@@ -86,7 +86,7 @@ test("writes a mirror beside every tracked CLAUDE.md, skips untracked", () => {
   git("commit", "-q", "-m", "init");
 
   const written = generateAgentsFiles(repo, "wt1");
-  assert.deepEqual(written.sort(), ["AGENTS.md", "sub/AGENTS.md"]);
+  assert.deepEqual(written.toSorted(), ["AGENTS.md", "sub/AGENTS.md"]);
   assert.ok(readFileSync(join(repo, "AGENTS.md"), "utf8").includes("wt1"));
   assert.ok(
     readFileSync(join(repo, "sub", "AGENTS.md"), "utf8").endsWith("sub docs\n"),
@@ -120,7 +120,7 @@ test("embeds path-scoped Claude rules in the nearest AGENTS.md", () => {
   );
   git("commit", "-q", "-m", "add scoped rule");
 
-  assert.deepEqual(generateAgentsFiles(repo).sort(), [
+  assert.deepEqual(generateAgentsFiles(repo).toSorted(), [
     "AGENTS.md",
     "sub/AGENTS.md",
   ]);

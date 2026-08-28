@@ -18,7 +18,6 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { signalNumber, terminateChild } from "./child-signals.js";
 import { git, gitCommonDir } from "./test-git.js";
 import { acquire, lockDir, type Held, type Tier } from "./test-locks.js";
@@ -28,18 +27,47 @@ export interface Args {
   command: string[];
 }
 
+/** Nothing after `--`, or no `--` at all: there is no command to run. */
+export class MissingSeparatorError extends Error {
+  constructor() {
+    super("with-slot: needs `-- <command…>`");
+    this.name = "MissingSeparatorError";
+  }
+}
+
+export class MissingCommandError extends Error {
+  constructor() {
+    super("with-slot: needs a command after --");
+    this.name = "MissingCommandError";
+  }
+}
+
+export class EmptyCommandError extends Error {
+  constructor() {
+    super("with-slot: empty command");
+    this.name = "EmptyCommandError";
+  }
+}
+
+export class InvalidTierError extends Error {
+  constructor(readonly tier: string | undefined) {
+    super(`with-slot: --tier must be ordinary or careful, got ${String(tier)}`);
+    this.name = "InvalidTierError";
+  }
+}
+
 /** `--tier` before `--`; everything after `--` is the command, verbatim. */
 export function parseArgs(argv: string[]): Args {
   const separator = argv.indexOf("--");
-  if (separator === -1) throw new Error("with-slot: needs `-- <command…>`");
+  if (separator === -1) throw new MissingSeparatorError();
   const flags = argv.slice(0, separator);
   const command = argv.slice(separator + 1);
-  if (command.length === 0) throw new Error("with-slot: needs a command after --");
+  if (command.length === 0) throw new MissingCommandError();
   const tierIndex = flags.indexOf("--tier");
   if (tierIndex === -1) return { tier: "ordinary", command };
   const tier = flags[tierIndex + 1];
   if (tier !== "ordinary" && tier !== "careful") {
-    throw new Error(`with-slot: --tier must be ordinary or careful, got ${String(tier)}`);
+    throw new InvalidTierError(tier);
   }
   return { tier, command };
 }
@@ -95,7 +123,7 @@ function installSignalReleases(): void {
 /** stdio inherited throughout: this wrapper reads nothing and rewrites nothing. */
 function run(command: string[]): Promise<number> {
   const [executable, ...args] = command;
-  if (executable === undefined) throw new Error("with-slot: empty command");
+  if (executable === undefined) throw new EmptyCommandError();
   return new Promise((resolve) => {
     const child = spawn(executable, args, { stdio: "inherit" });
     activeChild = child;
@@ -122,7 +150,7 @@ async function main(argv: string[]): Promise<number> {
   }
 }
 
-if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (process.argv[1] !== undefined && import.meta.filename === process.argv[1]) {
   main(process.argv.slice(2)).then(
     (code) => {
       process.exitCode = code;

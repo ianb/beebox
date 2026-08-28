@@ -41,10 +41,43 @@ const STATE_FILE_NAME = "mobile-contract-pending";
 // The trailer that overrides a pending violation for a genuine non-wire change.
 const TRAILER_KEY = "Contract-Unchanged";
 
+/**
+ * Base class for every fail-closed manifest failure. Kept as the base (rather
+ * than thrown directly) so callers can catch the family; each failure below is
+ * its own subclass with its message composed in its constructor.
+ */
 class ManifestError extends Error {
   public constructor(message: string) {
     super(message);
     this.name = "ManifestError";
+  }
+}
+
+class MissingAnchorsBlockError extends ManifestError {
+  public constructor() {
+    super("no ```anchors block found in the contract doc");
+    this.name = "MissingAnchorsBlockError";
+  }
+}
+
+class EmptyAnchorsBlockError extends ManifestError {
+  public constructor() {
+    super("```anchors block is empty");
+    this.name = "EmptyAnchorsBlockError";
+  }
+}
+
+class UnterminatedAnchorsBlockError extends ManifestError {
+  public constructor() {
+    super("unterminated ```anchors block in the contract doc");
+    this.name = "UnterminatedAnchorsBlockError";
+  }
+}
+
+class ContractDocMissingError extends ManifestError {
+  public constructor(readonly docPath: string) {
+    super(`contract doc missing at ${docPath}`);
+    this.name = "ContractDocMissingError";
   }
 }
 
@@ -57,7 +90,7 @@ export function parseManifest(docText: string): string[] {
   const lines = docText.split("\n");
   const open = lines.findIndex((line) => line.trim() === "```anchors");
   if (open === -1) {
-    throw new ManifestError("no ```anchors block found in the contract doc");
+    throw new MissingAnchorsBlockError();
   }
   const anchors: string[] = [];
   for (let i = open + 1; i < lines.length; i++) {
@@ -66,14 +99,14 @@ export function parseManifest(docText: string): string[] {
     const line = raw.trim();
     if (line === "```") {
       if (anchors.length === 0) {
-        throw new ManifestError("```anchors block is empty");
+        throw new EmptyAnchorsBlockError();
       }
       return anchors;
     }
     if (line === "" || line.startsWith("#")) continue;
     anchors.push(line);
   }
-  throw new ManifestError("unterminated ```anchors block in the contract doc");
+  throw new UnterminatedAnchorsBlockError();
 }
 
 /** True if a staged path matches an anchor: exact, or under a `dir/` prefix. */
@@ -99,13 +132,13 @@ export function hasContractUnchangedTrailer(message: string): boolean {
   });
 }
 
-function gitPath(repoRoot: string, relative: string): string {
+function gitPath(root: string, relative: string): string {
   const out = execFileSync("git", ["rev-parse", "--git-path", relative], {
-    cwd: repoRoot,
+    cwd: root,
     encoding: "utf8",
   }).trim();
   // `--git-path` may return a path relative to the repo root; normalize.
-  return out.startsWith("/") ? out : join(repoRoot, out);
+  return out.startsWith("/") ? out : join(root, out);
 }
 
 function repoRoot(): string {
@@ -124,7 +157,7 @@ function stagedFiles(root: string): string[] {
 function loadAnchors(root: string): string[] {
   const docPath = join(root, CONTRACT_DOC);
   if (!existsSync(docPath)) {
-    throw new ManifestError(`contract doc missing at ${CONTRACT_DOC}`);
+    throw new ContractDocMissingError(CONTRACT_DOC);
   }
   return parseManifest(readFileSync(docPath, "utf8"));
 }
@@ -170,7 +203,7 @@ function runCommitMsg(statePath: string, messageFile: string): void {
   console.error("Two ways forward:");
   console.error(`  1. Stage an update to ${CONTRACT_DOC} reflecting the change, then re-commit.`);
   console.error(
-    `  2. If this genuinely does not alter the wire surface (refactor, comment, test scaffold),`,
+    "  2. If this genuinely does not alter the wire surface (refactor, comment, test scaffold),",
   );
   console.error(
     `     re-run the commit with a trailer, e.g.:  git commit --trailer "${TRAILER_KEY}: <reason>"`,

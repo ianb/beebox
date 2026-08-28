@@ -124,9 +124,9 @@ export function groupPaths(
   }
   return {
     groups,
-    packages: [...packages].sort(),
+    packages: [...packages].toSorted(),
     root,
-    unknown: [...unknown].sort(),
+    unknown: [...unknown].toSorted(),
   };
 }
 
@@ -320,7 +320,7 @@ export interface SkipInput {
  */
 export function skipTypecheckLintDecision(input: SkipInput): { value: boolean; reason: string } {
   if (input.stragglers.length > 0) {
-    return { value: false, reason: `uncommitted paths never ran pre-commit` };
+    return { value: false, reason: "uncommitted paths never ran pre-commit" };
   }
   if (input.mergeNoOp) {
     return { value: true, reason: "merge of main was a no-op; pre-commit covered every commit" };
@@ -360,5 +360,5 @@ export function parseTrailers(messages: string[]): { issues: string[]; plans: st
       (key === "Issue" ? issues : plans).add(value ?? "");
     }
   }
-  return { issues: [...issues].sort(), plans: [...plans].sort() };
+  return { issues: [...issues].toSorted(), plans: [...plans].toSorted() };
 }

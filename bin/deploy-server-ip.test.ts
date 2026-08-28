@@ -10,11 +10,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { after, before, test } from "node:test";
-import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = resolve(import.meta.dirname, "..");
 const SOURCE_DEPLOY = join(ROOT, "callback-box", "deploy");
 const scratch = mkdtempSync(join(tmpdir(), "deploy-server-ip-test-"));
 const main = join(scratch, "main");
@@ -151,13 +150,13 @@ test("production diagnostic tools use the shared worktree fallback", () => {
 test("deploy.sh retains its local-only server-ip backstop", () => {
   const deployScript = readFileSync(join(SOURCE_DEPLOY, "deploy.sh"), "utf8");
   assert.doesNotMatch(deployScript, /resolve-server-ip/);
-  assert.match(deployScript, /if \[ ! -s "\$SCRIPT_DIR\/server-ip" \]/);
+  assert.match(deployScript, /if \[ ! -s "\$SCRIPT_DIR\/server-ip" ]/);
 });
 
 test("both owner-cookie tools fail closed when CB_OWNER_EMAIL is absent", () => {
   for (const tool of ["prod-curl", "prod-browse"]) {
     const script = readFileSync(join(SOURCE_DEPLOY, tool), "utf8");
-    assert.match(script, /\[\[ -z "\$\{CB_OWNER_EMAIL:-\}" \]\]/);
+    assert.match(script, /\[\[ -z "\${CB_OWNER_EMAIL:-}" ]]/);
     assert.match(script, /Error: CB_OWNER_EMAIL is unset/);
   }
 });

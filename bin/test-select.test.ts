@@ -28,7 +28,7 @@ function graphOf(input: {
   return {
     tests,
     universe,
-    unresolved: new Set(input.unresolved ?? []),
+    unresolved: new Set(input.unresolved),
     ambiguousEdges: 0,
     buildMs: 0,
     cached: false,
@@ -250,7 +250,7 @@ test("spawnerEdges catches a test whose CHILD imports source the parent does not
       graph,
       readFile: (path) => readFileSync(join(fx.root, path), "utf-8"),
     });
-    assert.deepEqual([...edges.keys()].sort(), [
+    assert.deepEqual([...edges.keys()].toSorted(), [
       "pkg/test/cli.doctest.md",
       "pkg/test/spawner.test.ts",
     ]);

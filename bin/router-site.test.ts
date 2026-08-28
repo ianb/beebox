@@ -8,7 +8,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import fs from "node:fs/promises";
-import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { resolveSiteTarget, serveSite, SiteBuildError, type BuildRunner } from "./router-site.js";
@@ -102,6 +101,18 @@ test("resolveSiteTarget: an unbuilt dist reports no-dist", async () => {
 
 // --- serveSite (end-to-end over a fake ServerResponse) ------------------------
 
+// A stand-in for the generator's own error text, so the 500 path can assert the
+// build's output reaches the response body verbatim.
+const FRONTMATTER_BUILD_FAILURE = "site/content/x.md:3 invalid frontmatter YAML: bad indentation";
+
+/** Thrown by a runner that must never be invoked, so the test fails loudly if it is. */
+class UnexpectedBuildError extends Error {
+  constructor() {
+    super("should not build when there is no generator");
+    this.name = "UnexpectedBuildError";
+  }
+}
+
 interface FakeResponse {
   statusCode: number;
   headers: Record<string, string>;
@@ -131,16 +142,16 @@ function fakeResponse(): FakeResponse {
   };
 }
 
-async function request(repoRoot: string, rel: string, buildRunner: BuildRunner): Promise<FakeResponse> {
+async function request(repoRoot: string, { rel, buildRunner }: { rel: string; buildRunner: BuildRunner }): Promise<FakeResponse> {
   const res = fakeResponse();
-  await serveSite({ name: "wt", rest: `/site${rel}`, res: res as unknown as http.ServerResponse, repoRoot, buildRunner });
+  await serveSite({ name: "wt", rest: `/site${rel}`, res, repoRoot, buildRunner });
   return res;
 }
 
 test("serveSite: a fresh, already-built site serves index.html with no-store and no rebuild", async () => {
   const { repoRoot } = await mkBuiltSite();
   const counter = { n: 0 };
-  const res = await request(repoRoot, "/", countingRunner(counter));
+  const res = await request(repoRoot, { rel: "/", buildRunner: countingRunner(counter) });
   assert.equal(res.statusCode, 200);
   assert.equal(res.headers["content-type"], "text/html; charset=utf-8");
   assert.equal(res.setHeaders["cache-control"], "no-store, max-age=0");
@@ -155,12 +166,12 @@ test("serveSite: missing dist auto-builds, then a second request does not rebuil
   const counter = { n: 0 };
   const runner = countingRunner(counter);
 
-  const first = await request(repoRoot, "/", runner);
+  const first = await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(first.statusCode, 200);
   assert.match(first.body, /built/);
   assert.equal(counter.n, 1);
 
-  const second = await request(repoRoot, "/", runner);
+  const second = await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(second.statusCode, 200);
   assert.equal(counter.n, 1); // fresh manifest → no second build
   await fs.rm(repoRoot, { recursive: true, force: true });
@@ -171,11 +182,11 @@ test("serveSite: a changed source (same set) triggers a rebuild", async () => {
   const counter = { n: 0 };
   const runner = countingRunner(counter);
 
-  await request(repoRoot, "/", runner);
+  await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(counter.n, 0); // fresh
 
   await fs.writeFile(path.join(siteDir, "content", "index.md"), "---\ntitle: T2\nsummary: S2\n---\nedited\n", "utf8");
-  await request(repoRoot, "/", runner);
+  await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(counter.n, 1); // content hash changed → rebuild
   await fs.rm(repoRoot, { recursive: true, force: true });
 });
@@ -185,11 +196,11 @@ test("serveSite: a deleted source triggers a rebuild (content-based, not mtime)"
   const counter = { n: 0 };
   const runner = countingRunner(counter);
 
-  await request(repoRoot, "/", runner);
+  await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(counter.n, 0); // fresh
 
   await fs.rm(path.join(siteDir, "content", "index.md"));
-  await request(repoRoot, "/", runner);
+  await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(counter.n, 1); // source set shrank → manifest differs → rebuild
   await fs.rm(repoRoot, { recursive: true, force: true });
 });
@@ -198,7 +209,7 @@ test("serveSite: a missing manifest is treated as stale and rebuilds", async () 
   const { repoRoot, distRoot } = await mkBuiltSite();
   await fs.rm(path.join(distRoot, ".inputs.json"));
   const counter = { n: 0 };
-  await request(repoRoot, "/", countingRunner(counter));
+  await request(repoRoot, { rel: "/", buildRunner: countingRunner(counter) });
   assert.equal(counter.n, 1);
   await fs.rm(repoRoot, { recursive: true, force: true });
 });
@@ -209,9 +220,9 @@ test("serveSite: concurrent requests on a stale site share one build", async () 
   const counter = { n: 0 };
   const runner = countingRunner(counter);
   const [a, b, c] = await Promise.all([
-    request(repoRoot, "/", runner),
-    request(repoRoot, "/", runner),
-    request(repoRoot, "/", runner),
+    request(repoRoot, { rel: "/", buildRunner: runner }),
+    request(repoRoot, { rel: "/", buildRunner: runner }),
+    request(repoRoot, { rel: "/", buildRunner: runner }),
   ]);
   assert.equal(a.statusCode, 200);
   assert.equal(b.statusCode, 200);
@@ -224,9 +235,9 @@ test("serveSite: a build failure returns 500 with the build's error text", async
   const { repoRoot, distRoot } = await mkBuiltSite();
   await fs.rm(distRoot, { recursive: true, force: true });
   const failing: BuildRunner = async () => {
-    throw new SiteBuildError("site/content/x.md:3 invalid frontmatter YAML: bad indentation");
+    throw new SiteBuildError(FRONTMATTER_BUILD_FAILURE);
   };
-  const res = await request(repoRoot, "/", failing);
+  const res = await request(repoRoot, { rel: "/", buildRunner: failing });
   assert.equal(res.statusCode, 500);
   assert.match(res.body, /invalid frontmatter YAML: bad indentation/);
   await fs.rm(repoRoot, { recursive: true, force: true });
@@ -235,9 +246,9 @@ test("serveSite: a build failure returns 500 with the build's error text", async
 test("serveSite: a checkout with no site/ generator keeps the 404 build hint", async () => {
   const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "router-site-nogen-"));
   const runner: BuildRunner = async () => {
-    throw new Error("should not build when there is no generator");
+    throw new UnexpectedBuildError();
   };
-  const res = await request(repoRoot, "/", runner);
+  const res = await request(repoRoot, { rel: "/", buildRunner: runner });
   assert.equal(res.statusCode, 404);
   assert.match(res.body, /pnpm --dir site build/);
   await fs.rm(repoRoot, { recursive: true, force: true });

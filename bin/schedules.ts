@@ -23,51 +23,55 @@
  *
  * Design: callback-box/docs/plans/scheduled-workstreams.md
  * Schema/records: bin/lib/schedules.ts · Store: bin/lib/schedules-store.ts
- * Runner:         bin/lib/schedules-runner.ts
+ * Runner:         bin/lib/schedules-runner.ts (one schedule) + schedules-tick.ts (one launchd firing)
+ * This file:      usage, `list`, `run`/`tick`/`logs`, `lint`, dispatch. The
+ *                 process context and flag reader are bin/lib/schedules-cli-context.ts;
+ *                 the reporting verbs are bin/lib/schedules-cli-report.ts.
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { execa } from "execa";
 
 import {
-  HANDOFF_BODY_MAX,
   formatDuration,
   loadSchedule,
   loadSchedules,
-  prioritySchema,
-  schedulesStoreRoot,
   type LoadedSchedule,
-  type Priority,
 } from "./lib/schedules.js";
 import {
-  ensureScheduleDir,
   ensureStoreRoot,
-  readAllAlerts,
   readAlerts,
   readScheduleState,
   readStoreState,
   latestRunId,
   visibleAlerts,
-  writeAlert,
-  writeHandoff,
-  writeResult,
-  bootTimeMs,
-  isProcessAlive,
 } from "./lib/schedules-store.js";
 import {
-  DRY_RUN_HANDOFF_MARKER,
   isDue,
   isOverdue,
   nextDueAtMs,
   readRunLog,
   refuseRunHere,
   runSchedule,
-  tick,
 } from "./lib/schedules-runner.js";
-import { osascriptNotify, raiseAlert, type RunnerDeps } from "./lib/schedules-alerts.js";
+import { tick } from "./lib/schedules-tick.js";
 import { installTick, uninstallTick } from "./lib/schedules-launchd.js";
 import { formatFinding, lintSchedules } from "./lib/schedules-lint.js";
+import { flags, resolveContext, runnerDeps, type Context } from "./lib/schedules-cli-context.js";
+import {
+  commandAck,
+  commandAlert,
+  commandAlerts,
+  commandDone,
+  commandHandoff,
+} from "./lib/schedules-cli-report.js";
+
+/** `run <name>` naming a schedule the loader refuses. */
+class UnrunnableScheduleError extends Error {
+  constructor(readonly scheduleName: string, readonly detail: string) {
+    super(`schedule '${scheduleName}' is not runnable — ${detail}`);
+    this.name = "UnrunnableScheduleError";
+  }
+}
 
 const USAGE = `usage: bin/schedules <command>
 
@@ -94,91 +98,6 @@ const USAGE = `usage: bin/schedules <command>
                                   contracts, shellcheck, eslint.
   install | uninstall             The launchd tick (main checkout only).
 `;
-
-interface Context {
-  repoRoot: string;
-  mainRoot: string;
-  schedulesRoot: string;
-  storeRoot: string;
-}
-
-async function resolveContext(): Promise<Context> {
-  const { stdout: top } = await execa("git", ["rev-parse", "--show-toplevel"]);
-  const { stdout: common } = await execa("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
-  const repoRoot = top.trim();
-  const mainRoot = path.dirname(common.trim());
-  // `CALLBACK_SCHEDULES_DIR` points the CLI at a different set of schedule
-  // directories, the way `CALLBACK_SCHEDULES_ROOT` points it at a different
-  // store — what lets a test run `lint` over a fixture tree.
-  const schedulesDir = process.env["CALLBACK_SCHEDULES_DIR"];
-  return {
-    repoRoot,
-    mainRoot,
-    schedulesRoot: schedulesDir === undefined || schedulesDir === "" ? path.join(repoRoot, "schedules") : schedulesDir,
-    storeRoot: schedulesStoreRoot(mainRoot),
-  };
-}
-
-function runnerDeps(context: Context): RunnerDeps {
-  return {
-    storeRoot: context.storeRoot,
-    schedulesRoot: context.schedulesRoot,
-    repoRoot: context.repoRoot,
-    mainRoot: context.mainRoot,
-    now: () => new Date(),
-    pid: process.pid,
-    isProcessAlive,
-    bootTimeMs,
-    // SCHEDULE_NOTIFY=0 keeps the alert record but skips the desktop
-    // notification — set by the test suite so fixtures never reach the
-    // boxholder's notification center.
-    notify: process.env["SCHEDULE_NOTIFY"] === "0" ? async () => {} : osascriptNotify,
-  };
-}
-
-// ─── Argument reading ─────────────────────────────────────────────────────
-
-const VALUE_FLAGS = new Set(["title", "message", "details", "body", "priority", "workstream", "run"]);
-
-/** `--flag value`, values consumed unconditionally: a message of "-- no" is
- *  the author's words, not a flag (the bin/comments rule). */
-function flags(args: string[]): Map<string, string> {
-  const found = new Map<string, string>();
-  for (let i = 0; i < args.length; i += 1) {
-    const arg = args[i];
-    if (arg === undefined || !arg.startsWith("--")) continue;
-    const name = arg.slice(2);
-    if (!VALUE_FLAGS.has(name)) continue;
-    found.set(name, args[i + 1] ?? "");
-    i += 1;
-  }
-  return found;
-}
-
-async function readStdin(): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
-  return Buffer.concat(chunks).toString("utf8");
-}
-
-/** `@file` reads the file, `-` reads stdin, anything else is the text itself.
- *  Long details are the whole point of the flag, and no shell should have to
- *  carry 40 lines of log as an argument. */
-async function readValue(raw: string): Promise<string> {
-  if (raw === "-") return readStdin();
-  if (raw.startsWith("@")) return fs.readFile(raw.slice(1), "utf8");
-  return raw;
-}
-
-function envOr(flagValue: string | undefined, variable: string): string | null {
-  if (flagValue !== undefined && flagValue !== "") return flagValue;
-  const fromEnv = process.env[variable];
-  return fromEnv === undefined || fromEnv === "" ? null : fromEnv;
-}
-
-function isDryRun(): boolean {
-  return process.env["SCHEDULE_DRY_RUN"] === "1";
-}
 
 // ─── list ─────────────────────────────────────────────────────────────────
 
@@ -266,7 +185,7 @@ async function requireSchedule(context: Context, name: string): Promise<LoadedSc
   const entry = await loadSchedule(path.join(context.schedulesRoot, name));
   if (entry.kind === "invalid") {
     const detail = entry.issues.map((issue) => `${issue.path}: ${issue.message}`).join("; ");
-    throw new Error(`schedule '${name}' is not runnable — ${detail}`);
+    throw new UnrunnableScheduleError(name, detail);
   }
   return entry;
 }
@@ -340,157 +259,6 @@ async function commandLogs(context: Context, args: string[]): Promise<number> {
     return 1;
   }
   process.stdout.write(log.endsWith("\n") ? log : `${log}\n`);
-  return 0;
-}
-
-// ─── handoff / alert / done / ack ─────────────────────────────────────────
-
-/** The run id a reporting command belongs to. `--run` wins over the env so a
- *  session that lost its environment (a resumed tab) can still report; with
- *  neither there is nothing to attach the record to, so it refuses. */
-function resolveRunId(options: Map<string, string>): string | null {
-  return envOr(options.get("run"), "SCHEDULE_RUN_ID");
-}
-
-function resolveWorkstream(options: Map<string, string>): string | null {
-  return envOr(options.get("workstream"), "SCHEDULE_NAME");
-}
-
-async function commandHandoff(context: Context, args: string[]): Promise<number> {
-  const options = flags(args);
-  const title = options.get("title");
-  const rawBody = options.get("body");
-  if (title === undefined || title === "") {
-    process.stderr.write("schedules handoff: --title is required\n");
-    return 2;
-  }
-  if (rawBody === undefined) {
-    process.stderr.write("schedules handoff: --body is required (@file, - for stdin, or text)\n");
-    return 2;
-  }
-  const name = resolveWorkstream(options);
-  const runId = resolveRunId(options);
-  if (name === null || runId === null) {
-    process.stderr.write("schedules handoff: needs SCHEDULE_NAME/SCHEDULE_RUN_ID (or --workstream/--run)\n");
-    return 2;
-  }
-  const body = await readValue(rawBody);
-  if (body.length > HANDOFF_BODY_MAX) {
-    process.stderr.write(`schedules handoff: body is ${String(body.length)} bytes, over the ${String(HANDOFF_BODY_MAX)} limit\n`);
-    return 2;
-  }
-  if (isDryRun()) {
-    // A dry run writes nothing anywhere; the marker is how the runner reports
-    // the would-be outcome.
-    process.stdout.write(`${DRY_RUN_HANDOFF_MARKER} ${title}\n${body}\n`);
-    return 0;
-  }
-  await ensureStoreRoot(context.storeRoot);
-  await ensureScheduleDir(context.storeRoot, name);
-  await writeHandoff(context.storeRoot, { name, runId, title, body, at: new Date().toISOString() });
-  return 0;
-}
-
-function parsePriority(raw: string | undefined): Priority {
-  if (raw === undefined || raw === "") return "normal";
-  const parsed = prioritySchema.safeParse(raw);
-  if (!parsed.success) throw new Error(`--priority must be important|normal|backlog|fyi, got '${raw}'`);
-  return parsed.data;
-}
-
-async function commandAlert(context: Context, args: string[]): Promise<number> {
-  const options = flags(args);
-  const title = options.get("title");
-  const message = options.get("message");
-  if (title === undefined || title === "") {
-    process.stderr.write("schedules alert: --title is required\n");
-    return 2;
-  }
-  if (message === undefined || message === "") {
-    process.stderr.write("schedules alert: --message is required\n");
-    return 2;
-  }
-  const name = resolveWorkstream(options);
-  const runId = resolveRunId(options);
-  if (name === null || runId === null) {
-    process.stderr.write("schedules alert: needs SCHEDULE_NAME/SCHEDULE_RUN_ID (or --workstream/--run)\n");
-    return 2;
-  }
-  const rawDetails = options.get("details");
-  const details = rawDetails === undefined || rawDetails === "" ? null : await readValue(rawDetails);
-  if (isDryRun()) {
-    process.stdout.write(`[schedules] would alert (${parsePriority(options.get("priority"))}): ${title}\n${message}\n`);
-    return 0;
-  }
-  await ensureStoreRoot(context.storeRoot);
-  const alert = await raiseAlert(runnerDeps(context), {
-    workstream: name,
-    runId,
-    title,
-    message,
-    details,
-    priority: parsePriority(options.get("priority")),
-  });
-  await writeResult(context.storeRoot, { name, runId, kind: "alert", alertId: alert.id, at: new Date().toISOString() });
-  process.stdout.write(`${alert.id}\n`);
-  return 0;
-}
-
-async function commandDone(context: Context, args: string[]): Promise<number> {
-  const options = flags(args);
-  const name = resolveWorkstream(options);
-  const runId = resolveRunId(options);
-  if (name === null || runId === null) {
-    process.stderr.write("schedules done: needs SCHEDULE_NAME/SCHEDULE_RUN_ID (or --workstream/--run)\n");
-    return 2;
-  }
-  if (isDryRun()) {
-    process.stdout.write("[schedules] would record done\n");
-    return 0;
-  }
-  await ensureStoreRoot(context.storeRoot);
-  await ensureScheduleDir(context.storeRoot, name);
-  await writeResult(context.storeRoot, { name, runId, kind: "done", alertId: null, at: new Date().toISOString() });
-  return 0;
-}
-
-/**
- * Read-only alert listing. The workstream browser reads the store through this
- * rather than opening it itself: the CLI is the only thing that knows the
- * store's layout, and the app is downstream of `bin/` everywhere else too.
- */
-async function commandAlerts(context: Context, args: string[]): Promise<number> {
-  if (!args.includes("--json")) {
-    process.stderr.write("schedules alerts: --json is required (the human view is `list`)\n");
-    return 2;
-  }
-  const workstream = flags(args).get("workstream");
-  const all = workstream === undefined || workstream === ""
-    ? await readAllAlerts(context.storeRoot)
-    : await readAlerts(context.storeRoot, workstream);
-  const alerts = visibleAlerts(all, Date.now())
-    .toSorted((left, right) => right.createdAt.localeCompare(left.createdAt));
-  process.stdout.write(`${JSON.stringify({ alerts })}\n`);
-  return 0;
-}
-
-async function commandAck(context: Context, args: string[]): Promise<number> {
-  const [id] = args;
-  if (id === undefined || id.startsWith("--")) {
-    process.stderr.write("schedules ack: needs an alert id\n");
-    return 2;
-  }
-  const alerts = await readAllAlerts(context.storeRoot);
-  const alert = alerts.find((candidate) => candidate.id === id);
-  if (alert === undefined) {
-    process.stderr.write(`schedules ack: no alert '${id}'\n`);
-    return 1;
-  }
-  if (alert.state === "acknowledged") {
-    process.stdout.write(`${id} was already acknowledged.\n`);
-    return 0;
-  }
-  await writeAlert(context.storeRoot, { ...alert, state: "acknowledged", acknowledgedAt: new Date().toISOString() });
   return 0;
 }
 

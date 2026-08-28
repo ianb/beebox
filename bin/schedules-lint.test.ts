@@ -22,7 +22,7 @@ import * as path from "node:path";
 import { execa } from "execa";
 
 import { lintSchedules, shebangKind, shebangProblem, type LintFinding } from "./lib/schedules-lint.js";
-import { INVALID_SCHEDULE_ALERT_TITLE, tick } from "./lib/schedules-runner.js";
+import { INVALID_SCHEDULE_ALERT_TITLE, tick } from "./lib/schedules-tick.js";
 import { readAlerts, writeAlert } from "./lib/schedules-store.js";
 import type { RunnerDeps } from "./lib/schedules-alerts.js";
 
@@ -276,7 +276,7 @@ test("lint is silent and exits 0 on a clean tree, and prints one line per findin
 test("lint --json prints one findings array", async () => {
   const broken = await makeSchedule("jsonjob", {
     "schedule.yaml": CLEAN_YAML,
-    run: '#!/usr/bin/env bash\necho hi\n',
+    run: "#!/usr/bin/env bash\necho hi\n",
   });
   const result = await runLint({ schedulesRoot: broken, args: ["--json"] });
   assert.equal(result.exitCode, 1, result.stderr);

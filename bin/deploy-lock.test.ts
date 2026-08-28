@@ -10,16 +10,15 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, test } from "node:test";
-import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = resolve(import.meta.dirname, "..");
 const fixtures: string[] = [];
 
 afterEach(() => {
-  for (const fixture of fixtures.splice(0)) {
-    rmSync(fixture, { recursive: true, force: true });
+  for (const dir of fixtures.splice(0)) {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
@@ -61,7 +60,7 @@ test("a lock loser reports an explicit superseded terminal state", () => {
   });
 
   assert.equal(result.status, 0);
-  assert.match(result.stdout, new RegExp(`Deploy superseded: ${f.first} queued`));
+  assert.ok(result.stdout.includes(`Deploy superseded: ${f.first} queued`), result.stdout);
 });
 
 test("a failed lock holder chains to a newer request", () => {
@@ -87,11 +86,11 @@ test("a failed lock holder chains to a newer request", () => {
 
   assert.equal(result.status, 23);
   assert.match(result.stdout, /Deploy failed \(exit 23\)/);
-  assert.match(result.stdout, new RegExp(`Deploy superseded by ${f.second}`));
+  assert.ok(result.stdout.includes(`Deploy superseded by ${f.second}`), result.stdout);
   const chainedLog = execFileSync("tail", ["-20", join(f.deployDir, ".last-deploy.log")], {
     encoding: "utf8",
   });
-  assert.match(chainedLog, new RegExp(`Deploying ref '${f.second}'`));
+  assert.ok(chainedLog.includes(`Deploying ref '${f.second}'`), chainedLog);
   assert.match(chainedLog, /Deploy failed \(exit 24\)/);
 });
 

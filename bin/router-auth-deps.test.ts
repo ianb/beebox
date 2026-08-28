@@ -18,6 +18,8 @@ import { test, before, after } from "node:test";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
+import type { ResolvedBoxEntry } from "./box-entry.js";
+import type { RouterHeaders } from "./router-auth.js";
 
 const OWNER = "owner@example.com";
 process.env.CB_OWNER_EMAIL = OWNER;
@@ -38,8 +40,6 @@ const { signSession } = await import("../callback-box/src/webapp/auth.js");
 const { signMobileSession, MOBILE_SESSION_TTL_MS } = await import(
   "../callback-box/src/core/mobile/mobile-session.js"
 );
-import type { ResolvedBoxEntry } from "./box-entry.js";
-import type { RouterHeaders } from "./router-auth.js";
 
 /** A fake worktree/box map: worktree name → its box entries (or null = unknown). */
 function fakeConfig(map: Record<string, ResolvedBoxEntry[] | null>): {

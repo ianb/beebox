@@ -319,7 +319,7 @@ async function commandList(context: Context, args: string[]): Promise<number> {
     return 0;
   }
   // Newest document first, so "what did I just say" is at the top.
-  const ordered = [...filtered].sort((a, b) => {
+  const ordered = filtered.toSorted((a, b) => {
     const latest = (entry: StoreEntry): string => byNewest(entry.comments)[0]?.at ?? "";
     return latest(b).localeCompare(latest(a));
   });

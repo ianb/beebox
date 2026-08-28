@@ -15,15 +15,21 @@
 // the prefixed paths. HMR connects directly to Vite's internal port,
 // bypassing this router entirely.
 //
-// STRUCTURE (2026-07-11, Phase B of the state formalization): the worktree
-// lifecycle engine lives in ./router-core.ts (`createRouterCore(effects, config)`,
-// owning the worktrees map and driving transitions through injected effects);
-// the state model lives in ./router-lifecycle.ts; the serialized pidfile store in
-// ./router-pidfile.ts. THIS file builds the REAL effects (execa, get-port,
-// http.request probes, the pidfile store), wires the core to the HTTP/WS server,
-// and runs the boot + signal-handler sequence in `main()`. Importing this module
-// binds no ports and installs no signal handlers — only `main()` does, and it
-// runs only when this file is executed directly.
+// STRUCTURE (2026-07-11, Phase B of the state formalization; extended 2026-08-28
+// when this file was split for size): the worktree lifecycle engine lives in
+// ./router-core.ts (`createRouterCore(effects, config)`, owning the worktrees map
+// and driving transitions through injected effects); the state model in
+// ./router-lifecycle.ts; the serialized pidfile store in ./router-pidfile.ts; the
+// REAL effects (execa, get-port, http.request probes) in ./router-real-effects.ts;
+// the proxy and its retry/body-replay machinery in ./router-proxy.ts; the pages
+// the router renders itself in ./router-pages.ts; the per-request dispatch in
+// ./router-dispatch.ts and the WS upgrade in ./router-upgrade.ts; the shared
+// configuration and logger in ./router-config.ts.
+//
+// THIS file wires those together into the two gated servers and runs the boot +
+// signal-handler sequence in `main()`. Importing this module binds no ports and
+// installs no signal handlers — only `main()` does, and it runs only when this
+// file is executed directly.
 //
 // Orphan resistance:
 //   - Each spawned child is recorded in ~/.cache/callback-box/pids/<name>.json
@@ -37,898 +43,38 @@ import http from "node:http";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { Readable } from "node:stream";
-import type { Socket } from "node:net";
-import { execa } from "execa";
-import getPort from "get-port";
-import httpProxy from "http-proxy-3";
+import type { Duplex } from "node:stream";
 import { reclaimOrphans } from "./process-cleanup.js";
-import { injectBasePrefix } from "../callback-box/src/webapp/base-prefix.js";
-import { resolveBoxEntries, type ResolvedBoxEntry } from "./box-entry.js";
 import { authorizeRouterRequest, type RouterAuthDeps, type RouterAuthDecision } from "./router-auth.js";
 import { createRouterAuthDeps } from "./router-auth-deps.js";
-import { rewriteMobileCookiePath } from "./router-cookie.js";
-import {
-  bootstrapMobileSessionCookie,
-  mobileBootstrapTarget,
-  type MobileBootstrapTarget,
-} from "./router-mobile-bootstrap.js";
-import { escapeHtml, serveDev } from "./router-docs.js";
-import { serveSite } from "./router-site.js";
+import { resolveBoxEntries } from "./box-entry.js";
 import {
   createRealWorkstreamsAppEffects,
   createWorkstreamsAppSupervisor,
-  WORKSTREAMS_APP_CAPABILITY_HEADER,
-  type WorkstreamsAppState,
   type WorkstreamsAppSupervisor,
-  type WorkstreamsAppTarget,
 } from "./workstreams-app-supervisor.js";
-
-function legacyIssuesRedirect(afterWorkstream: string): string | null {
-  const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
-  if (pathname !== "/dev/issues" && !pathname.startsWith("/dev/issues/"))
-    return null;
-  const suffix = afterWorkstream.slice("/dev/issues".length);
-  return `/workstreams/issues${suffix || "/"}`;
-}
+import { isServing } from "./router-lifecycle.js";
+import { createRouterCore, listenLoopback, type RouterCore } from "./router-core.js";
+import { errMessage, errnoCode, readEnvFile } from "./router-effects.js";
+import { createRealEffects, pidAlive, resolveWorktree, sweepStaleChildren } from "./router-real-effects.js";
+import { isBenignSocketError } from "./router-proxy.js";
+import { dispatchRouterRequest, type DispatchContext } from "./router-dispatch.js";
+import { handleRouterUpgrade, type UpgradeState } from "./router-upgrade.js";
 import {
-  type WorktreeHandle,
-  type CapturedError,
-  type TimerHandle,
-  readyLifecycle,
-  failedLifecycle,
-  startPromiseOf,
-  isServing,
-  childPids,
-} from "./router-lifecycle.js";
-import { createPidStore, type PidRecord } from "./router-pidfile.js";
-import {
-  createRouterCore,
-  errMessage,
-  errnoCode,
-  httpStatusOf,
-  listenLoopback,
-  readEnvFile,
-  type RouterCore,
-  type RouterEffects,
-  type ResolvedWorktree,
-} from "./router-core.js";
-
-// --- Configuration -----------------------------------------------------
-
-const ROUTER_PORT = Number(process.env.ROUTER_PORT) || 3210;
-const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..");
-// Where /main/ is served from. Defaults to the canonical checkout so that a
-// router started from a worktree (e.g. while iterating on router.ts itself)
-// still serves real-main at /main/, not the worktree's stale snapshot of main.
-// Override with CALLBACK_MAIN_ROOT for non-standard layouts.
-const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-box");
-const WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees");
-const BOXES_ROOT = path.join(os.homedir(), "src", "box-worktrees");
-// Overridable so a second router can run isolated (tests, dev on the router
-// itself) without fighting the live one over pid files and port state.
-const STATE_DIR = process.env.CALLBACK_STATE_DIR || path.join(os.homedir(), ".cache", "callback-box");
-const LOG_DIR = path.join(STATE_DIR, "logs");
-const PID_DIR = path.join(STATE_DIR, "pids");
-const BROWSE_DIR = path.join(STATE_DIR, "browse");
-const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
-// The local trust boundary (plan Track B): a SECOND listener on a Unix-domain
-// socket. Requests arriving on it are `trustedLocal` (unauthenticated) because a
-// browser cannot originate a UDS connection — a real capability boundary, not a
-// spoofable header. Local CLI (bin/workstreams) talks to the router through this;
-// everything on the TCP listener (which Tailscale Serve fronts) must authenticate.
-const ROUTER_SOCK = path.join(STATE_DIR, "router.sock");
-
-// Verbose worktree-lifecycle logging (e.g. WS-upgrade refusals to idle-stopped
-// worktrees — designed behavior, not anomalies, so silent by default).
-const ROUTER_DEBUG = process.env.CB_ROUTER_DEBUG === "1";
-
-const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
-
-// The /dev/ space: a place the *dev-repo agent* (Claude Code, not a box) builds
-// things for you to view in the browser — HTML visualizations, rendered
-// Markdown reports, data displays. Served from the tracked dev/ directory
-// (committed, unlike the gitignored scratch/), so these views are kept.
-const DEV_ROOT = path.join(REPO_ROOT, "dev");
-void DEV_ROOT; // referenced in docs/comments only; kept as a named landmark.
-
-const IDLE_TIMEOUT_MS = Number(process.env.ROUTER_IDLE_MS) || 5 * 60 * 1000;
-const KILL_GRACE_MS = 2000;
-
-// Boxholder directive (2026-07-04): each worktree's backend is now a
-// per-worktree `cb hub` (lazy: true, idleMs matching IDLE_TIMEOUT_MS above)
-// instead of one `server-main.ts` Fastify process serving every box in the
-// worktree's BOXES list. This gives each BOX its own process, lazily
-// started and idle-collected — the same semantics this router already gives
-// whole worktrees — composing cleanly with the router's own lazy/idle
-// worktree layer: the router still lazy-starts/idle-stops the WORKTREE
-// (vite + hub), and the hub now separately lazy-starts/idle-stops each BOX
-// within it. One release of insurance while this beds in: CB_DEV_NO_HUB=1
-// reverts to spawning server-main.ts directly, the old one-process-many-
-// boxes shape (Track G's prior escape hatch). Delete this flag once the
-// hub path has proven itself — tracked in docs/implemented-plans/boxes-as-packages-v2.md.
-const DEV_NO_HUB = process.env.CB_DEV_NO_HUB === "1";
-const HUB_CONFIG_DIR = path.join(STATE_DIR, "hub-configs");
-
-const MAIN_BOX_DEFAULTS = [
-  path.join(os.homedir(), "src", "boxes", "hearthside"),
-  path.join(os.homedir(), "src", "boxes", "test1"),
-  path.join(os.homedir(), "src", "boxes", "hearth-test"),
-  path.join(os.homedir(), "src", "boxes", "studio"),
-  path.join(os.homedir(), "src", "boxes", "meta-cb"),
-  path.join(os.homedir(), "src", "boxes", "ia-review"),
-];
-
-// --- Worktree resolution -----------------------------------------------
-
-async function resolveWorktree(name: string): Promise<ResolvedWorktree | null> {
-  if (name === "main") {
-    return {
-      name: "main",
-      root: MAIN_ROOT,
-      backendCwd: path.join(MAIN_ROOT, "callback-box"),
-      frontendCwd: path.join(MAIN_ROOT, "callback-box", "src", "frontend"),
-      boxes: (await readBoxes(path.join(MAIN_ROOT, "callback-box", ".env"))) ?? MAIN_BOX_DEFAULTS,
-    };
-  }
-  const root = path.join(WORKTREES_ROOT, name);
-  try {
-    await fs.access(root);
-  } catch {
-    return null;
-  }
-  const envPath = path.join(root, "callback-box", ".env");
-  const boxes = await readBoxes(envPath);
-  return {
-    name,
-    root,
-    backendCwd: path.join(root, "callback-box"),
-    frontendCwd: path.join(root, "callback-box", "src", "frontend"),
-    boxes: boxes ?? [path.join(BOXES_ROOT, name, "test1")],
-  };
-}
-
-async function readBoxes(envPath: string): Promise<string[] | null> {
-  try {
-    const text = await fs.readFile(envPath, "utf8");
-    const line = text.split("\n").find((l) => l.startsWith("BOXES="));
-    if (!line) return null;
-    return line.slice("BOXES=".length).trim().split(/\s+/).filter(Boolean);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Generate this worktree's `hub.json`, written fresh on every (re)start
- * (single-slot per worktree, like the pidfile) so a `BOXES=` edit in the
- * worktree's `.env` or a resolved-slug change always takes effect on the
- * next cold start. `port` is the worktree's own dynamically-assigned
- * `backendPort` — Vite's `vite.config.ts` proxies `/<box>/api/...` etc. to
- * `http://localhost:BACKEND_PORT`, and the hub's own routing composes with
- * that unchanged. `lazy: true` + `idleMs: IDLE_TIMEOUT_MS` give each BOX the
- * same lazy-start/idle-collect semantics this router gives each WORKTREE.
- */
-async function writeWorktreeHubConfig(params: {
-  name: string;
-  backendPort: number;
-  resolvedBoxes: ResolvedBoxEntry[];
-}): Promise<string> {
-  const { name, backendPort, resolvedBoxes } = params;
-  await fs.mkdir(HUB_CONFIG_DIR, { recursive: true });
-  const configPath = path.join(HUB_CONFIG_DIR, `${name}.json`);
-  const boxes: Record<string, { path: string }> = {};
-  for (const { slug, contentDir } of resolvedBoxes) boxes[slug] = { path: contentDir };
-  await fs.writeFile(
-    configPath,
-    JSON.stringify({ port: backendPort, host: "127.0.0.1", lazy: true, idleMs: IDLE_TIMEOUT_MS, boxes }, null, 2),
-  );
-  return configPath;
-}
-
-// --- PID file management ----------------------------------------------
-
-function pidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return errnoCode(e) === "EPERM";
-  }
-}
-
-async function sweepStaleChildren(): Promise<void> {
-  let files: string[];
-  try {
-    files = await fs.readdir(PID_DIR);
-  } catch {
-    return;
-  }
-  for (const file of files) {
-    if (!file.endsWith(".json")) continue;
-    const fullPath = path.join(PID_DIR, file);
-    let data: Partial<PidRecord>;
-    try {
-      data = JSON.parse(await fs.readFile(fullPath, "utf8"));
-    } catch {
-      await fs.unlink(fullPath).catch(() => {});
-      continue;
-    }
-    for (const pid of [data.vitePid, data.fastifyPid]) {
-      if (typeof pid !== "number") continue;
-      if (!pidAlive(pid)) continue;
-      log(`sweep: killing leftover pid ${pid} from ${file}`);
-      try {
-        process.kill(-pid, "SIGTERM");
-      } catch {
-        try {
-          process.kill(pid, "SIGTERM");
-        } catch {
-          /* gone */
-        }
-      }
-    }
-    if (typeof data.socketDir === "string") {
-      try {
-        const dashPidStr = await fs.readFile(path.join(data.socketDir, "dashboard.pid"), "utf8");
-        const dashPid = Number.parseInt(dashPidStr.trim(), 10);
-        if (Number.isFinite(dashPid) && pidAlive(dashPid)) {
-          log(`sweep: killing leftover dashboard pid ${dashPid} from ${file}`);
-          try {
-            process.kill(dashPid, "SIGTERM");
-          } catch {
-            /* gone */
-          }
-        }
-      } catch {
-        /* no dashboard pidfile, fine */
-      }
-    }
-    await fs.unlink(fullPath).catch(() => {});
-  }
-}
-
-// --- Process supervision effects --------------------------------------
-//
-// The worktree lifecycle model lives in ./router-lifecycle.ts; the engine that
-// drives it lives in ./router-core.ts. THIS section holds the REAL effect
-// implementations the engine is injected with — the actual spawning, killing,
-// HTTP probes, timers, and clock.
-
-function killGroup(pid: number | undefined, sig: NodeJS.Signals = "SIGTERM"): void {
-  if (!pid) return;
-  try {
-    process.kill(-pid, sig);
-  } catch {
-    try {
-      process.kill(pid, sig);
-    } catch {
-      /* gone */
-    }
-  }
-}
-
-// HTTP-level readiness probe. TCP listening is not enough — a process can
-// accept connections before its request handlers are wired up.
-async function waitForHttp(port: number, reqPath: string, timeoutMs: number, label: string): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const ok = await new Promise<boolean>((resolve) => {
-      const req = http.request(
-        { host: "127.0.0.1", port, path: reqPath, method: "GET", timeout: 1000 },
-        (res) => {
-          res.resume();
-          resolve(true);
-        },
-      );
-      req.on("error", () => resolve(false));
-      req.on("timeout", () => {
-        req.destroy();
-        resolve(false);
-      });
-      req.end();
-    });
-    if (ok) return;
-    await sleep(150);
-  }
-  throw new Error(`${label} did not respond to HTTP GET ${reqPath} within ${timeoutMs}ms`);
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-/**
- * A token for the backend source a checkout would run: the newest mtime seen
- * while walking `callback-box/src`, plus the entry count.
- *
- * Why not the git commit, which was the first idea: the hub is spawned as
- * `node --import tsx ./src/cli/index.ts hub` and therefore executes the
- * TypeScript on disk. `HEAD` misses an uncommitted edit entirely and moves for
- * commits touching nothing the hub loads. Filesystem state is what the hub
- * actually reads, so filesystem state is what the token is made of.
- *
- * `src/frontend` is excluded: Vite owns that half and hot-reloads it, so a
- * frontend edit is not a stale backend. Directory mtimes count too, which is
- * what makes a pure deletion visible, and `callback-box/package.json` is folded
- * in so a dependency change with no `src/` edit is not invisible.
- *
- * `null` on any failure — a checkout with no `callback-box/` is a legitimate
- * shape here, and a token that cannot be computed must disable the comparison
- * rather than fabricate a mismatch.
- */
-async function backendSourceToken(root: string): Promise<string | null> {
-  const srcRoot = path.join(root, "callback-box", "src");
-  let newest = 0;
-  let entries = 0;
-  async function walk(dir: string): Promise<void> {
-    const items = await fs.readdir(dir, { withFileTypes: true });
-    const stat = await fs.stat(dir);
-    newest = Math.max(newest, stat.mtimeMs);
-    for (const item of items) {
-      if (item.name === "node_modules" || item.name === "frontend") continue;
-      const full = path.join(dir, item.name);
-      if (item.isDirectory()) {
-        await walk(full);
-        continue;
-      }
-      entries += 1;
-      const st = await fs.stat(full);
-      newest = Math.max(newest, st.mtimeMs);
-    }
-  }
-  try {
-    await walk(srcRoot);
-    // The hub's dependencies are as much a part of what it loaded as its own
-    // source: a package bump that lands with no `src/` change would otherwise
-    // leave a stale generation looking current.
-    const pkg = await fs.stat(path.join(root, "callback-box", "package.json"));
-    newest = Math.max(newest, pkg.mtimeMs);
-    entries += 1;
-  } catch {
-    return null;
-  }
-  return `${Math.round(newest)}:${entries}`;
-}
-
-/**
- * Build the real effects the router core runs on. Constructed in `main()` (not
- * at module scope) so importing this file is side-effect-free — no timers, no
- * pidfile-store map, no port allocation happen until the router is actually run.
- */
-function createRealEffects(): RouterEffects {
-  const pidStore = createPidStore(PID_DIR);
-  return {
-    spawn: (command, args, options) => execa(command, args, options),
-    killGroup,
-    pidAlive,
-    waitForHttp,
-    setTimer: (ms, fn): TimerHandle => {
-      const t = setTimeout(() => {
-        try {
-          fn();
-        } catch (err) {
-          // A throwing escalation/idle callback must never crash the router.
-          console.error(`[router] timer callback threw: ${errMessage(err)}`);
-        }
-      }, ms);
-      // Escalation and idle timers must not keep the process alive on their own.
-      t.unref();
-      return { cancel: () => clearTimeout(t) };
-    },
-    clearTimer: (handle) => handle.cancel(),
-    now: () => Date.now(),
-    sleep,
-    pidStore,
-    writeHubConfig: writeWorktreeHubConfig,
-    getPort: () => getPort(),
-    resolveWorktree,
-    resolveBoxEntries,
-    sourceToken: backendSourceToken,
-  };
-}
-
-// --- HTTP proxy --------------------------------------------------------
-//
-// The proxy + its retry/body-replay machinery is a REQUEST-level concern, kept
-// deliberately OUT of the lifecycle state machine (bin/docs/router-protocol.md,
-// "Fifth candidate that stays OUT of the state machine"). It touches the core
-// only through the `ensureRunning` handshake every request performs.
-
-const proxy = httpProxy.createProxyServer({
-  ws: true,
-  changeOrigin: true,
-});
-
-/**
- * Socket errors that mean "the peer went away", not "the router is broken".
- * A client abandoning a request is routine during a worktree cold start, and a
- * dev router must not die of it — these are logged-and-ignored everywhere they
- * surface, including the process-level uncaughtException backstop.
- */
-function isBenignSocketError(err: NodeJS.ErrnoException | undefined): boolean {
-  if (!err) return false;
-  return err.code === "ECONNRESET" || err.code === "EPIPE" || err.code === "ECONNABORTED";
-}
-
-proxy.on("error", (err: Error, _req, res) => {
-  log(`proxy error: ${err.message}`);
-  if (res && "writeHead" in res && !(res as http.ServerResponse).headersSent) {
-    const r = res as http.ServerResponse;
-    r.writeHead(502, { "content-type": "text/plain" });
-    r.end(`Bad gateway: ${err.message}\n`);
-  } else if (res) {
-    try {
-      (res as http.ServerResponse | Socket).end();
-    } catch {
-      /* gone */
-    }
-  }
-});
-
-/**
- * The `/<worktree>/<box>` box slug of a proxied request, or null when the path
- * has no box segment (`/<w>/`, `/<w>/api/...`, `/<w>/@vite/...`). Used only to
- * scope the Set-Cookie Path rewrite; the rewrite's own exact-`/<slug>` match is
- * the real guard, so a non-box second segment here is harmless (it never equals
- * a box cookie's Path).
- */
-function boxSlugOf(reqPath: string): string | null {
-  const m = reqPath.match(/^\/[^/?#]+\/([^/?#]+)(?:[/?#]|$)/);
-  return m ? m[1]! : null;
-}
-
-// The box child sets `cb_mobile` with `Path=/<slug>` (it only knows its slug);
-// behind the router the browser path is `/<worktree>/<slug>/…`, so the cookie is
-// dropped on reload + the tRPC WebSocket unless the router rewrites its Path.
-// `proxyRes` fires BEFORE http-proxy-3's writeHeaders pass copies proxyRes.headers
-// onto the client response (web-incoming.ts: emit `proxyRes` → run web-outgoing
-// passes), so mutating `proxyRes.headers["set-cookie"]` here is the correct hook.
-// Shared by the TCP and UDS servers (both proxy through this one instance); the
-// rewrite is a no-op for the CLI's UDS traffic and correct for browser traffic.
-proxy.on("proxyRes", (proxyRes, req) => {
-  const reqPath = req.url ?? "";
-  const worktree = parseWorktreeName(reqPath);
-  const boxSlug = worktree ? boxSlugOf(reqPath) : null;
-  if (!worktree || !boxSlug) return;
-  const rewritten = rewriteMobileCookiePath(proxyRes.headers["set-cookie"], { worktree, boxSlug });
-  if (rewritten !== undefined) proxyRes.headers["set-cookie"] = rewritten;
-});
-
-// Proxying consumes the request's body stream, so a naive retry after
-// ECONNREFUSED re-sends the request with no body — the upstream then waits
-// forever for JSON that never arrives (this wedged chat sends that raced an
-// idle shutdown). Requests with a small known body are buffered up front and
-// each attempt replays the buffer; bodies that are large or of unknown length
-// get exactly one attempt.
-const MAX_REPLAY_BODY_BYTES = 1024 * 1024;
-
-/** Body bytes to buffer for replay, or null when the request isn't replayable. */
-function replayableBodyLength(req: http.IncomingMessage): number | null {
-  if (req.method === "GET" || req.method === "HEAD") return 0;
-  const len = Number(req.headers["content-length"] ?? Number.NaN);
-  return Number.isFinite(len) && len <= MAX_REPLAY_BODY_BYTES ? len : null;
-}
-
-async function readBody(req: http.IncomingMessage): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
-  return Buffer.concat(chunks);
-}
-
-// The spoof wall (expose-dev-router B.2c / finding: strip client `x-cb-*`).
-// The router injects exactly ONE trusted `x-cb-*` header — `x-cb-base-prefix`
-// (via injectBasePrefix). Every other `x-cb-*` (x-cb-authenticated-email,
-// x-cb-hub-secret, x-cb-hub-auth, x-cb-diag, …) is an identity/authorization
-// header the worktree hub or box trusts; a client on the exposed TCP listener
-// must never be able to forge one and have it reach Vite/the hub. So we delete
-// ALL incoming `x-cb-*` at the router edge before proxying (mirrors the hub's
-// own `stripHubHeaders`). `injectBasePrefix` then re-sets the one the router
-// legitimately owns. Defense-in-depth: the hub strips again downstream.
-const CB_HEADER_PREFIX = "x-cb-";
-function stripClientCbHeaders(headers: http.IncomingHttpHeaders): void {
-  for (const key of Object.keys(headers)) {
-    if (key.toLowerCase().startsWith(CB_HEADER_PREFIX)) delete headers[key];
-  }
-}
-
-/** Apply the workstreams app's private hop capability after the spoof wall. */
-export function prepareWorkstreamsAppHeaders(
-  headers: http.IncomingHttpHeaders,
-  capability: string | null,
-): void {
-  stripClientCbHeaders(headers);
-  if (capability !== null) headers[WORKSTREAMS_APP_CAPABILITY_HEADER] = capability;
-}
-
-/** One proxy attempt. Resolves with the proxy error, or undefined on success. */
-function proxyOnce(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  { frontendPort, body }: { frontendPort: number; body: Buffer | null },
-): Promise<(Error & { code?: string }) | undefined> {
-  return new Promise((resolve) => {
-    const target = `http://127.0.0.1:${frontendPort}`;
-    // The proxy callback fires only on error; success is the response closing.
-    res.on("close", () => resolve(undefined));
-    const options = body === null ? { target } : { target, buffer: Readable.from(body) };
-    proxy.web(req, res, options, (err: Error & { code?: string } | undefined) => resolve(err));
-  });
-}
-
-/** The resident app does not cold-start or retry request bodies. */
-function proxyWorkstreamsAppOnce(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  target: WorkstreamsAppTarget,
-): Promise<(Error & { code?: string }) | undefined> {
-  prepareWorkstreamsAppHeaders(req.headers, target.kind === "backend" ? target.capability : null);
-  return new Promise((resolve) => {
-    res.on("close", () => resolve(undefined));
-    proxy.web(req, res, { target: `http://127.0.0.1:${target.port}` }, (error) => resolve(error));
-  });
-}
-
-async function proxyWithRetry(
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
-  name: string,
-  retriesLeft: number,
-  core: RouterCore,
-  mobileBootstrap: MobileBootstrapTarget | null,
-): Promise<void> {
-  const bodyLength = replayableBodyLength(req);
-  const body = bodyLength === null ? null : await readBody(req);
-  // Strip ALL client-supplied `x-cb-*` first (the spoof wall), so a forged
-  // identity/hub-secret header can never reach the worktree. Then inject the one
-  // header the router legitimately owns: `x-cb-base-prefix`, telling the fronted
-  // worktree which path prefix this router strips so its login redirects (and
-  // SPA asset rewrite) can rebuild the full browser path. injectBasePrefix also
-  // strips any client copy of that one header before setting it (Track A).
-  stripClientCbHeaders(req.headers);
-  injectBasePrefix(req.headers, `/${name}`);
-  let bootstrapPending = mobileBootstrap;
-  for (;;) {
-    let handle: WorktreeHandle;
-    try {
-      // Re-resolve every attempt: after a kill/restart race the worktree's
-      // new generation listens on different ports, so retrying the original
-      // target would hammer a dead port. ensureRunning also restarts a
-      // worktree that died between request arrival and proxying — the HTTP
-      // request already established user intent.
-      handle = await core.ensureRunning(name);
-    } catch (err) {
-      if (!res.headersSent) {
-        res.writeHead(httpStatusOf(err) ?? 502, { "content-type": "text/plain" });
-        res.end(`Failed to start worktree ${name}: ${errMessage(err)}\n`);
-      }
-      return;
-    }
-    // A start that was superseded mid-flight (invariant #5) resolves to a
-    // non-ready handle; treat it like a transient upstream and retry, which
-    // re-runs ensureRunning against the fresh generation (or cold-starts one).
-    const ready = readyLifecycle(handle);
-    let err: (Error & { code?: string }) | undefined;
-    if (ready) {
-      if (bootstrapPending) {
-        const target = bootstrapPending;
-        bootstrapPending = null;
-        try {
-          const cookies = await bootstrapMobileSessionCookie({
-            ...target,
-            backendPort: ready.backendPort,
-          });
-          if (!cookies) {
-            res.writeHead(401, { "content-type": "text/plain; charset=utf-8" });
-            res.end("Mobile session bootstrap failed.\n");
-            return;
-          }
-          res.setHeader("set-cookie", cookies);
-        } catch (error) {
-          log(`[${name}] mobile session bootstrap failed: ${errMessage(error)}`);
-          res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
-          res.end("Mobile session bootstrap failed.\n");
-          return;
-        }
-      }
-      err = await proxyOnce(req, res, { frontendPort: ready.frontendPort, body });
-    } else {
-      const notReady: Error & { code?: string } = new Error(`worktree ${name} not ready`);
-      notReady.code = "ECONNREFUSED";
-      err = notReady;
-    }
-    if (!err) return;
-    // ECONNREFUSED: nothing listening (cold port). ECONNRESET/EPIPE: the
-    // process died with the socket mid-handshake (e.g. a kill racing the
-    // request). All three happen before any response, so a buffered body can
-    // be replayed safely; headersSent guards the mid-response variants.
-    const transientCodes = ["ECONNREFUSED", "ECONNRESET", "EPIPE"];
-    const retryable = transientCodes.includes(err.code ?? "") && body !== null && !res.headersSent;
-    if (retryable && retriesLeft > 0) {
-      retriesLeft--;
-      log(`[${name}] upstream not ready, retry (${retriesLeft} left)`);
-      await sleep(600);
-      continue;
-    }
-    if (!res.headersSent) {
-      res.writeHead(502, { "content-type": "text/plain" });
-      res.end(`Upstream unavailable: ${err.message}\n`);
-    } else {
-      try {
-        res.end();
-      } catch {
-        /* already ended */
-      }
-    }
-    return;
-  }
-}
-
-// --- Presentation: index page, status, failed page ---------------------
-
-function parseWorktreeName(reqPath: string): string | null {
-  const m = reqPath.match(/^\/([^/?#]+)(?:[/?#]|$)/);
-  return m ? m[1]! : null;
-}
-
-interface DiscoveredWorktree {
-  name: string;
-  running: boolean;
-  handle?: WorktreeHandle;
-}
-
-async function discoverWorktrees(core: RouterCore): Promise<DiscoveredWorktree[]> {
-  const all = new Map<string, DiscoveredWorktree>();
-  all.set("main", { name: "main", running: false });
-  try {
-    const entries = await fs.readdir(WORKTREES_ROOT, { withFileTypes: true });
-    for (const e of entries) {
-      if (e.isDirectory()) all.set(e.name, { name: e.name, running: false });
-    }
-  } catch {
-    // No worktrees dir yet — fine.
-  }
-  for (const [name, handle] of core.entries()) {
-    const existing = all.get(name) ?? { name, running: false };
-    all.set(name, { ...existing, running: isServing(handle), handle });
-  }
-  return Array.from(all.values()).sort((a, b) =>
-    a.name === "main" ? -1 : b.name === "main" ? 1 : a.name.localeCompare(b.name),
-  );
-}
-
-// Best-effort "+ins −del vs main" for the worktree list. Uses the merge-base so
-// a worktree that hasn't merged a newer main doesn't count main's own commits as
-// deletions; diffs the WORKING TREE (committed + uncommitted) against it, so the
-// number reflects the tree's current state. Null on any error or no changes.
-async function worktreeDiffStat(name: string): Promise<{ ins: number; del: number } | null> {
-  if (name === "main") return null;
-  try {
-    const cwd = worktreeRoot(name);
-    const base = (await execa("git", ["merge-base", "main", "HEAD"], { cwd })).stdout.trim();
-    if (!base) return null;
-    const { stdout } = await execa("git", ["diff", "--shortstat", base], { cwd });
-    const ins = Number(/(\d+) insertion/.exec(stdout)?.[1] ?? "0");
-    const del = Number(/(\d+) deletion/.exec(stdout)?.[1] ?? "0");
-    return ins === 0 && del === 0 ? null : { ins, del };
-  } catch (_e) {
-    return null; // best-effort: a non-git worktree or transient git error → no stat
-  }
-}
-
-async function renderIndex(core: RouterCore): Promise<string> {
-  const list = await discoverWorktrees(core);
-  const diffStats = new Map(
-    await Promise.all(list.map(async (w) => [w.name, await worktreeDiffStat(w.name)] as const)),
-  );
-  const rows = list
-    .map((w) => {
-      const ready = w.handle ? readyLifecycle(w.handle) : null;
-      const status =
-        w.handle && failedLifecycle(w.handle)
-          ? `<span class="badge failed">failed · <a href="/${escapeHtml(w.name)}/">see error</a></span>`
-          : ready
-            ? `<span class="badge running">running · idle ${Math.round((Date.now() - ready.lastActivity) / 1000)}s</span>`
-            : `<span class="badge cold" title="will lazy-start on first request">cold</span>`;
-      const dashLink = `<a href="/__router/dashboard/${escapeHtml(w.name)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)} (starts the worktree if cold)">agent-browser ↗</a>`;
-      const devLink = `<a href="/${escapeHtml(w.name)}/dev/" class="dash" title="agent-built visualizations &amp; markdown doc browser for ${escapeHtml(w.name)} (served from disk, no start)">dev ↗</a>`;
-      const stopForm = w.running
-        ? `<form method="POST" action="/__router/stop/${escapeHtml(w.name)}" class="stopForm">
-           <button type="submit" title="Tell the router to stop ${escapeHtml(w.name)} now">stop</button>
-         </form>`
-        : "";
-      const diff = diffStats.get(w.name) ?? null;
-      const diffCell = diff
-        ? `<span class="diffstat" title="changes vs main (committed + uncommitted, since this tree branched)"><span class="ins">+${diff.ins}</span> <span class="del">−${diff.del}</span></span>`
-        : `<span class="diffstat"></span>`;
-      return `
-      <li>
-        <a href="/${escapeHtml(w.name)}/" class="name">${escapeHtml(w.name)}</a>
-        <span class="statuscell">${status}</span>
-        ${diffCell}
-        <div class="actions">${dashLink}${devLink}${stopForm}</div>
-      </li>`;
-    })
-    .join("");
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>callback-box dev router</title>
-<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
-<style>
-  body { font: 14px/1.5 system-ui, sans-serif; max-width: 900px; margin: 2em auto; padding: 0 1em; color: #222; }
-  h1 { font-size: 1.2em; margin-bottom: 0.2em; }
-  p.sub { color: #666; margin-top: 0; }
-  ul { list-style: none; padding: 0; }
-  li { display: grid; grid-template-columns: max-content max-content 1fr auto; align-items: center; column-gap: 0.9em; padding: 0.5em 0; border-bottom: 1px solid #eee; }
-  a.name { font-weight: 600; text-decoration: none; color: #2255aa; font-family: ui-monospace, Menlo, monospace; white-space: nowrap; }
-  a.name:hover { text-decoration: underline; }
-  .statuscell { white-space: nowrap; }
-  .diffstat { justify-self: end; white-space: nowrap; font-size: 0.8em; font-family: ui-monospace, Menlo, monospace; }
-  .diffstat .ins { color: #2a8a2a; }
-  .diffstat .del { color: #c0392b; }
-  .actions { display: flex; align-items: center; gap: 0.6em; justify-self: end; }
-  .badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 4px; }
-  .badge.running { background: #d8f0d8; color: #2a6b2a; }
-  .badge.cold    { background: #ececec; color: #666; }
-  .badge.failed  { background: #ffe1e1; color: #a22; }
-  .badge.failed a { color: #a22; text-decoration: underline; }
-  .dash { font-size: 0.8em; color: #2255aa; text-decoration: none; padding: 0.15em 0.5em; border: 1px solid #d0deef; border-radius: 4px; background: #f4f8ff; }
-  .dash:hover { background: #e6f0ff; text-decoration: underline; }
-  .stopForm { display: inline-flex; }
-  .stopForm button { font-size: 0.75em; padding: 0.15em 0.6em; background: #fff; border: 1px solid #ddd; border-radius: 4px; color: #666; cursor: pointer; }
-  .stopForm button:hover { background: #fee; border-color: #faa; color: #a22; }
-  .help { margin-top: 2em; padding: 1em; background: #f7f7f7; border-radius: 6px; font-size: 0.9em; }
-  .help h2 { margin: 0 0 0.4em; font-size: 1em; }
-  .help code { background: #fff; padding: 0.1em 0.35em; border-radius: 3px; border: 1px solid #ddd; }
-  footer { margin-top: 1em; font-size: 0.85em; color: #888; }
-  footer a { color: #888; }
-  @media (max-width: 700px) {
-    li { display: flex; flex-wrap: wrap; gap: 0.3em 0.7em; }
-    a.name { white-space: normal; }
-    .diffstat, .actions { justify-self: auto; }
-  }
-</style>
-</head>
-<body>
-<h1>callback-box dev router</h1>
-<p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s. <strong>dev ↗</strong> opens that worktree's visualizations &amp; doc browser (served from disk, no start).</p>
-<p><a href="/workstreams/" class="dash" title="Browse workstreams and the issue queue">workstreams ↗</a></p>
-<ul>${rows}</ul>
-
-<div class="help">
-  <h2>If something looks wedged</h2>
-  <p>
-    Run <code>bin/workstreams panic</code> from a terminal — this kills the
-    router plus every child it knows about, wipes <code>~/.cache/callback-box</code>
-    state, and frees port ${ROUTER_PORT}. Then start fresh with <code>pnpm dev</code>.
-  </p>
-  <p>
-    Per-worktree logs are at <code>~/.cache/callback-box/logs/&lt;name&gt;.log</code>.
-  </p>
-  <h2>If the list is too long</h2>
-  <p>
-    Run <code>bin/workstreams sweep</code> to remove worktrees that are fully
-    merged into main, clean, and have no active <code>claude</code> session —
-    plus any orphan browse/log/pid state left behind by past cleanups.
-    Add <code>--dry-run</code> to preview.
-  </p>
-</div>
-
-<footer>
-  <a href="/__router/status">status JSON</a>
-</footer>
-</body>
-</html>
-`;
-}
-
-/**
- * HTML error page shown when a worktree failed to start. Surfaces the
- * captured error message, the tail of each child's stderr, a link to
- * the per-worktree log, and a retry button that POSTs to
- * `/__router/retry/<name>`. Replaces the previous plain-text 502 so
- * the failure is actually debuggable from the browser.
- */
-function renderFailedPage(name: string, err: CapturedError): string {
-  const logPath = path.join(LOG_DIR, `${name}.log`);
-  const sinceMs = Date.now() - err.at;
-  const viteSection = err.viteOutput.trim()
-    ? `<h2>vite output (last ${err.viteOutput.length} bytes, stdout+stderr interleaved)</h2><pre>${escapeHtml(err.viteOutput)}</pre>`
-    : `<h2>vite output</h2><p class="muted">(empty)</p>`;
-  const fastifySection = err.fastifyOutput.trim()
-    ? `<h2>fastify output (last ${err.fastifyOutput.length} bytes, stdout+stderr interleaved)</h2><pre>${escapeHtml(err.fastifyOutput)}</pre>`
-    : `<h2>fastify output</h2><p class="muted">(empty)</p>`;
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Worktree ${escapeHtml(name)} — failed to start</title>
-<style>
-  body { font: 14px/1.5 system-ui, sans-serif; max-width: 920px; margin: 2em auto; padding: 0 1em; color: #222; }
-  h1 { font-size: 1.2em; margin-bottom: 0.2em; color: #a22; }
-  h2 { font-size: 0.95em; margin: 1.5em 0 0.3em; color: #555; }
-  p.sub { color: #666; margin-top: 0; }
-  p.muted { color: #999; font-style: italic; }
-  .err { margin: 1em 0; padding: 0.8em 1em; background: #fff5f5; border-left: 4px solid #c33; border-radius: 3px; font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; white-space: pre-wrap; }
-  pre { background: #f7f7f7; padding: 0.8em 1em; border-radius: 4px; overflow-x: auto; font-size: 0.8em; line-height: 1.4; max-height: 24em; }
-  form { display: inline; }
-  button { font: 14px/1 system-ui; padding: 0.5em 1em; background: #2255aa; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
-  button:hover { background: #1a4490; }
-  a { color: #2255aa; }
-  .actions { margin: 1.5em 0; display: flex; gap: 0.8em; align-items: center; }
-  .meta { font-size: 0.85em; color: #888; }
-  code { background: #fff; padding: 0.1em 0.35em; border-radius: 3px; border: 1px solid #ddd; }
-</style>
-</head>
-<body>
-<h1>Worktree <code>${escapeHtml(name)}</code> failed to start</h1>
-<p class="sub">Phase: <code>${escapeHtml(err.phase)}</code> · <span class="meta">${Math.round(sinceMs / 1000)}s ago</span></p>
-
-<div class="err">${escapeHtml(err.message)}</div>
-
-<div class="actions">
-  <form method="POST" action="/__router/retry/${escapeHtml(name)}">
-    <button type="submit">Retry startup</button>
-  </form>
-  <a href="/">← back to router index</a>
-</div>
-
-${viteSection}
-${fastifySection}
-
-<h2>Per-worktree log</h2>
-<p class="meta">Full output (both children, all attempts) lives at <code>${escapeHtml(logPath)}</code>.</p>
-
-</body>
-</html>
-`;
-}
-
-export function renderWorkstreamsAppFallback(state: WorkstreamsAppState, logPath: string): string {
-  const detail = state.phase === "failed"
-    ? `<div class="err">${escapeHtml(state.message)}</div>`
-    : `<p>The resident app is currently <strong>${escapeHtml(state.phase)}</strong>.</p>`;
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Workstreams app unavailable</title>
-<style>
-  body { font: 15px/1.5 system-ui, sans-serif; max-width: 52rem; margin: 3rem auto; padding: 0 1rem; color: #222; }
-  h1 { font-size: 1.35rem; }
-  .err { margin: 1rem 0; padding: 0.8rem 1rem; background: #fff5f5; border-left: 4px solid #b43; white-space: pre-wrap; }
-  .actions { display: flex; gap: 1rem; align-items: center; margin: 1.5rem 0; }
-  button { font: inherit; padding: 0.45rem 0.8rem; }
-  code { background: #f3f3f3; padding: 0.1rem 0.3rem; }
-  a { color: #2456a6; }
-</style>
-</head>
-<body>
-<h1>Workstreams app unavailable</h1>
-${detail}
-<p>The dev router is still healthy. App output is in <code>${escapeHtml(logPath)}</code>.</p>
-<p>If the log reports missing dependencies, run <code>pnpm install</code> in the main checkout, then retry. The router itself does not need a restart.</p>
-<div class="actions">
-  <form method="POST" action="/__router/retry/workstreams-app"><button type="submit">Retry app startup</button></form>
-  <a href="/">Router diagnostics</a>
-</div>
-</body>
-</html>`;
-}
-
-// Per-worktree, just like the box apps: /<name>/dev/ serves <name>'s checkout —
-// its tracked dev/ directory (artifacts) and a markdown doc browser over its own
-// .md files. Served straight from disk, so it never cold-starts the worktree.
-function worktreeRoot(name: string): string {
-  return name === "main" ? MAIN_ROOT : path.join(WORKTREES_ROOT, name);
-}
+  AGENT_BROWSER_BIN,
+  BROWSE_DIR,
+  DEV_NO_HUB,
+  IDLE_TIMEOUT_MS,
+  KILL_GRACE_MS,
+  LOG_DIR,
+  MAIN_ROOT,
+  ROUTER_PID_FILE,
+  ROUTER_PORT,
+  ROUTER_SOCK,
+  STATE_DIR,
+  log,
+  parseWorktreeName,
+} from "./router-config.js";
 
 // --- Auth gate: deny handling -----------------------------------------
 
@@ -944,6 +90,19 @@ function loginWorktree(url: string): string {
   return first;
 }
 
+/** The request field `writeDeny` reads. Structural so a unit test can pass a
+ *  plain object instead of casting one to `http.IncomingMessage`. */
+export interface DenyRequest {
+  url?: string | undefined;
+}
+
+/** The response methods `writeDeny` writes through. Structural for the same
+ *  reason; a real `http.ServerResponse` satisfies it. */
+export interface DenyResponse {
+  writeHead(status: number, headers?: Record<string, string>): void;
+  end(chunk?: string): void;
+}
+
 /**
  * Write the response for a denied (non-`trustedLocal`) request. A denied browser
  * NAVIGATION (302 → the prefixed login page, carrying `returnTo`) so the user can
@@ -951,7 +110,10 @@ function loginWorktree(url: string): string {
  * status (401 / 403 / 404). Nothing here cold-starts or serves — the deny is
  * terminal, upstream of all dispatch.
  */
-export function writeDeny(req: http.IncomingMessage, res: http.ServerResponse, decision: RouterAuthDecision & { allow: false }): void {
+export function writeDeny(
+  req: DenyRequest,
+  { res, decision }: { res: DenyResponse; decision: RouterAuthDecision & { allow: false } },
+): void {
   const url = req.url || "/";
   // Self-identify as a GUARDED dev router on denials of our own `/__router/*`
   // control routes (Track C, expose-dev-router.md): a benign marker so
@@ -999,7 +161,8 @@ export interface RouterServerGate {
 
 export function createRouterServer(core: RouterCore, gate: RouterServerGate): http.Server {
   const { authDeps, trustedLocal, workstreamsApp } = gate;
-  const refusedUpgradeLogAt = new Map<string, number>();
+  const ctx: DispatchContext = { core, workstreamsApp };
+  const upgradeState: UpgradeState = { ctx, authDeps, trustedLocal, refusedUpgradeLogAt: new Map() };
 
   // The per-request dispatch. Wrapped below in a `.catch` rejection boundary so
   // NO thrown/rejected error from any path (auth gate, dev-serving, proxy,
@@ -1042,287 +205,11 @@ export function createRouterServer(core: RouterCore, gate: RouterServerGate): ht
       return;
     }
     if (!decision.allow) {
-      writeDeny(req, res, decision);
+      writeDeny(req, { res, decision });
       return;
     }
 
-    if (url === "/__router/status" || url === "/__router/status/") {
-      res.writeHead(200, { "content-type": "application/json" });
-      // Disk-discovery first so cold worktrees (not yet hit by a request) still
-      // appear in the status response — otherwise the JSON looks empty when a
-      // freshly-created worktree exists but hasn't been warmed yet.
-      const discovered = await discoverWorktrees(core);
-      const state: Record<string, unknown> = {};
-      for (const w of discovered) {
-        const handle = core.getHandle(w.name);
-        if (!handle) {
-          state[w.name] = { state: "cold" };
-          continue;
-        }
-        const ready = readyLifecycle(handle);
-        if (ready) {
-          state[w.name] = {
-            state: "ready",
-            frontendPort: ready.frontendPort,
-            backendPort: ready.backendPort,
-            dashboardPort: ready.dashboardPort,
-            dashboardUrl: ready.dashboardUrl,
-            vitePid: ready.vitePid,
-            fastifyPid: ready.fastifyPid,
-            socketDir: ready.socketDir,
-            profileDir: ready.profileDir,
-            startedAt: handle.startedAt,
-            lastActivity: ready.lastActivity,
-            idleMs: Date.now() - ready.lastActivity,
-            // Non-null means this generation is executing source that has since
-            // changed on disk. Reported, never acted on — see checkSourceFreshness.
-            staleSince: ready.staleSince,
-          };
-        } else {
-          // starting / failed — the only other in-map phases (stopping handles
-          // are unlinked before the transition). Ports/pids aren't meaningful yet.
-          state[w.name] = { state: handle.lifecycle.phase, startedAt: handle.startedAt };
-        }
-      }
-      res.end(
-        JSON.stringify(
-          {
-            routerPort: ROUTER_PORT,
-            routerPid: process.pid,
-            idleTimeoutMs: IDLE_TIMEOUT_MS,
-            workstreamsApp: workstreamsApp?.supervisor.state() ?? { phase: "disabled" },
-            worktrees: state,
-          },
-          null,
-          2,
-        ),
-      );
-      return;
-    }
-
-    if (url === "/__router/retry/workstreams-app" || url === "/__router/retry/workstreams-app/") {
-      if (req.method !== "POST") {
-        res.writeHead(405, { "content-type": "text/plain", allow: "POST" });
-        res.end("retry requires POST\n");
-        return;
-      }
-      if (!workstreamsApp) {
-        res.writeHead(404, { "content-type": "text/plain" });
-        res.end("workstreams app is disabled\n");
-        return;
-      }
-      await workstreamsApp.supervisor.retry();
-      res.writeHead(303, { location: "/workstreams/" });
-      res.end();
-      return;
-    }
-
-    if (url.startsWith("/__router/retry/")) {
-      const name = url.slice("/__router/retry/".length).replace(/\/$/, "");
-      if (!name) {
-        res.writeHead(400);
-        res.end("missing worktree name");
-        return;
-      }
-      // POST-only — a GET probe (e.g. a curl with no -X) shouldn't have a side
-      // effect. The failure page's retry button POSTs.
-      if (req.method !== "POST") {
-        res.writeHead(405, { "content-type": "text/plain", allow: "POST" });
-        res.end("retry requires POST\n");
-        return;
-      }
-      // Clear any failed-state entry so ensureRunning will spawn a fresh attempt
-      // rather than re-throwing the cached error.
-      core.clearFailed(name);
-      res.writeHead(303, { location: `/${name}/` });
-      res.end();
-      return;
-    }
-
-    if (url.startsWith("/__router/stop/")) {
-      const name = url.slice("/__router/stop/".length).replace(/\/$/, "");
-      if (!name) {
-        res.writeHead(400);
-        res.end("missing worktree name");
-        return;
-      }
-      // POST-only — same reasoning as retry: a GET (curl without -X, a link
-      // prefetcher, a crawler) must not kill a running worktree.
-      if (req.method !== "POST") {
-        res.writeHead(405, { "content-type": "text/plain", allow: "POST" });
-        res.end("stop requires POST\n");
-        return;
-      }
-      await core.stopWorktree(name);
-      const wantsHtml = (req.headers.accept ?? "").includes("text/html");
-      if (wantsHtml) {
-        res.writeHead(303, { location: "/" });
-        res.end();
-        return;
-      }
-      res.writeHead(200, { "content-type": "text/plain" });
-      res.end(`stopped ${name}\n`);
-      return;
-    }
-
-    if (url.startsWith("/__router/dashboard/")) {
-      const name = url.slice("/__router/dashboard/".length).replace(/\/$/, "");
-      if (!name) {
-        res.writeHead(400);
-        res.end("missing worktree name");
-        return;
-      }
-      let handle: WorktreeHandle;
-      try {
-        handle = await core.ensureRunning(name);
-      } catch (err) {
-        res.writeHead(httpStatusOf(err) ?? 502, { "content-type": "text/plain" });
-        res.end(`Failed to start worktree ${name}: ${errMessage(err)}\n`);
-        return;
-      }
-      const dashboardUrl = readyLifecycle(handle)?.dashboardUrl ?? null;
-      if (!dashboardUrl) {
-        res.writeHead(502, { "content-type": "text/plain" });
-        res.end(
-          `Worktree ${name} is running but its dashboard failed to start. See logs at ~/.cache/callback-box/logs/${name}.log\n`,
-        );
-        return;
-      }
-      res.writeHead(302, { location: dashboardUrl });
-      res.end();
-      return;
-    }
-
-    if (url === "/" || url === "") {
-      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      res.end(await renderIndex(core));
-      return;
-    }
-
-    const requestPathname = url.split("?")[0] ?? url;
-    if (requestPathname === "/workstreams" || requestPathname.startsWith("/workstreams/")) {
-      if (requestPathname === "/workstreams") {
-        res.writeHead(301, { location: `/workstreams/${url.includes("?") ? url.slice(url.indexOf("?")) : ""}` });
-        res.end();
-        return;
-      }
-      if (workstreamsApp) {
-        const target = workstreamsApp.supervisor.targetFor(url);
-        if (!target) {
-          const appState = workstreamsApp.supervisor.state();
-          const wantsJson = requestPathname.startsWith("/workstreams/api/") ||
-            requestPathname.startsWith("/workstreams/__internal/");
-          res.writeHead(503, {
-            "content-type": wantsJson ? "application/json; charset=utf-8" : "text/html; charset=utf-8",
-            "retry-after": "2",
-          });
-          if (req.method === "HEAD") {
-            res.end();
-          } else if (wantsJson) {
-            res.end(`${JSON.stringify({ error: "workstreams-app-unavailable", phase: appState.phase })}\n`);
-          } else {
-            res.end(renderWorkstreamsAppFallback(appState, workstreamsApp.displayLogPath));
-          }
-          return;
-        }
-        const proxyError = await proxyWorkstreamsAppOnce(req, res, target);
-        if (proxyError && !res.headersSent) {
-          res.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
-          res.end(`Workstreams app proxy failed: ${proxyError.message}\n`);
-        }
-        return;
-      }
-      res.writeHead(503, {
-        "content-type": "text/plain; charset=utf-8",
-        "retry-after": "2",
-      });
-      res.end("Workstreams app supervisor is unavailable. Restart the router.\n");
-      return;
-    }
-
-    if (url === "/favicon.png" || url === "/favicon.ico") {
-      try {
-        const buf = await fs.readFile(path.join(REPO_ROOT, "bin", "assets", "favicon.png"));
-        res.writeHead(200, { "content-type": "image/png", "cache-control": "public, max-age=86400" });
-        res.end(buf);
-      } catch (err) {
-        res.writeHead(404, { "content-type": "text/plain" });
-        res.end(`favicon not found: ${errMessage(err)}\n`);
-      }
-      return;
-    }
-
-    // Bare /dev → the main checkout's dev space (it's per-worktree; default main).
-    if (url.split("?")[0] === "/dev" || url.split("?")[0] === "/dev/") {
-      res.writeHead(301, { location: "/main/dev/" });
-      res.end();
-      return;
-    }
-
-    const name = parseWorktreeName(url);
-    if (!name) {
-      res.writeHead(404, { "content-type": "text/plain" });
-      res.end("no worktree in path\n");
-      return;
-    }
-
-    if (url === `/${name}`) {
-      res.writeHead(301, { location: `/${name}/` });
-      res.end();
-      return;
-    }
-
-    // /<name>/dev/... — the worktree's dev space (artifacts + doc browser),
-    // served straight from disk so it never cold-starts the worktree.
-    const afterName = url.slice(`/${name}`.length);
-    const issuesRedirect = legacyIssuesRedirect(afterName);
-    if (issuesRedirect) {
-      res.writeHead(301, { location: issuesRedirect });
-      res.end();
-      return;
-    }
-    if (afterName.split("?")[0] === "/dev") {
-      res.writeHead(301, { location: `/${name}/dev/` });
-      res.end();
-      return;
-    }
-    if (afterName.startsWith("/dev/")) {
-      await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name) });
-      return;
-    }
-
-    // /<name>/site/... — the generated static site (site/dist/), served from
-    // disk so it never cold-starts the worktree.
-    if (afterName.split("?")[0] === "/site") {
-      res.writeHead(301, { location: `/${name}/site/` });
-      res.end();
-      return;
-    }
-    if (afterName.startsWith("/site/")) {
-      await serveSite({ name, rest: afterName, res, repoRoot: worktreeRoot(name) });
-      return;
-    }
-
-    try {
-      await core.ensureRunning(name);
-    } catch (err) {
-      const status = httpStatusOf(err) ?? 502;
-      // If we have a captured failure for this worktree, render the rich HTML
-      // error page (stderr tail + retry button). Otherwise fall back to plain
-      // text (e.g. 404 for unknown worktree name).
-      const failedHandle = core.getHandle(name);
-      const failed = failedHandle ? failedLifecycle(failedHandle) : null;
-      if (failed) {
-        res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
-        res.end(renderFailedPage(name, failed.lastError));
-        return;
-      }
-      res.writeHead(status, { "content-type": "text/plain" });
-      res.end(`Failed to start worktree ${name}: ${errMessage(err)}\n`);
-      return;
-    }
-
-    await proxyWithRetry(req, res, name, 5, core, mobileBootstrapTarget(req, decision));
+    await dispatchRouterRequest(ctx, { req, res, decision });
   };
 
   const server = http.createServer((req, res) => {
@@ -1334,101 +221,20 @@ export function createRouterServer(core: RouterCore, gate: RouterServerGate): ht
       } else {
         try {
           res.end();
-        } catch {
+        } catch (_e) {
           /* response already torn down */
         }
       }
     });
   });
 
-  // WebSocket upgrades never cold-start a worktree. Clients auto-reconnect on
-  // timers (tRPC's wsLink retries forever, first attempt with zero delay), so
-  // treating an upgrade as user activity would resurrect an idle-shutdown
-  // worktree from any abandoned background tab, forever. Refusal is cheap for
-  // the client (it just backs off and retries); the worktree comes back when a
-  // real HTTP request arrives — a page load, an API call, or Vite's HMR ping.
-  server.on("upgrade", async (req, socket, head) => {
-    const reqUrl = req.url || "/";
-    // WS must authenticate too (2nd-review 2.7): the same chokepoint runs on the
-    // upgrade. A denied upgrade destroys the socket. Over TCP a browser's cookie
-    // rides the upgrade headers; over UDS trustedLocal bypasses the resolvers.
-    let decision: RouterAuthDecision;
-    try {
-      decision = await authorizeRouterRequest(
-        { trustedLocal, method: req.method || "GET", url: reqUrl, headers: req.headers },
-        authDeps,
-      );
-    } catch (err) {
-      log(`auth gate error on WS upgrade for ${reqUrl}: ${errMessage(err)}`);
+  // One rest parameter rather than (req, socket, head): the emitter fixes the
+  // arity, and the house limit is two positional parameters.
+  server.on("upgrade", (...upgradeArgs: [http.IncomingMessage, Duplex, Buffer]) => {
+    const [req, socket, head] = upgradeArgs;
+    void handleRouterUpgrade(upgradeState, { req, socket, head }).catch((err: unknown) => {
+      log(`unhandled upgrade error for ${req.url ?? "?"}: ${errMessage(err)}`);
       socket.destroy();
-      return;
-    }
-    if (!decision.allow) {
-      socket.destroy();
-      return;
-    }
-    const upgradePathname = reqUrl.split("?")[0] ?? reqUrl;
-    if (workstreamsApp && upgradePathname.startsWith("/workstreams/")) {
-      const target = workstreamsApp.supervisor.targetFor(reqUrl);
-      if (!target || target.kind !== "frontend") {
-        socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
-        return;
-      }
-      prepareWorkstreamsAppHeaders(req.headers, null);
-      proxy.ws(req, socket, head, { target: `http://127.0.0.1:${target.port}` }, (error: Error | undefined) => {
-        if (error) {
-          log(`[workstreams-app] ws proxy error: ${error.message}`);
-          socket.destroy();
-        }
-      });
-      return;
-    }
-    // The spoof wall on the upgrade path too: strip client `x-cb-*` before the
-    // socket is proxied to Vite/the hub (expose-dev-router B.2c). The WS carries
-    // the browser session on TCP; it needs no router-injected `x-cb-*`, so this
-    // is a pure strip with no re-injection.
-    stripClientCbHeaders(req.headers);
-    const name = parseWorktreeName(reqUrl);
-    if (!name) {
-      socket.destroy();
-      return;
-    }
-    let handle = core.getHandle(name);
-    const inFlight = handle ? startPromiseOf(handle) : null;
-    if (inFlight) {
-      // A cold start is already underway (triggered by an HTTP request) — let
-      // the socket wait for it rather than refusing and forcing a retry cycle.
-      try {
-        handle = await inFlight;
-      } catch (err) {
-        log(`[${name}] upgrade failed: ${errMessage(err)}`);
-        socket.destroy();
-        return;
-      }
-    }
-    const ready = handle ? readyLifecycle(handle) : null;
-    if (!handle || !ready) {
-      if (ROUTER_DEBUG) {
-        const last = refusedUpgradeLogAt.get(name) ?? 0;
-        if (Date.now() - last > 60_000) {
-          refusedUpgradeLogAt.set(name, Date.now());
-          log(`[${name}] refusing WS upgrade while not running (logged at most once/min)`);
-        }
-      }
-      socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
-      return;
-    }
-    core.touch(handle);
-    const target = `http://127.0.0.1:${ready.frontendPort}`;
-    proxy.ws(req, socket, head, { target }, (err: Error | undefined) => {
-      if (err) {
-        log(`[${name}] ws proxy error: ${err.message}`);
-        try {
-          socket.destroy();
-        } catch {
-          /* already gone */
-        }
-      }
     });
   });
 
@@ -1437,17 +243,25 @@ export function createRouterServer(core: RouterCore, gate: RouterServerGate): ht
 
 // --- Router PID file ---------------------------------------------------
 
+/** A live pid in the router pidfile: a second router owns this state dir. */
+class RouterAlreadyRunningError extends Error {
+  constructor(readonly pid: number) {
+    super(`Another router is already running (pid ${pid}). Run \`bin/workstreams panic\` to clear.`);
+    this.name = "RouterAlreadyRunningError";
+  }
+}
+
 async function acquireRouterPidFile(): Promise<void> {
   await fs.mkdir(STATE_DIR, { recursive: true });
   try {
     const existing = await fs.readFile(ROUTER_PID_FILE, "utf8");
     const pid = Number(existing.trim());
     if (pid && pidAlive(pid)) {
-      throw new Error(`Another router is already running (pid ${pid}). Run \`bin/workstreams panic\` to clear.`);
+      throw new RouterAlreadyRunningError(pid);
     }
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
-      if (e instanceof Error && e.message.startsWith("Another router")) throw e;
+      if (e instanceof RouterAlreadyRunningError) throw e;
       // Otherwise the file is malformed; overwrite it.
     }
   }
@@ -1476,15 +290,11 @@ async function listenUnixSocket(server: http.Server, sockPath: string): Promise<
   await fs.chmod(sockPath, 0o600);
 }
 
-// --- Logging + terminal tab title -------------------------------------
-
-function log(msg: string): void {
-  console.log(`[router ${new Date().toISOString()}] ${msg}`);
-}
+// --- Terminal tab title -----------------------------------------------
 
 function setTabTitle(title: string): void {
   if (!process.stdout.isTTY) return;
-  process.stdout.write(`\x1b]0;${title}\x07`);
+  process.stdout.write(`\u001B]0;${title}\u0007`);
 }
 
 function updateTabTitle(core: RouterCore): void {
@@ -1652,17 +462,20 @@ async function main(): Promise<void> {
   }
   await listenUnixSocket(localServer, ROUTER_SOCK);
   log(`trusted-local socket at ${ROUTER_SOCK} (mode 0600; unauthenticated, local CLI)`);
-  listenLoopback(server, ROUTER_PORT, () => {
-    log(`listening on http://localhost:${ROUTER_PORT}  (pid ${process.pid})`);
-    log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout (root: ${MAIN_ROOT})`);
-    log(`idle timeout: ${IDLE_TIMEOUT_MS}ms`);
-    updateTabTitle(core);
+  listenLoopback(server, {
+    port: ROUTER_PORT,
+    onListening: () => {
+      log(`listening on http://localhost:${ROUTER_PORT}  (pid ${process.pid})`);
+      log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout (root: ${MAIN_ROOT})`);
+      log(`idle timeout: ${IDLE_TIMEOUT_MS}ms`);
+      updateTabTitle(core);
+    },
   });
 }
 
 // Run the boot sequence only when executed directly (importing this module for
 // its helpers must not bind ports or install signal handlers).
-const invokedDirectly = process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const invokedDirectly = process.argv[1] !== undefined && path.resolve(process.argv[1]) === import.meta.filename;
 if (invokedDirectly) {
   main().catch((err: unknown) => {
     console.error(errMessage(err));

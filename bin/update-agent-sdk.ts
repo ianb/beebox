@@ -30,6 +30,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { z } from "zod";
 
 const PACKAGE = "@anthropic-ai/claude-agent-sdk";
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
@@ -47,12 +48,15 @@ function run(cmd: string, { args, cwd }: { args: string[]; cwd: string }): strin
   return execFileSync(cmd, args, { encoding: "utf-8", cwd, env });
 }
 
+/** `npm view <pkg> time --json`: an ISO timestamp per version, plus `created`/`modified`. */
+const PublishTimes = z.record(z.string(), z.string());
+
 /** Publish timestamps per version, from the npm registry. */
 function publishTimes(): Map<string, Date> {
   // cwd is the OS tmpdir, NOT the repo: the repo's .npmrc holds pnpm-only
   // keys (node-linker, minimum-release-age) that npm warns about on every
   // read. npm view needs no project context anyway.
-  const raw = JSON.parse(run("npm", { args: ["view", PACKAGE, "time", "--json"], cwd: os.tmpdir() })) as Record<string, string>;
+  const raw = PublishTimes.parse(JSON.parse(run("npm", { args: ["view", PACKAGE, "time", "--json"], cwd: os.tmpdir() })));
   const times = new Map<string, Date>();
   for (const [version, iso] of Object.entries(raw)) {
     if (version === "created" || version === "modified") continue;
@@ -75,7 +79,7 @@ const SDK_MINIMUM_RELEASE_AGE_MINUTES = 2 * 24 * 60;
 
 function minimumReleaseAgeMinutes(): number {
   const npmrc = fs.readFileSync(path.join(REPO_ROOT, ".npmrc"), "utf-8");
-  if (!/^minimum-release-age-exclude\[\]=@anthropic-ai\/claude-agent-sdk\*\s*$/m.test(npmrc)) {
+  if (!/^minimum-release-age-exclude\[]=@anthropic-ai\/claude-agent-sdk\*\s*$/m.test(npmrc)) {
     console.error("update-agent-sdk: root .npmrc is missing `minimum-release-age-exclude[]=@anthropic-ai/claude-agent-sdk*` — the global gate would block the fast lane. Restore it.");
     process.exit(2);
   }
@@ -109,8 +113,7 @@ function newestMatureVersion(): string {
 
 function installedVersion(): string {
   const pkgPath = path.join(REPO_ROOT, "node_modules", PACKAGE, "package.json");
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as { version: string };
-  return pkg.version;
+  return z.object({ version: z.string() }).parse(JSON.parse(fs.readFileSync(pkgPath, "utf-8"))).version;
 }
 
 /** Version of the platform's bundled Claude Code binary, or null if not found. */

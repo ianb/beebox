@@ -140,6 +140,17 @@ if echo "$staged" | grep -q '^workstreams-app/'; then
   run_in workstreams-app pnpm typecheck
 fi
 
+# bin/ is not a workspace package, so none of the branches above reach it — and
+# the root typecheck alone used to be the whole gate on the dev router, the
+# worktree tooling and the test selector. The root eslint config lints it now;
+# this is what runs that at commit time
+# (issues/code-quality/2026-08-26-bin-typescript-is-not-linted.md). Cached, so a
+# commit that changed one file re-lints one file.
+if echo "$staged" | grep -qE '^bin/.*\.(ts|tsx|js|jsx|cjs)$'; then
+  echo "[pre-commit] .: pnpm lint:bin"
+  (cd "$REPO_DIR" && pnpm --silent lint:bin)
+fi
+
 # Committed exhibit apps (dev/apps/) are deliberately outside every package's
 # lint — casual by design — but they merge to main and live forever, so staged
 # app SOURCE gets one bare this-will-build check: tsc with the same settings

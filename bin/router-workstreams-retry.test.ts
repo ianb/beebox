@@ -18,6 +18,33 @@ const unusedAuthDeps: RouterAuthDeps = {
   hasBrowseKey: () => false,
 };
 
+/** Thrown if the retry route reaches the worktree lifecycle core, which it must not. */
+class UnexpectedRouterCoreCallError extends Error {
+  constructor(readonly method: string) {
+    super(`the workstreams retry route unexpectedly called RouterCore.${method}`);
+    this.name = "UnexpectedRouterCoreCallError";
+  }
+}
+
+/** A RouterCore member that fails the test loudly if the route ever calls it. */
+function tripwire(method: string): () => never {
+  return () => {
+    throw new UnexpectedRouterCoreCallError(method);
+  };
+}
+
+// This route does not consult the worktree lifecycle core, so every member is a
+// tripwire rather than a stub with behavior.
+const unusedCore: RouterCore = {
+  ensureRunning: tripwire("ensureRunning"),
+  stopWorktree: tripwire("stopWorktree"),
+  touch: tripwire("touch"),
+  getHandle: tripwire("getHandle"),
+  entries: tripwire("entries"),
+  clearFailed: tripwire("clearFailed"),
+  stopAllChildren: tripwire("stopAllChildren"),
+};
+
 test("workstreams retry redirects only after startup finishes", async () => {
   let finishRetry: (() => void) | undefined;
   const retryFinished = new Promise<void>((resolve) => { finishRetry = resolve; });
@@ -31,8 +58,7 @@ test("workstreams retry redirects only after startup finishes", async () => {
     targetFor: () => null,
     shutdown: async () => {},
   };
-  // This route does not consult the worktree lifecycle core.
-  const server = createRouterServer({} as RouterCore, {
+  const server = createRouterServer(unusedCore, {
     authDeps: unusedAuthDeps,
     trustedLocal: true,
     workstreamsApp: { supervisor, displayLogPath: "fixture.log" },

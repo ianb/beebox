@@ -47,7 +47,8 @@ export function parseCarefulList(text: string): string[] {
  * that quietly stops testing what it claims to, which is the failure mode the
  * whole list exists to prevent.
  */
-export function readCarefulList(packageRoot: string = PACKAGE_ROOT): string[] {
+export function readCarefulList(root?: string): string[] {
+  const packageRoot = root ?? PACKAGE_ROOT;
   const path = join(packageRoot, CAREFUL_LIST);
   if (!existsSync(path)) return [];
   const paths = parseCarefulList(readFileSync(path, "utf-8"));
@@ -81,17 +82,21 @@ export function taprcPatterns(packageRoot: string): TaprcPatterns {
   };
   if (!existsSync(path)) return fallback;
   const parsed: unknown = parse(readFileSync(path, "utf-8"));
-  if (typeof parsed !== "object" || parsed === null) return fallback;
-  const config = parsed as { include?: unknown; exclude?: unknown };
+  if (!isRecord(parsed)) return fallback;
   return {
-    include: stringList(config.include) ?? fallback.include,
-    exclude: stringList(config.exclude) ?? fallback.exclude,
+    include: stringList(parsed.include) ?? fallback.include,
+    exclude: stringList(parsed.exclude) ?? fallback.exclude,
   };
+}
+
+/** The parse boundary: YAML hands back `unknown`, and `.taprc` may be anything. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function stringList(value: unknown): string[] | null {
   if (!Array.isArray(value)) return null;
-  return value.every((v) => typeof v === "string") ? (value as string[]) : null;
+  return value.every((v): v is string => typeof v === "string") ? value : null;
 }
 
 /** Every test file `.taprc` includes and does not exclude, package-relative. */
@@ -107,7 +112,7 @@ export function taprcTestFiles(packageRoot: string): string[] {
       if (!excluded.has(rel)) found.add(rel);
     }
   }
-  return [...found].sort();
+  return [...found].toSorted();
 }
 
 // ── argv ────────────────────────────────────────────────────────────────────
@@ -186,6 +191,6 @@ export function tierCommand(input: {
 }
 
 /** The careful list in the graph's repo-relative vocabulary, for the selector. */
-export function carefulExclusions(packageRoot: string = PACKAGE_ROOT): string[] {
-  return readCarefulList(packageRoot).map((rel) => `callback-box/${rel}`);
+export function carefulExclusions(packageRoot?: string): string[] {
+  return readCarefulList(packageRoot ?? PACKAGE_ROOT).map((rel) => `callback-box/${rel}`);
 }

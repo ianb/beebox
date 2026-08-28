@@ -24,7 +24,6 @@ import { execa } from "execa";
 import { z } from "zod";
 
 import {
-  ScheduleError,
   type Handoff,
   type LoadedSchedule,
   type Outcome,
@@ -34,6 +33,10 @@ import {
 import { logPath, readResult, tailLog, updateScheduleState } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
+import { errnoCode } from "../../callback-box/src/lib/error-guards.js";
+import { NewlineInToolPatternError, NoWorkstreamToStartError } from "./schedules-errors.js";
+
+
 
 /** How many log lines an alert carries as details. */
 const LOG_TAIL_LINES = 40;
@@ -114,7 +117,8 @@ export async function agentState(deps: RunnerDeps, worktreePath: string): Promis
   let payload: unknown;
   try {
     payload = JSON.parse(result.stdout);
-  } catch {
+  } catch (_e) {
+    /* ignore: non-JSON stdout from the guard reads as "unknown" — fail closed */
     return "unknown";
   }
   const parsed = livenessSchema.safeParse(payload);
@@ -144,7 +148,7 @@ async function claudeTranscriptExists(sessionId: string): Promise<boolean> {
   try {
     entries = await fs.readdir(projects);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if (errnoCode(e) === "ENOENT") return false;
     throw e;
   }
   for (const entry of entries) {
@@ -152,7 +156,8 @@ async function claudeTranscriptExists(sessionId: string): Promise<boolean> {
       await fs.stat(path.join(projects, entry, `${sessionId}.jsonl`));
       return true;
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT" && (e as NodeJS.ErrnoException).code !== "ENOTDIR") throw e;
+      const code = errnoCode(e);
+      if (code !== "ENOENT" && code !== "ENOTDIR") throw e;
     }
   }
   return false;
@@ -189,7 +194,7 @@ function listEnv(values: string[] | undefined): string {
     // The argv comes back from bash one element per line, so a tool pattern
     // containing a newline would silently become two arguments — refuse it
     // rather than launch an agent with a sandbox nobody wrote.
-    if (value.includes("\n")) throw new ScheduleError(`tool pattern '${value}' contains a newline`);
+    if (value.includes("\n")) throw new NewlineInToolPatternError(value);
   }
   return values.join("\n");
 }
@@ -248,7 +253,7 @@ export interface StartRequest {
 export async function startWorkstream(deps: RunnerDeps, request: StartRequest): Promise<WorkstreamOutcome> {
   const { schedule, runId } = request;
   const workstream = schedule.config.workstream;
-  if (workstream === null) throw new ScheduleError(`${schedule.name} has no workstream to start`);
+  if (workstream === null) throw new NoWorkstreamToStartError(schedule.name);
   const logFile = logPath(deps.storeRoot, { name: schedule.name, runId });
   const alert = async (input: { title: string; message: string; details: string | null; priority: "important" | "normal" }): Promise<void> => {
     await raiseAlert(deps, { workstream: schedule.name, runId, ...input });
@@ -409,7 +414,7 @@ async function isExecutable(filePath: string): Promise<boolean> {
     const stat = await fs.stat(filePath);
     return stat.isFile() && (stat.mode & 0o111) !== 0;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if (errnoCode(e) === "ENOENT") return false;
     throw e;
   }
 }

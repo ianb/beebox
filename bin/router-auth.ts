@@ -229,6 +229,73 @@ function classifyRouterControl(pathname: string): RouterRoute {
   return { kind: "unknown" };
 }
 
+/** The mutating `/workstreams/*` POSTs — everything else there is a read. */
+function isWorkstreamsMutation(pathname: string): boolean {
+  return (
+    pathname.startsWith("/workstreams/action/") ||
+    pathname.startsWith("/workstreams/issues/action/") ||
+    pathname === "/workstreams/api/trpc" ||
+    pathname.startsWith("/workstreams/api/trpc/")
+  );
+}
+
+function classifyWorkstreams({ method, pathname }: { method: string; pathname: string }): RouterRoute {
+  // Reads (the general browser, issue views, tRPC queries) are `dev-read`;
+  // the mutating action/tRPC POSTs below stay `control` (owner + CSRF).
+  if (method === "GET" || method === "HEAD") return { kind: "dev-read" };
+  if (method === "POST" && isWorkstreamsMutation(pathname)) return { kind: "control" };
+  return { kind: "unknown" };
+}
+
+/**
+ * Router infra served at the bare root, above any worktree segment. Returns
+ * `null` when the path is not root-level, so classification continues into the
+ * per-worktree space.
+ */
+function classifyRouterRoot({ method, pathname }: { method: string; pathname: string }): RouterRoute | null {
+  // The pre-auth iOS pairing bootstrap. Router-scoped: the router sees the
+  // request un-stripped, one segment deeper than the hub/box servers do — see
+  // isRouterPairingRedeemUrl. The ticket is the credential.
+  if (method === "POST" && isRouterPairingRedeemUrl(pathname)) return { kind: "unauth-allowlist" };
+
+  // Router infra at the bare root (never under a worktree).
+  if (pathname === "/" || pathname === "") return { kind: "control-read", json: false };
+  if (pathname === "/favicon.png" || pathname === "/favicon.ico") return { kind: "unauth-allowlist" };
+  if (pathname === "/__router" || pathname.startsWith("/__router/")) return classifyRouterControl(pathname);
+  if (pathname === "/workstreams" || pathname.startsWith("/workstreams/")) {
+    return classifyWorkstreams({ method, pathname });
+  }
+  // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the dev space. A read gets
+  // the same treatment as the `/<w>/dev/...` it redirects to; any other method
+  // stays owner-only (the handler has no write path, so this grants nothing new).
+  if (pathname === "/dev" || pathname === "/dev/") {
+    return isRead(method) ? { kind: "dev-read" } : { kind: "control-read", json: false };
+  }
+  return null;
+}
+
+/**
+ * Classify the surfaces under `/<w>/…` that are recognized from `rest` alone —
+ * auth, public static assets, and the dev space. Returns `null` when the path
+ * needs the second segment (or the worktree name) to classify, which the caller
+ * handles.
+ */
+function classifyWorktreePrefix({ method, rest }: { method: string; rest: string }): RouterRoute | null {
+  // `/<w>/auth/*` — login/setup HTML + the auth API (login, logout, me, methods,
+  // callback). Method-agnostic: login is a POST, `/auth/me` a GET.
+  if (rest === "/auth" || rest.startsWith("/auth/")) return { kind: "unauth-allowlist" };
+
+  // `/<w>/{assets,icons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
+  if (method === "GET" && isPublicFrontendAssetPath(rest)) return { kind: "unauth-allowlist" };
+
+  // `/<w>/dev` / `/<w>/dev/...` — the worktree's dev space, served from disk.
+  if (rest === "/dev" || rest.startsWith("/dev/")) {
+    return isRead(method) ? { kind: "dev-read" } : { kind: "control-read", json: false };
+  }
+
+  return null;
+}
+
 /**
  * Classify a request into a route class, PURELY from its method and url. Does
  * not consult any box map or session — it only reads the URL shape (chunk 2's
@@ -248,51 +315,15 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
   if (url.includes("#")) return { kind: "unknown" };
   const pathname = pathnameOf(url);
 
-  // The pre-auth iOS pairing bootstrap. Router-scoped: the router sees the
-  // request un-stripped, one segment deeper than the hub/box servers do — see
-  // isRouterPairingRedeemUrl. The ticket is the credential.
-  if (method === "POST" && isRouterPairingRedeemUrl(pathname)) return { kind: "unauth-allowlist" };
-
-  // Router infra at the bare root (never under a worktree).
-  if (pathname === "/" || pathname === "") return { kind: "control-read", json: false };
-  if (pathname === "/favicon.png" || pathname === "/favicon.ico") return { kind: "unauth-allowlist" };
-  if (pathname === "/__router" || pathname.startsWith("/__router/")) return classifyRouterControl(pathname);
-  if (pathname === "/workstreams" || pathname.startsWith("/workstreams/")) {
-    // Reads (the general browser, issue views, tRPC queries) are `dev-read`;
-    // the mutating action/tRPC POSTs below stay `control` (owner + CSRF).
-    if (method === "GET" || method === "HEAD") return { kind: "dev-read" };
-    if (
-      method === "POST" &&
-      (pathname.startsWith("/workstreams/action/") ||
-        pathname.startsWith("/workstreams/issues/action/") ||
-        pathname === "/workstreams/api/trpc" ||
-        pathname.startsWith("/workstreams/api/trpc/"))
-    )
-      return { kind: "control" };
-    return { kind: "unknown" };
-  }
-  // Bare `/dev` / `/dev/` redirect to `/main/dev/` — the dev space. A read gets
-  // the same treatment as the `/<w>/dev/...` it redirects to; any other method
-  // stays owner-only (the handler has no write path, so this grants nothing new).
-  if (pathname === "/dev" || pathname === "/dev/") {
-    return isRead(method) ? { kind: "dev-read" } : { kind: "control-read", json: false };
-  }
+  const rootRoute = classifyRouterRoot({ method, pathname });
+  if (rootRoute !== null) return rootRoute;
 
   const name = firstSegment(pathname);
   if (name === null) return { kind: "unknown" };
   const rest = pathname.slice(`/${name}`.length); // "" | "/..." after the worktree segment
 
-  // `/<w>/auth/*` — login/setup HTML + the auth API (login, logout, me, methods,
-  // callback). Method-agnostic: login is a POST, `/auth/me` a GET.
-  if (rest === "/auth" || rest.startsWith("/auth/")) return { kind: "unauth-allowlist" };
-
-  // `/<w>/{assets,icons,manifest.webmanifest,sw.js}` — public frontend static assets (GET).
-  if (method === "GET" && isPublicFrontendAssetPath(rest)) return { kind: "unauth-allowlist" };
-
-  // `/<w>/dev` / `/<w>/dev/...` — the worktree's dev space, served from disk.
-  if (rest === "/dev" || rest.startsWith("/dev/")) {
-    return isRead(method) ? { kind: "dev-read" } : { kind: "control-read", json: false };
-  }
+  const prefixRoute = classifyWorktreePrefix({ method, rest });
+  if (prefixRoute !== null) return prefixRoute;
 
   const seg2Match = rest.match(/^\/([^/]+)(?:\/|$)/);
   const seg2 = seg2Match ? seg2Match[1]! : null;

@@ -43,7 +43,28 @@ import path from "node:path";
 
 /** Thrown when the blocklist file is unparseable — surfaced as a fail-closed error. */
 export class BlocklistError extends Error {
-  override name = "BlocklistError";
+  constructor(message: string) {
+    super(message);
+    this.name = "BlocklistError";
+  }
+}
+
+/** A `re:` entry whose pattern the RegExp engine rejects. */
+class InvalidBlocklistRegexError extends BlocklistError {
+  constructor(line: number, detail: string) {
+    super(`invalid regex on line ${line}: ${detail}`);
+    this.name = "InvalidBlocklistRegexError";
+  }
+}
+
+/** The message of an unknown thrown value, without asserting it is an Error. */
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+/** Narrow a caught value to a Node syscall error, which carries a string `code`. */
+function isErrnoException(e: unknown): e is NodeJS.ErrnoException {
+  return e instanceof Error && "code" in e;
 }
 
 /** All [start, end) match spans of an entry within one line of text. */
@@ -69,9 +90,10 @@ function literalSpans(needle: string): SpanFn {
 function regexSpans(pattern: string, line: number): SpanFn {
   let re: RegExp;
   try {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- a `re:` entry IS a user-authored regex by contract (bin/CLAUDE.md); escaping it would change the feature's meaning. The source is the developer's own gitignored .commit-blocklist, read locally.
     re = new RegExp(pattern, "gi");
   } catch (e) {
-    throw new BlocklistError(`invalid regex on line ${line}: ${(e as Error).message}`);
+    throw new InvalidBlocklistRegexError(line, errorMessage(e));
   }
   return (text) => {
     const out: Array<[number, number]> = [];
@@ -101,6 +123,7 @@ function globToRegex(glob: string): RegExp {
       re += c;
     }
   }
+  // eslint-disable-next-line security/detect-non-literal-regexp -- `re` is built above one character at a time, with every regex metacharacter escaped and only `*` translated, so no glob character reaches the engine unescaped.
   return new RegExp(`^${re}$`);
 }
 
@@ -123,8 +146,8 @@ function fileMatcher(glob: string): (repoPath: string) => boolean {
 export function parseBlocklist(text: string): Entry[] {
   const entries: Entry[] = [];
   const lines = text.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    let body = lines[i]!.trim();
+  for (const [i, line_] of lines.entries()) {
+    let body = line_!.trim();
     if (body === "" || body.startsWith("#")) continue;
     const line = i + 1;
     if (body.startsWith("file:")) {
@@ -239,8 +262,8 @@ function main(): void {
   try {
     text = fs.readFileSync(blocklistPath, "utf8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return; // no list => opt-out, silent no-op
-    console.error(`commit-blocklist-check: cannot read ${rel}: ${(e as Error).message}`);
+    if (isErrnoException(e) && e.code === "ENOENT") return; // no list => opt-out, silent no-op
+    console.error(`commit-blocklist-check: cannot read ${rel}: ${errorMessage(e)}`);
     process.exit(1); // any other read failure => fail closed
   }
 
@@ -248,7 +271,7 @@ function main(): void {
   try {
     entries = parseBlocklist(text);
   } catch (e) {
-    console.error(`commit-blocklist-check: ${(e as Error).message}`);
+    console.error(`commit-blocklist-check: ${errorMessage(e)}`);
     process.exit(1); // malformed list => fail closed
   }
   if (entries.every((e) => e.kind !== "block")) return; // no block rules => nothing to enforce

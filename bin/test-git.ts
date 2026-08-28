@@ -51,11 +51,11 @@ export const porcelain = (cwd?: string): string =>
   git(["status", "--porcelain", "-z", "--untracked-files=all"], cwd);
 
 /** Changed paths versus a base ref (default `main`), plus anything uncommitted. */
-export function changedPaths(input: { base?: string; cwd?: string } = {}): string[] {
-  const base = input.base ?? "main";
-  const committed = git(["diff", "--name-only", `${base}...HEAD`], input.cwd).split("\n");
-  const dirty = parsePorcelainEntries(porcelain(input.cwd)).map((entry) => entry.path);
-  return [...new Set([...committed, ...dirty].filter((p) => p !== ""))].sort();
+export function changedPaths(input?: { base?: string; cwd?: string }): string[] {
+  const base = input?.base ?? "main";
+  const committed = git(["diff", "--name-only", `${base}...HEAD`], input?.cwd).split("\n");
+  const dirty = parsePorcelainEntries(porcelain(input?.cwd)).map((entry) => entry.path);
+  return [...new Set([...committed, ...dirty].filter((p) => p !== ""))].toSorted();
 }
 
 /**
@@ -96,8 +96,11 @@ function untrackedBlobs(cwd?: string): string[] {
     const chunk = paths.slice(i, i + 200);
     try {
       const hashes = git(["hash-object", "--", ...chunk], cwd).split("\n");
-      chunk.forEach((path, index) => blobs.push(`blob:${hashes[index] ?? "?"}:${path}`));
-    } catch {
+      for (const [index, path] of chunk.entries()) blobs.push(`blob:${hashes[index] ?? "?"}:${path}`);
+    } catch (_e) {
+      // Absorbs a path that vanished between `git status` and `git hash-object`
+      // (a test's temp file, an editor's swap file). The whole chunk fails, so
+      // each of its paths is named rather than hashed.
       for (const path of chunk) blobs.push(`unhashable:${path}`);
     }
   }
@@ -110,5 +113,5 @@ function sha256(data: Buffer | string): string {
 
 /** Order-independent, so the caller never has to think about sort stability. */
 function hashParts(parts: string[]): string {
-  return `sha256:${sha256([...parts].sort().join("\n")).slice(0, 16)}`;
+  return `sha256:${sha256(parts.toSorted().join("\n")).slice(0, 16)}`;
 }

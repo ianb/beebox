@@ -6,6 +6,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { formatJson, formatTable, runChecks } from "./doctor.js";
 import {
   checkClaudeAuth,
   checkFrontendBuild,
@@ -17,15 +18,14 @@ import {
   checkSchedulesTick,
   checkSdkBinary,
   checkWorkspaceInstalled,
-  formatJson,
-  formatTable,
+} from "./doctor-checks.js";
+import {
   parseVersion,
-  runChecks,
   satisfiesRange,
   type CommandResult,
   type DoctorDeps,
   type RunCommand,
-} from "./doctor.js";
+} from "./doctor-lib.js";
 
 // ─── Version-range comparison (pure) ───────────────────────────────────────
 
@@ -72,7 +72,15 @@ function ok(stdout: string): CommandResult {
   return { spawned: true, code: 0, stdout, stderr: "" };
 }
 
-const notFound: CommandResult = { spawned: false, code: null, stdout: "", stderr: "" };
+/** Stands in for the native-module load failure a Node major bump produces. */
+class FakeAbiDriftError extends Error {
+  constructor() {
+    super(
+      "ERR_DLOPEN_FAILED: The module was compiled against a different Node.js version\nmore detail",
+    );
+    this.name = "FakeAbiDriftError";
+  }
+}
 
 // ─── Individual checks against a fake exec ─────────────────────────────────
 
@@ -322,7 +330,7 @@ test("checkNativeSqlite passes with the loader's detail and fails on a load erro
 
   const failResult = await checkNativeSqlite({
     loadBetterSqlite3: async () => {
-      throw new Error("ERR_DLOPEN_FAILED: The module was compiled against a different Node.js version\nmore detail");
+      throw new FakeAbiDriftError();
     },
   });
   assert.equal(failResult.ok, false);

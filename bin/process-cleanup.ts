@@ -50,8 +50,13 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { execa } from "execa";
+import { cwdOf, etimeToSeconds, psRows, type PsRow } from "./process-table.js";
+
+// `etimeToSeconds` is re-exported because it is part of this module's tested
+// surface (callback-box/test/dev/process-cleanup-liveness.doctest.md).
+export { etimeToSeconds };
 
 // Mirror bin/router.ts's roots (including the CALLBACK_MAIN_ROOT override) so
 // scoping stays identical. CALLBACK_WORKTREE_ROOT is the same override
@@ -62,7 +67,7 @@ const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src
 const WORKTREES_ROOT = process.env.CALLBACK_WORKTREE_ROOT || path.join(os.homedir(), "src", "callback-worktrees");
 
 // This file's own directory — where `workstreams` (the liveness oracle) lives.
-const BIN_DIR = path.dirname(fileURLToPath(import.meta.url));
+const BIN_DIR = import.meta.dirname;
 
 // Per-worktree agent-browser socket dirs, mirroring `bin/browse`
 // (`${HOME}/.cache/callback-box/browse/<worktree>/socket`). Each dir's
@@ -120,13 +125,6 @@ export interface ReclaimResult {
   spared: ProjectProc[];
 }
 
-interface PsRow {
-  pid: number;
-  ppid: number;
-  ageSec: number;
-  command: string;
-}
-
 /** Map an absolute path to its owning worktree ("main" or a worktree name). */
 function worktreeForPath(p: string): string | null {
   const wtPrefix = WORKTREES_ROOT + path.sep;
@@ -154,7 +152,9 @@ async function currentDaemonPids(worktree: string): Promise<Set<number>> {
   let entries: string[];
   try {
     entries = await fs.readdir(sockDir);
-  } catch {
+  } catch (_e) {
+    // No socket dir for this worktree (never browsed, or already cleaned up):
+    // nothing is vouched for, which is the documented empty-set answer.
     return live;
   }
   await Promise.all(
@@ -164,53 +164,14 @@ async function currentDaemonPids(worktree: string): Promise<Set<number>> {
         try {
           const pid = Number((await fs.readFile(path.join(sockDir, f), "utf8")).trim());
           if (Number.isFinite(pid) && pid > 0) live.add(pid);
-        } catch { /* unreadable pidfile — ignore */ }
+        } catch (_e) {
+          // The pidfile was removed between readdir and readFile, or is
+          // unreadable: it vouches for nothing, which is the safe direction
+          // only because the age gate below still spares young daemons.
+        }
       }),
   );
   return live;
-}
-
-/**
- * Seconds from a `ps etime` field (`[[dd-]hh:]mm:ss`). Returns `Infinity` for
- * anything unparseable: an unreadable age must not read as "young", which is
- * the value that spares a process from an otherwise-correct reap.
- */
-export function etimeToSeconds(etime: string): number {
-  const m = etime.trim().match(/^(?:(\d+)-)?(?:(\d+):)?(\d+):(\d+)$/);
-  if (!m) return Infinity;
-  const [days, hours, mins, secs] = [m[1] ?? "0", m[2] ?? "0", m[3]!, m[4]!].map(Number);
-  return ((days! * 24 + hours!) * 60 + mins!) * 60 + secs!;
-}
-
-async function psRows(): Promise<PsRow[]> {
-  const { stdout } = await execa("ps", ["-axo", "pid=,ppid=,etime=,command="]);
-  const rows: PsRow[] = [];
-  for (const line of stdout.split("\n")) {
-    const m = line.match(/^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/);
-    if (!m) continue;
-    rows.push({ pid: Number(m[1]), ppid: Number(m[2]), ageSec: etimeToSeconds(m[3]!), command: m[4]! });
-  }
-  return rows;
-}
-
-/** cwd of each pid via lsof, best-effort (some pids may be unreadable). */
-async function cwdOf(pids: number[]): Promise<Map<number, string>> {
-  const out = new Map<number, string>();
-  if (pids.length === 0) return out;
-  let stdout = "";
-  try {
-    ({ stdout } = await execa("lsof", ["-a", "-d", "cwd", "-p", pids.join(","), "-Fn"]));
-  } catch (e) {
-    // lsof exits non-zero if *any* listed pid is gone, but still prints the
-    // rest on stdout — recover whatever it managed to emit.
-    stdout = (e as { stdout?: string }).stdout ?? "";
-  }
-  let cur = 0;
-  for (const line of stdout.split("\n")) {
-    if (line.startsWith("p")) cur = Number(line.slice(1));
-    else if (line.startsWith("n") && cur) out.set(cur, line.slice(1));
-  }
-  return out;
 }
 
 /** Absolute path of a worktree name as this module attributes them. */
@@ -231,7 +192,7 @@ function pathForWorktree(worktree: string): string {
  */
 export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<string, AgentLiveness>> {
   const out = new Map<string, AgentLiveness>(
-    worktrees.map((wt) => [wt, { state: "unknown" as AgentState, reason: "liveness-oracle-unavailable" }]),
+    worktrees.map((wt): [string, AgentLiveness] => [wt, { state: "unknown", reason: "liveness-oracle-unavailable" }]),
   );
   if (worktrees.length === 0) return out;
   let stdout: string;
@@ -240,26 +201,56 @@ export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<
       "agent-liveness",
       ...worktrees.map(pathForWorktree),
     ]));
-  } catch {
+  } catch (_e) {
+    // The oracle could not be run at all (missing, not executable, non-zero
+    // exit): every worktree keeps its `unknown`, which spares its daemons.
     return out;
   }
-  let parsed: { ok?: boolean; paths?: Record<string, { state?: string; reason?: string }> };
+  let payload: unknown;
   try {
-    parsed = JSON.parse(stdout) as typeof parsed;
-  } catch {
+    payload = JSON.parse(stdout);
+  } catch (_e) {
+    // Truncated or non-JSON output — an answer we cannot read is not an answer.
     return out;
   }
-  if (parsed.ok !== true || !parsed.paths) return out;
+  const byPath = livenessPaths(payload);
+  if (byPath === null) return out;
   for (const wt of worktrees) {
-    const entry = parsed.paths[pathForWorktree(wt)];
-    if (!entry) continue;
-    // Anything that isn't a state we recognize stays `unknown` — a guard must
-    // not read a value it doesn't understand as permission to kill.
-    const recognized = entry.state === "live" || entry.state === "launching" || entry.state === "none";
-    const state: AgentState = recognized ? entry.state as AgentState : "unknown";
-    out.set(wt, { state, reason: entry.reason ?? "" });
+    const entry = byPath.get(pathForWorktree(wt));
+    if (entry === undefined) continue;
+    out.set(wt, readLiveness(entry));
   }
   return out;
+}
+
+/**
+ * The `paths` map of a successful `agent-liveness` answer, or `null` for
+ * anything else — a payload that isn't an object, didn't report `ok`, or
+ * carries no paths. Reading the shape here keeps the parse boundary in one
+ * place instead of asserting a type over untrusted subprocess output.
+ */
+function livenessPaths(payload: unknown): Map<string, unknown> | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  if (!("ok" in payload) || payload.ok !== true) return null;
+  if (!("paths" in payload)) return null;
+  const paths = payload.paths;
+  if (typeof paths !== "object" || paths === null) return null;
+  return new Map(Object.entries(paths));
+}
+
+/**
+ * Anything that isn't a state we recognize stays `unknown` — a guard must not
+ * read a value it doesn't understand as permission to kill.
+ */
+function readLiveness(entry: unknown): AgentLiveness {
+  if (typeof entry !== "object" || entry === null) return { state: "unknown", reason: "" };
+  const rawState = "state" in entry ? entry.state : undefined;
+  const rawReason = "reason" in entry ? entry.reason : undefined;
+  const recognized = rawState === "live" || rawState === "launching" || rawState === "none";
+  return {
+    state: recognized ? rawState : "unknown",
+    reason: typeof rawReason === "string" ? rawReason : "",
+  };
 }
 
 /**
@@ -290,8 +281,7 @@ export async function agentLivenessByWorktree(worktrees: string[]): Promise<Map<
  */
 export function classifyAgentBrowser(
   session: AgentState,
-  vouched: boolean,
-  ageSec: number,
+  { vouched, ageSec }: { vouched: boolean; ageSec: number },
 ): { kill: boolean; reason: string } {
   if (session === "launching") return { kill: false, reason: "launch in progress" };
   if (session === "unknown") return { kill: false, reason: "session liveness unknown" };
@@ -347,8 +337,14 @@ export async function discoverProjectProcs(): Promise<ProjectProc[]> {
 function signal(pid: number, sig: NodeJS.Signals): void {
   try {
     process.kill(-pid, sig);
-  } catch {
-    try { process.kill(pid, sig); } catch { /* already gone */ }
+  } catch (_groupError) {
+    // ESRCH for the group: the process was never a group leader, or the whole
+    // group died between discovery and here. Fall back to the bare pid.
+    try {
+      process.kill(pid, sig);
+    } catch (_pidError) {
+      // ESRCH again — the process exited on its own in the meantime.
+    }
   }
 }
 
@@ -410,7 +406,7 @@ export async function reclaimOrphans(opts: {
     if (p.kind === "agent-browser") {
       const session = sessions.get(p.worktree)?.state ?? "unknown";
       const vouched = currentByWt.get(p.worktree)?.has(p.pid) ?? false;
-      ({ kill: doKill, reason: abReason } = classifyAgentBrowser(session, vouched, p.ageSec));
+      ({ kill: doKill, reason: abReason } = classifyAgentBrowser(session, { vouched, ageSec: p.ageSec }));
     } else {
       doKill = opts.aggressive || p.ppid === 1;
     }
@@ -472,7 +468,7 @@ export async function reclaimWorktreeBrowsers(opts: {
   const killed: ProjectProc[] = [];
   const spared: ProjectProc[] = [];
   for (const p of procs) {
-    const { kill, reason } = classifyAgentBrowser("live", vouchedPids.has(p.pid), p.ageSec);
+    const { kill, reason } = classifyAgentBrowser("live", { vouched: vouchedPids.has(p.pid), ageSec: p.ageSec });
     if (!kill) {
       spared.push(p);
       continue;

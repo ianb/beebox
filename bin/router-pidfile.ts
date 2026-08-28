@@ -58,13 +58,14 @@ export interface PidStoreFs {
 }
 
 const realFs: PidStoreFs = {
-  mkdir: (dir) => fs.mkdir(dir, { recursive: true }).then(() => undefined),
+  mkdir: (dir) => fs.mkdir(dir, { recursive: true }).then(() => {}),
   readFile: (p) => fs.readFile(p, "utf8"),
   writeFile: (p, content) => fs.writeFile(p, content),
   unlink: (p) => fs.unlink(p),
 };
 
-export function createPidStore(pidDir: string, backend: PidStoreFs = realFs): PidStore {
+export function createPidStore(pidDir: string, backendFs?: PidStoreFs): PidStore {
+  const backend = backendFs ?? realFs;
   // One serialization chain per worktree name. The stored tail swallows
   // outcomes so a failed op neither wedges the chain nor surfaces as an
   // unhandled rejection; the promise handed back to the caller still carries
@@ -75,8 +76,8 @@ export function createPidStore(pidDir: string, backend: PidStoreFs = realFs): Pi
     const prev = chains.get(name) ?? Promise.resolve();
     const result = prev.then(op, op);
     const tail = result.then(
-      () => undefined,
-      () => undefined,
+      () => {},
+      () => {},
     );
     chains.set(name, tail);
     // Prune once settled so the map doesn't retain one promise per name forever
@@ -103,13 +104,13 @@ export function createPidStore(pidDir: string, backend: PidStoreFs = realFs): Pi
           // A newer generation owns the slot now — leave it alone.
           return;
         }
-      } catch {
+      } catch (_e) {
         // Missing or unreadable — fall through to the unlink (a no-op if gone).
       }
     }
     try {
       await backend.unlink(fullPath);
-    } catch {
+    } catch (_e) {
       // Already gone — fine.
     }
   }

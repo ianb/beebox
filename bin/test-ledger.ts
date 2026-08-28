@@ -12,20 +12,24 @@
  * turns failure counts into failure rates, and a denominator is free to
  * collect now and impossible to reconstruct later.
  *
- * This is the I/O shell; the parsing, classification and aggregation it calls
- * are pure and live in test-ledger-lib.ts.
+ * This is the process shell — the semaphore, the tap child, the CLI. Building
+ * and appending a record lives in test-ledger-store.ts; the parsing,
+ * classification and aggregation both call are pure and live in
+ * test-ledger-lib.ts.
  *
  * See callback-box/docs/plans/change-based-test-selection.md, Track 5.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { appendFileSync, readFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { signalNumber, terminateChild } from "./child-signals.js";
-import { changedPaths, git, gitCommonDir, treeHash } from "./test-git.js";
-import { buildGraph } from "./test-graph.js";
-import { implicatedTests, isAccounted } from "./test-graph-query.js";
+import { changedPaths, git, gitCommonDir } from "./test-git.js";
 import { renderReport } from "./test-ledger-report.js";
+import {
+  computeGraph,
+  recordRun,
+  type RunContext,
+  type RunMode,
+} from "./test-ledger-store.js";
 import { acquire, lockDir, type Held, type Tier } from "./test-locks.js";
 import {
   PACKAGE_ROOT,
@@ -34,84 +38,17 @@ import {
   tierCommand,
   TierListError,
 } from "./test-tiers.js";
-import {
-  classifyFailure,
-  foldFilesets,
-  hashFileset,
-  isCompletedRun,
-  ledgerPaths,
-  parseTapFiles,
-  summarize,
-  type LedgerRecord,
-} from "./test-ledger-lib.js";
 
-/** A ledger operation that could not complete. Never reaches a caller's exit code. */
-class LedgerRecordError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "LedgerRecordError";
-  }
-}
+// `bin/test-select.ts`, `bin/test-ledger-report.ts`, and
+// `schedules/full-suite/run.ts` reach the store through this module, which is
+// the ledger's public name.
+export { appendLedgerRecord, readRecords } from "./test-ledger-store.js";
 
 class LedgerTimeoutError extends Error {
   constructor(ms: number) {
     super(`ledger bookkeeping exceeded ${ms}ms`);
     this.name = "LedgerTimeoutError";
   }
-}
-
-function readFilesets(path: string): Record<string, string[]> {
-  if (!existsSync(path)) return {};
-  try {
-    return foldFilesets(readFileSync(path, "utf-8").split("\n"));
-  } catch (e) {
-    console.warn(`test-ledger: fileset log unreadable, starting fresh (${String(e)})`);
-    return {};
-  }
-}
-
-function isLedgerRecord(value: unknown): value is LedgerRecord {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as { commit?: unknown; ranFiles?: unknown; failures?: unknown };
-  return (
-    typeof record.commit === "string" &&
-    typeof record.ranFiles === "string" &&
-    Array.isArray(record.failures)
-  );
-}
-
-export function readRecords(path: string): LedgerRecord[] {
-  if (!existsSync(path)) return [];
-  const records: LedgerRecord[] = [];
-  for (const line of readFileSync(path, "utf-8").split("\n")) {
-    if (line.trim() === "") continue;
-    try {
-      const parsed: unknown = JSON.parse(line);
-      // Validated rather than cast: an interleaved append from a concurrent
-      // worktree can leave a half-written line, and a bad shape would surface
-      // far away as a wrong statistic.
-      if (isLedgerRecord(parsed)) records.push(parsed);
-    } catch (e) {
-      // One malformed line must not blind the whole instrument.
-      console.warn(`test-ledger: skipping malformed record (${String(e)})`);
-    }
-  }
-  return records;
-}
-
-/** What the run is, beyond its argv: how to record it and what "changed" means. */
-export interface RunContext {
-  tier: Tier;
-  mode: RunMode;
-  /**
-   * The ref `changed` is computed against, in place of `main`. The batched
-   * full-suite schedule passes the commit it last tested, so `changed` is the
-   * landed range — on `main`, `main...HEAD` is empty and `implicated` would
-   * otherwise be nothing (plan revision 2026-08-25, mechanism D).
-   */
-  base: string | null;
-  /** Recorded as {@link LedgerRecord.source}; null for an ordinary run. */
-  source: string | null;
 }
 
 async function runWrapped(command: string[], context: RunContext): Promise<number> {
@@ -224,7 +161,7 @@ async function runUnderSlot(input: {
     await withTimeout(LEDGER_BUDGET_MS, async () => {
       const base = input.context.base;
       const changed = changedPaths(base === null ? {} : { base });
-      record({
+      recordRun({
         tapOutput: output,
         changed,
         exitCode,
@@ -286,106 +223,6 @@ function streamCommand(executable: string, args: string[]): Promise<StreamResult
     });
   });
 }
-
-interface GraphView {
-  implicated: Set<string>;
-  accounted: boolean;
-}
-
-function record(input: {
-  tapOutput: string;
-  changed: string[];
-  exitCode: number;
-  context: RunContext;
-  /** Null when no slot could be taken, so the figure is unknown rather than zero. */
-  concurrency: number | null;
-  graph: GraphView | null;
-}): void {
-  const results = parseTapFiles(input.tapOutput);
-  if (results.length === 0) throw new LedgerRecordError("TAP output named no test files");
-
-  const paths = ledgerPaths(gitCommonDir());
-  const changed = input.changed;
-  const implicated = input.graph === null ? null : input.graph.implicated;
-  const accounted = input.graph === null ? null : input.graph.accounted;
-
-  const ranFiles = results.map((r) => r.file);
-  const implicatedFiles = implicated === null ? [] : [...implicated].map(stripPackagePrefix);
-  const implicatedForClass = implicated === null ? null : new Set(implicatedFiles);
-
-  const record: LedgerRecord = {
-    ts: new Date().toISOString(),
-    commit: git(["rev-parse", "HEAD"]),
-    branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
-    treeHash: treeHash(),
-    mode: input.context.mode,
-    ...(input.context.source === null ? {} : { source: input.context.source }),
-    exitCode: input.exitCode,
-    tier: input.context.tier,
-    ...(input.concurrency === null ? {} : { concurrency: input.concurrency }),
-    accounted,
-    changed,
-    ranFiles: hashFileset(ranFiles),
-    implicated: hashFileset(implicatedFiles),
-    durations: Object.fromEntries(results.map((r) => [r.file, r.ms])),
-    failures: results
-      .filter((r) => !r.ok)
-      .map((r) => ({ file: r.file, class: classifyFailure({ file: r.file, implicated: implicatedForClass }) })),
-  };
-
-  appendLedgerRecord({ record, ranFiles, implicatedFiles, paths });
-}
-
-/**
- * Append one record plus the filesets it names.
- *
- * Exported because `bin/test-select.ts` writes its own record when the
- * selection is empty: there is no tap invocation to wrap, and a run that
- * tested nothing still has to be counted or the gap hides (plan revision
- * 2026-08-25, mechanism B).
- *
- * Append both, never rewrite: this directory is shared by every worktree on
- * the machine and concurrent suite runs are routine. Duplicate hashes are
- * harmless — the reader folds them into a map.
- */
-export function appendLedgerRecord(input: {
-  record: LedgerRecord;
-  ranFiles: string[];
-  implicatedFiles: string[];
-  paths?: { ledger: string; filesets: string };
-}): void {
-  const paths = input.paths ?? ledgerPaths(gitCommonDir());
-  const filesetLines = [
-    { hash: input.record.ranFiles, files: [...input.ranFiles].sort() },
-    { hash: input.record.implicated, files: [...input.implicatedFiles].sort() },
-  ].map((entry) => `${JSON.stringify(entry)}\n`);
-  appendFileSync(paths.filesets, filesetLines.join(""));
-  appendFileSync(paths.ledger, `${JSON.stringify(input.record)}\n`);
-}
-
-/** Graph paths are repo-relative; TAP names them relative to callback-box. */
-function stripPackagePrefix(path: string): string {
-  return path.startsWith("callback-box/") ? path.slice("callback-box/".length) : path;
-}
-
-async function computeGraph(changed: string[]): Promise<GraphView | null> {
-  try {
-    const graph = await buildGraph();
-    return {
-      implicated: implicatedTests({ graph, changed }),
-      accounted: isAccounted({ graph, changed }),
-    };
-  } catch (e) {
-    console.warn(`test-ledger: graph unavailable, failures recorded as unknown (${String(e)})`);
-    return null;
-  }
-}
-
-/**
- * What the run was: everything `.taprc` includes, or a change-based selection.
- * `bin/test-select.ts --run` passes `--mode selected`; nothing else does.
- */
-export type RunMode = LedgerRecord["mode"];
 
 /** Reads `--mode` from the wrapper's own flags; null on an unknown value. */
 function parseMode(flags: string[]): RunMode | null {
@@ -474,6 +311,6 @@ export async function main(argv: string[]): Promise<void> {
   process.exitCode = 2;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] === import.meta.filename) {
   await main(process.argv.slice(2));
 }

@@ -34,16 +34,16 @@ export function scheduleHeartbeatStatus(rows: Workstream[], now?: Date): Heartbe
 }
 
 /** Cadence, last run, next due, and the two things that mean act now. */
-export function ScheduleFacts({ schedule }: { schedule: NonNullable<Workstream["schedule"]> }) {
+export function ScheduleFacts({ schedule, now }: { schedule: NonNullable<Workstream["schedule"]>; now?: Date | undefined }) {
   return (
     <>
       <span className="schedule-fact">every {schedule.cadence}</span>
       <span className="schedule-fact">
-        last run {schedule.lastRunAt ? relativeTime(schedule.lastRunAt) : "never"}
+        last run {schedule.lastRunAt ? relativeTime(schedule.lastRunAt, now) : "never"}
         {schedule.lastOutcome ? ` · ${schedule.lastOutcome}` : ""}
       </span>
       <span className="schedule-fact">
-        next due {schedule.nextDueAt ? relativeTime(schedule.nextDueAt) : "—"}
+        next due {schedule.nextDueAt ? relativeTime(schedule.nextDueAt, now) : "—"}
       </span>
       {schedule.enabled ? null : <Pill tone="neutral">disabled</Pill>}
       {schedule.overdue ? <Pill tone="danger">overdue</Pill> : null}
@@ -54,7 +54,7 @@ export function ScheduleFacts({ schedule }: { schedule: NonNullable<Workstream["
   );
 }
 
-function ScheduledRow({ row, issues }: { row: Workstream; issues: Issue[] }) {
+function ScheduledRow({ row, issues, now }: { row: Workstream; issues: Issue[]; now?: Date | undefined }) {
   const [open, setOpen] = useState(false);
   const related = issues.filter((issue) =>
     issue.frontmatter.workstream === row.name || issue.frontmatter.discoveredIn === row.name);
@@ -65,7 +65,7 @@ function ScheduledRow({ row, issues }: { row: Workstream; issues: Issue[] }) {
           <span aria-hidden="true">{row.session.emoji ?? "·"}</span>{row.name}
         </Link>
         <span className="workstream-description">{row.session.description ?? "No description"}</span>
-        {row.schedule ? <ScheduleFacts schedule={row.schedule} /> : <span className="workstream-note">schedule unreadable</span>}
+        {row.schedule ? <ScheduleFacts schedule={row.schedule} now={now} /> : <span className="workstream-note">schedule unreadable</span>}
         <WorkstreamActions row={row}>
           <Button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? "Hide alerts" : "Alerts"}
@@ -105,7 +105,7 @@ export function ScheduledSection({ rows, issues, now }: { rows: Workstream[]; is
         </span>
       </h2>
       <ul>
-        {rows.map((row) => <ScheduledRow key={row.name} row={row} issues={issues} />)}
+        {rows.map((row) => <ScheduledRow key={row.name} row={row} issues={issues} now={now} />)}
       </ul>
     </section>
   );

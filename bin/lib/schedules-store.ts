@@ -19,10 +19,11 @@ import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
+import { errnoCode } from "../../callback-box/src/lib/error-guards.js";
+
 import {
   EMPTY_SCHEDULE_STATE,
   SCHEDULES_MARKER,
-  ScheduleError,
   alertSchema,
   handoffSchema,
   resultSchema,
@@ -36,6 +37,9 @@ import {
   type ScheduleState,
   type StoreState,
 } from "./schedules.js";
+import { InvalidStoreRecordError, UnmarkedStoreRootError } from "./schedules-errors.js";
+
+
 
 /** Refused rather than adopted: an unmarked directory where the store should
  *  be is somebody else's data. */
@@ -44,7 +48,7 @@ export async function ensureStoreRoot(root: string): Promise<void> {
   try {
     await fs.stat(root);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
     await fs.mkdir(root, { recursive: true });
     await fs.writeFile(marker, "", "utf8");
     return;
@@ -52,7 +56,7 @@ export async function ensureStoreRoot(root: string): Promise<void> {
   try {
     await fs.stat(marker);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
     // An empty directory holds nobody's data, so it is claimed; anything with
     // contents is left alone. (2026-08-24: a bare mkdir of the store path left
     // an empty unmarked directory, and every tick for a day refused it — with
@@ -61,7 +65,7 @@ export async function ensureStoreRoot(root: string): Promise<void> {
       await fs.writeFile(marker, "", "utf8");
       return;
     }
-    throw new ScheduleError(`${root} exists without ${SCHEDULES_MARKER} — refusing to adopt an unrelated directory`);
+    throw new UnmarkedStoreRootError(root);
   }
 }
 
@@ -89,12 +93,12 @@ async function readJson<T>(filePath: string, schema: z.ZodType<T>): Promise<T | 
   try {
     raw = await fs.readFile(filePath, "utf8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw e;
   }
   const parsed = schema.safeParse(JSON.parse(raw));
   if (!parsed.success) {
-    throw new ScheduleError(`${filePath} is not a valid record: ${parsed.error.issues.map((i) => i.message).join("; ")}`);
+    throw new InvalidStoreRecordError(filePath, parsed.error.issues.map((i) => i.message).join("; "));
   }
   return parsed.data;
 }
@@ -208,10 +212,10 @@ export async function latestRunId(root: string, name: string): Promise<string | 
   try {
     entries = await fs.readdir(path.join(scheduleDir(root, name), "runs"));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw e;
   }
-  const ids = entries.filter((entry) => entry.endsWith(".log")).map((entry) => entry.slice(0, -".log".length)).sort();
+  const ids = entries.filter((entry) => entry.endsWith(".log")).map((entry) => entry.slice(0, -".log".length)).toSorted();
   return ids.at(-1) ?? null;
 }
 
@@ -221,7 +225,7 @@ export async function tailLog(logFile: string, count: number): Promise<string> {
   try {
     raw = await fs.readFile(logFile, "utf8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return "";
+    if (errnoCode(e) === "ENOENT") return "";
     throw e;
   }
   const lines = raw.split("\n");
@@ -241,11 +245,11 @@ export async function readAlerts(root: string, name: string): Promise<Alert[]> {
   try {
     entries = await fs.readdir(dir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   const alerts: Alert[] = [];
-  for (const entry of entries.filter((file) => file.endsWith(".json")).sort()) {
+  for (const entry of entries.filter((file) => file.endsWith(".json")).toSorted()) {
     const alert = await readJson(path.join(dir, entry), alertSchema);
     if (alert !== null) alerts.push(alert);
   }
@@ -258,9 +262,9 @@ export async function readAllAlerts(root: string): Promise<Alert[]> {
   let names: string[];
   try {
     const entries = await fs.readdir(root, { withFileTypes: true });
-    names = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+    names = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).toSorted();
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   const alerts: Alert[] = [];
@@ -335,7 +339,8 @@ export function bootTimeMs(): number | null {
   let raw: string;
   try {
     raw = execFileSync("/usr/sbin/sysctl", ["-n", "kern.boottime"], { encoding: "utf8" });
-  } catch {
+  } catch (_e) {
+    /* ignore: no sysctl or no kern.boottime — the age rule carries the reclaim alone */
     return null;
   }
   const match = /sec\s*=\s*(\d+)/u.exec(raw);
@@ -373,7 +378,7 @@ export async function acquireLock(
   try {
     await fs.mkdir(dir, { recursive: false });
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+    if (errnoCode(e) !== "EEXIST") throw e;
     const held = await readJson(path.join(dir, "owner.json"), lockRecordSchema);
     // A lock whose owner is gone is debris from a crash or a laptop shutdown —
     // reclaiming it is the only way the next tick can finish that run's story.
@@ -390,7 +395,7 @@ export async function acquireLock(
     try {
       await fs.mkdir(dir, { recursive: false });
     } catch (retry) {
-      if ((retry as NodeJS.ErrnoException).code !== "EEXIST") throw retry;
+      if (errnoCode(retry) !== "EEXIST") throw retry;
       return { kind: "held", pid: held?.pid ?? null, runId: held?.runId ?? null };
     }
   }
@@ -409,6 +414,6 @@ export function isProcessAlive(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (e) {
-    return (e as NodeJS.ErrnoException).code === "EPERM";
+    return errnoCode(e) === "EPERM";
   }
 }

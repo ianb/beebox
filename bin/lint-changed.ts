@@ -26,7 +26,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { changedPaths } from "./test-git.js";
 import { packageOwnerDirs } from "./workspace-packages.js";
 
@@ -47,6 +46,11 @@ const FRONTEND_ROOT = `${FRONTEND_DIR}/src/`;
 // backend config's ignores, so it is deliberately absent.
 const BACKEND_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".cjs"];
 const FRONTEND_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
+
+// `bin/` holds extensionless executables (`bin/land`, `bin/schedules`) beside
+// its TypeScript; only the latter is what `pnpm lint:bin` has anything to say
+// about, so a change confined to a shell script does not start an eslint run.
+const BIN_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".cjs"];
 
 const hasExtension = (path: string, extensions: string[]): boolean =>
   extensions.some((extension) => path.endsWith(extension));
@@ -86,7 +90,7 @@ export function splitCallbackBoxTargets(paths: string[]): CallbackBoxTargets {
     if (!hasExtension(relative, BACKEND_EXTENSIONS)) continue;
     backend.push(relative);
   }
-  return { backend: backend.sort(), frontend: frontend.sort() };
+  return { backend: backend.toSorted(), frontend: frontend.toSorted() };
 }
 
 /** One thing to run, named the way an agent would type it. */
@@ -126,19 +130,25 @@ export function packageOf(path: string, packageDirs: string[]): string | null {
  *
  * callback-box gets its own `lint:changed` (it is the big one, and it knows
  * the frontend/backend split); every other package runs its whole `lint`,
- * which is seconds. `schedules/` is not a package — `bin/schedules lint` is
- * what checks it, and it is the only root path the root eslint config lints.
+ * which is seconds. `schedules/` and `bin/` are not packages — they are the
+ * two root paths the root eslint config lints, and each has its own root-level
+ * command: `bin/schedules lint` (which wraps eslint in the schedule-specific
+ * checks) and `pnpm lint:bin` (plain eslint over `bin/`).
  */
 export function dispatchPlan(input: DispatchInput): LintCommand[] {
   const commands: LintCommand[] = [];
   const packages = new Set<string>();
   let schedules = false;
+  let binary = false;
   for (const path of input.paths) {
     if (path.startsWith("schedules/")) schedules = true;
+    if (path.startsWith("bin/") && BIN_EXTENSIONS.some((extension) => path.endsWith(extension))) {
+      binary = true;
+    }
     const dir = packageOf(path, input.packageDirs);
     if (dir !== null) packages.add(dir);
   }
-  for (const dir of [...packages].sort()) {
+  for (const dir of [...packages].toSorted()) {
     const script = dir === "callback-box" ? "lint:changed" : "lint";
     if (!input.hasScript(dir, script)) continue;
     commands.push({
@@ -150,6 +160,9 @@ export function dispatchPlan(input: DispatchInput): LintCommand[] {
   if (schedules) {
     commands.push({ label: "bin/schedules lint", cwd: ".", argv: ["bin/schedules", "lint"] });
   }
+  if (binary) {
+    commands.push({ label: "pnpm lint:bin", cwd: ".", argv: ["pnpm", "lint:bin"] });
+  }
   return commands;
 }
 
@@ -160,10 +173,24 @@ interface Args {
   root: boolean;
 }
 
+class MissingBaseRefError extends Error {
+  public constructor() {
+    super("--base needs a ref");
+    this.name = "MissingBaseRefError";
+  }
+}
+
+class EmptyCommandError extends Error {
+  public constructor() {
+    super("empty command");
+    this.name = "EmptyCommandError";
+  }
+}
+
 function parseArgs(argv: string[]): Args {
   const index = argv.indexOf("--base");
   const base = index === -1 ? "main" : argv[index + 1];
-  if (base === undefined) throw new Error("--base needs a ref");
+  if (base === undefined) throw new MissingBaseRefError();
   return { base, root: argv.includes("--root") };
 }
 
@@ -175,16 +202,19 @@ function existing(paths: string[]): string[] {
 function hasScript(dir: string, script: string): boolean {
   try {
     const raw = readFileSync(join(REPO_ROOT, dir, "package.json"), "utf-8");
-    const parsed = JSON.parse(raw) as { scripts?: Record<string, string> };
-    return parsed.scripts?.[script] !== undefined;
-  } catch {
+    const parsed: unknown = JSON.parse(raw);
+    const scripts: unknown =
+      typeof parsed === "object" && parsed !== null && "scripts" in parsed ? parsed.scripts : undefined;
+    if (typeof scripts !== "object" || scripts === null) return false;
+    return Object.hasOwn(scripts, script);
+  } catch (_e) {
     return false;
   }
 }
 
 function runCommand(command: LintCommand): number {
   const [executable, ...args] = command.argv;
-  if (executable === undefined) throw new Error("empty command");
+  if (executable === undefined) throw new EmptyCommandError();
   console.error(`lint-changed: ${command.label}`);
   const result = spawnSync(executable, args, {
     cwd: join(REPO_ROOT, command.cwd),
@@ -260,7 +290,7 @@ function main(argv: string[]): number {
   return status;
 }
 
-if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (process.argv[1] !== undefined && import.meta.filename === process.argv[1]) {
   try {
     process.exitCode = main(process.argv.slice(2));
   } catch (e) {

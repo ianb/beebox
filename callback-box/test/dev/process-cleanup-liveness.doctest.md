@@ -147,13 +147,13 @@ an oracle failure there is no second signal left to be wrong about.
 ```ts
 const old = 3600;
 JSON.stringify([
-  classifyAgentBrowser("unknown", true, old),
-  classifyAgentBrowser("unknown", false, old),
-  classifyAgentBrowser("launching", true, old),
-  classifyAgentBrowser("launching", false, old),
-  classifyAgentBrowser("live", true, old),
-  classifyAgentBrowser("live", false, old),
-  classifyAgentBrowser("none", true, old),
+  classifyAgentBrowser("unknown", { vouched: true, ageSec: old }),
+  classifyAgentBrowser("unknown", { vouched: false, ageSec: old }),
+  classifyAgentBrowser("launching", { vouched: true, ageSec: old }),
+  classifyAgentBrowser("launching", { vouched: false, ageSec: old }),
+  classifyAgentBrowser("live", { vouched: true, ageSec: old }),
+  classifyAgentBrowser("live", { vouched: false, ageSec: old }),
+  classifyAgentBrowser("none", { vouched: true, ageSec: old }),
 ])
 => [{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"session liveness unknown"},{"kill":false,"reason":"launch in progress"},{"kill":false,"reason":"launch in progress"},{"kill":false,"reason":"current daemon"},{"kill":true,"reason":"superseded orphan"},{"kill":true,"reason":"no live session"}]
 ```
@@ -174,10 +174,10 @@ something still spawned that daemon a moment ago.
 ```ts
 const young = 5;
 JSON.stringify([
-  classifyAgentBrowser("live", false, young),
-  classifyAgentBrowser("none", false, young),
-  classifyAgentBrowser("live", true, young),
-  classifyAgentBrowser("live", false, 61),
+  classifyAgentBrowser("live", { vouched: false, ageSec: young }),
+  classifyAgentBrowser("none", { vouched: false, ageSec: young }),
+  classifyAgentBrowser("live", { vouched: true, ageSec: young }),
+  classifyAgentBrowser("live", { vouched: false, ageSec: 61 }),
 ])
 => [{"kill":false,"reason":"starting (5s old, no pidfile yet)"},{"kill":false,"reason":"starting (5s old, no pidfile yet)"},{"kill":false,"reason":"current daemon"},{"kill":true,"reason":"superseded orphan"}]
 ```

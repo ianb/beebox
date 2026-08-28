@@ -27,7 +27,7 @@ import {
 const NOW = Date.parse("2026-08-25T12:00:00.000Z");
 const BOOT = Date.parse("2026-08-25T08:00:00.000Z");
 
-const lock = (over: Partial<LockRecord> = {}): LockRecord => ({
+const lock = (over?: Partial<LockRecord>): LockRecord => ({
   pid: 111,
   branch: "worktree-x",
   at: new Date(NOW - 60_000).toISOString(),
@@ -35,7 +35,7 @@ const lock = (over: Partial<LockRecord> = {}): LockRecord => ({
   ...over,
 });
 
-const probe = (over: Partial<StaleProbe> = {}): StaleProbe => ({
+const probe = (over?: Partial<StaleProbe>): StaleProbe => ({
   nowMs: NOW,
   bootTimeMs: BOOT,
   isProcessAlive: () => true,
@@ -187,7 +187,7 @@ test(
     writeForeignLock(join(dir, "slot-0"));
     const held = await acquire({ dir, tier: "ordinary", branch: "worktree-x" });
     assert.equal(held.concurrency, 1);
-    assert.deepEqual(readdirSync(dir).sort(), ["slot-0", "slot-1"]);
+    assert.deepEqual(readdirSync(dir).toSorted(), ["slot-0", "slot-1"]);
     held.release();
   }),
 );
@@ -226,7 +226,7 @@ test(
 
     rmSync(join(dir, "slot-0"));
     const held = await acquired;
-    assert.deepEqual(readdirSync(dir).sort(), ["slot-0", "slot-1"], "barrier cleared on acquire");
+    assert.deepEqual(readdirSync(dir).toSorted(), ["slot-0", "slot-1"], "barrier cleared on acquire");
     held.release();
 
     const after = await ordinary;
@@ -234,13 +234,21 @@ test(
   }),
 );
 
+/** A polled condition that never became true within the test's budget. */
+class ConditionNeverHeldError extends Error {
+  constructor() {
+    super("condition never held");
+    this.name = "ConditionNeverHeldError";
+  }
+}
+
 /** Poll until a condition holds, so a test never depends on the poll interval. */
 async function waitFor(condition: () => boolean): Promise<void> {
   for (let i = 0; i < 200; i++) {
     if (condition()) return;
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  throw new Error("condition never held");
+  throw new ConditionNeverHeldError();
 }
 
 /** Did this promise resolve within a couple of poll intervals? */

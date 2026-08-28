@@ -10,10 +10,9 @@
 //   node --import tsx --test bin/router-guard-header.test.ts
 
 import assert from "node:assert/strict";
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { test } from "node:test";
 
-import { routerGuardHeaders, writeDeny } from "./router.js";
+import { routerGuardHeaders, writeDeny, type DenyRequest, type DenyResponse } from "./router.js";
 import type { RouterAuthDecision } from "./router-auth.js";
 
 interface Captured {
@@ -22,25 +21,23 @@ interface Captured {
   body: string;
 }
 
-// A minimal ServerResponse capturing writeHead/end — enough to assert the header.
-function fakeRes(captured: Captured): ServerResponse {
-  const res = {
-    writeHead(status: number, headers: Record<string, unknown>): ServerResponse {
+// A minimal response double capturing writeHead/end — enough to assert the
+// header. `writeDeny` takes the structural `DenyResponse`/`DenyRequest`, so no
+// cast to Node's own types is needed.
+function fakeRes(captured: Captured): DenyResponse {
+  return {
+    writeHead(status: number, headers?: Record<string, string>): void {
       captured.status = status;
-      captured.headers = headers;
-      return res;
+      captured.headers = headers ?? {};
     },
-    end(chunk?: string): ServerResponse {
+    end(chunk?: string): void {
       if (typeof chunk === "string") captured.body = chunk;
-      return res;
     },
-  // Test-only structural double implements every response method this handler uses.
-  } as unknown as ServerResponse;
-  return res;
+  };
 }
 
-function req(url: string): IncomingMessage {
-  return { url, headers: {} } as unknown as IncomingMessage;
+function req(url: string): DenyRequest {
+  return { url };
 }
 
 test("routerGuardHeaders: only /__router/* paths get the marker", () => {
@@ -66,7 +63,7 @@ test("writeDeny: anonymous /__router/status 401 carries the guarded header", () 
     redirectToLogin: false,
     route: { kind: "control-read", json: true },
   };
-  writeDeny(req("/__router/status"), fakeRes(captured), deny);
+  writeDeny(req("/__router/status"), { res: fakeRes(captured), decision: deny });
   assert.equal(captured.status, 401);
   assert.equal(captured.headers["x-cb-router-guarded"], "1");
   assert.equal(captured.headers["content-type"], "application/json; charset=utf-8");
@@ -82,7 +79,7 @@ test("writeDeny: a non-router box deny does NOT carry the header", () => {
     redirectToLogin: false,
     route: { kind: "box", targetWorktree: "main", targetBox: "test1" },
   };
-  writeDeny(req("/main/test1/api/x"), fakeRes(captured), deny);
+  writeDeny(req("/main/test1/api/x"), { res: fakeRes(captured), decision: deny });
   assert.equal(captured.status, 401);
   assert.equal(captured.headers["x-cb-router-guarded"], undefined);
 });
@@ -96,7 +93,7 @@ test("writeDeny: a /__router/* login redirect still carries the header", () => {
     redirectToLogin: true,
     route: { kind: "control" },
   };
-  writeDeny(req("/__router/dashboard/main"), fakeRes(captured), deny);
+  writeDeny(req("/__router/dashboard/main"), { res: fakeRes(captured), decision: deny });
   assert.equal(captured.status, 302);
   assert.equal(captured.headers["x-cb-router-guarded"], "1");
   assert.equal(typeof captured.headers["location"], "string");

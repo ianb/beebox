@@ -16,7 +16,6 @@
 // This is a separate handler, not a reuse of serveDevArtifact (which renders
 // directory listings and Markdoc).
 
-import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execa } from "execa";
@@ -63,7 +62,8 @@ export async function resolveSiteTarget(params: {
   const { distRoot, rel } = params;
   try {
     await fs.stat(distRoot);
-  } catch {
+  } catch (_e) {
+    // No dist/ yet (never built, or wiped) — the caller triggers a build.
     return { kind: "no-dist" };
   }
 
@@ -75,7 +75,8 @@ export async function resolveSiteTarget(params: {
   let stat;
   try {
     stat = await fs.stat(resolved);
-  } catch {
+  } catch (_e) {
+    // No such file under dist/ — a 404, not an error.
     return { kind: "not-found" };
   }
 
@@ -86,7 +87,8 @@ export async function resolveSiteTarget(params: {
     const indexPath = path.join(resolved, "index.html");
     try {
       await fs.stat(indexPath);
-    } catch {
+    } catch (_e) {
+      // A directory with no index.html — nothing to serve.
       return { kind: "not-found" };
     }
     return { kind: "file", abs: indexPath };
@@ -145,6 +147,17 @@ async function ensureBuilt(params: { repoRoot: string; siteDir: string; distRoot
 }
 
 /**
+ * The subset of `http.ServerResponse` serveSite writes to. Declared structurally
+ * so a test can hand in a recording fake without an unsound cast; a real
+ * `http.ServerResponse` satisfies it.
+ */
+export interface SiteResponse {
+  setHeader(name: string, value: string): void;
+  writeHead(status: number, headers?: Record<string, string>): void;
+  end(chunk?: string | Buffer): void;
+}
+
+/**
  * Dispatch a request under /<name>/site/. `rest` is the URL after /<name>
  * (i.e. it starts with "/site"). `repoRoot` is the caller-resolved worktree
  * root, threaded in like serveDev so this module needs no router.ts config.
@@ -153,7 +166,7 @@ async function ensureBuilt(params: { repoRoot: string; siteDir: string; distRoot
 export async function serveSite(params: {
   name: string;
   rest: string;
-  res: http.ServerResponse;
+  res: SiteResponse;
   repoRoot: string;
   buildRunner?: BuildRunner;
 }): Promise<void> {
@@ -171,7 +184,8 @@ export async function serveSite(params: {
   // built — keep the 404-with-hint for that case only.
   try {
     await fs.stat(path.join(siteDir, "build.ts"));
-  } catch {
+  } catch (_e) {
+    // No site/build.ts in this checkout — it predates the site generator.
     res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     res.end("site not built — run: pnpm --dir site build\n");
     return;

@@ -63,7 +63,7 @@ export function deriveDate(slug: string): string | null {
  * `workstream:` field, `bin/workstreams`. {@link normalizeWorkstreamName} lets a
  * caller pass either spelling.
  */
-export function deriveDiscoveredInWorkstream(discoveredIn: string | undefined): string | null {
+export function deriveDiscoveredInWorkstream(discoveredIn?: string): string | null {
   if (discoveredIn === undefined) return null;
   const token = /^\s*worktree-(?<name>[A-Za-z0-9][A-Za-z0-9._-]*)/u.exec(discoveredIn);
   return token?.groups?.["name"] ?? null;

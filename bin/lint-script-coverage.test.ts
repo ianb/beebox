@@ -6,7 +6,14 @@ import frontend from "../callback-box/src/frontend/package.json" with { type: "j
 import root from "../package.json" with { type: "json" };
 
 test("workspace lint excludes frontend only because callback-box lint covers it", () => {
-  assert.equal(root.scripts.lint, "pnpm --filter '!callback-box-frontend' -r lint");
+  assert.equal(
+    root.scripts.lint,
+    "pnpm lint:bin && pnpm --filter '!callback-box-frontend' -r lint",
+  );
+  // `bin/` is not a workspace package, so the `-r` fan-out cannot reach it; the
+  // root eslint config is what lints it, and this script is the only whole-tree
+  // run of that config. Dropping it would silently un-lint bin/ again.
+  assert.match(root.scripts["lint:bin"], / bin\/$/);
   assert.equal(
     callbackBox.scripts.lint,
     "node --import tsx ../bin/with-slot.ts -- pnpm run '/^lint:(backend|frontend)$/'",

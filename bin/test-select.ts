@@ -23,7 +23,6 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { changedPaths, git, treeHash } from "./test-git.js";
 import { buildGraph, cliBundleInputs, REPO_ROOT } from "./test-graph.js";
 import { isAccounted } from "./test-graph-query.js";
@@ -51,7 +50,10 @@ function stripPackagePrefix(path: string): string {
 function readRepoFile(repoRelative: string): string | null {
   try {
     return readFileSync(join(REPO_ROOT, repoRelative), "utf-8");
-  } catch {
+  } catch (_e) {
+    // A graph path can name a file that is gone from the working tree (deleted
+    // in the branch, or listed by a cache built before the delete). Absent
+    // content is the answer the caller wants, not a failure.
     return null;
   }
 }
@@ -72,10 +74,18 @@ interface Args {
   cache: boolean;
 }
 
+/** `--base` was given as the last argument, with no ref after it. */
+class MissingBaseRefError extends Error {
+  constructor() {
+    super("--base needs a ref");
+    this.name = "MissingBaseRefError";
+  }
+}
+
 function parseArgs(argv: string[]): Args {
   const baseIndex = argv.indexOf("--base");
   const base = baseIndex === -1 ? "main" : argv[baseIndex + 1];
-  if (base === undefined) throw new Error("--base needs a ref");
+  if (base === undefined) throw new MissingBaseRefError();
   return { base, run: argv.includes("--run"), cache: !argv.includes("--no-cache") };
 }
 
@@ -186,7 +196,7 @@ export async function main(argv: string[]): Promise<number> {
   return runSelected(files);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] === import.meta.filename) {
   try {
     process.exitCode = await main(process.argv.slice(2));
   } catch (e) {

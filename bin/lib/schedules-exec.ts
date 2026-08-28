@@ -171,10 +171,11 @@ function killGroup(pid: number | undefined, signal: NodeJS.Signals): void {
   if (pid === undefined) return;
   try {
     process.kill(-pid, signal);
-  } catch {
+  } catch (_groupError) {
+    /* ignore: no such process group — fall back to the pid itself */
     try {
       process.kill(pid, signal);
-    } catch {
+    } catch (_pidError) {
       // Already gone.
     }
   }
