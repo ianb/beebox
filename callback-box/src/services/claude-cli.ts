@@ -34,8 +34,17 @@ export interface ClaudeCliService {
 
 // ─── Real implementation ─────────────────────────────────────────────────────
 
+/**
+ * The one in-flight login for this process. Module-level, not per service
+ * instance: every tRPC mutation constructs its own `createClaudeCliService()`
+ * (`routers/admin.ts`), so a per-instance handle meant the submit-code call
+ * built a fresh service that had never seen the login — "No sign-in in
+ * progress" while the process sat alive waiting for stdin (prod, 2026-08-28).
+ * One login per box process is the real constraint anyway.
+ */
+let activeLogin: { process: ReturnType<typeof spawn>; authUrl: string | null } | null = null;
+
 export function createClaudeCliService(): ClaudeCliService {
-  let activeLogin: { process: ReturnType<typeof spawn>; authUrl: string | null } | null = null;
 
   return {
     async authStatus() {

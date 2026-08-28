@@ -54,6 +54,22 @@ JSON.stringify([submitted.accepted, afterCode.loggedIn])
 => [true,true]
 ```
 
+The real service keeps the in-flight login at module scope, because every
+mutation builds its own service instance: the instance that started the login
+and the one that receives the code are different objects. Two instances agree
+about whether a login exists (no process is spawned here — the assertion is on
+the shared state, exercised through the refusal path).
+
+```ts continue
+const { createClaudeCliService } = await import("../../src/services/claude-cli.js");
+const first = createClaudeCliService();
+const second = createClaudeCliService();
+const r1 = await first.authSubmitCode("x");
+const r2 = await second.authSubmitCode("x");
+JSON.stringify([r1.accepted, r2.accepted, r1.error === r2.error])
+=> [false,false,true]
+```
+
 ```ts cleanup
 await box.cleanup();
 ```
