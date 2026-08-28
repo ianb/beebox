@@ -31,6 +31,7 @@ import { verifyDiagBearerKey } from "../webapp/auth.js";
 import { errorMessage } from "../lib/error-guards.js";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
 import type { HubHealth } from "./hub-server.js";
+import type { DiskHealth } from "./disk-health.js";
 
 /** Bound the canary's fetch of the box's own `/healthz` — a box that can't
  *  answer its health endpoint within this at deploy time is itself a fault. */
@@ -52,11 +53,21 @@ function requireDiagKey(request: FastifyRequest, reply: FastifyReply): boolean {
 
 export function registerHealthRoutes(
   app: FastifyInstance,
-  { endpoints, getHealth }: { endpoints: EndpointProvider; getHealth: () => HubHealth },
+  options: { endpoints: EndpointProvider; getHealth: () => HubHealth; getDiskHealth?: (() => DiskHealth) | undefined },
 ): void {
+  const { endpoints, getHealth } = options;
   app.get("/healthz", async (request, reply) => {
     if (!requireDiagKey(request, reply)) return reply;
-    const health = getHealth();
+    const baseHealth = getHealth();
+    if (options.getDiskHealth === undefined) {
+      return reply.status(baseHealth.status === "unhealthy" ? 503 : 200).send(baseHealth);
+    }
+    const disk = options.getDiskHealth();
+    const health = {
+      ...baseHealth,
+      status: baseHealth.status === "unhealthy" || disk.status === "low" ? "unhealthy" : "ok",
+      disk,
+    };
     return reply.status(health.status === "unhealthy" ? 503 : 200).send(health);
   });
 
