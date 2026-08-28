@@ -73,7 +73,11 @@ export function createClaudeCliService(): ClaudeCliService {
       const onData = (data: Buffer): void => {
         output += data.toString();
         if (login.authUrl) return;
-        const urlMatch = output.match(/(https:\/\/claude\.ai\/oauth\/authorize\S+)/);
+        // Both hosts: Claude Code 2.1.246 moved the sign-in URL from
+        // claude.ai/oauth/authorize to claude.com/cai/oauth/authorize, and the
+        // old-host-only match turned every login into "Failed to get auth
+        // URL" (prod, 2026-08-28). Anchored on the path, not the host.
+        const urlMatch = output.match(/(https:\/\/claude\.(?:ai|com)\/(?:cai\/)?oauth\/authorize\S+)/);
         if (!urlMatch) return;
         invariant(urlMatch[1] !== undefined, "capture group 1 is non-optional in urlMatch");
         login.authUrl = urlMatch[1];
