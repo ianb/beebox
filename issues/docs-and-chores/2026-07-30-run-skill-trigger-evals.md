@@ -65,7 +65,7 @@ Our skills overlap by design in ways an eval would stress: `cb-debug` vs
 `cb-guide-testing` vs `cb-debug`; the three `cb-guide-*` against each other. Some
 of those boundaries are stated in the descriptions and have never been checked.
 
-Pairs with [skill-description-triggering-conditions](2026-07-30-skill-description-triggering-conditions.md)
+Pairs with [skill-description-triggering-conditions](../closed/docs-and-chores/2026-07-30-skill-description-triggering-conditions.md)
 — that item asserts a fix; this one is how we'd know whether it was needed and
 whether it worked.
 
