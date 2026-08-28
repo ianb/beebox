@@ -65,6 +65,11 @@ newest request when it finishes. Hook-triggered runs each log to
 `deploy/.deploy-logs/`, with `deploy/.last-deploy.log` symlinked to the newest
 (see `deploy/CLAUDE.md` for the wait/poll pattern).
 
+The hook records its requested SHA synchronously before launching through
+`bin/lib/detach.ts`, so an agent command ending cannot kill the deploy by
+process group. That ordered hook request stays authoritative: a late-starting
+older child cannot overwrite newer intent.
+
 ### `create-server.sh` — Create a new server from scratch
 
 Destroys any existing server, creates a fresh Hetzner VPS, provisions it, and sets up DNS.
