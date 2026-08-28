@@ -1,6 +1,7 @@
 /** Engine selection for fresh and engine-pinned resumed chats. */
 
 import { loadAgentEngine } from "../../box/config.js";
+import { coinedEngineFor } from "./coined-engines.js";
 import type { AgentEngine } from "../../../shared/agent-models.js";
 import { loadHistoryEntries } from "./history.js";
 import { findChatHuskEntry, type ChatHuskEntry } from "../husk-read.js";
@@ -33,7 +34,9 @@ export async function resolveChatEngine(
   const historyEngine = args.historyEngine === undefined
     ? (await loadHistoryEntries(boxRoot)).find((candidate) => candidate.id === sessionId)?.engine ?? null
     : args.historyEngine;
-  return historyEngine ?? await loadAgentEngine(boxRoot);
+  // A coined-but-unstarted chat's engine lives in its reservation, not yet in
+  // history — see coined-engines.ts for the 500s this ordering fixes.
+  return historyEngine ?? coinedEngineFor(sessionId) ?? await loadAgentEngine(boxRoot);
 }
 
 /**
@@ -55,5 +58,5 @@ export async function resolveStartEngine(
   const husk = await findChatHuskEntry(boxRoot, sessionId);
   if (husk?.engine !== undefined) return husk.engine;
   const recorded = (await loadHistoryEntries(boxRoot)).find((candidate) => candidate.id === sessionId)?.engine ?? null;
-  return recorded ?? requested ?? await loadAgentEngine(boxRoot);
+  return recorded ?? coinedEngineFor(sessionId) ?? requested ?? await loadAgentEngine(boxRoot);
 }

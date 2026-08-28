@@ -136,6 +136,23 @@ const unasked = await reserveChatSession({
 
 JSON.stringify([asked.kind, unasked.kind])
 => ["reserved","unsupported"]
+```
 
+While a reservation is live, the READ paths see its engine too — bootstrap and
+history resolve a coined-but-unstarted chat through `resolveChatEngine`, which
+answered the box default until the first turn wrote history (on a codex box:
+Codex history reads for a Claude-reserved chat, failing the whole bootstrap).
+The reservation registers the engine; release forgets it:
+
+```ts continue
+const codexCoined = asked.kind === "reserved" ? asked.sessionId : "";
+const during = await resolveChatEngine(codexBox.root, { sessionId: codexCoined });
+codexStore.release(codexCoined);
+const after = await resolveChatEngine(codexBox.root, { sessionId: codexCoined });
+JSON.stringify([during, after])
+=> ["claude","codex"]
+```
+
+```ts cleanup
 await codexBox.cleanup();
 ```
