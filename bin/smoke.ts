@@ -52,6 +52,7 @@ import { invariant } from "../callback-box/src/lib/invariant.js";
 import {
   SmokeFailure,
   cardViewRendered,
+  currentPlaceLabel,
   directoryRowCount,
   formatSmokeReport,
   smokeLogPath,
@@ -64,9 +65,11 @@ import {
   pollUntilReady,
   probeFailure,
   readHealthProbe,
+  placeSwitchFailure,
   readPlaceMenu,
   readProbe,
   refFor,
+  switchTarget,
   type SmokeRunRecord,
   type SmokeStepRecord,
 } from "./smoke-lib.js";
@@ -480,8 +483,61 @@ function buildSteps(input: {
       // mouse event at the box centre and reports success either way — so the
       // assertion is on the consequence, never on the click.
       await session.run(["click", "#cb-nav-place"]);
-      const snapshot = await session.snapshot({ interactiveOnly: true });
+      // The FULL tree, not the interactive one: landmark rows are separated
+      // from the nav-card rows above them only by a `StaticText "Switch to"`
+      // section header, and interactive-only snapshots drop static text — so
+      // there is no way to tell a landmark from a route in that view.
+      const snapshot = await session.snapshot();
       const failure = placeMenuFailure(readPlaceMenu(snapshot), snapshot);
+      if (failure !== null) throw failure;
+    },
+  });
+
+  steps.push({
+    id: "place-switch",
+    name: "selecting a landmark moves you there",
+    // The menu listing landmarks is the affordance; going somewhere is what the
+    // affordance is FOR, and that is where the 2026-08-20 bug lived — the menu
+    // listed all seven landmarks, reported no problems, and selecting one did
+    // not move you. Every assertion the step above makes would have passed.
+    run: async () => {
+      // Re-read rather than reuse the previous step's snapshot: the menu starts
+      // its landmark and recent-file queries when it opens, and a row arriving
+      // late renumbers the refs. A stale `eN` clicks nothing, and the click
+      // itself reports success either way — so the saving was buying a
+      // mysterious red on a healthy box.
+      const before = await session.snapshot();
+      const current = currentPlaceLabel(before);
+      const target = switchTarget({ landmarks: readPlaceMenu(before).landmarks, current });
+      if (target === null) {
+        throw new SmokeFailure(
+          "the box offers nowhere to switch to — it lists no landmark other than the one" +
+            ` we are already in ("${current ?? "unknown"}"), so the switch cannot be walked.` +
+            " A box used for smoke needs at least two landmarks.",
+          before,
+        );
+      }
+      const ref = refFor(before, "menuitem", target.rawName);
+      if (ref === null) {
+        throw new SmokeFailure(`could not resolve a ref for the landmark "${target.rawName}"`, before);
+      }
+      const urlBefore = await session.getUrl();
+      await session.clickRef(ref);
+      // Client-side navigation: nothing loads, so wait for the app to settle
+      // rather than for a page load that will not happen. A timed-out wait is
+      // not fatal on its own — the assertions below decide — but it changes
+      // what a failure MEANS, so it is carried into the message.
+      const settled = await session.waitForReady();
+      const after = await session.snapshot();
+      const failure = placeSwitchFailure({
+        target: target.label,
+        targetRaw: target.rawName,
+        urlBefore,
+        urlAfter: await session.getUrl(),
+        labelAfter: currentPlaceLabel(after),
+        settled,
+        snapshot: after,
+      });
       if (failure !== null) throw failure;
     },
   });
