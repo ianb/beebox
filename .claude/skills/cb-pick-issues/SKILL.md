@@ -86,6 +86,14 @@ Exclude by default: `needs: [manual-testing]` (the developer's own queue),
 `watch/` (trigger-driven, never picked), and anything with a `next-action:`
 tag (that is `cb-issue-actions` territory — mention them, don't work them).
 
+**Route against existing workstreams, at survey time.** Run `bin/workstreams
+list` before surveying: an issue a LIVE workstream owns or plainly covers is
+excluded (tell the survey which streams are live and what each covers), and a
+cluster that falls inside a live or dormant stream's territory is proposed as
+"resume <name> with this briefing", not as a new session. "The right owner
+already exists" is a complete and common recommendation — the launch skill's
+route-before-creating check is the backstop, not the first look.
+
 ## What a proposal contains
 
 One recommendation, not a menu. For it: the issue paths (every member, with
