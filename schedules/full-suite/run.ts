@@ -1,62 +1,30 @@
 /**
- * The batched full-suite run — mechanism D of the 2026-08-25 revision of
- * callback-box/docs/plans/change-based-test-selection.md.
- *
- * Iteration and `/finish` run only the tests a change implicates. This is the
- * one thing that runs everything, hourly, on `main`, and the one thing that
- * tests `main` at all. It does not fix anything: it bisects a red run down to
- * the landing that caused it and files an issue naming that landing's
- * workstream, which then owns the fixup.
- *
- * ## Where this runs, and why that matters
- *
- * `bin/schedules install` registers the launchd tick FROM THE MAIN CHECKOUT
- * ONLY, and the runner executes `run` with the main checkout as its cwd. So at
- * scheduled run time this script is in the main checkout, on `main`, and may
- * commit an issue file there. That is the assumption the issue-filing step is
- * written against, and it is checked rather than assumed: run from a linked
- * worktree (a `bin/schedules run full-suite --force` typed in the wrong place)
- * the script refuses before it does anything, because a Claude Code worktree
- * session is isolated from the main checkout and could not commit there even
- * if this tried. If the main checkout is on another branch or the commit is
- * refused, the issue text rides the alert instead of being written — nothing
- * is lost, and nothing is written where it would rot.
- *
- * The tests themselves never run in the main checkout (`.claude/agents/
- * finish.md`: "never run the suite in the main checkout"). `main` is pinned
- * once with `git rev-parse main` and everything runs in a DETACHED worktree of
- * that commit, so a landing that arrives mid-run is neither tested nor marked
- * tested — it is the next hour's work. The worktree is removed in a `finally`;
- * there is no `check` script because a run-only schedule's `check` is never
- * executed (`bin/lib/schedules-workstream.ts` runs it after a SESSION, and
- * this schedule declares no workstream).
- *
- * Tests need no box clone: `test/helpers/test-server.ts` scaffolds its own
- * throwaway box per process (`scaffoldV2Box`). A fresh worktree does need one
- * workspace-wide `pnpm install`.
+ * Hourly full-suite run on pinned `main`; mechanism D of
+ * callback-box/docs/plans/change-based-test-selection.md. It runs in a detached
+ * worktree, triages red files, bisects only attributable landings, and files
+ * issues from the main checkout. It refuses to run elsewhere, and always
+ * removes the detached checkout in `finally`.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 
 import { execa } from "execa";
-
 import { gitCommonDir } from "../../bin/test-git.js";
 import { appendLedgerRecord, readRecords } from "../../bin/test-ledger.js";
-import { flakeShare, foldFilesets, hashFileset, ledgerPaths } from "../../bin/test-ledger-lib.js";
+import { hashFileset, ledgerPaths } from "../../bin/test-ledger-lib.js";
+import { touchesDeployedPath } from "../../bin/deployed-paths.js";
+import { attributableLanding, unbisectedFiles, type Batch } from "./attribution.js";
 import {
   BISECT_MAX_FILES,
-  FLAKE_WINDOW,
   LANDING_FIELD_SEPARATOR,
   LANDING_RECORD_SEPARATOR,
   TIERS,
   batchExit,
   bisect,
-  classifyFailure,
   completionMarker,
   environmentCluster,
-  failureExcerpt,
   firstErrorLines,
   isEnvironmentFailure,
   issuePath,
@@ -80,6 +48,8 @@ import {
   type SuiteRun,
 } from "./checkout.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
+import { newlyRedFiles, readKnownRed, writeKnownRed } from "./state.js";
+import { groupCulprits, triage } from "./triage.js";
 
 const SCHEDULES_CLI = path.join(REPO_ROOT, "bin", "schedules");
 const DRY_RUN = process.env["SCHEDULE_DRY_RUN"] === "1";
@@ -127,19 +97,19 @@ async function canCommitIssues(): Promise<string | null> {
 
 // ─── the batch ────────────────────────────────────────────────────────────
 
-interface Batch {
-  pinned: string;
-  base: string | null;
-  landings: Landing[];
-}
-
 async function readBatch(): Promise<Batch> {
   const pinned = await git(["rev-parse", "main"]);
   const base = lastTestedCommit(readRecords(ledgerPaths(gitCommonDir(REPO_ROOT)).ledger));
-  if (base === null) return { pinned, base: null, landings: [] };
+  if (base === null) return { pinned, base: null, landings: [], attributableLandings: [] };
   const format = `%H${LANDING_FIELD_SEPARATOR}%s${LANDING_RECORD_SEPARATOR}`;
   const raw = await git(["log", "--first-parent", "--reverse", `--format=${format}`, `${base}..${pinned}`]);
-  return { pinned, base, landings: parseLandings(raw) };
+  const landings = parseLandings(raw);
+  const attributableLandings: Landing[] = [];
+  for (const landing of landings) {
+    const changed = (await git(["diff", "--name-only", `${landing.commit}^1`, landing.commit])).split("\n").filter(Boolean);
+    if (touchesDeployedPath(changed)) attributableLandings.push(landing);
+  }
+  return { pinned, base, landings, attributableLandings };
 }
 
 // ─── bisect ───────────────────────────────────────────────────────────────
@@ -151,7 +121,12 @@ async function readBatch(): Promise<Batch> {
  * search then converges on the landing that introduced it, which is the true
  * answer for a test that has never passed.
  */
-async function blameLanding(input: { checkout: Checkout; file: string; landings: Landing[] }): Promise<Landing> {
+async function blameLanding(input: {
+  checkout: Checkout;
+  file: string;
+  landings: Landing[];
+  attributable: ReadonlySet<string>;
+}): Promise<Landing | null> {
   const index = await bisect({
     count: input.landings.length,
     passesAt: async (at) => {
@@ -166,53 +141,10 @@ async function blameLanding(input: { checkout: Checkout; file: string; landings:
   });
   const landing = input.landings[index];
   if (landing === undefined) refuse("bisect returned an index outside the landing list");
-  return landing;
+  return attributableLanding({ found: landing, attributableCommits: input.attributable });
 }
 
 // ─── the red path ─────────────────────────────────────────────────────────
-
-interface Triage {
-  flakes: string[];
-  real: string[];
-}
-
-/** Isolated re-run plus the ledger's own flake history, per the plan's order. */
-async function triage(input: { checkout: Checkout; failures: string[] }): Promise<Triage> {
-  const paths = ledgerPaths(gitCommonDir(REPO_ROOT));
-  const records = readRecords(paths.ledger);
-  const filesets = existsSync(paths.filesets)
-    ? foldFilesets(readFileSync(paths.filesets, "utf-8").split("\n"))
-    : {};
-  const triaged: Triage = { flakes: [], real: [] };
-  for (const file of input.failures) {
-    process.stdout.write(`\n--- isolated re-run: ${file} ---\n`);
-    const rerun = await runFileAlone({ checkout: input.checkout, file });
-    process.stdout.write(rerun.output);
-    const share = flakeShare({ records, filesets, file, window: FLAKE_WINDOW }).share;
-    const verdict = classifyFailure({ isolatedPass: rerun.exitCode === 0, flakeShare: share });
-    (verdict === "flake" ? triaged.flakes : triaged.real).push(file);
-  }
-  return triaged;
-}
-
-/** One issue per blamed landing, with every file that landing broke. */
-function groupCulprits(input: { blamed: Array<{ file: string; landing: Landing }>; output: string }): Culprit[] {
-  const byCommit = new Map<string, Culprit>();
-  for (const { file, landing } of input.blamed) {
-    const existing = byCommit.get(landing.commit);
-    if (existing === undefined) {
-      byCommit.set(landing.commit, {
-        landing,
-        files: [file],
-        excerpt: failureExcerpt({ raw: input.output, file }),
-      });
-      continue;
-    }
-    existing.files.push(file);
-    existing.excerpt = `${existing.excerpt}\n\n${failureExcerpt({ raw: input.output, file })}`;
-  }
-  return [...byCommit.values()];
-}
 
 async function fileIssues(input: { culprits: Culprit[]; batch: Batch }): Promise<{ written: string[]; blocked: string | null }> {
   // Nothing to blame, nothing to write. Guarded here as well as at the call
@@ -293,7 +225,12 @@ async function markComplete(input: { batch: Batch; runs: SuiteRun[] }): Promise<
 
 // ─── the run ──────────────────────────────────────────────────────────────
 
-async function handleRed(input: { batch: Batch; checkout: Checkout; failures: string[]; output: string }): Promise<void> {
+async function handleRed(input: {
+  batch: Batch;
+  checkout: Checkout;
+  failures: string[];
+  output: string;
+}): Promise<string[] | null> {
   const { batch, failures } = input;
   const firstErrors = firstErrorLines({ raw: input.output, files: failures });
   const cluster = environmentCluster({ failures, firstErrors });
@@ -303,10 +240,12 @@ async function handleRed(input: { batch: Batch; checkout: Checkout; failures: st
       title: `full suite: ${String(failures.length)} files failed (environment)`,
       message: renderEnvironmentAlert({ testedCommit: batch.pinned, failures, cluster }),
     });
-    return;
+    return null;
   }
 
   const triaged = await triage({ checkout: input.checkout, failures });
+  const known = await readKnownRed();
+  const newReal = newlyRedFiles({ known, current: triaged.real });
   if (triaged.real.length === 0) {
     await alert({
       priority: "normal",
@@ -320,21 +259,38 @@ async function handleRed(input: { batch: Batch; checkout: Checkout; failures: st
         unattributed: [],
       }),
     });
-    return;
+    return failures;
   }
 
-  const bisectable = batch.landings.length > 0 ? triaged.real.slice(0, BISECT_MAX_FILES) : [];
-  const unattributed = triaged.real.filter((file) => !bisectable.includes(file));
+  const bisectable = batch.landings.length > 0 ? newReal.slice(0, BISECT_MAX_FILES) : [];
+  const knownAtBaseline = triaged.real.filter((file) => !newReal.includes(file));
+  const overBudget = newReal.slice(BISECT_MAX_FILES);
+  const unattributed = unbisectedFiles({ real: triaged.real, bisectable });
   const blamed: Array<{ file: string; landing: Landing }> = [];
+  const noDeployedCulprit: string[] = [];
+  const attributable = new Set(batch.attributableLandings.map((landing) => landing.commit));
   for (const file of bisectable) {
-    blamed.push({ file, landing: await blameLanding({ checkout: input.checkout, file, landings: batch.landings }) });
+    const landing = await blameLanding({ checkout: input.checkout, file, landings: batch.landings, attributable });
+    if (landing === null) noDeployedCulprit.push(file);
+    else blamed.push({ file, landing });
   }
   const culprits = groupCulprits({ blamed, output: input.output });
   const filed = await fileIssues({ culprits, batch });
   // No landing range means no baseline to bisect against — the first run this
   // schedule ever makes, or one after the ledger was cleared. Red is still
   // reported; it just cannot be attributed to a landing.
-  const attribution = culprits.length === 0 ? "No landing range to bisect: nothing attributed, nothing filed." : null;
+  const inherited = newReal.length === 0;
+  const attribution = culprits.length === 0
+    ? inherited || noDeployedCulprit.length > 0
+      ? "Red inherited from baseline; no attributable landing, nothing filed."
+      : "No landing range to bisect: nothing attributed, nothing filed."
+    : null;
+  const unattributedReason = [
+    ...(knownAtBaseline.length > 0 ? ["already red at baseline"] : []),
+    ...(noDeployedCulprit.length > 0 ? ["bisect found a non-deployed-path landing"] : []),
+    ...(overBudget.length > 0 ? [`over the ${String(BISECT_MAX_FILES)}-file budget`] : []),
+    ...(batch.landings.length === 0 && newReal.length > 0 ? ["no landing range to search"] : []),
+  ].join("; ");
 
   const message = [
     renderRedAlert({
@@ -343,8 +299,8 @@ async function handleRed(input: { batch: Batch; checkout: Checkout; failures: st
       landings: batch.landings,
       culprits,
       flakes: triaged.flakes,
-      unattributed,
-      ...(attribution === null ? {} : { unattributedReason: "no landing range to search" }),
+      unattributed: [...unattributed, ...noDeployedCulprit],
+      ...(unattributedReason === "" ? {} : { unattributedReason }),
     }),
     attribution ??
       (filed.blocked === null
@@ -355,10 +311,11 @@ async function handleRed(input: { batch: Batch; checkout: Checkout; failures: st
     priority: "important",
     title:
       culprits.length === 0
-        ? `full suite red: ${String(triaged.real.length)} file(s), no landing range`
+        ? `full suite red: ${String(triaged.real.length)} file(s), no attributable landing`
         : `full suite red: ${String(culprits.length)} landing(s) blamed`,
     message,
   });
+  return failures;
 }
 
 async function main(): Promise<void> {
@@ -399,11 +356,13 @@ async function main(): Promise<void> {
     const failures = failingFiles(runs);
     if (failures.length === 0) {
       process.stdout.write("full-suite: green.\n");
+      await writeKnownRed([]);
       await markComplete({ batch, runs });
       await report(["done"]);
       return;
     }
-    await handleRed({ batch, checkout, failures, output });
+    const knownRed = await handleRed({ batch, checkout, failures, output });
+    if (knownRed !== null) await writeKnownRed(knownRed);
     await markComplete({ batch, runs });
   } finally {
     await removeCheckout(checkout);

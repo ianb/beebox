@@ -26,6 +26,7 @@ import { Supervisor } from "../../hub/supervisor.js";
 import { resolveBoxRoot } from "../../hub/child-spawn.js";
 import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
 import { hubVerdict } from "../../hub/hub-health.js";
+import { getRootDiskHealth } from "../../hub/disk-health.js";
 import { loadEnv, hubEnvSchema } from "../../lib/env.js";
 import { getPublicUrl } from "../../lib/public-url.js";
 import { maybeArmFirstRunSetup } from "../../webapp/setup-token.js";
@@ -163,7 +164,14 @@ export const hubCommand = new Command("hub")
     // `cb hub` never enables open access, so auth is always required here.
     maybeArmFirstRunSetup({ publicUrl: getPublicUrl(baseUrl), openAccess: false });
 
-    const server = await createHubServer({ endpoints: supervisor, getHealth, hubSecret, boxes, baseUrl });
+    const server = await createHubServer({
+      endpoints: supervisor,
+      getHealth,
+      getDiskHealth: getRootDiskHealth,
+      hubSecret,
+      boxes,
+      baseUrl,
+    });
 
     let shuttingDown = false;
     const shutdown = async (signal: string): Promise<void> => {

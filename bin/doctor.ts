@@ -64,6 +64,9 @@ import { createRequire } from "node:module";
 import { resolveClaudeCodeBinary } from "../callback-box/src/core/sdk-binary-path.js";
 import { isRecord } from "../callback-box/src/lib/is-record.js";
 import { schedulesStoreRoot, storeStateSchema } from "./lib/schedules.js";
+import {
+  diskHealthFromBytes,
+} from "../callback-box/src/hub/disk-health.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -414,6 +417,46 @@ export async function checkDeployCurrency(deps: Pick<DoctorDeps, "run" | "fileEx
   );
 }
 
+/** Check the deployed host directly; skip machines without the deploy marker. */
+export async function checkProductionDisk(deps: Pick<DoctorDeps, "run" | "fileExists">): Promise<CheckResult> {
+  const name = "Production disk";
+  const common = await deps.run("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  if (!common.spawned || common.stdout.trim() === "") return pass(name, "not a git checkout — skipped");
+  const marker = path.join(path.dirname(common.stdout.trim()), "callback-box", "deploy", "server-ip");
+  if (!deps.fileExists(marker)) return pass(name, "this checkout does not deploy — skipped");
+
+  const serverIp = (await deps.run("cat", [marker])).stdout.trim();
+  if (serverIp === "") return fail(name, `${marker} is empty`, "restore the production server IP in deploy/server-ip");
+  const disk = await deps.run("ssh", [
+    "-o", "BatchMode=yes",
+    "-o", "ConnectTimeout=5",
+    `root@${serverIp}`,
+    "df", "-Pk", "/",
+  ]);
+  if (!disk.spawned || disk.code !== 0) {
+    return fail(
+      name,
+      "could not query free space on production /",
+      `check SSH access to root@${serverIp}, then rerun bin/doctor`,
+    );
+  }
+  const dataLine = disk.stdout.trim().split("\n").at(-1);
+  const fields = dataLine?.trim().split(/\s+/);
+  const totalKib = Number(fields?.[1]);
+  const freeKib = Number(fields?.[3]);
+  if (!Number.isFinite(totalKib) || !Number.isFinite(freeKib)) {
+    return fail(
+      name,
+      "production df output was unparseable",
+      `run \`ssh root@${serverIp} df -Pk /\` and inspect the output`,
+    );
+  }
+  const health = diskHealthFromBytes(freeKib * 1024, totalKib * 1024);
+  const detail = `${health.freeGiB.toFixed(1)} GiB free on / (threshold: ${health.thresholdGiB.toFixed(1)} GiB)`;
+  if (health.status === "ok") return pass(name, detail);
+  return fail(name, detail, "free production disk space before the next deploy");
+}
+
 /**
  * Is the scheduler actually ticking, and is its launchd job loaded?
  *
@@ -485,6 +528,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
       checkClaudeAuth(deps),
     ]);
   const deployResult = await checkDeployCurrency(deps);
+  const diskResult = await checkProductionDisk(deps);
   const schedulesResult = await checkSchedulesTick(deps);
   return [
     checkNodeVersion(deps),
@@ -497,6 +541,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
     checkSdkBinary(deps),
     checkFrontendBuild(deps),
     deployResult,
+    diskResult,
     schedulesResult,
   ];
 }

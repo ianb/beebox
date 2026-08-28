@@ -253,6 +253,43 @@ backend.prewarmCount
 => 2
 ```
 
+A coined reservation's engine reaches the run it starts. The regression this
+guards (2026-08-27): the registry handed the reservation's contextDir and
+seedFeatures into the session but not its engine, so a `?engine=claude` coined
+start on a codex-default box fell to the box default and tripped the
+coined-must-be-Claude invariant — a 500 at chat open.
+
+```ts continue
+const fs = await import("node:fs/promises");
+const path = await import("node:path");
+const { clearBoxConfigCache } = await import("../../src/core/box/config.js");
+const { randomUUID } = await import("node:crypto");
+
+const codexBox = await makeTmpBox();
+await fs.mkdir(path.join(codexBox.root, "config"), { recursive: true });
+await fs.writeFile(
+  path.join(codexBox.root, "config/box.json"),
+  JSON.stringify({ agentEngine: "codex", engines: { claude: true, codex: true } }),
+);
+clearBoxConfigCache(codexBox.root);
+
+const codexBackend = createFakeChatBackend();
+const codexRegistry = makeRegistry(codexBox, codexBackend);
+const coined = randomUUID();
+const reserved = await codexRegistry.reserve({
+  sessionId: coined, contextDir: null, seedFeatures: {}, requestedEngine: "claude",
+});
+await codexRegistry.getOrCreate(coined).send("hi");
+await tick();
+JSON.stringify([reserved.kind, codexBackend.lastRun()?.startOptions.engine])
+=> ["reserved","claude"]
+```
+
+```ts continue
+codexRegistry.shutdown();
+await codexBox.cleanup();
+```
+
 `shutdown()` closes the warm slot too — it's a subprocess like any session's:
 
 ```ts continue

@@ -59,6 +59,22 @@ JSON.stringify([
 => ["codex","codex"]
 ```
 
+A COINED id is not yet a record: the id exists from the first request, before
+any husk or history entry does. The picker's request must win there — falling
+through to the box default sent a `?engine=claude` coined start on a
+codex-default box into the coined-must-be-Claude invariant (a 500,
+2026-08-27). Recorded > requested > box default. (This box's default is
+claude, so the second entry below is the default answering.)
+
+```ts continue
+const coinedFresh = randomUUID();
+JSON.stringify([
+  await resolveStartEngine(box.root, { sessionId: coinedFresh, requested: "claude" }),
+  await resolveStartEngine(box.root, { sessionId: coinedFresh, requested: null }),
+])
+=> ["claude","claude"]
+```
+
 A reservation carries the chosen model, and refuses a non-Claude engine —
 `unsupported`, not an error, because the client's answer to it is to send
 `"new"` instead.
@@ -120,6 +136,23 @@ const unasked = await reserveChatSession({
 
 JSON.stringify([asked.kind, unasked.kind])
 => ["reserved","unsupported"]
+```
 
+While a reservation is live, the READ paths see its engine too — bootstrap and
+history resolve a coined-but-unstarted chat through `resolveChatEngine`, which
+answered the box default until the first turn wrote history (on a codex box:
+Codex history reads for a Claude-reserved chat, failing the whole bootstrap).
+The reservation registers the engine; release forgets it:
+
+```ts continue
+const codexCoined = asked.kind === "reserved" ? asked.sessionId : "";
+const during = await resolveChatEngine(codexBox.root, { sessionId: codexCoined });
+codexStore.release(codexCoined);
+const after = await resolveChatEngine(codexBox.root, { sessionId: codexCoined });
+JSON.stringify([during, after])
+=> ["claude","codex"]
+```
+
+```ts cleanup
 await codexBox.cleanup();
 ```

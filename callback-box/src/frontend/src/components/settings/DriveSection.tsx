@@ -39,7 +39,10 @@ export function DriveSection() {
         <div className="p-3 bg-warning-50 border border-warning-100 rounded text-sm text-warning-dark">
           {error}
         </div>
-        <GoogleConnectLink id="cb-settings-drive-connect-google" />
+        {/* Distinct id from the not-connected branch below: ids are authored
+            once (ui-scan annotations doctest counts source literals), even
+            when the branches are mutually exclusive at runtime. */}
+        <GoogleConnectLink id="cb-settings-drive-connect-google-error" />
       </DriveShell>
     );
   }
