@@ -62,8 +62,13 @@ if [ "$BRANCH" = "main" ]; then
     LOG_FILE="$LOG_DIR/$(date -u +%Y%m%dT%H%M%SZ)-${SHA:0:8}.log"
     ln -sfn ".deploy-logs/$(basename "$LOG_FILE")" "$REPO_DIR/callback-box/deploy/.last-deploy.log"
     ls -1t "$LOG_DIR"/*.log 2>/dev/null | tail -n +21 | while IFS= read -r old; do rm -f "$old"; done
+    # Record intent synchronously. A background child can be killed before it
+    # executes its first line when the hook process exits; the active holder
+    # must still see this ref and chain to it.
+    echo "$SHA" > "$REPO_DIR/.deploy-requested"
+    echo "Deploy requested for $SHA." > "$LOG_FILE"
     echo "[post-merge] Deploying to server (branch: main, ref: ${SHA:0:8})..."
-    "$REPO_DIR/callback-box/deploy/deploy.sh" --ref "$SHA" &>"$LOG_FILE" &
+    nohup "$REPO_DIR/callback-box/deploy/deploy.sh" --ref "$SHA" --request-recorded >>"$LOG_FILE" 2>&1 </dev/null &
     disown
     echo "[post-merge] Deploy started in background — notifies on failure (log: callback-box/deploy/.last-deploy.log)"
   fi
