@@ -6,7 +6,7 @@ CLI long-poll to the browser tab holding the recording.
 
 ```ts setup
 import { createLastAudioPending } from "../../src/core/last-audio-pending.js";
-import { buildAudioQuestionPrompt } from "../../src/core/audio-question.js";
+import { AUDIO_QUESTION_MODEL, buildAudioQuestionPrompt } from "../../src/core/audio-question.js";
 import { audioMimeType, missingMessageIdError } from "../../src/cli/commands/chat-audio.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 ```
@@ -504,6 +504,14 @@ cb chat retranscribe: requires --message <id> — read message-id="…" off the 
 ```
 
 ## ask-about-audio helpers
+
+Audio questions use the model selected by the bakeoff for full-audio
+understanding:
+
+```ts
+AUDIO_QUESTION_MODEL
+=> gemini-3.7-flash
+```
 
 `audioMimeType` maps `--file` extensions to MIME types; unknown extensions
 are rejected rather than guessed:
