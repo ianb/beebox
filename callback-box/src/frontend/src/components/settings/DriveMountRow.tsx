@@ -28,6 +28,14 @@ import { cbSource } from "../../lib/source-tag";
 
 export type DriveMount = RouterOutput["drive"]["mounts"]["mounts"][number];
 
+/** Preserve case-sensitive Drive identity inside the scan's lowercase id grammar. */
+export function driveControlId(action: "cancel" | "confirm" | "open" | "sync" | "unmount", driveId: string): string {
+  const encodedId = [...driveId]
+    .map((character) => character.codePointAt(0)?.toString(16).padStart(6, "0"))
+    .join("");
+  return `cb-settings-drive-${action}-id-${encodedId}`;
+}
+
 function childSummary(children: DriveMount["children"]): string {
   const parts: string[] = [];
   parts.push(children.files === 1 ? "1 synced file" : `${String(children.files)} synced files`);
@@ -70,7 +78,7 @@ export function UnmountControl(props: UnmountControlProps) {
   if (!props.confirming) {
     return (
       <Button
-        id={`cb-settings-drive-unmount-${props.driveId}`}
+        id={driveControlId("unmount", props.driveId)}
         size="sm"
         intent="ghost"
         disabled={props.busy}
@@ -84,7 +92,7 @@ export function UnmountControl(props: UnmountControlProps) {
     <>
       <Text size="sm">Stop mirroring? Children stay where they are.</Text>
       <Button
-        id={`cb-settings-drive-unmount-confirm-${props.driveId}`}
+        id={driveControlId("confirm", props.driveId)}
         size="sm"
         intent="destructive"
         disabled={props.busy}
@@ -95,7 +103,7 @@ export function UnmountControl(props: UnmountControlProps) {
         Yes, unmount
       </Button>
       <Button
-        id={`cb-settings-drive-unmount-cancel-${props.driveId}`}
+        id={driveControlId("cancel", props.driveId)}
         size="sm"
         intent="ghost"
         disabled={props.pending}
@@ -170,14 +178,14 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
 
       <Row gap="sm" align="center" wrap>
         <Link
-          id={`cb-settings-drive-open-${mount.driveId}`}
+          id={driveControlId("open", mount.driveId)}
           to={href(`/${boxSlug}/browse/${mount.cardPath}`)}
           className="text-sm text-primary hover:text-primary-dark underline"
         >
           Open
         </Link>
         <Button
-          id={`cb-settings-drive-sync-${mount.driveId}`}
+          id={driveControlId("sync", mount.driveId)}
           size="sm"
           intent="secondary"
           disabled={busy}

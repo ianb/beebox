@@ -13,7 +13,11 @@ boxholder should read before answering.
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { UnmountControl } from "../../../src/frontend/src/components/settings/DriveMountRow.js";
+import {
+  driveControlId,
+  UnmountControl,
+} from "../../../src/frontend/src/components/settings/DriveMountRow.js";
+import { isControlAddress } from "../../../src/frontend/src/lib/ui-scan/resolve.js";
 
 globalThis.React = React;
 
@@ -32,6 +36,23 @@ function render(state: { confirming: boolean; busy?: boolean; pending?: boolean 
     }),
   );
 }
+```
+
+Drive IDs are case-sensitive and may contain characters outside the control
+scan's lowercase address grammar. The row encodes the complete ID rather than
+lowercasing it, so distinct Drive IDs stay distinct and every control remains
+addressable.
+
+```ts
+const encoded = driveControlId("unmount", "Folder_A-1");
+encoded
+=> cb-settings-drive-unmount-id-00004600006f00006c00006400006500007200005f00004100002d000031
+
+isControlAddress(encoded)
+=> true
+
+driveControlId("unmount", "Folder_A-1") === driveControlId("unmount", "folder_a-1")
+=> false
 ```
 
 ## Step one is a single button that commits to nothing
