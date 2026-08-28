@@ -375,6 +375,67 @@ export function placeMenuFailure(reading: PlaceMenuReading, snapshot: string): S
   return null;
 }
 
+/**
+ * The landmark the place pill currently names, or null if it is not rendered.
+ *
+ * The pill's accessible name is `Place: <label>` (PlacePill.tsx), and that
+ * label is the user-visible answer to "where am I" — which makes it the thing
+ * to assert a switch against.
+ */
+export function currentPlaceLabel(snapshot: string): string | null {
+  const line = snapshot.split("\n").find((candidate) => candidate.includes("id=cb-nav-place"));
+  if (line === undefined) return null;
+  return /"Place:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
+}
+
+/**
+ * A landmark worth switching TO — the first one the menu lists that is not
+ * where we already are.
+ *
+ * Switching to the place you are already in asserts nothing: the pill would
+ * read the same afterwards whether or not the navigation worked.
+ */
+export function switchTarget(input: {
+  landmarks: readonly string[];
+  current: string | null;
+}): string | null {
+  return input.landmarks.find((name) => name !== input.current) ?? null;
+}
+
+/**
+ * Did selecting a landmark actually take us there?
+ *
+ * Asserts the consequence, never the click: `bin/browse click` dispatches a
+ * mouse event at the element's box centre and reports success whether or not
+ * anything happened (issues/closed/bugs/2026-08-21-browse-click-on-a-ref-does-not-dispatch.md).
+ *
+ * Both conditions matter and they fail differently. The pill still naming the
+ * old place is the 2026-08-20 bug's shape — the menu worked, the selection did
+ * not move you. An unchanged URL is a click that never navigated at all.
+ */
+export function placeSwitchFailure(input: {
+  target: string;
+  urlBefore: string;
+  urlAfter: string;
+  labelAfter: string | null;
+  snapshot: string;
+}): SmokeFailure | null {
+  if (input.urlAfter === input.urlBefore) {
+    return new SmokeFailure(
+      `selecting the landmark "${input.target}" did not navigate — the URL is unchanged (${input.urlAfter})`,
+      input.snapshot,
+    );
+  }
+  if (input.labelAfter !== input.target) {
+    return new SmokeFailure(
+      `selected the landmark "${input.target}" and the page moved, but the place pill still names` +
+        ` "${input.labelAfter ?? "nothing"}" — the switch did not take`,
+      input.snapshot,
+    );
+  }
+  return null;
+}
+
 /** Does the snapshot contain an element carrying this DOM id? */
 export function hasDomId(snapshot: string, domId: string): boolean {
   return snapshot.includes(`id=${domId}`);

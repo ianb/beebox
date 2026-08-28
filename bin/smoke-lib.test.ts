@@ -8,6 +8,7 @@ import {
   MENU_ERROR_TEXT,
   SmokeFailure,
   cardViewRendered,
+  currentPlaceLabel,
   directoryRowCount,
   expandedState,
   firstCardRow,
@@ -17,12 +18,14 @@ import {
   menuItemNames,
   parseFailedPage,
   placeMenuFailure,
+  placeSwitchFailure,
   probeFailure,
   readPlaceMenu,
   readProbe,
   formatSmokeReport,
   refFor,
   summarizeSmokeLog,
+  switchTarget,
   worktreeState,
   type SmokeRunRecord,
 } from "./smoke-lib.js";
@@ -373,4 +376,62 @@ test("pollUntilReady: a failed-to-start page stops the poll at once; a deadline 
     pollMs: 250,
   });
   assert.deepEqual(expired, { verdict: { kind: "unexpected", status: 502 }, timedOut: true });
+});
+
+// ── selecting a landmark ────────────────────────────────────────────────────
+
+test("currentPlaceLabel: reads the pill's `Place: <label>` accessible name", () => {
+  assert.equal(currentPlaceLabel(MENU_SNAPSHOT), "Chat");
+  assert.equal(
+    currentPlaceLabel('- button "Place: Acids & Bases" [expanded=false, ref=e5, id=cb-nav-place]'),
+    "Acids & Bases",
+  );
+  assert.equal(currentPlaceLabel('- button "User" [ref=e8, id=cb-nav-profile]'), null);
+});
+
+test("switchTarget: never the place we are already in", () => {
+  // Switching to where you already are asserts nothing — the pill reads the
+  // same afterwards whether or not the navigation worked.
+  assert.equal(switchTarget({ landmarks: ["Box", "Acids & Bases"], current: "Box" }), "Acids & Bases");
+  assert.equal(switchTarget({ landmarks: ["Box", "Acids & Bases"], current: "Chat" }), "Box");
+  assert.equal(switchTarget({ landmarks: ["Box"], current: "Box" }), null);
+  assert.equal(switchTarget({ landmarks: [], current: null }), null);
+});
+
+test("placeSwitchFailure: a click that never navigated", () => {
+  const failure = placeSwitchFailure({
+    target: "Acids & Bases",
+    urlBefore: "http://x/chat",
+    urlAfter: "http://x/chat",
+    labelAfter: "Chat",
+    snapshot: "",
+  });
+  assert.match(failure?.message ?? "", /did not navigate/);
+});
+
+test("placeSwitchFailure: the page moved but the place did not — the 2026-08-20 shape", () => {
+  // The menu listed every landmark and reported no problems; selecting one
+  // coined a fresh chat in the same place instead of moving you. A URL check
+  // alone passes that, which is why the pill is asserted too.
+  const failure = placeSwitchFailure({
+    target: "Acids & Bases",
+    urlBefore: "http://x/chat",
+    urlAfter: "http://x/chat?session=new",
+    labelAfter: "Chat",
+    snapshot: "",
+  });
+  assert.match(failure?.message ?? "", /still names "Chat"/);
+});
+
+test("placeSwitchFailure: arriving where we aimed passes", () => {
+  assert.equal(
+    placeSwitchFailure({
+      target: "Acids & Bases",
+      urlBefore: "http://x/chat",
+      urlAfter: "http://x/chat?contextDir=store%2Fcourses%2FAcids_Bases.attach",
+      labelAfter: "Acids & Bases",
+      snapshot: "",
+    }),
+    null,
+  );
 });

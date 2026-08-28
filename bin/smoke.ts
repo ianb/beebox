@@ -52,6 +52,7 @@ import { invariant } from "../callback-box/src/lib/invariant.js";
 import {
   SmokeFailure,
   cardViewRendered,
+  currentPlaceLabel,
   directoryRowCount,
   formatSmokeReport,
   smokeLogPath,
@@ -64,9 +65,11 @@ import {
   pollUntilReady,
   probeFailure,
   readHealthProbe,
+  placeSwitchFailure,
   readPlaceMenu,
   readProbe,
   refFor,
+  switchTarget,
   type SmokeRunRecord,
   type SmokeStepRecord,
 } from "./smoke-lib.js";
@@ -472,6 +475,11 @@ function buildSteps(input: {
     },
   });
 
+  // The open menu, handed from the step that opened it to the step that acts on
+  // it. Re-snapshotting the same DOM a second time costs ~1.9s of a walk whose
+  // whole budget is spent on browser round-trips.
+  let openMenu: string | null = null;
+
   steps.push({
     id: "place-menu",
     name: "the place menu opens and lists landmarks",
@@ -482,6 +490,48 @@ function buildSteps(input: {
       await session.run(["click", "#cb-nav-place"]);
       const snapshot = await session.snapshot({ interactiveOnly: true });
       const failure = placeMenuFailure(readPlaceMenu(snapshot), snapshot);
+      if (failure !== null) throw failure;
+      openMenu = snapshot;
+    },
+  });
+
+  steps.push({
+    id: "place-switch",
+    name: "selecting a landmark moves you there",
+    // The menu listing landmarks is the affordance; going somewhere is what the
+    // affordance is FOR, and that is where the 2026-08-20 bug lived — the menu
+    // listed all seven landmarks, reported no problems, and selecting one did
+    // not move you. Every assertion the step above makes would have passed.
+    run: async () => {
+      // Still open from the previous step, which already read it.
+      const before = openMenu ?? (await session.snapshot({ interactiveOnly: true }));
+      const current = currentPlaceLabel(before);
+      const target = switchTarget({ landmarks: readPlaceMenu(before).landmarkNames, current });
+      if (target === null) {
+        throw new SmokeFailure(
+          `the box offers nowhere to switch to — every landmark it lists is the one we are` +
+            ` already in ("${current ?? "unknown"}"), so the switch cannot be walked.` +
+            " A box used for smoke needs at least two landmarks.",
+          before,
+        );
+      }
+      const ref = refFor(before, "menuitem", target);
+      if (ref === null) {
+        throw new SmokeFailure(`could not resolve a ref for the landmark "${target}"`, before);
+      }
+      const urlBefore = await session.getUrl();
+      await session.clickRef(ref);
+      // Client-side navigation: nothing loads, so wait for the app to settle
+      // rather than for a page load that will not happen.
+      await session.waitForReady();
+      const after = await session.snapshot({ interactiveOnly: true });
+      const failure = placeSwitchFailure({
+        target,
+        urlBefore,
+        urlAfter: await session.getUrl(),
+        labelAfter: currentPlaceLabel(after),
+        snapshot: after,
+      });
       if (failure !== null) throw failure;
     },
   });
