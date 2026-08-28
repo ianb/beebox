@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- Field probe (2026-08-28): the SPA shell renders on a phone but boot
+     queries never resolve. This page runs the boot sequence with the
+     device's own cookies and prints status + timing on screen. Content-free:
+     statuses, milliseconds, byte counts, and a cookie-present boolean only.
+     Static and default-inert: it does nothing until Run is tapped, costs
+     nothing in the bundle, and has no server half. Probe fate decided at
+     wrap-up per the field-probe skill. -->
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>boot probe</title>
+<style>body{font:16px -apple-system,sans-serif;margin:1rem;background:#fff;color:#111}
+li{margin:.4rem 0;font-family:ui-monospace,monospace;font-size:14px}button{font-size:18px;padding:.6rem 1.2rem}</style></head>
+<body>
+<h1>boot probe</h1>
+<p><label>box: <input id="box" value="" placeholder="your-box-name" style="font-size:16px"></label></p>
+<button id="run">Run</button>
+<ol id="out"></ol>
+<script>
+const out = document.getElementById("out");
+function line(t){ const li=document.createElement("li"); li.textContent=t; out.appendChild(li); }
+async function timed(name, fn){
+  const t0=performance.now();
+  try { const r=await fn(); line(`${name}: ${r} in ${Math.round(performance.now()-t0)}ms`); }
+  catch(e){ line(`${name}: FAIL ${String(e && e.name || e).slice(0,60)} after ${Math.round(performance.now()-t0)}ms`); }
+}
+function withTimeout(p, ms){ return Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout-"+ms+"ms")),ms))]); }
+document.getElementById("run").onclick = async () => {
+  out.textContent="";
+  const box=document.getElementById("box").value.trim();
+  line("cookies present: " + (document.cookie.length>0));
+  line("ua-hint: " + (navigator.userAgent.includes("Safari")?"safari":"other"));
+  await timed("document", () => withTimeout(fetch(`/${box}/`, {credentials:"include"}).then(r=>`${r.status} ${r.redirected?"(redirected)":""} ${r.headers.get("content-type")||""}`.trim()), 15000));
+  await timed("placeMenu", () => withTimeout(fetch(`/${box}/api/trpc/chat.placeMenu`, {credentials:"include"}).then(async r=>`${r.status} ${(await r.text()).length}B`), 15000));
+  const input=encodeURIComponent(JSON.stringify({slice:{mode:"tail",tail:40}}));
+  await timed("bootstrap", () => withTimeout(fetch(`/${box}/api/trpc/chat.bootstrap?input=${input}`, {credentials:"include"}).then(async r=>`${r.status} ${(await r.text()).length}B`), 20000));
+  await timed("websocket", () => withTimeout(new Promise((res,rej)=>{
+    const ws=new WebSocket(`${location.protocol==="https:"?"wss":"ws"}://${location.host}/${box}/api/events`);
+    ws.onopen=()=>{ ws.close(); res("open"); };
+    ws.onerror=()=>rej(new Error("ws-error"));
+  }), 15000));
+  line("done");
+};
+</script></body></html>
