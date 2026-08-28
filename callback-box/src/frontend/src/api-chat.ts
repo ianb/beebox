@@ -147,6 +147,8 @@ export interface HqTranscriptionResult {
   text: string;
   /** True when the recording was diarized and speaker labels were applied. */
   diarized: boolean;
+  /** Server-resolved backend that produced the transcript. */
+  service?: string;
 }
 
 export async function postAudioForHqTranscription(blob: Blob, params: { sessionId: string | null }): Promise<HqTranscriptionResult | null> {
@@ -170,7 +172,10 @@ export async function postAudioForHqTranscription(blob: Blob, params: { sessionI
       return null;
     }
     const diarized = "diarized" in body && body.diarized === true;
-    return { text: body.text, diarized };
+    const service = "service" in body && typeof body.service === "string" && /^[\da-z-]+$/.test(body.service)
+      ? body.service
+      : undefined;
+    return { text: body.text, diarized, ...(service ? { service } : {}) };
   } catch (e) {
     console.warn(`[hq-transcribe] request failed: ${e instanceof Error ? e.message : String(e)}`);
     return null;

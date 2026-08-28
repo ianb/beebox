@@ -15,6 +15,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { UserMessage } from "../../src/frontend/src/components/chat/user-message.js";
 import { originalDisplayText } from "../../src/frontend/src/components/chat/user-entry-content.js";
 import { buildAudioBadgeSpecs } from "../../src/frontend/src/components/chat/audio-overlay-badge.js";
+import { resolveEntryMessageId, resolveTranscriptionProvenance } from "../../src/frontend/src/components/chat/message-parsing.js";
 import { createAudioOverlayStore } from "../../src/frontend/src/components/chat/audio-overlay-store.js";
 import type { SessionEntry } from "../../src/frontend/src/api.js";
 
@@ -26,6 +27,13 @@ function voiceEntry(messageId: string, text: string): SessionEntry {
     type: "user",
     timestamp: "2026-01-01T00:00:00Z",
     content: [{ type: "text", text: `<speech stt="deepgram" message-id="${messageId}">${text}</speech>` }],
+  };
+}
+
+function hqVoiceEntry(messageId: string, text: string): SessionEntry {
+  return {
+    ...voiceEntry(messageId, text),
+    content: [{ type: "text", text: `<chat-app hq-dictation="on">\n<card-activity ref="store/example.card">viewed</card-activity>\n</chat-app>\n<speech stt="hq" stt-service="whisper-llm" message-id="${messageId}">${text}</speech>` }],
   };
 }
 
@@ -128,6 +136,28 @@ plainOut.includes("two large legs")
 => true
 
 plainOut.includes("aria-haspopup")
+=> false
+```
+
+## Durable HQ provenance renders a subtle badge from history
+
+The service comes from the persisted speech wrapper, which the client stamps
+only from a successful server response. Reloading history therefore retains
+the evidence without relying on the transient retranscription overlay store.
+
+```ts
+const hqEntry = hqVoiceEntry("msg-hq", "server corrected words");
+JSON.stringify(resolveTranscriptionProvenance(hqEntry))
+=> {"kind":"hq","service":"whisper-llm"}
+
+resolveEntryMessageId(hqEntry)
+=> msg-hq
+
+const hqOut = render([hqEntry]);
+hqOut.includes('aria-label="HQ transcript — whisper-llm"')
+=> true
+
+render([voiceEntry("msg-realtime", "fast words")]).includes('aria-label="HQ transcript')
 => false
 ```
 

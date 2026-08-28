@@ -81,6 +81,8 @@ export function buildVoiceSubmitEmission(opts: {
   words?: readonly FinalWord[] | null;
   /** See `Emission.hqText` — set when this text came from an HQ pass. */
   hqText?: true;
+  /** See `Emission.hqService`. */
+  hqService?: string;
 }): Emission {
   const full = joinTranscript(opts.priorInput, opts.finalText);
   return createVoiceEmission({
@@ -92,12 +94,14 @@ export function buildVoiceSubmitEmission(opts: {
     words: resolveEmissionWords(opts.words),
     spokenStart: spokenTextStart(opts.priorInput),
     hqText: opts.hqText,
+    hqService: opts.hqService,
   });
 }
 
 interface HqTranscript {
   text: string;
   diarized: boolean;
+  service?: string;
 }
 
 /**
@@ -121,6 +125,7 @@ export async function prepareVoiceSubmitEmission(opts: {
   let finalText = intent.text;
   let diarized = false;
   let usedHq = false;
+  let hqService: string | undefined;
 
   if (runHq && intent.audioBlob !== null) {
     let hqResult: HqTranscript | null = null;
@@ -145,6 +150,7 @@ export async function prepareVoiceSubmitEmission(opts: {
             matchedPhrase: intent.matchedPhrase,
           });
       diarized = hqResult.diarized;
+      hqService = hqResult.service;
       usedHq = true;
     }
   }
@@ -160,6 +166,7 @@ export async function prepareVoiceSubmitEmission(opts: {
       // `stt="hq"` (docs/implemented-plans/hq-dictation-switch.md) stamps only when the
       // HQ pass actually ran and produced text — never on a fallback.
       hqText: usedHq ? true : undefined,
+      hqService: usedHq ? hqService : undefined,
     }),
     usedHq,
   };

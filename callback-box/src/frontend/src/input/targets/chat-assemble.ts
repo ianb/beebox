@@ -115,13 +115,16 @@ export function assembleChatMessage(
     const sttAttr = emission.hqText === true
       ? " stt=\"hq\""
       : emission.words !== undefined ? " stt=\"deepgram\"" : "";
+    const sttServiceAttr = emission.hqText === true && emission.hqService
+      ? ` stt-service="${emission.hqService}"`
+      : "";
     // `message-id` (retranscription-in-chat plan, Vocabulary lock-ins) is the
     // emission id — the same value returned as `messageId` below and the key
     // the audio retention store uses — stamped on every voice send so the
     // message stays addressable after the pending→authoritative uuid swap.
     // Typed sends carry no recording to point back at, so they don't get it.
     const messageIdAttr = ` message-id="${emission.id}"`;
-    wrapped = `<speech${sttAttr}${diarizedAttr}${messageIdAttr}${attrs}>${body}</speech>`;
+    wrapped = `<speech${sttAttr}${sttServiceAttr}${diarizedAttr}${messageIdAttr}${attrs}>${body}</speech>`;
   }
 
   // File attachments emit a sibling <attachments> block of markdown-style
