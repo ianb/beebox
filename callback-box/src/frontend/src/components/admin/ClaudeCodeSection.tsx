@@ -3,6 +3,7 @@
  * login/logout/refresh actions via the claudeAuthMachine.
  */
 
+import { useState } from "react";
 import { useMachine } from "@xstate/react";
 import { claudeAuthMachine } from "../../machines/claudeAuthMachine.js";
 import { ExternalLink } from "../ui/ExternalLink";
@@ -10,10 +11,12 @@ import { Button } from "../ui/Button";
 
 export function ClaudeCodeSection() {
   const [snapshot, send] = useMachine(claudeAuthMachine);
+  const [code, setCode] = useState("");
   const { status, error, authUrl } = snapshot.context;
+  const isSubmittingCode = snapshot.matches("submittingCode");
   const isLoading = snapshot.matches("loading");
   const isStarting = snapshot.matches("starting");
-  const isPolling = snapshot.matches("polling");
+  const isPolling = snapshot.matches("polling") || snapshot.matches("submittingCode");
   const isLoggingOut = snapshot.matches("loggingOut");
   const isIdle = snapshot.matches("idle");
 
@@ -66,8 +69,26 @@ export function ClaudeCodeSection() {
           </p>
           <ExternalLink id="cb-admin-claude-login-link" href={authUrl}>Open Anthropic Login</ExternalLink>
           <p className="text-xs text-primary mt-2">
-            Waiting for authentication to complete...
+            After signing in, Anthropic shows a code. Paste it here:
           </p>
+          <form
+            className="flex gap-2 mt-2"
+            onSubmit={(e) => { e.preventDefault(); if (code.trim()) { send({ type: "SUBMIT_CODE", code }); setCode(""); } }}
+          >
+            <input
+              id="cb-admin-claude-login-code"
+              className="flex-1 border border-warm-300 rounded px-2 py-1 text-sm font-mono"
+              value={code}
+              onChange={(e) => { setCode(e.target.value); }}
+              placeholder="paste code"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Anthropic sign-in code"
+            />
+            <Button id="cb-admin-claude-submit-code" type="submit" disabled={!code.trim() || isSubmittingCode} loading={isSubmittingCode}>
+              Submit code
+            </Button>
+          </form>
         </div>
       ) : null}
 

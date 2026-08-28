@@ -22,6 +22,14 @@ export interface ClaudeCliService {
   authStatus(): Promise<Record<string, unknown>>;
   authLogin(email?: string): Promise<{ authUrl: string | null; error?: string }>;
   authLogout(): Promise<{ success: boolean; error?: string }>;
+  /**
+   * Deliver the one-time code the sign-in page shows. Claude Code's login
+   * redirects to Anthropic's own page (platform.claude.com), which displays a
+   * code and asks the CLI to read it from stdin — a headless server never
+   * receives it any other way (2026-08-28: the flow ended at "Paste code here
+   * if prompted >" with no way to answer, and the login process sat forever).
+   */
+  authSubmitCode(code: string): Promise<{ accepted: boolean; error?: string }>;
 }
 
 // ─── Real implementation ─────────────────────────────────────────────────────
@@ -102,6 +110,18 @@ export function createClaudeCliService(): ClaudeCliService {
       return { authUrl: null, error: "Failed to get auth URL" };
     },
 
+    async authSubmitCode(code) {
+      const login = activeLogin;
+      if (!login || !login.authUrl) return { accepted: false, error: "No sign-in in progress — start again" };
+      const stdin = login.process.stdin;
+      if (!stdin || stdin.destroyed) return { accepted: false, error: "Sign-in process is not accepting input — start again" };
+      return new Promise((resolve) => {
+        stdin.write(`${code.trim()}\n`, (err) => {
+          resolve(err ? { accepted: false, error: err.message } : { accepted: true });
+        });
+      });
+    },
+
     async authLogout() {
       return new Promise<{ success: boolean; error?: string }>((resolve) => {
         execFile("claude", ["auth", "logout"], { timeout: 10000 }, (err) => {
@@ -125,6 +145,8 @@ export interface FakeClaudeCliOptions {
 
 export interface FakeClaudeCliService extends ClaudeCliService {
   loggedIn: boolean;
+  /** A login was started and is waiting for its code. */
+  pendingCode: boolean;
 }
 
 export function createFakeClaudeCli(
@@ -132,6 +154,7 @@ export function createFakeClaudeCli(
 ): FakeClaudeCliService {
   const fake: FakeClaudeCliService = {
     loggedIn: opts?.loggedIn ?? false,
+    pendingCode: false,
 
     async authStatus() {
       return fake.loggedIn
@@ -140,8 +163,15 @@ export function createFakeClaudeCli(
     },
 
     async authLogin() {
-      fake.loggedIn = true;
-      return { authUrl: "https://claude.ai/oauth/authorize?fake=1" };
+      fake.pendingCode = true;
+      return { authUrl: "https://claude.com/cai/oauth/authorize?fake=1" };
+    },
+
+    async authSubmitCode(code) {
+      if (!fake.pendingCode) return { accepted: false, error: "No sign-in in progress — start again" };
+      fake.pendingCode = false;
+      fake.loggedIn = code.trim().length > 0;
+      return { accepted: true };
     },
 
     async authLogout() {
