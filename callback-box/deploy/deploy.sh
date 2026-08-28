@@ -58,10 +58,42 @@ notify() {  # $1=title  $2=message
     terminal-notifier -title "$1" -message "$2" -group callback-deploy >/dev/null 2>&1 || true
 }
 # The trap also releases the deploy lock (LOCK_HELD is set only after shlock
-# succeeds, further below). On a FAILED run the lock is released but any newer
-# request recorded during the run is deliberately NOT chained — the failure
-# notification tells the human, and the next commit (or a manual run) redeploys.
-trap 'rc=$?; [ -n "${LOCK_HELD:-}" ] && rm -f "${LOCK_FILE:-}"; if [ "$rc" -ne 0 ]; then echo "Deploy failed (exit $rc)"; notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"; fi' EXIT
+# succeeds, further below). If a held deploy fails after a newer request was
+# recorded, it still hands off to that request: otherwise the non-blocking lock
+# loser has already exited successfully and nobody remains to deploy the newest
+# ref. The failed attempt remains explicit before the chained attempt begins.
+deploy_exit() {
+  local rc=$?
+  trap - EXIT
+  local held="${LOCK_HELD:-}"
+  if [ -n "$held" ]; then
+    rm -f "${LOCK_FILE:-}"
+    LOCK_HELD=""
+  fi
+  if [ "$rc" -eq 0 ]; then
+    return
+  fi
+
+  echo "Deploy failed (exit $rc)"
+  notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"
+
+  local newer=""
+  if [ -n "$held" ] && [ -n "${REQUESTED_FILE:-}" ] && [ -n "${SHA:-}" ]; then
+    newer="$(cat "$REQUESTED_FILE" 2>/dev/null || true)"
+  fi
+  # Signal-style exits mean an operator or supervisor deliberately stopped the
+  # run. Do not turn Ctrl-C/SIGTERM into a fresh full deploy behind their back.
+  if [ "$rc" -lt 128 ] && [ -n "$newer" ] && [ "$newer" != "$SHA" ]; then
+    echo "Deploy superseded by $newer — chaining after failed attempt."
+    if [ -t 1 ]; then
+      "$0" --ref "$newer" --chained || true
+    else
+      "$0" --ref "$newer" --chained >>"$SCRIPT_DIR/.last-deploy.log" 2>&1 || true
+    fi
+  fi
+  exit "$rc"
+}
+trap deploy_exit EXIT
 
 # The deploy target IP lives in a gitignored file; a repo move or fresh clone
 # leaves it behind — which is exactly how a run of silent no-op deploys just
@@ -179,7 +211,7 @@ if [[ "$CHAINED" != true ]]; then
   echo "$SHA" > "$REQUESTED_FILE"
 fi
 if ! shlock -f "$LOCK_FILE" -p $$; then
-  echo "Another deploy holds $LOCK_FILE — requested $SHA recorded; the running deploy will chain to it."
+  echo "Deploy superseded: $SHA queued; another deploy holds $LOCK_FILE and will chain to it."
   exit 0
 fi
 LOCK_HELD=1
@@ -536,8 +568,9 @@ REMOTE
 
 # Deploy installs are what grow both caches. Prune only after the root workspace
 # and callback-owned box installs have finished, so this cannot evict entries a
-# later install in the same deploy still needs. `-H` is required for uv: without
-# it sudo leaves HOME=/root and uv attempts to read /root/uv.toml.
+# later install in the same deploy still needs. Start callback-user cleanup in
+# its home so upward config discovery cannot reach /root/uv.toml; `-H`
+# separately gives HOME-based tools the callback user's home.
 echo "Pruning deploy package caches..."
 ssh "root@$SERVER_IP" bash -s <<'CACHECLEAN'
 set -euo pipefail
