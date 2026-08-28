@@ -106,6 +106,27 @@ export function extractFileAttachments(text: string): FileAttachmentRef[] {
 // so an occurrence anywhere outside the wrapper's own opening tag — including
 // later in the same `<speech>` element's body — never matches.
 const MESSAGE_ID_WRAPPER_RE = /^\s*<speech\b[^>]*\bmessage-id="([^"]*)"/;
+const SPEECH_WRAPPER_RE = /^\s*<speech\b([^>]*)>/;
+const STT_ATTR_RE = /\bstt="([^"]*)"/;
+const STT_SERVICE_ATTR_RE = /\bstt-service="([^"]*)"/;
+
+export interface TranscriptionProvenance {
+  kind: "hq" | "realtime";
+  service?: string;
+}
+
+/** Durable transcription provenance stamped on the message's speech wrapper. */
+export function resolveTranscriptionProvenance(entry: SessionEntry): TranscriptionProvenance | null {
+  const firstText = entry.content.find((b) => b.type === "text")?.text ?? "";
+  const attrs = stripChatAppTags(firstText).match(SPEECH_WRAPPER_RE)?.[1];
+  if (attrs === undefined) return null;
+  const stt = attrs.match(STT_ATTR_RE)?.[1];
+  if (stt === "hq") {
+    const service = attrs.match(STT_SERVICE_ATTR_RE)?.[1];
+    return service ? { kind: "hq", service } : { kind: "hq" };
+  }
+  return stt === "deepgram" ? { kind: "realtime", service: "deepgram" } : null;
+}
 
 /**
  * Resolve the key an audio-overlay event addresses this entry by
@@ -123,7 +144,7 @@ const MESSAGE_ID_WRAPPER_RE = /^\s*<speech\b[^>]*\bmessage-id="([^"]*)"/;
  */
 export function resolveEntryMessageId(entry: SessionEntry): string {
   const firstText = entry.content.find((b) => b.type === "text")?.text ?? "";
-  const match = firstText.match(MESSAGE_ID_WRAPPER_RE)?.[1];
+  const match = stripChatAppTags(firstText).match(MESSAGE_ID_WRAPPER_RE)?.[1];
   return match && match.length > 0 ? match : entry.uuid;
 }
 

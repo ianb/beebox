@@ -103,6 +103,7 @@ struct ChatAPI: Sendable {
     struct HqTranscriptionResult: Decodable, Equatable {
         var text: String
         var diarized: Bool
+        var service: String?
     }
 
     func transcribeAudio(fileURL: URL) async throws -> HqTranscriptionResult {

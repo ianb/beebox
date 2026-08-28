@@ -91,7 +91,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
         boxRoot,
       });
       if (result.diarized !== true) {
-        return { text: result.text, diarized: false };
+        return { text: result.text, diarized: false, service: result.service };
       }
       // Diarized: tag this recording's speakers with a per-session letter
       // so the agent can tell "Speaker 1A" (recording 1) and "Speaker 1B"
@@ -101,7 +101,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
       const priorText = sessionId !== null ? await readSessionLogTail(boxRoot, sessionId) : "";
       const letter = nextSpeakerLetter(findLastSpeakerLetter(priorText));
       const relabeled = relabelDiarizedSpeakers(result.text, letter);
-      return { text: relabeled, diarized: true };
+      return { text: relabeled, diarized: true, service: result.service };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[transcribe-audio] HQ transcription failed:", msg);

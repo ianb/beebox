@@ -10,8 +10,25 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AudioOverlayEntry } from "./audio-overlay-store";
+import type { TranscriptionProvenance } from "./message-parsing";
 
 type AudioBadgeKind = "retranscribed" | "consulted";
+
+/** Persistent evidence that the displayed text came from the server HQ pass. */
+export function TranscriptionProvenanceBadge({ provenance }: { provenance: TranscriptionProvenance | null }) {
+  if (provenance?.kind !== "hq") return null;
+  const label = provenance.service ? `HQ transcript — ${provenance.service}` : "HQ transcript";
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className="inline-flex items-center justify-center h-[18px] rounded-full bg-info text-white ring-1 ring-warm-50 px-1.5 text-[9px] font-semibold tracking-wide"
+    >
+      HQ
+    </span>
+  );
+}
 
 export interface AudioBadgeSpec {
   kind: AudioBadgeKind;
