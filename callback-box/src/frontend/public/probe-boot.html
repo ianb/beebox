@@ -33,6 +33,23 @@ document.getElementById("run").onclick = async () => {
   await timed("placeMenu", () => withTimeout(fetch(`/${box}/api/trpc/chat.placeMenu`, {credentials:"include"}).then(async r=>`${r.status} ${(await r.text()).length}B`), 15000));
   const input=encodeURIComponent(JSON.stringify({slice:{mode:"tail",tail:40}}));
   await timed("bootstrap", () => withTimeout(fetch(`/${box}/api/trpc/chat.bootstrap?input=${input}`, {credentials:"include"}).then(async r=>`${r.status} ${(await r.text()).length}B`), 20000));
+  await timed("bundle-fetch", async () => {
+    const doc = await withTimeout(fetch(`/${box}/`, {credentials:"include"}), 15000).then(r=>r.text());
+    const m = doc.match(/\/assets\/index-[\w-]+\.js/);
+    if (!m) return "no bundle ref in document";
+    window.__probeBundle = m[0];
+    const r = await withTimeout(fetch(m[0]), 20000);
+    return `${r.status} ${(await r.text()).length}B ${m[0].slice(8,20)}`;
+  });
+  await timed("bundle-import", async () => {
+    if (!window.__probeBundle) return "skipped";
+    const errs = [];
+    const onerr = (e) => errs.push(String(e.message||e.reason||e).slice(0,80));
+    window.addEventListener("error", onerr); window.addEventListener("unhandledrejection", onerr);
+    try { await withTimeout(import(window.__probeBundle), 20000); return "imported ok" + (errs.length?` (async errs: ${errs.join(" | ")})`:""); }
+    catch(e){ return `IMPORT-ERR ${String(e && (e.name+": "+e.message) || e).slice(0,120)}`; }
+    finally { window.removeEventListener("error", onerr); window.removeEventListener("unhandledrejection", onerr); }
+  });
   await timed("websocket", () => withTimeout(new Promise((res,rej)=>{
     const ws=new WebSocket(`${location.protocol==="https:"?"wss":"ws"}://${location.host}/${box}/api/events`);
     ws.onopen=()=>{ ws.close(); res("open"); };
