@@ -68,8 +68,9 @@ if [ "$BRANCH" = "main" ]; then
     echo "$SHA" > "$REPO_DIR/.deploy-requested"
     echo "Deploy requested for $SHA." > "$LOG_FILE"
     echo "[post-merge] Deploying to server (branch: main, ref: ${SHA:0:8})..."
-    nohup "$REPO_DIR/callback-box/deploy/deploy.sh" --ref "$SHA" --request-recorded >>"$LOG_FILE" 2>&1 </dev/null &
-    disown
+    node "$REPO_DIR/bin/lib/detach.ts" bash -c \
+      'exec "$1" --ref "$2" --request-recorded >>"$3" 2>&1' \
+      bash "$REPO_DIR/callback-box/deploy/deploy.sh" "$SHA" "$LOG_FILE"
     echo "[post-merge] Deploy started in background — notifies on failure (log: callback-box/deploy/.last-deploy.log)"
   fi
 

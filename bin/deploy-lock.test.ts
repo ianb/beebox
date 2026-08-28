@@ -120,12 +120,12 @@ test("deploy hooks persist intent before starting a detached child", () => {
   for (const hook of ["post-commit", "post-merge"]) {
     const source = readFileSync(join(ROOT, ".husky", hook), "utf8");
     const stamp = source.indexOf('echo "$SHA" > "$REPO_DIR/.deploy-requested"');
-    const launch = source.indexOf('nohup "$REPO_DIR/callback-box/deploy/deploy.sh"');
+    const launch = source.indexOf('node "$REPO_DIR/bin/lib/detach.ts"');
     assert.notEqual(stamp, -1, `${hook} must stamp the requested ref`);
     assert.notEqual(launch, -1, `${hook} must detach the deploy child`);
     assert.ok(stamp < launch, `${hook} must stamp intent before launching`);
-    assert.match(source, /nohup .* >>"\$LOG_FILE" 2>&1 <\/dev\/null &/);
-    assert.match(source, /deploy\.sh" --ref "\$SHA" --request-recorded/);
+    assert.match(source, /exec "\$1" --ref "\$2" --request-recorded >>"\$3" 2>&1/);
+    assert.match(source, /deploy\.sh" "\$SHA" "\$LOG_FILE"/);
   }
 });
 
