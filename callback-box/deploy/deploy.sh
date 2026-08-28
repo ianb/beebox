@@ -203,10 +203,10 @@ echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 echo "Pruning deploy package caches before disk gate..."
 ssh "root@$SERVER_IP" bash -s <<'PREFLIGHTCLEAN'
 pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
-sudo -u callback -H bash -lc 'pnpm store prune' \
+sudo -u callback -H bash -lc 'cd /home/callback && pnpm store prune' \
   || echo "  WARNING: callback pnpm store preflight prune failed" >&2
 if sudo -u callback -H bash -lc 'command -v uv >/dev/null 2>&1'; then
-  sudo -u callback -H bash -lc 'uv cache clean' \
+  sudo -u callback -H bash -lc 'cd /home/callback && uv cache clean' \
     || echo "  WARNING: callback uv cache preflight clean failed" >&2
 fi
 PREFLIGHTCLEAN
@@ -542,9 +542,9 @@ echo "Pruning deploy package caches..."
 ssh "root@$SERVER_IP" bash -s <<'CACHECLEAN'
 set -euo pipefail
 pnpm store prune
-sudo -u callback -H bash -lc 'pnpm store prune'
+sudo -u callback -H bash -lc 'cd /home/callback && pnpm store prune'
 if sudo -u callback -H bash -lc 'command -v uv >/dev/null 2>&1'; then
-  sudo -u callback -H bash -lc 'uv cache clean'
+  sudo -u callback -H bash -lc 'cd /home/callback && uv cache clean'
 fi
 CACHECLEAN
 
