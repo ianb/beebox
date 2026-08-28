@@ -300,6 +300,15 @@ export const adminRouter = router({
     });
   }),
 
+  claudeSubmitCode: ownerProcedure
+    .input(z.object({ code: z.string().trim().min(1).max(512) }))
+    .mutation(async ({ ctx, input }) => {
+      const claude = ctx.services.claudeCli ?? createClaudeCliService();
+      const result = await claude.authSubmitCode(input.code);
+      if (result.accepted) return { accepted: true as const };
+      throw new TRPCError({ code: "BAD_REQUEST", message: result.error ?? "Code not accepted" });
+    }),
+
   claudeLogout: ownerProcedure.mutation(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     return claude.authLogout();

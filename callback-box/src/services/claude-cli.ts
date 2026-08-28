@@ -22,12 +22,29 @@ export interface ClaudeCliService {
   authStatus(): Promise<Record<string, unknown>>;
   authLogin(email?: string): Promise<{ authUrl: string | null; error?: string }>;
   authLogout(): Promise<{ success: boolean; error?: string }>;
+  /**
+   * Deliver the one-time code the sign-in page shows. Claude Code's login
+   * redirects to Anthropic's own page (platform.claude.com), which displays a
+   * code and asks the CLI to read it from stdin — a headless server never
+   * receives it any other way (2026-08-28: the flow ended at "Paste code here
+   * if prompted >" with no way to answer, and the login process sat forever).
+   */
+  authSubmitCode(code: string): Promise<{ accepted: boolean; error?: string }>;
 }
 
 // ─── Real implementation ─────────────────────────────────────────────────────
 
+/**
+ * The one in-flight login for this process. Module-level, not per service
+ * instance: every tRPC mutation constructs its own `createClaudeCliService()`
+ * (`routers/admin.ts`), so a per-instance handle meant the submit-code call
+ * built a fresh service that had never seen the login — "No sign-in in
+ * progress" while the process sat alive waiting for stdin (prod, 2026-08-28).
+ * One login per box process is the real constraint anyway.
+ */
+let activeLogin: { process: ReturnType<typeof spawn>; authUrl: string | null } | null = null;
+
 export function createClaudeCliService(): ClaudeCliService {
-  let activeLogin: { process: ReturnType<typeof spawn>; authUrl: string | null } | null = null;
 
   return {
     async authStatus() {
@@ -73,7 +90,11 @@ export function createClaudeCliService(): ClaudeCliService {
       const onData = (data: Buffer): void => {
         output += data.toString();
         if (login.authUrl) return;
-        const urlMatch = output.match(/(https:\/\/claude\.ai\/oauth\/authorize\S+)/);
+        // Both hosts: Claude Code 2.1.246 moved the sign-in URL from
+        // claude.ai/oauth/authorize to claude.com/cai/oauth/authorize, and the
+        // old-host-only match turned every login into "Failed to get auth
+        // URL" (prod, 2026-08-28). Anchored on the path, not the host.
+        const urlMatch = output.match(/(https:\/\/claude\.(?:ai|com)\/(?:cai\/)?oauth\/authorize\S+)/);
         if (!urlMatch) return;
         invariant(urlMatch[1] !== undefined, "capture group 1 is non-optional in urlMatch");
         login.authUrl = urlMatch[1];
@@ -96,6 +117,18 @@ export function createClaudeCliService(): ClaudeCliService {
 
       if (login.authUrl) return { authUrl: login.authUrl };
       return { authUrl: null, error: "Failed to get auth URL" };
+    },
+
+    async authSubmitCode(code) {
+      const login = activeLogin;
+      if (!login || !login.authUrl) return { accepted: false, error: "No sign-in in progress — start again" };
+      const stdin = login.process.stdin;
+      if (!stdin || stdin.destroyed) return { accepted: false, error: "Sign-in process is not accepting input — start again" };
+      return new Promise((resolve) => {
+        stdin.write(`${code.trim()}\n`, (err) => {
+          resolve(err ? { accepted: false, error: err.message } : { accepted: true });
+        });
+      });
     },
 
     async authLogout() {
@@ -121,6 +154,8 @@ export interface FakeClaudeCliOptions {
 
 export interface FakeClaudeCliService extends ClaudeCliService {
   loggedIn: boolean;
+  /** A login was started and is waiting for its code. */
+  pendingCode: boolean;
 }
 
 export function createFakeClaudeCli(
@@ -128,6 +163,7 @@ export function createFakeClaudeCli(
 ): FakeClaudeCliService {
   const fake: FakeClaudeCliService = {
     loggedIn: opts?.loggedIn ?? false,
+    pendingCode: false,
 
     async authStatus() {
       return fake.loggedIn
@@ -136,8 +172,15 @@ export function createFakeClaudeCli(
     },
 
     async authLogin() {
-      fake.loggedIn = true;
-      return { authUrl: "https://claude.ai/oauth/authorize?fake=1" };
+      fake.pendingCode = true;
+      return { authUrl: "https://claude.com/cai/oauth/authorize?fake=1" };
+    },
+
+    async authSubmitCode(code) {
+      if (!fake.pendingCode) return { accepted: false, error: "No sign-in in progress — start again" };
+      fake.pendingCode = false;
+      fake.loggedIn = code.trim().length > 0;
+      return { accepted: true };
     },
 
     async authLogout() {
