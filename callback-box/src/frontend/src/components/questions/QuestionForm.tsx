@@ -48,7 +48,7 @@ function QuestionContext({ question }: { question: QuestionInfo }) {
   const hasLearning = question.learning?.proposal !== undefined;
   return (
     <>
-      <Text as="h3" size="lg" weight="bold" className="mb-2">
+      <Text as="h2" size="lg" weight="bold" className="mb-2">
         {question.name}
       </Text>
       <Text as="p" className="mb-2">

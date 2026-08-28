@@ -52,7 +52,7 @@ export function QuestionCardView({ data }: RendererProps) {
     <div className="p-4 max-w-2xl mx-auto">
       <Card padding="md" {...cbSource("card", data.path)}>
         <Stack gap="sm">
-          <Text as="h3" size="lg" weight="bold">{question.name}</Text>
+          <Text as="h2" size="lg" weight="bold">{question.name}</Text>
           <Text as="p">{question.prompt}</Text>
           {renderQuestionAnswer(question)}
           {question.learning?.proposal !== undefined ? (
