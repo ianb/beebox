@@ -196,6 +196,47 @@ fi
 
 echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 
+# First reclaim deploy-owned caches so a previous accumulation cannot lock out
+# the cleanup that repairs it. Best-effort here: the hard post-install prune
+# below is authoritative, while this recovery pass may be running on a full
+# filesystem with partially broken tools.
+echo "Pruning deploy package caches before disk gate..."
+ssh "root@$SERVER_IP" bash -s <<'PREFLIGHTCLEAN'
+pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
+sudo -u callback -H bash -lc 'pnpm store prune' \
+  || echo "  WARNING: callback pnpm store preflight prune failed" >&2
+if sudo -u callback -H bash -lc 'command -v uv >/dev/null 2>&1'; then
+  sudo -u callback -H bash -lc 'uv cache clean' \
+    || echo "  WARNING: callback uv cache preflight clean failed" >&2
+fi
+PREFLIGHTCLEAN
+
+# Refuse to make a low-disk incident worse. This runs before either local or
+# remote installs. The 15%-free entry gate stays meaningful across differently
+# sized hosts; its 3 GiB floor preserves minimum package/temp/write headroom.
+echo "Checking server disk headroom..."
+ssh "root@$SERVER_IP" bash -s <<'DISKCHECK'
+set -euo pipefail
+read -r total_kib free_kib < <(df -Pk / | awk 'NR == 2 { print $2, $4 }')
+if [[ ! "$total_kib" =~ ^[0-9]+$ || ! "$free_kib" =~ ^[0-9]+$ ]]; then
+  echo "  FAILED: could not determine free disk space for /" >&2
+  exit 1
+fi
+threshold_kib=$((total_kib * 15 / 100))
+floor_kib=$((3 * 1024 * 1024))
+(( threshold_kib < floor_kib )) && threshold_kib=$floor_kib
+if (( free_kib < threshold_kib )); then
+  free_gib=$(awk -v kib="$free_kib" 'BEGIN { printf "%.1f", kib / 1024 / 1024 }')
+  threshold_gib=$(awk -v kib="$threshold_kib" 'BEGIN { printf "%.1f", kib / 1024 / 1024 }')
+  echo "  FAILED: only ${free_gib} GiB free on /; deploy requires ${threshold_gib} GiB (15% capacity, 3 GiB minimum)." >&2
+  echo "  Free disk space, then rerun the deploy." >&2
+  exit 1
+fi
+free_gib=$(awk -v kib="$free_kib" 'BEGIN { printf "%.1f", kib / 1024 / 1024 }')
+threshold_gib=$(awk -v kib="$threshold_kib" 'BEGIN { printf "%.1f", kib / 1024 / 1024 }')
+echo "  Disk headroom OK: ${free_gib} GiB free (deploy threshold: ${threshold_gib} GiB)."
+DISKCHECK
+
 # --- Build-checkout lifecycle (persistent local --shared clone) -------------
 # `.deploy-checkout` is a SEPARATE local clone, NOT a git worktree — deliberately.
 # A worktree shares the main repo's `.git/worktrees/` bookkeeping, which every
@@ -492,6 +533,20 @@ ssh "root@$SERVER_IP" bash -s <<'REMOTE'
     fi
   done
 REMOTE
+
+# Deploy installs are what grow both caches. Prune only after the root workspace
+# and callback-owned box installs have finished, so this cannot evict entries a
+# later install in the same deploy still needs. `-H` is required for uv: without
+# it sudo leaves HOME=/root and uv attempts to read /root/uv.toml.
+echo "Pruning deploy package caches..."
+ssh "root@$SERVER_IP" bash -s <<'CACHECLEAN'
+set -euo pipefail
+pnpm store prune
+sudo -u callback -H bash -lc 'pnpm store prune'
+if sudo -u callback -H bash -lc 'command -v uv >/dev/null 2>&1'; then
+  sudo -u callback -H bash -lc 'uv cache clean'
+fi
+CACHECLEAN
 
 # Write deploy info (git hashes + timestamp).
 # Build the JSON via node so JSON.stringify escapes subjects correctly —

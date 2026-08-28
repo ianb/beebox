@@ -1,6 +1,7 @@
 ---
 title: "Prod disk hit 100% (again); nginx truncated every large response and nothing paged anyone"
-workstream: unattached
+workstream: deploy-disk-hygiene
+resolution: implemented
 area: callback-box
 priority: important
 labels: [deploy, ops]
@@ -8,6 +9,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — phones stuck on "Loading Callback Box…" for two days
 ---
+
+Closed by `a17d74a2e`: deploys prune the package caches they grow, refuse to
+install below a capacity-relative disk threshold, and expose low disk through
+hub health and `cb doctor`. Production verification remains the landing deploy.
 
 Second 100%-full in three weeks (first: 2026-08-04). From 2026-08-26 23:27 to
 2026-08-28 ~12:50 UTC, the server's disk was full. Consequences, all silent:
