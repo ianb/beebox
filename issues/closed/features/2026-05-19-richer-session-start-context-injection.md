@@ -1,8 +1,11 @@
 ---
 title: "richer session start context injection"
-workstream: unknown
+workstream: chores-burn-down
 area: callback-box
+resolution: implemented
 ---
+
+**Closed:** Web chat session context is implemented in `src/core/session-context.ts`. Telegram parity is tracked separately in [Telegram thread session context](../../features/2026-08-29-telegram-thread-session-context.md).
 
 Currently the boxholder agent gets the date but not derived context that frequently matters in conversation. Cheap additions:
 
