@@ -3983,6 +3983,14 @@ test1:
       peak: 46685
       added: 0
       turns: 1
+  quote-third-party-from:
+    - date: 2026-08-29T19:34:43.609Z
+      boxCommit: 5faacdb83a5e5f17be6dab96f9113b6ad54ebf58
+      repoCommit: 48cc77df5154afc9d80ef6d5e9e4369de3b1c1d6
+      initial: 46976
+      peak: 46976
+      added: 0
+      turns: 1
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

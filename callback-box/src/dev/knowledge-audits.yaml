@@ -2948,6 +2948,23 @@ tests:
     correct_contains_any: ["{% quote"]
     tags: [quotes, cards, markdown]
 
+  - id: quote-third-party-from
+    prompt: >
+      I am writing a research card and want to preserve this studio owner's
+      exact words: "We make every installation for the particular room it will
+      inhabit." How do I mark the quote so it cannot be mistaken for the
+      boxholder's own voice?
+    expected_level: knows_directly
+    watch_for: >
+      Uses `{% quote from="…" %}` with the studio owner named in `from=`.
+      Explains that `from` renders the third-party attribution and keeps those
+      exact words visibly distinct from the user's own unattributed voice.
+    correct_contains_any: ["from=", "from attribute", "attribut"]
+    tags: [quotes, cards, provenance, third-party]
+    # Status (2026-08-29): passes at knows_directly with 0 file reads and
+    # 0 searches. The agent used from="Rina Patel, studio owner" and explained
+    # that the rendered attribution distinguishes these words from the user.
+
   - id: quote-when-to-use
     prompt: >
       The user is in a long chat working through an idea — mostly

@@ -81,9 +81,10 @@ The two tags compose to express "verbatim from there":
 {% /source %}
 \`\`\`
 
-Outer tag pins the origin; inner tag marks that the words are exact. Use the
-inner \`{% quote %}\` **only** for the *user's own words*, never for a document
-excerpt you're pointing at — that goes in the source body (see anchoring, next).
+Outer tag pins the origin; inner tag marks that a person's words are exact. For
+a third party's words, set the quote's \`from="…"\` attribution; the user's own
+voice needs no \`from\`. Never use an inner quote merely for a document excerpt
+you're pointing at — that goes in the source body (see anchoring, next).
 A bare \`{% source %}\` (no inner \`{% quote %}\`) holds content *from* the source in
 its body; \`usage\` says how faithful — paraphrase, summary, or a verbatim excerpt.
 
