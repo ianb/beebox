@@ -66,6 +66,26 @@ JSON.stringify({ files: complete?.files, selections: complete?.selections })
 => {"files":[{"id":2,"path":"tmp/report.pdf","originalName":"report.pdf","size":42,"mimetype":"application/pdf"}],"selections":[{"id":3,"ref":"/notes/plan.md","text":"the plan","position":"paragraph 2","anchor":null,"spokenWords":null}]}
 ```
 
+HQ provenance from native survives the bridge so chat history can render the
+same persistent marker as a web-composer HQ send:
+
+```ts continue
+const hqVoice = nativeEmissionFromDetail({
+  version: 2,
+  id: "ios-hq-1",
+  origin: "voice",
+  text: "clean transcript",
+  diarized: false,
+  hqText: true,
+  hqService: "whisper",
+  images: [],
+  files: [],
+  selections: [],
+});
+JSON.stringify({ hqText: hqVoice?.hqText, hqService: hqVoice?.hqService })
+=> {"hqText":true,"hqService":"whisper"}
+```
+
 Unknown versions and malformed V2 items reject with a receipt-ready reason:
 
 ```ts continue

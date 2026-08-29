@@ -226,6 +226,8 @@ struct PendingEmission: Codable, Equatable, Identifiable, Sendable {
     var text: String
     var origin: NativeEmissionV2.Origin
     var diarized: Bool
+    var hqText: Bool? = nil
+    var hqService: String? = nil
     var state: PendingEmissionState
     var createdAt: Date
 }
@@ -314,6 +316,9 @@ struct VoicePreparation: Codable, Equatable, Identifiable, Sendable {
     var priorInput: String
     var action: SpeechKeywordAction
     var matchedPhrase: String
+    /// Nil in manifests written before button-triggered HQ sends existed; nil
+    /// preserves the historical keyword-tag behavior.
+    var appendsKeywordTag: Bool? = nil
     var audioFilename: String?
     var createdAt: Date
 }

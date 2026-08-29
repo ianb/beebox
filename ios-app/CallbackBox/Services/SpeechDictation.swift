@@ -332,6 +332,8 @@ final class SpeechDictation: ObservableObject {
         }
         hasDictatedText = false
         transcript = ""
+        seedText = ""
+        keywordSeedText = ""
         VoiceCompositionReducer.reduce(&state, .reset)
     }
 
@@ -355,6 +357,11 @@ final class SpeechDictation: ObservableObject {
     /// keeps its pre-keyword text; the spoken command words never land in it.
     func discardKeywordSubstitution() {
         heldKeywordTranscript = nil
+        keywordSeedText = ""
+    }
+
+    func dictationSeedText() -> String {
+        seedText
     }
 
     #if DEBUG
