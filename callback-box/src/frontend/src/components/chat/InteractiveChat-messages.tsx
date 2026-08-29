@@ -306,7 +306,9 @@ function MessageListInner({
               const spacer = sendSignal > 0 && turnLive && index === data.length - 1 ? viewportPx : undefined;
               return (
                 <div key={key} data-role={item.kind === "group" ? item.group.type : item.kind} style={{ minHeight: spacer }}>
-                  {renderDataItem(item, renderCtx)}
+                  {spacer === undefined ? renderDataItem(item, renderCtx) : (
+                    <div data-chat-live-turn-content>{renderDataItem(item, renderCtx)}</div>
+                  )}
                 </div>
               );
             })}

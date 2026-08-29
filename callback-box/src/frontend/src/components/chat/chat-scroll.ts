@@ -39,6 +39,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { MutableRefObject } from "react";
 import { easeOrSnapToTop, anchorOffset } from "./chat-scroll-ease.js";
+import { currentBottomTop } from "./chat-scroll-bottom.js";
 import { decideReconcile, type ReconcileAction } from "./scroll-reconcile";
 import { recordScrollTrace } from "../../lib/scroll-diagnostics";
 
@@ -341,7 +342,7 @@ export function useChatScroll(): ChatScroll {
 
   // Derived geometry, re-read after every scroll and reconcile: never a guess.
   const measure = useCallback((el: HTMLDivElement) => {
-    const fromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const fromBottom = Math.max(0, currentBottomTop(el, contentElRef.current) - el.scrollTop);
     // Growth is noticed here, not only in reconcile: a scroll event (the
     // previous write's) can precede the resize callback in the same frame, and
     // it re-measures first — so per-frame growth never reads as `grew` there.
@@ -365,7 +366,7 @@ export function useChatScroll(): ChatScroll {
 
   const writeToBottom = useCallback((behavior: ScrollBehavior) => {
     const el = scrollerElRef.current;
-    if (el) writeTop(el.scrollHeight - el.clientHeight, behavior);
+    if (el) writeTop(currentBottomTop(el, contentElRef.current), behavior);
   }, [writeTop]);
 
   const endOpenPhase = useCallback((why: string) => openHoldRef.current.end(why), []);

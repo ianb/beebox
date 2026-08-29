@@ -12,6 +12,19 @@ browser procedure in `docs/chat-scroll-testing.md` and the scenario table at
 
 ```ts setup
 import { decideReconcile } from "../../src/frontend/src/components/chat/scroll-reconcile.js";
+import { bottomScrollTop } from "../../src/frontend/src/components/chat/chat-scroll-bottom.js";
+```
+
+The floating button ignores the viewport-tall remainder of a live turn and
+aligns the generated content bottom instead. Without a live spacer it uses the
+natural scroll bottom.
+
+```ts
+bottomScrollTop({ scrollHeight: 2000, clientHeight: 500, scrollTop: 900, scrollerTop: 100, liveContentBottom: 650 })
+=> 950
+
+bottomScrollTop({ scrollHeight: 2000, clientHeight: 500, scrollTop: 900, scrollerTop: 100, liveContentBottom: null })
+=> 1500
 ```
 
 A prepend of older history (loaded on scroll-up) grows the content just like a
