@@ -25,45 +25,129 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.246` (in `callback-box/package.json` — see the split-pin
+- **Current pin:** `0.3.247` (in `callback-box/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`, which is why `pnpm update-agent-sdk` ends by printing
   "Now at 0.3.226" even when the managed pin moved)
-- **Latest reviewed upstream version:** `0.3.250` (SDK), `2.1.250` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.251` (SDK), `2.1.251` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.246` was taken this turn as the newest settled
-  version, so `perTaskStopAffordance` is now available to
-  `issues/decisions/2026-08-25-chat-stop-and-background-subagents.md`. Pending:
-  `0.3.247` (~29h, carries the `ambient` flag the task-strip issue needs — take
-  it next turn), `0.3.248` (~3h) and `0.3.250` (~1h). None act-now.
-  **`0.3.250` and `2.1.250` are recorded as unreviewable, not as reviewed** —
-  they had no changelog section, no git tag and no GitHub release at review
-  time. Their entry says what to re-read next turn.
+- **Current recommendation:** `0.3.247` was taken this turn as the newest settled
+  version, which is the deliberate take the last turn flagged — the `ambient`
+  flag that `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md`
+  needs is now in the pin. Pending: `0.3.248` (~28h), `0.3.250` (~26h) and
+  `0.3.251` (~9h), none act-now. `2.1.251` is the largest security release this
+  ledger has seen, and **almost none of it protects this repo** — every session
+  here runs with permission enforcement off, which is the finding rather than
+  the fixes. The last turn's obligation to re-read `2.1.250` is discharged
+  below.
 
 ## Release ledger
 
-### 0.3.250 / Claude Code 2.1.250 — pending, UNREVIEWABLE at this turn (re-read next turn)
+### 0.3.251 — pending (published 2026-08-28T15:36Z, ~9h at this turn; parity with Claude Code 2.1.251)
 
-Both published ~1h before this turn (`0.3.250` 2026-08-27T22:28Z, `2.1.250`
-minutes earlier) and **neither is documented anywhere yet**: no section in
-either `main` CHANGELOG, no `v0.3.250`/`v2.1.250` git tag, no GitHub release,
-and the claude-code npm tarball ships no changelog. `0.3.249` was never
-published at all, so this is a two-version gap in a train that is currently
-churning.
+- **Upstream:** SDK says only "parity with Claude Code v2.1.251". That parity
+  line hides ~75 itemized Claude Code entries, assessed immediately below.
+- **Action:** Settled path; takeable 2026-08-30.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03251)
 
-What could be established without release notes: the SDK's **public type surface
-is unchanged**. `sdk.d.ts` from the `0.3.248` and `0.3.250` tarballs is
-byte-identical, so `0.3.250` adds, removes and renames nothing callback-box
-compiles against. That bounds the risk of the version existing; it says nothing
-about behavior, which is where the Claude Code half lives.
+### Claude Code 2.1.251 — harness + runtime; the security cluster lands where this repo has no enforcement
 
-**This entry is not a review.** The next turn must re-read
-`https://github.com/anthropics/claude-code/blob/v2.1.250/CHANGELOG.md` (and the
-SDK's `0.3.250` section) once the tag lands, and replace this with a real
-assessment. Recording it as reviewed would retire it from the briefing
-permanently — the ledger's header advances to `0.3.250`/`2.1.250` because the
-`run` script needs a single high-water mark, so this note is the only thing
-keeping the obligation visible.
+~75 items, including the largest batch of security fixes this ledger has
+recorded. The single most useful thing to state about them is the frame:
+
+**Nothing here runs with permission enforcement on.** Box agents run
+`permissionMode: "bypassPermissions"` (`src/core/agent/run.ts`), and worker
+sessions launch with `--dangerously-skip-permissions`
+(`bin/launch-worktree-session`). Checked for permission rules that would make
+these fixes bite: `.claude/settings.json`, `callback-box/.claude/settings.json`
+and `.claude/settings.local.json` declare **no `deny` rules at all**, and the
+user-level settings declare none either. So the permission-boundary fixes below
+are not protections this repo was relying on and lost, nor protections it now
+gains — they are enforcement this repo deliberately does not use. The exception
+is the boxholder's own interactive sessions, which do run under prompts; that is
+the only place these matter here, and the installed CLI is still **2.1.247**, so
+they are unfixed on this machine until it auto-updates.
+
+- **The security cluster, for the record:** file tools (Read, Write, Edit)
+  followed a symlink swapped inside the working directory *after* the permission
+  check, so a read or write could land outside the approved location (a TOCTOU
+  race needing an adversarial process on the machine — not this repo's threat
+  model); Grep and Glob did not apply `Read(...)` deny rules to files reached
+  through a symlinked search path; Bash permission checks auto-approved commands
+  assigning an arithmetic expression to an integer shell variable (`OPTIND=1/0`,
+  `RANDOM=2+2`); the Workflow tool read — and quoted in errors — a `scriptPath`
+  outside what the session may read before the permission check ran; plugin
+  commands declared in a marketplace entry could point outside the plugin
+  directory; and project settings could enable detailed beta tracing or raw API
+  body logging. Several settings-approval tightenings ship alongside
+  (`ANTHROPIC_CUSTOM_HEADERS` setting credential/routing headers, sandbox-TLS
+  and proxy-injection managed settings, sandbox output-file redirection).
+- **Checked and clear — the project-settings `env` restriction.** *"Changed
+  project-level `.claude/settings.json` `env` to no longer set
+  `CLAUDE_CONFIG_DIR`, `CLAUDE_CODE_TMPDIR`, or `TMPDIR`/`TMP`/`TEMP`."* This is
+  the one item in the release that could have silently broken this repo, since a
+  project `env` block that stops taking effect fails quietly. It does not:
+  `.claude/settings.json` and `callback-box/.claude/settings.json` have empty
+  `env` blocks, and `.claude/settings.local.json` sets only `PATH`, which is
+  unaffected. Nothing in `bin/`, `.claude/` or `schedules/` sets any of the
+  three restricted variables.
+- **Runtime — the wedge worth knowing about.** *"Fixed conversations getting
+  stuck on 'text content blocks must be non-empty' errors after a turn where the
+  model produced only thinking."* A stuck conversation is a chat thread that
+  fails every turn from then on, which in this product is boxholder-visible
+  breakage rather than a transient error. Considered for act-now and **not**
+  taken, on the same reasoning as the last turn's token-refresh fix: no
+  occurrence has been observed here, and `0.3.251` was nine hours old. It
+  arrives 2026-08-30 on the settled path. If a box chat thread starts failing
+  every turn before then, this is the first thing to check.
+- **Runtime — structurally possible, not reachable.** *"Fixed session
+  transcripts being silently overwritten when a directory change relocated a
+  session onto an existing same-ID transcript."* Silent transcript loss matters
+  here because chat history *is* the transcript. `agent/index.ts:114` passes
+  `cwd` per **invoke**, not per agent, so resuming one session under a different
+  cwd is structurally allowed — and that is exactly the relocation this bug
+  punishes. It is not reachable today: no caller anywhere in `callback-box/src`
+  passes `cwd` at all, so every invoke falls back to `boxRoot` and the value is
+  constant for the life of a session. Worth remembering if a caller ever starts
+  varying it.
+- **Harness — worktree editing, again.** *"Fixed background sessions and their
+  subagents being unable to edit files inside a git worktree they created with
+  `git worktree add`."* Same family as v2.1.218's worktree git isolation, which
+  broke `/finish` here for days. This repo is not exposed the same way — a
+  session creates a worktree through the `WorktreeCreate` hook and
+  `bin/workstreams create`, and the *new* session works in it rather than the
+  creating one — but the pattern of worktree-scoped capability regressions
+  landing without warning is now a three-release trend.
+- **Additive for hooks:** new `PreModelSwitch` / `PostModelSwitch` hook events
+  (block, confirm or annotate a model switch), and `SessionStart` resume hooks
+  now receive session staleness and estimated re-cache cost. This repo's
+  `SessionStart` hook (`.claude/hooks/session-start-registry.sh`) reads the
+  fields it needs and ignores the rest, so the added input is harmless; the
+  staleness signal is there if resume behavior ever needs tuning.
+- **Also changed, worth knowing:** `CLAUDE_CODE_SUBAGENT_MODEL` now sets the
+  *default* subagent model rather than overriding everything (an agent
+  definition's `model:` and an explicit per-spawn model win) — nothing here sets
+  it; per-model `/effort` defaults; the native binary is ~7.5 MB smaller; and
+  `claude ultrareview` / `/ultrareview` now stop early when the cloud session
+  fails to start instead of waiting the full 30 minutes.
+- **Action:** Nothing to adjust. Settled path.
+- **Sources:** [Claude Code 2.1.251](https://github.com/anthropics/claude-code/blob/v2.1.251/CHANGELOG.md#21251)
+
+### 0.3.250 / Claude Code 2.1.250 — reviewed 2026-08-28 (the previous turn's obligation, discharged)
+
+The last turn recorded these as **unreviewable** rather than reviewed: at that
+point neither had a changelog section, a git tag or a GitHub release. Both have
+since landed, and the answer is anticlimactic — **2.1.250 says only "Bug fixes
+and reliability improvements"**, and the SDK's `0.3.250` says only "parity with
+Claude Code v2.1.250". (`0.3.249` also now has a changelog section, for a
+Claude Code 2.1.249 that was likewise never tagged; the SDK version itself was
+never published to npm.)
+
+So the release was genuinely opaque rather than merely undocumented-yet, and the
+previous turn's byte-identical `sdk.d.ts` comparison against `0.3.248` remains
+the only substantive thing known about it: no public type surface changed.
+Nothing to assess on either channel. The obligation is discharged; no further
+re-read is owed.
 
 ### 0.3.248 — pending (published 2026-08-27T20:37Z, ~3h at this turn)
 
@@ -166,7 +250,7 @@ upstream but **not yet present on this machine**.
   one issue filed.
 - **Sources:** [Claude Code 2.1.248](https://github.com/anthropics/claude-code/blob/v2.1.248/CHANGELOG.md#21248)
 
-### 0.3.247 — pending (published 2026-08-26T18:05Z, ~29h at this turn)
+### 0.3.247 — APPLIED 2026-08-28 (published 2026-08-26T18:05Z)
 
 - **Upstream:** Two items. An optional `ambient` flag on `task_started`,
   `task_notification` and `background_tasks_changed` entries, "so hosts can
@@ -197,9 +281,13 @@ upstream but **not yet present on this machine**.
   The `permissionMode` fix does not apply: `src/core/agent/run.ts` sets
   `permissionMode: "bypassPermissions"` once and never switches mid-session.
 - **Callback-box applicability (harness):** None from the SDK side.
-- **Action:** Settled path — nothing act-now. Takeable 2026-08-28, and worth
-  taking deliberately: the filed issue needs `ambient`. Still pending as of
-  2026-08-27; re-read at that turn and nothing changed.
+- **Action:** Applied 2026-08-28 on the settled path (~54h old), the newest
+  settled version — the deliberate take flagged two turns running, since
+  `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md` needs
+  `ambient`. That issue is no longer blocked on the pin.
+  `pnpm -C callback-box test`: **8,402 pass, 0 fail** (a 13-minute run against
+  the usual 3-4, from machine contention rather than anything in the release).
+  `sdk-steering-probe`: all four steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03247)
 
 ### Claude Code 2.1.247 — harness only (no SDK pin of its own; bundled by 0.3.247)
