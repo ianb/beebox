@@ -46,15 +46,15 @@ export function HqPreferenceRow(props: {
     : defaults.landmark === "on" ? "off" : "inherit";
   return (
     <div className="px-3 py-2 text-warm-700" role="group" aria-label="HQ dictation preferences">
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-1.5">
         <span className={props.enabled ? undefined : "opacity-40"} aria-hidden="true">{props.icon}</span>
-        <span className="mr-auto">HQ dictation</span>
+        <span>HQ dictation</span>
         <ScopeControl id="cb-voice-hq-dictation" label={`Chat: ${props.enabled ? "on" : "off"}`} accessibleLabel={`Change Chat HQ dictation, currently ${props.enabled ? "on" : "off"}`} onClick={props.onToggle} />
         {defaults.canManage ? (
-          <>
-          <ScopeControl id="cb-voice-hq-landmark" disabled={defaults.pending || !defaults.hasLandmark} label={`Landmark: ${defaults.landmark}`} accessibleLabel={`Change Landmark HQ dictation, currently ${defaults.landmark}`} onClick={() => defaults.onLandmarkChange(nextLandmark)} />
-          <ScopeControl id="cb-voice-hq-box" disabled={defaults.pending} label={`Box: ${defaults.box}`} accessibleLabel={`Change Box HQ dictation, currently ${defaults.box}`} onClick={() => defaults.onBoxChange(defaults.box === "on" ? "off" : "on")} />
-          </>
+          <div className="col-span-3 flex justify-end gap-1.5">
+            <ScopeControl id="cb-voice-hq-landmark" disabled={defaults.pending || !defaults.hasLandmark} label={`Landmark: ${defaults.landmark}`} accessibleLabel={`Change Landmark HQ dictation, currently ${defaults.landmark}`} onClick={() => defaults.onLandmarkChange(nextLandmark)} />
+            <ScopeControl id="cb-voice-hq-box" disabled={defaults.pending} label={`Box: ${defaults.box}`} accessibleLabel={`Change Box HQ dictation, currently ${defaults.box}`} onClick={() => defaults.onBoxChange(defaults.box === "on" ? "off" : "on")} />
+          </div>
         ) : null}
       </div>
     </div>
