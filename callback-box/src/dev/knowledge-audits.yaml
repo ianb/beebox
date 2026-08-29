@@ -2959,7 +2959,7 @@ tests:
       Uses `{% quote from="…" %}` with the studio owner named in `from=`.
       Explains that `from` renders the third-party attribution and keeps those
       exact words visibly distinct from the user's own unattributed voice.
-    correct_contains_any: ["from=", "from attribute", "attribut"]
+    correct_contains_any: ["from="]
     tags: [quotes, cards, provenance, third-party]
     # Status (2026-08-29): passes at knows_directly with 0 file reads and
     # 0 searches. The agent used from="Rina Patel, studio owner" and explained

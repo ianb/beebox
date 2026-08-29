@@ -38,8 +38,7 @@ For the **user's own words**, omit \`from\`: their voice is the default protecte
 by ${SECTION.LAW_OF_QUOTING}. When quoting a third party — a studio owner, an
 interview subject, or attributed website copy — set \`from="…"\` to the speaker
 or author. The renderer shows that attribution, keeping the third party visibly
-distinct from the user's voice. \`from\` may be a display name or a person-card
-ref.
+distinct from the user's voice. Write a human-readable attribution in \`from\`.
 
 A document span you're anchoring a comment to — an excerpt you're *pointing at*,
 not a person's words you're recording — is not a quote: it goes in a
