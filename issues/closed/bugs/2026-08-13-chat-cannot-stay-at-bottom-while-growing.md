@@ -1,6 +1,6 @@
 ---
 title: "Chat drifts off the bottom as it grows, and is hard to scroll back down"
-workstream: chat-scroll
+workstream: small-bugs-batch
 area: callback-box
 priority: important
 resolution: superseded
@@ -82,5 +82,5 @@ skill) is the instrument if anything still feels wrong.
 ## Related
 
 - Prepend and drop both shift position too — see the paging window in
-  [chat messages grow unbounded](../closed/bugs/2026-08-01-chat-messages-grow-unbounded-on-load-older.md).
+  [chat messages grow unbounded](2026-08-01-chat-messages-grow-unbounded-on-load-older.md).
   Any fix here should not assume growth only happens at the bottom.

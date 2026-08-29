@@ -37,6 +37,6 @@ in `AVAudioRecorderFactory` without leaking `AVFoundation` into the recorder
 model.
 
 Out of scope for the audio-session routing work
-([plan](../../callback-box/docs/implemented-plans/ios-audio-session-routing.md)), which
+([plan](../../../callback-box/docs/implemented-plans/ios-audio-session-routing.md)), which
 only changed which category and options the session uses. Found by a
 cross-model review of that change.

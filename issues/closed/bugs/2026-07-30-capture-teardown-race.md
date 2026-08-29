@@ -12,7 +12,7 @@ resolution: implemented
 Closed 2026-08-29 by this commit (`fix(capture): guard abandoned-session teardown`): the sweep now rechecks lifecycle, emptiness, and staleness under the staging lock before discarding.
 
 The bulk-upload side of this race was fixed (see
-[chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)):
+[chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)):
 a client cancel or an abandonment sweep could read a session's state, then delete
 its staging directory *after* a finalize had sealed it — the worker then reads
 `null`, silently returns, and the client, which already saw finalize succeed,
