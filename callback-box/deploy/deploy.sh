@@ -443,6 +443,8 @@ rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "root@$SERVER_IP:$
 # might chmod. One pass over the whole tree after every sync is simpler and
 # more robust than trying to get every rsync invocation's ownership right.
 echo "Fixing ownership..."
+# INSTALL_DIR must expand locally before the remote command runs.
+# shellcheck disable=SC2029
 ssh "root@$SERVER_IP" "chown -R callback:callback $INSTALL_DIR"
 
 # Install deps if package-lock changed (compare hash)
@@ -617,9 +619,13 @@ if (process.env.CALLBACK_BOX_HASH) {
 }
 process.stdout.write(JSON.stringify(out, null, 2) + "\n");
 ')
+# INSTALL_DIR is the locally configured remote deployment path.
+# shellcheck disable=SC2029
 ssh "root@$SERVER_IP" "cat > $INSTALL_DIR/callback-box/deploy-info.json" <<< "$DEPLOY_INFO"
 
 # Append to deploy history (keep last 20 entries)
+# INSTALL_DIR is intentionally interpolated locally; remote variables are escaped below.
+# shellcheck disable=SC2087
 ssh "root@$SERVER_IP" bash -s <<HISTEOF
   HIST_FILE="$INSTALL_DIR/callback-box/deploy-history.json"
   if [[ -f "\$HIST_FILE" ]]; then
@@ -651,6 +657,8 @@ if [[ "$SKIP_RESTART" != true ]]; then
   # server already. It used to exist only as a heredoc in setup-server.sh, so a
   # server provisioned before it was added had NO copy and every deploy skipped
   # the wait entirely — silently, because the skip was best-effort.
+  # INSTALL_DIR is the locally configured remote deployment path.
+  # shellcheck disable=SC2029
   ssh "root@$SERVER_IP" "install -m 0755 $INSTALL_DIR/callback-box/deploy/server-bin/cb-wait-quiet /usr/local/bin/cb-wait-quiet"
 
   echo "Waiting for boxes to be at rest (best-effort)..."

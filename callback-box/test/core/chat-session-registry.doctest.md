@@ -15,6 +15,7 @@ import { ChatSessionRegistry } from "../../src/core/chat/session/registry.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { tick, plainTestPrompt } from "../helpers/chat-session-spawner-helpers.js";
+import { stopChatSessionsAndWait } from "../../src/core/chat/session/registry-shutdown.js";
 
 // Hand-advanced deadline clock.
 let clock = 1_000;
@@ -49,6 +50,38 @@ function errorName(fn: () => unknown): string {
     return error instanceof Error ? error.name : "unknown";
   }
 }
+```
+
+## Shutdown waits for close, but not forever
+
+The supervised-reload boundary resolves after a session actually closes, not
+merely after `stop()` starts. A delayed fake makes that ordering observable:
+
+```ts
+let closeListener = () => {};
+const delayed = {
+  getSessionId: () => "delayed-session",
+  isRunning: () => true,
+  once: (_event: "close", listener: () => void) => { closeListener = listener; },
+  stop: () => {},
+};
+let shutdownResolved = false;
+const delayedShutdown = stopChatSessionsAndWait([delayed], { timeoutMs: 100, periodMs: 1 })
+  .then((timedOut) => { shutdownResolved = true; return timedOut; });
+await new Promise((resolve) => setImmediate(resolve));
+shutdownResolved
+=> false
+
+closeListener();
+JSON.stringify(await delayedShutdown)
+=> []
+```
+
+A stuck close is bounded and names the session the child had to leave behind:
+
+```ts continue
+JSON.stringify(await stopChatSessionsAndWait([delayed], { timeoutMs: 5, periodMs: 1 }))
+=> ["delayed-session"]
 ```
 
 ## LRU eviction under the live cap
@@ -310,11 +343,15 @@ JSON.stringify({
 ```
 
 ```ts continue
-codexRegistry.shutdown();
+await codexRegistry.shutdown();
+coinedSession.isRunning()
+=> false
+
 await codexBox.cleanup();
 ```
 
-`shutdown()` closes the warm slot too — it's a subprocess like any session's:
+Shutdown closes the warm slot immediately too — it is a subprocess like any
+session's:
 
 ```ts continue
 registry.shutdown();
