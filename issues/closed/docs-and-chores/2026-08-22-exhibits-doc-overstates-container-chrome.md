@@ -1,11 +1,14 @@
 ---
 title: "The exhibits contract says the container wraps every tier; the raw-HTML tier gets no container at all"
-workstream: dev-comments
+workstream: chores-burn-down
 area: monorepo
+resolution: implemented
 filed-by: agent
 discovered-in: worktree-dev-comments — designing the general browser's exhibit header
 labels: [docs, exhibits]
 ---
+
+**Closed:** This commit scopes the automatic ask-control guarantee to the default and module tiers.
 
 `workstreams-app/docs/exhibits.md` states that the disposition control is
 appended below the page's own content *"for every tier, custom pages included"*,

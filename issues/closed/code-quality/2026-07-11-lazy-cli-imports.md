@@ -1,10 +1,13 @@
 ---
 title: "Lazy-import heavy deps in the CLI bundle (~100MB heap allocated per process at import time)"
-workstream: memory-use
+workstream: chores-burn-down
 area: callback-box
+resolution: implemented
 filed-by: agent
 discovered-in: worktree-memory-use — investigating prod memory usage
 ---
+
+**Closed:** This commit moves the remaining cheerio, markdownlint, and Google GenAI imports to their points of use; TypeScript was already lazy.
 
 Every `cb` process pays the full import cost of every command's dependencies:
 a bare `cb --help` peaks at ~245MB RSS (~218MB without `--enable-source-maps`),

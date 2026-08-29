@@ -37,7 +37,7 @@ Make the failed-upload state a clear, prominent affordance with an obviously
 tappable Retry, and give Retry immediate visual feedback (in-progress state →
 resolved state). This sits on the capture flow that has already been fragile under
 upload failures (see the 07-29 many-photos aborts and
-[capture-teardown-race](2026-07-30-capture-teardown-race.md)), so the error/retry UX
+[capture-teardown-race](../closed/bugs/2026-07-30-capture-teardown-race.md)), so the error/retry UX
 is exactly where a user lands when those bite. Verify on a real device — this is a
 mobile touch-target + feedback issue.
 

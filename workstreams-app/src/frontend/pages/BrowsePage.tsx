@@ -15,7 +15,7 @@ import type { BrowsedDocument, DirectoryEntry } from "../types.js";
  * THE ADDRESS IS THE FILE: `?file=<repo-relative>` with `?workstream=` as a
  * lens over it, following the issues browser, which holds its selection in a
  * search param and redirects the old path-segment URLs into that shape
- * (`router.tsx` legacyIssueRoute). A worktree is never a path segment — that is
+ * (`router.tsx` issuesRoute). A worktree is never a path segment — that is
  * the `/<worktree>/dev/` shape this replaces.
  */
 function KindPill({ document }: { document: BrowsedDocument }) {

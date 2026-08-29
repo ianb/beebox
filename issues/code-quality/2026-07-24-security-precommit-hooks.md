@@ -1,6 +1,6 @@
 ---
 title: "Adopt openclaw-style security pre-commit hooks (dev-repo scope)"
-workstream: openclaw-security-lints
+workstream: chores-burn-down
 area: callback-box
 labels: [lint, security, openclaw-borrow]
 filed-by: agent
@@ -60,4 +60,11 @@ workflows grow), ruff/pytest/swift* (we're TS-only).
 
 Open decisions before implementing: (a) gitleaks allowlist/baseline approach;
 (b) exactly where `pnpm audit` runs (pre-push vs CI vs a periodic maintenance
-check); (c) whether shellcheck runs in husky pre-commit or as a `pnpm` script.
+check).
+
+## Implemented in this workstream
+
+This commit adds the approved private-key, merge-conflict, and shellcheck guards
+to the root pre-commit dispatcher. Shellcheck runs only for staged shell files.
+The remaining work is gitleaks allowlist/baseline design and deciding where the
+network-dependent `pnpm audit` gate belongs.
