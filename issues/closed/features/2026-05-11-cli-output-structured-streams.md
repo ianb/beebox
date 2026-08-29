@@ -1,8 +1,11 @@
 ---
 title: "CLI output as structured streams"
-workstream: unknown
+workstream: chores-burn-down
 area: callback-box
+resolution: implemented
 ---
+
+**Closed:** The concrete feedback channel shipped as `cb feedback`; the remaining structured-stream discussion is intentionally open-ended and does not define further work.
 
 The `--deliver=webhook:url` pattern (route CLI output to a file, webhook, or stdout) is really reinventing the pipe inside the CLI. Shell already does this: process substitution + `tee` + `jq` can route different parts of a JSON stream to different destinations without the CLI knowing anything about it:
 

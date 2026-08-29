@@ -169,7 +169,7 @@ function MessageListInner({
     [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView],
   );
 
-  const { scrollerRef, contentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen, viewportPx } = useChatScroll();
+  const { scrollerRef, contentRef, liveContentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen, viewportPx } = useChatScroll();
 
   // The content element, for the send anchor's DOM query. Held alongside (never
   // instead of) the controller's attach callback — one authority owns scroll.
@@ -306,7 +306,9 @@ function MessageListInner({
               const spacer = sendSignal > 0 && turnLive && index === data.length - 1 ? viewportPx : undefined;
               return (
                 <div key={key} data-role={item.kind === "group" ? item.group.type : item.kind} style={{ minHeight: spacer }}>
-                  {renderDataItem(item, renderCtx)}
+                  <div ref={spacer === undefined ? undefined : liveContentRef} data-chat-live-turn-content={spacer === undefined ? undefined : ""}>
+                    {renderDataItem(item, renderCtx)}
+                  </div>
                 </div>
               );
             })}

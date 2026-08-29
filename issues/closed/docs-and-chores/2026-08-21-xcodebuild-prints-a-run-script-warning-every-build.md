@@ -1,12 +1,15 @@
 ---
 title: "Every xcodebuild run prints a 'will be run during every build' warning for the git-stamp script phase"
-workstream: unattached
+workstream: chores-burn-down
 area: ios-app
+resolution: implemented
 labels: [ios, build, noise]
 filed-by: agent
 discovered-by: agent
 discovered-in: voice-barge-in worktree — noticed while building for the screen-awake fix
 ---
+
+**Closed:** Commit `f3857fd7` added `alwaysOutOfDate = 1` on 2026-08-12. If a real build still emits the warning, refile it with fresh evidence.
 
 Every `xcodebuild` invocation ends with:
 

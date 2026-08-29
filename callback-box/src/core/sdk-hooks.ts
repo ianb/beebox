@@ -11,7 +11,6 @@ import type {
   HookJSONOutput,
 } from "@anthropic-ai/claude-agent-sdk";
 import { formatLintResults } from "../cards/index.js";
-import { lint as markdownlint } from "markdownlint/promise";
 import { customLinkRules, linkRuleConfig } from "./markdown-lint-rules.js";
 import { lintCardsDispatch } from "./card-lint.js";
 import { buildLoadContext } from "./load-context.js";
@@ -164,6 +163,7 @@ async function runMarkdownLint(filePath: string, { startDir }: { startDir: strin
   const boxRoot = await findBoxRoot(startDir);
   if (boxRoot === null) return null;
   try {
+    const { lint: markdownlint } = await import("markdownlint/promise");
     const results = await markdownlint({ files: [filePath], config: markdownConfig(boxRoot), customRules: customLinkRules });
     const errors = results[filePath] ?? [];
     if (errors.length === 0) return null;

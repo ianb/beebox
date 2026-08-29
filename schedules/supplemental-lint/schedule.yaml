@@ -1,0 +1,8 @@
+description: "Weekly supplemental lint: new oxlint and circular-dependency findings"
+cadence: 7d
+workstream:
+  agent: claude
+  model: opus
+  worktree: true
+  session: fresh
+  permissionMode: bypassPermissions

@@ -76,6 +76,7 @@ export async function discardStagingSessionIfCancellable(opts: {
       console.error(`[capture] Failed to discard staging session ${id}:`, e);
       throw e;
     }
+    releaseStagingLock(id);
     return { discarded: true };
   });
 }

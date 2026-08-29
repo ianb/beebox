@@ -211,7 +211,7 @@ authenticated-but-unattributed behavior.
 
 ### 3.3 Script-message channels (web → native)
 
-Five channels, all web→native. On iOS they are `WKScriptMessageHandler` names registered on the
+The following channels are web→native. On iOS they are `WKScriptMessageHandler` names registered on the
 `userContentController`; the transport is platform glue (§10), the channel names and payloads are
 the contract.
 
@@ -220,10 +220,11 @@ the contract.
 | `callbackboxSession` | `window.location.href` (string) | `Coordinator.userContentController` → `onSessionChange(visibleSessionID)` |
 | `callbackboxEmissionReceipt` | `Receipt` object (§4.2) | → `receiveEmissionReceipt` |
 | `callbackboxLocationResult` | `{ id, success, message }` | → `receiveLocationResult` |
+| `callbackboxHqDictationState` | `{ enabled }` | → `receiveHqDictationState` |
 | `callbackboxComposerCommand` | V1 or V2 composer command (§4.7, §4.8) | → `receiveComposerCommand` |
 | `callbackboxLastAudioRequest` | V1 last-audio request (§4.9) | → `receiveLastAudioRequest` |
 
-- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)` for all five).
+- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)`).
 - Session reporting: the native-authored startup script wraps `history.pushState`/`replaceState` +
   `popstate` and posts `location.href` on every nav; native extracts `?session=` via
   `visibleSessionID`. Origin-checked at both post and receipt time.
@@ -392,9 +393,9 @@ mint them independently; the ids are per-emission and per-kind.
 
 - **Wire shape:** `{ enabled: boolean }` on `callbackboxNarrationState`.
 - **Semantics:** the web chat posts the current session's narration flag whenever it changes. Native
-  defaults to off. A normal native voice keyword send uses its Apple live transcript directly while
-  off; the explicit `clean up and send` / `send and clean up` keyword enters durable HQ audio
-  preparation regardless of narration state.
+  defaults to off. A normal native voice keyword send uses its Apple live transcript directly only
+  when both narration and HQ dictation are off; the explicit `clean up and send` / `send and clean
+  up` keyword enters durable HQ audio preparation regardless of either state.
 - **Anchors:** web `use-native-bridge.ts` — `useNativeNarrationBridge`; native
   `Views/ChatWebView.swift` — `receiveNarrationState`; `Views/NativeComposerView.swift` —
   `sendKeywordIntent`.
@@ -408,6 +409,19 @@ mint them independently; the ids are per-emission and per-kind.
   restores the pre-keyword transcript) and refuses to match inside an existing markup tag; web never
   re-feeds composer text to detection, so it needs neither guard. Neither side may assume the
   other's detector fired.
+
+### 4.4a HQ dictation state (web → native)
+
+- **Wire shape:** `{ enabled: boolean }` on `callbackboxHqDictationState`.
+- **Semantics:** the web posts the resolved HQ setting for the visible chat. Native defaults to off.
+  When enabled, both the native Send button and ordinary spoken-send keyword enter the durable HQ
+  audio preparation path. Typed messages remain direct sends; the explicit cleanup keyword remains
+  HQ regardless of this state.
+- **Anchors:** web `use-native-bridge.ts` — `useNativeHqDictationBridge`; native
+  `Views/ChatWebView.swift` — `receiveHqDictationState`; `Views/NativeComposerView.swift` —
+  `send`, `sendKeywordIntent`.
+- **Drift:** fail-local — an absent or malformed state leaves native HQ dictation off. If HQ
+  transcription later fails, the durable preparation visibly falls back to its live transcript.
 
 ### 4.5 Speech playback state (web → native)
 
@@ -1022,7 +1036,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | A4 | tRPC context identity | box internal | `authed` from mobile token; `user=null,isOwner=false` | — | `server-box-scope.ts` · `createContext` | SILENT |
 | W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session]` — carries NO credential | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `request()` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `callbackboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
-| B1 | Native emission | native→web | V2 `{version:2,id,text,origin,diarized,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `callbackboxNativeReceive`, queue `callbackboxNativeQueue`, event `callbackbox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2 / SILENT legacy |
+| B1 | Native emission | native→web | V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `callbackboxNativeReceive`, queue `callbackboxNativeQueue`, event `callbackbox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2 / SILENT legacy |
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `callbackboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location toggle | native→web | `callbackboxNativeShareLocation("<uuid>","toggle")`, queue `callbackboxNativeLocationQueue`, event `callbackbox:native-share-location`, detail `{id,action:"toggle"}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
 | B4 | Location state/result | web→native | state `{enabled}` via `callbackboxLocationState`; result `{id,success,enabled,message}` via `callbackboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationState`, `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationState`, `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
@@ -1031,6 +1045,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B11 | Speech control (barge-in) | native→web | V1 `{version:1,action:"stop"}` via `callbackboxNativeSpeechCommand`, queue `callbackboxNativeSpeechCommandQueue`, event `callbackbox:native-speech-command`; no ack — §4.5 `{playing:false}` reports the stop | `Models/NativeComposerContract.swift` · `NativeSpeechCommand`; `Services/SpeechDictation.swift` · `NativeVoiceTurnState`; `Views/ChatWebView.swift` · `deliverSpeechStopRequest` | `native-speech-command.ts` · `nativeSpeechCommandFromDetail`; `use-native-bridge.ts` · `useNativeSpeechCommandBridge` | SILENT-degraded (speech plays into an open mic) |
 | B10 | Last-audio request relay | web→native | V1 `{version:1,requestId,messageId,sessionId\|null}` via `callbackboxLastAudioRequest`; answered by H6, not by an ack | `Models/NativeComposerContract.swift` · `NativeLastAudioRequest`; `Views/ChatWebView.swift` · `receiveLastAudioRequest`; `Views/RootView.swift` · `answerLastAudioRequest` | `native-last-audio-request.ts`; `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` | QUIET (asleep phone is indistinguishable) |
 | B7 | Narration state | web→native | `{enabled}` via `callbackboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
+| B14 | HQ dictation state | web→native | `{enabled}` via `callbackboxHqDictationState` | `Views/ChatWebView.swift` · `receiveHqDictationState`; `Views/NativeComposerView.swift` · `send`, `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeHqDictationBridge` | fail-local |
 | B8 | Speech playback state | web→native | `{playing}` via `callbackboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | B9 | Response generation state | web→native | `{active}` via `callbackboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `callbackboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
@@ -1044,7 +1059,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
-| S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
+| S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `CallbackBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `cb_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
 | U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
@@ -1122,6 +1137,7 @@ without the other is a contract break.
   `use-native-composer-commands.ts` / `native-control-scan.ts`.
 - **Script-message channel names** `callbackboxSession` / `callbackboxEmissionReceipt` /
   `callbackboxLocationResult` / `callbackboxLocationState` / `callbackboxNarrationState` /
+  `callbackboxHqDictationState` /
   `callbackboxSpeechPlaybackState` / `callbackboxResponseState` /
   `callbackboxComposerCommand` / `callbackboxLastAudioRequest` —
   `Views/ChatWebView.swift` (`userContentController.add`) ↔

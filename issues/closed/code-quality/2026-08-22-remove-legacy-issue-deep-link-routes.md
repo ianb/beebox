@@ -1,12 +1,15 @@
 ---
 title: "Remove the legacy issue routes: SPA deep links and the /dev/issues router rewrite"
-workstream: dev-comments
+workstream: chores-burn-down
 area: monorepo
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-dev-comments — reading the issues browser as the model for the general browser
 labels: [workstreams-app, cleanup]
 ---
+
+**Closed:** This commit removes the four SPA routes and the shared-router rewrite. The router half takes effect after the boxholder restarts the shared router; this workstream did not restart it.
 
 `workstreams-app/src/frontend/router.tsx:18-37` carries four routes whose only
 job is to redirect an old URL shape into the current one:
@@ -20,7 +23,7 @@ job is to redirect an old URL shape into the current one:
 
 Each parses the path back apart and `redirect`s to `/issues?issue=<relPath>`
 with the right visibility. They date from the move to SPA query state
-([workstreams](../../callback-box/docs/implemented-plans/workstreams.md):629),
+([workstreams](../../../callback-box/docs/implemented-plans/workstreams.md):629),
 which kept the redirects *"indefinitely — one line, and habit + docs point"* at
 the old form.
 

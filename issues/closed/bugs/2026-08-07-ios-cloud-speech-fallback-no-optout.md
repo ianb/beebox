@@ -5,7 +5,11 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-security-report — egress inventory for the security report
 priority: backlog
+resolution: wontfix
 ---
+
+> Wontfix, boxholder 2026-08-29: the legacy fallback path is not worth a
+> preference surface; leave it as-is.
 
 The iOS app's dictation prefers the on-device `SpeechAnalyzer` /
 `SpeechTranscriber` path (iOS 26+, verified local-only). When that path

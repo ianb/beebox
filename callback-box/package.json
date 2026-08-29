@@ -31,11 +31,14 @@
     "src/frontend/dist",
     "src/frontend/package.json",
     "src/types",
+    "src/core/views/types.ts",
+    "src/core/chat/card-activity.ts",
+    "src/shared/card-activity-kinds.ts",
     "tsconfig.json",
     "tsconfig.base.json"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && mkdir -p dist/webapp/test-fixtures && cp -R src/webapp/test-fixtures/tts dist/webapp/test-fixtures/tts",
     "build:frontend": "cd src/frontend && pnpm build",
     "build:all": "pnpm build && pnpm build:frontend",
     "build:cli": "node scripts/build-cli.ts && tsc -p tsconfig.declarations.json",

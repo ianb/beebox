@@ -1,15 +1,18 @@
 ---
 title: "Capture's DELETE route and sweep can delete a session out from under its worker"
-workstream: chat-photo-batch-upload
+workstream: small-bugs-batch
 area: callback-box
 filed-by: agent
 discovered-in: worktree-chat-photo-batch-upload — Codex review of the bulk-upload teardown fixes
 labels: [mobile]
 priority: normal
+resolution: implemented
 ---
 
+Closed 2026-08-29 by this commit (`fix(capture): guard abandoned-session teardown`): the sweep now rechecks lifecycle, emptiness, and staleness under the staging lock before discarding.
+
 The bulk-upload side of this race was fixed (see
-[chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)):
+[chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)):
 a client cancel or an abandonment sweep could read a session's state, then delete
 its staging directory *after* a finalize had sealed it — the worker then reads
 `null`, silently returns, and the client, which already saw finalize succeed,

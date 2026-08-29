@@ -27,7 +27,6 @@ import {
 } from "./router-pages.js";
 import {
   REPO_ROOT,
-  legacyIssuesRedirect,
   parseWorktreeName,
   worktreeRoot,
 } from "./router-config.js";
@@ -258,12 +257,6 @@ async function handleWorktreeRoutes(
   // /<name>/dev/... — the worktree's dev space (artifacts + doc browser),
   // served straight from disk so it never cold-starts the worktree.
   const afterName = url.slice(`/${name}`.length);
-  const issuesRedirect = legacyIssuesRedirect(afterName);
-  if (issuesRedirect) {
-    res.writeHead(301, { location: issuesRedirect });
-    res.end();
-    return;
-  }
   if (afterName.split("?")[0] === "/dev") {
     res.writeHead(301, { location: `/${name}/dev/` });
     res.end();

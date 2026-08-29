@@ -3,7 +3,7 @@ title: "Sticky HQ transcription preference"
 status: implemented
 workstream: transcript-confidence
 issues:
-  - ../../../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md
+  - ../../../issues/features/2026-08-26-sticky-hq-transcription-preference.md
 ---
 # Sticky HQ transcription preference
 

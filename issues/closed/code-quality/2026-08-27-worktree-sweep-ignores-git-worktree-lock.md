@@ -1,13 +1,16 @@
 ---
 title: "Worktree teardown trashes by `mv` and never reads git's worktree lock, so upstream's new background-session protection doesn't reach us"
-workstream: unattached
+workstream: chores-burn-down
 area: callback-box
+resolution: implemented
 priority: backlog
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Claude Code 2.1.248
 labels: [sdk-update]
 ---
+
+**Closed:** This commit makes teardown refuse a Git-locked worktree and prints the lock reason.
 
 Claude Code 2.1.248 fixes "a backgrounded worktree session losing its checkout"
 by having the background session **hold the worktree's git lock** while it runs,

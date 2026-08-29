@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-29T11:05:12Z
-Total documents: 312
+Generated: 2026-08-29T17:09:08Z
+Total documents: 313
 
 ## Issues
 
@@ -47,6 +47,7 @@ These documents are not referenced by any other document.
 - **docs/plans/public-site-orientation.md** — "Public site — orientation & re-entry map" (93 lines)
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
+- **docs/plans/sticky-hq-ios-parity.md** — "Sticky HQ dictation on iOS" (100 lines)
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
@@ -1512,7 +1513,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1292 lines
+Title: "Cross-Platform Mobile Contract" | 1308 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1531,6 +1532,7 @@ Referenced by:
 - docs/plans/invite-links-and-password-change.md:126 (mention) — `mobile-contract.md` change is required.
 - docs/plans/ios-input-plane-parity.md:95 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
 - docs/plans/ios-share-extension-capture.md:52 (mention) — - Swift already demonstrates direct non-batched tRPC calls. `ios-app/CallbackBox/Services/LogForwarder.swift:283` posts 
+- docs/plans/sticky-hq-ios-parity.md:16 (mention) — The boxholder requires the setting to work on iOS. The existing mobile contract requires web/native wire changes to upda
 - ../.claude/skills/cb-ios-overlap/SKILL.md:17 (mention) — **The canonical reference is `callback-box/docs/mobile-contract.md`**
 - ../CLAUDE.md:10 (mention) — - **ios-app/** — Native SwiftUI companion app; a thin shell around the web chat (`WKWebView`) plus native pairing, compo
 - ../issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md:176 (mention) — - `docs/mobile-contract.md` / cb-ios-overlap — both platforms, shared surface.
@@ -1600,7 +1602,7 @@ Referenced by:
 - CLAUDE.md:168 (mention) — | Which model a box thinks with | `docs/model-policy.md` |
 - docs/box-layout.md:159 (mention) — | `config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md`
 - docs/implemented-plans/model-engine-policy.md:45 (mention) — passes. The reference doc is `docs/model-policy.md`.
-- docs/mobile-contract.md:794 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/mobile-contract.md:808 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 
 References:
 - → docs/implemented-plans/model-engine-policy.md (mention)
@@ -2585,7 +2587,7 @@ Title: "Bulk file upload" | 461 lines
 
 Referenced by:
 - docs/box-layout.md:103 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:824 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:838 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:15 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -3193,7 +3195,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines
 
 Referenced by:
-- docs/mobile-contract.md:594 (mention) — `docs/plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:608 (mention) — `docs/plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../callback-box/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../callback-box/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -3389,7 +3391,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 510 lines
 
 Referenced by:
-- docs/mobile-contract.md:1169 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1185 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../callback-box/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:40 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -3954,7 +3956,7 @@ Referenced by:
 Title: "Sticky HQ transcription preference" | 108 lines
 
 References:
-- → ../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md (frontmatter)
+- → ../issues/features/2026-08-26-sticky-hq-transcription-preference.md (frontmatter)
 
 #### docs/implemented-plans/tailscale-expose-and-protect.md
 
@@ -4203,7 +4205,7 @@ References:
 Title: "The agent sees the interface and points at controls in it" | 1306 lines
 
 Referenced by:
-- docs/mobile-contract.md:478 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
+- docs/mobile-contract.md:492 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-cb-ids.md:10 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:22 (link) — [agent-points-at-ui](../../callback-box/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:5 (frontmatter) — design: ../../../callback-box/docs/plans/agent-points-at-ui.md
@@ -4223,7 +4225,7 @@ Title: "Native Android companion app" | 761 lines
 
 Referenced by:
 - docs/implemented-plans/mobile-token-handshake.md:346 (mention) — - **Android.** No Android client exists yet; `docs/plans/android-companion-app.md` describes
-- docs/mobile-contract.md:231 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
+- docs/mobile-contract.md:232 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
 - docs/mobile-parity.md:9 (mention) — Android columns reflect `docs/plans/android-companion-app.md` — a plan, not
 - docs/plans/agent-points-at-ui.md:155 (mention) — cross-platform shape (`docs/plans/android-companion-app.md`, Track 0).
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:7 (mention) — `callback-box/docs/plans/android-companion-app.md` is build-ready and its
@@ -4350,7 +4352,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 494 lines
 
 Referenced by:
-- docs/mobile-contract.md:823 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:837 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/bugs/2026-07-30-capture-teardown-race.md:12 (link) — [chat-photo-batch-upload](../../callback-box/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../callback-box/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)).
@@ -4753,7 +4755,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines
 
 Referenced by:
-- docs/mobile-contract.md:1163 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1179 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the 
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
@@ -5146,6 +5148,14 @@ Referenced by:
 - CLAUDE.md:175 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
 - docs/plans/README.md:88 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
 - docs/plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
+
+#### docs/plans/sticky-hq-ios-parity.md **[ORPHAN]**
+
+Title: "Sticky HQ dictation on iOS" | 100 lines
+
+References:
+- → ../issues/features/2026-08-26-sticky-hq-transcription-preference.md (frontmatter)
+- → docs/mobile-contract.md (mention)
 
 #### docs/plans/user-story-journeys.md
 

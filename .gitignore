@@ -107,3 +107,6 @@ schedules/*/local.yaml
 # delete just means the next run re-embeds the whole queue, which costs money
 # rather than correctness.
 /.issues-index
+
+# Tailscale sidecar credentials (docker-install.md)
+callback-box/docker/tailscale.env

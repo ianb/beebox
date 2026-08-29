@@ -135,6 +135,7 @@ function makeFakeApi(opts: { log: (line: string) => void }): CaptureApi {
     },
     finalizeCaptureSession: async (id) => { log(`finalize(${id})`); },
     cancelCaptureSession: async (id) => { log(`cancel(${id})`); },
+    listResumableCaptureSessions: async () => ({ resumable: [] }),
     uploadCaptureFile: async (uploadOpts) => {
       log(`upload start (${uploadOpts.kind} ${uploadOpts.filename})`);
       try {

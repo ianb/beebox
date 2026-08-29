@@ -74,8 +74,19 @@ deploy_exit() {
     return
   fi
 
-  echo "Deploy failed (exit $rc)"
-  notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"
+  # Signal exits (rc >= 128: 130 Ctrl-C/tab close, 143 SIGTERM) are an
+  # interruption, not a failure — the classic case is closing a workstream's
+  # Terminal tab while its post-commit deploy runs in the background. A later
+  # landing's deploy covers the same or a newer ref, so a red FAILED here is
+  # misleading (boxholder, 2026-08-29). Say what actually happened.
+  if [ "$rc" -ge 128 ]; then
+    local sig=$((rc - 128))
+    echo "Deploy interrupted (signal $sig) — not a failure; the next landing's deploy covers this ref."
+    notify "⏸ callback-box deploy interrupted" "signal $sig — the next landing redeploys; see $LOG_HINT"
+  else
+    echo "Deploy failed (exit $rc)"
+    notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"
+  fi
 
   local newer=""
   if [ -n "$held" ] && [ -n "${REQUESTED_FILE:-}" ] && [ -n "${SHA:-}" ]; then
@@ -432,6 +443,8 @@ rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "root@$SERVER_IP:$
 # might chmod. One pass over the whole tree after every sync is simpler and
 # more robust than trying to get every rsync invocation's ownership right.
 echo "Fixing ownership..."
+# INSTALL_DIR must expand locally before the remote command runs.
+# shellcheck disable=SC2029
 ssh "root@$SERVER_IP" "chown -R callback:callback $INSTALL_DIR"
 
 # Install deps if package-lock changed (compare hash)
@@ -606,9 +619,13 @@ if (process.env.CALLBACK_BOX_HASH) {
 }
 process.stdout.write(JSON.stringify(out, null, 2) + "\n");
 ')
+# INSTALL_DIR is the locally configured remote deployment path.
+# shellcheck disable=SC2029
 ssh "root@$SERVER_IP" "cat > $INSTALL_DIR/callback-box/deploy-info.json" <<< "$DEPLOY_INFO"
 
 # Append to deploy history (keep last 20 entries)
+# INSTALL_DIR is intentionally interpolated locally; remote variables are escaped below.
+# shellcheck disable=SC2087
 ssh "root@$SERVER_IP" bash -s <<HISTEOF
   HIST_FILE="$INSTALL_DIR/callback-box/deploy-history.json"
   if [[ -f "\$HIST_FILE" ]]; then
@@ -640,6 +657,8 @@ if [[ "$SKIP_RESTART" != true ]]; then
   # server already. It used to exist only as a heredoc in setup-server.sh, so a
   # server provisioned before it was added had NO copy and every deploy skipped
   # the wait entirely — silently, because the skip was best-effort.
+  # INSTALL_DIR is the locally configured remote deployment path.
+  # shellcheck disable=SC2029
   ssh "root@$SERVER_IP" "install -m 0755 $INSTALL_DIR/callback-box/deploy/server-bin/cb-wait-quiet /usr/local/bin/cb-wait-quiet"
 
   echo "Waiting for boxes to be at rest (best-effort)..."

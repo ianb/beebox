@@ -4,8 +4,13 @@ struct PairBoxView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var store: PairedBoxStore
     @EnvironmentObject private var boxLockManager: BoxLockManager
+    #if DEBUG
     @State private var label = "Local test box"
     @State private var urlString = "http://localhost:3210/main/test1"
+    #else
+    @State private var label = ""
+    @State private var urlString = ""
+    #endif
     @State private var sessionID = ""
     @State private var errorMessage: String?
     @State private var showingScanner = false

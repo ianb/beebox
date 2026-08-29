@@ -1,10 +1,13 @@
 ---
 title: "doc-check passes a brand-new doc it would reject once staged"
-workstream: unattached
+workstream: chores-burn-down
 area: callback-box
+resolution: implemented
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — writing a plan doc and validating it before committing
 ---
+
+**Closed:** This commit checks untracked Markdown for frontmatter and broken references while keeping orphan detection tracked-only.
 
 `doc-check` discovers its inputs with `git ls-files` (`src/dev/doc-check.ts:76`),
 which lists only tracked files. A newly written doc is invisible to it, so

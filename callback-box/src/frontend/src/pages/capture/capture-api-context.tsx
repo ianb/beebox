@@ -14,6 +14,7 @@ import {
   finalizeCaptureSession,
   cancelCaptureSession,
   uploadCaptureFile,
+  listResumableCaptureSessions,
 } from "./capture-api";
 
 /** The capture lifecycle + upload calls the hooks depend on. */
@@ -22,6 +23,7 @@ export interface CaptureApi {
   finalizeCaptureSession: typeof finalizeCaptureSession;
   cancelCaptureSession: typeof cancelCaptureSession;
   uploadCaptureFile: typeof uploadCaptureFile;
+  listResumableCaptureSessions: typeof listResumableCaptureSessions;
 }
 
 /** The real, network-backed implementation (the production default). */
@@ -30,6 +32,7 @@ const realCaptureApi: CaptureApi = {
   finalizeCaptureSession,
   cancelCaptureSession,
   uploadCaptureFile,
+  listResumableCaptureSessions,
 };
 
 const CaptureApiContext = createContext<CaptureApi>(realCaptureApi);
