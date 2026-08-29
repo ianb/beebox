@@ -35,6 +35,10 @@ closed, mostly because she doesn't trust herself to keep them tidy.
 {% source ref="/people/Dana_Lee.person.card" usage="inferred from her email signature" %}
 Dana lives in Portland.
 {% /source %}
+
+{% source href="https://example-studio.com/about" retrieved="2026-08-29" usage="paraphrase" %}
+The studio accepts commissions for large public installations.
+{% /source %}
 \`\`\`
 
 ### \`ref\` — pointing at another card
@@ -77,9 +81,10 @@ The two tags compose to express "verbatim from there":
 {% /source %}
 \`\`\`
 
-Outer tag pins the origin; inner tag marks that the words are exact. Use the
-inner \`{% quote %}\` **only** for the *user's own words*, never for a document
-excerpt you're pointing at — that goes in the source body (see anchoring, next).
+Outer tag pins the origin; inner tag marks that a person's words are exact. For
+a third party's words, set the quote's \`from="…"\` attribution; the user's own
+voice needs no \`from\`. Never use an inner quote merely for a document excerpt
+you're pointing at — that goes in the source body (see anchoring, next).
 A bare \`{% source %}\` (no inner \`{% quote %}\`) holds content *from* the source in
 its body; \`usage\` says how faithful — paraphrase, summary, or a verbatim excerpt.
 
@@ -102,6 +107,10 @@ anchor also carries:
 - \`href\` instead of \`ref\` for an **external** target (a full URL: \`file:\`,
   \`http(s):\`) — exactly one of \`ref\`/\`href\`, never both. \`href\` targets are
   not tracked or rewritten by \`cb mv\`.
+- \`retrieved\` — for an external \`href\`, the date you checked the source, in
+  date-only ISO form (\`YYYY-MM-DD\`). Set it when capturing facts from a web
+  page so a later reader can judge their currency. It is optional because older
+  citations and stable local \`file:\` targets may not have a useful check date.
 
 ### When to skip the tag
 

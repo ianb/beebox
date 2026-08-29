@@ -68,6 +68,11 @@ Mechanics — how \`{% quote %}\` renders and composes with \`{% source %}\` —
 ${xref(SECTION.DIRECT_QUOTES)} below. The law says only *that you must*; that
 section says *how*.
 
+The box can also preserve a third party's exact words. Wrap those words in
+\`{% quote from="…" %}\`, with the speaker or author in \`from\`, so the rendered
+attribution keeps them visibly distinct from the user's own voice. The same
+verbatim rule applies inside the tag.
+
 ### ${SECTION.LAW_OF_SAVING} — chat is not a record; saving is.
 
 The user interacts with you to *do* things, but words exchanged in chat are not
