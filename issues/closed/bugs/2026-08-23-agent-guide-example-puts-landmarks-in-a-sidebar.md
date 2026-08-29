@@ -5,7 +5,10 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a first-time user was told to look in a sidebar
 priority: backlog
+resolution: implemented
 ---
+
+Closed 2026-08-29 by this commit (`docs(issues): close stale Landmarks sidebar example`): the generated behavior source now describes Landmarks without nonexistent sidebar directions and requires looking before naming screen location.
 
 A first-time user was told by the assistant:
 
