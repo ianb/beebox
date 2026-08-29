@@ -12,6 +12,7 @@ of what's in this directory.
 | `compose.yaml` | The `box` service (loopback-only `127.0.0.1:3210`, `restart: unless-stopped`, bind-mounted box + persistent Claude-credentials volume) and a `caddy` service behind `--profile public` for VPS TLS. |
 | `Caddyfile.example` | Two-line reverse proxy for the public profile (`CB_DOMAIN` → `box:3210`). |
 | `compose.tailscale.yaml` | Override adding a `tailscale` sidecar service (tailnet-only HTTPS, zero open ports) — load with `-f compose.yaml -f compose.tailscale.yaml`. |
+| `tailscale.env.example` | Template for the sidecar-only `tailscale.env` (`TS_AUTHKEY`); kept out of `.env` because the box service reads that file. |
 | `tailscale-serve.json` | `TS_SERVE_CONFIG` for the sidecar: terminates HTTPS on the tailnet hostname and proxies to `box:3210`. |
 | `smoke-docker.sh` | The lifecycle test: build → empty-volume refusal → `cb init` → serve → HTTP probe → teardown, on a non-default port (a scratch compose file, not this dir's). Run it after touching anything here. |
 | `smoke-dev-install.sh` | Bare-machine developer-install smoke: follows `../docs/developer-install.md` from a fresh `debian:bookworm` (apt → Node 24 → clone → `pnpm install` → `cb init` → `cb serve` → HTTP probe → `pnpm run doctor`), asserting every doctor check passes except headless "Claude auth". Approximates the clean-clone rollout verification. |

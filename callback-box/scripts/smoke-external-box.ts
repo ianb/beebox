@@ -275,7 +275,7 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
   const cbServe: Subprocess = execa(
     "node_modules/.bin/cb",
     ["serve", "content", "--port", String(args.port)],
-    { cwd: args.boxDir, env: { ...process.env, CB_DIAG_API_KEY: diagKey }, reject: false, all: true }
+    { cwd: args.boxDir, env: { ...strangerEnv(), CB_DIAG_API_KEY: diagKey }, extendEnv: false, reject: false, all: true }
   );
   try {
     const t0 = process.hrtime.bigint();

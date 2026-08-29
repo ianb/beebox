@@ -166,9 +166,10 @@ To record the run, keep the `certificate obtained` log line, the two
 > item 2 — treat the steps below as unverified until that item records a run.
 
 To reach the box privately over a [tailnet](https://tailscale.com/) with
-nothing exposed to the public internet, `cb tailscale` drives the whole
-setup — the box keeps its normal loopback mapping, and Tailscale Serve
-fronts it with TLS. Which topology applies depends on where `cb` runs:
+nothing exposed to the public internet, the box keeps its normal loopback
+mapping and Tailscale Serve fronts it with TLS. Which topology applies
+depends on where `cb` runs: on a host with `tailscaled`, `cb tailscale
+setup` drives the setup; in the Docker install, a sidecar container does.
 
 **Host-daemon (from-source or VPS-host install, `cb` on the same machine as
 `tailscaled`):**
@@ -211,10 +212,19 @@ proxies to `box:3210` over the compose network. The box service keeps its
 
 1. In the Tailscale admin console, create an auth key (Settings → Keys;
    reusable is convenient, tagged if you use ACL tags) and put it in
-   `callback-box/docker/.env`:
+   `callback-box/docker/tailscale.env` — its own file, read only by the
+   sidecar (`.env` is also fed to the box service, so the key must not go
+   there):
 
    ```bash
-   TS_AUTHKEY=tskey-auth-...
+   cp tailscale.env.example tailscale.env      # then set TS_AUTHKEY=tskey-auth-...
+   ```
+
+   In `.env`, set the box's public URL now — the first-run setup link is
+   minted from it on the first start, so it has to be right before step 3:
+
+   ```bash
+   PUBLIC_URL=https://callback-box.<your-tailnet>.ts.net
    TS_HOSTNAME=callback-box          # optional; the machine name on the tailnet
    ```
 
@@ -233,11 +243,12 @@ proxies to `box:3210` over the compose network. The box service keeps its
    The sidecar logs its registration; if the key needs device approval the
    log says so and the admin console shows the pending machine.
 4. Open `https://<TS_HOSTNAME>.<your-tailnet>.ts.net/` from any device on the
-   tailnet. Set `PUBLIC_URL` in `.env` to that URL so the first-run setup
-   link and push notifications use it.
+   tailnet; the setup link in `docker compose logs box` points at the same
+   origin.
 
-`docker compose config` with both files is exercised by the packaging
-checks; a live tailnet run is recorded in the installation issue's ledger.
+`docker compose config` with both files is validated; the sidecar has not
+yet been run against a live tailnet (the installation issue's ledger tracks
+that run).
 To change the Serve config, edit `tailscale-serve.json` and restart the
 sidecar (a single-file bind mount is not always picked up by Serve's
 reload).

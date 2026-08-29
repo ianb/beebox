@@ -24,18 +24,15 @@ services:
     depends_on:
       - box
     hostname: ${TS_HOSTNAME:-callback-box}
+    # The auth key lives in its own file, NOT in .env: compose.yaml feeds .env
+    # to the box service too, and a reusable tailnet key has no business in
+    # the environment of cb serve, cb init, or an agent run. Missing file →
+    # compose refuses to start (required: true); missing key inside it → the
+    # sidecar itself exits with "TS_AUTHKEY not set".
+    env_file:
+      - path: tailscale.env
+        required: true
     environment:
-      # This overlay is loaded ONLY when the operator explicitly asks for it
-      # (`-f compose.tailscale.yaml`) — unlike compose.yaml's `caddy` service,
-      # which is defined unconditionally and merely gated behind
-      # `--profile public` at *run* time (see the `:?`-avoidance comment on
-      # CB_DOMAIN there: Compose interpolates the whole file at load time,
-      # before profile filtering, so a `:?` guard there would fire even for a
-      # plain `docker compose up` that never touches caddy). No such bare
-      # `docker compose up` ever loads THIS file, so there's no accidental
-      # load to break — a `:?` guard here just fails loudly and immediately
-      # when the operator asked for Tailscale but forgot the auth key.
-      TS_AUTHKEY: ${TS_AUTHKEY:?set TS_AUTHKEY in .env — create a reusable auth key in the Tailscale admin console under Settings > Keys}
       TS_HOSTNAME: ${TS_HOSTNAME:-callback-box}
       TS_STATE_DIR: /var/lib/tailscale
       TS_SERVE_CONFIG: /config/serve.json
