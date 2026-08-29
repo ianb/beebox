@@ -20,12 +20,9 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 // enough headroom here while the outer doctest timeout still catches hangs.
 const TEST_VIEW_TIMEOUT_MS = 60000;
 
-// A v2 box renders views by resolving react/react-dom from its OWN
-// `node_modules` (writeNodeViewModule symlinks `packageRoot/node_modules`
-// into the render tmpdir). `makeTmpBox({ deps: true })` only symlinks
-// `callback-box`, so a real box's `react` dependency is simulated by
-// symlinking the engine's copy beside it — the same trick `cb view test`
-// uses for a legacy box (src/cli/commands/view.ts).
+// A v2 box carries React in its own node_modules. The renderer must still
+// override it with the engine's copy so hook-using views share the dispatcher
+// used by react-dom/server.
 async function makeViewBox() {
   const box = await makeTmpBox({ deps: true });
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
@@ -47,12 +44,14 @@ created: 2026-03-01T12:00:00Z
 Test memo content
 `;
 
-const GOOD_VIEW = `export const name = "Good";
+const GOOD_VIEW = `import { useState } from "react";
+export const name = "Good";
 export const description = "renders fine";
 export const dependencies = [];
 export const modes = ["page"];
 export default function Good() {
-  return <div>ok</div>;
+  const [value] = useState("ok");
+  return <div>{value}</div>;
 }
 `;
 
