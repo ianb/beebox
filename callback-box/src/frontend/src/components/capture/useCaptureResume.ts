@@ -13,8 +13,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   loadResumeSessionId,
   clearResumeSessionId,
-  finalizeCaptureSession,
-  cancelCaptureSession,
 } from "../../pages/capture/capture-api";
 import { useCaptureApi } from "../../pages/capture/capture-api-context";
 
@@ -35,7 +33,7 @@ export interface CaptureResume {
 }
 
 export function useCaptureResume(targetSessionId: string | null): CaptureResume {
-  const { listResumableCaptureSessions } = useCaptureApi();
+  const { listResumableCaptureSessions, finalizeCaptureSession, cancelCaptureSession } = useCaptureApi();
   const clientSessionId = loadResumeSessionId();
   const [loading, setLoading] = useState(true);
   const [resumable, setResumable] = useState<ResumableCaptureView[]>([]);
@@ -62,12 +60,12 @@ export function useCaptureResume(targetSessionId: string | null): CaptureResume 
   const submitNow = useCallback(async (id: string): Promise<void> => {
     await finalizeCaptureSession(id);
     clearResumeSessionId();
-  }, []);
+  }, [finalizeCaptureSession]);
 
   const discard = useCallback(async (id: string): Promise<void> => {
     await cancelCaptureSession(id);
     clearResumeSessionId();
-  }, []);
+  }, [cancelCaptureSession]);
 
   return {
     loading,

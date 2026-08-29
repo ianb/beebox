@@ -10,8 +10,7 @@ export function bottomScrollTop(geometry: {
   return Math.max(0, geometry.scrollTop + geometry.liveContentBottom - geometry.scrollerTop - geometry.clientHeight);
 }
 
-export function currentBottomTop(el: HTMLDivElement, content: HTMLDivElement | null): number {
-  const live = content?.querySelector("[data-chat-live-turn-content]") ?? null;
+export function currentBottomTop(el: HTMLDivElement, live: HTMLDivElement | null): number {
   return bottomScrollTop({
     scrollHeight: el.scrollHeight,
     clientHeight: el.clientHeight,

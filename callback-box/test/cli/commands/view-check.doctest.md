@@ -6,7 +6,7 @@ migration uses (`cb view check`) and the broken-view detector. `ok` is true only
 when every view renders.
 
 ```ts setup
-import { mkdir, writeFile, symlink } from "node:fs/promises";
+import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -20,13 +20,14 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 // enough headroom here while the outer doctest timeout still catches hangs.
 const TEST_VIEW_TIMEOUT_MS = 60000;
 
-// A v2 box carries React in its own node_modules. The renderer must still
-// override it with the engine's copy so hook-using views share the dispatcher
-// used by react-dom/server.
+// A v2 box carries its own physical React copy. The renderer must override it
+// with the engine's copy so hook-using views share react-dom/server's dispatcher.
 async function makeViewBox() {
   const box = await makeTmpBox({ deps: true });
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
-  await symlink(join(reactNodeModules, "react"), join(box.packageRoot, "node_modules", "react"), "dir");
+  const boxReact = join(box.packageRoot, "node_modules", "react");
+  await rm(boxReact, { recursive: true, force: true });
+  await cp(join(reactNodeModules, "react"), boxReact, { recursive: true });
   return box;
 }
 

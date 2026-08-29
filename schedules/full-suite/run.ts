@@ -193,8 +193,10 @@ async function fileIssues(input: { culprits: Culprit[]; batch: Batch }): Promise
   );
   if (commit.exitCode !== 0) {
     const unstaged = await execa("git", ["-C", REPO_ROOT, ...unstageIssueArgs(paths)], { reject: false, all: true });
+    const removed = await Promise.allSettled(paths.map((reportPath) => fs.rm(path.join(REPO_ROOT, reportPath))));
     const cleanupFailure = unstaged.exitCode === 0 ? "" : `; unstage failed: ${(unstaged.all ?? "").slice(-500)}`;
-    return { written: paths, blocked: `git commit failed: ${(commit.all ?? "").slice(-500)}${cleanupFailure}` };
+    const removeFailure = removed.some((result) => result.status === "rejected") ? "; generated issue cleanup failed" : "";
+    return { written: paths, blocked: `git commit failed: ${(commit.all ?? "").slice(-500)}${cleanupFailure}${removeFailure}` };
   }
   return { written: paths, blocked: null };
 }
