@@ -278,9 +278,9 @@ export const VoiceChip = memo(function VoiceChip({
   return (
     <Dropdown
       align="right"
-      // w-64 (not the menu-default w-56) buys the root panel's "Live: … ·
-      // HQ: …" summary line room before it truncates.
-      width="w-[min(24rem,calc(100vw-1rem))]"
+      // Slightly wider than the menu default so the scope controls remain
+      // compact without making the menu dominate a narrow viewport.
+      width="w-[min(18rem,calc(100vw-1rem))]"
       panelIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
