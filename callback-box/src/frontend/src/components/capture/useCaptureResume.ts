@@ -13,10 +13,8 @@ import { useCallback, useEffect, useState } from "react";
 import {
   loadResumeSessionId,
   clearResumeSessionId,
-  finalizeCaptureSession,
-  cancelCaptureSession,
-  listResumableCaptureSessions,
 } from "../../pages/capture/capture-api";
+import { useCaptureApi } from "../../pages/capture/capture-api-context";
 
 export interface ResumableCaptureView {
   id: string;
@@ -35,6 +33,7 @@ export interface CaptureResume {
 }
 
 export function useCaptureResume(targetSessionId: string | null): CaptureResume {
+  const { listResumableCaptureSessions, finalizeCaptureSession, cancelCaptureSession } = useCaptureApi();
   const clientSessionId = loadResumeSessionId();
   const [loading, setLoading] = useState(true);
   const [resumable, setResumable] = useState<ResumableCaptureView[]>([]);
@@ -56,17 +55,17 @@ export function useCaptureResume(targetSessionId: string | null): CaptureResume 
     return () => {
       active = false;
     };
-  }, [clientSessionId, targetSessionId]);
+  }, [clientSessionId, listResumableCaptureSessions, targetSessionId]);
 
   const submitNow = useCallback(async (id: string): Promise<void> => {
     await finalizeCaptureSession(id);
     clearResumeSessionId();
-  }, []);
+  }, [finalizeCaptureSession]);
 
   const discard = useCallback(async (id: string): Promise<void> => {
     await cancelCaptureSession(id);
     clearResumeSessionId();
-  }, []);
+  }, [cancelCaptureSession]);
 
   return {
     loading,

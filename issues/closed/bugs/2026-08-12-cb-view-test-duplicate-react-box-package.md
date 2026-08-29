@@ -1,13 +1,16 @@
 ---
 title: "`cb view test` breaks React hooks in a box package — two React instances"
-workstream: unattached
+workstream: small-bugs-batch
 area: callback-box
 labels: [views, boxes-as-packages]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — cb feedback triage from a real box
 priority: normal
+resolution: implemented
 ---
+
+Closed 2026-08-29 by this commit (`fix(views): share engine React in box-package renders`): node view modules now override a box package's React with the renderer's instance, verified with a real hook-using view.
 
 Any view using React hooks fails to render under `cb view test` when the host is
 a **box package**: `import { useState } from "react"` produces *"Invalid hook

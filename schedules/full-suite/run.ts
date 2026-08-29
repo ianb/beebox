@@ -34,6 +34,7 @@ import {
   renderIssue,
   renderRedAlert,
   workstreamOf,
+  unstageIssueArgs,
   type Culprit,
   type Landing,
 } from "./lib.js";
@@ -191,10 +192,11 @@ async function fileIssues(input: { culprits: Culprit[]; batch: Batch }): Promise
     { reject: false, all: true },
   );
   if (commit.exitCode !== 0) {
-    // The files are written but uncommitted in the main checkout. Say so — an
-    // uncommitted issue in a tree the boxholder is working in is worse than a
-    // loud alert about it.
-    return { written: paths, blocked: `git commit failed: ${(commit.all ?? "").slice(-500)}` };
+    const unstaged = await execa("git", ["-C", REPO_ROOT, ...unstageIssueArgs(paths)], { reject: false, all: true });
+    const removed = await Promise.allSettled(paths.map((reportPath) => fs.rm(path.join(REPO_ROOT, reportPath))));
+    const cleanupFailure = unstaged.exitCode === 0 ? "" : `; unstage failed: ${(unstaged.all ?? "").slice(-500)}`;
+    const removeFailure = removed.some((result) => result.status === "rejected") ? "; generated issue cleanup failed" : "";
+    return { written: paths, blocked: `git commit failed: ${(commit.all ?? "").slice(-500)}${cleanupFailure}${removeFailure}` };
   }
   return { written: paths, blocked: null };
 }

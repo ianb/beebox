@@ -39,6 +39,7 @@ import {
   renderIssue,
   renderRedAlert,
   workstreamOf,
+  unstageIssueArgs,
 } from "./lib.js";
 
 // ─── the batch ────────────────────────────────────────────────────────────
@@ -282,6 +283,11 @@ test("issuePath follows issues/CLAUDE.md and carries the landing in the slug", (
     issuePath({ date: "2026-08-25", landing: { commit: "f".repeat(40), subject: "docs: typo" } }),
     "issues/bugs/2026-08-25-full-suite-red-ffffffff.md",
   );
+});
+
+test("a failed issue commit is cleaned up with a path-scoped unstage", () => {
+  const args = unstageIssueArgs(["issues/bugs/a.md", "issues/bugs/b.md"]);
+  assert.deepEqual(args, ["restore", "--staged", "--", "issues/bugs/a.md", "issues/bugs/b.md"]);
 });
 
 test("renderIssue names the landing, the workstream, the files and the excerpt", () => {

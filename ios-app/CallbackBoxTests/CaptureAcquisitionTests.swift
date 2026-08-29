@@ -174,6 +174,7 @@ final class CaptureAudioSessionTests: XCTestCase {
             CaptureAudioStopReason.interruption,
             .background,
             .sizeLimit,
+            .unexpectedStop,
         ] {
             let session = RecordingAudioSession()
             let recorder = CaptureAudioRecorder(
@@ -188,6 +189,23 @@ final class CaptureAudioSessionTests: XCTestCase {
 
             XCTAssertEqual(session.deactivations, 1, "\(reason)")
         }
+    }
+
+    func testRecorderStoppingItselfClosesTheSegmentAndSurfacesNotice() async throws {
+        let recording = StubRecording()
+        let recorder = CaptureAudioRecorder(
+            sink: StubAcquisitionSink(),
+            factory: SuppliedRecorderFactory(recording: recording),
+            audioSession: RecordingAudioSession(),
+            authorizer: AlwaysGrantedAuthorizer()
+        )
+
+        await recorder.start()
+        recording.stop()
+        try await Task.sleep(for: .milliseconds(650))
+
+        XCTAssertFalse(recorder.isRecording)
+        XCTAssertEqual(recorder.notice, "Recording stopped unexpectedly. Start again to continue in a new segment.")
     }
 
     func testAFailedStartNeverReleasesASessionItDidNotAcquire() async throws {
@@ -242,6 +260,14 @@ private struct StubAcquisitionSink: CaptureAcquisitionSink {
 private struct StubRecorderFactory: CaptureAudioRecorderFactory {
     func makeRecorder(url: URL, settings: [String: Any]) throws -> any CaptureAudioRecording {
         StubRecording()
+    }
+}
+
+private struct SuppliedRecorderFactory: CaptureAudioRecorderFactory {
+    var recording: StubRecording
+
+    func makeRecorder(url: URL, settings: [String: Any]) throws -> any CaptureAudioRecording {
+        recording
     }
 }
 

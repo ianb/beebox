@@ -6,7 +6,7 @@ migration uses (`cb view check`) and the broken-view detector. `ok` is true only
 when every view renders.
 
 ```ts setup
-import { mkdir, writeFile, symlink } from "node:fs/promises";
+import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -20,16 +20,14 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 // enough headroom here while the outer doctest timeout still catches hangs.
 const TEST_VIEW_TIMEOUT_MS = 60000;
 
-// A v2 box renders views by resolving react/react-dom from its OWN
-// `node_modules` (writeNodeViewModule symlinks `packageRoot/node_modules`
-// into the render tmpdir). `makeTmpBox({ deps: true })` only symlinks
-// `callback-box`, so a real box's `react` dependency is simulated by
-// symlinking the engine's copy beside it — the same trick `cb view test`
-// uses for a legacy box (src/cli/commands/view.ts).
+// A v2 box carries its own physical React copy. The renderer must override it
+// with the engine's copy so hook-using views share react-dom/server's dispatcher.
 async function makeViewBox() {
   const box = await makeTmpBox({ deps: true });
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
-  await symlink(join(reactNodeModules, "react"), join(box.packageRoot, "node_modules", "react"), "dir");
+  const boxReact = join(box.packageRoot, "node_modules", "react");
+  await rm(boxReact, { recursive: true, force: true });
+  await cp(join(reactNodeModules, "react"), boxReact, { recursive: true });
   return box;
 }
 
@@ -47,12 +45,14 @@ created: 2026-03-01T12:00:00Z
 Test memo content
 `;
 
-const GOOD_VIEW = `export const name = "Good";
+const GOOD_VIEW = `import { useState } from "react";
+export const name = "Good";
 export const description = "renders fine";
 export const dependencies = [];
 export const modes = ["page"];
 export default function Good() {
-  return <div>ok</div>;
+  const [value] = useState("ok");
+  return <div>{value}</div>;
 }
 `;
 

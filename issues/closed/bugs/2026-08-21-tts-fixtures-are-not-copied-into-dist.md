@@ -1,12 +1,15 @@
 ---
 title: "The mock TTS fixtures never reach dist, so /dev/speech fails on any built server"
-workstream: unattached
+workstream: small-bugs-batch
 area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the speech-playback user stories on /dev/speech
 priority: important
+resolution: implemented
 ---
+
+Closed 2026-08-29 by this commit (`fix(web): copy TTS fixtures into the backend build`): the backend build now copies the committed TTS fixtures beside the emitted mock module.
 
 Every segment on the `/dev/speech` harness goes to state `failed` with
 `TTS API error 500 {"error":"mock TTS fixture missing — run: pnpm tsx

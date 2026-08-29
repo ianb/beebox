@@ -1,11 +1,14 @@
 ---
 title: "The agent guide's example puts the Landmarks list in a sidebar that page does not have"
-workstream: unattached
+workstream: small-bugs-batch
 area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a first-time user was told to look in a sidebar
 priority: backlog
+resolution: implemented
 ---
+
+Closed 2026-08-29 by this commit (`docs(issues): close stale Landmarks sidebar example`): the generated behavior source now describes Landmarks without nonexistent sidebar directions and requires looking before naming screen location.
 
 A first-time user was told by the assistant:
 
@@ -36,7 +39,7 @@ So the guidance lands as a direction to look somewhere that is not there, in the
 one moment the rule exists to prevent exactly that.
 
 Navigation moved to a single top bar in
-[top-nav-ia](../../callback-box/docs/implemented-plans/top-nav-ia.md) — which
+[top-nav-ia](../../../callback-box/docs/implemented-plans/top-nav-ia.md) — which
 merged the picker into the Landmarks page and demoted the Dashboard — and the
 guide's example was not revisited.
 
@@ -45,7 +48,7 @@ guide's example was not revisited.
 Fixing the example is worth doing and is not the whole story. The agent's only
 account of the interface is a static document it cannot check against the screen,
 so any drift between the two becomes a confident wrong direction — see
-[let the agent see the interface and point at things in it](../closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md),
+[let the agent see the interface and point at things in it](../features/2026-08-14-agent-can-see-and-point-at-the-interface.md),
 which this is a symptom of.
 
 ## The general shape

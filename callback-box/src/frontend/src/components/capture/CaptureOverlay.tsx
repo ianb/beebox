@@ -141,6 +141,8 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
         />
       ) : null}
 
+      {error ? <CaptureErrorBanner message={error} onDismiss={() => setError(null)} /> : null}
+
       <CameraViewport
         ref={videoRef}
         cameraOn={cameraOn}
@@ -154,8 +156,6 @@ function CaptureSurface({ targetSessionId, resume, onExit }: {
         onToggleCamera={() => void toggleCamera()}
         onFlipCamera={() => void flipCamera()}
       />
-
-      {error ? <CaptureErrorBanner message={error} onDismiss={() => setError(null)} /> : null}
 
       <input ref={galleryRef} type="file" accept="image/*" multiple hidden onChange={handleGallerySelect} />
       <input ref={uploadRef} type="file" multiple hidden onChange={handleFileSelect} />

@@ -75,13 +75,22 @@ struct ShareExtensionAPI {
     }
 
     func send(_ item: SharedTextualItem, to sessionID: String, messageID: UUID) async throws {
-        let body = try JSONEncoder().encode(ChatSendBody(
+        let body = try Self.encodeChatSendBody(
             message: item.value,
             messageId: messageID.uuidString,
-            session: sessionID,
-            exactSession: true
-        ))
+            session: sessionID
+        )
         _ = try await request(path: "chat/send", method: "POST", body: body)
+    }
+
+    static func encodeChatSendBody(message: String, messageId: String, session: String) throws -> Data {
+        try JSONEncoder().encode(ChatSendBody(
+            message: message,
+            messageId: messageId,
+            session: session,
+            exactSession: true,
+            channel: "ios-native"
+        ))
     }
 
     func save(
@@ -161,6 +170,7 @@ struct ShareExtensionAPI {
         var messageId: String
         var session: String
         var exactSession: Bool
+        var channel: String
     }
 
     private struct SaveBody: Encodable {
