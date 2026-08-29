@@ -1,11 +1,14 @@
 ---
 title: "A ref that shares its object with other keys renders as dead text in the card view"
-workstream: unattached
+workstream: small-bugs-batch
 area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — following card-to-card links from a question card
+resolution: implemented
 ---
+
+Closed 2026-08-29 by this commit (`fix(cards): link nested refs with sibling fields`): nested frontmatter objects now render their `ref` as a link without dropping sibling fields.
 
 In the frontmatter view of a card, a `ref` is linkified only when it is the whole
 field value. A `ref` that sits in an object beside other keys renders as plain
