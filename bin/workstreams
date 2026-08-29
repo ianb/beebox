@@ -408,7 +408,7 @@ case "$cmd" in
           exec "$REPO_DIR/bin/workstreams" focus "$name"
         fi
         handoff_file=$(mktemp -t "workstream-handoff.$name.XXXXXX")
-        workstream_wrap_briefing "$WORKSTREAM_BRIEFING" > "$handoff_file"
+        workstream_wrap_briefing "$WORKSTREAM_BRIEFING" "$name" > "$handoff_file"
         chmod 600 "$handoff_file"
         "$REPO_DIR/bin/workstreams" focus "$name" >/dev/null 2>&1 || true
         echo "workstreams resume: manual forwarding required: $handoff_file"
@@ -491,7 +491,7 @@ case "$cmd" in
     fi
     if [ "$WORKSTREAM_BRIEFING_PROVIDED" = true ]; then
       printf '\n' >> "$prompt_file"
-      workstream_wrap_briefing "$WORKSTREAM_BRIEFING" >> "$prompt_file"
+      workstream_wrap_briefing "$WORKSTREAM_BRIEFING" "$name" >> "$prompt_file"
     fi
     emoji=$(printf '%s' "$record" | jq -r '.emoji // empty' 2>/dev/null || true)
     [ -n "$emoji" ] || emoji=$(launch_session_default_emoji "$name")
