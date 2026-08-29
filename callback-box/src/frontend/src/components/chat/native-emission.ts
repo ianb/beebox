@@ -16,6 +16,8 @@ export interface NativeEmissionV2 {
   origin: "typed" | "voice";
   text: string;
   diarized: boolean;
+  hqText?: boolean;
+  hqService?: string;
   images: ChatImageAttachment[];
   files: Array<Required<EmissionFile>>;
   selections: Array<Required<Pick<SelectionItem, "id" | "ref" | "text" | "position" | "anchor" | "spokenWords">>>;
@@ -55,6 +57,10 @@ function parseV2(candidate: Record<string, unknown>): NativeEmissionParseResult 
   if (typeof candidate.text !== "string" || typeof candidate.diarized !== "boolean") {
     return reject(candidate, "Invalid native emission V2: text and diarized are required");
   }
+  if ((candidate.hqText !== undefined && typeof candidate.hqText !== "boolean")
+    || (candidate.hqService !== undefined && typeof candidate.hqService !== "string")) {
+    return reject(candidate, "Invalid native emission V2: malformed HQ provenance");
+  }
   const images = parseV2Array(candidate.images, parseNativeImage);
   const files = parseV2Array(candidate.files, parseNativeFile);
   const selections = parseV2Array(candidate.selections, parseNativeSelection);
@@ -67,7 +73,12 @@ function parseV2(candidate: Record<string, unknown>): NativeEmissionParseResult 
   }
   const common = { text, images, files, selections };
   const emission = candidate.origin === "voice"
-    ? createVoiceEmission({ ...common, diarized: candidate.diarized })
+    ? createVoiceEmission({
+      ...common,
+      diarized: candidate.diarized,
+      hqText: candidate.hqText === true ? true : undefined,
+      hqService: candidate.hqText === true ? candidate.hqService : undefined,
+    })
     : createTypedEmission(common);
   return { ok: true, emission: { ...emission, id } };
 }

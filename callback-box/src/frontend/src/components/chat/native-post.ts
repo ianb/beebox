@@ -13,6 +13,7 @@ export type NativeShellChannel =
   | "callbackboxLocationResult"
   | "callbackboxLocationState"
   | "callbackboxNarrationState"
+  | "callbackboxHqDictationState"
   | "callbackboxSpeechPlaybackState"
   | "callbackboxResponseState"
   | "callbackboxComposerCommand"

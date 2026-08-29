@@ -10,6 +10,8 @@ struct NativeChatEmission: Equatable, Identifiable {
     var text: String
     var origin: Origin
     var diarized: Bool
+    var hqText: Bool? = nil
+    var hqService: String? = nil
     var images: [ChatImageAttachment]
     var files: [NativeEmissionFile] = []
     var selections: [NativeEmissionSelection] = []
@@ -100,6 +102,7 @@ struct ChatWebView: UIViewRepresentable {
     var onLocationShareResult: (NativeLocationShareResult) -> Void
     var onLocationSharingStateChange: (Bool) -> Void
     var onNarrationStateChange: (Bool) -> Void
+    var onHqDictationStateChange: (Bool) -> Void
     var onSpeechPlaybackStateChange: (Bool) -> Void
     var onResponseStateChange: (Bool) -> Void
     var onScreenshotResult: (NativeScreenshotResult) -> Void
@@ -126,6 +129,7 @@ struct ChatWebView: UIViewRepresentable {
         onLocationShareResult: @escaping (NativeLocationShareResult) -> Void = { _ in },
         onLocationSharingStateChange: @escaping (Bool) -> Void = { _ in },
         onNarrationStateChange: @escaping (Bool) -> Void = { _ in },
+        onHqDictationStateChange: @escaping (Bool) -> Void = { _ in },
         onSpeechPlaybackStateChange: @escaping (Bool) -> Void = { _ in },
         onResponseStateChange: @escaping (Bool) -> Void = { _ in },
         onScreenshotResult: @escaping (NativeScreenshotResult) -> Void = { _ in },
@@ -150,6 +154,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onLocationShareResult = onLocationShareResult
         self.onLocationSharingStateChange = onLocationSharingStateChange
         self.onNarrationStateChange = onNarrationStateChange
+        self.onHqDictationStateChange = onHqDictationStateChange
         self.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
         self.onResponseStateChange = onResponseStateChange
         self.onScreenshotResult = onScreenshotResult
@@ -169,6 +174,7 @@ struct ChatWebView: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "callbackboxLocationResult")
         configuration.userContentController.add(context.coordinator, name: "callbackboxLocationState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxNarrationState")
+        configuration.userContentController.add(context.coordinator, name: "callbackboxHqDictationState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxSpeechPlaybackState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxResponseState")
         configuration.userContentController.add(context.coordinator, name: "callbackboxComposerCommand")
@@ -200,6 +206,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onLocationShareResult = onLocationShareResult
         context.coordinator.onLocationSharingStateChange = onLocationSharingStateChange
         context.coordinator.onNarrationStateChange = onNarrationStateChange
+        context.coordinator.onHqDictationStateChange = onHqDictationStateChange
         context.coordinator.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
         context.coordinator.onResponseStateChange = onResponseStateChange
         context.coordinator.onScreenshotResult = onScreenshotResult
@@ -241,6 +248,7 @@ struct ChatWebView: UIViewRepresentable {
             onLocationShareResult: onLocationShareResult,
             onLocationSharingStateChange: onLocationSharingStateChange,
             onNarrationStateChange: onNarrationStateChange,
+            onHqDictationStateChange: onHqDictationStateChange,
             onSpeechPlaybackStateChange: onSpeechPlaybackStateChange,
             onResponseStateChange: onResponseStateChange,
             onScreenshotResult: onScreenshotResult,
@@ -262,6 +270,7 @@ struct ChatWebView: UIViewRepresentable {
         var onLocationShareResult: (NativeLocationShareResult) -> Void
         var onLocationSharingStateChange: (Bool) -> Void
         var onNarrationStateChange: (Bool) -> Void
+        var onHqDictationStateChange: (Bool) -> Void
         var onSpeechPlaybackStateChange: (Bool) -> Void
         var onResponseStateChange: (Bool) -> Void
         var onScreenshotResult: (NativeScreenshotResult) -> Void
@@ -320,6 +329,7 @@ struct ChatWebView: UIViewRepresentable {
             onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
             onLocationSharingStateChange: @escaping (Bool) -> Void,
             onNarrationStateChange: @escaping (Bool) -> Void,
+            onHqDictationStateChange: @escaping (Bool) -> Void = { _ in },
             onSpeechPlaybackStateChange: @escaping (Bool) -> Void,
             onResponseStateChange: @escaping (Bool) -> Void,
             onScreenshotResult: @escaping (NativeScreenshotResult) -> Void,
@@ -344,6 +354,7 @@ struct ChatWebView: UIViewRepresentable {
             self.onLocationShareResult = onLocationShareResult
             self.onLocationSharingStateChange = onLocationSharingStateChange
             self.onNarrationStateChange = onNarrationStateChange
+            self.onHqDictationStateChange = onHqDictationStateChange
             self.onSpeechPlaybackStateChange = onSpeechPlaybackStateChange
             self.onResponseStateChange = onResponseStateChange
             self.onScreenshotResult = onScreenshotResult
@@ -503,6 +514,10 @@ struct ChatWebView: UIViewRepresentable {
             }
             if message.name == "callbackboxNarrationState" {
                 receiveNarrationState(message.body)
+                return
+            }
+            if message.name == "callbackboxHqDictationState" {
+                receiveHqDictationState(message.body)
                 return
             }
             if message.name == "callbackboxSpeechPlaybackState" {
@@ -703,6 +718,13 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             onNarrationStateChange(enabled)
+        }
+
+        private func receiveHqDictationState(_ body: Any) {
+            guard let enabled = ChatWebView.hqDictationEnabled(from: body) else {
+                return
+            }
+            onHqDictationStateChange(enabled)
         }
 
         private func receiveSpeechPlaybackState(_ body: Any) {
@@ -985,6 +1007,10 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     static func narrationEnabled(from body: Any) -> Bool? {
+        dictionaryPayload(from: body)?["enabled"] as? Bool
+    }
+
+    static func hqDictationEnabled(from body: Any) -> Bool? {
         dictionaryPayload(from: body)?["enabled"] as? Bool
     }
 

@@ -174,7 +174,6 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
   const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, sessionInput, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing"); const isLoading = snapshot.matches("loading");
-
   // Put the turn in the tab title, so a chat left in a background tab says
   // whether the box is still working on it. The deps are one boolean, so this
   // publishes once per turn rather than once per streamed token.
@@ -182,7 +181,6 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const currentUser = useCurrentUser();
   const { boxSlug } = useParams({ strict: false });
   const backgroundTasks = useBackgroundTasks(); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts
-
   // Composer text lives outside React state, so keystrokes re-render only its textareas.
   // The full emission store is a prop (see above); this derives the
   // text-only view every render — cheap, and stable in identity as long as
@@ -206,7 +204,6 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   // Server-derived pending capture bubbles (survive reload; refined live below).
   const { bubbles: captureBubbleList, applyCaptureStatus, verbs: captureVerbs } = useCaptureBubbles(sessionId);
   const screenshots = useScreenshotRequests(sessionId);
-
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const groups = useMemo(() => groupMessages(messages), [messages]);
 
@@ -254,8 +251,8 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid, nativeComposer: usesNativeComposer,
   });
   useNativeBridges({
-    enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug,
-    narrationEnabled: model.narrationEnabled, responseActive: snapshot.value === "streaming",
+    enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug, sessionId,
+    narrationEnabled: model.narrationEnabled, hqDictationEnabled: model.hqDictationEnabled, responseActive: snapshot.value === "streaming",
     speechPlaying: voice.speechPlayback.isPlaying, stopSpeech: voice.handleStopSpeech });
   useEnsureComposerVisible({ ensureComposerVisibleRef, isTranscribing: voice.isTranscribing, setTypingMode, textareaRef });
 
