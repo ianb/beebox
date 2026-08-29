@@ -97,10 +97,12 @@ Harness re-run on today's main (Node 24, Claude Code 2.1.251), 2026-08-29:
   allowlist lacked `@googleworkspace/cli` (a postinstall-script dependency
   added since July; pnpm 10 makes an unapproved build a hard error). Fixed
   in the Dockerfile and in the same list in `scripts/smoke-external-box.ts`
-  / `scripts/smoke-upgrade.ts`. Result after the fix: see below.
+  / `scripts/smoke-upgrade.ts`. Result after the fix: PASS (179s).
 - `smoke-vps-install.sh` — FAILED on first run at the in-dind `git clone`
   (EACCES copying a pack from the read-only source mount under Docker
-  Desktop 29). Fixed with `--no-local`. Result after the fix: see below.
+  Desktop 29). Fixed with `--no-local`; the `/box/` probe now follows the
+  auth wall's 302 to the login page (auth is always on). Result after the
+  fixes: PASS via dind (643s), including the Caddy profile.
 - `pnpm smoke` (`scripts/smoke-external-box.ts`, the release-tarball anchor)
   — FAILED on first run, four ways, all pre-existing drift since July and
   all fixed: (1) under `pnpm run` the parent's `npm_config_*` env leaked
