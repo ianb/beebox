@@ -1,6 +1,6 @@
 ---
 title: "Figure compile route: loose .attach segment match + unbounded process-global caches"
-workstream: quick-seeing-p5js
+workstream: chores-burn-down
 area: callback-box
 filed-by: agent
 discovered-in: worktree-quick-seeing-p5js — adversarial review of the figure compile route while adding the canvas-loop runtime
@@ -34,3 +34,9 @@ on the branch):
    fix: track every input file via esbuild's `metafile` and include their
    mtimes in the freshness check (or hash the dependency set). Found by the
    cross-model route review.
+
+## Implemented in this workstream
+
+This commit resolves item 1: the route now requires the `.attach` directory to
+have a real sibling card with the same basename. Items 2 and 3 remain open and
+need a cache-eviction and dependency-freshness design.

@@ -20,6 +20,7 @@ import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { bundleView } from "../views/compiler.js";
+import { cardBasename } from "../../shared/attach-path.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -36,6 +37,19 @@ interface RegisterFigureRoutesOptions {
 /** A module the figure harness recognizes as a compile failure. */
 function figureErrorModule(message: string): string {
   return `export const figureError = ${JSON.stringify(message)};\n`;
+}
+
+async function hasOwningCard(sourcePath: string, root: string): Promise<boolean> {
+  const relative = path.relative(root, sourcePath);
+  const segments = relative.split(path.sep);
+  const attachIndex = segments.findIndex((segment) => segment.endsWith(".attach"));
+  if (attachIndex === -1) return false;
+  const attachName = segments[attachIndex];
+  if (attachName === undefined) return false;
+  const ownerStem = attachName.slice(0, -".attach".length);
+  const parent = path.join(root, ...segments.slice(0, attachIndex));
+  const entries = await fs.readdir(parent);
+  return entries.some((entry) => entry.endsWith(".card") && cardBasename(entry).toLowerCase() === ownerStem.toLowerCase());
 }
 
 export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void {
@@ -104,6 +118,9 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
         return reply
           .status(400)
           .send({ error: "Not a figure source (.ts/.tsx in an attach scope)" });
+      }
+      if (!(await hasOwningCard(realResolved, realRoot))) {
+        return reply.status(400).send({ error: "Attach scope has no owning card" });
       }
 
       let isFile = false;
