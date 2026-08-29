@@ -6,7 +6,12 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-install-remaining — the hourly full-suite run on main
+resolution: implemented
 ---
+
+Fixed in `a704991ef`. The release-manifest fixture now includes the three
+source files deliberately added to the npm package for installed-box view
+typechecking. The Docker and Tailscale compose assets remain repo-only.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `f8691505`. Bisecting the landings since the last tested

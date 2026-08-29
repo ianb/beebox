@@ -105,6 +105,9 @@ checkedIn
   ".agents",
   "src/frontend/package.json",
   "src/types",
+  "src/core/views/types.ts",
+  "src/core/chat/card-activity.ts",
+  "src/shared/card-activity-kinds.ts",
   "tsconfig.json",
   "tsconfig.base.json"
 ]
