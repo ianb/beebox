@@ -180,8 +180,10 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
         <div className="text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">{senderName}</div>
         <div className="relative ml-3 sm:ml-6 w-fit">
           <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
-            <TranscriptionProvenanceBadge provenance={transcriptionProvenance} />
             <AudioOverlayBadgeCluster overlay={audioOverlay} originalText={originalDisplayText(firstEntry)} />
+          </span>
+          <span className="absolute top-px right-px z-10">
+            <TranscriptionProvenanceBadge provenance={transcriptionProvenance} />
           </span>
           <div
             className={"rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words" + pendingClass}
@@ -214,8 +216,10 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
             Track 3, "badge rendering"). */}
         <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
           <AckBadgeCluster acks={acks} onZoomView={onZoomView} />
-          <TranscriptionProvenanceBadge provenance={transcriptionProvenance} />
           <AudioOverlayBadgeCluster overlay={audioOverlay} originalText={originalDisplayText(firstEntry)} />
+        </span>
+        <span className="absolute top-px right-px z-10">
+          <TranscriptionProvenanceBadge provenance={transcriptionProvenance} />
         </span>
         <div
           className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
