@@ -30,6 +30,7 @@ import { prewarmBackend } from "./registry-warm.js";
 import { enforceLiveCap } from "./registry-cap.js";
 import { pinEntry, pinSessionObject } from "./registry-pins.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./registry-options.js";
+import { stopChatSessionsAndWait } from "./registry-shutdown.js";
 
 export { SessionDeletingError } from "./deletion-state.js";
 export type { ChatSessionRegistryOptions } from "./registry-options.js";
@@ -471,15 +472,13 @@ export class ChatSessionRegistry extends EventEmitter {
 
   /** Tear down all entries AND the backend's warm slot (a subprocess too).
    *  Call on server shutdown. */
-  shutdown(): void {
+  async shutdown(): Promise<void> {
     this.stopCleanup();
     this.backend.closeWarm?.();
-    for (const [id, entry] of this.entries) {
-      log("shutdown", `Stopping ${id}`);
-      entry.session.stop();
-    }
+    const sessions = [...this.entries.values()].map((entry) => entry.session).concat([...this.pending]);
     this.entries.clear();
-    for (const s of this.pending) s.stop();
     this.pending.clear();
+    const timedOut = await stopChatSessionsAndWait(sessions);
+    if (timedOut.length > 0) log("shutdown", `Close grace expired for ${timedOut.join(", ")}`);
   }
 }

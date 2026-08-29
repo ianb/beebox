@@ -1,6 +1,7 @@
 ---
 title: "Development bundle reload stops live chat sessions instead of draining them to idle"
-workstream: unattached
+workstream: coined-engine-authority
+resolution: implemented
 area: callback-box
 labels: [chat, deploy]
 filed-by: agent
@@ -23,3 +24,21 @@ how idle persistent runs are retired, and what happens when a drain deadline is
 reached.
 
 Related incident: [coined chat still runs on box default engine](2026-08-29-coined-chat-still-runs-on-box-default-engine.md).
+
+## Resolution
+
+The existing reload gate already waits for active turns, async preparation,
+schedules, mutations, and background delivery to become idle. The remaining
+gap was the final close boundary: the Fastify `onClose` hook called synchronous
+`registry.shutdown()`, which started each SDK run's graceful `close()` and
+returned immediately. Server shutdown could therefore reach `process.exit(75)`
+while those subprocesses were still closing.
+
+Registry shutdown is now awaitable and bounded. It attaches each run's close
+listener before stopping it, waits up to ten seconds of awake time for live
+sessions to emit close, reports any session IDs that miss the grace, and only
+then allows the server hook and supervised reload exit to complete. The
+registry maps are cleared before that wait, so shutdown cannot expose stale
+entries during the async boundary. Regression coverage uses a deliberately
+delayed close to prove shutdown does not resolve early, plus a stuck close to
+prove the deadline releases the child and names what it left behind.
