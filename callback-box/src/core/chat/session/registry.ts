@@ -253,6 +253,11 @@ export class ChatSessionRegistry extends EventEmitter {
             // a codex-default box fell to the box default and tripped the
             // coined-must-be-Claude invariant (500, 2026-08-27).
             engine: reservation.engine,
+            // This session keeps the accepted reservation record even if the
+            // addressability TTL later expires. A pre-start feature toggle can
+            // therefore never fall through to started-chat history and mint a
+            // second engine answer.
+            persistPendingFeatures: (updates) => { Object.assign(reservation.seedFeatures, updates); return true; },
             ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
             ...(Object.keys(reservation.seedFeatures).length > 0 ? { seedFeatures: reservation.seedFeatures } : {}),
             onFirstRunStart: (id: string) => this.recordSessionStart(id, {

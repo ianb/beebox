@@ -1,6 +1,7 @@
 ---
 title: "A coined chat with ?engine=claude still runs its first turn on the box's default engine (codex) — fourth occurrence, after three fixes"
-workstream: unattached
+workstream: coined-engine-authority
+resolution: implemented
 area: callback-box
 priority: important
 labels: [chat, codex]
@@ -82,3 +83,28 @@ Also from this incident, separate but adjacent:
 The fix must come with a test that reproduces THIS sequence — reserve, delay
 past the warm handoff, set a feature, send — on a codex-default box, asserting
 the backend's `startOptions.engine`, the husk, and the history entry all agree.
+
+## Resolution
+
+The confirmed path was the pre-send feature toggle, not warm adoption or the
+63-second delay. `setFeature` created the missing history row with the box
+default engine; start then treated that premature Codex row as more authoritative
+than the Claude reservation.
+
+The reservation record is now the single pre-start authority. Engine readers
+resolve through that live record; warm probing and session construction receive
+its engine and model; pre-start feature changes stay on the record until the
+first real start writes history and the husk together. A constructed session
+retains that record even after the reservation's addressability TTL expires, so
+the old default-engine history fallback cannot recur through expiry. The exact
+reserve → warm → create → set-feature → send sequence now asserts backend,
+husk, history, and features together.
+
+The incident's Codex thread was recovered locally as
+`01a04d2d-7071-79d2-a9a4-7a06c11d44ad` from the matching context directory and
+timestamp. The history row and husk were rebound to it, and the husk engine was
+corrected to Codex so the chat opens against the transcript that actually ran.
+
+The adjacent `collab_tool_call` activity now renders on live and history paths.
+Bundle reload stopping live chat sessions is tracked separately in
+[bundle reload stops live chat sessions](../../bugs/2026-08-29-bundle-reload-stops-live-chat-sessions.md).

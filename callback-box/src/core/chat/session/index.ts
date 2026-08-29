@@ -116,6 +116,7 @@ export class ChatSession extends EventEmitter {
       boxRoot: this.boxRoot,
       getSessionId: () => this.sessionId,
       seedFeatures: options.seedFeatures,
+      persistPending: options.persistPendingFeatures,
       onChange: (features) => {
         this.emit("features-changed", { features });
       },

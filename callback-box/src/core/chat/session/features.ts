@@ -43,6 +43,7 @@ interface FeatureStoreDeps {
   getSessionId: () => string | null;
   /** Landmark seed defaults for a fresh session, if any. */
   seedFeatures?: Record<string, string> | undefined;
+  persistPending?: ((updates: Record<string, string>) => boolean) | undefined;
   /** Notifies the owner that the feature map changed (carries the new map). */
   onChange: (features: FeatureMap) => void;
 }
@@ -100,6 +101,7 @@ export class FeatureStore {
   private async persist(updates: Record<string, string>): Promise<void> {
     const sessionId = this.deps.getSessionId();
     if (sessionId !== null) {
+      if (this.deps.persistPending?.(updates) === true) return;
       await updateFeaturesForSession(this.deps.boxRoot, { sessionId, updates });
     }
   }
