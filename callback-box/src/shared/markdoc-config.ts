@@ -74,7 +74,7 @@
 
 import Markdoc from "@markdoc/markdoc";
 import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc";
-import { validateSourceAttributes } from "./iso-date.js";
+import { validateSourceAttributes } from "./source-model.js";
 import { TODO_STATUSES, validateTodoAttributes } from "./todo-model.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS

@@ -24,6 +24,12 @@ function check(src: string): string {
   if (errors.length === 0) return "valid";
   return errors.map((e) => e.error.id).join(", ");
 }
+
+function sourceTag(src: string): Markdoc.Tag {
+  const tree = Markdoc.transform(parse(src), markdocConfig) as Markdoc.Tag;
+  const paragraph = tree.children[0] as Markdoc.Tag;
+  return paragraph.children[0] as Markdoc.Tag;
+}
 ```
 
 ## An external anchor (href + retrieved + pos + version + placement) validates
@@ -34,12 +40,37 @@ check('{% source href="https://example.com/doc" retrieved="2026-08-29" pos="body
 valid
 ```
 
+The external schemes named by the guide remain valid without a retrieval date:
+
+```ts
+check('{% source href="file:/Users/x/doc.md" %}local external file{% /source %}')
+=>
+valid
+```
+
+The transform preserves the retrieval date for the React source renderer:
+
+```ts
+const transformed = sourceTag('{% source href="https://example.com" retrieved="2026-08-29" %}fact{% /source %}');
+`${transformed.name}:${transformed.attributes["retrieved"]}`
+=>
+SourceInline:2026-08-29
+```
+
 ## Retrieved must be a real ISO date
 
 ```ts
 check('{% source href="https://example.com" retrieved="2026-02-29" %}fact{% /source %}')
 =>
 source-retrieved-date
+```
+
+## Retrieved requires an external href
+
+```ts
+check('{% source ref="/notes/research.doc.card" retrieved="2026-08-29" %}fact{% /source %}')
+=>
+source-retrieved-requires-href
 ```
 
 ```ts
