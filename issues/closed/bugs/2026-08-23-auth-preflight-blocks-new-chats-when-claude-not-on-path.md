@@ -5,7 +5,10 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a journey walkthrough could not start a second chat
 priority: normal
+resolution: implemented
 ---
+
+Closed 2026-08-29 by this commit (`docs(issues): close inconclusive auth preflight bug`): spawn, timeout, empty, and unparseable probes now return `AUTH_PROBE_INCONCLUSIVE`; after one retry the preflight lets the real SDK judge auth.
 
 > **Reconfirmed 2026-08-24 — still live, unchanged.** Tag removed. The defect
 > this issue names is verbatim still in the code: `services/claude-cli.ts:27`
