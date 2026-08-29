@@ -28,6 +28,7 @@ import { mkdtemp, mkdir, readFile, writeFile, readdir, stat, rm } from "node:fs/
 import * as os from "node:os";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
+import { BOX_BUILT_DEPENDENCIES } from "../src/core/box/package.js";
 import { isRecord } from "../src/lib/is-record.js";
 
 /** Extract a `version` string from a parsed `package.json`-shaped value, throwing on anything else. */
@@ -35,8 +36,6 @@ function requireVersion(parsed: unknown): string {
   if (isRecord(parsed) && typeof parsed["version"] === "string") return parsed["version"];
   throw new MissingPackageVersionError();
 }
-
-const BUILT_DEPENDENCIES = ["better-sqlite3", "esbuild", "@google/genai", "protobufjs"];
 
 /** A fresh scaffold's `src/` has nothing but the CLAUDE.md guides — no
  *  `.ts`/`.tsx` files — so `tsc -p .` (the box tsconfig's `include: ["src"]`)
@@ -177,7 +176,7 @@ async function scaffoldBox(args: { tarball: string; boxDir: string }): Promise<v
     file: "pnpm",
     args: [
       "dlx",
-      ...BUILT_DEPENDENCIES.map((d) => "--allow-build=" + d),
+      ...BOX_BUILT_DEPENDENCIES.map((d) => "--allow-build=" + d),
       "--package",
       args.tarball,
       "cb",
