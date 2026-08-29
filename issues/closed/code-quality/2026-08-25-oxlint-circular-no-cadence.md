@@ -1,7 +1,10 @@
 ---
 title: "oxlint and the circular-dep check still have no cadence"
-workstream: unattached
+workstream: chores-burn-down
+resolution: implemented
 ---
+
+**Closed:** This commit adds one weekly baseline-diff schedule for oxlint and circular-dependency findings.
 
 2026-08-24, narrowed 2026-08-25.
 
