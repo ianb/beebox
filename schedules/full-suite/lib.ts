@@ -350,6 +350,10 @@ export function issuePath(input: { date: string; landing: Landing }): string {
   return `issues/bugs/${input.date}-${slug}.md`;
 }
 
+export function unstageIssueArgs(paths: string[]): string[] {
+  return ["restore", "--staged", "--", ...paths];
+}
+
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "");
 }

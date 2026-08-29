@@ -1,11 +1,14 @@
 ---
 title: "The capture error banner covers the device settings panel"
-workstream: unattached
+workstream: small-bugs-batch
 area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — exercising capture mode in the /dev/capture-mode harness
+resolution: implemented
 ---
+
+Closed 2026-08-29 by this commit (`fix(capture): keep error banner clear of device settings`): the banner now participates in layout between settings and the viewport.
 
 In capture mode, an error banner and the device settings panel occupy the same
 strip below the status bar, and the banner is drawn on top. With both visible,

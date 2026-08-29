@@ -1,13 +1,16 @@
 ---
 title: "Chat drifts off the bottom as it grows, and is hard to scroll back down"
-workstream: chat-scroll
+workstream: small-bugs-batch
 area: callback-box
 priority: important
+resolution: superseded
 labels: [chat, scroll]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report
 ---
+
+Closed 2026-08-29 by this commit (`docs(issues): close obsolete chat follow race`): the replacement scroll model removed the follow pin and its event-classification race; this issue carried no `needs: [manual-testing]` gate.
 
 Starting **fully scrolled down**, the chat still ends up appearing scrolled up
 as content grows, and getting back to the bottom is difficult. The follow-the-
@@ -79,5 +82,5 @@ skill) is the instrument if anything still feels wrong.
 ## Related
 
 - Prepend and drop both shift position too — see the paging window in
-  [chat messages grow unbounded](../closed/bugs/2026-08-01-chat-messages-grow-unbounded-on-load-older.md).
+  [chat messages grow unbounded](2026-08-01-chat-messages-grow-unbounded-on-load-older.md).
   Any fix here should not assume growth only happens at the bottom.

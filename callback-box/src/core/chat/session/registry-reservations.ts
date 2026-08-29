@@ -38,14 +38,17 @@ export async function reserveAndWarm(opts: {
   const { boxRoot, store, backend, baseOptions, ...request } = opts;
   const result = await reserveChatSession({ boxRoot, store, ...request });
   if (result.kind !== "reserved") return result;
+  const reservation = store.get(result.sessionId);
+  if (reservation === null) return result;
   log("reserve", `Reserved ${result.sessionId} (held=${store.size()})`);
   prewarmReservedChat({
     boxRoot,
     backend,
     baseOptions,
     sessionId: result.sessionId,
-    contextDir: request.contextDir,
-    ...(request.model !== undefined ? { model: request.model } : {}),
+    contextDir: reservation.contextDir,
+    engine: reservation.engine,
+    ...(reservation.model !== undefined ? { model: reservation.model } : {}),
   });
   return result;
 }

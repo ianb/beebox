@@ -76,8 +76,9 @@ JSON.stringify([
   normalizeCodexToolItem({ type: "webSearch", id: "w", query: "callback box" }),
   normalizeCodexToolItem({ type: "mcpToolCall", id: "m", server: "calendar", tool: "list", arguments: '{"days":7}' }),
   normalizeCodexToolItem({ type: "subAgentActivity", id: "a", kind: "started", agentPath: "/root/review", agentThreadId: "thread-1" }),
+  normalizeCodexToolItem({ type: "collab_tool_call", id: "c", tool: "wait", receiver_thread_ids: [], status: "completed" }),
 ].map((block) => ({ name: block?.name, input: block?.input })))
-=> [{"name":"Bash","input":{"command":"cb status"}},{"name":"Edit","input":{"file_path":"store/A.card","status":"completed"}},{"name":"WebSearch","input":{"query":"callback box"}},{"name":"calendar.list","input":{"days":7}},{"name":"Agent","input":{"description":"/root/review","kind":"started","thread_id":"thread-1"}}]
+=> [{"name":"Bash","input":{"command":"cb status"}},{"name":"Edit","input":{"file_path":"store/A.card","status":"completed"}},{"name":"WebSearch","input":{"query":"callback box"}},{"name":"calendar.list","input":{"days":7}},{"name":"Agent","input":{"description":"/root/review","kind":"started","thread_id":"thread-1"}},{"name":"Agent","input":{"action":"wait","status":"completed","thread_ids":[]}}]
 ```
 
 The live SDK vocabulary maps through a separate typed entry point while native
@@ -94,6 +95,17 @@ normalizeCodexSdkToolItem({
   result: { content: [], structured_content: {} },
 })?.name
 => drive.find
+
+JSON.stringify(normalizeCodexSdkToolItem({
+  id: "collab-1",
+  type: "collab_tool_call",
+  tool: "spawn_agent",
+  sender_thread_id: "parent-1",
+  receiver_thread_ids: ["child-1"],
+  agents_states: { "child-1": { status: "pending_init", message: null } },
+  status: "completed",
+}))
+=> {"type":"tool_use","id":"collab-1","name":"Agent","input":{"action":"spawn_agent","status":"completed","thread_ids":["child-1"],"agents":{"child-1":{"status":"pending_init","message":null}}}}
 ```
 
 SDK threads are created by `codex exec`. The history app-server defaults to

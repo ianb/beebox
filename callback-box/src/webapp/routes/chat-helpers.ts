@@ -108,8 +108,7 @@ export const sendBodySchema = z.object({
   /**
    * Where the user is sending from, decided by the client (only it knows
    * whether the native shell is in effect) and surfaced as the `channel`
-   * snapshot attribute. Absent from an old bundle — and from the iOS share
-   * extension, which posts here without a web client — in which case the
+   * snapshot attribute. Absent from an old bundle, in which case the
    * route falls back to classifying the User-Agent (see `resolveChannel`).
    */
   channel: z.enum(CHAT_CHANNELS).optional(),

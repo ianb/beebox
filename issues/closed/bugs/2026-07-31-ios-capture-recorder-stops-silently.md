@@ -1,12 +1,15 @@
 ---
 title: "iOS: native audio capture can stop recording while the UI still says recording"
-workstream: ios-audio-session-fix
+workstream: small-bugs-batch
 area: callback-box
 filed-by: agent
 discovered-in: worktree-ios-audio-session-fix — Codex review of the audio-session fix
 labels: [mobile]
 priority: normal
+resolution: implemented
 ---
+
+Closed 2026-08-29 by this commit (`fix(ios): detect unexpected capture recorder stops`): the size timer now detects a recorder that stopped itself, closes the segment, logs metadata-only diagnostics, and presents a restart notice.
 
 `CaptureAudioRecorder` starts an `AVAudioRecorder` and then watches only the
 file size (`CaptureAcquisition.swift:801` `startSizeTimer`). It sets no
@@ -34,6 +37,6 @@ in `AVAudioRecorderFactory` without leaking `AVFoundation` into the recorder
 model.
 
 Out of scope for the audio-session routing work
-([plan](../../callback-box/docs/implemented-plans/ios-audio-session-routing.md)), which
+([plan](../../../callback-box/docs/implemented-plans/ios-audio-session-routing.md)), which
 only changed which category and options the session uses. Found by a
 cross-model review of that change.

@@ -1,12 +1,15 @@
 ---
 title: "full-suite schedule cannot commit its own red report: path-leak-check rejects the tap output it embeds"
-workstream: unattached
+workstream: small-bugs-batch
 area: schedules
 priority: important
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-chat-session-identity — bin/land refused a dirty main checkout
 ---
+
+Closed 2026-08-29 by this commit (`fix(schedules): unstage reports after commit failure`): failed report commits now path-scope a `git restore --staged`, while preserving the written report and surfacing cleanup failure.
 
 `schedules/full-suite/run.ts` files an issue when `main` goes red, then
 `git add` + `git commit -- <paths>` in the main checkout (`run.ts:246-258`).

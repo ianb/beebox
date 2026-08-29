@@ -39,6 +39,8 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import type { MutableRefObject } from "react";
 import { easeOrSnapToTop, anchorOffset } from "./chat-scroll-ease.js";
+import { currentBottomTop } from "./chat-scroll-bottom.js";
+import { armPrependSnapshot, clearTimer, movedUp } from "./chat-scroll-refs.js";
 import { decideReconcile, type ReconcileAction } from "./scroll-reconcile";
 import { recordScrollTrace } from "../../lib/scroll-diagnostics";
 
@@ -56,7 +58,6 @@ const ANCHOR_RECAPTURE_MS = 80;
  * growth (a reply arriving minutes later) restore a stale gap and jump the
  * reader. The snapshot belongs to one in-flight request; it expires with it.
  */
-const PREPEND_SNAPSHOT_MS = 10000;
 /**
  * The quiet period that ends the open-thread hold: this long with no content
  * growth after the transcript's images have loaded. The caller can only report
@@ -79,6 +80,17 @@ const OPEN_SETTLE_MS = 400;
 const OPEN_MAX_MS = 8000;
 
 export interface Anchor { el: Element; top: number }
+interface ScrollObservers { content: ResizeObserver | null; scroller: ResizeObserver | null; live: ResizeObserver | null }
+
+function observeResize(opts: { refs: MutableRefObject<ScrollObservers>; key: keyof ScrollObservers; el: Element | null; onResize: () => void }): void {
+  const { refs, key, el, onResize } = opts;
+  refs.current[key]?.disconnect();
+  refs.current[key] = null;
+  if (!el) return;
+  const observer = new ResizeObserver(onResize);
+  observer.observe(el);
+  refs.current[key] = observer;
+}
 
 /**
  * The anchor that holds the view steady when content above it resizes: the
@@ -156,7 +168,8 @@ function applyReconcileAction(action: ReconcileAction, opts: {
     // what is preserved is 0 and the reader ends up at the bottom. That is the
     // bounded worst case of the ordering, and only for a reader who was already
     // within the resize delta of the bottom.
-    writeTop(el.scrollHeight - el.clientHeight - prevFromBottom, "instant");
+    const live = contentElRef.current?.querySelector<HTMLDivElement>("[data-chat-live-turn-content]") ?? null;
+    writeTop(currentBottomTop(el, live) - prevFromBottom, "instant");
   } else if (action === "hold-anchor") {
     writeTop(el.scrollTop + anchorDelta, "instant");
   } else if (action === "flag-unseen") {
@@ -252,38 +265,13 @@ function refreshAnchorTop(anchor: Anchor | null, scroller: HTMLDivElement): void
   if (anchor && live !== null) anchor.top = live;
 }
 
-/** Did scrollTop move up since the last look? Records the current value.
- *  Scrolling away is this, never merely being off the bottom — see rule 1. */
-function movedUp(el: HTMLDivElement, prevTop: MutableRefObject<number>): boolean {
-  const up = el.scrollTop < prevTop.current - 1;
-  prevTop.current = el.scrollTop;
-  return up;
-}
-
-/** A `window.setTimeout` handle held in a ref, cleared idempotently. */
-function clearTimer(ref: MutableRefObject<number | null>): void {
-  if (ref.current !== null) window.clearTimeout(ref.current);
-  ref.current = null;
-}
-
-/**
- * Record the bottom gap to restore once the older-history page lands, and arm
- * its expiry (see PREPEND_SNAPSHOT_MS).
- */
-function armPrependSnapshot(el: HTMLDivElement, refs: { gap: MutableRefObject<number | null>; timer: MutableRefObject<number | null> }): void {
-  refs.gap.current = el.scrollHeight - el.scrollTop;
-  clearTimer(refs.timer);
-  refs.timer.current = window.setTimeout(() => {
-    refs.gap.current = null;
-    refs.timer.current = null;
-  }, PREPEND_SNAPSHOT_MS);
-}
-
 export interface ChatScroll {
   /** Attach to the scroll container (the `overflow-y:auto` element). */
   scrollerRef: (el: HTMLDivElement | null) => void;
   /** Attach to the inner content wrapper (the element whose height grows). */
   contentRef: (el: HTMLDivElement | null) => void;
+  /** Attach to the live turn's natural-height content inside its spacer. */
+  liveContentRef: (el: HTMLDivElement | null) => void;
   /** The view is within `AT_BOTTOM_PX` of the bottom. Drives the button. */
   atBottom: boolean;
   /** Content arrived below a reader who is not at the bottom — button accent. */
@@ -320,6 +308,7 @@ function useMirroredFlag(initial: boolean): { ref: MutableRefObject<boolean>; va
 export function useChatScroll(): ChatScroll {
   const scrollerElRef = useRef<HTMLDivElement | null>(null);
   const contentElRef = useRef<HTMLDivElement | null>(null);
+  const liveContentElRef = useRef<HTMLDivElement | null>(null);
 
   const { ref: atBottomRef, value: atBottom, set: setAtBottomFlag } = useMirroredFlag(true);
   const { value: hasUnseenContent, set: setUnseen } = useMirroredFlag(false);
@@ -328,20 +317,19 @@ export function useChatScroll(): ChatScroll {
   const prevScrollHeightRef = useRef(0);
   const prevFromBottomRef = useRef(0);
   const prevScrollTopRef = useRef(0);
-  // While older messages load: the pre-prepend gap to restore once they land.
   const prependGapRef = useRef<number | null>(null);
   const prependTimerRef = useRef<number | null>(null);
   const anchorRef = useRef<Anchor | null>(null);
   const anchorTimerRef = useRef<number | null>(null);
   const openHoldRef = useRef(new OpenHold());
-  const observersRef = useRef<{ content: ResizeObserver | null; scroller: ResizeObserver | null }>({
+  const observersRef = useRef<ScrollObservers>({
     content: null,
     scroller: null,
+    live: null,
   });
 
-  // Derived geometry, re-read after every scroll and reconcile: never a guess.
   const measure = useCallback((el: HTMLDivElement) => {
-    const fromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const fromBottom = Math.max(0, currentBottomTop(el, liveContentElRef.current) - el.scrollTop);
     // Growth is noticed here, not only in reconcile: a scroll event (the
     // previous write's) can precede the resize callback in the same frame, and
     // it re-measures first — so per-frame growth never reads as `grew` there.
@@ -365,7 +353,7 @@ export function useChatScroll(): ChatScroll {
 
   const writeToBottom = useCallback((behavior: ScrollBehavior) => {
     const el = scrollerElRef.current;
-    if (el) writeTop(el.scrollHeight - el.clientHeight, behavior);
+    if (el) writeTop(currentBottomTop(el, liveContentElRef.current), behavior);
   }, [writeTop]);
 
   const endOpenPhase = useCallback((why: string) => openHoldRef.current.end(why), []);
@@ -430,16 +418,11 @@ export function useChatScroll(): ChatScroll {
     scheduleAnchorRecapture();
   }, [measure, atBottomRef, endOpenPhase, scheduleAnchorRecapture]);
 
-  // Both ResizeObservers funnel here: the pure `decideReconcile` classifies the
-  // cycle, this measures the DOM facts it needs and applies the compensation.
   const reconcile = useCallback((source: "content" | "scroller") => {
     const el = scrollerElRef.current;
     if (!el) return;
     const prevFromBottom = prevFromBottomRef.current;
     const grew = el.scrollHeight > prevScrollHeightRef.current + GROWTH_EPSILON;
-    // A prepend only "lands" once content actually grew — a zero-growth content
-    // cycle in the load-older window (the button's "Loading…" label swap) must
-    // not consume the snapshot and leave the real insertion unguarded.
     const prepend = source === "content" && prependGapRef.current !== null && grew;
 
     let anchorDelta = 0;
@@ -452,9 +435,6 @@ export function useChatScroll(): ChatScroll {
       grew,
       prepend,
       anchorMoved: Math.abs(anchorDelta) > 1,
-      // Where the reader lands if nothing is written: the pre-cycle gap plus
-      // whatever the content grew by (a scroller resize is compensated, so its
-      // pre-cycle state stands).
       atBottomAfter: prevFromBottom + Math.max(0, el.scrollHeight - prevScrollHeightRef.current) <= AT_BOTTOM_PX,
       openPhase: openHoldRef.current.active,
     });
@@ -471,7 +451,7 @@ export function useChatScroll(): ChatScroll {
     scrollerElRef.current = el;
     if (el) {
       prevScrollHeightRef.current = el.scrollHeight;
-      prevFromBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight;
+      prevFromBottomRef.current = Math.max(0, currentBottomTop(el, liveContentElRef.current) - el.scrollTop);
       setViewportPx(el.clientHeight);
       el.addEventListener("scroll", handleScroll, { passive: true });
       const ro = new ResizeObserver(() => reconcile("scroller"));
@@ -481,13 +461,13 @@ export function useChatScroll(): ChatScroll {
   }, [handleScroll, reconcile]);
 
   const contentRef = useCallback((el: HTMLDivElement | null) => {
-    if (observersRef.current.content) observersRef.current.content.disconnect();
     contentElRef.current = el;
-    if (el) {
-      const ro = new ResizeObserver(() => reconcile("content"));
-      ro.observe(el);
-      observersRef.current.content = ro;
-    }
+    observeResize({ refs: observersRef, key: "content", el, onResize: () => reconcile("content") });
+  }, [reconcile]);
+
+  const liveContentRef = useCallback((el: HTMLDivElement | null) => {
+    liveContentElRef.current = el;
+    observeResize({ refs: observersRef, key: "live", el, onResize: () => reconcile("content") });
   }, [reconcile]);
 
   useEffect(() => {
@@ -497,13 +477,14 @@ export function useChatScroll(): ChatScroll {
     return () => {
       if (observers.content) observers.content.disconnect();
       if (observers.scroller) observers.scroller.disconnect();
+      if (observers.live) observers.live.disconnect();
       for (const timer of timers) clearTimer(timer);
       hold.end("unmount");
     };
   }, []);
 
   return {
-    scrollerRef, contentRef, atBottom, hasUnseenContent, scrollToBottom,
+    scrollerRef, contentRef, liveContentRef, atBottom, hasUnseenContent, scrollToBottom,
     anchorToTop, captureForPrepend, openThread, settleOpen, viewportPx,
   };
 }

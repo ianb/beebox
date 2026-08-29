@@ -1,11 +1,14 @@
 ---
 title: "The capture resume probe bypasses the injectable CaptureApi, so the dev harness cannot fake it"
-workstream: unattached
+workstream: small-bugs-batch
 area: callback-box
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — exercising capture states on /dev/capture-mode
+resolution: implemented
 ---
+
+Closed 2026-08-29 by this commit (`fix(capture): inject the resumable-session probe`): the resume hook now gets the list operation from `CaptureApi`, and the dev harness supplies a fake.
 
 Capture's network calls go through an injectable seam so the dev harness can
 mount capture mode against an in-memory fake: `CaptureApi` +
