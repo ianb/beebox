@@ -22,4 +22,4 @@ child reload path and define how long a genuinely busy turn may defer reload,
 how idle persistent runs are retired, and what happens when a drain deadline is
 reached.
 
-Related incident: [coined chat still runs on box default engine](2026-08-29-coined-chat-still-runs-on-box-default-engine.md).
+Related incident: [coined chat still runs on box default engine](../closed/bugs/2026-08-29-coined-chat-still-runs-on-box-default-engine.md).

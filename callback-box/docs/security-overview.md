@@ -135,7 +135,7 @@ The summary:
 One caveat worth naming: the iOS app's dictation prefers Apple's
 on-device recognizer, but on older systems it falls back to Apple's
 cloud speech service without an app-level opt-out
-([issue](../../issues/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md)).
+([issue](../../issues/closed/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md)).
 
 ## The authentication surface
 
