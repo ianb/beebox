@@ -118,8 +118,11 @@ probe() {
   code=""
   deadline=$(( $(date +%s) + 150 ))
   while [ "$(date +%s)" -lt "$deadline" ]; do
-    code="$(curl $extra -s -o /tmp/body -w '%{http_code}' "$url" 2>/dev/null || true)"
-    [ "$code" = "200" ] && break
+    # -L: the box's auth wall answers an anonymous GET with a 302 to its
+    # login page; following it to a 200 HTML page is what proves the box is
+    # serving (auth is always on — there is no unauthenticated mode).
+    code="$(curl $extra -sL -o /tmp/body -w '%{http_code}' "$url" 2>/dev/null || true)"
+    [ "$code" = "200" ] && grep -qi '<html\|<!doctype html' /tmp/body && break
     sleep 3
   done
   if [ "$code" != "200" ]; then
@@ -128,7 +131,7 @@ probe() {
     docker compose logs box 2>&1 | tail -n 60 >&2
     exit 1
   fi
-  echo "  ok  | $desc: GET $url -> 200"
+  echo "  ok  | $desc: GET $url -> 200 HTML (after redirects)"
 }
 
 # The box is served at /box/ (slug = basename of /data/box). First run installs
