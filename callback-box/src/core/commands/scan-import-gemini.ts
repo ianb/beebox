@@ -6,7 +6,6 @@
  */
 
 import * as fs from "node:fs/promises";
-import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { getMimeType, GeminiEmptyResponseError, parseGeminiJsonArray } from "./describe-images-helpers.js";
 
@@ -208,6 +207,7 @@ export async function analyzeScanBatchWithGemini(
     boxholderContext,
   }: { imagePaths: string[]; thinkingBudget?: number; boxholderContext?: string | null }
 ): Promise<{ analyses: RawScanAnalysis[]; usage: BatchUsage | null }> {
+  const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey });
 
   const imageParts = [];
