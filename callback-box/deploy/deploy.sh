@@ -74,8 +74,19 @@ deploy_exit() {
     return
   fi
 
-  echo "Deploy failed (exit $rc)"
-  notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"
+  # Signal exits (rc >= 128: 130 Ctrl-C/tab close, 143 SIGTERM) are an
+  # interruption, not a failure — the classic case is closing a workstream's
+  # Terminal tab while its post-commit deploy runs in the background. A later
+  # landing's deploy covers the same or a newer ref, so a red FAILED here is
+  # misleading (boxholder, 2026-08-29). Say what actually happened.
+  if [ "$rc" -ge 128 ]; then
+    local sig=$((rc - 128))
+    echo "Deploy interrupted (signal $sig) — not a failure; the next landing's deploy covers this ref."
+    notify "⏸ callback-box deploy interrupted" "signal $sig — the next landing redeploys; see $LOG_HINT"
+  else
+    echo "Deploy failed (exit $rc)"
+    notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"
+  fi
 
   local newer=""
   if [ -n "$held" ] && [ -n "${REQUESTED_FILE:-}" ] && [ -n "${SHA:-}" ]; then
