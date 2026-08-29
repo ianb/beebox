@@ -41,5 +41,5 @@ feature.
 
 `bin/router.ts:70-73` rewrites `/<worktree>/dev/issues[/…]` to
 `/workstreams/issues…`, and is already slated for removal in
-[remove-legacy-issue-deep-link-routes](2026-08-22-remove-legacy-issue-deep-link-routes.md).
+[remove-legacy-issue-deep-link-routes](../closed/code-quality/2026-08-22-remove-legacy-issue-deep-link-routes.md).
 Both touch the same file and could go together.

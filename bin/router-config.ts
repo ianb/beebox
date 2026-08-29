@@ -83,14 +83,6 @@ export function worktreeRoot(name: string): string {
   return name === "main" ? MAIN_ROOT : path.join(WORKTREES_ROOT, name);
 }
 
-export function legacyIssuesRedirect(afterWorkstream: string): string | null {
-  const pathname = afterWorkstream.split("?")[0] ?? afterWorkstream;
-  if (pathname !== "/dev/issues" && !pathname.startsWith("/dev/issues/"))
-    return null;
-  const suffix = afterWorkstream.slice("/dev/issues".length);
-  return `/workstreams/issues${suffix || "/"}`;
-}
-
 /** Every router module logs through this one line format. */
 export function log(msg: string): void {
   console.log(`[router ${new Date().toISOString()}] ${msg}`);
