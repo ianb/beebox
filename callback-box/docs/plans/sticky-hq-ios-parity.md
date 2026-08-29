@@ -1,6 +1,6 @@
 ---
 title: "Sticky HQ dictation on iOS"
-status: active
+status: partial
 workstream: transcript-confidence
 issues:
   - ../../../issues/features/2026-08-26-sticky-hq-transcription-preference.md

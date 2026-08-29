@@ -531,7 +531,7 @@ Referenced by:
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
 - docs/implemented-plans/private-issues-shadow-repo.md:157 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
 - docs/implemented-plans/workstreams.md:755 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
-- user-stories/catalog/2026-08-21.md:2638 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus 
+- user-stories/catalog/2026-08-21.md:2638 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus
 - ../.claude/skills/security-report/SKILL.md:337 (mention) — `callback-box/README.md` keeps a short "What leaves your machine" section
 - ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:18 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../issues/code-quality/2026-08-08-audit-cb-subcommand-surface.md:86 (mention) — - `README.md:3` — "the `cb` CLI is the interface"
@@ -4010,7 +4010,7 @@ Referenced by:
 - docs/implemented-plans/nav-card.md:18 (mention) — **Where the entries render changed (2026-08, `docs/implemented-plans/top-nav-ia.md`
 - docs/landmarks.md:126 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
 - docs/questions.md:254 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
-- user-stories/catalog/2026-08-21.md:9059 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a 
+- user-stories/catalog/2026-08-21.md:9059 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a
 - ../issues/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:39 (link) — [top-nav-ia](../../callback-box/docs/implemented-plans/top-nav-ia.md) — which
 - ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:32 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
 - ../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md:6 (mention) — discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
@@ -5723,4 +5723,3 @@ References:
 - → ../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
 - → ../issues/closed/bugs/2026-08-25-one-401-ejects-the-whole-app-to-a-login-form.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-
