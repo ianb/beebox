@@ -101,6 +101,16 @@ Harness re-run on today's main (Node 24, Claude Code 2.1.251), 2026-08-29:
 - `smoke-vps-install.sh` — FAILED on first run at the in-dind `git clone`
   (EACCES copying a pack from the read-only source mount under Docker
   Desktop 29). Fixed with `--no-local`. Result after the fix: see below.
+- `pnpm smoke` (`scripts/smoke-external-box.ts`, the release-tarball anchor)
+  — FAILED on first run, four ways, all pre-existing drift since July and
+  all fixed: (1) under `pnpm run` the parent's `npm_config_*` env leaked
+  into the box's own `pnpm install`, which exited 1 silently — child steps
+  now get a stranger's env; (2) the tarball didn't ship
+  `src/core/views/types.ts`, so `cb view typecheck` failed in every
+  installed box — the three-file type closure is in `files` now; (3) the
+  box-health probe still used the pre-slug-derivation `/content/` URL;
+  (4) it didn't send the diag bearer key the always-on auth wall requires.
+  Result after the fixes: PASS.
 - Claude CLI in the image (2.1.251): `claude auth login` prints
   `https://claude.com/cai/oauth/authorize?...`, then blocks at
   `Paste code here if prompted >`; a wrong code prints `Invalid code` and

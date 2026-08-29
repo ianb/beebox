@@ -75,7 +75,7 @@ interface RunSpec {
 function strangerEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const [k, v] of Object.entries(process.env)) {
-    if (/^(npm_|pnpm_config_|PNPM_SCRIPT_SRC_DIR$)/i.test(k)) continue;
+    if (/^(npm_|pnpm_config_|pnpm_script_src_dir$)/i.test(k)) continue;
     env[k] = v;
   }
   return env;
@@ -291,22 +291,28 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
       }),
       crashed,
     ]);
-    // The box's slug is the basename of the dir passed to `cb serve`
-    // ("content") — this IS the plan's "serve its content/" literally: no
-    // Track G slug-derivation exists yet, so the slug a real README would
-    // reference today is whatever basename `content/` has.
-    const boxHealthUrl = "http://localhost:" + String(args.port) + "/content/api/trpc/health.check";
-    const boxHealthResponse = await waitForStatus({ url: boxHealthUrl, expectStatus: 200, timeoutMs: 5000 });
+    // A v2 box's slug is the basename of its PACKAGE dir, not of `content/`
+    // (src/lib/box-slug.ts; docs/docker-install.md: `/data/box` → `/box/`).
+    const slug = path.basename(args.boxDir);
+    const boxHealthUrl = `http://localhost:${String(args.port)}/${slug}/api/trpc/health.check`;
+    // Auth is always on; the diag bearer key is the documented bypass for
+    // exactly this procedure (src/webapp/auth.ts DIAG_PROCEDURE_WHITELIST).
+    const boxHealthResponse = await waitForStatus({
+      url: boxHealthUrl,
+      headers: { Authorization: "Bearer " + diagKey },
+      expectStatus: 200,
+      timeoutMs: 5000,
+    });
     const boxHealthBody: unknown = await boxHealthResponse.json();
     const resultField = isRecord(boxHealthBody) ? boxHealthBody["result"] : undefined;
     const dataField = isRecord(resultField) ? resultField["data"] : undefined;
     const boxStatus = isRecord(dataField) ? dataField["status"] : undefined;
     if (!boxStatus) {
-      throw new SmokeStepError(SERVE_STEP_LABEL, "unexpected /content/api/trpc/health.check body: " + JSON.stringify(boxHealthBody));
+      throw new SmokeStepError(SERVE_STEP_LABEL, `unexpected ${boxHealthUrl} body: ` + JSON.stringify(boxHealthBody));
     }
     const ms = Number(process.hrtime.bigint() - t0) / 1e6;
     process.stderr.write(
-      "[smoke] ok: cb serve — /healthz 200, /content/api/trpc/health.check 200 (status: " +
+      `[smoke] ok: cb serve — /healthz 200, /${slug}/api/trpc/health.check 200 (status: ` +
         boxStatus + ") (" + (ms / 1000).toFixed(1) + "s)\n"
     );
 
