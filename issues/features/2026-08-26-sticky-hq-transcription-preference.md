@@ -1,6 +1,6 @@
 ---
 title: "Sticky HQ transcription preference — turning HQ dictation on shouldn't be a per-chat ritual"
-workstream: unattached
+workstream: transcript-confidence
 area: callback-box
 labels: [voice, ui]
 filed-by: agent
