@@ -107,4 +107,4 @@ corrected to Codex so the chat opens against the transcript that actually ran.
 
 The adjacent `collab_tool_call` activity now renders on live and history paths.
 Bundle reload stopping live chat sessions is tracked separately in
-[bundle reload stops live chat sessions](../../bugs/2026-08-29-bundle-reload-stops-live-chat-sessions.md).
+[bundle reload stops live chat sessions](2026-08-29-bundle-reload-stops-live-chat-sessions.md).

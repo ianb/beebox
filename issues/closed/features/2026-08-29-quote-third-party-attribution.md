@@ -8,7 +8,7 @@ discovered-in: worktree-source-retrieved-date — field critique of research pro
 resolution: implemented
 ---
 
-Implemented in the resolving commit. The agent guide now documents `from=` for
+Implemented in `ecae9aaab` (Teach third-party quote attribution). The agent guide now documents `from=` for
 third-party words, and a passing `knows_directly` audit covers the distinction.
 The existing renderer already shows the attribution in inline and block quotes.
 

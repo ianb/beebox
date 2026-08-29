@@ -8,7 +8,7 @@ discovered-in: worktree-source-retrieved-date — field critique of research pro
 resolution: implemented
 ---
 
-Implemented in the resolving commit. External source tags now accept and render
+Implemented in `48cc77df5` (Add retrieval dates to external sources). External source tags now accept and render
 an optional, validated `retrieved="YYYY-MM-DD"` attribute. The agent guide and a
 passing `knows_directly` audit teach agents to use it.
 
