@@ -204,7 +204,7 @@ if [ "$description_set" = true ]; then
   printf '%s' "$description" > "$description_file"
 fi
 if [ -n "$prompt" ]; then
-  workstream_wrap_briefing "$prompt" > "$prompt_file"
+  workstream_wrap_briefing "$prompt" "$wt" > "$prompt_file"
 fi
 
 # The shared builder is also used by `bin/workstreams resume`; keep every tab
