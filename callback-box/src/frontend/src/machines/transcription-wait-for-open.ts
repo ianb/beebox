@@ -58,7 +58,11 @@ export async function openWithRetry(
     }
     if (await waitForOpen(handle.ws, opts.attemptTimeoutMs)) return handle;
     opts.discard(handle);
-    console.warn(`[realtime-transcription] connect attempt ${attempt}/${opts.attempts} failed`);
+    // A count cap of MAX_SAFE_INTEGER means the caller bounds retries by a
+    // time window instead (transcription-actor's RECONNECT_WINDOW) — printing
+    // the sentinel read as "retrying forever" in the log (2026-08-29).
+    const bound = opts.attempts === Number.MAX_SAFE_INTEGER ? "(bounded by the reconnect window)" : `of ${String(opts.attempts)}`;
+    console.warn(`[realtime-transcription] connect attempt ${String(attempt)} ${bound} failed`);
     if (attempt < opts.attempts) await delay(jitteredBackoff(attempt, opts.backoff));
   }
   return null;
