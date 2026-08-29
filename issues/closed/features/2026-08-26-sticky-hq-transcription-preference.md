@@ -6,7 +6,10 @@ labels: [voice, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "sticky hq transcription preference"
+resolution: implemented
 ---
+
+Closed by `6410124b5`: box and landmark defaults now seed new chats with explicit chat override, using chat > landmark > box > built-in off precedence. Parent-scope edits do not change an open chat.
 
 HQ dictation is a chat feature flag: `hq-dictation` in
 `src/core/chat/features.ts` (server is the source of truth, per session, with

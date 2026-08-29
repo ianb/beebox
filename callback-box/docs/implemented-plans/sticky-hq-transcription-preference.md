@@ -1,9 +1,9 @@
 ---
 title: "Sticky HQ transcription preference"
-status: active
+status: implemented
 workstream: transcript-confidence
 issues:
-  - ../../../issues/features/2026-08-26-sticky-hq-transcription-preference.md
+  - ../../../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md
 ---
 # Sticky HQ transcription preference
 
