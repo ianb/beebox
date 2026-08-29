@@ -3,7 +3,7 @@ title: "Chat scroll: write on user actions only"
 status: partial
 workstream: chat-scroll
 issues:
-  - ../../../issues/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md
+  - ../../../issues/closed/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md
 ---
 # Chat scroll: write on user actions only
 

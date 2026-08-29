@@ -3,11 +3,14 @@ title: "Chat drifts off the bottom as it grows, and is hard to scroll back down"
 workstream: chat-scroll
 area: callback-box
 priority: important
+resolution: superseded
 labels: [chat, scroll]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report
 ---
+
+Closed 2026-08-29 by this commit (`docs(issues): close obsolete chat follow race`): the replacement scroll model removed the follow pin and its event-classification race; this issue carried no `needs: [manual-testing]` gate.
 
 Starting **fully scrolled down**, the chat still ends up appearing scrolled up
 as content grows, and getting back to the bottom is difficult. The follow-the-
