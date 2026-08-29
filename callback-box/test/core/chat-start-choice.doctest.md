@@ -138,11 +138,9 @@ JSON.stringify([asked.kind, unasked.kind])
 => ["reserved","unsupported"]
 ```
 
-While a reservation is live, the READ paths see its engine too — bootstrap and
-history resolve a coined-but-unstarted chat through `resolveChatEngine`, which
-answered the box default until the first turn wrote history (on a codex box:
-Codex history reads for a Claude-reserved chat, failing the whole bootstrap).
-The reservation registers the engine; release forgets it:
+While a reservation is live, callers that can address unstarted chats pass the
+reservation's choice to the read resolver. The reservation remains the sole
+pre-start authority; release removes that answer:
 
 ```ts continue
 const codexCoined = asked.kind === "reserved" ? asked.sessionId : "";

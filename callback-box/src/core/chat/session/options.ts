@@ -47,6 +47,8 @@ export interface ChatSessionOptions {
    * is assigned. User toggles afterward override the seed.
    */
   seedFeatures?: Record<string, string>;
+  /** Persist pre-start feature changes somewhere other than started-chat history. */
+  persistPendingFeatures?: ((updates: Record<string, string>) => boolean) | undefined;
   /**
    * Pre-set the session id (skips loading from `sessionFile`). Used by the
    * registry to construct an instance bound to a specific existing session.
