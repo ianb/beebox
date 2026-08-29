@@ -16,6 +16,11 @@ set -e
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMR)"
 
+# Fast, offline security guards over staged content: private keys, unresolved
+# merge markers, and shellcheck for staged hook/bin shell files only.
+echo "[pre-commit] .: staged security checks"
+(cd "$REPO_DIR" && node --import tsx bin/precommit-security.ts)
+
 run_in() {
   local dir="$1"; shift
   echo "[pre-commit] $dir: $*"
