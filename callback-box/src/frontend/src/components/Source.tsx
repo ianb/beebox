@@ -134,11 +134,22 @@ function ContainerChip({
 }
 
 /** External (href) citation: a static chip — the target lives outside the box. */
-function ExternalChip({ href, version }: { href: string; version: string | undefined }): ReactNode {
-  const title = version === undefined || version === "" ? href : `${href} @ ${version}`;
+function ExternalChip({
+  href,
+  version,
+  retrieved,
+}: {
+  href: string;
+  version: string | undefined;
+  retrieved: string | undefined;
+}): ReactNode {
+  const details = [version === undefined || version === "" ? null : `version ${version}`,
+    retrieved === undefined || retrieved === "" ? null : `retrieved ${retrieved}`].filter(Boolean);
+  const title = details.length === 0 ? href : `${href} — ${details.join(", ")}`;
   return (
     <span className="not-italic text-warm-500 text-xs ml-1" title={title}>
-      [↗ {externalLabel(href)}]
+      [↗ {externalLabel(href)}
+      {retrieved !== undefined && retrieved !== "" ? <span className="text-warm-400">{` · ${retrieved}`}</span> : null}]
     </span>
   );
 }
@@ -146,6 +157,7 @@ function ExternalChip({ href, version }: { href: string; version: string | undef
 interface SourceProps {
   sourceRef?: string;
   href?: string;
+  retrieved?: string;
   usage?: string;
   version?: string;
   pos?: string;
@@ -157,13 +169,13 @@ export function makeSourceComponents(linkCtx: SourceLinkContext): {
   SourceInline: (props: SourceProps) => ReactNode;
   SourceBlock: (props: SourceProps) => ReactNode;
 } {
-  function Citation({ sourceRef, href, usage, version, children }: SourceProps): ReactNode {
+  function Citation({ sourceRef, href, usage, version, retrieved, children }: SourceProps): ReactNode {
     const quoteText = flattenText(children);
     if (sourceRef !== undefined && sourceRef !== "") {
       return <CitationChip sourceRef={sourceRef} usage={usage} quoteText={quoteText} linkCtx={linkCtx} />;
     }
     if (href !== undefined && href !== "") {
-      return <ExternalChip href={href} version={version} />;
+      return <ExternalChip href={href} version={version} retrieved={retrieved} />;
     }
     return <ContainerChip quoteText={quoteText} linkCtx={linkCtx} />;
   }

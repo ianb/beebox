@@ -26,12 +26,26 @@ function check(src: string): string {
 }
 ```
 
-## An external anchor (href + pos + version + placement) validates
+## An external anchor (href + retrieved + pos + version + placement) validates
 
 ```ts
-check('{% source href="file:/Users/x/doc.md" pos="body; ~line 4" version="git:7ffeae4 sha256:9f3a1c2b" placement="estimated, ~50% through the message" %}\nthe selected span\n{% /source %}')
+check('{% source href="https://example.com/doc" retrieved="2026-08-29" pos="body; ~line 4" version="git:7ffeae4 sha256:9f3a1c2b" placement="estimated, ~50% through the message" %}\nthe selected span\n{% /source %}')
 =>
 valid
+```
+
+## Retrieved must be a real ISO date
+
+```ts
+check('{% source href="https://example.com" retrieved="2026-02-29" %}fact{% /source %}')
+=>
+source-retrieved-date
+```
+
+```ts
+check('{% source href="https://example.com" retrieved="August 29, 2026" %}fact{% /source %}')
+=>
+source-retrieved-date
 ```
 
 ## An in-box anchor (ref only) still validates — backward compatible

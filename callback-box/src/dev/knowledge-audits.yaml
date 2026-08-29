@@ -3203,6 +3203,22 @@ tests:
   # nested-tag form unprompted; skip-for-own-framing test quoted the
   # guide back at the agent and explained the dilution-of-signal
   # rationale beyond what the watch_for asked for.
+  # Status (2026-08-29): source-external-retrieved-date passes at
+  # knows_directly with 0 file reads and 0 searches. The agent used
+  # href= with retrieved="2026-08-29" in date-only ISO form.
+
+  - id: source-external-retrieved-date
+    prompt: >
+      I am recording a fact from a studio's public website in a research card.
+      How do I cite the page so the card preserves both its URL and the date I
+      checked it today, August 29, 2026?
+    expected_level: knows_directly
+    watch_for: >
+      Uses a `{% source %}` tag with the external page in `href=` and the
+      date-only ISO check date in `retrieved="2026-08-29"`. Does not put the
+      date in free prose or invent a frontmatter field.
+    correct_contains_any: ["retrieved=", "retrieved date", "retrieval date"]
+    tags: [source, cards, provenance, external-source]
 
   - id: source-tag-syntax
     prompt: >
