@@ -85,8 +85,12 @@ step() {
 # curl for probing (Alpine dind has git but not curl).
 step "apk add curl (dind probe tool)" apk add --no-cache curl
 
+# --no-local: a plain local clone copies pack files by hardlink/copy, which
+# fails with EACCES from a read-only virtiofs mount (Docker Desktop 29 on
+# macOS, 2026-08). The transport path is what a stranger's `git clone <url>`
+# uses anyway.
 step "git clone (file-protocol, stranger's clone of '$BRANCH')" \
-  git clone -b "$BRANCH" /repo-src /root/callback-mono
+  git clone --no-local -b "$BRANCH" /repo-src /root/callback-mono
 
 cd /root/callback-mono/callback-box/docker
 mkdir -p data/box

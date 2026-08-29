@@ -127,6 +127,7 @@ RUN printf '%s\n' \
        --allow-build=esbuild \
        --allow-build=@google/genai \
        --allow-build=protobufjs \
+       --allow-build=@googleworkspace/cli \
        /app/callback-box.tgz
 
 COPY --chown=node:node callback-box/docker/entrypoint.sh /app/entrypoint.sh

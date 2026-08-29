@@ -1,0 +1,60 @@
+# Tailscale sidecar overlay — tailnet-only HTTPS access with zero open ports,
+# per docs/docker-install.md's "Tailscale-only (no open ports)" section
+# ("Docker container" topology). Load this ON TOP of compose.yaml, never
+# instead of it:
+#
+#   docker compose -f compose.yaml -f compose.tailscale.yaml up -d
+#
+# The box service keeps its normal 127.0.0.1:3210 mapping from compose.yaml
+# unchanged — only this sidecar is tailnet-facing. It holds the tailnet
+# identity (TS_AUTHKEY) and a Tailscale Serve config (tailscale-serve.json)
+# that terminates HTTPS on the tailnet and reverse-proxies to the box over
+# the compose network (http://box:3210). It does not touch the box's ports
+# or its own always-on auth wall — see docs/docker-install.md.
+#
+# Follows Tailscale's official Docker sidecar guidance:
+# https://tailscale.com/kb/1282/docker
+# and the Docker env var reference:
+# https://tailscale.com/docs/features/containers/docker/docker-params
+
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    restart: unless-stopped
+    depends_on:
+      - box
+    hostname: ${TS_HOSTNAME:-callback-box}
+    environment:
+      # This overlay is loaded ONLY when the operator explicitly asks for it
+      # (`-f compose.tailscale.yaml`) — unlike compose.yaml's `caddy` service,
+      # which is defined unconditionally and merely gated behind
+      # `--profile public` at *run* time (see the `:?`-avoidance comment on
+      # CB_DOMAIN there: Compose interpolates the whole file at load time,
+      # before profile filtering, so a `:?` guard there would fire even for a
+      # plain `docker compose up` that never touches caddy). No such bare
+      # `docker compose up` ever loads THIS file, so there's no accidental
+      # load to break — a `:?` guard here just fails loudly and immediately
+      # when the operator asked for Tailscale but forgot the auth key.
+      TS_AUTHKEY: ${TS_AUTHKEY:?set TS_AUTHKEY in .env — create a reusable auth key in the Tailscale admin console under Settings > Keys}
+      TS_HOSTNAME: ${TS_HOSTNAME:-callback-box}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+      # Userspace networking (the image's default; left unset here) is
+      # sufficient: this sidecar only terminates Tailscale Serve/HTTPS and
+      # reverse-proxies to another container over the compose network. It
+      # doesn't advertise subnet routes or forward raw tailnet traffic to a
+      # host IP (TS_ROUTES / TS_TAILNET_TARGET_IP) — the kernel-networking
+      # (TS_USERSPACE=false) cases that need /dev/net/tun + NET_ADMIN.
+    volumes:
+      # Named volume: the tailnet machine identity/keys persist across
+      # `compose down` and image updates; `down -v` drops it (re-auth needed).
+      - tailscale-state:/var/lib/tailscale
+      # Bind-mounted as a single file. Tailscale's directory-watch reload for
+      # TS_SERVE_CONFIG can miss updates to a file bind-mounted this way —
+      # after editing tailscale-serve.json, restart the sidecar to be sure
+      # the change took:
+      #   docker compose -f compose.yaml -f compose.tailscale.yaml restart tailscale
+      - ./tailscale-serve.json:/config/serve.json:ro
+
+volumes:
+  tailscale-state:

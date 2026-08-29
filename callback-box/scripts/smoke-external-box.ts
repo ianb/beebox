@@ -29,15 +29,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
+import { BOX_BUILT_DEPENDENCIES } from "../src/core/box/package.js";
 import { isRecord } from "../src/lib/is-record.js";
-
-/** Native-module deps whose install scripts a fresh `pnpm install`/`dlx` must
- *  be told to trust (pnpm 10 blocks all of them by default) — kept in sync
- *  with the `pnpm.onlyBuiltDependencies` list `scaffoldPackageRoot` writes
- *  into the box's own `package.json` (`src/core/box/package.ts`). The `dlx`
- *  step below needs its own copy of this list because it runs BEFORE that
- *  package.json exists. */
-const BUILT_DEPENDENCIES = ["better-sqlite3", "esbuild", "@google/genai", "protobufjs"];
 
 /** A gate step (command or assertion) failed. `label` names the step;
  *  `detail` carries the full diagnostic (command line, stdout/stderr, or
@@ -73,18 +66,36 @@ interface RunSpec {
   env?: NodeJS.ProcessEnv;
 }
 
+/** The environment a stranger's shell would have: `pnpm run smoke` injects
+ *  `npm_config_*` / `npm_*` / `pnpm_config_*` from THIS package's config into
+ *  its children, and a child `pnpm install` in the box reads them as its own
+ *  config (an empty `npm_config_frozen_lockfile`, `node_linker=hoisted`, the
+ *  reporter, …) — the box install then fails, silently, in a way it never
+ *  does from a plain terminal. Strip them. */
+function strangerEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (/^(npm_|pnpm_config_|PNPM_SCRIPT_SRC_DIR$)/i.test(k)) continue;
+    env[k] = v;
+  }
+  return env;
+}
+
 /** Run one gate step, timing it and throwing with full output on failure. */
 async function step(label: string, spec: RunSpec): Promise<void> {
   const t0 = process.hrtime.bigint();
   const result = await execa(spec.file, spec.args, {
     cwd: spec.cwd,
-    env: spec.env,
+    env: spec.env ?? strangerEnv(),
+    extendEnv: false,
     reject: false,
     all: true,
   });
   if (result.exitCode !== 0) {
     const command = spec.file + " " + spec.args.join(" ");
-    throw new SmokeStepError(label, command + "\n" + (result.all ?? ""));
+    // A spawn failure or signal death leaves `all` empty — say what happened.
+    const why = `exit ${String(result.exitCode)}${result.signal ? ` (${result.signal})` : ""}: ${result.shortMessage}`;
+    throw new SmokeStepError(label, `${command}\n${why}\n${result.all ?? ""}`);
   }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6;
   process.stderr.write("[smoke] ok: " + label + " (" + (ms / 1000).toFixed(1) + "s)\n");
@@ -183,7 +194,7 @@ async function scaffold(args: { tarball: string; boxDir: string }): Promise<void
     file: "pnpm",
     args: [
       "dlx",
-      ...BUILT_DEPENDENCIES.map((d) => "--allow-build=" + d),
+      ...BOX_BUILT_DEPENDENCIES.map((d) => "--allow-build=" + d),
       "--package",
       args.tarball,
       "cb",
@@ -191,7 +202,7 @@ async function scaffold(args: { tarball: string; boxDir: string }): Promise<void
       ".",
     ],
     cwd: args.boxDir,
-    env: { ...process.env, CB_INIT_CALLBACK_BOX_SPEC: "file:" + args.tarball },
+    env: { ...strangerEnv(), CB_INIT_CALLBACK_BOX_SPEC: "file:" + args.tarball },
   });
 
   // Step 2: the real install — resolves the `file:<tarball>` dependency

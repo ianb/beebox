@@ -1,6 +1,6 @@
 ---
 title: "Installation: what's verified, what still needs testing, what's not built yet"
-workstream: installation-process
+workstream: install-remaining
 design: ../../callback-box/docs/plans/installation-story.md
 needs: [manual-testing]
 priority: important
@@ -73,6 +73,38 @@ section.
 Items 1–4 are a single afternoon with a $5 VPS + a Mac; items 6–11 are
 each their own decision-then-build. Nothing here blocks the
 source-available drop except by the boxholder's own judgment.
+
+## Ledger (2026-08-29, `install-remaining`)
+
+Per item: what the workstream verified by execution, what still needs the
+boxholder's hands, and the exact ask. The boxholder clears `manual-testing`
+per item; nothing here is cleared by the agent.
+
+| # | Item | Agent-verified | Boxholder step | Status |
+|---|---|---|---|---|
+| 1 | ACME / Let's Encrypt | compose + Caddyfile path re-run via `smoke-vps-install.sh` (internal CA) | follow "Checklist: proving a fresh public deployment" in `docs/docker-install.md`; paste the `certificate obtained` line + two `curl -sI` first lines | **blocked on you** (~30 min, VPS + A record) |
+| 2 | Tailscale-only | sidecar overlay `docker/compose.tailscale.yaml` + `tailscale-serve.json` validate with `docker compose config`; host-daemon path unexercised | (a) sidecar: put `TS_AUTHKEY=` in `docker/.env`, run the overlay command in the doc, open `https://<hostname>.<tailnet>.ts.net/`; (b) host-daemon: `cb serve` a scratch box, `cb tailscale setup --target <port>`, then `cb tailscale stop` | **blocked on you** (5 min + 2 min) |
+| 3 | `claude auth login` in-container | CLI in the image prints the sign-in URL and blocks on stdin for the page's code (probe, no real login); doc rewritten for the code step | `docker compose run --rm box claude auth login`, open the URL, paste the code; then `docker compose run --rm box claude auth status`. Separately: laptop `claude setup-token` → `.env` → `docker compose up -d` → `auth status` | **blocked on you** (3 min each) |
+| 4 | macOS/Homebrew | every brew formula / pip name in the doc resolves; `pnpm run doctor` passes on a maintained Mac | decide whether a factory-fresh Mac walkthrough is worth doing; doc now states the exact status | **decision** |
+| 5 | Windows/WSL2 | — | stance written into `developer-install.md` ("native unsupported; WSL2 = Linux path, unwalked"); confirm or change | **decision** |
+| 6–11 | not-built rungs | — | each is its own decision-then-build; 11 (root README front door) is the cheap one and unblocks nothing else; 6 (npm publish + image) is the real gate to turnkey | **unchanged** |
+
+Harness re-run on today's main (Node 24, Claude Code 2.1.251), 2026-08-29:
+
+- `smoke-dev-install.sh` — PASS (186s); doctor 13/14 with only "Claude auth"
+  failing, as asserted.
+- `smoke-docker.sh` — FAILED on first run: the image build's `pnpm add`
+  allowlist lacked `@googleworkspace/cli` (a postinstall-script dependency
+  added since July; pnpm 10 makes an unapproved build a hard error). Fixed
+  in the Dockerfile and in the same list in `scripts/smoke-external-box.ts`
+  / `scripts/smoke-upgrade.ts`. Result after the fix: see below.
+- `smoke-vps-install.sh` — FAILED on first run at the in-dind `git clone`
+  (EACCES copying a pack from the read-only source mount under Docker
+  Desktop 29). Fixed with `--no-local`. Result after the fix: see below.
+- Claude CLI in the image (2.1.251): `claude auth login` prints
+  `https://claude.com/cai/oauth/authorize?...`, then blocks at
+  `Paste code here if prompted >`; a wrong code prints `Invalid code` and
+  keeps waiting. `claude setup-token` still exists. Doc rewritten to match.
 
 ## Manual testing
 

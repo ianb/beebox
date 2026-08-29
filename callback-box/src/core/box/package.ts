@@ -56,6 +56,23 @@ function defaultCallbackBoxSpec(engineVersion: string): string {
   return installed ? `^${engineVersion}` : `link:${PACKAGE_ROOT}`;
 }
 
+/**
+ * Dependencies whose install scripts a box's `pnpm install` must be allowed
+ * to run (pnpm 10 blocks every postinstall by default; non-interactively a
+ * blocked build is a hard error). Written into each box's package.json as
+ * `pnpm.onlyBuiltDependencies` and passed as `--allow-build` flags by the
+ * smoke scripts. The two shell copies — `docker/Dockerfile` and
+ * `docker/entrypoint.sh` — must be updated by hand; `docker/smoke-docker.sh`
+ * fails the image build when they drift.
+ */
+export const BOX_BUILT_DEPENDENCIES = [
+  "better-sqlite3",
+  "esbuild",
+  "@google/genai",
+  "protobufjs",
+  "@googleworkspace/cli",
+];
+
 export interface BoxTarget {
   mode: BoxInitMode;
   /** The operational root — where `.cb-box`, `box/`, `config/`, etc. live (or will). */
@@ -236,7 +253,7 @@ export async function scaffoldPackageRoot(
     // release smoke test's `cb serve` step, which failed exactly this way
     // against a real fresh install.
     pnpm: {
-      onlyBuiltDependencies: ["better-sqlite3", "@google/genai", "esbuild", "protobufjs"],
+      onlyBuiltDependencies: BOX_BUILT_DEPENDENCIES,
     },
   };
   await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
