@@ -20,7 +20,6 @@ import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { bundleView } from "../views/compiler.js";
-import { cardBasename } from "../../shared/attach-path.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -46,10 +45,10 @@ async function hasOwningCard(sourcePath: string, root: string): Promise<boolean>
   if (attachIndex === -1) return false;
   const attachName = segments[attachIndex];
   if (attachName === undefined) return false;
-  const ownerStem = attachName.slice(0, -".attach".length);
+  const ownerCard = `${attachName.slice(0, -".attach".length)}.card`;
   const parent = path.join(root, ...segments.slice(0, attachIndex));
   const entries = await fs.readdir(parent);
-  return entries.some((entry) => entry.endsWith(".card") && cardBasename(entry).toLowerCase() === ownerStem.toLowerCase());
+  return entries.some((entry) => entry.toLowerCase() === ownerCard.toLowerCase());
 }
 
 export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void {
