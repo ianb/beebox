@@ -117,11 +117,12 @@ export function resolveFeatures(stored?: FeatureMap | null): FeatureMap {
  * map, possibly empty.
  */
 export function mergeSeedFeatures(input: {
+  box?: Record<string, string> | null | undefined;
   landmark?: Record<string, string> | null | undefined;
   request?: Record<string, string> | null | undefined;
 }): FeatureMap {
   const out: FeatureMap = {};
-  for (const source of [input.landmark, input.request]) {
+  for (const source of [input.box, input.landmark, input.request]) {
     if (!source) continue;
     for (const [name, value] of Object.entries(source)) {
       if (isKnownFeature(name) && isValidValue(name, value)) out[name] = value;

@@ -39,6 +39,7 @@ export {
   getChatHistory,
   getChatSessions,
   getChatStatus,
+  getNewChatFeatures,
   setDefaultChatModel,
   interruptChat,
   postAudioForHqTranscription,

@@ -24,6 +24,7 @@ import {
   VoicePanel, transcriptionServiceLabel, hqTranscriptionServiceLabel,
   type TranscriptionServiceOption, type HqTranscriptionOption,
 } from "./VoiceChip-panels";
+import { HqPreferenceRow, type HqDefaultsState } from "./HqPreferenceRow";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
@@ -67,6 +68,7 @@ function HqIcon() {
   );
 }
 
+
 export interface VoiceChipFaceState {
   muted: boolean;
   narrationEnabled: boolean;
@@ -108,6 +110,7 @@ interface VoiceChipBodyProps {
   onToggleNarration: () => void;
   hqDictationEnabled: boolean;
   onToggleHqDictation: () => void;
+  hqDefaults: HqDefaultsState;
   onOpenVoice: () => void;
   onBackToRoot: () => void;
   currentService: string | null;
@@ -125,7 +128,7 @@ interface VoiceChipBodyProps {
 function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
   const {
     panel, muted, onToggleMute, narrationEnabled, onToggleNarration,
-    hqDictationEnabled, onToggleHqDictation, onOpenVoice,
+    hqDictationEnabled, onToggleHqDictation, hqDefaults, onOpenVoice,
     onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService,
   } = props;
@@ -147,17 +150,12 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
           >
             {narrationEnabled ? "✓ " : ""}Narration mode
           </MenuItem>
-          <MenuItem
-            id="cb-voice-hq-dictation"
-            onClick={onToggleHqDictation}
-            icon={
-              <span className={hqDictationEnabled ? undefined : "opacity-40"}>
-                <HqIcon />
-              </span>
-            }
-          >
-            {hqDictationEnabled ? "✓ " : ""}HQ dictation
-          </MenuItem>
+          <HqPreferenceRow
+            enabled={hqDictationEnabled}
+            onToggle={onToggleHqDictation}
+            defaults={hqDefaults}
+            icon={<HqIcon />}
+          />
           <MenuDivider />
           <MenuItem id="cb-voice-settings" onClick={onOpenVoice} keepOpen>
             <span className="flex justify-between gap-2 w-full">
@@ -189,6 +187,8 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
 }
 
 export interface VoiceChipProps {
+  contextDir: string | null;
+  canManageDefaults: boolean;
   muted: boolean;
   onToggleMute: () => void;
   narrationEnabled: boolean;
@@ -206,6 +206,8 @@ export interface VoiceChipProps {
  * are primitives and `useCallback`s, so the memo holds.
  */
 export const VoiceChip = memo(function VoiceChip({
+  contextDir,
+  canManageDefaults,
   muted,
   onToggleMute,
   narrationEnabled,
@@ -230,6 +232,35 @@ export const VoiceChip = memo(function VoiceChip({
   });
   const currentService = transcriptionConfigQuery.data?.service ?? null;
   const currentHqService = transcriptionConfigQuery.data?.hqService ?? null;
+  const hqDefaultsQuery = trpc.landmarks.hqPreferences.useQuery(
+    { dir: contextDir },
+    { enabled: canManageDefaults },
+  );
+  const setLandmarkHq = trpc.landmarks.setHqPreference.useMutation({
+    onSuccess: (result) => {
+      void utils.landmarks.hqPreferences.invalidate();
+      if (result.commitWarning !== null) toastError(result.commitWarning);
+    },
+    onError: (error) => { toastError("Failed to save the landmark HQ setting", { cause: error }); },
+  });
+  const setBoxHq = trpc.admin.updateBoxConfig.useMutation({
+    onSuccess: (result) => {
+      void utils.landmarks.hqPreferences.invalidate();
+      if (result.commitWarning !== null) toastError(result.commitWarning);
+    },
+    onError: (error) => { toastError("Failed to save the box HQ setting", { cause: error }); },
+  });
+  const hqDefaults: HqDefaultsState = {
+    canManage: canManageDefaults,
+    hasLandmark: hqDefaultsQuery.data?.hasLandmark ?? false,
+    landmark: hqDefaultsQuery.data?.landmark ?? "inherit",
+    box: hqDefaultsQuery.data?.box ?? "off",
+    pending: hqDefaultsQuery.isLoading || setLandmarkHq.isPending || setBoxHq.isPending,
+    onLandmarkChange: (value) => {
+      if (contextDir !== null) setLandmarkHq.mutate({ dir: contextDir, value });
+    },
+    onBoxChange: (value) => { setBoxHq.mutate({ hqDictation: value }); },
+  };
 
   const onSelectTranscriptionService = (service: TranscriptionServiceOption) => {
     if (currentService === service) return;
@@ -249,7 +280,7 @@ export const VoiceChip = memo(function VoiceChip({
       align="right"
       // w-64 (not the menu-default w-56) buys the root panel's "Live: … ·
       // HQ: …" summary line room before it truncates.
-      width="w-64"
+      width="w-[min(24rem,calc(100vw-1rem))]"
       panelIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
@@ -276,6 +307,7 @@ export const VoiceChip = memo(function VoiceChip({
         onToggleNarration={onToggleNarration}
         hqDictationEnabled={hqDictationEnabled}
         onToggleHqDictation={onToggleHqDictation}
+        hqDefaults={hqDefaults}
         onOpenVoice={() => setPanel("voice")}
         onBackToRoot={() => setPanel("root")}
         currentService={currentService}

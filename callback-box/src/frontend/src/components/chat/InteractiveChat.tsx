@@ -210,7 +210,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const groups = useMemo(() => groupMessages(messages), [messages]);
 
-  const model = useChatModelFeatures({ sessionId, groupCount: groups.length, send, startEngine, startModel });
+  const model = useChatModelFeatures({ sessionId, contextDir: effectiveContextDir, groupCount: groups.length, send, startEngine, startModel });
   const mute = useChatMute();
   const tabs = useChatTabs();
   const { activeView } = tabs;

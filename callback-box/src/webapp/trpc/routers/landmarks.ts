@@ -12,7 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
 import { z } from "zod";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure, ownerProcedure } from "../trpc.js";
 import {
   resolveLandmark,
   type ResolvedLink,
@@ -23,6 +23,8 @@ import type { LandmarkProblem } from "../../../core/landmark/summaries.js";
 import { parseLandmarkFields } from "../../../schemas/landmark.js";
 import { readLandmarkSymbol } from "../../../core/landmark/symbol.js";
 import { errorMessage } from "../../../lib/error-guards.js";
+import { loadHqDictationDefault } from "../../../core/box/config.js";
+import { setLandmarkHqPreference } from "../../../core/landmark/hq-preference.js";
 
 export interface LandmarkPayload {
   /** Box-relative path of the landmark card. */
@@ -110,6 +112,31 @@ async function loadLandmarkPayload(
 }
 
 export const landmarksRouter = router({
+  hqPreferences: ownerProcedure
+    .input(z.object({ dir: z.string().refine((d) => !d.startsWith("/") && !d.split("/").includes("..")).nullable() }))
+    .query(async ({ ctx, input }) => {
+      const pattern = input.dir === null ? null : input.dir === "" ? "*.landmark.card" : `${input.dir}/*.landmark.card`;
+      const matches = pattern === null ? [] : await glob(pattern, { cwd: ctx.boxRoot, nodir: true });
+      const relPath = matches.toSorted()[0];
+      let landmark: "inherit" | "on" | "off" = "inherit";
+      if (relPath !== undefined) {
+        const loaded = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot });
+        const value = loaded.status === "ok" ? loaded.payload.features["hq-dictation"] : undefined;
+        if (value === "on" || value === "off") landmark = value;
+      }
+      return { box: await loadHqDictationDefault(ctx.boxRoot), landmark, hasLandmark: relPath !== undefined };
+    }),
+
+  setHqPreference: ownerProcedure
+    .input(z.object({
+      dir: z.string().refine((d) => !d.startsWith("/") && !d.split("/").includes("..")),
+      value: z.enum(["inherit", "on", "off"]),
+    }))
+    .mutation(async ({ ctx, input }) => setLandmarkHqPreference({
+      boxRoot: ctx.boxRoot,
+      contextDir: input.dir,
+      value: input.value,
+    })),
   list: publicProcedure.query(async ({ ctx }): Promise<{
     landmarks: LandmarkPayload[];
     problems: LandmarkProblem[];

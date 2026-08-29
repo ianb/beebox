@@ -100,16 +100,16 @@ JSON.stringify(resolveFeatures(null))
 ## Seeding a new session
 
 `mergeSeedFeatures` builds the initial feature map for a brand-new chat by
-layering the client's pre-session choices (e.g. narration toggled on before
-the first message) over any landmark defaults. The explicit client choice
+layering box, landmark, then client pre-session choices. The most local value
 wins on conflict.
 
 ```ts
 JSON.stringify(mergeSeedFeatures({
+  box: { narration: "on", "hq-dictation": "on" },
   landmark: { narration: "off", prose: "off" },
   request: { narration: "on" },
 }))
-=> {"narration":"on","prose":"off"}
+=> {"narration":"on","hq-dictation":"on","prose":"off"}
 ```
 
 Either source may be absent (no landmark, or no pre-session toggles). Missing

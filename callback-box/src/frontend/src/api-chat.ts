@@ -134,6 +134,10 @@ export async function getChatFeatures(params: { sessionId: string }): Promise<{ 
   return trpcClient.chat.features.query({ session: params.sessionId });
 }
 
+export async function getNewChatFeatures(params: { contextDir: string | null }): Promise<Record<string, string>> {
+  return trpcClient.chat.newFeatures.query(params);
+}
+
 export async function setChatFeature(params: { sessionId: string; feature: string; value: string }): Promise<{ ok: boolean; features: Record<string, string> }> {
   return trpcClient.chat.setFeature.mutate({ session: params.sessionId, feature: params.feature, value: params.value });
 }
