@@ -1,6 +1,6 @@
 ---
 title: "iOS small cleanups: legacy STT off-device partials, temp WAV leak, dev pairing defaults, duplicate extension, no strict concurrency"
-workstream: unknown
+workstream: chores-burn-down
 area: callback-box
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
@@ -37,3 +37,10 @@ A bundle of small, independent iOS cleanups surfaced in the 2026-07-17 companion
   and App Intents metadata extraction runs despite the target not linking AppIntents.framework. Remove
   the obsolete icon slot and disable the inapplicable metadata-generation build step/setting so a clean
   `xcodebuild -quiet ... build` is actually quiet.
+
+## Implemented in this workstream
+
+This commit keeps the manual-pairing label and localhost URL defaults in debug
+builds only. It also consolidates `String.nilIfEmpty` into one module-wide
+extension. The legacy speech privacy, temporary WAV cleanup, strict concurrency,
+stale web comment, and simulator-warning items remain open.
