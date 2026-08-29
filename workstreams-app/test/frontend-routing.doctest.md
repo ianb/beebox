@@ -1,8 +1,8 @@
 # Frontend routing
 
-The issues index must remain the exact route. Legacy public/private and
-open/closed issue paths match redirect-only routes without a catch-all that can
-capture the index and redirect forever.
+The issues index is the only frontend issue route. Deep links were retired, so
+the route tree must not quietly recreate a public/private or open/closed
+redirect path.
 
 ```ts setup
 import { createMemoryHistory } from "@tanstack/react-router";
@@ -16,10 +16,9 @@ const leaf = (pathname: string): string | undefined =>
 ```ts
 JSON.stringify([
   leaf("/issues"),
-  leaf("/issues/bugs/example.md"),
-  leaf("/issues/closed/bugs/example.md"),
-  leaf("/issues/private/bugs/example.md"),
-  leaf("/issues/private/closed/bugs/example.md"),
+  ...Object.values(router.routesById)
+    .map((route) => route.fullPath)
+    .filter((path) => path.startsWith("/issues/") && path !== "/issues"),
 ])
-=> ["/app/issues","/app/issues/$category/$filename","/app/issues/closed/$category/$filename","/app/issues/private/$category/$filename","/app/issues/private/closed/$category/$filename"]
+=> ["/app/issues"]
 ```
