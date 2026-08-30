@@ -1,12 +1,21 @@
 ---
 title: "In-box view authoring guidance: use ref/href conventions in view data, not ad-hoc url arrays"
-workstream: unattached
+workstream: link-vocabulary-guidance
 area: callback-box
 labels: [views, agent-guidance]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — boxholder saw a view built with a bare urls string array"
+resolution: implemented
 ---
+
+Resolved by adding the current `ref`/`href` object-envelope vocabulary to
+the always-loaded card guide and the generated view-authoring reference. Two
+direct-knowledge audits cover internal refs and external source envelopes. The
+schema-side standardization decision remains parked; this change does not rename
+fields or migrate card data. No validator warning was added: detecting an
+intentional bare-string URL array without false positives is not a small change,
+and the requested guidance plus audits cover this workstream's scope.
 
 When a box agent builds a custom view, nothing steers it toward the repo's
 field conventions, so it invents shapes — the observed case:
