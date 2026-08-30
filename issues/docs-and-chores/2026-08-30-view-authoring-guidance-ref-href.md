@@ -33,6 +33,18 @@ loads:
   opinion on data shapes, and should it nudge (a warn on `^urls?:` string
   arrays is cheap and targeted — but that's lint-adjacent, keep it a warn).
 
+Boxholder generalization (same day): **schema link fields should rhyme with
+`{% source %}`** — the same attribute names (`ref` / `href` / `usage` /
+`retrieved` / `version`), the same envelope shape, whether the link lives in
+a tag, a card field, or view data. One vocabulary across the three surfaces,
+so an agent that learned the tag already knows the field. That widens this
+item beyond view guidance: the standardize-card-provenance decision
+(`../decisions/2026-08-09-standardize-card-provenance-field.md`) is the
+schema-side half — its four provenance spellings (`source:` string,
+`RecipeSource`, `link`, `from`) are exactly the rhyme failing — and whoever
+takes either should take both, with `{% source %}`'s attribute set as the
+tuning fork.
+
 Related: `2026-08-29-rrule-as-universal-field-convention.md` (the envelope
 instinct generalized), `2026-07-22-embed-json-schema-in-card-docs.md` (schema
 into agent docs), the `{% source %}` retrieved/href work (landed 2026-08-29)
