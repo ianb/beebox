@@ -1,7 +1,7 @@
 ---
-title: "chat.history parse cost is unbounded per request — concurrent fetches of a fat transcript OOM cb serve (box-family crashes ×4)"
+title: "chat.history parse cost is unbounded per request — concurrent fetches of a fat transcript OOM bbx serve (box-family crashes ×4)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: ios-capture-upload-diag worktree — live-measured on prod during the 2026-08-03/04 box-family incident
 resolution: implemented
@@ -10,12 +10,12 @@ resolution: implemented
 > **Fixed.** Directions 1–3 landed on main (`ac0d7d65`, `add0c339`, `546310cb`)
 > and are prod-verified: the 10-parallel `chat.history` storm dropped from
 > **+216 MB → +0.04 MB** heap (read coalescing + an oversize-line parse bound +
-> client refetch backoff/dedupe). The temporary `cb` instrumentation patch and the
-> `/home/callback/diag` dir are removed. Direction 4 (strip/sidecar multi-MB
+> client refetch backoff/dedupe). The temporary `bbx` instrumentation patch and the
+> `/home/beebox/diag` dir are removed. Direction 4 (strip/sidecar multi-MB
 > payloads at write/render) is the remaining longer-term hardening, spun out to
 > [strip-multi-mb-payloads-from-transcript-entries](../code-quality/2026-08-05-strip-multi-mb-payloads-from-transcript-entries.md).
 
-Four V8 heap OOMs of prod box-family's `cb serve` (2026-08-03 21:39, 2026-08-04
+Four V8 heap OOMs of prod box-family's `bbx serve` (2026-08-03 21:39, 2026-08-04
 02:09, 02:10, 17:18 UTC — all at the ~1.9GB default cap, all during
 phone-attached use; the 17:18 one 48s after `[ChatSession:init] Loaded
 session`). The 2026-08-01 bounded-retention fix
@@ -55,12 +55,12 @@ and this item stays open regardless because the diagnostic instrumentation
 below still needs removal after prod verification.
 
 1. ~~**Coalesce/single-flight history reads per (session, slice)**~~ — done.
-   `loadSessionHistory` (`callback-box/src/core/chat/session/load-history.ts`)
+   `loadSessionHistory` (`beebox/src/core/chat/session/load-history.ts`)
    keys in-flight reads on `(logPath, slice)` and hands concurrent callers the
    same promise. The entry is dropped on settle, so it is a coalescing window,
    not a cache. The shared entries array is frozen.
 2. ~~**Bound per-line parse cost**~~ — done.
-   `callback-box/src/cli/lib/session-oversize.ts` holds the threshold
+   `beebox/src/cli/lib/session-oversize.ts` holds the threshold
    (`MAX_SESSION_LINE_BYTES`, 256 KB of UTF-8) and the stub entry the scan
    records in place of a line it refuses to parse. The stub is an ordinary
    `SessionEntry` with one text block, so the frontend needed nothing. It counts
@@ -97,15 +97,15 @@ concurrency multiplier — the mechanism that reached the 1.9GB cap — is gone.
 ## Diagnostic infrastructure (REMOVED 2026-08-04 after the acceptance run)
 
 All of the below is torn down: the wrapper patch (deploys had already wiped
-it; left stock), the `/home/callback/diag` dir, the inspector helper script,
+it; left stock), the `/home/beebox/diag` dir, the inspector helper script,
 and the wrapper backup. The technique (SIGUSR1 → inspector → `Runtime.evaluate`
 memoryUsage / `HeapProfiler.takeHeapSnapshot`) is reusable without any
 pre-arming. Original notes kept below for the record.
 
 Prod serve children run with `--heapsnapshot-near-heap-limit=1
---heapsnapshot-signal=SIGUSR2 --diagnostic-dir=/home/callback/diag` via a
-TEMPORARY patch to `/opt/callback/callback-box/bin/cb` (`run_bundle`, serve
-subcommand only; backup at `cb.pre-oom-instr`). **Every deploy silently wipes
+--heapsnapshot-signal=SIGUSR2 --diagnostic-dir=/home/beebox/diag` via a
+TEMPORARY patch to `/opt/beebox/beebox/bin/bbx` (`run_bundle`, serve
+subcommand only; backup at `bbx.pre-oom-instr`). **Every deploy silently wipes
 the patch** (it was wiped twice on 2026-08-04, which is why crash #4 left no
 snapshot) — re-apply after deploys while any of this remains under
 investigation, or remove it once the fix lands. `kill -USR1 <child>` +

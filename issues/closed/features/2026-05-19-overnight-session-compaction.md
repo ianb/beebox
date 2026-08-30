@@ -1,18 +1,18 @@
 ---
 title: "overnight session compaction"
 workstream: unknown
-design: ../../../callback-box/docs/implemented-plans/chat-review.md
-area: callback-box
+design: ../../../beebox/docs/implemented-plans/chat-review.md
+area: beebox
 resolution: implemented
 ---
 
 **Resolved 2026-07-28** — implemented under the name **chat review** (not
 "compaction"; that word was reserved for the SDK's context-window compaction).
-See [docs/chat-review.md](../../../callback-box/docs/chat-review.md) for the
-current reference and [the design doc](../../../callback-box/docs/implemented-plans/chat-review.md)
+See [docs/chat-review.md](../../../beebox/docs/chat-review.md) for the
+current reference and [the design doc](../../../beebox/docs/implemented-plans/chat-review.md)
 for rationale/history. Landed on `main` via the `worktree-compacting` branch.
 
-**Designed 2026-07-28** as [chat review](../../../callback-box/docs/implemented-plans/chat-review.md).
+**Designed 2026-07-28** as [chat review](../../../beebox/docs/implemented-plans/chat-review.md).
 The plan covers the engine, the size gate, and titling; it deliberately defers
 the fan-out to the four sinks listed below, none of which exist yet. Note the
 vocabulary decision there: the subsystem is **chat review**, never "compaction"
@@ -39,7 +39,7 @@ Three requirements added by the boxholder beyond the original filing:
   every card type, like `contains` itself); `contains` stays one sentence,
   regenerated from it.
 
-Chat sessions currently leave transcripts but no synthesized residue. A nightly (or end-of-session-plus-delay) compaction pass would extract what's worth keeping: decisions made, action items, hunches formed, things learned about the boxholder, things to follow up on. The standard auto-compaction in chat systems is generic; for callback-box it should be driven by a *custom compaction message* shaped to extract the things this system cares about, not generic compression.
+Chat sessions currently leave transcripts but no synthesized residue. A nightly (or end-of-session-plus-delay) compaction pass would extract what's worth keeping: decisions made, action items, hunches formed, things learned about the boxholder, things to follow up on. The standard auto-compaction in chat systems is generic; for beebox it should be driven by a *custom compaction message* shaped to extract the things this system cares about, not generic compression.
 
 This is also the *engine* that would update several other ideas in this file. None of them update themselves; something has to look back at recent sessions and extract from them:
 

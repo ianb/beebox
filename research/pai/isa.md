@@ -188,9 +188,9 @@ tool-checkable) is a good touch.
 - **No validation.** For all the talk of fixed sections and required formats, nothing
   checks an ISA except the model and one frontmatter-reading hook.
 
-## What cb should take
+## What bbx should take
 
-cb already has the *execution* half (procedures, procedure-runs, jobs, structured
+bbx already has the *execution* half (procedures, procedure-runs, jobs, structured
 output). What it lacks is the *specification* half: a procedure run has steps
 (actions) but no machine-checkable statement of the end state.
 
@@ -198,7 +198,7 @@ Sketch — a criteria block on `procedure-run` (or a procedure-level template fo
 
 - At run start the agent writes 3–15 criteria, each a claim about the **end state**
   (not an action), each naming a probe a tool can answer yes/no. At least one `Anti:`
-  criterion. cb's schema layer can actually validate this, which PAI cannot.
+  criterion. bbx's schema layer can actually validate this, which PAI cannot.
 - Criteria get stable IDs; edits during the run append, split (`N.M`), or tombstone —
   never renumber.
 - Each criterion is checked with one line of evidence (command + output excerpt),
@@ -211,15 +211,15 @@ Sketch — a criteria block on `procedure-run` (or a procedure-level template fo
   already has the diff) captures the value.
 - Dead ends recorded in the run ("tried X, failed because Y, don't retry") are
   exactly the kind of thing the next run over the same material should see; this
-  fits cb's existing pattern of runs living in `procedure/runs/`.
+  fits bbx's existing pattern of runs living in `procedure/runs/`.
 
-Where the granularity rule earns its keep in cb specifically: scheduled and
+Where the granularity rule earns its keep in bbx specifically: scheduled and
 triage-driven procedures run unattended, so "the agent believed it finished" is
 currently the main completion signal. Probe-named criteria turn that into "these
 commands returned these outputs," which is auditable from the run card alone — same
-spirit as cb's git-trailer provenance, applied to task completion.
+spirit as bbx's git-trailer provenance, applied to task completion.
 
 Explicitly skip: effort tiers, count floors, the twelve-section body (Problem /
-Vision / Principles etc. are plan-document sections — cb has `docs/plans/` and the
-cb-plan skill for that altitude), and the phase state machine (the reactor already
+Vision / Principles etc. are plan-document sections — bbx has `docs/plans/` and the
+bbx-plan skill for that altitude), and the phase state machine (the reactor already
 is one, in code).

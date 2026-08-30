@@ -1,7 +1,7 @@
 ---
 title: "A capture's confirmation only exists in the chat, which the user has usually already left"
 workstream: capture-chip-states
-area: callback-box
+area: beebox
 labels: [capture, chat, notifications]
 filed-by: agent
 discovered-by: Ian

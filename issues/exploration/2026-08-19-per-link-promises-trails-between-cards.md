@@ -1,7 +1,7 @@
 ---
 title: "Links that promise something: frontmatter trails with a per-link \"what you will find\""
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [cards, links, search, embeddings]
 filed-by: agent
@@ -56,7 +56,7 @@ and matching a query against them is matching intent to intent. Relevance stops
 being treated as intrinsic to a document and becomes relational, which is what
 it actually is.
 
-Worth testing against `cb search` (Orama, full-text plus vector) rather than
+Worth testing against `bbx search` (Orama, full-text plus vector) rather than
 assuming — the question is whether a promise-index complements the content
 index or competes with it.
 
@@ -66,7 +66,7 @@ This is a discipline on machinery that is already mature, not a new subsystem:
 `src/shared/ref-path.ts` (the three-form ref rule), `core/canonical-refs.ts` and
 `canonicalize-refs.ts` (checking and rewriting), the `normalize-ref-keys`
 migration that already moved bare-string refs onto a `ref` key, and ref repair on
-move via `cb mv` and `doc-check --fix`.
+move via `bbx mv` and `doc-check --fix`.
 
 It also avoids the problem the Microcosm reading surfaced: these links are
 **in-band** — legible by reading the card, no separate linkbase, and write access

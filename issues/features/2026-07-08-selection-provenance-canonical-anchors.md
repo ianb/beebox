@@ -1,13 +1,13 @@
 ---
 title: "selection provenance canonical anchors"
 workstream: unknown
-area: callback-box
+area: beebox
 needs: [design]
 priority: normal
 ---
 
 From the HoverSource review (`research/hoversource-review.md`). We already have a
-provenance standard — `data-cb-source` element tagging (`src/frontend/src/lib/source-tag.ts`,
+provenance standard — `data-bbx-source` element tagging (`src/frontend/src/lib/source-tag.ts`,
 `docs/data-source-tagging.md`) and text-selection capture (`SelectionCapture.tsx` +
 `lib/selection/position.ts`, feeding `chat/ChatSelections.tsx`). HoverSource (hover an
 element → copy its exact `file:line:col` for a coding agent) is the same idea aimed at
@@ -22,9 +22,9 @@ code, and surfaces two gaps in ours:
    improvement.
 
 2. **Only text selections are capturable; whole elements aren't.** Every element already
-   carries `data-cb-source`, but there's no affordance to hand the agent "*this card /
+   carries `data-bbx-source`, but there's no affordance to hand the agent "*this card /
    this list item*" without selecting prose. A **hover/point-to-capture** affordance
-   that surfaces the element's existing `data-cb-source` (+ `data-cb-source-item`) would
+   that surfaces the element's existing `data-bbx-source` (+ `data-bbx-source-item`) would
    extend capture beyond text, reusing `source-tag.ts` and complementing
    `SelectionCapture`.
 

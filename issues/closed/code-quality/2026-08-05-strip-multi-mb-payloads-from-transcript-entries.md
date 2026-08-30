@@ -2,7 +2,7 @@
 title: "Keep multi-MB payloads out of transcript entries the history path serves (strip/sidecar at write or render)"
 workstream: live-vs-stored
 resolution: wontfix
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — direction 4 spun out of the closed chat.history parse-OOM bug
 ---
@@ -85,6 +85,6 @@ file behind the SDK's back would put us in a race with its own resume reads.
 
 - [chat-history-parse-transient-oom](../bugs/2026-08-04-chat-history-parse-transient-oom.md)
   — the closed parent (directions 1–3 landed + verified).
-- The bounded-retention design: `callback-box/docs/implemented-plans/chat-history-oom-mobile-lock.md`.
+- The bounded-retention design: `beebox/docs/implemented-plans/chat-history-oom-mobile-lock.md`.
 - Sibling unbounded-bytes items: `turn-buffer-bounds-frames-not-bytes`,
   `session-retention-counts-entries-not-bytes`.

@@ -1,12 +1,12 @@
 ---
 title: "iOS: a stuck \"Sending message…\" persists across app restarts and doubles on a real send"
 workstream: emission-model
-area: callback-box
+area: beebox
 labels: [ios, chat, emissions]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from the iOS app
-design: ../../../callback-box/docs/implemented-plans/emission-model.md
+design: ../../../beebox/docs/implemented-plans/emission-model.md
 resolution: implemented
 ---
 
@@ -25,7 +25,7 @@ sent the app shows the row **twice** — the stale one plus the live one.
 ## Why restarting doesn't clear it
 
 This is durable state doing exactly what it was built to do.
-`ios-app/CallbackBox/Storage/PendingEmissionStore.swift` persists an ordered,
+`ios-app/BeeBox/Storage/PendingEmissionStore.swift` persists an ordered,
 box-scoped queue *before* webview delivery and replays it after relaunch —
 that is the feature that stops a send being lost when the app dies mid-flight.
 `NativeComposerView.swift:1391-1398` renders "Sending message…" for two states:

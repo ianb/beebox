@@ -1,7 +1,7 @@
 ---
 title: "A reloaded conversation shows [image not displayed] where your photos were"
 workstream: live-vs-stored
-area: callback-box
+area: beebox
 labels: [journey-findings]
 filed-by: agent
 discovered-by: agent

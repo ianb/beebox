@@ -2,7 +2,7 @@
 title: "hypothesis tracking"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 The agent forms suspicions constantly — "boxholder seems stressed about work this week," "the kitchen project may have stalled," "they're avoiding a particular family topic." These are different from facts and currently have nowhere to live: too provisional for a person/topic card, too important to discard. Without persistence the agent re-derives them each session or, worse, forgets and asks something the suspicion would have steered it away from.

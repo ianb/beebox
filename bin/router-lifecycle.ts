@@ -5,7 +5,7 @@
 // the state model only — the router (router.ts) owns the effects (spawning,
 // killing, pidfiles, HTTP probes) and drives transitions through here.
 //
-// Design (mirrors callback-box/src/core/chat/session/lifecycle.ts):
+// Design (mirrors beebox/src/core/chat/session/lifecycle.ts):
 //
 //   - A `WorktreeHandle` is ONE object per generation, created when a start is
 //     kicked off and NEVER replaced or copied. Identity lives on the handle:
@@ -21,7 +21,7 @@
 //     `LEGAL_TRANSITIONS`. It mutates `handle.lifecycle` in place — the shell
 //     identity is preserved; only the union value is swapped.
 //
-// bin/ can't import callback-box internals, so `invariant` is restated locally.
+// bin/ can't import beebox internals, so `invariant` is restated locally.
 
 /** The tail of a child's interleaved stdout+stderr, captured for the failed
  *  page so the user can see what went wrong without grepping the log file. */
@@ -97,7 +97,7 @@ export interface ReadyLifecycle {
    * When the source under this generation was first seen to have moved, or
    * `null` while it still matches. Reporting only: nothing in the router acts
    * on it. See the "why not restart" note in
-   * callback-box/docs/plans/dev-loop-lifecycle.md — the router's activity
+   * beebox/docs/plans/dev-loop-lifecycle.md — the router's activity
    * signal is HTTP-only, so a WebSocket-borne chat looks idle to it and there
    * is no moment it can prove is safe to replace a generation in.
    */
@@ -161,7 +161,7 @@ export interface WorktreeHandle {
   lifecycle: WorktreeLifecycle;
 }
 
-// --- invariant (local; bin/ can't import callback-box) ------------------------
+// --- invariant (local; bin/ can't import beebox) ------------------------
 
 export class WorktreeLifecycleError extends Error {
   constructor(message: string) {

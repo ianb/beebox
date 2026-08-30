@@ -1,7 +1,7 @@
 // Base-path handling and internal-link resolution for the static site.
 //
 // The site is served at different path prefixes depending on target: the dev
-// router serves it at /<worktree>/site/, GitHub Pages under /callback-box/, a
+// router serves it at /<worktree>/site/, GitHub Pages under /beebox/, a
 // custom domain at /. Rather than emit hand-relative links (fragile across
 // prefixes), every internal link is authored site-root-relative or
 // page-relative and resolved against a single base at build time. External

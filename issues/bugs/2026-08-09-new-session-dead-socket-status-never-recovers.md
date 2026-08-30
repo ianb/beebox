@@ -1,7 +1,7 @@
 ---
 title: "The stream watchdog can fail even when chat has an explicit session ID"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: browse-ws-auth — reconciling field-test evidence after the WebSocket auth fix
 labels: [soft-launch, field-test-findings]

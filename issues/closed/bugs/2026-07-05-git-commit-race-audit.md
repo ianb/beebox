@@ -10,7 +10,7 @@ non-connector sweep in f438f54b, telegram in 5c93f7a9, gmail/drive/calendar
 (incl. the directory-staging rework in google-calendar.ts) in 5dcd611e.
 Per-site decision was commitPaths everywhere; no process-wide mutex needed
 (cross-process same-path commits remain on the index-lock retry, recorded as
-deliberate). Plan: `callback-box/docs/implemented-plans/architectural-review-followups.md`
+deliberate). Plan: `beebox/docs/implemented-plans/architectural-review-followups.md`
 Track 2.
 
 Deferred from Track H (plan `docs/implemented-plans/architectural-review.md`): a card

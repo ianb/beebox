@@ -6,13 +6,13 @@
  * leaves a remark on a document, an agent reads it, acts, and clears it. They
  * never reach git, and they must survive a worktree cull — the third
  * persistence class the exhibits store established
- * (`callback-box/docs/plans/workstream-exhibits.md`), so the root derivation,
+ * (`beebox/docs/plans/workstream-exhibits.md`), so the root derivation,
  * marker guard, and containment posture here deliberately mirror
  * `workstreams-app/src/server/exhibits/store.ts` without importing it (the
  * resident-app precedent is to share patterns, not source, and `bin/` and the
  * app do not import across their package boundary at all).
  *
- * Design: `callback-box/docs/plans/document-comments.md`.
+ * Design: `beebox/docs/plans/document-comments.md`.
  *
  * TWO NAMESPACES, because a repository-relative path is not a unique document:
  *   tracked/<repo-relative>.comments.yaml            — follows the file everywhere
@@ -39,14 +39,14 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 // The canonical guards, rather than an `as` cast on a caught `unknown`
-// (`callback-box/code-style.md`). bin/ already imports from callback-box —
+// (`beebox/code-style.md`). bin/ already imports from beebox —
 // see bin/router-auth.ts.
-import { errnoCode, errorMessage } from "../../callback-box/src/lib/error-guards.js";
+import { errnoCode, errorMessage } from "../../beebox/src/lib/error-guards.js";
 import { InvalidCommentPathError } from "./comments-store-errors.js";
 // The canonical cross-process lock. Its docblock is explicit: "This is the
 // canonical lock for the project... Don't add a new lock surface elsewhere —
 // extend or wrap this instead."
-import { withFileLock as withCrossProcessLock } from "../../callback-box/src/lib/file-lock.js";
+import { withFileLock as withCrossProcessLock } from "../../beebox/src/lib/file-lock.js";
 
 /** Written when the store root is created; nothing writes to an unmarked directory. */
 export const STORE_MARKER = ".dev-comments";
@@ -58,7 +58,7 @@ export const COMMENTS_SUFFIX = ".comments.yaml";
 const STORE_VERSION = 1;
 
 /**
- * How the text arrived. Deliberately the same field and values as callback-box's
+ * How the text arrived. Deliberately the same field and values as beebox's
  * interactive input (`src/frontend/src/input/emission.ts:44`, and the wire
  * contract at `docs/mobile-contract.md:262`) — this tool does not share that
  * schema, but a developer reading both should not hold two words for one idea.
@@ -109,11 +109,11 @@ class UninitializedCommentStoreError extends Error {
 
 /**
  * The store sits beside the MAIN checkout, matching how the exhibits store
- * derives its root. `CALLBACK_COMMENTS_ROOT` overrides, for tests and for a
+ * derives its root. `BBX_COMMENTS_ROOT` overrides, for tests and for a
  * non-standard layout.
  */
 export function defaultStoreRoot(mainRoot: string): string {
-  const override = process.env["CALLBACK_COMMENTS_ROOT"];
+  const override = process.env["BBX_COMMENTS_ROOT"];
   if (override !== undefined && override !== "") return path.resolve(override);
   return path.join(path.dirname(path.resolve(mainRoot)), "dev-comments");
 }
@@ -177,7 +177,7 @@ export async function initStore(storeRoot: string): Promise<void> {
 
 /**
  * Refuse to write to a directory that is not a comment store. Without this, a
- * mistyped `CALLBACK_COMMENTS_ROOT` scatters files into an unrelated tree.
+ * mistyped `BBX_COMMENTS_ROOT` scatters files into an unrelated tree.
  */
 async function assertStoreInitialized(storeRoot: string): Promise<void> {
   const root = path.resolve(storeRoot);
@@ -436,7 +436,7 @@ function subjectFromStorePath(storeRelative: string): Subject | null {
 export async function listAll(storeRoot: string): Promise<StoreEntry[]> {
   const root = path.resolve(storeRoot);
   // A root that does not exist yet is genuinely empty. A root that EXISTS but
-  // is not a store is refused rather than walked: `CALLBACK_COMMENTS_ROOT=$HOME`
+  // is not a store is refused rather than walked: `BBX_COMMENTS_ROOT=$HOME`
   // would otherwise recurse through an unrelated tree and report what it found
   // there as comments.
   const rootExists = await fs.stat(root).then((stats) => stats.isDirectory(), () => false);

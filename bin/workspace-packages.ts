@@ -6,8 +6,8 @@
  * Both used to derive their own list from `pnpm-workspace.yaml`, and they
  * disagreed: lint-changed matched the longest package directory while
  * finish-preflight matched the first path segment, so a change under
- * `callback-box/pub-worker` — its own workspace package, with its own `test`,
- * `typecheck` and `lint` — was verified as if it were callback-box source and
+ * `beebox/pub-worker` — its own workspace package, with its own `test`,
+ * `typecheck` and `lint` — was verified as if it were beebox source and
  * got none of its own checks. See
  * issues/closed/code-quality/2026-08-25-nested-workspace-packages-misclassified.md.
  *
@@ -23,13 +23,13 @@ import { parse } from "yaml";
  * A workspace package whose verification a parent package owns, so it never
  * owns a path of its own.
  *
- * `callback-box/src/frontend` is its own package, but callback-box runs its
+ * `beebox/src/frontend` is its own package, but beebox runs its
  * checks: `lint:frontend` and `typecheck:frontend` shell into it, and its tests
- * are callback-box doctests under `callback-box/test/frontend/`. Attributing a
+ * are beebox doctests under `beebox/test/frontend/`. Attributing a
  * frontend path to it would run its (nonexistent) `test` script and skip all
  * three.
  */
-const PARENT_OWNED = new Set(["callback-box/src/frontend"]);
+const PARENT_OWNED = new Set(["beebox/src/frontend"]);
 
 /** The scripts that make a package able to verify a change of its own. */
 const VERIFICATION_SCRIPTS = ["test", "typecheck", "lint"];

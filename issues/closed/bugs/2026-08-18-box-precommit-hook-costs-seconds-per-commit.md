@@ -1,8 +1,8 @@
 ---
-title: "The box pre-commit hook costs seconds per commit — three `cb` cold starts plus two box-wide scans"
+title: "The box pre-commit hook costs seconds per commit — three `bbx` cold starts plus two box-wide scans"
 workstream: commit-performance
-design: ../../../callback-box/docs/plans/commit-performance.md
-area: callback-box
+design: ../../../beebox/docs/plans/commit-performance.md
+area: beebox
 labels: [performance, validation, boxes]
 priority: important
 filed-by: agent
@@ -12,12 +12,12 @@ resolution: implemented
 ---
 
 > **Closed 2026-08-19 (commit 4ae22252, cab459dd):** Phase 1 of the linked
-> plan fixed the named complaint — the hook's three `cb` invocations collapsed
-> into one `cb validate --pre-commit`, the box-wide scans made
+> plan fixed the named complaint — the hook's three `bbx` invocations collapsed
+> into one `bbx validate --pre-commit`, the box-wide scans made
 > incremental/index-based, and heavy externals made lazy. Measured: small-box
-> commit 2.2s → ~0.7s. Remaining ideas (a resident `cb` process, lazy command
+> commit 2.2s → ~0.7s. Remaining ideas (a resident `bbx` process, lazy command
 > registration, fewer commits per operation) are recorded as Phases 2–3 in
-> [the plan doc](../../../callback-box/docs/plans/commit-performance.md),
+> [the plan doc](../../../beebox/docs/plans/commit-performance.md),
 > deliberately not built pending discussion.
 
 A commit on a large box reported **6.63s** in git + hooks. Measured
@@ -26,18 +26,18 @@ independently.
 
 > **Update 2026-08-19:** full attribution measured on a test1 clone (1,815
 > files): git's own commit work + post-commit hook ~0.08s, `git annex
-> pre-commit` ~0.11s, and ~2.2s is the three `cb` boots (~0.7s each, ~0.1s of
+> pre-commit` ~0.11s, and ~2.2s is the three `bbx` boots (~0.7s each, ~0.1s of
 > real check work each) — commit total 2.3s. The startup floor is bundle eval
 > plus eager loading of heavy externals (agent SDK, typescript, sharp) that
 > the validate path never uses. Design and fix plan:
-> [commit-performance plan](../../../callback-box/docs/plans/commit-performance.md).
+> [commit-performance plan](../../../beebox/docs/plans/commit-performance.md).
 
 ## A fixed cost that every box pays
 
-`cb --version` on a small box takes **0.81s** — Node startup plus loading the
+`bbx --version` on a small box takes **0.81s** — Node startup plus loading the
 bundle, before any work at all.
 
-The managed pre-commit hook invokes `cb` **three times**: `validate --staged`
+The managed pre-commit hook invokes `bbx` **three times**: `validate --staged`
 (when cards are staged), `validate --links`, and `attachments check-unlisted`.
 That is ~2.4s of pure process startup on *any* box, including an empty one,
 plus `git annex pre-commit` and git's own work.
@@ -52,9 +52,9 @@ Two of the three checks are **box-wide scans that ignore what is staged**:
 
 | | small box (1,319 files) | large box (12,774 files) |
 |---|---|---|
-| `cb --version` (startup floor) | 0.81s | — |
-| `cb validate --links` | 1.01s | **2.57s** |
-| `cb attachments check-unlisted` | 0.87s | **1.61s** |
+| `bbx --version` (startup floor) | 0.81s | — |
+| `bbx validate --links` | 1.01s | **2.57s** |
+| `bbx attachments check-unlisted` | 0.87s | **1.61s** |
 
 Subtracting the startup floor, the actual scanning work goes from ~0.2s on
 the small box to ~2.4s on one roughly ten times its size. It scales with the tree, not

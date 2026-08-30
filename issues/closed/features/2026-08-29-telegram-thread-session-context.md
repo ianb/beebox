@@ -1,7 +1,7 @@
 ---
 title: "Inject derived session context into Telegram thread sessions"
 workstream: chores-burn-down
-area: callback-box
+area: beebox
 resolution: implemented
 filed-by: agent
 discovered-by: agent

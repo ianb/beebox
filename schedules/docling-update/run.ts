@@ -32,9 +32,9 @@ const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
 /**
  * The pin's single source of truth (see the file's own header). Parsed rather
  * than imported: this script lives in the monorepo root's TypeScript project,
- * which deliberately excludes `callback-box/`.
+ * which deliberately excludes `beebox/`.
  */
-const VERSION_FILE = path.join(REPO_ROOT, "callback-box", "src", "services", "docling-version.ts");
+const VERSION_FILE = path.join(REPO_ROOT, "beebox", "src", "services", "docling-version.ts");
 
 /** How old a release must be before we suggest it. */
 const SETTLING_DAYS = 14;
@@ -132,6 +132,6 @@ await alert({
   message:
     `Released ${String(Math.floor(ageDays))} days ago, past the ${String(SETTLING_DAYS)}-day settling window.`
     + " Upgrading is manual: re-read `docling convert --help` for flag changes, bump DOCLING_VERSION in"
-    + " callback-box/src/services/docling-version.ts, then `cb pdf reanalyze` a sample document and diff"
-    + " (callback-box/docs/plans/scanner-ingest-docling-decisions.md, D3).",
+    + " beebox/src/services/docling-version.ts, then `bbx pdf reanalyze` a sample document and diff"
+    + " (beebox/docs/plans/scanner-ingest-docling-decisions.md, D3).",
 });

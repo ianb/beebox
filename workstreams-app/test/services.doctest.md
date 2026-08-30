@@ -27,9 +27,9 @@ async function makeRepo() {
   await Promise.all([
     fs.mkdir(path.join(root, "issues", "bugs"), { recursive: true }),
     fs.mkdir(path.join(privateRoot, "bugs"), { recursive: true }),
-    fs.mkdir(path.join(root, "callback-box", "docs", "plans"), { recursive: true }),
-    fs.mkdir(path.join(root, "callback-box", "docs", "implemented-plans"), { recursive: true }),
-    fs.mkdir(path.join(root, "callback-box", "docs", "unimplemented-plans"), { recursive: true }),
+    fs.mkdir(path.join(root, "beebox", "docs", "plans"), { recursive: true }),
+    fs.mkdir(path.join(root, "beebox", "docs", "implemented-plans"), { recursive: true }),
+    fs.mkdir(path.join(root, "beebox", "docs", "unimplemented-plans"), { recursive: true }),
     fs.mkdir(worktreesRoot, { recursive: true }),
   ]);
   const issuePath = path.join(root, "issues", "bugs", "2026-08-13-example.md");
@@ -71,7 +71,7 @@ priority: normal
 ---
 Private body.
 `);
-  await fs.writeFile(path.join(root, "callback-box", "docs", "plans", "example.md"), `---
+  await fs.writeFile(path.join(root, "beebox", "docs", "plans", "example.md"), `---
 title: Example plan
 status: draft
 workstream: example

@@ -1,7 +1,7 @@
 ---
 title: "Agent guide omits third-party quote attribution"
 workstream: source-retrieved-date
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-source-retrieved-date — field critique of research provenance

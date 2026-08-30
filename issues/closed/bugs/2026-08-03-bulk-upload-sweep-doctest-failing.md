@@ -1,7 +1,7 @@
 ---
 title: "`bulk-upload/sweep.doctest.md` abandons a fresh staging session it should keep"
 workstream: cbserve-fd-leak
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-cbserve-fd-leak — while running the full suite for the spawn-EBADF fix
 resolution: implemented

@@ -2,7 +2,7 @@
 title: "Add self-screenshot to the iOS app (the agent-visible screen capture clerk gives on desktop)"
 workstream: unknown
 resolution: implemented
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder wants the clerk screenshot ability on iOS
 ---
@@ -10,10 +10,10 @@ discovered-in: main session — boxholder wants the clerk screenshot ability on 
 **Closed (already implemented) 2026-08-03 — filed on a wrong premise.** I asserted
 "iOS has no equivalent" without checking the Swift code; it does. iOS already has a
 full screenshot capability: a user-facing **"Screenshot" button**
-(`ios-app/CallbackBox/Views/ComposerActionsView.swift:60`), the native
+(`ios-app/BeeBox/Views/ComposerActionsView.swift:60`), the native
 `NativeScreenshotRequest` / `NativeScreenshotResult` capture bridge
-(`ios-app/CallbackBox/Views/ChatWebView.swift`, wired in `RootView.swift`), and the
-agent-initiated path — the web `cb chat screenshot` (`screenshot-capture.ts` Track B)
+(`ios-app/BeeBox/Views/ChatWebView.swift`, wired in `RootView.swift`), and the
+agent-initiated path — the web `bbx chat screenshot` (`screenshot-capture.ts` Track B)
 is fulfilled by the native bridge on iOS instead of the unavailable mobile-web
 `getDisplayMedia`. So the "agent sees your screen" capability is present. No action.
 
@@ -31,7 +31,7 @@ blind to the user's iOS screen.
   unavailable there).
 - **Clerk** (Chrome extension) — provides **silent agent screenshots**:
   `chrome.tabs.captureVisibleTab` grabs the box tab with no prompt, gated behind an
-  opt-in "Silent screenshots" toggle (`callback-clerk/src/platform/capture-permission.ts`,
+  opt-in "Silent screenshots" toggle (`beebox-clerk/src/platform/capture-permission.ts`,
   `entrypoints/background.ts:173`, `ui/settings-app.tsx`). This is the "agent sees
   your box" capability the boxholder wants on iOS.
 - **iOS** — nothing. The agent cannot see the user's iOS screen at all.
@@ -62,5 +62,5 @@ mobile-web screenshot missing.
 - **Privacy / opt-in.** Capturing the user's screen is sensitive; clerk gates the
   silent path behind an opt-in toggle. iOS should have equivalent consent, especially
   for the agent-initiated silent case.
-- **Overlap.** This mirrors web + clerk surfaces — cb-ios-overlap territory; fit it
+- **Overlap.** This mirrors web + clerk surfaces — bbx-ios-overlap territory; fit it
   into the native bridge + `docs/mobile-contract.md`.

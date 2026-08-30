@@ -1,7 +1,7 @@
 ---
 title: "Review all prompts (using the prompt viewer)"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 The tooling for this now exists; what remains is the actual review, which is
@@ -13,7 +13,7 @@ or mis-placed, and comment.
 (system prompts, subagent prompts, all schema instructions, connector rules,
 procedure templates) plus the *assembled* chat / chat-thread / reactor context
 stacks as an agent actually receives them, with word/token counts per layer.
-Regenerate the data with `pnpm prompt-viewer` in `callback-box/` (reads
+Regenerate the data with `pnpm prompt-viewer` in `beebox/` (reads
 `~/src/boxes/test1`; `docs/maintenance.md` has the details). Every fragment has
 a stable kebab-case name (`chat-system-prompt`, `schema-memo`,
 `reactor/claude-md`, …) — **cite prompts by these names when commenting**, so
@@ -22,7 +22,7 @@ review notes are unambiguous and greppable.
 **The review itself:**
 
 - Read the three assembled stacks end-to-end, the way an agent does —
-  [prompt-surface-review.md](../../callback-box/docs/prompt-surface-review.md)
+  [prompt-surface-review.md](../../beebox/docs/prompt-surface-review.md)
   is the procedure for acting on findings (where an instruction should live,
   what to trim).
 - Triage the duplication findings on the page. Known real signal at filing

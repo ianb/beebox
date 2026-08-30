@@ -1,7 +1,7 @@
 ---
 title: "Make the cross-model review skill bidirectional (rename `codex` → `cross-model`, review with the *other* model family)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder noticed while landing codex worktree parity
 resolution: implemented
@@ -72,12 +72,12 @@ lets the CLAUDE.md guidance become model-agnostic instead of Claude-only.
   re-invoke `cross-model`; it just reviews and returns.
 - **Rename mechanics:** kebab-case skill dir `cross-model`. Grep for `/codex`,
   `codex skill`, `.claude/skills/codex` references (root CLAUDE.md, bin/CLAUDE.md,
-  the cb-plan skill, any docs) and update. Keep a one-line note that it was
+  the bbx-plan skill, any docs) and update. Keep a one-line note that it was
   adapted from gstack's `/codex` skill.
 
 ## Related
 
-- `callback-box/docs/implemented-plans/codex-worktree-sessions.md` — the codex
+- `beebox/docs/implemented-plans/codex-worktree-sessions.md` — the codex
   worktree feature this completes the review story for.
 - The skill-mirroring landed with the codex finish/merge parity change
   (`bin/generate-agents-md.ts`, `bin/launch-worktree-session`).

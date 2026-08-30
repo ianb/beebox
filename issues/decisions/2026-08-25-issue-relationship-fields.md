@@ -9,7 +9,7 @@ discovered-in: "worktree-beads-vs-issues — comparing Beads' typed dependency e
 ---
 
 The issue schema is closed and has no machine-readable relationships between
-items. Clusters are re-derived on every `cb-pick-issues` run
+items. Clusters are re-derived on every `bbx-pick-issues` run
 (`bin/issues similar`, grep), ordering ("B after A") lives only in prose, and
 `resolution: superseded` names no target. Beads models all of this as typed
 edges (`blocks`, `parent-child`, `related`, `discovered-from`, `duplicates`,

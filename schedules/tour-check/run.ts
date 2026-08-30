@@ -45,9 +45,9 @@ const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
  * tour every week is for — but it is not evidence the change was deliberate.
  */
 const TOUR_PATHS = [
-  "callback-box/src/frontend",
-  "callback-box/src/webapp",
-  "callback-box/test/tours",
+  "beebox/src/frontend",
+  "beebox/src/webapp",
+  "beebox/test/tours",
 ] as const;
 
 function refuse(message: string): never {
@@ -68,7 +68,7 @@ async function git(args: string[]): Promise<string> {
  * with "authorized". Asking the socket keeps the check to one meaning.
  */
 function routerSocket(): string {
-  const stateDir = process.env["CALLBACK_STATE_DIR"] ?? path.join(homedir(), ".cache", "callback-box");
+  const stateDir = process.env["BBX_STATE_DIR"] ?? path.join(homedir(), ".cache", "beebox");
   return path.join(stateDir, "router.sock");
 }
 

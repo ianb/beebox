@@ -1,7 +1,7 @@
 ---
 title: "Go-to-bottom during a streaming reply scrolls into the last-turn spacer's white space, past the generated text"
 workstream: small-bugs-batch
-area: callback-box
+area: beebox
 labels: [ui, chat]
 filed-by: agent
 discovered-by: Ian

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the callback-box precise OpenGrep rulepack (security/opengrep/precise.yml)
+# Run the beebox precise OpenGrep rulepack (security/opengrep/precise.yml)
 # — self-incident security-regression guards — over the working tree.
 #
 # Usage:

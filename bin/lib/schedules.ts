@@ -8,7 +8,7 @@
  * Zod schema here, because a schedule that fails at 03:00 on a Sunday with
  * nobody watching is the failure the whole design exists to prevent.
  *
- * Design: callback-box/docs/plans/scheduled-workstreams.md (Tracks A, B, C).
+ * Design: beebox/docs/plans/scheduled-workstreams.md (Tracks A, B, C).
  * Store IO (marker discipline, atomic writes, locks): bin/lib/schedules-store.ts
  */
 
@@ -17,7 +17,7 @@ import * as path from "node:path";
 import * as YAML from "yaml";
 import { z } from "zod";
 
-import { errnoCode } from "../../callback-box/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/lib/error-guards.js";
 
 /** A refusal this module raises for input it will not guess about. The base of
  *  every schedule failure, so `instanceof ScheduleError` still catches them all. */
@@ -364,7 +364,7 @@ export const SCHEDULES_MARKER = ".schedule-runs";
  * does not evaporate with the worktree that happened to trigger it.
  */
 export function schedulesStoreRoot(mainRoot: string): string {
-  const override = process.env["CALLBACK_SCHEDULES_ROOT"];
+  const override = process.env["BBX_SCHEDULES_ROOT"];
   if (override !== undefined && override !== "") return override;
   return path.join(path.dirname(mainRoot), "schedule-runs");
 }

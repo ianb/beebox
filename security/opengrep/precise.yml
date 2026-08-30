@@ -1,9 +1,9 @@
-# Callback-box precise OpenGrep rulepack — self-CVE / self-incident regression
+# Bee Box precise OpenGrep rulepack — self-CVE / self-incident regression
 # guards. Each rule encodes a real past security/isolation bug in our own code
 # and fails if that exact shape returns. Keyed to our own issues/commits (we run
 # no GHSA process). See security/opengrep/README.md.
 rules:
-  - id: cb-route-writes-to-host-os-tmpdir
+  - id: bbx-route-writes-to-host-os-tmpdir
     languages: [typescript, javascript]
     severity: ERROR
     message: >-
@@ -18,12 +18,12 @@ rules:
           - pattern: tmpdir()
     paths:
       include:
-        - "callback-box/src/webapp/routes/"
-        - "callback-box/src/webapp/trpc/"
+        - "beebox/src/webapp/routes/"
+        - "beebox/src/webapp/trpc/"
     metadata:
       category: security
       cwe: [CWE-22, CWE-284]
-      advisory-id: cb-box-tmp-isolation
+      advisory-id: bbx-box-tmp-isolation
       advisory-url: issues/code-quality/2026-07-24-security-precommit-hooks.md
       detector-bucket: precise
-      source-rule-id: cb-route-writes-to-host-os-tmpdir
+      source-rule-id: bbx-route-writes-to-host-os-tmpdir

@@ -1,25 +1,25 @@
 ---
 title: "Chat review's journal is machine-local but the husk it guards is shared, so two machines fight"
 workstream: chat-session-identity
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-compacting — checking prod retention after shipping chat review
 priority: backlog
 resolution: implemented
 ---
 
-**Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) Track 4 (`65f943555`): a machine reviews only sessions whose husk `origin` is its own (or unstamped ones whose transcript is present here), so the journal is now legitimately machine-local — the origin machine is the only one holding the whole transcript. Skipped sessions are counted in `cb chat review status`. Coverage for laptop-origin sessions requires running the schedule there (boxholder policy).
-[Chat review](../../../callback-box/docs/chat-review.md) keeps two pieces of state
+**Closed 2026-08-26** by [chat-session-identity](../../../beebox/docs/implemented-plans/chat-session-identity.md) Track 4 (`65f943555`): a machine reviews only sessions whose husk `origin` is its own (or unstamped ones whose transcript is present here), so the journal is now legitimately machine-local — the origin machine is the only one holding the whole transcript. Skipped sessions are counted in `bbx chat review status`. Coverage for laptop-origin sessions requires running the schedule there (boxholder policy).
+[Chat review](../../../beebox/docs/chat-review.md) keeps two pieces of state
 about a session, and they live on opposite sides of the sync boundary:
 
-- **The span journal** — `.callback-box/chat-review/state.json`. `.callback-box/`
+- **The span journal** — `.beebox/chat-review/state.json`. `.beebox/`
   is **gitignored**, so this is per-checkout machine state.
 - **The husk card** — `store/chat/web/*.chat.card`, carrying `title`,
   `contains`, `contains-evidence` and the `review-span` marker. Git-tracked,
   pushed, and pulled by every other checkout of that box.
 
 A box that exists in more than one place — and the deployed ones all do; prod
-serves `/home/callback/boxes/<box>` while the same box is cloned to a laptop —
+serves `/home/beebox/boxes/<box>` while the same box is cloned to a laptop —
 therefore has **one shared account and N independent journals.**
 
 ## Why transcripts make this worse rather than better
@@ -60,12 +60,12 @@ Measured 2026-07-29:
   `estate`, `personal`, `tech-talk`), so the shared-husk half of the setup is
   the normal state, not an oddity.
 - **Only prod runs a scheduler.** `launchctl` on the laptop lists only
-  `com.callback-box.sdk-update` — no `cb tick`, no scheduler daemon. So there is
+  `com.beebox.sdk-update` — no `bbx tick`, no scheduler daemon. So there is
   exactly one automatic writer per box today.
 
 That single-writer property is what keeps this latent, and nothing enforces it:
 `enabled: true` ships to every checkout of every box, so the day a laptop runs a
-scheduler — or someone runs `cb chat review run` by hand on a box prod also
+scheduler — or someone runs `bbx chat review run` by hand on a box prod also
 reviews — there are two writers and the divergence above starts.
 
 A manual local run during the 2026-07-28 eval did **not** trigger it: prod has

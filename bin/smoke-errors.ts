@@ -39,7 +39,7 @@ export class CredentialRefusedError extends SmokeFailureError {
   constructor(readonly url: string) {
     super(
       `the router refused our credential at ${url}` +
-        " — CB_BROWSE_API_KEY is missing or stale in callback-box/.env",
+        " — BBX_BROWSE_API_KEY is missing or stale in beebox/.env",
     );
     this.name = "CredentialRefusedError";
   }
@@ -88,7 +88,7 @@ export class PlaceMenuErroredError extends SmokeFailureError {
 export class PlaceMenuCollapsedError extends SmokeFailureError {
   constructor(readonly snapshot: string) {
     super(
-      "clicking the place pill did not open the menu (#cb-nav-place is still collapsed)",
+      "clicking the place pill did not open the menu (#bbx-nav-place is still collapsed)",
       snapshot,
     );
     this.name = "PlaceMenuCollapsedError";

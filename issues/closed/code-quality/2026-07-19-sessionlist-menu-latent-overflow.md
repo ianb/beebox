@@ -1,7 +1,7 @@
 ---
 title: "SessionListButton hand-rolls its dropdown — same latent mobile overflow the header menus had"
 workstream: mobile-chat-layout
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-mobile-chat-layout — while fixing the landmark/recent-files menu overflow
 resolution: implemented

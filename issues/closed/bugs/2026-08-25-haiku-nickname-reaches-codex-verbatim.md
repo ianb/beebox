@@ -2,7 +2,7 @@
 title: "\"haiku\" from the chat reviewer and retro observer reaches the Codex SDK verbatim"
 workstream: model-engine-policy
 resolution: implemented
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-model-engine-policy — cluster survey for the model/engine policy work

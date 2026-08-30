@@ -1,7 +1,7 @@
 ---
 title: "Session-log retention is bounded by entry count, not bytes"
 workstream: chat-history-oom-mobile-lock
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — Codex review of Track A
 resolution: implemented
@@ -16,7 +16,7 @@ resolution: implemented
 > + typecheck green.
 
 `parseSessionLog` no longer retains a whole transcript
-(`callback-box/src/cli/lib/session-retention.ts`), which removes the OOM this
+(`beebox/src/cli/lib/session-retention.ts`), which removes the OOM this
 was filed against: retention is now O(window) instead of O(file). But the
 window is counted in *entries*, and one entry can be arbitrarily large — a
 `Write` tool_use keeps the whole file body it wrote

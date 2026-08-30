@@ -3,7 +3,7 @@
 // purely for file size — both are one long template literal each.
 //
 // RETIRED: `/<worktree>/dev/docs/…` 301s to `/workstreams/browse?file=…`
-// (callback-box/docs/plans/general-browser.md, Track 5), so nothing reaches
+// (beebox/docs/plans/general-browser.md, Track 5), so nothing reaches
 // this code at runtime. It is kept, not deleted, because the closed-issue pill
 // feature it rendered has not been ported to the general browser yet — see
 // issues/code-quality/2026-08-22-retire-doc-browser-dead-code.md, which asks for

@@ -22,10 +22,10 @@ import {
 
 const TESTS: VerificationCommand = {
   kind: "tests",
-  command: "pnpm --dir callback-box test:changed",
+  command: "pnpm --dir beebox test:changed",
   cwd: ".",
-  argv: ["pnpm", "--dir", "callback-box", "test:changed"],
-  isolate: { cwd: ".", packageDir: "callback-box", argv: ["tap"] },
+  argv: ["pnpm", "--dir", "beebox", "test:changed"],
+  isolate: { cwd: ".", packageDir: "beebox", argv: ["tap"] },
 };
 const LINT: VerificationCommand = {
   kind: "lint",
@@ -63,7 +63,7 @@ test("failing files come from TAP lines, and only when the name is a real file",
 
 test("a green run prints one line and no verdict noise", () => {
   const green = result({ ok: true, seconds: 12.34 });
-  assert.deepEqual(formatResult(green), ["ok   pnpm --dir callback-box test:changed (12.3s)"]);
+  assert.deepEqual(formatResult(green), ["ok   pnpm --dir beebox test:changed (12.3s)"]);
   assert.deepEqual(verdict([green]), { green: true, flakes: [] });
 });
 
@@ -74,7 +74,7 @@ test("a flake-only failure is green, and named", () => {
     flakes: ["test/lib/git-lock.doctest.md"],
   });
   assert.deepEqual(formatResult(flaked), [
-    "FAIL pnpm --dir callback-box test:changed (1.0s) → /tmp/out.log",
+    "FAIL pnpm --dir beebox test:changed (1.0s) → /tmp/out.log",
     "     flake test/lib/git-lock.doctest.md",
   ]);
 });
@@ -103,22 +103,22 @@ test("a failing typecheck or lint is red with no isolation attempted", () => {
   ]);
 });
 
-test("a callback-box TAP path resolves against the package, not the command's cwd", () => {
-  // The shape that matters: `pnpm --dir callback-box test:changed` runs from
-  // the repo root and tap prints `test/...` relative to callback-box/. Checked
+test("a beebox TAP path resolves against the package, not the command's cwd", () => {
+  // The shape that matters: `pnpm --dir beebox test:changed` runs from
+  // the repo root and tap prints `test/...` relative to beebox/. Checked
   // against the cwd, no failing file is ever identified — and finish-verify
   // reports every one of them `real`, blocking on a known flake.
   const root = mkdtempSync(join(tmpdir(), "finish-verify-"));
   try {
-    mkdirSync(join(root, "callback-box/test/core"), { recursive: true });
-    writeFileSync(join(root, "callback-box/test/core/box.doctest.md"), "");
+    mkdirSync(join(root, "beebox/test/core"), { recursive: true });
+    writeFileSync(join(root, "beebox/test/core/box.doctest.md"), "");
     const path = "test/core/box.doctest.md";
-    assert.equal(existsRelative({ packageDir: join(root, "callback-box"), path, root }), true);
+    assert.equal(existsRelative({ packageDir: join(root, "beebox"), path, root }), true);
     assert.equal(existsRelative({ packageDir: root, path, root }), false);
     const output = `not ok 1 - ${path} # time=812ms`;
     assert.deepEqual(
       parseFailingFiles(output, (p) =>
-        existsRelative({ packageDir: join(root, "callback-box"), path: p, root }),
+        existsRelative({ packageDir: join(root, "beebox"), path: p, root }),
       ),
       [path],
     );

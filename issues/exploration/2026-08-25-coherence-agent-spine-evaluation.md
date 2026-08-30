@@ -43,7 +43,7 @@ sitting in the tree right now.** `pnpm doc-check` enforces *broken references,
 orphaned docs, duplicate basenames* — that a doc **points** somewhere real. It
 never checks that a doc **says** something true. Today:
 
-- `callback-box/docs/security-overview.md:66` states "On fresh boxes, scheduled
+- `beebox/docs/security-overview.md:66` states "On fresh boxes, scheduled
   agent runs are off by default."
 - `src/core/box/defaults.ts` ships **three** seeded schedules `enabled: true` —
   `refresh-maps`, `gc-procedure-runs`, `process-retrospective`.

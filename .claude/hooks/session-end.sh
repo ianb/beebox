@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code SessionEnd hook.
 #
-# When a session ends, if we're in a callback-box worktree AND the worktree
+# When a session ends, if we're in a beebox worktree AND the worktree
 # branch is fully merged into main (no commits ahead, no uncommitted
 # changes), automatically remove the worktree + branch + cloned box + any
 # router state for it. Claude Code's built-in auto-cleanup only fires when
@@ -24,8 +24,8 @@ set -euo pipefail
 exec 1>&2
 
 input=$(cat)
-mkdir -p "$HOME/.cache/callback-box"
-printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-session-end-input.json"
+mkdir -p "$HOME/.cache/beebox"
+printf '%s\n' "$input" > "$HOME/.cache/beebox/last-session-end-input.json"
 
 WT_LOG_LABEL="SessionEnd"
 WT_SAY_PREFIX="[session-end]   "
@@ -38,9 +38,9 @@ WT_SAY_PREFIX="[session-end]   "
 # directory its script and caller are still executing from. The marker prevents
 # a loop if path resolution is ever unusual.
 hook_repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-if [ "$hook_repo" != "$WT_MONO" ] && [ "${CB_SESSION_END_MAIN_REEXEC:-0}" != "1" ]; then
+if [ "$hook_repo" != "$WT_MONO" ] && [ "${bbx_session_END_MAIN_REEXEC:-0}" != "1" ]; then
   cd "$WT_MONO"
-  CB_SESSION_END_MAIN_REEXEC=1 exec "$WT_MONO/.claude/hooks/session-end.sh" <<<"$input"
+  bbx_session_END_MAIN_REEXEC=1 exec "$WT_MONO/.claude/hooks/session-end.sh" <<<"$input"
 fi
 
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
@@ -76,7 +76,7 @@ trap '"$WT_MONO/.claude/hooks/auto-sweep.sh" session-end 2>/dev/null || true' EX
 # checkout (e.g. to run a cross-tree git command) before exiting would
 # defeat a cwd-only check and leak the worktree. transcript_path is the
 # durable signal: it encodes the directory the session was launched in,
-# embedded as `-src-callback-worktrees-<name>` in
+# embedded as `-src-beebox-worktrees-<name>` in
 # `~/.claude/projects/<encoded-path>/<uuid>.jsonl`.
 worktree_path=""
 case "$cwd" in
@@ -154,7 +154,7 @@ wt_log "decision=clean branch=$WT_BRANCH ahead=0 dirty=0 wt=$worktree_path"
 
 # IMPORTANT: the name derives from $worktree_path, not $cwd. When the session
 # ends with cwd = main (the original bug that motivated the transcript-path
-# fallback above), basename($cwd) = "callback-box" — wrong name, wrong target.
+# fallback above), basename($cwd) = "beebox" — wrong name, wrong target.
 echo "[session-end] worktree '$WT_BRANCH' is fully merged into main and clean — cleaning up"
 wt_remove_now "$worktree_path" "$WT_BRANCH"
 

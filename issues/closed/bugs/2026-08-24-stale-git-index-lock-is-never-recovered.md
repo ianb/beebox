@@ -2,7 +2,7 @@
 title: "A stale `.git/index.lock` is treated as live contention forever — every committing task fails until a human deletes it"
 workstream: stale-git-lock
 resolution: implemented
-area: callback-box
+area: beebox
 priority: important
 labels: [git, scheduler, boxes]
 filed-by: agent
@@ -13,7 +13,7 @@ discovered-in: main session — a box's scheduled tasks failing for days on inde
 **Closed by `e877e2aa` + `d2e09e4b` (recovery, and the fixes a cross-model review
 found in it), `0e6f66d6` and `38f4ce2a` (deploy owns the server-side settings).
 Deployed and verified on the production server: the systemd drop-ins are in
-force, `cb-wait-quiet` waits before a restart for the first time, and no box
+force, `bbx-wait-quiet` waits before a restart for the first time, and no box
 holds a lock.** Prevention is deliberately partial — an OOM kill or an ENOSPC
 mid-index-write still produces the artifact — so recovery is the load-bearing
 half. Reopen if a stale lock survives a write or the health check misses one.
@@ -45,7 +45,7 @@ All of that is right for *live* contention. **Nothing distinguishes a live
 holder from an abandoned file.** A stale lock is permanent by nature, so the
 system reports "contended — another process held the box's git index" every
 run, forever, which reads as transient bad luck and invites waiting it out.
-`cb health` says exactly that, indefinitely.
+`bbx health` says exactly that, indefinitely.
 
 The signals to tell them apart are cheap and already on disk: the lock's age,
 and whether any process actually has it open. Neither is consulted.
@@ -86,15 +86,15 @@ and whether any process actually has it open. Neither is consulted.
 
 ## What shipped
 
-**Recovery.** `callback-box/src/lib/git-stale-lock.ts` classifies the lock and
+**Recovery.** `beebox/src/lib/git-stale-lock.ts` classifies the lock and
 removes only an abandoned one. Reaching that verdict takes an age gate (15
 minutes), a holder probe over open descriptors that fails closed when it cannot
 answer, a veto on any git-family process working in the repository, a settle
 window with an inode+mtime re-check, and an inode-checked unlink under the box
-git lock. `withIndexLockRetry` runs it between its two attempts, `cb serve`
+git lock. `withIndexLockRetry` runs it between its two attempts, `bbx serve`
 sweeps at startup, and a lock that cannot be removed reports as its own
 `stale-git-index-lock` box health check instead of a per-task failure string.
-Verified end-to-end against a real box clone: `cb health` named the file, and
+Verified end-to-end against a real box clone: `bbx health` named the file, and
 the next commit recovered it.
 
 **Prevention — partial by nature.** Our own teardown was manufacturing the
@@ -102,7 +102,7 @@ condition: the hub SIGKILLed a box child's whole process group two seconds
 after SIGTERM, and prod runs a lazy hub (6 boxes, 30-minute idle, keepRecent 1)
 restarted several times a day by deploys, against an 11GB box whose `add -A`
 alone runs for seconds. Box children now get a 30s grace, the escalation waits
-for the process GROUP to empty rather than the leader, and `cb serve` and the
+for the process GROUP to empty rather than the leader, and `bbx serve` and the
 scheduler drain their git spans before exiting. The systemd units get
 `KillMode=mixed` and an explicit stop timeout via `deploy/systemd/git-drain.conf`,
 which `deploy.sh` now reinstalls and reloads on every deploy — the drop-in
@@ -110,7 +110,7 @@ directory lets a deploy own a unit setting without owning the unit, which
 `setup-server.sh` still does not generate in its post-hub shape.
 
 This does not close every route. The OOM killer has killed processes inside
-`callback-hub.service`'s cgroup on this server, and the volume is at 92%; an
+`beebox-hub.service`'s cgroup on this server, and the volume is at 92%; an
 ENOSPC mid-index-write produces the same artifact. Recovery is the load-bearing
 half for that reason.
 

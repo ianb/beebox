@@ -22,5 +22,5 @@ this and the asymmetry should be written down rather than left looking like an o
 Deliberately out of scope of the change that raised it: one agent's session mechanism at
 a time, and Codex already had partial coverage. The Claude half of the story, including
 why the earlier "resume loses worktree isolation" finding was wrong, is in
-[workstreams.md](../../callback-box/docs/implemented-plans/workstreams.md) (Track B, the
+[workstreams.md](../../beebox/docs/implemented-plans/workstreams.md) (Track B, the
 B2 note).

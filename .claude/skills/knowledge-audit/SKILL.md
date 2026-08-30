@@ -1,21 +1,21 @@
 ---
 name: knowledge-audit
-description: Explains callback-box's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check what it actually knows. Use after touching what a BOX agent loads — a box CLAUDE.md, the generated agent guide, schema instructions, or box prompts/rules — to verify agents absorbed it. (Dev-repo guidance like this repo's CLAUDE.md or .claude/skills/ is invisible to box agents; audits can't test it.) Triggers include "knowledge audit", "did the agent absorb this doc", "audit the guidance", "test what the agent knows", "run the knowledge audits". Full guide in callback-box/docs/knowledge-audits.md.
+description: Explains beebox's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check what it actually knows. Use after touching what a BOX agent loads — a box CLAUDE.md, the generated agent guide, schema instructions, or box prompts/rules — to verify agents absorbed it. (Dev-repo guidance like this repo's CLAUDE.md or .claude/skills/ is invisible to box agents; audits can't test it.) Triggers include "knowledge audit", "did the agent absorb this doc", "audit the guidance", "test what the agent knows", "run the knowledge audits". Full guide in beebox/docs/knowledge-audits.md.
 ---
 
 # Knowledge audits: verifying what agents actually know
 
 A pointer skill: what the harness is and when to reach for it. Test
 structure, recording results, and interpreting failures live in
-`callback-box/docs/knowledge-audits.md`.
+`beebox/docs/knowledge-audits.md`.
 
 ## What it is
 
 Tests that prompt a real box agent, watch its tool use, and check its
 response — not unit tests of code, tests of what an agent *knows* after
 reading CLAUDE.md/schemas/prompts. Definitions in
-`callback-box/src/dev/knowledge-audits.yaml`; harness in
-`callback-box/src/dev/knowledge-audit.ts` + `src/dev/lib/`.
+`beebox/src/dev/knowledge-audits.yaml`; harness in
+`beebox/src/dev/knowledge-audit.ts` + `src/dev/lib/`.
 
 ## When to run
 
@@ -30,7 +30,7 @@ reading CLAUDE.md/schemas/prompts. Definitions in
 
 ## Running
 
-From `callback-box/`:
+From `beebox/`:
 
 ```bash
 pnpm knowledge-audit run --box ~/src/boxes/test1 [--filter <tag-or-id>]

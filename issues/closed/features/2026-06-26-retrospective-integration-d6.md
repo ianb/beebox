@@ -1,7 +1,7 @@
 ---
 title: "retrospective integration d6"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

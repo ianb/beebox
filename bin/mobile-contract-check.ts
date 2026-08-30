@@ -2,8 +2,8 @@
 /**
  * Mobile-contract tripwire (`pnpm mobile-contract-check`). One script, two modes,
  * driven by the two git hooks that together enforce the sync rule from
- * `callback-box/docs/mobile-contract.md` (mechanism 5 of
- * `callback-box/docs/implemented-plans/mobile-parity-sync.md`):
+ * `beebox/docs/mobile-contract.md` (mechanism 5 of
+ * `beebox/docs/implemented-plans/mobile-parity-sync.md`):
  *
  *   pre-commit  (default mode)   — reads the staged file list and the anchor
  *     manifest (the ```anchors block in the contract doc). If a staged file
@@ -25,7 +25,7 @@
  * we cannot know whether a staged file is an anchor, so we refuse to guess.
  *
  * Runs on EVERY commit repo-wide, so it stays fast: plain git + fs, no heavy
- * imports. Background: `callback-box/docs/implemented-plans/mobile-parity-sync.md`.
+ * imports. Background: `beebox/docs/implemented-plans/mobile-parity-sync.md`.
  */
 
 import { execFileSync } from "node:child_process";
@@ -33,7 +33,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 // The contract doc that a contract-surface change must co-stage, repo-relative.
-const CONTRACT_DOC = "callback-box/docs/mobile-contract.md";
+const CONTRACT_DOC = "beebox/docs/mobile-contract.md";
 // Basename of the per-worktree state file inside the git dir. `git rev-parse
 // --git-path` resolves it correctly whether in the main checkout or a worktree,
 // and pre-commit + commit-msg for one commit share the same git dir.

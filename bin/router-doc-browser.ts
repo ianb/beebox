@@ -2,7 +2,7 @@
 // sidebar, and the request handler that rendered them.
 //
 // RETIRED: `/<worktree>/dev/docs/…` 301s to `/workstreams/browse?file=…`
-// (callback-box/docs/plans/general-browser.md, Track 5), so nothing reaches this
+// (beebox/docs/plans/general-browser.md, Track 5), so nothing reaches this
 // code at runtime. It is kept, not deleted, because the closed-issue pill
 // feature it rendered has not been ported to the general browser yet — see
 // issues/code-quality/2026-08-22-retire-doc-browser-dead-code.md, which asks for
@@ -81,7 +81,7 @@ async function mdLastModified(repoRoot: string, files: string[]): Promise<Map<st
 }
 
 // A top-level area with more than this many .md files is split into a second
-// level (e.g. callback-box/ → callback-box/docs, callback-box/test, …). Smaller
+// level (e.g. beebox/ → beebox/docs, beebox/test, …). Smaller
 // areas stay flat — the flatness is nice when it fits.
 const DOC_TWO_LEVEL_THRESHOLD = 60;
 
@@ -152,7 +152,7 @@ export async function serveDocBrowser(
   base: string,
   { repoRoot, rel, sort, res }: { repoRoot: string; rel: string; sort: string; res: DevResponse },
 ): Promise<void> {
-  // rel is the part after "/docs", e.g. "" | "/" | "/callback-box/CLAUDE.md"
+  // rel is the part after "/docs", e.g. "" | "/" | "/beebox/CLAUDE.md"
   const fileRel = rel.replace(/^\//, "");
   const files = await listRepoMarkdown(repoRoot);
   const times = sort === "recent" ? await mdLastModified(repoRoot, files) : new Map<string, number>();

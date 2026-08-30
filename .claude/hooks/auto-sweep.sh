@@ -37,11 +37,11 @@ REPO="$(cd "$HOOK_DIR/../.." 2>/dev/null && pwd || echo "")"
 # Only the MAIN checkout sweeps. A worktree session's SessionStart runs the
 # worktree's own copy of this script; gate it out so we don't fan a sweep off
 # every worktree session start.
-case "$REPO" in *"/callback-worktrees/"*) exit 0 ;; esac
+case "$REPO" in *"/beebox-worktrees/"*) exit 0 ;; esac
 
 trigger="${1:-manual}"
-LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
-LOCK="$HOME/.cache/callback-box/sweep.lock"
+LOG="$HOME/.cache/beebox/worktree-cleanup.log"
+LOCK="$HOME/.cache/beebox/sweep.lock"
 mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
 
 stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }

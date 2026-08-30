@@ -1,7 +1,7 @@
 ---
 title: "iOS: location is effectively always shared — the native path bypasses the consent toggle"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: "main session — boxholder: location seems always shared on iOS, not clearly toggleable"
 resolution: implemented
@@ -62,7 +62,7 @@ await captureAndStore(boxSlug, Date.now());   // <- no check of the `enabled` to
 postNativeLocationResult({ id, success: true, message: "Location shared." });
 ```
 
-So when the iOS shell requests location (the agent's `cb location get`, or any
+So when the iOS shell requests location (the agent's `bbx location get`, or any
 native trigger), the web bridge captures and stores it **gated only by
 `isGeolocationAvailable()` + the iOS system permission** — the app-level consent
 toggle (`loadLocationShareState(boxSlug).enabled`) is never consulted. Once the
@@ -75,7 +75,7 @@ composer's Add menu. In the native iOS composer that menu item may not be
 surfaced at all — so there's **no visible toggle** on iOS even though the web has
 one. "Always shared + not toggleable" = both halves.
 
-This also breaks the promise the app makes in `ios-app/CallbackBox/Info.plist`:
+This also breaks the promise the app makes in `ios-app/BeeBox/Info.plist`:
 *"shares your location with your paired box only when you request it."* On iOS
 the "request" is the agent/native side asking, not the user opting in.
 
@@ -96,7 +96,7 @@ The web's consent gate must also gate the native path:
 
 ## Verify
 
-On a real device: with the toggle OFF, confirm an agent `cb location get` / native
+On a real device: with the toggle OFF, confirm an agent `bbx location get` / native
 request is refused (not silently fulfilled); with it ON, confirm it works and the
 state is visible. Privacy-sensitive — this is location data leaving the device, so
 treat the fix as fail-closed (default off, no capture without an explicit, visible
@@ -104,4 +104,4 @@ opt-in).
 
 Squarely in the [iOS input-plane parity](../../features/2026-07-19-ios-input-plane-parity.md)
 surface (native composer + its menu), and touches the
-[mobile contract](../../../callback-box/docs/mobile-contract.md).
+[mobile contract](../../../beebox/docs/mobile-contract.md).

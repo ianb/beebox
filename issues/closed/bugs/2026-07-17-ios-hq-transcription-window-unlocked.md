@@ -1,10 +1,10 @@
 ---
 title: "iOS HQ-transcription window in the native composer isn't locked"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 filed-by: agent
-discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
 ---
 
 Resolved by the durable voice-preparation work in `6a270305`. Keyword sends now
@@ -14,7 +14,7 @@ preparation without clobbering later work. The voice reducer and pending-store
 tests cover preparation state and ordering.
 
 `NativeComposerView`'s keyword-send path (the function that kicks off HQ transcription, in
-`ios-app/CallbackBox/Views/NativeComposerView.swift`) launches a `Task` that awaits the multi-second
+`ios-app/BeeBox/Views/NativeComposerView.swift`) launches a `Task` that awaits the multi-second
 `ChatAPI.transcribeAudio` upload, and only sets `lastSentEmission` (which drives the `isSending`
 spinner/lock) *after* that await completes, inside the function that enqueues the prepared voice
 message. During the upload window the composer status merely reads "Improving transcription…" but the

@@ -1,14 +1,14 @@
 /**
  * The two test tiers, and the argv that expresses them.
  *
- * `callback-box/test/careful.txt` lists the timing-sensitive files that run
+ * `beebox/test/careful.txt` lists the timing-sensitive files that run
  * alone in the batched run instead of on every iteration. `.taprc` cannot
  * express that, and a shell-expanded file list in `package.json` is fragile —
  * a list that expands to nothing leaves a bare `tap`, which falls back to
  * `.taprc`'s includes and runs everything. So the ledger wrapper, already in
  * front of every tap invocation, builds the argv itself.
  *
- * See callback-box/docs/plans/change-based-test-selection.md, mechanism C.
+ * See beebox/docs/plans/change-based-test-selection.md, mechanism C.
  */
 
 import { globSync, readFileSync, existsSync, statSync } from "node:fs";
@@ -17,7 +17,7 @@ import { parse } from "yaml";
 import type { Tier } from "./test-locks.js";
 
 const REPO_ROOT = resolve(import.meta.dirname, "..");
-export const PACKAGE_ROOT = join(REPO_ROOT, "callback-box");
+export const PACKAGE_ROOT = join(REPO_ROOT, "beebox");
 const CAREFUL_LIST = "test/careful.txt";
 
 /** A tier list that cannot be trusted. Never silently narrows a run. */
@@ -139,7 +139,7 @@ export function hasExplicitFiles(input: {
  * Does this argument name a file in the package?
  *
  * A directory does not count: `--grep test` would otherwise resolve against
- * `callback-box/test/` and be read as a file list. Erring this way runs a
+ * `beebox/test/` and be read as a file list. Erring this way runs a
  * superset (the tier list is still appended), never a subset.
  */
 function packageFile(packageRoot: string): (path: string) => boolean {
@@ -192,5 +192,5 @@ export function tierCommand(input: {
 
 /** The careful list in the graph's repo-relative vocabulary, for the selector. */
 export function carefulExclusions(packageRoot?: string): string[] {
-  return readCarefulList(packageRoot ?? PACKAGE_ROOT).map((rel) => `callback-box/${rel}`);
+  return readCarefulList(packageRoot ?? PACKAGE_ROOT).map((rel) => `beebox/${rel}`);
 }

@@ -2,7 +2,7 @@
 title: "Sent message disappears then reappears ~20s later when an intermediate history snapshot omits it"
 workstream: sent-message-disappears-fix
 needs: [manual-testing]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder; got much worse recently
 ---
@@ -124,7 +124,7 @@ Corrected fix direction: make the optimistic/pending message **survive any
 `reconcilePending` to keep an un-echoed pending message rather than dropping it when
 an intermediate server-history snapshot omits it. Then no intermediate refresh (from
 any source) can open a disappear-gap, regardless of timing. Confirm the exact clearing
-event by instrumentation before fixing (cb-debug).
+event by instrumentation before fixing (bbx-debug).
 
 ## Manual testing
 

@@ -1,7 +1,7 @@
 ---
 title: "Capture upload error/retry affordance is tiny and gives no feedback on click"
 workstream: capture-chip-states
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder tried to retry a failed capture upload
 priority: important

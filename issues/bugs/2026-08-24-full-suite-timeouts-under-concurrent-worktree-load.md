@@ -1,7 +1,7 @@
 ---
 title: "field-test/run.doctest.md and hub-e2e.doctest.md time out in the full suite under concurrent worktree load"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — /finish full-suite verification
@@ -14,7 +14,7 @@ concurrently running their own `pnpm test`/`pnpm lint`/`pnpm typecheck` on the
 same machine (observed via `ps aux`: `knip-exports` and others active at the
 same time):
 
-- `test/field-test/run.doctest.md` — `run.doctest.md:199` (`cb serve` boot)
+- `test/field-test/run.doctest.md` — `run.doctest.md:199` (`bbx serve` boot)
   and `run.doctest.md:369` both timed out waiting on child-process readiness;
   the suite-level per-file timeout then expired the whole file
   (`not ok 619 - timeout! expired: test/field-test/run.doctest.md`).

@@ -2,14 +2,14 @@
 title: "Separate the boxholder-specific deploy machinery from the repo's release story — abstract the deploy, keep opt-in infrastructure"
 workstream: unattached
 needs: [design]
-area: callback-box
+area: beebox
 labels: [deploy, soft-launch]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — needed for release; the deploy stuff is really specific to my machine and deployment"
 ---
 
-`callback-box/deploy/` is the boxholder's personal pipeline wearing repo
+`beebox/deploy/` is the boxholder's personal pipeline wearing repo
 clothes: `deploy.sh` assumes one specific server (gitignored `server-ip`),
 one SSH root path, macOS-specific pieces (shlock, terminal-notifier,
 Terminal-activating notifications), and the root husky `post-commit` hook

@@ -21,7 +21,7 @@ const filePatterns = roots.map((r) => `${r}/**/*.${exts}`);
 ```
 
 `filePatterns` is the `files:` key of the one block carrying `allRulesOff` +
-`enabledRules` + `disabledRules`. callback-box's backend passes `react: false`,
+`enabledRules` + `disabledRules`. beebox's backend passes `react: false`,
 so the 28 `.tsx` files under `src/schemas/` never match it and fall through to
 `eslint-config-agent`'s unreviewed base instead.
 
@@ -43,12 +43,12 @@ correctness rules — `no-const-assign`, `no-dupe-keys`, `no-unreachable`,
 
 The gap is old and has been patched a rule at a time by whoever tripped over
 it: the preset's trailing `.tsx` block re-asserts `no-shadow` with a comment
-naming this exact cause, callback-box's own config turns off
+naming this exact cause, beebox's own config turns off
 `custom/jsx-classname-required` noting the preset re-enables it on `.tsx`, and
 the knip workstream added `class-export`/`required-exports` (2026-08-24).
 
 **Cost of the real fix, measured.** Making `exts` unconditional leaves 16
-violations across callback-box:
+violations across beebox:
 
 - 12 × `no-redeclare` on `const X = z.enum([...])` + `type X = z.infer<typeof X>`.
   Legal TypeScript, idiomatic Zod. `@typescript-eslint/no-redeclare` does NOT

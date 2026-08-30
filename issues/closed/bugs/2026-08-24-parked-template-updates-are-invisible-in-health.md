@@ -1,7 +1,7 @@
 ---
-title: "A parked template update is invisible in `cb health`, so a fix can land upstream five times and never reach the box"
+title: "A parked template update is invisible in `bbx health`, so a fix can land upstream five times and never reach the box"
 workstream: honest-diagnostics
-area: callback-box
+area: beebox
 priority: important
 resolution: implemented
 labels: [templates, health, boxes]
@@ -32,8 +32,8 @@ config/_template-updates/config/procedures/refresh-maps.procedure.card  ← the 
 ```
 
 Four updates were parked in total (a briefing card, two guide/personality cards,
-and the procedure). **`cb health` mentions templates zero times.** Only
-`cb status` reports them (`cli/commands/status.ts:74-84`), and health is what a
+and the procedure). **`bbx health` mentions templates zero times.** Only
+`bbx status` reports them (`cli/commands/status.ts:74-84`), and health is what a
 boxholder actually reads — it is the surface that lists failing schedules, and
 it lists them without ever saying the fix is already sitting on disk.
 
@@ -55,15 +55,15 @@ Nothing offers a merge, and nothing says a choice is pending.
 
 ## What to fix
 
-- **Surface parked updates in `cb health`.** They are exactly the kind of
+- **Surface parked updates in `bbx health`.** They are exactly the kind of
   "something needs a human" state health exists to report, and their absence
   turned a one-line fix into five rounds. This is the minimum.
 - **Say it where the symptom appears.** A failing schedule whose own procedure
   card has a parked update should say so in the failure, not leave the
   connection to be discovered.
-- **Give parked updates a resolution path.** Today `cb status` says to copy the
+- **Give parked updates a resolution path.** Today `bbx status` says to copy the
   file over by hand or delete it. A three-way merge, or at minimum a
-  `cb template accept <path>` / `diff` pair, would make the choice takeable.
+  `bbx template accept <path>` / `diff` pair, would make the choice takeable.
   Note the parked copy usually carries *other* improvements too — this one had
   new MAP.md guidance the box never received.
 - **Consider whether some fields should be box-owned rather than diverging the
@@ -79,8 +79,8 @@ Nothing offers a merge, and nothing says a choice is pending.
 
 ## Resolution (2026-08-24)
 
-`cb health` now has a `template-updates` box check (warn; error when the parked
+`bbx health` now has a `template-updates` box check (warn; error when the parked
 card belongs to a task that is failing or inconclusive), and a failing task's
-line names the parked path. The resolution-path items (`cb template
+line names the parked path. The resolution-path items (`bbx template
 accept`/`diff`, three-way merge, box-owned fields) were not built here — see
 [template resolution path](../../features/2026-08-24-parked-template-resolution-path.md).

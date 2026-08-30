@@ -1,15 +1,15 @@
 # ESLint rule-suppression audit
 
-**Status:** ✅ COMPLETE — callback-box (backend + frontend) and cardworks all have
+**Status:** ✅ COMPLETE — beebox (backend + frontend) and cardworks all have
 every silenced rule re-enabled and zero suppressions. The personal-vibe-check
 preset itself was updated (0.4.0) where rules were retired/adjusted.
-**Found:** 2026-05-30, during the `fix-cb-mv` worktree (a tangent off the `cb mv` work)
-**Scope:** `callback-box` (backend + frontend) and `cardworks`
+**Found:** 2026-05-30, during the `fix-bbx-mv` worktree (a tangent off the `bbx mv` work)
+**Scope:** `beebox` (backend + frontend) and `cardworks`
 
 ## Progress log
 
 - **2026-05-30 — ratchet landed (backend).** Removed the off-block from
-  `callback-box/eslint.config.mjs`; captured existing debt in committed
+  `beebox/eslint.config.mjs`; captured existing debt in committed
   `eslint-suppressions.json` (1000 violations) via `eslint --suppress-all`;
   added `--pass-on-unpruned-suppressions` to the backend lint-staged command;
   kept `custom/jsx-classname-required` off with a comment. All rules now
@@ -30,7 +30,7 @@ preset itself was updated (0.4.0) where rules were retired/adjusted.
   chaining" bullet from code-style.md + vibe-check conventions.md/README. Pruned all
   302 backend suppressions. (vibe-check's own dev deps aren't installed in this
   worktree, so its self-tests weren't re-run; the change is config-only and both
-  callback-box halves lint clean against it.)
+  beebox halves lint clean against it.)
 - **2026-05-30 — `??` ban retired, `as` ban kept (`.tsx` no-restricted-syntax).**
   Reviewed the 72 `.tsx`-only sites. The ~44 `??` bans were clean default idioms
   (`options.x ?? default`) — inconsistent with allowing optional chaining — so the
@@ -75,7 +75,7 @@ preset itself was updated (0.4.0) where rules were retired/adjusted.
   rule was ever enforced. Deleted the stale config, auto-fixed the mechanical
   backlog, then burned down catch/default-params/error-classes/max-lines and all
   29 `max-params` (refactored to named-params objects; the one external caller,
-  callback-box's `lintCard`, updated in lockstep). `cardworks/eslint-suppressions.json`
+  beebox's `lintCard`, updated in lockstep). `cardworks/eslint-suppressions.json`
   empty; 505 tests pass.
 - **2026-05-30 — bare-catch rule enabled for the frontend.** In the frontend
   (`react: true`), `no-restricted-syntax` carries *only* the bare-catch selector
@@ -93,7 +93,7 @@ preset itself was updated (0.4.0) where rules were retired/adjusted.
   `security/detect-bidi-characters` and `@typescript-eslint/no-this-alias`. The
   other four (`detect-object-injection`, `no-hardcoded-urls`, `single-export`,
   `require-spec-file`) are disabled in vibe-check's *own* preset for `.ts`
-  files — removing callback-box's override doesn't enable them. "0 violations"
+  files — removing beebox's override doesn't enable them. "0 violations"
   masked "rule off." (They *are* on for `.tsx`, where they happen to have 0
   hits.)
 - `no-restricted-syntax` (342) is **not** homogeneous. It's **270 bare catches**
@@ -108,7 +108,7 @@ When `@ianbicking/personal-vibe-check` was integrated (2026-02-14), each
 project's `eslint.config.mjs` was given a block that turns **18 rules off**.
 Several of those are rules from personal-vibe-check itself (i.e. rules we
 deliberately authored), and several directly contradict the written rules in
-`callback-box/code-style.md`. The suppression has been silent ever since — the
+`beebox/code-style.md`. The suppression has been silent ever since — the
 preset says "enforce these," the project config says "never mind."
 
 This is **not** ongoing/creeping suppression: the block was added once, at
@@ -122,7 +122,7 @@ fix is a policy/ratchet decision, not a quick edit.
 
 ## How this was disabled (forensics)
 
-`callback-box/eslint.config.mjs` has been touched by exactly two commits:
+`beebox/eslint.config.mjs` has been touched by exactly two commits:
 
 | Commit | Date | What it did |
 |---|---|---|
@@ -132,16 +132,16 @@ fix is a policy/ratchet decision, not a quick edit.
 So the disabling was a single deliberate act at adoption time — the common
 "turn off whatever would mass-fail so the new preset can land" move — done by an
 agent under the maintainer's name. It was never separately reviewed/approved as
-a policy decision. `cardworks` and `callback-box/src/frontend` carry the same
+a policy decision. `cardworks` and `beebox/src/frontend` carry the same
 block (added with their own vibe-check integrations).
 
 ## What's disabled, by project
 
 Legend for **Owner**: `vibe` = a personal-vibe-check rule we wrote · `core` =
 ESLint core · `3p` = bundled third-party plugin.
-**Style?** = does it contradict `callback-box/code-style.md`.
+**Style?** = does it contradict `beebox/code-style.md`.
 
-### callback-box backend (`eslint.config.mjs`) — ~1009 violations if restored
+### beebox backend (`eslint.config.mjs`) — ~1009 violations if restored
 
 | Rule | Owner | Style? | Violations |
 |---|---|---|---:|
@@ -169,7 +169,7 @@ immediately, with no debt: `no-hardcoded-urls`, `single-export`,
 `require-spec-file`, `detect-object-injection`, `detect-bidi-characters`,
 `no-this-alias`.
 
-### callback-box frontend (`src/frontend/eslint.config.mjs`) — ~401 violations
+### beebox frontend (`src/frontend/eslint.config.mjs`) — ~401 violations
 
 Disables the same family (minus `error/no-throw-literal`, `complexity`, the
 `security/*` set, `no-this-alias`; it keeps those **on**). Also disables
@@ -286,7 +286,7 @@ zero, it's just a normal enforced rule.
 ## Decisions needed
 
 1. Ratchet now, or full-fix? (Recommend: ratchet now, fix incrementally.)
-2. All three projects in one pass, or callback-box first?
+2. All three projects in one pass, or beebox first?
 3. Any disabled rule we actually want to *stay* off deliberately (e.g. the noisy
    `security/detect-object-injection`)? If so, keep it off **with a comment**
    saying why — the problem isn't that things are disabled, it's that they're

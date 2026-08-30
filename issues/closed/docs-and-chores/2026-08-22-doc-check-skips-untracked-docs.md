@@ -1,7 +1,7 @@
 ---
 title: "doc-check passes a brand-new doc it would reject once staged"
 workstream: chores-burn-down
-area: callback-box
+area: beebox
 resolution: implemented
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — writing a plan doc and validating it before committing
@@ -15,7 +15,7 @@ running `pnpm doc-check` to check your work reports success, and the same check
 then fails in pre-commit once the file is staged.
 
 Observed: `docs/plans/user-story-journeys.md` written with `status: proposed`.
-`pnpm --dir callback-box doc-check` exited 0. `git commit` failed with
+`pnpm --dir beebox doc-check` exited 0. `git commit` failed with
 `invalid plan status` (the valid set is in `src/dev/doc-frontmatter.ts:6`).
 Nothing about the first result said "this file was not examined".
 

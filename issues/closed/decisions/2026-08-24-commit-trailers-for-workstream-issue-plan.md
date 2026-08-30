@@ -47,7 +47,7 @@ at a different moment, none able to speak about a specific commit:
 - issues carry `workstream:` (~72% `unknown`/`unattached`)
 - plans carry `workstream:` and `issues: []` (28 of 176 plans have a non-empty
   list)
-- the registry (`~/.cache/callback-box/workstreams/<name>.json`) carries
+- the registry (`~/.cache/beebox/workstreams/<name>.json`) carries
   `baseSha` and, on removal, `finalSha`
 
 At close time `/finish` writes "Resolved by `<sha>`" as prose at the top of the
@@ -55,7 +55,7 @@ issue body (`issues/CLAUDE.md`). That is the one moment the commit↔issue link
 is known and recorded — unstructured, and only for issues someone remembered.
 
 The box-side trailer vocabulary (`CONNECTOR_TRAILER_KEYS` in
-`callback-box/src/lib/git-trailers.ts`, facets in `git-log.ts`, filters in the
+`beebox/src/lib/git-trailers.ts`, facets in `git-log.ts`, filters in the
 history router) is **not** this vocabulary — it records what a connector did to
 a card. It is precedent only that trailers + a parser + a faceted reader work
 in this codebase. This issue is about development history: who was working on
@@ -86,7 +86,7 @@ human. Settled:
 - *What did workstream X do?* — `git log --grep='^Workstream: X'`, or the
   landing merges. Durable after the branch is culled.
 - *Did this fix land?* — `git log --grep='^Issue: <name>'` before falling back
-  to the `git log -S` guess in `cb-issue-actions`. Only catches commits that
+  to the `git log -S` guess in `bbx-issue-actions`. Only catches commits that
   named the issue; a forgotten trailer degrades to today.
 - *Which commits does this plan account for?* — `Plan:` grep, or via the
   stream.
@@ -104,7 +104,7 @@ human. Settled:
 ## Who reads it
 
 1. `git log --format='%(trailers:key=Issue,valueonly)'` / `--grep` — free.
-2. A small `bin/` query wrapping those, called by the `cb-issue-actions`
+2. A small `bin/` query wrapping those, called by the `bbx-issue-actions`
    `fixed` disposition first.
 3. The workstreams app shows no commits today (`git.tip` plus a `committed`
    boolean); a per-stream/per-issue commit list is a new panel. Later.
@@ -132,5 +132,5 @@ after a reader exists.
 
 - [No way to know what a workstream covers](../features/2026-08-20-no-way-to-know-what-a-workstream-covers.md)
   — answered from git by `Workstream:` and the landing merges.
-- `cb-issue-actions` skill, `fixed` disposition — the `git log -S` guess that
+- `bbx-issue-actions` skill, `fixed` disposition — the `git log -S` guess that
   `Issue:` grep precedes.

@@ -26,7 +26,7 @@ discovered-in: main session — editing the launch-worktree-session skill and ch
 > skill" showed the refusal was a considered decision, not an oversight — so
 > overriding it was not the agent's call to make.
 >
-> **Residual:** three entries remain real directories — `cb-prompt-review`,
+> **Residual:** three entries remain real directories — `bbx-prompt-review`,
 > `codex`, `skill-creator` — none of which is a tracked Claude skill any more.
 > The loop only manages tracked names, so it leaves them, and the cleanup pass
 > only removes stale *symlinks*. A Codex session there still sees July copies of
@@ -68,8 +68,8 @@ copy of every skill. Measured on the one that prompted this:
 
 Less than half. Everything added since 2026-07-06 is invisible to Codex there —
 including the agent/model-choice guidance, the routing-before-creating section,
-and the base-ref warning added today. `finish`, `browse`, `cb-plan`,
-`cb-migration` and the rest are equally stale.
+and the base-ref warning added today. `finish`, `browse`, `bbx-plan`,
+`bbx-migration` and the rest are equally stale.
 
 **Worktrees are probably fine**: a fresh worktree has no `.agents/` yet, so the
 generator symlinks cleanly at spin-up. That is also why this stayed hidden —

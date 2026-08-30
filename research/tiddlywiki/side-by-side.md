@@ -1,8 +1,8 @@
-# TiddlyWiki markup beside the callback-box equivalent
+# TiddlyWiki markup beside the beebox equivalent
 
 **Written 2026-08-19.** Companion to [expressing-content.md](expressing-content.md).
 TiddlyWiki samples are verbatim from the TiddlyWiki5 repository at `master`
-(`5.5.0-prerelease`); callback-box samples are from this checkout.
+(`5.5.0-prerelease`); beebox samples are from this checkout.
 
 Each section is one job a box already does, the markup TiddlyWiki uses for it,
 and what the difference costs or buys.
@@ -31,8 +31,8 @@ entries:
 
 **The difference is the address.** A tiddler's address is its title, so a link
 is the name of the thing and renaming breaks every link (there is a whole
-community plugin, `relink`, to fix this). Our address is a path, so `cb mv`
-rewrites refs and `cb validate` catches dangling ones — refs are found by
+community plugin, `relink`, to fix this). Our address is a path, so `bbx mv`
+rewrites refs and `bbx validate` catches dangling ones — refs are found by
 convention, any key named `ref`/`refs` at any depth, plus Markdoc `ref=`
 attributes in bodies.
 
@@ -213,9 +213,9 @@ at view granularity, and it is not addressable or composable.
 
 The pieces line up like this:
 
-| Job | TiddlyWiki | callback-box |
+| Job | TiddlyWiki | beebox |
 |---|---|---|
-| Select a set | filter expression | `dependencies` globs; `cb search --kind --path` |
+| Select a set | filter expression | `dependencies` globs; `bbx search --kind --path` |
 | Render the set | `<$list>` | the view component's own JSX |
 | Render one item | `template` / widget body / default link | `file-type-registry` priority chain |
 | Pick the item renderer | cascade (filter-conditioned, neighbour-ordered) | `registerFileType({type}, {priority})` + `rendersCardTypes` |
@@ -286,7 +286,7 @@ are the same sentence with a different tag.
 ## 7. Search
 
 ```
-cb search "leaky faucet" --kind memo --path store/projects/ --limit 20
+bbx search "leaky faucet" --kind memo --path store/projects/ --limit 20
 ```
 
 ```
@@ -296,7 +296,7 @@ cb search "leaky faucet" --kind memo --path store/projects/ --limit 20
 
 Same job, and the second line shows what the difference gets you: `!has[caption]`
 is a predicate we cannot express, over a field no one declared, composed with
-everything else. `cb search` has three fixed axes — text, kind, path prefix —
+everything else. `bbx search` has three fixed axes — text, kind, path prefix —
 each a flag.
 
 The trade is exactly the one this whole review keeps landing on: their

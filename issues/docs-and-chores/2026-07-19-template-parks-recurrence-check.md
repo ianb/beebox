@@ -1,7 +1,7 @@
 ---
 title: "Check that template updates aren't parking again without due cause"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 needs: [decision]
 ---

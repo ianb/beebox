@@ -1,4 +1,4 @@
-# The batched full run of callback-box's test suite — the only thing that tests
+# The batched full run of beebox's test suite — the only thing that tests
 # `main`, and the only thing that still runs everything. Iteration and /finish
 # run selected tests; a failure that reaches main surfaces here within the hour.
 #

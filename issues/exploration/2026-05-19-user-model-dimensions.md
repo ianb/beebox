@@ -2,7 +2,7 @@
 title: "user model dimensions"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 Related to the memory-writing guidance above: a deep model of the principal (boxholder) is something that *develops over time* from observed interactions, not something written upfront. But for accumulation to add up to a model rather than a pile of facts, the agent needs scaffolding of *which dimensions to pay attention to*. Candidates:

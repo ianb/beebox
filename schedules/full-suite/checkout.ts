@@ -66,7 +66,7 @@ async function installDeps(dir: string): Promise<void> {
 }
 
 /**
- * `callback-box`'s `pretest`, run explicitly.
+ * `beebox`'s `pretest`, run explicitly.
  *
  * The tiers invoke the ledger wrapper directly rather than through `pnpm test`,
  * which means npm's `pretest` hook — `node scripts/build-cli.ts` — never fires.
@@ -76,11 +76,11 @@ async function installDeps(dir: string): Promise<void> {
  * rather than restating its command keeps one definition of the build.
  */
 async function buildCli(dir: string): Promise<void> {
-  const result = await execa("pnpm", ["--dir", path.join(dir, "callback-box"), "run", "pretest"], {
+  const result = await execa("pnpm", ["--dir", path.join(dir, "beebox"), "run", "pretest"], {
     reject: false,
     all: true,
   });
-  if (result.exitCode !== 0) refuse(`callback-box pretest (build-cli) failed:\n${result.all ?? ""}`);
+  if (result.exitCode !== 0) refuse(`beebox pretest (build-cli) failed:\n${result.all ?? ""}`);
 }
 
 /** The lockfile at a commit, so a bisect step reinstalls only when it must. */
@@ -90,7 +90,7 @@ async function lockfileHash(commit: string): Promise<string> {
 
 // ─── running tests in it ──────────────────────────────────────────────────
 
-/** The ledger-wrapped tier command, as `callback-box/package.json` spells it. */
+/** The ledger-wrapped tier command, as `beebox/package.json` spells it. */
 function tierArgs(input: { tier: "ordinary" | "careful"; base: string }): string[] {
   return [
     "exec",
@@ -117,7 +117,7 @@ export interface SuiteRun {
 
 export async function runTier(input: { checkout: Checkout; tier: "ordinary" | "careful"; base: string }): Promise<SuiteRun> {
   process.stdout.write(`\n=== full suite (${input.tier}) ===\n`);
-  const result = await execa("pnpm", ["--dir", path.join(input.checkout.dir, "callback-box"), ...tierArgs(input)], {
+  const result = await execa("pnpm", ["--dir", path.join(input.checkout.dir, "beebox"), ...tierArgs(input)], {
     reject: false,
     all: true,
   });
@@ -146,7 +146,7 @@ export function failingFiles(runs: SuiteRun[]): string[] {
 export async function runFileAlone(input: { checkout: Checkout; file: string }): Promise<SuiteRun> {
   const result = await execa(
     "pnpm",
-    ["--dir", path.join(input.checkout.dir, "callback-box"), "exec", "tap", input.file],
+    ["--dir", path.join(input.checkout.dir, "beebox"), "exec", "tap", input.file],
     { reject: false, all: true },
   );
   return { output: result.all ?? "", exitCode: result.exitCode ?? null };
@@ -165,7 +165,7 @@ export async function runFileAlone(input: { checkout: Checkout; file: string }):
  * See issues/closed/bugs/2026-08-25-fresh-checkout-tap-default-plugins.md.
  */
 async function assertTapPlugins(dir: string): Promise<void> {
-  const pkg = path.join(dir, "callback-box");
+  const pkg = path.join(dir, "beebox");
   for (const args of [["plugin", "list"], ["versions"]]) {
     const result = await execa("pnpm", ["--dir", pkg, "exec", "tap", ...args], {
       reject: false,

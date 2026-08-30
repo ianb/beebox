@@ -1,7 +1,7 @@
 ---
 title: "parseSessionLog silently truncates transcripts at 10,000 entries"
 workstream: chat-session-identity
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
 priority: normal
@@ -9,13 +9,13 @@ resolution: implemented
 ---
 
 **Closed 2026-08-26.** The last silent first-page reader, `core/retro/discovery.ts` `countUserMessages`, now returns `truncated` and its caller logs a notice (`d3d678ee1`). `renderSessionCompact` (`transcript-render.ts:88-91`) and `extractBehavior` (`dev/lib/test-runner.ts:219,248`) already warned. Workstream chat-session-identity.
-`parseSessionLog` (`callback-box/src/cli/lib/session.ts:317`) defaults `limit`
+`parseSessionLog` (`beebox/src/cli/lib/session.ts:317`) defaults `limit`
 to 10,000 (line 322) and slices *after* building the whole filtered array
 (line 339). A caller that doesn't pass an explicit `limit` therefore gets only
 the first 10,000 entries, with no error and no signal — `hasMore` is returned
 but most callers ignore it.
 
-`renderSessionCompact` (`callback-box/src/core/chat/transcript-render.ts`) is
+`renderSessionCompact` (`beebox/src/core/chat/transcript-render.ts`) is
 one such caller, so the **retrospective observer silently sees only the first
 10,000 entries** of any longer transcript. Nothing in the corpus measured on
 2026-07-28 was that long (the largest rendered to ~642k chars), so this is
@@ -58,8 +58,8 @@ transcript is longer:
 - `dev/lib/test-runner.ts` `extractBehavior` — knowledge-audit behavior
   extraction over the main log and each sub-agent log (silent); an audit of a
   5 000+-entry run would miss later tool use.
-- `cli/commands/session.ts` (plain `cb session <id>`) now *prints* a note when
-  it truncates, and `cb session --since` was switched to a tail read (it wants
+- `cli/commands/session.ts` (plain `bbx session <id>`) now *prints* a note when
+  it truncates, and `bbx session --since` was switched to a tail read (it wants
   the recent end, not the first page) — those two are no longer silent.
 
 Chat review's variant of the same problem is filed separately as

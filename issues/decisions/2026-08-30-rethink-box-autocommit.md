@@ -2,7 +2,7 @@
 title: "Autocommit causes a lot of issues — decide how box content commits should actually work"
 workstream: unattached
 needs: [design]
-area: callback-box
+area: beebox
 labels: [cards, git]
 filed-by: agent
 discovered-by: Ian

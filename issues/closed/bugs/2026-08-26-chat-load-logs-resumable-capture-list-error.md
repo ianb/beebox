@@ -1,7 +1,7 @@
 ---
 title: "Every chat page load logs a [capture] 'List resumable capture sessions failed' error"
 workstream: tour-health
-area: callback-box
+area: beebox
 labels: [capture, tours]
 filed-by: agent
 discovered-by: agent
@@ -26,7 +26,7 @@ a box without the opt-in.
 
 On the tour worktree's `test1` clone, opening `/chat` (and `/capture`, which
 redirects into it) puts one error in the app bar's debug-log button on every
-load. The client debug log (`.callback-box/client-debug.log`) shows it each
+load. The client debug log (`.beebox/client-debug.log`) shows it each
 time:
 
 ```

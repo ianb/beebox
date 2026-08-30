@@ -6,7 +6,7 @@ import { z } from "zod";
  * this schema is a parse boundary over another program's stdout, not a second
  * definition of the record — `bin/lib/schedules.ts` owns that.
  *
- * Design: callback-box/docs/plans/scheduled-workstreams.md (Tracks C, D).
+ * Design: beebox/docs/plans/scheduled-workstreams.md (Tracks C, D).
  */
 
 /** `<YYYYMMDD>-<HHMMSS>-<4 hex>` (bin/lib/schedules.ts `alertIdFor`). */

@@ -4,7 +4,7 @@ workstream: codex-exit-cleanup
 area: bin
 filed-by: agent
 discovered-in: worktree-codex-exit-cleanup — cross-model (codex) review of the codex teardown work
-design: ../../../callback-box/docs/plans/worktree-control-surface.md
+design: ../../../beebox/docs/plans/worktree-control-surface.md
 resolution: implemented
 ---
 
@@ -18,7 +18,7 @@ addressed — worktree names are now validated at the CLI boundary
 to argv, so a name that doesn't match the argv pattern still resolves via cwd.
 
 > **Was being fixed as part of a plan.** Track B / chunk 2 of
-> [the worktree control surface plan](../../../callback-box/docs/plans/worktree-control-surface.md)
+> [the worktree control surface plan](../../../beebox/docs/plans/worktree-control-surface.md)
 > took the "fold sweep onto `wt_other_agent_live` with a snapshot passed in"
 > option sketched below.
 

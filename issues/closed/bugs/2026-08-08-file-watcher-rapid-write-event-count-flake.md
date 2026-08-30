@@ -1,14 +1,14 @@
 ---
 title: "`file-watcher.doctest.md` rapid-write event count flakes under parallel load"
 workstream: member-password-reset
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-member-password-reset — finish verification after merging current main
 resolution: implemented
 ---
 
 The full `pnpm test` suite intermittently fails the rapid-write assertion in
-`callback-box/test/core/box/file-watcher.doctest.md`. The test writes four
+`beebox/test/core/box/file-watcher.doctest.md`. The test writes four
 versions about 12 ms apart and expects at least two `file-change` events after
 the 50 ms debounce window. Under parallel suite load, it observed only one:
 

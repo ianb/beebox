@@ -2,7 +2,7 @@
 title: "Two SPA-fallback doctests fail on main: page navigations 404 where they should redirect to login"
 workstream: unattached
 resolution: implemented
-area: callback-box
+area: beebox
 labels: [tests, auth]
 filed-by: agent
 discovered-by: agent
@@ -61,5 +61,5 @@ these files are this.
 Fix: `InternalServerOptions.frontendPath`; `makeTestServer` passes the tracked
 `test/fixtures/frontend-dist/`, so every test server has the built shape.
 `test/webapp` is 1007/1007 with and without a real build. Remaining
-build-dependent test: `test/hub/hub-e2e.doctest.md` (drives a real `cb hub`
+build-dependent test: `test/hub/hub-e2e.doctest.md` (drives a real `bbx hub`
 subprocess and builds the frontend itself if absent).

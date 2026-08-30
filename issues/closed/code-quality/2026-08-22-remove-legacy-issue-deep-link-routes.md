@@ -23,7 +23,7 @@ job is to redirect an old URL shape into the current one:
 
 Each parses the path back apart and `redirect`s to `/issues?issue=<relPath>`
 with the right visibility. They date from the move to SPA query state
-([workstreams](../../../callback-box/docs/implemented-plans/workstreams.md):629),
+([workstreams](../../../beebox/docs/implemented-plans/workstreams.md):629),
 which kept the redirects *"indefinitely — one line, and habit + docs point"* at
 the old form.
 

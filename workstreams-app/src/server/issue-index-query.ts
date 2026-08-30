@@ -19,7 +19,7 @@ const TEXT_PROPERTIES = ["title", "body"] as const;
 const BOOST = { title: 2 } as const;
 
 /**
- * Vector-half cosine cutoff. Same value and rationale as callback-box's search
+ * Vector-half cosine cutoff. Same value and rationale as beebox's search
  * (`core/search/query.ts`): Orama's 0.8 default excludes nearly every real
  * text-embedding-3-small match, so the vector half would contribute nothing.
  */

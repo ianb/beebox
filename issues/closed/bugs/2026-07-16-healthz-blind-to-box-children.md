@@ -4,7 +4,7 @@ workstream: unknown
 resolution: implemented
 ---
 
-During the Node 22→24 upgrade (2026-07-16), every per-box `cb serve` child
+During the Node 22→24 upgrade (2026-07-16), every per-box `bbx serve` child
 crash-looped on a better-sqlite3 ABI mismatch (`ERR_DLOPEN_FAILED`), yet the
 hub's `/healthz` returned 200 — the deploy healthcheck (and any external
 monitoring pointed at it) considered the system healthy while no box could

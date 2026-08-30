@@ -1,39 +1,39 @@
 ---
-title: "cb pub setup's Access instructions are stale and dashboard-bound — provision via the API instead"
+title: "bbx pub setup's Access instructions are stale and dashboard-bound — provision via the API instead"
 workstream: pub-setup-wrangler
-area: callback-box
+area: beebox
 needs: [manual-testing]
-design: ../../callback-box/docs/implemented-plans/pub-setup-wrangler.md
+design: ../../beebox/docs/implemented-plans/pub-setup-wrangler.md
 filed-by: agent
-discovered-in: main session — boxholder ran the first live `cb pub setup` and got stuck on the manual Access step
+discovered-in: main session — boxholder ran the first live `bbx pub setup` and got stuck on the manual Access step
 priority: important
 ---
 
 **2026-07-31 — BUILT (worktree-pub-setup-wrangler), pending live verification.**
 The three forks were resolved with the boxholder and the rework is implemented
-+ fake-tested per [pub-setup-wrangler](../../callback-box/docs/implemented-plans/pub-setup-wrangler.md)
++ fake-tested per [pub-setup-wrangler](../../beebox/docs/implemented-plans/pub-setup-wrangler.md)
 (which also records the Codex security review that reshaped the credential
 model — notably the content/ingestion R2 bucket split):
 
 - Setup auth is `wrangler login` (OAuth); REST read-backs ride
   `wrangler auth token` through a refresh-on-401 bearer provider. No token, no
-  `~/.cb-publish.env`. Env pair stays as an explicit escape hatch.
-- Access is provisioned via the CF API (`cb pub setup --access`) under a
-  SETUP-ONLY Access-edit token (hidden prompt / `CB_ACCESS_SETUP_TOKEN`,
+  `~/.beebox-publish.env`. Env pair stays as an explicit escape hatch.
+- Access is provisioned via the CF API (`bbx pub setup --access`) under a
+  SETUP-ONLY Access-edit token (hidden prompt / `BBX_ACCESS_SETUP_TOKEN`,
   never argv, never stored; revoke-after printed as a completion step).
   Default login method: One-Time PIN; policy allow-everyone; the Worker's
   per-pub allowlist stays the authorization.
 - The connector credential is an ingestion-bucket-scoped R2 token in
   `config/connectors/publish.secret.json` (per-box secret pattern) — and
-  `cb pub setup --mint-connector-token` MINTS it via the account-token API
+  `bbx pub setup --mint-connector-token` MINTS it via the account-token API
   (bootstrap token gains "Account API Tokens: Edit"), so there is no manual
   R2-dashboard token assembly (addendum in the design doc, 2026-07-31).
 - Non-secret Access values persist in `config/publish.json` so reruns
-  redeploy rather than erase them; `cb pub status` diffs deployed vars
+  redeploy rather than erase them; `bbx pub status` diffs deployed vars
   against that file.
 
 **Manual testing needed (boxholder present — writes real auth policy):** run
-`wrangler login` + `cb pub setup` live; then `--access` with a scoped token
+`wrangler login` + `bbx pub setup` live; then `--access` with a scoped token
 against the real Zero Trust org; verify the plan's named live gaps (create
 response `aud` placement, `/access/organizations` pre-onboarding behavior,
 whether the OTP IdP is auto-provisioned, `wrangler whoami --json` shape, R2
@@ -42,20 +42,20 @@ permission-group names, bucket resource-key format, one-time `value` in the
 create response); then an OTP login on a published `/a/` page confirming the
 JWT email matches the allowlist.
 
-`cb pub setup` provisions the R2 bucket and deploys the Worker fine (verified live
+`bbx pub setup` provisions the R2 bucket and deploys the Worker fine (verified live
 2026-07-19, first real run). But the account-tier half — Cloudflare Access — is
 left as **printed manual instructions** pointing at dashboard pages, and those
 instructions are already wrong. The boxholder lost real time to it.
 
 ## What it prints today
 
-From `accessSetupInstructions` (`callback-box/src/publish/setup.ts`):
+From `accessSetupInstructions` (`beebox/src/publish/setup.ts`):
 
 ```
 1. Zero Trust dashboard → Settings → Authentication → add Google as a login method.
 2. Access → Applications → Add application (Self-hosted): ...
 3. Copy the team domain and the application's Audience (aud) tag ...
-4. Re-run: cb pub setup --access-team-domain ... --access-aud ...
+4. Re-run: bbx pub setup --access-team-domain ... --access-aud ...
 ```
 
 ## What actually happened
@@ -88,7 +88,7 @@ does (bucket create, Worker deploy, previews-disabled, read-back verification)
 goes through the API behind an injectable client and is unit-tested. The Access
 step is the one place we punt to prose.
 
-**Proposal: provision Access through the API too**, so `cb pub setup` creates the
+**Proposal: provision Access through the API too**, so `bbx pub setup` creates the
 application itself and reads back the `aud` rather than asking a human to copy it.
 
 - `POST /accounts/<id>/access/apps` with `type: self_hosted` and
@@ -120,13 +120,13 @@ application itself and reads back the `aud` rather than asking a human to copy i
   allowlist match on the email a Cloudflare-IdP JWT carries? If yes, prefer it
   and mention Google only as an alternative.
 - **Idempotency/drift**, matching the rest of setup: re-running should find an
-  existing app rather than creating duplicates, and `cb pub status` should report
+  existing app rather than creating duplicates, and `bbx pub status` should report
   Access config drift the way it reports Worker drift.
 
-## Related: `~/.cb-publish.env` doesn't fit our secret management
+## Related: `~/.beebox-publish.env` doesn't fit our secret management
 
 Publishing's credentials are a **machine-level dotfile the user must remember to
-source** (`set -a; . ~/.cb-publish.env; set +a`) before running anything;
+source** (`set -a; . ~/.beebox-publish.env; set +a`) before running anything;
 `src/publish/setup.ts:59` and `src/services/publish-remote-store.ts:114` just
 read `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` out of the environment.
 
@@ -141,12 +141,12 @@ That's a third pattern, matching neither of the two we already have:
 Concrete problems, not just inconsistency:
 
 1. **The connector can't work on the server.** `publish-submissions.ts` runs on
-   every `cb wakeup`, including prod. A file at `~/.cb-publish.env` on the
+   every `bbx wakeup`, including prod. A file at `~/.beebox-publish.env` on the
    boxholder's laptop does not exist on the server, and (per the known
-   prod-diagnostics gotcha) an ad-hoc `cb` invocation there doesn't inherit the
+   prod-diagnostics gotcha) an ad-hoc `bbx` invocation there doesn't inherit the
    services' environment anyway. So submission pulling is either silently
    broken in prod or needs a separate, undocumented credential path.
-2. **No tooling knows about it.** `cb health` / `cb status` can't report "this
+2. **No tooling knows about it.** `bbx health` / `bbx status` can't report "this
    box can't publish because it has no Cloudflare credential" the way they could
    for a `*.secret.json`. A forgotten `set -a` looks like a bug, not a config gap.
 3. **It's account-wide, not per-box** — which may actually be correct (one CF
@@ -163,7 +163,7 @@ flow — "no API credentials needed."** Driving the provisioning half through
 wrangler commands under that login (`wrangler r2 bucket create`, `wrangler
 deploy`, `wrangler secret put`, preview-URLs via `wrangler.jsonc`) **eliminates
 both friction points at once**: the hand-minted scoped API token (the manual
-dashboard step) *and* `~/.cb-publish.env` (the dotfile). The only human action
+dashboard step) *and* `~/.beebox-publish.env` (the dotfile). The only human action
 becomes `wrangler login` → approve in the browser.
 
 Two boundaries it does NOT cross:
@@ -173,11 +173,11 @@ Two boundaries it does NOT cross:
   proposed above — wrangler doesn't change that half.
 - **The server-side submission-pull connector still needs a stored credential.**
   `wrangler login` is interactive and laptop-local; `publish-submissions.ts` runs
-  headless on prod every `cb wakeup`. So wrangler-login fixes the one-time *setup*
+  headless on prod every `bbx wakeup`. So wrangler-login fixes the one-time *setup*
   auth but not the *runtime* credential — that stays the secret-management
   question above.
 
-Net target: **`cb pub setup` provisions via `wrangler login` (no token, no
+Net target: **`bbx pub setup` provisions via `wrangler login` (no token, no
 dotfile); account-tier Access via the CF API (no dashboard); the runtime
 submission connector draws its credential from the resolved
 [per-box secret-management](../closed/decisions/2026-03-15-per-box-secret-management.md)

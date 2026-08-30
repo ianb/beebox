@@ -43,11 +43,11 @@ const runId = process.env["SCHEDULE_RUN_ID"] ?? "unknown";
 const stateDir = process.env["SCHEDULE_STATE_DIR"] ?? "";
 const logFile = path.join(stateDir, "runs", `${runId}.log`);
 
-console.log(`=== callback-box manual tests (${commit} on ${branch}) ===`);
+console.log(`=== beebox manual tests (${commit} on ${branch}) ===`);
 
 // Streamed AND captured: stdout is the run log, and the captured copy is what
 // the briefing carries.
-const suite = await execa("pnpm", ["--dir", "callback-box", "test:manual"], {
+const suite = await execa("pnpm", ["--dir", "beebox", "test:manual"], {
   cwd: REPO_ROOT,
   reject: false,
   all: true,

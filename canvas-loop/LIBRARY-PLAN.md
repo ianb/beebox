@@ -4,7 +4,7 @@
 `main`; kept as the founding design record (not a live proposal). Boxholder
 direction was to turn the validated sandbox into a monorepo library —
 eslint plugin, Claude plugin (skill + maybe rule), React display component,
-usable as a figure in callback-box **without being bound to callback-box**.
+usable as a figure in beebox **without being bound to beebox**.
 Treat the package as experimental: the API is expected to keep moving as
 agent exercises teach us more (see the README's EXPERIMENTAL banner). Design
 record: `issues/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`.
@@ -70,23 +70,23 @@ canvas-loop/
   showRecorder? height?/>` — wraps the existing browser TEA runner + the
   declaration-generated controls (plain HTML inputs restyled minimally; no
   widget libraries). SSR-safe: no window/document access at module
-  scope (callback-box renders with SSR machinery around).
+  scope (beebox renders with SSR machinery around).
 - **Inputs are initializable, watchable, and persistable — optionally**
   (boxholder requirement, 2026-07-14). Uncontrolled mode:
   `initialParams` (partial record overriding declaration defaults), state
   lives inside. Controlled mode: `params` + `onParamsChange(values)` — the
   host owns values, so persistence is composition at the host (a
-  callback-box card, localStorage, anything), not a component feature.
+  beebox card, localStorage, anything), not a component feature.
   `onEvent(entry)` optionally streams the same `{frame, type, …}` log
   entries the recorder captures — watching generalizes past params because
   every input is already a logged msg, and saving a full replayable session
   is likewise a host-side choice. Param changes injected by the host in
   controlled mode dispatch through the normal `param` msg path.
-- The **figure-in-callback-box** goal is an interface constraint, not a
-  deliverable: nothing in `./react` may import callback-box, and the demo
+- The **figure-in-beebox** goal is an interface constraint, not a
+  deliverable: nothing in `./react` may import beebox, and the demo
   proves embeddability outside it — a page in the monorepo `dev/` directory
   (served at `/<worktree>/dev/`) embedding two sketches via the component.
-  Actual callback-box card-view integration is future work (its own issue).
+  Actual beebox card-view integration is future work (its own issue).
 
 ## ESLint plugin (`./eslint`)
 

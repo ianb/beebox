@@ -7,7 +7,7 @@ discovered-in: worktree-open-source-readiness — docs-genre audit for the soft 
 labels: [soft-launch]
 ---
 
-Genre audit (2026-07-20) of all of `callback-box/docs/`: install is
+Genre audit (2026-07-20) of all of `beebox/docs/`: install is
 well-covered (3 verified guides + per-connector setup), reference/
 architecture dominates (~40 contributor/agent-facing files), and the
 **USE genre — "I have a running box, what do I do with it day to day" —

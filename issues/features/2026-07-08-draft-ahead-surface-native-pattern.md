@@ -1,7 +1,7 @@
 ---
 title: "draft ahead surface native pattern"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 From the Rowboat review (`research/rowboat-review.md`, Tier 2). Rowboat's email surface

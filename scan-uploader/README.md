@@ -1,10 +1,10 @@
 # scan-uploader
 
 A stand-alone laptop client that uploads scanned files (from a Fujitsu
-ScanSnap or similar) to a [callback-box](../callback-box) instance's
+ScanSnap or similar) to a [beebox](../beebox) instance's
 scan-upload endpoint. TypeScript, zero runtime dependencies (Node stdlib
 only), bundled by esbuild into a single self-contained script — `node
-dist/scan-uploader.mjs` runs it on any machine with no checkout, no `cb`,
+dist/scan-uploader.mjs` runs it on any machine with no checkout, no `bbx`,
 and no `npm install`.
 
 ## What it does
@@ -36,7 +36,7 @@ re-validates; useful after a validator fix upstream).
 
 This package is the client half of a wire contract shared with the server;
 the server side and the exact request/response shapes live in
-[`../callback-box/docs/scan-upload-contract.md`](../callback-box/docs/scan-upload-contract.md).
+[`../beebox/docs/scan-upload-contract.md`](../beebox/docs/scan-upload-contract.md).
 Every place in this codebase that encodes part of that contract carries a
 `// WIRE CONTRACT (scan-upload): …` comment — change both sides together.
 
@@ -111,7 +111,7 @@ bin/scan-uploader schedule uninstall
 "Config" below) and refuses if that file is missing or fails the strict
 reader — an installed schedule pointing at a broken config would just fail
 silently into a log file. It writes
-`~/Library/LaunchAgents/org.callback-box.scan-uploader.plist` and loads it
+`~/Library/LaunchAgents/org.beebox.scan-uploader.plist` and loads it
 (`RunAtLoad` is also set, so a sweep runs immediately and again after any
 reboot/login, catching scans that landed while the machine was off).
 Output goes to `~/Library/Logs/scan-uploader.log`. `uninstall` is
@@ -151,7 +151,7 @@ unknown keys already in the file. Shape, for hand-maintenance:
   "targets": [
     {
       "folder": "/Users/user/Scans/Family",
-      "serverUrl": "https://cb.example.org",
+      "serverUrl": "https://beebox.run",
       "box": "family",
       "tokenPath": "/Users/user/.scan-tokens/family.token",
       "disposition": "archive"
@@ -161,7 +161,7 @@ unknown keys already in the file. Shape, for hand-maintenance:
 ```
 
 - `folder` — absolute path to watch. Required.
-- `serverUrl` — the callback-box instance's base URL. Required.
+- `serverUrl` — the beebox instance's base URL. Required.
 - `box` — the box slug this folder uploads to. Required.
 - `tokenPath` — path to a file containing the bearer scan-token (minted via
   the box's `scanTokens` admin UI/tRPC procedures). The file's contents are

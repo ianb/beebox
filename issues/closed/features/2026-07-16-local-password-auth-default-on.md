@@ -1,24 +1,24 @@
 ---
 title: "Username/password login + forced account creation (even in dev) so a box is never accidentally open"
 workstream: unknown
-design: ../../../callback-box/docs/implemented-plans/local-password-auth.md
+design: ../../../beebox/docs/implemented-plans/local-password-auth.md
 resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder asked for a local-first, default-secure auth path
-area: callback-box
+area: beebox
 ---
 
 ## Implemented (2026-07-19)
 
 Built end-to-end on `worktree-local-password-auth` per the design plan (Tracks
-A–H): scrypt credential store, always-on gate with the `CB_ALLOW_UNAUTHENTICATED`
+A–H): scrypt credential store, always-on gate with the `BBX_ALLOW_UNAUTHENTICATED`
 opt-out, password login + first-run setup + throttle, `gen` session revocation +
 fail-closed auth-store + WS cookie fallback, browse agent-token injection,
-`cb auth` CLI, frontend login/setup pages + open-mode banner, docs. Cross-model
+`bbx auth` CLI, frontend login/setup pages + open-mode banner, docs. Cross-model
 (Codex) reviewed at plan and implementation stages; the implementation review
 found (and fixed) hub-side gen-revocation and hub login body-parse breaks. Full
 doctest suite green. Plan + review:
-`../../callback-box/docs/implemented-plans/local-password-auth.md` (+ `.review.md`).
+`../../beebox/docs/implemented-plans/local-password-auth.md` (+ `.review.md`).
 
 The human-only verification (real login/setup/WS/browse flows + prod hardening)
 lives in its own tracker:
@@ -58,15 +58,15 @@ account creation **mandatory on first run — including in dev** (with a screen 
   party), so a dev box is fully authenticated with zero remote services. Google
   OAuth stays available but becomes *a* method, not *the* method.
 
-The session half already works locally — `cb_session` is an HMAC-signed cookie with
-no server-side store, and `CB_SESSION_SECRET` auto-generates to a `0600` file if
+The session half already works locally — `bbx_session` is an HMAC-signed cookie with
+no server-side store, and `BBX_SESSION_SECRET` auto-generates to a `0600` file if
 unset (`auth.ts:44`). What's missing is the **identity/login** half that doesn't
 route through Google.
 
 ### Design questions (why this needs a design pass)
 
 - **Credential storage.** Where does the local credential live (per-box
-  `config/` vs `.callback-box/`) and how is it hashed (argon2id / scrypt /
+  `config/` vs `.beebox/`) and how is it hashed (argon2id / scrypt /
   bcrypt — pick one, salted, tuned)? Never plaintext; treat the file like the
   session secret (`0600`).
 - **Relationship to OAuth.** Is local password an *additional* method alongside
@@ -76,11 +76,11 @@ route through Google.
 - **"Forced even in dev" mechanics.** Does auth become *always-on*, dropping the
   `!isAuthEnabled() ⇒ open` branch entirely, with first-run bootstrapping a local
   account? Keep the existing gated bypasses intact and documented: the
-  `CB_DIAG_API_KEY` bearer (`auth.ts:62`) and hub-mode header trust behind
-  `CB_HUB_SECRET` (`auth.ts:114`) are secret-gated, not open doors.
+  `BBX_DIAG_API_KEY` bearer (`auth.ts:62`) and hub-mode header trust behind
+  `BBX_HUB_SECRET` (`auth.ts:114`) are secret-gated, not open doors.
 - **The explicit escape hatch.** "Default secure" must not wedge legitimate
   headless/CI/throwaway use. Provide a single loud opt-out (e.g.
-  `CB_ALLOW_UNAUTHENTICATED=1`) that logs a prominent warning on every boot —
+  `BBX_ALLOW_UNAUTHENTICATED=1`) that logs a prominent warning on every boot —
   fail-closed by default, opt-out by intent, never silent.
 - **Single boxholder vs multiple accounts.** Likely one boxholder credential per
   box (matches the single-user model); confirm before building a user table.
@@ -89,8 +89,8 @@ route through Google.
   local auth keeps dev free of remote dependencies), so a developer hitting it
   understands the intent rather than reaching for a bypass.
 - **Hub/prod boundary.** In hub mode the supervisor injects
-  `x-cb-authenticated-email` (secret-gated); local password login is for direct
-  `cb serve` / dev, not the hub path. Keep the two clearly separated.
+  `x-bbx-authenticated-email` (secret-gated); local password login is for direct
+  `bbx serve` / dev, not the hub path. Keep the two clearly separated.
 
 Aligns with the fail-closed/strict-by-default posture and the local-first dev goal.
 Touches the same surface as `docs/todo-security.md` (accepted security gaps) and

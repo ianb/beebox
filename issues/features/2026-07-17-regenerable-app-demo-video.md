@@ -4,7 +4,7 @@ workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder wants a shareable demo video an agent can keep current
-area: callback-box
+area: beebox
 priority: backlog
 ---
 
@@ -18,7 +18,7 @@ narrative* + a *determinism decision*.
 
 ### What already exists (driving the app is solved)
 
-- **Tours** (`callback-box/test/tours/*.tour.ts`, framework `test/tours/tour-lib/`,
+- **Tours** (`beebox/test/tours/*.tour.ts`, framework `test/tours/tour-lib/`,
   run via `bin/tour`) already script walks through the running app —
   navigate/click/type — but today emit **screenshots** (desktop 1280×800 + mobile
   375×800) + a11y snapshots, not video (`docs/tours.md`). The interaction-scripting
@@ -26,7 +26,7 @@ narrative* + a *determinism decision*.
 - **agent-browser** drives Chrome over CDP and exposes `get cdp-url` / `--cdp`, so a
   capture client can attach to the same session.
 - **Determinism pieces** for a *repeatable* capture: `src/scenario/`
-  (loader/runner for scripted multi-step fixtures), `CB_TIME` frozen time
+  (loader/runner for scripted multi-step fixtures), `BBX_TIME` frozen time
   (`src/lib/time.ts`), and the fake-agent — so the demo can repeat rather than be a
   different live-LLM take each run.
 - **The demo box is test1** (boxholder: "test1 is basically a shareable demo box").
@@ -48,7 +48,7 @@ narrative* + a *determinism decision*.
    curation against test1.
 3. **Determinism decision** (the crux for "keep it up to date") — the app's soul is
    agent interaction, which is non-deterministic. Either:
-   - **scripted responses** (scenario/fake-agent + `CB_TIME`) → repeats identically,
+   - **scripted responses** (scenario/fake-agent + `BBX_TIME`) → repeats identically,
      regenerates unattended, but shows canned answers; or
    - **live agent** → authentic but varies per run, needs a human "pick the good
      take." Auto-regeneration favors scripted; a hero cut may favor live.

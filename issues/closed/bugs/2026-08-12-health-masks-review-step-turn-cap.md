@@ -1,16 +1,16 @@
 ---
-title: "`cb health` reports a procedure as failing when only its review step ran out of turns"
+title: "`bbx health` reports a procedure as failing when only its review step ran out of turns"
 workstream: honest-diagnostics
-area: callback-box
+area: beebox
 labels: [health, procedures]
 filed-by: agent
 discovered-by: agent
-discovered-in: main session — cb feedback triage from a real box
+discovered-in: main session — bbx feedback triage from a real box
 priority: important
 resolution: implemented
 ---
 
-A scheduled `refresh-maps` run showed **failing** in `cb health`, but the work
+A scheduled `refresh-maps` run showed **failing** in `bbx health`, but the work
 itself had succeeded — the refresh step's own stdout said *"All MAP.md files
 current."* The failure came from the **review/validate sub-step** hitting
 *"Reached maximum number of turns (8)"* while trying to produce a verdict.

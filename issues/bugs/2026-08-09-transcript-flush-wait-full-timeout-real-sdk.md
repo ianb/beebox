@@ -1,7 +1,7 @@
 ---
 title: "Transcript durability gate hits its full 5s timeout on both turns of a real-SDK doctest"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: weekly manual-test triage — 2026-08-09T151705Z run, repo 508f42cc
 labels: [manual-tests]
@@ -10,7 +10,7 @@ priority: normal
 
 `test/manual/chat-queue-real.doctest.md` (real `claude` SDK process, not the
 fake backend) logged the durability-gate warning from
-`callback-box/src/core/chat/session/transcript-sync.ts` on **both** of its two
+`beebox/src/core/chat/session/transcript-sync.ts` on **both** of its two
 turns:
 
 ```
@@ -58,7 +58,7 @@ Same warning fired on both turns again, in the same doctest, still on exit
 status 0 (test still passes). Run log:
 `logs/manual-tests/2026-08-16T151700Z-53382.log` (lines 35, 39), repo
 `39752043`. `WAIT_TIMEOUT_MS` is still 5s and the warning text is unchanged
-in `callback-box/src/core/chat/session/transcript-sync.ts:29,129`. Two
+in `beebox/src/core/chat/session/transcript-sync.ts:29,129`. Two
 separate weekly runs, both two-for-two on the full timeout, rules out a
 one-off fluke — this now looks like a standing condition on this machine
 rather than an isolated slow poll. Still unconfirmed which of the two

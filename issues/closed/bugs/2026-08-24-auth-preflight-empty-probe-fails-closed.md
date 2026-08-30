@@ -3,7 +3,7 @@ title: "An empty `claude auth status` probe fails a run as \"not logged in\""
 workstream: refresh-maps-throughput
 filed-by: agent
 discovered-in: refresh-maps tier comparison (worktree-refresh-maps-throughput)
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
@@ -37,7 +37,7 @@ empty result; treat an empty-but-successful probe as "unknown" and let the run
 proceed (the SDK call itself fails informatively if auth really is missing); or
 carry an explicit `unknown` state the way the judge now does.
 
-Worth checking whether the same collapse affects the `cb health` auth probe in
+Worth checking whether the same collapse affects the `bbx health` auth probe in
 `webapp/trpc/routers/health.ts`, which uses the same service.
 
 ## Fixed, 2026-08-24

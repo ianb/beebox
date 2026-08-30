@@ -36,7 +36,7 @@ Design questions to settle:
   reload" affordance.
 - **iOS specifics**: the native shell could also force a reload on foreground
   when the page is older than some threshold, independent of the web-side
-  handshake (`cb-ios-overlap` territory — the webview lifecycle is native
+  handshake (`bbx-ios-overlap` territory — the webview lifecycle is native
   code).
 - A mismatch line in the client debug log even without any UI would already
   help the agent rule stale bundles in/out during a field probe.

@@ -2,13 +2,13 @@
 title: "Scheduled monitors have no way to talk to Ian — a message queue outside git"
 workstream: scheduled-task-voice
 resolution: implemented
-design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
+design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
 area: monorepo
 needs: [design]
 labels: [scheduler, workstreams, notifications]
 filed-by: agent
 discovered-by: Ian
-discovered-in: main session — cb feedback triage
+discovered-in: main session — bbx feedback triage
 priority: normal
 ---
 
@@ -23,8 +23,8 @@ none of them is something he can work through later.
 |---|---|
 | `bin/update-agent-sdk-scheduled.sh` | `PushNotification` + an `osascript` notification on nonzero exit |
 | `bin/manual-tests-scheduled.sh` | its own `notify()`, plus a triage agent that files `issues/` items |
-| `callback-box/deploy/deploy.sh` | `notify()` / `terminal-notifier` |
-| the scheduler daemon (`cb tick`) | **nothing** — writes `.callback-box/scheduler.jsonl` and hopes |
+| `beebox/deploy/deploy.sh` | `notify()` / `terminal-notifier` |
+| the scheduler daemon (`bbx tick`) | **nothing** — writes `.beebox/scheduler.jsonl` and hopes |
 
 Four jobs, four mechanisms, and a macOS notification is gone the moment it's
 dismissed. Recent cost: a deploy died mid-run and said nothing (the trap never

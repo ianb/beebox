@@ -1,0 +1,55 @@
+{
+  // Cloudflare Worker that serves publications from R2 (Track C).
+  // Provisioning (`bbx pub setup`, Track E) creates the real bucket and deploys
+  // this Worker per-box; this config is the shape it deploys and what the
+  // vitest-pool-workers suite runs against (miniflare supplies a local R2).
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pub-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-06",
+  // Publication CONTENT is data in R2, never bundled into the Worker (locked
+  // decision 3 + the "old Worker versions stay reachable" leak finding). Split
+  // into two buckets (Codex cross-review amendment 1, CRITICAL): PUB_STORE holds
+  // only publication content (`pubs/`, `slugs/`), laptop-OAuth-written by
+  // `bbx pub go`; PUB_INGEST holds Worker-written ingestion data (`submissions/`,
+  // `access-log/`). The box's stored connector token is scoped to PUB_INGEST only,
+  // so it can pull submissions/access-log but can never rewrite a manifest's
+  // `allowedEmails` or replace published content — R2 tokens scope per-bucket, not
+  // per-prefix, so one bucket could not make that guarantee. Box-side config
+  // parsing (`src/publish/pub-worker-meta.ts`) finds each entry by its binding
+  // name, so order here is presentation only.
+  "r2_buckets": [
+    {
+      "binding": "PUB_STORE",
+      "bucket_name": "pub-store",
+      "preview_bucket_name": "pub-store"
+    },
+    {
+      "binding": "PUB_INGEST",
+      "bucket_name": "pub-ingest",
+      "preview_bucket_name": "pub-ingest"
+    }
+  ],
+  // Cloudflare Access config for the account (`/a/`) tiers (Track D). Empty
+  // placeholders here → account tiers fail closed (404: not configured). `bbx pub
+  // setup` (Track E) fills these with the team domain origin (e.g.
+  // `https://myteam.cloudflareaccess.com`) and the Access application `aud`.
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    // Build-stamped at deploy by `bbx pub setup` (`--var PUB_WORKER_VERSION:<hash>`)
+    // for the `bbx pub status` drift probe; the committed placeholder stays empty
+    // so the version hash of the committed tree is stable.
+    "PUB_WORKER_VERSION": ""
+  },
+  // Old Worker *version* preview URLs are a leak surface (Prior art); setup
+  // disables them. Content never ships in the Worker, so an old version leaks
+  // only old code.
+  "preview_urls": false,
+  // Explicit so the committed config is the full deploy shape (workers.dev is the
+  // deploy target; `preview_urls` above stays false regardless).
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  }
+}

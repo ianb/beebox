@@ -141,10 +141,10 @@ the checkout location.
 
 ```ts
 const failed = createWorkstreamsCommandService({
-  repoRoot: "/Users/me/src/callback-box",
+  repoRoot: "/Users/me/src/beebox",
   commandRunner: async () => {
     throw Object.assign(new Error("command failed"), {
-      stderr: "fatal: /Users/me/src/callback-box/bin/workstreams is unavailable",
+      stderr: "fatal: /Users/me/src/beebox/bin/workstreams is unavailable",
     });
   },
 });

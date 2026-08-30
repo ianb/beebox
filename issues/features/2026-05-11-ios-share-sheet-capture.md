@@ -1,14 +1,14 @@
 ---
 title: "iOS Share Sheet capture via native extension"
 workstream: ios-share-extension-capture
-area: callback-box
+area: beebox
 needs: [manual-testing]
-design: ../../callback-box/docs/plans/ios-share-extension-capture.md
+design: ../../beebox/docs/plans/ios-share-extension-capture.md
 ---
 
 ## Current design decision
 
-This feature now uses a **native Share Extension** in the iOS app (`app.callbackbox.ios.share`).
+This feature now uses a **native Share Extension** in the iOS app (`app.beebox.ios.share`).
 
 The first implemented slice supports sharing from other apps to a selected paired box through:
 
@@ -33,7 +33,7 @@ share action.
 
 ## Implementation notes
 
-Implemented via `callback-box/docs/plans/ios-share-extension-capture.md`.
+Implemented via `beebox/docs/plans/ios-share-extension-capture.md`.
 
 Image/photo, audio, and file sharing remain follow-up work in that plan. The extension deliberately
 does not advertise those types until capture staging supports exact chat and save targets.

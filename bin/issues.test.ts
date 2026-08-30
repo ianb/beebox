@@ -14,7 +14,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import { createFakeEmbeddings } from "../callback-box/src/services/openai-embeddings.js";
+import { createFakeEmbeddings } from "../beebox/src/services/openai-embeddings.js";
 import {
   deriveDate, deriveDiscoveredInWorkstream, emptyFilters, filterIssues, groupIssues,
   loadIssueEntries, normalizeWorkstreamName,
@@ -94,11 +94,11 @@ void test("status defaults to open; --closed and --all select the rest", async (
 void test("repeats are OR within a filter and AND across filters", async () => {
   const root = await makeRepo();
   assert.deepEqual(
-    (await filtered(root, (f) => { f.area = ["router", "callback-box"]; })).toSorted(),
+    (await filtered(root, (f) => { f.area = ["router", "beebox"]; })).toSorted(),
     ["2026-01-05-calendar-drops-events", "2026-02-10-composer-splices-drafts", "2026-03-01-search-the-queue"],
   );
   assert.deepEqual(
-    await filtered(root, (f) => { f.area = ["router", "callback-box"]; f.priority = ["important"]; }),
+    await filtered(root, (f) => { f.area = ["router", "beebox"]; f.priority = ["important"]; }),
     ["2026-01-05-calendar-drops-events"],
   );
 });

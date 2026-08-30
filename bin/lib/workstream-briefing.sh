@@ -6,6 +6,7 @@ workstream_read_briefing() {
   shift
   WORKSTREAM_BRIEFING_PROVIDED=false
   WORKSTREAM_BRIEFING=""
+  export WORKSTREAM_BRIEFING_PROVIDED
   [ $# -gt 0 ] || return 0
   WORKSTREAM_BRIEFING_PROVIDED=true
   case "$1" in
@@ -60,4 +61,5 @@ workstream_validate_description() {
     return 1
   }
   WORKSTREAM_DESCRIPTION="$description"
+  export WORKSTREAM_DESCRIPTION
 }

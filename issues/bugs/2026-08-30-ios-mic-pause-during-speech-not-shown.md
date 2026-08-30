@@ -1,7 +1,7 @@
 ---
 title: "iOS: input pauses while the box speaks, but the UI still looks like an open mic"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [ios, voice, chat]
 filed-by: agent
 discovered-by: Ian

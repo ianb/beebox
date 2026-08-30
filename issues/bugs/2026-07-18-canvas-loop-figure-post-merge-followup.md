@@ -1,7 +1,7 @@
 ---
 title: "canvas-loop figure runtime: post-merge follow-up — responsive overflow + verification punch-list"
 workstream: quick-seeing-p5js
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-quick-seeing-p5js — after merging the canvas-loop library + figure runtime to main (f57eb12c)
 priority: backlog
@@ -81,14 +81,14 @@ container-fit rework) which no single reviewer saw whole.
 
 ## 5. Deploy health
 
-The post-merge deploy hook fired, but `callback-box/deploy/.last-deploy.log`
+The post-merge deploy hook fired, but `beebox/deploy/.last-deploy.log`
 was absent when checked — confirm the deploy actually completed and prod serves
 a canvas-loop figure (create/enable one on a prod box, or check the deploy
 succeeded via `deploy/README.md`'s health runbook).
 
 ## 6. End-to-end authoring loop (the real integration test)
 
-Unit tests (canvas-loop 75, callback-box 4005) and knowledge audits (2/2) pass,
+Unit tests (canvas-loop 75, beebox 4005) and knowledge audits (2/2) pass,
 but nobody has run the *agent* authoring loop end-to-end in a box: invoke the
 `canvas-loop-sketch` skill, scaffold a figure via the template
 (`createFigureTemplate({runtime: "canvas-loop"})`), write a real interactive

@@ -1,7 +1,7 @@
 ---
 title: "No way to find tracked Gmail threads that no longer match any rule"
 workstream: box-family-email
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-box-family-email — after a boxholder narrowed their Gmail rules
 needs: [design]
@@ -16,7 +16,7 @@ Changing `config/connectors/gmail.json` changes what gets tracked *next*. It
 says nothing about what is already tracked. There is no supported way to ask
 "which of my tracked threads no longer match anything?"
 
-`cb connector gmail` offers `track <thread-id>`, `pending [rule]` and `gws`.
+`bbx connector gmail` offers `track <thread-id>`, `pending [rule]` and `gws`.
 Nothing enumerates the tracked set, and nothing evaluates it against the current
 rules. `findTrackedGmailThreads` (`src/connectors/gmail-tracking.ts`) already
 builds exactly the registry such a command needs — every live
@@ -33,14 +33,14 @@ is no command that will tell them that, and no command that acts on it.
 The obvious-looking fix is the one that was deliberately removed.
 `gmail-gc.ts` did automatic deletion of unlabeled cards and was deleted by
 `ba3bf436`; its plan
-([gmail-gc-unlabeled](../../callback-box/docs/implemented-plans/gmail-gc-unlabeled.md))
+([gmail-gc-unlabeled](../../beebox/docs/implemented-plans/gmail-gc-unlabeled.md))
 is marked superseded, and the config parser now warns that `gc` settings are
 obsolete because "card deletion now controls untracking". The current model is
 deliberate: the card set *is* the registry, and a card can carry box work that
 has nothing to do with whether its Gmail labels still match.
 
 So the deliverable is a **report**, not a sweep. Something like
-`cb connector gmail orphans` — read-only, lists tracked threads matching no
+`bbx connector gmail orphans` — read-only, lists tracked threads matching no
 rule, with enough per-thread detail (age, message count, whether anything else
 in the box references the card) for a human or agent to decide. Deletion stays
 the existing manual gesture.

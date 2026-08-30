@@ -1,7 +1,7 @@
 ---
 title: "iOS: pressing record while the box is speaking starts a turn that doesn't listen — it silently waits instead of interrupting"
 workstream: voice-barge-in
-area: callback-box
+area: beebox
 needs: [manual-testing]
 labels: [ios, voice, chat, mobile-contract]
 filed-by: agent
@@ -23,7 +23,7 @@ not to work.
 
 ## The mechanism (before the fix)
 
-`ios-app/CallbackBox/Services/SpeechDictation.swift:27-29`:
+`ios-app/BeeBox/Services/SpeechDictation.swift:27-29`:
 
 ```swift
 case .microphoneStarted:
@@ -35,7 +35,7 @@ The turn is marked active but **no command is issued**. Dictation starts later,
 when `.speechPlaybackChanged(playing: false)` arrives and returns
 `.startDictation` (`:39-48`).
 
-This is deliberate and documented — `callback-box/docs/mobile-contract.md` §4.5:
+This is deliberate and documented — `beebox/docs/mobile-contract.md` §4.5:
 
 > An active native continuous-dictation turn pauses while `playing:true` and
 > resumes when the final queued speech segment reports `playing:false`. The
@@ -69,10 +69,10 @@ if speech stops, there is nothing for the microphone to overhear, so the
 
 There is currently **no way for native to tell the web to stop speaking.**
 §4.5 is web → native state only (`{playing: boolean}` on
-`callbackboxSpeechPlaybackState`), and no native → web speech-control row
+`beeboxSpeechPlaybackState`), and no native → web speech-control row
 exists in the bridge table (§ B-rows). So barge-in from the native record
 button needs a new contract row plus its web handler — which puts this in
-`cb-ios-overlap` territory rather than being a local Swift fix.
+`bbx-ios-overlap` territory rather than being a local Swift fix.
 
 An explicit press is distinguishable from the automatic resume, which the fix
 depends on: `.microphoneStarted` is the user acting, while
@@ -85,7 +85,7 @@ Barge-in, plus the honest control the wait exposed:
 
 - **Contract §4.9, a new native→web row.** Native had no way to stop the page's
   speech, and the page is the speaker (`lib/audio/tts-client.ts`).
-  `window.callbackboxNativeSpeechCommand({version:1,action:"stop"})` with the
+  `window.beeboxNativeSpeechCommand({version:1,action:"stop"})` with the
   same queue-plus-wake-event transport as the other native→web rows;
   `useNativeSpeechCommandBridge` handles it as `STOP_SPEECH`. Not
   `START_DICTATION` — its `beginTurn`/`startMic` would open the *web*
@@ -106,7 +106,7 @@ Barge-in, plus the honest control the wait exposed:
   barge-in alone would not have removed it. It now shows a pending face that
   still stops the turn on tap. A `--composer-fixture=starting-dictation` layout
   fixture renders it without device timing.
-- **Written up as a principle.** `callback-box/docs/engineering-principles.md`
+- **Written up as a principle.** `beebox/docs/engineering-principles.md`
   #13 — a control shows the state the system is in, never the one it intends —
   with this issue and
   [capture success is invisible](2026-08-20-capture-success-is-invisible.md) as

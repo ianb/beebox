@@ -61,5 +61,5 @@ the guard exemption) rather than keeping an unused branch.
 
 ## Related
 
-- `callback-box/docs/plans/scheduled-workstreams.md` (Track B, liveness scope)
+- `beebox/docs/plans/scheduled-workstreams.md` (Track B, liveness scope)
 - `schedules/sdk-update/` (`schedule.yaml`, `prompt.md`, `run.ts`)

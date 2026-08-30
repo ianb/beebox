@@ -1,7 +1,7 @@
 ---
 title: "iPad support: the app already claims iPad — make the layouts true, with real-device testing"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design, manual-testing]
 labels: [ios, layout]
 filed-by: agent
@@ -40,7 +40,7 @@ if the app ever shipped claiming it.
 
 Fold in or sequence with: the orientations issue above (same test matrix),
 `2026-07-23-mobile-modal-not-split-pane` (the iPad exception belongs in that
-decision), `cb-ios-overlap` for anything touching the web side.
+decision), `bbx-ios-overlap` for anything touching the web side.
 
 ## Manual testing
 

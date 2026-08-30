@@ -1,7 +1,7 @@
 ---
 title: "<upload> has no chat renderer — it shows as raw markup, not a chip"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 resolution: implemented
 discovered-in: prod (estate box) — first real run of chat-photo-batch-upload

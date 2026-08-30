@@ -1,7 +1,7 @@
 ---
 title: "Figure compile route: loose .attach segment match + unbounded process-global caches"
 workstream: chores-burn-down
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-quick-seeing-p5js — adversarial review of the figure compile route while adding the canvas-loop runtime
 ---

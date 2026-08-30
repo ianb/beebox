@@ -1,7 +1,7 @@
 ---
 title: "Drive folder discovery fails open on local ambiguity"
 workstream: connector-integrity
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-sync-isolation — independent review of Drive trash tombstones

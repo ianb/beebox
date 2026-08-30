@@ -52,14 +52,14 @@ buried. None blocks the merge.
    guard's unique job being `stopping`-vs-`failed` routing; (d) the filed
    name-scoped dashboard-socket hazard
    ([bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md](../bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md)).
-   Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
+   Design record: `beebox/docs/implemented-plans/router-state-formalization.md`.
 
 2. **Clerk↔server contract. Decided + done (boxholder decision, 2026-07-12):
    generated-and-CI-checked contract.** The two clerk procedures' zod
    schemas moved to a self-contained leaf module
    (`webapp/trpc/routers/clerk-contract.ts`, with `.output()` schemas);
    `bin/snapshot-clerk-contract.ts` generates
-   `callback-clerk/src/contract/clerk-contract.generated.ts` (whitelist
+   `beebox-clerk/src/contract/clerk-contract.generated.ts` (whitelist
    printer that throws on unsupported zod constructs); a pre-commit
    dispatcher branch regenerates + diffs on any contract-file change;
    clerk's hand-declared shapes deleted in favor of generated types, with
@@ -69,7 +69,7 @@ buried. None blocks the merge.
    prevented; the staleness gate's working-tree mechanism has
    partial-staging escape edges (self-correcting via clerk's typecheck of
    the generated imports). Plan:
-   `callback-box/docs/implemented-plans/clerk-contract-and-import-boundary.md`.
+   `beebox/docs/implemented-plans/clerk-contract-and-import-boundary.md`.
    Original framing: The extension talks to the box via hand-built
    tRPC URLs + a hand-duplicated payload shape (no shared typed contract,
    unlike the in-repo frontend's `AppRouter` import). Options: shared
@@ -133,7 +133,7 @@ buried. None blocks the merge.
    `@typescript-eslint/no-restricted-imports` in the frontend's own
    eslint config (project-local ADDITION, not a preset change) banning
    raw relative escapes at every real depth AND value imports through the
-   aliases (`allowTypeImports`) — load-bearing because tsx/`cb render`
+   aliases (`allowTypeImports`) — load-bearing because tsx/`bbx render`
    resolve the aliases even though vite doesn't. Seven doctested/bundled
    files are explicitly exempted (the doctest runner uses the root
    tsconfig, no aliases — they keep raw-relative `shared/` imports).
@@ -142,7 +142,7 @@ buried. None blocks the merge.
    `shared/ → lib/` edge; follow-up filed for consolidating the
    frontend's local helper copies
    (`../code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md`).
-   Plan: `callback-box/docs/implemented-plans/clerk-contract-and-import-boundary.md`.
+   Plan: `beebox/docs/implemented-plans/clerk-contract-and-import-boundary.md`.
    Original framing: ~28 raw `../../../core/...` imports bypass
    the `@backend`/`@shared` alias contract. Options: add `@core`/`@schemas`
    aliases (build-config churn across tsconfig+vite+eslint-resolver; doesn't
@@ -150,7 +150,7 @@ buried. None blocks the merge.
    change needing sign-off; actually enforces). P3-d deferred this.
 
 6. **Barrels. Decided (boxholder, 2026-07-12): NO barrels — codified in
-   `callback-box/code-style.md` ("it's just indirection").**
+   `beebox/code-style.md` ("it's just indirection").**
    Original framing: Plan leaned "adopt for dirs with 3+ files"; P3-d deferred,
    judging the discoverability win already delivered by the directory
    grouping and not worth the export-visibility/cycle risk a barrel adds.

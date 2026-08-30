@@ -1,7 +1,7 @@
 ---
 title: "pdf.card Original view assumes PDF; page matcher untested on real docling output"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [ui, pdf, renderers]
 filed-by: agent
@@ -24,5 +24,5 @@ future non-PDF `format:` it degrades to the object-tag fallback
 The block→page matcher (`lib/docling-match.ts`, `MATCH_LOOKAHEAD = 8`) and the
 figure-index correlation (`pictures[i]` → `figure-{i+1}.avif`, an ordering
 convention from `pdf-extract.ts`, not a recorded link) are verified only
-against synthetic fixtures. Run `cb pdf reanalyze` on a real multi-page scan
+against synthetic fixtures. Run `bbx pdf reanalyze` on a real multi-page scan
 and check the markers before trusting them on long documents.

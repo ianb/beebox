@@ -1,24 +1,24 @@
 ---
 title: "Universal {% todo %} Markdoc annotation wrapping an item, metadata in attributes"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder idea
 needs: [design]
-design: ../../../callback-box/docs/implemented-plans/todo-annotation.md
+design: ../../../beebox/docs/implemented-plans/todo-annotation.md
 resolution: implemented
 ---
 
 > **Closed (2026-07-28):** implemented per
-> [todo-annotation](../../../callback-box/docs/implemented-plans/todo-annotation.md)
+> [todo-annotation](../../../beebox/docs/implemented-plans/todo-annotation.md)
 > (worktree-todo-annotation), commits `01307f98..b5aa6378` (the seven
 > plan-chunk commits — tags + rendering, universal body Markdoc validation,
-> frontmatter `todos:`, collector + `cb todos`, review sweep + agent
+> frontmatter `todos:`, collector + `bbx todos`, review sweep + agent
 > guidance, `todos.list` + `todo-view` surface, docs + knowledge audits).
 > The mechanism sketch below is superseded by the plan.
 
 > **Design written (2026-07-28):** goals-first design in
-> [todo-annotation](../../../callback-box/docs/implemented-plans/todo-annotation.md)
+> [todo-annotation](../../../beebox/docs/implemented-plans/todo-annotation.md)
 > (worktree-todo-annotation), Codex-cross-reviewed. The plan supersedes the
 > mechanism sketch below.
 
@@ -36,7 +36,7 @@ Call the vet about the prescription refill
 ## Where this fits (precedent already exists)
 
 The shared Markdoc vocabulary lives in `src/shared/markdoc-config.ts` — one
-config used by the frontend renderer, `cb validate`'s body-ref walker, and the
+config used by the frontend renderer, `bbx validate`'s body-ref walker, and the
 dev-doc renderer, so **adding a tag there makes it universal by construction**
 (available in every card body + docs). Emission is in
 `src/core/markdoc/emit-tags.ts` (`emitUniversalln` / briefing / recipe groups).

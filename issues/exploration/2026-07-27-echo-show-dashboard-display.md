@@ -1,7 +1,7 @@
 ---
-title: "Display callback-box on an Echo Show (Alexa skill vs. a wall dashboard)"
+title: "Display beebox on an Echo Show (Alexa skill vs. a wall dashboard)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked to research
 ---
@@ -25,7 +25,7 @@ catch:
 ### 1. Point the Echo Show browser at a dashboard URL (no app)
 
 The Echo Show has a built-in **Silk browser**; you can open a URL and render any
-web page — including a callback-box dashboard we already have
+web page — including a beebox dashboard we already have
 (`src/frontend/src/pages/DashboardPage`). This is by far the least effort.
 
 **The catch — no persistence.** The Echo Show reverts to its home screen and
@@ -54,7 +54,7 @@ other always-on screen (a spare tablet, a Pi, a TV).
 **[Alexa Presentation Language (APL)](https://developer.amazon.com/en-US/docs/alexa/alexa-presentation-language/add-visuals-and-audio-to-your-skill.html)**
 lets a custom skill render rich visual templates on Echo Show (JSON: an APL
 *document* for layout + a *data source* for content). Voice invocation ("Alexa,
-open my callback box") is the real upside, and there's an
+open my beebox") is the real upside, and there's an
 [APL Authoring Tool](https://developer.amazon.com/en-US/alexa/alexa-skills-kit/get-deeper/response-api/multimodal)
 and multimodal response builder.
 
@@ -91,7 +91,7 @@ voice-launch turns out to matter.
 
 Deeper dig, aimed at the boxholder's actual goal — *regularly and easily show a
 personalized custom web page*. Good news: the persistence problem that made path
-1 look weak is **solvable**, and the fix is something callback-box can own.
+1 look weak is **solvable**, and the fix is something beebox can own.
 
 ### The Silk timeout is real — but there's a known keepalive hack
 
@@ -126,7 +126,7 @@ persistent by design
 ([Echo Show as a photo frame](https://www.techhive.com/article/831563/amazon-echo-show-photo-frame.html)).
 Approach: render the dashboard to an image, push it to an Amazon Photos
 album, let ambient mode cycle it. (NOTE 2026-08-01: this originally said
-`cb render`, which has since been removed. `bin/browse` screenshots the real
+`bbx render`, which has since been removed. `bin/browse` screenshots the real
 running app and is the replacement — heavier, but it produces a true image.) Persistence is free and requires no browser —
 but it's a **static image, not interactive**, refreshes slowly (album re-pull,
 not real-time), and Amazon Photos has no clean upload API (automation is the
@@ -147,7 +147,7 @@ effort, least layout freedom, only worth it for deep native integration.
 
 For *"regularly and easily display a custom web page,"* the winner is **path 1
 with the muted-audio keepalive**: it literally shows our web page, it's touch-
-interactive, and callback-box can make it robust by building (a) a device-token
+interactive, and beebox can make it robust by building (a) a device-token
 read-only display view and (b) the keepalive into that view. The image→Photo-
 Frame route is the fallback when "open the URL once" is unacceptable; APL Widgets
 only if we want a native home-screen tile. All three still reduce to the same

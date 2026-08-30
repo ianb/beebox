@@ -16,13 +16,13 @@ count live code as dead, each fixed before anything was deleted:
 
 - **Doctests are markdown.** The suite imports ~3,000 symbols from `src/`
   through `.doctest.md` fences, which knip cannot parse. A compiler
-  (`callback-box/scripts/knip-doctest-imports.ts`, itself doctested) lifts the
+  (`beebox/scripts/knip-doctest-imports.ts`, itself doctested) lifts the
   import statements out, static and `await import(...)` forms alike.
 - **`test/` and `scripts/` weren't in `project`**, so the suite's imports never
   counted as use.
 - **The workspaces couldn't see each other.** The frontend imports
-  `src/shared` via `@shared/*`, `bin/` imports `callback-box/src` by relative
-  path, and callback-box's doctests exercise frontend machines. One rooted run
+  `src/shared` via `@shared/*`, `bin/` imports `beebox/src` by relative
+  path, and beebox's doctests exercise frontend machines. One rooted run
   resolves all of it.
 - **knip ran per-package under `node-linker=hoisted`**, where dependencies
   install into the ROOT `node_modules`. It could not tie a binary a script

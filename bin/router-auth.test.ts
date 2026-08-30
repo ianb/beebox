@@ -1,6 +1,6 @@
 // Truth-table tests for the dev router's pure authorization core
 // (bin/router-auth.ts) — Track B, chunk 1 of
-// callback-box/docs/implemented-plans/expose-dev-router.md. Every "planned" row of the
+// beebox/docs/implemented-plans/expose-dev-router.md. Every "planned" row of the
 // plan's Failure-modes table that maps to the pure gate is a non-vacuous
 // assertion here, driven by injected fakes (no I/O, no server).
 //

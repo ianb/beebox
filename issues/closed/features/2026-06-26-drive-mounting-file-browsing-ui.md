@@ -2,16 +2,16 @@
 title: "drive mounting file browsing ui"
 workstream: drive-folder-mounts
 needs: [decision]
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
 **Closed 2026-08-26:** the decision landed as the fuller of the two options
 this issue sketched — not the small `updateConfig`-writer CLI command, but the
-card-based redesign in `callback-box/docs/implemented-plans/drive-folder-mounts.md`
+card-based redesign in `beebox/docs/implemented-plans/drive-folder-mounts.md`
 (commit 544fa0c96 and the `bin/land` merge that follows it). A folder mount is
 now a `.gfolder.card` (not a config entry or a browsed-and-picked tree), driven
-from both `DriveSection.tsx` settings and `cb drive mount`/`link`/`unmount`.
+from both `DriveSection.tsx` settings and `bbx drive mount`/`link`/`unmount`.
 The dead `updateConfig`/`available` procedures are gone from the `drive`
 router, replaced by `mounts`/`mount`/`unmount`/`link`/`syncFolder`.
 
@@ -25,8 +25,8 @@ which Drive folders sync to which local paths means hand-editing
 `config/connectors/google-drive.json`.
 
 Two ways to give it a driver:
-- **`cb drive mount <folder-id-or-url> <local-path>`** (smaller). A CLI command
-  that writes the mount into the connector config, mirroring `cb drive add`.
+- **`bbx drive mount <folder-id-or-url> <local-path>`** (smaller). A CLI command
+  that writes the mount into the connector config, mirroring `bbx drive add`.
   Lowest-effort; agent- and human-usable; no new UI surface.
 - **A folder-browser in `DriveSection.tsx`** (bigger). Browse the Drive tree,
   pick folders, call the existing `updateConfig` mutation. This is the "browse
@@ -39,7 +39,7 @@ Resolve the dead `inspect` endpoint as part of whichever path is taken (wire it
 up or delete it).
 
 **Amended 2026-08-26:** the tRPC router never had an `inspect` procedure — only
-the CLI `cb drive inspect` exists (and works); the "dead endpoint" line above
+the CLI `bbx drive inspect` exists (and works); the "dead endpoint" line above
 is stale. The rest stands. Superseded in direction by
-`callback-box/docs/plans/drive-folder-mounts.md`, which makes a folder mount a
+`beebox/docs/plans/drive-folder-mounts.md`, which makes a folder mount a
 card (`.gfolder.card`) rather than a config entry.

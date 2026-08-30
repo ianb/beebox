@@ -29,8 +29,8 @@ export const ALLOWED_NAMES = new Set([
   // personal-identity leak (the guard's real target) — just a scrappy deploy
   // detail, exempt so those real paths don't trip the hook. Not a blessed
   // public interface; if the deploy stops hardcoding these, drop them.
-  "callback",
-  "cb-test1",
+  "beebox",
+  "bbx-test1",
   // Fictional placeholders used in docs, schema examples, and test fixtures.
   "me",
   "you",

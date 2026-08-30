@@ -1,5 +1,5 @@
 ---
-title: "Loaded Callback Clerk build can silently lag behind source"
+title: "Loaded Bee Box Clerk build can silently lag behind source"
 workstream: tab-organizer-clerk
 area: clerk
 filed-by: agent
@@ -7,7 +7,7 @@ discovered-in: worktree-tab-organizer-clerk — testing tab organizer handoff
 priority: normal
 ---
 
-Callback Clerk is loaded from the generated `callback-clerk/dist/chrome-mv3/`
+Bee Box Clerk is loaded from the generated `beebox-clerk/dist/chrome-mv3/`
 directory. A Clerk source change can land without rebuilding that directory.
 Chrome's Reload action then reloads the old generated files and gives no clear
 warning that the source and extension differ.

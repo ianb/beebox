@@ -1,7 +1,7 @@
 ---
 title: "The /capture deep link leaves ?capture=1 in the URL, so capture mode comes back after you close it"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — following the /capture deep link into chat
@@ -9,9 +9,9 @@ resolution: implemented
 ---
 
 `/<box>/capture` redirects to the chat with `?capture=1`
-(`callback-box/src/frontend/src/pages/capture/CapturePage.tsx:15`). `ChatPage`
+(`beebox/src/frontend/src/pages/capture/CapturePage.tsx:15`). `ChatPage`
 reads the param on every render
-(`callback-box/src/frontend/src/pages/ChatPage.tsx:132`) and passes it as
+(`beebox/src/frontend/src/pages/ChatPage.tsx:132`) and passes it as
 `openCaptureOnMount`; `InteractiveChat` seeds its `captureMode` state from it
 (`components/chat/InteractiveChat.tsx:184`).
 

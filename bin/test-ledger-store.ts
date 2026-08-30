@@ -6,7 +6,7 @@
  * tap child, the CLI). Both halves are the same instrument — nothing here
  * branches on a record either.
  *
- * See callback-box/docs/plans/change-based-test-selection.md, Track 5.
+ * See beebox/docs/plans/change-based-test-selection.md, Track 5.
  */
 
 import { appendFileSync, readFileSync, existsSync } from "node:fs";
@@ -164,9 +164,9 @@ export function appendLedgerRecord(input: {
   appendFileSync(paths.ledger, `${JSON.stringify(input.record)}\n`);
 }
 
-/** Graph paths are repo-relative; TAP names them relative to callback-box. */
+/** Graph paths are repo-relative; TAP names them relative to beebox. */
 function stripPackagePrefix(path: string): string {
-  return path.startsWith("callback-box/") ? path.slice("callback-box/".length) : path;
+  return path.startsWith("beebox/") ? path.slice("beebox/".length) : path;
 }
 
 export async function computeGraph(changed: string[]): Promise<GraphView | null> {

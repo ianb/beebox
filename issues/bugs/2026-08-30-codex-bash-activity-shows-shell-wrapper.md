@@ -1,7 +1,7 @@
 ---
 title: "Codex bash activity renders its shell wrapper where Claude's doesn't — command lines read noisier on codex chats"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [chat, codex, ui]
 filed-by: agent
 discovered-by: Ian

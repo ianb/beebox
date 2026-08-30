@@ -305,7 +305,7 @@ pattern before it becomes a filename component. An encoded-slash traversal
 attempt in the URL path never matches the pattern:
 
 ```
-const badSlug = await syncRejected(() => parseServerUrlWithBox("https://cb.example.org/..%2f..%2fetc%2fpasswd"));
+const badSlug = await syncRejected(() => parseServerUrlWithBox("https://beebox.run/..%2f..%2fetc%2fpasswd"));
 badSlug.name
 => ConfigureError
 ```
@@ -326,9 +326,9 @@ const nested = parseServerUrlWithBox("http://localhost:3210/my-worktree/test1");
 ```
 
 ```continue
-const bare = parseServerUrlWithBox("https://cb.example.org/family");
+const bare = parseServerUrlWithBox("https://beebox.run/family");
 [bare.serverUrl, bare.box].join(" ")
-=> https://cb.example.org family
+=> https://beebox.run family
 ```
 
 And `configure()` itself refuses before writing anything — the bad slug is
@@ -338,7 +338,7 @@ rejected during URL parsing, ahead of any config or token write:
 const configPath4 = join(dir, "slug-test", "scan-uploader.json");
 const failure4 = await rejected(
   configure({
-    serverUrlWithBox: "https://cb.example.org/..%2f..%2fetc%2fpasswd",
+    serverUrlWithBox: "https://beebox.run/..%2f..%2fetc%2fpasswd",
     folder: "/scans/x",
     disposition: "keep",
     name: "x",
@@ -391,7 +391,7 @@ fail closed on `--folder`, not quietly write to the wrong config path:
 
 ```continue
 const looksLikeAFlag = await syncRejected(() =>
-  parseConfigureArgs(["https://cb.example.org/family", "--folder", "--config", "/tmp/x.json"]),
+  parseConfigureArgs(["https://beebox.run/family", "--folder", "--config", "/tmp/x.json"]),
 );
 looksLikeAFlag.message
 => --folder requires a value

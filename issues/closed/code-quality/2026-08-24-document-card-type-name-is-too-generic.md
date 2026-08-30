@@ -1,7 +1,7 @@
 ---
 title: "`.document.card` and `.doc.card` are indistinguishable names for unrelated types"
 workstream: document-card-view
-area: callback-box
+area: beebox
 needs: [decision]
 labels: [cards, naming, schemas]
 filed-by: agent
@@ -21,7 +21,7 @@ Two card types, near-synonymous names, unrelated purposes:
   markdown body. The default for agent-authored prose instead of a plain `.md`.
 - **`.document.card`** (`schemas/document.ts`) — an *extracted* document: the
   rendered text of a PDF as the body, with the original bytes, page renders, and
-  figures in the attach scope. Written by `cb scan-import`'s PDF branch.
+  figures in the attach scope. Written by `bbx scan-import`'s PDF branch.
 
 Nothing in either name distinguishes them. "doc" and "document" are the same
 word.

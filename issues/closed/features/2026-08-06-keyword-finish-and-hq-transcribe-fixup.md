@@ -1,7 +1,7 @@
 ---
 title: "Voice keyword that finishes the message AND runs an HQ-transcription fixup pass on it"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder
 resolution: implemented

@@ -1,16 +1,16 @@
 ---
 title: "Hub mobile-auth wall check is presence-only, not verified (S1)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
-discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
 resolution: implemented
 ---
 
 **Closed (implemented).** The presence-only gate is gone: `hasMobileAuth` in
 `src/hub/hub-server.ts` now calls `verifyMobileRequest`
 (`src/core/mobile/request-auth.ts`), which validates the bearer against the
-device store / the `cb_mobile` cookie against its per-box HMAC. Both the HTTP
+device store / the `bbx_mobile` cookie against its per-box HMAC. Both the HTTP
 catch-all and the WS-upgrade path reject an unverified request BEFORE
 `resolveEndpoint`, so a bogus `Bearer x` no longer cold-starts a box or reveals
 slug validity. The verification landed in commit 44da6cef ("auth: harden
@@ -19,7 +19,7 @@ proof — a bogus credential on a real slug answers identically to an unknown sl
 — in `test/hub/hub-server-auth.doctest.md`.
 
 
-`hasMobileAuthAttempt` in `callback-box/src/hub/hub-server.ts` decides whether to let a request past
+`hasMobileAuthAttempt` in `beebox/src/hub/hub-server.ts` decides whether to let a request past
 the hub's pre-upgrade auth wall by checking only that an `Authorization: Bearer …` header OR a
 `?mobileToken=` query param is *present* — it never validates the token against the box's device
 store. This gate is used both on the HTTP catch-all and on the WebSocket upgrade path to bypass the

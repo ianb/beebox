@@ -6,7 +6,7 @@
 # `claude -p` / `codex exec` in the foreground, briefing on stdin, for
 # scheduled runs — is launch-headless.sh, sourced here so that a caller who
 # sources this file has both launchers and neither duplicates the other's flag
-# assembly (callback-box/docs/plans/scheduled-workstreams.md, Track B).
+# assembly (beebox/docs/plans/scheduled-workstreams.md, Track B).
 
 # shellcheck source=launch-headless.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/launch-headless.sh"

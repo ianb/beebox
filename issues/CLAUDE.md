@@ -58,7 +58,7 @@ link, so moving/reclassifying an item breaks its inbound links — from other
 issues AND from `docs/`.
 
 **After moving ANY issue** (closing → `closed/`, reclassifying between category
-dirs, or a rename), run **`pnpm --dir callback-box doc-check --fix`** — it
+dirs, or a rename), run **`pnpm --dir beebox doc-check --fix`** — it
 re-resolves every broken issue link by its (unique) basename and rewrites the
 path to the file's new location, so you don't hand-edit inbound links. It heals
 moves; a true rename or delete it reports as unfixable (fix those by hand). Issue
@@ -80,8 +80,8 @@ what doesn't apply.
 title: "Short human title"    # required — the H1 replacement
 workstream: unattached        # bare workstream name; unknown is backfill-only
 needs: [design, decision]     # what must happen before this can be called done
-design: ../../callback-box/docs/plans/foo.md   # link once a design/plan exists
-area: callback-box            # callback-box | router | vibe-check | clerk | docs | ...
+design: ../../beebox/docs/plans/foo.md   # link once a design/plan exists
+area: beebox            # beebox | router | vibe-check | clerk | docs | ...
 labels: [soft-launch]         # optional cross-cutting tags (kebab-case, multiple allowed)
 priority: important           # important | normal | backlog; omitted is uncategorized
 next-action: discuss          # discuss | reconfirm | duplicate | invalid | fixed | manually-confirmed | verify-without-me
@@ -124,7 +124,7 @@ schema, add it here **and** to `KNOWN_FRONTMATTER_KEYS` in that parser.
 **Don't use the developer's name in prose.** Those two frontmatter fields are
 the good reason to write it: a name is *data* there — the record of who found
 or authored something, the same way a commit has an author. Everywhere else,
-say **"the developer"** (or "the boxholder" in callback-box docs, matching the
+say **"the developer"** (or "the boxholder" in beebox docs, matching the
 surrounding register). It reads as a role because it *is* a role: this is how
 any developer talks back to an agent, and the guidance holds whoever is sitting
 there.
@@ -133,7 +133,7 @@ The failure is easy to fall into, because the person you are talking to is
 right there and naming them feels precise. It isn't — it bakes one person into
 text that describes a general relationship, in a source-available repo. If a
 sentence still makes sense with "the developer" substituted in, it should have
-said that. This restates the broader rule in `callback-box/CLAUDE.md` ("Keep
+said that. This restates the broader rule in `beebox/CLAUDE.md` ("Keep
 source and docs generic — never hardcode personal names"), which applies to
 agent-facing docs and skills as much as to shipped source.
 
@@ -333,7 +333,7 @@ at the monorepo root sees nothing staged — that is the leak guard working
 (the mount is gitignored), not a bug.
 
 **Links are one-way.** Private issues may link to public files
-(`../callback-box/...` style paths resolve through the mount). Public files
+(`../beebox/...` style paths resolve through the mount). Public files
 must NEVER link into `private-issues/` — the link would dangle for anyone
 without the private repo; `doc-check` hard-errors it. Name the private item
 in prose (not a link) if a public file must gesture at it.
@@ -383,7 +383,7 @@ to include plans/design docs as prior art), then grep by the issue's slug,
 its keywords, the files/symbols it names, and the symptom. A fix often resolves a sibling too, and there are frequently near-dupes
 filed from different angles. Decide up front which of the cluster this work should
 address *together* (fixing one and leaving its twin open is wasted future work),
-and **list every issue in the cluster in the plan** (cb-plan's "Issues addressed"
+and **list every issue in the cluster in the plan** (bbx-plan's "Issues addressed"
 header) so `/finish` knows the full set to reconcile — issues that aren't listed
 are the ones that get forgotten.
 

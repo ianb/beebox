@@ -1,7 +1,7 @@
 ---
 title: "Field-test quiescence times out on a gmail intake job that never drains"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (dentist-email)
 labels: [field-test-findings, harness]
@@ -10,7 +10,7 @@ resolution: implemented
 
 > **Resolved** in `6e0a74a0`: chose the "drain in the pre-action" direction. A
 > single wakeup runs only one reactor cycle, so both `inject-email` and
-> `advance-days` now run `cb reactor` (all sources, low priority included,
+> `advance-days` now run `bbx reactor` (all sources, low priority included,
 > several cycles) after their wakeup — leaving the box caught up before the
 > next item opens, rather than making quiescence drive the reactor. The day
 > boundary needed the same treatment (the leftover intake job survived the
@@ -24,7 +24,7 @@ out "still busy: jobs", and the next item (`whats-needed`) began with "box was
 not quiescent before the item: jobs". A `2026-08-11T08-40-00-gmail.intake.job.card`
 sat in `box/jobs/` and never drained.
 
-The `inject-email` pre-action runs a connector-scoped `cb wakeup --connector
+The `inject-email` pre-action runs a connector-scoped `bbx wakeup --connector
 gmail` (sync + reactor scoped to gmail). That created the email thread card and
 an intake job. Something then left an intake job card behind that the scoped
 wakeup's reactor did not clear — so composite quiescence (which requires

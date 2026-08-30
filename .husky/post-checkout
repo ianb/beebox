@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 # Run git-lfs post-checkout to smudge LFS pointers into real files.
-# (Required: monorepo has LFS-tracked fixtures in callback-box/test/.)
+# (Required: monorepo has LFS-tracked fixtures in beebox/test/.)
 command -v git-lfs >/dev/null 2>&1 || exit 0
 git lfs post-checkout "$@"

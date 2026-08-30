@@ -1,7 +1,7 @@
 ---
 title: "Recipe view abbreviates units at display time (tbsp → \"T\", 1/2 → \"½\")"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — cross-model review of the category-2 field-test fixes
 labels: [field-test-findings, ui-sensibility]
@@ -17,7 +17,7 @@ resolution: implemented
 > Verified live: a stored `unit="T"` renders "3 Tbsp olive oil".
 The recipe renderer normalizes faithfully-stored ingredients when it displays
 them: `UNIT_ABBREV` in
-`callback-box/src/frontend/src/components/RecipeTags.tsx` maps
+`beebox/src/frontend/src/components/RecipeTags.tsx` maps
 `tablespoon`/`tbsp` → `T`, `teaspoon`/`tsp` → `t`, `cup` → `c`, and
 `formatFraction` swaps `1/2` → `½` via `UNICODE_FRACTIONS`.
 

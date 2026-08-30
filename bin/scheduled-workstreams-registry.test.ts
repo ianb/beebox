@@ -32,9 +32,9 @@ after(async () => {
 });
 
 interface Harness {
-  /** CALLBACK_STATE_DIR: where `workstreams/<name>.json` records live. */
+  /** BBX_STATE_DIR: where `workstreams/<name>.json` records live. */
   stateDir: string;
-  /** CALLBACK_WORKTREE_ROOT: kept empty, so every record reads as absent. */
+  /** BBX_WORKTREE_ROOT: kept empty, so every record reads as absent. */
   worktreeRoot: string;
   env: NodeJS.ProcessEnv;
 }
@@ -51,11 +51,11 @@ async function harness(): Promise<Harness> {
     worktreeRoot,
     env: {
       ...process.env,
-      CALLBACK_STATE_DIR: stateDir,
-      CALLBACK_WORKTREE_ROOT: worktreeRoot,
+      BBX_STATE_DIR: stateDir,
+      BBX_WORKTREE_ROOT: worktreeRoot,
       // No schedules directory here: `bin/schedules list --json` answers with an
       // empty listing, which is the join `list` must survive.
-      CALLBACK_SCHEDULES_ROOT: path.join(root, "schedule-runs"),
+      BBX_SCHEDULES_ROOT: path.join(root, "schedule-runs"),
     },
   };
 }

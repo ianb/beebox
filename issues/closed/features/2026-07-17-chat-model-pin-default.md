@@ -5,7 +5,7 @@ resolution: implemented
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder idea while thinking about the chat model selector
-area: callback-box
+area: beebox
 ---
 
 **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track D, commit `ba5f53255`): the chat model selector pins the box default and a chat without its own pick follows it.
@@ -45,7 +45,7 @@ Today there isn't really a per-chat model *and* a separate default; there's **on
 box-wide pointer**:
 
 - `saveCurrentModel`/`loadCurrentModel` read+write a single box file,
-  `.callback-box/chat-model.json` — the path is `DEFAULT_MODEL_FILE`
+  `.beebox/chat-model.json` — the path is `DEFAULT_MODEL_FILE`
   (`src/core/chat/session/state.ts`).
 - Every `ChatSession` defaults `modelFile` to that same box path
   (`src/core/chat/session/index.ts:106`), and holds an in-memory

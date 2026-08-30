@@ -1,16 +1,16 @@
 ---
 title: "Decide what, if anything, to take from Hermes' self-improvement machinery"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [decision, design]
 labels: [agents, research]
 filed-by: agent
 discovered-by: Ian
-discovered-in: main session — cb feedback triage
+discovered-in: main session — bbx feedback triage
 ---
 
 Hermes' self-improvement work is well spoken of, and Ian wants to look at it
-more. The deliverable here is **a call**, not a build: does callback-box take
+more. The deliverable here is **a call**, not a build: does beebox take
 anything from it, and if so what.
 
 ## The research already exists — start there, don't redo it
@@ -30,7 +30,7 @@ this, covering:
 Sibling docs in that directory compare skills/tools and context/memory.
 
 So the question is not "what does Hermes do" — it's **which of those mechanisms
-earns a place here**, given callback-box already has retrospectives, guide
+earns a place here**, given beebox already has retrospectives, guide
 cards, personality cards, and a questions subsystem doing adjacent work.
 
 ## What to actually decide
@@ -45,7 +45,7 @@ reason, so it isn't re-litigated).
   that would need settling either way.
 - **Runtime-enforced write permissions.** A whitelist enforced pre-dispatch
   rather than prompted is a materially different safety posture from
-  instructions-in-a-prompt, and callback-box leans on the latter. This may be
+  instructions-in-a-prompt, and beebox leans on the latter. This may be
   the most transferable idea in the whole document.
 - **The Curator's inactivity-triggered cadence** — interesting alongside
   [box dormancy](../exploration/2026-08-11-encryption-at-rest.md), which also
@@ -55,7 +55,7 @@ reason, so it isn't re-litigated).
 
 ## The prior question
 
-**Does callback-box want an agent that rewrites its own guidance?** The box
+**Does beebox want an agent that rewrites its own guidance?** The box
 already learns through retrospectives and questions, but those put a human in
 the loop by design. A background loop that edits its own instructions is a
 different bargain, and worth naming as a bargain before evaluating mechanisms

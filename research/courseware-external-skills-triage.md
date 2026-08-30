@@ -244,7 +244,7 @@ defined it) and Bloom-appropriate difficulty.
   `{% source %}`? which nodes have no misconceptions noted? This is a natural
   companion to our existing knowledge-audit machinery.
 - **Touches:** `concept-map`, `material`, `progress`, the audit tooling.
-- **Discuss:** Worth a `cb`-side "course coverage" report? Where would it live?
+- **Discuss:** Worth a `bbx`-side "course coverage" report? Where would it live?
 
 **`quiz-generator`** — generates 10 MC questions/chapter, **Bloom-distributed**,
 with misconception-aware distractors. **Direct conflict with our stance:** we

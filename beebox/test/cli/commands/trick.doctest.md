@@ -1,0 +1,131 @@
+# bbx trick
+
+`bbx trick` discovers and runs box-local agent-authored scripts. Tricks live at
+`boxCodePaths(shape).tricksDir` — `packageRoot/src/tricks` for a v2
+(package-layout) box — so both the subprocess's cwd and every path in its
+listing/error messages must resolve through the box's actual shape rather
+than a hardcoded `tricks/` relative to `boxRoot`.
+
+```ts setup
+import { mkdtemp, mkdir, writeFile, symlink, realpath, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { spawn, execSync } from "node:child_process";
+import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
+
+// Run the prebuilt CLI with the given cwd (requireBoxRoot walks up from there).
+function runTrickCli(cwd, args) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [join(PACKAGE_ROOT, "dist/cli.mjs"), "trick", ...args], { cwd });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => { stdout += String(d); });
+    child.stderr.on("data", (d) => { stderr += String(d); });
+    child.on("close", (code) => resolve({ code, stdout, stderr }));
+  });
+}
+
+// A trick that proves both where it ran from and what env it saw, without
+// needing any of its own npm dependencies.
+const PROBE_TRICK = `
+export const description = "reports its own cwd and BBX_BOX_ROOT";
+console.log("cwd:" + process.cwd());
+console.log("boxRoot:" + process.env.BBX_BOX_ROOT);
+console.log("trickName:" + process.env.BBX_TRICK_NAME);
+`;
+
+/**
+ * Build a v2 (package-shaped) fixture box: a package root with its own
+ * `node_modules/beebox` (symlinked to the real engine copy, the same
+ * trick the v2 fixtures in `test/webapp/views-compiler-v2.doctest.md` and
+ * `test/cli/lib/init-v2.doctest.md` use), `content/` nested inside as the
+ * operational root, and `src/tricks/scripts/` for trick sources.
+ */
+async function makeV2Box() {
+  const root = await mkdtemp(join(tmpdir(), "bbx-v2trick-"));
+  await writeFile(
+    join(root, "package.json"),
+    JSON.stringify({ name: "my-box", private: true, dependencies: { "beebox": "0.1.0" } })
+  );
+  await mkdir(join(root, "node_modules"), { recursive: true });
+  await symlink(PACKAGE_ROOT, join(root, "node_modules", "beebox"), "dir");
+  await mkdir(join(root, "content"), { recursive: true });
+  await mkdir(join(root, "content", ".beebox"), { recursive: true });
+  await writeFile(join(root, "content", ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
+  await mkdir(join(root, "src", "tricks", "scripts"), { recursive: true });
+  // Git (like `.claude/`) lives at the package root for a v2 box; a trick's
+  // auto-commit (`commitIfDirty`, keyed off `boxRoot` = `content/`) still
+  // finds it by walking up, same as real usage.
+  execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
+    cwd: root,
+    stdio: "pipe",
+  });
+  return {
+    root,
+    contentRoot: join(root, "content"),
+    tricksDir: join(root, "src", "tricks"),
+    async writeTrick(name, content) {
+      const dir = join(root, "src", "tricks", "scripts", name);
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, "index.ts"), content);
+    },
+    async cleanup() {
+      await rm(root, { recursive: true, force: true });
+    },
+  };
+}
+```
+
+## v2 (package-layout) box: runs from `packageRoot/src/tricks`, not `boxRoot/tricks`
+
+```ts
+const box = await makeV2Box();
+await box.writeTrick("probe", PROBE_TRICK);
+
+const r = await runTrickCli(box.contentRoot, ["probe"]);
+r.code
+=> 0
+```
+
+The subprocess's cwd is the package's `src/tricks/` directory — a sibling of
+`content/`, not a subdirectory of it — and `BBX_BOX_ROOT` still points at the
+operational root (`content/`):
+
+```ts continue
+const expectedCwd = await realpath(box.tricksDir);
+r.stdout.includes("cwd:" + expectedCwd)
+=> true
+
+r.stdout.includes("boxRoot:" + (await realpath(box.contentRoot)))
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## v2 box: listing and not-found messages name `../src/tricks/scripts/...`
+
+Messages are relative to the operating agent's cwd (`content/`), which has to
+climb out to the package root to reach `src/tricks/`:
+
+```ts
+const box = await makeV2Box();
+
+const empty = await runTrickCli(box.contentRoot, []);
+empty.stdout.includes("Create one at ../src/tricks/scripts/<name>/index.ts")
+=> true
+```
+
+```ts continue
+const missing = await runTrickCli(box.contentRoot, ["nope"]);
+missing.code
+=> 1
+
+missing.stderr.includes("Expected: ../src/tricks/scripts/nope/index.ts")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```

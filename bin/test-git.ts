@@ -6,7 +6,7 @@
  * differently from the ledger recording it would make every `implicated`
  * figure a comparison between two different questions.
  *
- * See callback-box/docs/plans/change-based-test-selection.md, Tracks 2 and 5
+ * See beebox/docs/plans/change-based-test-selection.md, Tracks 2 and 5
  * and the 2026-08-25 revision (mechanism B).
  */
 

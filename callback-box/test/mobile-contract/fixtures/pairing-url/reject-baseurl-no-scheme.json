@@ -1,6 +1,0 @@
-{
-  "input": "callbackbox://pair?baseURL=example.com%2Fbox&pairingToken=tok123",
-  "expected": {
-    "accepted": false
-  }
-}

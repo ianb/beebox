@@ -1,12 +1,12 @@
 ---
 title: "introspectable feedback storage"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 Several ideas in this file — parked proactive observations, hypothesis tracking, behavioral-profile candidates, correction-counting, autonomy-promotion candidates, agent-noticed self-failures — all involve the same shape: *the agent writes structured entries that accumulate over time and get surfaced during /spark or retrospectives*. The naive implementation is parallel files (ideas_log.md, development_backlog.md, hunches.md, parked-observations.md, corrections.md...), which is sprawl with overlapping concerns.
 
-Cleaner shape: extend `cb feedback` (or whatever the existing feedback mechanism is) to be the single storage layer for all of these. Each entry has:
+Cleaner shape: extend `bbx feedback` (or whatever the existing feedback mechanism is) to be the single storage layer for all of these. Each entry has:
 
 - **Type/category** — parked-observation, hypothesis, correction, self-noticed-failure, autonomy-promotion-candidate, etc.
 - **Subject** — what it's about (person, project, behavior, operation class).
@@ -18,7 +18,7 @@ The point isn't to enforce a rigid schema — different types need different fie
 
 Connections:
 - [/spark mode — batch harvest of the proactive layer](../features/2026-05-19-spark-mode.md) reads this surface as its input.
-- *Park ignored proactive observations* in [prompt-audits.md](../../callback-box/docs/prompt-audits.md#park-ignored-proactive-observations) writes parked items here.
+- *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompt-audits.md#park-ignored-proactive-observations) writes parked items here.
 - [Hypothesis tracking](2026-05-19-hypothesis-tracking.md) writes hunches here.
 - [Correction counting → spec promotion](2026-05-19-correction-counting-spec-promotion.md) writes correction events here.
 - [Declared per-box autonomy matrix with encounter queue](2026-05-19-autonomy-matrix.md) writes promotion candidates here.

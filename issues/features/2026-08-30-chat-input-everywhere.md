@@ -1,7 +1,7 @@
 ---
 title: "The chat input should be everywhere — send to the box from any page, not just chat pages"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [chat, ui, navigation]
 filed-by: agent
@@ -29,7 +29,7 @@ This is a real design item, not a widget move:
   return path.
 - **Drafts** are per-chat today (`useDictationDraft` keyed by box); an
   everywhere-composer needs a draft story for "typed on a card page."
-- **iOS parity** from day one (`cb-ios-overlap`): the native composer is a
+- **iOS parity** from day one (`bbx-ios-overlap`): the native composer is a
   separate implementation; "everywhere" on web widens a gap unless planned
   together — the input-plane-parity issue (`2026-07-19`) is the sibling.
 

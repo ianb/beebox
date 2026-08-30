@@ -11,7 +11,7 @@ const trpcClient = createTRPCClient<AppRouter>({ links: [httpLink({ url: "/works
 
 function QueryActivity() {
   const active = useIsFetching() + useIsMutating() > 0;
-  useEffect(() => { document.body.dataset.cbLoading = active ? "true" : "false"; }, [active]);
+  useEffect(() => { document.body.dataset.bbxLoading = active ? "true" : "false"; }, [active]);
   return null;
 }
 

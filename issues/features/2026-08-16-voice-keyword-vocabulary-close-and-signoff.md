@@ -1,7 +1,7 @@
 ---
 title: "\"send and close\" is a weak canonical keyword, and the close-mic vocabulary has holes"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [voice, transcription, chat]
 filed-by: agent

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Shared, project-scoped process reclamation for the callback-box dev router.
+// Shared, project-scoped process reclamation for the beebox dev router.
 //
 // The router's pidfiles only ever record the *current* generation of each
 // worktree (single-slot `<name>.json`), so older leaked generations and
@@ -55,25 +55,25 @@ import { execa } from "execa";
 import { cwdOf, etimeToSeconds, psRows, type PsRow } from "./process-table.js";
 
 // `etimeToSeconds` is re-exported because it is part of this module's tested
-// surface (callback-box/test/dev/process-cleanup-liveness.doctest.md).
+// surface (beebox/test/dev/process-cleanup-liveness.doctest.md).
 export { etimeToSeconds };
 
-// Mirror bin/router.ts's roots (including the CALLBACK_MAIN_ROOT override) so
-// scoping stays identical. CALLBACK_WORKTREE_ROOT is the same override
+// Mirror bin/router.ts's roots (including the BBX_MAIN_ROOT override) so
+// scoping stays identical. BBX_WORKTREE_ROOT is the same override
 // bin/lib/worktree-paths.sh honors — the basename under the parent is
 // convention, not something git knows, and a test needs to point both halves at
 // a scratch tree rather than at the developer's real worktrees.
-const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-box");
-const WORKTREES_ROOT = process.env.CALLBACK_WORKTREE_ROOT || path.join(os.homedir(), "src", "callback-worktrees");
+const MAIN_ROOT = process.env.BBX_MAIN_ROOT || path.join(os.homedir(), "src", "beebox");
+const WORKTREES_ROOT = process.env.BBX_WORKTREE_ROOT || path.join(os.homedir(), "src", "beebox-worktrees");
 
 // This file's own directory — where `workstreams` (the liveness oracle) lives.
 const BIN_DIR = import.meta.dirname;
 
 // Per-worktree agent-browser socket dirs, mirroring `bin/browse`
-// (`${HOME}/.cache/callback-box/browse/<worktree>/socket`). Each dir's
+// (`${HOME}/.cache/beebox/browse/<worktree>/socket`). Each dir's
 // `*.pid` files (default.pid, dashboard.pid, <session>.pid) name the only
 // agent-browser processes that are actually live for that worktree.
-const BROWSE_CACHE_ROOT = path.join(os.homedir(), ".cache", "callback-box", "browse");
+const BROWSE_CACHE_ROOT = path.join(os.homedir(), ".cache", "beebox", "browse");
 
 const KILL_GRACE_MS = 2000;
 
@@ -90,7 +90,7 @@ const KILL_GRACE_MS = 2000;
 // a test's fake daemons are necessarily seconds old — there is no way to
 // exercise the reaping half of the predicate without it.
 const MIN_ORPHAN_AGE_SEC = ((): number => {
-  const raw = process.env.CB_CLEANUP_MIN_ORPHAN_AGE_SEC;
+  const raw = process.env.BBX_CLEANUP_MIN_ORPHAN_AGE_SEC;
   if (raw === undefined || raw === "") return 60;
   const n = Number(raw);
   // A malformed value must not disable the guard: `NaN` loses every comparison,
@@ -314,7 +314,7 @@ export async function discoverProjectProcs(): Promise<ProjectProc[]> {
       if (wt) { procs.push({ pid: r.pid, ppid: r.ppid, kind: "agent-browser", worktree: wt, command: r.command, ageSec: r.ageSec }); }
       continue;
     }
-    // fastify — the callback-box backend. Its server-main.ts path is relative
+    // fastify — the beebox backend. Its server-main.ts path is relative
     // in argv, so the worktree is attributed from the process cwd below.
     if (/(^|\s)\S*src\/webapp\/server-main\.ts\b/.test(r.command) && /--import\b/.test(r.command)) {
       fastifyCandidates.push(r);

@@ -1,7 +1,7 @@
 ---
 title: "fish audio s2 streaming transcription"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 [Fish Audio S2](https://fish.audio/s2/) is a real-time speech-to-text service

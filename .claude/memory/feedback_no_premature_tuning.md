@@ -4,7 +4,7 @@ description: "Soft default — prefer waiting until specific AI behaviors cause 
 metadata: 
   node_type: memory
   type: feedback
-  originSessionId: 6f088193-eb30-436c-80cb-1b6a986f9034
+  originSessionId: 6f088193-eb30-436c-80bbx-1b6a986f9034
 ---
 
 **Provenance note:** Derived from one observation, not an explicit broad endorsement. Ian declined to read gstack's opus-4-7 model overlay (a list of per-model behavioral nudges) with the reasoning *"I'll do it eventually, but not sure what problems it will expose, want to encounter them before I try to fix them."* I generalized that to a principle. When this came up again later, Ian said *"I don't know exactly where that comes from. I'm not against that necessarily."* So this stands as a soft default — apply with light touch, not a firm rule.

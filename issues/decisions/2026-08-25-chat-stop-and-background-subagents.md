@@ -1,7 +1,7 @@
 ---
 title: "Should chat's stop button keep background subagents running? (`perTaskStopAffordance`, SDK 0.3.246)"
 workstream: unattached
-area: callback-box
+area: beebox
 priority: normal
 filed-by: agent
 discovered-by: agent
@@ -14,8 +14,8 @@ SDK 0.3.246 adds a `perTaskStopAffordance` option: when set, `interrupt()`
 aborts only the current turn and leaves background agents and workflows
 running; without it (and for one-shot string prompts) they stop too.
 
-callback-box calls `interrupt()` on the chat stop path
-(`callback-box/src/core/chat/session/index.ts:374`, reached from
+beebox calls `interrupt()` on the chat stop path
+(`beebox/src/core/chat/session/index.ts:374`, reached from
 `webapp/trpc/routers/chat-control-procedures.ts:212`) and again in
 `services/claude-chat.ts:273` and the field-test operator turns. Today every one
 of those inherits the "stop everything" semantics, so a boxholder pressing stop

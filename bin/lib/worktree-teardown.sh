@@ -19,14 +19,14 @@
 
 # Locations — WT_MONO (where the git bookkeeping runs), WT_BOX_ROOT, and
 # WT_STATE_DIR all come from the shared derivation, so this file makes no $HOME
-# assumption of its own. Better than the old `$HOME/src/callback-box` fallback,
+# assumption of its own. Better than the old `$HOME/src/beebox` fallback,
 # which could point the destructive path at a checkout that isn't the one in
 # play.
 #
 # On derivation failure the four repo-relative roots are cleared, so nothing
 # outside WT_STATE_DIR is reachable: the box trash is guarded on a non-empty
 # WT_BOX_ROOT and `cd "$WT_MONO"` fails before the worktree trash-mv and the
-# branch delete. WT_STATE_DIR is NOT cleared — it comes from $CALLBACK_STATE_DIR
+# branch delete. WT_STATE_DIR is NOT cleared — it comes from $BBX_STATE_DIR
 # or the fixed cache path, neither of which depends on the derivation — so
 # router-stop and browse/log/pid cleanup still run. That is deliberate: those
 # are this tool's own regenerable cache, not anybody's work.

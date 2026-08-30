@@ -1,7 +1,7 @@
 ---
-title: "cb serve went unresponsive for ~4 minutes, then self-healed silently"
+title: "bbx serve went unresponsive for ~4 minutes, then self-healed silently"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
 labels: [field-test-findings, code-error]
@@ -37,7 +37,7 @@ before timing out with no response. On the third attempt the app loaded
 normally with all state intact — no error shown, no reconnect notice, no trace
 in the UI that anything happened.
 
-Context: standalone `cb serve <box> --port 3555` (fresh `cb init` box, dev
+Context: standalone `bbx serve <box> --port 3555` (fresh `bbx init` box, dev
 build), immediately after rapid navigation between the three card views
 (chat side panel → browse page → full card view) and keyboard scroll attempts.
 A real chat-agent turn had completed a minute or two earlier.
@@ -46,7 +46,7 @@ Low information — filed so the symptom is on record. Worth checking when it
 recurs: whether the Node process was blocked (event-loop stall — a sync FS
 walk? search-index rebuild? git operation on the box?), whether it correlates
 with the chat session pool, and whether anything landed in the box's
-`.callback-box/` logs. The field-test harness (agent-field-tests plan) will
+`.beebox/` logs. The field-test harness (agent-field-tests plan) will
 surface this class of stall as a harness event if it recurs in runs.
 
 Note: a stall long enough would starve the WS ping/pong watchdog
@@ -72,7 +72,7 @@ Served a copy of run 2's actual box and drove every candidate below hard
 (5,700+ requests over ~6 min with a 500ms stall detector): **no stall
 reproduced**, and code reading confirms all the listed request-path
 candidates are async / bounded-concurrency (`fs.promises`, `mapInBatches`,
-`simple-git` async spawns; the `execSync("which cb")` is unreachable from
+`simple-git` async spawns; the `execSync("which bbx")` is unreachable from
 read routes). Consider `landmarks.list`, `navStatus`, `status.browse`,
 `status.activity`/`getLog`, and the wakeup `execSync` **exonerated**.
 
@@ -114,5 +114,5 @@ that's the next step when this recurs):
 - `src/webapp/trpc/routers/status.ts` (`activity`) + `src/lib/git.ts`
   `getLog` — git-log on the request path; check whether it shells out
   synchronously.
-- `src/core/commands/wakeup.ts` — `execSync("which cb", ...)`, a synchronous
+- `src/core/commands/wakeup.ts` — `execSync("which bbx", ...)`, a synchronous
   subprocess spawn; check reachability from any route handler.

@@ -1,7 +1,7 @@
 ---
 title: "Package root vs `content/`: one box has two roots, and callers keep picking the wrong one"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [box-shape]
 filed-by: agent
 discovered-by: Ian
@@ -9,8 +9,8 @@ discovered-in: worktree-add-box-process — three instances of this bug in one w
 ---
 
 A v2 box has two roots. The **package root** holds `package.json`, `src/`, and
-`.claude/`. The **box root** is `content/`, and holds `.cb-box` plus everything
-an agent sees. See [`box-layout.md`](../../callback-box/docs/box-layout.md).
+`.claude/`. The **box root** is `content/`, and holds `.bbx-box` plus everything
+an agent sees. See [`box-layout.md`](../../beebox/docs/box-layout.md).
 
 Every interface that takes "a box path" must therefore say which root it means,
 and they do not agree. Callers guess, and the guess is silent: both paths exist,
@@ -29,8 +29,8 @@ Three landed in a single work unit on 2026-08-17
    `<package-root>/config/`. That directory does not exist — `config/` is under
    `content/`. On a fresh box the write crashed the remote script. Caught by a
    cross-model review, not by a test.
-2. The same script passed the package root to `cb boxes add`, which checks for
-   `.cb-box` at the path it is given (`src/cli/commands/boxes.ts:30`, via
+2. The same script passed the package root to `bbx boxes add`, which checks for
+   `.bbx-box` at the path it is given (`src/cli/commands/boxes.ts:30`, via
    `isBox` at `src/core/schedule/scheduler.ts:56`). It failed on the first real
    run against the server.
 3. The two manifests take **different** roots, which is what produced (2):
@@ -53,7 +53,7 @@ signal about what kind of fix works here.
   Two non-hub callers already reach in: `src/cli/commands/hub.ts:26` and
   `src/field-test/run-box.ts:26`.
 - **Bilingual is the exception, not the default.** The hub accepts either root
-  deliberately. `cb boxes add`/`remove` do not. A caller cannot know which
+  deliberately. `bbx boxes add`/`remove` do not. A caller cannot know which
   behavior a given command has without reading it.
 - **Nothing fails loudly at the boundary.** Handing `config/box.json` a package
   root produces a stray directory or an ENOENT deep in a script, not "you gave
@@ -66,7 +66,7 @@ The narrow, obvious pieces:
 - Move `resolveBoxRoot` to `src/lib/` (it needs only `path` + `fileExists`, so
   there is no cycle risk) and repoint its callers, per the rule that `src/lib/`
   is the single home for cross-cutting helpers.
-- Make `cb boxes add`/`remove` bilingual, so both manifest-writing commands
+- Make `bbx boxes add`/`remove` bilingual, so both manifest-writing commands
   behave the same way. Note the stored value should stay the box root —
   existing `boxes.json` entries are all `content/` dirs.
 
@@ -89,4 +89,4 @@ should be settled before doing the narrow pieces in case they become moot:
 Not yet done: an audit of every site that takes a box path as a string and which
 root each expects. That inventory is what would say whether this is three sharp
 edges or a systemic naming problem. `grep -rn "boxRoot\|packageRoot\|boxPath"
-callback-box/src/` is the starting point.
+beebox/src/` is the starting point.

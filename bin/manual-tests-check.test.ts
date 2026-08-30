@@ -101,7 +101,7 @@ test("an unchanged issue file is refused", async (t) => {
 test("a path outside the open issue categories never parses as a TRIAGE line", async (t) => {
   const fixture = await makeFixture();
   t.after(() => fs.rm(path.dirname(fixture.worktree), { recursive: true, force: true }));
-  const result = await runCheck(fixture, "TRIAGE: callback-box/src/webapp/server.ts\n");
+  const result = await runCheck(fixture, "TRIAGE: beebox/src/webapp/server.ts\n");
   assert.equal(result.exitCode, 1);
   assert.match(result.stderr, /never printed a TRIAGE line/u);
 });
@@ -175,10 +175,10 @@ test("a file dirtied outside issues/ is refused by name", async (t) => {
   const fixture = await makeFixture();
   t.after(() => fs.rm(path.dirname(fixture.worktree), { recursive: true, force: true }));
   await fs.appendFile(path.join(fixture.worktree, ISSUE), "\nAgent diagnosis.\n");
-  await fs.writeFile(path.join(fixture.worktree, "callback-box-note.ts"), "export const x = 1;\n");
+  await fs.writeFile(path.join(fixture.worktree, "beebox-note.ts"), "export const x = 1;\n");
   const result = await runCheck(fixture, `TRIAGE: ${ISSUE}\n`);
   assert.equal(result.exitCode, 1);
   assert.match(result.stderr, /outside issues\/ modified/u);
-  assert.match(result.stderr, /callback-box-note\.ts/u);
+  assert.match(result.stderr, /beebox-note\.ts/u);
   assert.equal(await headCount(fixture.worktree), 1);
 });

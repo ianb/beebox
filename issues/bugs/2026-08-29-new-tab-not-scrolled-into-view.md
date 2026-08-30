@@ -1,7 +1,7 @@
 ---
 title: "Opening a document doesn't scroll its tab into view when the tab bar overflows"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [ui]
 filed-by: agent
 discovered-by: Ian

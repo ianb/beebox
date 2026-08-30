@@ -1,7 +1,7 @@
 ---
 title: "Chat review stops advancing once a transcript passes MAX_SESSION_ENTRIES"
 workstream: chat-history-scale
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — Track A of docs/plans/chat-history-oom-mobile-lock.md
 priority: normal
@@ -10,9 +10,9 @@ resolution: implemented
 
 **Closed 2026-08-25** — resolved by commits f7d24973 / b093062b (workstream chat-history-scale). See the "Fixed (2026-08-25)" section below for what shipped.
 
-`parseSessionLog` no longer retains a whole transcript (that OOM'd `cb serve`
+`parseSessionLog` no longer retains a whole transcript (that OOM'd `bbx serve`
 in prod on 2026-08-01). Every caller now names a bounded slice, capped at
-`MAX_SESSION_ENTRIES` (5 000) — `callback-box/src/cli/lib/session-retention.ts`.
+`MAX_SESSION_ENTRIES` (5 000) — `beebox/src/cli/lib/session-retention.ts`.
 
 Chat review is the one consumer that genuinely wanted the whole file. Its span
 resolution (`core/chat/review/span.ts`) hashes every entry *before* the journal
@@ -27,8 +27,8 @@ journal boundary is below the read window, so the run cannot locate an unread
 span. The session's husk title, `contains`, and account never change again.
 
 The standstill is loud, not silent. `discoverSessions` counts the session in
-`boundaryBeyondWindow` and `console.warn`s its id; `cb chat review status` and
-`cb chat review run` both print the count. But nothing advances it.
+`boundaryBeyondWindow` and `console.warn`s its id; `bbx chat review status` and
+`bbx chat review run` both print the count. But nothing advances it.
 
 Options, unsettled:
 

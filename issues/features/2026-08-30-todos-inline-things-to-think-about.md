@@ -1,7 +1,7 @@
 ---
 title: "Todos as inline things-to-think-about, not a todo location — and surfaced in the card companion view when that exists"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [cards, ui]
 filed-by: agent
@@ -11,7 +11,7 @@ discovered-in: main session — boxholder direction
 
 Today todo handling routes to a **place**: `{% todo %}` annotations are
 collected into todo-view plate cards (the implemented
-[todo-annotation](../../callback-box/docs/implemented-plans/todo-annotation.md)
+[todo-annotation](../../beebox/docs/implemented-plans/todo-annotation.md)
 design — annotation + collector + a stock todo-view card). The boxholder's
 direction: that's the wrong emphasis. Todos are **things to think about,
 inline** — they live where the content lives, and the reading experience

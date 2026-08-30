@@ -88,19 +88,19 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
   // transitive deps (ajv@6, node-fetch 2) trigger on every node start.
   const nodeOptions = [process.env.NODE_OPTIONS, "--disable-warning=DEP0040"].filter(Boolean).join(" ");
   const childEnv: NodeJS.ProcessEnv = {
-    // This checkout's own `callback-box/.env` is local dev config for the
-    // processes we spawn (CB_BROWSE_API_KEY, …), not just the `BOXES=` line
+    // This checkout's own `beebox/.env` is local dev config for the
+    // processes we spawn (BBX_BROWSE_API_KEY, …), not just the `BOXES=` line
     // the router greps out of it elsewhere. A real exported variable wins
     // over the file, so `FOO=x pnpm dev` still overrides — standard dotenv
     // precedence. Worktrees get their copy from the WorktreeCreate hook;
     // nothing here reaches into another checkout.
-    ...(await readEnvFile(path.join(wt.root, "callback-box", ".env"), config.log)),
+    ...(await readEnvFile(path.join(wt.root, "beebox", ".env"), config.log)),
     ...process.env,
     FRONTEND_PORT: String(frontendPort),
     BACKEND_PORT: String(backendPort),
     VITE_BASE: baseUrl,
     PORT: String(backendPort),
-    CB_DEV_SURFACES: "1",
+    BBX_DEV_SURFACES: "1",
     NODE_OPTIONS: nodeOptions,
   };
   const browseEnv: NodeJS.ProcessEnv = {

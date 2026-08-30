@@ -1,8 +1,8 @@
 // Rewrite the `Path` attribute of the box-issued mobile/session cookies so they
 // survive behind the dev router's `/<worktree>/` prefix. Track B, chunk 2b of
-// callback-box/docs/implemented-plans/expose-dev-router.md (the iOS session-continuity leg).
+// beebox/docs/implemented-plans/expose-dev-router.md (the iOS session-continuity leg).
 //
-// The box child sets `cb_mobile` with `Path=/<boxSlug>` (webapp/mobile-cookie.ts)
+// The box child sets `bbx_mobile` with `Path=/<boxSlug>` (webapp/mobile-cookie.ts)
 // because it only knows its own slug. Behind the router the browser serves the
 // SPA (and all its dev assets) under the Vite base `/<worktree>/…`, so a
 // `Path=/<boxSlug>` cookie is dropped on the next request, the tRPC WebSocket
@@ -13,16 +13,16 @@
 // proxies (see rewriteMobileCookiePath for why `/<worktree>`, not the box path).
 //
 // Scope is deliberately narrow (security-critical):
-//   - ONLY the named cookies below (`cb_mobile`, `cb_session`);
+//   - ONLY the named cookies below (`bbx_mobile`, `bbx_session`);
 //   - ONLY their `Path` attribute — never HttpOnly/SameSite/Max-Age/Secure/value;
 //   - ONLY when that Path is exactly `/<boxSlug>` (the value the box sets).
-// `cb_session` is issued host-wide `Path=/` (webapp/routes/auth.ts), so the
+// `bbx_session` is issued host-wide `Path=/` (webapp/routes/auth.ts), so the
 // exact-`/<boxSlug>` guard leaves it untouched — it already works behind any
-// prefix. It is listed anyway so a future non-root `cb_session` Path would be
+// prefix. It is listed anyway so a future non-root `bbx_session` Path would be
 // carried through the same rewrite. No other cookie or header is altered.
 
 /** The cookies whose Path the router may rewrite. Everything else passes verbatim. */
-const REWRITABLE_COOKIE_NAMES = new Set<string>(["cb_mobile", "cb_session"]);
+const REWRITABLE_COOKIE_NAMES = new Set<string>(["bbx_mobile", "bbx_session"]);
 
 /** The name of a `Set-Cookie` string — the token before the first `=`. */
 function cookieName(setCookie: string): string {
@@ -52,7 +52,7 @@ function rewriteOne(setCookie: string, { boxPath, prefixedPath }: { boxPath: str
 }
 
 /**
- * Rewrite the `Path` of `cb_mobile`/`cb_session` from `/<boxSlug>` to the
+ * Rewrite the `Path` of `bbx_mobile`/`bbx_session` from `/<boxSlug>` to the
  * WORKTREE prefix `/<worktree>` (the Vite base, `VITE_BASE=/<worktree>/`) across a
  * response's `Set-Cookie` header(s).
  *
@@ -63,7 +63,7 @@ function rewriteOne(setCookie: string, { boxPath, prefixedPath }: { boxPath: str
  * for those `/<worktree>/…` asset requests, so a mobile-only iOS webview loads
  * the box page but its JS bundle 401s → white screen. Scoping to `/<worktree>`
  * covers both the box paths and those assets. This does NOT widen access: the
- * `cb_mobile` session is box-scoped (HMAC keyed to the box), so sending it to a
+ * `bbx_mobile` session is box-scoped (HMAC keyed to the box), so sending it to a
  * SIBLING box's path still fails that box's `verifyMobileSession`; the gate
  * enforces per-box server-side regardless of how broadly the cookie is sent.
  *

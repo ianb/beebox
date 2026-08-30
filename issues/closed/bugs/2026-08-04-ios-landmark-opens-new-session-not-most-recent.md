@@ -1,7 +1,7 @@
 ---
 title: "iOS: selecting a landmark starts a NEW chat instead of resuming the landmark's most-recent session"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder on iOS
@@ -64,7 +64,7 @@ web/iOS URL or bridge contract.
 
 ## Related
 
-- `docs/mobile-contract.md` / cb-ios-overlap — this is a web/iOS parity gap on a
+- `docs/mobile-contract.md` / bbx-ios-overlap — this is a web/iOS parity gap on a
   shared surface; the fix should keep the native path using the web's
   resume-or-start contract, not a divergent one.
 - `docs/landmarks.md` — the landmark↔session association model.

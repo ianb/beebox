@@ -255,7 +255,7 @@ export function findBlocked(added: AddedLine[], entries: Entry[]): Hit[] {
 
 function main(): void {
   const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
-  const rel = process.env.CB_COMMIT_BLOCKLIST ?? ".commit-blocklist";
+  const rel = process.env.BBX_COMMIT_BLOCKLIST ?? ".commit-blocklist";
   const blocklistPath = path.join(repoRoot, rel);
 
   let text: string;

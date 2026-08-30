@@ -1,0 +1,20 @@
+{
+  "name": "beebox",
+  "interface": {
+    "displayName": "Bee Box"
+  },
+  "plugins": [
+    {
+      "name": "beebox-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/beebox-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

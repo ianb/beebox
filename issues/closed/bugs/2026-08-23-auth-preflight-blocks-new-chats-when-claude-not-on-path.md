@@ -1,7 +1,7 @@
 ---
 title: "New chats intermittently fail with \"Claude Code is not logged in\" while existing chats keep working"
 workstream: small-bugs-batch
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a journey walkthrough could not start a second chat
 priority: normal

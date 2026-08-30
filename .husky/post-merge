@@ -13,7 +13,7 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 
 # A merged lockfile can make the existing node_modules unusable immediately:
-# bin/cb rebuilds its externalized CLI bundle against the new dependency graph,
+# bin/bbx rebuilds its externalized CLI bundle against the new dependency graph,
 # then Node cannot resolve packages that the old install never contained. Do
 # this for every checkout, before deploy/build work. The hook cannot change a
 # completed merge's outcome, so a failure warns on stderr and deploy continues.
@@ -30,23 +30,23 @@ fi
 # bundle. After post-merge-install.sh, which may have changed the dep graph the
 # bundle externalizes.
 if [ "${1:-0}" = "1" ]; then
-  "$REPO_DIR/callback-box/scripts/auto-build-cli.sh" HEAD WORKTREE || true
+  "$REPO_DIR/beebox/scripts/auto-build-cli.sh" HEAD WORKTREE || true
 else
-  "$REPO_DIR/callback-box/scripts/auto-build-cli.sh" ORIG_HEAD HEAD || true
+  "$REPO_DIR/beebox/scripts/auto-build-cli.sh" ORIG_HEAD HEAD || true
 fi
 
 if [ "$BRANCH" = "main" ]; then
   # Only deploy when the merge actually changed something deploy.sh ships (see
-  # post-commit / callback-box/deploy/deploy.sh): callback-box, agent-doctest,
+  # post-commit / beebox/deploy/deploy.sh): beebox, agent-doctest,
   # personal-vibe-check, patches/, root pnpm files. A merge confined to issues/,
-  # callback-clerk/, ios-app/, research/, bin/, root docs, etc. ships nothing.
+  # beebox-clerk/, ios-app/, research/, bin/, root docs, etc. ships nothing.
   # Fail OPEN: if the merge's file list can't be computed, deploy rather than
   # risk silently skipping a real ship (the failure mode we're guarding against).
-  merge_changed=$(git -C "$REPO_DIR" diff --name-only ORIG_HEAD HEAD 2>/dev/null || echo "callback-box/__diff_failed__")
-  if ! printf '%s\n' "$merge_changed" | grep -qE '^(callback-box|agent-doctest|personal-vibe-check|patches)/|^(package\.json|pnpm-workspace\.yaml|\.npmrc|pnpm-lock\.yaml)$'; then
-    echo "[post-merge] Skip deploy: merge touches no deployed path (callback-box/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
-  elif [ ! -s "$REPO_DIR/callback-box/deploy/server-ip" ]; then
-    echo "[post-merge] ⚠ NOT deploying — callback-box/deploy/server-ip is missing" >&2
+  merge_changed=$(git -C "$REPO_DIR" diff --name-only ORIG_HEAD HEAD 2>/dev/null || echo "beebox/__diff_failed__")
+  if ! printf '%s\n' "$merge_changed" | grep -qE '^(beebox|agent-doctest|personal-vibe-check|patches)/|^(package\.json|pnpm-workspace\.yaml|\.npmrc|pnpm-lock\.yaml)$'; then
+    echo "[post-merge] Skip deploy: merge touches no deployed path (beebox/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
+  elif [ ! -s "$REPO_DIR/beebox/deploy/server-ip" ]; then
+    echo "[post-merge] ⚠ NOT deploying — beebox/deploy/server-ip is missing" >&2
     echo "[post-merge]   (gitignored; lost in a repo move?). Nothing shipped — restore it." >&2
   else
     # Capture the post-merge HEAD and deploy exactly that sha, so a commit landed
@@ -57,10 +57,10 @@ if [ "$BRANCH" = "main" ]; then
     # to its own timestamped file and repoint .last-deploy.log at it as a RELATIVE
     # symlink, so the documented `tail .last-deploy.log` poll keeps working. Prune
     # to the newest 20 logs.
-    LOG_DIR="$REPO_DIR/callback-box/deploy/.deploy-logs"
+    LOG_DIR="$REPO_DIR/beebox/deploy/.deploy-logs"
     mkdir -p "$LOG_DIR"
     LOG_FILE="$LOG_DIR/$(date -u +%Y%m%dT%H%M%SZ)-${SHA:0:8}.log"
-    ln -sfn ".deploy-logs/$(basename "$LOG_FILE")" "$REPO_DIR/callback-box/deploy/.last-deploy.log"
+    ln -sfn ".deploy-logs/$(basename "$LOG_FILE")" "$REPO_DIR/beebox/deploy/.last-deploy.log"
     ls -1t "$LOG_DIR"/*.log 2>/dev/null | tail -n +21 | while IFS= read -r old; do rm -f "$old"; done
     # Record intent synchronously. A background child can be killed before it
     # executes its first line when the hook process exits; the active holder
@@ -70,12 +70,12 @@ if [ "$BRANCH" = "main" ]; then
     echo "[post-merge] Deploying to server (branch: main, ref: ${SHA:0:8})..."
     node "$REPO_DIR/bin/lib/detach.ts" bash -c \
       'exec "$1" --ref "$2" --request-recorded >>"$3" 2>&1' \
-      bash "$REPO_DIR/callback-box/deploy/deploy.sh" "$SHA" "$LOG_FILE"
-    echo "[post-merge] Deploy started in background — notifies on failure (log: callback-box/deploy/.last-deploy.log)"
+      bash "$REPO_DIR/beebox/deploy/deploy.sh" "$SHA" "$LOG_FILE"
+    echo "[post-merge] Deploy started in background — notifies on failure (log: beebox/deploy/.last-deploy.log)"
   fi
 
   # Rebuild the clerk extension if its sources changed in this merge.
-  "$REPO_DIR/callback-clerk/build/auto-build.sh" ORIG_HEAD HEAD || true
+  "$REPO_DIR/beebox-clerk/build/auto-build.sh" ORIG_HEAD HEAD || true
 
   # NOTE: worktree auto-sweep deliberately does NOT run here. It calls
   # `git worktree prune`, which is not concurrency-safe against the deploy we
@@ -92,5 +92,5 @@ fi
 if command -v git-lfs >/dev/null 2>&1; then
   git lfs post-merge "$@" || true
 else
-  echo "warning: git-lfs not found — media files will not be handled (see callback-box/docs/developer-install.md)" >&2
+  echo "warning: git-lfs not found — media files will not be handled (see beebox/docs/developer-install.md)" >&2
 fi

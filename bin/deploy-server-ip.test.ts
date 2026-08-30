@@ -14,12 +14,12 @@ import { join, resolve } from "node:path";
 import { after, before, test } from "node:test";
 
 const ROOT = resolve(import.meta.dirname, "..");
-const SOURCE_DEPLOY = join(ROOT, "callback-box", "deploy");
+const SOURCE_DEPLOY = join(ROOT, "beebox", "deploy");
 const scratch = mkdtempSync(join(tmpdir(), "deploy-server-ip-test-"));
 const main = join(scratch, "main");
 const worktree = join(scratch, "worktree");
-const mainDeploy = join(main, "callback-box", "deploy");
-const worktreeDeploy = join(worktree, "callback-box", "deploy");
+const mainDeploy = join(main, "beebox", "deploy");
+const worktreeDeploy = join(worktree, "beebox", "deploy");
 const fakeBin = join(scratch, "bin");
 const sshLog = join(scratch, "ssh.log");
 const browseLog = join(scratch, "browse.log");
@@ -67,7 +67,7 @@ before(() => {
   mkdirSync(fakeBin);
   writeFileSync(
     join(fakeBin, "ssh"),
-    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "${sshLog}"\nif [[ "$*" == *"CB_SESSION_SECRET"* ]]; then printf cookie-token; fi\n`,
+    `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> "${sshLog}"\nif [[ "$*" == *"BBX_SESSION_SECRET"* ]]; then printf cookie-token; fi\n`,
   );
   chmodSync(join(fakeBin, "ssh"), 0o755);
   mkdirSync(join(worktree, "bin"));
@@ -123,7 +123,7 @@ test("production diagnostic tools use the shared worktree fallback", () => {
 
   execFileSync(
     join(worktreeDeploy, "prod-ssh"),
-    ["systemctl", "status", "cb-hub"],
+    ["systemctl", "status", "bbx-hub"],
     {
       env,
       stdio: "ignore",
@@ -139,11 +139,11 @@ test("production diagnostic tools use the shared worktree fallback", () => {
   });
 
   const sshCalls = readFileSync(sshLog, "utf8");
-  assert.match(sshCalls, /-A root@198\.51\.100\.10 systemctl status cb-hub/);
+  assert.match(sshCalls, /-A root@198\.51\.100\.10 systemctl status bbx-hub/);
   assert.match(sshCalls, /root@198\.51\.100\.10 bash -s --/);
-  assert.match(sshCalls, /root@198\.51\.100\.10 .*CB_SESSION_SECRET/);
+  assert.match(sshCalls, /root@198\.51\.100\.10 .*BBX_SESSION_SECRET/);
   const browseCalls = readFileSync(browseLog, "utf8");
-  assert.match(browseCalls, /cookies set cb_session cookie-token/);
+  assert.match(browseCalls, /cookies set bbx_session cookie-token/);
   assert.match(browseCalls, /open https:\/\/example\.invalid\/test1\//);
 });
 
@@ -153,10 +153,10 @@ test("deploy.sh retains its local-only server-ip backstop", () => {
   assert.match(deployScript, /if \[ ! -s "\$SCRIPT_DIR\/server-ip" ]/);
 });
 
-test("both owner-cookie tools fail closed when CB_OWNER_EMAIL is absent", () => {
+test("both owner-cookie tools fail closed when BBX_OWNER_EMAIL is absent", () => {
   for (const tool of ["prod-curl", "prod-browse"]) {
     const script = readFileSync(join(SOURCE_DEPLOY, tool), "utf8");
-    assert.match(script, /\[\[ -z "\${CB_OWNER_EMAIL:-}" ]]/);
-    assert.match(script, /Error: CB_OWNER_EMAIL is unset/);
+    assert.match(script, /\[\[ -z "\${BBX_OWNER_EMAIL:-}" ]]/);
+    assert.match(script, /Error: BBX_OWNER_EMAIL is unset/);
   }
 });

@@ -1,12 +1,12 @@
 ---
 title: "View cardRefs are unresolvable on a v2 box (views live outside the box root)"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
 Fixed in `52a21dd3`. View refs now use the operational box root as their
-resolution base for validation, canonical reporting and repair, and `cb mv`
+resolution base for validation, canonical reporting and repair, and `bbx mv`
 rewrites. Legacy card and dossier resolution semantics are unchanged.
 
 On a package-shaped (v2) box, `listBoxViewFiles` returns views from
@@ -25,7 +25,7 @@ my-box/
 ```
 
 The leading `/` makes the ref box-root-absolute, so it correctly names
-`content/people/alice.person.card`. Today, `cb validate` still reports it as
+`content/people/alice.person.card`. Today, `bbx validate` still reports it as
 broken. The resolver starts from `src/views/people.tsx`, but that file is
 outside `content/`, so it rejects the starting path before it can resolve the
 ref. A view with several valid links therefore produces a wall of false
@@ -33,9 +33,9 @@ ref. A view with several valid links therefore produces a wall of false
 
 - `lintViewRefs` → `resolveRefExists` → `boxRelativeFrom(boxRoot, viewAbsPath)`
   returns `null` (the path starts with `..`), so the ref resolves to nothing and
-  `cb validate` reports **every** `cardRef="…"` in a v2 box's views as a broken
+  `bbx validate` reports **every** `cardRef="…"` in a v2 box's views as a broken
   reference, including correct box-root-absolute ones.
-- The `--canonical` walk added in `callback-box/docs/implemented-plans/box-root-paths.md`
+- The `--canonical` walk added in `beebox/docs/implemented-plans/box-root-paths.md`
   Track F deliberately *skips* those views for the same reason, so the view
   surface contributes nothing to the canonical report on a v2 box.
 

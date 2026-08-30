@@ -1,7 +1,7 @@
 ---
 title: "Always-on personalized dashboard view for the Echo Show (device auth + Silk keepalive)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder chose this after Echo Show research
 needs: [design]
@@ -29,7 +29,7 @@ Concretely (design to be worked out):
   `config/schemas/`), whose body/fields describe what to show and how — the
   agent writes and continuously updates it.
 - **A custom view attached to that card** — a view-widget (the
-  `callback-box/view-widgets` specifier; views are `?view=…` on the card's
+  `beebox/view-widgets` specifier; views are `?view=…` on the card's
   `browse/<path>`, per our card-attached-view model) that renders the card as the
   display surface. This is the "custom web page" the Echo Show points at.
 - **Agent-managed at an intimate level** — the agent decides what belongs on the
@@ -60,7 +60,7 @@ choice is **where the private data lives** and **whether the page is live**.
 
 ### Option A — external published page (box never exposed)
 
-Reuse the publish-pages pipeline (`src/publish/` — `cb pub`, `manifest.ts`,
+Reuse the publish-pages pipeline (`src/publish/` — `bbx pub`, `manifest.ts`,
 `submission.ts`, `pub-worker-meta.ts`, `leak-scan.ts`, `setup.ts`;
 `docs/plans/publish-pages.md`). The box **renders the dashboard and publishes a
 static artifact**; the Echo Show fetches that. The box's fail-closed auth is
@@ -80,7 +80,7 @@ never touched.
 Extend the mobile device-token / pairing model in `src/core/mobile/`
 (`request-auth.ts`, `mobile-session.ts`, `pairing.ts`) + `routes/pairing.ts` /
 `server-box-scope.ts`. **Not a novel hole:** paired phones already authenticate
-with a box-scoped device token (`cb_mobile`) instead of OAuth. A display token is
+with a box-scoped device token (`bbx_mobile`) instead of OAuth. A display token is
 a **strictly narrower sibling** — read-only, unlocks *only* the one dashboard-card
 view, revocable, per-device, rate-limited. Blast radius of a leak = "someone sees
 the dashboard," not "controls the box" — arguably the least-privileged credential

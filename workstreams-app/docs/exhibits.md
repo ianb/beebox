@@ -3,7 +3,7 @@
 An **exhibit** is a directory you create; the app renders it. It is how an agent
 shows work to the developer — rendered documents, labeled screenshots, small
 interactive pages — with an explicit **ask** on every item. Design and
-vocabulary: `callback-box/docs/plans/workstream-exhibits.md`.
+vocabulary: `beebox/docs/plans/workstream-exhibits.md`.
 
 ## Create one
 
@@ -179,7 +179,7 @@ workstreams origin: pages here script freely and hold no workstreams authority.
 
 A request needs the machine-scoped token, once, as `?token=<t>`; the origin
 exchanges it for a session cookie and redirects to the clean URL. The token is
-persisted at `$CALLBACK_STATE_DIR/exhibits-token`; the supervisor mints it, and
+persisted at `$BBX_STATE_DIR/exhibits-token`; the supervisor mints it, and
 so does `bin/exhibits` when the app has never run — both reuse an existing file,
 so a printed URL always carries a token that works.
 `bin/exhibits url <workstream>/<exhibit>` prints an authorized URL (Track D).

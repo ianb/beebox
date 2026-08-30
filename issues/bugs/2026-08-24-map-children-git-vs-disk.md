@@ -3,7 +3,7 @@ title: "refresh-maps derives `children` from git on some paths and disk on other
 workstream: refresh-maps-throughput
 filed-by: agent
 discovered-in: refresh-maps throughput measurement (worktree-refresh-maps-throughput)
-area: callback-box
+area: beebox
 ---
 
 `listMappableDirs` decides which directories deserve a MAP.md by walking the
@@ -39,7 +39,7 @@ point the git-derived `children` still omits it. Boxes gitignore media, so
 
 Observed on a deployed box: a directory vanished from its parent's map on
 2026-08-06 and reappeared on 2026-08-11 once it had tracked content. The agent
-that dropped it had spent nine consecutive turns checking `ls`, `cb ls`,
+that dropped it had spent nine consecutive turns checking `ls`, `bbx ls`,
 `git ls-tree`, `git check-ignore`, and `find` against that very directory before
 deferring to the brief — it noticed the discrepancy and had no way to act on it.
 
@@ -49,7 +49,7 @@ that never contained the ignored dir, so it would read as "added" on every run
 and the directory would be permanently dirty.
 
 The fix that follows from the reproduction is to **store the listing in
-`.cb-maps-state.json` and diff the current on-disk listing against the stored
+`.bbx-maps-state.json` and diff the current on-disk listing against the stored
 one**, instead of diffing two commits. That makes `children`, `added`, and
 `deleted` all disk-derived and mutually consistent, and it retires the
 `asOf`-unresolvable recovery path entirely — the path that regenerated six

@@ -60,8 +60,8 @@ disposition write, which reopens a boundary that was drawn on purpose.
 
 ## Related
 
-- [document-comments](../../callback-box/docs/plans/document-comments.md) — the
+- [document-comments](../../beebox/docs/plans/document-comments.md) — the
   boxholder→agent direction of the same channel. This is the agent→boxholder
   direction, and the two should not end up with different vocabulary.
-- [general-browser](../../callback-box/docs/plans/general-browser.md) — its
+- [general-browser](../../beebox/docs/plans/general-browser.md) — its
   recency feed is where a flagged file would be badged.

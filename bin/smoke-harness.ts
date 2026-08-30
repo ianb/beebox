@@ -14,7 +14,7 @@ import { basename, join } from "node:path";
 import { homedir } from "node:os";
 import { parseEnv } from "node:util";
 import { request as httpRequest } from "node:http";
-import { invariant } from "../callback-box/src/lib/invariant.js";
+import { invariant } from "../beebox/src/lib/invariant.js";
 import {
   BudgetExhaustedError,
   MissingBoxSlugError,
@@ -77,7 +77,7 @@ export function git(args: string[]): string {
  * but not what they broke, and the value is the only thing a later reader has.
  */
 export function faultInjection(): string | null {
-  const reason = process.env["CB_SMOKE_FAULT_INJECTION"];
+  const reason = process.env["BBX_SMOKE_FAULT_INJECTION"];
   return reason === undefined || reason.trim() === "" ? null : reason.trim();
 }
 
@@ -123,7 +123,7 @@ export function report(): number {
  * `/<name>/`, and a URL built from the branch name hits nothing.
  */
 export function worktreeName(): string {
-  return REPO_ROOT.includes("/callback-worktrees/") ? basename(REPO_ROOT) : "main";
+  return REPO_ROOT.includes("/beebox-worktrees/") ? basename(REPO_ROOT) : "main";
 }
 
 export function routerPort(): string {
@@ -137,8 +137,8 @@ export function routerPort(): string {
  */
 export function browseKey(): string | null {
   try {
-    const parsed = parseEnv(readFileSync(join(REPO_ROOT, "callback-box/.env"), "utf8"));
-    const key = parsed["CB_BROWSE_API_KEY"];
+    const parsed = parseEnv(readFileSync(join(REPO_ROOT, "beebox/.env"), "utf8"));
+    const key = parsed["BBX_BROWSE_API_KEY"];
     return typeof key === "string" && key !== "" ? key : null;
   } catch (_e) {
     // No .env in this checkout: proceed unauthenticated and let the probe say so.
@@ -153,7 +153,7 @@ export function browseKey(): string | null {
  * this tier drive the control plane it otherwise has no session for.
  */
 function routerSocket(): string {
-  const stateDir = process.env["CALLBACK_STATE_DIR"] ?? join(homedir(), ".cache", "callback-box");
+  const stateDir = process.env["BBX_STATE_DIR"] ?? join(homedir(), ".cache", "beebox");
   return join(stateDir, "router.sock");
 }
 
@@ -247,7 +247,7 @@ interface Probe {
 
 async function probe(input: { url: string; key: string | null; timeoutMs: number }): Promise<Probe> {
   const headers: Record<string, string> = {};
-  if (input.key !== null) headers["cookie"] = `cb_browse_key=${input.key}`;
+  if (input.key !== null) headers["cookie"] = `bbx_browse_key=${input.key}`;
   const response = await fetch(input.url, {
     headers,
     signal: AbortSignal.timeout(input.timeoutMs),

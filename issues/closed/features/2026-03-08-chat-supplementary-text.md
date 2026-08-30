@@ -1,7 +1,7 @@
 ---
 title: "chat supplementary text"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

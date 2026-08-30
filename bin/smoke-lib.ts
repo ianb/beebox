@@ -40,7 +40,7 @@ export interface SmokeRunRecord {
   /** Its message, first line only — the log is a tally, not an error store. */
   failure?: string;
   /**
-   * Why this run was deliberately broken, when it was (`CB_SMOKE_FAULT_INJECTION`).
+   * Why this run was deliberately broken, when it was (`BBX_SMOKE_FAULT_INJECTION`).
    *
    * Proving the tier can go red means breaking something on purpose, and the
    * resulting red is indistinguishable in the log from one the tier caught in
@@ -110,7 +110,7 @@ function isStepRecord(value: unknown): value is SmokeStepRecord {
 }
 
 export function smokeLogPath(gitCommonDir: string): string {
-  return `${gitCommonDir}/callback-smoke-log.jsonl`;
+  return `${gitCommonDir}/beebox-smoke-log.jsonl`;
 }
 
 export interface StepStats {

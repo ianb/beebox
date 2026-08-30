@@ -10,11 +10,11 @@ resolution: implemented
 ---
 
 > **Closed 2026-08-24** in
-> [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md)
+> [dev-loop-lifecycle](../../../beebox/docs/implemented-plans/dev-loop-lifecycle.md)
 > — as *detection*, not as automatic replacement.
 >
-> The router records a token for `callback-box/src` (excluding `src/frontend`,
-> which Vite hot-reloads) plus `callback-box/package.json` when it spawns a hub,
+> The router records a token for `beebox/src` (excluding `src/frontend`,
+> which Vite hot-reloads) plus `beebox/package.json` when it spawns a hub,
 > rechecks it at most every 5s on the request path, and reports a mismatch as
 > `staleSince` in `/__router/status` and `ready (stale)` in
 > `bin/workstreams list`. Git `HEAD` was the first candidate and is wrong: the
@@ -30,8 +30,8 @@ resolution: implemented
 > invisible. `bin/workstreams down <name>` remains the remedy, and when to run
 > it stays a human call.
 
-The main checkout can rebuild `callback-box/dist/cli.mjs` without replacing an
-already-running main hub generation or its `cb serve` children. The router sees
+The main checkout can rebuild `beebox/dist/cli.mjs` without replacing an
+already-running main hub generation or its `bbx serve` children. The router sees
 the generation as healthy and continues to route requests to processes that
 loaded the previous build.
 
@@ -48,7 +48,7 @@ timeline was:
 > **Checked 2026-08-18 — the box-child half is solved; the hub half is not.**
 > The invalidation contract this issue asks for now exists, from
 > [long-lived processes never reload the rebuilt bundle](2026-08-15-long-lived-processes-never-reload-the-rebuilt-bundle.md):
-> `bin/cb` stamps `CB_DEV_BUNDLE_PATH`/`CB_DEV_BUNDLE_ID` at spawn, identifying
+> `bin/bbx` stamps `BBX_DEV_BUNDLE_PATH`/`BBX_DEV_BUNDLE_ID` at spawn, identifying
 > the exact artifact loaded by *identity* rather than mtime ordering, and
 > `src/webapp/server.ts:359-383` polls for a replacement.
 >
@@ -56,13 +56,13 @@ timeline was:
 > reloading — pausing chat schedules, waiting for no active mutations, idle chat
 > runtimes, and idle schedule deliveries — then exits with
 > `DEV_BUNDLE_RELOAD_EXIT_CODE` so its supervisor replaces it. A **standalone
-> `cb serve`** deliberately does *not* self-replace (its pidfile and orphan
+> `bbx serve`** deliberately does *not* self-replace (its pidfile and orphan
 > detector make overlapping parent/successor lifetimes destructive) and only
 > warns.
 >
 > Verified on live processes: main's hub (pid 5722, 19:15:06) and its box child
 > (5814, 19:15:10) both postdate the current bundle (18:13), the child carries
-> both `CB_HUB_SECRET` and `CB_DEV_BUNDLE_ID` so it takes the self-reload
+> both `BBX_HUB_SECRET` and `BBX_DEV_BUNDLE_ID` so it takes the self-reload
 > branch, and the child's identity changed between two samples minutes apart —
 > the supervisor is replacing children in practice. The reload was separately
 > observed end to end on the scheduler: a forced rebuild produced a re-exec onto
@@ -71,9 +71,9 @@ timeline was:
 > **What remains, and why this stays open:**
 >
 > - **The hub itself is not covered.** It runs via `tsx` from source, spawned by
->   the router rather than through `bin/cb`, so it is never stamped and never
+>   the router rather than through `bin/bbx`, so it is never stamped and never
 >   checks. Hub-level code changes still require a router restart — and this
->   issue's scope is explicitly "the main hub generation *or* its `cb serve`
+>   issue's scope is explicitly "the main hub generation *or* its `bbx serve`
 >   children".
 > - **A busy box can still run stale code.** The drain gives up after 10 minutes
 >   and continues on the loaded bundle with a warning, by design — never wedge a

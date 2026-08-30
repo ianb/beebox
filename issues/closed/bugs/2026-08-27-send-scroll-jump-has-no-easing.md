@@ -1,7 +1,7 @@
 ---
 title: "Sending a message snaps the chat scroll with no easing — the jump to anchor the new message is abrupt"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [ui, chat]
 filed-by: agent
 discovered-by: Ian

@@ -1,7 +1,7 @@
 ---
 title: "Central Google auth + policy proxy: escape-proof filtering and per-client capabilities"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 needs: [design]
 discovered-in: main session — boxholder idea, out of the Google-auth thread
@@ -78,7 +78,7 @@ This maps onto standard OAuth cleanly, which is the appeal:
   approves them — the box can't widen its own token.
 - **Revocation is per-box at the proxy** — kill one box's access without touching
   the Google grant or the other boxes.
-- **Reuse question:** is Tier 2 a full OAuth flow, or does it reuse callback-box's
+- **Reuse question:** is Tier 2 a full OAuth flow, or does it reuse beebox's
   existing session/device-token auth against the proxy? OAuth gives introspection
   + scopes for free; the device-token model is simpler but would need the
   capability-advertisement bolted on. Decide during design.
@@ -130,7 +130,7 @@ What is **genuinely different** (the part worth our own code):
 
 **So the real decision is build-vs-adopt, not build-from-scratch:** likely
 *don't* rebuild the token-vault/refresh plumbing — evaluate **self-hosted Nango**
-for Tier 1 + token custody, and put the callback-box-specific **policy
+for Tier 1 + token custody, and put the beebox-specific **policy
 enforcement + capability advertisement + connector fit** on top. A thin bespoke
 proxy is only justified if mirroring Google's API for our existing connectors
 (§ protocol shape) turns out simpler than bending Nango to it. Fold this into
@@ -210,14 +210,14 @@ add a doctest for the Nango auth impl against a fake Nango.
 ## Additional mitigations from the todo-security breakdown (2026-08-07)
 
 Two Google-hardening mitigations listed in
-`callback-box/docs/todo-security.md` fold in here rather than standing as their
+`beebox/docs/todo-security.md` fold in here rather than standing as their
 own issues — both are conditional on this proxy direction:
 
 - **Incremental authorization.** Today the OAuth flow requests all scopes
   (calendar, gmail, drive) upfront regardless of a box's `googleServices` policy
   (`src/core/box/config.ts` `isGoogleServiceAllowed`, checked post-hoc in
   `src/connectors/requirements.ts:23-28`). Requesting only the scopes a box needs
-  shrinks the blast radius of a leaked `CB_GOOGLE_TOKENS_FILE`. Open question:
+  shrinks the blast radius of a leaked `BBX_GOOGLE_TOKENS_FILE`. Open question:
   once the proxy owns the single Google grant (Tier 1), incremental auth mostly
   matters only for the BYO / direct-mode path — decide its relevance during design.
 - **Per-box Google API audit logging.** The `googleServices` policy is enforced

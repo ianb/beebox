@@ -2,7 +2,7 @@
 title: "courseware image generation"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 Explored whether text-to-image earns a place in courseware (prior art:

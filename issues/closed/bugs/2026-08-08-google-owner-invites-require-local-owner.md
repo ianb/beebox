@@ -1,7 +1,7 @@
 ---
 title: "Google-authenticated owners cannot create local member accounts without SSH"
 workstream: member-password-reset
-area: callback-box
+area: beebox
 needs:
   - design
 filed-by: agent
@@ -16,7 +16,7 @@ first-run owner setup permanently closed after the final member is removed.
 
 A signed-in box owner can administer the box through Google sign-in, but the
 Admin invite action requires a matching local-password owner record. A hosted
-operator therefore sees an instruction to run `cb auth create-user` on the
+operator therefore sees an instruction to run `bbx auth create-user` on the
 server before they can invite a member. That instruction is not practical for
 normal web administration and is not necessary to authorize the action: the
 owner-only web procedure already authenticates the operator.

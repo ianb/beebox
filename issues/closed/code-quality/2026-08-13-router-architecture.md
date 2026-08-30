@@ -62,7 +62,7 @@ files including real coverage of auth and lifecycle.
 
 ## The UI half should probably use the house stack
 
-Boxholder, 2026-08-13: the UI surfaces should mostly follow callback-box's own
+Boxholder, 2026-08-13: the UI surfaces should mostly follow beebox's own
 conventions — React, XState, React Router, Vite — rather than hand-rolled
 server-rendered strings.
 

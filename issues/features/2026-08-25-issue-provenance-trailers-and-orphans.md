@@ -27,7 +27,7 @@ The file move stays the status; the trailer is the input that drives it.
 
 Open issues cited by an `Issue:` or `Resolves:` trailer on `main`, with the
 citing commits. Done-but-not-closed, or partly addressed; neither is visible
-today. No `--fix`: closing is a `/finish` or `cb-issue-actions` judgment.
+today. No `--fix`: closing is a `/finish` or `bbx-issue-actions` judgment.
 
 ## 3. Invariants in `doc-check`
 

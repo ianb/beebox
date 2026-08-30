@@ -8,7 +8,7 @@
  * failure, where a binary search steps next, what an issue file says — are the
  * parts that must be right at 03:00, and none of them need a checkout to test.
  *
- * Design: callback-box/docs/plans/change-based-test-selection.md, revision
+ * Design: beebox/docs/plans/change-based-test-selection.md, revision
  * 2026-08-25, mechanism D.
  */
 
@@ -378,7 +378,7 @@ export function renderIssue(input: {
     "---",
     `title: "Full-suite red: ${input.files.join(", ")}"`,
     `workstream: ${workstream ?? "unattached"}`,
-    "area: callback-box",
+    "area: beebox",
     "priority: important",
     "filed-by: agent",
     "discovered-by: agent",
@@ -412,7 +412,7 @@ export function renderIssue(input: {
     "",
     "```bash",
     `git log -1 ${short}`,
-    `pnpm --dir callback-box exec tap ${input.files.join(" ")}`,
+    `pnpm --dir beebox exec tap ${input.files.join(" ")}`,
     "```",
     "",
   ];

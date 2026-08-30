@@ -1,8 +1,8 @@
-# gstack ↔ callback-box/docs/ideas.md overlap
+# gstack ↔ beebox/docs/ideas.md overlap
 
 Pairing each gstack skill that's marked `try`, `integrate`, `integrate (parts)`,
 or `tbd (mine ideas)` against ideas.md entries that point at the same territory.
-Goal: when one of these gstack experiments lands in callback-box, it lands on
+Goal: when one of these gstack experiments lands in beebox, it lands on
 top of an idea we've already been chewing on, not from a cold start.
 
 Status labels mirror skills.md.

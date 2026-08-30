@@ -2,8 +2,8 @@
 set -euo pipefail
 
 device="${1:-booted}"
-output_dir="${2:-/tmp/callback-box-composer-fixtures}"
-bundle_id="app.callbackbox.ios"
+output_dir="${2:-/tmp/beebox-composer-fixtures}"
+bundle_id="app.beebox.ios"
 states=(
   empty
   typing

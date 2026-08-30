@@ -9,9 +9,9 @@
 // and N's unlink and still lose its record (invariant #6). The fix is here, not
 // at the call sites: every `write`/`remove` for a given name runs through a
 // per-name promise chain, so a `remove`'s read+unlink is atomic relative to any
-// `write` for the same name. bin/ can't import callback-box internals, so this
+// `write` for the same name. bin/ can't import beebox internals, so this
 // is a local, minimal restatement of the `withCardLock` in-process-serialization
-// pattern (callback-box/src/lib/card-lock.ts).
+// pattern (beebox/src/lib/card-lock.ts).
 
 import path from "node:path";
 import fs from "node:fs/promises";

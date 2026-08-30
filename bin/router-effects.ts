@@ -116,7 +116,7 @@ export interface RouterCoreConfig {
   onStateChange?: () => void;
 }
 
-// --- error helpers (honestly typed; bin/ can't import callback-box's guards) ---
+// --- error helpers (honestly typed; bin/ can't import beebox's guards) ---
 
 /** A message from an unknown thrown value, without an `as Error` cast. */
 export function errMessage(e: unknown): string {
@@ -153,7 +153,7 @@ export function httpStatusOf(err: unknown): number | undefined {
 }
 
 /**
- * Read a checkout's `callback-box/.env` into a plain object.
+ * Read a checkout's `beebox/.env` into a plain object.
  *
  * Deliberately does NOT mutate the router's own `process.env`: the router
  * serves many checkouts, and one worktree's file must not leak into another's

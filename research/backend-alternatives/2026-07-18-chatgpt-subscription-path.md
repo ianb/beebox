@@ -1,7 +1,7 @@
 # The ChatGPT-subscription path (Codex CLI/SDK, OpenAI policy reality)
 
 *2026-07-18. Deep-pass per-topic note (subagent web research, Sonnet; lightly edited).
-Question: can a user's existing ChatGPT Plus/Pro subscription power callback-box's
+Question: can a user's existing ChatGPT Plus/Pro subscription power beebox's
 agent, and what would that take? Synthesis: [2026-07-18-synthesis.md](2026-07-18-synthesis.md).*
 
 ---

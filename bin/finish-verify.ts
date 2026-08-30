@@ -12,7 +12,7 @@
  * hidden; failing again is real and blocks. The `smoke` command gets no such
  * forgiveness — it boots one real box and either it works or it does not.
  *
- * See callback-box/docs/plans/change-based-test-selection.md, "Revision
+ * See beebox/docs/plans/change-based-test-selection.md, "Revision
  * 2026-08-25 — test economics", mechanism E2.
  */
 
@@ -200,9 +200,9 @@ function runCommand(input: {
  * A TAP description is a file only if it resolves against the package the
  * suite ran in, or against the repo root.
  *
- * The package dir, NOT the command's cwd: `pnpm --dir callback-box …` runs
- * from the repo root, and every path callback-box's tap prints is relative to
- * `callback-box/`. Checking the cwd alone identified no failing file at all
+ * The package dir, NOT the command's cwd: `pnpm --dir beebox …` runs
+ * from the repo root, and every path beebox's tap prints is relative to
+ * `beebox/`. Checking the cwd alone identified no failing file at all
  * there, so every flake came back `real` and blocked the merge.
  */
 export function existsRelative(input: { packageDir: string; path: string; root: string }): boolean {

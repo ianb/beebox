@@ -46,7 +46,7 @@ import {
  * whose open-mode opt-out is legal precisely because their bind is loopback —
  * so the router itself must never listen on a routable interface. There is
  * deliberately no host override; tailnet/remote access goes through
- * `tailscale serve` fronting a dedicated auth-gated `cb serve`/`cb hub`,
+ * `tailscale serve` fronting a dedicated auth-gated `bbx serve`/`bbx hub`,
  * never the router (docs/implemented-plans/tailscale-expose-and-protect.md, Track A).
  */
 export function listenLoopback(server: net.Server, { port, onListening }: { port: number; onListening: () => void }): void {

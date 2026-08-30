@@ -1,7 +1,7 @@
 ---
 title: "`exec-with-timeout` doctest flakes when the process is cold: a 60ms awake timeout does not fire within 150ms"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [testing, flake]
 filed-by: agent
 discovered-by: agent

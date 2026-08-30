@@ -1,7 +1,7 @@
 ---
 title: "Chat thread management: delete, rename, archive"
 workstream: chat-session-identity
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
 labels: [soft-launch]
@@ -9,7 +9,7 @@ priority: important
 resolution: implemented
 ---
 
-**Closed 2026-08-26.** Delete shipped 2026-08-07; rename is safe (husk identity is the `session` field, [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) Track 1); archive shipped as `chat.archive` for dead husks (Track 3), offered in the delete confirmation. A rename affordance in the UI was not built — `cb mv`/the editor rename a husk safely now.
+**Closed 2026-08-26.** Delete shipped 2026-08-07; rename is safe (husk identity is the `session` field, [chat-session-identity](../../../beebox/docs/implemented-plans/chat-session-identity.md) Track 1); archive shipped as `chat.archive` for dead husks (Track 3), offered in the delete confirmation. A rename affordance in the UI was not built — `bbx mv`/the editor rename a husk safely now.
 **Implementation update (2026-08-07):** The permanent single-conversation
 DELETE slice is implemented by `worktree-chat-session-delete`, including the
 ordered lifecycle, confirmation disclosures, and missing-transcript guards.
@@ -54,7 +54,7 @@ about Anthropic-side retention.**
    outside the box, and are NOT git-tracked.** Deleting only the `.jsonl` orphans
    the sidecar dir (accumulates GBs — Claude Code #58154), so a clean delete
    removes the whole `<id>/` dir too.
-3. **Index / pointer state** in `.callback-box/`: `chat-session-history.json`
+3. **Index / pointer state** in `.beebox/`: `chat-session-history.json`
    (id → cwd), `chat-session-id.json` (the most-active pointer bare `/chat`
    resolves to), `chat-review/state.json` (title/summary journal keyed by id),
    plus the in-memory live-session registry.
@@ -79,7 +79,7 @@ every resume pointer *before* deleting the transcript is required, not hygiene:
    orphaned dead weight otherwise.
 5. **Delete the transcript + its `<id>/` sidecar dir** — irreversible (outside
    git).
-6. **Trash / remove the husk card** — the one step generic `cb rm` already does.
+6. **Trash / remove the husk card** — the one step generic `bbx rm` already does.
 
 ### Recoverability is asymmetric
 
@@ -140,7 +140,7 @@ Implications:
   *"Changes this conversation made to your box — cards it created or edited,
   memories it wrote — stay. Deleting removes the conversation, not its effects."*
 - **Richer, optional:** the session's file changes are partly *attributable* — box
-  commits carry authorship trailers, and `cb chat whats-changed` already reports
+  commits carry authorship trailers, and `bbx chat whats-changed` already reports
   commits since a reply — so a future version could surface "this conversation
   touched these cards / wrote these memories" at delete time instead of a generic
   warning.

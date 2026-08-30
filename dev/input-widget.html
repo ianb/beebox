@@ -637,7 +637,7 @@
   staged implementation, first stage pure refactor (Emission + adapter assembly, doctests, no
   UI change), then the boundary, then targets/receipts/stop, then singleton persistence
   (the visible behavior change), capture-as-PlaceTarget last. Full spec:
-  <code>callback-box/docs/plans/input-widget.md</code>.</div>
+  <code>beebox/docs/plans/input-widget.md</code>.</div>
 
   <footer>Generated from docs/plans/input-widget.md · worktree interface-as-cards · 2026-07</footer>
 </main>
@@ -689,7 +689,7 @@ const SCENARIOS = [
       { f:3, t:3, label:"retain(audio, id) · clear()",
         note:"On acceptance the audio moves to <b>retention, keyed by the emission id</b> — no more single slot clobbered by the next send." },
       { f:5, t:3, label:"(later) request original audio",
-        note:"The agent runs <code>cb chat get-last-audio</code>. The loopback mechanism is unchanged — only the storage got an identity." },
+        note:"The agent runs <code>bbx chat get-last-audio</code>. The loopback mechanism is unchanged — only the storage got an identity." },
       { f:3, t:5, label:"retained.fetch(id) → blob",
         note:"“Last audio” is now just the degenerate case of “this message's audio” — the agent already holds the messageId." },
     ],

@@ -1,7 +1,7 @@
 ---
 title: "encodeProjectDir collapses `_` and `.`; Claude Code preserves them, so session discovery misses"
 workstream: chat-session-identity
-area: callback-box
+area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
@@ -14,7 +14,7 @@ resolution: implemented
 correct: the Claude Code 2.1.246 binary encodes with `replace(/[^a-zA-Z0-9]/g,
 "-")`, the same rule. Every `_`/`.`-preserving entry in the real store was a
 symlink our own tooling planted — the `.moved-to` links from the packageify
-migration, and `memory ->` links from `cb init` — none held a transcript. The
+migration, and `memory ->` links from `bbx init` — none held a transcript. The
 `memory` links are the actual bug: `symlinkClaudeMemory` (`src/core/box/index.ts`)
 had its own `/`-only translation, so a box path with `_` or `.` got its
 auto-memory linked under a directory Claude Code never reads. It now uses
@@ -24,7 +24,7 @@ name over 200 characters and suffixes `-<hash>`; the longest observed box name
 is 152.
 
 
-`encodeProjectDir` (`callback-box/src/core/chat/session/transcript-paths.ts`)
+`encodeProjectDir` (`beebox/src/core/chat/session/transcript-paths.ts`)
 maps a cwd onto Claude Code's `~/.claude/projects/<dir>` key by collapsing every
 non-alphanumeric character to `-`:
 

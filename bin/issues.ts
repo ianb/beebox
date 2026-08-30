@@ -60,7 +60,7 @@ search:  --mode text|hybrid|semantic — text is BM25 and offline; hybrid and se
 similar: --docs  also rank ${DOCS_SUBDIR}/**/*.md as prior art
 Common:  --json  --limit N  --rebuild (discard .issues-index/ first)
 
-Embeddings key, first match wins: CALLBACK_OPENAI_API_KEY, THINKING_OPENAI_API_KEY,
+Embeddings key, first match wins: BBX_OPENAI_API_KEY, THINKING_OPENAI_API_KEY,
 SKE_OPENAI_API_KEY. Without one, only --mode text works (and it never uses the network).
 --visibility public never reads private-issues at all, so nothing private is embedded.
 `;

@@ -1,7 +1,7 @@
 ---
 title: "A switch for always-HQ dictation, separate from narration mode"
 workstream: transcript-confidence
-area: callback-box
+area: beebox
 labels: [voice, transcription, chat]
 filed-by: agent
 discovered-by: Ian
@@ -10,7 +10,7 @@ resolution: implemented
 ---
 
 > **⏳ Awaiting manual testing** — implemented on `worktree-transcript-confidence`
-> and landed on main (design: `callback-box/docs/implemented-plans/hq-dictation-switch.md`;
+> and landed on main (design: `beebox/docs/implemented-plans/hq-dictation-switch.md`;
 > commits through `082d21f3`); see [Manual testing](#manual-testing). Only the
 > developer clears this.
 
@@ -76,7 +76,7 @@ what the current threshold behavior already is.
 
 ## Retranscription stops being available — say so minimally
 
-**This is the part to get right.** `cb chat retranscribe` *is* an HQ pass over
+**This is the part to get right.** `bbx chat retranscribe` *is* an HQ pass over
 the retained recording — it exists to escalate from fast live transcription to
 the better model. When dictation already ran at HQ, there is no higher tier to
 escalate to, so retranscribing returns the same text and spends the user's turn

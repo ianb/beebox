@@ -1,7 +1,7 @@
 ---
 title: "Chat-send start polling doctests flake under full-suite load"
 workstream: node-env-production
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-node-env-production — finish suite rerun after main advanced
@@ -11,7 +11,7 @@ resolution: implemented
 Closed 2026-08-24 by `3c56246c`. Both doctests now wait on the operation's own completion
 signal instead of a ten-second polling deadline, and they finish background
 session work before tearing down their test boxes. The focused tests, a
-40-execution contention run, lint, typecheck, and the full callback-box suite
+40-execution contention run, lint, typecheck, and the full beebox suite
 passed.
 
 Two chat-send doctests can exhaust their polling window before asynchronous

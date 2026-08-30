@@ -1,7 +1,7 @@
 ---
 title: "Give the agent one clear temp-file convention (it invents different places today)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: "main session — boxholder: the agent has different ideas about where temp files go"
 resolution: implemented
@@ -36,11 +36,11 @@ the box agent will actually read it.
 - Pick ONE convention per context and state it where that agent sees it:
   - **Box agent** → put "temp files go in `tmp/` (uncommitted); it is swept, don't
     rely on persistence" into the box's own guidance (a box `CLAUDE.md` line, the
-    generated agent-guide, or a `.claude/rules/` glob — cb-context territory), not
+    generated agent-guide, or a `.claude/rules/` glob — bbx-context territory), not
     just `box-layout.md`.
   - **Dev agent** → `scratch/` already exists; reinforce it (even in-session the
     dev agent has reached for `/tmp`, so the rule may need to be louder).
-- Consider a light nudge (a validation warning or a `cb`/hook check) when temp files
+- Consider a light nudge (a validation warning or a `bbx`/hook check) when temp files
   land outside the convention, so drift is caught rather than accumulating.
 - Verify with a knowledge audit that a box agent actually absorbs the `tmp/` rule
   (dev-repo guidance can't be audited; box guidance can).

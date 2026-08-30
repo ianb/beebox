@@ -20,18 +20,18 @@
 <div class="wrap">
 <nav class="topnav"><a href="agent-knowledge.html">Narrative</a> · <a href="viz-skill-rhythm.html">Skill rhythm</a> · <b>Skill pairs</b> · <a href="viz-claude-constellation.html">CLAUDE.md tree</a></nav>
 <h1>Skill pairs — the rituals</h1>
-<p class="sub">Which skills show up <em>together</em> in the same session. Node size = total invocations; edge thickness = sessions where both fired. One pairing dominates everything: <b>cb-plan → codex</b> (8 sessions) — plan the work, then have another model attack the plan. That two-skill ritual is the spine of how non-trivial work gets done here.</p>
+<p class="sub">Which skills show up <em>together</em> in the same session. Node size = total invocations; edge thickness = sessions where both fired. One pairing dominates everything: <b>bbx-plan → codex</b> (8 sessions) — plan the work, then have another model attack the plan. That two-skill ritual is the spine of how non-trivial work gets done here.</p>
 <svg id="net" viewBox="0 0 760 620" width="100%" role="img" aria-label="Skill co-occurrence network"></svg>
 <p><small>Solo skills (deep-research, agent-browser) never co-occurred and float unconnected. Edges with weight ≥1 shown.</small></p>
 </div>
 <script>
 const NODES = {
-  "cb-plan":18, "codex":10, "finish":8, "launch-worktree-session":7,
+  "bbx-plan":18, "codex":10, "finish":8, "launch-worktree-session":7,
   "browse":4, "claude-api":2, "update-config":1, "deep-research":1, "agent-browser":1,
 };
 const EDGES = [
-  ["cb-plan","codex",8], ["cb-plan","finish",4], ["cb-plan","launch-worktree-session",2],
-  ["cb-plan","claude-api",1], ["cb-plan","update-config",1],
+  ["bbx-plan","codex",8], ["bbx-plan","finish",4], ["bbx-plan","launch-worktree-session",2],
+  ["bbx-plan","claude-api",1], ["bbx-plan","update-config",1],
   ["codex","finish",1], ["codex","launch-worktree-session",2], ["codex","browse",1],
   ["finish","launch-worktree-session",2], ["finish","update-config",1],
   ["launch-worktree-session","update-config",1], ["launch-worktree-session","browse",1],
@@ -43,14 +43,14 @@ const pos={}; names.forEach((n,i)=>{const a=-Math.PI/2+i/names.length*2*Math.PI;
 const rOf=n=>8+Math.sqrt(NODES[n])*5;
 // edges
 for(const [a,b,w] of EDGES){
-  const hot = (a==="cb-plan"&&b==="codex")||(a==="codex"&&b==="cb-plan");
+  const hot = (a==="bbx-plan"&&b==="codex")||(a==="codex"&&b==="bbx-plan");
   svg.append(mk("line",{x1:pos[a][0],y1:pos[a][1],x2:pos[b][0],y2:pos[b][1],
     stroke:hot?"#a2380a":"#9ab", "stroke-width":w*1.6, "stroke-opacity":hot?.9:.5,"stroke-linecap":"round"}));
 }
 // nodes
 for(const n of names){
   const [px,py]=pos[n], r=rOf(n);
-  const hot = n==="cb-plan"||n==="codex";
+  const hot = n==="bbx-plan"||n==="codex";
   svg.append(mk("circle",{cx:px,cy:py,r,fill:hot?"#a2380a":"#2255aa","fill-opacity":hot?.92:.78}));
   // label outside the ring
   const a=Math.atan2(py-cy,px-cx), lx=px+(r+8)*Math.cos(a), ly=py+(r+8)*Math.sin(a);
@@ -59,7 +59,7 @@ for(const n of names){
 }
 // center annotation
 svg.append(mk("text",{x:cx,y:cy-6,"text-anchor":"middle",fill:"#a2380a","font-weight":700,"font-size":"13"},"plan → review"));
-svg.append(mk("text",{x:cx,y:cy+12,"text-anchor":"middle",fill:"#a2380a","font-size":"11"},"cb-plan ↔ codex · 8 sessions"));
+svg.append(mk("text",{x:cx,y:cy+12,"text-anchor":"middle",fill:"#a2380a","font-size":"11"},"bbx-plan ↔ codex · 8 sessions"));
 </script>
 </body>
 </html>

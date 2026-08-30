@@ -9,7 +9,7 @@
  *
  * Exit: 0 sheet printed, 2 wrong place / broken private mount, 3 merge conflict.
  *
- * See callback-box/docs/plans/change-based-test-selection.md, "Revision
+ * See beebox/docs/plans/change-based-test-selection.md, "Revision
  * 2026-08-25 — test economics", mechanism E2.
  */
 
@@ -166,9 +166,9 @@ function diffSize(root: string): { lines: number; sourceLines: number } {
 
 /** Plans that name this workstream, plus any `Plan:` trailer on branch commits. */
 function planDocs(root: string, workstream: string): string[] {
-  const dir = join(root, "callback-box/docs/plans");
+  const dir = join(root, "beebox/docs/plans");
   if (!existsSync(dir)) return [];
-  const listed = git(["ls-files", "callback-box/docs/plans"], root).split("\n");
+  const listed = git(["ls-files", "beebox/docs/plans"], root).split("\n");
   return listed.filter((file) => {
     if (!file.endsWith(".md")) return false;
     const head = readFileSync(join(root, file), "utf-8").slice(0, 2000);
@@ -183,11 +183,11 @@ function planDocs(root: string, workstream: string): string[] {
 }
 
 /**
- * The selected test set. Only asked for when callback-box is in the diff — the
+ * The selected test set. Only asked for when beebox is in the diff — the
  * selector's esbuild pass costs seconds and selects nothing otherwise.
  */
 function selection(root: string, packages: string[]): Sheet["selectedTests"] {
-  if (!packages.includes("callback-box")) return null;
+  if (!packages.includes("beebox")) return null;
   const result = spawnSync(process.execPath, ["--import", "tsx", join(root, "bin/test-select.ts")], {
     cwd: root,
     encoding: "utf-8",
@@ -293,7 +293,7 @@ export function formatSheet(sheet: Sheet): string {
   }
   lines.push(`docsOnly: ${String(sheet.docsOnly)}   codeChanged: ${String(sheet.codeChanged)}`);
   lines.push(
-    `selected tests: ${sheet.selectedTests === null ? "n/a (callback-box untouched)" : sheet.selectedTests.note}`,
+    `selected tests: ${sheet.selectedTests === null ? "n/a (beebox untouched)" : sheet.selectedTests.note}`,
   );
   for (const file of sheet.selectedTests?.files ?? []) lines.push(`  ${file}`);
   lines.push("verification:");

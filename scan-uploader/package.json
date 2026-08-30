@@ -1,7 +1,7 @@
 {
   "name": "scan-uploader",
   "version": "0.1.0",
-  "description": "Stand-alone laptop client that uploads ScanSnap output to a callback-box scan-upload endpoint. Zero runtime dependencies; bundled to a single self-contained script.",
+  "description": "Stand-alone laptop client that uploads ScanSnap output to a beebox scan-upload endpoint. Zero runtime dependencies; bundled to a single self-contained script.",
   "type": "module",
   "private": true,
   "bin": {

@@ -60,7 +60,7 @@ test("parseFailedPage: restyled markup degrades instead of throwing", () => {
 test("probeFailure: ok passes; every other verdict names what to do", () => {
   assert.equal(probeFailure({ verdict: { kind: "ok" }, url: "u", body: "" }), null);
   const unauthorized = probeFailure({ verdict: { kind: "unauthorized" }, url: "u", body: "" });
-  assert.match(unauthorized?.message ?? "", /CB_BROWSE_API_KEY/);
+  assert.match(unauthorized?.message ?? "", /BBX_BROWSE_API_KEY/);
   const failed = probeFailure({
     verdict: { kind: "failed", phase: "spawn", message: "boom", stderr: "trace" },
     url: "u",

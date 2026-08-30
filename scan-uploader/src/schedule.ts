@@ -18,7 +18,7 @@ import { writeFileAtomic } from "./atomic-write.js";
 import { errorMessage, isErrnoException } from "./error-guards.js";
 import { ScheduleError } from "./errors.js";
 
-export const LABEL = "org.callback-box.scan-uploader";
+export const LABEL = "org.beebox.scan-uploader";
 export const DEFAULT_INTERVAL_MINUTES = 15;
 
 export function plistPath(homeDir: string): string {

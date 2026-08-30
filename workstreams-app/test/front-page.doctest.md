@@ -73,7 +73,7 @@ JSON.stringify([
   recentFile("issues/closed/features/2026-08-01-a-closed-issue.md", null),
   recentFile("issues/bugs/2026-08-25-a-worktree-issue.md", "some-stream"),
   recentFile("issues/CLAUDE.md", null),
-  recentFile("callback-box/docs/plans/a-plan.md", null),
+  recentFile("beebox/docs/plans/a-plan.md", null),
 ].map(recentRowTarget), null, 2)
 => [
   {
@@ -103,7 +103,7 @@ JSON.stringify([
   {
     "to": "/browse",
     "search": {
-      "file": "callback-box/docs/plans/a-plan.md"
+      "file": "beebox/docs/plans/a-plan.md"
     }
   }
 ]

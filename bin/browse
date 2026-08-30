@@ -8,7 +8,7 @@
 #     runs a fully isolated agent-browser daemon with its own Chrome profile,
 #     plus a per-`--session` profile under BROWSE_PROFILE_BASE (cli.ts)
 #   - A bounded wait for the app to settle before `snapshot`/`screenshot` (cli.ts)
-#   - Loads the callback-clerk extension when BROWSE_CLERK=1, so the browse
+#   - Loads the beebox-clerk extension when BROWSE_CLERK=1, so the browse
 #     agent can exercise it. Opt-in because loading any extension forces
 #     agent-browser into headed mode (no --headless=new) — see below.
 
@@ -26,14 +26,14 @@ else
   exit 1
 fi
 
-if [[ "$PWD" == *"/callback-worktrees/"* ]]; then
-  worktree="${PWD#*/callback-worktrees/}"
+if [[ "$PWD" == *"/beebox-worktrees/"* ]]; then
+  worktree="${PWD#*/beebox-worktrees/}"
   worktree="${worktree%%/*}"
 else
   worktree="main"
 fi
 
-browse_base="${HOME}/.cache/callback-box/browse/${worktree}"
+browse_base="${HOME}/.cache/beebox/browse/${worktree}"
 mkdir -p "${browse_base}/socket" "${browse_base}/profile"
 
 export BROWSE_REPO_DIR="$REPO_DIR"
@@ -46,19 +46,19 @@ export BROWSE_PROFILE_BASE="${browse_base}"
 
 # Auth is on by default in dev (local-password-auth Track B), so a page
 # navigation into this worktree's box hits the login wall unless it carries a
-# credential. That credential is CB_BROWSE_API_KEY — an opt-in, operator-set
-# key (callback-box/src/core/browse-key.ts), normally living in this
-# checkout's gitignored `callback-box/.env`, which the WorktreeCreate hook
+# credential. That credential is BBX_BROWSE_API_KEY — an opt-in, operator-set
+# key (beebox/src/core/browse-key.ts), normally living in this
+# checkout's gitignored `beebox/.env`, which the WorktreeCreate hook
 # copies from the main checkout. cli.ts seeds it as a short-lived, host-only
 # cookie in this worktree's isolated browser profile (browse/src/worktree.ts),
 # so normal navigation, fetches, and WebSocket upgrades share one auth path.
 #
-# An already-exported value wins over the file, so `CB_BROWSE_API_KEY=… bin/browse`
+# An already-exported value wins over the file, so `BBX_BROWSE_API_KEY=… bin/browse`
 # works for a one-off. No key at all is not an error — browse proceeds
 # unauthenticated and lands on the login page, which is also the honest signal
 # that the key isn't set.
-browse_env_file="${REPO_DIR}/callback-box/.env"
-if [[ -z "${CB_BROWSE_API_KEY:-}" && -r "$browse_env_file" ]]; then
+browse_env_file="${REPO_DIR}/beebox/.env"
+if [[ -z "${BBX_BROWSE_API_KEY:-}" && -r "$browse_env_file" ]]; then
   # Parse with Node's `util.parseEnv` — the SAME parser the router uses
   # (bin/router-core.ts readEnvFile). A hand-rolled sed/tr version was wrong:
   # it disagreed with the router on quoting and whitespace, so a key written
@@ -68,32 +68,32 @@ if [[ -z "${CB_BROWSE_API_KEY:-}" && -r "$browse_env_file" ]]; then
   #
   # Reading one named key, not sourcing the file: `source` would execute its
   # contents and dump every other variable into this shell.
-  CB_BROWSE_API_KEY="$(node -e '
+  BBX_BROWSE_API_KEY="$(node -e '
     const { parseEnv } = require("node:util");
     const fs = require("node:fs");
     try {
-      const v = parseEnv(fs.readFileSync(process.argv[1], "utf8")).CB_BROWSE_API_KEY;
+      const v = parseEnv(fs.readFileSync(process.argv[1], "utf8")).BBX_BROWSE_API_KEY;
       if (typeof v === "string") process.stdout.write(v);
     } catch { /* unreadable or unparseable: no key, browse proceeds unauthenticated */ }
   ' "$browse_env_file")"
-  [[ -n "$CB_BROWSE_API_KEY" ]] && export CB_BROWSE_API_KEY
+  [[ -n "$BBX_BROWSE_API_KEY" ]] && export BBX_BROWSE_API_KEY
 fi
 export AGENT_BROWSER_SOCKET_DIR="${browse_base}/socket"
 export AGENT_BROWSER_PROFILE="${browse_base}/profile"
 export AGENT_BROWSER_IDLE_TIMEOUT_MS="${AGENT_BROWSER_IDLE_TIMEOUT_MS:-300000}"
 
-# Load callback-clerk as an unpacked extension when BROWSE_CLERK=1 (agent-browser's
+# Load beebox-clerk as an unpacked extension when BROWSE_CLERK=1 (agent-browser's
 # --extension / AGENT_BROWSER_EXTENSIONS; a .crx can't be sideloaded via CLI).
 # Opt-in: agent-browser drops --headless=new whenever an extension is present, so
 # every browse would otherwise spawn a visible window (and break headless/CI).
 # Append so a caller's own AGENT_BROWSER_EXTENSIONS still applies. Build first:
-# (cd callback-clerk && pnpm build).
-clerk_ext="${REPO_DIR}/callback-clerk/dist/chrome-mv3"
+# (cd beebox-clerk && pnpm build).
+clerk_ext="${REPO_DIR}/beebox-clerk/dist/chrome-mv3"
 if [[ -n "${BROWSE_CLERK:-}" ]]; then
   if [[ -f "${clerk_ext}/manifest.json" ]]; then
     export AGENT_BROWSER_EXTENSIONS="${AGENT_BROWSER_EXTENSIONS:+${AGENT_BROWSER_EXTENSIONS},}${clerk_ext}"
   else
-    echo "browse: BROWSE_CLERK set but extension not built — run (cd callback-clerk && pnpm build)" >&2
+    echo "browse: BROWSE_CLERK set but extension not built — run (cd beebox-clerk && pnpm build)" >&2
   fi
 fi
 

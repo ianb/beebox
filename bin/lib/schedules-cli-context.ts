@@ -26,10 +26,10 @@ export async function resolveContext(): Promise<Context> {
   const { stdout: common } = await execa("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   const repoRoot = top.trim();
   const mainRoot = path.dirname(common.trim());
-  // `CALLBACK_SCHEDULES_DIR` points the CLI at a different set of schedule
-  // directories, the way `CALLBACK_SCHEDULES_ROOT` points it at a different
+  // `BBX_SCHEDULES_DIR` points the CLI at a different set of schedule
+  // directories, the way `BBX_SCHEDULES_ROOT` points it at a different
   // store — what lets a test run `lint` over a fixture tree.
-  const schedulesDir = process.env["CALLBACK_SCHEDULES_DIR"];
+  const schedulesDir = process.env["BBX_SCHEDULES_DIR"];
   return {
     repoRoot,
     mainRoot,

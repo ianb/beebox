@@ -1,7 +1,7 @@
 ---
 title: "No automated backup story for server box data"
 workstream: security-report
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report
 ---
@@ -11,7 +11,7 @@ The deployed server has no first-class backup mechanism.
 currently configured for the server"; git-annexed assets are
 `numcopies: 1` with no annex remote (`docs/assets.md`); only migrations
 take a tar snapshot, scoped to that operation. A box's git remote (the
-one `cb wakeup` pushes to) is operator-chosen and optional — boxes
+one `bbx wakeup` pushes to) is operator-chosen and optional — boxes
 without one have exactly one copy of their history, and annexed media
 has one copy regardless.
 

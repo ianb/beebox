@@ -1,7 +1,7 @@
 ---
 title: "Newly written views don't appear until a full page reload"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [views, ui]
 filed-by: agent
 discovered-by: Ian
@@ -24,7 +24,7 @@ Fix directions, cheapest that works wins:
   views list — coarse but fixes the common flow (agent writes views in chat,
   user flips to the card in the same tab).
 - Check both call sites: the card's view-tab strip and the `?view=` resolver
-  (and `cb view check`'s registry, if the server caches the view list
+  (and `bbx view check`'s registry, if the server caches the view list
   in-process — a server-side cache would need the watcher poke too, not just
   query invalidation).
 

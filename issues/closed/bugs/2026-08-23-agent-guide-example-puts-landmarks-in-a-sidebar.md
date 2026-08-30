@@ -1,7 +1,7 @@
 ---
 title: "The agent guide's example puts the Landmarks list in a sidebar that page does not have"
 workstream: small-bugs-batch
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a first-time user was told to look in a sidebar
 priority: backlog
@@ -20,7 +20,7 @@ word is wrong."*
 
 The phrasing comes from the agent guide every box agent is given
 (`src/core/agent-guide/behavior.ts:26-28`, reproduced at
-`.callback-box/agent-guide.md:103`):
+`.beebox/agent-guide.md:103`):
 
 > **Introduce a system term only when they need it to act**, and explain it in
 > the same breath the first time: "I put it on your Landmarks page — the
@@ -39,7 +39,7 @@ So the guidance lands as a direction to look somewhere that is not there, in the
 one moment the rule exists to prevent exactly that.
 
 Navigation moved to a single top bar in
-[top-nav-ia](../../../callback-box/docs/implemented-plans/top-nav-ia.md) — which
+[top-nav-ia](../../../beebox/docs/implemented-plans/top-nav-ia.md) — which
 merged the picker into the Landmarks page and demoted the Dashboard — and the
 guide's example was not revisited.
 

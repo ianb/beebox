@@ -12,7 +12,7 @@ now attaches the original markdown line and example source to each `t.check` and
 `t.checkThrows` assertion. Real-loader regression cases cover multiple examples
 in one block, a continue block, and a throws mismatch with an error stack.
 
-While debugging `callback-box/test/core/box/file-watcher.doctest.md`, a failing
+While debugging `beebox/test/core/box/file-watcher.doctest.md`, a failing
 subtest identified the block beginning around line 105, but its TAP diagnostic
 `source` field displayed `grew < 20` from the preceding block. Temporary
 instrumentation confirmed that the FD assertion passed (`before=26`, `after=26`,

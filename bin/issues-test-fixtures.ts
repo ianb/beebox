@@ -27,7 +27,7 @@ const FIXTURES: Fixture[] = [
     frontmatter: [
       'title: "Calendar drops events on resync"',
       "workstream: calendar-sync",
-      "area: callback-box",
+      "area: beebox",
       "labels: [soft-launch, field-test-findings]",
       "needs: [manual-testing]",
       "priority: important",
@@ -41,7 +41,7 @@ const FIXTURES: Fixture[] = [
     frontmatter: [
       'title: "Composer splices a draft into another message"',
       "workstream: unattached",
-      "area: callback-box",
+      "area: beebox",
       "labels: [soft-launch]",
       "next-action: reconfirm",
       "discovered-in: worktree-user-stories-refresh — while testing the composer",

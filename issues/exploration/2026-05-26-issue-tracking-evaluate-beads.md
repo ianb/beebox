@@ -16,7 +16,7 @@ This top-level `issues/` tree (one `YYYY-MM-DD-slug.md` file per item, which rep
 - `bd remember` / `bd prime` build a persistent project knowledge base injected at session start; closed-issue summaries fold in.
 - `bd setup claude` wires the harness.
 
-Fits the existing infrastructure surprisingly well: the `WorktreeCreate` hook already runs setup per worktree, so a `bd ready` call at session start is a natural extension. Per-subproject scoping via labels (`callback-box`, `cardworks`, `clerk`, `agent-doctest`).
+Fits the existing infrastructure surprisingly well: the `WorktreeCreate` hook already runs setup per worktree, so a `bd ready` call at session start is a natural extension. Per-subproject scoping via labels (`beebox`, `cardworks`, `clerk`, `agent-doctest`).
 
 Costs to weigh: another binary + daemon (tension with "noisy output is a bug"); JSONL churn in commits; lock-in to Dolt's storage; the convention of treating closed issues as memory rather than archive is a behavior change for the user, not just the agent. The casual alternative (gstack's single `TODOS.md` with a strict What/Why/Effort/Priority/Depends-on template enforced by a skill) gives up dependency queries and parallel-agent safety but keeps zero deps.
 

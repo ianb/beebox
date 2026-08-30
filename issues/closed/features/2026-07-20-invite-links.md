@@ -2,7 +2,7 @@
 title: "Invite links: add a member without sharing a password"
 workstream: open-source-readiness
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
@@ -13,7 +13,7 @@ Closed by `604080ed` and its preceding invite-auth implementation commits. The
 shipped design uses Admin-minted, 15-minute, single-use links with optional
 pinned email, a hashed persistent capability store, and one-box member access.
 
-Today adding a member means the operator runs `cb auth add-user` and hands
+Today adding a member means the operator runs `bbx auth add-user` and hands
 the person a password out of band. The boxholder wants to invite people
 (family, collaborators — not developers) without sharing a credential.
 

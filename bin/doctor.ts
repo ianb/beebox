@@ -1,12 +1,12 @@
 #!/usr/bin/env node --import tsx
 /**
  * Preflight doctor (`pnpm doctor`): checks that a developer's machine has
- * everything callback-box needs, with a one-line remedy for every failure.
+ * everything beebox needs, with a one-line remedy for every failure.
  *
  * Why this exists: missing prerequisites fail silently (git-lfs filters:
  * `.husky/post-commit` degrades with `|| true`) or opaquely (a missing/expired
  * Claude login surfaces as an unhelpful SDK stream failure). This is the rail
- * beside the install path — read `callback-box/docs/plans/installation-story.md`
+ * beside the install path — read `beebox/docs/plans/installation-story.md`
  * Track B for the design discussion, including why this is a small root
  * script rather than a shared check-framework library (health.ts, the run-path
  * preflight, and this doctor each have their own right-sized shape).
@@ -19,24 +19,24 @@
  *   - better-sqlite3 loads and opens a database — the direct probe for
  *     Node-ABI drift, the failure the version pin exists to prevent.
  *   - `pandoc`, `magick`, `pdftotext` on PATH (the external-tools contract
- *     promised to agents: `callback-box/src/core/agent-guide/chat.ts`).
+ *     promised to agents: `beebox/src/core/agent-guide/chat.ts`).
  *   - `git-lfs` binary present AND its filters are actually installed
  *     (`git config --get filter.lfs.clean` resolves) — the binary alone is
  *     not enough (`src/core/box/index.ts` wires LFS `.gitattributes` per box).
  *   - System `claude` on PATH and `claude auth status` reports logged in
- *     (mirrors `callback-box/src/services/claude-cli.ts`'s invocation and its
+ *     (mirrors `beebox/src/services/claude-cli.ts`'s invocation and its
  *     tolerant non-JSON-output parsing).
  *   - The Agent SDK resolves a bundled Claude Code binary for this platform
- *     (`callback-box/src/core/sdk-binary-path.ts`, imported directly — the
+ *     (`beebox/src/core/sdk-binary-path.ts`, imported directly — the
  *     workspace import works cleanly from a root tsx script; see below).
  *   - Free space on the deployed host, against the same threshold the hub's own
- *     health route uses (`callback-box/src/hub/disk-health.ts`) — a full
+ *     health route uses (`beebox/src/hub/disk-health.ts`) — a full
  *     production disk truncated every large response with nothing saying so.
  *   - The scheduler heartbeat (`<store>/state.json`) is under an hour old and
- *     the `com.callback-box.schedules` launchd job is loaded — the anti-silence
- *     check for callback-box/docs/plans/scheduled-workstreams.md.
- *   - The frontend build output exists (`callback-box/src/frontend/dist`,
- *     Vite's `build.outDir`), else "run `pnpm --dir callback-box
+ *     the `com.beebox.schedules` launchd job is loaded — the anti-silence
+ *     check for beebox/docs/plans/scheduled-workstreams.md.
+ *   - The frontend build output exists (`beebox/src/frontend/dist`,
+ *     Vite's `build.outDir`), else "run `pnpm --dir beebox
  *     build:frontend`".
  *
  * `--json` prints a machine-readable array of check results instead of the
@@ -64,8 +64,8 @@ import type BetterSqlite3Module from "better-sqlite3";
 // Workspace import of an engine module from root tooling. Verified to work
 // cleanly (both `tsc --noEmit` and `node --import tsx` resolve it via the
 // `.js`-extension NodeNext convention) — no awkwardness to fall back from.
-import { resolveClaudeCodeBinary } from "../callback-box/src/core/sdk-binary-path.js";
-import { isRecord } from "../callback-box/src/lib/is-record.js";
+import { resolveClaudeCodeBinary } from "../beebox/src/core/sdk-binary-path.js";
+import { isRecord } from "../beebox/src/lib/is-record.js";
 import {
   createRealRun,
   MissingEnginesNodeError,

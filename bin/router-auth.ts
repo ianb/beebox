@@ -1,5 +1,5 @@
 // The dev router's fail-closed authorization core (Track B, chunk 1 of
-// callback-box/docs/implemented-plans/expose-dev-router.md).
+// beebox/docs/implemented-plans/expose-dev-router.md).
 //
 // This module is PURE: it classifies a request into a route class and decides
 // allow/deny, given the request facts plus INJECTED auth-resolution functions.
@@ -7,7 +7,7 @@
 // full truth table is unit-testable with trivial fakes (bin/router-auth.test.ts).
 // Chunk 2 wires the live listeners, the real resolvers (resolveRequestIdentity /
 // getOwnerEmail / resolveMobileRequestAuth / the slug→box map), the client
-// `x-cb-*` strip, and the Set-Cookie Path rewrite around this decision.
+// `x-bbx-*` strip, and the Set-Cookie Path rewrite around this decision.
 //
 // The gate is the SINGLE decision point: chunk 2 must call authorizeRouterRequest
 // before ALL dispatch, INCLUDING the `upgrade` (WebSocket) handler, so a browser
@@ -17,9 +17,9 @@
 // classification keys off `/<worktree>/<rest>`. Router infra (`/`, `/__router/*`,
 // `/favicon.*`) lives at the bare root, not under a worktree.
 
-import { assertNever } from "../callback-box/src/lib/invariant.js";
-import { isScanUploadSubpath } from "../callback-box/src/hub/scan-gate.js";
-import { isPairingRedeemUrl } from "../callback-box/src/webapp/routes/pairing.js";
+import { assertNever } from "../beebox/src/lib/invariant.js";
+import { isScanUploadSubpath } from "../beebox/src/hub/scan-gate.js";
+import { isPairingRedeemUrl } from "../beebox/src/webapp/routes/pairing.js";
 
 /**
  * The router-scoped variant of `isPairingRedeemUrl`. The shared matcher is
@@ -131,7 +131,7 @@ export interface BoxAccessIdentity {
  *   control.
  * - `hasBrowseKey` — the machine-wide local-dev browser key alone (NOT the box
  *   credential ladder). Gates `dev-read` only; constant false unless the
- *   operator set `CB_BROWSE_API_KEY`.
+ *   operator set `BBX_BROWSE_API_KEY`.
  * - `resolveWorktreeAsset` — true if ANY valid box credential in the worktree is
  *   present: a session (owner, or a member of any box there), OR a per-box mobile
  *   token / agent bearer for any box there. Gates the non-sensitive dev assets
@@ -436,7 +436,7 @@ export async function authorizeRouterRequest(
       // NOT via `resolveWorktreeAsset`, which would also admit per-box iOS
       // mobile tokens and agent bearers — because the grant is deliberately the
       // browse key's alone: it is machine-wide by construction, absent unless
-      // the operator sets CB_BROWSE_API_KEY, and already opens every box route
+      // the operator sets BBX_BROWSE_API_KEY, and already opens every box route
       // the router fronts (core/browse-key.ts). Refusing it here meant the
       // credential opened real chat history and closed a directory of tracked
       // files — so issues ABOUT the dev surface became boxholder-only to verify

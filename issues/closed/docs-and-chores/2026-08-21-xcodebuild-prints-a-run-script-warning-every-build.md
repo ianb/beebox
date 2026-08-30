@@ -16,8 +16,8 @@ Every `xcodebuild` invocation ends with:
 ```
 note: Run script build phase 'Stamp git commit into Info.plist' will be run
 during every build because the option to run the script phase "Based on
-dependency analysis" is unchecked. (in target 'CallbackBox' from project
-'CallbackBox')
+dependency analysis" is unchecked. (in target 'BeeBox' from project
+'BeeBox')
 ```
 
 It is not actionable as written — the phase *should* run every build, since the

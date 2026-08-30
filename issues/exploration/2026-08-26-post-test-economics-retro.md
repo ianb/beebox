@@ -59,7 +59,7 @@ someone's worktree.
    program — one library. Separately: UI keeps the streamed bubble when the
    authoritative entry never arrives, and error copy names the layer that
    failed (the menu said "landmarks" for a Codex plugin failure).
-5. **Process.** Launcher now refuses options after the name; `cb-pick-issues`
+5. **Process.** Launcher now refuses options after the name; `bbx-pick-issues`
    bare invocation stops to ask; briefings carry understanding. Add: a subagent
    that cites `file:line` must have opened the file.
 

@@ -1,7 +1,7 @@
 ---
 title: "oh-my-pi as a BYO-model third box engine — watch, don't build"
 workstream: research-ohmypi
-area: callback-box
+area: beebox
 labels: [engine, vendor-risk, research]
 filed-by: agent
 discovered-by: Ian

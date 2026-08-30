@@ -1,0 +1,14 @@
+{
+  "input": {
+    "version": 2,
+    "id": "point-command-1",
+    "kind": "point-at-control",
+    "payload": { "id": "bbx-composer-mic", "action": "point" }
+  },
+  "expected": {
+    "version": 2,
+    "id": "point-command-1",
+    "kind": "point-at-control",
+    "payload": { "id": "bbx-composer-mic", "action": "point" }
+  }
+}

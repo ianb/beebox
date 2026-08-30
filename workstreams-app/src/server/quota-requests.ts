@@ -118,7 +118,7 @@ export async function requestCodexRateLimits(
     const timer = setTimeout(() => finish(requestError("Codex quota request timed out")), timeoutMs);
     send({
       method: "initialize", id: 0,
-      params: { clientInfo: { name: "callback_box_workstreams", title: "Callback Box Workstreams", version: "1" } },
+      params: { clientInfo: { name: "bbx_workstreams", title: "Bee Box Workstreams", version: "1" } },
     });
   });
 }

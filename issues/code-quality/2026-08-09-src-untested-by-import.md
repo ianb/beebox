@@ -1,7 +1,7 @@
 ---
-title: "A third of callback-box/src is imported by no test — 430 of 1,288 files, 327 of them frontend"
+title: "A third of beebox/src is imported by no test — 430 of 1,288 files, 327 of them frontend"
 workstream: test-selection
-area: callback-box
+area: beebox
 labels: [testing]
 filed-by: agent
 discovered-in: worktree-test-selection — measured while running the test-selection Track 0 spike
@@ -12,7 +12,7 @@ over all 484 test entrypoints (method and numbers in
 [run less of the full suite](../closed/exploration/2026-08-08-run-less-of-the-test-suite.md),
 `## Track 0 measurement`).
 
-**430 of 1,288 `.ts`/`.tsx` files under `callback-box/src/` are imported by no
+**430 of 1,288 `.ts`/`.tsx` files under `beebox/src/` are imported by no
 test file, directly or transitively.** By area:
 
 | Files | Area |
@@ -51,7 +51,7 @@ components, pages, and hooks are exercised only by hand in a browser.
 
 Per `issues/CLAUDE.md`, this is a tension, not a task. Blanket coverage of 327
 frontend files is not proposed and would be a bad use of effort —
-`callback-box/docs/testing.md` is explicit that tests are not for coverage
+`beebox/docs/testing.md` is explicit that tests are not for coverage
 percentages. The useful version of this is probably: pick the frontend logic that
 already has hand-testable seams (hooks, reducers, machines, `lib/` helpers — many
 already have doctests) and note that the components themselves may be the wrong

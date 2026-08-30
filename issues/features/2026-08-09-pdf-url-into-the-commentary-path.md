@@ -1,7 +1,7 @@
 ---
 title: "Bring a PDF at a URL into the box as commentable markdown — no path covers it today"
 workstream: unknown
-area: callback-box
+area: beebox
 needs: [design]
 labels: [clerk, documents, commentary]
 priority: normal
@@ -18,8 +18,8 @@ half of the machinery exists; nothing joins them.
 markdown as the card **body**, `format:` carries the source type, the original
 bytes stay attached, and the canonical `DoclingDocument` JSON is gzipped
 alongside (`docling.ref:`). Design in
-[pdf-intake-design](../../callback-box/docs/plans/pdf-intake-design.md), as
-amended by `scanner-ingest.md`. `cb document reanalyze` re-runs extraction over
+[pdf-intake-design](../../beebox/docs/plans/pdf-intake-design.md), as
+amended by `scanner-ingest.md`. `bbx document reanalyze` re-runs extraction over
 the original.
 
 **Capturing a web page is solved.** Clerk captures http(s) pages into `webpage`
@@ -28,7 +28,7 @@ cards.
 ## Why neither reaches a PDF URL
 
 **Clerk can't *read* one.** `commentBlockedReason`
-(`callback-clerk/src/domain/commentary.ts:51-67`) documents it: the capture
+(`beebox-clerk/src/domain/commentary.ts:51-67`) documents it: the capture
 content script only runs on http(s) pages, so browser-internal pages — and
 **"PDFs in the viewer"** explicitly — are out. Chrome's built-in PDF viewer
 isn't a readable DOM page, so any design that starts "have Clerk scrape the
@@ -54,10 +54,10 @@ extension's own context. Clerk already has every piece:
 
 - `optional_host_permissions: ["http://*/*", "https://*/*"]`, granted per-origin
   when the user enables a box rather than broadly at install
-  (`callback-clerk/wxt.config.ts:34-36`), plus `activeTab` — and a click on the
+  (`beebox-clerk/wxt.config.ts:34-36`), plus `activeTab` — and a click on the
   popup is the user gesture that activates it for the current tab.
 - Credentialed fetch is already the house pattern:
-  `callback-clerk/src/platform/clerk-api.ts:36` does
+  `beebox-clerk/src/platform/clerk-api.ts:36` does
   `fetch(url, { credentials: "include" })`.
 
 So: user clicks in the popup on a PDF tab → the extension fetches that URL with
@@ -71,7 +71,7 @@ Open questions:
   does one of them take an arbitrary binary with a filename and content type, or
   is a new one needed? Papers run to several MB — check the size limits.
 - **Where the extraction fires.** On upload automatically, or as a follow-up
-  (`cb document`-shaped) step? Docling on a large PDF isn't instant, so the
+  (`bbx document`-shaped) step? Docling on a large PDF isn't instant, so the
   upload response probably shouldn't wait on it.
 - **Non-PDF URLs.** What happens when the user triggers this on something that
   isn't a PDF — refuse, or let `format:` carry whatever it is?
@@ -86,7 +86,7 @@ Open questions:
 ## The second half: what does commenting on it mean?
 
 Getting a `document` card is not the end. The
-[commentary surface](../../callback-box/docs/plans/box-commentary-surface.md)
+[commentary surface](../../beebox/docs/plans/box-commentary-surface.md)
 (partially implemented) is built for files **outside** the box, anchored via
 `{% source %}` — but an ingested paper is *inside* the box, as a card body. So
 either:

@@ -1,7 +1,7 @@
 ---
 title: "Publish go doctest waits for confirmation under parallel load"
 workstream: turn-buffer-byte-budget
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-turn-buffer-byte-budget — full-suite verification during finish
 resolution: implemented

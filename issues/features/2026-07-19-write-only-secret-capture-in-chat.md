@@ -4,7 +4,7 @@ workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder idea alongside the /admin chat landmark
-area: callback-box
+area: beebox
 priority: backlog
 ---
 
@@ -37,7 +37,7 @@ backends, the model provider). This feature closes that hole.
     process: a real-time widget that captures one value and produces no card, no
     learning destination, and no transcript entry.
 - **A secret store already exists** — connectors read `config/connectors/<name>.secret.json`
-  (legacy) and `CB_GOOGLE_TOKENS_FILE` (Google), gitignored
+  (legacy) and `BBX_GOOGLE_TOKENS_FILE` (Google), gitignored
   (`src/connectors/requirements.ts`). "X" is this store; the request names a target
   within it.
 - **Admin surface** — `AdminPage.tsx` + the admin tRPC router already own
@@ -79,7 +79,7 @@ backends, the model provider). This feature closes that hole.
     with `sk-`"); **hard validation** via a server-side probe after save,
     stored as `verified: ok|failed|unchecked` metadata the agent and admin
     page see redacted. See
-    `callback-box/docs/implemented-plans/secret-custody.md` ("Guided entry +
+    `beebox/docs/implemented-plans/secret-custody.md` ("Guided entry +
     validation"); the widget writes into that plan's store, and its target
     grammar is the store's name registry.
 - **Scope + gating.** Admin-privileged — only in the `/admin` landmark chat, not

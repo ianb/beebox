@@ -1,7 +1,7 @@
 ---
 title: "realtimeTranscriptionMachine can't be doctested — worklet ?url import breaks the Node loader"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [transcription, voice, testing]
 filed-by: agent
 discovered-by: agent

@@ -1,7 +1,7 @@
 ---
 title: "color contrast wcag aa audit"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 `bin/tour --all` surfaces ~18 `color-contrast` violations (serious, per
@@ -29,8 +29,8 @@ fixes when the time comes:
    re-tuning the neutral scale.
 
 To re-enable the rule for one tour run: remove `color-contrast` from
-`SUPPRESS_RULES` in `callback-box/test/tours/tour-lib/axe.ts`.
+`SUPPRESS_RULES` in `beebox/test/tours/tour-lib/axe.ts`.
 
 When this becomes interesting again, run `bin/tour --all` after
 re-enabling and the latest violation inventory will land under
-`callback-box/test/tours/.artifacts/<tour>/<runId>/*.axe.json`.
+`beebox/test/tours/.artifacts/<tour>/<runId>/*.axe.json`.

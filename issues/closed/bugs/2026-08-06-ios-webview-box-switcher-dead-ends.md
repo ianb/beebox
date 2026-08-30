@@ -1,7 +1,7 @@
 ---
 title: "iOS: switching boxes via the web-view boxes menu dead-ends on a stuck screen — box-switching should be native-only"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder on iOS
 resolution: implemented
@@ -51,7 +51,7 @@ stuck screen) — but the primary fix is not offering the switch at all.
 
 ## Related
 
-- `docs/mobile-contract.md` / cb-ios-overlap — web/iOS shared surface; the gate is a
+- `docs/mobile-contract.md` / bbx-ios-overlap — web/iOS shared surface; the gate is a
   native-shell conditional in the web UI.
 
 ## Implemented

@@ -208,15 +208,15 @@ function killProcessGroup(pid: number | undefined, signal: NodeJS.Signals): void
 }
 
 /**
- * The main checkout's `callback-box/.env`, for the resident app the same way
+ * The main checkout's `beebox/.env`, for the resident app the same way
  * `router-core.ts` hands each worktree child its own copy: dev config such as
- * `CALLBACK_OPENAI_API_KEY` (comment transcription, the issue browser's
+ * `BBX_OPENAI_API_KEY` (comment transcription, the issue browser's
  * Related section) lives there, and a real exported variable still wins.
  * Missing or unparseable means no file config, never a failed start — the
  * app has explicit no-key states for exactly this.
  */
 function mainCheckoutEnvFile(appRoot: string): NodeJS.Dict<string> {
-  const envPath = path.join(appRoot, "..", "callback-box", ".env");
+  const envPath = path.join(appRoot, "..", "beebox", ".env");
   let text: string;
   try {
     text = readFileSync(envPath, "utf8");

@@ -1,7 +1,7 @@
 ---
 title: "Agent outcomes don't announce themselves — \"the conscience and not the voice\""
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test run 2, dentist-email + whats-needed items
 labels: [soft-launch, field-test-findings, ui-sensibility]

@@ -1,14 +1,14 @@
 ---
 title: "Every page load counts pending questions for a nav badge that no longer exists"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the nav's pending-count user story against the running app
 ---
 
 `AppNav` renders one badge, the on-plate todo count
-(`callback-box/src/frontend/src/components/AppNav.tsx:104-105`, `:140`). The
+(`beebox/src/frontend/src/components/AppNav.tsx:104-105`, `:140`). The
 pending-question badge was removed — a comment at `:116-117` records it ("the
 question events this used to watch moved out with the questions badge") — but
 the count behind it stayed.

@@ -2,7 +2,7 @@
 title: "reflexive person profile loading"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 Two related questions about how the agent handles people.

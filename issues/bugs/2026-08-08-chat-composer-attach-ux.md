@@ -1,7 +1,7 @@
 ---
 title: "Chat composer attach UX: literal [file1] token, twin attach items, image-only placeholder"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 1)
 labels: [soft-launch, field-test-findings, ui-error, ui-sensibility]
@@ -32,7 +32,7 @@ needs: [manual-testing]
 > literal token. The sent message still hides it (`stripUserDisplayTags`). So
 > the rich-composer / re-anchoring question this was holding open is **not**
 > being pursued; the grammar's statement of record is
-> `callback-box/src/shared/composer-tokens.ts`.
+> `beebox/src/shared/composer-tokens.ts`.
 
 > **Partly resolved 2026-08-09.** Item 1's display half: the `[fileN]` token
 > is load-bearing on send (it anchors the attachment inline, resolved through

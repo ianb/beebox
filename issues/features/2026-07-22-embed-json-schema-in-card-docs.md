@@ -1,7 +1,7 @@
 ---
 title: "Embed real JSON Schema in per-card-type agent docs (RFC idea, never built)"
 workstream: public-site
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-github-pages-site — story-extraction triage of cards-as-markdown-rfc.md
 priority: important

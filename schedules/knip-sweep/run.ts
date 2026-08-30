@@ -37,7 +37,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Where knip is run from. It moved from `callback-box` to the monorepo root
+ * Where knip is run from. It moved from `beebox` to the monorepo root
  * (one run so the workspaces can see each other, and so hoisted node_modules
  * stop reading as unlisted binaries), and this schedule has to work on both
  * sides of that landing — so it asks the checkout rather than assuming.
@@ -46,7 +46,7 @@ async function knipCommand(): Promise<string[]> {
   const manifest: unknown = JSON.parse(await fs.readFile(path.join(REPO_ROOT, "package.json"), "utf8"));
   const scripts = isRecord(manifest) ? manifest["scripts"] : undefined;
   const rootHasKnip = isRecord(scripts) && "lint:knip" in scripts;
-  return rootHasKnip ? ["lint:knip"] : ["--dir", "callback-box", "lint:knip"];
+  return rootHasKnip ? ["lint:knip"] : ["--dir", "beebox", "lint:knip"];
 }
 
 /**

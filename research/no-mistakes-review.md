@@ -1,4 +1,4 @@
-# No Mistakes vs callback-box review and landing
+# No Mistakes vs beebox review and landing
 
 _Snapshot: 2026-08-30. Upstream: [kunchenguid/no-mistakes](https://github.com/kunchenguid/no-mistakes) v1.60.3, commit [`c7897368`](https://github.com/kunchenguid/no-mistakes/commit/c78973685d8af1cf5b1baaf959ad6a77347c0520), 7,967 GitHub stars at inspection time._
 
@@ -23,7 +23,7 @@ Its ordered agent list covers Claude, Codex, Grok, OpenCode, Copilot, Pi, Rovo D
 
 ## Comparison
 
-| Concern | No Mistakes | callback-box | Judgment |
+| Concern | No Mistakes | beebox | Judgment |
 | --- | --- | --- | --- |
 | Unit of work | One disposable worktree per submitted push/run | One durable managed worktree per human workstream; `/finish` reuses it and merges `main` into it | Different lifecycle. The durable workstream preserves context and intentional unfinished state; a second disposable checkout would add custody and synchronization machinery we do not need. |
 | Review | One configured pipeline agent reviews the diff and intent; optional fix/rereview rounds | `.claude/skills/cross-model/SKILL.md` invokes the other model family read-only, verifies source claims, and requires the driving agent to adjudicate and surface material findings | Keep ours. No Mistakes has a broader gate, but its fallback routing is not cross-model independence. |
@@ -125,4 +125,4 @@ Concrete trace: `.claude/skills/cross-model/SKILL.md` shared rules 8–9 and the
 
 The principle may help ensure that an incomplete or superseded deploy cannot report or leave the wrong ref live. Do not infer a fix from this comparison: first inspect the current deploy coordinator and its existing supersession guarantees in a dedicated workstream.
 
-Concrete trace: `callback-box/deploy/deploy.sh` and the main-only post-commit/post-merge deployment contract in root `CLAUDE.md`.
+Concrete trace: `beebox/deploy/deploy.sh` and the main-only post-commit/post-merge deployment contract in root `CLAUDE.md`.

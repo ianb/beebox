@@ -6,7 +6,7 @@
  * and nothing else. There is no escape to the full suite: an unaccounted
  * changed path contributes nothing, and an empty selection is the honest
  * statement that no test imports what changed. That inversion is the
- * 2026-08-25 revision of callback-box/docs/plans/change-based-test-selection.md
+ * 2026-08-25 revision of beebox/docs/plans/change-based-test-selection.md
  * (mechanism B), which replaced Track 2's `FULL` fallback after sixteen days of
  * ledger data found no case of a full run catching an unimplicated bug.
  *
@@ -38,7 +38,7 @@ export function selectTests(input: {
   /**
    * The repo files bundled into `dist/cli.mjs` (test-graph.ts's
    * `cliBundleInputs`). Null/absent means unknown, and a `dist/cli.mjs` ref
-   * then matches any `callback-box/src/` change — fail open, since the bundle
+   * then matches any `beebox/src/` change — fail open, since the bundle
    * is a superset of no-one-knows-what.
    */
   cliBundleInputs?: Set<string> | null;
@@ -183,7 +183,7 @@ function matchedSpawners(input: {
  * it we fail open on `src/`, the smallest honest superset.
  */
 function isCliBundleInput(path: string, inputs: Set<string> | null): boolean {
-  if (inputs === null) return path.startsWith("callback-box/src/");
+  if (inputs === null) return path.startsWith("beebox/src/");
   return inputs.has(path);
 }
 

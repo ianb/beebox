@@ -48,7 +48,7 @@ test("bootstrapMobileSessionCookie exchanges the bearer and scopes the cookie ov
       url: request.url ?? "",
     });
     response.writeHead(204, {
-      "set-cookie": "cb_mobile=signed; Max-Age=3600; Path=/test1; HttpOnly; SameSite=Lax",
+      "set-cookie": "bbx_mobile=signed; Max-Age=3600; Path=/test1; HttpOnly; SameSite=Lax",
     });
     response.end();
   });
@@ -63,7 +63,7 @@ test("bootstrapMobileSessionCookie exchanges the bearer and scopes the cookie ov
       worktree: "main",
     });
     assert.deepEqual(cookies, [
-      "cb_mobile=signed; Max-Age=3600; Path=/main; HttpOnly; SameSite=Lax",
+      "bbx_mobile=signed; Max-Age=3600; Path=/main; HttpOnly; SameSite=Lax",
     ]);
     assert.deepEqual(requests, [
       {

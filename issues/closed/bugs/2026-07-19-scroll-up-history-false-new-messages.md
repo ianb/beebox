@@ -3,7 +3,7 @@ title: "Scrolling up to load older chat history falsely shows 'new messages' on 
 workstream: unknown
 filed-by: agent
 discovered-in: main session — boxholder hit it in chat
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

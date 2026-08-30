@@ -3,7 +3,7 @@ title: "Default chat model + a settings indicator when the model is non-default 
 workstream: model-engine-policy
 resolution: implemented
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder wants to see at a glance when a chat is off-default
 priority: normal

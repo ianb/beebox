@@ -1,8 +1,8 @@
 ---
 title: "Mark low-confidence words in a transcript so a misheard word is visible"
 workstream: transcript-confidence
-area: callback-box
-design: ../../../callback-box/docs/implemented-plans/transcript-confidence.md
+area: beebox
+design: ../../../beebox/docs/implemented-plans/transcript-confidence.md
 labels: [transcription, voice, chat]
 priority: important
 filed-by: agent
@@ -96,7 +96,7 @@ To try (needs a real microphone, which no agent has):
 1. On a Deepgram-realtime box, dictate a message with a keyword send ("…send
    message") — ideally including a name or a mumbled word. Check the sent
    bubble for dotted-underlined words, and the session JSONL (or
-   `cb chat retranscribe`'s printed realtime transcript) for the `<unsure>`
+   `bbx chat retranscribe`'s printed realtime transcript) for the `<unsure>`
    tags and `stt="deepgram"`.
 2. Dictate and tap the send button instead of speaking the keyword — marks
    should still appear (this path was wired in the review fix round).

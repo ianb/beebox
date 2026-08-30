@@ -60,7 +60,7 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
        title, and **offer to fix them in this session** — they are this
        workstream's own finds, and it is their default owner; there is no
        someone-else they fall to. Offer, don't start. Don't fold them into the
-       prose. A named flake is not an issue; `callback-box/test/careful.txt` is
+       prose. A named flake is not an issue; `beebox/test/careful.txt` is
        that channel.
    - **`RESULT: BLOCKED`** → it hit something needing a human call (on `main`, a
      merge conflict, a real test failure, ambiguous uncommitted files, missing

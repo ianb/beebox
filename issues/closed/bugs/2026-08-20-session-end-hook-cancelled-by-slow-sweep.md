@@ -11,7 +11,7 @@ resolution: implemented
 ---
 
 > **Fixed 2026-08-24** in
-> [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md).
+> [dev-loop-lifecycle](../../../beebox/docs/implemented-plans/dev-loop-lifecycle.md).
 > The diagnosis below is partly wrong and is left as filed. The sweep was
 > already backgrounded and `disown`ed, so it never spent its 25s inside the
 > hook's budget. Two separate defects were hiding in one report:
@@ -50,7 +50,7 @@ The hook was killed part-way through, before it did the job it exists for.
 
 ## What the log shows (2026-08-20)
 
-`~/.cache/callback-box/worktree-cleanup.log`:
+`~/.cache/beebox/worktree-cleanup.log`:
 
 ```
 22:43:14 SessionEnd event: session=620830c5 reason=prompt_input_exit cwd=…/secret-custody

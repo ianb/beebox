@@ -1,7 +1,7 @@
 ---
 title: "Regression: iOS shows both native + web composers after navigating (nativeComposer=1 lost on nav)"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder on iOS, a landmark chat
@@ -41,7 +41,7 @@ param — `ChatPage.tsx:70`: `const nativeComposer = String(search.nativeCompose
 === "1"`.
 
 The iOS app sets that param **only on the initial chat URL** —
-`ios-app/CallbackBox/Models/PairedBox.swift:50`:
+`ios-app/BeeBox/Models/PairedBox.swift:50`:
 `URLQueryItem(name: "nativeComposer", value: "1")` on `box.chatURL`. Internal
 navigations (into a landmark's chat — the screenshot's landmark (`… / Recent`) — a
 session switch, a link) load a fresh app URL that the web router builds **without**
@@ -58,12 +58,12 @@ navigation work exposed that the flag doesn't survive navigation.
 
 The native shell already injects a bridge on **every** page load via a
 `WKUserScript` (`ChatWebView.swift:602`, `startupScript()` sets
-`window.callbackboxNativePost`, the native queues, etc.). That signal survives
+`window.beeboxNativePost`, the native queues, etc.). That signal survives
 navigation; the URL param doesn't. So:
 
 - `ChatPage` (and anything keying off `nativeComposer`) should treat "native
-  shell present" as **`window.callbackboxNativePost` exists** (or a dedicated
-  `window.callbackboxNativeComposer` flag the startup script sets), not the
+  shell present" as **`window.beeboxNativePost` exists** (or a dedicated
+  `window.beeboxNativeComposer` flag the startup script sets), not the
   `?nativeComposer=1` query param. Self-healing across navigation, no per-URL
   plumbing.
 - Keep the URL param as a fallback if desired, but the bridge presence should be
@@ -76,7 +76,7 @@ Alternative (worse): preserve `nativeComposer` across every web-router navigatio
 
 Likely downstream of the same confusion — with both composers live, a send may go
 through the wrong path (web ComposerRegion vs the native emission bridge), so the
-native emission receipt (`callbackboxEmissionReceipt`) never comes back and the
+native emission receipt (`beeboxEmissionReceipt`) never comes back and the
 chat reports no confirmation. Verify it clears once the shell is detected
 consistently (one composer, native path); if it persists after that, it's a
 separate emission-bridge bug — file separately.

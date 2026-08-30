@@ -1,7 +1,7 @@
 ---
 title: "richer session start context injection"
 workstream: chores-burn-down
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

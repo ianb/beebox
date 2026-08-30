@@ -7,14 +7,14 @@
  * it fixes is not specific to tests: six concurrent whole-tree eslint runs in
  * one worktree took 29–51 minutes each against a solo minute. Anything
  * whole-tree and CPU-hungry belongs behind it — `pnpm lint` and `pnpm
- * typecheck` in callback-box are wrapped with this. Changed-file runs
+ * typecheck` in beebox are wrapped with this. Changed-file runs
  * (`lint:changed`, lint-staged) are NOT: they are seconds long, and queueing
  * them behind a whole-tree run would cost more than the contention does.
  *
  * The ledger is not involved. This is the lock and nothing else.
  *
  * See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
- * callback-box/docs/plans/change-based-test-selection.md, mechanism A.
+ * beebox/docs/plans/change-based-test-selection.md, mechanism A.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";

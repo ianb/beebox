@@ -72,7 +72,7 @@ person reading it is mid-thought with a recording they cannot send.
 ```ts continue
 const notConfigured = new TranscriptionNotConfiguredError();
 JSON.stringify({
-  namesTheVariable: notConfigured.message.includes("CALLBACK_OPENAI_API_KEY"),
+  namesTheVariable: notConfigured.message.includes("BBX_OPENAI_API_KEY"),
   offersAWayOut: notConfigured.message.includes("type it instead"),
 })
 => {"namesTheVariable":true,"offersAWayOut":true}

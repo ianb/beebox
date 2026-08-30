@@ -1,5 +1,5 @@
 // Which workstreams have touched which files — the cross-workstream lens
-// (callback-box/docs/plans/general-browser.md, Track 3a).
+// (beebox/docs/plans/general-browser.md, Track 3a).
 //
 // One piece of data, read in both directions:
 //

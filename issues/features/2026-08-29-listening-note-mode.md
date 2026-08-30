@@ -1,7 +1,7 @@
 ---
 title: "Listening/note mode — diarized ambient listening with typed notes alongside, for interviews and group planning"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [voice, chat]
 filed-by: agent
@@ -55,4 +55,4 @@ Design questions (`needs: [design]`):
   precedent applies to stickiness.
 
 Related: `2026-05-19-spark-mode.md` (ambient-adjacent, different intent);
-iOS parity matters (`cb-ios-overlap`) since interviews happen on the phone.
+iOS parity matters (`bbx-ios-overlap`) since interviews happen on the phone.

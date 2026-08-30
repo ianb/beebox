@@ -1,7 +1,7 @@
 ---
 title: "\"Edited a file\" appears in chat with no way to see what changed"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, twelve minutes into a first session
 priority: normal

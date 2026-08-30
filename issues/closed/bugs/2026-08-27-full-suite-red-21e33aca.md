@@ -1,7 +1,7 @@
 ---
 title: "Full-suite red after chore(issues): full-suite red after 02e2a02b: 1 test file failing"
 workstream: unattached
-area: callback-box
+area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
@@ -26,7 +26,7 @@ report.
 not ok 393 - test/frontend/lib/ui-scan/annotations.doctest.md # time=991.753ms
   ---
   stdio: inherit
-  cwd: /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-0QiOK0/checkout/callback-box
+  cwd: /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-0QiOK0/checkout/beebox
   externalID: test/frontend/lib/ui-scan/annotations.doctest.md
   command: ~/.nvm/versions/node/v24.18.0/bin/node
   args:
@@ -41,7 +41,7 @@ not ok 393 - test/frontend/lib/ui-scan/annotations.doctest.md # time=991.753ms
     - --import=./test/helpers/isolate-auth-file.ts
     - --import=./test/helpers/isolate-origin-id.ts
     - --import=./test/helpers/isolate-codex-home.ts
-    - /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-0QiOK0/checkout/callback-box/test/frontend/lib/ui-scan/annotations.doctest.md
+    - /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-0QiOK0/checkout/beebox/test/frontend/lib/ui-scan/annotations.doctest.md
   jobId: 1
   exitCode: 1
   signal: null
@@ -69,5 +69,5 @@ Reproduce at the blamed landing:
 
 ```bash
 git log -1 21e33aca
-pnpm --dir callback-box exec tap test/frontend/lib/ui-scan/annotations.doctest.md
+pnpm --dir beebox exec tap test/frontend/lib/ui-scan/annotations.doctest.md
 ```

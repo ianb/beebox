@@ -1,6 +1,6 @@
 /**
  * Entry point. Bundled by esbuild into a single `dist/scan-uploader.mjs`,
- * runnable with plain `node` — no checkout, no install, no `cb`. Invoked
+ * runnable with plain `node` — no checkout, no install, no `bbx`. Invoked
  * either by a ScanSnap post-scan hook or as a manual/periodic sweep; the
  * check endpoint's dedup makes double-runs harmless.
  */
@@ -21,7 +21,7 @@ function printHelp(): void {
       "       scan-uploader configure <server-url-with-box> --folder <path> [options]",
       "       scan-uploader schedule <install|uninstall|status> [options]",
       "",
-      "Uploads new files from configured folders to a callback-box scan-upload",
+      "Uploads new files from configured folders to a beebox scan-upload",
       "endpoint. Config defaults to ./scan-uploader.json if present, else",
       "~/.config/scan-uploader.json.",
       "",

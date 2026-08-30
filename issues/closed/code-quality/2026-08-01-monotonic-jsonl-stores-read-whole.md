@@ -1,7 +1,7 @@
 ---
 title: "Monotonic JSONL stores (retro ledger, usage manifest) read whole with no rotation"
 workstream: chat-history-scale
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep
 resolution: implemented
@@ -12,13 +12,13 @@ resolution: implemented
 Two append-forever JSONL stores are read whole into memory and never rotated:
 
 - **Retro ledger** — `loadLedgerEntries`
-  (`callback-box/src/core/retro/ledger.ts`) reads the whole file into a
+  (`beebox/src/core/retro/ledger.ts`) reads the whole file into a
   string, splits, and retains every entry; `loadEvidenceHashes` amplifies it.
   Grows one line per observation per nightly run, forever. Batch path. The
   consumer (`retro/scan.ts`) only needs the `evidenceHash` Set — stream lines
   and keep just that.
-- **Usage manifest** — `readManifest` (`callback-box/src/core/usage.ts`), one
-  line per session ever run, read whole and held as a Map for `cb usage`.
+- **Usage manifest** — `readManifest` (`beebox/src/core/usage.ts`), one
+  line per session ever run, read whole and held as a Map for `bbx usage`.
   CLI. Stream it, or prune entries older than the retention window.
 
 (The scheduler log has the same read shape in
@@ -32,13 +32,13 @@ touching either subsystem.
 
 Both stores are read line by line over a stream instead of whole-file + split.
 
-- `callback-box/src/core/retro/ledger.ts` — `loadLedgerEntries` and
+- `beebox/src/core/retro/ledger.ts` — `loadLedgerEntries` and
   `loadEvidenceHashes` share a `forEachLedgerEntry` streaming walk;
   `loadEvidenceHashes` adds to its Set as lines go past, so it never
   materializes the entries. `loadLedgerEntries` stays — `retro-scan.doctest.md`
   and the integrator still read full entries. Covered by
-  `callback-box/test/core/retro/ledger.doctest.md`.
-- `callback-box/src/core/usage.ts` — `readManifest` became async and streams;
+  `beebox/test/core/retro/ledger.doctest.md`.
+- `beebox/src/core/usage.ts` — `readManifest` became async and streams;
   its one caller (`syncUsage`) awaits it.
 
 Rotation/pruning was not added — the streaming read is the cheap half, and

@@ -1,7 +1,7 @@
 ---
 title: "A composer draft can splice itself into the middle of another message"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a journey walkthrough landed in an old chat and read it
 ---

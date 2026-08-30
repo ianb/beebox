@@ -1,7 +1,7 @@
 ---
 title: "Chat sends often show 'failed'/stay in the composer though the message actually sent — receipts are unreliable"
 workstream: emission-model
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder reports it happening commonly across normal use
 priority: important
@@ -126,7 +126,7 @@ claimed message IDs for seven days so those navigation and recovery redeliveries
 remain idempotent. A 30-second metadata-only diagnostic records that a receipt is
 still pending without changing its disposition.
 
-Focused web receipt tests, the full callback-box suite, and simulator request
+Focused web receipt tests, the full beebox suite, and simulator request
 tests cover these paths. Cold Codex browser controls are green. Physical-device
 confirmation remains the final gate.
 
@@ -196,7 +196,7 @@ Instrumentation now records a bounded, metadata-only timeline for each send.
 Routine success stays in memory and prints nothing. A rejected or slow receipt,
 network retry/offline event, stream error, incomplete stream, or event-bus error
 flushes the timeline at `warn` level, so it reaches
-`.callback-box/client-debug.log` while the debug panel is closed. The timeline uses
+`.beebox/client-debug.log` while the debug panel is closed. The timeline uses
 the emission ID to correlate dispatch, each `/api/chat/send` attempt and response,
 local receipt settlement, turn-stream frames, durable-history reconciliation,
 visibility changes, online state, and global event-bus reconnects. It records text

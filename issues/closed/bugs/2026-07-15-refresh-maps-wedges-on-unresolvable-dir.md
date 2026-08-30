@@ -3,7 +3,7 @@ title: "refresh-maps wedges permanently when a directory can't be resolved at th
 workstream: unknown
 filed-by: agent
 discovered-in: main session — investigating a test box's stuck refresh-maps health flag
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
@@ -24,7 +24,7 @@ git at the stored `asOf` triggers it.
 2. Empty-at-`asOf` + present-on-disk ⇒ every current child reads as "added" ⇒ the
    dir is perpetually **dirty**.
 3. The agent regenerates the MAP.md, then the step's `validate` phase re-runs
-   `cb refresh-maps --brief`, which **"still reports outstanding work"** (the same
+   `bbx refresh-maps --brief`, which **"still reports outstanding work"** (the same
    dir is still dirty) ⇒ validate **fails** (observed: "Validation still failing
    after 1 retry — failing the step").
 4. Because the step fails, **`finalize` never runs** — and `finalize`
@@ -52,7 +52,7 @@ convergence path disagree.
   usually a symptom of box-data corruption, as here) instead of silently looping.
 
 **Repro:** a box with a directory on disk that isn't tracked at the stored map
-`asOf` (e.g. a doubled/migration-artifact subtree) → `cb tick --script
+`asOf` (e.g. a doubled/migration-artifact subtree) → `bbx tick --script
 refresh-maps --force` fails the `refresh` step at validate, and the state at
 `config/schedules/.state/refresh-maps.json` never reaches `success`.
 
@@ -80,6 +80,6 @@ Fixed in `worktree-refresh-maps-convergence`: finalize now stamps only maps it
 can prove were rewritten, and runs as a run-phase shell so a dead agent's
 partial work is still banked. The unresolvable-`asOf` case is now surfaced as an
 explicit anomaly rather than silently inflating the brief. Design and evidence:
-[`callback-box/docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/implemented-plans/refresh-maps-convergence.md).
+[`beebox/docs/plans/refresh-maps-convergence.md`](../../../beebox/docs/implemented-plans/refresh-maps-convergence.md).
 
 Remaining follow-up: [refresh-maps max-turns throughput](../code-quality/2026-07-19-refresh-maps-max-turns-throughput.md).

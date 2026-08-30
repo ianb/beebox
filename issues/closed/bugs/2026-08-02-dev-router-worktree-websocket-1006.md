@@ -49,5 +49,5 @@ across all sessions and runs the *main* checkout's `bin/router.ts`, so a
 fix in a worktree does nothing until it is merged to `main` and the
 boxholder restarts `pnpm dev`. A worktree session cannot iterate on it
 (and must not restart the shared router). An isolated second router
-(`CALLBACK_STATE_DIR` + `ROUTER_PORT`) is the way to reproduce without
+(`BBX_STATE_DIR` + `ROUTER_PORT`) is the way to reproduce without
 touching the shared one.

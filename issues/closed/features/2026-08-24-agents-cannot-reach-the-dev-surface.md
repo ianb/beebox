@@ -92,7 +92,7 @@ verb, which stay `control` (owner session AND a CSRF-safe origin). Those carry
 real control verbs. Non-read methods on `/dev/` also stay owner-only; `serveDev`
 has no write path, so keeping them out grants nothing.
 
-Verified against an isolated router (`CALLBACK_STATE_DIR` + `ROUTER_PORT`):
+Verified against an isolated router (`BBX_STATE_DIR` + `ROUTER_PORT`):
 `/main/dev/` and `/main/dev/skills.html` went 401 → 200 with the browse-key
 cookie, `/dev/` → 301, `/workstreams/` → 503 (the gate allowed it; that
 instance's workstreams app could not bind the fixed exhibits port 3230 already

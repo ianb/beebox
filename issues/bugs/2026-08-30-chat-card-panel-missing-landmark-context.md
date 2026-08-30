@@ -1,7 +1,7 @@
 ---
 title: "A card opened beside chat loses the current landmark context"
 workstream: landmark-in-browse
-area: callback-box
+area: beebox
 labels: [chat, navigation, ui, landmarks]
 filed-by: agent
 discovered-by: Ian

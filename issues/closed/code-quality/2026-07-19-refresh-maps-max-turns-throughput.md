@@ -3,7 +3,7 @@ title: "refresh-maps max-turns:40 is an unmeasured throughput knob"
 workstream: refresh-maps-throughput
 filed-by: agent
 discovered-in: refresh-maps convergence work (worktree-refresh-maps-convergence)
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
@@ -20,7 +20,7 @@ correctness problem disguised as a budget.
 That's fixed: finalize now runs as a run-phase shell and stamps only the maps it
 can prove were rewritten, so a capped run banks its partial work and the next run
 continues from there (see
-[`docs/plans/refresh-maps-convergence.md`](../../../callback-box/docs/implemented-plans/refresh-maps-convergence.md)).
+[`docs/plans/refresh-maps-convergence.md`](../../../beebox/docs/implemented-plans/refresh-maps-convergence.md)).
 
 What's left is a genuine throughput question with no measurement behind it: on a
 box with a large brief, 40 turns means N runs to converge, and nobody has checked
@@ -58,7 +58,7 @@ step's `max-turns`.
 
 **The one capped run was not throughput-limited.** Its brief was 2 maps. It
 spent 36 of 40 turns on `Bash` — repeated `git show`/`status`/`log`/`ls-tree`
-and four re-runs of `cb refresh-maps` — auditing its own work, and 2 turns
+and four re-runs of `bbx refresh-maps` — auditing its own work, and 2 turns
 writing maps. Raising the cap would have bought it more auditing.
 
 **What does limit this procedure: a *different* turn cap.** 12 of 28 runs are

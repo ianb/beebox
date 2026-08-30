@@ -739,24 +739,24 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
         // catch block and causes a second send (FST_ERR_REP_ALREADY_SENT).
         // Consuming projects with a route-handler directory matching this
         // shape should disable the rule there in their OWN eslint config
-        // (see callback-box/eslint.config.ts for the model), not here —
+        // (see beebox/eslint.config.ts for the model), not here —
         // this preset has no opinion on any one project's route layout.
         "@typescript-eslint/return-await": "error",
         // `x!` silences the compiler instead of proving non-null; a wrong
         // assertion becomes a runtime crash with no type-checker warning.
         // Burned down 2026-07-10: 190 sites converted to real narrowing
         // (optional chaining, explicit guards, or a typed assertion helper)
-        // across callback-box (backend + frontend), callback-clerk, and
+        // across beebox (backend + frontend), beebox-clerk, and
         // agent-doctest.
         "@typescript-eslint/no-non-null-assertion": "error",
         // Flags conditions/optional-chains/binary-expressions that TypeScript's
         // types prove can never be false (or never true) — usually a stale
         // guard left over after a type narrowed, or a check that was never
         // reachable to begin with. Burned down 2026-07-10: ~200 sites fixed
-        // across callback-box (backend + frontend), callback-clerk, and
+        // across beebox (backend + frontend), beebox-clerk, and
         // agent-doctest; 3 sites kept a justified single-line disable comment
         // (agent-doctest/src/check.ts and
-        // callback-box frontend useSSRMachine.ts, router.tsx) where the
+        // beebox frontend useSSRMachine.ts, router.tsx) where the
         // condition is genuinely defensive against a case the type system
         // can't see (e.g. a cast at a parse/runtime boundary).
         "@typescript-eslint/no-unnecessary-condition": "error",
@@ -793,7 +793,7 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
               // leaves them ON there. They demand that every top-level
               // declaration be exported — `const x = 42` is a violation — which
               // is the inverse of the export-what's-needed rule in
-              // callback-box/code-style.md and blocks un-exporting anything in
+              // beebox/code-style.md and blocks un-exporting anything in
               // a `.tsx`. Off here so the rejection actually applies.
               "class-export/class-export": "off",
               "required-exports/required-exports": "off",

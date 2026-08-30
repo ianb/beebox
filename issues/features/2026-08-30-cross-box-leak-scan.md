@@ -1,7 +1,7 @@
 ---
 title: "A dedicated security scan for leaks between boxes on the same host"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [security]
 filed-by: agent
@@ -28,7 +28,7 @@ limit):
   cwd — per-box today, but an upstream keying change would silently merge
   them; see the 2026-08-25 finding), `~/.codex` (the plugin/marketplace
   registration is global and was corrupted cross-checkout on 2026-08-27),
-  `~/.config/cb` (global credentials), the shared event-bus/registry files,
+  `~/.config/beebox` (global credentials), the shared event-bus/registry files,
   the hub's routing table, `/tmp`.
 
 What "a scan" should mean here (design questions):

@@ -11,7 +11,7 @@ color: false
 disable-coverage: true
 # Per-file timeout. recency.doctest.md spins up several throwaway git repos
 # and scans them across ~7 headings; solo it finishes in ~30s, but under a
-# loaded machine (see callback-box/.taprc for the same phenomenon measured
+# loaded machine (see beebox/.taprc for the same phenomenon measured
 # there) that inflated past the previous 60s default and intermittently timed
 # out even though every assertion passed. 180s preserves headroom without
 # masking a genuine hang indefinitely.

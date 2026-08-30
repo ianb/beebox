@@ -24,7 +24,7 @@ import { runSearch } from "./issue-index-query.js";
 import {
   EMBEDDING_KEY_VARS, refreshIndex, resolveEmbeddingsService, type RefreshResult,
 } from "./issue-index.js";
-import type { EmbeddingsService } from "../../../callback-box/src/services/openai-embeddings.js";
+import type { EmbeddingsService } from "../../../beebox/src/services/openai-embeddings.js";
 import { loadIssueEntries, type IssueEntry } from "./issue-search-model.js";
 
 /** Rows shown under an issue. Eight is what fits without becoming a second list. */

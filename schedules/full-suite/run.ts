@@ -1,6 +1,6 @@
 /**
  * Hourly full-suite run on pinned `main`; mechanism D of
- * callback-box/docs/plans/change-based-test-selection.md. It runs in a detached
+ * beebox/docs/plans/change-based-test-selection.md. It runs in a detached
  * worktree, triages red files, bisects only attributable landings, and files
  * issues from the main checkout. It refuses to run elsewhere, and always
  * removes the detached checkout in `finally`.
@@ -135,7 +135,7 @@ async function blameLanding(input: {
       if (landing === undefined) return true;
       process.stdout.write(`\n--- bisect: ${input.file} at ${landing.commit.slice(0, 8)} ---\n`);
       await checkoutCommit({ checkout: input.checkout, commit: landing.commit });
-      if (!existsSync(path.join(input.checkout.dir, "callback-box", input.file))) return true;
+      if (!existsSync(path.join(input.checkout.dir, "beebox", input.file))) return true;
       const result = await runFileAlone({ checkout: input.checkout, file: input.file });
       return result.exitCode === 0;
     },

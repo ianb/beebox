@@ -1,7 +1,7 @@
 ---
 title: "A pasted WebP was rejected, though the app's own encoder prefers WebP"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, from assets an agent had wrongly converted to WebP

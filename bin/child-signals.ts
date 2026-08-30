@@ -7,7 +7,7 @@
  * signal was aimed at.
  *
  * See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
- * callback-box/docs/plans/change-based-test-selection.md, mechanism A.
+ * beebox/docs/plans/change-based-test-selection.md, mechanism A.
  */
 
 import type { ChildProcess } from "node:child_process";

@@ -39,7 +39,7 @@ shapes: read this first.
 
 **Where:** `createPidStore` in `bin/router-pidfile.ts`.
 
-Each worktree's pidfile (`~/.cache/callback-box/pids/<name>.json`) holds only
+Each worktree's pidfile (`~/.cache/beebox/pids/<name>.json`) holds only
 the *current* generation's PIDs — there's no history. A teardown racing a
 fresh start must not delete a pidfile that a newer generation has already
 written, or that generation becomes invisible to the startup sweep (an
@@ -178,7 +178,7 @@ guard was meant to prevent.
 
 **Fix shape:** `write` and `remove` for a given worktree name run through a
 small in-process promise chain (a `Map<name, Promise>` tail, the `withCardLock`
-pattern — bin/ can't import callback-box internals, so it's restated locally),
+pattern — bin/ can't import beebox internals, so it's restated locally),
 so a `remove`'s read+unlink is atomic relative to any `write` for the same name.
 Every current-generation pidfile op — `startWorktree` (write + failure/self-clean
 remove), `stopWorktree`, `onChildExit`, and full-router `shutdown` — routes
@@ -224,7 +224,7 @@ the bottom of `router.ts`.
 Phase 1 (2026-07-09) was the conservative doc-browser extraction
 (`bin/router-docs.ts`) plus the first write-up of invariants #1–#4 — pure code
 motion, no state-machine change. Phase 2 (2026-07-11,
-`callback-box/docs/implemented-plans/router-state-formalization.md`) then did the fuller
+`beebox/docs/implemented-plans/router-state-formalization.md`) then did the fuller
 option from `issues/decisions/2026-07-06-architectural-review-open-decisions.md`
 (item 1), in three sub-phases:
 

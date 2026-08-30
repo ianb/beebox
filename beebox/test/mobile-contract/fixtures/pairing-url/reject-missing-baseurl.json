@@ -1,0 +1,6 @@
+{
+  "input": "beebox://pair?label=Nope&pairingToken=tok123",
+  "expected": {
+    "accepted": false
+  }
+}

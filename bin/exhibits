@@ -4,7 +4,7 @@
 # An exhibit is a directory in the per-workstream store carrying a manifest
 # (exhibit.json), content files, and whatever the page captures. Every exhibit
 # states one ask: decide | confirm | react | fyi. Design and vocabulary:
-# callback-box/docs/plans/workstream-exhibits.md; page contract:
+# beebox/docs/plans/workstream-exhibits.md; page contract:
 # workstreams-app/docs/exhibits.md.
 #
 # Commands:
@@ -25,7 +25,7 @@
 #   help               This text.
 #
 # The store lives at <parent-of-main-checkout>/workstream-exhibits/<workstream>/
-# (override CALLBACK_EXHIBITS_ROOT), outside git and outside every worktree, so
+# (override BBX_EXHIBITS_ROOT), outside git and outside every worktree, so
 # exhibits survive a worktree cull. This CLI writes the store path it derives
 # itself — never through the <checkout>/exhibits symlink — so a broken mount
 # cannot redirect writes into a doomed tree.

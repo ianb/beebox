@@ -1,6 +1,6 @@
 /**
  * Minimal types for the subset of text-fragments-polyfill this app uses. The
- * package ships plain JS with no declarations. callback-box declares the finder
+ * package ships plain JS with no declarations. beebox declares the finder
  * half the same way (`src/frontend/src/types/text-fragments-polyfill.d.ts`);
  * this adds the GENERATOR half, which is the piece that turns a live selection
  * into a durable anchor.

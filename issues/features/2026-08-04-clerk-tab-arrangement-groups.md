@@ -2,7 +2,7 @@
 title: "Support local Chrome tab groups in Clerk tab arrangements"
 workstream: tab-organizer-clerk
 needs: [design]
-design: ../../callback-box/docs/plans/clerk-tab-arrangements.md
+design: ../../beebox/docs/plans/clerk-tab-arrangements.md
 area: clerk
 filed-by: agent
 discovered-in: worktree-tab-organizer-clerk — simplifying the experimental tab-arrangement plan

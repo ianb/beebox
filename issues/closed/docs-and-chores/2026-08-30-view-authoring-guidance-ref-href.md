@@ -1,7 +1,7 @@
 ---
 title: "In-box view authoring guidance: use ref/href conventions in view data, not ad-hoc url arrays"
 workstream: link-vocabulary-guidance
-area: callback-box
+area: beebox
 labels: [views, agent-guidance]
 filed-by: agent
 discovered-by: Ian
@@ -30,7 +30,7 @@ loads:
 - Wherever view authoring is taught (the views section of the agent guide /
   `skills-content.ts` — locate the actual authoring guidance, not just the
   debugging tips), add the field-shape rules: internal targets are `ref`
-  (rewritten by `cb mv`, rendered as links, walked by ref-fields); external
+  (rewritten by `bbx mv`, rendered as links, walked by ref-fields); external
   targets are `href` inside an object envelope (`sources: [{href, retrieved,
   note}]`), never bare-string url arrays; dates date-only ISO, rendered as
   prose.
@@ -38,7 +38,7 @@ loads:
   envelope AND a ref side by side).
 - A `knows_directly` knowledge-audit entry, run, per the convention-without-
   an-audit rule.
-- Worth considering while in there: does `cb view check`/validate have any
+- Worth considering while in there: does `bbx view check`/validate have any
   opinion on data shapes, and should it nudge (a warn on `^urls?:` string
   arrays is cheap and targeted — but that's lint-adjacent, keep it a warn).
 

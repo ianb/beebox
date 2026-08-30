@@ -2,7 +2,7 @@
 title: "Canvas tight-loop: browser-less run→render→screenshot programming surface for agents"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 Idea (Ian, 2026-07-13): instead of the browser-automation stack (`bin/browse`,
@@ -49,18 +49,18 @@ Why this fits agent cognition (assessment from the agent side, same date):
   creative coding, sims, visualizations) — a new programming surface for boxes.
   It does not replace browse for the real DOM/CSS app UI. Related tension about
   which "look at output" tools earn their keep:
-  [cb-render-vs-bin-browse](../closed/decisions/2026-07-07-cb-render-vs-bin-browse.md).
+  [bbx-render-vs-bin-browse](../closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md).
 
 Prior art to lean on: p5.js has a headless-friendly instance mode; `skia-canvas`
 / `node-canvas` give a real Canvas2D (and skia-canvas some WebGL) in Node with
 no browser; frame-stepped virtual clocks are standard in game-engine testing.
 
-## How to test this without touching callback-box (2026-07-13)
+## How to test this without touching beebox (2026-07-13)
 
 The sandbox needs almost no agent-facing API, because Claude Code's `Read`
 tool already displays PNGs. So the whole experiment is a small standalone
 package (a new top-level dir like `sandbox/canvas-loop/`, or outside the repo
-entirely — zero callback-box changes):
+entirely — zero beebox changes):
 
 1. `sandbox run sketch.ts --frames 120 --events events.json` — loads a sketch
    module (p5-style `setup`/`draw`/handlers against a headless Canvas2D),
@@ -139,7 +139,7 @@ history (the sketches they name now live under `canvas-loop/gallery/`).
 ## Experiment (2026-07-14) — prototype built and tested on a fresh agent
 
 The sandbox exists: **`sandbox/canvas-loop/`** (own workspace package, zero
-callback-box changes) — deterministic frame-stepped Canvas2D runtime over
+beebox changes) — deterministic frame-stepped Canvas2D runtime over
 `@napi-rs/canvas`, p5-like `Sketch` API (seeded RNG, virtual clock, ambient
 `Math.random`/`Date.now` disabled), events-JSON injection through the real
 handler path, frame-tagged `transcript.md` with deduped inline PNGs. 10/10
@@ -195,7 +195,7 @@ pattern from creative coding): the sketch *declares* tweakable parameters
   `{frame: 30, param: "speed", value: 0.12}` — just another entry in the
   deterministic event log; no widget geometry, no synthesized clicks.
 - Browser packaging (when sketches become box-facing): Tweakpane (tiny,
-  maintained, framework-free) or leva (React, which callback-box already is)
+  maintained, framework-free) or leva (React, which beebox already is)
   auto-generates the human control panel from the same declaration. A human's
   slider drag and an agent's script entry converge on the same param-change
   event — injection symmetry gets cleaner, not weaker.

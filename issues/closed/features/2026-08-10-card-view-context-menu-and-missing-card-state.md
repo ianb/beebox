@@ -1,7 +1,7 @@
 ---
 title: "Card view needs a context menu (delete, history) and a real missing-card state"
 workstream: card-menu
-area: callback-box
+area: beebox
 labels: [ui, cards]
 resolution: implemented
 ---
@@ -17,20 +17,20 @@ doesn't exist, say so usefully instead of erroring.
 
 ## Delete
 
-**`cb rm` exists** and is the right primitive: *"Move one or more cards to the
+**`bbx rm` exists** and is the right primitive: *"Move one or more cards to the
 trash"*, with `--reason`, `--commit`, and `--dry-run` (`src/cli/commands/trash.ts`).
 Worth carrying into the UI wording — this is **trash, not destroy**, so the
 affordance can be less frightening than a permanent delete.
 
 ### The dangling-reference problem
 
-`cb rm` does **nothing** about refs today. Other cards can point at the one
+`bbx rm` does **nothing** about refs today. Other cards can point at the one
 being trashed, and after it's gone those refs dangle.
 
-**The scan for this already exists.** `cb mv` solves the harder version of the
+**The scan for this already exists.** `bbx mv` solves the harder version of the
 same problem: `src/core/rewrite-card-refs.ts` + `src/core/commands/move-operations.ts`
 walk every other card *and* every plain `.md`, **resolve** each ref against the
-card holding it (the same way the renderer and `cb validate` resolve them), and
+card holding it (the same way the renderer and `bbx validate` resolve them), and
 rewrite it in whatever style it was written — box-root-absolute stays absolute,
 relative stays relative, `attach/` is left scoped to its owner. It covers three
 ref-bearing forms.
@@ -46,15 +46,15 @@ would reproduce.
 
 Three different answers for three different callers, per the boxholder:
 
-- **Agent (`cb rm`)** — print the dangling references. The agent has the context
+- **Agent (`bbx rm`)** — print the dangling references. The agent has the context
   to decide, and often to fix them.
 - **UI** — warn before trashing. There's no resolution that's naturally apparent
   in a menu, so the honest affordance is "N cards link to this — trash anyway?"
   plus a way to see which ones. Don't invent a repair UI.
-- **Ideally** — the agent fixes them up. Whether that's a `cb rm` flag, a
+- **Ideally** — the agent fixes them up. Whether that's a `bbx rm` flag, a
   follow-up job, or something the chat agent does when asked is undecided.
 
-Open: does `cb rm` grow a `--check-refs`/`--force` shape, or does it always
+Open: does `bbx rm` grow a `--check-refs`/`--force` shape, or does it always
 report and let the caller decide? A `--dry-run` already exists and may be the
 natural place for the report.
 

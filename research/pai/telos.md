@@ -10,11 +10,11 @@ All files ship as sample templates with `(sample)` placeholder entries; `/interv
 *showing the intended shape* — most of the value here is in the per-file footnotes
 that tell the model what each file is **for**.
 
-## Why this matters for cb
+## Why this matters for bbx
 
-cb's user-description layer (`config/main.personality.card`, guide cards, the
+bbx's user-description layer (`config/main.personality.card`, guide cards, the
 boxholder fields) answers *how should the assistant behave*. TELOS answers *what is
-the boxholder trying to do* — and cb has no representation of that at all. Every
+the boxholder trying to do* — and bbx has no representation of that at all. Every
 TELOS file footer describes a concrete consumption pattern ("the DA uses this
 to…"), which is the right test for whether a context file earns its tokens.
 
@@ -87,7 +87,7 @@ This is the user *inviting pushback in writing* — a standing authorization the
 assistant can cite when it says "this looks like C2."
 
 **Core vs. provisional beliefs** (`BELIEFS.md`) — a crude, hand-rolled version of
-cb's evidence model:
+bbx's evidence model:
 
 > ## Provisional Beliefs
 >
@@ -133,8 +133,8 @@ hint:
 > the DA is picking between options. Examples: long-horizon thinking, building over
 > consuming, open-source over proprietary, depth over breadth).
 
-Same architecture as cb's agent-guide generation (`src/core/agent-guide/`):
-human-editable sources, compiled artifact in context. cb already has the machinery.
+Same architecture as bbx's agent-guide generation (`src/core/agent-guide/`):
+human-editable sources, compiled artifact in context. bbx already has the machinery.
 
 ## The identity pair
 
@@ -153,20 +153,20 @@ closing section worth quoting for its last line:
 **`DA_IDENTITY.md`** — who the assistant is. Name, color, two ElevenLabs voice IDs
 (main + a separate "algorithm" narration voice), personality prose, writing-style
 prose, relationship framing ("We are peers, not commander/executor"), and — the
-part cb should copy — an explicit autonomy boundary:
+part bbx should copy — an explicit autonomy boundary:
 
 > ## Autonomy
 >
 > **Can initiate:** send_notification, create_reminder, log_learning, routine_checks
 > **Must ask:** send_external_message, modify_code_unprompted, financial_action, delete_data, publish_content
 
-cb enforces this boundary structurally (staged outbound cards, `cb finalize`,
+bbx enforces this boundary structurally (staged outbound cards, `bbx finalize`,
 question cards) but nowhere *states* it where the boxholder can read and edit it.
 A `can-initiate` / `must-ask` pair on the personality card would make the policy
 legible, and gives retro a place to propose loosening ("you've approved every
 calendar-event creation for a month — promote to can-initiate?").
 
-## Mapping onto cb
+## Mapping onto bbx
 
 Proposed shape — not a new subsystem, an extension of the existing user-description
 surface:
@@ -174,11 +174,11 @@ surface:
 1. **A telos card** (e.g. `config/main.telos.card`, sibling of
    `main.personality.card`): sections for missions, active goals (with
    active/deferred/completed lifecycle), challenges, beliefs, wisdom. Entries get
-   stable IDs and — this is where cb improves on PAI — the existing evidence model:
+   stable IDs and — this is where bbx improves on PAI — the existing evidence model:
    `source: user-stated | feedback | inferred`, confidence, provenance ref. PAI's
    Core/Provisional belief split collapses into that model naturally.
 2. **Interview as the bootstrap, retro as the maintainer.** PAI fills TELOS via a
-   one-time `/interview`; nothing in the public release keeps it current. cb's
+   one-time `/interview`; nothing in the public release keeps it current. bbx's
    retro is the missing maintenance loop: chat reveals an implicit goal → retro
    proposes an `inferred` entry; behavior contradicts a stated goal or matches a
    stated challenge → escalate as a question card. The same recurrence gating that
@@ -186,7 +186,7 @@ surface:
 3. **Consumption, not just storage.** Each section should have a stated consumer,
    PAI-footer style: triage can weigh "does this relate to an active goal" when
    prioritizing; chat can cite challenges when pushing back; scheduled reviews
-   (weekly/quarterly) can walk the goals list — which also gives cb's currently
+   (weekly/quarterly) can walk the goals list — which also gives bbx's currently
    thin "daily briefing" story a spine. A telos section with no consumer shouldn't
    exist (drop BOOKS/NARRATIVES unless a use appears).
 4. **Compile into the agent guide.** Like the personality section, a compressed

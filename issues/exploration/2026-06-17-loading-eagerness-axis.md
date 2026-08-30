@@ -2,7 +2,7 @@
 title: "loading eagerness axis"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 When the boxholder agent learns something durable and writes it down as

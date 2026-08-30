@@ -1,7 +1,7 @@
 #!/usr/bin/env node --import tsx
 /**
  * Agent SDK updater (`pnpm update-agent-sdk`): bumps the EXACT pin of
- * `@anthropic-ai/claude-agent-sdk` in callback-box/package.json to the newest
+ * `@anthropic-ai/claude-agent-sdk` in beebox/package.json to the newest
  * npm release at least two days old, installs, and typechecks. `--check` only
  * reports staleness (exit 1 when behind) without touching anything.
  *
@@ -20,8 +20,8 @@
  * moves the version, and the 2-day gate lives here.
  *
  * After a bump, run:
- *   pnpm -C callback-box test
- *   node --import tsx callback-box/scripts/sdk-steering-probe.ts   (real API calls)
+ *   pnpm -C beebox test
+ *   node --import tsx beebox/scripts/sdk-steering-probe.ts   (real API calls)
  * then commit. Prod picks the new version up on the next main-merge deploy
  * (the lockfile change triggers a clean reinstall on the server).
  */
@@ -34,7 +34,7 @@ import { z } from "zod";
 
 const PACKAGE = "@anthropic-ai/claude-agent-sdk";
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
-const MANIFEST = path.join(REPO_ROOT, "callback-box", "package.json");
+const MANIFEST = path.join(REPO_ROOT, "beebox", "package.json");
 
 function run(cmd: string, { args, cwd }: { args: string[]; cwd: string }): string {
   // When this script runs under `pnpm update-agent-sdk`, pnpm injects
@@ -162,8 +162,8 @@ if (checkOnly) {
 console.log(`Bumping ${PACKAGE}: ${current} → ^${target}`);
 rewriteManifest(target);
 execFileSync("pnpm", ["install"], { cwd: REPO_ROOT, stdio: "inherit" });
-console.log("Typechecking callback-box...");
-execFileSync("pnpm", ["-C", "callback-box", "typecheck"], { cwd: REPO_ROOT, stdio: "inherit" });
+console.log("Typechecking beebox...");
+execFileSync("pnpm", ["-C", "beebox", "typecheck"], { cwd: REPO_ROOT, stdio: "inherit" });
 
 console.log(`Done. Now at ${installedVersion()} (bundled CLI: ${bundledCliVersion() ?? "not found"}).`);
-console.log("Next: pnpm -C callback-box test && node --import tsx callback-box/scripts/sdk-steering-probe.ts, then commit.");
+console.log("Next: pnpm -C beebox test && node --import tsx beebox/scripts/sdk-steering-probe.ts, then commit.");

@@ -1,4 +1,4 @@
-# Backend pluggability for callback-box: deep-pass synthesis
+# Backend pluggability for beebox: deep-pass synthesis
 
 *2026-07-18. Supersedes the first-pass [README](README.md) analysis (kept as a record
 with its flaws flagged). Method: a code-reading
@@ -16,7 +16,7 @@ entirely different harness with Claude-Code-like functionality.*
 
 ## The architecture fact everything else hangs on
 
-callback-box delegates a **runtime** to Claude Code — built-in filesystem/shell tools,
+beebox delegates a **runtime** to Claude Code — built-in filesystem/shell tools,
 CLAUDE.md/rules/skills auto-loading, the `claude_code` system-prompt preset, in-process
 PreToolUse/PostToolUse hooks (card validation), session store + transcripts, and
 subscription auth — with the Agent SDK as the driving handle
@@ -69,7 +69,7 @@ ban/throttle reports exist for personal headless/cron agents; task type is irrel
 to Anthropic (Cowork proves general use on the same quota pool). Every enforcement
 wave hit multi-tenant harnesses proxying other users' traffic. The ambiguity to be
 honest about: the same docs point "developers building products/services" at API
-keys, and callback-box is a shipped product even though each user runs their own
+keys, and beebox is a shipped product even though each user runs their own
 instance on their own login — a tolerated gray zone per the policy note, defensible
 as long as we never centralize users' subscriptions, and a second reason (beyond
 pricing) to want the provider-config escape hatch. The concrete threat is the announced-then-cancelled credit-pool

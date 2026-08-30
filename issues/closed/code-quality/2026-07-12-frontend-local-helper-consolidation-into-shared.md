@@ -1,10 +1,10 @@
 ---
 title: "Consolidate the frontend's local helper copies into src/shared/"
 workstream: architectural-review
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-architectural-review — implementing the frontend import-boundary (clerk-contract-and-import-boundary.md Track 2)
-design: ../../../callback-box/docs/implemented-plans/clerk-contract-and-import-boundary.md
+design: ../../../beebox/docs/implemented-plans/clerk-contract-and-import-boundary.md
 resolution: implemented
 ---
 
@@ -25,7 +25,7 @@ added to `OUTSIDE_VITE_SHARED_RAW`. Pattern documented in `docs/module-map.md`.
 Track 2 of the import-boundary work stood up the pattern for sharing a value
 between frontend and backend: put it in `src/shared/` (isomorphic, bundler-safe)
 and import via `@shared/*` (Vite-only code) or a raw relative `../shared/…`
-(code the doctest runner / `cb render` / the view-widgets esbuild bundle also
+(code the doctest runner / `bbx render` / the view-widgets esbuild bundle also
 loads — see the exemption list in `src/frontend/eslint.config.mjs`). Now that
 the pattern and the `@shared` alias exist, the frontend's hand-maintained
 *copies* of helpers that already live in `src/lib/` (backend) are candidates to

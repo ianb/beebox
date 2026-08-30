@@ -1,7 +1,7 @@
 ---
 title: "Cards need one provenance field — there are already four spellings of it"
 workstream: unknown
-area: callback-box
+area: beebox
 needs: [decision, design]
 labels: [schemas, provenance]
 ---
@@ -39,7 +39,7 @@ real question is which existing shape wins:
   shared `CardSource` and standardizing `source:` on it would consolidate rather
   than add.
 - Against that: `webpage.source` is a required bare string today, and changing
-  its shape is a **data migration** across every existing card (cb-migration
+  its shape is a **data migration** across every existing card (bbx-migration
   territory, not a schema-only change). `document`/`file`'s `filename:` entry is
   richer still and may want to stay distinct — it carries mime-type and size,
   which aren't provenance.
@@ -67,4 +67,4 @@ real question is which existing shape wins:
 - [PDF at a URL into the commentary path](../features/2026-08-09-pdf-url-into-the-commentary-path.md)
   — the case that surfaced this; an ingested paper wants to record its origin.
 - `docs/adding-schemas.md` — where a shared field would need documenting.
-- `cb-migration` skill — any change to an existing card's on-disk shape.
+- `bbx-migration` skill — any change to an existing card's on-disk shape.

@@ -2,7 +2,7 @@
 title: "MCP tool: agent launches the conversation into another chat (by landmark or specific chat), carrying context"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder's idea
 priority: normal
@@ -67,9 +67,9 @@ being told "go start a chat over there" and losing the thread.
 
 ## Related
 
-- [Landmarks](../../callback-box/docs/landmarks.md) — the navigation surface the
+- [Landmarks](../../beebox/docs/landmarks.md) — the navigation surface the
   "by landmark" target rides on.
-- [Chat session lifecycle](../../callback-box/docs/chat-session-lifecycle.md) — how
+- [Chat session lifecycle](../../beebox/docs/chat-session-lifecycle.md) — how
   a chat/turn starts, which the seeded message would trigger.
 - Memory Atlas architecture review (`research/memory-atlas-architecture-review.md`)
   — the feature set this belongs to.

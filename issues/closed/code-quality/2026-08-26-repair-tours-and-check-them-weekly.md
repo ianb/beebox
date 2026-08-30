@@ -1,7 +1,7 @@
 ---
 title: "Repair the five tours so they all pass, then check them weekly — a walk nobody runs decays into nothing"
 workstream: tour-health
-area: callback-box
+area: beebox
 labels: [tests, tours, schedules]
 filed-by: agent
 discovered-by: Ian
@@ -24,7 +24,7 @@ Measured 2026-08-26 (full findings on
 all five still execute, but `browse-walk`, `dashboard` and `capture` each abort
 after one checkpoint on a failed soft assertion, while `nav-pages` and
 `new-chat` walk clean. Nobody noticed, because nothing runs them
-(`callback-box/docs/tours.md` keeps them out of pre-commit and the suite on
+(`beebox/docs/tours.md` keeps them out of pre-commit and the suite on
 purpose) and the artifacts are gitignored.
 
 ## What the boxholder asked for
@@ -33,7 +33,7 @@ purpose) and the artifacts are gitignored.
    what they flag is not an app regression: `browse-walk` hardcoded a box item
    *count* into a selector (`"box directory, 3357 items"`), so it breaks
    whenever box contents change. Repairing means pinning to stable app
-   addresses (`cb-` ids) rather than content-derived labels, so a pass means
+   addresses (`bbx-` ids) rather than content-derived labels, so a pass means
    something.
 2. **A weekly check that runs them** — and which **may update a tour when the
    app changed deliberately**, rather than reporting a failure.
@@ -55,7 +55,7 @@ up.
 ## Open
 
 - **Where the weekly check runs.** `schedules/<name>/` with a `run` and a
-  `prompt.md` is the mechanism (`cb-authoring-schedules`); the tours need a box
+  `prompt.md` is the mechanism (`bbx-authoring-schedules`); the tours need a box
   and a dev server, so which checkout and which box it drives is unsettled.
 - **What counts as a finding worth reporting** versus a tour edit the agent
   just makes. Axe violations are probably reportable; a renamed button is

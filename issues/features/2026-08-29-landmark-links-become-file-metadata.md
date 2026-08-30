@@ -1,7 +1,7 @@
 ---
 title: "Landmark links move from curated lists in the landmark card to metadata on the files themselves, with a fast aggregated view"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [navigation, cards]
 filed-by: agent
@@ -27,7 +27,7 @@ stated together:
 
 Why it matters: curated `links:` lists drift (a moved/renamed card falls out;
 a new card never gets added), and the list lives far from the thing it
-describes. File-side metadata travels with the file through `cb mv`, and the
+describes. File-side metadata travels with the file through `bbx mv`, and the
 "what belongs here" answer becomes local to each card.
 
 Design questions:

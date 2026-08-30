@@ -2,7 +2,7 @@
 title: "card activity kind representation"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 The `<card-activity>` children of the `<chat-app>` snapshot currently use ONE

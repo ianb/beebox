@@ -7,7 +7,7 @@ dist/
 # never become repository state.
 /logs/
 
-# Deploy build checkout + latest-wins lock state (see callback-box/deploy/deploy.sh).
+# Deploy build checkout + latest-wins lock state (see beebox/deploy/deploy.sh).
 # The checkout is a disposable detached git worktree; the other two are runtime
 # lock/coordination files. All live at the main repo root.
 /.deploy-checkout/
@@ -38,7 +38,7 @@ AGENTS.md
 .codex/
 
 # Claude Code worktrees (the WorktreeCreate hook puts ours at
-# ~/src/callback-worktrees/ instead, but the default location would still
+# ~/src/beebox-worktrees/ instead, but the default location would still
 # be created if the hook is somehow bypassed)
 .claude/worktrees/
 
@@ -66,7 +66,7 @@ scratch/*
 !scratch/README.md
 
 # Prompt viewer generated data (regenerate with `pnpm prompt-viewer` in
-# callback-box). The size ledger (size-ledger.jsonl) and index.html are tracked.
+# beebox). The size ledger (size-ledger.jsonl) and index.html are tracked.
 dev/prompts/data.json
 
 # Story-eval triage process is NOT tracked (boxholder, 2026-07-22): extraction
@@ -84,9 +84,9 @@ dev/apps/story-eval/runs/
 /private-issues
 
 # Exhibit-store mount (same symlink rule — bin/lib/exhibits-store.sh; design
-# in callback-box/docs/plans/workstream-exhibits.md).
+# in beebox/docs/plans/workstream-exhibits.md).
 /exhibits
-callback-box/user-stories/work/
+beebox/user-stories/work/
 
 # Workflow scripts, built from the `.ts` sources beside them by
 # `user-stories/pipeline/build-workflows.ts`. The Workflow tool parses plain
@@ -97,9 +97,9 @@ callback-box/user-stories/work/
 # webp) so a journey is self-contained and runnable from a clean checkout.
 # Anonymized mail stays out until the boxholder has read it, since it is derived
 # from a real family's inbox — prepare.ts fails loudly naming anything absent.
-callback-box/user-stories/journeys/E-school/assets/
+beebox/user-stories/journeys/E-school/assets/
 
-# Per-machine schedule overrides (callback-box/docs/plans/scheduled-workstreams.md,
+# Per-machine schedule overrides (beebox/docs/plans/scheduled-workstreams.md,
 # Track A): same schema as schedule.yaml, every field optional, so a laptop can
 # disable a schedule without a commit.
 schedules/*/local.yaml
@@ -109,4 +109,4 @@ schedules/*/local.yaml
 /.issues-index
 
 # Tailscale sidecar credentials (docker-install.md)
-callback-box/docker/tailscale.env
+beebox/docker/tailscale.env

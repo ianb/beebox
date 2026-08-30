@@ -1,7 +1,7 @@
 ---
 title: "Stuck in one landmark — the switch menu doesn't move you, though the whole server side resolves correctly"
 workstream: chat-wayfinding
-area: callback-box
+area: beebox
 labels: [chat, navigation, ios, landmarks]
 filed-by: agent
 discovered-by: Ian
@@ -99,7 +99,7 @@ directory, curated links, Recent files) is therefore unreachable until a reload.
 That the same URL is right on a cold load and wrong on a client-side navigation
 points at the props, not the lookups. `ChatPage` passes `contextDir` down only
 while the rendered session is the literal `"new"`
-(`callback-box/src/frontend/src/pages/ChatPage.tsx:327-338`), and the chip is
+(`beebox/src/frontend/src/pages/ChatPage.tsx:327-338`), and the chip is
 published from that prop (`InteractiveChat.tsx:160` →
 `InteractiveChat-view.tsx:127` → `ChatBarChrome.tsx:87` `useAppBarPlace`). On a
 cold load the first paint is `"new"`, so the dir arrives. On a chat→chat

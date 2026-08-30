@@ -27,11 +27,11 @@ closed as superseded into it:
   question. The eval run below is its answer.
 - *Skill descriptions should be triggering conditions, not workflow summaries*
   (`closed/docs-and-chores/2026-07-30-skill-description-triggering-conditions.md`)
-  — the fix the eval validates. The `cb-guide-*` descriptions are the named
-  offenders (verified still true 2026-08-27: `cb-guide-api`'s description
+  — the fix the eval validates. The `bbx-guide-*` descriptions are the named
+  offenders (verified still true 2026-08-27: `bbx-guide-api`'s description
   summarizes the decision and points at the doc — the model answers from the
   listing and never opens the skill). A judgment call rides along: whether the
-  `cb-guide-*` trio should be skills at all or fold into their target docs.
+  `bbx-guide-*` trio should be skills at all or fold into their target docs.
 
 **Deferred until Claude quota resets (Fri 2026-08-29 PM):** the eval drives
 `claude -p` per query, and the fix must be validated on BOTH engines — a
@@ -60,9 +60,9 @@ Two of their harness details worth copying regardless of which tool we use:
 
 ## Why it matters here
 
-Our skills overlap by design in ways an eval would stress: `cb-debug` vs
-`cb-codehealth` vs `/code-review`; `cb-plan` vs `launch-worktree-session`;
-`cb-guide-testing` vs `cb-debug`; the three `cb-guide-*` against each other. Some
+Our skills overlap by design in ways an eval would stress: `bbx-debug` vs
+`bbx-codehealth` vs `/code-review`; `bbx-plan` vs `launch-worktree-session`;
+`bbx-guide-testing` vs `bbx-debug`; the three `bbx-guide-*` against each other. Some
 of those boundaries are stated in the descriptions and have never been checked.
 
 Pairs with [skill-description-triggering-conditions](../closed/docs-and-chores/2026-07-30-skill-description-triggering-conditions.md)

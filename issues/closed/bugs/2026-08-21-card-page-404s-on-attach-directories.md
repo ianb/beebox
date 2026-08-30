@@ -1,7 +1,7 @@
 ---
 title: "The card page 404s on an .attach directory because directory detection reads the extension"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — walking card and directory URLs to check the browse user stories
@@ -21,8 +21,8 @@ function isDirectoryPath(path: string): boolean {
 }
 ```
 
-(`callback-box/src/frontend/src/components/FileView.tsx:109`, with `pathExt` in
-`callback-box/src/frontend/src/lib/binary-files.ts`.) An `.attach` directory has
+(`beebox/src/frontend/src/components/FileView.tsx:109`, with `pathExt` in
+`beebox/src/frontend/src/lib/binary-files.ts`.) An `.attach` directory has
 a non-empty extension, so it is classified as a file, and the shell fetches its
 body as text from `/api/files/<dir>` — which 404s.
 

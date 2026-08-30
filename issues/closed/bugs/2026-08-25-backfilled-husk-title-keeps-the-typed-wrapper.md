@@ -2,7 +2,7 @@
 title: "A husk titled from an existing transcript keeps the raw <typed> wrapper, email and all"
 workstream: live-vs-stored
 resolution: implemented
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-live-vs-stored — noticed while verifying session-media in the running app
 labels: [code-error]

@@ -1,7 +1,7 @@
 ---
 title: "The first message of a chat can't have its audio retranscribed"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [chat, voice, transcription]
 resolution: implemented
 filed-by: agent
@@ -92,7 +92,7 @@ Both are about how the failure *reads*. The recording is still missing.
 Traced the answer path. Retranscription is served by a **per-tab, memory-only
 retention store**: `src/frontend/src/lib/audio/last-audio.ts:10-12` —
 "Recordings live only in this tab's memory (gone on reload)", capacity 5
-(`RETENTION_CAPACITY`, line 33). `cb chat get-last-audio` long-polls
+(`RETENTION_CAPACITY`, line 33). `bbx chat get-last-audio` long-polls
 (`src/webapp/routes/chat-last-audio-routes.ts`), the server broadcasts a bus
 event, and connected tabs answer from that store. Two distinct mechanisms
 fall out:
@@ -101,7 +101,7 @@ fall out:
    captured natively, HQ-transcribed through the stateless
    `/api/chat/transcribe-audio` endpoint (nothing retains the upload —
    `src/webapp/routes/chat-audio-routes.ts`), and the native audio file is
-   then deleted (`ios-app/CallbackBox/Views/NativeComposerView.swift:496-498,
+   then deleted (`ios-app/BeeBox/Views/NativeComposerView.swift:496-498,
    525-527`). The emission crosses the bridge as text (Emission V2 has no
    audio field), so the web tab's retention store never holds the blob — and
    never even gets a tombstone. Every native voice message answers
@@ -126,7 +126,7 @@ the emission ID and the server could retain the recording keyed by message
 ID for a bounded window — making retranscription server-answerable and
 removing the tab-lifetime dependency for both composers. That is a
 mobile-contract change and belongs with the emission-model plan
-(`../../callback-box/docs/implemented-plans/emission-model.md`), not a drive-by.
+(`../../beebox/docs/implemented-plans/emission-model.md`), not a drive-by.
 
 ## What to actually investigate
 

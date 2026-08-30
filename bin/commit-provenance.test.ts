@@ -5,7 +5,7 @@
 //   node --import tsx --test bin/commit-provenance.test.ts
 // (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
 //
-// bin/CLAUDE.md points new bin/ tests at callback-box/test/dev/*.doctest.md.
+// bin/CLAUDE.md points new bin/ tests at beebox/test/dev/*.doctest.md.
 // This one stays a .test.ts because it must fork a git repo per case and drive
 // hooks end to end; it sits beside the sibling bin/*.test.ts files it matches.
 
@@ -86,7 +86,7 @@ function makeRepo(params: { label: string; branch: string; plans: string[]; issu
   git(dir, ["config", "user.email", "test@example.com"]);
   git(dir, ["config", "commit.gpgsign", "false"]);
   for (const [index, stream] of plans.entries()) {
-    write(path.join(dir, "callback-box/docs/plans", `plan-${index}.md`), plan(stream));
+    write(path.join(dir, "beebox/docs/plans", `plan-${index}.md`), plan(stream));
   }
   for (const rel of issues) write(path.join(dir, "issues", rel), "---\ntitle: i\n---\n");
   if (issues.length > 0) write(path.join(dir, "issues/CLAUDE.md"), "queue conventions, not an issue\n");

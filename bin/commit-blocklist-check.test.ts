@@ -54,7 +54,7 @@ test("an allow rule does NOT un-block a match outside its span (no smuggling)", 
 test("file: ignore skips a matching file entirely; others still checked", () => {
   const entries = parseBlocklist("secret\nfile:package.json\n");
   const added = [
-    { file: "callback-box/package.json", lineno: 1, text: "has a secret here" },
+    { file: "beebox/package.json", lineno: 1, text: "has a secret here" },
     { file: "src/x.ts", lineno: 2, text: "has a secret here" },
   ];
   // no-slash glob matches package.json by basename at any depth; src/x.ts still blocks

@@ -1,8 +1,8 @@
 ---
 title: "Implement complete iOS input-plane parity"
 workstream: unknown
-design: ../../callback-box/docs/plans/ios-input-plane-parity.md
-area: callback-box
+design: ../../beebox/docs/plans/ios-input-plane-parity.md
+area: beebox
 priority: important
 ---
 
@@ -23,7 +23,7 @@ priority: important
 
 The native iOS composer is visually usable but does not yet have the web input
 plane's complete semantics. The implementation-ready design is
-[`ios-input-plane-parity.md`](../../callback-box/docs/plans/ios-input-plane-parity.md).
+[`ios-input-plane-parity.md`](../../beebox/docs/plans/ios-input-plane-parity.md).
 This issue is the cold-start handoff for the next implementation session.
 
 ## Implementation progress
@@ -101,7 +101,7 @@ target state, final message assembly, and dispatch.
 ## How to resume
 
 1. Create an implementation worktree and read, in order:
-   `ios-app/CLAUDE.md`, `callback-box/docs/mobile-contract.md`, and the linked
+   `ios-app/CLAUDE.md`, `beebox/docs/mobile-contract.md`, and the linked
    plan. The design is complete; resume from the progress recorded above rather
    than writing another plan.
 2. Track 5's pending-send and voice state machines are complete. Continue with
@@ -130,7 +130,7 @@ target state, final message assembly, and dispatch.
 - XCTest for the draft reducer/repository, token and Unicode-caret behavior,
   attachment races, pending receipt ordering/retry/restore, and voice snapshot
   races.
-- `xcodebuild` simulator test pass for the `CallbackBox` scheme. Discover the
+- `xcodebuild` simulator test pass for the `BeeBox` scheme. Discover the
   destination with `xcrun simctl list devices available`; do not hardcode an old
   simulator name.
 - DEBUG composer fixtures and visual checks at compact/current iPhone and iPad

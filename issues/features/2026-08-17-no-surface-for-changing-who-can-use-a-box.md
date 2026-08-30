@@ -1,7 +1,7 @@
 ---
 title: "Adding a person to an existing box means hand-editing JSON on the server"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [access, provisioning]
 filed-by: agent
 discovered-by: agent
@@ -38,8 +38,8 @@ without reading it.
 
 ## Why this is probably not a CLI feature
 
-The obvious patch is `cb box allow <email>`. That is likely the wrong surface:
-the boxholder works in the web UI and chat, and the `cb` CLI is agent and script
+The obvious patch is `bbx box allow <email>`. That is likely the wrong surface:
+the boxholder works in the web UI and chat, and the `bbx` CLI is agent and script
 plumbing. Membership is an ordinary owner task, not a provisioning task — it
 happens long after the box exists, at moments that have nothing to do with a
 deploy. A person who wants to add a family member should not be at a terminal.
@@ -61,4 +61,4 @@ Open questions:
 
 Until something exists, `deploy/add-box.sh --allow` at creation time and a
 hand-edit afterwards is the honest documented answer, and
-[`docs/adding-a-box.md`](../../callback-box/docs/adding-a-box.md) says so.
+[`docs/adding-a-box.md`](../../beebox/docs/adding-a-box.md) says so.

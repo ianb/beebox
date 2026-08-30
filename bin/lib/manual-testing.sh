@@ -71,7 +71,7 @@ workstream_confirm_tested() {
       mv "$issue" "$target" || exit
     fi
     git -C "$WT_MONO" add -- "$rel" "$new_rel" || exit
-    pnpm --dir "$WT_MONO/callback-box" doc-check --fix >/dev/null || exit
+    pnpm --dir "$WT_MONO/beebox" doc-check --fix >/dev/null || exit
     git -C "$WT_MONO" commit --only -m "Confirm manual testing for ${basename%.md}" -- "$rel" "$new_rel" >/dev/null || exit
   ); then
     # Main was clean at preflight, so every tracked worktree/index change here

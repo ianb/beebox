@@ -21,7 +21,7 @@ const baselineFile = path.join(stateDir, "last-report.txt");
 const dryRun = process.env["SCHEDULE_DRY_RUN"] === "1";
 
 async function report(command: "lint:oxlint" | "lint:circular"): Promise<string[]> {
-  const result = await execa("pnpm", ["--dir", "callback-box", command], {
+  const result = await execa("pnpm", ["--dir", "beebox", command], {
     cwd: repoRoot,
     reject: false,
     all: true,

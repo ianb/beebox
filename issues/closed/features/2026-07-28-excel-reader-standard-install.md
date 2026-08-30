@@ -1,7 +1,7 @@
 ---
 title: "Make an Excel/.xlsx reader part of the standard install"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder request
 resolution: implemented

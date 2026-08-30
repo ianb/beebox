@@ -1,19 +1,19 @@
 import type { KnipConfig } from "knip";
-import { doctestImports } from "./callback-box/scripts/knip-doctest-imports.js";
+import { doctestImports } from "./beebox/scripts/knip-doctest-imports.js";
 
 /**
- * Knip runs from the MONOREPO ROOT, not from callback-box.
+ * Knip runs from the MONOREPO ROOT, not from beebox.
  *
  * `.npmrc` sets `node-linker=hoisted`, so every package's dependencies are
- * installed into the root `node_modules` — `callback-box/node_modules` holds
+ * installed into the root `node_modules` — `beebox/node_modules` holds
  * two entries. Run per-package, knip cannot map a binary a script invokes
  * (`eslint`, `tsc`, `tap`) back to the package declaring it, and reports the
  * same tool as an unlisted binary AND an unused devDependency at once. From
  * the root the modules are where knip expects, and that whole class goes away.
  *
  * One run also means the workspaces can see each other: bin/ imports
- * callback-box/src by relative path, the frontend imports src/shared via
- * @shared/*, and callback-box's doctests exercise frontend machines. Analyzed
+ * beebox/src by relative path, the frontend imports src/shared via
+ * @shared/*, and beebox's doctests exercise frontend machines. Analyzed
  * separately, each side reads the others' live code as dead.
  */
 const config: KnipConfig = {
@@ -25,7 +25,7 @@ const config: KnipConfig = {
       // Invoked through bin/browse, a shell script knip does not read.
       ignoreDependencies: ["agent-browser"],
     },
-    "callback-box": {
+    "beebox": {
       entry: [
         "src/webapp/server.ts",
         "src/schemas/index.ts",
@@ -33,7 +33,7 @@ const config: KnipConfig = {
         "src/cli/index.ts",
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",
-        // The box-facing specifiers (callback-box/cards, ./schema, ./server)
+        // The box-facing specifiers (beebox/cards, ./schema, ./server)
         // need no entry: knip reads package.json "exports" and maps the dist
         // paths back through tsconfig. Same for the frontend's main.tsx, which
         // its Vite config names.
@@ -58,7 +58,7 @@ const config: KnipConfig = {
         "@googleworkspace/cli",
         "@parcel/markdown-ansi",
         "ansi-to-html",
-        // Its config block lives in callback-box/package.json, but the runner
+        // Its config block lives in beebox/package.json, but the runner
         // is the monorepo-root .husky/pre-commit — knip sees neither end.
         "lint-staged",
         // Frontend deps, reached from test/frontend/*.doctest.md.
@@ -74,7 +74,7 @@ const config: KnipConfig = {
         "./src/webapp/box-config-write.ts",
       ],
     },
-    "callback-box/src/frontend": {
+    "beebox/src/frontend": {
       entry: ["src/components/view-widgets/node-entry.tsx"],
       project: ["src/**/*.{ts,tsx}"],
       ignoreDependencies: [
@@ -94,8 +94,8 @@ const config: KnipConfig = {
     "agent-doctest",
     "browse",
     "browse/**",
-    "callback-box/pub-worker",
-    "callback-clerk",
+    "beebox/pub-worker",
+    "beebox-clerk",
     "canvas-loop",
     "personal-vibe-check",
     "scan-uploader",
@@ -116,8 +116,8 @@ const config: KnipConfig = {
     "tar",
     "ps",
     "lsof",
-    // callback-box's own bin, invoked as an installed command by the smoke test.
-    "cb",
+    // beebox's own bin, invoked as an installed command by the smoke test.
+    "bbx",
     // A tracked executable in this repo, run by the root `dev` script.
     "bin/workstreams",
     // `pnpm --dir site build` and a GitHub Actions job named `build`; neither

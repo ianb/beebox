@@ -1,22 +1,22 @@
 ---
 title: "Detect dead Google auth in health + notify the user with a clear re-authorize CTA"
 workstream: google-reauth-health
-area: callback-box
+area: beebox
 filed-by: agent
 needs: [manual-testing]
-design: ../../callback-box/docs/implemented-plans/google-auth-reauth-health.md
+design: ../../beebox/docs/implemented-plans/google-auth-reauth-health.md
 discovered-in: main session — boxholder, after the Google OAuth thread
 priority: important
 ---
 
 **Implemented** on `worktree-google-reauth-health` — design and the decisions
 behind it are in
-[google-auth-reauth-health](../../callback-box/docs/implemented-plans/google-auth-reauth-health.md).
+[google-auth-reauth-health](../../beebox/docs/implemented-plans/google-auth-reauth-health.md).
 
 Still needs manual testing, which an agent can't do: **revoke the box's Google
 grant** (myaccount.google.com → Security → Third-party apps → remove access, or
 wait out a Testing-mode 7-day expiry), then confirm that (a) the next
-Gmail/Calendar/Drive sync flips the state, (b) `cb health` shows the
+Gmail/Calendar/Drive sync flips the state, (b) `bbx health` shows the
 `google-auth` warning, (c) exactly one Telegram/push notification arrives with
 the reconnect link, (d) the admin page says "Needs re-authorization" rather than
 "Connected", and (e) re-authorizing clears all of it. The daily probe path needs
@@ -40,7 +40,7 @@ but *handling it gracefully* is where we can be better than the field.
 - **Token refresh:** `src/connectors/google-auth.ts` refreshes the access token
   from the stored refresh token — the natural place to catch a dead credential
   (Google returns `invalid_grant` when the refresh token is expired/revoked).
-- **Health:** `src/webapp/trpc/routers/health-engine.ts` + `cb health`
+- **Health:** `src/webapp/trpc/routers/health-engine.ts` + `bbx health`
   (`src/cli/commands/health.ts`) — the surface a "Google needs re-auth"
   condition should appear in.
 - **Proactive notify:** `src/core/notify-boxholder.ts` `notifyBoxholder()`
@@ -58,7 +58,7 @@ but *handling it gracefully* is where we can be better than the field.
    Google account), distinct from a one-off sync error. Only auth-dead flips it;
    transient failures don't.
 2. **Health condition.** Add a Google-auth check to the health engine so
-   `cb health` and the admin health surface report a clear, typed condition —
+   `bbx health` and the admin health surface report a clear, typed condition —
    e.g. `google-auth: needs re-authorization (since <date>)` — not a generic
    connector-failed line.
 3. **Notify once per transition.** On the flip to `needsReauth`, call

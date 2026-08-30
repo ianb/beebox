@@ -7,7 +7,7 @@
  *
  * Nothing here judges a step. `run` deciding that a step "looks unproductive"
  * would be the script reasoning about its own findings — see the schedule's
- * header, and `.claude/skills/cb-authoring-schedules`.
+ * header, and `.claude/skills/bbx-authoring-schedules`.
  */
 
 import * as fs from "node:fs/promises";

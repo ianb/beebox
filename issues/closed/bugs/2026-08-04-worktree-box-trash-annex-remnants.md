@@ -9,10 +9,10 @@ resolution: implemented
 > `.git/annex/objects/**` files no longer strand remnants on macOS —
 > `.claude/hooks/worktree-remove.sh`, `.claude/hooks/session-end.sh`, and
 > `bin/workstreams`. The accumulated remnants (16 trees, ~625 MB) were purged from
-> `~/.cache/callback-box/trash/` at the same time.
+> `~/.cache/beebox/trash/` at the same time.
 
 `worktree-remove.sh` (and sweep) trash a removed worktree's box clone to
-`~/.cache/callback-box/trash/` and background-`rm -rf` it. git-annex marks its
+`~/.cache/beebox/trash/` and background-`rm -rf` it. git-annex marks its
 object files read-only (`.git/annex/objects/**` with `chmod a-w`), and plain
 `rm -rf` fails on them on macOS — so every trashed box leaves its annex
 objects behind permanently. Observed 2026-08-04: ~15 `box-*` remnant trees

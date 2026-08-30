@@ -14,7 +14,7 @@ resolution: implemented
 event with no preconditions, and `@eN` refs are renumbered on every snapshot
 (not in document order), so a number read off an older snapshot names a
 different valid element and the click lands there — `✓ Done`. `bin/browse`
-now annotates snapshots with the app's `cb-` ids, accepts them as targets, and
+now annotates snapshots with the app's `bbx-` ids, accepts them as targets, and
 refuses any action whose target is missing/hidden/disabled/covered/off-screen,
 with a reason (`browse/src/controls.ts`; `.claude/skills/browse/SKILL.md`).
 The walker prompt tells walkers to act by id. Not re-walked on `/admin`,

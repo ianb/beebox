@@ -33,7 +33,7 @@ export function printScheduleHelp(): void {
       "hook (the check endpoint's dedup makes overlap harmless). macOS only.",
       "",
       "  install [--interval <minutes>] [--config <path>]",
-      "      writes ~/Library/LaunchAgents/org.callback-box.scan-uploader.plist",
+      "      writes ~/Library/LaunchAgents/org.beebox.scan-uploader.plist",
       `      (default interval: ${String(DEFAULT_INTERVAL_MINUTES)} minutes) and loads it; refuses if`,
       "      the config file is missing or fails the strict reader",
       "  uninstall",

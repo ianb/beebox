@@ -1,7 +1,7 @@
 ---
-title: "`cb serve` file-descriptor exhaustion made every SDK chat spawn fail with `EBADF`"
+title: "`bbx serve` file-descriptor exhaustion made every SDK chat spawn fail with `EBADF`"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder hit "internal server error" on a local box
 resolution: implemented

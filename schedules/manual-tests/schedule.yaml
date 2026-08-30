@@ -18,7 +18,7 @@ workstream:
   tools: [Read, Grep, Glob, Edit, Write, Bash]
   allowedTools:
     - "Read(issues/**)"
-    - "Read(callback-box/**)"
+    - "Read(beebox/**)"
     - "Read(bin/**)"
     - "Read(package.json)"
     - "Read(pnpm-lock.yaml)"

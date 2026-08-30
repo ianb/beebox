@@ -1,7 +1,7 @@
 ---
 title: "`hub-e2e.doctest.md` binds the default hub port, so two worktrees running it at once collide"
 workstream: watcher-flake
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-watcher-flake — full-suite verification of the file-watcher flake fix
@@ -28,7 +28,7 @@ because every step below shares one test via `continue` blocks.
 - **`waitFor` takes a label**, so a timeout says what it was waiting for instead
   of blaming the first block of the shared test.
 - **The cleanup block stops the hub.** The SIGTERM section is an assertion, not
-  a teardown, so any earlier failure left the hub and its `cb serve` grandchild
+  a teardown, so any earlier failure left the hub and its `bbx serve` grandchild
   running and holding the port. Cleanup now SIGTERMs (letting the hub stop its
   own child) and SIGKILLs only if it will not go.
 

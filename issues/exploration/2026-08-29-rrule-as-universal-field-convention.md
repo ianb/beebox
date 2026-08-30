@@ -1,7 +1,7 @@
 ---
 title: "An rrule/ical field convention with ref-like universal treatment — every consumer knows what a recurrence value is"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "not 100% sure we should do this"
@@ -9,7 +9,7 @@ discovered-in: main session — "not 100% sure we should do this"
 
 Boxholder idea, explicitly tentative ("not 100% sure we should do this"):
 the way `ref` is *always* a reference — one name, one meaning, and every
-consumer (validation, inlining policy, rendering, `cb mv` rewriting, the
+consumer (validation, inlining policy, rendering, `bbx mv` rewriting, the
 frontmatter view's RefLink) treats it uniformly wherever it appears — do the
 same for **recurrence/event values**: an `rrule` (or ical event) field name
 that is a known quantity across the system.

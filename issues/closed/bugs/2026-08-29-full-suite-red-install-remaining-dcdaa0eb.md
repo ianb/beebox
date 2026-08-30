@@ -1,7 +1,7 @@
 ---
 title: "Full-suite red: test/scripts/release-manifest.doctest.md"
 workstream: install-remaining
-area: callback-box
+area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
@@ -29,7 +29,7 @@ report.
 not ok 521 - test/scripts/release-manifest.doctest.md # time=828.896ms
   ---
   stdio: inherit
-  cwd: /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-kaTvcY/checkout/callback-box
+  cwd: /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-kaTvcY/checkout/beebox
   externalID: test/scripts/release-manifest.doctest.md
   command: ~/.nvm/versions/node/v24.18.0/bin/node
   args:
@@ -44,7 +44,7 @@ not ok 521 - test/scripts/release-manifest.doctest.md # time=828.896ms
     - --import=./test/helpers/isolate-auth-file.ts
     - --import=./test/helpers/isolate-origin-id.ts
     - --import=./test/helpers/isolate-codex-home.ts
-    - /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-kaTvcY/checkout/callback-box/test/scripts/release-manifest.doctest.md
+    - /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-kaTvcY/checkout/beebox/test/scripts/release-manifest.doctest.md
   jobId: 3
   exitCode: 1
   signal: null
@@ -72,5 +72,5 @@ Reproduce at the blamed landing:
 
 ```bash
 git log -1 dcdaa0eb
-pnpm --dir callback-box exec tap test/scripts/release-manifest.doctest.md
+pnpm --dir beebox exec tap test/scripts/release-manifest.doctest.md
 ```

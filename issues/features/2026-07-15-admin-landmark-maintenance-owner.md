@@ -4,7 +4,7 @@ workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — after a local test-box health-check triage, the boxholder wanted a single home for maintenance
-area: callback-box
+area: beebox
 priority: important
 ---
 
@@ -12,7 +12,7 @@ Right now box maintenance has no single owner. When the health monitor surfaces 
 problem (e.g. the 2026-07-15 local test-box episode: three scheduled tasks stuck
 "failing/never-succeeded" — all stale, cleared by re-running through the
 scheduler), there's no designated place an agent goes to *do maintenance*: what to
-check, how to read `cb health`, when a failure is stale-vs-live, how to clear it,
+check, how to read `bbx health`, when a failure is stale-vs-live, how to clear it,
 and what else to sweep. The knowledge is scattered across box CLAUDE.md-equivalents,
 per-directory briefings, connector rules, and docs — so each maintenance pass
 re-derives it.
@@ -45,7 +45,7 @@ landmark and has everything.
 
 ### What it would own
 
-- **Health checks** — read `cb health`, distinguish stale-vs-live failures, know
+- **Health checks** — read `bbx health`, distinguish stale-vs-live failures, know
   the clear path (re-run the scheduled script via the scheduler so `recordOutcome`
   resets state; don't force agent-invoking procedures just to clear a cosmetic
   flag). Today's test-box triage is the worked example this playbook should

@@ -4,7 +4,7 @@
 Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easily lost. Prefer storing durable knowledge in repo files (CLAUDE.md, docs/) rather than here. This file is best for ephemeral/session-adjacent notes, feedback, and preferences. Planned features + open issues live in `/issues/` (monorepo root). Server operations live in `docs/server-operations.md`. See [issue #25739](https://github.com/anthropics/claude-code/issues/25739) for the open feature request for portable memory.
 
 ## Key Locations
-- Monorepo: `~/src/callback-box/` (callback-box, callback-clerk, agent-doctest, personal-vibe-check)
+- Monorepo: `~/src/beebox/` (beebox, beebox-clerk, agent-doctest, personal-vibe-check)
 - Boxes: `~/src/boxes/` (outside the monorepo so agents don't inherit parent CLAUDE.md)
 - Test box: `~/src/boxes/test1/`
 
@@ -14,7 +14,7 @@ Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machin
 The frontmatter field for conditional `.claude/rules/` files is `paths:`, not `globs:`. Using `globs:` causes all rules to load unconditionally (Claude Code doesn't recognize the field). Fixed in `init-rules.ts`.
 
 ### DOCID debug markers
-`cb init . --docid-debug` persists a `.callback-box/docid-debug` marker file. All subsequent `generateDocs()` calls (including from wakeup) detect the marker and embed `<!-- DOCID:<path> -->` in generated files. Useful for tracing which doc files are actually loaded into agent context.
+`bbx init . --docid-debug` persists a `.beebox/docid-debug` marker file. All subsequent `generateDocs()` calls (including from wakeup) detect the marker and embed `<!-- DOCID:<path> -->` in generated files. Useful for tracing which doc files are actually loaded into agent context.
 
 ## Feedback
 - [Scan whole function when fixing a bug](feedback_compound_bugs.md) — compound bugs cluster; re-read the full function and eyeball sample output before declaring done

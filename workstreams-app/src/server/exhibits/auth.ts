@@ -25,7 +25,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import { renderUnauthorized } from "./pages.js";
 
-export const EXHIBITS_COOKIE = "cb_exhibits_session";
+export const EXHIBITS_COOKIE = "bbx_exhibits_session";
 export const EXHIBITS_TOKEN_PARAM = "token";
 
 export const UNAUTHORIZED_HINT =

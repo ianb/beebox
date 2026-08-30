@@ -31,7 +31,7 @@ const serverEnvSchema = z.object({
   // agent-written script, so it never runs unauthenticated.
   EXHIBITS_PORT: z.coerce.number().int().positive().max(65_535).default(3230),
   EXHIBITS_TOKEN: z.string().min(16),
-  CALLBACK_EXHIBITS_ROOT: z.string().min(1).optional(),
+  BBX_EXHIBITS_ROOT: z.string().min(1).optional(),
 });
 
 const packageRoot = path.resolve(import.meta.dirname, "../..");
@@ -39,7 +39,7 @@ const repoRoot = path.resolve(import.meta.dirname, "../../..");
 
 function exhibitsRoots(env: z.infer<typeof serverEnvSchema>): { storeRoot: string; appsRoot: string } {
   return {
-    storeRoot: env.CALLBACK_EXHIBITS_ROOT ?? defaultStoreRoot(repoRoot),
+    storeRoot: env.BBX_EXHIBITS_ROOT ?? defaultStoreRoot(repoRoot),
     appsRoot: path.join(repoRoot, "dev", "apps"),
   };
 }
@@ -67,7 +67,7 @@ async function startExhibits(env: z.infer<typeof serverEnvSchema>): Promise<Fast
 
 async function main(): Promise<void> {
   const env = serverEnvSchema.parse(process.env);
-  const worktreesRoot = process.env.CALLBACK_WORKTREE_ROOT ?? path.join(path.dirname(repoRoot), "callback-worktrees");
+  const worktreesRoot = process.env.BBX_WORKTREE_ROOT ?? path.join(path.dirname(repoRoot), "beebox-worktrees");
   const actions = createActionsService({
     runCommand: createActionCommandRunner(repoRoot),
   });

@@ -21,8 +21,8 @@ import {
 } from "./finish-preflight-lib.js";
 
 const PACKAGES = new Set([
-  "callback-box",
-  "callback-box/pub-worker",
+  "beebox",
+  "beebox/pub-worker",
   "site",
   "agent-doctest",
   "canvas-loop",
@@ -33,25 +33,25 @@ const NO_SKIP = { value: false, reason: "the merge of main brought code in" };
 const allScripts = (): ((pkg: string, script: string) => boolean) => () => true;
 
 test("docsOnly is an iff over every path, and a .doctest.md is not a doc", () => {
-  assert.equal(isDocsOnly(["callback-box/docs/testing.md", "docs/x.md"]), true);
-  assert.equal(isDocsOnly(["callback-box/docs/a.md", "callback-box/src/x.ts"]), false);
-  assert.equal(isDocsOnly(["callback-box/docs/a.doctest.md"]), false);
+  assert.equal(isDocsOnly(["beebox/docs/testing.md", "docs/x.md"]), true);
+  assert.equal(isDocsOnly(["beebox/docs/a.md", "beebox/src/x.ts"]), false);
+  assert.equal(isDocsOnly(["beebox/docs/a.doctest.md"]), false);
   // A stray root .md is not under a docs/ directory.
   assert.equal(isDocsOnly(["CLAUDE.md"]), false);
   assert.equal(isDocsOnly([]), false);
 });
 
 test("codeChanged ignores docs and tests, and a .doctest.md is a test", () => {
-  assert.equal(hasCodeChange(["callback-box/docs/a.md", "bin/x.test.ts"]), false);
-  assert.equal(hasCodeChange(["callback-box/test/core/box.doctest.md"]), false);
-  assert.equal(hasCodeChange(["callback-box/src/core/box.ts"]), true);
+  assert.equal(hasCodeChange(["beebox/docs/a.md", "bin/x.test.ts"]), false);
+  assert.equal(hasCodeChange(["beebox/test/core/box.doctest.md"]), false);
+  assert.equal(hasCodeChange(["beebox/src/core/box.ts"]), true);
   assert.equal(hasCodeChange(["issues/bugs/x.md", "bin/router.ts"]), true);
 });
 
 test("paths group by package, with bin/ and root files on the root scripts", () => {
   const grouped = groupPaths(
     [
-      "callback-box/src/x.ts",
+      "beebox/src/x.ts",
       "bin/router.ts",
       "package.json",
       "issues/bugs/x.md",
@@ -60,7 +60,7 @@ test("paths group by package, with bin/ and root files on the root scripts", () 
     ],
     PACKAGES,
   );
-  assert.deepEqual(grouped.packages, ["callback-box", "site"]);
+  assert.deepEqual(grouped.packages, ["beebox", "site"]);
   assert.equal(grouped.root, true);
   assert.deepEqual(grouped.unknown, ["weird-new-dir"]);
   assert.deepEqual(grouped.groups["(none)"], ["issues/bugs/x.md"]);
@@ -69,12 +69,12 @@ test("paths group by package, with bin/ and root files on the root scripts", () 
 
 test("a nested package owns its own paths, and its parent still owns the rest", () => {
   const grouped = groupPaths(
-    ["callback-box/pub-worker/src/x.ts", "callback-box/src/x.ts"],
+    ["beebox/pub-worker/src/x.ts", "beebox/src/x.ts"],
     PACKAGES,
   );
-  assert.deepEqual(grouped.packages, ["callback-box", "callback-box/pub-worker"]);
+  assert.deepEqual(grouped.packages, ["beebox", "beebox/pub-worker"]);
   const commands = verificationCommands({
-    paths: ["callback-box/pub-worker/src/x.ts"],
+    paths: ["beebox/pub-worker/src/x.ts"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,
@@ -82,17 +82,17 @@ test("a nested package owns its own paths, and its parent still owns the rest", 
   assert.deepEqual(
     commands.map((command) => command.command),
     [
-      "pnpm --dir callback-box/pub-worker test",
-      "pnpm --dir callback-box/pub-worker typecheck",
+      "pnpm --dir beebox/pub-worker test",
+      "pnpm --dir beebox/pub-worker typecheck",
       "bin/smoke",
       "pnpm lint:changed",
     ],
   );
 });
 
-test("callback-box runs the selected set, not the whole suite", () => {
+test("beebox runs the selected set, not the whole suite", () => {
   const commands = verificationCommands({
-    paths: ["callback-box/src/core/box.ts"],
+    paths: ["beebox/src/core/box.ts"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,
@@ -100,8 +100,8 @@ test("callback-box runs the selected set, not the whole suite", () => {
   assert.deepEqual(
     commands.map((c) => c.command),
     [
-      "pnpm --dir callback-box test:changed",
-      "pnpm --dir callback-box typecheck",
+      "pnpm --dir beebox test:changed",
+      "pnpm --dir beebox typecheck",
       "bin/smoke",
       "pnpm lint:changed",
     ],
@@ -109,34 +109,34 @@ test("callback-box runs the selected set, not the whole suite", () => {
   assert.ok(commands[0]?.isolate?.argv.includes("../bin/test-ledger.ts"));
 });
 
-test("a failed selector sends callback-box to the full suite", () => {
+test("a failed selector sends beebox to the full suite", () => {
   // An internal selector error (graph, esbuild) is not a test result. The sheet
   // already noted "run pnpm test"; the verification list has to agree, or
   // finish-verify runs `test:changed` straight back into the same error.
   const commands = verificationCommands({
-    paths: ["callback-box/src/core/box.ts"],
+    paths: ["beebox/src/core/box.ts"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,
     selectorFailed: true,
   });
-  assert.deepEqual(commands[0]?.command, "pnpm --dir callback-box test");
-  assert.deepEqual(commands[0]?.argv, ["pnpm", "--dir", "callback-box", "test"]);
+  assert.deepEqual(commands[0]?.command, "pnpm --dir beebox test");
+  assert.deepEqual(commands[0]?.argv, ["pnpm", "--dir", "beebox", "test"]);
   // Still isolatable: a flake in the full suite is a flake.
-  assert.equal(commands[0]?.isolate?.packageDir, "callback-box");
+  assert.equal(commands[0]?.isolate?.packageDir, "beebox");
 });
 
-test("the callback-box isolate resolves TAP paths against the package, not its cwd", () => {
+test("the beebox isolate resolves TAP paths against the package, not its cwd", () => {
   const commands = verificationCommands({
-    paths: ["callback-box/src/core/box.ts"],
+    paths: ["beebox/src/core/box.ts"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,
   });
-  // `pnpm --dir callback-box` is spawned from the repo root while tap prints
-  // `test/...` relative to callback-box/.
+  // `pnpm --dir beebox` is spawned from the repo root while tap prints
+  // `test/...` relative to beebox/.
   assert.equal(commands[0]?.isolate?.cwd, ".");
-  assert.equal(commands[0]?.isolate?.packageDir, "callback-box");
+  assert.equal(commands[0]?.isolate?.packageDir, "beebox");
 });
 
 test("a bin/ change runs the root suite and typecheck, and lints nothing", () => {
@@ -154,7 +154,7 @@ test("a bin/ change runs the root suite and typecheck, and lints nothing", () =>
 
 test("lint is one root fan-out entry however many packages changed", () => {
   const commands = verificationCommands({
-    paths: ["callback-box/src/x.ts", "site/src/y.ts"],
+    paths: ["beebox/src/x.ts", "site/src/y.ts"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,
@@ -199,7 +199,7 @@ test("a package without a script contributes no command for it", () => {
 
 test("a docs-only diff names every command as skipped rather than hiding it", () => {
   const commands = verificationCommands({
-    paths: ["callback-box/docs/testing.md"],
+    paths: ["beebox/docs/testing.md"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,
@@ -216,7 +216,7 @@ test("skipTypecheckLint keys on what pre-commit never saw", () => {
   assert.equal(
     skipTypecheckLintDecision({
       mergeNoOp: false,
-      mergeBroughtPaths: ["issues/bugs/x.md", "callback-box/docs/a.md"],
+      mergeBroughtPaths: ["issues/bugs/x.md", "beebox/docs/a.md"],
       stragglers: [],
     }).value,
     true,
@@ -224,7 +224,7 @@ test("skipTypecheckLint keys on what pre-commit never saw", () => {
   assert.equal(
     skipTypecheckLintDecision({
       mergeNoOp: false,
-      mergeBroughtPaths: ["callback-box/src/x.ts"],
+      mergeBroughtPaths: ["beebox/src/x.ts"],
       stragglers: [],
     }).value,
     false,
@@ -239,7 +239,7 @@ test("skipTypecheckLint keys on what pre-commit never saw", () => {
 
 test("the skipped typecheck/lint commands are still listed, with the reason", () => {
   const commands = verificationCommands({
-    paths: ["callback-box/src/x.ts"],
+    paths: ["beebox/src/x.ts"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: { value: true, reason: "merge of main was a no-op" },
@@ -276,7 +276,7 @@ test("a code-related diff gets a smoke walk; a diff that ships nothing does not"
       skipTypecheckLint: NO_SKIP,
     }).some((command) => command.kind === "smoke");
 
-  assert.equal(smokeFor(["callback-box/src/core/box.ts"]), true);
+  assert.equal(smokeFor(["beebox/src/core/box.ts"]), true);
   assert.equal(smokeFor(["pnpm-lock.yaml"]), true);
   // bin/ and issues/ change nothing a running box would show, and neither
   // ships — the deploy hook's rule and this one are deliberately identical.
@@ -288,7 +288,7 @@ test("a docs-only diff names the smoke walk as skipped rather than dropping it",
   // Same reason the other commands are listed-and-skipped: a sheet that simply
   // omits a step reads as "this diff never needed one".
   const commands = verificationCommands({
-    paths: ["callback-box/docs/testing.md"],
+    paths: ["beebox/docs/testing.md"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,

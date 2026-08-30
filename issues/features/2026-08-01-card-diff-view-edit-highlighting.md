@@ -2,7 +2,7 @@
 title: "Card diff view: highlight what changed as a card is edited (control during voice/chat editing)"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder wants to see what the AI actually edited
 priority: normal
@@ -57,7 +57,7 @@ to design for:
   not in history — the view must also handle "working tree vs HEAD," not only
   committed-vs-parent, or a just-made voice/chat edit would be invisible until
   commit.
-- **Renames.** `cb mv` moves cards (and rewrites refs); follow history across
+- **Renames.** `bbx mv` moves cards (and rewrites refs); follow history across
   renames (`git log --follow`) so a moved card keeps its diff lineage.
 
 ## Design questions

@@ -1,7 +1,7 @@
 ---
 title: "`chat-default-route.doctest.md` can fail on ENOTEMPTY/ENOENT tmp-dir cleanup under parallel suite load"
 workstream: member-password-reset
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-member-password-reset — /finish full-suite verification for the file-watcher rapid-write flake fix
 resolution: implemented
@@ -12,7 +12,7 @@ The full `pnpm test` suite intermittently fails
 
 ```text
 not ok 1 - chat-default-route.doctest.md:35 — await getDefaultSession() # time=58.598ms
-not ok 2 - ENOTEMPTY: directory not empty, rmdir '/var/folders/.../cb-chat-default-U41J6o/.callback-box'
+not ok 2 - ENOTEMPTY: directory not empty, rmdir '/var/folders/.../bbx-chat-default-U41J6o/.beebox'
 not ok 408 - test/webapp/chat-default-route.doctest.md # time=3695.573ms
 ```
 

@@ -19,7 +19,7 @@ import { execa } from "execa";
 
 import { loadSchedules, type LoadedSchedule, type ScheduleConfig } from "./lib/schedules.js";
 import type { RunnerDeps } from "./lib/schedules-alerts.js";
-import { errnoCode } from "../callback-box/src/lib/error-guards.js";
+import { errnoCode } from "../beebox/src/lib/error-guards.js";
 
 const tempDirs: string[] = [];
 
@@ -38,7 +38,7 @@ export async function cleanupTempDirs(): Promise<void> {
  *  lease is part of what is under test, so the shell library runs for real
  *  against a temp state dir rather than being stood in for. */
 export async function useTempRegistryStateDir(): Promise<void> {
-  process.env["CALLBACK_STATE_DIR"] = await tempDir("schedules-registry");
+  process.env["BBX_STATE_DIR"] = await tempDir("schedules-registry");
 }
 
 /**

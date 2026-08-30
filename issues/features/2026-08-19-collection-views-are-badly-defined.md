@@ -1,7 +1,7 @@
 ---
 title: "Collection views are badly defined — there is no first-class view over a set of cards"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [views, cards, plugins]
 filed-by: agent
@@ -42,7 +42,7 @@ the selection is authored by hand rather than derived, and it goes stale.
   recipe *index*; an education plugin wants a course roster. Under the current
   model each has to invent a card type to hold a list, which is why collection
   card types keep accreting.
-- **The search index already knows how to select cards** (`cb search`, Orama).
+- **The search index already knows how to select cards** (`bbx search`, Orama).
   A collection view is arguably a saved query plus a rendering, and most of the
   machinery exists.
 - **The card-anchored constraint was a deliberate simplification** — views
@@ -95,7 +95,7 @@ error at authoring time, not a broken page.
 already declare `export const rendersCardTypes = ["<type>"]`, and
 `useCardViewBinding` (`src/frontend/src/lib/view-bindings.ts`, used from
 `FileView.tsx:344-360`) binds them ahead of the built-in renderers — with
-`cb view-lint` enforcing that every view attaches to a type. So single-card
+`bbx view-lint` enforcing that every view attaches to a type. So single-card
 views are already typed and already pluggable. A collection view is plausibly
 the same declaration widened from "the type I render" to "the types I accept a
 set of", which would make this an extension of a working mechanism rather than
@@ -354,7 +354,7 @@ by whatever knows how.
   attach to cards? "All images anywhere" has no card to hang off. This is the
   crux from the section above, and the conventional-query case makes it
   unavoidable rather than theoretical.
-- **What is the query language?** `cb search` already selects cards (Orama,
+- **What is the query language?** `bbx search` already selects cards (Orama,
   full-text plus vector). A glob over card types is a different axis from a
   text query, and "union of directories" is a third. Whether these are one
   language or three matters more for the reified case than the conventional one.

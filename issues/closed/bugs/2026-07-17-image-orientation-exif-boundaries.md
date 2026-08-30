@@ -1,7 +1,7 @@
 ---
 title: "Image orientation can break when EXIF metadata is dropped across upload boundaries"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session - testing camera attachments in the iOS companion app
 resolution: implemented
@@ -26,11 +26,11 @@ the live canvas is manual. See `docs/image-orientation.md` § "What is deliberat
 
 A photo taken in the iOS companion app arrived in chat with the wrong
 orientation. The immediate native-camera path now redraws the `UIImage` into an
-upright bitmap before JPEG compression (`ios-app/CallbackBox/Views/NativeComposerView.swift`),
+upright bitmap before JPEG compression (`ios-app/BeeBox/Views/NativeComposerView.swift`),
 with a regression test covering a metadata-rotated source image. That fixes the
 observed path, but the underlying contract is still implicit.
 
-Images enter Callback Box through several routes: native camera capture, native
+Images enter Bee Box through several routes: native camera capture, native
 photo-library selection, browser camera capture, paste/drop/file selection,
 capture-session uploads, and existing image files. Some routes re-render pixels;
 others preserve the source bytes and rely on EXIF orientation. Later boundaries

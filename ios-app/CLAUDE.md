@@ -1,7 +1,7 @@
 # iOS development
 
 This directory is the native iOS companion app. Read this file before changing
-Swift code or `CallbackBox.xcodeproj`; read `README.md` for the current product
+Swift code or `BeeBox.xcodeproj`; read `README.md` for the current product
 surface and simulator-pairing shortcut.
 
 ## Architecture boundary
@@ -12,13 +12,13 @@ surface and simulator-pairing shortcut.
   busy/queue state, dispatch, and server-rendered pending messages. Do not build
   parallel native models for those concerns.
 - Native input crosses the bridge as the shared mobile contract documented in
-  `../callback-box/docs/mobile-contract.md`. When the wire shape changes, update
+  `../beebox/docs/mobile-contract.md`. When the wire shape changes, update
   Swift encoding/decoding, the TypeScript bridge parser, that reference doc, and
   the shared fixtures under
-  `../callback-box/test/mobile-contract/fixtures/` in the same change.
+  `../beebox/test/mobile-contract/fixtures/` in the same change.
 - The iOS input-plane parity work is designed in
-  `../callback-box/docs/plans/ios-input-plane-parity.md`. Native capture has a
-  separate lifecycle in `../callback-box/docs/plans/ios-native-capture-mode.md`;
+  `../beebox/docs/plans/ios-input-plane-parity.md`. Native capture has a
+  separate lifecycle in `../beebox/docs/plans/ios-native-capture-mode.md`;
   do not route ordinary composer attachments through capture staging.
 - There are no third-party iOS dependencies. The deployment target is iOS 17;
   newer APIs require availability checks and an older-system fallback.
@@ -31,7 +31,7 @@ and inspect the project before diagnosing source code:
 ```sh
 xcode-select -p
 xcodebuild -version
-xcodebuild -list -project ios-app/CallbackBox.xcodeproj
+xcodebuild -list -project ios-app/BeeBox.xcodeproj
 xcrun simctl list devices available
 ```
 
@@ -43,7 +43,7 @@ drift; discover them with `simctl` instead of copying an old destination.
 Open the project for interactive work:
 
 ```sh
-open ios-app/CallbackBox.xcodeproj
+open ios-app/BeeBox.xcodeproj
 ```
 
 ## Build and test
@@ -53,8 +53,8 @@ From the monorepo root, a signing-free simulator compile is:
 ```sh
 xcodebuild \
   -quiet \
-  -project ios-app/CallbackBox.xcodeproj \
-  -scheme CallbackBox \
+  -project ios-app/BeeBox.xcodeproj \
+  -scheme BeeBox \
   -configuration Debug \
   -destination 'generic/platform=iOS Simulator' \
   CODE_SIGNING_ALLOWED=NO \
@@ -66,29 +66,29 @@ Run XCTest against an installed simulator selected from `simctl`:
 ```sh
 xcodebuild \
   -quiet \
-  -project ios-app/CallbackBox.xcodeproj \
-  -scheme CallbackBox \
+  -project ios-app/BeeBox.xcodeproj \
+  -scheme BeeBox \
   -configuration Debug \
   -destination 'platform=iOS Simulator,id=<SIMULATOR-UDID>' \
   test
 ```
 
-The `CallbackBoxTests` target includes speech/mobile-contract and native capture
+The `BeeBoxTests` target includes speech/mobile-contract and native capture
 tests. Some mobile-contract tests read the monorepo fixture directory through
 the test source's `#filePath`; run them from this checkout and keep the relative
-`ios-app/` + `callback-box/` layout intact.
+`ios-app/` + `beebox/` layout intact.
 
-Bridge and server changes also need the corresponding callback-box checks. At a
+Bridge and server changes also need the corresponding beebox checks. At a
 minimum, run the directly affected doctest(s), then the normal checks required
-by the callback-box pre-commit hook. The broad test command is:
+by the beebox pre-commit hook. The broad test command is:
 
 ```sh
-pnpm --dir callback-box test
+pnpm --dir beebox test
 ```
 
 ## Xcode project file
 
-`CallbackBox.xcodeproj/project.pbxproj` is manually enumerated. It does not use
+`BeeBox.xcodeproj/project.pbxproj` is manually enumerated. It does not use
 folder-synchronized groups and there is no project generator. Adding a `.swift`
 file on disk is insufficient: it must also have all of these entries in the
 project file:
@@ -106,7 +106,7 @@ a simulator build or test. Do not rewrite or reformat the whole project file.
 Assets are similarly explicit through `Assets.xcassets`. User-specific Xcode
 state, workspaces' `xcuserdata`, `DerivedData`, and `ios-app/build/` are ignored;
 do not commit them. The shared scheme under
-`CallbackBox.xcodeproj/xcshareddata/xcschemes/` is tracked.
+`BeeBox.xcodeproj/xcshareddata/xcschemes/` is tracked.
 
 ## Running against a local box
 
@@ -140,10 +140,10 @@ signing changes.
 
 ## Bridge discipline
 
-- `CallbackBox/Views/ChatWebView.swift` is the native transport and navigation
+- `BeeBox/Views/ChatWebView.swift` is the native transport and navigation
   boundary. Keep allowed-origin checks, delivery deduplication, receipt
   timeouts, and navigation reload behavior explicit.
-- `callback-box/src/frontend/src/components/chat/native-emission.ts` and the
+- `beebox/src/frontend/src/components/chat/native-emission.ts` and the
   hooks beside it are the web side. Native must submit an `Emission` to the
   visible web session; it must not call chat-send APIs behind the webview.
 - Web-to-native traffic uses named `WKScriptMessageHandler` channels. Validate
@@ -170,7 +170,7 @@ For deterministic composer layout checks, launch a DEBUG build with
 `sending`, `interrupted`, `rejected-send`, `stuck-pending`,
 `expired-attachment`, `keyboard-shown`, and
 `control-registry` (which reads back the native control registry the web's
-`scan-controls` command answers from — see `../callback-box/docs/mobile-contract.md`
+`scan-controls` command answers from — see `../beebox/docs/mobile-contract.md`
 §4.8 — and offers every action per control so the refusals are as visible as the
 successes). Add `--composer-point=<control-id>:<action>` beside it to perform one
 pointer action as soon as the anchors have registered, so a plain screenshot
@@ -209,8 +209,8 @@ the feature introduces no new runtime state or failure boundary.
 
 Native entries are uploaded through `Services/BoxLog.swift` and
 `Services/LogForwarder.swift` to the paired box's rolling
-`.callback-box/client-debug.log`, alongside browser diagnostics. Start runtime
+`.beebox/client-debug.log`, alongside browser diagnostics. Start runtime
 debugging there; `[ios]` identifies native entries and `[ios@<timestamp>]`
 preserves the device event time after a delayed/offline flush. See
-`../callback-box/docs/client-debug-log.md` for locations and interpretation and
-`../callback-box/docs/mobile-contract.md` §5.7 for the wire/durability contract.
+`../beebox/docs/client-debug-log.md` for locations and interpretation and
+`../beebox/docs/mobile-contract.md` §5.7 for the wire/durability contract.

@@ -2,7 +2,7 @@
 title: "A coined chat with ?engine=claude still runs its first turn on the box's default engine (codex) — fourth occurrence, after three fixes"
 workstream: coined-engine-authority
 resolution: implemented
-area: callback-box
+area: beebox
 priority: important
 labels: [chat, codex]
 filed-by: agent
@@ -35,7 +35,7 @@ Log (box `hub-child.log`, times UTC):
 State afterwards — the two records DISAGREE, which is the diagnostic signature:
 
 - husk `store/chat/web/2026-08-29_4d206d20.chat.card`: `engine: claude`
-- `.callback-box/chat-session-history.json` entry: `engine: codex`, features `{hq-dictation: on}`
+- `.beebox/chat-session-history.json` entry: `engine: codex`, features `{hq-dictation: on}`
 - No transcript for this id in `~/.claude/projects/…` (Claude never ran it) and none
   in `~/.codex/sessions` under this id (Codex mints its own thread ids; a coined
   UUID is not one of them). The turn's content lives only in whatever Codex thread

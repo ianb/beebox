@@ -1,7 +1,7 @@
 ---
 title: "Worktree teardown trashes by `mv` and never reads git's worktree lock, so upstream's new background-session protection doesn't reach us"
 workstream: chores-burn-down
-area: callback-box
+area: beebox
 resolution: implemented
 priority: backlog
 filed-by: agent

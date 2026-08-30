@@ -1,7 +1,7 @@
 ---
 title: "At the box root, browse shows only the raw listing — the root landmark's view and its links are unreachable in place"
 workstream: landmark-in-browse
-area: callback-box
+area: beebox
 labels: [navigation, ui]
 filed-by: agent
 discovered-by: Ian
@@ -31,7 +31,7 @@ What the code says (verified):
   in the browse/folder surface, for the root OR any directory.
 
 So the root may just be where it's most noticeable (the root is every box's
-front door, and its landmark is guaranteed to exist by `cb init`) rather than
+front door, and its landmark is guaranteed to exist by `bbx init`) rather than
 special-cased — unless the boxholder's "folder/landmark view" refers to a
 surface I haven't identified; **clarify which view was expected** before
 building: (a) the browse directory listing growing a landmark header with the

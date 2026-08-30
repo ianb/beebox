@@ -1,7 +1,7 @@
 // The guarded-dev-router self-identification header (Track C of
-// callback-box/docs/implemented-plans/expose-dev-router.md). On a denied `/__router/*`
-// control request the router answers with `x-cb-router-guarded: 1` so
-// `cb tailscale setup` can prove the auth gate is live end-to-end over Serve
+// beebox/docs/implemented-plans/expose-dev-router.md). On a denied `/__router/*`
+// control request the router answers with `x-bbx-router-guarded: 1` so
+// `bbx tailscale setup` can prove the auth gate is live end-to-end over Serve
 // (401 + this header) and tell a guarded router apart from an ungated one
 // (200, no header) or a non-router. The marker leaks nothing a bare curl
 // doesn't already learn.
@@ -41,11 +41,11 @@ function req(url: string): DenyRequest {
 }
 
 test("routerGuardHeaders: only /__router/* paths get the marker", () => {
-  assert.deepEqual(routerGuardHeaders("/__router/status"), { "x-cb-router-guarded": "1" });
-  assert.deepEqual(routerGuardHeaders("/__router/status/"), { "x-cb-router-guarded": "1" });
-  assert.deepEqual(routerGuardHeaders("/__router/stop/main"), { "x-cb-router-guarded": "1" });
-  assert.deepEqual(routerGuardHeaders("/__router"), { "x-cb-router-guarded": "1" });
-  assert.deepEqual(routerGuardHeaders("/__router/status?foo=1"), { "x-cb-router-guarded": "1" });
+  assert.deepEqual(routerGuardHeaders("/__router/status"), { "x-bbx-router-guarded": "1" });
+  assert.deepEqual(routerGuardHeaders("/__router/status/"), { "x-bbx-router-guarded": "1" });
+  assert.deepEqual(routerGuardHeaders("/__router/stop/main"), { "x-bbx-router-guarded": "1" });
+  assert.deepEqual(routerGuardHeaders("/__router"), { "x-bbx-router-guarded": "1" });
+  assert.deepEqual(routerGuardHeaders("/__router/status?foo=1"), { "x-bbx-router-guarded": "1" });
   // Not a control route — no marker.
   assert.deepEqual(routerGuardHeaders("/"), {});
   assert.deepEqual(routerGuardHeaders("/main/test1/"), {});
@@ -65,7 +65,7 @@ test("writeDeny: anonymous /__router/status 401 carries the guarded header", () 
   };
   writeDeny(req("/__router/status"), { res: fakeRes(captured), decision: deny });
   assert.equal(captured.status, 401);
-  assert.equal(captured.headers["x-cb-router-guarded"], "1");
+  assert.equal(captured.headers["x-bbx-router-guarded"], "1");
   assert.equal(captured.headers["content-type"], "application/json; charset=utf-8");
   assert.equal(captured.body, `${JSON.stringify({ error: "owner-session-required" })}\n`);
 });
@@ -81,7 +81,7 @@ test("writeDeny: a non-router box deny does NOT carry the header", () => {
   };
   writeDeny(req("/main/test1/api/x"), { res: fakeRes(captured), decision: deny });
   assert.equal(captured.status, 401);
-  assert.equal(captured.headers["x-cb-router-guarded"], undefined);
+  assert.equal(captured.headers["x-bbx-router-guarded"], undefined);
 });
 
 test("writeDeny: a /__router/* login redirect still carries the header", () => {
@@ -95,6 +95,6 @@ test("writeDeny: a /__router/* login redirect still carries the header", () => {
   };
   writeDeny(req("/__router/dashboard/main"), { res: fakeRes(captured), decision: deny });
   assert.equal(captured.status, 302);
-  assert.equal(captured.headers["x-cb-router-guarded"], "1");
+  assert.equal(captured.headers["x-bbx-router-guarded"], "1");
   assert.equal(typeof captured.headers["location"], "string");
 });

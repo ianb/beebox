@@ -2,7 +2,7 @@
 title: "Development bundle reload stops live chat sessions instead of draining them to idle"
 workstream: coined-engine-authority
 resolution: implemented
-area: callback-box
+area: beebox
 labels: [chat, deploy]
 filed-by: agent
 discovered-by: Ian

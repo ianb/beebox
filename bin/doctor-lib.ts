@@ -9,7 +9,7 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { isRecord } from "../callback-box/src/lib/is-record.js";
+import { isRecord } from "../beebox/src/lib/is-record.js";
 
 const execFileAsync = promisify(execFile);
 

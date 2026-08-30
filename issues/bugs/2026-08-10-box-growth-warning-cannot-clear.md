@@ -1,13 +1,13 @@
 ---
 title: "Box-growth warns forever on a box with an email connector, and is blind to the box's biggest bytes"
 workstream: box-family-email
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-box-family-email — investigating growth on a production box
 labels: [code-error]
 ---
 
-Three separate problems in `callback-box/src/core/box-growth/`, found together
+Three separate problems in `beebox/src/core/box-growth/`, found together
 on one production box. They compound: the check cries wolf about the wrong
 thing while missing the real thing.
 
@@ -44,10 +44,10 @@ and the warning is unchanged, because 3,453 is still above the 1,000 global.
 The only exit is the `acknowledge-box-growth` action — which, if the boxholder
 takes it, also silently blesses whatever the baseline happened to catch.
 
-## 3. The scan prunes `.callback-box`, which is where the bytes are
+## 3. The scan prunes `.beebox`, which is where the bytes are
 
-`findArguments` (`scan.ts:107`) prunes `.git`, `.callback-box` and
-`node_modules`. On the observed box `.callback-box` is 193 MB against 415 MB of
+`findArguments` (`scan.ts:107`) prunes `.git`, `.beebox` and
+`node_modules`. On the observed box `.beebox` is 193 MB against 415 MB of
 content — the single largest thing in the box, and entirely invisible to the
 growth check. 165 MB of it is one stale `search-index.json` (see
 [low-priority-jobs-wedge-wakeup-forever](../closed/bugs/2026-08-10-low-priority-jobs-wedge-wakeup-forever.md)).
@@ -61,7 +61,7 @@ prod disk hit 100% on 2026-08-04, bytes are the dimension that actually hurts.
 
 Directory count has an operational consequence the growth check does not
 mention. `MAX_WATCHED_DIRS` is 1,024
-(`callback-box/src/core/box/file-watcher.ts:48`); the observed box exceeds it
+(`beebox/src/core/box/file-watcher.ts:48`); the observed box exceeds it
 and logs, on every server start since 2026-08-05:
 
 ```
@@ -79,7 +79,7 @@ number behind it, this is probably it — but 250 is not that number either.
   level once at baseline, then only ever warn on rate.
 - Scale the absolute thresholds to what the box's enabled connectors imply,
   rather than one global pair.
-- Measure bytes, and stop pruning `.callback-box` (or measure it separately and
+- Measure bytes, and stop pruning `.beebox` (or measure it separately and
   report it as engine overhead rather than box content).
 - Tie the directory threshold to `MAX_WATCHED_DIRS` so the warning predicts a
   real degradation instead of an arbitrary one.

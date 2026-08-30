@@ -12,7 +12,7 @@ mid-run. Wherever this says BLOCKED, stop and return `RESULT: BLOCKED` naming wh
 needs a human decision and what you did and did not do; merge only on a fully clean
 happy path. Two scripts own the mechanics, you own the judgment — never re-derive
 what the sheet states. Why: revision 2026-08-25 of the plan
-`callback-box/docs/plans/change-based-test-selection.md`.
+`beebox/docs/plans/change-based-test-selection.md`.
 
 ## 1. Preflight — `bin/finish-preflight`
 Confirms the worktree, classifies the private leg, lists stragglers, merges `main`,
@@ -42,7 +42,7 @@ boxholder to start (`pnpm dev` in the main checkout), not something to work
 around. **green** →
 proceed; a named flake (fail, then pass alone at the same content hash) is green
 — name it in the report, and file no flake issue
-(`callback-box/test/careful.txt` curation is that channel). **red** → every
+(`beebox/test/careful.txt` curation is that channel). **red** → every
 selected test ran because this branch touched what it imports, so it is this
 branch's to answer for; "unrelated", "failing before", "infra broken" are not
 exits. Fix and re-run, or BLOCKED with the output path. Never re-run a suite to
@@ -90,8 +90,8 @@ reconcile each plan in `plan.docs` this branch introduced or modified:
 - abandoned/superseded → `git mv` to `docs/unimplemented-plans/` + a row in its
   README's disposition table.
 - Set frontmatter `status:` (`implemented`/`partial`/`superseded`/`parked`), no
-  duplicate prose line; renames follow `callback-box/docs/README.md`. After a move:
-  `pnpm --dir callback-box doc-check --fix`, then `pnpm doc-graph` in `callback-box/`.
+  duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
+  `pnpm --dir beebox doc-check --fix`, then `pnpm doc-graph` in `beebox/`.
 
 ## 6. Close resolved issues
 Candidates: the sheet's `issues`, the plan's frontmatter `issues:`, the briefing, and
@@ -102,7 +102,7 @@ For each issue this work **actually resolves**: `git mv issues/<category>/<x>.md
 issues/closed/<category>/`, then in the moved file add `resolution:
 implemented|wontfix|superseded`, set `workstream:` to the bare workstream name, and
 put a closing note atop the body naming the resolving commit and any divergence from
-what the issue proposed. Then `pnpm --dir callback-box doc-check --fix` at the root.
+what the issue proposed. Then `pnpm --dir beebox doc-check --fix` at the root.
 Never close an issue with `needs: [manual-testing]` — only the boxholder clears
 that. Ambiguous, or a deliberate punch-list → leave open and name it. **Private
 issues** close the same way inside `private-issues/`, where `doc-check --fix`

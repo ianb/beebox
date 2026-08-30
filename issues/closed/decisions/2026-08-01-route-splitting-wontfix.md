@@ -10,7 +10,7 @@ showing 457→287 KB gzip initial (−37%).
 
 The full plan, measured prototype numbers, corrected deploy-cache economics,
 and the trigger conditions that would reopen this live in
-`../../../callback-box/docs/plans/route-splitting.md`. Summary of the call:
+`../../../beebox/docs/plans/route-splitting.md`. Summary of the call:
 
 - Chat — the primary entry path — gains nothing (−7% bytes, +1 serial fetch
   stage on cold loads; a wash or slightly negative).
@@ -28,5 +28,5 @@ structural, deploys become frequent enough for the re-download reduction to
 matter, or the renderer-registry rework gets independently justified.
 
 One orphaned piece worth landing regardless: the prototype's
-`CB_ANALYZE_FINE=1` per-file attribution mode for `analyze:bundle`
+`BBX_ANALYZE_FINE=1` per-file attribution mode for `analyze:bundle`
 (diff preserved in the analysis worktree's scratch/).

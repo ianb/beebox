@@ -25,11 +25,11 @@ afterEach(() => {
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), "deploy-lock-test-"));
   fixtures.push(root);
-  const deployDir = join(root, "callback-box", "deploy");
+  const deployDir = join(root, "beebox", "deploy");
   const fakeBin = join(root, "fake-bin");
   mkdirSync(deployDir, { recursive: true });
   mkdirSync(fakeBin);
-  copyFileSync(join(ROOT, "callback-box", "deploy", "deploy.sh"), join(deployDir, "deploy.sh"));
+  copyFileSync(join(ROOT, "beebox", "deploy", "deploy.sh"), join(deployDir, "deploy.sh"));
   chmodSync(join(deployDir, "deploy.sh"), 0o755);
   writeFileSync(join(deployDir, "server-ip"), "192.0.2.1\n");
   writeFileSync(join(deployDir, ".last-deploy.log"), "");

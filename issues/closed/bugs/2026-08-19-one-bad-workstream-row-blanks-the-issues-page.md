@@ -2,7 +2,7 @@
 title: "One malformed workstream row blanks the whole issues page, and a stray directory is enough to cause it"
 workstream: streams-and-issues
 area: router
-design: ../../../callback-box/docs/implemented-plans/workstream-routing.md
+design: ../../../beebox/docs/implemented-plans/workstream-routing.md
 labels: [workstreams-app, robustness, dev-tooling]
 filed-by: agent
 discovered-by: Ian
@@ -22,7 +22,7 @@ returned an invalid shape at 18.branch
 ```
 
 Nothing else rendered. The cause was an **empty directory** at
-`~/src/callback-worktrees/scratch` — created 2026-08-18 19:28, not a git
+`~/src/beebox-worktrees/scratch` — created 2026-08-18 19:28, not a git
 repository, no matching branch, containing nothing.
 
 ## The chain

@@ -1,14 +1,14 @@
 ---
 title: "Husks outlive their transcripts, and nothing handles the resulting husk graveyard"
 workstream: chat-session-identity
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-compacting — eval'ing chat review against real boxes
 priority: normal
 resolution: implemented
 ---
 
-**Closed 2026-08-26** by [chat-session-identity](../../../callback-box/docs/implemented-plans/chat-session-identity.md) Tracks 2–3: husks record `engine`/`origin`/`origin-name` (backfilled on boot for transcripts present here), transcript availability is a typed state — present / expired / elsewhere (on <machine>) / unknown — shown in the history dropdown and landmark card, and a dead husk can be archived to `store/chat/archive/` (`chat.archive`). Not built, by decision: automatic GC/archive sweeps, a box-owned transcript (transcripts stay out of git).
+**Closed 2026-08-26** by [chat-session-identity](../../../beebox/docs/implemented-plans/chat-session-identity.md) Tracks 2–3: husks record `engine`/`origin`/`origin-name` (backfilled on boot for transcripts present here), transcript availability is a typed state — present / expired / elsewhere (on <machine>) / unknown — shown in the history dropdown and landmark card, and a dead husk can be archived to `store/chat/archive/` (`chat.archive`). Not built, by decision: automatic GC/archive sweeps, a box-owned transcript (transcripts stay out of git).
 **Implementation update (2026-08-07):** `worktree-chat-session-delete` makes
 missing local transcripts an explicit unavailable state, disables the unsafe
 `Open chat` path, and guards bootstrap, raw-send, and schedule-resume paths.
@@ -73,10 +73,10 @@ A dead husk is not inert — it is actively misleading:
   creation — e.g. `"eh, delete this"`, `"Alright, so I'm going to be doing a
   longish review here of different chat"`. That is now the *entire* durable
   record of the conversation.
-- `loadAllSessions` (`callback-box/src/webapp/trpc/routers/chat.ts`) silently
+- `loadAllSessions` (`beebox/src/webapp/trpc/routers/chat.ts`) silently
   skips it, so it's invisible in the picker but present everywhere else — the
   worst of both.
-- [Chat review](../../../callback-box/docs/chat-review.md) skips it too (correctly —
+- [Chat review](../../../beebox/docs/chat-review.md) skips it too (correctly —
   there is nothing to read), so it will never be titled or summarized. Its
   content is unrecoverable.
 - **Resuming it crashes the turn — it is not merely a dead link.** Confirmed
@@ -106,7 +106,7 @@ truncated-first-message title and no account.
   - Mark it — a `transcript: expired` field or similar — so the card view can say
     "this conversation's transcript has expired; what follows is all that
     remains" instead of offering a dead "Open chat" link.
-  - Archive it — `cb mv` to `store/archive/` on detection, keeping it findable
+  - Archive it — `bbx mv` to `store/archive/` on detection, keeping it findable
     without cluttering the live chat directory.
   - Delete husks that have neither a transcript nor an account — they carry no
     information at all beyond a session id and a truncated sentence. (Deleting a
@@ -114,7 +114,7 @@ truncated-first-message title and no account.
 - **Who detects it?** Chat review already walks every husk and knows which
   transcripts are missing (`DiscoveryResult.missingTranscripts`). It is the
   natural place, but "the summarizer also archives cards" may be a scope smell.
-  A separate `cb chat husks gc`, or a housekeeping step, may be cleaner.
+  A separate `bbx chat husks gc`, or a housekeeping step, may be cleaner.
 - **Should the husk record the expiry date?** Knowing *when* a transcript went
   away is more useful than knowing it's gone — it bounds what the account covers.
 - **Does the `Open chat →` link need to change?** Today it points at a session
@@ -124,6 +124,6 @@ truncated-first-message title and no account.
 
 - [Renamed husks duplicate on backfill](../bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md)
   — the other husk-lifecycle gap found in the same pass.
-- `callback-box/docs/chat-review.md` currently explains missing transcripts as
+- `beebox/docs/chat-review.md` currently explains missing transcripts as
   ordinary stale refs, which undersells this; it should name the retention window
   and the deadline it implies.

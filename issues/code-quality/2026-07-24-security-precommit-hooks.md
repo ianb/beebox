@@ -1,7 +1,7 @@
 ---
 title: "Adopt openclaw-style security pre-commit hooks (dev-repo scope)"
 workstream: chores-burn-down
-area: callback-box
+area: beebox
 labels: [lint, security, openclaw-borrow]
 filed-by: agent
 discovered-in: worktree-openclaw-security-lints — surveying openclaw's .pre-commit-config.yaml
@@ -33,7 +33,7 @@ Approved to adopt (Ian, 2026-07-24):
 
 Cleared via mature `pnpm.overrides` (all patches ≥7-day `minimum-release-age`):
 `undici ^7.28.0` (prod, via cheerio — the important one), `hono ^4.12.27` (prod,
-transitive), `js-yaml ^4.3.0`, `tmp ^0.2.7`. callback-box typecheck stays green.
+transitive), `js-yaml ^4.3.0`, `tmp ^0.2.7`. beebox typecheck stays green.
 
 Deferred — patched version is younger than our own 7-day maturity gate; forcing
 it would install into the compromised-maintainer window (a worse trade than a

@@ -7,7 +7,7 @@ always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
 ## Tests for `bin/` tooling
 
 New tests for root dev infrastructure use the repository's primary doctest
-format. Put them in `callback-box/test/dev/*.doctest.md`, importing the `bin/`
+format. Put them in `beebox/test/dev/*.doctest.md`, importing the `bin/`
 module or invoking the CLI from there. Pure logic, temporary-filesystem tests,
 shell-script fixtures, and CLI behavior all fit doctests; `.test.ts` is not a
 separate integration tier. Existing `bin/*.test.ts` files predate this rule and
@@ -23,7 +23,7 @@ every commit. It's the durable backstop for a source-available repo: audit
 reports and docs kept leaking the author's home because agents paste whatever
 the ambient environment hands them (Read needs absolute paths; a worktree cwd
 is absolute). Fail-closed — `ALLOWED_NAMES` lists the hardcoded deploy service-account homes
-(`callback`, `cb-test1`) and placeholders (`me`, `you`, `user`, `x`) that
+(`beebox`, `bbx-test1`) and placeholders (`me`, `you`, `user`, `x`) that
 aren't personal-identity leaks; any other username trips it. Fix a hit with a repo-relative or
 `~/…` path, not by widening the allowlist. Background:
 `issues/closed/bugs/2026-07-05-report-workflows-emit-relative-paths.md`.
@@ -59,12 +59,12 @@ for a real gate. Companion to the home-path guard above.
 
 Two hooks and one script give every commit a queryable link to its
 workstream, plan, and (optionally) issue. Convention for agents: root
-`CLAUDE.md`. Design: `callback-box/docs/plans/commit-provenance-trailers.md`.
+`CLAUDE.md`. Design: `beebox/docs/plans/commit-provenance-trailers.md`.
 
 - **`.husky/prepare-commit-msg`** → `commit-provenance --prepare <msgfile>
   <source>`: on a `worktree-<name>` branch, `git interpret-trailers --in-place
   --if-exists replace` stamps `Workstream: <name>` and, when exactly one
-  `callback-box/docs/plans/*.md` carries `workstream: <name>`, `Plan:
+  `beebox/docs/plans/*.md` carries `workstream: <name>`, `Plan:
   <basename>`. Skips `squash` sources, detached HEAD, and `main`. Any error
   prints one stderr line and exits 0 — provenance never blocks a commit.
 - **`.husky/commit-msg`** → `commit-provenance --check <msgfile>`: reads the
@@ -93,7 +93,7 @@ land a branch a finish left merge-ready. It resolves the main checkout from
 checkout, from inside a worktree, or from a Codex session (whose sandbox can't
 git the main checkout). Managed Claude worktree sessions are not isolated from
 the main checkout — that isolation belongs to native `claude --worktree`, which
-they don't use — so `git -C ~/src/callback-box` works there; `bin/land` is
+they don't use — so `git -C ~/src/beebox` works there; `bin/land` is
 preferred for its checks, not because git is blocked.
 
 With no argument: from a worktree it lands that worktree's own branch; from the
@@ -116,15 +116,15 @@ merge that updates main (fast-forward or not), so deploy is unaffected; see
 
 One router (`router.ts`, port 3210) serves the main checkout and every
 worktree, routing by URL path prefix (`/main/...`, `/<worktree>/...`).
-Each worktree gets its own Vite + `cb hub` pair, spawned as direct
+Each worktree gets its own Vite + `bbx hub` pair, spawned as direct
 children of the router (no Overmind, no tmux — flat process tree). The
-hub then lazily spawns/idle-collects a `cb serve` child per box within
+hub then lazily spawns/idle-collects a `bbx serve` child per box within
 that worktree, so boxes cold-start and idle-stop independently of the
-worktree they live in. `CB_DEV_NO_HUB=1` reverts to the router spawning
+worktree they live in. `BBX_DEV_NO_HUB=1` reverts to the router spawning
 a single legacy `server-main.ts` Fastify process per worktree instead.
 
-In a development checkout, `callback-box/bin/cb` stamps the exact CLI bundle
-artifact it execs. A hub-spawned `cb serve` child watches that identity; when a
+In a development checkout, `beebox/bin/bbx` stamps the exact CLI bundle
+artifact it execs. A hub-spawned `bbx serve` child watches that identity; when a
 later build replaces it, the child stops admitting mutations, finishes active
 requests, chat turns, and scheduled-chat deliveries, then exits with the
 expected reload code. The hub supervisor respawns it without consuming the
@@ -134,8 +134,8 @@ within ten minutes reopens mutations and keeps the loaded code, with a warning,
 rather than wedging the box read-only. The global scheduler uses the same
 identity but checks only
 between complete all-box passes; its launchd `KeepAlive` service performs the
-replacement. Packed installs and `CB_CLI_PREBUILT` production checkouts never
-opt into this dev behavior. A standalone foreground `cb serve`/scheduler has no
+replacement. Packed installs and `BBX_CLI_PREBUILT` production checkouts never
+opt into this dev behavior. A standalone foreground `bbx serve`/scheduler has no
 safe owner to replace it and exits or remains visible rather than self-spawning
 an overlapping successor.
 
@@ -167,24 +167,24 @@ tRPC WebSocket all flow through the router.
 ## The router is a fail-closed authenticating proxy
 
 Authentication is structurally always-on (open-mode was removed — there is no
-`CB_ALLOW_UNAUTHENTICATED` env path anymore), and the router itself now
+`BBX_ALLOW_UNAUTHENTICATED` env path anymore), and the router itself now
 authenticates every TCP request before it proxies, serves `/<worktree>/dev/`
-infra, or cold-starts a worktree — the same front-door model `cb hub` already
+infra, or cold-starts a worktree — the same front-door model `bbx hub` already
 runs in prod. Full design and rationale:
-`callback-box/docs/implemented-plans/expose-dev-router.md`.
+`beebox/docs/implemented-plans/expose-dev-router.md`.
 
 - **Login behind the router prefix works.** The login/setup pages are
   self-contained, server-rendered HTML (a plain `<form>` + inline `<style>`, no
-  script/asset references — `callback-box/src/webapp/login-page.ts`), so a
+  script/asset references — `beebox/src/webapp/login-page.ts`), so a
   logged-out browser gets a working login page with zero gated resources — the
   gate never 401s a bundle that never loads. Form action, OAuth link, and every
-  server redirect carry the `/<worktree>/` prefix (from `x-cb-base-prefix`). This
+  server redirect carry the `/<worktree>/` prefix (from `x-bbx-base-prefix`). This
   replaced the old React-SPA login page, whose Vite dev modules (`/src/…`,
   `/@vite/…`) the gate 401'd behind the prefix, dead-ending login. No standalone
-  `cb serve` workaround needed to test login/OAuth.
+  `bbx serve` workaround needed to test login/OAuth.
 - **Two listeners, one gate.** The router listens on both a TCP loopback
   socket (browsers, Tailscale) and a Unix-domain socket at
-  `~/.cache/callback-box/router.sock` (or `$CALLBACK_STATE_DIR/router.sock` for
+  `~/.cache/beebox/router.sock` (or `$BBX_STATE_DIR/router.sock` for
   an isolated test router). The UDS is the trusted-local, **unauthenticated**
   channel — a browser can't originate a UDS connection, so it's a real
   capability boundary, not a spoofable header. `bin/workstreams` and other local
@@ -197,26 +197,26 @@ runs in prod. Full design and rationale:
   agent-authored, read-only `/<w>/dev/` browser also accepts the opt-in
   machine-wide browse key used by `bin/browse`; the worktree index,
   `/workstreams/`, and `/__router/*` remain owner-session surfaces.
-- **`cb tailscale setup --target <routerPort>`** (e.g. `--target 3210`) exposes
+- **`bbx tailscale setup --target <routerPort>`** (e.g. `--target 3210`) exposes
   the _whole_ router — every worktree and box — over the tailnet through this
   one authenticated front door. Before recording the exposure, setup verifies
   the gate is actually live: it hits the served `/__router/status` over Serve
   with no credentials and requires a `401` (a `200` means an ungated router or
   a Serve misconfiguration, and setup refuses + tears down rather than exposing
-  it). `cb tailscale status` reports whether an exposed router is guarded.
+  it). `bbx tailscale status` reports whether an exposed router is guarded.
 
-## `callback-box/.env` is loaded into every dev process
+## `beebox/.env` is loaded into every dev process
 
-Each checkout's `callback-box/.env` (gitignored) is parsed with Node's own
+Each checkout's `beebox/.env` (gitignored) is parsed with Node's own
 `util.parseEnv` and merged into the environment of the children the router
-spawns for that worktree — Vite, `cb hub`, and every `cb serve` below it
+spawns for that worktree — Vite, `bbx hub`, and every `bbx serve` below it
 (`bin/router-effects.ts` `readEnvFile`). A real exported variable wins over the
 file, so `FOO=x pnpm dev` still overrides. **It is a real env file now, not just
 the `BOXES=` line the router greps out of it** — a stray `PATH=` or
 `NODE_OPTIONS=` in there reaches every dev process.
 
 The router ALSO loads the main checkout's copy into its own process env at
-startup, because the router's own auth gate reads `CB_BROWSE_API_KEY`. One
+startup, because the router's own auth gate reads `BBX_BROWSE_API_KEY`. One
 router fronts every worktree, so that key is effectively machine-level: a
 worktree that sets a different one passes its own children and is refused at
 the router. One key everywhere is the supported shape.
@@ -225,10 +225,10 @@ The WorktreeCreate hook copies the main checkout's `.env` into each new
 worktree **minus its `BOXES=` line** — that line points at `~/src/boxes/*`, the
 real boxes, and a worktree that inherited it would serve those instead of its
 own isolated clone. Existing worktrees predate the copy; do it by hand
-(`grep -v '^BOXES=' ../../callback-box/callback-box/.env > callback-box/.env`).
+(`grep -v '^BOXES=' ../../beebox/beebox/.env > beebox/.env`).
 
-`CB_BROWSE_API_KEY` itself is the local-dev browser credential — see
-`callback-box/src/core/browse-key.ts` for what it grants and why it is opt-in.
+`BBX_BROWSE_API_KEY` itself is the local-dev browser credential — see
+`beebox/src/core/browse-key.ts` for what it grants and why it is opt-in.
 
 ## Idle shutdown + self-healing tabs
 
@@ -236,7 +236,7 @@ Only HTTP requests count as worktree activity. WebSocket upgrades never
 cold-start a worktree (clients auto-reconnect on timers; honoring them
 would let abandoned background tabs resurrect worktrees forever) — the
 router refuses upgrades for non-running worktrees with a 503 and the
-client retries later (silent by default; `CB_ROUTER_DEBUG=1` logs these
+client retries later (silent by default; `BBX_ROUTER_DEBUG=1` logs these
 refusals). HMR rides the page origin (no `hmr.clientPort` in
 vite.config — the browser never learns Vite's internal port), so a stale
 tab heals itself: Vite's client pings the router while the tab is
@@ -255,7 +255,7 @@ reload + history) when refocused.
 The hub runs TypeScript from the checkout through tsx, and nothing reloads it,
 so a merge landing under a running generation leaves it executing the old code
 while the router still calls it ready. The router now records a token for
-`callback-box/src` (excluding `src/frontend`, which Vite hot-reloads) at spawn
+`beebox/src` (excluding `src/frontend`, which Vite hot-reloads) at spawn
 and rechecks it at most every 5s on the request path; a mismatch is reported as
 `staleSince` in `/__router/status` and as `ready (stale)` in
 `bin/workstreams list`. Nothing restarts automatically: the router's only
@@ -265,10 +265,10 @@ safe to cut. `bin/workstreams down <name>` is the fix, and it is the human's
 call.
 
 The box-child half is solved end to end. A child stamps its bundle's stat
-identity (`CB_DEV_BUNDLE_ID`), polls it once a second, and drains before
+identity (`BBX_DEV_BUNDLE_ID`), polls it once a second, and drains before
 re-execing on exit 75 — but nothing used to WRITE a new bundle, so that poll
-had no producer and fired only when someone happened to run `cb` or `pnpm test`
-for an unrelated reason. `callback-box/scripts/auto-build-cli.sh` is the
+had no producer and fired only when someone happened to run `bbx` or `pnpm test`
+for an unrelated reason. `beebox/scripts/auto-build-cli.sh` is the
 producer: the root post-commit/post-merge hooks call it in every checkout, and
 it rebuilds `dist/cli.mjs` (~250ms, esbuild only) when the commit or merge
 moved an actual bundle input. It gates on paths because rewriting the bundle
@@ -278,7 +278,7 @@ does not.
 
 ## Orphan resistance
 
-PID files at `~/.cache/callback-box/pids/<name>.json` (single-slot —
+PID files at `~/.cache/beebox/pids/<name>.json` (single-slot —
 current generation only); router sweeps and kills survivors on startup;
 clean SIGTERM/SIGINT kills children with SIGKILL fallback after 2
 seconds. Because pidfiles can't see leaked older generations or
@@ -316,7 +316,7 @@ calls the CLI directly. The logic lives in `bin/lib/worktree-create.sh` and
 `bin/lib/worktree-teardown.sh`. It used to live in the hooks, which meant Codex
 had to synthesize hook JSON and pipe it into a file under `.claude/` to reach the
 repo's own worktree logic — and any third frontend would have had to as well.
-Design and rationale: `callback-box/docs/plans/worktree-control-surface.md`.
+Design and rationale: `beebox/docs/plans/worktree-control-surface.md`.
 
 **Add worktree behavior to the lib, never to a hook.** A hook that grows its own
 logic is invisible to every other frontend, which is how the coupling came back.
@@ -324,16 +324,16 @@ logic is invisible to every other frontend, which is how the coupling came back.
 **Locations are derived, never hardcoded** (`bin/lib/worktree-paths.sh`):
 `wt_paths_init` resolves `WT_MONO` through `git rev-parse --git-common-dir` and
 names `WT_ROOT` / `WT_BOX_ROOT` / `WT_BOX_SRC` under its parent. It **fails
-closed** rather than falling back to `$HOME/src/callback-box` — a plausible but
+closed** rather than falling back to `$HOME/src/beebox` — a plausible but
 wrong root means lifecycle operations on a checkout that isn't the one in play,
 which is silent when it happens. Override the basenames with
-`CALLBACK_WORKTREE_ROOT` / `CALLBACK_BOX_ROOT` / `CALLBACK_BOX_SRC`.
+`BBX_WORKTREE_ROOT` / `BBX_BOX_ROOT` / `BBX_BOX_SRC`.
 
 **Post-merge dependency sync is checkout-local.** `.husky/post-merge` runs
 `bin/post-merge-install.sh` before deploy or extension rebuild work. When the
 merge changed `pnpm-lock.yaml`, it runs one root `pnpm install
 --frozen-lockfile` in the checkout whose hook fired. This applies to main and
-worktrees: either checkout can otherwise rebuild the externalized `cb` CLI
+worktrees: either checkout can otherwise rebuild the externalized `bbx` CLI
 against packages its old `node_modules` does not contain. Install failure does
 not suppress an eligible server deploy. The hook warns on stderr with the
 manual-install remedy; Git does not propagate a post-merge hook's exit status.
@@ -478,7 +478,7 @@ the destructive guard. Non-worktree directories under the managed root are
 reported and skipped. The app parses rows independently so one malformed row
 produces a visible warning instead of blanking every view.
 
-Isolated router testing: `CALLBACK_STATE_DIR` + `ROUTER_PORT` run a
+Isolated router testing: `BBX_STATE_DIR` + `ROUTER_PORT` run a
 second router without touching the live one (which only picks up
 `router.ts` changes after a main-merge + `pnpm dev` restart).
 
@@ -638,13 +638,13 @@ failure destroys work.
 ## Schedules (`bin/schedules`)
 
 Recurring work: one directory per job under `schedules/`, one launchd tick, one
-alert store. The root CLAUDE.md has the contract; the `cb-authoring-schedules`
+alert store. The root CLAUDE.md has the contract; the `bbx-authoring-schedules`
 skill is how to write one. Design:
-`callback-box/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
+`beebox/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
 the router protocol above:
 
 - **The store lives beside the main checkout**, never inside it:
-  `<parent>/schedule-runs/` (override `CALLBACK_SCHEDULES_ROOT`), the exhibits
+  `<parent>/schedule-runs/` (override `BBX_SCHEDULES_ROOT`), the exhibits
   and comments convention, with the same marker-file discipline — a directory
   without `.schedule-runs` in it is refused rather than adopted. One store
   behind every worktree, so a run's history does not evaporate with whichever
@@ -704,7 +704,7 @@ unconstrained, and its
 `prompt.md` leads the briefing instead of riding `--append-system-prompt-file`.
 The session reports by writing a record (`bin/schedules alert` or `done`); one
 that ends without either is an `important` alert. Design:
-`callback-box/docs/plans/scheduled-workstreams.md`, Track B.
+`beebox/docs/plans/scheduled-workstreams.md`, Track B.
 
 ## Linting a schedule (`bin/schedules lint`)
 
@@ -732,7 +732,7 @@ deliberately casual.
 
 The boxholder's channel for talking to an agent **about a document**: a remark
 anchored to a span, written in the browser at `/workstreams/browse`, waiting in
-a store until an agent reads it. Design: `callback-box/docs/plans/document-comments.md`.
+a store until an agent reads it. Design: `beebox/docs/plans/document-comments.md`.
 
 - **Read them.** `bin/comments show <path>` for one document (any path spelling
   — absolute, repo-relative, cwd-relative); `bin/comments list` for everything
@@ -747,7 +747,7 @@ a store until an agent reads it. Design: `callback-box/docs/plans/document-comme
   the app can write through one implementation; a human types in the browser.
 
 **Where they live, and why nothing can delete them.** A store beside the main
-checkout (`<parent>/dev-comments/`, override `CALLBACK_COMMENTS_ROOT`), mounted
+checkout (`<parent>/dev-comments/`, override `BBX_COMMENTS_ROOT`), mounted
 read-only into each checkout as a gitignored `comments` symlink. It is the
 exhibits store's third persistence class: survives a worktree cull, never
 merges, never reaches git. Two namespaces, because a repository-relative path is
@@ -794,7 +794,7 @@ corpus at most every 30s to decide whether anything changed.
   default when a key is available) fuses BM25 with vector similarity;
   `semantic` is vector only.
 - `issues similar <issue-path> [--docs]` — nearest neighbours of an issue by its
-  own stored vector. `--docs` also ranks `callback-box/docs/**/*.md`, so an
+  own stored vector. `--docs` also ranks `beebox/docs/**/*.md`, so an
   existing plan surfaces as prior art instead of being re-derived.
 - `issues show <path>` — frontmatter as JSON plus the top of the body.
 
@@ -821,14 +821,14 @@ for the whole corpus again.
 with no key at all. `--mode hybrid` and `--mode semantic` are assertions that
 BM25 will not do, so they **error** when there is no key or the corpus is not
 fully embedded; only the unspecified default degrades to text, and it says so on
-stderr. The key is read from `CALLBACK_OPENAI_API_KEY`, then
+stderr. The key is read from `BBX_OPENAI_API_KEY`, then
 `THINKING_OPENAI_API_KEY`, then `SKE_OPENAI_API_KEY`.
 
 The same order applies to the app's Related section (and to comment
 transcription), read from the **app child's** environment: the supervisor
-spawns it with the main checkout's `callback-box/.env` underneath
+spawns it with the main checkout's `beebox/.env` underneath
 `process.env`, the same precedence worktree children get, so a
-`CALLBACK_OPENAI_API_KEY=` line there is enough and an exported variable
+`BBX_OPENAI_API_KEY=` line there is enough and an exported variable
 still wins. The router does not load that line into itself. With
 no key the section says so — "the semantic index needs an OpenAI key" is a
 state it renders, not an error page.
@@ -847,7 +847,7 @@ avoids the network entirely.
 
 `bin/private-issues` manages the per-developer private issue repo
 (`issues/CLAUDE.md` has the what-goes-where rules; the plan is
-`callback-box/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+`beebox/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 in the spirit of the router protocol above:
 
 - **Symlink topology is the safety property.** Every checkout's
@@ -859,7 +859,7 @@ in the spirit of the router protocol above:
 - **Locations are derived, never hardcoded** — peers of the main checkout,
   found via `git rev-parse --git-common-dir` from an explicit checkout-path
   argument. The private repo must carry the identity marker
-  (`.callback-private-issues` + `callback.privateIssues` git config) before
+  (`.beebox-private-issues` + `beebox.privateIssues` git config) before
   any command mutates it; a same-named unrelated dir is refused.
 - **Remove-if-safe, orphan-if-not.** Cleanup (session-end, worktree-remove,
   sweep) removes a private worktree only when merged into private `main` AND
@@ -885,7 +885,7 @@ agent's already-staged-but-uncommitted changes can be swept into a
 concurrently-running `git commit` from another agent, landing under the
 wrong commit's attribution. The fix is always **path-scoped commits**:
 `git add <paths> && git commit -- <paths>` (or the `stageAndCommitPaths`
-helper in `callback-box/src/lib/git.ts`), never a bare `git commit` —
+helper in `beebox/src/lib/git.ts`), never a bare `git commit` —
 scoping the commit to exactly the paths this agent staged means an
 interleaved sweep from another agent can't get co-committed under this
 one's message. This is a convention, not a lock: each agent is responsible

@@ -11,7 +11,7 @@ labels: [soft-launch]
 **Closed (decided) 2026-07-31 — Zulip.** Boxholder chose Zulip: live chat with
 real threading (topics), the strongest anti-Discord on organization, free hosted
 OSS tier and self-hostable (on-thesis). The forum is live at
-[callback-box.zulipchat.com](https://callback-box.zulipchat.com/). GitHub
+[beebox.zulipchat.com](https://beebox.zulipchat.com/). GitHub
 Discussions remains available as a secondary async record if wanted, but Zulip is
 the primary channel.
 

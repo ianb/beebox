@@ -43,7 +43,7 @@ export class CoverageError extends Error {
 }
 
 // Short content fingerprint — first 16 hex of SHA-256. Replicated locally from
-// callback-box/src/lib/content-hash.ts (site/ can't import engine internals).
+// beebox/src/lib/content-hash.ts (site/ can't import engine internals).
 function contentHash(content: string): string {
   return createHash("sha256").update(content).digest("hex").slice(0, 16);
 }

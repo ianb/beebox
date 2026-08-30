@@ -1,7 +1,7 @@
 ---
 title: "Doctest loader intermittently resolves .tsx schema modules as missing .ts files"
 workstream: tab-organizer-clerk
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-tab-organizer-clerk — full finish-suite verification
 resolution: implemented
@@ -14,7 +14,7 @@ maps `./module.js` directly to an existing `module.tsx` when no `module.ts`
 exists, so a downstream probe cannot stop at the missing `.ts` candidate. A
 regression test forces that downstream failure. A stress run passed 24
 simultaneous schema-registry TAP files (1,728/1,728 assertions). The six-job
-callback-box suite passed 6,163/6,163 in 140 seconds, compared with 588 seconds
+beebox suite passed 6,163/6,163 in 140 seconds, compared with 588 seconds
 before the upgrade.
 
 A full parallel `pnpm test` run produced 272 failures whose child processes

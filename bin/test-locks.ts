@@ -8,7 +8,7 @@
  * decisions are unit-testable without spawning a process or waiting a second.
  *
  * Why two slots, why a barrier, and what the ledger measured to justify both:
- * callback-box/docs/plans/change-based-test-selection.md, "Revision 2026-08-25
+ * beebox/docs/plans/change-based-test-selection.md, "Revision 2026-08-25
  * — test economics", mechanism A.
  */
 
@@ -166,7 +166,7 @@ export function bootTimeMs(): number | null {
 
 // ── the I/O shell ───────────────────────────────────────────────────────────
 
-export const lockDir = (gitCommonDir: string): string => join(gitCommonDir, "callback-test-locks");
+export const lockDir = (gitCommonDir: string): string => join(gitCommonDir, "beebox-test-locks");
 
 /** A held claim; `release` is idempotent and safe to call from a signal handler. */
 export interface Held {

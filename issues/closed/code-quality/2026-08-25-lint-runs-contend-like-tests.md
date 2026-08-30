@@ -7,7 +7,7 @@ resolution: implemented
 ---
 
 Observed 2026-08-25 while two agents worked one worktree: six concurrent
-`callback-box` eslint runs (agents re-running `pnpm lint` after each edit)
+`beebox` eslint runs (agents re-running `pnpm lint` after each edit)
 plus two in a sibling worktree, each at 29–51 min elapsed against a solo
 time of about a minute. Same pathology the test-run semaphore
 (`bin/test-locks.ts`, plan `change-based-test-selection.md` mechanism A)
@@ -37,10 +37,10 @@ whole-tree eslint numbers drift ±30% run to run, so treat them as ranges.
 
 Kept:
 
-- **`pnpm lint:changed`** (`bin/lint-changed.ts`) in callback-box and at the
+- **`pnpm lint:changed`** (`bin/lint-changed.ts`) in beebox and at the
   root. Changed = `git diff --name-only main...HEAD` ∪ dirty, through the test
   selector's own `changedPaths`, split by the boundary lint-staged uses. The
-  root form dispatches per changed package (`callback-box` → its `lint:changed`,
+  root form dispatches per changed package (`beebox` → its `lint:changed`,
   others → their `lint`, `schedules/` → `bin/schedules lint`).
 - **ESLint `--cache`** on `lint:backend` and `lint:frontend`, in
   `node_modules/.cache/eslint/` (gitignored, per worktree). Cold cost is
@@ -48,7 +48,7 @@ Kept:
 - **`tsc --incremental`** with a `tsBuildInfoFile` under `node_modules/.cache/tsc/`
   on all four typecheck programs. Verified a deliberate type error still fails
   `pnpm typecheck` (exit 1, the error named).
-- **`bin/with-slot.ts`** — the generic semaphore wrapper, on callback-box's
+- **`bin/with-slot.ts`** — the generic semaphore wrapper, on beebox's
   whole-tree `lint` and `typecheck`. Pre-commit's `pnpm typecheck` is wrapped by
   virtue of being that script; its lint-staged run is not (it is small, and
   queueing it behind a whole-tree run would cost more than the contention does).

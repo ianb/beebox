@@ -1,7 +1,7 @@
 ---
 title: "Low-priority job cards never drain, and one wedges the search index indefinitely"
 workstream: low-priority-jobs
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-box-family-email — investigating growth on a production box
 labels: [code-error]
@@ -9,10 +9,10 @@ priority: important
 resolution: implemented
 ---
 
-`cb wakeup` runs its reactor cycle with `skipLowPriority: true`
-(`callback-box/src/cli/commands/wakeup.ts:128`). A reactor cycle skips
+`bbx wakeup` runs its reactor cycle with `skipLowPriority: true`
+(`beebox/src/cli/commands/wakeup.ts:128`). A reactor cycle skips
 entirely when every pending job is low priority
-(`callback-box/src/core/reactor/cycle.ts:123`). Scheduled wakeup is the only
+(`beebox/src/core/reactor/cycle.ts:123`). Scheduled wakeup is the only
 thing that runs a reactor on a deployed box. So a box whose `box/jobs` holds
 only low-priority cards never drains them — not late, never.
 
@@ -26,7 +26,7 @@ ticks every minute.
 
 The stuck `contains-backfill` card is not just stale — it disables the search
 index. `createContainsBackfillJob`
-(`callback-box/src/cli/commands/wakeup-steps.ts:376`) returns early when a
+(`beebox/src/cli/commands/wakeup-steps.ts:376`) returns early when a
 `contains-backfill` job is already pending, and that early return is *before*
 its `openSearchIndex(boxRoot)` call on line 381:
 
@@ -38,14 +38,14 @@ await openSearchIndex(boxRoot);
 ```
 
 `openSearchIndex` is the refresh — it is what reconciles the index against the
-card tree. Its only other callers are `cb init` and `cb contains`, neither of
+card tree. Its only other callers are `bbx init` and `bbx contains`, neither of
 which runs on a schedule. So one undrainable low-priority card takes the
 search index out of the wakeup path permanently.
 
-Consequence on the observed box: `.callback-box/search-index.json` was last
+Consequence on the observed box: `.beebox/search-index.json` was last
 written 2026-08-04 and is 165 MB, with a 19 MB companion manifest. It still
 indexes roughly 141,000 documents that were removed from the box on 2026-08-06
-— about 98% of its content is deleted files. The box's whole `.callback-box`
+— about 98% of its content is deleted files. The box's whole `.beebox`
 is 193 MB against 415 MB of content; comparable boxes on the same server sit
 at 1–21 MB. Search results on that box are silently answering from a six-day-old
 tree.
@@ -61,7 +61,7 @@ the field-test harness. That issue's fix (drain in the field-test pre-action)
 does not touch the scheduled-wakeup path, so it could not have covered this.
 
 The hazard is already half-documented in-tree:
-`callback-box/src/schemas/todo-review-job.ts:37` explains that `low` is for
+`beebox/src/schemas/todo-review-job.ts:37` explains that `low` is for
 "genuinely-optional" work precisely because wakeup skips it. Nothing says what
 happens when such a job is queued anyway and no one ever runs an unfiltered
 reactor.
@@ -80,11 +80,11 @@ delayed by a low-priority backlog. Age comes from the timestamp prefix every
 job-card writer stamps into the filename — no card mutation, nothing to keep
 in sync; an unstamped name falls back to mtime, and an age that can't be
 established reads as young. See `discoverStage` in
-`callback-box/src/core/reactor/cycle.ts`.
+`beebox/src/core/reactor/cycle.ts`.
 
 **The index refresh has its own footing.** Rather than hoisting the one line,
 `openSearchIndex` moved out of `createContainsBackfillJob` entirely and became
-a `cb wakeup` step (`refreshSearchIndex`), run unconditionally ahead of the
+a `bbx wakeup` step (`refreshSearchIndex`), run unconditionally ahead of the
 backfill step that reads the `contains` state it writes. A refresh whose
 execution is incidental to an unrelated guard breaks again the next time that
 guard grows a return. It returns false when it did not actually reconcile —
@@ -92,7 +92,7 @@ it threw, or it lost the search lock to another process and served the last
 persisted index untouched — and the backfill step is skipped in that case
 rather than choosing a batch from state that predates the card tree.
 
-**Something complains now.** `cb health` reports any job pending over 7 days as
+**Something complains now.** `bbx health` reports any job pending over 7 days as
 a warning (`stalled-jobs`, in `health-stale.ts`). It reports the fact — a job
 is old — independent of the reason, because the next instance of this class
 will stall for a reason we haven't met: a failing agent, a connector-scoped
@@ -111,7 +111,7 @@ tree.
 
 ## Deploy note
 
-Prod boxes have accumulated these cards. The first full `cb wakeup` after this
+Prod boxes have accumulated these cards. The first full `bbx wakeup` after this
 ships will do two things at once on such a box: process up to five long-overdue
 low-priority jobs, and run the first index reconciliation in months — which on
 the observed box means restoring a 165 MB index to drop ~141,000 deleted

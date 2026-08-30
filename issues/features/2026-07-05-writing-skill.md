@@ -2,7 +2,7 @@
 title: "writing practice: assembling the user's own words into a finished form"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — after being told my README prose was "all AI"
 ---

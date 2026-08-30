@@ -1,7 +1,7 @@
 ---
 title: "iOS 'Clear message' sometimes doesn't clear — the unchanged-snapshot guard eats it when text moved underneath"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [ios, voice]
 filed-by: agent
 discovered-by: Ian
@@ -9,7 +9,7 @@ discovered-in: main session — "sometimes doesn't work; seems like a race somew
 ---
 
 On iOS, the "Clear message" voice keyword (`<erase-message phrase="Clear
-message" />`, `ios-app/CallbackBox/Services/SpeechKeywords.swift:46,210`)
+message" />`, `ios-app/BeeBox/Services/SpeechKeywords.swift:46,210`)
 sometimes leaves the composer un-cleared.
 
 Prime suspect, found by reading (not yet reproduced):

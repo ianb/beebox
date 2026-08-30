@@ -7,7 +7,7 @@ import { appRouter } from "./api/router.js";
 import { createMutationActivity } from "./mutation-activity.js";
 import type { AppServices } from "./services.js";
 
-export const ROUTER_CAPABILITY_HEADER = "x-cb-workstreams-capability";
+export const ROUTER_CAPABILITY_HEADER = "x-bbx-workstreams-capability";
 
 function capabilitiesMatch(actual: string | undefined, expected: string): boolean {
   if (actual === undefined) return false;

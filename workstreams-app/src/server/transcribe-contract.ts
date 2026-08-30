@@ -26,7 +26,7 @@ export const transcribeInputSchema = z.object({
  */
 export class TranscriptionNotConfiguredError extends Error {
   constructor() {
-    super("CALLBACK_OPENAI_API_KEY is not set, so spoken comments cannot be transcribed — type it instead.");
+    super("BBX_OPENAI_API_KEY is not set, so spoken comments cannot be transcribed — type it instead.");
     this.name = "TranscriptionNotConfiguredError";
   }
 }

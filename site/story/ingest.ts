@@ -7,7 +7,7 @@
 // the nugget — never written out (engineering principle 4). Any validation,
 // JSON, or span failure fails the whole run closed (nothing written, non-zero
 // exit); success prints one summary line per run file and nothing else. See
-// callback-box/docs/plans/github-pages-site-story-extraction.subplan.md, Track B.
+// beebox/docs/plans/github-pages-site-story-extraction.subplan.md, Track B.
 
 import fs from "node:fs/promises";
 import path from "node:path";
