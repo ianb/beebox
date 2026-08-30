@@ -6,8 +6,17 @@ labels: [chat, navigation, ui, landmarks]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "worktree-landmark-in-browse — while confirming landmark context in Browse"
-resolution: implemented
 ---
+
+> Reopened 2026-08-30: the first implementation (d088cd77d, reverted in
+> 27a29f79) rendered the resolved landmark's FULL header + links above the
+> card — and for a card in an un-landmarked dir that resolved to the ROOT
+> landmark, so the panel led with the box's whole link set and buried the
+> card (boxholder: "went nuts and put stuff in the card sidecar"). Lessons
+> for the next attempt: only the card's OWN dir's landmark (no root
+> fallback), compact (a one-line context strip, not the header), and design
+> it WITH the companion-view direction in
+> 2026-08-30-todos-inline-things-to-think-about — one panel, not bolt-ons.
 
 Resolved by `d088cd77d`. A landmark-bound chat now shows a compact landmark
 header above its companion card. Desktop includes the landmark's curated links.
