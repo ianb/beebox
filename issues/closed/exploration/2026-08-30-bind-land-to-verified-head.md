@@ -5,7 +5,13 @@ area: tooling
 labels: [git, tests]
 filed-by: agent
 discovered-in: research/no-mistakes-review.md
+resolution: wontfix
 ---
+
+**Closed 2026-08-30 by boxholder decision.** Accidental or over-broad use of
+`bin/land` is not an observed problem. In the infrequent case it is invoked
+directly, the boxholder asked for it. A verified-head receipt would therefore
+add machinery for a theoretical failure rather than address an experienced one.
 
 `/finish` has a strong procedural gate but `bin/land` has no durable evidence
 that the branch tip it is about to merge is the tip that passed that gate.
@@ -36,4 +42,4 @@ Investigate a small receipt owned by the existing commands:
 The design should remain one local landing path, with no proxy remote, daemon,
 PR requirement, force-push, or second worktree.
 
-Source comparison: [research/no-mistakes-review.md](../../research/no-mistakes-review.md).
+Source comparison: [research/no-mistakes-review.md](../../../research/no-mistakes-review.md).

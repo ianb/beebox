@@ -6,7 +6,7 @@ _Snapshot: 2026-08-30. Upstream: [kunchenguid/no-mistakes](https://github.com/ku
 
 No Mistakes is not a stronger version of our cross-model review skill. It is a local delivery system: a Git remote admits a committed branch into a disposable worktree, runs an intent/rebase/review/test/document/lint pipeline, publishes the resulting head, opens a PR, and watches CI. Our nearest comparison is the whole `/finish` path, not `.claude/skills/cross-model/SKILL.md` alone.
 
-The useful idea is narrower than adopting the product: bind the final mutation to durable evidence about the exact head that passed review and verification. No Mistakes carries a review-approved SHA through later steps and refuses publication when continuity is lost. Our headless finish agent checks that the tree is clean and that post-green commits were reverified, but `bin/land` itself knows only that the branch contains current `main`. Investigating a small, local verified-head receipt would strengthen the boundary without importing a daemon, proxy remote, TUI, PR workflow, or autonomous repair policy.
+The useful material is in its review instructions and review/fix/rereview loop, not its delivery guard. No Mistakes carries a review-approved SHA through later steps, but the boxholder does not see accidental or unauthorized `bin/land` use in practice; the rare direct use is intentional. Adding a verified-head receipt would solve a theoretical misuse rather than an experienced failure.
 
 Do not replace our cross-model pairing with No Mistakes' agent fallback chain. A fallback chain is availability routing, not independent review: it stops at the first configured agent that runs successfully and may remain in the same model family as the author. Our skill's point is deliberately different blind spots (Claude author -> Codex reviewer, or Codex author -> Claude reviewer), read-only source checking, and human adjudication.
 
@@ -30,7 +30,7 @@ Its ordered agent list covers Claude, Codex, Grok, OpenCode, Copilot, Pi, Rovo D
 | Judgment | Findings are typed `auto-fix`, `ask-user`, or `no-op`; selected fixes can be delegated to the pipeline | Review is working evidence. The authoring agent verifies findings, applies changes in the normal workstream, and reports material outcomes | Keep the separation. It matches the boxholder preference to arrange context rather than automate product judgment. We can borrow structured finding labels without handing branch custody to a repair agent. |
 | Validation | Targeted local test plus agent-gathered evidence, documentation and lint stages, then remote CI as the broad suite | `finish-preflight` derives a decision sheet; `finish-verify` runs changed tests, applicable typecheck/lint, and a real-box smoke; `schedules/full-suite` tests pinned `main` hourly and files attributed regressions | Similar economics. Our hourly post-merge net deliberately accepts bounded escape latency instead of making every landing wait for the full suite. |
 | Dirty or uncertain state | Gate consumes committed history; pipeline owns mutations while active | Finish agent blocks on ambiguous stragglers, merge conflicts, real failures, dirty final state, or missing human decisions | Our fail-closed headless behavior is simpler and better fitted to a single boxholder. No Mistakes adds durable pause/resume and branch custody for long PR/CI lifetimes, which we do not have. |
-| Exact-head safety | Durable review-approved SHA; head-continuity checks before every later step; guarded push and remote verification | Finish agent tracks the decision sheet and requires re-verification after post-green commits; `bin/land` requires clean `main`, current-main ancestry, and `--no-ff`, but has no durable verification receipt | This is the strongest transferable idea. Investigate binding `bin/land` to the exact verified head, without copying the remote force-push mechanism. |
+| Exact-head safety | Durable review-approved SHA; head-continuity checks before every later step; guarded push and remote verification | Finish agent tracks the decision sheet and requires re-verification after post-green commits; `bin/land` requires clean `main`, current-main ancestry, and `--no-ff` | No change. The remaining bypass is intentional in the infrequent cases it occurs; a receipt would add machinery without an observed error. |
 | Concurrent upstream movement | Rebase before review; later conflict repair re-enters Review because ancestry continuity is lost | Preflight merges `main` into the worktree; `bin/land` refuses if `main` moved, sending the worktree back through merge and verification | Already equivalent in safety intent. Our no-rewrite merge topology makes force-with-lease irrelevant to landing. |
 | Delivery | Pushes a feature branch, opens a PR, monitors CI, and may republish repairs | `bin/land --no-ff` merges locally to `main`; hooks deploy deployed paths; hourly suite is the post-merge net | Reject the PR/proxy layer here. It would create a second way to land and conflict with the repo's one-command `bin/land` boundary. |
 
@@ -47,6 +47,32 @@ The headless distinction is therefore:
 
 The latter is less convenient for unattended PR production but easier to reason about in this repository.
 
+### The actual review instructions
+
+The reviewer is told to read the relevant history and diff itself, then inspect surrounding code, call sites, shared helpers, tests, and invariants as needed. The strongest instructions are concrete rather than checklist-shaped:
+
+- For changed logic, construct at least one concrete input or state and trace it, specifically looking for a wrong result that does not throw or otherwise announce itself.
+- For a claimed durable bug fix, reconstruct the original failing sequence and invariant, then inspect sibling paths and shared state transitions to see whether the same authorized failure remains reachable.
+- Recommend a shared boundary only when source evidence demonstrates the reachable failure. Duplication or architectural taste alone is not evidence of a systemic defect.
+- Respect explicitly authorized containment and user scope. Do not convert an optional redesign into a blocker.
+- Review bugs, security, performance, breaking changes, insufficient error handling, and genuine simplification opportunities, but exclude style, formatting, lint, compilation, and type errors because later gates own them.
+- Complete the whole review before returning rather than stopping at the first finding.
+
+Every finding carries severity, file/line when possible, a short description, and an action. `ask-user` covers product behavior, deliberate intent, and any remedy that would extend scope by adding durable state, schema changes, retries/background work, persistence, or a subsystem. `auto-fix` is reserved for non-user-visible correctness, reliability, security, performance, or mechanical-quality repairs that do not require an intent decision. `no-op` is informational. The reviewer also produces a low/medium/high risk assessment and rationale.
+
+Two aspects look worth adapting into `.claude/skills/cross-model/SKILL.md` after a focused design pass:
+
+1. Require one concrete state trace for new logic and reconstruction of the failing sequence for purported durable fixes. Our current instruction to verify source claims is strong for plans, but diff review/challenge mode is less explicit about these two moves.
+2. Classify a finding by the scope of its smallest honest remedy. “The defect is real” and “the reviewer is authorized to grow a subsystem to fix it” are separate judgments; No Mistakes makes that separation explicit.
+
+### Loop mechanics
+
+The loop is `fresh review -> selected fix -> fresh full review`, bounded by the configured review auto-fix count (zero by default). The initial review and every rereview are session-free. Fix rounds alone reuse a durable fixer session, so the fixer retains implementation context but never certifies its own work.
+
+The rereviewer receives sanitized round history: prior findings, decisions, fix summaries, and user intent. It is explicitly told that pipeline-authored code and tests are claims, not evidence, and must receive the same adversarial scrutiny as the original change. This design was added after a resumed reviewer approved defective code and a test produced by its own prescribed fix. If a fix expands beyond what the finding required and introduces defects, the rereviewer is told to emit one `ask-user` recommendation to revert that round to the minimal fix rather than recursively breeding more repairs.
+
+The fixer itself is told to verify each finding first, distinguish a local defect from a deeper ownership/validation/design problem, apply the smallest root-cause fix within the changed area, avoid undoing intentional author behavior, make all edits before verification, and run one focused check at the end—never the full repository test or lint suite. Dedicated Test and Lint stages remain authoritative.
+
 ## Force-push safety and our landing/deploy chain
 
 No Mistakes needs force-push safety because rebases and pipeline fixes may rewrite an already-published feature branch. It proves two separate facts: the proposed head equals or descends from the review-approved head, and the remote still equals the expected lease anchor. If the first proof fails, it returns to Review; if the second fails, it refuses to overwrite concurrent remote work.
@@ -57,11 +83,11 @@ The transferable invariant is “the mutation consumes the exact artifact that w
 
 ## Dispositions
 
-### Adapt — investigate a verified-head receipt for `bin/land`
+### Adapt — strengthen diff-review instructions around concrete failure traces
 
-Have `bin/finish-verify` (or the finish agent after all required judgment steps) emit a short-lived/durable record keyed by branch, exact HEAD, merged-main base, and completed verification kinds. Make `bin/land` validate and consume that record, invalidating it when HEAD or `main` changes. Preserve the existing rule that semantic changes after green require a full rerun and docs-only changes need only doc checks. This adapts No Mistakes' approved-head continuity to our local `--no-ff` topology rather than copying its database or force-push path.
+Consider adding two requirements to cross-model review/challenge mode: trace at least one concrete state through changed logic, and reconstruct the failing sequence plus invariant for a claimed durable fix. Also make the reviewer distinguish a source defect from the scope authorization required by its smallest honest remedy.
 
-Concrete trace: `bin/finish-preflight.ts`, `bin/finish-verify.ts`, `.claude/agents/finish.md` step 7, and `bin/land`. Filed as [`issues/exploration/2026-08-30-bind-land-to-verified-head.md`](../issues/exploration/2026-08-30-bind-land-to-verified-head.md).
+Concrete trace: `.claude/skills/cross-model/SKILL.md` review/challenge prompts and No Mistakes' `internal/pipeline/steps/review.go` at the reviewed commit. This needs a focused design before editing the skill; it is not a request to import No Mistakes' automated loop. Filed as [`issues/exploration/2026-08-30-cross-model-review-concrete-traces.md`](../issues/exploration/2026-08-30-cross-model-review-concrete-traces.md).
 
 ### Adopt — use exact-head language when reasoning about later mutations
 
@@ -81,6 +107,12 @@ Those components solve multi-repository contribution and long-running CI custody
 
 Concrete trace: root `CLAUDE.md` worktree/auto-deploy rules, `.claude/skills/finish/SKILL.md`, and `bin/land`.
 
+### Reject — require a verified-head receipt before `bin/land`
+
+The boxholder does not observe accidental or over-broad use of `bin/land`; its infrequent direct use is intentional. A receipt would add state and another authorization mechanism without addressing a real failure.
+
+Concrete trace: boxholder decision, 2026-08-30; closed issue [`issues/closed/exploration/2026-08-30-bind-land-to-verified-head.md`](../issues/closed/exploration/2026-08-30-bind-land-to-verified-head.md).
+
 ### Reject — automatically apply model-authored review findings by default
 
 Keep deterministic format/lint fixes automated where already safe, but keep cross-model findings as evidence for the primary agent and user. No Mistakes itself now defaults review auto-fix to zero; its more autonomous test/document/lint repair loop is not a reason to blur our author/reviewer roles.
@@ -92,4 +124,3 @@ Concrete trace: `.claude/skills/cross-model/SKILL.md` shared rules 7–8 and the
 The principle may help ensure that an incomplete or superseded deploy cannot report or leave the wrong ref live. Do not infer a fix from this comparison: first inspect the current deploy coordinator and its existing supersession guarantees in a dedicated workstream.
 
 Concrete trace: `callback-box/deploy/deploy.sh` and the main-only post-commit/post-merge deployment contract in root `CLAUDE.md`.
-
