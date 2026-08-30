@@ -13,7 +13,8 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
-import { apiFileUrl } from "../../lib/view-url";
+import { apiFileUrl, isExternalUrl, type ViewTarget } from "../../lib/view-url";
+import { resolveContentTarget } from "../../lib/view-url";
 import type { SessionRowItem } from "../session-pickers/SessionRow";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
@@ -21,14 +22,14 @@ import { Text } from "../ui/Text";
 import { ChevronIcon } from "./ChevronIcon";
 import { LandmarkSessions } from "./LandmarkSessions";
 
-interface ResolvedLink {
+export interface ResolvedLink {
   ref: string;
   label: string | null;
   title: string;
   exists: boolean;
 }
 
-interface ResolvedGroup {
+export interface ResolvedGroup {
   label: string;
   children: ResolvedLink[];
   count: number;
@@ -136,16 +137,26 @@ export function LandmarkSection({
  * behind an inline disclosure rather than a click-through (no full-form view
  * exists to click through to).
  */
-function LandmarkLinks({ links, boxSlug }: { links: ResolvedLink[]; boxSlug: string }) {
+export function LandmarkLinks({
+  links,
+  boxSlug,
+  onNavigate,
+  compact,
+}: {
+  links: ResolvedLink[];
+  boxSlug: string;
+  onNavigate?: (target: ViewTarget) => void;
+  compact?: boolean;
+}) {
   const [showAll, setShowAll] = useState(false);
   if (links.length === 0) return null;
   const visible = showAll ? links : links.slice(0, LINK_CAP);
 
   return (
     <Stack gap="xs">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className={`grid grid-cols-1 gap-2 ${compact === true ? "" : "sm:grid-cols-2"}`}>
         {visible.map((link) => (
-          <LinkTile key={link.ref} link={link} boxSlug={boxSlug} />
+          <LinkTile key={link.ref} link={link} boxSlug={boxSlug} onNavigate={onNavigate} />
         ))}
       </div>
       {links.length > LINK_CAP ? (
@@ -164,7 +175,17 @@ function LandmarkLinks({ links, boxSlug }: { links: ResolvedLink[]; boxSlug: str
   );
 }
 
-function LandmarkGroup({ group, boxSlug }: { group: ResolvedGroup; boxSlug: string }) {
+export function LandmarkGroup({
+  group,
+  boxSlug,
+  onNavigate,
+  compact,
+}: {
+  group: ResolvedGroup;
+  boxSlug: string;
+  onNavigate?: (target: ViewTarget) => void;
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const overflow = group.count - group.children.length;
 
@@ -181,9 +202,9 @@ function LandmarkGroup({ group, boxSlug }: { group: ResolvedGroup; boxSlug: stri
         <Text as="span" size="xs" tone="muted">{group.count}</Text>
       </button>
       {open ? (
-        <div className="ml-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className={`ml-6 grid grid-cols-1 gap-2 ${compact === true ? "" : "sm:grid-cols-2"}`}>
           {group.children.map((link) => (
-            <LinkTile key={link.ref} link={link} boxSlug={boxSlug} />
+            <LinkTile key={link.ref} link={link} boxSlug={boxSlug} onNavigate={onNavigate} />
           ))}
           {overflow > 0 ? (
             <Text as="div" size="xs" tone="muted" className="self-center">
@@ -196,25 +217,53 @@ function LandmarkGroup({ group, boxSlug }: { group: ResolvedGroup; boxSlug: stri
   );
 }
 
-function LandmarkSymbol({ landmark, boxSlug }: { landmark: Landmark; boxSlug: string }) {
+export function LandmarkSymbol({
+  landmark,
+  boxSlug,
+  compact,
+}: {
+  landmark: Pick<Landmark, "symbol" | "symbolSrc">;
+  boxSlug: string;
+  compact?: boolean;
+}) {
+  const isCompact = compact === true;
   if (landmark.symbolSrc) {
     return (
       <img
         src={apiFileUrl(boxSlug, landmark.symbolSrc)}
         alt=""
-        className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+        className={`${isCompact ? "w-9 h-9" : "w-14 h-14"} rounded-full object-cover flex-shrink-0`}
       />
     );
   }
   return (
-    <span className="text-4xl leading-none flex-shrink-0" aria-hidden>
+    <span className={`${isCompact ? "text-2xl" : "text-4xl"} leading-none flex-shrink-0`} aria-hidden>
       {landmark.symbol || "📍"}
     </span>
   );
 }
 
-function LinkTile({ link, boxSlug }: { link: ResolvedLink; boxSlug: string }) {
+function LinkTile({
+  link,
+  boxSlug,
+  onNavigate,
+}: {
+  link: ResolvedLink;
+  boxSlug: string;
+  onNavigate?: (target: ViewTarget) => void;
+}) {
   const display = link.label !== null && link.label.length > 0 ? link.label : link.title;
+
+  if (isExternalUrl(link.ref)) {
+    return (
+      <a href={link.ref} target="_blank" rel="noopener noreferrer" className="block">
+        <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
+          <Text as="div" size="sm" weight="medium">{display}</Text>
+          <Text as="div" size="xs" tone="muted" truncate>{link.ref}</Text>
+        </Card>
+      </a>
+    );
+  }
 
   if (!link.exists) {
     return (
@@ -222,6 +271,18 @@ function LinkTile({ link, boxSlug }: { link: ResolvedLink; boxSlug: string }) {
         <Text as="div" size="sm" weight="medium" tone="muted">{display}</Text>
         <Text as="div" size="xs" tone="muted">Missing</Text>
       </Card>
+    );
+  }
+
+  const target = resolveContentTarget(undefined, link.ref);
+  if (onNavigate !== undefined && target !== null) {
+    return (
+      <button type="button" onClick={() => onNavigate(target)} className="block w-full text-left">
+        <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
+          <Text as="div" size="sm" weight="medium">{display}</Text>
+          <Text as="div" size="xs" tone="muted" truncate>{link.ref}</Text>
+        </Card>
+      </button>
     );
   }
 
