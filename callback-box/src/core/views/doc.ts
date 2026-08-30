@@ -137,6 +137,34 @@ box-relative paths (e.g.
 never inlined — attachments can be huge or binary — fetch it with
 \`readFile(path)\` or point an \`<img>\`/\`<audio>\` at \`fileUrl(path)\`.`;
 
+const linkFieldVocabularySection = `## Link-Shaped Card Data
+
+When a card schema or a view-owned data shape points somewhere, use the same
+field names as \`{% source %}\`: \`ref\` for an internal box target and \`href\`
+for an external target. Keep the target in an object so sibling fields can say
+why it is there. Do not invent \`url\`/\`link\` fields or bare string arrays such
+as \`urls: ["https://…"]\`.
+
+For example, this card records an internal related card beside an external
+source. \`retrieved\` is the date the external source was checked, in date-only
+ISO form:
+
+\`\`\`yaml
+related:
+  - ref: /store/projects/Garden_Redesign.project.card
+    note: Background for this recommendation
+sources:
+  - href: https://example.com/native-plants
+    retrieved: 2026-08-30
+    usage: Paraphrased for the hardiness recommendation
+\`\`\`
+
+Internal \`ref\` values are walked by ref-aware fields, rendered as links, and
+rewritten by \`cb mv\` when their targets move. External \`href\` values are not
+rewritten. The shared vocabulary also includes \`version\` when a source must be
+pinned to a measured file state. See the agent guide's \`{% source %}\` section
+for the full semantics.`;
+
 const showingFilesSection = `## Showing Files in Chat
 
 To show a file to the user, reference it by its plain box path — like a normal
@@ -290,6 +318,7 @@ export function generateViewsDoc(): string {
       introSection,
       fileFormatSection,
       metadataAndPropsSection,
+      linkFieldVocabularySection,
       dependenciesAndParamsSection,
       showingFilesSection,
       companionViewsSection,
