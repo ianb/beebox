@@ -1,11 +1,12 @@
 ---
 title: "At the box root, browse shows only the raw listing — the root landmark's view and its links are unreachable in place"
-workstream: unattached
+workstream: landmark-in-browse
 area: callback-box
 labels: [navigation, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — when in the root landmark, it doesn't show the folder/landmark view, and then you can't open links in that landmark"
+resolution: implemented
 ---
 
 Browsing the box root (`/browse/`) renders the plain directory listing —
