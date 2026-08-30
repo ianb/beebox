@@ -142,7 +142,7 @@ async function repairInterruptedSetup(): Promise<{ code: number | null; setupRan
   const name = "interrupted";
   const worktree = path.join(worktrees, name);
   execFileSync("git", ["worktree", "add", "-q", "-b", `worktree-${name}`, worktree, "main"], { cwd: mono });
-  const stateFile = path.join(mono, ".git", `callback-worktree-setup-${name}.state`);
+  const stateFile = path.join(mono, ".git", `beebox-worktree-setup-${name}.state`);
   await fs.writeFile(stateFile, `in-progress\t${worktree}\n`);
   const repaired = create(name);
   const result = await repaired.done;
@@ -157,7 +157,7 @@ async function repairInterruptedSetup(): Promise<{ code: number | null; setupRan
 async function failThenRepair(): Promise<{ failed: number | null; incomplete: boolean; retried: number | null; ready: boolean }> {
   const name = "failed-setup";
   const failed = await create(name, { SETUP_FAIL_NAME: name }).done;
-  const stateFile = path.join(mono, ".git", `callback-worktree-setup-${name}.state`);
+  const stateFile = path.join(mono, ".git", `beebox-worktree-setup-${name}.state`);
   const incomplete = (await fs.readFile(stateFile, "utf8")).startsWith("in-progress\t");
   const retried = await create(name).done;
   return {
@@ -177,7 +177,7 @@ async function legacyBackfill(): Promise<{ code: number | null; envPreserved: bo
   const beforeCalls = await fs.readFile(calls, "utf8");
   const result = await create(name).done;
   const afterCalls = await fs.readFile(calls, "utf8");
-  const stateFile = path.join(mono, ".git", `callback-worktree-setup-${name}.state`);
+  const stateFile = path.join(mono, ".git", `beebox-worktree-setup-${name}.state`);
   return {
     code: result.code,
     envPreserved: (await fs.readFile(localEnv, "utf8")) === "LOCAL_ONLY=1\n",
@@ -193,7 +193,7 @@ async function createThenRemove(): Promise<{ create: number | null; firstRemoveR
   const creator = create(name);
   await waitFor(path.join(markerDir, name));
   const firstRemover = removeWorktree(name);
-  await waitFor(path.join(observerDir, `callback-worktree-setup-${name}.lock.waiting`));
+  await waitFor(path.join(observerDir, `beebox-worktree-setup-${name}.lock.waiting`));
   const firstRemoveResult = await firstRemover.done;
   const survivedUntilRelease = await exists(path.join(worktrees, name));
   await fs.writeFile(release, "release\n");
@@ -228,7 +228,7 @@ async function nativeRemovalTombstone(): Promise<{ refusedWhileRegistered: boole
   const worktree = path.join(worktrees, name);
   execFileSync("git", ["worktree", "add", "-q", "-b", `worktree-${name}`, worktree, "main"], { cwd: mono });
   const canonicalWorktree = path.join(await fs.realpath(worktrees), name);
-  const stateFile = path.join(mono, ".git", `callback-worktree-setup-${name}.state`);
+  const stateFile = path.join(mono, ".git", `beebox-worktree-setup-${name}.state`);
   await fs.writeFile(stateFile, `native-removal-pending\t${canonicalWorktree}\n`);
   const refused = await create(name).done;
   execFileSync("git", ["worktree", "remove", "--force", worktree], { cwd: mono });
@@ -252,7 +252,7 @@ await writePnpm(true);
 const first = create("same-name");
 await waitFor(path.join(markerDir, "same-name"));
 const second = create("same-name");
-await waitFor(path.join(observerDir, "callback-worktree-setup-same-name.lock.waiting"));
+await waitFor(path.join(observerDir, "beebox-worktree-setup-same-name.lock.waiting"));
 assert.equal(second.child.exitCode, null);
 await fs.writeFile(release, "release\n");
 const [firstResult, secondResult] = await Promise.all([first.done, second.done]);
