@@ -39,6 +39,16 @@ What universal treatment could buy, if adopted:
   handling is the swamp: a bare RRULE without dtstart/tz is underspecified,
   which may argue for the object form.
 
+Boxholder refinement (same day): like refs, a recurrence value should
+generally travel with **context** — an object envelope, e.g.
+`{ note: "hours open", rrule: ... }` — so the value says what it *is*, not
+just when it fires. (Their words: "maybe not `rrule`, I don't know what the
+right envelope here is" — the inner key is open too.) This parallels how a
+bare `ref:` string usually sits inside an object whose siblings say why the
+ref is there, and it strengthens the object-form lean above: the envelope is
+where note, dtstart, and tz all live. Rendering follows: the note is the
+prose, the recurrence is the detail ("Hours open — every 2nd Tuesday").
+
 Why the hesitation is warranted (the "minimize invented concepts" preference
 cuts both ways): `ref`'s universality earns its keep because refs are
 *everywhere*; recurrence fields today exist in one schema. Adopting the
