@@ -41,7 +41,7 @@ const mountResult = await execFileAsync(privateIssues, ["mount", worktree], { en
 const report = await execFileAsync(privateIssues, ["report-orphans", mono], { env });
 const defaultRootReport = await execFileAsync(privateIssues, ["report-orphans", mono]);
 const sweep = await execFileAsync(privateIssues, ["sweep-orphans", mono], { env });
-const privateWorktrees = await git(join(root, "callback-private-issues"), "worktree", "list", "--porcelain");
+const privateWorktrees = await git(join(root, "beebox-private-issues"), "worktree", "list", "--porcelain");
 JSON.stringify({
   mounted: mountResult.stdout.trim() === "mounted",
   reportSilent: report.stdout.trim() === "",

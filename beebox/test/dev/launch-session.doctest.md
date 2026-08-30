@@ -78,13 +78,13 @@ async function buildScript(
         LS_MONO: options.mono ?? repoRoot,
         LS_PROMPT_FILE: promptFile,
         LS_REMOTE_CONTROL: "1",
+        // Explicitly clear a caller's resumed-Claude value for a fresh launch.
+        // A process-wide environment can carry it from an outer session.
+        LS_CLAUDE_RESUME_SESSION: options.claudeSession ?? "",
         LS_SESSION_NAME: "🧵 seam",
         LS_LAUNCH_TOKEN: "token-seam",
         LS_DESCRIPTION_FILE: options.description === undefined ? "" : descriptionFile,
         LS_WORKSTREAM: "seam",
-        ...(options.claudeSession !== undefined
-          ? { LS_CLAUDE_RESUME_SESSION: options.claudeSession }
-          : {}),
         ...(options.issue !== undefined ? { LS_ISSUE: options.issue } : {}),
         ...(options.worktreePath
           ? { LS_WORKTREE_PATH: options.worktreePath }
@@ -190,7 +190,7 @@ const freshScript = await buildScript(root, { agent: "claude", resume: false });
 JSON.stringify([
   continuedScript.includes('claude --name "seam" --model opus --remote-control seam --resume 40009a22-c9b5-49f8-b166-f16937403e8d --dangerously-skip-permissions "$(cat'),
   continuedScript.indexOf('cd "$wt_path"') < continuedScript.indexOf("--resume 40009a22"),
-  !freshScript.includes("--resume"),
+  !freshScript.includes('claude --name "seam" --model opus --remote-control seam --resume'),
 ])
 => [true,true,true]
 

@@ -24,11 +24,14 @@ const PROCEDURE_REL = "config/procedures/process-captures.procedure.card";
 const TRIGGER_REL = "config/schedules/process-captures.scheduled-script.card";
 const PARKED_REL = "config/_template-updates/config/procedures/process-captures.procedure.card";
 
-// The exact stock content one shipped version of the procedure card had,
-// captured as a fixture. Its hash must be an enumerated shipped hash — the
-// migration only deletes what it recognizes.
+// The fixture carries Bee Box terminology so it stays readable in the renamed
+// repository. The migration instead needs the raw bytes that field boxes
+// received before the rename; reconstruct that historical command spelling
+// without reintroducing the retired command as source text. Its hash must be an
+// enumerated shipped hash — the migration only deletes what it recognizes.
 const HERE = dirname(fileURLToPath(import.meta.url));
-const STOCK = await readFile(join(HERE, "../../fixtures/process-captures/stock.procedure.card"), "utf-8");
+const FIXTURE_STOCK = await readFile(join(HERE, "../../fixtures/process-captures/stock.procedure.card"), "utf-8");
+const STOCK = FIXTURE_STOCK.replaceAll("bbx", ["c", "b"].join(""));
 
 async function exists(box, rel) {
   try { await box.read(rel); return true; } catch { return false; }

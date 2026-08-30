@@ -21,7 +21,7 @@
  * an explicit `.procedure.card` path is used as given.
  */
 export function procedureCardForRuns(runs: string): string | null {
-  const match = /(?:^|[&;|]\s*)\S*\bcb\s+procedure\s+run\s+(.*)$/s.exec(runs);
+  const match = /(?:^|[&;|]\s*)\S*\bbbx\s+procedure\s+run\s+(.*)$/s.exec(runs);
   const tail = match?.[1];
   if (tail === undefined) return null;
   const nameOrPath = firstOperand(tail);

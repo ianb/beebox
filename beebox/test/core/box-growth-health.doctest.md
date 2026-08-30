@@ -49,14 +49,13 @@ print(`history: ${measured.history.status}`);
 print(measured.largestSubtrees.filter((item) => item.files > 0).map((item) => `${item.path}:${item.source}:${item.files}`).join("\n"));
 =>
 directories: 12
-files: 7
+files: 6
 complete: true
 history: available
 store/drive:connector:2
 box/inbox/email:connector:1
 store/chat/session:chat:1
 tmp-upload:user-input:1
-.beebox/box.json:unknown:1
 box-link:unknown:1
 
 measured.largestSubtrees.length <= 20
@@ -153,7 +152,7 @@ const badShapeMeasurement = await measureBoxGrowth(badShape.root, {
   now: at("2026-08-05T12:00:00Z"),
 });
 print(`${badShapeMeasurement.counts.files}:${badShapeMeasurement.history.status}`);
-=> 2:unavailable
+=> 1:unavailable
 ```
 
 ```ts cleanup

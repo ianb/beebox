@@ -26,7 +26,7 @@ const repoRoot = resolve(process.cwd(), "..");
 // literal prefixes. Nothing under ~/src has that problem, so this is a
 // property of the scratch tree, not of the code under test.
 const home = await realpath(await mkdtemp(join(tmpdir(), "process-cleanup-doctest-")));
-const worktreeRoot = join(home, "src/callback-worktrees");
+const worktreeRoot = join(home, "src/beebox-worktrees");
 const browseRoot = join(home, ".cache/beebox/browse");
 const fakeBin = join(home, "fakebin");
 const spawned: number[] = [];
