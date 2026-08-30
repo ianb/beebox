@@ -245,7 +245,12 @@ export const chatRouter = router({
     .query(async ({ ctx, input }) => {
       const recorded = await getDirectoryForSession(ctx.boxRoot, input.sessionId);
       const reserved = getChatRuntime(ctx.boxRoot)?.registry.getReservation(input.sessionId) ?? null;
-      const contextDir = recorded ?? (reserved === null ? null : reserved.contextDir);
+      // "" (the box root), never null: a chat with no recorded binding is a
+      // ROOT chat — the same missing→"" rule byLandmark applies above. This
+      // procedure answered null instead, and the app bar treats null as "no
+      // place at all", so root chats had no folder menu — the root landmark's
+      // links were unreachable from chat (boxholder, 2026-08-27→30).
+      const contextDir = recorded ?? reserved?.contextDir ?? "";
       return { contextDir };
     }),
 
