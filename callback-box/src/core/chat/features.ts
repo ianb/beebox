@@ -11,7 +11,7 @@
  * `model="opus"` slot in by adding a registry entry, no shape change.
  */
 
-import type { ChatChannel } from "../../shared/chat-channel.js";
+import type { AgentChatChannel } from "../../shared/chat-channel.js";
 
 export type FeatureValue = string;
 export type FeatureMap = Record<string, FeatureValue>;
@@ -163,9 +163,9 @@ const READ_ONLY_ATTRS = new Set([
  *     local-time="Wednesday 2026-05-13 14:23 (afternoon)" channel="web-desktop"/>
  */
 export function composeChatAppSnapshot(input: {
-  features: FeatureMap;
+  features?: FeatureMap;
   localTime?: string;
-  channel?: ChatChannel;
+  channel?: AgentChatChannel;
   lastActivity?: string;
   health?: string;
   todos?: string;
@@ -173,12 +173,14 @@ export function composeChatAppSnapshot(input: {
   /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
   activityChildren?: string;
 }): string {
-  const resolved = resolveFeatures(input.features);
   const attrs: string[] = [];
-  for (const f of FEATURE_LIST) {
-    const val = resolved[f.name];
-    if (val === undefined) continue;
-    attrs.push(`${f.name}="${escapeAttr(val)}"`);
+  if (input.features !== undefined) {
+    const resolved = resolveFeatures(input.features);
+    for (const f of FEATURE_LIST) {
+      const val = resolved[f.name];
+      if (val === undefined) continue;
+      attrs.push(`${f.name}="${escapeAttr(val)}"`);
+    }
   }
   const contextAttrs: Array<[string, string | undefined]> = [
     ["local-time", input.localTime],

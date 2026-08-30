@@ -208,6 +208,14 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 await box.write("store/threads/conv1.card", `---\nstatus: new\n---\nHi there`);
 await box.write("box/jobs/msg.chat.job.card", chatJob("Reply to user", "store/threads/conv1.card"));
+await box.write(".callback-box/chat-sessions.json", JSON.stringify({
+  "store/threads/conv1.card": {
+    sessionId: "stale-session",
+    createdAt: "2020-01-01T00:00:00.000Z",
+    lastUsedAt: "2020-01-02T00:00:00.000Z",
+    messageCount: 1,
+  },
+}));
 box.commitAll("Add chat job");
 
 let agents = [];
@@ -244,6 +252,18 @@ agents.length
 
 agents[0].invocations[0].prompt.includes("Reply to user")
 => true
+
+// Telegram chat jobs carry the same per-message situational snapshot as web
+// chat, with their own channel vocabulary.
+/^<chat-app .*local-time="[^"]+" channel="telegram"/.test(agents[0].invocations[0].prompt)
+=> true
+
+agents[0].invocations[0].prompt.includes('last-activity=')
+=> true
+
+// Web-only UI feature flags are not sent to the Telegram reactor.
+/\b(?:narration|prose|hq-dictation)=/.test(agents[0].invocations[0].prompt)
+=> false
 
 await box.cleanup();
 ```
@@ -365,6 +385,14 @@ agents[1].sessionId === agents[0].sessionId
 
 agents[1].invocations[0].resumed
 => true
+
+// Resumed messages still carry current time/channel context, while
+// session-start-only context is not repeated.
+agents[1].invocations[0].prompt.includes('channel="telegram"')
+=> true
+
+agents[1].invocations[0].prompt.includes('last-activity=')
+=> false
 
 // Session record survived and counted both messages
 const stored2 = JSON.parse(
