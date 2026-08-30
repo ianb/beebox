@@ -54,8 +54,10 @@ MONO_DIR="$(cd "$REPO_DIR/.." && pwd)"     # the invoking tree's monorepo root
 LOG_HINT="callback-box/deploy/.last-deploy.log"
 notify() {  # $1=title  $2=message
   [ -t 1 ] && return 0
+  # -activate: clicking the notification brings Terminal forward (where the
+  # deploy ran) instead of doing nothing. One fixed group replaces stale ones.
   command -v terminal-notifier >/dev/null 2>&1 &&
-    terminal-notifier -title "$1" -message "$2" -group callback-deploy >/dev/null 2>&1 || true
+    terminal-notifier -title "$1" -message "$2" -group callback-deploy       -activate com.apple.Terminal >/dev/null 2>&1 || true
 }
 # The trap also releases the deploy lock (LOCK_HELD is set only after shlock
 # succeeds, further below). If a held deploy fails after a newer request was
@@ -910,7 +912,7 @@ echo "Deploy complete."
 echo "$SHA" > "$SCRIPT_DIR/.last-deployed-sha"
 # Show what shipped (hash + commit subject) rather than the — frankly boring —
 # server IP. Both vars are computed above for deploy-info.json.
-notify "✅ callback-box deployed" "$CALLBACK_BOX_HASH $CALLBACK_BOX_SUBJECT"
+notify "🚀 callback-box deployed" "$CALLBACK_BOX_HASH $CALLBACK_BOX_SUBJECT"
 echo "Verify externally: curl -H \"Authorization: Bearer \$CB_DIAG_API_KEY\" https://box.example.com/healthz"
 
 # --- Chain to a newer request (latest-wins, second half) ----------------------
