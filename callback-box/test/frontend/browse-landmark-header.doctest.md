@@ -7,7 +7,7 @@ navigation callback; URL-shaped links stay ordinary external anchors.
 ```ts setup
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { BrowseLandmarkHeader } from "../../src/frontend/src/pages/browse/components/BrowseLandmarkHeader.js";
+import { LandmarkContextHeader } from "../../src/frontend/src/components/landmarks/LandmarkContextHeader.js";
 import { BrowseSidebarList } from "../../src/frontend/src/pages/browse/components/BrowseSidebarList.js";
 
 globalThis.React = React;
@@ -25,13 +25,19 @@ const landmark = {
     { ref: "https://example.com/guide", label: "Guide", title: "Guide", exists: false },
     { ref: "store/Missing.memo.card", label: null, title: "Missing", exists: false },
   ],
-  groups: [],
+  groups: [{ label: "Reference", children: [], count: 3 }],
 };
 
-const header = renderToStaticMarkup(React.createElement(BrowseLandmarkHeader, {
+const header = renderToStaticMarkup(React.createElement(LandmarkContextHeader, {
   landmark,
   boxSlug: "test1",
   onNavigate: () => {},
+}));
+const mobileCompanionHeader = renderToStaticMarkup(React.createElement(LandmarkContextHeader, {
+  landmark,
+  boxSlug: "test1",
+  onNavigate: () => {},
+  collapseNavigationOnMobile: true,
 }));
 ```
 
@@ -49,8 +55,10 @@ is visibly unavailable.
   header.includes('href="https://example.com/guide"'),
   header.includes('target="_blank"'),
   header.includes('>Missing<'),
+  header.includes('class="space-y-2"'),
+  mobileCompanionHeader.includes('class="space-y-2 hidden md:block"'),
 ].join(" ")
-=> true true true true true true true true
+=> true true true true true true true true true true
 ```
 
 The landmark card itself is not repeated in the raw listing once the header

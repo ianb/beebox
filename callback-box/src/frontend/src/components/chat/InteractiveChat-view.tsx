@@ -249,7 +249,7 @@ function ComposerRegion(props: ChatBodyProps) {
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
-  const { tabs, voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
+  const { tabs, voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer, effectiveContextDir } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
   const {
     handleAddSelection,
@@ -282,6 +282,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             onNavigate={handleCompanionNavigate}
             onAddSelection={handleAddSelection}
             reportActivity={reportCardActivity}
+            contextDir={effectiveContextDir}
           />
         ) : null
       }
