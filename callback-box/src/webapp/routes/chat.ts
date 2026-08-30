@@ -221,6 +221,6 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
   // Tear down the registry on server close so subprocesses don't linger.
   server.addHook("onClose", async () => {
     clearChatRuntime(boxRoot);
-    registry.shutdown();
+    await registry.shutdown();
   });
 }

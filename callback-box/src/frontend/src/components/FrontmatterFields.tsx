@@ -44,7 +44,25 @@ function RefLink({ refPath }: { refPath: string }): ReactNode {
   );
 }
 
+/** An http(s) scalar renders as a real link — an `href:` shown as inert text
+ *  is a dead end the reader has to copy by hand (boxholder, 2026-08-29). */
+function isHttpUrl(value: unknown): value is string {
+  return typeof value === "string" && /^https?:\/\/\S+$/.test(value);
+}
+
 function ValueView({ value }: { value: unknown }): ReactNode {
+  if (isHttpUrl(value)) {
+    return (
+      <a
+        href={value}
+        target="_blank"
+        rel="noreferrer"
+        className="text-warm-600 hover:text-warm-800 underline underline-offset-2 break-all"
+      >
+        {value}
+      </a>
+    );
+  }
   if (isScalar(value)) {
     return <span className="whitespace-pre-wrap break-words">{formatScalar(value)}</span>;
   }

@@ -2948,6 +2948,23 @@ tests:
     correct_contains_any: ["{% quote"]
     tags: [quotes, cards, markdown]
 
+  - id: quote-third-party-from
+    prompt: >
+      I am writing a research card and want to preserve this studio owner's
+      exact words: "We make every installation for the particular room it will
+      inhabit." How do I mark the quote so it cannot be mistaken for the
+      boxholder's own voice?
+    expected_level: knows_directly
+    watch_for: >
+      Uses `{% quote from="…" %}` with the studio owner named in `from=`.
+      Explains that `from` renders the third-party attribution and keeps those
+      exact words visibly distinct from the user's own unattributed voice.
+    correct_contains_any: ["from="]
+    tags: [quotes, cards, provenance, third-party]
+    # Status (2026-08-29): passes at knows_directly with 0 file reads and
+    # 0 searches. The agent used from="Rina Patel, studio owner" and explained
+    # that the rendered attribution distinguishes these words from the user.
+
   - id: quote-when-to-use
     prompt: >
       The user is in a long chat working through an idea — mostly
@@ -3203,6 +3220,22 @@ tests:
   # nested-tag form unprompted; skip-for-own-framing test quoted the
   # guide back at the agent and explained the dilution-of-signal
   # rationale beyond what the watch_for asked for.
+  # Status (2026-08-29): source-external-retrieved-date passes at
+  # knows_directly with 0 file reads and 0 searches. The agent used
+  # href= with retrieved="2026-08-29" in date-only ISO form.
+
+  - id: source-external-retrieved-date
+    prompt: >
+      I am recording a fact from a studio's public website in a research card.
+      How do I cite the page so the card preserves both its URL and the date I
+      checked it today, August 29, 2026?
+    expected_level: knows_directly
+    watch_for: >
+      Uses a `{% source %}` tag with the external page in `href=` and the
+      date-only ISO check date in `retrieved="2026-08-29"`. Does not put the
+      date in free prose or invent a frontmatter field.
+    correct_contains_any: ["retrieved=", "retrieved date", "retrieval date"]
+    tags: [source, cards, provenance, external-source]
 
   - id: source-tag-syntax
     prompt: >

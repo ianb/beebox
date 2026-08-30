@@ -12,7 +12,7 @@ import { busEventData } from "../../lib/bus-events";
 import { isRecord } from "@shared/is-record";
 import { type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
-import { trpc } from "../../lib/trpc";
+import { trpc, type RouterOutput } from "../../lib/trpc";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
 import { BrowseDetailPanel } from "./components/BrowseDetailPanel";
 import { BrowseContextMenu } from "./components/BrowseContextMenu";
@@ -143,16 +143,13 @@ function useBrowseTitle({
   dirPath,
   selectedFilePath,
   selectedCard,
+  landmark,
 }: {
   dirPath: string;
   selectedFilePath: string | null;
   selectedCard: { title?: string | null } | null;
+  landmark: RouterOutput["landmarks"]["forDir"]["landmark"];
 }): string {
-  // Same query key as the place pill's and the title mark's, so this is their
-  // cache entry rather than a third request.
-  const landmarkQuery = trpc.landmarks.forDir.useQuery({ dir: dirPath }, { enabled: !selectedFilePath });
-  const landmark = landmarkQuery.data?.landmark ?? null;
-
   return useMemo(() => {
     if (selectedFilePath !== null && selectedFilePath !== "") {
       const cardTitle = selectedCard?.title?.trim();
@@ -183,6 +180,10 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   // selection state to diverge from the route, so every file click is a
   // history entry the back button can walk.
   const selectedFilePath = pathIsFile ? currentPath : null;
+  // Same query key as the place pill's and the title mark's, so the browse
+  // header reuses their cache entry rather than adding a request.
+  const landmarkQuery = trpc.landmarks.forDir.useQuery({ dir: dirPath }, { enabled: !selectedFilePath });
+  const landmark = landmarkQuery.data?.landmark ?? null;
 
   const handleLinkNavigate = useCallback(
     (target: ViewTarget) => {
@@ -250,7 +251,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
 
   const hasDetail = Boolean(selectedFilePath);
 
-  usePageTitle(useBrowseTitle({ dirPath, selectedFilePath, selectedCard }));
+  usePageTitle(useBrowseTitle({ dirPath, selectedFilePath, selectedCard, landmark }));
   useBrowsePlace({ dirPath, currentPath });
 
   const handleDelete = useCallback(async (path: string) => {
@@ -301,6 +302,11 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
             selectedFilePath={selectedFilePath}
             onNavigate={onNavigate}
             onFileContextMenu={handleFileContextMenu}
+            landmark={landmark}
+            boxSlug={boxSlug ?? ""}
+            onLinkNavigate={handleLinkNavigate}
+            landmarkError={landmarkQuery.error}
+            onLandmarkRetry={() => { void landmarkQuery.refetch(); }}
           />
         </Column>
       </Sidebar>
