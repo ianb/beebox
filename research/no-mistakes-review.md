@@ -89,7 +89,7 @@ The transferable invariant is “the mutation consumes the exact artifact that w
 
 Add four requirements to cross-model review/challenge mode: trace at least one concrete state through changed logic; reconstruct the failing sequence plus invariant for a claimed durable fix; distinguish a source defect from the scope authorization required by its smallest honest remedy; and ground the review in the originating request with direct human decisions as its highest authority.
 
-Concrete trace: boxholder decision, 2026-08-30; `.claude/skills/cross-model/SKILL.md` review/challenge prompts; and No Mistakes' `internal/pipeline/steps/review.go` at the reviewed commit. This is not a request to import No Mistakes' automated loop. Filed as [`issues/features/2026-08-30-cross-model-review-concrete-traces.md`](../issues/features/2026-08-30-cross-model-review-concrete-traces.md).
+Concrete trace: boxholder decision, 2026-08-30; `.claude/skills/cross-model/SKILL.md` required diff-review instructions; and No Mistakes' `internal/pipeline/steps/review.go` at the reviewed commit. The bounded prompt change is implemented without importing No Mistakes' automated loop. Closed as [`issues/closed/features/2026-08-30-cross-model-review-concrete-traces.md`](../issues/closed/features/2026-08-30-cross-model-review-concrete-traces.md).
 
 ### Adopt — use exact-head language when reasoning about later mutations
 

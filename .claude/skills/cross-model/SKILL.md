@@ -65,8 +65,11 @@ there's a diff against `main` → ask review-or-challenge.
    at the monorepo root. You may read any repo file (read-only), **including
    `docs/` and `.claude/rules/`**, to verify claims."*
 3. **Fence the prompt hard.** A named read-list ("READ EXACTLY THESE files"),
-   pre-verified facts it must NOT re-verify, a findings cap. An unfenced
-   reviewer grep-crawls the repo and burns its budget reading.
+   pre-verified facts it must NOT re-verify, a findings cap. For diff review and
+   diff-target challenge, the [required instructions](#required-diff-review-instructions-both-directions)
+   convert that closed list to a bounded first hop so the reviewer can trace
+   directly relevant code. An unfenced reviewer grep-crawls the repo and burns
+   its budget reading.
 4. **Make it verify, don't just opine.** The instruction that produces the real
    findings: *"Spot-check the plan's `file:line` citations and its 'we already
    do X / this is free reuse / validation catches it' claims against the actual
@@ -195,14 +198,15 @@ codex exec - -s read-only -C "$ROOT" -m gpt-5.5 \
   opine, and review authority) is what makes these reviews land, and it applies
   here too. Include the `Review authority` block before asking whether the code
   is correct; an optional focus narrows the investigation but does not replace
-  the originating request.
+  the originating request. Include the required diff-review instructions below.
 - `codex review` (or `codex exec review`) exists and preserves Codex's own tuned
   review prompt, but it takes its prompt differently, so **none** of this skill's
   scaffolding reaches it — an unfenced repo crawl is the usual result. Reach for
   it only as a deliberate experiment, and say in your report that the review ran
-  unfenced.
+  unfenced and without the required diff-review instructions.
 - **challenge:** `codex exec - -s read-only -C "$ROOT"` with the adversarial
-  persona (shared, below).
+  persona (shared, below), the `Review authority` block, and the required
+  diff-review instructions when the target is a diff.
 
 ---
 
@@ -335,6 +339,47 @@ verify-don't-opine). Include the shared `Review authority` block in both modes;
 for a diff, name the direct human request and any issue/brief/plan the branch is
 implementing before asking whether the code is correct. An optional review
 focus narrows the investigation but does not replace the originating request.
+Include the required diff-review instructions below for review and diff-target
+challenge modes.
+
+---
+
+## Required diff-review instructions (both directions)
+
+Include these three moves in every **review** prompt and every **challenge**
+prompt whose target is a diff. Keep them attached to the changed logic and
+named intent; they are not a generic invitation to redesign surrounding
+systems.
+
+For these diff modes, adapt shared rule 3's read-list from a closed set to a
+bounded first hop: name the files the reviewer must read first, permit it to
+follow only directly relevant call sites, sibling paths, and shared state owners
+needed by the three moves below, and require it to name every extra file it
+opened. This preserves fencing without making the requested trace impossible.
+Place the three moves after the `Review authority` block and before the findings
+cap.
+
+```
+- For new or changed logic, choose at least one concrete input or state and
+  trace it through the relevant code. Look especially for a wrong value,
+  label, state, or side effect that does not throw or otherwise announce itself.
+- When the change claims a durable bug fix, reconstruct the original failing
+  sequence and the invariant the fix must establish. Inspect relevant sibling
+  paths and shared state transitions. Call the fix inadequate only when source
+  evidence shows the failure the change was authorized to fix remains
+  reachable; report an adjacent reachable failure as its own finding under the
+  remedy rule below.
+- For each material finding, identify the smallest honest remedy. If that
+  remedy would extend the authorized change by adding durable state, a schema
+  change, background/retry/persistence machinery, a new subsystem, or a product
+  decision, label it `human decision required` rather than presenting that
+  expansion as an ordinary fix. The primary agent will adjudicate and mediate
+  the decision with the human.
+```
+
+This remedy label does not make the reviewer authoritative and does not change
+the handoff rules below: the driving agent still verifies every claim, rejects
+noise, and brings only the actual decision to the human.
 
 ---
 
