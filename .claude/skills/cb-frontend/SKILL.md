@@ -187,6 +187,14 @@ Built UI is unverified until you've *looked* at it. Use the `browse` skill
 - [ ] If a screenshot shows "Failed to load" or broken UI, **report the URL** —
       don't dismiss a visible error as out of scope.
 
+When screenshots are evidence for the completed UI—before/after, several
+states, or desktop/mobile—turn the useful set into one exhibit with labels and
+captions, then hand off the exhibit URL. The developer should not have to open
+raw `.claude/screenshots/` paths and infer which image proves what. Use an
+`fyi` exhibit for verification evidence; if you actually need a choice,
+confirmation, or reaction, use that ask instead. Skip the exhibit for an
+incidental one-off debug capture with nothing useful to review.
+
 ## Common rationalizations
 
 | Excuse | Reality |

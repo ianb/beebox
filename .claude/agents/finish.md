@@ -143,7 +143,12 @@ Factual and compact — an internal handoff, not a conversation ending; no advic
 to exit, clean up, or continue. Give: merge hash and commit count, what
 `bin/finish-verify` ran and its verdict (naming any flake), step 5's
 MET/PARTIAL/UNMET tally when there was a plan, Track O findings, and honest scope
-notes (passing tests is not "verified in the app"). End with the status line the
+notes (passing tests is not "verified in the app"). When the briefing or branch
+provides multiple screenshots as UI verification, require one labeled exhibit
+URL in the report rather than listing raw screenshot paths; if no exhibit exists,
+create an `fyi` exhibit before landing. Its prose/captions must identify what the
+figures demonstrate, not leave the developer a spot-the-difference puzzle. A
+single incidental debug capture does not trigger this. End with the status line the
 caller parses: `RESULT: MERGED`, or `RESULT: BLOCKED` + what blocks, what you
 completed, what the human must decide — saying plainly that nothing merged if you
 stopped before step 7. With the private leg active, EVERY report also carries
