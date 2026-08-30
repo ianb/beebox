@@ -9,6 +9,9 @@ discovered-in: "main session — when in the root landmark, it doesn't show the 
 resolution: implemented
 ---
 
+> Resolved by `0de51bccd`: landmarked directories now lead with the landmark's
+> resolved links while retaining the raw directory listing below.
+
 Browsing the box root (`/browse/`) renders the plain directory listing —
 folders, then files, with `Box` appearing only as a card row — and no
 landmark-flavored view. So the root landmark's curated links aren't openable
