@@ -1,7 +1,7 @@
 ---
 title: "A smoke tier at merge and deploy: boot a real box and click, because two of today's escapes were state bugs no unit tier can see"
 workstream: smoke-tier
-area: callback-box
+area: beebox
 labels: [tests]
 filed-by: agent
 discovered-by: Ian
@@ -13,7 +13,7 @@ resolution: implemented
 through the dev router and walks it with `bin/browse` (nav-pages, place menu,
 one chat), wired into `/finish` as a `kind: "smoke"` step whenever a landing
 touches a deployed path (`bin/finish-preflight-lib.ts`,
-`bin/deployed-paths.ts`); `callback-box/deploy/deploy.sh` keeps the
+`bin/deployed-paths.ts`); `beebox/deploy/deploy.sh` keeps the
 post-deploy `/healthz` + `/healthz/canary` hooks against prod. Per-run
 history lands in a shared log (`bin/smoke --report`), and
 `schedules/smoke-review/` reviews weekly whether each step still earns its
@@ -75,7 +75,7 @@ change, and the findings above are partly box-state artifacts rather than
 defects. A hard-fail smoke tier written with content-coupled selectors like
 that fails every week for reasons nobody cares about, gets ignored, and ends
 up exactly where the tours are — except now it is also blocking merges. The
-selectors need to be stable app addresses (`cb-` ids), and the fixture box
+selectors need to be stable app addresses (`bbx-` ids), and the fixture box
 stable, before anything hard-fails on them.
 
 Decided since (2026-08-26): repair them and run them weekly, tracked as

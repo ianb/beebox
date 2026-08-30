@@ -1,7 +1,7 @@
 ---
 title: "Post-commit deploy fails hard on a transient worktree index.lock (ENOTDIR) instead of retrying"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — while deploying a frontend image-card fix (commit e0a788a7)
 resolution: implemented
@@ -11,7 +11,7 @@ resolution: implemented
 helper out of the duplicated wipe+`worktree prune`+`worktree add` recreate logic,
 then wrapped both the bare `git -C "$CHECKOUT" checkout --detach "$SHA"` and
 `git -C "$CHECKOUT" clean -fdx ...` in retry-once-then-recreate handling
-(`callback-box/deploy/deploy.sh:203-252`). A transient failure now gets a 2s
+(`beebox/deploy/deploy.sh:203-252`). A transient failure now gets a 2s
 sleep + one retry; a second failure falls back to the existing wipe/recreate
 path instead of exiting fatally. A `CHECKOUT_FRESH` flag skips the `clean` step
 entirely when the checkout was just (re)created (a fresh worktree has nothing
@@ -55,7 +55,7 @@ old, unlocked hooks — a lock in the current checkout can't cover them, nor
 Claude Code's built-in worktree removal.
 
 The fix: **stop using a git worktree for the build checkout.** It's now a
-standalone local `git clone --shared` (`callback-box/deploy/deploy.sh`) — its own
+standalone local `git clone --shared` (`beebox/deploy/deploy.sh`) — its own
 `.git` dir, so it's invisible to `git worktree` ops and *cannot* be corrupted by
 any of the above. `--shared` points its object store at the main repo via
 alternates, so a just-committed `$SHA` checks out with no fetch and no object
@@ -70,7 +70,7 @@ concurrent `git worktree prune`.
 The `post-merge` auto-sweep is still removed (worktree cleanup runs on
 SessionStart) — good hygiene, though the clone no longer needs it gone.
 
-The root `post-commit` hook backgrounds `callback-box/deploy/deploy.sh --ref <sha>`
+The root `post-commit` hook backgrounds `beebox/deploy/deploy.sh --ref <sha>`
 the instant a `main` commit completes. On one deploy the build-checkout step
 died immediately:
 

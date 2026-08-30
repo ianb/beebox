@@ -19,7 +19,7 @@ process.
 ## Two listeners, one port, no error
 
 ```
-node  22902  IPv6  [::1]:58710      (LISTEN)   ← the box's `cb serve`
+node  22902  IPv6  [::1]:58710      (LISTEN)   ← the box's `bbx serve`
 node  63235  IPv4  127.0.0.1:58710  (LISTEN)   ← an orphaned Vite
 ```
 
@@ -75,7 +75,7 @@ the failure is itself a symptom of the other family already being taken.
   not by coincidence.
 - **Verify identity after allocation.** The hub could confirm the process it
   proxies to is the box it spawned (a health/identity check on first proxy).
-  The dev bundle already stamps child identity (`CB_DEV_BUNDLE_ID`), so there
+  The dev bundle already stamps child identity (`BBX_DEV_BUNDLE_ID`), so there
   is precedent for "prove you are who I started".
 - **Log the 401 bootstrap path.** A failure that returns a user-visible error
   while writing nothing to the log cost most of the diagnosis time here.
@@ -89,6 +89,6 @@ Same family of defect (allocation not actually reserving), different mechanism.
 
 ## What was done
 
-Killed the orphaned generation and restarted the box's `cb serve` child; it
+Killed the orphaned generation and restarted the box's `bbx serve` child; it
 respawned on a fresh port bound to both families and served normally. That is a
 one-off repair, not a fix — nothing stops the collision recurring.

@@ -1,7 +1,7 @@
 ---
 title: "investigate composio tool layer"
 workstream: unknown
-area: callback-box
+area: beebox
 
 ---
 

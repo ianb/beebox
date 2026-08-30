@@ -4,14 +4,14 @@ workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — backend-alternatives research (research/backend-alternatives/README.md)
-area: callback-box
+area: beebox
 ---
 
 Research on alternate agent backends
 ([research/backend-alternatives/README.md](../../research/backend-alternatives/README.md))
 landed on one concrete, low-effort lever worth verifying, plus a clear "don't" list.
 
-**The lever:** callback-box runs on `@anthropic-ai/claude-agent-sdk`, which is
+**The lever:** beebox runs on `@anthropic-ai/claude-agent-sdk`, which is
 Anthropic-model-only by design — *except* it speaks the Messages API, so pointing
 `ANTHROPIC_BASE_URL` + auth token at an **Anthropic-compatible endpoint** (GLM's
 `api.z.ai/api/anthropic`, Kimi-coding) could swap the model with near-zero code. We

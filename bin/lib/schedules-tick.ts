@@ -5,7 +5,7 @@
  * path) as a pure move — the tick is the whole-store pass, the runner is one
  * schedule at a time.
  *
- * Design: callback-box/docs/plans/scheduled-workstreams.md (Track B).
+ * Design: beebox/docs/plans/scheduled-workstreams.md (Track B).
  */
 
 import { loadSchedules, runIdFor, type InvalidSchedule, type ScheduleEntry } from "./schedules.js";
@@ -80,7 +80,7 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
     entries = await loadSchedules(deps.schedulesRoot);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    await deps.notify({ title: "callback-box schedules", message: `cannot write the schedule store: ${message}` });
+    await deps.notify({ title: "beebox schedules", message: `cannot write the schedule store: ${message}` });
     return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
   }
 
@@ -110,7 +110,7 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      await deps.notify({ title: "callback-box schedules", message: `cannot write the schedule store: ${message}` });
+      await deps.notify({ title: "beebox schedules", message: `cannot write the schedule store: ${message}` });
       return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
     }
     return { exitCode: 0, reports: [{ kind: "skipped", name: "tick", reason }], invalid: [], heartbeatError: null };
@@ -124,7 +124,7 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
   } catch (e) {
     await releaseLock(deps.storeRoot, TICK_LOCK_NAME);
     const message = e instanceof Error ? e.message : String(e);
-    await deps.notify({ title: "callback-box schedules", message: `cannot write the schedule store: ${message}` });
+    await deps.notify({ title: "beebox schedules", message: `cannot write the schedule store: ${message}` });
     return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
   }
 

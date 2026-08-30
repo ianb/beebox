@@ -8,13 +8,13 @@ labels: [soft-launch]
 resolution: implemented
 ---
 
-> **Done 2026-08-06.** The Zulip forum is live at https://callback-box.zulipchat.com/
+> **Done 2026-08-06.** The Zulip forum is live at https://beebox.zulipchat.com/
 > and linked in the root README under Community — the soft-launch discussion-channel
 > gate is satisfied. Any further cross-surface links fold into the README front-door
 > gate.
 
 The project's discussion forum is live on Zulip:
-[callback-box.zulipchat.com](https://callback-box.zulipchat.com/). It's listed in
+[beebox.zulipchat.com](https://beebox.zulipchat.com/). It's listed in
 the root `README.md` under Community. This is a small **findability** chore, not a
 build.
 

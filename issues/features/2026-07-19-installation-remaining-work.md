@@ -1,7 +1,7 @@
 ---
 title: "Installation: what's verified, what still needs testing, what's not built yet"
 workstream: installation-process
-design: ../../callback-box/docs/plans/installation-story.md
+design: ../../beebox/docs/plans/installation-story.md
 needs: [manual-testing]
 priority: important
 ---
@@ -13,19 +13,19 @@ section.
 
 ## Where things stand (done, verified by execution)
 
-- From-source developer install: `callback-box/docs/developer-install.md`,
+- From-source developer install: `beebox/docs/developer-install.md`,
   verified end-to-end from a bare `debian:bookworm` by
-  `callback-box/docker/smoke-dev-install.sh` (~150s, re-runnable).
-- Local/VPS Docker install: `callback-box/docker/` + `docs/docker-install.md`,
+  `beebox/docker/smoke-dev-install.sh` (~150s, re-runnable).
+- Local/VPS Docker install: `beebox/docker/` + `docs/docker-install.md`,
   verified through docker-in-docker (build → init → up → 200 → Caddy
-  internal-TLS 200) by `callback-box/docker/smoke-vps-install.sh` (~170s).
+  internal-TLS 200) by `beebox/docker/smoke-vps-install.sh` (~170s).
 - `pnpm run doctor` preflight (incl. the better-sqlite3 ABI-drift probe),
   Claude-auth run-path preflight, `.env.example`, agent-facing install guide
   (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
   deliberately bumped to 24 on main (`fae16368`) — the single-commit-upgrade
   mechanism working as designed.
 - Closed as implemented:
-  [cb-doctor-preflight](../closed/features/2026-07-12-cb-doctor-preflight.md),
+  [bbx-doctor-preflight](../closed/features/2026-07-12-bbx-doctor-preflight.md),
   [docker-vps-install-path](../closed/features/2026-07-12-docker-vps-install-path.md).
 
 ## Still needs TESTING (real infra a container can't fake)
@@ -50,9 +50,9 @@ section.
    real `pnpm dlx` five-minute start, and a clone-free
    `docker compose up` from a three-line compose file. Currently every
    path starts with cloning the monorepo and building from source.
-   (Roadmap: `callback-box/docs/implemented-plans/boxes-as-packages-v2.md`
+   (Roadmap: `beebox/docs/implemented-plans/boxes-as-packages-v2.md`
    distribution decisions; `source-available-release.md` NOT-in-scope.)
-7. **curl|bash installer + `cb onboard` wizard** — the OpenClaw/Hermes
+7. **curl|bash installer + `bbx onboard` wizard** — the OpenClaw/Hermes
    pattern. Trigger: published package + evidence strangers stall on the
    quickstart. (Research: `research/openclaw-hermes/deep-installation.md`.)
 8. **First-run web onboarding / admin key management + Track F remainder**

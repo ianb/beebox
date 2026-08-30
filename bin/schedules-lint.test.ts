@@ -252,7 +252,7 @@ async function runLint(input: { schedulesRoot: string; args: string[] }): Promis
   const result = await execa("node", ["--import", "tsx", CLI, "lint", ...input.args], {
     reject: false,
     cwd: REPO_ROOT,
-    env: { ...process.env, CALLBACK_SCHEDULES_DIR: input.schedulesRoot },
+    env: { ...process.env, BBX_SCHEDULES_DIR: input.schedulesRoot },
   });
   return { exitCode: result.exitCode ?? -1, stdout: result.stdout, stderr: result.stderr };
 }

@@ -1,7 +1,7 @@
 ---
 title: "agent-browser's origin-scoped header injection may not cover WebSocket upgrades (browse-key sessions)"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — investigating the stuck "Agent is working…" field-test finding
 labels: [field-test-findings, harness]
@@ -43,7 +43,7 @@ The measured harness-side fix delivers the browse key as a real cookie
 instead of per-origin header injection, so it rides WS upgrades natively;
 the implementation and its profile-lifetime tradeoff are recorded below.
 
-The browse-key credential (`cb_browse_key`) is not a real browser cookie in
+The browse-key credential (`bbx_browse_key`) is not a real browser cookie in
 `bin/browse` sessions: `browse/src/worktree.ts` (`authHeaderFor`) sends it as
 an origin-scoped header via agent-browser's `open <url> --headers <json>`,
 deliberately avoiding the profile's cookie jar. Server-side WS auth is wired
@@ -60,7 +60,7 @@ trigger for the stuck-status finding
 ([chat-status-lies-after-completion](2026-08-08-chat-status-lies-after-completion.md);
 the client-side stream watchdog now self-heals the symptom regardless).
 
-How to settle it: run `cb serve` with a browse key, open the box via
+How to settle it: run `bbx serve` with a browse key, open the box via
 `bin/browse`, and log/inspect WS upgrade requests server-side (does the
 upgrade carry the header? does it succeed?), including after a forced
 disconnect. If reconnects are naked, field-test operator sessions run
@@ -73,7 +73,7 @@ operator's whole session.
 A raw logging proxy in front of this worktree's running box confirmed the
 client-side gap. With the old `open --headers` mechanism, the document loaded
 but the initial tRPC WebSocket upgrade and every retry arrived without
-`cb_browse_key`; the server therefore never held a live subscription socket.
+`bbx_browse_key`; the server therefore never held a live subscription socket.
 
 Seeding Chromium's cookie jar before navigation fixed both cases. From a
 cleared profile, the initial tRPC upgrade carried the browse cookie and stayed

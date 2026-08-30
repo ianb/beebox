@@ -1,13 +1,13 @@
 ---
 title: "No socket-level integration test for WS tRPC subscription auth"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — todo-security breakdown for the security-overview.md report
 ---
 
 The tRPC WebSocket adapter (`useWSS`, the per-box plugin) hands `createContext`
-(`callback-box/src/webapp/trpc/context.ts`) a raw `http.IncomingMessage`. The
+(`beebox/src/webapp/trpc/context.ts`) a raw `http.IncomingMessage`. The
 raw-`Cookie`-header identity fallback that `createContext` relies on is covered
 only at the **resolver** level by `test/webapp/ws-auth.doctest.md` — no test
 opens a real WebSocket, upgrades a tRPC subscription, and asserts the resolved
@@ -27,7 +27,7 @@ valid, rejected/closed when absent), not against a synthetic request object.
 ## Field observation (2026-08-09)
 
 The predicted symptom happened and cost two debugging sessions. A browse-driven
-browser with a missing/expired `cb_session` loads pages that look normal, but
+browser with a missing/expired `bbx_session` loads pages that look normal, but
 every tRPC WS upgrade is silently destroyed (`bin/router.ts` upgrade handler
 calls `socket.destroy()` on deny — no status, no close frame), so realtime is
 dead with **zero client-side signal**: no `[events-sub]` error, no console
@@ -39,7 +39,7 @@ refuse the upgrade with a readable 401 response (as the hub already does)
 rather than a bare TCP reset, and/or whether the client should surface a
 persistent-reconnect-failure signal after N attempts.
 
-Broken out of `callback-box/docs/todo-security.md` ("No true socket-level WS-auth
+Broken out of `beebox/docs/todo-security.md` ("No true socket-level WS-auth
 integration test"), where it was recorded as a residual accepted for now — this
 makes it a tracked coverage gap. Feeds the internal-security-practices section of
 the [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md).

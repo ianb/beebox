@@ -3,7 +3,7 @@ title: "box-packageify migration created doubled subtrees in some boxes"
 workstream: unknown
 filed-by: agent
 discovered-in: main session — investigating a test box's stuck refresh-maps health flag
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
@@ -36,7 +36,7 @@ half, but the data-repair genuinely remains on the two **local dev/review** boxe
 (their `refresh-maps` is silently wedged). Low stakes — dev boxes, not prod. Stays
 open until the two are repaired or rebuilt; the repair caveat below (diverged
 copies, human-in-loop) still applies. If those two local boxes are disposable,
-`cb init`-rebuilding them is cheaper than de-doubling.
+`bbx init`-rebuilding them is cheaper than de-doubling.
 
 The v1→v2 `box-packageify` migration (`scripts/migrate/box-packageify.ts`,
 registered in `src/core/migrations.ts`; ran ~2026-07-04) **duplicated some
@@ -56,7 +56,7 @@ personal boxes scanned clean. Detection scan (structure only, no content):
 ```py
 # for each box's content root, walk dirs and flag any whose relative path has a
 # repeated consecutive path-segment run (parts[i:i+L] == parts[i+L:i+2L]).
-# Exclude .git / node_modules / .callback-box / procedure/runs, and note that
+# Exclude .git / node_modules / .beebox / procedure/runs, and note that
 # scenario fixtures legitimately nest box/box — those are false positives.
 ```
 

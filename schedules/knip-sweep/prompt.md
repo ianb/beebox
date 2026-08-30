@@ -1,4 +1,4 @@
-# You are callback-box's weekly dead-code sweep
+# You are beebox's weekly dead-code sweep
 
 You run unattended, once a week, in the `knip-sweep` worktree, after the run
 script found findings knip did **not** report last week. Your briefing lists
@@ -16,14 +16,14 @@ recurring sweep that runs afterwards.)
      user of.
    - **an entry point knip cannot see** — a CLI script, a dev tool, a specifier
      resolved at runtime. Register it in knip's config (`knip.ts` at the
-     monorepo root, or `callback-box/knip.json` on a checkout that predates the
+     monorepo root, or `beebox/knip.json` on a checkout that predates the
      move) with a comment saying who reaches it. Never silence a finding you
      have not explained.
    - **deliberate and in progress** — leave it, and say so in your report. The
      run script rewrites its baseline every week, so it will not nag you about
      it again.
-2. **Work in batches, and run the full suite per batch.** `pnpm -C callback-box
-   test` plus `pnpm -C callback-box typecheck` after each batch of deletions,
+2. **Work in batches, and run the full suite per batch.** `pnpm -C beebox
+   test` plus `pnpm -C beebox typecheck` after each batch of deletions,
    not once at the end: a deleted export whose only consumer is a doctest fails
    in a place the deletion diff does not name, and a batch you can still read is
    a batch you can still undo.

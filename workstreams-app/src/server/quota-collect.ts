@@ -158,7 +158,7 @@ export interface CollectQuotasOptions {
 export async function collectAgentQuotas(options: CollectQuotasOptions): Promise<Quota[]> {
   const now = options.now ?? new Date();
   const fetchedAt = now.toISOString();
-  const stateDir = options.stateDir ?? process.env.CALLBACK_STATE_DIR ?? path.join(os.homedir(), ".cache/callback-box");
+  const stateDir = options.stateDir ?? process.env.BBX_STATE_DIR ?? path.join(os.homedir(), ".cache/beebox");
   const [claude, codex] = await Promise.all([
     collectClaude({
       background: options.backgroundClaudeRefresh ?? false,

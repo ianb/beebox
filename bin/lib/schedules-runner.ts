@@ -11,7 +11,7 @@
  * own death. A tick that never got the lock records a SKIP instead: refreshing
  * the heartbeat there would report health it never established.
  *
- * Design: callback-box/docs/plans/scheduled-workstreams.md (Track B).
+ * Design: beebox/docs/plans/scheduled-workstreams.md (Track B).
  */
 
 import * as fs from "node:fs/promises";
@@ -42,7 +42,7 @@ import {
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
 import { alertIfBailed, startWorkstream } from "./schedules-workstream.js";
-import { errnoCode } from "../../callback-box/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/lib/error-guards.js";
 
 /** How many log lines a `failed` alert carries as details. */
 const LOG_TAIL_LINES = 40;

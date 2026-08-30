@@ -1,7 +1,7 @@
 ---
 title: "Full agent-driven integration tests exercising realistic box activities"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder, soft-launch confidence
 labels: [soft-launch]
@@ -9,7 +9,7 @@ resolution: implemented
 ---
 
 > **Closed 2026-08-08.** Built end-to-end in
-> `docs/implemented-plans/agent-field-tests.md`: the `cb field-test run|list|report`
+> `docs/implemented-plans/agent-field-tests.md`: the `bbx field-test run|list|report`
 > harness, an agent operator driving the real web UI (`bin/browse`) against a
 > fresh box with real agent processing, and a first full real
 > `onboarding-first-days` run completed (all 6 checklist items, 2h 8m, 3
@@ -67,7 +67,7 @@ mundane flows a real user does. Each is exercised through the real UI + the agen
 
 ## Build on what exists
 
-- The **`cb scenario` harness** (`callback-box/src/scenario/` — loader/runner/types;
+- The **`bbx scenario` harness** (`beebox/src/scenario/` — loader/runner/types;
   `docs/testing.md`) already does multi-step end-to-end fixtures with checkpoints and
   `--from`/`--dry-run`. Extend or complement it rather than starting fresh — it may be
   the right backbone for the activity scripts, with the browser + agent-observer layer

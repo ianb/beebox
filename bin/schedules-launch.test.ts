@@ -171,7 +171,7 @@ test("a session reporting through the real `bin/schedules done` counts as report
     run: HANDOFF_RUN,
     liveness: "none",
     agentExit: 0,
-    agentExtra: `cd "${REPO}" && CALLBACK_SCHEDULES_ROOT="__STORE__" "${REPO}/bin/schedules" done --run "$SCHEDULE_RUN_ID"`,
+    agentExtra: `cd "${REPO}" && BBX_SCHEDULES_ROOT="__STORE__" "${REPO}/bin/schedules" done --run "$SCHEDULE_RUN_ID"`,
     check: null,
   });
   // The store path is only known after the rig exists; patch it into the fake.

@@ -35,7 +35,7 @@ function graphOf(input: {
   };
 }
 
-const BOX = "callback-box/";
+const BOX = "beebox/";
 
 test("the union rule: implicated tests, and only paths this suite could care about", () => {
   const graph = graphOf({

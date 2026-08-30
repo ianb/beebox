@@ -1,6 +1,6 @@
 // Static site generator. Run via tsx:
 //   pnpm --dir site build            # base derived from the git branch
-//   pnpm --dir site build --base /callback-box/   # GitHub Pages
+//   pnpm --dir site build --base /beebox/   # GitHub Pages
 //
 // Reads site/content/*.md, renders each through the local Markdoc pipeline,
 // writes HTML + a machine-facing .md twin to site/dist/, generates llms.txt,

@@ -1,7 +1,7 @@
 ---
 title: "A capture that succeeds says nothing — success is a chip disappearing, so the user assumes it failed and re-captures"
 workstream: capture-chip-states
-area: callback-box
+area: beebox
 labels: [capture, chat, ui, feedback]
 filed-by: agent
 discovered-by: Ian

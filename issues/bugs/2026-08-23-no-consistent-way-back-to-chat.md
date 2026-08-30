@@ -1,7 +1,7 @@
 ---
 title: "No consistent way back to chat from browse or a card page — worst on iOS, where there is no browser chrome"
 workstream: chat-wayfinding
-area: callback-box
+area: beebox
 labels: [navigation, mobile, ios, ui]
 filed-by: agent
 discovered-by: Ian

@@ -37,9 +37,9 @@ export async function resolveWorktree(name: string): Promise<ResolvedWorktree | 
     return {
       name: "main",
       root: MAIN_ROOT,
-      backendCwd: path.join(MAIN_ROOT, "callback-box"),
-      frontendCwd: path.join(MAIN_ROOT, "callback-box", "src", "frontend"),
-      boxes: (await readBoxes(path.join(MAIN_ROOT, "callback-box", ".env"))) ?? MAIN_BOX_DEFAULTS,
+      backendCwd: path.join(MAIN_ROOT, "beebox"),
+      frontendCwd: path.join(MAIN_ROOT, "beebox", "src", "frontend"),
+      boxes: (await readBoxes(path.join(MAIN_ROOT, "beebox", ".env"))) ?? MAIN_BOX_DEFAULTS,
     };
   }
   const root = path.join(WORKTREES_ROOT, name);
@@ -49,13 +49,13 @@ export async function resolveWorktree(name: string): Promise<ResolvedWorktree | 
     // No such directory — an unknown worktree name, not an error.
     return null;
   }
-  const envPath = path.join(root, "callback-box", ".env");
+  const envPath = path.join(root, "beebox", ".env");
   const boxes = await readBoxes(envPath);
   return {
     name,
     root,
-    backendCwd: path.join(root, "callback-box"),
-    frontendCwd: path.join(root, "callback-box", "src", "frontend"),
+    backendCwd: path.join(root, "beebox"),
+    frontendCwd: path.join(root, "beebox", "src", "frontend"),
     boxes: boxes ?? [path.join(BOXES_ROOT, name, "test1")],
   };
 }
@@ -224,7 +224,7 @@ async function waitForHttp(
 
 /**
  * A token for the backend source a checkout would run: the newest mtime seen
- * while walking `callback-box/src`, plus the entry count.
+ * while walking `beebox/src`, plus the entry count.
  *
  * Why not the git commit, which was the first idea: the hub is spawned as
  * `node --import tsx ./src/cli/index.ts hub` and therefore executes the
@@ -234,15 +234,15 @@ async function waitForHttp(
  *
  * `src/frontend` is excluded: Vite owns that half and hot-reloads it, so a
  * frontend edit is not a stale backend. Directory mtimes count too, which is
- * what makes a pure deletion visible, and `callback-box/package.json` is folded
+ * what makes a pure deletion visible, and `beebox/package.json` is folded
  * in so a dependency change with no `src/` edit is not invisible.
  *
- * `null` on any failure — a checkout with no `callback-box/` is a legitimate
+ * `null` on any failure — a checkout with no `beebox/` is a legitimate
  * shape here, and a token that cannot be computed must disable the comparison
  * rather than fabricate a mismatch.
  */
 async function backendSourceToken(root: string): Promise<string | null> {
-  const srcRoot = path.join(root, "callback-box", "src");
+  const srcRoot = path.join(root, "beebox", "src");
   let newest = 0;
   let entries = 0;
   async function walk(dir: string): Promise<void> {
@@ -266,11 +266,11 @@ async function backendSourceToken(root: string): Promise<string | null> {
     // The hub's dependencies are as much a part of what it loaded as its own
     // source: a package bump that lands with no `src/` change would otherwise
     // leave a stale generation looking current.
-    const pkg = await fs.stat(path.join(root, "callback-box", "package.json"));
+    const pkg = await fs.stat(path.join(root, "beebox", "package.json"));
     newest = Math.max(newest, pkg.mtimeMs);
     entries += 1;
   } catch (_e) {
-    // No callback-box/src in this checkout, or an unreadable tree — a token
+    // No beebox/src in this checkout, or an unreadable tree — a token
     // that cannot be computed must disable the comparison, not fake a mismatch.
     return null;
   }

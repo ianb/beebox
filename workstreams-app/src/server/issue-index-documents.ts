@@ -1,6 +1,6 @@
 /**
  * What the issue index indexes: one flat `IndexDocument` per markdown file,
- * from either corpus (the issue queue, or `callback-box/docs` as prior art).
+ * from either corpus (the issue queue, or `beebox/docs` as prior art).
  *
  * The two hashes each document carries are the whole reason this is a
  * separate step from indexing: `indexHash` decides whether the persisted
@@ -144,7 +144,7 @@ async function walkMarkdown(root: string, relative: string): Promise<string[]> {
   return found;
 }
 
-export const DOCS_SUBDIR = "callback-box/docs";
+export const DOCS_SUBDIR = "beebox/docs";
 
 export async function loadDocDocuments(repoRoot: string): Promise<IndexDocument[]> {
   const root = path.join(repoRoot, DOCS_SUBDIR);

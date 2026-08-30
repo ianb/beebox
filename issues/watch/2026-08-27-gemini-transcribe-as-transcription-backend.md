@@ -1,7 +1,7 @@
 ---
 title: "Gemini 3.5 Transcribe — evaluate against Voxtral for the chat transcription paths"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [voice]
 filed-by: agent
 discovered-by: Ian
@@ -39,7 +39,7 @@ documented at any granularity** — a gap for the transcript-confidence work
 When triggered, the evaluation is: WER on the boxholder's actual audio vs
 Voxtral (the retranscribe/ask-about-audio machinery keeps real samples),
 streaming latency on the transcribe-ws path, and whether "smart transcription"
-fights the verbatim needs of `cb chat retranscribe`. Note the adjacent
+fights the verbatim needs of `bbx chat retranscribe`. Note the adjacent
 `codex-native-audio` workstream (agent reads raw audio) reduces how much a
 transcript's fidelity matters on codex boxes — weigh both before switching
 anything. Also `exploration/2026-06-15-fish-audio-s2-streaming-transcription.md`

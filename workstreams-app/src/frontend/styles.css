@@ -106,7 +106,7 @@ h2 small { color: #827d75; font-size: .78em; font-weight: 500; }
 .quick-open-hit:hover, .quick-open-hit.first { background: #eef2f9; }
 
 /* Comments: a communication medium on a rendered document. */
-::highlight(cb-comment-anchor) { background: #fde68a; color: inherit; }
+::highlight(bbx-comment-anchor) { background: #fde68a; color: inherit; }
 .comment-layer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e1ddd7; }
 .comment-toolbar { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
 .comment-composer { display: grid; gap: .5rem; margin: .8rem 0; }

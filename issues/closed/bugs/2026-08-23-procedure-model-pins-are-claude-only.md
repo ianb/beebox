@@ -1,7 +1,7 @@
 ---
 title: "A procedure's `model:` pin is a Claude name, so every pinned procedure fails silently on a codex box"
 workstream: codex-model-pins
-area: callback-box
+area: beebox
 priority: important
 resolution: implemented
 labels: [codex, procedures, scheduler]
@@ -33,7 +33,7 @@ rejection, startup/transport failure) is distinct from a started turn that made
 partial progress. Declared run shells still execute because they may be
 finalizers; the step then gates before validation. Run-agent failures land in
 `run.error`; judge invocation failures land in `validate.error`; the exact cause
-continues through the procedure CLI error, scheduler state, `cb health`, health
+continues through the procedure CLI error, scheduler state, `bbx health`, health
 alerts, and the dashboard's collapsed schedule row. Procedure CLI errors are
 flushed before exit. Timeouts retain their timeout headline when no more precise
 child diagnostic exists.
@@ -60,7 +60,7 @@ Independent cross-model review found and drove fixes for the real Codex
 `turn.failed` shape, Claude post-result/partial-work classification, judge-side
 silence, truncated stderr selection, timeout preservation, and the dashboard
 summary. Focused doctests, typecheck, lint, knowledge audit, browser checks, and
-the complete callback-box and root suites are green.
+the complete beebox and root suites are green.
 
 ---
 
@@ -112,7 +112,7 @@ validation-failure retry. No assistant turn was ever produced, twice.
 
 Nothing anywhere says why. The run card records `validate: fail` (the
 downstream symptom), the scheduler's log has no entry, the box log has none, and
-`cb health` reports only `Command failed with exit code 1`. The single piece of
+`bbx health` reports only `Command failed with exit code 1`. The single piece of
 evidence that identifies the cause is an empty agent thread, reachable only by
 reading Codex's thread store directly.
 

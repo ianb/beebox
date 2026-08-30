@@ -1,8 +1,8 @@
 ---
 title: "tRPC error responses carry a server stack trace, and the deploy never sets NODE_ENV=production"
 workstream: node-env-production
-design: ../../../callback-box/docs/implemented-plans/webapp-production-mode.md
-area: callback-box
+design: ../../../beebox/docs/implemented-plans/webapp-production-mode.md
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — reading a 403 from the settings page in the browser network panel
@@ -20,12 +20,12 @@ filesystem paths, readable in the browser. Observed on a `FORBIDDEN`
 ("Owner access required") from `pairing.devices` on the settings page.
 
 The router is created with no error formatter
-(`callback-box/src/webapp/trpc/trpc.ts:4`), so tRPC's default applies: it puts
+(`beebox/src/webapp/trpc/trpc.ts:4`), so tRPC's default applies: it puts
 `stack` in `error.data` whenever `process.env.NODE_ENV !== "production"`.
 
 The part that needs checking is what that env var is on a deployed box. Nothing
-in `callback-box/deploy/` sets it: the systemd units take their environment from
-`$CB_HOME/.env` (`deploy/setup-server.sh:212`, `:238`) and the generated `.env`
+in `beebox/deploy/` sets it: the systemd units take their environment from
+`$BBX_HOME/.env` (`deploy/setup-server.sh:212`, `:238`) and the generated `.env`
 template has no `NODE_ENV` line (`deploy/setup-server.sh:171-183`). Three
 behaviours key off the same variable and would all take their dev branch if it
 is unset in production:
@@ -33,20 +33,20 @@ is unset in production:
 - tRPC error stacks, above.
 - `GET /api/external`, which reads allowlisted files OUTSIDE the box root, is
   registered when `NODE_ENV !== "production"`
-  (`callback-box/src/webapp/routes/api.ts:73`). `docs/security-report.md:107`
+  (`beebox/src/webapp/routes/api.ts:73`). `docs/security-report.md:107`
   records this endpoint as "never mounted on a deployed server" on the strength
   of that guard.
-- The CSP header mode (`callback-box/src/webapp/server.ts:158`).
+- The CSP header mode (`beebox/src/webapp/server.ts:158`).
 
-The live server uses the manually configured `callback-hub` unit, not the
-obsolete `callback-serve` unit that `setup-server.sh` still generates
-(`callback-box/deploy/README.md:91-101`, `:243-248`). The hub copies
+The live server uses the manually configured `beebox-hub` unit, not the
+obsolete `beebox-serve` unit that `setup-server.sh` still generates
+(`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
 `NODE_ENV` into every box child only when the hub received it
-(`callback-box/src/hub/child-env.ts:42-50`, `:103-119`).
+(`beebox/src/hub/child-env.ts:42-50`, `:103-119`).
 
 ## Production confirmation (2026-08-23)
 
-The boxholder authorized a read-only probe of the running `callback-hub`
+The boxholder authorized a read-only probe of the running `beebox-hub`
 process. The probe read `/proc/<MainPID>/environ`, filtered the output to the
 single `NODE_ENV` key, and returned:
 
@@ -69,20 +69,20 @@ accidentally mounted commentary helper.
 
 The initial issue also missed a fourth branch. `POST /api/chat/tts` accepts
 browser-test mock fields when `NODE_ENV !== "production"`
-(`callback-box/src/webapp/routes/chat-audio-routes.ts:115-123`). An authenticated
+(`beebox/src/webapp/routes/chat-audio-routes.ts:115-123`). An authenticated
 caller can therefore select fixture audio, delays, chunk sizes, or a
 deterministic mock failure on the deployed server.
 
 ## Temporary containment (2026-08-23)
 
 With the boxholder's explicit approval, a unit-local systemd drop-in set
-`NODE_ENV=production` on `callback-hub`; the shared `.env` and scheduler unit
+`NODE_ENV=production` on `beebox-hub`; the shared `.env` and scheduler unit
 were not changed or restarted. A filtered inventory confirmed that both the
 shared engine and separately pinned engines contain the ambient guard.
 
 After restarting only the hub:
 
-- `callback-hub` and `callback-scheduler` both reported active.
+- `beebox-hub` and `beebox-scheduler` both reported active.
 - The hub process reported `NODE_ENV=production`.
 - An authenticated canary request to `GET /api/external` returned 404.
 - A missing tRPC procedure returned 404 with no `stack` field.
@@ -96,18 +96,18 @@ then removes the drop-in.
 ## Durable implementation and rollout (2026-08-24)
 
 Commit `be218b9d` defaults development surfaces off and enables them only
-with the strict `CB_DEV_SURFACES=1` launcher opt-in. tRPC explicitly disables
+with the strict `BBX_DEV_SURFACES=1` launcher opt-in. tRPC explicitly disables
 response stacks and replaces raw `INTERNAL_SERVER_ERROR` messages, since an
 exception message can contain the same absolute paths even without a stack.
 Fastify always selects the built-frontend CSP policy; Vite independently owns
 its HMR policy. Mock TTS is rejected before provider lookup unless development
 surfaces are enabled.
 
-The implementation's focused tests, 7,723 callback-box assertions, and 206
+The implementation's focused tests, 7,723 beebox assertions, and 206
 root assertions were green when it shipped. A later filtered inventory found
 six served boxes on the shared guarded engine and no separately pinned engine.
 The temporary systemd override was then retired, leaving both `NODE_ENV` and
-`CB_DEV_SURFACES` unset in the hub process. Authenticated production canaries
+`BBX_DEV_SURFACES` unset in the hub process. Authenticated production canaries
 confirmed `/api/external` and an unknown tRPC procedure return 404, tRPC data
 contains no stack, mock TTS is rejected, and the built-app CSP remains the
 report-only production policy.

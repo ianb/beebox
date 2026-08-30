@@ -1,7 +1,7 @@
 ---
 title: "Codex session start fails intermittently — decide on retry, and check the ChatSession construction rate"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [codex, chat]
 filed-by: agent
 discovered-by: Ian

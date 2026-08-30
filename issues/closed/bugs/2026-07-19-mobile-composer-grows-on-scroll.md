@@ -1,7 +1,7 @@
 ---
 title: "Mobile: the chat input area grows while scrolling after opening recent files / landmark cards"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder hit it on mobile
 resolution: implemented

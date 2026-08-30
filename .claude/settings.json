@@ -10,7 +10,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/callback-box/node_modules/.bin/vibe-check lint --hook"
+            "command": "$CLAUDE_PROJECT_DIR/beebox/node_modules/.bin/vibe-check lint --hook"
           }
         ]
       }

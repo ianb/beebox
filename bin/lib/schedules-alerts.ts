@@ -6,7 +6,7 @@
  * of it. Split out of schedules-runner.ts so the launcher can raise alerts
  * without an import cycle back into the runner that calls it.
  *
- * Design: callback-box/docs/plans/scheduled-workstreams.md (Track C).
+ * Design: beebox/docs/plans/scheduled-workstreams.md (Track C).
  */
 
 import { spawn } from "node:child_process";
@@ -17,7 +17,7 @@ import { ensureScheduleDir, writeAlert } from "./schedules-store.js";
 
 /** Everything the runner touches that a test wants to hold still. */
 export interface RunnerDeps {
-  /** `<parent>/schedule-runs` (or `CALLBACK_SCHEDULES_ROOT`). */
+  /** `<parent>/schedule-runs` (or `BBX_SCHEDULES_ROOT`). */
   storeRoot: string;
   /** `<checkout>/schedules`. */
   schedulesRoot: string;

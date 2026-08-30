@@ -2,7 +2,7 @@
 title: "Decide once: axe 'region' violation on the composer's floating role=menu"
 workstream: unattached
 needs: [decision]
-area: callback-box
+area: beebox
 labels: [a11y, tours]
 filed-by: agent
 discovered-by: agent

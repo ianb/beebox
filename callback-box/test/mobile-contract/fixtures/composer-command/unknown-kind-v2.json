@@ -1,9 +1,0 @@
-{
-  "input": {
-    "version": 2,
-    "id": "future-command-1",
-    "kind": "dismiss-keyboard",
-    "payload": { "id": "cb-composer-input" }
-  },
-  "expected": null
-}

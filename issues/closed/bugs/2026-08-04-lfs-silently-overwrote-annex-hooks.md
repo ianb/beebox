@@ -25,12 +25,12 @@ were present, and the boxes served fine. It only surfaced when
 empty, at which point comparing the boxes' hook sets made the gap obvious.
 
 Repaired in place by removing the LFS-only hooks, stripping the LFS stanza out
-of the merged `post-commit` (which also carries the callback-box url-check
+of the merged `post-commit` (which also carries the beebox url-check
 block), and re-running `git annex init` to reinstall the real hooks. Every box
-now has an identical set: `post-checkout=annex`, `post-commit=cb`,
-`post-merge=annex`, `post-receive=annex`, `pre-commit=annex+cb`.
+now has an identical set: `post-checkout=annex`, `post-commit=bbx`,
+`post-merge=annex`, `post-receive=annex`, `pre-commit=annex+bbx`.
 
-**The tension:** nothing detects this class of damage. `cb init` runs the annex
+**The tension:** nothing detects this class of damage. `bbx init` runs the annex
 doctor's repair pass, but the doctor evidently does not verify that annex's own
 hooks are present and are annex's. A box can sit for months with its smudge
 hooks quietly replaced by another tool's — or deleted by a user cleaning up —
@@ -39,8 +39,8 @@ checkout or merge.
 
 Worth considering: have `runAnnexDoctor` (`src/core/annex/doctor.ts`) check that
 `post-checkout` and `post-merge` exist and invoke `git annex`, and repair them
-if not. That would have caught this at any `cb init`. The `post-commit` case is
-harder — it legitimately holds both another tool's block and callback-box's own,
+if not. That would have caught this at any `bbx init`. The `post-commit` case is
+harder — it legitimately holds both another tool's block and beebox's own,
 so the check would need to be "contains the annex line" rather than "equals the
 annex hook".
 

@@ -1,12 +1,12 @@
 /**
  * Lint what the change implicates, instead of the whole tree.
  *
- *   node --import tsx bin/lint-changed.ts            # callback-box (its `lint:changed`)
+ *   node --import tsx bin/lint-changed.ts            # beebox (its `lint:changed`)
  *   node --import tsx bin/lint-changed.ts --root     # dispatch per changed package
  *   node --import tsx bin/lint-changed.ts --base <ref>
  *
  * The same "run what the change implicates" move `test:changed` made, for the
- * same measured reason: a whole-tree `pnpm lint` in callback-box is ~37s solo
+ * same measured reason: a whole-tree `pnpm lint` in beebox is ~37s solo
  * and minutes under contention, while one file is ~4s. Changed = `git diff
  * --name-only <base>...HEAD` ∪ dirty, via the selector's own `changedPaths`, so
  * the two answer the same question.
@@ -20,7 +20,7 @@
  * filesystem and spawning is the shell at the bottom.
  *
  * See issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md and
- * callback-box/docs/plans/change-based-test-selection.md, mechanism B.
+ * beebox/docs/plans/change-based-test-selection.md, mechanism B.
  */
 
 import { spawnSync } from "node:child_process";
@@ -33,12 +33,12 @@ const REPO_ROOT = join(import.meta.dirname, "..");
 
 /**
  * What `lint:backend` covers: `eslint src/ scripts/ test/ user-stories/` from
- * callback-box, whose config ignores `src/frontend/**` and `**\/*.mjs`.
+ * beebox, whose config ignores `src/frontend/**` and `**\/*.mjs`.
  */
 const BACKEND_ROOTS = ["src", "scripts", "test", "user-stories"];
 
-/** What `lint:frontend` covers: `eslint src/` from callback-box/src/frontend. */
-const FRONTEND_DIR = "callback-box/src/frontend";
+/** What `lint:frontend` covers: `eslint src/` from beebox/src/frontend. */
+const FRONTEND_DIR = "beebox/src/frontend";
 const FRONTEND_ROOT = `${FRONTEND_DIR}/src/`;
 
 // `{ts,tsx,js,jsx}` is the preset's own file glob (personal-vibe-check/preset.ts
@@ -55,22 +55,22 @@ const BIN_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".cjs"];
 const hasExtension = (path: string, extensions: string[]): boolean =>
   extensions.some((extension) => path.endsWith(extension));
 
-export interface CallbackBoxTargets {
-  /** Paths relative to `callback-box/`. */
+export interface BeeBoxTargets {
+  /** Paths relative to `beebox/`. */
   backend: string[];
-  /** Paths relative to `callback-box/src/frontend/`. */
+  /** Paths relative to `beebox/src/frontend/`. */
   frontend: string[];
 }
 
 /**
  * Split repo-relative changed paths the way lint-staged splits them: frontend
- * source gets the frontend config, everything else the callback-box one.
+ * source gets the frontend config, everything else the beebox one.
  *
  * A path neither script covers (`deploy/`, `docs/`, a `.mjs`) is dropped — not
  * skipped silently by accident, but because whole-tree `pnpm lint` does not
  * lint it either, and handing eslint an ignored file only earns a warning.
  */
-export function splitCallbackBoxTargets(paths: string[]): CallbackBoxTargets {
+export function splitBeeBoxTargets(paths: string[]): BeeBoxTargets {
   const backend: string[] = [];
   const frontend: string[] = [];
   for (const path of paths) {
@@ -83,8 +83,8 @@ export function splitCallbackBoxTargets(paths: string[]): CallbackBoxTargets {
       }
       continue;
     }
-    if (!path.startsWith("callback-box/")) continue;
-    const relative = path.slice("callback-box/".length);
+    if (!path.startsWith("beebox/")) continue;
+    const relative = path.slice("beebox/".length);
     const [root] = relative.split("/");
     if (root === undefined || !BACKEND_ROOTS.includes(root)) continue;
     if (!hasExtension(relative, BACKEND_EXTENSIONS)) continue;
@@ -111,10 +111,10 @@ export interface DispatchInput {
 /**
  * Which package each changed path belongs to, longest prefix wins.
  *
- * `callback-box/src/frontend` is its own workspace package but never its own
- * lint run: root `pnpm lint` filters it out precisely because callback-box's
+ * `beebox/src/frontend` is its own workspace package but never its own
+ * lint run: root `pnpm lint` filters it out precisely because beebox's
  * `lint:frontend` already covers it. {@link packageOwnerDirs} leaves it out of
- * the list for that reason, so a frontend path lands on callback-box here.
+ * the list for that reason, so a frontend path lands on beebox here.
  */
 export function packageOf(path: string, packageDirs: string[]): string | null {
   let best: string | null = null;
@@ -128,7 +128,7 @@ export function packageOf(path: string, packageDirs: string[]): string | null {
 /**
  * The root fan-out, reduced to the packages this change touched.
  *
- * callback-box gets its own `lint:changed` (it is the big one, and it knows
+ * beebox gets its own `lint:changed` (it is the big one, and it knows
  * the frontend/backend split); every other package runs its whole `lint`,
  * which is seconds. `schedules/` and `bin/` are not packages — they are the
  * two root paths the root eslint config lints, and each has its own root-level
@@ -149,7 +149,7 @@ export function dispatchPlan(input: DispatchInput): LintCommand[] {
     if (dir !== null) packages.add(dir);
   }
   for (const dir of [...packages].toSorted()) {
-    const script = dir === "callback-box" ? "lint:changed" : "lint";
+    const script = dir === "beebox" ? "lint:changed" : "lint";
     if (!input.hasScript(dir, script)) continue;
     commands.push({
       label: `pnpm --dir ${dir} ${script}`,
@@ -248,13 +248,13 @@ function eslintCommand(input: { cwd: string; cache: string; files: string[] }): 
   };
 }
 
-function callbackBoxCommands(paths: string[]): LintCommand[] {
-  const { backend, frontend } = splitCallbackBoxTargets(paths);
+function beeboxCommands(paths: string[]): LintCommand[] {
+  const { backend, frontend } = splitBeeBoxTargets(paths);
   const commands: LintCommand[] = [];
   if (backend.length > 0) {
     commands.push(
       eslintCommand({
-        cwd: "callback-box",
+        cwd: "beebox",
         cache: "node_modules/.cache/eslint/backend",
         files: backend,
       }),
@@ -277,7 +277,7 @@ function main(argv: string[]): number {
   const paths = existing(changedPaths({ base: args.base, cwd: REPO_ROOT }));
   const commands = args.root
     ? dispatchPlan({ paths, packageDirs: packageOwnerDirs(REPO_ROOT), hasScript })
-    : callbackBoxCommands(paths);
+    : beeboxCommands(paths);
   if (commands.length === 0) {
     console.log("lint-changed: nothing lintable changed");
     return 0;

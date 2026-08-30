@@ -1,16 +1,16 @@
 ---
 title: "test/dev/auto-sweep-detach, test/field-test/lifecycle, test/field-test/run doctests time out under extreme parallel load"
 workstream: commit-provenance
-area: callback-box/test
+area: beebox/test
 labels: [flaky, timeout, load]
 filed-by: agent
 discovered-by: agent
-discovered-in: /finish for the commit-provenance-trailers stream, full callback-box suite run under load averages 28-40 (many concurrent sibling sessions)
+discovered-in: /finish for the commit-provenance-trailers stream, full beebox suite run under load averages 28-40 (many concurrent sibling sessions)
 ---
 
 ## What happened
 
-A full `pnpm test` run in `callback-box/` (post-merge re-verification for an
+A full `pnpm test` run in `beebox/` (post-merge re-verification for an
 unrelated stream) failed 4 of 7886 tests, all timeout-shaped, while system
 load averages sat at 28-40 (many concurrent Claude sessions running
 tests/lint/typecheck in parallel):

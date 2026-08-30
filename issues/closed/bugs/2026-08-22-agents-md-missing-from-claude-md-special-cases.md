@@ -1,7 +1,7 @@
 ---
 title: "`AGENTS.md` is missing from the places that special-case `CLAUDE.md` — refresh-maps fails forever on every codex box"
 workstream: agents-md-pairing
-area: callback-box
+area: beebox
 labels: [codex, maps, procedures]
 priority: important
 resolution: implemented
@@ -28,7 +28,7 @@ nothing else at all.
 | --- | --- |
 | `core/maps/precheck-ignore.ts:81` | **Bug.** Fixed. |
 | `core/maps/finalize.ts:93` | **Second live bug.** It creates `<dir>/CLAUDE.md` and nothing planted the mirror, so a newly-mapped directory stayed invisible to Codex until the next `generate-docs`. Self-healing, therefore silent. Now links the file it just created, via a narrow `ensureAgentsMirror(claudePath)`. |
-| `core/sdk-hooks.ts:90` | **Drift.** A hand-rolled subset of `isBuiltinLintableMarkdown`, which documents itself as the single source of truth "so every entry point agrees". It missed `AGENTS.md`, `docs/generated/`, and the skip-dirs; the codex-side hook (`cb validate --hook`) already routed through the real predicate. Deleted in favour of it — a deliberate broadening, not a no-op. |
+| `core/sdk-hooks.ts:90` | **Drift.** A hand-rolled subset of `isBuiltinLintableMarkdown`, which documents itself as the single source of truth "so every entry point agrees". It missed `AGENTS.md`, `docs/generated/`, and the skip-dirs; the codex-side hook (`bbx validate --hook`) already routed through the real predicate. Deleted in favour of it — a deliberate broadening, not a no-op. |
 | `codex-run.ts:62`, `codex-chat.ts:49`, `agent-context.ts:17` | Correct. They expand includes from the canonical file; `AGENTS.md` is a symlink to it. No second bug hid in the codex paths. |
 | `box/package.ts:249`, `docs-gen/claude-md.ts:27`, `claude-md-lint.ts:46,102` | Correct. Canonical write / canonical find — mirroring here would double-write or double-report. |
 | `doc-graph-data.ts:67`, `doc-graph-html-data.ts:258,281`, `doc-link-repair.ts:18` | Correct. The doc graph excludes `AGENTS.md` at the walk (`EXCLUDE_PATTERNS`), so nothing downstream can see one; basename repair cannot mis-resolve to a file that never enters the index. |
@@ -90,7 +90,7 @@ in the listing."* `AGENTS.md` belongs in that list and is absent.
 So every directory holding a `CLAUDE.md` presents refresh-maps with an unmapped
 file that is, literally, a symlink to the file excluded on the line above. The
 precheck demands each MAP list it; the agent correctly declines to write an
-instruction-file symlink into a content map; `cb refresh-maps --brief` keeps
+instruction-file symlink into a content map; `bbx refresh-maps --brief` keeps
 reporting `needsWork: true`; the validate step fails. Every run, forever.
 
 Observed on a box with 106 instruction files: the run's agent made only an

@@ -16,6 +16,10 @@ set -e
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMR)"
 
+# Block retired product vocabulary outside the exact historical and migration
+# allowlist. The checker is silent when the baseline is clean.
+(cd "$REPO_DIR" && pnpm --silent retired-product-name-check)
+
 run_in() {
   local dir="$1"; shift
   echo "[pre-commit] $dir: $*"
@@ -76,7 +80,7 @@ fi
 
 # Any commit touching markdown runs the fast doc reference/orphan check.
 if echo "$staged" | grep -q '\.md$'; then
-  run_in callback-box pnpm doc-check
+  run_in beebox pnpm doc-check
 fi
 
 # Docs-only commits need nothing further — typecheck/lint add nothing.
@@ -85,7 +89,7 @@ if [ -n "$staged" ] && ! echo "$staged" | grep -qv '\.md$'; then
 fi
 
 # Clerk contract staleness gate. The dispatcher runs the per-subtree checks
-# below independently, so a callback-box-only change to the clerk wire shape
+# below independently, so a beebox-only change to the clerk wire shape
 # never exercises the clerk side — this branch closes that gap. It fires when
 # the staged set touches the leaf schema, the generator, the generated
 # snapshot, or this hook itself; it regenerates and diffs ONLY the generated
@@ -96,12 +100,12 @@ fi
 # touched. Scope caveat: this whole subtree ships across a store release, so a
 # store-version skew gate is deliberately out of scope (runtime validation in
 # clerk-api.ts handles deployed skew by degradation).
-if echo "$staged" | grep -qE '^(callback-box/src/webapp/trpc/routers/clerk-contract\.ts|bin/snapshot-clerk-contract\.ts|callback-clerk/src/contract/clerk-contract\.generated\.ts|\.husky/pre-commit)$'; then
+if echo "$staged" | grep -qE '^(beebox/src/webapp/trpc/routers/clerk-contract\.ts|bin/snapshot-clerk-contract\.ts|beebox-clerk/src/contract/clerk-contract\.generated\.ts|\.husky/pre-commit)$'; then
   echo "[pre-commit] .: pnpm snapshot:clerk-contract (clerk contract staleness gate)"
   (cd "$REPO_DIR" && pnpm --silent snapshot:clerk-contract)
-  if ! git -C "$REPO_DIR" diff --exit-code -- callback-clerk/src/contract/clerk-contract.generated.ts; then
+  if ! git -C "$REPO_DIR" diff --exit-code -- beebox-clerk/src/contract/clerk-contract.generated.ts; then
     echo "[pre-commit] clerk contract is stale — regenerate and stage it:" >&2
-    echo "[pre-commit]   pnpm snapshot:clerk-contract && git add callback-clerk/src/contract/clerk-contract.generated.ts" >&2
+    echo "[pre-commit]   pnpm snapshot:clerk-contract && git add beebox-clerk/src/contract/clerk-contract.generated.ts" >&2
     exit 1
   fi
 fi
@@ -118,15 +122,15 @@ fi
 # --quiet: suppress lint-staged's own progress/warning chatter (STARTED/
 # COMPLETED lines, the --no-stash banner) — task output (eslint errors) still
 # prints on failure.
-if echo "$staged" | grep -q '^callback-box/'; then
-  run_pair callback-box "pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet" "pnpm typecheck"
+if echo "$staged" | grep -q '^beebox/'; then
+  run_pair beebox "pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet" "pnpm typecheck"
 fi
 
-if echo "$staged" | grep -q '^callback-clerk/'; then
-  run_pair callback-clerk "pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet" "pnpm typecheck"
+if echo "$staged" | grep -q '^beebox-clerk/'; then
+  run_pair beebox-clerk "pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet" "pnpm typecheck"
 fi
 
-# The generated site is a top-level package invisible to the callback-box/clerk
+# The generated site is a top-level package invisible to the beebox/clerk
 # branches above. No lint-staged here (small package, no config) — lint + type
 # the whole thing. A content-only (.md) commit exits early above, so this only
 # fires when TS/config under site/ changed.

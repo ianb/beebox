@@ -28,7 +28,7 @@ test("the deploy hook and DEPLOYED_PATHS_PATTERN are the same rule", () => {
 
 test("isDeployedPath: shipped subprojects and root pnpm files, nothing else", () => {
   for (const path of [
-    "callback-box/src/hub/server.ts",
+    "beebox/src/hub/server.ts",
     "agent-doctest/src/run.ts",
     "personal-vibe-check/eslint.config.ts",
     "patches/tap+21.0.1.patch",
@@ -43,11 +43,11 @@ test("isDeployedPath: shipped subprojects and root pnpm files, nothing else", ()
     "issues/bugs/2026-08-26-thing.md",
     "bin/smoke.ts",
     "ios-app/App.swift",
-    "callback-clerk/src/background.ts",
+    "beebox-clerk/src/background.ts",
     "research/notes.md",
     "README.md",
     // Anchoring: the name has to be at the root, not anywhere in the path.
-    "dev/callback-box/notes.md",
+    "dev/beebox/notes.md",
     "docs/package.json",
   ]) {
     assert.equal(isDeployedPath(path), false, path);
@@ -55,7 +55,7 @@ test("isDeployedPath: shipped subprojects and root pnpm files, nothing else", ()
 });
 
 test("touchesDeployedPath: any shipped path counts; an empty diff ships nothing", () => {
-  assert.equal(touchesDeployedPath(["issues/x.md", "callback-box/src/a.ts"]), true);
+  assert.equal(touchesDeployedPath(["issues/x.md", "beebox/src/a.ts"]), true);
   assert.equal(touchesDeployedPath(["issues/x.md", "bin/b.ts"]), false);
   assert.equal(touchesDeployedPath([]), false);
 });

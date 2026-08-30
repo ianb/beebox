@@ -1,5 +1,5 @@
 ---
-title: "Manually verify Callback Clerk tab arrangement Apply and Undo"
+title: "Manually verify Bee Box Clerk tab arrangement Apply and Undo"
 workstream: tab-organizer-clerk
 area: clerk
 needs: [manual-testing]
@@ -10,12 +10,12 @@ discovered-in: worktree-tab-organizer-clerk — following up after the guarded t
 > **⏳ Awaiting manual testing** — the feature landed in `86614e16`, with viewer polish in `29da64ec`; exercise a real Chrome Apply and best-effort Undo. Only Ian clears this.
 
 The tab-arrangement flow has automated coverage and browser verification of the
-card viewer. It has not completed an end-to-end test in the real Callback Clerk
+card viewer. It has not completed an end-to-end test in the real Bee Box Clerk
 extension against live Chrome tabs.
 
 ## Manual testing
 
-1. Build `callback-clerk/dist/chrome-mv3/`, then reload that unpacked extension
+1. Build `beebox-clerk/dist/chrome-mv3/`, then reload that unpacked extension
    in Chrome. This avoids the separate
    [stale unpacked-build bug](../bugs/2026-08-06-clerk-unpacked-build-silently-stale.md).
 2. Share the current window to a selected box. Confirm the organizer opens in a

@@ -1,7 +1,7 @@
 ---
 title: "Doctest TSX resolution flake recurred after the loader fix"
 workstream: load-older-label
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-load-older-label — full finish-suite verification
 resolution: wontfix
@@ -25,7 +25,7 @@ resolution: wontfix
 > them. It also explains why no campaign could force it in a warm worktree —
 > the built set was already correct there.
 >
-> The fix is `callback-box`'s `postinstall: tap build`. If this signature
+> The fix is `beebox`'s `postinstall: tap build`. If this signature
 > appears again, check `tap versions` (the BUILT set) before assuming load;
 > `tap plugin list` prints the configured set and will look right either way.
 
@@ -91,7 +91,7 @@ closed `wontfix` after a comparable no-repro campaign.
 > loaded full-suite runs, and treat a sighting as the event that reopens
 > investigation.
 
-The full parallel `callback-box` suite still intermittently resolves an
+The full parallel `beebox` suite still intermittently resolves an
 extensionless frontend import to a missing module. This recurred after the fix
 documented in
 [the earlier loader issue](2026-08-05-doctest-loader-tsx-resolution-under-parallel-load.md).

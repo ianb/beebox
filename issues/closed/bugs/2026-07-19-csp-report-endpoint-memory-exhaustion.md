@@ -3,7 +3,7 @@ title: "Unauthenticated /api/csp-report can exhaust memory/disk (no per-report s
 workstream: local-password-auth
 filed-by: agent
 discovered-in: worktree-local-password-auth — Codex adversarial review of the always-on-auth branch (finding #7, pre-existing)
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

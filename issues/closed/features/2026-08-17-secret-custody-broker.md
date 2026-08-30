@@ -1,8 +1,8 @@
 ---
 title: "Secret custody: hold secrets somewhere that discloses on request, logs access, and can share between boxes"
 workstream: secret-custody
-area: callback-box
-design: ../../../callback-box/docs/implemented-plans/secret-custody.md
+area: beebox
+design: ../../../beebox/docs/implemented-plans/secret-custody.md
 labels: [security, secrets, hub, connectors]
 filed-by: agent
 discovered-by: Ian
@@ -14,9 +14,9 @@ resolution: implemented
 `main` (see `docs/implemented-plans/secret-custody.md`): the machine-level
 store, per-box slug-keyed grants, `server`/`agent` access levels, typed
 refusals, access log, probe/format registries, admin Secrets UI, agent
-loopback resolve route, `cb secrets` CLI (incl. `migrate`), env allowlists for
+loopback resolve route, `bbx secrets` CLI (incl. `migrate`), env allowlists for
 agent subprocesses, and all nine secret readers migrated onto the store with a
-fail-closed legacy fallback. **Still operational, not code:** running `cb
+fail-closed legacy fallback. **Still operational, not code:** running `bbx
 secrets migrate` on each dev machine and on prod, and the follow-up removal of
 the legacy env/file fallbacks and allowlist entries once every box has
 migrated — see the plan's Rollout-shape migration-status note.
@@ -35,14 +35,14 @@ and design item before it is a build item.
 
 - **Per-box connector secrets** — `content/config/connectors/*.secret.json`.
   The main store, one copy per box.
-- **A machine-global credential store** — `~/.cb-auth.json` (override
-  `CB_AUTH_FILE`). Notably *not* per-box: one file behind every local box.
-- **Per-box capability tokens** — `.callback-box/scan-tokens.secret.json` via
+- **A machine-global credential store** — `~/.beebox-auth.json` (override
+  `BBX_AUTH_FILE`). Notably *not* per-box: one file behind every local box.
+- **Per-box capability tokens** — `.beebox/scan-tokens.secret.json` via
   `src/core/token-store.ts` (0600, atomic replace).
-- **Session secret** — `~/.cb-session-secret`.
-- **Server process env** — `/home/callback/.env`, loaded as the hub unit's
-  `EnvironmentFile`, and each checkout's `callback-box/.env` in dev.
-- **Machine-wide dev credential** — `CB_BROWSE_API_KEY` (`core/browse-key.ts`),
+- **Session secret** — `~/.beebox-session-secret`.
+- **Server process env** — `/home/beebox/.env`, loaded as the hub unit's
+  `EnvironmentFile`, and each checkout's `beebox/.env` in dev.
+- **Machine-wide dev credential** — `BBX_BROWSE_API_KEY` (`core/browse-key.ts`),
   explicitly whole-machine rather than per-box.
 
 **Sharing between boxes today is a file copy.** `deploy/add-box.sh
@@ -147,12 +147,12 @@ The boxholder explicitly asked for best practices rather than invention:
 ## Research (2026-08-17)
 
 Full digest with sources lives in the design doc
-(`callback-box/docs/plans/secret-custody.md`, "Prior art" section). The
+(`beebox/docs/plans/secret-custody.md`, "Prior art" section). The
 findings that shape the design:
 
 **Codebase fact that dissolves the vault-vs-broker fork:** every
-secret-using API call already runs in a server process (`cb serve` child,
-`cb wakeup`, webhook routes) — no agent-invoked code path reads a connector
+secret-using API call already runs in a server process (`bbx serve` child,
+`bbx wakeup`, webhook routes) — no agent-invoked code path reads a connector
 secret today. So agents never need a disclosure interface at all; the gap is
 placement (secrets sit inside the agent's cwd) and env inheritance
 (`buildScriptEnv` spreads the full server env into agent subprocesses,
@@ -186,7 +186,7 @@ reach every agent's environment today).
   already does.
 
 **Design direction (for discussion):** a machine-level store outside every
-box tree with per-box grants, an access log, and a `cb secrets` lifecycle —
+box tree with per-box grants, an access log, and a `bbx secrets` lifecycle —
 a vault whose only clients are server processes, which makes it a broker
 from the agent's point of view. Sharing becomes a grant instead of a file
 copy; rotation touches one entry. Composes with

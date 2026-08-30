@@ -60,8 +60,8 @@ there's a diff against `main` → ask review-or-challenge.
 1. **Run from the repo root that makes cited paths resolve.** The monorepo is
    one git repo: `ROOT=$(git rev-parse --show-toplevel)`.
 2. **Orientation glue (callback-specific).** Always tell the reviewer the layout
-   so it doesn't rediscover it: *"This targets the `callback-box/` subproject.
-   Paths like `src/…`, `docs/…`, `test/…` are under `callback-box/`; `bin/…` is
+   so it doesn't rediscover it: *"This targets the `beebox/` subproject.
+   Paths like `src/…`, `docs/…`, `test/…` are under `beebox/`; `bin/…` is
    at the monorepo root. You may read any repo file (read-only), **including
    `docs/` and `.claude/rules/`**, to verify claims."*
 3. **Fence the prompt hard.** A named read-list ("READ EXACTLY THESE files"),
@@ -267,7 +267,7 @@ every cited path must be this worktree's. That is only safe because of
 > finishes. That hook removes the worktree, its cloned box, and its branch when
 > the branch is merged and clean. Verified the hard way on 2026-08-04: a bare
 > `claude -p` run from inside a worktree destroyed that worktree mid-session
-> (recorded in `~/.cache/callback-box/worktree-cleanup.log`). Loading user
+> (recorded in `~/.cache/beebox/worktree-cleanup.log`). Loading user
 > settings only means the project's hooks are never registered.
 > (`.claude/hooks/session-end.sh` now also refuses to clean a worktree that
 > still has another live agent belonging to it, and fails closed when it can't

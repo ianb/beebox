@@ -1,7 +1,7 @@
 ---
 title: "iOS: native audio capture can stop recording while the UI still says recording"
 workstream: ios-audio-session-fix
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-ios-audio-session-fix — Codex review of the audio-session fix
 labels: [mobile]
@@ -34,6 +34,6 @@ in `AVAudioRecorderFactory` without leaking `AVFoundation` into the recorder
 model.
 
 Out of scope for the audio-session routing work
-([plan](../../callback-box/docs/implemented-plans/ios-audio-session-routing.md)), which
+([plan](../../beebox/docs/implemented-plans/ios-audio-session-routing.md)), which
 only changed which category and options the session uses. Found by a
 cross-model review of that change.

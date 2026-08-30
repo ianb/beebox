@@ -1,7 +1,7 @@
 ---
 title: "Browse sidebar live-refresh did not fire for a file added to the open directory"
 workstream: browse-back-url
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-browse-back-url — first real-browser verification after the browse-key auth work
 ---
@@ -42,12 +42,12 @@ Candidates, none confirmed:
   headless browser, despite the transport authenticating. Check whether the
   tRPC `events.subscribe` subscription is live client-side.
 - The box's file watcher did not emit `file-change` for a file created by an
-  external write (as opposed to one written through `cb`).
+  external write (as opposed to one written through `bbx`).
 - The event fired but `parent !== dirPath` — e.g. a path-shape mismatch between
   the event's `path` and the browse `dirPath`.
 
 Reproduce with the isolated-router setup in
-`callback-box/docs/implemented-plans/agent-token-browser-auth.md` — that is now the only way
+`beebox/docs/implemented-plans/agent-token-browser-auth.md` — that is now the only way
 an agent can drive the dev app in a browser at all.
 
 ## Related

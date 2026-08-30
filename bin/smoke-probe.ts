@@ -10,7 +10,7 @@
  * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
  */
 
-import { isRecord } from "../callback-box/src/lib/is-record.js";
+import { isRecord } from "../beebox/src/lib/is-record.js";
 import {
   BoxFailedToStartError,
   CredentialRefusedError,

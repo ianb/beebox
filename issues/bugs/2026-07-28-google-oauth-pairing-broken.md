@@ -1,7 +1,7 @@
 ---
 title: "Google OAuth: unverified-app screen + Testing-mode token expiry (not a code bug)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder hit it
 needs: [decision]
@@ -15,7 +15,7 @@ actual block was Google's **"Google hasn't verified this app"** interstitial
 documents.readonly). Clicking **Advanced → continue (unsafe) → consent** connected
 successfully. So the connect flow *works*; the friction (and likely the recurring
 "it broke again") is Google OAuth **publishing/verification state**, not
-callback-box code. Details + fix below; the remaining work is a decision (verify
+beebox code. Details + fix below; the remaining work is a decision (verify
 the app vs. stay unverified) plus optional code follow-ups.
 
 Boxholder reports *"pairing with Google seems to be broken, and oauth pairs are
@@ -78,11 +78,11 @@ the boxholder saw is the missing piece.
 
 ## What was checked on prod (points away from the obvious causes)
 
-- **`CB_PUBLIC_URL` is clean** (`https://<host>`, no trailing slash, no box-slug
+- **`BBX_PUBLIC_URL` is clean** (`https://<host>`, no trailing slash, no box-slug
   segment) → the login redirect_uri resolves to `https://<host>/auth/callback`
   correctly. So this is **not** the earlier double-slash redirect_uri bug
   ([closed: google-oauth-callback-unauthenticated](../closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md)).
-- **No `[auth]` / `redirect_uri` / token-exchange errors in the `callback-hub`
+- **No `[auth]` / `redirect_uri` / token-exchange errors in the `beebox-hub`
   journal in the last 24h.** The app isn't logging a failure — so the break may
   happen *before* the request reaches the app, or logs to the box-local
   `client-debug.log` instead.
@@ -90,7 +90,7 @@ the boxholder saw is the missing piece.
 ## Update (2026-07-28): reproduced on a prod box — failed on Google's end
 
 Boxholder retried on one of the prod boxes; it **failed on Google's own page** (not
-callback-box, not a Cloudflare Access page). The `callback-hub` journal logged
+beebox, not a Cloudflare Access page). The `beebox-hub` journal logged
 nothing for the attempt — consistent with Google rejecting at the *authorize*
 step, before any redirect back to `/auth/…/callback`. That rules out Cloudflare
 Access (it shows its own page) and app-side token exchange. It's a **Google-side
@@ -129,8 +129,8 @@ path. `redirect_uri_mismatch` is **not** it:
 
 - Both canonical URIs **are registered**: `https://<host>/auth/callback` (login)
   and `https://<host>/auth/google-services/callback` (connector).
-- `CB_PUBLIC_URL=https://<host>` (canonical, no slug) is present in **both** the
-  hub and every per-box `cb serve` child — so the login redirect_uri is
+- `BBX_PUBLIC_URL=https://<host>` (canonical, no slug) is present in **both** the
+  hub and every per-box `bbx serve` child — so the login redirect_uri is
   canonical for every box (the one registered `/<slug>/auth/callback` URI in the
   console is legacy cruft, not something the current code emits).
 - The frontend calls `googleSetup.mutate({})` with **no `origin`**
@@ -154,7 +154,7 @@ requests **restricted scopes** (Gmail/Calendar/Drive):
 
 **Need the exact text of Google's error page** (the error code / blue box / "error
 details") to pick between these — the fix differs per case. It is NOT a
-callback-box code bug in the redirect_uri path.
+beebox code bug in the redirect_uri path.
 
 ## Latent smell (still worth fixing, but NOT the cause here)
 
@@ -188,10 +188,10 @@ responsible for this failure.
 with **raw `publicUrl`** — it does NOT go through `baseServerUrl()`
 (`src/webapp/base-server-url.ts`) the way the connector path
 (`admin-google.ts`) does. `baseServerUrl()` strips a trailing box-slug segment
-*and* a trailing slash. So the login flow is fragile: a `CB_PUBLIC_URL` with a
+*and* a trailing slash. So the login flow is fragile: a `BBX_PUBLIC_URL` with a
 trailing slash or a box-slug segment produces a malformed redirect_uri
 (`host//auth/callback` or `host/<slug>/auth/callback`) and breaks login. It's
-fine on *this* prod (clean `CB_PUBLIC_URL`) but is a footgun for other
+fine on *this* prod (clean `BBX_PUBLIC_URL`) but is a footgun for other
 deployments and should be normalized to match the connector path.
 
 ## What's needed to pin it (the manual-testing artifact)
@@ -199,7 +199,7 @@ deployments and should be normalized to match the connector path.
 - **Which flow** — logging into the box with Google, or connecting a Google
   account to a box?
 - **The exact error** — the screen/text (Google's `redirect_uri_mismatch`? a
-  Cloudflare Access page? a callback-box 400/401/500? a blank redirect?).
-- The box's `.callback-box/client-debug.log` around the attempt.
+  Cloudflare Access page? a beebox 400/401/500? a blank redirect?).
+- The box's `.beebox/client-debug.log` around the attempt.
 
 With the error signature this collapses to one of the suspects above quickly.

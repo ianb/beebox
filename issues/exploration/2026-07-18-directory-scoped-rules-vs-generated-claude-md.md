@@ -4,7 +4,7 @@ workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder wondering if per-directory rules could replace generated context
-area: callback-box
+area: beebox
 ---
 
 Today a box's agent context is assembled by **generating CLAUDE.md** and injecting
@@ -28,13 +28,13 @@ investigate (boxholder: "I'm not sure if that works").
 - `src/core/docs-gen/triage.ts` — triage-location doc generation (the boxholder's
   motivating case — triage spots have location-specific handling).
 - `src/core/box/package.ts:249` — writes `ROOT_CLAUDE_MD` into a new box package.
-- Engine side: `callback-box/CLAUDE.md:174` uses `@code-style.md` (an @-include of a
+- Engine side: `beebox/CLAUDE.md:174` uses `@code-style.md` (an @-include of a
   hand-written file — different from the generated-briefing case, but same mechanism).
 
 ## The core question (load-bearing, verify first)
 
 Does **Claude Code's native nested-CLAUDE.md discovery** (auto-load CLAUDE.md up the
-directory chain from the agent's cwd) actually fire in the way callback-box runs the
+directory chain from the agent's cwd) actually fire in the way beebox runs the
 agent — i.e. through the **Agent SDK's `query()`** with a set cwd (`src/core/agent/`),
 not just interactive `claude`? If a CLAUDE.md placed in a triage/landmark subdirectory is
 auto-loaded when the agent's cwd is that subdir, then a lot of the compile-and-@-include
@@ -60,7 +60,7 @@ Reasons this might NOT be a clean swap (check each):
 
 **Answer: yes, it works** — confirmed both by the docs and by a live experiment against the
 actual Claude Code agent (planted distinct secret codes in different locations and asked a
-headless `claude -p` run which it could see). The SDK path callback-box uses is covered
+headless `claude -p` run which it could see). The SDK path beebox uses is covered
 because `settingSources` defaults to loading all sources (we omit it, so `project` — hence
 CLAUDE.md, nested memory, and `.claude/rules/` — loads; SDK d.ts: *"When omitted, all sources
 are loaded"*, *"Must include 'project' to load CLAUDE.md files"*). Docs:
@@ -84,7 +84,7 @@ are loaded"*, *"Must include 'project' to load CLAUDE.md files"*). Docs:
   on-demand when the agent touches files matching the glob. This is the purpose-built
   "directory/path-based rules" feature.
 
-**What this means for callback-box:**
+**What this means for beebox:**
 - **Landmark/triage-bound sessions run cwd = the subdir** → a `CLAUDE.md` placed there loads
   automatically at start (it's in the cwd→root chain, per Test 2). **This is a clean fit** —
   location-specific triage/landmark context can live in-place instead of being compiled and

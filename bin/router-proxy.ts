@@ -1,5 +1,5 @@
 // The HTTP proxy the router fronts every worktree with, plus its
-// retry/body-replay machinery and the `x-cb-*` spoof wall.
+// retry/body-replay machinery and the `x-bbx-*` spoof wall.
 //
 // This is a REQUEST-level concern, kept deliberately OUT of the lifecycle state
 // machine (bin/docs/router-protocol.md, "Fifth candidate that stays OUT of the
@@ -11,7 +11,7 @@ import type http from "node:http";
 import { Readable } from "node:stream";
 import type { Socket } from "node:net";
 import httpProxy from "http-proxy-3";
-import { injectBasePrefix } from "../callback-box/src/webapp/base-prefix.js";
+import { injectBasePrefix } from "../beebox/src/webapp/base-prefix.js";
 import { rewriteMobileCookiePath } from "./router-cookie.js";
 import { bootstrapMobileSessionCookie, type MobileBootstrapTarget } from "./router-mobile-bootstrap.js";
 import { WORKSTREAMS_APP_CAPABILITY_HEADER, type WorkstreamsAppTarget } from "./workstreams-app-supervisor.js";
@@ -66,7 +66,7 @@ function boxSlugOf(reqPath: string): string | null {
   return m ? m[1]! : null;
 }
 
-// The box child sets `cb_mobile` with `Path=/<slug>` (it only knows its slug);
+// The box child sets `bbx_mobile` with `Path=/<slug>` (it only knows its slug);
 // behind the router the browser path is `/<worktree>/<slug>/…`, so the cookie is
 // dropped on reload + the tRPC WebSocket unless the router rewrites its Path.
 // `proxyRes` fires BEFORE http-proxy-3's writeHeaders pass copies proxyRes.headers
@@ -118,19 +118,19 @@ async function readBody(req: http.IncomingMessage): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-// The spoof wall (expose-dev-router B.2c / finding: strip client `x-cb-*`).
-// The router injects exactly ONE trusted `x-cb-*` header — `x-cb-base-prefix`
-// (via injectBasePrefix). Every other `x-cb-*` (x-cb-authenticated-email,
-// x-cb-hub-secret, x-cb-hub-auth, x-cb-diag, …) is an identity/authorization
+// The spoof wall (expose-dev-router B.2c / finding: strip client `x-bbx-*`).
+// The router injects exactly ONE trusted `x-bbx-*` header — `x-bbx-base-prefix`
+// (via injectBasePrefix). Every other `x-bbx-*` (x-bbx-authenticated-email,
+// x-bbx-hub-secret, x-bbx-hub-auth, x-bbx-diag, …) is an identity/authorization
 // header the worktree hub or box trusts; a client on the exposed TCP listener
 // must never be able to forge one and have it reach Vite/the hub. So we delete
-// ALL incoming `x-cb-*` at the router edge before proxying (mirrors the hub's
+// ALL incoming `x-bbx-*` at the router edge before proxying (mirrors the hub's
 // own `stripHubHeaders`). `injectBasePrefix` then re-sets the one the router
 // legitimately owns. Defense-in-depth: the hub strips again downstream.
-const CB_HEADER_PREFIX = "x-cb-";
-export function stripClientCbHeaders(headers: http.IncomingHttpHeaders): void {
+const BBX_HEADER_PREFIX = "x-bbx-";
+export function stripClientBbxHeaders(headers: http.IncomingHttpHeaders): void {
   for (const key of Object.keys(headers)) {
-    if (key.toLowerCase().startsWith(CB_HEADER_PREFIX)) delete headers[key];
+    if (key.toLowerCase().startsWith(BBX_HEADER_PREFIX)) delete headers[key];
   }
 }
 
@@ -139,7 +139,7 @@ export function prepareWorkstreamsAppHeaders(
   headers: http.IncomingHttpHeaders,
   capability: string | null,
 ): void {
-  stripClientCbHeaders(headers);
+  stripClientBbxHeaders(headers);
   if (capability !== null) headers[WORKSTREAMS_APP_CAPABILITY_HEADER] = capability;
 }
 
@@ -201,13 +201,13 @@ export async function proxyWithRetry(
   let retriesLeft = retries;
   const bodyLength = replayableBodyLength(req);
   const body = bodyLength === null ? null : await readBody(req);
-  // Strip ALL client-supplied `x-cb-*` first (the spoof wall), so a forged
+  // Strip ALL client-supplied `x-bbx-*` first (the spoof wall), so a forged
   // identity/hub-secret header can never reach the worktree. Then inject the one
-  // header the router legitimately owns: `x-cb-base-prefix`, telling the fronted
+  // header the router legitimately owns: `x-bbx-base-prefix`, telling the fronted
   // worktree which path prefix this router strips so its login redirects (and
   // SPA asset rewrite) can rebuild the full browser path. injectBasePrefix also
   // strips any client copy of that one header before setting it (Track A).
-  stripClientCbHeaders(req.headers);
+  stripClientBbxHeaders(req.headers);
   injectBasePrefix(req.headers, `/${name}`);
   let bootstrapPending = mobileBootstrap;
   for (;;) {

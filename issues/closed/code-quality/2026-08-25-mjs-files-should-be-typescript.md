@@ -27,17 +27,17 @@ the historical reason these were `.mjs`.
 ## The thirty, sorted
 
 **14 × `eslint.config.mjs` — no remaining reason.** Root, `agent-doctest`,
-`browse`, `callback-box` (+ `pub-worker`, `src/frontend`), `callback-clerk`,
+`browse`, `beebox` (+ `pub-worker`, `src/frontend`), `beebox-clerk`,
 `canvas-loop`, `feedback-review`, `personal-vibe-check`, `scan-uploader`,
 `site`, `workstreams-app` (+ `eslint.frontend.config.mjs`). This is the bulk and
 the easy win.
 
-**3 generated and gitignored — leave them.** `callback-box/dist/cli.mjs`,
+**3 generated and gitignored — leave them.** `beebox/dist/cli.mjs`,
 `scan-uploader/dist/scan-uploader.mjs`,
-`callback-clerk/.wxt/eslint-auto-imports.mjs`. Build output, not source; esbuild
+`beebox-clerk/.wxt/eslint-auto-imports.mjs`. Build output, not source; esbuild
 and wxt emit `.mjs` and that is fine.
 
-**1 genuinely cannot be TypeScript — leave it.** `callback-box/tsx-preload.mjs`
+**1 genuinely cannot be TypeScript — leave it.** `beebox/tsx-preload.mjs`
 sets `TSX_TSCONFIG_PATH` *before tsx initializes*, so by definition it runs where
 TS loading does not yet exist. This is exactly the loader carve-out the rule
 allows, and it should keep a comment saying so.
@@ -54,7 +54,7 @@ deliberately; either answer is defensible if the reason is written down.
   `bin/vibe-init.mjs`, `prettier.config.mjs`
 - `agent-doctest/src/`: `doctest-hooks.mjs`, `resolve-rules.mjs`
 - `canvas-loop/`: `src/eslint/index.mjs`, `test/tea-lint.test.mjs`
-- `callback-box/scripts/build-cli.mjs`
+- `beebox/scripts/build-cli.mjs`
 
 ## The one that needs testing, not assertion
 
@@ -93,11 +93,11 @@ excluded from `tsconfig` has achieved nothing.
 ## Outcome — 2026-08-25
 
 Done. 27 of the 30 `.mjs` files are gone; the three that remain are the three
-this issue said should remain (`callback-box/dist/cli.mjs`,
-`scan-uploader/dist/scan-uploader.mjs`, `callback-clerk/.wxt/eslint-auto-imports.mjs`
+this issue said should remain (`beebox/dist/cli.mjs`,
+`scan-uploader/dist/scan-uploader.mjs`, `beebox-clerk/.wxt/eslint-auto-imports.mjs`
 — all generated and gitignored). The two judgment calls:
 
-- **`callback-box/tsx-preload.mjs` stays `.mjs`**, as predicted, and now carries a
+- **`beebox/tsx-preload.mjs` stays `.mjs`**, as predicted, and now carries a
   comment saying exactly why so the next sweep doesn't rediscover it.
 - **`bin/lib/detach.mjs` was converted.** The argument for leaving it was paying a
   TS loader's startup on a teardown path. That argument assumed tsx; Node 24
@@ -151,7 +151,7 @@ and nothing else. `preset.ts` binds its implementation to that declaration
 - Self-linting the preset immediately found a latent bug: a prose comment
   beginning with `eslint-disable-next-line` that ESLint had been parsing as a real
   directive naming a nonexistent rule.
-- `callback-box` and `agent-doctest` each grew a `tsconfig.tooling.json`, because
+- `beebox` and `agent-doctest` each grew a `tsconfig.tooling.json`, because
   their main tsconfig sets `rootDir: "src"` and a package-root file trips TS6059.
   That exposed a wider hole, filed separately as
-  [callback-box lints `scripts/` and `test/` but never type-checks them](../../code-quality/2026-08-25-callback-box-scripts-and-test-untypechecked.md).
+  [beebox lints `scripts/` and `test/` but never type-checks them](../../code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md).

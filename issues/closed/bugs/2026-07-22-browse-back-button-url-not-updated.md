@@ -1,7 +1,7 @@
 ---
 title: "Browse: the back button doesn't work — file selection changes state without updating the URL"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder using browse/
 resolution: implemented
@@ -102,7 +102,7 @@ Changed, all routed through `onNavigate`:
 Verifying this required first fixing `bin/browse`, which could not authenticate
 against the dev app at all — see
 [browse-cannot-authenticate-dev-pages](2026-07-31-browse-cannot-authenticate-dev-pages.md).
-Driven against an isolated router (`CALLBACK_STATE_DIR` + `ROUTER_PORT`):
+Driven against an isolated router (`BBX_STATE_DIR` + `ROUTER_PORT`):
 
 - Clicking two files in `store/recipes` produced a URL per file; browser back
   stepped file 2 → file 1 → the directory → its parent, one entry at a time,

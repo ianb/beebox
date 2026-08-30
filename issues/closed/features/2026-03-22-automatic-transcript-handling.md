@@ -1,7 +1,7 @@
 ---
 title: "Automatic transcript handling in schema instructions"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: superseded
 ---
 

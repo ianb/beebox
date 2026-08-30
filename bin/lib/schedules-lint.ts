@@ -11,7 +11,7 @@
  * report through `bin/schedules alert`. Shell scripts go to shellcheck, and
  * TypeScript scripts to eslint under the personal-vibe-check preset.
  *
- * Design: callback-box/docs/plans/scheduled-workstreams.md (Track E).
+ * Design: beebox/docs/plans/scheduled-workstreams.md (Track E).
  */
 
 import * as fs from "node:fs/promises";
@@ -19,7 +19,7 @@ import * as path from "node:path";
 import { execa } from "execa";
 import { z } from "zod";
 
-import { errnoCode } from "../../callback-box/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/lib/error-guards.js";
 
 import { loadSchedules, type ScheduleEntry } from "./schedules.js";
 import {

@@ -1,10 +1,10 @@
 ---
 title: "Retire the todo-list card schema, superseded by {% todo %}"
 workstream: todo-annotation
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-todo-annotation — follow-up named in the todo-annotation plan's NOT-in-scope list
-design: ../../../callback-box/docs/implemented-plans/todo-annotation.md
+design: ../../../beebox/docs/implemented-plans/todo-annotation.md
 resolution: implemented
 ---
 
@@ -16,7 +16,7 @@ migration (`scripts/migrate/todo-list-to-doc.ts` /
 `src/core/migrations.ts`) that converts every `*.todo-list.card` into a
 sibling `*.doc.card`, plus removal of the schema, its template, the frontend
 renderer (`TodoListView`), and `todosRouter.updateItem`. Run for real on
-test1 via `cb migrate --apply` (see `docs/migrations.md`'s `todo-list-to-doc`
+test1 via `bbx migrate --apply` (see `docs/migrations.md`'s `todo-list-to-doc`
 entry). Agent guide, `docs/cards-as-markdown.md`, and `knowledge-audits.yaml`
 updated to match.
 
@@ -35,7 +35,7 @@ This is that follow-up.
   `src/frontend/src/renderers/todo-list.tsx` (renderer) are the two source
   files.
 - **Not a code-only removal** — any real box may have existing
-  `*.todo-list.card` files on disk. Per `docs/migrations.md` (cb-migration
+  `*.todo-list.card` files on disk. Per `docs/migrations.md` (bbx-migration
   territory), retiring the schema needs either:
   - a scripted migration that converts each `todo-list` card's items into
     `{% todo %}`-annotated content in a suitable target card (there's no

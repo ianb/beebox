@@ -1,14 +1,14 @@
 ---
 title: "listSessionRoots joins a history-file contextDir without containment"
 workstream: chat-session-identity
-area: callback-box
+area: beebox
 priority: backlog
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-chat-session-identity — Track O review of chat-session-identity.md landing
 ---
 
-`listSessionRoots` (`callback-box/src/core/chat/session/history.ts:185`) reads
+`listSessionRoots` (`beebox/src/core/chat/session/history.ts:185`) reads
 `contextDir` out of the per-checkout session-history JSON and joins it straight
 onto `boxRoot`:
 

@@ -14,7 +14,7 @@ user-facing text** — the prose it puts in front of the developer in
 conversation, in reports, in summaries.
 
 Scope, stated precisely because it was got wrong once: this is about **the
-agent's own output**, not about callback-box's UI strings, not about the box
+agent's own output**, not about beebox's UI strings, not about the box
 agent's chat replies, and not about docs or commit messages. The "user" is the
 developer reading the assistant's messages.
 

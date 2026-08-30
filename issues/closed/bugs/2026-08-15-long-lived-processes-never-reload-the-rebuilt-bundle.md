@@ -1,7 +1,7 @@
 ---
 title: "Long-lived dev processes run stale engine code — staleness is only checked at spawn"
 workstream: stale-process-reload
-area: callback-box
+area: beebox
 labels: [dev-server, process-lifecycle, scheduler]
 priority: important
 resolution: implemented
@@ -10,7 +10,7 @@ discovered-by: Ian
 discovered-in: main session — boxholder noticed main's dev server not showing recent changes
 ---
 
-`bin/cb` self-heals a stale bundle **at spawn time and only then**. In a dev
+`bin/bbx` self-heals a stale bundle **at spawn time and only then**. In a dev
 checkout it scans for any backend `.ts` newer than `dist/cli.mjs`, rebuilds if
 so, and `exec`s the bundle. Newly spawned processes are therefore always
 current — and nothing ever re-checks after `exec`. Any process that outlives a
@@ -21,7 +21,7 @@ Measured 2026-08-15:
 
 ```
 dist/cli.mjs built     10:08:51
-main's cb serve child  started 08:21:38   ← serving 08:21 code at 10:08
+main's bbx serve child  started 08:21:38   ← serving 08:21 code at 10:08
 scheduler daemon       started Aug 9      ← six days stale
 ```
 
@@ -31,7 +31,7 @@ long-lived processes pick up new code on their own.
 
 ## Two victims, and the second has no protection at all
 
-**Box `cb serve` children.** Protected only by idle-collect — stop when unused,
+**Box `bbx serve` children.** Protected only by idle-collect — stop when unused,
 respawn fresh on the next request. A worktree in *continuous* use never idles,
 so it never restarts. The protection is inversely proportional to how heavily
 the checkout is being used, which is backwards: the checkout you are actively
@@ -61,7 +61,7 @@ those failures against a current daemon before assuming they are separate bugs.
 ## Why it stays invisible
 
 Vite transforms on request, so the frontend always updates and the app looks
-alive. `bin/cb` rebuilds silently. A change spanning both surfaces appears
+alive. `bin/bbx` rebuilds silently. A change spanning both surfaces appears
 half-applied, which reads as a UI bug rather than a stale process. And the
 post-commit hook deploys to the *server* — nothing bounces local long-lived
 processes.
@@ -72,7 +72,7 @@ Preference is for self-healing over reporting, per the boxholder.
 
 - **The daemon re-execs itself.** Compare `dist/cli.mjs` mtime against process
   start each loop; when the bundle is newer, re-exec. This is the same
-  philosophy `bin/cb` already applies at spawn, extended to the process that
+  philosophy `bin/bbx` already applies at spawn, extended to the process that
   most needs it. Needs care around a tick in flight — finish the current pass,
   then replace.
 - **The hub recycles a child when the bundle moves**, rather than relying on
@@ -92,7 +92,7 @@ Preference is for self-healing over reporting, per the boxholder.
   or restart at a turn boundary — is probably the answer, and it is the crux.
 - **Whether dev box children should run the bundle at all.** Running `tsx` from
   source would always be current, at the cost of the fast cold start
-  `bin/cb`'s bundle exists to provide (see its header comment). Worth pricing
+  `bin/bbx`'s bundle exists to provide (see its header comment). Worth pricing
   rather than assuming.
 - **Whether this generalizes.** Any long-lived process spawned from a dev
   checkout has the same shape. Enumerate them before fixing two cases.
@@ -102,17 +102,17 @@ Preference is for self-healing over reporting, per the boxholder.
 Development bundle invocations now stamp the exact artifact identity they
 loaded. The scheduler checks it only after a complete all-box pass and exits
 with a reload code for its launchd `KeepAlive` owner to replace. Hub-spawned
-`cb serve` children stop accepting mutations, pause persisted chat schedules,
+`bbx serve` children stop accepting mutations, pause persisted chat schedules,
 and wait for accepted HTTP work, chat turns (including async turn preparation),
 Telegram background turns, and scheduled deliveries before exiting with the
 same expected code; the hub replaces them without consuming crash-loop budget.
 A drain that cannot become safe within ten minutes reopens mutations and warns
 instead of killing work or wedging read-only.
 
-Packed installs and `CB_CLI_PREBUILT` production checkouts do not opt in.
-Standalone foreground `cb serve` has no safe supervisor because overlapping
+Packed installs and `BBX_CLI_PREBUILT` production checkouts do not opt in.
+Standalone foreground `bbx serve` has no safe supervisor because overlapping
 replacement conflicts with its pidfile and orphan detector, so it warns rather
-than self-spawning. The dev router's `tsx` hub and legacy `CB_DEV_NO_HUB`
+than self-spawning. The dev router's `tsx` hub and legacy `BBX_DEV_NO_HUB`
 process are source-loaded rather than bundle-backed and are outside this
 rebuilt-bundle mismatch.
 

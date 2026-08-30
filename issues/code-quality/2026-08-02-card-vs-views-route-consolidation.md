@@ -1,7 +1,7 @@
 ---
 title: "/card/$ and /views/$ are two parallel single-card routes"
 workstream: top-nav-ia
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
 ---

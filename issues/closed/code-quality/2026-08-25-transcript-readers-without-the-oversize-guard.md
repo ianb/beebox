@@ -2,7 +2,7 @@
 title: "Four transcript readers parse multi-MB lines with no oversize guard"
 workstream: live-vs-stored
 resolution: implemented
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-live-vs-stored — spun out when strip-multi-mb-payloads closed wontfix
 labels: [code-error]

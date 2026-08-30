@@ -143,7 +143,7 @@ async function handleControlRoutes(
     if (!dashboardUrl) {
       res.writeHead(502, { "content-type": "text/plain" });
       res.end(
-        `Worktree ${name} is running but its dashboard failed to start. See logs at ~/.cache/callback-box/logs/${name}.log\n`,
+        `Worktree ${name} is running but its dashboard failed to start. See logs at ~/.cache/beebox/logs/${name}.log\n`,
       );
       return true;
     }

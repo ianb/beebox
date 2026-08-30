@@ -10,7 +10,7 @@ Dated snapshot, 2026-08-25. Beads examined at commit `62d2119`
 (github.com/steveyegge/beads, now `gastownhall/beads`; `CHANGELOG.md` top is
 `[Unreleased]`, no tag in the shallow clone). Our side is `issues/CLAUDE.md`,
 `bin/issues`, `bin/commit-provenance`, the `finish` agent, and the
-`cb-issue-actions` / `cb-pick-issues` skills as of this date.
+`bbx-issue-actions` / `bbx-pick-issues` skills as of this date.
 
 Scope, per the developer: the use cases are the same (an agent-shared queue of
 work and tensions, worked mostly by agents, triaged by one person), so this
@@ -159,9 +159,9 @@ only durable list, and it lives in the plan, not the issues. `labels:
 
 Do we have the problem? Two halves:
 
-- *Ready-work query*: no. The developer picks work; `cb-pick-issues` is a
+- *Ready-work query*: no. The developer picks work; `bbx-pick-issues` is a
   proposal step, not a scheduler. An agent never asks "what is unblocked."
-- *Durable grouping and ordering*: yes. Every `cb-pick-issues` run rebuilds
+- *Durable grouping and ordering*: yes. Every `bbx-pick-issues` run rebuilds
   the same clusters; `/finish` forgets siblings that weren't listed in the
   plan; "B is a follow-up to A" is lost when A closes.
 
@@ -283,8 +283,8 @@ STE-style prose does not want a template.
 |---|---|---|---|
 | Survey | `bd list`, `bd ready`, `bd blocked`, `bd stale`, `bd count`, `bd graph` | `bin/issues list/groups/search/similar/show` with filters on every frontmatter key; hybrid search | Ours is stronger for a human-triaged queue (facets, semantic similarity). Missing: stale (§2.2). |
 | Hygiene | `bd stale`, `bd orphans`, `bd lint`, `bd doctor`, `bd find-duplicates` | `doc-check --fix` (link repair after moves), `unknownKeys` | Missing: orphans (§2.7), lint (§2.9). `find-duplicates` ≈ `similar`. |
-| Work selection | `bd ready` + `--claim` | `cb-pick-issues` (a procedure) | Different by design; no gap. |
-| Disposition | `close --reason`, `reopen`, `defer`, `duplicate`, `supersede` | `cb-issue-actions` over seven `next-action:` values; `git mv` to `closed/` | Ours is richer; missing a target on duplicate/supersede (§2.6). |
+| Work selection | `bd ready` + `--claim` | `bbx-pick-issues` (a procedure) | Different by design; no gap. |
+| Disposition | `close --reason`, `reopen`, `defer`, `duplicate`, `supersede` | `bbx-issue-actions` over seven `next-action:` values; `git mv` to `closed/` | Ours is richer; missing a target on duplicate/supersede (§2.6). |
 | Provenance | `(bd-id)` in message, `bd orphans` | `Issue:` trailer + hook validation + `commit-provenance` | Ours stricter; missing the inverse query (§2.7). |
 | Agent context | `bd prime` on SessionStart | CLAUDE.md pointer + skills | §2.8, later. |
 | Browser | none (CLI + `--json`; TUI via integrations) | `workstreams/issues/` facet browser, comments | Ours only. Consistent with "CLI is not a user surface." |

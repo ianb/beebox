@@ -1,7 +1,7 @@
 ---
 title: "iOS legacy speech fallback streams audio to Apple with no app-level opt-out"
 workstream: security-report
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — egress inventory for the security report
 priority: backlog
@@ -12,7 +12,7 @@ The iOS app's dictation prefers the on-device `SpeechAnalyzer` /
 is unavailable it falls back to the legacy `SFSpeechRecognizer`, which
 streams live microphone audio to Apple's cloud servers —
 `requiresOnDeviceRecognition` is never set
-(`ios-app/CallbackBox/Services/SpeechDictation.swift:102,339-350`), and
+(`ios-app/BeeBox/Services/SpeechDictation.swift:102,339-350`), and
 the app offers no setting to refuse the cloud fallback.
 
 Fix direction: set `requiresOnDeviceRecognition = true` when the device

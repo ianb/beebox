@@ -2,17 +2,17 @@
 title: "Agent signature identity: emoji/avatar on the personality card + a first-run 'meet your assistant' moment"
 workstream: openclaw-onboarding-research
 needs: [decision, design]
-area: callback-box
+area: beebox
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-openclaw-onboarding-research — OpenClaw identity-onboarding research corpus
 priority: important
 ---
 
-The assistant has no visual identity anywhere in callback-box. `goes-by`
+The assistant has no visual identity anywhere in beebox. `goes-by`
 ("Egg") is consumed only as prompt text — `personality-compile.ts` renders
 "You are **Egg**" and nothing else reads it. The UI `Avatar` component
-(`callback-box/src/frontend/src/components/ui/Avatar.tsx`) is for human users.
+(`beebox/src/frontend/src/components/ui/Avatar.tsx`) is for human users.
 Chat replies, session lists, and attribution surfaces show the assistant with
 no name, no emoji, no avatar.
 
@@ -25,11 +25,11 @@ its legible identity files, not evidence that a per-agent signature improves
 attachment.
 
 Research behind this:
-`research/openclaw-personality-onboarding/compare-cbx-recommendations.md`
+`research/openclaw-personality-onboarding/compare-bbx-recommendations.md`
 (dispositions 2 and 3, revised after a cross-model Codex review). OpenClaw
 findings, condensed: the signature elements (emoji/avatar/name) are the
 load-bearing part of its identity system; the agent-solo one-shot t0 ritual is
-the criticized part (bootstrap paradox — rejected for CBX); its deepest bug is
+the criticized part (bootstrap paradox — rejected for bbx); its deepest bug is
 a two-store split where the ritual writes a file the consumers never read.
 
 ## Design spine: stable identifier vs evolving belief
@@ -40,13 +40,13 @@ identifier churn like a belief: signature fields are user-approved. The agent
 (retro included) may *propose* a change with evidence — via the retro
 **question** sink, with the boxholder confirming — never a direct
 personality-sink rewrite. (Today's observer remit is tone/traits/relationship,
-`callback-box/src/core/retro/observer.ts:46`; a signature proposal needs its
+`beebox/src/core/retro/observer.ts:46`; a signature proposal needs its
 own observation kind and a churn guard — small design work.)
 
 ## Proposed shape (needs the boxholder's call, then design)
 
 1. **Fields on the personality card**, next to `goes-by`
-   (`callback-box/src/schemas/personality.tsx`): optional `emoji` first.
+   (`beebox/src/schemas/personality.tsx`): optional `emoji` first.
    An image `avatar` (attach ref) is a *separate, later call* — it carries
    schema/validation/transport questions emoji doesn't, and even OpenClaw's
    ritual never asks for one.

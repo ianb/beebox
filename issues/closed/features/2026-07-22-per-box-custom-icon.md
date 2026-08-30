@@ -1,7 +1,7 @@
 ---
 title: "Per-box custom icon (favicon, PWA install icon, tiles, notifications)"
 workstream: tab-identity
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder wants a distinct icon per box
 priority: important
@@ -12,8 +12,8 @@ resolution: implemented
 > workstream's first round; 2734eef66..55313f2cf this second round). The favicon,
 > PWA manifest icons, apple-touch-icon, notification icon, and box-selector tiles
 > all now show the box's own mark, rendered server-side from the root landmark
-> card's `symbol` (`callback-box/src/core/box/box-icon.ts`,
-> `callback-box/src/webapp/routes/box-identity-assets.ts`) rather than a new
+> card's `symbol` (`beebox/src/core/box/box-icon.ts`,
+> `beebox/src/webapp/routes/box-identity-assets.ts`) rather than a new
 > `config/box.json` field as this issue originally proposed — the design
 > question resolved by reusing the *existing* per-directory `symbol` on the
 > box's own root landmark, so there is no separate box-icon vocabulary.
@@ -76,7 +76,7 @@ with how directories already get symbols.
 
 The favicon and manifest are **static files served identically for every box**;
 the SPA `index.html` is one document. Making them per-box means the per-box
-`cb serve` (behind the hub's `/<slug>/` prefix) has to serve a **box-scoped
+`bbx serve` (behind the hub's `/<slug>/` prefix) has to serve a **box-scoped
 favicon and manifest** — either by templating `index.html`/`manifest.webmanifest`
 per box at serve time, or box-scoped routes (`/<slug>/manifest.webmanifest`,
 `/<slug>/favicon`) that resolve the box's configured icon. An emoji icon can be
@@ -87,7 +87,7 @@ rendered to PNG/SVG server-side; an image icon is served from the box's config.
 - **Emoji vs image vs both.** Emoji is zero-asset and matches the landmark
   `symbol` union; an image allows a real logo/photo. Support both, like `symbol`.
 - **Where the icon is declared** — `config/box.json` field, a config card, or a
-  well-known `config/icon.*` file. Prefer one that `cb init`/templates understand
+  well-known `config/icon.*` file. Prefer one that `bbx init`/templates understand
   and that survives sync.
 - **Sizes** — the PWA manifest wants 192/512; an emoji renders to any size, an
   uploaded image needs resizing (the box already has image handling).

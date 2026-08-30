@@ -2,7 +2,7 @@
 title: "/questions fails axe heading-order — an h3 with no h2 above it"
 workstream: tour-health
 resolution: implemented
-area: callback-box
+area: beebox
 labels: [a11y, tours]
 filed-by: agent
 discovered-by: agent
@@ -35,4 +35,4 @@ answerable questions and had its own `h3` for the answered-state title) from
 `pnpm typecheck` and `pnpm lint:changed` clean. `bin/tour nav-pages`:
 10 checkpoints, 0 findings, 0 axe violations — `questions` checkpoint shows
 0 axe violations on both desktop and mobile in
-`callback-box/test/tours/.artifacts/nav-pages/2026-08-28T15-03-52-681Z/summary.md`.
+`beebox/test/tours/.artifacts/nav-pages/2026-08-28T15-03-52-681Z/summary.md`.

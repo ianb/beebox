@@ -81,7 +81,7 @@ test("acknowledged alerts leave the default view after 14 days; records are kept
 
 test("alert takes its workstream and run id from the environment, and --run overrides", async () => {
   const storeRoot = path.join(await tempDir("cli-store"), "store");
-  const env = { CALLBACK_SCHEDULES_ROOT: storeRoot, SCHEDULE_NAME: "clijob", SCHEDULE_RUN_ID: "20260824-120000" };
+  const env = { BBX_SCHEDULES_ROOT: storeRoot, SCHEDULE_NAME: "clijob", SCHEDULE_RUN_ID: "20260824-120000" };
 
   const fromEnv = await runCli(["alert", "--title", "from env", "--message", "m"], { env });
   assert.equal(fromEnv.exitCode, 0, fromEnv.stderr);
@@ -106,7 +106,7 @@ test("alert takes its workstream and run id from the environment, and --run over
 test("alert refuses with neither --run nor SCHEDULE_RUN_ID", async () => {
   const storeRoot = path.join(await tempDir("cli-store"), "store");
   const result = await runCli(["alert", "--title", "t", "--message", "m", "--workstream", "clijob"], {
-    env: { CALLBACK_SCHEDULES_ROOT: storeRoot, SCHEDULE_NAME: "", SCHEDULE_RUN_ID: "" },
+    env: { BBX_SCHEDULES_ROOT: storeRoot, SCHEDULE_NAME: "", SCHEDULE_RUN_ID: "" },
   });
   assert.equal(result.exitCode, 2);
   assert.match(result.stderr, /SCHEDULE_RUN_ID/);
@@ -114,7 +114,7 @@ test("alert refuses with neither --run nor SCHEDULE_RUN_ID", async () => {
 
 test("--details - reads the long tail from stdin", async () => {
   const storeRoot = path.join(await tempDir("cli-store"), "store");
-  const env = { CALLBACK_SCHEDULES_ROOT: storeRoot, SCHEDULE_NAME: "stdinjob", SCHEDULE_RUN_ID: "20260824-120000" };
+  const env = { BBX_SCHEDULES_ROOT: storeRoot, SCHEDULE_NAME: "stdinjob", SCHEDULE_RUN_ID: "20260824-120000" };
   const result = await runCli(["alert", "--title", "t", "--message", "m", "--details", "-"], {
     env,
     input: "line one\nline two\n",
@@ -126,7 +126,7 @@ test("--details - reads the long tail from stdin", async () => {
 
 test("done records a result; ack marks an alert acknowledged", async () => {
   const storeRoot = path.join(await tempDir("cli-store"), "store");
-  const env = { CALLBACK_SCHEDULES_ROOT: storeRoot, SCHEDULE_NAME: "ackjob", SCHEDULE_RUN_ID: "20260824-120000" };
+  const env = { BBX_SCHEDULES_ROOT: storeRoot, SCHEDULE_NAME: "ackjob", SCHEDULE_RUN_ID: "20260824-120000" };
   const done = await runCli(["done"], { env });
   assert.equal(done.exitCode, 0, done.stderr);
   const result = await fs.readFile(path.join(storeRoot, "ackjob", "runs", "20260824-120000.result.json"), "utf8");
@@ -145,7 +145,7 @@ test("handoff under SCHEDULE_DRY_RUN=1 prints instead of writing", async () => {
   const storeRoot = path.join(await tempDir("cli-store"), "store");
   const result = await runCli(["handoff", "--title", "work", "--body", "-"], {
     env: {
-      CALLBACK_SCHEDULES_ROOT: storeRoot,
+      BBX_SCHEDULES_ROOT: storeRoot,
       SCHEDULE_NAME: "dryjob",
       SCHEDULE_RUN_ID: "20260824-120000",
       SCHEDULE_DRY_RUN: "1",

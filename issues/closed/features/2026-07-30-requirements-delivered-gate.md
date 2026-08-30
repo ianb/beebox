@@ -1,7 +1,7 @@
 ---
 title: "finish should check the plan's stated scope was actually delivered"
 workstream: elixir-skills-review
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
 resolution: implemented

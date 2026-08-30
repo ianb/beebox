@@ -1,14 +1,14 @@
 ---
 title: "Give parked template updates a resolution path (accept / diff / merge) instead of hand-copying"
 workstream: unattached
-area: callback-box
+area: beebox
 priority: normal
 labels: [templates, boxes]
 filed-by: agent
 discovered-in: honest-diagnostics — split out of the parked-updates health issue
 ---
 
-`cb health` and `cb status` now report parked template updates
+`bbx health` and `bbx status` now report parked template updates
 (`config/_template-updates/<path>`), and say to copy the file over or delete
 it. That is the whole resolution path. The parked copy usually carries other
 upstream improvements alongside the fix the boxholder wants, and the local copy
@@ -17,8 +17,8 @@ local" lose something.
 
 Candidates, roughly in order of cost:
 
-- `cb template diff <path>` — show local vs parked vs last stock.
-- `cb template accept <path>` — copy over and record the new stock hash.
+- `bbx template diff <path>` — show local vs parked vs last stock.
+- `bbx template accept <path>` — copy over and record the new stock hash.
 - A three-way merge (last stock, local, parked) that applies cleanly when the
   local edit and the upstream change touch different regions.
 - Box-owned fields (`install-template-file.ts` already has `boxOwnedFields`) so

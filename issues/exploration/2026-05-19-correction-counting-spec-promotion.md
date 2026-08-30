@@ -1,7 +1,7 @@
 ---
 title: "correction counting spec promotion"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 Corrections that stay in chat disappear. The fix is to extract them (during overnight compaction or a retrospective pass), count how often the *same* correction recurs across sessions, and promote frequent ones to permanent spec-level instructions.

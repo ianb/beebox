@@ -19,11 +19,11 @@ screenshot output — briefly suspected — turned out to be gitignored and neve
 reaches committed docs. See `bin/CLAUDE.md`.
 
 Auto-generated audit reports leaked the author's home directory. The
-2026-06-26 user-stories audit (`callback-box/docs/reports/`) carried ~105
+2026-06-26 user-stories audit (`beebox/docs/reports/`) carried ~105
 absolute `Evidence:` paths like
-`/Users/<user>/src/callback-worktrees/<wt>/callback-box/src/...`,
+`/Users/<user>/src/beebox-worktrees/<wt>/beebox/src/...`,
 even though the report's own header claims "paths are relative to
-`callback-box/`". The verifier agents pasted whatever `bin/browse` and file
+`beebox/`". The verifier agents pasted whatever `bin/browse` and file
 reads handed them — absolute paths — and nothing relativized them.
 
 Fixed in place (relativized the existing report; the `doc-graph.html`
@@ -38,5 +38,5 @@ skill drives these audit workflows so a public repo doesn't accrue home-path
 leaks each time one runs.
 
 Related: the source-available release plan
-(`callback-box/docs/plans/source-available-release.md`) records the leak
+(`beebox/docs/plans/source-available-release.md`) records the leak
 investigation and fixes.

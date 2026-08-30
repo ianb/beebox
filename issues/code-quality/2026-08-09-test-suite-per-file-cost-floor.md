@@ -1,7 +1,7 @@
 ---
 title: "Per-file fixed cost is ~12–13% of the suite — Node boot, tsx, loader, and a cold template box, paid 480 times"
 workstream: test-selection
-area: callback-box
+area: beebox
 needs: [design]
 labels: [testing, developer-experience]
 filed-by: agent
@@ -63,7 +63,7 @@ number above is an upper bound from a heavily loaded machine (load average ~18,
 on a quiet machine — see the research section's conclusion, which says the same
 thing.
 
-Related: [change-based test selection](../../callback-box/docs/plans/change-based-test-selection.md)
+Related: [change-based test selection](../../beebox/docs/plans/change-based-test-selection.md)
 sizes this lever in its NOT-in-scope section and measures itself against it in
 Track 0 — if selection's realistic saving turns out comparable to this, this work
 is the better investment and selection should be shelved.

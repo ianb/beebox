@@ -1,12 +1,12 @@
 ---
 title: "iOS: a voice keyword leaves its tag in the composer when the send lock is stuck, and repeats nest the tags"
 workstream: emission-model
-area: callback-box
+area: beebox
 labels: [ios, voice, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report from the iOS app
-design: ../../../callback-box/docs/implemented-plans/emission-model.md
+design: ../../../beebox/docs/implemented-plans/emission-model.md
 resolution: implemented
 ---
 
@@ -37,7 +37,7 @@ bug. It is — the mechanism is exact.
 
 ## Mechanism
 
-`ios-app/CallbackBox/Views/NativeComposerView.swift:442-456`:
+`ios-app/BeeBox/Views/NativeComposerView.swift:442-456`:
 
 ```swift
 private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
@@ -111,7 +111,7 @@ defect is what happens to the *text* when the lock refuses, not the refusal.
 3. With the lock free, say "clear message": the draft clears as before
    (the accepted path must still work).
 4. If a stuck `isSending` recurs in normal use, pull
-   `.callback-box/client-debug.log` — the new `[ios]` send-lock entries name
+   `.beebox/client-debug.log` — the new `[ios]` send-lock entries name
    the wedged term; report it on this issue.
 
 ## Also reported, likely separate

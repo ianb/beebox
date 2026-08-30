@@ -2,7 +2,7 @@
 title: "Small structured-output agent passes load the full box CLAUDE.md + agent guide"
 workstream: model-engine-policy
 resolution: implemented
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-path-handling-model — tracing which agent types receive the ref-path guidance (Track E of docs/implemented-plans/box-root-paths.md)
 ---

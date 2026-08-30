@@ -46,7 +46,7 @@ export class UninitializedStoreError extends Error {
 /**
  * The store sits beside the main checkout, matching wt_paths_init's
  * WT_EXHIBITS_ROOT (bin/lib/worktree-paths.sh). Derived from the MAIN
- * checkout — a run from anywhere else passes CALLBACK_EXHIBITS_ROOT.
+ * checkout — a run from anywhere else passes BBX_EXHIBITS_ROOT.
  */
 export function defaultStoreRoot(repoRoot: string): string {
   return path.join(path.dirname(path.resolve(repoRoot)), "workstream-exhibits");

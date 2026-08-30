@@ -1,7 +1,7 @@
 ---
 title: "\"Today\" view as a recurring procedure"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 Rather than build a hardcoded "today" page like Obsidian's daily notes, make it a procedure that emits a `daily-digest` card each morning. Aggregates whatever the boxholder configures: today's calendar, recently arrived inbox, jobs run overnight, the latest capture-session summary, fresh commits. Renders as a regular card with the box's existing view machinery — no special UI path.

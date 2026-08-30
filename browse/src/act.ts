@@ -2,8 +2,8 @@
  * The browser-touching half of control addressing (`controls.ts` is the pure
  * half): the annotated snapshot and the checked action.
  *
- * Both are own-origin only. On any other page there is no `window.__cbUiScan`
- * and no `cb-` ids, so `snapshot` and `click` pass straight through to upstream
+ * Both are own-origin only. On any other page there is no `window.__bbxUiScan`
+ * and no `bbx-` ids, so `snapshot` and `click` pass straight through to upstream
  * exactly as before — the checks are a property of driving *this* app.
  */
 
@@ -69,11 +69,11 @@ function decodeEval(stdout: string): unknown {
 
 interface LiveScan {
   entries: ScanEntry[];
-  /** `cb-` ids more than one element carries right now — `getElementById` would pick one silently. */
+  /** `bbx-` ids more than one element carries right now — `getElementById` would pick one silently. */
   duplicateIds: string[];
 }
 
-const SCAN_EXPR = "JSON.stringify(typeof window.__cbUiScan === 'function' ? (s => ({ entries: s.entries.map(e => ({ id: e.id, role: e.role, name: e.name })), duplicateIds: s.duplicateIds }))(window.__cbUiScan()) : null)";
+const SCAN_EXPR = "JSON.stringify(typeof window.__bbxUiScan === 'function' ? (s => ({ entries: s.entries.map(e => ({ id: e.id, role: e.role, name: e.name })), duplicateIds: s.duplicateIds }))(window.__bbxUiScan()) : null)";
 
 async function liveScan(): Promise<LiveScan | null> {
   try {
@@ -92,7 +92,7 @@ async function liveScan(): Promise<LiveScan | null> {
 
 function warnDuplicates(duplicateIds: readonly string[]): void {
   if (duplicateIds.length === 0) return;
-  process.stderr.write(`browse: duplicate cb- ids on this page (an id-addressed action on them is refused): ${duplicateIds.join(", ")}\n`);
+  process.stderr.write(`browse: duplicate bbx- ids on this page (an id-addressed action on them is refused): ${duplicateIds.join(", ")}\n`);
 }
 
 /** The id attribute of the element a ref names right now, or null. */
@@ -107,7 +107,7 @@ async function liveRefId(ref: string): Promise<string | null> {
 
 /**
  * `snapshot`, with ids. Upstream's text is captured and rewritten so each ref
- * whose control has a `cb-` id shows it; the ref table is saved for the
+ * whose control has a `bbx-` id shows it; the ref table is saved for the
  * identity check on the next action. `--json` output is passed through
  * untouched (its consumers parse upstream's shape).
  */
@@ -136,7 +136,7 @@ export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeCo
   const scan = await liveScan();
   if (scan === null) {
     process.stdout.write(text);
-    process.stderr.write("browse: page has no window.__cbUiScan — ids not shown (is the frontend up to date?)\n");
+    process.stderr.write("browse: page has no window.__bbxUiScan — ids not shown (is the frontend up to date?)\n");
     await saveRefTable(annotateSnapshot(text, []).refs);
     return 0;
   }
@@ -237,9 +237,9 @@ async function checkAtBox(selector: string, expectName: string | null): Promise<
 /**
  * A target-taking subcommand (`click`, `fill`, …), checked. Resolution order:
  *
- * - `cb-…` / `#cb-…`: the in-page precondition check, then upstream with `#id`.
+ * - `bbx-…` / `#bbx-…`: the in-page precondition check, then upstream with `#id`.
  * - `@eN`: a warning when the number changed hands between the last two
- *   snapshots (what it was, what it is now); if the element carries a `cb-`
+ *   snapshots (what it was, what it is now); if the element carries a `bbx-`
  *   id the action proceeds by id, otherwise only geometry can be checked and
  *   the output says so.
  * - anything else: upstream, untouched.
@@ -309,7 +309,7 @@ export async function checkedAction({ sub, args, ctx }: { sub: string; args: rea
   return runPassthrough([sub, upstreamSelector(target), ...rest]);
 }
 
-/** `get <sub> <target> …`: the target slot accepts a `cb-` id like every other. */
+/** `get <sub> <target> …`: the target slot accepts a `bbx-` id like every other. */
 export async function getWithTarget(args: readonly string[]): Promise<number> {
   const sub = args[0];
   const raw = args[1];

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # CLI for the private-issues shadow repo (see
-# callback-box/docs/implemented-plans/private-issues-shadow-repo.md).
+# beebox/docs/implemented-plans/private-issues-shadow-repo.md).
 #
 # A separate, per-developer git repo holds issues that must not enter this
-# source-available repo. Its checkouts mirror callback-box's: the main
+# source-available repo. Its checkouts mirror beebox's: the main
 # checkout mounts the repo's primary tree at <main>/private-issues (symlink),
 # and each public worktree mounts a private worktree (branch worktree-<name>,
 # living OUTSIDE the disposable public worktree) at <wt>/private-issues
@@ -43,7 +43,7 @@ log() { echo "[private-issues] $*" >&2; }
 
 # Shared append-only lifecycle log (same file the worktree hooks use), so
 # private-side decisions are traceable next to the public ones. Best-effort.
-WORKTREE_LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
+WORKTREE_LOG="$HOME/.cache/beebox/worktree-cleanup.log"
 wlog() { printf '%s pid=%s private-issues %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" >> "$WORKTREE_LOG" 2>/dev/null || true; }
 
 # --- location derivation (the one place it lives) ---------------------------
@@ -58,13 +58,13 @@ pi_derive() {
     return 1
   }
   PI_MAIN=$(dirname "$common")
-  PI_REPO="$(dirname "$PI_MAIN")/callback-private-issues"
+  PI_REPO="$(dirname "$PI_MAIN")/beebox-private-issues"
   PI_WT_ROOT="$(dirname "$PI_MAIN")/private-issues-worktrees"
 }
 
 # Resolve the public worktree root through the shared lifecycle helper. The
 # basename is configurable, so deriving it again here would make orphan reports
-# disagree with the create/remove commands when CALLBACK_WORKTREE_ROOT is set.
+# disagree with the create/remove commands when BBX_WORKTREE_ROOT is set.
 pi_public_worktree_root() {
   local checkout="$1" paths_lib="$PI_MAIN/bin/lib/worktree-paths.sh"
   [ -f "$paths_lib" ] || paths_lib="$(dirname "$0")/lib/worktree-paths.sh"
@@ -77,8 +77,8 @@ pi_public_worktree_root() {
 # expected path — it must carry the marker init writes. A same-named
 # unrelated repo is refused, not silently used.
 pi_repo_valid() {
-  [ -f "$PI_REPO/.callback-private-issues" ] &&
-    [ "$(git -C "$PI_REPO" config --get callback.privateIssues 2>/dev/null || true)" = "true" ]
+  [ -f "$PI_REPO/.beebox-private-issues" ] &&
+    [ "$(git -C "$PI_REPO" config --get beebox.privateIssues 2>/dev/null || true)" = "true" ]
 }
 
 # --- mutation lock ----------------------------------------------------------
@@ -258,24 +258,24 @@ cmd_init() {
   else
     log "creating private repo at $PI_REPO"
     git init -q -b main "$PI_REPO"
-    git -C "$PI_REPO" config callback.privateIssues true
-    touch "$PI_REPO/.callback-private-issues"
+    git -C "$PI_REPO" config beebox.privateIssues true
+    touch "$PI_REPO/.beebox-private-issues"
     local cat
     for cat in bugs features code-quality docs-and-chores decisions exploration watch; do
       mkdir -p "$PI_REPO/$cat" "$PI_REPO/closed/$cat"
       touch "$PI_REPO/$cat/.gitkeep" "$PI_REPO/closed/$cat/.gitkeep"
     done
     cat > "$PI_REPO/README.md" <<'EOF'
-# callback-private-issues
+# beebox-private-issues
 
-Private issues for a callback-box developer. **This is a SEPARATE git repo**
-from the callback-box monorepo — it only *mounts* into callback-box checkouts
+Private issues for a beebox developer. **This is a SEPARATE git repo**
+from the beebox monorepo — it only *mounts* into beebox checkouts
 at `<checkout>/private-issues/` (always via symlink; the path is gitignored
 there).
 
 Rules that keep it private and safe:
 
-- **Commit from INSIDE `private-issues/`.** In the callback-box repo the
+- **Commit from INSIDE `private-issues/`.** In the beebox repo the
   mount is gitignored: `git add -A` there stages nothing from here — that is
   the leak guard working, not a bug.
 - **Links are one-way.** Issues here may link to public repo files; public

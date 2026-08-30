@@ -14,7 +14,7 @@ resolution: implemented
 Ten issues (six open, four closed, all filed 2026-08-21/23 by the user-story
 verification work) carry a `stories:` list, e.g.
 `stories: [connectors/configure-which-gmail-calendar-and-drive-content]`,
-pointing at slugs in `callback-box/user-stories/catalog/2026-08-21.md`.
+pointing at slugs in `beebox/user-stories/catalog/2026-08-21.md`.
 
 The field appears nowhere in `issues/CLAUDE.md`'s frontmatter schema, and
 `workstreams-app/src/server/issue-domain.ts` (the one parser, shared by the

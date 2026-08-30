@@ -2,8 +2,8 @@
 title: "questions end to end d1"
 workstream: unknown
 needs: [design]
-design: ../../../callback-box/docs/implemented-plans/questions-end-to-end.md
-area: callback-box
+design: ../../../beebox/docs/implemented-plans/questions-end-to-end.md
+area: beebox
 resolution: implemented
 ---
 

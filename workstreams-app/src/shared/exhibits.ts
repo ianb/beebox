@@ -2,7 +2,7 @@
 //
 // An exhibit is a directory in the store carrying a manifest, content files,
 // and (later) captured interactions. See docs/exhibits.md for the page contract
-// and callback-box/docs/plans/workstream-exhibits.md for the vocabulary.
+// and beebox/docs/plans/workstream-exhibits.md for the vocabulary.
 
 import { z } from "zod";
 

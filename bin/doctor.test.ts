@@ -198,17 +198,17 @@ const GIT_COMMON = "git rev-parse --path-format=absolute --git-common-dir";
 
 function schedulesRun(state: string, launchctlCode: number): RunCommand {
   return fakeRun({
-    [GIT_COMMON]: ok("/checkouts/callback-box/.git\n"),
+    [GIT_COMMON]: ok("/checkouts/beebox/.git\n"),
     "cat /checkouts/schedule-runs/state.json": ok(state),
     "id -u": ok("501\n"),
-    "launchctl print gui/501/com.callback-box.schedules": { spawned: true, code: launchctlCode, stdout: "", stderr: "" },
+    "launchctl print gui/501/com.beebox.schedules": { spawned: true, code: launchctlCode, stdout: "", stderr: "" },
   });
 }
 
 test("checkProductionDisk reports free space and fails below the shared threshold", async () => {
-  const marker = "/checkouts/callback-box/callback-box/deploy/server-ip";
+  const marker = "/checkouts/beebox/beebox/deploy/server-ip";
   const base = {
-    [GIT_COMMON]: ok("/checkouts/callback-box/.git\n"),
+    [GIT_COMMON]: ok("/checkouts/beebox/.git\n"),
     [`cat ${marker}`]: ok("203.0.113.10\n"),
   };
   const check = async (availableKib: number) => checkProductionDisk({
@@ -228,7 +228,7 @@ test("checkProductionDisk reports free space and fails below the shared threshol
 });
 
 test("checkSchedulesTick skips a machine with no schedule store", async () => {
-  const run = fakeRun({ [GIT_COMMON]: ok("/checkouts/callback-box/.git\n") });
+  const run = fakeRun({ [GIT_COMMON]: ok("/checkouts/beebox/.git\n") });
   const result = await checkSchedulesTick({ run, fileExists: () => false, nowMs: NOW_MS });
   assert.equal(result.ok, true);
   assert.match(result.detail, /no schedules installed/);
@@ -255,7 +255,7 @@ test("checkSchedulesTick fails when the tick job is not loaded, and tolerates a 
   assert.match(failed.detail, /not loaded in launchd/);
 
   const noLaunchctl = fakeRun({
-    [GIT_COMMON]: ok("/checkouts/callback-box/.git\n"),
+    [GIT_COMMON]: ok("/checkouts/beebox/.git\n"),
     "cat /checkouts/schedule-runs/state.json": ok(JSON.stringify({ lastTickAt: "2026-08-24T11:55:00Z", lastTickExit: 0 })),
     "id -u": ok("501\n"),
   });
@@ -265,7 +265,7 @@ test("checkSchedulesTick fails when the tick job is not loaded, and tolerates a 
 });
 
 test("checkSchedulesTick fails when the store exists but was never ticked", async () => {
-  const run = fakeRun({ [GIT_COMMON]: ok("/checkouts/callback-box/.git\n") });
+  const run = fakeRun({ [GIT_COMMON]: ok("/checkouts/beebox/.git\n") });
   const result = await checkSchedulesTick({ run, fileExists: () => true, nowMs: NOW_MS });
   assert.equal(result.ok, false);
   assert.match(result.detail, /never ticked/);

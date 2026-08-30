@@ -1,5 +1,5 @@
 /**
- * Derive the test -> source import graph for callback-box, with esbuild.
+ * Derive the test -> source import graph for beebox, with esbuild.
  *
  *   node --import tsx bin/test-graph.ts                    # summary
  *   node --import tsx bin/test-graph.ts <file>             # which tests import <file>
@@ -35,7 +35,7 @@ import type { TestGraph } from "./test-graph-query.js";
 import { taprcTestFiles } from "./test-tiers.js";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "..");
-const PACKAGE_ROOT = join(REPO_ROOT, "callback-box");
+const PACKAGE_ROOT = join(REPO_ROOT, "beebox");
 
 /**
  * Everything the graph pass needs to know about the tree it is graphing.
@@ -53,12 +53,12 @@ export interface GraphConfig {
 }
 
 /**
- * Exactly one alias, deliberately: `callback-box/tsconfig.json` maps only
+ * Exactly one alias, deliberately: `beebox/tsconfig.json` maps only
  * `@shared/*`, and its comment says the frontend's other aliases "stay
  * unresolvable on purpose — a frontend module reaching for those in a doctest
  * is a boundary violation, not a config gap".
  */
-const CALLBACK_BOX_ALIASES: Record<string, string> = {
+const BBX_BOX_ALIASES: Record<string, string> = {
   "@shared/": join(PACKAGE_ROOT, "src/shared"),
 };
 
@@ -67,11 +67,11 @@ export function testEntrypoints(packageRoot: string): string[] {
   return taprcTestFiles(packageRoot).map((rel) => join(packageRoot, rel));
 }
 
-export function callbackBoxConfig(): GraphConfig {
+export function beeboxConfig(): GraphConfig {
   return {
     repoRoot: REPO_ROOT,
     packageRoot: PACKAGE_ROOT,
-    aliases: CALLBACK_BOX_ALIASES,
+    aliases: BBX_BOX_ALIASES,
     entrypoints: testEntrypoints(PACKAGE_ROOT),
   };
 }
@@ -360,13 +360,13 @@ export async function buildGraphCached(
   return graph;
 }
 
-/** The callback-box graph. */
+/** The beebox graph. */
 export async function buildGraph(options?: CacheOptions): Promise<TestGraph> {
-  return buildGraphCached(callbackBoxConfig(), options);
+  return buildGraphCached(beeboxConfig(), options);
 }
 
 /**
- * The repo files esbuild bundles into `callback-box/dist/cli.mjs`.
+ * The repo files esbuild bundles into `beebox/dist/cli.mjs`.
  *
  * A test that execs the bundle has no import edge to anything in it, and the
  * bundle is not `src/cli/**`: `scripts/build-cli.ts` bundles `src/cli/index.ts`

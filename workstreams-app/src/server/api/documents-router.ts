@@ -1,4 +1,4 @@
-// The general browser's read side (`callback-box/docs/plans/general-browser.md`).
+// The general browser's read side (`beebox/docs/plans/general-browser.md`).
 //
 // Split out of api/router.ts to keep that file under the 300-line ceiling, and
 // because these five procedures are one surface: an address space, its listing,

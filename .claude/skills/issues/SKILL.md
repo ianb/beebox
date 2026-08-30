@@ -24,7 +24,7 @@ Two commands you will need from it:
 - `bin/issues search --all "<what you saw>"` before filing — a match (open
   or closed) is a re-encounter, which has its own rules there, not a new file.
 - `git mv` into `closed/<category>/` + `resolution:` to close, then
-  `pnpm --dir callback-box doc-check --fix`.
+  `pnpm --dir beebox doc-check --fix`.
 
 Private content goes to `private-issues/` (separate repo; commit from inside
 it) — when unsure, ask before filing publicly.

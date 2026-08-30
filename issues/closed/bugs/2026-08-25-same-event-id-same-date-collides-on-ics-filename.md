@@ -1,7 +1,7 @@
 ---
 title: "Two calendars can still collide on one .ics filename"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-connector-integrity — keying calendar state by (event, calendar)
@@ -9,17 +9,17 @@ resolution: implemented
 ---
 
 **Closed — fixed in the same pass that keyed the index by (event, calendar).**
-`uniqueEventFilename` in `callback-box/src/connectors/google-calendar-event-index.ts`
+`uniqueEventFilename` in `beebox/src/connectors/google-calendar-event-index.ts`
 disambiguates the name with a short hash of the calendar id when a pull is about
 to write a file another entry already holds, and keeps a disambiguated name as
 long as it still describes the event. No existing file is renamed, so the rename
 migration this item feared is not owed. A box that already has two entries on one
 file is deduped once per sync (`dropDuplicateFilenames`): the first entry keeps
 the file, the later one is untracked and reported as a sync failure. Covered by
-`callback-box/test/connectors/google-calendar-event-index.doctest.md`.
+`beebox/test/connectors/google-calendar-event-index.doctest.md`.
 
 **What is wrong.** `eventFilename` in
-`callback-box/src/connectors/google-calendar-ics.ts:323` builds a file name from
+`beebox/src/connectors/google-calendar-ics.ts:323` builds a file name from
 the event's start date plus the last 8 characters of its id:
 `{YYYY-MM-DD}_{shortId}.ics`. The calendar is not part of it. Two calendars can
 hold different events with the same id (Google event ids are unique within one

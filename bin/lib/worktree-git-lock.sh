@@ -64,7 +64,7 @@ wt_git_lock_common_dir() {
 wt_git_setup_state_file() {
   local name="$1" common
   common=$(wt_git_lock_common_dir) || return 1
-  printf '%s/callback-worktree-setup-%s.state\n' "$common" "$name"
+  printf '%s/beebox-worktree-setup-%s.state\n' "$common" "$name"
 }
 
 wt_git_setup_lock_acquire() {
@@ -73,7 +73,7 @@ wt_git_setup_lock_acquire() {
     echo "worktree-lock: cannot resolve Git common directory for $WT_MONO" >&2
     return 1
   }
-  lock_path="$common/callback-worktree-setup-$name.lock"
+  lock_path="$common/beebox-worktree-setup-$name.lock"
   exec 198>>"$lock_path" || return 1
   if ! wt_git_lock_wait "$lock_path" 198 "$timeout"; then
     exec 198>&-
@@ -92,7 +92,7 @@ wt_git_admin_lock_acquire() {
     echo "worktree-lock: cannot resolve Git common directory for $WT_MONO" >&2
     return 1
   }
-  lock_path="$common/callback-worktree-admin.lock"
+  lock_path="$common/beebox-worktree-admin.lock"
   exec 199>>"$lock_path" || return 1
   if ! wt_git_lock_wait "$lock_path" 199 "$WT_GIT_ADMIN_LOCK_TIMEOUT_SECONDS"; then
     exec 199>&-

@@ -42,8 +42,8 @@ Three artifacts, three jobs, and they're genuinely distinct:
   redundant with git history plus the plan's own inline notes, read mainly by
   their `brief` skill to narrate what happened.
 
-Our `callback-box/docs/plans/` holds 25 documents with **zero checkboxes**. Our
-plans are design artifacts — `cb-plan` produces a "Stated preferences this plan
+Our `beebox/docs/plans/` holds 25 documents with **zero checkboxes**. Our
+plans are design artifacts — `bbx-plan` produces a "Stated preferences this plan
 trades against" section, which is a different and arguably more valuable thing
 than a task ledger. Execution state lives in the conversation and dies with it.
 Whether we want to change that is a real fork, filed as a decision (README D1),
@@ -92,7 +92,7 @@ being rediscovered 3–4 times, wasting ~96K tokens.
   specific session that wasted tokens doing the work anyway. `investigate` also
   carries an explicit warning against spawning confirmatory subagents, citing
   ~80K tokens burned spawning four agents to confirm an already-obvious root
-  cause. That single line is worth adding to `cb-debug`; the rest of the skill
+  cause. That single line is worth adding to `bbx-debug`; the rest of the skill
   duplicates it.
 - **`learn-from-fix` — a destination-selection table.** Given a verified lesson,
   an explicit table routes it by scope and durability: package-specific skill →

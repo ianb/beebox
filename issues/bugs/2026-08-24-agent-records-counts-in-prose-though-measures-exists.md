@@ -1,7 +1,7 @@
 ---
 title: "Records have a quantity field and the agent used it on 2 of 20 inventory items"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [soft-launch, journey-findings]
 filed-by: agent
 discovered-by: agent

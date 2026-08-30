@@ -3,7 +3,7 @@ title: "The validate judge fails refresh-maps for obeying the ignore policy"
 workstream: refresh-maps-throughput
 filed-by: agent
 discovered-in: refresh-maps throughput measurement (worktree-refresh-maps-throughput)
-area: callback-box
+area: beebox
 ---
 
 `SKELETON_HIDDEN_PATHS` in `precheck-ignore.ts` hides whole subtrees from maps —
@@ -23,7 +23,7 @@ box's map ignore policy, so the one thing it most needs to check a map diff
 against is the one thing it can't see.
 
 Two shapes of fix, not yet chosen. Narrow: pass the effective ignore patterns
-(defaults + skeleton + `.cb-maps-ignore`) into the judge's context for this
+(defaults + skeleton + `.bbx-maps-ignore`) into the judge's context for this
 step. General: give validate steps a way to declare the policy a reviewer needs,
 so this isn't refresh-maps-specific — the same gap will appear wherever a
 procedure's correct behavior is defined by config the judge can't read.

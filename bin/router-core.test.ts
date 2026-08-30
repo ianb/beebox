@@ -29,7 +29,7 @@ test("dedupe: two concurrent ensureRunning(name) share ONE start and one handle"
     // Exactly one vite + one fastify spawned — not two pairs.
     assert.equal(h.spawner.lifecycleCalls().length, 2, "one lifecycle pair, not two");
     const fastify = h.spawner.lifecycleCalls()[0];
-    assert.equal(fastify?.options.env?.CB_DEV_SURFACES, "1", "hub backend explicitly enables dev surfaces");
+    assert.equal(fastify?.options.env?.BBX_DEV_SURFACES, "1", "hub backend explicitly enables dev surfaces");
   } finally {
     await h.cleanup();
   }
@@ -41,7 +41,7 @@ test("direct backend explicitly enables development surfaces too", async () => {
     await startReady(h, "wt");
     const fastify = h.spawner.lifecycleCalls()[0];
     assert.ok(fastify?.args.includes("./src/webapp/server-main.ts"));
-    assert.equal(fastify?.options.env?.CB_DEV_SURFACES, "1");
+    assert.equal(fastify?.options.env?.BBX_DEV_SURFACES, "1");
   } finally {
     await h.cleanup();
   }
@@ -117,7 +117,7 @@ test("source freshness: an unchanged token never marks a generation stale, and t
 
 test("source freshness: an uncomputable token disables the comparison instead of crying stale", async () => {
   const h = await makeHarness();
-  h.sourceToken.value = null; // e.g. a checkout with no callback-box/src
+  h.sourceToken.value = null; // e.g. a checkout with no beebox/src
   try {
     const handle = await startReady(h, "wt");
     const ready = readyLifecycle(handle)!;

@@ -2,7 +2,7 @@
 title: "Inline bug submission: agent-drafted, user-confirmed reports to the public repo"
 workstream: open-source-readiness
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]

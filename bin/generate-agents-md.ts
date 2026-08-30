@@ -102,7 +102,7 @@ the shared dev router serves this checkout at
 http://localhost:3210/${worktreeName}/... (the worktree short name, not the
 branch name).
 
-Other in-progress worktrees live at ~/src/callback-worktrees/<name>/ (their box
+Other in-progress worktrees live at ~/src/beebox-worktrees/<name>/ (their box
 clones at ~/src/box-worktrees/<name>/). You MAY read them to see what other work
 is underway — \`git worktree list\` to enumerate, \`git -C <path> status\` and
 \`git -C <path> diff main\` to inspect one. Your sandbox confines writes, not

@@ -1,7 +1,7 @@
 ---
 title: "OpenCode as a third box engine — re-evaluate when these upstream triggers land"
 workstream: research-opencode
-area: callback-box
+area: beebox
 ---
 
 [research/opencode/engine.md](../../research/opencode/engine.md) (2026-08-25, v1.18.23)

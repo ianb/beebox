@@ -1,0 +1,61 @@
+{
+  "name": "beebox-clerk",
+  "version": "0.1.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "postinstall": "wxt prepare",
+    "test": "tap test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "defuddle": "^0.18.1",
+    "dompurify": "^3.4.8",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "single-file-core": "^1.5.84",
+    "turndown": "^7.2.2"
+  },
+  "devDependencies": {
+    "@ianbicking/personal-vibe-check": "workspace:*",
+    "@types/chrome": "^0.1.32",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/turndown": "^5.0.6",
+    "@wxt-dev/module-react": "^1.2.2",
+    "autoprefixer": "^10",
+    "eslint": "^9.39.2",
+    "lint-staged": "^16.2.7",
+    "postcss": "^8",
+    "tailwindcss": "^3",
+    "tap": "^21",
+    "tsx": "^4.23.1",
+    "typescript": "^5.7.0",
+    "wxt": "^0.20.26"
+  },
+  "tap": {
+    "plugin": [
+      "!@tapjs/node-serialize"
+    ],
+    "node-arg": [
+      "--import=tsx"
+    ],
+    "coverage-report": [
+      "none"
+    ],
+    "statements": 0,
+    "branches": 0,
+    "functions": 0,
+    "lines": 0
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "eslint"
+    ]
+  }
+}

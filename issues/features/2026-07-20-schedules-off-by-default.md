@@ -1,7 +1,7 @@
 ---
 title: "Seeded schedules stay disabled until the user activates them"
 workstream: open-source-readiness
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
 labels: [soft-launch]
@@ -15,7 +15,7 @@ next-action: discuss
 > on a fresh box can create the full map tree. The boxholder accepts that
 > cost. Existing boxes keep their current box-owned schedule state.
 
-At filing, a fresh `cb init` box shipped five scheduled scripts with three **enabled**
+At filing, a fresh `bbx init` box shipped five scheduled scripts with three **enabled**
 (`refresh-maps`, `gc-procedure-runs`, `process-retrospective` —
 `src/core/box/defaults.ts:208-273`). Boxholder decision (2026-07-20):
 **keep schedules down or nil until activated by the user** — including
@@ -50,13 +50,13 @@ whether these schedules should run lazily or on demand; this decision keeps
 their cron scheduling and does not add a lazy execution path.
 
 This resolution applies only to seeded defaults for **new** boxes. Existing
-boxes are grandfathered: `cb init` and template sync preserve their current
+boxes are grandfathered: `bbx init` and template sync preserve their current
 box-owned `enabled` state rather than retroactively changing it.
 
 ## Decision recorded 2026-08-23
 
 `process-retrospective` is now seeded **enabled** on fresh boxes
-(`callback-box/docs/implemented-plans/first-run-openers.md`). This isn't a
+(`beebox/docs/implemented-plans/first-run-openers.md`). This isn't a
 reversal of the reasoning above — it's a narrower read of what the schedule
 actually costs. Retro's discovery step only qualifies **human** chat sessions
 (a transcript carrying `<typed>`/`<speech>`-tagged messages, or a session in

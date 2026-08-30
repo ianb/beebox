@@ -1,7 +1,7 @@
 ---
 title: "Composer Add menu: 'Attach file…' vs 'Upload files…' are indistinguishable"
 workstream: add-files-menu
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder couldn't tell the two apart
 priority: important

@@ -65,7 +65,7 @@ Minimum viable port for callback:
 
 Open questions before implementing:
 - Does this live as a Claude Code skill, a shell script, or something else?
-- What's the right base-branch detection logic for callback's monorepo? (Three separate git repos: callback-box, callback-clerk, cardworks — each invocation should scope to one repo.)
+- What's the right base-branch detection logic for callback's monorepo? (Three separate git repos: beebox, beebox-clerk, cardworks — each invocation should scope to one repo.)
 - Do we want all three modes from day one, or just `review`?
 
 ## Portable patterns regardless of whether we adopt /codex itself

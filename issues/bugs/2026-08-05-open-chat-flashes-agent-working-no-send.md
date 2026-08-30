@@ -2,7 +2,7 @@
 title: "Opening an existing chat briefly flashes 'Agent is working' with no message sent (web + iOS)"
 workstream: emission-model
 needs: [manual-testing]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder opened a landmark's most-recent chat
 ---
@@ -173,7 +173,7 @@ is shared without a native bridge or wire-shape change.
 
 ## Related
 
-- `docs/mobile-contract.md` / cb-ios-overlap — both platforms, shared surface.
+- `docs/mobile-contract.md` / bbx-ios-overlap — both platforms, shared surface.
 - The TargetStrip busy bar (`components/chat/TargetStrip.tsx`) is the indicator.
 
 ## Second report + server-side evidence (2026-08-05, box-family)

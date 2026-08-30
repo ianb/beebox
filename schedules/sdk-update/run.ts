@@ -4,12 +4,12 @@
  *
  * Deliberately cheap and deliberately dumb — VERSIONS ONLY. It reads two npm
  * registries and one line of `docs/agent-sdk-notes.md`, and it never fetches a
- * changelog, never reads callback-box's source, and never judges relevance.
+ * changelog, never reads beebox's source, and never judges relevance.
  * All of that is the session's work, and starting an Opus session every day to
  * discover "nothing was published" is the cost this head exists to avoid.
  *
  * Two packages, because two channels reach this repo. RUNTIME is
- * `@anthropic-ai/claude-agent-sdk`, which callback-box imports. HARNESS is
+ * `@anthropic-ai/claude-agent-sdk`, which beebox imports. HARNESS is
  * `@anthropic-ai/claude-code`, the CLI every worker session runs in — most SDK
  * releases say only "parity with Claude Code v2.1.N", and a Claude Code change
  * with zero SDK API surface can still break this repo (v2.1.218's worktree git

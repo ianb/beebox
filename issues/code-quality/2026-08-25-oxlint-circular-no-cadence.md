@@ -14,7 +14,7 @@ the dead-code sweep weekly with a baseline diff so only NEW findings are
 reported. `bin/schedules lint` passes and a dry run of the sweep works against
 the current config.
 
-What remains is the smaller half. `callback-box/docs/maintenance.md` lists two
+What remains is the smaller half. `beebox/docs/maintenance.md` lists two
 more sweeps whose cadence column still says "periodically" and "after big
 refactors", which in practice has meant never:
 

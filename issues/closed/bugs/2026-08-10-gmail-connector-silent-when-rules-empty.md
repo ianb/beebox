@@ -1,7 +1,7 @@
 ---
 title: "Gmail's no-config default silently flipped from the whole inbox to nothing"
 workstream: box-family-email
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-box-family-email — investigating growth on a production box
 labels: [code-error]
@@ -12,7 +12,7 @@ resolution: implemented
 > first-class and must state its `action`; a missing config file now fails the
 > sync instead of parsing as zero rules; the admin form gained the "On match"
 > control it never had. Plan:
-> [gmail-explicit-action](../../../callback-box/docs/implemented-plans/gmail-explicit-action.md).
+> [gmail-explicit-action](../../../beebox/docs/implemented-plans/gmail-explicit-action.md).
 >
 > Direction 3 (a migration) was declined by the boxholder — an existing
 > shorthand config without an action errors on purpose, so no box keeps

@@ -1,7 +1,7 @@
 ---
 title: "bin/private-issues status misreports the MAIN checkout as state=invalid"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked to set up private issues, status said invalid
 resolution: implemented
@@ -21,15 +21,15 @@ look failed.
 `pi_mount_state` (`bin/private-issues:151`) applies **worktree**-mount logic to
 every path, including the main checkout. It derives:
 
-- `PI_NAME = basename(wt)` → `callback-box`
-- `PI_BRANCH = "worktree-$PI_NAME"` → `worktree-callback-box`
-- `PI_TARGET = "$PI_WT_ROOT/$PI_NAME"` → `~/src/private-issues-worktrees/callback-box`
+- `PI_NAME = basename(wt)` → `beebox`
+- `PI_BRANCH = "worktree-$PI_NAME"` → `worktree-beebox`
+- `PI_TARGET = "$PI_WT_ROOT/$PI_NAME"` → `~/src/private-issues-worktrees/beebox`
 
 Then the symlink check (`:176-181`) requires the mount to point at `PI_TARGET` on
 branch `PI_BRANCH`. But the **main checkout** correctly symlinks to the private
 repo's **primary tree on `main`** (`~/src/callback-private-issues`), per the design
 ("main → the private repo's primary tree" — `bin/CLAUDE.md`, `issues/CLAUDE.md`).
-Primary-tree ≠ `PI_WT_ROOT/callback-box`, and `main` ≠ `worktree-callback-box`, so
+Primary-tree ≠ `PI_WT_ROOT/beebox`, and `main` ≠ `worktree-beebox`, so
 it falls through to `PI_STATE="invalid"` (`:180`).
 
 The function has no main-checkout case. It is written for worktrees, but `status`

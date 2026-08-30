@@ -1,7 +1,7 @@
 ---
 title: "Scoped edit-locks — a sentinel file plus a PreToolUse gate"
 workstream: elixir-skills-review
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
 ---
@@ -21,8 +21,8 @@ blocked edit is to try a different route to the same change.
 
 ## What it's for
 
-`cb-debug` has whole phases that should be read-only (Phase 1 builds a feedback
-loop, Phase 2 reproduces), and `cb-plan` is entirely a writing-about-code
+`bbx-debug` has whole phases that should be read-only (Phase 1 builds a feedback
+loop, Phase 2 reproduces), and `bbx-plan` is entirely a writing-about-code
 activity. Both describe that discipline in prose only. Scope creep during
 investigation — "while I'm here" edits that muddy what actually fixed the bug —
 is a real and common failure, and this catches it at the moment it happens rather
@@ -42,7 +42,7 @@ on those terms; not worth describing as enforcement.
 
 ## Open questions
 
-- Is prose actually failing us here? Neither `cb-debug` nor `cb-plan` has a known
+- Is prose actually failing us here? Neither `bbx-debug` nor `bbx-plan` has a known
   history of scope-creep incidents — this might be solving a problem we don't
   have. Worth a look at recent worktree diffs before building.
 - Interaction with our worktree model: a lock is per-checkout state, and several

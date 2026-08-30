@@ -2,7 +2,7 @@
 title: "directory head cards"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 Exploratory structural idea (2026-06-12), the deep version of [Prominence / surface-worthiness — one concept across tree nodes (cards AND directories)](2026-06-12-card-level-prominence.md). Today a card relates to a sibling container exactly one way — `Foo.attach/` is Foo's private bag of binaries — and a *directory* gets its identity a different way: a `landmark`/`briefing` card placed *inside* it. What if instead `Foo.type.card` paired with a plain `Foo/`? Then **a directory's "head card" — a same-named sibling of any type — gives the directory its type, identity, prominence, and primary content at once.** `Recipes.landmark.card + Recipes/`, `Chat.sandbox.card + Chat/`, `Foo.doc.card + Foo/` all become one pattern, recursive down the tree (every directory optionally typed by its sibling). This generalizes the prominence insight: a bare directory lacks the renderable identity a card has, so it needs a proxy — the head card *is* that proxy, and making it any-typed unifies attachments, landmarks, and briefings into "directories have head cards."
@@ -18,7 +18,7 @@ A bare `Foo/` can't say which, and the `.attach` suffix is doing real disambigua
 Open tensions:
 - **Basename-uniqueness rule** must learn to treat `Foo.type.card` + `Foo/` as a deliberate pair, not a lint collision.
 - **Ref resolution** — how do refs point into `Foo/` vs the current `attach/` prefix?
-- **mv coupling flips.** A head card *beside* its directory must move as a pair (`cb mv` already does this for `.attach/`); a landmark *inside* travels with the directory automatically. Beside is more visible in the parent listing (identity without descending) but more fragile to manual moves.
-- **Asset-manifest** keys on `.attach/`; a rename of the convention is a migration touching that hook, gitignore, ref resolution, and `cb mv`.
+- **mv coupling flips.** A head card *beside* its directory must move as a pair (`bbx mv` already does this for `.attach/`); a landmark *inside* travels with the directory automatically. Beside is more visible in the parent listing (identity without descending) but more fragile to manual moves.
+- **Asset-manifest** keys on `.attach/`; a rename of the convention is a migration touching that hook, gitignore, ref resolution, and `bbx mv`.
 
 Big migration, not near-term — but it's the structural endpoint the prominence + interactive-views + attachment-writes threads all lean toward, so worth holding before any of them hardcode the `.attach`-only assumption.

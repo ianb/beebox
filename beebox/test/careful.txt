@@ -1,0 +1,20 @@
+# The careful tier: timing-sensitive tests that run alone, one job at a time,
+# in the batched full run — not on every `pnpm test:changed`. They are not
+# deleted for being a nuisance; they run less often and more carefully. See
+# beebox/docs/plans/change-based-test-selection.md, mechanism C.
+#
+# Membership is a judgment, not an automatic demotion. `test-ledger report`
+# prints candidates by flake share; a human moves lines here.
+# Run this tier with `pnpm test:careful`. A path listed here that does not
+# exist fails the run rather than silently shrinking the tier.
+
+# 29 failures / 365 runs, 10 derived flakes — the suite's worst file.
+test/field-test/run.doctest.md
+# 14 / 363, 4 flakes: same field-test harness, same real-clock waits.
+test/field-test/lifecycle.doctest.md
+# 10 / 361, 8 of them unimplicated — fs watch latency, not the code under test.
+test/core/box/file-watcher.doctest.md
+# 10 / 363, 7 unimplicated: boots a hub and waits on real ports.
+test/hub/hub-e2e.doctest.md
+# 5 / 189, all 5 unimplicated — contends for a real git lock with its neighbours.
+test/lib/git-lock.doctest.md

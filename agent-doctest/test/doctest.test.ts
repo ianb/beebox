@@ -132,7 +132,7 @@ test("generateTestSource: template-literal content is emitted verbatim (no injec
 test("parseExamples: backticks inside quoted strings or line comments don't open a template", async (t) => {
   // Three backticks inside a double-quoted string (markdown fence in test
   // data) must not flip the template tracker — this exact shape appears in
-  // callback-box's reactor.doctest.md and once broke the whole file.
+  // beebox's reactor.doctest.md and once broke the whole file.
   const examples = parseExamples('desc.includes("```xml")\n=> true\n\nfoo() // don`t count `these`\n=> 1');
   t.equal(examples.length, 2);
   t.equal(examples[0].expression, 'desc.includes("```xml")');

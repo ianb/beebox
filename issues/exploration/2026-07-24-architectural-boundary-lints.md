@@ -1,7 +1,7 @@
 ---
 title: "Architectural boundary lints (openclaw-style channel-agnostic enforcement)"
 workstream: openclaw-security-lints
-area: callback-box
+area: beebox
 labels: [lint, openclaw-borrow]
 filed-by: agent
 discovered-in: worktree-openclaw-security-lints — surveying openclaw's custom lint walkers

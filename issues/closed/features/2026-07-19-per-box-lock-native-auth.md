@@ -1,8 +1,8 @@
 ---
 title: "Per-box lock: require re-auth (biometric/device) to open a sensitive box in a multi-box client"
 workstream: unknown
-area: callback-box
-design: ../../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md
+area: beebox
+design: ../../../beebox/docs/implemented-plans/ios-per-box-device-lock.md
 resolution: implemented
 filed-by: agent
 discovered-in: main session — boxholder raised it while working through the queue
@@ -10,7 +10,7 @@ discovered-in: main session — boxholder raised it while working through the qu
 
 **Closed (implemented + boxholder-confirmed) 2026-07-31.** The iOS per-box lock
 shipped (design in
-[`ios-per-box-device-lock.md`](../../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md)):
+[`ios-per-box-device-lock.md`](../../../beebox/docs/implemented-plans/ios-per-box-device-lock.md)):
 a device-local per-box preference gates navigation behind a fresh
 `LocalAuthentication` request (Face ID / Touch ID → passcode), re-locks on
 background and box switch, and keeps protected views mounted-but-opaque. Boxholder
@@ -27,7 +27,7 @@ Proposal: mark some boxes as **locked**, so opening one requires an additional
 gate even inside an already-authenticated client.
 
 The implementation-ready iOS design is
-[`ios-per-box-device-lock.md`](../../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md).
+[`ios-per-box-device-lock.md`](../../../beebox/docs/implemented-plans/ios-per-box-device-lock.md).
 It resolves the declaration question in favor of an honest device-local
 preference: this feature gates navigation on one phone and does not introduce a
 server policy that can become stale or imply enforcement a client cannot provide.

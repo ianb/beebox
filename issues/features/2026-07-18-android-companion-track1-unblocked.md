@@ -4,15 +4,15 @@ workstream: unknown
 priority: backlog
 ---
 
-`callback-box/docs/plans/android-companion-app.md` is build-ready and its
+`beebox/docs/plans/android-companion-app.md` is build-ready and its
 prerequisites all landed 2026-07-17:
 
 - **Track 0 shipped** — web→native posting is platform-neutral
-  (`callbackboxNativePost`, `native-post.ts`, iOS dual-form decode), so the
+  (`beeboxNativePost`, `native-post.ts`, iOS dual-form decode), so the
   Android inbound bridge has a contract to implement.
 - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
   tripwire anchor manifest), `docs/mobile-parity.md`, shared golden fixtures
-  under `callback-box/test/mobile-contract/fixtures/`, and the
+  under `beebox/test/mobile-contract/fixtures/`, and the
   pre-commit/commit-msg tripwire.
 - **Toolchain installed** on the dev machine — OpenJDK 21 (`JAVA_HOME` in the
   shell profiles), Android cmdline-tools, platform-tools, `platforms;android-36`,

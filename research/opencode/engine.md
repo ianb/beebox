@@ -1,9 +1,9 @@
 # OpenCode as a third box engine
 
 *2026-08-25, v1.18.23. Scored against the contract the Codex engine met —
-`callback-box/docs/implemented-plans/codex-box-engine.md` (its capability-probe table and
+`beebox/docs/implemented-plans/codex-box-engine.md` (its capability-probe table and
 tracks). Evidence is from source; no live probe was run. Paths are inside the OpenCode
-repo unless prefixed `callback-box/`.*
+repo unless prefixed `beebox/`.*
 
 ## The July blockers, re-checked
 
@@ -19,7 +19,7 @@ repo unless prefixed `callback-box/`.*
 
 | Capability | Grade | Evidence |
 |---|---|---|
-| Session identity (caller-coined) | missing | above; breaks `coinedSessionId` (`callback-box/src/core/chat/session/reserve.ts`) the same way Codex does |
+| Session identity (caller-coined) | missing | above; breaks `coinedSessionId` (`beebox/src/core/chat/session/reserve.ts`) the same way Codex does |
 | Resume after restart | works | history re-read from SQLite each loop iteration (`session/prompt.ts`) |
 | Typed streaming events | works | `packages/schema/src/session-event.ts`; turn end = `session.status` idle |
 | Tools + structured final output | works, v1 API only | `OutputFormatJsonSchema` injected as a required synthetic tool (`prompt.ts`) — coexists with tools by construction; absent from the v2 `session.prompt` |
@@ -31,7 +31,7 @@ repo unless prefixed `callback-box/`.*
 | maxTurns | partial | per-agent `steps` config, not per request |
 | maxBudgetUsd | missing | cost reported, never enforced |
 
-## callback-box-specific needs
+## beebox-specific needs
 
 - **Headless surface:** `@opencode-ai/sdk` spawns `opencode serve` and gives a typed
   OpenAPI client. Cleaner than the hand-written JSON-RPC-over-stdio Codex wrapper. ACP
@@ -62,7 +62,7 @@ Codex adapter: ~1,700 LOC + ~480 LOC doctests. Reused unchanged: engine selectio
 and wait machinery, `load-history.ts` dispatch shape. Dropped: Track 5's usage ledger
 (cost comes over the API) and Track 4's symlinks. New: a supervised long-lived
 `opencode serve` per box with a per-box `OPENCODE_DB`; a host-side session-id map;
-a `callback-box-opencode` plugin doing `tool.execute.after → cb validate --hook`
+a `beebox-opencode` plugin doing `tool.execute.after → bbx validate --hook`
 (better than the Codex wrapper-validation fallback). **Roughly the same size, ±20%.**
 
 ## Disposition: later

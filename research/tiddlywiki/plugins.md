@@ -211,7 +211,7 @@ works.
 **C1. No isolation, no dependency resolution.** A plugin overriding arbitrary
 core tiddlers is workable in a single-user single-file wiki and is not a model
 to copy for something a box loads. Our public-specifier boundary
-(`callback-box/{cards,schema,view-widgets}`) is already a stronger contract than
+(`beebox/{cards,schema,view-widgets}`) is already a stronger contract than
 anything here, and it should stay the plugin API.
 
 **C2. Themes and languages as plugin subtypes.** A singleton-plugin-type
@@ -224,6 +224,6 @@ mechanism solves a problem we do not have.
 content", and editions ship as plugin bundles. That is the medium/content line
 drawn in the opposite place from our framing: TiddlyWiki has one packaging
 mechanism and lets it carry either. Worth deciding deliberately rather than by
-default — if a callback-box plugin can ship cards as well as schemas and views,
+default — if a beebox plugin can ship cards as well as schemas and views,
 "an education plugin" means something quite different from "a plugin that adds
 education card types".

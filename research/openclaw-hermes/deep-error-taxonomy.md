@@ -1,6 +1,6 @@
 # Deep dive: error-classification taxonomies (Hermes vs. OpenClaw)
 
-Source clones (as of this dive): `/private/tmp/claude-501/-Users-ianbicking-src-callback-mono/b71d2662-11ec-4f27-9a9a-ef9beea687b1/scratchpad/hermes-agent/` and `.../scratchpad/openclaw/`. All citations are `absolute/path:line`. This is raw material for a future CBX failure-taxonomy design — no CBX code is touched here.
+Source clones (as of this dive): `/private/tmp/claude-501/-Users-ianbicking-src-callback-mono/b71d2662-11ec-4f27-9a9a-ef9beea687b1/scratchpad/hermes-agent/` and `.../scratchpad/openclaw/`. All citations are `absolute/path:line`. This is raw material for a future bbx failure-taxonomy design — no bbx code is touched here.
 
 ---
 
@@ -158,12 +158,12 @@ OpenClaw's messaging-channel extensions each have their **own, independently-imp
 
 These are largely **irrelevant to a system built on the Agent SDK** (which handles the raw HTTP/session/token/retry mechanics internally) because they concern request-shape/wire-protocol details a caller of the SDK never touches directly:
 
-- Hermes: `thinking_signature`, `llama_cpp_grammar_pattern`, `oauth_long_context_beta_forbidden`, `invalid_encrypted_content`, `multimodal_tool_content_unsupported`, `image_too_large`, `payload_too_large` (SDK request-compression/serialization is not something a CBX caller does by hand), the entire priority-1 provider-pattern-matching stage, per-provider one-shot 401-refresh flows (Codex/Vertex/Nous/Copilot/Anthropic), Z.AI/Nous provider-specific backoff ladders, `upstream_rate_limit` (OpenRouter-aggregator-specific wire quirk).
+- Hermes: `thinking_signature`, `llama_cpp_grammar_pattern`, `oauth_long_context_beta_forbidden`, `invalid_encrypted_content`, `multimodal_tool_content_unsupported`, `image_too_large`, `payload_too_large` (SDK request-compression/serialization is not something a bbx caller does by hand), the entire priority-1 provider-pattern-matching stage, per-provider one-shot 401-refresh flows (Codex/Vertex/Nous/Copilot/Anthropic), Z.AI/Nous provider-specific backoff ladders, `upstream_rate_limit` (OpenRouter-aggregator-specific wire quirk).
 - OpenClaw: most of `ProviderHttpError`'s status/code/errorType normalization, the `format` bodyless-400-is-noise heuristic, `context_overflow`'s "does not advance fallback, stays in compaction logic" design (an Agent-SDK-based system likely delegates context management to the SDK entirely), the whole `LiveSessionModelSwitchError` control-flow carve-out, `session_expired`, `no_error_details`/`empty_response` (SDK-internal signal shapes).
 
 ### 3.3 Categories that apply to ANY agent system regardless of who owns the model loop
 
-These generalize directly to a CBX taxonomy:
+These generalize directly to a bbx taxonomy:
 
 - **Auth/credential expiry** (distinguishing refreshable vs. permanently-revoked) — both systems independently arrived at this exact two-way split (Hermes: `auth`/`auth_permanent`; OpenClaw: `auth`/`auth_permanent`), a strong signal it's a load-bearing distinction for any system with rotatable credentials.
 - **Quota/billing exhaustion** vs. **rate limiting** — both systems treat these as separate categories with materially different backoff philosophy (billing = long/permanent-ish backoff or abort; rate limit = short retry-then-rotate). Both flagged real production incidents driving the billing-side caution (Hermes: ~$40/48h; conceptually the same instinct in OpenClaw's 5h→24h billing-disable ladder).
@@ -177,41 +177,41 @@ These generalize directly to a CBX taxonomy:
 
 ---
 
-## 4. CBX applicability sketch (skeleton only, no implementation)
+## 4. bbx applicability sketch (skeleton only, no implementation)
 
-CBX's actual failure surfaces, per the task brief: **SDK/agent-run errors**, **connector sync failures** (Gmail/Telegram/Calendar — auth+quota+transport), **scheduler/wakeup failures**, **card-validation failures**. A proposed taxonomy skeleton per surface, with rationale drawn from the synthesis above.
+bbx's actual failure surfaces, per the task brief: **SDK/agent-run errors**, **connector sync failures** (Gmail/Telegram/Calendar — auth+quota+transport), **scheduler/wakeup failures**, **card-validation failures**. A proposed taxonomy skeleton per surface, with rationale drawn from the synthesis above.
 
 ### 4.1 SDK/agent-run errors
-Since CBX sits on the Agent SDK, it inherits the "Agent SDK owns the model loop" layer — CBX should NOT reimplement Hermes's/OpenClaw's provider-quirk categories (§3.2). What remains relevant and worth a CBX-level bucket:
-- **Auth/credential expiry** (refreshable vs. permanent) — if CBX manages its own provider credentials/API keys outside the SDK's own auth, this split is still load-bearing.
+Since bbx sits on the Agent SDK, it inherits the "Agent SDK owns the model loop" layer — bbx should NOT reimplement Hermes's/OpenClaw's provider-quirk categories (§3.2). What remains relevant and worth a bbx-level bucket:
+- **Auth/credential expiry** (refreshable vs. permanent) — if bbx manages its own provider credentials/API keys outside the SDK's own auth, this split is still load-bearing.
 - **Quota/billing exhaustion** — distinct from rate limiting; needs its own (probably long) backoff/notify path, mirroring both systems' independent convergence here.
 - **Rate limiting** — short retry-then-back-off; should surface `Retry-After` if the SDK exposes it.
 - **Timeout/transport** — SDK-level network failures should still classify separately from application-level failures, since the recovery action (retry the SDK call) differs from e.g. a card-validation failure (fix the data).
-- **Malformed/invalid tool output** — a CBX card-schema validation failure surfacing *through* an agent run is a distinct case from a provider-format error; worth a dedicated bucket rather than folding into a generic "agent run failed."
-- **Content/safety refusal** — worth tracking distinctly even if CBX's policy is "don't fail over for this," per OpenClaw's stance; the point is visibility, not necessarily an automated response.
+- **Malformed/invalid tool output** — a bbx card-schema validation failure surfacing *through* an agent run is a distinct case from a provider-format error; worth a dedicated bucket rather than folding into a generic "agent run failed."
+- **Content/safety refusal** — worth tracking distinctly even if bbx's policy is "don't fail over for this," per OpenClaw's stance; the point is visibility, not necessarily an automated response.
 - **Unknown/unclassified catch-all** — keep retryable-by-default, per both systems' convergent choice, rather than treating "we don't recognize this" as automatically fatal.
 
 ### 4.2 Connector sync failures (Gmail/Telegram/Calendar)
-This surface maps closely to OpenClaw's channel-extension layer (§2.3), which is instructive precisely because each channel there built its *own* taxonomy rather than sharing one — suggesting CBX connectors will want a **shared base vocabulary** (auth/quota/transport/format) but connector-specific detection:
+This surface maps closely to OpenClaw's channel-extension layer (§2.3), which is instructive precisely because each channel there built its *own* taxonomy rather than sharing one — suggesting bbx connectors will want a **shared base vocabulary** (auth/quota/transport/format) but connector-specific detection:
 - **Auth expired** (OAuth token refresh failure, revoked grant) — split refreshable vs. permanent, same as §4.1; this is probably the single highest-value shared category across all three connectors given how much both source systems invest in it.
 - **Quota/rate-limit** (Gmail API quota, Telegram flood control, Calendar API rate limits) — each provider has different units/reset semantics (daily quota vs. per-second flood), so detection is necessarily connector-specific even if the bucket name is shared.
 - **Transport/timeout** — connector-agnostic network failure bucket.
 - **Send/delivery-specific outcomes** (Telegram: message too long, bad markup, target chat gone, blocked-by-user) — OpenClaw's Telegram taxonomy shows this deserves its own sub-taxonomy distinct from generic transport, especially the **idempotency-aware retry-safety split** (pre-connect-safe-to-retry vs. post-connect-ambiguous) — genuinely worth adopting for any connector that sends outbound messages, since duplicate sends are a real user-visible bug class.
 - **Permission/scope revoked** (calendar/gmail access removed by the user) — distinct from a transient auth failure; should disable the connector and notify, not silently retry forever (echoes OpenClaw's `auth_permanent` "skip immediately" + cron's "schedule-error auto-disable, notify the user" pattern from #28861).
-- **Malformed remote data** (a calendar event or email CBX can't parse) — a format-shaped failure that's about *their* data being unusual, not CBX's request being wrong; worth distinguishing from a request-format error.
+- **Malformed remote data** (a calendar event or email bbx can't parse) — a format-shaped failure that's about *their* data being unusual, not bbx's request being wrong; worth distinguishing from a request-format error.
 
 ### 4.3 Scheduler/wakeup failures
 Maps most directly to OpenClaw's cron taxonomy (§2.2), which is the most mature analog available:
 - **Transient vs. permanent split with a bounded retry ladder** — directly reusable pattern: a small number of named transient categories (network, timeout, rate_limit, overloaded, server_error) checked first via any structured reason available from the underlying agent-run classification (§4.1), falling back to message-regex; everything else permanent.
-- **A capped ladder, not unbounded exponential** — OpenClaw's 30s/60s/5m/15m/60m plateau (not indefinite doubling) is a concrete, reusable number set; CBX should pick its own but the "cap and plateau, don't grow forever" shape is worth keeping.
-- **Separate counters for different failure origins** — OpenClaw distinguishes execution errors, schedule-computation errors (a bad cron expression), and skipped-runs (heartbeat disabled) as three independent counters rather than one blended "failure count." CBX's scheduler/wakeup should likely separate "the wakeup logic itself errored" from "the resulting agent run failed" from "the wakeup was skipped/suppressed."
-- **Auto-disable + mandatory user notification** once a bounded threshold is hit — OpenClaw's #28861 fix (silent auto-disable was a real bug) is a directly-applicable lesson: any CBX scheduler auto-disable must notify, not just log.
+- **A capped ladder, not unbounded exponential** — OpenClaw's 30s/60s/5m/15m/60m plateau (not indefinite doubling) is a concrete, reusable number set; bbx should pick its own but the "cap and plateau, don't grow forever" shape is worth keeping.
+- **Separate counters for different failure origins** — OpenClaw distinguishes execution errors, schedule-computation errors (a bad cron expression), and skipped-runs (heartbeat disabled) as three independent counters rather than one blended "failure count." bbx's scheduler/wakeup should likely separate "the wakeup logic itself errored" from "the resulting agent run failed" from "the wakeup was skipped/suppressed."
+- **Auto-disable + mandatory user notification** once a bounded threshold is hit — OpenClaw's #28861 fix (silent auto-disable was a real bug) is a directly-applicable lesson: any bbx scheduler auto-disable must notify, not just log.
 - **A distinct, lower-threshold "alert" mechanism independent of the retry/disable decision** — OpenClaw's failure-alerts (after 2 consecutive errors, 1h cooldown) fire regardless of whether the job keeps retrying; worth separating "tell the user something's wrong" from "stop trying."
 
 ### 4.4 Card-validation failures
 No close analog exists in either source system (both are chat/agent-first, not structured-data-first), but the closest parallels are Hermes's `tool_result_classification.py` (distinguishing a genuinely-failed mutation from noisy-but-successful diagnostic output) and OpenClaw's `tool-result-error.ts` status-string enumeration:
 - **Schema violation** (required field missing, wrong type) — a deterministic, non-retryable-as-is failure; the "fix" is data correction, not backoff. Closest analog: OpenClaw's `format` bucket philosophy ("retrying the same payload fails the same way").
 - **Reference/dependency failure** (a card references another card/entity that doesn't exist or was deleted) — analogous to `model_not_found`/`session_expired`'s "the target of this operation is gone" shape; should skip retry and surface directly.
-- **Migration/version mismatch** (an old-shape card hitting new validation code) — a CBX-specific category with no direct source-system analog; worth its own bucket given `cb-migration`'s existence as a distinct concern already in this codebase.
+- **Migration/version mismatch** (an old-shape card hitting new validation code) — a bbx-specific category with no direct source-system analog; worth its own bucket given `bbx-migration`'s existence as a distinct concern already in this codebase.
 - **Transient write-contention** (concurrent card write, lock contention) — analogous to OpenClaw's session-write-lock carve-out (§2.1, "must abort, not consume failover candidate slots") — worth treating as retryable-with-backoff but explicitly not as a "provider is broken" signal.
 - **Successful-but-noisy result** — Hermes's `file_mutation_result_landed()` distinction (nested lint/diagnostic output inside an otherwise-successful write) is directly relevant: a card write that succeeds but reports secondary warnings shouldn't be classified as a failure.

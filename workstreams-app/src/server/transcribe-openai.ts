@@ -8,20 +8,20 @@
 // acknowledged, and it matches `POST /api/chat/transcribe-audio`, which is
 // already stateless upload-audio-get-text.
 //
-// IT CALLS OPENAI DIRECTLY rather than through callback-box's
+// IT CALLS OPENAI DIRECTLY rather than through beebox's
 // `transcribeAudioHq`, and that is a boundary worth keeping: this app imports
-// NOTHING outside its own package, and callback-box does not export
+// NOTHING outside its own package, and beebox does not export
 // transcription (its public specifiers are `cards`, `schema`, `view-widgets` —
 // "box code imports only the public specifiers, never engine internals").
 // Making the dev-tooling app depend on the main system, and widening that
 // system's public surface for a non-box consumer, is a larger change than one
 // multipart POST.
 //
-// The key is `CALLBACK_OPENAI_API_KEY` by boxholder decision (2026-08-22): it
+// The key is `BBX_OPENAI_API_KEY` by boxholder decision (2026-08-22): it
 // also names the embeddings key, and the box side keeps `openai` and
 // `openai-thinking` separate on purpose, but a dev-surface key on the
 // developer's own machine did not earn a third name. Recorded in
-// `callback-box/docs/secrets.md` so a later reader does not read this as the
+// `beebox/docs/secrets.md` so a later reader does not read this as the
 // box-side distinction having eroded.
 
 import { z } from "zod";
@@ -46,7 +46,7 @@ function extensionFor(mimeType: string): string {
 export function createTranscribeService(): TranscribeService {
   return {
     async transcribe({ audio, mimeType }): Promise<{ text: string }> {
-      const apiKey = process.env.CALLBACK_OPENAI_API_KEY;
+      const apiKey = process.env.BBX_OPENAI_API_KEY;
       if (apiKey === undefined || apiKey === "") throw new TranscriptionNotConfiguredError();
 
       const form = new FormData();

@@ -5,14 +5,14 @@
 // Track G in docs/implemented-plans/boxes-as-packages-v2.md):
 //   - a legacy (shapeVersion 1) box dir — content and package root are the
 //     same directory.
-//   - a v2 box's PACKAGE root (has `content/.cb-box` inside it).
-//   - a v2 box's `content/` dir directly (has `.cb-box` right there).
+//   - a v2 box's PACKAGE root (has `content/.beebox` inside it).
+//   - a v2 box's `content/` dir directly (has `.beebox` right there).
 //
-// This is deliberately independent of callback-box's own `src/cli/lib/
+// This is deliberately independent of beebox's own `src/cli/lib/
 // box-shape.ts` (the engine's canonical predicate) rather than importing it:
 // the router serves many worktrees side by side, each pinning its own
 // checkout — sometimes an older one that predates this predicate entirely —
-// and the router's own tsconfig excludes callback-box for exactly this
+// and the router's own tsconfig excludes beebox for exactly this
 // reason (see tsconfig.json at the repo root). Router-side detection only
 // needs to know "where's the content dir, what's the slug" — a much smaller
 // and more version-stable question than the engine's fail-closed shape
@@ -22,7 +22,7 @@
 // Dev keeps the one-process-many-boxes model: a single `server-main.ts`
 // (one engine version, this worktree's own checkout) serves every box this
 // worktree lists, in one Fastify process — same as today for legacy boxes.
-// The plan's end-state ("Serving") spawns a box's OWN `node_modules/.bin/cb
+// The plan's end-state ("Serving") spawns a box's OWN `node_modules/.bin/bbx
 // serve` per box for real per-box engine-version isolation, but that only
 // matters once boxes can pin *different* engine versions from each other;
 // in dev every box a worktree serves shares that worktree's one checked-out
@@ -53,13 +53,13 @@ async function exists(p: string): Promise<boolean> {
 /**
  * Resolve one BOXES entry to `{ contentDir, slug }`.
  *
- * - `<entry>/.cb-box` exists → `entry` IS a box root already.
+ * - `<entry>/.beebox` exists → `entry` IS a box root already.
  *   - A v2 marker there means `entry` is a v2 `content/` dir passed
  *     directly: slug comes from the PACKAGE root (entry's parent), since
  *     `content/`'s own basename is always the literal string "content".
  *   - Otherwise (legacy, or the marker doesn't parse as v2): slug is
  *     `entry`'s own basename, same as always.
- * - Else `<entry>/content/.cb-box` exists → `entry` is a v2 PACKAGE root:
+ * - Else `<entry>/content/.beebox` exists → `entry` is a v2 PACKAGE root:
  *   contentDir is `entry/content`, slug is `entry`'s own basename.
  * - Else (no marker found anywhere, e.g. a nonexistent path or a fixture
  *   dir in a test) → tolerate it the same way the engine's
@@ -68,7 +68,7 @@ async function exists(p: string): Promise<boolean> {
 export async function resolveBoxEntry(entry: string): Promise<ResolvedBoxEntry> {
   const resolved = path.resolve(entry);
 
-  if (await exists(path.join(resolved, ".cb-box"))) {
+  if (await exists(path.join(resolved, ".beebox"))) {
     const shapeVersion = await readShapeVersion(resolved);
     if (shapeVersion >= 2) {
       return { contentDir: resolved, slug: path.basename(path.dirname(resolved)) };
@@ -77,7 +77,7 @@ export async function resolveBoxEntry(entry: string): Promise<ResolvedBoxEntry> 
   }
 
   const nestedContent = path.join(resolved, "content");
-  if (await exists(path.join(nestedContent, ".cb-box"))) {
+  if (await exists(path.join(nestedContent, ".beebox"))) {
     return { contentDir: nestedContent, slug: path.basename(resolved) };
   }
 
@@ -85,7 +85,7 @@ export async function resolveBoxEntry(entry: string): Promise<ResolvedBoxEntry> 
   return { contentDir: resolved, slug: path.basename(resolved) };
 }
 
-/** A `.cb-box` marker that exists but cannot be read as one. */
+/** A `.beebox` marker that exists but cannot be read as one. */
 export class BoxMarkerError extends Error {
   constructor(markerPath: string, problem: string) {
     super(`${markerPath}: ${problem}`);
@@ -101,7 +101,7 @@ export class BoxMarkerError extends Error {
  * the slug from the wrong directory and route the box under the wrong name.
  */
 async function readShapeVersion(boxRoot: string): Promise<number> {
-  const markerPath = path.join(boxRoot, ".cb-box");
+  const markerPath = path.join(boxRoot, ".beebox");
   const raw = await fs.readFile(markerPath, "utf-8");
   if (raw.trim() === "") return 1;
   let marker: unknown;

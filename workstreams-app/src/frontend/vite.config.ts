@@ -35,7 +35,7 @@ export default defineConfig({
       "/workstreams/api": {
         target: `http://127.0.0.1:${backendPort}`,
         changeOrigin: true,
-        ...(routerCapability ? { headers: { "x-cb-workstreams-capability": routerCapability } } : {}),
+        ...(routerCapability ? { headers: { "x-bbx-workstreams-capability": routerCapability } } : {}),
       },
     },
   },

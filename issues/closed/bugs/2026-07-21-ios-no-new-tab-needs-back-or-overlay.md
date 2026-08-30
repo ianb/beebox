@@ -1,7 +1,7 @@
 ---
 title: "iOS: 'open in a new tab' does nothing — needs in-place nav (+ back) or the overlay"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder hit it trying to focus a card on iOS
 resolution: implemented

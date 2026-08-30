@@ -1,7 +1,7 @@
 ---
 title: "A single 401 from any procedure throws the whole app to a login form, mid-work"
 workstream: live-vs-stored
-area: callback-box
+area: beebox
 labels: [journey-findings]
 filed-by: agent
 discovered-by: agent
@@ -58,9 +58,9 @@ there is no identity at all on an API URL, **403** for authenticated-but-not-
 permitted, **503** for an unreadable auth store, and a 302 login redirect for
 HTML navigation rather than an API call.
 
-In ordinary use that leaves one real cause: **the `cb_session` cookie is gone** —
+In ordinary use that leaves one real cause: **the `bbx_session` cookie is gone** —
 30-day expiry, or `gen`-revoked by a password change (`src/webapp/auth.ts:26`).
-Mobile has its own 1-hour `cb_mobile` lapse, already handled by refresh-and-retry
+Mobile has its own 1-hour `bbx_mobile` lapse, already handled by refresh-and-retry
 before any eject.
 
 ## What this means for the fix

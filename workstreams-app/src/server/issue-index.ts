@@ -3,7 +3,7 @@
  * app's `issues.related` procedure — one implementation, two callers, so a
  * "Related" row in the browser and a `bin/issues similar` row are the same row.
  *
- * Mirrors `callback-box/src/core/search/` in shape (Orama + a stat manifest +
+ * Mirrors `beebox/src/core/search/` in shape (Orama + a stat manifest +
  * lazy re-embedding) at a much smaller scale: ~900 markdown files, no locking,
  * no partial-document extraction. The whole index is a disposable cache under a
  * gitignored `.issues-index/` at the repo root — delete it and the next run
@@ -34,7 +34,7 @@ import {
   EMBEDDER_ID,
   EMBEDDING_DIMENSIONS,
   type EmbeddingsService,
-} from "../../../callback-box/src/services/openai-embeddings.js";
+} from "../../../beebox/src/services/openai-embeddings.js";
 import type { IndexDocument } from "./issue-index-documents.js";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
@@ -172,11 +172,11 @@ async function writeJsonAtomic(filePath: string, value: unknown): Promise<void> 
 /**
  * Environment variables consulted for the embeddings key, in order. The first
  * is this repo's own; the other two are the keys a dev machine is likely to
- * already have exported for callback-box's transcription and story-eval work,
+ * already have exported for beebox's transcription and story-eval work,
  * so `bin/issues search` works without new setup.
  */
 export const EMBEDDING_KEY_VARS = [
-  "CALLBACK_OPENAI_API_KEY",
+  "BBX_OPENAI_API_KEY",
   "THINKING_OPENAI_API_KEY",
   "SKE_OPENAI_API_KEY",
 ] as const;
@@ -348,7 +348,7 @@ export async function refreshIndex(options: RefreshOptions): Promise<RefreshResu
 
 /**
  * Paths the manifest already tracks. The CLI uses this to keep indexing
- * `callback-box/docs` once `--docs` has pulled it in: dropping the corpus again
+ * `beebox/docs` once `--docs` has pulled it in: dropping the corpus again
  * would delete vectors that were paid for, and re-adding it would pay twice.
  */
 export async function manifestPaths(repoRoot: string, scope: IndexScope): Promise<string[]> {

@@ -240,8 +240,8 @@ export async function collectAgentQuotas(options?: {
   const stateDir =
     resolved.stateDir ??
     // TODO(env-migration): operational state override belongs in shared env config.
-    process.env.CALLBACK_STATE_DIR ??
-    path.join(os.homedir(), ".cache/callback-box");
+    process.env.BBX_STATE_DIR ??
+    path.join(os.homedir(), ".cache/beebox");
   const claudePath = path.join(stateDir, "claude-rate-limits.json");
   const codexRequest = resolved.codexRequest;
   const [claude, codex] = await Promise.all([

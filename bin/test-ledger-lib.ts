@@ -13,7 +13,7 @@
  * failure counts into failure rates, and a denominator is free to collect now
  * and impossible to reconstruct later.
  *
- * See callback-box/docs/plans/change-based-test-selection.md, Track 5.
+ * See beebox/docs/plans/change-based-test-selection.md, Track 5.
  */
 
 import { createHash } from "node:crypto";
@@ -292,13 +292,13 @@ export function summarize(input: {
 }
 
 export const ledgerPaths = (gitCommonDir: string): { ledger: string; filesets: string } => ({
-  ledger: join(gitCommonDir, "callback-test-ledger.jsonl"),
+  ledger: join(gitCommonDir, "beebox-test-ledger.jsonl"),
   // Append-only, like the ledger itself. A single JSON object rewritten per
   // run would be a read-modify-write on a file every worktree on this machine
   // shares, and concurrent suite runs across worktrees are routine here — one
   // would silently drop the other's entries. Appending removes the race rather
   // than guarding it with a lock.
-  filesets: join(gitCommonDir, "callback-test-filesets.jsonl"),
+  filesets: join(gitCommonDir, "beebox-test-filesets.jsonl"),
 });
 
 /** Fold an append-only fileset log into the hash -> files map readers want. */

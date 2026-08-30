@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Run a scripted browser tour of the running callback-box app and dump
+# Run a scripted browser tour of the running beebox app and dump
 # artifacts (desktop + mobile screenshots, AX trees, axe-core a11y
-# violations, summary.md) under callback-box/test/tours/.artifacts/.
+# violations, summary.md) under beebox/test/tours/.artifacts/.
 #
 # Drives the app through bin/browse; assumes the dev router at :3210
 # (`pnpm dev`) and the agent-browser daemon (auto-started by bin/browse)
-# are reachable. Tours themselves live at callback-box/test/tours/*.tour.ts.
+# are reachable. Tours themselves live at beebox/test/tours/*.tour.ts.
 #
 # Usage:
 #   bin/tour                # list available tours
@@ -28,13 +28,13 @@ fi
 
 # Same worktree detection as bin/browse, so tours hit the right URL prefix
 # whether run from main or any worktree.
-if [[ "$PWD" == *"/callback-worktrees/"* ]]; then
-  worktree="${PWD#*/callback-worktrees/}"
+if [[ "$PWD" == *"/beebox-worktrees/"* ]]; then
+  worktree="${PWD#*/beebox-worktrees/}"
   worktree="${worktree%%/*}"
 else
   worktree="main"
 fi
 export BROWSE_WORKTREE="$worktree"
 
-CLI="$REPO_DIR/callback-box/test/tours/tour-lib/cli.ts"
+CLI="$REPO_DIR/beebox/test/tours/tour-lib/cli.ts"
 exec "$TSX" "$CLI" "$@"

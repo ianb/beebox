@@ -1,14 +1,14 @@
 ---
 title: "Field-test `models.chat` now pins the whole box — the name says otherwise"
 workstream: model-engine-policy
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: model/engine policy work — cross-model review of the implementation
 labels: [field-test, naming]
 priority: backlog
 ---
 
-A field-test scenario's `models.chat` used to write `.callback-box/chat-model.json`
+A field-test scenario's `models.chat` used to write `.beebox/chat-model.json`
 and so pin chat alone. It now writes the box's model policy (`agentModel` in
 `config/box.json`), which chat **and the reactor** read — that was the point, and
 the run report says so. The field name did not follow.

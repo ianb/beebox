@@ -2,7 +2,7 @@
 title: "Member-level tRPC procedures include config writes and code execution"
 workstream: security-report
 needs: [decision]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — endpoint inventory for the security report
 ---

@@ -1,7 +1,7 @@
 ---
 title: "file-lock: cross-process reclaim/release can let two holders acquire the same lock"
 workstream: open-source-readiness
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
 labels: [soft-launch]
@@ -32,7 +32,7 @@ isn't the security boundary). Unlike the first two holes, it cannot be
 reached by request flooding. The stricter fixes considered and declined as
 over-engineering: fencing-token CAS on the device-store write; switching to
 `flock` (native addon). Documented as an accepted limitation in
-`callback-box/docs/todo-security.md` for the security-overview.md security report.
+`beebox/docs/todo-security.md` for the security-overview.md security report.
 
 ---
 
@@ -134,7 +134,7 @@ atomically holding the lock*. The one deliberate foreign-guard eviction is
 **Stale / onCompromised / sleep decisions.**
 - `stale = 5 min`. While a holder is alive, `proper-lockfile` refreshes the guard
   mtime every `stale/2` (2.5 min), so a live lock stays fresh for an unbounded
-  hold — hold duration need not fit under `stale`. 5 min sits under `cb tick`'s
+  hold — hold duration need not fit under `stale`. 5 min sits under `bbx tick`'s
   10-min per-script SIGKILL timeout, so a wedged run's lock always clears before
   the run is force-killed.
 - `onCompromised` logs LOUDLY (`console.error`) and drops the in-process release

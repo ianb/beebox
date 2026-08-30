@@ -1,7 +1,7 @@
 ---
 title: "The front door is an empty text box"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, a first-time user with no orientation
 ---

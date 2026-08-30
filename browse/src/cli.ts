@@ -7,11 +7,11 @@ import type { ScreenshotInvocation } from "./screenshot.js";
 import { authCookieArgs, BrowseConfigError, detectWorktreeContext, isOwnOrigin, rewriteOpenUrl, sessionProfileDir } from "./worktree.js";
 import type { WorktreeContext } from "./worktree.js";
 
-// JS expression evaluated in the page. The callback-box frontend exposes
-// `<body data-cb-loading="true|false">` driven by React Query's
+// JS expression evaluated in the page. The beebox frontend exposes
+// `<body data-bbx-loading="true|false">` driven by React Query's
 // useIsFetching/useIsMutating, so "false" means all in-flight queries
-// (and any mutations) have settled. See callback-box trpc-provider.tsx.
-const READY_FN = "document.body.dataset.cbLoading === 'false'";
+// (and any mutations) have settled. See beebox trpc-provider.tsx.
+const READY_FN = "document.body.dataset.bbxLoading === 'false'";
 
 // Ceiling on the settle wait. `wait --fn` polls forever on agent-browser
 // 0.27.0: its own `--timeout` flag is parsed only in `--download` mode, and

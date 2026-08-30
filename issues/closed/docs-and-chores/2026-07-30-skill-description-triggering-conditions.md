@@ -24,22 +24,22 @@ which is how we'd actually measure it.
 
 ## Where we do the anti-pattern
 
-The three `cb-guide-*` skills, whose descriptions state what the skill explains
-and then name the file holding the real content. `cb-guide-api`:
+The three `bbx-guide-*` skills, whose descriptions state what the skill explains
+and then name the file holding the real content. `bbx-guide-api`:
 
-> Explains how HTTP endpoints are added in callback-box and the
-> tRPC-vs-raw-Fastify decision. […] Instructional (a cb-guide-\* skill) — full
+> Explains how HTTP endpoints are added in beebox and the
+> tRPC-vs-raw-Fastify decision. […] Instructional (a bbx-guide-\* skill) — full
 > checklist in docs/adding-api-endpoints.md.
 
 A model reading that has been told the topic, the decision at stake, and where
 the checklist lives. Opening the skill is the least attractive of its options.
-`cb-guide-schemas` and `cb-guide-testing` have the same shape.
+`bbx-guide-schemas` and `bbx-guide-testing` have the same shape.
 
 Description lengths across `.claude/skills/*/SKILL.md`, longest first:
-`canvas-loop-sketch` 574, `cb-prompt-review` 536, `cb-guide-schemas` 519,
-`cb-context` 490, `launch-worktree-session` 460, `cb-guide-testing` 446,
-`cb-debug` 438, `cb-codehealth` 433, `cb-guide-api` 410, `cb-frontend` 394,
-`cb-migration` 393, `codex` 335, `skill-creator` 333, `cb-plan` 293,
+`canvas-loop-sketch` 574, `bbx-prompt-review` 536, `bbx-guide-schemas` 519,
+`bbx-context` 490, `launch-worktree-session` 460, `bbx-guide-testing` 446,
+`bbx-debug` 438, `bbx-codehealth` 433, `bbx-guide-api` 410, `bbx-frontend` 394,
+`bbx-migration` 393, `codex` 335, `skill-creator` 333, `bbx-plan` 293,
 `finish` 289, `browse` 223.
 
 ## The tension
@@ -50,7 +50,7 @@ description crowds out siblings and hurts routing corpus-wide. With 16 skills we
 have room. So this is **not** a "shorten everything" chore — it's specifically
 about descriptions that carry *content* rather than *triggers*.
 
-Also unsettled: the `cb-guide-*` skills are deliberately thin pointers to a doc.
+Also unsettled: the `bbx-guide-*` skills are deliberately thin pointers to a doc.
 If the description names the doc and the skill body mostly does too, it's worth
 asking whether those three should be skills at all, or whether the guide content
 should move into the skill so there's something to load.

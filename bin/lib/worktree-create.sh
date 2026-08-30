@@ -15,7 +15,7 @@
 # What it does beyond `git worktree add`:
 #   - OVERRIDES the worktree location to WT_ROOT/<name> (bin/lib/worktree-paths.sh).
 #     Claude Code would default to <repo>/.claude/worktrees/<name>/. Reason:
-#     callback-box has a file: dep on personal-vibe-check at
+#     beebox has a file: dep on personal-vibe-check at
 #     file:../personal-vibe-check, and that relative path only resolves when the
 #     worktree is a SIBLING of the monorepo root (same depth as main checkout).
 #   - clones WT_BOX_SRC to WT_BOX_ROOT/<name>/test1/
@@ -23,12 +23,12 @@
 #     /<wt>/test1/... swap cleanly across worktrees — true whether the clone
 #     is a legacy box or a v2 package, see box-entry.ts)
 #     (kept outside the monorepo so the box doesn't inherit monorepo CLAUDE.md)
-#   - for a v2 (package-layout) clone, points its "callback-box" dependency
+#   - for a v2 (package-layout) clone, points its "beebox" dependency
 #     at THIS worktree's own engine checkout (pnpm.overrides link:) and
 #     installs the box's own node_modules — see Track G in
 #     docs/implemented-plans/boxes-as-packages-v2.md. Legacy clones are untouched.
-#   - runs pnpm install at the worktree root (root husky), callback-box, and
-#     callback-box/src/frontend. After this the worktree is ready for the
+#   - runs pnpm install at the worktree root (root husky), beebox, and
+#     beebox/src/frontend. After this the worktree is ready for the
 #     dev router to serve.
 #
 # The dev router lazy-spawns Vite + Fastify per worktree on first request, so
@@ -67,7 +67,7 @@ wt_create_mount_private_issues() {
 # resume must refresh mirrors against whatever Claude docs and skills now say,
 # and skipping it would leave a hand-launched `codex` in a resumed worktree on
 # stale guidance. tsx lives at the worktree ROOT node_modules (hoisted
-# workspace — callback-box/node_modules/.bin has no tsx). Non-blocking: a
+# workspace — beebox/node_modules/.bin has no tsx). Non-blocking: a
 # Claude session doesn't need the mirrors, and the codex launcher path
 # re-verifies the root AGENTS.md exists before exec'ing codex.
 wt_create_generate_agents_md() {
@@ -293,20 +293,20 @@ wt_create_locked() {
         echo "[worktree-create] WARNING: git-annex not installed; worktree box has no asset content" >&2
       fi
 
-      # v2 (package-layout) box: redirect its "callback-box" dependency at
-      # THIS worktree's own callback-box checkout via a pnpm.overrides
+      # v2 (package-layout) box: redirect its "beebox" dependency at
+      # THIS worktree's own beebox checkout via a pnpm.overrides
       # `link:` entry — a live symlink that never installs the target's own
       # deps, revertible without touching `dependencies` (see "Prior art" /
       # Track G in docs/implemented-plans/boxes-as-packages-v2.md). Without this the
-      # clone would resolve callback-box from whatever the box's lockfile
+      # clone would resolve beebox from whatever the box's lockfile
       # pins — never this worktree's in-progress engine code, defeating the
       # whole point of a worktree. Legacy clones have no package.json here
       # and are left untouched.
-      if [ -f "$BOX_DEST/package.json" ] && jq -e '(.dependencies["callback-box"] // .devDependencies["callback-box"]) != null' "$BOX_DEST/package.json" >/dev/null; then
-        echo "[worktree-create] v2 box detected — pointing callback-box at $worktree_path/callback-box" >&2
+      if [ -f "$BOX_DEST/package.json" ] && jq -e '(.dependencies["beebox"] // .devDependencies["beebox"]) != null' "$BOX_DEST/package.json" >/dev/null; then
+        echo "[worktree-create] v2 box detected — pointing beebox at $worktree_path/beebox" >&2
         local tmp_pkg
         tmp_pkg=$(mktemp)
-        jq --arg link "link:$worktree_path/callback-box" '.pnpm.overrides["callback-box"] = $link' \
+        jq --arg link "link:$worktree_path/beebox" '.pnpm.overrides["beebox"] = $link' \
           "$BOX_DEST/package.json" > "$tmp_pkg"
         mv "$tmp_pkg" "$BOX_DEST/package.json"
         echo "[worktree-create] running pnpm install in $BOX_DEST..." >&2
@@ -319,12 +319,12 @@ wt_create_locked() {
     echo "[worktree-create] reusing existing box $BOX_DEST" >&2
   fi
 
-  # 2.5. Copy the main checkout's callback-box/.env, if it has one.
+  # 2.5. Copy the main checkout's beebox/.env, if it has one.
   #
   # `.env` is gitignored, so a fresh worktree gets none — and the router loads
   # each checkout's OWN .env into the dev processes it spawns (bin/router-core.ts),
   # so without this copy a worktree runs with none of the local dev config the
-  # main checkout has (CB_BROWSE_API_KEY, a BOXES override). Copying keeps the
+  # main checkout has (BBX_BROWSE_API_KEY, a BOXES override). Copying keeps the
   # rule uniform — every checkout reads its own file, nothing reaches across
   # into another checkout at runtime. Copy, not symlink: a worktree is free to
   # diverge (point at a different box, use a different key) without editing the
@@ -336,12 +336,12 @@ wt_create_locked() {
   # the line makes the router fall back to WT_BOX_ROOT/<name>/test1
   # (bin/router.ts `boxes ?? [...]`), which is exactly right. Add a BOXES line to
   # the worktree's own .env to override.
-  local main_env="$WT_MONO/callback-box/.env"
+  local main_env="$WT_MONO/beebox/.env"
   if [ -f "$main_env" ]; then
-    grep -v '^BOXES=' "$main_env" > "$worktree_path/callback-box/.env"
-    echo "[worktree-create] copied callback-box/.env from the main checkout (minus BOXES)" >&2
+    grep -v '^BOXES=' "$main_env" > "$worktree_path/beebox/.env"
+    echo "[worktree-create] copied beebox/.env from the main checkout (minus BOXES)" >&2
   else
-    echo "[worktree-create] no callback-box/.env in the main checkout — skipping" >&2
+    echo "[worktree-create] no beebox/.env in the main checkout — skipping" >&2
   fi
 
   # 3. pnpm install. ONE workspace install at the root — never per-subpackage.
@@ -349,7 +349,7 @@ wt_create_locked() {
   # inside a subpackage walks up to the workspace root anyway, but in
   # practice it also seems to wipe the root lockfile in some cases, leaving
   # the worktree with node_modules/ populated but node_modules/.bin/ empty
-  # (which then breaks bin/browse, bin/cb, etc.). Same shape as what
+  # (which then breaks bin/browse, bin/bbx, etc.). Same shape as what
   # deploy/deploy.sh does on the server.
   echo "[worktree-create] running pnpm install (workspace-wide)..." >&2
   (exec 198>&-; cd "$worktree_path" && pnpm install >&2)
@@ -359,33 +359,33 @@ wt_create_locked() {
   wt_create_generate_agents_md "$worktree_path" "$NAME"
 
   # 4. Write .claude/settings.local.json so the agent's shell sees the worktree's
-  # own cb on PATH. Per-worktree because each worktree has its own absolute
-  # callback-box/bin path. Claude Code's env block doesn't substitute ${PATH},
+  # own bbx on PATH. Per-worktree because each worktree has its own absolute
+  # beebox/bin path. Claude Code's env block doesn't substitute ${PATH},
   # so we have to expand it at write time. settings.local.json is gitignored.
   echo "[worktree-create] writing .claude/settings.local.json with PATH override..." >&2
   mkdir -p "$worktree_path/.claude"
   cat > "$worktree_path/.claude/settings.local.json" <<EOF
 {
   "env": {
-    "PATH": "$worktree_path/callback-box/bin:$PATH"
+    "PATH": "$worktree_path/beebox/bin:$PATH"
   }
 }
 EOF
 
   # 5. Refresh box hooks: the cloned box's .git/hooks/pre-commit and
-  # .claude/settings.json have the source box's cb path baked in (often the
-  # pre-migration path). Re-run cb init against the cloned box from the
-  # WORKTREE's cb so its hooks point at the worktree's cb.
-  # Idempotent (cb init is "initialize or update").
+  # .claude/settings.json have the source box's bbx path baked in (often the
+  # pre-migration path). Re-run bbx init against the cloned box from the
+  # WORKTREE's bbx so its hooks point at the worktree's bbx.
+  # Idempotent (bbx init is "initialize or update").
   if [ -d "$BOX_DEST" ]; then
-    echo "[worktree-create] refreshing box hooks (worktree's cb -> $BOX_DEST)..." >&2
-    # CB_HOOK_BIN: without it, resolveCbBin() detects it's running from a linked
-    # worktree and rebases the hook's embedded cb path back onto the MAIN
-    # checkout, defeating this refresh (a stale main cb then rejects cards using
+    echo "[worktree-create] refreshing box hooks (worktree's bbx -> $BOX_DEST)..." >&2
+    # BBX_HOOK_BIN: without it, resolveBbxBin() detects it's running from a linked
+    # worktree and rebases the hook's embedded bbx path back onto the MAIN
+    # checkout, defeating this refresh (a stale main bbx then rejects cards using
     # in-flight schema changes; see
-    # issues/closed/bugs/2026-07-10-box-hook-stale-cross-checkout-cb.md).
-    (exec 198>&-; CB_HOOK_BIN="$worktree_path/callback-box/bin/cb" \
-      "$worktree_path/callback-box/bin/cb" init "$BOX_DEST" >/dev/null)
+    # issues/closed/bugs/2026-07-10-box-hook-stale-cross-checkout-bbx.md).
+    (exec 198>&-; BBX_HOOK_BIN="$worktree_path/beebox/bin/bbx" \
+      "$worktree_path/beebox/bin/bbx" init "$BOX_DEST" >/dev/null)
   fi
 
   if ! printf 'ready\t%s\n' "$worktree_path" > "$state_file"; then

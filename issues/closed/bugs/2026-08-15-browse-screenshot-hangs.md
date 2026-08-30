@@ -1,7 +1,7 @@
 ---
 title: "bin/browse screenshot and snapshot hang; second --session blocked by profile SingletonLock"
 workstream: browse-capture-hang
-area: callback-box
+area: beebox
 labels: [browse, dev-tooling]
 filed-by: agent
 discovered-by: agent
@@ -57,4 +57,4 @@ login or app state set up in one session is not visible in another.
 Verified against `about:blank`, a real app page, and an own-origin page with
 the marker removed, headed and headless, after a daemon restart, and with two
 named sessions live at once. Covered by
-`callback-box/test/dev/browse-session-profile.doctest.md`.
+`beebox/test/dev/browse-session-profile.doctest.md`.

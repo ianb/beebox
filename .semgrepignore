@@ -7,5 +7,5 @@ build/
 coverage/
 *.min.js
 pnpm-lock.yaml
-callback-box/deploy/
+beebox/deploy/
 research/

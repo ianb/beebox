@@ -2,13 +2,13 @@
 title: "Vector-bearing search index restores in seconds per search — wait for upstream, cache in-process, or restructure?"
 workstream: orama-semantic-search
 needs: [decision]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-orama-semantic-search — researching Orama persistence after semantic search shipped
 ---
 
 With embeddings, a real box's search index restores in **~2-3 seconds on
-every `cb search`** (a large real box: 2,458 cards, ~1k vectors, 34.5MB JSON). Before
+every `bbx search`** (a large real box: 2,458 cards, ~1k vectors, 34.5MB JSON). Before
 vectors this was sub-second. The cost is structural in `@orama/orama`:
 vectors persist in BOTH the documents store and the vector index
 (~21KB/embedded doc in JSON), and the whole index restores as one blob per
@@ -55,14 +55,14 @@ the synthetic numbers were misleading; trust the real ones):
 
 ## The options, none chosen
 
-1. **Live with it** (status quo): ~2-3s per `cb search` on a large embedded
+1. **Live with it** (status quo): ~2-3s per `bbx search` on a large embedded
    box; text-only boxes unaffected. Agents tolerate it; humans may not.
 2. **Upstream**: file (or contribute) against oramasearch/orama — expose
    encode options in plugin-data-persistence, stop double-persisting
    vectors, or support partial/lazy restore. Aligns with the boxholder's
    "Orama's job" stance; timeline uncertain, JS-Orama release cadence has
    slowed since OramaCore.
-3. **In-process index cache** for resident processes (`cb serve`/hub):
+3. **In-process index cache** for resident processes (`bbx serve`/hub):
    cache the restored db keyed by index-file mtime, so web/chat-driven
    searches pay restore once, not per query. Doesn't help one-shot CLI
    invocations (reactor/agent searches), which stay at seconds.

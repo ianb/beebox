@@ -116,7 +116,7 @@ In order of value:
 - **3-strike rule: soft positive.** Hasn't been a noticed problem in practice, but plausibly useful as a circuit breaker. Worth knowing it's there; not urgent to enforce.
 - **Regression test discipline: yes — and addresses an observed pattern.** AI tends to fix-then-write-test, which "doesn't go terribly but" the test-first-fail-then-pass ordering would be a real improvement. The discipline targets a real failure mode that's already shown up in callback work.
 - **DEBUG REPORT format: yes.** Like it — it's a form-as-prompt instance.
-- **Pattern Analysis table: yes, and worth extending.** The generic patterns (race / null / state corruption / integration / config drift / stale cache) are useful as-is. callback-box almost certainly has its own recurring bug patterns that belong in an equivalent table — could become a real callback-specific artifact rather than just adopting gstack's generic list.
+- **Pattern Analysis table: yes, and worth extending.** The generic patterns (race / null / state corruption / integration / config drift / stale cache) are useful as-is. beebox almost certainly has its own recurring bug patterns that belong in an equivalent table — could become a real callback-specific artifact rather than just adopting gstack's generic list.
 - **Red flags: yes.** Keep — *"no 'for now'"*, *"proposing a fix before tracing data flow = guessing"*, *"wrong layer not wrong code"*.
 - **Sanitize before WebSearch: uncertain.** Not sure it's a real problem in callback work. Don't pre-emptively add the rule (per the no-premature-tuning principle); revisit if a real privacy leak via error-message search ever surfaces.
 - **Blast radius alert (>5 files): yes — sounds important.** Bug fixes shouldn't quietly grow into refactors. Worth keeping the gate.
@@ -140,6 +140,6 @@ A callback-specific debugging guide (in CLAUDE.md or a `docs/debugging.md`) with
 1. The Iron Law, quoted with its reason
 2. The fail-without-fix-then-pass regression test rule
 3. The DEBUG REPORT format as a template
-4. A Pattern Analysis table that starts with the generic patterns and adds callback-box-specific recurring patterns as they're identified
+4. A Pattern Analysis table that starts with the generic patterns and adds beebox-specific recurring patterns as they're identified
 
 The Pattern Analysis table is the part that gains the most from being callback-specific — it'd grow over time as new recurring bug shapes get categorized.

@@ -77,9 +77,9 @@ export function expandedState(snapshot: string, domId: string): boolean | null {
  * landmark row" is the assertion that the menu's data actually resolved.
  */
 const FIXED_MENU_IDS = [
-  "cb-switch-menu-box",
-  "cb-switch-menu-landmarks",
-  "cb-switch-menu-recent-files",
+  "bbx-switch-menu-box",
+  "bbx-switch-menu-landmarks",
+  "bbx-switch-menu-recent-files",
 ];
 
 /** The exact copy the menu shows when its landmark query failed (Retry row). */
@@ -166,7 +166,7 @@ export function readPlaceMenu(snapshot: string): PlaceMenuReading {
     }
   }
   return {
-    expanded: expandedState(snapshot, "cb-nav-place") === true,
+    expanded: expandedState(snapshot, "bbx-nav-place") === true,
     fixedRowsPresent: FIXED_MENU_IDS.every((id) => hasDomId(snapshot, id)),
     landmarks,
     // The apostrophe is a typographic one in the JSX and renders as such;
@@ -201,7 +201,7 @@ export function placeMenuFailure(reading: PlaceMenuReading, snapshot: string): S
  * to assert a switch against.
  */
 export function currentPlaceLabel(snapshot: string): string | null {
-  const line = snapshot.split("\n").find((candidate) => candidate.includes("id=cb-nav-place"));
+  const line = snapshot.split("\n").find((candidate) => candidate.includes("id=bbx-nav-place"));
   if (line === undefined) return null;
   return /"Place:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
 }

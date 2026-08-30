@@ -10,7 +10,7 @@
  * Every write is temp-plus-rename, because the file that says when a schedule
  * last ran is exactly the file a crash mid-write would make unreadable.
  *
- * Design: callback-box/docs/plans/scheduled-workstreams.md (Track B).
+ * Design: beebox/docs/plans/scheduled-workstreams.md (Track B).
  */
 
 import * as fs from "node:fs/promises";
@@ -19,7 +19,7 @@ import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
-import { errnoCode } from "../../callback-box/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/lib/error-guards.js";
 
 import {
   EMPTY_SCHEDULE_STATE,

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CLI for the callback-box dev router and worktrees.
+# CLI for the beebox dev router and worktrees.
 #
 # Commands:
 #   create <name>      Create (or re-attach to) a worktree, ready to work in:
@@ -47,7 +47,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-STATE_DIR="${CALLBACK_STATE_DIR:-$HOME/.cache/callback-box}"
+STATE_DIR="${BBX_STATE_DIR:-$HOME/.cache/beebox}"
 ROUTER_PID_FILE="$STATE_DIR/router.pid"
 PID_DIR="$STATE_DIR/pids"
 ROUTER_PORT="${ROUTER_PORT:-3210}"

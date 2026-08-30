@@ -88,9 +88,9 @@ A worktree whose frontend port is taken at spawn still fails to start.
 ## Diagnosis note worth keeping
 
 The cause was 30 lines above the crash in
-`~/.cache/callback-box/logs/main.log`, past a wall of unrelated Vite
+`~/.cache/beebox/logs/main.log`, past a wall of unrelated Vite
 deprecation warnings and box-resolution errors for boxes that don't exist
 (`ai-class`, `scenarios`). Both of those are noise that made a clean
 `EADDRINUSE` harder to find than it should have been, and the box-resolution
 errors are their own small cleanup: the router is configured with box paths
-that have no `.cb-box` marker.
+that have no `.bbx-box` marker.

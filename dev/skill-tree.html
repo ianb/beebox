@@ -25,7 +25,7 @@
 <div class="wrap">
 <nav class="topnav"><a href="agent-knowledge.html">Narrative</a> · <a href="skills.html">Skills profiled</a> · <b>Skill tree</b> · <a href="viz-skill-rhythm.html">Rhythm</a> · <a href="viz-skill-pairs.html">Pairs</a> · <a href="viz-claude-constellation.html">CLAUDE.md tree</a></nav>
 <h1>🌳 The skill tree</h1>
-<p class="lede">The skills as a talent tree. They build on each other along the arc of a task — fork a session, plan it, have a rival model attack the plan, build, verify, ship. <b>Level = times invoked.</b> The dim, padlocked nodes are <b>born but never unlocked</b> — the craft branch you haven't leveled into yet. The glowing gold path is the ritual that actually carries the work: <b>cb-plan → codex</b>. The <b>⚙ line</b> under each node is the skill's <b>equipment</b> — the real CLI tools it wields (e.g. <code>launch-worktree-session</code> drives a launcher script, <code>claude --worktree</code>, and <code>bin/workstreams</code>; <code>browse</code> is all <code>bin/browse</code>).</p>
+<p class="lede">The skills as a talent tree. They build on each other along the arc of a task — fork a session, plan it, have a rival model attack the plan, build, verify, ship. <b>Level = times invoked.</b> The dim, padlocked nodes are <b>born but never unlocked</b> — the craft branch you haven't leveled into yet. The glowing gold path is the ritual that actually carries the work: <b>bbx-plan → codex</b>. The <b>⚙ line</b> under each node is the skill's <b>equipment</b> — the real CLI tools it wields (e.g. <code>launch-worktree-session</code> drives a launcher script, <code>claude --worktree</code>, and <code>bin/workstreams</code>; <code>browse</code> is all <code>bin/browse</code>).</p>
 <div class="legend">
   <span><span class="sw" style="background:#e0a82e"></span><b>Plan &amp; rigor</b></span>
   <span><span class="sw" style="background:#3fb6a8"></span><b>Build / craft</b></span>
@@ -41,43 +41,43 @@ const BR = { plan:"#e0a82e", build:"#3fb6a8", flow:"#6699e8", box:"#a07be0", met
 // x,y,icon,branch,uses(0=locked),tagline
 const N = {
   "launch-worktree-session": {x:480,y:80, icon:"🌱", br:"flow", uses:7, tag:"Fork a focused session"},
-  "cb-plan":      {x:480,y:215, icon:"📐", br:"plan", uses:18, tag:"Design the whole change first"},
+  "bbx-plan":      {x:480,y:215, icon:"📐", br:"plan", uses:18, tag:"Design the whole change first"},
   "codex":        {x:250,y:330, icon:"⚔️", br:"plan", uses:10, tag:"Summon a rival model to attack it"},
-  "cb-codehealth":{x:700,y:315, icon:"🩺", br:"build", uses:0, tag:"Heal cruft into deep modules"},
-  "cb-frontend":  {x:560,y:430, icon:"🎨", br:"build", uses:0, tag:"UI with taste, not the AI look"},
-  "cb-debug":     {x:770,y:445, icon:"🐛", br:"build", uses:0, tag:"No fix without a red loop"},
+  "bbx-codehealth":{x:700,y:315, icon:"🩺", br:"build", uses:0, tag:"Heal cruft into deep modules"},
+  "bbx-frontend":  {x:560,y:430, icon:"🎨", br:"build", uses:0, tag:"UI with taste, not the AI look"},
+  "bbx-debug":     {x:770,y:445, icon:"🐛", br:"build", uses:0, tag:"No fix without a red loop"},
   "browse":       {x:360,y:470, icon:"🔭", br:"flow", uses:4, tag:"See it in a real browser"},
   "finish":       {x:480,y:610, icon:"🚢", br:"flow", uses:8, tag:"Land it in main — green or stop"},
-  "cb-context":   {x:140,y:205, icon:"📖", br:"box", uses:0, tag:"Teach the box agent what to know"},
+  "bbx-context":   {x:140,y:205, icon:"📖", br:"box", uses:0, tag:"Teach the box agent what to know"},
   "skill-creator":{x:150,y:600, icon:"🔧", br:"meta", uses:0, tag:"Forge new skills"},
 };
 // the CLI tools / surfaces each skill wields to do its work (its "equipment")
 const TOOLS = {
   "launch-worktree-session":["launch-worktree-session", "claude --worktree", "bin/workstreams", "WorktreeCreate hook"],
-  "cb-plan":["docs/plans/", "pnpm knowledge-audit"],
+  "bbx-plan":["docs/plans/", "pnpm knowledge-audit"],
   "codex":["codex CLI (OpenAI)", "codex exec -s read-only"],
-  "cb-codehealth":["pnpm lint:knip", "lint:circular", "lint:oxlint"],
-  "cb-frontend":["bin/browse", "FRONTEND.md", "React Compiler"],
-  "cb-debug":["cb scenario run", "bin/browse", "pnpm knowledge-audit", "curl"],
+  "bbx-codehealth":["pnpm lint:knip", "lint:circular", "lint:oxlint"],
+  "bbx-frontend":["bin/browse", "FRONTEND.md", "React Compiler"],
+  "bbx-debug":["bbx scenario run", "bin/browse", "pnpm knowledge-audit", "curl"],
   "browse":["bin/browse", "(wraps agent-browser)"],
   "finish":["pnpm test", "git merge", "feedback-review collect.ts"],
-  "cb-context":["pnpm knowledge-audit", "init-rules.ts"],
+  "bbx-context":["pnpm knowledge-audit", "init-rules.ts"],
   "skill-creator":["eval / benchmark scripts"],
 };
 
 // [from, to, hot?]
 const E = [
-  ["launch-worktree-session","cb-plan"],
-  ["cb-plan","codex", true],
-  ["cb-plan","cb-codehealth"],
-  ["cb-plan","cb-frontend"],
-  ["cb-codehealth","cb-debug"],
-  ["cb-frontend","cb-debug"],
-  ["cb-frontend","browse"],
+  ["launch-worktree-session","bbx-plan"],
+  ["bbx-plan","codex", true],
+  ["bbx-plan","bbx-codehealth"],
+  ["bbx-plan","bbx-frontend"],
+  ["bbx-codehealth","bbx-debug"],
+  ["bbx-frontend","bbx-debug"],
+  ["bbx-frontend","browse"],
   ["codex","finish"],
   ["browse","finish"],
-  ["cb-frontend","finish"],
-  ["cb-debug","finish"],
+  ["bbx-frontend","finish"],
+  ["bbx-debug","finish"],
 ];
 const NS="http://www.w3.org/2000/svg", svg=document.getElementById("tree");
 const mk=(t,a,txt)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;};

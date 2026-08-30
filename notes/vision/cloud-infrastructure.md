@@ -1,6 +1,6 @@
-# Callback Box — Cloud Infrastructure Plan
+# Bee Box — Cloud Infrastructure Plan
 
-## What is Callback Box?
+## What is Bee Box?
 
 A personal assistant/automation platform built on Claude Code. A composable, self-extending workflow system where:
 
@@ -20,7 +20,7 @@ A personal assistant/automation platform built on Claude Code. A composable, sel
 
 ## What the Droplet Runs
 
-- `cb wakeup` on cron (scheduled tasks, connector sync, triage)
+- `bbx wakeup` on cron (scheduled tasks, connector sync, triage)
 - Web server (Telegram webhook endpoint, mobile chat UI)
 - Persistent chat sessions (ChatSessionPool — one active Claude process at a time per box)
 - Git pull before each scheduled run, push after

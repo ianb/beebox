@@ -88,7 +88,7 @@ function FilterMenu({ filters, categories, needs, onFilters }: { filters: IssueF
       if (event.key !== "Escape") return;
       event.preventDefault();
       setOpen(false);
-      document.querySelector<HTMLElement>("#cb-issues-filter")?.focus();
+      document.querySelector<HTMLElement>("#bbx-issues-filter")?.focus();
     }
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
@@ -103,7 +103,7 @@ function FilterMenu({ filters, categories, needs, onFilters }: { filters: IssueF
   function setSort(value: string): void {
     if (value === "date" || value === "priority") onFilters({ ...filters, sort: value });
   }
-  return <details className="filter-menu" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}><summary id="cb-issues-filter">Filter</summary><button type="button" id="cb-issues-filter-close" className="filter-backdrop" aria-hidden="true" tabIndex={-1} hidden={!open} onClick={() => setOpen(false)} /><div className="filter-popover" role="dialog" aria-label="Issue filters">
+  return <details className="filter-menu" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}><summary id="bbx-issues-filter">Filter</summary><button type="button" id="bbx-issues-filter-close" className="filter-backdrop" aria-hidden="true" tabIndex={-1} hidden={!open} onClick={() => setOpen(false)} /><div className="filter-popover" role="dialog" aria-label="Issue filters">
     <label>Status <select value={filters.status ?? "open"} onChange={(event) => setStatus(event.target.value)}><option value="open">Open</option><option value="all">All</option><option value="closed">Closed</option></select></label>
     <label>Sort <select value={filters.sort ?? "date"} onChange={(event) => setSort(event.target.value)}><option value="date">Newest filed</option><option value="priority">Priority</option></select></label>
     <label>Category <select value={filters.category ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, category: event.target.value } : without("category"))}><option value="">Every category</option>{categories.map((category) => <option value={category} key={category}>{category}</option>)}</select></label>

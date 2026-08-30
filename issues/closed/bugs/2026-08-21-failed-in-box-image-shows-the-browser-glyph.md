@@ -1,7 +1,7 @@
 ---
 title: "An in-box image that 404s shows the browser's broken-image glyph, not the app's placeholder"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the "a broken image says so" user story on /browse
@@ -20,12 +20,12 @@ in the test1 clone (a path `/api/files` answers with 404).
 **The cause was not located.** The placeholder exists and the path to it looks
 intact: `Image`'s `onError` records the failed URL and re-renders to
 `ErrorPlaceholder`
-(`callback-box/src/frontend/src/components/ui/Image.tsx:99-120`, `:293-300`,
+(`beebox/src/frontend/src/components/ui/Image.tsx:99-120`, `:293-300`,
 `:325`), and the raw-image renderer for a plain `.jpg` goes through that same
-component (`callback-box/src/frontend/src/renderers/image.tsx:184-197`). Whatever
+component (`beebox/src/frontend/src/renderers/image.tsx:184-197`). Whatever
 rendered the observed `<img>` either is not that component or did not reach the
 error branch. One bare `<img>` with no error handling does exist, in the file-list
-thumbnail (`callback-box/src/frontend/src/components/file-entries/ImageCardListEntry.tsx:27`),
+thumbnail (`beebox/src/frontend/src/components/file-entries/ImageCardListEntry.tsx:27`),
 but the observation was of the detail pane.
 
 Reproducing it against a live server and identifying which element renders the
@@ -33,24 +33,24 @@ dead `src` is the first step.
 
 ## Updating the user-story catalog
 
-This issue is why [`browse/images-still-show-when-the-source-blocks`](../../../callback-box/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
-flagged ❌ in [the user-story catalog](../../../callback-box/user-stories/catalog/2026-08-21.md) — a catalogue of what callback-box can
+This issue is why [`browse/images-still-show-when-the-source-blocks`](../../../beebox/user-stories/catalog/2026-08-21.md#flagged-worth-a-human-glance) is currently
+flagged ❌ in [the user-story catalog](../../../beebox/user-stories/catalog/2026-08-21.md) — a catalogue of what beebox can
 actually do, where every claim is checked against the source.
 
 **When you fix this, re-check that story so the catalog stops being wrong.** It is a
 short agent run over just the affected stories, not the full regeneration:
 
 ```
-Workflow({scriptPath: "callback-box/user-stories/pipeline/recheck.workflow.mjs",
+Workflow({scriptPath: "beebox/user-stories/pipeline/recheck.workflow.mjs",
           args: {root: "<repo root>", date: "2026-08-21",
                  ids: ["browse/images-still-show-when-the-source-blocks"]}})
 
-pnpm exec tsx callback-box/user-stories/pipeline/apply-recheck.ts 2026-08-21
-pnpm exec tsx callback-box/user-stories/pipeline/render.ts \
-  > callback-box/user-stories/catalog/2026-08-21.md
+pnpm exec tsx beebox/user-stories/pipeline/apply-recheck.ts 2026-08-21
+pnpm exec tsx beebox/user-stories/pipeline/render.ts \
+  > beebox/user-stories/catalog/2026-08-21.md
 ```
 
 The recheck is adversarial by design: it will not mark the story accurate just because
 this issue was closed — it re-reads the code. If it still refutes, that is worth knowing
 before you call the fix done. Details in
-[the pipeline README](../../../callback-box/user-stories/README.md).
+[the pipeline README](../../../beebox/user-stories/README.md).

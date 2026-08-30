@@ -64,7 +64,7 @@
 <header class="hero">
   <h1>The shape of this repo's agent&nbsp;knowledge</h1>
   <p class="lede">Skills, docs, and the always-on laws — what exists, how it got here, and how it's actually been used. Read from the repo's git history and ~114 Claude&nbsp;Code session logs.</p>
-  <p class="meta">callback-box · generated from a session mining pass · numbers are real, baked in at authoring time</p>
+  <p class="meta">beebox · generated from a session mining pass · numbers are real, baked in at authoring time</p>
 </header>
 
 <section>
@@ -76,7 +76,7 @@
 
 <section>
   <h2><span class="num">2</span>Who drives each skill</h2>
-  <p class="sub">Three different signals, and they disagree by an order of magnitude. <code>cb-plan</code> is never typed as a slash command — but it's asked for in prose 81×, then the model fires it. <code>finish</code> is the opposite: a typed reflex, 104 times across 70 sessions.</p>
+  <p class="sub">Three different signals, and they disagree by an order of magnitude. <code>bbx-plan</code> is never typed as a slash command — but it's asked for in prose 81×, then the model fires it. <code>finish</code> is the opposite: a typed reflex, 104 times across 70 sessions.</p>
   <div class="key">
     <span class="k-model">model-invoked (Skill tool)</span>
     <span class="k-slash">human /slash</span>
@@ -94,9 +94,9 @@
 
 <section>
   <h2><span class="num">4</span>The laws: an always-on file, gardened for five months</h2>
-  <p class="sub"><code>callback-box/CLAUDE.md</code> is the oldest file here (born 2026-01-30) and the most-tended — 51 commits. You can't invoke it, so its story is told in edits, not usage. Left alone, a CLAUDE.md bloats; this one was caught at 218 lines, halved in a single day, and held at a healthy weight ever since.</p>
+  <p class="sub"><code>beebox/CLAUDE.md</code> is the oldest file here (born 2026-01-30) and the most-tended — 51 commits. You can't invoke it, so its story is told in edits, not usage. Left alone, a CLAUDE.md bloats; this one was caught at 218 lines, halved in a single day, and held at a healthy weight ever since.</p>
   <figure>
-    <svg id="traj" viewBox="0 0 880 280" width="100%" role="img" aria-label="Line count of callback-box/CLAUDE.md over its 51 commits"></svg>
+    <svg id="traj" viewBox="0 0 880 280" width="100%" role="img" aria-label="Line count of beebox/CLAUDE.md over its 51 commits"></svg>
     <figcaption>Each point is one commit (oldest → newest). The cliff is March 3 — “Condense CLAUDE.md” (−100) the same day the first nested CLAUDE.md files were born: the knowledge didn't vanish, it budded down into the code tree. After that it self-corrects within a tight band — the dips are “review pass: compact” gardening commits.</figcaption>
   </figure>
   <blockquote>The compression and the constellation are the same event: distribute knowledge down to where it's used, and prune the center on a schedule.</blockquote>
@@ -120,8 +120,8 @@
 
 <section>
   <h2><span class="num">7</span>A skill is a pain felt three times, then written down</h2>
-  <p>The origin of each skill is recoverable from the chat that produced its commit. <code>cb-debug</code> exists because of one recurring frustration, captured the moment it was added:</p>
-  <blockquote>“agents under-reach for web search on library/platform quirks — we hit three this session (canvas.toBlob lossy-only, macOS timers counting sleep, ESM/CJS imports) … add it to cb-debug before committing.”</blockquote>
+  <p>The origin of each skill is recoverable from the chat that produced its commit. <code>bbx-debug</code> exists because of one recurring frustration, captured the moment it was added:</p>
+  <blockquote>“agents under-reach for web search on library/platform quirks — we hit three this session (canvas.toBlob lossy-only, macOS timers counting sleep, ESM/CJS imports) … add it to bbx-debug before committing.”</blockquote>
 </section>
 
 <p class="foot">Data mined from <code>git</code> history and <code>~/.claude/projects/**/*.jsonl</code> session logs. This page is a static first cut with numbers baked in; the next step is to regenerate it from a live mining pass so it stays current.</p>
@@ -132,31 +132,31 @@
 // ---- data (mined this session) ----
 const PIPELINE = [
   {step:"spin off", skill:"launch-worktree-session", stat:"7× · 69 prose", c:"#6699e8"},
-  {step:"plan", skill:"cb-plan", stat:"18× · 81 prose", c:"#e0a82e"},
+  {step:"plan", skill:"bbx-plan", stat:"18× · 81 prose", c:"#e0a82e"},
   {step:"review", skill:"codex", stat:"10× · 3 /slash", c:"#e0a82e"},
-  {step:"build", skills:["cb-debug","cb-frontend","cb-codehealth","cb-context"], stat:"new — 0 uses yet", cold:true, c:"#3fb6a8"},
+  {step:"build", skills:["bbx-debug","bbx-frontend","bbx-codehealth","bbx-context"], stat:"new — 0 uses yet", cold:true, c:"#3fb6a8"},
   {step:"verify", skill:"browse", stat:"4×", c:"#6699e8"},
   {step:"ship", skill:"finish", stat:"104 /slash · 70 sessions", c:"#6699e8"},
 ];
 // model, slash, prose (prose null = too noisy to trust)
 const USAGE = [
-  {name:"cb-plan", model:18, slash:0, prose:81},
+  {name:"bbx-plan", model:18, slash:0, prose:81},
   {name:"finish", model:8, slash:104, prose:null},
   {name:"codex", model:10, slash:3, prose:null},
   {name:"launch-worktree", model:7, slash:0, prose:69},
   {name:"browse", model:4, slash:0, prose:null},
-  {name:"cb-codehealth", model:0, slash:0, prose:10},
-  {name:"cb-debug", model:0, slash:0, prose:7},
-  {name:"cb-frontend", model:0, slash:0, prose:4},
-  {name:"cb-context", model:0, slash:0, prose:4},
+  {name:"bbx-codehealth", model:0, slash:0, prose:10},
+  {name:"bbx-debug", model:0, slash:0, prose:7},
+  {name:"bbx-frontend", model:0, slash:0, prose:4},
+  {name:"bbx-context", model:0, slash:0, prose:4},
   {name:"skill-creator", model:0, slash:0, prose:7},
 ];
 const ERAS = [
   {cls:"e1", when:"late May", theme:"Orchestration", members:"finish · launch-worktree-session · browse", note:"make worktrees safe & routine"},
-  {cls:"e2", when:"early June", theme:"Rigor", members:"cb-plan · codex", note:"plan deeply, review across models"},
-  {cls:"e3", when:"mid June", theme:"Craft", members:"cb-debug · cb-frontend · cb-codehealth · cb-context · skill-creator", note:"encode build-phase judgment"},
+  {cls:"e2", when:"early June", theme:"Rigor", members:"bbx-plan · codex", note:"plan deeply, review across models"},
+  {cls:"e3", when:"mid June", theme:"Craft", members:"bbx-debug · bbx-frontend · bbx-codehealth · bbx-context · skill-creator", note:"encode build-phase judgment"},
 ];
-// callback-box/CLAUDE.md line count per commit, oldest→newest
+// beebox/CLAUDE.md line count per commit, oldest→newest
 const TRAJ = [217,219,220,222,222,209,209,218,118,122,141,145,114,116,118,119,121,127,130,131,132,133,134,135,121,122,121,122,123,136,141,141,141,141,141,141,141,146,146,146,146,146,146,146,146,146,144,144,145,144];
 const TRAJ_NOTES = [
   {i:8, label:"Mar 3 — “Condense” (−100)"},
@@ -164,11 +164,11 @@ const TRAJ_NOTES = [
   {i:24, label:"May 5 — “compact” gardening"},
 ];
 const BIRTHS = [
-  {date:"2026-01-30", path:"callback-box/CLAUDE.md", tier:"project"},
-  {date:"2026-02-01", path:"callback-box/THINKING_CLAUDE.md", tier:"dead"},
-  {date:"2026-02-07", path:"callback-clerk/CLAUDE.md", tier:"project"},
+  {date:"2026-01-30", path:"beebox/CLAUDE.md", tier:"project"},
+  {date:"2026-02-01", path:"beebox/THINKING_CLAUDE.md", tier:"dead"},
+  {date:"2026-02-07", path:"beebox-clerk/CLAUDE.md", tier:"project"},
   {date:"2026-03-03", path:"src/connectors · src/services · src/core/reactor", tier:"nested"},
-  {date:"2026-03-04", path:"callback-box/deploy", tier:"nested"},
+  {date:"2026-03-04", path:"beebox/deploy", tier:"nested"},
   {date:"2026-03-11", path:"docs/architecture", tier:"nested"},
   {date:"2026-03-15", path:"src/dev", tier:"nested"},
   {date:"2026-04-16", path:"personal-vibe-check/CLAUDE.md", tier:"project"},
@@ -176,13 +176,13 @@ const BIRTHS = [
   {date:"2026-06-21", path:"src/.../components/chat", tier:"nested"},
 ];
 const DOCS = [
-  {name:"callback-box/docs/ideas.md", reads:58},
-  {name:"callback-box/docs/cards-as-markdown.md", reads:33},
-  {name:"callback-box/docs/box-commentary-surface.md", reads:28},
-  {name:"callback-box/CLAUDE.md (read deliberately)", reads:15},
-  {name:"callback-box/docs/testing.md", reads:12},
-  {name:"callback-box/docs/stack-decisions.md", reads:10},
-  {name:"callback-box/docs/narration-mode-design.md", reads:10},
+  {name:"beebox/docs/ideas.md", reads:58},
+  {name:"beebox/docs/cards-as-markdown.md", reads:33},
+  {name:"beebox/docs/box-commentary-surface.md", reads:28},
+  {name:"beebox/CLAUDE.md (read deliberately)", reads:15},
+  {name:"beebox/docs/testing.md", reads:12},
+  {name:"beebox/docs/stack-decisions.md", reads:10},
+  {name:"beebox/docs/narration-mode-design.md", reads:10},
 ];
 
 // ---- render ----

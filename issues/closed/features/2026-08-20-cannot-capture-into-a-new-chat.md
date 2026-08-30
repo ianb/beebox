@@ -1,7 +1,7 @@
 ---
 title: "You can't capture into a new chat — \"send a message first\" blocks the most natural way to start one"
 workstream: new-chat-first-emission
-area: callback-box
+area: beebox
 needs: [design]
 labels: [capture, chat]
 resolution: implemented
@@ -12,7 +12,7 @@ discovered-in: main session — boxholder noticed capture failing on first messa
 
 > **Closed 2026-08-20 — implemented.** A new chat now coins its own session id
 > in the browser and the box reserves it before the first message
-> (`callback-box/docs/plans/coined-chat-ids.md`), so capture and bulk upload
+> (`beebox/docs/plans/coined-chat-ids.md`), so capture and bulk upload
 > address an ordinary chat and the gate never fires. The gate itself was not
 > deleted: it reads `sessionId === null`, which is still the true answer on a
 > Codex box, whose harness names its own threads. The delivery-side fix is the

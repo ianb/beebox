@@ -1,22 +1,22 @@
 ---
 title: "Mobile-authenticated chat sends attribute to no user"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
-discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
 resolution: implemented
 ---
 
 **Resolved** in worktree `open-source-readiness`: `POST /api/chat/send` now falls
 back to `resolveMobileSender` (`webapp/routes/chat-helpers.ts`) when there is no
-`cb_session` cookie — resolving the request's mobile identity to the paired
+`bbx_session` cookie — resolving the request's mobile identity to the paired
 device's `createdBy` email (the strict single-identity option: attribute to the
 user who paired the device; a device paired in open mode carries no `createdBy`
 and stays unattributed, matching the cookie path). Test:
 `test/webapp/routes/chat-mobile-sender.doctest.md`.
 
 Requests authenticated via the mobile device token (bearer or `?mobileToken=`) get `authed: true` in
-tRPC's `createContext` (`callback-box/src/webapp/server-box-scope.ts`), but `user` stays `null` and
+tRPC's `createContext` (`beebox/src/webapp/server-box-scope.ts`), but `user` stays `null` and
 `isOwner` stays `false` — mobile identity is never unified with the owner's session identity. In
 practice this means every message sent from the native iOS composer, and every mobile web-session
 send, lands in the chat log attributed to nobody rather than to the box owner.

@@ -1,22 +1,22 @@
 ---
-title: "Every page's browser title is just \"Callback Box\", so tabs and history are unidentifiable"
+title: "Every page's browser title is just \"Bee Box\", so tabs and history are unidentifiable"
 workstream: tab-identity
 resolution: implemented
-area: callback-box
+area: beebox
 labels: [ui, navigation]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed every page shares one title
 ---
 
-`index.html:14` sets `<title>Callback Box</title>`, and almost nothing changes
+`index.html:14` sets `<title>Bee Box</title>`, and almost nothing changes
 it. So every tab, every history entry, and every bookmark says the same thing
 regardless of what is on screen.
 
 ## The mechanism exists and is used once
 
 `src/frontend/src/hooks/useDocumentTitle.ts` already does the job — it sets
-`"<title> — Callback Box"` on mount and restores the previous title on unmount.
+`"<title> — Bee Box"` on mount and restores the previous title on unmount.
 
 **Exactly one of 19 page components calls it**: `pages/browse/BrowsePage.tsx:244`.
 The other eighteen — dashboard, chat, chats, card view, landmarks, history,
@@ -30,7 +30,7 @@ say, and make it impossible for the next page to forget".
 
 - **One router serves many boxes and many checkouts.** URLs are
   `/<main|worktree>/<box>/…`, so a person can easily have several tabs open on
-  different boxes and different worktrees — all reading `Callback Box`. The box
+  different boxes and different worktrees — all reading `Bee Box`. The box
   slug is arguably more valuable in the title than the page name.
 - **Chat tabs are long-lived** and the thing you switch back to. A chat's own
   label already exists (`chat.label`, husk titles, the nightly chat review names
@@ -40,7 +40,7 @@ say, and make it impossible for the next page to forget".
 
 ## What to decide
 
-- **The shape.** `<page> — <box> — Callback Box` is complete but long, and
+- **The shape.** `<page> — <box> — Bee Box` is complete but long, and
   browsers truncate tabs hard. What matters most in the first ~20 characters is
   the real question. The box slug may deserve to come first.
 - **Dynamic titles.** A chat's title changes as the chat is renamed; a card page
@@ -78,7 +78,7 @@ briefly reinstate a stale title during navigation, and nested callers make
 Titles are `<page> — <box>`, page first (browsers truncate tabs to about
 twenty characters) and no app name — it appears only where there is no box.
 The boxholder chose that shape over box-first and over keeping a
-`Callback Box` suffix, and declined a worktree/checkout marker.
+`Bee Box` suffix, and declined a worktree/checkout marker.
 
 Structure rather than convention: `StaticDataRouteOption` is augmented with a
 required `title`, which makes TanStack Router's `staticData` mandatory on every

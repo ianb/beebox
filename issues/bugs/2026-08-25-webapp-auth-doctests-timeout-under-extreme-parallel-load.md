@@ -1,7 +1,7 @@
 ---
 title: "test/webapp/{login-redirect,password-*,push-subscribe}.doctest.md and api-csp-report-bounds time out in the full suite under extreme concurrent worktree load"
 workstream: live-vs-stored
-area: callback-box/test
+area: beebox/test
 labels: [testing, flake, timeout, load]
 filed-by: agent
 discovered-by: agent

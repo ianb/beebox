@@ -7,7 +7,7 @@ rather than tiddlywiki.com's rendered pages or third-party summaries.
 
 ## Why
 
-Collection views in callback-box have no first-class definition
+Collection views in beebox have no first-class definition
 ([issue](../../issues/features/2026-08-19-collection-views-are-badly-defined.md)),
 and the design question — what selects a set, what renders it, what labels it,
 and how it degrades on mixed types — has a working twenty-year-old answer here:
@@ -55,7 +55,7 @@ our issue treats as load-bearing — that a collection view declares what it can
 display and a query feeding it something else is an authoring-time error — and
 does not try to. A collection there also has no address: it exists only as
 markup inside whatever tiddler contains it. Our card-anchored `?view=foo`
-invariant and `rendersCardTypes` + `cb view-lint` typing are both stronger, and
+invariant and `rendersCardTypes` + `bbx view-lint` typing are both stronger, and
 the review argues for extending them rather than trading them for
 expressiveness. The open question they leave — where a *conventional* collection
 lives in URL space when no card exists to hang it off — gets no help from here,

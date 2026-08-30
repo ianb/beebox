@@ -1,7 +1,7 @@
 ---
 title: "Sticky HQ transcription preference — turning HQ dictation on shouldn't be a per-chat ritual"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [voice, ui]
 filed-by: agent
 discovered-by: Ian

@@ -1,7 +1,7 @@
 ---
 title: "Implementation vocabulary leaks into first-contact UI and agent replies"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activities 1+2)
 labels: [soft-launch, field-test-findings, ui-sensibility]
@@ -96,4 +96,4 @@ Also collected, smaller:
   in a message about *their* login state, while they are logged in. "So the app
   and I disagree about whether I'm logged in, using the same word."
 
-Full notes: `callback-box/user-stories/work/journeys/B-inventory-2026-08-23*/notes.md`.
+Full notes: `beebox/user-stories/work/journeys/B-inventory-2026-08-23*/notes.md`.

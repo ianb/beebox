@@ -13,7 +13,7 @@
 #
 # Deliberately not a gate. A gate's only response to intended UI change is to go
 # red, which is how a soft-finding instrument becomes permanently red and then
-# ignored (callback-box/docs/tours.md).
+# ignored (beebox/docs/tours.md).
 description: "Weekly: walk every browser tour, edit the ones the app outgrew, file the rest"
 cadence: 7d
 # Five tours × two viewports, each summary read, each checkpoint screenshot
@@ -34,5 +34,5 @@ workstream:
   # The prompt says "never touch src/"; this makes the editing tools refuse it.
   # Bash stays open (the session needs git, bin/tour, bin/land), so it is a
   # guard against the ordinary path, not a sandbox.
-  disallowedTools: ["Edit(callback-box/src/**)", "Write(callback-box/src/**)"]
+  disallowedTools: ["Edit(beebox/src/**)", "Write(beebox/src/**)"]
   maxBudgetUsd: 4

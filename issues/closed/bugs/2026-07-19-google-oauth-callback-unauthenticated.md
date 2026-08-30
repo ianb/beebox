@@ -3,7 +3,7 @@ title: "Google connector OAuth callback saves centralized tokens without an auth
 workstream: local-password-auth
 filed-by: agent
 discovered-in: worktree-local-password-auth — Codex adversarial review of the always-on-auth branch (finding #2, pre-existing)
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
@@ -25,7 +25,7 @@ than folded into that branch.
 The Google connector's OAuth redirect callback (`src/webapp/routes/admin.ts`
 around lines 24 and 60) accepts a caller-controlled `state`, exchanges the
 authorization `code`, and writes the centralized Google refresh/access tokens
-(`CB_GOOGLE_TOKENS_FILE`, shared across all boxes) **without** verifying a
+(`BBX_GOOGLE_TOKENS_FILE`, shared across all boxes) **without** verifying a
 session, the owner identity, or a server-generated nonce bound to the initiating
 request. An attacker who can reach the callback URL and drive an OAuth code
 through it could replace the box's stored Google credentials (a credential-swap

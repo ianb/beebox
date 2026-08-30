@@ -21,16 +21,16 @@ real disambiguation work — their investigate / testing / pr-review skills each
 explicitly carve out what they are *not*, to stop overlapping triggers.
 
 Ours run 223–574 characters against their ~200-char target, and three of them do
-precisely the anti-pattern. `cb-guide-api`:
+precisely the anti-pattern. `bbx-guide-api`:
 
-> Explains how HTTP endpoints are added in callback-box and the
-> tRPC-vs-raw-Fastify decision. […] Instructional (a cb-guide-\* skill) — full
+> Explains how HTTP endpoints are added in beebox and the
+> tRPC-vs-raw-Fastify decision. […] Instructional (a bbx-guide-\* skill) — full
 > checklist in docs/adding-api-endpoints.md.
 
 That description tells the model the skill explains a decision, and then names
 the file with the real checklist. A model reading it has every reason to skip
 the skill and go straight to the doc — or to answer from the description alone.
-The other two `cb-guide-*` descriptions have the same shape. Filed as A1.
+The other two `bbx-guide-*` descriptions have the same shape. Filed as A1.
 
 The length argument is separate and weaker for us: their ~200-char budget comes
 from having ~40 skills competing for a shared skill-listing context budget, where

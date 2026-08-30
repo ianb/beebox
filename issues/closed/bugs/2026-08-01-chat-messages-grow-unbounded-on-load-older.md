@@ -1,7 +1,7 @@
 ---
 title: "Frontend chat messages array grows without ceiling as the user pages back"
 workstream: chat-history-scale
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-chat-history-oom-mobile-lock — post-fix sweep
 priority: normal
@@ -10,7 +10,7 @@ resolution: implemented
 
 **Closed 2026-08-25** — resolved by commits f7d24973 / b093062b (workstream chat-history-scale). See the "Fixed (2026-08-25)" section below for what shipped.
 
-`callback-box/src/frontend/src/machines/chatMachine.ts` `PREPEND_MESSAGES`
+`beebox/src/frontend/src/machines/chatMachine.ts` `PREPEND_MESSAGES`
 does `[...event.messages, ...context.messages]` — each load-older page is
 server-bounded, but repeated paging accumulates every fetched entry in the
 tab, including full base64 `imageData` blocks. On a long session a user who
@@ -55,16 +55,16 @@ Design questions:
 
 The unbounded growth is capped. `MAX_RETAINED_MESSAGES` (600, a judgment call
 — three initial windows — not a measurement) lives in
-`callback-box/src/frontend/src/machines/chat-types.ts`. `PREPEND_MESSAGES` now
+`beebox/src/frontend/src/machines/chat-types.ts`. `PREPEND_MESSAGES` now
 runs through `prependOlderMessages`
-(`callback-box/src/frontend/src/machines/chat-actions.ts`): a page that would
+(`beebox/src/frontend/src/machines/chat-actions.ts`): a page that would
 overflow the ceiling is truncated from its *older* end, so the retained window
 stays contiguous and the live tail is never evicted; at the ceiling a further
 page is dropped. The load-older affordance hides at the same threshold
 (`InteractiveChat-messages.tsx` `hasOlder`) and `handleLoadOlder`
 (`InteractiveChat-actions.ts`) refuses to fetch past it, so a user never spends
 a round trip on entries that cannot be retained. Covered by
-`callback-box/test/frontend/chat-machine-prepend-cap.doctest.md`.
+`beebox/test/frontend/chat-machine-prepend-cap.doctest.md`.
 
 Not done, deliberately: inline base64 is *not* stripped from prepended pages.
 Images arrive as `dataBase64` on a `SessionContentBlock`, and the transcript

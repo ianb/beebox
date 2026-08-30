@@ -9,13 +9,13 @@
  */
 
 import * as path from "node:path";
-import { isRecord } from "../callback-box/src/lib/is-record.js";
-import { diskHealthFromBytes } from "../callback-box/src/hub/disk-health.js";
+import { isRecord } from "../beebox/src/lib/is-record.js";
+import { diskHealthFromBytes } from "../beebox/src/hub/disk-health.js";
 import { schedulesStoreRoot, storeStateSchema } from "./lib/schedules.js";
 import { fail, pass, satisfiesRange, type CheckResult, type DoctorDeps } from "./doctor-lib.js";
 
 /** The one launchd label the schedules tick runs under (bin/lib/schedules-launchd.ts). */
-const SCHEDULES_LABEL = "com.callback-box.schedules";
+const SCHEDULES_LABEL = "com.beebox.schedules";
 
 export function checkNodeVersion(deps: Pick<DoctorDeps, "nodeVersion" | "engines">): CheckResult {
   const name = "Node version";
@@ -130,7 +130,7 @@ export async function checkClaudeAuth(deps: Pick<DoctorDeps, "run">): Promise<Ch
     });
   }
   const status = await deps.run("claude", ["auth", "status"]);
-  // Tolerant parse, mirroring callback-box/src/services/claude-cli.ts's
+  // Tolerant parse, mirroring beebox/src/services/claude-cli.ts's
   // authStatus(): stdout should be JSON, but fall back gracefully if not.
   let parsed: Record<string, unknown> | null = null;
   try {
@@ -176,11 +176,11 @@ export function checkSdkBinary(deps: Pick<DoctorDeps, "resolveSdkBinary">): Chec
 
 export function checkFrontendBuild(deps: Pick<DoctorDeps, "fileExists" | "repoRoot">): CheckResult {
   const name = "Frontend build";
-  const indexHtml = path.join(deps.repoRoot, "callback-box", "src", "frontend", "dist", "index.html");
+  const indexHtml = path.join(deps.repoRoot, "beebox", "src", "frontend", "dist", "index.html");
   if (deps.fileExists(indexHtml)) return pass(name, `${indexHtml} exists`);
   return fail(name, {
     detail: `${indexHtml} is missing`,
-    remedy: "run `pnpm --dir callback-box build:frontend`",
+    remedy: "run `pnpm --dir beebox build:frontend`",
   });
 }
 
@@ -207,12 +207,12 @@ export async function checkDeployCurrency(deps: Pick<DoctorDeps, "run" | "fileEx
   const common = await deps.run("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   if (!common.spawned || common.stdout.trim() === "") return pass(name, "not a git checkout — skipped");
   const mainRoot = path.dirname(common.stdout.trim());
-  const marker = path.join(mainRoot, "callback-box", "deploy", "server-ip");
+  const marker = path.join(mainRoot, "beebox", "deploy", "server-ip");
   // No server-ip means this machine doesn't deploy at all (a fresh clone, a
   // contributor's checkout). Nothing to be stale about.
   if (!deps.fileExists(marker)) return pass(name, "this checkout does not deploy — skipped");
 
-  const shaFile = path.join(mainRoot, "callback-box", "deploy", ".last-deployed-sha");
+  const shaFile = path.join(mainRoot, "beebox", "deploy", ".last-deployed-sha");
   if (!deps.fileExists(shaFile)) {
     return pass(name, "no completed deploy recorded yet (marker added 2026-08-10)");
   }
@@ -230,7 +230,7 @@ export async function checkDeployCurrency(deps: Pick<DoctorDeps, "run" | "fileEx
   return fail(name, {
     detail: `main is ${count === "" ? "ahead" : `${count} commit(s) ahead`} of the last completed deploy (${deployedSha.slice(0, 8)})`,
     remedy:
-      "re-run `callback-box/deploy/deploy.sh --ref $(git rev-parse main)` from the main checkout, then check deploy/.last-deploy.log",
+      "re-run `beebox/deploy/deploy.sh --ref $(git rev-parse main)` from the main checkout, then check deploy/.last-deploy.log",
   });
 }
 
@@ -239,7 +239,7 @@ export async function checkDeployCurrency(deps: Pick<DoctorDeps, "run" | "fileEx
  *
  * A full production disk truncated every large response with nothing saying so
  * (issues/closed/bugs/2026-08-28-disk-full-truncated-every-large-response.md).
- * The threshold comes from `callback-box/src/hub/disk-health.ts` so the doctor
+ * The threshold comes from `beebox/src/hub/disk-health.ts` so the doctor
  * and the hub's own health route cannot disagree about what "low" means.
  *
  * Skips machines with no deploy marker, same as `checkDeployCurrency`.
@@ -250,7 +250,7 @@ export async function checkProductionDisk(
   const name = "Production disk";
   const common = await deps.run("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   if (!common.spawned || common.stdout.trim() === "") return pass(name, "not a git checkout — skipped");
-  const marker = path.join(path.dirname(common.stdout.trim()), "callback-box", "deploy", "server-ip");
+  const marker = path.join(path.dirname(common.stdout.trim()), "beebox", "deploy", "server-ip");
   if (!deps.fileExists(marker)) return pass(name, "this checkout does not deploy — skipped");
 
   const serverIp = (await deps.run("cat", [marker])).stdout.trim();
@@ -326,7 +326,7 @@ export async function checkSchedulesTick(
     return fail(name, {
       detail: `last tick ${ageText} (over an hour; the tick runs every 15 min)`,
       remedy:
-        "check ~/Library/Logs/callback-box-schedules.log, then `bin/schedules install` from the main checkout",
+        "check ~/Library/Logs/beebox-schedules.log, then `bin/schedules install` from the main checkout",
     });
   }
 

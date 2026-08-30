@@ -1,7 +1,7 @@
 ---
 title: "Chat backend port hygiene: keep SDK types inside the port, own our transcripts"
 workstream: chat-session-identity
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research
 ---
@@ -34,7 +34,7 @@ stand on their own as hygiene, whether or not a second backend ever exists:
    not go into the box's git repository. A durable box-owned transcript would be
    a separate storage mechanism, and is not planned. The cluster this item
    anchored is handled instead by recording `engine` and `origin` on the husk
-   ([plan](../../callback-box/docs/implemented-plans/chat-session-identity.md)); `contains-evidence`
+   ([plan](../../beebox/docs/implemented-plans/chat-session-identity.md)); `contains-evidence`
    remains the durable record past retention. Revisit item 3 only if retention
    loss exceeds what the review account preserves, or a third engine arrives.
 

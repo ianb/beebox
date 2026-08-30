@@ -1,10 +1,10 @@
 ---
 title: "session output critique tool"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
-**Closed:** Implemented as `cb session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Session Critiques for usage.
+**Closed:** Implemented as `bbx session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Session Critiques for usage.
 
-Implemented as `cb session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Session Critiques for usage.
+Implemented as `bbx session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Session Critiques for usage.

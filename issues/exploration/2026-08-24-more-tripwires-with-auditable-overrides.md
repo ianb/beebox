@@ -21,7 +21,7 @@ Not scheduled. Candidates where the same shape has teeth:
 
 - **Card-shape change without a migration** — a `schemas/` edit with no
   migration staged → `Migration-Unneeded: <reason>` (additive field, new
-  schema). See the `cb-migration` skill.
+  schema). See the `bbx-migration` skill.
 - **Test removal** — a deleted `.test.ts`/`.doctest.md` or an added `.skip(`
   → `Test-Removed: <reason>`. Today invisible.
 - The clerk-contract staleness gate, if it ever false-positives.

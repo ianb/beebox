@@ -1,7 +1,7 @@
 ---
 title: "deferred lint rules"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
@@ -28,8 +28,8 @@ remaining work here.
   off because it fights the deliberate chat-composer autofocus. ~14 genuine
   interactive/label/anchor bugs fixed across the frontend.
 - **`@typescript-eslint/return-await`**, in `in-try-catch` mode (the rule's
-  default), with `callback-box/src/webapp/routes/**` carved out in
-  callback-box's own eslint config. This is a deliberate deviation from the
+  default), with `beebox/src/webapp/routes/**` carved out in
+  beebox's own eslint config. This is a deliberate deviation from the
   rule's usual "always" recommendation: 30 of 36 measured sites were Fastify
   `return reply.send(...)` inside a try-block whose catch re-sends — forcing
   `await` there routes a rejected send into the catch block and causes a
@@ -39,7 +39,7 @@ remaining work here.
 - **`@typescript-eslint/no-non-null-assertion`.** Burned down 2026-07-10:
   190 sites converted to real narrowing (optional chaining, explicit guards,
   `invariant()`/`assertNever` for genuinely-impossible states, or a typed
-  assertion helper) across callback-box (backend + frontend), callback-clerk,
+  assertion helper) across beebox (backend + frontend), beebox-clerk,
   and agent-doctest. Now `"error"` in the preset's type-aware block, zero
   outstanding findings.
 - **`@typescript-eslint/no-unnecessary-condition`.** Burned down 2026-07-10:

@@ -10,7 +10,7 @@ recall of box conventions (card-authoring tags, schema `instructions`,
 box docs). The `{% quote %}` audits are the precedent.
 
 **The idea:** a *parallel* audit surface for **engine-development**
-conventions — what an agent editing the callback-box engine source must
+conventions — what an agent editing the beebox engine source must
 recall: the `assertNever`/`invariant` helpers, the `Result` convention,
 `withCardLock` for same-file RMW, `resolveContainedRef` for card refs,
 `fenceForPrompt` for untrusted prompt embeds, the logging-level policy,
@@ -39,14 +39,14 @@ shape.
   just need the right runner. They can be recovered from git history.
 
 **Overlap caveat (the reason this is subtle):** box agents *do* program
-against the public `callback-box/{cards,schema,view-widgets}` specifiers,
+against the public `beebox/{cards,schema,view-widgets}` specifiers,
 so a few conventions are legitimately box-agent knowledge even though
 they live in engine source — e.g. `cardRef()`/`opaqueContentRef()` in
 `src/cards/` (a box author writing a local schema with a ref field
 chooses between them). Those belong in the *existing* box harness, not
 this one. The line is audience, not file location: "does a box author
 need this to operate a box" → box harness; "does an engine dev need this
-to edit callback-box" → this proposed engine-dev harness.
+to edit beebox" → this proposed engine-dev harness.
 
 Not scheduled work — filed as an idea. Priority is low unless engine-dev
 onboarding (human or agent) starts showing the recall gaps this would

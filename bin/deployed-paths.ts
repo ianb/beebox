@@ -2,7 +2,7 @@
  * The "deployed paths" rule: which changed files actually reach the server.
  *
  * The root husky `post-commit`/`post-merge` hooks use it to decide whether a
- * commit on `main` triggers `callback-box/deploy/deploy.sh`, and the merge-time
+ * commit on `main` triggers `beebox/deploy/deploy.sh`, and the merge-time
  * smoke tier (bin/smoke.ts, wired in through bin/finish-preflight-lib.ts) uses
  * it to decide whether a landing is "code-related" and has to boot a real box
  * first. Those two must never disagree: a change that ships is a change the
@@ -19,7 +19,7 @@
  * rewrite) so the drift test can compare the two literally.
  */
 export const DEPLOYED_PATHS_PATTERN =
-  "^(callback-box|agent-doctest|personal-vibe-check|patches)/|^(package\\.json|pnpm-workspace\\.yaml|\\.npmrc|pnpm-lock\\.yaml)$";
+  "^(beebox|agent-doctest|personal-vibe-check|patches)/|^(package\\.json|pnpm-workspace\\.yaml|\\.npmrc|pnpm-lock\\.yaml)$";
 
 const DEPLOYED_PATHS = new RegExp(DEPLOYED_PATHS_PATTERN);
 

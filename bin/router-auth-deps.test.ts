@@ -1,13 +1,13 @@
 // Tests for the REAL RouterAuthDeps (bin/router-auth-deps.ts) — Track B, chunk
-// 2a of callback-box/docs/implemented-plans/expose-dev-router.md. These exercise the wiring
+// 2a of beebox/docs/implemented-plans/expose-dev-router.md. These exercise the wiring
 // the pure gate (bin/router-auth.ts, covered by bin/router-auth.test.ts) can't:
 // the single slug→box source of truth (duplicate ⇒ fail closed; a non-box
 // segment ⇒ the worktree-root/session sentinel, NOT a deny), the per-box mobile
 // keying, the owner-session (gen-aware) check, and the CSRF rule.
 //
-// Isolation: an empty temp CB_AUTH_FILE so the resolver's cookie path finds no
-// local record (a gen-less owner cookie then authenticates); CB_OWNER_EMAIL and
-// CB_SESSION_SECRET are pinned; CB_HUB_SECRET is cleared so the resolver never
+// Isolation: an empty temp BBX_AUTH_FILE so the resolver's cookie path finds no
+// local record (a gen-less owner cookie then authenticates); BBX_OWNER_EMAIL and
+// BBX_SESSION_SECRET are pinned; BBX_HUB_SECRET is cleared so the resolver never
 // takes the hub path. Set BEFORE importing the auth module (secret is cached).
 //
 // Run with:
@@ -22,23 +22,23 @@ import type { ResolvedBoxEntry } from "./box-entry.js";
 import type { RouterHeaders } from "./router-auth.js";
 
 const OWNER = "owner@example.com";
-process.env.CB_OWNER_EMAIL = OWNER;
-process.env.CB_SESSION_SECRET = "router-auth-deps-test-secret";
-delete process.env.CB_HUB_SECRET;
+process.env.BBX_OWNER_EMAIL = OWNER;
+process.env.BBX_SESSION_SECRET = "router-auth-deps-test-secret";
+delete process.env.BBX_HUB_SECRET;
 
 let authFileDir: string;
 before(async () => {
   authFileDir = await fs.mkdtemp(path.join(os.tmpdir(), "router-auth-deps-"));
-  process.env.CB_AUTH_FILE = path.join(authFileDir, "auth.json"); // absent ⇒ empty store
+  process.env.BBX_AUTH_FILE = path.join(authFileDir, "auth.json"); // absent ⇒ empty store
 });
 after(async () => {
   await fs.rm(authFileDir, { recursive: true, force: true });
 });
 
 const { createRouterAuthDeps } = await import("./router-auth-deps.js");
-const { signSession } = await import("../callback-box/src/webapp/auth.js");
+const { signSession } = await import("../beebox/src/webapp/auth.js");
 const { signMobileSession, MOBILE_SESSION_TTL_MS } = await import(
-  "../callback-box/src/core/mobile/mobile-session.js"
+  "../beebox/src/core/mobile/mobile-session.js"
 );
 
 /** A fake worktree/box map: worktree name → its box entries (or null = unknown). */
@@ -55,7 +55,7 @@ function fakeConfig(map: Record<string, ResolvedBoxEntry[] | null>): {
 const entry = (slug: string, contentDir: string): ResolvedBoxEntry => ({ slug, contentDir });
 
 function ownerCookie(): RouterHeaders {
-  return { cookie: `cb_session=${signSession({ email: OWNER, name: "Owner" })}` };
+  return { cookie: `bbx_session=${signSession({ email: OWNER, name: "Owner" })}` };
 }
 
 // --- resolveTargetBoxRoot: the single slug→box source of truth ---------------
@@ -99,13 +99,13 @@ test("resolveOwnerSession: valid owner cookie → owner; no cookie / wrong email
   const deps = createRouterAuthDeps(fakeConfig({}));
   assert.deepEqual(await deps.resolveOwnerSession(ownerCookie()), { email: OWNER });
   assert.equal(await deps.resolveOwnerSession({}), null, "no cookie → no owner");
-  const stranger = { cookie: `cb_session=${signSession({ email: "stranger@example.com", name: "S" })}` };
+  const stranger = { cookie: `bbx_session=${signSession({ email: "stranger@example.com", name: "S" })}` };
   assert.equal(await deps.resolveOwnerSession(stranger), null, "a non-owner session is not the owner");
 });
 
 test("resolveOwnerSession: a tampered/garbage cookie → null (HMAC rejects it)", async () => {
   const deps = createRouterAuthDeps(fakeConfig({}));
-  assert.equal(await deps.resolveOwnerSession({ cookie: "cb_session=not.a.valid.cookie" }), null);
+  assert.equal(await deps.resolveOwnerSession({ cookie: "bbx_session=not.a.valid.cookie" }), null);
 });
 
 test("resolveBoxAccessSession: owner session reaches any box and the worktree-root sentinel", async () => {
@@ -149,10 +149,10 @@ test("isCsrfSafe: no Sec-Fetch-Site falls back to Origin vs Host", () => {
 
 // --- resolveWorktreeAsset: dev SPA shell reachable by any box credential ------
 
-/** A `cb_mobile` cookie signed with `boxRoot`'s own per-box secret (pure HMAC). */
+/** A `bbx_mobile` cookie signed with `boxRoot`'s own per-box secret (pure HMAC). */
 function mobileCookie(boxRoot: string): RouterHeaders {
   const value = signMobileSession(boxRoot, { deviceId: "dev-1", createdBy: "u@example.com", ttlMs: MOBILE_SESSION_TTL_MS });
-  return { cookie: `cb_mobile=${value}` };
+  return { cookie: `bbx_mobile=${value}` };
 }
 
 test("resolveWorktreeAsset: a per-box mobile token reaches the worktree's dev assets", async () => {
@@ -160,7 +160,7 @@ test("resolveWorktreeAsset: a per-box mobile token reaches the worktree's dev as
   const boxB = await fs.mkdtemp(path.join(os.tmpdir(), "router-asset-b-"));
   try {
     const deps = createRouterAuthDeps(fakeConfig({ main: [entry("boxa", boxA), entry("boxb", boxB)] }));
-    // A cb_mobile for boxA (any box in the worktree) reaches the dev assets.
+    // A bbx_mobile for boxA (any box in the worktree) reaches the dev assets.
     assert.equal(await deps.resolveWorktreeAsset(mobileCookie(boxA), "main"), true);
     // The owner session reaches them too (the owner's own dev SPA).
     assert.equal(await deps.resolveWorktreeAsset(ownerCookie(), "main"), true);
@@ -191,29 +191,29 @@ test("resolveWorktreeAsset: a mobile token does NOT reach a DIFFERENT worktree's
 
 // --- hasBrowseKey: the dev-read rung -----------------------------------------
 
-test("hasBrowseKey: absent CB_BROWSE_API_KEY → constant false (the fail-closed default)", () => {
-  const prior = process.env.CB_BROWSE_API_KEY;
-  delete process.env.CB_BROWSE_API_KEY;
+test("hasBrowseKey: absent BBX_BROWSE_API_KEY → constant false (the fail-closed default)", () => {
+  const prior = process.env.BBX_BROWSE_API_KEY;
+  delete process.env.BBX_BROWSE_API_KEY;
   try {
     const deps = createRouterAuthDeps(fakeConfig({ main: [] }));
-    assert.equal(deps.hasBrowseKey({ cookie: "cb_browse_key=anything" }), false);
+    assert.equal(deps.hasBrowseKey({ cookie: "bbx_browse_key=anything" }), false);
     assert.equal(deps.hasBrowseKey({}), false);
   } finally {
-    if (prior === undefined) delete process.env.CB_BROWSE_API_KEY;
-    else process.env.CB_BROWSE_API_KEY = prior;
+    if (prior === undefined) delete process.env.BBX_BROWSE_API_KEY;
+    else process.env.BBX_BROWSE_API_KEY = prior;
   }
 });
 
 test("hasBrowseKey: the configured key in the cookie → true; a wrong value → false", () => {
-  const prior = process.env.CB_BROWSE_API_KEY;
-  process.env.CB_BROWSE_API_KEY = "dev-read-test-key";
+  const prior = process.env.BBX_BROWSE_API_KEY;
+  process.env.BBX_BROWSE_API_KEY = "dev-read-test-key";
   try {
     const deps = createRouterAuthDeps(fakeConfig({ main: [] }));
-    assert.equal(deps.hasBrowseKey({ cookie: "cb_browse_key=dev-read-test-key" }), true);
-    assert.equal(deps.hasBrowseKey({ cookie: "cb_browse_key=wrong" }), false);
+    assert.equal(deps.hasBrowseKey({ cookie: "bbx_browse_key=dev-read-test-key" }), true);
+    assert.equal(deps.hasBrowseKey({ cookie: "bbx_browse_key=wrong" }), false);
     assert.equal(deps.hasBrowseKey({}), false);
   } finally {
-    if (prior === undefined) delete process.env.CB_BROWSE_API_KEY;
-    else process.env.CB_BROWSE_API_KEY = prior;
+    if (prior === undefined) delete process.env.BBX_BROWSE_API_KEY;
+    else process.env.BBX_BROWSE_API_KEY = prior;
   }
 });

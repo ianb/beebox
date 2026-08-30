@@ -24,8 +24,8 @@ test("flags a real personal Linux home", () => {
 
 test("allows deploy service accounts and placeholders", () => {
   const lines = [
-    `deploy/README.md:5:cd ${H}callback/app`,
-    `docs/box.md:9:${H}cb-test1/content`,
+    `deploy/README.md:5:cd ${H}beebox/app`,
+    `docs/box.md:9:${H}bbx-test1/content`,
     `schemas/extfile.tsx:74:file:${U}me/src/x.ts`,
     `test/x.doctest.md:3:${U}x/tmp`,
     `test/y.doctest.md:4:${H}user/box`,

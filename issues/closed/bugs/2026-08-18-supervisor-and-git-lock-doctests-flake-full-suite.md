@@ -1,7 +1,7 @@
 ---
 title: "supervisor.doctest.md and git-lock.doctest.md flake under the full parallel suite"
 workstream: low-priority-jobs
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-low-priority-jobs — /finish full-suite run
 labels: [flake]

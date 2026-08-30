@@ -1,7 +1,7 @@
 ---
 title: "Infra config drift: setup-server.sh is not re-run by deploy.sh"
 workstream: security-report
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report
 ---

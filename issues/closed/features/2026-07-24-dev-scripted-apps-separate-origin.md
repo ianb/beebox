@@ -10,7 +10,7 @@ resolution: implemented
 ---
 
 > **Closed 2026-08-15 — implemented by relocation** (Track F of
-> `callback-box/docs/plans/workstream-exhibits.md`). The separate origin this
+> `beebox/docs/plans/workstream-exhibits.md`). The separate origin this
 > issue asked for is the exhibits listener: a second Fastify instance behind its
 > own token/cookie, holding no router or workstreams authority. story-eval moved
 > there as a committed app (`dev/apps/story-eval/`, served at

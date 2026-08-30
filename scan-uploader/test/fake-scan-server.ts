@@ -1,7 +1,7 @@
 /**
  * A minimal fake implementation of the server half of the scan-upload wire
  * contract (docs/scan-upload-contract.md), for exercising the client
- * against real HTTP without a callback-box checkout. Route matching and
+ * against real HTTP without a beebox checkout. Route matching and
  * response shapes are deliberately literal translations of the contract —
  * this file has no other purpose than being a body double for the real
  * server routes in tests.

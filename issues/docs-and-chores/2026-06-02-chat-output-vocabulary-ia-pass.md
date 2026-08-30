@@ -2,7 +2,7 @@
 title: "chat output vocabulary ia pass"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 Triggered by adding `{% redacted %}` — there was no obvious place to document it for the chat agent. Looked into existing patterns and the categorization isn't clean. The chat agent's emit-side vocabulary currently splits along several un-aligned axes:

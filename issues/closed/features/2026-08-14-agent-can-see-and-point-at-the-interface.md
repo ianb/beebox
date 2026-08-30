@@ -1,8 +1,8 @@
 ---
 title: "Let the agent see the interface and point at things in it"
 workstream: points-at-ui
-area: callback-box
-design: ../../../callback-box/docs/plans/agent-points-at-ui.md
+area: beebox
+design: ../../../beebox/docs/plans/agent-points-at-ui.md
 labels: [chat, ui-sensibility]
 priority: important
 filed-by: agent
@@ -11,11 +11,11 @@ discovered-in: main session — boxholder idea, with memory-atlas prior art
 resolution: implemented
 ---
 
-Implemented across the `points-at-ui` workstream (ui-scan library, `cb-`
-ids/annotations on the chat surface, `ControlPointer` + ring, `cb chat ui`
+Implemented across the `points-at-ui` workstream (ui-scan library, `bbx-`
+ids/annotations on the chat surface, `ControlPointer` + ring, `bbx chat ui`
 routes/CLI/dump, prompt text, five passing knowledge audits, and the iOS V2
 bridge envelope with native registry + point/focus/reveal). See the plan's
-Status note (`callback-box/docs/plans/agent-points-at-ui.md`, "Status
+Status note (`beebox/docs/plans/agent-points-at-ui.md`, "Status
 2026-08-23") for the one remaining gap: a `coverage: dom+native` dump has not
 been produced through a real paired WKWebView — that needs the boxholder's
 phone, so the plan itself stays `status: partial` pending that field check.
@@ -65,7 +65,7 @@ below:
 
 ## Shape
 
-Roughly three `cb`-side capabilities, deliberately small:
+Roughly three `bbx`-side capabilities, deliberately small:
 
 1. **View** — dump the interface: what controls are present and what each one
    does. **The accessibility tree is the base**, and it should carry most of the

@@ -1,15 +1,15 @@
 ---
 title: "Run less of the full suite — map changes to the tests that could break"
 workstream: test-economics
-area: callback-box
+area: beebox
 resolution: implemented
 needs: [design]
-design: ../../../callback-box/docs/plans/change-based-test-selection.md
+design: ../../../beebox/docs/plans/change-based-test-selection.md
 labels: [testing, developer-experience]
 ---
 
 Resolved by the "Revision 2026-08-25" mechanisms (A–E) of
-[change-based test selection](../../../callback-box/docs/plans/change-based-test-selection.md),
+[change-based test selection](../../../beebox/docs/plans/change-based-test-selection.md),
 landed on `worktree-test-economics` (commits `5a93effa`, `fd174775`,
 `096c5883`, `041304fc`, `347958ed`, `ab4f886c`, and others on the branch): the
 test-run ledger, the machine-wide two-slot semaphore, change-based selection
@@ -20,7 +20,7 @@ itself stays `status: partial` — this issue's origin question ("which tests
 run on a given change, and can that be smaller") is answered and shipped.
 
 > **Design written 2026-08-08, twice reviewed** —
-> [change-based test selection](../../../callback-box/docs/plans/change-based-test-selection.md)
+> [change-based test selection](../../../beebox/docs/plans/change-based-test-selection.md)
 > settles the mechanism (an import graph derived from the tree with esbuild, not
 > recorded at runtime), the trust model (selection applies only when every
 > changed path is accounted for by the graph; anything else runs everything), and
@@ -41,9 +41,9 @@ again. Most of that is provably irrelevant to the diff — a frontend tweak does
 not need the connector doctests — but we have no way to know which part *is*
 relevant, so we pay for all of it every time.
 
-Scale of the thing (`callback-box/.taprc`, `package.json:52`):
+Scale of the thing (`beebox/.taprc`, `package.json:52`):
 
-- **480 `.doctest.md` files** plus 2 `.test.ts` under `callback-box/test/`, and
+- **480 `.doctest.md` files** plus 2 `.test.ts` under `beebox/test/`, and
   19 `.test.ts` under `bin/` — roughly 2231 assertions.
 - `jobs: 6` (deliberately half the cores: `makeTestServer()` boots a full
   Fastify app plus two synchronous `git` spawns, and at full core-count
@@ -72,7 +72,7 @@ shipped, not as a failing test. Worth surveying before designing:
   behavior through a booted server rather than a direct import.
 - **Affected-package graphs.** Nx/Turborepo/Bazel style, at package granularity.
   Coarse, but this is a monorepo with real package boundaries
-  (`callback-box`/`agent-doctest`/`bin`/`canvas-loop`), so a cheap first cut
+  (`beebox`/`agent-doctest`/`bin`/`canvas-loop`), so a cheap first cut
   might just be "which packages did the diff touch."
 - **Test Impact Analysis** as a named industry practice (Microsoft shipped this
   for .NET/Azure DevOps) — worth reading for how they handle the safety problem
@@ -121,7 +121,7 @@ processes. At the end, load average was 9.24, 21.98, 22.02, swap used 16.9 of
 
 ### Full run and per-file ranking
 
-The callback-box TAP run took 566.5 seconds at `jobs: 6`, excluding a measured
+The beebox TAP run took 566.5 seconds at `jobs: 6`, excluding a measured
 0.3-second pretest CLI build. It was not green: 13 frontend doctest processes
 reported `1..0 # no tests found`. The same 13 files passed together at
 `jobs=1` immediately afterward. This is consistent with load-sensitive runner
@@ -134,7 +134,7 @@ Those assertions exposed a real pairing-redeem classifier regression rather
 than bad tests. It was fixed after this profiling run in `03f46268`; the focused
 router-auth file and the 220-test root suite are green on the current baseline.
 
-The loaded callback-box run ranked these files highest:
+The loaded beebox run ranked these files highest:
 
 | Rank | File | Loaded time | `makeTestServer()` calls |
 | ---: | --- | ---: | ---: |
@@ -744,7 +744,7 @@ Method: one esbuild pass over all 484 test entrypoints (`bundle`, `write:false`,
 the `.js`-to-`.ts`/`.tsx` rewrite plus the `@shared/*` alias. Then, for each
 merge commit on `main`, the branch's own diff (`<merge>^1...<merge>^2`) was
 classified against the graph. 334 real branches measured out of 400 merges (66
-skipped as empty, docs-only, or touching nothing in `callback-box`).
+skipped as empty, docs-only, or touching nothing in `beebox`).
 
 ### The four questions
 
@@ -787,7 +787,7 @@ Two caveats, both of which make 25% an **upper** bound:
 - The graph is derived from today's tree, not from each historical commit. Paths
   deleted since were dropped rather than counted as unaccounted (137 branches
   contained one).
-- Prose markdown inside `callback-box/` is treated as out of scope. That was
+- Prose markdown inside `beebox/` is treated as out of scope. That was
   verified, not assumed: no doctest in the suite reads the repository's own prose
   markdown — the real-doc validation is `doc-check`, a pre-commit hook outside
   the tap suite. Counting it as unaccounted instead would drop the per-commit
@@ -795,7 +795,7 @@ Two caveats, both of which make 25% an **upper** bound:
 
 ### Correction (2026-08-09): treat 25% as provisional
 
-While reading the quiet-run per-file timings, `callback-box/test/field-test/`
+While reading the quiet-run per-file timings, `beebox/test/field-test/`
 turned out to be a live directory whose five doctests are graph entrypoints —
 one of them, `run.doctest.md`, is the single most expensive file in the suite.
 An earlier session note called that directory deleted, which was a
@@ -843,7 +843,7 @@ gravity moved from the speedup to the instrument.
 The `## Research (2026-08-08)` section above closes by saying "The strongest next
 measurement is a green full run on a quiet machine". It now exists.
 
-**`pnpm test` in `callback-box`: 6,623 assertions, 6,623 pass, exit 0, in
+**`pnpm test` in `beebox`: 6,623 assertions, 6,623 pass, exit 0, in
 143.9 seconds** at the configured `jobs: 6`, on the same 12-core Mac.
 
 Against the loaded run in the research section — 566.5 seconds and **not** green

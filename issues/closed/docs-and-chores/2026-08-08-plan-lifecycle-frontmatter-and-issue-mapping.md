@@ -2,7 +2,7 @@
 title: "Plans need frontmatter and a mapping from incomplete plans to issues"
 workstream: workstreams
 area: process
-design: ../../../callback-box/docs/implemented-plans/workstreams.md
+design: ../../../beebox/docs/implemented-plans/workstreams.md
 labels: [plans, issues, worktrees]
 resolution: implemented
 ---
@@ -11,7 +11,7 @@ Closed by `b66aed4f` and `8b6d91df`: plan and issue frontmatter are now
 machine-validated, the document graph exposes the mapping, and `/finish`
 reconciles incomplete plan work explicitly.
 
-There are **44 active plans in `callback-box/docs/plans/`, 18,838 lines** (plus
+There are **44 active plans in `beebox/docs/plans/`, 18,838 lines** (plus
 105 files / 45,130 lines in `implemented-plans/`). Nothing about that state is
 machine-readable, and the leftover work in a partially-implemented plan is
 tracked nowhere.
@@ -27,8 +27,8 @@ in flight," "which are stalled," or "which are partially done" without reading
 
 **The plan↔issue link is one-directional and barely used.** Issues have a
 `design:` frontmatter field pointing at a plan — 11 open issues use it. The
-reverse is prose: `cb-plan`'s SKILL.md prescribes an "Issues addressed" section
-(`.claude/skills/cb-plan/SKILL.md:103`), and **3 of 44 plans actually have one.**
+reverse is prose: `bbx-plan`'s SKILL.md prescribes an "Issues addressed" section
+(`.claude/skills/bbx-plan/SKILL.md:103`), and **3 of 44 plans actually have one.**
 So from an issue you can find its plan; from a plan you generally can't find its
 issues, and nothing can compute the join.
 

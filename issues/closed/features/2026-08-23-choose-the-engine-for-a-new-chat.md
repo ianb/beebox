@@ -2,7 +2,7 @@
 title: "No way to pick a chat's engine — models are switchable per chat, engines are box-wide"
 workstream: model-engine-policy
 resolution: implemented
-area: callback-box
+area: beebox
 needs: [design]
 labels: [chat, codex, engines]
 filed-by: agent
@@ -21,7 +21,7 @@ A chat's **model** is a per-chat choice that can change mid-conversation. Its
 offers a choice.
 
 > **Considered and deferred 2026-08-25** by the model/engine policy work
-> (`callback-box/docs/implemented-plans/model-engine-policy.md`), which shipped the
+> (`beebox/docs/implemented-plans/model-engine-policy.md`), which shipped the
 > *model* half — a box default model that chat and the reactor both read, with a
 > per-chat override. This issue was carried as a fifth track and cut, because it
 > is a bigger mechanism than the "thread one existing parameter" the note below

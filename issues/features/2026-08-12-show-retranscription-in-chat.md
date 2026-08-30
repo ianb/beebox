@@ -1,7 +1,7 @@
 ---
 title: "Show a retranscription in chat — an indicator, and the improved text in place"
 workstream: transcript-confidence
-area: callback-box
+area: beebox
 needs: [manual-testing]
 labels: [chat, voice, ui]
 filed-by: agent
@@ -10,13 +10,13 @@ discovered-in: main session — boxholder report
 priority: important
 ---
 
-When the agent runs `cb chat retranscribe`, the user sees nothing. Their message
+When the agent runs `bbx chat retranscribe`, the user sees nothing. Their message
 keeps whatever the on-device transcriber produced — mangled names, a dropped
 negative — while the agent quietly works from a better version. So the person is
 reading one thing and being answered about another.
 
 > **⏳ Awaiting manual testing** — implemented on `worktree-transcript-confidence`
-> (design: `callback-box/docs/implemented-plans/retranscription-in-chat.md`; commits
+> (design: `beebox/docs/implemented-plans/retranscription-in-chat.md`; commits
 > `60358e66`…`d4ae8649`); see [Manual testing](#manual-testing). Only the
 > developer clears this.
 
@@ -24,7 +24,7 @@ Wanted: **an indicator that a retranscription happened, and the improved text
 shown in place of the original.**
 
 Extended scope (boxholder, 2026-08-15): the same treatment for **any
-agent-side audio consultation** — `cb chat ask-about-audio` should also mark
+agent-side audio consultation** — `bbx chat ask-about-audio` should also mark
 the message it examined (something small, e.g. an emoticon/icon on the
 bubble), so "the agent went back to the recording" is visible even when no
 text was replaced. This matters more now that `<unsure>` spans (see
@@ -44,7 +44,7 @@ every connected chat tab answers with its cached recording (or "none"), and the
 first audio answer streams back to the waiting CLI call — carrying the
 recording's metadata in `X-Recorded-At` and `X-Message-Text` headers.
 
-So there is already a request/response conversation between `cb chat
+So there is already a request/response conversation between `bbx chat
 retranscribe` and the tab that holds the audio. Showing the result is an
 **extension of a conversation already happening**, not new plumbing: the same
 bus can carry a "here is the better text for that message" event back.
@@ -84,7 +84,7 @@ leaves a durable-overlay extension open).
 To try (needs a real microphone):
 
 1. Dictate a mumbled message; ask the agent to double-check it. It should run
-   `cb chat retranscribe --message <id>` (watch that it targets rather than
+   `bbx chat retranscribe --message <id>` (watch that it targets rather than
    errors), and the bubble should swap to the corrected text with the ✎
    badge; the popover shows the realtime original, readable (no raw
    `<unsure>` tags).

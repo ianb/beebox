@@ -130,7 +130,7 @@ briefing.
    as work owned by the workstream, and the assignment lands with the eventual
    work. This is responsibility, not discovery provenance. Omit `--issue` when
    the discussion is not taking on a specific filed issue. The flag takes one
-   path; when the work is a cluster (see `cb-pick-issues`), pass the anchor
+   path; when the work is a cluster (see `bbx-pick-issues`), pass the anchor
    issue here and list every other member's path in the briefing so the new
    session's plan names the full set and `/finish` reconciles all of them.
 

@@ -1,7 +1,7 @@
 ---
 title: "A dead-drop ingress so external automations can POST into a box"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [ingress, connectors, soft-launch]
 filed-by: agent
@@ -44,7 +44,7 @@ posture:
   `PUT /<w>/<box>/api/scan/files/<sha256>` (`bin/router-auth.ts:62-65`).
 - The bearer is verified **independently** by the hub's scan gate and by the box
   child, so neither trusts the other.
-- Tokens live in a per-box store (`.callback-box/scan-tokens.secret.json`,
+- Tokens live in a per-box store (`.beebox/scan-tokens.secret.json`,
   `src/core/token-store.ts`), separate from session and mobile auth —
   `resolveMobileRequestAuth` structurally cannot resolve a scan token.
 - There's a rate limiter alongside it that is explicitly *not* the security
@@ -66,7 +66,7 @@ surface, verified at every hop, stored apart from user auth.
   nothing else — no read, no listing, no other surface.
 - **Abuse and size.** An open-ish URL invites junk. Rate limiting, a size cap,
   and a per-token quota are the minimum, and the token stays the actual control.
-- **Discovery/setup UX.** `cb pub setup` is the outbound analogue and worth
+- **Discovery/setup UX.** `bbx pub setup` is the outbound analogue and worth
   reading for shape — and for its warning: its instructions went stale and
   dashboard-bound (filed separately). Prefer a flow that mints and prints the
   URL over one that documents clicking through a console.

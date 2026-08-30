@@ -2,7 +2,7 @@
 title: "bulk-upload attach blobs of arbitrary extension aren't gitignored"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
@@ -36,7 +36,7 @@ Options to weigh (design):
 - Broaden attach-scope gitignoring to the whole `.attach/**` tree except
   `manifest.json` / committed sidecars (revisits the extension-list approach the
   asset-manifest doc's "Future review points" already flags), or
-- Have `cb attachments init-gitignore` add a bulk-specific rule.
+- Have `bbx attachments init-gitignore` add a bulk-specific rule.
 
 Not blocking chunk 1 (prepare is correct in isolation); wire the gitignore
 alongside the finalize route (chunk 2) or the docs/gitignore work (Track 4)

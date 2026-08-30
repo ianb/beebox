@@ -2,7 +2,7 @@
 title: "in chat interactive questions"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 resolution: wontfix
 ---
 

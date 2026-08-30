@@ -1,7 +1,7 @@
 ---
 title: "Show a consistent 'listening/session active' status in the tab title (not the browser's flickering mic/speaker icons)"
 workstream: tab-identity
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder wants a steady session-on indicator
 priority: normal

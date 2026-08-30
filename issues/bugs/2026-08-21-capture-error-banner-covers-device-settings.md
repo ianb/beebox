@@ -1,7 +1,7 @@
 ---
 title: "The capture error banner covers the device settings panel"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — exercising capture mode in the /dev/capture-mode harness
@@ -12,9 +12,9 @@ strip below the status bar, and the banner is drawn on top. With both visible,
 the red banner hides the "Camera" and "Microphone" select labels.
 
 `CaptureErrorBanner` is `absolute top-14 … z-20`
-(`callback-box/src/frontend/src/components/capture/CaptureErrorBanner.tsx:13`).
+(`beebox/src/frontend/src/components/capture/CaptureErrorBanner.tsx:13`).
 `DeviceSettings` sits in normal flow directly under the status bar
-(`callback-box/src/frontend/src/components/capture/CaptureOverlay.tsx:136-141`,
+(`beebox/src/frontend/src/components/capture/CaptureOverlay.tsx:136-141`,
 panel markup in `DeviceSettings.tsx:21`), which is the same vertical band.
 
 The two are shown together in an ordinary case: the camera fails to start, the

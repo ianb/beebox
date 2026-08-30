@@ -6,7 +6,7 @@ needs: [design]
 labels: [agents, plans, reporting]
 filed-by: agent
 discovered-by: Ian
-discovered-in: main session — cb feedback triage
+discovered-in: main session — bbx feedback triage
 ---
 
 When a large unit of work completes, what surfaces is **the last step of a
@@ -51,7 +51,7 @@ what a "stuff you should know" section exists to catch.
 
 Candidates, and the choice matters more than the wording:
 
-- **`cb-plan`** — a required section of every plan, so it exists before the work
+- **`bbx-plan`** — a required section of every plan, so it exists before the work
   does and gets filled in as choices are made. Strongest for "questionable
   choices", since that's a record kept *during* the work, not reconstructed after.
 - **`.claude/agents/finish.md` step 9** — already the report contract, already

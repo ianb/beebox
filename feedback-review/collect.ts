@@ -19,12 +19,12 @@ import { runOnServer } from "./run-on-server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const BOX_MARKER = ".cb-box";
+const BOX_MARKER = ".beebox";
 const FEEDBACK_DIR = path.join("config", "feedback");
 const RESOLVED_DIR = path.join("config", "feedback", "resolved");
-const REMOTE_BOXES_DIR = "/home/callback/boxes";
+const REMOTE_BOXES_DIR = "/home/beebox/boxes";
 
-// `cb feedback` names every item `YYYY-MM-DDTHH-MM-SS-<slug>.md`. Match only
+// `bbx feedback` names every item `YYYY-MM-DDTHH-MM-SS-<slug>.md`. Match only
 // that shape so the feedback dir's own docs (CLAUDE.md, MAP.md, README.md) are
 // never collected — and, critically, never swept into resolved/ by --resolve-all.
 function isFeedbackFilename(name: string): boolean {
@@ -32,7 +32,7 @@ function isFeedbackFilename(name: string): boolean {
 }
 
 function getRemoteHost(): string | null {
-  const serverIpFile = path.join(__dirname, "..", "callback-box", "deploy", "server-ip");
+  const serverIpFile = path.join(__dirname, "..", "beebox", "deploy", "server-ip");
   try {
     return fs.readFileSync(serverIpFile, "utf-8").trim();
   } catch {
@@ -140,7 +140,7 @@ function collectRemoteFeedback(host: string): FeedbackFile[] {
   const items: FeedbackFile[] = [];
 
   for (const filePath of files.sort()) {
-    // Path format: /home/callback/boxes/<boxname>/config/feedback/<file>
+    // Path format: /home/beebox/boxes/<boxname>/config/feedback/<file>
     const boxName = filePath.split("/")[4];
     if (!boxName) continue;
     const boxRoot = `${REMOTE_BOXES_DIR}/${boxName}`;
@@ -200,9 +200,9 @@ function resolveRemoteFile(item: FeedbackFile): void {
     "config/feedback/resolved/"
   );
 
-  // Runs as the `callback` user (run-on-server default). NEVER drop the
+  // Runs as the `beebox` user (run-on-server default). NEVER drop the
   // `su` and let git run as root — root-owned commits leave root-owned
-  // objects under .git/objects/ that later block callback-user commits.
+  // objects under .git/objects/ that later block beebox-user commits.
   // See feedback-review/run-on-server.ts for the why.
   const script = [
     "set -e",

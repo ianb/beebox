@@ -1,7 +1,7 @@
 ---
 title: "A failed capture chip offers only \"tap to retry\" — no discard, and no sense of how old it is"
 workstream: capture-chip-states
-area: callback-box
+area: beebox
 labels: [capture, chat, ui]
 filed-by: agent
 discovered-by: Ian

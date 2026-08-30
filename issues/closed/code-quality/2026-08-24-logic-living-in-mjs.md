@@ -29,7 +29,7 @@ These cannot be TypeScript, and the reason should be written at the top of each
 |---|---|---|
 | `agent-doctest/src/doctest-hooks.mjs` | 506 | Node loader hook via `node:module` `register()` — it is what *enables* TS loading, so it cannot itself require loading |
 | `agent-doctest/src/resolve-rules.mjs` | 126 | Imported by that loader; same bootstrap constraint (it already carries a hand-written `resolve-rules.d.mts`) |
-| `callback-box/tsx-preload.mjs` | 17 | Preload, runs before tsx |
+| `beebox/tsx-preload.mjs` | 17 | Preload, runs before tsx |
 | `bin/lib/detach.mjs` | 22 | Same family |
 
 The doctest pair is the awkward case: it is the sanctioned shim shape, but at
@@ -37,7 +37,7 @@ The doctest pair is the awkward case: it is the sanctioned shim shape, but at
 `.mjs` hook that delegates to a `.ts` module the hook itself can load — worth
 a look, not obviously worth the complexity.
 
-`callback-box/user-stories/pipeline/*.workflow.mjs` (1,464 lines across five
+`beebox/user-stories/pipeline/*.workflow.mjs` (1,464 lines across five
 files) are Workflow-tool scripts, which that tool requires to be plain JS.
 Being raised separately with the user-stories workstream — out of scope here.
 
@@ -55,10 +55,10 @@ modules.
 | `personal-vibe-check/rules/restrict-component-classes.mjs` | 301 |
 | `personal-vibe-check/bin/vibe-init.mjs` | 250 |
 | `canvas-loop/src/eslint/index.mjs` | 215 |
-| `callback-box/src/frontend/eslint.config.mjs` | 175 |
-| `callback-box/scripts/build-cli.mjs` | 133 |
+| `beebox/src/frontend/eslint.config.mjs` | 175 |
+| `beebox/scripts/build-cli.mjs` | 133 |
 | `personal-vibe-check/bin/vibe-check.mjs` | 128 |
-| `callback-box/eslint.config.mjs` | 102 |
+| `beebox/eslint.config.mjs` | 102 |
 | `canvas-loop/test/tea-lint.test.mjs` | 78 |
 
 `canvas-loop/src/eslint/index.mjs` is a published subpath export, so check how

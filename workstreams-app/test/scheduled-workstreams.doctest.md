@@ -6,7 +6,7 @@ list of schedules whose scheduler died is the failure the design exists to make
 visible. Alerts are read and acknowledged through `bin/schedules`; the app never
 writes the schedule store.
 
-Design: `callback-box/docs/plans/scheduled-workstreams.md` (Track D).
+Design: `beebox/docs/plans/scheduled-workstreams.md` (Track D).
 
 ```ts setup
 import * as React from "react";

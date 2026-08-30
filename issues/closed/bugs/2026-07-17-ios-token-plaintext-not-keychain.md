@@ -1,9 +1,9 @@
 ---
 title: "iOS device token stored as plaintext JSON, not Keychain"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
-discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
 resolution: implemented
 ---
 
@@ -13,7 +13,7 @@ the selected-box snapshot preserve only non-secret state. Migration tests, a sim
 the generated app/extension entitlements verified the shared access group.
 
 `PairedBox.authToken` is persisted as plaintext JSON in `Library/Application Support/paired-boxes.json`
-(written via `PairedBoxStore.save` in `ios-app/CallbackBox/Storage/PairedBoxStore.swift`, an atomic
+(written via `PairedBoxStore.save` in `ios-app/BeeBox/Storage/PairedBoxStore.swift`, an atomic
 `Data.write`). There's no Keychain usage anywhere in the app, no `CODE_SIGN_ENTITLEMENTS`, and no
 `FileProtection` applied to the file. This departs from the Keychain plan stated in the original
 Track-C design.

@@ -19,4 +19,4 @@ unchanged by the `channel` work — it only became visible once the union was
 closed. The fix is for the extension to send `channel: "ios-native"`
 (contract row S3 in `docs/mobile-contract.md` §5.5), which belongs with the
 Track 5 remainder of
-[agent-points-at-ui](../../callback-box/docs/plans/agent-points-at-ui.md).
+[agent-points-at-ui](../../beebox/docs/plans/agent-points-at-ui.md).

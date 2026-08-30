@@ -1,14 +1,14 @@
 ---
 title: bulk-upload cancel route sometimes accepts a completed batch under suite load
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-workstreams — full finish verification
 priority: backlog
 ---
 
-The full callback-box suite intermittently fails the cancellation case in
+The full beebox suite intermittently fails the cancellation case in
 `test/webapp/routes/bulk-upload-routes.doctest.md`. After the fixture completes
 the batch, the late `DELETE /api/bulk/sessions/:sessionId` request sometimes
 returns 200 instead of the expected 409.

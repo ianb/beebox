@@ -58,11 +58,11 @@ Sourced from code.claude.com/docs/en/claude-code-on-the-web.md and
   separate scoped-credential proxy (the token never enters the sandbox).
 - **GitHub:** required for the normal path — clones from the connected GitHub
   account, pushes a branch you PR. **This repo qualifies:** it has a GitHub
-  origin (`github.com:ianb/callback-box`). (Fallback: `claude --cloud` uploads a
+  origin (`github.com:ianb/beebox`). (Fallback: `claude --cloud` uploads a
   local bundle <100 MB, but can't push back without GitHub auth — and 1.1 GB of
   `node_modules` aside, the *source* tree is well under 100 MB.)
 - **Secrets:** plain env vars in the environment config, described as
-  *semi-public* (no real secrets store yet). Fine for a `CB_*` test toggle,
+  *semi-public* (no real secrets store yet). Fine for a `BBX_*` test toggle,
   **wrong** for prod SSH keys or live API tokens.
 - **No dev-server / preview / port-forwarding.** It's batch coding + PR. There is
   no mechanism to reach a long-running server on a port from your browser.
@@ -90,7 +90,7 @@ there — and must **no-op cleanly outside the cloud** (guard on
 The full `install → typecheck → lint → test` chain runs from the **repo alone**
 — no external box, no network at test time (verified against the test setup):
 
-- **Tests are self-contained.** `makeTmpBox()` (`callback-box/test/helpers/doctest-helpers.ts:39`)
+- **Tests are self-contained.** `makeTmpBox()` (`beebox/test/helpers/doctest-helpers.ts:39`)
   builds throwaway boxes in the OS tmpdir; route doctests boot Fastify against
   tmp git repos; agents/services are faked (`test/helpers/fake-agent.ts`,
   `src/services/`). The scenario loader that defaults to `~/src/boxes/scenarios`
@@ -98,7 +98,7 @@ The full `install → typecheck → lint → test` chain runs from the **repo al
 - **Build is offline.** `pretest` bundles the `dist/` package exports via esbuild;
   typecheck/lint are offline. Network is only needed at **install**.
 - **Deploy won't fire.** The husky post-commit/post-merge deploy self-skips when
-  `callback-box/deploy/server-ip` (gitignored) is absent — a fresh clone can
+  `beebox/deploy/server-ip` (gitignored) is absent — a fresh clone can
   commit on `main` with no risk of shipping. git-lfs isn't used anymore (hooks
   warn-and-continue); the commit-blocklist check no-ops without a
   `.commit-blocklist`.
@@ -143,14 +143,14 @@ container: the `claude --worktree` flow and `launch-worktree-session`
 (Terminal.app/osascript — macOS only), the four worktree lifecycle hooks
 (WorktreeCreate/Remove, SessionEnd, main-only auto-sweep), box cloning,
 `bin/browse` (agent-browser profile under `~/.cache`), and the router's
-multi-worktree serving under `~/src/{callback-worktrees,box-worktrees}` (only
+multi-worktree serving under `~/src/{beebox-worktrees,box-worktrees}` (only
 `/main/` is meaningful with one checkout). None of it blocks single-checkout work
 — it just does nothing. Router state/paths that *do* matter are already
-env-overridable (`CALLBACK_MAIN_ROOT`, `CALLBACK_STATE_DIR`, `ROUTER_PORT`).
+env-overridable (`BBX_MAIN_ROOT`, `BBX_STATE_DIR`, `ROUTER_PORT`).
 
 ### The "no preview URL" problem — and how the ecosystem solves it
 
-Gap #5 (no dev-server preview) is not a callback-box problem; it's universal to
+Gap #5 (no dev-server preview) is not a beebox problem; it's universal to
 locked-down agent sandboxes, and the market has converged on an answer. Surveyed
 GitHub Codespaces, Gitpod/Ona, Cursor cloud agents, Devin, OpenAI Codex cloud,
 Google Jules, Replit Agent, and the preview-builders (v0/Bolt/Lovable).
@@ -189,7 +189,7 @@ end/resume** (pipe logs to a file). Tunnels (ngrok/cloudflared) are nobody's
 blessed path — they fight the proxy/allowlist and are a security surface, not a
 feature; would need Custom-firewall domains and still isn't recommended.
 
-**callback-box is unusually well-positioned for the convergent pattern** — it
+**beebox is unusually well-positioned for the convergent pattern** — it
 already has the substrate the ecosystem settled on: an **agent-driven browser**
 (`agent-browser` / `bin/browse`) and **tours** (`docs/tours.md` — scripted browser
 walks for UI/a11y review). Those are built for exactly "agent drives the UI
@@ -212,7 +212,7 @@ task**, not a code change — but it buys a **restricted mode**: engine/library
 code work + `typecheck`/`lint`/`test` + PR. The "no running box / no UI" limit is
 **softer than it first looked**: the ecosystem-standard answer (boot server as a
 background process → agent tests via `curl` + headless browser → screenshots back
-to the human) is available in-sandbox, and callback-box already owns the tooling
+to the human) is available in-sandbox, and beebox already owns the tooling
 for it (`agent-browser`, tours). What's genuinely absent is a *live interactive
 preview* for the human — that stays a local-only affordance.
 
@@ -221,7 +221,7 @@ Minimal viable setup (one-time, per-environment, in the UI):
 2. **Setup script:** `nvm use 22 && corepack enable && pnpm install` (measure it
    against the 5-min budget; if it blows past, split the heavy install into a
    `CLAUDE_CODE_REMOTE`-gated SessionStart hook and let caching absorb it).
-3. First-run verification: confirm better-sqlite3 builds and `cd callback-box &&
+3. First-run verification: confirm better-sqlite3 builds and `cd beebox &&
    pnpm typecheck && pnpm lint && pnpm test` is green (there's no recursive root
    aggregate — checks run per-package).
 

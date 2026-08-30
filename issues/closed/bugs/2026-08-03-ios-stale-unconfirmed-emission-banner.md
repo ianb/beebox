@@ -1,11 +1,11 @@
 ---
 title: "iOS: a stale 'chat did not confirm the message' banner (with a duplicating Retry) survives when the send actually went through"
 workstream: emission-model
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder saw the banner without composing anything
 priority: important
-design: ../../../callback-box/docs/implemented-plans/emission-model.md
+design: ../../../beebox/docs/implemented-plans/emission-model.md
 resolution: implemented
 ---
 
@@ -35,7 +35,7 @@ resolution: implemented
    it offers no Retry, and that Discard removes it cleanly.
 
 The iOS banner **"The chat did not confirm the message. Try sending it again."**
-(`ios-app/CallbackBox/Views/ChatWebView.swift:454`, with Retry / Restore / Discard)
+(`ios-app/BeeBox/Views/ChatWebView.swift:454`, with Retry / Restore / Discard)
 appears **even when the user has not just composed or sent anything** — and even when
 the message it refers to actually **did** process (the agent's completed reply was
 visible in the same view when the boxholder hit it).
@@ -79,6 +79,6 @@ of truth. Only a pending emission with no corresponding message in history is a 
   — the server-side half of the same "processed but not confirmed → duplicate on
   retry" family, being worked in `worktree-cbserve-fd-leak`. This iOS reconciliation
   is the client half.
-- cb-ios-overlap: the native emission path mirrors the web emission path
+- bbx-ios-overlap: the native emission path mirrors the web emission path
   (`components/chat/native-emission.ts`); a fix should keep them consistent.
   `docs/mobile-contract.md` governs the receipt contract.

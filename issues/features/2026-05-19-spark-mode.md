@@ -2,16 +2,16 @@
 title: "spark mode"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
-Conceptual inverse of narration mode (see [narration-mode.md](../../callback-box/docs/plans/narration-mode.md)). Narration is user-talks-mostly (long dumps, agent files quietly). /spark is agent-talks-mostly (agent surfaces everything it's been holding back; user triages). Both intentionally break the turn-balanced rhythm in opposite directions.
+Conceptual inverse of narration mode (see [narration-mode.md](../../beebox/docs/plans/narration-mode.md)). Narration is user-talks-mostly (long dumps, agent files quietly). /spark is agent-talks-mostly (agent surfaces everything it's been holding back; user triages). Both intentionally break the turn-balanced rhythm in opposite directions.
 
 The premise: the agent runs a proactive layer continuously, with normal suppression discipline (park-on-ignore, thresholded surfacing, silent consultation as default). Observations the agent would have surfaced eventually but didn't yet — because timing was wrong, because the boxholder was focused elsewhere, because the quota was already spent — accumulate. /spark is the deliberate harvest of that accumulation.
 
 This presupposes the full suppression-discipline stack. Without it the bin is empty and spark is just "the agent rambling." Inputs probably come from:
 
-- Parked proactive observations (see *Park ignored proactive observations* in [prompt-audits.md](../../callback-box/docs/prompt-audits.md#park-ignored-proactive-observations) audit)
+- Parked proactive observations (see *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompt-audits.md#park-ignored-proactive-observations) audit)
 - Hypotheses crossing confirmation/refutation thresholds (see [Hypothesis tracking](../exploration/2026-05-19-hypothesis-tracking.md))
 - Behavioral-profile and autonomy-matrix promotion candidates (see [Declared per-box autonomy matrix with encounter queue](../exploration/2026-05-19-autonomy-matrix.md), [Correction counting → spec promotion](../exploration/2026-05-19-correction-counting-spec-promotion.md))
 - Recurring corrections worth surfacing as proposed rules

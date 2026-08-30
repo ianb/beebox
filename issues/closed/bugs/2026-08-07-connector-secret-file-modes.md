@@ -1,7 +1,7 @@
 ---
 title: "Connector secret files written/placed without mode 0600"
 workstream: secret-custody
-area: callback-box
+area: beebox
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-security-report — credential inventory for the security report
@@ -20,7 +20,7 @@ Rollout-shape migration-status note for the pending removal of that fallback,
 after which this class of file stops being written at all.
 
 Every bespoke credential store in the codebase writes with an explicit
-`mode: 0o600` (`~/.cb-auth.json`, token stores, google tokens,
+`mode: 0o600` (`~/.beebox-auth.json`, token stores, google tokens,
 `publish.secret.json`, …). Two exceptions found:
 
 1. **Telegram**: `src/webapp/trpc/routers/admin.ts:96-101` writes

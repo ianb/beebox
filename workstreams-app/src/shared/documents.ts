@@ -81,7 +81,7 @@ export const issueSchema = z.object({
 export const relatedRowSchema = z.object({
   /** Cosine score, as printed by the CLI. */
   score: z.number(),
-  /** Repo-relative path, e.g. `issues/bugs/…md` or `callback-box/docs/…md`. */
+  /** Repo-relative path, e.g. `issues/bugs/…md` or `beebox/docs/…md`. */
   path: z.string(),
   title: z.string(),
   kind: z.enum(["issue", "doc"]),

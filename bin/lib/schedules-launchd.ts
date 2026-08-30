@@ -1,5 +1,5 @@
 /**
- * The one launchd job: `com.callback-box.schedules`, a 15-minute
+ * The one launchd job: `com.beebox.schedules`, a 15-minute
  * `StartInterval` tick. It replaces the two hand-rolled per-job plists
  * (`bin/update-agent-sdk-scheduled.sh`, `bin/manual-tests-scheduled.sh`), so
  * installing also boots those labels out — two mechanisms both running the SDK
@@ -16,9 +16,9 @@ import * as path from "node:path";
 import { existsSync } from "node:fs";
 import { execa } from "execa";
 
-const TICK_LABEL = "com.callback-box.schedules";
+const TICK_LABEL = "com.beebox.schedules";
 /** Retired per-job labels; install boots them out so nothing double-runs. */
-const SUPERSEDED_LABELS = ["com.callback-box.sdk-update", "com.callback-box.manual-tests"];
+const SUPERSEDED_LABELS = ["com.beebox.sdk-update", "com.beebox.manual-tests"];
 const TICK_INTERVAL_SECONDS = 900;
 
 function plistPath(): string {
@@ -26,7 +26,7 @@ function plistPath(): string {
 }
 
 function logFile(): string {
-  return path.join(os.homedir(), "Library", "Logs", "callback-box-schedules.log");
+  return path.join(os.homedir(), "Library", "Logs", "beebox-schedules.log");
 }
 
 /**

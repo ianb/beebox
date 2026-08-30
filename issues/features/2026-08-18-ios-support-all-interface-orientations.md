@@ -1,7 +1,7 @@
 ---
 title: "Support all interface orientations on iOS — the app claims iPad but was only ever laid out portrait"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [ios, layout, accessibility]
 filed-by: agent
@@ -19,7 +19,7 @@ project makes without backing it up.
 
 ## What the project actually declares
 
-`ios-app/CallbackBox.xcodeproj/project.pbxproj`:
+`ios-app/BeeBox.xcodeproj/project.pbxproj`:
 
 ```
 TARGETED_DEVICE_FAMILY = "1,2"      # 1 = iPhone, 2 = iPad

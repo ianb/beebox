@@ -1,7 +1,7 @@
 ---
 title: "A history deep link to an older commit silently shows the newest commit"
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the history page's shareable-link user stories
@@ -21,7 +21,7 @@ const match = firstPage?.commits.find((c) => c.hash.startsWith(initialHash));
 setSelectedCommit(match ?? firstCommit);
 ```
 
-(`callback-box/src/frontend/src/components/history/HistoryBrowser.tsx:86-89`.)
+(`beebox/src/frontend/src/components/history/HistoryBrowser.tsx:86-89`.)
 Later pages arrive through `fetchNextPage`, and the selection is never revisited.
 
 Reproduced with `/history/8d65fe14` (138 commits back), which rendered commit

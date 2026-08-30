@@ -23,7 +23,7 @@ export interface TestGraph {
 }
 
 /**
- * The changed paths that could conceivably affect the callback-box suite.
+ * The changed paths that could conceivably affect the beebox suite.
  *
  * Everything else — `issues/`, `bin/`, `ios-app/`, `research/`, root docs — is
  * outside this suite's concern entirely and must not make a change look
@@ -39,7 +39,7 @@ export interface TestGraph {
 export function scopedChanges(changed: string[]): string[] {
   return changed.filter((path) => {
     const inScope =
-      path.startsWith("callback-box/") ||
+      path.startsWith("beebox/") ||
       path.startsWith("agent-doctest/") ||
       path === "package.json" ||
       path === "pnpm-lock.yaml" ||

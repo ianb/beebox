@@ -1,7 +1,7 @@
 ---
 title: "Support Codex as a box engine alongside Claude Code — refresh the research and decide"
 workstream: codex-engine-plan
-area: callback-box
+area: beebox
 labels: [engine, vendor-risk, research]
 resolution: implemented
 filed-by: agent
@@ -9,8 +9,8 @@ discovered-by: Ian
 discovered-in: main session — boxholder decision to reduce single-vendor exposure
 ---
 
-Resolved by the [implemented Codex box engine plan](../../../callback-box/docs/implemented-plans/codex-box-engine.md).
-The implementation culminated in `405414e2`: Callback Box now supports a complete
+Resolved by the [implemented Codex box engine plan](../../../beebox/docs/implemented-plans/codex-box-engine.md).
+The implementation culminated in `405414e2`: Bee Box now supports a complete
 optional Codex box engine through thin provider-specific adapters, pins each chat to
 its originating engine, and reads supported Codex history through app-server rather
 than owning a normalized replacement transcript.
@@ -30,7 +30,7 @@ disposable git repository with `approvalPolicy: "never"` and an explicit
 tokens. These are runtime observations, not conclusions inferred from the CLI's
 help text.
 
-| Capability callback-box needs | Probe result | What was observed |
+| Capability beebox needs | Probe result | What was observed |
 | --- | --- | --- |
 | Long-lived session identity | **Works** | `thread/start` returned a stable thread ID. |
 | Resume after wrapper/app-server restart | **Works** | A nonce from the first turn was recalled after killing app-server, starting a new process, and calling `thread/resume`. The wrapper does not have to reconstruct model context to resume execution. |
@@ -39,9 +39,9 @@ help text.
 | Local image input | **Works** | A copied, opaquely named screenshot sent as `localImage` was correctly identified as showing the recording state. |
 | Per-turn filesystem sandbox | **Works** | A write into an existing directory outside the declared writable root failed with `Operation not permitted`; no file was created. An initial control demonstrated that macOS temporary directories remain writable when the policy explicitly permits temp space. |
 | Interrupt an active tool/turn | **Works** | `turn/interrupt` stopped a `sleep 30; touch ...` command; the turn completed as `interrupted` and the delayed file was not created. |
-| Token accounting | **Works, tokens not dollars** | `thread/tokenUsage/updated` arrived throughout the run and included total, last-turn, cached-input, output, reasoning, and context-window counts. The eight-turn full probe reported 209,438 cumulative tokens: 208,832 input (127,232 cached) and 606 output. Its last small turn alone reported 25,148 input tokens (24,320 cached) and 146 output, so routine box-turn cost needs measurement with callback-box's actual instructions and context. |
+| Token accounting | **Works, tokens not dollars** | `thread/tokenUsage/updated` arrived throughout the run and included total, last-turn, cached-input, output, reasoning, and context-window counts. The eight-turn full probe reported 209,438 cumulative tokens: 208,832 input (127,232 cached) and 606 output. Its last small turn alone reported 25,148 input tokens (24,320 cached) and 146 output, so routine box-turn cost needs measurement with beebox's actual instructions and context. |
 | Post-tool validation feedback | **Protocol support confirmed; project configuration not yet proven** | The app-server emitted hook lifecycle events for an existing user-level hook. However, an isolated repo's `.codex/hooks.json` PostToolUse hook was not discovered in two attempts, including with an adjacent `.codex/config.toml` and `--dangerously-bypass-hook-trust`. The current Codex hook contract documents blocking PostToolUse feedback, but the project config/trust/discovery recipe still needs a focused probe before claiming parity. |
-| Claude-style `maxTurns` / `maxBudgetUsd` | **No direct equivalent found** | The app-server protocol has interruption, token usage, and usage-limit errors, but its generated schema exposes no matching per-run turn or dollar budget. callback-box would have to count/interrupt host-side; dollar enforcement requires pricing/accounting outside the harness. |
+| Claude-style `maxTurns` / `maxBudgetUsd` | **No direct equivalent found** | The app-server protocol has interruption, token usage, and usage-limit errors, but its generated schema exposes no matching per-run turn or dollar budget. beebox would have to count/interrupt host-side; dollar enforcement requires pricing/accounting outside the harness. |
 
 The positive result is narrower and better than “re-provide the runtime”: a
 direct app-server adapter can preserve the Codex harness while satisfying the
@@ -53,25 +53,25 @@ agent runtime.
 The remaining lossy areas are mostly product policy and presentation:
 
 - Claude and Codex event/item types should remain provider-specific below a
-  small callback-box lifecycle interface. Normalizing every update would throw
+  small beebox lifecycle interface. Normalizing every update would throw
   away useful information for little benefit.
 - Codex usage events do not provide Claude's dollar-budget control. Token caps
   are feasible; exact pre-turn dollar caps are not equivalent.
-- callback-box's current history UI reads Claude Code's private transcript
+- beebox's current history UI reads Claude Code's private transcript
   files. The resume probe shows Codex itself can own continuation, but it does
   **not** show that Codex can supply the same transcript presentation, husk
   extraction, or deletion semantics. `thread/read`, `thread/list`, and
   `thread/delete` exist in the protocol; their fidelity and retention behavior
   need a separate transcript probe. This is still the main design question.
 - Project-scoped PostToolUse setup is unresolved. Hooks are not absent, but we
-  should not promise callback-box's validator behavior until the discovery and
+  should not promise beebox's validator behavior until the discovery and
   trust path works in an isolated box.
 - No live mid-chat engine switch was tested or is proposed. Pinning each chat
   to its engine avoids translating model-private state.
 
 Two practical follow-up tracks remain before implementation estimation is
 credible: (1) finish the transcript audit begun below, including
-list/delete/retention and every callback-box consumer; (2) establish the
+list/delete/retention and every beebox consumer; (2) establish the
 supported project hook trust/configuration path and verify that blocking
 PostToolUse feedback actually replaces the tool result seen by the model.
 
@@ -112,21 +112,21 @@ not disturb the running chat.
 This API representation is intentionally lossy relative to the private file:
 it omitted raw tool calls/results, encrypted reasoning, token-count events,
 full injected turn context, and world-state snapshots. That is probably the
-right loss boundary for callback-box rather than a defect. The chat UI needs
+right loss boundary for beebox rather than a defect. The chat UI needs
 user/agent content and selected durable activity, while active-turn streaming
 can carry transient tool progress. Debug/raw-transcript tooling may remain
 provider-specific.
 
-Most importantly, **Codex chat history does not require callback-box to parse
+Most importantly, **Codex chat history does not require beebox to parse
 Codex's private JSONL**. A provider transcript adapter can use the supported
 `thread/read` result and retain Codex's native item types. The remaining audit
-is now narrower: map those returned items against callback-box's rendered chat
+is now narrower: map those returned items against beebox's rendered chat
 entries, first-message labels, delivered-message decoding, self-notes, husk
 review/extraction, retention slicing, and delete/archive behavior. `thread/list`
 and `thread/delete` still need non-destructive/synthetic testing; the current
 real chat was deliberately not deleted.
 
-Ian wants callback-box able to run on **Codex as an engine**, not only Claude
+Ian wants beebox able to run on **Codex as an engine**, not only Claude
 Code, to reduce exposure to a single vendor's product decisions. There was no
 issue for it; there is substantial prior research, now a month old and written
 before the trigger.
@@ -140,7 +140,7 @@ synthesis with recommendations and a watchlist.
 
 **The finding that governs everything**, from the coupling audit's verdict:
 
-> what callback-box delegates to `@anthropic-ai/claude-agent-sdk` is not a loop,
+> what beebox delegates to `@anthropic-ai/claude-agent-sdk` is not a loop,
 > it's a **runtime**
 
 The SDK spawns the bundled Claude Code binary, and the product leans on Claude
@@ -187,7 +187,7 @@ cheapest thing that actually delivers it?*
 - **Partial adoption is probably the answer.** Worker sessions already run on
   Codex routinely (`bin/launch-worktree-session --agent codex`) and `/finish`
   lands their work, so the *development* side is already dual-vendor. The
-  exposure is specifically the **box engine** — `cb wakeup`, chat sessions,
+  exposure is specifically the **box engine** — `bbx wakeup`, chat sessions,
   scheduled procedures. Naming that boundary may make this much smaller than
   "support Codex everywhere".
 - **What degrades?** Codex has no `--worktree`, has a different hook

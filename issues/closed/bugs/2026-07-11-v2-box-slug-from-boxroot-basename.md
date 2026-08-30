@@ -8,7 +8,7 @@ resolution: implemented
 ---
 
 Closed 2026-07-19: `src/lib/box-slug.ts` (`boxSlug` / `boxSlugFromShape`) is now
-the one derivation, used by every site below; `cb serve`'s `defaultSlugFor`
+the one derivation, used by every site below; `bbx serve`'s `defaultSlugFor`
 collapsed into it. `test/lib/box-slug.doctest.md` pins that two v2 boxes slug
 differently, and `push-output-cards.doctest.md` dropped its per-box store
 isolation — both boxes now share one slug-keyed store without colliding. The
@@ -30,7 +30,7 @@ dir instead would silently slug every v2 box 'content'").
 The other sites did **not** get that correction. Found via the v1-removal work
 (step 1a): once test fixtures build real v2 boxes, `push-output-cards.doctest.md`
 collided because two boxes both slugged to `"content"` against the global,
-slug-keyed push store (`~/.local/share/cb/push-subscriptions.json`). Worked
+slug-keyed push store (`~/.local/share/beebox/push-subscriptions.json`). Worked
 around in that test by isolating the store per box; the underlying code issue is
 untouched and filed here.
 

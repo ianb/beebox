@@ -8,7 +8,7 @@ labels: [cleanup, router]
 ---
 
 `/<worktree>/dev/docs/…` now 301s to `/workstreams/browse?file=…&workstream=…`
-([general-browser](../../callback-box/docs/plans/general-browser.md), Track 5),
+([general-browser](../../beebox/docs/plans/general-browser.md), Track 5),
 so everything that rendered that surface is unreachable:
 
 - `serveDocBrowser`, `renderDocSidebar`, `renderDocQuickOpen`, `DOC_BROWSER_CSS`

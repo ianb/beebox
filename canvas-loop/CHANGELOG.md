@@ -53,10 +53,10 @@ us more. Every change lands here — hand-written and terse.
   `<SketchFigure>` delegates to it (one browser implementation); the
   dependency-isolation test extends to prove `./browser` pulls in neither React
   nor the native canvas backend.
-- **First host integration: callback-box figure runtime.** A TEA sketch module
+- **First host integration: beebox figure runtime.** A TEA sketch module
   may also default-export a host figure factory
   (`(cl, { mount, figure }) => cl.mountSketch(...)`); the headless CLI ignores
-  the default export (TEA detection keys on the named `update`). callback-box
+  the default export (TEA detection keys on the named `update`). beebox
   adds `canvas-loop` as a fourth `figure` runtime that lazy-imports `./browser`
   and mounts the sketch through this factory. See TEA.md's dual-export section.
 

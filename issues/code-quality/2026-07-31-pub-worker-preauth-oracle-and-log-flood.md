@@ -1,12 +1,12 @@
 ---
 title: "pub-worker: pre-auth pub-id status oracle + unbounded any-account access-log writes"
 workstream: pub-setup-wrangler
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-pub-setup-wrangler — Codex cross-review of the pub-setup rework surfaced these as pre-existing Worker behavior, out of that item's scope
 ---
 
-Two hardening tensions in `callback-box/pub-worker/`, found by an adversarial
+Two hardening tensions in `beebox/pub-worker/`, found by an adversarial
 review of the publish credential model. Both are pre-existing behavior of the
 Track C/D Worker, not regressions.
 

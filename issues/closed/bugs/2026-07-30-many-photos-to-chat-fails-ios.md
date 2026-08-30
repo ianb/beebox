@@ -1,11 +1,11 @@
 ---
 title: "Submitting many photos to chat fails (iOS); route >N through upload+references"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder hit it on a prod box
 resolution: implemented
-design: ../../../callback-box/docs/plans/chat-photo-batch-upload.md
+design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 labels: [mobile]
 ---
 
@@ -20,7 +20,7 @@ progress on the worktree, but the reported bug is resolved. Reopen only if
 large-batch submits fail again.
 
 **Fix implemented on worktree `chat-photo-batch-upload`** (design:
-[chat-photo-batch-upload](../../../callback-box/docs/plans/chat-photo-batch-upload.md)).
+[chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
 Above 4 photos, both composers now upload the selection as a bulk batch instead
 of base64-inlining it, and the composer text rides along as the batch's `note`
 so the agent files against it rather than asking what the files are.

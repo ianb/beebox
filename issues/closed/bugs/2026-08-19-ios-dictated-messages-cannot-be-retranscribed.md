@@ -1,16 +1,16 @@
 ---
 title: "Messages dictated in the iOS app can never be retranscribed"
 workstream: ios-retranscribe
-area: callback-box
+area: beebox
 labels: [chat, voice, transcription, ios]
-design: ../../../callback-box/docs/implemented-plans/ios-audio-retranscription.md
+design: ../../../beebox/docs/implemented-plans/ios-audio-retranscription.md
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-ios-retranscribe — spun off to make retranscription work on iOS
 resolution: implemented
 ---
 
-`cb chat retranscribe --message <id>` and `cb chat ask-about-audio` always fail
+`bbx chat retranscribe --message <id>` and `bbx chat ask-about-audio` always fail
 for a message dictated in the native iOS composer. Not sometimes — structurally,
 every time. The failure is not a bug in the retranscribe path; it is that
 nothing on the iOS send path ever puts the recording anywhere the retranscribe
@@ -26,10 +26,10 @@ independent).
 
 Verified by reading the code, not by running it (see *Testing reality* below).
 
-**The answer path is web-only.** `cb chat retranscribe` long-polls
+**The answer path is web-only.** `bbx chat retranscribe` long-polls
 `/api/chat/last-audio/request`, which emits `chat-last-audio-request` on the
 event bus; connected chat tabs answer from
-`callback-box/src/frontend/src/lib/audio/last-audio.ts`, a per-tab in-memory
+`beebox/src/frontend/src/lib/audio/last-audio.ts`, a per-tab in-memory
 `RetentionStore` keyed by emission id. `grep -rn "last-audio\|lastAudio\|retranscri" ios-app/`
 returns nothing: the native app does not participate at all.
 
@@ -101,7 +101,7 @@ storage consequences, not an implementation detail.
 handed over only when an agent asks; nothing sits at rest on the box. The at-rest
 question is parked rather than settled — option 2 remains available later for the
 asleep-phone case without invalidating option 1. Design:
-[iOS audio retranscription](../../../callback-box/docs/implemented-plans/ios-audio-retranscription.md).
+[iOS audio retranscription](../../../beebox/docs/implemented-plans/ios-audio-retranscription.md).
 
 ## Testing reality
 
@@ -122,7 +122,7 @@ exercises a real device.
 
 **What to try:** on a phone with this build installed, dictate one message in
 the iOS composer with narration off (an ordinary `.live` send, not the HQ
-variant), then run `cb chat retranscribe --message <id>` against it from an
+variant), then run `bbx chat retranscribe --message <id>` against it from an
 agent or the CLI.
 
 **Expected:** a transcript comes back. **Today's failure mode:** "No recording
@@ -141,5 +141,5 @@ build that predates it.
   and [Mark low-confidence words in transcripts](../features/2026-08-15-mark-low-confidence-words-in-transcripts.md)
   — both `transcript-confidence`, both about surfacing transcript quality. A fix
   here should feed those rather than grow a parallel display.
-- `callback-box/docs/mobile-contract.md` — where a new native duty gets written
+- `beebox/docs/mobile-contract.md` — where a new native duty gets written
   down once decided.

@@ -1,7 +1,7 @@
 ---
 title: "iOS: swipe-typing (QuickPath) leaves the cursor behind instead of advancing"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder swipe-typing in the native iOS composer
 resolution: implemented
@@ -40,7 +40,7 @@ lands in the wrong place. Native composer only.
 
 ## Cause (from reading the code)
 
-`ios-app/CallbackBox/Views/ComposerTextView.swift` is a `UITextView` wrapped in
+`ios-app/BeeBox/Views/ComposerTextView.swift` is a `UITextView` wrapped in
 SwiftUI with **two-way bindings for both text AND selection**, and
 `updateUIView` (lines 34-49) forces the caret on every reconcile:
 

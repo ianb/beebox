@@ -4,7 +4,7 @@ description: "When a bug causes downstream damage (UI freeze, data loss, lost me
 metadata: 
   node_type: memory
   type: feedback
-  originSessionId: 6f088193-eb30-436c-80cb-1b6a986f9034
+  originSessionId: 6f088193-eb30-436c-80bbx-1b6a986f9034
 ---
 
 When a bug has caused damage that the user actually cares about — UI freeze, data loss, lost in-progress message, lost work, corrupted state, anything where the failure mode of the bug spilled into real user-visible harm — treat it as **two** problems, not one:

@@ -1,0 +1,74 @@
+# beebox — one box, one compose project.
+#
+# Local:  docker compose run --rm box bbx init /data/box   # once
+#         docker compose run --rm box claude auth login    # once (or use
+#                                                           # CLAUDE_CODE_OAUTH_TOKEN)
+#         docker compose up -d
+#         open http://localhost:3210/box/
+#
+# VPS:    same, plus `docker compose --profile public up -d` for Caddy + TLS.
+#
+# See docs/docker-install.md for the full local + VPS walkthrough.
+
+services:
+  box:
+    build:
+      # Context is the monorepo root — the release tarball is built from the
+      # whole workspace. Relative to this compose file, that is two levels up.
+      context: ../..
+      dockerfile: beebox/docker/Dockerfile
+    restart: unless-stopped
+    # Loopback-only by default: the box is reachable from the host but NOT
+    # from the network. Publishing wider (a VPS's public interface) is an
+    # explicit operator choice — do it via the Caddy profile below, not by
+    # widening this mapping.
+    ports:
+      - "127.0.0.1:3210:3210"
+    volumes:
+      # The box package — a git repo the operator owns. Survives everything.
+      - ./data/box:/data/box
+      # Claude `auth login` credentials (CLAUDE_CONFIG_DIR in the image points
+      # here). A NAMED volume so it survives `docker compose down` and container
+      # rebuilds; `down -v` destroys it (re-login needed).
+      - claude-auth:/app/claude-config
+    # Optional: provider keys (see the parent .env.example) and, as the
+    # headless-auth fallback, CLAUDE_CODE_OAUTH_TOKEN from a laptop-side
+    # `claude setup-token`. Absent .env is fine.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Overrides the image's baked git identity for the box's commits.
+      BBX_GIT_NAME: ${BBX_GIT_NAME:-Bee Box}
+      BBX_GIT_EMAIL: ${BBX_GIT_EMAIL:-beebox@box.example.com}
+
+  # Public HTTPS front door — only started with `--profile public`. Absent
+  # from a plain `docker compose up`. Terminates TLS (auto-cert from Let's
+  # Encrypt) for $BBX_DOMAIN and proxies to the box.
+  caddy:
+    image: caddy:2
+    profiles: ["public"]
+    restart: unless-stopped
+    depends_on:
+      - box
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Do NOT use the `${BBX_DOMAIN:?...}` required-variable form here: Compose
+      # interpolates the whole file at load time, BEFORE profile filtering, so a
+      # `:?` guard fires even for a plain `docker compose up`/`run` that never
+      # touches the caddy service — breaking the local flow. Default to empty
+      # instead; if the public profile is started without BBX_DOMAIN set, Caddy
+      # itself fails loudly on the empty site address (`{$BBX_DOMAIN}` in the
+      # Caddyfile). docs/docker-install.md says to set it for the public path.
+      BBX_DOMAIN: ${BBX_DOMAIN:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  claude-auth:
+  caddy-data:
+  caddy-config:

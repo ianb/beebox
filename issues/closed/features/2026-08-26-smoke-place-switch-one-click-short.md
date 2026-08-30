@@ -1,7 +1,7 @@
 ---
 title: "The smoke walk opens the place menu but never selects a landmark — it stops one click short of the surface that broke"
 workstream: smoke-tier
-area: callback-box
+area: beebox
 labels: [smoke-tier]
 filed-by: agent
 discovered-by: agent
@@ -15,7 +15,7 @@ consequence — the URL changed and the place pill names the target — via
 `switchTarget`/`placeSwitchFailure` in `bin/smoke-lib.ts`. No divergence from
 what this issue proposed.
 
-The `place-menu` step clicks `#cb-nav-place`, then asserts the menu is
+The `place-menu` step clicks `#bbx-nav-place`, then asserts the menu is
 expanded, carries its fixed rows, shows no error row, and lists at least one
 landmark (`bin/smoke.ts`, `placeMenuFailure` in `bin/smoke-lib.ts`). It never
 selects a landmark. So the walk proves the affordance renders and stops

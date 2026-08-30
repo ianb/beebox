@@ -22,8 +22,8 @@ set -euo pipefail
 exec 1>&2  # everything to stderr; no stdout expected
 
 input=$(cat)
-mkdir -p "$HOME/.cache/callback-box"
-printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-worktree-remove-input.json"
+mkdir -p "$HOME/.cache/beebox"
+printf '%s\n' "$input" > "$HOME/.cache/beebox/last-worktree-remove-input.json"
 
 name_from_input=$(printf '%s' "$input" | jq -r '.name // .worktree_name // empty')
 path_from_input=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')

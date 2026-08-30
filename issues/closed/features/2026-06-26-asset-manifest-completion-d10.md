@@ -1,7 +1,7 @@
 ---
 title: "asset manifest completion d10"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
@@ -19,11 +19,11 @@ The pre-commit verify hook had already landed (bucket C). The remaining
   uploads, email connectors, agents dropping files), and the pre-commit
   hook auto-claims all of it. A web affordance to hand-staple a file to a
   card is *manual attachment management*, which the boxholder explicitly
-  doesn't want; the rare one-off is covered by `cb attachments add`.
+  doesn't want; the rare one-off is covered by `bbx attachments add`.
 - **Docs corrected.** `docs/asset-manifests.md` had a stale
   "Not yet implemented" status and a Commands section describing
-  manifest-aware `cb overwrite`/`cb mv`/`cb rm` that don't exist as
-  written (the real command is `cb attachments overwrite`; moves/renames
+  manifest-aware `bbx overwrite`/`bbx mv`/`bbx rm` that don't exist as
+  written (the real command is `bbx attachments overwrite`; moves/renames
   are auto-reconciled by the scan; there is no manifest-aware delete). All
   corrected to match what shipped. (There was no actual "versioning"
   language to remove — the doc's history framing is correctly about git.)

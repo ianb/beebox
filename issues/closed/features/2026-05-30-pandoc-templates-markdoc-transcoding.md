@@ -2,7 +2,7 @@
 title: "pandoc templates markdoc transcoding"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 resolution: wontfix
 ---
 
@@ -33,7 +33,7 @@ transformer for the cases where the output medium genuinely needs
 Pandoc's template engine (a printable brief, an exportable PDF, a
 slide deck from a guide card). Markdoc stays the authoring + rendering
 layer; Pandoc becomes a downstream sink for specific export targets.
-The transcoder would be a `cb` subcommand (e.g. `cb export pandoc
+The transcoder would be a `bbx` subcommand (e.g. `bbx export pandoc
 <card>`) that walks the Markdoc AST and emits Pandoc-flavored Markdown
 or directly the Pandoc JSON AST, then pipes through `pandoc` with one
 of these templates selected by export target.

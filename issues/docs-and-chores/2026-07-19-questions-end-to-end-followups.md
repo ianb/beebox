@@ -1,8 +1,8 @@
 ---
 title: "Questions end-to-end: rollout + hardening followups"
 workstream: unknown
-area: callback-box
-design: ../../callback-box/docs/implemented-plans/questions-end-to-end.md
+area: beebox
+design: ../../beebox/docs/implemented-plans/questions-end-to-end.md
 ---
 
 Followups from the questions-end-to-end implementation (merged to main
@@ -12,7 +12,7 @@ unfinished operational steps, and the review passes left named test gaps.
 ## Rollout (blocking — the feature is half-deployed until these run)
 
 - **Run the `question-lifecycle` migration on prod boxes and
-  `~/src/boxes/test1`** per `callback-box/docs/migrations.md`
+  `~/src/boxes/test1`** per `beebox/docs/migrations.md`
   (`scripts/migrate/question-lifecycle-run.ts` — dry-run first, then
   `--apply`; exit code 2 means select-options violations to fix by hand).
   It has only run on the questions worktree's test-box clone. Until it
@@ -21,7 +21,7 @@ unfinished operational steps, and the review passes left named test gaps.
   skips them — no nudge, no expiry), and scan-import questions stranded in
   `.attach/` scopes stay invisible to every surface.
 - **Template rollout parks.** `templates/procedures/process-pages.procedure.card`
-  parked on the questions worktree's test-box clone at `cb init` (observed
+  parked on the questions worktree's test-box clone at `bbx init` (observed
   2026-07-10) and will park on other existing boxes; check
   `process-retrospective.procedure.card` too. Both carry the rewritten
   question-card guidance (YAML format, `learning:`, no `answered-by`), so a
@@ -39,7 +39,7 @@ process-level failure modes of the guarded transition
   web answer vs aging expiry as separate processes) — lock timeout and the
   loser's status re-check.
 - **Stale-lock recovery** (holder killed while holding
-  `.callback-box/question-locks/…`).
+  `.beebox/question-locks/…`).
 - **SIGKILL between writes** — the job-before-card ordering exists exactly
   so a crash never leaves `answered` with no job; the invariant is
   documented and code-ordered but has no test that kills the process
@@ -66,7 +66,7 @@ process-level failure modes of the guarded transition
   acts on while pending) — revisit once the base loop has been lived with;
   the `learning.proposal` shape was designed so this needs no schema
   change.
-- Footnote, by design: scoped `cb finalize -c <connector>` runs skip the
+- Footnote, by design: scoped `bbx finalize -c <connector>` runs skip the
   question-alert/aging block (only the full finalize and `-c push` run
   it); if scoped finalize runs ever become a primary cadence, the sweep
   needs its own trigger.

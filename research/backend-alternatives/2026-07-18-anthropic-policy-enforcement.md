@@ -79,7 +79,7 @@ messages/5-hr window; Pro ≈ 40–45. Direct current user quotes could not be p
 
 ---
 
-## Risk assessment for callback-box
+## Risk assessment for beebox
 
 Low-to-moderate, and it is a **billing/ambiguity risk, not a ban risk**:
 
@@ -88,7 +88,7 @@ Low-to-moderate, and it is a **billing/ambiguity risk, not a ban risk**:
 - The credit-pool split is the concrete threat to track: if it returns, users face a
   new metered pool or cap for programmatic usage — a pricing change, with promised
   advance notice. This is precisely the scenario that motivates provider pluggability.
-- Self-audit line: if callback-box ever centralizes multiple users' subscriptions
+- Self-audit line: if beebox ever centralizes multiple users' subscriptions
   through shared infrastructure, that crosses into the enforced-against behavior.
   Per-user, own-login architecture stays on the safe side.
 - Monitoring points: support.claude.com's Agent SDK article and

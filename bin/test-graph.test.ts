@@ -156,7 +156,7 @@ test("the @shared alias resolves, and only the configured prefix does", async ()
 
 // ── scope ───────────────────────────────────────────────────────────────────
 
-test("paths outside callback-box cannot make a change unaccounted", () => {
+test("paths outside beebox cannot make a change unaccounted", () => {
   // /finish routes bin/, issues/, ios-app/ etc. to their own verification.
   // Treating them as unaccounted here would send almost every branch to the
   // full suite for reasons that have nothing to do with this suite.
@@ -166,9 +166,9 @@ test("paths outside callback-box cannot make a change unaccounted", () => {
       "issues/bugs/x.md",
       "ios-app/App.swift",
       "research/notes.md",
-      "callback-box/src/core/box.ts",
+      "beebox/src/core/box.ts",
     ]),
-    ["callback-box/src/core/box.ts"],
+    ["beebox/src/core/box.ts"],
   );
 });
 
@@ -178,12 +178,12 @@ test("prose markdown is out of scope, but a .doctest.md is not", () => {
   // and it is a pre-commit hook outside tap.
   assert.deepEqual(
     scopedChanges([
-      "callback-box/docs/testing.md",
-      "callback-box/docs/security-overview.md",
-      "callback-box/src/services/CLAUDE.md",
-      "callback-box/test/core/box.doctest.md",
+      "beebox/docs/testing.md",
+      "beebox/docs/security-overview.md",
+      "beebox/src/services/CLAUDE.md",
+      "beebox/test/core/box.doctest.md",
     ]),
-    ["callback-box/test/core/box.doctest.md"],
+    ["beebox/test/core/box.doctest.md"],
   );
 });
 

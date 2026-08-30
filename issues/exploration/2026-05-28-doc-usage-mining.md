@@ -2,7 +2,7 @@
 title: "doc usage mining"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 Claude Code session transcripts live as JSONL at `~/.claude/projects/<encoded-cwd>/*.jsonl`, and every `Read` tool_use carries the file path plus offset/limit. That's free data — no instrumentation needed — describing how the agent actually uses the doc corpus, which is rarely the same as how we *think* it does.

@@ -3,7 +3,7 @@ title: "The manual-testing queue always links landed work to main dev, even when
 workstream: unattached
 needs: [design]
 area: workstreams-app
-design: ../../callback-box/docs/implemented-plans/workstreams.md
+design: ../../beebox/docs/implemented-plans/workstreams.md
 labels: [workstreams, manual-testing, testing-queue]
 filed-by: agent
 discovered-by: agent

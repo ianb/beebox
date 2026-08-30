@@ -3,14 +3,14 @@
 *2026-07-28. Prompted by the boxholder's Google-OAuth friction (unverified-app
 screen, restricted-scope verification) — "what do OpenClaw / Hermes / others
 do?" A focused scan of how self-hosted agents and the surrounding tooling handle
-Google account connection, with dispositions for callback-box. Flat top-level
+Google account connection, with dispositions for beebox. Flat top-level
 note (cross-cuts beyond the openclaw-hermes corpus).*
 
 ## Three models in the field
 
 | Model | Who | Who sets up the OAuth app | Who holds tokens | Verification burden |
 |---|---|---|---|---|
-| **BYO credentials** | callback-box, OpenClaw, most self-hosted MCP servers | the operator (own Google Cloud project) | the operator's box | operator's own, personal-scale → usually skip |
+| **BYO credentials** | beebox, OpenClaw, most self-hosted MCP servers | the operator (own Google Cloud project) | the operator's box | operator's own, personal-scale → usually skip |
 | **Managed auth broker** | Composio, Arcade, Nango, Pipedream, Paragon | the broker (pre-verified apps) | the broker's vault (Nango self-host = your infra) | none for the user — broker carries it |
 | **Hosted verified app** | Anthropic Claude connectors, ChatGPT, Zapier | the vendor | the vendor | vendor passed CASA |
 
@@ -42,7 +42,7 @@ all use BYO OAuth creds via a `credentials.json` / env path, tokens never leave
 the machine, ~25–40 min setup — and their docs literally warn that **"OAuth
 tokens expire every 7 days unless you verify your consent screen"** ([roundup](https://calendarmcp.ai/blog/best-calendar-mcp-servers-2026)).
 So the unverified-app friction we hit is a **universal BYO condition, not a
-callback-box defect.**
+beebox defect.**
 
 **Managed auth brokers — the middle path.** Composio / Arcade / Nango / Pipedream
 host **pre-verified** OAuth apps and **vault + refresh** tokens, giving the agent
@@ -54,9 +54,9 @@ machinery can run on your own infra with credentials staying local
 ([Nango self-host](https://nango.dev/blog/best-self-hosted-api-integration-platforms-for-ai-agents/)) —
 a genuine hybrid.
 
-## Where callback-box sits + dispositions
+## Where beebox sits + dispositions
 
-callback-box is squarely in the **BYO** camp with OpenClaw and the MCP servers —
+beebox is squarely in the **BYO** camp with OpenClaw and the MCP servers —
 env-var client creds, operator's own domain/consent screen, tokens on the box.
 This **validates the bet**; the friction is the price everyone in this camp pays.
 
@@ -64,7 +64,7 @@ This **validates the bet**; the friction is the price everyone in this camp pays
   become a hosted-verified custodian (that's what forces CASA). See
   [byo-google-oauth-self-host-story](../issues/decisions/2026-07-28-byo-google-oauth-self-host-story.md).
 - **adapt** — OpenClaw's **one-plugin/one-OAuth-for-all-Google-services** + its
-  **chat-driven grant**. callback-box already has a shared server-wide Google
+  **chat-driven grant**. beebox already has a shared server-wide Google
   connection + per-box service toggles and a web admin grant, so we're close;
   the transferable bit is presenting it as *one* connect action, and possibly a
   chat-initiated flow.
@@ -77,7 +77,7 @@ This **validates the bet**; the friction is the price everyone in this camp pays
   privacy-preserving variant. Ties directly to
   [investigate-composio-tool-layer](../issues/exploration/2026-07-09-investigate-composio-tool-layer.md).
   Default stays BYO; broker is opt-in convenience.
-- **reject** — a callback-box-hosted shared OAuth app (forces mandatory CASA +
+- **reject** — a beebox-hosted shared OAuth app (forces mandatory CASA +
   100-user cap + makes us everyone's token custodian).
 
 ## Downsides of the broker options (Composio vs Nango, 2026)
@@ -109,7 +109,7 @@ cover a handful of connections) — the real axes are **custody/security** and
   data syncs on self-hosted need an enterprise license"; the free self-hosted
   edition is deliberately Auth+Proxy-only (the community has asked them to
   clarify: [issue #5536](https://github.com/NangoHQ/nango/issues/5536)). **This
-  is fine for us** — callback-box has its own connectors/sync; we'd use Nango
+  is fine for us** — beebox has its own connectors/sync; we'd use Nango
   only for the auth/proxy layer, not its sync product.
 - **Ops burden** is real but trivial at our scale (~1 Google integration); the
   "maintenance grows past 20–30 integrations" warning doesn't apply.
@@ -117,13 +117,13 @@ cover a handful of connections) — the real axes are **custody/security** and
   ~$50–$249/mo ([review](https://makerstack.co/reviews/nango-review/)) — but
   self-hosted-free is the relevant path.
 
-**Bottom line for callback-box:** Composio is the wrong shape (cloud custody +
+**Bottom line for beebox:** Composio is the wrong shape (cloud custody +
 breach + lock-in + per-call billing). **Nango's free self-hosted Auth+Proxy is
 the one worth a spike** — it keeps tokens local and hands us the commodity
 plumbing, leaving only our differentiated policy/filtering/advertisement layer to
 build. The enterprise-gated sync engine is irrelevant since we don't use it.
 
-## What Nango provides — and the slice callback-box would actually use
+## What Nango provides — and the slice beebox would actually use
 
 Nango's full surface (900+ APIs): **Auth/OAuth** (flows, token refresh, scopes,
 provider quirks, encrypted credential storage) · **Proxy** (automatic credential
@@ -134,7 +134,7 @@ alerts per connection) · **Connect UI** (drop-in account-linking) · **agent
 tool/MCP schemas** · multi-tenant isolation ([docs](https://nango.dev/docs/introduction)).
 
 **We'd use only Auth + Proxy.** Syncs / unified models / webhooks / RAG are
-Nango's headline value but **callback-box already does that itself** (connectors →
+Nango's headline value but **beebox already does that itself** (connectors →
 card materialization), and they're the enterprise-gated part of self-hosted
 anyway. So most of Nango is irrelevant to us — which is fine; the two we want are
 in the free self-hosted tier.

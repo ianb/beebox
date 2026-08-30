@@ -1,9 +1,9 @@
 /**
  * Custom error classes for scan-uploader. Every non-transport failure carries
  * a purpose-named class so callers (and tests) can branch on `instanceof`
- * instead of string-matching messages. Mirrors callback-box's convention
- * (`callback-box/src/lib/errors.ts`) without importing it — this package
- * shares no code with callback-box.
+ * instead of string-matching messages. Mirrors beebox's convention
+ * (`beebox/src/lib/errors.ts`) without importing it — this package
+ * shares no code with beebox.
  */
 
 import { errorMessage } from "./error-guards.js";

@@ -6,7 +6,7 @@ needs: [design]
 labels: [research, discoverability]
 filed-by: agent
 discovered-by: Ian
-discovered-in: main session — cb feedback triage
+discovered-in: main session — bbx feedback triage
 ---
 
 **Goggles Open Knowledge Format** came up as something to consider. Ian knows

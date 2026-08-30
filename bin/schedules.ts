@@ -21,7 +21,7 @@
  *
  * THIS CLI IS THE ONLY WRITER of the store, the `bin/comments` precedent.
  *
- * Design: callback-box/docs/plans/scheduled-workstreams.md
+ * Design: beebox/docs/plans/scheduled-workstreams.md
  * Schema/records: bin/lib/schedules.ts · Store: bin/lib/schedules-store.ts
  * Runner:         bin/lib/schedules-runner.ts (one schedule) + schedules-tick.ts (one launchd firing)
  * This file:      usage, `list`, `run`/`tick`/`logs`, `lint`, dispatch. The
@@ -306,7 +306,7 @@ async function main(): Promise<number> {
   try {
     return await dispatch();
   } catch (e) {
-    if (process.env["CB_SCHEDULES_DEBUG"] === "1") throw e;
+    if (process.env["BBX_SCHEDULES_DEBUG"] === "1") throw e;
     process.stderr.write(`schedules: ${e instanceof Error ? e.message : String(e)}\n`);
     return 1;
   }

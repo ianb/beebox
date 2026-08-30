@@ -1,7 +1,7 @@
 ---
 title: "Codex plugin installer points the user's global marketplace at whichever checkout ran last; a culled one breaks every codex box's chat list"
 workstream: codex-plugin-registration
-area: callback-box
+area: beebox
 priority: important
 labels: [codex, tests]
 filed-by: agent
@@ -19,7 +19,7 @@ alone (`installCodexPlugin` in `ensure-codex-plugin.ts`), and
 failing the whole `chat.placeMenu` query. No divergence from what the issue
 proposed.
 
-`src/core/agent/ensure-codex-plugin.ts` registers the `callback-box` plugin
+`src/core/agent/ensure-codex-plugin.ts` registers the `beebox` plugin
 marketplace in the user's global Codex state (`~/.codex`) with
 `marketplaceSource.source = PACKAGE_ROOT` — the checkout that happens to be
 running — and re-points it whenever the registered path differs. Three
@@ -45,8 +45,8 @@ consequences, all seen 2026-08-26:
 Worktrees have the same shape as (1): each codex session re-points the global
 marketplace at its own checkout, and a culled worktree leaves it dangling.
 
-Repair used today: `codex plugin marketplace remove callback-box`, `… add
-<main checkout>/callback-box`, `codex plugin add callback-box-codex@callback-box`.
+Repair used today: `codex plugin marketplace remove beebox`, `… add
+<main checkout>/beebox`, `codex plugin add beebox-codex@beebox`.
 
 ## What to change
 
@@ -56,7 +56,7 @@ Repair used today: `codex plugin marketplace remove callback-box`, `… add
   which test reaches it (a fixture box with `agentEngine: codex` that lists
   sessions, or a codex run).
 - **The installer repairs a broken registration**: when `plugin list` fails,
-  remove/re-add the `callback-box` marketplace rather than throwing.
+  remove/re-add the `beebox` marketplace rather than throwing.
 - **Don't fight over the global registration from worktrees**: leave an
   existing registration alone when its path still exists and the plugin
   version matches; only repair when the path is gone.

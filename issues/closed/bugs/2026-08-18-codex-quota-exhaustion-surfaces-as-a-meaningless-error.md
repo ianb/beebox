@@ -1,7 +1,7 @@
 ---
 title: "Codex quota exhaustion surfaces as \"exited with code 1: Reading prompt from stdin…\" — we discard the real reason"
 workstream: deferred-recoverable
-area: callback-box
+area: beebox
 labels: [codex, agent, error-messages, scheduler]
 filed-by: agent
 resolution: implemented
@@ -10,11 +10,11 @@ discovered-in: main session — persistent chat and scheduled-task failures on a
 ---
 
 > **Closed (2026-08-18):** implemented by the deferred-recoverable plan
-> (`../../../callback-box/docs/plans/deferred-recoverable-agent-failures.md`).
+> (`../../../beebox/docs/plans/deferred-recoverable-agent-failures.md`).
 > Quota exhaustion is now recognized as a deferred-recoverable engine
 > unavailability: the informative message (with reset time) reaches chat,
 > `lastError`, and procedure output; scheduled work skips instead of burning
-> attempts; `consecutiveFailures` freezes; `cb health` shows `waiting`; the
+> attempts; `consecutiveFailures` freezes; `bbx health` shows `waiting`; the
 > boxholder is notified once per episode. The loss point was refined during
 > design: the semantic event was already captured in
 > `src/services/codex-sdk-session.ts` — the rethrow discarded it. Verified
@@ -68,7 +68,7 @@ Two places, and the second is ours.
    The SDK exports a `ThreadError` event type alongside `ThreadEvent`. We never
    look at it. `codex-run.ts:145-149` then catches the process-level throw and
    passes `error.message` through verbatim, so the meaningless string is what
-   reaches chat, `cb health`, and the schedule state file.
+   reaches chat, `bbx health`, and the schedule state file.
 
 ## What to fix
 

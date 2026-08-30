@@ -17,7 +17,7 @@
  * Proving the tier can still go red means breaking something on purpose. Say so
  * when you do:
  *
- *   CB_SMOKE_FAULT_INJECTION="hub throws at import" bin/smoke
+ *   BBX_SMOKE_FAULT_INJECTION="hub throws at import" bin/smoke
  *
  * That reason is stamped on the run, and every count in `--report` and in the
  * weekly review excludes it. Without it a manufactured red is indistinguishable
@@ -39,9 +39,9 @@
  * on a model. Budget is a hard wall-clock kill, not a target.
  */
 
-import { BrowseSession } from "../callback-box/test/tours/tour-lib/browse.js";
-import { VIEWPORTS } from "../callback-box/test/tours/tour-lib/types.js";
-import { invariant } from "../callback-box/src/lib/invariant.js";
+import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
+import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
+import { invariant } from "../beebox/src/lib/invariant.js";
 import {
   BrowseListEmptyError,
   CardContentMissingError,
@@ -156,7 +156,7 @@ function buildSteps(input: {
 
       await session.open(`${baseUrl}/chat`);
       const snapshot = await session.snapshot({ interactiveOnly: true });
-      if (!hasDomId(snapshot, "cb-composer-input") || !hasDomId(snapshot, "cb-nav-place")) {
+      if (!hasDomId(snapshot, "bbx-composer-input") || !hasDomId(snapshot, "bbx-nav-place")) {
         throw new ChatShellMissingError(snapshot);
       }
     },
@@ -169,7 +169,7 @@ function buildSteps(input: {
       // The click's exit status means nothing — agent-browser dispatches a
       // mouse event at the box centre and reports success either way — so the
       // assertion is on the consequence, never on the click.
-      await session.run(["click", "#cb-nav-place"]);
+      await session.run(["click", "#bbx-nav-place"]);
       // The FULL tree, not the interactive one: landmark rows are separated
       // from the nav-card rows above them only by a `StaticText "Switch to"`
       // section header, and interactive-only snapshots drop static text — so
@@ -230,7 +230,7 @@ function buildSteps(input: {
     run: async () => {
       await session.open(`${baseUrl}/browse`);
       const snapshot = await session.snapshot({ interactiveOnly: true });
-      if (!hasDomId(snapshot, "cb-browse-crumb-root") || directoryRowCount(snapshot) === 0) {
+      if (!hasDomId(snapshot, "bbx-browse-crumb-root") || directoryRowCount(snapshot) === 0) {
         throw new BrowseListEmptyError(snapshot);
       }
     },
@@ -252,7 +252,7 @@ function buildSteps(input: {
       await session.clickRef(ref);
       const snapshot = await session.snapshot({ interactiveOnly: true });
       const url = await session.getUrl();
-      if (!url.includes("/browse/") || !hasDomId(snapshot, "cb-browse-open-card")) {
+      if (!url.includes("/browse/") || !hasDomId(snapshot, "bbx-browse-open-card")) {
         throw new CardViewMissingError({ name: row.name, url, snapshot });
       }
       if (!cardViewRendered(snapshot)) {

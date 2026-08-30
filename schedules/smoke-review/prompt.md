@@ -1,7 +1,7 @@
 # Weekly smoke-tier review
 
 You are reviewing the shape of the smoke tier (`bin/smoke`, documented in
-`callback-box/docs/testing.md`) — not any individual failure. A red smoke run
+`beebox/docs/testing.md`) — not any individual failure. A red smoke run
 already alerted and already blocked its landing; that is handled.
 
 Two questions, and either can be the whole week's product:

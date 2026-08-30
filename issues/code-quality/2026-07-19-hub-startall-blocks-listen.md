@@ -12,7 +12,7 @@ which is what raced the deploy's old 30s healthcheck during the 2026-07-16 ABI
 incident.
 
 The healthz-aggregation work
-([design](../../callback-box/docs/implemented-plans/hub-healthz-box-aggregation.md)) worked
+([design](../../beebox/docs/implemented-plans/hub-healthz-box-aggregation.md)) worked
 around this by bumping the deploy poll to 180s. The cleaner fix is to `listen`
 first and start boxes after — but a hub answering *before* pre-start finishes
 reports every box `stopped`, which a naive deploy check would read as a vacuous

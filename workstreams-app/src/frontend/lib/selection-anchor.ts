@@ -4,7 +4,7 @@
 // TWO HALVES OF ONE ALREADY-INSTALLED LIBRARY. `generateFragment` is Chrome's
 // own "Copy link to highlight" implementation: it walks the selection and
 // returns the minimal words that uniquely identify it. `processTextFragmentDirective`
-// is the matching side, already used in callback-box
+// is the matching side, already used in beebox
 // (`src/frontend/src/lib/selection/quote-anchor.ts`). Using both means not
 // hand-rolling a prefix/suffix heuristic that a browser vendor has already
 // tuned.
@@ -149,12 +149,12 @@ export function findAnchoredRange(root: HTMLElement, fragment: string): Range | 
 }
 
 /** Named highlight for anchored comments — see styles.css. */
-export const COMMENT_HIGHLIGHT = "cb-comment-anchor";
+export const COMMENT_HIGHLIGHT = "bbx-comment-anchor";
 
 /**
  * Highlight ranges through the CSS Custom Highlight API: it mutates no DOM, so
  * it cannot fight React's ownership of the rendered markdown. A no-op where the
- * API is unavailable, exactly as callback-box's quote-anchor does.
+ * API is unavailable, exactly as beebox's quote-anchor does.
  */
 export function highlightRanges(ranges: Range[]): void {
   if (typeof Highlight === "undefined" || !("highlights" in CSS)) return;

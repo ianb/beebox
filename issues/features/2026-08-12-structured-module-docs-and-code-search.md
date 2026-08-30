@@ -1,17 +1,17 @@
 ---
-title: "Structured module/export descriptions, lint-enforced, feeding a code search cb-plan can use"
+title: "Structured module/export descriptions, lint-enforced, feeding a code search bbx-plan can use"
 workstream: unattached
 area: monorepo
 needs: [design]
-labels: [discoverability, lint, cb-plan]
+labels: [discoverability, lint, bbx-plan]
 filed-by: agent
 discovered-by: Ian
-discovered-in: main session — cb feedback triage
+discovered-in: main session — bbx feedback triage
 priority: normal
 ---
 
 A structured description of each module (and ideally each export), enforced by
-lint, backfilled across the tree, and made **searchable** — with `cb-plan`
+lint, backfilled across the tree, and made **searchable** — with `bbx-plan`
 running that search as a planning step and putting the results in the plan. A
 kind of self-research: before designing, find out what already exists.
 
@@ -41,7 +41,7 @@ is mostly about making it *machine-addressable* rather than creating it.
 
 Two existing pieces to build on rather than duplicate:
 
-- **`callback-box/docs/module-map.md`** — a discoverability contract for where
+- **`beebox/docs/module-map.md`** — a discoverability contract for where
   shared code lives, deciding placement "by dependencies and consumers, not by
   vibe." This proposal is the per-module counterpart to that per-directory rule.
 - **`bin/docs/router-protocol.md`** — the precedent for promoting invariants out
@@ -63,9 +63,9 @@ Findings from this month, each of which a working search would have surfaced:
 Each is the same failure: the thing existed, and finding it required someone to
 already know it existed.
 
-## The search engine already exists: reuse `cb search`'s
+## The search engine already exists: reuse `bbx search`'s
 
-`cb search` is built on **Orama** (`@orama/orama`, plus
+`bbx search` is built on **Orama** (`@orama/orama`, plus
 `@orama/plugin-data-persistence` for the on-disk index) — see
 `src/core/search/`, with an embedding pass in `embed-pass.ts` alongside the
 lexical path.
@@ -85,9 +85,9 @@ than opening them:
 The open design question becomes narrower and better: **one index or two?** Box
 content and source-module docs have different corpora, refresh triggers, and
 audiences — but sharing the store means one thing to keep warm and one query
-path for `cb-plan` to call.
+path for `bbx-plan` to call.
 
-**Separately: `cb search` is underused.** Its capabilities were a surprise even
+**Separately: `bbx search` is underused.** Its capabilities were a surprise even
 to Ian — full-text and vector in one index, already built and already indexing.
 Agents here reach for `grep` by reflex. Worth exercising it deliberately (and
 teaching agents to reach for it) independent of this feature: a search that
@@ -110,9 +110,9 @@ one-way part.
 
 - Module-level, export-level, or both? Export-level is where the scope
   annotation lives, but it is also where the backfill cost explodes.
-- One Orama index shared with `cb search`, or a separate one for module docs?
+- One Orama index shared with `bbx search`, or a separate one for module docs?
   (See above — the engine choice itself is settled.)
-- What does `cb-plan` do with results — paste them, summarize them, or require
+- What does `bbx-plan` do with results — paste them, summarize them, or require
   the planner to say why each near-miss wasn't reused?
 - Does the scope annotation get *enforced* (a lint error on importing a
   subdirectory-local export from outside), or is it advisory? Enforcement is

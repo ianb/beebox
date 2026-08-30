@@ -2,7 +2,7 @@
 title: "No way to find which workstream should own a new issue — names carry no scope, and the field is mostly empty"
 workstream: streams-and-issues
 area: monorepo
-design: ../../../callback-box/docs/implemented-plans/workstream-routing.md
+design: ../../../beebox/docs/implemented-plans/workstream-routing.md
 labels: [workstreams, issues, discovery]
 filed-by: agent
 discovered-by: Ian
@@ -16,7 +16,7 @@ skill routes related work before creating a new stream.
 
 Also answered from the commit side: `pnpm commit-provenance --workstream
 <name>` lists every commit a stream produced (see
-`callback-box/docs/implemented-plans/commit-provenance-trailers.md`).
+`beebox/docs/implemented-plans/commit-provenance-trailers.md`).
 
 > I think there's a workstream that *should* own this (one that already exists),
 > but I'm not sure.

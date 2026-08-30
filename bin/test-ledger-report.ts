@@ -82,7 +82,7 @@ export function renderReport(): void {
 
 /**
  * Who belongs in the careful tier. Membership is a judgment — this prints the
- * evidence and a human moves lines in `callback-box/test/careful.txt` (plan
+ * evidence and a human moves lines in `beebox/test/careful.txt` (plan
  * revision 2026-08-25, mechanism C).
  */
 function renderCarefulTier(records: LedgerRecord[], filesets: Record<string, string[]>): void {

@@ -1,11 +1,11 @@
 # site/
 
-The generated public front-door site for callback-box. A spare static site
+The generated public front-door site for beebox. A spare static site
 built from `site/content/*.md` to gitignored `site/dist/`, deployed to GitHub
 Pages and viewable on the dev router at `/<worktree>/site/`.
 
 - Principles (settled with the boxholder): `issues/features/2026-07-20-public-site.md`
-- Full plan / tracks: `../callback-box/docs/plans/public-site.md`
+- Full plan / tracks: `../beebox/docs/plans/public-site.md`
 
 ## Hard constraint: static output only
 
@@ -35,7 +35,7 @@ router route is the only live view. The Pages workflow
 
 ```bash
 pnpm --dir site build                    # base derived from the git branch (router view)
-pnpm --dir site build --base /callback-box/   # what the Pages workflow runs
+pnpm --dir site build --base /beebox/   # what the Pages workflow runs
 pnpm --dir site lint                     # eslint (roots: ["."] — sources at package root)
 pnpm --dir site typecheck                # tsc --noEmit
 pnpm --dir site test                     # node --test over *.test.ts
@@ -47,7 +47,7 @@ build is **optional for router viewing**: the router auto-builds on request when
 current sources — content-hash based, so it's never-stale and deletion-correct
 (boxholder: "I don't want stale builds"). Builds are serialized per checkout and
 a failure surfaces as a 500 with the build's error text. The Pages workflow
-still builds explicitly (with `--base /callback-box/`). Run `pnpm --dir site
+still builds explicitly (with `--base /beebox/`). Run `pnpm --dir site
 build` yourself when you want to see build errors directly.
 
 The build fails closed: malformed frontmatter (named file:line), a broken

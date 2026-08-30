@@ -1,11 +1,11 @@
 ---
 title: "Submitting a voice message leaves it behind as an 'unsent' recoverable draft"
 workstream: emission-model
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder, repeatedly, sending voice messages
 priority: important
-design: ../../../callback-box/docs/implemented-plans/emission-model.md
+design: ../../../beebox/docs/implemented-plans/emission-model.md
 resolution: implemented
 ---
 
@@ -24,7 +24,7 @@ resolution: implemented
 2. Immediately (within half a second) switch session/landmark/route.
 3. Return: no unsent-message recovery may be offered.
 4. Stronger check: right after the send, read
-   `localStorage["cb-input-emission:<box>"]` in devtools — the key must be
+   `localStorage["bbx-input-emission:<box>"]` in devtools — the key must be
    gone, not merely blanked.
 5. Confirm ordinary draft persistence still works: type without sending,
    reload the tab, and the draft is offered back.
@@ -99,7 +99,7 @@ visible; it's purely the persisted-draft clear not landing before navigation.)
 
 Dictate → send → **immediately navigate away** (switch session/landmark/route)
 within the debounce window → return and confirm no unsent-message recovery is
-offered. Good `cb-debug` loop: after send-then-nav, the persisted-emission
+offered. Good `bbx-debug` loop: after send-then-nav, the persisted-emission
 localStorage key should be gone. Then confirm the tab-hide flush and normal
 persistence still work.
 

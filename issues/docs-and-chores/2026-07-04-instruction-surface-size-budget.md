@@ -1,7 +1,7 @@
 ---
 title: "instruction surface size budget"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 (From the OpenClaw/Hermes comparison, 2026-07: the agent guide is generated at
@@ -14,7 +14,7 @@ truncate — inject a prompt telling the agent to slim it down: consolidate
 overlapping rules, demote detail to lazier tiers (rules/skills per the
 loading-eagerness axis above), drop what no longer earns its tokens.
 
-Delivery mechanism (boxholder, 2026-07-04): **just do it with `cb validate`** —
+Delivery mechanism (boxholder, 2026-07-04): **just do it with `bbx validate`** —
 add a size warning to validation, so the existing PostToolUse hook surfaces it
 the moment the agent touches an oversized surface, and the agent can consider
 fixing it right away in the same session. No new machinery: validate already

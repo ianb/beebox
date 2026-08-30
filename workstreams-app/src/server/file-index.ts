@@ -1,5 +1,5 @@
 // Every path the browser can open, for quick-open and the sidebar
-// (callback-box/docs/plans/general-browser.md, Track 3).
+// (beebox/docs/plans/general-browser.md, Track 3).
 //
 // This is the affordance that has to survive the consolidation. Replacing five
 // reading surfaces with one is only an improvement if finding things gets

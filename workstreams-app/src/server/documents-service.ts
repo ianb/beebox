@@ -158,11 +158,11 @@ export function workstreamIssueIndicators(options: {
 async function listPlans(mainRoot: string): Promise<Plan[]> {
   const records: Plan[] = [];
   for (const dir of ["plans", "implemented-plans", "unimplemented-plans"]) {
-    const root = path.join(mainRoot, "callback-box", "docs", dir);
+    const root = path.join(mainRoot, "beebox", "docs", dir);
     const names = await fs.readdir(root).catch(() => []);
     for (const name of names) {
       if (!name.endsWith(".md") || name === "README.md" || name.endsWith(".review.md")) continue;
-      const relPath = `callback-box/docs/${dir}/${name}`;
+      const relPath = `beebox/docs/${dir}/${name}`;
       const { data } = parseFrontmatter(await fs.readFile(path.join(root, name), "utf8"));
       records.push({
         title: typeof data.title === "string" ? data.title : name.replace(/\.md$/u, ""),

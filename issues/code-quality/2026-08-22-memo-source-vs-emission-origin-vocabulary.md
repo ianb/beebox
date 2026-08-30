@@ -1,7 +1,7 @@
 ---
 title: "Two vocabularies for how input arrived: emission `origin: typed|voice` vs memo `source: text|voice|email`"
 workstream: dev-comments
-area: callback-box
+area: beebox
 needs: [decision]
 filed-by: agent
 discovered-by: Ian
@@ -35,7 +35,7 @@ emission is one interactive act, a memo's `source` is a provenance class that
 also covers `email` and has no interactive sense. But an agent writing a new
 surface has to pick one and has no rule for choosing, which is how a third
 spelling gets added. That already nearly happened: the dev-repo
-[document-comments](../../callback-box/docs/plans/document-comments.md) plan
+[document-comments](../../beebox/docs/plans/document-comments.md) plan
 initially invented `kind: typed | spoken`, a third field name and a third value
 word, before being aligned to the emission model.
 

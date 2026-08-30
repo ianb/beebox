@@ -23,7 +23,7 @@
  *
  * `--json` on any command emits machine-readable output for that caller.
  *
- * Design: callback-box/docs/plans/document-comments.md
+ * Design: beebox/docs/plans/document-comments.md
  * Store:  bin/lib/comments-store.ts (root derivation, namespaces, containment)
  */
 
@@ -376,14 +376,14 @@ async function dispatch(): Promise<number> {
 /**
  * A refusal from the store is information, not a crash: an uninitialized store
  * or a path that escapes it should read as one sentence, not a Node stack
- * trace. `CB_COMMENTS_DEBUG=1` keeps the stack for the case where the message
+ * trace. `BBX_COMMENTS_DEBUG=1` keeps the stack for the case where the message
  * is not enough.
  */
 async function main(): Promise<number> {
   try {
     return await dispatch();
   } catch (e) {
-    if (process.env["CB_COMMENTS_DEBUG"] === "1") throw e;
+    if (process.env["BBX_COMMENTS_DEBUG"] === "1") throw e;
     process.stderr.write(`comments: ${e instanceof Error ? e.message : String(e)}\n`);
     return 1;
   }

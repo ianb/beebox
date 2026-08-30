@@ -1,7 +1,7 @@
 ---
 title: "A fresh checkout runs tap with its default plugins, so the frontend doctests fail as a block"
 workstream: test-economics
-area: callback-box
+area: beebox
 labels: [testing, flake]
 resolution: implemented
 ---
@@ -9,8 +9,8 @@ resolution: implemented
 **Closed 2026-08-25 — fixed.** The monorepo root's `postinstall` runs `tap
 build` after `patch-package`, so every workspace install builds the `.taprc`
 plugin set: a fresh worktree, a detached full-suite checkout, and a deploy all
-get it from one mechanism. It is at the root, not in `callback-box`'s own
-`postinstall`, because `callback-box` is packed and installed as a tarball
+get it from one mechanism. It is at the root, not in `beebox`'s own
+`postinstall`, because `beebox` is packed and installed as a tarball
 dependency by v2 boxes — a `postinstall` there would run in a consumer install
 that has no `tap` (a devDependency) and fail it. A `link:` dependency's
 lifecycle scripts do not run, so the dev/deploy box installs were never

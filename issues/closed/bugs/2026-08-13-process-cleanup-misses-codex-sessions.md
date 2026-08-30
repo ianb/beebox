@@ -16,7 +16,7 @@ exposes `wt_other_agent_live`'s tri-state answer as JSON, and the sweep consumes
 it. `unknown` — including "the oracle would not run" — spares every daemon in
 that worktree, which is stricter than the tri-state rule requires, because
 reaping a superseded orphan otherwise rests on the socket dir's pidfiles alone.
-Covered by `callback-box/test/dev/process-cleanup-liveness.doctest.md`.
+Covered by `beebox/test/dev/process-cleanup-liveness.doctest.md`.
 
 The sibling hole in the same matcher —
 [a hand-launched Chrome for Testing is unreapable](../../bugs/2026-08-14-hand-launched-chrome-for-testing-unreapable.md)

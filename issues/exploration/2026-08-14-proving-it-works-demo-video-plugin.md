@@ -1,7 +1,7 @@
 ---
 title: "Check out `proving-it-works` — a Claude Code plugin that records and verifies demo videos"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [tooling-eval, demo-video]
 filed-by: agent
 discovered-by: Ian

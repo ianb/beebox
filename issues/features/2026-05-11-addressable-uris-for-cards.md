@@ -2,7 +2,7 @@
 title: "Addressable URIs for cards, elements, and versions"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 Goal: every card, every addressable element inside a card, and every version of either should have a stable URI that can be pasted anywhere — emails, calendar events, chat assistants, other cards, external scripts — and resolved by the callback web UI.
@@ -17,7 +17,7 @@ Where `<fragment>` follows cardworks' existing scheme (`id`, `query(xpath)`, `qu
 
 The design stance is **historical truth over current validity**:
 
-- Path rewrites on `cb mv` continue to be applied to existing refs — that preserves identity, which is the right move.
+- Path rewrites on `bbx mv` continue to be applied to existing refs — that preserves identity, which is the right move.
 - Version pins are sacred — a URI with `@1.0.0` should always resolve to that version's content, served from git history if the live card has moved past it. The web view shows a banner "viewing version 1.0.0; current is 1.2.0" with a link to current.
 - An unversioned URI resolves to current (the common case).
 - An invalid version (deleted, garbage-collected) shows a clear "version no longer available" rather than silently substituting.

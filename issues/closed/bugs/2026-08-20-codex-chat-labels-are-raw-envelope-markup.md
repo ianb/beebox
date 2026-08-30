@@ -1,7 +1,7 @@
 ---
 title: "Every Codex chat is labelled with raw `<chat-app>` envelope markup, so Recent chats shows a wall of identical rows"
 workstream: codex-chat-labels
-area: callback-box
+area: beebox
 labels: [chat, codex, ui]
 filed-by: agent
 discovered-by: Ian

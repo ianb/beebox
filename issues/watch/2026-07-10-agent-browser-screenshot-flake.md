@@ -24,7 +24,7 @@ keep working. Observed repeatedly on 2026-07-10 in the
 unify-capture-input worktree: interactive `bin/browse screenshot`
 during a capture-mode walkthrough, and both viewport passes of
 `bin/tour capture` twice in a row (see
-`callback-box/test/tours/.artifacts/capture/2026-07-10T13-46-44-961Z/summary.md`),
+`beebox/test/tours/.artifacts/capture/2026-07-10T13-46-44-961Z/summary.md`),
 including with zero other active sessions. Pre-existing — artifacts
 from earlier the same day and the capture-mode Track 4 session show the
 identical failure.

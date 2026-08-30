@@ -10,9 +10,9 @@ labels: [soft-launch]
 Record of the 2026-07-20 launch-shape decisions (all made by the boxholder in
 conversation), plus the remaining gates. Open until the repo is actually shown
 to people; close when the soft launch happens. Builds on
-[the source-available release plan](../../callback-box/docs/plans/source-available-release.md)
+[the source-available release plan](../../beebox/docs/plans/source-available-release.md)
 (secret scan clean, PII scrub, licensing — all done 2026-07) and
-[the installation story](../../callback-box/docs/plans/installation-story.md)
+[the installation story](../../beebox/docs/plans/installation-story.md)
 (phase 1 shipped, verified).
 
 ## Decisions (2026-07-20)
@@ -24,14 +24,14 @@ to people; close when the soft launch happens. Builds on
 - **Deploy**: local run first-class; **one blessed deploy happy path**
   (Docker/compose + optional Caddy, Tailscale as the protect story). No
   platform matrix — for unverified environments, the sanctioned path is
-  handing [the agent install guide](../../callback-box/docs/agent-install.md)
+  handing [the agent install guide](../../beebox/docs/agent-install.md)
   to the user's agent and letting it reinterpret.
 - **iOS ships at release** (boxholder, 2026-07-21) — via local builds (no
   App Store distribution this cut). This escalates
   [ios-pairing-flow-robustness](../bugs/2026-07-17-ios-pairing-flow-robustness.md)
   to a gate (the external-URL auto-redeem phishing surface).
 - **Dev is never open** (boxholder, 2026-07-21): local dev **always**
-  requires a username/password login — never `CB_ALLOW_UNAUTHENTICATED` as a
+  requires a username/password login — never `BBX_ALLOW_UNAUTHENTICATED` as a
   default — with explicit testing provisions (a seeded dev credential +
   automation auth path) rather than disabling the wall. This reverses the
   dev-router login fix's approach and is the resolution for
@@ -115,13 +115,13 @@ to people; close when the soft launch happens. Builds on
 4. **Security docs — DONE.** The
    [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)
    shipped 2026-08-14 (seed:
-   [todo-security.md](../../callback-box/docs/todo-security.md)), producing
-   [security-overview.md](../../callback-box/docs/security-overview.md) — the
+   [todo-security.md](../../beebox/docs/todo-security.md)), producing
+   [security-overview.md](../../beebox/docs/security-overview.md) — the
    readable threat model — over the structured
-   [security-report.md](../../callback-box/docs/security-report.md). The root
+   [security-report.md](../../beebox/docs/security-report.md). The root
    `SECURITY.md` is the short, conventional reporting policy GitHub recognizes,
    pointing at both (split out 2026-08-22; the overview previously sat at
-   `callback-box/SECURITY.md`, where GitHub never saw it).
+   `beebox/SECURITY.md`, where GitHub never saw it).
 5. **Issues scrub** — done except one open question: whether "the ledger
    box" in
    [stale-image-refs-after-renames](../closed/bugs/2026-05-14-stale-image-refs-after-renames.md)
@@ -188,7 +188,7 @@ this doc,
 Filed — docs-and-chores / exploration:
 [day-to-day-usage-docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md),
 [meta-issues](../docs-and-chores/2026-07-21-meta-issues.md),
-[issues-inside-callback-box](../exploration/2026-07-21-issues-inside-callback-box.md).
+[issues-inside-beebox](../exploration/2026-07-21-issues-inside-beebox.md).
 
 Closed this session:
 [google-oauth-callback-unauthenticated](../closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md),

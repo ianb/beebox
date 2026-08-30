@@ -10,7 +10,7 @@ allowed-tools: Bash(bin/browse:*), Bash(pnpm verify-help:*), Bash(pnpm --filter 
 
 - **Worktree-aware URL rewriting** — `bin/browse open /dashboard` resolves to `http://localhost:3210/<this-worktree>/<box>/dashboard`. **The worktree and box are added for you — write the app path only.** `open /test1/chats` doubles the box and silently lands on some other page instead of erroring.
 - **Authenticated navigation** — it seeds the browse-key cookie so pages, fetches, and the WebSocket all carry one credential. See [Auth](#auth-why-a-navigation-lands-on-the-login-page) when you hit a login page.
-- **Per-worktree isolated daemons** — each worktree runs its own `agent-browser` daemon with its own Chrome profile (cookies, history, login state). No cross-worktree leakage. Backed by `AGENT_BROWSER_SOCKET_DIR` and `AGENT_BROWSER_PROFILE` env vars rooted at `~/.cache/callback-box/browse/<worktree>/`.
+- **Per-worktree isolated daemons** — each worktree runs its own `agent-browser` daemon with its own Chrome profile (cookies, history, login state). No cross-worktree leakage. Backed by `AGENT_BROWSER_SOCKET_DIR` and `AGENT_BROWSER_PROFILE` env vars rooted at `~/.cache/beebox/browse/<worktree>/`.
 - **Per-worktree dashboard** — the dev router auto-starts an `agent-browser dashboard` per worktree on its own port. Find the URL via `bin/workstreams status` (`.worktrees[<wt>].dashboardUrl`) or the "dashboard ↗" link on the router home page at `http://localhost:3210/`.
 - **Self-describing screenshots** — `bin/browse screenshot` writes a sidecar `<image>.json` with the URL/title/timestamp/worktree so the file alone tells you what it captured.
 - **Indexed default path** — `bin/browse screenshot` with no path saves to `.claude/screenshots/NNNN-<slug>.png` in the worktree (gitignored).
@@ -28,13 +28,13 @@ If you find yourself thinking "I need to start `pnpm dev` to use `bin/browse`," 
 ```bash
 bin/browse open /                 # 1. Open a page (leading / → worktree router URL)
 bin/browse snapshot -i            # 2. See interactive elements — each shows a ref, and an id when it has one:
-                                  #      - button "User" [expanded=false, ref=e8, id=cb-nav-profile]
-bin/browse click cb-nav-profile   # 3. Act BY ID when the line shows one; by ref (@e8) only when it doesn't
+                                  #      - button "User" [expanded=false, ref=e8, id=bbx-nav-profile]
+bin/browse click bbx-nav-profile   # 3. Act BY ID when the line shows one; by ref (@e8) only when it doesn't
 bin/browse snapshot -i            # 4. Re-snapshot after the page changes
 ```
 
-**Prefer the id.** `cb-…` ids are the app's own stable control addresses
-(`callback-box/src/frontend/src/lib/ui-scan/resolve.ts`): resolved by
+**Prefer the id.** `bbx-…` ids are the app's own stable control addresses
+(`beebox/src/frontend/src/lib/ui-scan/resolve.ts`): resolved by
 `getElementById` at the moment you act, so a re-render between snapshot and
 action cannot retarget them. `@eN` refs are upstream's positional handles —
 **renumbered on every snapshot, and not in document order** (an open menu takes
@@ -42,7 +42,7 @@ action cannot retarget them. `@eN` refs are upstream's positional handles —
 after a re-render is not an error upstream; it just names a different element.
 
 **Every action is checked before it is sent.** On the app's own pages the wrapper
-refuses — `✗ click cb-composer-send refused: disabled — …`, exit 1 — when the
+refuses — `✗ click bbx-composer-send refused: disabled — …`, exit 1 — when the
 target is missing, hidden, zero-size, off-screen, disabled, `pointer-events:
 none`, or covered by another element. A `@eN` whose number changed hands
 between your last two snapshots gets a stderr warning naming both (the tool
@@ -50,7 +50,7 @@ cannot know which snapshot you read it from, so it warns rather than refuses —
 the id needs no warning). Upstream alone reports `✓ Done` in
 every one of those cases (measured on 0.27.0 — it is a box-center mouse event
 with no preconditions), which is how a driver ends up "clicking" a heading and
-concluding the app ignored it. A `@eN` ref on a control with no `cb-` id gets
+concluding the app ignored it. A `@eN` ref on a control with no `bbx-` id gets
 only the geometry checks; the wrapper says so on stderr. Off the app (any other
 origin), everything passes through to upstream unchanged.
 
@@ -72,10 +72,10 @@ bin/browse get text @e5
 bin/browse get url                              # current page URL
 bin/browse get title
 
-# Acting — a cb- id, a @eN ref, or a CSS/XPath selector, in every target slot
-bin/browse click cb-nav-profile
+# Acting — a bbx- id, a @eN ref, or a CSS/XPath selector, in every target slot
+bin/browse click bbx-nav-profile
 bin/browse click @e3                            # ref: only when the snapshot line shows no id
-bin/browse fill cb-composer-input "hello"
+bin/browse fill bbx-composer-input "hello"
 bin/browse type @e2 " more text"                # type without clearing
 bin/browse press Enter
 bin/browse press Control+a
@@ -134,7 +134,7 @@ You still need `snapshot -i` to *discover* refs — take it before the click,
 while the page is idle, then act and read with `get`.
 
 The wait is bounded and app-only: it runs only when the page is this
-worktree's own origin (nothing else sets the `data-cb-loading` marker), gives
+worktree's own origin (nothing else sets the `data-bbx-loading` marker), gives
 up after 15s with a note on stderr and captures anyway, and `--no-wait` skips
 it outright. `BROWSE_READY_TIMEOUT_MS` raises the ceiling for a genuinely slow
 page.
@@ -147,15 +147,15 @@ passing arm once the failing one has actually failed.
 
 ## Worktree / box / port
 
-- Worktree is detected from `$PWD`: `/callback-worktrees/<name>/` → `<name>`; main checkout → `main`.
+- Worktree is detected from `$PWD`: `/beebox-worktrees/<name>/` → `<name>`; main checkout → `main`.
 - Box defaults to `test1`. Override per command: `BROWSE_BOX=other-box bin/browse open /`.
 - Port defaults to `3210`. Override: `ROUTER_PORT=4000 bin/browse open /`.
 
-First request to a worktree spins up Vite + a `cb hub` (~4s cold); the hub then lazy-starts the specific box's `cb serve` child on its first request. Subsequent calls are fast. The dev router lazy-shuts idle worktrees after 5 minutes.
+First request to a worktree spins up Vite + a `bbx hub` (~4s cold); the hub then lazy-starts the specific box's `bbx serve` child on its first request. Subsequent calls are fast. The dev router lazy-shuts idle worktrees after 5 minutes.
 
 ## Auth — why a navigation lands on the login page
 
-Dev auth is always on: every TCP request to the router authenticates. `bin/browse` handles this for you by reading `CB_BROWSE_API_KEY` from this checkout's gitignored `callback-box/.env` and seeding it as a cookie in the worktree's isolated Chrome profile. When it works you never think about it.
+Dev auth is always on: every TCP request to the router authenticates. `bin/browse` handles this for you by reading `BBX_BROWSE_API_KEY` from this checkout's gitignored `beebox/.env` and seeding it as a cookie in the worktree's isolated Chrome profile. When it works you never think about it.
 
 When you land on `/auth/login`, work through these in order. **The first two are far more common than a bad key**, so check them before touching credentials.
 
@@ -200,18 +200,18 @@ bin/browse auth login owner
 ```
 
 **Ask the boxholder for the credential** — do not invent one, and do not reach for
-`cb auth set-password`, which rewrites a machine-global credential store and revokes
-live sessions (`callback-box/CLAUDE.md`). If you cannot get one, say which findings
+`bbx auth set-password`, which rewrites a machine-global credential store and revokes
+live sessions (`beebox/CLAUDE.md`). If you cannot get one, say which findings
 were unreachable rather than reporting them as absent features.
 
-Mechanism: `callback-box/docs/plans/agent-browsing-owner.md`.
+Mechanism: `beebox/docs/plans/agent-browsing-owner.md`.
 
 **3. Is the key live in the running router?** One probe answers it, and it must use the **cookie** form against a **box route**:
 
 ```bash
-KEY=$(grep '^CB_BROWSE_API_KEY=' callback-box/.env | cut -d= -f2-)
+KEY=$(grep '^BBX_BROWSE_API_KEY=' beebox/.env | cut -d= -f2-)
 curl -s -o /dev/null -w '%{http_code}\n' \
-  -H "Cookie: cb_browse_key=$KEY" http://localhost:3210/main/test1/
+  -H "Cookie: bbx_browse_key=$KEY" http://localhost:3210/main/test1/
 # 200 → the router has this key. 401 → it doesn't.
 ```
 
@@ -220,15 +220,15 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 **4. Does this worktree's `.env` have the key at all?** The WorktreeCreate hook copies main's `.env` into new worktrees, but worktrees created before that existed don't have it:
 
 ```bash
-grep -c '^CB_BROWSE_API_KEY=' callback-box/.env    # 0 means that's your problem
-grep -v '^BOXES=' ../../callback-box/callback-box/.env > callback-box/.env
+grep -c '^BBX_BROWSE_API_KEY=' beebox/.env    # 0 means that's your problem
+grep -v '^BOXES=' ../../beebox/beebox/.env > beebox/.env
 ```
 
 Copy it **minus `BOXES=`** — that line points at the real boxes, and a worktree that inherits it serves those instead of its own clone.
 
 **5. Only then suspect the value.** The key is machine-wide: one router fronts every worktree, and it loads main's `.env` **at startup**. A worktree with a different key passes its own children and is refused at the router; a key edited after the router started needs a `pnpm dev` restart, which is the boxholder's call — never restart the shared router from a worktree session.
 
-A one-off override without touching any file: `CB_BROWSE_API_KEY=… bin/browse open /`.
+A one-off override without touching any file: `BBX_BROWSE_API_KEY=… bin/browse open /`.
 
 **No key set at all is not an error.** browse proceeds unauthenticated and you land on the login page — which is the honest signal, not a malfunction.
 
@@ -239,7 +239,7 @@ Every `bin/browse screenshot` writes `<image>.json`:
 ```json
 {
   "url": "http://localhost:3210/nav-refactor/test1/chats",
-  "title": "Chats — Callback Box",
+  "title": "Chats — Bee Box",
   "timestamp": "2026-05-26T22:58:26.388Z",
   "takenInWorktree": "nav-refactor"
 }
@@ -291,8 +291,8 @@ in one session is not visible in another.
 - **First request hangs ~4s** — cold start for the worktree's dev server. Normal.
 - **`browse: @e8 may be stale — …`** — that number meant something else in the snapshot before last. If the action's effect is not what you expected, that is why; act by id where the line shows one.
 - **`✗ … refused: covered — … is under …`** — something (an overlay, a toast, a menu) sits on top of the control. That is usually a real finding about the app; report it rather than working around it.
-- **`browse: page has no window.__cbUiScan`** — the frontend on this page predates the hook (or it is not the app). Ids are not shown; refs still work.
-- **`text=…` and XPath targets say "Element not found"** even when the element is there — upstream's CDP engine does not resolve those forms (0.27.0), whatever its `--help` says. Use a `cb-` id, a ref, or CSS.
+- **`browse: page has no window.__bbxUiScan`** — the frontend on this page predates the hook (or it is not the app). Ids are not shown; refs still work.
+- **`text=…` and XPath targets say "Element not found"** even when the element is there — upstream's CDP engine does not resolve those forms (0.27.0), whatever its `--help` says. Use a `bbx-` id, a ref, or CSS.
 - **Refs from a prior snapshot don't work** — page changed (navigation, viewport, dialog). Re-snapshot.
 - **You land on `/auth/login`** — work [Auth](#auth-why-a-navigation-lands-on-the-login-page) in order. Usually a box slug written into the path, or a request for an owner-session-only surface — not a bad key.
 - **You navigated somewhere you didn't ask for** — check `bin/browse get url` before concluding anything about the page. A path that resolves to no route redirects rather than erroring, so a typo reads as "the app is behaving strangely."

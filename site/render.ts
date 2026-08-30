@@ -181,10 +181,10 @@ for (const pre of document.querySelectorAll("pre")) {
 function headerHtml(base: string): string {
   return `<header>
 <div class="inner">
-<span class="ident"><a class="home" href="${escapeHtml(base)}">Callback Box</a> <span class="by">by <a href="https://ianbicking.org" target="_blank" rel="noopener noreferrer">Ian Bicking</a></span></span>
+<span class="ident"><a class="home" href="${escapeHtml(base)}">Bee Box</a> <span class="by">by <a href="https://ianbicking.org" target="_blank" rel="noopener noreferrer">Ian Bicking</a></span></span>
 <nav aria-label="Project links">
-<a href="https://github.com/ianb/callback-box" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" title="GitHub">${GITHUB_ICON}</a>
-<a href="https://callback-box.zulipchat.com" target="_blank" rel="noopener noreferrer" aria-label="Zulip community forum" title="Zulip community">${CHAT_ICON}</a>
+<a href="https://github.com/ianb/beebox" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" title="GitHub">${GITHUB_ICON}</a>
+<a href="https://beebox.zulipchat.com" target="_blank" rel="noopener noreferrer" aria-label="Zulip community forum" title="Zulip community">${CHAT_ICON}</a>
 </nav>
 </div>
 </header>`;

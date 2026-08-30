@@ -1,7 +1,7 @@
 ---
 title: "gsheet-rename migration overwrites an existing destination card on collision"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [decision]
 labels: [migrations]
 filed-by: agent
@@ -12,7 +12,7 @@ resolution: wontfix
 > **Closed 2026-08-24 — window closed.** Verified zero `*.sheet.card` files
 > remain: local boxes (`~/src/boxes/*/`, all 10) and every prod box
 > (`ai-class`, `birch`, `box-family`, `estate`, `mn-pottery`, `personal`, via
-> `sudo -u callback find /home/callback/boxes -name '*.sheet.card'`, empty on
+> `sudo -u beebox find /home/beebox/boxes -name '*.sheet.card'`, empty on
 > both). Each prod box's `config/migrations.jsonl` records `gsheet-rename` as
 > applied. No box exists that could still hit the collision this issue
 > describes, so the fix is moot; not implementing it.

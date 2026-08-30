@@ -3,7 +3,7 @@
 `issues.related` answers "what else is about this?" for the issue on screen.
 It is the browser's front end for `bin/issues similar <path> --all --docs`:
 the same index, the same `.issues-index/all` cache, the same scores. Closed
-issues and `callback-box/docs` plans rank alongside open ones, because prior
+issues and `beebox/docs` plans rank alongside open ones, because prior
 art that was already decided is exactly what a reader needs to see.
 
 The embedder here is a fixture, not the real one: it puts every document
@@ -16,7 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { createIssueRelatedService } from "../src/server/issue-related-service.js";
 import { ROUTER_CAPABILITY_HEADER, buildApp } from "../src/server/app.js";
-import { EMBEDDING_DIMENSIONS } from "../../callback-box/src/services/openai-embeddings.js";
+import { EMBEDDING_DIMENSIONS } from "../../beebox/src/services/openai-embeddings.js";
 
 function axis(index: number) {
   const vector = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0);
@@ -53,7 +53,7 @@ async function makeRepo() {
   await issue(root, "features/2026-02-01-router-prefixes.md",
     'title: "Router prefixes per worktree"\nworkstream: unattached',
     "Serve every checkout by URL prefix.");
-  const plan = path.join(root, "callback-box", "docs", "plans");
+  const plan = path.join(root, "beebox", "docs", "plans");
   await fs.mkdir(plan, { recursive: true });
   await fs.writeFile(path.join(plan, "calendar-sync.md"), "# Calendar sync\n\nHow calendar sync works.\n");
   return root;
@@ -79,7 +79,7 @@ JSON.stringify({
     .map((row) => ({ path: row.path, kind: row.kind, status: row.status, score: row.score }))
     .toSorted((a, b) => a.path.localeCompare(b.path)),
 })
-=> {"problem":null,"unembedded":0,"rows":[{"path":"callback-box/docs/plans/calendar-sync.md","kind":"doc","status":null,"score":1},{"path":"issues/closed/bugs/2026-01-20-calendar-resync-loops.md","kind":"issue","status":"closed","score":1}]}
+=> {"problem":null,"unembedded":0,"rows":[{"path":"beebox/docs/plans/calendar-sync.md","kind":"doc","status":null,"score":1},{"path":"issues/closed/bugs/2026-01-20-calendar-resync-loops.md","kind":"issue","status":"closed","score":1}]}
 ```
 
 An issue row carries the address the browser links to; a doc row does not,
@@ -154,7 +154,7 @@ page.
 ```ts continue
 const keyless = createIssueRelatedService({ mainRoot: root, env: {} });
 const withoutKey = await keyless.related(target);
-JSON.stringify({ rows: withoutKey.rows, reason: withoutKey.problem?.reason, mentionsKey: withoutKey.problem?.detail.includes("CALLBACK_OPENAI_API_KEY") })
+JSON.stringify({ rows: withoutKey.rows, reason: withoutKey.problem?.reason, mentionsKey: withoutKey.problem?.detail.includes("BBX_OPENAI_API_KEY") })
 => {"rows":[],"reason":"no-key","mentionsKey":true}
 ```
 
@@ -184,5 +184,5 @@ JSON.stringify({
   status: response.statusCode,
   paths: response.json().result.data.rows.map((row) => row.path).toSorted(),
 })
-=> {"status":200,"paths":["callback-box/docs/plans/calendar-sync.md","issues/closed/bugs/2026-01-20-calendar-resync-loops.md"]}
+=> {"status":200,"paths":["beebox/docs/plans/calendar-sync.md","issues/closed/bugs/2026-01-20-calendar-resync-loops.md"]}
 ```

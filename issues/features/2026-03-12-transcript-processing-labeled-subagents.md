@@ -1,7 +1,7 @@
 ---
 title: "Transcript processing as labeled sub-agents"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 Two levels of transcript processing that map to different agent types:

@@ -1,5 +1,5 @@
 ---
-title: "Prickles-and-goo as a framing for callback-box (Watts)"
+title: "Prickles-and-goo as a framing for beebox (Watts)"
 workstream: public-site
 area: docs
 filed-by: agent
@@ -11,7 +11,7 @@ Alan Watts's temperament taxonomy: **prickly** people want rigor, particles,
 precision; **gooey** people want flow, wholeness, vibes — and his claim that
 the universe is irreducibly *prickly-goo*.
 
-Callback-box is an unusually pure instance: maximum-strictness machinery
+beebox is an unusually pure instance: maximum-strictness machinery
 (strictest-mode YAML, verbatim span checks, fail-closed auth, lint-as-law,
 types-over-docs) existing entirely in service of the gooiest possible
 material — voice memos, half-thoughts, a human life's unstructured stream.

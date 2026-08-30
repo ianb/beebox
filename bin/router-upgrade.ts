@@ -11,7 +11,7 @@ import type http from "node:http";
 import type { Duplex } from "node:stream";
 import { authorizeRouterRequest, type RouterAuthDecision, type RouterAuthDeps } from "./router-auth.js";
 import { readyLifecycle, startPromiseOf } from "./router-lifecycle.js";
-import { proxy, prepareWorkstreamsAppHeaders, stripClientCbHeaders } from "./router-proxy.js";
+import { proxy, prepareWorkstreamsAppHeaders, stripClientBbxHeaders } from "./router-proxy.js";
 import { errMessage } from "./router-effects.js";
 import { ROUTER_DEBUG, log, parseWorktreeName } from "./router-config.js";
 import type { DispatchContext } from "./router-dispatch.js";
@@ -66,11 +66,11 @@ export async function handleRouterUpgrade(
     });
     return;
   }
-  // The spoof wall on the upgrade path too: strip client `x-cb-*` before the
+  // The spoof wall on the upgrade path too: strip client `x-bbx-*` before the
   // socket is proxied to Vite/the hub (expose-dev-router B.2c). The WS carries
-  // the browser session on TCP; it needs no router-injected `x-cb-*`, so this
+  // the browser session on TCP; it needs no router-injected `x-bbx-*`, so this
   // is a pure strip with no re-injection.
-  stripClientCbHeaders(req.headers);
+  stripClientBbxHeaders(req.headers);
   const name = parseWorktreeName(reqUrl);
   if (!name) {
     socket.destroy();

@@ -8,9 +8,9 @@ resolution: implemented
 ---
 
 **Closed 2026-07-09** (W-core-sweep): Track 2 of
-`callback-box/docs/implemented-plans/architectural-review-followups.md` swept ~31
+`beebox/docs/implemented-plans/architectural-review-followups.md` swept ~31
 stage→commit sites onto the path-scoped `stageAndCommitPaths` helper
-(`callback-box/src/lib/git.ts`, landed in commit c1e65a22), and this agent's
+(`beebox/src/lib/git.ts`, landed in commit c1e65a22), and this agent's
 non-connector share of that sweep + the process-fix paragraph in
 `bin/CLAUDE.md`'s new "Multiple agents sharing one worktree" section
 document the path-scoped-commit convention (`git add <paths> && git commit

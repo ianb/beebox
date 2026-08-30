@@ -2,7 +2,7 @@
 title: "Retire the questions subsystem: make questions inline annotations in documents"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder riffing off ProofEditor's inline comment/question threads
 labels: [soft-launch]
@@ -15,7 +15,7 @@ inline `{% todo %}` annotation
 [todo-markdoc-annotation](../closed/features/2026-07-28-todo-markdoc-annotation.md)).
 A question stops being a separate stored object. It becomes an annotation that
 lives at the spot in a card it is about. The current subsystem
-([questions-end-to-end](../../callback-box/docs/implemented-plans/questions-end-to-end.md))
+([questions-end-to-end](../../beebox/docs/implemented-plans/questions-end-to-end.md))
 would be retired.
 
 ## Where the idea comes from
@@ -92,7 +92,7 @@ kind: the question points at exactly the commits it is asking about.
 - **It stays async.** The boxholder answers when they reach the doc. This does
   **not** reopen the in-chat-synchronicity objection that rejected interactive
   in-chat questions
-  ([in-chat-interactive-questions was rejected](../../callback-box/docs/implemented-plans/questions-end-to-end.md)):
+  ([in-chat-interactive-questions was rejected](../../beebox/docs/implemented-plans/questions-end-to-end.md)):
   that decision was about chat being synchronous. A question annotation in a
   document is still async. Reconcile this explicitly in the design so retiring
   the subsystem is a knowing choice, not an accidental reversal.
@@ -107,7 +107,7 @@ kind: the question points at exactly the commits it is asking about.
 
 ## Related
 
-- [questions-end-to-end](../../callback-box/docs/implemented-plans/questions-end-to-end.md)
+- [questions-end-to-end](../../beebox/docs/implemented-plans/questions-end-to-end.md)
   — the subsystem this would retire (its `learning:` / precedent goal is the part
   to preserve).
 - [verify-todo-annotation-rendering](../features/2026-07-29-verify-todo-annotation-rendering.md)

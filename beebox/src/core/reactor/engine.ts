@@ -1,0 +1,268 @@
+/**
+ * Reactor engine — the main sync → process → finalize loop.
+ *
+ * See DESIGN.md for the full flow and rationale. In brief:
+ *
+ * 1. Acquire lock (prevent concurrent reactors)
+ * 2. Optionally reset chat sessions
+ * 3. Loop up to maxCycles times:
+ *    a. Sync (bbx wakeup) — pulls from external sources, creates jobs
+ *    b. generateDocs — refresh agent docs (fast mtime-cached no-op)
+ *    c. Find job cards in box/jobs/
+ *    d. Run jobs via batch or chat processing (each worked by an agent)
+ *    e. Stop if no jobs remain or none were processed (stuck)
+ * 4. Finalize (bbx finalize) — flush outbound cards
+ * 5. Optionally poll (sleep + recurse)
+ */
+
+import { sleep } from "../../lib/sleep.js";
+import * as path from "node:path";
+import {
+  acquireLock as acquireFileLock,
+  releaseLock as releaseFileLock,
+  LockHeldError,
+} from "../../lib/file-lock.js";
+import { createAgent as realCreateAgent } from "../agent/index.js";
+import { generateDocs as realGenerateDocs } from "../docs-gen/index.js";
+import { fmt } from "../../lib/format.js";
+import {
+  loadChatSessions,
+  saveChatSessions,
+  resetAllSessions,
+} from "../chat/reactor-sessions.js";
+import { runOneCycle, type RunCycleParams } from "./cycle.js";
+import { boxEngineUnavailability, engineWaitReason } from "../schedule/engine-wait.js";
+import { runSync as realRunSync, runFinalize as realRunFinalize } from "./subprocess.js";
+
+export interface ReactorOptions {
+  boxRoot: string;
+  dryRun?: boolean | undefined;
+  /** Run sync before processing jobs */
+  sync?: boolean | undefined;
+  /** Maximum sync→process cycles (default 3) */
+  maxCycles?: number | undefined;
+  /** Poll interval in seconds (0 = one-shot, default) */
+  pollInterval?: number | undefined;
+  /** Skip agent invocation if only low-priority jobs remain */
+  skipLowPriority?: boolean | undefined;
+  /** Only process jobs of this type (e.g. "chat" matches *.chat.job.card) */
+  type?: string | undefined;
+  /**
+   * Only process jobs whose frontmatter `source:` matches this value. Used
+   * by `bbx wakeup --connector X` to drain just the jobs that the same
+   * partial run produced. Cross-cutting jobs (different source) are
+   * left for the next run that does match them.
+   */
+  sourceFilter?: string | undefined;
+  /** Reset all persisted chat sessions before processing */
+  resetSessions?: boolean | undefined;
+  onLog?: ((text: string) => void) | undefined;
+  /** Agent factory — override for testing. Defaults to the real createAgent(). */
+  createAgent?: typeof realCreateAgent | undefined;
+  /**
+   * Sync subprocess (`bbx wakeup`) — override for testing. Defaults to the
+   * real spawn. Tests pass a no-op fake to avoid spawning the CLI.
+   */
+  runSync?: typeof realRunSync | undefined;
+  /**
+   * Finalize subprocess (`bbx finalize`) — override for testing. Defaults to
+   * the real spawn. Tests pass a no-op fake to avoid spawning the CLI.
+   */
+  runFinalize?: typeof realRunFinalize | undefined;
+  /**
+   * Agent-doc refresh — override for testing. Defaults to the real
+   * generateDocs(), which is ~1s cold on a fresh box. Tests that don't
+   * assert on generated docs pass a no-op fake.
+   */
+  generateDocs?: typeof realGenerateDocs | undefined;
+}
+
+export interface ReactorResult {
+  success: boolean;
+  jobsProcessed: number;
+  jobsRemaining: number;
+  error?: string;
+}
+
+/**
+ * Run the reactor loop.
+ *
+ * If sync is enabled, runs: sync → process jobs → repeat until no new jobs.
+ * Otherwise, processes existing jobs one-shot.
+ */
+export async function runReactor(options: ReactorOptions): Promise<ReactorResult> {
+  const {
+    boxRoot,
+    dryRun,
+    sync,
+    maxCycles,
+    pollInterval,
+    skipLowPriority,
+    typeFilter,
+    sourceFilter,
+    shouldResetSessions,
+    onLog,
+    agentFactory,
+    runSync,
+    runFinalize,
+    generateDocs,
+  } = normalizeReactorOptions(options);
+
+  // Acquire lock — prevent concurrent reactor runs
+  const lockFile = path.join(boxRoot, ".bbx-reactor.lock");
+  const lockAcquired = await acquireReactorLock(lockFile);
+  if (!lockAcquired) {
+    onLog?.(fmt.dim("Another reactor is already running, skipping.\n"));
+    return { success: true, jobsProcessed: 0, jobsRemaining: 0 };
+  }
+
+  // Handle --reset-sessions
+  if (shouldResetSessions) {
+    const sessions = await loadChatSessions(boxRoot);
+    resetAllSessions(sessions);
+    await saveChatSessions(boxRoot, sessions);
+    onLog?.(fmt.ok("Chat reactor sessions reset.\n"));
+  }
+
+  let totalProcessed = 0;
+  let lastRemaining = 0;
+  let success = true;
+
+  const cycleParams: RunCycleParams = {
+    boxRoot,
+    dryRun,
+    sync,
+    skipLowPriority,
+    typeFilter,
+    sourceFilter,
+    onLog,
+    agentFactory,
+    runSync,
+    generateDocs,
+  };
+
+  // Main loop
+  for (let cycle = 0; cycle < maxCycles; cycle++) {
+    if (cycle > 0) {
+      onLog?.(fmt.header(`\n--- Cycle ${cycle + 1} ---\n\n`));
+    }
+
+    const result = await runOneCycle(cycleParams);
+    totalProcessed += result.jobsProcessed;
+    lastRemaining = result.jobsRemaining;
+
+    if (!result.success) {
+      success = false;
+      const wait = await boxEngineUnavailability(boxRoot);
+      if (wait !== null) {
+        // Deferred-recoverable: further cycles would burn attempts that
+        // cannot succeed. Jobs stay pending for a cycle after the reset.
+        onLog?.(fmt.warn(`Stopping cycles: ${engineWaitReason(wait)}\n`));
+        break;
+      }
+    }
+
+    // Stop if no jobs remain or if we didn't process any (stuck)
+    if (result.jobsRemaining === 0 || result.jobsProcessed === 0) {
+      break;
+    }
+  }
+
+  // Run finalize to flush outbound cards
+  onLog?.(fmt.header("\n[Finalize]\n"));
+  const finalizeOk = await runFinalize(boxRoot, onLog);
+  if (!finalizeOk) {
+    onLog?.(fmt.warn("Finalize failed.\n"));
+  }
+  onLog?.("\n");
+
+  // Polling mode: wait and repeat
+  if (pollInterval > 0 && success) {
+    await releaseReactorLock(lockFile);
+    onLog?.(fmt.dim(`\nPolling every ${pollInterval}s... (Ctrl+C to stop)\n`));
+    await sleep(pollInterval * 1000);
+    // Recurse for next poll iteration (re-acquires lock)
+    const pollResult = await runReactor(options);
+    return {
+      success: pollResult.success,
+      jobsProcessed: totalProcessed + pollResult.jobsProcessed,
+      jobsRemaining: pollResult.jobsRemaining,
+    };
+  }
+
+  await releaseReactorLock(lockFile);
+
+  return {
+    success,
+    jobsProcessed: totalProcessed,
+    jobsRemaining: lastRemaining,
+  };
+}
+
+// ─── Options ──────────────────────────────────────────────────────────
+
+interface NormalizedReactorOptions {
+  boxRoot: string;
+  dryRun: boolean;
+  sync: boolean;
+  maxCycles: number;
+  pollInterval: number;
+  skipLowPriority: boolean;
+  typeFilter: string | undefined;
+  sourceFilter: string | undefined;
+  shouldResetSessions: boolean;
+  onLog: ((text: string) => void) | undefined;
+  agentFactory: typeof realCreateAgent;
+  runSync: typeof realRunSync;
+  runFinalize: typeof realRunFinalize;
+  generateDocs: typeof realGenerateDocs;
+}
+
+/** Apply defaults to the public {@link ReactorOptions} for internal use. */
+function normalizeReactorOptions(options: ReactorOptions): NormalizedReactorOptions {
+  return {
+    boxRoot: options.boxRoot,
+    dryRun: options.dryRun ?? false,
+    sync: options.sync ?? false,
+    maxCycles: options.maxCycles ?? 3,
+    pollInterval: options.pollInterval ?? 0,
+    skipLowPriority: options.skipLowPriority ?? false,
+    typeFilter: options.type,
+    sourceFilter: options.sourceFilter,
+    shouldResetSessions: options.resetSessions ?? false,
+    onLog: options.onLog,
+    agentFactory: options.createAgent ?? realCreateAgent,
+    runSync: options.runSync ?? realRunSync,
+    runFinalize: options.runFinalize ?? realRunFinalize,
+    generateDocs: options.generateDocs ?? realGenerateDocs,
+  };
+}
+
+// ─── Reactor lock ─────────────────────────────────────────────────────
+
+/**
+ * Acquire the reactor lock. Returns true on success, false if a live
+ * holder owns it. Dead holders are reclaimed automatically.
+ */
+class ReactorLockError extends Error {
+  constructor(cause: unknown, lockPath: string) {
+    super(`Failed to acquire reactor lock: ${lockPath}`);
+    this.name = "ReactorLockError";
+    this.cause = cause;
+  }
+}
+
+async function acquireReactorLock(lockPath: string): Promise<boolean> {
+  try {
+    await acquireFileLock(lockPath, { kind: "reactor" });
+    return true;
+  } catch (err) {
+    if (err instanceof LockHeldError) return false;
+    throw new ReactorLockError(err, lockPath);
+  }
+}
+
+async function releaseReactorLock(lockPath: string): Promise<void> {
+  await releaseFileLock(lockPath);
+}
+

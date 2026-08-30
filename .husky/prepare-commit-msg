@@ -7,7 +7,7 @@
 # main and any non-`worktree-*` branch. Silent on success, and it never blocks:
 # the script reports failures on stderr and still exits 0.
 #
-# Plan: callback-box/docs/plans/commit-provenance-trailers.md
+# Plan: beebox/docs/plans/commit-provenance-trailers.md
 # Lives at the monorepo root alongside commit-msg; core.hooksPath (set to
 # .husky/_/ by the root `pnpm install`) is shared across all worktrees.
 

@@ -1,7 +1,7 @@
 ---
 title: Assets commit as raw blobs where the filter scope and annex.largefiles disagree (bulk non-asset files, mixed-case extensions)
 workstream: annex-bypass-check
-area: callback-box
+area: beebox
 resolution: implemented
 filed-by: agent
 discovered-by: agent
@@ -15,7 +15,7 @@ any-case glob the attributes file uses, and `assetAnnexAttributes()` carries
 real-git-annex doctests cover it — `test/core/annex/largefiles-matching.doctest.md`
 and `test/core/bulk-upload/prepare-annex.doctest.md` — and both were confirmed
 to fail against the unfixed source. Existing boxes pick the change up on
-`cb doctor annex`; that rollout is the separate
+`bbx doctor annex`; that rollout is the separate
 [stale `annex.largefiles`](2026-08-18-stale-annex-largefiles-never-reapplies.md)
 issue, and it now covers this change too.
 
@@ -34,7 +34,7 @@ attributes list being wider is safe: *"an over-wide attribute line only runs a
 filter that then declines to annex."* True for data loss. But the outcome of
 "declines to annex" is that the bytes commit into git as a raw blob — which is
 the thing the annex migration exists to stop. Two reachable cases, both verified
-on a box with a clean `cb doctor annex` and the current expressions:
+on a box with a clean `bbx doctor annex` and the current expressions:
 
 **1. Bulk-upload batches of non-asset file types.** `src/core/bulk-upload/prepare.ts:166`
 writes a batch-local `.gitattributes` with `* annex.largefiles=anything`,

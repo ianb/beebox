@@ -15,7 +15,7 @@ own header says why it is skipped there: *"`schedules/` is not a package —
 `bin/schedules lint` is what checks it, and it is the only root path the root
 eslint config lints."* Root `pnpm lint` fans out to packages, and `bin/` is not
 one. So a `bin/` change passes pre-commit on typecheck alone, while `test/` code
-in callback-box is held to the full reviewed ruleset.
+in beebox is held to the full reviewed ruleset.
 
 The pre-commit typecheck does cover `bin/` (root tsconfig), so this is the lint
 rules — the `as` ban, no-floating-promises, exhaustiveness, the logging
@@ -53,7 +53,7 @@ Notable consequences:
   user-visible message string is byte-identical.
 - **`as` is gone from `bin/`**, replaced by type guards and zod parses at the
   real boundaries (lock files, cache files, `.taprc`, `package.json`,
-  `.cb-box`, agent-liveness JSON). One exception: `bin/router-markdown.ts`
+  `.bbx-box`, agent-liveness JSON). One exception: `bin/router-markdown.ts`
   keeps a one-line `import-x/no-named-as-default-member` disable — `@markdoc/markdoc`
   is CJS, so the named imports its types advertise do not exist at runtime.
   Two `security/detect-non-literal-regexp` disables remain in

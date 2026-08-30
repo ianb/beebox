@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Dev router for the callback-box monorepo.
+// Dev router for the beebox monorepo.
 //
 // Listens on a single user-facing port (default 3210) and lazily spawns a
 // Vite + Fastify pair for each worktree on first request to that worktree's
@@ -32,7 +32,7 @@
 // file is executed directly.
 //
 // Orphan resistance:
-//   - Each spawned child is recorded in ~/.cache/callback-box/pids/<name>.json
+//   - Each spawned child is recorded in ~/.cache/beebox/pids/<name>.json
 //   - On router startup, that directory is swept: any PID still alive is
 //     killed (it's from a previous router that crashed); any dead PID's
 //     file is removed.
@@ -117,7 +117,7 @@ export function writeDeny(
   const url = req.url || "/";
   // Self-identify as a GUARDED dev router on denials of our own `/__router/*`
   // control routes (Track C, expose-dev-router.md): a benign marker so
-  // `cb tailscale setup` can prove the gate is live end-to-end over Serve
+  // `bbx tailscale setup` can prove the gate is live end-to-end over Serve
   // (401 + this header) and distinguish us from an ungated router (200, no
   // header) or a non-router. Leaks nothing a bare curl doesn't already learn.
   const guardHeaders = routerGuardHeaders(url);
@@ -131,13 +131,13 @@ export function writeDeny(
   res.end(`${JSON.stringify({ error: decision.reason })}\n`);
 }
 
-/** The `x-cb-router-guarded: 1` marker for a denial of a `/__router/*` control
+/** The `x-bbx-router-guarded: 1` marker for a denial of a `/__router/*` control
  *  route, else no extra headers. Pure over the request path so it is unit-tested
  *  directly (bin/router-guard-header.test.ts). */
 export function routerGuardHeaders(url: string): Record<string, string> {
   const q = url.indexOf("?");
   const pathname = q === -1 ? url : url.slice(0, q);
-  return pathname === "/__router" || pathname.startsWith("/__router/") ? { "x-cb-router-guarded": "1" } : {};
+  return pathname === "/__router" || pathname.startsWith("/__router/") ? { "x-bbx-router-guarded": "1" } : {};
 }
 
 // --- HTTP + WebSocket server ------------------------------------------
@@ -299,7 +299,7 @@ function setTabTitle(title: string): void {
 
 function updateTabTitle(core: RouterCore): void {
   const running = core.entries().map(([, h]) => h).filter((h) => isServing(h));
-  let title = `⚡ cb router :${ROUTER_PORT}`;
+  let title = `⚡ bbx router :${ROUTER_PORT}`;
   if (running.length === 1) {
     title += ` · ${running[0]!.name}`;
   } else if (running.length > 1) {
@@ -313,20 +313,20 @@ function updateTabTitle(core: RouterCore): void {
 async function main(): Promise<void> {
   // The router must NEVER be in hub mode (expose-dev-router B.2c / finding 3.3).
   // Its owner-session resolver runs through resolveRequestIdentity, whose branch
-  // is env-driven by CB_HUB_SECRET (auth.ts isHubMode): were it set in the
+  // is env-driven by BBX_HUB_SECRET (auth.ts isHubMode): were it set in the
   // router's env, the resolver would take the hub-header identity path instead
   // of the gen-aware cookie path. The deps already fail closed (they accept only
   // source==="cookie"), but we harden by removing the env var outright.
   //
-  // Safe for the child hubs it spawns: verified that `cb hub` MINTS its own
+  // Safe for the child hubs it spawns: verified that `bbx hub` MINTS its own
   // per-boot secret (crypto.randomBytes, cli/commands/hub.ts) and never reads
-  // CB_HUB_SECRET from its inherited env; its Supervisor then sets each
-  // `cb serve` child's CB_HUB_SECRET explicitly from that minted secret
+  // BBX_HUB_SECRET from its inherited env; its Supervisor then sets each
+  // `bbx serve` child's BBX_HUB_SECRET explicitly from that minted secret
   // (hub/supervisor.ts buildChildEnv). So the router's env copy is unused by
   // any descendant — deleting it changes nothing downstream.
-  delete process.env.CB_HUB_SECRET;
+  delete process.env.BBX_HUB_SECRET;
 
-  // The router's OWN gate reads CB_BROWSE_API_KEY (via core/browse-key.ts), so
+  // The router's OWN gate reads BBX_BROWSE_API_KEY (via core/browse-key.ts), so
   // the router process needs it too — the per-checkout copy in `childEnv` only
   // reaches the children it spawns. Load it from the main checkout's `.env`,
   // the file this router already treats as its config (MAIN_BOX_DEFAULTS above).
@@ -338,20 +338,20 @@ async function main(): Promise<void> {
   // that sets a DIFFERENT key would pass its own children and be refused at the
   // router. One key everywhere is the supported shape.
   //
-  // Only fills in what isn't already exported, so `CB_BROWSE_API_KEY=… pnpm dev`
+  // Only fills in what isn't already exported, so `BBX_BROWSE_API_KEY=… pnpm dev`
   // still wins.
   //
   // The ROUTER takes only the one key it needs, not the whole file — unlike the
   // children, which get the file wholesale because that is what a dotenv is
   // for. The router is different: it is the authenticating front door, and its
   // own resolver is env-driven in ways a dev config file must not reach. A
-  // `CB_HUB_SECRET=` line would flip `isHubMode()` and swing the resolver off
+  // `BBX_HUB_SECRET=` line would flip `isHubMode()` and swing the resolver off
   // the gen-aware cookie path that the `delete` above exists to guarantee —
   // silently undoing that hardening from a gitignored file nobody reviews.
   // An allowlist makes that structurally impossible rather than relying on
   // nobody ever putting the wrong line in a `.env`.
-  const ROUTER_ENV_FROM_FILE = ["CB_BROWSE_API_KEY"];
-  const fileEnv = await readEnvFile(path.join(MAIN_ROOT, "callback-box", ".env"), log);
+  const ROUTER_ENV_FROM_FILE = ["BBX_BROWSE_API_KEY"];
+  const fileEnv = await readEnvFile(path.join(MAIN_ROOT, "beebox", ".env"), log);
   for (const key of ROUTER_ENV_FROM_FILE) {
     const value = fileEnv[key];
     if (process.env[key] === undefined && value !== undefined) process.env[key] = value;

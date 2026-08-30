@@ -1,0 +1,28 @@
+{
+  "description": "Validate Bee Box files after Codex edits them.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bbx agent-context --hook",
+            "statusMessage": "Loading Bee Box context"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bbx validate --hook",
+            "statusMessage": "Validating box files"
+          }
+        ]
+      }
+    ]
+  }
+}

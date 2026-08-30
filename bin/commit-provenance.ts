@@ -2,14 +2,14 @@
 /**
  * Commit provenance trailers (`pnpm commit-provenance`): stamps, validates and
  * queries the `Workstream:` / `Plan:` / `Issue:` trailers on monorepo commits.
- * Plan: callback-box/docs/plans/commit-provenance-trailers.md.
+ * Plan: beebox/docs/plans/commit-provenance-trailers.md.
  *
  * Three roles, one script:
  *
  *   --prepare <msgfile> [source]   `.husky/prepare-commit-msg`. On a
  *       `worktree-<name>` branch, stamps `Workstream: <name>`, plus
  *       `Plan: <basename>` when exactly one active plan in
- *       `callback-box/docs/plans/` claims that workstream in its frontmatter.
+ *       `beebox/docs/plans/` claims that workstream in its frontmatter.
  *       Idempotent (`git interpret-trailers --if-exists replace`), so amend and
  *       reword keep one trailer per key. Silent on success; ANY failure prints
  *       one stderr line and exits 0 — provenance must never block a commit.
@@ -35,11 +35,11 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { splitFrontmatter } from "../callback-box/src/dev/doc-frontmatter.js";
-import { errnoCode, errorMessage } from "../callback-box/src/lib/error-guards.js";
+import { splitFrontmatter } from "../beebox/src/dev/doc-frontmatter.js";
+import { errnoCode, errorMessage } from "../beebox/src/lib/error-guards.js";
 
 /** Active plans only — implemented plans are finished and unimplemented ones are parked/superseded. */
-const PLANS_DIR = "callback-box/docs/plans";
+const PLANS_DIR = "beebox/docs/plans";
 const ISSUES_DIR = "issues";
 
 function git(args: string[], cwd: string): string {

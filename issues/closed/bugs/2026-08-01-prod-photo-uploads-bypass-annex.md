@@ -18,7 +18,7 @@ and [retire the remaining asset-manifest writers](../../code-quality/2026-08-18-
 ## What was checked, and how (2026-08-18)
 
 **1. A batch of photos prepared today annexes.** `prepareBulkBatch` was driven against a
-real annex box (`annex.version 10`, current `cb doctor annex` clean) with a 3 MB
+real annex box (`annex.version 10`, current `bbx doctor annex` clean) with a 3 MB
 JPEG. The committed git object is a 102-byte `/annex/objects/SHA256E-s3145728--…`
 pointer, not the bytes. Reproduction: stage a bulk session, call
 `prepareBulkBatch`, then `git cat-file -s HEAD:<attachRelDir>/<name>.jpg`.

@@ -1,19 +1,19 @@
 ---
 title: "iOS Float32 WAV is accepted by HQ transcription providers"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
-discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
 resolution: wontfix
 ---
 
 Closed after live verification on 2026-08-06. Every selectable HQ transcription path accepted a
 48 kHz mono IEEE Float32 WAV and returned the expected speech. No format conversion is needed.
 
-`SpeechDictation` (`ios-app/CallbackBox/`) writes the dictation WAV using the microphone's native
+`SpeechDictation` (`ios-app/BeeBox/`) writes the dictation WAV using the microphone's native
 input format (`inputNode.outputFormat`), which is typically 32-bit float PCM, and uploads it to
 `POST /api/chat/transcribe-audio` with `Content-Type: audio/wav` unchanged. The server
-(`callback-box/src/webapp/routes/chat-audio-routes.ts`) forwards the buffer as-is to the configured HQ
+(`beebox/src/webapp/routes/chat-audio-routes.ts`) forwards the buffer as-is to the configured HQ
 transcription provider (`transcribeAudioHq`, dispatching to OpenAI or Voxtral). The separate general
 transcription path also supports Deepgram.
 
@@ -59,7 +59,7 @@ Provider documentation gives these results:
 ### Live verification
 
 The tiebreaker used a 3.32-second, 48 kHz mono WAV whose source bit depth was Float32. The spoken
-phrase was "The callback box float wave test says cedar lantern seven."
+phrase was "The beebox float wave test says cedar lantern seven."
 
 - The repository's `transcribeAudioHq` client returned the expected non-empty phrase from all three
   OpenAI choices: `whisper`, `whisper-llm`, and `whisper-llm-mini`.

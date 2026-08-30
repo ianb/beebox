@@ -1,7 +1,7 @@
 ---
 title: "Tell the agent when the screen isn't focused, and that it should lean on voice"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [chat, voice, agent-context]
 filed-by: agent
 discovered-by: Ian

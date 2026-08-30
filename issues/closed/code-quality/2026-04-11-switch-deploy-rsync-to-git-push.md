@@ -1,7 +1,7 @@
 ---
 title: "switch deploy rsync to git push"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
@@ -20,7 +20,7 @@ rollback runbook: `docs/server-operations.md`. A Codex adversarial review
 shaped the hardenings (clean-artifact boundary, checkout ownership
 validation, per-run deploy logs).
 
-`deploy/deploy.sh` rsyncs the local working tree to `/opt/callback/`, excluding `.git`. Side effects:
+`deploy/deploy.sh` rsyncs the local working tree to `/opt/beebox/`, excluding `.git`. Side effects:
 
 - Server's `git rev-parse HEAD` is meaningless (it reflects whenever .git was last touched, not what's running). The health endpoint now reads `deploy-info.json` to surface the actual deployed hash, but that's a workaround.
 - You can deploy from a dirty working tree, so the recorded hash may not match what's on disk.
@@ -28,7 +28,7 @@ validation, per-run deploy logs).
 
 Options:
 
-1. **Git push to a bare repo on the server with a post-receive hook.** Hook checks out HEAD into `/opt/callback/`, runs `npm install`, builds frontend, restarts services. Server git matches what's running. Loses today's "scp a single file to test a hotfix" iteration loop — every change has to be a commit. (This section predates the cardworks-into-callback-box merge and the monorepo restructure, which removed the multi-repo deploy complication it originally called out.)
+1. **Git push to a bare repo on the server with a post-receive hook.** Hook checks out HEAD into `/opt/beebox/`, runs `npm install`, builds frontend, restarts services. Server git matches what's running. Loses today's "scp a single file to test a hotfix" iteration loop — every change has to be a commit. (This section predates the cardworks-into-beebox merge and the monorepo restructure, which removed the multi-repo deploy complication it originally called out.)
 
 2. **Server pulls from GitHub on deploy.** Standard CI/CD pattern, single source of truth, but every deploy is a GitHub roundtrip.
 

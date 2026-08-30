@@ -131,7 +131,7 @@ JSON.stringify({
   location: exchanged.headers.location,
   cookie: exchanged.headers["set-cookie"],
 })
-=> {"status":302,"location":"/demo-ws/?keep=1","cookie":"cb_exhibits_session=exhibits-test-token-0123456789; Path=/; HttpOnly; SameSite=Lax"}
+=> {"status":302,"location":"/demo-ws/?keep=1","cookie":"bbx_exhibits_session=exhibits-test-token-0123456789; Path=/; HttpOnly; SameSite=Lax"}
 ```
 
 ## Listings

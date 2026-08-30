@@ -2,13 +2,13 @@
 title: "Should plans carry execution state (checkboxes), or stay design documents?"
 workstream: elixir-skills-review
 needs: [decision]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
 ---
 
-All 25 documents in `callback-box/docs/plans/` contain **zero checkboxes**. Our
-plans are design artifacts: `cb-plan` produces a statement of purpose, a scope
+All 25 documents in `beebox/docs/plans/` contain **zero checkboxes**. Our
+plans are design artifacts: `bbx-plan` produces a statement of purpose, a scope
 boundary, and a "Stated preferences this plan trades against" section. Execution
 state lives in the conversation and dies with it — after a compaction, a crash,
 or a day away, "where were we" is reconstructed by reading the diff and asking.
@@ -54,7 +54,7 @@ Roughly three options:
 2. **Add an optional execution section** — a plan may carry a task list when
    someone wants one, without every plan becoming a ledger. Keeps the design-doc
    character; risks the section going stale precisely because it's optional.
-3. **Adopt it properly** — `cb-plan` emits tasks, whatever executes them ticks
+3. **Adopt it properly** — `bbx-plan` emits tasks, whatever executes them ticks
    boxes with inline notes, and resume/compaction hooks read the tree.
 
 Option 3 only pays off with the hooks around it, so it's a bigger commitment than

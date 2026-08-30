@@ -1,7 +1,7 @@
 ---
 title: "memory gardener consolidation loop"
 workstream: unknown
-area: callback-box
+area: beebox
 needs: [design]
 priority: backlog
 next-action: discuss
@@ -42,7 +42,7 @@ time. Retro feeds *in* new learnings; nothing *gardens* what's piled up.
 
 ## Direction
 
-A scheduled "gardening" wakeup (natural fit for `cb tick`/reactor + a schedule card)
+A scheduled "gardening" wakeup (natural fit for `bbx tick`/reactor + a schedule card)
 that walks high-activity / long-lived cards and consolidates them, using Rowboat's
 concrete rules as a starting spec (age-based collapse, recurring→facts, stale→dormant,
 qualification thresholds + cooldown + per-run cap, commit as a distinct "curation"

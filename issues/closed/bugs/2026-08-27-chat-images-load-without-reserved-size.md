@@ -2,7 +2,7 @@
 title: "Chat images load without reserved dimensions, so late decodes still jank the scroll"
 workstream: chat-image-dimensions
 resolution: implemented
-area: callback-box
+area: beebox
 labels: [ui, chat]
 filed-by: agent
 discovered-by: Ian

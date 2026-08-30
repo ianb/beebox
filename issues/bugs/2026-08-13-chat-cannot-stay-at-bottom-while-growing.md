@@ -1,7 +1,7 @@
 ---
 title: "Chat drifts off the bottom as it grows, and is hard to scroll back down"
 workstream: chat-scroll
-area: callback-box
+area: beebox
 priority: important
 labels: [chat, scroll]
 filed-by: agent
@@ -62,7 +62,7 @@ guess about. Rather than a fifth discriminator, the controller was replaced with
 one that never asks the question: it writes `scrollTop` only on a discrete user
 action (open a thread, send, press the button) plus geometric compensations, and
 content growth below the reader never scrolls
-(`callback-box/docs/plans/chat-scroll-model.md`; controller
+(`beebox/docs/plans/chat-scroll-model.md`; controller
 `components/chat/chat-scroll.ts`).
 
 The failure described above is therefore not fixed so much as made

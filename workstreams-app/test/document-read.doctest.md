@@ -25,21 +25,21 @@ const mainRoot = await fs.mkdtemp(path.join(os.tmpdir(), "browse-main-"));
 const wtRoot = await fs.mkdtemp(path.join(os.tmpdir(), "browse-wt-"));
 const outside = await fs.mkdtemp(path.join(os.tmpdir(), "browse-outside-"));
 
-await fs.mkdir(path.join(mainRoot, "callback-box/docs/plans"), { recursive: true });
+await fs.mkdir(path.join(mainRoot, "beebox/docs/plans"), { recursive: true });
 await fs.mkdir(path.join(mainRoot, "src"), { recursive: true });
-await fs.writeFile(path.join(mainRoot, "callback-box/docs/plans/foo.md"), "# Foo\n\nA plan.\n");
+await fs.writeFile(path.join(mainRoot, "beebox/docs/plans/foo.md"), "# Foo\n\nA plan.\n");
 await fs.writeFile(path.join(mainRoot, "src/run.ts"), "export const x = 1;\n");
 await fs.writeFile(path.join(mainRoot, "page.html"), "<h1>hi</h1>\n");
 await fs.writeFile(path.join(mainRoot, "data.json"), '{"a":1}\n');
 await fs.writeFile(path.join(outside, "secret.txt"), "not yours\n");
 
 // The worktree holds a DIFFERENT version of the same address — the lens case.
-await fs.mkdir(path.join(wtRoot, "callback-box/docs/plans"), { recursive: true });
-await fs.writeFile(path.join(wtRoot, "callback-box/docs/plans/foo.md"), "# Foo\n\nEdited on a branch.\n");
+await fs.mkdir(path.join(wtRoot, "beebox/docs/plans"), { recursive: true });
+await fs.writeFile(path.join(wtRoot, "beebox/docs/plans/foo.md"), "# Foo\n\nEdited on a branch.\n");
 
 // Only main is a git repo, so `tracked` has something real to answer.
 await execa("git", ["init", "-q"], { cwd: mainRoot });
-await execa("git", ["add", "callback-box/docs/plans/foo.md"], { cwd: mainRoot });
+await execa("git", ["add", "beebox/docs/plans/foo.md"], { cwd: mainRoot });
 
 const roots = { mainRoot, worktreeRoots: new Map([["demo", wtRoot]]) };
 const read = (relPath: string, workstream: string | null = null) =>
@@ -63,8 +63,8 @@ The same address reads differently through the lens, and the document says which
 checkout answered.
 
 ```ts
-const onMain = await read("callback-box/docs/plans/foo.md");
-const onBranch = await read("callback-box/docs/plans/foo.md", "demo");
+const onMain = await read("beebox/docs/plans/foo.md");
+const onBranch = await read("beebox/docs/plans/foo.md", "demo");
 const lens = {
   sameAddress: onMain.relPath === onBranch.relPath,
   mainWorkstream: onMain.workstream,
@@ -80,7 +80,7 @@ An unknown workstream is refused by name — the browser can say which worktree 
 could not find, rather than rendering main's copy as if it were the branch's.
 
 ```ts
-const unknown = await read("callback-box/docs/plans/foo.md", "ghost")
+const unknown = await read("beebox/docs/plans/foo.md", "ghost")
   .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
 JSON.stringify({ unknown, mainRootIsDefault: rootForWorkstream(roots, null) === mainRoot })
 => {"unknown":"UnknownWorkstreamError","mainRootIsDefault":true}
@@ -91,7 +91,7 @@ JSON.stringify({ unknown, mainRootIsDefault: rootForWorkstream(roots, null) === 
 Traversal, absolute paths, and a NUL byte are all refused rather than clamped.
 
 ```ts
-const escapes = ["../escape.md", "callback-box/../../escape.md", "/etc/passwd", `a${"\u0000"}b`];
+const escapes = ["../escape.md", "beebox/../../escape.md", "/etc/passwd", `a${"\u0000"}b`];
 const named = (e: unknown) => (e instanceof Error ? e.name : "unknown");
 const outcomes = await Promise.all(escapes.map((relPath) => read(relPath).then(() => "ALLOWED", named)));
 JSON.stringify(outcomes)
@@ -115,9 +115,9 @@ Directories sort first, dotfiles are hidden, and each entry carries the address
 the browser links to — so a listing is navigable rather than a dead end.
 
 ```ts
-const dir = await read("callback-box/docs");
+const dir = await read("beebox/docs");
 JSON.stringify({ kind: dir.kind, entries: dir.entries, text: dir.text })
-=> {"kind":"directory","entries":[{"name":"plans","relPath":"callback-box/docs/plans","kind":"directory"}],"text":null}
+=> {"kind":"directory","entries":[{"name":"plans","relPath":"beebox/docs/plans","kind":"directory"}],"text":null}
 ```
 
 The repository root is a legal address, spelled `""`.

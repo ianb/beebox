@@ -7,7 +7,7 @@
  * `.claude/agents/finish.md` until now; {@link verificationCommands} is the
  * one place it lives.
  *
- * See callback-box/docs/plans/change-based-test-selection.md, "Revision
+ * See beebox/docs/plans/change-based-test-selection.md, "Revision
  * 2026-08-25 — test economics", mechanisms E and E2.
  */
 
@@ -26,8 +26,8 @@ export interface VerificationCommand {
    *
    * `cwd` is where the re-run is spawned; `packageDir` is the directory the
    * suite's OWN paths are relative to, which is not the same thing. `pnpm
-   * --dir callback-box` is spawned from the repo root while tap names
-   * `test/foo.test.ts` relative to `callback-box/` — resolving a TAP path
+   * --dir beebox` is spawned from the repo root while tap names
+   * `test/foo.test.ts` relative to `beebox/` — resolving a TAP path
    * against `cwd` alone finds nothing, and a failing file that cannot be
    * identified is reported as real rather than re-run.
    */
@@ -78,8 +78,8 @@ export type PathGroup =
  * of every pnpm workspace package (bin/workspace-packages.ts), so a new package
  * is classified without editing this file.
  *
- * The NEAREST enclosing package wins: `callback-box/pub-worker` is its own
- * package inside callback-box, and its `test`/`typecheck`/`lint` are the ones
+ * The NEAREST enclosing package wins: `beebox/pub-worker` is its own
+ * package inside beebox, and its `test`/`typecheck`/`lint` are the ones
  * that cover a change under it.
  */
 export function groupOf(path: string, workspacePackages: Set<string>): PathGroup {
@@ -164,12 +164,12 @@ export interface CommandInput {
   hasScript: (pkg: string, script: string) => boolean;
   /** From {@link skipTypecheckLintDecision}. */
   skipTypecheckLint: { value: boolean; reason: string };
-  /** Did `bin/test-select` fail outright? Then callback-box runs everything. */
+  /** Did `bin/test-select` fail outright? Then beebox runs everything. */
   selectorFailed?: boolean;
 }
 
 /**
- * callback-box iterates on the selected set; every other package runs its own.
+ * beebox iterates on the selected set; every other package runs its own.
  *
  * When the selector itself failed — a graph or esbuild error, not a test
  * failure — there is no selection to iterate on, and `test:changed` would just
@@ -177,11 +177,11 @@ export interface CommandInput {
  * callers run the full suite, so that is what the sheet names.
  */
 function testScript(pkg: string, selectorFailed: boolean): string {
-  return pkg === "callback-box" && !selectorFailed ? "test:changed" : "test";
+  return pkg === "beebox" && !selectorFailed ? "test:changed" : "test";
 }
 
 /**
- * The isolated re-run of one failing test file. Only callback-box and the root
+ * The isolated re-run of one failing test file. Only beebox and the root
  * suite have one that keeps the ledger's flake derivation working (a
  * fail-then-pass at the same content hash IS the flake definition); elsewhere
  * finish-verify reports the failure as real without a re-run.
@@ -189,14 +189,14 @@ function testScript(pkg: string, selectorFailed: boolean): string {
 const ROOT_ISOLATE = { cwd: ".", packageDir: ".", argv: ["node", "--import", "tsx", "--test"] };
 
 function isolateFor(pkg: string): VerificationCommand["isolate"] | undefined {
-  if (pkg === "callback-box") {
+  if (pkg === "beebox") {
     return {
       cwd: ".",
-      packageDir: "callback-box",
+      packageDir: "beebox",
       argv: [
         "pnpm",
         "--dir",
-        "callback-box",
+        "beebox",
         "exec",
         "node",
         "--import",

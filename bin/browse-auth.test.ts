@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { authCookieArgs, type WorktreeContext } from "../browse/src/worktree.js";
 
-const ORIGINAL_KEY = process.env["CB_BROWSE_API_KEY"];
+const ORIGINAL_KEY = process.env["BBX_BROWSE_API_KEY"];
 const CONTEXT: WorktreeContext = {
   repoDir: "/repo",
   worktree: "example",
@@ -12,17 +12,17 @@ const CONTEXT: WorktreeContext = {
 };
 
 afterEach(() => {
-  if (ORIGINAL_KEY === undefined) delete process.env["CB_BROWSE_API_KEY"];
-  else process.env["CB_BROWSE_API_KEY"] = ORIGINAL_KEY;
+  if (ORIGINAL_KEY === undefined) delete process.env["BBX_BROWSE_API_KEY"];
+  else process.env["BBX_BROWSE_API_KEY"] = ORIGINAL_KEY;
 });
 
 test("browse auth seeds a short-lived, host-only browser cookie", () => {
-  process.env["CB_BROWSE_API_KEY"] = "test-key";
+  process.env["BBX_BROWSE_API_KEY"] = "test-key";
   const before = Math.floor(Date.now() / 1000) + 30 * 60;
   const args = authCookieArgs(`${CONTEXT.routerBase}/chat`, CONTEXT);
   const after = Math.floor(Date.now() / 1000) + 30 * 60;
   assert.deepEqual(args?.slice(0, -1), [
-    "cookies", "set", "cb_browse_key", "test-key",
+    "cookies", "set", "bbx_browse_key", "test-key",
     "--url", "http://localhost:3210",
     "--path", "/",
     "--httpOnly",
@@ -34,7 +34,7 @@ test("browse auth seeds a short-lived, host-only browser cookie", () => {
 });
 
 test("browse auth never seeds a cookie for another origin", () => {
-  process.env["CB_BROWSE_API_KEY"] = "test-key";
+  process.env["BBX_BROWSE_API_KEY"] = "test-key";
   assert.throws(
     () => authCookieArgs("https://example.com/", CONTEXT),
     /Refusing to seed browse auth for another origin/
@@ -42,7 +42,7 @@ test("browse auth never seeds a cookie for another origin", () => {
 });
 
 test("an absent browse key expires a previously seeded cookie", () => {
-  delete process.env["CB_BROWSE_API_KEY"];
+  delete process.env["BBX_BROWSE_API_KEY"];
   const args = authCookieArgs(`${CONTEXT.routerBase}/chat`, CONTEXT);
   assert.equal(args[3], "");
   assert.deepEqual(args.slice(-2), ["--expires", "1"]);

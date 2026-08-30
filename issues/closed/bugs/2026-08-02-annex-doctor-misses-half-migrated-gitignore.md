@@ -1,15 +1,15 @@
 ---
-title: "cb doctor annex passes green on a half-migrated box whose .gitignore still hides all assets"
+title: "bbx doctor annex passes green on a half-migrated box whose .gitignore still hides all assets"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — a clerk page-save 500'd; several boxes found half-migrated
 resolution: implemented
 ---
 
-Resolved by `7084030e`. `cb doctor annex` now uses the annex gate's shared
+Resolved by `7084030e`. `bbx doctor annex` now uses the annex gate's shared
 `.gitignore` predicate and reports the half-migrated state with the existing
-`cb attachments unignore` repair. The secondary hardening ideas below were not
+`bbx attachments unignore` repair. The secondary hardening ideas below were not
 part of this fix.
 
 Several boxes on a deployment were found in a broken half-migrated annex state:
@@ -30,7 +30,7 @@ Two real surfaces of the same root cause, both hit 2026-08-02:
 
 `isAnnexBox` (`src/core/annex/is-annex-box.ts`) gates on TWO conditions: annex
 initialized AND the box `.gitignore` no longer carrying the manifest-scheme asset
-block. `cb doctor annex --check` verifies **seven** things — binary, initialized,
+block. `bbx doctor annex --check` verifies **seven** things — binary, initialized,
 thin, largefiles, content-present, journal, hook — but **not the gitignore half**. So
 in this exact state doctor reports all green:
 
@@ -46,16 +46,16 @@ prevent** — reconciling them cost real debugging time reading the probe source
 AND an asset ignore rule is still present. The exact predicate already exists —
 `isAssetIgnoreRule` / `gitignoreIgnoresAssets` in `attachments-gitignore.ts`, the same
 "does this `.gitignore` still hide assets from git" question `is-annex-box.ts` frames.
-The check should point at the repair (`cb attachments unignore` — remove the managed
+The check should point at the repair (`bbx attachments unignore` — remove the managed
 block, add the post-annex unignore block). Without it, this state is invisible until
 an asset write happens to hit it.
 
 ## Secondary findings (worth their own items if pursued)
 
-- **`cb attachments to-annex` no-ops on this half-state.** It guards on
+- **`bbx attachments to-annex` no-ops on this half-state.** It guards on
   "is-annex-box" (annex.uuid present) and reports "0 assets, nothing changed", so it
   will NOT complete a box that was annex-init'd but never gitignore-converted. The
-  fix on such a box is `cb attachments unignore`. Consider making `to-annex` (or a
+  fix on such a box is `bbx attachments unignore`. Consider making `to-annex` (or a
   dedicated repair) detect and finish this state.
 - **The clerk save 500s instead of degrading.** `clerk.commentary` surfaces the raw
   git "ignored path" error as a 500 rather than a handled failure. Hardening worth
@@ -67,7 +67,7 @@ an asset write happens to hit it.
 
 ## Resolution of the immediate incident (2026-08-02)
 
-Manually ran `cb attachments unignore` on the affected boxes (annex + largefiles were
+Manually ran `bbx attachments unignore` on the affected boxes (annex + largefiles were
 already fine; only the gitignore was stale). The one box with stuck clerk page
 snapshots had them annexed and committed afterward (verified: `page.frozen` became a
 98-byte annex pointer with the annex holding the object). A box that was consistently

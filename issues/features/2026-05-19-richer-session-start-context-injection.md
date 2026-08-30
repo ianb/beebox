@@ -1,7 +1,7 @@
 ---
 title: "richer session start context injection"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 Currently the boxholder agent gets the date but not derived context that frequently matters in conversation. Cheap additions:

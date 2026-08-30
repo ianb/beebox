@@ -1,7 +1,7 @@
 ---
 title: "Chat shows 'Agent is working…' long after the turn finished; Recent files / landmarks deny the saved card meanwhile"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test v0 spine run (Priya, save-recipe)
 labels: [soft-launch, field-test-findings, code-error]
@@ -54,7 +54,7 @@ would present as blocked, and the gap between those two outcomes is one
 status indicator." A real user closes the tab at minute twelve, tells a
 friend the app is broken, and is wrong.
 
-Context to reproduce/investigate: dedicated `cb serve <box> --port <p>` on a
+Context to reproduce/investigate: dedicated `bbx serve <box> --port <p>` on a
 fresh field box (not the dev router), browse-key-authenticated headless
 browser, real chat turn that writes a card. Suspects worth checking: turn-done
 events not reaching this client (WS subscription vs the browse-key cookie on

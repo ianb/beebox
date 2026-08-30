@@ -2,7 +2,7 @@
 title: "A meta-assistant: teach the user's own external agent to manage the box + connectors + local setup"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder's idea, riffing off the Every tools
 labels: [soft-launch]
@@ -15,7 +15,7 @@ labels: [soft-launch]
 Give the boxholder a way to hand box administration to **the general-purpose agent
 they already use** — their personal ChatGPT, Claude.ai, or Claude Desktop — rather
 than doing the fiddly setup themselves or asking the box's own internal agent (which
-cannot reach the user's laptop or external services). callback-box would ship
+cannot reach the user's laptop or external services). beebox would ship
 something that **teaches an external agent how to manage a box**: set up the
 uploader (WIP), configure a connector, stand up Tailscale, SSH into the box and fix
 something, or install computer-local pieces. The comparison is the **Every tools** —
@@ -31,7 +31,7 @@ When the boxholder is setting up or repairing their box and hits a fiddly
 admin/local task — connect a connector, get the bulk uploader working, make
 Tailscale reach the box, SSH in to fix a wedged service — they want to hand it to
 the assistant they already have open, so it gets done without them becoming a
-callback-box operator who memorizes CLI flags. Situate it: they are at their
+beebox operator who memorizes CLI flags. Situate it: they are at their
 laptop, mid-setup, low patience for arcana, and their ChatGPT / Claude is one tab
 away. The win is delegating operator work to an agent that is already in the room.
 
@@ -43,7 +43,7 @@ box" is a very different capability from "open the repo and run the deploy scrip
 
 Unsettled, and the boxholder floated the whole range — from heavy to light:
 
-1. **An admin MCP server.** callback-box ships an MCP server exposing box-management
+1. **An admin MCP server.** beebox ships an MCP server exposing box-management
    tools (setup-uploader, configure-connector, tailscale-setup, health, ssh-and-fix)
    that any MCP-capable host (Claude Desktop, ChatGPT-with-MCP) loads. Most capable,
    most infrastructure, sharpest security questions.
@@ -71,7 +71,7 @@ Two hard constraints shape every option:
   connector-auth work (device tokens, Nango). Do not let a convenience prompt smuggle
   in unscoped SSH-as-root.
 - **Local tasks need a local execution context.** Installing an uploader, running
-  `cb tailscale setup`, or SSHing in requires an agent host that can execute on the
+  `bbx tailscale setup`, or SSHing in requires an agent host that can execute on the
   user's machine (Claude Desktop, Claude Code, a local MCP server) — a pure cloud
   ChatGPT cannot reach the laptop or the box. So the mechanism's reach depends on the
   host's capabilities; a cloud chat is limited to guidance, a local agent can act.
@@ -83,7 +83,7 @@ Two hard constraints shape every option:
   — a setup flow already being made scriptable; a natural thing to hand off.
 - [BYO Google OAuth / self-host story](../decisions/2026-07-28-byo-google-oauth-self-host-story.md)
   — connector auth is the hardest admin task and the sharpest security case.
-- [cb tailscale operational polish](../features/2026-07-22-cb-tailscale-dev-router-operational-polish.md)
+- [bbx tailscale operational polish](../features/2026-07-22-bbx-tailscale-dev-router-operational-polish.md)
   — the Tailscale setup an external agent would drive.
 - The WIP bulk uploader (chat-photo-batch-upload / bulk-file-upload) — the boxholder
   named "set up an uploader" as a first example task.

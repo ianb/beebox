@@ -4,7 +4,7 @@
 # 1. Auto-deploy to prod server — ONLY from main. Worktrees on other
 #    branches skip the deploy (they commit safely without shipping).
 # 2. Clean up architecture-doc PNG backup files for images that were
-#    just committed (callback-box-specific, kept here so a single root
+#    just committed (beebox-specific, kept here so a single root
 #    post-commit handles everything).
 #
 # Lives at the monorepo root for the same reason as pre-commit (one
@@ -16,7 +16,7 @@ set -e
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 
-# 1. Auto-deploy (callback-box ships to prod) — only from main.
+# 1. Auto-deploy (beebox ships to prod) — only from main.
 # Skip merge commits: post-merge handles all merges (including fast-forwards
 # which don't fire post-commit at all). Letting post-commit also deploy on
 # merge commits would double-fire for non-FF merges.
@@ -24,22 +24,22 @@ if [ "$BRANCH" = "main" ]; then
   if git -C "$REPO_DIR" rev-parse --verify --quiet HEAD^2 >/dev/null; then
     echo "[post-commit] Skip deploy: merge commit (post-merge handles it)"
   # Only deploy when the commit actually touched something deploy.sh ships (see
-  # callback-box/deploy/deploy.sh): the synced workspace members
-  # (callback-box, agent-doctest, personal-vibe-check), patches/, and the root
-  # pnpm files. A commit confined to issues/, callback-clerk/, ios-app/,
+  # beebox/deploy/deploy.sh): the synced workspace members
+  # (beebox, agent-doctest, personal-vibe-check), patches/, and the root
+  # pnpm files. A commit confined to issues/, beebox-clerk/, ios-app/,
   # research/, bin/, root docs, etc. changes nothing on the server — skip it.
   elif ! git -C "$REPO_DIR" diff-tree --no-commit-id --name-only -r HEAD \
-      | grep -qE '^(callback-box|agent-doctest|personal-vibe-check|patches)/|^(package\.json|pnpm-workspace\.yaml|\.npmrc|pnpm-lock\.yaml)$'; then
-    echo "[post-commit] Skip deploy: commit touches no deployed path (callback-box/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
+      | grep -qE '^(beebox|agent-doctest|personal-vibe-check|patches)/|^(package\.json|pnpm-workspace\.yaml|\.npmrc|pnpm-lock\.yaml)$'; then
+    echo "[post-commit] Skip deploy: commit touches no deployed path (beebox/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
     # The clerk extension still self-gates on its own sources below.
-    "$REPO_DIR/callback-clerk/build/auto-build.sh" || true
+    "$REPO_DIR/beebox-clerk/build/auto-build.sh" || true
   else
-    if [ ! -s "$REPO_DIR/callback-box/deploy/server-ip" ]; then
+    if [ ! -s "$REPO_DIR/beebox/deploy/server-ip" ]; then
       # Pre-flight the one prerequisite that silently killed a whole run of
       # deploys after a repo move. Fail visibly here (in the commit output),
       # rather than backgrounding a deploy that dies on line 1 into a log
       # nobody reads. deploy.sh also guards this, but this surfaces it now.
-      echo "[post-commit] ⚠ NOT deploying — callback-box/deploy/server-ip is missing" >&2
+      echo "[post-commit] ⚠ NOT deploying — beebox/deploy/server-ip is missing" >&2
       echo "[post-commit]   (gitignored; lost in a repo move?). Nothing shipped — restore it." >&2
     else
       # Capture the trigger-time HEAD and deploy exactly that sha, so a commit
@@ -50,10 +50,10 @@ if [ "$BRANCH" = "main" ]; then
       # run to its own timestamped file and repoint .last-deploy.log at it as a
       # RELATIVE symlink, so the documented `tail .last-deploy.log` poll keeps
       # working. Prune to the newest 20 logs.
-      LOG_DIR="$REPO_DIR/callback-box/deploy/.deploy-logs"
+      LOG_DIR="$REPO_DIR/beebox/deploy/.deploy-logs"
       mkdir -p "$LOG_DIR"
       LOG_FILE="$LOG_DIR/$(date -u +%Y%m%dT%H%M%SZ)-${SHA:0:8}.log"
-      ln -sfn ".deploy-logs/$(basename "$LOG_FILE")" "$REPO_DIR/callback-box/deploy/.last-deploy.log"
+      ln -sfn ".deploy-logs/$(basename "$LOG_FILE")" "$REPO_DIR/beebox/deploy/.last-deploy.log"
       ls -1t "$LOG_DIR"/*.log 2>/dev/null | tail -n +21 | while IFS= read -r old; do rm -f "$old"; done
       # Record intent synchronously. A background child can be killed before it
       # executes its first line when the hook process exits; the active holder
@@ -63,12 +63,12 @@ if [ "$BRANCH" = "main" ]; then
       echo "[post-commit] Deploying to server (branch: main, ref: ${SHA:0:8})..."
       node "$REPO_DIR/bin/lib/detach.ts" bash -c \
         'exec "$1" --ref "$2" --request-recorded >>"$3" 2>&1' \
-        bash "$REPO_DIR/callback-box/deploy/deploy.sh" "$SHA" "$LOG_FILE"
-      echo "[post-commit] Deploy started in background — notifies on failure (log: callback-box/deploy/.last-deploy.log)"
+        bash "$REPO_DIR/beebox/deploy/deploy.sh" "$SHA" "$LOG_FILE"
+      echo "[post-commit] Deploy started in background — notifies on failure (log: beebox/deploy/.last-deploy.log)"
     fi
 
     # Rebuild the clerk extension if its sources changed in this commit.
-    "$REPO_DIR/callback-clerk/build/auto-build.sh" || true
+    "$REPO_DIR/beebox-clerk/build/auto-build.sh" || true
   fi
 else
   echo "[post-commit] Skip deploy: branch is '$BRANCH' (deploys only run from 'main')"
@@ -77,10 +77,10 @@ fi
 # 2. Rebuild this checkout's CLI bundle if the commit moved a bundle input.
 # Every branch: a worktree's own dev server runs its own bundle, and a session
 # testing its own uncommitted-then-committed work wants it fresh too.
-"$REPO_DIR/callback-box/scripts/auto-build-cli.sh" || true
+"$REPO_DIR/beebox/scripts/auto-build-cli.sh" || true
 
 # 3. Clean up .bak.png files for architecture-doc images that were just committed.
-committed_images=$(git -C "$REPO_DIR" diff-tree --no-commit-id --name-only -r HEAD -- 'callback-box/docs/architecture/images/*.png' | grep -v '\.bak\.png$' || true)
+committed_images=$(git -C "$REPO_DIR" diff-tree --no-commit-id --name-only -r HEAD -- 'beebox/docs/architecture/images/*.png' | grep -v '\.bak\.png$' || true)
 if [ -n "$committed_images" ]; then
   for img in $committed_images; do
     base="${img%.png}"
@@ -96,5 +96,5 @@ fi
 if command -v git-lfs >/dev/null 2>&1; then
   git lfs post-commit "$@" || true
 else
-  echo "warning: git-lfs not found — media files will not be handled (see callback-box/docs/developer-install.md)" >&2
+  echo "warning: git-lfs not found — media files will not be handled (see beebox/docs/developer-install.md)" >&2
 fi

@@ -68,7 +68,7 @@ test("the repo's own careful.txt exists and every path in it is real", () => {
   // The list is committed and the files it names move; this is the guard that
   // says so at `pnpm test` time rather than at the next batched run.
   assert.ok(carefulExclusions().length > 0);
-  for (const path of carefulExclusions()) assert.match(path, /^callback-box\/test\//);
+  for (const path of carefulExclusions()) assert.match(path, /^beebox\/test\//);
 });
 
 // ── what `.taprc` includes ──────────────────────────────────────────────────
@@ -179,7 +179,7 @@ test("an empty tier refuses to become a bare `tap`", () => {
 // ── the exclude wiring ──────────────────────────────────────────────────────
 
 test("the selector drops careful files unless the branch changed one", () => {
-  const box = "callback-box/";
+  const box = "beebox/";
   const careful = carefulExclusions();
   const member = careful[0];
   assert.ok(member !== undefined);

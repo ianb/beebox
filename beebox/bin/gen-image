@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+// Thin stub: run src/dev/gen-image.ts via the project's local tsx.
+// All real logic lives in the .ts file; this just hands argv to it.
+//
+// Uses require.resolve to find tsx because under the pnpm workspace
+// (node-linker=hoisted) tsx is hoisted to the workspace root, not
+// beebox's own node_modules. The same fix bin/bbx applies.
+
+import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import { dirname, join, resolve } from "node:path";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const projectRoot = resolve(here, "..");
+const tsSrc = join(projectRoot, "src", "dev", "gen-image.ts");
+
+const require = createRequire(import.meta.url);
+const tsxPkgPath = require.resolve("tsx/package.json", { paths: [projectRoot] });
+const tsxBin = join(dirname(tsxPkgPath), "dist", "cli.mjs");
+
+const child = spawn("node", [tsxBin, tsSrc, ...process.argv.slice(2)], {
+  stdio: "inherit",
+});
+child.on("exit", (code, signal) => {
+  if (signal !== null) process.kill(process.pid, signal);
+  else process.exit(code === null ? 1 : code);
+});

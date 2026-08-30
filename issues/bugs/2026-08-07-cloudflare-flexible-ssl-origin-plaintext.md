@@ -1,7 +1,7 @@
 ---
 title: "Cloudflare 'Flexible' SSL leaves edge-to-origin traffic plain HTTP"
 workstream: security-report
-area: callback-box
+area: beebox
 labels: [soft-launch]
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report

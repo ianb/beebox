@@ -1,7 +1,7 @@
 ---
-title: "Plugins: which parts of callback-box are the medium, and which are content a box could grow itself"
+title: "Plugins: which parts of beebox are the medium, and which are content a box could grow itself"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [architecture, plugins, schemas]
 filed-by: agent
@@ -9,11 +9,11 @@ discovered-by: Ian
 discovered-in: main session — boxholder thinking about what belongs in core
 ---
 
-Much of what ships in callback-box could be a plugin — the educational
+Much of what ships in beebox could be a plugin — the educational
 material, various card schemas, domain-shaped features. The boxholder's
 framing, worth preserving because the line it draws is not the obvious one:
 
-> Lots of what's in callback-box could be a plugin, like the educational stuff,
+> Lots of what's in beebox could be a plugin, like the educational stuff,
 > different schemas, etc. **OTOH the basic medium shouldn't be a plugin, even
 > when parts are obscure** (like different listening modes, speech input and
 > output features, etc).
@@ -50,9 +50,9 @@ The design should start from what is already true rather than greenfield:
 
 - **Box-local schemas** already work — `config/schemas/` is watched and
   hot-reloaded (`src/core/schema-watcher.ts`), and box-local schemas import the
-  same primitives via the public `callback-box/cards` specifier.
+  same primitives via the public `beebox/cards` specifier.
 - **A box is already a package** with its own `package.json` and
-  `node_modules`, importing only the public `callback-box/{cards,schema,view-widgets}`
+  `node_modules`, importing only the public `beebox/{cards,schema,view-widgets}`
   entry points — never engine internals. That boundary is exactly a plugin API,
   it just isn't called one.
 - **Box-local views and procedures** already live in the box
@@ -132,11 +132,11 @@ identity.
 The docs are explicit that plugins "can also be used to distribute ordinary
 text, images or any other content", and editions ship as plugin bundles — one
 packaging mechanism carrying either. That draws the medium/content line in a
-different place from this issue's framing. If a callback-box plugin can ship
+different place from this issue's framing. If a beebox plugin can ship
 cards, "an education plugin" means something quite different from "a plugin that
 adds education card types", and that should be decided rather than defaulted.
 
 What does not transfer: no isolation and no dependency resolution (a `dependents`
 list, a `core-version`, a numeric priority, and later-wins precedence is the
-whole system). The public-specifier boundary — `callback-box/{cards,schema,view-widgets}`
+whole system). The public-specifier boundary — `beebox/{cards,schema,view-widgets}`
 — is already a stronger contract and should stay the plugin API.

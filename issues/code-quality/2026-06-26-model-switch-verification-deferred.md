@@ -1,7 +1,7 @@
 ---
 title: "model switch verification deferred"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 Mid-conversation model switching (`src/webapp/routes/chat-session-routes.ts`) has

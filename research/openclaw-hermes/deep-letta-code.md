@@ -169,9 +169,9 @@ The default statusline, notably, is minimal — `AgentName · ModelName` (`src/c
 4. **Trust surface.** Mods are unsandboxed "trusted local code" the agent can edit; hooks can be LLM-judged; the interactive agent's shell is unsandboxed by default (fail-open when no backend exists). The unbypassable cross-agent memory guard shows they're thinking about it, but the harness-self-modification story is bold.
 5. **Sheer complexity.** Three tool dialects, hot toolset swapping, 5,000-line coordinator, approval reconstruction, git sync with rebase + system-reminder conflict escalation — the persistent-agent premise taxes every layer.
 
-### Worth stealing for a Claude-Code-based system (Callback Box)
+### Worth stealing for a Claude-Code-based system (Bee Box)
 
-- **Memory/state as a git repo with per-edit agent-attributed commits.** Callback Box already has card files on disk; committing agent edits with `Generated-By`/`Agent-ID` trailers and a one-clean-commit-per-operation discipline would give us the audit trail and the `/palace`-style "show me what the agent believes" view almost for free.
+- **Memory/state as a git repo with per-edit agent-attributed commits.** Bee Box already has card files on disk; committing agent edits with `Generated-By`/`Agent-ID` trailers and a one-clean-commit-per-operation discipline would give us the audit trail and the `/palace`-style "show me what the agent believes" view almost for free.
 - **Reflection-on-compaction.** For long-running box sessions: trigger a distill-to-cards pass exactly when context compacts, rather than on a timer.
 - **`/doctor` as agent-led interactive audit.** "Prompt the agent to run a memory-hygiene skill and interview the user" is a pattern, not a Letta feature — directly portable to auditing a box's CLAUDE.md/rules/cards, and it pairs with proactive size warnings (system-prompt-warning.ts:92).
 - **`PostToolUseFailure` and `prompt` hooks.** Feed-stderr-back-on-failure and LLM-judged hooks are both implementable in Claude Code hooks today with modest glue.

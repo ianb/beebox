@@ -1,9 +1,0 @@
-{
-  "input": {
-    "version": 2,
-    "id": "point-command-2",
-    "kind": "point-at-control",
-    "payload": { "id": "cb-composer-mic", "action": "operate" }
-  },
-  "expected": null
-}

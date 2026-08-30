@@ -1,7 +1,7 @@
 ---
 title: "In-box analytics the box itself can use to optimize itself — clicks, agent activity, the typical stuff"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 filed-by: agent
 discovered-by: Ian
@@ -18,7 +18,7 @@ box's chats on itself.
 What partially exists, none of it click-level and none of it unified:
 
 - `src/core/usage.ts` — token usage from agent sessions aggregated into
-  `.callback-box/usage.db` (SQLite, rebuildable, not git-tracked), fed by
+  `.beebox/usage.db` (SQLite, rebuildable, not git-tracked), fed by
   `store/usage/session-manifest.jsonl`. Agent cost data, no UI data.
 - `bin/test-ledger.ts` — the dev-repo precedent for "collect the denominator
   now; the questions come later." Green runs recorded because failure *rates*
@@ -37,7 +37,7 @@ Design questions (the reason for `needs: [design]`):
   that got no click), agent events (runs, tools, files touched, models, cost,
   outcomes), or both under one schema? Where's the line before it becomes
   surveillance of the boxholder rather than an instrument for them?
-- **Where it lives.** `.callback-box/` SQLite beside `usage.db` (per-checkout,
+- **Where it lives.** `.beebox/` SQLite beside `usage.db` (per-checkout,
   not synced) vs something git-tracked/aggregated. The chat-review journal's
   machine-local-vs-shared tension applies here too.
 - **Who reads it and how.** The box agent on demand? A scheduled

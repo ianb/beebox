@@ -1,7 +1,7 @@
 ---
 title: "iOS: the device sleeps while the app is running — including with the mic open — breaking recording"
 workstream: voice-barge-in
-area: callback-box
+area: beebox
 needs: [manual-testing]
 labels: [ios, voice, capture, mobile-contract]
 filed-by: agent
@@ -59,7 +59,7 @@ worse bug than the one being fixed.
 
 ## What landed
 
-`ios-app/CallbackBox/Services/ScreenAwake.swift` — a single writer of
+`ios-app/BeeBox/Services/ScreenAwake.swift` — a single writer of
 `UIApplication.isIdleTimerDisabled` over a set of named reasons. The decisions
 above were settled as:
 

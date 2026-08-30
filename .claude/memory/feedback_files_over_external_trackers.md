@@ -4,7 +4,7 @@ description: "For project state, notes, work-queues, and knowledge — prefer fi
 metadata: 
   node_type: memory
   type: feedback
-  originSessionId: 6f088193-eb30-436c-80cb-1b6a986f9034
+  originSessionId: 6f088193-eb30-436c-80bbx-1b6a986f9034
 ---
 
 For project state, work-tracking, notes, design docs, and durable knowledge — default to files in the repo (markdown, structured text, etc.) rather than external services (Linear, Jira, Notion, Confluence, etc.).

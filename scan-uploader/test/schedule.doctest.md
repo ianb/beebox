@@ -76,7 +76,7 @@ async function writeValidConfig(configPath: string): Promise<void> {
     configPath,
     JSON.stringify({
       targets: [
-        { folder: "/scans/family", serverUrl: "https://cb.example.org", box: "family", tokenPath: "/t", disposition: "keep" },
+        { folder: "/scans/family", serverUrl: "https://beebox.run", box: "family", tokenPath: "/t", disposition: "keep" },
       ],
     }),
   );
@@ -100,7 +100,7 @@ const plist = generatePlist({
   logPath: "/Users/A B & C/scan-uploader.log",
 });
 JSON.stringify(plist)
-=> "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>Label</key>\n\t<string>org.callback-box.scan-uploader</string>\n\t<key>ProgramArguments</key>\n\t<array>\n\t\t<string>/usr/local/bin/node</string>\n\t\t<string>/Users/A B &amp; C/scan-uploader.mjs</string>\n\t\t<string>/Users/A B &amp; C/scan-uploader.json</string>\n\t</array>\n\t<key>StartInterval</key>\n\t<integer>900</integer>\n\t<key>RunAtLoad</key>\n\t<true/>\n\t<key>StandardOutPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n\t<key>StandardErrorPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n</dict>\n</plist>\n"
+=> "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>Label</key>\n\t<string>org.beebox.scan-uploader</string>\n\t<key>ProgramArguments</key>\n\t<array>\n\t\t<string>/usr/local/bin/node</string>\n\t\t<string>/Users/A B &amp; C/scan-uploader.mjs</string>\n\t\t<string>/Users/A B &amp; C/scan-uploader.json</string>\n\t</array>\n\t<key>StartInterval</key>\n\t<integer>900</integer>\n\t<key>RunAtLoad</key>\n\t<true/>\n\t<key>StandardOutPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n\t<key>StandardErrorPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n</dict>\n</plist>\n"
 ```
 
 `parseIntervalSeconds` reads `StartInterval` back out of exactly that
@@ -123,7 +123,7 @@ const sourcePlist = generatePlist({
   logPath: "/Users/A B & C/scan-uploader.log",
 });
 JSON.stringify(sourcePlist)
-=> "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>Label</key>\n\t<string>org.callback-box.scan-uploader</string>\n\t<key>ProgramArguments</key>\n\t<array>\n\t\t<string>/repo/bin/scan-uploader</string>\n\t\t<string>/Users/A B &amp; C/scan-uploader.json</string>\n\t</array>\n\t<key>WorkingDirectory</key>\n\t<string>/repo root &amp; co</string>\n\t<key>EnvironmentVariables</key>\n\t<dict>\n\t\t<key>PATH</key>\n\t\t<string>/usr/local/bin:/usr/bin:/bin</string>\n\t</dict>\n\t<key>StartInterval</key>\n\t<integer>900</integer>\n\t<key>RunAtLoad</key>\n\t<true/>\n\t<key>StandardOutPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n\t<key>StandardErrorPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n</dict>\n</plist>\n"
+=> "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>Label</key>\n\t<string>org.beebox.scan-uploader</string>\n\t<key>ProgramArguments</key>\n\t<array>\n\t\t<string>/repo/bin/scan-uploader</string>\n\t\t<string>/Users/A B &amp; C/scan-uploader.json</string>\n\t</array>\n\t<key>WorkingDirectory</key>\n\t<string>/repo root &amp; co</string>\n\t<key>EnvironmentVariables</key>\n\t<dict>\n\t\t<key>PATH</key>\n\t\t<string>/usr/local/bin:/usr/bin:/bin</string>\n\t</dict>\n\t<key>StartInterval</key>\n\t<integer>900</integer>\n\t<key>RunAtLoad</key>\n\t<true/>\n\t<key>StandardOutPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n\t<key>StandardErrorPath</key>\n\t<string>/Users/A B &amp; C/scan-uploader.log</string>\n</dict>\n</plist>\n"
 ```
 
 ```continue
@@ -375,7 +375,7 @@ runnerB.calls.length
 
 ```continue
 JSON.stringify(runnerB.calls[0])
-=> ["bootout","gui/501/org.callback-box.scan-uploader"]
+=> ["bootout","gui/501/org.beebox.scan-uploader"]
 ```
 
 ```continue
@@ -590,7 +590,7 @@ statusAfter.intervalMinutes
 
 ```continue
 JSON.stringify(runnerLoadedD.calls)
-=> [["print","gui/501/org.callback-box.scan-uploader"]]
+=> [["print","gui/501/org.beebox.scan-uploader"]]
 ```
 
 ## `uninstall` — bootout (tolerated whether loaded or not), removes the plist, idempotent
@@ -622,7 +622,7 @@ existsAfterUninstall1
 
 ```continue
 JSON.stringify(runnerUninstall1.calls)
-=> [["bootout","gui/501/org.callback-box.scan-uploader"]]
+=> [["bootout","gui/501/org.beebox.scan-uploader"]]
 ```
 
 A second `uninstall` is idempotent — reports "not installed", and still
@@ -637,12 +637,12 @@ uninstall2.wasInstalled
 
 ```continue
 JSON.stringify(runnerUninstall2.calls)
-=> [["bootout","gui/501/org.callback-box.scan-uploader"]]
+=> [["bootout","gui/501/org.beebox.scan-uploader"]]
 ```
 
 ```continue
 LABEL
-=> org.callback-box.scan-uploader
+=> org.beebox.scan-uploader
 ```
 
 ## `install` with no explicit `--config` embeds the resolved default's ABSOLUTE path

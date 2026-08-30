@@ -17,7 +17,7 @@
  * classification and aggregation both call are pure and live in
  * test-ledger-lib.ts.
  *
- * See callback-box/docs/plans/change-based-test-selection.md, Track 5.
+ * See beebox/docs/plans/change-based-test-selection.md, Track 5.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";

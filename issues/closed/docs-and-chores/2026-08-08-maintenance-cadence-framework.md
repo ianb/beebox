@@ -2,14 +2,14 @@
 title: "A consistent cadence framework for periodic maintenance/update tasks — where they run, how they report, how they raise issues"
 workstream: scheduled-task-voice
 resolution: implemented
-design: ../../../callback-box/docs/implemented-plans/scheduled-workstreams.md
-area: callback-box
+design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
+area: beebox
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder wants recurring updates on a cadence
 ---
 
-**Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single launchd tick replace the ad hoc per-job plists. Four tasks are enrolled (sdk-update, manual-tests, knip-sweep, docling-update) — see commits 69bf1bd1 (schema/loader), 568ada2e (lint + tick), 9eeb572e and 62d2c10c (enroll sdk-update/manual-tests). Remaining not-yet-enrolled tasks are tracked in `callback-box/docs/maintenance.md` as ordinary follow-up work under the `cb-authoring-schedules` skill, not as an open design gap.
+**Closed:** Resolved by the scheduled-workstreams plan: one `schedules/` directory, `bin/schedules` CLI, and a single launchd tick replace the ad hoc per-job plists. Four tasks are enrolled (sdk-update, manual-tests, knip-sweep, docling-update) — see commits 69bf1bd1 (schema/loader), 568ada2e (lint + tick), 9eeb572e and 62d2c10c (enroll sdk-update/manual-tests). Remaining not-yet-enrolled tasks are tracked in `beebox/docs/maintenance.md` as ordinary follow-up work under the `bbx-authoring-schedules` skill, not as an open design gap.
 
 The boxholder wants a **coherent way to run recurring maintenance/update tasks on
 a cadence** — Agent SDK updates, the security-overview.md regeneration, manual testing,
@@ -19,7 +19,7 @@ mix: some tasks have a full automated cadence, others rely on someone rememberin
 
 ## What already exists (this is not greenfield — generalize it)
 
-`callback-box/docs/maintenance.md` catalogs the periodic tasks, and there are
+`beebox/docs/maintenance.md` catalogs the periodic tasks, and there are
 **two working scheduled agent-runner patterns** that already answer all three
 questions for the tasks they cover:
 
@@ -34,7 +34,7 @@ questions for the tasks they cover:
   snapshot-guarded, cannot touch code or private issues), and raises a macOS
   notification. This is the proven "scheduled agent → raises issues → human
   confirms" model.
-- **CSP violation review** (`callback-box/docs/scheduled/csp-violation-review.md`)
+- **CSP violation review** (`beebox/docs/scheduled/csp-violation-review.md`)
   — a scheduled runbook: agent analyzes new violations, reports, and *proposes*
   the harden flip but never flips it — a human confirms.
 
@@ -53,7 +53,7 @@ human memory, with inconsistent (or no) reporting:
   but no cadence home decides *when* it re-runs or where.
 - **Knowledge-audit revisit** — `pnpm knowledge-audit` exists and the doc says
   "monthly is probably enough," but **nothing runs it on a cadence** — it waits
-  for someone to remember (`callback-box/docs/knowledge-audits.md`).
+  for someone to remember (`beebox/docs/knowledge-audits.md`).
 - **Doc / prompt refresh** — the standing tension in
   [doc-refresh-cadence](../../docs-and-chores/2026-07-04-doc-refresh-cadence.md) (docs-claim vs. code
   adjudication) and the prompt-report/prompt-viewer drift catchers.
@@ -91,7 +91,7 @@ doc, a log + notification, in-place status comments, or plain console.
 1. **Where they run.** The working pattern is **machine-local launchd** resuming a
    constrained agent — but that ties maintenance to one laptop being awake, and
    it's the wrong home for tasks that should track prod. Decide per task among:
-   launchd (per-dev-machine, current), the box scheduler (`cb tick` / a scheduled
+   launchd (per-dev-machine, current), the box scheduler (`bbx tick` / a scheduled
    routine), CI/GitHub Actions, or a prod-side job. Judgment tasks need an agent
    with the codebase + git (security-overview.md regen, knowledge audits), which points at
    the dev-machine/CI lane, not a box.
@@ -126,6 +126,6 @@ and standardize report + issue-raising across all of them.
   — the release/update-story decision this dovetails with.
 - [meta-issues](../../docs-and-chores/2026-07-21-meta-issues.md) — this coordinates several tasks/issues,
   so it may itself be a meta/tracking issue.
-- `callback-box/docs/maintenance.md` (the task catalog),
-  `callback-box/docs/knowledge-audits.md`,
-  `callback-box/docs/scheduled/csp-violation-review.md` (the runbook precedent).
+- `beebox/docs/maintenance.md` (the task catalog),
+  `beebox/docs/knowledge-audits.md`,
+  `beebox/docs/scheduled/csp-violation-review.md` (the runbook precedent).

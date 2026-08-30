@@ -1,7 +1,7 @@
 ---
 title: "Chat's live task strip pairs edges and filters only `skip_transcript` — a missed bookend wedges it, and watcher tasks show as user work"
 workstream: unattached
-area: callback-box
+area: beebox
 priority: normal
 filed-by: agent
 discovered-by: agent
@@ -14,7 +14,7 @@ Agent SDK's own guidance as of 0.3.247.
 
 **1. The live strip pairs edges, so a missed bookend leaves a task running
 forever.** `applyTaskEvent`
-(`callback-box/src/frontend/src/components/chat/background-tasks.ts`) folds the
+(`beebox/src/frontend/src/components/chat/background-tasks.ts`) folds the
 `started` / `progress` / `updated` / `settled` edge stream into the in-flight
 list: `started` registers a task, a terminal status removes it. Nothing else
 removes it. If the `settled` bookend never arrives — a dropped stream, a parked
@@ -26,7 +26,7 @@ The SDK ships a level signal for exactly this. `background_tasks_changed`
 carries the full set of live background tasks on every membership change, and
 its 0.3.247 documentation is explicit: consumers that only need "is background
 work running" should *replace* their set with each payload rather than pairing
-edges, "so a missed bookend cannot wedge a stale running indicator". callback-box
+edges, "so a missed bookend cannot wedge a stale running indicator". beebox
 does not consume `background_tasks_changed` anywhere. Adopting it means honoring
 its stated contract: the level is per-process and nothing is emitted at startup,
 so the set must reset to empty whenever the session's CLI process (re)starts;
@@ -38,7 +38,7 @@ an `ambient` flag to `task_started`, `task_notification` and the
 `background_tasks_changed` entries, documented as "true for housekeeping tasks
 the CLI does not surface as user work (**every `skip_transcript` task, plus
 auto-started live-update watchers**)". `adaptTaskMessage`
-(`callback-box/src/core/chat/session/messages.ts:126,148`) filters on
+(`beebox/src/core/chat/session/messages.ts:126,148`) filters on
 `skip_transcript` alone, so the watcher class — ambient but not
 `skip_transcript` — reaches the transcript and the strip as if the boxholder's
 agent had started it. `ambient` is a superset, not a rename: `skip_transcript`

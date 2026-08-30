@@ -11,7 +11,7 @@ resolution: implemented
 ---
 
 > **Fixed 2026-08-24** in
-> [dev-loop-lifecycle](../../../callback-box/docs/implemented-plans/dev-loop-lifecycle.md).
+> [dev-loop-lifecycle](../../../beebox/docs/implemented-plans/dev-loop-lifecycle.md).
 > Measured the window directly: `bin/browse` puts agent-browser processes on the
 > process table at T+1s and its socket dir holds no `.pid` file until T+3s.
 >

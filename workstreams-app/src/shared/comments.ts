@@ -5,7 +5,7 @@
 // this is the parse boundary for what the CLI hands back — so it is validated
 // here on the way in, not assumed.
 //
-// `origin` deliberately matches callback-box's interactive input
+// `origin` deliberately matches beebox's interactive input
 // (`src/frontend/src/input/emission.ts:44` — "typed" | "voice"). This tool does
 // not share that schema, but a developer reading both should not hold two words
 // for one idea.

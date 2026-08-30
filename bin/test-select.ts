@@ -6,7 +6,7 @@
  *   node --import tsx bin/test-select.ts --base <ref>
  *   node --import tsx bin/test-select.ts --no-cache  # rebuild the graph
  *
- * `pnpm test:changed` in callback-box is the `--run` form, and it is the
+ * `pnpm test:changed` in beebox is the `--run` form, and it is the
  * agent's iteration command. `pnpm test` keeps its meaning: everything.
  *
  * This is the I/O shell — git, the esbuild graph pass, spawning tap. The rule
@@ -16,7 +16,7 @@
  * `pnpm test`". An EMPTY selection is not an error: it exits 0 having run
  * nothing, because "no test imports the changed paths" is the honest
  * description of a change to untested code, and a full suite hides it rather
- * than fixing it. See callback-box/docs/plans/change-based-test-selection.md,
+ * than fixing it. See beebox/docs/plans/change-based-test-selection.md,
  * Track 2 and the 2026-08-25 revision (mechanism B).
  */
 
@@ -31,7 +31,7 @@ import { appendLedgerRecord } from "./test-ledger.js";
 import { selectTests, spawnerEdges } from "./test-select-lib.js";
 import { carefulExclusions } from "./test-tiers.js";
 
-const PACKAGE_ROOT = join(REPO_ROOT, "callback-box");
+const PACKAGE_ROOT = join(REPO_ROOT, "beebox");
 
 /**
  * What a selection of nothing prints. The message is the honest statement; the
@@ -42,9 +42,9 @@ export function emptyRunLines(): string[] {
   return ["no test imports the changed paths", "# { total: 0, pass: 0, selected: 0 }"];
 }
 
-/** Graph paths are repo-relative; tap names them relative to callback-box. */
+/** Graph paths are repo-relative; tap names them relative to beebox. */
 function stripPackagePrefix(path: string): string {
-  return path.startsWith("callback-box/") ? path.slice("callback-box/".length) : path;
+  return path.startsWith("beebox/") ? path.slice("beebox/".length) : path;
 }
 
 function readRepoFile(repoRelative: string): string | null {

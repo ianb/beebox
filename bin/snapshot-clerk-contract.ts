@@ -3,10 +3,10 @@
  * Clerk contract snapshot generator (`pnpm snapshot:clerk-contract`).
  *
  * Reads the SINGLE leaf schema module
- * (`callback-box/src/webapp/trpc/routers/clerk-contract.ts`) — and imports
- * nothing else from callback-box — and emits the TypeScript types the extension
- * consumes into `callback-clerk/src/contract/clerk-contract.generated.ts`. This
- * closes the enforcement gap where a callback-box-only change to the wire shape
+ * (`beebox/src/webapp/trpc/routers/clerk-contract.ts`) — and imports
+ * nothing else from beebox — and emits the TypeScript types the extension
+ * consumes into `beebox-clerk/src/contract/clerk-contract.generated.ts`. This
+ * closes the enforcement gap where a beebox-only change to the wire shape
  * never exercised the clerk side: the pre-commit staleness gate regenerates and
  * fails if the checked-in snapshot is stale.
  *
@@ -29,7 +29,7 @@ import {
   commentaryDestination,
   tabArrangementPayload,
   tabArrangementOutput,
-} from "../callback-box/src/webapp/trpc/routers/clerk-contract.js";
+} from "../beebox/src/webapp/trpc/routers/clerk-contract.js";
 
 /**
  * A construct outside the printer's whitelist — fail generation loudly. Kept as
@@ -81,10 +81,10 @@ class OpenObjectError extends UnsupportedSchemaError {
 }
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
-export const OUT_PATH = path.join(REPO_ROOT, "callback-clerk", "src", "contract", "clerk-contract.generated.ts");
+export const OUT_PATH = path.join(REPO_ROOT, "beebox-clerk", "src", "contract", "clerk-contract.generated.ts");
 const GENERATOR_REL = "bin/snapshot-clerk-contract.ts";
 const PNPM_SCRIPT = "pnpm snapshot:clerk-contract";
-const LEAF_REL = "callback-box/src/webapp/trpc/routers/clerk-contract.ts";
+const LEAF_REL = "beebox/src/webapp/trpc/routers/clerk-contract.ts";
 
 /**
  * The types to emit: a schema, its io side (input types come from the input

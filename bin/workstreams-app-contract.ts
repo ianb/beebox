@@ -7,7 +7,7 @@
 // other. The supervisor module re-exports all of this, so callers keep the one
 // import path they always had.
 
-export const WORKSTREAMS_APP_CAPABILITY_HEADER = "x-cb-workstreams-capability";
+export const WORKSTREAMS_APP_CAPABILITY_HEADER = "x-bbx-workstreams-capability";
 export const WORKSTREAMS_APP_BASE_PATH = "/workstreams";
 
 // The exhibits surface is a SECOND listener in the same supervised process

@@ -1,7 +1,7 @@
 ---
 title: "Agent-editable UI text"
 workstream: unknown
-area: callback-box
+area: beebox
 needs: [decision, design]
 ---
 

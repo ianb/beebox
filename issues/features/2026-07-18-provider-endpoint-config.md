@@ -2,7 +2,7 @@
 title: "Provider-endpoint config: choose your model provider at install time (Shape A)"
 workstream: backend-research
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research
 ---

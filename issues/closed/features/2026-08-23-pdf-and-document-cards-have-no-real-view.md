@@ -1,7 +1,7 @@
 ---
 title: "PDFs get a bare iframe and PDF-derived `document` cards get no view at all — the extracted structure is never shown"
 workstream: document-card-view
-area: callback-box
+area: beebox
 needs: [design]
 labels: [ui, pdf, renderers]
 filed-by: agent
@@ -68,7 +68,7 @@ whose output shape is:
 
 So it carries docling's extraction, page renders, and figures, and it exists
 because someone fed paper through a scanner. `docs/plans/pdf-intake-design.md`
-describes a broader intake (`cb import`, capture endpoint, email connector); its
+describes a broader intake (`bbx import`, capture endpoint, email connector); its
 `status: partial` is doing real work — the scan branch is what got built.
 
 **Nothing renders it.** No renderer registers `rendersCardTypes` for `document`;

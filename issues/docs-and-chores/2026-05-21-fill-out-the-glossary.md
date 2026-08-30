@@ -4,16 +4,16 @@ workstream: unknown
 area: docs
 ---
 
-`docs/glossary.md` is scoped to Proper Nouns — names we coined and general words we've narrowed to project-specific meanings. The starter set covers box, card, attach scope, attachment, asset, asset manifest, wakeup cycle, connector, procedure, service, cardworks, inbox, archive, cb, cb attachments. Things to add:
+`docs/glossary.md` is scoped to Proper Nouns — names we coined and general words we've narrowed to project-specific meanings. The starter set covers box, card, attach scope, attachment, asset, asset manifest, wakeup cycle, connector, procedure, service, cardworks, inbox, archive, bbx, bbx attachments. Things to add:
 
 - **Card-related**: tagName, ref, ref graph, schema instructions, validation, virtual `attach/` prefix, basename, card title
-- **Layout**: store/, box/inbox/, box/jobs/, box/commands/, box/questions/, config/, .callback-box/, landmark
+- **Layout**: store/, box/inbox/, box/jobs/, box/commands/, box/questions/, config/, .beebox/, landmark
 - **Wakeup / agent loop**: command, question, job, dispatch, agent invocation, Claude Code harness
 - **Connectors / services**: sync, fake vs real, observable state, the service/connector boundary
 - **Procedures**: run, step, scenario
 - **Capture / intake**: capture session, scan-import, intake, source (the `<filename source>` enum)
 - **Frontend**: page, renderer, UI primitive, semantic palette, restrict-component-classes
-- **Persistence**: pre-commit hook, post-commit hook, deploy, trailer (git trailer), `cb commit`
+- **Persistence**: pre-commit hook, post-commit hook, deploy, trailer (git trailer), `bbx commit`
 - **Testing**: doctest, makeTestServer, makeTmpBox, the three tiers
 - **Misc**: hunch, knowledge audit, landmark, file-lock
 

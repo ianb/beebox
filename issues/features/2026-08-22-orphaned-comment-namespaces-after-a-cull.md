@@ -10,7 +10,7 @@ labels: [comments, workstreams]
 ---
 
 The document-comment store
-([document-comments](../../callback-box/docs/plans/document-comments.md)) is
+([document-comments](../../beebox/docs/plans/document-comments.md)) is
 deliberately outside every worktree, so a cull cannot delete a comment — nothing
 in `bin/lib/worktree-teardown.sh` or `bin/workstreams` knows the store exists.
 That was the goal. It creates two follow-on problems, neither of which is data
@@ -27,7 +27,7 @@ design.
 The exhibits store reached the same place and answered by **reporting** rather
 than deleting: `bin/workstreams sweep` *"gains a report line for store
 directories whose workstream is neither registered nor a live worktree"*
-([workstream-exhibits](../../callback-box/docs/plans/workstream-exhibits.md):265).
+([workstream-exhibits](../../beebox/docs/plans/workstream-exhibits.md):265).
 The same treatment fits here, plus a marker in `bin/comments list` so an orphan
 is visibly an orphan rather than a live remark.
 

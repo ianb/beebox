@@ -1,7 +1,7 @@
 ---
 title: "New chat: the first user message doesn't display until the agent starts working (~10s blank)"
 workstream: first-message-redirect
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder report
 resolution: implemented
@@ -48,14 +48,14 @@ no remount). Latch semantics locked down in
 
 ## Why earlier reproductions failed (environment)
 
-The browse-browser probes stalled because the browser's `cb_session` was
+The browse-browser probes stalled because the browser's `bbx_session` was
 missing/expired: the dev router **silently destroys** unauthenticated WS
 upgrades (`bin/router.ts` upgrade handler), so the tRPC socket never connects
 — no `system/init`, no `chat-session-assigned`, no redirect — while cached
 pages still render. This matches the gap filed in
 [no-socket-level-ws-auth-test](../../code-quality/2026-08-07-no-socket-level-ws-auth-test.md).
 A working setup needs a valid owner session cookie in the driven browser
-(mint one with the `~/.cb-session-secret` HMAC scheme, including the user's
+(mint one with the `~/.beebox-session-secret` HMAC scheme, including the user's
 current `gen` — a gen-less cookie is treated as revoked).
 
 Starting a **new** chat and submitting the first message: the user's message does
@@ -101,7 +101,7 @@ Hypothesis 1 is the prime suspect; the fix is likely to preserve the optimistic
 `messages`/`pendingMessages` across the new→assigned-session transition (avoid the
 remount, or carry the pending entry through it), not to touch the append.
 
-## Repro / debug loop (per cb-debug)
+## Repro / debug loop (per bbx-debug)
 
 Drive a real new chat via `bin/browse`: open a fresh chat, submit a first message,
 and snapshot the message list on an interval *before* the first stream output —

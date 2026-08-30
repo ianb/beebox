@@ -147,7 +147,7 @@ test("serveDev: encoded traversal stays contained", async () => {
 
 test("serveDev: dotfiles under dev/ are not served, at any depth", async () => {
   const repo = await mkAppishRepo();
-  await fs.writeFile(path.join(repo, "dev", ".env"), "CB_SECRET=leak\n");
+  await fs.writeFile(path.join(repo, "dev", ".env"), "BBX_SECRET=leak\n");
   await fs.mkdir(path.join(repo, "dev", "story-eval", ".git"), { recursive: true });
   await fs.writeFile(path.join(repo, "dev", "story-eval", ".git", "config"), "[core]\n");
   // Hidden from the listing AND refused on a direct request — the listing

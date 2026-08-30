@@ -2,7 +2,7 @@
 title: "A small-model slot for title, summary and chat-review passes"
 workstream: model-engine-policy
 resolution: implemented
-area: callback-box
+area: beebox
 ---
 
 **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track G, commit `42c930165`): title/summary/chat-review/procedure-judge passes resolve through a declared `smallModel` slot, no routing/fallback logic.

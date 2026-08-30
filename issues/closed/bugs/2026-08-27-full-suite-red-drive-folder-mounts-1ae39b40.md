@@ -1,7 +1,7 @@
 ---
 title: "Full-suite red after Merge branch 'worktree-drive-folder-mounts': 1 test file failing"
 workstream: drive-folder-mounts
-area: callback-box
+area: beebox
 priority: important
 filed-by: agent
 discovered-by: agent
@@ -9,7 +9,7 @@ discovered-in: worktree-drive-folder-mounts — the hourly full-suite run on mai
 resolution: implemented
 ---
 
-> Closed 2026-08-27: real failure, correctly blamed. DriveSection.tsx authored `cb-settings-drive-connect-google` in two mutually-exclusive branches; the error branch now has its own id. The twelve hourly duplicates that followed closed as superseded into this one.
+> Closed 2026-08-27: real failure, correctly blamed. DriveSection.tsx authored `bbx-settings-drive-connect-google` in two mutually-exclusive branches; the error branch now has its own id. The twelve hourly duplicates that followed closed as superseded into this one.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `78470b9b`. Bisecting the landings since the last tested
@@ -27,7 +27,7 @@ report.
 not ok 393 - test/frontend/lib/ui-scan/annotations.doctest.md # time=927.53ms
   ---
   stdio: inherit
-  cwd: /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-nnX3v2/checkout/callback-box
+  cwd: /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-nnX3v2/checkout/beebox
   externalID: test/frontend/lib/ui-scan/annotations.doctest.md
   command: ~/.nvm/versions/node/v24.18.0/bin/node
   args:
@@ -42,7 +42,7 @@ not ok 393 - test/frontend/lib/ui-scan/annotations.doctest.md # time=927.53ms
     - --import=./test/helpers/isolate-auth-file.ts
     - --import=./test/helpers/isolate-origin-id.ts
     - --import=./test/helpers/isolate-codex-home.ts
-    - /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-nnX3v2/checkout/callback-box/test/frontend/lib/ui-scan/annotations.doctest.md
+    - /private/var/folders/r2/19qcwg5d05nd8xs3lzpfp58c0000gn/T/full-suite-nnX3v2/checkout/beebox/test/frontend/lib/ui-scan/annotations.doctest.md
   jobId: 5
   exitCode: 1
   signal: null
@@ -70,5 +70,5 @@ Reproduce at the blamed landing:
 
 ```bash
 git log -1 1ae39b40
-pnpm --dir callback-box exec tap test/frontend/lib/ui-scan/annotations.doctest.md
+pnpm --dir beebox exec tap test/frontend/lib/ui-scan/annotations.doctest.md
 ```

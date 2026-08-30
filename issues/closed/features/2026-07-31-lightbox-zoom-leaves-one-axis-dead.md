@@ -1,7 +1,7 @@
 ---
 title: "Lightbox double-tap zoom leaves one axis with zero pan travel"
 workstream: lightbox-horizontal-pan
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-lightbox-horizontal-pan — measured while chasing a different (mis-stated) bug
 resolution: wontfix

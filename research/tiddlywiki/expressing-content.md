@@ -586,7 +586,7 @@ transfer only if we re-add the type checking TiddlyWiki chose to do without.
 
 ---
 
-## 7. Dispositions — what transfers to callback-box
+## 7. Dispositions — what transfers to beebox
 
 ### Adopt
 
@@ -652,7 +652,7 @@ slice.
 **C2. An actual filter language.** If reified queries ever land, the run/prefix
 model (`+` narrows, `-` subtracts, `~` falls back) is a good compositional
 skeleton, and `:intersection` vs `:and` names a real distinction we would hit.
-But it is a large surface, and our `cb search` already covers text + kind +
+But it is a large surface, and our `bbx search` already covers text + kind +
 path prefix (`src/cli/commands/search.ts`). Do not design a query language until
 a shipped collection view proves the built-in queries insufficient.
 
@@ -661,7 +661,7 @@ a shipped collection view proves the built-in queries insufficient.
 **D1. Stringly-typed everything.** The typing constraint in the issue —
 *"if your query gave unrenderable items, that's not very helpful"* — is a
 constraint TiddlyWiki cannot express and does not try to. We have `rendersCardTypes`
-and `cb view-lint` enforcing that every view attaches to a type; that is a real
+and `bbx view-lint` enforcing that every view attaches to a type; that is a real
 advantage and the collection design should extend it (declare the types a view
 renders *well*) rather than trade it away for expressiveness.
 

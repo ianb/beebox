@@ -1,7 +1,7 @@
 ---
 title: Asset-manifest writers still run after the annex migration retired the scheme
 workstream: unattached
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-annex-bypass-check — investigating the photo-batch annex-bypass report
@@ -13,13 +13,13 @@ information git-annex itself maintains, so keeping both is exactly the
 duplication #8 forbids."* Two live code paths still write `manifest.json` in the
 retired format.
 
-- `callback-box/src/core/bulk-upload/prepare.ts:235` — every bulk batch writes an
+- `beebox/src/core/bulk-upload/prepare.ts:235` — every bulk batch writes an
   asset manifest into its attach scope and commits it. The batch-local
   `.gitattributes` even carries a `manifest.json annex.largefiles=nothing` line
   to keep it out of the annex.
-- `callback-box/src/core/capture/write-cards.ts:71` — every capture child card
+- `beebox/src/core/capture/write-cards.ts:71` — every capture child card
   gets a per-scope manifest, staged at `:72`.
-- `callback-box/src/core/commands/attachments.ts:263,302` — `cb attachments`
+- `beebox/src/core/commands/attachments.ts:263,302` — `bbx attachments`
   still maintains manifests.
 
 The result is a size + sha256 record sitting beside an annex key that already

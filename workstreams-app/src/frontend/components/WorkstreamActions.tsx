@@ -7,7 +7,7 @@ import type { ActionVerb, LifecycleJob, Workstream } from "../types.js";
  * A schedule is sticky and always shown as one, worktree or not: the boxholder
  * asked for these in their own section rather than mixed into "In progress"
  * whenever a run happens to have a live session
- * (callback-box/docs/plans/scheduled-workstreams.md, Track D).
+ * (beebox/docs/plans/scheduled-workstreams.md, Track D).
  */
 export function isScheduled(row: Workstream): boolean {
   return row.routing.state === "scheduled" || row.schedule !== null;

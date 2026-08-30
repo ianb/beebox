@@ -28,7 +28,7 @@ Two adjacent findings, both left open:
   an unscoped `prettier --write .` reformats the prose docs (it rewrote emphasis
   markers in `CLAUDE.md`), which isn't wanted.
 
-Also surfaced: `callback-box/pub-worker` had no `node_modules`, failing the
+Also surfaced: `beebox/pub-worker` had no `node_modules`, failing the
 recursive typecheck on `@cloudflare/workers-types`. Fixed by `pnpm install`
 (lockfile unchanged) — latent since publish-pages landed.
 

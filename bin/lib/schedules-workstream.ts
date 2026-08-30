@@ -14,7 +14,7 @@
  * neither BAILED, and that is an `important` alert — the silent failure this
  * plan exists to refuse.
  *
- * Design: callback-box/docs/plans/scheduled-workstreams.md (Track B).
+ * Design: beebox/docs/plans/scheduled-workstreams.md (Track B).
  */
 
 import * as fs from "node:fs/promises";
@@ -33,7 +33,7 @@ import {
 import { logPath, readResult, tailLog, updateScheduleState } from "./schedules-store.js";
 import { raiseAlert, type RunnerDeps } from "./schedules-alerts.js";
 import { execChild, scheduleEnv } from "./schedules-exec.js";
-import { errnoCode } from "../../callback-box/src/lib/error-guards.js";
+import { errnoCode } from "../../beebox/src/lib/error-guards.js";
 import { NewlineInToolPatternError, NoWorkstreamToStartError } from "./schedules-errors.js";
 
 

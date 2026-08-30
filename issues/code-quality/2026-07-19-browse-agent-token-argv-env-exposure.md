@@ -3,7 +3,7 @@ title: "bin/browse passes the box agent token via child argv/env (readable by ot
 workstream: local-password-auth
 filed-by: agent
 discovered-in: worktree-local-password-auth — Codex adversarial review of the always-on-auth branch (finding #8, Track E)
-area: callback-box
+area: beebox
 ---
 
 Surfaced by a cross-model (Codex) security review of the local-password-auth
@@ -14,7 +14,7 @@ is low on a single-user dev machine.
 Two related weaknesses in the Track E wiring:
 
 1. **Token in process metadata.** `bin/browse` exports the box's
-   `.callback-box/agent-token` as `BROWSE_AGENT_TOKEN` (`bin/browse:~58`) and it
+   `.beebox/agent-token` as `BROWSE_AGENT_TOKEN` (`bin/browse:~58`) and it
    ends up in the browser child's argv (`browse/src/cli.ts:~75`,
    `browse/packages/agent-browser-typed/src/runner.ts:~56`). A full bearer in
    argv/env is readable by any other local user via `ps`/`/proc/<pid>/environ`,
@@ -35,4 +35,4 @@ Fix direction: pass the token to `agent-browser` via a file/stdin rather than
 argv/env; and either scope the header by URL path-prefix (`/<worktree>/`) rather
 than origin, or document that dev tokens are per-user-machine and the cross-
 worktree bleed is acceptable. See the Track E section of
-`../../callback-box/docs/implemented-plans/local-password-auth.md`.
+`../../beebox/docs/implemented-plans/local-password-auth.md`.

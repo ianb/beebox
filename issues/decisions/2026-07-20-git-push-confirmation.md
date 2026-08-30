@@ -2,14 +2,14 @@
 title: "Git push confirmation: should the box confirm before pushing content off-machine?"
 workstream: open-source-readiness
 needs: [decision]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
 ---
 
 "Git push confirmation is something to definitely consider" (boxholder,
-2026-07-20). Today `cb wakeup` pushes the box repo to its configured
+2026-07-20). Today `bbx wakeup` pushes the box repo to its configured
 remote automatically. The push is the backup story's engine — but it is
 also the box sending the user's entire personal-data history to wherever
 the remote points, on an automatic cadence, with no per-push consent.

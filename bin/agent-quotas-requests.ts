@@ -180,8 +180,8 @@ export async function requestCodexRateLimits(
       id: 0,
       params: {
         clientInfo: {
-          name: "callback_box_workstreams",
-          title: "Callback Box Workstreams",
+          name: "bbx_workstreams",
+          title: "Bee Box Workstreams",
           version: "1",
         },
       },

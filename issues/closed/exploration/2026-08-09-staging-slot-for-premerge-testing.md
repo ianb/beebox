@@ -2,7 +2,7 @@
 title: "A staging slot for pre-merge workstream testing"
 workstream: streams-and-issues
 area: deploy
-design: ../../../callback-box/docs/implemented-plans/workstreams.md
+design: ../../../beebox/docs/implemented-plans/workstreams.md
 filed-by: agent
 discovered-in: worktree-workstreams — implementing the workstreams testing queue
 resolution: wontfix
@@ -36,7 +36,7 @@ is an explicit escalation, not the default testing path.
 
 ## What changed after this was filed
 
-The original remote-access mechanism now exists. `cb tailscale setup --target
+The original remote-access mechanism now exists. `bbx tailscale setup --target
 3210` can expose the authenticated dev router to the owner's Tailnet. The
 router can serve every worktree by prefix, so a phone or other remote device
 can open the same isolated checkout and `test1` clone that
