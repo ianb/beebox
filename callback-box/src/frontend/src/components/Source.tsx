@@ -143,15 +143,36 @@ function ExternalChip({
   version: string | undefined;
   retrieved: string | undefined;
 }): ReactNode {
+  const shownDate = formatRetrieved(retrieved);
   const details = [version === undefined || version === "" ? null : `version ${version}`,
-    retrieved === undefined || retrieved === "" ? null : `retrieved ${retrieved}`].filter(Boolean);
+    shownDate === null ? null : `retrieved ${shownDate}`].filter(Boolean);
   const title = details.length === 0 ? href : `${href} — ${details.join(", ")}`;
+  // A link, not a span: the target lives outside the box, and a citation chip
+  // you cannot follow is a dead end (boxholder, 2026-08-29).
   return (
-    <span className="not-italic text-warm-500 text-xs ml-1" title={title}>
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="not-italic text-warm-500 hover:text-warm-700 text-xs ml-1 no-underline hover:underline underline-offset-2"
+      title={title}
+    >
       [↗ {externalLabel(href)}
-      {retrieved !== undefined && retrieved !== "" ? <span className="text-warm-400">{` · ${retrieved}`}</span> : null}]
-    </span>
+      {shownDate === null ? null : <span className="text-warm-400">{` · ${shownDate}`}</span>}]
+    </a>
   );
+}
+
+/** A date-only ISO value reads as prose ("Aug 29, 2026"); anything else —
+ *  including a full timestamp, which must never show raw — falls back to the
+ *  date part when it parses, or verbatim when it does not. */
+function formatRetrieved(retrieved: string | undefined): string | null {
+  if (retrieved === undefined || retrieved === "") return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(retrieved);
+  if (!match) return retrieved;
+  const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (Number.isNaN(parsed.getTime())) return retrieved;
+  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 interface SourceProps {
