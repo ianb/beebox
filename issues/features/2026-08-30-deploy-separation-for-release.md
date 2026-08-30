@@ -35,7 +35,7 @@ Shape to design (not decided):
   is the sibling — a *release* is what a visitor consumes; this issue is
   about not shipping the boxholder's *pipeline* as if it were that).
 - **Boundary cases**: prod-curl/prod-ssh/prod-browse (operator debug tools —
-  useful pattern, personal endpoints), add-box/migrate scripts (half setup, 半
+  useful pattern, personal endpoints), add-box/migrate scripts (half setup, half
   personal history), `claude-update.sh`, the notification wiring.
 
 Overlaps to name, not absorb: [setup-server drift](../code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md),
