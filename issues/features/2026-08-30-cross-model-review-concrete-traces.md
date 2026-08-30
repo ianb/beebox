@@ -1,11 +1,15 @@
 ---
-title: "Give cross-model diff review concrete trace and remedy-scope instructions"
+title: "Give cross-model diff review concrete trace, durable-fix, and remedy-scope instructions"
 workstream: research-no-mistakes
 area: tooling
 labels: [agents, review]
 filed-by: agent
 discovered-in: research/no-mistakes-review.md
 ---
+
+**Direction chosen by the boxholder, 2026-08-30:** carry all three principles
+into the cross-model skill. The remaining work is the focused prompt design and
+verification, not deciding whether the ideas belong.
 
 The cross-model skill is explicit about independence, source verification,
 prompt fencing, and adjudication, but its diff review/challenge guidance does
@@ -22,8 +26,8 @@ the smallest honest fix would add durable state, a schema change,
 background/retry/persistence machinery, or a new subsystem, the finding asks
 the user even when the defect itself is source-verifiable.
 
-Consider adapting those instructions into the `review` and `challenge` prompts
-in `.claude/skills/cross-model/SKILL.md`. Preserve the current architecture:
+Adapt those instructions into the `review` and `challenge` prompts in
+`.claude/skills/cross-model/SKILL.md`. Preserve the current architecture:
 the other model remains read-only, the driving agent adjudicates findings, and
 material outcomes are surfaced. Do not import the automated fix loop as part of
 this change.

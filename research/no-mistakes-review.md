@@ -60,10 +60,11 @@ The reviewer is told to read the relevant history and diff itself, then inspect 
 
 Every finding carries severity, file/line when possible, a short description, and an action. `ask-user` covers product behavior, deliberate intent, and any remedy that would extend scope by adding durable state, schema changes, retries/background work, persistence, or a subsystem. `auto-fix` is reserved for non-user-visible correctness, reliability, security, performance, or mechanical-quality repairs that do not require an intent decision. `no-op` is informational. The reviewer also produces a low/medium/high risk assessment and rationale.
 
-Two aspects look worth adapting into `.claude/skills/cross-model/SKILL.md` after a focused design pass:
+The boxholder chose to carry three aspects into `.claude/skills/cross-model/SKILL.md` (2026-08-30), with exact prompt wording and placement left to a focused change:
 
-1. Require one concrete state trace for new logic and reconstruction of the failing sequence for purported durable fixes. Our current instruction to verify source claims is strong for plans, but diff review/challenge mode is less explicit about these two moves.
-2. Classify a finding by the scope of its smallest honest remedy. “The defect is real” and “the reviewer is authorized to grow a subsystem to fix it” are separate judgments; No Mistakes makes that separation explicit.
+1. Require one concrete state trace for new or changed logic.
+2. For a purported durable fix, reconstruct the failing sequence and required invariant, then inspect sibling paths and shared state transitions for the same reachable failure.
+3. Classify a finding by the scope of its smallest honest remedy. “The defect is real” and “the reviewer is authorized to add durable state, schema changes, retry/background/persistence machinery, or a subsystem to fix it” are separate judgments.
 
 ### Loop mechanics
 
@@ -83,11 +84,11 @@ The transferable invariant is “the mutation consumes the exact artifact that w
 
 ## Dispositions
 
-### Adapt — strengthen diff-review instructions around concrete failure traces
+### Adopt — strengthen diff-review instructions around concrete failure traces
 
-Consider adding two requirements to cross-model review/challenge mode: trace at least one concrete state through changed logic, and reconstruct the failing sequence plus invariant for a claimed durable fix. Also make the reviewer distinguish a source defect from the scope authorization required by its smallest honest remedy.
+Add three requirements to cross-model review/challenge mode: trace at least one concrete state through changed logic; reconstruct the failing sequence plus invariant for a claimed durable fix; and distinguish a source defect from the scope authorization required by its smallest honest remedy.
 
-Concrete trace: `.claude/skills/cross-model/SKILL.md` review/challenge prompts and No Mistakes' `internal/pipeline/steps/review.go` at the reviewed commit. This needs a focused design before editing the skill; it is not a request to import No Mistakes' automated loop. Filed as [`issues/exploration/2026-08-30-cross-model-review-concrete-traces.md`](../issues/exploration/2026-08-30-cross-model-review-concrete-traces.md).
+Concrete trace: boxholder decision, 2026-08-30; `.claude/skills/cross-model/SKILL.md` review/challenge prompts; and No Mistakes' `internal/pipeline/steps/review.go` at the reviewed commit. The exact wording still needs a focused design; this is not a request to import No Mistakes' automated loop. Filed as [`issues/features/2026-08-30-cross-model-review-concrete-traces.md`](../issues/features/2026-08-30-cross-model-review-concrete-traces.md).
 
 ### Adopt — use exact-head language when reasoning about later mutations
 
