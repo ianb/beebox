@@ -41,6 +41,16 @@ last ran, what is overdue. Writing or migrating one: the
 
 **Exhibits — showing work instead of pasting it into chat.** An exhibit is a directory the developer views in a browser: labeled screenshots, a rendered document, or a small interactive page, with exactly one **ask** on it — `decide` (pick among options), `confirm` (veto if wrong), `react` (impressions wanted), or `fyi` (nothing needed). `bin/exhibits add --title <t> --ask <type> --prose <p> [files…]` creates one and prints its URL on stdout (one line, pasteable); `bin/exhibits list` shows which asks came back answered, so a later session can pick up the developer's response. Exhibits live in a per-workstream store beside the main checkout (`<parent>/workstream-exhibits/<workstream>/`, mounted at `<checkout>/exhibits`), so they survive a worktree cull and never merge to main — a durable tool goes to `dev/apps/<name>/` instead (`bin/exhibits add --permanent`). Exhibit pages are deliberately casual: no lint anywhere; committed apps alone get a this-will-build gate (pre-commit runs `pnpm dev-apps-typecheck` — bare `tsc --noEmit` — when `dev/apps` TS is staged). Page contract: `workstreams-app/docs/exhibits.md`; design: `callback-box/docs/plans/workstream-exhibits.md`.
 
+**Screenshot evidence is shown through an exhibit.** When screenshots are part
+of a UI workstream's verification or handoff—especially before/after, multiple
+states, or responsive variants—package the useful set into one labeled exhibit
+and share its URL. Do not hand the developer a list of `.claude/screenshots/`
+paths and make them reconstruct what each image proves. The exhibit's prose and
+captions say what changed and what each figure demonstrates; use `ask: fyi` when
+the images are evidence only, or the honest interactive ask when a decision,
+confirmation, or reaction is actually needed. A lone incidental debug capture
+that adds no comparison or review value does not require an exhibit.
+
 **Document comments — the boxholder talking to you about a file.** Remarks left
 in the browser wait in a store outside git; run **`bin/comments list --workstream
 <your workstream>`** when you pick up work, and `bin/comments show <path>` when
