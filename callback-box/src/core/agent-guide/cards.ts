@@ -68,6 +68,11 @@ next), but a few belong to every card:
   \`the dates are in [the beta launch plan](/store/notes/Beta_Launch.doc.card)\`.
   The full \`ref\`/\`href\` semantics (tracking, \`cb mv\` rewriting, external \`href\`)
   live in ${xref(SECTION.PROVENANCE)}.
+- **Link-shaped fields use one vocabulary.** Internal targets use \`ref\`; external
+  targets use \`href\`. Put either in an object whose sibling fields explain the
+  relationship — for example \`sources: [{href, retrieved, usage}]\` — never an
+  ad-hoc bare URL string array. These names rhyme with \`{% source %}\`; use
+  date-only ISO (\`YYYY-MM-DD\`) for \`retrieved\`.
 - **No Git-tracked metadata.** Don't put \`created\` / \`modified\` (or the like)
   in frontmatter — Git already tracks both authoritatively. Don't duplicate what
   the history already knows.

@@ -3237,6 +3237,42 @@ tests:
     correct_contains_any: ["retrieved=", "retrieved date", "retrieval date"]
     tags: [source, cards, provenance, external-source]
 
+  # Status (2026-08-30): both link-field-vocabulary audits pass at
+  # knows_directly with 0 file reads and 0 searches. The agent used ref for the
+  # internal target and a sources object with href/retrieved/usage externally.
+  - id: link-fields-external-href-envelope
+    prompt: >
+      I am defining data for a custom card view. It needs to preserve two public
+      web sources, how each source was used, and when each page was checked.
+      What field shape and names should I use? Show a small YAML example.
+    expected_level: knows_directly
+    watch_for: >
+      Uses an object envelope such as sources: [{href, retrieved, usage}] rather
+      than a bare URL string array or an invented url/link field. retrieved is a
+      date-only ISO value.
+    correct_matches:
+      - "sources:\\s*\\n\\s*-\\s+href:"
+      - "retrieved:.*[0-9]{4}-[0-9]{2}-[0-9]{2}"
+      - "usage:"
+    response_not_contains: ["urls:"]
+    tags: [source, cards, views, provenance, link-fields]
+
+  - id: link-fields-internal-ref
+    prompt: >
+      I am defining a card field used by a custom view. Each entry points to an
+      internal project card and records why that project is related. What target
+      field name and shape should I use? Show a small YAML example and explain
+      what happens if the target card moves.
+    expected_level: knows_directly
+    watch_for: >
+      Uses ref inside an object with a sibling such as note or usage. Explains
+      that cb mv rewrites tracked refs; does not substitute href, url, or a bare
+      string array for the internal target.
+    correct_contains: ["cb mv"]
+    correct_matches:
+      - "-\\s+ref:\\s+/[^\\n]+\\n\\s+(?:note|usage|why|relation):"
+    tags: [source, cards, views, provenance, link-fields]
+
   - id: source-tag-syntax
     prompt: >
       I'm writing a doc that summarizes a voice memo. How do I mark the

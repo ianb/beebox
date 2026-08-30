@@ -17,7 +17,7 @@ import { getBoxTime } from "../lib/time.js";
 import { loadBoxTimezone } from "./box/config.js";
 import { getMostActiveSavedAt } from "./chat/session/history.js";
 import { composeChatAppSnapshot, type FeatureMap } from "./chat/features.js";
-import type { ChatChannel } from "../shared/chat-channel.js";
+import type { AgentChatChannel } from "../shared/chat-channel.js";
 import {
   loadScheduleHealth,
   summarizeScheduleHealth,
@@ -195,13 +195,14 @@ export function admitHealth(
  */
 export async function composeSendSnapshot(
   boxRoot: string,
-  { features, sessionStart, channel, openCard, activityChildren, healthGate }: {
-    features: FeatureMap;
+  { features, sessionStart, channel, openCard, activityChildren, healthGate, lastActivityAt }: {
+    features?: FeatureMap;
     sessionStart: boolean;
-    channel?: ChatChannel;
+    channel?: AgentChatChannel;
     openCard?: string;
     activityChildren?: string;
     healthGate?: HealthGate;
+    lastActivityAt?: Date | null;
   },
 ): Promise<string> {
   // Box time, not wall time: the `local-time` tag is what the agent reasons
@@ -214,9 +215,10 @@ export async function composeSendSnapshot(
     now,
     sessionStart,
     ...(healthGate !== undefined ? { healthGate } : {}),
+    ...(lastActivityAt !== undefined ? { lastActivityAt } : {}),
   });
   return composeChatAppSnapshot({
-    features,
+    ...(features !== undefined ? { features } : {}),
     ...context,
     ...(channel !== undefined ? { channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
@@ -236,10 +238,11 @@ export async function composeSendSnapshot(
  */
 export async function buildSnapshotContext(
   boxRoot: string,
-  { now, sessionStart, healthGate }: {
+  { now, sessionStart, healthGate, lastActivityAt }: {
     now: Date;
     sessionStart: boolean;
     healthGate?: HealthGate;
+    lastActivityAt?: Date | null;
   },
 ): Promise<SnapshotContext> {
   const timezone = await loadBoxTimezone(boxRoot);
@@ -273,7 +276,7 @@ export async function buildSnapshotContext(
   if (!sessionStart) return out;
 
   try {
-    const savedAt = await getMostActiveSavedAt(boxRoot);
+    const savedAt = lastActivityAt === undefined ? await getMostActiveSavedAt(boxRoot) : lastActivityAt;
     if (savedAt !== null && savedAt.getTime() < now.getTime()) {
       out.lastActivity = `${describeElapsed(now.getTime() - savedAt.getTime())} ago`;
     }

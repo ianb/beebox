@@ -3998,6 +3998,36 @@ test1:
       peak: 46974
       added: 0
       turns: 1
+  link-fields-external-href-envelope:
+    - date: 2026-08-30T17:59:29.933Z
+      boxCommit: cd152ea6c3ef0d7cd140ba448d6a2954537f1772
+      repoCommit: f77c0cc3f48c1b2066ae73519aca9da382980846
+      initial: 47142
+      peak: 47142
+      added: 0
+      turns: 1
+    - date: 2026-08-30T18:07:43.817Z
+      boxCommit: 7c4b1969c10a2f7d3b0c71d98111ebea1184dd18
+      repoCommit: f77c0cc3f48c1b2066ae73519aca9da382980846
+      initial: 47127
+      peak: 47127
+      added: 0
+      turns: 1
+  link-fields-internal-ref:
+    - date: 2026-08-30T17:59:29.933Z
+      boxCommit: cd152ea6c3ef0d7cd140ba448d6a2954537f1772
+      repoCommit: f77c0cc3f48c1b2066ae73519aca9da382980846
+      initial: 47134
+      peak: 47134
+      added: 0
+      turns: 1
+    - date: 2026-08-30T18:07:43.817Z
+      boxCommit: 7c4b1969c10a2f7d3b0c71d98111ebea1184dd18
+      repoCommit: f77c0cc3f48c1b2066ae73519aca9da382980846
+      initial: 47134
+      peak: 47134
+      added: 0
+      turns: 1
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
