@@ -556,7 +556,7 @@ wt_git_worktree_lock_reason() {
     current == target && $1 == "locked" {
       reason = substr($0, length("locked") + 1)
       sub(/^[[:space:]]+/, "", reason)
-      print reason == "" ? "no reason provided" : reason
+      print (reason == "" ? "no reason provided" : reason)
       found = 1
       exit
     }
