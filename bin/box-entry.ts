@@ -5,8 +5,8 @@
 // Track G in docs/implemented-plans/boxes-as-packages-v2.md):
 //   - a legacy (shapeVersion 1) box dir — content and package root are the
 //     same directory.
-//   - a v2 box's PACKAGE root (has `content/.beebox` inside it).
-//   - a v2 box's `content/` dir directly (has `.beebox` right there).
+//   - a v2 box's PACKAGE root (has `content/.beebox/box.json` inside it).
+//   - a v2 box's `content/` dir directly (has `.beebox/box.json` right there).
 //
 // This is deliberately independent of beebox's own `src/cli/lib/
 // box-shape.ts` (the engine's canonical predicate) rather than importing it:
@@ -50,16 +50,37 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
+// The router is deliberately not allowed to import the engine's state
+// migration: it serves worktrees that can run a different engine generation.
+// These are compatibility inputs for *discovery only*.  The selected engine
+// owns the one-shot migration when it starts, so launching an older worktree
+// never has its persisted state rewritten by the shared router.
+const CANONICAL_MARKER = path.join(".beebox", "box.json");
+const LEGACY_MARKER = ".cb-box";
+const LEGACY_STATE_DIR = ".callback-box";
+
+async function findMarkerPath(boxRoot: string): Promise<string | null> {
+  for (const marker of [CANONICAL_MARKER, LEGACY_MARKER]) {
+    const candidate = path.join(boxRoot, marker);
+    if (await exists(candidate)) return candidate;
+  }
+  return null;
+}
+
+async function hasLegacyState(boxRoot: string): Promise<boolean> {
+  return exists(path.join(boxRoot, LEGACY_STATE_DIR));
+}
+
 /**
  * Resolve one BOXES entry to `{ contentDir, slug }`.
  *
- * - `<entry>/.beebox` exists → `entry` IS a box root already.
+ * - `<entry>/.beebox/box.json` or the legacy marker exists → `entry` IS a box root already.
  *   - A v2 marker there means `entry` is a v2 `content/` dir passed
  *     directly: slug comes from the PACKAGE root (entry's parent), since
  *     `content/`'s own basename is always the literal string "content".
  *   - Otherwise (legacy, or the marker doesn't parse as v2): slug is
  *     `entry`'s own basename, same as always.
- * - Else `<entry>/content/.beebox` exists → `entry` is a v2 PACKAGE root:
+ * - Else `<entry>/content/.beebox/box.json` or legacy state exists → `entry` is a v2 PACKAGE root:
  *   contentDir is `entry/content`, slug is `entry`'s own basename.
  * - Else (no marker found anywhere, e.g. a nonexistent path or a fixture
  *   dir in a test) → tolerate it the same way the engine's
@@ -68,16 +89,18 @@ async function exists(p: string): Promise<boolean> {
 export async function resolveBoxEntry(entry: string): Promise<ResolvedBoxEntry> {
   const resolved = path.resolve(entry);
 
-  if (await exists(path.join(resolved, ".beebox"))) {
-    const shapeVersion = await readShapeVersion(resolved);
+  const directMarker = await findMarkerPath(resolved);
+  if (directMarker) {
+    const shapeVersion = await readShapeVersion(directMarker);
     if (shapeVersion >= 2) {
       return { contentDir: resolved, slug: path.basename(path.dirname(resolved)) };
     }
     return { contentDir: resolved, slug: path.basename(resolved) };
   }
+  if (await hasLegacyState(resolved)) return { contentDir: resolved, slug: path.basename(resolved) };
 
   const nestedContent = path.join(resolved, "content");
-  if (await exists(path.join(nestedContent, ".beebox"))) {
+  if ((await findMarkerPath(nestedContent)) || await hasLegacyState(nestedContent)) {
     return { contentDir: nestedContent, slug: path.basename(resolved) };
   }
 
@@ -85,7 +108,7 @@ export async function resolveBoxEntry(entry: string): Promise<ResolvedBoxEntry> 
   return { contentDir: resolved, slug: path.basename(resolved) };
 }
 
-/** A `.beebox` marker that exists but cannot be read as one. */
+/** A box marker that exists but cannot be read as one. */
 export class BoxMarkerError extends Error {
   constructor(markerPath: string, problem: string) {
     super(`${markerPath}: ${problem}`);
@@ -100,8 +123,7 @@ export class BoxMarkerError extends Error {
  * a number — throws rather than guessing: a guess of "legacy" would re-derive
  * the slug from the wrong directory and route the box under the wrong name.
  */
-async function readShapeVersion(boxRoot: string): Promise<number> {
-  const markerPath = path.join(boxRoot, ".beebox");
+async function readShapeVersion(markerPath: string): Promise<number> {
   const raw = await fs.readFile(markerPath, "utf-8");
   if (raw.trim() === "") return 1;
   let marker: unknown;

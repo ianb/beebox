@@ -13,6 +13,12 @@ import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { fileExists } from "../lib/file-exists.js";
 import { waitForHttp } from "./child-process-utils.js";
 
+const CANONICAL_MARKER = path.join(".beebox", "box.json");
+// Compatibility inputs only. `getBoxShape()` owns the one-shot migration
+// after this resolver identifies the operational root.
+const LEGACY_MARKER = ".cb-box";
+const LEGACY_STATE_DIR = ".callback-box";
+
 export type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
 
 /** Params for spawning a box child process -- see `SpawnChildFn`. */
@@ -57,7 +63,7 @@ export function defaultCheckReady(params: { port: number; label: string }): Prom
 class BoxResolutionError extends Error {
   constructor(entryPath: string) {
     super(
-      "Configured box path " + entryPath + " has no .beebox/box.json marker at itself or at its " +
+      "Configured box path " + entryPath + " has no .beebox/box.json marker or legacy state at itself or at its " +
         "content/ subdirectory -- not a Bee Box (checked both the v2 package-root " +
         "and legacy/v2 content-dir shapes)."
     );
@@ -72,10 +78,18 @@ class BoxResolutionError extends Error {
  * (content) root that `getBoxShape` expects.
  */
 export async function resolveBoxRoot(entryPath: string): Promise<string> {
-  if (await fileExists(path.join(entryPath, ".beebox/box.json"))) return entryPath;
+  if (await hasBoxIdentity(entryPath)) return entryPath;
   const nested = path.join(entryPath, "content");
-  if (await fileExists(path.join(nested, ".beebox/box.json"))) return nested;
+  if (await hasBoxIdentity(nested)) return nested;
   throw new BoxResolutionError(entryPath);
+}
+
+async function hasBoxIdentity(boxRoot: string): Promise<boolean> {
+  return (
+    (await fileExists(path.join(boxRoot, CANONICAL_MARKER))) ||
+    (await fileExists(path.join(boxRoot, LEGACY_MARKER))) ||
+    (await fileExists(path.join(boxRoot, LEGACY_STATE_DIR)))
+  );
 }
 
 /** The box's own installed `bbx` when present (v2, installed), else the

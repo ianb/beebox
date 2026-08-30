@@ -159,6 +159,29 @@ symlinkErr.message.includes("test1-symlink")
 => true
 ```
 
+## Legacy box state resolves, but config loading does not migrate it
+
+The router and hub need to locate a box before `getBoxShape()` can run the
+engine-owned migration. A legacy `content/.callback-box` therefore identifies
+the operational root, but discovery itself must leave it in place so an older
+worktree can still be served without the router rewriting its state.
+
+```ts continue
+const legacyState = path.join(box.root, "boxes/legacy/content/.callback-box");
+await fs.mkdir(legacyState, { recursive: true });
+await fs.writeFile(path.join(legacyState, "state.json"), "old\n");
+const legacyConfigPath = await writeConfig(box.root, { boxes: { legacy: { path: "./boxes/legacy" } } });
+const legacyConfig = await loadHubConfig(legacyConfigPath);
+legacyConfig.boxes.legacy.path === path.join(box.root, "boxes/legacy")
+=> true
+
+await fs.access(legacyState).then(() => true)
+=> true
+
+await fs.access(path.join(box.root, "boxes/legacy/content/.beebox")).then(() => false, () => true)
+=> true
+```
+
 A box path that doesn't resolve at all (no `.beebox/box.json` anywhere) still loads
 successfully -- canonicalization failures don't block config load, only the
 supervisor reports that box "unhealthy" once it actually tries to launch it
