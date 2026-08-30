@@ -5,15 +5,20 @@ area: tooling
 labels: [agents, review]
 filed-by: agent
 discovered-in: research/no-mistakes-review.md
+resolution: implemented
 ---
 
-**Direction chosen by the boxholder, 2026-08-30:** carry all four principles
-into the cross-model skill. The remaining work is the focused prompt design and
-verification, not deciding whether the ideas belong.
+**Closed 2026-08-30 by `research-no-mistakes`.** All four chosen principles are
+now explicit in `.claude/skills/cross-model/SKILL.md`: every mode carries the
+review-authority hierarchy; review and diff-target challenge prompts require a
+concrete state trace, durable-fix failure/invariant reconstruction, and
+remedy-scope classification. The other model remains read-only and the primary
+agent still adjudicates and mediates human decisions.
 
-The cross-model skill is explicit about independence, source verification,
-prompt fencing, and adjudication, but its diff review/challenge guidance does
-not prescribe two concrete review moves that No Mistakes v1.60.3 uses:
+Before this change, the cross-model skill was explicit about independence,
+source verification, prompt fencing, and adjudication, but its diff
+review/challenge guidance did not prescribe two concrete review moves that No
+Mistakes v1.60.3 uses:
 
 - for new or changed logic, choose at least one concrete input or state and
   trace it far enough to find wrong results that do not error;
@@ -39,12 +44,12 @@ the other model remains read-only, the driving agent adjudicates findings, and
 material outcomes are surfaced. Do not import the automated fix loop as part of
 this change.
 
-**Implemented in this workstream:** every mode now requires a compact
+Every mode now requires a compact
 review-authority block. It quotes decisive human wording where practical,
 points at originating issue/brief/plan paths, establishes direct human
 decisions as highest authority, and says when no originating request is
-available rather than inventing one. The concrete-trace, durable-fix, and
-remedy-scope prompt changes above remain open.
+available rather than inventing one. Review and challenge mode now also carry
+the other three bounded instructions above.
 
 Before editing, compare the additions against the existing fencing and findings
 cap so the prompt stays bounded rather than becoming a generic review checklist.
