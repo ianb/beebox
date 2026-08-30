@@ -29,15 +29,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
+import { BOX_BUILT_DEPENDENCIES } from "../src/core/box/package.js";
 import { isRecord } from "../src/lib/is-record.js";
-
-/** Native-module deps whose install scripts a fresh `pnpm install`/`dlx` must
- *  be told to trust (pnpm 10 blocks all of them by default) — kept in sync
- *  with the `pnpm.onlyBuiltDependencies` list `scaffoldPackageRoot` writes
- *  into the box's own `package.json` (`src/core/box/package.ts`). The `dlx`
- *  step below needs its own copy of this list because it runs BEFORE that
- *  package.json exists. */
-const BUILT_DEPENDENCIES = ["better-sqlite3", "esbuild", "@google/genai", "protobufjs"];
 
 /** A gate step (command or assertion) failed. `label` names the step;
  *  `detail` carries the full diagnostic (command line, stdout/stderr, or
@@ -73,18 +66,36 @@ interface RunSpec {
   env?: NodeJS.ProcessEnv;
 }
 
+/** The environment a stranger's shell would have: `pnpm run smoke` injects
+ *  `npm_config_*` / `npm_*` / `pnpm_config_*` from THIS package's config into
+ *  its children, and a child `pnpm install` in the box reads them as its own
+ *  config (an empty `npm_config_frozen_lockfile`, `node_linker=hoisted`, the
+ *  reporter, …) — the box install then fails, silently, in a way it never
+ *  does from a plain terminal. Strip them. */
+function strangerEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (/^(npm_|pnpm_config_|pnpm_script_src_dir$)/i.test(k)) continue;
+    env[k] = v;
+  }
+  return env;
+}
+
 /** Run one gate step, timing it and throwing with full output on failure. */
 async function step(label: string, spec: RunSpec): Promise<void> {
   const t0 = process.hrtime.bigint();
   const result = await execa(spec.file, spec.args, {
     cwd: spec.cwd,
-    env: spec.env,
+    env: spec.env ?? strangerEnv(),
+    extendEnv: false,
     reject: false,
     all: true,
   });
   if (result.exitCode !== 0) {
     const command = spec.file + " " + spec.args.join(" ");
-    throw new SmokeStepError(label, command + "\n" + (result.all ?? ""));
+    // A spawn failure or signal death leaves `all` empty — say what happened.
+    const why = `exit ${String(result.exitCode)}${result.signal ? ` (${result.signal})` : ""}: ${result.shortMessage}`;
+    throw new SmokeStepError(label, `${command}\n${why}\n${result.all ?? ""}`);
   }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6;
   process.stderr.write("[smoke] ok: " + label + " (" + (ms / 1000).toFixed(1) + "s)\n");
@@ -183,7 +194,7 @@ async function scaffold(args: { tarball: string; boxDir: string }): Promise<void
     file: "pnpm",
     args: [
       "dlx",
-      ...BUILT_DEPENDENCIES.map((d) => "--allow-build=" + d),
+      ...BOX_BUILT_DEPENDENCIES.map((d) => "--allow-build=" + d),
       "--package",
       args.tarball,
       "bbx",
@@ -191,7 +202,7 @@ async function scaffold(args: { tarball: string; boxDir: string }): Promise<void
       ".",
     ],
     cwd: args.boxDir,
-    env: { ...process.env, BBX_INIT_BEEBOX_SPEC: "file:" + args.tarball },
+    env: { ...strangerEnv(), BBX_INIT_BEEBOX_SPEC: "file:" + args.tarball },
   });
 
   // Step 2: the real install — resolves the `file:<tarball>` dependency
@@ -264,7 +275,7 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
   const bbxServe: Subprocess = execa(
     "node_modules/.bin/bbx",
     ["serve", "content", "--port", String(args.port)],
-    { cwd: args.boxDir, env: { ...process.env, BBX_DIAG_API_KEY: diagKey }, reject: false, all: true }
+    { cwd: args.boxDir, env: { ...strangerEnv(), BBX_DIAG_API_KEY: diagKey }, extendEnv: false, reject: false, all: true }
   );
   try {
     const t0 = process.hrtime.bigint();
@@ -280,22 +291,28 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
       }),
       crashed,
     ]);
-    // The box's slug is the basename of the dir passed to `bbx serve`
-    // ("content") — this IS the plan's "serve its content/" literally: no
-    // Track G slug-derivation exists yet, so the slug a real README would
-    // reference today is whatever basename `content/` has.
-    const boxHealthUrl = "http://localhost:" + String(args.port) + "/content/api/trpc/health.check";
-    const boxHealthResponse = await waitForStatus({ url: boxHealthUrl, expectStatus: 200, timeoutMs: 5000 });
+    // A v2 box's slug is the basename of its PACKAGE dir, not of `content/`
+    // (src/lib/box-slug.ts; docs/docker-install.md: `/data/box` → `/box/`).
+    const slug = path.basename(args.boxDir);
+    const boxHealthUrl = `http://localhost:${String(args.port)}/${slug}/api/trpc/health.check`;
+    // Auth is always on; the diag bearer key is the documented bypass for
+    // exactly this procedure (src/webapp/auth.ts DIAG_PROCEDURE_WHITELIST).
+    const boxHealthResponse = await waitForStatus({
+      url: boxHealthUrl,
+      headers: { Authorization: "Bearer " + diagKey },
+      expectStatus: 200,
+      timeoutMs: 5000,
+    });
     const boxHealthBody: unknown = await boxHealthResponse.json();
     const resultField = isRecord(boxHealthBody) ? boxHealthBody["result"] : undefined;
     const dataField = isRecord(resultField) ? resultField["data"] : undefined;
     const boxStatus = isRecord(dataField) ? dataField["status"] : undefined;
     if (!boxStatus) {
-      throw new SmokeStepError(SERVE_STEP_LABEL, "unexpected /content/api/trpc/health.check body: " + JSON.stringify(boxHealthBody));
+      throw new SmokeStepError(SERVE_STEP_LABEL, `unexpected ${boxHealthUrl} body: ` + JSON.stringify(boxHealthBody));
     }
     const ms = Number(process.hrtime.bigint() - t0) / 1e6;
     process.stderr.write(
-      "[smoke] ok: bbx serve — /healthz 200, /content/api/trpc/health.check 200 (status: " +
+      `[smoke] ok: bbx serve — /healthz 200, /${slug}/api/trpc/health.check 200 (status: ` +
         boxStatus + ") (" + (ms / 1000).toFixed(1) + "s)\n"
     );
 

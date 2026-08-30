@@ -73,6 +73,14 @@ function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnabled: bo
   }, [enabled, narrationEnabled]);
 }
 
+function useNativeHqDictationBridge(opts: { enabled: boolean; hqDictationEnabled: boolean; sessionId: string | null }) {
+  const { enabled, hqDictationEnabled, sessionId } = opts;
+  useEffect(() => {
+    if (!enabled) return;
+    postNativeHqDictationState(hqDictationEnabled, window);
+  }, [enabled, hqDictationEnabled, sessionId]);
+}
+
 function useNativeSpeechPlaybackBridge(opts: { enabled: boolean; playing: boolean }) {
   const { enabled, playing } = opts;
   useEffect(() => {
@@ -122,15 +130,18 @@ export function useNativeBridges(opts: {
   enabled: boolean;
   dispatchEmission: (emission: Emission) => Promise<Receipt>;
   boxSlug: string | undefined;
+  sessionId: string | null;
   narrationEnabled: boolean;
+  hqDictationEnabled: boolean;
   responseActive: boolean;
   speechPlaying: boolean;
   stopSpeech: () => void;
 }) {
-  const { enabled, dispatchEmission, boxSlug, narrationEnabled, responseActive, speechPlaying, stopSpeech } = opts;
+  const { enabled, dispatchEmission, boxSlug, sessionId, narrationEnabled, hqDictationEnabled, responseActive, speechPlaying, stopSpeech } = opts;
   useNativeEmissionBridge({ enabled, dispatchEmission });
   useNativeLocationBridge({ enabled, boxSlug });
   useNativeNarrationBridge({ enabled, narrationEnabled });
+  useNativeHqDictationBridge({ enabled, hqDictationEnabled, sessionId });
   useNativeResponseBridge({ enabled, active: responseActive });
   useNativeSpeechPlaybackBridge({ enabled, playing: speechPlaying });
   useNativeSpeechCommandBridge({ enabled, stopSpeech });
@@ -250,6 +261,10 @@ export function postNativeLocationState(enabled: boolean, shell: NativeShellWind
 
 export function postNativeNarrationState(enabled: boolean, shell: NativeShellWindow): void {
   postNativeMessage(shell, { channel: "beeboxNarrationState", payload: { enabled } });
+}
+
+export function postNativeHqDictationState(enabled: boolean, shell: NativeShellWindow): void {
+  postNativeMessage(shell, { channel: "beeboxHqDictationState", payload: { enabled } });
 }
 
 export function postNativeSpeechPlaybackState(playing: boolean, shell: NativeShellWindow): void {

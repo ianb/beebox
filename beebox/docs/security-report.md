@@ -118,9 +118,9 @@ pub-worker routes are in §6a.
 
 | Credential | Lives at | Gates (blast radius) | Scope | Lifetime / revocation | State |
 |---|---|---|---|---|---|
-| Local password store — `~/.beebox-auth.json` (`local-users.ts:87`) | 0600 self-healing (`:124-127`), symlink-rejected, scrypt N=2^17, atomic writes | Account takeover for stored users | **Machine-global** (all local boxes) | Permanent; password change bumps `gen`, revoking live sessions | ok |
-| Session secret — `~/.beebox-session-secret` / `BBX_SESSION_SECRET` (`auth.ts:30-59`) | 0600; env preferred | **Forge any user's session** (symmetric HMAC) | Machine/hub only — **not inherited via env** by box children or agent subprocesses; the 0600 file remains readable by any same-OS-user process (`script-env-allowlist.ts` concedes this) | Cookie TTL 30 days; revocation via `gen` bump only | ok — env-level control, see the allowlist note below |
-| Invite & password-reset capabilities — `~/.beebox-auth.json.invites.json` (`auth-capabilities.ts`, one shared store since `68c5e537`; the file keeps its legacy name, on-disk `version: 2`, auto-upgrades from `version: 1` on first write) | SHA-256 hash at rest, 0600, atomic + locked | Invite: create one member account on one box. Reset: replace one existing member's password on one box | Per-box | 15-min TTL, single-use, 100-live cap shared across both kinds | ok |
+| Local password store — `~/.bbx-auth.json` (`local-users.ts:87`) | 0600 self-healing (`:124-127`), symlink-rejected, scrypt N=2^17, atomic writes | Account takeover for stored users | **Machine-global** (all local boxes) | Permanent; password change bumps `gen`, revoking live sessions | ok |
+| Session secret — `~/.bbx-session-secret` / `BBX_SESSION_SECRET` (`auth.ts:30-59`) | 0600; env preferred | **Forge any user's session** (symmetric HMAC) | Machine/hub only — **not inherited via env** by box children or agent subprocesses; the 0600 file remains readable by any same-OS-user process (`script-env-allowlist.ts` concedes this) | Cookie TTL 30 days; revocation via `gen` bump only | ok — env-level control, see the allowlist note below |
+| Invite & password-reset capabilities — `~/.bbx-auth.json.invites.json` (`auth-capabilities.ts`, one shared store since `68c5e537`; the file keeps its legacy name, on-disk `version: 2`, auto-upgrades from `version: 1` on first write) | SHA-256 hash at rest, 0600, atomic + locked | Invite: create one member account on one box. Reset: replace one existing member's password on one box | Per-box | 15-min TTL, single-use, 100-live cap shared across both kinds | ok |
 | Setup token (`setup-token.ts`) | Memory only; printed once to console | Claim a zero-user box | Per-process | 15-min TTL, self-disabling | accepted (§8) |
 | `BBX_HUB_SECRET` (`supervisor.ts:106,429`) | Env only, minted per hub boot | Impersonate any user to hub-fronted boxes | Hub + direct children; never allowlisted into box subprocesses (`script-env-allowlist.ts`) | Hub process lifetime | ok |
 | `BBX_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
@@ -153,8 +153,8 @@ scheduled `runs:` commands, which run the connectors); Track 3 retires that
 carve-out with the env-var credential path itself. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.doctest.md`.
 **Scope of the control**: env-level, not OS-level. Everything runs as
-one OS user, so file-backed secrets (`~/.beebox-session-secret`,
-`~/.beebox-auth.json`) stay readable by any process that goes looking; the
+one OS user, so file-backed secrets (`~/.bbx-session-secret`,
+`~/.bbx-auth.json`) stay readable by any process that goes looking; the
 allowlist stops inheritance and accident, not a determined same-user
 reader.
 
@@ -180,7 +180,7 @@ wakeup cycle or routine use without a per-action confirmation.
 | **Tailscale** (`tailscale-setup.ts`) | Manual CLI | Traffic to the tailnet via `tailscale serve` — **never `funnel`** (a discovered funnel grant is a hard failure); control-plane traffic belongs to the OS daemon | — | `bbx tailscale stop` / don't install | ok |
 | **Adapter proxy** (`api-adapters.ts:33-104`) | Box-local code calling `/api/adapters/:adapter/*` (never automatic) | The authed request body, forwarded to **Replicate**, Mistral, Anthropic, or OpenAI with the box's stored key injected server-side | Per-box stored keys | Only reachable behind the wall; inert without a stored key | ok |
 | **Outbound URL fetches** (`proxy-image.ts`, `url-fetch.ts`) | Image proxy per render; link check on validate | The URL itself (query strings can carry data) | None forwarded | — | mitigated — SSRF guards, §4 |
-| **iOS app** | — | All box traffic goes only to the paired box. Exception: legacy dictation fallback streams mic audio to **Apple** cloud speech, no app-level opt-out | — | On-device path preferred (iOS 26+) | gap — [ios-cloud-speech-fallback-no-optout](../../issues/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md) |
+| **iOS app** | — | All box traffic goes only to the paired box. Exception: legacy dictation fallback streams mic audio to **Apple** cloud speech, no app-level opt-out | — | On-device path preferred (iOS 26+) | gap — [ios-cloud-speech-fallback-no-optout](../../issues/closed/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md) |
 | **Chrome extension** (`beebox-clerk`) | User-initiated capture | Readability-extracted page markdown, URL, optional screenshot + frozen HTML; selected tab titles/URLs — only to the user's own enabled box (per-origin permission granted at enable time) | Browser session cookie | Per-box enablement | ok |
 | **Telemetry / analytics / update checks** | — | **None in the running system — verified absent.** No analytics/crash/telemetry dependency in any `package.json`; no version/update check on any box or server code path. (Developer maintenance scripts in the monorepo's `bin/` query npm/PyPI; they are not shipped and never run on a box) | — | — | ok |
 

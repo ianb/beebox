@@ -102,6 +102,10 @@ anchor also carries:
 - \`href\` instead of \`ref\` for an **external** target (a full URL: \`file:\`,
   \`http(s):\`) — exactly one of \`ref\`/\`href\`, never both. \`href\` targets are
   not tracked or rewritten by \`bbx mv\`.
+- \`retrieved\` — for an external \`href\`, the date you checked the source, in
+  date-only ISO form (\`YYYY-MM-DD\`). Set it when capturing facts from a web
+  page so a later reader can judge their currency. It is optional because older
+  citations and stable local \`file:\` targets may not have a useful check date.
 
 ### When to skip the tag
 

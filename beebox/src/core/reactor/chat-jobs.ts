@@ -18,9 +18,11 @@ import {
   getOrCreateSession,
   markSessionUsed,
   resetSession,
+  lastChatSessionActivity,
 } from "../chat/reactor-sessions.js";
 import { buildReactorSystemPrompt } from "./prompts.js";
 import { computeTodoAmbientLine } from "../todo/ambient-summary.js";
+import { composeSendSnapshot } from "../session-context.js";
 import { buildJobDescription } from "./batch-jobs.js";
 import { readCardFrontmatter, isRecord } from "../card-io.js";
 import { fmt } from "../../lib/format.js";
@@ -48,13 +50,19 @@ export async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean
       onLog?.(fmt.dim(`  Thread: ${threadRef}\n`));
     }
 
+    const previousActivity = lastChatSessionActivity(sessions, sessionKey);
     const { sessionId, resume } = getOrCreateSession(sessions, sessionKey);
     onLog?.(fmt.dim(`  Session: ${sessionId.slice(0, 8)}... (${resume ? "resume" : "new"})\n`));
 
     const desc = await buildJobDescription(job, boxRoot);
+    const snapshot = await composeSendSnapshot(boxRoot, {
+      sessionStart: !resume,
+      channel: "telegram",
+      lastActivityAt: previousActivity,
+    });
     const ambientLine = await computeTodoAmbientLine(boxRoot);
     const ambientBlock = ambientLine !== null ? `${ambientLine}\n\n` : "";
-    const userPrompt = `${ambientBlock}Please process this job:\n\n${desc}\n\nProcess it according to the instructions, then call \`bbx finish\` when done.`;
+    const userPrompt = `${snapshot}\n${ambientBlock}Please process this job:\n\n${desc}\n\nProcess it according to the instructions, then call \`bbx finish\` when done.`;
 
     if (dryRun) {
       onLog?.("\n[DRY RUN] Would run agent with prompt:\n");

@@ -3,7 +3,7 @@ title: "One browser: artifacts, docs, code, plans, and exhibits in one place"
 status: active
 workstream: dev-comments
 issues:
-  - ../../../issues/docs-and-chores/2026-08-22-exhibits-doc-overstates-container-chrome.md
+  - ../../../issues/closed/docs-and-chores/2026-08-22-exhibits-doc-overstates-container-chrome.md
 ---
 
 # One browser

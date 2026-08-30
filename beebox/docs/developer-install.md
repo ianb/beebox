@@ -66,6 +66,21 @@ server), the Docker path is simpler: see
   page works without being logged in; running an agent (chat, reactor)
   needs `claude auth login` completed first.
 
+## Platforms
+
+- **Linux (Debian/Ubuntu)** — the exercised path: `docker/smoke-dev-install.sh`
+  walks this document from a bare `debian:bookworm` on every run.
+- **macOS** — the Homebrew lines above are what the maintainers run daily;
+  the formula/package names are checked against Homebrew and PyPI, but no
+  walkthrough from a factory-fresh Mac has been recorded.
+- **Windows** — native Windows is not supported (the box server, the agent
+  runtime, and the deploy scripts assume a POSIX shell and filesystem). Use
+  **WSL2** with a Debian/Ubuntu distribution and follow the Linux steps
+  inside it; keep the clone and your boxes on the WSL2 filesystem (not under
+  `/mnt/c`, where git and file watching are slow). This is the same path as
+  Linux but has not been walked through on a real WSL2 install. The Docker
+  path (`docker-install.md`) works from Docker Desktop with the WSL2 backend.
+
 ## Quickstart
 
 ```bash

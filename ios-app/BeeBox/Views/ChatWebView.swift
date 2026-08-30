@@ -169,6 +169,7 @@ struct ChatWebView: UIViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "beeboxLocationResult")
         configuration.userContentController.add(context.coordinator, name: "beeboxLocationState")
         configuration.userContentController.add(context.coordinator, name: "beeboxNarrationState")
+        configuration.userContentController.add(context.coordinator, name: "beeboxHqDictationState")
         configuration.userContentController.add(context.coordinator, name: "beeboxSpeechPlaybackState")
         configuration.userContentController.add(context.coordinator, name: "beeboxResponseState")
         configuration.userContentController.add(context.coordinator, name: "beeboxComposerCommand")
@@ -503,6 +504,10 @@ struct ChatWebView: UIViewRepresentable {
             }
             if message.name == "beeboxNarrationState" {
                 receiveNarrationState(message.body)
+                return
+            }
+            if message.name == "beeboxHqDictationState" {
+                receiveHqDictationState(message.body)
                 return
             }
             if message.name == "beeboxSpeechPlaybackState" {

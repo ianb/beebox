@@ -60,6 +60,16 @@ export interface CodexToolContent extends ChatMessageContent {
 
 const TOOL_ITEM_TYPES = new Set<string>(codexToolItemSchema.options.map((option) => option.shape.type.value));
 
+const collabToolCallSchema = z.looseObject({
+  id: z.string().min(1),
+  type: z.literal("collab_tool_call"),
+  tool: z.string(),
+  receiver_thread_ids: z.array(z.string()).optional(),
+  prompt: z.string().nullable().optional(),
+  agents_states: z.record(z.string(), z.unknown()).optional(),
+  status: z.string(),
+});
+
 function record(value: unknown): Record<string, unknown> {
   if (isRecord(value)) return value;
   if (typeof value !== "string") return {};
@@ -73,6 +83,8 @@ function record(value: unknown): Record<string, unknown> {
 
 /** One provider-owned conversion point used by both live streaming and history. */
 export function normalizeCodexToolItem(raw: unknown): CodexToolContent | null {
+  const collab = collabToolCallSchema.safeParse(raw);
+  if (collab.success) return normalizeCollabToolCall(collab.data);
   const parsed = codexToolItemSchema.safeParse(raw);
   if (!parsed.success) {
     if (isRecord(raw) && typeof raw.type === "string" && TOOL_ITEM_TYPES.has(raw.type)) {
@@ -135,6 +147,21 @@ export function normalizeCodexToolItem(raw: unknown): CodexToolContent | null {
   };
 }
 
+function normalizeCollabToolCall(item: z.infer<typeof collabToolCallSchema>): CodexToolContent {
+  return {
+    type: "tool_use",
+    id: item.id,
+    name: "Agent",
+    input: {
+      action: item.tool,
+      status: item.status,
+      ...(item.receiver_thread_ids === undefined ? {} : { thread_ids: item.receiver_thread_ids }),
+      ...(item.prompt === undefined || item.prompt === null ? {} : { prompt: item.prompt }),
+      ...(item.agents_states === undefined ? {} : { agents: item.agents_states }),
+    },
+  };
+}
+
 /**
  * The `id` of an SDK item, or null when the item arrived without one. Every
  * item type in the SDK's declared vocabulary carries a string `id`, and both
@@ -153,6 +180,11 @@ export function codexSdkItemId(item: CodexSdkItem): string | null {
 
 /** Convert the official SDK item vocabulary used by live batch and chat runs. */
 export function normalizeCodexSdkToolItem(item: CodexSdkItem): CodexToolContent | null {
+  // The CLI emits this official exec-stream item, but the SDK's ThreadItem
+  // union does not include it yet. Parse at the provider boundary so the
+  // temporary upstream type lag cannot make collaboration invisible here.
+  const collab = collabToolCallSchema.safeParse(item);
+  if (collab.success) return normalizeCollabToolCall(collab.data);
   const id = codexSdkItemId(item);
   if (id === null) return null;
   switch (item.type) {

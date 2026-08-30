@@ -28,7 +28,6 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
-import { GoogleGenAI } from "@google/genai";
 import { extensionToMimetype } from "../lib/mimetype.js";
 import { errorMessage, toError } from "../lib/error-guards.js";
 
@@ -227,6 +226,7 @@ async function main(): Promise<void> {
     });
   }
 
+  const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey: key });
   let response: GenerateResponse;
   try {

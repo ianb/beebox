@@ -85,6 +85,7 @@ export type LandmarkExpandData = z.infer<typeof LandmarkExpand>;
 const LandmarkChatApp = z.object({
   narration: z.enum(["on", "off"]).optional(),
   prose: z.enum(["on", "off"]).optional(),
+  "hq-dictation": z.enum(["on", "off"]).optional(),
 });
 export type LandmarkChatAppData = z.infer<typeof LandmarkChatApp>;
 

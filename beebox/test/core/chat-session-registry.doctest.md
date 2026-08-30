@@ -15,6 +15,7 @@ import { ChatSessionRegistry } from "../../src/core/chat/session/registry.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { tick, plainTestPrompt } from "../helpers/chat-session-spawner-helpers.js";
+import { stopChatSessionsAndWait } from "../../src/core/chat/session/registry-shutdown.js";
 
 // Hand-advanced deadline clock.
 let clock = 1_000;
@@ -33,11 +34,12 @@ function makeRegistry(box: { root: string }, backend: ReturnType<typeof createFa
 // Poll until a condition holds — the registry's re-warm is fire-and-forget
 // (`void this.prewarm()`), and prewarm awaits async box I/O before the fake's
 // counter moves, so a fixed tick count would be flaky.
-async function waitFor(cond: () => boolean): Promise<void> {
-  for (let i = 0; i < 100; i += 1) {
-    if (cond()) return;
-    await new Promise((r) => setImmediate(r));
+async function waitFor(cond: () => boolean | Promise<boolean>): Promise<void> {
+  for (let i = 0; i < 2_000; i += 1) {
+    if (await cond()) return;
+    await new Promise((r) => setTimeout(r, 1));
   }
+  throw new Error("condition did not become true");
 }
 
 function errorName(fn: () => unknown): string {
@@ -48,6 +50,38 @@ function errorName(fn: () => unknown): string {
     return error instanceof Error ? error.name : "unknown";
   }
 }
+```
+
+## Shutdown waits for close, but not forever
+
+The supervised-reload boundary resolves after a session actually closes, not
+merely after `stop()` starts. A delayed fake makes that ordering observable:
+
+```ts
+let closeListener = () => {};
+const delayed = {
+  getSessionId: () => "delayed-session",
+  isRunning: () => true,
+  once: (_event: "close", listener: () => void) => { closeListener = listener; },
+  stop: () => {},
+};
+let shutdownResolved = false;
+const delayedShutdown = stopChatSessionsAndWait([delayed], { timeoutMs: 100, periodMs: 1 })
+  .then((timedOut) => { shutdownResolved = true; return timedOut; });
+await new Promise((resolve) => setImmediate(resolve));
+shutdownResolved
+=> false
+
+closeListener();
+JSON.stringify(await delayedShutdown)
+=> []
+```
+
+A stuck close is bounded and names the session the child had to leave behind:
+
+```ts continue
+JSON.stringify(await stopChatSessionsAndWait([delayed], { timeoutMs: 5, periodMs: 1 }))
+=> ["delayed-session"]
 ```
 
 ## LRU eviction under the live cap
@@ -279,18 +313,45 @@ const coined = randomUUID();
 const reserved = await codexRegistry.reserve({
   sessionId: coined, contextDir: null, seedFeatures: {}, requestedEngine: "claude",
 });
-await codexRegistry.getOrCreate(coined).send("hi");
+await waitFor(() => codexBackend.prewarmCount === 1);
+const coinedSession = codexRegistry.getOrCreate(coined);
+// Even if addressability expires after construction, the session retains the
+// accepted start choice; a feature toggle cannot mint a competing history row.
+clock += 7 * 60 * 60 * 1_000;
+const reservationExpired = codexRegistry.getReservation(coined) === null;
+await coinedSession.setFeature("hq-dictation", "on");
+await coinedSession.send("hi");
 await tick();
-JSON.stringify([reserved.kind, codexBackend.lastRun()?.startOptions.engine])
-=> ["reserved","claude"]
+const { loadHistoryEntries } = await import("../../src/core/chat/session/history.js");
+const { findChatHuskEntry } = await import("../../src/core/chat/husk-read.js");
+await waitFor(async () => {
+  const entry = (await loadHistoryEntries(codexBox.root)).find((candidate) => candidate.id === coined);
+  return entry?.features?.["hq-dictation"] === "on"
+    && (await findChatHuskEntry(codexBox.root, coined))?.engine === "claude";
+});
+const historyEntry = (await loadHistoryEntries(codexBox.root)).find((entry) => entry.id === coined);
+const husk = await findChatHuskEntry(codexBox.root, coined);
+JSON.stringify({
+  reserved: reserved.kind,
+  reservationExpired,
+  backend: codexBackend.lastRun()?.startOptions.engine,
+  husk: husk?.engine,
+  history: historyEntry?.engine,
+  features: historyEntry?.features,
+})
+=> {"reserved":"reserved","reservationExpired":true,"backend":"claude","husk":"claude","history":"claude","features":{"hq-dictation":"on"}}
 ```
 
 ```ts continue
-codexRegistry.shutdown();
+await codexRegistry.shutdown();
+coinedSession.isRunning()
+=> false
+
 await codexBox.cleanup();
 ```
 
-`shutdown()` closes the warm slot too — it's a subprocess like any session's:
+Shutdown closes the warm slot immediately too — it is a subprocess like any
+session's:
 
 ```ts continue
 registry.shutdown();

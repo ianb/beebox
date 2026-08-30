@@ -14,6 +14,8 @@ import { normalizeModelId } from "../../shared/model-ids.js";
 export type { AgentEngine } from "../../shared/agent-models.js";
 
 export interface BoxConfig {
+  /** Box-wide default for HQ dictation in newly created chats. Missing means off. */
+  hqDictation?: "on" | "off";
   /** Native agent harness used for new box jobs and chats. Missing means Claude. */
   agentEngine?: AgentEngine;
   /**
@@ -69,6 +71,15 @@ export interface BoxConfig {
    * is nobody. A box a person actually uses must not set this.
    */
   agentBrowsing?: "owner";
+}
+
+/** Validated HQ-dictation default for newly created chats. */
+export async function loadHqDictationDefault(boxRoot: string): Promise<"on" | "off"> {
+  const value: unknown = (await loadBoxConfig(boxRoot)).hqDictation;
+  if (value === undefined) return "off";
+  if (value === "on" || value === "off") return value;
+  console.warn(`[box-config] Ignoring invalid hqDictation value: ${JSON.stringify(value)}`);
+  return "off";
 }
 
 class InvalidAgentEngineError extends Error {

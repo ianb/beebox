@@ -17,6 +17,7 @@ struct RootView: View {
     @State private var locationShareResult: NativeLocationShareResult?
     @State private var locationSharingEnabled = false
     @State private var narrationEnabled = false
+    @State private var hqDictationEnabled = false
     @State private var speechPlaybackActive = false
     @State private var responseActive = false
     @State private var screenshotRequest: NativeScreenshotRequest?
@@ -121,6 +122,7 @@ struct RootView: View {
             locationShareResult = nil
             locationSharingEnabled = false
             narrationEnabled = false
+            hqDictationEnabled = false
             speechPlaybackActive = false
             responseActive = false
             screenshotRequest = nil
@@ -250,6 +252,7 @@ struct RootView: View {
             onSessionChange: { sessionID in
                 if visibleChatSessionID != sessionID {
                     narrationEnabled = false
+                    hqDictationEnabled = false
                     speechPlaybackActive = false
                     responseActive = false
                     speechStopRequest = nil
@@ -282,6 +285,9 @@ struct RootView: View {
             },
             onNarrationStateChange: { enabled in
                 narrationEnabled = enabled
+            },
+            onHqDictationStateChange: { enabled in
+                hqDictationEnabled = enabled
             },
             onSpeechPlaybackStateChange: { playing in
                 if speechPlaybackActive != playing {
@@ -352,6 +358,7 @@ struct RootView: View {
                 pendingStore: pendingEmissionStore,
                 captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
                 narrationEnabled: narrationEnabled,
+                hqDictationEnabled: hqDictationEnabled,
                 speechPlaybackActive: speechPlaybackActive,
                 responseActive: responseActive,
                 locationSharingEnabled: locationSharingEnabled,

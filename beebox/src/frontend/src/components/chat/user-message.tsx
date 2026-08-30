@@ -11,13 +11,14 @@ import type { SessionEntry } from "../../api";
 import type { AckIndication } from "../../lib/structured-output-parsing";
 import type { OnZoomView } from "./markdown-rendering";
 import { AckBadgeCluster } from "./ack-badge";
-import { AudioOverlayBadgeCluster } from "./audio-overlay-badge";
+import { AudioOverlayBadgeCluster, TranscriptionProvenanceBadge } from "./audio-overlay-badge";
 import { useAudioOverlayEntry, type AudioOverlayStore } from "./audio-overlay-store";
 import {
   extractFileAttachments,
   getUserName,
   parseTaskNotification,
   resolveEntryMessageId,
+  resolveTranscriptionProvenance,
   stripUserDisplayTags,
   type TaskNotification,
 } from "./message-parsing";
@@ -151,6 +152,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
   invariant(firstEntry !== undefined, "user message group has no entries");
   const senderName = getUserName(firstEntry);
   const senderEmail = firstEntry.userEmail;
+  const transcriptionProvenance = resolveTranscriptionProvenance(firstEntry);
   // Compare by email if available (same user across devices), fall back to name
   const isOtherUser = isOtherChatUser({
     locallyAuthored: firstEntry.reconcileKnownUuids !== undefined,
@@ -179,6 +181,9 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
         <div className="relative ml-3 sm:ml-6 w-fit">
           <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
             <AudioOverlayBadgeCluster overlay={audioOverlay} originalText={originalDisplayText(firstEntry)} />
+          </span>
+          <span className="absolute top-px right-px z-10">
+            <TranscriptionProvenanceBadge provenance={transcriptionProvenance} />
           </span>
           <div
             className={"rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words" + pendingClass}
@@ -212,6 +217,9 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
         <span className="absolute -top-1 -left-1 inline-flex items-center gap-0.5">
           <AckBadgeCluster acks={acks} onZoomView={onZoomView} />
           <AudioOverlayBadgeCluster overlay={audioOverlay} originalText={originalDisplayText(firstEntry)} />
+        </span>
+        <span className="absolute top-px right-px z-10">
+          <TranscriptionProvenanceBadge provenance={transcriptionProvenance} />
         </span>
         <div
           className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}

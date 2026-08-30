@@ -64,10 +64,9 @@ export interface NodeViewModule {
  *   `node_modules` is itself a symlink into the shared workspace tree in dev, so
  *   `beebox` (self-reference, for `beebox/view-widgets`) can't live
  *   inside it — it gets its own inner `node_modules` instead.
- * - `box-package` — a real box package carries a `node_modules/beebox`
- *   (and, since box `src/` code imports React directly, a real
- *   `node_modules/react` beside it) — resolve straight through the box
- *   package's OWN `node_modules`, no synthetic per-package symlink needed.
+ * - `box-package` — resolve box dependencies through the package's own
+ *   `node_modules`, but override React in the inner directory with the engine's
+ *   copy so the view and `react-dom/server` share one hooks dispatcher.
  */
 export async function writeNodeViewModule(output: string, host: ViewHostContext): Promise<NodeViewModule> {
   const tmpDir = path.join(os.tmpdir(), `bbx-view-${randomUUID()}`);
@@ -85,6 +84,10 @@ export async function writeNodeViewModule(output: string, host: ViewHostContext)
       await fs.symlink(PACKAGE_ROOT, path.join(innerDir, "node_modules", "beebox"), "dir");
     } else {
       await fs.symlink(path.join(host.packageRoot, "node_modules"), path.join(tmpDir, "node_modules"), "dir");
+      const engineReact = path.dirname(
+        createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),
+      );
+      await fs.symlink(engineReact, path.join(innerDir, "node_modules", "react"), "dir");
     }
     await fs.writeFile(tmpFile, output, "utf-8");
     return {

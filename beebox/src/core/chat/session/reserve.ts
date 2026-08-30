@@ -23,7 +23,6 @@
  */
 
 import { loadHistoryEntries } from "./history.js";
-import { recordCoinedEngine, forgetCoinedEngine } from "./coined-engines.js";
 import { transcriptExistsForContext } from "./transcript-paths.js";
 import { loadAgentEngine, type AgentEngine } from "../../box/config.js";
 import { sdkSessionIdSchema } from "./session-id.js";
@@ -56,6 +55,17 @@ export interface ChatReservation {
   createdAt: number;
 }
 
+/** Live records by coined id; readers receive the reservation's answer itself. */
+const liveReservations = new Map<string, ChatReservation>();
+
+export function reservedEngineFor(sessionId: string): AgentEngine | null {
+  return liveReservations.get(sessionId)?.engine ?? null;
+}
+
+function forgetReservation(record: ChatReservation): void {
+  if (liveReservations.get(record.sessionId) === record) liveReservations.delete(record.sessionId);
+}
+
 export type ReserveResult =
   | { kind: "reserved"; sessionId: string }
   /** The id already names a real chat — the client coins a different one. */
@@ -82,7 +92,7 @@ export class ChatReservationStore {
     if (record === undefined) return null;
     if (this.now() - record.createdAt > RESERVATION_TTL_MS) {
       this.records.delete(sessionId);
-      forgetCoinedEngine(sessionId);
+      forgetReservation(record);
       return null;
     }
     return record;
@@ -99,7 +109,7 @@ export class ChatReservationStore {
     if (existing !== null) return existing;
     const stored: ChatReservation = { ...record, createdAt: this.now() };
     this.records.set(record.sessionId, stored);
-    recordCoinedEngine(stored.sessionId, stored.engine);
+    liveReservations.set(stored.sessionId, stored);
     return stored;
   }
 
@@ -108,8 +118,9 @@ export class ChatReservationStore {
    * and a transcript answer for it) — or that the caller is abandoning.
    */
   release(sessionId: string): void {
+    const record = this.records.get(sessionId);
     this.records.delete(sessionId);
-    forgetCoinedEngine(sessionId);
+    if (record !== undefined) forgetReservation(record);
   }
 
   /**
@@ -122,7 +133,7 @@ export class ChatReservationStore {
     for (const [id, record] of this.records) {
       if (record.createdAt > cutoff) continue;
       this.records.delete(id);
-      forgetCoinedEngine(id);
+      forgetReservation(record);
       expired.push(id);
     }
     return expired;

@@ -582,6 +582,7 @@ enum CaptureAudioStopReason: Equatable {
     case interruption
     case background
     case sizeLimit
+    case unexpectedStop
 }
 
 enum CaptureAudioLifecycleState: Equatable {
@@ -819,6 +820,8 @@ final class CaptureAudioRecorder: ObservableObject {
             currentURL = nil
             if reason == .sizeLimit {
                 notice = "Recording stopped at the 48 MiB segment limit. Start again to continue."
+            } else if reason == .unexpectedStop {
+                notice = "Recording stopped unexpectedly. Start again to continue in a new segment."
             } else if reason == .interruption || reason == .background {
                 notice = "Recording paused. Start again to continue in a new segment."
             }
@@ -858,6 +861,11 @@ final class CaptureAudioRecorder: ObservableObject {
         sizeTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let url = self.currentURL else { return }
+                if self.recorder?.isRecording != true {
+                    BoxLog.warn("recording stopped unexpectedly", category: .capture)
+                    await self.stop(reason: .unexpectedStop)
+                    return
+                }
                 let values = try? url.resourceValues(forKeys: [.fileSizeKey])
                 let byteCount = Int64(values?.fileSize ?? 0)
                 if Self.shouldSoftStop(byteCount: byteCount) {

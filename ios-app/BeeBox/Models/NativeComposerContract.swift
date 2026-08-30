@@ -32,6 +32,8 @@ struct NativeEmissionV2: Codable, Equatable {
     var origin: Origin
     var text: String
     var diarized: Bool
+    var hqText: Bool?
+    var hqService: String?
     var images: [ChatImageAttachment]
     var files: [NativeEmissionFile]
     var selections: [NativeEmissionSelection]
@@ -41,6 +43,8 @@ struct NativeEmissionV2: Codable, Equatable {
         origin = emission.origin
         text = emission.text
         diarized = emission.diarized
+        hqText = emission.hqText
+        hqService = emission.hqService
         images = emission.images
         files = emission.files
         selections = emission.selections
@@ -56,6 +60,8 @@ struct NativeEmissionV2: Codable, Equatable {
         origin = try container.decode(Origin.self, forKey: .origin)
         text = try container.decode(String.self, forKey: .text)
         diarized = try container.decode(Bool.self, forKey: .diarized)
+        hqText = try container.decodeIfPresent(Bool.self, forKey: .hqText)
+        hqService = try container.decodeIfPresent(String.self, forKey: .hqService)
         images = try container.decode([ChatImageAttachment].self, forKey: .images)
         files = try container.decode([NativeEmissionFile].self, forKey: .files)
         selections = try container.decode([NativeEmissionSelection].self, forKey: .selections)

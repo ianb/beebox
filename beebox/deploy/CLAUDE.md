@@ -39,7 +39,7 @@ symlink to the newest run — so the poll below always follows the latest deploy
 long leading `sleep` (the harness blocks it):
 
 ```bash
-until tail -3 deploy/.last-deploy.log | grep -qE "Deploy complete|Deploy failed|ERR_PNPM|ELIFECYCLE"; do sleep 5; done
+until tail -3 deploy/.last-deploy.log | grep -qE "Deploy complete|Deploy interrupted|Deploy failed|ERR_PNPM|ELIFECYCLE"; do sleep 5; done
 tail -15 deploy/.last-deploy.log
 ```
 

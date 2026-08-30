@@ -133,6 +133,11 @@ fi
 
 if [ "$WT_AHEAD" != "0" ] || [ "$WT_DIRTY" != "0" ]; then
   echo "[session-end] worktree '$WT_BRANCH' not fully merged (ahead=$WT_AHEAD, non-deletion dirty=$WT_DIRTY) — leaving alone"
+  # The boxholder's next question is always "how do I get back to it" — and the
+  # harness's own exit line ("claude --resume …") reopens only the SESSION, in
+  # this directory, with none of the workstream machinery. Say the real answer.
+  ws_name="${WT_BRANCH#worktree-}"
+  echo "[session-end] reopen this workstream later:  bin/workstreams resume $ws_name   (from the main checkout; continues the session where possible, recreates the worktree if culled)"
   # WT_BLOCKERS captures WHICH entries block it — untracked file vs unmerged
   # commit is the whole diagnosis (e.g. review-ios lingered on one untracked doc).
   wt_log "decision=skip:unmerged branch=$WT_BRANCH ahead=$WT_AHEAD dirty=$WT_DIRTY blockers=[$WT_BLOCKERS] wt=$worktree_path"

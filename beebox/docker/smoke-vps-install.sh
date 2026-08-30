@@ -86,7 +86,7 @@ step() {
 step "apk add curl (dind probe tool)" apk add --no-cache curl
 
 step "git clone (file-protocol, stranger's clone of '$BRANCH')" \
-  git clone -b "$BRANCH" /repo-src /root/beebox-mono
+  git clone --no-local -b "$BRANCH" /repo-src /root/beebox-mono
 
 cd /root/beebox-mono/beebox/docker
 mkdir -p data/box

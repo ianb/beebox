@@ -13,6 +13,7 @@ export type NativeShellChannel =
   | "beeboxLocationResult"
   | "beeboxLocationState"
   | "beeboxNarrationState"
+  | "beeboxHqDictationState"
   | "beeboxSpeechPlaybackState"
   | "beeboxResponseState"
   | "beeboxComposerCommand"

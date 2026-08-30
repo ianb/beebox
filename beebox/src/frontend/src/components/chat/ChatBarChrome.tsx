@@ -152,6 +152,8 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
         onToggleDebugLog={onToggleDebugLog}
       />
       <VoiceChip
+        contextDir={contextDir}
+        canManageDefaults={canPin}
         muted={muted}
         onToggleMute={onToggleMute}
         narrationEnabled={narrationEnabled}

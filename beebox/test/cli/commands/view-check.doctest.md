@@ -20,12 +20,10 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 // enough headroom here while the outer doctest timeout still catches hangs.
 const TEST_VIEW_TIMEOUT_MS = 60000;
 
-// A v2 box renders views by resolving react/react-dom from its OWN
-// `node_modules` (writeNodeViewModule symlinks `packageRoot/node_modules`
-// into the render tmpdir). `makeTmpBox({ deps: true })` only symlinks
-// `beebox`, so a real box's `react` dependency is simulated by
-// symlinking the engine's copy beside it — the same trick `bbx view test`
-// uses for a legacy box (src/cli/commands/view.ts).
+// A v2 box carries its own physical React copy. The renderer overrides it
+// with the engine's copy so hook-using views share react-dom/server's
+// dispatcher. `makeTmpBox({ deps: true })` therefore simulates the normal
+// package layout by placing React beside the symlinked `beebox` package.
 async function makeViewBox() {
   const box = await makeTmpBox({ deps: true });
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));

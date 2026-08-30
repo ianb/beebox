@@ -140,7 +140,7 @@ fi
 # Otherwise derive one from the name: deterministic, so relaunching the same
 # worktree keeps the same glyph and you learn to recognize it.
 if [ -z "$emoji" ]; then
-  # shellcheck source=lib/launch-session.sh
+  # shellcheck source=launch-session.sh
   . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/launch-session.sh"
   emoji=$(launch_session_default_emoji "$wt")
 fi
@@ -159,7 +159,7 @@ while [ -L "$self" ]; do
   esac
 done
 script_dir=$(cd "$(dirname "$self")" && pwd)
-# shellcheck source=lib/workstream-briefing.sh
+# shellcheck source=workstream-briefing.sh
 . "$script_dir/lib/workstream-briefing.sh"
 if [ "$description_set" = true ]; then
   workstream_validate_description "$description"
@@ -170,7 +170,7 @@ prompt="$WORKSTREAM_BRIEFING"
 # One derivation, shared with every other piece of worktree tooling. It fails
 # closed rather than falling back to a hardcoded $HOME path — launching a
 # session against the wrong checkout is worse than not launching one.
-# shellcheck source=lib/worktree-paths.sh
+# shellcheck source=worktree-paths.sh
 . "$script_dir/lib/worktree-paths.sh"
 if ! wt_paths_init "$script_dir/.."; then
   echo "launch-worktree-session: cannot locate the monorepo from $script_dir" >&2
@@ -204,12 +204,12 @@ if [ "$description_set" = true ]; then
   printf '%s' "$description" > "$description_file"
 fi
 if [ -n "$prompt" ]; then
-  workstream_wrap_briefing "$prompt" > "$prompt_file"
+  workstream_wrap_briefing "$prompt" "$wt" > "$prompt_file"
 fi
 
 # The shared builder is also used by `bin/workstreams resume`; keep every tab
 # spawn and per-agent script in one implementation.
-# shellcheck source=lib/launch-session.sh
+# shellcheck source=launch-session.sh
 . "$script_dir/lib/launch-session.sh"
 LS_MONO="$MONO"
 LS_WORKSTREAM="$wt"
@@ -223,6 +223,8 @@ LS_LAUNCH_DIR="$launch_dir"
 LS_ISSUE="$issue"
 LS_DESCRIPTION_FILE="$description_file"
 LS_WORKTREE_PATH=""
+export LS_MONO LS_WORKSTREAM LS_SESSION_NAME LS_AGENT LS_MODEL LS_REMOTE_CONTROL
+export LS_PROMPT_FILE LS_EMOJI LS_LAUNCH_DIR LS_ISSUE LS_DESCRIPTION_FILE LS_WORKTREE_PATH
 launch_session_build
 result=$(launch_session_open)
 

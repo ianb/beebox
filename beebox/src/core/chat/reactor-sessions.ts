@@ -37,6 +37,14 @@ export type ChatSessionRecord = z.infer<typeof ChatSessionRecordSchema>;
 
 type SessionStore = Record<string, ChatSessionRecord>;
 
+/** Last successful activity for one reactor thread, independent of web chat. */
+export function lastChatSessionActivity(store: SessionStore, threadRef: string): Date | null {
+  const value = store[threadRef]?.lastUsedAt;
+  if (value === undefined) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export async function loadChatSessions(boxRoot: string): Promise<SessionStore> {
   const filePath = path.join(boxRoot, SESSIONS_FILE);
   try {

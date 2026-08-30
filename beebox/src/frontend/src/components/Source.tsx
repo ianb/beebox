@@ -134,18 +134,51 @@ function ContainerChip({
 }
 
 /** External (href) citation: a static chip — the target lives outside the box. */
-function ExternalChip({ href, version }: { href: string; version: string | undefined }): ReactNode {
-  const title = version === undefined || version === "" ? href : `${href} @ ${version}`;
+function ExternalChip({
+  href,
+  version,
+  retrieved,
+}: {
+  href: string;
+  version: string | undefined;
+  retrieved: string | undefined;
+}): ReactNode {
+  const shownDate = formatRetrieved(retrieved);
+  const details = [version === undefined || version === "" ? null : `version ${version}`,
+    shownDate === null ? null : `retrieved ${shownDate}`].filter(Boolean);
+  const title = details.length === 0 ? href : `${href} — ${details.join(", ")}`;
+  // A link, not a span: the target lives outside the box, and a citation chip
+  // you cannot follow is a dead end (boxholder, 2026-08-29).
   return (
-    <span className="not-italic text-warm-500 text-xs ml-1" title={title}>
-      [↗ {externalLabel(href)}]
-    </span>
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="not-italic text-warm-500 hover:text-warm-700 text-xs ml-1 no-underline hover:underline underline-offset-2"
+      title={title}
+    >
+      [↗ {externalLabel(href)}
+      {shownDate === null ? null : <span className="text-warm-400">{` · ${shownDate}`}</span>}]
+    </a>
   );
+}
+
+/** A date-only ISO value reads as prose ("Aug 29, 2026"); anything else —
+ *  including a full timestamp, which must never show raw — falls back to the
+ *  date part when it parses, or verbatim when it does not. */
+function formatRetrieved(retrieved: string | undefined): string | null {
+  if (retrieved === undefined || retrieved === "") return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(retrieved);
+  if (!match) return retrieved;
+  const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (Number.isNaN(parsed.getTime())) return retrieved;
+  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 interface SourceProps {
   sourceRef?: string;
   href?: string;
+  retrieved?: string;
   usage?: string;
   version?: string;
   pos?: string;
@@ -157,13 +190,13 @@ export function makeSourceComponents(linkCtx: SourceLinkContext): {
   SourceInline: (props: SourceProps) => ReactNode;
   SourceBlock: (props: SourceProps) => ReactNode;
 } {
-  function Citation({ sourceRef, href, usage, version, children }: SourceProps): ReactNode {
+  function Citation({ sourceRef, href, usage, version, retrieved, children }: SourceProps): ReactNode {
     const quoteText = flattenText(children);
     if (sourceRef !== undefined && sourceRef !== "") {
       return <CitationChip sourceRef={sourceRef} usage={usage} quoteText={quoteText} linkCtx={linkCtx} />;
     }
     if (href !== undefined && href !== "") {
-      return <ExternalChip href={href} version={version} />;
+      return <ExternalChip href={href} version={version} retrieved={retrieved} />;
     }
     return <ContainerChip quoteText={quoteText} linkCtx={linkCtx} />;
   }

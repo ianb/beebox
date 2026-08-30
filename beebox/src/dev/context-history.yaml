@@ -3975,6 +3975,59 @@ test1:
       peak: 48284
       added: 1299
       turns: 5
+  source-external-retrieved-date:
+    - date: 2026-08-29T19:32:32.189Z
+      boxCommit: 5faacdb83a5e5f17be6dab96f9113b6ad54ebf58
+      repoCommit: b2f03b9b37612a398df89b6674f0637f08bf37f6
+      initial: 46685
+      peak: 46685
+      added: 0
+      turns: 1
+  quote-third-party-from:
+    - date: 2026-08-29T19:34:43.609Z
+      boxCommit: 5faacdb83a5e5f17be6dab96f9113b6ad54ebf58
+      repoCommit: 48cc77df5154afc9d80ef6d5e9e4369de3b1c1d6
+      initial: 46976
+      peak: 46976
+      added: 0
+      turns: 1
+    - date: 2026-08-29T19:39:08.090Z
+      boxCommit: 5faacdb83a5e5f17be6dab96f9113b6ad54ebf58
+      repoCommit: 2bd2ab7d225118e01b4ddfcd3ec79c33d2a88094
+      initial: 46974
+      peak: 46974
+      added: 0
+      turns: 1
+  link-fields-external-href-envelope:
+    - date: 2026-08-30T17:59:29.933Z
+      boxCommit: cd152ea6c3ef0d7cd140ba448d6a2954537f1772
+      repoCommit: f77c0cc3f48c1b2066ae73519aca9da382980846
+      initial: 47142
+      peak: 47142
+      added: 0
+      turns: 1
+    - date: 2026-08-30T18:07:43.817Z
+      boxCommit: 7c4b1969c10a2f7d3b0c71d98111ebea1184dd18
+      repoCommit: f77c0cc3f48c1b2066ae73519aca9da382980846
+      initial: 47127
+      peak: 47127
+      added: 0
+      turns: 1
+  link-fields-internal-ref:
+    - date: 2026-08-30T17:59:29.933Z
+      boxCommit: cd152ea6c3ef0d7cd140ba448d6a2954537f1772
+      repoCommit: f77c0cc3f48c1b2066ae73519aca9da382980846
+      initial: 47134
+      peak: 47134
+      added: 0
+      turns: 1
+    - date: 2026-08-30T18:07:43.817Z
+      boxCommit: 7c4b1969c10a2f7d3b0c71d98111ebea1184dd18
+      repoCommit: f77c0cc3f48c1b2066ae73519aca9da382980846
+      initial: 47134
+      peak: 47134
+      added: 0
+      turns: 1
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

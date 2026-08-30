@@ -31,7 +31,6 @@ import { spawn } from "node:child_process";
 import * as esbuild from "esbuild";
 import { createElement, type ComponentType } from "react";
 import { renderToString } from "react-dom/server";
-import { load as cheerioLoad } from "cheerio";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { compileView, listViews, resolveViewsDir } from "../../webapp/views/compiler.js";
 import { writeNodeViewModule, boxPackageHost } from "../../webapp/views/node-view-runtime.js";
@@ -101,8 +100,9 @@ function buildProps(opts: {
 }
 
 /** Strip <script>/<style> from rendered HTML; --raw keeps them. */
-function postProcess(html: string, { raw }: { raw: boolean }): string {
+async function postProcess(html: string, { raw }: { raw: boolean }): Promise<string> {
   if (raw) return html;
+  const { load: cheerioLoad } = await import("cheerio");
   const $ = cheerioLoad(html);
   $("script").remove();
   $("style").remove();
@@ -184,7 +184,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
       return 1;
     }
 
-    process.stdout.write(postProcess(html, { raw }) + "\n");
+    process.stdout.write(await postProcess(html, { raw }) + "\n");
 
     // Cards that matched a dependency glob but failed to load. The live app
     // omits them silently; a test tool surfaces them as author feedback.

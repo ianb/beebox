@@ -78,7 +78,8 @@ if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
       --allow-build=better-sqlite3 \
       --allow-build=esbuild \
       --allow-build=@google/genai \
-      --allow-build=protobufjs )
+      --allow-build=protobufjs \
+      --allow-build=@googleworkspace/cli )
 fi
 
 # Serve the operational box (content/) on all interfaces inside the container;

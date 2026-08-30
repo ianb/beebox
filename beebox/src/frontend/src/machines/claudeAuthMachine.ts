@@ -30,6 +30,7 @@ type ClaudeAuthEvent =
   | { type: "LOGIN" }
   | { type: "LOGOUT" }
   | { type: "REFRESH" }
+  | { type: "SUBMIT_CODE"; code: string }
   | { type: "LOGGED_IN"; status: ClaudeStatus }
   | { type: "POLL_RESULT"; status: ClaudeStatus };
 
@@ -43,6 +44,10 @@ const startLogin = fromPromise(async () => {
   // claudeLogin throws on failure and always returns a non-empty authUrl.
   const { authUrl } = await trpcClient.admin.claudeLogin.mutate();
   return authUrl;
+});
+
+const submitCode = fromPromise<void, { code: string }>(async ({ input }) => {
+  await trpcClient.admin.claudeSubmitCode.mutate({ code: input.code });
 });
 
 const doLogout = fromPromise<ClaudeStatus>(async () => {
@@ -84,6 +89,7 @@ export const claudeAuthMachine = setup({
   actors: {
     fetchStatus,
     startLogin,
+    submitCode,
     doLogout,
     pollForLogin,
   },
@@ -153,6 +159,7 @@ export const claudeAuthMachine = setup({
         },
       },
       on: {
+        SUBMIT_CODE: "submittingCode",
         POLL_RESULT: [
           {
             guard: ({ event }) => event.status.loggedIn === true,
@@ -164,6 +171,20 @@ export const claudeAuthMachine = setup({
             })),
           },
         ],
+      },
+    },
+    // The sign-in page hands the person a code; the CLI reads it from stdin.
+    // Polling keeps running underneath: `polling` is re-entered on success and
+    // its status query is what finally flips loggedIn.
+    submittingCode: {
+      invoke: {
+        src: "submitCode",
+        input: ({ event }) => ({ code: event.type === "SUBMIT_CODE" ? event.code : "" }),
+        onDone: { target: "polling", actions: assign({ error: null }) },
+        onError: {
+          target: "polling",
+          actions: assign(({ event }) => ({ error: errorMessage(event.error) })),
+        },
       },
     },
     loggingOut: {

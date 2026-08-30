@@ -66,6 +66,7 @@ final class PendingEmissionStore: ObservableObject {
         priorInput: String,
         action: SpeechKeywordAction,
         matchedPhrase: String,
+        appendsKeywordTag: Bool = true,
         audioURL: URL?,
         boxID: UUID
     ) async throws -> VoicePreparation {
@@ -85,6 +86,7 @@ final class PendingEmissionStore: ObservableObject {
             priorInput: priorInput,
             action: action,
             matchedPhrase: matchedPhrase,
+            appendsKeywordTag: appendsKeywordTag,
             audioFilename: audioFilename,
             createdAt: Date()
         )
@@ -111,7 +113,9 @@ final class PendingEmissionStore: ObservableObject {
     func finishVoicePreparation(
         id: UUID,
         text: String,
-        diarized: Bool
+        diarized: Bool,
+        hqText: Bool,
+        hqService: String?
     ) async throws {
         guard let index = voicePreparations.firstIndex(where: { $0.id == id }) else {
             return
@@ -128,6 +132,8 @@ final class PendingEmissionStore: ObservableObject {
                 text: text,
                 origin: .voice,
                 diarized: diarized,
+                hqText: hqText ? true : nil,
+                hqService: hqText ? hqService : nil,
                 state: .pending(deliveryAttempts: 0, lastAttemptAt: nil),
                 createdAt: preparation.createdAt
             )
@@ -338,6 +344,8 @@ final class PendingEmissionStore: ObservableObject {
             text: pending.text,
             origin: pending.origin,
             diarized: pending.diarized,
+            hqText: pending.hqText,
+            hqService: pending.hqService,
             images: images,
             files: files,
             selections: selections

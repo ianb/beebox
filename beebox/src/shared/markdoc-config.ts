@@ -74,6 +74,7 @@
 
 import Markdoc from "@markdoc/markdoc";
 import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc";
+import { validateSourceAttributes } from "./source-model.js";
 import { TODO_STATUSES, validateTodoAttributes } from "./todo-model.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
@@ -165,6 +166,10 @@ const source: Schema = {
     // the ref-free default for commentary attached to the page it annotates.
     ref: { type: String },
     href: { type: String },
+    // Date an external href was checked, in ISO date-only form. Optional so
+    // existing source tags remain valid; meaningful for external sources whose
+    // contents can change after the citation is written.
+    retrieved: { type: String },
     // `usage` — free-form: the way the source material was used to produce the
     // wrapped content ("verbatim", "summary of the third section", "inferred
     // from her email signature", …).
@@ -179,20 +184,7 @@ const source: Schema = {
     placement: { type: String },
   },
   validate(node) {
-    const ref: unknown = node.attributes["ref"];
-    const href: unknown = node.attributes["href"];
-    const hasRef = typeof ref === "string" && ref !== "";
-    const hasHref = typeof href === "string" && href !== "";
-    if (hasRef && hasHref) {
-      return [
-        {
-          id: "source-ref-xor-href",
-          level: "error",
-          message: "{% source %} takes at most one of `ref` or `href`, not both",
-        },
-      ];
-    }
-    return [];
+    return validateSourceAttributes(node.attributes);
   },
   transform(node, config) {
     // Markdoc-side attribute is `ref` (which is also what Track 4's body

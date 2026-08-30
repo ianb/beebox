@@ -342,7 +342,10 @@ EOF
     [ -n "$acwd" ] || continue
     case "$acwd" in
       "$worktree_path"|"$worktree_path"/*)
+        # Outputs consumed by callers after this function returns.
+        # shellcheck disable=SC2034
         WT_AGENT_STATE="live"
+        # shellcheck disable=SC2034
         WT_AGENT_REASON="signal=cwd others=[$pid_csv]"
         return 0 ;;
     esac
@@ -371,6 +374,8 @@ EOF
 # (modified, untracked, renamed, conflicted) still blocks.
 wt_work_state() {
   local d="$1"
+  # Output consumed by callers after this function returns.
+  # shellcheck disable=SC2034
   WT_BRANCH=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   WT_AHEAD=$(git -C "$d" rev-list --count main..HEAD 2>/dev/null || echo "?")
 
@@ -390,6 +395,8 @@ wt_work_state() {
     fi
   else
     WT_DIRTY="?"
+    # Output consumed by callers after this function returns.
+    # shellcheck disable=SC2034
     WT_BLOCKERS="git-status-failed"
   fi
   [ -n "$WT_DIRTY" ] || WT_DIRTY="?"
@@ -487,6 +494,8 @@ wt_trash_reap() {
   local entries=("$trash"/*)
   # An unmatched glob stays literal; nothing to reap.
   [ -e "${entries[0]}" ] || return 0
+  # Expansion belongs to the child shell, which receives paths as arguments.
+  # shellcheck disable=SC2016
   nohup sh -c 'for p in "$@"; do chmod -R u+w "$p" 2>/dev/null || true; rm -rf "$p"; done' \
     sh "${entries[@]}" 197>&- 198>&- 199>&- >/dev/null 2>&1 &
   disown 2>/dev/null || true
@@ -539,6 +548,22 @@ wt_removal_patch() {
       + if $boxRef == "" then {} else {boxRef:$boxRef} end)}'
 }
 
+# Print Git's lock reason and succeed when the named worktree is locked.
+wt_git_worktree_lock_reason() {
+  local worktree_path="$1"
+  git -C "$WT_MONO" worktree list --porcelain | awk -v target="$worktree_path" '
+    $1 == "worktree" { current = substr($0, length("worktree ") + 1); next }
+    current == target && $1 == "locked" {
+      reason = substr($0, length("locked") + 1)
+      sub(/^[[:space:]]+/, "", reason)
+      print (reason == "" ? "no reason provided" : reason)
+      found = 1
+      exit
+    }
+    END { if (!found) exit 1 }
+  '
+}
+
 wt_remove_now_locked() {
   local worktree_path="$1" branch="$2" keep_branch="" preserve_box="" arg
   shift 2
@@ -552,6 +577,14 @@ wt_remove_now_locked() {
   removed_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   removed_merged=false
   [ "${WT_AHEAD:-?}" = "0" ] && [ "${WT_DIRTY:-?}" = "0" ] && removed_merged=true
+
+  # Refuse before any teardown side effect. The second check under the Git
+  # administration lock below closes the race with a newly acquired lock.
+  local git_lock_reason
+  if git_lock_reason=$(wt_git_worktree_lock_reason "$worktree_path"); then
+    wt_say "refusing removal: Git worktree is locked: $git_lock_reason"
+    return 1
+  fi
 
   if [ -n "$preserve_box" ]; then
     workstream_preserve_keep "$name" \
@@ -578,6 +611,12 @@ wt_remove_now_locked() {
   # checkout, and Git registration are all still present for a later sweep.
   if ! wt_git_admin_lock_acquire; then
     wt_say "refusing removal: could not acquire the Git worktree administration lock"
+    return 1
+  fi
+
+  if git_lock_reason=$(wt_git_worktree_lock_reason "$worktree_path"); then
+    wt_git_admin_lock_release
+    wt_say "refusing removal: Git worktree is locked: $git_lock_reason"
     return 1
   fi
 

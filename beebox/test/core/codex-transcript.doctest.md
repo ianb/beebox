@@ -76,8 +76,9 @@ JSON.stringify([
   normalizeCodexToolItem({ type: "webSearch", id: "w", query: "Bee Box" }),
   normalizeCodexToolItem({ type: "mcpToolCall", id: "m", server: "calendar", tool: "list", arguments: '{"days":7}' }),
   normalizeCodexToolItem({ type: "subAgentActivity", id: "a", kind: "started", agentPath: "/root/review", agentThreadId: "thread-1" }),
+  normalizeCodexToolItem({ type: "collab_tool_call", id: "c", tool: "wait", receiver_thread_ids: [], status: "completed" }),
 ].map((block) => ({ name: block?.name, input: block?.input })))
-=> [{"name":"Bash","input":{"command":"bbx status"}},{"name":"Edit","input":{"file_path":"store/A.card","status":"completed"}},{"name":"WebSearch","input":{"query":"Bee Box"}},{"name":"calendar.list","input":{"days":7}},{"name":"Agent","input":{"description":"/root/review","kind":"started","thread_id":"thread-1"}}]
+=> [{"name":"Bash","input":{"command":"bbx status"}},{"name":"Edit","input":{"file_path":"store/A.card","status":"completed"}},{"name":"WebSearch","input":{"query":"Bee Box"}},{"name":"calendar.list","input":{"days":7}},{"name":"Agent","input":{"description":"/root/review","kind":"started","thread_id":"thread-1"}},{"name":"Agent","input":{"action":"wait","status":"completed","thread_ids":[]}}]
 ```
 
 The live SDK vocabulary maps through a separate typed entry point while native

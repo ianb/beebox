@@ -56,6 +56,7 @@ so we read the raw payload:
 
 ```ts
 const ctx = await makeTestServer();
+await ctx.seed("box/inbox/Demo.figure.card", "");
 await ctx.seed("box/inbox/Demo.figure.attach/sketch.ts", P5_SKETCH);
 
 const res = await ctx.rawRequest({
@@ -93,6 +94,7 @@ canvas-loop specifier:
 
 ```ts
 const ctx = await makeTestServer();
+await ctx.seed("box/inbox/Orbit.figure.card", "");
 await ctx.seed("box/inbox/Orbit.figure.attach/sketch.ts", CANVAS_LOOP_SKETCH);
 
 const res = await ctx.rawRequest({
@@ -130,6 +132,7 @@ names the module:
 
 ```ts
 const ctx = await makeTestServer();
+await ctx.seed("box/inbox/Wrong.figure.card", "");
 await ctx.seed("box/inbox/Wrong.figure.attach/sketch.ts", VALUE_IMPORT_SKETCH);
 
 const res = await ctx.rawRequest({
@@ -162,6 +165,7 @@ the harness checks before treating `default` as the sketch factory:
 
 ```ts
 const ctx = await makeTestServer();
+await ctx.seed("box/inbox/Broken.figure.card", "");
 await ctx.seed("box/inbox/Broken.figure.attach/sketch.ts", "export default function( {");
 
 const res = await ctx.rawRequest({
@@ -196,6 +200,7 @@ const abs = join(ctx.boxRoot, rel);
 const pinned = new Date(1577836800000); // fixed instant: identical mtimeMs on both writes
 // The distinguishing marker lives in a string LITERAL, not a comment — esbuild
 // strips comments, so a comment marker would never survive into the output.
+await ctx.seed("box/inbox/Cache.figure.card", "");
 await ctx.seed(rel, "export default function (p5, mount, figure) { const marker = \"AAA\"; return () => marker; }");
 await utimes(abs, pinned, pinned);
 
@@ -351,6 +356,28 @@ const res = await ctx.request({
 });
 res.statusCode
 => 404
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+An attach-named directory is not enough: it must be the sibling attach scope of
+an existing card. This prevents arbitrary box files from becoming compilable
+modules merely by being placed under a `*.attach` directory:
+
+```ts
+const ctx = await makeTestServer();
+await ctx.seed("box/inbox/Loose.figure.attach/sketch.ts", "export default () => {};");
+const res = await ctx.rawRequest({
+  method: "GET",
+  url: "/api/figure/module.js?path=box/inbox/Loose.figure.attach/sketch.ts",
+});
+res.statusCode
+=> 400
+
+JSON.parse(res.payload).error
+=> Attach scope has no owning card
 ```
 
 ```ts cleanup

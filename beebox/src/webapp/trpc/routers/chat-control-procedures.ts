@@ -26,8 +26,7 @@ import { SessionDeletingError } from "../../../core/chat/session/registry.js";
 import { LockHeldError } from "../../../core/chat/review/lock.js";
 import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
 import type { ReserveResult } from "../../../core/chat/session/reserve.js";
-import { readLandmarkFeaturesForDir } from "../../../core/landmark/features.js";
-import { mergeSeedFeatures } from "../../../core/chat/features.js";
+import { seedFeaturesForNewChat } from "../../../core/landmark/features.js";
 
 function requireRuntime(boxRoot: string): ChatRuntime {
   const runtime = getChatRuntime(boxRoot);
@@ -108,6 +107,13 @@ export async function readSessionStatus(boxRoot: string, sessionId: string | nul
 }
 
 export const chatControlProcedures = {
+  newFeatures: publicProcedure
+    .input(z.object({
+      contextDir: z.string()
+        .refine((dir) => !dir.startsWith("/") && !dir.split("/").includes(".."), "contextDir must stay inside the box")
+        .nullable(),
+    }))
+    .query(({ input, ctx }) => seedFeaturesForNewChat({ boxRoot: ctx.boxRoot, contextDir: input.contextDir })),
   deleteSession: ownerProcedure.input(z.object({ sessionId: sdkSessionIdSchema })).mutation(async ({ input, ctx }) => {
     const runtime = requireRuntime(ctx.boxRoot);
     try {
@@ -326,7 +332,6 @@ export const chatControlProcedures = {
       const contextDir = input.contextDir ?? null;
       // Landmark feature defaults are captured now because nothing else will:
       // they only ever ride a `"new"` send, and a coined chat never sends one.
-      const landmark = contextDir !== null ? await readLandmarkFeaturesForDir(ctx.boxRoot, contextDir) : null;
       if (input.engine !== undefined && !(await loadEnabledEngines(ctx.boxRoot)).includes(input.engine)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: `${input.engine} is not enabled for this box` });
       }
@@ -339,7 +344,7 @@ export const chatControlProcedures = {
       return registry.reserve({
         sessionId: input.sessionId,
         contextDir,
-        seedFeatures: mergeSeedFeatures({ landmark, request: undefined }),
+        seedFeatures: await seedFeaturesForNewChat({ boxRoot: ctx.boxRoot, contextDir }),
         ...(input.engine !== undefined ? { requestedEngine: input.engine } : {}),
         ...(input.model !== undefined ? { model: input.model } : {}),
       });

@@ -31,8 +31,8 @@ cd beebox/docker
 # 1. Build the image and initialize a box into ./data/box (one time).
 docker compose run --rm box bbx init /data/box
 
-# 2. Authenticate Claude (one time). Opens a URL + paste-code flow; the
-#    credentials persist in a named volume across restarts.
+# 2. Authenticate Claude (one time): open the printed URL in a browser, paste
+#    back the code it shows. Credentials persist in a named volume.
 docker compose run --rm box claude auth login
 
 # 3. Start the server.
@@ -117,6 +117,46 @@ The box stays on its loopback mapping inside the compose network — Caddy is th
 only public listener. Without `--profile public`, the `caddy` service is not
 started at all.
 
+#### Checklist: proving a fresh public deployment
+
+The compose/Caddy wiring is exercised by `docker/smoke-vps-install.sh`, but
+that run uses Caddy's internal CA. A real Let's Encrypt issuance needs a real
+domain and public 80/443. On a fresh Debian/Ubuntu VPS with Docker installed
+(`curl -fsSL https://get.docker.com | sh`) and an A record `box.example.com`
+already pointing at it:
+
+```bash
+git clone <repo-url> beebox-mono && cd beebox-mono/beebox/docker
+cat > .env <<'ENV'
+PUBLIC_URL=https://box.example.com
+BBX_DOMAIN=box.example.com
+ENV
+cp Caddyfile.example Caddyfile
+docker compose run --rm box bbx init /data/box          # ~1 min after the image builds
+docker compose --profile public up -d
+docker compose logs -f box                             # wait for "listening"; note the one-time setup URL
+```
+
+Expected, in order:
+
+1. `docker compose logs caddy` shows `certificate obtained successfully` for
+   the domain within ~30s (an ACME `http-01`/`tls-alpn-01` challenge over the
+   public 80/443). A `failed to get certificate` line with `dns` or
+   `connection refused` means the A record or a firewall, not the compose
+   file.
+2. `curl -sI https://box.example.com/ | head -1` from your laptop (no `-k`)
+   prints `HTTP/2 200` or a `302` to the login page — a trusted cert.
+3. `curl -sI http://box.example.com/ | head -1` prints a `308` redirect to
+   https (Caddy's default).
+4. The setup URL from the box log opens in your browser at the real domain
+   (it is built from `PUBLIC_URL`), and creating the owner account lands you
+   in the box.
+5. `docker compose down && docker compose --profile public up -d` comes back
+   without a second issuance (`caddy-data` volume kept the cert).
+
+To record the run, keep the `certificate obtained` log line, the two
+`curl -sI` first lines, and `docker compose exec box claude --version`.
+
 ### Tailscale-only (no open ports)
 
 > **Status: not yet exercised end-to-end.** The smoke harness
@@ -126,9 +166,10 @@ started at all.
 > item 2 — treat the steps below as unverified until that item records a run.
 
 To reach the box privately over a [tailnet](https://tailscale.com/) with
-nothing exposed to the public internet, `bbx tailscale` drives the whole
-setup — the box keeps its normal loopback mapping, and Tailscale Serve
-fronts it with TLS. Which topology applies depends on where `bbx` runs:
+nothing exposed to the public internet, the box keeps its normal loopback
+mapping and Tailscale Serve fronts it with TLS. Which topology applies
+depends on where `bbx` runs: on a host with `tailscaled`, `bbx tailscale
+setup` drives the setup; in the Docker install, a sidecar container does.
 
 **Host-daemon (from-source or VPS-host install, `bbx` on the same machine as
 `tailscaled`):**
@@ -136,7 +177,7 @@ fronts it with TLS. Which topology applies depends on where `bbx` runs:
 1. [Install Tailscale](https://tailscale.com/download) on the host and run
    `tailscale up`.
 2. Run `bbx tailscale setup` — it auto-detects the hub port from the hub config
-   (`~/.config/beebox/hub.json`); pass `--target <port>` only for a
+   (`~/.config/bbx/hub.json`); pass `--target <port>` only for a
    non-standard/standalone `bbx serve`. It inspects the real Tailscale and serve
    state and tells you the single next step — logging in, approving the machine,
    enabling tailnet HTTPS — looping until the box is reachable at
@@ -145,7 +186,7 @@ fronts it with TLS. Which topology applies depends on where `bbx` runs:
 
    Run `bbx tailscale setup` as the SAME OS account the box server runs as (the
    service account in prod, not root or an admin). The exposure record it writes
-   (`~/.config/beebox/tailscale-exposure.json`, or `BBX_TAILSCALE_EXPOSURE_FILE`) is
+   (`~/.config/bbx/tailscale-exposure.json`, or `BBX_TAILSCALE_EXPOSURE_FILE`) is
    bookkeeping for `bbx tailscale status`/`stop` — drift detection and scoped
    teardown of the serve mapping. It does NOT gate server startup (there is no
    unauthenticated mode left to guard); a setup run under a different user just
@@ -160,17 +201,57 @@ fronts it with TLS. Which topology applies depends on where `bbx` runs:
 
 **Docker container (`bbx` runs inside the container, which has no
 `tailscaled`):** `bbx tailscale setup` cannot drive a host daemon it can't
-reach — run inside the container it reports `binary-absent` (the generic
-"install Tailscale, then `tailscale up`" step), which is your cue to use the
-sidecar topology below rather than configure Tailscale in-container. The
-supported shape is Tailscale's own
-[sidecar container](https://tailscale.com/kb/1282/docker): a `tailscale`
-service holding the tailnet identity (`TS_AUTHKEY`) and a serve config
-(`TS_SERVE_CONFIG`) that proxies to the box service over the compose
-network, added alongside — not instead of — the existing services. The box
-service keeps its `127.0.0.1:3210:3210` mapping unchanged; only the sidecar
-is tailnet-facing. Follow Tailscale's compose example there for the
-`TS_AUTHKEY` and `TS_SERVE_CONFIG` shape.
+reach — run inside the container it reports `binary-absent`, which is your
+cue to use the sidecar topology instead. `compose.tailscale.yaml` is that
+sidecar, following Tailscale's own
+[sidecar container](https://tailscale.com/kb/1282/docker) shape: a
+`tailscale` service holding the tailnet identity (`TS_AUTHKEY`) and a Serve
+config (`tailscale-serve.json`) that terminates HTTPS on the tailnet and
+proxies to `box:3210` over the compose network. The box service keeps its
+`127.0.0.1:3210:3210` mapping unchanged; only the sidecar is tailnet-facing.
+
+1. In the Tailscale admin console, create an auth key (Settings → Keys;
+   reusable is convenient, tagged if you use ACL tags) and put it in
+   `beebox/docker/tailscale.env` — its own file, read only by the
+   sidecar (`.env` is also fed to the box service, so the key must not go
+   there):
+
+   ```bash
+   cp tailscale.env.example tailscale.env      # then set TS_AUTHKEY=tskey-auth-...
+   ```
+
+   In `.env`, set the box's public URL now — the first-run setup link is
+   minted from it on the first start, so it has to be right before step 3:
+
+   ```bash
+   PUBLIC_URL=https://beebox.<your-tailnet>.ts.net
+   TS_HOSTNAME=beebox          # optional; the machine name on the tailnet
+   ```
+
+2. Make sure [HTTPS certificates](https://tailscale.com/kb/1153/enabling-https)
+   are enabled for the tailnet (Serve needs them).
+3. Bring up the box with the overlay on top of the base file — never the
+   overlay alone:
+
+   ```bash
+   docker compose run --rm box bbx init /data/box                       # once
+   docker compose run --rm box claude auth login                        # once
+   docker compose -f compose.yaml -f compose.tailscale.yaml up -d
+   docker compose -f compose.yaml -f compose.tailscale.yaml logs -f tailscale
+   ```
+
+   The sidecar logs its registration; if the key needs device approval the
+   log says so and the admin console shows the pending machine.
+4. Open `https://<TS_HOSTNAME>.<your-tailnet>.ts.net/` from any device on the
+   tailnet; the setup link in `docker compose logs box` points at the same
+   origin.
+
+`docker compose config` with both files is validated; the sidecar has not
+yet been run against a live tailnet (the installation issue's ledger tracks
+that run).
+To change the Serve config, edit `tailscale-serve.json` and restart the
+sidecar (a single-file bind mount is not always picked up by Serve's
+reload).
 
 **The sidecar path has NO bbx-side guard, by construction.** The sidecar
 applies `TS_SERVE_CONFIG` directly; `bbx tailscale setup` never runs and no
@@ -198,7 +279,7 @@ full design.
 The box requires a login. Create the first (owner) account with
 `docker compose run --rm box bbx auth create-user`, or open the first-run setup
 URL the server prints to its log. This uses the built-in local password method —
-no external service. Credentials are scrypt-hashed in `~/.beebox-auth.json` (mode
+no external service. Credentials are scrypt-hashed in `~/.bbx-auth.json` (mode
 0600) inside the box volume.
 
 Once that owner exists, use a box's Admin page to create a 15-minute,
@@ -223,12 +304,25 @@ GOOGLE_OAUTH_CLIENT_SECRET=...
 
 ## Claude auth: interactive vs headless
 
-`docker compose run --rm box claude auth login` is the primary path — an
-attached run gives you the URL-and-paste-code flow, and the login persists in
-the `claude-auth` named volume.
+`docker compose run --rm box claude auth login` is the primary path. The
+container has no browser, so the CLI prints a sign-in URL
+(`https://claude.com/cai/oauth/authorize?...`) and then waits at
+`Paste code here if prompted >`:
 
-If interactive login is awkward on a headless server (no easy way to complete
-the browser step), use the **token fallback**:
+1. Open the URL on any machine with a browser and approve the sign-in.
+2. Anthropic's page then shows a one-time code (it does not redirect back
+   to the container). Copy it.
+3. Paste it into the waiting terminal and press Enter. The CLI exits on
+   success; the login persists in the `claude-auth` named volume.
+
+`docker compose run` allocates a TTY when your terminal has one, which is
+what the paste step needs; over a bare SSH pipe or in a script it hangs —
+use the token fallback instead. A mistyped code prints `Invalid code` and
+keeps waiting; Ctrl-C and run the command again. Confirm with
+`docker compose run --rm box claude auth status` (`"loggedIn": true`).
+
+If interactive login is awkward on a headless server, use the **token
+fallback**:
 
 1. On a machine with a browser, run `claude setup-token` and copy the token.
 2. Put it in `beebox/docker/.env`:
@@ -239,6 +333,10 @@ the browser step), use the **token fallback**:
 
 3. `docker compose up -d`. The token is passed via the env-file; no interactive
    step needed.
+
+Either way, the doctor-style check is `docker compose run --rm box claude
+auth status`. Serving pages needs no login; running an agent (chat, reactor)
+does.
 
 ## Data and volumes
 

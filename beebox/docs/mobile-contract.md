@@ -120,10 +120,6 @@ the browser sends on its own — navigations it initiates itself, and the tRPC W
 which the browser `WebSocket` API cannot attach headers to — rides a **short-lived `bbx_mobile`
 cookie** minted from that token.
 
-`bbx_mobile` is the per-box, device-authentication cookie described here. It is deliberately
-distinct from `bbx_session`, the host-wide owner/web session cookie used by ordinary browser
-login; neither cookie authenticates as the other kind of caller.
-
 ### 2.1 Carriers
 
 | carrier | wire shape | who sets it | who reads it |
@@ -215,7 +211,7 @@ authenticated-but-unattributed behavior.
 
 ### 3.3 Script-message channels (web → native)
 
-Five channels, all web→native. On iOS they are `WKScriptMessageHandler` names registered on the
+The following channels are web→native. On iOS they are `WKScriptMessageHandler` names registered on the
 `userContentController`; the transport is platform glue (§10), the channel names and payloads are
 the contract.
 
@@ -224,10 +220,11 @@ the contract.
 | `beeboxSession` | `window.location.href` (string) | `Coordinator.userContentController` → `onSessionChange(visibleSessionID)` |
 | `beeboxEmissionReceipt` | `Receipt` object (§4.2) | → `receiveEmissionReceipt` |
 | `beeboxLocationResult` | `{ id, success, message }` | → `receiveLocationResult` |
+| `beeboxHqDictationState` | `{ enabled }` | → `receiveHqDictationState` |
 | `beeboxComposerCommand` | V1 or V2 composer command (§4.7, §4.8) | → `receiveComposerCommand` |
 | `beeboxLastAudioRequest` | V1 last-audio request (§4.9) | → `receiveLastAudioRequest` |
 
-- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)` for all five).
+- Native-side registration: `ChatWebView.swift` (`userContentController.add(_, name:)`).
 - Session reporting: the native-authored startup script wraps `history.pushState`/`replaceState` +
   `popstate` and posts `location.href` on every nav; native extracts `?session=` via
   `visibleSessionID`. Origin-checked at both post and receipt time.
@@ -396,9 +393,9 @@ mint them independently; the ids are per-emission and per-kind.
 
 - **Wire shape:** `{ enabled: boolean }` on `beeboxNarrationState`.
 - **Semantics:** the web chat posts the current session's narration flag whenever it changes. Native
-  defaults to off. A normal native voice keyword send uses its Apple live transcript directly while
-  off; the explicit `clean up and send` / `send and clean up` keyword enters durable HQ audio
-  preparation regardless of narration state.
+  defaults to off. A normal native voice keyword send uses its Apple live transcript directly only
+  when both narration and HQ dictation are off; the explicit `clean up and send` / `send and clean
+  up` keyword enters durable HQ audio preparation regardless of either state.
 - **Anchors:** web `use-native-bridge.ts` — `useNativeNarrationBridge`; native
   `Views/ChatWebView.swift` — `receiveNarrationState`; `Views/NativeComposerView.swift` —
   `sendKeywordIntent`.
@@ -412,6 +409,19 @@ mint them independently; the ids are per-emission and per-kind.
   restores the pre-keyword transcript) and refuses to match inside an existing markup tag; web never
   re-feeds composer text to detection, so it needs neither guard. Neither side may assume the
   other's detector fired.
+
+### 4.4a HQ dictation state (web → native)
+
+- **Wire shape:** `{ enabled: boolean }` on `beeboxHqDictationState`.
+- **Semantics:** the web posts the resolved HQ setting for the visible chat. Native defaults to off.
+  When enabled, both the native Send button and ordinary spoken-send keyword enter the durable HQ
+  audio preparation path. Typed messages remain direct sends; the explicit cleanup keyword remains
+  HQ regardless of this state.
+- **Anchors:** web `use-native-bridge.ts` — `useNativeHqDictationBridge`; native
+  `Views/ChatWebView.swift` — `receiveHqDictationState`; `Views/NativeComposerView.swift` —
+  `send`, `sendKeywordIntent`.
+- **Drift:** fail-local — an absent or malformed state leaves native HQ dictation off. If HQ
+  transcription later fails, the durable preparation visibly falls back to its live transcript.
 
 ### 4.5 Speech playback state (web → native)
 
@@ -487,12 +497,12 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   { "version": 2, "id": "<UUID string>", "kind": "add-selection",
     "payload": { "ref": "…", "text": "…", "position": "…" } }
   { "version": 2, "id": "<UUID string>", "kind": "point-at-control",
-    "payload": { "id": "cb-composer-mic", "action": "point" } }
+    "payload": { "id": "bbx-composer-mic", "action": "point" } }
   ```
   `kind` discriminates the payload; a kind that carries none omits `payload`. `id` is required and
   non-empty in **every** version — that is what lets an older build's failed decode answer with a
   rejection (§4.7) instead of returning silently. An unknown `kind` is refused on both sides rather
-  In `point-at-control` the payload's `id` is the **control's** `cb-` address, not the command id
+  In `point-at-control` the payload's `id` is the **control's** `bbx-` address, not the command id
   (the envelope carries that separately), and `action` is closed to `point|focus|reveal`. Both are
   strict: an empty address and an unrecognised action each fail the whole decode, because the web
   degrades an unknown `action=` in a `control:` href to `point` before it ever builds a command, so a
@@ -507,7 +517,7 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - **Result wire shape** (native → web, on its own global):
   ```json
   { "version": 2, "id": "<same id>", "kind": "scan-controls", "ok": true,
-    "controls": [ { "id": "cb-composer-mic", "role": "button", "label": "Start dictation",
+    "controls": [ { "id": "bbx-composer-mic", "role": "button", "label": "Start dictation",
       "does": "…", "container": "Composer", "disabled": false } ] }
   { "version": 2, "id": "<same id>", "kind": "scan-controls", "ok": false, "reason": "<reason>" }
   { "version": 2, "id": "<same id>", "kind": "point-at-control", "ok": true }
@@ -538,7 +548,7 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - **`scan-controls` semantics.** Native answers from a registry populated by the `.controlAnchor`
   view modifier, which registers `(id, label, does, container, disabled, frame)` while a view is on
   screen and deregisters it on disappear, and sets the view's `accessibilityIdentifier` to the same
-  `id` in the same call. The `cb-` ids are **shared with the web** (Track 4's table): the same string
+  `id` in the same call. The `bbx-` ids are **shared with the web** (Track 4's table): the same string
   names the same control on both surfaces, so renaming one is a contract migration. Registration is
   by view-instance token, so the composer's mic → send → stop swap cannot leave a stale entry, and
   the inventory is coalesced by `id` so an in-flight swap cannot report two mutually exclusive
@@ -550,8 +560,8 @@ UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
   operates anything. `focus` and `reveal` run only where the anchor supplied a handler for them, and
   `NativeControlEntry.actions` is **derived from** those handlers rather than declared beside them,
   so the list the agent reads cannot promise something the view has no way to do. In this build that
-  is `focus` on `cb-composer-input` (make the composer text field first responder) and `reveal` on
-  `cb-composer-add` (present the actions sheet) — and nothing else.
+  is `focus` on `bbx-composer-input` (make the composer text field first responder) and `reveal` on
+  `bbx-composer-add` (present the actions sheet) — and nothing else.
   Every gap answers with a sentence rather than doing nothing: an unregistered address, a frame the
   registry has no real layout for (refused rather than ringing the wrong place — the accepted
   lower-fidelity trade; such a control is also reported by `scan-controls` with **no actions**, so
@@ -750,13 +760,15 @@ See §1.3 (full request/response/errors).
 - **Request:** `POST`; `Content-Type: multipart/form-data`; `User-Agent: BeeBox-iOS/0.1`;
   `Authorization: Bearer <token>`. Multipart body: text field `session=<resolved session id>`; file
   field `file`, filename `segment.wav`, content-type `audio/wav`.
-- **Response 200:** `{ text: string, diarized: boolean }`.
+- **Response 200:** `{ text: string, diarized: boolean, service?: string }`, where
+  `service` is the backend resolved by the box (not the client's requested intent).
+  Clients accept its absence for compatibility with older boxes.
 - **Errors:** 400 `{ error: "No audio uploaded" }`; 500 `{ error: <msg> }` → iOS
   `ChatAPIError.server(...)` (surfaces in composer status).
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native caller | `ios-app/BeeBox/Services/ChatAPI.swift` — `ChatAPI.transcribeAudio(fileURL:)`, `applyAuth`, `HqTranscriptionResult { text, diarized }` |
+  | native caller | `ios-app/BeeBox/Services/ChatAPI.swift` — `ChatAPI.transcribeAudio(fileURL:)`, `applyAuth`, `HqTranscriptionResult { text, diarized, service? }` |
   | box handler | `src/webapp/routes/chat-audio-routes.ts` — `POST /api/chat/transcribe-audio` (→ `transcribeAudioHq({ audioBuffer, filename, boxRoot })`) |
 - **Drift:** LOUD for provider rejection (5xx surfaced). A provider HTTP 200 with unusable text would
   be SILENT. Float32 WAV compatibility was verified against every selectable HQ path on 2026-08-06.
@@ -1024,7 +1036,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | A4 | tRPC context identity | box internal | `authed` from mobile token; `user=null,isOwner=false` | — | `server-box-scope.ts` · `createContext` | SILENT |
 | W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session]` — carries NO credential | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `request()` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `beeboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
-| B1 | Native emission | native→web | V2 `{version:2,id,text,origin,diarized,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2 / SILENT legacy |
+| B1 | Native emission | native→web | V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2 / SILENT legacy |
 | B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `beeboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location toggle | native→web | `beeboxNativeShareLocation("<uuid>","toggle")`, queue `beeboxNativeLocationQueue`, event `beebox:native-share-location`, detail `{id,action:"toggle"}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
 | B4 | Location state/result | web→native | state `{enabled}` via `beeboxLocationState`; result `{id,success,enabled,message}` via `beeboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationState`, `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationState`, `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
@@ -1033,12 +1045,13 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B11 | Speech control (barge-in) | native→web | V1 `{version:1,action:"stop"}` via `beeboxNativeSpeechCommand`, queue `beeboxNativeSpeechCommandQueue`, event `beebox:native-speech-command`; no ack — §4.5 `{playing:false}` reports the stop | `Models/NativeComposerContract.swift` · `NativeSpeechCommand`; `Services/SpeechDictation.swift` · `NativeVoiceTurnState`; `Views/ChatWebView.swift` · `deliverSpeechStopRequest` | `native-speech-command.ts` · `nativeSpeechCommandFromDetail`; `use-native-bridge.ts` · `useNativeSpeechCommandBridge` | SILENT-degraded (speech plays into an open mic) |
 | B10 | Last-audio request relay | web→native | V1 `{version:1,requestId,messageId,sessionId\|null}` via `beeboxLastAudioRequest`; answered by H6, not by an ack | `Models/NativeComposerContract.swift` · `NativeLastAudioRequest`; `Views/ChatWebView.swift` · `receiveLastAudioRequest`; `Views/RootView.swift` · `answerLastAudioRequest` | `native-last-audio-request.ts`; `lib/audio/last-audio.ts` · `fulfillLastAudioRequest` | QUIET (asleep phone is indistinguishable) |
 | B7 | Narration state | web→native | `{enabled}` via `beeboxNarrationState` | `Views/ChatWebView.swift` · `receiveNarrationState`; `Views/NativeComposerView.swift` · `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeNarrationBridge` | fail-local |
+| B14 | HQ dictation state | web→native | `{enabled}` via `beeboxHqDictationState` | `Views/ChatWebView.swift` · `receiveHqDictationState`; `Views/NativeComposerView.swift` · `send`, `sendKeywordIntent` | `use-native-bridge.ts` · `useNativeHqDictationBridge` | fail-local |
 | B8 | Speech playback state | web→native | `{playing}` via `beeboxSpeechPlaybackState` | `Views/ChatWebView.swift` · `receiveSpeechPlaybackState`; `Views/NativeComposerView.swift` · `applyVoiceTurn` | `use-native-bridge.ts` · `useNativeSpeechPlaybackBridge` | fail-local |
 | B9 | Response generation state | web→native | `{active}` via `beeboxResponseState` | `Views/ChatWebView.swift` · `receiveResponseState`; `Services/NativeEarcons.swift` · `NativeEarconState` | `use-native-bridge.ts` · `useNativeResponseBridge` | fail-local |
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
 | B13 | Command result | native→web | `{version:2,id,kind,ok:true,controls[]}` or `{…,ok:false,reason}` via `beeboxNativeCommandResult`, queue + `beebox:native-command-result` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandResult`; `Models/NativeControlRegistry.swift` · `controlAnchor`; `Views/ChatWebView.swift` · `deliverComposerCommandResults` | `native-composer-command.ts` · `nativeCommandResultFromDetail`; `native-control-scan.ts` · `requestNativeControls` | LOUD in the dump |
 | R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
-| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
+| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized,service?}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
 | H6 | `POST /api/chat/last-audio/:requestId` | native→box | multipart `file`(last-message.wav, audio/wav) + `recordedAt`,`text`,`messageId`,`sessionId?`; or JSON `{"none":true}`; res `{ok}` / `404` when already settled | `Services/ChatAPI.swift` · `answerLastAudio`; `Storage/VoiceAudioRetentionStore.swift` | `routes/chat-last-audio-routes.ts`; `core/last-audio-pending.ts` · `fulfill`/`reportNone` | QUIET — a missing echo is IGNORED, not rejected |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,channel?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |
@@ -1046,7 +1059,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | H5 | `POST /api/trpc/debugLog.submit` | native→box | req `{source?,entries:[{level,message,at?}]}`; res `{"result":{"data":{"ok":true}}}` (tRPC envelope) | `Services/LogForwarder.swift` | `trpc/routers/debugLog.ts` · `submit`; `lib/rolling-log.ts` · `appendRollingLogStrict` | fail-local |
 | S1 | `GET /api/trpc/share.destinations` | extension→box | res tRPC `{chats:[…],saves:[…]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `destinations` | `trpc/routers/share.ts` · `destinations` | LOUD |
 | S2 | `POST /api/trpc/share.saveTextual` | extension→box | URL or text + `shareId`, `capturedAt`, destination; res `{created:[path]}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `save` | `trpc/routers/share.ts` · `saveTextual` | LOUD |
-| S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
+| S3 | `POST /api/chat/send` exact mode | extension→box | `{message,messageId,session,exactSession:true,channel:"ios-native"}` | `BeeBoxShareExtension/ShareExtensionAPI.swift` · `send` | `routes/chat-send-target.ts` · `assertExactSessionTarget` | LOUD |
 | M1 | Hub mobile-auth wall | box internal | full verification of bearer or `bbx_mobile` for the request's slug | — | `hub-server.ts` · `hasMobileAuth` → `core/mobile/request-auth.ts` · `verifyMobileRequest` | LOUD |
 | U1 | `POST /api/bulk/sessions` | native/web→box | req `{targetSessionId,items?}` (context dir derived server-side from `targetSessionId`); res `{sessionId,startedAt,capabilities}` | — (deferred) | `routes/bulk-upload.ts` · `registerBulkUploadRoutes` | LOUD (400 no target) |
 | U2 | `POST /api/bulk/sessions/:id/items` | native/web→box | req `{items:BulkItem[]}`; res `{registered}` | — (deferred) | `routes/bulk-upload.ts` | LOUD |
@@ -1086,8 +1099,8 @@ without the other is a contract break.
   `role` closed to `button|textbox` — `Models/NativeComposerContract.swift` ·
   `NativeComposerCommand.Kind` / `NativeComposerCommandResult` / `NativeControlEntry` ↔
   `native-composer-command.ts`.
-- **Control addresses** — the `cb-`-prefixed ids from Track 4's table in
-  `docs/plans/agent-points-at-ui.md` (`cb-composer-add`, `-input`, `-send`, `-mic`, `-capture`,
+- **Control addresses** — the `bbx-`-prefixed ids from Track 4's table in
+  `docs/plans/agent-points-at-ui.md` (`bbx-composer-add`, `-input`, `-send`, `-mic`, `-capture`,
   `-stop-dictation`, …). One string names one control on **both** surfaces: on the web it is the
   element's HTML `id`, natively it is the `.controlAnchor(...)` argument, which also becomes the
   view's `accessibilityIdentifier`. They are not anchored file-by-file (they live in ordinary view
@@ -1124,6 +1137,7 @@ without the other is a contract break.
   `use-native-composer-commands.ts` / `native-control-scan.ts`.
 - **Script-message channel names** `beeboxSession` / `beeboxEmissionReceipt` /
   `beeboxLocationResult` / `beeboxLocationState` / `beeboxNarrationState` /
+  `beeboxHqDictationState` /
   `beeboxSpeechPlaybackState` / `beeboxResponseState` /
   `beeboxComposerCommand` / `beeboxLastAudioRequest` —
   `Views/ChatWebView.swift` (`userContentController.add`) ↔

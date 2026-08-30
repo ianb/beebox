@@ -73,7 +73,7 @@ case "$cmd" in
     # nowhere else. A second implementation of a guard this destructive is the
     # duplication that produced the fail-open sweep bug of 2026-08-04.
     [ $# -ge 1 ] || { echo "usage: workstreams agent-liveness <worktree-path>..." >&2; exit 1; }
-    # shellcheck source=lib/worktree-teardown.sh
+    # shellcheck source=worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
     WT_LOG_LABEL="AgentLiveness"
     # One system-wide ps/lsof snapshot reused across every path asked about.
@@ -124,12 +124,12 @@ case "$cmd" in
   archive|unarchive)
     name="${1:-}"
     [ -n "$name" ] && [ $# -eq 1 ] || { echo "usage: workstreams $cmd <name>" >&2; exit 1; }
-    # shellcheck source=lib/worktree-paths.sh
+    # shellcheck source=worktree-paths.sh
     . "$REPO_DIR/bin/lib/worktree-paths.sh"
     wt_paths_init "$REPO_DIR" || exit 1
     wt_paths_valid_name "$name" \
       || { echo "workstreams $cmd: invalid workstream name '$name'" >&2; exit 1; }
-    # shellcheck source=lib/session-registry.sh
+    # shellcheck source=session-registry.sh
     . "$REPO_DIR/bin/lib/session-registry.sh"
     record=$(session_registry_read "$name" || true)
     if [ ! -d "$WT_ROOT/$name" ] && [ -z "$record" ]; then
@@ -186,13 +186,14 @@ case "$cmd" in
     # does exactly that ("wrote 18 AGENTS.md mirror(s)…"), and its line landed in
     # the returned path until this was added.
     exec 3>&1 1>&2
-    # shellcheck source=lib/worktree-create.sh
+    # shellcheck source=worktree-create.sh
     . "$REPO_DIR/bin/lib/worktree-create.sh"
     # Validated before the ERR trap is armed, so a bad name reports itself
     # rather than the trap's "may be partially set up" — nothing has been
     # created yet. wt_create re-checks for callers that source the lib directly.
     wt_paths_valid_name "$name" \
       || { echo "workstreams create: '$name' is not a worktree name ([a-zA-Z0-9_-]+, no slashes)" >&2; exit 1; }
+    rc=0
     trap 'rc=$?; echo "[worktree-create] FAILED at line $LINENO (exit $rc). Worktree may be partially set up at ${WT_CREATED_PATH:-unknown}." >&2; exit $rc' ERR
     wt_create "$name" "$base_ref" "$want_path" "$box_ref"
     printf '%s\n' "$WT_CREATED_PATH" >&3
@@ -214,7 +215,7 @@ case "$cmd" in
     done
     [ -n "$name" ] || { echo "usage: workstreams remove <name> [--force] [--keep-branch] [--dry-run]" >&2; exit 1; }
 
-    # shellcheck source=lib/worktree-teardown.sh
+    # shellcheck source=worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
     . "$REPO_DIR/bin/lib/workstream-box-state.sh"
     # See the note in `list`: the lib clears the roots instead of exiting, and a
@@ -222,6 +223,7 @@ case "$cmd" in
     wt_paths_init "$REPO_DIR" || exit 1
     WT_LOG_LABEL="Remove"
     WT_SAY_PREFIX="  "
+    export WT_LOG_LABEL WT_SAY_PREFIX
     # Validate BEFORE building a path. `remove ../boxes/test1` would otherwise
     # resolve outside WT_ROOT, pass the `-d` check, and trash the source box.
     wt_paths_valid_name "$name" \
@@ -270,16 +272,16 @@ case "$cmd" in
 
   focus)
     name="${1:-}"
-    # shellcheck source=lib/worktree-teardown.sh
+    # shellcheck source=worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
     wt_paths_init "$REPO_DIR" || exit 1
     if [ $# -ne 1 ] || ! wt_paths_valid_name "$name"; then
       echo "usage: workstreams focus <name>" >&2
       exit 1
     fi
-    # shellcheck source=lib/session-registry.sh
+    # shellcheck source=session-registry.sh
     . "$REPO_DIR/bin/lib/session-registry.sh"
-    # shellcheck source=lib/terminal-tabs.sh
+    # shellcheck source=terminal-tabs.sh
     . "$REPO_DIR/bin/lib/terminal-tabs.sh"
     record=$(session_registry_read "$name" || true)
     tty_path=$(printf '%s' "$record" | jq -r '.tty // empty' 2>/dev/null || true)
@@ -303,13 +305,13 @@ case "$cmd" in
         *) [ -z "$name" ] || { echo "workstreams close: unexpected argument $1" >&2; exit 1; }; name="$1"; shift ;;
       esac
     done
-    # shellcheck source=lib/worktree-teardown.sh
+    # shellcheck source=worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
     wt_paths_init "$REPO_DIR" || exit 1
-    [ -n "$name" ] && wt_paths_valid_name "$name" || {
+    if ! [ -n "$name" ] || ! wt_paths_valid_name "$name"; then
       echo "usage: workstreams close <name> [--force]" >&2
       exit 1
-    }
+    fi
     target="$WT_ROOT/$name"
     [ -d "$target" ] || { echo "workstreams close: no worktree at $target" >&2; exit 1; }
 
@@ -325,9 +327,9 @@ case "$cmd" in
       exit 1
     fi
 
-    # shellcheck source=lib/session-registry.sh
+    # shellcheck source=session-registry.sh
     . "$REPO_DIR/bin/lib/session-registry.sh"
-    # shellcheck source=lib/terminal-tabs.sh
+    # shellcheck source=terminal-tabs.sh
     . "$REPO_DIR/bin/lib/terminal-tabs.sh"
     record=$(session_registry_read "$name" || true)
     tty_path=$(printf '%s' "$record" | jq -r '.tty // empty' 2>/dev/null || true)
@@ -369,19 +371,19 @@ case "$cmd" in
     done
     case "$requested_agent" in ""|claude|codex) ;; *) echo "workstreams resume: --agent must be claude or codex" >&2; exit 1 ;; esac
 
-    # shellcheck source=lib/worktree-teardown.sh
+    # shellcheck source=worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
     wt_paths_init "$REPO_DIR" || exit 1
-    [ -n "$name" ] && wt_paths_valid_name "$name" || {
+    if ! [ -n "$name" ] || ! wt_paths_valid_name "$name"; then
       echo "usage: workstreams resume [--agent claude|codex] [--fresh] [--at-final-sha] <name> [--] [<briefing> | - | @file]" >&2
       exit 1
-    }
-    # shellcheck source=lib/workstream-briefing.sh
+    fi
+    # shellcheck source=workstream-briefing.sh
     . "$REPO_DIR/bin/lib/workstream-briefing.sh"
     workstream_read_briefing "workstreams resume" ${briefing_args[@]+"${briefing_args[@]}"}
-    # shellcheck source=lib/session-registry.sh
+    # shellcheck source=session-registry.sh
     . "$REPO_DIR/bin/lib/session-registry.sh"
-    # shellcheck source=lib/workstream-resume.sh
+    # shellcheck source=workstream-resume.sh
     . "$REPO_DIR/bin/lib/workstream-resume.sh"
     workstream_resume_status checking
     record=$(session_registry_read "$name" || true)
@@ -408,7 +410,7 @@ case "$cmd" in
           exec "$REPO_DIR/bin/workstreams" focus "$name"
         fi
         handoff_file=$(mktemp -t "workstream-handoff.$name.XXXXXX")
-        workstream_wrap_briefing "$WORKSTREAM_BRIEFING" > "$handoff_file"
+        workstream_wrap_briefing "$WORKSTREAM_BRIEFING" "$name" > "$handoff_file"
         chmod 600 "$handoff_file"
         "$REPO_DIR/bin/workstreams" focus "$name" >/dev/null 2>&1 || true
         echo "workstreams resume: manual forwarding required: $handoff_file"
@@ -480,7 +482,7 @@ case "$cmd" in
     case "$session_mode" in
       "continue "*) resume_session="${session_mode#continue }" ;;
     esac
-    # shellcheck source=lib/launch-session.sh
+    # shellcheck source=launch-session.sh
     . "$REPO_DIR/bin/lib/launch-session.sh"
     launch_dir=$(mktemp -d -t workstreams-resume.XXXXXX)
     prompt_file="$launch_dir/prompt.txt"
@@ -491,7 +493,7 @@ case "$cmd" in
     fi
     if [ "$WORKSTREAM_BRIEFING_PROVIDED" = true ]; then
       printf '\n' >> "$prompt_file"
-      workstream_wrap_briefing "$WORKSTREAM_BRIEFING" >> "$prompt_file"
+      workstream_wrap_briefing "$WORKSTREAM_BRIEFING" "$name" >> "$prompt_file"
     fi
     emoji=$(printf '%s' "$record" | jq -r '.emoji // empty' 2>/dev/null || true)
     [ -n "$emoji" ] || emoji=$(launch_session_default_emoji "$name")
@@ -522,6 +524,9 @@ case "$cmd" in
     if [ "$resolved_agent" = codex ] && [ "$fresh" = false ] && [ "$resume_state" = existing ]; then
       LS_CODEX_RESUME=1
     fi
+    export LS_MONO LS_WORKSTREAM LS_SESSION_NAME LS_AGENT LS_MODEL LS_REMOTE_CONTROL
+    export LS_PROMPT_FILE LS_EMOJI LS_LAUNCH_DIR LS_WORKTREE_PATH LS_CODEX_RESUME
+    export LS_CLAUDE_RESUME_SESSION LS_DESCRIPTION_FILE
     launch_session_build || exit 1
     workstream_resume_status opening-terminal
     result=$(launch_session_open)
@@ -559,7 +564,10 @@ case "$cmd" in
     name="${1:-}"
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
     wt_paths_init "$REPO_DIR" || exit 1
-    [ $# -eq 1 ] && wt_paths_valid_name "$name" || { echo "usage: workstreams release <name>" >&2; exit 1; }
+    if ! [ $# -eq 1 ] || ! wt_paths_valid_name "$name"; then
+      echo "usage: workstreams release <name>" >&2
+      exit 1
+    fi
     target="$WT_ROOT/$name"
     [ -d "$target" ] || { echo "workstreams release: no worktree for $name" >&2; exit 1; }
     wt_other_agent_live "$target"
@@ -611,7 +619,7 @@ case "$cmd" in
     # implementation of a guard that stands in front of an irreversible delete is
     # exactly the duplication that produced the fail-open bug this refactor
     # closed, and a TS reimplementation would be precisely that.
-    # shellcheck source=lib/worktree-teardown.sh
+    # shellcheck source=worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
     # The lib CLEARS the roots on a derivation failure rather than exiting (it is
     # sourced by non-blocking hooks). A command that iterates `$WT_ROOT/*` must
@@ -620,9 +628,9 @@ case "$cmd" in
     wt_paths_init "$REPO_DIR" || exit 1
     WT_LOG_LABEL="List"
     wt_agent_snapshot_capture
-    # shellcheck source=lib/workstream-box-state.sh
+    # shellcheck source=workstream-box-state.sh
     . "$REPO_DIR/bin/lib/workstream-box-state.sh"
-    # shellcheck source=lib/workstream-routing.sh
+    # shellcheck source=workstream-routing.sh
     . "$REPO_DIR/bin/lib/workstream-routing.sh"
 
     # One router query for the whole listing. A router that is down, wedged, or
@@ -895,7 +903,7 @@ case "$cmd" in
     LOGS_ROOT="$STATE_DIR/logs"
 
     # Locations are derived, never hardcoded — see bin/lib/worktree-paths.sh.
-    # shellcheck source=lib/worktree-paths.sh
+    # shellcheck source=worktree-paths.sh
     . "$REPO_DIR/bin/lib/worktree-paths.sh"
     wt_paths_init "$REPO_DIR" || exit 1
 
@@ -906,11 +914,12 @@ case "$cmd" in
     # local copy's two-state answer was a fail-OPEN hole in front of an
     # irreversible delete (issues/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md):
     # a `ps` or `lsof` that could not answer read as "nothing is running".
-    # shellcheck source=lib/worktree-teardown.sh
+    # shellcheck source=worktree-teardown.sh
     . "$REPO_DIR/bin/lib/worktree-teardown.sh"
-    # shellcheck source=lib/workstream-box-state.sh
+    # shellcheck source=workstream-box-state.sh
     . "$REPO_DIR/bin/lib/workstream-box-state.sh"
     WT_LOG_LABEL="Sweep"
+    export WT_LOG_LABEL
     wt_agent_snapshot_capture
 
     removed=0
@@ -1029,7 +1038,7 @@ case "$cmd" in
     if [ "$dry_run" = false ]; then
       # Registry entries intentionally outlive their worktrees. Retire only
       # records explicitly marked removed and older than the retention window.
-      # shellcheck source=lib/session-registry.sh
+      # shellcheck source=session-registry.sh
       . "$REPO_DIR/bin/lib/session-registry.sh"
       registry_cutoff=$(date -v-90d +%s 2>/dev/null || date -d '90 days ago' +%s)
       session_registry_prune "$registry_cutoff"

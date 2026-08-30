@@ -9,7 +9,6 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { GoogleGenAI } from "@google/genai";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import type { PromptPart } from "./generate-doc-images-types.js";
 
@@ -19,6 +18,7 @@ export async function generateImage(
   prompt: string | PromptPart[],
   { model, apiKey }: { model: string; apiKey: string },
 ): Promise<Buffer | null> {
+  const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey });
 
   let contents: string | Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>;

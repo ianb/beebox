@@ -11,7 +11,7 @@
  * `model="opus"` slot in by adding a registry entry, no shape change.
  */
 
-import type { ChatChannel } from "../../shared/chat-channel.js";
+import type { AgentChatChannel } from "../../shared/chat-channel.js";
 
 export type FeatureValue = string;
 export type FeatureMap = Record<string, FeatureValue>;
@@ -117,11 +117,12 @@ export function resolveFeatures(stored?: FeatureMap | null): FeatureMap {
  * map, possibly empty.
  */
 export function mergeSeedFeatures(input: {
+  box?: Record<string, string> | null | undefined;
   landmark?: Record<string, string> | null | undefined;
   request?: Record<string, string> | null | undefined;
 }): FeatureMap {
   const out: FeatureMap = {};
-  for (const source of [input.landmark, input.request]) {
+  for (const source of [input.box, input.landmark, input.request]) {
     if (!source) continue;
     for (const [name, value] of Object.entries(source)) {
       if (isKnownFeature(name) && isValidValue(name, value)) out[name] = value;
@@ -162,9 +163,9 @@ const READ_ONLY_ATTRS = new Set([
  *     local-time="Wednesday 2026-05-13 14:23 (afternoon)" channel="web-desktop"/>
  */
 export function composeChatAppSnapshot(input: {
-  features: FeatureMap;
+  features?: FeatureMap;
   localTime?: string;
-  channel?: ChatChannel;
+  channel?: AgentChatChannel;
   lastActivity?: string;
   health?: string;
   todos?: string;
@@ -172,12 +173,14 @@ export function composeChatAppSnapshot(input: {
   /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
   activityChildren?: string;
 }): string {
-  const resolved = resolveFeatures(input.features);
   const attrs: string[] = [];
-  for (const f of FEATURE_LIST) {
-    const val = resolved[f.name];
-    if (val === undefined) continue;
-    attrs.push(`${f.name}="${escapeAttr(val)}"`);
+  if (input.features !== undefined) {
+    const resolved = resolveFeatures(input.features);
+    for (const f of FEATURE_LIST) {
+      const val = resolved[f.name];
+      if (val === undefined) continue;
+      attrs.push(`${f.name}="${escapeAttr(val)}"`);
+    }
   }
   const contextAttrs: Array<[string, string | undefined]> = [
     ["local-time", input.localTime],

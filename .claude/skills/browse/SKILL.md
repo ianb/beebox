@@ -250,6 +250,14 @@ Two reasons this matters:
 1. **The user can `open` the file later and know exactly what they're looking at** — no need to dig through chat history for the URL.
 2. **When a screenshot shows an error state ("Failed to load", broken UI), report the URL from the sidecar to the user.** They can browse there themselves to see whether it repros. Don't dismiss visible errors as out-of-scope.
 
+The sidecar makes an individual capture self-describing to an agent; it does
+not make a list of file paths a good human handoff. When screenshots are the
+evidence for UI work, package the useful set with `bin/exhibits add` and share
+the exhibit URL. Give the exhibit prose/captions enough context to distinguish
+before/after and each state or viewport. Use `--ask fyi` for evidence that asks
+nothing of the developer; choose another ask only when you genuinely need it.
+An incidental diagnostic screenshot does not need an exhibit.
+
 ## Escape hatch — anything not covered here
 
 Pass it through. `bin/browse <whatever>` works for every upstream subcommand. For a full reference of what's available upstream:

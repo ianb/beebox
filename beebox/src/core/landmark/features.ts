@@ -16,6 +16,8 @@ import * as path from "node:path";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../schemas/landmark.js";
 import { isKnownFeature, isValidValue } from "../chat/features.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { loadHqDictationDefault } from "../box/config.js";
+import { mergeSeedFeatures } from "../chat/features.js";
 
 class LandmarkDirReadError extends Error {
   constructor(cause: unknown, dir: string) {
@@ -64,7 +66,7 @@ export async function readLandmarkFeaturesForDir(
     if (errnoCode(e) === "ENOENT") return null;
     throw new LandmarkDirReadError(e, absDir);
   }
-  const landmarkName = entries.find((n) => n.endsWith(".landmark.card"));
+  const landmarkName = entries.filter((n) => n.endsWith(".landmark.card")).toSorted()[0];
   if (!landmarkName) return null;
   const absPath = path.join(absDir, landmarkName);
   let fields;
@@ -78,4 +80,18 @@ export async function readLandmarkFeaturesForDir(
   if (fields === null) return null;
   const features = readLandmarkFeatures(fields.navigation);
   return Object.keys(features).length === 0 ? null : features;
+}
+
+/** Resolve every inherited feature source for a newly created chat. */
+export async function seedFeaturesForNewChat(options: {
+  boxRoot: string;
+  contextDir: string | null | undefined;
+  request?: Record<string, string> | null | undefined;
+}): Promise<Record<string, string>> {
+  const { boxRoot, contextDir, request } = options;
+  const [boxHq, landmark] = await Promise.all([
+    loadHqDictationDefault(boxRoot),
+    contextDir === null || contextDir === undefined ? null : readLandmarkFeaturesForDir(boxRoot, contextDir),
+  ]);
+  return mergeSeedFeatures({ box: { "hq-dictation": boxHq }, landmark, request });
 }

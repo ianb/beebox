@@ -198,7 +198,7 @@ const pending = prepareVoiceSubmitEmission({
   runHq: true,
   transcribe: async () => {
     await hqGate;
-    return { text: "clean words", diarized: true };
+    return { text: "clean words", diarized: true, service: "voxtral" };
   },
 });
 const nextComposerText = "belongs to the next message";
@@ -218,6 +218,9 @@ prepared.emission.words
 
 prepared.emission.hqText
 => true
+
+prepared.emission.hqService
+=> voxtral
 ```
 
 The HQ pass used `hqIntent`'s words to describe text that got replaced —
@@ -290,7 +293,7 @@ const manualPrepared = await prepareVoiceSubmitEmission({
   imagesSnapshot: [],
   filesSnapshot: [],
   runHq: true,
-  transcribe: async () => ({ text: "quick thought before I go, corrected", diarized: false }),
+  transcribe: async () => ({ text: "quick thought before I go, corrected", diarized: false, service: "whisper-llm" }),
 });
 manualPrepared.usedHq
 => true
@@ -300,4 +303,7 @@ manualPrepared.emission.text
 
 manualPrepared.emission.hqText
 => true
+
+manualPrepared.emission.hqService
+=> whisper-llm
 ```

@@ -41,6 +41,10 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
    - **`RESULT: MERGED`** → give a concise human-facing handoff: what landed,
      the hash, meaningful verification, and anything still open. Do not dump
      the subagent's status template or enumerate routine negatives.
+     When UI verification produced multiple screenshots, relay the single
+     labeled exhibit URL from the finish report—not raw screenshot paths. The
+     exhibit is the human-facing evidence; the individual files are working
+     artifacts.
      Treat a merge as a **checkpoint by default**: the conversation and
      workstream may continue after landing. Do not end every finish with an
      instruction to exit, clean up, or close the workstream.

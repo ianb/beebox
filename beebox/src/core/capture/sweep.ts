@@ -40,7 +40,8 @@ import {
   stagingSessionIsEmpty,
   isCaptureSession,
 } from "./staging-store.js";
-import { cleanupStagingSession } from "./staging-teardown.js";
+import { discardStagingSessionIfCancellable } from "./staging-teardown.js";
+import { StagingSessionGoneError } from "./staging-errors.js";
 import { ABANDONMENT_WINDOW_MS } from "../../shared/capture-staleness.js";
 
 /** Age after which a delivered card still under `tmp-capture/` is flagged unfiled. */
@@ -109,8 +110,21 @@ export async function sweepAbandonedCaptures(deps: SweepDeps): Promise<SweepResu
 
     if (session.state === "open") {
       if (stagingSessionIsEmpty(session)) {
-        await cleanupStagingSession({ boxRoot, id: session.id });
-        result.discarded.push(session.id);
+        try {
+          const discard = await discardStagingSessionIfCancellable({
+            boxRoot,
+            id: session.id,
+            stillDiscardable: (fresh) =>
+              isCaptureSession(fresh) &&
+              stagingSessionIsEmpty(fresh) &&
+              now - new Date(fresh.lastActivityAt).getTime() >= ABANDONMENT_WINDOW_MS,
+          });
+          if (discard.discarded) result.discarded.push(session.id);
+        } catch (error) {
+          if (!(error instanceof StagingSessionGoneError)) {
+            console.error(`[capture] Sweep could not discard ${session.id}:`, error);
+          }
+        }
         continue;
       }
       const seal = await sealStagingSession({ boxRoot, id: session.id, partial: true, requireOpen: true });

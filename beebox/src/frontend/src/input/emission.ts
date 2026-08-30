@@ -77,6 +77,8 @@ export interface Emission {
    * backend ran, only that retranscription has nothing to add.
    */
   readonly hqText?: true;
+  /** Server-resolved HQ backend; present only with `hqText`. */
+  readonly hqService?: string;
 }
 
 /**
@@ -133,6 +135,8 @@ interface VoiceEmissionInput {
   spokenStart?: number;
   /** See `Emission.hqText`. */
   hqText?: true;
+  /** See `Emission.hqService`. */
+  hqService?: string;
 }
 
 /**
@@ -153,5 +157,6 @@ export function createVoiceEmission(input: VoiceEmissionInput): Emission {
     words: input.words,
     spokenStart: input.spokenStart,
     hqText: input.hqText,
+    hqService: input.hqService,
   };
 }

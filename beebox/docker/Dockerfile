@@ -127,6 +127,7 @@ RUN printf '%s\n' \
        --allow-build=esbuild \
        --allow-build=@google/genai \
        --allow-build=protobufjs \
+       --allow-build=@googleworkspace/cli \
        /app/beebox.tgz
 
 COPY --chown=node:node beebox/docker/entrypoint.sh /app/entrypoint.sh

@@ -59,8 +59,8 @@ Not cadence tasks — tools you run because of a change you just made.
 |------|---------|------|
 | Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Anytime; the `sdk-update` schedule does it automatically after the settling window |
 | Dead-code sweep | `pnpm lint:knip` (monorepo root) | Before a release, or when code feels accumulated. Triage each finding: real dead code → delete; legitimate entry point → register it in `knip.ts` with a comment naming who reaches it |
-| Supplemental lint | `pnpm lint:oxlint` | Periodically. Catches what ESLint misses (ambiguous constructors, useless spreads, identical ternary branches) |
-| Circular deps | `pnpm lint:circular` | After big refactors. Type-only cycles are fine; a new *value* cycle means a module needs splitting |
+| Supplemental lint | `pnpm lint:oxlint` | Weekly through `schedules/supplemental-lint`; also after broad lint-sensitive changes. Catches what ESLint misses (ambiguous constructors, useless spreads, identical ternary branches) |
+| Circular deps | `pnpm lint:circular` | Weekly through `schedules/supplemental-lint`; also after big refactors. Type-only cycles are fine; a new *value* cycle means a module needs splitting |
 | Security regression scan | `pnpm security:opengrep` (monorepo root) | Before releases, and when touching auth/subprocess/temp-file/prompt boundaries. Discipline and how to add a rule: `security/opengrep/README.md` |
 | Doc images | `pnpm generate:doc-images` | After editing architecture-diagram text or `.mmd` sources. Pipeline: `docs/architecture/CLAUDE.md` |
 | Box data migrations | `bbx migrate` (per box) | After adding a migrator to `src/core/migrations.ts`. Author guide and rollout history: `docs/migrations.md` |

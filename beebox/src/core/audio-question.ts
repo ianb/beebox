@@ -10,8 +10,6 @@
  * last-audio browser loopback (chat-last-audio-routes.ts).
  */
 
-import { GoogleGenAI } from "@google/genai";
-
 export const AUDIO_QUESTION_MODEL = "gemini-3.7-flash";
 
 class AudioQuestionError extends Error {
@@ -68,6 +66,7 @@ export async function askAudioQuestion(
     transcript?: string | undefined;
   }
 ): Promise<{ answer: string; model: string }> {
+  const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
     model: AUDIO_QUESTION_MODEL,

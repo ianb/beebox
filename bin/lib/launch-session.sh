@@ -92,6 +92,10 @@ if [ -s "$LS_PROMPT_FILE" ]; then
 else
   claude --name "$LS_WORKSTREAM" $model_arg $rc_arg $resume_arg --dangerously-skip-permissions || claude_status=\$?
 fi
+echo ""
+echo "Reopen this WORKSTREAM (not just the session):  bin/workstreams resume $LS_WORKSTREAM"
+echo "  (from the main checkout — continues the agent session where possible, recreates the worktree if culled;"
+echo "   the 'claude --resume' line above reopens only the conversation, without the workstream machinery)"
 exit \$claude_status
 EOF
   else
@@ -177,6 +181,9 @@ else
   codex "\${codex_args[@]}" || codex_status=\$?
 fi
 trap - INT
+echo ""
+echo "Reopen this WORKSTREAM:  bin/workstreams resume $LS_WORKSTREAM"
+echo "  (from the main checkout — continues this codex session, recreates the worktree if culled)"
 
 if session_registry_complete_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "\$launch_patch" --preserve-base-sha; then
   launch_pending=0
@@ -210,7 +217,7 @@ launch_session_default_emoji() {
 }
 
 launch_session_open() {
-  local result launch_intent
+  local launch_intent
   # Record intent before asking Terminal to start a shell. The generated script
   # owns this token until it reaches the agent boundary or reports setup failure.
   # shellcheck source=session-registry.sh
@@ -233,13 +240,13 @@ launch_session_open() {
     echo "workstreams launch: could not record launch intent; Terminal was not opened" >&2
     return 1
   fi
-  if result=$(osascript <<APPLESCRIPT
+  if osascript >/dev/null <<APPLESCRIPT
 tell application "Terminal"
   activate
   do script "$LS_LAUNCHER"
 end tell
 APPLESCRIPT
-  ); then
+  then
     printf '%s\n' "new tab/window (per your Terminal tab preference)"
     return 0
   else

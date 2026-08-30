@@ -121,6 +121,11 @@ final class ChatWebViewRequestTests: XCTestCase {
         XCTAssertNil(ChatWebView.narrationEnabled(from: #"{"enabled":"yes"}"#))
     }
 
+    func testHQDictationStateDecodesNeutralBridgePayload() {
+        XCTAssertEqual(ChatWebView.hqDictationEnabled(from: #"{"enabled":true}"#), true)
+        XCTAssertNil(ChatWebView.hqDictationEnabled(from: #"{"enabled":"yes"}"#))
+    }
+
     func testSpeechPlaybackStateDecodesNeutralBridgePayload() {
         XCTAssertEqual(ChatWebView.speechPlaybackActive(from: #"{"playing":true}"#), true)
         XCTAssertNil(ChatWebView.speechPlaybackActive(from: #"{"playing":"yes"}"#))

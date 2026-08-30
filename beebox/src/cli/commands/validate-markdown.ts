@@ -7,7 +7,6 @@
  */
 
 import * as path from "node:path";
-import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
 import { customLinkRules, linkRuleConfig } from "../../core/markdown-lint-rules.js";
 import { listBoxMarkdownFiles, isBuiltinLintableMarkdown } from "../../core/list-cards.js";
@@ -58,6 +57,7 @@ export interface MarkdownLintSummary {
 }
 
 async function runMarkdownlint(files: string[], config: Record<string, unknown>): Promise<MarkdownLintSummary> {
+  const { lint: markdownlint } = await import("markdownlint/promise");
   const results = await markdownlint({ files, config, customRules: customLinkRules });
   let filesWithErrors = 0;
   let totalErrors = 0;

@@ -331,6 +331,9 @@ enum VoicePreparationResolver {
         guard let hqTranscript else {
             return preparation.liveTranscript
         }
+        if preparation.appendsKeywordTag == false {
+            return join(preparation.priorInput, hqTranscript)
+        }
         let processed = SpeechKeywords.detect(hqTranscript)?.processedTranscript
             ?? SpeechKeywords.appendSendKeywordTag(
                 to: hqTranscript,
@@ -360,9 +363,12 @@ enum NativeVoiceKeywordSendPlan: Equatable {
     static func make(
         liveTranscript: String,
         action: SpeechKeywordAction,
-        narrationEnabled: Bool
+        narrationEnabled: Bool,
+        hqDictationEnabled: Bool
     ) -> NativeVoiceKeywordSendPlan {
-        narrationEnabled || action == .sendHq ? .hq : .live(text: liveTranscript)
+        narrationEnabled || hqDictationEnabled || action == .sendHq
+            ? .hq
+            : .live(text: liveTranscript)
     }
 }
 

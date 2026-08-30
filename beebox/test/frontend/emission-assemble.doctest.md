@@ -609,9 +609,10 @@ const eHq = createVoiceEmission({
   selections: [],
   diarized: false,
   hqText: true,
+  hqService: "whisper-llm",
 });
 assembleChatMessage(eHq, W).message.replace(eHq.id, "ID")
-=> <speech stt="hq" message-id="ID" local-time="14:23">the corrected HQ transcript</speech>
+=> <speech stt="hq" stt-service="whisper-llm" message-id="ID" local-time="14:23">the corrected HQ transcript</speech>
 ```
 
 `stt` still leads `diarized` in attribute order, same as the deepgram case:

@@ -359,7 +359,7 @@ private struct PairingRedeemResponse: Decodable {
     var token: String
 }
 
-private extension String {
+extension String {
     var nilIfEmpty: String? {
         isEmpty ? nil : self
     }

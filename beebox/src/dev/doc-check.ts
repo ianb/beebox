@@ -74,7 +74,20 @@ function trackedMarkdownFiles(): string[] {
 // them — a private-issues link in doctest prose is a real leak.
 function trackedMarkdownFilesIncludingDoctests(): string[] {
   const stdout = execFileSync("git", ["ls-files", "-z", "*.md"], { cwd: MONO_ROOT, encoding: "utf8" });
-  return stdout.split("\0").filter((p) => p.length > 0);
+  return stdout.split("\0").filter((p) => p.length > 0 && fs.existsSync(path.join(MONO_ROOT, p)));
+}
+
+function markdownFilesIncludingDoctests(): string[] {
+  const stdout = execFileSync(
+    "git",
+    ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "*.md"],
+    { cwd: MONO_ROOT, encoding: "utf8" },
+  );
+  return stdout.split("\0").filter((p) => p.length > 0 && fs.existsSync(path.join(MONO_ROOT, p)));
+}
+
+function markdownFiles(): string[] {
+  return markdownFilesIncludingDoctests().filter((p) => !p.endsWith(".doctest.md"));
 }
 
 function issueFiles(tracked: string[]): string[] {
@@ -82,7 +95,7 @@ function issueFiles(tracked: string[]): string[] {
 }
 
 // The reference/orphan checks shared by both modes. Returns problem strings.
-function referenceProblems(): string[] {
+function referenceProblems(tracked: ReadonlySet<string>): string[] {
   const { docs, externalRefs } = buildGraphExtended();
   const problems: string[] = [];
 
@@ -101,6 +114,8 @@ function referenceProblems(): string[] {
   }
 
   for (const doc of docs.values()) {
+    const monorepoPath = `beebox/${doc.path}`;
+    if (!tracked.has(monorepoPath)) continue;
     if (!doc.path.startsWith("docs/")) continue;
     if (ORPHAN_EXEMPT_PREFIXES.some((p) => doc.path.startsWith(p))) continue;
     if (doc.path.endsWith("README.md") || doc.path === "docs/doc-graph.md") continue;
@@ -149,7 +164,8 @@ function schemaProblems(tracked: string[]): string[] {
 
 function runDefaultCheck(): void {
   const tracked = trackedMarkdownFiles();
-  const problems = [...referenceProblems(), ...issuesUniquenessProblems(tracked), ...privateLinkProblems(), ...schemaProblems(tracked)];
+  const all = markdownFiles();
+  const problems = [...referenceProblems(new Set(tracked)), ...issuesUniquenessProblems(all), ...privateLinkProblems(), ...schemaProblems(all)];
 
   if (problems.length > 0) {
     console.error("doc-check failed:");
@@ -161,10 +177,11 @@ function runDefaultCheck(): void {
 
 function runFix(): void {
   const tracked = trackedMarkdownFiles();
+  const all = markdownFiles();
   const basenameLookup = buildBasenameLookup(tracked);
   const fileExists = (repoRel: string): boolean => fs.existsSync(path.join(MONO_ROOT, repoRel));
 
-  const scanSources = tracked.filter((p) =>
+  const scanSources = all.filter((p) =>
     !GENERATED_NO_SCAN.has(p) && !FROZEN_SCAN_PREFIXES.some((prefix) => p.startsWith(prefix)),
   );
 
@@ -196,7 +213,7 @@ function runFix(): void {
     ? `\ndoc-check --fix: rewrote ${totalRewrites} link(s) across ${filesChanged} file(s).`
     : "\ndoc-check --fix: no broken links needed rewriting.");
 
-  const issuesProblems = issuesUniquenessProblems(tracked);
+  const issuesProblems = issuesUniquenessProblems(all);
   if (issuesProblems.length > 0) {
     console.error("\nissues/ uniqueness violations (must fix — auto-repair depends on this):");
     for (const p of issuesProblems) console.error(`  ${p}`);
@@ -220,7 +237,7 @@ function runFix(): void {
   // Non-fatal: how far the repo is from globally unique basenames (excluding
   // the intentionally-per-directory whitelist). --fix works today wherever a
   // basename happens to be unique; this just surfaces the remaining overlaps.
-  const repoDups = duplicateBasenames(tracked);
+  const repoDups = duplicateBasenames(all);
   if (repoDups.size > 0) {
     console.log(`\nrepo-wide duplicate basenames (${repoDups.size}) — not a failure; --fix can't auto-resolve these:`);
     for (const [base, paths] of repoDups) console.log(`  ${base}: ${paths.join(", ")}`);

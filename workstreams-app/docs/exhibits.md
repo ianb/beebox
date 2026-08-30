@@ -96,14 +96,14 @@ One mechanism, three levels of effort:
    client below already provided. Drop the file in; no build step, no
    registration, HMR picks up edits.
 
-**The container answers the ask, not the page.** Whenever the manifest states an
-ask, the disposition control is appended *below* the page's own content — for
-every tier, custom pages included. It writes `data/disposition.json` and appends
-a `disposition` event, so an instrument is answerable without writing a line of
+**The container answers the ask for the default and module tiers.** Whenever
+their manifest states an ask, the disposition control is appended *below* the
+page's own content. It writes `data/disposition.json` and appends a
+`disposition` event, so an instrument is answerable without writing a line of
 form code. A manifest with no `ask` (only a committed app may omit it) gets no
-control, because nothing is waiting on an answer. A page that wants its own
-richer interaction still writes through the client below; the container's
-control is what guarantees there is always *some* way to reply.
+control, because nothing is waiting on an answer. Raw `index.html` is served
+unchanged and receives no container; it must implement its own answer control.
+A page that wants richer interaction writes through the client below.
 
 Page *source* is never served as content: `.ts`/`.tsx`/`.jsx` requests are
 refused, and paths cannot leave the exhibit directory.

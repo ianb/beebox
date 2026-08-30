@@ -11,6 +11,7 @@ import {
   setChatModel,
   setDefaultChatModel,
   getChatFeatures,
+  getNewChatFeatures,
   setChatFeature,
 } from "../../api";
 import { type ModelMarker } from "./InteractiveChat-helpers";
@@ -27,6 +28,7 @@ import type { ChatEvent } from "../../machines/chat-types";
 export function useChatModelFeatures(opts: {
   sessionId: string | null;
   groupCount: number;
+  contextDir: string | null;
   send: (event: ChatEvent) => void;
   /**
    * The engine and model this chat was started with, before it exists. The
@@ -37,7 +39,7 @@ export function useChatModelFeatures(opts: {
   startEngine?: string | undefined;
   startModel?: string | undefined;
 }) {
-  const { sessionId, groupCount, send, startEngine, startModel } = opts;
+  const { sessionId, groupCount, contextDir, send, startEngine, startModel } = opts;
   // This chat's OWN pick; `null` means it follows the box default. The
   // effective model is `modelInForce` — the two differ for a follower.
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -50,6 +52,24 @@ export function useChatModelFeatures(opts: {
   const [agentEngine, setAgentEngine] = useState<ChatAgentEngine | null>(null);
   const [modelMarkers, setModelMarkers] = useState<ModelMarker[]>([]);
   const [chatFeatures, setChatFeatures] = useState<Record<string, string>>({});
+  const preSessionFeatureTouchedRef = useRef(false);
+
+  useEffect(() => {
+    preSessionFeatureTouchedRef.current = false;
+    if (sessionId !== null) return;
+    let current = true;
+    getNewChatFeatures({ contextDir })
+      .then((features) => {
+        if (!current || preSessionFeatureTouchedRef.current) return;
+        setChatFeatures(features);
+        const hq = features["hq-dictation"];
+        if (hq === "on" || hq === "off") send({ type: "SET_SEED_FEATURE", feature: "hq-dictation", value: hq });
+      })
+      .catch((error: unknown) => {
+        console.warn(`[chatfsm] get new-chat features failed: ${error instanceof Error ? error.message : String(error)}`);
+      });
+    return () => { current = false; };
+  }, [sessionId, contextDir, send]);
 
   /**
    * Re-read the model state. Called on mount and whenever the model panel
@@ -100,7 +120,7 @@ export function useChatModelFeatures(opts: {
 
   const {
     narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation,
-  } = useChatFeatureToggles({ sessionId, chatFeatures, setChatFeatures, send });
+  } = useChatFeatureToggles({ sessionId, chatFeatures, setChatFeatures, send, preSessionFeatureTouchedRef });
 
   // Generation counter so an out-of-order completion (an older select
   // resolving after a newer one) cannot clobber state a later request set.
@@ -210,8 +230,9 @@ function useChatFeatureToggles(opts: {
   chatFeatures: Record<string, string>;
   setChatFeatures: Dispatch<SetStateAction<Record<string, string>>>;
   send: (event: ChatEvent) => void;
+  preSessionFeatureTouchedRef: { current: boolean };
 }) {
-  const { sessionId, chatFeatures, setChatFeatures, send } = opts;
+  const { sessionId, chatFeatures, setChatFeatures, send, preSessionFeatureTouchedRef } = opts;
   const narrationEnabled = chatFeatures.narration === "on";
   const hqDictationEnabled = chatFeatures["hq-dictation"] === "on";
 
@@ -263,6 +284,7 @@ function useChatFeatureToggles(opts: {
     const requestId = ++hqDictationRequestIdRef.current;
     setChatFeatures((prev) => ({ ...prev, "hq-dictation": next }));
     if (!sessionId) {
+      preSessionFeatureTouchedRef.current = true;
       send({ type: "SET_SEED_FEATURE", feature: "hq-dictation", value: next });
       return;
     }
@@ -277,7 +299,7 @@ function useChatFeatureToggles(opts: {
         if (hqDictationRequestIdRef.current !== requestId) return;
         setChatFeatures((prev) => ({ ...prev, "hq-dictation": previous }));
       });
-  }, [sessionId, hqDictationEnabled, send, setChatFeatures]);
+  }, [sessionId, hqDictationEnabled, send, setChatFeatures, preSessionFeatureTouchedRef]);
 
 
   return { narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation };

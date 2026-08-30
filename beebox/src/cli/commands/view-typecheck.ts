@@ -53,7 +53,9 @@ async function typecheckOneView(args: { viewPath: string; slug: string }): Promi
     await fs.copyFile(viewPath, path.join(tmpDir, "view.tsx"));
 
     // Relative import to the real ViewProps source, so the assertion is against
-    // the actual interface, not a copy that could drift.
+    // the actual interface, not a copy that could drift. The release tarball
+    // ships this file and its type closure (package.json `files`) for the
+    // same reason; `pnpm smoke` fails at `bbx view typecheck` if that drifts.
     let viewProps = path
       .relative(tmpDir, path.join(PACKAGE_ROOT, "src", "core", "views", "types"))
       .replaceAll(path.sep, "/");

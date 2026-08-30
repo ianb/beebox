@@ -305,7 +305,8 @@ final class ComposerDraftReducerTests: XCTestCase {
             NativeVoiceKeywordSendPlan.make(
                 liveTranscript: "native words <send-message phrase=\"send now\" />",
                 action: .send,
-                narrationEnabled: false
+                narrationEnabled: false,
+                hqDictationEnabled: false
             ),
             .live(text: "native words <send-message phrase=\"send now\" />")
         )
@@ -316,7 +317,8 @@ final class ComposerDraftReducerTests: XCTestCase {
             NativeVoiceKeywordSendPlan.make(
                 liveTranscript: "native words",
                 action: .send,
-                narrationEnabled: true
+                narrationEnabled: true,
+                hqDictationEnabled: false
             ),
             .hq
         )
@@ -327,7 +329,20 @@ final class ComposerDraftReducerTests: XCTestCase {
             NativeVoiceKeywordSendPlan.make(
                 liveTranscript: "native words",
                 action: .sendHq,
-                narrationEnabled: false
+                narrationEnabled: false,
+                hqDictationEnabled: false
+            ),
+            .hq
+        )
+    }
+
+    func testVoiceKeywordSendUsesHQPreparationWhenHQDictationIsOn() {
+        XCTAssertEqual(
+            NativeVoiceKeywordSendPlan.make(
+                liveTranscript: "native words",
+                action: .send,
+                narrationEnabled: false,
+                hqDictationEnabled: true
             ),
             .hq
         )
@@ -450,6 +465,26 @@ final class ComposerDraftReducerTests: XCTestCase {
         XCTAssertEqual(
             VoicePreparationResolver.text(for: preparation, hqTranscript: "clearer words"),
             "typed first clearer words <send-message phrase=\"send now\" />"
+        )
+    }
+
+    func testButtonVoicePreparationDoesNotAppendKeywordTag() {
+        let preparation = VoicePreparation(
+            id: UUID(),
+            boxID: UUID(),
+            draft: .empty,
+            liveTranscript: "live words",
+            priorInput: "typed first",
+            action: .send,
+            matchedPhrase: "",
+            appendsKeywordTag: false,
+            audioFilename: "voice.wav",
+            createdAt: Date()
+        )
+
+        XCTAssertEqual(
+            VoicePreparationResolver.text(for: preparation, hqTranscript: "clearer words"),
+            "typed first clearer words"
         )
     }
 
@@ -1036,13 +1071,17 @@ final class ComposerDraftRepositoryTests: XCTestCase {
         try await relaunchedPending.finishVoicePreparation(
             id: preparation.id,
             text: "original HQ <send-message phrase=\"send now\" />",
-            diarized: true
+            diarized: true,
+            hqText: true,
+            hqService: "test-hq"
         )
         XCTAssertTrue(relaunchedPending.voicePreparations.isEmpty)
         XCTAssertEqual(relaunchedPending.pending.map(\.id), [preparation.id, nextEmission.id])
         XCTAssertEqual(relaunchedPending.deliveries.map(\.id), [preparation.id, nextEmission.id])
         XCTAssertEqual(relaunchedPending.pending.first?.draft, snapshot)
         XCTAssertEqual(relaunchedPending.pending.first?.diarized, true)
+        XCTAssertEqual(relaunchedPending.deliveries.first?.hqText, true)
+        XCTAssertEqual(relaunchedPending.deliveries.first?.hqService, "test-hq")
         XCTAssertEqual(relaunchedDraft.draft.text, "next draft")
         await XCTAssertThrowsErrorAsync {
             _ = try await repository.loadPayload(

@@ -30,6 +30,7 @@ import { prewarmBackend } from "./registry-warm.js";
 import { enforceLiveCap } from "./registry-cap.js";
 import { pinEntry, pinSessionObject } from "./registry-pins.js";
 import type { ChatSessionRegistryOptions, RegistryEntry } from "./registry-options.js";
+import { stopChatSessionsAndWait } from "./registry-shutdown.js";
 
 export { SessionDeletingError } from "./deletion-state.js";
 export type { ChatSessionRegistryOptions } from "./registry-options.js";
@@ -253,6 +254,11 @@ export class ChatSessionRegistry extends EventEmitter {
             // a codex-default box fell to the box default and tripped the
             // coined-must-be-Claude invariant (500, 2026-08-27).
             engine: reservation.engine,
+            // This session keeps the accepted reservation record even if the
+            // addressability TTL later expires. A pre-start feature toggle can
+            // therefore never fall through to started-chat history and mint a
+            // second engine answer.
+            persistPendingFeatures: (updates) => { Object.assign(reservation.seedFeatures, updates); return true; },
             ...(reservation.contextDir !== null ? { contextDir: reservation.contextDir } : {}),
             ...(Object.keys(reservation.seedFeatures).length > 0 ? { seedFeatures: reservation.seedFeatures } : {}),
             onFirstRunStart: (id: string) => this.recordSessionStart(id, {
@@ -466,15 +472,13 @@ export class ChatSessionRegistry extends EventEmitter {
 
   /** Tear down all entries AND the backend's warm slot (a subprocess too).
    *  Call on server shutdown. */
-  shutdown(): void {
+  async shutdown(): Promise<void> {
     this.stopCleanup();
     this.backend.closeWarm?.();
-    for (const [id, entry] of this.entries) {
-      log("shutdown", `Stopping ${id}`);
-      entry.session.stop();
-    }
+    const sessions = [...this.entries.values()].map((entry) => entry.session).concat([...this.pending]);
     this.entries.clear();
-    for (const s of this.pending) s.stop();
     this.pending.clear();
+    const timedOut = await stopChatSessionsAndWait(sessions);
+    if (timedOut.length > 0) log("shutdown", `Close grace expired for ${timedOut.join(", ")}`);
   }
 }

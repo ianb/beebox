@@ -71,16 +71,32 @@ export async function raiseAlert(deps: RunnerDeps, input: AlertInput): Promise<A
 }
 
 /** Best-effort macOS notification. Absent `osascript` is not an error — the
- *  record was already written by the time this runs. */
+ *  record was already written by the time this runs.
+ *
+ *  terminal-notifier first, when installed: an osascript notification opens
+ *  Script Editor when clicked (it is the posting app), which is useless
+ *  (boxholder, 2026-08-30). terminal-notifier lets the click open the
+ *  workstreams app, where schedule alerts are listed and acked. */
 export async function osascriptNotify(notification: { title: string; message: string }): Promise<void> {
-  await new Promise<void>((resolve) => {
-    const quote = (text: string): string => text.replace(/["\\]/g, " ").replace(/\n/g, " ");
-    const child = spawn(
-      "/usr/bin/osascript",
-      ["-e", `display notification "${quote(notification.message)}" with title "${quote(notification.title)}"`],
-      { stdio: "ignore" },
-    );
-    child.on("error", () => { resolve(); });
-    child.on("exit", () => { resolve(); });
+  const ran = await runQuiet("terminal-notifier", [
+    "-title", notification.title,
+    "-message", notification.message,
+    "-group", "callback-schedules",
+    "-open", "http://localhost:3210/workstreams/",
+  ]);
+  if (ran) return;
+  const quote = (text: string): string => text.replace(/["\\]/g, " ").replace(/\n/g, " ");
+  await runQuiet(
+    "/usr/bin/osascript",
+    ["-e", `display notification "${quote(notification.message)}" with title "${quote(notification.title)}"`],
+  );
+}
+
+/** Spawn fire-and-forget; false when the binary is missing or exits nonzero. */
+function runQuiet(command: string, args: string[]): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const child = spawn(command, args, { stdio: "ignore" });
+    child.on("error", () => { resolve(false); });
+    child.on("exit", (code) => { resolve(code === 0); });
   });
 }

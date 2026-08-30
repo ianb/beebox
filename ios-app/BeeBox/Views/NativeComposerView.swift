@@ -9,6 +9,7 @@ struct NativeComposerView: View {
     @ObservedObject var pendingStore: PendingEmissionStore
     var captureAvailable: Bool
     var narrationEnabled: Bool
+    var hqDictationEnabled: Bool
     var speechPlaybackActive: Bool
     var responseActive: Bool
     var locationSharingEnabled: Bool
@@ -557,7 +558,20 @@ struct NativeComposerView: View {
             applyVoiceTurn(.microphoneStopped)
         }
         let origin: NativeChatEmission.Origin = dictation.hasDictatedText ? .voice : .typed
-        enqueueMessage(text: message, origin: origin, diarized: false)
+        let audioURL = origin == .voice ? dictation.consumeRecordedAudioURL() : nil
+        if origin == .voice, hqDictationEnabled {
+            prepareVoiceSend(
+                liveTranscript: message,
+                priorInput: dictation.dictationSeedText(),
+                action: .send,
+                matchedPhrase: "",
+                appendsKeywordTag: false,
+                audioURL: audioURL,
+                closeMicrophone: true
+            )
+            return
+        }
+        enqueueMessage(text: message, origin: origin, diarized: false, retainingAudioAt: audioURL)
     }
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
@@ -630,7 +644,8 @@ struct NativeComposerView: View {
         switch NativeVoiceKeywordSendPlan.make(
             liveTranscript: intent.processedTranscript,
             action: intent.action,
-            narrationEnabled: narrationEnabled
+            narrationEnabled: narrationEnabled,
+            hqDictationEnabled: hqDictationEnabled
         ) {
         case .live(let text):
             // The recording used to be deleted here. It is kept instead, so a
@@ -649,6 +664,26 @@ struct NativeComposerView: View {
             break
         }
         let priorInput = dictation.consumeKeywordSeedText()
+        prepareVoiceSend(
+            liveTranscript: intent.processedTranscript,
+            priorInput: priorInput,
+            action: intent.action,
+            matchedPhrase: intent.matchedPhrase,
+            appendsKeywordTag: true,
+            audioURL: audioURL,
+            closeMicrophone: intent.action == .sendClose
+        )
+    }
+
+    private func prepareVoiceSend(
+        liveTranscript: String,
+        priorInput: String,
+        action: SpeechKeywordAction,
+        matchedPhrase: String,
+        appendsKeywordTag: Bool,
+        audioURL: URL?,
+        closeMicrophone: Bool
+    ) {
         let snapshot = draftStore.draft
         let sendingBox = box
         isPreparingSend = true
@@ -657,10 +692,11 @@ struct NativeComposerView: View {
             do {
                 let preparation = try await pendingStore.stageVoicePreparation(
                     draft: snapshot,
-                    liveTranscript: intent.processedTranscript,
+                    liveTranscript: liveTranscript,
                     priorInput: priorInput,
-                    action: intent.action,
-                    matchedPhrase: intent.matchedPhrase,
+                    action: action,
+                    matchedPhrase: matchedPhrase,
+                    appendsKeywordTag: appendsKeywordTag,
                     audioURL: audioURL,
                     boxID: sendingBox.id
                 )
@@ -675,7 +711,7 @@ struct NativeComposerView: View {
                         RetainedVoiceAudio(
                             emissionID: preparation.id.uuidString,
                             recordedAt: preparation.createdAt,
-                            text: intent.processedTranscript,
+                            text: liveTranscript,
                             sessionID: sendingBox.sessionID
                         ),
                         movingFrom: audioURL,
@@ -688,7 +724,7 @@ struct NativeComposerView: View {
                 focused = false
                 isPreparingSend = false
                 statusText = nil
-                applyVoiceTurn(.voiceMessageSent(closeMicrophone: intent.action == .sendClose))
+                applyVoiceTurn(.voiceMessageSent(closeMicrophone: closeMicrophone))
                 resumeVoicePreparation(preparation, box: sendingBox)
             } catch {
                 applyEarcon(.cancelWaiting)
@@ -717,7 +753,9 @@ struct NativeComposerView: View {
                 try await pendingStore.finishVoicePreparation(
                     id: preparation.id,
                     text: prepared.text,
-                    diarized: prepared.diarized
+                    diarized: prepared.diarized,
+                    hqText: prepared.hqText,
+                    hqService: prepared.hqService
                 )
                 // The recording was retained at send time with the realtime
                 // transcript, because that was all that existed then; the
@@ -738,19 +776,21 @@ struct NativeComposerView: View {
     private func prepareVoiceMessage(
         _ preparation: VoicePreparation,
         box: PairedBox
-    ) async -> (text: String, diarized: Bool) {
+    ) async -> (text: String, diarized: Bool, hqText: Bool, hqService: String?) {
         guard let audioURL = await pendingStore.voiceAudioURL(for: preparation) else {
-            return (preparation.liveTranscript, false)
+            return (preparation.liveTranscript, false, false, nil)
         }
         do {
             let hqResult = try await ChatAPI(box: box).transcribeAudio(fileURL: audioURL)
             return (
                 VoicePreparationResolver.text(for: preparation, hqTranscript: hqResult.text),
-                hqResult.diarized
+                hqResult.diarized,
+                true,
+                hqResult.service
             )
         } catch {
             statusText = "HQ transcription failed; sending live dictation."
-            return (VoicePreparationResolver.text(for: preparation, hqTranscript: nil), false)
+            return (VoicePreparationResolver.text(for: preparation, hqTranscript: nil), false, false, nil)
         }
     }
 

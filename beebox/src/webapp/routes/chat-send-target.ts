@@ -1,7 +1,6 @@
 import type { FastifyReply } from "fastify";
 import type { ChatSession } from "../../core/chat/session/index.js";
-import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
-import { mergeSeedFeatures } from "../../core/chat/features.js";
+import { seedFeaturesForNewChat } from "../../core/landmark/features.js";
 import { resolveSessionAvailability } from "../../core/chat/session/availability.js";
 import { isResumableSession } from "../../core/chat/session/recent-landmark.js";
 import { resolveChatTarget, type ChatTargetSpec } from "../../core/chat/session/target.js";
@@ -89,10 +88,7 @@ async function freshSeedFeatures(
   boxRoot: string,
   args: ResolveSendArgs,
 ): Promise<{ seedFeatures?: Record<string, string> }> {
-  const landmark = args.contextDir !== undefined && args.contextDir !== ""
-    ? await readLandmarkFeaturesForDir(boxRoot, args.contextDir)
-    : null;
-  const seedFeatures = mergeSeedFeatures({ landmark, request: args.requestSeedFeatures });
+  const seedFeatures = await seedFeaturesForNewChat({ boxRoot, contextDir: args.contextDir, request: args.requestSeedFeatures });
   return Object.keys(seedFeatures).length > 0 ? { seedFeatures } : {};
 }
 

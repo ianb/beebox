@@ -1,31 +1,31 @@
 ---
 title: "Sticky HQ transcription preference — turning HQ dictation on shouldn't be a per-chat ritual"
-workstream: unattached
+workstream: transcript-confidence
 area: beebox
 labels: [voice, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "sticky hq transcription preference"
+needs: [manual-testing]
 ---
 
-HQ dictation is a chat feature flag: `hq-dictation` in
-`src/core/chat/features.ts` (server is the source of truth, per session, with
-a registry default), read at `use-chat-model.ts:216` and toggled per chat.
-A boxholder who always wants the HQ pass (`POST /api/chat/transcribe-audio` →
-the configured HQ transcriber, vs the Voxtral realtime stream) has to re-enable
-it in every new chat.
+Web support landed in `6410124b5`, but physical-device testing found that the
+iOS native composer did not receive or honor the HQ state. Keep this open until
+the native Send button and spoken-send paths are bridged and verified.
 
-Make the preference sticky. Design choices, since the feature system already
-offers levels:
+HQ dictation now has the agreed scope controls: a per-chat value by default,
+plus adjacent landmark and box defaults with explicit inheritance. The server
+resolves the effective value and remains the source of truth.
 
-- **Where the sticky value lives.** The feature registry has per-feature
-  defaults, and landmarks seed features — so the natural options are a
-  box-level default (box config, like `agentModel`), a landmark-level seed, or
-  a per-device preference (localStorage; wrong if the preference is really
-  about the boxholder, right if it's about the device's mic/bandwidth).
-  Box-level default with per-chat override is the shape the model picker just
-  established (`model-engine-policy`); following it keeps one pattern.
-- **Precedence.** registry default < box default < landmark seed < explicit
-  per-chat toggle — and whether an agent `<chat-app>` delta can flip it.
-- Narration mode (`narration` flag, same file) has the same per-chat reset;
-  decide whether it rides along or is deliberately per-chat.
+The remaining gate is native iOS verification. The web setting, native Send
+button, and spoken-send path now share that resolved value; native HQ results
+also carry provenance so the persistent `HQ` marker is evidence of the pass,
+not merely the client's intent.
+
+## Manual testing
+
+- Install a build containing the native bridge changes, then force-quit and reopen it.
+- In a fresh chat, set `Chat: on`, dictate a normal message, and tap Send. Confirm the message keeps the microphone stopped and shows the subtle `HQ` provenance marker.
+- Set `Chat: off`, dictate and tap Send, and confirm there is no `HQ` marker.
+- Set `Chat: on` again, dictate and say the ordinary send keyword, and confirm the resulting message shows `HQ`.
+- Start a brand-new chat while an inherited landmark or box setting resolves to on, then repeat the button test to cover session assignment.

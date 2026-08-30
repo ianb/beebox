@@ -25,52 +25,136 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.246` (in `beebox/package.json` — see the split-pin
+- **Current pin:** `0.3.247` (in `beebox/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`, which is why `pnpm update-agent-sdk` ends by printing
   "Now at 0.3.226" even when the managed pin moved)
-- **Latest reviewed upstream version:** `0.3.250` (SDK), `2.1.250` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.251` (SDK), `2.1.251` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.246` was taken this turn as the newest settled
-  version, so `perTaskStopAffordance` is now available to
-  `issues/decisions/2026-08-25-chat-stop-and-background-subagents.md`. Pending:
-  `0.3.247` (~29h, carries the `ambient` flag the task-strip issue needs — take
-  it next turn), `0.3.248` (~3h) and `0.3.250` (~1h). None act-now.
-  **`0.3.250` and `2.1.250` are recorded as unreviewable, not as reviewed** —
-  they had no changelog section, no git tag and no GitHub release at review
-  time. Their entry says what to re-read next turn.
+- **Current recommendation:** `0.3.247` was taken this turn as the newest settled
+  version, which is the deliberate take the last turn flagged — the `ambient`
+  flag that `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md`
+  needs is now in the pin. Pending: `0.3.248` (~28h), `0.3.250` (~26h) and
+  `0.3.251` (~9h), none act-now. `2.1.251` is the largest security release this
+  ledger has seen, and **almost none of it protects this repo** — every session
+  here runs with permission enforcement off, which is the finding rather than
+  the fixes. The last turn's obligation to re-read `2.1.250` is discharged
+  below.
 
 ## Release ledger
 
-### 0.3.250 / Claude Code 2.1.250 — pending, UNREVIEWABLE at this turn (re-read next turn)
+### 0.3.251 — pending (published 2026-08-28T15:36Z, ~9h at this turn; parity with Claude Code 2.1.251)
 
-Both published ~1h before this turn (`0.3.250` 2026-08-27T22:28Z, `2.1.250`
-minutes earlier) and **neither is documented anywhere yet**: no section in
-either `main` CHANGELOG, no `v0.3.250`/`v2.1.250` git tag, no GitHub release,
-and the claude-code npm tarball ships no changelog. `0.3.249` was never
-published at all, so this is a two-version gap in a train that is currently
-churning.
+- **Upstream:** SDK says only "parity with Claude Code v2.1.251". That parity
+  line hides ~75 itemized Claude Code entries, assessed immediately below.
+- **Action:** Settled path; takeable 2026-08-30.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03251)
 
-What could be established without release notes: the SDK's **public type surface
-is unchanged**. `sdk.d.ts` from the `0.3.248` and `0.3.250` tarballs is
-byte-identical, so `0.3.250` adds, removes and renames nothing beebox
-compiles against. That bounds the risk of the version existing; it says nothing
-about behavior, which is where the Claude Code half lives.
+### Claude Code 2.1.251 — harness + runtime; the security cluster lands where this repo has no enforcement
 
-**This entry is not a review.** The next turn must re-read
-`https://github.com/anthropics/claude-code/blob/v2.1.250/CHANGELOG.md` (and the
-SDK's `0.3.250` section) once the tag lands, and replace this with a real
-assessment. Recording it as reviewed would retire it from the briefing
-permanently — the ledger's header advances to `0.3.250`/`2.1.250` because the
-`run` script needs a single high-water mark, so this note is the only thing
-keeping the obligation visible.
+~75 items, including the largest batch of security fixes this ledger has
+recorded. The single most useful thing to state about them is the frame:
+
+**Nothing here runs with permission enforcement on.** Box agents run
+`permissionMode: "bypassPermissions"` (`src/core/agent/run.ts`), and worker
+sessions launch with `--dangerously-skip-permissions`
+(`bin/launch-worktree-session`). Checked for permission rules that would make
+these fixes bite: `.claude/settings.json`, `beebox/.claude/settings.json`
+and `.claude/settings.local.json` declare **no `deny` rules at all**, and the
+user-level settings declare none either. So the permission-boundary fixes below
+are not protections this repo was relying on and lost, nor protections it now
+gains — they are enforcement this repo deliberately does not use. The exception
+is the boxholder's own interactive sessions, which do run under prompts; that is
+the only place these matter here, and the installed CLI is still **2.1.247**, so
+they are unfixed on this machine until it auto-updates.
+
+- **The security cluster, for the record:** file tools (Read, Write, Edit)
+  followed a symlink swapped inside the working directory *after* the permission
+  check, so a read or write could land outside the approved location (a TOCTOU
+  race needing an adversarial process on the machine — not this repo's threat
+  model); Grep and Glob did not apply `Read(...)` deny rules to files reached
+  through a symlinked search path; Bash permission checks auto-approved commands
+  assigning an arithmetic expression to an integer shell variable (`OPTIND=1/0`,
+  `RANDOM=2+2`); the Workflow tool read — and quoted in errors — a `scriptPath`
+  outside what the session may read before the permission check ran; plugin
+  commands declared in a marketplace entry could point outside the plugin
+  directory; and project settings could enable detailed beta tracing or raw API
+  body logging. Several settings-approval tightenings ship alongside
+  (`ANTHROPIC_CUSTOM_HEADERS` setting credential/routing headers, sandbox-TLS
+  and proxy-injection managed settings, sandbox output-file redirection).
+- **Checked and clear — the project-settings `env` restriction.** *"Changed
+  project-level `.claude/settings.json` `env` to no longer set
+  `CLAUDE_CONFIG_DIR`, `CLAUDE_CODE_TMPDIR`, or `TMPDIR`/`TMP`/`TEMP`."* This is
+  the one item in the release that could have silently broken this repo, since a
+  project `env` block that stops taking effect fails quietly. It does not:
+  `.claude/settings.json` and `beebox/.claude/settings.json` have empty
+  `env` blocks, and `.claude/settings.local.json` sets only `PATH`, which is
+  unaffected. Nothing in `bin/`, `.claude/` or `schedules/` sets any of the
+  three restricted variables.
+- **Runtime — the wedge worth knowing about.** *"Fixed conversations getting
+  stuck on 'text content blocks must be non-empty' errors after a turn where the
+  model produced only thinking."* A stuck conversation is a chat thread that
+  fails every turn from then on, which in this product is boxholder-visible
+  breakage rather than a transient error. Considered for act-now and **not**
+  taken, on the same reasoning as the last turn's token-refresh fix: no
+  occurrence has been observed here, and `0.3.251` was nine hours old. It
+  arrives 2026-08-30 on the settled path. If a box chat thread starts failing
+  every turn before then, this is the first thing to check.
+- **Runtime — structurally possible, not reachable.** *"Fixed session
+  transcripts being silently overwritten when a directory change relocated a
+  session onto an existing same-ID transcript."* Silent transcript loss matters
+  here because chat history *is* the transcript. `agent/index.ts:114` passes
+  `cwd` per **invoke**, not per agent, so resuming one session under a different
+  cwd is structurally allowed — and that is exactly the relocation this bug
+  punishes. It is not reachable today: no caller anywhere in `beebox/src`
+  passes `cwd` at all, so every invoke falls back to `boxRoot` and the value is
+  constant for the life of a session. Worth remembering if a caller ever starts
+  varying it.
+- **Harness — worktree editing, again.** *"Fixed background sessions and their
+  subagents being unable to edit files inside a git worktree they created with
+  `git worktree add`."* Same family as v2.1.218's worktree git isolation, which
+  broke `/finish` here for days. This repo is not exposed the same way — a
+  session creates a worktree through the `WorktreeCreate` hook and
+  `bin/workstreams create`, and the *new* session works in it rather than the
+  creating one — but the pattern of worktree-scoped capability regressions
+  landing without warning is now a three-release trend.
+- **Additive for hooks:** new `PreModelSwitch` / `PostModelSwitch` hook events
+  (block, confirm or annotate a model switch), and `SessionStart` resume hooks
+  now receive session staleness and estimated re-cache cost. This repo's
+  `SessionStart` hook (`.claude/hooks/session-start-registry.sh`) reads the
+  fields it needs and ignores the rest, so the added input is harmless; the
+  staleness signal is there if resume behavior ever needs tuning.
+- **Also changed, worth knowing:** `CLAUDE_CODE_SUBAGENT_MODEL` now sets the
+  *default* subagent model rather than overriding everything (an agent
+  definition's `model:` and an explicit per-spawn model win) — nothing here sets
+  it; per-model `/effort` defaults; the native binary is ~7.5 MB smaller; and
+  `claude ultrareview` / `/ultrareview` now stop early when the cloud session
+  fails to start instead of waiting the full 30 minutes.
+- **Action:** Nothing to adjust. Settled path.
+- **Sources:** [Claude Code 2.1.251](https://github.com/anthropics/claude-code/blob/v2.1.251/CHANGELOG.md#21251)
+
+### 0.3.250 / Claude Code 2.1.250 — reviewed 2026-08-28 (the previous turn's obligation, discharged)
+
+The last turn recorded these as **unreviewable** rather than reviewed: at that
+point neither had a changelog section, a git tag or a GitHub release. Both have
+since landed, and the answer is anticlimactic — **2.1.250 says only "Bug fixes
+and reliability improvements"**, and the SDK's `0.3.250` says only "parity with
+Claude Code v2.1.250". (`0.3.249` also now has a changelog section, for a
+Claude Code 2.1.249 that was likewise never tagged; the SDK version itself was
+never published to npm.)
+
+So the release was genuinely opaque rather than merely undocumented-yet, and the
+previous turn's byte-identical `sdk.d.ts` comparison against `0.3.248` remains
+the only substantive thing known about it: no public type surface changed.
+Nothing to assess on either channel. The obligation is discharged; no further
+re-read is owed.
 
 ### 0.3.248 — pending (published 2026-08-27T20:37Z, ~3h at this turn)
 
 - **Upstream:** One item: a per-server `timeout` for SDK-hosted MCP servers
   (`createSdkMcpServer({ timeout })`), overriding `MCP_TOOL_TIMEOUT` for that
   server's tool calls.
-- **beebox applicability (runtime):** None. beebox calls
+- **BeeBox applicability (runtime):** None. beebox calls
   `createSdkMcpServer` nowhere — it hosts no in-process MCP server, and
   `src/core/agent/run.ts` passes no `mcpServers`. The itemized SDK content is
   therefore empty for us, and everything that matters in this version is the
@@ -166,7 +250,7 @@ upstream but **not yet present on this machine**.
   one issue filed.
 - **Sources:** [Claude Code 2.1.248](https://github.com/anthropics/claude-code/blob/v2.1.248/CHANGELOG.md#21248)
 
-### 0.3.247 — pending (published 2026-08-26T18:05Z, ~29h at this turn)
+### 0.3.247 — APPLIED 2026-08-28 (published 2026-08-26T18:05Z)
 
 - **Upstream:** Two items. An optional `ambient` flag on `task_started`,
   `task_notification` and `background_tasks_changed` entries, "so hosts can
@@ -174,7 +258,7 @@ upstream but **not yet present on this machine**.
   `permissionMode` on per-turn `system/init` frames reported the mode at turn
   start rather than the live mode, so a mode switch right after submitting sent
   a stale value.
-- **beebox applicability (runtime):** The `ambient` flag lands squarely on
+- **BeeBox applicability (runtime):** The `ambient` flag lands squarely on
   code beebox already wrote, and reading the shipped types rather than the
   changelog line is what made it assessable. Pulled `0.3.247`'s `sdk.d.ts`:
   `ambient` is documented as "true for housekeeping tasks the CLI does not
@@ -196,10 +280,14 @@ upstream but **not yet present on this machine**.
   `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md`.
   The `permissionMode` fix does not apply: `src/core/agent/run.ts` sets
   `permissionMode: "bypassPermissions"` once and never switches mid-session.
-- **beebox applicability (harness):** None from the SDK side.
-- **Action:** Settled path — nothing act-now. Takeable 2026-08-28, and worth
-  taking deliberately: the filed issue needs `ambient`. Still pending as of
-  2026-08-27; re-read at that turn and nothing changed.
+- **BeeBox applicability (harness):** None from the SDK side.
+- **Action:** Applied 2026-08-28 on the settled path (~54h old), the newest
+  settled version — the deliberate take flagged two turns running, since
+  `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md` needs
+  `ambient`. That issue is no longer blocked on the pin.
+  `pnpm -C beebox test`: **8,402 pass, 0 fail** (a 13-minute run against
+  the usual 3-4, from machine contention rather than anything in the release).
+  `sdk-steering-probe`: all four steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03247)
 
 ### Claude Code 2.1.247 — harness only (no SDK pin of its own; bundled by 0.3.247)
@@ -279,7 +367,7 @@ tag before recording one as opaque.
   option. And `perTaskStopAffordance`: with it set, `interrupt()` aborts only
   the current turn and leaves background agents and workflows running;
   without it — and always for one-shot string prompts — they stop with it.
-- **beebox applicability (runtime):** `perTaskStopAffordance` is the one
+- **BeeBox applicability (runtime):** `perTaskStopAffordance` is the one
   that matters. beebox calls `interrupt()` on the chat stop path
   (`src/core/chat/session/index.ts:374`, via
   `webapp/trpc/routers/chat-control-procedures.ts:212`), in
@@ -295,7 +383,7 @@ tag before recording one as opaque.
   reads the on-disk transcript. `costBasis` and `modelPricing` are additive:
   beebox budgets with `maxBudgetUsd` but reads no cost fields, and sets
   no managed settings.
-- **beebox applicability (harness):** None. `perTaskStopAffordance` is an
+- **BeeBox applicability (harness):** None. `perTaskStopAffordance` is an
   SDK option; worker sessions are unaffected.
 - **Action:** Applied 2026-08-27 on the settled path (~52h old), the newest
   settled version. `pnpm -C beebox test`: **8,386 pass, 0 fail**.
@@ -329,7 +417,7 @@ touches. What is actually relevant here, in order:
   **not** exposed. `.claude/hooks/worktree-create.sh` deliberately does not
   forward Claude Code's proposed `<repo>/.claude/worktrees/<name>` path — it
   hands creation to `bin/workstreams create`, which places worktrees as
-  siblings of the monorepo (`~/src/beebox-worktrees/`, `~/src/box-worktrees/`)
+  siblings of the monorepo (`~/src/callback-worktrees/`, `~/src/box-worktrees/`)
   because beebox's `file:../personal-vibe-check` dep only resolves there.
   No repo worktree has ever lived under the swept directory.
 - **Bash permission checks on malformed commands.** *"Fixed Bash permission
@@ -384,7 +472,7 @@ touches. What is actually relevant here, in order:
 - **Upstream:** SDK says only "parity with Claude Code v2.1.245". 2.1.245 is a
   single-line release: *"Fixed a crash on startup on Linux distributions that
   ship glibc 2.44 (for example Arch Linux, CachyOS and Fedora Rawhide)."*
-- **beebox applicability:** None on either channel. The boxholder's
+- **BeeBox applicability:** None on either channel. The boxholder's
   machine is macOS and the prod server is Debian-family, well below glibc 2.44.
   Recorded so the parity line is not mistaken for something unread.
 - **Action:** Never installed on its own — `0.3.246` settled first and the
@@ -414,7 +502,7 @@ missing version.
   PDF results now deliver the `document` block (or page `image` blocks for
   `pages` reads) **inside** the `tool_result` content instead of as a separate
   `user` message after it.
-- **beebox applicability (runtime):** This is the batch's only release
+- **BeeBox applicability (runtime):** This is the batch's only release
   that touches shapes beebox parses.
   - *PDF result shape.* Boxes hold PDF cards (the `document` → `pdf` card-type
     migration is in `src/core/migrations.ts`), so box agents do read PDFs.
@@ -438,7 +526,7 @@ missing version.
     connected forever; now it reconnects or fails visibly. Correctness, arrives
     with the pin, no code change.
   - `queued_turn_count` is additive; the chat session tracks its own queue.
-- **beebox applicability (harness):** 2.1.243 itself is mostly
+- **BeeBox applicability (harness):** 2.1.243 itself is mostly
   configuration and `/usage` surface — a Loops breakdown in `/usage`, a
   `modelPicker` setting, `promptCacheTtl`/`subagentPromptCacheTtl` (explicitly
   for API-key and cloud-provider users, which this account is not), a
@@ -462,7 +550,7 @@ missing version.
   2.1.241. So this is a published version whose contents are not documented
   anywhere, the third such pin in a short run (2.1.240 and 2.1.241 both said
   only "bug fixes and reliability improvements").
-- **beebox applicability:** Nothing assessable on either channel.
+- **BeeBox applicability:** Nothing assessable on either channel.
 - **Action:** Never installed on its own — `0.3.243` settled in the same turn
   and the updater takes the newest settled version, so the pin stepped straight
   over it. Its (undocumented) contents are included in the current pin.
@@ -478,7 +566,7 @@ missing version.
   releases is exactly when a harness change like v2.1.218's worktree isolation
   could pass through unremarked, and the only defense is noticing behavior
   afterward rather than reading about it first.
-- **beebox applicability:** Nothing assessable on either channel.
+- **BeeBox applicability:** Nothing assessable on either channel.
 - **Action:** Applied 2026-08-25 on the settled path (~71h old) — it was the
   only version past the two-day window. `pnpm -C beebox test`: 7,866 pass,
   27 fail, all 27 in `test/webapp/login-redirect.doctest.md` and
@@ -569,7 +657,7 @@ CLI before editing.
   literal text on Bedrock/Vertex/Foundry/gateway providers. A repeated
   `initialize` on a running process is now followed by a
   `background_tasks_changed` snapshot.
-- **beebox applicability (runtime):**
+- **BeeBox applicability (runtime):**
   - **Both cost changes land on a value beebox records.**
     `scan-vision-claude.ts` reads `result.total_cost_usd` per scan batch (and
     `toBatchUsage` reads `result.usage`). The 1.1× data-residency multiplier
@@ -578,16 +666,16 @@ CLI before editing.
     than a turn-end snapshot. Neither breaks anything — but any comparison of
     scan costs recorded across this pin boundary is apples-to-oranges, which is
     worth knowing before reading a cost trend as a regression.
-  - `SYSTEM_PROMPT_DYNAMIC_BOUNDARY`: inert. beebox passes
+  - `SYSTEM_PROMPT_DYNAMIC_BOUNDARY`: inert. BeeBox passes
     `systemPrompt: { type: "preset", preset: "claude_code", append: … }`
     (`src/core/agent/run.ts`), not an array, and talks to the Anthropic API
     directly rather than through Bedrock/Vertex/Foundry/a gateway.
   - The `background_tasks_changed`-after-repeated-`initialize` item continues the
     thread from `0.3.238`: it further confirms the SDK expects hosts that
-    re-`initialize` a running process. beebox still is not one — its warm
+    re-`initialize` a running process. BeeBox still is not one — its warm
     pool hands the already-initialized `Query` to `buildRunFromQuery` — so both
     items remain inert here for the same reason.
-- **beebox applicability (harness):**
+- **BeeBox applicability (harness):**
   - `Fixed WebFetch retaining expired page content in memory for the whole
     session instead of the intended 15 minutes` — a real memory fix in a tool
     box agents can use, and resident box sessions are exactly where per-session
@@ -634,10 +722,10 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   the response now reports `hooks_applied`. Fixed
   `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION` near-limit behavior. Changed
   `vcs_state_changed` push events to emit one event per pushed branch.
-- **beebox applicability (runtime):**
+- **BeeBox applicability (runtime):**
   - **The hook-callbacks-after-re-`initialize` fix is the one worth thinking
     about, and it looks inert here — but the reasoning is worth writing down
-    because the blast radius would be large if wrong.** beebox registers
+    because the blast radius would be large if wrong.** BeeBox registers
     hooks on every query: `PreToolUse: [gitMvNudgeHook()]` plus the local
     harness plugin in `src/services/claude-chat.ts`, and
     `PreToolUse`/`PostToolUse` (git-mv nudge + card validator) in
@@ -667,7 +755,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
     `UserPromptExpansion` hook), `command_lifecycle: refused` (no cross-session
     messaging), `vcs_state_changed` per-branch push events (still unconsumed
     anywhere in `src/`), and the prompt-suggestion env var (unused).
-- **beebox applicability (harness):**
+- **BeeBox applicability (harness):**
   - **`Fixed unbounded memory growth in long interactive sessions: subagent tool
     results are now released once they leave the recent display window`** — the
     headline memory item, but it is scoped to *interactive* sessions and a
@@ -703,7 +791,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   v2.1.237". Claude Code 2.1.237 is two items: prompt caching fixed for sessions
   using an LLM gateway or custom base URL, and a new built-in "Concise" output
   style that leads with results and skips preamble.
-- **beebox applicability:** Nothing on either channel. beebox talks
+- **BeeBox applicability:** Nothing on either channel. BeeBox talks
   to the Anthropic API directly, with no gateway or custom base URL, so the
   caching fix does not apply; the output style is an interactive `/config`
   preference with no SDK or repo surface. **Published 2026-08-19T23:58Z, only
@@ -722,7 +810,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   `hookSpecificOutput.classifierContext`, a short host-asserted note about a tool
   call's result that the auto mode permission classifier reads alongside that
   result. The bundled Claude Code 2.1.236 is large; its relevant items are below.
-- **beebox applicability (runtime):**
+- **BeeBox applicability (runtime):**
   - **`classifierContext` lands on a shape beebox already builds.**
     `src/core/sdk-hooks.ts` returns `hookSpecificOutput` with
     `hookEventName: "PostToolUse"` today (the card-validator hook, registered in
@@ -754,7 +842,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
     clipboard copy, background housekeeping, background sessions, and local MCP
     logs breaking after a session's working directory is removed; and skills
     hot-reload in SDK sessions erroring on every skills change after the
-    session's cwd was deleted. beebox deletes box directories out from
+    session's cwd was deleted. BeeBox deletes box directories out from
     under sessions in exactly one place — worktree teardown removing the cloned
     box (`bin/lib/worktree-teardown.sh`, `bin/worktrees sweep`) — so the
     exposure is dev-environment only; prod box directories are not deleted.
@@ -763,7 +851,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
     cross-session `SendMessage` (unused), the macOS sandbox wildcard read-deny
     precedence fix (no sandbox rules configured), and the WSL/`powershell.exe`
     subprocess fix (a 2.1.234 regression, Windows-only).
-- **beebox applicability (harness):** Mostly TUI. Worth knowing:
+- **BeeBox applicability (harness):** Mostly TUI. Worth knowing:
   auto mode now sets aside `Monitor` allow rules so Monitor commands are
   reviewed like Bash; the auto mode git-status check can no longer be fooled by
   `status.showUntrackedFiles=no` into reporting a clean tree; a slash-command
@@ -791,7 +879,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   `/ultrareview` run in the background, and an embedded-`grep` improvement in
   native macOS/Linux builds where pathological patterns now fail fast instead of
   exhausting memory.
-- **beebox applicability (runtime):** Nothing act-now. The
+- **BeeBox applicability (runtime):** Nothing act-now. The
   `subagent_type` fix is inert — beebox defines no custom agents for box
   sessions (no `agents/` in `beebox/templates`, and no `subagent_type` or
   `agentType` anywhere in `src/`), so box agents get the default agent set. The
@@ -807,7 +895,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
     handle leak and 2.1.229's whitespace-only 400. With `0.3.234`/`0.3.235` both
     settling within a day, waiting costs one turn. If a box agent is ever seen
     dying on memory during a search, start here.
-- **beebox applicability (harness):** Two permission-dialog fixes are
+- **BeeBox applicability (harness):** Two permission-dialog fixes are
   worth noting for the boxholder's own interactive sessions, since both prevent
   granting *more* than intended: Shift+Tab in the comment field no longer
   silently grants session-wide edit permission, and "don't ask again" is now
@@ -837,7 +925,7 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   `origin` injected by the host may declare the sending session's permission
   class (`fromMode`). `SDKSystemMessage` (`system`/`init`) gains an optional
   `effort` field, set on Remote Control bridge init frames.
-- **beebox applicability (runtime):** **The breaking change does not bite
+- **BeeBox applicability (runtime):** **The breaking change does not bite
   here** — checked before bumping rather than after: `ExitReason`,
   `bypass_permissions_disabled`, and `ApiKeySource` appear nowhere in
   `beebox/src`, `beebox/scripts`, or `bin/`. The rest is inert too:
@@ -846,9 +934,9 @@ Moving the run ~3h later, or treating the window as 45h, would close it.
   additive — `adaptSdkMessage` (`src/core/chat/session/messages.ts`) forwards
   only `session_id` from an init message. So `0.3.234` should be an ordinary
   settled bump next turn.
-- **beebox applicability (harness) — one item worth keeping:**
+- **BeeBox applicability (harness) — one item worth keeping:**
   **`CLAUDE_CODE_PROJECT_DIR_NAME`** (new in 2.1.234) lets a host choose a short
-  name for the per-project transcript directory. beebox *derives* that
+  name for the per-project transcript directory. BeeBox *derives* that
   directory name itself: `encodeProjectDir`
   (`src/core/chat/session/transcript-paths.ts`) reproduces Claude Code's
   "replace every non-alphanumeric with `-`" encoding of the cwd, and
@@ -908,8 +996,8 @@ clean tree, and a single long-lived uncommitted file stalls it indefinitely.
   `\??\` device-prefix path-validation fix (NTLM credential-leak vector), and a
   **revert of 2.1.232's Bash permission changes** for Cygwin-style symlinks and
   input redirections (`< file`).
-- **beebox applicability (runtime):** The todo-tool removal was checked
-  rather than assumed and is **inert here**. beebox never asks for those
+- **BeeBox applicability (runtime):** The todo-tool removal was checked
+  rather than assumed and is **inert here**. BeeBox never asks for those
   tools: `buildQueryOptions` (`src/core/agent/run.ts`) and
   `src/services/claude-chat.ts` pass no `tools`/`allowedTools` at all, and the
   one place that does set an explicit surface — `OPERATOR_TOOLS` in
@@ -918,7 +1006,7 @@ clean tree, and a single long-lived uncommitted file stalls it indefinitely.
   concept. Notification hooks are also inert: beebox registers only
   `PreToolUse`/`PostToolUse` (`run.ts`), and runs `bypassPermissions`, so there
   are no pending permission prompts to notify about.
-- **beebox applicability (harness):** The todo-tool removal **does** land
+- **BeeBox applicability (harness):** The todo-tool removal **does** land
   here — worker sessions on Opus/Sonnet 5 lose `TodoWrite` and the `Task*` tools
   from their default surface, changing how agents track multi-step work in this
   repo. `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` restores them if that turns out to
@@ -942,15 +1030,15 @@ clean tree, and a single long-lived uncommitted file stalls it indefinitely.
   (new `SDKContextUsage` type). `vcs_state_changed` events now populate `branch`
   for push operations. The bundled Claude Code 2.1.232 is a large release; its
   beebox-relevant items are below.
-- **beebox applicability (runtime):** All three SDK changes are inert —
+- **BeeBox applicability (runtime):** All three SDK changes are inert —
   `tool_use_result`, `context_usage`, `SDKContextUsage`, and `vcs_state_changed`
   appear nowhere in `beebox/src`. Note the `tool_use_result` shape change
   is *not* the same thing as the Anthropic `tool_result` **content block** that
   beebox does consume (`src/core/agent/render.ts`,
   `src/cli/lib/session-content.ts`, the frontend `SessionLog`); those are
-  unaffected. beebox also configures no MCP servers, so subagent MCP
+  unaffected. BeeBox also configures no MCP servers, so subagent MCP
   results do not arise.
-- **beebox applicability (harness) — two items worth keeping:**
+- **BeeBox applicability (harness) — two items worth keeping:**
   - **Subagent forking is now on by default**: a `subagent_type: "fork"`
     subagent inherits the full conversation and prompt cache, and non-teammate
     agent spawns in interactive sessions now run in the background by default.
@@ -1039,7 +1127,7 @@ one.
   The itemized content is Claude Code 2.1.231's single fix: MCP OAuth sign-in
   failing with a redirect URI mismatch for servers that use a pre-registered
   OAuth client, such as Slack.
-- **beebox applicability:** Nothing on the runtime channel — beebox
+- **BeeBox applicability:** Nothing on the runtime channel — beebox
   configures no `mcpServers` (still true as of this turn). On the harness
   channel it only affects a boxholder session signing in to a pre-registered
   MCP OAuth server; no repo surface, nothing to adjust.
@@ -1067,7 +1155,7 @@ and a caution against reading the changelog as the list of installable versions.
   with `terminal_reason` `"api_error"` instead of `"image_error"`, with
   `StopFailure` `error_details` of `"request_body_over_limit: …"`. It also
   carries Claude Code 2.1.229, a large release whose relevant items are below.
-- **beebox applicability (runtime):**
+- **BeeBox applicability (runtime):**
   - `terminal_slash_commands` on system/init is additive and inert here —
     `adaptSdkMessage` (`src/core/chat/session/messages.ts`) forwards only
     `session_id` from a `system`/`init` message.
@@ -1084,7 +1172,7 @@ and a caution against reading the changelog as the list of installable versions.
     routes return text to the client, which then posts it through that same
     guarded route. Not act-now for that reason alone.
   - **`Fixed a file-watcher handle leak after atomic file replacements`
-    (2.1.229) — the item to watch.** beebox replaces files atomically
+    (2.1.229) — the item to watch.** BeeBox replaces files atomically
     everywhere (`writeFileAtomic`, `src/lib/atomic-write.ts`, described in
     CLAUDE.md as the write every small state store uses), and prod runs resident
     `bbx hub` + per-box `bbx serve` with long-lived agent sessions — the shape
@@ -1105,7 +1193,7 @@ and a caution against reading the changelog as the list of installable versions.
     normal.
   - Vertex/Bedrock SSE keepalives and the `ANTHROPIC_BASE_URL` gateway fixes do
     not apply — beebox talks to the Anthropic API directly.
-- **beebox applicability (harness):**
+- **BeeBox applicability (harness):**
   - **`Changed /commit-push-pr so git/gh commands with dangerous flags
     (--force, --amend, --no-verify, etc.) are no longer auto-approved`.** This is
     the 2.1.218-class item in the release, so it was checked directly: **no
@@ -1178,8 +1266,8 @@ apply. Recorded because several items land squarely on this repo's workflow.
 - **Upstream:** One change, and it is a real API item rather than a parity
   line: agent tool results (`AgentOutput`) now carry through
   `usage.output_tokens_details`.
-- **beebox applicability (runtime):** Additive, nothing act-now, but it
-  lands on a surface already flagged in this ledger. beebox's token
+- **BeeBox applicability (runtime):** Additive, nothing act-now, but it
+  lands on a surface already flagged in this ledger. BeeBox's token
   accounting reads `result.usage` in `toBatchUsage`
   (`src/services/scan-vision-claude.ts`) and aggregates JSONL assistant-message
   usage in `src/core/usage.ts`; neither consumes agent-tool (`AgentOutput`)
@@ -1187,7 +1275,7 @@ apply. Recorded because several items land squarely on this repo's workflow.
   with the `usage` vs `modelUsage` note in the 0.3.223 entry, this is the second
   piece of the same picture: cost accounting here undercounts anything outside
   the main loop. No behavior changes by upgrading.
-- **beebox applicability (harness):** Nothing — no CLI behavior claimed.
+- **BeeBox applicability (harness):** Nothing — no CLI behavior claimed.
 - **Action:** Published 2026-08-11T17:49Z. A direct bump to it on 2026-08-14 was
   reverted on a test failure that did not reproduce (see the validation note
   above); applied 2026-08-15, carried in by the settled bump to `0.3.231`.
@@ -1205,10 +1293,10 @@ apply. Recorded because several items land squarely on this repo's workflow.
   improved the slash-command menu's selection highlighting and glyph handling;
   improved performance with fewer event-loop stalls on file-not-found
   suggestions and at-mention size checks.
-- **beebox applicability (runtime):** Nothing. No API surface changed, and
+- **BeeBox applicability (runtime):** Nothing. No API surface changed, and
   none of the fixes touch the query, message-adaptation, or hook paths
   beebox uses.
-- **beebox applicability (harness):** Effectively nothing to act on.
+- **BeeBox applicability (harness):** Effectively nothing to act on.
   - The `claude-code-action` fix does not apply: this repo's only GitHub
     workflow is `.github/workflows/pages.yml`, and nothing references
     `claude-code-action` or `allowed_non_write_users`.
@@ -1245,7 +1333,7 @@ outstanding work — it is durable evidence.
   pin.
 - **2.1.225 — cross-session messages parked without notice or expiry in headless
   sessions and during startup.** Pairs with the `crossSessionInbound` note in
-  the 0.3.224 entry below. beebox sends no cross-session messages today,
+  the 0.3.224 entry below. BeeBox sends no cross-session messages today,
   so this is latent, not active.
 - **2.1.224 — removed the 200-subagent-per-session spawn cap.** Concurrency and
   depth limits still apply. Relevant to this repo's heavy fan-out worker
@@ -1269,7 +1357,7 @@ outstanding work — it is durable evidence.
 - **Upstream:** "Updated to parity with Claude Code v2.1.226." The matching
   Claude Code 2.1.226 entry says only "Bug fixes and reliability improvements" —
   no itemized changes to evaluate.
-- **beebox applicability:** Nothing specific to assess. The parity target
+- **BeeBox applicability:** Nothing specific to assess. The parity target
   names no behavior beebox depends on, and the release adds no API
   surface. Nothing relevant, nothing act-now.
 - **Action:** Published 2026-08-08T01:48Z. Deliberately not taken in the
@@ -1288,13 +1376,13 @@ outstanding work — it is durable evidence.
 - **Upstream:** Single fix — background subagents in headless/SDK sessions never
   resumed when a background shell command or Monitor they had left running
   completed, so the subagent never saw the result. No Claude Code parity claim.
-- **beebox applicability:** **Act-now correctness fix, directly in
+- **BeeBox applicability:** **Act-now correctness fix, directly in
   beebox's execution shape.** Every beebox query is a headless SDK
   session (`src/core/agent/run.ts`, `src/services/claude-chat.ts`), and none of
   them restrict the toolset — `buildQueryOptions` sets `permissionMode`,
   `maxTurns`, hooks, and system-prompt options but passes no `allowedTools`/
   `disallowedTools`, so box agents have Task and background Bash available and
-  can hit this. beebox also actively surfaces background-task lifecycle
+  can hit this. BeeBox also actively surfaces background-task lifecycle
   events in the chat UI: `adaptTaskMessage`
   (`src/core/chat/session/messages.ts`) normalizes `task_started`,
   `task_progress`, `task_updated`, and `task_notification` into `task`
@@ -1327,7 +1415,7 @@ outstanding work — it is durable evidence.
   another project's session directory under a shared sanitized prefix, so
   session list/get/rename/tag/fork/delete and `/resume` no longer cross
   projects. No Claude Code parity claim.
-- **beebox applicability:** One genuinely adjacent fix, but not reachable;
+- **BeeBox applicability:** One genuinely adjacent fix, but not reachable;
   the rest is unused surface.
   - Cross-project session directories: this is the closest thing to a
     correctness fix for beebox, because beebox owns the same
@@ -1374,8 +1462,8 @@ outstanding work — it is durable evidence.
   main-loop-only and per-turn while `modelUsage` is cumulative across the whole
   query pipeline and is the field intended for cost accounting. No Claude Code
   parity claim in this release.
-- **beebox applicability:** Nothing breaking and nothing act-now.
-  - `resumeSessionAt`/`resumeDropsTurn`: unused. beebox resumes by
+- **BeeBox applicability:** Nothing breaking and nothing act-now.
+  - `resumeSessionAt`/`resumeDropsTurn`: unused. BeeBox resumes by
     session id (`resumeSessionId` in `src/core/chat/session/start-run.ts`) and
     never truncates a resume, so the new option does not apply.
   - `system/permission_denied`: beebox passes no `canUseTool`, so it is a
@@ -1412,7 +1500,7 @@ outstanding work — it is durable evidence.
 - **Upstream:** Fixed `query({ sessionStore, resume })` dropping user settings
   in the resumed subprocess. The bundled Claude Code 2.1.222 also included
   security, connection-handling, hook-policy, and reliability fixes.
-- **beebox applicability:** beebox does not use `sessionStore`, so
+- **BeeBox applicability:** BeeBox does not use `sessionStore`, so
   the SDK-specific fix does not touch its resume path. No beebox API or
   message adaptation changed.
 - **Action:** Applied in the `0.3.220` to `0.3.222` bump.
@@ -1424,7 +1512,7 @@ outstanding work — it is durable evidence.
   `mcpServers` missing the first turn. The bundled Claude Code 2.1.221 included
   the matching headless MCP connection fix plus broader security and reliability
   changes.
-- **beebox applicability:** beebox passes neither the `skills`
+- **BeeBox applicability:** BeeBox passes neither the `skills`
   option nor external `mcpServers`, so the SDK-specific changes do not affect
   its current query setup. Keep this entry as a pointer if beebox later
   starts configuring either surface.
@@ -1436,7 +1524,7 @@ outstanding work — it is durable evidence.
 - **Upstream:** Updated the SDK to parity with Claude Code 2.1.220. That bundled
   CLI already included the 2.1.208 fix for unbounded memory growth from large
   tool-result payloads in long-running headless and SDK sessions.
-- **beebox applicability:** The headless memory fix directly matches
+- **BeeBox applicability:** The headless memory fix directly matches
   beebox's resident chat execution shape. Binary verification confirms
   SDK 0.3.220 bundled Claude Code 2.1.220, so the fix was already present at the
   old pin; the later 0.3.222 bump did not introduce it. Keep this correction in
