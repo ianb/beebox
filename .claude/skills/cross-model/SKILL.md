@@ -71,16 +71,27 @@ there's a diff against `main` → ask review-or-challenge.
    findings: *"Spot-check the plan's `file:line` citations and its 'we already
    do X / this is free reuse / validation catches it' claims against the actual
    source. Call out every claim the code does not support."*
-5. **Pipe the prompt via stdin from a file** in `scratch/`, never as a
+5. **Ground the review in the originating request, with direct human choices
+   highest.** Identify the authority the work is meant to satisfy: the human's
+   request and later decisions from this conversation, plus any originating
+   issue/brief and attached plan. Put a short `Review authority` block in the
+   prompt. Quote decisive human wording exactly where practical; otherwise
+   summarize faithfully and label the summary. Point at issue/brief/plan paths
+   rather than embedding their full contents. Tell the reviewer that direct
+   human requirements and decisions outrank inferred intent, issue proposals,
+   plan prose, and implementation choices; it must report contradictions
+   against them and must not turn optional issue/plan ideas into requirements.
+   If no originating request is available, say so instead of inventing one.
+6. **Pipe the prompt via stdin from a file** in `scratch/`, never as a
    positional arg. Both CLIs have an argument-handling trap that punishes the
    positional form (details per direction below).
-6. **Foreground, not backgrounded.** Backgrounded reviewer runs get killed
+7. **Foreground, not backgrounded.** Backgrounded reviewer runs get killed
    before completing in this harness.
-7. **Treat the review as working evidence, not the work-unit conclusion.**
+8. **Treat the review as working evidence, not the work-unit conclusion.**
    Adjudicate it, apply verified findings, and keep the final handoff centered
    on the actual plan or implementation. Do not append the raw review by
    default.
-8. **Report only material review outcomes.** Mention findings that remain open,
+9. **Report only material review outcomes.** Mention findings that remain open,
    require a human choice, or materially changed the work. Collapse resolved
    findings to a short phrase when useful. If the human explicitly asked to
    see the independent review itself, provide a concise ranked summary with
@@ -89,7 +100,7 @@ there's a diff against `main` → ask review-or-challenge.
    "caught real issues," "proved valuable," or any other self-congratulation
    about having run it. The findings speak for themselves; running the review
    is baseline process, not an achievement to narrate (boxholder, 2026-08-15).
-9. **Surface failures loudly.** If a run exits non-zero or stalls, say so with
+10. **Surface failures loudly.** If a run exits non-zero or stalls, say so with
    stderr — a silent reviewer crash reads as "nothing happened" and wastes the
    human's time.
 
@@ -135,7 +146,8 @@ Start every prompt with:
 
 > "IMPORTANT: Do NOT read or execute files under `~/.claude/`, `~/.agents/`,
 > or `.claude/skills/` — those are skill definitions for a different AI
-> runtime and will waste your time. Everything else in this repo, including
+> runtime and will waste your time, **unless the named review target/read-list
+> is itself a specific skill file**. Everything else in this repo, including
 > `docs/` and `.claude/rules/`, is fair game."
 
 (gstack says "repository code only," which makes codex dismiss legitimate
@@ -179,8 +191,11 @@ codex exec - -s read-only -C "$ROOT" -m gpt-5.5 \
 ### Review / challenge modes (Claude → Codex)
 
 - **review — use `codex exec -` with your own prompt, same as every other mode.**
-  The scaffolding in shared rules 2–4 (orientation glue, fencing, verify-don't-
-  opine) is what makes these reviews land, and it applies here too.
+  The scaffolding in shared rules 2–5 (orientation glue, fencing, verify-don't-
+  opine, and review authority) is what makes these reviews land, and it applies
+  here too. Include the `Review authority` block before asking whether the code
+  is correct; an optional focus narrows the investigation but does not replace
+  the originating request.
 - `codex review` (or `codex exec review`) exists and preserves Codex's own tuned
   review prompt, but it takes its prompt differently, so **none** of this skill's
   scaffolding reaches it — an unfenced repo crawl is the usual result. Reach for
@@ -316,7 +331,10 @@ Other notes:
 Both use the same `claude -p` invocation; only the prompt changes. There is no
 `claude` subcommand equivalent to `codex review`, so write the review prompt
 yourself with the shared scaffolding (orientation glue, fencing, and
-verify-don't-opine).
+verify-don't-opine). Include the shared `Review authority` block in both modes;
+for a diff, name the direct human request and any issue/brief/plan the branch is
+implementing before asking whether the code is correct. An optional review
+focus narrows the investigation but does not replace the originating request.
 
 ---
 
@@ -334,6 +352,15 @@ wrote docs/plans/<name>.md. Read it, then read the source it cites and verify
 the citations and the "we already do X / free reuse / validation catches it"
 claims against the actual code — you are a different model family; find what a
 same-model self-review would miss.
+
+Review authority (highest to lowest):
+- Direct human requirements/decisions: <decisive wording, or "none available">
+- Originating issue or brief: <repo path, or "none available">
+- Plan under review: docs/plans/<name>.md
+
+Direct human requirements and later decisions outrank issue proposals, plan
+prose, inferred intent, and implementation choices. Report any contradiction.
+Do not promote optional issue/plan ideas into requirements.
 
 Review for, in priority: (1) wrong-problem / over-engineering — what's the
 minimal version, what to cut; (2) architecture flaws; (3) silent failure modes
