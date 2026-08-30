@@ -37,6 +37,7 @@ interface BrowseSidebarListProps {
   onNavigate: (path: string) => void;
   selectedFilePath: string | null;
   onFileContextMenu: (event: React.MouseEvent<HTMLButtonElement>, path: string) => void;
+  omitCardPath?: string;
 }
 
 export function BrowseSidebarList({
@@ -46,6 +47,7 @@ export function BrowseSidebarList({
   onNavigate,
   selectedFilePath,
   onFileContextMenu,
+  omitCardPath,
 }: BrowseSidebarListProps) {
   if (loading) {
     return <div className="p-4 text-warm-600 text-sm">Loading...</div>;
@@ -75,7 +77,7 @@ export function BrowseSidebarList({
         </button>
       ))}
 
-      {data.cards.map((card) => {
+      {data.cards.filter((card) => card.relativePath !== omitCardPath).map((card) => {
         // A card with an `.attach/` scope behaves like a directory: the row
         // still opens the card in the detail panel, but a trailing chevron
         // navigates INTO the attach scope (presented as the card itself —
