@@ -13,7 +13,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
-import { apiFileUrl, isExternalUrl, type NavigateHint, type ViewTarget } from "../../lib/view-url";
+import { apiFileUrl, isExternalUrl, type ViewTarget } from "../../lib/view-url";
 import { resolveContentTarget } from "../../lib/view-url";
 import type { SessionRowItem } from "../session-pickers/SessionRow";
 import { Card } from "../ui/Card";
@@ -145,7 +145,7 @@ export function LandmarkLinks({
 }: {
   links: ResolvedLink[];
   boxSlug: string;
-  onNavigate?: (target: ViewTarget, hint?: NavigateHint) => void;
+  onNavigate?: (target: ViewTarget) => void;
   compact?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -183,7 +183,7 @@ export function LandmarkGroup({
 }: {
   group: ResolvedGroup;
   boxSlug: string;
-  onNavigate?: (target: ViewTarget, hint?: NavigateHint) => void;
+  onNavigate?: (target: ViewTarget) => void;
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -250,7 +250,7 @@ function LinkTile({
 }: {
   link: ResolvedLink;
   boxSlug: string;
-  onNavigate?: (target: ViewTarget, hint?: NavigateHint) => void;
+  onNavigate?: (target: ViewTarget) => void;
 }) {
   const display = link.label !== null && link.label.length > 0 ? link.label : link.title;
 
@@ -277,11 +277,7 @@ function LinkTile({
   const target = resolveContentTarget(undefined, link.ref);
   if (onNavigate !== undefined && target !== null) {
     return (
-      <button
-        type="button"
-        onClick={() => onNavigate(target, { label: display })}
-        className="block w-full text-left"
-      >
+      <button type="button" onClick={() => onNavigate(target)} className="block w-full text-left">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
           <Text as="div" size="xs" tone="muted" truncate>{link.ref}</Text>

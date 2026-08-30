@@ -17,11 +17,6 @@ import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import type { AddSelectionInput } from "../../lib/selection/position";
 import type { ActivityKind } from "@core/chat/card-activity.js";
-import { trpc } from "../../lib/trpc";
-import { LandmarkContextHeader } from "../landmarks/LandmarkContextHeader";
-import { Button } from "../ui/Button";
-import { Column } from "../ui/Column";
-import { Text } from "../ui/Text";
 
 /**
  * Countdown pill showing time remaining for an active schedule.
@@ -110,48 +105,6 @@ export interface PanelTab {
   label: string;
 }
 
-function CompanionLandmarkContext({
-  contextDir,
-  boxSlug,
-  onNavigate,
-}: {
-  contextDir: string | null;
-  boxSlug: string;
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-}) {
-  const landmarkQuery = trpc.landmarks.forDir.useQuery(
-    { dir: contextDir ?? "" },
-    { enabled: contextDir !== null },
-  );
-  if (contextDir === null) return null;
-  if (landmarkQuery.data?.landmark) {
-    return (
-      <LandmarkContextHeader
-        landmark={landmarkQuery.data.landmark}
-        boxSlug={boxSlug}
-        onNavigate={onNavigate}
-        collapseNavigationOnMobile
-      />
-    );
-  }
-  if (landmarkQuery.isError) {
-    return (
-      <Column gap="xs" className="border-b border-warm-200 p-4">
-        <Text as="div" size="sm" tone="danger">Could not load this chat&rsquo;s landmark.</Text>
-        <Button id="cb-panel-landmark-retry" size="sm" intent="secondary" onClick={() => void landmarkQuery.refetch()}>
-          Try again
-        </Button>
-      </Column>
-    );
-  }
-  if (!landmarkQuery.isLoading) return null;
-  return (
-    <div className="border-b border-warm-200 p-4" aria-busy>
-      <Text as="div" size="sm" tone="subtle">Loading landmark...</Text>
-    </div>
-  );
-}
-
 /**
  * Companion view panel shown alongside chat when one or more views are open.
  * Tabs are keyed by path: opening a file that's already open reactivates it
@@ -166,7 +119,6 @@ function CompanionViewPanelInner({
   onNavigate,
   onAddSelection,
   reportActivity,
-  contextDir,
 }: {
   tabs: PanelTab[];
   activePath: string;
@@ -177,8 +129,6 @@ function CompanionViewPanelInner({
   onAddSelection?: (selection: AddSelectionInput) => void;
   /** Report user activity on the active card to the chat accumulator. */
   reportActivity: (kind: ActivityKind, detail?: string) => void;
-  /** The chat's bound directory, whose landmark orients the open card. */
-  contextDir: string | null;
 }) {
   const { boxSlug } = useParams({ strict: false });
   // Tabs that have been activated at least once. We mount a tab's view on
@@ -259,9 +209,6 @@ function CompanionViewPanelInner({
           <CloseButton id="cb-panel-close" onClick={onClosePanel} label="Close companion view" size="sm" />
         </div>
       </div>
-      {boxSlug === undefined ? null : (
-        <CompanionLandmarkContext contextDir={contextDir} boxSlug={boxSlug} onNavigate={onNavigate} />
-      )}
       <div className="flex-1 min-h-0 relative">
         {tabs.map((tab) => {
           const isActive = tab.target.path === activePath;
