@@ -60,11 +60,12 @@ The reviewer is told to read the relevant history and diff itself, then inspect 
 
 Every finding carries severity, file/line when possible, a short description, and an action. `ask-user` covers product behavior, deliberate intent, and any remedy that would extend scope by adding durable state, schema changes, retries/background work, persistence, or a subsystem. `auto-fix` is reserved for non-user-visible correctness, reliability, security, performance, or mechanical-quality repairs that do not require an intent decision. `no-op` is informational. The reviewer also produces a low/medium/high risk assessment and rationale.
 
-The boxholder chose to carry three aspects into `.claude/skills/cross-model/SKILL.md` (2026-08-30), with exact prompt wording and placement left to a focused change:
+The boxholder chose to carry four aspects into `.claude/skills/cross-model/SKILL.md` (2026-08-30):
 
 1. Require one concrete state trace for new or changed logic.
 2. For a purported durable fix, reconstruct the failing sequence and required invariant, then inspect sibling paths and shared state transitions for the same reachable failure.
 3. Classify a finding by the scope of its smallest honest remedy. “The defect is real” and “the reviewer is authorized to add durable state, schema changes, retry/background/persistence machinery, or a subsystem to fix it” are separate judgments.
+4. Attach the review to its originating request, issue, or brief, giving direct human requirements and later decisions priority over inferred intent, issue proposals, plan prose, and implementation choices.
 
 ### Loop mechanics
 
@@ -86,15 +87,15 @@ The transferable invariant is “the mutation consumes the exact artifact that w
 
 ### Adopt — strengthen diff-review instructions around concrete failure traces
 
-Add three requirements to cross-model review/challenge mode: trace at least one concrete state through changed logic; reconstruct the failing sequence plus invariant for a claimed durable fix; and distinguish a source defect from the scope authorization required by its smallest honest remedy.
+Add four requirements to cross-model review/challenge mode: trace at least one concrete state through changed logic; reconstruct the failing sequence plus invariant for a claimed durable fix; distinguish a source defect from the scope authorization required by its smallest honest remedy; and ground the review in the originating request with direct human decisions as its highest authority.
 
-Concrete trace: boxholder decision, 2026-08-30; `.claude/skills/cross-model/SKILL.md` review/challenge prompts; and No Mistakes' `internal/pipeline/steps/review.go` at the reviewed commit. The exact wording still needs a focused design; this is not a request to import No Mistakes' automated loop. Filed as [`issues/features/2026-08-30-cross-model-review-concrete-traces.md`](../issues/features/2026-08-30-cross-model-review-concrete-traces.md).
+Concrete trace: boxholder decision, 2026-08-30; `.claude/skills/cross-model/SKILL.md` review/challenge prompts; and No Mistakes' `internal/pipeline/steps/review.go` at the reviewed commit. This is not a request to import No Mistakes' automated loop. Filed as [`issues/features/2026-08-30-cross-model-review-concrete-traces.md`](../issues/features/2026-08-30-cross-model-review-concrete-traces.md).
 
 ### Adopt — use exact-head language when reasoning about later mutations
 
 When a post-review step changes history or code, ask whether the delivered head is exactly the reviewed head, a permitted descendant with its own required checks, or unrelated/unprovable. This is a useful review vocabulary now, especially in future deploy-supersession work, and costs no new mechanism.
 
-Concrete trace: `.claude/skills/cross-model/SKILL.md` shared rules 7–9 and `.claude/agents/finish.md` steps 3 and 7.
+Concrete trace: `.claude/skills/cross-model/SKILL.md` shared rules 8–10 and `.claude/agents/finish.md` steps 3 and 7.
 
 ### Reject — replace cross-model pairing with an agent fallback chain
 
@@ -118,7 +119,7 @@ Concrete trace: boxholder decision, 2026-08-30; closed issue [`issues/closed/exp
 
 Keep deterministic format/lint fixes automated where already safe, but keep cross-model findings as evidence for the primary agent and user. No Mistakes itself now defaults review auto-fix to zero; its more autonomous test/document/lint repair loop is not a reason to blur our author/reviewer roles.
 
-Concrete trace: `.claude/skills/cross-model/SKILL.md` shared rules 7–8 and the boxholder's established “arrange context, do not automate judgment” direction.
+Concrete trace: `.claude/skills/cross-model/SKILL.md` shared rules 8–9 and the boxholder's established “arrange context, do not automate judgment” direction.
 
 ### Later — evaluate exact-head continuity in deploy supersession
 
