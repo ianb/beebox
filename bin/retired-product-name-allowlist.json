@@ -8,6 +8,8 @@
   { "path": "beebox/docs/name-history.md", "occurrenceClass": "old-domain", "expectedCount": 1, "reason": "The sole historical record maps the former public domain." },
   { "path": "issues/closed/decisions/2026-07-21-discussion-channel.md", "occurrenceClass": "old-domain", "expectedCount": 2, "reason": "The closed decision records the actual historical Zulip organization before the move to Discord." },
   { "path": "issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md", "occurrenceClass": "old-domain", "expectedCount": 3, "reason": "The closed implementation record preserves the actual historical Zulip URL while marking it superseded by Discord." },
+  { "path": "bin/lib/worktree-create.sh", "occurrenceClass": "kebab-name", "expectedCount": 8, "reason": "Worktree setup must recognize and migrate cloned box packages that still declare the retired engine dependency." },
+  { "path": "beebox/test/dev/workstream-box-state.doctest.md", "occurrenceClass": "kebab-name", "expectedCount": 4, "reason": "The regression fixture proves worktree setup migrates the retired engine dependency in existing box packages." },
   { "path": "beebox/deploy/migrate-to-beebox-user.sh", "occurrenceClass": "old-home", "expectedCount": 2, "reason": "The one-shot production migration must locate the former home and install roots." },
   { "path": "beebox/deploy/migrate-to-beebox-user.sh", "occurrenceClass": "old-service", "expectedCount": 6, "reason": "The one-shot production migration must stop and disable every former service unit." },
   { "path": "beebox/deploy/migrate-to-beebox-user.sh", "occurrenceClass": "kebab-name", "expectedCount": 10, "reason": "The one-shot production migration must locate and preserve the former installed checkout." },

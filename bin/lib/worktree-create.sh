@@ -88,6 +88,34 @@ wt_create_restore_box_ref() {
   git -C "$box_dest" reset --hard FETCH_HEAD >&2
 }
 
+# Point a package-layout box at the engine in this worktree. During the Bee Box
+# rename, existing box repositories can still declare the retired
+# `callback-box` package name; migrate that dependency at the same boundary
+# where we already install the worktree-local override.
+wt_create_repoint_box_engine() {
+  local package_json="$1" worktree_path="$2" tmp_pkg
+  tmp_pkg=$(mktemp)
+  if ! jq --arg link "link:$worktree_path/beebox" '
+    if (.dependencies["beebox"] // .devDependencies["beebox"] //
+        .dependencies["callback-box"] // .devDependencies["callback-box"]) == null then
+      error("not a Bee Box package")
+    else
+      .dependencies = (.dependencies // {}) |
+      .dependencies["beebox"] = $link |
+      del(.dependencies["callback-box"]) |
+      del(.devDependencies["callback-box"]) |
+      .pnpm = (.pnpm // {}) |
+      .pnpm.overrides = (.pnpm.overrides // {}) |
+      .pnpm.overrides["beebox"] = $link |
+      del(.pnpm.overrides["callback-box"])
+    end
+  ' "$package_json" > "$tmp_pkg"; then
+    rm -f "$tmp_pkg"
+    return 1
+  fi
+  mv "$tmp_pkg" "$package_json"
+}
+
 wt_create_attach_worktree() {
   local worktree_path="$1" new_branch="$2" base_ref="$3" state_file="$4" rc=0
   WT_CREATE_REUSED=false
@@ -165,7 +193,7 @@ wt_create_locked() {
   worktree_path="$worktree_parent/$(basename "$worktree_path")"
   local BOX_SRC="$WT_BOX_SRC"
   local BOX_DEST="$WT_BOX_ROOT/$NAME/test1"
-  WT_CREATED_PATH="$worktree_path"
+  export WT_CREATED_PATH="$worktree_path"
   state_file=$(wt_create_state_file "$NAME") || {
     echo "[worktree-create] FATAL: cannot resolve setup state file for $NAME" >&2
     return 1
@@ -302,13 +330,12 @@ wt_create_locked() {
       # pins — never this worktree's in-progress engine code, defeating the
       # whole point of a worktree. Legacy clones have no package.json here
       # and are left untouched.
-      if [ -f "$BOX_DEST/package.json" ] && jq -e '(.dependencies["beebox"] // .devDependencies["beebox"]) != null' "$BOX_DEST/package.json" >/dev/null; then
+      if [ -f "$BOX_DEST/package.json" ] && jq -e '
+        (.dependencies["beebox"] // .devDependencies["beebox"] //
+         .dependencies["callback-box"] // .devDependencies["callback-box"]) != null
+      ' "$BOX_DEST/package.json" >/dev/null; then
         echo "[worktree-create] v2 box detected — pointing beebox at $worktree_path/beebox" >&2
-        local tmp_pkg
-        tmp_pkg=$(mktemp)
-        jq --arg link "link:$worktree_path/beebox" '.pnpm.overrides["beebox"] = $link' \
-          "$BOX_DEST/package.json" > "$tmp_pkg"
-        mv "$tmp_pkg" "$BOX_DEST/package.json"
+        wt_create_repoint_box_engine "$BOX_DEST/package.json" "$worktree_path"
         echo "[worktree-create] running pnpm install in $BOX_DEST..." >&2
         (exec 198>&-; cd "$BOX_DEST" && pnpm install >&2)
       fi

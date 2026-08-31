@@ -18,6 +18,35 @@ function git(cwd: string, args: string[]): void {
 }
 ```
 
+Worktree setup recognizes boxes that still carry the pre-rename engine package
+name and migrates the dependency while installing the worktree-local override.
+
+```ts
+const root = await fs.mkdtemp(path.join(os.tmpdir(), "box-engine-repoint-"));
+t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
+const packageJson = path.join(root, "package.json");
+await fs.writeFile(packageJson, JSON.stringify({
+  dependencies: { "callback-box": "^0.1.0", react: "^18.3.1" },
+  pnpm: { overrides: { "callback-box": "link:/old/engine" } },
+}));
+execFileSync("bash", ["-c", [
+  ". bin/lib/worktree-create.sh",
+  'wt_create_repoint_box_engine "$PACKAGE_JSON" "$WORKTREE"',
+].join("; ")], {
+  cwd: repoRoot,
+  env: { ...process.env, PACKAGE_JSON: packageJson, WORKTREE: "/tmp/new-worktree" },
+});
+const migrated = JSON.parse(await fs.readFile(packageJson, "utf8"));
+JSON.stringify({
+  beebox: migrated.dependencies.beebox,
+  retiredDependency: migrated.dependencies["callback-box"] ?? null,
+  react: migrated.dependencies.react,
+  override: migrated.pnpm.overrides.beebox,
+  oldOverride: migrated.pnpm.overrides["callback-box"] ?? null,
+})
+=> {"beebox":"link:/tmp/new-worktree/beebox","retiredDependency":null,"react":"^18.3.1","override":"link:/tmp/new-worktree/beebox","oldOverride":null}
+```
+
 Cull pins report the highest-priority reason until it is resolved: unmerged
 keep work, a test-setup branch, or a linked issue awaiting manual testing. Both
 supported YAML list forms are recognized.
