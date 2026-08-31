@@ -30,7 +30,17 @@ from retired names to current names; do not repeat that vocabulary here.
 - [ ] Open the README and several documentation links through the new GitHub
   URL. Confirm that images, badges, and source links resolve.
 
-## 3. Publish the npm package
+## 3. Move the local checkout when ready
+
+- [ ] After the repository and external cutover are otherwise settled, stop the
+  shared dev router and move the current main checkout to `~/src/beebox`.
+- [ ] Restart `pnpm dev` from `~/src/beebox` and confirm the router reports that
+  path as the `main` root and discovers worktrees under
+  `~/src/beebox-worktrees`.
+- [ ] Update any shell aliases, editor workspaces, terminal profiles, scripts,
+  and bookmarks that still point at the previous local checkout path.
+
+## 4. Publish the npm package
 
 - [ ] Confirm that the `beebox` npm package name is still available to the
   correct npm account.
@@ -40,7 +50,7 @@ from retired names to current names; do not repeat that vocabulary here.
 - [ ] Deprecate the previous package with a short migration message that points
   users to `beebox`, if that package was ever published publicly.
 
-## 4. Configure `beebox.run`
+## 5. Configure `beebox.run`
 
 - [ ] Complete domain registration and attach the domain to the intended
   Cloudflare account.
@@ -52,7 +62,7 @@ from retired names to current names; do not repeat that vocabulary here.
 - [ ] Decide whether the previous hostname redirects to `beebox.run` and, if
   so, keep that redirect for bookmarks and inbound links.
 
-## 5. Update Google OAuth
+## 6. Update Google OAuth
 
 - [ ] Change the OAuth consent-screen application name to **Bee Box**.
 - [ ] Add `https://beebox.run` as an authorized JavaScript origin where the
@@ -65,7 +75,7 @@ from retired names to current names; do not repeat that vocabulary here.
 - [ ] Check whether the consent-screen change triggers verification or new
   review requirements before removing any working configuration.
 
-## 6. Cut over the production server
+## 7. Cut over the production server
 
 - [ ] Take a current backup or snapshot of the production home, install tree,
   `.env`, and service definitions.
@@ -87,7 +97,7 @@ from retired names to current names; do not repeat that vocabulary here.
   successfully long enough to make rollback unnecessary. Remove them only in
   a separate, deliberate cleanup.
 
-## 7. Update the community and public identity
+## 8. Update the community and public identity
 
 - [ ] Rename the Zulip organization to **Bee Box** and obtain
   `beebox.zulipchat.com`, or create the replacement organization if Zulip
@@ -98,7 +108,7 @@ from retired names to current names; do not repeat that vocabulary here.
 - [ ] Update any public profiles, repository descriptions, pinned posts,
   release notes, or announcement links that are not stored in this repository.
 
-## 8. Apple records and local devices
+## 9. Apple records and local devices
 
 - [ ] If Apple Developer records exist, rename the app display record to
   **Bee Box** and confirm the bundle IDs `app.beebox.ios`,
