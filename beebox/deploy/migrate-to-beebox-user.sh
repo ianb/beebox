@@ -28,6 +28,10 @@ NEW_HOME="${NEW_HOME:-$(under_root /home/beebox)}"
 OLD_INSTALL="${OLD_INSTALL:-$(under_root /opt/callback)}"
 NEW_INSTALL="${NEW_INSTALL:-$(under_root /opt/beebox)}"
 LOCAL_BIN="${LOCAL_BIN:-$(under_root /usr/local/bin)}"
+SYSTEMD_DIR="${SYSTEMD_DIR:-$(under_root /etc/systemd/system)}"
+STAGED_CHECKOUT="$OLD_INSTALL/beebox"
+NEW_CHECKOUT="$NEW_INSTALL/beebox"
+RETIRED_CHECKOUT="$NEW_INSTALL/callback-box-retired"
 
 SYSTEMCTL_BIN="${SYSTEMCTL_BIN:-systemctl}"
 USERADD_BIN="${USERADD_BIN:-useradd}"
@@ -65,16 +69,64 @@ assert_moveable_pair() {
 
 echo "=== Migrating production to the Bee Box identity ==="
 
+FIRST_CUTOVER=0
+if [[ -e "$OLD_HOME" || -e "$OLD_INSTALL" ]]; then FIRST_CUTOVER=1; fi
+
 # Do every conflict check before stopping anything, so a partial installation
 # does not cause avoidable downtime.
 assert_moveable_pair "$OLD_HOME" "$NEW_HOME" "home"
 assert_moveable_pair "$OLD_INSTALL" "$NEW_INSTALL" "install"
-if [[ -e "$OLD_INSTALL/callback-box" && -e "$OLD_INSTALL/beebox" ]]; then
-  die "both checkout paths exist: $OLD_INSTALL/callback-box and $OLD_INSTALL/beebox"
+if [[ "$FIRST_CUTOVER" == 1 ]]; then
+  [[ -f "$STAGED_CHECKOUT/bin/bbx" ]] || die "stage the renamed checkout at $STAGED_CHECKOUT before migration"
+  [[ -f "$STAGED_CHECKOUT/deploy/server-bin/bbx-wait-quiet" ]] || die "staged checkout is missing bbx-wait-quiet"
+  [[ ! -e "$RETIRED_CHECKOUT" ]] || die "retired checkout destination exists: $RETIRED_CHECKOUT"
 fi
-if [[ -e "$NEW_INSTALL/callback-box" && -e "$NEW_INSTALL/beebox" ]]; then
-  die "both checkout paths exist: $NEW_INSTALL/callback-box and $NEW_INSTALL/beebox"
+
+# Key collisions are knowable before downtime. Refuse conflicting old/new
+# spellings rather than silently choosing one during the rewrite.
+PREFLIGHT_ENV="$OLD_HOME/.env"
+[[ -f "$PREFLIGHT_ENV" ]] || PREFLIGHT_ENV="$NEW_HOME/.env"
+if [[ -f "$PREFLIGHT_ENV" ]]; then
+  python3 - "$PREFLIGHT_ENV" <<'PY'
+import re, sys
+assignment = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$")
+seen = {}
+for line in open(sys.argv[1], encoding="utf-8"):
+    match = assignment.match(line.rstrip("\r\n"))
+    if not match:
+        continue
+    old_key, value = match.groups()
+    if old_key.startswith("CALLBACK_"):
+        key = "BBX_" + old_key[len("CALLBACK_"):]
+    elif old_key.startswith("CB_"):
+        key = "BBX_" + old_key[len("CB_"):]
+    else:
+        key = old_key
+    if key in seen and seen[key] != value:
+        raise SystemExit(f"conflicting values for migrated environment key {key}")
+    seen[key] = value
+PY
 fi
+
+PREFLIGHT_HOME="$OLD_HOME"
+[[ -d "$PREFLIGHT_HOME" ]] || PREFLIGHT_HOME="$NEW_HOME"
+python3 - "$PREFLIGHT_HOME" <<'PY'
+import json, pathlib, sys
+home = pathlib.Path(sys.argv[1])
+config = home / ".config/cb"
+if not config.is_dir():
+    config = home / ".config/beebox"
+paths = [config / "hub.json", config / "boxes.json"]
+paths.extend(sorted((home / "boxes").glob("*/package.json")))
+for path in paths:
+    if not path.is_file():
+        continue
+    value = json.loads(path.read_text(encoding="utf-8"))
+    for section in ("dependencies", "devDependencies", "optionalDependencies"):
+        deps = value.get(section) if isinstance(value, dict) else None
+        if isinstance(deps, dict) and "callback-box" in deps and "beebox" in deps:
+            raise SystemExit(f"both retired and canonical dependencies exist in {path}")
+PY
 
 # Stop both generations. callback-hub is included because it can have child
 # processes whose cwd is inside the install while the filesystem is moved.
@@ -84,6 +136,7 @@ OLD_UNITS=(
   callback-scheduler
   callback-serve-recycle
   callback-serve-recycle.timer
+  claude-update.timer
 )
 NEW_UNITS=(
   beebox-hub
@@ -92,14 +145,16 @@ NEW_UNITS=(
   beebox-serve-recycle
   beebox-serve-recycle.timer
 )
-echo "Stopping old and any partially installed Bee Box services..."
-for unit in "${OLD_UNITS[@]}" "${NEW_UNITS[@]}"; do
-  "$SYSTEMCTL_BIN" stop "$unit" 2>/dev/null || true
-done
-echo "Disabling retired services (they remain on disk for rollback review)..."
-for unit in "${OLD_UNITS[@]}"; do
-  "$SYSTEMCTL_BIN" disable "$unit" 2>/dev/null || true
-done
+if [[ "$FIRST_CUTOVER" == 1 ]]; then
+  echo "Stopping old and any partially installed Bee Box services..."
+  for unit in "${OLD_UNITS[@]}" "${NEW_UNITS[@]}"; do
+    "$SYSTEMCTL_BIN" stop "$unit" 2>/dev/null || true
+  done
+  echo "Disabling retired services (they remain on disk for rollback review)..."
+  for unit in "${OLD_UNITS[@]}"; do
+    "$SYSTEMCTL_BIN" disable "$unit" 2>/dev/null || true
+  done
+fi
 
 user_exists() {
   if [[ "$REHEARSAL" == 1 ]]; then
@@ -136,16 +191,16 @@ fi
 
 if [[ -d "$OLD_INSTALL" ]]; then
   echo "Moving $OLD_INSTALL to $NEW_INSTALL..."
+  if [[ -d "$NEW_INSTALL" ]]; then rmdir "$NEW_INSTALL"; fi
   mkdir -p "$(dirname "$NEW_INSTALL")"
   mv "$OLD_INSTALL" "$NEW_INSTALL"
 fi
 
-# The moved install can still have the old checkout directory even when the
-# repository itself has already been renamed upstream.
+# Preserve the old checkout as a directly reversible rollback artifact. The
+# renamed checkout was staged alongside it before downtime.
 if [[ -d "$NEW_INSTALL/callback-box" ]]; then
-  echo "Renaming the installed checkout to $NEW_INSTALL/beebox..."
-  [[ ! -e "$NEW_INSTALL/beebox" ]] || die "checkout destination exists: $NEW_INSTALL/beebox"
-  mv "$NEW_INSTALL/callback-box" "$NEW_INSTALL/beebox"
+  echo "Retaining the old checkout at $RETIRED_CHECKOUT..."
+  mv "$NEW_INSTALL/callback-box" "$RETIRED_CHECKOUT"
 fi
 
 migrate_path() {
@@ -171,18 +226,20 @@ migrate_path "$NEW_HOME/.config/cb" "$NEW_HOME/.config/beebox"
 migrate_path "$NEW_HOME/.local/share/cb" "$NEW_HOME/.local/share/beebox"
 migrate_path "$NEW_HOME/.cb-session-secret" "$NEW_HOME/.bbx-session-secret"
 migrate_path "$NEW_HOME/.cb-auth.json" "$NEW_HOME/.bbx-auth.json"
+migrate_path "$NEW_HOME/.cb-auth.json.invites.json" "$NEW_HOME/.bbx-auth.json.invites.json"
 
 ENV_FILE="$NEW_HOME/.env"
 if [[ -f "$ENV_FILE" ]]; then
   echo "Migrating environment keys and service PATH..."
-  python3 - "$ENV_FILE" "$OLD_HOME" "$NEW_HOME" <<'PY'
+  [[ -f "$ENV_FILE.pre-beebox-rename" ]] || cp -p "$ENV_FILE" "$ENV_FILE.pre-beebox-rename"
+  python3 - "$ENV_FILE" "$OLD_HOME" "$NEW_HOME" "$OLD_INSTALL" "$NEW_INSTALL" <<'PY'
 import os
 import re
 import stat
 import sys
 import tempfile
 
-env_path, old_home, new_home = sys.argv[1:]
+env_path, old_home, new_home, old_install, new_install = sys.argv[1:]
 assignment = re.compile(r"^(\s*(?:export\s+)?)([A-Za-z_][A-Za-z0-9_]*)(=)(.*?)(\r?\n?)$")
 lines = []
 seen = {}
@@ -194,11 +251,24 @@ def canonical_key(key):
         return "BBX_" + key[len("CB_"):]
     return key
 
-def migrate_path_value(value):
+def migrate_value(value):
     quote = ""
     if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
         quote, value = value[0], value[1:-1]
-    entries = [entry for entry in value.replace(old_home + "/.local/bin", new_home + "/.local/bin").split(":") if entry]
+    value = value.replace(old_install + "/callback-box", new_install + "/beebox")
+    value = value.replace(old_home, new_home).replace(old_install, new_install)
+    value = value.replace("/.config/cb", "/.config/beebox")
+    value = value.replace("/.local/share/cb", "/.local/share/beebox")
+    value = value.replace("/.cb-session-secret", "/.bbx-session-secret")
+    value = value.replace("/.cb-auth.json", "/.bbx-auth.json")
+    return quote + value + quote
+
+def migrate_path_value(value):
+    value = migrate_value(value)
+    quote = ""
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        quote, value = value[0], value[1:-1]
+    entries = [entry for entry in value.split(":") if entry]
     local_bin = new_home + "/.local/bin"
     entries = [entry for entry in entries if entry != local_bin]
     entries.insert(0, local_bin)
@@ -214,6 +284,8 @@ for line in open(env_path, encoding="utf-8"):
     key = canonical_key(old_key)
     if key == "PATH":
         value = migrate_path_value(value)
+    else:
+        value = migrate_value(value)
     prior = seen.get(key)
     if prior is not None and prior != value:
         raise SystemExit(f"conflicting values for migrated environment key {key}")
@@ -236,6 +308,58 @@ except BaseException:
 PY
 fi
 
+echo "Rewriting persisted paths and box package dependencies..."
+python3 - "$NEW_HOME" "$OLD_HOME" "$NEW_HOME" "$OLD_INSTALL" "$NEW_INSTALL" <<'PY'
+import json, os, pathlib, shutil, sys, tempfile
+
+home = pathlib.Path(sys.argv[1])
+old_home, new_home, old_install, new_install = sys.argv[2:]
+paths = [home / ".config/beebox/hub.json", home / ".config/beebox/boxes.json"]
+paths.extend(sorted((home / "boxes").glob("*/package.json")))
+
+def rewrite(value):
+    if isinstance(value, str):
+        value = value.replace(old_install + "/callback-box", new_install + "/beebox")
+        value = value.replace(old_home, new_home).replace(old_install, new_install)
+        value = value.replace("/.config/cb", "/.config/beebox")
+        value = value.replace("/.local/share/cb", "/.local/share/beebox")
+        value = value.replace("/.cb-session-secret", "/.bbx-session-secret")
+        return value.replace("/.cb-auth.json", "/.bbx-auth.json")
+    if isinstance(value, list):
+        return [rewrite(item) for item in value]
+    if isinstance(value, dict):
+        result = {key: rewrite(item) for key, item in value.items()}
+        for section in ("dependencies", "devDependencies", "optionalDependencies"):
+            deps = result.get(section)
+            if isinstance(deps, dict) and "callback-box" in deps:
+                old_value = deps.pop("callback-box")
+                new_value = rewrite(old_value).replace("callback-box", "beebox")
+                if "beebox" in deps and deps["beebox"] != new_value:
+                    raise SystemExit(f"conflicting beebox dependency in {path}")
+                deps["beebox"] = new_value
+        return result
+    return value
+
+for path in paths:
+    if not path.is_file():
+        continue
+    backup = path.with_name(path.name + ".pre-beebox-rename")
+    if not backup.exists():
+        shutil.copy2(path, backup)
+    original = json.loads(path.read_text(encoding="utf-8"))
+    updated = rewrite(original)
+    fd, temporary = tempfile.mkstemp(prefix=path.name + ".bbx-", dir=path.parent, text=True)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as output:
+            json.dump(updated, output, indent=2)
+            output.write("\n")
+        os.chmod(temporary, path.stat().st_mode)
+        os.replace(temporary, path)
+    except BaseException:
+        pathlib.Path(temporary).unlink(missing_ok=True)
+        raise
+PY
+
 if [[ "$REHEARSAL" == 1 ]]; then
   mkdir -p "$NEW_HOME" "$NEW_INSTALL" "$LOCAL_BIN"
 else
@@ -244,12 +368,70 @@ else
   "$SU_BIN" - "$NEW_USER" -c 'git config --global user.name "Bee Box"'
 fi
 
-CLI_SOURCE="$NEW_INSTALL/beebox/bin/bbx"
-WAIT_SOURCE="$NEW_INSTALL/beebox/deploy/server-bin/bbx-wait-quiet"
+CLI_SOURCE="$NEW_CHECKOUT/bin/bbx"
+WAIT_SOURCE="$NEW_CHECKOUT/deploy/server-bin/bbx-wait-quiet"
 [[ -f "$CLI_SOURCE" ]] || die "new checkout is missing $CLI_SOURCE"
 [[ -f "$WAIT_SOURCE" ]] || die "new checkout is missing $WAIT_SOURCE"
 mkdir -p "$LOCAL_BIN"
 ln -sfn "$CLI_SOURCE" "$LOCAL_BIN/bbx"
 install -m 0755 "$WAIT_SOURCE" "$LOCAL_BIN/bbx-wait-quiet"
 
-echo "Files migrated. Run setup-server.sh/deploy from the renamed checkout to install and start the new units. Verify service health and an authenticated request before removing account $OLD_USER or its retired unit files."
+echo "Installing canonical Bee Box service units..."
+mkdir -p "$SYSTEMD_DIR"
+cat > "$SYSTEMD_DIR/beebox-hub.service" <<EOF
+[Unit]
+Description=Bee Box Hub (per-box supervisor + router)
+After=network.target
+
+[Service]
+Type=simple
+User=$NEW_USER
+Group=$NEW_USER
+ExecStart=/usr/local/bin/bbx hub
+WorkingDirectory=$NEW_HOME
+EnvironmentFile=$NEW_HOME/.env
+KillMode=mixed
+TimeoutStopSec=60
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+cat > "$SYSTEMD_DIR/beebox-scheduler.service" <<EOF
+[Unit]
+Description=Bee Box Scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=$NEW_USER
+Group=$NEW_USER
+ExecStart=/usr/local/bin/bbx scheduler start
+WorkingDirectory=$NEW_HOME/boxes
+EnvironmentFile=$NEW_HOME/.env
+KillMode=mixed
+TimeoutStopSec=60
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+if [[ -f "$SYSTEMD_DIR/claude-update.service" ]]; then
+  [[ -f "$SYSTEMD_DIR/claude-update.service.pre-beebox-rename" ]] || \
+    cp -p "$SYSTEMD_DIR/claude-update.service" "$SYSTEMD_DIR/claude-update.service.pre-beebox-rename"
+  sed -e "s|User=$OLD_USER|User=$NEW_USER|" \
+      -e "s|Group=$OLD_USER|Group=$NEW_USER|" \
+      -e "s|$OLD_HOME|$NEW_HOME|g" \
+      -e "s|$OLD_INSTALL/callback-box|$NEW_CHECKOUT|g" \
+      "$SYSTEMD_DIR/claude-update.service" > "$SYSTEMD_DIR/claude-update.service.bbx-new"
+  mv "$SYSTEMD_DIR/claude-update.service.bbx-new" "$SYSTEMD_DIR/claude-update.service"
+fi
+
+"$SYSTEMCTL_BIN" daemon-reload
+"$SYSTEMCTL_BIN" enable beebox-hub beebox-scheduler
+
+echo "Files and units migrated. Run deploy.sh from the renamed checkout to sync code, converge boxes, start the new units, and verify health. Keep account $OLD_USER and its retired unit files until rollback is no longer needed."
