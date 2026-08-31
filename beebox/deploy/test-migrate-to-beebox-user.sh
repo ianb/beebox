@@ -37,6 +37,7 @@ Group=callback
 Environment=PATH=$OLD_HOME/.local/bin:/usr/local/bin
 ExecStart=$ROOT/opt/callback/callback-box/deploy/claude-update.sh
 EOF
+: > "$ROOT/etc/systemd/system/claude-update.timer"
 
 # The single-quoted argument below is fixture source, not a shell expansion.
 # shellcheck disable=SC2016
@@ -73,6 +74,8 @@ if grep -q 'callback-box' "$ROOT/home/beebox/boxes/birch/package.json"; then
 fi
 [[ -f "$ROOT/home/beebox/.env.pre-beebox-rename" ]]
 [[ -f "$ROOT/home/beebox/.config/beebox/hub.json.pre-beebox-rename" ]]
+[[ -f "$ROOT/home/beebox/.beebox-rename-backups/birch/package.json" ]]
+[[ ! -e "$ROOT/home/beebox/boxes/birch/package.json.pre-beebox-rename" ]]
 [[ "$(readlink "$ROOT/usr/local/bin/bbx")" == "$ROOT/opt/beebox/beebox/bin/bbx" ]]
 grep -q '^User=beebox$' "$ROOT/etc/systemd/system/claude-update.service"
 grep -q "$ROOT/opt/beebox/beebox/deploy/claude-update.sh" "$ROOT/etc/systemd/system/claude-update.service"
@@ -84,6 +87,7 @@ grep -q '^stop callback-hub$' "$SYSTEMCTL_LOG"
 grep -q '^disable callback-serve$' "$SYSTEMCTL_LOG"
 grep -q '^daemon-reload$' "$SYSTEMCTL_LOG"
 grep -q '^enable beebox-hub beebox-scheduler$' "$SYSTEMCTL_LOG"
+grep -q '^enable --now claude-update.timer$' "$SYSTEMCTL_LOG"
 grep -q '^User=beebox$' "$ROOT/etc/systemd/system/beebox-hub.service"
 grep -q '^ExecStart=/usr/local/bin/bbx hub$' "$ROOT/etc/systemd/system/beebox-hub.service"
 grep -q "^WorkingDirectory=$ROOT/home/beebox$" "$ROOT/etc/systemd/system/beebox-hub.service"

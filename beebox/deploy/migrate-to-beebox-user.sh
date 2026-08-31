@@ -343,7 +343,11 @@ def rewrite(value):
 for path in paths:
     if not path.is_file():
         continue
-    backup = path.with_name(path.name + ".pre-beebox-rename")
+    if path.name == "package.json" and path.parent.parent == home / "boxes":
+        backup = home / ".beebox-rename-backups" / path.parent.name / path.name
+        backup.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        backup = path.with_name(path.name + ".pre-beebox-rename")
     if not backup.exists():
         shutil.copy2(path, backup)
     original = json.loads(path.read_text(encoding="utf-8"))
@@ -433,5 +437,8 @@ fi
 
 "$SYSTEMCTL_BIN" daemon-reload
 "$SYSTEMCTL_BIN" enable beebox-hub beebox-scheduler
+if [[ -f "$SYSTEMD_DIR/claude-update.timer" ]]; then
+  "$SYSTEMCTL_BIN" enable --now claude-update.timer
+fi
 
 echo "Files and units migrated. Run deploy.sh from the renamed checkout to sync code, converge boxes, start the new units, and verify health. Keep account $OLD_USER and its retired unit files until rollback is no longer needed."
