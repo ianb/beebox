@@ -10,15 +10,51 @@
 
 import path from "node:path";
 import os from "node:os";
+import { execFileSync } from "node:child_process";
 
 export const ROUTER_PORT = Number(process.env.ROUTER_PORT) || 3210;
 export const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..");
 // Where /main/ is served from. Defaults to the canonical checkout so that a
 // router started from a worktree (e.g. while iterating on router.ts itself)
 // still serves real-main at /main/, not the worktree's stale snapshot of main.
-// Override with BBX_MAIN_ROOT for non-standard layouts.
-export const MAIN_ROOT = process.env.BBX_MAIN_ROOT || path.join(os.homedir(), "src", "beebox");
-export const WORKTREES_ROOT = path.join(os.homedir(), "src", "beebox-worktrees");
+// Override with BBX_MAIN_ROOT for non-standard layouts. Git's common directory
+// names the stable main checkout even when this router code is running from a
+// linked worktree; deriving it also survives a product rename that does not
+// immediately rename the boxholder's physical checkout directory.
+export function resolveMainRoot(input: {
+  repoRoot: string;
+  override?: string | undefined;
+  commonDir?: string | undefined;
+}): string {
+  const { repoRoot, override, commonDir } = input;
+  if (override) return override;
+  if (commonDir) return path.dirname(path.resolve(repoRoot, commonDir));
+  return repoRoot;
+}
+
+function gitCommonDir(repoRoot: string): string | undefined {
+  try {
+    return execFileSync("git", ["-C", repoRoot, "rev-parse", "--path-format=absolute", "--git-common-dir"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch (error) {
+    void error;
+    return undefined;
+  }
+}
+
+export const MAIN_ROOT = resolveMainRoot({
+  repoRoot: REPO_ROOT,
+  override: process.env.BBX_MAIN_ROOT,
+  commonDir: gitCommonDir(REPO_ROOT),
+});
+export function resolveWorktreesRoot(mainRoot: string): string {
+  const mainName = path.basename(mainRoot);
+  const familyName = mainName.endsWith("-box") ? mainName.slice(0, -4) : mainName;
+  return path.join(path.dirname(mainRoot), `${familyName}-worktrees`);
+}
+export const WORKTREES_ROOT = resolveWorktreesRoot(MAIN_ROOT);
 export const BOXES_ROOT = path.join(os.homedir(), "src", "box-worktrees");
 // Overridable so a second router can run isolated (tests, dev on the router
 // itself) without fighting the live one over pid files and port state.

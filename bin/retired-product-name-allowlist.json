@@ -25,6 +25,7 @@
   { "path": "beebox/src/core/install-validation-hooks.ts", "occurrenceClass": "kebab-name", "expectedCount": 1, "reason": "Hook convergence recognizes and replaces the retired managed marker." },
   { "path": "beebox/test/core/agent-context-mirrors.doctest.md", "occurrenceClass": "kebab-name", "expectedCount": 3, "reason": "The regression fixture proves retired agent mirrors are removed." },
   { "path": "beebox/test/core/install-validation-hooks.doctest.md", "occurrenceClass": "kebab-name", "expectedCount": 1, "reason": "The regression fixture proves a retired managed hook is replaced." },
+  { "path": "bin/router-config.test.ts", "occurrenceClass": "kebab-name", "expectedCount": 3, "reason": "The router regression proves a renamed product can continue using its existing physical main-checkout directory." },
   { "path": "beebox/src/lib/state-migration.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "The persisted-state migration recognizes the former marker and box state directory." },
   { "path": "beebox/src/lib/state-migration.ts", "occurrenceClass": "config-cli-directory", "expectedCount": 2, "reason": "The persisted-state migration recognizes the former machine config and state directories." },
   { "path": "beebox/src/hub/child-spawn.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "Hub discovery accepts legacy box identity until the selected engine migrates its state." },
