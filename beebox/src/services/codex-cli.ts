@@ -18,8 +18,8 @@ export function classifyCodexAuthStatus(params: {
   output: string;
 }): CodexAuthStatus {
   const output = params.output.trim();
-  if (params.errorCode === null && /logged in/i.test(output)) return { kind: "logged-in" };
-  if (params.errorCode === 1 && /^not logged in$/i.test(output)) return { kind: "logged-out" };
+  if (/not logged in/i.test(output)) return { kind: "logged-out" };
+  if (params.errorCode === 0 && /logged in/i.test(output)) return { kind: "logged-in" };
   if (params.errorCode === "ENOENT") return { kind: "unavailable", detail: output };
   return { kind: "incompatible", detail: output || `codex login status exited ${String(params.errorCode)}` };
 }

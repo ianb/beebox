@@ -35,8 +35,8 @@ export const CODEX_NOT_LOGGED_IN_MESSAGE =
   "Codex is not logged in — run `codex login --device-auth` as the Bee Box service user";
 
 export class CodexReadinessError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = "CodexReadinessError";
   }
 }
@@ -52,9 +52,10 @@ export class CodexCliUnavailableError extends CodexReadinessError {
   readonly detail: string;
 
   constructor(detail: string) {
-    super("Codex CLI is unavailable — reinstall Bee Box's package dependencies");
+    const safeDetail = redactCodexAuthDetail(detail);
+    super("Codex CLI is unavailable — reinstall Bee Box's package dependencies", { cause: new Error(safeDetail) });
     this.name = "CodexCliUnavailableError";
-    this.detail = detail;
+    this.detail = safeDetail;
   }
 }
 
@@ -62,10 +63,19 @@ export class CodexCliIncompatibleError extends CodexReadinessError {
   readonly detail: string;
 
   constructor(detail: string) {
-    super("Codex CLI is incompatible — deploy matching @openai/codex and @openai/codex-sdk versions");
+    const safeDetail = redactCodexAuthDetail(detail);
+    super("Codex CLI is incompatible — deploy matching @openai/codex and @openai/codex-sdk versions", {
+      cause: new Error(safeDetail),
+    });
     this.name = "CodexCliIncompatibleError";
-    this.detail = detail;
+    this.detail = safeDetail;
   }
+}
+
+export function redactCodexAuthDetail(detail: string): string {
+  return detail
+    .replaceAll(/\bsk-[\w-]+/g, "<redacted-api-key>")
+    .replaceAll(/((?:api key|access token)\s*-\s*)\S+/gi, "$1<redacted>");
 }
 
 // A confirmed login is cached this long. Generous — auth rarely changes mid
@@ -122,9 +132,17 @@ export async function checkCodexAuth(options?: {
     case "logged-out":
       throw new CodexAuthError();
     case "unavailable":
-      throw new CodexCliUnavailableError(status.detail);
+      {
+        const error = new CodexCliUnavailableError(status.detail);
+        console.warn("[codex-auth] readiness probe failed:", error);
+        throw error;
+      }
     case "incompatible":
-      throw new CodexCliIncompatibleError(status.detail);
+      {
+        const error = new CodexCliIncompatibleError(status.detail);
+        console.warn("[codex-auth] readiness probe failed:", error);
+        throw error;
+      }
   }
 }
 

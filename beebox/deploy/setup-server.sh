@@ -114,7 +114,7 @@ pnpm install
 # One package-pinned Codex executable serves plugin management, history, SDK
 # turns, and the operator's one-time login. The dependency lives at the
 # workspace root; this symlink is only the stable command name for operators.
-ln -sf "$INSTALL_DIR/node_modules/.bin/codex" /usr/local/bin/codex
+ln -sf "$INSTALL_DIR/beebox/node_modules/.bin/codex" /usr/local/bin/codex
 
 echo "Building frontend..."
 cd "$INSTALL_DIR/beebox/src/frontend"

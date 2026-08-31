@@ -15,10 +15,10 @@ import {
 ## The supported status answers are explicit
 
 ```ts
-JSON.stringify(classifyCodexAuthStatus({ errorCode: null, output: "Logged in using ChatGPT" }))
+JSON.stringify(classifyCodexAuthStatus({ errorCode: 0, output: "Logged in using ChatGPT" }))
 => {"kind":"logged-in"}
 
-JSON.stringify(classifyCodexAuthStatus({ errorCode: 1, output: "Not logged in" }))
+JSON.stringify(classifyCodexAuthStatus({ errorCode: 1, output: "warning: config note\nNot logged in\nRun codex login" }))
 => {"kind":"logged-out"}
 ```
 

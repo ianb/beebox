@@ -18,9 +18,11 @@ import {
   CodexAuthError,
   CLAUDE_NOT_LOGGED_IN_MESSAGE,
   CODEX_NOT_LOGGED_IN_MESSAGE,
+  redactCodexAuthDetail,
 } from "../../../src/core/agent/auth-preflight.js";
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../src/services/claude-cli.js";
 import { createFakeCodexCli } from "../../../src/services/codex-cli.js";
+import { createChatBackend } from "../../../src/services/claude-chat.js";
 
 /** A probe that answers `n` times with no usable result, then as given. */
 function flakyCli(inconclusiveTimes, then) {
@@ -154,6 +156,23 @@ const proceedCodex = await preflightChatBackend({
 });
 JSON.stringify({ proceedCodex, codexEvents, codexCalls: codexCli.statusCalls })
 => {"proceedCodex":false,"codexEvents":[["error","Codex is not logged in — run `codex login --device-auth` as the Bee Box service user"]],"codexCalls":1}
+```
+
+The production composite backend carries both provider requirements. This is
+the object the chat registry actually passes to the preflight.
+
+```ts
+const backend = createChatBackend();
+JSON.stringify({ claude: backend.requiresClaudeAuth, codex: backend.requiresCodexAuth })
+=> {"claude":true,"codex":true}
+```
+
+Status diagnostics preserve useful CLI context but redact credential-shaped
+content before it becomes an error cause or log value.
+
+```ts
+redactCodexAuthDetail("warning for API key - sk-secret_123 and access token - abc123")
+=> warning for API key - <redacted> and access token - <redacted>
 ```
 
 ## A probe that returns no answer is not a logout
