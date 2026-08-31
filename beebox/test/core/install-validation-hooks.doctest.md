@@ -170,6 +170,49 @@ const migrated = await fs.readFile(hookPath, "utf8");
 ]
 ```
 
+The post-commit migration removes the retired URL-check block instead of
+leaving it ahead of the new block. Both blocks change into `content/`; keeping
+both makes the second one try `content/content` and fail after every commit.
+
+```ts
+const box = await makeBox();
+const postPath = path.join(box.packageRoot, ".git/hooks/post-commit");
+await fs.writeFile(
+  postPath,
+  `#!/bin/sh
+echo foreign-hook
+
+# >>> callback-box url-check (managed) >>>
+cd "content"
+# <<< callback-box url-check (managed) <<<
+
+# >>> callback-box url-check (managed) >>>
+cd "content"
+# <<< callback-box url-check (managed) <<<
+
+# >>> beebox url-check (managed) >>>
+cd "content"
+BBX_URLCHECK="/stale/bin/bbx"
+# <<< beebox url-check (managed) <<<
+`,
+);
+await installValidationHooks(box.root);
+const migrated = await fs.readFile(postPath, "utf8");
+[
+  migrated.includes("echo foreign-hook"),
+  migrated.includes("callback-box url-check (managed)"),
+  migrated.match(/cd "content"/g)?.length,
+  migrated.includes("beebox url-check (managed)"),
+]
+=>
+[
+  true,
+  false,
+  1,
+  true
+]
+```
+
 ## Merge — preserves unrelated settings keys
 
 Existing user settings under unrelated top-level keys are preserved verbatim:
