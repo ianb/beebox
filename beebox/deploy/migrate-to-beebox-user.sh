@@ -67,6 +67,78 @@ assert_moveable_pair() {
   fi
 }
 
+remap_claude_projects() {
+  local mode="$1"
+  local projects="$2"
+  python3 - "$mode" "$projects" "$OLD_HOME" "$NEW_HOME" <<'PY'
+import filecmp, os, pathlib, sys
+
+mode, projects_arg, old_home, new_home = sys.argv[1:]
+projects = pathlib.Path(projects_arg)
+
+def encode(path):
+    return "".join(character if character.isascii() and character.isalnum() else "-" for character in path)
+
+if not projects.is_dir():
+    print("0")
+    raise SystemExit
+
+old_prefix = encode(old_home)
+new_prefix = encode(new_home)
+pairs = []
+for source in sorted(list(projects.iterdir())):
+    if not source.name.startswith(old_prefix):
+        continue
+    destination = projects / (new_prefix + source.name[len(old_prefix):])
+    if source.is_symlink() and destination.exists() and source.resolve() == destination.resolve():
+        continue
+    if source.is_symlink() or not source.is_dir():
+        raise SystemExit(f"invalid retired Claude project directory: {source}")
+    if destination.exists() or destination.is_symlink():
+        if not source.is_dir() or not destination.is_dir():
+            raise SystemExit(f"conflicting Claude project paths: {source} and {destination}")
+        for child in source.iterdir():
+            target = destination / child.name
+            if not target.exists() and not target.is_symlink():
+                continue
+            if child.is_file() and target.is_file() and filecmp.cmp(child, target, shallow=False):
+                continue
+            if child.resolve() != target.resolve():
+                raise SystemExit(f"conflicting Claude transcript paths: {child} and {target}")
+    pairs.append((source, destination))
+
+if mode == "check":
+    print("1" if pairs else "0")
+    raise SystemExit
+if mode != "apply":
+    raise SystemExit(f"unknown Claude transcript remap mode: {mode}")
+
+for source, destination in pairs:
+    if not destination.exists() and not destination.is_symlink():
+        source.rename(destination)
+    else:
+        for child in list(source.iterdir()):
+            target = destination / child.name
+            if not target.exists() and not target.is_symlink():
+                child.rename(target)
+            elif child.is_file() and target.is_file() and filecmp.cmp(child, target, shallow=False):
+                child.unlink()
+        source.rmdir()
+    source.symlink_to(destination.name, target_is_directory=True)
+    for parent, directories, files in os.walk(destination, followlinks=False):
+        for name in directories + files:
+            link = pathlib.Path(parent) / name
+            if not link.is_symlink():
+                continue
+            target = os.readlink(link)
+            if not os.path.isabs(target) or not target.startswith(old_home + os.sep):
+                continue
+            link.unlink()
+            link.symlink_to(new_home + target[len(old_home):], target_is_directory=name in directories)
+print(str(len(pairs)))
+PY
+}
+
 echo "=== Migrating production to the Bee Box identity ==="
 
 FIRST_CUTOVER=0
@@ -128,6 +200,8 @@ for path in paths:
             raise SystemExit(f"both retired and canonical dependencies exist in {path}")
 PY
 
+CLAUDE_TRANSCRIPT_REMAP_NEEDED=$(remap_claude_projects check "$PREFLIGHT_HOME/.claude/projects")
+
 # Stop both generations. callback-hub is included because it can have child
 # processes whose cwd is inside the install while the filesystem is moved.
 OLD_UNITS=(
@@ -145,11 +219,13 @@ NEW_UNITS=(
   beebox-serve-recycle
   beebox-serve-recycle.timer
 )
-if [[ "$FIRST_CUTOVER" == 1 ]]; then
+if [[ "$FIRST_CUTOVER" == 1 || "$CLAUDE_TRANSCRIPT_REMAP_NEEDED" == 1 ]]; then
   echo "Stopping old and any partially installed Bee Box services..."
   for unit in "${OLD_UNITS[@]}" "${NEW_UNITS[@]}"; do
     "$SYSTEMCTL_BIN" stop "$unit" 2>/dev/null || true
   done
+fi
+if [[ "$FIRST_CUTOVER" == 1 ]]; then
   echo "Disabling retired services (they remain on disk for rollback review)..."
   for unit in "${OLD_UNITS[@]}"; do
     "$SYSTEMCTL_BIN" disable "$unit" 2>/dev/null || true
@@ -227,6 +303,14 @@ migrate_path "$NEW_HOME/.local/share/cb" "$NEW_HOME/.local/share/beebox"
 migrate_path "$NEW_HOME/.cb-session-secret" "$NEW_HOME/.bbx-session-secret"
 migrate_path "$NEW_HOME/.cb-auth.json" "$NEW_HOME/.bbx-auth.json"
 migrate_path "$NEW_HOME/.cb-auth.json.invites.json" "$NEW_HOME/.bbx-auth.json.invites.json"
+
+# Claude keys each transcript directory by the absolute cwd that started the
+# session. Move the transcript bytes under the new encoded cwd and leave the
+# retired key as a compatibility symlink for rollback tooling.
+if [[ "$CLAUDE_TRANSCRIPT_REMAP_NEEDED" == 1 ]]; then
+  echo "Remapping Claude transcript directories to the Bee Box home..."
+  remap_claude_projects apply "$NEW_HOME/.claude/projects" >/dev/null
+fi
 
 ENV_FILE="$NEW_HOME/.env"
 if [[ -f "$ENV_FILE" ]]; then
