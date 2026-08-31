@@ -219,6 +219,19 @@ export interface Hit {
   entry: number;
 }
 
+/**
+ * A managed worktree does not receive the gitignored personal blocklist. Use a
+ * worktree-local file when present, otherwise share the main checkout's file
+ * beside Git's common directory. Absolute overrides remain absolute.
+ */
+export function blocklistCandidates(options: { repoRoot: string; rel: string; commonDir: string }): string[] {
+  const { repoRoot, rel, commonDir } = options;
+  if (path.isAbsolute(rel)) return [rel];
+  const local = path.join(repoRoot, rel);
+  const mainCheckout = path.join(path.dirname(commonDir), rel);
+  return local === mainCheckout ? [local] : [local, mainCheckout];
+}
+
 /** True if a block span sits entirely inside one of the allow spans. */
 function covered([bs, be]: [number, number], allowSpans: Array<[number, number]>): boolean {
   return allowSpans.some(([as, ae]) => as <= bs && be <= ae);
@@ -256,16 +269,25 @@ export function findBlocked(added: AddedLine[], entries: Entry[]): Hit[] {
 function main(): void {
   const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
   const rel = process.env.BBX_COMMIT_BLOCKLIST ?? ".commit-blocklist";
-  const blocklistPath = path.join(repoRoot, rel);
+  const commonDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
+    encoding: "utf8",
+  }).trim();
+  const candidates = blocklistCandidates({ repoRoot, rel, commonDir });
 
-  let text: string;
-  try {
-    text = fs.readFileSync(blocklistPath, "utf8");
-  } catch (e) {
-    if (isErrnoException(e) && e.code === "ENOENT") return; // no list => opt-out, silent no-op
-    console.error(`commit-blocklist-check: cannot read ${rel}: ${errorMessage(e)}`);
-    process.exit(1); // any other read failure => fail closed
+  let text = "";
+  let blocklistPath = "";
+  for (const candidate of candidates) {
+    try {
+      text = fs.readFileSync(candidate, "utf8");
+      blocklistPath = candidate;
+      break;
+    } catch (e) {
+      if (isErrnoException(e) && e.code === "ENOENT") continue;
+      console.error(`commit-blocklist-check: cannot read ${candidate}: ${errorMessage(e)}`);
+      process.exit(1); // any other read failure => fail closed
+    }
   }
+  if (blocklistPath === "") return; // no list in this worktree or main => opt-out
 
   let entries: Entry[];
   try {
@@ -278,7 +300,9 @@ function main(): void {
 
   // The personal list must never be committed — it literally contains the
   // strings you're purging. Refuse if it's tracked.
-  const tracked = execFileSync("git", ["ls-files", "--", rel], { cwd: repoRoot, encoding: "utf8" }).trim();
+  const tracked = path.isAbsolute(rel)
+    ? ""
+    : execFileSync("git", ["ls-files", "--", rel], { cwd: repoRoot, encoding: "utf8" }).trim();
   if (tracked !== "") {
     console.error(`commit-blocklist-check: ${rel} is tracked by git — it must stay gitignored (it holds the very strings you block). Run: git rm --cached ${rel}`);
     process.exit(1);
@@ -293,9 +317,9 @@ function main(): void {
   const hits = findBlocked(parseAddedLines(diff), entries);
   if (hits.length > 0) {
     console.error("commit-blocklist-check failed — staged changes add blocklisted content:");
-    for (const h of hits) console.error(`  ${h.file}:${h.lineno} (matches ${rel} line ${h.entry})`);
+    for (const h of hits) console.error(`  ${h.file}:${h.lineno} (matches ${blocklistPath} line ${h.entry})`);
     console.error("The matched value is not printed (it would re-leak). To see which term:");
-    console.error(`  sed -n '<N>p' ${rel}`);
+    console.error(`  sed -n '<N>p' ${blocklistPath}`);
     console.error("Fix it, or add a `!`-allow (specific token) or `file:` ignore (whole file). (--no-verify bypasses — don't.)");
     process.exit(1);
   }

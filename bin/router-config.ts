@@ -104,12 +104,7 @@ export const DEV_NO_HUB = process.env.BBX_DEV_NO_HUB === "1";
 export const HUB_CONFIG_DIR = path.join(STATE_DIR, "hub-configs");
 
 export const MAIN_BOX_DEFAULTS = [
-  path.join(os.homedir(), "src", "boxes", "hearthside"),
   path.join(os.homedir(), "src", "boxes", "test1"),
-  path.join(os.homedir(), "src", "boxes", "hearth-test"),
-  path.join(os.homedir(), "src", "boxes", "studio"),
-  path.join(os.homedir(), "src", "boxes", "meta-bbx"),
-  path.join(os.homedir(), "src", "boxes", "ia-review"),
 ];
 
 // Per-worktree, just like the box apps: /<name>/dev/ serves <name>'s checkout —
