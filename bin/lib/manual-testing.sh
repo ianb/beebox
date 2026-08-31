@@ -26,7 +26,7 @@ workstream_confirm_tested() {
   [ -z "$(git -C "$WT_MONO" status --porcelain)" ] \
     || { echo "confirm-tested: main checkout must be clean" >&2; return 1; }
   local matches issue rel match_count
-  matches=$(find "$WT_MONO/issues" -type f -name "$basename" ! -path '*/closed/*')
+  matches=$(find "$WT_MONO/issues" -type f -name "$basename" ! -path '*/closed/*' ! -path '*/deferred/*')
   match_count=$(printf '%s\n' "$matches" | grep -c . || true)
   [ "$match_count" -eq 1 ] || { echo "confirm-tested: expected one open issue named $basename" >&2; return 1; }
   issue="$matches"

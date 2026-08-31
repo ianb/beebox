@@ -39,6 +39,7 @@ import {
   MissingSimilarPathError, NoStoredEmbeddingError, UnknownSubcommandError, UsageError,
 } from "./issues-errors.js";
 import { emitJson, issueLine, reportHits } from "./issues-output.js";
+import { activateDueRepositories } from "./deferred-issues.js";
 
 const USAGE = `bin/issues — survey and search the issue queue
 
@@ -47,6 +48,7 @@ const USAGE = `bin/issues — survey and search the issue queue
   issues search <text> [filters]           keyword / semantic search
   issues similar <issue-path> [filters]    issues (and docs) like this one
   issues show <issue-path>                 frontmatter + the top of the body
+  issues activate-due [--apply]            preview, or move due deferred issues into their categories
 
 Status (every subcommand):  default open only, --closed only closed, --all both.
 Filters: --category --area --label --workstream --discovered-in --needs
@@ -172,6 +174,24 @@ async function commandShow(values: ParsedValues, positionals: string[]): Promise
   }
 }
 
+async function commandActivateDue(values: ParsedValues): Promise<void> {
+  const visibilityFilter = values.visibility === undefined
+    ? null
+    : oneOf({ value: values.visibility, allowed: ["public", "private"] as const, flag: "--visibility" });
+  const result = await activateDueRepositories({
+    repoRoot: REPO_ROOT,
+    dryRun: values.apply !== true,
+    visibility: visibilityFilter,
+  });
+  if (values.json === true) {
+    emitJson(result);
+    return;
+  }
+  for (const [visibility, moves] of Object.entries(result)) {
+    for (const move of moves) process.stdout.write(`${visibility}: ${move.source} -> ${move.destination}\n`);
+  }
+}
+
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -189,6 +209,7 @@ async function main(): Promise<void> {
     case "search": return commandSearch(values, rest);
     case "similar": return commandSimilar(values, rest);
     case "show": return commandShow(values, rest);
+    case "activate-due": return commandActivateDue(values);
     default: throw new UnknownSubcommandError(command);
   }
 }

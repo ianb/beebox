@@ -27,6 +27,8 @@ export const options = {
   rebuild: { type: "boolean" },
   docs: { type: "boolean" },
   help: { type: "boolean", short: "h" },
+  "dry-run": { type: "boolean" },
+  apply: { type: "boolean" },
   by: { type: "string" },
   min: { type: "string" },
   limit: { type: "string" },
@@ -52,6 +54,8 @@ export interface ParsedValues {
   rebuild?: boolean | undefined;
   docs?: boolean | undefined;
   help?: boolean | undefined;
+  "dry-run"?: boolean | undefined;
+  apply?: boolean | undefined;
   by?: string | undefined;
   min?: string | undefined;
   limit?: string | undefined;

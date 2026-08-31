@@ -46,6 +46,9 @@ log() { echo "[private-issues] $*" >&2; }
 WORKTREE_LOG="$HOME/.cache/beebox/worktree-cleanup.log"
 wlog() { printf '%s pid=%s private-issues %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" >> "$WORKTREE_LOG" 2>/dev/null || true; }
 
+# Assigned by wt_paths_init after the shared lifecycle helper is sourced.
+WT_ROOT=""
+
 # --- location derivation (the one place it lives) ---------------------------
 
 # pi_derive <checkout-path>: sets PI_MAIN (main checkout), PI_REPO (private
@@ -68,7 +71,7 @@ pi_derive() {
 pi_public_worktree_root() {
   local checkout="$1" paths_lib="$PI_MAIN/bin/lib/worktree-paths.sh"
   [ -f "$paths_lib" ] || paths_lib="$(dirname "$0")/lib/worktree-paths.sh"
-  # shellcheck source=lib/worktree-paths.sh
+  # shellcheck source=bin/lib/worktree-paths.sh
   . "$paths_lib"
   wt_paths_init "$checkout"
 }
@@ -261,6 +264,8 @@ cmd_init() {
     git -C "$PI_REPO" config beebox.privateIssues true
     touch "$PI_REPO/.beebox-private-issues"
     local cat
+    mkdir -p "$PI_REPO/deferred"
+    touch "$PI_REPO/deferred/.gitkeep"
     for cat in bugs features code-quality docs-and-chores decisions exploration watch; do
       mkdir -p "$PI_REPO/$cat" "$PI_REPO/closed/$cat"
       touch "$PI_REPO/$cat/.gitkeep" "$PI_REPO/closed/$cat/.gitkeep"
@@ -280,7 +285,7 @@ Rules that keep it private and safe:
   the leak guard working, not a bug.
 - **Links are one-way.** Issues here may link to public repo files; public
   files must NEVER link here (enforced by the public repo's doc-check).
-- **Category layout mirrors the public `issues/`** (bugs/, features/,
+- **Category layout mirrors the public `issues/`** (deferred/, bugs/, features/,
   code-quality/, docs-and-chores/, decisions/, exploration/, watch/,
   closed/<category>/), same file conventions (issues/CLAUDE.md over there).
 - **Nothing here is ever force-deleted.** If a public worktree goes away

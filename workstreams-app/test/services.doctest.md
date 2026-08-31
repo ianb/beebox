@@ -101,11 +101,12 @@ path prefix supplied by a client.
 JSON.stringify({
   open: issueRelPathSchema.safeParse("bugs/2026-08-13-example.md").success,
   closed: issueRelPathSchema.safeParse("closed/watch/2026-08-13-example.md").success,
+  deferred: issueRelPathSchema.safeParse("deferred/2026-08-13-example.md").success,
   privatePrefix: issueRelPathSchema.safeParse("private/bugs/2026-08-13-example.md").success,
   traversal: issueRelPathSchema.safeParse("bugs/../../secret.md").success,
   wrongExtension: issueRelPathSchema.safeParse("bugs/2026-08-13-example.txt").success,
 })
-=> {"open":true,"closed":true,"privatePrefix":false,"traversal":false,"wrongExtension":false}
+=> {"open":true,"closed":true,"deferred":true,"privatePrefix":false,"traversal":false,"wrongExtension":false}
 ```
 
 ## Documents retain issue, plan, body, and testing semantics
