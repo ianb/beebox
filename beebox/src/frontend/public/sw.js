@@ -14,10 +14,6 @@
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
-// Keep installability: a fetch handler (even a pass-through) is what makes the
-// app installable on some engines. We don't intercept — let the network serve.
-self.addEventListener("fetch", () => {});
-
 function parsePush(event) {
   if (!event.data) return null;
   try {
@@ -32,6 +28,7 @@ self.addEventListener("push", (event) => {
   const payload = parsePush(event);
   if (!payload) return;
   const title = payload.title || "Bee Box";
+  const sharedIcon = new URL("icons/icon-192.png", self.registration.scope).toString();
   event.waitUntil(
     self.registration.showNotification(title, {
       body: payload.body || "",
@@ -40,11 +37,11 @@ self.addEventListener("push", (event) => {
       // The sending box's own mark when the payload carries one (sendPush
       // fills it in), so a notification says which box is talking. Falls back
       // to the shared app icon for an older payload or a box with no mark.
-      icon: payload.icon || "/icons/icon-192.png",
+      icon: payload.icon || sharedIcon,
       // NOT the box mark: `badge` is the small status-bar representation,
       // which Android masks to a silhouette. A full-colour emoji through that
       // mask is a shapeless blob, so the badge stays the app's own.
-      badge: "/icons/icon-192.png",
+      badge: sharedIcon,
     }),
   );
 });
