@@ -1,6 +1,6 @@
 ---
 title: "Production Codex session startup and authentication"
-status: active
+status: partial
 workstream: codex-session-startup-auth
 issues: []
 ---
@@ -62,7 +62,7 @@ Bee Box production cannot start a Codex chat because the service account has no 
 
 **Why this needs to change.** Current chat preflight bypasses Codex, production has no `.codex` state, and plugin installation hides an absent executable as a plugin failure.
 
-**Direction.** Model Codex readiness as a discriminated result from the external process boundary: CLI unavailable, CLI incompatible, authentication required, plugin failure, or ready. Probe `codex login status` before mutating plugin state and cache a positive result for ten minutes, matching Claude's existing preflight cost control. Do not cache logged-out or inconclusive results. Preserve the underlying stderr/cause in logs and map the typed category to concise user copy. Do not inspect or copy credential files. Do not accept `OPENAI_API_KEY` from the ambient hub environment as an implicit fallback.
+**Direction.** Model Codex readiness as a discriminated result from the external process boundary: CLI unavailable, authentication required, probe inconclusive, plugin failure, or ready. Probe `codex login status` before mutating plugin state and cache a positive result for ten minutes, matching Claude's existing preflight cost control. Do not cache logged-out or inconclusive results. An inconclusive probe logs redacted detail and lets the SDK report its runtime state; it does not falsely diagnose a version mismatch. Do not inspect or copy credential files. Do not accept `OPENAI_API_KEY` from the ambient hub environment as an implicit fallback.
 
 **Vocabulary lock-ins.** `CodexReadinessError` is the user-facing typed exception. Provider-specific CLI services remain separate; the shared orchestration dispatches by engine rather than pretending Claude and Codex auth responses have one wire shape.
 
@@ -93,7 +93,7 @@ None. The cross-model review exposed and resolved the two-binary question: the S
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Codex executable is absent from the service `PATH` | Planned deployment-shaped test | Planned typed readiness error | Clear |
-| Workspace Codex version lacks plugin commands | Planned CLI-service doctest and scratch-home deploy check | Planned incompatible-CLI error | Clear |
+| Workspace Codex version lacks plugin commands | CLI-service doctest and scratch-home deploy check | Deployment fails before restart | Clear |
 | Plugin/login state is written by a different Codex version than the SDK executes | Planned single-binary path assertions | All call sites use the workspace-pinned binary | Clear test failure |
 | Service account is not logged in | Planned auth doctest | Planned authentication-required error and operator procedure | Clear |
 | `codex login status` output changes or is unparseable | Planned parser doctest | Planned inconclusive/incompatible result with stderr context; no cache | Clear |
@@ -154,4 +154,4 @@ Skipped. This is deployment and runtime infrastructure; it adds no concept a box
 
 ## Rollout shape
 
-Tests land red first at each boundary. Local completion requires the focused CLI/auth/plugin/chat tests and the deployment-shaped setup test to pass. Production rollout is intentionally two-stage: deploy the executable and diagnostics, then complete `beebox`-user login through the supported Codex CLI flow and run a real Codex chat. A production canary is not claimed until the browser-visible turn completes and the plugin hooks run without error.
+Tests landed red first at each boundary. Local implementation is complete: the focused CLI/auth/plugin/chat tests, real package-pinned executable probe, all 173 selected changed tests, typecheck, lint, shell syntax, and documentation checks pass. Production rollout remains intentionally open and two-stage: merge/deploy the executable and diagnostics, then complete `beebox`-user login through the supported Codex CLI flow and run a real Codex chat. A production canary is not claimed until the browser-visible turn completes and the plugin hooks run without error.
