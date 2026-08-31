@@ -82,7 +82,7 @@ Bee Box production cannot start a Codex chat because the service account has no 
 
 ## Could this be simpler?
 
-The simplest fix is to add the existing workspace `node_modules/.bin` to the service `PATH` and complete a manual login. That clears today's spawn `ENOENT` without installing another binary. The fuller plan adds a cached auth preflight, precise boundary errors, and deployment checks so a rebuild or dependency change cannot silently regress it, as required by principles 3, 4, and 10. It does not add an Admin login UI or a new secret store.
+The simplest runtime fix is to add the existing workspace `node_modules/.bin` to the service `PATH` and complete a manual login. That clears today's spawn `ENOENT` without installing another binary. The implemented path also adds a cached auth preflight, precise boundary errors, deployment checks, and an Admin device-code ceremony so a rebuild or dependency change cannot silently regress startup and the boxholder does not need shell access. It does not add a new secret store.
 
 ## Subplans
 
@@ -92,16 +92,16 @@ None. The cross-model review exposed and resolved the two-binary question: the S
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Codex executable is absent from the service `PATH` | Planned deployment-shaped test | Planned typed readiness error | Clear |
+| Codex executable is absent from the service `PATH` | Deployment-shaped test | Typed readiness error | Clear |
 | Workspace Codex version lacks plugin commands | CLI-service doctest and scratch-home deploy check | Deployment fails before restart | Clear |
 | Plugin/login state is written by a different Codex version than the SDK executes | Package lockstep and binary-path assertions | Direct CLI operations use the workspace-pinned binary; SDK turns use its version-matched vendored binary | Clear test failure |
-| Service account is not logged in | Planned auth doctest | Planned authentication-required error and operator procedure | Clear |
-| `codex login status` output changes or is unparseable | Planned parser doctest | Planned inconclusive/incompatible result with stderr context; no cache | Clear |
+| Service account is not logged in | Auth doctest | Authentication-required error and Admin device-code ceremony | Clear |
+| `codex login status` output changes or is unparseable | Parser doctest | Inconclusive/incompatible result with stderr context; no cache | Clear |
 | Marketplace registration is missing or stale | Existing installer doctest | Existing repair path | Clear in logs; user category improved |
 | Plugin add fails after successful login | Existing terminal-failure test, strengthened | Typed plugin failure preserving cause | Clear |
 | Hook cannot find `bbx` | Existing context-mirror tests; planned production canary | `run-bbx.sh` exits 127 with workspace detail | Clear |
 | CLI is installed but SDK cannot start a thread | Existing session-start phase reporting; planned canary | SDK error remains session-start, distinct from readiness | Clear |
-| Auth credentials leak through logs or child env | Planned negative assertions | Credentials remain in Codex's store; no env propagation | Clear test failure |
+| Auth credentials leak through logs or child env | Negative assertions | Credentials remain in Codex's store; no env propagation | Clear test failure |
 
 There is no unresolved critical gap in the planned local loop. Production authentication still requires the boxholder to complete the provider-supported login once, but that ceremony is initiated and observed through Admin rather than requiring shell access. The CLI command remains a recovery path when Admin is unavailable.
 

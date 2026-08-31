@@ -17,7 +17,13 @@ import {
   createClaudeCliService,
   type ClaudeCliService,
 } from "../../services/claude-cli.js";
-import { createCodexCliService, type CodexCliService } from "../../services/codex-cli.js";
+import {
+  createCodexCliService,
+  redactCodexCliDetail,
+  type CodexCliService,
+} from "../../services/codex-cli.js";
+
+export { redactCodexCliDetail as redactCodexAuthDetail } from "../../services/codex-cli.js";
 
 /** The single actionable message shown when Claude Code has no active login. */
 export const CLAUDE_NOT_LOGGED_IN_MESSAGE =
@@ -52,17 +58,11 @@ export class CodexCliUnavailableError extends CodexReadinessError {
   readonly detail: string;
 
   constructor(detail: string) {
-    const safeDetail = redactCodexAuthDetail(detail);
+    const safeDetail = redactCodexCliDetail(detail);
     super("Codex CLI is unavailable — reinstall Bee Box's package dependencies", { cause: new Error(safeDetail) });
     this.name = "CodexCliUnavailableError";
     this.detail = safeDetail;
   }
-}
-
-export function redactCodexAuthDetail(detail: string): string {
-  return detail
-    .replaceAll(/\bsk-[\w-]+/g, "<redacted-api-key>")
-    .replaceAll(/((?:api key|access token)\s*-\s*)\S+/gi, "$1<redacted>");
 }
 
 // A confirmed login is cached this long. Generous — auth rarely changes mid
@@ -126,7 +126,7 @@ export async function checkCodexAuth(options?: {
       }
     case "inconclusive":
       console.warn(
-        `[codex-auth] status probe was inconclusive; letting Codex report its runtime state: ${redactCodexAuthDetail(status.detail)}`,
+        `[codex-auth] status probe was inconclusive; letting Codex report its runtime state: ${redactCodexCliDetail(status.detail)}`,
       );
       return;
   }
