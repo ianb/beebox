@@ -10,12 +10,19 @@ result so a wakeup cycle doesn't shell out per job.
 ```ts setup
 import {
   checkClaudeAuth,
+  checkCodexAuth,
   preflightChatBackend,
   resetClaudeAuthCache,
+  resetCodexAuthCache,
   ClaudeAuthError,
+  CodexAuthError,
   CLAUDE_NOT_LOGGED_IN_MESSAGE,
+  CODEX_NOT_LOGGED_IN_MESSAGE,
+  redactCodexAuthDetail,
 } from "../../../src/core/agent/auth-preflight.js";
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../src/services/claude-cli.js";
+import { createFakeCodexCli } from "../../../src/services/codex-cli.js";
+import { createChatBackend } from "../../../src/services/claude-chat.js";
 
 /** A probe that answers `n` times with no usable result, then as given. */
 function flakyCli(inconclusiveTimes, then) {
@@ -89,6 +96,95 @@ const claudeCli = createFakeClaudeCli({ loggedIn: false });
 const proceedReal = await preflightChatBackend({ backend: { requiresClaudeAuth: true }, session, claudeCli });
 JSON.stringify({ proceedReal, events })
 => {"proceedReal":false,"events":[["error","Claude Code is not logged in — run `claude auth login` on this machine"]]}
+```
+
+## Codex has its own preflight and remedy
+
+Codex does not reuse Claude's status shape or credentials. A confirmed logout
+fails before plugin mutation or SDK startup and says which service identity
+must log in.
+
+```ts
+resetCodexAuthCache();
+const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
+const thrown = await checkCodexAuth({ codexCli }).then(() => "no throw").catch((e) => `${e.name}: ${e.message}`);
+thrown
+=> CodexAuthError: Codex is not logged in — run `codex login --device-auth` as the Bee Box service user
+```
+
+```ts continue
+CODEX_NOT_LOGGED_IN_MESSAGE
+=> Codex is not logged in — run `codex login --device-auth` as the Bee Box service user
+```
+
+A positive result is cached for the wakeup/chat burst. Logout and
+inconclusive results are not cached.
+
+```ts
+resetCodexAuthCache();
+const codexCli = createFakeCodexCli({ status: { kind: "logged-in" } });
+await checkCodexAuth({ codexCli });
+await checkCodexAuth({ codexCli });
+codexCli.statusCalls
+=> 1
+```
+
+```ts
+resetCodexAuthCache();
+const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
+await checkCodexAuth({ codexCli }).catch((e) => e instanceof CodexAuthError);
+await checkCodexAuth({ codexCli }).catch((e) => e instanceof CodexAuthError);
+codexCli.statusCalls
+=> 2
+```
+
+An inconclusive process answer does not block a run the SDK may still complete,
+and it is probed again next time rather than cached.
+
+```ts
+resetCodexAuthCache();
+const codexCli = createFakeCodexCli({ status: { kind: "inconclusive", detail: "timed out" } });
+await checkCodexAuth({ codexCli });
+await checkCodexAuth({ codexCli });
+codexCli.statusCalls
+=> 2
+```
+
+The chat dispatch selects the provider preflight. A Codex engine does not
+silently bypass auth and never calls the Claude fake.
+
+```ts
+resetCodexAuthCache();
+const codexEvents = [];
+const codexSession = { emit: (event, err) => { codexEvents.push([event, err.message]); return true; } };
+const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
+const claudeCli = createFakeClaudeCli({ loggedIn: true });
+const proceedCodex = await preflightChatBackend({
+  backend: { requiresCodexAuth: true },
+  engine: "codex",
+  session: codexSession,
+  claudeCli,
+  codexCli,
+});
+JSON.stringify({ proceedCodex, codexEvents, codexCalls: codexCli.statusCalls })
+=> {"proceedCodex":false,"codexEvents":[["error","Codex is not logged in — run `codex login --device-auth` as the Bee Box service user"]],"codexCalls":1}
+```
+
+The production composite backend carries both provider requirements. This is
+the object the chat registry actually passes to the preflight.
+
+```ts
+const backend = createChatBackend();
+JSON.stringify({ claude: backend.requiresClaudeAuth, codex: backend.requiresCodexAuth })
+=> {"claude":true,"codex":true}
+```
+
+Status diagnostics preserve useful CLI context but redact credential-shaped
+content before it becomes an error cause or log value.
+
+```ts
+redactCodexAuthDetail("warning for API key - sk-secret_123 and access token - abc123")
+=> warning for API key - <redacted> and access token - <redacted>
 ```
 
 ## A probe that returns no answer is not a logout

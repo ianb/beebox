@@ -111,6 +111,8 @@ export interface ChatBackend {
    * never touch the SDK) skip it. Absent/`false` on every fake.
    */
   requiresClaudeAuth?: boolean | undefined;
+  /** True only for the real Codex SDK backend; fakes skip Codex auth probes. */
+  requiresCodexAuth?: boolean | undefined;
   start(opts: ChatBackendStartOptions): ChatBackendRun;
   /**
    * Pre-warm a Claude subprocess against `opts` so the next `start()` with

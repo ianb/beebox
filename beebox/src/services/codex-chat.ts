@@ -231,5 +231,5 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
 
 export function createCodexChatBackend(createSession?: CodexSdkSessionFactory): ChatBackend {
   const factory = createSession ?? createCodexSdkSession;
-  return { start: (options) => createRun(options, factory) };
+  return { requiresCodexAuth: true, start: (options) => createRun(options, factory) };
 }

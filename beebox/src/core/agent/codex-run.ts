@@ -6,6 +6,7 @@ import { fmt } from "../../lib/format.js";
 import { buildTimezoneContext } from "../box/config.js";
 import type { AgentResult } from "./types.js";
 import { ensureCodexPluginInstalled } from "./ensure-codex-plugin.js";
+import { checkCodexAuth } from "./auth-preflight.js";
 import { expandClaudeIncludes } from "../agent-context-includes.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { validateHookPathsResult } from "../../cli/commands/validate-hook.js";
@@ -57,6 +58,7 @@ export async function runCodexAgent(
   const activity = { seen: false };
   let observedSessionId = options.resumeSessionId ?? "";
   try {
+    await checkCodexAuth();
     await ensureCodexPluginInstalled();
     const tzContext = options.resumeSessionId === undefined ? await buildTimezoneContext(options.boxRoot) : "";
     const { packageRoot } = await getBoxShape(options.boxRoot);

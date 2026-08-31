@@ -4,6 +4,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { EventEmitter } from "node:events";
 import * as readline from "node:readline";
 import { z } from "zod";
+import { codexBinaryPath } from "./codex-binary.js";
 
 const rpcResponseSchema = z.looseObject({
   id: z.number(),
@@ -58,8 +59,7 @@ export class CodexHistoryServer {
   private closing = false;
 
   constructor(cwd: string) {
-    // TODO(env-migration): test/diagnostic binary override; move into the typed env boundary.
-    this.child = spawn(process.env.BBX_CODEX_BINARY ?? "codex", ["app-server", "--listen", "stdio://"], {
+    this.child = spawn(codexBinaryPath(), ["app-server", "--listen", "stdio://"], {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
     });

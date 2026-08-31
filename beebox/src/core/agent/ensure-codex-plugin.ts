@@ -32,6 +32,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { assertNever } from "../../lib/invariant.js";
+import { codexBinaryPath } from "../../services/codex-binary.js";
 
 const execFileAsync = promisify(execFile);
 const pluginListSchema = z.object({
@@ -65,7 +66,7 @@ export class CodexPluginInstallError extends Error {
 /** One `codex` invocation, resolving to its stdout. Injected so tests can watch. */
 export type CodexCommand = (args: string[]) => Promise<string>;
 
-const runCodex: CodexCommand = async (args) => (await execFileAsync("codex", args)).stdout;
+const runCodex: CodexCommand = async (args) => (await execFileAsync(codexBinaryPath(), args)).stdout;
 
 /**
  * What Codex says about our plugin. The three answers need three responses, and
