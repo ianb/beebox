@@ -13,13 +13,14 @@ mkdir -p "$OLD_HOME/boxes/birch" "$ROOT/etc/systemd/system"
 mkdir -p "$ROOT/opt/callback/callback-box/bin"
 mkdir -p "$ROOT/opt/callback/beebox/bin" "$ROOT/opt/callback/beebox/deploy/server-bin"
 mkdir -p "$ROOT/fake-bin"
-printf '%s\n' 'old state' > "$OLD_HOME/.config/cb/state.json"
+printf '%s\n' '{"state":"old"}' > "$OLD_HOME/.config/cb/state.json"
 printf '%s\n' 'old scheduler state' > "$OLD_HOME/.local/share/cb/scheduler.json"
 printf '%s\n' 'secret' > "$OLD_HOME/.cb-session-secret"
 printf '%s\n' '{}' > "$OLD_HOME/.cb-auth.json"
 printf '%s\n' '{"invites":[]}' > "$OLD_HOME/.cb-auth.json.invites.json"
 printf '%s\n' '{"boxes":{"birch":{"path":"'"$OLD_HOME"'/boxes/birch"}}}' > "$OLD_HOME/.config/cb/hub.json"
 printf '%s\n' '{"boxes":["'"$OLD_HOME"'/boxes/birch/content"]}' > "$OLD_HOME/.config/cb/boxes.json"
+printf '%s\n' '{"boxes":["'"$OLD_HOME"'/boxes/birch"]}' > "$OLD_HOME/.config/cb/scheduler.json"
 printf '%s\n' '{"dependencies":{"callback-box":"link:'"$ROOT"'/opt/callback/callback-box"}}' > "$OLD_HOME/boxes/birch/package.json"
 printf '%s\n' \
   'CALLBACK_DEEPGRAM_API_KEY=deepgram' \
@@ -67,6 +68,7 @@ grep -q "^BBX_GOOGLE_TOKENS_FILE=$ROOT/home/beebox/.google-tokens.json$" "$ROOT/
 grep -q "^PATH=$ROOT/home/beebox/.local/bin:/usr/local/bin:/usr/bin:/bin$" "$ROOT/home/beebox/.env"
 grep -q "$ROOT/home/beebox/boxes/birch" "$ROOT/home/beebox/.config/beebox/hub.json"
 grep -q "$ROOT/home/beebox/boxes/birch/content" "$ROOT/home/beebox/.config/beebox/boxes.json"
+grep -q "$ROOT/home/beebox/boxes/birch" "$ROOT/home/beebox/.config/beebox/scheduler.json"
 grep -q '"beebox": "link:.*/opt/beebox/beebox"' "$ROOT/home/beebox/boxes/birch/package.json"
 if grep -q 'callback-box' "$ROOT/home/beebox/boxes/birch/package.json"; then
   echo "retired dependency survived package migration" >&2

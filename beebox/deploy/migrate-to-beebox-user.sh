@@ -116,7 +116,7 @@ home = pathlib.Path(sys.argv[1])
 config = home / ".config/cb"
 if not config.is_dir():
     config = home / ".config/beebox"
-paths = [config / "hub.json", config / "boxes.json"]
+paths = sorted(config.glob("*.json"))
 paths.extend(sorted((home / "boxes").glob("*/package.json")))
 for path in paths:
     if not path.is_file():
@@ -314,7 +314,7 @@ import json, os, pathlib, shutil, sys, tempfile
 
 home = pathlib.Path(sys.argv[1])
 old_home, new_home, old_install, new_install = sys.argv[2:]
-paths = [home / ".config/beebox/hub.json", home / ".config/beebox/boxes.json"]
+paths = sorted((home / ".config/beebox").glob("*.json"))
 paths.extend(sorted((home / "boxes").glob("*/package.json")))
 
 def rewrite(value):
