@@ -80,3 +80,40 @@ priority: urgent
 Body`).join("\n")
 => issues/features/x.md: priority must be important, normal, or backlog
 ```
+
+## Deferred issues require their activation metadata
+
+```ts
+check("issues/deferred/x.md", `---
+title: X
+workstream: unattached
+activate-on: 2026-09-07
+category: code-quality
+---
+Body`).length
+=> 0
+
+check("issues/deferred/x.md", `---
+title: X
+workstream: unattached
+activate-on: 2026-02-30
+category: someday
+---
+Body`).join("\n")
+=> issues/deferred/x.md: deferred issues require activate-on as a valid YYYY-MM-DD date
+issues/deferred/x.md: deferred issues require a valid category
+```
+
+The fields do not survive the move into the active queue.
+
+```ts
+check("issues/features/x.md", `---
+title: X
+workstream: unattached
+activate-on: 2026-09-07
+category: features
+---
+Body`).join("\n")
+=> issues/features/x.md: activate-on is allowed only on deferred issues
+issues/features/x.md: category is allowed only on deferred issues
+```

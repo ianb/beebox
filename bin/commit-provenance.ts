@@ -149,8 +149,8 @@ export function miscasedKeys(parsed: string): string[] {
 /**
  * Every issue, as basename (without `.md`) -> path relative to `issuesDir`.
  *
- * Only real issue files count — `issues/<category>/<name>.md` and
- * `issues/closed/<category>/<name>.md` — so the queue's own prose
+ * Only real issue files count — `issues/<category>/<name>.md`,
+ * `issues/deferred/<name>.md`, and `issues/closed/<category>/<name>.md` — so the queue's own prose
  * (`issues/CLAUDE.md`, `issues/closed/README.md`) can never be cited as an
  * issue.
  *
@@ -161,10 +161,13 @@ export function miscasedKeys(parsed: string): string[] {
  */
 export function issueFiles(issuesDir: string): Map<string, string> {
   const out = new Map<string, string>();
+  const openDirectories = new Set([
+    "bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch", "deferred",
+  ]);
   const isIssuePath = (rel: string): boolean => {
     const parts = rel.split(path.sep);
-    if (parts.length === 2) return parts[0] !== "closed"; // issues/<category>/<name>.md
-    return parts.length === 3 && parts[0] === "closed"; // issues/closed/<category>/<name>.md
+    if (parts.length === 2) return openDirectories.has(parts[0] ?? "");
+    return parts.length === 3 && parts[0] === "closed" && openDirectories.has(parts[1] ?? "") && parts[1] !== "deferred";
   };
   const walk = (dir: string): void => {
     let entries: fs.Dirent[];

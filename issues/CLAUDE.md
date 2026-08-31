@@ -38,6 +38,27 @@ item rather than duplicating. Pick the
 *dominant* category — a bug whose fix is a refactor is still a `bug`. Reclassify
 by `git mv`-ing between category dirs (and fix any inbound links).
 
+## Deferred items
+
+Work that becomes actionable on a known future date lives outside the active
+queue in `deferred/`. The directory is flat. Keep the ordinary filing-date
+filename and record the activation date and destination category in frontmatter:
+
+```yaml
+activate-on: 2026-09-07
+category: code-quality
+```
+
+Both fields are required in `deferred/` and forbidden after activation. The
+hourly `deferred-issues` schedule moves due files into their category directory,
+removes these two fields, repairs links with the normal updater, and commits the
+move. A missed tick catches up on the next run. Deferred files do not appear in
+normal issue lists, searches, or automatic issue picking before activation.
+They remain explicitly addressable so a link or manual worktree launch can open
+one early. They are still documents: links to and from them must resolve, their basenames
+must remain unique across the entire issue tree, and `doc-check --fix` updates
+links when activation moves them.
+
 ## Closed items
 
 Closed items move to **`closed/<category>/`** with `git mv` — directory placement

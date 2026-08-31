@@ -123,7 +123,7 @@ if ! [[ "$wt" =~ ^[a-zA-Z0-9_-]+$ ]]; then
   exit 1
 fi
 
-if [ -n "$issue" ] && ! [[ "$issue" =~ ^(issues|private-issues)/(closed/)?(bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)/[a-zA-Z0-9_-]+\.md$ ]]; then
+if [ -n "$issue" ] && ! [[ "$issue" =~ ^(issues|private-issues)/((closed/)?(bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)/|deferred/)[a-zA-Z0-9_-]+\.md$ ]]; then
   echo "launch-worktree-session: --issue must be a repo-relative issue markdown path, got: $issue" >&2
   exit 1
 fi

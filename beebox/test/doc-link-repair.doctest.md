@@ -26,6 +26,21 @@ JSON.stringify(r.rewrites)
 => [{"line":1,"from":"../bugs/foo.md","to":"../closed/bugs/foo.md"}]
 ```
 
+Deferred activation is the same move contract. Once the destination is staged,
+the normal updater finds it by basename and repairs inbound links.
+
+```ts
+const activatedFiles = ["issues/code-quality/later.md", "issues/features/bar.md"];
+const activated = repairLinks({
+  fromRel: "issues/features/bar.md",
+  content: "[later](../deferred/later.md)",
+  fileExists: (candidate) => activatedFiles.includes(candidate),
+  basenameLookup: buildBasenameLookup(activatedFiles),
+});
+activated.content
+=> [later](../code-quality/later.md)
+```
+
 ## Frontmatter scalar and list paths use the same repair contract
 
 ```ts
