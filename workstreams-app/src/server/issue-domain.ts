@@ -7,6 +7,7 @@ import { issueNextActionSchema, type IssueNextAction } from "../shared/documents
 export const ISSUE_CATEGORIES = [
   "bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch",
 ] as const;
+export type IssueCategory = (typeof ISSUE_CATEGORIES)[number];
 
 export type IssuePriority = "important" | "normal" | "uncategorized" | "backlog";
 export type ResearchState = "none" | "awaiting" | "researched";
@@ -121,6 +122,10 @@ function researchState(body: string): ResearchState {
 const KNOWN_FRONTMATTER_KEYS = new Set([
   "title", "workstream", "needs", "design", "area", "labels", "priority",
   "next-action", "filed-by", "discovered-by", "discovered-in", "resolution",
+  // Deferred-only lifecycle metadata. Deferred files are intentionally not
+  // returned by listIssues(); the activation script consumes these fields and
+  // removes them when it moves the issue into its category directory.
+  "activate-on", "category",
 ]);
 
 export function parseIssueFile(options: {

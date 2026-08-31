@@ -2,7 +2,10 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 const PLAN_RE = /^beebox\/docs\/(plans|implemented-plans|unimplemented-plans)\/([^/]+\.md)$/;
+const ISSUE_CATEGORIES = ["bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch"] as const;
+const ISSUE_CATEGORY_SET = new Set<string>(ISSUE_CATEGORIES);
 const ISSUE_RE = /^issues\/(closed\/)?(?:bugs|features|code-quality|docs-and-chores|decisions|exploration|watch)\/[^/]+\.md$/;
+const DEFERRED_ISSUE_RE = /^issues\/deferred\/[^/]+\.md$/;
 const PLAN_STATUSES = new Set(["draft", "active", "partial", "implemented", "superseded", "parked"]);
 const NEEDS = new Set(["design", "decision", "manual-testing"]);
 const RESOLUTIONS = new Set(["implemented", "wontfix", "superseded"]);
@@ -33,6 +36,17 @@ function strings(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
+function calendarDate(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
 function pathProblem(params: { rel: string; key: string; value: unknown; exists: (rel: string) => boolean }): string[] {
   const { rel, key, value, exists } = params;
   if (typeof value !== "string" || value.length === 0) return [`${rel}: frontmatter ${key} must be a non-empty path`];
@@ -59,9 +73,9 @@ function planProblems(params: {
 }
 
 function issueProblems(params: {
-  rel: string; closed: boolean; data: Record<string, unknown>; body: string; exists: (rel: string) => boolean;
+  rel: string; closed: boolean; deferred: boolean; data: Record<string, unknown>; body: string; exists: (rel: string) => boolean;
 }): string[] {
-  const { rel, closed, data, body, exists } = params;
+  const { rel, closed, deferred, data, body, exists } = params;
   const out: string[] = [];
   if (data.needs !== undefined && (!strings(data.needs) || data.needs.some((need) => !NEEDS.has(need)))) out.push(`${rel}: invalid needs list`);
   if (data.labels !== undefined && (!strings(data.labels) || data.labels.some((label) => !/^[\da-z]+(?:-[\da-z]+)*$/.test(label)))) out.push(`${rel}: invalid labels list`);
@@ -73,6 +87,19 @@ function issueProblems(params: {
   const resolution = data.resolution;
   if (closed && (typeof resolution !== "string" || !RESOLUTIONS.has(resolution))) out.push(`${rel}: closed issues require a valid resolution`);
   if (!closed && resolution !== undefined) out.push(`${rel}: open issues must not have resolution`);
+  const activateOn = data["activate-on"];
+  const category = data.category;
+  if (deferred) {
+    if (!calendarDate(activateOn)) {
+      out.push(`${rel}: deferred issues require activate-on as a valid YYYY-MM-DD date`);
+    }
+    if (typeof category !== "string" || !ISSUE_CATEGORY_SET.has(category)) {
+      out.push(`${rel}: deferred issues require a valid category`);
+    }
+  } else {
+    if (activateOn !== undefined) out.push(`${rel}: activate-on is allowed only on deferred issues`);
+    if (category !== undefined) out.push(`${rel}: category is allowed only on deferred issues`);
+  }
   return out;
 }
 
@@ -93,7 +120,8 @@ export function frontmatterProblems(params: {
   const { rel, source, exists } = params;
   const plan = PLAN_RE.exec(rel);
   const issue = ISSUE_RE.exec(rel);
-  if (!plan && !issue) return [];
+  const deferred = DEFERRED_ISSUE_RE.test(rel);
+  if (!plan && !issue && !deferred) return [];
   if (plan && (plan[2] === "README.md" || plan[2]?.endsWith(".review.md"))) return [];
   let parsed: FrontmatterDocument | null;
   try {
@@ -107,6 +135,6 @@ export function frontmatterProblems(params: {
     ...commonProblems(rel, data),
     ...(plan
       ? planProblems({ rel, dir: plan[1] ?? "", data, exists })
-      : issueProblems({ rel, closed: issue?.[1] !== undefined, data, body: parsed.body, exists })),
+      : issueProblems({ rel, closed: issue?.[1] !== undefined, deferred, data, body: parsed.body, exists })),
   ];
 }

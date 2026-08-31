@@ -53,7 +53,7 @@ workstream_cull_pin_reason() {
       echo manual-testing
       return 0
     fi
-  done < <(find "$WT_MONO/issues" -mindepth 2 -maxdepth 2 -type f -name '*.md' 2>/dev/null)
+  done < <(find "$WT_MONO/issues" -mindepth 2 -maxdepth 2 -type f -name '*.md' ! -path '*/deferred/*' 2>/dev/null)
   return 1
 }
 

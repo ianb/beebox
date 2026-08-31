@@ -1,0 +1,5 @@
+# A date is a day-level promise, but hourly catch-up keeps activation prompt
+# after midnight without giving each deferred issue its own timer or state.
+description: "Activate due issues from deferred/ into their category queues"
+cadence: 1h
+timeout: 1h

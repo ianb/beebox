@@ -147,15 +147,18 @@ test("trailerValues matches the canonical key exactly; miscasedKeys catches the 
   assert.deepEqual(miscasedKeys("Workstream: s\nIssue: a\nPlan: p\n"), []);
 });
 
-test("issueBasenames takes only category-dir issues — the queue's own prose is not citable", () => {
+test("issueBasenames includes deferred issues but not the queue's own prose", () => {
   const dir = tmpDir("issues");
   write(path.join(dir, "issues/bugs/2026-01-01-a.md"), "x");
   write(path.join(dir, "issues/closed/features/2026-01-02-b.md"), "x");
+  write(path.join(dir, "issues/deferred/2026-01-03-c.md"), "x");
+  write(path.join(dir, "issues/not-a-category/2026-01-04-d.md"), "x");
   write(path.join(dir, "issues/CLAUDE.md"), "x"); // conventions doc, not an issue
   write(path.join(dir, "issues/closed/README.md"), "x");
   assert.deepEqual(issueBasenames(path.join(dir, "issues")).toSorted(), [
     "2026-01-01-a",
     "2026-01-02-b",
+    "2026-01-03-c",
   ]);
   assert.deepEqual(issueBasenames(path.join(dir, "nope")), []);
 });
@@ -167,10 +170,12 @@ test("issueFiles maps a basename to where the issue lives NOW", () => {
   const dir = tmpDir("issues-now");
   write(path.join(dir, "issues/bugs/2026-01-01-a.md"), "x");
   write(path.join(dir, "issues/closed/features/2026-01-02-b.md"), "x");
+  write(path.join(dir, "issues/deferred/2026-01-03-c.md"), "x");
   write(path.join(dir, "issues/CLAUDE.md"), "x");
   const files = issueFiles(path.join(dir, "issues"));
   assert.equal(files.get("2026-01-01-a"), path.join("bugs", "2026-01-01-a.md"));
   assert.equal(files.get("2026-01-02-b"), path.join("closed", "features", "2026-01-02-b.md"));
+  assert.equal(files.get("2026-01-03-c"), path.join("deferred", "2026-01-03-c.md"));
   assert.equal(files.has("CLAUDE"), false);
 });
 
