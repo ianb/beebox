@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
 import { bundleAnalysisPlugin } from "./src/dev/bundle-analysis-plugin";
+import { perBoxIdentityAssetPattern } from "./vite-proxy";
 
 const FRONTEND_PORT = Number(process.env.FRONTEND_PORT) || 3210;
 const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
@@ -145,7 +146,7 @@ export default defineConfig({
       // Vite answers them from its own static tree and a request for a PNG
       // comes back as the SPA document, so dev would show a broken icon while
       // prod showed the box's.
-      [`^${BASE_PREFIX}/[^/]+/(icon-\\d+\\.png|manifest\\.webmanifest)$`]: {
+      [perBoxIdentityAssetPattern(BASE_PREFIX)]: {
         target: backendTarget,
         changeOrigin: true,
         rewrite: stripBase,
