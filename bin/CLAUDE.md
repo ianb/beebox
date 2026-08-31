@@ -31,7 +31,9 @@ aren't personal-identity leaks; any other username trips it. Fix a hit with a re
 ## Commit blocklist (`commit-blocklist-check.ts`)
 
 `pnpm commit-blocklist-check` blocks a commit whose staged _additions_ contain
-any entry from a personal, gitignored `.commit-blocklist` at the repo root; the
+any entry from a personal, gitignored `.commit-blocklist` at the repo root. A
+linked worktree without its own copy falls back to the main checkout's list, so
+managed worktrees get the same guard without copying sensitive values. The
 pre-commit hook runs it on every commit. Shared mechanism, personal list: the
 script is tracked so everyone has the guard, but the strings it blocks live in a
 gitignored file so the sensitive values (a purged domain, an IP, personal names)
