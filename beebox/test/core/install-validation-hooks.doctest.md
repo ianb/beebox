@@ -154,6 +154,22 @@ second
 => []
 ```
 
+## Rename migration — replaces the retired managed hook
+
+```ts
+const box = await makeBox();
+const hookPath = path.join(box.packageRoot, ".git/hooks/pre-commit");
+await fs.writeFile(hookPath, "#!/bin/sh\n# callback-box validation hook (managed)\nexit 0\n");
+await installValidationHooks(box.root);
+const migrated = await fs.readFile(hookPath, "utf8");
+[migrated.includes("# beebox validation hook (managed)"), migrated.includes("/bin/bbx")]
+=>
+[
+  true,
+  true
+]
+```
+
 ## Merge — preserves unrelated settings keys
 
 Existing user settings under unrelated top-level keys are preserved verbatim:

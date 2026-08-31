@@ -131,7 +131,8 @@ async function mirrorRules(packageRoot: string): Promise<string[]> {
   const changed: string[] = [];
   const expected = new Set(files.map((file) => `beebox-rule-${file.slice(0, -3)}`));
   for (const entry of await readdir(skillsDir, { withFileTypes: true })) {
-    if (entry.isDirectory() && entry.name.startsWith("beebox-rule-") && !expected.has(entry.name)) {
+    const managed = entry.name.startsWith("beebox-rule-") || entry.name.startsWith("callback-box-rule-");
+    if (entry.isDirectory() && managed && !expected.has(entry.name)) {
       await rm(join(skillsDir, entry.name), { recursive: true });
       changed.push(join(skillsDir, entry.name));
     }

@@ -213,7 +213,7 @@ function upsertPostCommitBlock(existing: string | null, block: string): string {
  * Marker comment so we recognize a hook we wrote vs one a user installed.
  * If a foreign pre-commit hook exists we leave it alone.
  */
-const PRE_COMMIT_MARKER = "# beebox validation hook (managed)";
+const PRE_COMMIT_MARKER = "# beebox validation hook (managed)", LEGACY_PRE_COMMIT_MARKER = "# callback-box validation hook (managed)";
 
 // `git annex init` installs this hook when the pre-commit slot is empty. It is
 // safe for us to adopt because `preCommitBody()` preserves its only behavior
@@ -468,7 +468,7 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
       if (errnoCode(e) !== "ENOENT") throw e;
     }
 
-    const isManaged = existing !== null && existing.includes(PRE_COMMIT_MARKER);
+    const isManaged = existing !== null && [PRE_COMMIT_MARKER, LEGACY_PRE_COMMIT_MARKER].some((marker) => existing.includes(marker));
     const isGitAnnexGenerated = existing !== null && existing.replaceAll("\r\n", "\n").trimEnd() === GIT_ANNEX_PRE_COMMIT_BODY;
     const foreignHook = existing !== null && !isManaged && !isGitAnnexGenerated;
     if (foreignHook) {

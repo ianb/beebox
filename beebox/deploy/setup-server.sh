@@ -86,6 +86,8 @@ done
 # checkout, and after the user exists because everything here runs as them.
 echo "Installing uv for $BBX_USER..."
 su - "$BBX_USER" -c 'command -v uv >/dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh'
+# The login shell, not this provisioning shell, expands HOME and PATH.
+# shellcheck disable=SC2016
 su - "$BBX_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
 # Pre-fetch exactly the model weights document mode uses, so the first scanned
@@ -135,6 +137,8 @@ echo "Installing Claude Code CLI (native installer)..."
 curl -fsSL https://claude.ai/install.sh | bash
 su - "$BBX_USER" -c 'curl -fsSL https://claude.ai/install.sh | bash'
 # Add native install location to Bee Box user's PATH
+# The login shell, not this provisioning shell, expands HOME and PATH.
+# shellcheck disable=SC2016
 su - "$BBX_USER" -c 'grep -q "/.local/bin" ~/.bashrc || echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
 # Transcript retention. Claude Code prunes ~/.claude/projects/**/*.jsonl on a
@@ -188,16 +192,13 @@ else
   echo "$ENV_FILE already exists, not overwriting"
 fi
 
-# ── Systemd: beebox-serve ─────────────────────────────────────────
+# ── Systemd: beebox-hub ───────────────────────────────────────────
 echo "Creating systemd services..."
 BOXES_DIR="$BBX_HOME/boxes"
 BOX_DIRS=$(find "$BOXES_DIR" -maxdepth 1 -mindepth 1 -type d | sort | tr '\n' ' ')
 
-# Both serve and scheduler consult the same manifest at
-# ~/.config/beebox/boxes.json. The systemd unit no longer hard-codes box
-# paths; `bbx serve` reads the manifest at startup, and a future
-# `bbx boxes add <path>` just requires `systemctl restart beebox-serve`
-# (no unit rewrite needed).
+# The hub owns per-box supervisors and routing. The scheduler consults the
+# same box manifest. Neither unit hard-codes individual box paths.
 # KillMode=mixed + an explicit stop timeout: with systemd's default
 # (control-group) the stop signal goes to EVERY process in the cgroup, so a
 # `git` a box child is running is signalled by systemd rather than by us, and
@@ -207,17 +208,17 @@ BOX_DIRS=$(find "$BOXES_DIR" -maxdepth 1 -mindepth 1 -type d | sort | tr '\n' ' 
 # children (see drainBoxGitLocks / BOX_KILL_GRACE_MS); TimeoutStopSec is the
 # backstop, set above the in-process grace so systemd escalates only if our own
 # teardown failed.
-cat > /etc/systemd/system/beebox-serve.service <<EOF
+cat > /etc/systemd/system/beebox-hub.service <<EOF
 [Unit]
-Description=Bee Box Web Server
+Description=Bee Box Hub (per-box supervisor + router)
 After=network.target
 
 [Service]
 Type=simple
 User=$BBX_USER
 Group=$BBX_USER
-ExecStart=/usr/local/bin/bbx serve --host 0.0.0.0 --port 3210
-WorkingDirectory=$BOXES_DIR
+ExecStart=/usr/local/bin/bbx hub
+WorkingDirectory=$BBX_HOME
 EnvironmentFile=$BBX_HOME/.env
 KillMode=mixed
 TimeoutStopSec=60
@@ -256,40 +257,15 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-# ── Quiet-hour recycle of beebox-serve ───────────────────────────
-# The web server hot-reloads box-local schema edits by cache-busting the
-# dynamic import (Node never frees the old module), so its memory creeps a
-# little between restarts. A daily restart at a low-traffic hour reclaims it.
-# bbx-wait-quiet (shared with deploy.sh) waits, bounded and best-effort, for all
-# boxes to be at rest first so the restart doesn't kill an active chat/script.
-# The script itself lives at deploy/server-bin/bbx-wait-quiet rather than in a
-# heredoc here, so deploy.sh can reinstall it on every deploy. A server
-# provisioned before it existed had no copy at all and every deploy restarted
-# without waiting — the drift this file layout removes.
+# bbx-wait-quiet is shared with deploy.sh. Install it during provisioning so
+# the first deploy has the same bounded at-rest check as later deploys.
 install -m 0755 "$INSTALL_DIR/beebox/deploy/server-bin/bbx-wait-quiet" /usr/local/bin/bbx-wait-quiet
-
-cat > /etc/systemd/system/beebox-serve-recycle.service <<'EOF'
-[Unit]
-Description=Daily quiet-hour recycle of beebox-serve (reclaims schema hot-reload memory)
-
-[Service]
-Type=oneshot
-# Wait (best-effort) for at-rest, then restart only beebox-serve — chat lives
-# there, and the scheduler doesn't accumulate the hot-reload leak.
-ExecStart=/bin/bash -c '/usr/local/bin/bbx-wait-quiet; systemctl restart beebox-serve'
-EOF
-
-cat > /etc/systemd/system/beebox-serve-recycle.timer <<'EOF'
-[Unit]
-Description=Run beebox-serve-recycle daily at a low-traffic hour
-
-[Timer]
-OnCalendar=*-*-* 04:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
+# Remove obsolete pre-hub units on a re-run. They are superseded by the hub's
+# own per-box lifecycle and must not compete for ports or children.
+systemctl disable --now beebox-serve beebox-serve-recycle.timer 2>/dev/null || true
+rm -f /etc/systemd/system/beebox-serve.service \
+  /etc/systemd/system/beebox-serve-recycle.service \
+  /etc/systemd/system/beebox-serve-recycle.timer
 
 # ── Systemd: nightly Claude Code self-update ───────────────────────
 # Claude Code's built-in auto-updater only fires during interactive-ish
@@ -353,8 +329,8 @@ WantedBy=timers.target
 EOF
 
 systemctl daemon-reload
-systemctl enable beebox-serve beebox-scheduler claude-update.timer beebox-serve-recycle.timer
-systemctl start beebox-serve beebox-scheduler claude-update.timer beebox-serve-recycle.timer
+systemctl enable beebox-hub beebox-scheduler claude-update.timer
+systemctl start beebox-hub beebox-scheduler claude-update.timer
 
 # ── Nginx reverse proxy ────────────────────────────────────────────
 echo "Configuring nginx..."
@@ -396,6 +372,6 @@ nginx -t && systemctl restart nginx
 echo ""
 echo "=== Setup complete ==="
 echo "Services:"
-systemctl is-active beebox-serve || true
+systemctl is-active beebox-hub || true
 systemctl is-active beebox-scheduler || true
 echo "Nginx: $(systemctl is-active nginx)"

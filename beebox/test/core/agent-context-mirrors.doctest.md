@@ -30,6 +30,8 @@ paths:
 # Memo rules
 `);
 await writeFile(join(root, "node_modules/beebox/plugins/beebox-codex/hooks/hooks.json"), "{}");
+await mkdir(join(root, ".agents/skills/callback-box-rule-card-memo"), { recursive: true });
+await writeFile(join(root, ".agents/skills/callback-box-rule-card-memo/SKILL.md"), "retired mirror\n");
 await generateAgentContextMirrors(boxRoot);
 ```
 
@@ -56,5 +58,8 @@ Rules are copied into provider-valid skills:
 => true
 
 (await readFile(join(root, ".agents/skills/beebox-rule-card-memo/SKILL.md"), "utf8")).includes("**/*.memo.card")
+=> true
+
+await readFile(join(root, ".agents/skills/callback-box-rule-card-memo/SKILL.md"), "utf8").then(() => false, () => true)
 => true
 ```
