@@ -4,6 +4,12 @@ On 2026-08-30, **Callback Box** was renamed **Bee Box**. The new name is easier
 to read as ordinary words and keeps the product identity distinct from its
 implementation vocabulary.
 
+**The former name was entirely an early, internal development name. No public
+release was ever made under it.** Retired names remain in git history and
+temporary compatibility code because development boxes and infrastructure
+already carried them, not because there is a publicly released predecessor
+product or a public compatibility promise to preserve.
+
 The coordinated machine-name changes were:
 
 | Before | After |
