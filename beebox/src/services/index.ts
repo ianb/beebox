@@ -9,6 +9,7 @@
 
 import type { TelegramService } from "./telegram.js";
 import type { ClaudeCliService } from "./claude-cli.js";
+import type { CodexCliService } from "./codex-cli.js";
 import type { GoogleAuthService } from "./google-auth.js";
 import type { GoogleCalendarService } from "./google-calendar.js";
 import type { GoogleGmailService } from "./google-gmail.js";
@@ -21,6 +22,7 @@ import type { GoogleDriveService } from "./google-drive.js";
 export interface Services {
   telegram?: TelegramService | undefined;
   claudeCli?: ClaudeCliService | undefined;
+  codexCli?: CodexCliService | undefined;
   googleAuth?: GoogleAuthService | undefined;
   calendar?: GoogleCalendarService | undefined;
   gmail?: GoogleGmailService | undefined;

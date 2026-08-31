@@ -337,8 +337,11 @@ installs the CLI, then it persists in `~/.claude/` for that user.
 Codex authentication uses the same service-account custody boundary and its
 own CLI-managed store under `~/.codex/`. Bee Box deliberately does not reuse a
 transcription/search API key or copy a developer's credentials. After the
-workspace install creates `/usr/local/bin/codex`, authenticate once with the
-provider-supported device flow:
+workspace install creates `/usr/local/bin/codex`, the box owner normally starts
+the provider-supported device flow from **Admin → Codex**. Bee Box displays the
+short-lived verification URL and code while Codex owns token persistence and
+refresh. For recovery when the web UI is unavailable, the equivalent operator
+commands are:
 
 ```bash
 su - beebox -c 'codex login --device-auth'
@@ -346,8 +349,9 @@ su - beebox -c 'codex login status'
 ```
 
 The direct `@openai/codex` and `@openai/codex-sdk` dependencies are pinned to
-the same version. Plugin management, history, and SDK turns resolve that same
-package runtime; the symlink exists for operator commands only.
+the same version. Login, plugin management, and history resolve the direct
+package runtime; SDK turns keep the SDK's version-matched vendored binary so
+its bundled tools remain available. The symlink exists for operator commands.
 
 ```
 # Required

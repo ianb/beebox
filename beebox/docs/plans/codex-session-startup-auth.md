@@ -39,7 +39,7 @@ Bee Box production cannot start a Codex chat because the service account has no 
 ## Prior art (external)
 
 - The installed Codex CLI exposes `codex login status`, `codex login --device-auth`, `codex login --with-api-key`, and `codex login --with-access-token`. A clean `CODEX_HOME` makes `codex login status` print `Not logged in` and exit 1. The service flow will use the CLI's own login store rather than inventing a Bee Box credential file.
-- Official OpenAI documentation search did not expose a specific indexed page for noninteractive Linux service-account login or plugin marketplace provisioning. Treat the installed CLI contract and pinned-version deployment probe as the executable authority; do not claim an undocumented refresh-token copying contract.
+- Official OpenAI documentation specifies an app-server `chatgptDeviceCode` flow for clients that own the sign-in ceremony. It returns a verification URL and user code, then emits login-completed and account-updated notifications while Codex owns token storage and refresh. The package-pinned CLI was also probed successfully against that protocol in a scratch `CODEX_HOME`.
 - Existing Bee Box precedent uses a one-time service-account subscription login for Claude and keeps API keys out of the child environment (`deploy/README.md:329-339`). Reuse the custody boundary, not Claude's commands or file format.
 
 ## Tracks / scope
@@ -62,7 +62,7 @@ Bee Box production cannot start a Codex chat because the service account has no 
 
 **Why this needs to change.** Current chat preflight bypasses Codex, production has no `.codex` state, and plugin installation hides an absent executable as a plugin failure.
 
-**Direction.** Model Codex readiness as a discriminated result from the external process boundary: CLI unavailable, authentication required, probe inconclusive, plugin failure, or ready. Probe `codex login status` before mutating plugin state and cache a positive result for ten minutes, matching Claude's existing preflight cost control. Do not cache logged-out or inconclusive results. An inconclusive probe logs redacted detail and lets the SDK report its runtime state; it does not falsely diagnose a version mismatch. Do not inspect or copy credential files. Do not accept `OPENAI_API_KEY` from the ambient hub environment as an implicit fallback.
+**Direction.** Model Codex readiness as a discriminated result from the external process boundary: CLI unavailable, authentication required, probe inconclusive, plugin failure, or ready. Probe `codex login status` before mutating plugin state and cache a positive result for ten minutes, matching Claude's existing preflight cost control. Do not cache logged-out or inconclusive results. An inconclusive probe logs redacted detail and lets the SDK report its runtime state; it does not falsely diagnose a version mismatch. Admin starts Codex's structured `chatgptDeviceCode` flow, displays only the short-lived verification URL/code, polls status, and supports cancellation/logout. Codex alone persists and refreshes tokens. Do not inspect or copy credential files. Do not accept `OPENAI_API_KEY` from the ambient hub environment as an implicit fallback.
 
 **Vocabulary lock-ins.** `CodexReadinessError` is the user-facing typed exception. Provider-specific CLI services remain separate; the shared orchestration dispatches by engine rather than pretending Claude and Codex auth responses have one wire shape.
 
@@ -94,7 +94,7 @@ None. The cross-model review exposed and resolved the two-binary question: the S
 |---|---|---|---|
 | Codex executable is absent from the service `PATH` | Planned deployment-shaped test | Planned typed readiness error | Clear |
 | Workspace Codex version lacks plugin commands | CLI-service doctest and scratch-home deploy check | Deployment fails before restart | Clear |
-| Plugin/login state is written by a different Codex version than the SDK executes | Planned single-binary path assertions | All call sites use the workspace-pinned binary | Clear test failure |
+| Plugin/login state is written by a different Codex version than the SDK executes | Package lockstep and binary-path assertions | Direct CLI operations use the workspace-pinned binary; SDK turns use its version-matched vendored binary | Clear test failure |
 | Service account is not logged in | Planned auth doctest | Planned authentication-required error and operator procedure | Clear |
 | `codex login status` output changes or is unparseable | Planned parser doctest | Planned inconclusive/incompatible result with stderr context; no cache | Clear |
 | Marketplace registration is missing or stale | Existing installer doctest | Existing repair path | Clear in logs; user category improved |
@@ -103,7 +103,7 @@ None. The cross-model review exposed and resolved the two-binary question: the S
 | CLI is installed but SDK cannot start a thread | Existing session-start phase reporting; planned canary | SDK error remains session-start, distinct from readiness | Clear |
 | Auth credentials leak through logs or child env | Planned negative assertions | Credentials remain in Codex's store; no env propagation | Clear test failure |
 
-There is no unresolved critical gap in the planned local loop. Production authentication still requires the boxholder to complete the provider-supported login once; the implementation must stop with an explicit operator instruction until that external action occurs.
+There is no unresolved critical gap in the planned local loop. Production authentication still requires the boxholder to complete the provider-supported login once, but that ceremony is initiated and observed through Admin rather than requiring shell access. The CLI command remains a recovery path when Admin is unavailable.
 
 ## Agent-flow / user-flow edge cases
 
@@ -117,7 +117,7 @@ There is no unresolved critical gap in the planned local loop. Production authen
 
 ## NOT in scope
 
-- A browser-based Codex login UI. The first production repair uses the supported CLI flow under the service account.
+- Hosting or proxying OpenAI's sign-in page. Admin launches the provider-hosted device page and never receives ChatGPT credentials or Codex tokens.
 - Copying developer workstation Codex credentials to production. That would cross a secret-custody boundary and rely on an undocumented file format.
 - Reusing `THINKING_OPENAI_API_KEY` or `BBX_OPENAI_API_KEY`. Those keys belong to transcription/search and must not silently change agent billing.
 - Changing Codex models, quotas, transcript behavior, or retry policy.
@@ -147,11 +147,12 @@ Skipped. This is deployment and runtime infrastructure; it adds no concept a box
 3. Add red Codex login/readiness and chat-preflight doctests.
 4. Implement service path/explicit binary convergence and deployment verification.
 5. Implement the Codex CLI service, typed readiness errors, and shared chat/batch orchestration.
-6. Update deployment/operator documentation.
-7. Run focused, packed/deployment-shaped, and full relevant test suites.
-8. Cross-model review the implementation and resolve findings.
-9. Deploy only after the boxholder authorizes shipping; complete service-account login, then verify the production web-chat path.
+6. Add Admin device-code authentication over Codex app-server, including status, cancellation, logout, and UI lifecycle states.
+7. Update deployment/operator documentation.
+8. Run focused, packed/deployment-shaped, and full relevant test suites.
+9. Cross-model review the implementation and resolve findings.
+10. Deploy only after the boxholder authorizes shipping; complete service-account login through Admin, then verify the production web-chat path.
 
 ## Rollout shape
 
-Tests landed red first at each boundary. Local implementation is complete: the focused CLI/auth/plugin/chat tests, real package-pinned executable probe, all 173 selected changed tests, typecheck, lint, shell syntax, and documentation checks pass. Production rollout remains intentionally open and two-stage: merge/deploy the executable and diagnostics, then complete `beebox`-user login through the supported Codex CLI flow and run a real Codex chat. A production canary is not claimed until the browser-visible turn completes and the plugin hooks run without error.
+Local implementation is complete. The original runtime work passed its focused CLI/auth/plugin/chat tests and real package-pinned executable probe. The combined work passed all 176 selected changed test files (2,147 assertions); after review-driven lifecycle fixes, the 28 focused auth assertions, typecheck, changed-file lint, and documentation checks pass again. The package-pinned app-server also completed a scratch-home device-code start/cancel probe, and Admin's authenticated state was browser-checked at desktop and narrow widths. Cross-model review findings on stale ceremonies, logout cache invalidation, unknown-state labeling, diagnostic redaction, subprocess lifecycle, and test realism were resolved. Production rollout remains intentionally open and two-stage: merge/deploy the executable and diagnostics, then complete `beebox`-user login through Admin and run a real Codex chat. A production canary is not claimed until the browser-visible turn completes and the plugin hooks run without error.
