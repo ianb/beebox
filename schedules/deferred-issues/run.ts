@@ -3,17 +3,27 @@ import * as path from "node:path";
 
 import { execa } from "execa";
 
+import { errnoCode } from "../../beebox/src/lib/error-guards.js";
+
 interface ActivationResult {
   public: Array<{ destination: string }>;
   private: Array<{ destination: string }>;
 }
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
+// SCHEDULE_DRY_RUN is the schedules runner's process-boundary contract; this
+// standalone job does not run inside the beebox application's env layer.
 const dryRun = process.env["SCHEDULE_DRY_RUN"] === "1";
 async function activate(visibility: "public" | "private"): Promise<ActivationResult> {
   if (visibility === "private") {
     const privateRoot = path.join(REPO_ROOT, "private-issues");
-    const present = await fs.stat(privateRoot).then((stat) => stat.isDirectory()).catch(() => false);
+    let present: boolean;
+    try {
+      present = (await fs.stat(privateRoot)).isDirectory();
+    } catch (error) {
+      if (errnoCode(error) !== "ENOENT") throw error;
+      present = false;
+    }
     if (!present) return { public: [], private: [] };
   }
   const args = ["activate-due", "--json", "--visibility", visibility];

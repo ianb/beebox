@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
@@ -106,8 +107,15 @@ export function activatedSource(source: string): string {
 async function markdownFiles(root: string): Promise<string[]> {
   const files: string[] = [];
   const visit = async (directory: string): Promise<void> => {
-    const entries = await fs.readdir(directory, { withFileTypes: true }).catch(() => []);
+    let entries: Dirent[];
+    try {
+      entries = await fs.readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      if (errnoCode(error) === "ENOENT") return;
+      throw error;
+    }
     for (const entry of entries) {
+      if (entry.name === ".git") continue;
       const target = path.join(directory, entry.name);
       if (entry.isDirectory()) await visit(target);
       else if (entry.isFile() && entry.name.endsWith(".md")) files.push(path.relative(root, target).split(path.sep).join("/"));
@@ -119,7 +127,13 @@ async function markdownFiles(root: string): Promise<string[]> {
 
 export async function readDeferredIssues(issuesRoot: string): Promise<DeferredIssue[]> {
   const deferredRoot = path.join(issuesRoot, "deferred");
-  const entries = await fs.readdir(deferredRoot, { withFileTypes: true }).catch(() => []);
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(deferredRoot, { withFileTypes: true });
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return [];
+    throw error;
+  }
   const nested = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
   if (nested.length > 0) throw new NestedDeferredDirectoryError(deferredRoot, nested);
   const issues: DeferredIssue[] = [];
@@ -170,7 +184,14 @@ async function restoreCleanRepository(repoRoot: string): Promise<void> {
   const untrackedMarkdown = untracked.stdout.split("\n").filter((file) => file.endsWith(".md"));
   await execa("git", ["reset", "-q"], { cwd: repoRoot });
   await execa("git", ["restore", "--worktree", "--", "."], { cwd: repoRoot });
-  await Promise.all(untrackedMarkdown.map((file) => fs.unlink(path.join(repoRoot, file)).catch(() => {})));
+  await Promise.all(untrackedMarkdown.map(async (file) => {
+    try {
+      await fs.unlink(path.join(repoRoot, file));
+    } catch (error) {
+      // Another cleanup may already have removed the untracked activation output.
+      if (errnoCode(error) !== "ENOENT") throw error;
+    }
+  }));
 }
 
 export async function runActivationTransaction<T>(repoRoot: string, operation: () => Promise<T>): Promise<T> {
@@ -223,8 +244,9 @@ async function repairPrivateLinks(privateRoot: string): Promise<void> {
 async function directoryExists(target: string): Promise<boolean> {
   try {
     return (await fs.stat(target)).isDirectory();
-  } catch (_error) {
-    return false;
+  } catch (error) {
+    if (errnoCode(error) === "ENOENT") return false;
+    throw error;
   }
 }
 
