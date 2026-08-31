@@ -17,6 +17,7 @@ import {
   createClaudeCliService,
   type ClaudeCliService,
 } from "../../services/claude-cli.js";
+import { createCodexCliService, type CodexCliService } from "../../services/codex-cli.js";
 
 /** The single actionable message shown when Claude Code has no active login. */
 export const CLAUDE_NOT_LOGGED_IN_MESSAGE =
@@ -30,12 +31,50 @@ export class ClaudeAuthError extends Error {
   }
 }
 
+export const CODEX_NOT_LOGGED_IN_MESSAGE =
+  "Codex is not logged in — run `codex login --device-auth` as the Bee Box service user";
+
+export class CodexReadinessError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CodexReadinessError";
+  }
+}
+
+export class CodexAuthError extends CodexReadinessError {
+  constructor() {
+    super(CODEX_NOT_LOGGED_IN_MESSAGE);
+    this.name = "CodexAuthError";
+  }
+}
+
+export class CodexCliUnavailableError extends CodexReadinessError {
+  readonly detail: string;
+
+  constructor(detail: string) {
+    super("Codex CLI is unavailable — reinstall Bee Box's package dependencies");
+    this.name = "CodexCliUnavailableError";
+    this.detail = detail;
+  }
+}
+
+export class CodexCliIncompatibleError extends CodexReadinessError {
+  readonly detail: string;
+
+  constructor(detail: string) {
+    super("Codex CLI is incompatible — deploy matching @openai/codex and @openai/codex-sdk versions");
+    this.name = "CodexCliIncompatibleError";
+    this.detail = detail;
+  }
+}
+
 // A confirmed login is cached this long. Generous — auth rarely changes mid
 // process, and the health probe (live, uncached) is the surface for spotting a
 // logout promptly. This cache only exists to keep run-path probes cheap.
 const POSITIVE_TTL_MS = 10 * 60 * 1000;
 
 let cachedOkAt: number | null = null;
+let cachedCodexOkAt: number | null = null;
 
 /**
  * A probe that returns no usable answer is retried once before we act on it.
@@ -62,6 +101,31 @@ export interface CheckClaudeAuthOptions {
 /** Clear the positive-result cache. Tests only. */
 export function resetClaudeAuthCache(): void {
   cachedOkAt = null;
+}
+
+export function resetCodexAuthCache(): void {
+  cachedCodexOkAt = null;
+}
+
+export async function checkCodexAuth(options?: {
+  codexCli?: CodexCliService | undefined;
+  now?: (() => number) | undefined;
+}): Promise<void> {
+  const now = options?.now ?? Date.now;
+  const at = now();
+  if (cachedCodexOkAt !== null && at - cachedCodexOkAt < POSITIVE_TTL_MS) return;
+  const status = await (options?.codexCli ?? createCodexCliService()).authStatus();
+  switch (status.kind) {
+    case "logged-in":
+      cachedCodexOkAt = at;
+      return;
+    case "logged-out":
+      throw new CodexAuthError();
+    case "unavailable":
+      throw new CodexCliUnavailableError(status.detail);
+    case "incompatible":
+      throw new CodexCliIncompatibleError(status.detail);
+  }
 }
 
 /**
@@ -103,13 +167,30 @@ export async function checkClaudeAuth(options?: CheckClaudeAuthOptions): Promise
  * `true` when the run may proceed.
  */
 export async function preflightChatBackend(params: {
-  backend: { requiresClaudeAuth?: boolean | undefined };
+  backend: {
+    requiresClaudeAuth?: boolean | undefined;
+    requiresCodexAuth?: boolean | undefined;
+  };
   engine?: "claude" | "codex" | undefined;
   session: { emit(event: "error", error: Error): boolean };
   /** CLI service for the probe. Omit in production; tests inject a fake. */
   claudeCli?: ClaudeCliService | undefined;
+  codexCli?: CodexCliService | undefined;
 }): Promise<boolean> {
-  if (params.engine === "codex" || params.backend.requiresClaudeAuth !== true) return true;
+  if (params.engine === "codex") {
+    if (params.backend.requiresCodexAuth !== true) return true;
+    try {
+      await checkCodexAuth({ codexCli: params.codexCli });
+      return true;
+    } catch (error) {
+      if (error instanceof CodexReadinessError) {
+        params.session.emit("error", error);
+        return false;
+      }
+      throw error;
+    }
+  }
+  if (params.backend.requiresClaudeAuth !== true) return true;
   try {
     await checkClaudeAuth({ claudeCli: params.claudeCli });
     return true;

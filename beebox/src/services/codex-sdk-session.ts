@@ -16,6 +16,7 @@ import { CODEX_BOX_SANDBOX } from "./codex-sandbox.js";
 import { toError } from "../lib/error-guards.js";
 import { declaredPresent } from "../lib/declared-present.js";
 import type { ChatContentBlock } from "./claude-chat-types.js";
+import { codexBinaryPath } from "./codex-binary.js";
 
 export type CodexSdkItem = ThreadItem;
 export type CodexSdkEvent = ThreadEvent;
@@ -207,8 +208,7 @@ class CodexSdkSession {
     const codex = new Codex({
       config: { developer_instructions: options.systemPrompt },
       ...(env === undefined ? {} : { env }),
-      // TODO(env-migration): test/diagnostic binary override; move into the typed env boundary.
-      ...(process.env.BBX_CODEX_BINARY === undefined ? {} : { codexPathOverride: process.env.BBX_CODEX_BINARY }),
+      codexPathOverride: codexBinaryPath(),
     });
     const threadOptions = codexSdkThreadOptions(options);
     const started = declaredPresent(options.resumeSessionId === undefined
