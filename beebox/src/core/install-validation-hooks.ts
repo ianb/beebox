@@ -200,7 +200,7 @@ function postCommitBlock(bbxBin: string, boxRelFromPackageRoot: string): string 
  */
 function upsertPostCommitBlock(existing: string | null, block: string): string {
   if (existing === null) return `#!/usr/bin/env bash\n\n${block}\n`;
-  const beginIdx = existing.indexOf(URLCHECK_BEGIN);
+  const beginIdx = (existing = existing.replace(/# >>> callback-box url-check \(managed\) >>>[\S\s]*?# <<< callback-box url-check \(managed\) <<<\n?/g, "")).indexOf(URLCHECK_BEGIN);
   const endIdx = existing.indexOf(URLCHECK_END);
   if (beginIdx !== -1 && endIdx !== -1) {
     return existing.slice(0, beginIdx) + block + existing.slice(endIdx + URLCHECK_END.length);
