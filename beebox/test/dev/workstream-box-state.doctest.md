@@ -47,6 +47,30 @@ JSON.stringify({
 => {"beebox":"link:/tmp/new-worktree/beebox","retiredDependency":null,"react":"^18.3.1","override":"link:/tmp/new-worktree/beebox","oldOverride":null}
 ```
 
+An existing clone with the tracked pre-rename box marker is made recognizable
+to the renamed engine without modifying the source box.
+
+```ts
+const root = await fs.mkdtemp(path.join(os.tmpdir(), "box-marker-migrate-"));
+t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
+const oldMarker = path.join(root, "content/.cb-box");
+const newMarker = path.join(root, "content/.beebox/box.json");
+await fs.mkdir(path.dirname(oldMarker), { recursive: true });
+await fs.writeFile(oldMarker, '{"shapeVersion":2}\n');
+execFileSync("bash", ["-c", [
+  ". bin/lib/worktree-create.sh",
+  'wt_create_migrate_box_marker "$BOX_PACKAGE"',
+].join("; ")], {
+  cwd: repoRoot,
+  env: { ...process.env, BOX_PACKAGE: root },
+});
+JSON.stringify({
+  oldExists: await fs.stat(oldMarker).then(() => true, () => false),
+  marker: await fs.readFile(newMarker, "utf8"),
+})
+=> {"oldExists":false,"marker":"{\"shapeVersion\":2}\n"}
+```
+
 Cull pins report the highest-priority reason until it is resolved: unmerged
 keep work, a test-setup branch, or a linked issue awaiting manual testing. Both
 supported YAML list forms are recognized.

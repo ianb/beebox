@@ -116,6 +116,20 @@ wt_create_repoint_box_engine() {
   mv "$tmp_pkg" "$package_json"
 }
 
+# The identity migration moved the v2 marker from a tracked root-level file to
+# `.beebox/box.json`. A source test box may have performed that migration in its
+# working tree before committing it; Git clones then still contain only the old
+# marker. Repair that exact compatible shape so setup does not mistake the
+# existing box package for an unrelated Node package.
+wt_create_migrate_box_marker() {
+  local old_marker="$1/content/.cb-box"
+  local new_marker="$1/content/.beebox/box.json"
+  [ -f "$old_marker" ] || return 0
+  [ ! -e "$new_marker" ] || return 0
+  mkdir -p "$(dirname "$new_marker")"
+  mv "$old_marker" "$new_marker"
+}
+
 wt_create_attach_worktree() {
   local worktree_path="$1" new_branch="$2" base_ref="$3" state_file="$4" rc=0
   WT_CREATE_REUSED=false
@@ -345,6 +359,7 @@ wt_create_locked() {
   else
     echo "[worktree-create] reusing existing box $BOX_DEST" >&2
   fi
+  [ ! -d "$BOX_DEST" ] || wt_create_migrate_box_marker "$BOX_DEST"
 
   # 2.5. Copy the main checkout's beebox/.env, if it has one.
   #
