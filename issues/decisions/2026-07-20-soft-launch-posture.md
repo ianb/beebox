@@ -147,9 +147,9 @@ to people; close when the soft launch happens. Builds on
    (delete is the ask) lands pre-launch; the
    [day-to-day usage docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md)
    are the docs half of the same gap.
-8. **[Discussion channel](../closed/decisions/2026-07-21-discussion-channel.md)** — boxholder
-   wants **live** discussion (not async), disliking Discord; decision
-   deferred. Field is Zulip (lead) vs Matrix. Cheap to stand up once picked.
+8. **[Discussion channel](../closed/decisions/2026-07-21-discussion-channel.md)** — live
+   discussion is now on the Bee Box Discord server; the public invite is
+   linked from the README and site.
 
 ## Explicitly not gates
 

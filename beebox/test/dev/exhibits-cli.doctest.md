@@ -24,7 +24,7 @@ const root = await mkdtemp(join(tmpdir(), "exhibits-cli-doctest-"));
 const store = join(root, "workstream-exhibits");
 const state = join(root, "state");
 const mono = join(root, "beebox");
-const worktrees = join(root, "callback-worktrees");
+const worktrees = join(root, "beebox-worktrees");
 const worktree = join(worktrees, "demo");
 
 await mkdir(join(mono, "beebox"), { recursive: true });

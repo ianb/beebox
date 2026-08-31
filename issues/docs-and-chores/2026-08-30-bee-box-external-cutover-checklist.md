@@ -15,30 +15,35 @@ from retired names to current names; do not repeat that vocabulary here.
 
 ## 1. Land the repository rename
 
-- [ ] Merge the rename workstream into `main`.
-- [ ] Confirm the post-merge hook finishes successfully before changing
+- [x] Merge the rename workstream into `main`.
+- [x] Confirm the post-merge hook finishes successfully before changing
   production or external service names.
-- [ ] Run `pnpm retired-product-name-check` on `main`.
+- [x] Run `pnpm retired-product-name-check` on `main`.
 
 ## 2. Rename the GitHub repository
 
-- [ ] Rename the repository to `ianb/beebox` in GitHub Settings.
-- [ ] Change the local `origin` remote to `git@github.com:ianb/beebox.git` or
+- [x] Rename the repository to `ianb/beebox` in GitHub Settings.
+- [x] Change the local `origin` remote to `git@github.com:ianb/beebox.git` or
   the equivalent HTTPS URL.
-- [ ] Check branch protection, Actions permissions, deploy keys, webhooks,
+- [x] Check branch protection, Actions permissions, deploy keys, webhooks,
   GitHub Pages settings, and repository topics after the rename.
-- [ ] Open the README and several documentation links through the new GitHub
+- [x] Open the README and several documentation links through the new GitHub
   URL. Confirm that images, badges, and source links resolve.
 
 ## 3. Move the local checkout when ready
 
-- [ ] After the repository and external cutover are otherwise settled, stop the
+- [x] After the repository and external cutover are otherwise settled, stop the
   shared dev router and move the current main checkout to `~/src/beebox`.
-- [ ] Restart `pnpm dev` from `~/src/beebox` and confirm the router reports that
+- [x] Restart `pnpm dev` from `~/src/beebox` and confirm the router reports that
   path as the `main` root and discovers worktrees under
   `~/src/beebox-worktrees`.
-- [ ] Update any shell aliases, editor workspaces, terminal profiles, scripts,
+- [x] Update any shell aliases, editor workspaces, terminal profiles, scripts,
   and bookmarks that still point at the previous local checkout path.
+
+The worktrees moved to `~/src/beebox-worktrees`, and Git's linked-worktree
+metadata was repaired. A compatibility symlink preserves old paths. Claude
+project directories and Codex thread indexes retain access to sessions created
+before the move.
 
 ## 4. Publish the npm package
 
@@ -64,16 +69,16 @@ from retired names to current names; do not repeat that vocabulary here.
 
 ## 6. Update Google OAuth
 
-- [ ] Change the OAuth consent-screen application name to **Bee Box**.
-- [ ] Add `https://beebox.run` as an authorized JavaScript origin where the
-  client requires one.
-- [ ] Add `https://beebox.run/auth/callback` for application login.
-- [ ] Add `https://beebox.run/auth/google-services/callback` for Google
-  connector authorization.
+- [x] Treat the OAuth client as personal-box configuration. There is no public
+  OAuth service or public-app launch to prepare.
+- [ ] Add `https://beebox.run/auth/callback` to the existing client for owner
+  login.
+- [ ] Add `https://beebox.run/auth/google-services/callback` to the existing
+  client for Google connector authorization.
 - [ ] Keep the previous redirect URIs during the cutover if active sessions can
   still return through the previous hostname.
-- [ ] Check whether the consent-screen change triggers verification or new
-  review requirements before removing any working configuration.
+- [ ] Confirm that owner login and one Google connector authorization complete
+  through `https://beebox.run`.
 
 ## 7. Cut over the production server
 
@@ -99,12 +104,11 @@ from retired names to current names; do not repeat that vocabulary here.
 
 ## 8. Update the community and public identity
 
-- [ ] Rename the Zulip organization to **Bee Box** and obtain
-  `beebox.zulipchat.com`, or create the replacement organization if Zulip
-  cannot rename the subdomain.
-- [ ] Configure a redirect or visible move notice at the previous Zulip URL if
-  the service supports it.
-- [ ] Confirm that the README community link opens the correct organization.
+- [x] Create the Bee Box Discord server and choose it as the project's
+  community channel.
+- [x] Record the stable invite URL: [join the Bee Box Discord](https://discord.gg/FQYn6zyv).
+- [x] Confirm that the README community link opens the invite and joins the
+  intended server.
 - [ ] Update any public profiles, repository descriptions, pinned posts,
   release notes, or announcement links that are not stored in this repository.
 
@@ -127,6 +131,6 @@ from retired names to current names; do not repeat that vocabulary here.
 - [ ] Search the boxholder's password manager, bookmarks, shell configuration,
   and service dashboards for the retired vocabulary described in the name
   history.
-- [ ] Confirm that GitHub, npm, Cloudflare, Google, Zulip, production, Apple
+- [ ] Confirm that GitHub, npm, Cloudflare, Google, Discord, production, Apple
   records, and personal devices all use the current identity.
 - [ ] Record the completion date here, then close this issue as implemented.

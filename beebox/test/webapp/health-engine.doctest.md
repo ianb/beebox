@@ -8,7 +8,7 @@ to a transient worktree), and `box-schemas` surfaces box-local schema files
 that failed to load (keep-last-good otherwise hides them).
 
 ```ts setup
-import { mkdir, symlink, rm } from "node:fs/promises";
+import { mkdir, symlink, rm, unlink, writeFile } from "node:fs/promises";
 import { engineHealthChecks } from "../../src/webapp/trpc/routers/health-engine.js";
 import { invalidateBoxSchemas } from "../../src/schemas/registry.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -31,7 +31,7 @@ function byName(checks: Array<{ name: string }>, name: string) {
 
 ## Healthy v2 box: engine link resolves to a readable engine
 
-(A fake engine directory outside any `callback-worktrees` path — linking the
+(A fake engine directory outside any `beebox-worktrees` path — linking the
 test's own running engine would legitimately trip the worktree-pinned
 warning below whenever the suite runs from a worktree.)
 
@@ -82,16 +82,16 @@ deadLink?.message.includes("nonexistent-checkout")
 
 ## Worktree-pinned engine link: warning (it dies with the worktree)
 
-A resolvable link that points into a `callback-worktrees` checkout, on a box
+A resolvable link that points into a `beebox-worktrees` checkout, on a box
 that is not itself a worktree clone — how test1 broke in the incident.
 
 ```ts continue
 await box.write(
-  "callback-worktrees/some-feature/beebox/package.json",
+  "beebox-worktrees/some-feature/beebox/package.json",
   JSON.stringify({ name: "beebox", version: "0.1.0" }),
 );
 await rm(box.path("pkg/node_modules/beebox"));
-await symlink(box.path("callback-worktrees/some-feature/beebox"), box.path("pkg/node_modules/beebox"));
+await symlink(box.path("beebox-worktrees/some-feature/beebox"), box.path("pkg/node_modules/beebox"));
 
 const pinned = await engineHealthChecks(boxRoot);
 const pinnedLink = byName(pinned, "engine-link");
@@ -103,6 +103,14 @@ pinnedLink?.severity
 
 pinnedLink?.message.includes("points into a worktree")
 => true
+
+await unlink(box.path("pkg/node_modules/beebox"));
+await mkdir(box.path("callback-worktrees/old-feature/beebox"), { recursive: true });
+await writeFile(box.path("callback-worktrees/old-feature/beebox/package.json"), JSON.stringify({ name: "beebox", version: "0.1.0" }));
+await symlink(box.path("callback-worktrees/old-feature/beebox"), box.path("pkg/node_modules/beebox"));
+
+(await engineHealthChecks(boxRoot)).find((c) => c.name === "engine-link")?.ok
+=> false
 ```
 
 ## Broken box-local schema file: box-schemas error names the file

@@ -13,7 +13,7 @@ summary: "A personal system built on Claude Code: the filesystem is state, git i
 Until then, the plain links:
 
 - [Source on GitHub](https://github.com/ianb/beebox)
-- [Community forum (Zulip)](https://beebox.zulipchat.com)
+- [Community server (Discord)](https://discord.gg/FQYn6zyv)
 
 Install guides (in the repository for now; on-site copies come later):
 

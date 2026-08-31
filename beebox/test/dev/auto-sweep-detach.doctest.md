@@ -32,7 +32,7 @@ const log = join(home, ".cache/beebox/worktree-cleanup.log");
 const lock = join(home, ".cache/beebox/sweep.lock");
 
 // A main-checkout shape: the hook gates itself out when its own repo is under
-// callback-worktrees, so the scratch copy must not look like a worktree.
+// beebox-worktrees, so the scratch copy must not look like a worktree.
 await mkdir(join(fakeRepo, ".claude/hooks"), { recursive: true });
 await mkdir(join(fakeRepo, "bin/lib"), { recursive: true });
 await mkdir(join(home, ".cache/beebox"), { recursive: true });

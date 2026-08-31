@@ -34,8 +34,8 @@ Per-project details are in each project's `CLAUDE.md`.
 
 ## Community
 
-Questions and discussion happen on Zulip:
-[beebox.zulipchat.com](https://beebox.zulipchat.com/).
+Questions and discussion happen on Discord:
+[join the Bee Box server](https://discord.gg/FQYn6zyv).
 
 ## License
 

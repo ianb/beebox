@@ -21,7 +21,7 @@ beebox/src/frontend/dist
 # CLAUDE.md and private content). None live under the repo, but guard anyway.
 **/boxes
 box-worktrees
-callback-worktrees
+beebox-worktrees
 
 # The docker/ dir itself is never needed inside the image EXCEPT entrypoint.sh
 # (which is COPYed in). Excluding the rest keeps Dockerfile/compose/doc edits

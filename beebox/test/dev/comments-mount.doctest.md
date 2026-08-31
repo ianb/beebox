@@ -21,7 +21,7 @@ const repoRoot = resolve(process.cwd(), "..");
 const lib = join(repoRoot, "bin/lib/comments-store.sh");
 const root = await mkdtemp(join(tmpdir(), "comments-mount-doctest-"));
 const store = join(root, "dev-comments");
-const wt = join(root, "callback-worktrees/demo");
+const wt = join(root, "beebox-worktrees/demo");
 await mkdir(wt, { recursive: true });
 
 // Run a snippet with the lib sourced and the store root pinned. Returns
@@ -129,7 +129,7 @@ mount's call to make: it refuses and says so, and the caller's mount is
 best-effort, so the session continues.
 
 ```ts
-const wt2 = join(root, "callback-worktrees/real-dir");
+const wt2 = join(root, "beebox-worktrees/real-dir");
 await mkdir(join(wt2, "comments"), { recursive: true });
 await writeFile(join(wt2, "comments/someone-put-this-here.txt"), "keep me\n");
 const blocked = await sh(`wt_comments_mount "${wt2}"`);

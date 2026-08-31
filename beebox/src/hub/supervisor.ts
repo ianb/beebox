@@ -435,7 +435,8 @@ export class Supervisor implements EndpointProvider {
       const bbxBinary = await resolveBbxBinary(shape);
       const port = await getPorts();
 
-      const env = buildChildEnv({ sourceEnv: process.env, hubExtras: { BBX_HUB_SECRET: this.hubSecret } });
+      const hubExtras = { BBX_BIN: bbxBinary, BBX_HUB_SECRET: this.hubSecret };
+      const env = buildChildEnv({ sourceEnv: process.env, hubExtras });
       const child = this.spawnChild({
         bbxBinary,
         args: ["serve", boxRoot, "--slug", box.slug, "--port", String(port)],

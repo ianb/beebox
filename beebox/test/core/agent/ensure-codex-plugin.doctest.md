@@ -55,6 +55,20 @@ JSON.stringify(codex.calls)
 => ["plugin list --json"]
 ```
 
+Codex cachebusters are build metadata, not a wire-contract version change, so
+they do not make every fresh process re-register the global marketplace:
+
+```ts
+const codex = fakeCodex(() => listing({
+  version: "0.1.1+codex.local-20260831-120000",
+  path: PLUGIN_ROOT,
+}));
+await installCodexPlugin(codex.run);
+
+JSON.stringify(codex.calls)
+=> ["plugin list --json"]
+```
+
 The plugin not being installed here is a different fact from the registration
 being broken, and collapsing the two is how a checkout hijacks the entry: if
 "absent" meant "re-register at me", every fresh worktree would still claim the

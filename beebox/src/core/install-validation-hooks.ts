@@ -59,7 +59,7 @@ import { errnoCode } from "../lib/error-guards.js";
  *
  * The catch: boxes live OUTSIDE the monorepo, so the embedded path is their only
  * link back to a `bbx`, and whichever checkout last ran `bbx` on the box stamps it.
- * A git *worktree*'s checkout (`~/src/callback-worktrees/<name>/beebox`) is
+ * A git *worktree*'s checkout (`~/src/beebox-worktrees/<name>/beebox`) is
  * ephemeral — deleted on session exit — so stamping it leaves the hook pointing
  * at a vanished `bbx` that then silently skips validation. So when we're running
  * inside a worktree, resolve to the stable **main checkout**'s `bbx` (via the

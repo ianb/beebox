@@ -222,7 +222,7 @@ Ordered by implementation dependency, then surface size.
 ### Track C — v1 content: the letter, links, machine layer
 
 - **What**: one human page — the boxholder's letter — plus links (repo,
-  Zulip at beebox.zulipchat.com, install docs), and the agent layer:
+  the Bee Box Discord server, install docs), and the agent layer:
   `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
   when it exists, export/instruction docs), with `.md` twins for every human
   page.

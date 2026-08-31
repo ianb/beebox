@@ -57,7 +57,8 @@ export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]
       // test1 broke in the incident above).
       const worktreePinned =
         target !== null
-        && target.includes(`${path.sep}callback-worktrees${path.sep}`)
+        && ["beebox-worktrees", "callback-worktrees"]
+          .some((dir) => target.includes(`${path.sep}${dir}${path.sep}`))
         && !shape.packageRoot.includes(`${path.sep}box-worktrees${path.sep}`);
       checks.push({
         name: "engine-link",

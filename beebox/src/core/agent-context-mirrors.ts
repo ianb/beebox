@@ -95,17 +95,36 @@ async function mirrorSkills(packageRoot: string): Promise<string[]> {
 }
 
 async function mirrorCodexHooks(packageRoot: string): Promise<string[]> {
-  const linkPath = join(packageRoot, ".codex", "hooks.json");
-  const targetPath = join(
-    packageRoot,
-    "node_modules",
-    "beebox",
-    "plugins",
-    "beebox-codex",
-    "hooks",
-    "hooks.json",
-  );
-  return await ensureRelativeSymlink(linkPath, targetPath) ? [linkPath] : [];
+  const hooksPath = join(packageRoot, ".codex", "hooks.json");
+  const description = "GENERATED from Bee Box's Codex plugin hooks; do not edit.";
+  const content = `${JSON.stringify({
+    description,
+    hooks: {
+      SessionStart: [{ hooks: [{
+        type: "command",
+        command: "\"$CLAUDE_PROJECT_DIR/node_modules/beebox/plugins/beebox-codex/scripts/run-bbx.sh\" agent-context --hook",
+        statusMessage: "Loading Bee Box context",
+      }] }],
+      PostToolUse: [{
+        matcher: "apply_patch|Edit|Write",
+        hooks: [{
+          type: "command",
+          command: "\"$CLAUDE_PROJECT_DIR/node_modules/beebox/plugins/beebox-codex/scripts/run-bbx.sh\" validate --hook",
+          statusMessage: "Validating box files",
+        }],
+      }],
+    },
+  }, null, 2)}\n`;
+  const kind = await pathKind(hooksPath);
+  if (kind === "file") {
+    const current = await readFile(hooksPath, "utf8");
+    if (!current.includes(description) || current === content) return [];
+  }
+  if (kind === "directory") return [];
+  if (kind === "symlink" || kind === "file") await rm(hooksPath);
+  await mkdir(dirname(hooksPath), { recursive: true });
+  await writeFile(hooksPath, content);
+  return [hooksPath];
 }
 
 function ruleSkill(ruleName: string, rule: string): string {

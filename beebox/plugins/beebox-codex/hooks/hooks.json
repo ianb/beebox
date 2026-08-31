@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bbx agent-context --hook",
+            "command": "\"$PLUGIN_ROOT/scripts/run-bbx.sh\" agent-context --hook",
             "statusMessage": "Loading Bee Box context"
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bbx validate --hook",
+            "command": "\"$PLUGIN_ROOT/scripts/run-bbx.sh\" validate --hook",
             "statusMessage": "Validating box files"
           }
         ]

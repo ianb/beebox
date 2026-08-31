@@ -51,6 +51,10 @@ const MARKETPLACE = "beebox";
 const PLUGIN_ID = "beebox-codex@beebox";
 const PLUGIN_VERSION = "0.1.1";
 
+function pluginBaseVersion(version: string): string {
+  return version.split("+", 1)[0] ?? version;
+}
+
 export class CodexPluginInstallError extends Error {
   constructor(cause: unknown) {
     super("Could not install the Bee Box Codex plugin", { cause });
@@ -140,7 +144,7 @@ export async function installCodexPlugin(run: CodexCommand): Promise<void> {
       case "installed":
         // Another checkout's registration is fine as long as it is still there
         // and current: the entry is shared, and churn is what breaks the others.
-        if (state.version === PLUGIN_VERSION && existsSync(state.path)) return;
+        if (pluginBaseVersion(state.version) === PLUGIN_VERSION && existsSync(state.path)) return;
         await reregister(run);
         return;
       default:

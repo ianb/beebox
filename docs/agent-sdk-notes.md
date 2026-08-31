@@ -417,7 +417,7 @@ touches. What is actually relevant here, in order:
   **not** exposed. `.claude/hooks/worktree-create.sh` deliberately does not
   forward Claude Code's proposed `<repo>/.claude/worktrees/<name>` path — it
   hands creation to `bin/workstreams create`, which places worktrees as
-  siblings of the monorepo (`~/src/callback-worktrees/`, `~/src/box-worktrees/`)
+  siblings of the monorepo (`~/src/beebox-worktrees/`, `~/src/box-worktrees/`)
   because beebox's `file:../personal-vibe-check` dep only resolves there.
   No repo worktree has ever lived under the swept directory.
 - **Bash permission checks on malformed commands.** *"Fixed Bash permission

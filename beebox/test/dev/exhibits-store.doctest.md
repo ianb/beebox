@@ -19,7 +19,7 @@ const repoRoot = resolve(process.cwd(), "..");
 const lib = join(repoRoot, "bin/lib/exhibits-store.sh");
 const root = await mkdtemp(join(tmpdir(), "exhibits-store-doctest-"));
 const store = join(root, "workstream-exhibits");
-const wt = join(root, "callback-worktrees/demo");
+const wt = join(root, "beebox-worktrees/demo");
 await mkdir(wt, { recursive: true });
 
 // Run a snippet with the lib sourced and the store root pinned. Returns
@@ -73,14 +73,14 @@ symlink. A rescue that would overwrite an existing store entry refuses
 instead — fail closed, since the caller's next step is destructive.
 
 ```ts
-const wt2 = join(root, "callback-worktrees/demo2");
+const wt2 = join(root, "beebox-worktrees/demo2");
 await mkdir(join(wt2, "exhibits"), { recursive: true });
 await writeFile(join(wt2, "exhibits/stranded.md"), "rescued\n");
 const rescueMount = await sh(`wt_exhibits_mount "${wt2}" demo2`);
 const rescued = await readFile(join(store, "demo2/stranded.md"), "utf8");
 const nowSymlink = (await lstat(join(wt2, "exhibits"))).isSymbolicLink();
 
-const wt3 = join(root, "callback-worktrees/demo2-again");
+const wt3 = join(root, "beebox-worktrees/demo2-again");
 await mkdir(join(wt3, "exhibits"), { recursive: true });
 await writeFile(join(wt3, "exhibits/stranded.md"), "conflicting\n");
 const collision = await sh(`wt_exhibits_rescue "${wt3}" demo2`);

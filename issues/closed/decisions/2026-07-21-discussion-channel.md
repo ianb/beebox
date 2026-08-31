@@ -8,10 +8,14 @@ discovered-in: worktree-open-source-readiness — launch-readiness conversation 
 labels: [soft-launch]
 ---
 
-**Closed (decided) 2026-07-31 — Zulip.** Boxholder chose Zulip: live chat with
+> **Superseded 2026-08-31 — Discord.** The developer replaced the earlier Zulip
+> choice with the [Bee Box Discord server](https://discord.com/channels/1544028033395073055/1544028036872278131),
+> using [this public invite](https://discord.gg/FQYn6zyv).
+
+**Originally closed (decided) 2026-07-31 — Zulip.** Boxholder chose Zulip: live chat with
 real threading (topics), the strongest anti-Discord on organization, free hosted
-OSS tier and self-hostable (on-thesis). The forum is live at
-[beebox.zulipchat.com](https://beebox.zulipchat.com/). GitHub
+OSS tier and self-hostable (on-thesis). The forum was live at
+[callback-box.zulipchat.com](https://callback-box.zulipchat.com/). GitHub
 Discussions remains available as a secondary async record if wanted, but Zulip is
 the primary channel.
 

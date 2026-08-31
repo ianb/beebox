@@ -47,8 +47,12 @@ JSON.stringify(await readlink(join(root, "nested/AGENTS.md")))
 JSON.stringify(await readlink(join(root, ".agents/skills/calendar")))
 => "../../.claude/skills/calendar"
 
-JSON.stringify(await readlink(join(root, ".codex/hooks.json")))
-=> "../node_modules/beebox/plugins/beebox-codex/hooks/hooks.json"
+const hooks = await readFile(join(root, ".codex/hooks.json"), "utf8");
+hooks.includes("$CLAUDE_PROJECT_DIR/node_modules/beebox/plugins/beebox-codex/scripts/run-bbx.sh")
+=> true
+
+hooks.includes("$PLUGIN_ROOT")
+=> false
 ```
 
 Rules are copied into provider-valid skills:
