@@ -16,7 +16,6 @@ import { CODEX_BOX_SANDBOX } from "./codex-sandbox.js";
 import { toError } from "../lib/error-guards.js";
 import { declaredPresent } from "../lib/declared-present.js";
 import type { ChatContentBlock } from "./claude-chat-types.js";
-import { codexBinaryPath } from "./codex-binary.js";
 
 export type CodexSdkItem = ThreadItem;
 export type CodexSdkEvent = ThreadEvent;
@@ -208,7 +207,9 @@ class CodexSdkSession {
     const codex = new Codex({
       config: { developer_instructions: options.systemPrompt },
       ...(env === undefined ? {} : { env }),
-      codexPathOverride: codexBinaryPath(),
+      // Keep the SDK default so it also prepends its vendored tool directory
+      // (notably `rg`). Tests and diagnostics may still select a binary.
+      ...(process.env.BBX_CODEX_BINARY === undefined ? {} : { codexPathOverride: process.env.BBX_CODEX_BINARY }),
     });
     const threadOptions = codexSdkThreadOptions(options);
     const started = declaredPresent(options.resumeSessionId === undefined

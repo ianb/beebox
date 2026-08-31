@@ -138,6 +138,18 @@ codexCli.statusCalls
 => 2
 ```
 
+An inconclusive process answer does not block a run the SDK may still complete,
+and it is probed again next time rather than cached.
+
+```ts
+resetCodexAuthCache();
+const codexCli = createFakeCodexCli({ status: { kind: "inconclusive", detail: "timed out" } });
+await checkCodexAuth({ codexCli });
+await checkCodexAuth({ codexCli });
+codexCli.statusCalls
+=> 2
+```
+
 The chat dispatch selects the provider preflight. A Codex engine does not
 silently bypass auth and never calls the Claude fake.
 

@@ -7,7 +7,7 @@ export type CodexAuthStatus =
   | { kind: "logged-in" }
   | { kind: "logged-out" }
   | { kind: "unavailable"; detail: string }
-  | { kind: "incompatible"; detail: string };
+  | { kind: "inconclusive"; detail: string };
 
 export interface CodexCliService {
   authStatus(): Promise<CodexAuthStatus>;
@@ -21,7 +21,7 @@ export function classifyCodexAuthStatus(params: {
   if (/not logged in/i.test(output)) return { kind: "logged-out" };
   if (params.errorCode === 0 && /logged in/i.test(output)) return { kind: "logged-in" };
   if (params.errorCode === "ENOENT") return { kind: "unavailable", detail: output };
-  return { kind: "incompatible", detail: output || `codex login status exited ${String(params.errorCode)}` };
+  return { kind: "inconclusive", detail: output || `codex login status exited ${String(params.errorCode)}` };
 }
 
 export function createCodexCliService(): CodexCliService {
@@ -54,7 +54,7 @@ export function createCodexCliService(): CodexCliService {
         });
         const timer = setTimeout(() => {
           child.kill();
-          finish({ kind: "incompatible", detail: "codex login status timed out" });
+          finish({ kind: "inconclusive", detail: "codex login status timed out" });
         }, 10_000);
       });
     },

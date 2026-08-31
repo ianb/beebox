@@ -30,7 +30,7 @@ JSON.stringify(classifyCodexAuthStatus({ errorCode: "ENOENT", output: "spawn cod
 => {"kind":"unavailable","detail":"spawn codex ENOENT"}
 
 JSON.stringify(classifyCodexAuthStatus({ errorCode: 2, output: "error: unexpected argument 'status'" }))
-=> {"kind":"incompatible","detail":"error: unexpected argument 'status'"}
+=> {"kind":"inconclusive","detail":"error: unexpected argument 'status'"}
 ```
 
 The fake is observable so cache tests can prove that a second check did not

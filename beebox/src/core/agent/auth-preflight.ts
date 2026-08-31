@@ -59,19 +59,6 @@ export class CodexCliUnavailableError extends CodexReadinessError {
   }
 }
 
-export class CodexCliIncompatibleError extends CodexReadinessError {
-  readonly detail: string;
-
-  constructor(detail: string) {
-    const safeDetail = redactCodexAuthDetail(detail);
-    super("Codex CLI is incompatible — deploy matching @openai/codex and @openai/codex-sdk versions", {
-      cause: new Error(safeDetail),
-    });
-    this.name = "CodexCliIncompatibleError";
-    this.detail = safeDetail;
-  }
-}
-
 export function redactCodexAuthDetail(detail: string): string {
   return detail
     .replaceAll(/\bsk-[\w-]+/g, "<redacted-api-key>")
@@ -137,12 +124,11 @@ export async function checkCodexAuth(options?: {
         console.warn("[codex-auth] readiness probe failed:", error);
         throw error;
       }
-    case "incompatible":
-      {
-        const error = new CodexCliIncompatibleError(status.detail);
-        console.warn("[codex-auth] readiness probe failed:", error);
-        throw error;
-      }
+    case "inconclusive":
+      console.warn(
+        `[codex-auth] status probe was inconclusive; letting Codex report its runtime state: ${redactCodexAuthDetail(status.detail)}`,
+      );
+      return;
   }
 }
 
