@@ -25,29 +25,90 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.247` (in `beebox/package.json` — see the split-pin
+- **Current pin:** `0.3.251` (in `beebox/package.json` — see the split-pin
   note below; the monorepo root still carries a second, unmanaged pin at
   `0.3.226`, which is why `pnpm update-agent-sdk` ends by printing
   "Now at 0.3.226" even when the managed pin moved)
-- **Latest reviewed upstream version:** `0.3.251` (SDK), `2.1.251` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.252` (SDK), `2.1.252` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.247` was taken this turn as the newest settled
-  version, which is the deliberate take the last turn flagged — the `ambient`
-  flag that `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md`
-  needs is now in the pin. Pending: `0.3.248` (~28h), `0.3.250` (~26h) and
-  `0.3.251` (~9h), none act-now. `2.1.251` is the largest security release this
-  ledger has seen, and **almost none of it protects this repo** — every session
-  here runs with permission enforcement off, which is the finding rather than
-  the fixes. The last turn's obligation to re-read `2.1.250` is discharged
-  below.
+- **Current recommendation:** `0.3.251` was taken this turn as the newest settled
+  version, but **only after testing it** — `2.1.252` exists mainly to fix a Bash
+  regression that `2.1.251` introduced, and taking the settled version blind
+  would have installed that regression into box agents. Two probes against a
+  scratch `0.3.251` install showed the failure does not reproduce on this
+  machine (below). `0.3.252` (~8h) is the only pending version and is the
+  natural next take. No releases were published 2026-08-29 or 2026-08-30, so
+  the three-day gap since the last turn is upstream quiet, not missed coverage.
 
 ## Release ledger
 
-### 0.3.251 — pending (published 2026-08-28T15:36Z, ~9h at this turn; parity with Claude Code 2.1.251)
+### 0.3.252 — pending (published 2026-08-31T17:08Z, ~8h at this turn; parity with Claude Code 2.1.252)
+
+- **Upstream:** SDK says only "parity with Claude Code v2.1.252". 2.1.252 is
+  four fixes, and the first one is the reason this turn did more than read:
+  *"Fixed Bash commands failing with `task output swap refused (tasks dir moved
+  or linked)` on some Macs."*
+- **Why that mattered before the bump:** that error is the fallout of
+  `2.1.251`'s *"Changed how Bash command output files are created and read back
+  when commands run in the sandbox, so a sandboxed command cannot redirect or
+  replace them"* — a hardening item recorded in this ledger one turn ago. So
+  `0.3.251`, the version the settled path was about to install, is the version
+  that broke Bash for some macOS users, and `0.3.252` is the repair. Box agents
+  run Bash constantly, and the local ones run on this Mac, so installing
+  `0.3.251` blind risked every Bash call in a local box agent failing. The
+  changelog's "some Macs" is not something to resolve by reading.
+- **What was actually tested.** A scratch install of `0.3.251` in `/tmp`, driven
+  by a small `query()` script with `permissionMode: "bypassPermissions"` (what
+  box agents use), asked to run one `echo` through the Bash tool:
+  - Plain cwd, inherited `TMPDIR`: tool result `is_error=false`, echo output
+    returned, result `subtype=success`.
+  - Repeated with the cwd reached through a **symlink** and `TMPDIR` pointed at
+    a **symlinked** directory — the "tasks dir moved or linked" shape the error
+    names: same clean pass, no `task output swap refused` anywhere in the
+    stream.
+  Two shapes, no reproduction, so `0.3.251` is safe on this machine and the
+  settled path was taken as written. Worth knowing why this machine is probably
+  not exposed: nothing here relocates the tasks dir. `beebox/src/core/agent/run.ts`
+  builds its child env through `buildScriptEnv`, which touches `PATH` and
+  `ANTHROPIC_BASE_URL` and sets neither `TMPDIR` nor `CLAUDE_CODE_TMPDIR`, so
+  box agents inherit the ordinary macOS temp dir.
+- **The other three fixes.** *"Fixed background task notifications with very
+  large failure output (for example git errors on a full disk) making the
+  conversation exceed the API request size limit"* — third release running in
+  the same family as 2.1.247's megabytes-of-hook-output overflow and 2.1.248's
+  unwritable-output-file memory growth, and the cited trigger is one this
+  deployment has actually had (the prod server hit 100% of its volume on
+  2026-08-04). Box agents commit through git, so a disk-full git error is the
+  exact shape.
+  *"Fixed Remote Control sessions hosted by Claude Desktop or VS Code stalling
+  for minutes after a tool finished when the connection to claude.ai was
+  degraded"* — worker sessions launch with `--remote-control` by default
+  (`bin/launch-worktree-session`), so this is a real quality-of-life fix for the
+  boxholder, though it is harness-side and arrives with the installed CLI rather
+  than with the pin. *"Fixed 'always allow' not saving in a project that has no
+  `.claude/settings.local.json` yet"* — not applicable; nothing here runs with
+  permission prompts, per the 2.1.251 entry below.
+- **Action:** Settled path; takeable 2026-09-02. It is the natural next take,
+  and taking it also puts the Bash repair in place before any future change to
+  how box agents set up their temp dirs could expose the regression.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03252), [Claude Code 2.1.252](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21252)
+
+### 0.3.251 — APPLIED 2026-08-31 (published 2026-08-28T15:36Z; parity with Claude Code 2.1.251)
 
 - **Upstream:** SDK says only "parity with Claude Code v2.1.251". That parity
   line hides ~75 itemized Claude Code entries, assessed immediately below.
-- **Action:** Settled path; takeable 2026-08-30.
+- **Action:** Applied 2026-08-31 on the settled path (~81h old), the newest
+  settled version — but deliberately, not automatically: `2.1.252` had by then
+  revealed that this release broke Bash on some Macs, so it was probed first
+  (see the `0.3.252` entry above) and taken only after the failure did not
+  reproduce in two shapes on this machine.
+  `pnpm -C beebox test`: **8,492 pass, 0 fail**. Note for future turns: that
+  green does **not** speak to
+  `issues/bugs/2026-08-31-full-suite-red-future-dated-issues-7f47b493.md`, the
+  red `test/frontend/trpc-directory-resolution.test.ts` filed on `main` the same
+  day — that file does not appear in this suite at all, so the hourly
+  `schedules/full-suite/` run covers tests this monitor's gate does not.
+  `sdk-steering-probe`: all four steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03251)
 
 ### Claude Code 2.1.251 — harness + runtime; the security cluster lands where this repo has no enforcement
@@ -133,7 +194,7 @@ they are unfixed on this machine until it auto-updates.
 - **Action:** Nothing to adjust. Settled path.
 - **Sources:** [Claude Code 2.1.251](https://github.com/anthropics/claude-code/blob/v2.1.251/CHANGELOG.md#21251)
 
-### 0.3.250 / Claude Code 2.1.250 — reviewed 2026-08-28 (the previous turn's obligation, discharged)
+### 0.3.250 / Claude Code 2.1.250 — superseded; reviewed 2026-08-28 (the previous turn's obligation, discharged)
 
 The last turn recorded these as **unreviewable** rather than reviewed: at that
 point neither had a changelog section, a git tag or a GitHub release. Both have
@@ -149,7 +210,7 @@ the only substantive thing known about it: no public type surface changed.
 Nothing to assess on either channel. The obligation is discharged; no further
 re-read is owed.
 
-### 0.3.248 — pending (published 2026-08-27T20:37Z, ~3h at this turn)
+### 0.3.248 — superseded (published 2026-08-27T20:37Z)
 
 - **Upstream:** One item: a per-server `timeout` for SDK-hosted MCP servers
   (`createSdkMcpServer({ timeout })`), overriding `MCP_TOOL_TIMEOUT` for that
@@ -159,7 +220,10 @@ re-read is owed.
   `src/core/agent/run.ts` passes no `mcpServers`. The itemized SDK content is
   therefore empty for us, and everything that matters in this version is the
   Claude Code 2.1.248 it bundles, below.
-- **Action:** Settled path; takeable 2026-08-29.
+- **Action:** Never installed on its own — it settled during a quiet upstream
+  weekend, and by the time this monitor next bumped, `0.3.251` was the newest
+  settled version. Its content (an MCP `timeout` option beebox does not use) is
+  included in the current pin.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03248)
 
 ### Claude Code 2.1.248 — harness only (bundled by 0.3.248); one item wants the boxholder
