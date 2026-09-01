@@ -22,8 +22,18 @@ if (privateKey) {
   process.exit(1);
 }
 
+function isStagedBinary(file: string): boolean {
+  const numstat = execFileSync(
+    "git",
+    ["diff", "--cached", "--numstat", "--no-ext-diff", "--", file],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+  return numstat.startsWith("-\t-");
+}
+
 const shellFiles = staged.filter((file) => {
   if (file.startsWith(".husky/") || /\.(?:sh|bash)$/u.test(file)) return true;
+  if (isStagedBinary(file)) return false;
   const content = execFileSync("git", ["show", `:${file}`], { cwd: repoRoot, encoding: "utf8" });
   return /^#!.*\b(?:ba|z|k)?sh\b/u.test(content);
 });
