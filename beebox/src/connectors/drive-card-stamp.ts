@@ -119,7 +119,7 @@ export async function writeGfolderCard(cardPath: string, file: DriveFile): Promi
 }
 
 /** The canonical Drive URL for an item, when the API did not send one. */
-export function driveViewLink(fileId: string): string {
+function driveViewLink(fileId: string): string {
   return `https://drive.google.com/file/d/${fileId}/view`;
 }
 
