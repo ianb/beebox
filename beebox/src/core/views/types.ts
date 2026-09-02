@@ -6,6 +6,16 @@
  */
 
 import type { ActivityKind } from "../chat/card-activity.js";
+import type { ViewState } from "../../shared/view-state.js";
+
+export type { ViewState, ViewStateValue } from "../../shared/view-state.js";
+
+export interface ViewHistory {
+  readonly state: ViewState;
+  readonly canPush: boolean;
+  pushState: (next: ViewState) => "pushed" | "replaced" | "rejected";
+  replaceState: (next: ViewState) => void;
+}
 
 export interface ViewProps {
   cards: ViewCard[];
@@ -54,6 +64,8 @@ export interface ViewProps {
   boxSlug: string;
   /** Query parameters from the view URL (e.g., path, custom filters). */
   params: Record<string, string>;
+  /** Explicit, JSON-safe navigation state owned by this authored view. */
+  viewHistory: ViewHistory;
   /**
    * Report user activity on this card to the chat's companion-pane accumulator,
    * with an optional free-text detail. A no-op outside the companion pane

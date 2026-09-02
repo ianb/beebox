@@ -125,13 +125,13 @@ export const ContextMenuBody = memo(function ContextMenuBody(props: ContextMenuB
 
   const onLandmarkPanel = (link: ResolvedLink) => {
     onZoomView({
-      target: { path: link.ref, viewer: null, params: {} },
+      target: { path: link.ref, viewer: null, params: {}, viewState: null },
       label: link.label ?? link.title,
     });
   };
   const onFilePanel: RecentFilesPanelFileHandler = (summary) => {
     onZoomView({
-      target: { path: summary.path, viewer: null, params: {} },
+      target: { path: summary.path, viewer: null, params: {}, viewState: null },
       label: summary.title,
     });
   };
@@ -170,7 +170,7 @@ export const RecentFilesMenuBody = memo(function RecentFilesMenuBody({
 }): ReactNode {
   const onFilePanel: RecentFilesPanelFileHandler = (summary) => {
     onZoomView({
-      target: { path: summary.path, viewer: null, params: {} },
+      target: { path: summary.path, viewer: null, params: {}, viewState: null },
       label: summary.title,
     });
   };

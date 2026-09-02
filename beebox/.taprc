@@ -5,6 +5,10 @@ node-arg:
   # fires per subprocess and otherwise spams test output dozens of times.
   - --disable-warning=DEP0040
   - --import=tsx
+  # Isolate every home-relative state/config path, including the migration
+  # boundary reached by child CLI processes before command dispatch. This is a
+  # TypeScript preload, so it must follow the tsx loader.
+  - --import=./test/helpers/isolate-user-home.ts
   - --import=agent-doctest/tap
   - --import=agent-doctest/loader
   # Point BBX_SECRETS_FILE at a throwaway path in every test process, so nothing

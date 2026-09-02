@@ -28,3 +28,33 @@ Options, cheapest first:
 Related: 2026-08-25 the tick itself failed for a day (empty unmarked store dir)
 and could raise no alert about it because the store is where alerts go — a
 tick-can't-start failure needs a delivery path that doesn't depend on the store.
+
+> 2026-09-02 (main session, boxholder re-report): confirmed still true, and
+> two more findings.
+>
+> - Delivery is now `terminal-notifier` (`osascriptNotify`), sender
+>   `fr.julienxx.oss.terminal-notifier`. `com.apple.ncprefs` shows that sender
+>   with the banner bit set and the alert bit clear (flags 41951246: bit 8 on,
+>   bit 16 off), so notifications still auto-dismiss. Option 1 applies to the
+>   terminal-notifier sender, not Script Editor; `bin/doctor` could read that
+>   flag.
+> - `-group callback-schedules` removes the previous notification whenever a
+>   new one posts, so at most one schedule alert ever survives in Notification
+>   Center, even before it expires. A per-alert group (the alert id) keeps them.
+> - **Click target.** `-open` points at the workstreams app root. The
+>   boxholder wants the click to land on the specific report: the alert itself
+>   (needs an alert deep link, e.g. `/workstreams/?alert=<id>` scrolled and
+>   highlighted in the Scheduled section), the filed issue when the message
+>   names one (the issues page has an `issue=` search param), or the run log
+>   (`bin/schedules logs <name> --run <id>` has no web route yet). `notify()`
+>   receives only title and message today; it needs the alert id, and
+>   optionally an issue path, to build the URL.
+>
+> - The Claude Code hook notifications (`~/.claude/hooks/notify.sh`) DO stay:
+>   they use `alerter`, not terminal-notifier. alerter posts an alert-style
+>   notification that stays until clicked, closed, or `--timeout` (the hook
+>   uses 900s), blocks until then, and reports the outcome as JSON, which is
+>   how the hook focuses the right tab on click. Same tool, already installed
+>   (`/opt/homebrew/bin/alerter`). Cheapest fix for schedules: post through
+>   alerter with `--group <alert id>`, a long timeout, and open the deep link
+>   when the result says clicked. Option 2 above, concretely.

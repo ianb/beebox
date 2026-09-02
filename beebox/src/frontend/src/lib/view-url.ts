@@ -12,6 +12,10 @@
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { resolveRefPath } from "../../../shared/ref-path.js";
 import type { ControlAction } from "./ui-scan/types.js";
+import { assertViewState, validateViewState, type ViewState } from "@shared/view-state";
+
+export { validateViewState } from "@shared/view-state";
+export type { ViewState, ViewStateValue } from "@shared/view-state";
 
 export interface ViewTarget {
   /** File path relative to box root */
@@ -20,6 +24,8 @@ export interface ViewTarget {
   viewer: string | null;
   /** Remaining query params (excluding the reserved `view` key) */
   params: Record<string, string>;
+  /** Authored-view navigation state from the reserved `viewState` key. */
+  viewState: ViewState | null;
 }
 
 /**
@@ -49,8 +55,8 @@ export function parseViewUrl(raw: string): ViewTarget {
   // mount (card.get tolerates it) but never matches a `file-change` event, so the
   // companion pane silently stops live-updating. See src/shared/box-path.ts.
   const path = boxRelativePath(rawPath);
-  const { viewer, params } = parseViewQuery(qIndex === -1 ? "" : value.slice(qIndex + 1));
-  return { path, viewer, params };
+  const { viewer, params, viewState } = parseViewQuery(qIndex === -1 ? "" : value.slice(qIndex + 1));
+  return { path, viewer, params, viewState };
 }
 
 /**
@@ -59,20 +65,35 @@ export function parseViewUrl(raw: string): ViewTarget {
  * `parseViewUrl` (box-root-normalized) and `resolveContentTarget`
  * (document-relative), which differ only in how they treat the path part.
  */
-function parseViewQuery(query: string): { viewer: string | null; params: Record<string, string> } {
+export function parseViewQuery(query: string): Pick<ViewTarget, "viewer" | "params" | "viewState"> {
   const params: Record<string, string> = {};
   let viewer: string | null = null;
+  let viewState: ViewState | null = null;
   if (query !== "") {
     const search = new URLSearchParams(query);
     for (const [key, val] of search.entries()) {
       if (key === "view") {
         viewer = val;
+      } else if (key === "viewState") {
+        viewState = parseViewState(val);
       } else {
         params[key] = val;
       }
     }
   }
-  return { viewer, params };
+  return { viewer, params, viewState };
+}
+
+function parseViewState(value: string): ViewState | null {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (validateViewState(parsed)) return parsed;
+  } catch (error) {
+    // The warning below covers malformed JSON and invalid JSON shapes alike.
+    void error;
+  }
+  console.warn("Ignoring invalid authored-view state from URL");
+  return null;
 }
 
 /** True for an absolute URL (any scheme) or a protocol-relative `//host` URL. */
@@ -96,8 +117,8 @@ export function resolveContentTarget(basePath: string | undefined, href: string)
   const pathPart = qIndex === -1 ? href : href.slice(0, qIndex);
   const path = resolveRelativePath(basePath, pathPart);
   if (path === null) return null;
-  const { viewer, params } = parseViewQuery(qIndex === -1 ? "" : href.slice(qIndex + 1));
-  return { path, viewer, params };
+  const { viewer, params, viewState } = parseViewQuery(qIndex === -1 ? "" : href.slice(qIndex + 1));
+  return { path, viewer, params, viewState };
 }
 
 /**
@@ -106,11 +127,22 @@ export function resolveContentTarget(basePath: string | undefined, href: string)
 export function serializeViewUrl(target: ViewTarget): string {
   const parts: string[] = [];
   if (target.viewer) parts.push(`view=${encodeURIComponent(target.viewer)}`);
+  if (target.viewState && Object.keys(target.viewState).length > 0) {
+    assertViewState(target.viewState);
+    parts.push(`viewState=${encodeURIComponent(JSON.stringify(target.viewState))}`);
+  }
   for (const [k, v] of Object.entries(target.params)) {
     parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
   }
   const qs = parts.join("&");
   return qs ? `${target.path}?${qs}` : target.path;
+}
+
+/** Supply authored state to TanStack Router; its search serializer encodes JSON. */
+export function viewStateSearchValue(state: ViewState | null): ViewState | undefined {
+  if (state === null || Object.keys(state).length === 0) return undefined;
+  assertViewState(state);
+  return state;
 }
 
 /**

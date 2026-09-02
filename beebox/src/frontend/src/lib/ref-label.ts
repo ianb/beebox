@@ -50,5 +50,5 @@ export function externalLabel(href: string): string {
 export function refToViewTarget(ref: string, basePath: string | undefined): ViewTarget | null {
   const noFrag = ref.split("#")[0] ?? ref;
   const path = resolveRelativePath(basePath, noFrag);
-  return path === null ? null : { path, viewer: null, params: {} };
+  return path === null ? null : { path, viewer: null, params: {}, viewState: null };
 }

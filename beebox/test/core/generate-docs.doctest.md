@@ -41,7 +41,7 @@ async function makeV2Fixture() {
     JSON.stringify({ name: "fixture", dependencies: { "beebox": "0.1.0" } }, null, 2),
   );
   await fs.writeFile(path.join(packageRoot, ".gitignore"), "node_modules/\n");
-  execSync("git init -q && git add -A && git commit -q -m init", { cwd: packageRoot });
+  execSync("git init -q -b main && git add -A && git commit -q -m init", { cwd: packageRoot });
   return { packageRoot, boxRoot };
 }
 

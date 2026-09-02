@@ -311,7 +311,7 @@ Each view must export:
 - \`dependencies\` (string[]) — glob patterns for cards that affect rendering
 - \`modes\` (string[]) — \`"page"\`, \`"chat"\`, or both
 - \`rendersCardTypes\` (string[]) — the card type(s) this view renders
-- \`default\` function component receiving \`{ cards, navigate, boxSlug, params }\` (\`params.path\` is the card being rendered)
+- \`default\` function component receiving \`{ cards, navigate, boxSlug, params, viewHistory }\` (\`params.path\` is the card being rendered; \`viewHistory\` explicitly preserves JSON-safe navigation state)
 
 React is provided automatically — do not import it.
 

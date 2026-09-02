@@ -27,7 +27,7 @@ export function BrowseLandmarkHeader({
           <Text as="h2" size="sm" weight="bold">
             <button
               type="button"
-              onClick={() => onNavigate({ path: landmark.path, viewer: null, params: {} })}
+              onClick={() => onNavigate({ path: landmark.path, viewer: null, params: {}, viewState: null })}
               aria-label={`Open ${landmark.label || landmark.path} landmark details`}
               className="text-left hover:underline"
             >

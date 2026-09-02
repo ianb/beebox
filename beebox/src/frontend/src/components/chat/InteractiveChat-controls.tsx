@@ -117,6 +117,7 @@ function CompanionViewPanelInner({
   onCloseTab,
   onClosePanel,
   onNavigate,
+  onUpdateTarget,
   onAddSelection,
   reportActivity,
 }: {
@@ -126,6 +127,7 @@ function CompanionViewPanelInner({
   onCloseTab: (path: string) => void;
   onClosePanel: () => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  onUpdateTarget: (target: ViewTarget, hint?: NavigateHint) => void;
   onAddSelection?: (selection: AddSelectionInput) => void;
   /** Report user activity on the active card to the chat accumulator. */
   reportActivity: (kind: ActivityKind, detail?: string) => void;
@@ -242,6 +244,8 @@ function CompanionViewPanelInner({
                 mode="companion"
                 rendererName={tab.target.viewer}
                 params={tab.target.params}
+                viewState={tab.target.viewState}
+                onViewStateChange={(next) => onUpdateTarget({ ...tab.target, viewState: next }, { label: tab.label })}
                 onNavigate={onNavigate}
                 onAddSelection={onAddSelection}
                 reportActivity={reportActivity}

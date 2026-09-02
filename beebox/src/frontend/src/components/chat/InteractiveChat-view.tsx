@@ -268,6 +268,12 @@ export function InteractiveChatBody(props: ChatBodyProps) {
     },
     [reportCardActivity, onZoomView],
   );
+  const handleCompanionTargetUpdate = useCallback(
+    (target: ViewTarget, hint?: NavigateHint) => {
+      onZoomView({ target, label: hint?.label ?? target.path });
+    },
+    [onZoomView],
+  );
   return (
     <ChatView
       hasCompanion={Boolean(activeView)}
@@ -280,6 +286,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             onCloseTab={onCloseTab}
             onClosePanel={onClosePanel}
             onNavigate={handleCompanionNavigate}
+            onUpdateTarget={handleCompanionTargetUpdate}
             onAddSelection={handleAddSelection}
             reportActivity={reportCardActivity}
           />

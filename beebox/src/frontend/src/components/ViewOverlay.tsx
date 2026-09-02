@@ -131,6 +131,8 @@ function ViewOverlayPanel({
             mode="companion"
             rendererName={state.target.viewer}
             params={state.target.params}
+            viewState={state.target.viewState}
+            onViewStateChange={(next) => onOpen({ ...state.target, viewState: next }, state.label === undefined ? undefined : { label: state.label })}
             onNavigate={onOpen}
           />
         </div>
