@@ -1,7 +1,13 @@
 ---
 title: "Schedule alert notifications vanish; they need to be sticky"
-workstream: unattached
+workstream: schedule-alerter
+resolution: implemented
 ---
+Resolved by `4c690d066`: schedule alerts now use `alerter` with independent
+per-alert groups and open an addressable report view when clicked. Unlike the
+reference hook, they intentionally have no timeout; dismissal remains under the
+boxholder's control. Missing `alerter` remains a fail-open notification path.
+
 `bin/schedules alert` delivers via `osascript display notification`
 (`bin/lib/schedules-alerts.ts` → `osascriptNotify`). macOS shows that as a
 banner that auto-dismisses in seconds, so an alert raised while the boxholder

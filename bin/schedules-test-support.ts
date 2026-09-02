@@ -18,7 +18,7 @@ import * as path from "node:path";
 import { execa } from "execa";
 
 import { loadSchedules, type LoadedSchedule, type ScheduleConfig } from "./lib/schedules.js";
-import type { RunnerDeps } from "./lib/schedules-alerts.js";
+import type { DesktopNotification, RunnerDeps } from "./lib/schedules-alerts.js";
 import { errnoCode } from "../beebox/src/lib/error-guards.js";
 
 const tempDirs: string[] = [];
@@ -97,13 +97,13 @@ export const BASE_YAML = 'description: "A test schedule"\ncadence: 1d\n';
 
 export interface Fake {
   deps: RunnerDeps;
-  notifications: { title: string; message: string }[];
+  notifications: DesktopNotification[];
   setNow: (ms: number) => void;
 }
 
 export async function makeDeps(input: { schedulesRoot: string; nowMs: number; alive?: (pid: number) => boolean; mainRoot?: string; bootTimeMs?: number }): Promise<Fake> {
   const storeRoot = path.join(await tempDir("schedule-runs"), "store");
-  const notifications: { title: string; message: string }[] = [];
+  const notifications: DesktopNotification[] = [];
   let nowMs = input.nowMs;
   return {
     notifications,
@@ -295,4 +295,3 @@ export const REPORTS_DONE = [
   'printf \'{"runId":"%s","kind":"done","alertId":null,"at":"2026-08-24T12:00:00.000Z"}\\n\' "$SCHEDULE_RUN_ID" \\',
   '  > "$SCHEDULE_STATE_DIR/runs/$SCHEDULE_RUN_ID.result.json"',
 ].join("\n");
-
