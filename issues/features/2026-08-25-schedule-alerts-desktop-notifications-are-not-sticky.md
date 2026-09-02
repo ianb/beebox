@@ -1,6 +1,6 @@
 ---
 title: "Schedule alert notifications vanish; they need to be sticky"
-workstream: unattached
+workstream: schedule-alerter
 ---
 `bin/schedules alert` delivers via `osascript display notification`
 (`bin/lib/schedules-alerts.ts` → `osascriptNotify`). macOS shows that as a
