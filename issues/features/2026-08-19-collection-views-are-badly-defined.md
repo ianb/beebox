@@ -427,7 +427,7 @@ Two details worth keeping:
 - **They could get the answer** — the agent answers it well in chat. What they
   wanted was to *see* it without asking, and to see progress: done versus left.
 - **It is a count over a set**, which is the same missing primitive as
-  [counts living in prose](../bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md).
+  [counts living in prose](../closed/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md).
   A collection view that cannot say how many things are in a container is not
   much better than the paragraph.
 

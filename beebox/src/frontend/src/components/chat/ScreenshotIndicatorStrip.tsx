@@ -47,7 +47,7 @@ function IndicatorRow({ indicator, onDismiss }: {
     <div className="flex items-center gap-2 text-xs text-warm-600 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
       <span aria-hidden="true">📸</span>
       <Text size="xs" tone="subtle">
-        screenshot shared with the agent
+        screenshot added to the chat
       </Text>
       <Image
         src={indicator.thumbnailUrl}

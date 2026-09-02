@@ -91,7 +91,7 @@ export interface ChatContext {
    * Why the machine is (or last was) in `refreshing`. `"turn"` is set on every
    * `streaming → refreshing` edge — the agent just worked; `"resync"` by the
    * global REFRESH (WS (re)connect, idle-chat `chat-complete`, status poll).
-   * The status strip shows "Agent is working…" through a `turn` refresh only
+   * The status strip shows "Thinking…" through a `turn` refresh only
    * (`components/chat/processing-status-display.ts`). Meaningful only while
    * in `refreshing`.
    */

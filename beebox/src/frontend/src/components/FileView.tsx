@@ -31,6 +31,7 @@ import { apiRawFileUrl, getApiBase, withBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
+import { rendererDisplayLabel } from "../lib/renderer-display-label";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { boxRelativePath } from "@shared/box-path";
 import { RequestError } from "../lib/errors";
@@ -190,15 +191,16 @@ function cardTitle(data: FileData): string | null {
   return typeof title === "string" && title.trim() !== "" ? title : null;
 }
 
-function RendererToggle({
-  renderers, active, onSelect, compact,
-}: {
+function RendererToggle({ renderers, active, onSelect, compact, path }: {
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
   compact?: boolean;
+  path: string;
 }) {
   if (renderers.length < 2) return null;
+  // Sorted by descending priority (getRenderers): "Card" (30) leads only when no type-specific (100) renderer is registered.
+  const hasTypeSpecificRenderer = renderers[0]?.name !== "Card";
   return (
     <div className={`flex gap-1 bg-warm-100 rounded-lg ${compact ? "p-0.5" : "p-1"}`}>
       {renderers.map(r => (
@@ -209,7 +211,7 @@ function RendererToggle({
             r === active ? "bg-white shadow text-warm-900" : "text-warm-700 hover:text-warm-900"
           }`}
         >
-          {r.name}
+          {rendererDisplayLabel({ registeredName: r.name, filePath: path, hasTypeSpecificRenderer })}
         </button>
       ))}
     </div>
@@ -236,7 +238,7 @@ function ChatHeader({
         <div className="text-sm font-medium truncate">{title ?? displayName(path)}</div>
         <div className="text-xs text-warm-500 truncate" title={path}>{path}</div>
       </div>
-      <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact />
+      <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact path={path} />
       <CardActions path={path} onTrashed={onTrashed} />
       {onOpenInPanel ? (
         <OpenInPanelButton onClick={onOpenInPanel} label="Open in sidebar" size="sm" />
@@ -272,7 +274,7 @@ function PageHeader({
             {status ? <StatusBadge status={status} /> : null}
           </div>
         </div>
-        <div className="flex items-center gap-1"><RendererToggle renderers={renderers} active={active} onSelect={onSelect} />{isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onTrashed} /> : null}</div>
+        <div className="flex items-center gap-1"><RendererToggle renderers={renderers} active={active} onSelect={onSelect} path={data.path} />{isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onTrashed} /> : null}</div>
       </div>
     </div>
   );
@@ -380,7 +382,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
       <div className="flex flex-col min-h-full">
         {renderers.length > 1 || isCardPath(data.path) ? (
           <div className="flex-shrink-0 flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
-            <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact />
+            <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact path={data.path} />
             {isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onClose} /> : null}
           </div>
         ) : null}

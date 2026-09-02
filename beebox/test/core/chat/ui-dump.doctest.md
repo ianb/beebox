@@ -64,14 +64,14 @@ const chat = payload({
   omittedUnknownRole: 1,
   entries: [
     entry({ role: "navigation", name: "Primary", kind: "landmark" }),
-    entry({ role: "button", name: "Place: test1", id: "bbx-nav-place", container: "Primary" }),
+    entry({ role: "button", name: "Where you are: test1", id: "bbx-nav-place", container: "Primary" }),
     entry({
       role: "button",
-      name: "Session: Dinner plans",
+      name: "Chat: Dinner plans",
       id: "bbx-nav-session",
       container: "Primary",
       actions: ["point", "focus", "reveal"],
-      does: "the thread menu: new session, recent chats, model, delete this chat",
+      does: "the thread menu: new chat, recent chats, model, delete this chat",
     }),
     entry({ role: "button", name: "Open debug log (2 errors)", container: "Primary", offscreen: true }),
     entry({ role: "region", name: "Compose message", kind: "landmark" }),
@@ -102,9 +102,9 @@ Covers: browser DOM only. This surface has no native chrome.
 1 element omitted: role not one this scan reports.
 «blankline»
 navigation "Primary"
-  button [Place: test1](control:bbx-nav-place)
-  button [Session: Dinner plans](control:bbx-nav-session) [reveal]
-    — the thread menu: new session, recent chats, model, delete this chat
+  button [Where you are: test1](control:bbx-nav-place)
+  button [Chat: Dinner plans](control:bbx-nav-session) [reveal]
+    — the thread menu: new chat, recent chats, model, delete this chat
   button "Open debug log (2 errors)"                     (no address) (off-screen)
 region "Compose message"
   button [Add](control:bbx-composer-add) [reveal]

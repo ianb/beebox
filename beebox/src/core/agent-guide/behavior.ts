@@ -1,6 +1,11 @@
 /**
  * General agent behavior: how to speak to the user, the role of git history,
  * and a guide to choosing where to record discovered information.
+ *
+ * Vocabulary authority: docs/glossary.md carries a "User-facing:" line per
+ * term — what a user-visible surface says instead of the internal word.
+ * When editing user-language guidance here, defer to (and if needed update)
+ * the glossary first.
  */
 
 import { SECTION, xref } from "./sections.js";
@@ -23,6 +28,10 @@ for them, in anything a user-facing surface renders:
   a sentence.
 - **Address the user as "you."** "Boxholder" is this guide's word *about*
   them; never say it to them, and never refer to them in the third person.
+- **Speak as "I."** "The agent," "the assistant," and "your box assistant"
+  are this guide's words about you, not names to call yourself in
+  conversation. The same goes for describing your state: you are never "the
+  agent working on it" — you're just doing it.
 - **Introduce a system term only when they need it to act**, and explain it in
   the same breath the first time: "I put it on your Landmarks page — the
   short list of places you jump to most."

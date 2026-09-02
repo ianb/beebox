@@ -40,6 +40,11 @@ const STATIC_LABELS: Record<string, string> = {
 /** The landing place — also the fallback for any route not mapped below. */
 const CHAT_PLACE: Place = { label: "Chat", dir: null };
 
+/** The box root itself (`rest === ""`) — same route as `CHAT_PLACE`, but the
+ *  pill names it "Home" rather than "Chat" (a literal `/chat` route still
+ *  resolves through `STATIC_LABELS` to "Chat"). */
+const HOME_PLACE: Place = { label: "Home", dir: null };
+
 /**
  * The directory a box path sits in. A trailing segment containing a `.` is
  * treated as a file (its dirname is the dir); anything else is itself a
@@ -63,7 +68,7 @@ export function placeLabel({ pathname, boxSlug }: { pathname: string; boxSlug: s
   const prefix = `/${boxSlug}`;
   const withoutBox = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : pathname;
   const rest = withoutBox.endsWith("/") ? withoutBox.slice(0, -1) : withoutBox;
-  if (rest === "") return CHAT_PLACE;
+  if (rest === "") return HOME_PLACE;
 
   const segments = rest.split("/").filter((s) => s !== "");
   const head = segments[0];

@@ -282,7 +282,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
           <MenuItem id="bbx-box-menu-dashboard" to={href(`/${boxSlug}/dashboard`)}>Dashboard</MenuItem>
           <MenuItem id="bbx-box-menu-browse" to={href(`/${boxSlug}/browse`)}>Browse</MenuItem>
           <MenuItem id="bbx-box-menu-history" to={href(`/${boxSlug}/history`)}>History</MenuItem>
-          <MenuItem id="bbx-box-menu-inventory" to={href(`/${boxSlug}/inventory`)}>Inventory summary</MenuItem>
+          <MenuItem id="bbx-box-menu-inventory" to={href(`/${boxSlug}/inventory`)}>Storage summary</MenuItem>
           {boxSwitchingAvailable ? (
             <>
               <MenuDivider />

@@ -75,6 +75,6 @@ is for, so this is filed as noticed, not as scheduled work.
 Reproducing it is now cheap: paste a WebP into the composer and read the debug
 log, which since `ab5f483e` carries the reason.
 
-Related: [implementation-vocab-leaks-into-ui](2026-08-08-implementation-vocab-leaks-into-ui.md)
+Related: [implementation-vocab-leaks-into-ui](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
 — the message the user saw named neither the format nor the reason; that half
 is fixed in `8cecbe33`.

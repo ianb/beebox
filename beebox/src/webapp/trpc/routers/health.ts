@@ -201,8 +201,8 @@ async function claudeAuthCheck(injected?: ClaudeCliService): Promise<HealthCheck
     name: "claude-credentials",
     ok: false,
     message:
-      "Claude Code is not logged in — agent operations (chat, reactor, procedures) will " +
-      "not work. Run `claude auth login` on this machine",
+      "The assistant engine (Claude Code) isn't signed in on this server — chat and " +
+      "background processing (reactor, procedures) will not work. Run `claude auth login` on this machine",
     severity: "error",
   };
 }

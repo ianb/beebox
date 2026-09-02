@@ -13,16 +13,18 @@ subdirectory. A non-null `dir` is what gets handed to `landmarks.forDir`.
 import { placeLabel } from "../../../src/frontend/src/lib/place-label.js";
 ```
 
-## The box root is the chat landing
+## The box root is Home; a literal `/chat` route is still Chat
 
-`/` redirects to `/chat` (Track A), so the bare box path names the same place.
+`/` redirects to `/chat` (Track A) and both render the same page, but the pill
+names the bare box root "Home" (docs/glossary.md) while a literal `/chat`
+route keeps "Chat".
 
 ```ts
 JSON.stringify(placeLabel({ pathname: "/test1", boxSlug: "test1" }))
-=> {"label":"Chat","dir":null}
+=> {"label":"Home","dir":null}
 
 JSON.stringify(placeLabel({ pathname: "/test1/", boxSlug: "test1" }))
-=> {"label":"Chat","dir":null}
+=> {"label":"Home","dir":null}
 
 JSON.stringify(placeLabel({ pathname: "/test1/chat", boxSlug: "test1" }))
 => {"label":"Chat","dir":null}

@@ -28,7 +28,7 @@ export function InventoryHeader({ boxSlug, refreshing, refresh, refreshError }: 
 function InventoryTitle() {
   return (
     <Stack gap="xs">
-      <Text as="h1" size="2xl" weight="bold">Inventory summary</Text>
+      <Text as="h1" size="2xl" weight="bold">Storage summary</Text>
       <Text as="p" tone="muted">Repository storage, file types, and linked versus unlinked content.</Text>
     </Stack>
   );

@@ -103,7 +103,7 @@ noServiceSpecs.map((s) => s.label).join(", ")
 ```ts
 const consultedSpecs = buildAudioBadgeSpecs({ consulted: { questions: ["did I sound annoyed?"] } }, "irrelevant");
 consultedSpecs.map((s) => s.label).join(", ")
-=> The agent analyzed this recording
+=> This recording was analyzed
 
 const detailHtml = renderToStaticMarkup(consultedSpecs[0].detail);
 print(`heading: ${detailHtml.includes("question asked")}`);
@@ -202,7 +202,7 @@ const consultedOut = render([voiceEntry("msg-4", "two large legs")], consultedSt
 consultedOut.includes("two large legs")
 => true
 
-consultedOut.includes('aria-label="The agent analyzed this recording"')
+consultedOut.includes('aria-label="This recording was analyzed"')
 => true
 ```
 
@@ -234,7 +234,7 @@ const otherConsultedOut = renderAsOtherViewer([otherUserVoiceEntry("msg-bob-2", 
 otherConsultedOut.includes("bob asked something")
 => true
 
-otherConsultedOut.includes('aria-label="The agent analyzed this recording"')
+otherConsultedOut.includes('aria-label="This recording was analyzed"')
 => true
 ```
 

@@ -1,12 +1,20 @@
 ---
 title: "Implementation vocabulary leaks into first-contact UI and agent replies"
-workstream: integration-tests
+workstream: vocab-sweep
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activities 1+2)
 labels: [soft-launch, field-test-findings, ui-sensibility]
 priority: important
 ---
+
+> **Closed 2026-09-02 (vocab-sweep).** All remaining items landed on this
+> branch (see `beebox/docs/implemented-plans/vocab-glossary-sweep.md`, Track
+> C): box-not-found copy, session→chat labels, error-badge gate, view tabs,
+> transcription glosses, nav chrome, and the name collisions via the
+> glossary's new user-facing register (`beebox/docs/glossary.md`). UI copy
+> changes verified by tests and Track O review, not exercised in a browser.
 
 > **Further progress 2026-08-09 (later):** the "worst single item" —
 > filename-as-heading — is fixed: card page and chat headers now headline the
@@ -50,9 +58,9 @@ agent's guidance should tell it to explain-or-avoid box jargon when talking to
 the user (the agent-guide / box CLAUDE.md owns that). The worst single item is
 the filename-as-heading on card views.
 
-Related: [first-run-experience](../features/2026-07-20-first-run-experience.md) (the
+Related: [first-run-experience](../../features/2026-07-20-first-run-experience.md) (the
 surrounding "explains nothing" tension);
-[day-to-day-usage-docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md).
+[day-to-day-usage-docs](../../docs-and-chores/2026-07-20-day-to-day-usage-docs.md).
 
 ## Second collection, 2026-08-23 (journey B, an independent first-time walk)
 
@@ -98,5 +106,13 @@ Also collected, smaller:
 
 Full notes: `beebox/user-stories/work/journeys/B-inventory-2026-08-23*/notes.md`.
 
+
+> 2026-09-02 (vocab-sweep, later): the sweep is implemented on this branch —
+> vocabulary decided with the boxholder and recorded as a user-facing register
+> in `beebox/docs/glossary.md` (chat/Home/Storage/Thinking…, box = the user's
+> box, no "agent"/"box assistant"); all surfaces below reworded, the error
+> badge gated behind ever-having-opened the debug log, view tabs relabeled by
+> card type, transcription rows glossed live-vs-final. Cross-model reviewed.
+> Plan: `beebox/docs/implemented-plans/vocab-glossary-sweep.md`.
 
 > 2026-09-02 survey (bbx-pick-issues): re-verified still true. `app-shell.tsx` still says "No box matches …", `AppNav.tsx` debug-log badge still ungated, `SessionChip`/`PlacePill` still say "Session menu"/"Place:", `VoiceChip-panels.tsx` still labels raw Deepgram/Whisper. Filename-as-heading and agent-reply jargon halves are fixed. Grouped with 2026-08-08-markdown-not-rendering-in-agent-output (agent imitates `[→ …]` compiled-doc markup) and 2026-08-24-agent-records-counts-in-prose-though-measures-exists as one internals-leak vocabulary sweep.

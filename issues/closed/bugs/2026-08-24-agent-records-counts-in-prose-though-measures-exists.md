@@ -1,12 +1,21 @@
 ---
 title: "Records have a quantity field and the agent used it on 2 of 20 inventory items"
-workstream: unattached
+workstream: vocab-sweep
+resolution: implemented
 area: beebox
 labels: [soft-launch, journey-findings]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, 2026-08-24 walk
 ---
+
+> **Closed 2026-09-02 (vocab-sweep).** Resolved by the record schema change
+> (`src/schemas/record.tsx`): a new single-value `quantity` field answers
+> "how many do I have", `measures` renamed to `measurements` (Track B,
+> `beebox/docs/implemented-plans/vocab-glossary-sweep.md`), migration
+> `record-measurements` registered and doctested, applied on the worktree
+> test1 clone. Knowledge audit `record-quantity-field` passes against a live
+> box agent.
 
 When I ask how many of something I have, I want the box to have kept the
 number as a number, so the answer does not depend on re-reading a paragraph I

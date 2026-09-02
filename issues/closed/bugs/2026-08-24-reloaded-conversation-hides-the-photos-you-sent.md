@@ -65,4 +65,4 @@ Still a placeholder, correctly: an image block whose bytes never arrived (a
 failed upload). Nothing was stripped from that line, so there is nothing to
 point at, and it still reads `[image not displayed]`.
 
-Related: [implementation-vocab-leaks-into-ui](../../bugs/2026-08-08-implementation-vocab-leaks-into-ui.md).
+Related: [implementation-vocab-leaks-into-ui](2026-08-08-implementation-vocab-leaks-into-ui.md).
