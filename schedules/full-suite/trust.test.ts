@@ -39,12 +39,17 @@ function tierRecord(durations: Record<string, number>, overrides?: Partial<Ledge
   };
 }
 
-/** N healthy runs of `count` files, each file at ~1.5s. */
+/** A distinct 40-char commit per run, so each record group is its own run. */
+function commitFor(run: number): string {
+  return `${String(run)}a`.repeat(20).slice(0, 40);
+}
+
+/** N healthy runs of `count` files, each file at ~1.5s, one commit per run. */
 function healthyRecords(runs: number, count: number): LedgerRecord[] {
   const durations = Object.fromEntries(
     Array.from({ length: count }, (_unused, i) => [`test/f${String(i)}.test.ts`, 1500 + i]),
   );
-  return Array.from({ length: runs }, () => tierRecord(durations));
+  return Array.from({ length: runs }, (_unused, run) => tierRecord(durations, { commit: commitFor(run) }));
 }
 
 test("median of an empty list is null, odd and even lists are exact", () => {
@@ -68,7 +73,8 @@ test("durationHistories reads only this schedule's tier records", () => {
       changed: [],
       emptyFileset: "sha256:empty",
     }),
-    tierRecord({ "test/a.test.ts": 2000 }),
+    // A later run at another commit: a separate group, a separate sample.
+    tierRecord({ "test/a.test.ts": 2000 }, { commit: commitFor(1) }),
   ];
   assert.deepEqual(durationHistories({ records }).get("test/a.test.ts"), [1000, 2000]);
 });
@@ -122,6 +128,46 @@ test("sub-second tests say nothing about contention", () => {
   const slowdown = batchSlowdown({ current, histories });
   assert.equal(slowdown.factor, null);
   assert.equal(slowdown.samples, 0);
+});
+
+test("a sustained load event cannot train the baseline — slowed runs contribute no history", () => {
+  // Five healthy runs, then eleven thrashed ones (each its own commit, the way
+  // hourly batches land). If the thrashed durations entered the history, the
+  // 20-run median would drift to 40s and the twelfth slow run would read as
+  // 1.0× — the gate goes blind exactly when it matters.
+  const slow = Object.fromEntries(
+    Array.from({ length: SLOWDOWN_MIN_SAMPLES }, (_unused, i) => [`test/f${String(i)}.test.ts`, 40000]),
+  );
+  const records = [
+    ...healthyRecords(5, SLOWDOWN_MIN_SAMPLES),
+    ...Array.from({ length: 11 }, (_unused, i) => tierRecord(slow, { commit: commitFor(100 + i) })),
+  ];
+  const histories = durationHistories({ records });
+  assert.deepEqual(histories.get("test/f0.test.ts")?.length, 5);
+  assert.equal(runIsUntrusted(batchSlowdown({ current: slow, histories })), true);
+});
+
+test("a run's tiers are judged together, so the careful tier's few files ride the batch verdict", () => {
+  // One run writes an ordinary record (many files) and a careful record (two
+  // files) at the same commit. Alone, two files are under the sample floor and
+  // the careful record would always fold; grouped, the thrashed run's careful
+  // durations stay out of the history too.
+  const commit = "c".repeat(40);
+  const ordinarySlow = Object.fromEntries(
+    Array.from({ length: SLOWDOWN_MIN_SAMPLES }, (_unused, i) => [`test/f${String(i)}.test.ts`, 40000]),
+  );
+  // The careful record shares its run's commit with the ordinary record.
+  const healthy = Array.from({ length: 5 }, (_unused, run) => [
+    ...healthyRecords(1, SLOWDOWN_MIN_SAMPLES).map((record) => ({ ...record, commit: commitFor(run) })),
+    tierRecord({ "test/careful.doctest.md": 1500 }, { commit: commitFor(run) }),
+  ]).flat();
+  const records = [
+    ...healthy,
+    tierRecord(ordinarySlow, { commit }),
+    tierRecord({ "test/careful.doctest.md": 60000 }, { commit }),
+  ];
+  const histories = durationHistories({ records });
+  assert.deepEqual(histories.get("test/careful.doctest.md"), [1500, 1500, 1500, 1500, 1500]);
 });
 
 // ─── repeat suppression ───────────────────────────────────────────────────

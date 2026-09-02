@@ -46,6 +46,13 @@ export const SLOWDOWN_WINDOW = 20;
  * Per-file durations of this schedule's own recent tier runs, newest last.
  * Marker records carry no durations and other sources run different
  * concurrency, so only this schedule's tier records are comparable.
+ *
+ * Self-consistent: each run (consecutive tier records at one commit, so the
+ * careful tier's five files are judged with the ordinary tier beside them) is
+ * judged against the history built so far, and a run the gate would distrust
+ * contributes nothing. Without this, a multi-day load event trains the
+ * baseline until 40s file-watcher runs read as normal and the gate goes blind
+ * — the ledger keeps recording durations for deferred runs.
  */
 export function durationHistories(input: {
   records: LedgerRecord[];
@@ -53,15 +60,32 @@ export function durationHistories(input: {
 }): Map<string, number[]> {
   const window = input.window ?? SLOWDOWN_WINDOW;
   const histories = new Map<string, number[]>();
-  for (const record of input.records) {
-    if (record.source !== LEDGER_SOURCE || record.marker === true) continue;
-    for (const [file, ms] of Object.entries(record.durations)) {
+  const fold = (group: LedgerRecord[]): void => {
+    if (group.length === 0) return;
+    const current: Record<string, number> = {};
+    for (const record of group) {
+      for (const [file, ms] of Object.entries(record.durations)) {
+        current[file] = Math.max(current[file] ?? 0, ms);
+      }
+    }
+    if (runIsUntrusted(batchSlowdown({ current, histories }))) return;
+    for (const [file, ms] of Object.entries(current)) {
       const history = histories.get(file) ?? [];
       history.push(ms);
       if (history.length > window) history.shift();
       histories.set(file, history);
     }
+  };
+  let group: LedgerRecord[] = [];
+  for (const record of input.records) {
+    if (record.source !== LEDGER_SOURCE || record.marker === true) continue;
+    if (group[0] !== undefined && group[0].commit !== record.commit) {
+      fold(group);
+      group = [];
+    }
+    group.push(record);
   }
+  fold(group);
   return histories;
 }
 

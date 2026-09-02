@@ -157,6 +157,24 @@ async function main(): Promise<void> {
     const output = `${ordinary.output}\n${careful.output}`;
     const runs = [ordinary, careful];
     const failures = failingFiles(runs);
+    // An untrusted run yields NO verdicts in either direction: red is
+    // deferred, and green neither clears known-red/pending nor resets alert
+    // suppression — a pass at 5× usual speed is as unmeasured as a failure.
+    const slowdown = batchSlowdown({ current: currentDurations(runs), histories });
+    if (runIsUntrusted(slowdown) && slowdown.factor !== null) {
+      process.stdout.write(
+        `full-suite: ran at ${slowdown.factor.toFixed(1)}× usual durations (${String(slowdown.samples)} files); withholding verdicts.\n`,
+      );
+      if (failures.length === 0) {
+        process.stdout.write("full-suite: green under load; state untouched.\n");
+        await markComplete({ batch, runs });
+        await report(["done"]);
+        return;
+      }
+      await deferRed({ batch, failures, factor: slowdown.factor, samples: slowdown.samples });
+      await markComplete({ batch, runs });
+      return;
+    }
     if (failures.length === 0) {
       process.stdout.write("full-suite: green.\n");
       await writeKnownRed([]);
@@ -166,20 +184,15 @@ async function main(): Promise<void> {
       await report(["done"]);
       return;
     }
-    const slowdown = batchSlowdown({ current: currentDurations(runs), histories });
-    if (runIsUntrusted(slowdown) && slowdown.factor !== null) {
-      process.stdout.write(
-        `full-suite: ran at ${slowdown.factor.toFixed(1)}× usual durations (${String(slowdown.samples)} files); withholding verdicts.\n`,
-      );
-      await deferRed({ batch, failures, factor: slowdown.factor, samples: slowdown.samples });
-      await markComplete({ batch, runs });
-      return;
-    }
     const knownRed = await handleRed({ batch, checkout, failures, output, pending });
-    if (knownRed !== null) await writeKnownRed(knownRed);
-    // Every pending file just got a trusted answer: confirmed files went
-    // through triage/bisect above, recovered ones are cleared by the pass.
-    await writePending({});
+    if (knownRed !== null) {
+      await writeKnownRed(knownRed);
+      // Every pending file got a trusted answer: confirmed files went through
+      // triage/bisect, recovered ones are cleared by the pass. An environment
+      // verdict (knownRed null) judged the machine, not the files — pending
+      // stays.
+      await writePending({});
+    }
     await markComplete({ batch, runs });
   } finally {
     await removeCheckout(checkout);

@@ -9,13 +9,22 @@ import { readLastAlert, writeLastAlert } from "./state.js";
 
 const SCHEDULES_CLI = path.join(REPO_ROOT, "bin", "schedules");
 
-/** `bin/schedules alert|done`, which handle `SCHEDULE_DRY_RUN` themselves. */
-export async function report(args: string[]): Promise<void> {
-  await execa(SCHEDULES_CLI, args, { stdout: "inherit", stderr: "inherit", reject: false });
+/**
+ * `bin/schedules alert|done`, which handle `SCHEDULE_DRY_RUN` themselves.
+ * Returns whether the CLI accepted it; a failed report is loud but not fatal —
+ * the runner's own ended-without-reporting alert is the backstop.
+ */
+export async function report(args: string[]): Promise<boolean> {
+  const result = await execa(SCHEDULES_CLI, args, { stdout: "inherit", stderr: "inherit", reject: false });
+  const delivered = result.exitCode === 0;
+  if (!delivered) {
+    process.stdout.write(`full-suite: bin/schedules ${args[0] ?? ""} failed (exit ${String(result.exitCode)}).\n`);
+  }
+  return delivered;
 }
 
-async function alert(input: { title: string; message: string; priority: string }): Promise<void> {
-  await report(["alert", "--priority", input.priority, "--title", input.title, "--message", input.message]);
+async function alert(input: { title: string; message: string; priority: string }): Promise<boolean> {
+  return report(["alert", "--priority", input.priority, "--title", input.title, "--message", input.message]);
 }
 
 /**
@@ -38,6 +47,9 @@ export async function alertOnce(input: {
     await report(["done"]);
     return;
   }
-  await alert(input);
-  await writeLastAlert({ fingerprint, raisedAt: new Date().toISOString() });
+  // Suppression state only records a DELIVERED alert: suppressing the next
+  // run's alert because this one failed to send would hide the condition.
+  if (await alert(input)) {
+    await writeLastAlert({ fingerprint, raisedAt: new Date().toISOString() });
+  }
 }
