@@ -6,6 +6,7 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-view-live-update-state — the hourly full-suite run on main
+resolution: implemented
 ---
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
@@ -69,3 +70,6 @@ Reproduce at the blamed landing:
 git log -1 e4ebb74d
 pnpm --dir beebox exec tap test/cli/lib/git.doctest.md
 ```
+
+
+> Closed 2026-09-02 (main session): cause confirmed. `374859ed1` (in the blamed landing) added `test/helpers/isolate-user-home.ts` to the tap preloads, so the global `init.defaultBranch=main` stopped applying and every bare `git init -q` in a test helper produced `master`. Fixed by passing `-b main` explicitly in `doctest-helpers.ts`, `test-server.ts`, and the four doctests that init their own repo. Re-ran `git`, `generate-docs`, `upgrade`, `trick`, `box-guard` doctests: 67/67 pass.
