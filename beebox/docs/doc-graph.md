@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-08-30T22:16:43Z
-Total documents: 314
+Generated: 2026-09-02T18:15:01Z
+Total documents: 315
 
 ## Issues
 
@@ -12,6 +12,7 @@ These documents are not referenced by any other document.
 - **docker/README.md** — "Docker packaging" (31 lines)
 - **docs/implemented-plans/agent-applied-migrations.md** — "Agent-applied migrations (via procedure checklists)" (550 lines)
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines)
+- **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines)
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (676 lines)
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (357 lines)
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (160 lines)
@@ -41,6 +42,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (550 lines)
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines)
+- **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (159 lines)
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
@@ -51,8 +53,7 @@ These documents are not referenced by any other document.
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
-- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
-- **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
+- **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (14 lines)
 - **test/manual/README.md** — "Manual tests" (44 lines)
 - **user-stories/journeys/B-inventory/reports/2026-08-23-2.md** — "B-inventory, 2026-08-23 (run 2)" (54 lines)
 - **user-stories/journeys/B-inventory/reports/2026-08-23-6.md** — "B-inventory, 2026-08-23 (run 6)" (49 lines)
@@ -168,6 +169,7 @@ Referenced by:
 - docs/plans/change-based-test-selection.md:941 (mention) — `--base`, CLAUDE.md guidance. The point at which behavior changes for agents,
 - docs/plans/chat-photo-batch-upload.md:32 (link) — - [`beebox/CLAUDE.md`](../../CLAUDE.md):101 — *"Read before writing. Don't
 - docs/plans/chat-scroll-model.md:209 (mention) — harness, all scenarios green, `decideScroll` deleted, nested CLAUDE.md and
+- docs/plans/codex-session-startup-auth.md:21 (mention) — - `CLAUDE.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
 - docs/plans/design-reconciliation.md:88 (mention) — - **Reality/tension** — CLAUDE.md:1 (the sentence agents actually load): "A
 - docs/plans/docs-reorg.gap-analysis.md:39 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
 - docs/plans/docs-reorg.md:13 (mention) — history out of the way but findable, and slim CLAUDE.md files down to
@@ -209,7 +211,7 @@ Referenced by:
 - ../.claude/skills/launch-worktree-session/SKILL.md:193 (mention) — AGENTS.md mirrors rather than CLAUDE.md, and its cross-model review command
 - ../CLAUDE.md:5 (mention) — - **beebox/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `cardwork
 - ../bin/CLAUDE.md:5 (mention) — always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
-- ../issues/CLAUDE.md:136 (mention) — said that. This restates the broader rule in `beebox/CLAUDE.md` ("Keep
+- ../issues/CLAUDE.md:157 (mention) — said that. This restates the broader rule in `beebox/CLAUDE.md` ("Keep
 - ../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:50 (mention) — the user (the agent-guide / box CLAUDE.md owns that). The worst single item is
 - ../issues/bugs/2026-08-08-markdown-not-rendering-in-agent-output.md:16 (mention) — > bracket form is the system's own CLAUDE.md-downgrade serialization of
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:12 (mention) — doubling held only empty directory structure, `CLAUDE.md` files byte-identical to
@@ -534,7 +536,7 @@ Referenced by:
 - docs/implemented-plans/workstreams.md:755 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
 - user-stories/catalog/2026-08-21.md:2638 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus
 - ../.claude/skills/security-report/SKILL.md:337 (mention) — `beebox/README.md` keeps a short "What leaves your machine" section
-- ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:18 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
+- ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:22 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../issues/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:86 (mention) — - `README.md:3` — "the `bbx` CLI is the interface"
 - ../research/CLAUDE.md:11 (mention) — `pai/`, …) with a `README.md` index: a table of the corpus's documents plus
 - ../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md:4 (link) — architecture framing in the first-pass [README](README.md)). This is a code-reading
@@ -574,7 +576,7 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 477 lines
+Title: "Deploy" | 497 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `bbx hub` routing `/<slug>/...`
@@ -588,6 +590,7 @@ Referenced by:
 - docs/implemented-plans/tailscale-expose-and-protect.md:104 (mention) — `bbx hub` on the live server (hand-migrated; `deploy/README.md:85` records
 - docs/implemented-plans/web-push-notifications.md:189 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/implemented-plans/webapp-production-mode.md:233 (mention) — `deploy/README.md` to document the temporary unit override plus the durable
+- docs/plans/codex-session-startup-auth.md:35 (mention) — - `deploy/README.md:329-339` documents service-account Claude subscription login. Add the parallel Codex operator proced
 - docs/plans/docs-reorg.md:129 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
 - docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/docker-install.md`, and
@@ -1105,6 +1108,7 @@ Referenced by:
 - docs/implemented-plans/agent-field-tests.md:34 (mention) — - `beebox/docs/engineering-principles.md` — traced by number below;
 - docs/implemented-plans/architectural-review-followups.md:11 (mention) — principles (`../engineering-principles.md`) and the same execution model
 - docs/implemented-plans/architectural-review.md:29 (mention) — >   `docs/engineering-principles.md`, Track N bbx-codehealth checks, Track O
+- docs/implemented-plans/authored-view-history-state.md:15 (link) — - The boxholder chose explicit adoption by authored views rather than automatic component-state preservation. This keeps
 - docs/implemented-plans/box-git-lock.md:41 (mention) — - `docs/engineering-principles.md` **§4 Resilient AND never silent — and never
 - docs/implemented-plans/box-growth-health-checks.md:70 (mention) — disk boundary. `docs/engineering-principles.md:39-47` says: *"Disk reads,
 - docs/implemented-plans/box-root-paths.md:25 (mention) — - `docs/engineering-principles.md` — #3 validate-at-boundaries (refs are
@@ -1624,7 +1628,7 @@ Referenced by:
 
 #### docs/name-history.md
 
-Title: "Name history" | 24 lines
+Title: "Name history" | 30 lines
 
 Referenced by:
 - docs/README.md:11 (link) — finished plan. The deliberate exception is [name history](name-history.md),
@@ -2461,6 +2465,13 @@ References:
 - → CLAUDE.md (mention)
 - → docs/box-layout.md (mention)
 
+#### docs/implemented-plans/authored-view-history-state.md **[ORPHAN]**
+
+Title: "Browser-like history state for authored views" | 211 lines
+
+References:
+- → docs/engineering-principles.md (link)
+
 #### docs/implemented-plans/box-git-lock.md
 
 Title: "Box git lock — serialize our writers on the repo-wide git index" | 655 lines
@@ -2886,7 +2897,7 @@ References:
 Title: "Commit provenance trailers" | 361 lines
 
 Referenced by:
-- ../bin/CLAUDE.md:62 (mention) — `CLAUDE.md`. Design: `beebox/docs/plans/commit-provenance-trailers.md`.
+- ../bin/CLAUDE.md:64 (mention) — `CLAUDE.md`. Design: `beebox/docs/plans/commit-provenance-trailers.md`.
 - ../issues/closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md:19 (mention) — `beebox/docs/implemented-plans/commit-provenance-trailers.md`).
 
 References:
@@ -3052,7 +3063,7 @@ Title: "Make the shared dev router safely exposable over Tailscale" | 566 lines
 Referenced by:
 - docs/docker-install.md:274 (mention) — router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
 - docs/implemented-plans/expose-dev-router.review.md:4 (mention) — `expose-dev-router.md`, 2026-07-21. **Verdict: unsafe as written — do not
-- ../bin/CLAUDE.md:174 (mention) — `beebox/docs/implemented-plans/expose-dev-router.md`.
+- ../bin/CLAUDE.md:176 (mention) — `beebox/docs/implemented-plans/expose-dev-router.md`.
 - ../issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md:11 (mention) — `expose-dev-router` plan (`beebox/docs/implemented-plans/expose-dev-router.md`),
 - ../issues/closed/features/2026-07-21-expose-dev-checkout-over-tailscale.md:13 (mention) — (`beebox/docs/implemented-plans/expose-dev-router.md`): the shared
 - ../issues/features/2026-07-22-bbx-tailscale-dev-router-operational-polish.md:11 (mention) — The dev-router Tailscale exposure (`docs/implemented-plans/expose-dev-router.md`)
@@ -3515,7 +3526,7 @@ References:
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 444 lines
 
 Referenced by:
-- ../bin/CLAUDE.md:850 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
+- ../bin/CLAUDE.md:852 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`). Design invariants,
 
 References:
 - → README.md (mention)
@@ -3816,7 +3827,7 @@ Title: "Scheduled workstreams" | 731 lines
 Referenced by:
 - docs/maintenance.md:38 (mention) — --dry-run`. Design: `docs/plans/scheduled-workstreams.md`.
 - ../.claude/skills/bbx-authoring-schedules/SKILL.md:3 (mention) — description: Explains how recurring work is enrolled in this monorepo — the `schedules/<name>/` directory, its `run` scr
-- ../bin/CLAUDE.md:643 (mention) — `beebox/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
+- ../bin/CLAUDE.md:645 (mention) — `beebox/docs/plans/scheduled-workstreams.md`. Mechanism, in the spirit of
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/closed/features/2026-08-25-sdk-update-in-a-worktree.md:41 (mention) — The problems, from the review of `scheduled-workstreams.md`:
@@ -4448,6 +4459,14 @@ References:
 - → docs/adding-a-box.md (mention)
 - → docs/maintenance.md (mention)
 
+#### docs/plans/codex-session-startup-auth.md **[ORPHAN]**
+
+Title: "Production Codex session startup and authentication" | 159 lines
+
+References:
+- → CLAUDE.md (mention)
+- → deploy/README.md (mention)
+
 #### docs/plans/commit-performance.md
 
 Title: "Commit performance: make box commits fast" | 148 lines
@@ -4595,7 +4614,7 @@ Title: "Document comments" | 945 lines
 
 Referenced by:
 - docs/plans/general-browser.md:17 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
-- ../bin/CLAUDE.md:735 (mention) — a store until an agent reads it. Design: `beebox/docs/plans/document-comments.md`.
+- ../bin/CLAUDE.md:737 (mention) — a store until an agent reads it. Design: `beebox/docs/plans/document-comments.md`.
 - ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:38 (link) — [document-comments](../../beebox/docs/plans/document-comments.md) plan
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:18 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) writes
 - ../issues/features/2026-08-22-file-asks-agent-flagged-attention.md:63 (link) — - [document-comments](../../beebox/docs/plans/document-comments.md) — the
@@ -5219,7 +5238,7 @@ Title: "An agent-neutral worktree control surface" | 702 lines
 
 Referenced by:
 - docs/implemented-plans/workstreams.md:25 (link) — ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
-- ../bin/CLAUDE.md:319 (mention) — Design and rationale: `beebox/docs/plans/worktree-control-surface.md`.
+- ../bin/CLAUDE.md:321 (mention) — Design and rationale: `beebox/docs/plans/worktree-control-surface.md`.
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:7 (frontmatter) — design: ../../../beebox/docs/plans/worktree-control-surface.md
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:21 (link) — > [the worktree control surface plan](../../../beebox/docs/plans/worktree-control-surface.md)
 - ../issues/closed/code-quality/2026-08-01-derive-public-worktree-paths.md:7 (frontmatter) — design: ../../../beebox/docs/plans/worktree-control-surface.md
@@ -5492,19 +5511,11 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 
-### src/frontend/dist/earcons/
-
-#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
-
-Title: "Earcon sources & attribution" | 13 lines
-
-No references in or out.
-
 ### src/frontend/public/earcons/
 
 #### src/frontend/public/earcons/SOURCES.md **[ORPHAN]**
 
-Title: "Earcon sources & attribution" | 13 lines
+Title: "Earcon sources & attribution" | 14 lines
 
 No references in or out.
 

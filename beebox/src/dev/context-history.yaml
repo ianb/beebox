@@ -4028,6 +4028,14 @@ test1:
       peak: 47134
       added: 0
       turns: 1
+  authored-view-history-state:
+    - date: 2026-09-02T18:05:46.905Z
+      boxCommit: c64cb6c28b98b15726a9799038da192a005c42c8
+      repoCommit: 969687b954cccd2ef2b942dce4ff9912ceead52e
+      initial: 40814
+      peak: 53913
+      added: 13099
+      turns: 7
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

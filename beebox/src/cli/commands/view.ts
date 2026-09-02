@@ -87,6 +87,12 @@ function buildProps(opts: {
     cards,
     files,
     params,
+    viewHistory: {
+      state: {},
+      canPush: false,
+      pushState: () => "replaced",
+      replaceState: () => {},
+    },
     boxSlug,
     fileUrl: (filePath: string) => `/api/files/${filePath}`,
     navigate: () => {},

@@ -31,13 +31,22 @@ export const dependencies = ["store/**/*.ledger-overview.card", "store/archive/*
 export const modes = ["page", "chat"];
 export const rendersCardTypes = ["ledger-overview"];
 
-export default function EstateOverview({ cards, navigate, boxSlug, params }) {
+export default function EstateOverview({ cards, navigate, boxSlug, params, viewHistory }) {
   // params.path is the card being displayed; dependencies must cover it.
   const card = cards.find(c => c.path === params.path);
   const records = cards.filter(c => c.type === "record");
+  const section = typeof viewHistory.state.section === "string"
+    ? viewHistory.state.section
+    : "summary";
+  const openRecords = () => {
+    const next = { section: "records" };
+    if (viewHistory.canPush) viewHistory.pushState(next);
+    else viewHistory.replaceState(next);
+  };
 
   return (
-    <div>
+    <div data-section={section}>
+      <button onClick={openRecords}>Records</button>
       <h2>{card?.frontmatter?.title ?? "Ledger Overview"}</h2>
       <p>{records.length} records</p>
       <ul>
@@ -107,7 +116,16 @@ The default export receives a \`ViewProps\` object:
 | \`navigate\` | (path: string) => void | Navigate within the box (e.g., \`navigate("chat")\`) |
 | \`boxSlug\` | string | The current box slug |
 | \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
+| \`viewHistory\` | { state, canPush, pushState, replaceState } | Explicit JSON-safe navigation state. Read \`state\`; use \`pushState(next)\` for a new Back/Forward entry or \`replaceState(next)\` to normalize the current entry. Check \`canPush\` when the UI depends on browser history. Do not call \`window.history\` directly. |
 | \`reportActivity\` | (kind, detail?) => void | When open in the chat companion pane, tell the agent the user touched this card. Writes auto-report \`"modified"\`; call \`reportActivity("explored", detail)\` when the user changes the view's *parameters* (filters, ranges, a selected tab) without changing data. The optional \`detail\` is a short free-text string surfaced to the agent as the \`<card-activity>\` element's text (e.g. the query the user typed and its top result) — it overwrites any prior detail for the same kind, so calling it on every keystroke is fine. A no-op for inline/page renders, so always safe to call. |
+
+\`viewHistory\` is opt-in persistence for meaningful view navigation, not a
+snapshot of React state. Values must be JSON-safe objects. Validate members
+before use because an old/shared URL may contain state from another version of
+the view. Unknown or obsolete values should fall back to the view's default;
+after a user action, a view may normalize them with \`replaceState\`. Do not
+write history during render. Renderer \`params\` remain external configuration,
+while React \`useState\` remains transient interaction state.
 
 ### ViewCard Structure
 

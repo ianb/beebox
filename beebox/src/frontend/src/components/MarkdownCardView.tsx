@@ -56,6 +56,7 @@ function QuoteSpeakersLine({
                 path: speaker,
                 viewer: null,
                 params: {},
+                viewState: null,
               };
               onNavigate(target, { label: display });
             }}

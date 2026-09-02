@@ -189,7 +189,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
       <button
         type="button"
         onClick={() => {
-          const target: ViewTarget = { path, viewer: null, params: {} };
+          const target: ViewTarget = { path, viewer: null, params: {}, viewState: null };
           linkCtx.onNavigate(target, label === "" ? undefined : { label });
         }}
         className="mx-0.5 rounded bg-warm-100 px-1.5 py-0.5 align-middle text-xs text-warm-700 hover:bg-warm-200"

@@ -14,8 +14,12 @@ import {
   externalImageProxyUrl,
   apiFileUrl,
   apiImageUrl,
+  validateViewState,
 } from "../../../src/frontend/src/lib/view-url.js";
 import { apiRawFileUrl } from "../../../src/frontend/src/api-core.js";
+import { decideViewHistoryUpdate } from "../../../src/shared/view-state.js";
+
+class CustomState { value = "x"; }
 ```
 
 ## parseViewUrl
@@ -24,24 +28,67 @@ Pulls a file path, viewer override (`?view=`), and other params out of a seriali
 
 ```ts
 JSON.stringify(parseViewUrl("view:store/docs/report.md"))
-=> {"path":"store/docs/report.md","viewer":null,"params":{}}
+=> {"path":"store/docs/report.md","viewer":null,"params":{},"viewState":null}
 
 JSON.stringify(parseViewUrl("store/docs/report.md?view=source&k=v"))
-=> {"path":"store/docs/report.md","viewer":"source","params":{"k":"v"}}
+=> {"path":"store/docs/report.md","viewer":"source","params":{"k":"v"},"viewState":null}
+
+JSON.stringify(parseViewUrl('store/docs/report.md?k=v&viewState=%7B%22page%22%3A%22gallery%22%2C%22index%22%3A2%7D&view=source'))
+=> {"path":"store/docs/report.md","viewer":"source","params":{"k":"v"},"viewState":{"page":"gallery","index":2}}
 ```
 
 A leading `/` is stripped — `ViewTarget.path` is box-root-relative, and consumers compare it for exact equality against the file watcher's relative paths (which have no leading slash). Card refs are conventionally written `/store/…`, so the slash is normalized away here:
 
 ```ts
 JSON.stringify(parseViewUrl("view:/store/archive/Foo.memo.card"))
-=> {"path":"store/archive/Foo.memo.card","viewer":null,"params":{}}
+=> {"path":"store/archive/Foo.memo.card","viewer":null,"params":{},"viewState":null}
 ```
 
 `serializeViewUrl` is the round-trip inverse (without the `view:` prefix):
 
 ```ts
-serializeViewUrl({ path: "a/b.md", viewer: "source", params: { k: "v" } })
+serializeViewUrl({ path: "a/b.md", viewer: "source", params: { k: "v" }, viewState: { page: "gallery" } })
+=> a/b.md?view=source&viewState=%7B%22page%22%3A%22gallery%22%7D&k=v
+
+serializeViewUrl({ path: "a/b.md", viewer: null, params: {}, viewState: {} })
+=> a/b.md
+
+validateViewState({ page: "gallery", filters: ["open", null], count: 2 })
+=> true
+
+validateViewState({ count: Number.NaN })
+=> false
+
+validateViewState({ when: new Date("2026-01-01") })
+=> false
+
+validateViewState({ filters: new Map([["status", "open"]]) })
+=> false
+
+validateViewState({ custom: new CustomState() })
+=> false
+
+const cyclic: Record<string, unknown> = {};
+cyclic.self = cyclic;
+validateViewState(cyclic)
+=> false
+
+// Deliberately violate the static contract to exercise the runtime boundary
+// protecting authored JavaScript callers.
+serializeViewUrl({ path: "a/b.md", viewer: null, params: {}, viewState: cyclic as never })
+=> throws InvalidViewStateError: Authored view state must be a JSON-safe object
+
+serializeViewUrl({ path: "a/b.md", viewer: "source", params: { k: "v" }, viewState: null })
 => a/b.md?view=source&k=v
+
+decideViewHistoryUpdate({ state: { page: "gallery" }, requested: "push", canPush: true })
+=> push
+
+decideViewHistoryUpdate({ state: { page: "gallery" }, requested: "push", canPush: false })
+=> replace
+
+decideViewHistoryUpdate({ state: { count: Number.POSITIVE_INFINITY }, requested: "replace", canPush: true })
+=> rejected
 ```
 
 ## resolveRelativePath
@@ -94,14 +141,14 @@ A relative path resolves against the document's dir; the query becomes viewer + 
 
 ```ts
 JSON.stringify(resolveContentTarget("store/docs/report.md", "chart.figure.card?size=300"))
-=> {"path":"store/docs/chart.figure.card","viewer":null,"params":{"size":"300"}}
+=> {"path":"store/docs/chart.figure.card","viewer":null,"params":{"size":"300"},"viewState":null}
 ```
 
 A leading `/` is box-root-absolute and ignores `basePath` — and `?view=` selects a card-attached viewer:
 
 ```ts
 JSON.stringify(resolveContentTarget("store/docs/report.md", "/store/x.bill.card?view=ledger"))
-=> {"path":"store/x.bill.card","viewer":"ledger","params":{}}
+=> {"path":"store/x.bill.card","viewer":"ledger","params":{},"viewState":null}
 ```
 
 `basePath` is treated like a containing *file* (its last segment is stripped). A

@@ -142,6 +142,7 @@ function makeChatMarkdownComponents(
           path={target.path}
           mode="embed"
           rendererName={target.viewer}
+          viewState={target.viewState}
           onNavigate={onNavigate}
           params={target.params}
           {...(alt !== undefined && alt !== "" ? { caption: alt } : {})}

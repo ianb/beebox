@@ -31,16 +31,13 @@ import { apiRawFileUrl, getApiBase, withBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
-import type { NavigateHint, ViewTarget } from "../lib/view-url";
-import type { ActivityKind } from "@core/chat/card-activity.js";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { boxRelativePath } from "@shared/box-path";
 import { RequestError } from "../lib/errors";
 import { busEventData } from "../lib/bus-events";
 import { SelectionCapture } from "./SelectionCapture";
-import type { AddSelectionInput } from "../lib/selection/position";
 import { Pre } from "./ui/Pre";
-import { AgentViewRenderer } from "./AgentViewRenderer";
+import { ActiveFileRenderer, AuthoredRendererMarker } from "./ActiveFileRenderer";
 import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { OpenInPanelButton } from "./ui/OpenInPanelButton";
@@ -48,59 +45,9 @@ import { StatusBadge } from "./ui/StatusBadge";
 import { CardActions } from "./card-actions/CardActions";
 import { usePageTitle } from "./DocumentTitle";
 import { MissingCardState } from "./card-actions/MissingCardState";
+import type { FileViewProps } from "./file-view-types";
 
-export type FileViewMode = "page" | "chat" | "companion" | "embed";
-
-interface FileViewProps {
-  path: string;
-  mode?: FileViewMode;
-  /** Force a specific renderer by name (e.g. from a `?view=X` param). */
-  rendererName?: string | null;
-  /**
-   * Optional. When provided, the renderer toggle reports the chosen name here
-   * instead of keeping it in local state — the host owns the choice and is
-   * expected to feed it back as `rendererName`. Browse passes this so the
-   * active renderer lives in the URL (`?view=`) and survives back/forward and
-   * a shared link. Absent elsewhere, where the toggle stays view-local.
-   */
-  onSelectRenderer?: (name: string) => void;
-  /**
-   * Required. Called when a link inside this view wants to open a different
-   * file. The surrounding context decides what that means — pushing a URL,
-   * replacing a sidebar pane, etc.
-   */
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  /**
-   * Optional. When provided, text selections in the rendered document
-   * surface a floating "+" that hands the selection to this callback (used
-   * in the chat companion pane). Absent everywhere else — no affordance
-   * without a composer to receive it.
-   */
-  onAddSelection?: (selection: AddSelectionInput) => void;
-  /**
-   * Optional. Report user activity on this card to the chat's companion-pane
-   * accumulator. Threaded into agent-generated views (writes → `"modified"`,
-   * `reportActivity("explored")` opt-in). Absent outside the companion pane.
-   */
-  reportActivity?: (kind: ActivityKind, detail?: string) => void;
-  /**
-   * Optional. When provided (chat-embedded cards only), the chat header shows
-   * an "open in sidebar" button beside open-in-new-tab that escalates this
-   * card into the companion pane. Absent where no companion pane exists.
-   */
-  onOpenInPanel?: () => void;
-  /**
-   * Optional. Embed query params, forwarded to the active renderer's `params`.
-   * Set on the embed path; absent elsewhere.
-   */
-  params?: Record<string, string>;
-  /**
-   * Optional. The `![caption](path)` caption, forwarded to a media renderer so
-   * an embedded image/figure card shows it like a normal captioned image.
-   */
-  caption?: string;
-  onClose?: () => void;
-}
+export type { FileViewMode } from "./file-view-types";
 
 /* ---------- path classification ---------- */
 
@@ -333,7 +280,7 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption, onClose }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
   const mode = modeProp ?? "page";
   const { data, loading, error } = useFileData(path);
 
@@ -359,20 +306,8 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   const renderers: FileRenderer[] = useMemo(() => {
     const base = data ? getRenderers(path, data) : [];
     if (binding === null || !data) return base;
-    const Bound = () => (
-      <AgentViewRenderer
-        slug={binding.slug}
-        mode={mode === "chat" ? "chat" : "page"}
-        // Link/embed query params (e.g. `?view=…&k=v`) reach the view; `path`
-        // is the card's own path and is authoritative (can't be clobbered).
-        params={{ ...params, path }}
-        {...(reportActivity !== undefined ? { reportActivity } : {})}
-        onNavigate={onNavigate}
-        renderInline={(cardPath) => <FileView path={cardPath} mode="embed" onNavigate={onNavigate} />}
-      />
-    );
-    return [{ name: binding.name, Component: Bound, priority: 100 }, ...base];
-  }, [path, data, binding, mode, reportActivity, onNavigate, params]);
+    return [{ name: binding.name, Component: AuthoredRendererMarker, priority: 100 }, ...base];
+  }, [path, data, binding]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
   if (error && !(isCardPath(path) && error.startsWith("Card not found:"))) {
@@ -397,7 +332,25 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     return <div className="p-4 text-warm-600">No renderer available for this file.</div>;
   }
 
-  const rendered = <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption} />;
+  const rendered = (
+    <ActiveFileRenderer
+      active={active} binding={binding} data={data} path={path} mode={mode}
+      params={params} viewState={ownedViewState} canPushViewState={canPushArg}
+      {...(ownedStateChange !== undefined ? { onViewStateChange: ownedStateChange } : {})}
+      {...(reportActivity !== undefined ? { reportActivity } : {})}
+      onNavigate={onNavigate} caption={caption}
+      renderInline={(target) => (
+        <FileView
+          path={target.path}
+          mode="embed"
+          rendererName={target.viewer}
+          params={target.params}
+          viewState={target.viewState}
+          onNavigate={onNavigate}
+        />
+      )}
+    />
+  );
   const body = onAddSelection === undefined
     ? rendered
     : <SelectionCapture onCapture={handleCapture}>{rendered}</SelectionCapture>;

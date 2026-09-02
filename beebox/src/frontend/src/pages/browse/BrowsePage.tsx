@@ -10,7 +10,7 @@ import { apiRawFileUrl, getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { busEventData } from "../../lib/bus-events";
 import { isRecord } from "@shared/is-record";
-import { type ViewTarget } from "../../lib/view-url";
+import { viewStateSearchValue, type ViewState, type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
@@ -46,7 +46,7 @@ function basenameTitle(filename: string): string {
 
 export interface BrowseNavigateOptions {
   /** Query params for the target URL. Omitted/empty clears the current ones. */
-  search?: Record<string, string>;
+  search?: Record<string, unknown>;
   /** Replace the current history entry instead of pushing a new one. */
   replace?: boolean;
 }
@@ -172,7 +172,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
-  const { viewer, params: urlParams } = useUrlView();
+  const { viewer, params: urlParams, viewState } = useUrlView();
 
   const pathIsFile = isFilePath(currentPath);
   const dirPath = pathIsFile ? currentPath.split("/").slice(0, -1).join("/") : currentPath;
@@ -189,13 +189,16 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     (target: ViewTarget) => {
       // A link stays in the browse layout — navigating swaps the detail panel
       // and updates the URL, carrying the link's `?view=`/params along.
-      const search = { ...target.params, ...(target.viewer ? { view: target.viewer } : {}) };
+      const encodedState = viewStateSearchValue(target.viewState);
+      const search = { ...target.params, ...(target.viewer ? { view: target.viewer } : {}), ...(encodedState ? { viewState: encodedState } : {}) };
       // Re-rendering the file already open (a pure ?view=/param change) isn't a
       // new place: replace, so back leaves the file instead of undoing a toggle.
       onNavigate(target.path, { search, replace: target.path === currentPath });
     },
     [currentPath, onNavigate],
   );
+
+  const handleViewStateChange = useBrowseViewStateNavigation({ currentPath, onNavigate, params: urlParams, viewer });
 
   const handleSelectRenderer = useCallback(
     (name: string) => {
@@ -204,9 +207,9 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
       // where it outranks `?view=`, survives a same-path navigation, and can't
       // be shared or restored by back/forward. Replace: looking at the same
       // card a different way is not a new place.
-      onNavigate(currentPath, { search: { ...urlParams, view: name }, replace: true });
+      onNavigate(currentPath, { search: { ...urlParams, view: name, ...(viewState ? { viewState: viewStateSearchValue(viewState) } : {}) }, replace: true });
     },
-    [currentPath, onNavigate, urlParams],
+    [currentPath, onNavigate, urlParams, viewState],
   );
 
   const { data, isLoading: loading, isError, error: browseError, refetch } = trpc.status.browse.useQuery({ path: dirPath });
@@ -325,8 +328,10 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
             onDelete={handleDelete}
             onNavigate={handleLinkNavigate}
             onSelectRenderer={handleSelectRenderer}
+            onViewStateChange={handleViewStateChange}
             params={urlParams}
             rendererName={viewer}
+            viewState={viewState}
             selectedCard={selectedCard}
             selectedFilePath={selectedFilePath}
             selectedRawFile={selectedRawFile}
@@ -348,4 +353,18 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
       ) : null}
     </Row>
   );
+}
+
+function useBrowseViewStateNavigation(opts: {
+  currentPath: string;
+  onNavigate: BrowsePageProps["onNavigate"];
+  params: Record<string, string>;
+  viewer: string | null;
+}) {
+  const { currentPath, onNavigate, params, viewer } = opts;
+  return useCallback((next: ViewState, method: "push" | "replace") => {
+    const encodedState = viewStateSearchValue(next);
+    const search = { ...params, ...(viewer ? { view: viewer } : {}), ...(encodedState ? { viewState: encodedState } : {}) };
+    onNavigate(currentPath, { search, replace: method === "replace" });
+  }, [currentPath, onNavigate, params, viewer]);
 }
