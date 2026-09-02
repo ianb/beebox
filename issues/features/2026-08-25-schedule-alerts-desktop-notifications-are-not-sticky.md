@@ -49,3 +49,12 @@ tick-can't-start failure needs a delivery path that doesn't depend on the store.
 >   (`bin/schedules logs <name> --run <id>` has no web route yet). `notify()`
 >   receives only title and message today; it needs the alert id, and
 >   optionally an issue path, to build the URL.
+>
+> - The Claude Code hook notifications (`~/.claude/hooks/notify.sh`) DO stay:
+>   they use `alerter`, not terminal-notifier. alerter posts an alert-style
+>   notification that stays until clicked, closed, or `--timeout` (the hook
+>   uses 900s), blocks until then, and reports the outcome as JSON, which is
+>   how the hook focuses the right tab on click. Same tool, already installed
+>   (`/opt/homebrew/bin/alerter`). Cheapest fix for schedules: post through
+>   alerter with `--group <alert id>`, a long timeout, and open the deep link
+>   when the result says clicked. Option 2 above, concretely.
