@@ -41,7 +41,7 @@ export function makeRandom(seed: number): () => number {
 }
 
 /** A seeded backlog: alternating user/assistant blocks of plausible heights. */
-export function seedMessages(count: number, seed: number): HarnessMessage[] {
+function seedMessages(count: number, seed: number): HarnessMessage[] {
   const rnd = makeRandom(seed);
   const out: HarnessMessage[] = [];
   for (let i = 0; i < count; i++) {
@@ -52,11 +52,11 @@ export function seedMessages(count: number, seed: number): HarnessMessage[] {
   return out;
 }
 
-export const INITIAL_SEED = 20260813;
-export const INITIAL_MESSAGE_COUNT = 24;
-export const INITIAL_CHROME_PX = 96;
+const INITIAL_SEED = 20260813;
+const INITIAL_MESSAGE_COUNT = 24;
+const INITIAL_CHROME_PX = 96;
 
-export function initialContent(): HarnessContent {
+function initialContent(): HarnessContent {
   const messages = seedMessages(INITIAL_MESSAGE_COUNT, INITIAL_SEED);
   return {
     messages,
