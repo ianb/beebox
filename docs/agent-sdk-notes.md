@@ -25,24 +25,159 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.251` (in `beebox/package.json` — see the split-pin
-  note below; the monorepo root still carries a second, unmanaged pin at
-  `0.3.226`, which is why `pnpm update-agent-sdk` ends by printing
-  "Now at 0.3.226" even when the managed pin moved)
-- **Latest reviewed upstream version:** `0.3.252` (SDK), `2.1.252` (Claude Code)
+- **Current pin:** `0.3.251` (in `beebox/package.json`. The monorepo root
+  carries a second, unmanaged pin at `0.3.226` — no longer described here as a
+  reporting quirk: as of 2026-09-01 that is
+  `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, because the
+  root copy is what `bin/` tooling imports and what `update-agent-sdk --check`
+  measures, so the check reports "behind" on a current repo and every bump ends
+  by printing "Now at 0.3.226")
+- **Latest reviewed upstream version:** `0.3.258` (SDK), `2.1.258` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.251` was taken this turn as the newest settled
-  version, but **only after testing it** — `2.1.252` exists mainly to fix a Bash
-  regression that `2.1.251` introduced, and taking the settled version blind
-  would have installed that regression into box agents. Two probes against a
-  scratch `0.3.251` install showed the failure does not reproduce on this
-  machine (below). `0.3.252` (~8h) is the only pending version and is the
-  natural next take. No releases were published 2026-08-29 or 2026-08-30, so
-  the three-day gap since the last turn is upstream quiet, not missed coverage.
+- **Current recommendation:** **No bump was due this turn** and none was made.
+  Nothing has settled since `0.3.251`: `0.3.252` was ~32h, `0.3.257` ~8h and
+  `0.3.258` ~2h at this turn, so the newest mature version is the pin itself —
+  confirmed with `pnpm update-agent-sdk --check`, which named `0.3.251` as
+  "newest mature". `0.3.252` becomes takeable next turn. Take `0.3.257` or newer
+  before adopting `background_tasks_changed` in the chat task strip; see that
+  issue's upstream-movement note.
 
 ## Release ledger
 
-### 0.3.252 — pending (published 2026-08-31T17:08Z, ~8h at this turn; parity with Claude Code 2.1.252)
+### 0.3.258 / Claude Code 2.1.258 — pending (published 2026-09-01T22:24Z, ~2h at this turn)
+
+- **Upstream:** SDK is parity-only. 2.1.258 is two fixes: *"Fixed Claude Code
+  failing to launch on macOS 12 (Monterey), a regression introduced in
+  2.1.255"*, and *"Fixed remote and scheduled sessions failing with 'user
+  messages must have non-empty content' after a re-sent permission approval
+  could not be applied."*
+- **Beebox applicability:** The Monterey fix does not apply — this machine runs
+  a current macOS and the prod server is Linux. It is worth noting for a
+  different reason: **2.1.255 was never published to npm** (see the gap entry
+  below), yet it was live enough to break launches on an OS version and need a
+  repair three releases later. The "non-empty content" fix is the third in a
+  family this ledger has now tracked across three releases (2.1.251's *"text
+  content blocks must be non-empty"* chat wedge, 2.1.258's user-message
+  variant); the scope here is Claude Code's own remote and `/schedule` sessions,
+  not this repo's `bin/schedules` runs, which are plain CLI invocations.
+- **Action:** Settled path; takeable 2026-09-03.
+- **Sources:** [Claude Code 2.1.258](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21258)
+
+### 0.3.253 – 0.3.256 — never published (four versions, both channels)
+
+The SDK changelog carries sections for `0.3.253`, `0.3.254`, `0.3.255` and
+`0.3.256`, each claiming parity with the matching Claude Code version. **None of
+the four exists on npm**, and Claude Code's `2.1.253`–`2.1.256` have no
+changelog sections and no git tags. This is the second such gap in a week
+(`0.3.249` and `0.3.244` before it), but the first to swallow four consecutive
+versions on both channels at once.
+
+They were not merely unpublished, either: `2.1.258` fixes "a regression
+introduced in 2.1.255", so at least one of the four shipped somewhere before
+being withdrawn. Nothing to review; recorded so a future turn does not go
+looking, and as evidence for how much this train is currently churning — which
+is the argument for the two-day settling window continuing to earn its keep.
+
+### 0.3.257 — pending (published 2026-09-01T17:15Z, ~8h at this turn)
+
+- **Upstream:** Eleven itemized changes plus parity with 2.1.257 — the first
+  substantively itemized SDK release since `0.3.247`. `thinkingTokens` on
+  `ModelUsage` (and a fix for `thinking_tokens` reporting 0);
+  `tool_use_result.resourceLinks` and `task_notification.resource_links` for MCP
+  tool results; four `mcp_*` control fixes; Agent tool calls now emitting the
+  periodic `tool_progress` heartbeat; a browser-bundle fix for engines without
+  native `Symbol.dispose`; a `detail: 'summary'` option on
+  `Query.getContextUsage()`; and two background-task lifecycle fixes.
+- **Beebox applicability (runtime) — the two lifecycle fixes are the ones that
+  matter, and they land on an open issue.**
+  - *"Fixed a background Bash task that is still running when a stream-json
+    session ends right after an interrupt (stdin closed) never receiving its
+    final `task_notification`."* That is beebox's chat stop path exactly:
+    `interrupt()` (`src/core/chat/session/index.ts:374`) and then the run ends.
+    A background Bash task started in that turn was losing its `settled`
+    bookend **upstream**, and the live task strip has no way to clear a task
+    whose bookend never arrives. So this is a live producer of the wedge filed
+    in `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md`,
+    not merely an adjacent fix.
+  - *"Fixed `-p` giving up on a long-running background subagent without
+    actually stopping it, so `background_tasks_changed` kept listing it and
+    events for it arrived after its `stopped` notification."* This one is a
+    **caveat on that issue's proposed fix**: the level signal the issue
+    recommends adopting was itself reporting phantom running tasks before
+    `0.3.257`. Adopting it against an older bundled CLI would trade a wedged
+    strip for one showing work that is already gone. Both notes were added to
+    the issue, with the pin requirement it now carries (`0.3.257`+ for the
+    level signal, versus `0.3.247` for `ambient`).
+- **Beebox applicability (runtime) — checked and clear.** The Agent-tool
+  heartbeat is harmless here: `adaptSdkMessage` drops `tool_progress` outright
+  (`src/core/chat/session/messages.ts:254`), so the new frames cannot spam the
+  transcript or the strip. The MCP fixes and `resourceLinks` additions do not
+  apply — beebox configures no MCP servers and hosts none. The browser-bundle
+  fix does not apply: nothing imports `@anthropic-ai/claude-agent-sdk/browser`.
+  `thinkingTokens` is additive and beebox reads no usage fields beyond
+  duration; `getContextUsage()` is not called.
+- **Action:** Settled path; takeable 2026-09-03. Worth taking deliberately
+  rather than incidentally, since it is the version the task-strip issue should
+  build against.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03257)
+
+### Claude Code 2.1.257 — harness; one change to check for, and it is clear here
+
+~110 items, the largest release this ledger has covered. Nearly all of it is
+interactive UI, provider plumbing (Bedrock/Vertex/Foundry/gateway), VS Code, and
+`claude agents` polish that no session here touches. What is worth recording:
+
+- **The one potentially breaking change, checked clear.** *"Changed
+  `defaultMode: "bypassPermissions"` in `.claude/settings.json` or
+  `.claude/settings.local.json` to be ignored, like `"auto"`; set it in user or
+  managed settings, or pass `--permission-mode`."* A project-settings key that
+  silently stops taking effect is the shape that breaks unattended sessions
+  days later — an unattended session that quietly reverts to prompting simply
+  hangs. **`defaultMode` appears nowhere in this repo** (searched all settings,
+  scripts and docs), and neither channel depends on it: box agents pass
+  `permissionMode: "bypassPermissions"` as a `query()` option
+  (`src/core/agent/run.ts`), and worker sessions pass
+  `--dangerously-skip-permissions` on the command line. Both routes are
+  explicitly still supported. Note for the future: beebox *does* write
+  `.claude/settings.json` into boxes (`src/core/install-validation-hooks.ts`),
+  so if a validation-hook change ever wants a default permission mode, this is
+  the door that closed.
+- **Worktree isolation, loosened.** *"Fixed worktree-isolated sessions refusing
+  Bash loops, `$VAR` reads, `"$(…)"` and heredocs that never touch git as 'too
+  complex to verify that it stays inside the worktree'"*, and *"Fixed sandboxed
+  git commands in a linked worktree losing write access to the repository's
+  common `.git` directory after `cd` into a subdirectory."* This is the same
+  machinery whose 2.1.218 tightening broke `/finish` here for days; both
+  entries relax over-refusal rather than tighten, so the direction is safe. They
+  apply to natively worktree-isolated sessions, which this repo's managed
+  sessions are not.
+- **Sleep and long turns.** *"Fixed subagents stopping when a response was cut
+  off mid-stream by a computer sleep, dropped connection, or server error; they
+  now automatically continue."* The laptop this runs on sleeps, and worker
+  sessions spawn subagents; this is the subagent counterpart to 2.1.246's
+  main-turn continuation fix.
+- **Background-task lifecycle, harness side.** Stopping a background command or
+  subagent now tells Claude it happened, stopping a background subagent no
+  longer leaves its monitors running, and detached background commands (under
+  `timeout` or `setsid`) no longer survive a task stop or a Claude Code exit.
+  Same theme as the SDK-side fixes above.
+- **Memory:** unbounded growth when non-JSONL data is piped into
+  `claude -p --input-format stream-json` (now fails fast), and `claude mcp
+  add/remove` exhausting memory on a `.mcp.json` that is a FIFO or device-file
+  symlink. Neither path is used here.
+- **Security, for the record:** plugins could read outside their own directory
+  through a symlinked component path; Bash `Read()`/`Edit()` deny rules did not
+  apply to `< file` redirects or reader commands like `tac`; certain `[[ ]]`
+  conditionals that zsh parses differently were auto-approved; dismissing the
+  Remote Control consent prompt counted as consent. As established in the
+  2.1.251 entry, the deny-rule and auto-approval items enforce boundaries no
+  session here enables — the Remote Control consent fix is the one that touches
+  the boxholder, since worker sessions launch with `--remote-control` by
+  default.
+- **Action:** Nothing to adjust.
+- **Sources:** [Claude Code 2.1.257](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21257)
+
+### 0.3.252 — pending (published 2026-08-31T17:08Z, ~32h at this turn; parity with Claude Code 2.1.252)
 
 - **Upstream:** SDK says only "parity with Claude Code v2.1.252". 2.1.252 is
   four fixes, and the first one is the reason this turn did more than read:
@@ -88,7 +223,8 @@ own entries here, labeled as such, with no pin to apply.
   than with the pin. *"Fixed 'always allow' not saving in a project that has no
   `.claude/settings.local.json` yet"* — not applicable; nothing here runs with
   permission prompts, per the 2.1.251 entry below.
-- **Action:** Settled path; takeable 2026-09-02. It is the natural next take,
+- **Action:** Settled path; takeable 2026-09-02 — re-checked at the 2026-09-01
+  turn, still inside the window at ~32h, nothing changed. It is the natural next take,
   and taking it also puts the Bash repair in place before any future change to
   how box agents set up their temp dirs could expose the regression.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03252), [Claude Code 2.1.252](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21252)
@@ -1155,9 +1291,15 @@ earlier caution is not left standing as an unresolved suspicion against
 `0.3.228`. The underlying flake in `file-watcher.doctest.md` is a real test-suite
 issue, but it belongs to the repo, not to this ledger.
 
-### Monitor reliability — the SDK pin has split in two (needs a decision)
+### Monitor reliability — the SDK pin has split in two (FILED 2026-09-01 as `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`)
 
-Not an upstream release; recorded here because it degrades this monitor.
+Not an upstream release; recorded here because it degrades this monitor. The
+prediction below held: `pnpm update-agent-sdk --check` on 2026-09-01 reported
+"behind: installed 0.3.226, newest mature 0.3.251" with the managed pin already
+at `0.3.251`. The filed issue adds what this note did not reach — the root copy
+is not only read for reporting, it is *executed*: `bin/agent-quotas-requests.ts`
+imports the SDK from `bin/`, which resolves the root install, so that tool
+drives the Claude Code binary bundled with `0.3.226`.
 
 Commit `db2ed936` ("Use SDK-backed Claude quota cache") added a **second**
 `@anthropic-ai/claude-agent-sdk` pin at the monorepo root (`package.json`),
