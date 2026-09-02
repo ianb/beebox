@@ -56,7 +56,8 @@ export const RecordSchema = cardSchema("record", {
     dates: z.array(DateEntry).optional(),
     persons: z.array(PersonEntry).optional(),
     location: LocationEntry.optional(),
-    measures: z.array(MeasureEntry).optional(),
+    quantity: MeasureEntry.optional(),
+    measurements: z.array(MeasureEntry).optional(),
     language: z.string().optional(),
     triage: z.string().optional(),
     notes: z.string().optional(),
@@ -90,8 +91,18 @@ identifiable thing.
   \`note\` is freeform context.
 - \`location:\` — \`{text?, ref?}\`. Where the thing is, was, or
   relates to.
-- \`measures:\` — Array of \`{value, note?}\`. Natural language with
-  number and unit together: \`"2 pages"\`, \`"7 feet"\`, \`"1200 USD"\`.
+- \`quantity:\` — \`{value, note?}\` (a single value, not a list). **How
+  much or how many of it there is** — the answer to "how many do I
+  have": \`"3 items"\`, \`"roughly 15–20"\`, \`"10 ounces"\`, \`"4 sticks"\`.
+  Natural language with number and unit together. Whenever you know a
+  count or amount, put it here, not in prose — a count in
+  \`description:\` can't be summed, sorted, or updated as a field edit.
+- \`measurements:\` — Array of \`{value, note?}\`. Facts about the thing
+  itself — how big, how heavy, what it cost: \`"2 pages"\`, \`"7 feet"\`,
+  \`"45 pounds"\`, \`"1200 USD"\`. Same natural-language shape. The line
+  between the two: \`quantity\` is how much you *have*; \`measurements\`
+  describe the thing. ("10 ounces" of flour on hand is a quantity; the
+  ladder weighing "45 pounds" is a measurement.)
 - \`language:\` — Only include when notable.
 - \`triage:\` — Only used when a triage procedure is active.
 - \`notes:\` — Anything that doesn't fit elsewhere — observations,
@@ -106,9 +117,9 @@ something with no textual content.
 ## Guidelines
 
 Use only fields that are appropriate for the domain. A home inventory
-item needs \`location\` and \`measures\` but probably no body. A
+item needs \`location\` and \`quantity\` but probably no body. A
 document archive entry needs a body and \`dates\` but maybe no
-\`measures\`.
+\`measurements\`.
 
 Status lifecycle:
 - \`draft\` — Freshly extracted, may need human review.

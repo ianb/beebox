@@ -134,6 +134,10 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // the reactor both read. Configuration, not card data — like annex-config
   // above. See docs/implemented-plans/model-engine-policy.md.
   { name: "chat-model-to-box-config", script: "scripts/migrate/chat-model-to-box-config.ts" },
+  // Rename the record card's `measures` field to `measurements` (the
+  // vocabulary sweep's quantity/measurements split — `quantity` itself is new
+  // and optional, nothing to migrate). See docs/plans/vocab-glossary-sweep.md.
+  { name: "record-measurements", script: "scripts/migrate/record-measurements.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";
