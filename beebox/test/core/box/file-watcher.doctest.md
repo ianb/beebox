@@ -102,6 +102,46 @@ bus.close();
 await box.cleanup();
 ```
 
+## An authored-code root outside the content box emits its package path
+
+Package-layout boxes serve cards from `content/`, but their authored views live
+beside it in `src/views/`. The same watcher covers that small external tree and
+reports the path vocabulary the frontend uses.
+
+```ts
+const box = await makeTmpBox();
+const contentRoot = join(box.root, "content");
+const sourceDir = join(box.root, "src");
+const viewsDir = join(box.root, "src", "views");
+await mkdir(contentRoot, { recursive: true });
+await mkdir(viewsDir, { recursive: true });
+const bus = createEventBus(contentRoot, { pollInterval: 60_000 });
+const seen: string[] = [];
+const subscription = bus.subscribe({
+  listener: (event) => {
+    if (event.event === "file-change") seen.push(event.data.path);
+  },
+});
+const watcher = ensureBoxWatcher(contentRoot, {
+  eventBus: bus,
+  additionalRoots: [{ path: sourceDir, eventPathPrefix: "src" }],
+});
+await watcher.ready;
+await waitForWatch(box.root, bus, join("src", "views"));
+
+await writeFile(join(viewsDir, "catalog.tsx"), "export default function Catalog() { return null; }");
+await waitFor(() => seen.includes("src/views/catalog.tsx"), 5000, "package view change");
+seen.includes("src/views/catalog.tsx")
+=> true
+```
+
+```ts cleanup
+subscription.unsubscribe();
+await closeBoxWatcher(contentRoot);
+bus.close();
+await box.cleanup();
+```
+
 ## Watching 400 files costs a handful of descriptors, not 400
 
 The direct statement of the bug. On macOS this assertion is the one that would

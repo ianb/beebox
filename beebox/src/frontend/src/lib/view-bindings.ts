@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { trpcClient } from "./trpc";
 import { busEventData } from "./bus-events";
+import { viewSlugFromSourcePath } from "./view-source-path";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 
 export interface CardViewBinding {
@@ -113,7 +114,7 @@ export function useCardViewBinding(type: string | undefined): CardViewBinding | 
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       const change = busEventData(event, "file-change");
-      if (!change || !/^views\/.+\.tsx$/.test(change.path)) return;
+      if (!change || viewSlugFromSourcePath(change.path) === null) return;
       invalidateBindings();
       load();
     }, [load]),

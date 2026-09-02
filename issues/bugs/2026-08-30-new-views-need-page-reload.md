@@ -1,6 +1,6 @@
 ---
 title: "Newly written views don't appear until a full page reload"
-workstream: unattached
+workstream: view-live-update-state
 area: beebox
 labels: [views, ui]
 filed-by: agent
