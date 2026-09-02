@@ -1,6 +1,6 @@
 ---
 title: "Retro, first day under change-based selection: eleven incidents, five improvements — keep the speed"
-workstream: unattached
+workstream: full-suite-verdicts
 area: monorepo
 labels: [tests, schedules, codex]
 filed-by: agent
