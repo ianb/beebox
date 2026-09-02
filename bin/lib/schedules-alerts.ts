@@ -107,6 +107,8 @@ export async function osascriptNotify(notification: DesktopNotification): Promis
 }
 
 async function executableOnPath(command: string): Promise<string | null> {
+  // This root CLI helper intentionally follows the launcher's PATH; the
+  // beebox runtime env module does not own process discovery for bin scripts.
   const directories = (process.env["PATH"] ?? "").split(delimiter).filter(Boolean);
   for (const directory of directories) {
     const candidate = join(directory, command);
