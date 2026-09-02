@@ -1,12 +1,18 @@
 ---
 title: "Newly written views don't appear until a full page reload"
 workstream: view-live-update-state
+resolution: implemented
 area: beebox
 labels: [views, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — after writing views for a new card type, a reload was needed to see them
 ---
+
+Resolved by `ca1e6ed70`: package-layout view sources are now watched and their
+`src/views/...` events invalidate both view bindings and the active compiled
+module. Rich authored-view state preservation across module replacement is a
+separate design question and was not part of this reload bug.
 
 After authoring new views for a new card type (agent-written, in-box), the
 views didn't show as available on the card until the web page was fully
