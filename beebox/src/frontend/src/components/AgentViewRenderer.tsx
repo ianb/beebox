@@ -27,6 +27,7 @@ import {
   type ResolvedRef,
 } from "../lib/view-host";
 import { type NavigateHint, type ViewTarget } from "../lib/view-url";
+import { viewSlugFromSourcePath } from "../lib/view-source-path";
 // Side effect: installs window.__bbxViewWidgets so the compiler's
 // `beebox/view-widgets` shim can hand CardLink/CardRef to compiled views.
 import "./view-widgets";
@@ -296,7 +297,7 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
       if (fileChange) {
         const changedPath = fileChange.path;
         // View source changed — reload module
-        if (changedPath === `views/${slug}.tsx`) {
+        if (viewSlugFromSourcePath(changedPath) === slug) {
           void loadModule();
         }
         // Card changed — reload data. Non-card files reload too when they
