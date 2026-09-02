@@ -73,6 +73,8 @@ cyclic.self = cyclic;
 validateViewState(cyclic)
 => false
 
+// Deliberately violate the static contract to exercise the runtime boundary
+// protecting authored JavaScript callers.
 serializeViewUrl({ path: "a/b.md", viewer: null, params: {}, viewState: cyclic as never })
 => throws InvalidViewStateError: Authored view state must be a JSON-safe object
 

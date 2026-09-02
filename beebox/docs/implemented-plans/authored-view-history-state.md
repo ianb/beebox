@@ -1,6 +1,6 @@
 ---
 title: "Browser-like history state for authored views"
-status: draft
+status: implemented
 workstream: view-live-update-state
 issues: []
 ---
