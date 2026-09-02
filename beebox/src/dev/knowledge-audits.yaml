@@ -3134,6 +3134,50 @@ tests:
     correct_contains_any: ["your recipe", "your lemon chicken"]
     tags: [laws, chat, behavioral, vocabulary]
 
+  # Speak the User's Language, self-reference half (added 2026-09-02, vocab
+  # sweep — docs/plans/vocab-glossary-sweep.md): "the agent"/"the assistant"/
+  # "your box assistant" are guide words *about* the agent, never what it
+  # calls itself in conversation. The `[→ …]` counterpart of this sweep is
+  # already covered by source-no-bracket-form above.
+  #
+  # Status (2026-09-02): pass, knows_directly (0 reads, 0 searches).
+  - id: no-self-jargon
+    prompt: >
+      In chat I ask "who am I actually talking to here — what are you?" How
+      do you refer to yourself when you answer, and is there anything you'd
+      avoid calling yourself?
+    expected_level: knows_directly
+    watch_for: >
+      Speaks as "I"; says it avoids third-person system labels for itself —
+      "the agent", "your box assistant" — in conversation. (Explaining what
+      it is in plain words is fine; the audit is about not adopting the
+      guide's operating vocabulary as a name.)
+    correct_matches:
+      - "\\bI\\b"
+    tags: [chat, behavioral, vocabulary]
+
+  # Record quantity field (added 2026-09-02, vocab sweep): the record
+  # schema's `measures` list was split into `quantity` (a single "how much
+  # do I have" value) + `measurements` (facts about the thing). Journey B's
+  # failure: 18 of 20 inventory counts kept in prose because nothing
+  # connected the field to "how many do I have". This probes that the count
+  # lands in the field, not in `description:` prose.
+  #
+  # Status (2026-09-02): pass (1 read: card-record.md, 0 searches). Named
+  # `quantity` as a single {value, note?}, kept the user's "roughly 15 to
+  # 20" phrasing, and volunteered the quantity/measurements line unprompted.
+  - id: record-quantity-field
+    prompt: >
+      I'm inventorying my desk drawer: roughly 15 to 20 pens. When you make
+      the record card for them, where exactly does that count go?
+    expected_level: knows_directly
+    watch_for: >
+      Names the `quantity` field (a single {value, note?} — e.g.
+      value: "roughly 15–20") rather than putting the count in the
+      description or body prose; does not reach for the old `measures` name.
+    correct_contains: ["quantity"]
+    tags: [cards, vocabulary]
+
   # --- Behavior audit (not knowledge) ---
   #
   # The four audits above test what the agent *knows* about `{% quote %}`

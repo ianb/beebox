@@ -53,5 +53,8 @@ issue; noted here since it showed up in the same citations.
 > 2026-09-02 (vocab-sweep): the apostrophe-loss note is a different mechanism
 > (slug/title derivation, not vocabulary or rendering) and is split into its
 > own issue: [apostrophes-lost-in-slugs-and-titles](2026-09-02-apostrophes-lost-in-slugs-and-titles.md).
-> The `[→ …]` guidance gap is being fixed by this workstream
-> (`beebox/docs/plans/vocab-glossary-sweep.md`, Track D).
+> The `[→ …]` guidance gap turned out to be already closed: the survey note
+> above checked the wrong file. The guidance lives in
+> `beebox/src/core/agent-guide/source.ts` ("Never write the `[→ …]` bracket
+> form"), verified by the `source-no-bracket-form` knowledge audit (pass,
+> knows_directly, 2026-08-09). Nothing remains here but this correction.
