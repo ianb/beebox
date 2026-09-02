@@ -94,7 +94,7 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
         <section className="mt-4 text-sm text-warm-700">
           <h3 className="font-semibold text-warm-900">Removed</h3>
           <ul className="mt-1 list-disc space-y-1 pl-5">
-            <li>The transcript and its subagent/chat sidecars on this machine.</li>
+            <li>The transcript and its working files on this machine.</li>
             <li>The active chat listing; its card moves to box Trash and remains git-recoverable.</li>
             <li>Pending reminders linked to this conversation.</li>
           </ul>

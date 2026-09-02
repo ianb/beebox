@@ -60,7 +60,7 @@ export function AdvancedPanel({
       </MenuItem>
       <MenuDivider />
       <div className="px-3 py-1.5 text-xs text-warm-500">
-        <div>Session: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
+        <div>Chat ID: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
         <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
       </div>
       <MenuDivider />

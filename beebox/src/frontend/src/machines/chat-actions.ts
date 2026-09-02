@@ -25,7 +25,7 @@ type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
 export function sendInterrupt(sessionId: string): void {
   interruptChat({ sessionId }).catch((e: unknown) => {
     console.error(`[chatfsm] interrupt failed for session ${sessionId}:`, e);
-    toastError("Failed to interrupt the agent", { cause: e });
+    toastError("Couldn't stop the reply", { cause: e });
   });
 }
 
