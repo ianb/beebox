@@ -58,3 +58,6 @@ request, claiming records had nowhere to put a count and that the agent had
 promised a field that did not exist. Both were wrong — the field exists and the
 agent did use it. The claim came from reading one record and generalising. The
 boxholder, who thought quantity was already a thing, was right.
+
+
+> 2026-09-02 survey (bbx-pick-issues): still true; `measures` schema instructions unchanged. Grouped with 2026-08-08-implementation-vocab-leaks-into-ui (same class: internal names not translated for the user).

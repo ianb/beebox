@@ -46,3 +46,6 @@ affordance; right now it leaks as raw markup, which reads as broken to a user.
 The apostrophe loss ("Wren's" → "Wrens", "Nana Odette's" → "Nana Odettes" in
 tabs and menus) recurs in filenames/titles and may be a separate slugging
 issue; noted here since it showed up in the same citations.
+
+
+> 2026-09-02 survey (bbx-pick-issues): still true for the remaining half — `core/agent-guide/behavior.ts` has no guidance about the `[→ …]` compiled-doc serialization; the apostrophe-loss slug note is untriaged. Grouped with 2026-08-08-implementation-vocab-leaks-into-ui as one vocabulary sweep.

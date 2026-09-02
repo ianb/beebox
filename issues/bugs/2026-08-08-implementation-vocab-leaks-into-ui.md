@@ -97,3 +97,6 @@ Also collected, smaller:
   and I disagree about whether I'm logged in, using the same word."
 
 Full notes: `beebox/user-stories/work/journeys/B-inventory-2026-08-23*/notes.md`.
+
+
+> 2026-09-02 survey (bbx-pick-issues): re-verified still true. `app-shell.tsx` still says "No box matches …", `AppNav.tsx` debug-log badge still ungated, `SessionChip`/`PlacePill` still say "Session menu"/"Place:", `VoiceChip-panels.tsx` still labels raw Deepgram/Whisper. Filename-as-heading and agent-reply jargon halves are fixed. Grouped with 2026-08-08-markdown-not-rendering-in-agent-output (agent imitates `[→ …]` compiled-doc markup) and 2026-08-24-agent-records-counts-in-prose-though-measures-exists as one internals-leak vocabulary sweep.
