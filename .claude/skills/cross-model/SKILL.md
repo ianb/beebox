@@ -40,10 +40,6 @@ divergences so they don't get silently reverted.
 - A plan in `docs/plans/` is finalized and worth an outside pass before building.
 - A branch diff is ready and you want adversarial review before merge.
 
-**Cost:** real money. Codex ~$0.05–0.50/call (more for big diffs + high
-reasoning); `claude -p` is comparable. Don't run it unprompted outside the
-CLAUDE.md mandate.
-
 ## Modes (both directions)
 
 | Mode | Trigger | What it does |
