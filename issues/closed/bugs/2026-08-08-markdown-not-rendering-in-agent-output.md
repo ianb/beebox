@@ -1,12 +1,21 @@
 ---
 title: "Markdown and source-citation markup render raw in agent output and cards"
-workstream: integration-tests
+workstream: vocab-sweep
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (multiple activities)
 labels: [soft-launch, field-test-findings, ui-error]
 priority: important
 ---
+
+> **Closed 2026-09-02 (vocab-sweep).** Both remaining symptoms resolved: the
+> todo-view `**` glob fix landed earlier; the `[→ …]` guidance already
+> existed in `src/core/agent-guide/source.ts` (audit `source-no-bracket-form`
+> pass, 2026-08-09) — the 2026-09-02 survey note below checked the wrong
+> file, corrected in this branch's note. The apostrophe-loss note stays open
+> as its own issue, [apostrophes-lost-in-slugs-and-titles](../../bugs/2026-09-02-apostrophes-lost-in-slugs-and-titles.md)
+> (different mechanism, workstream unattached).
 
 > **Re-attributed 2026-08-09 — neither symptom is a markdown-rendering bug.**
 > (1) The bare `**` under "The Plate" was never markdown: it was the todo
@@ -52,7 +61,7 @@ issue; noted here since it showed up in the same citations.
 
 > 2026-09-02 (vocab-sweep): the apostrophe-loss note is a different mechanism
 > (slug/title derivation, not vocabulary or rendering) and is split into its
-> own issue: [apostrophes-lost-in-slugs-and-titles](2026-09-02-apostrophes-lost-in-slugs-and-titles.md).
+> own issue: [apostrophes-lost-in-slugs-and-titles](../../bugs/2026-09-02-apostrophes-lost-in-slugs-and-titles.md).
 > The `[→ …]` guidance gap turned out to be already closed: the survey note
 > above checked the wrong file. The guidance lives in
 > `beebox/src/core/agent-guide/source.ts` ("Never write the `[→ …]` bracket

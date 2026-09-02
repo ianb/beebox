@@ -31,7 +31,7 @@ Directly relevant to gate 7 (first-hour experience) in
 > assistant" in user surfaces). Whatever first-run screen this issue designs
 > should use those words. The assistant's persona (personified vs.
 > appliance-like) was deliberately left open and belongs to this design.
-> Details: `beebox/docs/plans/vocab-glossary-sweep.md`.
+> Details: `beebox/docs/implemented-plans/vocab-glossary-sweep.md`.
 
 ## The vocabulary problem underneath it
 

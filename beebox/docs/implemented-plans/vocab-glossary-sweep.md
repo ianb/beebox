@@ -1,11 +1,11 @@
 ---
 title: "Vocabulary sweep: glossary with a user-facing register, UI copy, record quantity/measurements"
-status: draft
+status: implemented
 workstream: vocab-sweep
 issues:
-  - ../../../issues/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md
-  - ../../../issues/bugs/2026-08-08-markdown-not-rendering-in-agent-output.md
-  - ../../../issues/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md
+  - ../../../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md
+  - ../../../issues/closed/bugs/2026-08-08-markdown-not-rendering-in-agent-output.md
+  - ../../../issues/closed/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md
 ---
 # Vocabulary sweep: glossary, UI copy, record quantity/measurements
 

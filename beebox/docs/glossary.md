@@ -19,7 +19,7 @@ surface (UI label, agent reply) says instead: the same word, a different word,
 or *internal — never shown*. UI copy and the agent guide's "Speak the User's
 Language" section (`src/core/agent-guide/behavior.ts`) defer to these lines;
 to change a user-facing word, change it here first. Decisions recorded
-2026-09-02 (`docs/plans/vocab-glossary-sweep.md`).
+2026-09-02 (`docs/implemented-plans/vocab-glossary-sweep.md`).
 
 **Open question — capitalization.** Proper nouns in English are normally capitalized. We may want to write "Asset" and "Card" with initial caps in prose to signal "this is the project term, not the everyday word." Not yet decided; entries below use lowercase pending that call. See [issues/decisions/2026-05-21-glossary-proper-nouns.md](../../issues/decisions/2026-05-21-glossary-proper-nouns.md).
 

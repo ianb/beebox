@@ -22,6 +22,6 @@ slugger preserve a marker. Not yet traced to the responsible code; that is the
 first step.
 
 This is a slugging/derivation bug, not a vocabulary problem — split out of
-[markdown-not-rendering](2026-08-08-markdown-not-rendering-in-agent-output.md)
+[markdown-not-rendering](../closed/bugs/2026-08-08-markdown-not-rendering-in-agent-output.md)
 (which the vocab-sweep workstream is resolving) so it doesn't close with that
 issue while unexamined.
