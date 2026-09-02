@@ -6,6 +6,7 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-name-change-plan — the hourly full-suite run on main
+resolution: superseded
 ---
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
@@ -81,3 +82,11 @@ waiting for fs.watch delivery in store` (a 5s budget), and then absent from the
 2026-09-01 20:22 run — before any watcher code changed (`ca1e6ed70` landed at
 22:17 that day). A ~26-hour environmental condition on the host, blamed on
 whichever landing happened to be first in the window.
+
+## 2026-09-02 — closed: false red
+
+Verified stale (note above): the failure was host contention, and the blamed
+landing cannot reach the failing file. An instance of
+[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+the mis-attribution itself is fixed by the full-suite-verdicts workstream
+(slowdown-gated verdicts + import-cone attribution in schedules/full-suite/).

@@ -6,6 +6,7 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-future-dated-issues — the hourly full-suite run on main
+resolution: superseded
 ---
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
@@ -79,3 +80,11 @@ loader children failed with a bare `Command failed:` and the test took 15.2s,
 which is the test's 15s per-child `execFile` timeout. That is machine
 contention, not the landing; the "failed again in isolation" verdict was made
 on the same loaded machine. Mis-attribution by `schedules/full-suite/`.
+
+## 2026-09-02 — closed: false red
+
+Verified stale (note above): the failure was host contention, and the blamed
+landing cannot reach the failing file. An instance of
+[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+the mis-attribution itself is fixed by the full-suite-verdicts workstream
+(slowdown-gated verdicts + import-cone attribution in schedules/full-suite/).

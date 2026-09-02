@@ -6,6 +6,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — /finish full-suite verification
 labels: [testing, flake]
+resolution: superseded
 ---
 
 A `/finish` full-suite run (`pnpm test`) failed with 6/7861 assertions down,
@@ -38,3 +39,10 @@ Filed rather than fixed: no obvious code change here, the symptom is resource
 contention, and `exploration/2026-08-08-run-less-of-the-test-suite.md` is
 already tracking the structural fix (change-based test selection) that would
 reduce how much runs concurrently in the first place.
+
+## 2026-09-02 — closed: superseded
+
+Consolidated with the other load-timeout filings into
+[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+the harness-side fix (quiet-host wait, slowdown-gated verdicts, import-cone
+attribution) landed from the full-suite-verdicts workstream.

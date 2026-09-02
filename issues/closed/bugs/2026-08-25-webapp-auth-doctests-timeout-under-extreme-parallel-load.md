@@ -6,6 +6,7 @@ labels: [testing, flake, timeout, load]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-live-vs-stored — /finish full-suite re-run
+resolution: superseded
 ---
 
 A `/finish` full-suite `pnpm test` run (post-merge re-verification, HEAD
@@ -64,3 +65,10 @@ test selection / running less concurrently) is the tracked remedy.
 Filed rather than fixed — isolated run is clean, the branch didn't touch any
 of the affected code, and this is a duplicate instance of an already-tracked
 environmental condition. No action taken beyond filing.
+
+## 2026-09-02 — closed: superseded
+
+Consolidated with the other load-timeout filings into
+[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+the harness-side fix (quiet-host wait, slowdown-gated verdicts, import-cone
+attribution) landed from the full-suite-verdicts workstream.

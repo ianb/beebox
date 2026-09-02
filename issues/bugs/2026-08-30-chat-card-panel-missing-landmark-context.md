@@ -28,7 +28,7 @@ landmark orientation that is now available for a landmarked directory in
 Browse.
 
 This is separate from the
-[Browse directory fix](2026-08-30-root-landmark-view-missing-in-browse.md).
+[Browse directory fix](../closed/bugs/2026-08-30-root-landmark-view-missing-in-browse.md).
 Determine whether the chat card panel should show a compact landmark header,
 expose the landmark's links, or provide a smaller orientation affordance that
 fits the panel hierarchy.
