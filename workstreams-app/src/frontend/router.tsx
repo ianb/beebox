@@ -6,6 +6,7 @@ import { BrowsePage } from "./pages/BrowsePage.js";
 import { RecentPage } from "./pages/RecentPage.js";
 import { IssuesPage } from "./pages/IssuesPage.js";
 import { PlansPage } from "./pages/PlansPage.js";
+import { ScheduleAlertPage } from "./pages/ScheduleAlertPage.js";
 import { TestingPage } from "./pages/TestingPage.js";
 import { WorkstreamDetailPage } from "./pages/WorkstreamDetailPage.js";
 import { WorkstreamsPage } from "./pages/WorkstreamsPage.js";
@@ -27,6 +28,7 @@ const indexRoute = createRoute({
 });
 const workstreamsRoute = createRoute({ getParentRoute: () => appRoute, path: "/streams", component: WorkstreamsPage, validateSearch: z.object({ q: z.string().optional() }) });
 const detailRoute = createRoute({ getParentRoute: () => appRoute, path: "/$name", component: WorkstreamDetailPage });
+const scheduleAlertRoute = createRoute({ getParentRoute: () => appRoute, path: "/alerts/$name", component: ScheduleAlertPage, validateSearch: z.object({ alert: z.string().optional() }) });
 const issuesRoute = createRoute({ getParentRoute: () => appRoute, path: "/issues", component: IssuesPage, validateSearch: z.object({ issue: z.string().optional(), issueVisibility: z.enum(["public", "private"]).optional(), status: z.enum(["open", "closed", "all"]).optional(), sort: z.enum(["date", "priority"]).optional(), category: z.string().optional(), priority: z.enum(["important", "normal", "backlog", "uncategorized"]).optional(), needs: z.string().optional() }) });
 const plansRoute = createRoute({ getParentRoute: () => appRoute, path: "/plans", component: PlansPage });
 // The selection lives in a search param, not a path segment — the shape the
@@ -54,6 +56,6 @@ const recentRoute = createRoute({
 });
 const testingRoute = createRoute({ getParentRoute: () => appRoute, path: "/testing", component: TestingPage });
 const asksRoute = createRoute({ getParentRoute: () => appRoute, path: "/asks", component: AsksPage });
-const routeTree = rootRoute.addChildren([appRoute.addChildren([indexRoute, workstreamsRoute, detailRoute, issuesRoute, plansRoute, browseRoute, recentRoute, testingRoute, asksRoute])]);
+const routeTree = rootRoute.addChildren([appRoute.addChildren([indexRoute, workstreamsRoute, detailRoute, scheduleAlertRoute, issuesRoute, plansRoute, browseRoute, recentRoute, testingRoute, asksRoute])]);
 export const router = createRouter({ routeTree, basepath: "/workstreams" });
 declare module "@tanstack/react-router" { interface Register { router: typeof router } }

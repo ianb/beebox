@@ -51,6 +51,12 @@ test("an alert record carries the full shape and defaults to open", async () => 
   assert.match(alert.id, /^\d{8}-\d{6}-[\da-f]{4}$/);
   const stored = await readAlerts(fake.deps.storeRoot, "alertjob");
   assert.deepEqual(stored, [alert]);
+  assert.deepEqual(fake.notifications, [{
+    title: "alertjob: 12 new unused exports",
+    message: "knip found twelve.",
+    group: `schedule-${alert.id}`,
+    destination: `http://localhost:3210/workstreams/alerts/alertjob?alert=${alert.id}`,
+  }]);
 });
 
 test("acknowledged alerts leave the default view after 14 days; records are kept", async () => {
