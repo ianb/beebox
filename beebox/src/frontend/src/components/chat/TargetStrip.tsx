@@ -32,7 +32,7 @@ export function TargetStrip(props: {
   return (
     <div className="px-4 py-1.5 border-t border-info-light bg-info-50 text-info-dark text-xs flex items-center gap-3">
       <div className="flex-1 flex items-center gap-3">
-        {status.state === "busy" ? <span>Agent is working…</span> : null}
+        {status.state === "busy" ? <span>Thinking…</span> : null}
         {pendingCount > 0 ? (
           <span>{pendingCount === 1 ? "1 message queued" : `${pendingCount} messages queued`}</span>
         ) : null}

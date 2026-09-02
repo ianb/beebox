@@ -112,7 +112,7 @@ function InventoryEmpty() {
 
 function InventorySummary({ data, linkStatus }: { data: Inventory; linkStatus: LinkStatus }) {
   return (
-    <Card as="section" aria-label="Inventory summary">
+    <Card as="section" aria-label="Storage summary">
       <Stack gap="md">
         {data.complete ? null : <Text as="p" tone="danger" size="sm">This scan is partial because {data.skippedPaths.toLocaleString()} filesystem path(s) could not be read. Totals are lower bounds.</Text>}
         {data.linkStatusComplete ? null : <Text as="p" tone="danger" size="sm">Incoming-reference detection is partial. Linked contains confirmed matches; Unlinked may include cards whose referrers could not be read.</Text>}
@@ -146,7 +146,7 @@ function InventoryArea({ items, metric, linkStatus, projection, setMetric, setLi
   setProjection: Dispatch<SetStateAction<Projection>>;
 }) {
   return (
-    <Card as="section" aria-label="Inventory area view">
+    <Card as="section" aria-label="Storage area view">
       <Stack gap="md">
         <Text as="h2" size="lg" weight="semibold">Area view</Text>
         <TabBar value={linkStatus} onChange={setLinkStatus} idPrefix="bbx-inventory-link-status" label="Incoming reference filter" tabs={[{ value: "all", label: "All" }, { value: "linked", label: "Linked" }, { value: "unlinked", label: "Unlinked" }]} />
@@ -162,7 +162,7 @@ function InventoryArea({ items, metric, linkStatus, projection, setMetric, setLi
 
 function InventoryDataTable({ items, linkStatus, projection }: { items: Inventory["direct"]; linkStatus: LinkStatus; projection: Projection }) {
   return (
-    <Card as="section" aria-label={`${projection} inventory table`}>
+    <Card as="section" aria-label={`${projection} storage table`}>
       <Stack gap="md">
         <Text as="h2" size="lg" weight="semibold">{linkStatus === "all" ? "All content" : `${linkStatus === "linked" ? "Linked" : "Unlinked"} cards`} — {projection === "grouped" ? "grouped" : "direct files"}</Text>
         {items.length === 0 ? <Text as="p" tone="muted">No matching cards.</Text> : <InventoryTable items={items} />}

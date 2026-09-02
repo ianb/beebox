@@ -80,7 +80,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
   if (state.kind === "error") {
     return (
       <div className="px-3 py-2 text-sm text-danger-dark">
-        Couldn&rsquo;t load sessions.{" "}
+        Couldn&rsquo;t load chats.{" "}
         <button id="bbx-session-list-retry" type="button" onClick={load} className="underline hover:no-underline">
           Retry
         </button>
@@ -89,7 +89,7 @@ export function SessionListPanel({ contextDir }: { contextDir: string | null }) 
   }
   const { sessions, dead } = state;
   if (sessions.length === 0 && dead.length === 0) {
-    return <div className="px-3 py-2 text-sm text-warm-500">No sessions yet</div>;
+    return <div className="px-3 py-2 text-sm text-warm-500">No chats yet</div>;
   }
 
   // Prefer the current session's own row over the `contextDir` prop: a resumed

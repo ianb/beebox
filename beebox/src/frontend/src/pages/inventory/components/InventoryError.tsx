@@ -5,7 +5,7 @@ import { Text } from "../../../components/ui/Text";
 
 export function InventoryError({ message, refresh }: { message: string; refresh: () => Promise<void> }) {
   return (
-    <Card aria-label="File inventory error">
+    <Card aria-label="Storage error">
       <Stack gap="sm">
         <Text as="h2" size="lg" weight="semibold">Couldn’t scan this box</Text>
         <Text as="p" tone="danger">{message}</Text>

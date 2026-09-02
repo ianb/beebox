@@ -36,7 +36,7 @@ const box = await makeTmpBox();
 const claudeCli = createFakeClaudeCli({ loggedIn: false });
 const checks = await runHealthChecks(box.root, { claudeCli });
 JSON.stringify(claudeCheck(checks))
-=> {"name":"claude-credentials","ok":false,"message":"Claude Code is not logged in — agent operations (chat, reactor, procedures) will not work. Run `claude auth login` on this machine","severity":"error"}
+=> {"name":"claude-credentials","ok":false,"message":"The assistant engine (Claude Code) isn't signed in on this server — chat and background processing (reactor, procedures) will not work. Run `claude auth login` on this machine","severity":"error"}
 ```
 
 ```ts cleanup

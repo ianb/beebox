@@ -20,7 +20,7 @@ const TRANSCRIPTION_OPTIONS: ReadonlyArray<{
 }> = [
   { label: "Voxtral (Mistral)", service: "voxtral" },
   { label: "Deepgram", service: "deepgram" },
-  { label: "OpenAI Realtime Whisper", service: "openai-realtime" },
+  { label: "Whisper (live, OpenAI)", service: "openai-realtime" },
 ];
 
 const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{
@@ -31,7 +31,7 @@ const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   { label: "Whisper LLM", service: "whisper-llm" },
   { label: "Whisper LLM mini", service: "whisper-llm-mini" },
   { label: "Voxtral (Mistral)", service: "voxtral" },
-  { label: "Voxtral + diarization", service: "voxtral-diarized" },
+  { label: "Voxtral + diarization (labels who's speaking)", service: "voxtral-diarized" },
 ];
 
 function optionLabel(options: ReadonlyArray<{ label: string; service: string }>, service: string | null): string {
@@ -74,14 +74,14 @@ export function VoicePanel({
         <span className="text-warm-500">‹ Voice settings</span>
       </MenuItem>
       <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Live transcription</div>
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">While you speak</div>
       {TRANSCRIPTION_OPTIONS.map((opt) => (
         <MenuItem key={opt.service} id={`bbx-voice-live-${opt.service}`} onClick={() => onSelectTranscriptionService(opt.service)} keepOpen>
           {currentService === opt.service ? "✓ " : "  "}{opt.label}
         </MenuItem>
       ))}
       <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">HQ transcription</div>
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Final transcript (after recording)</div>
       {HQ_TRANSCRIPTION_OPTIONS.map((opt) => (
         <MenuItem key={opt.service} id={`bbx-voice-hq-${opt.service}`} onClick={() => onSelectHqTranscriptionService(opt.service)} keepOpen>
           {currentHqService === opt.service ? "✓ " : "  "}{opt.label}

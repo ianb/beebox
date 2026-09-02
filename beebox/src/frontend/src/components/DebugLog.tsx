@@ -150,6 +150,31 @@ export function clearErrorCount() {
   for (const fn of errorCountListeners) fn();
 }
 
+/**
+ * Whether this browser has ever opened the debug log — the `ErrorBadge` gate
+ * (`AppNav.tsx`): a first-run screen must not show a developer affordance, so
+ * the badge stays hidden until the person has proven they know it's there.
+ * `localStorage` access can throw (private browsing, blocked site data), so
+ * both sides fail closed to "not opened" rather than crash the nav.
+ */
+const DEBUG_LOG_OPENED_KEY = "bbx-debug-log-opened";
+
+export function hasDebugLogBeenOpened(): boolean {
+  try {
+    return localStorage.getItem(DEBUG_LOG_OPENED_KEY) !== null;
+  } catch (_e) {
+    return false;
+  }
+}
+
+function markDebugLogOpened() {
+  try {
+    localStorage.setItem(DEBUG_LOG_OPENED_KEY, "1");
+  } catch (_e) {
+    /* ignore: private-browsing/blocked storage — the gate just stays closed next time */
+  }
+}
+
 function useLogEntries(): LogEntry[] {
   const [logSnapshot, setLogSnapshot] = useState<LogEntry[]>([]);
 
@@ -178,6 +203,7 @@ export function DebugLogPanel({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     setVerboseForwarding(true);
+    markDebugLogOpened();
     return () => setVerboseForwarding(false);
   }, []);
 

@@ -4888,9 +4888,9 @@ tests:
       3 controls omitted: no accessible name.
 
       navigation "Primary"
-        button [Place: test1](control:bbx-nav-place)
-        button [Session: Dinner plans](control:bbx-nav-session) [reveal]
-          — the thread menu: new session, recent chats, model, delete this chat
+        button [Where you are: test1](control:bbx-nav-place)
+        button [Chat: Dinner plans](control:bbx-nav-session) [reveal]
+          — the thread menu: new chat, recent chats, model, delete this chat
         button "Open debug log (2 errors)"                     (no address) (off-screen)
       region "Compose message"
         button [Add](control:bbx-composer-add) [reveal]

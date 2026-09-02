@@ -53,7 +53,7 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
         ? "The transcript is gone, but the chat card could not be fully moved to Trash. Retry cleanup to finish the card move."
         : cleanup?.storage === "present"
           ? "The transcript remains on this machine because deletion did not complete. Retry cleanup to try again."
-          : "The transcript was only partly removed. Retry cleanup to remove the remaining local session data.";
+          : "The transcript was only partly removed. Retry cleanup to remove the remaining local chat data.";
 
   const remove = async (): Promise<void> => {
     const next = await mutation.mutateAsync({ sessionId });
@@ -94,7 +94,7 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
         <section className="mt-4 text-sm text-warm-700">
           <h3 className="font-semibold text-warm-900">Removed</h3>
           <ul className="mt-1 list-disc space-y-1 pl-5">
-            <li>The transcript and its subagent/session sidecars on this machine.</li>
+            <li>The transcript and its subagent/chat sidecars on this machine.</li>
             <li>The active chat listing; its card moves to box Trash and remains git-recoverable.</li>
             <li>Pending reminders linked to this conversation.</li>
           </ul>

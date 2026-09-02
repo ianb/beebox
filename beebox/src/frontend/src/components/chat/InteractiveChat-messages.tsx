@@ -261,7 +261,7 @@ function MessageListInner({
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
         <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
-        <div className="text-warm-500 text-sm">Start a conversation with your box assistant.</div>
+        <div className="text-warm-500 text-sm">Start a conversation.</div>
       </div>
     );
   }

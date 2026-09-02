@@ -158,7 +158,7 @@ function BoxNotFound({ slug, boxes }: { slug: string; boxes: KnownBox[] }) {
         Box not found
       </Text>
       <Text as="p" tone="subtle">
-        No box matches <code>{slug}</code> on this server.
+        There&rsquo;s no box called <code>{slug}</code> here.
       </Text>
       {isWorktreeUrl ? (
         <Text as="p" tone="subtle" size="sm">
