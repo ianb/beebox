@@ -49,3 +49,9 @@ issue; noted here since it showed up in the same citations.
 
 
 > 2026-09-02 survey (bbx-pick-issues): still true for the remaining half — `core/agent-guide/behavior.ts` has no guidance about the `[→ …]` compiled-doc serialization; the apostrophe-loss slug note is untriaged. Grouped with 2026-08-08-implementation-vocab-leaks-into-ui as one vocabulary sweep.
+
+> 2026-09-02 (vocab-sweep): the apostrophe-loss note is a different mechanism
+> (slug/title derivation, not vocabulary or rendering) and is split into its
+> own issue: [apostrophes-lost-in-slugs-and-titles](2026-09-02-apostrophes-lost-in-slugs-and-titles.md).
+> The `[→ …]` guidance gap is being fixed by this workstream
+> (`beebox/docs/plans/vocab-glossary-sweep.md`, Track D).

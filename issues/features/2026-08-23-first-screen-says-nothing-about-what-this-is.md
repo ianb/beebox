@@ -24,6 +24,15 @@ never did.
 Directly relevant to gate 7 (first-hour experience) in
 [the soft-launch posture](../decisions/2026-07-20-soft-launch-posture.md).
 
+> 2026-09-02 (vocab-sweep): the vocabulary underneath this issue is now
+> settled — `beebox/docs/glossary.md` has a user-facing register per term
+> (chat not session, Home for the root place, Storage not Inventory, box =
+> the user's box and never the app's name for itself, no "agent"/"box
+> assistant" in user surfaces). Whatever first-run screen this issue designs
+> should use those words. The assistant's persona (personified vs.
+> appliance-like) was deliberately left open and belongs to this design.
+> Details: `beebox/docs/plans/vocab-glossary-sweep.md`.
+
 ## The vocabulary problem underneath it
 
 The same person, in the first two minutes:
