@@ -4065,6 +4065,26 @@ tests:
       guide) or the attach-to-a-card concept (when it answers directly). See
       docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
+  # Status (2026-09-02): passes after reading docs/generated/views.md (1 file,
+  # 0 searches). The agent used viewHistory.state, pushState/replaceState, and
+  # canPush; distinguished URL navigation state from React state; and did not
+  # call window.history directly.
+  - id: authored-view-history-state
+    prompt: >
+      I am building a rich custom view with several internal sections. How
+      should it preserve the selected section across source-code reloads and
+      make browser Back and Forward useful?
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/views.md. Uses viewHistory.state with pushState or
+      replaceState, checks canPush when Back/Forward behavior matters, validates
+      old state before use, and distinguishes navigation state from renderer
+      params and transient React useState. Must not call window.history directly.
+    should_read: ["docs/generated/views.md"]
+    correct_contains_any: ["viewHistory", "pushState", "replaceState"]
+    response_not_contains: ["window.history.pushState", "window.history.replaceState"]
+    tags: [views, navigation, state]
+
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + build-course skill) ===
   #
   # Status (2026-07-03): all 12 pass against test1. courseware-exposition-plan was

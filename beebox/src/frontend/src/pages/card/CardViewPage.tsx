@@ -5,6 +5,7 @@
  */
 
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { useCallback } from "react";
 import { href, toSearch } from "../../lib/routing";
 import { useUrlView } from "../../hooks/useUrlView";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
@@ -16,6 +17,7 @@ import { Stack } from "../../components/ui/Stack";
 import { Text } from "../../components/ui/Text";
 import { TextLink } from "../../components/ui/TextLink";
 import { OpenChatControl } from "./components/OpenChatControl";
+import { viewStateSearchValue, type ViewState } from "../../lib/view-url";
 
 export function CardViewPage() {
   const { boxSlug, _splat: cardPath } = useParams({ strict: false });
@@ -25,16 +27,23 @@ export function CardViewPage() {
   // picks the renderer and everything else is forwarded to it. Without this,
   // `/card/...?page=2` — a link the page strip and the box agent both hand out
   // — silently did nothing here while working in `/browse/...`.
-  const { viewer, params } = useUrlView();
+  const { viewer, params, viewState } = useUrlView();
   const selectRenderer = (name: string) => {
     // Looking at the same card a different way is not a new place: replace, so
     // back leaves the card rather than undoing a toggle (as browse does).
     void navigate({
       to: href(`/${boxSlug}/card/${cardPath ?? ""}`),
-      search: toSearch({ ...params, view: name }),
+      search: toSearch({ ...params, view: name, viewState: viewStateSearchValue(viewState) }),
       replace: true,
     });
   };
+  const updateViewState = useCallback((next: ViewState, method: "push" | "replace") => {
+    void navigate({
+      to: href(`/${boxSlug}/card/${cardPath ?? ""}`),
+      search: toSearch({ ...params, ...(viewer ? { view: viewer } : {}), viewState: viewStateSearchValue(next) }),
+      replace: method === "replace",
+    });
+  }, [boxSlug, cardPath, navigate, params, viewer]);
 
   if (!cardPath) {
     return <Text as="div" tone="subtle" className="p-8">No card path specified</Text>;
@@ -56,6 +65,9 @@ export function CardViewPage() {
             path={cardPath}
             params={params}
             rendererName={viewer}
+            viewState={viewState}
+            canPushViewState
+            onViewStateChange={updateViewState}
             onSelectRenderer={selectRenderer}
             onNavigate={handleNavigate}
             onClose={() => void navigate({ to: href(`/${boxSlug}/dashboard`), replace: true })}

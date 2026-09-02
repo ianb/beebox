@@ -43,9 +43,10 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "views-guide-v2": {
-    current: "e8f5e99502aa1da29e07f9e5c68bbe3c1ac3c6dba216fc27c5463f8f0272d772",
+    current: "d53ddddd5f418fa7cd2bb9f043e77b2ec37314e9df7b0879979abe433739c61f",
     superseded: [
       "f6be48fb86eed3b36edbb335f3ead34e97c58b6bb172cdfe1458b0a3ddfc8472",
+      "e8f5e99502aa1da29e07f9e5c68bbe3c1ac3c6dba216fc27c5463f8f0272d772",
     ],
   },
 } satisfies Record<string, TemplateStockEntry>;
