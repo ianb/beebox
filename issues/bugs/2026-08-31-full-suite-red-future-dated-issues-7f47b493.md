@@ -68,3 +68,14 @@ Reproduce at the blamed landing:
 git log -1 7f47b493
 pnpm --dir beebox exec tap test/frontend/trpc-directory-resolution.test.ts
 ```
+
+## 2026-09-02 — verified stale (survey note)
+
+Passes on `main` at `01791868b` in isolation (1/1, 2.2s). The blamed landing
+`7f47b493` touched `bin/`, `schedules/`, `issues/`, `src/dev/doc-frontmatter.ts`
+and workstreams-app — nothing under `src/frontend/` or this test. In the hourly
+run's own isolated re-run, children 5, 10, 11 and 12 of the 12 concurrent
+loader children failed with a bare `Command failed:` and the test took 15.2s,
+which is the test's 15s per-child `execFile` timeout. That is machine
+contention, not the landing; the "failed again in isolation" verdict was made
+on the same loaded machine. Mis-attribution by `schedules/full-suite/`.
