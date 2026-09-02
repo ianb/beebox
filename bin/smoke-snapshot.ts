@@ -196,14 +196,14 @@ export function placeMenuFailure(reading: PlaceMenuReading, snapshot: string): S
 /**
  * The landmark the place pill currently names, or null if it is not rendered.
  *
- * The pill's accessible name is `Place: <label>` (PlacePill.tsx), and that
- * label is the user-visible answer to "where am I" — which makes it the thing
- * to assert a switch against.
+ * The pill's accessible name is `Where you are: <label>` (PlacePill.tsx), and
+ * that label is the user-visible answer to "where am I" — which makes it the
+ * thing to assert a switch against.
  */
 export function currentPlaceLabel(snapshot: string): string | null {
   const line = snapshot.split("\n").find((candidate) => candidate.includes("id=bbx-nav-place"));
   if (line === undefined) return null;
-  return /"Place:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
+  return /"Where you are:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
 }
 
 /**
