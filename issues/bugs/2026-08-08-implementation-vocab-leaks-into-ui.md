@@ -99,4 +99,12 @@ Also collected, smaller:
 Full notes: `beebox/user-stories/work/journeys/B-inventory-2026-08-23*/notes.md`.
 
 
+> 2026-09-02 (vocab-sweep, later): the sweep is implemented on this branch —
+> vocabulary decided with the boxholder and recorded as a user-facing register
+> in `beebox/docs/glossary.md` (chat/Home/Storage/Thinking…, box = the user's
+> box, no "agent"/"box assistant"); all surfaces below reworded, the error
+> badge gated behind ever-having-opened the debug log, view tabs relabeled by
+> card type, transcription rows glossed live-vs-final. Cross-model reviewed.
+> Plan: `beebox/docs/plans/vocab-glossary-sweep.md`. Closes at /finish.
+
 > 2026-09-02 survey (bbx-pick-issues): re-verified still true. `app-shell.tsx` still says "No box matches …", `AppNav.tsx` debug-log badge still ungated, `SessionChip`/`PlacePill` still say "Session menu"/"Place:", `VoiceChip-panels.tsx` still labels raw Deepgram/Whisper. Filename-as-heading and agent-reply jargon halves are fixed. Grouped with 2026-08-08-markdown-not-rendering-in-agent-output (agent imitates `[→ …]` compiled-doc markup) and 2026-08-24-agent-records-counts-in-prose-though-measures-exists as one internals-leak vocabulary sweep.
