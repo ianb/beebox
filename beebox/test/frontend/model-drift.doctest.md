@@ -16,7 +16,7 @@ import { modelDrift } from "../../src/frontend/src/components/chat/model-drift.j
 Stronger and weaker than the default.
 
 ```ts
-modelDrift({ model: "claude-fable-5", boxDefault: "claude-sonnet-5" })
+modelDrift({ model: "claude-fable-5-1", boxDefault: "claude-sonnet-5" })
 => above
 
 modelDrift({ model: "claude-haiku-4-5-20251001", boxDefault: "claude-opus-5" })
@@ -44,7 +44,7 @@ as stronger than Terra and never as weaker than a Claude flagship.
 ```ts
 JSON.stringify([
   modelDrift({ model: "gpt-5.6-sol", boxDefault: "gpt-5.6-terra" }),
-  modelDrift({ model: "gpt-5.6-sol", boxDefault: "claude-fable-5" }),
+  modelDrift({ model: "gpt-5.6-sol", boxDefault: "claude-fable-5-1" }),
 ])
 => ["above","below"]
 ```

@@ -27,7 +27,7 @@ JSON.stringify([
   resolveProcedureModel("codex", "strong"),
   resolveProcedureModel("codex", "strongest"),
 ])
-=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-5.6-sol"]
+=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5-1","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-5.6-sol"]
 ```
 
 ## Legacy aliases
@@ -43,7 +43,7 @@ JSON.stringify([
   resolveProcedureModel("codex", "opus"),
   resolveProcedureModel("codex", "fable"),
 ])
-=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-5.6-sol"]
+=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5-1","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-5.6-sol"]
 ```
 
 The schema vocabulary contains both sets exactly once.

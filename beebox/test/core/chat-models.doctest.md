@@ -15,7 +15,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 ```ts
 JSON.stringify(chatModelOptions("claude").map((option) => option.label))
-=> ["Default (Opus)","Haiku 4.5","Sonnet 5","Opus 5","Fable 5"]
+=> ["Default (Opus)","Haiku 4.5","Sonnet 5","Opus 5","Fable 5.1"]
 
 JSON.stringify(chatModelOptions("codex"))
 => [{"label":"Default (Codex)","model":null},{"label":"Sol","model":"gpt-5.6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-5.6-luna"}]
@@ -85,7 +85,7 @@ function tiersRoundTrip(engine: AgentEngine): boolean {
 ```
 
 ```ts
-JSON.stringify([modelTier("claude-fable-5"), modelTier("gpt-5.6-sol"), modelTier("not-a-model")])
+JSON.stringify([modelTier("claude-fable-5-1"), modelTier("gpt-5.6-sol"), modelTier("not-a-model")])
 => ["strongest","strong",null]
 
 JSON.stringify(ENGINES.map(tiersRoundTrip))
@@ -116,12 +116,12 @@ to the other engine falls through to the pin rather than to nothing.
 ```ts
 const pinned = "claude-sonnet-5";
 JSON.stringify([
-  resolveEffectiveModel({ engine: "claude", pinned }, { kind: "explicit", model: "claude-fable-5" }),
+  resolveEffectiveModel({ engine: "claude", pinned }, { kind: "explicit", model: "claude-fable-5-1" }),
   resolveEffectiveModel({ engine: "claude", pinned }, { kind: "follow" }),
   resolveEffectiveModel({ engine: "claude", pinned: null }, { kind: "follow" }),
   resolveEffectiveModel({ engine: "claude", pinned }, { kind: "explicit", model: "gpt-5.6-sol" }),
 ])
-=> [{"model":"claude-fable-5","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":null,"source":"none"},{"model":"claude-sonnet-5","source":"default"}]
+=> [{"model":"claude-fable-5-1","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":null,"source":"none"},{"model":"claude-sonnet-5","source":"default"}]
 ```
 
 What a *running* chat reports is the model its subprocess started with, whatever
@@ -131,12 +131,12 @@ intends, not the one it is in.
 
 ```ts
 JSON.stringify([
-  liveModelState({ explicit: "claude-fable-5", resolved: "claude-fable-5" }),
+  liveModelState({ explicit: "claude-fable-5-1", resolved: "claude-fable-5-1" }),
   liveModelState({ explicit: null, resolved: "claude-sonnet-5" }),
-  liveModelState({ explicit: "claude-fable-5", resolved: "claude-sonnet-5" }),
+  liveModelState({ explicit: "claude-fable-5-1", resolved: "claude-sonnet-5" }),
   liveModelState({ explicit: null, resolved: null }),
 ])
-=> [{"model":"claude-fable-5","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":"claude-sonnet-5","source":"default"},{"model":null,"source":"none"}]
+=> [{"model":"claude-fable-5-1","source":"explicit"},{"model":"claude-sonnet-5","source":"default"},{"model":"claude-sonnet-5","source":"default"},{"model":null,"source":"none"}]
 ```
 
 A hand-edited `agentModel` that no engine offers is rejected at the config
@@ -179,9 +179,9 @@ JSON.stringify([
   resolveSmallModelForEngine("claude", null),
   resolveSmallModelForEngine("codex", null),
   resolveSmallModelForEngine("codex", "claude-sonnet-5"),
-  resolveSmallModelForEngine("claude", "claude-fable-5"),
+  resolveSmallModelForEngine("claude", "claude-fable-5-1"),
 ])
-=> ["claude-haiku-4-5-20251001","gpt-5.6-luna","gpt-5.6-terra","claude-fable-5"]
+=> ["claude-haiku-4-5-20251001","gpt-5.6-luna","gpt-5.6-terra","claude-fable-5-1"]
 ```
 
 A codex box never receives a Claude model id, whatever the box config says —

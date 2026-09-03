@@ -19,7 +19,7 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
     { label: "Haiku 4.5", model: MODEL_ID.haiku },
     { label: "Sonnet 5", model: MODEL_ID.sonnet },
     { label: "Opus 5", model: MODEL_ID.opus },
-    { label: "Fable 5", model: MODEL_ID.fable },
+    { label: "Fable 5.1", model: MODEL_ID.fable },
   ],
   codex: [
     { label: "Default (Codex)", model: null },

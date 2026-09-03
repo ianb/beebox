@@ -146,7 +146,7 @@ briefing.
 
    - **Opus** (`--model opus`) — for somewhat harder work. The boxholder will
      usually ask for this explicitly; don't reach for it on your own.
-   - **Fable** (`--model claude-fable-5`) — genuinely hard work, big
+   - **Fable** (`--model claude-fable-5-1`) — genuinely hard work, big
      architecture questions, and decisions that need user empathy to get right.
      Usually specified directly. **If you think something deserves Fable, ask
      — don't just launch it there.**
@@ -255,13 +255,13 @@ from elsewhere (these run unattended in background tabs, and much of the
 manual testing they generate happens on a phone). The session is named after the
 worktree so concurrent ones stay tellable apart. `--no-remote-control` opts out.
 
-Pass `--model <model>` (e.g. `claude-fable-5`, `opus`, `sonnet`) to spin a
+Pass `--model <model>` (e.g. `claude-fable-5-1`, `opus`, `sonnet`) to spin a
 Claude worktree up on a specific model — never omit it on the Claude path,
 where omitting silently inherits the boxholder's saved default. On the Codex
 path omitting `--model` is correct: the launcher pins `gpt-5.6-sol` itself.
 
 A Fable session then follows the delegate-and-Codex-review guidance in the root
-CLAUDE.md, so `claude-fable-5` buys orchestration and cross-model review, not
+CLAUDE.md, so `claude-fable-5-1` buys orchestration and cross-model review, not
 just a stronger single pass.
 
 It opens a new tab in the front Terminal.app window (or a new window if none is
