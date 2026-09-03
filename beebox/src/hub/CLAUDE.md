@@ -35,7 +35,7 @@ hand.
 
 `hub.json`'s `lazy: true` flag makes every configured box start "stopped";
 `Supervisor.ensureRunning()` cold-starts a box on its first proxied request
-and idle-stops it after `idleMs` — the same semantics `bin/router.ts` uses
+and idle-stops it after `idleMs` — the same semantics `workstreams-app/src/router/router.ts` uses
 for dev worktrees. Non-lazy (the default) starts every box resident at hub
 boot and never idle-stops them.
 

@@ -63,7 +63,7 @@ const hubConfigFileSchema = z.strictObject({
    * boot. The first HTTP request (never a WS upgrade — see
    * `hub-server.ts`'s WS-refusal comment) for a slug spawns it on demand,
    * the same semantics the monorepo dev router already has for whole
-   * worktrees (`bin/router.ts`'s `ensureRunning`). Idle boxes (only HTTP
+   * worktrees (`workstreams-app/src/router/router.ts`'s `ensureRunning`). Idle boxes (only HTTP
    * request traffic counts as activity) get SIGTERM'd back to "stopped"
    * after `idleMs`. Defaults to `false` — production hubs stay resident
    * (schedulers/webhooks want the process up) unless a config opts in.

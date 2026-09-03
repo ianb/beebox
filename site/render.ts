@@ -1,5 +1,5 @@
 // The site's own small Markdoc pipeline. Deliberately NOT imported from
-// bin/router-docs.ts: that module drags in router/runtime dependencies that do
+// workstreams-app/src/router/router-docs.ts: that module drags in router/runtime dependencies that do
 // not belong in the static-site build. This package declares @markdoc/markdoc
 // explicitly and renders through it here.
 //

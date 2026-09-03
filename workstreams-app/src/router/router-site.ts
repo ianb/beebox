@@ -19,7 +19,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execa } from "execa";
-import { isStale } from "../site/sources.js";
+import { isStale } from "../../../site/sources.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",

@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { test } from "node:test";
 
-import { createRouterServer } from "./router.js";
-import type { RouterAuthDeps } from "./router-auth.js";
-import type { RouterCore } from "./router-core.js";
-import type { WorkstreamsAppSupervisor } from "./workstreams-app-supervisor.js";
+import { createRouterServer } from "../../src/router/router.js";
+import type { RouterAuthDeps } from "../../src/router/router-auth.js";
+import type { RouterCore } from "../../src/router/router-core.js";
+import type { WorkstreamsAppSupervisor } from "../../src/router/workstreams-app-supervisor.js";
 
 const unusedAuthDeps: RouterAuthDeps = {
   resolveOwnerSession: () => null,

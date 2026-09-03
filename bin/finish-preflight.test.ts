@@ -26,6 +26,7 @@ const PACKAGES = new Set([
   "site",
   "agent-doctest",
   "canvas-loop",
+  "workstreams-app",
 ]);
 const NO_SKIP = { value: false, reason: "the merge of main brought code in" };
 
@@ -45,14 +46,14 @@ test("codeChanged ignores docs and tests, and a .doctest.md is a test", () => {
   assert.equal(hasCodeChange(["beebox/docs/a.md", "bin/x.test.ts"]), false);
   assert.equal(hasCodeChange(["beebox/test/core/box.doctest.md"]), false);
   assert.equal(hasCodeChange(["beebox/src/core/box.ts"]), true);
-  assert.equal(hasCodeChange(["issues/bugs/x.md", "bin/router.ts"]), true);
+  assert.equal(hasCodeChange(["issues/bugs/x.md", "bin/doctor.ts"]), true);
 });
 
 test("paths group by package, with bin/ and root files on the root scripts", () => {
   const grouped = groupPaths(
     [
       "beebox/src/x.ts",
-      "bin/router.ts",
+      "bin/doctor.ts",
       "package.json",
       "issues/bugs/x.md",
       "site/src/y.ts",
@@ -64,7 +65,7 @@ test("paths group by package, with bin/ and root files on the root scripts", () 
   assert.equal(grouped.root, true);
   assert.deepEqual(grouped.unknown, ["weird-new-dir"]);
   assert.deepEqual(grouped.groups["(none)"], ["issues/bugs/x.md"]);
-  assert.deepEqual(grouped.groups["(root)"], ["bin/router.ts", "package.json"]);
+  assert.deepEqual(grouped.groups["(root)"], ["bin/doctor.ts", "package.json"]);
 });
 
 test("a nested package owns its own paths, and its parent still owns the rest", () => {
@@ -141,7 +142,7 @@ test("the beebox isolate resolves TAP paths against the package, not its cwd", (
 
 test("a bin/ change runs the root suite and typecheck, and lints nothing", () => {
   const commands = verificationCommands({
-    paths: ["bin/router.ts"],
+    paths: ["bin/doctor.ts"],
     workspacePackages: PACKAGES,
     hasScript: allScripts(),
     skipTypecheckLint: NO_SKIP,
@@ -280,7 +281,7 @@ test("a code-related diff gets a smoke walk; a diff that ships nothing does not"
   assert.equal(smokeFor(["pnpm-lock.yaml"]), true);
   // bin/ and issues/ change nothing a running box would show, and neither
   // ships — the deploy hook's rule and this one are deliberately identical.
-  assert.equal(smokeFor(["bin/router.ts"]), false);
+  assert.equal(smokeFor(["bin/doctor.ts"]), false);
   assert.equal(smokeFor(["issues/bugs/x.md"]), false);
 });
 

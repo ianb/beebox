@@ -7,7 +7,7 @@
  *
  * Note on tier: bin/CLAUDE.md prefers doctests for new `bin/` tooling. The
  * plan names the Node test runner for this plan's chunks ("Tests first …
- * bin/schedules.test.ts", "`bin/router-*.test.ts`-style tests for the routing
+ * bin/schedules.test.ts", "`workstreams-app/src/router/router-*.test.ts`-style tests for the routing
  * table"), and `pnpm test` at the root runs exactly `bin/*.test.ts`.
  *
  * Real bash, real registry files in a temp state dir: what is under test is a

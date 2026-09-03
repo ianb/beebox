@@ -11,7 +11,7 @@ import type http from "node:http";
 import { Readable } from "node:stream";
 import type { Socket } from "node:net";
 import httpProxy from "http-proxy-3";
-import { injectBasePrefix } from "../beebox/src/webapp/base-prefix.js";
+import { injectBasePrefix } from "../../../beebox/src/webapp/base-prefix.js";
 import { rewriteMobileCookiePath } from "./router-cookie.js";
 import { bootstrapMobileSessionCookie, type MobileBootstrapTarget } from "./router-mobile-bootstrap.js";
 import { WORKSTREAMS_APP_CAPABILITY_HEADER, type WorkstreamsAppTarget } from "./workstreams-app-supervisor.js";

@@ -2,16 +2,16 @@
 // directory-index / trailing-slash canonicalization, missing-file handling,
 // plus the auto-build path (content-hash staleness, serialization,
 // 500-on-failure) over a fake http.ServerResponse. Run with:
-//   node --import tsx --test bin/router-site.test.ts
-// (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
+//   node --import tsx --test workstreams-app/test/router/router-site.test.ts
+// (or `pnpm --dir workstreams-app test`, which runs the router tests with the package suite).
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { resolveSiteTarget, serveSite, SiteBuildError, type BuildRunner } from "./router-site.js";
-import { writeManifest } from "../site/sources.js";
+import { resolveSiteTarget, serveSite, SiteBuildError, type BuildRunner } from "../../src/router/router-site.js";
+import { writeManifest } from "../../../site/sources.js";
 
 // A checkout with a site/ generator, real sources, and a fully built dist/ whose
 // input manifest matches those sources (so isStale() is false until something

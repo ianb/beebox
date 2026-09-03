@@ -42,11 +42,11 @@ function isScanPath(reqPath: string, slug: string): boolean {
  * Shape-only matcher for a box-relative scan-upload subpath (`/api/scan/check`
  * or `/api/scan/files/<64-hex>`), for callers that gate on path shape and
  * delegate bearer verification downstream — the dev router's auth wall
- * (`bin/router-auth.ts`) uses this the way it reuses `isPairingRedeemUrl`:
+ * (`workstreams-app/src/router/router-auth.ts`) uses this the way it reuses `isPairingRedeemUrl`:
  * the request is forwarded, and this hub gate plus the child's scan-auth
  * preHandler still independently verify the token.
  *
- * @public Imported by `bin/router-auth.ts`, outside this package.
+ * @public Imported by `workstreams-app/src/router/router-auth.ts`, outside this package.
  */
 export function isScanUploadSubpath(subpath: string): boolean {
   return SCAN_PATHS.test(subpath);

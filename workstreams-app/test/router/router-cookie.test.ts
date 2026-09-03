@@ -1,12 +1,12 @@
-// Tests for the Set-Cookie Path rewrite (bin/router-cookie.ts) — Track B, chunk
+// Tests for the Set-Cookie Path rewrite (workstreams-app/src/router/router-cookie.ts) — Track B, chunk
 // 2b of beebox/docs/implemented-plans/expose-dev-router.md (iOS session continuity).
 //
 // Run with:
-//   node --import tsx --test bin/router-cookie.test.ts
+//   node --import tsx --test workstreams-app/test/router/router-cookie.test.ts
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { rewriteMobileCookiePath } from "./router-cookie.js";
+import { rewriteMobileCookiePath } from "../../src/router/router-cookie.js";
 
 const WT = { worktree: "main", boxSlug: "test1" };
 

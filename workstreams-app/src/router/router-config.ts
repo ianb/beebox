@@ -13,7 +13,10 @@ import os from "node:os";
 import { execFileSync } from "node:child_process";
 
 export const ROUTER_PORT = Number(process.env.ROUTER_PORT) || 3210;
-export const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..");
+// This module lives at <repo>/workstreams-app/src/router/. Keep the repository
+// anchor explicit because launch paths, the favicon, and agent-browser all
+// depend on it rather than on the process cwd.
+export const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..", "..", "..");
 // Where /main/ is served from. Defaults to the canonical checkout so that a
 // router started from a worktree (e.g. while iterating on router.ts itself)
 // still serves real-main at /main/, not the worktree's stale snapshot of main.

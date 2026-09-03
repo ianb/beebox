@@ -17,7 +17,7 @@ import yaml from "highlight.js/lib/languages/yaml";
 /**
  * Highlighted source for the browser's code, data, and fenced-block views.
  *
- * highlight.js, because `bin/router-docs.ts` — the doc reader this browser
+ * highlight.js, because `workstreams-app/src/router/router-docs.ts` — the doc reader this browser
  * consolidates — already highlights with it, so the two surfaces agree on what
  * code looks like down to the palette (`styles.css`, the `.hljs-*` rules copied
  * from there). Registered a language at a time off `lib/core` rather than

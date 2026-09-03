@@ -69,7 +69,7 @@ Right-sized: defense concentrates at real boundaries; interior code trusts its t
 4. UI polling is not exempt — a silent `.catch(() => {})` on a poll turns a dead backend into a frozen UI. Retry-resilience and observability are different properties; log even when the poll retries.
 5. User-initiated actions never silently no-op: a toast/inline error, or at minimum a logged error.
 6. Discriminated-union dispatch uses `assertNever`, never an invented `default` fallback.
-7. Process-supervision code keeps the biggest defensive budget — each catch commented with the race it absorbs (`bin/router.ts` is the model).
+7. Process-supervision code keeps the biggest defensive budget — each catch commented with the race it absorbs (`workstreams-app/src/router/router.ts` is the model).
 8. Before adding a check, ask what produced the value: same-repo typed code → an assertion or nothing; disk/network/another process → keep the check.
 
 ### Lint rule suppression

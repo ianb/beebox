@@ -5,7 +5,7 @@
 // operation the lifecycle performs — spawning children, killing process groups,
 // HTTP-readiness probes, timers, the clock, sleeps, pidfile writes, hub-config
 // generation, port allocation, worktree/box resolution — arrives through
-// `effects`, so the incident tests (bin/router-core.test.ts) can substitute
+// `effects`, so the incident tests (workstreams-app/test/router/router-core.test.ts) can substitute
 // deterministic fakes (a manual clock, a barrier-gated pidfile store, a
 // controllable spawner) and reproduce the documented races.
 //

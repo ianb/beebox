@@ -4,8 +4,8 @@
 // killGroup, manual HTTP-readiness probes, and the `makeHarness` that wires them
 // into a real `createRouterCore`.
 //
-// Shared by bin/router-core.test.ts (startup: dedupe, freshness, rejection
-// discipline) and bin/router-core-teardown.test.ts (exit, guarded publication,
+// Shared by workstreams-app/test/router/router-core.test.ts (startup: dedupe, freshness, rejection
+// discipline) and workstreams-app/test/router/router-core-teardown.test.ts (exit, guarded publication,
 // shutdown, pidfile serialization), which were one file until it outgrew the
 // file-length limit. Log output is silenced by default (a no-op `log`) so a
 // passing run is quiet; flip `LOG` below to debug.
@@ -13,10 +13,15 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { createRouterCore, type RouterCore } from "./router-core.js";
-import type { RouterEffects, SpawnOptions, SpawnedChild, ResolvedWorktree } from "./router-effects.js";
-import type { PidExpectation } from "./router-pidfile.js";
-import type { TimerHandle, WorktreeHandle } from "./router-lifecycle.js";
+import { createRouterCore, type RouterCore } from "../../src/router/router-core.js";
+import type {
+  RouterEffects,
+  SpawnOptions,
+  SpawnedChild,
+  ResolvedWorktree,
+} from "../../src/router/router-effects.js";
+import type { PidExpectation } from "../../src/router/router-pidfile.js";
+import type { TimerHandle, WorktreeHandle } from "../../src/router/router-lifecycle.js";
 
 const LOG = false;
 
