@@ -155,8 +155,13 @@ codex_args=(
 $model_line
 )
 
-if session_registry_record_launch_session "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "\$launch_patch" --preserve-base-sha; then
-  :
+# Clear the launch lease the moment codex starts, exactly as the Claude
+# launcher does: from here on the running process is the liveness signal
+# (wt_other_agent_live matches it by cwd). Leaving the lease in place for the
+# whole run meant a tab closed or a machine restarted mid-session left it
+# expired forever, and the workstream rendered as a failed setup.
+if session_registry_complete_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "\$launch_patch" --preserve-base-sha; then
+  launch_pending=0
 else
   launch_registry_status=\$?
   if [ "\$launch_registry_status" = "2" ]; then
@@ -164,7 +169,7 @@ else
     echo "launch-worktree-session: launch for $LS_WORKSTREAM was superseded — refusing to start a second agent" >&2
     exit 1
   fi
-  echo "launch-worktree-session: could not record session metadata for $LS_WORKSTREAM — starting agent with launch-lease liveness" >&2
+  echo "launch-worktree-session: could not complete launch registry for $LS_WORKSTREAM — starting agent with process liveness only" >&2
 fi
 
 trap 'true' INT
@@ -184,18 +189,6 @@ trap - INT
 echo ""
 echo "Reopen this WORKSTREAM:  bin/workstreams resume $LS_WORKSTREAM"
 echo "  (from the main checkout — continues this codex session, recreates the worktree if culled)"
-
-if session_registry_complete_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "\$launch_patch" --preserve-base-sha; then
-  launch_pending=0
-else
-  launch_registry_status=\$?
-  if [ "\$launch_registry_status" = "2" ]; then
-    launch_pending=0
-    echo "launch-worktree-session: completed Codex session for $LS_WORKSTREAM no longer owns the launch token" >&2
-  else
-    echo "launch-worktree-session: could not clear launch registry for completed Codex session $LS_WORKSTREAM" >&2
-  fi
-fi
 
 teardown="$LS_MONO/bin/codex-session-end"
 if [ -x "\$teardown" ]; then
