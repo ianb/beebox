@@ -90,3 +90,16 @@ business in a commit. Pieces of the answer:
 
 Related: `issues/decisions/2026-08-30-rethink-box-autocommit.md` (autocommit
 sweeping in whatever is unignored is the mechanism that made this bite).
+
+> 2026-09-03 progress (main session): two migrations landed, `gitignore-2026-09`
+> (`scripts/migrate/box-gitignore.ts`; regenerates `.gitignore` via the now
+> exported `writeBoxGitignore`, untracks the state dir, box-root locks, and
+> pid from an allowlist, keeps `.beebox/box.json`) and `hooks-2026-09`
+> (`scripts/migrate/box-hooks.ts`; reinstalls the managed git hooks, which
+> still pointed at the former CLI). The state migration now removes an EMPTY
+> canonical directory instead of refusing (two local boxes and one worktree
+> launch were stuck on that). All six local boxes converged and committed;
+> the box that had committed its state has 182 files untracked, the marker
+> kept. Production converges through the deploy sweep. Still open here: the
+> marker question (layout workstream), the resilience ask for unknown session
+> ids, and the hidden `config/.migrations.jsonl` residue.
