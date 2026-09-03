@@ -155,20 +155,54 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 `,
   );
 
-  // Always write .gitignore (keep in sync with bbx version). A box's tricks live
-  // at `packageRoot/src/tricks/`, outside `boxRoot` (`content/`) entirely, so no
-  // trick-dependencies entry belongs here; that box's `src/tricks/node_modules/`
-  // is already covered by the package root's own `.gitignore` (`ROOT_GITIGNORE`
-  // in `./box-package.js`).
-  //
-  // The trailing asset block comes from `attachments-gitignore.ts` rather than
-  // being spelled out here — the two must be identical, and an inlined copy is
-  // what let `bbx init` keep writing the manifest-scheme block onto boxes that
-  // had migrated to git-annex.
+  await writeBoxGitignore(resolvedRoot, { annexed });
+
+  // Install tricks types.d.ts and CLAUDE.md if missing
+  await installTricksFiles(resolvedRoot);
+
+  // Install schemas guide CLAUDE.md if missing
+  await installSchemasGuide(resolvedRoot);
+
+  // Install views CLAUDE.md if missing
+  await installViewsGuide(resolvedRoot);
+
+  // Initialize git repo (only on fresh init) — don't commit yet;
+  // the init command installs more files (schedules, procedures, etc.)
+  // after this returns and commits everything together.
+  if (!options.skipGit && !isUpdate) {
+    const isExistingRepo = await isRepo(resolvedRoot);
+    if (!isExistingRepo) {
+      await initRepo(resolvedRoot, options.branch ?? "main");
+    }
+  }
+
+  return { isUpdate };
+}
+
+/**
+ * Write the box's `.gitignore` from the current rendering. `bbx init` calls
+ * this on every run, and the `gitignore-2026-09` migration calls it once per
+ * existing box: the 2026-08 rename changed the state directory and the lock
+ * and pid names, and a box that kept its pre-rename file ignored nothing
+ * current, so its next autocommit swept the whole state directory in.
+ *
+ * Always write .gitignore (keep in sync with bbx version). A box's tricks live
+ * at `packageRoot/src/tricks/`, outside `boxRoot` (`content/`) entirely, so no
+ * trick-dependencies entry belongs here; that box's `src/tricks/node_modules/`
+ * is already covered by the package root's own `.gitignore` (`ROOT_GITIGNORE`
+ * in `./box-package.js`).
+ *
+ * The trailing asset block comes from `attachments-gitignore.ts` rather than
+ * being spelled out here — the two must be identical, and an inlined copy is
+ * what let `bbx init` keep writing the manifest-scheme block onto boxes that
+ * had migrated to git-annex.
+ */
+export async function writeBoxGitignore(boxRoot: string, options: { annexed: boolean }): Promise<void> {
+  const { annexed } = options;
   const gitignore = `# Bee Box .gitignore
-# Lock files
+# Lock files (every .bbx-*.lock: reactor, trick-commit, and whatever comes next)
 .bbx-lock
-.bbx-reactor.lock
+.bbx-*.lock
 
 # Local config (credentials, etc.)
 config/connectors/*.secret.*
@@ -195,28 +229,7 @@ tmp/
 *~
 
 ${annexed ? UNIGNORE_BLOCK : GITIGNORE_BLOCK}`;
-  await fs.writeFile(path.join(resolvedRoot, ".gitignore"), gitignore);
-
-  // Install tricks types.d.ts and CLAUDE.md if missing
-  await installTricksFiles(resolvedRoot);
-
-  // Install schemas guide CLAUDE.md if missing
-  await installSchemasGuide(resolvedRoot);
-
-  // Install views CLAUDE.md if missing
-  await installViewsGuide(resolvedRoot);
-
-  // Initialize git repo (only on fresh init) — don't commit yet;
-  // the init command installs more files (schedules, procedures, etc.)
-  // after this returns and commits everything together.
-  if (!options.skipGit && !isUpdate) {
-    const isExistingRepo = await isRepo(resolvedRoot);
-    if (!isExistingRepo) {
-      await initRepo(resolvedRoot, options.branch ?? "main");
-    }
-  }
-
-  return { isUpdate };
+  await fs.writeFile(path.join(boxRoot, ".gitignore"), gitignore);
 }
 
 /**
