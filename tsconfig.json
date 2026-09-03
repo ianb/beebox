@@ -22,6 +22,6 @@
     "lib": ["ES2023"],
     "types": ["node", "@fastify/cookie"]
   },
-  "include": ["feedback-review/eslint.config.ts", "eslint.config.ts", "bin/**/*.ts", "schedules/**/*.ts"],
+  "include": ["feedback-review/eslint.config.ts", "eslint.config.ts", "bin/**/*.ts", "schedules/**/*.ts", "workstreams-app/src/router/**/*.ts"],
   "exclude": ["node_modules", "beebox", "cardworks", "agent-doctest", "canvas-loop", "beebox-clerk", "browse"]
 }

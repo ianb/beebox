@@ -226,7 +226,7 @@ await reloadFixture.cleanup();
 ## Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to "stopped"
 
 Boxholder directive (2026-07-04): a `lazy: true` hub gives each box the same
-lazy/idle semantics `bin/router.ts` already has for whole worktrees. No real
+lazy/idle semantics `workstreams-app/src/router/router.ts` already has for whole worktrees. No real
 process is spawned here either -- `spawnChild`/`checkReady` are faked the
 same way as above, and the idle timer is driven by a tiny `idleMs` so the
 doctest doesn't wait out a real 5-minute default.

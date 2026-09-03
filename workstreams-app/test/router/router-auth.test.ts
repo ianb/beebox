@@ -1,12 +1,12 @@
 // Truth-table tests for the dev router's pure authorization core
-// (bin/router-auth.ts) — Track B, chunk 1 of
+// (workstreams-app/src/router/router-auth.ts) — Track B, chunk 1 of
 // beebox/docs/implemented-plans/expose-dev-router.md. Every "planned" row of the
 // plan's Failure-modes table that maps to the pure gate is a non-vacuous
 // assertion here, driven by injected fakes (no I/O, no server).
 //
 // Run with:
-//   node --import tsx --test bin/router-auth.test.ts
-// (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
+//   node --import tsx --test workstreams-app/test/router/router-auth.test.ts
+// (or `pnpm --dir workstreams-app test`, which runs the router tests with the package suite).
 //
 // NON-VACUITY: each allow test would flip to a deny if the matching guard were
 // neutered, and vice versa — the fakes are set to the exact credential state the
@@ -20,7 +20,7 @@ import {
   type RouterAuthInput,
   type RouterHeaders,
   type BoxTarget,
-} from "./router-auth.js";
+} from "../../src/router/router-auth.js";
 
 // --- fake deps ----------------------------------------------------------------
 // Default: deny everything (no owner, no box resolvable, no mobile/agent/csrf).

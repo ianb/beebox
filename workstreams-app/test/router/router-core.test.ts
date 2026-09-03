@@ -1,13 +1,13 @@
 // Incident tests for the worktree lifecycle engine's STARTUP path
-// (bin/router-core.ts → bin/router-worktree-start.ts): TOCTOU dedupe
+// (workstreams-app/src/router/router-core.ts → workstreams-app/src/router/router-worktree-start.ts): TOCTOU dedupe
 // (bin/docs/router-protocol.md invariant #2), backend source freshness, and
 // rejection discipline (#3). The teardown-side incidents (#4, #5, #6) live in
-// bin/router-core-teardown.test.ts; both drive the same deterministic fakes from
-// bin/router-core-harness.ts.
+// workstreams-app/test/router/router-core-teardown.test.ts; both drive the same deterministic fakes from
+// workstreams-app/src/router/router-core-harness.ts.
 //
 // Run with:
-//   node --import tsx --test bin/router-core.test.ts
-// (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
+//   node --import tsx --test workstreams-app/test/router/router-core.test.ts
+// (or `pnpm --dir workstreams-app test`, which runs the router tests with the package suite).
 //
 // NON-VACUITY: every incident test fails when the guard it covers is neutered —
 // the specific neuter and observed failure are recorded in the implementation
@@ -16,7 +16,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { FakeChildExitError, makeHarness, startReady, ticks } from "./router-core-harness.js";
-import { readyLifecycle } from "./router-lifecycle.js";
+import { readyLifecycle } from "../../src/router/router-lifecycle.js";
 
 // --- group 2: TOCTOU dedupe (invariant #2) ------------------------------------
 

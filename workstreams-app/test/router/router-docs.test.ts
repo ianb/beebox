@@ -1,14 +1,14 @@
 // Unit tests for router-docs.ts's per-worktree dev/tools.json cards. Run with:
-//   node --import tsx --test bin/router-docs.test.ts
-// (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
+//   node --import tsx --test workstreams-app/test/router/router-docs.test.ts
+// (or `pnpm --dir workstreams-app test`, which runs the router tests with the package suite).
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { readDevTools, renderWorktreeToolCards, serveDev, type DevResponse } from "./router-docs.js";
-import { appendClosedIssuePills, findClosedIssueLinkHrefs, renderMarkdownToHtml } from "./router-markdown.js";
+import { readDevTools, renderWorktreeToolCards, serveDev, type DevResponse } from "../../src/router/router-docs.js";
+import { appendClosedIssuePills, findClosedIssueLinkHrefs, renderMarkdownToHtml } from "../../src/router/router-markdown.js";
 
 test("closed issue links in docs receive a status pill", () => {
   const markdown =

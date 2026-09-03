@@ -1,6 +1,6 @@
-// Tests for the REAL RouterAuthDeps (bin/router-auth-deps.ts) — Track B, chunk
+// Tests for the REAL RouterAuthDeps (workstreams-app/src/router/router-auth-deps.ts) — Track B, chunk
 // 2a of beebox/docs/implemented-plans/expose-dev-router.md. These exercise the wiring
-// the pure gate (bin/router-auth.ts, covered by bin/router-auth.test.ts) can't:
+// the pure gate (workstreams-app/src/router/router-auth.ts, covered by workstreams-app/test/router/router-auth.test.ts) can't:
 // the single slug→box source of truth (duplicate ⇒ fail closed; a non-box
 // segment ⇒ the worktree-root/session sentinel, NOT a deny), the per-box mobile
 // keying, the owner-session (gen-aware) check, and the CSRF rule.
@@ -11,15 +11,15 @@
 // takes the hub path. Set BEFORE importing the auth module (secret is cached).
 //
 // Run with:
-//   node --import tsx --test bin/router-auth-deps.test.ts
+//   node --import tsx --test workstreams-app/test/router/router-auth-deps.test.ts
 
 import assert from "node:assert/strict";
 import { test, before, after } from "node:test";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
-import type { ResolvedBoxEntry } from "./box-entry.js";
-import type { RouterHeaders } from "./router-auth.js";
+import type { ResolvedBoxEntry } from "../../src/router/box-entry.js";
+import type { RouterHeaders } from "../../src/router/router-auth.js";
 
 const OWNER = "owner@example.com";
 process.env.BBX_OWNER_EMAIL = OWNER;
@@ -35,10 +35,10 @@ after(async () => {
   await fs.rm(authFileDir, { recursive: true, force: true });
 });
 
-const { createRouterAuthDeps } = await import("./router-auth-deps.js");
-const { signSession } = await import("../beebox/src/webapp/auth.js");
+const { createRouterAuthDeps } = await import("../../src/router/router-auth-deps.js");
+const { signSession } = await import("../../../beebox/src/webapp/auth.js");
 const { signMobileSession, MOBILE_SESSION_TTL_MS } = await import(
-  "../beebox/src/core/mobile/mobile-session.js"
+  "../../../beebox/src/core/mobile/mobile-session.js"
 );
 
 /** A fake worktree/box map: worktree name → its box entries (or null = unknown). */

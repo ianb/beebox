@@ -81,7 +81,7 @@ h2 small { color: #827d75; font-size: .78em; font-weight: 500; }
 .browse-prose { max-width: 46rem; }
 
 /*
- * highlight.js colours, copied from `bin/router-docs.ts` so the doc reader this
+ * highlight.js colours, copied from `workstreams-app/src/router/router-docs.ts` so the doc reader this
  * browser consolidates and the browser itself render code identically.
  */
 .hljs-comment, .hljs-quote { color: #6a737d; font-style: italic; }

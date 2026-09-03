@@ -6,7 +6,7 @@
 // different structure from a directory tree — which is why the browser opens on
 // this rather than on a file tree.
 //
-// The computation generalizes working code. `bin/router-docs.ts` already
+// The computation generalizes working code. `workstreams-app/src/router/router-docs.ts` already
 // derives per-file times from `git log --format=%ct --name-only` and falls back
 // to filesystem mtime for untracked files, with the reasoning recorded in
 // place: untracked files "were created after the worktree clone, not shared at

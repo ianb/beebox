@@ -5,8 +5,8 @@ import { test } from "node:test";
 import {
   bootstrapMobileSessionCookie,
   mobileBootstrapTarget,
-} from "./router-mobile-bootstrap.js";
-import type { RouterAuthDecision } from "./router-auth.js";
+} from "../../src/router/router-mobile-bootstrap.js";
+import type { RouterAuthDecision } from "../../src/router/router-auth.js";
 
 const allowedBox: RouterAuthDecision = {
   allow: true,

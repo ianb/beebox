@@ -5,7 +5,7 @@ Real local boxes belong in the main checkout's gitignored `beebox/.env`
 
 ```ts setup
 import path from "node:path";
-import { MAIN_BOX_DEFAULTS } from "../../../bin/router-config.js";
+import { MAIN_BOX_DEFAULTS } from "../../../workstreams-app/src/router/router-config.js";
 ```
 
 ```ts

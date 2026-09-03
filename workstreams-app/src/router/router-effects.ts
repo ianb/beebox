@@ -6,7 +6,7 @@
 // depend on these shapes without depending on each other.
 //
 // router.ts constructs the REAL effects (execa, get-port, the serialized pidfile
-// store, http.request probes); bin/router-core.test.ts substitutes deterministic
+// store, http.request probes); workstreams-app/test/router/router-core.test.ts substitutes deterministic
 // fakes.
 
 import fs from "node:fs/promises";

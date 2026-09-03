@@ -14,7 +14,7 @@ import { getApiBase } from "../../api";
 import { trpc } from "../../lib/trpc";
 import { ExternalLink } from "../ui/ExternalLink";
 
-/** The dev router listens here (`bin/router.ts` ROUTER_PORT). We don't pre-fill
+/** The dev router listens here (`workstreams-app/src/router/router.ts` ROUTER_PORT). We don't pre-fill
  *  it as a *per-box* `--target`: viewing `/admin` on `localhost:3210` means
  *  you're on the router, and exposing the *whole* authenticated router is the
  *  explicit dev-machine path (the note at the bottom of this section), not a

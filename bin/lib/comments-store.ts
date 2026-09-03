@@ -40,7 +40,7 @@ import { z } from "zod";
 
 // The canonical guards, rather than an `as` cast on a caught `unknown`
 // (`beebox/code-style.md`). bin/ already imports from beebox —
-// see bin/router-auth.ts.
+// see workstreams-app/src/router/router-auth.ts.
 import { errnoCode, errorMessage } from "../../beebox/src/lib/error-guards.js";
 import { InvalidCommentPathError } from "./comments-store-errors.js";
 // The canonical cross-process lock. Its docblock is explicit: "This is the
