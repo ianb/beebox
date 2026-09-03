@@ -52,7 +52,9 @@ export class BlocklistError extends Error {
 /** A `re:` entry whose pattern the RegExp engine rejects. */
 class InvalidBlocklistRegexError extends BlocklistError {
   constructor(line: number, detail: string) {
-    super(`invalid regex on line ${line}: ${detail}`);
+    // The engine's message repeats the whole pattern, which is the blocked
+    // vocabulary itself; keep only the reason after it.
+    super(`invalid regex on line ${line}: ${detail.replace(/^Invalid regular expression: \/.*\/[a-z]*: /, "")}`);
     this.name = "InvalidBlocklistRegexError";
   }
 }
