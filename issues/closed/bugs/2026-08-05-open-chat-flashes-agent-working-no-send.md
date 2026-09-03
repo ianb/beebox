@@ -1,11 +1,16 @@
 ---
 title: "Opening an existing chat briefly flashes 'Agent is working' with no message sent (web + iOS)"
 workstream: emission-model
-needs: [manual-testing]
 area: beebox
 filed-by: agent
 discovered-in: main session — boxholder opened a landmark's most-recent chat
+resolution: implemented
 ---
+
+> **Closed 2026-09-02.** The boxholder confirmed on the affected real box that
+> the false “Agent is working…” flash is fixed. This clears the manual-testing
+> gate for the refresh-cause fix in `b8cb4865d` and its loading edge fix in
+> `be0f26c1b`.
 
 > **Root-caused and fixed 2026-08-23 (emission-model).** Reopened by the
 > boxholder the same day: opening a chat still flashed "Agent working" a couple
@@ -52,12 +57,13 @@ discovered-in: main session — boxholder opened a landmark's most-recent chat
 > reconcile — matches pre-fix timing (the old `"clearing"` path hid that
 > refresh too) and the agent genuinely is done then; no change.
 
-## Manual testing
+## Manual testing — done 2026-09-02
 
 On the box where it was seen (web and iOS): open an existing chat, wait ~10s
 without sending anything. Expected: no "Agent is working…" strip at any point.
 The earlier (2026-08-06) fix was closed on green tests and reopened, so this one
-stays gated until seen on the real box.
+stayed gated until seen on the real box. The boxholder confirmed the fix on
+2026-09-02.
 
 > **Checked 2026-08-18 — half fixed; the half that isn't cosmetic is still
 > live.** Tagged `reconfirm`; removed.
@@ -150,7 +156,7 @@ was not inspected from this worktree.
 
 1. **Real lingering turn.** The session had a queued/in-flight turn — this box has
    had stuck/duplicate turns from the receipt-failure family
-   ([chat-send-receipts-fail-often…](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md))
+   ([chat-send-receipts-fail-often…](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md))
    — and opening it shows the tail finishing, so `busy` is technically correct but
    surprising (the user didn't cause it, and no new output appears).
 2. **Spurious starting / status-race flash.** Opening the session momentarily reads
