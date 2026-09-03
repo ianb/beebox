@@ -6,6 +6,7 @@ authored or that are public-domain need no attribution.
 
 | File | Source | Author | License |
 |------|--------|--------|---------|
+| `book-close.wav` | https://freesound.org/people/Valenspire/sounds/699301/ | Valenspire | see freesound page |
 | `recording-error.wav` | https://freesound.org/people/BananaMilkshake/sounds/642600/ | BananaMilkshake | CC BY 4.0 |
 | `krell-alarm-7.wav` | https://freesound.org/people/SoapBoxRocket/sounds/846141/ | SoapBoxRocket | see freesound page |
 

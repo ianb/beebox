@@ -80,7 +80,7 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
     entries = await loadSchedules(deps.schedulesRoot);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    await deps.notify({ title: "beebox schedules", message: `cannot write the schedule store: ${message}` });
+    await notifyStoreFailure(deps, message);
     return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
   }
 
@@ -110,7 +110,7 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      await deps.notify({ title: "beebox schedules", message: `cannot write the schedule store: ${message}` });
+      await notifyStoreFailure(deps, message);
       return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
     }
     return { exitCode: 0, reports: [{ kind: "skipped", name: "tick", reason }], invalid: [], heartbeatError: null };
@@ -124,7 +124,7 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
   } catch (e) {
     await releaseLock(deps.storeRoot, TICK_LOCK_NAME);
     const message = e instanceof Error ? e.message : String(e);
-    await deps.notify({ title: "beebox schedules", message: `cannot write the schedule store: ${message}` });
+    await notifyStoreFailure(deps, message);
     return { exitCode: 1, reports: [], invalid: [], heartbeatError: message };
   }
 
@@ -151,4 +151,13 @@ export async function tick(deps: RunnerDeps): Promise<TickResult> {
   // the launchd log meaningful.
   await updateStoreState(deps.storeRoot, { lastTickAt: startedAt.toISOString(), lastTickExit: 0 });
   return { exitCode: 0, reports, invalid, heartbeatError: null };
+}
+
+async function notifyStoreFailure(deps: RunnerDeps, message: string): Promise<void> {
+  await deps.notify({
+    title: "beebox schedules",
+    message: `cannot write the schedule store: ${message}`,
+    group: "schedule-store-failure",
+    destination: "http://localhost:3210/workstreams/streams",
+  });
 }

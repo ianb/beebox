@@ -56,7 +56,7 @@ async function makeV2Box() {
   // Git (like `.claude/`) lives at the package root for a v2 box; a trick's
   // auto-commit (`commitIfDirty`, keyed off `boxRoot` = `content/`) still
   // finds it by walking up, same as real usage.
-  execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
+  execSync("git init -q -b main && git add -A && git commit --allow-empty -m init -q", {
     cwd: root,
     stdio: "pipe",
   });

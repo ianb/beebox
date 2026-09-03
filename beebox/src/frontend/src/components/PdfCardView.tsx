@@ -187,7 +187,7 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
   );
 
   const showOriginal = () => {
-    onNavigate({ path: data.path, viewer: ORIGINAL_RENDERER_NAME, params: {} });
+    onNavigate({ path: data.path, viewer: ORIGINAL_RENDERER_NAME, params: {}, viewState: null });
   };
 
   // The canonical extraction is a file in the attach scope, not a view of this
@@ -195,7 +195,7 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
   const doclingPath =
     fields.doclingRef === null ? null : resolveRelativePath(data.path, fields.doclingRef);
   const showExtraction = () => {
-    if (doclingPath !== null) onNavigate({ path: doclingPath, viewer: null, params: {} });
+    if (doclingPath !== null) onNavigate({ path: doclingPath, viewer: null, params: {}, viewState: null });
   };
 
   return (

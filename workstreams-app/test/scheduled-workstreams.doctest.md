@@ -199,6 +199,7 @@ const alerts = renderToStaticMarkup(createElement(ScheduleAlertList, {
   ],
   acknowledging: null,
   error: null,
+  selectedAlert: "20260824-115000-ab12",
   onAcknowledge: () => undefined,
 }));
 JSON.stringify({
@@ -207,9 +208,40 @@ JSON.stringify({
   markdownDetails: alerts.includes("<h2>Findings</h2>") && alerts.includes("<code>src/a.ts</code>"),
   acknowledgeButton: alerts.includes("Acknowledge</button>"),
   foldedAcknowledged: alerts.includes("<details") && alerts.includes("Docling 2.4 settled"),
+  selectedAddressable: alerts.includes('id="schedule-alert-20260824-115000-ab12"') && alerts.includes("schedule-alert-selected"),
   openCount: alerts.includes("1 open"),
 })
-=> {"title":true,"priority":true,"markdownDetails":true,"acknowledgeButton":true,"foldedAcknowledged":true,"openCount":true}
+=> {"title":true,"priority":true,"markdownDetails":true,"acknowledgeButton":true,"foldedAcknowledged":true,"selectedAddressable":true,"openCount":true}
+```
+
+An old notification can still reveal an alert after it has been acknowledged.
+
+```ts
+const acknowledgedSelection = renderToStaticMarkup(createElement(ScheduleAlertList, {
+  alerts: [alert({ id: "20260810-090000-cd34", state: "acknowledged", acknowledgedAt: "2026-08-11T09:00:00.000Z" })],
+  acknowledging: null,
+  error: null,
+  selectedAlert: "20260810-090000-cd34",
+  onAcknowledge: () => undefined,
+}));
+JSON.stringify({
+  disclosureOpen: acknowledgedSelection.includes('<details class="schedule-alerts-acknowledged" open=""'),
+  selectedAddressable: acknowledgedSelection.includes('id="schedule-alert-20260810-090000-cd34"') && acknowledgedSelection.includes("schedule-alert-selected"),
+})
+=> {"disclosureOpen":true,"selectedAddressable":true}
+```
+
+## Notification deep links resolve to the alert route
+
+The producer and browser share the `/alerts/<schedule>?alert=<id>` contract.
+
+```ts
+router.buildLocation({
+  to: "/alerts/$name",
+  params: { name: "full-suite" },
+  search: { alert: "20260824-115000-ab12" },
+}).href
+=> /workstreams/alerts/full-suite?alert=20260824-115000-ab12
 ```
 
 ## Reading and acknowledging go through `bin/schedules`

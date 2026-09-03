@@ -6,6 +6,7 @@ labels: [flaky, timeout, load]
 filed-by: agent
 discovered-by: agent
 discovered-in: /finish for the commit-provenance-trailers stream, full beebox suite run under load averages 28-40 (many concurrent sibling sessions)
+resolution: superseded
 ---
 
 ## What happened
@@ -57,3 +58,10 @@ a repeat under similar load conditions is recognized as this same flake
 rather than re-investigated from scratch. If it recurs often, consider
 scaling timeout budgets by measured wall-clock slowdown, or excluding these
 tests from concurrent-load runs.
+
+## 2026-09-02 — closed: superseded
+
+Consolidated with the other load-timeout filings into
+[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+the harness-side fix (quiet-host wait, slowdown-gated verdicts, import-cone
+attribution) landed from the full-suite-verdicts workstream.

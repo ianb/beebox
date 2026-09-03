@@ -10,6 +10,8 @@ import { forgetBoxSecret, setAndGrantSecret } from "../../../core/secrets/lifecy
 import { boxSlug } from "../../../lib/box-slug.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
+import { createCodexCliService } from "../../../services/codex-cli.js";
+import { resetCodexAuthCache } from "../../../core/agent/auth-preflight.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
@@ -317,6 +319,30 @@ export const adminRouter = router({
   claudeLogout: ownerProcedure.mutation(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     return claude.authLogout();
+  }),
+
+  codexStatus: ownerProcedure.query(async ({ ctx }) => {
+    const codex = ctx.services.codexCli ?? createCodexCliService();
+    return codex.authStatus();
+  }),
+
+  codexLogin: ownerProcedure.mutation(async ({ ctx }) => {
+    const codex = ctx.services.codexCli ?? createCodexCliService();
+    return codex.authLogin();
+  }),
+
+  codexCancelLogin: ownerProcedure.mutation(async ({ ctx }) => {
+    const codex = ctx.services.codexCli ?? createCodexCliService();
+    const result = await codex.authCancel();
+    if (!result.success) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error ?? "Could not cancel Codex login" });
+    return result;
+  }),
+
+  codexLogout: ownerProcedure.mutation(async ({ ctx }) => {
+    const codex = ctx.services.codexCli ?? createCodexCliService();
+    const result = await codex.authLogout();
+    if (result.success) resetCodexAuthCache();
+    return result;
   }),
 
   /**

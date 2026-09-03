@@ -27,6 +27,10 @@ import {
   type ResolvedRef,
 } from "../lib/view-host";
 import { type NavigateHint, type ViewTarget } from "../lib/view-url";
+import { viewSlugFromSourcePath } from "../lib/view-source-path";
+import { type ViewState } from "../lib/view-url";
+import type { ViewHistory } from "@core/views/types.js";
+import { useViewHistory } from "../hooks/useViewHistory";
 // Side effect: installs window.__bbxViewWidgets so the compiler's
 // `beebox/view-widgets` shim can hand CardLink/CardRef to compiled views.
 import "./view-widgets";
@@ -50,6 +54,7 @@ interface ViewProps extends ViewFileHelpers {
   navigate: (path: string) => void;
   boxSlug: string;
   params: Record<string, string>;
+  viewHistory: ViewHistory;
   /**
    * Report user activity on this card to the chat's companion-pane accumulator,
    * with an optional free-text detail surfaced as the `<card-activity>` element text (e.g. the query
@@ -105,6 +110,9 @@ interface AgentViewRendererProps {
   mode: ViewMode;
   /** Query parameters passed to the view component and cards API. */
   params?: Record<string, string>;
+  viewState?: ViewState | null;
+  canPushViewState?: boolean;
+  onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
   /** Companion-pane activity reporter; omitted for inline/page renders. */
   reportActivity?: (kind: ActivityKind, detail?: string) => void;
   /**
@@ -119,7 +127,7 @@ interface AgentViewRendererProps {
    * by the mount site (which owns FileView) so AgentAgentViewRenderer never imports
    * FileView (that would form a value-import cycle). Omitted → expand is a no-op.
    */
-  renderInline?: (cardPath: string) => ReactNode;
+  renderInline?: (target: ViewTarget) => ReactNode;
 }
 
 /**
@@ -144,7 +152,7 @@ function buildViewHost(args: {
   boxSlug: string | undefined;
   basePath: string;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  renderInline?: (cardPath: string) => ReactNode;
+  renderInline?: (target: ViewTarget) => ReactNode;
 }): ViewHost {
   const { boxSlug, basePath, onNavigate, renderInline } = args;
   return {
@@ -156,7 +164,7 @@ function buildViewHost(args: {
       // expansion already shows its own `missing` badge (the resolver reports
       // exists:false for escapes), so rendering nothing here isn't silent.
       if (target === null || renderInline === undefined) return null;
-      return renderInline(target.path);
+      return renderInline(target);
     },
     basePath,
     boxSlug: boxSlug || "",
@@ -205,10 +213,11 @@ async function fetchCardsJson(url: string): Promise<CardsPayload> {
   return data;
 }
 
-export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
+export function AgentViewRenderer({ slug: rawSlug, mode, params, viewState, canPushViewState: canPushArg, onViewStateChange, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
+  const canPushViewState = canPushArg ?? false;
   const viewParams = params || {};
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();
@@ -296,7 +305,7 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
       if (fileChange) {
         const changedPath = fileChange.path;
         // View source changed — reload module
-        if (changedPath === `views/${slug}.tsx`) {
+        if (viewSlugFromSourcePath(changedPath) === slug) {
           void loadModule();
         }
         // Card changed — reload data. Non-card files reload too when they
@@ -327,6 +336,8 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
   const fileHelpers = useViewFileHelpers(apiBase);
   const report = useCallback((kind: ActivityKind, detail?: string) => { reportActivity?.(kind, detail); }, [reportActivity]);
   const activityHelpers = useMemo(() => withModifiedReporting(fileHelpers, report), [fileHelpers, report]);
+
+  const viewHistory = useViewHistory({ slug, state: viewState, canPush: canPushViewState, onChange: onViewStateChange });
 
   const viewNavigate = useCallback((path: string) => {
     if (boxSlug) {
@@ -383,6 +394,7 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
             navigate={viewNavigate}
             boxSlug={boxSlug || ""}
             params={viewParams}
+            viewHistory={viewHistory}
             reportActivity={report}
           />
         </ViewHostProvider>

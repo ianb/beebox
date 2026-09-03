@@ -83,6 +83,8 @@ export interface BoxWatcherLimits {
 /** Everything {@link ensureBoxWatcher} needs beyond the box root. */
 export interface EnsureBoxWatcherOptions extends BoxWatcherLimits {
   eventBus: EventBus;
+  /** Additional authored-code directories outside `boxRoot` to watch. */
+  additionalRoots?: Array<{ path: string; eventPathPrefix: string }>;
 }
 
 /** A watcher's resolved bounds — every field settled, none optional. */
@@ -148,17 +150,28 @@ class BoxWatcher implements BoxWatcherHandle {
 
   private readonly eventBus: EventBus;
   private readonly limits: ResolvedLimits;
+  private readonly roots: Array<{ path: string; eventPathPrefix: string }>;
 
   constructor(private readonly boxRoot: string, opts: EnsureBoxWatcherOptions) {
     this.eventBus = opts.eventBus;
     this.limits = resolveLimits(opts);
+    this.roots = [
+      { path: boxRoot, eventPathPrefix: "" },
+      ...(opts.additionalRoots ?? []),
+    ];
+  }
+
+  private rootFor(absPath: string): { path: string; eventPathPrefix: string } | null {
+    return this.roots.find((root) => absPath === root.path || absPath.startsWith(root.path + path.sep)) ?? null;
   }
 
   /** Whether `absPath` is excluded from watching and from emission. */
   private ignored(absPath: string): boolean {
-    const rel = path.relative(this.boxRoot, absPath);
+    const root = this.rootFor(absPath);
+    if (root === null) return true;
+    const rel = path.relative(root.path, absPath);
     if (DOT_SEGMENT.test(rel)) return true;
-    return HIGH_CHURN_DIRS.some((dir) => rel === dir || rel.startsWith(dir + path.sep));
+    return root.path === this.boxRoot && HIGH_CHURN_DIRS.some((dir) => rel === dir || rel.startsWith(dir + path.sep));
   }
 
   /** Reserve one of the bounded watch slots before the first filesystem await. */
@@ -388,7 +401,12 @@ class BoxWatcher implements BoxWatcherHandle {
    */
   private emit(event: string, absPath: string): void {
     if (this.closed) return;
-    const rel = path.relative(this.boxRoot, absPath);
+    const root = this.rootFor(absPath);
+    if (root === null) return;
+    const localPath = path.relative(root.path, absPath);
+    const rel = root.eventPathPrefix
+      ? path.join(root.eventPathPrefix, localPath)
+      : localPath;
     const key = `${event}\0${rel}`;
 
     const open = this.windows.get(key);
@@ -461,7 +479,10 @@ export function ensureBoxWatcher(boxRoot: string, opts: EnsureBoxWatcherOptions)
   if (existing) return existing;
   const watcher = new BoxWatcher(boxRoot, opts);
   watchers.set(boxRoot, watcher);
-  watcher.ready = watcher.addDir(boxRoot).catch((e: unknown) => {
+  watcher.ready = Promise.all([
+    watcher.addDir(boxRoot),
+    ...(opts.additionalRoots ?? []).map((root) => watcher.addDir(root.path)),
+  ]).then(() => {}).catch((e: unknown) => {
     console.error(`[box-watcher] initial walk of ${boxRoot} failed:`, e);
   });
   return watcher;

@@ -4028,6 +4028,30 @@ test1:
       peak: 47134
       added: 0
       turns: 1
+  no-self-jargon:
+    - date: 2026-09-02T19:32:44.303Z
+      boxCommit: 8a488c951173b704888eb2986beb35148dab3a59
+      repoCommit: 3c1ecdea047ba2521199a76e1e1b4b8b3b4bf07d
+      initial: 40841
+      peak: 40841
+      added: 0
+      turns: 2
+  record-quantity-field:
+    - date: 2026-09-02T19:32:59.201Z
+      boxCommit: 8a488c951173b704888eb2986beb35148dab3a59
+      repoCommit: 3c1ecdea047ba2521199a76e1e1b4b8b3b4bf07d
+      initial: 40833
+      peak: 43368
+      added: 2535
+      turns: 5
+  authored-view-history-state:
+    - date: 2026-09-02T18:05:46.905Z
+      boxCommit: c64cb6c28b98b15726a9799038da192a005c42c8
+      repoCommit: 969687b954cccd2ef2b942dce4ff9912ceead52e
+      initial: 40814
+      peak: 53913
+      added: 13099
+      turns: 7
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

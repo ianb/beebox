@@ -131,9 +131,9 @@ export function CommitTab({
         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           {sessionId ? (
             <TrailerChip
-              label="session"
+              label="chat"
               value={`${sessionId.slice(0, 8)}…`}
-              title={onFilterSession ? `Show only this session (${sessionId})` : sessionId}
+              title={onFilterSession ? `Show only this chat (${sessionId})` : sessionId}
               onClick={onFilterSession ? () => onFilterSession(sessionId) : undefined}
             />
           ) : null}

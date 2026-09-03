@@ -36,7 +36,7 @@ function RefLink({ refPath }: { refPath: string }): ReactNode {
   return (
     <button
       type="button"
-      onClick={() => nav.onNavigate({ path: resolved, viewer: null, params: {} }, { label: refPath })}
+      onClick={() => nav.onNavigate({ path: resolved, viewer: null, params: {}, viewState: null }, { label: refPath })}
       className="text-warm-600 hover:text-warm-800 underline-offset-2 hover:underline cursor-pointer break-words text-left"
     >
       {refPath}

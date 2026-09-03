@@ -74,7 +74,7 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   "CLAUDE_CONFIG_DIR", // relocates the ~/.claude/ credentials dir the SDK reads.
   "BBX_CLAUDE_PROJECTS_DIR", // src/core/chat/session/transcript-paths.ts, delete-storage.ts -- transcript-dir override doctests rely on.
   "BBX_ORIGIN_ID_FILE", // src/core/chat/session/origin.ts -- machine-id file override doctests rely on.
-  "BBX_CODEX_BINARY", // src/services/codex-sdk-session.ts -- codex binary path override.
+  "BBX_CODEX_BINARY", // services/codex-sdk-session.ts and codex-binary.ts -- diagnostic binary override.
   "DISABLE_TELEMETRY",
   "DISABLE_ERROR_REPORTING",
   "DO_NOT_TRACK",

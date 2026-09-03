@@ -1,4 +1,4 @@
-/** Display policy for the chat's "Agent is working…" status strip. */
+/** Display policy for the chat's "Thinking…" status strip. */
 
 import { useEffect, useRef, useState } from "react";
 import { getChatStatus } from "../../api";
@@ -66,9 +66,9 @@ export function streamWatchdogAdvance(input: { busy: boolean; idlePolls: number 
  *
  * Also the stream watchdog: the machine's `streaming` state is exited ONLY by
  * frames or terminal callbacks on the per-turn WS subscription — if the socket
- * dies and never reconnects, nothing else ever clears "Agent is working…",
+ * dies and never reconnects, nothing else ever clears "Thinking…",
  * while the server (whose `busy` is in-process truth, no WS involved) has long
- * been idle. Seen in a field test: 20+ minutes of "Agent is working…" after
+ * been idle. Seen in a field test: 20+ minutes of "Thinking…" after
  * the turn had finished and written its card. While streaming, poll the
  * server; after STREAM_WATCHDOG_IDLE_POLLS consecutive idle reads, send
  * STREAM_RECOVER — the machine's stalled-stream path, which refreshes history

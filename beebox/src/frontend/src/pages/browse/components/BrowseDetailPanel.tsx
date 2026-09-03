@@ -6,9 +6,10 @@
 
 import { Link } from "@tanstack/react-router";
 import { cardTypeFromName } from "@shared/card-name";
-import { href } from "../../../lib/routing";
+import { href, toSearch } from "../../../lib/routing";
+import { viewStateSearchValue } from "../../../lib/view-url";
 import { displayName } from "../../../lib/display-name";
-import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
+import type { NavigateHint, ViewState, ViewTarget } from "../../../lib/view-url";
 import { FileView } from "../../../components/FileView";
 import { useCardViewBinding } from "../../../lib/view-bindings";
 import { MobileBackButton } from "../../../components/ui/MobileBackButton";
@@ -26,6 +27,8 @@ interface BrowseDetailPanelProps {
   rendererName?: string | null;
   /** Renderer-toggle choice, written back to the URL by the page. */
   onSelectRenderer: (name: string) => void;
+  viewState?: ViewState | null;
+  onViewStateChange: (next: ViewState, method: "push" | "replace") => void;
   selectedCard: { relativePath: string } | null;
   selectedFilePath: string;
   selectedRawFile: string | null;
@@ -44,8 +47,10 @@ export function BrowseDetailPanel({
   onDelete,
   onNavigate,
   onSelectRenderer,
+  onViewStateChange,
   params,
   rendererName,
+  viewState,
   selectedCard,
   selectedFilePath,
   selectedRawFile,
@@ -85,6 +90,11 @@ export function BrowseDetailPanel({
               <Link
                 id="bbx-browse-open-card"
                 to={href(`/${boxSlug}/card/${selectedCard.relativePath}`)}
+                search={toSearch({
+                  ...params,
+                  ...(rendererName ? { view: rendererName } : {}),
+                  ...(viewState ? { viewState: viewStateSearchValue(viewState) } : {}),
+                })}
                 className="text-primary hover:text-primary-dark text-sm"
               >
                 Open full view &rarr;
@@ -114,6 +124,9 @@ export function BrowseDetailPanel({
           onSelectRenderer={onSelectRenderer}
           params={params}
           rendererName={rendererName}
+          viewState={viewState}
+          canPushViewState
+          onViewStateChange={onViewStateChange}
           onClose={onBack}
         />
       </div>

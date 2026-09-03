@@ -14,23 +14,17 @@
 
 import { useMemo } from "react";
 import { useRouterState } from "@tanstack/react-router";
+import { parseViewQuery, type ViewState } from "../lib/view-url";
 
 export interface UrlView {
   /** The `?view=` renderer name, or null. */
   viewer: string | null;
   /** Every other query param, forwarded to the active renderer. */
   params: Record<string, string>;
+  viewState: ViewState | null;
 }
 
 export function useUrlView(): UrlView {
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
-  return useMemo(() => {
-    const params: Record<string, string> = {};
-    let viewer: string | null = null;
-    for (const [key, value] of new URLSearchParams(searchStr)) {
-      if (key === "view") viewer = value;
-      else params[key] = value;
-    }
-    return { viewer, params };
-  }, [searchStr]);
+  return useMemo(() => parseViewQuery(searchStr), [searchStr]);
 }

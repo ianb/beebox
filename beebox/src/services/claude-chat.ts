@@ -387,6 +387,7 @@ export function createChatBackend(): ChatBackend {
   const codex = createCodexChatBackend();
   return {
     requiresClaudeAuth: true,
+    requiresCodexAuth: true,
     start: (opts) => opts.engine === "codex" ? codex.start(opts) : claude.start(opts),
     prewarm: async (opts) => {
       if (opts.engine !== "codex") await claude.prewarm?.(opts);

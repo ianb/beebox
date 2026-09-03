@@ -519,6 +519,9 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
     done
   }
   install_with_retry
+  # Refresh the operator-facing command after every dependency reconciliation.
+  # Internal callers resolve this same direct package dependency themselves.
+  ln -sf /opt/beebox/node_modules/.bin/codex /usr/local/bin/codex
   # Native-module ABI guard. pnpm's side-effects cache keys build artifacts by
   # dependency graph, NOT by Node ABI — after a Node major upgrade, a "clean"
   # reinstall can silently restore a binary compiled for the old ABI (this
@@ -783,7 +786,7 @@ REMOTE
   ssh "root@$SERVER_IP" bash -s <<'TOOLCHECK'
     set -uo pipefail
     missing=""
-    for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv ffmpeg git git-lfs git-annex; do
+    for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv ffmpeg git git-lfs git-annex codex; do
       command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
     done
     python3 -c "import openpyxl" >/dev/null 2>&1 || missing="$missing python3-openpyxl"
@@ -791,6 +794,12 @@ REMOTE
       echo "  FAILED: required runtime tools missing on the server:$missing"
       echo "  Fix: re-run deploy/setup-server.sh on the server (or apt-get install the"
       echo "  missing packages), then redeploy. See setup-server.sh for the package list."
+      exit 1
+    fi
+    codex_check_home=$(mktemp -d)
+    trap 'rm -rf "$codex_check_home"' EXIT
+    if ! CODEX_HOME="$codex_check_home" codex plugin --help >/dev/null; then
+      echo "  FAILED: package-pinned Codex CLI does not support plugins"
       exit 1
     fi
     echo "  Required tools present."

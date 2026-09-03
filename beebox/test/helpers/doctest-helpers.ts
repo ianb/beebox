@@ -57,7 +57,7 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean; annex?:
 
   if (opts?.git) {
     // Git lives at the PACKAGE root (the whole v2 package is one repo).
-    execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
+    execSync("git init -q -b main && git add -A && git commit --allow-empty -m init -q", {
       cwd: packageRoot,
       stdio: "pipe",
     });

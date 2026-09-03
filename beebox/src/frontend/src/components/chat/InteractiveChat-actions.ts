@@ -141,7 +141,7 @@ export function useChatActions(opts: ChatActionsOpts) {
     // right surface here.
     restartChatSubprocess({ sessionId }).catch((e: unknown) => {
       console.error(`[chat] restart process failed for session ${sessionId}:`, e);
-      toastError("Failed to restart the agent process", { cause: e });
+      toastError("Couldn't restart the chat process", { cause: e });
     });
   }, [sessionId]);
 

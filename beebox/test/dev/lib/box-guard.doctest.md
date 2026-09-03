@@ -28,7 +28,7 @@ async function guard(p) {
 
 ```ts
 const root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-guard-"));
-execSync("git init -q", { cwd: root });
+execSync("git init -q -b main", { cwd: root });
 await guard(root)
 => ok
 ```
@@ -59,7 +59,7 @@ await fs.rm(plain, { recursive: true, force: true });
 
 ```ts continue
 const pkgRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-guard-pkg-"));
-execSync("git init -q", { cwd: pkgRoot });
+execSync("git init -q -b main", { cwd: pkgRoot });
 await fs.writeFile(
   path.join(pkgRoot, "package.json"),
   JSON.stringify({ name: "my-box", dependencies: { "beebox": "^0.1.0" } })

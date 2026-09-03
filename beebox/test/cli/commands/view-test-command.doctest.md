@@ -215,7 +215,9 @@ await writeView(box, "page.tsx", `
 export const name = "Page";
 export const dependencies = ["store/**/*.card"];
 export const modes = ["page"];
-export default function Page({ params }) { return <div>{"path: " + (params.path || "none")}</div>; }
+export default function Page({ params, viewHistory }) {
+  return <div>{"path: " + (params.path || "none") + "; canPush: " + viewHistory.canPush}</div>;
+}
 `);
 
 const r = await runViewTest(box.root, ["page", "--path", "box/inbox/Nope.memo.card"]);
@@ -228,6 +230,9 @@ r.stderr.includes("is not among")
 => true
 
 r.stdout.includes("path: box/inbox/Nope.memo.card")
+=> true
+
+r.stdout.includes("canPush: false")
 => true
 ```
 

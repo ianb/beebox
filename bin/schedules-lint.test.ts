@@ -24,7 +24,7 @@ import { execa } from "execa";
 import { lintSchedules, shebangKind, shebangProblem, type LintFinding } from "./lib/schedules-lint.js";
 import { INVALID_SCHEDULE_ALERT_TITLE, tick } from "./lib/schedules-tick.js";
 import { readAlerts, writeAlert } from "./lib/schedules-store.js";
-import type { RunnerDeps } from "./lib/schedules-alerts.js";
+import type { DesktopNotification, RunnerDeps } from "./lib/schedules-alerts.js";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -295,12 +295,12 @@ test("lint --json prints one findings array", async () => {
 
 interface Fake {
   deps: RunnerDeps;
-  notifications: { title: string; message: string }[];
+  notifications: DesktopNotification[];
 }
 
 async function makeDeps(schedulesRoot: string): Promise<Fake> {
   const storeRoot = path.join(await tempDir("lint-store"), "store");
-  const notifications: { title: string; message: string }[] = [];
+  const notifications: DesktopNotification[] = [];
   return {
     notifications,
     deps: {

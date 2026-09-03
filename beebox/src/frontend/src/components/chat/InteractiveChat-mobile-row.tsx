@@ -118,7 +118,7 @@ export function MobileTextareaRow({
           });
         }}
         disabled={!(isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim()}
-        title={isTranscribing || !targetBusy ? "Send" : "Queue message (agent is busy)"}
+        title={isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)"}
       />
     </div>
   );

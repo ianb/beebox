@@ -64,7 +64,7 @@ async function makeV2Fixture() {
   // ROOT_GITIGNORE) — a real `pnpm install` isn't tracked, so reverting it
   // is the fake "pnpm-install-restore" step's job, not git's.
   await fs.writeFile(path.join(packageRoot, ".gitignore"), "node_modules/\n");
-  execSync("git init -q && git add -A && git commit -q -m init", { cwd: packageRoot });
+  execSync("git init -q -b main && git add -A && git commit -q -m init", { cwd: packageRoot });
   return packageRoot;
 }
 
@@ -265,7 +265,7 @@ await fs.rm(packageRoot, { recursive: true, force: true });
 const legacyRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-upgrade-legacy-"));
 await fs.mkdir(path.join(legacyRoot, ".beebox"), { recursive: true });
 await fs.writeFile(path.join(legacyRoot, ".beebox/box.json"), "");
-execSync("git init -q && git add -A && git commit -q -m init --allow-empty", { cwd: legacyRoot });
+execSync("git init -q -b main && git add -A && git commit -q -m init --allow-empty", { cwd: legacyRoot });
 const thrown = await tryUpgrade(legacyRoot, makeFakeRunner({ packageRoot: legacyRoot, calls: [] }), legacyRoot);
 thrown instanceof BoxShapeError
 => true

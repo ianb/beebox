@@ -13,10 +13,12 @@
  */
 
 import { z } from "zod";
+import * as path from "node:path";
 import { tracked } from "@trpc/server";
 import type { BusEvent } from "../../../core/event-bus.js";
 import type { ChatMessage } from "../../../core/chat/session/index.js";
 import { ensureBoxWatcher } from "../../../core/box/file-watcher.js";
+import { resolveViewsDir } from "../../views/compiler.js";
 import { getTurnBuffer } from "../../../core/chat/turn-buffer.js";
 import { router, publicProcedure } from "../trpc.js";
 
@@ -61,7 +63,23 @@ export const eventsRouter = router({
       const signal = opts.signal;
       // The bus's `file-change` events come from this watcher; start it here so
       // the subscription is self-sufficient (the SSE route used to do this).
-      ensureBoxWatcher(opts.ctx.boxRoot, { eventBus: opts.ctx.eventBus });
+      let additionalRoots: Array<{ path: string; eventPathPrefix: string }> = [];
+      try {
+        const { viewsDir } = await resolveViewsDir(opts.ctx.boxRoot);
+        const viewsOutsideBoxRoot = path.relative(opts.ctx.boxRoot, viewsDir).startsWith(`..${path.sep}`);
+        if (viewsOutsideBoxRoot) {
+          additionalRoots = [{ path: path.dirname(viewsDir), eventPathPrefix: "src" }];
+        }
+      } catch (error) {
+        // The event stream is broader than authored-view freshness. If box
+        // shape resolution is temporarily unavailable, retain every existing
+        // event and degrade only package-view live reload until reconnect.
+        console.warn("[events.subscribe] Could not resolve the authored-view directory; watching box content only", error);
+      }
+      ensureBoxWatcher(opts.ctx.boxRoot, {
+        eventBus: opts.ctx.eventBus,
+        ...(additionalRoots.length > 0 ? { additionalRoots } : {}),
+      });
       const afterId = opts.input?.lastEventId ? Number(opts.input.lastEventId) : 0;
       const queue: BusEvent[] = [];
       let coalescedTransients = 0;

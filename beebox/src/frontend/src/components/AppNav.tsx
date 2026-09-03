@@ -26,7 +26,7 @@ import { useBoxName } from "../hooks/useBoxName";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
 import { trpc } from "../lib/trpc";
-import { useErrorCount, clearErrorCount } from "./DebugLog";
+import { useErrorCount, clearErrorCount, hasDebugLogBeenOpened } from "./DebugLog";
 import { Dropdown } from "./ui/Dropdown";
 import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
 import { Avatar } from "./ui/Avatar";
@@ -184,10 +184,16 @@ function PlateBadge({ base, count }: { base: string; count: number }) {
 
 /**
  * Small red dot in the nav bar when console errors have occurred.
+ *
+ * Gated on `hasDebugLogBeenOpened()`: this is a developer affordance, and a
+ * first-run screen must never lead with one, so it stays hidden until the
+ * person has opened the debug log at least once in this browser (the count
+ * still accumulates underneath; the profile menu's "Debug Log" item is the
+ * always-reachable path in).
  */
 function ErrorBadge({ onToggleDebugLog }: { onToggleDebugLog: () => void }) {
   const errorCount = useErrorCount();
-  if (errorCount === 0) return null;
+  if (errorCount === 0 || !hasDebugLogBeenOpened()) return null;
   return (
     <button
       id="bbx-nav-errors"

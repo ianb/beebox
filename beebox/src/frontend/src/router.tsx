@@ -103,7 +103,7 @@ const dashboardRoute = createRoute({
 });
 
 const inventoryRoute = createRoute({
-  staticData: { title: "Inventory" },
+  staticData: { title: "Storage" },
   getParentRoute: () => boxLayoutRoute,
   path: "/inventory",
   component: InventoryPage,

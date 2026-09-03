@@ -207,7 +207,8 @@ class CodexSdkSession {
     const codex = new Codex({
       config: { developer_instructions: options.systemPrompt },
       ...(env === undefined ? {} : { env }),
-      // TODO(env-migration): test/diagnostic binary override; move into the typed env boundary.
+      // Keep the SDK default so it also prepends its vendored tool directory
+      // (notably `rg`). Tests and diagnostics may still select a binary.
       ...(process.env.BBX_CODEX_BINARY === undefined ? {} : { codexPathOverride: process.env.BBX_CODEX_BINARY }),
     });
     const threadOptions = codexSdkThreadOptions(options);

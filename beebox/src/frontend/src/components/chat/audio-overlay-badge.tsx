@@ -90,7 +90,7 @@ export function buildAudioBadgeSpecs(overlay: AudioOverlayEntry, originalText: s
     specs.push({
       kind: "consulted",
       glyph: <EarSparkleGlyph />,
-      label: "The agent analyzed this recording",
+      label: "This recording was analyzed",
       detail: (
         <>
           <div className="text-warm-500 text-[10px] uppercase tracking-wide mt-1.5">

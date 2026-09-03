@@ -139,7 +139,7 @@ function getTemplateBox(): Promise<string> {
       for (const mod of ["react", "react-dom"]) {
         await symlink(join(reactNodeModules, mod), join(dir, "node_modules", mod), "dir");
       }
-      execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
+      execSync("git init -q -b main && git add -A && git commit --allow-empty -m init -q", {
         cwd: dir,
         stdio: "pipe",
       });

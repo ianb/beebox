@@ -245,6 +245,7 @@ URL in tracked files.
 /home/beebox/.env         # Environment variables (API keys)
 /home/beebox/.local/bin/claude  # Claude Code (native install, auto-updates)
 /usr/local/bin/bbx           # CLI symlink
+/usr/local/bin/codex         # Workspace-pinned Codex CLI symlink
 /usr/local/bin/bbx-rebuild   # Rebuild shortcut
 ```
 
@@ -332,6 +333,25 @@ can't silently take over billing. The server authenticates via subscription
 login instead — run `claude auth login` as the `beebox` user
 (`su - beebox -c 'claude auth login'`) once after `setup-server.sh`
 installs the CLI, then it persists in `~/.claude/` for that user.
+
+Codex authentication uses the same service-account custody boundary and its
+own CLI-managed store under `~/.codex/`. Bee Box deliberately does not reuse a
+transcription/search API key or copy a developer's credentials. After the
+workspace install creates `/usr/local/bin/codex`, the box owner normally starts
+the provider-supported device flow from **Admin → Codex**. Bee Box displays the
+short-lived verification URL and code while Codex owns token persistence and
+refresh. For recovery when the web UI is unavailable, the equivalent operator
+commands are:
+
+```bash
+su - beebox -c 'codex login --device-auth'
+su - beebox -c 'codex login status'
+```
+
+The direct `@openai/codex` and `@openai/codex-sdk` dependencies are pinned to
+the same version. Login, plugin management, and history resolve the direct
+package runtime; SDK turns keep the SDK's version-matched vendored binary so
+its bundled tools remain available. The symlink exists for operator commands.
 
 ```
 # Required
