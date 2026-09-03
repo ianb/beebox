@@ -1,6 +1,6 @@
 ---
 title: "Serve thumbnails on demand: a card with a full-resolution photo loads the whole file every time"
-workstream: unattached
+workstream: image-thumbnails
 area: beebox
 labels: [images, performance, ui]
 filed-by: agent
