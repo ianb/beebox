@@ -172,7 +172,7 @@ When you land on `/auth/login`, work through these in order. **The first two are
 | `/__router/…` (control routes) | owner session only |
 | `/workstreams/…` (POST — actions, tRPC mutations) | owner session + same-origin |
 
-The dev surfaces were owner-only until 2026-08-24, which made every issue *about* them boxholder-only to verify. They are reads from disk with no write path, so the browse key now carries them (`dev-read` in `bin/router-auth.ts`). The control routes above deliberately did not move.
+The dev surfaces were owner-only until 2026-08-24, which made every issue *about* them boxholder-only to verify. They are reads from disk with no write path, so the browse key now carries them (`dev-read` in `workstreams-app/src/router/router-auth.ts`). The control routes above deliberately did not move.
 
 Note `/<wt>/dev/docs/…` is a 301 to `/workstreams/browse?file=…` — the doc browser retired into the general browser. Follow the redirect; both ends accept the key.
 

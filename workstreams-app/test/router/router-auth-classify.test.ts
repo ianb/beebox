@@ -1,17 +1,17 @@
 // Route-shape tests for the dev router's URL classifier (`classifyRouterRoute`
-// in bin/router-auth.ts) — Track B, chunk 1 of
+// in workstreams-app/src/router/router-auth.ts) — Track B, chunk 1 of
 // beebox/docs/implemented-plans/expose-dev-router.md. Classification is
 // pure over method + url, so these need none of the credential fakes the
-// authorization truth table in bin/router-auth.test.ts uses; they were split out
+// authorization truth table in workstreams-app/test/router/router-auth.test.ts uses; they were split out
 // of that file to keep both under the file-length limit.
 //
 // Run with:
-//   node --import tsx --test bin/router-auth-classify.test.ts
-// (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
+//   node --import tsx --test workstreams-app/test/router/router-auth-classify.test.ts
+// (or `pnpm --dir workstreams-app test`, which runs the router tests with the package suite).
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { classifyRouterRoute } from "./router-auth.js";
+import { classifyRouterRoute } from "../../src/router/router-auth.js";
 
 // --- classifier ---------------------------------------------------------------
 
@@ -126,7 +126,7 @@ test("classifier: exhaustive route-shape mapping", () => {
 });
 
 test("classifier: a raw `#` in the request target is rejected, whatever it precedes", () => {
-  // The gate strips a fragment; bin/router.ts's dispatch branches do not. Any
+  // The gate strips a fragment; workstreams-app/src/router/router.ts's dispatch branches do not. Any
   // such disagreement is a bypass, so a `#`-bearing target is `unknown` (404)
   // for EVERY route class, not just the dev surfaces.
   const c = (method: string, url: string) => classifyRouterRoute({ method, url });

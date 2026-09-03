@@ -139,7 +139,7 @@ export function isOwnOrigin(url: string, ctx: WorktreeContext): boolean {
  *    initial upgrade and a reconnect after the live socket was destroyed.
  * 2. The dev router treats ANY authorized GET into a box that carries an
  *    `Authorization` header as a mobile-device pairing bootstrap
- *    (`bin/router-mobile-bootstrap.ts`). The browse key is not a device token,
+ *    (`workstreams-app/src/router/router-mobile-bootstrap.ts`). The browse key is not a device token,
  *    so that exchange fails and the router answers the navigation with a hard
  *    `401 Mobile session bootstrap failed.` — measured, not theoretical.
  *    Carrying no bearer sidesteps it. (That trigger is too broad and wants

@@ -23,15 +23,6 @@ importers:
       execa:
         specifier: ^9.6.1
         version: 9.6.1
-      get-port:
-        specifier: ^7.1.0
-        version: 7.2.0
-      highlight.js:
-        specifier: ^11.11.1
-        version: 11.11.1
-      http-proxy-3:
-        specifier: ^1.23.2
-        version: 1.23.2
       yaml:
         specifier: ^2.7.0
         version: 2.9.0
@@ -770,9 +761,15 @@ importers:
       fastify:
         specifier: ^5.7.2
         version: 5.8.5
+      get-port:
+        specifier: ^7.1.0
+        version: 7.2.0
       highlight.js:
         specifier: ^11.11.1
         version: 11.11.1
+      http-proxy-3:
+        specifier: ^1.23.2
+        version: 1.23.2
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -786,6 +783,9 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@fastify/cookie':
+        specifier: ^11.0.2
+        version: 11.0.2
       '@ianbicking/personal-vibe-check':
         specifier: workspace:*
         version: link:../personal-vibe-check

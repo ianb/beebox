@@ -44,7 +44,7 @@
 // serving its socket but lingers at PID 1, so a fresh one spawns on next use
 // and the dead ones accumulate — the pidfile check is what reaps them.)
 //
-// Used by bin/router.ts (startup sweep, aggressive:false) and by
+// Used by workstreams-app/src/router/router.ts (startup sweep, aggressive:false) and by
 // `bin/workstreams panic` (run directly as a CLI, aggressive:true).
 
 import fs from "node:fs/promises";
@@ -58,7 +58,7 @@ import { cwdOf, etimeToSeconds, psRows, type PsRow } from "./process-table.js";
 // surface (beebox/test/dev/process-cleanup-liveness.doctest.md).
 export { etimeToSeconds };
 
-// Mirror bin/router.ts's roots (including the BBX_MAIN_ROOT override) so
+// Mirror workstreams-app/src/router/router.ts's roots (including the BBX_MAIN_ROOT override) so
 // scoping stays identical. BBX_WORKTREE_ROOT is the same override
 // bin/lib/worktree-paths.sh honors — the basename under the parent is
 // convention, not something git knows, and a test needs to point both halves at

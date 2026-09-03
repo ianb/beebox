@@ -1,13 +1,13 @@
 // The REAL RouterAuthDeps the dev router injects into the pure authorization
-// core (bin/router-auth.ts). Track B, chunk 2a of
+// core (workstreams-app/src/router/router-auth.ts). Track B, chunk 2a of
 // beebox/docs/plans/expose-dev-router.md.
 //
 // Every resolver runs beebox's CURRENT code against the TARGET box — the
 // finding-4 fix: the front door authenticates with main's auth even when it
 // proxies an old worktree whose own checkout may lack (or predate) this wall.
 // `bin/` importing `beebox/src` is precedented (bin/doctor.ts,
-// bin/router-auth.ts). This module holds only the resolvers; the listener/gate
-// wiring lives in bin/router.ts.
+// workstreams-app/src/router/router-auth.ts). This module holds only the resolvers; the listener/gate
+// wiring lives in workstreams-app/src/router/router.ts.
 //
 // Gen-revocation is honored because every session read goes through
 // `resolveRequestIdentity` (auth.ts), whose cookie path runs the gen-aware
@@ -23,16 +23,16 @@ import type {
   BoxAccessIdentity,
 } from "./router-auth.js";
 import type { ResolvedBoxEntry } from "./box-entry.js";
-import { resolveRequestIdentity, getOwnerEmail } from "../beebox/src/webapp/auth.js";
-import { canAccessBox } from "../beebox/src/webapp/box-access.js";
-import { resolveMobileRequestAuth } from "../beebox/src/core/mobile/request-auth.js";
-import { verifyAgentBearer } from "../beebox/src/core/agent/token.js";
-import { verifyBrowseKey } from "../beebox/src/core/browse-key.js";
+import { resolveRequestIdentity, getOwnerEmail } from "../../../beebox/src/webapp/auth.js";
+import { canAccessBox } from "../../../beebox/src/webapp/box-access.js";
+import { resolveMobileRequestAuth } from "../../../beebox/src/core/mobile/request-auth.js";
+import { verifyAgentBearer } from "../../../beebox/src/core/agent/token.js";
+import { verifyBrowseKey } from "../../../beebox/src/core/browse-key.js";
 
 /**
  * The router's own worktree/box resolution, injected so the auth deps route by
  * the EXACT same slug→box map the proxy does (plan 2.4, single source of truth).
- * `resolveWorktree` is bin/router.ts's own resolver; `resolveBoxEntries` is
+ * `resolveWorktree` is workstreams-app/src/router/router.ts's own resolver; `resolveBoxEntries` is
  * box-entry.ts's. Passing them (rather than re-importing) keeps one map and
  * lets the deps be unit-tested with fakes.
  */

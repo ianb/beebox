@@ -4,7 +4,7 @@
 // This module is PURE: it classifies a request into a route class and decides
 // allow/deny, given the request facts plus INJECTED auth-resolution functions.
 // It performs no I/O of its own — no fs, no network, no process.env — so the
-// full truth table is unit-testable with trivial fakes (bin/router-auth.test.ts).
+// full truth table is unit-testable with trivial fakes (workstreams-app/test/router/router-auth.test.ts).
 // Chunk 2 wires the live listeners, the real resolvers (resolveRequestIdentity /
 // getOwnerEmail / resolveMobileRequestAuth / the slug→box map), the client
 // `x-bbx-*` strip, and the Set-Cookie Path rewrite around this decision.
@@ -17,9 +17,9 @@
 // classification keys off `/<worktree>/<rest>`. Router infra (`/`, `/__router/*`,
 // `/favicon.*`) lives at the bare root, not under a worktree.
 
-import { assertNever } from "../beebox/src/lib/invariant.js";
-import { isScanUploadSubpath } from "../beebox/src/hub/scan-gate.js";
-import { isPairingRedeemUrl } from "../beebox/src/webapp/routes/pairing.js";
+import { assertNever } from "../../../beebox/src/lib/invariant.js";
+import { isScanUploadSubpath } from "../../../beebox/src/hub/scan-gate.js";
+import { isPairingRedeemUrl } from "../../../beebox/src/webapp/routes/pairing.js";
 
 /**
  * The router-scoped variant of `isPairingRedeemUrl`. The shared matcher is
@@ -305,7 +305,7 @@ export function classifyRouterRoute({ method, url }: { method: string; url: stri
   // A raw `#` in the request target is not a legal origin-form URI (RFC 9112:
   // absolute-path [ "?" query ] — a fragment never travels on the wire, and no
   // browser sends one). It DID travel through this gate: `pathnameOf` strips
-  // it, while bin/router.ts's dispatch branches match on `split("?")[0]` and do
+  // it, while workstreams-app/src/router/router.ts's dispatch branches match on `split("?")[0]` and do
   // not — so `GET /main/dev#x` classified as the dev space and then dispatched
   // as a proxied worktree path instead. Any gate/dispatcher disagreement about
   // what a URL means is a bypass by construction, so reject the whole class

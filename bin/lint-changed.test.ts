@@ -20,6 +20,7 @@ const PACKAGE_DIRS = [
   "beebox/pub-worker",
   "site",
   "personal-vibe-check",
+  "workstreams-app",
 ];
 
 test("frontend source goes to the frontend config, everything else to the root one", () => {
@@ -84,7 +85,7 @@ test("the frontend package is never its own lint run — beebox covers it", () =
   );
   // A genuinely nested package still wins by longest prefix.
   assert.equal(packageOf("beebox/pub-worker/src/w.ts", PACKAGE_DIRS), "beebox/pub-worker");
-  assert.equal(packageOf("bin/router.ts", PACKAGE_DIRS), null);
+  assert.equal(packageOf("workstreams-app/src/router/router.ts", PACKAGE_DIRS), "workstreams-app");
 });
 
 test("the root fan-out reduces to the packages the change touched", () => {
@@ -93,7 +94,7 @@ test("the root fan-out reduces to the packages the change touched", () => {
       "beebox/src/core/box.ts",
       "site/src/index.ts",
       "schedules/nightly/run.ts",
-      "bin/router.ts",
+      "workstreams-app/src/router/router.ts",
     ],
     packageDirs: PACKAGE_DIRS,
     hasScript: (dir, script) => (dir === "beebox" ? true : script === "lint"),
@@ -103,8 +104,8 @@ test("the root fan-out reduces to the packages the change touched", () => {
     [
       "pnpm --dir beebox lint:changed",
       "pnpm --dir site lint",
+      "pnpm --dir workstreams-app lint",
       "bin/schedules lint",
-      "pnpm lint:bin",
     ],
   );
 });
@@ -113,7 +114,7 @@ test("bin/ is linted from the root, and only for the files eslint reads there", 
   const plan = (paths: string[]): string[] =>
     dispatchPlan({ paths, packageDirs: PACKAGE_DIRS, hasScript: () => true }).map((c) => c.label);
   assert.deepEqual(plan(["bin/lib/schedules-store.ts"]), ["pnpm lint:bin"]);
-  assert.deepEqual(plan(["bin/router.test.ts"]), ["pnpm lint:bin"]);
+  assert.deepEqual(plan(["bin/doctor.test.ts"]), ["pnpm lint:bin"]);
   // `bin/land` and `bin/schedules` are shell; `bin/CLAUDE.md` is prose.
   assert.deepEqual(plan(["bin/land", "bin/CLAUDE.md"]), []);
 });

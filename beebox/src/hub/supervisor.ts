@@ -1,7 +1,7 @@
 /**
  * Per-box process supervision for `bbx hub` (Track D, chunk D1 in
  * `docs/implemented-plans/boxes-as-packages-v2.md`). Adapted from the monorepo dev
- * router's spawn/readiness/teardown mechanics (`../../../bin/router.ts`,
+ * router's spawn/readiness/teardown mechanics (`../../../workstreams-app/src/router/router.ts`,
  * `startWorktree`/`onChildExit`/`stopWorktree`), productized as engine code:
  * no lazy-start or idle-shutdown (hub children are resident — schedulers and
  * webhooks want them up), no worktree/Vite concept, and it adds crash-loop
@@ -83,7 +83,7 @@ interface ManagedBox {
   /** Lazy mode only. Set while a cold-start is in flight, so concurrent
    *  requests for the same slug (`ensureRunning`) await the SAME launch
    *  instead of each spawning their own child -- the exact "atomic
-   *  register-then-await" hazard `bin/router.ts`'s `ensureRunning` comment
+   *  register-then-await" hazard `workstreams-app/src/router/router.ts`'s `ensureRunning` comment
    *  documents for worktrees. Cleared once the launch settles. */
   startPromise: Promise<void> | undefined;
   /** Lazy mode only. Last time an HTTP request touched this box (WS
@@ -174,7 +174,7 @@ export class Supervisor implements EndpointProvider {
    * case nothing is spawned here at all: every box starts "stopped" and
    * `ensureRunning()` spawns it on the first HTTP request (boxholder
    * directive, 2026-07-04 -- the same lazy-per-worktree semantics
-   * `bin/router.ts` already has, now available to a production hub for
+   * `workstreams-app/src/router/router.ts` already has, now available to a production hub for
    * memory-constrained hosts). Never rejects -- a box that fails to come up
    * is reported via `getStatuses()`, not thrown.
    */
@@ -235,7 +235,7 @@ export class Supervisor implements EndpointProvider {
   /**
    * Lazy mode only: ensure `slug`'s box is running, spawning it on first
    * request and waiting for readiness if it's currently "stopped" --
-   * mirrors `bin/router.ts`'s `ensureRunning` for worktrees. Concurrent
+   * mirrors `workstreams-app/src/router/router.ts`'s `ensureRunning` for worktrees. Concurrent
    * callers for the same cold slug all await the one in-flight
    * `startPromise` rather than each spawning their own child. Returns the
    * endpoint once ready, or `undefined` if the slug isn't configured or the

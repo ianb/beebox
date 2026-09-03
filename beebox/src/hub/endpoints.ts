@@ -34,7 +34,7 @@ export interface EndpointProvider {
   /**
    * Lazy-mode cold start (boxholder directive, 2026-07-04): for a provider
    * backing a lazy hub, spawn `slug`'s box if it's stopped and wait for it
-   * to become ready, then return its endpoint — mirrors `bin/router.ts`'s
+   * to become ready, then return its endpoint — mirrors `workstreams-app/src/router/router.ts`'s
    * `ensureRunning` for worktrees. A non-lazy provider may implement this as
    * a synchronous-under-the-hood `get(slug)` (see `Supervisor.ensureRunning`),
    * or omit it entirely — HTTP routing in `hub-server.ts` falls back to

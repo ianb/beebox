@@ -1,14 +1,14 @@
 // Unit test for box-entry.ts's pure entry->{contentDir, slug} resolution.
 // No server spawn, no router — just fixture directories on disk. Run with:
-//   node --import tsx --test bin/box-entry.test.ts
-// (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
+//   node --import tsx --test workstreams-app/test/router/box-entry.test.ts
+// (or `pnpm --dir workstreams-app test`, which runs the router tests with the package suite).
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { resolveBoxEntry, boxEntryToArg, BoxMarkerError } from "./box-entry.js";
+import { resolveBoxEntry, boxEntryToArg, BoxMarkerError } from "../../src/router/box-entry.js";
 
 async function makeFixtureDir(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), "box-entry-test-"));
