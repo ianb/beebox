@@ -54,3 +54,26 @@ Shape to decide, not decided:
   the rendered image; a thumbnail changes the pixel size but not the
   proportions, so it should be unaffected, but check the rotated-image case
   (`2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md`).
+
+## Direction: rhyme with Cloudflare Images (boxholder, 2026-09-03)
+
+Do not invent an option vocabulary. Cloudflare's URL transform is
+`/cdn-cgi/image/<options>/<source>` with comma-separated options
+(`width=480,quality=75,format=auto/uploads/photo.jpg`), and every agent and
+every developer already knows it. Mirror it:
+
+- `/api/images/<options>/<box-path>`, options comma-separated, the same
+  names and the same short aliases: `width`/`w`, `height`/`h`,
+  `fit` (`scale-down` default, `contain`, `cover`, `crop`, `pad`;
+  Cloudflare's other three can wait), `quality`/`q` (1–100, default 85),
+  `format`/`f` (`auto`, `avif`, `webp`, `jpeg`), `dpr` (up to 2).
+- `format=auto` picks from the request's `Accept` header, as Cloudflare does.
+- Unknown or out-of-range options are a 400 naming the option, not a silent
+  original. Cloudflare also documents that behaviour.
+- The cache key is the normalised option string plus the source path and its
+  version token, so `w=480` and `width=480` are one entry.
+- The plain file route stays the original; nothing about `/api/files/*`
+  changes. A surface that wants a thumbnail switches URL scheme, which also
+  makes the thumbnail requests visible in logs as their own thing.
+
+Reference: https://developers.cloudflare.com/images/transform-images/transform-via-url/
