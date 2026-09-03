@@ -65,7 +65,9 @@ function ScheduledRow({ row, issues, now }: { row: Workstream; issues: Issue[]; 
           <span aria-hidden="true">{row.session.emoji ?? "·"}</span>{row.name}
         </Link>
         <span className="workstream-description">{row.session.description ?? "No description"}</span>
-        {row.schedule ? <ScheduleFacts schedule={row.schedule} now={now} /> : <span className="workstream-note">schedule unreadable</span>}
+        <span className="schedule-facts">
+          {row.schedule ? <ScheduleFacts schedule={row.schedule} now={now} /> : <span className="workstream-note">schedule unreadable</span>}
+        </span>
         <WorkstreamActions row={row}>
           <Button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? "Hide alerts" : "Alerts"}
