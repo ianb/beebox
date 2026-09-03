@@ -30,6 +30,27 @@ export class PersistedStateConflictError extends Error {
   }
 }
 
+/**
+ * An empty `newPath` directory is not a second generation of state, just a
+ * directory something created ahead of the migration (a hub child booting, a
+ * `mkdir -p` on the canonical path). Treating it as a conflict left boxes and
+ * the machine state directory refusing every command until someone deleted it
+ * by hand (2026-09-03, two local boxes and one launch). Remove it and let the
+ * rename proceed; anything non-empty is still the conflict it always was.
+ */
+async function removeIfEmptyDir(dirPath: string): Promise<boolean> {
+  let entries: string[];
+  try {
+    entries = await fs.readdir(dirPath);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && (error.code === "ENOENT" || error.code === "ENOTDIR")) return false;
+    throw error;
+  }
+  if (entries.length > 0) return false;
+  await fs.rmdir(dirPath);
+  return true;
+}
+
 async function exists(filePath: string): Promise<boolean> {
   try {
     await fs.lstat(filePath);
@@ -63,7 +84,8 @@ async function withMigrationLock<T>(identity: string, fn: () => Promise<T>): Pro
 /** Move one legacy persisted path to its canonical path, or do nothing. */
 async function migratePersistedPath(oldPath: string, newPath: string): Promise<"migrated" | "unchanged"> {
   return withMigrationLock(newPath, async () => {
-    const [oldExists, newExists] = await Promise.all([exists(oldPath), exists(newPath)]);
+    const oldExists = await exists(oldPath);
+    const newExists = await exists(newPath) && !(oldExists && await removeIfEmptyDir(newPath));
     if (oldExists && newExists) throw new PersistedStateConflictError(oldPath, newPath);
     if (!oldExists) return "unchanged";
     await fs.mkdir(path.dirname(newPath), { recursive: true });
@@ -82,9 +104,10 @@ async function migrateBoxStateLocked(boxRoot: string): Promise<"migrated" | "unc
   const newState = path.join(boxRoot, ".beebox");
   const oldMarker = path.join(boxRoot, LEGACY_BOX_MARKER);
   const newMarker = path.join(newState, "box.json");
-  const [oldStateExists, newStateExists, oldMarkerExists, newMarkerExists] = await Promise.all([
-    exists(oldState), exists(newState), exists(oldMarker), exists(newMarker),
+  const [oldStateExists, oldMarkerExists, newMarkerExists] = await Promise.all([
+    exists(oldState), exists(oldMarker), exists(newMarker),
   ]);
+  const newStateExists = await exists(newState) && !(oldStateExists && await removeIfEmptyDir(newState));
 
   // Never combine state from two generations. The only exception is a
   // partial migration we can identify unambiguously: the old state directory
