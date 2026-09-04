@@ -67,19 +67,16 @@ export function verifyAgentBearer(boxRoot: string, authorization: string | undef
 }
 
 /**
- * Resolve the agent token from the CLI's perspective: the env var set by
- * `buildScriptEnv`, falling back to the token file under the current
- * working directory (agents run with cwd at the box root; the fallback also
- * covers manual `bbx` runs from a box). Null when neither is available.
+ * Resolve the agent token from the CLI's perspective: the `BBX_AGENT_TOKEN`
+ * env var set by `buildScriptEnv` — the contract for every spawned agent
+ * subprocess. There is deliberately no cwd fallback: a session whose cwd is
+ * a box *subdirectory* (landmark chats) would silently read a nonexistent
+ * `<subdir>/.beebox/agent-token` and proceed unauthenticated for the wrong
+ * reason. Null when the env var is absent; the caller proceeds
+ * unauthenticated and any auth wall answers with a clear 401.
  */
 export function resolveAgentToken(): string | null {
   const fromEnv = process.env.BBX_AGENT_TOKEN;
   if (fromEnv && fromEnv.length >= MIN_TOKEN_LENGTH) return fromEnv;
-  try {
-    const fromCwd = fs.readFileSync(tokenPath(process.cwd()), "utf-8").trim();
-    if (fromCwd.length >= MIN_TOKEN_LENGTH) return fromCwd;
-  } catch (_e) {
-    // No box at cwd (or no token yet) — caller proceeds unauthenticated.
-  }
   return null;
 }

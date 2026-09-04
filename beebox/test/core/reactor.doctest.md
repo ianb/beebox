@@ -19,12 +19,18 @@ import * as path from "node:path";
 
 ## buildReactorSystemPrompt
 
-### Includes working directory and key instructions
+### Key instructions, and no absolute filesystem paths
+
+The system prompt must never embed the box's absolute path — agent-visible
+text stays box-relative (`docs/plans/one-root-box-layout.md`, criterion 4).
 
 ```ts
-const prompt = buildReactorSystemPrompt("/test/box");
-prompt.includes("WORKING DIRECTORY: /test/box")
+const prompt = buildReactorSystemPrompt();
+prompt.includes("working directory is the box root")
 => true
+
+/\/(Users|home|tmp|private)\//.test(prompt)
+=> false
 
 prompt.includes("processing jobs in a Bee Box")
 => true

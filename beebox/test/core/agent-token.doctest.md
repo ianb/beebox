@@ -73,6 +73,17 @@ resolved === "t".repeat(64)
 => true
 ```
 
+## resolveAgentToken has no cwd fallback
+
+Without the env var it returns null — it never guesses a token file from
+`process.cwd()`, which is a box *subdirectory* in landmark sessions.
+
+```ts
+delete process.env.BBX_AGENT_TOKEN;
+resolveAgentToken()
+=> null
+```
+
 ## Auth wall: agent bearer passes where anonymous requests 401
 
 With auth enabled, an unauthenticated loopback POST is rejected; the same

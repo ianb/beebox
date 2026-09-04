@@ -184,7 +184,7 @@ async function systemPromptLayers(
       name: "Reactor system prompt",
       source: "src/core/reactor/prompts.ts",
       loading: "always",
-      text: buildReactorSystemPrompt(options.boxRoot) + tzContext,
+      text: buildReactorSystemPrompt() + tzContext,
     },
     {
       name: "Reactor user prompt (template)",
