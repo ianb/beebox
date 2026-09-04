@@ -195,7 +195,7 @@ history decision. **No history surgery needed.** The repeatable gate is
   and remove `box.example.com` from product-source comments.
 - **Why.** `beebox/CLAUDE.md:103` (generic tool). Hardcoded:
   `deploy/setup-server.sh:5,40,56`, `deploy/add-box.sh:26-27`,
-  `deploy/create-server.sh`, `deploy/migrate-to-callback-user.sh:77`; real IP in
+  `deploy/hetzner/create-server.sh`; real IP in
   `docs/implemented-plans/box-migration.subplan.md:162`; domain in source comments
   `src/connectors/telegram.ts:269`, `src/frontend/src/lib/audio/mic-tab-lock.ts:10`,
   `src/webapp/routes/admin.ts:31`.

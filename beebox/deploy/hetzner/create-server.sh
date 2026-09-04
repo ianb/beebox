@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
+#
+# ONE EXAMPLE PROVISIONER, NOT THE INSTALL PATH.
+#
+# This creates the specific shape of server the boxholder's deploy.sh ships to:
+# a Hetzner VPS, Ubuntu 24.04, nginx, systemd, DNS through Cloudflare. The
+# supported way to run a Bee Box is the container flow in
+# docs/docker-install.md; everything under deploy/hetzner/ is here because one
+# operator's rsync pipeline needs a host that looks like this, and is useful to
+# read if you are building your own.
+#
+# The constants below (server name, domain, zone, region) are that operator's.
+# Edit them before running, or don't run this at all.
 set -euo pipefail
 
 # ── Config ──────────────────────────────────────────────────────────
@@ -11,13 +23,14 @@ SSH_KEY_PATH="$HOME/.ssh/id_ed25519.pub"
 CF_DOMAIN="box.example.com"
 CF_ZONE="ianbicking.org"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DEPLOY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"   # gitignored operator config lives here
 
 # ── Load .env ───────────────────────────────────────────────────────
-if [[ -f "$SCRIPT_DIR/.env" ]]; then
+if [[ -f "$DEPLOY_DIR/.env" ]]; then
   set -a
   # Operator-authored, gitignored, and absent in a fresh clone.
   # shellcheck source=/dev/null
-  source "$SCRIPT_DIR/.env"
+  source "$DEPLOY_DIR/.env"
   set +a
 fi
 
@@ -68,11 +81,11 @@ SERVER_IP=$(hcloud server ip "$SERVER_NAME")
 # Seed the opt-in deploy config, which is what makes this checkout one that
 # deploys at all (see deploy/target.env.example). Only the host is written; an
 # existing target.env is left alone — it may carry a whole operator's settings.
-if [[ -f "$SCRIPT_DIR/target.env" ]]; then
+if [[ -f "$DEPLOY_DIR/target.env" ]]; then
   echo "Server created at $SERVER_IP"
-  echo "NOTE: $SCRIPT_DIR/target.env already exists — set BBX_DEPLOY_HOST=$SERVER_IP in it yourself."
+  echo "NOTE: $DEPLOY_DIR/target.env already exists — set BBX_DEPLOY_HOST=$SERVER_IP in it yourself."
 else
-  printf 'BBX_DEPLOY_HOST=%s\n' "$SERVER_IP" > "$SCRIPT_DIR/target.env"
+  printf 'BBX_DEPLOY_HOST=%s\n' "$SERVER_IP" > "$DEPLOY_DIR/target.env"
   echo "Server created at $SERVER_IP (wrote deploy/target.env)"
 fi
 
@@ -134,8 +147,8 @@ done
 
 # ── Upload and run setup script ─────────────────────────────────────
 echo "Uploading scripts..."
-scp -o StrictHostKeyChecking=no "$SCRIPT_DIR/setup-server.sh" "$SCRIPT_DIR/rebuild-server.sh" "root@$SERVER_IP:/root/"
-ssh -o StrictHostKeyChecking=no "root@$SERVER_IP" "chmod +x /root/setup-server.sh /root/rebuild-server.sh && ln -sf /root/rebuild-server.sh /usr/local/bin/bbx-rebuild"
+scp -o StrictHostKeyChecking=no "$SCRIPT_DIR/setup-server.sh" "root@$SERVER_IP:/root/"
+ssh -o StrictHostKeyChecking=no "root@$SERVER_IP" "chmod +x /root/setup-server.sh"
 
 echo "Running setup on server (this will take a few minutes)..."
 ssh -A -o StrictHostKeyChecking=no "root@$SERVER_IP" "chmod +x /root/setup-server.sh && /root/setup-server.sh"

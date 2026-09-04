@@ -59,8 +59,8 @@ notify() {  # $1=title  $2=message
   [ -n "${BBX_DEPLOY_NOTIFY:-}" ] || return 0
   $BBX_DEPLOY_NOTIFY "$1" "$2" >/dev/null 2>&1 || true
 }
-# The trap also releases the deploy lock (LOCK_HELD is set only after shlock
-# succeeds, further below). If a held deploy fails after a newer request was
+# The trap also releases the deploy lock (LOCK_HELD is set only after the lock
+# is actually taken, further below). If a held deploy fails after a newer request was
 # recorded, it still hands off to that request: otherwise the non-blocking lock
 # loser has already exited successfully and nobody remains to deploy the newest
 # ref. The failed attempt remains explicit before the chained attempt begins.
@@ -69,7 +69,7 @@ deploy_exit() {
   trap - EXIT
   local held="${LOCK_HELD:-}"
   if [ -n "$held" ]; then
-    rm -f "${LOCK_FILE:-}"
+    rm -rf "${LOCK_FILE:-}"
     LOCK_HELD=""
   fi
   if [ "$rc" -eq 0 ]; then
@@ -115,17 +115,40 @@ require_deploy_target "$SCRIPT_DIR"
 SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
 INSTALL_DIR="$BBX_DEPLOY_INSTALL_DIR"
 
-# The latest-wins lock below uses shlock(1) — a PID-based lock that ships with
-# macOS at /usr/bin/shlock and auto-breaks a stale lock left by a dead process
-# (flock would be the natural choice but stock macOS doesn't have it). Guard
-# here with the same loud-and-actionable pattern as the deploy target rather than dying
-# on a bare "shlock: command not found" deep inside the run.
-if ! command -v shlock >/dev/null 2>&1; then
-  echo "deploy: shlock is required for deploy serialization but is not on PATH." >&2
-  echo "  It ships with macOS (/usr/bin/shlock). On another OS, install inn's" >&2
-  echo "  shlock or adapt the locking section to flock(1)." >&2
-  exit 1
-fi
+# The latest-wins lock below is a lock DIRECTORY holding the owner's pid.
+# `mkdir` is atomic on POSIX, and a directory needs no external tool: this used
+# to call shlock(1), which is a macOS-only path (flock is the natural choice
+# but stock macOS lacks it), so a deploy from anything but a Mac died on
+# "shlock: command not found" deep inside the run.
+#
+# take_deploy_lock is non-blocking and breaks a lock whose owner is gone,
+# matching shlock's PID-liveness behavior. Breaking is done by RENAMING the
+# stale directory aside before removing it, so two deploys that both judge a
+# lock stale cannot have the loser delete the winner's fresh lock — only one
+# rename can succeed. A lock with no readable pid is stale too: that is a
+# creator that died between the mkdir and the write. (A leftover lock FILE from
+# a pre-2026-09 deploy takes the same path and is cleaned up on first use.)
+take_deploy_lock() {  # $1 = lock directory
+  local lock="$1" owner stale
+  if mkdir "$lock" 2>/dev/null; then
+    echo $$ > "$lock/pid"
+    return 0
+  fi
+  owner="$(cat "$lock/pid" 2>/dev/null || true)"
+  if [ -n "$owner" ] && kill -0 "$owner" 2>/dev/null; then
+    return 1
+  fi
+  stale="$lock.stale.$$"
+  if mv "$lock" "$stale" 2>/dev/null; then
+    echo "Breaking a stale deploy lock (owner ${owner:-unknown} is gone)."
+    rm -rf "$stale"
+  fi
+  if mkdir "$lock" 2>/dev/null; then
+    echo $$ > "$lock/pid"
+    return 0
+  fi
+  return 1
+}
 
 # --- Argument parsing -------------------------------------------------------
 # --skip-frontend is intentionally gone: it's incompatible with "ref == prod"
@@ -206,13 +229,13 @@ checkout_belongs_to_repo() {
 # --- Locking: latest-wins ---------------------------------------------------
 # Record the requested sha (plain overwrite — last writer wins; a manual
 # rollback to an OLDER sha is still the LATEST intent, which is why this is
-# write-time ordering, not commit ancestry), then try to take the lock. shlock
-# is non-blocking, so a loser doesn't queue: it exits, trusting the current
+# write-time ordering, not commit ancestry), then try to take the lock. The
+# lock is non-blocking, so a loser doesn't queue: it exits, trusting the current
 # holder to CHAIN — after finishing, the holder re-reads .deploy-requested and
 # re-execs itself (see end of script). This collapses a rapid `main` commit
 # burst to at most one extra deploy, always ending on the latest requested ref.
-# A stale lock from a crashed deploy is auto-broken by shlock's PID liveness
-# check.
+# A stale lock from a crashed deploy is broken by take_deploy_lock's PID
+# liveness check.
 #
 # A CHAINED invocation does NOT stamp the file: it carries no new intent, it
 # only relays whatever is currently requested. (If it re-stamped, a stale sha
@@ -221,7 +244,7 @@ checkout_belongs_to_repo() {
 if [[ "$CHAINED" != true && "$REQUEST_RECORDED" != true ]]; then
   echo "$SHA" > "$REQUESTED_FILE"
 fi
-if ! shlock -f "$LOCK_FILE" -p $$; then
+if ! take_deploy_lock "$LOCK_FILE"; then
   echo "Deploy superseded: $SHA queued; another deploy holds $LOCK_FILE and will chain to it."
   exit 0
 fi
@@ -920,7 +943,7 @@ echo "Verify externally: curl -H \"Authorization: Bearer \$BBX_DIAG_API_KEY\" ht
 
 # --- Chain to a newer request (latest-wins, second half) ----------------------
 # If a deploy was requested while this one ran, its invocation exited early
-# (shlock held) trusting us to pick it up. Release the lock and re-exec in
+# (the lock was held) trusting us to pick it up. Release the lock and re-exec in
 # --chained mode (which re-reads .deploy-requested itself rather than trusting
 # the sha we read here — see the stamping comment above). Ordering matters:
 # release BEFORE the re-check, so a request that lands in the gap either gets
@@ -928,7 +951,7 @@ echo "Verify externally: curl -H \"Authorization: Bearer \$BBX_DIAG_API_KEY\" ht
 # a request is silently dropped. --skip-restart is deliberately not propagated:
 # the chained request came from a hook wanting a full deploy. (exec does not
 # fire the EXIT trap, hence the manual release.)
-rm -f "$LOCK_FILE"
+rm -rf "$LOCK_FILE"
 LOCK_HELD=""
 NEWREQ="$(cat "$REQUESTED_FILE" 2>/dev/null || true)"
 if [ -n "$NEWREQ" ] && [ "$NEWREQ" != "$SHA" ]; then

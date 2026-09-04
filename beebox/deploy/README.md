@@ -1,10 +1,28 @@
 # Deploy
 
-Scripts for provisioning and managing a Hetzner cloud server running beebox. This doc
-describes one example deployment (`box.example.com`) — the paths, domain, and service names
-below are specific to it, not something beebox requires.
+> **This is not how you install a Bee Box.** The supported install-and-update
+> path — local or on a VPS, with TLS — is the container flow in
+> [`../docs/docker-install.md`](../docs/docker-install.md). Read that one.
+>
+> What lives here is *one operator's* pipeline: rsync a built commit to a
+> long-lived Ubuntu VPS that serves many boxes behind nginx and systemd, then
+> converge and health-check them. It is in the repo because it is real, it is
+> exercised daily, and the multi-box convergence it does has no container
+> equivalent yet — not because it is the recommended shape.
+
+Nothing here runs until you opt in. `deploy/target.env` (gitignored; copy
+[`target.env.example`](./target.env.example)) names the server, and its
+presence is the switch: without it the commit hooks ship nothing and say
+nothing, and every script below refuses with the setup steps. The example
+deployment described throughout (`box.example.com`, `/opt/beebox`,
+`/home/beebox`, the unit names) is that one operator's; most of it is
+configurable in `target.env`, and the rest is what
+`hetzner/setup-server.sh` happens to build.
 
 ## Prerequisites
+
+For the `hetzner/` provisioners only. `deploy.sh` itself needs nothing but SSH
+to an already-provisioned host.
 
 - **hcloud CLI**: `brew install hcloud`
 - **Hetzner API token**: Create at [Hetzner Cloud Console](https://console.hetzner.cloud/), then `hcloud context create beebox`
@@ -14,7 +32,17 @@ below are specific to it, not something beebox requires.
 
 ## Setup
 
-Create `deploy/.env` (gitignored):
+`deploy/target.env` (gitignored) — the deploy target. At minimum:
+
+```
+BBX_DEPLOY_HOST=203.0.113.10
+```
+
+`target.env.example` lists the rest: SSH user, install dir, service account and
+home, hub port, the public URL `prod-browse` needs, and `BBX_DEPLOY_NOTIFY` (a
+command run on deploy failure — `deploy/notify-macos` is the macOS one).
+
+`deploy/.env` (gitignored), for the `hetzner/` provisioners:
 
 ```
 CLOUDFLARE_API_TOKEN=your-token-here
@@ -70,12 +98,15 @@ The hook records its requested SHA synchronously before launching through
 process group. That ordered hook request stays authoritative: a late-starting
 older child cannot overwrite newer intent.
 
-### `create-server.sh` — Create a new server from scratch
+### `hetzner/create-server.sh` — Create a new server from scratch
 
-Destroys any existing server, creates a fresh Hetzner VPS, provisions it, and sets up DNS.
+One example provisioner, kept because `deploy.sh` needs a host of this exact
+shape. Destroys any existing server, creates a fresh Hetzner VPS, provisions
+it, and sets up DNS. The server name, region, domain, and zone are constants at
+the top of the script — the boxholder's. Edit before running.
 
 ```bash
-./deploy/create-server.sh
+./deploy/hetzner/create-server.sh
 ```
 
 What it does:
@@ -84,9 +115,9 @@ What it does:
 3. Creates a cpx21 (3 vCPU, 4GB RAM) in Ashburn
 4. Updates Cloudflare DNS for `box.example.com` (if token provided)
 5. Sets Cloudflare SSL to Flexible
-6. Uploads and runs `setup-server.sh` on the server
+6. Uploads and runs `hetzner/setup-server.sh` on the server
 
-### `setup-server.sh` — Provision a bare server (runs remotely)
+### `hetzner/setup-server.sh` — Provision a bare server (runs remotely)
 
 Installs everything on Ubuntu 24.04:
 - System packages (git, Node.js 22, nginx)
@@ -101,7 +132,7 @@ Installs everything on Ubuntu 24.04:
 per-box `bbx@<box>.service` units. The live server has since been switched
 over to the hub by hand (see "Systemd units" below and
 `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
-`create-server.sh` run today would need the same by-hand steps repeated
+`hetzner/create-server.sh` run today would need the same by-hand steps repeated
 until this script catches up.
 
 **This script does not run on deploy.** `deploy.sh` never invokes it, so any
@@ -186,14 +217,6 @@ config left alone.
 a deploy from 2026-08 or later. On an older build the preflight fails with an
 unknown-command error.
 
-### `rebuild.sh` — Pull latest code and rebuild
-
-Pulls beebox, rebuilds, and restarts services.
-
-```bash
-./deploy/rebuild.sh
-```
-
 ### `prod-ssh` — SSH into the production server
 
 ```bash
@@ -246,7 +269,6 @@ tracked files.
 /home/beebox/.local/bin/claude  # Claude Code (native install, auto-updates)
 /usr/local/bin/bbx           # CLI symlink
 /usr/local/bin/codex         # Workspace-pinned Codex CLI symlink
-/usr/local/bin/bbx-rebuild   # Rebuild shortcut
 ```
 
 ## Systemd units
@@ -492,5 +514,5 @@ echo '{"botToken":"...","webhookSecret":"..."}' > telegram.secret.json
 
 ## DNS and HTTPS
 
-- DNS: `box.example.com` → server IP (Cloudflare proxied, auto-managed by `create-server.sh`)
+- DNS: `box.example.com` → server IP (Cloudflare proxied, auto-managed by `hetzner/create-server.sh`)
 - HTTPS: Handled by Cloudflare (SSL mode: Flexible — HTTPS to Cloudflare, HTTP to origin)

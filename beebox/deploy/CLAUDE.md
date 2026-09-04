@@ -1,6 +1,8 @@
 # Deploy
 
-Server provisioning and deployment scripts for Hetzner cloud. See `deploy/README.md` for full setup guide.
+ONE OPERATOR'S rsync-to-VPS pipeline, opt-in via a gitignored `target.env`. It
+is not the install path — that is the container flow in `docs/docker-install.md`
+— so don't send anyone here to set up a Bee Box. See `deploy/README.md`.
 
 Key files:
 - `deploy.sh` — commit-based deploy: builds the requested ref in a persistent
@@ -12,8 +14,9 @@ Key files:
   scheduler (`bbx boxes add` → `boxes.json`), restart both units, then canary
   the new slug. Preflight-validates the slug before it clones; `--dry-run`
   prints the plan without touching anything.
-- `create-server.sh` — provision a Hetzner box
-- `setup-server.sh` — install software, create `beebox` user, clone repos
+- `hetzner/` — example provisioners for the one server shape `deploy.sh` ships
+  to: `create-server.sh` (Hetzner VPS + Cloudflare DNS) and `setup-server.sh`
+  (Ubuntu packages, `beebox` user, units, nginx). Neither runs on deploy.
 - `target.env` — the deploy target: which server, which paths, how to notify
   (gitignored, per-operator). Its PRESENCE is what makes a checkout one that
   deploys — without it the commit hooks skip silently and deploy.sh refuses.
