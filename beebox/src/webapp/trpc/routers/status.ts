@@ -11,6 +11,7 @@ import { getLog } from "../../../lib/git.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { containWithinBox } from "../../../lib/box-containment.js";
 import { isInBoxNamespace } from "../../../lib/box-namespace.js";
+import { verifyBoxNamespaceOnDisk } from "../../../lib/box-namespace-resolve.js";
 import { BOX_ROOT_VOCABULARY } from "../../../lib/box-root-vocabulary.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
@@ -160,8 +161,23 @@ export const statusRouter = router({
       // itself is filtered to areas only, below.
       const resolved = path.resolve(targetDir);
       const contained = containWithinBox(ctx.boxRoot, resolved);
+      const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
       if (contained === null || (contained !== "" && !isInBoxNamespace(contained))) {
-        const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
+        return { path: relPath, ...empty };
+      }
+      // On-disk re-check for a non-root target: a symlinked directory or leaf
+      // partway down the path could otherwise walk the fence into the
+      // package internals even though the lexical check above passed
+      // (one-root layout — `docs/plans/one-root-box-layout.md` Track B). The
+      // root itself (`contained === ""`) has no walk to verify.
+      if (
+        contained !== "" &&
+        !(await verifyBoxNamespaceOnDisk({
+          boxRoot: ctx.boxRoot,
+          ns: { resolved, relativePath: contained },
+          mode: "read",
+        }))
+      ) {
         return { path: relPath, ...empty };
       }
 
@@ -172,7 +188,6 @@ export const statusRouter = router({
         if (errnoCode(e) !== "ENOENT") {
           console.warn(`browse: cannot read directory ${resolved}, returning empty listing:`, e);
         }
-        const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
         return { path: relPath, ...empty };
       }
 

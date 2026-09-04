@@ -22,6 +22,7 @@ import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 import type { LandmarkProblem } from "../../../core/landmark/summaries.js";
 import { parseLandmarkFields } from "../../../schemas/landmark.js";
 import { readLandmarkSymbol } from "../../../core/landmark/symbol.js";
+import { normalizeLandmarkDir, LANDMARK_CONTENT_DIR } from "../../../core/landmark/root-dir.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { loadHqDictationDefault } from "../../../core/box/config.js";
 import { setLandmarkHqPreference } from "../../../core/landmark/hq-preference.js";
@@ -82,7 +83,7 @@ async function loadLandmarkPayload(
   if (fields === null) return { status: "unparsed" };
 
   const navigation = fields.navigation;
-  const dir = path.dirname(relPath);
+  const dir = normalizeLandmarkDir(path.dirname(relPath));
   const landmarkDir = path.dirname(absPath);
   const { links, groups } = await resolveLandmark(navigation, {
     landmarkDir,
@@ -95,7 +96,7 @@ async function loadLandmarkPayload(
     status: "ok",
     payload: {
       path: relPath,
-      dir: dir === "." ? "" : dir,
+      dir,
       // Filename-basename fallback, matching `loadLandmarkSummaries`: a
       // label-less card (e.g. a destinations-only landmark) must never ship
       // an empty label — the app bar renders it as a blank pill face.
@@ -115,7 +116,10 @@ export const landmarksRouter = router({
   hqPreferences: ownerProcedure
     .input(z.object({ dir: z.string().refine((d) => !d.startsWith("/") && !d.split("/").includes("..")).nullable() }))
     .query(async ({ ctx, input }) => {
-      const pattern = input.dir === null ? null : input.dir === "" ? "*.landmark.card" : `${input.dir}/*.landmark.card`;
+      const pattern =
+        input.dir === null
+          ? null
+          : `${input.dir === "" ? LANDMARK_CONTENT_DIR : input.dir}/*.landmark.card`;
       const matches = pattern === null ? [] : await glob(pattern, { cwd: ctx.boxRoot, nodir: true });
       const relPath = matches.toSorted()[0];
       let landmark: "inherit" | "on" | "off" = "inherit";
@@ -217,7 +221,7 @@ export const landmarksRouter = router({
       }),
     )
     .query(async ({ ctx, input }): Promise<{ landmark: LandmarkPayload | null }> => {
-      const pattern = input.dir === "" ? "*.landmark.card" : `${input.dir}/*.landmark.card`;
+      const pattern = `${input.dir === "" ? LANDMARK_CONTENT_DIR : input.dir}/*.landmark.card`;
       const matches = await glob(pattern, {
         cwd: ctx.boxRoot,
         nodir: true,

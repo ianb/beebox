@@ -93,7 +93,7 @@ silently skipped by one creation path.
 const box = await makeTmpBox();
 await box.write("_config/box.json", JSON.stringify({ hqDictation: "on" }));
 await box.write(
-  "Home.landmark.card",
+  "_content/Home.landmark.card",
   "---\nnavigation:\n  label: Home\n  chat-app:\n    hq-dictation: off\n---\n",
 );
 JSON.stringify(await seedFeaturesForNewChat({ boxRoot: box.root, contextDir: null }))

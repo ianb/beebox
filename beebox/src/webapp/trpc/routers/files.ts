@@ -16,7 +16,7 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { registerBuiltinLoaders } from "../../../core/loader-registrations.js";
 import { summarize } from "../../../core/loader-registry.js";
 import type { FileSummary, LoaderInput } from "../../../core/file-summary.js";
-import { resolveBoxNamespacePath } from "../../../lib/box-namespace-resolve.js";
+import { resolveBoxNamespacePathOnDisk } from "../../../lib/box-namespace-resolve.js";
 
 registerBuiltinLoaders();
 
@@ -31,7 +31,7 @@ registerBuiltinLoaders();
  * Track B).
  */
 async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSummary<unknown> | null> {
-  const ns = resolveBoxNamespacePath(boxRoot, inputPath);
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: inputPath, mode: "read" });
   if (ns === null) return null;
   const { resolved, relativePath } = ns;
   const input: LoaderInput = { path: relativePath };

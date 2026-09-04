@@ -90,6 +90,26 @@ const { landmarks, problems } = await caller(box.root).landmarks.list();
 await box.cleanup();
 ```
 
+## `forDir({ dir: "" })` finds the root landmark under `_content/`
+
+The one-root layout put the ROOT landmark card at `_content/Box.landmark.card`,
+not at the box's physical root — but `dir: ""` still means the box-root chat
+scope. `forDir` must resolve it there, not answer `null`/fall back to a
+placeholder.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol: 🍳\n---\n");
+
+const { landmark } = await caller(box.root).landmarks.forDir({ dir: "" });
+JSON.stringify({ path: landmark?.path, dir: landmark?.dir, label: landmark?.label, symbol: landmark?.symbol })
+=> {"path":"_content/Box.landmark.card","dir":"","label":"Kitchen","symbol":"🍳"}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## `forDir` still answers null for a broken card
 
 The here menu asks for one directory's landmark. A card that doesn't parse

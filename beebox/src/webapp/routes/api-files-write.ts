@@ -26,7 +26,7 @@ import {
   attachDirOwnerBasename,
   isInsideAttachScope,
 } from "../../shared/attach-path.js";
-import { resolveBoxNamespacePath } from "../../lib/box-namespace-resolve.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 
 interface RegisterApiFilesWriteRoutesOptions {
   server: FastifyInstance;
@@ -46,9 +46,9 @@ interface CommitBody {
 export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutesOptions): void {
   const { server, boxRoot, eventBus } = options;
 
-  const guard = (
+  const guard = async (
     reqPath: string
-  ): { resolved: string; relativePath: string } | { error: string; status: number } => {
+  ): Promise<{ resolved: string; relativePath: string } | { error: string; status: number }> => {
     if (reqPath === "") {
       return { error: "File path required", status: 400 };
     }
@@ -56,8 +56,10 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
     // land only inside an underscore area — never `src/`, `node_modules/`,
     // `.git/`, or any other root entry, and a traversal form like
     // `_content/../package.json` can't hide behind its raw-string prefix
-    // (`docs/plans/one-root-box-layout.md` Track B).
-    const ns = resolveBoxNamespacePath(boxRoot, reqPath);
+    // (`docs/plans/one-root-box-layout.md` Track B). Also checked on the DISK:
+    // a symlinked directory or leaf partway down the path can't walk the
+    // fence into the package internals either (one-root layout).
+    const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
     if (ns === null) {
       return { error: "Access denied", status: 403 };
     }
@@ -81,7 +83,7 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
       reply: { status: (code: number) => { send: (body: unknown) => unknown } }
     ) => {
       const reqPath = boxRelativePath(request.params["*"] || "");
-      const guarded = guard(reqPath);
+      const guarded = await guard(reqPath);
       if ("error" in guarded) {
         return reply.status(guarded.status).send({ error: guarded.error });
       }
@@ -137,7 +139,7 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
     if (reqPath === "" || message === "") {
       return reply.status(400).send({ error: 'Body must be {"path": "...", "message": "..."}' });
     }
-    const ns = resolveBoxNamespacePath(boxRoot, reqPath);
+    const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
     if (ns === null) {
       return reply.status(403).send({ error: "Access denied" });
     }

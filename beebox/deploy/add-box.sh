@@ -32,7 +32,7 @@ set -euo pipefail
 #                    <your-gh-login>/<box-name>).
 #   --allow EMAIL    grant an extra user access (repeatable). The owner
 #                    always has access; this is only for ADDITIONAL users.
-#                    Written to config/box.json, new boxes only — never
+#                    Written to _config/box.json, new boxes only — never
 #                    clobbers an existing config.
 #   --secrets-from BOX  give the new box the same secret GRANTS another box
 #                    holds (e.g. the shared Mistral key), via
@@ -195,7 +195,7 @@ if [[ -z "$SERVER_IP" ]]; then
   exit 1
 fi
 
-SSH_OPTS="-A -o StrictHostKeyChecking=no"
+SSH_OPTS=(-A -o StrictHostKeyChecking=no)
 
 # ── Preflight (read-only on the server) ─────────────────────────────
 # `bbx hub add-box --dry-run` validates the slug against the LIVE hub.json:
@@ -206,7 +206,7 @@ SSH_OPTS="-A -o StrictHostKeyChecking=no"
 # unsure how much had landed.
 echo "Preflight: validating slug '$BOX_NAME' against the live hub config..."
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "root@$SERVER_IP" \
+ssh "${SSH_OPTS[@]}" "root@$SERVER_IP" \
   "su - $BBX_USER -c \"bbx hub add-box '$BOX_NAME' '$BOX_PATH' --dry-run\""
 
 # ── Preflight for --create (local + GitHub, still no mutation) ──────
@@ -247,7 +247,7 @@ if [[ -n "$DRY_RUN" ]]; then
   echo "  - clone $REPO to $BOX_PATH (or pull, if it exists)"
   echo "  - run 'bbx init' in it as $BBX_USER"
   if [[ -n "$ALLOW_CSV" ]]; then
-    echo "  - write config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
+    echo "  - write _config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
   fi
   if [[ -n "$SECRETS_FROM" ]]; then
     echo "  - copy box '$SECRETS_FROM's secret grants (bbx secrets copy-grants; no files move)"
@@ -297,7 +297,9 @@ echo "Adding box '$BOX_NAME' from $REPO..."
 # ...) expand here before sending. Keep it free of backticks and bare
 # $(...) (they'd run locally); use \$ for anything the remote evaluates.
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "root@$SERVER_IP" bash -s <<REMOTE
+# Unquoted delimiter is intentional: $BOX/$SERVER_IP interpolate client-side into the remote script.
+# shellcheck disable=SC2087
+ssh "${SSH_OPTS[@]}" "root@$SERVER_IP" bash -s <<REMOTE
 set -euo pipefail
 
 # Clone/pull as root (su drops the SSH agent socket, breaking agent
@@ -345,12 +347,12 @@ fi
 # Access config: only write for a brand-new box, never clobber an
 # existing one (re-deploys keep their hand-tuned access).
 if [[ -n "$ALLOW_CSV" ]]; then
-  if [[ -f "\$CONTENT_DIR/config/box.json" ]]; then
+  if [[ -f "\$CONTENT_DIR/_config/box.json" ]]; then
     echo "Access: box.json exists — leaving it unchanged (add by hand: $ALLOW_CSV)"
   else
-    mkdir -p "\$CONTENT_DIR/config"
-    python3 -c "import json,sys; json.dump({'allowedEmails': '$ALLOW_CSV'.split(',')}, open(sys.argv[1],'w'), indent=2)" "\$CONTENT_DIR/config/box.json"
-    echo "Access: wrote config/box.json (allowedEmails: $ALLOW_CSV)"
+    mkdir -p "\$CONTENT_DIR/_config"
+    python3 -c "import json,sys; json.dump({'allowedEmails': '$ALLOW_CSV'.split(',')}, open(sys.argv[1],'w'), indent=2)" "\$CONTENT_DIR/_config/box.json"
+    echo "Access: wrote _config/box.json (allowedEmails: $ALLOW_CSV)"
   fi
 fi
 
@@ -364,9 +366,9 @@ fi
 # structurally to one box (a Telegram bot token routes to one webhook URL) are
 # skipped by the command and named in its output.
 #
-# `--agent-confirmed` is correct here and not a rubber stamp: the operator
+# '--agent-confirmed' is correct here and not a rubber stamp: the operator
 # explicitly passed --secrets-from. Without it the command would refuse, since
-# stdin over `ssh`/`su -c` is not a TTY and therefore reads as an agent session.
+# stdin over 'ssh'/'su -c' is not a TTY and therefore reads as an agent session.
 if [[ -n "$SECRETS_FROM" ]]; then
   # A failure here is fatal on purpose: an unreadable store, a missing bbx, or a
   # crash would otherwise register a box with NO credentials and restart the
@@ -379,7 +381,7 @@ if [[ -n "$SECRETS_FROM" ]]; then
   fi
   echo "\$COPY_OUT"
 
-  # Legacy path, for a machine that has not run \`bbx secrets migrate\` yet: the
+  # Legacy path, for a machine that has not run \'bbx secrets migrate\' yet: the
   # source box has NO GRANTS AT ALL but still holds in-tree secret files. Copy
   # them so provisioning still works, and say plainly that this is deprecated.
   #
@@ -387,13 +389,17 @@ if [[ -n "$SECRETS_FROM" ]]; then
   # whose grants are all single-box copies nothing either, and must NOT land
   # here: falling back would hand this box the very Telegram token the command
   # just refused to share.
-  SRC_DIR="$BOXES_DIR/$SECRETS_FROM/content/config/connectors"
+  # v3 (one-root) in-tree location first, then the two retired v2 shapes
+  # (nested content/config/ and bare config/ at a v2 content root) for a
+  # source box that predates the one-root migration.
+  SRC_DIR="$BOXES_DIR/$SECRETS_FROM/_config/connectors"
+  [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/content/config/connectors"
   [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/config/connectors"
   if echo "\$COPY_OUT" | grep -q "has no grants at all" && compgen -G "\$SRC_DIR/*.secret.json" >/dev/null; then
     echo "Secrets: '$SECRETS_FROM' has no grants but still has in-tree secret files — falling back to the OLD file copy."
     echo "         DEPRECATED: run 'bbx secrets migrate' on this server (with the boxholder) to move them into the"
     echo "         machine store, then re-run this with --secrets-from to grant instead of copy."
-    mkdir -p "\$CONTENT_DIR/config/connectors"
+    mkdir -p "\$CONTENT_DIR/_config/connectors"
     for secret_file in "\$SRC_DIR"/*.secret.json; do
       # Same rule as the grant path, applied to files: a Telegram bot token
       # routes to ONE webhook URL and a publish token is scoped to one bucket,
@@ -404,8 +410,8 @@ if [[ -n "$SECRETS_FROM" ]]; then
           echo "Secrets: NOT copying \$(basename "\$secret_file") — it belongs to '$SECRETS_FROM' alone."
           continue ;;
       esac
-      cp "\$secret_file" "\$CONTENT_DIR/config/connectors/"
-      chmod 600 "\$CONTENT_DIR/config/connectors/\$(basename "\$secret_file")"
+      cp "\$secret_file" "\$CONTENT_DIR/_config/connectors/"
+      chmod 600 "\$CONTENT_DIR/_config/connectors/\$(basename "\$secret_file")"
       echo "Secrets: copied \$(basename "\$secret_file") from '$SECRETS_FROM'"
     done
   fi
@@ -425,7 +431,7 @@ chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
 #                             that is where .beebox/box.json lives and what every
 #                             existing entry holds. See
 #                             src/core/box/boxes-config.ts.
-# Passing the package root to `bbx boxes add` fails its .beebox/box.json check, so use
+# Passing the package root to 'bbx boxes add' fails its .beebox/box.json check, so use
 # the content dir resolved above. Neither file is hot-reloaded, hence the
 # restart below.
 #
@@ -449,7 +455,9 @@ REMOTE
 # proves nothing.
 echo "Verifying the new box serves..."
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "root@$SERVER_IP" bash -s <<VERIFY
+# Unquoted delimiter is intentional: $BOX/$SERVER_IP interpolate client-side into the remote script.
+# shellcheck disable=SC2087
+ssh "${SSH_OPTS[@]}" "root@$SERVER_IP" bash -s <<VERIFY
 set -euo pipefail
 KEY=\$(grep -E '^BBX_DIAG_API_KEY=' $BBX_HOME/.env 2>/dev/null | cut -d= -f2- || true)
 if [ -z "\$KEY" ]; then

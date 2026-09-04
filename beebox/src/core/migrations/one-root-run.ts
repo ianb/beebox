@@ -72,7 +72,15 @@ import {
 } from "./one-root-manifests.js";
 import { migrateClaudeProjectDirs, type CwdRemap } from "./one-root-claude-projects.js";
 import { rewriteChatBindings } from "./one-root-chat-bindings.js";
-import { planMoves, executeMoves, verifyNoIgnoreRegression, type PlannedMove, type RenamedEntry } from "./one-root-move-plan.js";
+import {
+  planMoves,
+  executeMoves,
+  remapMovedSymlinkTargets,
+  verifyNoIgnoreRegression,
+  type PlannedMove,
+  type RenamedEntry,
+} from "./one-root-move-plan.js";
+import { captureIgnoreRules, mergeIgnoreRules, snapshotBoxWideIgnored, verifyNoBoxWideIgnoreRegression } from "./one-root-ignore-merge.js";
 import { OneRootPreflightError, OneRootLinkGateError } from "./one-root-errors.js";
 
 export { OneRootPreflightError, OneRootLinkGateError, OneRootGitignoreRegressionError } from "./one-root-errors.js";
@@ -257,12 +265,30 @@ async function moveAndCommitBox(params: {
   let beeboxMoved = false;
   let originalMarkerBytes: string | null = null;
   let originalHistoryBytes: string | null = null;
-  let untrackedRenames: RenamedEntry[] = [];
+  // Caller-owned journal (finding 1): `executeMoves` appends to this array
+  // itself, immediately after each untracked rename succeeds, rather than
+  // building its own local array and returning it only on full success. A
+  // `const` reference that never gets reassigned means the `catch` below
+  // always sees every rename that landed before the throw — even one on the
+  // very last move in the loop — not an empty array from a `let` whose
+  // single reassignment never ran.
+  const untrackedRenames: RenamedEntry[] = [];
   let cwdPairs: CwdRemap[] = [];
+  // Finding 1: a destination whose restore-on-rollback FAILED must be
+  // preserved, not swept up by the stray-entry cleanup below (which removes
+  // whole top-level directories by name and would otherwise delete an
+  // already-moved secret sitting in one).
+  const preservedDestinations: string[] = [];
+
+  const ignoreSnapshot = await captureIgnoreRules({ packageRoot, contentRoot });
+  const boxWideIgnored = await snapshotBoxWideIgnored({ packageRoot });
 
   try {
-    const moveResult = await executeMoves({ packageRoot, contentRoot, moves });
-    untrackedRenames = moveResult.untrackedRenames;
+    await executeMoves({ packageRoot, contentRoot, moves, journal: untrackedRenames });
+    // Finding 4: recompute every moved symlink's relative target for its new
+    // depth, before anything downstream (ref rewrite, the hard link gate)
+    // can observe — or fail on — a dangling link.
+    await remapMovedSymlinkTargets({ packageRoot, contentRoot, moves });
     if (claudeMdMerge) await mergeClaudeMd({ packageRoot, contentRoot });
     await moveBeebox({ packageRoot, contentRoot });
     beeboxMoved = true;
@@ -283,7 +309,6 @@ async function moveAndCommitBox(params: {
     // index) runs later, ONLY once the link gate has passed — so an aborted
     // migration never pays that cost.
     await initBox(packageRoot);
-    await verifyNoIgnoreRegression({ packageRoot, untrackedRenames });
 
     const unresolvedCardRefs = await rewriteRefs({ packageRoot, moves });
     const unresolvedViewRefs = await rewriteViewRefs(packageRoot);
@@ -292,7 +317,20 @@ async function moveAndCommitBox(params: {
     const gate = await runOneRootLinkGate(packageRoot);
     if (!gate.ok) throw new OneRootLinkGateError(gate.report);
 
+    // `runInitTail` (the real `bbx init`) itself calls `initBox` again as
+    // part of its provisioning — so it REWRITES `.gitignore`/`.gitattributes`
+    // a second time, wholesale, same as the call above. The merge and both
+    // regression checks below run AFTER this, against the file that actually
+    // lands in the commit — not the intermediate one `initBox` alone wrote.
     await runInitTail(packageRoot);
+
+    // Finding 3: carry forward whatever v2-local .gitignore/.gitattributes
+    // rule the wholesale regen(s) above just discarded, then verify nothing
+    // formerly-ignored — anywhere in the box, not just this run's own
+    // untracked renames — lost coverage at its new location.
+    await mergeIgnoreRules({ packageRoot, snapshot: ignoreSnapshot });
+    await verifyNoIgnoreRegression({ packageRoot, untrackedRenames });
+    await verifyNoBoxWideIgnoreRegression({ packageRoot, before: boxWideIgnored });
 
     // `runInitTail` (the real `bbx init`) makes its own provisioning
     // commit(s) as a side effect (docs-gen, card installers) — the same
@@ -322,9 +360,14 @@ async function moveAndCommitBox(params: {
         // still leaves the restore incomplete.
       });
       await fs.rename(renamed.newAbs, renamed.oldAbs).catch((renameErr: unknown) => {
+        // Finding 1: a failed restore must PRESERVE the destination — it may
+        // hold an already-moved secret (e.g. a gitignored connector token)
+        // that the stray-entry cleanup below would otherwise delete wholesale
+        // along with the rest of its containing top-level directory.
+        preservedDestinations.push(renamed.newAbs);
         console.error(
           `one-root migration rollback: failed to rename ${renamed.newAbs} back to ${renamed.oldAbs} ` +
-            `(${errorMessage(renameErr)}) — manual recovery needed.`,
+            `(${errorMessage(renameErr)}) — PRESERVING ${renamed.newAbs}; manual recovery needed.`,
         );
       });
     }
@@ -382,7 +425,21 @@ async function moveAndCommitBox(params: {
     const survivors = await fs.readdir(packageRoot).catch(() => []);
     for (const name of survivors) {
       if (name === "content" || V2_PACKAGE_ROOT_VOCABULARY.has(name)) continue;
-      await fs.rm(path.join(packageRoot, name), { recursive: true, force: true }).catch((rmErr: unknown) => {
+      const entryAbs = path.join(packageRoot, name);
+      // Finding 1: never blind-delete a top-level entry that CONTAINS (or
+      // IS) a destination whose restore-on-rollback failed above — that's
+      // the one copy of whatever secret/data landed there.
+      const preserves = preservedDestinations.filter(
+        (p) => p === entryAbs || p.startsWith(entryAbs + path.sep),
+      );
+      if (preserves.length > 0) {
+        console.error(
+          `one-root migration rollback: skipping cleanup of ${entryAbs} — it contains ` +
+            `${String(preserves.length)} preserved destination(s) (${preserves.join(", ")}); manual recovery needed.`,
+        );
+        continue;
+      }
+      await fs.rm(entryAbs, { recursive: true, force: true }).catch((rmErr: unknown) => {
         console.error(
           `one-root migration rollback: failed to remove stray package-root entry ${name} ` +
             `(${errorMessage(rmErr)}) — manual recovery needed.`,

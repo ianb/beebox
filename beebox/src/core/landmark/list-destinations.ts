@@ -14,6 +14,7 @@ import { readLandmarkCard } from "./card-cache.js";
 import { findDestination, type DestinationKind } from "./destination.js";
 import { errorMessage } from "../../lib/error-guards.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
+import { normalizeLandmarkDir } from "./root-dir.js";
 
 /** Landmark cards read at once — see {@link mapInBatchesSettled}. */
 const READ_CONCURRENCY = 64;
@@ -49,8 +50,7 @@ async function readDestination(
   if (fields === null) return null;
   if (findDestination(fields.destinations, kind) === null) return null;
 
-  const dir = path.dirname(relPath);
-  const normalizedDir = dir === "." ? "" : dir;
+  const normalizedDir = normalizeLandmarkDir(path.dirname(relPath));
   const label = fields.navigation?.label ?? (normalizedDir === "" ? "root" : path.basename(normalizedDir));
   return { dir: normalizedDir, label, symbol: symbolText(fields.navigation?.symbol) };
 }

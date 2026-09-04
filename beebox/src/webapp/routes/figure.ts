@@ -20,7 +20,7 @@ import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { bundleView } from "../views/compiler.js";
-import { resolveBoxNamespacePath } from "../../lib/box-namespace-resolve.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -65,7 +65,7 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
 
       // Box containment + namespace fence, checked on the RESOLVED path
       // (`docs/plans/one-root-box-layout.md` Track B).
-      const ns = resolveBoxNamespacePath(boxRoot, reqPath);
+      const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
       if (ns === null) {
         return reply.status(400).send({ error: "Path outside box" });
       }

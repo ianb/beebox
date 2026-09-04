@@ -85,24 +85,83 @@ export function extractBodyLinks(body: string): BodyRef[] {
 }
 
 /**
- * A markdown reference-style link DEFINITION line: `[id]: /path "title"`.
- * Neither the inline-link pattern above nor `ref="…"`/frontmatter walking
- * sees this form — a `[text][id]` USAGE carries no path at all, only the
- * definition does. Matched at the start of a line (optionally indented up to
- * 3 spaces, per CommonMark), capturing just the target token so a rewriter
- * can splice a replacement in without disturbing the rest of the line.
+ * A destination token in a markdown reference-style link definition, per
+ * CommonMark's link-destination grammar: either angle-bracket delimited
+ * (`<…>`, no unescaped `<`, `>`, or line ending inside — the delimiters are
+ * stripped, not part of the returned url) or a bare run of non-whitespace
+ * characters. `text` is searched starting at its first character (NOT
+ * anchored to the start of a line — callers pass in whatever text follows
+ * the `[id]:` label, which may itself start with whitespace to skip).
+ */
+function matchDestination(text: string): { url: string; offset: number } | null {
+  const leading = /^[\t ]*/.exec(text)?.[0].length ?? 0;
+  const rest = text.slice(leading);
+  const angle = /^<([^\n<>]*)>/.exec(rest);
+  if (angle !== null) {
+    const url = angle[1];
+    if (url === undefined) return null;
+    return { url, offset: leading + 1 }; // +1 skips the opening `<`
+  }
+  const bare = /^(\S+)/.exec(rest);
+  if (bare === null) return null;
+  const url = bare[1];
+  if (url === undefined) return null;
+  return { url, offset: leading };
+}
+
+/**
+ * A markdown reference-style link DEFINITION: `[id]: /path "title"`, or
+ * `[id]: </path with spaces>` (angle-bracket delimited destination), or with
+ * the destination on the line AFTER the label when nothing but whitespace
+ * follows the colon:
+ * ```
+ * [id]:
+ *   /path
+ * ```
+ * All three are legal CommonMark, and the Markdoc parser this codebase
+ * already renders/lints with resolves all three to a real link — so an
+ * extractor that only understood same-line destinations was silently
+ * invisible to a form its own renderer treats as a working link. Neither the
+ * inline-link pattern above nor `ref="…"`/frontmatter walking sees this form
+ * at all — a `[text][id]` USAGE carries no path, only the definition does.
+ *
+ * `lines[labelLineIndex]` must start the label (optionally indented up to 3
+ * spaces, per CommonMark); a continuation destination is only recognized on
+ * the immediately following line (a blank line in between means no
+ * definition, matching CommonMark and this codebase's Markdoc parser — see
+ * `body-refs.doctest.md`). Returns the destination's line index (the label
+ * line, or the line after it for the continuation form) and its character
+ * offset within that line, with any angle-bracket delimiters already
+ * stripped, so a rewriter can splice a replacement in without disturbing the
+ * rest of the line and without ever producing a ref value containing `<`/`>`.
  *
  * Exported (not just used internally) so `markdown-lint-rules.ts`'s
  * line-based `extractInlineLinks` and the one-root migration's ref rewriter
  * share this one grammar instead of each growing its own regex for the same
  * form.
  */
-export function matchReferenceDefinition(line: string): { url: string; index: number } | null {
-  const match = /^[\t ]{0,3}\[[^\]]+]:[\t ]*(\S+)/.exec(line);
-  if (match === null) return null;
-  const url = match[1];
-  if (url === undefined) return null;
-  return { url, index: match.index + match[0].length - url.length };
+export function matchReferenceDefinitionAt(
+  lines: readonly string[],
+  labelLineIndex: number,
+): { url: string; lineIndex: number; index: number } | null {
+  const labelLine = lines[labelLineIndex];
+  if (labelLine === undefined) return null;
+  const label = /^[\t ]{0,3}\[[^\]]+]:(.*)$/.exec(labelLine);
+  if (label === null) return null;
+  const afterColon = label[1] ?? "";
+  if (afterColon.trim() !== "") {
+    const dest = matchDestination(afterColon);
+    if (dest === null) return null;
+    return { url: dest.url, lineIndex: labelLineIndex, index: labelLine.length - afterColon.length + dest.offset };
+  }
+  // Nothing but whitespace after the colon: CommonMark allows the
+  // destination on the next line, but only when that line isn't blank —
+  // a blank line ends the definition (and starts a new block) instead.
+  const nextLine = lines[labelLineIndex + 1];
+  if (nextLine === undefined || nextLine.trim() === "") return null;
+  const dest = matchDestination(nextLine);
+  if (dest === null) return null;
+  return { url: dest.url, lineIndex: labelLineIndex + 1, index: dest.offset };
 }
 
 /** Every reference-style link definition in `body`, as refs to check. */
@@ -110,10 +169,10 @@ export function extractReferenceDefinitions(body: string): BodyRef[] {
   if (body === "") return [];
   const out: BodyRef[] = [];
   const lines = body.split("\n");
-  for (const [i, line] of lines.entries()) {
-    const found = matchReferenceDefinition(line);
+  for (let i = 0; i < lines.length; i++) {
+    const found = matchReferenceDefinitionAt(lines, i);
     if (found === null || isExternalRef(found.url)) continue;
-    out.push({ path: `body:${String(i + 1)}:ref-def`, ref: found.url });
+    out.push({ path: `body:${String(found.lineIndex + 1)}:ref-def`, ref: found.url });
   }
   return out;
 }

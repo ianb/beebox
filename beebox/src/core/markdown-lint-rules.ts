@@ -5,7 +5,7 @@
 import { fileExists } from "../lib/file-exists.js";
 import { invariant } from "../lib/invariant.js";
 import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
-import { matchReferenceDefinition } from "./body-refs.js";
+import { matchReferenceDefinitionAt } from "./body-refs.js";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
 
@@ -134,9 +134,12 @@ export function extractInlineLinks(lines: readonly string[]): InlineLink[] {
       out.push({ lineNumber: i + 1, index: match.index, length: match[0].length, url: match[1].trim() });
       match = INLINE_LINK_RE.exec(line);
     }
-    const refDef = matchReferenceDefinition(line);
+    // A continuation-line destination reports on the NEXT line (`lineIndex`
+    // may differ from `i`), so this is keyed off the label line but points
+    // at wherever the destination text actually is.
+    const refDef = matchReferenceDefinitionAt(lines, i);
     if (refDef !== null) {
-      out.push({ lineNumber: i + 1, index: refDef.index, length: refDef.url.length, url: refDef.url });
+      out.push({ lineNumber: refDef.lineIndex + 1, index: refDef.index, length: refDef.url.length, url: refDef.url });
     }
   }
   return out;

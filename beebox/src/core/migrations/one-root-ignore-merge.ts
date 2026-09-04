@@ -1,0 +1,215 @@
+/**
+ * Finding 3 (Track E hardening review, round 2): `initBox`'s `.gitignore`/
+ * `.gitattributes` regen (`box/index.ts`) REPLACES both files wholesale. A v2
+ * box can carry custom rules in TWO places that discards outright:
+ *  - the package-root `.gitignore`/`.gitattributes` (npm-package-relative
+ *    rules, e.g. a hand-added `src/tricks/private.env`) — `initBox`
+ *    overwrites these unconditionally, every run;
+ *  - the operational-root `content/.gitignore`/`content/.gitattributes` —
+ *    `one-root-mapping.ts` classifies both `discard` (superseded by the
+ *    regenerated v3 versions), so nothing carries their custom lines forward
+ *    at all.
+ *
+ * Fix, part 1 ({@link captureIgnoreRules} + {@link mergeIgnoreRules}): snapshot
+ * every rule from all four files BEFORE `initBox` runs, then after it has
+ * written the fresh v3 files, append whatever custom rule isn't already
+ * covered — under a clearly marked "migrated local rules" section. A
+ * content-root-relative rule is remapped through `mapV2Path` to its
+ * v3-relative equivalent where that succeeds; one `mapV2Path` can't resolve
+ * (free text, or naming something outside the v2 content vocabulary) is
+ * carried forward UNCHANGED rather than dropped — a dead rule that matches
+ * nothing is a far smaller risk than silently losing coverage over a secret.
+ *
+ * Fix, part 2 ({@link snapshotBoxWideIgnored} + {@link verifyNoBoxWideIgnoreRegression}):
+ * `one-root-move-plan.ts`'s `verifyNoIgnoreRegression` only re-checks the
+ * entries THIS migration recorded as untracked renames. This is the box-wide
+ * extension the review called for: inventory EVERY path `git status
+ * --ignored` reports at preflight (before anything moves), and re-check every
+ * one of them post-migration — catching a regression the targeted check would
+ * miss, e.g. a whole ignored directory whose v3-mapped rule doesn't cover it.
+ */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { errnoCode } from "../../lib/error-guards.js";
+import { mapV2Path } from "./one-root-mapping.js";
+import { isGitIgnored } from "./one-root-move-plan.js";
+import { OneRootGitignoreRegressionError } from "./one-root-errors.js";
+
+const execFileAsync = promisify(execFile);
+
+async function readIfExists(p: string): Promise<string | null> {
+  try {
+    return await fs.readFile(p, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return null;
+    throw e;
+  }
+}
+
+/** Non-comment, non-blank lines, trailing whitespace trimmed — the unit both
+ * the capture and the "already covered" comparison operate on. */
+function ruleLines(text: string | null): string[] {
+  if (text === null) return [];
+  return text
+    .split("\n")
+    .map((l) => l.trimEnd())
+    .filter((l) => l.trim() !== "" && !l.trim().startsWith("#"));
+}
+
+export interface IgnoreSnapshot {
+  packageGitignoreRules: string[];
+  packageGitattributesRules: string[];
+  contentGitignoreRules: string[];
+  contentGitattributesRules: string[];
+}
+
+/** Capture every custom rule from both halves' `.gitignore`/`.gitattributes`
+ * BEFORE `initBox` overwrites the package-root pair and the residual
+ * `content/` tree gets `rm -rf`'d. Call early — before {@link executeMoves}
+ * mutates anything. */
+export async function captureIgnoreRules(params: { packageRoot: string; contentRoot: string }): Promise<IgnoreSnapshot> {
+  const [packageGitignore, packageGitattributes, contentGitignore, contentGitattributes] = await Promise.all([
+    readIfExists(path.join(params.packageRoot, ".gitignore")),
+    readIfExists(path.join(params.packageRoot, ".gitattributes")),
+    readIfExists(path.join(params.contentRoot, ".gitignore")),
+    readIfExists(path.join(params.contentRoot, ".gitattributes")),
+  ]);
+  return {
+    packageGitignoreRules: ruleLines(packageGitignore),
+    packageGitattributesRules: ruleLines(packageGitattributes),
+    contentGitignoreRules: ruleLines(contentGitignore),
+    contentGitattributesRules: ruleLines(contentGitattributes),
+  };
+}
+
+/** Remap a content-root-relative rule to its v3-root-relative equivalent via
+ * `mapV2Path`, preserving a leading `!` (negation), a leading `/` (anchor),
+ * and a trailing `/` (directory marker). Returns the rule UNCHANGED when
+ * `mapV2Path` can't resolve it (carried forward rather than dropped). */
+function remapContentRule(rule: string): string {
+  let negated = false;
+  let body = rule;
+  if (body.startsWith("!")) {
+    negated = true;
+    body = body.slice(1);
+  }
+  const anchored = body.startsWith("/");
+  if (anchored) body = body.slice(1);
+  const trailingSlash = body.endsWith("/");
+  const corePath = trailingSlash ? body.slice(0, -1) : body;
+  if (corePath === "") return rule;
+  const mapped = mapV2Path(corePath);
+  if (mapped.kind !== "move") return rule;
+  return `${negated ? "!" : ""}/${mapped.newPath}${trailingSlash ? "/" : ""}`;
+}
+
+const MIGRATED_SECTION_HEADER = "# Migrated local rules (from the v2 box's .gitignore/.gitattributes)";
+
+/** Append whatever custom rule from the captured v2 files isn't already
+ * covered by the freshly regenerated v3 file — call AFTER `initBox` has
+ * written the v3 `.gitignore`/`.gitattributes`. */
+export async function mergeIgnoreRules(params: { packageRoot: string; snapshot: IgnoreSnapshot }): Promise<void> {
+  await mergeOneFile({
+    filePath: path.join(params.packageRoot, ".gitignore"),
+    packageRules: params.snapshot.packageGitignoreRules,
+    contentRules: params.snapshot.contentGitignoreRules,
+  });
+  await mergeOneFile({
+    filePath: path.join(params.packageRoot, ".gitattributes"),
+    packageRules: params.snapshot.packageGitattributesRules,
+    contentRules: params.snapshot.contentGitattributesRules,
+  });
+}
+
+async function mergeOneFile(params: { filePath: string; packageRules: string[]; contentRules: string[] }): Promise<void> {
+  const current = (await readIfExists(params.filePath)) ?? "";
+  const currentLines = new Set(ruleLines(current));
+  const candidates = [...params.packageRules, ...params.contentRules.map(remapContentRule)];
+  const additions: string[] = [];
+  const seen = new Set<string>();
+  for (const rule of candidates) {
+    if (currentLines.has(rule) || seen.has(rule)) continue;
+    seen.add(rule);
+    additions.push(rule);
+  }
+  if (additions.length === 0) return;
+  const merged = `${current.trimEnd()}\n\n${MIGRATED_SECTION_HEADER}\n${additions.join("\n")}\n`;
+  await fs.writeFile(params.filePath, merged);
+}
+
+export interface BoxWideIgnoredEntry {
+  /** The pre-migration ignored FILE path, box-root-relative (POSIX-separated). */
+  oldRelPath: string;
+  /** Where that file is expected to be ignored post-migration, box-root-relative. */
+  expectedNewRelPath: string;
+}
+
+/** Everything a v2 box's `content/` prefix maps to under v3, plus `.beebox`
+ * (moved by `moveBeebox`, not `mapV2Path` — it's excluded from the migration
+ * walk entirely). Returns `null` for a content-relative path `mapV2Path`
+ * classifies as `discard`/`merge-claude-md`/`unmapped` — none of those has a
+ * v3 location to verify (a `discard`ed `content/.gitignore` is SUPPOSED to
+ * stop being ignored-at-that-path; it doesn't exist there any more). */
+function expectedNewRelPath(oldRelPath: string): string | null {
+  if (!oldRelPath.startsWith("content/")) return oldRelPath; // Package-root-relative — unchanged in v3.
+  const contentRel = oldRelPath.slice("content/".length);
+  if (contentRel.startsWith(".beebox/")) return contentRel;
+  const mapped = mapV2Path(contentRel);
+  return mapped.kind === "move" ? mapped.newPath : null;
+}
+
+/** A top-level v2-package area whose entire subtree stays at the SAME path
+ * under v3 (unaffected by the migration) and can hold thousands of ignored
+ * entries (an installed `node_modules/`) — excluded from the box-wide
+ * inventory below purely so a real, npm-installed box doesn't pay to
+ * enumerate every ignored file inside it one by one. Its own top-level
+ * ignore rule (`node_modules/`) is still carried forward by
+ * {@link mergeIgnoreRules} like any other rule; this exclusion only concerns
+ * the PER-FILE regression inventory. */
+function isExcludedBulkPath(relPath: string): boolean {
+  return relPath === "node_modules" || relPath.startsWith("node_modules/") || relPath.includes("/node_modules/");
+}
+
+/** Inventory every INDIVIDUAL ignored file across the WHOLE box (package
+ * root + `content/`) at preflight — not just the entries this migration's
+ * own move-plan records as untracked renames. Deliberately file-level
+ * (`git ls-files --others --ignored`), not `git status --ignored` (which
+ * COLLAPSES a directory whose entire content happens to be ignored into
+ * reporting the directory itself — e.g. a package-root `src/` that, in a
+ * fresh box, holds nothing but one ignored file collapses to `src/`, and
+ * `src` itself matches no real ignore rule, which would falsely read as a
+ * regression). Call before anything moves. */
+export async function snapshotBoxWideIgnored(params: { packageRoot: string }): Promise<BoxWideIgnoredEntry[]> {
+  const { stdout } = await execFileAsync("git", ["ls-files", "--others", "--ignored", "--exclude-standard", "-z"], {
+    cwd: params.packageRoot,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  const entries: BoxWideIgnoredEntry[] = [];
+  for (const oldRelPath of stdout.split("\0")) {
+    if (oldRelPath === "" || isExcludedBulkPath(oldRelPath)) continue;
+    const expected = expectedNewRelPath(oldRelPath);
+    if (expected === null) continue;
+    entries.push({ oldRelPath, expectedNewRelPath: expected });
+  }
+  return entries;
+}
+
+/** The box-wide counterpart of `one-root-move-plan.ts`'s
+ * `verifyNoIgnoreRegression` — same fail-closed `isGitIgnored` probe, applied
+ * to every path {@link snapshotBoxWideIgnored} recorded rather than only the
+ * ones this run's move-plan itself renamed. Call AFTER `initBox` (and the
+ * `.gitignore`/`.gitattributes` merge) has written the final v3 files. */
+export async function verifyNoBoxWideIgnoreRegression(params: {
+  packageRoot: string;
+  before: BoxWideIgnoredEntry[];
+}): Promise<void> {
+  const regressed: string[] = [];
+  for (const entry of params.before) {
+    const newAbs = path.join(params.packageRoot, entry.expectedNewRelPath);
+    if (!(await isGitIgnored(params.packageRoot, newAbs))) regressed.push(entry.expectedNewRelPath);
+  }
+  if (regressed.length > 0) throw new OneRootGitignoreRegressionError(regressed);
+}

@@ -13,7 +13,7 @@ import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
 import { parseCardName } from "../../lib/paths.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { naturalCompare } from "../../lib/natural-sort.js";
-import { resolveBoxNamespacePath } from "../../lib/box-namespace-resolve.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
 
 /** The underscore area names — what the box root listing shows, and all it shows. */
@@ -57,7 +57,7 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
       if (reqPath === "") {
         resolved = path.resolve(boxRoot);
       } else {
-        const ns = resolveBoxNamespacePath(boxRoot, reqPath);
+        const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
         if (ns === null) {
           return reply.status(403).send({ error: "Access denied" });
         }

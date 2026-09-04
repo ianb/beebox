@@ -18,7 +18,7 @@ actually sees. This mirrors how a real attacker (or a non-normalizing proxy)
 would reach it, and is enough to prove the fix without a raw socket.
 
 ```ts setup
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
@@ -170,4 +170,135 @@ summarizeRes[0]
 
 ```ts cleanup
 await server.cleanup();
+```
+
+## The `_content/pkg` → package-root SYMLINK escape (one-root layout)
+
+Percent-encoded `..` (above) is one way to reach outside the namespace; the
+one-root layout adds a second: a SYMLINK. `_content/pkg` here is a real
+symlink pointing at `..` — the box root, which in this layout is ALSO the npm
+package root (`package.json`, `src/`, `node_modules/`). No lexical `..`
+appears in the request path at all, so this is a genuinely different attack
+from the traversal-string one above; it needs the on-disk (`realpath`) check,
+not just the resolved-path check. Every verb — read, write, browse, and
+`card.get` — is refused:
+
+```ts
+const symServer = await makeTestServer();
+await writeFile(join(symServer.boxRoot, "package.json"), '{"name":"secret-marker-2"}');
+await symlink("..", join(symServer.boxRoot, "_content/pkg"));
+
+const symGetRes = await symServer.request({ method: "GET", url: "/api/files/_content/pkg/package.json" });
+symGetRes.statusCode
+=> 403
+
+const symPutRes = await symServer.request({
+  method: "PUT",
+  url: "/api/files/_content/pkg/package.json",
+  payload: { content: "pwned-via-symlink" },
+});
+symPutRes.statusCode
+=> 403
+```
+
+`package.json` on disk is untouched by the write attempt:
+
+```ts continue
+const symPkgJsonPath = join(symServer.boxRoot, "package.json");
+const symPkgJsonAfter = await readFile(symPkgJsonPath, "utf-8");
+symPkgJsonAfter.includes("secret-marker-2")
+=> true
+```
+
+Browsing straight into the symlinked directory (the browse target itself IS
+the symlink) is refused too — not just deeper paths through it:
+
+```ts continue
+const symBrowseRes = await symServer.request({ method: "GET", url: "/api/browse/_content/pkg" });
+symBrowseRes.statusCode
+=> 403
+
+const symBrowseDeeperRes = await symServer.request({ method: "GET", url: "/api/browse/_content/pkg/src" });
+symBrowseDeeperRes.statusCode
+=> 403
+```
+
+`card.get` (tRPC) refuses the same path:
+
+```ts continue
+const symCtx: TestCtx = { boxRoot: symServer.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
+await cardGetThrows(symCtx, "_content/pkg/package.json")
+=> true
+```
+
+`status.browse` (tRPC) refuses it too — an empty listing, not the package
+directory's contents:
+
+```ts continue
+const symStatusBrowseRes = await statusRouter.createCaller(symCtx).browse({ path: "_content/pkg" });
+JSON.stringify(symStatusBrowseRes)
+=> {"path":"_content/pkg","dirs":[],"cards":[],"files":[]}
+```
+
+`files.summarize` (tRPC) refuses it — no `package.json` content leaks through
+the batch summary endpoint:
+
+```ts continue
+const symFilesRouterModule = await import("../../src/webapp/trpc/routers/files.js");
+const symSummarizeRes = await symFilesRouterModule.filesRouter.createCaller(symCtx).summarize({
+  paths: ["_content/pkg/package.json"],
+});
+symSummarizeRes[0]
+=> null
+```
+
+```ts cleanup
+await symServer.cleanup();
+```
+
+## Annex-style leaf symlinks still serve on read (no regression)
+
+The on-disk fence must not break the shape git-annex actually uses: a raw box
+file whose leaf component is itself a symlink resolving OUTSIDE the box
+(`.git/annex/objects/...`) still serves its bytes on a plain GET — only a
+directory symlink partway down the path (above) is refused, not a leaf file
+symlink:
+
+```ts
+const annexServer = await makeTestServer();
+await mkdir(join(annexServer.boxRoot, ".git/annex/objects/xx/yy"), { recursive: true });
+await writeFile(join(annexServer.boxRoot, ".git/annex/objects/xx/yy/real.txt"), "real annexed bytes");
+await mkdir(join(annexServer.boxRoot, "_content/inbox"), { recursive: true });
+await symlink(
+  join(annexServer.boxRoot, ".git/annex/objects/xx/yy/real.txt"),
+  join(annexServer.boxRoot, "_content/inbox/annexed.txt"),
+);
+
+const annexGetRes = await annexServer.rawRequest({ method: "GET", url: "/api/files/_content/inbox/annexed.txt" });
+annexGetRes.statusCode
+=> 200
+
+annexGetRes.payload
+=> real annexed bytes
+```
+
+The same leaf symlink refuses a write or delete through it — an existing leaf
+symlink resolving outside the box is never writable, only readable:
+
+```ts continue
+const annexPutRes = await annexServer.request({
+  method: "PUT",
+  url: "/api/files/_content/inbox/annexed.txt",
+  payload: { content: "overwritten" },
+});
+annexPutRes.statusCode
+=> 403
+
+const annexDeleteRes = await annexServer.request({ method: "DELETE", url: "/api/files/_content/inbox/annexed.txt" });
+annexDeleteRes.statusCode
+=> 403
+```
+
+```ts cleanup
+await annexServer.cleanup();
 ```

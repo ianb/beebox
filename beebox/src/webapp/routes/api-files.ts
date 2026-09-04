@@ -21,7 +21,7 @@ import { extensionToMimetype } from "../../lib/mimetype.js";
 import { dangerousRenderableDisposition } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { probePointer } from "../../lib/asset-content.js";
-import { resolveBoxNamespacePath } from "../../lib/box-namespace-resolve.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 
 // Injected into frozen pages at serve time so a hot-linked image that fails
 // (hot-link blockers, auth, dead origin) retries once through the box image
@@ -93,7 +93,7 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
       // `.git/`, or any other root entry, and a traversal form like
       // `_content/../package.json` can't hide behind its raw-string prefix
       // (`docs/plans/one-root-box-layout.md` Track B).
-      const ns = resolveBoxNamespacePath(boxRoot, reqPath);
+      const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
       if (ns === null) {
         return reply.status(403).send({ error: "Access denied" });
       }
@@ -263,7 +263,7 @@ async function deleteBoxFile({
 
   // Box containment + namespace fence, checked on the RESOLVED path — see
   // `docs/plans/one-root-box-layout.md` Track B.
-  const ns = resolveBoxNamespacePath(boxRoot, reqPath);
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
   if (ns === null) {
     return reply.status(403).send({ error: "Access denied" });
   }

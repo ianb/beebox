@@ -38,7 +38,7 @@ import { splitCardContent, renderFrontmatterBlock } from "../../cards/frontmatte
 import { isAttachRef } from "../../shared/attach-path.js";
 import { formatRefSuffix, isExternalRef, parseRef } from "../../shared/ref-path.js";
 import { isRecord } from "../../lib/is-record.js";
-import { inlineLinkPattern, matchReferenceDefinition } from "../body-refs.js";
+import { inlineLinkPattern, matchReferenceDefinitionAt } from "../body-refs.js";
 import { mapV2Path } from "./one-root-mapping.js";
 
 export interface OneRootRewriteInput {
@@ -143,20 +143,24 @@ function walkFrontmatter(value: unknown, transform: (raw: string) => string): vo
 
 /**
  * Reference-style link DEFINITIONS (`[id]: /path`) — the usage token
- * (`[text][id]`) carries no path at all, so only the definition line needs
+ * (`[text][id]`) carries no path at all, so only the definition needs
  * rewriting. Same grammar `markdown-lint-rules.ts`'s BBX002 uses to CHECK
- * these, via the shared `matchReferenceDefinition` (`body-refs.ts`), so the
- * migration's rewriter and the hard link gate agree on what a ref-def is.
+ * these, via the shared `matchReferenceDefinitionAt` (`body-refs.ts`), so the
+ * migration's rewriter and the hard link gate agree on what a ref-def is —
+ * including the continuation-line form, where the destination to splice
+ * lives on the line AFTER the `[id]:` label line, not the label line itself.
  */
 function rewriteReferenceDefinitions(body: string, transform: (raw: string) => string): string {
-  return body
-    .split("\n")
-    .map((line) => {
-      const found = matchReferenceDefinition(line);
-      if (found === null) return line;
-      return line.slice(0, found.index) + transform(found.url) + line.slice(found.index + found.url.length);
-    })
-    .join("\n");
+  const lines = body.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const found = matchReferenceDefinitionAt(lines, i);
+    if (found === null) continue;
+    const targetLine = lines[found.lineIndex];
+    if (targetLine === undefined) continue;
+    lines[found.lineIndex] =
+      targetLine.slice(0, found.index) + transform(found.url) + targetLine.slice(found.index + found.url.length);
+  }
+  return lines.join("\n");
 }
 
 function rewriteBody(body: string, transform: (raw: string) => string): string {

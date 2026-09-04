@@ -18,6 +18,7 @@ import { isKnownFeature, isValidValue } from "../chat/features.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { loadHqDictationDefault } from "../box/config.js";
 import { mergeSeedFeatures } from "../chat/features.js";
+import { landmarkScanDir } from "./root-dir.js";
 
 class LandmarkDirReadError extends Error {
   constructor(cause: unknown, dir: string) {
@@ -58,7 +59,7 @@ export async function readLandmarkFeaturesForDir(
   boxRoot: string,
   contextDir: string,
 ): Promise<Record<string, string> | null> {
-  const absDir = path.join(boxRoot, contextDir);
+  const absDir = landmarkScanDir(boxRoot, contextDir);
   let entries: string[];
   try {
     entries = await fs.readdir(absDir);

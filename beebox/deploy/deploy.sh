@@ -675,12 +675,19 @@ if [[ "$SKIP_RESTART" != true ]]; then
   ssh "root@$SERVER_IP" bash -s <<'REMOTE'
     for boxdir in /home/beebox/boxes/*/; do
       name=$(basename "$boxdir")
-      box="$boxdir/content"
-      # A box with no content/ is not a v2 package. Say so rather than skipping
-      # in silence — an unmigratable box is exactly what this step exists to
-      # surface, and `bbx migrate` treats a manifest-less box as a human decision.
-      if [[ ! -d "$box" ]]; then
-        echo "  $name: no content/ — not a v2 box, skipped"
+      # v3 (one-root) boxes carry the shape marker directly at their root —
+      # no nested content/ operational root to find. A box still on the
+      # retired v2 layout (marker under content/.beebox/box.json instead)
+      # gets a LOUD skip so its absence from this convergence step is
+      # visible, not silently missed — `bbx migrate` treats a manifest-less
+      # box as a human decision, and we don't attempt that migration here.
+      if [[ -f "${boxdir}.beebox/box.json" ]]; then
+        box="$boxdir"
+      elif [[ -f "${boxdir}content/.beebox/box.json" ]]; then
+        echo "  $name: still v2-shaped (content/ subdir) — needs bbx migrate, skipped"
+        continue
+      else
+        echo "  $name: no .beebox/box.json found (root or content/) — not a box, skipped"
         continue
       fi
       # The path is passed as an ARGUMENT to `bash -lc`, never interpolated into

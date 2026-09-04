@@ -13,9 +13,10 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { scaffoldPackageRoot } from "../../../src/core/box/package.js";
-import { runOneRootMigration, OneRootPreflightError, OneRootLinkGateError } from "../../../src/core/migrations/one-root-run.js";
+import { runOneRootMigration, OneRootPreflightError, OneRootLinkGateError, OneRootGitignoreRegressionError } from "../../../src/core/migrations/one-root-run.js";
 import { probeV2Box } from "../../../src/core/migrations/one-root-v2-probe.js";
 import { getBoxShape } from "../../../src/lib/box-shape.js";
+import { executeMoves } from "../../../src/core/migrations/one-root-move-plan.js";
 
 // The box's git hooks embed an absolute `bbx` path (`install-validation-hooks.ts`);
 // running inside a worktree it defaults to the STABLE MAIN checkout's `bbx`,
@@ -126,7 +127,14 @@ async function extendWithHardeningFixture(root) {
   const foo = await fs.readFile(fooPath, "utf-8");
   await fs.writeFile(
     fooPath,
-    foo + "\nSee [Dana too][dana-ref].\n\n[dana-ref]: ../../people/Dana_Lee.person.card\n",
+    foo +
+      "\nSee [Dana too][dana-ref].\n\n[dana-ref]: ../../people/Dana_Lee.person.card\n" +
+      // Two more legal CommonMark reference-definition forms this codebase's
+      // Markdoc parser already renders as real links: a continuation-line
+      // destination (on the line AFTER the `[id]:` label) and an
+      // angle-bracket-delimited destination.
+      "\nSee [Dana cont][dana-cont-ref].\n\n[dana-cont-ref]:\n  ../../people/Dana_Lee.person.card\n" +
+      "\nSee [Dana angle][dana-angle-ref].\n\n[dana-angle-ref]: <../../people/Dana_Lee.person.card>\n",
   );
 
   execSync("git add -A && git commit -q -m hardening-fixture", { cwd: root, stdio: "pipe" });
@@ -364,6 +372,20 @@ fooAfter.includes("[dana-ref]: /_content/people/Dana_Lee.person.card")
 => true
 ```
 
+The continuation-line and angle-bracket reference definitions rewrote too —
+same new v3 target, no literal `<` leaking into the rewritten path — and the
+hard link gate the migration ran (Track E step 6) passed, so both resolve
+cleanly after the move:
+
+```ts continue
+JSON.stringify({
+  continuationForm: fooAfter.includes("[dana-cont-ref]:\n  /_content/people/Dana_Lee.person.card"),
+  angleForm: fooAfter.includes("[dana-angle-ref]: </_content/people/Dana_Lee.person.card>"),
+  noStrayAngle: !fooAfter.includes("<<") && !fooAfter.includes("card><"),
+})
+=> {"continuationForm":true,"angleForm":true,"noStrayAngle":true}
+```
+
 ```ts cleanup
 await cleanup(root);
 ```
@@ -399,5 +421,193 @@ JSON.stringify({ transcriptMoved, oldDirStillExists })
 ```ts cleanup
 delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
 await fs.rm(projectsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+await cleanup(root);
+```
+
+## `executeMoves`'s journal is caller-owned, so a mid-sequence throw doesn't lose track of what already moved
+
+Before the fix, `executeMoves` built its own local array and returned it only
+on full success — a `try`/`catch` in the caller assigned that return value to
+its own tracking variable, so a throw partway through the loop left the
+caller's variable at its initial empty value, with no record of the renames
+that DID land (and so nothing for rollback to undo). Now the caller passes in
+the journal array and `executeMoves` pushes to it after EACH successful
+untracked rename, so it's populated exactly as far as the loop got — even
+when the very next move throws.
+
+This constructs two moves directly (bypassing the `content/` walk, so the
+failure is deterministic instead of depending on filesystem readdir order):
+the first (a "secret") succeeds; the second is forced to fail by pre-creating
+a plain FILE at the exact directory slot its move needs to create (`fs.mkdir`
+then throws `ENOTDIR`).
+
+```ts
+const root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-move-journal-"));
+const contentRoot = path.join(root, "content");
+await fs.mkdir(contentRoot, { recursive: true });
+await fs.writeFile(path.join(contentRoot, "secret.txt"), "shh\n");
+await fs.writeFile(path.join(contentRoot, "other.txt"), "other\n");
+// "blocked" exists as a plain FILE, so `fs.mkdir("blocked/inner", { recursive: true })`
+// for the second move throws ENOTDIR — a controlled, order-independent failure.
+await fs.writeFile(path.join(root, "blocked"), "not a directory\n");
+
+const journal = [];
+const err = await executeMoves({
+  packageRoot: root,
+  contentRoot,
+  moves: [
+    { contentRelPath: "secret.txt", newRelPath: "_config/secret.txt", tracked: false },
+    { contentRelPath: "other.txt", newRelPath: "blocked/inner/other.txt", tracked: false },
+  ],
+  journal,
+}).catch((e) => e);
+
+JSON.stringify({
+  threw: err instanceof Error,
+  journalLength: journal.length,
+  journalEntryIsTheSecret: journal[0]?.oldAbs === path.join(contentRoot, "secret.txt") && journal[0]?.newAbs === path.join(root, "_config", "secret.txt"),
+})
+=> {"threw":true,"journalLength":1,"journalEntryIsTheSecret":true}
+```
+
+The journal alone (no other bookkeeping) is enough to restore the secret to
+exactly one location — the same reversal `moveAndCommitBox`'s rollback
+performs, in reverse order:
+
+```ts continue
+for (const entry of journal.toReversed()) {
+  await fs.rename(entry.newAbs, entry.oldAbs);
+}
+const secretAtOldLocation = await fs.access(path.join(contentRoot, "secret.txt")).then(() => true, () => false);
+const secretAtNewLocation = await fs.access(path.join(root, "_config", "secret.txt")).then(() => true, () => false);
+JSON.stringify({ secretAtOldLocation, secretAtNewLocation })
+=> {"secretAtOldLocation":true,"secretAtNewLocation":false}
+```
+
+```ts cleanup
+await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+```
+
+## Colliding v3 destinations abort preflight instead of silently overwriting one source with the other
+
+`content/docs/Collide.md` and `content/store/docs/Collide.md` both default
+into `_content/docs/Collide.md` (`docs` → `_content/docs`; `store/docs` isn't
+one of `mapStoreArea`'s named cases, so it falls to the free-form default —
+also `_content/docs`). Without a preflight check, whichever move ran second
+would silently clobber the first with no error. Both sources are named in the
+abort, and nothing moves.
+
+```ts
+const root = await makeV2Box();
+const content = path.join(root, "content");
+await fs.mkdir(path.join(content, "docs"), { recursive: true });
+await fs.writeFile(path.join(content, "docs", "Collide.md"), "docs copy\n");
+await fs.mkdir(path.join(content, "store", "docs"), { recursive: true });
+await fs.writeFile(path.join(content, "store", "docs", "Collide.md"), "store copy\n");
+execSync("git add -A && git commit -q -m collision-fixture", { cwd: root, stdio: "pipe" });
+
+const err = await runOneRootMigration({ packageRoot: root, contentRoot: content }).catch((e) => e);
+JSON.stringify({
+  isPreflightError: err instanceof OneRootPreflightError,
+  mentionsBothSources: err.message.includes("docs/Collide.md") && err.message.includes("store/docs/Collide.md"),
+  contentStillThere: await fs.access(content).then(() => true, () => false),
+})
+=> {"isPreflightError":true,"mentionsBothSources":true,"contentStillThere":true}
+```
+
+```ts cleanup
+await cleanup(root);
+```
+
+## A moved symlink's relative target is remapped for its new depth
+
+`content/store/drive/` is 3 levels below the package root; `_content/drive/`
+(its v3 destination) is 2. A TRACKED symlink there with an annex-object-shape
+relative target computed for the OLD depth (`../../../.git/…`) would dangle
+at the new depth — one `../` too many. The migration recomputes it. (The
+fixture's external target lives under `.git/info/` rather than the real
+`.git/annex/` — creating that literal path would make the box's own
+`isAnnexInitialized` probe, `src/core/annex/is-annex-box.ts`, believe it's a
+real git-annex box and engage annex-aware code paths this fixture isn't
+trying to exercise; the depth-remap logic itself doesn't care which
+unmoved-external path it is.)
+
+```ts
+const root = await makeV2Box();
+const externalObjDir = path.join(root, ".git", "info", "attic", "aa", "bb");
+await fs.mkdir(externalObjDir, { recursive: true });
+await fs.writeFile(path.join(externalObjDir, "SHA-dummy"), "annex bytes\n");
+
+const content = path.join(root, "content");
+await fs.mkdir(path.join(content, "store", "drive"), { recursive: true });
+await fs.symlink(
+  path.join("..", "..", "..", ".git", "info", "attic", "aa", "bb", "SHA-dummy"),
+  path.join(content, "store", "drive", "annex-photo.bin"),
+);
+execSync("git add -A && git commit -q -m annex-depth-fixture", { cwd: root, stdio: "pipe" });
+
+const result = await runOneRootMigration({ packageRoot: root, contentRoot: content });
+result.filesMoved
+=> 8
+```
+
+The link now resolves at its new (shallower) depth — two `../`, not three —
+and still reads the same real bytes through it:
+
+```ts continue
+const newLinkPath = path.join(root, "_content", "drive", "annex-photo.bin");
+const target = await fs.readlink(newLinkPath);
+const bytes = await fs.readFile(newLinkPath, "utf-8");
+JSON.stringify({ target, bytes })
+=> {"target":"../../.git/info/attic/aa/bb/SHA-dummy","bytes":"annex bytes\n"}
+```
+
+```ts cleanup
+await cleanup(root);
+```
+
+## `.gitignore`/`.gitattributes` custom rules merge forward instead of being discarded by the wholesale regen
+
+`initBox` regenerates both files wholesale — a v2 box's own hand-added rules
+(package-root-relative, like a `src/tricks/private.env` secret) would
+otherwise vanish, silently un-ignoring whatever they protected. The migration
+snapshots both files' custom rules before the regen and appends whatever
+isn't already covered under a marked section afterward; the box-wide ignore
+inventory (`git status --ignored`, taken at preflight, covering the WHOLE
+box, not just this run's own moved entries) then verifies nothing lost
+coverage.
+
+```ts
+const root = await makeV2Box();
+await fs.writeFile(path.join(root, ".gitignore"), "node_modules/\nsrc/tricks/private.env\n");
+await fs.mkdir(path.join(root, "src", "tricks"), { recursive: true });
+await fs.writeFile(path.join(root, ".gitattributes"), "*.psd -diff\n");
+execSync("git add -A && git commit -q -m ignore-fixture-tracked", { cwd: root, stdio: "pipe" });
+// Written AFTER the .gitignore rule above lands, so `git add -A` never picks
+// it up — a real untracked secret, exactly like `config/connectors/*.secret.*`.
+await fs.writeFile(path.join(root, "src", "tricks", "private.env"), "SECRET=shh\n");
+
+const result = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
+result.filesMoved
+=> 7
+```
+
+The custom `.gitignore`/`.gitattributes` lines both survived the regen, under
+a clearly marked section, and the secret they protect is still genuinely
+ignored (not just textually present in the file):
+
+```ts continue
+const gitignore = await fs.readFile(path.join(root, ".gitignore"), "utf-8");
+const gitattributes = await fs.readFile(path.join(root, ".gitattributes"), "utf-8");
+const stillIgnored = execSync("git check-ignore -q src/tricks/private.env && echo yes || echo no", { cwd: root, encoding: "utf-8" }).trim();
+JSON.stringify({
+  gitignoreCarriedRule: gitignore.includes("src/tricks/private.env"),
+  gitattributesCarriedRule: gitattributes.includes("*.psd -diff"),
+  stillIgnored,
+})
+=> {"gitignoreCarriedRule":true,"gitattributesCarriedRule":true,"stillIgnored":"yes"}
+```
+
+```ts cleanup
 await cleanup(root);
 ```

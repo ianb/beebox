@@ -13,6 +13,7 @@ import { glob } from "glob";
 import { parseLandmarkFields, type LandmarkFields } from "../../schemas/landmark.js";
 import { findDestination } from "../landmark/destination.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { normalizeLandmarkDir } from "../landmark/root-dir.js";
 
 /**
  * One triage category, derived from a landmark with a `triage`
@@ -90,8 +91,7 @@ export async function compileTriageInstructions(
     const triageDest = findDestination(fields.destinations, "triage");
     if (triageDest === null) continue;
 
-    const dir = path.dirname(relPath);
-    const normalizedDir = dir === "." ? "" : dir;
+    const normalizedDir = normalizeLandmarkDir(path.dirname(relPath));
     categories.push({
       name: deriveCategoryName(normalizedDir),
       dir: normalizedDir,

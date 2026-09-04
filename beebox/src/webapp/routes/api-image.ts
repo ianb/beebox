@@ -23,8 +23,8 @@ import { parse as parseYaml } from "yaml";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { containWithinBox } from "../../lib/box-containment.js";
-import { resolveBoxNamespacePath } from "../../lib/box-namespace-resolve.js";
+import { isInBoxNamespace } from "../../lib/box-namespace.js";
+import { resolveBoxNamespacePathOnDisk, verifyBoxNamespaceOnDisk } from "../../lib/box-namespace-resolve.js";
 
 // `.avif` is here because the document extractor writes page and figure
 // renders as AVIF (`src/core/commands/document-extract.ts`); without it every
@@ -94,7 +94,7 @@ export function registerApiImageRoutes({
 
       // Box containment + namespace fence, checked on the RESOLVED path
       // (`docs/plans/one-root-box-layout.md` Track B).
-      const ns = resolveBoxNamespacePath(boxRoot, reqPath);
+      const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
       if (ns === null) {
         return reply.status(403).send({ error: "Access denied" });
       }
@@ -117,7 +117,24 @@ export function registerApiImageRoutes({
         imageAbs = resolved;
       }
 
-      if (containWithinBox(boxRoot, imageAbs) === null) {
+      // `imageAbs` may be derived from the card's `filename.ref` (the
+      // `.image.card` branch above), not the raw request path — re-fence it
+      // the same way: lexical containment + namespace, then the on-disk
+      // symlink check, so a card whose ref was crafted/rewritten to point
+      // outside the namespace can't be used to walk the fence either.
+      const imageRoot = path.resolve(boxRoot);
+      const imageRelativePath = path.relative(imageRoot, imageAbs).split(path.sep).join("/");
+      const imageContained =
+        imageAbs === imageRoot || imageAbs.startsWith(imageRoot + path.sep);
+      if (!imageContained || !isInBoxNamespace(imageRelativePath)) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+      const imageOnDisk = await verifyBoxNamespaceOnDisk({
+        boxRoot,
+        ns: { resolved: imageAbs, relativePath: imageRelativePath },
+        mode: "read",
+      });
+      if (!imageOnDisk) {
         return reply.status(403).send({ error: "Access denied" });
       }
 

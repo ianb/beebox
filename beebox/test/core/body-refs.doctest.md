@@ -7,7 +7,7 @@ live in body tags like `{% source ref="…" %}` — any body tag whose
 attribute is literally named `ref`.
 
 ```ts setup
-import { extractBodyRefs } from "../../src/core/body-refs.js";
+import { extractBodyRefs, extractReferenceDefinitions } from "../../src/core/body-refs.js";
 ```
 
 ## A single `{% source %}` tag
@@ -102,6 +102,50 @@ A tag with no `ref` attribute is ignored.
 
 ```ts
 extractBodyRefs("{% callout type=\"note\" %}heads up{% /callout %}").length
+=> 0
+```
+
+## Reference-style link definitions: continuation-line and angle-bracket destinations
+
+CommonMark allows a link reference definition's destination to be on the
+line AFTER the `[id]:` label, and to be delimited with `<...>` instead of
+written bare. The Markdoc parser this codebase renders/lints with already
+resolves both forms as real links, so the extractor needs to see them too.
+
+```ts
+const body = [
+  "[s]:",
+  "  /store/recipes/Soup.recipe.card",
+  "",
+  "See [soup][s].",
+].join("\n");
+JSON.stringify(extractReferenceDefinitions(body), null, 2)
+=>
+[
+  {
+    "path": "body:2:ref-def",
+    "ref": "/store/recipes/Soup.recipe.card"
+  }
+]
+```
+
+```ts
+JSON.stringify(extractReferenceDefinitions("[t]: </store/x.card>\n\nSee [thing][t]."), null, 2)
+=>
+[
+  {
+    "path": "body:1:ref-def",
+    "ref": "/store/x.card"
+  }
+]
+```
+
+A blank line between the label and a would-be continuation destination ends
+the definition — no destination is found (matching CommonMark and this
+codebase's Markdoc parser).
+
+```ts
+extractReferenceDefinitions("[s]:\n\n  /store/x.card").length
 => 0
 ```
 
