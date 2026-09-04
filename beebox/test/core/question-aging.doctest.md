@@ -30,11 +30,11 @@ process.env.BBX_PUSH_STORE_DIR = storeDir;
 const SUB = { endpoint: "https://push.example/qaging", keys: { p256dh: "p", auth: "a" } };
 
 const ASKED_AT = new Date("2026-01-01T00:00:00Z");
-const MARKER = JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: ASKED_AT.toISOString() });
+const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: ASKED_AT.toISOString() });
 
-// makeTmpBox writes a shapeVersion-2 marker with no version/created; ageQuestions
+// makeTmpBox writes a shapeVersion-3 marker with no version/created; ageQuestions
 // calls getSystemState → getBoxMetadata, which parses those, so seed a marker
-// carrying both (it must keep shapeVersion 2 or getBoxShape rejects the box).
+// carrying both (it must keep shapeVersion 3 or getBoxShape rejects the box).
 async function seedBox(box) {
   await box.seed(".beebox/box.json", MARKER);
 }
@@ -69,7 +69,7 @@ const box = await makeTmpBox({ git: true });
 await seedBox(box);
 await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
 await box.write(
-  "box/questions/Color.question.card",
+  "_bookkeeping/questions/Color.question.card",
   question({ prompt: "What color?", askedAt: ASKED_AT.toISOString() })
 );
 box.commitAll("seed question");
@@ -86,9 +86,9 @@ At the 7-day mark it nudges exactly once, and a web-push card is written:
 setTime(addMs(ASKED_AT, DEFAULT_NUDGE_AFTER_MS));
 const nudgedResult = await ageQuestions(box.root);
 JSON.stringify(nudgedResult)
-=> {"nudged":["box/questions/Color.question.card"],"expired":[]}
+=> {"nudged":["_bookkeeping/questions/Color.question.card"],"expired":[]}
 
-const cards = (await fs.readdir(path.join(box.root, "box/output"))).filter((f) => f.endsWith(".web-push.card"));
+const cards = (await fs.readdir(path.join(box.root, "_bookkeeping/output"))).filter((f) => f.endsWith(".web-push.card"));
 cards.length
 => 1
 ```
@@ -105,7 +105,7 @@ JSON.stringify(await ageQuestions(box.root))
 The question is still pending — nudging never touches status:
 
 ```ts continue
-const card = await box.read("box/questions/Color.question.card");
+const card = await box.read("_bookkeeping/questions/Color.question.card");
 card.includes("status: pending")
 => true
 ```
@@ -121,7 +121,7 @@ delete process.env.BBX_TIME;
 const box = await makeTmpBox({ git: true });
 await seedBox(box);
 await box.write(
-  "box/questions/Stale.question.card",
+  "_bookkeeping/questions/Stale.question.card",
   question({ prompt: "Still relevant?", askedAt: ASKED_AT.toISOString() })
 );
 box.commitAll("seed question");
@@ -129,9 +129,9 @@ box.commitAll("seed question");
 setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
 const result = await ageQuestions(box.root);
 JSON.stringify(result)
-=> {"nudged":[],"expired":["box/questions/Stale.question.card"]}
+=> {"nudged":[],"expired":["_bookkeeping/questions/Stale.question.card"]}
 
-const card = await box.read("box/questions/Stale.question.card");
+const card = await box.read("_bookkeeping/questions/Stale.question.card");
 card.includes("status: expired")
 => true
 
@@ -173,7 +173,7 @@ await seedBox(box);
 await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
 const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 await box.write(
-  "box/questions/Deadline.question.card",
+  "_bookkeeping/questions/Deadline.question.card",
   question({ prompt: "Confirm by Friday?", askedAt: ASKED_AT.toISOString(), expiresAfter: "P10D" })
 );
 box.commitAll("seed question");
@@ -184,7 +184,7 @@ JSON.stringify(await ageQuestions(box.root))
 
 setTime(addMs(ASKED_AT, TEN_DAYS_MS / 2));
 JSON.stringify(await ageQuestions(box.root))
-=> {"nudged":["box/questions/Deadline.question.card"],"expired":[]}
+=> {"nudged":["_bookkeeping/questions/Deadline.question.card"],"expired":[]}
 ```
 
 Past the full 10-day override window it expires (not the 30-day default):
@@ -192,7 +192,7 @@ Past the full 10-day override window it expires (not the 30-day default):
 ```ts continue
 setTime(addMs(ASKED_AT, TEN_DAYS_MS));
 JSON.stringify(await ageQuestions(box.root))
-=> {"nudged":[],"expired":["box/questions/Deadline.question.card"]}
+=> {"nudged":[],"expired":["_bookkeeping/questions/Deadline.question.card"]}
 ```
 
 ```ts cleanup
@@ -210,14 +210,14 @@ question is already past the expiry window).
 const box = await makeTmpBox({ git: true });
 await seedBox(box);
 await box.write(
-  "box/questions/NoChannel.question.card",
+  "_bookkeeping/questions/NoChannel.question.card",
   question({ prompt: "Anyone listening?", askedAt: ASKED_AT.toISOString() })
 );
 box.commitAll("seed question");
 
 setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
 JSON.stringify(await ageQuestions(box.root))
-=> {"nudged":[],"expired":["box/questions/NoChannel.question.card"]}
+=> {"nudged":[],"expired":["_bookkeeping/questions/NoChannel.question.card"]}
 ```
 
 ```ts cleanup
@@ -234,7 +234,7 @@ the sweep degrades loudly rather than throwing):
 const box = await makeTmpBox({ git: true });
 await seedBox(box);
 await box.write(
-  "box/questions/NoAskedAt.question.card",
+  "_bookkeeping/questions/NoAskedAt.question.card",
   "---\nstatus: pending\nprompt: When was this asked?\ninput:\n  type: text\n---\n"
 );
 box.commitAll("seed question");
@@ -243,7 +243,7 @@ setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
 JSON.stringify(await ageQuestions(box.root))
 => {"nudged":[],"expired":[]}
 
-const card = await box.read("box/questions/NoAskedAt.question.card");
+const card = await box.read("_bookkeeping/questions/NoAskedAt.question.card");
 card.includes("status: pending")
 => true
 ```
@@ -269,7 +269,7 @@ untouched.
 const box = await makeTmpBox({ git: true });
 await seedBox(box);
 await box.write(
-  "box/questions/AlreadyAnswered.question.card",
+  "_bookkeeping/questions/AlreadyAnswered.question.card",
   question({ prompt: "Still open?", askedAt: ASKED_AT.toISOString() })
     .replace("status: pending", "status: answered\nanswered-at: 2026-01-02T00:00:00Z\nanswer:\n  text: Yes"),
 );
@@ -279,7 +279,7 @@ setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
 JSON.stringify(await ageQuestions(box.root))
 => {"nudged":[],"expired":[]}
 
-const card = await box.read("box/questions/AlreadyAnswered.question.card");
+const card = await box.read("_bookkeeping/questions/AlreadyAnswered.question.card");
 card.includes("status: answered")
 => true
 ```

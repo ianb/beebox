@@ -91,7 +91,7 @@ silently skipped by one creation path.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("config/box.json", JSON.stringify({ hqDictation: "on" }));
+await box.write("_config/box.json", JSON.stringify({ hqDictation: "on" }));
 await box.write(
   "Home.landmark.card",
   "---\nnavigation:\n  label: Home\n  chat-app:\n    hq-dictation: off\n---\n",

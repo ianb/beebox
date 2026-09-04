@@ -29,11 +29,12 @@ import { z } from "zod";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { refusalAllowsLegacyFallback } from "../secrets/legacy-fallback.js";
 import { resolveSecret } from "../secrets/resolve.js";
+import { BOX_DIRS } from "../../lib/paths.js";
 
 /** The store name this key lives under — matches the legacy file's basename. */
 const OPENAI_SECRET_NAME = "openai";
 
-const SECRET_RELATIVE_PATH = "config/connectors/openai.secret.json";
+const SECRET_RELATIVE_PATH = `${BOX_DIRS.connectors}/openai.secret.json`;
 
 let warnedAboutLegacyFile = false;
 

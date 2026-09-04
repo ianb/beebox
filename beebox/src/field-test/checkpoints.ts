@@ -50,9 +50,9 @@ export function checkpointTag(opts: { index: number; itemId: string }): string {
 }
 
 /** Tag the box's current HEAD as the run's baseline. */
-export async function tagBaseline(packageRoot: string): Promise<string> {
-  await createTag(packageRoot, BASELINE_TAG);
-  return getHead(packageRoot);
+export async function tagBaseline(boxRoot: string): Promise<string> {
+  await createTag(boxRoot, BASELINE_TAG);
+  return getHead(boxRoot);
 }
 
 export interface CleanupOutcome {
@@ -65,9 +65,7 @@ export interface CleanupOutcome {
 }
 
 export interface ApplyCleanupOptions {
-  /** The box's git root — the v2 PACKAGE root, not the operational box root. */
-  packageRoot: string;
-  /** The operational box root — where `reset` finds the staging area. */
+  /** The box's git root and operational root — one root (shapeVersion 3). */
   boxRoot: string;
   policy: FieldCleanupPolicy;
   /** Tag to write for this item. */
@@ -84,17 +82,17 @@ export interface ApplyCleanupOptions {
  * ending the run, since a failed checkpoint costs inspectability, not the run.
  */
 export async function applyCleanup(options: ApplyCleanupOptions): Promise<CleanupOutcome> {
-  const { packageRoot, boxRoot, policy, tag, previousTag, itemId } = options;
+  const { boxRoot, policy, tag, previousTag, itemId } = options;
   let resetTo: string | null = null;
 
   switch (policy) {
     case "keep":
       break;
     case "commit": {
-      const status = await getStatus(packageRoot);
+      const status = await getStatus(boxRoot);
       if (!status.clean) {
-        await stageAll(packageRoot);
-        await commit(packageRoot, {
+        await stageAll(boxRoot);
+        await commit(boxRoot, {
           message: `Field-test checkpoint after ${itemId}`,
           trailers: { "Created-By": "bbx field-test" },
         });
@@ -102,7 +100,7 @@ export async function applyCleanup(options: ApplyCleanupOptions): Promise<Cleanu
       break;
     }
     case "reset":
-      await revertToSnapshot(packageRoot, previousTag);
+      await revertToSnapshot(boxRoot, previousTag);
       // Gitignored, so the revert above cannot see it — and an in-flight batch
       // that outlived its target cards is worse than no batch at all.
       await rm(stagingBaseDir(boxRoot), { recursive: true, force: true });
@@ -112,6 +110,6 @@ export async function applyCleanup(options: ApplyCleanupOptions): Promise<Cleanu
       assertNever(policy);
   }
 
-  await createTag(packageRoot, tag);
-  return { tag, head: await getHead(packageRoot), resetTo };
+  await createTag(boxRoot, tag);
+  return { tag, head: await getHead(boxRoot), resetTo };
 }

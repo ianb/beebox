@@ -49,8 +49,7 @@ const slugSchema = z
 
 const boxEntrySchema = z.strictObject({
   /** Absolute or relative (resolved against the config file's own directory)
-   *  path to the box — either a v2 package root or a legacy/v2 content dir.
-   *  `src/hub/supervisor.ts` resolves which. */
+   *  path to the box root — one root (shapeVersion 3). */
   path: z.string().min(1),
 });
 

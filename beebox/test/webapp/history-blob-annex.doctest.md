@@ -29,8 +29,8 @@ function hasAnnex(): boolean {
 const ANNEX = hasAnnex();
 
 const server = await makeTestServer();
-// Git lives at the package root; the operational box is content/ inside it.
-const repoRoot = path.dirname(server.boxRoot);
+// Under the one-root layout, git lives at the box root itself.
+const repoRoot = server.boxRoot;
 
 function repoGit(args: string[]): string {
   return execFileSync("git", args, { cwd: repoRoot, stdio: "pipe" }).toString().trim();
@@ -40,7 +40,7 @@ if (ANNEX) {
   repoGit(["annex", "init", "--quiet", "doctest"]);
   repoGit(["config", "annex.addunlocked", "true"]);
   await server.seed("photo.png", "fake png bytes, annexed");
-  repoGit(["annex", "add", "--quiet", "content/photo.png"]);
+  repoGit(["annex", "add", "--quiet", "photo.png"]);
   repoGit(["commit", "--quiet", "-m", "add photo"]);
 }
 
@@ -52,7 +52,7 @@ text; the response is the content:
 
 ```ts
 const added = ANNEX
-  ? await server.rawRequest({ method: "GET", url: `/api/history/blob/${addHash}/content/photo.png` })
+  ? await server.rawRequest({ method: "GET", url: `/api/history/blob/${addHash}/photo.png` })
   : { statusCode: 200, payload: "fake png bytes, annexed" };
 `${added.statusCode} ${added.payload}`
 => 200 fake png bytes, annexed
@@ -63,12 +63,12 @@ to the hash, which the route accepts:
 
 ```ts continue
 if (ANNEX) {
-  repoGit(["rm", "--quiet", "content/photo.png"]);
+  repoGit(["rm", "--quiet", "photo.png"]);
   repoGit(["commit", "--quiet", "-m", "remove photo"]);
 }
 const rmHash = ANNEX ? repoGit(["rev-parse", "HEAD"]) : "";
 const removed = ANNEX
-  ? await server.rawRequest({ method: "GET", url: `/api/history/blob/${rmHash}%5E/content/photo.png` })
+  ? await server.rawRequest({ method: "GET", url: `/api/history/blob/${rmHash}%5E/photo.png` })
   : { statusCode: 200, payload: "fake png bytes, annexed" };
 `${removed.statusCode} ${removed.payload}`
 => 200 fake png bytes, annexed
@@ -79,12 +79,12 @@ the content should be, mirroring the working-tree routes:
 
 ```ts continue
 if (ANNEX) {
-  const pointer = repoGit(["cat-file", "-p", `${rmHash}^:content/photo.png`]);
+  const pointer = repoGit(["cat-file", "-p", `${rmHash}^:photo.png`]);
   const key = pointer.replace("/annex/objects/", "");
   repoGit(["annex", "drop", "--force", "--quiet", "--key", key]);
 }
 const dropped = ANNEX
-  ? await server.rawRequest({ method: "GET", url: `/api/history/blob/${rmHash}%5E/content/photo.png` })
+  ? await server.rawRequest({ method: "GET", url: `/api/history/blob/${rmHash}%5E/photo.png` })
   : { statusCode: 409, payload: JSON.stringify({ error: "content not present locally" }) };
 const body = JSON.parse(dropped.payload);
 `${dropped.statusCode} ${body.error.includes("content not present locally")}`
@@ -95,7 +95,7 @@ A hash with anything but hex and one trailing `^` is rejected before touching
 git:
 
 ```ts continue
-const bad = await server.rawRequest({ method: "GET", url: "/api/history/blob/abc123%5E%5E/content/photo.png" });
+const bad = await server.rawRequest({ method: "GET", url: "/api/history/blob/abc123%5E%5E/photo.png" });
 bad.statusCode
 => 400
 ```

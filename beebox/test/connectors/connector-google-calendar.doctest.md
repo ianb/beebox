@@ -2,7 +2,7 @@
 
 The Google Calendar connector pulls events from Google via the
 `GoogleCalendarService` and writes them as `.ics` files under
-`store/calendar/`. Injecting a fake service lets us exercise the ICS
+`_content/calendar/`. Injecting a fake service lets us exercise the ICS
 generation path (VTIMEZONE + DTSTART) without hitting the network.
 
 ```ts setup
@@ -74,7 +74,7 @@ result.success
 The sync wrote one `.ics` file:
 
 ```ts continue
-const files = (await readdir(join(box.root, "store/calendar"))).filter((f) => f.endsWith(".ics"));
+const files = (await readdir(join(box.root, "_content/calendar"))).filter((f) => f.endsWith(".ics"));
 files.length
 => 1
 ```
@@ -84,7 +84,7 @@ basic-vs-extended date format bug that broke every box's calendar sync
 would have thrown here):
 
 ```ts continue
-const ics = await readFile(join(box.root, "store/calendar", files[0]), "utf-8");
+const ics = await readFile(join(box.root, "_content/calendar", files[0]), "utf-8");
 const comp = new ICAL.Component(ICAL.parse(ics));
 comp.name
 => vcalendar
@@ -121,7 +121,7 @@ String(vevent?.getFirstProperty("rrule")?.toICALString()).includes("FREQ=WEEKLY"
 
 ## A locally-created .ics file gets pushed to Google
 
-Drop an unrecognized `.ics` into `store/calendar/`. The connector parses it,
+Drop an unrecognized `.ics` into `_content/calendar/`. The connector parses it,
 inserts it into the fake calendar, and tracks it in state.
 
 ```ts
@@ -129,7 +129,7 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
 
-await box.seed("store/calendar/local-new.ics",
+await box.seed("_content/calendar/local-new.ics",
   "BEGIN:VCALENDAR\r\n" +
   "VERSION:2.0\r\n" +
   "PRODID:-//Test//EN\r\n" +
@@ -194,7 +194,7 @@ const calendar = createFakeGoogleCalendar({
 
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 
 // Edit locally; Google's `updated` is unchanged → the edit gets pushed.
@@ -250,7 +250,7 @@ const calendar = createFakeGoogleCalendar({
 
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 
 // Local edit...
@@ -376,7 +376,7 @@ calendars, pushes local orphans, and reports the overall run as failed.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/google-calendar.json", JSON.stringify({
+await box.seed("_config/connectors/google-calendar.json", JSON.stringify({
   calendars: ["bad", "good"],
   syncDaysBack: 30,
   syncDaysForward: 90,
@@ -435,7 +435,7 @@ const calendar: GoogleCalendarService = {
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
 
-await box.seed("store/calendar/local-new.ics",
+await box.seed("_content/calendar/local-new.ics",
   "BEGIN:VCALENDAR\r\n" +
   "VERSION:2.0\r\n" +
   "PRODID:-//Test//EN\r\n" +
@@ -512,7 +512,7 @@ calendars, and never exposes the HTTP request URL containing token material.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/google-calendar.json", JSON.stringify({
+await box.seed("_config/connectors/google-calendar.json", JSON.stringify({
   calendars: ["expired", "healthy"],
 }, null, 2));
 box.commitAll("init retry box");
@@ -630,7 +630,7 @@ await box.cleanup();
 
 ## A corrupt state file fails the sync closed, nothing is pushed
 
-`config/connectors/google-calendar-state.json` is the index of which `.ics`
+`_bookkeeping/connectors/google-calendar-state.json` is the index of which `.ics`
 file belongs to which Google event. It is not a cache: the push pass treats
 every calendar file *absent* from that index as a locally-created event, so
 recovering from an unreadable index by starting with an empty one would insert
@@ -666,7 +666,7 @@ The sync fails, and — the point of the test — the fake calendar is untouched
 no `insertEvent` reached Google.
 
 ```ts continue
-const statePath = join(box.root, "config/connectors/google-calendar-state.json");
+const statePath = join(box.root, "_bookkeeping/connectors/google-calendar-state.json");
 await writeFile(statePath, '{"syncTokens": {}, "eventFiles": {"evt-rev');
 
 const second = await connector.sync();
@@ -688,7 +688,7 @@ second.error?.includes("could not be read or parsed")
 The local `.ics` is still there too — a failed load never touches the store:
 
 ```ts continue
-(await readdir(join(box.root, "store/calendar"))).filter((f) => f.endsWith(".ics")).length
+(await readdir(join(box.root, "_content/calendar"))).filter((f) => f.endsWith(".ics")).length
 => 1
 ```
 
@@ -707,7 +707,7 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
 
-await box.seed("store/calendar/local-new.ics",
+await box.seed("_content/calendar/local-new.ics",
   "BEGIN:VCALENDAR\r\n" +
   "VERSION:2.0\r\n" +
   "PRODID:-//Test//EN\r\n" +
@@ -744,9 +744,9 @@ waiting to be retried:
 
 ```ts continue
 result.error
-=> Calendar sync failed for primary store/calendar/local-new.ics (local-push, HTTP 503)
+=> Calendar sync failed for primary _content/calendar/local-new.ics (local-push, HTTP 503)
 
-(await readFile(join(box.root, "store/calendar/local-new.ics"), "utf-8")).includes("Rejected push")
+(await readFile(join(box.root, "_content/calendar/local-new.ics"), "utf-8")).includes("Rejected push")
 => true
 ```
 
@@ -800,7 +800,7 @@ const calendar: GoogleCalendarService = {
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
 
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 const ics = await readFile(join(dir, file), "utf-8");
 await writeFile(join(dir, file), ics.replace("END:VEVENT", "X-BBX-DELETE:no longer happening\r\nEND:VEVENT"));
@@ -860,7 +860,7 @@ const calendar: GoogleCalendarService = {
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
 
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 const localIcs = await readFile(join(dir, file), "utf-8");
 await writeFile(join(dir, file), localIcs.replace("Lunch", "Lunch MINE"));
@@ -877,7 +877,7 @@ const after = await readFile(join(dir, file), "utf-8");
 after.includes("Lunch MINE")
 => true
 
-result.error?.includes(`store/calendar/${file} (local-push, HTTP 503)`)
+result.error?.includes(`_content/calendar/${file} (local-push, HTTP 503)`)
 => true
 ```
 
@@ -956,7 +956,7 @@ const calendar: GoogleCalendarService = {
   },
 };
 
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const summaries = async (): Promise<string[]> => {
   const names = (await readdir(dir)).filter((f) => f.endsWith(".ics"));
   const found: string[] = [];
@@ -1023,7 +1023,7 @@ its absence is not evidence of anything and it is never removed. Push one into
 Google (which tracks it), delete it there, and force another 410:
 
 ```ts continue
-await box.seed("store/calendar/2027-01-01_faraway.ics",
+await box.seed("_content/calendar/2027-01-01_faraway.ics",
   "BEGIN:VCALENDAR\r\n" +
   "VERSION:2.0\r\n" +
   "PRODID:-//Test//EN\r\n" +
@@ -1102,7 +1102,7 @@ const calendar: GoogleCalendarService = {
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
 
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 const localIcs = await readFile(join(dir, file), "utf-8");
 await writeFile(join(dir, file), localIcs.replace("Lunch", "Lunch MINE"));
@@ -1184,7 +1184,7 @@ const calendar: GoogleCalendarService = {
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
 
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 const localIcs = await readFile(join(dir, file), "utf-8");
 await writeFile(join(dir, file), localIcs.replace("Dentist", "Dentist MINE"));
@@ -1220,7 +1220,7 @@ await box.cleanup();
 A patch that comes back 404 is definitive: there is no event on Google to
 patch, and no number of retries changes that. The edit used to sit in the
 retry queue forever, re-patched and re-reported on every wakeup. Now the file
-is stranded — moved to `store/calendar/stranded/`, untracked, reported once.
+is stranded — moved to `_content/calendar/stranded/`, untracked, reported once.
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -1259,7 +1259,7 @@ const calendar: GoogleCalendarService = {
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
 
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 const localIcs = await readFile(join(dir, file), "utf-8");
 await writeFile(join(dir, file), localIcs.replace("Deleted but edited here", "MINE now"));
@@ -1270,7 +1270,7 @@ const strandRun = await connector.sync();
 JSON.stringify({
   success: strandRun.success,
   patchCalls,
-  blamed: strandRun.error?.includes(`store/calendar/${file} (local-push, local: stranded — deleted on Google (HTTP 404))`),
+  blamed: strandRun.error?.includes(`_content/calendar/${file} (local-push, local: stranded — deleted on Google (HTTP 404))`),
   gone: (await readdir(dir)).includes(file),
   kept: (await readFile(join(dir, "stranded", file), "utf-8")).includes("MINE now"),
 })
@@ -1302,12 +1302,12 @@ const nameStatus = execSync("git show --name-status --pretty=format: HEAD", { cw
 // Columns are status, path(s) — and the box package puts the box under
 // content/, so match by suffix rather than by a whole path.
 const rows = nameStatus.trim().split("\n").filter(Boolean).map((line) => line.split("\t"));
-const vacated = rows.find((row) => row[1]?.endsWith(`store/calendar/${file}`));
+const vacated = rows.find((row) => row[1]?.endsWith(`_content/calendar/${file}`));
 // Git may record the move as a rename (R) or as a delete plus an add.
 const renamed = vacated?.[0]?.startsWith("R") === true
-  && vacated[2]?.endsWith(`store/calendar/stranded/${file}`) === true;
+  && vacated[2]?.endsWith(`_content/calendar/stranded/${file}`) === true;
 const deletedAndAdded = vacated?.[0] === "D"
-  && rows.some((row) => row[0] === "A" && row[1]?.endsWith(`store/calendar/stranded/${file}`));
+  && rows.some((row) => row[0] === "A" && row[1]?.endsWith(`_content/calendar/stranded/${file}`));
 JSON.stringify({ recorded: renamed || deletedAndAdded })
 => {"recorded":true}
 ```
@@ -1382,7 +1382,7 @@ const calendar: GoogleCalendarService = {
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: () => clock });
 await connector.sync();
 
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 const localIcs = await readFile(join(dir, file), "utf-8");
 await writeFile(join(dir, file), localIcs.replace("SUMMARY:Lunch", "SUMMARY:Lunch MINE"));
@@ -1455,7 +1455,7 @@ inner.events = [
 const connector2 = createGoogleCalendarConnector(box2.root, { calendar, now: () => clock });
 await connector2.sync();
 
-const dir2 = join(box2.root, "store/calendar");
+const dir2 = join(box2.root, "_content/calendar");
 const file2 = (await readdir(dir2)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 const ics2 = await readFile(join(dir2, file2), "utf-8");
 await writeFile(join(dir2, file2), ics2.replace("SUMMARY:Lunch", "SUMMARY:Lunch MINE"));
@@ -1524,7 +1524,7 @@ const calendar: GoogleCalendarService = {
 
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 
 // The resync comes back without the master. Nothing may be concluded from that.
@@ -1577,7 +1577,7 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
 
-await box.seed("store/calendar/local-new.ics",
+await box.seed("_content/calendar/local-new.ics",
   "BEGIN:VCALENDAR\r\n" +
   "VERSION:2.0\r\n" +
   "PRODID:-//Test//EN\r\n" +
@@ -1620,7 +1620,7 @@ JSON.stringify({ pushed: first.pushed?.length, remote: inner.events[0]?.summary 
 Edit the file the box created. The next sync patches it up:
 
 ```ts continue
-const filePath = join(box.root, "store/calendar/local-new.ics");
+const filePath = join(box.root, "_content/calendar/local-new.ics");
 const localIcs = await readFile(filePath, "utf-8");
 await writeFile(filePath, localIcs.replace("Locally created", "Locally created MINE"));
 
@@ -1655,7 +1655,7 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
 
-await box.seed("store/calendar/annotated.ics",
+await box.seed("_content/calendar/annotated.ics",
   "BEGIN:VCALENDAR\r\n" +
   "VERSION:2.0\r\n" +
   "PRODID:-//Test//EN\r\n" +
@@ -1686,7 +1686,7 @@ const calendar: GoogleCalendarService = {
   },
 };
 
-const filePath = join(box.root, "store/calendar/annotated.ics");
+const filePath = join(box.root, "_content/calendar/annotated.ics");
 await chmod(filePath, 0o444);
 
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
@@ -1694,7 +1694,7 @@ const first = await connector.sync();
 JSON.stringify({
   success: first.success,
   pushed: first.pushed?.length,
-  blamed: first.error?.includes("store/calendar/annotated.ics (local-push, error)"),
+  blamed: first.error?.includes("_content/calendar/annotated.ics (local-push, error)"),
   remote: inner.events.map((e) => e.summary),
 })
 => {"success":false,"pushed":1,"blamed":true,"remote":["Book the hall"]}
@@ -1779,7 +1779,7 @@ const calendar: GoogleCalendarService = {
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
 
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
 const filePath = join(dir, file);
 const localIcs = await readFile(filePath, "utf-8");
@@ -1787,14 +1787,14 @@ const localIcs = await readFile(filePath, "utf-8");
 // rewrite would have dropped, so the file and Google's copy really do differ.
 await writeFile(filePath, localIcs
   .replace("Review", "Review MINE")
-  .replace("END:VEVENT", "X-BBX-REF:store/note.md\r\nEND:VEVENT"));
+  .replace("END:VEVENT", "X-BBX-REF:_content/note.md\r\nEND:VEVENT"));
 await chmod(filePath, 0o444);
 
 quiet = true;
 const rewriteFailed = await connector.sync();
 JSON.stringify({
   success: rewriteFailed.success,
-  blamed: rewriteFailed.error?.includes(`store/calendar/${file} (local-push, error)`),
+  blamed: rewriteFailed.error?.includes(`_content/calendar/${file} (local-push, error)`),
   remote: inner.events.map((e) => e.summary),
 })
 => {"success":false,"blamed":true,"remote":["Review MINE"]}

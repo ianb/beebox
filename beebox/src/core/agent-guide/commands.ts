@@ -18,7 +18,7 @@ This is the rest of the everyday \`bbx\` surface; the full reference is
 
 - \`bbx feedback "<message>"\` — record anything that feels off about the tooling:
   a confusing flag, an unclear error message, an awkward workflow, a surprising
-  behavior. It's **silent** — writes a file to \`config/feedback/\` and commits it
+  behavior. It's **silent** — writes a file to \`_config/feedback/\` and commits it
   without interrupting your task — so reach for it reflexively the moment
   something is off. Good feedback is specific about *what* was confusing and
   *why*.
@@ -59,8 +59,8 @@ procedure run):
 **System-run — you don't invoke these** (the wakeup cycle and scheduler do; they
 appear here so you recognize them in \`git log\` and health output):
 
-- \`bbx reactor\` — process pending jobs in \`box/jobs/\`.
-- \`bbx finalize\` — flush outbound cards in \`box/output/\`.
+- \`bbx reactor\` — process pending jobs in \`_bookkeeping/jobs/\`.
+- \`bbx finalize\` — flush outbound cards in \`_bookkeeping/output/\`.
 - \`bbx health\` — scheduled-task health (failing / overdue / blocked /
   inconclusive tasks + scheduler liveness). \`inconclusive\` means the last run
   did its work but its check never reached a verdict — unknown, not broken; do

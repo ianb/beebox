@@ -105,7 +105,7 @@ JSON.stringify({ status: accepted.statusCode, location: accepted.headers.locatio
 listUsers().map((user) => `${user.email}:${user.role}`).join(",")
 => member@example.com:member
 
-JSON.parse(await ctx.read("config/box.json")).allowedEmails.join(",")
+JSON.parse(await ctx.read("_config/box.json")).allowedEmails.join(",")
 => member@example.com
 ```
 
@@ -219,7 +219,7 @@ process.env.BBX_AUTH_FILE = join(partialAuthDir, "auth.json");
 process.env.BBX_OWNER_EMAIL = "owner@example.com";
 await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
 const partialCtx = await makeTestServer({ openAccess: false });
-await partialCtx.seed("config/box.json", "not json");
+await partialCtx.seed("_config/box.json", "not json");
 const partialInvite = await mintAuthInvite({
   boxRoot: partialCtx.boxRoot,
   createdBy: "owner@example.com",
@@ -261,7 +261,7 @@ process.env.BBX_AUTH_FILE = join(authDir2, "auth.json");
 process.env.BBX_OWNER_EMAIL = "owner@example.com";
 await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
 const ctx2 = await makeTestServer({ openAccess: false });
-await ctx2.seed("config/box.json", JSON.stringify({ allowedEmails: ["GoogleOnly@Example.COM"] }));
+await ctx2.seed("_config/box.json", JSON.stringify({ allowedEmails: ["GoogleOnly@Example.COM"] }));
 const openOwner = await mintAuthInvite({ boxRoot: ctx2.boxRoot, createdBy: "owner@example.com" });
 
 const originalCollisionWarn = console.warn;

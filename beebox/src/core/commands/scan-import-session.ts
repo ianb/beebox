@@ -2,7 +2,7 @@
  * Session layout + input classification for the scan-import command.
  *
  * Every scan-import run (photo or pdf) allocates one capture-session
- * card under `box/inbox/scan-<date>-<id>.capture-session.card` with a sibling
+ * card under `_content/inbox/scan-<date>-<id>.capture-session.card` with a sibling
  * `.attach/` scope. `createSessionLayout` computes those paths and creates the
  * attach directory. The file-type predicates and the boxholder-context
  * assembly (scan guide via `scan-guide-context.ts`, plus `--context`) round
@@ -31,6 +31,7 @@ import { getGeminiApiKey } from "../gemini-key.js";
 import { checkClaudeAuth, ClaudeAuthError } from "../agent/auth-preflight.js";
 import { ScanVisionBatchError } from "../../services/scan-vision.js";
 import { runScanBatches, type RunScanBatchesResult } from "./scan-import-helpers.js";
+import { BOX_DIRS } from "../../lib/paths.js";
 
 export interface SessionLayout {
   sessionId: string;
@@ -202,7 +203,7 @@ export async function createSessionLayout(ctx: CommandContext): Promise<SessionL
   const stamp = startedAt.replace(/[:-]/g, "").slice(0, 13);
   const formattedDate = `${stamp.slice(0, 8)}T${stamp.slice(9, 13)}`;
   const sessionBasename = `scan-${formattedDate}-${shortId}`;
-  const inboxRelDir = "box/inbox";
+  const inboxRelDir = BOX_DIRS.inbox;
   const inboxAbsDir = path.join(ctx.boxRoot, inboxRelDir);
   const sessionCardFilename = `${sessionBasename}.capture-session.card`;
   const sessionAttachRelDir = `${inboxRelDir}/${sessionBasename}.attach`;

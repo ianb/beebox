@@ -29,7 +29,7 @@ QuestionFollowupJobSchema.frontmatterSchema.safeParse({
   status: "pending",
   source: "question-answer",
   description: "Follow up",
-  "question-ref": { ref: "box/questions/X.question.card" },
+  "question-ref": { ref: "_bookkeeping/questions/X.question.card" },
   directive: "Do the thing",
   answer: "yes",
 }).success
@@ -40,7 +40,7 @@ QuestionFollowupJobSchema.frontmatterSchema.safeParse({
   status: "pending",
   source: "question-answer",
   description: "Follow up",
-  "question-ref": { ref: "box/questions/X.question.card" },
+  "question-ref": { ref: "_bookkeeping/questions/X.question.card" },
   directive: "Do the thing",
   answer: "yes",
   learning: { sink: "guide", proposal: "Items like this belong in category A." },
@@ -52,7 +52,7 @@ QuestionFollowupJobSchema.frontmatterSchema.safeParse({
   status: "pending",
   source: "question-answer",
   description: "Follow up",
-  "question-ref": { ref: "box/questions/X.question.card" },
+  "question-ref": { ref: "_bookkeeping/questions/X.question.card" },
   directive: "Do the thing",
   answer: "yes",
   learning: { sink: "guide" },
@@ -65,7 +65,7 @@ QuestionFollowupJobSchema.frontmatterSchema.safeParse({
 ```ts
 createQuestionFollowupJobTemplate({
   description: "Follow up on answered question: What color?",
-  questionRef: "box/questions/X.question.card",
+  questionRef: "_bookkeeping/questions/X.question.card",
   directive: "File it.",
   answer: "blue",
 })
@@ -75,7 +75,7 @@ status: pending
 source: question-answer
 description: "Follow up on answered question: What color?"
 question-ref:
-  ref: box/questions/X.question.card
+  ref: _bookkeeping/questions/X.question.card
 directive: File it.
 answer: blue
 ---
@@ -87,7 +87,7 @@ answer: blue
 ```ts
 createQuestionFollowupJobTemplate({
   description: "Follow up on answered question: What color?",
-  questionRef: "box/questions/X.question.card",
+  questionRef: "_bookkeeping/questions/X.question.card",
   directive: "File it.",
   answer: "blue",
   learning: { sink: "guide", proposal: "Items like this belong in category A." },
@@ -98,7 +98,7 @@ status: pending
 source: question-answer
 description: "Follow up on answered question: What color?"
 question-ref:
-  ref: box/questions/X.question.card
+  ref: _bookkeeping/questions/X.question.card
 directive: File it.
 answer: blue
 learning:

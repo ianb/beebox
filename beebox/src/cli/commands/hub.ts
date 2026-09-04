@@ -48,7 +48,7 @@ function registerAddBoxSubcommand(parent: Command): void {
     .command("add-box")
     .description("Register a box with the hub's routing table (hub.json)")
     .argument("<slug>", "URL prefix the box is served under")
-    .argument("<path>", "Path to the box (package root or content dir)")
+    .argument("<path>", "Path to the box root")
     .option("-c, --config <path>", "Path to hub.json (default: ~/.config/beebox/hub.json)")
     .option("--dry-run", "Validate and print what would change, without writing");
 

@@ -30,10 +30,10 @@ function extUrl(href: string): string {
   return `/api/external?href=${encodeURIComponent(href)}`;
 }
 
-// The route reads its allowlist from the requesting box's config/box.json
+// The route reads its allowlist from the requesting box's _config/box.json
 // (`externalRoots`), per request. Seed it into the test box.
 async function allowRoot(ctx: { seed(p: string, c: string): Promise<void> }): Promise<void> {
-  await ctx.seed("config/box.json", JSON.stringify({ externalRoots: [root] }));
+  await ctx.seed("_config/box.json", JSON.stringify({ externalRoots: [root] }));
 }
 
 function makeExternalServer() {

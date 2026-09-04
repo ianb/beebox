@@ -111,19 +111,19 @@ const result = await mountDriveFolder({
   boxRoot: box.root,
   service: drive,
   input: "https://drive.google.com/drive/folders/folder-1",
-  dir: "store/drive/recipes",
+  dir: "_content/drive/recipes",
 });
 JSON.stringify({ cardPath: result.cardPath, name: result.name, failures: result.failures })
-=> {"cardPath":"store/drive/recipes/Recipes.gfolder.card","name":"Recipes","failures":[]}
+=> {"cardPath":"_content/drive/recipes/Recipes.gfolder.card","name":"Recipes","failures":[]}
 
-JSON.stringify(cardsIn(await box.list(), "store/drive/recipes/"))
-=> ["store/drive/recipes/Budget_2026.gsheet.card","store/drive/recipes/Recipes.gfolder.card","store/drive/recipes/Scanpdf.glink.card"]
+JSON.stringify(cardsIn(await box.list(), "_content/drive/recipes/"))
+=> ["_content/drive/recipes/Budget_2026.gsheet.card","_content/drive/recipes/Recipes.gfolder.card","_content/drive/recipes/Scanpdf.glink.card"]
 ```
 
 The mount card records the outcome, and the pointer says where it came from.
 
 ```ts continue
-const card = await box.read("store/drive/recipes/Recipes.gfolder.card");
+const card = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 JSON.stringify({
   driveId: /drive-id: (\S+)/.exec(card)?.[1],
   status: /status: (\S+)/.exec(card)?.[1],
@@ -131,7 +131,7 @@ JSON.stringify({
 })
 => {"driveId":"folder-1","status":"ok","hasLastSync":true}
 
-/origin: (\S+)/.exec(await box.read("store/drive/recipes/Scanpdf.glink.card"))?.[1]
+/origin: (\S+)/.exec(await box.read("_content/drive/recipes/Scanpdf.glink.card"))?.[1]
 => mirror
 ```
 
@@ -143,9 +143,9 @@ await mountDriveFolder({
   boxRoot: box.root,
   service: drive,
   input: FOLDER_URL("folder-1"),
-  dir: "store/drive/elsewhere",
+  dir: "_content/drive/elsewhere",
 })
-=> throws DriveIdClaimedError: Drive item folder-1 is already claimed by: store/drive/recipes/Recipes.gfolder.card — trash or move that card to put it somewhere else
+=> throws DriveIdClaimedError: Drive item folder-1 is already claimed by: _content/drive/recipes/Recipes.gfolder.card — trash or move that card to put it somewhere else
 ```
 
 So is mounting a second folder into a directory that already has a mount: one
@@ -157,7 +157,7 @@ await mountDriveFolder({
   boxRoot: box.root,
   service: drive,
   input: FOLDER_URL("folder-2"),
-  dir: "store/drive/recipes",
+  dir: "_content/drive/recipes",
 })
 => throws DirectoryAlreadyMountedError
 ```
@@ -179,7 +179,7 @@ await mountDriveFolder({
   boxRoot: box.root,
   service: drive,
   input: FILE_URL("sheet-1"),
-  dir: "store/drive/budget",
+  dir: "_content/drive/budget",
 })
 => throws NotADriveFolderError: Budget 2026 is a application/vnd.google-apps.spreadsheet, not a Drive folder — use `bbx drive add` to sync a Doc or Sheet, or `bbx drive link` to point at it
 ```
@@ -187,14 +187,14 @@ await mountDriveFolder({
 Nothing is left behind by the refusal — no directory, no card.
 
 ```ts continue
-(await box.list()).includes("store/drive/budget")
+(await box.list()).includes("_content/drive/budget")
 => false
 ```
 
 An input with no readable Drive ID never reaches Drive at all.
 
 ```ts continue
-await mountDriveFolder({ boxRoot: box.root, service: drive, input: "", dir: "store/drive/x" })
+await mountDriveFolder({ boxRoot: box.root, service: drive, input: "", dir: "_content/drive/x" })
 => throws UnreadableDriveInputError
 ```
 
@@ -216,17 +216,17 @@ const linked = await linkDriveItem({
   boxRoot: box.root,
   service: drive,
   input: "https://drive.google.com/file/d/pdf-1/view",
-  target: "store/drive/Lease",
+  target: "_content/drive/Lease",
 });
 JSON.stringify(linked)
-=> {"cardPath":"store/drive/Lease.glink.card","name":"Scan.pdf","mimeType":"application/pdf"}
+=> {"cardPath":"_content/drive/Lease.glink.card","name":"Scan.pdf","mimeType":"application/pdf"}
 ```
 
 `origin: manual` is what separates a pointer someone asked for from one a
 mirror emitted, and the body starts empty because the notes are not ours.
 
 ```ts continue
-const card = await box.read("store/drive/Lease.glink.card");
+const card = await box.read("_content/drive/Lease.glink.card");
 JSON.stringify({
   origin: /origin: (\S+)/.exec(card)?.[1],
   driveId: /drive-id: (\S+)/.exec(card)?.[1],
@@ -242,16 +242,16 @@ const folderLink = await linkDriveItem({
   boxRoot: box.root,
   service: drive,
   input: FOLDER_URL("folder-1"),
-  target: "store/drive/Recipes_folder.glink.card",
+  target: "_content/drive/Recipes_folder.glink.card",
 });
 JSON.stringify({ cardPath: folderLink.cardPath, mimeType: folderLink.mimeType })
-=> {"cardPath":"store/drive/Recipes_folder.glink.card","mimeType":"application/vnd.google-apps.folder"}
+=> {"cardPath":"_content/drive/Recipes_folder.glink.card","mimeType":"application/vnd.google-apps.folder"}
 ```
 
 The same Drive item is not pointed at twice.
 
 ```ts continue
-await linkDriveItem({ boxRoot: box.root, service: drive, input: FILE_URL("pdf-1"), target: "store/drive/Again" })
+await linkDriveItem({ boxRoot: box.root, service: drive, input: FILE_URL("pdf-1"), target: "_content/drive/Again" })
 => throws DriveIdClaimedError
 ```
 
@@ -269,20 +269,20 @@ await mountDriveFolder({
   boxRoot: box.root,
   service: drive,
   input: FOLDER_URL("folder-1"),
-  dir: "store/drive/recipes",
+  dir: "_content/drive/recipes",
 });
 
-const unmounted = await unmountDriveFolder({ boxRoot: box.root, target: "store/drive/recipes" });
+const unmounted = await unmountDriveFolder({ boxRoot: box.root, target: "_content/drive/recipes" });
 JSON.stringify(unmounted)
-=> {"cardPath":"store/drive/recipes/Recipes.gfolder.card","trashedTo":"store/trash/Recipes.gfolder.card"}
+=> {"cardPath":"_content/drive/recipes/Recipes.gfolder.card","trashedTo":"_bookkeeping/trash/Recipes.gfolder.card"}
 ```
 
 The children stay exactly where they are — the synced Sheet keeps syncing on
 its own card, the pointer keeps pointing. Nothing was deleted.
 
 ```ts continue
-JSON.stringify(cardsIn(await box.list(), "store/drive/recipes/"))
-=> ["store/drive/recipes/Budget_2026.gsheet.card","store/drive/recipes/Scanpdf.glink.card"]
+JSON.stringify(cardsIn(await box.list(), "_content/drive/recipes/"))
+=> ["_content/drive/recipes/Budget_2026.gsheet.card","_content/drive/recipes/Scanpdf.glink.card"]
 ```
 
 And the trashed card is the tombstone that stops the next sync re-creating the
@@ -292,8 +292,8 @@ mount.
 const drive2 = recipesDrive();
 const connector = createGoogleDriveConnector(box.root, drive2);
 await connector.sync();
-JSON.stringify(cardsIn(await box.list(), "store/drive/recipes/"))
-=> ["store/drive/recipes/Budget_2026.gsheet.card","store/drive/recipes/Scanpdf.glink.card"]
+JSON.stringify(cardsIn(await box.list(), "_content/drive/recipes/"))
+=> ["_content/drive/recipes/Budget_2026.gsheet.card","_content/drive/recipes/Scanpdf.glink.card"]
 ```
 
 Naming the card directly works the same way.
@@ -304,13 +304,13 @@ await mountDriveFolder({
   boxRoot: box.root,
   service: drive,
   input: FOLDER_URL("folder-2"),
-  dir: "store/drive/desserts",
+  dir: "_content/drive/desserts",
 });
 (await unmountDriveFolder({
   boxRoot: box.root,
-  target: "store/drive/desserts/Desserts.gfolder.card",
+  target: "_content/drive/desserts/Desserts.gfolder.card",
 })).trashedTo
-=> store/trash/Desserts.gfolder.card
+=> _bookkeeping/trash/Desserts.gfolder.card
 ```
 
 ```ts cleanup
@@ -322,15 +322,15 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("store/drive/two/A.gfolder.card", createGfolderTemplate({ driveId: "folder-1" }));
-await box.seed("store/drive/two/B.gfolder.card", createGfolderTemplate({ driveId: "folder-2" }));
+await box.seed("_content/drive/two/A.gfolder.card", createGfolderTemplate({ driveId: "folder-1" }));
+await box.seed("_content/drive/two/B.gfolder.card", createGfolderTemplate({ driveId: "folder-2" }));
 box.commitAll("two mounts in one directory");
 
-await unmountDriveFolder({ boxRoot: box.root, target: "store/drive/two" })
-=> throws AmbiguousFolderMountError: store/drive/two holds 2 folder mounts (A.gfolder.card, B.gfolder.card) — name the one to unmount
+await unmountDriveFolder({ boxRoot: box.root, target: "_content/drive/two" })
+=> throws AmbiguousFolderMountError: _content/drive/two holds 2 folder mounts (A.gfolder.card, B.gfolder.card) — name the one to unmount
 
-await unmountDriveFolder({ boxRoot: box.root, target: "store/notes" })
-=> throws NoFolderMountHereError: store/notes is not a Drive folder mount — it holds no .gfolder.card
+await unmountDriveFolder({ boxRoot: box.root, target: "_content/notes" })
+=> throws NoFolderMountHereError: _content/notes is not a Drive folder mount — it holds no .gfolder.card
 ```
 
 ```ts cleanup
@@ -350,7 +350,7 @@ await mountDriveFolder({
   boxRoot: box.root,
   service: drive,
   input: FOLDER_URL("folder-1"),
-  dir: "store/drive/recipes",
+  dir: "_content/drive/recipes",
 });
 
 const output = await captureLogs(() => runDriveStatus(box.root));
@@ -382,7 +382,7 @@ await captureLogs(async () => {
   await syncFolderMount({
     boxRoot: box.root,
     service: drive,
-    target: "store/drive/recipes/Recipes.gfolder.card",
+    target: "_content/drive/recipes/Recipes.gfolder.card",
   });
 });
 const noted = await captureLogs(() => runDriveStatus(box.root));
@@ -404,7 +404,7 @@ on the same pass, and rewrites the config without the entry.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await saveDriveConfig(box.root, {
-  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/recipes" }],
+  folders: [{ driveFolderId: "folder-1", localPath: "_content/drive/recipes" }],
 });
 box.commitAll("a pre-card folder mount");
 
@@ -412,9 +412,9 @@ const connector = createGoogleDriveConnector(box.root, recipesDrive());
 const log = await captureLogs(async () => { await connector.sync(); });
 JSON.stringify({
   converted: log.includes("Converted 1 legacy folder mount(s)"),
-  cards: cardsIn(await box.list(), "store/drive/recipes/"),
+  cards: cardsIn(await box.list(), "_content/drive/recipes/"),
 })
-=> {"converted":true,"cards":["store/drive/recipes/Budget_2026.gsheet.card","store/drive/recipes/Scanpdf.glink.card","store/drive/recipes/recipes.gfolder.card"]}
+=> {"converted":true,"cards":["_content/drive/recipes/Budget_2026.gsheet.card","_content/drive/recipes/Scanpdf.glink.card","_content/drive/recipes/recipes.gfolder.card"]}
 ```
 
 The config no longer carries the entry, and the mount card that replaced it is
@@ -425,7 +425,7 @@ const config = await loadDriveConfig(box.root);
 JSON.stringify(config)
 => {"ok":true,"value":{}}
 
-const card = await box.read("store/drive/recipes/recipes.gfolder.card");
+const card = await box.read("_content/drive/recipes/recipes.gfolder.card");
 JSON.stringify({
   driveId: /drive-id: (\S+)/.exec(card)?.[1],
   name: /name: (.*)/.exec(card)?.[1],
@@ -441,7 +441,7 @@ conversion — there is no `folders` key left to act on.
 const again = await captureLogs(async () => { await connector.sync(); });
 JSON.stringify({
   quiet: again.includes("Converted"),
-  cards: cardsIn(await box.list(), "store/drive/recipes/").length,
+  cards: cardsIn(await box.list(), "_content/drive/recipes/").length,
 })
 => {"quiet":false,"cards":3}
 ```
@@ -460,11 +460,11 @@ like the conversion succeeded.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/recipes/Other.gfolder.card",
+  "_content/drive/recipes/Other.gfolder.card",
   createGfolderTemplate({ driveId: "folder-9" }),
 );
 await saveDriveConfig(box.root, {
-  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/recipes" }],
+  folders: [{ driveFolderId: "folder-1", localPath: "_content/drive/recipes" }],
 });
 box.commitAll("a config entry pointing at an occupied directory");
 
@@ -476,15 +476,15 @@ log.includes("NOT converted")
 => true
 
 JSON.stringify(await loadDriveConfig(box.root))
-=> {"ok":true,"value":{"folders":[{"driveFolderId":"folder-1","localPath":"store/drive/recipes"}]}}
+=> {"ok":true,"value":{"folders":[{"driveFolderId":"folder-1","localPath":"_content/drive/recipes"}]}}
 ```
 
 An idempotent second run does exactly the same thing — no card, no rewrite.
 
 ```ts continue
 await captureLogs(async () => { await connector.sync(); });
-JSON.stringify(cardsIn(await box.list(), "store/drive/recipes/").filter((p) => p.endsWith(".gfolder.card")))
-=> ["store/drive/recipes/Other.gfolder.card"]
+JSON.stringify(cardsIn(await box.list(), "_content/drive/recipes/").filter((p) => p.endsWith(".gfolder.card")))
+=> ["_content/drive/recipes/Other.gfolder.card"]
 ```
 
 ```ts cleanup
@@ -500,7 +500,7 @@ wasn't. So the sync fails loudly and converts nothing.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.write("config/connectors/google-drive.json", '{"folders": [{"localPath": 7}]\n');
+await box.write("_config/connectors/google-drive.json", '{"folders": [{"localPath": 7}]\n');
 box.commitAll("a malformed connector config");
 
 const parsed = await loadDriveConfig(box.root);
@@ -534,10 +534,10 @@ in the config.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("store/drive/recipes/One.gfolder.card", createGfolderTemplate({ driveId: "folder-8" }));
-await box.seed("store/drive/recipes/Two.gfolder.card", createGfolderTemplate({ driveId: "folder-9" }));
+await box.seed("_content/drive/recipes/One.gfolder.card", createGfolderTemplate({ driveId: "folder-8" }));
+await box.seed("_content/drive/recipes/Two.gfolder.card", createGfolderTemplate({ driveId: "folder-9" }));
 await saveDriveConfig(box.root, {
-  folders: [{ driveFolderId: "folder-1", localPath: "store/drive/recipes" }],
+  folders: [{ driveFolderId: "folder-1", localPath: "_content/drive/recipes" }],
 });
 box.commitAll("a config entry pointing at a doubly-mounted directory");
 
@@ -550,7 +550,7 @@ log.includes("already holds 2 folder mounts (One.gfolder.card, Two.gfolder.card)
 => true
 
 JSON.stringify(await loadDriveConfig(box.root))
-=> {"ok":true,"value":{"folders":[{"driveFolderId":"folder-1","localPath":"store/drive/recipes"}]}}
+=> {"ok":true,"value":{"folders":[{"driveFolderId":"folder-1","localPath":"_content/drive/recipes"}]}}
 ```
 
 A legacy config could name any filesystem path. One that climbs out of the box
@@ -600,9 +600,9 @@ await refusal(mountDriveFolder({
 => PathOutsideBoxError: The target directory must be a path inside the box: ../outside
 
 await refusal(mountDriveFolder({
-  boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: "store/../..",
+  boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: "_content/../..",
 }))
-=> PathOutsideBoxError: The target directory must be a path inside the box: store/../..
+=> PathOutsideBoxError: The target directory must be a path inside the box: _content/../..
 
 await refusal(mountDriveFolder({
   boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: ".",
@@ -621,7 +621,7 @@ await refusal(unmountDriveFolder({ boxRoot: box.root, target: "../../etc" }))
 Nothing was created outside the box, and the box itself is untouched.
 
 ```ts continue
-JSON.stringify(cardsIn(await box.list(), "store/"))
+JSON.stringify(cardsIn(await box.list(), "_content/"))
 => []
 ```
 
@@ -629,10 +629,10 @@ A box-root-absolute target still mounts, at the path it names inside the box.
 
 ```ts continue
 const mounted = await mountDriveFolder({
-  boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: "/store/drive/recipes",
+  boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: "/_content/drive/recipes",
 });
 mounted.cardPath
-=> store/drive/recipes/Recipes.gfolder.card
+=> _content/drive/recipes/Recipes.gfolder.card
 ```
 
 ```ts cleanup

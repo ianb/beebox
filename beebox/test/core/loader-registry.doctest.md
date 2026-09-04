@@ -18,7 +18,7 @@ No registration needed — fallback handles everything.
 
 ```ts
 resetLoaderRegistry();
-const s = summarize({ path: "box/inbox/Meeting_Notes.memo.card" });
+const s = summarize({ path: "_content/inbox/Meeting_Notes.memo.card" });
 s.title
 => Meeting Notes
 ```
@@ -44,7 +44,7 @@ registerTypeLoader<{ status: string }>("memo", (raw) => ({
   title: "tag-matched",
   attrs: { status: String(raw.fields === undefined ? "unknown" : raw.fields["status"] ?? "unknown") },
 }));
-const s = summarize({ path: "box/inbox/foo.memo.card", type: "memo", fields: { status: "new" } });
+const s = summarize({ path: "_content/inbox/foo.memo.card", type: "memo", fields: { status: "new" } });
 s.title
 => tag-matched
 

@@ -1,7 +1,7 @@
 # `bbx pub draft` core
 
 `draftPublication` (Track E of `docs/plans/publish-pages.md`) renders a docs
-source into a `box/publish/<pub-id>/` draft (via the box layout), writes the bundle + manifest to the
+source into a `_publish/<pub-id>/` draft (via the box layout), writes the bundle + manifest to the
 working tree, runs the leak scan, and commits **only** on a clean-or-accepted
 scan. The commit step is injectable, so these filesystem doctests exercise the
 render→write→scan→decision logic with a recording stub — no real git repo
@@ -63,17 +63,17 @@ result.manifest.status
 => draft
 ```
 
-The manifest and bundle are written under `box/publish/<pub-id>/` (a sibling of
-`box/inbox/`, resolved via the box layout), the persisted manifest re-validates,
+The manifest and bundle are written under `_publish/<pub-id>/` (a top-level
+operational area, resolved via the box layout), the persisted manifest re-validates,
 and the clean scan led to exactly one commit.
 
 ```ts continue
-const manifestRaw = await box.read(`box/publish/${result.pubId}/manifest.json`);
+const manifestRaw = await box.read(`_publish/${result.pubId}/manifest.json`);
 publicationManifestSchema.safeParse(JSON.parse(manifestRaw)).success
 => true
 
 // The bundle entry is present and previewed with bytes + sha256.
-(await box.read(`box/publish/${result.pubId}/bundle/index.html`)).includes("Build Journal")
+(await box.read(`_publish/${result.pubId}/bundle/index.html`)).includes("Build Journal")
 => true
 
 result.files.some((f) => f.path === "index.html" && f.bytes > 0 && /^[\da-f]{64}$/.test(f.sha256))

@@ -7,6 +7,7 @@ import { createEmailThreadTemplate } from "../schemas/email-thread.js";
 import { createEmailMessageTemplate } from "../schemas/email-message.js";
 import { attachDirFor } from "../shared/attach-path.js";
 import { withCardLock } from "../lib/card-lock.js";
+import { getBoxDir } from "../lib/paths.js";
 import { invariant } from "../lib/invariant.js";
 import { safeDirectoryName, makeSnippet, type FetchedMessage } from "./gmail-mime.js";
 import { preserveAgentFields } from "./preserve-agent-fields.js";
@@ -156,7 +157,7 @@ function cardLocation(opts: {
       isNew: false,
     };
   }
-  const emailDir = path.join(opts.boxRoot, "box/inbox/email");
+  const emailDir = path.join(getBoxDir(opts.boxRoot, "inbox"), "email");
   const basename = safeDirectoryName(opts.subject, opts.threadId);
   const cardPath = path.join(emailDir, `${basename}.email-thread.card`);
   return { cardPath, attachDir: attachDirFor(cardPath), isNew: true };

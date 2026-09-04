@@ -18,7 +18,7 @@
  * commentary's Markdoc check or extfile's `file:`-URL refinement) is NOT here:
  * it lives on each schema as a `validate` hook, invoked generically below. The
  * one rule that cannot be self-contained — a chat husk's `session` must be
- * unique across `store/chat/**` — is dispatched from here against a per-run
+ * unique across `_content/chat/**` — is dispatched from here against a per-run
  * index (`lint-chat-duplicates.ts`).
  * The ref-existence walk stays here because it is box-aware (resolves refs
  * against the box root), which the self-contained hook deliberately lacks.

@@ -1,7 +1,7 @@
 /**
  * Capture session routes — audio recording + photo/file capture from the web UI.
  *
- * Uploads stage into the box at `tmp/capture-staging/<session-id>/` with a
+ * Uploads stage into the box at `_tmp/capture-staging/<session-id>/` with a
  * `session.json` manifest (see `core/capture/staging-store.ts`). Finalize seals
  * the session and fires the background preparation worker
  * (`core/capture/prepare.ts`), which writes + commits the capture document under

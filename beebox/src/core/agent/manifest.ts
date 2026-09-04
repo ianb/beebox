@@ -7,8 +7,9 @@
 
 import * as path from "node:path";
 import { appendFileSync, mkdirSync } from "node:fs";
+import { BOX_DIRS } from "../../lib/paths.js";
 
-const MANIFEST_REL_PATH = "store/usage/session-manifest.jsonl";
+const MANIFEST_REL_PATH = `${BOX_DIRS.usage}/session-manifest.jsonl`;
 
 interface ManifestEntry {
   sessionId: string;

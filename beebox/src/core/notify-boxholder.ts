@@ -28,6 +28,7 @@ import { createTelegramService, type TelegramService } from "../services/telegra
 import type { PushService } from "../services/push.js";
 import { endpointsForBox } from "./push-subscriptions.js";
 import { boxSlug } from "../lib/box-slug.js";
+import { BOX_DIRS } from "../lib/paths.js";
 
 /**
  * Which channels can currently reach the boxholder for this box: telegram if
@@ -82,7 +83,7 @@ export async function notifyBoxholder(
   // the opt-in). Skipping it when nobody's subscribed keeps a telegram-only
   // box from accruing failed cards on every alert.
   if (hasSubs) {
-    const pushRel = path.join("box/output", `${base}.web-push.card`);
+    const pushRel = path.join(BOX_DIRS.output, `${base}.web-push.card`);
     await writeCard(path.join(boxRoot, pushRel), createWebPushTemplate({
       title: input.title,
       body: input.body,
@@ -96,7 +97,7 @@ export async function notifyBoxholder(
 
   // Telegram card — only when the box has opted in with a chat id.
   if (chatId) {
-    const tgRel = path.join("box/output", `${base}.telegram-message.card`);
+    const tgRel = path.join(BOX_DIRS.output, `${base}.telegram-message.card`);
     const text = input.body ? `${input.title}\n${input.body}` : input.title;
     await writeCard(path.join(boxRoot, tgRel), createTelegramMessageTemplate({ chatId, text }));
     cards.push(tgRel);

@@ -8,7 +8,7 @@ import { makeTestServer } from "../../helpers/doctest-server.js";
 const VIEW_SOURCE = `
 export const name = "Test View";
 export const description = "A test view";
-export const dependencies = ["box/**/*.card"];
+export const dependencies = ["_content/**/*.card"];
 export const modes = ["page", "chat"];
 export default function TestView({ cards }) {
   return <div>Cards: {cards.length}</div>;
@@ -84,7 +84,7 @@ The cards endpoint returns cards matching a view's dependency globs:
 ```ts
 const ctx = await makeTestServer();
 await ctx.seedView("test.tsx", VIEW_SOURCE);
-await ctx.seed("box/inbox/Test.memo.card", MEMO_CARD);
+await ctx.seed("_content/inbox/Test.memo.card", MEMO_CARD);
 ctx.commitAll("add test data");
 
 const res = await ctx.request({ method: "GET", url: "/api/views/test/cards" });
@@ -100,7 +100,7 @@ res.body.cards[0].type
 => memo
 
 res.body.cards[0].path
-=> box/inbox/Test.memo.card
+=> _content/inbox/Test.memo.card
 
 res.body.cards[0].frontmatter.status
 => new
@@ -117,18 +117,18 @@ deep metadata listing of its attach scope:
 const PLAYGROUND_VIEW = `
 export const name = "Playground";
 export const description = "Session history";
-export const dependencies = ["box/**/*.card", "box/inbox/Test.attach/**/*.jsonl"];
+export const dependencies = ["_content/**/*.card", "_content/inbox/Test.attach/**/*.jsonl"];
 export const modes = ["page"];
 export default function P({ cards, files }) { return <div>{files.length}</div>; }
 `;
 await ctx.seedView("playground.tsx", PLAYGROUND_VIEW);
-await ctx.seed("box/inbox/Test.attach/sessions/history.jsonl", '{"summary":"first run"}\n{"summary":"second run"}\n');
+await ctx.seed("_content/inbox/Test.attach/sessions/history.jsonl", '{"summary":"first run"}\n{"summary":"second run"}\n');
 const res2 = await ctx.request({ method: "GET", url: "/api/views/playground/cards" });
 res2.statusCode
 => 200
 
 res2.body.cards[0].attachments.map((a) => a.path).join(", ")
-=> box/inbox/Test.attach/sessions/history.jsonl
+=> _content/inbox/Test.attach/sessions/history.jsonl
 
 res2.body.cards[0].attachments[0].size > 0
 => true
@@ -137,7 +137,7 @@ res2.body.files.length
 => 1
 
 res2.body.files[0].path
-=> box/inbox/Test.attach/sessions/history.jsonl
+=> _content/inbox/Test.attach/sessions/history.jsonl
 
 typeof res2.body.files[0].content
 => undefined
@@ -150,14 +150,14 @@ Content comes from `/api/files/*`, which supports byte ranges — a view
 tails a large log instead of downloading it (suffix form `bytes=-N`):
 
 ```ts continue
-const full = await ctx.rawRequest({ method: "GET", url: "/api/files/box/inbox/Test.attach/sessions/history.jsonl" });
+const full = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl" });
 full.statusCode
 => 200
 
 full.headers["accept-ranges"]
 => bytes
 
-const tail = await ctx.rawRequest({ method: "GET", url: "/api/files/box/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=-25" } });
+const tail = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=-25" } });
 tail.statusCode
 => 206
 
@@ -167,11 +167,11 @@ tail.headers["content-range"]
 JSON.parse(tail.payload.trim()).summary
 => second run
 
-const mid = await ctx.rawRequest({ method: "GET", url: "/api/files/box/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=0-22" } });
+const mid = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=0-22" } });
 mid.payload
 => {"summary":"first run"}
 
-const past = await ctx.rawRequest({ method: "GET", url: "/api/files/box/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=999-" } });
+const past = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=999-" } });
 past.statusCode
 => 416
 ```

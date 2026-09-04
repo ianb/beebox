@@ -22,8 +22,7 @@ interface RegisterViewRoutesOptions {
  * Resolve a view slug to its `.tsx` path, rejecting anything that would escape
  * the box's views directory (path separators, `..`, absolute paths). Returns
  * null for an invalid slug. The views directory itself is shape-aware
- * (`boxRoot/views` for a legacy box, `packageRoot/src/views` for a package
- * box) — see `resolveViewsDir`.
+ * (`boxRoot/src/views`) — see `resolveViewsDir`.
  */
 function resolveViewPath(viewsDir: string, slug: string): string | null {
   if (!slug || /[/\\]/.test(slug) || slug.includes("..")) return null;

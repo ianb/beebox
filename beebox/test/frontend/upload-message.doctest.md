@@ -20,7 +20,7 @@ import { parseUploadWrapper } from "../../src/frontend/src/components/chat/uploa
 This is the real wrapper shape from the estate box's second batch.
 
 ```ts
-const model = parseUploadWrapper(`<upload doc="store/documents/property/shop/tmp-upload/upload-20260801T0035-a56e0530/Batch.upload-batch.card" files="16" bytes="135 MB">
+const model = parseUploadWrapper(`<upload doc="_content/documents/property/shop/tmp-upload/upload-20260801T0035-a56e0530/Batch.upload-batch.card" files="16" bytes="135 MB">
 Shop exterior
 
 16 files uploaded (135 MB).

@@ -74,8 +74,8 @@ interface CollectedResults {
 
 interface ValidationResults extends CollectedResults {
   /**
-   * A v2 box with stray `*.ts` files under the legacy `config/schemas/`
-   * location — blocking, since the loader and validate hook can't otherwise
+   * Stray `*.ts` files under the legacy `_config/schemas/` location —
+   * blocking, since the loader and validate hook can't otherwise
    * catch a misplaced schema (see `findLegacySchemaFiles`). Box-wide, not
    * per-file, so it's checked once and merged in regardless of scope
    * (`--all`/`--staged`/explicit paths), rather than threaded through each
@@ -96,8 +96,8 @@ function canonicalBuckets(results: ValidationResults): CanonicalBuckets {
 }
 
 /**
- * Check for schemas left in the pre-package `config/schemas/` location on a
- * v2 box. Returns a one-element (or empty) array of formatted error strings —
+ * Check for schemas left in the legacy `_config/schemas/` location.
+ * Returns a one-element (or empty) array of formatted error strings —
  * an array so it composes with `countTotalErrors`/`printTextResults` like the
  * other result buckets, even though there's only ever one message.
  */
@@ -159,7 +159,7 @@ interface CollectArgs {
   resolved: string[];
   json: boolean;
   /**
-   * The box's `config/bbx-validate.ignore` matcher. Applied to the *implicit*
+   * The box's `_config/bbx-validate.ignore` matcher. Applied to the *implicit*
    * scans (`--all`, `--staged`); an explicit `bbx validate <path>` bypasses it,
    * mirroring how `isTrashedCard` skips only implicit scans.
    */

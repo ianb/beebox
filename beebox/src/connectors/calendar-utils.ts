@@ -1,7 +1,7 @@
 /**
  * Calendar utilities — parse .ics files and query events.
  *
- * Reads from local store/calendar/*.ics files. No API calls.
+ * Reads from local _content/calendar/*.ics files. No API calls.
  * Supports recurring events via RRULE expansion using ical.js.
  */
 

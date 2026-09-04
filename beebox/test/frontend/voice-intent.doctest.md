@@ -91,13 +91,13 @@ buildVoiceSubmitEmission({ priorInput: "", finalText: "send message", selections
 ## The frozen selections snapshot rides the emission, diarized carries through
 
 ```ts
-const sel = [{ id: 1, ref: "/store/recipes/Bread.recipe.card", text: "300g flour", position: "body" }];
+const sel = [{ id: 1, ref: "/_content/recipes/Bread.recipe.card", text: "300g flour", position: "body" }];
 const e2 = buildVoiceSubmitEmission({ priorInput: "", finalText: "add that", selectionsSnapshot: sel, imagesSnapshot: [], filesSnapshot: [], diarized: true });
 e2.selections.length
 => 1
 
 e2.selections[0]?.ref
-=> /store/recipes/Bread.recipe.card
+=> /_content/recipes/Bread.recipe.card
 
 e2.diarized
 => true
@@ -115,11 +115,11 @@ const e3 = buildVoiceSubmitEmission({
   finalText: "please summarize the attached report",
   selectionsSnapshot: [],
   imagesSnapshot: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=" }],
-  filesSnapshot: [{ id: 1, path: "tmp/2026-07-19T10-00-00_report.pdf" }],
+  filesSnapshot: [{ id: 1, path: "_tmp/2026-07-19T10-00-00_report.pdf" }],
   diarized: false,
 });
 e3.files[0]?.path
-=> tmp/2026-07-19T10-00-00_report.pdf
+=> _tmp/2026-07-19T10-00-00_report.pdf
 
 e3.images.length
 => 1

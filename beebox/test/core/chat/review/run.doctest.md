@@ -74,14 +74,14 @@ function labelled(text: string): string {
 
 /** Seed a husk card plus a backdated transcript big enough to clear the gate. */
 async function seed(box, opts: { sessionId: string; husk: string; entries: object[] }) {
-  await box.write(`store/chat/web/2026-07-28_${opts.sessionId}.chat.card`,
+  await box.write(`_content/chat/web/2026-07-28_${opts.sessionId}.chat.card`,
     `---\nsession: ${sid(opts.sessionId)}\n${opts.husk}---\n\n`);
   const logPath = getSessionLogPath(box.root, sid(opts.sessionId));
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, opts.entries.map((e) => JSON.stringify(e)).join("\n") + "\n");
   const when = new Date(NOW.getTime() - 5 * HOUR);
   await utimes(logPath, when, when);
-  return `store/chat/web/2026-07-28_${opts.sessionId}.chat.card`;
+  return `_content/chat/web/2026-07-28_${opts.sessionId}.chat.card`;
 }
 
 /** Enough rendered text to clear REVIEW_CHAR_THRESHOLD. */
@@ -471,7 +471,7 @@ The deferred session is untouched — no husk fields, no journal entry — and t
 next run picks it up.
 
 ```ts continue
-(await readFile(box.path("store/chat/web/2026-07-28_sessnew.chat.card"), "utf8")).includes("title:")
+(await readFile(box.path("_content/chat/web/2026-07-28_sessnew.chat.card"), "utf8")).includes("title:")
 => false
 
 const rest = fakeReviewer([OUTPUT]);
@@ -567,7 +567,7 @@ reviews the whole conversation including the new material.
 ```ts continue
 const state = await loadReviewState(box.root);
 JSON.stringify({
-  husk: (await readFile(box.path("store/chat/web/2026-07-28_sesslive.chat.card"), "utf8")).includes("title:"),
+  husk: (await readFile(box.path("_content/chat/web/2026-07-28_sesslive.chat.card"), "utf8")).includes("title:"),
   journal: sid("sesslive") in state.sessions,
 })
 => {"husk":false,"journal":false}

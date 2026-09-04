@@ -98,7 +98,7 @@ export async function probeAbsent(
   const moved = await deps.trashCard({ cardPath: relPath, driveId: entry.driveId });
   return {
     updated: moved,
-    notes: [`trashed: ${relPath} — Drive ${entry.driveId} is in the Drive trash; moved to store/trash/`],
+    notes: [`trashed: ${relPath} — Drive ${entry.driveId} is in the Drive trash; moved to _bookkeeping/trash/`],
     outcome: "trashed",
   };
 }

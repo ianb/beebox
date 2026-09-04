@@ -15,7 +15,7 @@ import { localOrigin } from "../../../../src/core/chat/session/origin.js";
 
 /** The husk fields the derivation reads; the rest of the card is irrelevant. */
 function husk(fields) {
-  return { path: "store/chat/web/2026-08-26_aaaaaaaa.chat.card", session: "s", ...fields };
+  return { path: "_content/chat/web/2026-08-26_aaaaaaaa.chat.card", session: "s", ...fields };
 }
 ```
 

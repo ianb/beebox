@@ -1,6 +1,6 @@
 /**
  * The filesystem roots a box's `file:` hrefs may resolve under: the box's own
- * root (always) plus its declared `externalRoots` (`config/box.json`), each
+ * root (always) plus its declared `externalRoots` (`_config/box.json`), each
  * realpath'd so it compares cleanly against a realpath'd target in
  * `resolveExternalRef`.
  *

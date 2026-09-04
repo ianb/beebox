@@ -27,17 +27,17 @@ async function lsLines(boxRoot, args) {
 
 ```ts
 const box = await makeTmpBox();
-await mkdir(join(box.root, "box/inbox"), { recursive: true });
-await writeFile(join(box.root, "box/inbox/Hello.memo.card"), `---
+await mkdir(join(box.root, "_content/inbox"), { recursive: true });
+await writeFile(join(box.root, "_content/inbox/Hello.memo.card"), `---
 title: Hello World
 status: new
 created: 2026-01-01T00:00:00Z
 ---
 Body.
 `);
-const lines = await lsLines(box.root, { paths: ["box/inbox"], format: "{title} ({status})" });
+const lines = await lsLines(box.root, { paths: ["_content/inbox"], format: "{title} ({status})" });
 JSON.stringify(lines)
-=> ["box/inbox/Hello.memo.card\tHello World (new)"]
+=> ["_content/inbox/Hello.memo.card\tHello World (new)"]
 ```
 
 ```ts cleanup
@@ -48,20 +48,20 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-await mkdir(join(box.root, "box/inbox"), { recursive: true });
-await writeFile(join(box.root, "box/inbox/Photo.image.card"), `---
+await mkdir(join(box.root, "_content/inbox"), { recursive: true });
+await writeFile(join(box.root, "_content/inbox/Photo.image.card"), `---
 title: Beach
 exif:
   camera: Canon
 ---
 `);
-const nested = await lsLines(box.root, { paths: ["box/inbox/Photo.image.card"], format: "{exif.camera}" });
+const nested = await lsLines(box.root, { paths: ["_content/inbox/Photo.image.card"], format: "{exif.camera}" });
 JSON.stringify(nested)
-=> ["box/inbox/Photo.image.card\tCanon"]
+=> ["_content/inbox/Photo.image.card\tCanon"]
 
-const missing = await lsLines(box.root, { paths: ["box/inbox/Photo.image.card"], format: "{nope}" });
+const missing = await lsLines(box.root, { paths: ["_content/inbox/Photo.image.card"], format: "{nope}" });
 JSON.stringify(missing)
-=> ["box/inbox/Photo.image.card\t"]
+=> ["_content/inbox/Photo.image.card\t"]
 ```
 
 ```ts cleanup
@@ -72,11 +72,11 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-await mkdir(join(box.root, "box/inbox"), { recursive: true });
-await writeFile(join(box.root, "box/inbox/Hello.memo.card"), "---\ntitle: Hi\n---\n");
-const lines = await lsLines(box.root, { paths: ["box/inbox"] });
+await mkdir(join(box.root, "_content/inbox"), { recursive: true });
+await writeFile(join(box.root, "_content/inbox/Hello.memo.card"), "---\ntitle: Hi\n---\n");
+const lines = await lsLines(box.root, { paths: ["_content/inbox"] });
 JSON.stringify(lines)
-=> ["box/inbox/Hello.memo.card"]
+=> ["_content/inbox/Hello.memo.card"]
 ```
 
 ```ts cleanup

@@ -76,6 +76,34 @@ async function seedTree(root: string, dirs: number, perDir: number): Promise<voi
     }
   }
 }
+
+/**
+ * Every directory `bbx init` scaffolds up front — present in any fresh v3
+ * box regardless of what a test itself creates (the underscore areas, plus
+ * the `src/` code tree the watcher also covers). Assertions below filter
+ * these out so the expected list reads as "what did *this test* add,"
+ * matching each test's own scenario rather than the full box skeleton.
+ */
+const SKELETON_DIRS = new Set([
+  "_bookkeeping", "_bookkeeping/archive", "_bookkeeping/archive/done",
+  "_bookkeeping/archive/failed", "_bookkeeping/archive/processed",
+  "_bookkeeping/connectors", "_bookkeeping/jobs", "_bookkeeping/output",
+  "_bookkeeping/questions", "_bookkeeping/resources", "_bookkeeping/usage",
+  "_config", "_config/connectors", "_config/procedures", "_config/schedules",
+  "_config/schemas", "_content", "_content/calendar", "_content/chat",
+  "_content/drive", "_content/inbox", "_content/inbox/intake",
+  "_content/inbox/staged", "_content/inbox/triaged",
+  "_content/inbox/triaged/_unsure", "_content/inbox/unhandled",
+  "_content/people", "_content/places", "_content/recipes",
+  "_content/reviews", "_content/reviews/retro", "_content/todos",
+  "_publish", "_tmp", "src", "src/schemas", "src/tricks", "src/tricks/lib",
+  "src/tricks/scripts", "src/views",
+]);
+
+/** `watcher.watchedDirs()`, with the scaffolded skeleton filtered out. */
+function testDirs(watcher: { watchedDirs(): string[] }): string {
+  return watcher.watchedDirs().filter((d) => !SKELETON_DIRS.has(d)).join(" ");
+}
 ```
 
 ## One watch per directory — never one per file
@@ -92,7 +120,7 @@ await seedTree(box.root, 4, 100);
 const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
-watcher.watchedDirs().join(" ")
+testDirs(watcher)
 => . store store/dir0 store/dir1 store/dir2 store/dir3
 ```
 
@@ -249,7 +277,7 @@ await rename(join(box.root, "store", "Staging"), join(box.root, "store", "Trip.a
 await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach/fresh"), 5000, "the replacement subtree watches");
 await watcher.settled();
 
-watcher.watchedDirs().join(" ")
+testDirs(watcher)
 => . store store/Trip.attach store/Trip.attach/fresh
 ```
 
@@ -321,7 +349,7 @@ await mkdir(join(box.root, "store", "real"), { recursive: true });
 await waitFor(() => watcher.watchedDirs().includes("store/real"), 5000, "the real directory watch");
 await watcher.settled();
 
-watcher.watchedDirs().join(" ")
+testDirs(watcher)
 => . procedure store store/real
 ```
 
@@ -386,7 +414,7 @@ await box.cleanup();
 
 ## High-churn trees stay excluded
 
-`procedure/runs` and `store/trash` are never live-rendered and churn constantly;
+`procedure/runs` and `_bookkeeping/trash` are never live-rendered and churn constantly;
 watching them exhausted the server's inotify limit on 2026-06-11. Dotfile trees
 (`.git`, `.beebox`) are excluded for the same reason. Ordinary content
 trees receive no path-specific treatment: the generic watch budget is their
@@ -396,15 +424,15 @@ safety boundary.
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "procedure", "runs", "r1"), { recursive: true });
-await mkdir(join(box.root, "store", "trash", "old"), { recursive: true });
-await mkdir(join(box.root, "box", "inbox", "email", "thread.attach"), { recursive: true });
+await mkdir(join(box.root, "_bookkeeping", "trash", "old"), { recursive: true });
+await mkdir(join(box.root, "_content", "inbox", "email", "thread.attach"), { recursive: true });
 await mkdir(join(box.root, "store", "keep"), { recursive: true });
 
 const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
-watcher.watchedDirs().join(" ")
-=> . box box/inbox box/inbox/email box/inbox/email/thread.attach procedure store store/keep
+testDirs(watcher)
+=> . _content/inbox/email _content/inbox/email/thread.attach procedure store store/keep
 ```
 
 ```ts cleanup

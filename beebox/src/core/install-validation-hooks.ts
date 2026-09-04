@@ -27,21 +27,12 @@
  * than a hash to distinguish ours-vs-user's. Neither fits the
  * overwrite-or-park-the-whole-file shape that helper is built for.
  *
- * **The v2 git-hooks trap** (see "THE TRAP" in
- * `docs/implemented-plans/boxes-as-packages-v2.md`, Track B): for a shapeVersion 2 box,
- * `.git` sits at the package root, not at `boxRoot` (`content/`). Git always
- * invokes hooks with cwd = the repository's top level regardless of where
- * `git commit` was run from — i.e. the PACKAGE root, not `content/` — so
- * `requireBoxRoot()` (which walks UP from cwd) would never find
- * `content/.beebox/box.json`. Both hook bodies below `cd` into the box root (a plain
- * relative path from the package root — safe, since that cwd guarantee is
- * unconditional) before invoking `bbx`, so `requireBoxRoot()` resolves
- * correctly and `git diff --cached --name-only --relative` (see
- * `listStagedRelPaths` in `../lib/staged-files.ts`)
- * reports box-relative paths instead of package-root-relative ones. `.claude/
- * settings.json`'s PostToolUse hook needs no such fix — Claude Code invokes
- * it with cwd = the operating agent's own cwd (`content/` or a subdirectory),
- * which already resolves correctly.
+ * shapeVersion 3 (the one-root layout) put `.git`, `.claude/`, and every
+ * operational area at the same `boxRoot` — git always invokes hooks with cwd
+ * = the repository's top level, which is now also the box root, so there is
+ * no separate root to `cd` into before `bbx` resolves the box. (The v2
+ * two-root layout needed exactly that `cd`; the workaround is gone along
+ * with v2.)
  */
 
 import * as fs from "node:fs/promises";
@@ -49,7 +40,6 @@ import * as path from "node:path";
 import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { getBoxShape } from "../lib/box-shape.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
 import { errnoCode } from "../lib/error-guards.js";
 
@@ -118,17 +108,13 @@ const IGNORE_RULE_PATH = ".claude/rules/bbx-validate-ignore.md";
 
 /**
  * `paths:` frontmatter is resolved by Claude Code relative to the project
- * root — the package root, where `.claude/rules/` lives. That's the same as
- * `VALIDATION_IGNORE_PATH` for a legacy box, but a v2 box's ignore file is
- * operational data under `boxRoot` (`content/`), so the caller passes the
- * package-root-relative glob (`ignoreGlob`) while the prose keeps the plain
- * `VALIDATION_IGNORE_PATH` — the name an agent working from `content/` (its
- * own cwd) actually sees.
+ * root, which is the box root — the same root `VALIDATION_IGNORE_PATH` is
+ * already relative to.
  */
-function ignoreRuleBody(ignoreGlob: string): string {
+function ignoreRuleBody(): string {
   return `---
 paths:
-  - "${ignoreGlob}"
+  - "${VALIDATION_IGNORE_PATH}"
 ---
 
 # ${VALIDATION_IGNORE_PATH} — operator-owned. Do NOT edit.
@@ -171,20 +157,14 @@ const IGNORE_SEED_BODY = `# bbx validate ignore — operator-owned. Gitignore-st
 const URLCHECK_BEGIN = "# >>> beebox url-check (managed) >>>";
 const URLCHECK_END = "# <<< beebox url-check (managed) <<<";
 
-function postCommitBlock(bbxBin: string, boxRelFromPackageRoot: string): string {
-  // v2's git-hooks trap (see the module doc): this hook always runs with cwd
-  // = the package root, so a v2 box needs an explicit `cd` into `content/`
-  // before `.beebox/url-check.log` and `bbx`'s own `requireBoxRoot()`
-  // resolve to the right place. A no-op line for a legacy box (cwd is
-  // already the box root).
-  const cd = boxRelFromPackageRoot === "" ? "" : `cd ${JSON.stringify(boxRelFromPackageRoot)}\n`;
+function postCommitBlock(bbxBin: string): string {
   return [
     URLCHECK_BEGIN,
     "# Non-blocking external-URL check (see `bbx validate --urls`): HEADs only the",
     "# http(s) URLs new in this commit, detached in the background, so the commit",
     "# never waits on the network. Output → .beebox/url-check.log.",
     "# Delete just this block to disable; `bbx init` re-adds it.",
-    `${cd}BBX_URLCHECK=${JSON.stringify(bbxBin)}`,
+    `BBX_URLCHECK=${JSON.stringify(bbxBin)}`,
     "[ -x \"$BBX_URLCHECK\" ] || BBX_URLCHECK=$(command -v bbx || true)",
     "if [ -n \"$BBX_URLCHECK\" ] && git rev-parse --verify -q HEAD~1 >/dev/null 2>&1; then",
     "  ( \"$BBX_URLCHECK\" validate --urls --urls-since HEAD~1 >.beebox/url-check.log 2>&1 & ) || true",
@@ -222,14 +202,7 @@ const PRE_COMMIT_MARKER = "# beebox validation hook (managed)", LEGACY_PRE_COMMI
 // git-annex still belongs to its author and must remain untouched.
 const GIT_ANNEX_PRE_COMMIT_BODY = "#!/bin/sh\n# automatically configured by git-annex\ngit annex pre-commit .";
 
-function preCommitBody(bbxBin: string, boxRelFromPackageRoot: string): string {
-  // v2's git-hooks trap (see the module doc): git always invokes this hook
-  // with cwd = the package root, so a v2 box needs an explicit `cd` into
-  // `content/` before invoking bbx — otherwise `requireBoxRoot()` never finds
-  // `content/.beebox/box.json` (it only walks UP from cwd). Annex deliberately runs
-  // before that cd, preserving the package-root `.` scope of its own generated
-  // hook. No-op for a legacy box.
-  const cd = boxRelFromPackageRoot === "" ? "" : `cd ${JSON.stringify(boxRelFromPackageRoot)}\n`;
+function preCommitBody(bbxBin: string): string {
   return `#!/usr/bin/env bash
 ${PRE_COMMIT_MARKER}
 # Block commits that include cards failing schema validation, and hand assets
@@ -257,8 +230,6 @@ if [ -d "$(git rev-parse --git-common-dir)/annex" ]; then
     exit 1
   fi
 fi
-
-${cd}
 
 BBX=${JSON.stringify(bbxBin)}
 if [ ! -x "$BBX" ]; then
@@ -371,17 +342,12 @@ async function readJsonIfExists(filePath: string): Promise<SettingsShape> {
 /**
  * Seed the operator-owned `config/bbx-validate.ignore` (commented template, only
  * if absent — never clobbering operator edits) and (over)write the
- * path-conditional rule that warns agents off it. `boxRoot`/`packageRoot`
- * differ for a v2 box (`.claude/` lives at the package root, but the ignore
- * file itself is operational data under `boxRoot`), so the rule's `paths:`
- * glob is expressed relative to `packageRoot` (where `.claude/rules/` lives,
- * and therefore where Claude Code resolves the glob from) — `boxRelFromPackageRoot`
- * prefixes it when the two roots differ. Returns the changed paths (relative
- * to `packageRoot`).
+ * path-conditional rule that warns agents off it. shapeVersion 3: `.claude/`
+ * and the ignore file itself share the one `boxRoot`, so the rule's `paths:`
+ * glob is just `VALIDATION_IGNORE_PATH` as-is. Returns the changed paths
+ * (relative to `boxRoot`).
  */
-async function installIgnoreScaffold(
-  { boxRoot, packageRoot, boxRelFromPackageRoot }: { boxRoot: string; packageRoot: string; boxRelFromPackageRoot: string }
-): Promise<string[]> {
+async function installIgnoreScaffold(boxRoot: string): Promise<string[]> {
   const changed: string[] = [];
 
   const seedAbs = path.join(boxRoot, VALIDATION_IGNORE_PATH);
@@ -395,14 +361,11 @@ async function installIgnoreScaffold(
   if (!seedExists) {
     await fs.mkdir(path.dirname(seedAbs), { recursive: true });
     await fs.writeFile(seedAbs, IGNORE_SEED_BODY);
-    changed.push(path.relative(packageRoot, seedAbs));
+    changed.push(path.relative(boxRoot, seedAbs));
   }
 
-  const ignoreGlob = boxRelFromPackageRoot === ""
-    ? VALIDATION_IGNORE_PATH
-    : `${boxRelFromPackageRoot}/${VALIDATION_IGNORE_PATH}`;
-  const ruleBody = ignoreRuleBody(ignoreGlob);
-  const ruleAbs = path.join(packageRoot, IGNORE_RULE_PATH);
+  const ruleBody = ignoreRuleBody();
+  const ruleAbs = path.join(boxRoot, IGNORE_RULE_PATH);
   let ruleExisting: string | null = null;
   try {
     ruleExisting = await fs.readFile(ruleAbs, "utf-8");
@@ -420,24 +383,18 @@ async function installIgnoreScaffold(
 
 /**
  * Install both hooks. Returns the list of files that changed (relative to
- * the box's package root — where `.claude/` and `.git/` live) so callers
- * can decide whether to commit / report.
+ * `boxRoot` — where `.claude/` and `.git/` live) so callers can decide
+ * whether to commit / report.
  */
 export async function installValidationHooks(boxRoot: string): Promise<string[]> {
-  const { packageRoot } = await getBoxShape(boxRoot);
-  const boxRelFromPackageRoot = path.relative(packageRoot, boxRoot);
-
-  const changed: string[] = [
-    ...(await installIgnoreScaffold({ boxRoot, packageRoot, boxRelFromPackageRoot })),
-  ];
+  const changed: string[] = [...(await installIgnoreScaffold(boxRoot))];
   const bbxBin = resolveBbxBin();
   const writeCommand = postToolUseCommand(bbxBin);
-  const hookBody = preCommitBody(bbxBin, boxRelFromPackageRoot);
+  const hookBody = preCommitBody(bbxBin);
 
-  // .claude/settings.json — lives at the package root (see the module doc's
-  // v2 git-hooks note; unlike the git hooks, this one needs no `cd` baked in
-  // because Claude Code invokes it with cwd = the operating agent's own cwd).
-  const settingsAbs = path.join(packageRoot, SETTINGS_PATH);
+  // .claude/settings.json — Claude Code invokes it with cwd = the operating
+  // agent's own cwd, which is `boxRoot`.
+  const settingsAbs = path.join(boxRoot, SETTINGS_PATH);
   const settings = await readJsonIfExists(settingsAbs);
   const settingsBefore = JSON.stringify(settings, null, 2) + "\n";
   ensurePostToolUseEntry(settings, writeCommand);
@@ -451,16 +408,16 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
   // .git/hooks/pre-commit — only when the box is actually a git repo.
   // Writing into a non-repo would create a `.git/hooks/` from scratch
   // that never fires (no git, no commits) and would silently shadow a
-  // future `git init`. `.git` sits at the package root for both shapes.
+  // future `git init`. `.git` sits at `boxRoot`.
   let isRepo = false;
   try {
-    isRepo = (await fs.stat(path.join(packageRoot, ".git"))).isDirectory();
+    isRepo = (await fs.stat(path.join(boxRoot, ".git"))).isDirectory();
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw e;
   }
 
   if (isRepo) {
-    const hookAbs = path.join(packageRoot, PRE_COMMIT_PATH);
+    const hookAbs = path.join(boxRoot, PRE_COMMIT_PATH);
     let existing: string | null = null;
     try {
       existing = await fs.readFile(hookAbs, "utf-8");
@@ -484,14 +441,14 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
 
     // .git/hooks/post-commit — splice our managed url-check block in, preserving
     // any foreign hook (git-lfs installs one here).
-    const postAbs = path.join(packageRoot, POST_COMMIT_PATH);
+    const postAbs = path.join(boxRoot, POST_COMMIT_PATH);
     let postExisting: string | null = null;
     try {
       postExisting = await fs.readFile(postAbs, "utf-8");
     } catch (e) {
       if (errnoCode(e) !== "ENOENT") throw e;
     }
-    const postMerged = upsertPostCommitBlock(postExisting, postCommitBlock(bbxBin, boxRelFromPackageRoot));
+    const postMerged = upsertPostCommitBlock(postExisting, postCommitBlock(bbxBin));
     if (postMerged !== postExisting) {
       await fs.mkdir(path.dirname(postAbs), { recursive: true });
       await fs.writeFile(postAbs, postMerged);

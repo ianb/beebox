@@ -1,8 +1,8 @@
 # Archiving a dead chat
 
 A chat whose transcript is gone can't be resumed, but its card is still a
-record worth keeping. Archiving moves that card from `store/chat/web/` to
-`store/chat/archive/` — and because `listChatHusks` reads `web/` only, that one
+record worth keeping. Archiving moves that card from `_content/chat/web/` to
+`_content/chat/archive/` — and because `listChatHusks` reads `web/` only, that one
 move takes the chat out of every list and out of the review corpus without
 deleting anything (`docs/implemented-plans/chat-session-identity.md`, Track 3).
 
@@ -36,9 +36,9 @@ const LIVE = "11111111-1111-4111-8111-111111111111";
 ```ts
 const box = await makeTmpBox({ git: true });
 const here = await localOrigin();
-await mkdir(box.path("store/chat/web"), { recursive: true });
+await mkdir(box.path("_content/chat/web"), { recursive: true });
 await writeFile(
-  box.path("store/chat/web/2026-08-19_22222222.chat.card"),
+  box.path("_content/chat/web/2026-08-19_22222222.chat.card"),
   `---\nsession: ${DEAD}\ntitle: Sourdough attempt\norigin: ${here.id}\norigin-name: ${here.name}\n---\n\nNotes from the chat.\n`,
 );
 // Husks are committed cards; the move is a change to a tracked file.
@@ -47,7 +47,7 @@ box.commitAll("seed husk");
 const registry = idleRegistry(box);
 const archived = await archiveChatSession({ boxRoot: box.root, sessionId: DEAD, registry });
 JSON.stringify(archived)
-=> {"status":"archived","sessionId":"22222222-2222-4222-8222-222222222222","from":"store/chat/web/2026-08-19_22222222.chat.card","to":"store/chat/archive/2026-08-19_22222222.chat.card","transcript":{"state":"expired"}}
+=> {"status":"archived","sessionId":"22222222-2222-4222-8222-222222222222","from":"_content/chat/web/2026-08-19_22222222.chat.card","to":"_content/chat/archive/2026-08-19_22222222.chat.card","transcript":{"state":"expired"}}
 ```
 
 Nothing is gone — the card is a card, at a new path — but the enumerations that
@@ -56,12 +56,12 @@ feed the chat UI no longer see it, dead list included.
 ```ts continue
 JSON.stringify({
   web: (await listChatHusks(box.root)).map((h) => h.path),
-  archive: (await listChatHusksUnder(box.root, "store/chat/archive")).map((h) => h.path),
+  archive: (await listChatHusksUnder(box.root, "_content/chat/archive")).map((h) => h.path),
   dead: (await loadDeadHusks(box.root)).map((h) => h.sessionId),
 })
-=> {"web":[],"archive":["store/chat/archive/2026-08-19_22222222.chat.card"],"dead":[]}
+=> {"web":[],"archive":["_content/chat/archive/2026-08-19_22222222.chat.card"],"dead":[]}
 
-(await box.read("store/chat/archive/2026-08-19_22222222.chat.card")).includes("Notes from the chat.")
+(await box.read("_content/chat/archive/2026-08-19_22222222.chat.card")).includes("Notes from the chat.")
 => true
 ```
 
@@ -72,7 +72,7 @@ already-filed chat as missing.
 
 ```ts continue
 JSON.stringify(await archiveChatSession({ boxRoot: box.root, sessionId: DEAD, registry }))
-=> {"status":"already-archived","sessionId":"22222222-2222-4222-8222-222222222222","huskPath":"store/chat/archive/2026-08-19_22222222.chat.card"}
+=> {"status":"already-archived","sessionId":"22222222-2222-4222-8222-222222222222","huskPath":"_content/chat/archive/2026-08-19_22222222.chat.card"}
 ```
 
 ```ts continue cleanup
@@ -88,18 +88,18 @@ the UI shows.
 ```ts
 const box = await makeTmpBox({ git: true });
 const here = await localOrigin();
-await mkdir(box.path("store/chat/web"), { recursive: true });
+await mkdir(box.path("_content/chat/web"), { recursive: true });
 const logPath = getSessionLogPath(box.root, LIVE);
 await mkdir(dirname(logPath), { recursive: true });
 await writeFile(logPath, "{}\n");
 await writeFile(
-  box.path("store/chat/web/2026-08-20_11111111.chat.card"),
+  box.path("_content/chat/web/2026-08-20_11111111.chat.card"),
   `---\nsession: ${LIVE}\norigin: ${here.id}\n---\n\n`,
 );
 
 const registry = idleRegistry(box);
 JSON.stringify(await archiveChatSession({ boxRoot: box.root, sessionId: LIVE, registry }))
-=> {"status":"refused","sessionId":"11111111-1111-4111-8111-111111111111","reason":"transcript-present","huskPath":"store/chat/web/2026-08-20_11111111.chat.card"}
+=> {"status":"refused","sessionId":"11111111-1111-4111-8111-111111111111","reason":"transcript-present","huskPath":"_content/chat/web/2026-08-20_11111111.chat.card"}
 
 JSON.stringify((await listSessionEntries(box.root)).map((e) => e.sessionId))
 => ["11111111-1111-4111-8111-111111111111"]
@@ -128,7 +128,7 @@ conversation to the archive move. The registry is asked as well.
 const box = await makeTmpBox({ git: true });
 const here = await localOrigin();
 await box.write(
-  "store/chat/web/2026-08-26_11111111.chat.card",
+  "_content/chat/web/2026-08-26_11111111.chat.card",
   `---\nsession: ${LIVE}\norigin: ${here.id}\n---\n\n`,
 );
 box.commitAll("seed husk");
@@ -146,10 +146,10 @@ JSON.stringify((await loadDeadHusks(box.root)).map((h) => h.sessionId))
 registry.getOrCreate(LIVE);
 
 JSON.stringify(await archiveChatSession({ boxRoot: box.root, sessionId: LIVE, registry }))
-=> {"status":"refused","sessionId":"11111111-1111-4111-8111-111111111111","reason":"session-live","huskPath":"store/chat/web/2026-08-26_11111111.chat.card"}
+=> {"status":"refused","sessionId":"11111111-1111-4111-8111-111111111111","reason":"session-live","huskPath":"_content/chat/web/2026-08-26_11111111.chat.card"}
 
 JSON.stringify((await listChatHusks(box.root)).map((h) => h.path))
-=> ["store/chat/web/2026-08-26_11111111.chat.card"]
+=> ["_content/chat/web/2026-08-26_11111111.chat.card"]
 ```
 
 ```ts continue cleanup

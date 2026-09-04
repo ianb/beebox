@@ -30,7 +30,7 @@ async function fakeVec(text: string): Promise<number[]> {
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to June 17."));
+await box.write("_content/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to June 17."));
 await box.write("store/notes/Plain.memo.card", MEMO("Just a note with no contains yet."));
 const fake = createFakeEmbeddings();
 const built = await openSearchIndex(box.root, { embeddings: fake });
@@ -48,7 +48,7 @@ JSON.stringify(fake.calls[0])
 => ["Dentist moved to June 17."]
 
 // The whole-card doc holds the fake's deterministic vector for that contains.
-const dentist = getByID(built.db, "box/inbox/Dentist.memo.card#");
+const dentist = getByID(built.db, "_content/inbox/Dentist.memo.card#");
 JSON.stringify(dentist?.embedding) === JSON.stringify(await fakeVec("Dentist moved to June 17."))
 => true
 
@@ -59,7 +59,7 @@ plain?.embedding === undefined
 
 // The manifest records the embedded card's hash, and leaves the other's unset.
 const m1 = await loadManifest(box.root);
-typeof m1.files["box/inbox/Dentist.memo.card"]?.embeddedHash
+typeof m1.files["_content/inbox/Dentist.memo.card"]?.embeddedHash
 => string
 
 m1.files["store/notes/Plain.memo.card"]?.embeddedHash === undefined
@@ -81,7 +81,7 @@ fake.calls.length
 ## Editing a card's contains re-embeds exactly that text
 
 ```ts continue
-await box.write("box/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to July 2 instead."));
+await box.write("_content/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to July 2 instead."));
 const edited = await openSearchIndex(box.root, { embeddings: fake });
 edited.embeddingsReady
 => true
@@ -92,7 +92,7 @@ fake.calls.length
 JSON.stringify(fake.calls[1])
 => ["Dentist moved to July 2 instead."]
 
-const reDentist = getByID(edited.db, "box/inbox/Dentist.memo.card#");
+const reDentist = getByID(edited.db, "_content/inbox/Dentist.memo.card#");
 JSON.stringify(reDentist?.embedding) === JSON.stringify(await fakeVec("Dentist moved to July 2 instead."))
 => true
 ```
@@ -107,7 +107,7 @@ const restored = await openSearchIndex(box.root);
 const vec = await fakeVec("Dentist moved to July 2 instead.");
 const vhits = await search(restored.db, { mode: "vector", vector: { value: vec, property: "embedding" }, similarity: 0.9, limit: 5 });
 vhits.hits.map((h) => h.document.path as string).join("\n")
-=> box/inbox/Dentist.memo.card
+=> _content/inbox/Dentist.memo.card
 ```
 
 ## No service: not ready, no warning (the designed not-configured state)
@@ -125,7 +125,7 @@ JSON.stringify(noService.warnings)
 
 ```ts continue
 const box2 = await makeTmpBox();
-await box2.write("box/inbox/Bill.memo.card", MEMO("The electric bill is due.", "Electric bill due Friday."));
+await box2.write("_content/inbox/Bill.memo.card", MEMO("The electric bill is due.", "Electric bill due Friday."));
 const flaky = createFakeEmbeddings({ failTimes: 1 });
 const failed = await openSearchIndex(box2.root, { embeddings: flaky });
 failed.embeddingsReady
@@ -140,10 +140,10 @@ failed.warnings[0]?.startsWith("embeddings unavailable")
 // Text search still answers, and the text side persisted.
 const textHit = await search(failed.db, { term: "electric", properties: ["contains", "content"] });
 textHit.hits.map((h) => h.document.path as string).join("\n")
-=> box/inbox/Bill.memo.card
+=> _content/inbox/Bill.memo.card
 
 const failedManifest = await loadManifest(box2.root);
-failedManifest.files["box/inbox/Bill.memo.card"]?.embeddedHash === undefined
+failedManifest.files["_content/inbox/Bill.memo.card"]?.embeddedHash === undefined
 => true
 
 // Same fake instance, next refresh: the card re-pends and this time succeeds.
@@ -151,7 +151,7 @@ const retried = await openSearchIndex(box2.root, { embeddings: flaky });
 retried.embeddingsReady
 => true
 
-const bill = getByID(retried.db, "box/inbox/Bill.memo.card#");
+const bill = getByID(retried.db, "_content/inbox/Bill.memo.card#");
 JSON.stringify(bill?.embedding) === JSON.stringify(await fakeVec("Electric bill due Friday."))
 => true
 ```
@@ -165,7 +165,7 @@ warning already marks it degraded.
 
 ```ts continue
 const box3 = await makeTmpBox();
-await box3.write("box/inbox/Contended.memo.card", MEMO("A card.", "Fully embedded already."));
+await box3.write("_content/inbox/Contended.memo.card", MEMO("A card.", "Fully embedded already."));
 await openSearchIndex(box3.root, { embeddings: createFakeEmbeddings() });
 
 await acquireLock(searchLockPath(box3.root), { purpose: "doctest-contender" });

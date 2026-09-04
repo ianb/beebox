@@ -23,9 +23,9 @@ import path from "node:path";
 process.env.BBX_SESSION_SECRET = "test-session-secret-for-box-picker-doctest";
 
 const boxA = await makeTmpBox();
-await boxA.write("config/box.json", JSON.stringify({ allowedEmails: ["alice@example.com"] }));
+await boxA.write("_config/box.json", JSON.stringify({ allowedEmails: ["alice@example.com"] }));
 const boxB = await makeTmpBox();
-await boxB.write("config/box.json", JSON.stringify({ allowedEmails: ["bob@example.com"] }));
+await boxB.write("_config/box.json", JSON.stringify({ allowedEmails: ["bob@example.com"] }));
 
 const boxes = [
   { slug: "box-a", boxRoot: boxA.root },

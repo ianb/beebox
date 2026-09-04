@@ -327,7 +327,7 @@ Full documentation: \`docs/generated/views.md\`
 
 /**
  * Install tricks scaffold files (package.json, CLAUDE.md) if they don't
- * exist. A box's tricks live at `packageRoot/src/tricks/` (`boxCodePaths`
+ * exist. A box's tricks live at `boxRoot/src/tricks/` (`boxCodePaths`
  * resolves it).
  */
 /** Write `content` to `filePath` only if nothing is there yet (ENOENT is the

@@ -3,11 +3,11 @@
 `runIntake` is the first stage of the triage pipeline. It does three things
 in one pass:
 
-1. Routes fresh top-level `box/inbox/*` cards into `box/inbox/intake/`,
+1. Routes fresh top-level `_content/inbox/*` cards into `_content/inbox/intake/`,
    leaving reserved subdirectories alone.
 2. Applies each registered intake step to every file in `intake/` until
    no step changes anything (quiescent).
-3. Moves the intake-complete items to `box/inbox/staged/`.
+3. Moves the intake-complete items to `_content/inbox/staged/`.
 
 See `docs/triage.md` and `src/core/intake.ts`.
 
@@ -18,13 +18,13 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 ## Routing fresh arrivals
 
-A top-level card in `box/inbox/` gets pulled into `box/inbox/intake/`,
+A top-level card in `_content/inbox/` gets pulled into `_content/inbox/intake/`,
 then (since its filename is already safe) advanced through to
-`box/inbox/staged/`.
+`_content/inbox/staged/`.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/Note.memo.card", "<memo/>");
+await box.write("_content/inbox/Note.memo.card", "<memo/>");
 
 const result = await runIntake({ boxRoot: box.root });
 
@@ -44,15 +44,25 @@ JSON.stringify({
   ]
 }
 
-await box.list("box/inbox")
+await box.list("_content/inbox")
 =>
-box/inbox/intake
-box/inbox/staged
-box/inbox/staged/Note.memo.card
+_content/inbox/.gitkeep
+_content/inbox/intake
+_content/inbox/intake/.gitkeep
+_content/inbox/staged
+_content/inbox/staged/.gitkeep
+_content/inbox/staged/Note.memo.card
+_content/inbox/triaged
+_content/inbox/triaged/.gitkeep
+_content/inbox/triaged/_unsure
+_content/inbox/triaged/_unsure/.gitkeep
+_content/inbox/unhandled
+_content/inbox/unhandled/.gitkeep
 
-await box.list("box/inbox/staged")
+await box.list("_content/inbox/staged")
 =>
-box/inbox/staged/Note.memo.card
+_content/inbox/staged/.gitkeep
+_content/inbox/staged/Note.memo.card
 ```
 
 ```ts cleanup
@@ -66,7 +76,7 @@ renamed file then advances to `staged/`.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/Voice Memo (raw).memo.card", "<memo/>");
+await box.write("_content/inbox/Voice Memo (raw).memo.card", "<memo/>");
 
 const result = await runIntake({ boxRoot: box.root });
 
@@ -100,9 +110,9 @@ re-routed, and items in unrecognized subdirectories are left alone too.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/Fresh.memo.card", "<memo/>");
-await box.write("box/inbox/oldbucket/Legacy.memo.card", "<memo/>");
-await box.write("box/inbox/staged/Already.memo.card", "<memo/>");
+await box.write("_content/inbox/Fresh.memo.card", "<memo/>");
+await box.write("_content/inbox/oldbucket/Legacy.memo.card", "<memo/>");
+await box.write("_content/inbox/staged/Already.memo.card", "<memo/>");
 
 const result = await runIntake({ boxRoot: box.root });
 
@@ -120,10 +130,10 @@ JSON.stringify({
   ]
 }
 
-await box.read("box/inbox/oldbucket/Legacy.memo.card")
+await box.read("_content/inbox/oldbucket/Legacy.memo.card")
 => <memo/>
 
-await box.read("box/inbox/staged/Already.memo.card")
+await box.read("_content/inbox/staged/Already.memo.card")
 => <memo/>
 ```
 
@@ -133,24 +143,24 @@ await box.cleanup();
 
 ## Non-card top-level files stay put
 
-`box/inbox/CLAUDE.md`, `MAP.md`, README files, and similar agent-facing
+`_content/inbox/CLAUDE.md`, `MAP.md`, README files, and similar agent-facing
 context don't get swept into intake. Only `*.card` files are routed.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/CLAUDE.md", "# Inbox context");
-await box.write("box/inbox/MAP.md", "# Inbox map");
-await box.write("box/inbox/Note.memo.card", "<memo/>");
+await box.write("_content/inbox/CLAUDE.md", "# Inbox context");
+await box.write("_content/inbox/MAP.md", "# Inbox map");
+await box.write("_content/inbox/Note.memo.card", "<memo/>");
 
 const result = await runIntake({ boxRoot: box.root });
 
 JSON.stringify({ routed: result.routed, staged: result.staged })
 => {"routed":["Note.memo.card"],"staged":["Note.memo.card"]}
 
-await box.read("box/inbox/CLAUDE.md")
+await box.read("_content/inbox/CLAUDE.md")
 => # Inbox context
 
-await box.read("box/inbox/MAP.md")
+await box.read("_content/inbox/MAP.md")
 => # Inbox map
 ```
 

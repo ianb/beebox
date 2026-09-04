@@ -2,8 +2,8 @@
  * bbx trick - Run box-local agent-authored scripts.
  *
  * Tricks are TypeScript scripts in `<tricksDir>/scripts/<name>/index.ts`,
- * where `tricksDir` is `boxCodePaths(shape).tricksDir` — `boxRoot/tricks`
- * for a legacy (v1) box, `packageRoot/src/tricks` for a package (v2) box.
+ * where `tricksDir` is `boxCodePaths(shape).tricksDir` — `boxRoot/src/tricks`
+ * (the box's one root).
  * The agent writes them; they're only callable from within the box.
  *
  * Scripts run as subprocesses via tsx with their own package context,
@@ -115,9 +115,8 @@ interface RunTrickOptions {
 
 /**
  * Run a trick as a subprocess via tsx. The subprocess cwd is `tricksDir`
- * (`boxRoot/tricks` for a legacy box, `packageRoot/src/tricks` for a
- * package box) so relative imports and the trick's own `package.json`
- * resolve the same way in either shape.
+ * (`boxRoot/src/tricks`, the box's one root) so relative imports and the
+ * trick's own `package.json` resolve correctly.
  * Returns the exit code.
  */
 async function runTrick(opts: RunTrickOptions): Promise<number> {

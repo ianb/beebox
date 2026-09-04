@@ -39,7 +39,7 @@ import { formatTodoLocation, plateInputFor } from "./collect-types.js";
 // Same non-content dirs `list-cards.ts` prunes; kept local rather than
 // importing that module's private constant (a one-line list, not worth a
 // cross-module dependency for).
-const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"];
+const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"];
 
 /**
  * A `glob`/`cardPath` input that could resolve outside the box root: an

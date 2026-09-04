@@ -40,7 +40,7 @@ function message(opts: {
 }
 
 async function transientState(root: string) {
-  return JSON.parse(await readFile(join(root, "config/connectors/gmail.state.json"), "utf-8"));
+  return JSON.parse(await readFile(join(root, "_bookkeeping/connectors/gmail.state.json"), "utf-8"));
 }
 ```
 
@@ -74,7 +74,7 @@ run establishes a history checkpoint; existing and later mail stay remote.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("_config/connectors/gmail.json", "{}\n");
 box.commitAll("initialize box");
 const gmail = createFakeGoogleGmail({
   labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
@@ -107,13 +107,13 @@ it does not create an email card itself.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", JSON.stringify({
+await box.seed("_config/connectors/gmail.json", JSON.stringify({
   rules: [{
     name: "review-mail",
     query: "label:callback",
     action: {
       type: "procedure",
-      ref: "config/procedures/review-mail.procedure.card",
+      ref: "_config/procedures/review-mail.procedure.card",
     },
   }],
 }));
@@ -129,7 +129,7 @@ result.created.length
 => 0
 
 JSON.stringify(result.procedures)
-=> [{"procedureRef":"config/procedures/review-mail.procedure.card","directive":"Gmail rule review-mail has new matching mail. Inspect with: bbx connector gmail pending review-mail"}]
+=> [{"procedureRef":"_config/procedures/review-mail.procedure.card","directive":"Gmail rule review-mail has new matching mail. Inspect with: bbx connector gmail pending review-mail"}]
 
 (await transientState(box.root)).rules["review-mail"].pending[0].threadId
 => t-review
@@ -147,8 +147,8 @@ write instead of permanently wedging upgraded connectors.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
-await box.seed("config/connectors/gmail.state.json", JSON.stringify({
+await box.seed("_config/connectors/gmail.json", "{}\n");
+await box.seed("_bookkeeping/connectors/gmail.state.json", JSON.stringify({
   historyId: "1",
   lastReconcileAt: "2026-08-01T00:00:00.000Z",
 }));
@@ -174,7 +174,7 @@ untracked thread arriving in the same history window is not materialized.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("_config/connectors/gmail.json", "{}\n");
 box.commitAll("initialize box");
 const gmail = createFakeGoogleGmail({
   labels: [{ id: "INBOX", name: "INBOX", type: "system" }],
@@ -223,7 +223,7 @@ leaves a visible pending summary in private state.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", JSON.stringify({
+await box.seed("_config/connectors/gmail.json", JSON.stringify({
   rules: [{
     name: "agent-label",
     query: "label:callback",
@@ -271,7 +271,7 @@ recounts rule matches. It does not full-list messages into Git.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", JSON.stringify({ labels: ["callback"], action: { type: "track" } }));
+await box.seed("_config/connectors/gmail.json", JSON.stringify({ labels: ["callback"], action: { type: "track" } }));
 box.commitAll("initialize box");
 const gmail = createFakeGoogleGmail({
   labels: [{ id: "Label_7", name: "callback", type: "user" }],
@@ -302,7 +302,7 @@ leaves it untracked.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("_config/connectors/gmail.json", "{}\n");
 box.commitAll("initialize box");
 const gmail = createFakeGoogleGmail({
   labels: [{ id: "INBOX", name: "INBOX", type: "system" }],

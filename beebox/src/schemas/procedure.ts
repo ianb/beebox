@@ -1,7 +1,7 @@
 /**
  * Procedure definition card schema (Phase-2 frontmatter, no body).
  *
- * Defines the structure of procedure definition cards in config/procedures/.
+ * Defines the structure of procedure definition cards in _config/procedures/.
  * A procedure is a sequence of steps, each with optional precheck, run, and
  * validate phases. Each phase groups its shell commands, agent prompts,
  * instructions, and whys by kind (the engine runs them grouped, not

@@ -5,7 +5,7 @@
  * Usage: bbx serve [dirs...]
  *   - With args: uses the given dirs directly.
  *   - No args: walks up from the current directory to its box root (so this
- *     works from a v2 box's package root or any subdirectory), falling back
+ *     works from anywhere inside the box), falling back
  *     to the bare cwd if no box is found — a one-off local-dev convenience.
  *
  * The `~/.config/beebox/boxes.json` manifest (`bbx boxes add/remove/list`) feeds
@@ -27,11 +27,9 @@ import { loadEnv, serverEnvSchema } from "../../lib/env.js";
 /**
  * `<slug>=<boxRoot>` argv encoding `server-main.ts` expects. Exported so
  * `--dev`'s spawn args (below) and its doctest build it the same way a
- * resolved `BoxSpec[]` always does — a v2 box's `content/` dir basename is
- * always the literal string "content", so passing a bare dir instead would
- * silently slug every v2 box "content" (server-main.ts's bare-dir fallback
- * derives the slug from `path.basename`, same gap `--slug`/`resolveBoxes`
- * exist to close for the non-dev path).
+ * resolved `BoxSpec[]` always does — the explicit slug is what lets a caller
+ * override `path.basename` (server-main.ts's bare-dir fallback), same gap
+ * `--slug`/`resolveBoxes` exist to close for the non-dev path.
  */
 export function toBoxArgs(boxes: BoxSpec[]): string[] {
   return boxes.map((box) => `${box.slug}=${box.boxRoot}`);
@@ -116,8 +114,7 @@ export const serveCommand = new Command("serve")
   .option("-d, --dev", "Run in development mode with auto-reload")
   .option(
     "--slug <slug>",
-    "URL slug to serve the box under (default: the box's own basename — the PACKAGE root's " +
-      "basename for a v2 box, since its content/ dir's basename is always \"content\"). " +
+    "URL slug to serve the box under (default: the box root's own basename). " +
       "Only valid with a single box directory — this is how `bbx hub` names a box's process."
   )
   .action(async (dirs: string[], options: { port: string; host: string; dev?: boolean; slug?: string }) => {
@@ -134,7 +131,7 @@ export const serveCommand = new Command("serve")
     // Resolve which box dirs to serve. Precedence:
     //   1. Explicit positional args.
     //   2. The current directory, walked up to its box root (handles running
-    //      from a v2 box's package root or any subdirectory) — falls back to
+    //      from anywhere inside the box) — falls back to
     //      the bare cwd if no box is found (fixtures, or a plain directory
     //      for one-off local dev).
     // The boxes.json manifest is never consulted here — it feeds the

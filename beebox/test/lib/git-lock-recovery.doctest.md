@@ -52,7 +52,7 @@ nothing sweeps it, and it is far too fresh to be reclaimed:
 const box = await makeTmpBox({ git: true });
 await crashedHolder(box.root, {});
 
-existsSync(join(box.packageRoot, ".git", "beebox-index.lock.guard"))
+existsSync(join(box.root, ".git", "beebox-index.lock.guard"))
 => true
 ```
 

@@ -210,13 +210,13 @@ export async function linkDriveItem(options: {
 export interface UnmountResult {
   /** Box-relative path the mount card came from. */
   cardPath: string;
-  /** Box-relative path in `store/trash/` it moved to. */
+  /** Box-relative path in `_bookkeeping/trash/` it moved to. */
   trashedTo: string;
 }
 
 /**
  * Stop mirroring a folder. Exactly `bbx rm` on the mount card: it moves to
- * `store/trash/` (where it also becomes the tombstone that stops a parent
+ * `_bookkeeping/trash/` (where it also becomes the tombstone that stops a parent
  * mirror re-creating it), and every child stays where it is — synced cards keep
  * syncing on their own, pointers keep pointing. Nothing is deleted.
  *

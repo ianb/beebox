@@ -37,8 +37,8 @@ shareDestinationsOutput.parse(fixture.result.data).chats[0].sessionId
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await mkdir(path.join(box.root, "store/reading"), { recursive: true });
-await writeFile(path.join(box.root, "store/reading/Reading.landmark.card"), `---
+await mkdir(path.join(box.root, "_content/reading"), { recursive: true });
+await writeFile(path.join(box.root, "_content/reading/Reading.landmark.card"), `---
 navigation:
   label: Reading
   symbol: 📚
@@ -46,8 +46,8 @@ destinations:
   - for: [share]
 ---
 `, "utf-8");
-await mkdir(path.join(box.root, "store/private"), { recursive: true });
-await writeFile(path.join(box.root, "store/private/Private.landmark.card"), `---
+await mkdir(path.join(box.root, "_content/private"), { recursive: true });
+await writeFile(path.join(box.root, "_content/private/Private.landmark.card"), `---
 navigation:
   label: Private
 destinations:
@@ -58,7 +58,7 @@ const destinations = await caller(box.root).share.destinations();
 print(JSON.stringify(destinations.saves));
 destinations.chats.length
 =>
-[{"destination":{"kind":"inbox"},"label":"Inbox","symbol":null},{"destination":{"kind":"landmark","dir":"store/reading"},"label":"Reading","symbol":"📚"}]
+[{"destination":{"kind":"inbox"},"label":"Inbox","symbol":null},{"destination":{"kind":"landmark","dir":"_content/reading"},"label":"Reading","symbol":"📚"}]
 0
 ```
 
@@ -71,7 +71,7 @@ const request = {
   url: "https://example.com/article",
   title: "An Example",
   capturedAt: "2026-08-07T12:00:00.000Z",
-  destination: { kind: "landmark" as const, dir: "store/reading" },
+  destination: { kind: "landmark" as const, dir: "_content/reading" },
 };
 const first = await caller(box.root).share.saveTextual(request);
 const saved = await readFile(path.join(box.root, first.created[0]), "utf-8");
@@ -87,12 +87,12 @@ true
 ```
 
 ```ts continue
-const moved = path.join("box/inbox", path.basename(first.created[0]));
-await mkdir(path.join(box.root, "box/inbox"), { recursive: true });
+const moved = path.join("_content/inbox", path.basename(first.created[0]));
+await mkdir(path.join(box.root, "_content/inbox"), { recursive: true });
 await rename(path.join(box.root, first.created[0]), path.join(box.root, moved));
 const replay = await caller(box.root).share.saveTextual(request);
 replay.created[0]
-=> box/inbox/An_Example_00000000-0000-4000-8000-000000000001.webpage.card
+=> _content/inbox/An_Example_00000000-0000-4000-8000-000000000001.webpage.card
 ```
 
 ## A reused share id with different immutable content conflicts
@@ -114,7 +114,7 @@ const stale = await caller(box.root).share.saveTextual({
   shareId: "00000000-0000-4000-8000-000000000002",
   text: "Keep this exact text",
   capturedAt: "2026-08-07T12:00:00.000Z",
-  destination: { kind: "landmark", dir: "store/missing" },
+  destination: { kind: "landmark", dir: "_content/missing" },
 }).then(() => "no-error", (error) => error.code);
 stale
 => BAD_REQUEST

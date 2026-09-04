@@ -2,13 +2,9 @@
  * Box-sourced context layers for `assembleContext` (context-assembly.ts) —
  * everything read from a box's disk rather than from source code.
  *
- * A v2 (package-shaped) box splits its always-loaded surface across two
- * roots: Claude Code runs in the operational root (`content/`), whose
- * CLAUDE.md is the operating context, but `.claude/` (skills, rules, memory)
- * lives at the PACKAGE root, and the package root's own CLAUDE.md also loads
- * (Claude Code reads CLAUDE.md from the cwd and its ancestors). Every layer
- * builder here therefore takes the roots it actually reads from. For a
- * legacy box the two roots are the same directory.
+ * shapeVersion 3: a box has ONE root — `.claude/` (skills, rules, memory) and
+ * CLAUDE.md all live at `boxRoot`. Every layer builder here takes that one
+ * root.
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -27,13 +23,6 @@ export interface ContextLayer {
   text: string;
 }
 
-export interface BoxRoots {
-  /** The operational root — where the agent session actually runs. */
-  boxRoot: string;
-  /** The package root — where `.claude/` lives. Equals boxRoot for legacy boxes. */
-  packageRoot: string;
-}
-
 class SkillNotInstalledError extends Error {
   constructor(skill: string, paths: string[]) {
     super(`Skill "${skill}" is not installed at ${paths.join(" or ")} (run bbx init?)`);
@@ -46,36 +35,6 @@ class UnknownCardTypeError extends Error {
     super(`Unknown card type "${cardType}" (known: ${known.join(", ")})`);
     this.name = "UnknownCardTypeError";
   }
-}
-
-/** Distinct `.claude/` roots to scan, package root first. */
-function claudeRoots(roots: BoxRoots): string[] {
-  return roots.packageRoot === roots.boxRoot
-    ? [roots.packageRoot]
-    : [roots.packageRoot, roots.boxRoot];
-}
-
-/**
- * The package root's own CLAUDE.md — a separate always-loaded layer for a v2
- * box (Claude Code loads every CLAUDE.md from the cwd up). Null when the box
- * is legacy-shaped or the package root has no CLAUDE.md.
- */
-export async function packageClaudeMdLayer(roots: BoxRoots): Promise<ContextLayer | null> {
-  if (roots.packageRoot === roots.boxRoot) return null;
-  const path = join(roots.packageRoot, "CLAUDE.md");
-  let text: string;
-  try {
-    text = await readFile(path, "utf-8");
-  } catch (_e) {
-    // No package-level CLAUDE.md — nothing to load.
-    return null;
-  }
-  return {
-    name: "Package CLAUDE.md (box repo root; loads alongside the operational CLAUDE.md)",
-    source: path,
-    loading: "always",
-    text,
-  };
 }
 
 /** Operational-root CLAUDE.md with one level of `@path` includes inlined. */
@@ -111,8 +70,8 @@ export async function claudeMdLayer(boxRoot: string): Promise<ContextLayer> {
  * Claude Code's project memory, so MEMORY.md loads every session. Null when
  * the box has no memory index.
  */
-export async function memoryLayer(roots: BoxRoots): Promise<ContextLayer | null> {
-  const path = join(roots.packageRoot, ".claude", "memory", "MEMORY.md");
+export async function memoryLayer(boxRoot: string): Promise<ContextLayer | null> {
+  const path = join(boxRoot, ".claude", "memory", "MEMORY.md");
   let text: string;
   try {
     text = await readFile(path, "utf-8");
@@ -132,64 +91,52 @@ export async function memoryLayer(roots: BoxRoots): Promise<ContextLayer | null>
  * The always-loaded routing surface of skills: each installed skill's name and
  * trigger description (the body loads only on invocation).
  */
-export async function skillDescriptionsLayer(roots: BoxRoots): Promise<ContextLayer> {
+export async function skillDescriptionsLayer(boxRoot: string): Promise<ContextLayer> {
   const lines: string[] = [];
-  const seen = new Set<string>();
-  for (const root of claudeRoots(roots)) {
-    const skillsDir = join(root, ".claude", "skills");
-    for (const name of await listDir(skillsDir)) {
-      if (seen.has(name)) continue;
-      seen.add(name);
-      const description = await skillDescription(join(skillsDir, name, "SKILL.md"));
-      lines.push(`- **${name}** — ${description ?? "(no description)"}`);
-    }
+  const skillsDir = join(boxRoot, ".claude", "skills");
+  for (const name of await listDir(skillsDir)) {
+    const description = await skillDescription(join(skillsDir, name, "SKILL.md"));
+    lines.push(`- **${name}** — ${description ?? "(no description)"}`);
   }
   return {
     name: "Skill descriptions (routing surface; bodies load on invocation)",
-    source: join(roots.packageRoot, ".claude/skills/*/SKILL.md"),
+    source: join(boxRoot, ".claude/skills/*/SKILL.md"),
     loading: "always",
     text: lines.length > 0 ? lines.join("\n") : "(no skills installed)",
   };
 }
 
-export async function skillBodyLayer(roots: BoxRoots, skill: string): Promise<ContextLayer> {
-  const candidates = claudeRoots(roots).map((root) =>
-    join(root, ".claude", "skills", skill, "SKILL.md"),
-  );
-  for (const path of candidates) {
-    let text: string;
-    try {
-      text = await readFile(path, "utf-8");
-    } catch (_e) {
-      continue;
-    }
-    return {
-      name: `Skill body: ${skill} (loads when invoked)`,
-      source: path,
-      loading: "on-demand",
-      text,
-    };
+export async function skillBodyLayer(boxRoot: string, skill: string): Promise<ContextLayer> {
+  const path = join(boxRoot, ".claude", "skills", skill, "SKILL.md");
+  let text: string;
+  try {
+    text = await readFile(path, "utf-8");
+  } catch (_e) {
+    throw new SkillNotInstalledError(skill, [path]);
   }
-  throw new SkillNotInstalledError(skill, candidates);
+  return {
+    name: `Skill body: ${skill} (loads when invoked)`,
+    source: path,
+    loading: "on-demand",
+    text,
+  };
 }
 
-/** Inventory of `.claude/rules/` (both roots) — each loads when the agent touches a matching path. */
-export async function rulesInventoryLayer(roots: BoxRoots): Promise<ContextLayer> {
+/** Inventory of `.claude/rules/` — each loads when the agent touches a matching path. */
+export async function rulesInventoryLayer(boxRoot: string): Promise<ContextLayer> {
   const lines: string[] = [];
-  for (const root of claudeRoots(roots)) {
-    const rulesDir = join(root, ".claude", "rules");
-    const label = relative(roots.packageRoot, rulesDir) || rulesDir;
-    for (const file of await listDir(rulesDir)) {
-      if (!file.endsWith(".md")) continue;
-      const content = await readFile(join(rulesDir, file), "utf-8");
-      const paths = [...content.matchAll(/^\s*-\s*"([^"]+)"/gm)].map((m) => m[1]);
-      const scope = paths.length > 0 ? paths.join(", ") : "(no paths declared)";
-      lines.push(`- \`${label}/${file}\` — ${String(wordCount(content))} words — loads on: ${scope}`);
-    }
+  const rulesDir = join(boxRoot, ".claude", "rules");
+  const label = relative(boxRoot, rulesDir) || rulesDir;
+  for (const file of await listDir(rulesDir)) {
+    if (!file.endsWith(".md")) continue;
+    const content = await readFile(join(rulesDir, file), "utf-8");
+    const paths = [...content.matchAll(/^\s*-\s*"([^"]+)"/gm)].map((m) => m[1]);
+    const scope = paths.length > 0 ? paths.join(", ") : "(no paths declared)";
+    lines.push(`- \`${label}/${file}\` — ${String(wordCount(content))} words — loads on: ${scope}`);
   }
   return {
     name: "Rules inventory (each loads on path match, not up front)",
-    source: join(roots.packageRoot, ".claude/rules/"),
+    source: join(boxRoot, ".claude/rules/"),
     loading: "on-demand",
     text: lines.length > 0 ? lines.join("\n") : "(no rules installed)",
   };
@@ -203,7 +150,7 @@ export async function schemaInstructionsLayer(boxRoot: string, cardType: string)
   }
   return {
     name: `Schema instructions: ${cardType} (rides the job / loads via card rule)`,
-    source: `src/schemas/ (or config/schemas/) → ${cardType}`,
+    source: `src/schemas/ (or _config/schemas/) → ${cardType}`,
     loading: "situational",
     text: schema.instructions ?? "(this type has no instructions)",
   };

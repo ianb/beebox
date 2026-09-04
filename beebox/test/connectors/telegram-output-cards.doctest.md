@@ -1,7 +1,7 @@
-# Telegram output cards (box/output/)
+# Telegram output cards (_bookkeeping/output/)
 
 `sendOutputCards` implements the lifecycle documented in the
-telegram-message schema: pending cards in `box/output/` are sent and
+telegram-message schema: pending cards in `_bookkeeping/output/` are sent and
 deleted; cards that fail to send are stamped `failed` with the error
 and left in place (not retried).
 
@@ -20,11 +20,11 @@ import { createTelegramMessageTemplate } from "../../src/schemas/telegram-messag
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.seed(
-  "box/output/health-alert.telegram-message.card",
+  "_bookkeeping/output/health-alert.telegram-message.card",
   createTelegramMessageTemplate({ chatId: "777", text: "check-email: failing ×3" }),
 );
 await box.seed(
-  "box/output/already-failed.telegram-message.card",
+  "_bookkeeping/output/already-failed.telegram-message.card",
   `---\nstatus: failed\nchat-id: "777"\ntext: old news\nerror: kaboom\n---\n`,
 );
 box.commitAll("seed outbox");
@@ -32,7 +32,7 @@ box.commitAll("seed outbox");
 const tg = createFakeTelegram({ username: "test_bot" });
 const sent = await sendOutputCards({ boxRoot: box.root, triggeredBy: "doctest", tg });
 JSON.stringify(sent)
-=> ["box/output/health-alert.telegram-message.card"]
+=> ["_bookkeeping/output/health-alert.telegram-message.card"]
 
 JSON.stringify(tg.sent)
 => [{"chatId":"777","text":"check-email: failing ×3","messageId":1}]
@@ -42,8 +42,8 @@ The sent card is gone; the previously-failed card is untouched (failed
 cards are never retried):
 
 ```ts continue
-JSON.stringify(await fs.readdir(path.join(box.root, "box/output")))
-=> ["already-failed.telegram-message.card"]
+JSON.stringify(await fs.readdir(path.join(box.root, "_bookkeeping/output")))
+=> [".gitkeep","already-failed.telegram-message.card"]
 ```
 
 The deletion is committed:
@@ -62,7 +62,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.seed(
-  "box/output/alert.telegram-message.card",
+  "_bookkeeping/output/alert.telegram-message.card",
   createTelegramMessageTemplate({ chatId: "777", text: "hello" }),
 );
 box.commitAll("seed outbox");
@@ -73,7 +73,7 @@ const sent = await sendOutputCards({ boxRoot: box.root, triggeredBy: "doctest", 
 JSON.stringify(sent)
 => []
 
-await fs.readFile(path.join(box.root, "box/output/alert.telegram-message.card"), "utf-8")
+await fs.readFile(path.join(box.root, "_bookkeeping/output/alert.telegram-message.card"), "utf-8")
 => ---
 status: failed
 chat-id: "777"

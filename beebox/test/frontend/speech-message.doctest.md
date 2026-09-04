@@ -33,9 +33,9 @@ buildSpeechMessage({ text: "speaker A and speaker B", diarized: true, selections
 JSON.stringify(buildSpeechMessage({
   text: "look at this part",
   diarized: false,
-  selections: [{ id: 1, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body; heading: Proofing (#proofing)" }],
+  selections: [{ id: 1, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body; heading: Proofing (#proofing)" }],
   attrs: " local-time=\"14:23\"",
 }))
 =>
-"<speech local-time=\"14:23\">look at this part\n<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection></speech>"
+"<speech local-time=\"14:23\">look at this part\n<user-selection ref=\"/_content/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection></speech>"
 ```

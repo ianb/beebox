@@ -11,18 +11,20 @@ import path from "node:path";
 import { isInsideAttachScope } from "../../shared/attach-path.js";
 import { cardTypeFromName } from "../../shared/card-name.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { BOX_DIRS } from "../../lib/paths.js";
 
-/** Directories never descended into. `store/trash` is handled by path. */
+/** Directories never descended into. `_bookkeeping/trash` is handled by path. */
 const SKIP_DIRS = new Set([
   ".git",
   "node_modules",
   ".beebox",
   ".claude", // agent rules/settings — machine config, not box content
+  "src", // box code (schemas/views/tricks) — tooling, not box content
   ".scan-archive",
   ".scan-api",
 ]);
 
-const TRASH_PREFIX = "store/trash";
+const TRASH_PREFIX = BOX_DIRS.trash;
 
 /** Generated agent docs — regenerable instruction text, not box content. */
 const GENERATED_DOCS_PREFIX = "docs/generated";

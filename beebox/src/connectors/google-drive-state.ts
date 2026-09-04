@@ -1,6 +1,6 @@
 /**
  * Google Drive connector transient state — the gitignored
- * `config/connectors/google-drive.state.json` file plus its serialized,
+ * `_bookkeeping/connectors/google-drive.state.json` file plus its serialized,
  * delta-merging writer.
  *
  * The state is written by TWO processes: the server (`google-drive.ts` `sync()`)
@@ -21,7 +21,7 @@ export interface DriveTransientState {
   files: Record<string, FileState>;
   /**
    * Drive IDs the CONNECTOR trashed, because Drive said the child was trashed.
-   * The tombstone in `store/trash/` cannot say who made it, and the two authors
+   * The tombstone in `_bookkeeping/trash/` cannot say who made it, and the two authors
    * mean opposite things: a `bbx rm` tombstone is a durable "not here", while a
    * connector one is only a mirror of Drive's own trash — so a file restored on
    * Drive must come back. Membership here is what tells them apart, and an ID

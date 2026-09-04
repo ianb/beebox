@@ -1,5 +1,5 @@
 /**
- * Google Drive connector configuration — `config/connectors/google-drive.json`.
+ * Google Drive connector configuration — `_config/connectors/google-drive.json`.
  *
  * There is nothing left to configure. A Drive mount is a card: a `.gdoc.card` /
  * `.gsheet.card` for a synced file, a `.gfolder.card` for a mirrored folder,
@@ -18,6 +18,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { ok, err, type Result } from "../lib/result.js";
+import { BOX_DIRS } from "../lib/paths.js";
 
 /** A pre-card folder mount. Legacy input only — see the module comment. */
 const DriveFolderMountSchema = z.object({
@@ -31,7 +32,7 @@ const DriveConfigSchema = z.object({
 
 export type DriveConfig = z.infer<typeof DriveConfigSchema>;
 
-export const DRIVE_CONFIG_REL = "config/connectors/google-drive.json";
+export const DRIVE_CONFIG_REL = `${BOX_DIRS.connectors}/google-drive.json`;
 
 /**
  * Read the connector config.

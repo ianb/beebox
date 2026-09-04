@@ -28,6 +28,7 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import type { EventBus } from "../event-bus.js";
+import { BOX_DIRS } from "../../lib/paths.js";
 
 const watchers = new Map<string, BoxWatcher>();
 
@@ -38,7 +39,7 @@ const DOT_SEGMENT = /(^|[/\\])\../;
  * subdirectory (procedure/runs/ alone exhausted the server's inotify limit on
  * 2026-06-11).
  */
-const HIGH_CHURN_DIRS = ["procedure/runs", "store/trash"];
+const HIGH_CHURN_DIRS = ["procedure/runs", BOX_DIRS.trash];
 
 /**
  * Absolute ceiling on live directory watches for one box. A watcher is a

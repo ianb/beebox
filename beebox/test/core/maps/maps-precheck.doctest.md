@@ -10,6 +10,36 @@ import { getHead } from "../../../src/lib/git.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { symlink } from "node:fs/promises";
 import { join } from "node:path";
+import { DEFAULT_IGNORE_PATTERNS, SKELETON_HIDDEN_PATHS } from "../../../src/core/maps/precheck-ignore.js";
+
+/**
+ * A fresh shapeVersion-3 box already has `_bookkeeping/`, `_content/`, and
+ * `src/` scaffolded with enough visible (non-skeleton-hidden) children —
+ * `_bookkeeping/usage`, `_bookkeeping/connectors`, `_content/recipes`,
+ * `_content/todos`, etc. — to qualify for their own MAP.md under the
+ * container + useful-content rules. None of these tests are about that
+ * always-present baseline, so this seeds and records MAP.md for all three
+ * up front — they never change afterward (tests only write into their own
+ * custom top-level dirs), so recording them once at the seed commit keeps
+ * them permanently quiet (the diff, not an exact HEAD match, decides
+ * dirtiness). Returns the recorded entries so a test that calls
+ * `saveMapState` again later can spread them back in (`saveMapState`
+ * replaces the whole file, it doesn't merge).
+ */
+async function seedSkeletonMaps(box) {
+  for (const dir of ["_bookkeeping", "_content", "src"]) {
+    await box.write(`${dir}/MAP.md`, "");
+  }
+  box.commitAll("seed skeleton maps");
+  const head = await getHead(box.root);
+  const entries = {
+    "_bookkeeping": { asOf: head, generatedAt: "t" },
+    "_content": { asOf: head, generatedAt: "t" },
+    "src": { asOf: head, generatedAt: "t" },
+  };
+  await saveMapState({ boxRoot: box.root, state: { maps: entries } });
+  return entries;
+}
 ```
 
 ## Skip reasons
@@ -85,6 +115,7 @@ Rules that gate which directories qualify:
 
 ```ts
 const box = await makeTmpBox({ git: true });
+await seedSkeletonMaps(box);
 await box.write("inbox/foo.card", "<card/>");          // file-only dir (skipped)
 await box.write("store/notes/a.md", "a");              // store: 2 subdirs → mapped
 await box.write("store/scratch/b.md", "b");
@@ -119,6 +150,7 @@ After we record state at HEAD, a re-run reports nothing to do:
 
 ```ts
 const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
 box.commitAll("seed");
@@ -130,6 +162,7 @@ await saveMapState({
   boxRoot: box.root,
   state: {
     maps: {
+      ...skeleton,
       "store": { asOf: head, generatedAt: "t" },
     },
   },
@@ -154,6 +187,7 @@ MAP (its listing changes), not its parent's:
 
 ```ts
 const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
 await box.write("store/MAP.md", "");
@@ -163,6 +197,7 @@ await saveMapState({
   boxRoot: box.root,
   state: {
     maps: {
+      ...skeleton,
       "store": { asOf: head, generatedAt: "t" },
     },
   },
@@ -191,6 +226,7 @@ MAP needs touching:
 
 ```ts
 const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
 await box.write("store/MAP.md", "");
@@ -200,6 +236,7 @@ await saveMapState({
   boxRoot: box.root,
   state: {
     maps: {
+      ...skeleton,
       "store": { asOf: head, generatedAt: "t" },
     },
   },
@@ -227,6 +264,7 @@ Leaf case — parent dirties, new dir is a leaf so it's not mapped:
 
 ```ts
 const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
 await box.write("store/MAP.md", "");
@@ -236,6 +274,7 @@ await saveMapState({
   boxRoot: box.root,
   state: {
     maps: {
+      ...skeleton,
       "store": { asOf: head, generatedAt: "t" },
     },
   },
@@ -261,6 +300,7 @@ becomes mappable:
 
 ```ts
 const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
 await box.write("store/MAP.md", "");
@@ -270,6 +310,7 @@ await saveMapState({
   boxRoot: box.root,
   state: {
     maps: {
+      ...skeleton,
       "store": { asOf: head, generatedAt: "t" },
     },
   },
@@ -296,12 +337,13 @@ await box.cleanup();
 ## Ignore patterns
 
 Default patterns include the skeleton hide-list (`procedure/**`,
-`box/inbox/**`, `store/archive/**`, etc.) and any directory ending in
-`.attach` (card attach scopes are an implementation detail of the card
-layout):
+`_content/inbox/**`, `_bookkeeping/archive/**`, etc.) and any directory
+ending in `.attach` (card attach scopes are an implementation detail of
+the card layout):
 
 ```ts
 const box = await makeTmpBox({ git: true });
+await seedSkeletonMaps(box);
 await box.write("a/b/x.card", "x");
 await box.write("a/c/y.card", "x");  // 2 subdirs for `a` to qualify
 await box.write("procedure/runs/run-1/log.txt", "x");
@@ -309,7 +351,7 @@ await box.write("emails/Foo.attach/x.card", "x");
 await box.write("emails/keep/sub/y.card", "x");
 await box.write("emails/keep/sub2/z.card", "x");  // 2 subdirs for `emails/keep` to qualify
 await box.write("emails/index.md", "x");  // 2nd visible child for `emails` to qualify
-await box.write("box/inbox/capture-1.attach/audio.webm", "x");
+await box.write("_content/inbox/capture-1.attach/audio.webm", "x");
 box.commitAll("seed");
 
 const brief = await precheck({ boxRoot: box.root });
@@ -325,7 +367,7 @@ Notes:
 - Root is always skipped (every top-level dir is skeleton).
 - `procedure/**` hides the whole `procedure/` tree.
 - `emails/Foo.attach/` is hidden (matches `**/*.attach`).
-- `box/inbox/**` hides the whole inbox tree (skeleton, high churn).
+- `_content/inbox/**` hides the whole inbox tree (skeleton, high churn).
 
 `emails/keep` is mapped because it has two subdirs; `emails/keep/sub` is
 a leaf and skipped under the container rule.
@@ -340,7 +382,7 @@ Every box gets an `AGENTS.md` symlink beside each `CLAUDE.md` so a Codex
 session finds the same content under the name it reads. Both names are meta —
 listing either one asks the agent to describe an instruction file in a content
 MAP, which it correctly refuses to do, so the precheck never goes quiet and
-every later run fails the same way. `config/box.json` is machine-owned config
+every later run fails the same way. `_config/box.json` is machine-owned config
 the admin UI rewrites, and is hidden for the same reason.
 
 The mirror is a real symlink (git mode 120000), so this seeds one rather than a
@@ -349,22 +391,22 @@ as a blob, and the fix has to hold on both paths.
 
 ```ts
 const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
 await box.write("store/notes/a.md", "a\n");
 await box.write("store/refs/b.md", "b\n");
 await box.write("store/CLAUDE.md", "@MAP.md\n");
 await symlink("CLAUDE.md", join(box.root, "store", "AGENTS.md"));
-await box.write("config/box.json", '{"timezone":"UTC"}');
-await box.write("config/a/x.md", "x");
-await box.write("config/b/y.md", "y");
+await box.write("_config/a/x.md", "x");
+await box.write("_config/b/y.md", "y");
 box.commitAll("seed");
 
 const brief = await precheck({ boxRoot: box.root });
 const children = (dir: string) => brief.tasks.find((t) => t.dir === dir)?.children.join(", ") ?? "(no task)";
 print(`store: ${children("store")}`);
-print(`config: ${children("config")}`);
+print(`_config: ${children("_config")}`);
 =>
 store: notes/, refs/
-config: a/, b/
+_config: a/, b/, migrations.jsonl, template-versions.json, transcription.json
 ```
 
 The git-side listing agrees. This half has to be set up so the mirror appears
@@ -379,7 +421,7 @@ await box.write("people/MAP.md", "# Map: people\n");
 box.commitAll("people, no instruction files yet");
 await saveMapState({
   boxRoot: box.root,
-  state: { maps: { people: { asOf: await getHead(box.root), generatedAt: "t" } } },
+  state: { maps: { ...skeleton, people: { asOf: await getHead(box.root), generatedAt: "t" } } },
 });
 
 const peopleTask = async () => {
@@ -408,6 +450,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
+await seedSkeletonMaps(box);
 await box.write("keep/sub/a.card", "x");
 await box.write("keep/sub2/c.card", "x");
 await box.write("dump/sub/b.card", "x");
@@ -432,6 +475,7 @@ for a MAP — the single bullet would just restate the dirname.
 
 ```ts
 const box = await makeTmpBox({ git: true });
+await seedSkeletonMaps(box);
 await box.write("collection/only-child/a.md", "x");
 box.commitAll("seed");
 
@@ -465,6 +509,7 @@ its own MAP.md; the parent's MAP describes it instead.
 
 ```ts
 const box = await makeTmpBox({ git: true });
+await seedSkeletonMaps(box);
 await box.write("store/items/a/note.md", "a");
 await box.write("store/items/b/note.md", "b");
 await box.write("store/keep/sub/x.md", "x");
@@ -473,7 +518,7 @@ box.commitAll("seed");
 
 const brief = await precheck({
   boxRoot: box.root,
-  ignorePatterns: ["store/items/*"],
+  ignorePatterns: [...DEFAULT_IGNORE_PATTERNS, ...SKELETON_HIDDEN_PATHS, "store/items/*"],
 });
 const dirs = brief.tasks.map((t) => t.dir || "<root>").toSorted();
 print(dirs.join("\n"));
@@ -501,6 +546,7 @@ collection is purely incidental and the parent shouldn't even mention it.
 
 ```ts
 const box = await makeTmpBox({ git: true });
+await seedSkeletonMaps(box);
 await box.write("store/items/a/note.md", "a");
 await box.write("store/items/b/note.md", "b");
 await box.write("store/keep/sub/x.md", "x");
@@ -510,7 +556,7 @@ box.commitAll("seed");
 
 const brief = await precheck({
   boxRoot: box.root,
-  ignorePatterns: ["store/items/**"],
+  ignorePatterns: [...DEFAULT_IGNORE_PATTERNS, ...SKELETON_HIDDEN_PATHS, "store/items/**"],
 });
 const dirs = brief.tasks.map((t) => t.dir || "<root>").toSorted();
 print(dirs.join("\n"));
@@ -536,6 +582,7 @@ map is regenerated from what's actually on disk.
 
 ```ts
 const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
 await box.write("store/notes/a.md", "a\n");
 await box.write("store/refs/b.md", "b\n");
 await box.write("store/MAP.md", "# Map: store\n");
@@ -544,7 +591,10 @@ box.commitAll("seed");
 await saveMapState({
   boxRoot: box.root,
   state: {
-    maps: { store: { asOf: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", generatedAt: "t" } },
+    maps: {
+      ...skeleton,
+      store: { asOf: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", generatedAt: "t" },
+    },
   },
 });
 box.commitAll("state");
@@ -569,6 +619,7 @@ is a normal `update`, with no anomaly.
 
 ```ts
 const box = await makeTmpBox({ git: true });
+const skeleton = await seedSkeletonMaps(box);
 await box.write("store/notes/a.md", "a\n");
 await box.write("store/refs/b.md", "b\n");
 await box.write("store/MAP.md", "# Map: store\n");
@@ -580,7 +631,7 @@ box.commitAll("add store/later");
 
 await saveMapState({
   boxRoot: box.root,
-  state: { maps: { store: { asOf, generatedAt: "t" } } },
+  state: { maps: { ...skeleton, store: { asOf, generatedAt: "t" } } },
 });
 box.commitAll("state");
 

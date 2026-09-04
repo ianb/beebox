@@ -20,6 +20,7 @@ import { processChatJobs } from "./chat-jobs.js";
 import type { runSync as realRunSync } from "./subprocess.js";
 import type { JobWithContent, ProcessJobsOptions } from "./types.js";
 import type { ReactorResult } from "./engine.js";
+import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
 
 export interface RunCycleParams {
   boxRoot: string;
@@ -64,7 +65,7 @@ export async function runOneCycle(params: RunCycleParams): Promise<ReactorResult
   await syncStage(params);
   await refreshDocsStage(params);
 
-  const jobsDir = path.join(boxRoot, "box/jobs");
+  const jobsDir = getBoxDir(boxRoot, "jobs");
   await fs.mkdir(jobsDir, { recursive: true });
 
   const discovered = await discoverStage({ jobsDir, typeFilter, sourceFilter, params });
@@ -110,7 +111,7 @@ async function refreshDocsStage(params: RunCycleParams): Promise<void> {
  * own. `skipLowPriority` (which `bbx wakeup` always sets) exists so an
  * otherwise-idle box doesn't spend an agent turn every tick on optional
  * filler — but before this deadline existed it also meant "or never": a box
- * whose `box/jobs` held nothing but low-priority cards skipped every cycle
+ * whose `_bookkeeping/jobs` held nothing but low-priority cards skipped every cycle
  * forever, and one such card (`contains-backfill`) suppressed its own
  * successor as well. Low priority means *may wait*, not *may wait forever*.
  */
@@ -169,7 +170,7 @@ async function discoverStage(opts: {
   onLog?.(fmt.header(`Found ${selected.length} job(s):\n`));
   for (const card of selected) {
     const label = card.priority === "low" ? " (low priority)" : "";
-    onLog?.(`  - box/jobs/${card.file}${label}\n`);
+    onLog?.(`  - ${BOX_DIRS.jobs}/${card.file}${label}\n`);
   }
   return { kind: "ready", jobCards: selected };
 }
@@ -219,7 +220,7 @@ async function readJobsWithContent(opts: {
   const { jobCards, boxRoot } = opts;
   const jobsWithContent: JobWithContent[] = [];
   for (const card of jobCards) {
-    const jp = path.join("box/jobs", card.file);
+    const jp = path.join(BOX_DIRS.jobs, card.file);
     const absPath = path.join(boxRoot, jp);
     try {
       const content = await fs.readFile(absPath, "utf-8");

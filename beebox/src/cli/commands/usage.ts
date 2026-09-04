@@ -3,7 +3,7 @@
  *
  * Syncs Claude Code session logs into a SQLite database for querying.
  * Data comes from two sources:
- *   - Session manifest (store/usage/session-manifest.jsonl) — maps sessions to tasks
+ *   - Session manifest (_bookkeeping/usage/session-manifest.jsonl) — maps sessions to tasks
  *   - Claude Code session logs (~/.claude/projects/...) — raw token counts
  */
 

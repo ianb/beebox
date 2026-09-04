@@ -78,7 +78,7 @@ export async function compileTriageInstructions(
   const matches = await glob("**/*.landmark.card", {
     cwd: boxRoot,
     nodir: true,
-    ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+    ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
   });
 
   const categories: TriageCategory[] = [];

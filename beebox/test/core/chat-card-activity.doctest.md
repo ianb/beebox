@@ -58,17 +58,17 @@ points somewhere else.
 // redundant with the open-card attribute → suppressed
 JSON.stringify(renderActivityChildren({
   kinds: ["navigated"],
-  details: { navigated: "store/a.card" },
-  openCard: "store/a.card",
+  details: { navigated: "_content/a.card" },
+  openCard: "_content/a.card",
 }))
 => ""
 
 renderActivityChildren({
   kinds: ["navigated"],
-  details: { navigated: "store/b.card" },
-  openCard: "store/a.card",
+  details: { navigated: "_content/b.card" },
+  openCard: "_content/a.card",
 })
-=> <card-activity kind="navigated">store/b.card</card-activity>
+=> <card-activity kind="navigated">_content/b.card</card-activity>
 ```
 
 Multiple kinds come out in canonical order regardless of arrival order, one per

@@ -8,7 +8,7 @@
  * 1. **The store** — `resolveSecret` with the name `mistral` at `server`
  *    access: the key is used only inside server processes (transcription), so
  *    an `agent` grant is never required and never asked for.
- * 2. **The legacy per-box file** — `config/connectors/mistral.secret.json`,
+ * 2. **The legacy per-box file** — `_config/connectors/mistral.secret.json`,
  *    kept for one transition window and warned about once per process, naming
  *    the stray file so the operator can migrate and delete it.
  * 3. **`BBX_MISTRAL_API_KEY`** — the env path, retired at the end of
@@ -43,7 +43,7 @@ export function resetMistralLegacyWarning(): void {
 
 /** The legacy in-tree secret file, or null when it is absent/unreadable. */
 async function readLegacySecretFile(boxRoot: string): Promise<string | null> {
-  const secretPath = path.join(boxRoot, "config/connectors/mistral.secret.json");
+  const secretPath = path.join(boxRoot, "_config/connectors/mistral.secret.json");
   let content: string;
   try {
     content = await fs.readFile(secretPath, "utf-8");

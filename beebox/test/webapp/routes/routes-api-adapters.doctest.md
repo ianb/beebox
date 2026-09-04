@@ -3,7 +3,7 @@
 `/api/adapters/:adapter/<path>` forwards to the provider with the box's
 API key injected server-side (the machine secret store's entry of the same
 name, falling back to the legacy
-`config/connectors/<adapter>.secret.json`). Views call providers that
+`_config/connectors/<adapter>.secret.json`). Views call providers that
 refuse CORS, and the key never reaches the browser. An adapter
 declaration is a couple of lines (base URL + auth header shape).
 
@@ -44,7 +44,7 @@ res.body.error
 ## With a key: forwarded with auth injected, cookies stripped
 
 ```ts continue
-await ctx.seed("config/connectors/replicate.secret.json", '{"apiKey": "r8_test_key"}');
+await ctx.seed("_config/connectors/replicate.secret.json", '{"apiKey": "r8_test_key"}');
 const ok = await ctx.request({
   method: "POST",
   url: "/api/adapters/replicate/v1/models/meta/llama/predictions",

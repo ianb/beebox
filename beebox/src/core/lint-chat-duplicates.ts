@@ -9,7 +9,7 @@
  * picker, and chat review would extend two accounts from one conversation.
  *
  * Every other rule in card-lint is per-file, so this one carries the whole cost
- * of being cross-file: the index of `store/chat/**` is built once per
+ * of being cross-file: the index of `_content/chat/**` is built once per
  * `lintCardsDispatch` run and memoized on that run's options object, never
  * rescanned per card. The repair is editorial (which husk's title and body do
  * you keep?), so the rule reports and never repairs.
@@ -36,7 +36,7 @@ function sessionIndex(input: { boxRoot: string; run: object }): Promise<Map<stri
 }
 
 /**
- * Error when another card under `store/chat/**` carries this card's `session`.
+ * Error when another card under `_content/chat/**` carries this card's `session`.
  * Both paths are named because either one may be the keeper — the rule can't
  * know which, and says so rather than guessing.
  */

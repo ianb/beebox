@@ -1,6 +1,6 @@
 # Box config: a malformed timezone degrades, never crashes
 
-`config/box.json`'s `timezone` is hand-editable — a typo (`"America/Chciago"`
+`_config/box.json`'s `timezone` is hand-editable — a typo (`"America/Chciago"`
 instead of `"America/Chicago"`) is easy to make and easy to miss. Every
 timezone-aware call site (the todo collector, `bbx todos`, `todos.list`, the
 review sweep, session-context's ambient timezone line) feeds `loadBoxTimezone`'s
@@ -28,7 +28,7 @@ await loadBoxTimezone(box.root)
 ## A valid IANA timezone loads as-is
 
 ```ts continue
-await box.write("config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
+await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
 await loadBoxTimezone(box.root)
 => America/Chicago
 ```
@@ -36,7 +36,7 @@ await loadBoxTimezone(box.root)
 ## A malformed timezone degrades to `null` (host fallback), not a thrown `RangeError`
 
 ```ts continue
-await box.write("config/box.json", JSON.stringify({ timezone: "America/Chciago" }));
+await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chciago" }));
 await loadBoxTimezone(box.root)
 => null
 ```

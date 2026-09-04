@@ -15,7 +15,10 @@ contract change — is defined in `docs/implemented-plans/mobile-parity-sync.md`
 
 **Path conventions.** Box code paths are relative to `beebox/`; iOS paths are under
 `ios-app/BeeBox/`. Anchors name a file plus the identifier (function/struct/const) inside it —
-never line numbers, which rot. A paired box's `baseURL` already includes the hub slug
+never line numbers, which rot. Box-relative wire values (landmark/share-destination `dir`s,
+uploaded-file `path`s) are opaque tokens iOS round-trips unmodified; under the one-root box
+layout (shapeVersion 3, `docs/plans/one-root-box-layout.md`) they land in underscore areas
+(`_content/…`, `_tmp/…`) — the wire shape is unchanged, only the values moved. A paired box's `baseURL` already includes the hub slug
 (e.g. `http://127.0.0.1:3210/main/test1` in dev, `https://host/<slug>` in prod), so every native
 HTTP path below is `<baseURL>/api/...`.
 
@@ -262,7 +265,7 @@ the contract.
   { "version": 2, "id": "<UUID string>", "text": "<string>",
     "origin": "typed"|"voice", "diarized": <bool>,
     "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ],
-    "files": [ { "id": <int>, "path": "<tmp/...>", "originalName": "<string>",
+    "files": [ { "id": <int>, "path": "<_tmp/...>", "originalName": "<string>",
       "size": <number>, "mimetype": "<string>" } ],
     "selections": [ { "id": <int>, "ref": "<string>", "text": "<string>",
       "position": "<string>", "anchor": <string|null>, "spokenWords": <number|null> } ] }
@@ -792,7 +795,7 @@ See §1.3 (full request/response/errors).
   `Authorization: Bearer <token>`. One file field named `file` with the original filename and MIME
   type. Native reports `URLSession` byte progress while uploading.
 - **Response 200:** `{ path: string, originalName: string, size: number, mimetype: string }`; `path`
-  points under the box's `tmp/` directory and becomes the Emission V2 file `path`.
+  points under the box's `_tmp/` directory and becomes the Emission V2 file `path`.
 - **Anchors:**
   | side | anchor |
   |---|---|

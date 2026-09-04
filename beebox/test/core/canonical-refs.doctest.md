@@ -331,7 +331,7 @@ await box.cleanup();
 ## Refs written with box-root intent are repaired, not just canonicalized
 
 Old system code wrote bare refs meaning them *from the box root* — a question
-card's `ref: box/inbox/scan-….capture-session.card`, a chat thread's
+card's `ref: _content/inbox/scan-….capture-session.card`, a chat thread's
 `participants[0].ref: people/Ian_Bicking`. Read document-relative they dangle;
 read from the box root they resolve. So when a non-canonical ref's
 document-relative target does NOT exist, `--fix` tries the same bare path from

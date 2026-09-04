@@ -15,7 +15,7 @@
  *     test rather than silently going stale).
  *
  * shapeVersion 3 (the one-root layout — `docs/plans/one-root-box-layout.md`):
- * a box has ONE root (`boxRoot` === `packageRoot`). Every path below is
+ * a box has ONE root (`boxRoot`). Every path below is
  * relative to that one root. The root's own vocabulary is closed: the
  * underscore-prefixed areas below (`_content`, `_config`, `_bookkeeping`,
  * `_publish`, `_tmp`) plus the npm/agent-identity entries in

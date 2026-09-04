@@ -8,7 +8,7 @@ sources they have, and the differences are load-bearing for the migration
 |---|---|---|---|
 | `core/gemini-key.ts` | `gemini` | none (never had one) | `GEMINI_KEY`, then `SKE_GEMINI_API_KEY` |
 | `core/openai-thinking-key.ts` | `openai-thinking` | none (never had one) | `THINKING_OPENAI_API_KEY` |
-| `core/search/embeddings-key.ts` | `openai` | `config/connectors/openai.secret.json` | `BBX_OPENAI_API_KEY` |
+| `core/search/embeddings-key.ts` | `openai` | `_config/connectors/openai.secret.json` | `BBX_OPENAI_API_KEY` |
 
 `openai` and `openai-thinking` are deliberately two names for two keys: the
 store name matches the legacy file basename where one exists, and a
@@ -113,11 +113,11 @@ embeddings key still: placeholder-embeddings-store-key
 
 ```ts continue
 process.env.BBX_SECRETS_FILE = join(dir, "no-store-here.json");
-await box.write("config/connectors/openai.secret.json", JSON.stringify({ apiKey: "placeholder-file-key" }));
+await box.write("_config/connectors/openai.secret.json", JSON.stringify({ apiKey: "placeholder-file-key" }));
 resetEmbeddingsLegacyWarning();
 const [fromFile, warnings] = await withWarnings(() => getOpenAiEmbeddingsKey(box.root));
 print(`file present: ${fromFile}`);
-print(`warned once: ${warnings.some((w) => w.includes("config/connectors/openai.secret.json"))}`);
+print(`warned once: ${warnings.some((w) => w.includes("_config/connectors/openai.secret.json"))}`);
 
 const [, second] = await withWarnings(() => getOpenAiEmbeddingsKey(box.root));
 print(`second call warned: ${second.length > 0}`);
@@ -173,7 +173,7 @@ Nothing configured anywhere is `null` for all three — the callers' existing
 
 ```ts continue
 process.env.BBX_SECRETS_FILE = join(dir, "no-store-here.json");
-await rm(join(box.root, "config/connectors/openai.secret.json"));
+await rm(join(box.root, "_config/connectors/openai.secret.json"));
 delete process.env.GEMINI_KEY;
 delete process.env.SKE_GEMINI_API_KEY;
 delete process.env.THINKING_OPENAI_API_KEY;

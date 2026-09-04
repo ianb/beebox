@@ -62,8 +62,8 @@ export function containWithinBox(boxRoot: string, absPath: string): BoxRelativeP
 }
 
 /**
- * Resolve a box-root-relative ref (`box/inbox/x`, or the equivalent
- * leading-slash `/box/inbox/x`) against `boxRoot` and contain it. For sites
+ * Resolve a box-root-relative ref (`_content/inbox/x`, or the equivalent
+ * leading-slash `/_content/inbox/x`) against `boxRoot` and contain it. For sites
  * whose refs are always box-relative (reactor jobs, nav, stale-job cleanup) —
  * NOT for document-relative or `attach/` refs (that's `resolveContainedRef`).
  */

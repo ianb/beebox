@@ -7,11 +7,11 @@
  */
 
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
+import { getBoxDir } from "../../../lib/paths.js";
 import type { HealthCheck } from "./health.js";
 
 /**
- * Flag any `config/connectors/*.secret.json` left in the box tree.
+ * Flag any `_config/connectors/*.secret.json` left in the box tree.
  *
  * Every reader now prefers the machine store and keeps its file arm only for
  * the transition window (`docs/plans/secret-custody.md`, Track 3), so a
@@ -20,7 +20,7 @@ import type { HealthCheck } from "./health.js";
  * box works, it is just still exposed, so this is a warning naming the files.
  */
 export async function legacySecretFilesCheck(boxRoot: string): Promise<HealthCheck> {
-  const dir = path.join(boxRoot, "config/connectors");
+  const dir = getBoxDir(boxRoot, "connectors");
   let entries: string[];
   try {
     entries = await fs.readdir(dir);
@@ -36,7 +36,7 @@ export async function legacySecretFilesCheck(boxRoot: string): Promise<HealthChe
       stray.length === 0
         ? "No legacy secret files in the box tree"
         : `Legacy secret file${stray.length === 1 ? "" : "s"} — migrate to the machine store and delete: ` +
-          stray.map((name) => `config/connectors/${name}`).join(", "),
+          stray.map((name) => `_config/connectors/${name}`).join(", "),
     severity: "warning",
   };
 }

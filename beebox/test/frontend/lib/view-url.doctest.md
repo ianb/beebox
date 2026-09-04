@@ -1,6 +1,6 @@
 # view-url helpers
 
-Parse, classify, and resolve the box-path URLs that markdown links/images use to reference files inside the box. Markdown authors plain paths (`store/x.card`, `/store/x.card?view=source`); the retired `view:` scheme survives only as an internal serialization marker (companion-pane URL persistence), which `parseViewUrl` still tolerates.
+Parse, classify, and resolve the box-path URLs that markdown links/images use to reference files inside the box. Markdown authors plain paths (`_content/x.card`, `/_content/x.card?view=source`); the retired `view:` scheme survives only as an internal serialization marker (companion-pane URL persistence), which `parseViewUrl` still tolerates.
 
 ```ts setup
 import {
@@ -27,21 +27,21 @@ class CustomState { value = "x"; }
 Pulls a file path, viewer override (`?view=`), and other params out of a serialized target (the `view:` prefix is optional and tolerated for internal callers). There is no `zoom` flag — a plain link opening the companion pane replaced it.
 
 ```ts
-JSON.stringify(parseViewUrl("view:store/docs/report.md"))
-=> {"path":"store/docs/report.md","viewer":null,"params":{},"viewState":null}
+JSON.stringify(parseViewUrl("view:_content/docs/report.md"))
+=> {"path":"_content/docs/report.md","viewer":null,"params":{},"viewState":null}
 
-JSON.stringify(parseViewUrl("store/docs/report.md?view=source&k=v"))
-=> {"path":"store/docs/report.md","viewer":"source","params":{"k":"v"},"viewState":null}
+JSON.stringify(parseViewUrl("_content/docs/report.md?view=source&k=v"))
+=> {"path":"_content/docs/report.md","viewer":"source","params":{"k":"v"},"viewState":null}
 
-JSON.stringify(parseViewUrl('store/docs/report.md?k=v&viewState=%7B%22page%22%3A%22gallery%22%2C%22index%22%3A2%7D&view=source'))
-=> {"path":"store/docs/report.md","viewer":"source","params":{"k":"v"},"viewState":{"page":"gallery","index":2}}
+JSON.stringify(parseViewUrl('_content/docs/report.md?k=v&viewState=%7B%22page%22%3A%22gallery%22%2C%22index%22%3A2%7D&view=source'))
+=> {"path":"_content/docs/report.md","viewer":"source","params":{"k":"v"},"viewState":{"page":"gallery","index":2}}
 ```
 
-A leading `/` is stripped — `ViewTarget.path` is box-root-relative, and consumers compare it for exact equality against the file watcher's relative paths (which have no leading slash). Card refs are conventionally written `/store/…`, so the slash is normalized away here:
+A leading `/` is stripped — `ViewTarget.path` is box-root-relative, and consumers compare it for exact equality against the file watcher's relative paths (which have no leading slash). Card refs are conventionally written `/_content/…`, so the slash is normalized away here:
 
 ```ts
-JSON.stringify(parseViewUrl("view:/store/archive/Foo.memo.card"))
-=> {"path":"store/archive/Foo.memo.card","viewer":null,"params":{},"viewState":null}
+JSON.stringify(parseViewUrl("view:/_bookkeeping/archive/Foo.memo.card"))
+=> {"path":"_bookkeeping/archive/Foo.memo.card","viewer":null,"params":{},"viewState":null}
 ```
 
 `serializeViewUrl` is the round-trip inverse (without the `view:` prefix):
@@ -96,20 +96,20 @@ decideViewHistoryUpdate({ state: { count: Number.POSITIVE_INFINITY }, requested:
 Resolves `href` values from a document at `basePath`, just like a filesystem:
 
 ```ts
-resolveRelativePath("store/docs/tax/2023/return-status.md", "1040.pdf")
-=> store/docs/tax/2023/1040.pdf
+resolveRelativePath("_content/docs/tax/2023/return-status.md", "1040.pdf")
+=> _content/docs/tax/2023/1040.pdf
 
-resolveRelativePath("store/docs/tax/2023/return-status.md", "../2022/summary.md")
-=> store/docs/tax/2022/summary.md
+resolveRelativePath("_content/docs/tax/2023/return-status.md", "../2022/summary.md")
+=> _content/docs/tax/2022/summary.md
 
-resolveRelativePath("store/docs/tax/2023/return-status.md", "./notes.md")
-=> store/docs/tax/2023/notes.md
+resolveRelativePath("_content/docs/tax/2023/return-status.md", "./notes.md")
+=> _content/docs/tax/2023/notes.md
 ```
 
 Leading `/` is stripped and treated as box-root-relative:
 
 ```ts
-resolveRelativePath("store/docs/a.md", "/other/file.md")
+resolveRelativePath("_content/docs/a.md", "/other/file.md")
 => other/file.md
 ```
 
@@ -126,10 +126,10 @@ the box root is `null`, never clamped back to the root. Callers degrade visibly
 — a link renders as a broken marker, an image gets an empty (broken) src.
 
 ```ts
-JSON.stringify(resolveRelativePath("store/docs/a.md", "../../../etc/passwd"))
+JSON.stringify(resolveRelativePath("_content/docs/a.md", "../../../etc/passwd"))
 => null
 
-JSON.stringify(resolveContentTarget("store/docs/report.md", "../../../etc/passwd?view=source"))
+JSON.stringify(resolveContentTarget("_content/docs/report.md", "../../../etc/passwd?view=source"))
 => null
 ```
 
@@ -140,15 +140,15 @@ Turns a markdown link/image href into a `ViewTarget`, splitting the `?view=`/par
 A relative path resolves against the document's dir; the query becomes viewer + params:
 
 ```ts
-JSON.stringify(resolveContentTarget("store/docs/report.md", "chart.figure.card?size=300"))
-=> {"path":"store/docs/chart.figure.card","viewer":null,"params":{"size":"300"},"viewState":null}
+JSON.stringify(resolveContentTarget("_content/docs/report.md", "chart.figure.card?size=300"))
+=> {"path":"_content/docs/chart.figure.card","viewer":null,"params":{"size":"300"},"viewState":null}
 ```
 
 A leading `/` is box-root-absolute and ignores `basePath` — and `?view=` selects a card-attached viewer:
 
 ```ts
-JSON.stringify(resolveContentTarget("store/docs/report.md", "/store/x.bill.card?view=ledger"))
-=> {"path":"store/x.bill.card","viewer":"ledger","params":{},"viewState":null}
+JSON.stringify(resolveContentTarget("_content/docs/report.md", "/_content/x.bill.card?view=ledger"))
+=> {"path":"_content/x.bill.card","viewer":"ledger","params":{},"viewState":null}
 ```
 
 `basePath` is treated like a containing *file* (its last segment is stripped). A
@@ -157,10 +157,10 @@ relative path resolves *inside* it, not its parent:
 
 ```ts
 JSON.stringify([
-  resolveContentTarget("store/foo/x.md", "bar.card").path,
-  resolveContentTarget("store/foo/", "bar.card").path,
+  resolveContentTarget("_content/foo/x.md", "bar.card").path,
+  resolveContentTarget("_content/foo/", "bar.card").path,
 ])
-=> ["store/foo/bar.card","store/foo/bar.card"]
+=> ["_content/foo/bar.card","_content/foo/bar.card"]
 ```
 
 ### Chat messages pass no base
@@ -196,14 +196,14 @@ resolveImageSrc("photo.png", { boxSlug: "test1", basePath: undefined })
 Splits an href into the cases the Markdown renderer cares about. A plain relative/absolute path is a box reference; anything with a scheme or anchor is external; the retired `view:` scheme is `legacy-view` so renderers can draw a visibly-broken marker:
 
 ```ts
-JSON.stringify(classifyMarkdownHref("view:store/a.md"))
-=> {"kind":"legacy-view","raw":"view:store/a.md"}
+JSON.stringify(classifyMarkdownHref("view:_content/a.md"))
+=> {"kind":"legacy-view","raw":"view:_content/a.md"}
 
 JSON.stringify(classifyMarkdownHref("notes.md"))
 => {"kind":"relative","path":"notes.md"}
 
-JSON.stringify(classifyMarkdownHref("/store/a.card?view=ledger"))
-=> {"kind":"relative","path":"/store/a.card?view=ledger"}
+JSON.stringify(classifyMarkdownHref("/_content/a.card?view=ledger"))
+=> {"kind":"relative","path":"/_content/a.card?view=ledger"}
 
 JSON.stringify(classifyMarkdownHref("../sibling.md"))
 => {"kind":"relative","path":"../sibling.md"}
@@ -271,8 +271,8 @@ True for anything with a URL scheme or a protocol-relative `//host` — used to 
 JSON.stringify([
   isExternalUrl("https://example.com/x.png"),
   isExternalUrl("//cdn.example.com/y.jpg"),
-  isExternalUrl("store/x.figure.card"),
-  isExternalUrl("/store/x.card"),
+  isExternalUrl("_content/x.figure.card"),
+  isExternalUrl("/_content/x.card"),
 ])
 => [true,true,false,false]
 ```
@@ -284,32 +284,32 @@ Rewrites a markdown image `src` into a URL that doesn't depend on the page URL �
 A leading `/` means box-root-relative:
 
 ```ts
-resolveImageSrc("/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
-=> /test1/api/image/store/images/front.png
+resolveImageSrc("/_content/images/front.png", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" })
+=> /test1/api/image/_content/images/front.png
 ```
 
 A bare path is document-relative — resolved against `basePath`:
 
 ```ts
-resolveImageSrc("images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
-=> /test1/api/image/store/dossiers/images/front.png
+resolveImageSrc("images/front.png", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" })
+=> /test1/api/image/_content/dossiers/images/front.png
 
-resolveImageSrc("../shared/logo.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
-=> /test1/api/image/store/shared/logo.png
+resolveImageSrc("../shared/logo.png", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" })
+=> /test1/api/image/_content/shared/logo.png
 ```
 
 An `.image.card` embed resolves through the same route — the backend reads `filename.ref` and serves the attached binary, so `![](…/foo.image.card)` renders instead of 404ing on the card file:
 
 ```ts
-resolveImageSrc("images/aya-intake.image.card", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
-=> /test1/api/image/store/dossiers/images/aya-intake.image.card
+resolveImageSrc("images/aya-intake.image.card", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" })
+=> /test1/api/image/_content/dossiers/images/aya-intake.image.card
 ```
 
 The legacy `api/files/<path>` form (and the `api/image/<path>` form) is accepted as a hint that the path is already box-root-relative; both re-emit through `/api/image/`:
 
 ```ts
-resolveImageSrc("api/files/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
-=> /test1/api/image/store/images/front.png
+resolveImageSrc("api/files/_content/images/front.png", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" })
+=> /test1/api/image/_content/images/front.png
 ```
 
 A src that escapes the box root names no servable file, so it resolves to an
@@ -317,17 +317,17 @@ empty src — the browser draws its broken-image affordance and the alt text
 instead of the clamped-to-root image the old resolver would have shown:
 
 ```ts
-JSON.stringify(resolveImageSrc("../../../etc/passwd", { boxSlug: "test1", basePath: "store/dossiers/annika.md" }))
+JSON.stringify(resolveImageSrc("../../../etc/passwd", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" }))
 => ""
 ```
 
 External URLs pass through untouched:
 
 ```ts
-resolveImageSrc("https://example.com/x.png", { boxSlug: "test1", basePath: "store/a.md" })
+resolveImageSrc("https://example.com/x.png", { boxSlug: "test1", basePath: "_content/a.md" })
 => https://example.com/x.png
 
-resolveImageSrc("data:image/png;base64,AAAA", { boxSlug: "test1", basePath: "store/a.md" })
+resolveImageSrc("data:image/png;base64,AAAA", { boxSlug: "test1", basePath: "_content/a.md" })
 => data:image/png;base64,AAAA
 ```
 
@@ -350,7 +350,7 @@ externalImageProxyUrl("//cdn.example.com/y.jpg", "test1")
 In-box and data URLs have no proxy — they return undefined:
 
 ```ts
-externalImageProxyUrl("/test1/api/files/store/a.png", "test1")
+externalImageProxyUrl("/test1/api/files/_content/a.png", "test1")
 => undefined
 
 externalImageProxyUrl("data:image/png;base64,AAAA", "test1")
@@ -362,25 +362,25 @@ externalImageProxyUrl("data:image/png;base64,AAAA", "test1")
 These build the URLs the file/image renderers embed a box-relative path into — `apiFileUrl`/`apiImageUrl` prefix the Vite base and box slug themselves (for an `<img src>` or link target built without an already box-scoped API base in hand); `apiRawFileUrl` takes an already-computed `apiBase` (as returned by `getApiBase()`) and builds the raw `/files/<path>` download/fetch URL. All three route every path segment through `encodePathForUrl`, so a filename containing `#`, `?`, `%`, or a space survives — a URL built by plain concatenation would otherwise get truncated at `#`/`?` or have a literal `%` reinterpreted as a percent-escape.
 
 ```ts
-apiFileUrl("test1", "store/notes/plan.md")
-=> /test1/api/files/store/notes/plan.md
+apiFileUrl("test1", "_content/notes/plan.md")
+=> /test1/api/files/_content/notes/plan.md
 
-apiImageUrl("test1", "store/photos/front.png")
-=> /test1/api/image/store/photos/front.png
+apiImageUrl("test1", "_content/photos/front.png")
+=> /test1/api/image/_content/photos/front.png
 
-apiRawFileUrl("/test1/api", "store/notes/plan.md")
-=> /test1/api/files/store/notes/plan.md
+apiRawFileUrl("/test1/api", "_content/notes/plan.md")
+=> /test1/api/files/_content/notes/plan.md
 ```
 
 A path segment with `#`, `?`, `%`, or a space is percent-encoded — but the `/` separators between segments are preserved, not escaped into `%2F`:
 
 ```ts
-apiFileUrl("test1", "store/Q&A #3 100% done?.md")
-=> /test1/api/files/store/Q%26A%20%233%20100%25%20done%3F.md
+apiFileUrl("test1", "_content/Q&A #3 100% done?.md")
+=> /test1/api/files/_content/Q%26A%20%233%20100%25%20done%3F.md
 
-apiImageUrl("test1", "store/Q&A #3 100% done?.png")
-=> /test1/api/image/store/Q%26A%20%233%20100%25%20done%3F.png
+apiImageUrl("test1", "_content/Q&A #3 100% done?.png")
+=> /test1/api/image/_content/Q%26A%20%233%20100%25%20done%3F.png
 
-apiRawFileUrl("/test1/api", "store/Q&A #3 100% done?.md")
-=> /test1/api/files/store/Q%26A%20%233%20100%25%20done%3F.md
+apiRawFileUrl("/test1/api", "_content/Q&A #3 100% done?.md")
+=> /test1/api/files/_content/Q%26A%20%233%20100%25%20done%3F.md
 ```

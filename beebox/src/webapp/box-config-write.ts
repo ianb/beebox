@@ -1,4 +1,4 @@
-/** Cross-process-safe mutations of the authorization fields in config/box.json. */
+/** Cross-process-safe mutations of the authorization fields in `_config/box.json`. */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -8,11 +8,13 @@ import { errnoCode } from "../lib/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { isRecord } from "../lib/is-record.js";
+import { BOX_DIRS } from "../lib/paths.js";
 import { clearBoxConfigCache } from "../core/box/config.js";
 import { canonicalizeEmail } from "./local-users.js";
 
 const LOCK_WAIT_MS = 5_000;
-const CONFIG_RELATIVE_PATH = "config/box.json";
+/** The box config's path, relative to `boxRoot`. */
+export const CONFIG_RELATIVE_PATH = `${BOX_DIRS.config}/box.json`;
 
 class BoxConfigWriteError extends Error {
   constructor(

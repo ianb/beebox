@@ -56,8 +56,10 @@ const real = await rm(box, { paths: ["box/notes/Engine.doc.card"] });
 real.success
 => true
 
-await box.list("store/trash")
-=> store/trash/Engine.doc.card
+await box.list("_bookkeeping/trash")
+=>
+_bookkeeping/trash/.gitkeep
+_bookkeeping/trash/Engine.doc.card
 
 await box.list("box/notes")
 =>
@@ -73,7 +75,7 @@ const linked = await makeTmpBox();
 await linked.write("box/notes/Target.doc.card", "---\ntype: doc\ntitle: Target\n---\n");
 await linked.write("box/notes/Source.doc.card", "---\ntype: doc\nrefs:\n  - Target.doc.card\n---\n[attachment](Target.attach/photo.png)\n");
 await linked.write("box/Index.md", "[target](notes/Target.doc.card)\n");
-await linked.write("store/trash/Old.doc.card", "---\ntype: doc\n---\n[old](../../box/notes/Target.doc.card)\n");
+await linked.write("_bookkeeping/trash/Old.doc.card", "---\ntype: doc\n---\n[old](../../box/notes/Target.doc.card)\n");
 await linked.write("box/Fenced.md", "```md\n[example](notes/Target.doc.card)\n```\n");
 
 const report = await rm(linked, { paths: ["box/notes/Target.doc.card"], dryRun: true });
@@ -97,12 +99,12 @@ git commit fails, rather than reporting total failure after a completed move.
 
 ```ts
 const rollback = await makeTmpBox({ git: true });
-await rollback.write("box/inbox/Rollback.doc.card", "---\ntype: doc\n---\n");
-await rollback.write("box/inbox/Rollback.attach/file.txt", "attached");
+await rollback.write("_content/inbox/Rollback.doc.card", "---\ntype: doc\n---\n");
+await rollback.write("_content/inbox/Rollback.attach/file.txt", "attached");
 await rollback.commitAll("seed rollback card");
 const { ctx: rollbackCtx } = createCollectorContext(rollback.root);
-const receipt = await moveCardsToTrash(rollbackCtx, ["box/inbox/Rollback.doc.card"]);
+const receipt = await moveCardsToTrash(rollbackCtx, ["_content/inbox/Rollback.doc.card"]);
 await rollbackTrashReceipt(rollback.root, receipt);
-JSON.stringify({ inbox: await rollback.list("box/inbox"), trash: await rollback.list("store/trash") })
-=> {"inbox":"box/inbox/Rollback.attach\nbox/inbox/Rollback.attach/file.txt\nbox/inbox/Rollback.doc.card","trash":""}
+JSON.stringify({ inbox: await rollback.list("_content/inbox"), trash: await rollback.list("_bookkeeping/trash") })
+=> {"inbox":"_content/inbox/.gitkeep\n_content/inbox/Rollback.attach\n_content/inbox/Rollback.attach/file.txt\n_content/inbox/Rollback.doc.card\n_content/inbox/intake\n_content/inbox/intake/.gitkeep\n_content/inbox/staged\n_content/inbox/staged/.gitkeep\n_content/inbox/triaged\n_content/inbox/triaged/.gitkeep\n_content/inbox/triaged/_unsure\n_content/inbox/triaged/_unsure/.gitkeep\n_content/inbox/unhandled\n_content/inbox/unhandled/.gitkeep","trash":"_bookkeeping/trash/.gitkeep"}
 ```

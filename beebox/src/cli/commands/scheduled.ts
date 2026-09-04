@@ -5,7 +5,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
 import { getBoxTime } from "../../lib/time.js";
 import {
   parseScheduledScript,
@@ -21,7 +21,7 @@ export const scheduledCommand = new Command("scheduled")
   .description("Show all scheduled scripts and their state")
   .action(async () => {
     const boxRoot = await requireBoxRoot();
-    const schedulesDir = path.join(boxRoot, "config/schedules");
+    const schedulesDir = getBoxDir(boxRoot, "schedules");
     const now = getBoxTime(boxRoot);
 
     let files: string[];

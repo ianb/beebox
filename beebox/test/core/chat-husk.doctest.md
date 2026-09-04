@@ -1,6 +1,6 @@
 # Chat husks — a `chat` card per web chat session
 
-`ensureChatHusk` creates the session's card under `store/chat/web/`
+`ensureChatHusk` creates the session's card under `_content/chat/web/`
 (docs/plans/chat-husks.md): identity + editorial only, keyed on the
 `session` field — the `_<shortid>.chat.card` filename is a naming
 convention and a lookup hint, nothing more.
@@ -31,16 +31,16 @@ husk starts untitled.
 const box = await makeTmpBox();
 const path = await ensureChatHusk(box.root, {
   sessionId: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869",
-  contextDir: "store/projects",
+  contextDir: "_content/projects",
   date: new Date("2026-07-02T12:00:00Z"),
 });
 path
-=> store/chat/web/2026-07-02_59fc20dd.chat.card
+=> _content/chat/web/2026-07-02_59fc20dd.chat.card
 
 await box.read(path)
 => ---
 session: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869
-context-dir: store/projects
+context-dir: _content/projects
 engine: claude
 origin: «*»
 origin-name: «*»
@@ -61,10 +61,10 @@ await ensureChatHusk(box.root, {
   sessionId: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869",
   date: new Date("2026-08-01T12:00:00Z"),
 })
-=> store/chat/web/2026-07-02_59fc20dd.chat.card
+=> _content/chat/web/2026-07-02_59fc20dd.chat.card
 
 (await findChatHuskEntry(box.root, "59fc20dd-fe6d-45cb-8f37-f1508a5a0869"))?.path ?? null
-=> store/chat/web/2026-07-02_59fc20dd.chat.card
+=> _content/chat/web/2026-07-02_59fc20dd.chat.card
 
 await findChatHuskEntry(box.root, "00000000-0000-4000-8000-000000000000")
 => null
@@ -77,12 +77,12 @@ for the same session on the next resume after a server restart
 only a lookup hint; when it misses, the `session`-field scan finds the card.
 
 ```ts continue
-await rename(box.path("store/chat/web/2026-07-02_59fc20dd.chat.card"), box.path("store/chat/web/Planning the trip.chat.card"));
+await rename(box.path("_content/chat/web/2026-07-02_59fc20dd.chat.card"), box.path("_content/chat/web/Planning the trip.chat.card"));
 await ensureChatHusk(box.root, {
   sessionId: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869",
   date: new Date("2026-08-01T12:00:00Z"),
 })
-=> store/chat/web/Planning the trip.chat.card
+=> _content/chat/web/Planning the trip.chat.card
 
 (await listChatHusks(box.root)).length
 => 1
@@ -215,15 +215,15 @@ skipped.
 const box = await makeTmpBox();
 await ensureChatHusk(box.root, {
   sessionId: "aaaa1111-0000-0000-0000-000000000000",
-  contextDir: "store/projects",
+  contextDir: "_content/projects",
   date: new Date("2026-07-01T12:00:00Z"),
 });
-await box.write("store/chat/web/renamed-topic_bbbb2222.chat.card", `---
+await box.write("_content/chat/web/renamed-topic_bbbb2222.chat.card", `---
 session: bbbb2222-0000-0000-0000-000000000000
 title: Planning the garden
 ---
 `);
-await box.write("store/chat/web/broken.chat.card", "no frontmatter here\n");
+await box.write("_content/chat/web/broken.chat.card", "no frontmatter here\n");
 const husks = await listChatHusks(box.root);
 JSON.stringify(husks.map((h) => ({ session: h.session.slice(0, 8), title: h.title ?? null, contextDir: h.contextDir ?? null })), null, 2)
 =>
@@ -231,7 +231,7 @@ JSON.stringify(husks.map((h) => ({ session: h.session.slice(0, 8), title: h.titl
   {
     "session": "aaaa1111",
     "title": null,
-    "contextDir": "store/projects"
+    "contextDir": "_content/projects"
   },
   {
     "session": "bbbb2222",
@@ -253,9 +253,9 @@ chat's title and body is the boxholder's call.
 ```ts
 const box = await makeTmpBox();
 const dup = "59fc20dd-fe6d-45cb-8f37-f1508a5a0869";
-await box.write("store/chat/web/2026-07-02_59fc20dd.chat.card", `---\nsession: ${dup}\n---\n`);
-await box.write("store/chat/web/Copied.chat.card", `---\nsession: ${dup}\n---\n`);
-await box.write("store/chat/web/2026-07-03_aaaa9999.chat.card",
+await box.write("_content/chat/web/2026-07-02_59fc20dd.chat.card", `---\nsession: ${dup}\n---\n`);
+await box.write("_content/chat/web/Copied.chat.card", `---\nsession: ${dup}\n---\n`);
+await box.write("_content/chat/web/2026-07-03_aaaa9999.chat.card",
   "---\nsession: aaaa9999-fe6d-45cb-8f37-f1508a5a0869\n---\n");
 
 const warnings: string[] = [];
@@ -265,7 +265,7 @@ await reconcileChatHusks(box.root);
 console.warn = original;
 
 warnings.join("\n")
-=> chat-husk: 2 husks claim session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869 (store/chat/web/2026-07-02_59fc20dd.chat.card, store/chat/web/Copied.chat.card) — keep one and `bbx trash` the others
+=> chat-husk: 2 husks claim session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869 (_content/chat/web/2026-07-02_59fc20dd.chat.card, _content/chat/web/Copied.chat.card) — keep one and `bbx trash` the others
 
 (await listChatHusks(box.root)).length
 => 3
@@ -285,13 +285,13 @@ const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("projects");
 const here = "eeee1111-2222-3333-4444-555566667777";
 const away = "ffff1111-2222-3333-4444-555566667777";
-await box.write("store/chat/web/Kitchen redo.chat.card", `---
+await box.write("_content/chat/web/Kitchen redo.chat.card", `---
 session: ${here}
 title: Kitchen redo
 ---
 Decided on the tile in this chat.
 `);
-await box.write("store/chat/web/Old trip.chat.card", `---
+await box.write("_content/chat/web/Old trip.chat.card", `---
 session: ${away}
 title: Old trip
 ---
@@ -305,7 +305,7 @@ await mkdir(dirname(hereLog), { recursive: true });
 await writeFile(hereLog, "{}\n");
 
 await reconcileChatHusks(box.root);
-await box.read("store/chat/web/Kitchen redo.chat.card")
+await box.read("_content/chat/web/Kitchen redo.chat.card")
 => ---
 session: eeee1111-2222-3333-4444-555566667777
 title: Kitchen redo
@@ -321,15 +321,15 @@ unstamped — "unknown" is honest, and a guessed origin would make an expired
 chat look like it lives somewhere it doesn't.
 
 ```ts continue
-await box.read("store/chat/web/Old trip.chat.card")
+await box.read("_content/chat/web/Old trip.chat.card")
 => ---
 session: ffff1111-2222-3333-4444-555566667777
 title: Old trip
 ---
 
-const stamped = await box.read("store/chat/web/Kitchen redo.chat.card");
+const stamped = await box.read("_content/chat/web/Kitchen redo.chat.card");
 await reconcileChatHusks(box.root);
-(await box.read("store/chat/web/Kitchen redo.chat.card")) === stamped
+(await box.read("_content/chat/web/Kitchen redo.chat.card")) === stamped
 => true
 ```
 

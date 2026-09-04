@@ -1,6 +1,6 @@
 # The reactor runs on the box's pinned model
 
-A box can pin the model it thinks with (`agentModel` in `config/box.json`). The
+A box can pin the model it thinks with (`agentModel` in `_config/box.json`). The
 reactor reads it once per run and passes it to every agent invocation in that
 run, so "which model does my box think with" has the same answer for autonomous
 work as it does for chat.
@@ -28,7 +28,7 @@ async function modelUsedBy(boxRoot: string): Promise<string | undefined> {
 
 async function pin(boxRoot: string, config: Record<string, unknown>): Promise<void> {
   await fs.mkdir(path.join(boxRoot, "config"), { recursive: true });
-  await fs.writeFile(path.join(boxRoot, "config/box.json"), JSON.stringify(config));
+  await fs.writeFile(path.join(boxRoot, "_config/box.json"), JSON.stringify(config));
   clearBoxConfigCache(boxRoot);
 }
 ```

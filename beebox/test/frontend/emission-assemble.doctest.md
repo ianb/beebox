@@ -40,12 +40,12 @@ at the end of the body — see the placemarker section below.)
 const e = createTypedEmission({
   text: "compare [selection#1] with the doc",
   images: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=" }],
-  files: [{ id: 1, path: "tmp/2026-07-04T01-00-00_report.pdf" }, { id: 2, path: "tmp/2026-07-04T01-00-01_notes.txt" }],
-  selections: [{ id: 1, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body; heading: Proofing (#proofing)" }],
+  files: [{ id: 1, path: "_tmp/2026-07-04T01-00-00_report.pdf" }, { id: 2, path: "_tmp/2026-07-04T01-00-01_notes.txt" }],
+  selections: [{ id: 1, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body; heading: Proofing (#proofing)" }],
 });
 const out = assembleChatMessage(e, W);
 JSON.stringify(out.message)
-=> "<typed local-time=\"14:23\">compare <user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection> with the doc [file#1] [file#2]</typed>\n<attachments>\n[file#1]: tmp/2026-07-04T01-00-00_report.pdf\n[file#2]: tmp/2026-07-04T01-00-01_notes.txt\n</attachments>"
+=> "<typed local-time=\"14:23\">compare <user-selection ref=\"/_content/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection> with the doc [file#1] [file#2]</typed>\n<attachments>\n[file#1]: _tmp/2026-07-04T01-00-00_report.pdf\n[file#2]: _tmp/2026-07-04T01-00-01_notes.txt\n</attachments>"
 
 out.images[0]?.mimeType
 => image/png
@@ -62,12 +62,12 @@ a token out both land here.
 ```ts
 const e = createVoiceEmission({
   text: "summarize the attached report",
-  files: [{ id: 1, path: "tmp/2026-07-19T10-00-00_report.pdf" }],
+  files: [{ id: 1, path: "_tmp/2026-07-19T10-00-00_report.pdf" }],
   selections: [],
   diarized: false,
 });
 JSON.stringify(assembleChatMessage(e, W).message.replace(e.id, "ID"))
-=> "<speech message-id=\"ID\" local-time=\"14:23\">summarize the attached report [file#1]</speech>\n<attachments>\n[file#1]: tmp/2026-07-19T10-00-00_report.pdf\n</attachments>"
+=> "<speech message-id=\"ID\" local-time=\"14:23\">summarize the attached report [file#1]</speech>\n<attachments>\n[file#1]: _tmp/2026-07-19T10-00-00_report.pdf\n</attachments>"
 ```
 
 A present token is left in place — only the absent ones append:
@@ -76,11 +76,11 @@ A present token is left in place — only the absent ones append:
 const e = createTypedEmission({
   text: "compare [file#1] against the notes",
   images: [],
-  files: [{ id: 1, path: "tmp/a.pdf" }, { id: 2, path: "tmp/b.txt" }],
+  files: [{ id: 1, path: "_tmp/a.pdf" }, { id: 2, path: "_tmp/b.txt" }],
   selections: [],
 });
 JSON.stringify(assembleChatMessage(e, W).message)
-=> "<typed local-time=\"14:23\">compare [file#1] against the notes [file#2]</typed>\n<attachments>\n[file#1]: tmp/a.pdf\n[file#2]: tmp/b.txt\n</attachments>"
+=> "<typed local-time=\"14:23\">compare [file#1] against the notes [file#2]</typed>\n<attachments>\n[file#1]: _tmp/a.pdf\n[file#2]: _tmp/b.txt\n</attachments>"
 ```
 
 ## A body written before the `#` rename keeps its own spelling
@@ -95,20 +95,20 @@ current form, because that token is being written now.
 const e = createTypedEmission({
   text: "compare [file1] against the notes",
   images: [],
-  files: [{ id: 1, path: "tmp/a.pdf" }, { id: 2, path: "tmp/b.txt" }],
+  files: [{ id: 1, path: "_tmp/a.pdf" }, { id: 2, path: "_tmp/b.txt" }],
   selections: [],
 });
 JSON.stringify(assembleChatMessage(e, W).message)
-=> "<typed local-time=\"14:23\">compare [file1] against the notes [file#2]</typed>\n<attachments>\n[file1]: tmp/a.pdf\n[file#2]: tmp/b.txt\n</attachments>"
+=> "<typed local-time=\"14:23\">compare [file1] against the notes [file#2]</typed>\n<attachments>\n[file1]: _tmp/a.pdf\n[file#2]: _tmp/b.txt\n</attachments>"
 ```
 
 Empty text with only an attachment (the send guard allows it): the body
 is just the token, with no stray leading space:
 
 ```ts
-const e = createTypedEmission({ text: "", images: [], files: [{ id: 1, path: "tmp/a.pdf" }], selections: [] });
+const e = createTypedEmission({ text: "", images: [], files: [{ id: 1, path: "_tmp/a.pdf" }], selections: [] });
 JSON.stringify(assembleChatMessage(e, W).message)
-=> "<typed local-time=\"14:23\">[file#1]</typed>\n<attachments>\n[file#1]: tmp/a.pdf\n</attachments>"
+=> "<typed local-time=\"14:23\">[file#1]</typed>\n<attachments>\n[file#1]: _tmp/a.pdf\n</attachments>"
 ```
 
 ## Witness attributes: order is local-time, zoomed-view, time-passed
@@ -118,8 +118,8 @@ Historical order from `handleSend`'s template
 
 ```ts
 const e = createTypedEmission({ text: "hi", images: [], files: [], selections: [] });
-assembleChatMessage(e, { localTime: "09:05", zoomedView: "view:store/notes/Foo.md?view=markdown", timePassed: "2d4h" }).message
-=> <typed local-time="09:05" zoomed-view="view:store/notes/Foo.md?view=markdown" time-passed="2d4h">hi</typed>
+assembleChatMessage(e, { localTime: "09:05", zoomedView: "view:_content/notes/Foo.md?view=markdown", timePassed: "2d4h" }).message
+=> <typed local-time="09:05" zoomed-view="view:_content/notes/Foo.md?view=markdown" time-passed="2d4h">hi</typed>
 ```
 
 ## Site 2 — keyword voice send: diarized attr leads, selections append
@@ -130,11 +130,11 @@ attribute comes BEFORE local-time — pinned. Spoken text carries no
 tokens, so selections append.
 
 ```ts
-const sel = [{ id: 2, ref: "/store/recipes/Bread.recipe.card", text: "300g flour", position: "body" }];
+const sel = [{ id: 2, ref: "/_content/recipes/Bread.recipe.card", text: "300g flour", position: "body" }];
 const e = createVoiceEmission({ text: "add that to the list", selections: sel, diarized: true });
 const out = assembleChatMessage(e, W);
 JSON.stringify(out.message.replace(e.id, "ID"))
-=> "<speech diarized=\"1\" message-id=\"ID\" local-time=\"14:23\">add that to the list\n<user-selection ref=\"/store/recipes/Bread.recipe.card\" pos=\"body\">300g flour</user-selection></speech>"
+=> "<speech diarized=\"1\" message-id=\"ID\" local-time=\"14:23\">add that to the list\n<user-selection ref=\"/_content/recipes/Bread.recipe.card\" pos=\"body\">300g flour</user-selection></speech>"
 ```
 
 Equivalence with the historical helper (same inputs → same bytes, modulo the
@@ -158,10 +158,10 @@ paths with every other send path and fold the live selections snapshot in
 other send path already folds.
 
 ```ts
-const sel = [{ id: 3, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body" }];
+const sel = [{ id: 3, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body" }];
 const e = createVoiceEmission({ text: "quick thought before I go", selections: sel, diarized: false });
 JSON.stringify(assembleChatMessage(e, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message.replace(e.id, "ID"))
-=> "<speech message-id=\"ID\" local-time=\"23:59\" time-passed=\"8h\">quick thought before I go\n<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection></speech>"
+=> "<speech message-id=\"ID\" local-time=\"23:59\" time-passed=\"8h\">quick thought before I go\n<user-selection ref=\"/_content/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection></speech>"
 ```
 
 With no selections pending (the common case), the fold is the identity —

@@ -45,21 +45,27 @@ await box.write(
   "---\ntype: doc\ntitle: Index\n---\nAbs [Engine](/box/notes/Engine.doc.card) and [photo](/box/notes/Engine.attach/photo.jpg).\n",
 );
 
-const result = await mv(box, { from: "box/notes/Engine.doc.card", to: "store/archive/Engine.doc.card" });
+const result = await mv(box, { from: "box/notes/Engine.doc.card", to: "_bookkeeping/archive/Engine.doc.card" });
 result.success
 => true
 ```
 
-The card file and its attach directory now live under `store/archive/`:
+The card file and its attach directory now live under `_bookkeeping/archive/`:
 
 ```ts continue
-await box.list("store/archive")
+await box.list("_bookkeeping/archive")
 =>
-store/archive/Engine.attach
-store/archive/Engine.attach/photo.jpg
-store/archive/Engine.doc.card
+_bookkeeping/archive/Engine.attach
+_bookkeeping/archive/Engine.attach/photo.jpg
+_bookkeeping/archive/Engine.doc.card
+_bookkeeping/archive/done
+_bookkeeping/archive/done/.gitkeep
+_bookkeeping/archive/failed
+_bookkeeping/archive/failed/.gitkeep
+_bookkeeping/archive/processed
+_bookkeeping/archive/processed/.gitkeep
 
-await box.read("store/archive/Engine.attach/photo.jpg")
+await box.read("_bookkeeping/archive/Engine.attach/photo.jpg")
 => JPG
 ```
 
@@ -67,7 +73,7 @@ The moved card keeps its `attach/` self-ref and gets a recomputed relative link
 to the card that stayed behind:
 
 ```ts continue
-await box.read("store/archive/Engine.doc.card")
+await box.read("_bookkeeping/archive/Engine.doc.card")
 =>
 ---
 type: doc
@@ -88,7 +94,7 @@ await box.read("box/notes/Priya.doc.card")
 type: doc
 title: Priya
 ---
-See [Engine](../../store/archive/Engine.doc.card) and its [photo](../../store/archive/Engine.attach/photo.jpg).
+See [Engine](../../_bookkeeping/archive/Engine.doc.card) and its [photo](../../_bookkeeping/archive/Engine.attach/photo.jpg).
 ```
 
 The absolute links stay absolute, repointed at the new location:
@@ -100,13 +106,13 @@ await box.read("box/index.doc.card")
 type: doc
 title: Index
 ---
-Abs [Engine](/store/archive/Engine.doc.card) and [photo](/store/archive/Engine.attach/photo.jpg).
+Abs [Engine](/_bookkeeping/archive/Engine.doc.card) and [photo](/_bookkeeping/archive/Engine.attach/photo.jpg).
 ```
 
 ## Box-local card type: classified by frontmatter shape, not the built-in registry
 
 A box can define its own frontmatter card types (e.g. `bill`) under
-`config/schemas/`. Those types aren't in beebox's built-in schema list,
+`_config/schemas/`. Those types aren't in beebox's built-in schema list,
 so a move must recognize them by file *shape* — a `.card` with a frontmatter
 block — not by matching a built-in type. (Earlier the type-based check sent any
 non-built-in type to the cardworks XML loader, which can't parse frontmatter, so
@@ -125,7 +131,7 @@ await box.write(
   "---\ntype: doc\ntitle: Index\n---\nUnpaid: [Water](/box/bills/Water.bill.card).\n",
 );
 
-const result = await mv(box, { from: "box/bills/Water.bill.card", to: "store/archive/Water.bill.card" });
+const result = await mv(box, { from: "box/bills/Water.bill.card", to: "_bookkeeping/archive/Water.bill.card" });
 result.success
 => true
 ```
@@ -134,11 +140,17 @@ The card and its attach directory moved, and the inbound absolute ref was
 repointed:
 
 ```ts continue
-await box.list("store/archive")
+await box.list("_bookkeeping/archive")
 =>
-store/archive/Water.attach
-store/archive/Water.attach/scan.pdf
-store/archive/Water.bill.card
+_bookkeeping/archive/Water.attach
+_bookkeeping/archive/Water.attach/scan.pdf
+_bookkeeping/archive/Water.bill.card
+_bookkeeping/archive/done
+_bookkeeping/archive/done/.gitkeep
+_bookkeeping/archive/failed
+_bookkeeping/archive/failed/.gitkeep
+_bookkeeping/archive/processed
+_bookkeeping/archive/processed/.gitkeep
 
 await box.read("box/index.doc.card")
 =>
@@ -146,7 +158,7 @@ await box.read("box/index.doc.card")
 type: doc
 title: Index
 ---
-Unpaid: [Water](/store/archive/Water.bill.card).
+Unpaid: [Water](/_bookkeeping/archive/Water.bill.card).
 ```
 
 ## Body Markdoc `{% source ref %}` rewritten (relative + absolute)
@@ -208,20 +220,20 @@ nested under another field (e.g. a landmark destination's
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/archive.procedure.card", "---\nsteps: []\n---\nbody\n");
+await box.write("_content/recipes/archive.procedure.card", "---\nsteps: []\n---\nbody\n");
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   "---\ndestinations:\n  - for: [triage]\n    procedure:\n      ref: archive.procedure.card\n---\n",
 );
 
-await mv(box, { from: "store/recipes/archive.procedure.card", to: "store/handlers/archive.procedure.card" });
-await box.read("store/recipes/Recipes.landmark.card")
+await mv(box, { from: "_content/recipes/archive.procedure.card", to: "store/handlers/archive.procedure.card" });
+await box.read("_content/recipes/Recipes.landmark.card")
 =>
 ---
 destinations:
   - for: [triage]
     procedure:
-      ref: ../handlers/archive.procedure.card
+      ref: ../../store/handlers/archive.procedure.card
 ---
 ```
 
@@ -239,15 +251,15 @@ await box.write(
   "---\ntype: memo\nitems:\n  - ref: Plan.doc.card\n    note: rel\n  - ref: /store/notes/Plan.doc.card\n---\nbody\n",
 );
 
-await mv(box, { from: "store/notes/Plan.doc.card", to: "store/archive/Plan.doc.card" });
+await mv(box, { from: "store/notes/Plan.doc.card", to: "_bookkeeping/archive/Plan.doc.card" });
 await box.read("store/notes/Index.memo.card")
 =>
 ---
 type: memo
 items:
-  - ref: ../archive/Plan.doc.card
+  - ref: ../../_bookkeeping/archive/Plan.doc.card
     note: rel
-  - ref: /store/archive/Plan.doc.card
+  - ref: /_bookkeeping/archive/Plan.doc.card
 ---
 body
 ```
@@ -293,15 +305,15 @@ await box.write(
     "both [x](charts/Ledger.doc.card?view=ledger#risks)\n",
 );
 
-await mv(box, { from: "store/charts/Ledger.doc.card", to: "store/archive/Ledger.doc.card" });
+await mv(box, { from: "store/charts/Ledger.doc.card", to: "_bookkeeping/archive/Ledger.doc.card" });
 (await box.read("store/Index.doc.card")).trim()
 =>
 ---
 type: doc
 title: Index
 ---
-rel [view](archive/Ledger.doc.card?view=ledger) abs [anchor](/store/archive/Ledger.doc.card#risks)
-both [x](archive/Ledger.doc.card?view=ledger#risks)
+rel [view](../_bookkeeping/archive/Ledger.doc.card?view=ledger) abs [anchor](/_bookkeeping/archive/Ledger.doc.card#risks)
+both [x](../_bookkeeping/archive/Ledger.doc.card?view=ledger#risks)
 ```
 
 ```ts continue
@@ -322,21 +334,21 @@ await box.write(
   "---\ntype: doc\n---\nAbs [scan](/box/session/scan.capture-session.card) rel [scan2](../session/scan.capture-session.card)\n",
 );
 
-const result = await mv(box, { from: "box/session", to: "store/archive/session" });
+const result = await mv(box, { from: "box/session", to: "_bookkeeping/archive/session" });
 result.success
 => true
 
-await box.list("store/archive/session")
+await box.list("_bookkeeping/archive/session")
 =>
-store/archive/session/photo.image.card
-store/archive/session/scan.capture-session.card
+_bookkeeping/archive/session/photo.image.card
+_bookkeeping/archive/session/scan.capture-session.card
 
 await box.read("box/notes/other.doc.card")
 =>
 ---
 type: doc
 ---
-Abs [scan](/store/archive/session/scan.capture-session.card) rel [scan2](../../store/archive/session/scan.capture-session.card)
+Abs [scan](/_bookkeeping/archive/session/scan.capture-session.card) rel [scan2](../../_bookkeeping/archive/session/scan.capture-session.card)
 ```
 
 A card *inside* the moved directory that links *out* of it (by a relative
@@ -352,8 +364,8 @@ await box.write(
   "---\ntype: doc\n---\nBy [Dana](../people/dana.person.card), see [scan](scan.capture-session.card).\n",
 );
 
-await mv(box, { from: "box/session", to: "store/archive/session" });
-await box.read("store/archive/session/note.doc.card")
+await mv(box, { from: "box/session", to: "_bookkeeping/archive/session" });
+await box.read("_bookkeeping/archive/session/note.doc.card")
 =>
 ---
 type: doc
@@ -416,15 +428,15 @@ await box.write(
     FENCE + "md\nFenced [plan](Plan.doc.card)\n" + FENCE + "\n",
 );
 
-await mv(box, { from: "store/notes/Plan.doc.card", to: "store/archive/Plan.doc.card" });
+await mv(box, { from: "store/notes/Plan.doc.card", to: "_bookkeeping/archive/Plan.doc.card" });
 const index = await box.read("store/notes/Index.memo.card");
 index.split("\n").filter((line) => line.includes("Plan.doc.card")).join("\n")
 =>
-ref: ../archive/Plan.doc.card  # the plan
-  - ref: ../archive/Plan.doc.card # also
+ref: ../../_bookkeeping/archive/Plan.doc.card  # the plan
+  - ref: ../../_bookkeeping/archive/Plan.doc.card # also
   - ref: Plan.doc.card
-Inline [plan](../archive/Plan.doc.card).
-Fenced [plan](../archive/Plan.doc.card)
+Inline [plan](../../_bookkeeping/archive/Plan.doc.card).
+Fenced [plan](../../_bookkeeping/archive/Plan.doc.card)
 ```
 
 ```ts continue
@@ -451,7 +463,7 @@ await box.write(
 
 const result = await mv(box, {
   from: ["store/mailto:dana.doc.card", "store/view:Ledger.doc.card"],
-  to: "store/archive/",
+  to: "_bookkeeping/archive/",
 });
 result.success
 => true
@@ -501,10 +513,10 @@ dir) under the destination.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/One.memo.card", "---\ntype: memo\n---\none\n");
-await box.write("box/inbox/Two.memo.card", "---\ntype: memo\n---\ntwo\n");
+await box.write("_content/inbox/One.memo.card", "---\ntype: memo\n---\none\n");
+await box.write("_content/inbox/Two.memo.card", "---\ntype: memo\n---\ntwo\n");
 
-const result = await mv(box, { from: ["box/inbox/One.memo.card", "box/inbox/Two.memo.card"], to: "store/kept/" });
+const result = await mv(box, { from: ["_content/inbox/One.memo.card", "_content/inbox/Two.memo.card"], to: "store/kept/" });
 result.success
 => true
 
@@ -598,7 +610,7 @@ await box.write(
   "# Session\n\nRun by [Dana](../people/dana.person.card); the [scan](scan.capture-session.card) is here.\n",
 );
 
-const result = await mv(box, { from: "box/session", to: "store/archive/session" });
+const result = await mv(box, { from: "box/session", to: "_bookkeeping/archive/session" });
 result.success
 => true
 ```
@@ -611,14 +623,14 @@ await box.read("store/dossiers/log.md")
 =>
 # Log
 «blankline»
-Abs [scan](/store/archive/session/scan.capture-session.card), rel [again](../archive/session/scan.capture-session.card).
+Abs [scan](/_bookkeeping/archive/session/scan.capture-session.card), rel [again](../../_bookkeeping/archive/session/scan.capture-session.card).
 ```
 
 The dossier that moved with the directory keeps its link to a sibling that
 moved alongside it, and gets a recomputed path to the card that stayed put:
 
 ```ts continue
-await box.read("store/archive/session/readme.md")
+await box.read("_bookkeeping/archive/session/readme.md")
 =>
 # Session
 «blankline»

@@ -99,7 +99,7 @@ reason removal goes id-by-id instead of through `reset("attachments")`.
 
 ```ts
 const store = withPhotos("photo [image#1] and doc [file#1]", [{ mimeType: "image/png", dataBase64: "aGk=" }]);
-store.editor.addFile({ id: store.editor.nextFileId(), path: "tmp/a.pdf", originalName: "a.pdf", size: 9, mimetype: "application/pdf" });
+store.editor.addFile({ id: store.editor.nextFileId(), path: "_tmp/a.pdf", originalName: "a.pdf", size: 9, mimetype: "application/pdf" });
 foldComposerImages(store);
 JSON.stringify([store.get().text, store.get().files.length])
 => ["photo and doc [file#1]",1]

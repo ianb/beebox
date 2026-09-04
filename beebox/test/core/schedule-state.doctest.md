@@ -269,7 +269,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-const stateDir = box.root + "/config/schedules/.state";
+const stateDir = box.root + "/_config/schedules/.state";
 await fs.mkdir(stateDir, { recursive: true });
 await fs.writeFile(stateDir + "/dead-script.lock", JSON.stringify({
   pid: 99999999,

@@ -1,8 +1,8 @@
 /**
  * In-box capture staging store.
  *
- * A staging session lives at `<boxRoot>/tmp/capture-staging/<session-id>/`,
- * holding the raw uploaded media plus a `session.json` manifest. `tmp/` is
+ * A staging session lives at `<boxRoot>/_tmp/capture-staging/<session-id>/`,
+ * holding the raw uploaded media plus a `session.json` manifest. `_tmp/` is
  * gitignored and the housekeeping sweep skips directories
  * (`housekeeping.ts` — `if (!stat.isFile()) continue;`), so staged sessions
  * are durable and inspectable while exempt from the flat-file sweep.

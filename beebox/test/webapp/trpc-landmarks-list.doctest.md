@@ -31,23 +31,23 @@ function caller(boxRoot) {
 ```ts
 const box = await makeTmpBox();
 
-await box.write("store/recipes/Recipes.landmark.card",
+await box.write("_content/recipes/Recipes.landmark.card",
   "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n\n");
-await box.write("store/trips/Trips.landmark.card", "no frontmatter here at all\n");
+await box.write("_content/trips/Trips.landmark.card", "no frontmatter here at all\n");
 
 const { landmarks, problems } = await caller(box.root).landmarks.list();
 print(`landmarks: ${landmarks.map((l) => `${l.label} (${l.dir})`).join(" | ")}`);
 print(`problems: ${problems.map((p) => p.path).join(",")}`);
 =>
-landmarks: Recipes (store/recipes)
-problems: store/trips/Trips.landmark.card
+landmarks: Recipes (_content/recipes)
+problems: _content/trips/Trips.landmark.card
 ```
 
 Fixing the card empties `problems` — the report tracks the file, it isn't
 sticky.
 
 ```ts continue
-await box.write("store/trips/Trips.landmark.card",
+await box.write("_content/trips/Trips.landmark.card",
   "---\nnavigation:\n  label: Trips\n---\n\n");
 
 const fixed = await caller(box.root).landmarks.list();
@@ -63,7 +63,7 @@ its filename basename — the label is never empty, so the app bar's pill
 face always has something to render.
 
 ```ts continue
-await box.write("store/archive/Old_Mail.landmark.card",
+await box.write("_bookkeeping/archive/Old_Mail.landmark.card",
   "---\ndestinations:\n  - for: [triage]\n    rules: \"Old mail.\"\n---\n\n");
 
 const withArchive = await caller(box.root).landmarks.list();
@@ -98,9 +98,9 @@ doesn't need one; the page-level surface is where the warning belongs.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/trips/Trips.landmark.card", "not a card\n");
+await box.write("_content/trips/Trips.landmark.card", "not a card\n");
 
-const { landmark } = await caller(box.root).landmarks.forDir({ dir: "store/trips" });
+const { landmark } = await caller(box.root).landmarks.forDir({ dir: "_content/trips" });
 `${landmark}`
 => null
 ```

@@ -23,6 +23,7 @@ import { findJobCards } from "../../core/reactor/job-discovery.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { loadContainsState, listMissing } from "../../core/search/contains-state.js";
 import { getBoxTimeISO } from "../../lib/time.js";
+import { getBoxDir } from "../../lib/paths.js";
 
 /**
  * Run preprocessors on all inbox items (transcription, etc.).
@@ -88,7 +89,7 @@ export async function runPreprocessors(boxRoot: string): Promise<number> {
  * committed with an error-indicating message so it can be investigated later.
  */
 export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
-  const jobsDir = path.join(boxRoot, "box/jobs");
+  const jobsDir = getBoxDir(boxRoot, "jobs");
   let jobFiles: string[];
   try {
     jobFiles = await fs.readdir(jobsDir);
@@ -190,7 +191,7 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
  * Scan inbox for items not referenced by any pending job and create
  * intake jobs for them. Returns the number of items covered.
  *
- * Under a full wakeup, scans all of `box/inbox/` (skipping subdirs that
+ * Under a full wakeup, scans all of `_content/inbox/` (skipping subdirs that
  * have their own pipelines) and tags intake jobs with `source="wakeup"`
  * / `source="wakeup-captures"`. Under a connector-scoped wakeup, scans
  * only `connector.inboxPaths` and tags jobs with the connector's name
@@ -271,7 +272,7 @@ export async function createIntakeJobsForUnjobbed(
  * frontmatter (`items: [{ref}]`, `thread: {ref}`, …).
  */
 async function collectExistingJobRefs(boxRoot: string): Promise<Set<string>> {
-  const jobsDir = path.join(boxRoot, "box/jobs");
+  const jobsDir = getBoxDir(boxRoot, "jobs");
   const existingRefs = new Set<string>();
   try {
     const jobFiles = await fs.readdir(jobsDir);
@@ -333,7 +334,7 @@ async function findUnjobbedInboxItems(
       await scanDir(path.join(boxRoot, rel), false);
     }
   } else {
-    await scanDir(path.join(boxRoot, "box/inbox"), true);
+    await scanDir(getBoxDir(boxRoot, "inbox"), true);
   }
 
   return unjobbedItems;
@@ -417,7 +418,7 @@ export async function refreshSearchIndex(boxRoot: string): Promise<boolean> {
  * card tree.
  */
 export async function createContainsBackfillJob(boxRoot: string): Promise<number> {
-  const jobsDir = path.join(boxRoot, "box/jobs");
+  const jobsDir = getBoxDir(boxRoot, "jobs");
   const pending = await findJobCards(jobsDir, { sourceFilter: CONTAINS_BACKFILL_SOURCE });
   if (pending.length > 0) return 0;
 

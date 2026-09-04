@@ -183,7 +183,7 @@ const dirtyEpoch = new Map<string, number>();
 /**
  * Drop a box's assembled schema snapshot so the next `loadBoxSchemas` rebuilds
  * it from disk. Deliberately preserves `boxFileRecords` (the hash/last-good
- * state the cache-bust relies on). Call this when `config/schemas/` changes.
+ * state the cache-bust relies on). Call this when `src/schemas/` changes.
  */
 export function invalidateBoxSchemas(boxRoot: string): void {
   boxSchemaCache.delete(boxRoot);
@@ -191,7 +191,7 @@ export function invalidateBoxSchemas(boxRoot: string): void {
 }
 
 /**
- * Load box-local schemas from config/schemas/*.ts.
+ * Load box-local schemas from src/schemas/*.ts.
  *
  * Each file should default-export a frontmatter `cardSchema()`. Optionally it
  * can also export a `template` (TemplateDefinition) for `bbx create`.
@@ -402,7 +402,7 @@ export function isKnownCardType(type: string): boolean {
  * Build a Map<type, CardSchema> for the markdown-frontmatter loader path.
  *
  * When boxRoot is given, box-local frontmatter schemas (from
- * config/schemas/*.ts) are merged in on top of the built-in ones, so box
+ * src/schemas/*.ts) are merged in on top of the built-in ones, so box
  * card types parse and validate as first-class. A box schema whose type
  * collides with a built-in wins (last write) — boxes can override.
  */

@@ -162,7 +162,7 @@ function PlateIcon() {
 
 /**
  * Open on-plate todo count (escalated + on-plate) — links to the stock
- * box-wide `todo-view` card ("The Plate", `store/plate.todo-view.card`),
+ * box-wide `todo-view` card ("The Plate", `_content/plate.todo-view.card`),
  * per the plan's one app-level todo affordance
  * (`docs/implemented-plans/todo-annotation.md` Track 4). Zero renders nothing.
  */
@@ -171,7 +171,7 @@ function PlateBadge({ base, count }: { base: string; count: number }) {
   return (
     <Link
       id="bbx-nav-todo"
-      to={href(`${base}/browse/store/plate.todo-view.card`)}
+      to={href(`${base}/browse/_content/plate.todo-view.card`)}
       className="flex items-center gap-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-full hover:bg-white/30 transition-colors"
       title={`${count} todo${count !== 1 ? "s" : ""} on the plate`}
       aria-label={`${count} todo${count !== 1 ? "s" : ""} on the plate`}

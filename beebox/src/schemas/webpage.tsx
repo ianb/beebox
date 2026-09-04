@@ -73,9 +73,9 @@ page — the containing document is the default target.
 ## Layout on disk
 
 \`\`\`
-box/inbox/My_Page.webpage.card          # readable body + provenance
-box/inbox/My_Page.attach/page.frozen    # frozen snapshot
-box/inbox/My_Page.attach/My_Page.commentary.card   # remarks (optional)
+_content/inbox/My_Page.webpage.card          # readable body + provenance
+_content/inbox/My_Page.attach/page.frozen    # frozen snapshot
+_content/inbox/My_Page.attach/My_Page.commentary.card   # remarks (optional)
 \`\`\``,
 });
 

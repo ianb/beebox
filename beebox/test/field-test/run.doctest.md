@@ -166,14 +166,14 @@ scenarioNeedsGmail(seedScenario)
 const seedBox = await createFieldBox(join(seedTmp, "run"));
 await seedFieldBox({ box: seedBox, scenario: seedScenario });
 
-await fileExists(join(seedBox.boxRoot, "config/connectors/gmail.json"))
+await fileExists(join(seedBox.boxRoot, "_config/connectors/gmail.json"))
 => true
 
 (await loadBoxModel(seedBox.boxRoot)) === MODEL_ID.sonnet
 => true
 
-// The connector config and the pinned model (config/box.json) are both part of the committed baseline.
-const seedStatus = await execa("git", ["status", "--porcelain"], { cwd: seedBox.packageRoot });
+// The connector config and the pinned model (_config/box.json) are both part of the committed baseline.
+const seedStatus = await execa("git", ["status", "--porcelain"], { cwd: seedBox.boxRoot });
 seedStatus.stdout
 =>
 ```
@@ -221,7 +221,7 @@ const scenarioDir = await writeScenario(join(tmp, "scenario"), [
 ].join("\n"));
 
 const runsRoot = join(tmp, "runs");
-const boxRoot = join(runsRoot, "run", "box", "content");
+const boxRoot = join(runsRoot, "run", "box");
 const backend = createFakeChatBackend();
 // The scripted operator leaves untracked residue during the third activity —
 // which is exactly what `reset` exists to undo.

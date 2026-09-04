@@ -7,7 +7,7 @@ a narrower credential (`docs/plans/secret-custody.md`, "Broker escalations").
 
 Three behaviours follow, all covered here:
 
-- **setup writes the machine store**, not `config/connectors/telegram.secret.json`,
+- **setup writes the machine store**, not `_config/connectors/telegram.secret.json`,
   as a single-box entry (`owningBox` + `shareable: false`) granted to this box.
 - **status never returns the token.** It used to, on both its arms — which
   handed a live all-powerful credential to the admin frontend on every page
@@ -76,7 +76,7 @@ const config = await loadTelegramConfig(box.root);
 print(`connector resolves the token: ${config.botToken === "111111:placeholder-bot-token"}`);
 print(`webhook secret is a real one: ${config.webhookSecret.length === 64}`);
 
-const strayFile = await box.read("config/connectors/telegram.secret.json").catch(() => null);
+const strayFile = await box.read("_config/connectors/telegram.secret.json").catch(() => null);
 print(`stray file in the box tree: ${strayFile}`);
 =>
 connector resolves the token: true

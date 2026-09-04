@@ -112,7 +112,7 @@ b.statusCode
 The staging manifest records both segments in order, each with its chunk:
 
 ```ts continue
-const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
 manifest.segments.map((s) => s.id).join(",")
 => seg-a,seg-b
 
@@ -202,7 +202,7 @@ duplicate.statusCode
 The rejected body never lands on disk or in the manifest:
 
 ```ts continue
-const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
 JSON.stringify({
   photos: manifest.photos.map((item) => item.filename),
   audio: manifest.segments.map((segment) => ({ format: segment.format, chunks: segment.chunks })),
@@ -246,7 +246,7 @@ JSON.stringify({ status: resumed.statusCode, matches: resumed.body.resumable[0]?
 ```
 
 ```ts continue
-const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
 manifest.createdBy
 => owner@example.com
 ```
@@ -280,7 +280,7 @@ JSON.stringify([
 ```
 
 ```ts continue
-const stillOpen = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+const stillOpen = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
 JSON.stringify({ state: stillOpen.state, photos: stillOpen.photos.map((item) => item.filename) })
 => {"state":"open","photos":["ios-photo-owner.jpg"]}
 ```

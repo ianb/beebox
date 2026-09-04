@@ -1,7 +1,7 @@
 /**
  * Per-run retrospective report — the boxholder's review surface.
  *
- * Each `bbx retro scan` writes `store/reviews/retro/<runId>.md` recording
+ * Each `bbx retro scan` writes `_content/reviews/retro/<runId>.md` recording
  * exactly what was looked at, what was noticed, and (once the integrator
  * has run) what was done about it. Plain markdown rather than a card: a
  * machine-written audit artifact, browsable via the file renderer, with
@@ -11,8 +11,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { LedgerEntry } from "./ledger.js";
+import { BOX_DIRS } from "../../lib/paths.js";
 
-const RETRO_REPORTS_DIR = "store/reviews/retro";
+const RETRO_REPORTS_DIR = BOX_DIRS.retroReports;
 
 export interface RetroRunSessionSummary {
   sessionId: string;

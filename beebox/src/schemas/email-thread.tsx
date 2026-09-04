@@ -50,8 +50,8 @@ export const EmailThreadSchema = cardSchema("email-thread", {
   instructions: `# Handling Email Threads
 
 **Location IS state.** The filesystem path tells you the lifecycle stage:
-- \`box/inbox/email/\` — new threads, awaiting processing
-- \`store/archive/email/\` — processed/archived threads
+- \`_content/inbox/email/\` — new threads, awaiting processing
+- \`_bookkeeping/archive/email/\` — processed/archived threads
 
 This card is part of a tracked working set, not a mailbox mirror. Its existence
 means the Gmail connector will keep the thread synchronized. Moving the card
@@ -63,7 +63,7 @@ Mail without a live card is absent from box search and context. Search or read
 it remotely with \`bbx connector gmail gws -- <gws Gmail read args>\`; inspect
 bounded rule discoveries with \`bbx connector gmail pending [rule]\`.
 Automatic routing is configured as named rules in
-\`config/connectors/gmail.json\`. A rule either tracks matching new threads
+\`_config/connectors/gmail.json\`. A rule either tracks matching new threads
 within a rolling budget or requests a procedure after sync. Procedure shell
 prechecks can skip before any agent step runs. The \`gws\` passthrough is
 remote-read-only: it cannot send, modify, trash, or delete mail.

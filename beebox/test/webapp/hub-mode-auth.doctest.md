@@ -17,7 +17,7 @@ process.env.BBX_HUB_SECRET = "test-hub-secret-xyz";
 process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-mode-auth-doctest";
 
 const server = await makeTestServer();
-await server.seed("config/box.json", JSON.stringify({ allowedEmails: [" Allowed@Example.COM "] }));
+await server.seed("_config/box.json", JSON.stringify({ allowedEmails: [" Allowed@Example.COM "] }));
 ```
 
 ## No hub headers at all -> 401 (fails closed, not open)

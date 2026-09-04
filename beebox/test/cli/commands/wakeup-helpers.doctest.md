@@ -15,7 +15,7 @@ import { createIntakeJobsForUnjobbed, cleanupStaleJobs } from "../../../src/cli/
 
 ### Creates intake jobs for unjobbed inbox items
 
-When there are card files in `box/inbox/` that aren't referenced by any
+When there are card files in `_content/inbox/` that aren't referenced by any
 existing job, an intake job gets created:
 
 ```ts
@@ -24,26 +24,26 @@ await initBox(box.root);
 box.commitAll("init box");
 
 // Put two cards in the inbox
-await box.seed("box/inbox/note1.memo.card", "<memo>Hello</memo>");
-await box.seed("box/inbox/note2.task.card", "<task>Do thing</task>");
+await box.seed("_content/inbox/note1.memo.card", "<memo>Hello</memo>");
+await box.seed("_content/inbox/note2.task.card", "<task>Do thing</task>");
 box.commitAll("add inbox items");
 
 const count = await createIntakeJobsForUnjobbed(box.root);
 count
 => 2
 
-// A job was created in box/jobs/
-const allFiles = await readdir(join(box.root, "box/jobs"));
+// A job was created in _bookkeeping/jobs/
+const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
 const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
 jobFiles.length
 => 1
 
 // The job references both items
-const content = await readFile(join(box.root, "box/jobs", jobFiles[0]), "utf-8");
-content.includes("ref: box/inbox/note1.memo.card")
+const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0]), "utf-8");
+content.includes("ref: _content/inbox/note1.memo.card")
 => true
 
-content.includes("ref: box/inbox/note2.task.card")
+content.includes("ref: _content/inbox/note2.task.card")
 => true
 ```
 
@@ -66,12 +66,12 @@ await initBox(box.root);
 box.commitAll("init box");
 
 // Create an inbox item
-await box.seed("box/inbox/already-handled.memo.card", "<memo>Old</memo>");
+await box.seed("_content/inbox/already-handled.memo.card", "<memo>Old</memo>");
 
 // Create a job that already references it
 await box.seed(
-  "box/jobs/existing.intake.job.card",
-  "---\nstatus: pending\ncreated: 2026-01-01T00:00:00Z\nsource: test\ndescription: Existing\nitems:\n  - ref: box/inbox/already-handled.memo.card\n---\n",
+  "_bookkeeping/jobs/existing.intake.job.card",
+  "---\nstatus: pending\ncreated: 2026-01-01T00:00:00Z\nsource: test\ndescription: Existing\nitems:\n  - ref: _content/inbox/already-handled.memo.card\n---\n",
 );
 box.commitAll("setup");
 
@@ -89,23 +89,23 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
 
-await box.seed("box/inbox/note.memo.card", "<memo>Important</memo>");
-await box.seed("box/inbox/snap.capture-session.card", "<capture-session>Snap</capture-session>");
-await box.seed("box/inbox/pic.image.card", "<image>Photo</image>");
+await box.seed("_content/inbox/note.memo.card", "<memo>Important</memo>");
+await box.seed("_content/inbox/snap.capture-session.card", "<capture-session>Snap</capture-session>");
+await box.seed("_content/inbox/pic.image.card", "<image>Photo</image>");
 box.commitAll("add items");
 
 const count = await createIntakeJobsForUnjobbed(box.root);
 count
 => 3
 
-const allFiles = await readdir(join(box.root, "box/jobs"));
+const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
 const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card")).sort();
 jobFiles.length
 => 2
 
 // One normal-priority job with the memo, one low-priority with captures
-const job0 = await readFile(join(box.root, "box/jobs", jobFiles[0]), "utf-8");
-const job1 = await readFile(join(box.root, "box/jobs", jobFiles[1]), "utf-8");
+const job0 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0]), "utf-8");
+const job1 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[1]), "utf-8");
 const allContent = job0 + job1;
 allContent.includes("note.memo.card")
 => true
@@ -116,7 +116,7 @@ allContent.includes("snap.capture-session.card")
 
 ### Skips excluded subdirectories (feedback)
 
-Items in `box/inbox/feedback/` have their own pipeline and are not
+Items in `_content/inbox/feedback/` have their own pipeline and are not
 picked up for intake:
 
 ```ts
@@ -124,9 +124,9 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
 
-await box.seed("box/inbox/feedback/fb1.feedback.card", "<feedback>Good</feedback>");
+await box.seed("_content/inbox/feedback/fb1.feedback.card", "<feedback>Good</feedback>");
 // One real inbox item
-await box.seed("box/inbox/real.memo.card", "<memo>Real item</memo>");
+await box.seed("_content/inbox/real.memo.card", "<memo>Real item</memo>");
 box.commitAll("add items");
 
 const count = await createIntakeJobsForUnjobbed(box.root);
@@ -159,20 +159,20 @@ await initBox(box.root);
 box.commitAll("init box");
 
 // One item in the gmail-owned subdir, one in an unrelated subdir
-await box.seed("box/inbox/email/thread-1/msg-001.email-message.card", "<email-message>Hi</email-message>");
-await box.seed("box/inbox/pages-saved/page1.memo.card", "<memo>Saved</memo>");
+await box.seed("_content/inbox/email/thread-1/msg-001.email-message.card", "<email-message>Hi</email-message>");
+await box.seed("_content/inbox/pages-saved/page1.memo.card", "<memo>Saved</memo>");
 box.commitAll("add items");
 
-const fakeGmail = { name: "gmail", inboxPaths: ["box/inbox/email"] };
+const fakeGmail = { name: "gmail", inboxPaths: ["_content/inbox/email"] };
 const count = await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail });
 
 // Only the email item — the pages-saved item is left for full wakeup
 count
 => 1
 
-const allFiles = await readdir(join(box.root, "box/jobs"));
+const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
 const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
-const content = await readFile(join(box.root, "box/jobs", jobFiles[0]), "utf-8");
+const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0]), "utf-8");
 content.includes("source: gmail")
 => true
 
@@ -191,8 +191,8 @@ frontmatter job — the format all live jobs use.)
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(
-  "box/jobs/dead.intake.job.card",
-  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: box/inbox/gone.memo.card\n---\n",
+  "_bookkeeping/jobs/dead.intake.job.card",
+  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: _content/inbox/gone.memo.card\n---\n",
 );
 box.commitAll("queue stale job");
 
@@ -200,7 +200,7 @@ const cleaned = await cleanupStaleJobs(box.root);
 cleaned
 => 1
 
-(await readdir(join(box.root, "box/jobs"))).includes("dead.intake.job.card")
+(await readdir(join(box.root, "_bookkeeping/jobs"))).includes("dead.intake.job.card")
 => false
 ```
 
@@ -208,10 +208,10 @@ cleaned
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/inbox/live.memo.card", "---\nstatus: new\n---\nstill here");
+await box.write("_content/inbox/live.memo.card", "---\nstatus: new\n---\nstill here");
 await box.write(
-  "box/jobs/live.intake.job.card",
-  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: box/inbox/live.memo.card\n---\n",
+  "_bookkeeping/jobs/live.intake.job.card",
+  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: _content/inbox/live.memo.card\n---\n",
 );
 box.commitAll("queue live job");
 
@@ -228,8 +228,8 @@ doesn't apply defaults, so cleanup must.
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(
-  "box/jobs/nostatus.intake.job.card",
-  "---\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: box/inbox/gone.memo.card\n---\n",
+  "_bookkeeping/jobs/nostatus.intake.job.card",
+  "---\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: _content/inbox/gone.memo.card\n---\n",
 );
 box.commitAll("queue statusless job");
 

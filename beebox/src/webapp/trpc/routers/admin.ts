@@ -17,7 +17,7 @@ import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
-import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
+import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
 import { modelTier } from "../../../shared/agent-models.js";
 import { normalizeModelId } from "../../../shared/model-ids.js";
 import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
@@ -28,7 +28,7 @@ import { describeAllowedUsers } from "./admin-user-details.js";
 import { getGoogleClientCreds } from "../../../connectors/google-auth.js";
 
 /**
- * Shape of `config/box.json`, validated on read (config is untrusted input).
+ * Shape of `_config/box.json`, validated on read (config is untrusted input).
  * `.default()` on every field lets a missing file or missing key read as the
  * documented default rather than casting an untyped `JSON.parse` result.
  */
@@ -190,7 +190,7 @@ export const adminRouter = router({
   }),
 
   boxConfig: ownerProcedure.query(async ({ ctx }) => {
-    const configPath = path.join(ctx.boxRoot, "config/box.json");
+    const configPath = path.join(ctx.boxRoot, CONFIG_RELATIVE_PATH);
     let config: z.infer<typeof boxConfigSchema>;
     try {
       config = boxConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));

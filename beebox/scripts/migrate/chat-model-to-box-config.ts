@@ -9,7 +9,7 @@
  * an id — an older build, the iOS app, and **every chat on a Codex box** — took
  * it, so on those boxes the file was the model every conversation started on.
  *
- * The box model policy (`agentModel` in `config/box.json`) replaces it, and is
+ * The box model policy (`agentModel` in `_config/box.json`) replaces it, and is
  * read by chat and the reactor alike. This migration moves the value across so
  * a box that had picked a model keeps starting chats on it, then deletes the
  * file nothing reads any more.
@@ -38,7 +38,7 @@ import { normalizeModelId } from "../../src/shared/model-ids.js";
 import { modelTier } from "../../src/shared/agent-models.js";
 
 const LEGACY_FILE = ".beebox/chat-model.json";
-const CONFIG_FILE = "config/box.json";
+const CONFIG_FILE = "_config/box.json";
 
 /** A file this migration must read but could not. */
 class UnreadableFileError extends Error {

@@ -121,10 +121,10 @@ const mounted = await mountDriveFolder({
   boxRoot: box.root,
   service: watched,
   input: "https://drive.google.com/drive/folders/folder-1",
-  dir: "store/drive/recipes",
+  dir: "_content/drive/recipes",
 });
 JSON.stringify({ cardPath: mounted.cardPath, heldDuringListing })
-=> {"cardPath":"store/drive/recipes/Recipes.gfolder.card","heldDuringListing":[true]}
+=> {"cardPath":"_content/drive/recipes/Recipes.gfolder.card","heldDuringListing":[true]}
 ```
 
 And it is not still held once the mount returns.

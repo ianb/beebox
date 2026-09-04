@@ -62,7 +62,7 @@ export async function listDestinations(
   const matches = await glob("**/*.landmark.card", {
     cwd: boxRoot,
     nodir: true,
-    ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+    ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
   });
 
   // Independent files, read concurrently but in bounded batches — one handle

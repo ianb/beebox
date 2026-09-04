@@ -156,8 +156,8 @@ nothing regenerates it.
    Inspect files as needed to understand them.
 
 3. **File each file, or a coherent group, to its destination:** a destination
-   card's attach scope (via the asset-manifest tooling), \`store/\`, or
-   \`box/inbox/\`. Use the file-level tools that actually exist — \`git mv\` for
+   card's attach scope (via the asset-manifest tooling), \`_content/\`, or
+   \`_content/inbox/\`. Use the file-level tools that actually exist — \`git mv\` for
    tracked files, attach-scope blobs move via the manifest helpers, and \`bbx mv\`
    only for cards/directories (it refuses loose files). Shrink the card's
    \`received\`/\`missing\`/\`failed\` lists as you place things, and **delete the card

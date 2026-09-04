@@ -2,7 +2,7 @@
  * Canonical ordered list of box data migrations.
  *
  * `bbx migrate` reads this and the per-box manifest at
- * `config/migrations.jsonl` to decide what to run. New migrations get
+ * `_config/migrations.jsonl` to decide what to run. New migrations get
  * appended to the array; never reorder or remove existing entries —
  * the `name` is the manifest key and reordering would change which
  * migrations a box thinks it has applied.
@@ -37,7 +37,7 @@ export interface ScriptMigration extends BaseMigration {
 
 /** An agent-applied migration that runs a procedure definition. */
 export interface ProcedureMigration extends BaseMigration {
-  /** Procedure definition name (resolved from config/procedures/). */
+  /** Procedure definition name (resolved from _config/procedures/). */
   readonly procedure: string;
 }
 
@@ -130,7 +130,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // nothing). *.document.card → *.pdf.card + inbound refs.
   { name: "document-to-pdf", script: "scripts/migrate/document-to-pdf.ts" },
   // Fold the legacy box-wide chat model pointer (.beebox/chat-model.json)
-  // into the box model policy (`agentModel` in config/box.json), which chat and
+  // into the box model policy (`agentModel` in _config/box.json), which chat and
   // the reactor both read. Configuration, not card data — like annex-config
   // above. See docs/implemented-plans/model-engine-policy.md.
   { name: "chat-model-to-box-config", script: "scripts/migrate/chat-model-to-box-config.ts" },
@@ -140,7 +140,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "record-measurements", script: "scripts/migrate/record-measurements.ts" },
 ];
 
-export const MANIFEST_PATH = "config/migrations.jsonl";
+export const MANIFEST_PATH = "_config/migrations.jsonl";
 
 export interface ManifestEntry {
   readonly name: string;

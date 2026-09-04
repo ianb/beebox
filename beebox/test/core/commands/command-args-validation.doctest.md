@@ -31,7 +31,7 @@ badLimit.error
 
 const badPaths = await runCommand({
   name: "ls",
-  args: { paths: "box/inbox" },
+  args: { paths: "_content/inbox" },
   ctx: createCollectorContext(box.root),
 });
 badPaths.error

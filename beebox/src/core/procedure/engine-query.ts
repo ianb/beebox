@@ -12,6 +12,7 @@ import { invariant } from "../../lib/invariant.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ProcedureError } from "./engine-types.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { getBoxDir } from "../../lib/paths.js";
 
 /**
  * Resolve a run-dir argument to an absolute path. A bare name or relative
@@ -45,7 +46,7 @@ export async function resolveRunDir(
  * List available procedure definitions.
  */
 export async function listProcedures(ctx: CommandContext): Promise<Result<string[], ProcedureError>> {
-  const procedureDir = path.join(ctx.boxRoot, "config/procedures");
+  const procedureDir = getBoxDir(ctx.boxRoot, "procedures");
 
   try {
     const files = await fs.readdir(procedureDir);
@@ -66,7 +67,7 @@ export async function listProcedures(ctx: CommandContext): Promise<Result<string
     if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read procedures directory ${procedureDir}:`, e);
     }
-    ctx.writeLine(fmt.dim("No config/procedures/ directory."));
+    ctx.writeLine(fmt.dim("No _config/procedures/ directory."));
     return ok([]);
   }
 }

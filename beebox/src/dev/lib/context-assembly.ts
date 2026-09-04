@@ -10,9 +10,8 @@
  * Per-turn dynamic content (the `<chat-app>` snapshot, selections,
  * attachments) is inherently per-message and is noted, not rendered.
  *
- * The `boxRoot` option accepts either root of a v2 package box: it is
- * resolved to the OPERATIONAL root (`content/`) the agent actually runs in,
- * and the package root is derived from the box's shape.
+ * The `boxRoot` option accepts any path at or below the box's one root
+ * (shapeVersion 3) and is resolved via `findBoxRoot`.
  */
 
 import {
@@ -27,17 +26,14 @@ import {
 } from "../../core/reactor/prompts.js";
 import { buildTimezoneContext } from "../../core/box/config.js";
 import { findBoxRoot } from "../../lib/paths.js";
-import { getBoxShape } from "../../lib/box-shape.js";
 import {
   claudeMdLayer,
   memoryLayer,
-  packageClaudeMdLayer,
   rulesInventoryLayer,
   schemaInstructionsLayer,
   skillBodyLayer,
   skillDescriptionsLayer,
   wordCount,
-  type BoxRoots,
   type ContextLayer,
   type LayerLoading,
 } from "./context-layers.js";
@@ -79,30 +75,23 @@ export async function assembleContext(
   if (description === undefined) {
     throw new UnknownSituationError(situation);
   }
-  // Resolve to the OPERATIONAL root — for a v2 package box, `<pkg>/content/`
-  // is what the agent actually runs in, and passing the package root would
-  // silently measure the wrong (tiny, package-machinery) CLAUDE.md.
   const boxRoot = await findBoxRoot(options.boxRoot);
   if (boxRoot === null) {
     throw new NotABoxError(options.boxRoot);
   }
-  const { packageRoot } = await getBoxShape(boxRoot);
-  const roots: BoxRoots = { boxRoot, packageRoot };
 
   const layers: ContextLayer[] = [];
   const notRendered: string[] = [];
 
   layers.push(...(await systemPromptLayers(situation, { ...options, boxRoot })));
-  const packageLayer = await packageClaudeMdLayer(roots);
-  if (packageLayer !== null) layers.push(packageLayer);
   layers.push(await claudeMdLayer(boxRoot));
-  const memory = await memoryLayer(roots);
+  const memory = await memoryLayer(boxRoot);
   if (memory !== null) layers.push(memory);
-  layers.push(await skillDescriptionsLayer(roots));
-  layers.push(await rulesInventoryLayer(roots));
+  layers.push(await skillDescriptionsLayer(boxRoot));
+  layers.push(await rulesInventoryLayer(boxRoot));
 
   if (options.skill !== undefined) {
-    layers.push(await skillBodyLayer(roots, options.skill));
+    layers.push(await skillBodyLayer(boxRoot, options.skill));
   }
   if (options.cardType !== undefined) {
     layers.push(await schemaInstructionsLayer(boxRoot, options.cardType));

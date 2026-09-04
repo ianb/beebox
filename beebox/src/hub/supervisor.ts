@@ -440,7 +440,7 @@ export class Supervisor implements EndpointProvider {
       const child = this.spawnChild({
         bbxBinary,
         args: ["serve", boxRoot, "--slug", box.slug, "--port", String(port)],
-        cwd: shape.packageRoot,
+        cwd: shape.boxRoot,
         env,
       });
       // Swallow the execa promise rejection here (not just via .on("exit")) --

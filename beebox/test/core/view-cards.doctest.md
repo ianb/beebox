@@ -24,10 +24,10 @@ matches arriving in `files` as metadata:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/Test.memo.card", MEMO_CARD);
-await box.write("box/inbox/Test.attach/notes.txt", "hello");
+await box.write("_content/inbox/Test.memo.card", MEMO_CARD);
+await box.write("_content/inbox/Test.attach/notes.txt", "hello");
 
-const result = await loadViewCards(box.root, ["box/**/*.card", "box/**/*.txt"]);
+const result = await loadViewCards(box.root, ["_content/**/*.card", "_content/**/*.txt"]);
 result.cards.length
 => 1
 
@@ -35,13 +35,13 @@ result.cards[0].type
 => memo
 
 result.cards[0].path
-=> box/inbox/Test.memo.card
+=> _content/inbox/Test.memo.card
 
 result.cards[0].frontmatter.status
 => new
 
 result.files.map((f) => f.path).join(", ")
-=> box/inbox/Test.attach/notes.txt
+=> _content/inbox/Test.attach/notes.txt
 
 JSON.stringify(result.skipped)
 => []
@@ -75,15 +75,15 @@ selected an invalid card instead of silently rendering without it:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/Good.memo.card", MEMO_CARD);
-await box.write("box/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema for this type\n");
+await box.write("_content/inbox/Good.memo.card", MEMO_CARD);
+await box.write("_content/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema for this type\n");
 
-const result = await loadViewCards(box.root, ["box/**/*.card"]);
+const result = await loadViewCards(box.root, ["_content/**/*.card"]);
 result.cards.map((c) => c.path).join(", ")
-=> box/inbox/Good.memo.card
+=> _content/inbox/Good.memo.card
 
 result.skipped.map((s) => s.path).join(", ")
-=> box/inbox/Bad.bogus.card
+=> _content/inbox/Bad.bogus.card
 
 result.skipped[0].error.length > 0
 => true

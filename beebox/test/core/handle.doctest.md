@@ -26,7 +26,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -39,8 +39,8 @@ destinations:
 ---
 `,
 );
-await box.write("box/inbox/triaged/recipes/Bread.memo.card", "<memo>bread</memo>");
-await box.write("box/inbox/triaged/recipes/Pasta.memo.card", "<memo>pasta</memo>");
+await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo>bread</memo>");
+await box.write("_content/inbox/triaged/recipes/Pasta.memo.card", "<memo>pasta</memo>");
 
 const { ctx } = createCollectorContext(box.root);
 const calls = [];
@@ -58,10 +58,10 @@ JSON.stringify(calls, null, 2)
 =>
 [
   {
-    "procedurePath": "store/recipes/archive.procedure.card",
+    "procedurePath": "_content/recipes/archive.procedure.card",
     "triageItems": [
-      "box/inbox/triaged/recipes/Bread.memo.card",
-      "box/inbox/triaged/recipes/Pasta.memo.card"
+      "_content/inbox/triaged/recipes/Bread.memo.card",
+      "_content/inbox/triaged/recipes/Pasta.memo.card"
     ]
   }
 ]
@@ -82,7 +82,7 @@ form above still resolves against the landmark's own directory.
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -90,11 +90,11 @@ destinations:
   - for: [triage]
     rules: Cooking instructions.
     procedure:
-      ref: /config/procedures/archive.procedure.card
+      ref: /_config/procedures/archive.procedure.card
 ---
 `,
 );
-await box.write("box/inbox/triaged/recipes/Bread.memo.card", "<memo>bread</memo>");
+await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo>bread</memo>");
 
 const { ctx } = createCollectorContext(box.root);
 const calls = [];
@@ -109,7 +109,7 @@ await runHandle({
 });
 
 JSON.stringify(calls)
-=> ["config/procedures/archive.procedure.card"]
+=> ["_config/procedures/archive.procedure.card"]
 ```
 
 ```ts cleanup
@@ -121,7 +121,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -134,7 +134,7 @@ destinations:
 `,
 );
 // Create the bucket directory but no items.
-await box.write("box/inbox/triaged/recipes/.gitkeep", "");
+await box.write("_content/inbox/triaged/recipes/.gitkeep", "");
 
 const { ctx } = createCollectorContext(box.root);
 let called = false;
@@ -161,7 +161,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -173,8 +173,8 @@ destinations:
 ---
 `,
 );
-await box.write("box/inbox/triaged/recipes/Item.memo.card", "<memo/>");
-await box.write("box/inbox/triaged/recipes/Item.memo.card.probable.txt", "Reason: judgment call.");
+await box.write("_content/inbox/triaged/recipes/Item.memo.card", "<memo/>");
+await box.write("_content/inbox/triaged/recipes/Item.memo.card.probable.txt", "Reason: judgment call.");
 
 const { ctx } = createCollectorContext(box.root);
 const seen = [];
@@ -189,7 +189,7 @@ await runHandle({
 });
 
 JSON.stringify(seen)
-=> ["box/inbox/triaged/recipes/Item.memo.card"]
+=> ["_content/inbox/triaged/recipes/Item.memo.card"]
 ```
 
 ```ts cleanup
@@ -201,7 +201,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/notes/Notes.landmark.card",
+  "_content/notes/Notes.landmark.card",
   `---
 navigation:
   label: Notes
@@ -212,7 +212,7 @@ destinations:
 ---
 `,
 );
-await box.write("box/inbox/triaged/notes/Item.memo.card", "<memo/>");
+await box.write("_content/inbox/triaged/notes/Item.memo.card", "<memo/>");
 
 const { ctx } = createCollectorContext(box.root);
 const results = await runHandle({
@@ -232,7 +232,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/triaged/_unsure/Mystery.memo.card", "<memo/>");
+await box.write("_content/inbox/triaged/_unsure/Mystery.memo.card", "<memo/>");
 
 const { ctx } = createCollectorContext(box.root);
 let called = false;
@@ -264,7 +264,7 @@ distinction exists to prevent.
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -276,7 +276,7 @@ destinations:
 ---
 `,
 );
-await box.write("box/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
+await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
 
 const { ctx } = createCollectorContext(box.root);
 const results = await runHandle({
@@ -305,7 +305,7 @@ The report line a reader sees:
 JSON.stringify(formatHandlingLines(results[0]), null, 2)
 =>
 [
-  "  procedure-inconclusive\trecipes (1 item) [store/recipes/archive.procedure.card]",
+  "  procedure-inconclusive\trecipes (1 item) [_content/recipes/archive.procedure.card]",
   "    └─ inconclusive — review of step archive reached max turns (8); work completed"
 ]
 ```
@@ -319,7 +319,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -331,7 +331,7 @@ destinations:
 ---
 `,
 );
-await box.write("box/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
+await box.write("_content/inbox/triaged/recipes/Bread.memo.card", "<memo/>");
 
 const { ctx } = createCollectorContext(box.root);
 const results = await runHandle({
@@ -344,7 +344,7 @@ const results = await runHandle({
 JSON.stringify(formatHandlingLines(results[0]), null, 2)
 =>
 [
-  "  procedure-failed\trecipes (1 item) [store/recipes/archive.procedure.card]",
+  "  procedure-failed\trecipes (1 item) [_content/recipes/archive.procedure.card]",
   "    └─ step archive failed"
 ]
 ```

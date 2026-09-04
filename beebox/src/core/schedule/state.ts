@@ -15,6 +15,7 @@ import {
   LockHeldError,
 } from "../../lib/file-lock.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { getBoxDir } from "../../lib/paths.js";
 
 class ScriptAlreadyRunningError extends Error {
   constructor(scriptName: string, pid: number) {
@@ -120,7 +121,7 @@ export function normalizeScriptState(raw: ScriptStatePartial): ScriptState {
 }
 
 function stateDir(boxRoot: string): string {
-  return path.join(boxRoot, "config/schedules/.state");
+  return path.join(getBoxDir(boxRoot, "schedules"), ".state");
 }
 
 function stateFile(boxRoot: string, scriptName: string): string {

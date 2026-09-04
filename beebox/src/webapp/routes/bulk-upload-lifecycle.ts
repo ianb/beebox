@@ -81,7 +81,7 @@ async function injectStrandedSelfNote(opts: {
     `A file upload the boxholder submitted could not be delivered (${batch.state}). ` +
     `${String(batch.receivedCount)} of ${String(batch.registeredCount)} file(s) reached the box` +
     `${batch.failedCount > 0 ? `, ${String(batch.failedCount)} failed to upload` : ""}; ` +
-    `the bytes are still staged under \`tmp/capture-staging/${batch.sessionId}/\`. ${introduction} ` +
+    `the bytes are still staged under \`_tmp/capture-staging/${batch.sessionId}/\`. ${introduction} ` +
     "They have not been told this failed and may believe the upload worked. " +
     "Tell them what happened, and — if you can work out where the files should go from what they " +
     "said — offer to place them. Do not silently discard the batch.";

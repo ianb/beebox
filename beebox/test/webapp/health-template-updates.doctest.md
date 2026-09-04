@@ -1,7 +1,7 @@
 # health: parked template updates
 
 An upstream template change that can't be written (the box copy diverged) is
-parked in `config/_template-updates/<path>`. Before this check, `bbx health`
+parked in `_config/_template-updates/<path>`. Before this check, `bbx health`
 mentioned templates zero times, so a corrected procedure card could sit parked
 while the task that runs it failed identically, round after round
 (`issues/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md`).
@@ -48,14 +48,14 @@ from `PARKED_TEMPLATE_RESOLUTION`, so the instruction can't drift between them.
 
 ```ts
 const drifted = await makeTmpBox({ git: true });
-await drifted.write("config/_template-updates/config/briefing.guide.card", "---\n---\nstock\n");
-await drifted.write("config/_template-updates/config/procedures/refresh-maps.procedure.card", procedureCard);
+await drifted.write("_config/_template-updates/_config/briefing.guide.card", "---\n---\nstock\n");
+await drifted.write("_config/_template-updates/_config/procedures/refresh-maps.procedure.card", procedureCard);
 const warn = await templateUpdatesCheck(drifted.root);
 JSON.stringify({ ok: warn.ok, severity: warn.severity })
 => {"ok":false,"severity":"warning"}
 
 warn.message
-=> 2 template updates parked for review: config/briefing.guide.card, config/procedures/refresh-maps.procedure.card. Accept one by copying config/_template-updates/<path> over <path>, or discard the parked copy.
+=> 2 template updates parked for review: _config/briefing.guide.card, _config/procedures/refresh-maps.procedure.card. Accept one by copying _config/_template-updates/<path> over <path>, or discard the parked copy.
 ```
 
 ```ts cleanup
@@ -71,14 +71,14 @@ raises severity.
 
 ```ts
 const stuck = await makeTmpBox({ git: true });
-await stuck.write("config/schedules/refresh-maps.scheduled-script.card", scheduleCard("bbx procedure run refresh-maps"));
-await stuck.write("config/procedures/refresh-maps.procedure.card", procedureCard);
-await stuck.write("config/_template-updates/config/procedures/refresh-maps.procedure.card", procedureCard.replace("MAP.md", "MAP.md, skipping doubled path segments"));
+await stuck.write("_config/schedules/refresh-maps.scheduled-script.card", scheduleCard("bbx procedure run refresh-maps"));
+await stuck.write("_config/procedures/refresh-maps.procedure.card", procedureCard);
+await stuck.write("_config/_template-updates/_config/procedures/refresh-maps.procedure.card", procedureCard.replace("MAP.md", "MAP.md, skipping doubled path segments"));
 const state = normalizeScriptState({ lastRun: "2026-08-24T05:00:10Z", lastResult: "failure", consecutiveFailures: 5, lastError: "step refresh failed" });
 await saveScriptState({ boxRoot: stuck.root, scriptName: "refresh-maps", state });
 const health = await loadScheduleHealth(stuck.root, NOW);
 JSON.stringify(health.tasks.map((t) => ({ name: t.name, status: t.status, parked: t.parkedTemplateUpdates })))
-=> [{"name":"refresh-maps","status":"failing","parked":["config/procedures/refresh-maps.procedure.card"]}]
+=> [{"name":"refresh-maps","status":"failing","parked":["_config/procedures/refresh-maps.procedure.card"]}]
 ```
 
 The task association is computed in `health-box.ts`, not in the CLI, so the
@@ -90,7 +90,7 @@ JSON.stringify({ ok: err.ok, severity: err.severity })
 => {"ok":false,"severity":"error"}
 
 err.message
-=> 1 template update parked for review: config/procedures/refresh-maps.procedure.card. A parked update belongs to a task that is failing: refresh-maps — config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Accept one by copying config/_template-updates/<path> over <path>, or discard the parked copy.
+=> 1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task that is failing: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Accept one by copying _config/_template-updates/<path> over <path>, or discard the parked copy.
 ```
 
 Without the schedule health (the dashboard and `/api/health` have none loaded)
@@ -107,7 +107,7 @@ session-start summary and proactive alerts both build on
 
 ```ts continue
 summarizeScheduleHealth(health, NOW)
-=> refresh-maps: failing ×5 (never succeeded) — parked update: config/_template-updates/config/procedures/refresh-maps.procedure.card — the fix may already be on disk
+=> refresh-maps: failing ×5 (never succeeded) — parked update: _config/_template-updates/_config/procedures/refresh-maps.procedure.card — the fix may already be on disk
 ```
 
 ```ts cleanup
@@ -123,9 +123,9 @@ this area exists to undo: an inconclusive task is unknown, not broken.
 
 ```ts
 const unjudged = await makeTmpBox({ git: true });
-await unjudged.write("config/schedules/refresh-maps.scheduled-script.card", scheduleCard("bbx procedure run refresh-maps"));
-await unjudged.write("config/procedures/refresh-maps.procedure.card", procedureCard);
-await unjudged.write("config/_template-updates/config/procedures/refresh-maps.procedure.card", procedureCard.replace("MAP.md", "MAP.md, skipping doubled path segments"));
+await unjudged.write("_config/schedules/refresh-maps.scheduled-script.card", scheduleCard("bbx procedure run refresh-maps"));
+await unjudged.write("_config/procedures/refresh-maps.procedure.card", procedureCard);
+await unjudged.write("_config/_template-updates/_config/procedures/refresh-maps.procedure.card", procedureCard.replace("MAP.md", "MAP.md, skipping doubled path segments"));
 await saveScriptState({
   boxRoot: unjudged.root,
   scriptName: "refresh-maps",
@@ -141,7 +141,7 @@ print(unjudgedCheck.severity);
 print(unjudgedCheck.message);
 =>
 error
-1 template update parked for review: config/procedures/refresh-maps.procedure.card. A parked update belongs to a task whose last check reached no verdict: refresh-maps — config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Accept one by copying config/_template-updates/<path> over <path>, or discard the parked copy.
+1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task whose last check reached no verdict: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Accept one by copying _config/_template-updates/<path> over <path>, or discard the parked copy.
 ```
 
 ```ts cleanup
@@ -151,22 +151,22 @@ await unjudged.cleanup();
 ## A task whose own card is parked, and one with no relation
 
 A parked update only attaches to a task it actually belongs to: the task's own
-`config/schedules/<name>.scheduled-script.card`, or the procedure its `runs`
+`_config/schedules/<name>.scheduled-script.card`, or the procedure its `runs`
 command executes. An unrelated parked guide attaches to nothing.
 
 ```ts
-const parked = ["config/briefing.guide.card", "config/procedures/refresh-maps.procedure.card", "config/schedules/check-email.scheduled-script.card"];
+const parked = ["_config/briefing.guide.card", "_config/procedures/refresh-maps.procedure.card", "_config/schedules/check-email.scheduled-script.card"];
 JSON.stringify({ ownCard: parkedUpdatesForTask({ name: "check-email", runs: "bbx wakeup --connector gmail" }, parked), viaProcedure: parkedUpdatesForTask({ name: "refresh-maps", runs: "bbx procedure run refresh-maps" }, parked), unrelated: parkedUpdatesForTask({ name: "chat-review", runs: "bbx chat review run" }, parked) })
-=> {"ownCard":["config/schedules/check-email.scheduled-script.card"],"viaProcedure":["config/procedures/refresh-maps.procedure.card"],"unrelated":[]}
+=> {"ownCard":["_config/schedules/check-email.scheduled-script.card"],"viaProcedure":["_config/procedures/refresh-maps.procedure.card"],"unrelated":[]}
 ```
 
 `runs` is a shell command, so the procedure is read out of it the way
 `bbx procedure run` resolves its argument: a bare name under
-`config/procedures/`, an explicit card path as given.
+`_config/procedures/`, an explicit card path as given.
 
 ```ts continue
-JSON.stringify([procedureCardForRuns("bbx procedure run process-pages"), procedureCardForRuns("cd /box && bbx procedure run 'refresh maps'"), procedureCardForRuns("bbx procedure run config/procedures/custom.procedure.card"), procedureCardForRuns("bbx procedure gc"), procedureCardForRuns("bbx wakeup")])
-=> ["config/procedures/process-pages.procedure.card","config/procedures/refresh maps.procedure.card","config/procedures/custom.procedure.card",null,null]
+JSON.stringify([procedureCardForRuns("bbx procedure run process-pages"), procedureCardForRuns("cd /box && bbx procedure run 'refresh maps'"), procedureCardForRuns("bbx procedure run _config/procedures/custom.procedure.card"), procedureCardForRuns("bbx procedure gc"), procedureCardForRuns("bbx wakeup")])
+=> ["_config/procedures/process-pages.procedure.card","_config/procedures/refresh maps.procedure.card","_config/procedures/custom.procedure.card",null,null]
 ```
 
 An option that takes a value swallows it, the way the CLI's own parser does.
@@ -183,5 +183,5 @@ JSON.stringify([
   procedureCardForRuns("bbx procedure run refresh-maps; echo done"),
   procedureCardForRuns("bbx procedure run --step maps"),
 ])
-=> ["config/procedures/refresh-maps.procedure.card","config/procedures/refresh-maps.procedure.card","config/procedures/refresh-maps.procedure.card","config/procedures/refresh-maps.procedure.card","config/procedures/refresh-maps.procedure.card",null]
+=> ["_config/procedures/refresh-maps.procedure.card","_config/procedures/refresh-maps.procedure.card","_config/procedures/refresh-maps.procedure.card","_config/procedures/refresh-maps.procedure.card","_config/procedures/refresh-maps.procedure.card",null]
 ```

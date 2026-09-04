@@ -8,7 +8,7 @@
  * 3. Loop up to maxCycles times:
  *    a. Sync (bbx wakeup) — pulls from external sources, creates jobs
  *    b. generateDocs — refresh agent docs (fast mtime-cached no-op)
- *    c. Find job cards in box/jobs/
+ *    c. Find job cards in _bookkeeping/jobs/
  *    d. Run jobs via batch or chat processing (each worked by an agent)
  *    e. Stop if no jobs remain or none were processed (stuck)
  * 4. Finalize (bbx finalize) — flush outbound cards

@@ -8,8 +8,8 @@
  * - Reactions for user feedback
  * - Context notes affecting decisions
  *
- * Guides live at config/*.guide.card. The filename stem is the identity
- * (e.g., config/intake.guide.card, config/calendar.guide.card).
+ * Guides live at _config/*.guide.card. The filename stem is the identity
+ * (e.g., _config/intake.guide.card, _config/calendar.guide.card).
  *
  * The full guide is the learning document (read by the revision agent).
  * A compiled version in docs/generated/ strips it down to actionable

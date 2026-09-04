@@ -183,7 +183,7 @@ fromEnv
 ## Key resolution: a valid secret file wins over the env var
 
 ```ts continue
-await box.write("config/connectors/openai.secret.json", JSON.stringify({ apiKey: "file-key-456" }));
+await box.write("_config/connectors/openai.secret.json", JSON.stringify({ apiKey: "file-key-456" }));
 process.env["BBX_OPENAI_API_KEY"] = "env-key-123";
 const fromFile = await getOpenAiEmbeddingsKey(box.root);
 delete process.env["BBX_OPENAI_API_KEY"];
@@ -203,15 +203,15 @@ async function keyErrorName(): Promise<string> {
   }
 }
 
-await box.write("config/connectors/openai.secret.json", "not valid json");
+await box.write("_config/connectors/openai.secret.json", "not valid json");
 await keyErrorName()
 => EmbeddingsKeyError
 
-await box.write("config/connectors/openai.secret.json", JSON.stringify({ notAnApiKey: "x" }));
+await box.write("_config/connectors/openai.secret.json", JSON.stringify({ notAnApiKey: "x" }));
 await keyErrorName()
 => EmbeddingsKeyError
 
-await box.write("config/connectors/openai.secret.json", JSON.stringify({ apiKey: "" }));
+await box.write("_config/connectors/openai.secret.json", JSON.stringify({ apiKey: "" }));
 await keyErrorName()
 => EmbeddingsKeyError
 ```

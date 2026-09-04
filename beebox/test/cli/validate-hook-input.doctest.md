@@ -27,17 +27,17 @@ JSON.stringify(parseHookFilePaths({
   tool_name: "apply_patch",
   tool_input: {
     command: `*** Begin Patch
-*** Update File: store/One.memo.card
+*** Update File: _content/One.memo.card
 @@
 -old
 +new
-*** Add File: store/Two.memo.card
+*** Add File: _content/Two.memo.card
 +new
-*** Delete File: store/Old.memo.card
+*** Delete File: _content/Old.memo.card
 *** End Patch`,
   },
 }))
-=> ["store/One.memo.card","store/Two.memo.card","store/Old.memo.card"]
+=> ["_content/One.memo.card","_content/Two.memo.card","_content/Old.memo.card"]
 ```
 
 Unknown and malformed tool inputs are ignored quietly:
@@ -57,9 +57,9 @@ subprocess's potentially different cwd:
 JSON.stringify(parseHookFilePaths({
   cwd: "/box/content",
   tool_name: "apply_patch",
-  tool_input: { command: "*** Begin Patch\n*** Update File: store/One.memo.card\n*** End Patch" },
+  tool_input: { command: "*** Begin Patch\n*** Update File: _content/One.memo.card\n*** End Patch" },
 }))
-=> ["/box/content/store/One.memo.card"]
+=> ["/box/content/_content/One.memo.card"]
 ```
 
 ## Warning severity is preserved

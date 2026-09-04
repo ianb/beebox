@@ -1,6 +1,6 @@
 # Scan quarantine sidecars
 
-Every file the scan routes accept lands in `tmp/scan-quarantine/` as
+Every file the scan routes accept lands in `_tmp/scan-quarantine/` as
 `<sha256>.<ext>` beside a `<sha256>.json` sidecar holding its state machine. The
 sidecar — not memory — is the recovery source of truth: the promote worker
 re-scans this directory at startup and resumes whatever it finds, and the
@@ -43,7 +43,7 @@ function entry(sha256, overrides) {
 
 ```ts
 const box = await makeTmpBox();
-quarantineDir(box.root) === path.join(box.root, "tmp", "scan-quarantine")
+quarantineDir(box.root) === path.join(box.root, "_tmp", "scan-quarantine")
 => true
 
 await recordQuarantineEntry(box.root, entry(HASH_A));

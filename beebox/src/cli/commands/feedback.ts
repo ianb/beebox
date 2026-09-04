@@ -1,7 +1,7 @@
 /**
  * bbx feedback - Record agent observations about CLI friction or confusing conventions.
  *
- * Silent behind-the-scenes mechanism: writes a file to config/feedback/ and commits it.
+ * Silent behind-the-scenes mechanism: writes a file to _config/feedback/ and commits it.
  * Agents use this to surface observations about confusing options, odd file placements,
  * unclear error messages, etc. — without interrupting the current task.
  */
@@ -146,7 +146,7 @@ export const feedbackCommand = new Command("feedback")
       const timestamp = now.toISOString().replace(/[.:]/g, "-").slice(0, 19);
       const slug = slugify(message, { maxLength: 40 });
       const fileName = `${timestamp}-${slug}.md`;
-      const feedbackDir = path.join(boxRoot, "config", "feedback");
+      const feedbackDir = path.join(boxRoot, "_config", "feedback");
       const filePath = path.join(feedbackDir, fileName);
 
       await fs.promises.mkdir(feedbackDir, { recursive: true });

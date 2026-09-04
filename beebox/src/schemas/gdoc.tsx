@@ -7,8 +7,8 @@
  * `lossy:` so agents know what won't survive a push.
  *
  * Example file layout:
- *   store/drive/Project_Notes.gdoc.card
- *   store/drive/Project_Notes.attach/Project_Notes.md
+ *   _content/drive/Project_Notes.gdoc.card
+ *   _content/drive/Project_Notes.attach/Project_Notes.md
  *
  * Distinct from the generic `doc` schema (`src/schemas/doc.tsx`), which
  * is a freeform document with no upstream sync — use that when an agent
@@ -52,7 +52,7 @@ export const GdocSchema = cardSchema("gdoc", {
   },
   instructions: `# Gdoc Cards
 
-**Location:** Anywhere in the box, commonly \`store/drive/\`.
+**Location:** Anywhere in the box, commonly \`_content/drive/\`.
 
 Each synced Google Doc has a \`.gdoc.card\` plus a markdown file inside
 the card's \`.attach/\` scope (e.g.

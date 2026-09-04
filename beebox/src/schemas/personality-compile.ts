@@ -78,7 +78,7 @@ export function appendSpeakingVoice(lines: string[], fields: PersonalityFields):
     for (const instruction of sv.instructions ?? []) {
       lines.push(`- ${instruction}`);
     }
-    lines.push("- Edit `speaking-voice` in `config/main.personality.card` to change defaults");
+    lines.push("- Edit `speaking-voice` in `_config/main.personality.card` to change defaults");
     lines.push("- For per-message voice or instruction overrides (chat only), see `docs/generated/chat-voice.md`");
     lines.push("");
   }

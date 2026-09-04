@@ -105,9 +105,9 @@ export const statusCommand = new Command("status")
         }
       }
 
-      // Legacy schema path: a v2 box with stray *.ts files under
-      // config/schemas/ (the pre-package location) — invisible to the loader
-      // and to the validate hook, so call it out explicitly.
+      // Legacy schema path: stray *.ts files under _config/schemas/ (the
+      // pre-src/schemas/ location) — invisible to the loader and to the
+      // validate hook, so call it out explicitly.
       const shape = await getBoxShape(boxRoot);
       const legacySchemaFiles = await findLegacySchemaFiles(shape);
       if (legacySchemaFiles.length > 0) {

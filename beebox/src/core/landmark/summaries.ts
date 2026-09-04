@@ -146,7 +146,7 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
   const matches = await glob("**/*.landmark.card", {
     cwd: boxRoot,
     nodir: true,
-    ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+    ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
   });
 
   // Read the cards concurrently — they're independent files and the picker

@@ -7,11 +7,18 @@ a box that needs a human alone. See `src/core/docs-refresh.ts`.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
-import { rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { rm, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { refreshGeneratedDocs } from "../../src/core/docs-refresh.js";
 import { GENERATE_MARKER } from "../../src/core/docs-gen/index.js";
+import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
+
+// This runs a real, executable `.git/hooks/pre-commit`. In a linked worktree,
+// `resolveBbxBin` (install-validation-hooks.ts) would otherwise stamp the
+// MAIN checkout's `bbx` — which can lag behind whatever this worktree is
+// actively developing — so pin it to this checkout's own freshly-built binary.
+process.env["BBX_HOOK_BIN"] = join(PACKAGE_ROOT, "bin", "bbx");
 
 /** A committed, clean box shaped enough like a real one for a full doc run:
  *  the box `.gitignore` a real box gets from `bbx init` (without it, the
@@ -27,12 +34,7 @@ async function makeCleanBox() {
 }
 
 function git(box, ...args) {
-  return execFileSync("git", args, { cwd: box.packageRoot }).toString().trim();
-}
-
-/** `.claude/` lives at the PACKAGE root for a v2 box, not under `content/`. */
-function packagePath(box, rel) {
-  return join(box.packageRoot, rel);
+  return execFileSync("git", args, { cwd: box.root }).toString().trim();
 }
 ```
 
@@ -109,14 +111,14 @@ deploy stamp gives on the real path.
 const box = await makeCleanBox();
 await refreshGeneratedDocs({ boxRoot: box.root });
 
-await writeFile(packagePath(box, ".claude/rules/card-pdf.md"), "stale rule\n");
-await writeFile(packagePath(box, ".claude/skills/views/SKILL.md"), "stale skill\n");
+await writeFile(box.path(".claude/rules/card-pdf.md"), "stale rule\n");
+await writeFile(box.path(".claude/skills/views/SKILL.md"), "stale skill\n");
 await rm(box.path(GENERATE_MARKER));
 box.commitAll("box carries stale generated guidance");
 
 const result = await refreshGeneratedDocs({ boxRoot: box.root });
-const rule = await box.read("../.claude/rules/card-pdf.md");
-const skill = await box.read("../.claude/skills/views/SKILL.md");
+const rule = await box.read(".claude/rules/card-pdf.md");
+const skill = await box.read(".claude/skills/views/SKILL.md");
 JSON.stringify({
   status: result.status,
   rule: rule.startsWith("stale"),
@@ -138,7 +140,7 @@ next deploy retries.
 
 ```ts
 const box = await makeCleanBox();
-await box.write("box/notes.md", "work in progress\n");
+await box.write("_content/notes.md", "work in progress\n");
 
 const result = await refreshGeneratedDocs({ boxRoot: box.root });
 JSON.stringify({

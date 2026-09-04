@@ -5,7 +5,7 @@ confidence. `mapDeepgramWords` (`src/core/transcription/deepgram.ts`) carries
 it into `WordTimestamp.confidence`, guarding at read because Deepgram success
 responses are not zod-validated: a word is only attached with `confidence`
 when the raw value is genuinely a `number`. The fake transcription service
-(`config/fake-transcription.json`) can script `confidence` on words too, so
+(`_config/fake-transcription.json`) can script `confidence` on words too, so
 doctests can exercise the field without a real Deepgram call.
 
 ```ts setup
@@ -77,14 +77,14 @@ JSON.stringify(
 
 ## Fake service round-trips scripted confidence
 
-`transcribeAudioFake` reads `config/fake-transcription.json` and returns the
+`transcribeAudioFake` reads `_config/fake-transcription.json` and returns the
 scripted `words` array verbatim — so a test can script `confidence` on a word
 just like a real Deepgram batch response would carry it.
 
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "config/fake-transcription.json",
+  "_config/fake-transcription.json",
   JSON.stringify({
     "*": {
       text: "cloud code",

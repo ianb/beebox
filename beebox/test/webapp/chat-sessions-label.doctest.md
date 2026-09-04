@@ -51,9 +51,9 @@ await seedTranscript(box.root, "titled01", "hey can you look at the thing from y
 await seedTranscript(box.root, "untitled1", "what's on my calendar tomorrow");
 
 // Both sessions have a husk; only the first one carries a title.
-await box.write("store/chat/web/2026-07-28_titled01.chat.card",
+await box.write("_content/chat/web/2026-07-28_titled01.chat.card",
   "---\nsession: titled01\ntitle: Chasing down a duplicate charge\n---\n\n");
-await box.write("store/chat/web/2026-07-28_untitled1.chat.card",
+await box.write("_content/chat/web/2026-07-28_untitled1.chat.card",
   "---\nsession: untitled1\n---\n\n");
 
 const { sessions } = await caller(box.root).chat.sessions();
@@ -84,7 +84,7 @@ A husk whose transcript is gone is skipped too — there's nothing to resume,
 though the card stays browsable.
 
 ```ts continue
-await box.write("store/chat/web/2026-07-28_notrans1.chat.card",
+await box.write("_content/chat/web/2026-07-28_notrans1.chat.card",
   "---\nsession: notrans1\n---\n\n");
 
 const stillGone = await caller(box.root).chat.sessions();
@@ -99,7 +99,7 @@ back to the id prefix rather than failing the whole list. (Expect a
 ```ts continue
 await mkdir(dirname(getSessionLogPath(box.root, "garbled9")), { recursive: true });
 await writeFile(getSessionLogPath(box.root, "garbled9"), "not json at all\n");
-await box.write("store/chat/web/2026-07-28_garbled9.chat.card",
+await box.write("_content/chat/web/2026-07-28_garbled9.chat.card",
   "---\nsession: garbled9\n---\n\n");
 
 const garbled = await caller(box.root).chat.sessions();
@@ -121,21 +121,21 @@ resolved server-side so the dropdown doesn't have to.
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-await box.write("store/recipes/Recipes.landmark.card",
+await box.write("_content/recipes/Recipes.landmark.card",
   "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n\n");
 
-await seedTranscript(box.path("store/recipes"), "inrecipe1", "what can I make with lentils");
+await seedTranscript(box.path("_content/recipes"), "inrecipe1", "what can I make with lentils");
 await seedTranscript(box.root, "rootchat1", "how's my week looking");
 
-await box.write("store/chat/web/2026-07-28_inrecipe1.chat.card",
-  "---\nsession: inrecipe1\ncontext-dir: store/recipes\n---\n\n");
-await box.write("store/chat/web/2026-07-28_rootchat1.chat.card",
+await box.write("_content/chat/web/2026-07-28_inrecipe1.chat.card",
+  "---\nsession: inrecipe1\ncontext-dir: _content/recipes\n---\n\n");
+await box.write("_content/chat/web/2026-07-28_rootchat1.chat.card",
   "---\nsession: rootchat1\n---\n\n");
 
 const { sessions } = await caller(box.root).chat.sessions();
 sessions.map((s) => `${s.sessionId} [${s.contextDir}] ${s.landmarkLabel}`).toSorted().join("\n")
 =>
-inrecipe1 [store/recipes] Recipes
+inrecipe1 [_content/recipes] Recipes
 rootchat1 [] Root
 ```
 
@@ -143,14 +143,14 @@ A session bound to a directory with no landmark card (deleted, or never one)
 still says where it lives — the directory itself is the fallback label.
 
 ```ts continue
-await seedTranscript(box.path("store/orphan"), "orphaned1", "leftover thread");
-await box.write("store/chat/web/2026-07-28_orphaned1.chat.card",
-  "---\nsession: orphaned1\ncontext-dir: store/orphan\n---\n\n");
+await seedTranscript(box.path("_content/orphan"), "orphaned1", "leftover thread");
+await box.write("_content/chat/web/2026-07-28_orphaned1.chat.card",
+  "---\nsession: orphaned1\ncontext-dir: _content/orphan\n---\n\n");
 
 const after = await caller(box.root).chat.sessions();
 const orphan = after.sessions.find((s) => s.sessionId === "orphaned1");
 `${orphan.contextDir} / ${orphan.landmarkLabel}`
-=> store/orphan / store/orphan
+=> _content/orphan / _content/orphan
 ```
 
 ```ts cleanup

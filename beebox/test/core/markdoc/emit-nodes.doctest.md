@@ -97,9 +97,9 @@ tag's usage text from compiled output. Both spellings emit now — `usage`
 preferred, `as` kept for cards written before the rename.
 
 ```ts
-JSON.stringify(emitBodyAsMarkdown('{% source ref="store/recipes/stew.recipe.card" usage="verbatim" %}Browning first is the whole trick.{% /source %}'))
+JSON.stringify(emitBodyAsMarkdown('{% source ref="_content/recipes/stew.recipe.card" usage="verbatim" %}Browning first is the whole trick.{% /source %}'))
 => "Browning first is the whole trick. [→ stew: verbatim]\n\n"
 
-JSON.stringify(emitBodyAsMarkdown('{% source ref="store/recipes/stew.recipe.card" %}Browning first is the whole trick.{% /source %}'))
+JSON.stringify(emitBodyAsMarkdown('{% source ref="_content/recipes/stew.recipe.card" %}Browning first is the whole trick.{% /source %}'))
 => "Browning first is the whole trick. [→ stew]\n\n"
 ```

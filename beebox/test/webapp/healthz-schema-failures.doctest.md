@@ -21,11 +21,10 @@ import * as path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { invalidateBoxSchemas } from "../../src/schemas/registry.js";
 
-// Box-local schemas live at `<packageRoot>/src/schemas/` for a v2 box — one
-// level up from the operational box root — resolved natively through the
-// box's own `node_modules/beebox` (the test server scaffolds it).
+// Box-local schemas live at `<boxRoot>/src/schemas/` — resolved natively
+// through the box's own `node_modules/beebox` (the test server scaffolds it).
 async function writeSchema(server, name, content) {
-  const full = path.join(path.dirname(server.boxRoot), "src/schemas", name);
+  const full = path.join(server.boxRoot, "src/schemas", name);
   await mkdir(path.dirname(full), { recursive: true });
   await writeFile(full, content);
 }

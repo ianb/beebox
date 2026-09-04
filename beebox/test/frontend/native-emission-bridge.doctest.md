@@ -59,11 +59,11 @@ const complete = nativeEmissionFromDetail({
   text: "See [file2] and [selection3]",
   diarized: false,
   images: [],
-  files: [{ id: 2, path: "tmp/report.pdf", originalName: "report.pdf", size: 42, mimetype: "application/pdf" }],
+  files: [{ id: 2, path: "_tmp/report.pdf", originalName: "report.pdf", size: 42, mimetype: "application/pdf" }],
   selections: [{ id: 3, ref: "/notes/plan.md", text: "the plan", position: "paragraph 2", anchor: null, spokenWords: null }],
 });
 JSON.stringify({ files: complete?.files, selections: complete?.selections })
-=> {"files":[{"id":2,"path":"tmp/report.pdf","originalName":"report.pdf","size":42,"mimetype":"application/pdf"}],"selections":[{"id":3,"ref":"/notes/plan.md","text":"the plan","position":"paragraph 2","anchor":null,"spokenWords":null}]}
+=> {"files":[{"id":2,"path":"_tmp/report.pdf","originalName":"report.pdf","size":42,"mimetype":"application/pdf"}],"selections":[{"id":3,"ref":"/notes/plan.md","text":"the plan","position":"paragraph 2","anchor":null,"spokenWords":null}]}
 ```
 
 HQ provenance from native survives the bridge so chat history can render the

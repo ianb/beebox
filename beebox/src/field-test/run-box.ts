@@ -41,27 +41,25 @@ const TEST_BOX_MARKER_BODY = [
 ].join("\n");
 
 export interface FieldBox {
-  /** Git root and `bbx serve` argument: the v2 PACKAGE root. */
-  packageRoot: string;
-  /** The operational box root — `<packageRoot>/content` for a v2 box. */
+  /** Git root, box root, and `bbx serve` argument — one root (shapeVersion 3). */
   boxRoot: string;
-  /** URL slug the server mounts this box under (the package root's basename). */
+  /** URL slug the server mounts this box under (the box root's basename). */
   slug: string;
 }
 
 class FieldBoxInitError extends Error {
-  constructor({ packageRoot, exitCode, output }: { packageRoot: string; exitCode: number | undefined; output: string }) {
+  constructor({ boxRoot, exitCode, output }: { boxRoot: string; exitCode: number | undefined; output: string }) {
     super(
-      `bbx init ${packageRoot} failed (exit ${exitCode === undefined ? "unknown" : String(exitCode)}):\n${output}`
+      `bbx init ${boxRoot} failed (exit ${exitCode === undefined ? "unknown" : String(exitCode)}):\n${output}`
     );
     this.name = "FieldBoxInitError";
   }
 }
 
 class FieldBoxExistsError extends Error {
-  constructor(packageRoot: string) {
+  constructor(boxRoot: string) {
     super(
-      `${packageRoot} already exists — a field run must create its box from nothing ` +
+      `${boxRoot} already exists — a field run must create its box from nothing ` +
         "(`bbx init` over an existing directory updates it in place, inheriting the previous run's state)."
     );
     this.name = "FieldBoxExistsError";
@@ -81,7 +79,7 @@ export function bbxBinary(): string {
  * half needs. Refuses a `<runDir>/box` that already exists.
  */
 export async function createFieldBox(runDir: string): Promise<FieldBox> {
-  const packageRoot = path.join(runDir, "box");
+  const target = path.join(runDir, "box");
   await mkdir(runDir, { recursive: true });
 
   // Enforced, not merely intended: `bbx init` over an existing directory is an
@@ -89,11 +87,11 @@ export async function createFieldBox(runDir: string): Promise<FieldBox> {
   // mode, and the baseline commit at the end is skipped), so a reused run
   // directory would quietly inherit the previous run's cards, git history and
   // connector state. A run must start from nothing.
-  if (await fileExists(packageRoot)) {
-    throw new FieldBoxExistsError(packageRoot);
+  if (await fileExists(target)) {
+    throw new FieldBoxExistsError(target);
   }
 
-  const result = await execa(bbxBinary(), ["init", packageRoot], {
+  const result = await execa(bbxBinary(), ["init", target], {
     cwd: runDir,
     reject: false,
     all: true,
@@ -111,26 +109,26 @@ export async function createFieldBox(runDir: string): Promise<FieldBox> {
     // `all` interleaves stdout+stderr: `bbx init` reports its failures on both
     // (commander errors on stderr, progress on stdout), and the last lines of
     // the progress are what say how far it got.
-    throw new FieldBoxInitError({ packageRoot, exitCode: result.exitCode, output: String(result.all) });
+    throw new FieldBoxInitError({ boxRoot: target, exitCode: result.exitCode, output: String(result.all) });
   }
 
-  // `bbx init` scaffolds `packageRoot` itself as the (one) box root; confirm
+  // `bbx init` scaffolds `target` itself as the (one) box root; confirm
   // that via the shared resolver rather than assuming it.
-  const boxRoot = await requireBoxRoot(packageRoot);
+  const boxRoot = await requireBoxRoot(target);
   await writeFileAtomic(path.join(boxRoot, TEST_BOX_MARKER), { content: TEST_BOX_MARKER_BODY });
 
   // `bbx init` leaves a fresh box committed and clean, so the only thing to
   // commit here is the marker. A dirty tree beyond that would mean init's own
   // commit didn't happen — commit it all rather than leaving a run's baseline
   // half-tracked, since `reset`-policy cleanup later rewinds to this commit.
-  const status = await getStatus(packageRoot);
+  const status = await getStatus(boxRoot);
   if (!status.clean) {
-    await stageAll(packageRoot);
-    await commit(packageRoot, {
+    await stageAll(boxRoot);
+    await commit(boxRoot, {
       message: "Field-test baseline",
       trailers: { "Created-By": "bbx field-test" },
     });
   }
 
-  return { packageRoot, boxRoot, slug: await boxSlug(boxRoot) };
+  return { boxRoot, slug: await boxSlug(boxRoot) };
 }

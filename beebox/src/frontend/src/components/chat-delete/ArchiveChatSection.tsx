@@ -4,7 +4,7 @@
  * Archiving sits beside deleting because it is the same decision made
  * differently — the boxholder is looking at a chat they no longer want in
  * their lists — but it removes nothing: the card moves to
- * `store/chat/archive/`, which is enough to take it out of every list and out
+ * `_content/chat/archive/`, which is enough to take it out of every list and out
  * of the review corpus (`docs/implemented-plans/chat-session-identity.md`, Track 3).
  *
  * Offered only for a chat whose transcript is gone. Archiving a live chat
@@ -45,7 +45,7 @@ export function ArchiveChatSection({ sessionId, huskPath, busy, onArchived }: {
       <h3 className="font-semibold text-warm-900">Archive instead</h3>
       <p className="mt-1">
         {dead
-          ? "Moves this chat’s card to store/chat/archive/; nothing is deleted."
+          ? "Moves this chat’s card to _content/chat/archive/; nothing is deleted."
           : "This conversation can still be opened, so there is nothing to archive yet."}
       </p>
       {mutation.error ? (

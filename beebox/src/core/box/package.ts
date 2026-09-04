@@ -80,12 +80,6 @@ export interface BoxTarget {
   /** The box root — the ONE root; `.beebox/box.json`, `_content/`,
    * `_config/`, `package.json`/`node_modules`/`src/` all live here (or will). */
   boxRoot: string;
-  /**
-   * @deprecated Alias for `boxRoot` — shapeVersion 3 has one root. Kept so
-   * callers that still read `.packageRoot` (init.ts, its doctest) keep
-   * compiling and stay correct; a later track deletes it.
-   */
-  packageRoot: string;
 }
 
 /**
@@ -95,7 +89,7 @@ export interface BoxTarget {
 export async function detectBoxTarget(targetPath: string): Promise<BoxTarget> {
   const resolvedRoot = path.resolve(targetPath);
   const mode: BoxInitMode = (await isValidBox(resolvedRoot)) ? "update" : "fresh";
-  return { mode, boxRoot: resolvedRoot, packageRoot: resolvedRoot };
+  return { mode, boxRoot: resolvedRoot };
 }
 
 interface EngineVersions {
@@ -170,19 +164,19 @@ async function readEngineVersions(): Promise<EngineVersions> {
  *   `node_modules/beebox` at the running engine's `PACKAGE_ROOT`.
  *   Production `bbx init` wants it (native schema/view resolution); cheap
  *   fixtures that only read/write cards don't, and skip it. Defaults to true.
- * @throws BoxPackageConflictError if `packageRoot` already has a `package.json`
+ * @throws BoxPackageConflictError if `boxRoot` already has a `package.json`
  */
 export async function scaffoldPackageRoot(
-  packageRoot: string,
+  boxRoot: string,
   options?: { symlinkBeeBox?: boolean }
 ): Promise<void> {
   const symlinkBeeBox = options?.symlinkBeeBox ?? true;
-  await fs.mkdir(packageRoot, { recursive: true });
+  await fs.mkdir(boxRoot, { recursive: true });
 
-  const packageJsonPath = path.join(packageRoot, "package.json");
+  const packageJsonPath = path.join(boxRoot, "package.json");
   if (await pathExists(packageJsonPath)) {
     throw new BoxPackageConflictError(
-      `Cannot initialize a beebox package at ${packageRoot}: it already has a ` +
+      `Cannot initialize a beebox package at ${boxRoot}: it already has a ` +
         "package.json. Fresh `bbx init` scaffolds a new coding-session package there and " +
         "won't overwrite an existing one — remove it first, or run `bbx init` on the " +
         "directory only after confirming it's meant to become a box package."
@@ -192,7 +186,7 @@ export async function scaffoldPackageRoot(
   const versions = await readEngineVersions();
   const beeBoxSpec = process.env.BBX_INIT_BEEBOX_SPEC ?? defaultBeeBoxSpec(versions.engine);
   const packageJson = {
-    name: path.basename(packageRoot),
+    name: path.basename(boxRoot),
     private: true,
     type: "module",
     // react/react-dom are DIRECT deps of the box, not left to hoisting:
@@ -236,14 +230,14 @@ export async function scaffoldPackageRoot(
   await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
 
   await writeFileIfAbsent(
-    path.join(packageRoot, "tsconfig.json"),
+    path.join(boxRoot, "tsconfig.json"),
     JSON.stringify({ extends: "beebox/tsconfig.base.json", include: ["src"] }, null, 2) + "\n"
   );
 
-  await fs.mkdir(path.join(packageRoot, "src"), { recursive: true });
+  await fs.mkdir(path.join(boxRoot, "src"), { recursive: true });
 
   if (symlinkBeeBox) {
-    const nodeModulesDir = path.join(packageRoot, "node_modules");
+    const nodeModulesDir = path.join(boxRoot, "node_modules");
     if (!(await pathExists(nodeModulesDir))) {
       await fs.mkdir(nodeModulesDir, { recursive: true });
       await fs.symlink(PACKAGE_ROOT, path.join(nodeModulesDir, "beebox"), "dir");
@@ -253,12 +247,6 @@ export async function scaffoldPackageRoot(
 
 /** A scaffolded shapeVersion-3 box: one root. */
 export interface ScaffoldedBox {
-  /**
-   * @deprecated Alias for `boxRoot` — shapeVersion 3 has one root. Kept so
-   * callers that still read `.packageRoot` keep compiling and stay correct;
-   * a later track deletes it.
-   */
-  packageRoot: string;
   /** The box root — where `package.json`/`node_modules`/`src/`,
    * `.beebox/box.json`, and every `_`-prefixed operational area live. */
   boxRoot: string;
@@ -288,7 +276,7 @@ export async function scaffoldBoxRoot(
   const boxRoot = path.resolve(target);
   await scaffoldPackageRoot(boxRoot, { symlinkBeeBox: options?.deps ?? false });
   await initBox(boxRoot, { skipGit: true });
-  return { packageRoot: boxRoot, boxRoot };
+  return { boxRoot };
 }
 
 /** Whether `filePath` exists, tolerating (only) the not-found case. */

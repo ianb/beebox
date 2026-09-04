@@ -16,7 +16,7 @@ The reactor is the main orchestration loop that turns pending job cards into com
   │     │                                          │ │
   │     │  a. bbx wakeup (sync external sources)    │ │
   │     │  b. generateDocs (refresh agent docs)    │ │
-  │     │  c. findJobCards (scan box/jobs/)         │ │
+  │     │  c. findJobCards (scan _bookkeeping/jobs/)         │ │
   │     │  d. Agent processing (batch or chat)     │ │
   │     │  e. Count remaining → loop or stop       │ │
   │     └──────────────────────────────────────────┘ │
@@ -60,7 +60,7 @@ Batch processing is natural for jobs that are independent tasks (e.g., "write a 
 
 ## Job Lifecycle
 
-1. **Creation:** Jobs appear in `box/jobs/` via connectors (sync phase), intake, or manual placement. They're YAML-frontmatter cards with the `.job.card` suffix (e.g. `2026-07-04T12-00-00-gmail.intake.job.card`). Each card's frontmatter carries a `source:` field naming the connector that owns it (e.g. `gmail`, `telegram`, `calendar`) or a cross-cutting bucket (`wakeup`, `feedback-sync`, `question-answer`):
+1. **Creation:** Jobs appear in `_bookkeeping/jobs/` via connectors (sync phase), intake, or manual placement. They're YAML-frontmatter cards with the `.job.card` suffix (e.g. `2026-07-04T12-00-00-gmail.intake.job.card`). Each card's frontmatter carries a `source:` field naming the connector that owns it (e.g. `gmail`, `telegram`, `calendar`) or a cross-cutting bucket (`wakeup`, `feedback-sync`, `question-answer`):
 
    ```
    ---
@@ -69,8 +69,8 @@ Batch processing is natural for jobs that are independent tasks (e.g., "write a 
    priority: normal
    description: 3 new emails to triage
    items:
-     - ref: box/inbox/2026-07-04T12-00-00-Invoice.email.card
-     - ref: box/inbox/2026-07-04T12-01-00-Newsletter.email.card
+     - ref: _content/inbox/2026-07-04T12-00-00-Invoice.email.card
+     - ref: _content/inbox/2026-07-04T12-01-00-Newsletter.email.card
    ---
    ```
 2. **Discovery:** `findJobCards()` scans the directory, extracts priority and source, and sorts normal-priority first.
@@ -79,7 +79,7 @@ Batch processing is natural for jobs that are independent tasks (e.g., "write a 
 
 ## Source Filter
 
-`runReactor` accepts a `sourceFilter` option. When set, jobs whose `source:` frontmatter field does not match are skipped — left in `box/jobs/` for a later run that does match them. This is how `bbx wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `source: gmail` jobs, even if telegram or feedback jobs are also pending.
+`runReactor` accepts a `sourceFilter` option. When set, jobs whose `source:` frontmatter field does not match are skipped — left in `_bookkeeping/jobs/` for a later run that does match them. This is how `bbx wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `source: gmail` jobs, even if telegram or feedback jobs are also pending.
 
 Cross-cutting jobs (e.g. `feedback-sync` for guide revisions, `question-answer` for question follow-ups) carry sources that no connector matches, so they only run when the reactor is invoked with no filter (a full `bbx wakeup`, or `bbx reactor` directly).
 

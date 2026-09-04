@@ -2,7 +2,7 @@
  * Scheduled script card schema - declarative scheduling for commands.
  *
  * Scheduled scripts define what to run and when. They live in
- * config/schedules/ and are evaluated by `bbx tick` (cron) and
+ * _config/schedules/ and are evaluated by `bbx tick` (cron) and
  * `bbx wakeup` (on-wakeup scripts).
  *
  * The filename stem is the identity (e.g., check-email.scheduled-script.card).
@@ -65,7 +65,7 @@ export const ScheduledScriptSchema = cardSchema("scheduled-script", {
   },
   instructions: `# Scheduled Script Cards
 
-Scheduled scripts define commands to run on a schedule. They live in \`config/schedules/\`.
+Scheduled scripts define commands to run on a schedule. They live in \`_config/schedules/\`.
 
 ## Schedule Types (mutually exclusive)
 - **cron**: Standard cron expression (e.g., \`0 6 * * *\` for 6am daily)

@@ -22,19 +22,19 @@ linting it surfaces the one broken link:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await mkdir(join(box.root, "store/images"), { recursive: true });
-await writeFile(join(box.root, "store/images/a.webp"), "x");
+await mkdir(join(box.root, "_content/images"), { recursive: true });
+await writeFile(join(box.root, "_content/images/a.webp"), "x");
 
-const doc = join(box.root, "store/docs/saoirse.md");
+const doc = join(box.root, "_content/docs/saoirse.md");
 await mkdir(dirname(doc), { recursive: true });
-await writeFile(doc, "![ok](/store/images/a.webp)\n![broken](/store/images/missing.webp)\n");
+await writeFile(doc, "![ok](/_content/images/a.webp)\n![broken](/_content/images/missing.webp)\n");
 execSync("git add -A", { cwd: box.root });
 
 const staged = await listStagedMarkdown(box.root);
 staged.map((p) => relative(box.root, p))
 =>
 [
-  "store/docs/saoirse.md"
+  "_content/docs/saoirse.md"
 ]
 ```
 
@@ -52,7 +52,7 @@ await box.cleanup();
 docs, and non-markdown:
 
 ```ts
-isLintableMarkdown("store/docs/saoirse.md")
+isLintableMarkdown("_content/docs/saoirse.md")
 => true
 
 isLintableMarkdown("CLAUDE.md")
@@ -61,26 +61,26 @@ isLintableMarkdown("CLAUDE.md")
 isLintableMarkdown("notes/AGENTS.md")
 => false
 
-isLintableMarkdown("store/x/.claude/rules/foo.md")
+isLintableMarkdown("_content/x/.claude/rules/foo.md")
 => false
 
-isLintableMarkdown("store/notes.txt")
+isLintableMarkdown("_content/notes.txt")
 => false
 ```
 
 It also skips bbx's own machine-generated docs — a `docs/generated/` segment pair
 at ANY depth, not just box root (generated trees are nested per-area, e.g.
-`store/roadtrip/docs/generated/`). A plain `docs/` dir that isn't generated is
+`_content/roadtrip/docs/generated/`). A plain `docs/` dir that isn't generated is
 still linted:
 
 ```ts
 isLintableMarkdown("docs/generated/card-doc.md")
 => false
 
-isLintableMarkdown("store/roadtrip/docs/generated/card-email-outbound.md")
+isLintableMarkdown("_content/roadtrip/docs/generated/card-email-outbound.md")
 => false
 
-isLintableMarkdown("store/handbook/docs/onboarding.md")
+isLintableMarkdown("_content/handbook/docs/onboarding.md")
 => true
 ```
 
@@ -91,10 +91,10 @@ returns advisory text, or null when the box is link-clean.
 ```ts
 const box3 = await makeTmpBox();
 await mkdir(join(box3.root, "store"), { recursive: true });
-await writeFile(join(box3.root, "store/note.md"), "![gone](/store/gone.png)\n");
+await writeFile(join(box3.root, "_content/note.md"), "![gone](/_content/gone.png)\n");
 const warn = await boxWideLinkWarnings(box3.root);
 await box3.cleanup();
-[warn?.includes("Broken link: /store/gone.png"), warn?.includes("not blocking the commit")]
+[warn?.includes("Broken link: /_content/gone.png"), warn?.includes("not blocking the commit")]
 =>
 [
   true,
@@ -104,9 +104,9 @@ await box3.cleanup();
 
 ```ts
 const box4 = await makeTmpBox();
-await mkdir(join(box4.root, "store/img"), { recursive: true });
-await writeFile(join(box4.root, "store/img/a.png"), "x");
-await writeFile(join(box4.root, "store/ok.md"), "![a](/store/img/a.png)\n");
+await mkdir(join(box4.root, "_content/img"), { recursive: true });
+await writeFile(join(box4.root, "_content/img/a.png"), "x");
+await writeFile(join(box4.root, "_content/ok.md"), "![a](/_content/img/a.png)\n");
 const clean = await boxWideLinkWarnings(box4.root);
 await box4.cleanup();
 clean
@@ -126,37 +126,37 @@ genWarn
 => null
 ```
 
-Nested per-area generated docs (`store/<area>/docs/generated/`, the shape that
+Nested per-area generated docs (`_content/<area>/docs/generated/`, the shape that
 actually appeared on prod) are skipped too — the old root-anchored ignore missed
 these, so their placeholder links leaked into the scan:
 
 ```ts
 const box6 = await makeTmpBox();
-await mkdir(join(box6.root, "store/roadtrip/docs/generated"), { recursive: true });
-await writeFile(join(box6.root, "store/roadtrip/docs/generated/card-doc.md"), "![caffeine](/store/figures/Molecule.figure.card)\n[Recipe](/store/archive/Pasta.recipe.card)\n");
+await mkdir(join(box6.root, "_content/roadtrip/docs/generated"), { recursive: true });
+await writeFile(join(box6.root, "_content/roadtrip/docs/generated/card-doc.md"), "![caffeine](/_content/figures/Molecule.figure.card)\n[Recipe](/_content/archive/Pasta.recipe.card)\n");
 const nestedWarn = await boxWideLinkWarnings(box6.root);
 await box6.cleanup();
 nestedWarn
 => null
 ```
 
-The box-specific `config/bbx-validate.ignore` (the boxholder's gitignore-style
+The box-specific `_config/bbx-validate.ignore` (the boxholder's gitignore-style
 escape hatch) suppresses links under any path it matches. A broken link in a
 vendored tree is silenced once the tree is listed, and restored when it isn't:
 
 ```ts
 const box7 = await makeTmpBox();
 await mkdir(join(box7.root, "vendor/imported"), { recursive: true });
-await writeFile(join(box7.root, "vendor/imported/sample.md"), "![gone](/store/nope.png)\n");
+await writeFile(join(box7.root, "vendor/imported/sample.md"), "![gone](/_content/nope.png)\n");
 
 const beforeIgnore = await boxWideLinkWarnings(box7.root);
-beforeIgnore?.includes("Broken link: /store/nope.png")
+beforeIgnore?.includes("Broken link: /_content/nope.png")
 => true
 ```
 
 ```ts continue
-await mkdir(join(box7.root, "config"), { recursive: true });
-await writeFile(join(box7.root, "config/bbx-validate.ignore"), "vendor/**\n");
+await mkdir(join(box7.root, "_config"), { recursive: true });
+await writeFile(join(box7.root, "_config/bbx-validate.ignore"), "vendor/**\n");
 const afterIgnore = await boxWideLinkWarnings(box7.root);
 await box7.cleanup();
 afterIgnore

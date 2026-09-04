@@ -13,7 +13,7 @@ import { huskTranscriptPath } from "../../../src/core/chat/husk-transcript.js";
 
 const session = "0198f0b0-3333-7333-8333-333333333333";
 function husk(contextDir) {
-  return { path: "store/chat/web/2026-08-26_0198f0b0.chat.card", session, ...(contextDir === undefined ? {} : { contextDir }) };
+  return { path: "_content/chat/web/2026-08-26_0198f0b0.chat.card", session, ...(contextDir === undefined ? {} : { contextDir }) };
 }
 ```
 
@@ -28,7 +28,7 @@ silently reinterpreted.
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("projects");
 
-huskTranscriptPath(box.root, husk("store/recipes")) === huskTranscriptPath(box.root, husk(undefined))
+huskTranscriptPath(box.root, husk("_content/recipes")) === huskTranscriptPath(box.root, husk(undefined))
 => false
 
 huskTranscriptPath(box.root, husk("../../elsewhere")) === huskTranscriptPath(box.root, husk(undefined))

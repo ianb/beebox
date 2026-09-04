@@ -1,7 +1,7 @@
 # Scan guide context resolution
 
 The scan-import photo flow gets its boxholder priors from
-`config/scan.guide.card`, compiled in-memory into prompt-ready markdown. The
+`_config/scan.guide.card`, compiled in-memory into prompt-ready markdown. The
 legacy box-root `CLAUDE_SCANS.md` is a deprecated fallback that keeps working
 with a warning; a present-but-invalid guide card is a hard error rather than
 a silent scan-without-priors. This file pins that resolution ladder.
@@ -19,7 +19,7 @@ import { createInitialGuideTemplate } from "../../../src/schemas/guide.js";
 
 async function makeBoxDir(): Promise<string> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "scan-guide-"));
-  await fs.mkdir(path.join(root, "config"), { recursive: true });
+  await fs.mkdir(path.join(root, "_config"), { recursive: true });
   return root;
 }
 
@@ -145,16 +145,16 @@ async function resolveError(root) {
 
 const root = await makeBoxDir();
 await writeGuide(root, "just prose, no frontmatter\n");
-(await resolveError(root)).includes("ScanGuideParseError: config/scan.guide.card has no YAML frontmatter")
+(await resolveError(root)).includes("ScanGuideParseError: _config/scan.guide.card has no YAML frontmatter")
 => true
 
 await writeGuide(root, "---\nversion: [unclosed\n---\n");
-(await resolveError(root)).startsWith("ScanGuideParseError: config/scan.guide.card has invalid YAML:")
+(await resolveError(root)).startsWith("ScanGuideParseError: _config/scan.guide.card has invalid YAML:")
 => true
 
 await writeGuide(root, "---\ntriage-rules: 5\n---\n");
 await resolveError(root)
-=> ScanGuideParseError: config/scan.guide.card fails guide schema validation: triage-rules: Invalid input: expected array, received number — fix the card (bbx validate config/scan.guide.card)
+=> ScanGuideParseError: _config/scan.guide.card fails guide schema validation: triage-rules: Invalid input: expected array, received number — fix the card (bbx validate _config/scan.guide.card)
 
 await fs.rm(root, { recursive: true, force: true });
 ```

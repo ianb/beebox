@@ -47,8 +47,8 @@ async function throwMessage(fn: () => Promise<unknown>): Promise<string> {
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to June 17."));
-await box.write("box/inbox/Bill.memo.card", MEMO("The electric bill is due.", "Electric bill due Friday."));
+await box.write("_content/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to June 17."));
+await box.write("_content/inbox/Bill.memo.card", MEMO("The electric bill is due.", "Electric bill due Friday."));
 const fake = createFakeEmbeddings();
 const res = await searchBox(box.root, { query: "Dentist moved to June 17.", embeddings: fake });
 res.searchMode
@@ -58,7 +58,7 @@ res.embeddingsReady
 => true
 
 res.results[0]?.path
-=> box/inbox/Dentist.memo.card
+=> _content/inbox/Dentist.memo.card
 
 JSON.stringify(res.warnings)
 => []
@@ -84,7 +84,7 @@ A `--kind`-restricted hybrid search returns only that kind; the `where` filter
 applies to both the text and vector halves.
 
 ```ts continue
-await box.write("store/notes/Dentist.md", "# Dentist\nA plain markdown note about the dentist appointment.\n");
+await box.write("_content/notes/Dentist.md", "# Dentist\nA plain markdown note about the dentist appointment.\n");
 const fakeK = createFakeEmbeddings();
 const resK = await searchBox(box.root, { query: "dentist appointment", embeddings: fakeK, kinds: ["memo"] });
 resK.searchMode
@@ -93,7 +93,7 @@ resK.searchMode
 resK.results.every((h) => h.kind === "memo")
 => true
 
-resK.results.map((h) => h.path).includes("store/notes/Dentist.md")
+resK.results.map((h) => h.path).includes("_content/notes/Dentist.md")
 => false
 ```
 
@@ -109,7 +109,7 @@ must fail loudly on) doesn't stop it.
 
 ```ts
 const boxT = await makeTmpBox();
-await boxT.write("box/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to June 17."));
+await boxT.write("_content/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to June 17."));
 const fakeT = createFakeEmbeddings();
 const resT = await searchBox(boxT.root, { query: "dentist", embeddings: fakeT, mode: "text" });
 resT.searchMode
@@ -119,7 +119,7 @@ resT.searchMode
 fakeT.calls.length
 => 0
 
-await boxT.write("config/connectors/openai.secret.json", "not valid json");
+await boxT.write("_config/connectors/openai.secret.json", "not valid json");
 const resTBroken = await searchBox(boxT.root, { query: "dentist", mode: "text" });
 resTBroken.searchMode
 => text
@@ -140,7 +140,7 @@ fails. Auto mode falls back to text-ranked results and says so.
 
 ```ts
 const boxQ = await makeTmpBox();
-await boxQ.write("box/inbox/Bill.memo.card", MEMO("The electric bill is due.", "Electric bill due Friday."));
+await boxQ.write("_content/inbox/Bill.memo.card", MEMO("The electric bill is due.", "Electric bill due Friday."));
 const innerQ = createFakeEmbeddings();
 let embedCalls = 0;
 const queryStageFails: EmbeddingsService = {
@@ -164,7 +164,7 @@ resQ.warnings[0]?.startsWith("query embedding failed")
 => true
 
 resQ.results[0]?.path
-=> box/inbox/Bill.memo.card
+=> _content/inbox/Bill.memo.card
 ```
 
 ```ts cleanup
@@ -179,7 +179,7 @@ surfaces (the query stage is never reached, so no duplicate warning is added).
 
 ```ts
 const boxF = await makeTmpBox();
-await boxF.write("box/inbox/Bill.memo.card", MEMO("The electric bill is due.", "Electric bill due Friday."));
+await boxF.write("_content/inbox/Bill.memo.card", MEMO("The electric bill is due.", "Electric bill due Friday."));
 const flaky = createFakeEmbeddings({ failTimes: 10 });
 const resF = await searchBox(boxF.root, { query: "electric", embeddings: flaky });
 resF.searchMode
@@ -196,7 +196,7 @@ resF.warnings[0]?.startsWith("embeddings unavailable")
 
 // Text search still answers.
 resF.results[0]?.path
-=> box/inbox/Bill.memo.card
+=> _content/inbox/Bill.memo.card
 ```
 
 ```ts cleanup
@@ -207,7 +207,7 @@ await boxF.cleanup();
 
 ```ts
 const boxH = await makeTmpBox();
-await boxH.write("box/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to June 17."));
+await boxH.write("_content/inbox/Dentist.memo.card", MEMO("The dentist appointment moved.", "Dentist moved to June 17."));
 await throwName(() => searchBox(boxH.root, { query: "dentist", mode: "hybrid" }))
 => HybridUnavailableError
 ```

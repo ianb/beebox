@@ -32,7 +32,7 @@ const UNAVAILABILITY = {
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/quota.procedure.card", `---
+await box.write("_config/procedures/quota.procedure.card", `---
 name: quota
 description: Engine dies of quota exhaustion
 steps:

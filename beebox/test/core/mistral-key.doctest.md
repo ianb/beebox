@@ -3,7 +3,7 @@
 `src/core/mistral-key.ts` is the first consumer migrated onto the machine-level
 secret store, and the template for the rest (`docs/plans/secret-custody.md`,
 Track 3). Order: the store wins, then the deprecated in-tree
-`config/connectors/mistral.secret.json` (warned about once per process, naming
+`_config/connectors/mistral.secret.json` (warned about once per process, naming
 the stray file), then `BBX_MISTRAL_API_KEY`. A box with none of them still
 degrades to `null` — the caller's existing "not configured" path.
 
@@ -47,11 +47,11 @@ process.env.BBX_MISTRAL_API_KEY = "placeholder-env-key";
 
 print(`env only: ${await getMistralApiKey(box.root, { observe: true })}`);
 
-await box.write("config/connectors/mistral.secret.json", JSON.stringify({ apiKey: "placeholder-file-key" }));
+await box.write("_config/connectors/mistral.secret.json", JSON.stringify({ apiKey: "placeholder-file-key" }));
 resetMistralLegacyWarning();
 const [fromFile, warnings] = await withWarnings(() => getMistralApiKey(box.root, { observe: true }));
 print(`file present: ${fromFile}`);
-print(`warned about the stray file: ${warnings.some((w) => w.includes("config/connectors/mistral.secret.json"))}`);
+print(`warned about the stray file: ${warnings.some((w) => w.includes("_config/connectors/mistral.secret.json"))}`);
 
 await setSecret({ name: "mistral", value: "placeholder-store-key" });
 await grantSecret({ slug, name: "mistral", access: "server" });
@@ -81,7 +81,7 @@ Nothing configured at all is `null`, not a throw:
 
 ```ts continue
 delete process.env.BBX_MISTRAL_API_KEY;
-await rm(join(box.root, "config/connectors/mistral.secret.json"));
+await rm(join(box.root, "_config/connectors/mistral.secret.json"));
 await getMistralApiKey(box.root, { observe: true });
 => null
 ```

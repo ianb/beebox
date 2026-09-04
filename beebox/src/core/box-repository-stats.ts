@@ -66,13 +66,13 @@ interface AnnexedFile {
   bytes?: number;
 }
 
-async function annexedFiles(packageRoot: string, boxRoot: string): Promise<{
+async function annexedFiles(boxRoot: string): Promise<{
   available: boolean;
   files: Map<string, AnnexedFile>;
 }> {
   try {
     const { stdout } = await execFileAsync("git", ["annex", "find", "--anything", "--json"], {
-      cwd: packageRoot,
+      cwd: boxRoot,
       maxBuffer: 64 * 1024 * 1024,
     });
     const result = new Map<string, AnnexedFile>();
@@ -86,7 +86,7 @@ async function annexedFiles(packageRoot: string, boxRoot: string): Promise<{
       }
       const parsed = annexFindLine.safeParse(json);
       if (!parsed.success) continue;
-      const relativePath = path.relative(boxRoot, path.resolve(packageRoot, parsed.data.file));
+      const relativePath = path.relative(boxRoot, path.resolve(boxRoot, parsed.data.file));
       if (!relativePath.startsWith(`..${path.sep}`) && relativePath !== "..") {
         const bytes = parsed.data.bytesize === undefined ? undefined : Number(parsed.data.bytesize);
         result.set(relativePath, bytes !== undefined && Number.isFinite(bytes) ? { bytes } : {});
@@ -116,10 +116,10 @@ function addStorage(input: {
 export async function scanBoxRepositoryStats(boxRoot: string, files: RepositoryFile[]): Promise<BoxRepositoryStats> {
   const shape = await getBoxShape(boxRoot);
   const [annexed, annexInitialized, checkoutDisk, gitDisk] = await Promise.all([
-    annexedFiles(shape.packageRoot, shape.boxRoot),
-    isAnnexInitialized(shape.packageRoot),
-    allocatedDiskBytes(shape.packageRoot),
-    allocatedDiskBytes(path.join(shape.packageRoot, ".git")),
+    annexedFiles(shape.boxRoot),
+    isAnnexInitialized(shape.boxRoot),
+    allocatedDiskBytes(shape.boxRoot),
+    allocatedDiskBytes(path.join(shape.boxRoot, ".git")),
   ]);
   const storage = {
     all: emptyStorageBreakdown(),

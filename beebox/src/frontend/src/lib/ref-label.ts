@@ -10,9 +10,9 @@ import { resolveRelativePath, type ViewTarget } from "./view-url";
 
 /**
  * Derive a short human label from a ref path:
- *   `/box/inbox/Voice_2026-03-15.memo.card`     → "Voice 2026-03-15"
- *   `box/people/dana.person.card`               → "dana"
- *   `box/chats/Mar15.chat-thread.card#m12`      → "Mar15"
+ *   `/_content/inbox/Voice_2026-03-15.memo.card` → "Voice 2026-03-15"
+ *   `_content/people/dana.person.card`           → "dana"
+ *   `_content/chat/Mar15.chat-thread.card#m12`   → "Mar15"
  *
  * Strips leading `/`, drops directory prefix, drops the `.<type>.card`
  * suffix, strips a trailing `#fragment`, then replaces `_`/`-` with spaces.

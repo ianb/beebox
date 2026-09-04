@@ -176,7 +176,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
   // Before the server boots: registration-time probes read this shape, so
   // converting after `createServer` would be too late.
   if (opts?.annexBox === true) {
-    await makeBoxAnnexShaped({ packageRoot: tmpDir, boxRoot });
+    await makeBoxAnnexShaped(boxRoot);
   }
 
   // Build the box's event bus here and inject it so the test holds the SAME

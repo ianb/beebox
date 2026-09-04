@@ -6,15 +6,16 @@ import { glob } from "glob";
 import { cardFields, parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
 import { EmailThreadSchema } from "../schemas/email-thread.js";
+import { BOX_DIRS } from "../lib/paths.js";
 
 const TRACKED_THREAD_GLOB = "**/*.email-thread.card";
 const TRACKED_THREAD_IGNORE = [
   "node_modules/**",
   ".git/**",
-  "tmp/**",
+  `${BOX_DIRS.tmp}/**`,
   ".beebox/**",
   "procedure/runs/**",
-  "store/trash/**",
+  `${BOX_DIRS.trash}/**`,
 ];
 
 export interface TrackedGmailThread {

@@ -2,7 +2,7 @@
  * Chat thread card schema — accumulating message thread for messaging connectors.
  *
  * Each chat (private or group) gets one thread file at:
- *   store/chat/<connector>/<ChatSlug>/thread.chat-thread.card
+ *   _content/chat/<connector>/<ChatSlug>/thread.chat-thread.card
  *
  * The connector appends incoming messages; the agent appends one trailing
  * message (its reply) or seen-marker (acknowledge without replying).

@@ -16,15 +16,13 @@ import { getTemplate } from "../../src/schemas/templates.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { loadCardFromText } from "../../src/core/card-io.js";
 
-// A real v2 (package-layout) box: schemas live in `<packageRoot>/src/schemas/`
-// and resolve `beebox/*` natively (deps:true symlinks
-// node_modules/beebox at the engine). `box.root` is the operational
-// (content) root passed to the loaders; `box.packageRoot` holds `src/`.
+// shapeVersion 3: schemas live in `<box.root>/src/schemas/` and resolve
+// `beebox/*` natively (deps:true symlinks node_modules/beebox at the engine).
 async function makeSchemaBox() {
   return makeTmpBox({ deps: true });
 }
 async function writeSchema(box, name, content) {
-  const p = path.join(box.packageRoot, "src/schemas", name);
+  const p = path.join(box.root, "src/schemas", name);
   await fs.mkdir(path.dirname(p), { recursive: true });
   await fs.writeFile(p, content);
   return p;
@@ -234,7 +232,7 @@ await loadBoxSchemas(boxA.root);
 getTemplate("trip-template") !== undefined
 => true
 
-await fs.rm(path.join(boxA.packageRoot, "src/schemas", "trip.ts"));
+await fs.rm(path.join(boxA.root, "src/schemas", "trip.ts"));
 invalidateBoxSchemas(boxA.root);
 const after = await loadBoxSchemas(boxA.root);
 [after.cardSchemas.length, getTemplate("trip-template") === undefined].join("|")

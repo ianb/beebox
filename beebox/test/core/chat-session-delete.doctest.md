@@ -36,7 +36,7 @@ async function deletionErrorName(options: Parameters<typeof deleteChatSession>[0
 const box = await makeTmpBox({ git: true });
 const sessionId = "11111111-1111-4111-8111-111111111111";
 const oldProjectsRoot = process.env.BBX_CLAUDE_PROJECTS_DIR;
-const projectsRoot = join(box.packageRoot, "claude-projects");
+const projectsRoot = join(box.root, "claude-projects");
 process.env.BBX_CLAUDE_PROJECTS_DIR = projectsRoot;
 const cwd = await realpath(box.root);
 const projectDir = join(projectsRoot, encodeProjectDir(cwd));
@@ -45,7 +45,7 @@ const sidecar = join(projectDir, sessionId);
 await mkdir(sidecar, { recursive: true });
 await writeFile(jsonl, "{}\n");
 await writeFile(join(sidecar, "subagent.jsonl"), "{}\n");
-await box.write("store/chat/web/2026-08-07_11111111.chat.card", `---\ntype: chat\nsession: ${sessionId}\ntitle: Junk chat\n---\n`);
+await box.write("_content/chat/web/2026-08-07_11111111.chat.card", `---\ntype: chat\nsession: ${sessionId}\ntitle: Junk chat\n---\n`);
 await appendHistory(box.root, { sessionId });
 await setMostActive(box.root, sessionId);
 const review = emptyReviewState();
@@ -82,9 +82,9 @@ JSON.stringify({
   active: await getMostActive(box.root),
   review: Object.keys((await loadReviewState(box.root)).sessions),
   schedules: scheduleManager.getActive().length,
-  trash: await box.list("store/trash"),
+  trash: await box.list("_bookkeeping/trash"),
 })
-=> {"transcript":true,"sidecar":true,"history":[],"active":null,"review":[],"schedules":0,"trash":"store/trash/2026-08-07_11111111.chat.card"}
+=> {"transcript":true,"sidecar":true,"history":[],"active":null,"review":[],"schedules":0,"trash":"_bookkeeping/trash/.gitkeep\n_bookkeeping/trash/2026-08-07_11111111.chat.card"}
 ```
 
 ```ts cleanup
@@ -100,12 +100,12 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 const sessionId = "66666666-6666-4666-8666-666666666666";
-await box.write("store/chat/web/2026-08-07_66666666.chat.card", `---\ntype: chat\nsession: ${sessionId}\n---\n`);
+await box.write("_content/chat/web/2026-08-07_66666666.chat.card", `---\ntype: chat\nsession: ${sessionId}\n---\n`);
 await box.write(".beebox/chat-session-history.json", "{broken");
 const registry = new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
 const scheduleManager = new ChatScheduleManager(box.root, { onFire: () => {} });
 const errorName = await deletionErrorName({ boxRoot: box.root, sessionId, runtime: { registry, scheduleManager } });
-JSON.stringify({ errorName, blocked: registry.deletion.isBlocked(sessionId), huskMissing: await missing(join(box.root, "store/chat/web/2026-08-07_66666666.chat.card")) })
+JSON.stringify({ errorName, blocked: registry.deletion.isBlocked(sessionId), huskMissing: await missing(join(box.root, "_content/chat/web/2026-08-07_66666666.chat.card")) })
 => {"errorName":"SyntaxError","blocked":false,"huskMissing":false}
 ```
 
@@ -123,13 +123,13 @@ cannot be treated as an already-absent transcript.
 ```ts
 const box = await makeTmpBox();
 const sessionId = "33333333-3333-4333-8333-333333333333";
-await box.write("store/landmark/.keep", "");
-await box.write("store/chat/web/2026-08-07_33333333.chat.card", `---\ntype: chat\nsession: ${sessionId}\n---\n`);
-await appendHistory(box.root, { sessionId, contextDir: "store/landmark" });
+await box.write("_content/landmark/.keep", "");
+await box.write("_content/chat/web/2026-08-07_33333333.chat.card", `---\ntype: chat\nsession: ${sessionId}\n---\n`);
+await appendHistory(box.root, { sessionId, contextDir: "_content/landmark" });
 const registry = new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
 const scheduleManager = new ChatScheduleManager(box.root, { onFire: () => {} });
 const errorName = await deletionErrorName({ boxRoot: box.root, sessionId, runtime: { registry, scheduleManager } });
-JSON.stringify({ errorName, history: await loadHistory(box.root), huskMissing: await missing(join(box.root, "store/chat/web/2026-08-07_33333333.chat.card")) })
+JSON.stringify({ errorName, history: await loadHistory(box.root), huskMissing: await missing(join(box.root, "_content/chat/web/2026-08-07_33333333.chat.card")) })
 => {"errorName":"SessionStorageContextMismatchError","history":["33333333-3333-4333-8333-333333333333"],"huskMissing":false}
 ```
 
@@ -148,12 +148,12 @@ reconstruct the rename from git status and finish it.
 const box = await makeTmpBox({ git: true });
 const sessionId = "44444444-4444-4444-8444-444444444444";
 const oldProjectsRoot = process.env.BBX_CLAUDE_PROJECTS_DIR;
-const projectsRoot = join(box.packageRoot, "claude-projects");
+const projectsRoot = join(box.root, "claude-projects");
 process.env.BBX_CLAUDE_PROJECTS_DIR = projectsRoot;
 const projectDir = join(projectsRoot, encodeProjectDir(await realpath(box.root)));
 await mkdir(projectDir, { recursive: true });
 await writeFile(join(projectDir, `${sessionId}.jsonl`), "{}\n");
-await box.write("store/chat/web/2026-08-07_44444444.chat.card", `---\ntype: chat\nsession: ${sessionId}\n---\n`);
+await box.write("_content/chat/web/2026-08-07_44444444.chat.card", `---\ntype: chat\nsession: ${sessionId}\n---\n`);
 await appendHistory(box.root, { sessionId });
 await box.commitAll("seed retry chat");
 const registry = new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
@@ -186,13 +186,13 @@ await box.cleanup();
 const box = await makeTmpBox();
 const sessionId = "22222222-2222-4222-8222-222222222222";
 const oldProjectsRoot = process.env.BBX_CLAUDE_PROJECTS_DIR;
-const projectsRoot = join(box.packageRoot, "claude-projects");
+const projectsRoot = join(box.root, "claude-projects");
 process.env.BBX_CLAUDE_PROJECTS_DIR = projectsRoot;
 const projectDir = join(projectsRoot, encodeProjectDir(await realpath(box.root)));
 const jsonl = join(projectDir, `${sessionId}.jsonl`);
 await mkdir(projectDir, { recursive: true });
 await writeFile(jsonl, "{}\n");
-await box.write("store/chat/web/2026-08-07_22222222.chat.card", `---\ntype: chat\nsession: ${sessionId}\n---\n`);
+await box.write("_content/chat/web/2026-08-07_22222222.chat.card", `---\ntype: chat\nsession: ${sessionId}\n---\n`);
 await appendHistory(box.root, { sessionId });
 await setMostActive(box.root, sessionId);
 const review = emptyReviewState();

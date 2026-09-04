@@ -22,7 +22,7 @@ verdict passes, so the step completes and the `review` reasoning is recorded.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/instr.procedure.card", `---
+await box.write("_config/procedures/instr.procedure.card", `---
 name: instr
 description: Instruction validation
 steps:
@@ -37,16 +37,16 @@ steps:
         - Both output files must exist.
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add instr procedure");
 
 let judgePrompt;
 const createAgent = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
-    await box.write("box/output/a.txt", "FIRST-CHANGE");
+    await box.write("_bookkeeping/output/a.txt", "FIRST-CHANGE");
     box.commitAll("agent commit 1");
-    await box.write("box/output/b.txt", "SECOND-CHANGE");
+    await box.write("_bookkeeping/output/b.txt", "SECOND-CHANGE");
     box.commitAll("agent commit 2");
     return { success: true };
   },
@@ -91,7 +91,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/gate.procedure.card", `---
+await box.write("_config/procedures/gate.procedure.card", `---
 name: gate
 description: Instruction gates
 steps:
@@ -109,16 +109,16 @@ steps:
     run:
       shells:
         - |
-          echo "nope" > box/output/nope.txt
+          echo "nope" > _bookkeeping/output/nope.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add gate procedure");
 
 const createAgent = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
-    await box.write("box/output/partial.txt", "half done");
+    await box.write("_bookkeeping/output/partial.txt", "half done");
     box.commitAll("agent partial work");
     return { success: true };
   },
@@ -133,7 +133,7 @@ const result = await startProcedure({
 });
 print(`success: ${result.ok}`);
 
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`nope.txt (second step) exists: ${files.includes("nope.txt")}`);
 
 const runs = await box.list("procedure/runs");
@@ -156,7 +156,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/soft.procedure.card", `---
+await box.write("_config/procedures/soft.procedure.card", `---
 name: soft
 description: Instruction warns
 steps:
@@ -174,16 +174,16 @@ steps:
     run:
       shells:
         - |
-          echo "ok" > box/output/after.txt
+          echo "ok" > _bookkeeping/output/after.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add soft procedure");
 
 const createAgent = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
-    await box.write("box/output/messy.txt", "eh");
+    await box.write("_bookkeeping/output/messy.txt", "eh");
     box.commitAll("agent work");
     return { success: true };
   },
@@ -198,7 +198,7 @@ const result = await startProcedure({
 });
 print(`success: ${result.ok}`);
 
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`after.txt exists: ${files.includes("after.txt")}`);
 
 const runs = await box.list("procedure/runs");
@@ -227,7 +227,7 @@ than reporting a non-answer as a verdict in either direction.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/unjudged.procedure.card", `---
+await box.write("_config/procedures/unjudged.procedure.card", `---
 name: unjudged
 description: The judge runs out of turns
 steps:
@@ -245,10 +245,10 @@ steps:
     run:
       shells:
         - |
-          echo "ran" > box/output/after.txt
+          echo "ran" > _bookkeeping/output/after.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add unjudged procedure");
 
 let workAgentRuns = 0;
@@ -256,7 +256,7 @@ const createAgent = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     workAgentRuns++;
-    await box.write("box/output/done.txt", "all done");
+    await box.write("_bookkeeping/output/done.txt", "all done");
     box.commitAll("agent work");
     return { success: true };
   },
@@ -280,7 +280,7 @@ print(`detail: ${result.value.inconclusive[0].detail}`);
 // of budget is the exact confusion this state exists to end.
 print(`work agent invocations: ${workAgentRuns}`);
 
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`after.txt (second step) exists: ${files.includes("after.txt")}`);
 
 const runs = await box.list("procedure/runs");

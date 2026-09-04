@@ -34,7 +34,7 @@ const empty = await stalledJobsCheck(box.root);
 JSON.stringify({ ok: empty.ok, severity: empty.severity })
 => {"ok":true,"severity":"warning"}
 
-await box.write(`box/jobs/${stampFromNow(0)}-fresh.intake.job.card`, job("Today's work"));
+await box.write(`_bookkeeping/jobs/${stampFromNow(0)}-fresh.intake.job.card`, job("Today's work"));
 (await stalledJobsCheck(box.root)).ok
 => true
 ```
@@ -50,8 +50,8 @@ take a box offline.
 
 ```ts
 const boxOld = await makeTmpBox({ git: true });
-await boxOld.write("box/jobs/2020-03-01T00-00-00-b.intake.job.card", job("Second oldest"));
-await boxOld.write("box/jobs/2020-01-01T00-00-00-a.intake.job.card", job("Oldest"));
+await boxOld.write("_bookkeeping/jobs/2020-03-01T00-00-00-b.intake.job.card", job("Second oldest"));
+await boxOld.write("_bookkeeping/jobs/2020-01-01T00-00-00-a.intake.job.card", job("Oldest"));
 const check = await stalledJobsCheck(boxOld.root);
 JSON.stringify({ ok: check.ok, severity: check.severity })
 => {"ok":false,"severity":"warning"}
@@ -81,7 +81,7 @@ noise, and noise is how the original three cards stayed invisible.
 
 ```ts
 const boxPlain = await makeTmpBox({ git: true });
-await boxPlain.write("box/jobs/handwritten.intake.job.card", job("No stamp"));
+await boxPlain.write("_bookkeeping/jobs/handwritten.intake.job.card", job("No stamp"));
 (await stalledJobsCheck(boxPlain.root)).ok
 => true
 ```

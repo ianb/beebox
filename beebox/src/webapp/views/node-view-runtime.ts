@@ -36,12 +36,12 @@ import type { BoxShape } from "../../lib/box-shape.js";
  * filesystem dances `writeNodeViewModule` performs.
  */
 export type ViewHostContext =
-  | { kind: "box-package"; packageRoot: string }
+  | { kind: "box-package"; boxRoot: string }
   | { kind: "engine-hosted" };
 
 /** Map a resolved box shape to its `box-package` view-host context. */
 export function boxPackageHost(shape: BoxShape): ViewHostContext {
-  return { kind: "box-package", packageRoot: shape.packageRoot };
+  return { kind: "box-package", boxRoot: shape.boxRoot };
 }
 
 export interface NodeViewModule {
@@ -83,7 +83,7 @@ export async function writeNodeViewModule(output: string, host: ViewHostContext)
       await fs.symlink(reactNodeModules, path.join(tmpDir, "node_modules"), "dir");
       await fs.symlink(PACKAGE_ROOT, path.join(innerDir, "node_modules", "beebox"), "dir");
     } else {
-      await fs.symlink(path.join(host.packageRoot, "node_modules"), path.join(tmpDir, "node_modules"), "dir");
+      await fs.symlink(path.join(host.boxRoot, "node_modules"), path.join(tmpDir, "node_modules"), "dir");
       const engineReact = path.dirname(
         createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),
       );

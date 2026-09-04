@@ -45,14 +45,6 @@ export interface BoxShape {
   /** The box root — the ONE root; `.beebox/box.json`, `package.json`, `src/`,
    * and every `_`-prefixed operational area all live here. */
   boxRoot: string;
-  /**
-   * @deprecated Alias for `boxRoot`. shapeVersion 3 has one root, so this is
-   * always identical to `boxRoot` — kept only so the ~60 call sites that
-   * read `shape.packageRoot` for code paths (`src/schemas`, etc.) keep
-   * compiling and stay correct. A later track deletes this field and those
-   * call sites switch to `boxRoot`.
-   */
-  packageRoot: string;
 }
 
 const boxMarkerSchema = z.object({ shapeVersion: z.number().optional() });
@@ -112,7 +104,7 @@ export async function getBoxShape(boxRoot: string): Promise<BoxShape> {
   }
 
   await requireBeeBoxDependency(resolvedRoot);
-  return { shapeVersion, boxRoot: resolvedRoot, packageRoot: resolvedRoot };
+  return { shapeVersion, boxRoot: resolvedRoot };
 }
 
 /** The result of a tolerant shape lookup: a resolved shape, or "no box here." */

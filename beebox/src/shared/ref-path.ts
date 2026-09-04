@@ -86,7 +86,7 @@ export interface ResolveRefPathInput {
  * fragment starts at the FIRST `#` and runs to the end (so a `?` inside it is
  * fragment text), and the query is taken from what remains before it.
  *
- * `parseRef("store/Plan.doc.card#risks")` → `{ path, fragment: "risks" }`
+ * `parseRef("_content/Plan.doc.card#risks")` → `{ path, fragment: "risks" }`
  * `parseRef("chart.figure.card?view=ledger")` → `{ path, query: "view=ledger" }`
  */
 export function parseRef(raw: string): ParsedRef {

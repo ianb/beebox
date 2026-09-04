@@ -94,7 +94,7 @@ export async function runPreCommitChecks(
     sections.push(describeStagedUnlistedBinaries(unlisted));
   }
 
-  // Misplaced legacy `config/schemas/*.ts` blocks here just as it does in every
+  // Misplaced legacy `_config/schemas/*.ts` blocks here just as it does in every
   // other validate scope (see `checkLegacySchemaPath` in `validate.ts`) — the
   // hook is the surface most likely to catch it before anything else loads the
   // box. One readdir; negligible on the commit path.

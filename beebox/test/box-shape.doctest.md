@@ -9,8 +9,7 @@ operational area (`_content/`, `_config/`, …) all live at the same directory
 predates the one-root layout and is a hard `BoxShapeError` naming
 `bbx migrate`.
 
-`makeTmpBox` builds a real shape-3 box (`box.root`; `box.packageRoot` is a
-deprecated alias for the same directory). The sections below use it
+`makeTmpBox` builds a real shape-3 box (`box.root`). The sections below use it
 directly; the error cases overwrite `box.root`'s `.beebox/box.json` marker
 by hand, or fabricate a v2-shaped fixture, to construct the rejected inputs.
 
@@ -116,13 +115,13 @@ JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, mentionsMigrate:
 await fs.rm(dir, { recursive: true, force: true });
 ```
 
-## Shape 3 with a valid package.json resolves boxRoot === packageRoot
+## Shape 3 with a valid package.json resolves boxRoot
 
 ```ts
 const box = await makeTmpBox();
 const shape = await getBoxShape(box.root);
-JSON.stringify({ shapeVersion: shape.shapeVersion, boxRoot: shape.boxRoot === box.root, packageRoot: shape.packageRoot === shape.boxRoot })
-=> {"shapeVersion":3,"boxRoot":true,"packageRoot":true}
+JSON.stringify({ shapeVersion: shape.shapeVersion, boxRoot: shape.boxRoot === box.root })
+=> {"shapeVersion":3,"boxRoot":true}
 ```
 
 ```ts cleanup

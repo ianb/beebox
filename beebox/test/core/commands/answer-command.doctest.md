@@ -26,9 +26,9 @@ function headFiles(root) {
     .join("\n");
 }
 
-// The single .card under box/jobs (the follow-up job), read back.
+// The single .card under _bookkeeping/jobs (the follow-up job), read back.
 async function readJob(box) {
-  const jobs = (await box.list("box/jobs")).split("\n").filter((f) => f.endsWith(".card"));
+  const jobs = (await box.list("_bookkeeping/jobs")).split("\n").filter((f) => f.endsWith(".card"));
   if (jobs.length !== 1) throw new Error(`expected 1 job, found ${jobs.length}`);
   return box.read(jobs[0]);
 }
@@ -85,13 +85,13 @@ option id as `selected`:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Receipt.question.card", SELECT);
+await box.write("_bookkeeping/questions/Receipt.question.card", SELECT);
 
-const res = await answer(box, { question: "box/questions/Receipt.question.card", answer: "a" });
+const res = await answer(box, { question: "_bookkeeping/questions/Receipt.question.card", answer: "a" });
 res.success
 => true
 
-const card = await box.read("box/questions/Receipt.question.card");
+const card = await box.read("_bookkeeping/questions/Receipt.question.card");
 card.includes("status: answered")
 => true
 
@@ -124,13 +124,13 @@ Answering by the option's label resolves the same id:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Receipt.question.card", SELECT);
+await box.write("_bookkeeping/questions/Receipt.question.card", SELECT);
 
-const res = await answer(box, { question: "box/questions/Receipt.question.card", answer: "Personal" });
+const res = await answer(box, { question: "_bookkeeping/questions/Receipt.question.card", answer: "Personal" });
 res.success
 => true
 
-const card = await box.read("box/questions/Receipt.question.card");
+const card = await box.read("_bookkeeping/questions/Receipt.question.card");
 card.includes("selected: personal")
 => true
 ```
@@ -143,13 +143,13 @@ Answering by `selectedId` alone (a direct API path) resolves the id to its label
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Receipt.question.card", SELECT);
+await box.write("_bookkeeping/questions/Receipt.question.card", SELECT);
 
-const res = await answer(box, { question: "box/questions/Receipt.question.card", selectedId: "finance" });
+const res = await answer(box, { question: "_bookkeeping/questions/Receipt.question.card", selectedId: "finance" });
 res.success
 => true
 
-(await box.read("box/questions/Receipt.question.card")).includes("text: Finance")
+(await box.read("_bookkeeping/questions/Receipt.question.card")).includes("text: Finance")
 => true
 ```
 
@@ -166,13 +166,13 @@ option sits at that letter's position:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Letters.question.card", LETTER_LABELS);
+await box.write("_bookkeeping/questions/Letters.question.card", LETTER_LABELS);
 
-const res = await answer(box, { question: "box/questions/Letters.question.card", answer: "b" });
+const res = await answer(box, { question: "_bookkeeping/questions/Letters.question.card", answer: "b" });
 res.success
 => true
 
-(await box.read("box/questions/Letters.question.card")).includes("selected: first")
+(await box.read("_bookkeeping/questions/Letters.question.card")).includes("selected: first")
 => true
 ```
 
@@ -185,13 +185,13 @@ shortcut and picks position 0:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Letters.question.card", LETTER_LABELS);
+await box.write("_bookkeeping/questions/Letters.question.card", LETTER_LABELS);
 
-const res = await answer(box, { question: "box/questions/Letters.question.card", answer: "a" });
+const res = await answer(box, { question: "_bookkeeping/questions/Letters.question.card", answer: "a" });
 res.success
 => true
 
-(await box.read("box/questions/Letters.question.card")).includes("selected: first")
+(await box.read("_bookkeeping/questions/Letters.question.card")).includes("selected: first")
 => true
 ```
 
@@ -206,17 +206,17 @@ rides along as a note into `answer.text`:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Archive.question.card", CONFIRM);
+await box.write("_bookkeeping/questions/Archive.question.card", CONFIRM);
 
 const res = await answer(box, {
-  question: "box/questions/Archive.question.card",
+  question: "_bookkeeping/questions/Archive.question.card",
   selectedId: "yes",
   answer: "looks safe to archive",
 });
 res.success
 => true
 
-const card = await box.read("box/questions/Archive.question.card");
+const card = await box.read("_bookkeeping/questions/Archive.question.card");
 card.includes("selected: yes")
 => true
 
@@ -239,13 +239,13 @@ A typed free-text `y` still normalizes to `yes`:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Archive.question.card", CONFIRM);
+await box.write("_bookkeeping/questions/Archive.question.card", CONFIRM);
 
-const res = await answer(box, { question: "box/questions/Archive.question.card", answer: "y" });
+const res = await answer(box, { question: "_bookkeeping/questions/Archive.question.card", answer: "y" });
 res.success
 => true
 
-(await box.read("box/questions/Archive.question.card")).includes("selected: yes")
+(await box.read("_bookkeeping/questions/Archive.question.card")).includes("selected: yes")
 => true
 ```
 
@@ -257,13 +257,13 @@ Junk is rejected — both a junk free-text answer and a junk `selectedId`:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Archive.question.card", CONFIRM);
+await box.write("_bookkeeping/questions/Archive.question.card", CONFIRM);
 
-const typed = await answer(box, { question: "box/questions/Archive.question.card", answer: "maybe" });
+const typed = await answer(box, { question: "_bookkeeping/questions/Archive.question.card", answer: "maybe" });
 typed.error
 => Confirm questions require a yes/no answer
 
-const bad = await answer(box, { question: "box/questions/Archive.question.card", selectedId: "maybe" });
+const bad = await answer(box, { question: "_bookkeeping/questions/Archive.question.card", selectedId: "maybe" });
 bad.error
 => Confirm answer must be "yes" or "no" (got "maybe")
 ```
@@ -271,7 +271,7 @@ bad.error
 The card stays pending after a rejected answer:
 
 ```ts continue
-(await box.read("box/questions/Archive.question.card")).includes("status: pending")
+(await box.read("_bookkeeping/questions/Archive.question.card")).includes("status: pending")
 => true
 ```
 
@@ -283,13 +283,13 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Name.question.card", TEXT);
+await box.write("_bookkeeping/questions/Name.question.card", TEXT);
 
-const res = await answer(box, { question: "box/questions/Name.question.card", answer: "Phoenix" });
+const res = await answer(box, { question: "_bookkeeping/questions/Name.question.card", answer: "Phoenix" });
 res.success
 => true
 
-(await box.read("box/questions/Name.question.card")).includes("text: Phoenix")
+(await box.read("_bookkeeping/questions/Name.question.card")).includes("text: Phoenix")
 => true
 ```
 
@@ -309,13 +309,13 @@ const EXPIRED = TEXT.replace(
   "status: expired\nexpired-at: 2026-01-01T00:00:00-07:00",
 );
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Old.question.card", EXPIRED);
+await box.write("_bookkeeping/questions/Old.question.card", EXPIRED);
 
-const res = await answer(box, { question: "box/questions/Old.question.card", answer: "Phoenix" });
+const res = await answer(box, { question: "_bookkeeping/questions/Old.question.card", answer: "Phoenix" });
 res.success
 => true
 
-const card = await box.read("box/questions/Old.question.card");
+const card = await box.read("_bookkeeping/questions/Old.question.card");
 card.includes("status: answered")
 => true
 
@@ -336,13 +336,13 @@ const DISMISSED = TEXT.replace(
   "status: dismissed\ndismissed-at: 2026-01-01T00:00:00-07:00",
 );
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Skipped.question.card", DISMISSED);
+await box.write("_bookkeeping/questions/Skipped.question.card", DISMISSED);
 
-const res = await answer(box, { question: "box/questions/Skipped.question.card", answer: "Phoenix" });
+const res = await answer(box, { question: "_bookkeeping/questions/Skipped.question.card", answer: "Phoenix" });
 res.success
 => true
 
-(await box.read("box/questions/Skipped.question.card")).includes("dismissed-at")
+(await box.read("_bookkeeping/questions/Skipped.question.card")).includes("dismissed-at")
 => false
 ```
 
@@ -359,9 +359,9 @@ const ANSWERED = TEXT.replace(
   "status: answered\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Done",
 );
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Done.question.card", ANSWERED);
+await box.write("_bookkeeping/questions/Done.question.card", ANSWERED);
 
-const res = await answer(box, { question: "box/questions/Done.question.card", answer: "Phoenix" });
+const res = await answer(box, { question: "_bookkeeping/questions/Done.question.card", answer: "Phoenix" });
 res.success
 => false
 
@@ -396,8 +396,8 @@ outside.error.startsWith("Question path escapes the box:")
 An absolute path that resolves INSIDE the box is accepted (the CLI may pass one):
 
 ```ts continue
-await box.write("box/questions/Name.question.card", TEXT);
-const abs = `${box.root}/box/questions/Name.question.card`;
+await box.write("_bookkeeping/questions/Name.question.card", TEXT);
+const abs = `${box.root}/_bookkeeping/questions/Name.question.card`;
 const res = await answer(box, { question: abs, answer: "Phoenix" });
 res.success
 => true
@@ -414,15 +414,15 @@ failure can never strand an answered card without its job:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Receipt.question.card", SELECT);
+await box.write("_bookkeeping/questions/Receipt.question.card", SELECT);
 
-await answer(box, { question: "box/questions/Receipt.question.card", answer: "a" });
+await answer(box, { question: "_bookkeeping/questions/Receipt.question.card", answer: "a" });
 
 const files = headFiles(box.root);
-files.startsWith("box/jobs/")
+files.startsWith("_bookkeeping/jobs/")
 => true
 
-files.includes("box/questions/Receipt.question.card")
+files.includes("_bookkeeping/questions/Receipt.question.card")
 => true
 
 files.split("\n").length
@@ -441,9 +441,9 @@ restores the original card and deletes the job before returning the error:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/questions/Receipt.question.card", SELECT);
+await box.write("_bookkeeping/questions/Receipt.question.card", SELECT);
 
-const res = await answer(box, { question: "box/questions/Receipt.question.card", answer: "a" });
+const res = await answer(box, { question: "_bookkeeping/questions/Receipt.question.card", answer: "a" });
 res.success
 => false
 
@@ -454,10 +454,10 @@ res.error.startsWith("Failed to commit transition:")
 The card is untouched (still pending) and no job file was left behind:
 
 ```ts continue
-(await box.read("box/questions/Receipt.question.card")).includes("status: pending")
+(await box.read("_bookkeeping/questions/Receipt.question.card")).includes("status: pending")
 => true
 
-(await box.list("box/jobs")).includes(".card")
+(await box.list("_bookkeeping/jobs")).includes(".card")
 => false
 ```
 

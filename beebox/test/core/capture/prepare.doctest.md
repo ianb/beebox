@@ -56,7 +56,7 @@ function commitReport(boxRoot, baseA, baseB) {
   return countA === 1 && countB === 1 && aIsolated && bIsolated;
 }
 
-const GITIGNORE = ["tmp/", ".beebox/", "**/*.attach/**/*.webm", "**/*.attach/**/*.m4a", "**/*.attach/**/*.jpg"].join("\n") + "\n";
+const GITIGNORE = ["_tmp/", ".beebox/", "**/*.attach/**/*.webm", "**/*.attach/**/*.m4a", "**/*.attach/**/*.jpg"].join("\n") + "\n";
 
 // Scripted transcription, keyed by the concatenated clip filename.
 const SCRIPT = {
@@ -104,8 +104,8 @@ async function stageSealedSession(boxRoot) {
 
 async function configureBox(box) {
   await box.write(".gitignore", GITIGNORE);
-  await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
-  await box.write("config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
+  await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
+  await box.write("_config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
   box.commitAll("configure fake transcription");
 }
 ```
@@ -217,8 +217,8 @@ under a WebM extension; transcription and the audio card both see `.m4a`.
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(".gitignore", GITIGNORE);
-await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
-await box.write("config/fake-transcription.json", JSON.stringify({ "audio-001.m4a": SCRIPT["audio-001.m4a"] }, null, 2));
+await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
+await box.write("_config/fake-transcription.json", JSON.stringify({ "audio-001.m4a": SCRIPT["audio-001.m4a"] }, null, 2));
 box.commitAll("configure native transcription");
 const staged = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
 await addAudioChunk({
@@ -264,9 +264,9 @@ silently dropped.
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(".gitignore", GITIGNORE);
-await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
+await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
 // Script only the first segment's clip; the second clip fails to transcribe.
-await box.write("config/fake-transcription.json", JSON.stringify({ "audio-001.webm": SCRIPT["audio-001.webm"] }, null, 2));
+await box.write("_config/fake-transcription.json", JSON.stringify({ "audio-001.webm": SCRIPT["audio-001.webm"] }, null, 2));
 box.commitAll("partial script");
 const id = await stageSealedSession(box.root);
 
@@ -469,7 +469,7 @@ await writeFile(logPath, "");
 // Rewire the staged session's target to the known chat.
 const staged = await readStagingSession({ boxRoot: box.root, id });
 staged.targetSessionId = "s-known";
-await writeFile(`${box.root}/tmp/capture-staging/${id}/session.json`, JSON.stringify(staged, null, 2));
+await writeFile(`${box.root}/_tmp/capture-staging/${id}/session.json`, JSON.stringify(staged, null, 2));
 
 let sendCount = 0;
 let crashOnSend = true;
@@ -591,8 +591,8 @@ deliver.
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(".gitignore", GITIGNORE + "**/tmp-capture/**/*.attach/**\n");
-await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
-await box.write("config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
+await box.write("_config/transcription.json", JSON.stringify({ service: "fake" }));
+await box.write("_config/fake-transcription.json", JSON.stringify(SCRIPT, null, 2));
 box.commitAll("configure fake transcription, annex-style ignore");
 const id = await stageSealedSession(box.root);
 

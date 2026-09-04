@@ -27,12 +27,12 @@ visible. The complement to \`{% quote %}\`: where \`{% quote %}\` answers
 from*, optionally *how* it was derived.
 
 \`\`\`
-{% source ref="/box/inbox/Voice_2026-03-15.memo.card" usage="summary" %}
+{% source ref="/_content/inbox/Voice_2026-03-15.memo.card" usage="summary" %}
 She's been going back and forth on the kitchen — open shelves vs.
 closed, mostly because she doesn't trust herself to keep them tidy.
 {% /source %}
 
-{% source ref="/people/Dana_Lee.person.card" usage="inferred from her email signature" %}
+{% source ref="/_content/people/Dana_Lee.person.card" usage="inferred from her email signature" %}
 Dana lives in Portland.
 {% /source %}
 \`\`\`
@@ -72,7 +72,7 @@ is sharper.
 The two tags compose to express "verbatim from there":
 
 \`\`\`
-{% source ref="/box/inbox/Voice_2026-03-15.memo.card" usage="verbatim" %}
+{% source ref="/_content/inbox/Voice_2026-03-15.memo.card" usage="verbatim" %}
 {% quote %}I keep going back and forth on the kitchen.{% /quote %}
 {% /source %}
 \`\`\`

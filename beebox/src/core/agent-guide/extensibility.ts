@@ -15,7 +15,7 @@ export function proceduresSection(procedures: ProcedureSummary[]): string {
   const lines: string[] = [
     "## Procedures",
     "",
-    "Available procedures in `config/procedures/`:",
+    "Available procedures in `_config/procedures/`:",
     "",
   ];
   for (const p of procedures) {

@@ -31,7 +31,7 @@ import {
   SCRIPT_TIMEOUT,
   type ExecTiming,
 } from "../../lib/exec-with-timeout.js";
-import { parseCardName } from "../../lib/paths.js";
+import { parseCardName, getBoxDir } from "../../lib/paths.js";
 import { resolveRefPath } from "../../shared/ref-path.js";
 import { scheduleOutcomeLine } from "../../shared/schedule-error.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
@@ -55,7 +55,7 @@ export function fallbackTiming(err: unknown): ExecTiming {
  * Returns the number of scripts that ran.
  */
 export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<number> {
-  const schedulesDir = path.join(boxRoot, "config/schedules");
+  const schedulesDir = getBoxDir(boxRoot, "schedules");
 
   let files: string[];
   try {

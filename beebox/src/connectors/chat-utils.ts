@@ -23,6 +23,7 @@ import { createChatJobTemplate } from "../schemas/chat-job.js";
 import { sanitizeFilenameStem } from "../shared/filename.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { isRecord } from "../lib/is-record.js";
+import { getBoxDir } from "../lib/paths.js";
 import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";
 
 class MissingFrontmatterError extends Error {
@@ -75,7 +76,7 @@ export async function ensureThreadFile(options: {
   participants?: string[];
 }): Promise<string> {
   const { boxRoot, connector, chatSlug, chatId } = options;
-  const threadDir = path.join(boxRoot, "store/chat", connector, chatSlug);
+  const threadDir = path.join(getBoxDir(boxRoot, "chat"), connector, chatSlug);
   const threadPath = path.join(threadDir, "thread.chat-thread.card");
 
   // Serialize the check-then-create so two first messages for the same new
@@ -204,7 +205,7 @@ async function findExistingChatJob(
   boxRoot: string,
   threadRef: string
 ): Promise<string | null> {
-  const jobsDir = path.join(boxRoot, "box/jobs");
+  const jobsDir = getBoxDir(boxRoot, "jobs");
   const found = await findPendingJobCard({
     jobsDir,
     suffix: ".chat.job.card",
@@ -232,7 +233,7 @@ export async function createChatJob(options: {
   const existing = await findExistingChatJob(boxRoot, threadRef);
   if (existing) return existing;
 
-  const jobsDir = path.join(boxRoot, "box/jobs");
+  const jobsDir = getBoxDir(boxRoot, "jobs");
   await fs.mkdir(jobsDir, { recursive: true });
 
   const slug = threadRef
@@ -295,9 +296,9 @@ export async function updatePersonEntry(options: {
   const slug = safeFilename(displayName);
   if (!slug) return { cardPath: null, metadataPath: null };
 
-  const personDir = path.join(boxRoot, "people", slug);
+  const personDir = path.join(getBoxDir(boxRoot, "people"), slug);
   const filePath = path.join(personDir, `${connector}.json`);
-  const personCardPath = path.join(boxRoot, "people", `${slug}.person.card`);
+  const personCardPath = path.join(getBoxDir(boxRoot, "people"), `${slug}.person.card`);
 
   // Seed a minimal person card if none exists. The connector knows the
   // display name and not much else; the boxholder is expected to enrich

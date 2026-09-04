@@ -347,10 +347,9 @@ export const modes = ["page", "chat"];
 }
 
 /**
- * Resolve a box's views directory for its shape: `boxRoot/views` for a
- * legacy (shapeVersion 1) box, `packageRoot/src/views` for a package
- * (shapeVersion 2+) box. Delegates to `boxCodePaths`, the one place that
- * predicate is defined (`src/cli/lib/box-shape.ts`).
+ * Resolve a box's views directory for its shape: `boxRoot/src/views`.
+ * Delegates to `boxCodePaths`, the one place that predicate is defined
+ * (`src/lib/box-shape.ts`).
  */
 export async function resolveViewsDir(boxRoot: string): Promise<{ viewsDir: string; boxShape: BoxShape }> {
   const boxShape = await getBoxShape(boxRoot);
@@ -359,7 +358,7 @@ export async function resolveViewsDir(boxRoot: string): Promise<{ viewsDir: stri
 
 /**
  * List all views in a box, resolving the views directory from the box's
- * shape (v1: `boxRoot/views`; v2: `packageRoot/src/views`).
+ * shape (`boxRoot/src/views`).
  *
  * A view that fails to compile or fails to import (including a subprocess
  * timeout — see `view-meta-import.ts`) still appears here, degraded to a

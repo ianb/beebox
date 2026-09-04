@@ -2,11 +2,11 @@
  * Google Calendar Connector — Syncs calendar events as .ics files.
  *
  * Configuration:
- *   config/connectors/google-calendar.json       - { "calendars": ["primary"], "syncDaysBack": 30, "syncDaysForward": 90 }
- *   config/connectors/google-calendar-state.json  - { syncTokens, eventFiles }
- *   config/connectors/google.secret.json          - shared Google OAuth2 credentials
+ *   _config/connectors/google-calendar.json       - { "calendars": ["primary"], "syncDaysBack": 30, "syncDaysForward": 90 }
+ *   _bookkeeping/connectors/google-calendar-state.json  - { syncTokens, eventFiles }
+ *   _config/connectors/google.secret.json          - shared Google OAuth2 credentials
  *
- * Events are stored as individual .ics files in store/calendar/.
+ * Events are stored as individual .ics files in _content/calendar/.
  * Uses singleEvents=false so recurring events are returned as compact masters
  * with RRULEs (expanded at query time by calendar-utils.ts).
  * Exception instances (single overrides of recurring events) are skipped.
@@ -193,7 +193,7 @@ class GoogleCalendarConnector implements Connector {
     const updated: string[] = [];
     const deleted: string[] = [];
     // Paths a stranding moved — the vacated one and its new home under
-    // store/calendar/stranded/. Kept apart from created/updated/deleted so the
+    // _content/calendar/stranded/. Kept apart from created/updated/deleted so the
     // path-scoped commit records the move without the sync claiming it as an
     // event it created or updated.
     const stranded: string[] = [];
@@ -204,10 +204,10 @@ class GoogleCalendarConnector implements Connector {
     // that lose the file are untracked here and reported, rather than left to
     // have their event patched with the keeper's content.
     for (const dup of await dropDuplicateFilenames({ index: state.eventFiles, calDir })) {
-      console.warn(`  Untracked ${dup.key} — store/calendar/${dup.filename} belongs to another entry`);
+      console.warn(`  Untracked ${dup.key} — _content/calendar/${dup.filename} belongs to another entry`);
       failures.push(localCalendarFailure({
         calendarId: dup.calendarId, operation: "stale-cleanup",
-        path: `store/calendar/${dup.filename}`,
+        path: `_content/calendar/${dup.filename}`,
         detail: "two tracked events named one file; this entry was untracked",
       }));
     }
@@ -280,7 +280,7 @@ class GoogleCalendarConnector implements Connector {
     const paths = [
       ...changedEventFiles,
       path.relative(this.boxRoot, this.statePath()),
-      "config/connectors/google-calendar.json",
+      "_config/connectors/google-calendar.json",
     ];
     const message = changedEventFiles.length > 0 || failures.length > 0
       ? buildNarrativeCommitMessage(allNotes, {

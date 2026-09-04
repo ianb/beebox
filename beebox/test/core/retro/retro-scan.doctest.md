@@ -109,7 +109,7 @@ const state = await loadRetroState(box.root);
 `${state.sessions["chat-a"]?.status} / ${state.sessions["chat-b"]?.status}:${state.sessions["chat-b"]?.attempts}`
 => done / failed:1
 
-await box.read("store/reviews/retro/2026-06-09T12-00-00.md")
+await box.read("_content/reviews/retro/2026-06-09T12-00-00.md")
 => # Retrospective run 2026-06-09T12-00-00
 «blankline»
 Generated 2026-06-09T12:00:00.000Z.

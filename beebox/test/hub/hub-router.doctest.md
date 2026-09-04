@@ -346,7 +346,7 @@ this file) to have a session to check in the first place.
 
 ```ts continue
 const ownedBox = await makeTmpBox();
-await ownedBox.write("config/box.json", JSON.stringify({ allowedEmails: ["owner@example.com"] }));
+await ownedBox.write("_config/box.json", JSON.stringify({ allowedEmails: ["owner@example.com"] }));
 
 // Hub auth ON for this section: construct the hub with openAccess: false so it
 // verifies the session cookie (the rest of the file runs open).

@@ -248,7 +248,7 @@ async function resolveRanking({
   if (mode === "hybrid") {
     if (service === undefined) {
       const noKeyDetail =
-        "no embeddings key configured — set config/connectors/openai.secret.json " +
+        "no embeddings key configured — set _config/connectors/openai.secret.json " +
         "or BBX_OPENAI_API_KEY, or search with --mode text";
       throw new HybridUnavailableError(noKeyDetail);
     }

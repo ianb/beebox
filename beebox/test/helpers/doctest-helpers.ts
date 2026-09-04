@@ -18,9 +18,6 @@ export interface TmpBox {
    * `package.json`, `node_modules/`, `src/`, and every underscore area.
    * Avoid using in expected output — temp dir names never appear there. */
   root: string;
-  /** @deprecated Alias for `root` — shapeVersion 3 has one root. Kept so the
-   * ~15-20 callers that still read `.packageRoot` keep compiling. */
-  packageRoot: string;
   /** Join a relative path with the box root. */
   path(relativePath: string): string;
   /** List files and dirs under a subdir, sorted, one per line. */
@@ -60,12 +57,11 @@ export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean; annex?:
   // bytes into a box gates on this shape (see core/annex/is-annex-box.ts), so a
   // fixture exercising that path has to declare which side it is testing.
   if (opts?.annex) {
-    await makeBoxAnnexShaped({ packageRoot: root, boxRoot: root });
+    await makeBoxAnnexShaped(root);
   }
 
   const box: TmpBox = {
     root,
-    packageRoot: root,
     path(relativePath: string) {
       return join(root, relativePath);
     },

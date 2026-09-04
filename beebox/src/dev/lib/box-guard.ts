@@ -59,13 +59,8 @@ export function formatUnsafeAuditBox(err: UnsafeAuditBoxError): string {
 /**
  * Require boxRoot to be the top level of its own git repo, or throw.
  *
- * A package-layout (shapeVersion 2+) box nests its operational root
- * (`content/`) one level inside the git repo, whose top level is the
- * package root — that's by design (`docs/implemented-plans/boxes-as-packages-v2.md`,
- * "The box repository": one git repo at the repo root, `boxRoot` is
- * `content/`). So the expected top level is the box's `packageRoot`
- * (`boxCodePaths`' predicate), not `boxRoot` itself; a legacy box has
- * `packageRoot === boxRoot`, so this subsumes the old check.
+ * shapeVersion 3: a box has ONE root — the git repo's top level IS `boxRoot`,
+ * with no separate package root to distinguish.
  */
 export async function assertStandaloneBox(boxRoot: string): Promise<void> {
   const resolved = path.resolve(boxRoot);
@@ -80,7 +75,7 @@ export async function assertStandaloneBox(boxRoot: string): Promise<void> {
   // too so a legit box under a symlinked prefix (e.g. macOS /var →
   // /private/var) isn't falsely flagged as nested. When the path isn't a box,
   // fall back to the path itself as the expected repo top level.
-  const expectedRoot = realpathSync(lookup.found ? lookup.shape.packageRoot : lookup.boxRoot);
+  const expectedRoot = realpathSync(lookup.found ? lookup.shape.boxRoot : lookup.boxRoot);
   if (path.resolve(toplevel) !== expectedRoot) {
     throw new AuditBoxInsideRepoError(realpathSync(resolved), path.resolve(toplevel));
   }

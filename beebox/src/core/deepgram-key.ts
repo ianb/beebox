@@ -8,7 +8,7 @@
  *    access. Deepgram needs TWO fields, so the entry's value is a JSON string
  *    `{"apiKey": "…", "projectId": "…"}` that this module parses (see
  *    `secrets/json-secret.ts` for why the store keeps values opaque).
- * 2. **The legacy per-box file** — `config/connectors/deepgram.secret.json`,
+ * 2. **The legacy per-box file** — `_config/connectors/deepgram.secret.json`,
  *    kept for one transition window and warned about once per process.
  * 3. **`BBX_DEEPGRAM_API_KEY` + `BBX_DEEPGRAM_PROJECT`.**
  *
@@ -56,7 +56,7 @@ function completeOrNull(fields: z.infer<typeof deepgramSecretSchema>): DeepgramC
 
 /** The legacy in-tree secret file, or null when it is absent/unusable. */
 async function readLegacySecretFile(boxRoot: string): Promise<DeepgramCredentials | null> {
-  const secretPath = path.join(boxRoot, "config/connectors/deepgram.secret.json");
+  const secretPath = path.join(boxRoot, "_config/connectors/deepgram.secret.json");
   let content: string;
   try {
     content = await fs.readFile(secretPath, "utf-8");

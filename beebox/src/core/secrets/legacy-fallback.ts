@@ -7,7 +7,7 @@
  * for. Every other refusal FAILS CLOSED.
  *
  * The reason is revocation. If `not-granted` fell through, `bbx secrets revoke`
- * would be a no-op on any box whose legacy `config/connectors/<name>.secret.json`
+ * would be a no-op on any box whose legacy `_config/connectors/<name>.secret.json`
  * (or exported env var) still exists — the boxholder would withdraw a grant,
  * see the revoke succeed, and the connector would keep working off the stale
  * file. The same argument covers the rest: `agent-access-not-granted` is a

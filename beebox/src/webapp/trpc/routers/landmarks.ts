@@ -144,7 +144,7 @@ export const landmarksRouter = router({
     const matches = await glob("**/*.landmark.card", {
       cwd: ctx.boxRoot,
       nodir: true,
-      ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+      ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
     });
 
     const payloads: LandmarkPayload[] = [];
@@ -221,7 +221,7 @@ export const landmarksRouter = router({
       const matches = await glob(pattern, {
         cwd: ctx.boxRoot,
         nodir: true,
-        ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+        ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
       });
       // One landmark per directory by convention; take the first match.
       const relPath = matches.toSorted()[0];

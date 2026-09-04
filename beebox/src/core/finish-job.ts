@@ -22,7 +22,7 @@ class JobDeleteError extends Error {
 
 export interface FinishJobParams {
   boxRoot: string;
-  /** Job card path relative to boxRoot (e.g., "box/jobs/foo.intake.job.card") */
+  /** Job card path relative to boxRoot (e.g., "_bookkeeping/jobs/foo.intake.job.card") */
   jobRelPath: string;
 }
 

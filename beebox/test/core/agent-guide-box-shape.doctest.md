@@ -13,7 +13,6 @@ import type { BoxShape } from "../../src/lib/box-shape.js";
 const v3Shape: BoxShape = {
   shapeVersion: 3,
   boxRoot: "/tmp/my-box",
-  packageRoot: "/tmp/my-box",
 };
 ```
 

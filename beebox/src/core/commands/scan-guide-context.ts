@@ -1,7 +1,7 @@
 /**
  * Boxholder scan-priors resolution for the scan-import photo flow.
  *
- * Priors live in `config/scan.guide.card` (the scan guide); the photo flow
+ * Priors live in `_config/scan.guide.card` (the scan guide); the photo flow
  * injects the COMPILED guide text into the per-page vision prompt. The
  * legacy box-root `CLAUDE_SCANS.md` file is a deprecated, warning-logged
  * fallback until boxes migrate (runbook: `docs/plans/scan-guide-card.md`).
@@ -22,7 +22,7 @@ import { parseGuide } from "../../schemas/guide-parse.js";
 import { compileGuide } from "../../schemas/guide-compile.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
-export const SCAN_GUIDE_REL_PATH = "config/scan.guide.card";
+export const SCAN_GUIDE_REL_PATH = "_config/scan.guide.card";
 
 /** The scan guide exists but cannot be parsed/validated — a hard error:
  * scanning without priors would commit misread names silently. `detail`
@@ -90,7 +90,7 @@ function compileScanGuide(raw: string): string {
 
 /**
  * Resolve the boxholder's scan priors: the compiled scan guide when
- * `config/scan.guide.card` exists, else the deprecated `CLAUDE_SCANS.md`
+ * `_config/scan.guide.card` exists, else the deprecated `CLAUDE_SCANS.md`
  * fallback (with a deprecation warning), else null (no priors — valid).
  *
  * @throws ScanGuideParseError when the guide card exists but is invalid.

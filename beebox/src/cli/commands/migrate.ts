@@ -1,7 +1,7 @@
 /**
  * `bbx migrate` — apply pending data migrations to the box.
  *
- * Compares the box's `config/migrations.jsonl` against the canonical
+ * Compares the box's `_config/migrations.jsonl` against the canonical
  * `MIGRATIONS` list in `src/core/migrations.ts`. Runs any pending
  * migrations in order, appending a manifest entry after each success.
  *
@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
 import { detectBoxTarget } from "../../core/box/package.js";
 import {
   MIGRATIONS,
@@ -85,7 +85,7 @@ export async function markMigrationApplied(args: { boxRoot: string; name: string
  * record a false "applied". Refuse instead. Throws ProcedureGateError.
  */
 async function assertProcedureHasGate(args: { procedure: string; boxRoot: string }): Promise<void> {
-  const defPath = path.join(args.boxRoot, "config/procedures", `${args.procedure}.procedure.card`);
+  const defPath = path.join(getBoxDir(args.boxRoot, "procedures"), `${args.procedure}.procedure.card`);
   const content = await fs.readFile(defPath, "utf-8");
   const def = parseProcedureDefinition(content);
   const hasGate =
@@ -280,7 +280,7 @@ export const migrateCommand = new Command("migrate")
 
     // Fully provision the box before migrating. A migration can depend on any
     // provisioned state — a procedure-kind migration needs its procedure card in
-    // config/procedures/, but updated rules, guides, schemas, or briefing may
+    // _config/procedures/, but updated rules, guides, schemas, or briefing may
     // matter too — and running one against a partially-updated box risks the
     // silent-inconsistency class this whole discipline guards against. `bbx init`
     // is the canonical, complete provisioning (idempotent — a current box is a

@@ -12,8 +12,8 @@ tests:
   - id: box-structure-inbox
     prompt: "Where would you look for unprocessed incoming items?"
     expected_level: knows_directly
-    watch_for: "Names box/inbox/ directly without searching"
-    correct_contains: ["box/inbox"]
+    watch_for: "Names _content/inbox/ directly without searching"
+    correct_contains: ["_content/inbox"]
     tags: [navigation]
 
   - id: find-memo-cards
@@ -26,7 +26,7 @@ tests:
   - id: card-after-processing
     prompt: "What happens to a card after it's processed?"
     expected_level: knows_directly
-    watch_for: "Mentions bbx mv and store/archive/ without file reads"
+    watch_for: "Mentions bbx mv and _bookkeeping/archive/ without file reads"
     correct_contains: ["archive"]
     tags: [navigation, lifecycle]
 
@@ -34,15 +34,15 @@ tests:
   # and 0 searches. The semantic regex accepts either natural ordering of the
   # host-/tmp rejection without requiring one model's exact wording.
   - id: temp-file-location
-    prompt: "You need to create a temporary working file while operating this box. Should it go in the host /tmp or the box-root tmp/ directory, and can you rely on it staying there?"
+    prompt: "You need to create a temporary working file while operating this box. Should it go in the host /tmp or the box-root _tmp/ directory, and can you rely on it staying there?"
     expected_level: knows_directly
-    watch_for: "Chooses box-root tmp/ and explicitly rejects host /tmp without reading files; says it may be swept and must not be relied on for persistence"
-    correct_contains: ["tmp/", "/tmp", "swept"]
+    watch_for: "Chooses box-root _tmp/ and explicitly rejects host /tmp without reading files; says it may be swept and must not be relied on for persistence"
+    correct_contains: ["_tmp/", "/tmp", "swept"]
     correct_matches:
       - "\\b(?:not|never)\\b(?:\\W+\\w+){0,2}\\W+host\\W+/tmp\\b|\\b(?:do\\W+not|don't)\\W+(?:use|put|place|write|store)(?:\\W+\\w+){0,3}\\W+host\\W+/tmp\\b|\\bhost\\W+/tmp\\b\\W+(?:should|must)\\W+not\\W+be\\W+(?:used|chosen)\\b"
     tags: [navigation, temp-files]
     notes: >
-      General box scratch belongs in tmp/, which is uncommitted and may be
+      General box scratch belongs in _tmp/, which is uncommitted and may be
       swept, so it is not persistent storage. This is distinct from host /tmp
       and the committed flow-specific tmp-capture/ and tmp-upload/ landing zones.
 
@@ -75,13 +75,13 @@ tests:
     tags: [intake]
     notes: >
       The agent should know that users interact through the web UI.
-      The failure mode is saying "create a file in box/inbox/" or
+      The failure mode is saying "create a file in _content/inbox/" or
       "put the voice memo in store/documents/".
 
   - id: dont-tell-user-to-place-files
     prompt: "I have some documents I want to add to the box. Where should I put them?"
     expected_level: knows_directly
-    watch_for: "Describes using the capture UI or a connector — does NOT say 'put them in box/inbox/' or any store/ path"
+    watch_for: "Describes using the capture UI or a connector — does NOT say 'put them in _content/inbox/' or any store/ path"
     tags: [intake]
     notes: >
       This is a trick question — the user says "where should I put them"
@@ -91,7 +91,7 @@ tests:
       structure as if the user navigates it directly.
 
   - id: inbox-vs-store
-    prompt: "What's the difference between box/inbox/ and store/archive/?"
+    prompt: "What's the difference between _content/inbox/ and _bookkeeping/archive/?"
     expected_level: knows_directly
     watch_for: "Inbox is for incoming/unprocessed items, archive is for processed/completed items"
     correct_contains: ["inbox", "archive"]
@@ -102,7 +102,7 @@ tests:
     expected_level: knows_about
     watch_for: >
       Describes the legacy reactor path: connectors sync, items land in inbox,
-      intake jobs created in box/jobs/, reactor processes them. Bonus credit if
+      intake jobs created in _bookkeeping/jobs/, reactor processes them. Bonus credit if
       the agent acknowledges the parallel new pipeline (intake → triage → handle,
       docs/triage.md) — but wakeup currently only drives the reactor path,
       so naming that flow is the primary expectation.
@@ -153,7 +153,7 @@ tests:
     tags: [cards, schemas, questions]
 
   - id: question-directive
-    prompt: "I want to ask the user whether to archive a recipe under store/recipes or store/archive. Create the question card."
+    prompt: "I want to ask the user whether to archive a recipe under _content/recipes or _bookkeeping/archive. Create the question card."
     expected_level: knows_about
     watch_for: "Creates a question card with a directive: frontmatter field describing the concrete action (move the recipe)"
     cards_contain: ["directive:"]
@@ -220,8 +220,8 @@ tests:
     prompt: "Where do I configure a procedure to react to newly matching Gmail, and can it avoid starting an agent when a deterministic check finds nothing?"
     expected_level: knows_about
     should_read: ["docs/generated/card-email-thread.md"]
-    watch_for: "Names config/connectors/gmail.json rules and says a procedure shell precheck can skip before an agent step"
-    correct_contains: ["config/connectors/gmail.json", "precheck"]
+    watch_for: "Names _config/connectors/gmail.json rules and says a procedure shell precheck can skip before an agent step"
+    correct_contains: ["_config/connectors/gmail.json", "precheck"]
     tags: [gmail, connectors, procedures]
 
   - id: gmail-gws-safety
@@ -305,10 +305,10 @@ tests:
     watch_for: >
       Says to finish by creating a question card (not guess past the
       ambiguity), declaring learning: when the destination is known; and
-      says to check box/questions/ first — including answered/dismissed/
+      says to check _bookkeeping/questions/ first — including answered/dismissed/
       expired cards, not just pending ones — before asking something that
       may already have been asked.
-    correct_contains_any: ["learning", "box/questions"]
+    correct_contains_any: ["learning", "_bookkeeping/questions"]
     tags: [questions]
 
   - id: question-dismissed-expired-meaning
@@ -335,8 +335,8 @@ tests:
   - id: create-new-card-type
     prompt: "How would you create a brand new card type for this box?"
     expected_level: discoverable
-    watch_for: "Names config/schemas/ + cardSchema()/Zod + bbx init; reading config/schemas/CLAUDE.md is fine but the agent now knows the shape directly"
-    correct_contains_any: ["config/schemas", "bbx init"]
+    watch_for: "Names _config/schemas/ + cardSchema()/Zod + bbx init; reading _config/schemas/CLAUDE.md is fine but the agent now knows the shape directly"
+    correct_contains_any: ["_config/schemas", "bbx init"]
     tags: [schemas, extension]
 
   # Status (2026-07-03): pass. The always-on cards section (agent-guide/cards.ts)
@@ -441,15 +441,15 @@ tests:
   - id: landmark-ref-box-root
     prompt: >
       I'm adding an entry to a landmark card's links list that points at the
-      card store/recipes/Bread.recipe.card. Write the links[] entry.
+      card _content/recipes/Bread.recipe.card. Write the links[] entry.
     expected_level: knows_directly
     watch_for: >
-      `ref: /store/recipes/Bread.recipe.card` — a box path with a leading `/`,
+      `ref: /_content/recipes/Bread.recipe.card` — a box path with a leading `/`,
       the same rule as every other ref. FAILS on a landmark-dir-relative
       (`recipes/Bread.recipe.card`) or `../`-climbing ref: that was the old
       landmark-private convention, retired 2026-07-30. A `title`/label
       alongside `ref` is expected and fine.
-    correct_contains: ["/store/recipes/Bread.recipe.card"]
+    correct_contains: ["/_content/recipes/Bread.recipe.card"]
     response_not_matches:
       - 'ref:\s*["'']?(?!/)[\w./-]*\.card'
     tags: [links, landmark, paths]
@@ -490,7 +490,7 @@ tests:
   # Status (2026-08-26): 1/1 pass on first run (claude, 1 file read, 47k ctx).
   - id: chat-husk-rename-safe
     prompt: >
-      This chat card under store/chat/web/ has a date-and-hex filename. I want
+      This chat card under _content/chat/web/ has a date-and-hex filename. I want
       to rename it to something meaningful — is that safe, and is there
       anything on the card I should leave alone?
     expected_level: knows_directly
@@ -536,14 +536,14 @@ tests:
     notes: >
       The agent should know bbx chat self-note exists for precisely this
       scheduled-agent handoff case. Failure modes: describing a journal file
-      in store/, creating a memo card in box/inbox/, relying on the commit
+      in store/, creating a memo card in _content/inbox/, relying on the commit
       message alone (which doesn't surface in chat), or posting via the
       regular chat endpoint (which would trigger a full conversational turn).
 
   - id: bbx-chat-self-note-env
     prompt: "What environment variables does bbx chat self-note require, and where do they come from?"
     expected_level: knows_about
-    watch_for: "Names BBX_BOX_NAME and BBX_SERVER_URL; knows they're set by the scheduler/script-runner from config/box.json publicUrl, not hardcoded or defaulted"
+    watch_for: "Names BBX_BOX_NAME and BBX_SERVER_URL; knows they're set by the scheduler/script-runner from _config/box.json publicUrl, not hardcoded or defaulted"
     correct_contains_any: ["BBX_BOX_NAME", "BBX_SERVER_URL"]
     max_turns: 20
     tags: [cli, chat]
@@ -551,7 +551,7 @@ tests:
       Self-note intentionally has no default server/box — the caller must
       inherit them from the spawning harness. Scheduled scripts get them
       automatically via buildScriptEnv in src/core/script-env.ts, which
-      reads publicUrl from config/box.json.
+      reads publicUrl from _config/box.json.
 
   # === Image Analysis ===
   #
@@ -599,12 +599,12 @@ tests:
   - id: create-procedure
     prompt: "How would you create a new procedure that processes bookmark cards?"
     expected_level: knows_about
-    watch_for: "Names config/procedures/ + the precheck/run/validate phases and shell/agent steps; points to procedures.md for the authoritative shape"
-    correct_contains: ["config/procedures"]
+    watch_for: "Names _config/procedures/ + the precheck/run/validate phases and shell/agent steps; points to procedures.md for the authoritative shape"
+    correct_contains: ["_config/procedures"]
     tags: [procedures, extension]
     notes: >
       Updated 2026-07-03: the agent describes the procedure shape correctly from
-      the always-on surface (config/procedures/, precheck/run/validate,
+      the always-on surface (_config/procedures/, precheck/run/validate,
       shell/agent steps) and itself points to procedures.md, so the old
       should_read is stale. Whether the *generated* YAML actually validates is a
       scenario-test question, not a knowledge-audit one — this audit only asserts
@@ -675,7 +675,7 @@ tests:
     watch_for: >
       Procedures run via `bbx procedure run <name>` (manual or scheduled) or as a
       triage category's handler — `bbx handle` runs a category landmark's
-      `destinations` handler `procedure` over its bucket. Job cards in box/jobs/
+      `destinations` handler `procedure` over its bucket. Job cards in _bookkeeping/jobs/
       are worked by agents, not trampolined into procedures.
     correct_contains_any: ["bbx procedure run", "handle", "handler"]
     tags: [procedures, jobs]
@@ -684,7 +684,7 @@ tests:
       procedure?" expecting an XML `<procedure ref>` job-trampoline — but that
       mechanism does not exist in the code. `startProcedure` is called only by
       `bbx procedure run`, migrations, and the triage handle stage; the reactor
-      dispatches box/jobs/ only to batch/chat agent jobs (no procedure
+      dispatches _bookkeeping/jobs/ only to batch/chat agent jobs (no procedure
       partition). The stale "procedure jobs via trampoline" comments in
       engine.ts / finish-job.ts describe a planned-but-unbuilt path. This audit
       now tests the real triggers.
@@ -786,10 +786,10 @@ tests:
   - id: cooking-recipe-lookup
     prompt: "Do I have any recipes saved? What can I make?"
     expected_level: knows_directly
-    watch_for: "Checks store/recipes/ for recipe cards — a straight file search, no guide needed"
+    watch_for: "Checks _content/recipes/ for recipe cards — a straight file search, no guide needed"
     tags: [cooking, recipes]
     notes: >
-      This is a simple lookup task. The agent knows recipes live in store/recipes/
+      This is a simple lookup task. The agent knows recipes live in _content/recipes/
       from the agent guide directory layout. Reading the cooking guide would be
       over-doing it here.
 
@@ -840,7 +840,7 @@ tests:
   - id: list-connectors
     prompt: "What connectors are configured for this box?"
     expected_level: discoverable
-    watch_for: "Explores config/connectors/ or reads docs/generated/connectors.md"
+    watch_for: "Explores _config/connectors/ or reads docs/generated/connectors.md"
     tags: [connectors]
 
   - id: rss-to-inbox-flow
@@ -859,7 +859,7 @@ tests:
   # === Scheduled Tasks ===
   #
   # Status (2026-07-03): both pass. add-daily-task answered scheduled-script +
-  # config/schedules/ directly (dropped stale should_read card-scheduled-script.md).
+  # _config/schedules/ directly (dropped stale should_read card-scheduled-script.md).
   # Status (2026-08-15, Codex): both pass. Schedule authoring intentionally lives
   # on the on-demand schedules skill rather than the always-on agent guide, so
   # how-schedules-work now expects a generated schedule-card reference read.
@@ -876,7 +876,7 @@ tests:
   - id: add-daily-task
     prompt: "As the box agent, how would you implement a new automated task that runs every day? What would you create, and where?"
     expected_level: knows_about
-    watch_for: "Names the scheduled-script card + config/schedules/ + bbx create; answers from the always-on guide"
+    watch_for: "Names the scheduled-script card + _config/schedules/ + bbx create; answers from the always-on guide"
     correct_contains: ["scheduled-script"]
     tags: [schedules, extension]
 
@@ -884,7 +884,7 @@ tests:
   #
   # Status (2026-07-03): all 4 pass. Fixed track-reading-list + create-task-card-type
   # (agent proposes custom schemas directly — dropped too-strict should_read
-  # config/schemas/CLAUDE.md; create-task-card-type re-encoded as a negative check
+  # _config/schemas/CLAUDE.md; create-task-card-type re-encoded as a negative check
   # given its conversational variance).
   # Status (2026-08-15, Codex): all 11 extension-tagged audits pass. The
   # track-reading-list prompt now asks the representation choice it evaluates;
@@ -899,10 +899,10 @@ tests:
     notes: >
       Updated 2026-07-03: the agent proposes a custom `book` schema with the right
       fields directly (from the agent-guide pointer + existing schema examples).
-      The old should_read config/schemas/CLAUDE.md was already noted as too strict.
+      The old should_read _config/schemas/CLAUDE.md was already noted as too strict.
       Substance check = proposes a schema/custom card type (the discoverable-correct
       answer), not the "just use memos" failure mode. It doesn't always name the
-      exact config/schemas/ path, so match on the concept; "book type" is the
+      exact _config/schemas/ path, so match on the concept; "book type" is the
       same domain-specific wording for this prompt, with or without Markdown
       code formatting around book.
 
@@ -919,7 +919,7 @@ tests:
       extensibility-aware behavior. A positive string match is too brittle across
       that variance, so the audit encodes the real assertion (its watch_for)
       negatively: the agent must not claim card types are a fixed/built-in set.
-      Dropped the too-strict should_read config/schemas/CLAUDE.md. (Updated
+      Dropped the too-strict should_read _config/schemas/CLAUDE.md. (Updated
       2026-07-29: the note used to name the now-retired todo-list type as the
       example the agent might ask about; genericized since that type is gone.)
 
@@ -1289,7 +1289,7 @@ tests:
       ran out of budget before narrating a final summary, so the truncated
       14-word reply never said "question" — failed the text check on a
       cut-off response, not a knowledge gap (confirmed by files-read: it had
-      already created `box/questions/Storage_Unit_Winter.question.card`).
+      already created `_bookkeeping/questions/Storage_Unit_Winter.question.card`).
       Passed cleanly after the bump with a full narrated response.
 
   - id: todo-application-query-plate
@@ -1948,13 +1948,13 @@ tests:
   - id: calendar-create-event
     prompt: "I need to add a dentist appointment next Tuesday at 2pm to my calendar. Can you do that?"
     expected_level: knows_about
-    watch_for: "Says yes and creates an .ics file in store/calendar/ — does NOT say calendar is read-only or suggest using Google Calendar directly"
+    watch_for: "Says yes and creates an .ics file in _content/calendar/ — does NOT say calendar is read-only or suggest using Google Calendar directly"
     correct_contains: ["sync"]
     max_turns: 15
     tags: [calendar]
     notes: >
       The agent should know that calendar sync is bidirectional and that creating
-      a new .ics file in store/calendar/ will push it to Google Calendar on next
+      a new .ics file in _content/calendar/ will push it to Google Calendar on next
       sync. The failure mode is saying "I can only read calendar events" or
       suggesting the user create the event in Google Calendar directly.
       The agent may actually create the file (good!) — the important thing is
@@ -1963,13 +1963,13 @@ tests:
   - id: calendar-edit-event
     prompt: "How would I change the time of a calendar event? Say I have a dentist appointment and need to move it to 3pm."
     expected_level: knows_about
-    watch_for: "Describes editing the .ics file in store/calendar/ — does NOT say calendar events can't be modified"
+    watch_for: "Describes editing the .ics file in _content/calendar/ — does NOT say calendar events can't be modified"
     correct_contains: [".ics"]
     tags: [calendar]
     notes: >
       This is a "how would you" question so the agent doesn't need to find
       an actual event. It should describe the process: find the .ics file in
-      store/calendar/, edit the DTSTART/DTEND, and it'll sync on next cycle.
+      _content/calendar/, edit the DTSTART/DTEND, and it'll sync on next cycle.
       The failure mode is saying calendar events can't be modified locally.
 
   - id: calendar-bidirectional
@@ -1987,15 +1987,15 @@ tests:
   #
   # Status (2026-07-03): 1/3 pass. BOX DRIFT: drive-edit-spreadsheet +
   # drive-understand-formulas need a synced .gsheet fixture in test1 to exercise
-  # (edit a value / read the formula JSON), but store/drive/ is empty — the agent
+  # (edit a value / read the formula JSON), but _content/drive/ is empty — the agent
   # correctly reports none exist. Restore a drive fixture or accept they can't run.
   # See docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
   - id: drive-find-spreadsheet
     prompt: "Where would I find spreadsheet data that's been synced from Google Drive?"
     expected_level: knows_about
-    watch_for: "Looks in store/drive/ for .gsheet.card files"
-    correct_contains: ["store/drive"]
+    watch_for: "Looks in _content/drive/ for .gsheet.card files"
+    correct_contains: ["_content/drive"]
     tags: [drive, navigation]
 
   - id: drive-edit-spreadsheet
@@ -2087,8 +2087,8 @@ tests:
   - id: drive-trashed-child
     prompt: "Someone trashed one of the files in a Drive folder this box mirrors. What happens to that file's card here?"
     expected_level: knows_about
-    watch_for: "Says the card moves to store/trash/ and the sync reports it — not that it is silently deleted or left syncing"
-    correct_contains: ["store/trash"]
+    watch_for: "Says the card moves to _bookkeeping/trash/ and the sync reports it — not that it is silently deleted or left syncing"
+    correct_contains: ["_bookkeeping/trash"]
     tags: [drive, mounts]
 
   # === Google Drive / Documents ===
@@ -2148,8 +2148,8 @@ tests:
   # verify the agent can find that knowledge.
   #
   # Status (2026-07-03): 6/6 pass. draft-email-placement had put reply drafts in
-  # box/output/ instead of the source thread's .attach/ (loses Gmail threading).
-  # FIXED by a corrective on the box/output/ row (agent-guide/box-shape.ts) noting
+  # _bookkeeping/output/ instead of the source thread's .attach/ (loses Gmail threading).
+  # FIXED by a corrective on the _bookkeeping/output/ row (agent-guide/box-shape.ts) noting
   # email drafts are the exception, plus a pointer in email-message.tsx. See
   # docs/reports/knowledge-audit-rerun-2026-07-03.md.
   #
@@ -2195,9 +2195,9 @@ tests:
     expected_level: knows_about
     watch_for: >
       Reply drafts go inside the existing thread directory under
-      box/inbox/email/ (next to the msg-NNN cards), as a
+      _content/inbox/email/ (next to the msg-NNN cards), as a
       *.email-outbound.card file. NOT a separate outbox tree.
-    correct_contains_any: ["thread", "box/inbox/email"]
+    correct_contains_any: ["thread", "_content/inbox/email"]
     tags: [email, drafts]
 
   - id: draft-email-after-upload
@@ -2560,8 +2560,8 @@ tests:
     prompt: "Where do items live at each stage of the triage pipeline?"
     expected_level: knows_directly
     watch_for: >
-      Names box/inbox/intake/ (stage 1), box/inbox/staged/ (between stages 1 and 2),
-      box/inbox/triaged/<category>/ (after stage 2), box/inbox/triaged/_unsure/
+      Names _content/inbox/intake/ (stage 1), _content/inbox/staged/ (between stages 1 and 2),
+      _content/inbox/triaged/<category>/ (after stage 2), _content/inbox/triaged/_unsure/
       for low-confidence holds. Layout is in the always-loaded agent guide.
     correct_contains: ["intake", "staged", "triaged"]
     tags: [triage-pipeline, navigation]
@@ -2614,11 +2614,11 @@ tests:
     expected_level: knows_about
     watch_for: >
       Distinguishes the two paths. Triage-pipeline intake (`bbx intake`) is
-      stage 1 of a formal three-stage pipeline — scans box/inbox/intake/,
+      stage 1 of a formal three-stage pipeline — scans _content/inbox/intake/,
       runs prep steps like filename normalization, advances items to
-      box/inbox/staged/. Reactor intake jobs are the legacy path —
-      connectors drop items in box/inbox/, wakeup creates job cards in
-      box/jobs/, the reactor agent processes them. The two paths coexist.
+      _content/inbox/staged/. Reactor intake jobs are the legacy path —
+      connectors drop items in _content/inbox/, wakeup creates job cards in
+      _bookkeeping/jobs/, the reactor agent processes them. The two paths coexist.
     correct_contains_any: ["legacy", "coexist", "two", "parallel", "reactor"]
     tags: [triage-pipeline, lifecycle, behavioral]
     notes: >
@@ -2632,7 +2632,7 @@ tests:
     prompt: "What happens when the triage agent isn't sure where an item belongs?"
     expected_level: knows_directly
     watch_for: >
-      Item moves to box/inbox/triaged/_unsure/, a select question card is
+      Item moves to _content/inbox/triaged/_unsure/, a select question card is
       created listing candidate categories (plus an `_other` escape option),
       and the pipeline does NOT advance the item further until the user
       answers. _unsure/ is named in the always-loaded agent guide.
@@ -2822,12 +2822,12 @@ tests:
     expected_level: knows_about
     watch_for: >
       Names `docs/generated/card-bookmark.md` or `src/schemas/bookmark.ts`
-      (or a box-local `config/schemas/bookmark.ts`) as where to look.
+      (or a box-local `_config/schemas/bookmark.ts`) as where to look.
       Does NOT guess fields from memory or pattern-match off another
       schema. `should_read` deliberately omitted — the prompt asks
       "how would you find out", which the agent can correctly answer
       by describing the procedure without actually opening the file.
-    correct_contains_any: ["docs/generated/", "src/schemas/", "config/schemas/"]
+    correct_contains_any: ["docs/generated/", "src/schemas/", "_config/schemas/"]
     tags: [schemas, discovery]
     notes: >
       Tests whether the agent reaches for the per-schema generated doc
@@ -3122,7 +3122,7 @@ tests:
   - id: speak-users-language
     prompt: >
       In chat I ask "where did my lemon chicken recipe end up?" It lives at
-      store/recipes/Lemon_Chicken.recipe.card. When you answer me, how do you
+      _content/recipes/Lemon_Chicken.recipe.card. When you answer me, how do you
       refer to it — and to me?
     expected_level: knows_directly
     watch_for: >
@@ -3712,8 +3712,8 @@ tests:
     watch_for: >
       Explains the retrospective (process-retrospective procedure mining
       past chat sessions) and points at the run reports in
-      store/reviews/retro/ without searching for them.
-    correct_contains: ["store/reviews/retro"]
+      _content/reviews/retro/ without searching for them.
+    correct_contains: ["_content/reviews/retro"]
     tags: [retro, navigation]
 
   - id: retro-inferred-belief-policy
@@ -3841,7 +3841,7 @@ tests:
     # guide, so the agent should reach for it without reading a doc.
     prompt: >
       I created a custom card type "sandbox" (box-local schema in
-      config/schemas/) and built views/sandbox.tsx as its UI. But when the
+      _config/schemas/) and built views/sandbox.tsx as its UI. But when the
       boxholder opens the card at /card/store/play/Demo.sandbox.card they
       get the generic card page, not my view. How do I make my view what
       they see there?
@@ -3867,7 +3867,7 @@ tests:
     watch_for: >
       Names adapterFetch (routes through the box's /api/adapters/replicate
       so the server injects the key from
-      config/connectors/replicate.secret.json). Must NOT suggest reading
+      _config/connectors/replicate.secret.json). Must NOT suggest reading
       the secret file into the browser, embedding the key in view source,
       or any CORS workaround.
     correct_contains: ["adapterFetch"]
@@ -4397,7 +4397,7 @@ tests:
     prompt: "Where do this box's local card schemas live, and what do they import?"
     expected_level: knows_directly
     watch_for: >
-      Names src/schemas/ at the package root (not config/schemas/) and the
+      Names src/schemas/ at the box root (not _config/schemas/) and the
       real library imports — beebox/cards for cardSchema()/body, and
       beebox/schema for z (Zod) and yaml — not a bare `zod` dependency.
     correct_contains_any: ["src/schemas", "../src/schemas"]
@@ -4410,7 +4410,7 @@ tests:
     prompt: "You want to add a custom view. Where does the file go and what may it import?"
     expected_level: knows_directly
     watch_for: >
-      Names src/views/ at the package root, the beebox/view-widgets
+      Names src/views/ at the box root, the beebox/view-widgets
       exports surface, and that it's hot-reloaded — no restart needed to see
       an edit take effect.
     correct_contains_any: ["src/views", "../src/views"]
@@ -4539,7 +4539,7 @@ tests:
   # the ask-first rule). upload-batch-found-outside-chat FAILED its first run
   # (0 words, 18 turns) — not a prompt-surface gap: the box actually had a
   # real leftover tmp-upload/ batch from the Track 1/2 E2E verification (filed
-  # to box/inbox/ as file cards but never deleted, a genuine loose end from
+  # to _content/inbox/ as file cards but never deleted, a genuine loose end from
   # that verification pass), and the agent went down a real remediation
   # rabbit hole (git mv, bbx rm, hashing files) instead of answering the
   # hypothetical, running out of turns before replying. Fixed by cleaning up
@@ -4827,7 +4827,7 @@ tests:
 
   - id: pdf-card-failed-extraction
     prompt: >
-      I found a card at `box/inbox/scan-20260402T1015-ab12cd34.attach/source.pdf.card`
+      I found a card at `_content/inbox/scan-20260402T1015-ab12cd34.attach/source.pdf.card`
       with `status: new` and an `error:` field saying Docling exited 1. Is the
       scanned document lost? What are my options?
     expected_level: knows_directly
@@ -5094,7 +5094,7 @@ tests:
   # The two audits named in docs/plans/secret-custody.md, "Knowledge audits":
   # provisioning (Track 3) and ad-hoc secret use in box code (`agent`-access
   # grants). Both guard the same failure family — the old
-  # `config/connectors/*.secret.json` answer, which the machine-level store
+  # `_config/connectors/*.secret.json` answer, which the machine-level store
   # made actively wrong. Run: pnpm knowledge-audit run --box <abs-path> --filter secrets
   #
   # Status (2026-08-17): 1/2 pass.
@@ -5107,7 +5107,7 @@ tests:
   #   agent grep'd the box for "mistral" and found
   #   `docs/generated/views.md` (generated by `src/core/views/doc-files.ts`),
   #   which documents `adapterFetch`/`/api/adapters/<adapter>` as reading the
-  #   key from `config/connectors/<adapter>.secret.json` — true when that doc
+  #   key from `_config/connectors/<adapter>.secret.json` — true when that doc
   #   text was written, now stale: `api-adapters.ts` (`readAdapterKey`)
   #   resolves from the machine store first and only falls back to the
   #   legacy file with a deprecation warning
@@ -5126,7 +5126,7 @@ tests:
   # doc (`src/core/views/doc-files.ts`'s "Calling external APIs (LLMs) from
   # a view" section) to say the server resolves the adapter key from the
   # machine-level store, the boxholder grants it via `bbx secrets`, and
-  # `config/connectors/<adapter>.secret.json` is a deprecated fallback, not
+  # `_config/connectors/<adapter>.secret.json` is a deprecated fallback, not
   # something to create. secrets-provisioning now reads that regenerated doc
   # (1 file read) and answers correctly — no `.secret.json` mention, names
   # the store/grant flow. secrets-adhoc-use unchanged (0 reads, pass).
@@ -5139,10 +5139,10 @@ tests:
       copy each, and the boxholder supplies the value and grants it to this
       box (via `bbx secrets` — declare/set/grant — or the admin page's
       Secrets section). Should NOT say to write or edit
-      `config/connectors/mistral.secret.json`, and should NOT describe the
+      `_config/connectors/mistral.secret.json`, and should NOT describe the
       key as something that lives inside the box tree.
     correct_contains_any: ["machine-level", "bbx secrets", "grant", "admin page", "boxholder"]
-    response_not_contains: ["config/connectors/mistral.secret.json", "mistral.secret.json", ".secret.json"]
+    response_not_contains: ["_config/connectors/mistral.secret.json", "mistral.secret.json", ".secret.json"]
     tags: [secrets]
 
   - id: secrets-adhoc-use
@@ -5161,5 +5161,5 @@ tests:
     correct_contains_any: ["bbx secrets declare", "secrets/resolve", "resolve"]
     correct_matches:
       - "call time|per[- ]call|each (?:call|request)|every (?:call|request|time)"
-    response_not_contains: ["write it to a file", "save it to a file", "store it in a file", "config/connectors", ".secret.json"]
+    response_not_contains: ["write it to a file", "save it to a file", "store it in a file", "_config/connectors", ".secret.json"]
     tags: [secrets]

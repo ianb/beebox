@@ -15,7 +15,7 @@ export interface Connector {
   produces: string[];
 
   /**
-   * Subdirectories under box/inbox/ that this connector owns. Used by
+   * Subdirectories under _content/inbox/ that this connector owns. Used by
    * `bbx wakeup --connector <name>` to scope inbox scanning and to tag
    * any intake jobs it creates with `source="<name>"`. Empty if the
    * connector creates job cards directly without staging inbox items.

@@ -33,7 +33,7 @@ async function code(p) {
 
 // Read a schedule card's frontmatter as an object.
 async function frontmatter(box, name) {
-  const text = await box.read(`config/schedules/${name}.scheduled-script.card`);
+  const text = await box.read(`_config/schedules/${name}.scheduled-script.card`);
   const inner = text.replace(/^---\n/, "").replace(/---\n?$/, "");
   return parseYaml(inner);
 }
@@ -54,7 +54,7 @@ rewrites.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/schedules/digest.scheduled-script.card", SCHED);
+await box.write("_config/schedules/digest.scheduled-script.card", SCHED);
 box.commitAll("seed");
 const c = caller(box.root);
 
@@ -106,7 +106,7 @@ the true no-op.)
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/schedules/digest.scheduled-script.card", SCHED);
+await box.write("_config/schedules/digest.scheduled-script.card", SCHED);
 box.commitAll("seed");
 const c = caller(box.root);
 
@@ -156,7 +156,7 @@ A disabled schedule can't be triggered (`BAD_REQUEST`); a missing one is
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(
-  "config/schedules/off.scheduled-script.card",
+  "_config/schedules/off.scheduled-script.card",
   `---\nenabled: false\nruns: "true"\n---\n`,
 );
 box.commitAll("seed");
@@ -185,7 +185,7 @@ recorded history.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/schedules/race.scheduled-script.card", SCHED);
+await box.write("_config/schedules/race.scheduled-script.card", SCHED);
 box.commitAll("seed");
 const c = caller(box.root);
 

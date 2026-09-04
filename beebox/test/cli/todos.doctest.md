@@ -14,7 +14,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 
 const box = await makeTmpBox();
-await box.write("config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
+await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
 
 async function run(options) {
   const logs = [];
@@ -33,7 +33,7 @@ function memo(frontmatterExtra, body) {
 }
 
 await box.write(
-  "store/plate.memo.card",
+  "_content/plate.memo.card",
   memo(
     "",
     [
@@ -58,11 +58,11 @@ await box.write(
 await run()
 =>
 ESCALATED (1)
-  store/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
+  _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ON PLATE (1)
-  store/plate.memo.card:7  [on-plate-one] Undated, on the plate now
+  _content/plate.memo.card:7  [on-plate-one] Undated, on the plate now
 QUIET (1)
-  store/plate.memo.card:9  [quiet-one] Not yet  (due=2026-08-01 start=2026-07-30)
+  _content/plate.memo.card:9  [quiet-one] Not yet  (due=2026-08-01 start=2026-07-30)
 ```
 
 ## `--status done`
@@ -71,7 +71,7 @@ QUIET (1)
 await run({ status: "done" })
 =>
 DONE (1)
-  store/plate.memo.card:13  [done-one] Already handled
+  _content/plate.memo.card:13  [done-one] Already handled
 ```
 
 ## `--status parked`
@@ -80,7 +80,7 @@ DONE (1)
 await run({ status: "parked" })
 =>
 PARKED (1)
-  store/plate.memo.card:11  [parked-one] Parked
+  _content/plate.memo.card:11  [parked-one] Parked
 ```
 
 ## `--on-plate` narrows the default (open) filter further, excluding quiet
@@ -89,9 +89,9 @@ PARKED (1)
 await run({ onPlate: true })
 =>
 ESCALATED (1)
-  store/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
+  _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ON PLATE (1)
-  store/plate.memo.card:7  [on-plate-one] Undated, on the plate now
+  _content/plate.memo.card:7  [on-plate-one] Undated, on the plate now
 ```
 
 ## `--assigned`
@@ -100,7 +100,7 @@ ON PLATE (1)
 await run({ assigned: "Dana" })
 =>
 ESCALATED (1)
-  store/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
+  _content/plate.memo.card:5  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ```
 
 ## No match
@@ -116,23 +116,23 @@ await run({ assigned: "Nobody" })
 await run({ status: "parked" })
 =>
 PARKED (1)
-  store/plate.memo.card:11  [parked-one] Parked
+  _content/plate.memo.card:11  [parked-one] Parked
 ```
 
 ## A card that fails to load prints a trailing "could not be read" section — never silently dropped
 
 ```ts continue
 await box.write(
-  "store/bad.memo.card",
+  "_content/bad.memo.card",
   '---\nstatus: new\ncreated: not-a-date\n---\n{% todo %}Never collected{% /todo %}\n'
 );
 await run({ status: "parked" })
 =>
 PARKED (1)
-  store/plate.memo.card:11  [parked-one] Parked
+  _content/plate.memo.card:11  [parked-one] Parked
 «blankline»
 1 cards could not be read for todos:
-  [load] store/bad.memo.card: /«*»store/bad.memo.card: invalid memo frontmatter:
+  [load] _content/bad.memo.card: /«*»_content/bad.memo.card: invalid memo frontmatter:
   - created: Invalid ISO datetime
 ```
 

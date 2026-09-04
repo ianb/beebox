@@ -205,7 +205,7 @@ box.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/box.json", JSON.stringify({ agentEngine: "codex" }));
+await box.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
 box.commitAll("Configure Codex");
 
 let fakeAgent;

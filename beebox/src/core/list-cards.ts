@@ -10,7 +10,7 @@ import { glob } from "glob";
 import { boxCodePaths, getBoxShape } from "../lib/box-shape.js";
 import { isAgentInstructionsFile } from "./agent-instruction-files.js";
 
-const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"];
+const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"];
 
 export async function listBoxCardFiles(boxRoot: string): Promise<string[]> {
   return glob("**/*.card", {
@@ -27,6 +27,7 @@ const MARKDOWN_SKIP_DIRS = new Set([
   ".git",
   ".pnpm",
   ".claude",
+  ".agents",
   ".beebox",
 ]);
 
@@ -64,6 +65,7 @@ const MARKDOWN_WALK_PRUNE = [
   "**/.git/**",
   "**/.pnpm/**",
   "**/.claude/**",
+  "**/.agents/**",
   "**/.beebox/**",
 ];
 
@@ -85,7 +87,7 @@ export async function listBoxMarkdownFiles(boxRoot: string): Promise<string[]> {
  * `cardRef="…"` refs that `bbx validate`/`bbx mv` track (see core/view-refs.ts).
  *
  * Shape-aware: a legacy box's views live at `boxRoot/views/`; a v2 box's live
- * at `packageRoot/src/views/` (`boxCodePaths` resolves either).
+ * at `boxRoot/src/views/` (`boxCodePaths` resolves either).
  */
 export async function listBoxViewFiles(boxRoot: string): Promise<string[]> {
   const shape = await getBoxShape(boxRoot);

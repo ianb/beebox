@@ -38,8 +38,8 @@ MANIFEST_FILENAME
 ```
 
 ```ts
-manifestPath("/box/inbox/foo.attach")
-=> /box/inbox/foo.attach/manifest.json
+manifestPath("/_content/inbox/foo.attach")
+=> /_content/inbox/foo.attach/manifest.json
 ```
 
 ## sha256File against the FIPS known-answer

@@ -56,7 +56,7 @@ THREW:FORBIDDEN
 ```ts continue
 print(JSON.stringify(await caller(boxRoot, { isOwner: true }).setService({ service: "deepgram" })));
 print(JSON.stringify(await caller(boxRoot, { isOwner: true }).setHqService({ hqService: "voxtral-diarized" })));
-print((await readFile(join(boxRoot, "config/transcription.json"), "utf-8")).trim());
+print((await readFile(join(boxRoot, "_config/transcription.json"), "utf-8")).trim());
 =>
 {"service":"deepgram"}
 {"hqService":"voxtral-diarized"}

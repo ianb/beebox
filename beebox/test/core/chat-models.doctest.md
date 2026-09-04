@@ -144,9 +144,9 @@ boundary, so it never reaches a spawn.
 
 ```ts
 const policyBox = await makeTmpBox();
-await mkdir(join(policyBox.root, "config"), { recursive: true });
+await mkdir(join(policyBox.root, "_config"), { recursive: true });
 const writeConfig = async (config: Record<string, unknown>) =>
-  writeFile(join(policyBox.root, "config/box.json"), JSON.stringify(config));
+  writeFile(join(policyBox.root, "_config/box.json"), JSON.stringify(config));
 
 await writeConfig({ agentModel: "claude-sonnet-5" });
 await loadBoxModel(policyBox.root)
@@ -189,9 +189,9 @@ including the nickname the old code hardcoded.
 
 ```ts
 const smallBox = await makeTmpBox();
-await mkdir(join(smallBox.root, "config"), { recursive: true });
+await mkdir(join(smallBox.root, "_config"), { recursive: true });
 const writeSmall = async (config: Record<string, unknown>) => {
-  await writeFile(join(smallBox.root, "config/box.json"), JSON.stringify(config));
+  await writeFile(join(smallBox.root, "_config/box.json"), JSON.stringify(config));
   clearBoxConfigCache(smallBox.root);
 };
 
@@ -218,9 +218,9 @@ field existed — rather than both.
 
 ```ts
 const engineBox = await makeTmpBox();
-await mkdir(join(engineBox.root, "config"), { recursive: true });
+await mkdir(join(engineBox.root, "_config"), { recursive: true });
 const writeEngines = async (config: Record<string, unknown>) => {
-  await writeFile(join(engineBox.root, "config/box.json"), JSON.stringify(config));
+  await writeFile(join(engineBox.root, "_config/box.json"), JSON.stringify(config));
   clearBoxConfigCache(engineBox.root);
 };
 

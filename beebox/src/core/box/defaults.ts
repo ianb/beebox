@@ -44,7 +44,7 @@ function describeInstall(result: InstallResult, displayName: string): string | n
 /**
  * Install procedure templates into a box.
  *
- * On fresh install: copies template procedure cards to config/procedures/.
+ * On fresh install: copies template procedure cards to _config/procedures/.
  * On update: if the box's copy matches the previously installed version,
  * updates it. If the box's copy has been modified, writes the new version
  * into `_config/_template-updates/procedures/` for manual merging.

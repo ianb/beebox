@@ -11,7 +11,7 @@
  * would make two weekly runs incomparable.
  *
  * `models.chat` now writes the box's model policy (`agentModel` in
- * `config/box.json`), so it pins CHAT AND THE REACTOR — intake, the email→task
+ * `_config/box.json`), so it pins CHAT AND THE REACTOR — intake, the email→task
  * step this tier exists to watch, and every other reactor invocation. The
  * scenario field keeps its old name for now; renaming it to `models.box` is
  * tracked separately.
@@ -24,6 +24,7 @@ import { clearBoxConfigCache } from "../core/box/config.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { commit, getStatus, stageAll } from "../lib/git.js";
+import { getBoxDir } from "../lib/paths.js";
 import type { FieldBox } from "./run-box.js";
 import type { FieldScenario } from "./scenario.js";
 
@@ -77,7 +78,7 @@ export async function seedFieldBox(options: SeedFieldBoxOptions): Promise<void> 
   const { box, scenario } = options;
 
   if (scenarioNeedsGmail(scenario)) {
-    const connectorsDir = path.join(box.boxRoot, "config/connectors");
+    const connectorsDir = getBoxDir(box.boxRoot, "connectors");
     await mkdir(connectorsDir, { recursive: true });
     await writeFileAtomic(path.join(connectorsDir, "gmail.json"), {
       content: `${JSON.stringify(TRACK_EVERYTHING_CONFIG, null, 2)}\n`,
@@ -86,17 +87,17 @@ export async function seedFieldBox(options: SeedFieldBoxOptions): Promise<void> 
 
   // Part of the committed baseline, so a `reset` mid-run rewinds onto the same
   // model the run started with rather than dropping the pin.
-  const configPath = path.join(box.boxRoot, "config/box.json");
+  const configPath = getBoxDir(box.boxRoot, "config") + "/box.json";
   await mkdir(path.dirname(configPath), { recursive: true });
   await writeFileAtomic(configPath, {
     content: `${JSON.stringify({ ...(await readBoxConfigJson(configPath)), agentModel: scenario.models.chat }, null, 2)}\n`,
   });
   clearBoxConfigCache(box.boxRoot);
 
-  const status = await getStatus(box.packageRoot);
+  const status = await getStatus(box.boxRoot);
   if (status.clean) return;
-  await stageAll(box.packageRoot);
-  await commit(box.packageRoot, {
+  await stageAll(box.boxRoot);
+  await commit(box.boxRoot, {
     message: `Field-test setup for ${scenario.name}`,
     trailers: { "Created-By": "bbx field-test" },
   });

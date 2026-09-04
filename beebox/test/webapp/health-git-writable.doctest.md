@@ -1,10 +1,8 @@
 # Health check: `git-writable` is shape-aware
 
 `runHealthChecks`'s `git-writable` check probes the git repository, which
-for a v2 (package-layout) box lives at the PACKAGE root — `content/` is a
-plain subdirectory with no `.git` of its own (see "One git repository at the
-repo root" in `docs/implemented-plans/boxes-as-packages-v2.md`) — so the
-check must resolve the box shape and probe `packageRoot/.git/objects`.
+under the one-root layout (shapeVersion 3) lives at the box root itself —
+so the check must resolve the box shape and probe `boxRoot/.git/objects`.
 
 ```ts setup
 import * as fs from "node:fs/promises";
@@ -19,14 +17,10 @@ const gitWritableCheck = (checks) => checks.find((c) => c.name === "git-writable
 const claudeCli = createFakeClaudeCli({ loggedIn: true });
 ```
 
-## v2 box: `.git/objects` lives at the PACKAGE root, one level above `content/`
-
-A `.git/objects` sitting inside `content/` (the legacy location) must NOT
-satisfy the check — only the package root's `.git` counts.
+## No `.git/objects` at the box root fails
 
 ```ts
 const box = await makeTmpBox();
-await fs.mkdir(box.path(".git/objects"), { recursive: true });
 const checks = await runHealthChecks(box.root, { claudeCli });
 JSON.stringify(gitWritableCheck(checks))
 => {"name":"git-writable","ok":false,"message":".git/objects is missing — commits will fail; verify the Git repository at «*»","severity":"error"}
@@ -52,11 +46,11 @@ JSON.stringify([
 => ["missing","not-writable","not-writable"]
 ```
 
-## v2 box: `.git/objects` present at the package root passes
+## `.git/objects` present at the box root passes
 
 ```ts
 const box = await makeTmpBox();
-await fs.mkdir(join(box.packageRoot, ".git/objects"), { recursive: true });
+await fs.mkdir(join(box.root, ".git/objects"), { recursive: true });
 const checks = await runHealthChecks(box.root, { claudeCli });
 JSON.stringify(gitWritableCheck(checks))
 => {"name":"git-writable","ok":true,"message":".git/objects is writable","severity":"error"}

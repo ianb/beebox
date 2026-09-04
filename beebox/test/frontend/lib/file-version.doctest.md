@@ -17,8 +17,8 @@ Files that haven't changed this session get no param — first loads stay clean 
 cross-reload freshness keeps relying on the server ETag:
 
 ```ts
-bustImageSrc("/main/test1/api/files/store/mara.webp")
-=> /main/test1/api/files/store/mara.webp
+bustImageSrc("/main/test1/api/files/_content/mara.webp")
+=> /main/test1/api/files/_content/mara.webp
 ```
 
 Non-box URLs (no `/api/files/` segment) pass through untouched:
@@ -32,39 +32,39 @@ Once a `file-change` is recorded for a path, its URL gets a `?v=<token>` so the
 browser misses its in-memory cache and re-fetches:
 
 ```ts
-bumpFileVersion("store/mara.webp", "1717270000000")
+bumpFileVersion("_content/mara.webp", "1717270000000")
 
-bustImageSrc("/main/test1/api/files/store/mara.webp")
-=> /main/test1/api/files/store/mara.webp?v=1717270000000
+bustImageSrc("/main/test1/api/files/_content/mara.webp")
+=> /main/test1/api/files/_content/mara.webp?v=1717270000000
 ```
 
 Matching is by the box-relative path after `/api/files/`, so the same file is
 busted regardless of the URL's base prefix (dev router worktree, prod root):
 
 ```ts
-bustImageSrc("/wt-name/box/api/files/store/mara.webp")
-=> /wt-name/box/api/files/store/mara.webp?v=1717270000000
+bustImageSrc("/wt-name/box/api/files/_content/mara.webp")
+=> /wt-name/box/api/files/_content/mara.webp?v=1717270000000
 ```
 
 A URL that already carries a query string gets the param appended with `&`:
 
 ```ts
-bustImageSrc("/main/test1/api/files/store/mara.webp?raw=1")
-=> /main/test1/api/files/store/mara.webp?raw=1&v=1717270000000
+bustImageSrc("/main/test1/api/files/_content/mara.webp?raw=1")
+=> /main/test1/api/files/_content/mara.webp?raw=1&v=1717270000000
 ```
 
 Other paths are unaffected — only the changed file is busted:
 
 ```ts
-bustImageSrc("/main/test1/api/files/store/other.webp")
-=> /main/test1/api/files/store/other.webp
+bustImageSrc("/main/test1/api/files/_content/other.webp")
+=> /main/test1/api/files/_content/other.webp
 ```
 
 A later change to the same path replaces the token (newest write wins):
 
 ```ts
-bumpFileVersion("store/mara.webp", "1717280000000")
+bumpFileVersion("_content/mara.webp", "1717280000000")
 
-bustImageSrc("/main/test1/api/files/store/mara.webp")
-=> /main/test1/api/files/store/mara.webp?v=1717280000000
+bustImageSrc("/main/test1/api/files/_content/mara.webp")
+=> /main/test1/api/files/_content/mara.webp?v=1717280000000
 ```

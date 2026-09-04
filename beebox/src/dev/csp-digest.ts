@@ -29,11 +29,9 @@ import { resolveBoxRoot } from "../lib/box-shape.js";
 import { isRecord } from "../core/card-io.js";
 
 const CURSOR_FILE = "csp-digest-cursor.json";
-// The package root, not the operational root — a v2 box's log lives under
-// its `content/` subdirectory. `runDigest` resolves this (and any `--box`
-// override) through `resolveBoxRoot` before building the log path, so
-// this constant can stay a stable, human-typeable path (and tolerates a path
-// that isn't a box).
+// `runDigest` resolves this (and any `--box` override) through
+// `resolveBoxRoot` before building the log path, so this constant can stay a
+// stable, human-typeable path (and tolerates a path that isn't a box).
 const DEFAULT_BOX = path.join(process.env.HOME ?? "~", "src/boxes/test1");
 
 /** One parsed report line. */

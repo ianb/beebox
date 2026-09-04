@@ -55,7 +55,7 @@ export const ChatSchema: CardSchema = cardSchema("chat", {
   category: "synced",
   instructions: `# Chat Husk Cards
 
-A \`chat\` card is the durable face of a web chat session — created automatically when a session starts, under \`store/chat/web/\`. The \`session\` field is the association (renaming the file is safe and encouraged once the topic is clear: \`bbx mv\` to a meaningful name).
+A \`chat\` card is the durable face of a web chat session — created automatically when a session starts, under \`_content/chat/web/\`. The \`session\` field is the association (renaming the file is safe and encouraged once the topic is clear: \`bbx mv\` to a meaningful name).
 
 A nightly **chat review** pass maintains \`title\`, \`contains\` and \`contains-evidence\` (a running account of what the conversation amounted to) on sessions that have grown enough to be worth re-reading. **A title you set by hand wins permanently** — the review detects the edit and never touches that field again. \`contains\`/\`contains-evidence\` are machine-owned; \`review-span\` is bookkeeping, leave it alone. \`engine\`, \`origin\` and \`origin-name\` are machine-owned provenance — which engine ran the chat and which machine holds its transcript — so leave those alone too.
 

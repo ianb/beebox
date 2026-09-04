@@ -119,7 +119,7 @@ async function executeAttachments(
 async function runToAnnex(ctx: CommandContext, opts: { dryRun: boolean }): Promise<CommandResult> {
   const shape = await getBoxShape(ctx.boxRoot);
   const result = await convertBoxToAnnex(createGitAnnexService(), {
-    repoRoot: shape.packageRoot,
+    repoRoot: shape.boxRoot,
     boxRoot: ctx.boxRoot,
     options: { dryRun: opts.dryRun },
   });

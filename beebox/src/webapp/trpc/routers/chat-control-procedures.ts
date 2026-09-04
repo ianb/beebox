@@ -153,7 +153,7 @@ export const chatControlProcedures = {
   }),
 
   /**
-   * File a dead chat's card away under `store/chat/archive/`.
+   * File a dead chat's card away under `_content/chat/archive/`.
    *
    * Beside `deleteSession` because it is the same decision made differently:
    * one removes the conversation, the other only stops listing it. Nothing is

@@ -20,7 +20,7 @@ const stage = (box) => { execSync("git add -A", { cwd: box.root }); };
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("store/notes/Plan.memo.card", "---\nstatus: not-a-real-status\n---\nBody text\n");
+await box.write("_content/notes/Plan.memo.card", "---\nstatus: not-a-real-status\n---\nBody text\n");
 stage(box);
 
 const outcome = await runPreCommitChecks(box.root, { colors: false });
@@ -36,7 +36,7 @@ single commit, so "No staged cards or markdown to validate" would be noise on
 every one of them:
 
 ```ts continue
-await box.write("store/notes/Plan.memo.card", "---\nstatus: new\ncreated: 2026-08-19T10:00:00Z\n---\nBody text\n");
+await box.write("_content/notes/Plan.memo.card", "---\nstatus: new\ncreated: 2026-08-19T10:00:00Z\n---\nBody text\n");
 stage(box);
 
 const clean = await runPreCommitChecks(box.root, { colors: false });
@@ -48,13 +48,13 @@ const clean = await runPreCommitChecks(box.root, { colors: false });
 ]
 ```
 
-Schemas stranded in the legacy `config/schemas/` location block here too — the
+Schemas stranded in the legacy `_config/schemas/` location block here too — the
 same gate every other validate scope applies (`checkLegacySchemaPath` in
 `validate.ts`), since the hook is the surface most likely to catch a misplaced
 schema before anything else loads the box:
 
 ```ts continue
-await box.write("config/schemas/memo.ts", "export {};\n");
+await box.write("_config/schemas/memo.ts", "export {};\n");
 const legacy = await runPreCommitChecks(box.root, { colors: false });
 [legacy.errorCount, legacy.report.includes("legacy location")]
 => [
@@ -78,12 +78,12 @@ Here `notes.md` links to `target.md`, and both are committed and clean:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("store/docs/target.md", "# Target\n");
-await box.write("store/docs/notes.md", "See [target](/store/docs/target.md).\n");
+await box.write("_content/docs/target.md", "# Target\n");
+await box.write("_content/docs/notes.md", "See [target](/_content/docs/target.md).\n");
 stage(box);
 box.commitAll("seed");
 
-await box.write("store/notes/Plan.memo.card", "---\nstatus: new\ncreated: 2026-08-19T10:00:00Z\n---\nAn unrelated add.\n");
+await box.write("_content/notes/Plan.memo.card", "---\nstatus: new\ncreated: 2026-08-19T10:00:00Z\n---\nAn unrelated add.\n");
 stage(box);
 const added = await runPreCommitChecks(box.root, { colors: false });
 [added.errorCount, added.linkWarnings]
@@ -99,12 +99,12 @@ never see. It is a warning: the commit is not blocked.
 
 ```ts continue
 box.commitAll("unrelated");
-execSync("git rm -q store/docs/target.md", { cwd: box.root });
+execSync("git rm -q _content/docs/target.md", { cwd: box.root });
 
 const deleted = await runPreCommitChecks(box.root, { colors: false });
 [
   deleted.errorCount,
-  deleted.linkWarnings !== null && deleted.linkWarnings.includes("store/docs/notes.md"),
+  deleted.linkWarnings !== null && deleted.linkWarnings.includes("_content/docs/notes.md"),
   deleted.linkWarnings !== null && deleted.linkWarnings.includes("not blocking the commit"),
 ]
 => [
@@ -125,7 +125,7 @@ it fires at exactly the commit that would put the bytes into history:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("store/notes/Trip.attach/export.parquet", "x".repeat(1024 * 1024 + 1));
+await box.write("_content/notes/Trip.attach/export.parquet", "x".repeat(1024 * 1024 + 1));
 
 const unstaged = await runPreCommitChecks(box.root, { colors: false });
 unstaged.errorCount

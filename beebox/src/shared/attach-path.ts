@@ -79,7 +79,7 @@ export function isAttachRef(ref: string): boolean {
  *
  * `splitAttachRef("attach/photo-001.jpg")` → `"photo-001.jpg"`
  * `splitAttachRef("attach/sub/scan.image.card")` → `"sub/scan.image.card"`
- * `splitAttachRef("store/x.attach/y.jpg")` → `null` (mid-path occurrence is literal)
+ * `splitAttachRef("_content/x.attach/y.jpg")` → `null` (mid-path occurrence is literal)
  */
 export function splitAttachRef(ref: string): string | null {
   if (!isAttachRef(ref)) return null;

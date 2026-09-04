@@ -2,7 +2,7 @@
  * Web Push card schema — outbound push notifications to the boxholder's
  * subscribed devices.
  *
- * The durable push analog of telegram-message: written to `box/output/` with
+ * The durable push analog of telegram-message: written to `_bookkeeping/output/` with
  * `status: pending`, delivered by the push connector during `bbx finalize`,
  * deleted on success, or stamped `failed` (and left in place) when delivery
  * fails — so a failed push is an inspectable artifact, never a silent drop.
@@ -37,7 +37,7 @@ export const WebPushSchema = cardSchema("web-push", {
 
 Prefer the \`notifyBoxholder\` helper in box code over hand-writing this card —
 it fans out to every configured channel (web push + Telegram). To push directly,
-create a card in \`box/output/\` with the \`.web-push.card\` extension.
+create a card in \`_bookkeeping/output/\` with the \`.web-push.card\` extension.
 
 ## Required frontmatter
 - \`title:\` — Short notification title.

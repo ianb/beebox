@@ -12,7 +12,6 @@ import type {
 import { ensureCodexPluginInstalled } from "../core/agent/ensure-codex-plugin.js";
 import { noteEngineUnavailability } from "../core/agent/engine-unavailability-apply.js";
 import { expandClaudeIncludes } from "../core/agent-context-includes.js";
-import { getBoxShape } from "../lib/box-shape.js";
 import { findBoxRoot } from "../lib/paths.js";
 import { validateHookPathsResult } from "../cli/commands/validate-hook.js";
 import {
@@ -101,7 +100,7 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
     boxRoot = await findBoxRoot(opts.cwd);
     const included = boxRoot === null ? "" : await expandClaudeIncludes({
       claudePath: join(boxRoot, "CLAUDE.md"),
-      packageRoot: (await getBoxShape(boxRoot)).packageRoot,
+      boxRoot,
     });
     session = createSession({
       cwd: opts.cwd,

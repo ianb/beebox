@@ -24,7 +24,7 @@ async function writeHusk(box, opts: { name: string; session: string; engine?: st
   const here = await localOrigin();
   const lines = [`session: ${opts.session}`, `origin: ${here.id}`, `origin-name: ${here.name}`];
   if (opts.engine !== undefined) lines.push(`engine: ${opts.engine}`);
-  await writeFile(box.path(`store/chat/web/${opts.name}.chat.card`), `---\n${lines.join("\n")}\n---\n`);
+  await writeFile(box.path(`_content/chat/web/${opts.name}.chat.card`), `---\n${lines.join("\n")}\n---\n`);
 }
 
 async function writeTranscript(box, sessionId: string) {
@@ -41,7 +41,7 @@ runs before any thread can be listed.
 
 ```ts
 const box = await makeTmpBox();
-await mkdir(box.path("store/chat/web"), { recursive: true });
+await mkdir(box.path("_content/chat/web"), { recursive: true });
 await writeTranscript(box, CLAUDE_CHAT);
 await writeHusk(box, { name: "2026-08-20_11111111", session: CLAUDE_CHAT });
 await writeHusk(box, { name: "2026-08-19_22222222", session: CODEX_CHAT, engine: "codex" });

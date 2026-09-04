@@ -156,7 +156,7 @@ export const rendersCardTypes = ["widget"];
 export default function Widget({ boxSlug }: { boxSlug: string }) {
   return (
     <div>
-      Widget view for {boxSlug} <CardLink cardRef="box/inbox">inbox</CardLink>
+      Widget view for {boxSlug} <CardLink cardRef="/_content/inbox">inbox</CardLink>
     </div>
   );
 }

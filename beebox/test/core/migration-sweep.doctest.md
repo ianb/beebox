@@ -6,7 +6,7 @@ needing a human alone. See `src/core/migration-sweep.ts`.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
-import { chmod, writeFile } from "node:fs/promises";
+import { chmod, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { MIGRATIONS, MANIFEST_PATH } from "../../src/core/migrations.js";
@@ -106,7 +106,7 @@ next deploy retries.
 const box = await makeTmpBox({ git: true });
 await seedManifest(box, { pending: [PROBE] });
 await box.commitAll("seed migration manifest");
-await box.write("box/inbox/Half_Written.memo.card", "---\nstatus: new\n---\nmid-edit\n");
+await box.write("_content/inbox/Half_Written.memo.card", "---\nstatus: new\n---\nmid-edit\n");
 
 const result = await sweepMigrations({ boxRoot: box.root });
 JSON.stringify({ status: result.status, pending: result.pending })
@@ -168,10 +168,13 @@ await box.cleanup();
 ## A box with no manifest at all is left alone
 
 It predates `bbx migrate`, and only a human can say whether it is already
-migrated (`--mark-all-applied`) or genuinely needs the whole queue.
+migrated (`--mark-all-applied`) or genuinely needs the whole queue. A fresh
+`bbx init` box always seeds a manifest, so this simulates the legacy case by
+removing it (a real pre-`bbx migrate` box on disk simply never had one):
 
 ```ts
 const box = await makeTmpBox({ git: true });
+await rm(join(box.root, MANIFEST_PATH));
 (await sweepMigrations({ boxRoot: box.root })).status
 => no-manifest
 ```

@@ -9,7 +9,7 @@
  * as ONE unit. `ghost update --rollback` used to revert only the code symlink
  * while the database stayed migrated forward, silently corrupting data
  * (https://github.com/TryGhost/Ghost-CLI/issues/699). Here the rollback unit
- * is a single `git reset --hard` at the package root — migrations mutate
+ * is a single `git reset --hard` at the box root — migrations mutate
  * tracked box files, so the same commit boundary that undoes the dependency
  * bump also undoes the migrations, with no separate "data rollback" step to
  * forget.
@@ -22,7 +22,7 @@
  * sync, typecheck) MUST run under the version being upgraded TO, since a
  * migration or template registered in the new version doesn't exist in the
  * old engine's in-process code. After `pnpm install` completes,
- * `packageRoot/node_modules/.bin/bbx` on disk IS the new engine, so those
+ * `boxRoot/node_modules/.bin/bbx` on disk IS the new engine, so those
  * steps are spawned as subprocesses against that binary rather than called
  * in-process — the only way to actually run "new engine code" from a process
  * that is itself the old engine.
@@ -42,8 +42,8 @@ import { toError, errorMessage } from "../../lib/error-guards.js";
 const OLD_ENGINE_BBX_BIN = path.join(PACKAGE_ROOT, "bin", "bbx");
 
 export class DirtyWorkingTreeError extends Error {
-  constructor(packageRoot: string) {
-    super(`${packageRoot} has uncommitted changes. Commit or stash them before \`bbx upgrade\` — it needs a clean starting point to snapshot.`);
+  constructor(boxRoot: string) {
+    super(`${boxRoot} has uncommitted changes. Commit or stash them before \`bbx upgrade\` — it needs a clean starting point to snapshot.`);
     this.name = "DirtyWorkingTreeError";
   }
 }
@@ -67,8 +67,8 @@ export class UpgradeStepFailedError extends Error {
 }
 
 class InstalledVersionMissingError extends Error {
-  constructor(packageRoot: string) {
-    super(`${packageRoot}/node_modules/beebox/package.json has no "version" field after install.`);
+  constructor(boxRoot: string) {
+    super(`${boxRoot}/node_modules/beebox/package.json has no "version" field after install.`);
     this.name = "InstalledVersionMissingError";
   }
 }
@@ -130,10 +130,10 @@ function isTarballPathSpec(spec: string): boolean {
   return spec.startsWith("file:") || spec.startsWith(".") || spec.startsWith("/") || spec.endsWith(".tgz");
 }
 
-async function assertSpecResolvable(spec: string, packageRoot: string): Promise<void> {
+async function assertSpecResolvable(spec: string, boxRoot: string): Promise<void> {
   if (!isTarballPathSpec(spec)) return;
   const raw = spec.startsWith("file:") ? spec.slice("file:".length) : spec;
-  const resolved = path.isAbsolute(raw) ? raw : path.join(packageRoot, raw);
+  const resolved = path.isAbsolute(raw) ? raw : path.join(boxRoot, raw);
   try {
     await fs.access(resolved);
   } catch (_e) {
@@ -141,8 +141,8 @@ async function assertSpecResolvable(spec: string, packageRoot: string): Promise<
   }
 }
 
-async function bumpBeeBoxDependency(args: { packageRoot: string; spec: string }): Promise<void> {
-  const pkgPath = path.join(args.packageRoot, "package.json");
+async function bumpBeeBoxDependency(args: { boxRoot: string; spec: string }): Promise<void> {
+  const pkgPath = path.join(args.boxRoot, "package.json");
   const raw = await fs.readFile(pkgPath, "utf-8");
   const parsed: unknown = JSON.parse(raw);
   const pkg: Record<string, unknown> = isRecord(parsed) ? parsed : {};
@@ -151,12 +151,12 @@ async function bumpBeeBoxDependency(args: { packageRoot: string; spec: string })
   await fs.writeFile(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
 }
 
-async function readInstalledVersion(packageRoot: string): Promise<string> {
-  const pkgPath = path.join(packageRoot, "node_modules/beebox/package.json");
+async function readInstalledVersion(boxRoot: string): Promise<string> {
+  const pkgPath = path.join(boxRoot, "node_modules/beebox/package.json");
   const raw = await fs.readFile(pkgPath, "utf-8");
   const parsed: unknown = JSON.parse(raw);
   const version = isRecord(parsed) ? parsed["version"] : undefined;
-  if (typeof version !== "string" || version === "") throw new InstalledVersionMissingError(packageRoot);
+  if (typeof version !== "string" || version === "") throw new InstalledVersionMissingError(boxRoot);
   return version;
 }
 
@@ -170,19 +170,18 @@ async function appendUpgradeLog(boxRoot: string, line: string): Promise<void> {
 /**
  * Revert everything `runUpgrade` did after the snapshot, as one unit — see
  * the module doc comment's "Ghost lesson." `git reset --hard` at the
- * package root discards the dependency bump AND any migration data changes
+ * box root discards the dependency bump AND any migration data changes
  * together (both are ordinary working-tree edits under the same repo), then
  * `pnpm install` re-resolves the previous engine so the box is left in
  * exactly its pre-upgrade state, not just its pre-upgrade commit.
  */
 async function revertUpgrade(args: {
-  packageRoot: string;
   boxRoot: string;
   snapshotSha: string;
   runCommand: CommandRunner;
   failure: Error;
 }): Promise<void> {
-  const { packageRoot, boxRoot, snapshotSha, runCommand, failure } = args;
+  const { boxRoot, snapshotSha, runCommand, failure } = args;
   // `revertToSnapshot` is `resetHard` + `clean(directories: true)` — see its
   // doc comment in git.ts. `git reset --hard` only reverts TRACKED changes;
   // a failed `bbx migrate`/`bbx init` step can have written new files (a
@@ -193,12 +192,12 @@ async function revertUpgrade(args: {
   // found now must have been created by the failed upgrade, and (b)
   // without `-x` it spares gitignored paths (node_modules, .beebox
   // runtime state).
-  await revertToSnapshot(packageRoot, snapshotSha);
+  await revertToSnapshot(boxRoot, snapshotSha);
   const restore = await runCommand({
     label: UPGRADE_STEPS.pnpmInstallRestore,
     command: "pnpm",
     args: ["install"],
-    cwd: packageRoot,
+    cwd: boxRoot,
   });
   const restoreNote = restore.code === 0
     ? "previous engine reinstalled"
@@ -212,7 +211,7 @@ async function revertUpgrade(args: {
   const logLine = `upgrade failed: ${failure.message} | reverted to ${snapshotSha} | ${restoreNote}${outputSnippet}`;
   await appendUpgradeLog(boxRoot, logLine);
   console.error(`\nbbx upgrade failed: ${failure.message}`);
-  console.error(`Reverted ${packageRoot} to ${snapshotSha} (code + data together) and ${restoreNote}.`);
+  console.error(`Reverted ${boxRoot} to ${snapshotSha} (code + data together) and ${restoreNote}.`);
   console.error(`See ${path.join(boxRoot, ".beebox/logs/upgrade.log")} for the record.`);
 }
 
@@ -240,14 +239,13 @@ export interface UpgradeResult {
 export async function runUpgrade(options: UpgradeOptions, deps?: UpgradeDeps): Promise<UpgradeResult> {
   const runCommand = deps?.runCommand ?? defaultRunner();
   const boxRoot = await requireBoxRoot(deps?.startPath);
-  const shape = await getBoxShape(boxRoot);
-  const packageRoot = shape.packageRoot;
+  await getBoxShape(boxRoot);
 
   // Step 0: preflight (fail-closed, nothing mutated yet — so no revert path
   // is needed if any of this fails).
-  const status = await getStatus(packageRoot);
-  if (!status.clean) throw new DirtyWorkingTreeError(packageRoot);
-  await assertSpecResolvable(options.to, packageRoot);
+  const status = await getStatus(boxRoot);
+  if (!status.clean) throw new DirtyWorkingTreeError(boxRoot);
+  await assertSpecResolvable(options.to, boxRoot);
   const preflightValidate = await runCommand({
     label: UPGRADE_STEPS.preflightValidate,
     command: OLD_ENGINE_BBX_BIN,
@@ -258,17 +256,17 @@ export async function runUpgrade(options: UpgradeOptions, deps?: UpgradeDeps): P
 
   // Step 1: snapshot. This one SHA is the whole rollback point for code AND
   // data — see the module doc comment.
-  const snapshotSha = await getHead(packageRoot);
+  const snapshotSha = await getHead(boxRoot);
 
   try {
     // Step 2: bump the dependency + pnpm install (old engine still fine here).
-    await bumpBeeBoxDependency({ packageRoot, spec: options.to });
-    const install = await runCommand({ label: UPGRADE_STEPS.pnpmInstall, command: "pnpm", args: ["install"], cwd: packageRoot });
+    await bumpBeeBoxDependency({ boxRoot, spec: options.to });
+    const install = await runCommand({ label: UPGRADE_STEPS.pnpmInstall, command: "pnpm", args: ["install"], cwd: boxRoot });
     if (install.code !== 0) throw new UpgradeStepFailedError(UPGRADE_STEPS.pnpmInstall, install.output);
 
-    // From here on, packageRoot/node_modules/.bin/bbx IS the new engine —
+    // From here on, boxRoot/node_modules/.bin/bbx IS the new engine —
     // spawn it (see module doc comment's "old-engine/new-engine handoff").
-    const newBbxBin = path.join(packageRoot, "node_modules/.bin/bbx");
+    const newBbxBin = path.join(boxRoot, "node_modules/.bin/bbx");
 
     // Step 3: data migrations.
     const migrate = await runCommand({ label: UPGRADE_STEPS.bbxMigrate, command: newBbxBin, args: ["migrate", "--apply"], cwd: boxRoot });
@@ -285,29 +283,29 @@ export async function runUpgrade(options: UpgradeOptions, deps?: UpgradeDeps): P
     // Step 6: typecheck the box's own src/ under the new engine's base tsconfig.
     const tsc = await runCommand({
       label: UPGRADE_STEPS.tsc,
-      command: path.join(packageRoot, "node_modules/.bin/tsc"),
+      command: path.join(boxRoot, "node_modules/.bin/tsc"),
       args: ["-p", "."],
-      cwd: packageRoot,
+      cwd: boxRoot,
     });
     if (tsc.code !== 0) throw new UpgradeStepFailedError(UPGRADE_STEPS.tsc, tsc.output);
 
     // Step 7: commit everything as one unit.
-    const installedVersion = await readInstalledVersion(packageRoot);
-    await stageAll(packageRoot);
-    const commitHash = await commit(packageRoot, {
+    const installedVersion = await readInstalledVersion(boxRoot);
+    await stageAll(boxRoot);
+    const commitHash = await commit(boxRoot, {
       message: `Upgrade beebox engine to ${installedVersion}`,
       trailers: { "Upgraded-To": `beebox@${installedVersion}` },
     });
 
     return { installedVersion, commitHash };
   } catch (e) {
-    await revertUpgrade({ packageRoot, boxRoot, snapshotSha, runCommand, failure: toError(e) });
+    await revertUpgrade({ boxRoot, snapshotSha, runCommand, failure: toError(e) });
     throw e;
   }
 }
 
 export const upgradeCommand = new Command("upgrade")
-  .description("Upgrade a v2 box's beebox engine: bump the dependency, migrate data, sync templates, typecheck, commit")
+  .description("Upgrade a box's beebox engine: bump the dependency, migrate data, sync templates, typecheck, commit")
   .requiredOption("--to <spec>", "beebox dependency spec to upgrade to (a semver range, or a file:<path>/<path>.tgz tarball)")
   .action(async (options: { to: string }) => {
     try {

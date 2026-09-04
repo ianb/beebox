@@ -24,7 +24,7 @@ const schemas = await createCardSchemaMap();
 async function seedPages(box, count) {
   const paths = [];
   for (let i = 0; i < count; i++) {
-    const p = join(box.packageRoot, `page-${i}.jpg`);
+    const p = join(box.root, `page-${i}.jpg`);
     await Sharp({
       create: { width: 32, height: 24, channels: 3, background: { r: i * 20, g: 40, b: 80 } },
     }).jpeg().toFile(p);
@@ -40,18 +40,18 @@ async function importPhotos(box, vision, count) {
 }
 
 async function sessionDir(box) {
-  const entries = await readdir(join(box.root, "box/inbox"));
+  const entries = await readdir(join(box.root, "_content/inbox"));
   return entries.find((e) => e.endsWith(".attach"));
 }
 
 async function sessionFiles(box) {
   const dir = await sessionDir(box);
-  const files = await readdir(join(box.root, "box/inbox", dir), { recursive: true });
+  const files = await readdir(join(box.root, "_content/inbox", dir), { recursive: true });
   return files.sort().join("\n");
 }
 
 async function questionFiles(box) {
-  const entries = await readdir(join(box.root, "box/questions")).catch(() => []);
+  const entries = await readdir(join(box.root, "_bookkeeping/questions")).catch(() => []);
   return entries.sort().join("\n");
 }
 ```
@@ -65,7 +65,7 @@ mutual-claim preference picks the batch-2 analysis whose pair claim page 3
 reciprocates. Result: two photo bundles, each with its back.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const vision = createFakeScanVision();
 const result = await importPhotos(box, vision, 4);
 result.success
@@ -92,7 +92,7 @@ The image card carries the analysis: description, back text, `analyzed` status.
 
 ```ts continue
 const dir = await sessionDir(box);
-const cardText = await box.read(`box/inbox/${dir}/photo-001.image.card`);
+const cardText = await box.read(`_content/inbox/${dir}/photo-001.image.card`);
 const card = parseCardText(cardText, { source: "photo-001.image.card", schemas, type: "image" });
 `${card.fields["status"]} | ${card.fields["description"]} | ${card.fields["text"]?.[0]?.content}`
 => analyzed | Fake photo 0 | Fake back caption 1
@@ -107,14 +107,14 @@ await questionFiles(box)
 => «*»-photo-002.review.question.card
 ```
 
-## Flagged pages produce review questions in `box/questions/`
+## Flagged pages produce review questions in `_bookkeeping/questions/`
 
 A page flagged for review (the Claude backend does this for any
 partial/illegible slot) emits a review question card alongside the image card.
 
 ```ts
 const flaggedPage = (i, count) => ({ index: i, kind: i === 0 ? "photo" : "back", paired_with_index: i === 0 ? 1 : 0, description: i === 0 ? "A flagged photo" : "", title: i === 0 ? "Flagged" : "", rotation: 0, subject_bbox: null, has_text: i !== 0, text_blocks: i === 0 ? [] : [{ source: "back", text: "M?" }], date_hint: null, flag_for_review: i !== 0, flag_reason: i !== 0 ? "Slots needing review: 2 (partial)" : null });
-const box2 = await makeTmpBox({ git: true });
+const box2 = await makeTmpBox({ git: true, annex: true });
 const vision2 = createFakeScanVision({ analyze: (paths) => paths.map((_, i) => flaggedPage(i, paths.length)) });
 const result2 = await importPhotos(box2, vision2, 2);
 `${result2.success} questions=${result2.data.reviewQuestions}`
@@ -131,13 +131,13 @@ fails with the classified message and stages nothing — no session dir, no
 cards, no questions.
 
 ```ts
-const box3 = await makeTmpBox({ git: true });
+const box3 = await makeTmpBox({ git: true, annex: true });
 const vision3 = createFakeScanVision({ alwaysFailRetry: "fatal" });
 const result3 = await importPhotos(box3, vision3, 2);
 `${result3.success} | ${result3.error}`
 => false | Scan analysis aborted: fake scan-vision failure (scripted)
 
-(await readdir(join(box3.root, "box/inbox"))).length
+(await readdir(join(box3.root, "_content/inbox"))).filter((name) => name.startsWith("scan-")).length
 => 0
 ```
 
@@ -147,7 +147,7 @@ Non-fatal, non-splittable failures keep today's semantics: the batch's pages
 become `unsure` placeholders with questions, and the import still completes.
 
 ```ts
-const box4 = await makeTmpBox({ git: true });
+const box4 = await makeTmpBox({ git: true, annex: true });
 const vision4 = createFakeScanVision({ alwaysFailRetry: "batch" });
 const result4 = await importPhotos(box4, vision4, 2);
 `${result4.success} unsure=${result4.data.unsureCount} photos=${result4.data.photoCount}`
@@ -165,7 +165,7 @@ same batch, and the import proceeds normally. The failed attempt's usage is
 included in the run's accounting (visible in the command's token/cost lines).
 
 ```ts
-const box5 = await makeTmpBox({ git: true });
+const box5 = await makeTmpBox({ git: true, annex: true });
 const vision5 = createFakeScanVision({ failTimes: 1, failRetry: "transient" });
 const result5 = await importPhotos(box5, vision5, 2);
 `${result5.success} photos=${result5.data.photoCount} calls=${vision5.calls.length}`

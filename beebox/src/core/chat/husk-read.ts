@@ -17,13 +17,14 @@ import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { isRecord } from "../card-io.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { AGENT_ENGINES, type AgentEngine } from "../../shared/agent-models.js";
+import { BOX_DIRS } from "../../lib/paths.js";
 
 /** Husk cards read at once — see {@link mapInBatchesSettled}. */
 const READ_CONCURRENCY = 64;
 
-export const CHAT_HUSK_DIR = "store/chat/web";
+export const CHAT_HUSK_DIR = `${BOX_DIRS.chat}/web`;
 /** Everything chat-shaped: the active husks, plus whatever sits beside them. */
-const CHAT_DIR = "store/chat";
+const CHAT_DIR = BOX_DIRS.chat;
 
 export function shortId(sessionId: string): string {
   return sessionId.slice(0, 8);
@@ -88,7 +89,7 @@ export interface ChatHuskEntry {
 }
 
 /**
- * All husk cards under store/chat/web — the enumeration source for
+ * All husk cards under `_content/chat/web` — the enumeration source for
  * "which web chats exist" (the picker reads these, not the history
  * JSON, so deleting a husk is editorial removal from the picker).
  * Unparseable or session-less files are skipped with a warning.
@@ -111,7 +112,7 @@ export async function listChatHusksUnder(boxRoot: string, relDir: string): Promi
 }
 
 /**
- * Every husk anywhere under `store/chat/**` — the whole-tree counterpart to
+ * Every husk anywhere under `_content/chat/**` — the whole-tree counterpart to
  * `listChatHusks`, which is deliberately only the active `web/` directory.
  * Used by the duplicate-`session` lint, which has to see a renamed or
  * hand-filed husk wherever it landed, not just the ones the pickers enumerate.

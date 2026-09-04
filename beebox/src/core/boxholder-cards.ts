@@ -25,7 +25,7 @@ export async function loadBoxholders(boxRoot: string): Promise<Boxholder[]> {
   const matches = await glob("people/*.person.card", {
     cwd: boxRoot,
     nodir: true,
-    ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+    ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
   });
 
   const schemas = await createCardSchemaMap(boxRoot);

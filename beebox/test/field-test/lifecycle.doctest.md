@@ -3,9 +3,8 @@
 A field run owns a disposable box and a dedicated server
 (`docs/implemented-plans/agent-field-tests.md`, Track 2). This exercises the real thing —
 a real `bbx init`, a real `bbx serve` on a real free port — because the failures
-this module exists to catch (a marker written to the package root instead of
-the operational box root, a server that never comes up, a child left running
-after teardown) are all invisible to a mocked version.
+this module exists to catch (a server that never comes up, a child left
+running after teardown) are all invisible to a mocked version.
 
 ```ts setup
 import { mkdtemp, rm } from "node:fs/promises";
@@ -31,30 +30,25 @@ port > 1024 && port < 65536
 
 ## Create a box, serve it, tear it down
 
-`createFieldBox` puts the box at `<runDir>/box` — a v2 package whose
-operational root is its `content/` — and writes the test-box marker relative to
-that operational root, which is where the `BBX_FAKE_GMAIL` gate (Track 1) will
-look for it.
+`createFieldBox` puts the box at `<runDir>/box` (shapeVersion 3, one root)
+and writes the test-box marker relative to that root, which is where the
+`BBX_FAKE_GMAIL` gate (Track 1) will look for it.
 
 ```ts
 const runDir = await mkdtemp(join(tmpdir(), "bbx-field-run-"));
 const box = await createFieldBox(runDir);
-[relative(runDir, box.packageRoot), relative(runDir, box.boxRoot), box.slug].join(" | ")
-=> box | box/content | box
+[relative(runDir, box.boxRoot), box.slug].join(" | ")
+=> box | box
 
 await fileExists(join(box.boxRoot, TEST_BOX_MARKER))
 => true
-
-// Not at the package root — the marker is a property of the operational box.
-await fileExists(join(box.packageRoot, TEST_BOX_MARKER))
-=> false
 ```
 
 The baseline is committed, so a later `reset` cleanup policy has something to
 rewind to:
 
 ```ts continue
-const status = await getStatus(box.packageRoot);
+const status = await getStatus(box.boxRoot);
 status.clean
 => true
 ```
@@ -130,7 +124,7 @@ attached rather than a bare timeout.
 
 ```ts
 const emptyDir = await mkdtemp(join(tmpdir(), "bbx-field-empty-"));
-const notABox = { packageRoot: emptyDir, boxRoot: emptyDir, slug: "nope" };
+const notABox = { boxRoot: emptyDir, slug: "nope" };
 
 await startFieldServer(notABox, { env: {}, readyTimeoutMs: 20_000 })
 => throws FieldServerStartError

@@ -2,17 +2,17 @@
  * Telegram Connector — receives messages via webhook, catches up via polling on wakeup,
  * sends outbound messages from chat thread files.
  *
- * Configuration: config/connectors/telegram.secret.json
+ * Configuration: _config/connectors/telegram.secret.json
  * {
  *   "botToken": "123456:ABC-DEF...",
  *   "webhookSecret": "random-secret-string"
  * }
  *
- * Transient state: config/connectors/telegram.state.json (gitignored)
+ * Transient state: _bookkeeping/connectors/telegram.state.json (gitignored)
  * {
  *   "lastUpdateId": 12345,
  *   "chatMappings": { "8239678071": "Ian_Bicking" },
- *   "callbacks": { "store/chat/telegram/Family_Group/thread.chat-thread.card": { "at": "..." } }
+ *   "callbacks": { "_content/chat/telegram/Family_Group/thread.chat-thread.card": { "at": "..." } }
  * }
  */
 
@@ -144,7 +144,7 @@ class TelegramConnector implements Connector {
       errors.push(`Outbound send failed: ${errorMessage(err)}`);
     }
 
-    // Phase 5: Send pending telegram-message cards from box/output/
+    // Phase 5: Send pending telegram-message cards from _bookkeeping/output/
     try {
       const sentCards = await sendOutputCards({
         boxRoot: this.boxRoot,

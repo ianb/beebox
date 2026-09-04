@@ -56,12 +56,10 @@ export function defaultCheckReady(params: { port: number; label: string }): Prom
   return waitForHttp({ port: params.port, reqPath: "/healthz", timeoutMs: READY_TIMEOUT_MS, label: params.label });
 }
 
-/** The box's own installed `bbx` when present (v2, installed), else the
- *  running engine's own `bbx` (legacy boxes, or a v2 box mid-transition
- *  that hasn't been `pnpm install`ed yet -- same fallback the plan
- *  specifies for the transition window). */
+/** The box's own installed `bbx` when present, else the running engine's own
+ *  `bbx` (a box that hasn't been `pnpm install`ed yet). */
 export async function resolveBbxBinary(shape: BoxShape): Promise<string> {
-  const ownBin = path.join(shape.packageRoot, "node_modules", ".bin", "bbx");
+  const ownBin = path.join(shape.boxRoot, "node_modules", ".bin", "bbx");
   if (await fileExists(ownBin)) return ownBin;
   return path.join(PACKAGE_ROOT, "bin", "bbx");
 }

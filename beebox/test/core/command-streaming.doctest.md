@@ -18,16 +18,16 @@ The `ls` command writes output lines via `ctx.writeLine()`, which become `{ type
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 
-await mkdir(join(box.root, "box/inbox"), { recursive: true });
+await mkdir(join(box.root, "_content/inbox"), { recursive: true });
 await writeFile(
-  join(box.root, "box/inbox/test.task.card"),
+  join(box.root, "_content/inbox/test.task.card"),
   "<task>Test task</task>",
 );
 
 const messages = [];
 const result = await executeCommandStreaming({
   command: "ls",
-  args: { paths: ["box/inbox"] },
+  args: { paths: ["_content/inbox"] },
   boxRoot: box.root,
   emit: (line) => messages.push(line),
 });
@@ -117,15 +117,15 @@ Commands that list multiple items emit one output line per item:
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 
-await mkdir(join(box.root, "box/inbox"), { recursive: true });
-await writeFile(join(box.root, "box/inbox/a.task.card"), "<task>A</task>");
-await writeFile(join(box.root, "box/inbox/b.task.card"), "<task>B</task>");
-await writeFile(join(box.root, "box/inbox/c.task.card"), "<task>C</task>");
+await mkdir(join(box.root, "_content/inbox"), { recursive: true });
+await writeFile(join(box.root, "_content/inbox/a.task.card"), "<task>A</task>");
+await writeFile(join(box.root, "_content/inbox/b.task.card"), "<task>B</task>");
+await writeFile(join(box.root, "_content/inbox/c.task.card"), "<task>C</task>");
 
 const messages = [];
 await executeCommandStreaming({
   command: "ls",
-  args: { paths: ["box/inbox"] },
+  args: { paths: ["_content/inbox"] },
   boxRoot: box.root,
   emit: (line) => messages.push(line),
 });

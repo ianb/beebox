@@ -78,15 +78,15 @@ const ctx: LoadCardContext = {
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "box/inbox/email/thread-x.email-thread.card",
+  "_content/inbox/email/thread-x.email-thread.card",
   "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: thread-x.attach/msg-001.email-message.card\n---\n",
 );
 await box.write(
-  "box/inbox/email/thread-x.attach/msg-001.email-message.card",
+  "_content/inbox/email/thread-x.attach/msg-001.email-message.card",
   "---\nmessage-id: m1\nthread-id: t1\nfrom: a@x\ndate: 2026-02-15T10:00:00Z\nsubject: hi\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/email/thread-x.email-thread.card")],
+  [box.path("_content/inbox/email/thread-x.email-thread.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalErrors
@@ -101,11 +101,11 @@ result.filesChecked
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "box/inbox/email/broken.email-thread.card",
+  "_content/inbox/email/broken.email-thread.card",
   "---\ntype: email-thread\nthread-id: t1\n---\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/email/broken.email-thread.card")],
+  [box.path("_content/inbox/email/broken.email-thread.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalErrors
@@ -124,11 +124,11 @@ cleaned off disk eventually without blocking commits.
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "box/inbox/notes/drift.doc.card",
+  "_content/inbox/notes/drift.doc.card",
   "---\ntype: doc\ntitle: Drift\nbogus-field: oops\n---\nBody.\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/notes/drift.doc.card")],
+  [box.path("_content/inbox/notes/drift.doc.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalErrors
@@ -149,11 +149,11 @@ each as a hard error would block commits on any box with accumulated drift.
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "box/inbox/email/thread-x/thread.email-thread.card",
+  "_content/inbox/email/thread-x/thread.email-thread.card",
   "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: thread.attach/missing.email-message.card\n---\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/email/thread-x/thread.email-thread.card")],
+  [box.path("_content/inbox/email/thread-x/thread.email-thread.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalErrors
@@ -200,11 +200,11 @@ clause is added at all — a clean box gets no new output.
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "box/inbox/email/thread-x/thread.email-thread.card",
+  "_content/inbox/email/thread-x/thread.email-thread.card",
   "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: thread.attach/missing.email-message.card\n---\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/email/thread-x/thread.email-thread.card")],
+  [box.path("_content/inbox/email/thread-x/thread.email-thread.card")],
   { boxRoot: box.root, ctx },
 );
 const summary = formatLintResults(result, { colors: false }).split("\n").at(-1);
@@ -218,11 +218,11 @@ the summary's broken-ref clause off entirely:
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "box/inbox/notes/drift.doc.card",
+  "_content/inbox/notes/drift.doc.card",
   "---\ntype: doc\ntitle: Drift\nbogus-field: oops\n---\nBody.\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/notes/drift.doc.card")],
+  [box.path("_content/inbox/notes/drift.doc.card")],
   { boxRoot: box.root, ctx },
 );
 formatLintResults(result, { colors: false }).split("\n").at(-1)
@@ -403,11 +403,11 @@ ctx doesn't include) is surfaced as a non-blocking warning rather than failing.
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "box/inbox/Note.unknowntype.card",
+  "_content/inbox/Note.unknowntype.card",
   "---\nstatus: new\n---\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/Note.unknowntype.card")],
+  [box.path("_content/inbox/Note.unknowntype.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalErrors
@@ -423,9 +423,9 @@ stray card doesn't brick a box's pre-commit/automation:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/Broken.memo.card", "this is not a frontmatter card\n");
+await box.write("_content/inbox/Broken.memo.card", "this is not a frontmatter card\n");
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/Broken.memo.card")],
+  [box.path("_content/inbox/Broken.memo.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalErrors
@@ -882,17 +882,17 @@ time instead of at render time.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/images/portrait.webp", "WEBP");
+await box.write("_content/recipes/images/portrait.webp", "WEBP");
 await box.write(
-  "store/recipes/Recipes.landmark.card",
-  "---\nnavigation:\n  label: Recipes\n  symbol:\n    src: /store/recipes/images/portrait.webp\n---\n",
+  "_content/recipes/Recipes.landmark.card",
+  "---\nnavigation:\n  label: Recipes\n  symbol:\n    src: /_content/recipes/images/portrait.webp\n---\n",
 );
 await box.write(
-  "store/recipes/Gone.landmark.card",
+  "_content/recipes/Gone.landmark.card",
   "---\nnavigation:\n  label: Gone\n  symbol:\n    src: images/vanished.webp\n---\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("store/recipes/Recipes.landmark.card"), box.path("store/recipes/Gone.landmark.card")],
+  [box.path("_content/recipes/Recipes.landmark.card"), box.path("_content/recipes/Gone.landmark.card")],
   { boxRoot: box.root, ctx },
 );
 JSON.stringify([result.totalErrors, result.totalWarnings])
@@ -919,14 +919,14 @@ await box.write(
   "---\nruntime: p5js\nentry: attach/missing.ts\n---\nNothing behind it.\n",
 );
 await box.write(
-  "store/recipes/Emoji.landmark.card",
+  "_content/recipes/Emoji.landmark.card",
   "---\nnavigation:\n  label: Recipes\n  symbol: 🍳\n---\n",
 );
 const figures = await lintCardsDispatch(
   [
     box.path("store/figures/Orbit.figure.card"),
     box.path("store/figures/Dangling.figure.card"),
-    box.path("store/recipes/Emoji.landmark.card"),
+    box.path("_content/recipes/Emoji.landmark.card"),
   ],
   { boxRoot: box.root, ctx },
 );
@@ -951,12 +951,12 @@ are UUIDv4, Codex thread ids UUIDv7, and one check covers both.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/chat/web/2026-08-26_ok.chat.card",
+await box.write("_content/chat/web/2026-08-26_ok.chat.card",
   "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
-await box.write("store/chat/web/2026-08-26_bad.chat.card",
+await box.write("_content/chat/web/2026-08-26_bad.chat.card",
   "---\nsession: sess1234\n---\n");
 const result = await lintCardsDispatch(
-  [box.path("store/chat/web/2026-08-26_ok.chat.card"), box.path("store/chat/web/2026-08-26_bad.chat.card")],
+  [box.path("_content/chat/web/2026-08-26_ok.chat.card"), box.path("_content/chat/web/2026-08-26_bad.chat.card")],
   { boxRoot: box.root, ctx },
 );
 JSON.stringify({
@@ -972,24 +972,24 @@ JSON.stringify({
 The `session` field is the husk's identity, so a second card carrying it means
 two husks for one conversation — both appear in the picker, and chat review
 would extend two separate accounts from the same transcript. This is card-lint's
-only cross-file rule: the `store/chat/**` index is built once per
+only cross-file rule: the `_content/chat/**` index is built once per
 `lintCardsDispatch` run and memoized on that run's options, not rescanned per
 card. Repair is editorial — which title and body do you keep? — so the rule
 names both paths and stops there.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/chat/web/2026-08-26_59fc20dd.chat.card",
+await box.write("_content/chat/web/2026-08-26_59fc20dd.chat.card",
   "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\ntitle: The Acme mess\n---\n");
-await box.write("store/chat/web/Copied.chat.card",
+await box.write("_content/chat/web/Copied.chat.card",
   "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
-await box.write("store/chat/web/2026-08-26_aaaa9999.chat.card",
+await box.write("_content/chat/web/2026-08-26_aaaa9999.chat.card",
   "---\nsession: aaaa9999-fe6d-45cb-8f37-f1508a5a0869\n---\n");
 const result = await lintCardsDispatch(
   [
-    box.path("store/chat/web/2026-08-26_59fc20dd.chat.card"),
-    box.path("store/chat/web/Copied.chat.card"),
-    box.path("store/chat/web/2026-08-26_aaaa9999.chat.card"),
+    box.path("_content/chat/web/2026-08-26_59fc20dd.chat.card"),
+    box.path("_content/chat/web/Copied.chat.card"),
+    box.path("_content/chat/web/2026-08-26_aaaa9999.chat.card"),
   ],
   { boxRoot: box.root, ctx },
 );
@@ -997,23 +997,23 @@ JSON.stringify({ errors: result.totalErrors, unique: result.results[2]!.errors.l
 => {"errors":2,"unique":0}
 
 result.results[0]!.errors[0]!.message
-=> Duplicate chat session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869: store/chat/web/2026-08-26_59fc20dd.chat.card and store/chat/web/Copied.chat.card are husks for one chat. Keep whichever card you want the chat to be, and `bbx trash` the other.
+=> Duplicate chat session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869: _content/chat/web/2026-08-26_59fc20dd.chat.card and _content/chat/web/Copied.chat.card are husks for one chat. Keep whichever card you want the chat to be, and `bbx trash` the other.
 ```
 
-A husk filed outside `store/chat/web/` counts too — the index walks the whole
-`store/chat/**` tree, so moving one of the pair out of the picker's directory
+A husk filed outside `_content/chat/web/` counts too — the index walks the whole
+`_content/chat/**` tree, so moving one of the pair out of the picker's directory
 doesn't make the collision go away.
 
 ```ts continue
 const box2 = await makeTmpBox();
-await box2.write("store/chat/web/2026-08-26_59fc20dd.chat.card",
+await box2.write("_content/chat/web/2026-08-26_59fc20dd.chat.card",
   "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
-await box2.write("store/chat/archive/2026-01-01_59fc20dd.chat.card",
+await box2.write("_content/chat/archive/2026-01-01_59fc20dd.chat.card",
   "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
 const moved = await lintCardsDispatch(
-  [box2.path("store/chat/web/2026-08-26_59fc20dd.chat.card")],
+  [box2.path("_content/chat/web/2026-08-26_59fc20dd.chat.card")],
   { boxRoot: box2.root, ctx },
 );
-moved.results[0]!.errors[0]!.message.includes("store/chat/archive/2026-01-01_59fc20dd.chat.card")
+moved.results[0]!.errors[0]!.message.includes("_content/chat/archive/2026-01-01_59fc20dd.chat.card")
 => true
 ```

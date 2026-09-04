@@ -4,7 +4,7 @@ A scheduled script can declare `<requires><connector>name</connector></requires>
 and the scheduler skips it cleanly when the connector isn't configured
 (`src/connectors/requirements.ts`).
 
-That probe used to check one thing: does `config/connectors/<name>.secret.json`
+That probe used to check one thing: does `_config/connectors/<name>.secret.json`
 exist? Once credentials moved to the machine store
 (`docs/plans/secret-custody.md`, Track 3) a fully migrated box has no such file
 — so a file-only probe would report every connector as missing and silently skip
@@ -96,7 +96,7 @@ A box that has not migrated keeps working — that is the whole point of the
 transition window (`bbx health` flags the surviving file separately).
 
 ```ts continue
-await box.write("config/connectors/pocket.secret.json", JSON.stringify({ apiKey: "placeholder-pocket-key" }));
+await box.write("_config/connectors/pocket.secret.json", JSON.stringify({ apiKey: "placeholder-pocket-key" }));
 print(`legacy file only: ${await missing(box.root, "pocket")}`);
 print(`several at once: ${await missing(box.root, "pocket", "raindrop", "nothinghere")}`);
 =>

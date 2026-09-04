@@ -3,7 +3,7 @@
  * subcommands that exist for scripts and operators rather than for daily use
  * (`docs/plans/secret-custody.md`, "Rollout shape").
  *
- * `migrate` moves a machine's per-box `config/connectors/*.secret.json` files
+ * `migrate` moves a machine's per-box `_config/connectors/*.secret.json` files
  * into the store, once. `copy-grants` is what `deploy/add-box.sh
  * --secrets-from` now does instead of copying files between box trees — the
  * copy was the rotation hazard the whole plan exists to end.
@@ -131,7 +131,7 @@ interface MigrateOptions {
 // Options come from `.opts()` rather than an action's third parameter — the
 // ruleset caps a function at two positional parameters.
 export const migrateCommand = new Command("migrate")
-  .description("Move every box's legacy config/connectors/*.secret.json into the machine store (originals stay)")
+  .description("Move every box's legacy _config/connectors/*.secret.json into the machine store (originals stay)")
   .option("--root <dir>", "Parent directory of the boxes to migrate (default: the registered boxes in boxes.json)")
   .option("--dry-run", "Print the plan and write nothing")
   .option("--agent-confirmed", AGENT_CONFIRMED_HELP);

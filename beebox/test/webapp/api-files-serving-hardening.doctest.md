@@ -155,8 +155,10 @@ path):
 ```ts continue
 const ctx = { boxRoot: server.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
 const escapeBrowse = await statusRouter.createCaller(ctx).browse({ path: `../${boxDirName}-other` });
-JSON.stringify(escapeBrowse)
-=> {"path":"../content-other","dirs":[],"cards":[],"files":[]}
+// The box root's own directory name varies per run (a temp dir), so compare
+// against the same computed sibling name rather than a fixed literal.
+JSON.stringify(escapeBrowse) === JSON.stringify({ path: `../${boxDirName}-other`, dirs: [], cards: [], files: [] })
+=> true
 ```
 
 ```ts cleanup

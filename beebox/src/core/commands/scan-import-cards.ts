@@ -11,7 +11,7 @@
  *     the analyzed description, text blocks, rotation, and subject bbox.
  *
  * Photo/JPEG artifacts stay in the session's attach scope, but question cards
- * land in `box/questions/` (the one location `getSystemState` scans for
+ * land in `_bookkeeping/questions/` (the one location `getSystemState` scans for
  * questions — see `docs/box-layout.md`), named with a session-slug prefix to
  * avoid collisions across sessions, with a `context:` ref back into the
  * attach scope.
@@ -32,7 +32,7 @@ import { createTextQuestionTemplate } from "../../schemas/question.js";
 import { SCAN_GUIDE_REL_PATH } from "./scan-guide-context.js";
 import type { PhotoBundle, OrphanBack, ResolvedPage } from "./scan-import-helpers.js";
 
-/** Ensure `box/questions/` exists and return its absolute path. */
+/** Ensure `_bookkeeping/questions/` exists and return its absolute path. */
 async function questionsDir(boxRoot: string): Promise<string> {
   const dir = getBoxDir(boxRoot, "questions");
   await fs.mkdir(dir, { recursive: true });
@@ -42,7 +42,7 @@ async function questionsDir(boxRoot: string): Promise<string> {
 /**
  * A short, filename-safe slug identifying the capture session, so multiple
  * scan-import runs don't collide when their question cards land together in
- * `box/questions/` (unlike the old per-session attach scope, which never
+ * `_bookkeeping/questions/` (unlike the old per-session attach scope, which never
  * collided across sessions by construction).
  */
 function sessionSlug(sessionAttachRelDir: string): string {

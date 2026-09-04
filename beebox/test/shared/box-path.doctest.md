@@ -14,15 +14,15 @@ import { boxRelativePath } from "../../src/shared/box-path.js";
 A leading slash (the authoring/ref form) is stripped:
 
 ```ts
-boxRelativePath("/store/archive/Foo.memo.card")
-=> store/archive/Foo.memo.card
+boxRelativePath("/_bookkeeping/archive/Foo.memo.card")
+=> _bookkeeping/archive/Foo.memo.card
 ```
 
 An already-canonical path is unchanged (idempotent):
 
 ```ts
-boxRelativePath("store/archive/Foo.memo.card")
-=> store/archive/Foo.memo.card
+boxRelativePath("_bookkeeping/archive/Foo.memo.card")
+=> _bookkeeping/archive/Foo.memo.card
 ```
 
 Redundant leading slashes collapse, and the empty string (the box root) is left
@@ -40,6 +40,6 @@ Only the leading slash is touched — interior and trailing slashes are left as-
 (document-relative resolution is `resolveRelativePath`'s job, not this helper's):
 
 ```ts
-boxRelativePath("/store//a/b.card")
-=> store//a/b.card
+boxRelativePath("/_content//a/b.card")
+=> _content//a/b.card
 ```

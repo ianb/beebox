@@ -38,7 +38,7 @@ process.env.BBX_OWNER_EMAIL = "owner@example.com";
 await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
 await addUser({ email: "member@example.com", name: "Member", password: "old-password", role: "member" });
 const ctx = await makeTestServer({ openAccess: false });
-await ctx.seed("config/box.json", JSON.stringify({ allowedEmails: ["member@example.com"] }));
+await ctx.seed("_config/box.json", JSON.stringify({ allowedEmails: ["member@example.com"] }));
 const reset = await mintAuthPasswordReset({
   boxRoot: ctx.boxRoot,
   createdBy: "owner@example.com",
@@ -199,7 +199,7 @@ process.env.BBX_OWNER_EMAIL = "owner@example.com";
 await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
 await addUser({ email: "member@example.com", name: "Member", password: "old-password", role: "member" });
 const staleCtx = await makeTestServer({ openAccess: false });
-await staleCtx.seed("config/box.json", JSON.stringify({ allowedEmails: [] }));
+await staleCtx.seed("_config/box.json", JSON.stringify({ allowedEmails: [] }));
 const staleReset = await mintAuthPasswordReset({
   boxRoot: staleCtx.boxRoot,
   createdBy: "owner@example.com",
@@ -211,7 +211,7 @@ stale.statusCode
 ```
 
 ```ts continue
-await staleCtx.seed("config/box.json", JSON.stringify({ allowedEmails: ["member@example.com"] }));
+await staleCtx.seed("_config/box.json", JSON.stringify({ allowedEmails: ["member@example.com"] }));
 const savedAuth = await readFile(process.env.BBX_AUTH_FILE, "utf8");
 await writeFile(process.env.BBX_AUTH_FILE, "not json", { mode: 0o600 });
 const credentialUnavailable = await staleCtx.server.inject({

@@ -3,7 +3,7 @@
 A Google event id is unique within ONE calendar, not across calendars, so a box
 syncing two calendars can hold two different events with the same id. The
 connector's index (`eventFiles` in
-`config/connectors/google-calendar-state.json`) is therefore keyed
+`_bookkeeping/connectors/google-calendar-state.json`) is therefore keyed
 `<eventId> <calendarId>` — see `src/connectors/google-calendar-event-index.ts`
 for why the separator is a space and why the calendar id comes last.
 
@@ -100,7 +100,7 @@ short hash of its calendar id. Each event ends up with its own file.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/google-calendar.json", JSON.stringify({
+await box.seed("_config/connectors/google-calendar.json", JSON.stringify({
   calendars: ["work", "home"],
 }, null, 2));
 box.commitAll("init two-calendar box");
@@ -123,7 +123,7 @@ const calendar = makeRoutedCalendar({
 });
 
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 const first = await connector.sync();
 JSON.stringify({ success: first.success, files: await icsFiles(dir) })
 => {"success":true,"files":["2026-06-10_t-shared.ics","2026-06-10_t-shared_4ea140.ics"]}
@@ -205,7 +205,7 @@ index order decides. Untracking the loser is safe because the file stays tracked
 by the keeper, so the orphan scan never re-inserts it.
 
 ```ts continue
-const statePath = join(box.root, "config/connectors/google-calendar-state.json");
+const statePath = join(box.root, "_bookkeeping/connectors/google-calendar-state.json");
 const collided = {
   version: 2,
   syncTokens: {},
@@ -220,7 +220,7 @@ const deduped = await connector.sync();
 JSON.stringify({
   success: deduped.success,
   blamed: deduped.error?.includes(
-    "store/calendar/2026-06-10_t-shared_4ea140.ics (stale-cleanup, local: two tracked events named one file; this entry was untracked)",
+    "_content/calendar/2026-06-10_t-shared_4ea140.ics (stale-cleanup, local: two tracked events named one file; this entry was untracked)",
   ),
   tracked: await trackedKeys(box.root),
 })
@@ -248,7 +248,7 @@ await writeFile(statePath, JSON.stringify({
 
 const byHash = await connector.sync();
 JSON.stringify({
-  blamed: byHash.error?.includes(`store/calendar/${homeFile} (stale-cleanup`),
+  blamed: byHash.error?.includes(`_content/calendar/${homeFile} (stale-cleanup`),
   tracked: await trackedKeys(box.root),
 })
 => {"blamed":true,"tracked":["evt-shared home"]}
@@ -281,7 +281,7 @@ const calendar = createFakeGoogleCalendar({
 });
 const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 const seeded = await connector.sync();
-const dir = join(box.root, "store/calendar");
+const dir = join(box.root, "_content/calendar");
 JSON.stringify({ success: seeded.success, files: await icsFiles(dir) })
 => {"success":true,"files":["2026-06-08_evt-old.ics"]}
 ```
@@ -298,7 +298,7 @@ const older = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n" +
   "DTSTART:20260620T090000Z\r\nDTEND:20260620T100000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
 await writeFile(join(dir, "2026-06-20_vt-other.ics"), older);
 
-const statePath = join(box.root, "config/connectors/google-calendar-state.json");
+const statePath = join(box.root, "_bookkeeping/connectors/google-calendar-state.json");
 await writeFile(statePath, JSON.stringify({
   syncTokens: {},
   eventFiles: {

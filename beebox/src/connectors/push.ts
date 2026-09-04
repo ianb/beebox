@@ -1,5 +1,5 @@
 /**
- * Web Push connector — delivers `box/output/*.web-push.card` notifications to
+ * Web Push connector — delivers `_bookkeeping/output/*.web-push.card` notifications to
  * the box's subscribed devices during `bbx finalize`.
  *
  * Mirrors the telegram output-card path (telegram-output-cards.ts): a pending
@@ -44,7 +44,7 @@ class PushConnector implements Connector {
 }
 
 /**
- * Deliver all pending web-push cards in box/output/. Returns the relative
+ * Deliver all pending web-push cards in _bookkeeping/output/. Returns the relative
  * paths of cards that were delivered (and deleted). One card's failure doesn't
  * stop the rest.
  */

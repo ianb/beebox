@@ -12,9 +12,8 @@
  *   bbx calendar remove <id>  — remove a calendar from sync
  */
 
-import * as path from "node:path";
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
 import { getGoogleAuth } from "../../connectors/google-auth.js";
 import {
   loadCalendarConfig,
@@ -53,7 +52,7 @@ export const calendarCommand = new Command("calendar")
   .argument("[timespan]", 'Time range: "today", "3d", "2w", "1m" (default: 7d)')
   .action(async (timespan?: string) => {
     const boxRoot = await requireBoxRoot();
-    const calDir = path.join(boxRoot, "store/calendar");
+    const calDir = getBoxDir(boxRoot, "calendar");
     const now = new Date();
 
     let from: Date;

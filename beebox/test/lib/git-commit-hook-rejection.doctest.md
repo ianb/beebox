@@ -37,12 +37,12 @@ The commit throws, and HEAD is where it was:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/inbox/Note.memo.card", "---\nstatus: new\n---\nfirst\n");
+await box.write("_content/inbox/Note.memo.card", "---\nstatus: new\n---\nfirst\n");
 await box.commitAll("a real commit");
 const head = git(box, "rev-parse", "HEAD");
 
 await installRejectingHook(box);
-await box.write("box/inbox/Rejected.memo.card", "---\nstatus: new\n---\nnope\n");
+await box.write("_content/inbox/Rejected.memo.card", "---\nstatus: new\n---\nnope\n");
 await stageAll(box.root);
 
 JSON.stringify({

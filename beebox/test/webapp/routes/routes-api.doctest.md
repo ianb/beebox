@@ -37,18 +37,18 @@ await ctx.cleanup();
 ```ts
 const ctx = await makeTestServer();
 await ctx.seed(
-  "box/inbox/browse-test.memo.card",
+  "_content/inbox/browse-test.memo.card",
   "---\nstatus: new\ncreated: 2026-01-01T00:00:00Z\n---\nBrowse\n",
 );
-await ctx.inject({ method: "GET", url: "/api/browse/box/inbox" })
+await ctx.inject({ method: "GET", url: "/api/browse/_content/inbox" })
 =>
 200
 {
-  "path": "box/inbox",
+  "path": "_content/inbox",
   «*»
   "cards": [
     {
-      "relativePath": "box/inbox/browse-test.memo.card",
+      "relativePath": "_content/inbox/browse-test.memo.card",
       «*»
       "type": "memo"«*»
     }
@@ -68,8 +68,8 @@ every time (otherwise agent edits would stay hidden behind stale HTTP cache):
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("store/notes/hello.md", "# Hello");
-const res = await ctx.rawRequest({ method: "GET", url: "/api/files/store/notes/hello.md" });
+await ctx.seed("_content/notes/hello.md", "# Hello");
+const res = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/notes/hello.md" });
 res.statusCode
 => 200
 
@@ -95,7 +95,7 @@ no body:
 const etag = res.headers["etag"] as string;
 const revalidate = await ctx.rawRequest({
   method: "GET",
-  url: "/api/files/store/notes/hello.md",
+  url: "/api/files/_content/notes/hello.md",
   headers: { "if-none-match": etag },
 });
 revalidate.statusCode
@@ -109,10 +109,10 @@ After the file changes on disk, the ETag changes and the client gets a fresh
 200 even when it sends the old ETag:
 
 ```ts continue
-await ctx.seed("store/notes/hello.md", "# Hello, world");
+await ctx.seed("_content/notes/hello.md", "# Hello, world");
 const fresh = await ctx.rawRequest({
   method: "GET",
-  url: "/api/files/store/notes/hello.md",
+  url: "/api/files/_content/notes/hello.md",
   headers: { "if-none-match": etag },
 });
 fresh.statusCode
@@ -126,8 +126,8 @@ fresh.payload
 verbatim file this way (card.get returns only the parsed form):
 
 ```ts continue
-await ctx.seed("store/archive/Note.memo.card", "---\nstatus: new\n---\nBody\n");
-const card = await ctx.rawRequest({ method: "GET", url: "/api/files/store/archive/Note.memo.card" });
+await ctx.seed("_bookkeeping/archive/Note.memo.card", "---\nstatus: new\n---\nBody\n");
+const card = await ctx.rawRequest({ method: "GET", url: "/api/files/_bookkeeping/archive/Note.memo.card" });
 card.statusCode
 => 200
 
@@ -148,20 +148,20 @@ await ctx.cleanup();
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("store/images/delete-me.webp", "not really an image");
+await ctx.seed("_content/images/delete-me.webp", "not really an image");
 ctx.commitAll("seed image");
-const res = await ctx.request({ method: "DELETE", url: "/api/files/store/images/delete-me.webp" });
+const res = await ctx.request({ method: "DELETE", url: "/api/files/_content/images/delete-me.webp" });
 res.statusCode
 => 200
 ```
 
 ```ts continue
 execSync("git log -1 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim()
-=> Deleted by user: store/images/delete-me.webp
+=> Deleted by user: _content/images/delete-me.webp
 ```
 
 ```ts continue
-await ctx.inject({ method: "GET", url: "/api/files/store/images/delete-me.webp" })
+await ctx.inject({ method: "GET", url: "/api/files/_content/images/delete-me.webp" })
 =>
 404
 «*»"error": "Not found"«*»
@@ -175,10 +175,10 @@ Dirty files get preserved in their own commit before the delete commit:
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("store/images/dirty-delete.webp", "version 1");
+await ctx.seed("_content/images/dirty-delete.webp", "version 1");
 ctx.commitAll("seed dirty image");
-await ctx.seed("store/images/dirty-delete.webp", "version 2");
-const res = await ctx.request({ method: "DELETE", url: "/api/files/store/images/dirty-delete.webp" });
+await ctx.seed("_content/images/dirty-delete.webp", "version 2");
+const res = await ctx.request({ method: "DELETE", url: "/api/files/_content/images/dirty-delete.webp" });
 res.statusCode
 => 200
 ```
@@ -186,8 +186,8 @@ res.statusCode
 ```ts continue
 execSync("git log -2 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim()
 =>
-Deleted by user: store/images/dirty-delete.webp
-Saved before user delete: store/images/dirty-delete.webp
+Deleted by user: _content/images/dirty-delete.webp
+Saved before user delete: _content/images/dirty-delete.webp
 ```
 
 ```ts cleanup

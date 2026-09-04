@@ -137,13 +137,13 @@ export type LoadManifestResult =
   | { ok: false; reason: "not-found"; message: string }
   | { ok: false; reason: "invalid-manifest"; message: string };
 
-/** Read `box/publish/<id>/manifest.json` and `safeParse` it (config is untrusted). */
+/** Read `_publish/<id>/manifest.json` and `safeParse` it (config is untrusted). */
 export async function loadLocalManifest(boxRoot: string, pubId: string): Promise<LoadManifestResult> {
   let raw: string;
   try {
     raw = await readFile(localManifestPath(boxRoot, pubId), "utf-8");
   } catch (_e) {
-    return { ok: false, reason: "not-found", message: `no publication '${pubId}' under box/publish/ — check the id with 'bbx pub ls'` };
+    return { ok: false, reason: "not-found", message: `no publication '${pubId}' under _publish/ — check the id with 'bbx pub ls'` };
   }
   let parsedJson: unknown;
   try {
@@ -189,7 +189,7 @@ export interface PublicationSummary {
 }
 
 /**
- * List the box's publications from each `box/publish/<id>/manifest.json`.
+ * List the box's publications from each `_publish/<id>/manifest.json`.
  * Read-only, no CF. Sorted by `renderedAt` then `pubId` (stable). A parse failure yields a row
  * flagged `invalid` rather than being dropped, so hand-edit drift stays visible.
  */

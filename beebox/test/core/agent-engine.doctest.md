@@ -1,6 +1,6 @@
 # Agent engine selection
 
-`createAgent()` selects one native harness from `config/box.json` on its first
+`createAgent()` selects one native harness from `_config/box.json` on its first
 invocation. Existing boxes have no setting and continue to use Claude. The
 selected delegate remains fixed for the lifetime of that agent.
 
@@ -12,7 +12,7 @@ import { clearBoxConfigCache } from "../../src/core/box/config.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 async function setEngine(boxRoot: string, agentEngine: unknown): Promise<void> {
-  const configDir = path.join(boxRoot, "config");
+  const configDir = path.join(boxRoot, "_config");
   await fs.mkdir(configDir, { recursive: true });
   await fs.writeFile(path.join(configDir, "box.json"), JSON.stringify({ agentEngine }));
   clearBoxConfigCache(boxRoot);

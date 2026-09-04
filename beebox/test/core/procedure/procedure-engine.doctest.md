@@ -18,7 +18,7 @@ results in the run card.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/greet.procedure.card", `---
+await box.write("_config/procedures/greet.procedure.card", `---
 name: greet
 description: A simple greeting procedure
 steps:
@@ -27,10 +27,10 @@ steps:
     run:
       shells:
         - |
-          echo "Hello from procedure" > box/output/greeting.txt
+          echo "Hello from procedure" > _bookkeeping/output/greeting.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add greet procedure");
 
 const output = [];
@@ -39,7 +39,7 @@ const result = await startProcedure({ ctx, procedureNameOrPath: "greet" });
 print(`success: ${result.ok}`);
 
 // The greeting file was created by the shell step
-const greeting = await box.read("box/output/greeting.txt");
+const greeting = await box.read("_bookkeeping/output/greeting.txt");
 print(`greeting: ${greeting.trim()}`);
 
 // Run card exists and shows completed
@@ -67,7 +67,7 @@ failed. The procedure continues to the next step.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/maybe.procedure.card", `---
+await box.write("_config/procedures/maybe.procedure.card", `---
 name: maybe
 description: Conditional steps
 steps:
@@ -80,16 +80,16 @@ steps:
     run:
       shells:
         - |
-          echo "SHOULD NOT RUN" > box/output/bad.txt
+          echo "SHOULD NOT RUN" > _bookkeeping/output/bad.txt
   - id: runs
     description: This step runs
     run:
       shells:
         - |
-          echo "OK" > box/output/good.txt
+          echo "OK" > _bookkeeping/output/good.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add maybe procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -97,7 +97,7 @@ const result = await startProcedure({ ctx, procedureNameOrPath: "maybe" });
 print(`success: ${result.ok}`);
 
 // The skipped step's shell never ran
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`bad.txt exists: ${files.includes("bad.txt")}`);
 print(`good.txt exists: ${files.includes("good.txt")}`);
 
@@ -128,7 +128,7 @@ scheduler.jsonl, not in a dir-per-nothing.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/idle.procedure.card", `---
+await box.write("_config/procedures/idle.procedure.card", `---
 name: idle
 description: Nothing to do
 steps:
@@ -141,7 +141,7 @@ steps:
     run:
       shells:
         - |
-          echo "NEVER" > box/output/never.txt
+          echo "NEVER" > _bookkeeping/output/never.txt
   - id: second
     description: Also skips
     precheck:
@@ -151,7 +151,7 @@ steps:
     run:
       shells:
         - |
-          echo "ALSO NEVER" > box/output/also.txt
+          echo "ALSO NEVER" > _bookkeeping/output/also.txt
 ---
 `);
 box.commitAll("Add idle procedure");
@@ -184,7 +184,7 @@ and the procedure halts — later steps don't run.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/fail-early.procedure.card", `---
+await box.write("_config/procedures/fail-early.procedure.card", `---
 name: fail-early
 description: First step fails
 steps:
@@ -197,16 +197,16 @@ steps:
     run:
       shells:
         - |
-          echo "NEVER" > box/output/never.txt
+          echo "NEVER" > _bookkeeping/output/never.txt
   - id: after
     description: Should not run
     run:
       shells:
         - |
-          echo "ALSO NEVER" > box/output/also.txt
+          echo "ALSO NEVER" > _bookkeeping/output/also.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add fail-early procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -214,7 +214,7 @@ const result = await startProcedure({ ctx, procedureNameOrPath: "fail-early" });
 print(`success: ${result.ok}`);
 
 // Neither step's run phase executed
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`never.txt exists: ${files.includes("never.txt")}`);
 print(`also.txt exists: ${files.includes("also.txt")}`);
 =>
@@ -234,7 +234,7 @@ lets the procedure continue; `severity="abort"` stops it.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/validate.procedure.card", `---
+await box.write("_config/procedures/validate.procedure.card", `---
 name: validate
 description: Validation test
 steps:
@@ -243,7 +243,7 @@ steps:
     run:
       shells:
         - |
-          echo "did work" > box/output/work.txt
+          echo "did work" > _bookkeeping/output/work.txt
     validate:
       severity: warn
       shells:
@@ -254,10 +254,10 @@ steps:
     run:
       shells:
         - |
-          echo "still going" > box/output/still.txt
+          echo "still going" > _bookkeeping/output/still.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add validate procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -265,7 +265,7 @@ const result = await startProcedure({ ctx, procedureNameOrPath: "validate" });
 print(`success: ${result.ok}`);
 
 // Both steps ran despite validation warning
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`work.txt: ${files.includes("work.txt")}`);
 print(`still.txt: ${files.includes("still.txt")}`);
 
@@ -291,7 +291,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/abort.procedure.card", `---
+await box.write("_config/procedures/abort.procedure.card", `---
 name: abort
 description: Abort on validation failure
 steps:
@@ -300,7 +300,7 @@ steps:
     run:
       shells:
         - |
-          echo "ran" > box/output/ran.txt
+          echo "ran" > _bookkeeping/output/ran.txt
     validate:
       severity: abort
       shells:
@@ -311,17 +311,17 @@ steps:
     run:
       shells:
         - |
-          echo "nope" > box/output/nope.txt
+          echo "nope" > _bookkeeping/output/nope.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add abort procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "abort" });
 print(`success: ${result.ok}`);
 
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`ran.txt: ${files.includes("ran.txt")}`);
 print(`nope.txt: ${files.includes("nope.txt")}`);
 =>
@@ -343,7 +343,7 @@ shows why.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/runfail.procedure.card", `---
+await box.write("_config/procedures/runfail.procedure.card", `---
 name: runfail
 description: Run shell exits non-zero
 steps:
@@ -360,10 +360,10 @@ steps:
     run:
       shells:
         - |
-          echo "nope" > box/output/nope.txt
+          echo "nope" > _bookkeeping/output/nope.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add runfail procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -372,7 +372,7 @@ print(`success: ${result.ok}`);
 print(`error: ${result.ok ? "" : result.error.message}`);
 
 // The later step never ran.
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`nope.txt: ${files.includes("nope.txt")}`);
 
 // Run card: step failed, with the failure detail captured.
@@ -405,7 +405,7 @@ expansion — surfaced as a clear `unbound variable` message.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/nounset.procedure.card", `---
+await box.write("_config/procedures/nounset.procedure.card", `---
 name: nounset
 description: Typo'd variable name
 steps:
@@ -417,7 +417,7 @@ steps:
           echo "count is $COUNNT"
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add nounset procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -447,7 +447,7 @@ success. Combined with `-e`, the script stops at the failing pipe.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/pipe.procedure.card", `---
+await box.write("_config/procedures/pipe.procedure.card", `---
 name: pipe
 description: Failing command mid-pipe
 steps:
@@ -457,10 +457,10 @@ steps:
       shells:
         - |
           false | cat
-          echo "reached" > box/output/reached.txt
+          echo "reached" > _bookkeeping/output/reached.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add pipe procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -468,7 +468,7 @@ const result = await startProcedure({ ctx, procedureNameOrPath: "pipe" });
 print(`success: ${result.ok}`);
 
 // The script stopped at the failing pipe — the later command never ran.
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`reached.txt: ${files.includes("reached.txt")}`);
 
 const runs = await box.list("procedure/runs");
@@ -492,7 +492,7 @@ captured on the run card so the reason is inspectable after the fact.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/precheck-err.procedure.card", `---
+await box.write("_config/procedures/precheck-err.procedure.card", `---
 name: precheck-err
 description: Precheck fails with a message
 steps:
@@ -506,10 +506,10 @@ steps:
     run:
       shells:
         - |
-          echo "ran" > box/output/ran.txt
+          echo "ran" > _bookkeeping/output/ran.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add precheck-err procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -537,7 +537,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/preview.procedure.card", `---
+await box.write("_config/procedures/preview.procedure.card", `---
 name: preview
 description: Preview procedure
 steps:
@@ -550,7 +550,7 @@ steps:
     run:
       shells:
         - |
-          echo "side effect" > box/output/effect.txt
+          echo "side effect" > _bookkeeping/output/effect.txt
     validate:
       severity: warn
       shells:
@@ -574,9 +574,9 @@ const result = await startProcedure({
 });
 print(`success: ${result.ok}`);
 
-// No side effects — box/output was never created
-const hasOutput = await box.list("box/output");
-print(`output dir empty: ${hasOutput === ""}`);
+// No side effects — nothing but the scaffolded .gitkeep was ever created
+const hasOutput = await box.list("_bookkeeping/output");
+print(`output dir empty: ${hasOutput === "_bookkeeping/output/.gitkeep"}`);
 
 // Output describes the steps
 const stepLines = output.filter(s => s.includes("first") || s.includes("second"));
@@ -595,7 +595,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/multi.procedure.card", `---
+await box.write("_config/procedures/multi.procedure.card", `---
 name: multi
 description: Multi-step
 steps:
@@ -604,16 +604,16 @@ steps:
     run:
       shells:
         - |
-          echo "a" > box/output/a.txt
+          echo "a" > _bookkeeping/output/a.txt
   - id: beta
     description: Beta
     run:
       shells:
         - |
-          echo "b" > box/output/b.txt
+          echo "b" > _bookkeeping/output/b.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add multi procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -624,7 +624,7 @@ const result = await startProcedure({
 });
 print(`success: ${result.ok}`);
 
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`a.txt: ${files.includes("a.txt")}`);
 print(`b.txt: ${files.includes("b.txt")}`);
 =>
@@ -663,7 +663,7 @@ extend a specific run.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/stamped.procedure.card", `---
+await box.write("_config/procedures/stamped.procedure.card", `---
 name: stamped
 description: Gets an expires stamp
 steps:
@@ -672,10 +672,10 @@ steps:
     run:
       shells:
         - |
-          echo "did it" > box/output/did.txt
+          echo "did it" > _bookkeeping/output/did.txt
 ---
 `);
-await box.write("config/procedures/doomed.procedure.card", `---
+await box.write("_config/procedures/doomed.procedure.card", `---
 name: doomed
 description: Fails
 steps:
@@ -691,7 +691,7 @@ steps:
           true
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add procedures");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -726,7 +726,7 @@ override the defaults; "never" pins every run of that procedure.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/keeper.procedure.card", `---
+await box.write("_config/procedures/keeper.procedure.card", `---
 name: keeper
 run-expiry: never
 description: Runs are kept forever
@@ -736,10 +736,10 @@ steps:
     run:
       shells:
         - |
-          echo "kept" > box/output/kept.txt
+          echo "kept" > _bookkeeping/output/kept.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add keeper procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -772,7 +772,7 @@ appends a marker each time it runs, is left untouched.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/staged.procedure.card", `---
+await box.write("_config/procedures/staged.procedure.card", `---
 name: staged
 description: Middle step gated on a sentinel
 steps:
@@ -781,26 +781,26 @@ steps:
     run:
       shells:
         - |
-          echo "x" >> box/output/alpha-runs.txt
+          echo "x" >> _bookkeeping/output/alpha-runs.txt
   - id: beta
     description: Precheck gated on a sentinel file
     precheck:
       shells:
         - |
-          test -f box/output/sentinel
+          test -f _bookkeeping/output/sentinel
     run:
       shells:
         - |
-          echo "b" > box/output/b.txt
+          echo "b" > _bookkeeping/output/b.txt
   - id: gamma
     description: Final step
     run:
       shells:
         - |
-          echo "c" > box/output/c.txt
+          echo "c" > _bookkeeping/output/c.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add staged procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -813,12 +813,12 @@ const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("staged_"));
 let run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`after first: ${run.steps.map(s => `${s.id}=${s.status}`).join(", ")}`);
-let files = await box.list("box/output");
+let files = await box.list("_bookkeeping/output");
 print(`b.txt: ${files.includes("b.txt")}, c.txt: ${files.includes("c.txt")}`);
-print(`alpha ran once: ${(await box.read("box/output/alpha-runs.txt")).trim() === "x"}`);
+print(`alpha ran once: ${(await box.read("_bookkeeping/output/alpha-runs.txt")).trim() === "x"}`);
 
 // Fix the gating condition and resume.
-await box.write("box/output/sentinel", "");
+await box.write("_bookkeeping/output/sentinel", "");
 box.commitAll("Add sentinel");
 const resumed = await resumeProcedure({ ctx, runDir });
 print(`resume success: ${resumed.ok}`);
@@ -826,9 +826,9 @@ print(`resume success: ${resumed.ok}`);
 run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`run status: ${run.status}`);
 print(`after resume: ${run.steps.map(s => `${s.id}=${s.status}`).join(", ")}`);
-files = await box.list("box/output");
+files = await box.list("_bookkeeping/output");
 print(`b.txt: ${files.includes("b.txt")}, c.txt: ${files.includes("c.txt")}`);
-print(`alpha not re-run: ${(await box.read("box/output/alpha-runs.txt")).trim() === "x"}`);
+print(`alpha not re-run: ${(await box.read("_bookkeeping/output/alpha-runs.txt")).trim() === "x"}`);
 =>
 first success: false
 after first: alpha=completed, beta=failed, gamma=pending
@@ -849,7 +849,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/done.procedure.card", `---
+await box.write("_config/procedures/done.procedure.card", `---
 name: done
 description: Completes cleanly
 steps:
@@ -858,10 +858,10 @@ steps:
     run:
       shells:
         - |
-          echo "done" > box/output/done.txt
+          echo "done" > _bookkeeping/output/done.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add done procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -896,7 +896,7 @@ printed.
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write("procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card", `---
-procedure: config/procedures/refresh-maps.procedure.card
+procedure: _config/procedures/refresh-maps.procedure.card
 status: inconclusive
 started-at: 2026-08-24T05:00:00Z
 completed-at: 2026-08-24T05:04:00Z
@@ -956,7 +956,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/steps.procedure.card", `---
+await box.write("_config/procedures/steps.procedure.card", `---
 name: steps
 description: Has steps
 steps:
