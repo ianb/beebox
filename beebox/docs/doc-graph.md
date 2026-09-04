@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-04T05:30:05Z
+Generated: 2026-09-04T14:34:06Z
 Total documents: 316
 
 ## Issues
@@ -1813,7 +1813,7 @@ References:
 
 #### docs/security-overview.md
 
-Title: "Security overview" | 223 lines
+Title: "Security overview" | 225 lines
 
 Referenced by:
 - README.md:88 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
@@ -1842,10 +1842,11 @@ References:
 - → ../issues/closed/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
 - → ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md (link)
 - → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
+- → ../issues/features/2026-09-04-cross-box-filesystem-isolation.md (link)
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 414 lines
+Title: "Security report — structured version" | 419 lines
 
 Referenced by:
 - docs/implemented-plans/agent-browsing-owner.md:178 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
@@ -1880,6 +1881,7 @@ References:
 - → ../issues/decisions/2026-08-07-server-backup-story.md (link)
 - → ../issues/code-quality/2026-07-31-pub-worker-preauth-oracle-and-log-flood.md (link)
 - → ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md (link)
+- → ../issues/features/2026-09-04-cross-box-filesystem-isolation.md (link)
 - → ../issues/closed/bugs/2026-08-26-listsessionroots-contextdir-no-containment.md (link)
 
 #### docs/server-operations.md
