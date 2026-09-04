@@ -150,18 +150,17 @@ export const statusRouter = router({
         ? path.join(ctx.boxRoot, relPath)
         : ctx.boxRoot;
 
-      // Security: ensure we stay within boxRoot
+      // Security: ensure we stay within boxRoot, then fence the RESOLVED
+      // path (not the raw `relPath` string) against the box namespace — a
+      // non-root path must land inside an underscore area (src/,
+      // node_modules/, .git/, and any other root entry are not browsable
+      // through this endpoint either), and a traversal form like
+      // `_content/../src` can't hide behind its raw-string prefix
+      // (`docs/plans/one-root-box-layout.md` Track B). The root listing
+      // itself is filtered to areas only, below.
       const resolved = path.resolve(targetDir);
-      if (containWithinBox(ctx.boxRoot, resolved) === null) {
-        const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
-        return { path: relPath, ...empty };
-      }
-
-      // Box namespace fence: a non-root path must land inside an underscore
-      // area — src/, node_modules/, .git/, and any other root entry are not
-      // browsable through this endpoint either (`docs/plans/one-root-box-layout.md`
-      // Track B). The root listing itself is filtered to areas only, below.
-      if (relPath !== "" && !isInBoxNamespace(relPath)) {
+      const contained = containWithinBox(ctx.boxRoot, resolved);
+      if (contained === null || (contained !== "" && !isInBoxNamespace(contained))) {
         const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
         return { path: relPath, ...empty };
       }

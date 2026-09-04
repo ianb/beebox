@@ -26,30 +26,57 @@ import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";
 import { checkBoxRoot } from "../../lib/box-root-check.js";
+import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
 
 /**
  * The npm-namespace entries `bbx validate --hook` treats as "editing the
  * package surface" (Track C, `docs/plans/one-root-box-layout.md`) — their
  * first path segment, whether the edit lands on the entry itself or
- * somewhere underneath it (a file inside `node_modules/`, say).
+ * somewhere underneath it (a file inside `node_modules/`, say). A subset of
+ * the full closed vocabulary — these specifically get their own feedback
+ * (below), independent of whether the root has any strays.
  */
 const NPM_NAMESPACE_ENTRIES = new Set(["package.json", "pnpm-lock.yaml", "package-lock.json", "tsconfig.json", "node_modules"]);
 
+/** Every legal box-root entry name — the closed vocabulary, `checkBoxRoot`'s own source of truth. */
+const VOCABULARY_NAMES: ReadonlySet<string> = new Set(BOX_ROOT_VOCABULARY.map((entry) => entry.name));
+
 /**
- * Root-vocabulary tripwire for the hook: an edit at the box root itself, or
- * anywhere under an npm-namespace entry, runs the closed-vocabulary root
- * check (one `readdir` — cheap). Returns `null` — never a "clean" result —
- * when there's nothing to surface, so a clean root falls through to the
- * edited file's own per-type handling (a root-level CLAUDE.md edit still
- * gets its usual size lint, say) rather than short-circuiting it.
+ * Root-vocabulary tripwire for the hook. Two independent checks on the
+ * edited path's TOP-LEVEL segment (Track C, `docs/plans/one-root-box-layout.md`):
+ *
+ *  - Editing anywhere under an npm-namespace entry (`package.json`, a
+ *    lockfile, `tsconfig.json`, `node_modules/`) always gets a nudge —
+ *    independent of whether the root itself has strays, so this fires even
+ *    on an otherwise-clean root.
+ *  - Editing anywhere under a top-level segment that ISN'T in the closed
+ *    vocabulary at all runs the closed-vocabulary root check (one `readdir`
+ *    — cheap). This catches a nested write like `config/stray.json` (which
+ *    implicitly creates the stray `config/` root dir) just as well as a
+ *    direct root-level write — the edited file need not be AT the root for
+ *    the resulting root-level entry to be a stray.
+ *
+ * Returns `null` — never a "clean" result — when there's nothing to
+ * surface, so a clean root falls through to the edited file's own per-type
+ * handling (a root-level CLAUDE.md edit still gets its usual size lint, say)
+ * rather than short-circuiting it.
  */
 async function checkPackageSurfaceEdit(fp: string, boxRoot: string): Promise<HookValidationResult | null> {
   const rel = path.relative(boxRoot, fp);
   if (rel === "" || rel.startsWith("..")) return null;
   const firstSegment = rel.split(path.sep)[0];
-  const atRoot = path.dirname(fp) === boxRoot;
-  const inNpmNamespace = firstSegment !== undefined && NPM_NAMESPACE_ENTRIES.has(firstSegment);
-  if (!atRoot && !inNpmNamespace) return null;
+  if (firstSegment === undefined) return null;
+
+  if (NPM_NAMESPACE_ENTRIES.has(firstSegment)) {
+    return {
+      feedback:
+        `Edit touches the box's npm/package surface (${firstSegment}) — make sure this is a ` +
+        "deliberate dependency/tooling change, not accidental drift.",
+      hasErrors: false,
+    };
+  }
+
+  if (VOCABULARY_NAMES.has(firstSegment)) return null;
 
   const strays = await checkBoxRoot(boxRoot);
   if (strays.length === 0) return null;

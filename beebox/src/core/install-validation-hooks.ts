@@ -144,7 +144,7 @@ const IGNORE_SEED_BODY = `# bbx validate ignore — operator-owned. Gitignore-st
 # This is the boxholder's file. It exists so YOU (the human) can exclude
 # box-specific trees that carry illustrative or intentionally-unresolved links
 # — e.g. a vendored doc set or imported data. bbx already skips its own
-# generated docs (docs/generated/) everywhere, so most boxes need nothing here.
+# generated docs (_content/docs/generated/) everywhere, so most boxes need nothing here.
 #
 # Examples (uncomment / adapt as needed):
 #

@@ -138,7 +138,7 @@ await find(fixedAgain.db, "broken")
 ```ts continue
 await box.write("_content/finances/Distribution_Letter.md", "# Ledger Distribution Letter\n\nEach heir receives an apportioned share.\n");
 await box.write("_content/notes/Note.attach/snippet.md", "apportioned share duplicate inside attach scope");
-await box.write("docs/generated/card-memo.md", "apportioned share generated doc noise");
+await box.write("_content/docs/generated/card-memo.md", "apportioned share generated doc noise");
 const withMd = await openSearchIndex(box.root);
 await find(withMd.db, "apportioned share")
 => _content/finances/Distribution_Letter.md

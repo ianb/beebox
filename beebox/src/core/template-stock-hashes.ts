@@ -31,9 +31,10 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "schemas-guide-v2": {
-    current: "ead7b46ef2e62d3e0d453e8b3b0d30b58f1b92d72ab380c9ae0969ed240e65d7",
+    current: "1290649a5abe4684c99ebd86386e152cd2cb3af411b0fb33d86673736dea972c",
     superseded: [
       "15f7fdb102d01ad5fa68bf2b706d5c2af26cffaff4822e0278620786b39d1bc7",
+      "ead7b46ef2e62d3e0d453e8b3b0d30b58f1b92d72ab380c9ae0969ed240e65d7",
     ],
   },
   "tricks-guide-v2": {
@@ -44,11 +45,12 @@ export const TEMPLATE_STOCK_HASHES = {
     ],
   },
   "views-guide-v2": {
-    current: "f1237111213cdea6c45fbed5ecda10d7108b1221d234bf596e5fc68deee326bf",
+    current: "d5a4f8b633f555f7898bed7632f02e6c9c75a76c35fe6fa4fb775c7039c26fc8",
     superseded: [
       "f6be48fb86eed3b36edbb335f3ead34e97c58b6bb172cdfe1458b0a3ddfc8472",
       "e8f5e99502aa1da29e07f9e5c68bbe3c1ac3c6dba216fc27c5463f8f0272d772",
       "d53ddddd5f418fa7cd2bb9f043e77b2ec37314e9df7b0879979abe433739c61f",
+      "f1237111213cdea6c45fbed5ecda10d7108b1221d234bf596e5fc68deee326bf",
     ],
   },
 } satisfies Record<string, TemplateStockEntry>;

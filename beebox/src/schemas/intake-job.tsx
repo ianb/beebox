@@ -30,7 +30,7 @@ An intake job means new items have arrived in the inbox and need triage.
 1. Read this job card to find the referenced items (each entry in
    \`items:\` has a \`ref\` pointing to an inbox card)
 2. Check for an applicable guide — see the compiled reference in
-   \`docs/generated/\` if available
+   \`_content/docs/generated/\` if available
 3. Read each referenced item to understand what it is
 4. For each item, follow the guide's triage rules and actions. Without
    a guide:

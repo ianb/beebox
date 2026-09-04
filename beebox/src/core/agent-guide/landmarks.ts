@@ -5,7 +5,7 @@
  * they're for; they should not learn how to create them from this
  * always-loaded guide. Curation criteria live in
  * `docs/landmark-curation.md`; schema details in
- * `docs/generated/card-landmark.md`.
+ * `_content/docs/generated/card-landmark.md`.
  */
 
 export function landmarksSection(): string {

@@ -24,7 +24,7 @@ import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { containWithinBox } from "../../lib/box-containment.js";
-import { isInBoxNamespace } from "../../lib/box-namespace.js";
+import { resolveBoxNamespacePath } from "../../lib/box-namespace-resolve.js";
 
 // `.avif` is here because the document extractor writes page and figure
 // renders as AVIF (`src/core/commands/document-extract.ts`); without it every
@@ -92,13 +92,13 @@ export function registerApiImageRoutes({
       const reqPath = request.params["*"] ?? "";
       if (!reqPath) return reply.status(400).send({ error: "Path required" });
 
-      const resolved = path.resolve(path.join(boxRoot, reqPath));
-      if (containWithinBox(boxRoot, resolved) === null) {
+      // Box containment + namespace fence, checked on the RESOLVED path
+      // (`docs/plans/one-root-box-layout.md` Track B).
+      const ns = resolveBoxNamespacePath(boxRoot, reqPath);
+      if (ns === null) {
         return reply.status(403).send({ error: "Access denied" });
       }
-      if (!isInBoxNamespace(reqPath)) {
-        return reply.status(403).send({ error: "Access denied" });
-      }
+      const { resolved } = ns;
       if (path.basename(resolved).startsWith(".")) {
         return reply.status(403).send({ error: "Access denied" });
       }

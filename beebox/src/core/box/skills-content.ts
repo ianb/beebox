@@ -424,7 +424,7 @@ source: Boxholder wanted a summary to start the week
 ---
 \`\`\`
 
-They run in the background automatically; \`bbx scheduled\` lists them. Use \`at:\` (a future timestamp) instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`docs/generated/card-scheduled-script.md\`.
+They run in the background automatically; \`bbx scheduled\` lists them. Use \`at:\` (a future timestamp) instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`_content/docs/generated/card-scheduled-script.md\`.
 
 (This is for durable, box-level schedules. A quick in-session follow-up while chatting — "remind me in 20 minutes" — is the chat \`<schedule>\` tag, not a card.)
 `;
@@ -461,7 +461,7 @@ description: Give a card type a custom interface — a React component that rend
 
 # Views
 
-Views are React (\`.tsx\`) components that render box data in the browser. **Read \`docs/generated/views.md\` before creating or modifying one** — it carries the full API, the view-host context, and how to test a view.
+Views are React (\`.tsx\`) components that render box data in the browser. **Read \`_content/docs/generated/views.md\` before creating or modifying one** — it carries the full API, the view-host context, and how to test a view.
 
 A view always gives a **card type** a custom interface: a view exporting \`rendersCardTypes = ["<type>"]\` becomes that type's UI on card pages, peeks, and chat embeds, and is selected on a card's path with \`?view=name\`. Every view is attached to a card type this way — there is no card-less standalone view.
 

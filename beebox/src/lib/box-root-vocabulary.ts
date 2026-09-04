@@ -32,7 +32,24 @@ export const BOX_ROOT_VOCABULARY = [
   { name: ".gitattributes", kind: "tooling" },
   { name: "CLAUDE.md", kind: "tooling" },
   { name: ".claude", kind: "tooling" },
+  // The Codex-facing mirror of the two above: `AGENTS.md` is a symlink to
+  // `CLAUDE.md`, `.agents/` and `.codex/` hold Codex-mirrored skills and hook
+  // config — all planted at the box root by `agent-context-mirrors.ts`
+  // alongside the Claude-facing originals.
+  { name: "AGENTS.md", kind: "tooling" },
+  { name: ".agents", kind: "tooling" },
+  { name: ".codex", kind: "tooling" },
   { name: "src", kind: "tooling" },
   { name: ".beebox", kind: "tooling" },
   { name: "README.md", kind: "tooling" },
+
+  // Runtime state dotfiles a running box legitimately writes at its root —
+  // not relocated under an underscore area, because they describe the
+  // *process*, not box content (`bbx serve`'s PID; the reactor's
+  // cross-process lock). `.bbx-lock` is NOT listed: that's the retired v2
+  // reactor-lock filename (renamed to `.bbx-reactor.lock`) — v3 never writes
+  // it, `one-root-run.ts`'s migration cleans up a leftover one, and a stray
+  // one on a v3 box is correctly still a stray.
+  { name: ".bbx-serve.pid", kind: "tooling" },
+  { name: ".bbx-reactor.lock", kind: "tooling" },
 ] as const satisfies readonly BoxRootVocabularyEntry[];

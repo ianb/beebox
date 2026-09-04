@@ -7,7 +7,7 @@
  * fallback until boxes migrate (runbook: `docs/plans/scan-guide-card.md`).
  *
  * The guide is compiled in-memory from the card on every run — never read
- * from the possibly-stale `docs/generated/scan-guide.md` derivative. The
+ * from the possibly-stale `_content/docs/generated/scan-guide.md` derivative. The
  * parse chain here is deliberately NOT `parseGuideCard`, whose `null`
  * conflates no-frontmatter, YAML-syntax, and schema failures; each stage
  * throws a `ScanGuideParseError` naming what broke.

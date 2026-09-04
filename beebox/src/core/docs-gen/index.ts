@@ -3,7 +3,7 @@
  *
  * Produces two categories of docs:
  * 1. `.beebox/agent-guide.md` — compact, always-loaded via @-include in CLAUDE.md
- * 2. `docs/generated/*.md` — detailed reference docs, read on demand by agents
+ * 2. `_content/docs/generated/*.md` — detailed reference docs, read on demand by agents
  *
  * Called by `bbx init` and at the start of `bbx reactor`.
  */
@@ -434,7 +434,7 @@ async function writeCardDocs(params: {
 export async function generateDocs(boxRoot: string, options?: GenerateDocsOptions): Promise<void> {
   options = options ?? {};
   // TEMPORARY — diagnose unexpected writes to the beebox source repo
-  // (`.beebox/` and `docs/generated/` showing up here as untracked).
+  // (`.beebox/` and `_content/docs/generated/` showing up here as untracked).
   // Remove once the caller is identified.
   if (boxRoot.endsWith("/callback/beebox") || boxRoot.endsWith("/src/callback/beebox")) {
     console.warn(`[generateDocs:DIAG] called with boxRoot=${boxRoot}`);

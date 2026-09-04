@@ -118,6 +118,50 @@ const deleted = await runPreCommitChecks(box.root, { colors: false });
 await box.cleanup();
 ```
 
+## The closed-vocabulary root check (Track C) blocks the commit
+
+`checkBoxRoot` is wired into `--pre-commit` as a blocking error — the check
+that would have caught the test1 stray-config incident at commit time, not
+just as a `bbx status` warning:
+
+```ts
+const strayBox = await makeTmpBox({ git: true });
+await strayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\ncreated: 2026-08-19T10:00:00Z\n---\n");
+stage(strayBox);
+
+const strayOutcome = await runPreCommitChecks(strayBox.root, { colors: false });
+[strayOutcome.errorCount > 0, strayOutcome.report.includes("Box root: recipes"), strayOutcome.report.includes("closed vocabulary")]
+=> [
+  true,
+  true,
+  true
+]
+```
+
+```ts cleanup
+await strayBox.cleanup();
+```
+
+A box with no root strays stays quiet on this check — a clean commit still
+passes with an empty report:
+
+```ts
+const cleanRootBox = await makeTmpBox({ git: true });
+await cleanRootBox.write("_content/notes/Plan.memo.card", "---\nstatus: new\ncreated: 2026-08-19T10:00:00Z\n---\nBody text\n");
+stage(cleanRootBox);
+
+const cleanRootOutcome = await runPreCommitChecks(cleanRootBox.root, { colors: false });
+[cleanRootOutcome.errorCount, cleanRootOutcome.report]
+=> [
+  0,
+  ""
+]
+```
+
+```ts cleanup
+await cleanRootBox.cleanup();
+```
+
 ## A staged oversized binary in an attach scope blocks
 
 The unlisted-binary guard reads the index (`core/annex/staged-unlisted.ts`), so

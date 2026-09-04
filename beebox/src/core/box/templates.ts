@@ -43,7 +43,7 @@ export default cardSchema("my-type", {
   instructions: \\\`# My Type Cards
 
 Instructions for the agent on how to handle this card type.
-These appear in .claude/rules/ and docs/generated/, and are loaded
+These appear in .claude/rules/ and _content/docs/generated/, and are loaded
 when the agent reads or edits a matching card file.\\\`,
 });
 \`\`\`
@@ -158,7 +158,7 @@ bbx init .
 
 This regenerates, from each schema's \`instructions\`:
 - \`.claude/rules/card-<type>.md\` (auto-loaded when you edit a matching card)
-- \`docs/generated/card-<type>.md\`
+- \`_content/docs/generated/card-<type>.md\`
 and registers any \`template\` exports for \`bbx create\`. Run it after you add or
 change a schema's \`instructions\` so the guidance an agent reads stays current. It
 does not touch the running server's schema registration (a fresh \`bbx\` process
@@ -301,7 +301,7 @@ const VIEWS_CLAUDE_MD = `# Views Directory
 
 This directory contains agent-generated React components (.tsx files) that render in the browser. **Every view is attached to a card type** via \`rendersCardTypes\` — it becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less standalone view.
 
-**IMPORTANT: Read \`docs/generated/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
+**IMPORTANT: Read \`_content/docs/generated/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
 
 ## Quick Reference
 
@@ -322,7 +322,7 @@ hand-rolled \`<a>\`) — see the "Card-aware widgets" section in the doc.
 After writing or changing a view, render-test it: \`bbx view test <slug>\` (loads
 the real cards, renders once, prints the output or a source-mapped error).
 
-Full documentation: \`docs/generated/views.md\`
+Full documentation: \`_content/docs/generated/views.md\`
 `;
 
 /**

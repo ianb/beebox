@@ -87,7 +87,7 @@ export function cardValidatorHook(): HookCallbackMatcher {
         }
 
         // `isBuiltinLintableMarkdown` is the shared skip set (both instruction
-        // filenames, dependency/VCS dirs, bbx's own docs/generated/ output). This
+        // filenames, dependency/VCS dirs, bbx's own _content/docs/generated/ output). This
         // used to be a hand-rolled subset that drifted from it.
         if (isBuiltinLintableMarkdown(filePath)) {
           const additional = await runMarkdownLint(filePath, { startDir: post.cwd });

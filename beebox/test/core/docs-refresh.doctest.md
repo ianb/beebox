@@ -22,12 +22,12 @@ process.env["BBX_HOOK_BIN"] = join(PACKAGE_ROOT, "bin", "bbx");
 
 /** A committed, clean box shaped enough like a real one for a full doc run:
  *  the box `.gitignore` a real box gets from `bbx init` (without it, the
- *  deliberately gitignored `docs/generated/` and `.beebox/` read as
+ *  deliberately gitignored `_content/docs/generated/` and `.beebox/` read as
  *  untracked and every run would look dirty) and a CLAUDE.md for the generator
  *  to add its @-includes to. */
 async function makeCleanBox() {
   const box = await makeTmpBox({ git: true });
-  await box.write(".gitignore", ".beebox/\ndocs/generated/\n");
+  await box.write(".gitignore", ".beebox/\n_content/docs/generated/\n");
   await box.write("CLAUDE.md", "# Box\n");
   box.commitAll("seed box");
   return box;

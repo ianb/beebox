@@ -23,7 +23,7 @@
  *  - https://www.humanlayer.dev/blog/writing-a-good-claude-md
  *
  * Concrete fixing strategies for an oversized file are documented per-box at
- * docs/generated/reducing-claude-md.md (src/core/reducing-claude-md-doc.ts),
+ * _content/docs/generated/reducing-claude-md.md (src/core/reducing-claude-md-doc.ts),
  * which the warning below points to.
  */
 
@@ -41,7 +41,7 @@ const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
 const MOVE_ADVICE =
   "Trim it, consolidate duplication, or move detail onto a lazier surface " +
   "(a sibling doc, a nested CLAUDE.md, a .claude/rules/ glob, or a skill). " +
-  "See docs/generated/reducing-claude-md.md for concrete strategies.";
+  "See _content/docs/generated/reducing-claude-md.md for concrete strategies.";
 
 /**
  * Return a soft warning line if the CLAUDE.md is large, else null. Two tiers:

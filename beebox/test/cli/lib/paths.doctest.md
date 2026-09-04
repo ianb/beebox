@@ -3,7 +3,21 @@
 Utilities for working with card filenames and Bee Box directory structure.
 
 ```ts setup
-import { parseCardName, buildCardName, isCardFile, BOX_DIRS } from "../../../src/lib/paths.js";
+import { parseCardName, buildCardName, isCardFile, BOX_DIRS, findBoxRoot } from "../../../src/lib/paths.js";
+import { PreV3ShapeError } from "../../../src/lib/box-shape-errors.js";
+import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+/** Whether `findBoxRoot(dir)` throws the migration-pointing pre-v3 error. */
+async function findBoxRootThrowsPreV3(dir: string): Promise<boolean> {
+  try {
+    await findBoxRoot(dir);
+    return false;
+  } catch (e) {
+    return e instanceof PreV3ShapeError;
+  }
+}
 ```
 
 ## Card filenames
@@ -95,4 +109,58 @@ BOX_DIRS.questions
 
 BOX_DIRS.archiveDone
 => _bookkeeping/archive/done
+```
+
+## `findBoxRoot` refuses a pre-v3 marker
+
+A v3 box (`makeTmpBox`'s default scaffold) resolves normally:
+
+```ts
+const v3Box = await makeTmpBox();
+(await findBoxRoot(v3Box.root)) === v3Box.root
+=> true
+```
+
+```ts cleanup
+await v3Box.cleanup();
+```
+
+A directory with NO marker anywhere above it still returns `null` — ordinary
+"not a box" discovery is untouched:
+
+```ts
+const bareDir = await makeTmpBox();
+const unmarkedSubdir = join(bareDir.root, "..", `bbx-doctest-unmarked-${String(Date.now())}`);
+await mkdir(unmarkedSubdir, { recursive: true });
+await findBoxRoot(unmarkedSubdir)
+=> null
+```
+
+A marker whose `shapeVersion` predates 3 (the common "invoked from inside an
+old v2 `content/` root" case) throws the migration-pointing error INSTEAD of
+returning the directory — this is the fix for the original bug: `bbx tick`
+run from inside such a directory used to silently resolve it as a valid box
+root, find nothing under `_config/schedules`, and report zero-work success:
+
+```ts continue
+const v2ContentRoot = join(bareDir.root, "v2-content");
+await mkdir(join(v2ContentRoot, ".beebox"), { recursive: true });
+await writeFile(join(v2ContentRoot, ".beebox", "box.json"), JSON.stringify({ shapeVersion: 2 }));
+await findBoxRootThrowsPreV3(v2ContentRoot)
+=> true
+```
+
+A marker with NO `shapeVersion` field at all (predates the field entirely)
+throws the same way:
+
+```ts continue
+const noVersionRoot = join(bareDir.root, "no-version");
+await mkdir(join(noVersionRoot, ".beebox"), { recursive: true });
+await writeFile(join(noVersionRoot, ".beebox", "box.json"), JSON.stringify({}));
+await findBoxRootThrowsPreV3(noVersionRoot)
+=> true
+```
+
+```ts cleanup
+await bareDir.cleanup();
 ```

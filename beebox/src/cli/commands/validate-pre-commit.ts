@@ -31,6 +31,7 @@ import {
 } from "../../core/annex/staged-unlisted.js";
 import { listStagedCards, listStagedRelPaths } from "../../lib/staged-files.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
+import { checkBoxRoot } from "../../lib/box-root-check.js";
 import {
   boxWideLinkWarnings,
   formatMarkdownResults,
@@ -103,6 +104,16 @@ export async function runPreCommitChecks(
   if (legacySchemaFiles.length > 0) {
     errorCount += legacySchemaFiles.length;
     sections.push(describeLegacySchemaFiles(shape, legacySchemaFiles));
+  }
+
+  // The closed-vocabulary root check (Track C): a stray root entry (the
+  // recreated-two-root shape the test1 incident documents) blocks the
+  // commit here, not just warns in `bbx status` — this is the check meant
+  // to catch it AT commit time. One readdir; negligible on the commit path.
+  const strays = await checkBoxRoot(boxRoot);
+  if (strays.length > 0) {
+    errorCount += strays.length;
+    sections.push(strays.map((s) => `Box root: ${s.message}`).join("\n"));
   }
 
   const removals = await listStagedRelPaths(boxRoot, { diffFilter: "DR" });

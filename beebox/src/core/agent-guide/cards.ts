@@ -163,7 +163,7 @@ export function cardTypesSection(allCardSchemas: CardSchema[]): string {
   const lines: string[] = [
     `## ${SECTION.CARD_TYPES}`,
     "",
-    "Each type with handling instructions has a full reference at `docs/generated/card-<type>.md` — read it before working with a card of that type.",
+    "Each type with handling instructions has a full reference at `_content/docs/generated/card-<type>.md` — read it before working with a card of that type.",
     "",
   ];
   for (const group of CARD_CATEGORY_GROUPS) {
@@ -211,5 +211,5 @@ demotes visibility from the active view; it's not a rejection).
 Always set \`directive:\` — what to do with the answer; the system creates a
 follow-up job carrying it once the user answers. Set \`expires-after:\` for a
 time-sensitive question that should age out sooner than the default. See
-\`docs/generated/card-question.md\` for templates and field reference.`;
+\`_content/docs/generated/card-question.md\` for templates and field reference.`;
 }

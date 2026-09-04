@@ -1,5 +1,5 @@
 /**
- * Generator for the `bbx` command reference doc (docs/generated/bbx-commands.md).
+ * Generator for the `bbx` command reference doc (_content/docs/generated/bbx-commands.md).
  *
  * Pure function: the static command prose is assembled here, with the
  * auto-generated "Available Templates" listing interleaved. Split out of
@@ -141,7 +141,7 @@ function bbxCommandsCore(): string[] {
     "Compiles the view, loads the real cards its `dependencies` select, renders it once, and",
     "prints the HTML — or, on failure, the error with a stack mapped to your `.tsx` source.",
     "Use it to check a view after writing it. It's a synchronous render (no effects/async",
-    "helpers); see `docs/generated/views.md` for what it does and doesn't cover.",
+    "helpers); see `_content/docs/generated/views.md` for what it does and doesn't cover.",
     "",
     "## bbx answer",
     "",

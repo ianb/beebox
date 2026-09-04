@@ -27,7 +27,7 @@ const SKIP_DIRS = new Set([
 const TRASH_PREFIX = BOX_DIRS.trash;
 
 /** Generated agent docs — regenerable instruction text, not box content. */
-const GENERATED_DOCS_PREFIX = "docs/generated";
+const GENERATED_DOCS_PREFIX = "_content/docs/generated";
 
 export interface CardStat {
   mtimeMs: number;

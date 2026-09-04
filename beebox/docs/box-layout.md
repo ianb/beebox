@@ -52,6 +52,9 @@ dependency.
 ├── .git/                          git repository
 ├── CLAUDE.md                      root agent instructions for this box
 ├── .claude/                       agent configuration (rules, skills, memory symlink, settings)
+├── AGENTS.md                      symlink to CLAUDE.md (Codex-facing mirror)
+├── .agents/                       Codex-facing mirror of .claude/skills/
+├── .codex/                        Codex-facing hook config (mirrors .claude/settings.json)
 ├── .beebox/                       runtime: box.json marker, dbs, logs, generated docs
 ├── src/
 │   ├── schemas/                    box-local card-type definitions
@@ -104,7 +107,7 @@ chat's context area (tracked and committed, unlike `_tmp/`) as a
 capture-session card + attach scope; the chat agent annotates and files
 them out — `tmp-capture/` must not accumulate. Flow reference:
 `docs/implemented-plans/capture-mode.md`; agent duties:
-`docs/generated/card-capture-session.md`.
+`_content/docs/generated/card-capture-session.md`.
 
 A bulk file-upload batch (dozens of items / ~100 MB dropped at once — camera-roll
 batches, document folders) lands the same way, as a sibling `tmp-upload/`
@@ -115,14 +118,14 @@ scope, or `_content/inbox/`) and deletes the card + attach dir once
 everything is placed — there is no terminal "filed" status, deletion *is* the
 completion signal, and `tmp-upload/` must not accumulate either. Plan:
 `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-`docs/generated/card-upload-batch.md`.
+`_content/docs/generated/card-upload-batch.md`.
 
 ## Marker and runtime files (root)
 
 | File | Purpose |
 |------|---------|
 | `.beebox/box.json` | JSON marker. Presence identifies the directory as a box. Contains version, `shapeVersion`, and creation timestamp. |
-| `.bbx-lock` | Reactor lock. JSON with `pid` and `startedAt`. Removed on clean exit. |
+| `.bbx-reactor.lock` | Reactor lock. JSON with `pid` and `startedAt`. Removed on clean exit. |
 | `.bbx-serve.pid` | Web-server PID file when `bbx serve` is running. |
 
 ## `_content/` — working state and user content

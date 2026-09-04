@@ -12,7 +12,7 @@
  * (e.g., _config/intake.guide.card, _config/calendar.guide.card).
  *
  * The full guide is the learning document (read by the revision agent).
- * A compiled version in docs/generated/ strips it down to actionable
+ * A compiled version in _content/docs/generated/ strips it down to actionable
  * rules for job-processing agents.
  *
  * This module is the public surface; the implementation is split across

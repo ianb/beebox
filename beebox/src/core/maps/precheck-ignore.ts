@@ -75,7 +75,7 @@ export const SKELETON_HIDDEN_PATHS: readonly string[] = [
   "_config/box.json",
   "_config/procedures/**",
   "_config/schedules/**",
-  "docs/generated/**",
+  "_content/docs/generated/**",
   "src/tricks/lib/**",
   "src/tricks/scripts/**",
 ];

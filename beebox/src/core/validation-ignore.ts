@@ -5,7 +5,7 @@
  * lets the *boxholder* exclude box-specific paths from validation (a vendored
  * doc tree, imported data full of illustrative example links, etc.) beyond the
  * always-on builtin skips (`isBuiltinLintableMarkdown` in list-cards.ts already
- * covers bbx's own `docs/generated/` output). Lives under `_config/` — operator
+ * covers bbx's own `_content/docs/generated/` output). Lives under `_config/` — operator
  * territory, deliberately away from where agents routinely edit.
  *
  * Deliberately undocumented in any agent-facing surface, and `bbx validate`

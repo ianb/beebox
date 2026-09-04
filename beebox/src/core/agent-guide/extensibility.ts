@@ -22,7 +22,7 @@ export function proceduresSection(procedures: ProcedureSummary[]): string {
     lines.push(`- **${p.name}** — ${p.description}`);
   }
   lines.push("");
-  lines.push("Run with `bbx procedure run <name>`. Read `docs/generated/procedures.md` before writing or modifying.");
+  lines.push("Run with `bbx procedure run <name>`. Read `_content/docs/generated/procedures.md` before writing or modifying.");
   return lines.join("\n");
 }
 

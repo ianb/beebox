@@ -8,6 +8,7 @@ import { isRecord } from "../../../lib/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
+import { isInBoxNamespace } from "../../../lib/box-namespace.js";
 import { parse as parseYaml } from "yaml";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { findInboundCardRefs } from "../../../core/find-inbound-card-refs.js";
@@ -16,14 +17,21 @@ import { rollbackTrashReceipt } from "../../../core/commands/trash-recovery.js";
 import { createCollectorContext } from "../../../core/commands/index.js";
 
 function resolveCardPath(boxRoot: string, inputPath: string): { relPath: string; fullPath: string } {
-  const relPath = boxRelativePath(inputPath);
-  const fullPath = path.join(boxRoot, relPath);
-  const resolved = path.resolve(fullPath);
   const root = path.resolve(boxRoot);
+  const resolved = path.resolve(path.join(boxRoot, boxRelativePath(inputPath)));
   if (resolved !== root && !resolved.startsWith(root + path.sep)) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid card path" });
   }
-  return { relPath, fullPath };
+  // Box namespace fence, checked on the RESOLVED path: `card.get` and its
+  // siblings (`inboundRefs`, `trash`) all resolve through here, and a
+  // traversal form like `_content/../package.json` must not read `package.json`
+  // just because the raw string starts with an underscore area
+  // (`docs/plans/one-root-box-layout.md` Track B).
+  const relPath = path.relative(root, resolved).split(path.sep).join("/");
+  if (!isInBoxNamespace(relPath)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid card path" });
+  }
+  return { relPath, fullPath: resolved };
 }
 
 export interface FrontmatterCardResponse {
@@ -93,11 +101,10 @@ export const cardRouter = router({
       const { relPath, fullPath } = resolveCardPath(ctx.boxRoot, input.path);
 
       // Security: `input.path` arrives from the client (and now from the chat
-      // `?card=` deep-link a card-page click writes). Ensure the resolved path
-      // stays inside the box before any read — `path.join` collapses `..`, so a
-      // crafted `../../etc/...` would otherwise escape boxRoot. Compare against
-      // `root + sep` (not a bare prefix) so a sibling dir like `<box>-secrets`
-      // can't satisfy the check. Mirrors the `/api/files` boundary guard.
+      // `?card=` deep-link a card-page click writes). `resolveCardPath` above
+      // already confirmed the resolved path stays inside the box AND inside
+      // the box namespace (Track B, `docs/plans/one-root-box-layout.md`) —
+      // mirrors the `/api/files` boundary guard.
       let raw: string | null = null;
       try {
         raw = await fs.readFile(fullPath, "utf-8");

@@ -12,7 +12,7 @@ export function bbxCommandsScheduling(): string[] {
   return [
     "## bbx procedure",
     "",
-    "Run and manage declarative procedures. See `docs/generated/procedures.md` for details.",
+    "Run and manage declarative procedures. See `_content/docs/generated/procedures.md` for details.",
     "",
     "```bash",
     "bbx procedure run <name-or-path>          # Run a procedure",

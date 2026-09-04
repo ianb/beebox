@@ -51,7 +51,7 @@ All of this is reused; nothing is rebuilt.
   as-is — no compile changes.
 - **Guide discovery + derived docs.** `compileConfigGuides`
   (`src/core/docs-gen/compile.ts:145-156`) flat-readdirs `config/` for
-  `*.guide.card` and writes `docs/generated/<name>-guide.md`; a new
+  `*.guide.card` and writes `_content/docs/generated/<name>-guide.md`; a new
   `config/scan.guide.card` is picked up with zero code change, appears in the
   always-loaded guides index (`src/core/agent-guide/extensibility.ts:29-42`),
   and recompiles on edit via `refreshDerivedRules`
@@ -154,7 +154,7 @@ accrete as beliefs.
    - Read `config/scan.guide.card` (same `config/`-relative root as
      `compileConfigGuides`, `compile.ts:145`). If present, compile
      **in-memory at scan time** — never the possibly-stale
-     `docs/generated/scan-guide.md` file. The resolver performs its own
+     `_content/docs/generated/scan-guide.md` file. The resolver performs its own
      `splitCardContent` → `parseYaml` → `GuideObject.safeParse` chain (NOT
      `parseGuideCard`, whose `null` conflates no-frontmatter, YAML syntax
      error, and schema failure — codex finding 4), then
@@ -230,7 +230,7 @@ accrete as beliefs.
    each box). Drafts are NOT installed into real boxes.
 
 **Vocabulary lock-ins:** the guide name is `scan` (file
-`config/scan.guide.card`, compiled `docs/generated/scan-guide.md`); the
+`config/scan.guide.card`, compiled `_content/docs/generated/scan-guide.md`); the
 learning ref string is `config/scan.guide.card`.
 
 **First implementation chunk:** chunk 1 below (seed + resolver + swap +
@@ -249,7 +249,7 @@ None. This plan is itself the subplan of `scanner-ingest.md` Track 6.
 | Only `CLAUDE_SCANS.md` (unmigrated box) | new doctest | works as today + deprecation warning per run | clear |
 | Neither present | new doctest (null) | scan runs without boxholder context (today's behavior) | clear (log line simply absent) |
 | Guide exists but compiles to empty-ish text (fresh seed, no priors) | new doctest | compiled seed still carries the disambiguation rule + applies-to; injected as-is | clear |
-| `docs/generated/scan-guide.md` stale vs card | n/a | avoided by design: scan compiles in-memory from the card | n/a |
+| `_content/docs/generated/scan-guide.md` stale vs card | n/a | avoided by design: scan compiles in-memory from the card | n/a |
 | Followup agent answers a scan question but guide doesn't exist yet | covered by existing followup-job contract | `learning.proposal` instructs `bbx create guide --name scan` first | clear |
 | Agent revises the guide into a state that fails schema validation | existing: per-box pre-commit `bbx validate --staged` blocks the commit | blocked at commit | clear |
 
@@ -371,7 +371,7 @@ Chunks 2–4 are independent of each other; all depend on chunk 1's vocabulary.
   3. Delete `CLAUDE_SCANS.md` and, in test1's case, remove the scans-file
      `@`-import line from `content/CLAUDE.md:3` (general agent
      context now comes via the guides index / compiled
-     `docs/generated/scan-guide.md`).
+     `_content/docs/generated/scan-guide.md`).
   4. Run a scan (or `bbx scan-import` dry pass) and confirm the log line says
      `from scan guide` and no deprecation warning appears.
   - test1 is the only known holder; estate/box-family never had the file —

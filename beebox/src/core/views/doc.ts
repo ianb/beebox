@@ -1,7 +1,7 @@
 /**
  * Generate the views reference documentation for agents.
  *
- * Called by generate-docs.ts to produce docs/generated/views.md.
+ * Called by generate-docs.ts to produce _content/docs/generated/views.md.
  */
 
 import { dependenciesAndParamsSection } from "./doc-files.js";

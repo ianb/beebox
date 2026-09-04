@@ -39,9 +39,9 @@ const MARKDOWN_SKIP_DIRS = new Set([
  * Excludes:
  *  - non-`.md` files;
  *  - anything under a dependency/VCS/tooling dir (`MARKDOWN_SKIP_DIRS`);
- *  - bbx's own machine-generated docs — a `docs/generated/` segment pair at ANY
+ *  - bbx's own machine-generated docs — a `_content/docs/generated/` segment pair at ANY
  *    depth (generated trees are nested per-area, e.g.
- *    `store/roadtrip/docs/generated/`, not just at box root; those docs are full
+ *    `store/roadtrip/_content/docs/generated/`, not just at box root; those docs are full
  *    of illustrative example links that never resolve and must not be linted);
  *  - `CLAUDE.md` / `AGENTS.md` (instructions, not linkable content).
  *

@@ -10,9 +10,9 @@ import { emitObservedActivity } from "../../../src/core/agent/codex-run-activity
 import type { CodexObservedActivity } from "../../../src/core/agent/codex-run-activity.js";
 
 const behavior = codexBehaviorFromActivity([
-  { type: "command", command: "sed -n '1,80p' docs/generated/card-image.md" },
-  { type: "command", command: "/opt/homebrew/bin/bash -lc \"sed -n '1,80p' docs/generated/card-image.md && rg -n EXIF docs/generated\"" },
-  { type: "command", command: "rg -n EXIF docs/generated" },
+  { type: "command", command: "sed -n '1,80p' _content/docs/generated/card-image.md" },
+  { type: "command", command: "/opt/homebrew/bin/bash -lc \"sed -n '1,80p' _content/docs/generated/card-image.md && rg -n EXIF _content/docs/generated\"" },
+  { type: "command", command: "rg -n EXIF _content/docs/generated" },
   { type: "search", tool: "WebSearch", summary: "EXIF DateTimeOriginal" },
 ], "  The date comes from EXIF.  ");
 ```

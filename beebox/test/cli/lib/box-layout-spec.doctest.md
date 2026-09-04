@@ -5,7 +5,7 @@ directory list, its paths, and its prose live. `BOX_DIRS` (`paths.ts`) and the
 in-box agent guide's directory table (`agent-guide/box-shape.ts`) both derive
 from it; this doctest checks the derivation, plus that `docs/box-layout.md`'s
 hand-written tables haven't drifted from the spec's text — a stand-in for
-regenerating the doc in place, since (unlike `docs/generated/*.md`, which are
+regenerating the doc in place, since (unlike `_content/docs/generated/*.md`, which are
 whole-file generated) `docs/box-layout.md` mixes prose with tables.
 
 ```ts setup

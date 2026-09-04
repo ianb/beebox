@@ -78,37 +78,38 @@ JSON.stringify({ hasFeedback: warning.feedback?.includes("claude-md-size"), hasE
 
 ## Package-surface tripwire (Track C)
 
-An edit at the box root, or anywhere under an npm-namespace entry
-(`package.json`, a lockfile, `tsconfig.json`, `node_modules/`), runs the
-closed-vocabulary root check. A clean root stays silent — the edited file
-still gets its own handling (the CLAUDE.md size warning above, for a
-root-level CLAUDE.md edit) — but a stray root entry is surfaced:
+An edit anywhere under a top-level segment outside the closed vocabulary
+runs the closed-vocabulary root check — not just a direct root-level edit; a
+stray root entry (here `recipes/`, created implicitly by the nested card
+write) is surfaced even though the edited file itself is nested under it:
 
 ```ts
 const strayBox = await makeTmpBox();
 await strayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await writeFile(`${strayBox.root}/package.json`, "{}");
-const npmEdit = await validateHookPathsResult([`${strayBox.root}/package.json`]);
+const nestedStrayEdit = await validateHookPathsResult([`${strayBox.root}/recipes/Bread.recipe.card`]);
 await strayBox.cleanup();
-JSON.stringify({ hasErrors: npmEdit.hasErrors, feedback: npmEdit.feedback })
+JSON.stringify({ hasErrors: nestedStrayEdit.hasErrors, feedback: nestedStrayEdit.feedback })
 => {"hasErrors":true,"feedback":"Box root: recipes: the box root is a closed vocabulary — user content goes under /_content/"}
 ```
 
-The same tripwire fires for a `node_modules/` edit, not just the entry
-itself:
+The same tripwire fires for a stray directly at the root — the edited file
+need not be nested under it:
 
 ```ts
-const nmBox = await makeTmpBox();
-await nmBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await nmBox.write("node_modules/pkg/index.js", "module.exports = {};");
-const nmEdit = await validateHookPathsResult([`${nmBox.root}/node_modules/pkg/index.js`]);
-await nmBox.cleanup();
-nmEdit.hasErrors
+const rootStrayBox = await makeTmpBox();
+await rootStrayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await writeFile(`${rootStrayBox.root}/stray-file.txt`, "hi");
+const strayFileEdit = await validateHookPathsResult([`${rootStrayBox.root}/stray-file.txt`]);
+await rootStrayBox.cleanup();
+strayFileEdit.hasErrors
 => true
 ```
 
-A box root with no strays stays quiet for a `package.json` edit — there is
-nothing to nudge about:
+## npm-namespace edit feedback is independent of stray detection
+
+Editing `package.json` (or a lockfile, `tsconfig.json`, `node_modules/`)
+always gets a nudge — even on an otherwise-clean root, where the stray check
+alone would stay silent:
 
 ```ts
 const cleanBox = await makeTmpBox();
@@ -116,5 +117,30 @@ await writeFile(`${cleanBox.root}/package.json`, "{}");
 const cleanEdit = await validateHookPathsResult([`${cleanBox.root}/package.json`]);
 await cleanBox.cleanup();
 JSON.stringify(cleanEdit)
-=> {"feedback":null,"hasErrors":false}
+=> {"feedback":"Edit touches the box's npm/package surface (package.json) — make sure this is a deliberate dependency/tooling change, not accidental drift.","hasErrors":false}
+```
+
+The same independent nudge fires for a `node_modules/` edit, not just the
+entry itself — and it's a warning (`hasErrors: false`), not a blocker:
+
+```ts
+const nmBox = await makeTmpBox();
+await nmBox.write("node_modules/pkg/index.js", "module.exports = {};");
+const nmEdit = await validateHookPathsResult([`${nmBox.root}/node_modules/pkg/index.js`]);
+await nmBox.cleanup();
+JSON.stringify(nmEdit)
+=> {"feedback":"Edit touches the box's npm/package surface (node_modules) — make sure this is a deliberate dependency/tooling change, not accidental drift.","hasErrors":false}
+```
+
+An edit inside a legitimate underscore area or another vocabulary entry
+stays quiet — the tripwire fires only on a top-level segment outside the
+closed vocabulary, or the npm namespace specifically:
+
+```ts
+const quietBox = await makeTmpBox();
+await quietBox.write("_content/inbox/x.memo.card", "---\nstatus: new\ncreated: 2026-01-01T00:00:00Z\n---\n");
+const quietEdit = await validateHookPathsResult([`${quietBox.root}/_content/inbox/x.memo.card`]);
+await quietBox.cleanup();
+quietEdit.feedback
+=> null
 ```

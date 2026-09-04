@@ -13,7 +13,7 @@ import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
 import { parseCardName } from "../../lib/paths.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { naturalCompare } from "../../lib/natural-sort.js";
-import { isInBoxNamespace } from "../../lib/box-namespace.js";
+import { resolveBoxNamespacePath } from "../../lib/box-namespace-resolve.js";
 import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
 
 /** The underscore area names — what the box root listing shows, and all it shows. */
@@ -46,24 +46,22 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
     async (request, reply) => {
       const reqPath = request.params["*"] || "";
 
-      // Resolve the target directory
-      const targetDir = reqPath ? path.join(boxRoot, reqPath) : boxRoot;
-
-      // Security: ensure we stay within boxRoot (reject sibling dirs like
-      // `${boxRoot}-secrets` that a bare startsWith would let through).
-      const root = path.resolve(boxRoot);
-      const resolved = path.resolve(targetDir);
-      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
-        return { path: reqPath, dirs: [], cards: [] };
-      }
-
-      // Box namespace fence: the root's own listing shows only the
-      // underscore areas (filtered below); anything under a path outside
-      // the namespace — src/, node_modules/, .git/, package.json's
-      // siblings — 403s rather than browsing the npm/agent-identity
+      // Resolve the target directory. Box namespace fence, checked on the
+      // RESOLVED path: the root's own listing shows only the underscore
+      // areas (filtered below, and the root itself is allowed here); a
+      // non-root path outside the namespace — src/, node_modules/, .git/,
+      // package.json's siblings, or a traversal form like
+      // `_content/../src` — 403s rather than browsing the npm/agent-identity
       // machinery (`docs/plans/one-root-box-layout.md` Track B).
-      if (reqPath !== "" && !isInBoxNamespace(reqPath)) {
-        return reply.status(403).send({ error: "Access denied" });
+      let resolved: string;
+      if (reqPath === "") {
+        resolved = path.resolve(boxRoot);
+      } else {
+        const ns = resolveBoxNamespacePath(boxRoot, reqPath);
+        if (ns === null) {
+          return reply.status(403).send({ error: "Access denied" });
+        }
+        resolved = ns.resolved;
       }
 
       let entries: Array<{ name: string; isDirectory: () => boolean }>;

@@ -413,7 +413,7 @@ tests:
     expected_level: knows_directly
     watch_for: "Names _content/inbox/ directly without searching"
     correct_contains: ["_content/inbox"]
-    should_read: ["docs/generated/card-memo.md"]   # optional
+    should_read: ["_content/docs/generated/card-memo.md"]   # optional
     should_not_read: ["some/file.md"]              # optional
     tags: [navigation]
 ```

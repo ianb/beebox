@@ -31,7 +31,7 @@ function markdownConfig(boxRoot: string): Record<string, unknown> {
  * True if `filePath` is a markdown file we lint. Thin wrapper over the shared
  * builtin predicate (`isBuiltinLintableMarkdown`) so the staged/hook collectors
  * and the box-wide scan agree on the skip set (CLAUDE.md, dependency/VCS dirs,
- * and bbx's own `docs/generated/` output at any depth). The box-specific
+ * and bbx's own `_content/docs/generated/` output at any depth). The box-specific
  * `_config/bbx-validate.ignore` file is layered on separately by the callers that
  * have a box root loaded — this predicate is the always-on builtin floor.
  */
