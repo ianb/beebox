@@ -34,8 +34,8 @@ function isFeedbackFilename(name: string): boolean {
   return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-.+\.md$/.test(name);
 }
 
-function getRemoteHost(): string | null {
-  return deployTarget(path.join(__dirname, ".."))?.host ?? null;
+function getRemoteSshTarget(): string | null {
+  return deployTarget(path.join(__dirname, ".."))?.sshTarget ?? null;
 }
 
 function parseArgs(): {
@@ -85,7 +85,7 @@ interface FeedbackFile {
   filePath: string;
   relPath: string;
   content: string;
-  remoteHost?: string;
+  remoteSshTarget?: string;
 }
 
 function collectLocalFeedback(boxes: string[]): FeedbackFile[] {
@@ -124,13 +124,13 @@ function collectLocalFeedback(boxes: string[]): FeedbackFile[] {
   return items;
 }
 
-function collectRemoteFeedback(host: string): FeedbackFile[] {
+function collectRemoteFeedback(sshTarget: string): FeedbackFile[] {
   const find = runOnServer({
-    host,
+    sshTarget,
     script: `find ${REMOTE_BOXES_DIR} -maxdepth 5 -path "*/config/feedback/*.md" ! -path "*/resolved/*" 2>/dev/null`,
   });
   if (find.exitCode !== 0) {
-    console.error(`Warning: could not reach remote host ${host}: ${find.stderr.trim()}`);
+    console.error(`Warning: could not reach ${sshTarget}: ${find.stderr.trim()}`);
     return [];
   }
 
@@ -145,7 +145,7 @@ function collectRemoteFeedback(host: string): FeedbackFile[] {
     const relPath = filePath.slice(boxRoot.length + 1);
 
     const read = runOnServer({
-      host,
+      sshTarget,
       script: `cat ${JSON.stringify(filePath)}`,
     });
     if (read.exitCode !== 0) continue;
@@ -156,7 +156,7 @@ function collectRemoteFeedback(host: string): FeedbackFile[] {
       filePath,
       relPath,
       content: read.stdout,
-      remoteHost: host,
+      remoteSshTarget: sshTarget,
     });
   }
 
@@ -210,7 +210,7 @@ function resolveRemoteFile(item: FeedbackFile): void {
     `git -C ${JSON.stringify(item.boxRoot)} commit -m ${JSON.stringify(`resolve agent feedback: ${path.basename(item.filePath)}`)}`,
   ].join("\n");
 
-  const r = runOnServer({ host: item.remoteHost!, script });
+  const r = runOnServer({ sshTarget: item.remoteSshTarget!, script });
   if (r.exitCode !== 0) {
     console.error(`Remote git error resolving ${item.filePath}: ${r.stderr.trim()}`);
     return;
@@ -219,7 +219,7 @@ function resolveRemoteFile(item: FeedbackFile): void {
 }
 
 function resolveFile(item: FeedbackFile): void {
-  if (item.remoteHost) {
+  if (item.remoteSshTarget) {
     resolveRemoteFile(item);
   } else {
     resolveLocalFile(item);
@@ -251,9 +251,9 @@ async function main(): Promise<void> {
   const items: FeedbackFile[] = collectLocalFeedback(localBoxes);
 
   if (!noRemote) {
-    const remoteHost = getRemoteHost();
-    if (remoteHost) {
-      items.push(...collectRemoteFeedback(remoteHost));
+    const remoteSshTarget = getRemoteSshTarget();
+    if (remoteSshTarget) {
+      items.push(...collectRemoteFeedback(remoteSshTarget));
     } else {
       console.error("Warning: no deploy target configured (beebox/deploy/target.env), skipping remote collection.");
     }

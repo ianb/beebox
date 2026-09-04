@@ -109,8 +109,8 @@ async function runProdHostAudit(): Promise<string[]> {
   if (ship.exitCode !== 0) refuse(`could not copy the host audit to prod: ${(ship.all ?? "").slice(-2000)}`);
   const remoteScript = [
     `printf '{"type":"module"}' > ${remoteDir}/package.json`,
-    `chown -R beebox ${remoteDir}`,
-    `sudo -u beebox -H bash -lc 'cd /opt/beebox && node --import tsx ${remoteDir}/host-audit.ts'`,
+    `chown -R ${target.serviceUser} ${remoteDir}`,
+    `sudo -u ${target.serviceUser} -H bash -lc 'cd ${target.installDir} && node --import tsx ${remoteDir}/host-audit.ts'`,
     "status=$?",
     `rm -rf ${remoteDir}`,
     "exit $status",

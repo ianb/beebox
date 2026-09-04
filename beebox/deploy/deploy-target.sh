@@ -46,8 +46,20 @@ resolve_deploy_file() {
 # Print the path of the target.env in effect, or return 1 if there is none.
 # The hooks call this (as a script, `deploy-target.sh path`) purely to decide
 # whether this machine deploys at all.
+#
+# BBX_DEPLOY_NO_FALLBACK=1 restricts the lookup to the given checkout. Shipping
+# is main-checkout-only ON PURPOSE — a worktree is a branch nobody has landed —
+# and the fallback exists so DIAGNOSTICS work from anywhere. Without this,
+# running deploy.sh from a worktree would borrow main's target and deploy an
+# unlanded branch to production, which the old `[ -s "$SCRIPT_DIR/server-ip" ]`
+# check made impossible.
 bbx_deploy_target_file() {
   local deploy_dir="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+  if [ "${BBX_DEPLOY_NO_FALLBACK:-}" = "1" ]; then
+    deploy_file_has_value "$deploy_dir/target.env" || return 1
+    printf '%s\n' "$deploy_dir/target.env"
+    return 0
+  fi
   resolve_deploy_file "$deploy_dir" target.env
 }
 
@@ -60,6 +72,29 @@ load_deploy_target() {
 
   target_file=$(bbx_deploy_target_file "$deploy_dir") || return 1
 
+  # Only the target's own identity is configurable. The server LAYOUT is not:
+  # deploy.sh's remote steps, add-box.sh, the leak scan, and the CSP report all
+  # name /opt/beebox, /home/beebox, the `beebox` account, and port 3210
+  # literally — mostly inside single-quoted heredocs the server expands. A
+  # settable BBX_DEPLOY_INSTALL_DIR would be honored by the rsync destination
+  # and ignored by everything downstream, which is a half-deployed server
+  # reporting success. Refuse the setting rather than half-honor it. Making
+  # them real means threading four values through every remote block in four
+  # codebases; until someone needs that, this fails closed.
+  local fixed
+  for fixed in BBX_DEPLOY_INSTALL_DIR BBX_DEPLOY_SERVICE_USER \
+               BBX_DEPLOY_SERVICE_HOME BBX_DEPLOY_HUB_PORT; do
+    if LC_ALL=C grep -qE "^[[:space:]]*(export[[:space:]]+)?$fixed=" "$target_file"; then
+      echo "deploy: $target_file sets $fixed, which is not configurable." >&2
+      echo "  The server layout is fixed at what deploy/hetzner/setup-server.sh" >&2
+      echo "  builds — /opt/beebox, /home/beebox, the 'beebox' account, port 3210" >&2
+      echo "  — because the deploy's remote steps name those literally. Setting it" >&2
+      echo "  here would change where files are sent and nothing else. Remove the" >&2
+      echo "  line. See beebox/deploy/target.env.example." >&2
+      return 2
+    fi
+  done
+
   set -a
   # Operator-authored config at a path resolved above, so shellcheck cannot
   # follow it and has nothing to check.
@@ -71,10 +106,18 @@ load_deploy_target() {
   # shellcheck disable=SC2034
   BBX_DEPLOY_TARGET_FILE="$target_file"
   : "${BBX_DEPLOY_SSH_USER:=root}"
-  : "${BBX_DEPLOY_INSTALL_DIR:=/opt/beebox}"
-  : "${BBX_DEPLOY_SERVICE_USER:=beebox}"
-  : "${BBX_DEPLOY_SERVICE_HOME:=/home/$BBX_DEPLOY_SERVICE_USER}"
-  : "${BBX_DEPLOY_HUB_PORT:=3210}"
+  # Not knobs — the one place every consumer reads the fixed layout from, so a
+  # future change to it is one edit rather than a grep across four codebases.
+  # Consumed by sourcing callers (prod-curl, prod-browse, add-box.sh) and by
+  # the `get` subcommand, never within this file.
+  # shellcheck disable=SC2034
+  BBX_DEPLOY_INSTALL_DIR=/opt/beebox
+  # shellcheck disable=SC2034
+  BBX_DEPLOY_SERVICE_USER=beebox
+  # shellcheck disable=SC2034
+  BBX_DEPLOY_SERVICE_HOME=/home/beebox
+  # shellcheck disable=SC2034
+  BBX_DEPLOY_HUB_PORT=3210
 
   # The host is the one value with no sensible default. A target.env that
   # omits it is a broken config, not an absent one — say so rather than
@@ -98,6 +141,16 @@ require_deploy_target() {
     0) return 0 ;;
     2) exit 1 ;;  # present but malformed; load_deploy_target already explained
   esac
+
+  if [ "${BBX_DEPLOY_NO_FALLBACK:-}" = "1" ] &&
+     resolve_deploy_file "$deploy_dir" target.env >/dev/null 2>&1; then
+    echo "deploy: this checkout has no beebox/deploy/target.env of its own." >&2
+    echo "  The main checkout has one, but deploying is deliberately" >&2
+    echo "  main-checkout-only: a worktree is a branch nobody has landed, and" >&2
+    echo "  shipping it would put unlanded code in production. Land the branch" >&2
+    echo "  and deploy from the main checkout." >&2
+    exit 1
+  fi
 
   echo "deploy: no deploy target is configured on this machine." >&2
   echo "  beebox/deploy/target.env (gitignored) names the server to deploy to." >&2

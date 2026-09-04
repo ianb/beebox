@@ -38,8 +38,13 @@ export interface RunOnServerOptions {
    *  the owner of box files). Use `"root"` only for operations that genuinely
    *  require it (systemctl, chown, package installs) and document the why. */
   asUser?: "beebox" | "root";
-  /** Override the target host. Defaults to this machine's configured deploy target. */
-  host?: string;
+  /**
+   * Override the SSH endpoint (`user@host`). Defaults to this machine's
+   * configured deploy target, SSH user included — don't rebuild `root@…` from
+   * a bare host, or an operator whose target.env sets BBX_DEPLOY_SSH_USER gets
+   * silently ignored.
+   */
+  sshTarget?: string;
 }
 
 export interface RunOnServerResult {
@@ -49,20 +54,20 @@ export interface RunOnServerResult {
   exitCode: number;
 }
 
-function defaultHost(): string {
+function defaultSshTarget(): string {
   const target = deployTarget(path.join(__dirname, ".."));
   if (target === null) {
     throw new Error(
-      "no deploy target configured (beebox/deploy/target.env) — pass an explicit host, " +
+      "no deploy target configured (beebox/deploy/target.env) — pass an explicit sshTarget, " +
         "or run from the checkout that deploys",
     );
   }
-  return target.host;
+  return target.sshTarget;
 }
 
 export function runOnServer(opts: RunOnServerOptions): RunOnServerResult {
   const asUser = opts.asUser ?? "beebox";
-  const host = opts.host ?? defaultHost();
+  const sshTarget = opts.sshTarget ?? defaultSshTarget();
 
   // When dropping to a non-root user, `su - <user> -s /bin/bash` starts a
   // login shell as that user; with our script piped to its stdin, bash runs
@@ -71,7 +76,7 @@ export function runOnServer(opts: RunOnServerOptions): RunOnServerResult {
   const remoteCmd =
     asUser === "root" ? "bash -s" : `su - ${asUser} -s /bin/bash`;
 
-  const result = spawnSync("ssh", ["-A", `root@${host}`, remoteCmd], {
+  const result = spawnSync("ssh", ["-A", sshTarget, remoteCmd], {
     input: opts.script,
     encoding: "utf-8",
     stdio: ["pipe", "pipe", "pipe"],

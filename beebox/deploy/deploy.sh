@@ -111,9 +111,13 @@ trap deploy_exit EXIT
 # only in real checkouts, not the (git-clean) build checkout below.
 # shellcheck source=beebox/deploy/deploy-target.sh
 . "$SCRIPT_DIR/deploy-target.sh"
-require_deploy_target "$SCRIPT_DIR"
+# NO_FALLBACK: the diagnostics may borrow the main checkout's target from a
+# worktree; deploying must not, or `deploy.sh` run from a worktree would ship
+# an unlanded branch to production.
+BBX_DEPLOY_NO_FALLBACK=1 require_deploy_target "$SCRIPT_DIR"
 SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
 INSTALL_DIR="$BBX_DEPLOY_INSTALL_DIR"
+
 
 # The latest-wins lock below is a lock DIRECTORY holding the owner's pid.
 # `mkdir` is atomic on POSIX, and a directory needs no external tool: this used

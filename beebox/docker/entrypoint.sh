@@ -104,12 +104,25 @@ fi
 #
 # BBX_SKIP_CONVERGE=1 turns this off, for an operator who would rather run
 # `docker compose run --rm box bbx migrate --sweep` themselves and watch it.
+# Each step is bounded, for the same reason deploy.sh bounds its own: "cannot
+# stop the box from serving" is only true if it cannot hang either, and a
+# migrator that never returns would leave the operator staring at a container
+# that starts and never listens. 600s matches the server deploy.
+converge() {  # $1 = human name, rest = the bbx command
+  local what="$1"; shift
+  local code=0
+  ( cd "$BOX_ROOT/content" && timeout 600 "$@" ) || code=$?
+  if [[ "$code" -eq 124 ]]; then
+    echo "beebox: $what timed out after 600s — serving anyway; run it yourself to see why." >&2
+  elif [[ "$code" -ne 0 ]]; then
+    echo "beebox: $what reported a problem (see above) — serving anyway." >&2
+  fi
+}
+
 if [[ "${BBX_SKIP_CONVERGE:-}" != "1" ]]; then
   echo "beebox: converging the box onto this engine..." >&2
-  ( cd "$BOX_ROOT/content" && bbx migrate --sweep ) || \
-    echo "beebox: migration sweep reported a problem (see above) — serving anyway." >&2
-  ( cd "$BOX_ROOT/content" && bbx docs refresh ) || \
-    echo "beebox: docs refresh reported a problem (see above) — serving anyway." >&2
+  converge "the migration sweep" bbx migrate --sweep
+  converge "the docs refresh" bbx docs refresh
 fi
 
 # Serve the operational box (content/) on all interfaces inside the container;

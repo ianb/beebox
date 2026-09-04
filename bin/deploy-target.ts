@@ -26,7 +26,9 @@ export interface DeployTarget {
   sshTarget: string;
   /** Where the source tree is rsynced to on the server. */
   installDir: string;
-  /** Home of the service account that owns the boxes. */
+  /** The service account that owns the boxes. */
+  serviceUser: string;
+  /** That account's home. */
   serviceHome: string;
 }
 
@@ -61,6 +63,7 @@ export function deployTarget(repoRoot: string): DeployTarget | null {
     host,
     sshTarget,
     installDir: ask(repoRoot, ["get", "BBX_DEPLOY_INSTALL_DIR"]) ?? "/opt/beebox",
+    serviceUser: ask(repoRoot, ["get", "BBX_DEPLOY_SERVICE_USER"]) ?? "beebox",
     serviceHome: ask(repoRoot, ["get", "BBX_DEPLOY_SERVICE_HOME"]) ?? "/home/beebox",
   };
 }

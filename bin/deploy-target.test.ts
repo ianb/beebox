@@ -119,22 +119,14 @@ test("a whitespace-only local target.env does not shadow the main checkout", () 
 
 // ─── Defaults and overrides ─────────────────────────────────────────────────
 
-test("everything but the host has a default, and each is overridable", () => {
+test("the SSH user is configurable and defaults to root", () => {
   writeTarget(mainDeploy, "BBX_DEPLOY_HOST=198.51.100.10\n");
-  assert.equal(target("get", "BBX_DEPLOY_INSTALL_DIR").stdout, "/opt/beebox\n");
-  assert.equal(target("get", "BBX_DEPLOY_SERVICE_HOME").stdout, "/home/beebox\n");
-  assert.equal(target("get", "BBX_DEPLOY_HUB_PORT").stdout, "3210\n");
-  // SERVICE_HOME defaults off SERVICE_USER rather than being independently
-  // hardcoded, so renaming the service account moves the home with it.
-  writeTarget(mainDeploy, "BBX_DEPLOY_HOST=198.51.100.10\nBBX_DEPLOY_SERVICE_USER=bbx\n");
-  assert.equal(target("get", "BBX_DEPLOY_SERVICE_HOME").stdout, "/home/bbx\n");
+  assert.equal(target("ssh-target").stdout, "root@198.51.100.10\n");
 
-  writeTarget(
-    mainDeploy,
-    "BBX_DEPLOY_HOST=198.51.100.10\nBBX_DEPLOY_SSH_USER=admin\nBBX_DEPLOY_INSTALL_DIR=/srv/bbx\n",
-  );
+  writeTarget(mainDeploy, "BBX_DEPLOY_HOST=198.51.100.10\nBBX_DEPLOY_SSH_USER=admin\n");
   assert.equal(target("ssh-target").stdout, "admin@198.51.100.10\n");
-  assert.equal(target("get", "BBX_DEPLOY_INSTALL_DIR").stdout, "/srv/bbx\n");
+
+  writeTarget(mainDeploy, "BBX_DEPLOY_HOST=198.51.100.10\n");
 });
 
 test("a target.env present but missing the host is a broken config, not an absent one", () => {
@@ -192,12 +184,57 @@ test("the deploy refuses, with the container install as the alternative, when un
 
 // ─── Invariants the scripts must keep ───────────────────────────────────────
 
-test("deploy.sh requires a target in the invoking checkout, not the fallback", () => {
-  // Diagnostics may borrow the main checkout's target; deploying must not, so
-  // that shipping stays a main-checkout act.
-  const deployScript = readFileSync(join(SOURCE_DEPLOY, "deploy.sh"), "utf8");
-  assert.match(deployScript, /require_deploy_target "\$SCRIPT_DIR"/);
-  assert.doesNotMatch(deployScript, /root@\$SERVER_IP/);
+test("deploying from a worktree is refused even though the main checkout has a target", () => {
+  // Diagnostics may borrow the main checkout's target; deploying must NOT, or
+  // `deploy.sh` run from a worktree ships an unlanded branch to production.
+  // Assert the behavior, not the call text: a regex over deploy.sh would pass
+  // just as happily while the loader quietly fell back.
+  writeTarget(mainDeploy, "BBX_DEPLOY_HOST=198.51.100.10\n");
+  rmSync(join(worktreeDeploy, "target.env"), { force: true });
+  copyFileSync(join(SOURCE_DEPLOY, "deploy.sh"), join(worktreeDeploy, "deploy.sh"));
+  chmodSync(join(worktreeDeploy, "deploy.sh"), 0o755);
+
+  const result = spawnSync(join(worktreeDeploy, "deploy.sh"), ["--ref", "HEAD"], {
+    encoding: "utf8",
+    env: { ...process.env, PATH: `${fakeBin}:${process.env.PATH}` },
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /no beebox\/deploy\/target\.env of its own/);
+  assert.match(result.stderr, /main-checkout-only/);
+  // …and it says so because of the fallback, not because nothing is configured.
+  assert.doesNotMatch(result.stderr, /no deploy target is configured/);
+});
+
+test("the fixed server layout cannot be overridden in target.env", () => {
+  // deploy.sh's remote steps, add-box.sh, the leak scan and the CSP report all
+  // name /opt/beebox, /home/beebox, `beebox` and 3210 literally. A settable
+  // INSTALL_DIR would move the rsync destination and nothing else — a
+  // half-deployed server reporting success. Refusing is the fail-closed half.
+  for (const key of [
+    "BBX_DEPLOY_INSTALL_DIR=/srv/bbx",
+    "BBX_DEPLOY_SERVICE_USER=bbx",
+    "BBX_DEPLOY_SERVICE_HOME=/home/bbx",
+    "BBX_DEPLOY_HUB_PORT=4000",
+  ]) {
+    writeTarget(mainDeploy, `BBX_DEPLOY_HOST=198.51.100.10\n${key}\n`);
+    const result = target("ssh-target");
+    assert.notEqual(result.status, 0, `${key} should be refused`);
+    assert.match(result.stderr, /is not configurable/);
+  }
+  // An `export`-prefixed line is the same setting, not a way around it.
+  writeTarget(mainDeploy, "BBX_DEPLOY_HOST=198.51.100.10\nexport BBX_DEPLOY_INSTALL_DIR=/srv/bbx\n");
+  assert.match(target("ssh-target").stderr, /is not configurable/);
+
+  writeTarget(mainDeploy, "BBX_DEPLOY_HOST=198.51.100.10\n");
+});
+
+test("the fixed layout is still readable, so consumers share one source for it", () => {
+  writeTarget(mainDeploy, "BBX_DEPLOY_HOST=198.51.100.10\n");
+  assert.equal(target("get", "BBX_DEPLOY_INSTALL_DIR").stdout, "/opt/beebox\n");
+  assert.equal(target("get", "BBX_DEPLOY_SERVICE_USER").stdout, "beebox\n");
+  assert.equal(target("get", "BBX_DEPLOY_SERVICE_HOME").stdout, "/home/beebox\n");
+  assert.equal(target("get", "BBX_DEPLOY_HUB_PORT").stdout, "3210\n");
 });
 
 test("both owner-cookie tools fail closed when BBX_OWNER_EMAIL is absent", () => {
