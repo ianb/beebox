@@ -42,3 +42,13 @@ Overlaps to name, not absorb: [setup-server drift](../code-quality/2026-08-07-de
 the installation-remaining work (the visitor-facing install paths), and the
 name-change plan (renaming will touch every one of these files anyway —
 sequencing the separation before or with the rename avoids doing it twice).
+
+> 2026-09-04 survey (bbx-pick-issues, release lens): still true. The root
+> `.husky/post-commit` now gates on deployed paths, but a clone with no
+> `beebox/deploy/server-ip` still prints "NOT deploying — server-ip is
+> missing (lost in a repo move?) — restore it" on every commit to main: a
+> false alarm telling a visitor to restore a file they never had. `deploy.sh`
+> references the server-ip/prod-ssh/notifier pieces 25 times. The rename has
+> landed, so the sequencing concern in the last paragraph is moot; the
+> generic core the issue asks for is what `docs/docker-install.md` already
+> describes.
