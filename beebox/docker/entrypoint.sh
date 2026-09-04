@@ -82,6 +82,36 @@ if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
       --allow-build=@googleworkspace/cli )
 fi
 
+# ── Converge the box onto the engine that is about to serve it ───────────
+#
+# An update here is `git pull && docker compose build && up -d`: new engine
+# code, the same box on disk. Without this step that box keeps its old card
+# shape and its old generated guidance indefinitely, because nothing else in
+# the container path runs migrations — `bbx serve` does not migrate on boot.
+# The server deploy has always done this (deploy/deploy.sh's convergence pass);
+# a container install needs it for the same reason and gets it at start.
+#
+# Two steps, in the order deploy.sh uses: `bbx migrate --sweep` (card data)
+# then `bbx docs refresh` (agent docs, card rules, managed skills). Both are
+# built for running unattended — the sweep skips a dirty box for next time and
+# commits what it does apply — and both own their own policy; see
+# src/core/migration-sweep.ts and src/core/docs-refresh.ts.
+#
+# Neither can stop the box from serving. A box that needs a human (dirty tree,
+# an agent-driven migration, a hard failure) is a box to look at, not a reason
+# to leave the operator with no server. On a freshly `bbx init`ed box both are
+# no-ops: init seeds the manifest as fully applied.
+#
+# BBX_SKIP_CONVERGE=1 turns this off, for an operator who would rather run
+# `docker compose run --rm box bbx migrate --sweep` themselves and watch it.
+if [[ "${BBX_SKIP_CONVERGE:-}" != "1" ]]; then
+  echo "beebox: converging the box onto this engine..." >&2
+  ( cd "$BOX_ROOT/content" && bbx migrate --sweep ) || \
+    echo "beebox: migration sweep reported a problem (see above) — serving anyway." >&2
+  ( cd "$BOX_ROOT/content" && bbx docs refresh ) || \
+    echo "beebox: docs refresh reported a problem (see above) — serving anyway." >&2
+fi
+
 # Serve the operational box (content/) on all interfaces inside the container;
 # the host-side port mapping (compose) decides who can reach it.
 exec bbx serve "$BOX_ROOT/content" --host 0.0.0.0 --port 3210
