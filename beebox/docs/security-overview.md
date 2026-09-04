@@ -1,9 +1,9 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: bf4028989b719ffa87a07198f918be739e91c0c3
+generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
 date: 2026-09-03
 model: claude-fable-5-1
-reviewed-by: DRAFT — unreviewed
+reviewed-by: Ian
 ---
 
 # Security overview
@@ -200,6 +200,8 @@ The ones you should actually weigh:
   box's *credentials* reach another box's data, and that is tested by a
   two-box probe in the suite and re-swept weekly
   ([§7b](security-report.md#7b-cross-box-leakage-on-a-shared-host)).
+  A per-box boundary on disk is accepted for now, not for good
+  ([direction](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md)).
 - **CSP is report-only** so far; enforcement is a staged flip.
 - **Open invite links don't verify email ownership**: pin the invite to
   an email when you know it, and send invite URLs over a channel you
