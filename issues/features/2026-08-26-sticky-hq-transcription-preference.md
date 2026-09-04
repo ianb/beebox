@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "sticky hq transcription preference"
 needs: [manual-testing]
+priority: normal
 ---
 
 Web support landed in `6410124b5`, but physical-device testing found that the

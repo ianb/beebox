@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-annex-bypass-check — investigating the photo-batch annex-bypass report
+priority: important
 ---
 
 `docs/plans/asset-annex.md` retires the asset-manifest system: *"**Retired**,

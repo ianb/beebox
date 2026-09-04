@@ -5,6 +5,7 @@ area: beebox-clerk
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder proposed reframing the clerk's primary action
+priority: normal
 ---
 
 > **Checked 2026-08-14 — not started.** Tagged `fixed`; the tag was wrong and

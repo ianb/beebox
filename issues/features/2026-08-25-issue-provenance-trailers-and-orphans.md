@@ -5,6 +5,7 @@ area: bin
 filed-by: agent
 discovered-by: agent
 discovered-in: "worktree-beads-vs-issues — comparing Beads' close/orphans commands against our Issue: trailer"
+priority: backlog
 ---
 
 Source: [Beads vs. our issues/ queue](../../research/beads-vs-issues.md) §2.7, §2.9.

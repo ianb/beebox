@@ -4,6 +4,7 @@ workstream: unattached
 area: beebox
 filed-by: agent
 discovered-by: Ian
+priority: important
 ---
 
 The card sidecar had already loaded a card successfully. A server update then

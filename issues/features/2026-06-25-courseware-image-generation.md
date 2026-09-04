@@ -3,6 +3,7 @@ title: "courseware image generation"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: backlog
 ---
 
 Explored whether text-to-image earns a place in courseware (prior art:

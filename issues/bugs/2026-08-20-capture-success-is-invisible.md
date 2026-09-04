@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder could not tell whether a capture had landed
 needs: [manual-testing]
+priority: normal
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in `9e6caef8`. A capture now

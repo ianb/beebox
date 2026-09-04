@@ -7,6 +7,7 @@ labels: [worktrees, boxes, developer-experience]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstreams — designing disposable workstream sessions
+priority: backlog
 ---
 
 When I need to test new engine code against the shape and behavior of a working

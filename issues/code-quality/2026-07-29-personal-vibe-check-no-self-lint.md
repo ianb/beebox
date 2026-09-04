@@ -5,6 +5,7 @@ area: personal-vibe-check
 filed-by: agent
 discovered-in: finish-skill-audit worktree — adding a root `lint` script exposed it
 
+priority: backlog
 ---
 
 The preset package that defines everyone else's lint has never linted itself.

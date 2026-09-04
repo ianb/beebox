@@ -2,6 +2,7 @@
 title: "Transcript processing as labeled sub-agents"
 workstream: unknown
 area: beebox
+priority: normal
 ---
 
 Two levels of transcript processing that map to different agent types:

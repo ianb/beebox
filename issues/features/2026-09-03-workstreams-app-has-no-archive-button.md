@@ -6,6 +6,7 @@ labels: [workstreams, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder looked for the archive option and could not find it
+priority: important
 ---
 
 `bin/workstreams archive <name>` / `unarchive <name>` exist, the app's shared

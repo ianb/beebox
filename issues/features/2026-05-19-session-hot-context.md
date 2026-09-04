@@ -3,6 +3,7 @@ title: "session hot context"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: backlog
 ---
 
 Cross-session continuity: a short doc the agent loads at session start describing what was in progress last time, what decisions were pending, what the user was about to do. Currently the agent reconstructs this from cards + conversation log, which is slow and incomplete.

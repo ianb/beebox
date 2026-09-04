@@ -3,6 +3,8 @@ title: "directory head cards"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: normal
+next-action: fixed
 ---
 
 Exploratory structural idea (2026-06-12), the deep version of [Prominence / surface-worthiness — one concept across tree nodes (cards AND directories)](2026-06-12-card-level-prominence.md). Today a card relates to a sibling container exactly one way — `Foo.attach/` is Foo's private bag of binaries — and a *directory* gets its identity a different way: a `landmark`/`briefing` card placed *inside* it. What if instead `Foo.type.card` paired with a plain `Foo/`? Then **a directory's "head card" — a same-named sibling of any type — gives the directory its type, identity, prominence, and primary content at once.** `Recipes.landmark.card + Recipes/`, `Chat.sandbox.card + Chat/`, `Foo.doc.card + Foo/` all become one pattern, recursive down the tree (every directory optionally typed by its sibling). This generalizes the prominence insight: a bare directory lacks the renderable identity a card has, so it needs a proxy — the head card *is* that proxy, and making it any-typed unifies attachments, landmarks, and briefings into "directories have head cards."

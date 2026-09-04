@@ -3,6 +3,7 @@ title: "Addressable URIs for cards, elements, and versions"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: backlog
 ---
 
 Goal: every card, every addressable element inside a card, and every version of either should have a stable URI that can be pasted anywhere — emails, calendar events, chat assistants, other cards, external scripts — and resolved by the callback web UI.

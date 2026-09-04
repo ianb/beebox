@@ -6,6 +6,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the chat Advanced menu against its user stories
 next-action: discuss
+priority: backlog
 ---
 
 Choosing "Run /compact" from the chat's Advanced menu put a `/compact` user

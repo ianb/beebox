@@ -7,6 +7,7 @@ discovered-by: Ian
 discovered-in: worktree-dev-comments — naming the dev-repo document comments store
 labels: [connectors, naming]
 needs: [design]
+priority: important
 ---
 
 Google Drive comment threads are written beside an exported card as

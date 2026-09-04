@@ -4,6 +4,7 @@ workstream: deploy-separation
 area: beebox
 filed-by: agent
 discovered-in: worktree-deploy-separation — split out of the add-box push-credential fix
+priority: backlog
 ---
 
 A box that cannot push looks completely healthy. It serves, agents run, commits

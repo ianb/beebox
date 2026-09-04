@@ -3,6 +3,7 @@ title: "card level prominence"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: important
 ---
 
 Started as "a landmark-ish marker in the card itself" and resolved (2026-06-12 discussion) into a unification: **there is one editorial axis — "should the box surface this node?" — applied to nodes in the box tree.** A card expresses it with an inline marker; a directory expresses it with a landmark card. Today's landmarks (`docs/landmarks.md`) are just **the directory form of this one concept**, not a separate thing.

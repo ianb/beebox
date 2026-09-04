@@ -5,6 +5,8 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
 labels: [field-test-findings, code-error]
+priority: backlog
+next-action: reconfirm
 ---
 
 > **Checked 2026-08-18 — still live, and today's git-lock work argues *against*

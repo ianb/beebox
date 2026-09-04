@@ -6,6 +6,7 @@ needs: [design]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "we should have analytics inside the box that the box itself can use"
+priority: backlog
 ---
 
 The box should collect its own analytics — the typical stuff: clicks and other

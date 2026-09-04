@@ -5,6 +5,7 @@ needs: [design]
 area: beebox
 filed-by: agent
 discovered-in: main session — after being told my README prose was "all AI"
+priority: backlog
 ---
 
 **Reframed 2026-07-20.** This was originally scoped as "prose that doesn't read

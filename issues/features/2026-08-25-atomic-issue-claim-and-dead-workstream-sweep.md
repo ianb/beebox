@@ -5,6 +5,7 @@ area: bin
 filed-by: agent
 discovered-by: agent
 discovered-in: "worktree-beads-vs-issues — comparing Beads' compare-and-set --claim against launch-session.sh"
+priority: backlog
 ---
 
 Source: [Beads vs. our issues/ queue](../../research/beads-vs-issues.md) §2.3.

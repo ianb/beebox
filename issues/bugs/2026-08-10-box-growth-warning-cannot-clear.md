@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-box-family-email — investigating growth on a production box
 labels: [code-error]
+priority: normal
 ---
 
 Three separate problems in `beebox/src/core/box-growth/`, found together

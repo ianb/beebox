@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the nav's pending-count user story against the running app
+priority: important
 ---
 
 `AppNav` renders one badge, the on-plate todo count

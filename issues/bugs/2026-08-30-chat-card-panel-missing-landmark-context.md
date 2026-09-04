@@ -6,6 +6,7 @@ labels: [chat, navigation, ui, landmarks]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "worktree-landmark-in-browse — while confirming landmark context in Browse"
+priority: normal
 ---
 
 > Reopened 2026-08-30: the first implementation (d088cd77d, reverted in

@@ -4,6 +4,7 @@ workstream: unattached
 area: router
 filed-by: agent
 discovered-in: worktree-resume-continues-session — while making `resume` continue Claude conversations
+priority: normal
 ---
 
 `bin/workstreams resume` now continues a Claude conversation whenever the recorded
