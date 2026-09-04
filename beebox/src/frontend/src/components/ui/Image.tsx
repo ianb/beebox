@@ -2,7 +2,6 @@ import { useEffect, useReducer, useRef, useState, type CSSProperties, type React
 import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
 import { imageUrlKey } from "../../lib/image-url-key";
-import { useImageRetry } from "../../hooks/use-image-retry";
 
 const SIZE_CLASSES = {
   thumb: "w-16 h-16 object-cover",
@@ -27,29 +26,18 @@ export type ImageRotation = 0 | 90 | 180 | 270;
 // instead of re-running the error sequence and re-fetching the dead URL.
 const failedImageUrls = new Set<string>();
 
-function shouldRetryPrimary({ src, fallbackSrc, retryOnError }: {
-  src: string;
-  fallbackSrc: string | undefined;
-  retryOnError: boolean;
-}): boolean {
-  return retryOnError && fallbackSrc === undefined && src !== "";
-}
-
 interface LoadStateOpts {
   src: string;
   fallbackSrc: string | undefined;
   locallyFailed: boolean;
-  retryEnabled: boolean;
-  retryFailed: boolean;
-  retrySrc: string;
 }
 
-function getLoadState({ src, fallbackSrc, locallyFailed, retryEnabled, retryFailed, retrySrc }: LoadStateOpts) {
-  const primaryFailed = retryEnabled ? retryFailed : locallyFailed || failedImageUrls.has(imageUrlKey(src));
+function getLoadState({ src, fallbackSrc, locallyFailed }: LoadStateOpts) {
+  const primaryFailed = locallyFailed || failedImageUrls.has(imageUrlKey(src));
   const fallbackFailed = fallbackSrc !== undefined && failedImageUrls.has(imageUrlKey(fallbackSrc));
   const usingFallback = primaryFailed && fallbackSrc !== undefined && !fallbackFailed;
   return {
-    displaySrc: usingFallback ? fallbackSrc : retryEnabled ? retrySrc : src,
+    displaySrc: usingFallback ? fallbackSrc : src,
     errored: primaryFailed && (fallbackSrc === undefined || fallbackFailed),
   };
 }
@@ -71,11 +59,6 @@ interface BaseImageProps {
    * shown. Omit for in-box images, which have no proxy.
    */
   proxyFallbackSrc?: string;
-  /**
-   * Retry `src` on a short, bounded backoff before showing the placeholder.
-   * Intended for in-box chat images that may be referenced before they exist.
-   */
-  retryOnError?: boolean;
   /**
    * Outer-layout classes (margin, padding, flex item, sizing, position),
    * applied to whichever element ends up being outermost (figure when
@@ -149,7 +132,6 @@ interface ImgElementProps {
   title: string | undefined;
   onActivate: ((element: HTMLImageElement) => void) | null;
   onError: (failedSrc: string) => void;
-  onLoad: () => void;
   lightbox: boolean;
   lightboxSrc: string | undefined;
   lightboxCaption: string | undefined;
@@ -158,7 +140,7 @@ interface ImgElementProps {
   loading: "lazy" | "eager" | undefined;
 }
 
-function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, lightbox, lightboxSrc, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
+function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, title, onActivate, onError, lightbox, lightboxSrc, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
   const interactive = onActivate !== null;
   const handleClick = () => {
     if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
@@ -187,7 +169,6 @@ function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, ti
       className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", interactive ? "m-0" : extraClass)}
       style={rotationStyle}
       onError={(event) => onError(event.currentTarget.currentSrc || src)}
-      onLoad={onLoad}
       title={title}
       data-image-src={lightbox ? lightboxSrc ?? src : undefined}
       data-image-alt={lightbox ? alt : undefined}
@@ -299,7 +280,6 @@ export function Image(props: ImageProps) {
     bordered = false,
     title,
     proxyFallbackSrc,
-    retryOnError = false,
     className,
     loading,
   } = props;
@@ -314,21 +294,12 @@ export function Image(props: ImageProps) {
   const [, bumpAfterError] = useReducer((n: number) => n + 1, 0);
   const [locallyFailedSrc, setLocallyFailedSrc] = useState<string | null>(null);
   const fallbackSrc = proxyFallbackSrc !== undefined && proxyFallbackSrc !== src ? proxyFallbackSrc : undefined;
-  const retryEnabled = shouldRetryPrimary({ src, fallbackSrc, retryOnError });
-  const retry = useImageRetry(src, retryEnabled);
   const { displaySrc, errored } = getLoadState({
     src,
     fallbackSrc,
     locallyFailed: locallyFailedSrc === src,
-    retryEnabled,
-    retryFailed: retry.failed,
-    retrySrc: retry.displaySrc,
   });
   const handleError = (failedSrc?: string) => {
-    if (retryEnabled) {
-      retry.handleError();
-      return;
-    }
     failedImageUrls.add(imageUrlKey(failedSrc ?? displaySrc));
     setLocallyFailedSrc(src);
     bumpAfterError();
@@ -385,7 +356,6 @@ export function Image(props: ImageProps) {
       title={title}
       onActivate={activate}
       onError={handleError}
-      onLoad={retry.handleLoad}
       lightbox={lightbox}
       lightboxSrc={lightboxSrc}
       lightboxCaption={typeof caption === "string" ? caption : undefined}

@@ -71,10 +71,9 @@ const ANCHOR_RECAPTURE_MS = 80;
 const OPEN_SETTLE_MS = 400;
 /**
  * The most the hold lasts after the first render, whatever keeps growing. An
- * `<img>` reserves no height until its bytes land (the chat has no dimension
- * metadata to reserve with), so the hold waits for the transcript's images,
- * but a fetch that retries for longer (see use-image-retry) and a thread
- * opened onto a live stream are not followed past this. The reader's own
+ * user-image thumbnail can grow when its bytes land, so the hold waits for
+ * the transcript's images, but a slow fetch and a thread opened onto a live
+ * stream are not followed past this. The reader's own
  * action ends the hold at any time.
  */
 const OPEN_MAX_MS = 8000;

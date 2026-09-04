@@ -128,18 +128,24 @@ that lands at the top means the hold ended before the first content cycle.
 ### 2.4b Opening a thread whose last turn carries images
 
 The boxholder's 2026-08-26 report: with images in the transcript the page
-opened above the bottom (web and iOS). An `<img>` has no height until its
-bytes land, so the last turn grows well after the first render; the open hold
-must outlast that. Use a session whose final reply embeds several images, and
+opened above the bottom (web and iOS). Assistant images now reserve their
+70vh frame; user-image thumbnails can still gain height when decoded. Use a
+session whose final reply embeds several images, and
 open it **cold** (a hard reload, so the images are fetched, not served from
 the memory cache):
 
 ```bash
 bin/browse open "/chat?session=<session-with-images-in-the-last-reply>"
 sleep 4
-bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");const imgs=[...s.querySelectorAll("img")];return JSON.stringify({imgs:imgs.length,loaded:imgs.filter(i=>i.complete&&i.naturalHeight>0).length,fb:Math.round(s.scrollHeight-s.scrollTop-s.clientHeight),btn:!!document.querySelector("#bbx-chat-scroll-latest")});})()'
-# expect loaded === imgs, fb ~0, btn:false
+bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");const box=s.getBoundingClientRect();const imgs=[...s.querySelectorAll("img")];const pending=imgs.filter(i=>{const r=i.getBoundingClientRect();return !i.complete&&(i.loading!=="lazy"||(r.bottom>=box.top&&r.top<=box.bottom));});return JSON.stringify({imgs:imgs.length,pendingVisibleOrEager:pending.length,fb:Math.round(s.scrollHeight-s.scrollTop-s.clientHeight),btn:!!document.querySelector("#bbx-chat-scroll-latest")});})()'
+# expect pendingVisibleOrEager === 0, fb ~0, btn:false; far-offscreen lazy images may remain unloaded
 ```
+
+For a known-good fixture, also verify that the expected visible images decoded
+successfully (`naturalWidth > 0`); a failure placeholder is not a successful
+load. Cold runs require confirmed network fetches, using disabled cache or
+fresh fixture URLs. Record the request evidence rather than assuming a
+navigation was cold.
 
 The harness scenario for this is `open-thread-late-image-at-bottom`.
 
@@ -186,10 +192,55 @@ bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scrolle
 bin/browse eval 'JSON.stringify(window.__m)'
 ```
 
-Finalize must keep `scrollHeight` monotonic. A drop — the turn briefly gone,
-leaving the user message alone — is the regression
-`chat-machine-finalize.doctest.md` guards: something cleared `streamText` before
-the finalized entry arrived.
+Finalize must not briefly remove the assistant turn and restore it after the
+history request. That transient collapse is the regression
+`chat-machine-finalize.doctest.md` guards. Record intentional send-spacer
+removal separately; a height decrease by itself is not proof of that bug.
+
+## 3. Inline images and lazy loading
+
+Image-bearing conversations are required fixtures for scroll verification,
+including the simulator and physical-device passes. A text-only `/fakestream`
+run does not cover them. Exercise the actual rendering paths separately:
+
+- Assistant Markdown images, both in a paragraph and in an image-only
+  paragraph: `ChatInlineImage` / `ChatImage` in `markdown-rendering.tsx` use
+  `Image size="chat"`, reserving a 70vh frame and loading eagerly.
+- User-message image content blocks: `MessageImage` in `user-entry-content.tsx`
+  uses `Image size="sm" loading="lazy"`. Its maximum dimensions do not reserve
+  the image's intrinsic height before decode. Use real attachment/content-block
+  messages; a Markdown image pasted into user text is not this path.
+- Embedded image cards use `FileView`; record that path separately instead of
+  assuming every image is an ordinary Markdown `<img>`.
+
+Use landscape and portrait images, several images in one turn, and enough
+history to put images well above and below the initial viewport. For each
+case below, record an identifiable visible text marker's screen position,
+composer/scroller height, scroll position, image request start/completion,
+`complete`, `naturalWidth`, and rendered image dimensions. Compare warm-cache
+and cold-cache runs. Reset/reload between fixtures so failure caching from a
+previous case does not hide a request.
+
+| Case | Procedure and evidence |
+| --- | --- |
+| Open image-bearing history | Cold-open a conversation ending in images. Capture initial layout, each decode, and the settled bottom position; a correct final position alone does not rule out transient jumps. Repeat warm. |
+| Delayed eager image | Delay an image response while its frame is visible; release it while typing, while reading above, and during streaming. Measure text displacement and whether the reserved assistant frame changes height. |
+| Lazy image enters view | Start with a user image far offscreen. Verify **no request yet**, scroll toward it until the request actually begins, then capture decode and nearby text movement. `loading="lazy"` alone does not prove deferred loading; browser preload distances vary. |
+| Lazy completion during a gesture | Delay a requested user image, move the viewport so it is above the text being read, then release it during a scroll/fling. Check for reversal or a jump; repeat with the keyboard open/closed on the simulator and device. |
+| Several images / finalize | Deliver images in a different order from their transcript order; finish the real assistant turn while an image is pending. Check image/turn node replacement and placeholder/frame collapse across authoritative history refresh. |
+| Missing image | Return 404 and wait at least 12 seconds. The failure placeholder should remain stable and there must be no timed `imageRetry` requests or repeated placeholder/image swaps. Repeat after a Markdown rerender. |
+| Changed image / proxy fallback | For assistant box images, change the underlying file and confirm the file-change versioned URL can load after an earlier failure. Record the short failure placeholder expanding back to a 70vh image frame, with the reading marker above and below it. Separately test an external image's one-time proxy fallback, including a failing proxy. |
+
+The timed missing-image retry hook was removed in this workstream. A missing
+URL now stays failed rather than periodically attempting the same resource.
+The existing assistant file-change versioning and external proxy fallback are
+separate mechanisms and remain. These checks do not claim that a newly created
+file must recover without a new URL or a file-change event.
+
+The native simulator is useful for keyboard/layout reproduction, but cannot
+replace a physical-device momentum/rubber-band pass. Its native composer is
+outside the DOM: a zero/missing web-composer measurement is not a native
+composer-height measurement; pair DOM traces with a simulator recording.
 
 ## `/scrolldebug` — the on-device scroll trace (field probe)
 
@@ -241,7 +292,11 @@ paragraphs/code blocks, falls back to message wrappers, and resets on a new
 wheel/touch gesture. It is a geometric marker, not eye tracking.
 
 `interaction` records input/focus/touch/wheel event kinds without text or key
-values. `dom` counts additions, removals, and text-node updates; it does not
+values. `image` records captured load/error events inside the transcript with
+an image-node number, the lazy-loading hint, intrinsic dimensions and current
+rendered geometry; it includes no URL or alt text. This marks completion, not
+request start: use the browser's request evidence to establish lazy deferral.
+`dom` counts additions, removals, and text-node updates; it does not
 identify React renders or prove a remount. `scroller-node` records replacement
 of the scroll element. `ease-write`, `ease-interrupted`, and `ease-stop` cover
 the send animation's writes and cancellation, previously absent from the

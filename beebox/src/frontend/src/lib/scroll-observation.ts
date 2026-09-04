@@ -36,6 +36,8 @@ export function startScrollObservation(record: RecordEvent): () => void {
   let scroller: HTMLElement | null = null;
   let anchor: Element | null = null;
   let anchorNumber = 0;
+  const imageNumbers = new WeakMap<HTMLImageElement, number>();
+  let nextImage = 0;
   const mutations = new MutationObserver((records) => {
     let added = 0;
     let removed = 0;
@@ -99,10 +101,24 @@ export function startScrollObservation(record: RecordEvent): () => void {
     const composer = target instanceof Element && target.matches(COMPOSER);
     const inChat = target instanceof Element && target.closest(SCROLLER) !== null;
     if (!composer && !inChat) return;
+    if (target instanceof HTMLImageElement && (event.type === "load" || event.type === "error")) {
+      let number = imageNumbers.get(target);
+      if (number === undefined) {
+        number = ++nextImage;
+        imageNumbers.set(target, number);
+      }
+      const rect = target.getBoundingClientRect();
+      record("image", {
+        image: number, event: event.type, lazy: target.loading === "lazy",
+        complete: target.complete, naturalWidth: target.naturalWidth,
+        naturalHeight: target.naturalHeight, height: rounded(rect.height), top: rounded(rect.top),
+      });
+      return;
+    }
     record("interaction", { event: event.type, composer, trusted: event.isTrusted });
     if (inChat && (event.type === "wheel" || event.type === "touchstart")) anchor = null;
   };
-  const eventNames = ["input", "focusin", "focusout", "wheel", "touchstart", "touchend"];
+  const eventNames = ["input", "focusin", "focusout", "wheel", "touchstart", "touchend", "load", "error"];
   for (const name of eventNames) document.addEventListener(name, action, { capture: true, passive: true });
   record("environment", { width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio });
   frame = requestAnimationFrame(sample);

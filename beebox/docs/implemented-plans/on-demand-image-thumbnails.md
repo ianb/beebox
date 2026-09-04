@@ -126,7 +126,7 @@ The bbox surface uses only `scale-down`. That preserves the source aspect ratio,
 
 **Why this needs to change.** `src/frontend/src/components/chat/markdown-rendering.tsx:25-58` sends canonical in-box images and external images through one presentation component.
 
-**Direction.** Transform only photo-raster URLs the helper recognizes as canonical box images. Chat uses one `width=960`, `fit=scale-down`, `quality=85`, `format=auto` display URL and its original lightbox URL. It does not use `srcset`: chat's `retryOnError` changes `src` when an in-box image may be referenced before it exists, while the browser would continue selecting from an unchanged `srcset`. External hot-links retain their direct URL and existing proxy fallback. Animated and unsupported transform formats retain their original URL.
+**Direction.** Transform only photo-raster URLs the helper recognizes as canonical box images. Chat uses one `width=960`, `fit=scale-down`, `quality=85`, `format=auto` display URL and its original lightbox URL. It does not use `srcset`. The original constraint was timed retries changing `src` independently of `srcset`; those retries were removed in `chat-scroll-fixes`, while the single-display-URL choice remains. External hot-links retain their direct URL and existing proxy fallback. Animated and unsupported transform formats retain their original URL. The server still accepts the historical `imageRetry` compatibility parameter.
 
 **Vocabulary lock-ins.** “In-box image” means a recognized `/api/image/` or `/api/files/` URL under the current router prefix. It does not mean every URL rendered by `Image`.
 

@@ -132,6 +132,19 @@ Arguments are `device base-url label session-id`; `device` defaults to
 container, so installation must happen first. Re-run it after deleting the app,
 because uninstalling removes that container.
 
+That shortcut writes box metadata, not an authentication credential. For an
+authenticated worktree test box, the existing `BBX_BROWSE_API_KEY` can act as
+the owner when the box has `agentBrowsing: "owner"` (the test1 clone does).
+Use it as the `bbx_browse_key` cookie to create a ticket with
+`POST /<worktree>/test1/api/trpc/pairing.createTicket`, then pair through the
+normal `beebox://pair?...&pairingToken=...` link. DEBUG builds also accept a
+`beebox://pair?...&authToken=...` link containing the redeemed device credential,
+with no `pairingToken` or `token` parameter, to skip ticket redemption. This uses existing
+test-box authority and does not require the boxholder's password. After
+re-pairing the same box, relaunch the simulator app if the webview still shows
+its earlier login page. Use a normal simulator build for runtime pairing; the
+signing-free command above is a compilation check, not proof of Keychain access.
+
 The simulator can reach the Mac through `127.0.0.1`. A physical iPhone cannot
 use that simulator URL: pair it to a reachable hosted or LAN box using the QR
 flow. Real-device signing uses Xcode's automatic signing; choose the connected
