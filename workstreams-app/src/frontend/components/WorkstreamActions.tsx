@@ -23,9 +23,12 @@ export function isScheduled(row: Workstream): boolean {
 export function workstreamActionVerbs(row: Workstream): ActionVerb[] {
   if (row.routing.action === "wait-for-launch") return [];
   if (isScheduled(row)) return row.agent.state === "live" ? ["focus"] : ["resume"];
-  if (row.session.removed) return ["focus", "resume"];
+  if (row.session.removed) return ["resume"];
   if (row.git === null) return row.session.agent && (row.session.launch.state === "failed" || row.session.launch.state === "expired") ? ["resume"] : [];
-  return ["focus", "close"];
+  // Focus and close both need a live Terminal tab (`bin/workstreams focus` and
+  // `close` refuse otherwise, telling the caller to resume). A row with no
+  // live agent gets the one verb that can actually act on it.
+  return row.agent.state === "live" ? ["focus", "close"] : ["resume"];
 }
 
 const resumeLabels: Record<LifecycleJob["stage"], string> = { queued: "Request accepted", checking: "Checking workstream", restoring: "Restoring worktree", preparing: "Preparing session", "opening-terminal": "Opening Terminal", opened: "Terminal opened", ready: "Session ready", failed: "Resume failed" };

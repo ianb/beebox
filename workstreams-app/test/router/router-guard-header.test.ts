@@ -7,13 +7,13 @@
 // doesn't already learn.
 //
 // Run with:
-//   node --import tsx --test bin/router-guard-header.test.ts
+//   node --import tsx --test workstreams-app/test/router/router-guard-header.test.ts
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { routerGuardHeaders, writeDeny, type DenyRequest, type DenyResponse } from "./router.js";
-import type { RouterAuthDecision } from "./router-auth.js";
+import { routerGuardHeaders, writeDeny, type DenyRequest, type DenyResponse } from "../../src/router/router.js";
+import type { RouterAuthDecision } from "../../src/router/router-auth.js";
 
 interface Captured {
   status: number;

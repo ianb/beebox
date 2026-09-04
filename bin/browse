@@ -60,7 +60,7 @@ export BROWSE_PROFILE_BASE="${browse_base}"
 browse_env_file="${REPO_DIR}/beebox/.env"
 if [[ -z "${BBX_BROWSE_API_KEY:-}" && -r "$browse_env_file" ]]; then
   # Parse with Node's `util.parseEnv` — the SAME parser the router uses
-  # (bin/router-core.ts readEnvFile). A hand-rolled sed/tr version was wrong:
+  # (workstreams-app/src/router/router-core.ts readEnvFile). A hand-rolled sed/tr version was wrong:
   # it disagreed with the router on quoting and whitespace, so a key written
   # in a form the two parse differently would authenticate the router's
   # children and be rejected at the router — a silent, confusing failure. The

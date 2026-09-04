@@ -68,3 +68,8 @@ at which point spending quota to curate the box's own chat openers is exactly
 the trade the boxholder wants. `chat-review` remains disabled — it does not
 have an equivalent human-activity gate. Existing boxes keep their box-owned
 `enabled` value; this reaches new boxes only.
+
+> 2026-09-03 survey (bbx-pick-issues): both recorded decisions are implemented
+> in `src/core/box/defaults.ts` (refresh-maps, gc-procedure-runs,
+> process-retrospective enabled; check-email, check-calendar, chat-review
+> disabled). Nothing left but closing it.

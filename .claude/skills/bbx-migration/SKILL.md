@@ -34,10 +34,14 @@ need a migration. New boxes are seeded all-applied by `bbx init`, so they skip i
 
 **The compatibility horizon is short (as of 2026-08).** Every box in existence
 lives on the development machine or the production server. Once those are
-migrated, nothing old remains: no back-compat reads, no dual-format loaders, no
-"support the old shape for a while." Migrate everything, then delete the old
-path in the same plan. (This changes if boxes ever run on machines we don't
-control — revisit this note then, not before.)
+migrated, nothing old remains. Keep back-compat reads or dual-format loaders only
+for a short, explicit settling period, then remove them. When the migration ships,
+file that cleanup in `issues/deferred/` with an `activate-on` date and
+`category: code-quality`; name the exact compatibility paths and the convergence
+check so the deferred issue becomes ordinary cleanup work when due. Do not leave
+the removal as an undated active-queue item or permanent "support the old shape
+for a while." (This changes if boxes ever run on machines we don't control —
+revisit this note then, not before.)
 
 ## Which kind — script (default) or agent-applied
 

@@ -1,7 +1,7 @@
 // The comment channel's procedures (`docs/plans/document-comments.md`).
 //
 // Everything mutating goes through tRPC — a CONSTRAINT, not a preference.
-// `bin/router-auth.ts:228-239` classifies a POST under `/workstreams/` as
+// `workstreams-app/src/router/router-auth.ts:228-239` classifies a POST under `/workstreams/` as
 // `control` only for `/workstreams/api/trpc[/*]`; anything else returns
 // `{kind: "unknown"}` and is denied before it reaches this app. A raw
 // `POST /workstreams/api/comments` would never arrive.

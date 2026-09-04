@@ -31,7 +31,7 @@
  *
  * It restarts the checkout's dev-server generation first, on purpose: the
  * router runs TypeScript straight off disk and nothing reloads it
- * (bin/router-lifecycle.ts), so without a restart this would test whatever
+ * (workstreams-app/src/router/router-lifecycle.ts), so without a restart this would test whatever
  * source was on disk whenever the generation happened to start. That restart is
  * also the floor the tier exists for — a server that cannot boot fails here.
  *

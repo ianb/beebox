@@ -256,7 +256,7 @@ async function serveDevArtifact(
   // the browse key can read this surface (cross-model review, 2026-08-24).
   // Checked on the RESOLVED path, not the raw `rel`: a legitimate request may
   // contain `..` segments that normalize away inside dev/ (see the encoded-dot
-  // cases in bin/router-docs.test.ts), and those must still resolve.
+  // cases in workstreams-app/test/router/router-docs.test.ts), and those must still resolve.
   if (path.relative(devRoot, resolved).split(path.sep).some((segment) => segment.startsWith("."))) {
     res.writeHead(404, { "content-type": "text/plain" });
     res.end(`not found in dev/: ${rel}\n`);

@@ -19,7 +19,7 @@ MODEL_ID.opus
 ## Retired IDs translate forward
 
 Opus 4.8 and its `[1m]` variant fold into Opus 5; the Fable `[1m]` variant folds
-into plain Fable 5 (1M context is native to the 5-tier).
+into Fable 5.1 (1M context is native to the 5-tier).
 
 ```ts
 normalizeModelId("claude-opus-4-8")
@@ -29,7 +29,15 @@ normalizeModelId("claude-opus-4-8[1m]")
 => claude-opus-5
 
 normalizeModelId("claude-fable-5[1m]")
-=> claude-fable-5
+=> claude-fable-5-1
+```
+
+Fable 5 itself is retired the same way: a chat or procedure card that pinned
+it keeps working on Fable 5.1.
+
+```ts
+normalizeModelId("claude-fable-5")
+=> claude-fable-5-1
 ```
 
 ## Live IDs pass through unchanged

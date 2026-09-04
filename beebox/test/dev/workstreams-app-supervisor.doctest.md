@@ -11,10 +11,10 @@ import os from "node:os";
 import path from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { classifyRouterRoute } from "../../../bin/router-auth.js";
-import { prepareWorkstreamsAppHeaders } from "../../../bin/router-proxy.js";
-import { renderWorkstreamsAppFallback } from "../../../bin/router-pages.js";
-import { writeDeny } from "../../../bin/router.js";
+import { classifyRouterRoute } from "../../../workstreams-app/src/router/router-auth.js";
+import { prepareWorkstreamsAppHeaders } from "../../../workstreams-app/src/router/router-proxy.js";
+import { renderWorkstreamsAppFallback } from "../../../workstreams-app/src/router/router-pages.js";
+import { writeDeny } from "../../../workstreams-app/src/router/router.js";
 import {
   EXHIBITS_DEFAULT_PORT,
   createWorkstreamsAppSupervisor,
@@ -25,7 +25,7 @@ import {
   type WorkstreamsAppEffects,
   type WorkstreamsAppSpawnOptions,
   type WorkstreamsAppTimer,
-} from "../../../bin/workstreams-app-supervisor.js";
+} from "../../../workstreams-app/src/router/workstreams-app-supervisor.js";
 
 type Exit = { code: number | null; signal: NodeJS.Signals | null };
 
@@ -354,6 +354,7 @@ await fs.writeFile(path.join(root, "src/server/app.ts"), "two");
 assert.notEqual(await fingerprintWorkstreamsApp(root), before);
 
 assert.equal(shouldRestartWorkstreamsBackend("src/frontend/styles.css"), false);
+assert.equal(shouldRestartWorkstreamsBackend("src/router/router.ts"), false);
 assert.equal(shouldRestartWorkstreamsBackend("src/shared/workstreams.ts"), true);
 assert.equal(shouldRestartWorkstreamsBackend("package.json"), true);
 assert.equal(shouldRestartWorkstreamsBackend("test/server.doctest.md"), false);

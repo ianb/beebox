@@ -165,7 +165,7 @@ works or replacing it speculatively.
   ~20s), likely the same "optimistic entry not protected across a server snapshot"
   family but a different trigger; a fix here should check whether it also covers
   that.
-- [open-chat-flashes-agent-working-no-send](../../bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md)
+- [open-chat-flashes-agent-working-no-send](2026-08-05-open-chat-flashes-agent-working-no-send.md)
   — adjacent new/opened-session render glitch.
 - [chat-send-receipts-fail-often](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
   — different symptom (receipt shows failed), same chat-send surface.

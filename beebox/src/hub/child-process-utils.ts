@@ -1,6 +1,6 @@
 /**
  * Small process-supervision primitives shared by `src/hub/supervisor.ts`,
- * adapted from the monorepo dev router (`../../../bin/router.ts`'s
+ * adapted from the monorepo dev router (`../../../workstreams-app/src/router/router.ts`'s
  * `waitForHttp`/`killGroup`/`sleep`) — see that file's module doc for the
  * original rationale. Kept here as plain functions (no router-specific
  * state) so the hub doesn't depend on the monorepo-only router script.

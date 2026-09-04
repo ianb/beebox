@@ -1,9 +1,9 @@
-// Unit tests for the pure worktree-state model (bin/router-lifecycle.ts): the
+// Unit tests for the pure worktree-state model (workstreams-app/src/router/router-lifecycle.ts): the
 // guarded transition table and the stable-shell identity contract. These are
 // the "transition-table" tests of Phase C group 6 — they need no fakes, only
 // the pure module. Run with:
-//   node --import tsx --test bin/router-lifecycle.test.ts
-// (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
+//   node --import tsx --test workstreams-app/test/router/router-lifecycle.test.ts
+// (or `pnpm --dir workstreams-app test`, which runs the router tests with the package suite).
 //
 // Non-vacuity: each illegal-transition assertion fails if the `invariant()`
 // guard inside transitionLifecycle is neutered (see the report). The
@@ -21,7 +21,7 @@ import {
   isLegalTransition,
   transitionLifecycle,
   createStartingHandle,
-} from "./router-lifecycle.js";
+} from "../../src/router/router-lifecycle.js";
 
 function startingHandle(name: string): WorktreeHandle {
   // createStartingHandle wires the deferred startPromise the `starting` variant

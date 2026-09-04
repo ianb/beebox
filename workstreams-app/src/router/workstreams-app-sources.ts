@@ -27,7 +27,12 @@ export function shouldRestartWorkstreamsBackend(relativePath: string): boolean {
   const normalized = relativePath.split(path.sep).join("/").replace(/^\.\//, "");
   const first = normalized.split("/")[0] ?? normalized;
   if (WATCH_IGNORED_DIRS.has(first)) return false;
-  return !(normalized === "src/frontend" || normalized.startsWith("src/frontend/"));
+  return !(
+    normalized === "src/frontend"
+    || normalized.startsWith("src/frontend/")
+    || normalized === "src/router"
+    || normalized.startsWith("src/router/")
+  );
 }
 
 async function fingerprintFiles(root: string, relative?: string): Promise<string[]> {

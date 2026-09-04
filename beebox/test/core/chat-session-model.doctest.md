@@ -39,8 +39,8 @@ await pin(box.root, { agentModel: "claude-sonnet-5" });
 JSON.stringify(await resolveSessionModel(box.root, FOLLOW))
 => {"model":"claude-sonnet-5","source":"default"}
 
-JSON.stringify(await resolveSessionModel(box.root, { engine: "claude", explicit: "claude-fable-5" }))
-=> {"model":"claude-fable-5","source":"explicit"}
+JSON.stringify(await resolveSessionModel(box.root, { engine: "claude", explicit: "claude-fable-5-1" }))
+=> {"model":"claude-fable-5-1","source":"explicit"}
 ```
 
 Changing the pin changes what a follower resolves next time — the reason a

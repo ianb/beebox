@@ -2,7 +2,7 @@
 
 A `.ts` file in the file browser is read, not just displayed. The browser
 highlights it with highlight.js — the same highlighter and the same palette as
-`bin/router-docs.ts`, the doc reader it consolidates.
+`workstreams-app/src/router/router-docs.ts`, the doc reader it consolidates.
 
 ```ts setup
 import React from "react";

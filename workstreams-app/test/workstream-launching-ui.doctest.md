@@ -49,3 +49,29 @@ JSON.stringify({
 })
 => {"section":"Launching","note":"setting up worktree and agent","launchingActions":[],"resumedSection":"Launching","expiredActions":["resume"]}
 ```
+
+A row whose worktree exists but whose agent is not live cannot be focused or
+closed (`bin/workstreams focus`/`close` refuse with "use resume"), so it gets
+Resume alone; a live row gets Focus and Close; a removed row can only be
+resumed. This is the row a machine restart leaves behind: session gone,
+commits still on the branch.
+
+```ts
+const dormant = row("active", "launching", "wait-for-launch");
+dormant.session.launch = { state: "none", startedAt: null, expiresAt: null, failedAt: null, reason: null };
+dormant.agent = { state: "none", reason: "" };
+dormant.routing = { state: "dormant", action: "resume-with-briefing", lastActivityAt: "2026-08-31T22:55:47Z" };
+dormant.git = { ahead: 1, dirty: 0, merged: false, tip: "2395f4abf1ba786737d6589867f8833225a22732" };
+const live = structuredClone(dormant);
+live.agent = { state: "live", reason: "signal=cwd" };
+live.routing = { state: "live", action: "manual-forward", lastActivityAt: null };
+const removed = structuredClone(dormant);
+removed.session.removed = { at: "2026-08-23T00:00:00Z", merged: false, finalSha: dormant.git.tip };
+JSON.stringify({
+  dormant: workstreamActionVerbs(dormant),
+  dormantSection: workstreamStateFor(dormant).section,
+  live: workstreamActionVerbs(live),
+  removed: workstreamActionVerbs(removed),
+})
+=> {"dormant":["resume"],"dormantSection":"Dormant","live":["focus","close"],"removed":["resume"]}
+```

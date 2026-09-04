@@ -267,7 +267,7 @@ wt_create_locked() {
   # BOX_DEST is either a legacy box (content lives at its root) or a v2
   # package (content lives at BOX_DEST/content — see "The box repository" in
   # docs/implemented-plans/boxes-as-packages-v2.md). Either way its basename stays
-  # "test1", so the URL slug matches across worktrees (bin/box-entry.ts
+  # "test1", so the URL slug matches across worktrees (workstreams-app/src/router/box-entry.ts
   # derives the v2 slug from the PACKAGE root's basename for exactly this
   # reason — confirmed against this clone layout).
   mkdir -p "$(dirname "$BOX_DEST")"
@@ -364,7 +364,7 @@ wt_create_locked() {
   # 2.5. Copy the main checkout's beebox/.env, if it has one.
   #
   # `.env` is gitignored, so a fresh worktree gets none — and the router loads
-  # each checkout's OWN .env into the dev processes it spawns (bin/router-core.ts),
+  # each checkout's OWN .env into the dev processes it spawns (workstreams-app/src/router/router-core.ts),
   # so without this copy a worktree runs with none of the local dev config the
   # main checkout has (BBX_BROWSE_API_KEY, a BOXES override). Copying keeps the
   # rule uniform — every checkout reads its own file, nothing reaches across
@@ -376,7 +376,7 @@ wt_create_locked() {
   # worktree that inherited it would silently serve those instead of the
   # isolated clone made above, which is the whole point of a worktree. Omitting
   # the line makes the router fall back to WT_BOX_ROOT/<name>/test1
-  # (bin/router.ts `boxes ?? [...]`), which is exactly right. Add a BOXES line to
+  # (workstreams-app/src/router/router.ts `boxes ?? [...]`), which is exactly right. Add a BOXES line to
   # the worktree's own .env to override.
   local main_env="$WT_MONO/beebox/.env"
   if [ -f "$main_env" ]; then

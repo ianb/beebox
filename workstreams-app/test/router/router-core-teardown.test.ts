@@ -1,14 +1,14 @@
 // Incident tests for the worktree lifecycle engine's TEARDOWN and publication
-// paths (bin/router-worktree-teardown.ts, plus the guarded terminals in
-// bin/router-worktree-start.ts): stale child exit (bin/docs/router-protocol.md
+// paths (workstreams-app/src/router/router-worktree-teardown.ts, plus the guarded terminals in
+// workstreams-app/src/router/router-worktree-start.ts): stale child exit (bin/docs/router-protocol.md
 // invariant #4), guarded publication (#5), full-router shutdown, and the pidfile
 // store's per-name serialization (#6, via router-pidfile.ts's fs seam). The
-// startup-side incidents live in bin/router-core.test.ts; both drive the same
-// deterministic fakes from bin/router-core-harness.ts.
+// startup-side incidents live in workstreams-app/test/router/router-core.test.ts; both drive the same
+// deterministic fakes from workstreams-app/src/router/router-core-harness.ts.
 //
 // Run with:
-//   node --import tsx --test bin/router-core-teardown.test.ts
-// (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
+//   node --import tsx --test workstreams-app/test/router/router-core-teardown.test.ts
+// (or `pnpm --dir workstreams-app test`, which runs the router tests with the package suite).
 //
 // NON-VACUITY: every incident test fails when the guard it covers is neutered —
 // the specific neuter and observed failure are recorded in the implementation
@@ -16,7 +16,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { listenLoopback } from "./router-core.js";
+import { listenLoopback } from "../../src/router/router-core.js";
 import {
   deferred,
   type Deferred,
@@ -27,8 +27,8 @@ import {
   startReady,
   ticks,
 } from "./router-core-harness.js";
-import { createPidStore, type PidStoreFs } from "./router-pidfile.js";
-import { readyLifecycle } from "./router-lifecycle.js";
+import { createPidStore, type PidStoreFs } from "../../src/router/router-pidfile.js";
+import { readyLifecycle } from "../../src/router/router-lifecycle.js";
 
 // --- group 4: stale exit (invariant #4) ---------------------------------------
 

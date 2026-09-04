@@ -42,7 +42,7 @@
  * Header-based (not Fastify-typed) so the three gates that need it can share
  * one implementation: the box's own wall (`webapp/server-box-scope.ts`), the
  * hub (`hub/hub-server.ts`, both its HTTP and upgrade paths), and the dev
- * router (`bin/router-auth-deps.ts`).
+ * router (`workstreams-app/src/router/router-auth-deps.ts`).
  */
 
 import * as crypto from "node:crypto";

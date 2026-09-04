@@ -79,7 +79,7 @@ function isAuthenticatedMeBody(body: Record<string, unknown>): boolean {
 
 /**
  * The benign marker the Track-B dev router sets on its OWN anonymous 401 for a
- * `/__router/*` control route (`bin/router.ts`). It identifies "a guarded
+ * `/__router/*` control route (`workstreams-app/src/router/router.ts`). It identifies "a guarded
  * callback dev router" and leaks nothing (a bare curl already learns the server
  * type). An UNGATED old router has no such header — it answers `/__router/status`
  * 200 with its status JSON. This lets the tailscale tooling distinguish a guarded

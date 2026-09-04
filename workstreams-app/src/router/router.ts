@@ -44,7 +44,7 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs/promises";
 import type { Duplex } from "node:stream";
-import { reclaimOrphans } from "./process-cleanup.js";
+import { reclaimOrphans } from "../../../bin/process-cleanup.js";
 import { authorizeRouterRequest, type RouterAuthDeps, type RouterAuthDecision } from "./router-auth.js";
 import { createRouterAuthDeps } from "./router-auth-deps.js";
 import { resolveBoxEntries } from "./box-entry.js";
@@ -133,7 +133,7 @@ export function writeDeny(
 
 /** The `x-bbx-router-guarded: 1` marker for a denial of a `/__router/*` control
  *  route, else no extra headers. Pure over the request path so it is unit-tested
- *  directly (bin/router-guard-header.test.ts). */
+ *  directly (workstreams-app/test/router/router-guard-header.test.ts). */
 export function routerGuardHeaders(url: string): Record<string, string> {
   const q = url.indexOf("?");
   const pathname = q === -1 ? url : url.slice(0, q);

@@ -4,6 +4,6 @@ export default [
   ...vibeCheck({
     react: false,
     roots: ["src/server", "src/shared", "test"],
-    ignores: ["src/frontend/**"],
+    ignores: ["src/frontend/**", "src/router/**"],
   }),
 ];

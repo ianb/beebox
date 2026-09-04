@@ -100,3 +100,12 @@ The switch menu's half of this — switching to a landmark coining a second empt
 chat instead of returning you to the one you left — is fixed with
 [the landmark-switch issue](../closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md),
 which turned out to share a cause.
+
+> 2026-09-03 (main session): the iOS half is withdrawn. The floating chevron
+> keyed on `WKWebView.canGoBack`, so it also appeared on the chat screen
+> whenever chat had history behind it (after a login, or after returning via
+> the web "Chat" chip, which pushes). The boxholder does not want a floating
+> back control anywhere; at most one in the header. The overlay, its
+> `NativeBackRequest`/`onCanGoBackChange` plumbing, and its tests are removed.
+> The web header chip (`BackToChatChip`) remains the way back on every
+> non-chat page, including inside the iOS shell.

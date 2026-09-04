@@ -29,7 +29,7 @@ checkout or the worktree's short name for an isolated checkout.
     `.md` files, canvas, SVG. The bare `sandbox` CSP that used to cover `/dev/`
     (blocking scripts and, less obviously, breaking every image in rendered
     markdown) was removed 2026-08-19; the rationale lives in the decision
-    comment in `bin/router-docs.ts` `serveDev`. The old `tools.json`
+    comment in `workstreams-app/src/router/router-docs.ts` `serveDev`. The old `tools.json`
     `scripted` allowlist stays gone — nothing needs a grant any more.
 - **Not this directory: exhibits.** Something built to ask the developer one
   question — labeled screenshots, a decision page — is an *exhibit*, not a

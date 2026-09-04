@@ -429,7 +429,7 @@ boxholder's decision ("choose the model at the very beginning of a chat").
   which engine the box defaults to is a Settings decision.
 
 **Vocabulary lock-ins.** Model rows use each engine's own names (Haiku 4.5,
-Sonnet 5, Opus 5, Fable 5; Sol, Terra, Luna) — never a tier name. Tiers are the
+Sonnet 5, Opus 5, Fable 5.1; Sol, Terra, Luna) — never a tier name. Tiers are the
 translation layer, not a thing the boxholder picks in chat.
 
 **First implementation chunk.** `engine` + `model` through `reserveSession` →

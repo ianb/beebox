@@ -138,6 +138,8 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // vocabulary sweep's quantity/measurements split — `quantity` itself is new
   // and optional, nothing to migrate). See docs/plans/vocab-glossary-sweep.md.
   { name: "record-measurements", script: "scripts/migrate/record-measurements.ts" },
+  { name: "gitignore-2026-09",  script: "scripts/migrate/box-gitignore.ts" },
+  { name: "hooks-2026-09",      script: "scripts/migrate/box-hooks.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";
