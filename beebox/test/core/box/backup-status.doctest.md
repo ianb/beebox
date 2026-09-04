@@ -156,3 +156,35 @@ isOffsiteRemoteUrl("")
 => false
 ```
 
+Git accepts scp-like remotes without a user, so `host:path` has to count too —
+requiring `user@` classified a perfectly real remote as a local path.
+
+```ts
+isOffsiteRemoteUrl("github.com:marlowe/box-hearth.git")
+=> true
+
+isOffsiteRemoteUrl("ssh://git@example.com:2222/srv/box.git")
+=> true
+```
+
+A loopback host is this machine wearing a hostname, and counting it as offsite
+would be the same false comfort as a local path.
+
+```ts
+isOffsiteRemoteUrl("ssh://localhost/srv/box.git")
+=> false
+
+isOffsiteRemoteUrl("git@localhost:box.git")
+=> false
+
+isOffsiteRemoteUrl("ssh://127.0.0.1/srv/box.git")
+=> false
+```
+
+A colon that is part of a path, not a host separator, is not a remote host.
+
+```ts
+isOffsiteRemoteUrl("/srv/git:mirror/box.git")
+=> false
+```
+

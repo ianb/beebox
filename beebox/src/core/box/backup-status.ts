@@ -23,6 +23,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import { gitDirsOf, isAnnexInitialized } from "../annex/is-annex-box.js";
+
 const execFileAsync = promisify(execFile);
 
 /** Why a box's assets are not reachable from anywhere but this machine. */
@@ -38,6 +40,16 @@ export interface AssetRisk {
   bytes: number;
 }
 
+/**
+ * `tracked` carries the counts; `none` means this branch has no upstream at
+ * all; `stale` means one is configured but its remote-tracking ref is gone —
+ * a real state, not the same as having none.
+ */
+export type UpstreamState =
+  | { state: "tracked"; ahead: number; behind: number }
+  | { state: "none" }
+  | { state: "stale" };
+
 export interface BackupStatus {
   /**
    * The push remote, or null when the box has none configured at all.
@@ -45,12 +57,8 @@ export interface BackupStatus {
    * machine — still a second copy, but not one that survives losing the disk.
    */
   remote: { name: string; url: string; offsite: boolean } | null;
-  /**
-   * Commits not on the remote / not local, or null when no upstream is
-   * configured. Computed from the cached remote-tracking ref — this never
-   * touches the network, so it is "as of the last fetch", not live.
-   */
-  upstream: { ahead: number; behind: number } | null;
+  /** What the upstream comparison found. See {@link UpstreamState}. */
+  upstream: UpstreamState;
   /** Git object store size: loose objects plus packs. */
   repoBytes: number;
   /** Annex object store size and file count, or null when not an annex repo. */
@@ -100,10 +108,28 @@ export function isOffsiteRemoteUrl(url: string): boolean {
   const trimmed = url.trim();
   if (trimmed === "") return false;
   if (trimmed.startsWith("file://")) return false;
-  if (/^[a-z][\d+.a-z-]*:\/\//i.test(trimmed)) return true;
-  // scp-style `user@host:path` — a colon before any slash, with a host in front.
-  if (/^[^/]+@[^/:]+:/.test(trimmed)) return true;
+
+  const scheme = /^[a-z][\d+.a-z-]*:\/\/(?:[^/@]*@)?([^/:]+)/i.exec(trimmed);
+  if (scheme !== null) return !isLoopbackHost(scheme[1] ?? "");
+
+  // scp-style `[user@]host:path`. The user part is OPTIONAL — `github.com:org/repo.git`
+  // is a form git accepts, and requiring `user@` classified it as a local path.
+  // The colon must precede any slash, or `/srv/git:mirror/x` would parse as a host.
+  const scp = /^(?:[^/@]+@)?([^/:]+):(?!\/)/.exec(trimmed);
+  if (scp !== null) return !isLoopbackHost(scp[1] ?? "");
+
   return false;
+}
+
+/**
+ * A host that resolves to this machine. Such a remote is a second copy on one
+ * disk, which is what this whole module exists to stop counting as a backup.
+ * Only the unambiguous names — deciding whether some other hostname is really
+ * this machine is a question this cannot answer from a URL alone.
+ */
+function isLoopbackHost(host: string): boolean {
+  const bare = host.toLowerCase().replace(/^\[|]$/g, "");
+  return bare === "localhost" || bare === "127.0.0.1" || bare === "::1" || bare.endsWith(".localhost");
 }
 
 /**
@@ -204,6 +230,30 @@ async function measureUntrackedAssets(dir: string): Promise<{ bytes: number; fil
 }
 
 /**
+ * Ahead/behind against the upstream, or why it could not be counted.
+ *
+ * `rev-list @{u}` fails two ways that mean different things, and collapsing
+ * both to "no tracking branch" hides the actionable one: a branch with NO
+ * upstream configured is ordinary, while a branch whose upstream IS configured
+ * but whose remote-tracking ref is missing (deleted remote branch, never
+ * fetched) is a stale state worth saying out loud. Ask about the configuration
+ * separately to tell them apart.
+ *
+ * Never touches the network: this reads the cached remote-tracking ref, so it
+ * is "as of the last fetch".
+ */
+async function readUpstream(topLevel: string): Promise<UpstreamState> {
+  const counts = (await gitOrNull(topLevel, ["rev-list", "--left-right", "--count", "@{u}...HEAD"]))?.trim();
+  const [behindText, aheadText] = counts?.split(/\s+/) ?? [];
+  const behind = Number(behindText);
+  const ahead = Number(aheadText);
+  if (Number.isFinite(behind) && Number.isFinite(ahead)) return { state: "tracked", ahead, behind };
+
+  const configured = await gitOrNull(topLevel, ["rev-parse", "--symbolic-full-name", "@{upstream}"]);
+  return configured === null ? { state: "none" } : { state: "stale" };
+}
+
+/**
  * Is any remote both able to hold annex content and actually elsewhere?
  *
  * A remote that can hold annex content has an annex-uuid recorded for it;
@@ -241,22 +291,25 @@ export async function getBackupStatus(boxRoot: string): Promise<BackupStatus> {
       ? null
       : (await gitOrNull(topLevel, ["remote", "get-url", remoteName]))?.trim() ?? null;
 
-  const counts = (await gitOrNull(topLevel, ["rev-list", "--left-right", "--count", "@{u}...HEAD"]))?.trim();
-  const [behindText, aheadText] = counts?.split(/\s+/) ?? [];
-  const behind = Number(behindText);
-  const ahead = Number(aheadText);
-  const upstream =
-    Number.isFinite(behind) && Number.isFinite(ahead) ? { ahead, behind } : null;
+  const upstream = await readUpstream(topLevel);
 
   const repoBytes = parseCountObjects((await gitOrNull(topLevel, ["count-objects", "-vH"])) ?? "");
 
-  const annexDir = path.join(topLevel, ".git", "annex", "objects");
-  const annexMeasured = await measureDir(annexDir);
-  const isAnnex = await fs
-    .stat(path.join(topLevel, ".git", "annex"))
-    .then(() => true)
-    .catch(() => false);
-  const annex = isAnnex ? annexMeasured : null;
+  // A linked worktree or submodule has a `.git` FILE, and its annex lives under
+  // the COMMON git dir — so `<topLevel>/.git/annex` finds nothing and a real
+  // annex box would report itself un-annexed, then get warned about as though
+  // its assets were untracked. `is-annex-box.ts` already owns this resolution;
+  // reuse it rather than re-deriving the path here.
+  const isAnnex = await isAnnexInitialized(topLevel);
+  let annex: { bytes: number; fileCount: number } | null = null;
+  if (isAnnex) {
+    annex = { bytes: 0, fileCount: 0 };
+    for (const gitDir of await gitDirsOf(topLevel)) {
+      const measured = await measureDir(path.join(gitDir, "annex", "objects"));
+      annex.bytes += measured.bytes;
+      annex.fileCount += measured.fileCount;
+    }
+  }
 
   const annexRemoteConfigured = await hasOffsiteAnnexRemote(topLevel);
 

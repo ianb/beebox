@@ -49,7 +49,7 @@ export function BackupSection() {
       {query.isLoading ? <p className="text-sm text-warm-600">Checking…</p> : null}
 
       {query.error != null ? (
-        <p className="text-sm text-red-700">Could not read backup status: {query.error.message}</p>
+        <p className="text-sm text-danger">Could not read backup status: {query.error.message}</p>
       ) : null}
 
       {query.data != null && status == null ? (
@@ -62,16 +62,21 @@ export function BackupSection() {
         <div>
           <Row label="Git remote">
             {status.remote === null ? (
-              <span className="text-red-700">none configured — this box is nowhere else</span>
+              <span className="text-danger">none configured — this box is nowhere else</span>
             ) : (
               <>
                 <span className="font-mono text-xs">{status.remote.url}</span>
-                {status.upstream === null ? (
+                {status.upstream.state === "none" ? (
                   <span className="text-warm-600"> · no tracking branch</span>
+                ) : status.upstream.state === "stale" ? (
+                  // Configured but its remote-tracking ref is gone — a deleted
+                  // remote branch or a clone that has never fetched. Saying "no
+                  // tracking branch" here would hide a state worth acting on.
+                  <span className="text-warning"> · upstream configured but never fetched</span>
                 ) : status.upstream.ahead === 0 ? (
                   <span className="text-warm-600"> · in sync</span>
                 ) : (
-                  <span className="text-amber-700">
+                  <span className="text-warning">
                     {" "}
                     · {status.upstream.ahead} commit{status.upstream.ahead === 1 ? "" : "s"} not pushed
                   </span>
@@ -79,7 +84,7 @@ export function BackupSection() {
                 {/* A sibling clone on this same disk is a second copy, not a
                     backup — say so rather than letting "in sync" imply safety. */}
                 {status.remote.offsite ? null : (
-                  <span className="text-amber-700"> · on this machine, not elsewhere</span>
+                  <span className="text-warning"> · on this machine, not elsewhere</span>
                 )}
               </>
             )}
@@ -94,7 +99,7 @@ export function BackupSection() {
           </Row>
 
           {status.assetRisk !== null ? (
-            <div className="mt-3 text-sm text-amber-800 bg-amber-50 rounded p-3">
+            <div className="mt-3 text-sm text-warning-dark bg-warning-50 rounded p-3">
               <p className="font-semibold mb-1">
                 {status.assetRisk.fileCount} file
                 {status.assetRisk.fileCount === 1 ? "" : "s"} ({formatBytes(status.assetRisk.bytes)}) exist only on
@@ -108,9 +113,9 @@ export function BackupSection() {
                 </p>
               ) : (
                 <p>
-                  This box does not use git-annex, so these attachments are ignored by git
-                  entirely — not even their names are pushed. They need a backup that is not
-                  this repository.
+                  This box does not use git-annex, so git ignores the files themselves; only
+                  whatever metadata the box happens to track travels with a push. The bytes
+                  need a backup that is not this repository.
                 </p>
               )}
             </div>
