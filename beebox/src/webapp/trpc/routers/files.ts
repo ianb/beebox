@@ -14,6 +14,7 @@ import { router, publicProcedure } from "../trpc.js";
 import { loadCardFile } from "../../../core/card-io.js";
 import { buildLoadContext } from "../../../core/load-context.js";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { containWithinBox } from "../../../lib/box-containment.js";
 import { registerBuiltinLoaders } from "../../../core/loader-registrations.js";
 import { summarize } from "../../../core/loader-registry.js";
 import type { FileSummary, LoaderInput } from "../../../core/file-summary.js";
@@ -21,14 +22,12 @@ import type { FileSummary, LoaderInput } from "../../../core/file-summary.js";
 registerBuiltinLoaders();
 
 /**
- * Normalize a client-supplied path to box-relative, or return null if the
- * path is absolute and lives outside the box.
+ * Normalize a client-supplied path to box-relative, or return null if it
+ * resolves outside the box — whether it arrives absolute or as a relative
+ * path that climbs out with `..` segments (the cross-box probe's case).
  */
 function normalizePath(boxRoot: string, raw: string): string | null {
-  if (!path.isAbsolute(raw)) return raw;
-  const relative = path.relative(boxRoot, raw);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) return null;
-  return relative;
+  return containWithinBox(boxRoot, path.isAbsolute(raw) ? raw : path.join(boxRoot, raw));
 }
 
 /**

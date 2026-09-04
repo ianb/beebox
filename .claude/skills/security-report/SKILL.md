@@ -290,8 +290,20 @@ with no tool allowlist). Enumerate every channel by which outside content
 becomes agent context (each connector, vision/OCR, transcripts, card
 bodies) and state plainly that structural mitigation is thin — the real
 controls are deployment-shaped (single-operator, schedules-off-by-default,
-human-in-the-loop on dangerous actions), not containment. Add a threats
-entry only when a second architecture-level threat earns one.
+human-in-the-loop on dangerous actions), not containment.
+
+**7b. Cross-box leakage on a shared host** — several boxes, one OS user,
+env-level isolation. Three channels, each with a named verifier: network
+(box A's credential reaching box B's data — the `cross-box-probe` doctest
+and the `schedules/cross-box-leak-scan` static sweep), filesystem
+(same-user reach — accepted; the schedule's host audit checks modes,
+per-cwd keying, undocumented shared files), and inheritance (hub secrets
+in a child env — `supervisor.doctest.md`). Regenerating this entry means
+re-running the schedule (`bin/schedules run cross-box-leak-scan --force`)
+and reconciling its findings table with the report: every `static`/`host`
+line the run produced is either a row here or a false positive named in
+the run's alert. Add a further threats entry only when another
+architecture-level threat earns one.
 
 ### 8. Accepted risks (roll-up)
 

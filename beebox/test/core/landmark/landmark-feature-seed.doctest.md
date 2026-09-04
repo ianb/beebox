@@ -143,3 +143,24 @@ await readLandmarkFeaturesForDir(box.root, "store/plain")
 ```ts cleanup
 await box.cleanup();
 ```
+
+A `contextDir` that would resolve outside the box fails closed: same `null`
+as a missing directory, not a read of whatever the path escapes to. This is
+the box-containment floor for a value that arrives from the tRPC layer
+already string-shape-checked (`boxRelativePathSchema` in
+`core/landmark/nearest.ts`) — this check is the defense-in-depth layer for
+any other caller.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "../outside-marker.landmark.card",
+  "---\nnavigation:\n  label: Outside\n  chat-app:\n    narration: on\n---\n",
+);
+await readLandmarkFeaturesForDir(box.root, "../")
+=> null
+```
+
+```ts cleanup
+await box.cleanup();
+```

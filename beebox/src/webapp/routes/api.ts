@@ -19,6 +19,7 @@ import { registerApiFilesRoutes } from "./api-files.js";
 import { registerProxyImageRoutes } from "./proxy-image.js";
 import { registerApiFilesWriteRoutes } from "./api-files-write.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { isTaskOutputPathForBox } from "../../core/chat/session/transcript-paths.js";
 import { registerApiAdapterRoutes } from "./api-adapters.js";
 import { registerApiExternalRoute } from "./api-external.js";
 import { registerApiImageRoutes } from "./api-image.js";
@@ -92,18 +93,39 @@ export async function registerApiRoutes(
         return reply.status(400).send({ error: "Missing file parameter" });
       }
 
-      // Security: only allow reading from tmp task output directories
-      const resolved = path.resolve(filePath);
-      if (!resolved.includes("/tasks/") || !resolved.startsWith("/private/tmp/") && !resolved.startsWith("/tmp/")) {
+      // Security: only this box's own background-task output files — see
+      // isTaskOutputPathForBox for the exact shape (tmp root, /tasks/, and
+      // THIS box's encoded-cwd segment). Checked on the literal path before
+      // any filesystem access, then again on the realpath'd target below so a
+      // symlink inside an otherwise-valid path can't point the read at
+      // another box's task output.
+      if (!isTaskOutputPathForBox({ boxRoot, filePath })) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+
+      let realResolved: string;
+      try {
+        realResolved = await fs.realpath(path.resolve(filePath));
+      } catch (e) {
+        if (errnoCode(e) !== "ENOENT") {
+          console.warn(`Could not resolve task output path, returning 404: ${filePath}:`, e);
+        }
+        return reply.status(404).send({ error: "Output file not found" });
+      }
+      if (!isTaskOutputPathForBox({ boxRoot, filePath: realResolved })) {
         return reply.status(403).send({ error: "Access denied" });
       }
 
       try {
-        const content = await fs.readFile(resolved, "utf-8");
+        const stat = await fs.lstat(realResolved);
+        if (!stat.isFile()) {
+          return reply.status(404).send({ error: "Output file not found" });
+        }
+        const content = await fs.readFile(realResolved, "utf-8");
         return reply.header("Content-Type", "text/plain").send(content);
       } catch (e) {
         if (errnoCode(e) !== "ENOENT") {
-          console.warn(`Could not read task output file, returning 404: ${resolved}:`, e);
+          console.warn(`Could not read task output file, returning 404: ${realResolved}:`, e);
         }
         return reply.status(404).send({ error: "Output file not found" });
       }
