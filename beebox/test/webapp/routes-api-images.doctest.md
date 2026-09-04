@@ -87,6 +87,15 @@ const croppedMetadata = await Sharp(cropped.rawPayload).metadata();
 => 80x120
 ```
 
+Crop never enlarges a source that is smaller than the target in one dimension:
+
+```ts continue
+const noUpscale = await imageRequest("/api/images/photo.jpg?width=100&height=130&fit=crop&format=jpeg");
+const noUpscaleMetadata = await Sharp(noUpscale.rawPayload).metadata();
+`${noUpscaleMetadata.width}x${noUpscaleMetadata.height}`
+=> 100x80
+```
+
 Bad options and non-image paths fail clearly instead of returning original bytes:
 
 ```ts continue

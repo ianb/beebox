@@ -2,6 +2,7 @@ import type { ImageTransformUrlOptions } from "../api-core";
 
 const PHOTO_EXT = /\.(?:avif|jpe?g|png|webp)$/i;
 const IMAGE_MARKERS = ["/api/image/", "/api/files/"] as const;
+const HAS_AUTHORITY = /^(?:[a-z][\d+.a-z-]*:|\/\/)/i;
 
 export function isTransformablePhotoPath(path: string): boolean {
   return PHOTO_EXT.test(path.replace(/[#?].*$/, ""));
@@ -11,6 +12,7 @@ export function transformedResolvedImageUrl(
   source: string,
   options: ImageTransformUrlOptions,
 ): string | null {
+  if (HAS_AUTHORITY.test(source)) return null;
   const marker = IMAGE_MARKERS.find((candidate) => source.includes(candidate));
   if (marker === undefined || !isTransformablePhotoPath(source)) return null;
   const markerIndex = source.indexOf(marker);

@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Metadata } from "sharp";
 import { BoxImageError, resolveBoxImage } from "../box-image.js";
 import { fileEtag } from "../file-etag.js";
@@ -27,6 +27,22 @@ function physicalDimension(value: number | undefined, dpr: number): number | und
   return value === undefined ? undefined : Math.round(value * dpr);
 }
 
+function applyImageHeaders(reply: FastifyReply, { contentType, etag, lastModified, negotiated }: {
+  contentType: string;
+  etag: string;
+  lastModified: string;
+  negotiated: boolean;
+}): FastifyReply {
+  const response = reply
+    .header("Content-Type", contentType)
+    .header("X-Content-Type-Options", "nosniff")
+    .header("Cache-Control", "no-cache")
+    .header("ETag", etag)
+    .header("Last-Modified", lastModified);
+  if (negotiated) response.header("Vary", "Accept");
+  return response;
+}
+
 async function transformImage(source: string, options: ImageTransformOptions): Promise<Buffer> {
   const { default: Sharp } = await import("sharp");
   let metadata: Metadata;
@@ -40,7 +56,7 @@ async function transformImage(source: string, options: ImageTransformOptions): P
   const orientedWidth = metadata.autoOrient.width;
   const orientedHeight = metadata.autoOrient.height;
   let fit: "cover" | "inside" = options.fit === "cover" || options.fit === "crop" ? "cover" : "inside";
-  let withoutEnlargement = options.fit === "scale-down";
+  let withoutEnlargement = options.fit === "scale-down" || options.fit === "crop";
   if (
     options.fit === "crop" &&
     (width === undefined || orientedWidth <= width) &&
@@ -82,6 +98,14 @@ export function registerApiImagesRoutes({ server, boxRoot }: { server: FastifyIn
         const source = await resolveBoxImage(boxRoot, request.params["*"] ?? "");
         const sourceVersion = fileEtag(source.stat);
         const key = imageTransformCacheKey({ sourcePath: source.relativePath, sourceVersion, options: parsed.options });
+        const etag = `"${key}"`;
+        const responseHeaders = {
+          contentType: CONTENT_TYPES[parsed.options.format],
+          etag,
+          lastModified: source.stat.mtime.toUTCString(),
+          negotiated: parsed.negotiated,
+        };
+        if (request.headers["if-none-match"] === etag) return applyImageHeaders(reply, responseHeaders).status(304).send();
         let content: Buffer;
         try {
           content = await cache.getOrCreate({
@@ -94,16 +118,7 @@ export function registerApiImagesRoutes({ server, boxRoot }: { server: FastifyIn
           console.warn(`[api-images] could not transform ${source.relativePath}:`, error);
           return reply.status(415).send({ error: "Image could not be transformed" });
         }
-        const etag = `"${key}"`;
-        const response = reply
-          .header("Content-Type", CONTENT_TYPES[parsed.options.format])
-          .header("X-Content-Type-Options", "nosniff")
-          .header("Cache-Control", "no-cache")
-          .header("ETag", etag)
-          .header("Last-Modified", source.stat.mtime.toUTCString());
-        if (parsed.negotiated) response.header("Vary", "Accept");
-        if (request.headers["if-none-match"] === etag) return response.status(304).send();
-        return response.send(content);
+        return applyImageHeaders(reply, responseHeaders).send(content);
       } catch (error) {
         if (error instanceof BoxImageError) return reply.status(error.statusCode).send(error.body);
         console.warn(`[api-images] could not serve ${request.params["*"] ?? ""}:`, error);

@@ -42,11 +42,12 @@ JSON.stringify([
   "/test/api/files/bitmap.bmp",
   "/test/api/files/icon.ico",
   "https://example.com/photo.jpg",
+  "https://cdn.example.com/api/files/photo.jpg",
   "blob:https://example.com/id",
   "/test/api/session-media/session/entry/0",
   "/test/api/history/abc/blob/photo.jpg",
 ].map((source) => transformedResolvedImageUrl(source, { width: 960 })))
-=> [null,null,null,null,null,null,null,null]
+=> [null,null,null,null,null,null,null,null,null]
 ```
 
 Chat retry and file-version parameters survive rewriting but do not become transform options.
