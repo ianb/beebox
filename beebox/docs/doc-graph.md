@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-04T05:22:50Z
+Generated: 2026-09-04T05:30:05Z
 Total documents: 316
 
 ## Issues
@@ -942,6 +942,7 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
 - docs/implemented-plans/top-nav-ia.md:417 (mention) — bar). `docs/chat-session-lifecycle.md` if it references the Chats page.
 - ../issues/code-quality/2026-07-06-chat-session-shared-core.md:51 (mention) — `beebox/docs/chat-session-lifecycle.md`.
+- ../issues/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md:16 (mention) — docs/chat-session-lifecycle.md and the chat steering design are reconciled.
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:53 (mention) — (See `docs/chat-session-lifecycle.md`.)
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:72 (link) — - [Chat session lifecycle](../../beebox/docs/chat-session-lifecycle.md) — how
 
@@ -1824,6 +1825,7 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:35 (mention) — `beebox/docs/todo-security.md` for the security-overview.md security report.
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:15 (mention) — a cadence** — Agent SDK updates, the security-overview.md regeneration, manual testing,
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:14 (mention) — and `beebox/docs/security-overview.md`); `3589d96c` and `3bbddcc5` applied cross-model
+- ../issues/closed/features/2026-08-30-cross-box-leak-scan.md:16 (mention) — `security-overview.md` carry `reviewed-by: DRAFT — unreviewed` pending human
 - ../issues/code-quality/2026-08-07-member-level-writing-procedures.md:37 (mention) — that in the invite flow and security-overview.md), or the config-writing and
 - ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:6 (mention) — discovered-in: main session — todo-security breakdown for the security-overview.md report
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:66 (mention) — - **Agent-legible docs as capability** (the security-overview.md /
@@ -1831,7 +1833,6 @@ Referenced by:
 - ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:46 (mention) — - `beebox/docs/security-overview.md:66` states "On fresh boxes, scheduled
 - ../issues/features/2026-07-20-agent-containment-allowed-directories.md:55 (mention) — honesty means security-overview.md describes what IS true today — but it's the
 - ../issues/features/2026-07-20-export-md-agent-instructions.md:11 (mention) — Data export on the security-overview.md pattern (boxholder, 2026-07-20): not a
-- ../issues/features/2026-08-30-cross-box-leak-scan.md:13 (mention) — security overview says so plainly (`docs/security-overview.md:46`). The ask:
 
 References:
 - → ../SECURITY.md (link)
@@ -1854,9 +1855,9 @@ Referenced by:
 - ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update beebox's security report — the structured accounting in beebox/docs/security-report.md a
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:36 (mention) — (`beebox/src/webapp/routes/api.ts:73`). `docs/security-report.md:107`
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:13 (mention) — `/security-report` skill as the committed rubric, `beebox/docs/security-report.md`,
+- ../issues/closed/features/2026-08-30-cross-box-leak-scan.md:15 (mention) — section below for the full list. `security-report.md` §7b and
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:121 (link) — [security-report.md](../../beebox/docs/security-report.md). The root
 - ../issues/exploration/2026-08-11-encryption-at-rest.md:56 (mention) — - **Credentials are already hashed at rest** (`docs/security-report.md` §2:
-- ../issues/features/2026-08-30-cross-box-leak-scan.md:21 (mention) — multi-box servers (`security-report.md:105`, tracked privately).
 
 References:
 - → docs/security-overview.md (link)

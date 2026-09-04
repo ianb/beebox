@@ -6,7 +6,17 @@ labels: [security]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder ask
+resolution: implemented
 ---
+
+**Closed 2026-09-04.** Delivered in commit 188f3c493 (workstream
+`cross-box-leak-scan`): the dynamic probe, static sweep, host audit, and the
+task-output/contextDir containment fixes — see the "Built 2026-09-03"
+section below for the full list. `security-report.md` §7b and
+`security-overview.md` carry `reviewed-by: DRAFT — unreviewed` pending human
+sign-off; the schedule itself has not yet had a real (non-dry) run — its
+first run hands an adjudication briefing to a session, per
+`schedules/cross-box-leak-scan/prompt.md`.
 
 Boxes on one host (prod runs six under one `callback` user; the dev machine
 runs many more) are isolated at the env level, not the OS level — the
@@ -69,4 +79,4 @@ and at minimum shares the fixture.
   item is closed), `chatControl.reserveSession` and the raw `/api/chat/send`
   body (`contextDir` now uses the shared box-relative schema), `files.summarize`
   (relative inputs now contained), and
-  [listsessionroots-contextdir-no-containment](../closed/bugs/2026-08-26-listsessionroots-contextdir-no-containment.md).
+  [listsessionroots-contextdir-no-containment](../bugs/2026-08-26-listsessionroots-contextdir-no-containment.md).

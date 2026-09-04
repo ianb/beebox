@@ -29,7 +29,7 @@ const dir = getSessionDir(path.join(boxRoot, contextDir));
 with no containment check — a `contextDir` of `../../etc` (hand-edited history
 file, or a future bug that writes one) would resolve outside the box. Same
 family as the husk `context-dir` bug fixed for
-[encode-project-dir-underscore-mismatch](../closed/bugs/2026-08-25-encode-project-dir-underscore-mismatch.md),
+[encode-project-dir-underscore-mismatch](2026-08-25-encode-project-dir-underscore-mismatch.md),
 but the source here is the history file rather than the husk card, so that
 fix's `resolveContainedRef` machinery (built for card refs) doesn't apply
 directly — this needs its own bounds check (e.g. resolve then verify the
