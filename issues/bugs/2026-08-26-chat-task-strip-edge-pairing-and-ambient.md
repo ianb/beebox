@@ -73,6 +73,7 @@ on a long-running background subagent without actually stopping it, so
 itself reporting phantom running tasks before `0.3.257`. Adopting it against an
 older bundled CLI would trade a wedged strip for a strip that shows work which
 is already gone. Whoever picks this up should require the pin to be at
-**`0.3.257` or newer** before switching the strip over — which is a stronger
+**`0.3.257` or newer** before switching the strip over — **satisfied as of
+2026-09-03, when the pin reached `0.3.258`** — which is a stronger
 version requirement than the `ambient` flag in part 2 (`0.3.247`, already in the
 pin).
