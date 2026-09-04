@@ -123,7 +123,7 @@ lives at the edges where a raw string arrives. One root removes the edge.
 | Bilingual resolvers ×3 | `src/hub/child-spawn.ts:80`, `src/cli/commands/serve.ts:67`, `src/lib/box-shape.ts:139` | **Delete all three**; one `resolveBoxRoot` in `src/lib/box-shape.ts` remains, accepting the root and (transitionally) a stale `…/content` path with a clear "this manifest predates v3" error |
 | Dir lookup | `src/lib/paths.ts:184` `getBoxDir`, `BOX_DIRS` | **Reuse**, table re-pointed at the new vocabulary |
 | Ref parsing, fail-closed | `src/shared/ref-path.ts` (3-form rule, `..` escape → `null`), `src/shared/box-path.ts` | **Reuse unchanged mechanics**; the root the forms resolve against moves; relative refs tighten (Track B) |
-| Ref rewriting machinery | `canonical-refs.ts`, `link-repair.ts`, `rewrite-card-refs.ts` (all convert to relative canonical form before writing — verified no absolute-path leaks) | **Reuse** as the migration's ref-rewrite engine |
+| Ref rewriting machinery | `canonical-refs.ts` (prefers leading-`/` form), `link-repair.ts` (writes box-root-absolute replacements), `rewrite-card-refs.ts` (preserves original absolute-vs-relative style; explicitly skips YAML inline-map forms, `rewrite-card-refs.ts:29-33`) | **Patterns only — the migration needs its own rewriter.** The existing three each do a narrower job than the migration needs (cross-model review, 2026-09-04); Track E builds a dedicated rewriter on `resolveRefPath` that covers markdown links, YAML ref fields (inline maps included), embeds, and attach scopes |
 | Migration registry + runbook | `src/core/migrations.ts`, `docs/migrations.md`, precedent `box-packageify` (`boxes-as-packages-v2.md` Track H) | **Reuse**: `one-root` lands as a registry migration, scratch-clone tested first |
 | Agent guide generation | `src/core/agent-guide/` (`REF_PATH_RULE` `source.ts:14-17`, `box-shape.ts:58-81` teaches the `../src` climb) | **Reuse**; the climb section is deleted (src is under the root now); ref rule text updated |
 | Session spawn plumbing | `src/core/agent/run.ts:74` (`cwd: options.cwd ?? options.boxRoot`), landmark scoping `src/core/chat/session/start.ts:122,157-159` | **Reuse**: `boxRoot` just becomes the one root; landmark pattern generalizes unchanged |
@@ -160,9 +160,9 @@ lives at the edges where a raw string arrives. One root removes the edge.
 ├── CLAUDE.md  .claude/                                                  agent identity
 ├── .beebox/                        runtime: box.json marker, dbs, logs, generated docs
 ├── src/                            box code: schemas/ views/ tricks/
-├── briefing.briefing.card  briefing.md  Box.landmark.card  MAP.md      spec'd root files
 │                                                       ── box namespace (underscore) ──
 ├── _content/                       ONLY user content — open vocabulary below here:
+│     briefing.briefing.card  briefing.md  Box.landmark.card  MAP.md
 │     inbox/  chat/  docs/  people/  places/  recipes/  todos/  calendar/  drive/
 ├── _config/                        meta-content: box.json*, connectors/, procedures/,
 │                                   schedules/, guides, personality  (*see Open questions)
@@ -185,12 +185,24 @@ Semantics locked in:
   converts. (Precedent: `remove-box-shape-v1.md` — clear-refusal beats silent
   bilingual support; soft-launch users' boxes are handled by the same
   migration path as the fleet, via `bbx upgrade`.)
-- **Refs:** a leading `/` means this root, and box refs must land inside the
-  box namespace — an underscore area or a spec'd root file. Refs into
-  `node_modules/`, `.git/`, `src/`, or unlisted root entries are invalid
-  (fail-closed, like `..` today — `ref-path.ts:20-28`). The underscore in the
-  first segment is the visible checksum: `/_content/recipes/x.card` is
-  self-evidently a box ref; `/etc/hosts` self-evidently is not.
+- **Refs:** a leading `/` means this root, and box refs must land inside an
+  **underscore area — with no exceptions**. There are no ref-addressable root
+  files: the box-facing root files (briefing card + md, the root landmark
+  card, MAP.md) move into `_content/`, so `/briefing.md` — as ambiguous as
+  `/etc/hosts` — cannot be a valid ref (cross-model review finding,
+  2026-09-04: root-file ref targets would break the underscore checksum).
+  Refs into `node_modules/`, `.git/`, `src/`, `CLAUDE.md`, or any root entry
+  are invalid (fail-closed, like `..` today — `ref-path.ts:20-28`). The
+  underscore in the first segment is the visible checksum: every valid box
+  ref carries it.
+- **HTTP surfaces get the same fence.** Today's browse/file APIs check only
+  containment under `boxRoot` (`api-browse.ts:42-50` lists every non-dot
+  directory; `api-files.ts:88-104` serves any non-dot file;
+  `api-files-write.ts:48-64` writes any non-dot, non-card path). Under one
+  root that would list `src/` and `node_modules/` and make `package.json`
+  *writable* over HTTP. Track B fences all three to the box namespace
+  (underscore areas), 403 elsewhere; the browse root lists the underscore
+  areas.
 - **Reservation:** at the box root, the underscore vocabulary is closed —
   an unlisted `_` entry or any unlisted non-underscore entry is a
   `bbx validate`/`bbx status` error. Below the root, no reservation
@@ -228,18 +240,24 @@ underscore area names above, `_bookkeeping` (boxholder-chosen, 2026-09-04).
 doctests (v3 fixture box; v2 fixture asserting the migration error text). No
 open questions inside.
 
-### Track B — Ref and path vocabulary
-**What:** `resolveRefPath` box-namespace restriction (underscore areas +
-spec'd root files; everything else `null`); relative refs move from "legacy,
-still resolves" to a validate warning this release (error later — see Open
-questions); `bbx validate` absolute-path check for card bodies; agent-guide
-text: ref rule updated, `../src` climb section deleted, `_bookkeeping`
-described in one line ("the machine's records — you rarely need to look
-here").
-**Why:** criteria 3–4; the ref universe must match the new root on the same
-commit the layout moves, or every link breaks.
+### Track B — Ref, path, and HTTP-surface vocabulary
+**What:** `resolveRefPath` box-namespace restriction (underscore areas only;
+everything else `null`); the same fence on the HTTP surfaces
+(`api-browse.ts`, `api-files.ts`, `api-files-write.ts`: 403 outside the box
+namespace; browse root lists the underscore areas); relative refs move from
+"legacy, still resolves" to a validate warning this release (error later —
+see Open questions); `bbx validate` absolute-path check for card bodies;
+agent-guide text: ref rule updated, `../src` climb section deleted,
+`_bookkeeping` described in one line, and an explicit off-limits statement
+for the npm namespace **kept** (the v2 guide's package-boundary warning,
+`agent-guide/box-shape.ts:66-80`, is updated for one root, not deleted —
+root-cwd agents run with bypassed permissions, `agent/run.ts:73-77`, so the
+guide plus the hook check below are the boundary).
+**Why:** criteria 3–4; the ref universe and the HTTP surface must match the
+new root on the same commit the layout moves, or every link breaks and the
+package machinery becomes browsable/writable.
 **First chunk:** namespace restriction + doctest (each area resolves; `src/`,
-`node_modules/`, unlisted root names → `null`).
+`node_modules/`, root files, unlisted root names → `null`).
 
 ### Track C — Closed-vocabulary enforcement
 **What:** `bbx validate`/`bbx status` root check: every root entry must be in
@@ -250,7 +268,14 @@ recreated-two-root case: a directory named `content/` or any underscore-area
 name appearing where the spec doesn't place it is called out specifically.
 **Why:** Principle 11; this is the check that turns the test1 incident from
 two silent months into one loud validate.
-**First chunk:** the check + doctest against a fixture with a stray root dir.
+**Hook path:** `bbx validate --hook` today checks only touched lintable
+files and exits clean for everything else (`validate-hook.ts:79-108`) — so
+the root check must be wired into hook mode explicitly: when the edited path
+is at the box root, or on any edit under the npm namespace
+(`package.json`, lockfile, `tsconfig.json`, `node_modules/`), the hook
+surfaces the violation. One `readdir` of the root per hook run is the cost.
+**First chunk:** the check + doctest against a fixture with a stray root dir
+and a fixture npm-namespace edit.
 
 ### Track D — Session and prompt plumbing
 **What:** re-point session cwd (`boxRoot` flows through unchanged code);
@@ -264,36 +289,84 @@ same lines.
 can land first as pure bug fixes).
 
 ### Track E — The migration (`one-root`, v2 → v3)
-**What:** registry migration, per box, atomic (one commit):
-0. Preflight: clean tree required; **root closed-vocabulary check against the
-   v2 spec** — unexpected package-root entries (the test1 stray `config/`
-   case) abort with a reconciliation instruction, never a blind delete.
-1. `git mv`: `content/inbox → _content/inbox` (and chat, docs, people,
-   places, recipes, todos, calendar, drive from their `store/`/`box/` homes);
-   `content/config → _config`; `box/{jobs,output,publish,questions,resources}`
-   and `store/{archive,trash,usage,reviews}` → their `_bookkeeping/` /
-   `_publish/` homes; `content/tmp → _tmp`; spec'd root files up; marker
-   `content/.beebox → .beebox` (merge with any root `.beebox`);
-   `content/CLAUDE.md` merged into the root CLAUDE.md (two personas, one
-   file — the root one is currently thin by design).
-2. Ref rewrite across every card and doc via the canonical-refs machinery:
-   old box-relative targets → new root-relative targets (a pure path-mapping
-   table derived from step 1's moves; doctested independently).
-3. Manifest updates: `hub.json` and `boxes.json` entries → the root.
-4. Marker bump to `shapeVersion: 3`; `bbx init` tail (regenerate rules,
-   guide, docs, search index); commit `migrate: one-root`.
-Rollback per box: `git reset --hard` to the pre-migration SHA + manifest
-revert + remove the migrations.jsonl line (`docs/migrations.md` pattern).
-**Fleet rollout:** scratch clone of test1 first, then laptop fleet, then
-server (per-box, hub keeps serving unconverted boxes only in the sense that
-their child processes run the *old* engine until upgraded — upgrade + migrate
-are one `bbx upgrade` step, the existing lifecycle). test1's stray-config
+**What:** registry migration, per box, one commit, run with the box's
+processes **stopped** (serve/reactor/scheduler down — same offline stance as
+`bbx upgrade`, `boxes-as-packages-v2.md:352-368`):
+
+**Bootstrap (design, not an afterthought):** the v3 engine refuses v2 boxes,
+but the migration runner must still reach them. `bbx migrate` gets a
+v2-tolerant shape probe used *only* by the migration path (reads the v2
+marker at `<root>/content/.beebox/box.json` without erroring), and the
+migration itself moves the migrations manifest
+(`content/config/migrations.jsonl` → `_config/migrations.jsonl` — the
+manifest path is currently hardcoded box-relative, `migrations.ts:143`,
+`migration-run.ts:35-83`). Doctest: `bbx migrate` on a v2 fixture succeeds;
+every *other* `bbx` verb on the same fixture errors with the
+migration-pointing message.
+
+1. Preflight: clean tree; processes stopped; **root closed-vocabulary check
+   against the v2 spec** — unexpected package-root entries (the test1 stray
+   `config/` case) abort with a reconciliation instruction, never a blind
+   delete.
+2. `git mv` per the mapping table. Old paths are **package-root-relative v2
+   paths** (the v2 box root is `content/`): `content/box/inbox →
+   _content/inbox`; `content/store/{chat,todos,recipes,drive,calendar} →
+   _content/…`; `content/{people,places,docs} → _content/…`;
+   `content/config → _config`; `content/box/{jobs,output,questions,resources}
+   → _bookkeeping/…`; `content/store/{archive,trash,usage,reviews} →
+   _bookkeeping/…`; `content/box/publish → _publish`; `content/tmp → _tmp`;
+   `content/{briefing.briefing.card,briefing.md,Box.landmark.card,MAP.md} →
+   _content/…`; `content/CLAUDE.md` merged into the root CLAUDE.md (two
+   personas, one file — the root one is thin by design). The table is
+   exhaustive over `BOX_LAYOUT` v2 entries with `assertNever` on an unmapped
+   area, so a spec entry added mid-plan fails compile, not migration.
+3. `.beebox/` move is a **filesystem rename, not git**: it is gitignored
+   runtime state (dbs, logs, tokens — `git reset --hard` cannot restore it).
+   With processes stopped, `rename(content/.beebox → .beebox)` is atomic on
+   the same filesystem; on any later step's failure the rollback renames it
+   back before the `git reset`. Any pre-existing root `.beebox/` entries
+   (none expected; verified none on test1) abort preflight.
+4. `.gitignore` and annex policy merge: the package-root ignore
+   (`node_modules/`, trick deps — `box/package.ts:105-109`) and the
+   operational-root ignore (`.beebox/`, secrets/state, tmp, asset rules —
+   `box/index.ts:158-198`) become one root `.gitignore` with paths remapped;
+   `.gitattributes` (annex) likewise. Doctested: post-migration `git status`
+   on the fixture is clean and an annexed asset still resolves.
+5. Ref rewrite across every card and doc with the **dedicated rewriter**
+   (Track E code, built on `resolveRefPath`): markdown links, YAML ref
+   fields including inline-map forms (`rewrite-card-refs.ts:29-33` skips
+   these today — the migration rewriter must not), embeds, attach scopes.
+   All rewritten to canonical leading-`/` form (this also discharges the
+   relative-ref deprecation for migrated content).
+6. **Hard link gate:** broken refs are warnings in normal validate
+   (`card-lint.ts:165-191`, pre-commit box-wide scan is warn-only) — the
+   migration runs the link check in **error mode** and refuses to commit
+   with any dangling ref.
+7. Manifest updates: `hub.json` and `boxes.json` entries → the root.
+8. Marker bump to `shapeVersion: 3` (marker now at root `.beebox/box.json`);
+   `bbx init` tail (regenerate rules, guide, docs, search index); commit
+   `migrate: one-root`.
+
+Rollback per box: rename `.beebox` back, `git reset --hard` to the
+pre-migration SHA, manifest revert, remove the migrations.jsonl line
+(`docs/migrations.md` pattern).
+
+**Fleet rollout and the deploy-ordering trap:** the server deploys the
+engine by rsync on main commits (`boxes-as-packages-v2.md:535-540`), and the
+hub falls back to the running checkout's `bin/bbx` for boxes without their
+own bin (`child-spawn.ts:99-102`) — so "unconverted boxes keep running the
+old engine" is NOT automatic. The cutover is therefore one runbook
+operation, same stance as v2's accepted critical gap: merge to main, then
+immediately run the fleet migration server-side; between deploy and each
+box's migration that box errors loudly (the migration-pointing message),
+never serves wrong content. Laptop fleet and worktree box clones migrate
+before the merge; scratch clone of test1 first; test1's stray-config
 reconciliation is a manual pre-step (diverged copies; compare and keep the
 real ones — no blind `git rm`).
 **Why last:** every prior track must be green on a fixture v3 box before any
 real box converts.
-**First chunk:** the path-mapping table + its doctest (old path → new path,
-exhaustive over `BOX_LAYOUT` v2 entries; `assertNever` on an unmapped area).
+**First chunk:** the path-mapping table + its doctest (exhaustive,
+`assertNever`-terminated), plus the v2-tolerant migrate probe.
 
 ### Track F — Docs
 **What:** `docs/box-layout.md` rewritten for v3 (also fixing the existing
@@ -339,11 +412,13 @@ explicitly NOT in scope.
 |---|---|---|---|
 | Stale manifest/config path (`…/content`) reaches the resolver post-migration | planned (Track A doctest) | migration-pointing error, never a silent resolve | clear |
 | Migration preflight meets an unexpected root entry (stray dirs à la test1) | planned (Track E) | abort with reconciliation instruction | clear |
-| Ref rewrite misses a form (bare relative ref, `attach/` scope, embed syntax) | planned (Track E mapping doctest + a full-box `bbx validate` link check post-migrate, which already flags broken links) | validate fails the migration commit | clear |
-| A v2 box hits the v3 engine (soft-launch user upgrades) | planned (Track A) | `getBoxShape` error names `bbx migrate` | clear |
-| Agent files user content at the root out of habit (old layout in weights) | planned (Track C doctest) | closed-vocabulary validate error + PostToolUse hook surfaces it at edit time | clear |
+| Ref rewrite misses a form (bare relative ref, YAML inline map, `attach/` scope, embed) | planned (Track E rewriter doctest per form) | migration-only **error-mode** link gate refuses the commit (normal validate only warns on broken refs, `card-lint.ts:165-191` — the gate is new, not free) | clear |
+| A v2 box hits the v3 engine (soft-launch user upgrades; or the server between deploy and fleet migration — the rsync deploy does not wait, `child-spawn.ts:99-102` fallback) | planned (Track A + E bootstrap doctest) | `getBoxShape` error names `bbx migrate`; cutover runbook makes deploy + fleet migration one operation | clear (loud window, accepted) |
+| HTTP browse/file APIs expose or write the npm namespace under one root | planned (Track B doctest) | box-namespace fence, 403 outside | clear |
+| Agent files user content at the root out of habit (old layout in weights) | planned (Track C doctest) | closed-vocabulary validate error + hook-mode root check (explicitly wired — today's hook exits clean for non-card paths, `validate-hook.ts:79-108`) | clear |
+| Root-cwd agent (bypassed permissions, `agent/run.ts:73-77`) edits `package.json`/lockfile | planned (Track C doctest) | hook flags npm-namespace edits; guide keeps the off-limits statement | clear |
 | Agent writes into `_bookkeeping/` thinking it is content | partially (validate only checks placement legality, not intent) | guide text says whose desk it is; jobs/output card schemas validate as today | silent-ish; accepted — misfiled cards were already possible and are visible in reviews |
-| `.beebox` merge conflict in step 1 (both roots have one) | planned (Track E) | preflight detects; content-side wins for marker/dbs, root-side has only `.claude`-adjacent artifacts today — verified on test1 during research | clear |
+| `.beebox` runtime state lost on rollback (`git reset` cannot restore gitignored dbs/logs) | planned (Track E fixture test) | filesystem rename with rename-back rollback; processes stopped in preflight | clear |
 | Worktree box clones (`~/src/box-worktrees/<name>/test1`) left on v2 while the worktree engine is v3 | no (dev-only) | same migration runs on clones; `bin/workstreams` clone step re-checked in Track E | clear (engine refuses v2) |
 | iOS app paths break (capture/upload routes embed box-relative paths) | needs check (bbx-ios-overlap) | the HTTP contract is box-relative and the root *semantics* move wholesale; contract doc reviewed in Track F | clear if reviewed; flagged for the review pass |
 
