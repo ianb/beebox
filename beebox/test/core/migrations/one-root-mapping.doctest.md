@@ -68,6 +68,12 @@ JSON.stringify(mapV2Path("people/Dana_Lee.person.card"))
 JSON.stringify(mapV2Path("places/Home.place.card"))
 => {"kind":"move","newPath":"_content/places/Home.place.card"}
 
+JSON.stringify(mapV2Path("docs/some-stray-doc.md"))
+=> {"kind":"move","newPath":"_content/docs/some-stray-doc.md"}
+
+JSON.stringify(mapV2Path("tmp/scratch.txt"))
+=> {"kind":"move","newPath":"_tmp/scratch.txt"}
+
 JSON.stringify(mapV2Path("config/procedures/foo.procedure.card"))
 => {"kind":"move","newPath":"_config/procedures/foo.procedure.card"}
 
@@ -143,16 +149,31 @@ JSON.stringify(mapV2Path(".gitattributes"))
 => {"kind":"discard"}
 ```
 
-## Anything unrecognized comes back unmapped, never guessed at
+## Free-form `store/<anything>` defaults to content, not an abort
+
+`store/` was always user content in v2 — an ad hoc bucket this table doesn't
+name explicitly (e.g. `store/notes/`) defaults to `_content/<name>` rather
+than aborting the migration.
+
+```ts
+JSON.stringify(mapV2Path("store/notes/idea.md"))
+=> {"kind":"move","newPath":"_content/notes/idea.md"}
+
+JSON.stringify(mapV2Path("store/notes"))
+=> {"kind":"move","newPath":"_content/notes"}
+```
+
+## Anything unrecognized under `box/`, or with no top-level home at all, comes back unmapped
+
+`box/` is machinery, not user content — an unrecognized subdirectory there
+needs a human, not a guess. A path with no top-level segment at all (a bare
+root file this table doesn't name) is unmapped too.
 
 ```ts
 JSON.stringify(mapV2Path("box/commands/whatever.card"))
 => {"kind":"unmapped"}
 
 JSON.stringify(mapV2Path("box/bookmarks/whatever.card"))
-=> {"kind":"unmapped"}
-
-JSON.stringify(mapV2Path("docs/some-stray-doc.md"))
 => {"kind":"unmapped"}
 
 JSON.stringify(mapV2Path("interview.md"))

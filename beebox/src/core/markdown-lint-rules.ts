@@ -5,6 +5,7 @@
 import { fileExists } from "../lib/file-exists.js";
 import { invariant } from "../lib/invariant.js";
 import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { matchReferenceDefinition } from "./body-refs.js";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
 
@@ -116,7 +117,13 @@ export interface InlineLink {
   url: string;
 }
 
-/** Every inline markdown link/image target in a file, with position info. */
+/**
+ * Every inline markdown link/image target in a file, with position info —
+ * PLUS reference-style link DEFINITIONS (`[id]: /path`), which carry a real
+ * target the inline pattern can't see (a `[text][id]` usage has none). Both
+ * forms feed BBX002's existence check and, via this shared extraction, the
+ * one-root migration's hard link gate.
+ */
 export function extractInlineLinks(lines: readonly string[]): InlineLink[] {
   const out: InlineLink[] = [];
   for (const [i, line] of lines.entries()) {
@@ -126,6 +133,10 @@ export function extractInlineLinks(lines: readonly string[]): InlineLink[] {
       invariant(match[1] !== undefined, "INLINE_LINK_RE's sole capture group always participates in a match");
       out.push({ lineNumber: i + 1, index: match.index, length: match[0].length, url: match[1].trim() });
       match = INLINE_LINK_RE.exec(line);
+    }
+    const refDef = matchReferenceDefinition(line);
+    if (refDef !== null) {
+      out.push({ lineNumber: i + 1, index: refDef.index, length: refDef.url.length, url: refDef.url });
     }
   }
   return out;

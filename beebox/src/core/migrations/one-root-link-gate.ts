@@ -16,9 +16,10 @@
 
 import { lintCardsDispatch, type LintDispatchOptions } from "../card-lint.js";
 import { countBrokenRefs } from "../../cards/lint-format.js";
-import { listBoxCardFiles } from "../list-cards.js";
+import { listBoxCardFiles, listBoxViewFiles } from "../list-cards.js";
 import { buildLoadContext } from "../load-context.js";
 import { boxWideLinkWarnings } from "../../cli/commands/validate-markdown.js";
+import { collectViewRefWarnings } from "../views/refs.js";
 
 export interface OneRootLinkGateResult {
   ok: boolean;
@@ -39,7 +40,10 @@ export async function runOneRootLinkGate(boxRoot: string): Promise<OneRootLinkGa
 
   const mdReport = await boxWideLinkWarnings(boxRoot);
 
-  if (brokenCardRefs === 0 && mdReport === null) {
+  const viewPaths = await listBoxViewFiles(boxRoot);
+  const viewWarnings = await collectViewRefWarnings(viewPaths, boxRoot);
+
+  if (brokenCardRefs === 0 && mdReport === null && viewWarnings.length === 0) {
     return { ok: true, report: "" };
   }
 
@@ -57,6 +61,10 @@ export async function runOneRootLinkGate(boxRoot: string): Promise<OneRootLinkGa
   if (mdReport !== null) {
     lines.push("Broken markdown links:");
     lines.push(mdReport);
+  }
+  if (viewWarnings.length > 0) {
+    lines.push(`${String(viewWarnings.length)} broken view reference(s):`);
+    for (const warning of viewWarnings) lines.push(`  ${warning}`);
   }
   return { ok: false, report: lines.join("\n") };
 }

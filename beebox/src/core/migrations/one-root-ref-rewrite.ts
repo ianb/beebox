@@ -20,7 +20,9 @@
  *    items (`refs: [{ ref: x }]` or block `- ref: x` — both walked, not
  *    text-matched);
  *  - body `ref="…"` attributes (Markdoc tags);
- *  - inline markdown links/images (`[text](path)`, `![alt](path)`).
+ *  - inline markdown links/images (`[text](path)`, `![alt](path)`);
+ *  - reference-style link DEFINITIONS (`[id]: path`) — the `[text][id]`
+ *    USAGE carries no path to rewrite, only the definition line does.
  * `attach/…` refs are left untouched (the one deliberate exception — they
  * stay relative to the card's own attach scope, which moves with the card).
  *
@@ -36,6 +38,7 @@ import { splitCardContent, renderFrontmatterBlock } from "../../cards/frontmatte
 import { isAttachRef } from "../../shared/attach-path.js";
 import { formatRefSuffix, isExternalRef, parseRef } from "../../shared/ref-path.js";
 import { isRecord } from "../../lib/is-record.js";
+import { inlineLinkPattern, matchReferenceDefinition } from "../body-refs.js";
 import { mapV2Path } from "./one-root-mapping.js";
 
 export interface OneRootRewriteInput {
@@ -138,13 +141,27 @@ function walkFrontmatter(value: unknown, transform: (raw: string) => string): vo
   }
 }
 
-/** `[text](path)` / `![alt](path)` — same grammar as `body-refs.ts`'s `inlineLinkPattern`. */
-function inlineLinkPattern(): RegExp {
-  return /(!?\[[^\]]*]\(\s*)([^\s()]+)/g;
+/**
+ * Reference-style link DEFINITIONS (`[id]: /path`) — the usage token
+ * (`[text][id]`) carries no path at all, so only the definition line needs
+ * rewriting. Same grammar `markdown-lint-rules.ts`'s BBX002 uses to CHECK
+ * these, via the shared `matchReferenceDefinition` (`body-refs.ts`), so the
+ * migration's rewriter and the hard link gate agree on what a ref-def is.
+ */
+function rewriteReferenceDefinitions(body: string, transform: (raw: string) => string): string {
+  return body
+    .split("\n")
+    .map((line) => {
+      const found = matchReferenceDefinition(line);
+      if (found === null) return line;
+      return line.slice(0, found.index) + transform(found.url) + line.slice(found.index + found.url.length);
+    })
+    .join("\n");
 }
 
 function rewriteBody(body: string, transform: (raw: string) => string): string {
-  const withLinks = body.replace(inlineLinkPattern(), (...args: string[]) => {
+  const withRefDefs = rewriteReferenceDefinitions(body, transform);
+  const withLinks = withRefDefs.replace(inlineLinkPattern(), (...args: string[]) => {
     const [, prefix, ref] = args;
     return (prefix ?? "") + transform(ref ?? "");
   });
@@ -187,5 +204,47 @@ export function rewriteOneRootRefs(input: OneRootRewriteInput): OneRootRewriteRe
     return { text: `---\n${split.frontmatterText}---\n${newBody}`, rewritten: getRewritten(), unresolved };
   }
   walkFrontmatter(fields, transform);
+  rewriteContextDirField(fields);
   return { text: renderFrontmatterBlock(fields, newBody), rewritten: getRewritten(), unresolved };
+}
+
+/**
+ * A chat husk card's `context-dir` frontmatter field (`src/schemas/chat.ts`)
+ * names a box-relative landmark directory — box-root-relative already, not a
+ * ref relative to the card's own location, so it needs `mapV2Path` directly
+ * rather than the `resolveV2Ref`-then-map pipeline every OTHER frontmatter
+ * `ref`/`refs` field goes through. Not a `ref`/`refs` key, so `walkFrontmatter`
+ * above never sees it; left unmapped (never "" — the box root) it stays
+ * unresolved forever, since nothing else in the box points at a husk to catch
+ * it at the hard link gate.
+ */
+function rewriteContextDirField(fields: Record<string, unknown>): void {
+  const value = fields["context-dir"];
+  if (typeof value !== "string" || value === "") return;
+  const mapped = mapV2Path(value);
+  if (mapped.kind === "move") fields["context-dir"] = mapped.newPath;
+}
+
+/** `cardRef="…"` / `cardRef='…'` — same attribute `core/views/refs.ts`'s
+ * `extractViewRefs` tracks. A view file never moves (it lives at the v2/v3
+ * package root, `src/views/`, in both shapes), so its refs need rewriting IN
+ * PLACE — this is the box-root-relative counterpart of {@link
+ * rewriteOneRootRefs} for that one surface. */
+const CARD_REF_ATTR = /(\bcardRef\s*=\s*)(["'])([^"']*)\2/g;
+
+/**
+ * Rewrite every `cardRef="…"` in one view source file from v2 to canonical
+ * v3 form. A view has no document-relative base — its refs already resolve
+ * from the box root (leading `/` or not, `core/views/refs.ts`'s doc
+ * comment), so this reuses the same v2-content-relative resolution as any
+ * other box-root-relative ref (`fromPath: ""`).
+ */
+export function rewriteOneRootViewRefs(text: string): OneRootRewriteResult {
+  const unresolved: string[] = [];
+  const { transform, getRewritten } = makeTransform({ oldContentRelPath: "", isCard: false, unresolved });
+  const newText = text.replace(CARD_REF_ATTR, (...args: string[]) => {
+    const [, prefix, quote, value] = args;
+    return (prefix ?? "") + (quote ?? "") + transform(value ?? "") + (quote ?? "");
+  });
+  return { text: newText, rewritten: getRewritten(), unresolved };
 }

@@ -29,11 +29,16 @@
  *    `content/procedure/**` → `_bookkeeping/procedure/**`, so a migrated
  *    box's runs land exactly where those call sites now look.
  *  - Real content roots also carry ad hoc top-level files/dirs with no home
- *    in `BOX_LAYOUT` at all (`docs/`, `interview.md`, `CLAUDE_SCANS.md`,
- *    `.cb-maps-state.json` were observed). These are NOT silently mapped:
- *    {@link mapV2Path} returns `null` for anything it doesn't recognize, and
- *    the migration script aborts rather than guessing (same "abort, don't
- *    delete" stance as the package-root preflight check).
+ *    in `BOX_LAYOUT` at all (`docs/`, `tmp/`, `interview.md`,
+ *    `CLAUDE_SCANS.md`, `.cb-maps-state.json` were observed). The plan's
+ *    step 2 documents `content/docs → _content/docs` and `content/tmp →
+ *    _tmp` explicitly, so both are real top-level cases here, not fallbacks.
+ *    Anything else this table doesn't name is NOT silently mapped:
+ *    {@link mapV2Path} returns `{ kind: "unmapped" }` and the migration
+ *    script aborts rather than guessing (same "abort, don't delete" stance
+ *    as the package-root preflight check) — except free-form
+ *    `store/<anything>` (`mapStoreArea`'s default case), which defaults to
+ *    `_content/<name>` since `store/` was always user content in v2.
  */
 
 import { assertNever } from "../../lib/invariant.js";
@@ -105,6 +110,8 @@ type V2TopLevel =
   | "store"
   | "people"
   | "places"
+  | "docs"
+  | "tmp"
   | "config"
   | "tricks"
   | "claude"
@@ -159,6 +166,10 @@ function classify(top: string, contentRelPath: string): V2TopLevel | "discard" |
       return "people";
     case "places":
       return "places";
+    case "docs":
+      return "docs";
+    case "tmp":
+      return "tmp";
     case "config":
       return "config";
     case "tricks":
@@ -201,6 +212,10 @@ export function mapV2Path(contentRelPath: string): MapV2PathResult {
       return { kind: "move", newPath: joinRel("_content/people", rest) };
     case "places":
       return { kind: "move", newPath: joinRel("_content/places", rest) };
+    case "docs":
+      return { kind: "move", newPath: joinRel("_content/docs", rest) };
+    case "tmp":
+      return { kind: "move", newPath: joinRel("_tmp", rest) };
     case "config":
       return mapConfigArea(rest);
     case "tricks":
@@ -273,7 +288,12 @@ function mapStoreArea(rest: string): MapV2PathResult {
       // stale prose (see this module's doc comment / migration report).
       return { kind: "move", newPath: joinRel("_content/reviews", sub) };
     default:
-      return { kind: "unmapped" };
+      // Free-form `store/<anything>` this table doesn't name explicitly
+      // (e.g. `store/notes/`) was always user content in v2 — default it to
+      // `_content/<top>` rather than aborting the whole migration over an
+      // ad hoc bucket. `box/<unknown>` (machinery, not content) keeps the
+      // abort-and-reconcile stance below.
+      return { kind: "move", newPath: joinRel(`_content/${top}`, sub) };
   }
 }
 

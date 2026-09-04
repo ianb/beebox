@@ -80,6 +80,41 @@ export function extractBodyLinks(body: string): BodyRef[] {
     if (ref === undefined || isExternalRef(ref)) continue;
     out.push({ path: `body:${String(lineAt(body, match.index))}:link`, ref });
   }
+  out.push(...extractReferenceDefinitions(body));
+  return out;
+}
+
+/**
+ * A markdown reference-style link DEFINITION line: `[id]: /path "title"`.
+ * Neither the inline-link pattern above nor `ref="…"`/frontmatter walking
+ * sees this form — a `[text][id]` USAGE carries no path at all, only the
+ * definition does. Matched at the start of a line (optionally indented up to
+ * 3 spaces, per CommonMark), capturing just the target token so a rewriter
+ * can splice a replacement in without disturbing the rest of the line.
+ *
+ * Exported (not just used internally) so `markdown-lint-rules.ts`'s
+ * line-based `extractInlineLinks` and the one-root migration's ref rewriter
+ * share this one grammar instead of each growing its own regex for the same
+ * form.
+ */
+export function matchReferenceDefinition(line: string): { url: string; index: number } | null {
+  const match = /^[\t ]{0,3}\[[^\]]+]:[\t ]*(\S+)/.exec(line);
+  if (match === null) return null;
+  const url = match[1];
+  if (url === undefined) return null;
+  return { url, index: match.index + match[0].length - url.length };
+}
+
+/** Every reference-style link definition in `body`, as refs to check. */
+export function extractReferenceDefinitions(body: string): BodyRef[] {
+  if (body === "") return [];
+  const out: BodyRef[] = [];
+  const lines = body.split("\n");
+  for (const [i, line] of lines.entries()) {
+    const found = matchReferenceDefinition(line);
+    if (found === null || isExternalRef(found.url)) continue;
+    out.push({ path: `body:${String(i + 1)}:ref-def`, ref: found.url });
+  }
   return out;
 }
 

@@ -79,6 +79,58 @@ async function makeV2Box() {
 async function cleanup(root) {
   await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 }
+
+/**
+ * Adds a second layer of fixture to a `makeV2Box()` box, exercising findings
+ * from the Track E hardening review in one extra commit:
+ *  - a TRACKED symlink (`store/drive/photo-link.bin`, annex-asset shape) and
+ *    an UNTRACKED-but-gitignored symlink (`config/connectors/other.secret.json`)
+ *    — both must survive the migration pointing at the right (untouched,
+ *    same-directory-relative) target;
+ *  - a plain gitignored secret (`config/connectors/gmail.secret.json`), a
+ *    connector state file, and schedule state — all untracked, exercising
+ *    the git-mv-refuses-untracked-files split;
+ *  - a view (`src/views/Test.tsx`) with a `cardRef` pointing at a new v2
+ *    recipe card, and a reference-style markdown link (`[x][id]` +
+ *    `[id]: path`) in `Foo.memo.card`'s body.
+ */
+async function extendWithHardeningFixture(root) {
+  const content = path.join(root, "content");
+  await fs.appendFile(
+    path.join(content, ".gitignore"),
+    "config/connectors/*.secret.*\nconfig/connectors/*.state.*\nconfig/schedules/.state/\n",
+  );
+
+  await fs.mkdir(path.join(content, "store", "drive"), { recursive: true });
+  await fs.writeFile(path.join(content, "store", "drive", "photo.bin"), "photo bytes\n");
+  await fs.symlink("photo.bin", path.join(content, "store", "drive", "photo-link.bin"));
+
+  await fs.mkdir(path.join(content, "config", "connectors"), { recursive: true });
+  await fs.writeFile(path.join(content, "config", "connectors", "gmail.secret.json"), '{"token":"shh"}\n');
+  await fs.symlink("gmail.secret.json", path.join(content, "config", "connectors", "other.secret.json"));
+  await fs.writeFile(path.join(content, "config", "connectors", "gmail.state.json"), '{"lastSync":"2026-01-01"}\n');
+
+  await fs.mkdir(path.join(content, "config", "schedules", ".state"), { recursive: true });
+  await fs.writeFile(path.join(content, "config", "schedules", ".state", "tick.json"), '{"lastRun":"2026-01-01"}\n');
+
+  await fs.mkdir(path.join(content, "store", "recipes"), { recursive: true });
+  await fs.writeFile(path.join(content, "store", "recipes", "Soup.recipe.card"), '---\ntitle: Soup\n---\nSoup.\n');
+
+  await fs.mkdir(path.join(root, "src", "views"), { recursive: true });
+  await fs.writeFile(
+    path.join(root, "src", "views", "Test.tsx"),
+    'export default function Test() { return <div cardRef="/store/recipes/Soup.recipe.card" />; }\n',
+  );
+
+  const fooPath = path.join(content, "box", "inbox", "Foo.memo.card");
+  const foo = await fs.readFile(fooPath, "utf-8");
+  await fs.writeFile(
+    fooPath,
+    foo + "\nSee [Dana too][dana-ref].\n\n[dana-ref]: ../../people/Dana_Lee.person.card\n",
+  );
+
+  execSync("git add -A && git commit -q -m hardening-fixture", { cwd: root, stdio: "pipe" });
+}
 ```
 
 ## The v2-tolerant probe finds the box from either the package or content root
@@ -220,6 +272,132 @@ JSON.stringify({
 => {"isLinkGateError":true,"shaUnchanged":true,"beeboxBackUnderContent":true}
 ```
 
+The rolled-back marker is still v2 — not just on disk, but as `probeV2Box` (the bootstrap `bbx migrate` itself uses) reads it. Before the fix, `bumpMarker` mutated `.beebox/box.json` in place with nothing to undo it: the marker said `shapeVersion: 3` even though the whole conversion had rolled back, so a retry's `probeV2Box` refused to recognize the box as v2 at all.
+
+```ts continue
+const probeAfterRollback = await probeV2Box(path.join(root, "content"));
+probeAfterRollback.shapeVersion
+=> 2
+```
+
+Fixing the dangling ref and re-running succeeds — the migration is retryable after a rollback, not stranded:
+
+```ts continue
+const fooPath2 = path.join(root, "content", "box", "inbox", "Foo.memo.card");
+const dangling = await fs.readFile(fooPath2, "utf-8");
+await fs.writeFile(fooPath2, dangling.replace("\n[ghost](../../nonexistent/Ghost.card)\n", ""));
+execSync("git add -A && git commit -q -m fix-dangling", { cwd: root, stdio: "pipe" });
+
+const retried = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
+JSON.stringify({ filesMoved: retried.filesMoved, unresolvedRefs: retried.unresolvedRefs })
+=> {"filesMoved":7,"unresolvedRefs":[]}
+```
+
 ```ts cleanup
+await cleanup(root);
+```
+
+## Hardening: tracked/untracked symlinks, gitignored secrets and state, view refs, and reference-style links
+
+A TRACKED symlink (`store/drive/photo-link.bin`, the annex-asset shape) moves
+via `git mv`; an UNTRACKED-but-gitignored symlink and gitignored secret/state
+files (which `git mv` refuses outright) move via a recorded filesystem
+rename. A view's `cardRef` and a card body's reference-style `[x][id]` +
+`[id]: path` link both get rewritten too — neither is a form the plain
+inline-link/frontmatter walkers see on their own.
+
+```ts
+const root = await makeV2Box();
+await extendWithHardeningFixture(root);
+const result = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
+result.filesMoved
+=> 14
+```
+
+The tracked symlink survived the move, still pointing at its sibling:
+
+```ts continue
+const photoLinkTarget = await fs.readlink(path.join(root, "_content", "drive", "photo-link.bin"));
+const photoLinkContent = await fs.readFile(path.join(root, "_content", "drive", "photo-link.bin"), "utf-8");
+JSON.stringify({ photoLinkTarget, photoLinkContent })
+=> {"photoLinkTarget":"photo.bin","photoLinkContent":"photo bytes\n"}
+```
+
+The untracked symlink survived too, and both it and the secret it points at
+are still gitignored at their new `_config/connectors/` home:
+
+```ts continue
+const secretLinkTarget = await fs.readlink(path.join(root, "_config", "connectors", "other.secret.json"));
+const secretContent = await fs.readFile(path.join(root, "_config", "connectors", "gmail.secret.json"), "utf-8");
+const secretIgnored = execSync("git check-ignore -q _config/connectors/gmail.secret.json && echo yes || echo no", { cwd: root, encoding: "utf-8" }).trim();
+const linkIgnored = execSync("git check-ignore -q _config/connectors/other.secret.json && echo yes || echo no", { cwd: root, encoding: "utf-8" }).trim();
+JSON.stringify({ secretLinkTarget, secretToken: JSON.parse(secretContent).token, secretIgnored, linkIgnored })
+=> {"secretLinkTarget":"gmail.secret.json","secretToken":"shh","secretIgnored":"yes","linkIgnored":"yes"}
+```
+
+Connector state and schedule state moved to their bookkeeping/config homes,
+and the tree is fully clean (nothing untracked, nothing dirty — the
+gitignored entries above included):
+
+```ts continue
+const stateContent = await fs.readFile(path.join(root, "_bookkeeping", "connectors", "gmail.state.json"), "utf-8");
+const scheduleState = await fs.readFile(path.join(root, "_config", "schedules", ".state", "tick.json"), "utf-8");
+const status = execSync("git status --porcelain", { cwd: root, encoding: "utf-8" }).trim();
+JSON.stringify({ lastSync: JSON.parse(stateContent).lastSync, lastRun: JSON.parse(scheduleState).lastRun, dirty: status !== "" })
+=> {"lastSync":"2026-01-01","lastRun":"2026-01-01","dirty":false}
+```
+
+The view's `cardRef` rewrote to the new recipe path (the view file itself
+never moved — same relative location at the package/box root in v2 and v3):
+
+```ts continue
+const viewSource = await fs.readFile(path.join(root, "src", "views", "Test.tsx"), "utf-8");
+viewSource.includes('cardRef="/_content/recipes/Soup.recipe.card"')
+=> true
+```
+
+The reference-style link definition rewrote too:
+
+```ts continue
+const fooAfter = await fs.readFile(path.join(root, "_content", "inbox", "Foo.memo.card"), "utf-8");
+fooAfter.includes("[dana-ref]: /_content/people/Dana_Lee.person.card")
+=> true
+```
+
+```ts cleanup
+await cleanup(root);
+```
+
+## Claude Code transcript directories are re-keyed to the new cwd
+
+Claude Code keys `~/.claude/projects/<encoded-cwd>/` by the absolute cwd a
+session ran with. The box's cwd moves from `<packageRoot>/content` to
+`<packageRoot>` — without re-keying, every existing transcript becomes
+unreachable. `BBX_CLAUDE_PROJECTS_DIR` points this at a fixture directory
+instead of the real `~/.claude/projects`.
+
+```ts
+const projectsDir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-claude-projects-"));
+process.env["BBX_CLAUDE_PROJECTS_DIR"] = projectsDir;
+const encode = (p) => p.replace(/[^\dA-Za-z]/g, "-");
+
+const root = await makeV2Box();
+const oldCwd = path.join(root, "content");
+const oldDir = path.join(projectsDir, encode(oldCwd));
+await fs.mkdir(oldDir, { recursive: true });
+await fs.writeFile(path.join(oldDir, "sess1.jsonl"), '{"type":"summary"}\n');
+
+await runOneRootMigration({ packageRoot: root, contentRoot: oldCwd });
+
+const newDir = path.join(projectsDir, encode(root));
+const transcriptMoved = await fs.access(path.join(newDir, "sess1.jsonl")).then(() => true, () => false);
+const oldDirStillExists = await fs.access(oldDir).then(() => true, () => false);
+JSON.stringify({ transcriptMoved, oldDirStillExists })
+=> {"transcriptMoved":true,"oldDirStillExists":false}
+```
+
+```ts cleanup
+delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
+await fs.rm(projectsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 await cleanup(root);
 ```
