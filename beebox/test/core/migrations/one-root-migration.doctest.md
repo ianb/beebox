@@ -15,6 +15,7 @@ import { execSync } from "node:child_process";
 import { scaffoldPackageRoot } from "../../../src/core/box/package.js";
 import { runOneRootMigration, OneRootPreflightError, OneRootLinkGateError, OneRootGitignoreRegressionError } from "../../../src/core/migrations/one-root-run.js";
 import { probeV2Box } from "../../../src/core/migrations/one-root-v2-probe.js";
+import { initBox } from "../../../src/core/box/index.js";
 import { getBoxShape } from "../../../src/lib/box-shape.js";
 import { executeMoves } from "../../../src/core/migrations/one-root-move-plan.js";
 
@@ -579,17 +580,43 @@ coverage.
 
 ```ts
 const root = await makeV2Box();
-await fs.writeFile(path.join(root, ".gitignore"), "node_modules/\nsrc/tricks/private.env\n");
+await fs.writeFile(
+  path.join(root, ".gitignore"),
+  "node_modules/\nsrc/tricks/private.env\ncontent/docs/private2.env\n",
+);
 await fs.mkdir(path.join(root, "src", "tricks"), { recursive: true });
-await fs.writeFile(path.join(root, ".gitattributes"), "*.psd -diff\n");
+await fs.writeFile(
+  path.join(root, ".gitattributes"),
+  "*.psd -diff\ncontent/config/connectors/google-calendar-state.json -diff\n",
+);
+// Finding 8: a `.gitattributes` line has a PATTERN plus an attribute list —
+// remapping the WHOLE line (attributes included) through `mapV2Path` maps
+// nothing (a path with a trailing ` -diff` matches no real path) and, worse,
+// bypasses the connector-state-file split (`_bookkeeping/connectors/`, not
+// `_config/connectors/`) that a bare path string would have hit. Committed
+// (tracked), unlike the untracked secrets below — this rule only needs to
+// survive the regen and remap correctly, not exercise the ignore-regression
+// check.
+await fs.mkdir(path.join(root, "content", "config", "connectors"), { recursive: true });
+await fs.writeFile(
+  path.join(root, "content", "config", "connectors", "google-calendar-state.json"),
+  '{"lastSync":"2026-01-01"}\n',
+);
 execSync("git add -A && git commit -q -m ignore-fixture-tracked", { cwd: root, stdio: "pipe" });
 // Written AFTER the .gitignore rule above lands, so `git add -A` never picks
 // it up — a real untracked secret, exactly like `config/connectors/*.secret.*`.
 await fs.writeFile(path.join(root, "src", "tricks", "private.env"), "SECRET=shh\n");
+// Finding 8 (round 3 hardening): a PACKAGE-root rule naming a `content/…`
+// path — package-root-relative, so it needs remapping through `mapV2Path`
+// just like a content-root rule does (it wasn't remapped at all before this
+// fix, so the box-wide regression check aborted an otherwise-legit
+// migration).
+await fs.mkdir(path.join(root, "content", "docs"), { recursive: true });
+await fs.writeFile(path.join(root, "content", "docs", "private2.env"), "SECRET2=shh\n");
 
 const result = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
 result.filesMoved
-=> 7
+=> 9
 ```
 
 The custom `.gitignore`/`.gitattributes` lines both survived the regen, under
@@ -606,6 +633,45 @@ JSON.stringify({
   stillIgnored,
 })
 => {"gitignoreCarriedRule":true,"gitattributesCarriedRule":true,"stillIgnored":"yes"}
+```
+
+The PACKAGE-root `content/docs/private2.env` rule remapped to its v3
+location, and the secret it protects is still genuinely ignored there:
+
+```ts continue
+const private2Ignored = execSync("git check-ignore -q _content/docs/private2.env && echo yes || echo no", { cwd: root, encoding: "utf-8" }).trim();
+JSON.stringify({
+  gitignoreRemappedRule: gitignore.includes("/_content/docs/private2.env"),
+  private2Ignored,
+})
+=> {"gitignoreRemappedRule":true,"private2Ignored":"yes"}
+```
+
+The `.gitattributes` PATTERN remapped to the connector-state-file split
+(`_bookkeeping/connectors/`), with the ` -diff` attribute preserved verbatim
+— not the whole line mapped as one opaque string (which would have landed,
+wrongly, under `_config/connectors/`):
+
+```ts continue
+gitattributes.includes("/_bookkeeping/connectors/google-calendar-state.json -diff")
+=> true
+```
+
+Finding 4 (round 3 hardening): a routine `bbx init` re-run — long after this
+migration landed, e.g. at a later chat start — regenerates `.gitignore`/
+`.gitattributes` wholesale like it always has. Before this fix that silently
+discarded the migrated section this migration just merged forward; now
+`initBox` preserves it across its own regeneration:
+
+```ts continue
+await initBox(root);
+const gitignoreAfterInit = await fs.readFile(path.join(root, ".gitignore"), "utf-8");
+const gitattributesAfterInit = await fs.readFile(path.join(root, ".gitattributes"), "utf-8");
+JSON.stringify({
+  gitignoreStillCarriesRule: gitignoreAfterInit.includes("/_content/docs/private2.env"),
+  gitattributesStillCarriesRule: gitattributesAfterInit.includes("/_bookkeeping/connectors/google-calendar-state.json -diff"),
+})
+=> {"gitignoreStillCarriesRule":true,"gitattributesStillCarriesRule":true}
 ```
 
 ```ts cleanup

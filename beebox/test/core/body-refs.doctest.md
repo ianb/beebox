@@ -149,6 +149,72 @@ extractReferenceDefinitions("[s]:\n\n  /store/x.card").length
 => 0
 ```
 
+## CRLF line endings don't hide a reference definition (finding 7, round 3 hardening)
+
+JS regex `.` excludes every line-terminator character, `\r` included — a
+Windows-line-ending body's raw `\r`-suffixed line (left attached after
+`body.split("\n")`) previously made the label-line pattern's `(.*)$` fail to
+match at all, so a CRLF body's reference definitions were invisible to both
+extraction and the migration's rewriter (they share this one matcher).
+
+```ts
+const crlfBody = "[s]: /store/recipes/Soup.recipe.card\r\n\r\nSee [soup][s].\r\n";
+JSON.stringify(extractReferenceDefinitions(crlfBody), null, 2)
+=>
+[
+  {
+    "path": "body:1:ref-def",
+    "ref": "/store/recipes/Soup.recipe.card"
+  }
+]
+```
+
+The continuation-line form works under CRLF too:
+
+```ts
+const crlfContinuation = "[s]:\r\n  /store/recipes/Soup.recipe.card\r\n\r\nSee [soup][s].\r\n";
+JSON.stringify(extractReferenceDefinitions(crlfContinuation), null, 2)
+=>
+[
+  {
+    "path": "body:2:ref-def",
+    "ref": "/store/recipes/Soup.recipe.card"
+  }
+]
+```
+
+## A reference definition inside a blockquote is recognized (finding 7)
+
+CommonMark allows a link reference definition inside a blockquote
+container — `> [id]: /path` — and this codebase's Markdoc parser already
+resolves it into a real link.
+
+```ts
+const quoted = "> [s]: /store/recipes/Soup.recipe.card\n\nSee [soup][s].\n";
+JSON.stringify(extractReferenceDefinitions(quoted), null, 2)
+=>
+[
+  {
+    "path": "body:1:ref-def",
+    "ref": "/store/recipes/Soup.recipe.card"
+  }
+]
+```
+
+A nested blockquote (`> > [id]: /path`) is recognized too:
+
+```ts
+const nestedQuoted = "> > [s]: /store/recipes/Soup.recipe.card\n\nSee [soup][s].\n";
+JSON.stringify(extractReferenceDefinitions(nestedQuoted), null, 2)
+=>
+[
+  {
+    "path": "body:1:ref-def",
+    "ref": "/store/recipes/Soup.recipe.card"
+  }
+]
+```
+
 ## Malformed bodies are swallowed
 
 A body that throws on parse is treated as "no refs" rather than crashing the

@@ -112,6 +112,34 @@ JSON.stringify(mapV2Path("CLAUDE.md"))
 => {"kind":"merge-claude-md"}
 ```
 
+## A root card's `<name>.attach/` sibling scope carries along to the same v3 destination
+
+Finding 10 (round 3 hardening): `Box.landmark.card` maps to
+`_content/Box.landmark.card`, but its sibling attach directory
+`Box.attach/` had no case at all before this fix — the migration aborted
+preflight on it. Derived from `V2_ROOT_FILE_TARGETS` (every mapped root
+CARD), not hand-enumerated a second time.
+
+```ts
+JSON.stringify(mapV2Path("Box.attach/photo.png"))
+=> {"kind":"move","newPath":"_content/Box.attach/photo.png"}
+
+JSON.stringify(mapV2Path("Box.attach/nested/photo.png"))
+=> {"kind":"move","newPath":"_content/Box.attach/nested/photo.png"}
+
+JSON.stringify(mapV2Path("briefing.attach/note.txt"))
+=> {"kind":"move","newPath":"_content/briefing.attach/note.txt"}
+```
+
+A root file that ISN'T a card (`briefing.md`, `MAP.md`) has no attach scope —
+its bare name (without `.attach`) still falls through to `unmapped`, same as
+any other unrecognized top-level name:
+
+```ts
+JSON.stringify(mapV2Path("briefing.md.attach/x"))
+=> {"kind":"unmapped"}
+```
+
 ## Connector state splits from config into bookkeeping
 
 ```ts

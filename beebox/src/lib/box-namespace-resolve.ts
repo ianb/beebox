@@ -33,7 +33,7 @@
  * box-root containment) on the resolved real path, and treats a leaf
  * symlink specially for reads (annex-style asset serving depends on it).
  */
-import { lstat, realpath } from "node:fs/promises";
+import { lstat, readlink, realpath } from "node:fs/promises";
 import type { Stats } from "node:fs";
 import * as path from "node:path";
 import { isInBoxNamespace } from "./box-namespace.js";
@@ -130,6 +130,47 @@ async function checkRealNamespace(lexicalTarget: string, realRoot: string): Prom
   return isInBoxNamespace(toRelative(realRoot, realFull));
 }
 
+/** The box's real `.git/annex/` directory, or `null` when there isn't one
+ * (never annex-initialized, or an unexpected error resolving it). */
+async function realAnnexRoot(realRoot: string): Promise<string | null> {
+  try {
+    return await realpath(path.join(realRoot, ".git", "annex"));
+  } catch (_e) {
+    return null;
+  }
+}
+
+/**
+ * Resolve a leaf symlink's target for classification: `realpath` when the
+ * target exists (follows the whole chain); for a DANGLING target (ENOENT),
+ * `realpath`s the deepest EXISTING ancestor of the raw link text and joins
+ * the still-literal remainder — the same technique {@link checkRealNamespace}
+ * uses — so a genuinely missing file (an annex object not yet downloaded, or
+ * an in-namespace sibling that hasn't been created) can still be classified
+ * as inside-or-outside the box without requiring it to exist, and the
+ * comparison against `realRoot` below is real-vs-real rather than
+ * lexical-vs-real (which would misfire wherever the box root itself sits
+ * behind a symlink, e.g. macOS's `/var` -> `/private/var`). Any other error
+ * fails closed (`null`, which the caller treats as "not inside, not annex").
+ */
+async function resolveLeafTargetForClassification(leafPath: string): Promise<string | null> {
+  try {
+    return await realpath(leafPath);
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") return null; // fail closed
+  }
+  const linkText = await readlink(leafPath);
+  const lexicalTarget = path.isAbsolute(linkText) ? linkText : path.resolve(path.dirname(leafPath), linkText);
+  const ancestorLexical = await deepestExistingAncestor(lexicalTarget);
+  try {
+    const realAncestor = await realpath(ancestorLexical);
+    const remainder = path.relative(ancestorLexical, lexicalTarget);
+    return remainder === "" ? realAncestor : path.join(realAncestor, remainder);
+  } catch (_e) {
+    return null; // fail closed
+  }
+}
+
 /**
  * The async filesystem-sink layer for a path already passed through
  * {@link resolveBoxNamespacePath}: `realpath`s the target (or its containing
@@ -183,22 +224,35 @@ export async function verifyBoxNamespaceOnDisk({
   }
 
   if (mode === "read" && leafStat !== null && leafStat.isSymbolicLink()) {
-    // Annex-style leaf symlink: its OWN target may point anywhere (including
-    // outside the box entirely) as long as it resolves to a non-directory —
-    // a directory-valued leaf falls through to the strict check below, so
-    // this stays safe for directory-listing routes (browse) too.
-    let leafTargetIsDirectory = false;
-    try {
-      const realLeaf = await realpath(ns.resolved);
-      leafTargetIsDirectory = (await lstat(realLeaf)).isDirectory();
-    } catch (e) {
-      if (errnoCode(e) !== "ENOENT") return false; // fail closed
-      // A dangling symlink target isn't a directory — fine, bypass applies;
-      // the downstream read will 404 on the missing file.
-    }
+    // A leaf symlink's OWN target may point OUTSIDE the strict per-leaf
+    // check below — but ONLY when it's either already inside the box
+    // NAMESPACE some other way (an ordinary in-namespace relative symlink,
+    // dangling or not — NOT merely inside the box ROOT: a target like the
+    // box's own `package.json`, which sits at the root but outside every
+    // underscore area, must still be refused) or a genuine annex object
+    // under the box's real `.git/annex/` (finding 2, round 3 hardening:
+    // this used to allow ANY non-directory leaf-symlink target, which let a
+    // leaf like `_content/pkg.json -> ../package.json` read arbitrary files
+    // outside the namespace). A directory-valued leaf falls through to the
+    // strict check below regardless, so this stays safe for
+    // directory-listing routes (browse) too.
+    const resolvedTarget = await resolveLeafTargetForClassification(ns.resolved);
+    if (resolvedTarget === null) return false; // fail closed — unexpected error, or unreadable link
+    const leafTargetIsDirectory =
+      (await lstat(resolvedTarget).catch(() => null))?.isDirectory() ?? false;
     if (!leafTargetIsDirectory) {
+      const targetInsideBox = resolvedTarget === realRoot || resolvedTarget.startsWith(realRoot + path.sep);
+      const targetInsideNamespace = targetInsideBox && isInBoxNamespace(toRelative(realRoot, resolvedTarget));
+      if (!targetInsideNamespace) {
+        const annexRoot = await realAnnexRoot(realRoot);
+        const targetUnderAnnex =
+          annexRoot !== null && (resolvedTarget === annexRoot || resolvedTarget.startsWith(annexRoot + path.sep));
+        if (!targetUnderAnnex) return false;
+      }
       // Only the WALK to the leaf's containing directory needs to stay
-      // in-namespace; the leaf's own symlink target is exempt.
+      // in-namespace; the leaf's own symlink target (verified above as
+      // either in-namespace or a genuine annex object) is exempt from the
+      // stricter leaf-itself check below.
       return checkRealNamespace(path.dirname(ns.resolved), realRoot);
     }
   }

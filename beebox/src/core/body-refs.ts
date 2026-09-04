@@ -109,6 +109,38 @@ function matchDestination(text: string): { url: string; offset: number } | null 
   return { url, offset: leading };
 }
 
+/** Strip a trailing CRLF `\r` (finding 7, round 3 hardening): JS regex `.`
+ * excludes ALL line-terminator characters, not just `\n` — so
+ * `matchReferenceDefinitionAt`'s `(.*)$` label-line pattern, matched against
+ * a Windows-line-ending body's raw `\r`-suffixed line (after `body.split
+ * ("\n")`, the `\r` stays attached to the preceding line), could never
+ * reach `$` and silently failed to match at all. Only ever trims the FINAL
+ * character, so it never disturbs any offset computed against the result. */
+function stripTrailingCR(line: string): string {
+  return line.endsWith("\r") ? line.slice(0, -1) : line;
+}
+
+/** Strip every leading blockquote-container marker (finding 7): CommonMark
+ * allows a reference-style link definition inside a blockquote —
+ * `> [id]: /path`, or nested `> > [id]: /path` — and this codebase's
+ * Markdoc parser already resolves those into real links, so the
+ * extractor/rewriter must recognize the form too. Each marker is up to 3
+ * leading spaces, `>`, and one optional following space; loops to peel
+ * nested containers. Returns the remaining text and how many characters
+ * were stripped, so a caller can translate an offset in the remainder back
+ * to an offset in the original (unstripped) line. */
+function stripBlockquotePrefixes(line: string): { rest: string; stripped: number } {
+  let rest = line;
+  let stripped = 0;
+  for (;;) {
+    const marker = /^[\t ]{0,3}> ?/.exec(rest);
+    if (marker === null) break;
+    rest = rest.slice(marker[0].length);
+    stripped += marker[0].length;
+  }
+  return { rest, stripped };
+}
+
 /**
  * A markdown reference-style link DEFINITION: `[id]: /path "title"`, or
  * `[id]: </path with spaces>` (angle-bracket delimited destination), or with
@@ -144,24 +176,37 @@ export function matchReferenceDefinitionAt(
   lines: readonly string[],
   labelLineIndex: number,
 ): { url: string; lineIndex: number; index: number } | null {
-  const labelLine = lines[labelLineIndex];
-  if (labelLine === undefined) return null;
-  const label = /^[\t ]{0,3}\[[^\]]+]:(.*)$/.exec(labelLine);
+  const rawLabelLine = lines[labelLineIndex];
+  if (rawLabelLine === undefined) return null;
+  // Finding 7 (round 3 hardening): strip a trailing CRLF `\r` and any
+  // leading blockquote-container marker(s) before matching — both `index`
+  // values below add the stripped-prefix LENGTH back in, so they still
+  // locate the destination within the RAW (unstripped) line, which is what
+  // a rewriter's splice must index into.
+  const noCR = stripTrailingCR(rawLabelLine);
+  const { rest: labelCore, stripped } = stripBlockquotePrefixes(noCR);
+  const label = /^[\t ]{0,3}\[[^\]]+]:(.*)$/.exec(labelCore);
   if (label === null) return null;
   const afterColon = label[1] ?? "";
   if (afterColon.trim() !== "") {
     const dest = matchDestination(afterColon);
     if (dest === null) return null;
-    return { url: dest.url, lineIndex: labelLineIndex, index: labelLine.length - afterColon.length + dest.offset };
+    return {
+      url: dest.url,
+      lineIndex: labelLineIndex,
+      index: stripped + (labelCore.length - afterColon.length) + dest.offset,
+    };
   }
   // Nothing but whitespace after the colon: CommonMark allows the
   // destination on the next line, but only when that line isn't blank —
   // a blank line ends the definition (and starts a new block) instead.
-  const nextLine = lines[labelLineIndex + 1];
-  if (nextLine === undefined || nextLine.trim() === "") return null;
-  const dest = matchDestination(nextLine);
+  const rawNextLine = lines[labelLineIndex + 1];
+  if (rawNextLine === undefined) return null;
+  const { rest: nextCore, stripped: nextStripped } = stripBlockquotePrefixes(stripTrailingCR(rawNextLine));
+  if (nextCore.trim() === "") return null;
+  const dest = matchDestination(nextCore);
   if (dest === null) return null;
-  return { url: dest.url, lineIndex: labelLineIndex + 1, index: dest.offset };
+  return { url: dest.url, lineIndex: labelLineIndex + 1, index: nextStripped + dest.offset };
 }
 
 /** Every reference-style link definition in `body`, as refs to check. */

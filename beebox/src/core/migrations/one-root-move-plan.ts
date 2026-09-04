@@ -54,6 +54,25 @@ export interface RenamedEntry {
    * regenerated v3 root `.gitignore` exists, so it can be compared against
    * the same check run at `newAbs` afterward ({@link verifyNoIgnoreRegression}). */
   wasIgnored: boolean;
+  /**
+   * Finding 6 (round 3 hardening): this entry's ORIGINAL symlink target text,
+   * set the first time {@link remapMovedSymlinkTargets} rewrites it in place
+   * (an UNTRACKED symlink whose relative target changed depth). `undefined`
+   * when the entry is not a symlink, or its target was never rewritten.
+   * Rollback restores it (re-symlinking at `oldAbs`) AFTER the rename-back —
+   * without this, a mid-migration failure leaves the restored file pointing
+   * at the migration's recomputed (post-move) target instead of the original.
+   */
+  originalLinkTarget?: string;
+  /**
+   * Finding 6: this entry's ORIGINAL file bytes, set the first time its
+   * content is rewritten in place after the move (the ref rewriter touching
+   * an untracked `.card`/`.md`). `undefined` when the entry's content was
+   * never rewritten (including every symlink — {@link originalLinkTarget}
+   * covers those instead). Rollback restores it after the rename-back, same
+   * reasoning as {@link originalLinkTarget}.
+   */
+  originalFileBytes?: string;
 }
 
 /** `content/`-relative paths (forward-slashed) `git` already tracks, so
@@ -265,6 +284,14 @@ export async function remapMovedSymlinkTargets(params: {
   packageRoot: string;
   contentRoot: string;
   moves: PlannedMove[];
+  /** Finding 6 (round 3 hardening): the caller-owned journal, so an
+   * UNTRACKED symlink whose target text this function rewrites in place has
+   * its ORIGINAL target recorded before the overwrite — rollback restores it
+   * after renaming the entry back, since the rename alone would otherwise
+   * leave the migration's rewritten target sitting at the pre-migration
+   * path. Matched to a journal entry by `newAbs` (untracked moves only —
+   * `git mv`'d symlinks are undone by `revertToSnapshot`, not this journal). */
+  journal: RenamedEntry[];
 }): Promise<void> {
   const oldToNewAbs = new Map<string, string>();
   for (const move of params.moves) {
@@ -273,6 +300,7 @@ export async function remapMovedSymlinkTargets(params: {
       path.join(params.packageRoot, move.newRelPath),
     );
   }
+  const journalByNewAbs = new Map(params.journal.map((entry) => [entry.newAbs, entry]));
 
   for (const move of params.moves) {
     const oldAbs = path.join(params.contentRoot, move.contentRelPath);
@@ -284,12 +312,62 @@ export async function remapMovedSymlinkTargets(params: {
     const resolvedOldTarget = path.resolve(path.dirname(oldAbs), target);
     // If the target itself moved in this same migration, its real new
     // location is where IT landed — not its now-nonexistent old path.
-    const resolvedFinalTarget = oldToNewAbs.get(resolvedOldTarget) ?? resolvedOldTarget;
+    // Finding 5: the target may not be an EXACT planned move (e.g. it names
+    // a directory whose contents moved individually, never itself an entry
+    // in `moves`) — fall back to mapping it through `mapV2Path` the same way
+    // every file under it was mapped, rather than leaving it unresolved.
+    const resolvedFinalTarget = oldToNewAbs.get(resolvedOldTarget) ?? mapDirectoryLevelTarget({
+      packageRoot: params.packageRoot,
+      contentRoot: params.contentRoot,
+      resolvedOldTarget,
+    });
+    if (resolvedFinalTarget === null) {
+      throw new OneRootPreflightError(
+        `${move.newRelPath}: symlink target "${target}" resolves to ${resolvedOldTarget}, which has no v3 ` +
+          "mapping (directory-level or exact) — refusing to migrate rather than leave it dangling. " +
+          "Reconcile by hand, then re-run.",
+      );
+    }
     const remapped = path.relative(path.dirname(newAbs), resolvedFinalTarget);
     if (remapped === target) continue;
+    // Finding 6: record the ORIGINAL target text for THIS entry's journal
+    // row, if it's an untracked move — but only the first time it's
+    // modified, so a later re-remap (shouldn't happen, but journaling is
+    // append-once by design) never overwrites the true pre-migration value.
+    const journalEntry = journalByNewAbs.get(newAbs);
+    if (journalEntry !== undefined && journalEntry.originalLinkTarget === undefined) {
+      journalEntry.originalLinkTarget = target;
+    }
     await fs.unlink(newAbs);
     await fs.symlink(remapped, newAbs);
   }
+}
+
+/**
+ * Finding 5: map a symlink target that isn't an exact planned-move source
+ * through `mapV2Path` at the directory level — e.g. a link to
+ * `content/store/drive` (a directory whose CONTENTS moved file-by-file, never
+ * itself a `PlannedMove`) still needs to resolve to `_content/drive`. Returns
+ * `null` when the target isn't under `contentRoot` at all (an external path,
+ * e.g. an annex object under `.git/` — left to the exact-match branch above,
+ * which already returns it unchanged for that case) or `mapV2Path` can't
+ * resolve it either.
+ */
+function mapDirectoryLevelTarget(params: {
+  packageRoot: string;
+  contentRoot: string;
+  resolvedOldTarget: string;
+}): string | null {
+  const { packageRoot, contentRoot, resolvedOldTarget } = params;
+  if (resolvedOldTarget !== contentRoot && !resolvedOldTarget.startsWith(contentRoot + path.sep)) {
+    // Outside content/ entirely (e.g. an untouched external annex object) —
+    // nothing to remap; the caller's exact-match lookup already handles this
+    // by falling back to `resolvedOldTarget` unchanged.
+    return resolvedOldTarget;
+  }
+  const contentRelTarget = path.relative(contentRoot, resolvedOldTarget).split(path.sep).join("/");
+  const mapped = mapV2Path(contentRelTarget);
+  return mapped.kind === "move" ? path.join(packageRoot, mapped.newPath) : null;
 }
 
 /** Refuse to commit if a formerly-ignored path (a secret, connector/schedule

@@ -56,7 +56,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../../lib/git.js";
+import { getStatus, getHead, stageAll, commit } from "../../lib/git.js";
 import { initBox } from "../box/index.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
@@ -82,36 +82,20 @@ import {
 } from "./one-root-move-plan.js";
 import { captureIgnoreRules, mergeIgnoreRules, snapshotBoxWideIgnored, verifyNoBoxWideIgnoreRegression } from "./one-root-ignore-merge.js";
 import { OneRootPreflightError, OneRootLinkGateError } from "./one-root-errors.js";
+import { rollbackMoveAndCommit, V2_PACKAGE_ROOT_VOCABULARY } from "./one-root-rollback.js";
 
-export { OneRootPreflightError, OneRootLinkGateError, OneRootGitignoreRegressionError } from "./one-root-errors.js";
+export {
+  OneRootPreflightError,
+  OneRootLinkGateError,
+  OneRootGitignoreRegressionError,
+  OneRootRollbackError,
+} from "./one-root-errors.js";
 
 const execFileAsync = promisify(execFile);
 
 /** v2 lock-file names, checked at the OLD operational root (`content/`) —
  * see `box/index.ts`'s `.gitignore` block for the current names. */
 const V2_LOCK_FILES = [".bbx-lock", ".bbx-reactor.lock", ".bbx-serve.pid"];
-
-/** The v2 package root's closed vocabulary (never formalized as data the way
- * `BOX_ROOT_VOCABULARY` is for v3 — this migration is the one place that
- * needs it, so it's inlined here rather than resurrecting a whole v2 spec
- * module for one check). */
-const V2_PACKAGE_ROOT_VOCABULARY = new Set([
-  "package.json",
-  "pnpm-lock.yaml",
-  "package-lock.json",
-  "tsconfig.json",
-  "node_modules",
-  ".git",
-  ".gitignore",
-  ".gitattributes",
-  "CLAUDE.md",
-  ".claude",
-  "src",
-  "content",
-  "README.md",
-  "views",
-  ".DS_Store",
-]);
 
 async function preflight(params: { packageRoot: string; contentRoot: string }): Promise<void> {
   const status = await getStatus(params.packageRoot);
@@ -198,9 +182,21 @@ async function runInitTail(packageRoot: string): Promise<void> {
 
 /** Ref-rewrite every migrated card/doc, using the mv plan to recover each
  * file's OLD content-relative path. Returns any unresolved ref tokens seen
- * (informational — the hard link gate is the real backstop). */
-async function rewriteRefs(params: { packageRoot: string; moves: PlannedMove[] }): Promise<string[]> {
+ * (informational — the hard link gate is the real backstop).
+ *
+ * Finding 6 (round 3 hardening): before overwriting an UNTRACKED move's
+ * rewritten text, record its pre-rewrite bytes into the matching journal
+ * entry (first rewrite only) — a `git mv`'d file needs no such record, since
+ * `revertToSnapshot`'s `reset --hard` undoes an in-place content edit on a
+ * tracked file for free.
+ */
+async function rewriteRefs(params: {
+  packageRoot: string;
+  moves: PlannedMove[];
+  journal: RenamedEntry[];
+}): Promise<string[]> {
   const unresolved: string[] = [];
+  const journalByNewAbs = new Map(params.journal.map((entry) => [entry.newAbs, entry]));
   for (const move of params.moves) {
     if (!move.newRelPath.endsWith(".card") && !move.newRelPath.endsWith(".md")) continue;
     const abs = path.join(params.packageRoot, move.newRelPath);
@@ -210,7 +206,13 @@ async function rewriteRefs(params: { packageRoot: string; moves: PlannedMove[] }
       oldContentRelPath: move.contentRelPath,
       isCard: move.newRelPath.endsWith(".card"),
     });
-    if (result.text !== text) await fs.writeFile(abs, result.text);
+    if (result.text !== text) {
+      const journalEntry = journalByNewAbs.get(abs);
+      if (journalEntry !== undefined && journalEntry.originalFileBytes === undefined) {
+        journalEntry.originalFileBytes = text;
+      }
+      await fs.writeFile(abs, result.text);
+    }
     for (const u of result.unresolved) unresolved.push(`${move.newRelPath}: ${u}`);
   }
   return unresolved;
@@ -274,11 +276,6 @@ async function moveAndCommitBox(params: {
   // single reassignment never ran.
   const untrackedRenames: RenamedEntry[] = [];
   let cwdPairs: CwdRemap[] = [];
-  // Finding 1: a destination whose restore-on-rollback FAILED must be
-  // preserved, not swept up by the stray-entry cleanup below (which removes
-  // whole top-level directories by name and would otherwise delete an
-  // already-moved secret sitting in one).
-  const preservedDestinations: string[] = [];
 
   const ignoreSnapshot = await captureIgnoreRules({ packageRoot, contentRoot });
   const boxWideIgnored = await snapshotBoxWideIgnored({ packageRoot });
@@ -288,7 +285,7 @@ async function moveAndCommitBox(params: {
     // Finding 4: recompute every moved symlink's relative target for its new
     // depth, before anything downstream (ref rewrite, the hard link gate)
     // can observe — or fail on — a dangling link.
-    await remapMovedSymlinkTargets({ packageRoot, contentRoot, moves });
+    await remapMovedSymlinkTargets({ packageRoot, contentRoot, moves, journal: untrackedRenames });
     if (claudeMdMerge) await mergeClaudeMd({ packageRoot, contentRoot });
     await moveBeebox({ packageRoot, contentRoot });
     beeboxMoved = true;
@@ -310,7 +307,7 @@ async function moveAndCommitBox(params: {
     // migration never pays that cost.
     await initBox(packageRoot);
 
-    const unresolvedCardRefs = await rewriteRefs({ packageRoot, moves });
+    const unresolvedCardRefs = await rewriteRefs({ packageRoot, moves, journal: untrackedRenames });
     const unresolvedViewRefs = await rewriteViewRefs(packageRoot);
     const unresolvedRefs = [...unresolvedCardRefs, ...unresolvedViewRefs];
 
@@ -354,100 +351,19 @@ async function moveAndCommitBox(params: {
 
     return { commitSha, filesMoved: moves.length, unresolvedRefs, cwdPairs };
   } catch (e) {
-    for (const renamed of untrackedRenames.toReversed()) {
-      await fs.mkdir(path.dirname(renamed.oldAbs), { recursive: true }).catch(() => {
-        // Best effort — the rename attempt right below reports if this
-        // still leaves the restore incomplete.
-      });
-      await fs.rename(renamed.newAbs, renamed.oldAbs).catch((renameErr: unknown) => {
-        // Finding 1: a failed restore must PRESERVE the destination — it may
-        // hold an already-moved secret (e.g. a gitignored connector token)
-        // that the stray-entry cleanup below would otherwise delete wholesale
-        // along with the rest of its containing top-level directory.
-        preservedDestinations.push(renamed.newAbs);
-        console.error(
-          `one-root migration rollback: failed to rename ${renamed.newAbs} back to ${renamed.oldAbs} ` +
-            `(${errorMessage(renameErr)}) — PRESERVING ${renamed.newAbs}; manual recovery needed.`,
-        );
-      });
-    }
-    if (beeboxMoved) {
-      // contentRoot itself may already be gone (rm -rf'd once every real
-      // file had moved out of it) — recreate it before renaming .beebox
-      // back, or the rename fails with ENOENT on a missing parent and
-      // silently strands .beebox at the package root.
-      await fs.mkdir(contentRoot, { recursive: true }).catch(() => {
-        // Best effort — the rename attempt right below reports if this
-        // still leaves contentRoot unusable.
-      });
-      await fs
-        .rename(path.join(packageRoot, ".beebox"), path.join(contentRoot, ".beebox"))
-        .catch((renameErr: unknown) => {
-          console.error(
-            `one-root migration rollback: failed to rename .beebox back (${errorMessage(renameErr)}) — manual recovery needed.`,
-          );
-        });
-      // Neither box.json nor chat-session-history.json is git-tracked
-      // (both live under the gitignored `.beebox/`), so `revertToSnapshot`
-      // below cannot undo their in-place mutation — restore the bytes
-      // captured before `bumpMarker`/`rewriteChatBindings` touched them.
-      // Without this a retried `bbx migrate` sees shapeVersion 3 already
-      // and refuses (`probeV2Box` treats >= 3 as "not a v2 box").
-      if (originalMarkerBytes !== null) {
-        await fs.writeFile(path.join(contentRoot, ".beebox", "box.json"), originalMarkerBytes).catch((writeErr: unknown) => {
-          console.error(
-            `one-root migration rollback: failed to restore the original box.json marker (${errorMessage(writeErr)}) — manual recovery needed.`,
-          );
-        });
-      }
-      if (originalHistoryBytes !== null) {
-        await fs
-          .writeFile(path.join(contentRoot, ".beebox", "chat-session-history.json"), originalHistoryBytes)
-          .catch((writeErr: unknown) => {
-            console.error(
-              `one-root migration rollback: failed to restore the original chat-session-history.json (${errorMessage(writeErr)}) — manual recovery needed.`,
-            );
-          });
-      }
-    }
-    // `initBox` (run before the ref rewrite/link gate) writes NEW,
-    // previously-nonexistent top-level entries at packageRoot — the v3
-    // `.gitignore`/`.gitattributes` and underscore areas (`_tmp/`,
-    // `_config/`, …). Once that `.gitignore` exists, plain `git clean -f -d`
-    // below (via `revertToSnapshot`, untracked-but-NOT-ignored files only)
-    // removes the .gitignore itself but leaves whatever it now ignores
-    // (`_tmp/`) behind — stranding a retry at the closed-vocabulary
-    // preflight check. Remove every such stray explicitly, by name, before
-    // the shared revert runs. Scoped to packageRoot's own top level (never
-    // touches `content/`, which the restores above already made right) and
-    // to entries outside the v2 vocabulary, so it can never remove
-    // something the box's OWN preflight already required to be there.
-    const survivors = await fs.readdir(packageRoot).catch(() => []);
-    for (const name of survivors) {
-      if (name === "content" || V2_PACKAGE_ROOT_VOCABULARY.has(name)) continue;
-      const entryAbs = path.join(packageRoot, name);
-      // Finding 1: never blind-delete a top-level entry that CONTAINS (or
-      // IS) a destination whose restore-on-rollback failed above — that's
-      // the one copy of whatever secret/data landed there.
-      const preserves = preservedDestinations.filter(
-        (p) => p === entryAbs || p.startsWith(entryAbs + path.sep),
-      );
-      if (preserves.length > 0) {
-        console.error(
-          `one-root migration rollback: skipping cleanup of ${entryAbs} — it contains ` +
-            `${String(preserves.length)} preserved destination(s) (${preserves.join(", ")}); manual recovery needed.`,
-        );
-        continue;
-      }
-      await fs.rm(entryAbs, { recursive: true, force: true }).catch((rmErr: unknown) => {
-        console.error(
-          `one-root migration rollback: failed to remove stray package-root entry ${name} ` +
-            `(${errorMessage(rmErr)}) — manual recovery needed.`,
-        );
-      });
-    }
-    await revertToSnapshot(packageRoot, preSha);
-    throw e;
+    // See `one-root-rollback.ts` for the restore-or-preserve logic (findings
+    // 1 and 6, round 3 hardening) — split out purely to keep this file under
+    // the repo's 300-line budget.
+    return rollbackMoveAndCommit({
+      packageRoot,
+      contentRoot,
+      preSha,
+      beeboxMoved,
+      originalMarkerBytes,
+      originalHistoryBytes,
+      untrackedRenames,
+      error: e,
+    });
   }
 }
 

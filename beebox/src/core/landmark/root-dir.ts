@@ -22,12 +22,26 @@ import * as path from "node:path";
 export const LANDMARK_CONTENT_DIR = "_content";
 
 /**
+ * Box-relative physical directory that logical landmark `dir` scans —
+ * `landmarkScanDir` before joining with `boxRoot`. Exported so a tRPC caller
+ * (finding 3, round 3 hardening: `landmarks.ts`'s `hqPreferences`/
+ * `setHqPreference`/`forDir`) can run the PHYSICAL dir through the box
+ * namespace fence before touching the filesystem — a raw `dir` like
+ * `src/templates` passes the router's own `refine` (no leading `/`, no `..`
+ * segments) but names a real, non-namespace directory the fence must still
+ * reject.
+ */
+export function landmarkScanRelDir(dir: string): string {
+  return dir === "" ? LANDMARK_CONTENT_DIR : dir;
+}
+
+/**
  * The physical directory to scan for the landmark card serving a logical
  * box-relative `dir` ("" = the box-root scope, which now scans the box's
  * content root rather than the box's physical root).
  */
 export function landmarkScanDir(boxRoot: string, dir: string): string {
-  return path.join(boxRoot, dir === "" ? LANDMARK_CONTENT_DIR : dir);
+  return path.join(boxRoot, landmarkScanRelDir(dir));
 }
 
 /**

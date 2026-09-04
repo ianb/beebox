@@ -117,6 +117,7 @@ type V2TopLevel =
   | "claude"
   | "procedure"
   | "rootFile"
+  | "rootFileAttach"
   | "claudeMdMerge";
 
 /** One v2 root file's fixed v3 destination (everything except CLAUDE.md, which merges). */
@@ -126,6 +127,27 @@ const V2_ROOT_FILE_TARGETS: Readonly<Record<string, string>> = {
   "Box.landmark.card": "_content/Box.landmark.card",
   "MAP.md": "_content/MAP.md",
 };
+
+/**
+ * Finding 10 (Track E hardening review, round 3): a v2 root CARD may carry a
+ * sibling `<Name>.attach/` scope (`Name.type.card` -> `Name.attach/`, per the
+ * card-attachment convention) that `V2_ROOT_FILE_TARGETS` alone never routed
+ * — `content/Box.attach/…` had no case in {@link classify} at all, so the
+ * migration aborted preflight on it. Derived from `V2_ROOT_FILE_TARGETS`
+ * itself (only `.card` entries have an attach scope) rather than a
+ * hand-maintained second table, so the two can never drift apart: adding a
+ * root card here automatically carries its attach directory along too.
+ */
+const V2_ROOT_ATTACH_TARGETS: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(V2_ROOT_FILE_TARGETS)
+    .filter(([key]) => key.endsWith(".card"))
+    .map(([key, target]) => {
+      const cardBaseName = key.slice(0, key.indexOf("."));
+      const attachDirName = `${cardBaseName}.attach`;
+      const targetDir = target.slice(0, target.lastIndexOf("/"));
+      return [attachDirName, `${targetDir}/${attachDirName}`];
+    }),
+);
 
 /** Connector state files split out of `_config/connectors/` into `_bookkeeping/connectors/`
  * (boxholder decision, plan "Open design questions"). Matched by filename suffix. */
@@ -155,6 +177,7 @@ function topLevelOf(contentRelPath: string): { top: string; rest: string } {
 
 function classify(top: string, contentRelPath: string): V2TopLevel | "discard" | null {
   if (contentRelPath in V2_ROOT_FILE_TARGETS) return "rootFile";
+  if (top in V2_ROOT_ATTACH_TARGETS) return "rootFileAttach";
   if (contentRelPath === "CLAUDE.md") return "claudeMdMerge";
   if (V2_DISCARDED_ROOT_FILES.has(contentRelPath)) return "discard";
   switch (top) {
@@ -199,6 +222,10 @@ export function mapV2Path(contentRelPath: string): MapV2PathResult {
     case "rootFile": {
       const target = V2_ROOT_FILE_TARGETS[normalized];
       return target === undefined ? { kind: "unmapped" } : { kind: "move", newPath: target };
+    }
+    case "rootFileAttach": {
+      const target = V2_ROOT_ATTACH_TARGETS[top];
+      return target === undefined ? { kind: "unmapped" } : { kind: "move", newPath: joinRel(target, rest) };
     }
     case "claudeMdMerge":
       return { kind: "merge-claude-md" };

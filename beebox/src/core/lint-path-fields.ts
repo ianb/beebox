@@ -32,17 +32,64 @@ export interface PathFieldLintInput {
 }
 
 /**
+ * One card field that names a file WITHOUT being called `ref`/`refs` — the
+ * single inventory this lint module AND the one-root migration's ref
+ * rewriter (`one-root-ref-rewrite.ts`) both walk (finding 9, round 3
+ * hardening: before this shared inventory, the rewriter didn't know about
+ * either field, so a migrated box with a landmark symbol or figure entry
+ * failed the migration's own hard link gate — the gate runs THIS module's
+ * checks, unrewritten). Adding a third field here is enough to cover both
+ * sides; there is no second list to remember to update.
+ */
+export interface PathField {
+  name: string;
+  getValue: (fields: Record<string, unknown>) => string | undefined;
+  setValue: (fields: Record<string, unknown>, newValue: string) => void;
+}
+
+function getNavigationSymbolSrc(fields: Record<string, unknown>): string | undefined {
+  const navigation = fields["navigation"];
+  if (!isRecord(navigation)) return undefined;
+  const symbol = navigation["symbol"];
+  if (!isRecord(symbol)) return undefined;
+  const src = symbol["src"];
+  return typeof src === "string" ? src : undefined;
+}
+
+function setNavigationSymbolSrc(fields: Record<string, unknown>, newValue: string): void {
+  const navigation = fields["navigation"];
+  if (!isRecord(navigation)) return;
+  const symbol = navigation["symbol"];
+  if (!isRecord(symbol)) return;
+  symbol["src"] = newValue;
+}
+
+export const PATH_FIELDS: readonly PathField[] = [
+  {
+    name: "navigation.symbol.src",
+    getValue: getNavigationSymbolSrc,
+    setValue: setNavigationSymbolSrc,
+  },
+  {
+    name: "entry",
+    getValue: (fields) => {
+      const entry = fields["entry"];
+      return typeof entry === "string" ? entry : undefined;
+    },
+    setValue: (fields, newValue) => {
+      fields["entry"] = newValue;
+    },
+  },
+];
+
+/**
  * Warn when a landmark's `navigation.symbol.src` names a file that doesn't
  * exist (or escapes the box). A text/emoji symbol and an absent symbol are both
  * silent — there is nothing to resolve.
  */
 export async function lintLandmarkSymbolSrc(input: PathFieldLintInput): Promise<LintIssue[]> {
-  const navigation = input.fields["navigation"];
-  if (!isRecord(navigation)) return [];
-  const symbol = navigation["symbol"];
-  if (!isRecord(symbol)) return [];
-  const src = symbol["src"];
-  if (typeof src !== "string" || src.trim() === "") return [];
+  const src = getNavigationSymbolSrc(input.fields);
+  if (src === undefined || src.trim() === "") return [];
   return checkPathField({ input, ref: src, field: "navigation.symbol.src" });
 }
 

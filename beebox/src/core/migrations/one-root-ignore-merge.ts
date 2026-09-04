@@ -85,13 +85,45 @@ export async function captureIgnoreRules(params: { packageRoot: string; contentR
   };
 }
 
-/** Remap a content-root-relative rule to its v3-root-relative equivalent via
+/**
+ * Split a `.gitattributes` line into its leading PATTERN token and the
+ * trailing attribute list — `config/connectors/x.json -diff` is the pattern
+ * `config/connectors/x.json` plus attributes ` -diff`. Only the pattern
+ * names a path; the attributes are opaque flags and must never be fed
+ * through `mapV2Path` (finding 8, round 3 hardening: doing so on the WHOLE
+ * line broke the mapping — a path string with a trailing ` -diff` matches
+ * nothing, so a connector STATE-file rule landed remapped under `_config/`
+ * instead of its real v3 home, `_bookkeeping/connectors/`). `.gitignore`
+ * has no such second column — callers pass `hasAttributes: false` there and
+ * get the whole line back as the pattern.
+ */
+function splitAttributesLine(rule: string, { hasAttributes }: { hasAttributes: boolean }): { pattern: string; attrs: string } {
+  if (!hasAttributes) return { pattern: rule, attrs: "" };
+  const match = /^(\S+)(\s.*)?$/.exec(rule);
+  if (match === null) return { pattern: rule, attrs: "" };
+  return { pattern: match[1] ?? rule, attrs: match[2] ?? "" };
+}
+
+/**
+ * Remap one ignore/attributes rule's PATH portion to its v3 equivalent via
  * `mapV2Path`, preserving a leading `!` (negation), a leading `/` (anchor),
- * and a trailing `/` (directory marker). Returns the rule UNCHANGED when
- * `mapV2Path` can't resolve it (carried forward rather than dropped). */
-function remapContentRule(rule: string): string {
+ * a trailing `/` (directory marker), and — for `.gitattributes`
+ * (`hasAttributes: true`) — the trailing attribute list untouched.
+ *
+ * `stripPrefix`, when non-null, is required and stripped before mapping:
+ * a PACKAGE-root rule (finding 8) is package-root-relative, so only a rule
+ * naming something under `content/` (e.g. `content/docs/private.env`) is
+ * migration-affected at all — anything else names a package-root path
+ * unaffected by the migration and is returned UNCHANGED. A CONTENT-root
+ * rule (`stripPrefix: null`) is already content-relative with nothing to
+ * strip. Either way, a path `mapV2Path` can't resolve is carried forward
+ * UNCHANGED rather than dropped — a dead rule that matches nothing is a far
+ * smaller risk than silently losing coverage over a secret.
+ */
+function remapRule(rule: string, { hasAttributes, stripPrefix }: { hasAttributes: boolean; stripPrefix: string | null }): string {
+  const { pattern, attrs } = splitAttributesLine(rule, { hasAttributes });
   let negated = false;
-  let body = rule;
+  let body = pattern;
   if (body.startsWith("!")) {
     negated = true;
     body = body.slice(1);
@@ -99,14 +131,24 @@ function remapContentRule(rule: string): string {
   const anchored = body.startsWith("/");
   if (anchored) body = body.slice(1);
   const trailingSlash = body.endsWith("/");
-  const corePath = trailingSlash ? body.slice(0, -1) : body;
+  let corePath = trailingSlash ? body.slice(0, -1) : body;
+  if (stripPrefix !== null) {
+    if (!corePath.startsWith(stripPrefix)) return rule; // Package-root-relative, unaffected by the migration.
+    corePath = corePath.slice(stripPrefix.length);
+  }
   if (corePath === "") return rule;
   const mapped = mapV2Path(corePath);
   if (mapped.kind !== "move") return rule;
-  return `${negated ? "!" : ""}/${mapped.newPath}${trailingSlash ? "/" : ""}`;
+  const newPattern = `${negated ? "!" : ""}/${mapped.newPath}${trailingSlash ? "/" : ""}`;
+  return hasAttributes ? `${newPattern}${attrs}` : newPattern;
 }
 
-const MIGRATED_SECTION_HEADER = "# Migrated local rules (from the v2 box's .gitignore/.gitattributes)";
+/** Exported for `box/index.ts`'s `initBox` (finding 4, round 3 hardening) —
+ * a routine `bbx init` re-run must preserve whatever's under this marker
+ * across its own wholesale `.gitignore`/`.gitattributes` regeneration, not
+ * just the one regen this migration itself runs. One marker string, not two
+ * hand-kept in sync. */
+export const MIGRATED_SECTION_HEADER = "# Migrated local rules (from the v2 box's .gitignore/.gitattributes)";
 
 /** Append whatever custom rule from the captured v2 files isn't already
  * covered by the freshly regenerated v3 file — call AFTER `initBox` has
@@ -114,20 +156,35 @@ const MIGRATED_SECTION_HEADER = "# Migrated local rules (from the v2 box's .giti
 export async function mergeIgnoreRules(params: { packageRoot: string; snapshot: IgnoreSnapshot }): Promise<void> {
   await mergeOneFile({
     filePath: path.join(params.packageRoot, ".gitignore"),
+    hasAttributes: false,
     packageRules: params.snapshot.packageGitignoreRules,
     contentRules: params.snapshot.contentGitignoreRules,
   });
   await mergeOneFile({
     filePath: path.join(params.packageRoot, ".gitattributes"),
+    hasAttributes: true,
     packageRules: params.snapshot.packageGitattributesRules,
     contentRules: params.snapshot.contentGitattributesRules,
   });
 }
 
-async function mergeOneFile(params: { filePath: string; packageRules: string[]; contentRules: string[] }): Promise<void> {
+async function mergeOneFile(params: {
+  filePath: string;
+  hasAttributes: boolean;
+  packageRules: string[];
+  contentRules: string[];
+}): Promise<void> {
   const current = (await readIfExists(params.filePath)) ?? "";
   const currentLines = new Set(ruleLines(current));
-  const candidates = [...params.packageRules, ...params.contentRules.map(remapContentRule)];
+  // Finding 8: a PACKAGE-root rule is only migration-affected when it names
+  // something under `content/` (e.g. `content/docs/private.env`) — anything
+  // else is package-root-relative and untouched by the migration, so
+  // `remapRule`'s `stripPrefix` requirement leaves it unchanged. A
+  // CONTENT-root rule is already content-relative (`stripPrefix: null`).
+  const candidates = [
+    ...params.packageRules.map((rule) => remapRule(rule, { hasAttributes: params.hasAttributes, stripPrefix: "content/" })),
+    ...params.contentRules.map((rule) => remapRule(rule, { hasAttributes: params.hasAttributes, stripPrefix: null })),
+  ];
   const additions: string[] = [];
   const seen = new Set<string>();
   for (const rule of candidates) {

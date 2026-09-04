@@ -229,6 +229,67 @@ aliasWrite?.relativePath
 await annexBox.cleanup();
 ```
 
+### A leaf symlink to a NON-annex external file is refused on read too (finding 2, round 3 hardening)
+
+Before this fix, ANY leaf symlink resolving to a non-directory target was
+served on read — not just an annex object under `.git/annex/`. A leaf
+pointing at `package.json` (nothing to do with annex) must 403 exactly like
+the directory-symlink probes above, even though the leaf itself is a
+non-directory:
+
+```ts
+const nonAnnexBox = await makeTmpBox();
+await mkdir(nonAnnexBox.path("_content/photos.attach"), { recursive: true });
+await nonAnnexBox.write("package.json", '{"name":"secret-marker"}');
+await symlink(
+  nonAnnexBox.path("package.json"),
+  nonAnnexBox.path("_content/photos.attach/pkg.json"),
+);
+
+await resolveBoxNamespacePathOnDisk({
+  boxRoot: nonAnnexBox.root,
+  rawPath: "_content/photos.attach/pkg.json",
+  mode: "read",
+})
+=> null
+```
+
+A RELATIVE non-annex target that still resolves outside the box entirely
+(`../package.json`-shaped) is refused the same way:
+
+```ts continue
+await symlink("../../../package.json", nonAnnexBox.path("_content/photos.attach/relative-escape.json"));
+await resolveBoxNamespacePathOnDisk({
+  boxRoot: nonAnnexBox.root,
+  rawPath: "_content/photos.attach/relative-escape.json",
+  mode: "read",
+})
+=> null
+```
+
+A leaf under a REAL `.git/annex/` directory but pointing OUTSIDE it (e.g.
+back at `.git/annex/../../package.json`) is refused too — "under
+`.git/annex/`" means the resolved target, not merely a box that happens to
+have annex initialized:
+
+```ts continue
+await mkdir(nonAnnexBox.path(".git/annex/objects/xx/yy"), { recursive: true });
+await symlink(
+  nonAnnexBox.path("package.json"),
+  nonAnnexBox.path("_content/photos.attach/not-really-annex.json"),
+);
+await resolveBoxNamespacePathOnDisk({
+  boxRoot: nonAnnexBox.root,
+  rawPath: "_content/photos.attach/not-really-annex.json",
+  mode: "read",
+})
+=> null
+```
+
+```ts cleanup
+await nonAnnexBox.cleanup();
+```
+
 ### `verifyBoxNamespaceOnDisk` — the lower-level building block
 
 Callers that already have a lexically-resolved `BoxNamespacePath` (e.g. one

@@ -39,6 +39,7 @@ import { isAttachRef } from "../../shared/attach-path.js";
 import { formatRefSuffix, isExternalRef, parseRef } from "../../shared/ref-path.js";
 import { isRecord } from "../../lib/is-record.js";
 import { inlineLinkPattern, matchReferenceDefinitionAt } from "../body-refs.js";
+import { PATH_FIELDS } from "../lint-path-fields.js";
 import { mapV2Path } from "./one-root-mapping.js";
 
 export interface OneRootRewriteInput {
@@ -209,7 +210,27 @@ export function rewriteOneRootRefs(input: OneRootRewriteInput): OneRootRewriteRe
   }
   walkFrontmatter(fields, transform);
   rewriteContextDirField(fields);
+  rewritePathFields(fields, transform);
   return { text: renderFrontmatterBlock(fields, newBody), rewritten: getRewritten(), unresolved };
+}
+
+/**
+ * Finding 9 (round 3 hardening): rewrite the two known path-bearing fields
+ * NOT named `ref`/`refs` — `navigation.symbol.src` and a figure's `entry` —
+ * using the SAME shared inventory ({@link PATH_FIELDS}, `lint-path-fields.ts`)
+ * the hard link gate's checks read. `walkFrontmatter` above never sees
+ * these (it only walks keys literally named `ref`/`refs`), so before this
+ * they went unrewritten and then FAILED the migration's own hard link gate
+ * on an otherwise-valid box. Both fields resolve like any other ref (the
+ * card's own document-relative / `attach/…` / leading-`/` 3-form), so this
+ * reuses the exact same `transform` `walkFrontmatter` uses.
+ */
+function rewritePathFields(fields: Record<string, unknown>, transform: (raw: string) => string): void {
+  for (const field of PATH_FIELDS) {
+    const value = field.getValue(fields);
+    if (value === undefined || value.trim() === "") continue;
+    field.setValue(fields, transform(value));
+  }
 }
 
 /**

@@ -14,6 +14,7 @@ import { claudeProjectsRoot, encodeProjectDir } from "../chat/session/transcript
 import { MIGRATIONS } from "../migrations.js";
 import { GITIGNORE_BLOCK, UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
 import { isAnnexInitialized } from "../annex/is-annex-box.js";
+import { MIGRATED_SECTION_HEADER } from "../migrations/one-root-ignore-merge.js";
 import {
   installSchemasGuide,
   installTricksFiles,
@@ -24,6 +25,36 @@ import { errnoCode } from "../../lib/error-guards.js";
 import { migrateBoxState } from "../../lib/state-migration.js";
 
 const BoxMarkerSchema = z.object({ version: z.string(), created: z.string() });
+
+/**
+ * Finding 4 (Track E hardening review, round 3): `initBox` regenerates
+ * `.gitignore`/`.gitattributes` WHOLESALE on every call, not just the one
+ * regen the one-root migration itself runs — a routine `bbx init` re-run
+ * (chat start, wakeup, docs refresh) any time after `mergeIgnoreRules`
+ * appended a box's migrated-forward custom rules under its marked section
+ * silently discarded them again on the very next call. Preserve whatever's
+ * under that marker (verbatim, to EOF) across the regeneration: read it
+ * before overwriting, re-append it after — idempotent, since the marker is
+ * re-extracted fresh each time rather than accumulated.
+ */
+async function readMigratedSection(filePath: string): Promise<string | null> {
+  let current: string;
+  try {
+    current = await fs.readFile(filePath, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return null;
+    throw e;
+  }
+  const markerIndex = current.indexOf(MIGRATED_SECTION_HEADER);
+  return markerIndex === -1 ? null : current.slice(markerIndex);
+}
+
+async function writeRegeneratedFilePreservingMigratedSection(filePath: string, regeneratedBody: string): Promise<void> {
+  const migratedSection = await readMigratedSection(filePath);
+  const content =
+    migratedSection === null ? regeneratedBody : `${regeneratedBody.trimEnd()}\n\n${migratedSection.trimEnd()}\n`;
+  await fs.writeFile(filePath, content);
+}
 
 export interface InitOptions {
   /** Skip git initialization */
@@ -145,7 +176,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // file is byte-identical to what `bbx attachments to-annex` leaves behind and
   // re-running init is a no-op on every box. `stripLfsFilters` remains the
   // migration's tool for stripping rules off boxes that still carry them.
-  await fs.writeFile(
+  await writeRegeneratedFilePreservingMigratedSection(
     path.join(resolvedRoot, ".gitattributes"),
     `# Audio files (voice memos, recordings)
 
@@ -201,7 +232,7 @@ _tmp/
 *~
 
 ${annexed ? UNIGNORE_BLOCK : GITIGNORE_BLOCK}`;
-  await fs.writeFile(path.join(resolvedRoot, ".gitignore"), gitignore);
+  await writeRegeneratedFilePreservingMigratedSection(path.join(resolvedRoot, ".gitignore"), gitignore);
 
   // Install tricks types.d.ts and CLAUDE.md if missing
   await installTricksFiles(resolvedRoot);
