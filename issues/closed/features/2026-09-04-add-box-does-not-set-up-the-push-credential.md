@@ -81,4 +81,16 @@ commits unpushed) but not the cause, and cannot fix it.
 >   GitHub CLI later removes it and the box stops pushing silently. The script
 >   prints this caveat when it registers. Unavoidable on that path; worth
 >   knowing before relying on it.
+>
+> A cross-model review then found four defects in that first implementation,
+> all fixed: a **read-only** deploy key matching by key material counted as
+> "registered" (it fetches and never pushes — the same failure in disguise);
+> an `https://github.com/...` repo argument, which the usage line accepts,
+> skipped credential setup entirely and reproduced the original bug through a
+> documented input; the ssh-config idempotency check was a regex, so the dots
+> in the alias were wildcards (verified: it false-matched `githubXcom-box-…`),
+> and it proved only that *some* Host line existed, not that the alias resolved
+> to this box's key; and a failed auto-registration on `--create` still exited
+> zero. The alias is now verified with `ssh -G`, and `--create` exits non-zero
+> when the key is not registered.
 

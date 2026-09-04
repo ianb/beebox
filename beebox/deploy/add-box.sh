@@ -161,6 +161,12 @@ if [[ "$REPO" =~ ^git@github\.com:(.+)$ ]]; then
   PUSH_REMOTE="git@$SSH_ALIAS:${BASH_REMATCH[1]}"
 elif [[ "$REPO" =~ ^ssh://git@github\.com/(.+)$ ]]; then
   PUSH_REMOTE="git@$SSH_ALIAS:${BASH_REMATCH[1]}"
+elif [[ "$REPO" =~ ^https://github\.com/(.+)$ ]]; then
+  # The usage line accepts an https GitHub URL and it clones fine — but a deploy
+  # key is an SSH credential, so leaving origin on https would provision a box
+  # that cannot push: the very bug this section exists to prevent, reachable
+  # through a documented input.
+  PUSH_REMOTE="git@$SSH_ALIAS:${BASH_REMATCH[1]%.git}.git"
 fi
 
 # The box name is also its URL slug, so it must satisfy the hub's slug rule
@@ -514,10 +520,26 @@ fi
 # The stanza and the remote below ARE safe to re-apply, so they are written
 # whenever they are missing rather than only on first run.
 touch ~/.ssh/config && chmod 600 ~/.ssh/config
-if ! grep -q "^Host $SSH_ALIAS\$" ~/.ssh/config; then
+# Fixed-string, whole-line match. A regex would treat the dots in
+# 'github.com-box-…' as wildcards and could match a different alias.
+if ! grep -qxF "Host $SSH_ALIAS" ~/.ssh/config; then
   printf '\nHost %s\n  HostName github.com\n  User git\n  IdentityFile %s\n  IdentitiesOnly yes\n' \
     "$SSH_ALIAS" "$KEY_PATH" >> ~/.ssh/config
   echo "  added ssh config stanza for $SSH_ALIAS" >&2
+fi
+
+# Presence of a Host line is not the same as it being CORRECT. A stanza left by
+# an earlier setup can name a different IdentityFile, and origin is about to
+# point at this alias regardless — so ask ssh what the alias actually resolves
+# to rather than trusting the grep.
+RESOLVED=$(ssh -G "$SSH_ALIAS" 2>/dev/null | awk '$1 == "identityfile" { print $2 }' | head -1)
+RESOLVED="${RESOLVED/#\~/$HOME}"
+if [[ "$RESOLVED" != "$KEY_PATH" ]]; then
+  echo "ERROR: ssh resolves $SSH_ALIAS to identity '$RESOLVED', not '$KEY_PATH'." >&2
+  echo "  An existing ssh config stanza is claiming this alias. Fix it by hand:" >&2
+  echo "  pointing the box's origin at an alias that uses another key would fail" >&2
+  echo "  to push in a way nothing reports." >&2
+  exit 1
 fi
 
 cat "$KEY_PATH.pub"
@@ -617,10 +639,23 @@ if [[ -n "$CREATE" && -n "$PUBKEY" ]]; then
   # duplicate. The base64 blob is the key's identity; the comment after it is
   # not part of it and GitHub does not always keep it.
   KEY_BLOB=$(printf '%s\n' "$PUBKEY" | awk '{print $2}')
-  if gh repo deploy-key list --repo "$CREATE_REPO" --json key --jq '.[].key' 2>/dev/null \
-       | awk '{print $2}' | grep -qxF "$KEY_BLOB"; then
-    echo "This box's deploy key is already registered on $CREATE_REPO — leaving it alone."
+  # Matching the key is not enough: a deploy key registered READ-ONLY fetches
+  # fine and never pushes, which is the failure being fixed wearing a disguise.
+  # So the check is "this key, with write access". (The API field is
+  # `read_only`; gh's --json accepts `readOnly` but returns snake_case, so
+  # reading `.readOnly` silently yields null and every key looks writable.)
+  EXISTING=$(gh api "repos/$CREATE_REPO/keys" \
+    --jq ".[] | select((.key | split(\" \")[1]) == \"$KEY_BLOB\") | .read_only" 2>/dev/null || true)
+  if [[ "$EXISTING" == "false" ]]; then
+    echo "This box's deploy key is already registered on $CREATE_REPO with write access — leaving it alone."
     REGISTERED=1
+  elif [[ "$EXISTING" == "true" ]]; then
+    # Not auto-upgraded: GitHub has no in-place permission change, so "fixing"
+    # it means deleting someone's existing key and adding a new one. That is a
+    # decision for the operator, not a side effect of re-running a script.
+    echo "WARNING: this box's deploy key is registered on $CREATE_REPO as READ-ONLY." >&2
+    echo "  It will fetch and never push. Remove it on GitHub and re-run, or tick" >&2
+    echo "  'Allow write access' on it by hand." >&2
   else
     PUBKEY_FILE=$(mktemp)
     printf '%s\n' "$PUBKEY" > "$PUBKEY_FILE"
@@ -648,6 +683,22 @@ if [[ -n "$REGISTERED" ]]; then
   echo ""
   echo "Push credential is set up and registered. Confirm with:"
   echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+elif [[ -n "$PUBKEY" && -n "$CREATE" ]]; then
+  # --create promises a box that can push. If registration did not happen, the
+  # box is built and serving but cannot reach its remote, and exiting 0 here
+  # would report the exact silent-success this script was changed to prevent.
+  echo ""
+  echo "The box is added and serving, but it CANNOT PUSH yet — registering its"
+  echo "deploy key did not happen (see the warning above)."
+  echo ""
+  echo "Register this key on $CREATE_REPO (Settings -> Deploy keys -> Add deploy"
+  echo "key), TICKING 'Allow write access':"
+  echo ""
+  echo "     $PUBKEY"
+  echo ""
+  echo "Then confirm with:"
+  echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+  exit 1
 elif [[ -n "$PUBKEY" ]]; then
   echo ""
   echo "ONE STEP LEFT — the box cannot push until you do this:"

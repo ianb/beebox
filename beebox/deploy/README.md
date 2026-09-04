@@ -239,17 +239,34 @@ the symptom per box (see `src/core/box/backup-status.ts`).
 
 On `--create`, where `gh` is already authenticated and already making the repo,
 the key is registered automatically with write access. It is **sticky**: the
-check is on the key material rather than a title, so a re-run finds the box's
-key already present and does nothing, and a key an operator added by hand under
-a different title still counts. The script never rotates or replaces a
-credential on its own — a silent re-register is indistinguishable from the
-orphaned-key failure this exists to prevent, so replacing one means removing the
-old key on GitHub and re-running deliberately. Note gh's own caveat: a key added
-through `gh` is tied to its auth token, and de-authorizing the GitHub CLI later
-removes the key.
+check is on the key material *and its write access*, not a title — so a re-run
+finds the box's key already present and does nothing, a key an operator added by
+hand under a different title still counts, and a key registered **read-only** is
+reported rather than accepted (it would fetch and never push, which is the
+failure this exists to prevent wearing a disguise). Read-only keys are not
+auto-upgraded: GitHub has no in-place permission change, so fixing one means
+deleting and re-adding it, which is the operator's call. The script never
+rotates or replaces a credential on its own — a silent re-register is
+indistinguishable from the orphaned-key failure — so replacing one means
+removing the old key on GitHub and re-running deliberately.
+
+If registration does not happen on a `--create` run, the script **exits
+non-zero** after printing the manual step. The box is added and serving at that
+point, but it cannot reach its remote, and exiting 0 would report exactly the
+silent success this change exists to end.
+
+Two caveats worth knowing. A key added through `gh` is tied to gh's auth token:
+de-authorizing the GitHub CLI later removes the key, and the box stops pushing
+silently. And the ssh alias is verified with `ssh -G` after the stanza is
+written — if some other stanza already claims that alias with a different
+identity, the script refuses rather than pointing `origin` at a key that will
+not work.
 
 A non-GitHub remote is left alone — the alias convention is a GitHub deploy-key
-mechanism, and rewriting a remote for another host would only break it.
+mechanism, and rewriting a remote for another host would only break it. An
+`https://github.com/...` URL *is* handled: it clones fine, but a deploy key is
+an SSH credential, so origin is moved to the aliased SSH form rather than left
+on a URL the key cannot authenticate.
 
 `--dry-run` still needs a `bbx` on the server that has `bbx hub add-box` — i.e.
 a deploy from 2026-08 or later. On an older build the preflight fails with an
