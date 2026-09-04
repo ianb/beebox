@@ -146,7 +146,7 @@ interface ImgElementProps {
   rotationStyle: CSSProperties | undefined;
   title: string | undefined;
   onActivate: ((element: HTMLImageElement) => void) | null;
-  onError: () => void;
+  onError: (failedSrc: string) => void;
   onLoad: () => void;
   lightbox: boolean;
   lightboxSrc: string | undefined;
@@ -184,7 +184,7 @@ function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, ti
       // carries the caller's spacing classes (extraClass) instead.
       className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", interactive ? "m-0" : extraClass)}
       style={rotationStyle}
-      onError={onError}
+      onError={(event) => onError(event.currentTarget.currentSrc || src)}
       onLoad={onLoad}
       title={title}
       data-image-src={lightbox ? lightboxSrc ?? src : undefined}
@@ -322,12 +322,12 @@ export function Image(props: ImageProps) {
     retryFailed: retry.failed,
     retrySrc: retry.displaySrc,
   });
-  const handleError = () => {
+  const handleError = (failedSrc?: string) => {
     if (retryEnabled) {
       retry.handleError();
       return;
     }
-    failedImageUrls.add(displaySrc);
+    failedImageUrls.add(failedSrc ?? displaySrc);
     bumpAfterError();
   };
 
@@ -345,7 +345,7 @@ export function Image(props: ImageProps) {
     const el = imgRef.current;
     if (el === null || errored) return;
     if (el.complete && el.naturalWidth === 0 && el.getAttribute("src") !== null) {
-      handleError();
+      handleError(el.currentSrc || displaySrc);
     }
     // `displaySrc` so a changed source is re-checked; `errored` so a placeholder
     // already showing does not re-enter.

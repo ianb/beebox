@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import Sharp from "sharp";
+import type { Metadata } from "sharp";
 import { BoxImageError, resolveBoxImage } from "../box-image.js";
 import { fileEtag } from "../file-etag.js";
 import { ImageTransformCache } from "../image-transform-cache.js";
@@ -28,36 +28,38 @@ function physicalDimension(value: number | undefined, dpr: number): number | und
 }
 
 async function transformImage(source: string, options: ImageTransformOptions): Promise<Buffer> {
+  const { default: Sharp } = await import("sharp");
+  let metadata: Metadata;
   try {
-    const width = physicalDimension(options.width, options.dpr);
-    const height = physicalDimension(options.height, options.dpr);
-    const input = Sharp(source, { limitInputPixels: 64 * 1024 * 1024 }).rotate();
-    const metadata = options.fit === "crop" ? await input.clone().metadata() : null;
-    let fit: "cover" | "inside" = options.fit === "cover" || options.fit === "crop" ? "cover" : "inside";
-    let withoutEnlargement = options.fit === "scale-down";
-    if (
-      options.fit === "crop" &&
-      metadata?.width !== undefined &&
-      (width === undefined || metadata.width <= width) &&
-      (height === undefined || metadata.height <= height)
-    ) {
-      fit = "inside";
-      withoutEnlargement = true;
-    }
-    let pipeline = input.resize({
-      width,
-      height,
-      fit,
-      withoutEnlargement,
-      ...(options.fit === "pad" ? { fit: "contain" as const, background: "#ffffff" } : {}),
-    });
-    if (options.format === "avif") pipeline = pipeline.avif({ quality: options.quality, effort: 1 });
-    else if (options.format === "webp") pipeline = pipeline.webp({ quality: options.quality, effort: 4 });
-    else pipeline = pipeline.jpeg({ quality: options.quality, progressive: true });
-    return await pipeline.toBuffer();
+    metadata = await Sharp(source, { limitInputPixels: 64 * 1024 * 1024 }).metadata();
   } catch (error) {
     throw new ImageDecodeError(error);
   }
+  const width = physicalDimension(options.width, options.dpr);
+  const height = physicalDimension(options.height, options.dpr);
+  const orientedWidth = metadata.autoOrient.width;
+  const orientedHeight = metadata.autoOrient.height;
+  let fit: "cover" | "inside" = options.fit === "cover" || options.fit === "crop" ? "cover" : "inside";
+  let withoutEnlargement = options.fit === "scale-down";
+  if (
+    options.fit === "crop" &&
+    (width === undefined || orientedWidth <= width) &&
+    (height === undefined || orientedHeight <= height)
+  ) {
+    fit = "inside";
+    withoutEnlargement = true;
+  }
+  let pipeline = Sharp(source, { limitInputPixels: 64 * 1024 * 1024 }).rotate().resize({
+    width,
+    height,
+    fit,
+    withoutEnlargement,
+    ...(options.fit === "pad" ? { fit: "contain" as const, background: "#ffffff" } : {}),
+  });
+  if (options.format === "avif") pipeline = pipeline.avif({ quality: options.quality, effort: 1 });
+  else if (options.format === "webp") pipeline = pipeline.webp({ quality: options.quality, effort: 4 });
+  else pipeline = pipeline.jpeg({ quality: options.quality, progressive: true });
+  return pipeline.toBuffer();
 }
 
 export function registerApiImagesRoutes({ server, boxRoot }: { server: FastifyInstance; boxRoot: string }): void {

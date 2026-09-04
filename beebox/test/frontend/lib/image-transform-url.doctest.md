@@ -33,9 +33,25 @@ transformedResolvedImageUrl(
 => /image-thumbnails/test1/api/images/store/photo.jpg?v=abc123&width=960&fit=scale-down&quality=85&format=auto
 ```
 
-Animated and external images are deliberately left alone.
+Animated, unsupported, external, blob, session-media, and history images are deliberately left alone.
 
 ```ts
-JSON.stringify([transformedResolvedImageUrl("/test/api/files/wave.gif", { width: 960 }), transformedResolvedImageUrl("https://example.com/photo.jpg", { width: 960 })])
-=> [null,null]
+JSON.stringify([
+  "/test/api/files/wave.gif",
+  "/test/api/files/vector.svg",
+  "/test/api/files/bitmap.bmp",
+  "/test/api/files/icon.ico",
+  "https://example.com/photo.jpg",
+  "blob:https://example.com/id",
+  "/test/api/session-media/session/entry/0",
+  "/test/api/history/abc/blob/photo.jpg",
+].map((source) => transformedResolvedImageUrl(source, { width: 960 })))
+=> [null,null,null,null,null,null,null,null]
+```
+
+Chat retry and file-version parameters survive rewriting but do not become transform options.
+
+```ts
+transformedResolvedImageUrl("/test/api/files/photo.jpg?v=one&imageRetry=2", { width: 960, format: "auto" })
+=> /test/api/images/photo.jpg?v=one&imageRetry=2&width=960&format=auto
 ```

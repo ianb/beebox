@@ -29,7 +29,9 @@ const ALIASES = {
   format: ["format", "f"],
 } as const;
 
-const KNOWN_KEYS = new Set(["width", "w", "height", "h", "fit", "quality", "q", "format", "f", "dpr", "v"]);
+// `v` is the file-watcher cache buster; `imageRetry` is the bounded chat
+// retry token. Neither changes the derived representation's identity.
+const KNOWN_KEYS = new Set(["width", "w", "height", "h", "fit", "quality", "q", "format", "f", "dpr", "v", "imageRetry"]);
 function singleValue({ query, name, aliases }: {
   query: Record<string, unknown>;
   name: string;

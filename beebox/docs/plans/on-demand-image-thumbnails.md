@@ -86,7 +86,7 @@ The cache is bounded by both age and bytes. A sweep removes entries older than 3
 
 Transformed responses use the cached file's content type and byte length, a strong output ETag, source `Last-Modified`, `Cache-Control: no-cache`, and `Vary: Accept` when negotiation occurred. A conditional hit returns `304`. `HEAD` resolves and validates identically and generates a missing representation so its content headers match `GET`, but sends no body. The route doctest pins this deliberate cold-HEAD cost.
 
-**Vocabulary lock-ins.** The public route is plural `/api/images/*`. Public query names and aliases are `width`/`w`, `height`/`h`, `fit`, `quality`/`q`, `format`/`f`, and `dpr`. The ignored compatibility parameter is `v`. The disk directory and hash layout are private cache implementation details.
+**Vocabulary lock-ins.** The public route is plural `/api/images/*`. Public query names and aliases are `width`/`w`, `height`/`h`, `fit`, `quality`/`q`, `format`/`f`, and `dpr`. The ignored internal compatibility parameters are the file-watcher token `v` and chat's bounded retry token `imageRetry`; neither affects representation identity. The disk directory and hash layout are private cache implementation details.
 
 **First implementation chunk.** Add pure option parsing, format negotiation, fit mapping, cache-key, and eviction-selection functions with doctests. Extract the shared image resolver. Add the route, two-slot semaphore, in-flight-key deduplication, atomic cache writes, and bounded sweep with route/filesystem doctests. Register it beside `/api/image/*`. No frontend switches in this chunk.
 

@@ -61,11 +61,13 @@ Aliases produce the same disk-cache identity after normalization, while a source
 ```ts
 const options = parseImageTransformOptions({ width: "480", quality: "75", format: "webp" }).options;
 const equivalent = parseImageTransformOptions({ w: "480", q: "75", f: "webp" }).options;
+const retried = parseImageTransformOptions({ w: "480", q: "75", f: "webp", v: "changed", imageRetry: "2" }).options;
 const first = imageTransformCacheKey({ sourcePath: "store/photo.jpg", sourceVersion: "v1", options });
 const same = imageTransformCacheKey({ sourcePath: "store/photo.jpg", sourceVersion: "v1", options: equivalent });
+const sameRetry = imageTransformCacheKey({ sourcePath: "store/photo.jpg", sourceVersion: "v1", options: retried });
 const changed = imageTransformCacheKey({ sourcePath: "store/photo.jpg", sourceVersion: "v2", options });
-`${first === same} ${first === changed}`
-=> true false
+`${first === same} ${first === sameRetry} ${first === changed}`
+=> true true false
 ```
 
 The purge removes stale temporary and finished files, then the oldest live variants until the cache is at most 512 MiB:

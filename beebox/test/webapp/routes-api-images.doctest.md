@@ -54,6 +54,14 @@ unchanged.statusCode
 => 304
 ```
 
+`HEAD` returns the representation headers without a response body:
+
+```ts continue
+const head = await server.server.inject({ method: "HEAD", url: "/test/api/images/photo.jpg?width=30&format=webp" });
+`${head.statusCode} ${head.headers["content-type"]} ${head.rawPayload.length}`
+=> 200 image/webp 0
+```
+
 Image cards resolve through their `filename.ref`, while the source card itself is never decoded:
 
 ```ts continue
@@ -66,6 +74,19 @@ const cardMetadata = await Sharp(cardImage.rawPayload).metadata();
 => 200 24x16
 ```
 
+Crop decisions use dimensions after EXIF orientation, so an already-smaller portrait is not enlarged and cropped:
+
+```ts continue
+const oriented = await Sharp({
+  create: { width: 120, height: 80, channels: 3, background: { r: 20, g: 80, b: 160 } },
+}).jpeg().withMetadata({ orientation: 6 }).toBuffer();
+await writeFile(join(server.boxRoot, "oriented.jpg"), oriented);
+const cropped = await imageRequest("/api/images/oriented.jpg?width=100&height=130&fit=crop&format=jpeg");
+const croppedMetadata = await Sharp(cropped.rawPayload).metadata();
+`${croppedMetadata.width}x${croppedMetadata.height}`
+=> 80x120
+```
+
 Bad options and non-image paths fail clearly instead of returning original bytes:
 
 ```ts continue
@@ -73,6 +94,18 @@ const bad = await server.request({ method: "GET", url: "/api/images/photo.jpg?wi
 const notImage = await server.request({ method: "GET", url: "/api/images/notes.txt?width=40" });
 `${bad.statusCode} ${bad.body.option} | ${notImage.statusCode} ${notImage.body.error}`
 => 400 width | 400 Not an image path
+```
+
+Containment, dotfiles, and absent annex content retain the original image route's fail-closed behavior:
+
+```ts continue
+await writeFile(join(server.boxRoot, ".hidden.jpg"), jpeg);
+await server.seed("absent.jpg", "/annex/objects/SHA256E-s300000--2ee2c7d493840de6795751cfb0c75d899624f1e5494f129b840812f129638f92.jpg\n");
+const traversal = await imageRequest("/api/images/%2e%2e%2foutside.jpg?width=40");
+const hidden = await imageRequest("/api/images/.hidden.jpg?width=40");
+const absent = await imageRequest("/api/images/absent.jpg?width=40");
+`${traversal.statusCode} ${hidden.statusCode} ${absent.statusCode}`
+=> 403 403 409
 ```
 
 An allowed extension containing undecodable bytes is an explicit media error, never an original-byte fallback:

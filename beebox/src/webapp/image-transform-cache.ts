@@ -7,6 +7,7 @@ const MAX_CACHE_BYTES = 512 * 1024 * 1024;
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const TEMP_MAX_AGE_MS = 60 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+const STAT_BATCH_SIZE = 32;
 
 export interface CacheEntry {
   path: string;
@@ -30,6 +31,23 @@ export function selectImageCacheEvictions(entries: CacheEntry[], now: number): s
     total -= entry.size;
   }
   return [...remove];
+}
+
+async function statCacheEntries({ root, names, offset }: { root: string; names: string[]; offset: number }): Promise<CacheEntry[]> {
+  const batch = await Promise.all(names.slice(offset, offset + STAT_BATCH_SIZE).map(async (name): Promise<CacheEntry | null> => {
+    const candidate = path.join(root, name);
+    try {
+      const stat = await fs.stat(candidate);
+      if (!stat.isFile()) return null;
+      return { path: candidate, size: stat.size, mtimeMs: stat.mtimeMs, temporary: name.includes(".tmp-") };
+    } catch (error) {
+      if (errnoCode(error) === "ENOENT") return null;
+      throw error;
+    }
+  }));
+  const entries = batch.filter((entry): entry is CacheEntry => entry !== null);
+  if (offset + STAT_BATCH_SIZE >= names.length) return entries;
+  return [...entries, ...await statCacheEntries({ root, names, offset: offset + STAT_BATCH_SIZE })];
 }
 
 class PermitPool {
@@ -115,7 +133,10 @@ export class ImageTransformCache {
   private async sweepIfDue(): Promise<void> {
     const now = Date.now();
     if (now - this.lastSweep < SWEEP_INTERVAL_MS) return;
-    if (this.sweepPromise !== null) return this.sweepPromise;
+    if (this.sweepPromise !== null) {
+      await this.sweepPromise.catch(() => null);
+      return;
+    }
     const sweep = this.sweep(now);
     this.sweepPromise = sweep;
     try {
@@ -136,18 +157,8 @@ export class ImageTransformCache {
       if (errnoCode(error) === "ENOENT") return;
       throw error;
     }
-    const entries = await Promise.all(names.map(async (name): Promise<CacheEntry | null> => {
-      const candidate = path.join(this.root, name);
-      try {
-        const stat = await fs.stat(candidate);
-        if (!stat.isFile()) return null;
-        return { path: candidate, size: stat.size, mtimeMs: stat.mtimeMs, temporary: name.includes(".tmp-") };
-      } catch (error) {
-        if (errnoCode(error) === "ENOENT") return null;
-        throw error;
-      }
-    }));
-    for (const candidate of selectImageCacheEvictions(entries.filter((entry): entry is CacheEntry => entry !== null), now)) {
+    const entries = await statCacheEntries({ root: this.root, names, offset: 0 });
+    for (const candidate of selectImageCacheEvictions(entries, now)) {
       await fs.unlink(candidate).catch((error: unknown) => {
         if (errnoCode(error) !== "ENOENT") throw error;
       });
