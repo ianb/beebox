@@ -13,6 +13,13 @@ import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
 import { parseCardName } from "../../lib/paths.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { naturalCompare } from "../../lib/natural-sort.js";
+import { isInBoxNamespace } from "../../lib/box-namespace.js";
+import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
+
+/** The underscore area names — what the box root listing shows, and all it shows. */
+const BOX_AREA_NAMES: ReadonlySet<string> = new Set(
+  BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area").map((entry): string => entry.name)
+);
 
 interface BrowseCard {
   relativePath: string;
@@ -36,7 +43,7 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
   // GET /api/browse/* - Browse directory contents (one level)
   server.get<{ Params: { "*": string } }>(
     "/api/browse/*",
-    async (request) => {
+    async (request, reply) => {
       const reqPath = request.params["*"] || "";
 
       // Resolve the target directory
@@ -48,6 +55,15 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
       const resolved = path.resolve(targetDir);
       if (resolved !== root && !resolved.startsWith(root + path.sep)) {
         return { path: reqPath, dirs: [], cards: [] };
+      }
+
+      // Box namespace fence: the root's own listing shows only the
+      // underscore areas (filtered below); anything under a path outside
+      // the namespace — src/, node_modules/, .git/, package.json's
+      // siblings — 403s rather than browsing the npm/agent-identity
+      // machinery (`docs/plans/one-root-box-layout.md` Track B).
+      if (reqPath !== "" && !isInBoxNamespace(reqPath)) {
+        return reply.status(403).send({ error: "Access denied" });
       }
 
       let entries: Array<{ name: string; isDirectory: () => boolean }>;
@@ -111,10 +127,19 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
         });
       }
 
-      dirs.sort(naturalCompare);
-      cards.sort((a, b) => naturalCompare(a.name, b.name));
+      // At the box root, list ONLY the underscore areas — not the npm
+      // namespace, `src/`, or agent-identity entries that also pass the
+      // dotfile filter above (`src`, `node_modules` aren't dotfiles). There
+      // are no ref-addressable root cards either (a stray one is a
+      // closed-vocabulary violation Track C's `bbx validate` flags, not
+      // something to browse here).
+      const rootFilteredDirs = reqPath === "" ? dirs.filter((name) => BOX_AREA_NAMES.has(name)) : dirs;
+      const rootFilteredCards = reqPath === "" ? [] : cards;
 
-      return { path: reqPath, dirs, cards };
+      rootFilteredDirs.sort(naturalCompare);
+      rootFilteredCards.sort((a, b) => naturalCompare(a.name, b.name));
+
+      return { path: reqPath, dirs: rootFilteredDirs, cards: rootFilteredCards };
     }
   );
 }

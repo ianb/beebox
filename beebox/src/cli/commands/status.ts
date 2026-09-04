@@ -11,6 +11,7 @@ import {
 } from "../../core/install-template-file.js";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
+import { checkBoxRoot } from "../../lib/box-root-check.js";
 import { loadBoxSchemas } from "../../schemas/registry.js";
 import { listSchemaLoadFailures } from "../../schemas/schema-load-status.js";
 import { getEngineVersionReport } from "../../core/engine-version.js";
@@ -114,6 +115,11 @@ export const statusCommand = new Command("status")
         console.log(describeLegacySchemaFiles(shape, legacySchemaFiles));
       }
 
+      // Closed-vocabulary root check (Track C, `docs/plans/one-root-box-layout.md`):
+      // a warning here, an error in `bbx validate` — status surfaces drift
+      // without blocking, validate is the gate.
+      await printRootStrays(boxRoot);
+
       // Recent activity
       if (options.verbose && state.recentActivity.length > 0) {
         console.log();
@@ -128,6 +134,16 @@ export const statusCommand = new Command("status")
       process.exit(1);
     }
   });
+
+/** The `bbx status` warnings section for `checkBoxRoot` — see its call site above. */
+async function printRootStrays(boxRoot: string): Promise<void> {
+  const rootStrays = await checkBoxRoot(boxRoot);
+  if (rootStrays.length === 0) return;
+  console.log(`Box root: ${rootStrays.length} unexpected entr${rootStrays.length === 1 ? "y" : "ies"}`);
+  for (const stray of rootStrays) {
+    console.log(`  - ${stray.message}`);
+  }
+}
 
 function printCards(cards: CardInfo[]): void {
   for (const card of cards) {

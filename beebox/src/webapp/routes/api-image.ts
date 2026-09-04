@@ -24,6 +24,7 @@ import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { containWithinBox } from "../../lib/box-containment.js";
+import { isInBoxNamespace } from "../../lib/box-namespace.js";
 
 // `.avif` is here because the document extractor writes page and figure
 // renders as AVIF (`src/core/commands/document-extract.ts`); without it every
@@ -93,6 +94,9 @@ export function registerApiImageRoutes({
 
       const resolved = path.resolve(path.join(boxRoot, reqPath));
       if (containWithinBox(boxRoot, resolved) === null) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+      if (!isInBoxNamespace(reqPath)) {
         return reply.status(403).send({ error: "Access denied" });
       }
       if (path.basename(resolved).startsWith(".")) {

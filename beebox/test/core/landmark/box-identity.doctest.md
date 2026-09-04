@@ -29,9 +29,9 @@ stays inside the box rather than becoming a filesystem path.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol:\n    src: /art/pan.png\n---\n");
+await box.write("Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol:\n    src: /_content/art/pan.png\n---\n");
 JSON.stringify(await identity(box))
-=> {"slug":"kitchen-box","name":"Kitchen","symbol":"","symbolSrc":"art/pan.png"}
+=> {"slug":"kitchen-box","name":"Kitchen","symbol":"","symbolSrc":"_content/art/pan.png"}
 ```
 
 ## Every failure degrades to the slug

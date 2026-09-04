@@ -43,12 +43,12 @@ JSON.stringify(problems)
 const box = await makeTmpBox();
 await box.write(
   "trips/Trips.landmark.card",
-  "---\nnavigation:\n  label: Trips\n  symbol:\n    src: Trips.attach/pin.png\n---\n",
+  "---\nnavigation:\n  label: Trips\n  symbol:\n    src: /_content/trips/Trips.attach/pin.png\n---\n",
 );
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":"","symbolSrc":"trips/Trips.attach/pin.png"}]
+=> [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":"","symbolSrc":"_content/trips/Trips.attach/pin.png"}]
 ```
 
 ## A box-root `symbol.src` (leading `/`) resolves against the box, not the card
@@ -65,12 +65,12 @@ absolute path win, so a leading-`/` src silently escaped the box
 const box = await makeTmpBox();
 await box.write(
   "archive/people/marlowe/Marlowe.landmark.card",
-  "---\nnavigation:\n  label: Marlowe\n  symbol:\n    src: /archive/people/marlowe/images/priya-portrait.webp\n---\n",
+  "---\nnavigation:\n  label: Marlowe\n  symbol:\n    src: /_content/archive/people/marlowe/images/priya-portrait.webp\n---\n",
 );
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 summaries[0].symbolSrc
-=> archive/people/marlowe/images/priya-portrait.webp
+=> _content/archive/people/marlowe/images/priya-portrait.webp
 ```
 
 ## Missing label falls back to the filename, missing navigation is tolerated

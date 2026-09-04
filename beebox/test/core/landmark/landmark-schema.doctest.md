@@ -419,13 +419,13 @@ normalized to box-relative.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("docs/About.doc.card", "---\ntitle: About\n---\n");
+await box.write("_content/docs/About.doc.card", "---\ntitle: About\n---\n");
 
 const navigation = {
   label: "Recipes",
   links: [
     { ref: "Bread.recipe.card" },
-    { ref: "../../docs/About.doc.card", label: "about" },
+    { ref: "../docs/About.doc.card", label: "about" },
   ],
 };
 const { links } = await resolveLandmark(navigation, {
@@ -443,7 +443,7 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
     "exists": true
   },
   {
-    "ref": "docs/About.doc.card",
+    "ref": "_content/docs/About.doc.card",
     "label": "about",
     "exists": true
   }
@@ -464,12 +464,12 @@ to nothing and is reported `exists: false`, never clamped to some other file.
 ```ts
 const box = await makeTmpBox();
 await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("docs/About.doc.card", "---\ntitle: About\n---\n");
+await box.write("_content/docs/About.doc.card", "---\ntitle: About\n---\n");
 
 const navigation = {
   label: "Recipes",
   links: [
-    { ref: "/docs/About.doc.card", label: "about" },
+    { ref: "/_content/docs/About.doc.card", label: "about" },
     { ref: "/_content/recipes/Gone.recipe.card" },
     { ref: "../../../../etc/hosts", label: "escape" },
   ],
@@ -484,7 +484,7 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
 =>
 [
   {
-    "ref": "docs/About.doc.card",
+    "ref": "_content/docs/About.doc.card",
     "label": "about",
     "exists": true
   },

@@ -25,6 +25,36 @@ import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";
+import { checkBoxRoot } from "../../lib/box-root-check.js";
+
+/**
+ * The npm-namespace entries `bbx validate --hook` treats as "editing the
+ * package surface" (Track C, `docs/plans/one-root-box-layout.md`) — their
+ * first path segment, whether the edit lands on the entry itself or
+ * somewhere underneath it (a file inside `node_modules/`, say).
+ */
+const NPM_NAMESPACE_ENTRIES = new Set(["package.json", "pnpm-lock.yaml", "package-lock.json", "tsconfig.json", "node_modules"]);
+
+/**
+ * Root-vocabulary tripwire for the hook: an edit at the box root itself, or
+ * anywhere under an npm-namespace entry, runs the closed-vocabulary root
+ * check (one `readdir` — cheap). Returns `null` — never a "clean" result —
+ * when there's nothing to surface, so a clean root falls through to the
+ * edited file's own per-type handling (a root-level CLAUDE.md edit still
+ * gets its usual size lint, say) rather than short-circuiting it.
+ */
+async function checkPackageSurfaceEdit(fp: string, boxRoot: string): Promise<HookValidationResult | null> {
+  const rel = path.relative(boxRoot, fp);
+  if (rel === "" || rel.startsWith("..")) return null;
+  const firstSegment = rel.split(path.sep)[0];
+  const atRoot = path.dirname(fp) === boxRoot;
+  const inNpmNamespace = firstSegment !== undefined && NPM_NAMESPACE_ENTRIES.has(firstSegment);
+  if (!atRoot && !inNpmNamespace) return null;
+
+  const strays = await checkBoxRoot(boxRoot);
+  if (strays.length === 0) return null;
+  return { feedback: strays.map((s) => `Box root: ${s.message}`).join("\n"), hasErrors: true };
+}
 
 /**
  * Extract edited paths from either harness's PostToolUse input. Claude's
@@ -83,6 +113,11 @@ async function validateHookPathResult(fp: string): Promise<HookValidationResult>
       feedback: "Trick scripts must be in a subdirectory: tricks/scripts/<name>/index.ts, not directly in tricks/scripts/",
       hasErrors: true,
     };
+  }
+  const surfaceBoxRoot = await findBoxRoot(path.dirname(fp));
+  if (surfaceBoxRoot !== null) {
+    const surfaceResult = await checkPackageSurfaceEdit(fp, surfaceBoxRoot);
+    if (surfaceResult !== null) return surfaceResult;
   }
   if (isAgentInstructionsFile(fp)) {
     const boxRoot = await requireBoxRoot(path.dirname(fp));

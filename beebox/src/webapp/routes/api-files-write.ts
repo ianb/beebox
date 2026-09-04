@@ -26,6 +26,7 @@ import {
   attachDirOwnerBasename,
   isInsideAttachScope,
 } from "../../shared/attach-path.js";
+import { isInBoxNamespace } from "../../lib/box-namespace.js";
 
 interface RegisterApiFilesWriteRoutesOptions {
   server: FastifyInstance;
@@ -54,6 +55,12 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
     }
     if (reqPath === "") {
       return { error: "File path required", status: 400 };
+    }
+    // Box namespace fence: writes land only inside an underscore area —
+    // never `src/`, `node_modules/`, `.git/`, or any other root entry
+    // (`docs/plans/one-root-box-layout.md` Track B).
+    if (!isInBoxNamespace(reqPath)) {
+      return { error: "Access denied", status: 403 };
     }
     if (resolved.endsWith(".card")) {
       return { error: "Card writes go through the card API or bbx create (cards validate)", status: 403 };
@@ -134,6 +141,9 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
     const guardResolved = path.resolve(path.join(boxRoot, reqPath));
     // Reject escapes, including sibling dirs a bare startsWith would allow.
     if (guardResolved !== root && !guardResolved.startsWith(root + path.sep)) {
+      return reply.status(403).send({ error: "Access denied" });
+    }
+    if (!isInBoxNamespace(reqPath)) {
       return reply.status(403).send({ error: "Access denied" });
     }
 

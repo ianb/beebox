@@ -10,9 +10,14 @@
  * different depending on where the document lives, which is exactly what breaks
  * when an agent copies a ref between documents.
  *
- * **Off by default, on purpose.** A box carries legacy relative refs by the
- * hundred; warning about them in the default walk would bury the broken-ref
- * signal that actually needs acting on. `--canonical` is opt-in reporting and
+ * **Body refs warn by default; frontmatter refs stay opt-in.** A card BODY
+ * (Markdoc tag refs, inline markdown links) gets this warning on every
+ * `bbx validate` run — `card-lint.ts`'s deprecation notice for the
+ * document-relative form (Track B, `docs/plans/one-root-box-layout.md`).
+ * Frontmatter refs (`ref:`/`refs:` fields) stay behind `--canonical`: a box
+ * can carry them by the legacy hundred, and warning about them in the
+ * default walk would bury the broken-ref signal that actually needs acting
+ * on. `--canonical` is full opt-in reporting (frontmatter included) and
  * `--canonical --fix` (`canonicalize-refs.ts`) is the one-command migration.
  *
  * All ref algebra comes from `src/shared/ref-path.ts`; this module only decides

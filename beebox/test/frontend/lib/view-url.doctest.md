@@ -109,15 +109,15 @@ resolveRelativePath("_content/docs/tax/2023/return-status.md", "./notes.md")
 Leading `/` is stripped and treated as box-root-relative:
 
 ```ts
-resolveRelativePath("_content/docs/a.md", "/other/file.md")
-=> other/file.md
+resolveRelativePath("_content/docs/a.md", "/_content/other/file.md")
+=> _content/other/file.md
 ```
 
 When `basePath` is missing, the relative path is already box-root-relative:
 
 ```ts
-resolveRelativePath(undefined, "notes.md")
-=> notes.md
+resolveRelativePath(undefined, "_content/notes.md")
+=> _content/notes.md
 ```
 
 The rules themselves live in `src/shared/ref-path.ts` (shared with the backend's
@@ -176,19 +176,19 @@ tier):
 
 ```ts
 JSON.stringify([
-  resolveContentTarget(undefined, "sibling.card").path,
-  resolveContentTarget(undefined, "/sibling.card").path,
-  resolveContentTarget(undefined, "Foo.doc.card").path,
+  resolveContentTarget(undefined, "_content/sibling.card").path,
+  resolveContentTarget(undefined, "/_content/sibling.card").path,
+  resolveContentTarget(undefined, "_content/Foo.doc.card").path,
 ])
-=> ["sibling.card","sibling.card","Foo.doc.card"]
+=> ["_content/sibling.card","_content/sibling.card","_content/Foo.doc.card"]
 ```
 
 An image in that same chat message resolves the same way — `basePath: undefined`
 sends a bare `photo.png` to the box root, not to `notes/photo.png`:
 
 ```ts
-resolveImageSrc("photo.png", { boxSlug: "test1", basePath: undefined })
-=> /test1/api/image/photo.png
+resolveImageSrc("_content/photo.png", { boxSlug: "test1", basePath: undefined })
+=> /test1/api/image/_content/photo.png
 ```
 
 ## classifyMarkdownHref

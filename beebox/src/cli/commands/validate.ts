@@ -33,7 +33,7 @@ import { buildLoadContext } from "../../core/load-context.js";
 import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external/url-check.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../core/card-io.js";
-import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
+import { checkLegacySchemaPath, checkRootStrayErrors } from "./validate-box-checks.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /**
@@ -82,6 +82,13 @@ interface ValidationResults extends CollectedResults {
    * `collect*Results` variant.
    */
   legacySchemaErrors: string[];
+  /**
+   * Closed-vocabulary root check (Track C, `docs/plans/one-root-box-layout.md`):
+   * every box-root entry outside `BOX_ROOT_VOCABULARY`, formatted. Same
+   * box-wide, checked-once-regardless-of-scope treatment as
+   * `legacySchemaErrors` above.
+   */
+  rootStrayErrors: string[];
   /** Whether `--canonical` asked for the canonical-form report. */
   canonical: boolean;
 }
@@ -93,18 +100,6 @@ function canonicalBuckets(results: ValidationResults): CanonicalBuckets {
     viewWarnings: results.canonicalViewWarnings,
     dossierWarnings: results.canonicalDossierWarnings,
   };
-}
-
-/**
- * Check for schemas left in the legacy `_config/schemas/` location.
- * Returns a one-element (or empty) array of formatted error strings —
- * an array so it composes with `countTotalErrors`/`printTextResults` like the
- * other result buckets, even though there's only ever one message.
- */
-async function checkLegacySchemaPath(boxRoot: string): Promise<string[]> {
-  const shape = await getBoxShape(boxRoot);
-  const files = await findLegacySchemaFiles(shape);
-  return files.length > 0 ? [describeLegacySchemaFiles(shape, files)] : [];
 }
 
 /**
@@ -241,7 +236,7 @@ const NO_CANONICAL = { canonicalViewWarnings: [], canonicalDossierWarnings: [] }
 
 /** Print human-readable card/markdown/attach/legacy-schema-path results to stdout. */
 function printTextResults(results: ValidationResults): void {
-  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors } = results;
+  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors } = results;
   const colors = useColor();
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors });
@@ -270,9 +265,8 @@ function printTextResults(results: ValidationResults): void {
   if (viewWarnings.length > 0) {
     console.log(`\n${viewWarnings.join("\n")}`);
   }
-  if (legacySchemaErrors.length > 0) {
-    console.log(`\n${legacySchemaErrors.join("\n")}`);
-  }
+  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors];
+  if (boxWideErrors.length > 0) console.log(`\n${boxWideErrors.join("\n")}`);
   if (results.canonical) {
     console.log(`\n${formatCanonicalReport(canonicalBuckets(results), { colors })}`);
   }
@@ -297,12 +291,13 @@ async function checkCommitted(boxRoot: string, { json }: { json: boolean }): Pro
   }
 }
 
-function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors }: ValidationResults): number {
+function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors }: ValidationResults): number {
   return (
     (cardSummary !== null ? cardSummary.totalErrors : 0) +
     (mdSummary !== null ? mdSummary.totalErrors : 0) +
     attachErrors.length +
-    legacySchemaErrors.length
+    legacySchemaErrors.length +
+    rootStrayErrors.length
   );
 }
 
@@ -365,7 +360,8 @@ export const validateCommand = new Command("validate")
 
         const collected = await collectResults(options, { boxRoot, ctx, resolved, json, ignore, canonical });
         const legacySchemaErrors = await checkLegacySchemaPath(boxRoot);
-        const results: ValidationResults = { ...collected, legacySchemaErrors, canonical };
+        const rootStrayErrors = await checkRootStrayErrors(boxRoot);
+        const results: ValidationResults = { ...collected, legacySchemaErrors, rootStrayErrors, canonical };
 
         if (json) {
           const counts = canonicalCounts(canonicalBuckets(results));
@@ -380,6 +376,7 @@ export const validateCommand = new Command("validate")
             claudeMd: results.claudeMdWarnings,
             views: results.viewWarnings,
             legacySchemaPath: results.legacySchemaErrors,
+            rootStrays: results.rootStrayErrors,
             // The `--canonical` buckets, top-level and separate for the same
             // reason `brokenRefs` is: a relative-but-resolving ref is a
             // different signal from a broken one. Zeroed when --canonical

@@ -80,16 +80,16 @@ flagged; broken ones are; a `..`-escape out of the box is flagged even though
 
 ```ts
 const box = await makeTmpBox();
-await mkdir(join(box.root, "store/images"), { recursive: true });
-await writeFile(join(box.root, "store/images/a.webp"), "x");
+await mkdir(join(box.root, "_content/store/images"), { recursive: true });
+await writeFile(join(box.root, "_content/store/images/a.webp"), "x");
 
-const doc = join(box.root, "store/docs/saoirse.md");
+const doc = join(box.root, "_content/store/docs/saoirse.md");
 await mkdir(dirname(doc), { recursive: true });
 await writeFile(
   doc,
   [
-    "![ok abs](/store/images/a.webp)",
-    "![broken abs](/store/images/missing.webp)",
+    "![ok abs](/_content/store/images/a.webp)",
+    "![broken abs](/_content/store/images/missing.webp)",
     "![ok rel](../images/a.webp)",
     "![broken rel](./nope.webp)",
     "![escape](../../../../../../../../etc/hosts)",
@@ -100,7 +100,7 @@ await writeFile(
 JSON.stringify(await lintLinks(box.root, doc), null, 2)
 =>
 [
-  "BBX002: Broken link: /store/images/missing.webp",
+  "BBX002: Broken link: /_content/store/images/missing.webp",
   "BBX002: Broken link: ./nope.webp",
   "BBX002: Link points outside the box: ../../../../../../../../etc/hosts"
 ]
@@ -121,21 +121,21 @@ missing.
 
 ```ts
 const sbox = await makeTmpBox();
-await mkdir(join(sbox.root, "store/figures"), { recursive: true });
-await writeFile(join(sbox.root, "store/figures/F.figure.card"), "---\n---\n");
+await mkdir(join(sbox.root, "_content/store/figures"), { recursive: true });
+await writeFile(join(sbox.root, "_content/store/figures/F.figure.card"), "---\n---\n");
 
-const sdoc = join(sbox.root, "store/docs/saoirse.md");
-await mkdir(join(sbox.root, "store/docs/attach"), { recursive: true });
-await writeFile(join(sbox.root, "store/docs/attach/photo.webp"), "x");
+const sdoc = join(sbox.root, "_content/store/docs/saoirse.md");
+await mkdir(join(sbox.root, "_content/store/docs/attach"), { recursive: true });
+await writeFile(join(sbox.root, "_content/store/docs/attach/photo.webp"), "x");
 await writeFile(
   sdoc,
   [
-    "[view](/store/figures/F.figure.card?view=ledger)",
-    "[anchor](/store/figures/F.figure.card#risks)",
+    "[view](/_content/store/figures/F.figure.card?view=ledger)",
+    "[anchor](/_content/store/figures/F.figure.card#risks)",
     "[both](../figures/F.figure.card?view=ledger#risks)",
     "![literal attach](attach/photo.webp)",
     "![no card scope](attach/missing.webp)",
-    "[gone](/store/figures/Missing.figure.card?view=ledger)",
+    "[gone](/_content/store/figures/Missing.figure.card?view=ledger)",
     "",
   ].join("\n"),
 );
@@ -144,7 +144,7 @@ JSON.stringify(await lintLinks(sbox.root, sdoc), null, 2)
 =>
 [
   "BBX002: Broken link: attach/missing.webp",
-  "BBX002: Broken link: /store/figures/Missing.figure.card?view=ledger"
+  "BBX002: Broken link: /_content/store/figures/Missing.figure.card?view=ledger"
 ]
 ```
 
@@ -158,7 +158,7 @@ and throws rather than silently mis-resolving every box-root link:
 ```ts
 const box2 = await makeTmpBox();
 const doc2 = join(box2.root, "x.md");
-await writeFile(doc2, "![broken](/store/nope.webp)\n");
+await writeFile(doc2, "![broken](/_content/store/nope.webp)\n");
 
 let thrown = "none";
 try {

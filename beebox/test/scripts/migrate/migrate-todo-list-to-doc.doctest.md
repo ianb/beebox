@@ -226,24 +226,24 @@ async function runMigrator(boxRoot, args = []) {
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/todos/Weekend_Errands.todo-list.card", `---
+await box.write("_content/store/todos/Weekend_Errands.todo-list.card", `---
 name: Weekend Errands
 items:
   - name: Buy groceries
     status: pending
 ---
 `);
-await box.write("store/projects/Notes.memo.card", `---
+await box.write("_content/store/projects/Notes.memo.card", `---
 status: processed
 ---
-See ref="/store/todos/Weekend_Errands.todo-list.card" for the errands list.
+See ref="/_content/store/todos/Weekend_Errands.todo-list.card" for the errands list.
 `);
 
 const dryRun = await runMigrator(box.root);
 dryRun.includes("Dry run")
 => true
 
-await box.read("store/todos/Weekend_Errands.todo-list.card")
+await box.read("_content/store/todos/Weekend_Errands.todo-list.card")
 => ---
 name: Weekend Errands
 items:
@@ -255,14 +255,14 @@ const applied = await runMigrator(box.root, ["--apply"]);
 applied.includes("Converted 1")
 => true
 
-await box.read("store/todos/Weekend_Errands.doc.card")
+await box.read("_content/store/todos/Weekend_Errands.doc.card")
 => ---
 title: Weekend Errands
 ---
 - {% todo %}Buy groceries{% /todo %}
 
 // The referring memo's ref was rewritten to the new path.
-(await box.read("store/projects/Notes.memo.card")).includes("store/todos/Weekend_Errands.doc.card")
+(await box.read("_content/store/projects/Notes.memo.card")).includes("_content/store/todos/Weekend_Errands.doc.card")
 => true
 
 // Idempotent: a second run finds nothing to convert.

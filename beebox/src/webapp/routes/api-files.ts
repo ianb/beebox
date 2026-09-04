@@ -21,6 +21,7 @@ import { extensionToMimetype } from "../../lib/mimetype.js";
 import { dangerousRenderableDisposition } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { probePointer } from "../../lib/asset-content.js";
+import { isInBoxNamespace } from "../../lib/box-namespace.js";
 
 // Injected into frozen pages at serve time so a hot-linked image that fails
 // (hot-link blockers, auth, dead origin) retries once through the box image
@@ -93,6 +94,13 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
       const resolved = path.resolve(path.join(boxRoot, reqPath));
       const root = path.resolve(boxRoot);
       if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+        return reply.status(403).send({ error: "Access denied" });
+      }
+
+      // Box namespace fence: only underscore-area paths are servable — not
+      // `src/`, `node_modules/`, `.git/`, or any other root entry
+      // (`docs/plans/one-root-box-layout.md` Track B).
+      if (!isInBoxNamespace(reqPath)) {
         return reply.status(403).send({ error: "Access denied" });
       }
 
@@ -258,6 +266,10 @@ async function deleteBoxFile({
   const root = path.resolve(boxRoot);
 
   if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    return reply.status(403).send({ error: "Access denied" });
+  }
+
+  if (reqPath !== "" && !isInBoxNamespace(reqPath)) {
     return reply.status(403).send({ error: "Access denied" });
   }
 

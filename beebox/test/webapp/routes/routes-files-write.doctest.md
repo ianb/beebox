@@ -108,6 +108,15 @@ createOnly.body.error
 => 404
 ```
 
+A path outside the underscore areas — `src/`, `node_modules/`, or any other
+root entry — is rejected too, even though it stays inside the box (Track B's
+namespace fence):
+
+```ts continue
+(await ctx.request({ method: "PUT", url: "/api/files/src/tricks/scripts/x.ts", payload: { content: "x" } })).statusCode
+=> 403
+```
+
 ## files-commit sweeps the file's card + attach scope, nothing else
 
 ```ts continue

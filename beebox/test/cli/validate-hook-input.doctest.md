@@ -75,3 +75,46 @@ await box.cleanup();
 JSON.stringify({ hasFeedback: warning.feedback?.includes("claude-md-size"), hasErrors: warning.hasErrors })
 => {"hasFeedback":true,"hasErrors":false}
 ```
+
+## Package-surface tripwire (Track C)
+
+An edit at the box root, or anywhere under an npm-namespace entry
+(`package.json`, a lockfile, `tsconfig.json`, `node_modules/`), runs the
+closed-vocabulary root check. A clean root stays silent — the edited file
+still gets its own handling (the CLAUDE.md size warning above, for a
+root-level CLAUDE.md edit) — but a stray root entry is surfaced:
+
+```ts
+const strayBox = await makeTmpBox();
+await strayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await writeFile(`${strayBox.root}/package.json`, "{}");
+const npmEdit = await validateHookPathsResult([`${strayBox.root}/package.json`]);
+await strayBox.cleanup();
+JSON.stringify({ hasErrors: npmEdit.hasErrors, feedback: npmEdit.feedback })
+=> {"hasErrors":true,"feedback":"Box root: recipes: the box root is a closed vocabulary — user content goes under /_content/"}
+```
+
+The same tripwire fires for a `node_modules/` edit, not just the entry
+itself:
+
+```ts
+const nmBox = await makeTmpBox();
+await nmBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await nmBox.write("node_modules/pkg/index.js", "module.exports = {};");
+const nmEdit = await validateHookPathsResult([`${nmBox.root}/node_modules/pkg/index.js`]);
+await nmBox.cleanup();
+nmEdit.hasErrors
+=> true
+```
+
+A box root with no strays stays quiet for a `package.json` edit — there is
+nothing to nudge about:
+
+```ts
+const cleanBox = await makeTmpBox();
+await writeFile(`${cleanBox.root}/package.json`, "{}");
+const cleanEdit = await validateHookPathsResult([`${cleanBox.root}/package.json`]);
+await cleanBox.cleanup();
+JSON.stringify(cleanEdit)
+=> {"feedback":null,"hasErrors":false}
+```

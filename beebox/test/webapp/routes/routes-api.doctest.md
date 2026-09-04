@@ -60,6 +60,46 @@ await ctx.inject({ method: "GET", url: "/api/browse/_content/inbox" })
 await ctx.cleanup();
 ```
 
+### The box namespace fence (Track B)
+
+The root listing shows ONLY the underscore areas — not `src/`, `node_modules/`,
+or any other root entry, even though those pass the plain dotfile filter:
+
+```ts
+const nsCtx = await makeTestServer();
+await nsCtx.seed("src/tricks/scripts/helper.ts", "export {};\n");
+await nsCtx.seed("node_modules/pkg/index.js", "module.exports = {};\n");
+await nsCtx.inject({ method: "GET", url: "/api/browse/" })
+=>
+200
+{
+  "path": "",
+  "dirs": [
+    "_bookkeeping",
+    "_config",
+    "_content",
+    "_publish",
+    "_tmp"
+  ],
+  "cards": []
+}
+```
+
+A request path outside the namespace 403s rather than listing it:
+
+```ts continue
+await nsCtx.inject({ method: "GET", url: "/api/browse/src/tricks/scripts" })
+=>
+403
+{
+  "error": "Access denied"
+}
+```
+
+```ts cleanup
+await nsCtx.cleanup();
+```
+
 ## Serving raw files
 
 `GET /api/files/*` serves the file body, includes `ETag` and `Last-Modified`
@@ -140,6 +180,21 @@ Body
 
 ```ts cleanup
 await ctx.cleanup();
+```
+
+### The box namespace fence applies to reads too (Track B)
+
+A path outside the underscore areas — even one that exists on disk — 403s
+rather than serving it:
+
+```ts
+const nsCtx2 = await makeTestServer();
+await nsCtx2.seed("CLAUDE.md", "# Box\n");
+const claudeMd = await nsCtx2.rawRequest({ method: "GET", url: "/api/files/CLAUDE.md" });
+claudeMd.statusCode
+=> 403
+
+await nsCtx2.cleanup();
 ```
 
 ## Deleting raw files

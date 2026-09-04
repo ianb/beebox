@@ -22,37 +22,37 @@ async function rm(box, args) {
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "box/notes/Engine.doc.card",
+  "_content/box/notes/Engine.doc.card",
   "---\ntype: doc\ntitle: Engine\n---\nBody.\n",
 );
 
-const dry = await rm(box, { paths: ["box/notes/Engine.doc.card"], dryRun: true });
+const dry = await rm(box, { paths: ["_content/box/notes/Engine.doc.card"], dryRun: true });
 JSON.stringify(dry.data)
-=> {"dryRun":true,"wouldTrash":["box/notes/Engine.doc.card"],"errors":[],"inboundRefs":{"box/notes/Engine.doc.card":[]}}
+=> {"dryRun":true,"wouldTrash":["_content/box/notes/Engine.doc.card"],"errors":[],"inboundRefs":{"_content/box/notes/Engine.doc.card":[]}}
 ```
 
 The card is still in place:
 
 ```ts continue
-await box.list("box/notes")
-=> box/notes/Engine.doc.card
+await box.list("_content/box/notes")
+=> _content/box/notes/Engine.doc.card
 ```
 
 A dry run against a missing card fails without creating anything:
 
 ```ts continue
-const missing = await rm(box, { paths: ["box/notes/Nope.doc.card"], dryRun: true });
+const missing = await rm(box, { paths: ["_content/box/notes/Nope.doc.card"], dryRun: true });
 missing.success
 => false
 
 missing.error
-=> Card not found: box/notes/Nope.doc.card
+=> Card not found: _content/box/notes/Nope.doc.card
 ```
 
 ## Real run: the card moves to trash
 
 ```ts continue
-const real = await rm(box, { paths: ["box/notes/Engine.doc.card"] });
+const real = await rm(box, { paths: ["_content/box/notes/Engine.doc.card"] });
 real.success
 => true
 
@@ -61,7 +61,7 @@ await box.list("_bookkeeping/trash")
 _bookkeeping/trash/.gitkeep
 _bookkeeping/trash/Engine.doc.card
 
-await box.list("box/notes")
+await box.list("_content/box/notes")
 =>
 ```
 
@@ -72,17 +72,17 @@ into the card's attach scope are included without changing the referrers.
 
 ```ts
 const linked = await makeTmpBox();
-await linked.write("box/notes/Target.doc.card", "---\ntype: doc\ntitle: Target\n---\n");
-await linked.write("box/notes/Source.doc.card", "---\ntype: doc\nrefs:\n  - Target.doc.card\n---\n[attachment](Target.attach/photo.png)\n");
-await linked.write("box/Index.md", "[target](notes/Target.doc.card)\n");
-await linked.write("_bookkeeping/trash/Old.doc.card", "---\ntype: doc\n---\n[old](../../box/notes/Target.doc.card)\n");
-await linked.write("box/Fenced.md", "```md\n[example](notes/Target.doc.card)\n```\n");
+await linked.write("_content/box/notes/Target.doc.card", "---\ntype: doc\ntitle: Target\n---\n");
+await linked.write("_content/box/notes/Source.doc.card", "---\ntype: doc\nrefs:\n  - Target.doc.card\n---\n[attachment](Target.attach/photo.png)\n");
+await linked.write("_content/box/Index.md", "[target](notes/Target.doc.card)\n");
+await linked.write("_bookkeeping/trash/Old.doc.card", "---\ntype: doc\n---\n[old](../../_content/box/notes/Target.doc.card)\n");
+await linked.write("_content/box/Fenced.md", "```md\n[example](notes/Target.doc.card)\n```\n");
 
-const report = await rm(linked, { paths: ["box/notes/Target.doc.card"], dryRun: true });
+const report = await rm(linked, { paths: ["_content/box/notes/Target.doc.card"], dryRun: true });
 JSON.stringify(report.data.inboundRefs)
-=> {"box/notes/Target.doc.card":[{"path":"box/Index.md","refs":1},{"path":"box/notes/Source.doc.card","refs":2}]}
+=> {"_content/box/notes/Target.doc.card":[{"path":"_content/box/Index.md","refs":1},{"path":"_content/box/notes/Source.doc.card","refs":2}]}
 
-await linked.read("box/notes/Source.doc.card")
+await linked.read("_content/box/notes/Source.doc.card")
 =>
 ---
 type: doc

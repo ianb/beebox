@@ -20,6 +20,7 @@ import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { bundleView } from "../views/compiler.js";
+import { isInBoxNamespace } from "../../lib/box-namespace.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -68,6 +69,9 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       const resolved = path.resolve(path.join(boxRoot, reqPath));
       const root = path.resolve(boxRoot);
       if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+        return reply.status(400).send({ error: "Path outside box" });
+      }
+      if (!isInBoxNamespace(reqPath)) {
         return reply.status(400).send({ error: "Path outside box" });
       }
 
