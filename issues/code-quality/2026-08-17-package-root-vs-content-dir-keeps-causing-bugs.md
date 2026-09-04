@@ -1,6 +1,6 @@
 ---
 title: "Package root vs `content/`: one box has two roots, and callers keep picking the wrong one"
-workstream: unattached
+workstream: box-layout-criteria
 area: beebox
 labels: [box-shape]
 filed-by: agent
