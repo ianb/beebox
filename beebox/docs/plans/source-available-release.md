@@ -60,7 +60,7 @@ Reuse-heavy: the release story is mostly *finishing* work already started, not
 new construction.
 
 - **Secret hygiene — reuse as-is.** Layered `.gitignore`: root `.gitignore:6`
-  (`.env`), `beebox/deploy/.gitignore:1-2` (`.env`, `server-ip`),
+  (`.env`), `beebox/deploy/.gitignore` (`.env`, `target.env`),
   `beebox/.gitignore:12` (`deploy-info.json`); connector secrets excluded
   by the `*.secret.json` convention enforced at `beebox/deploy/deploy.sh:26`
   and documented at `beebox/docs/box-layout.md:194`. No credential values
@@ -147,7 +147,7 @@ The only scanner hit was the RFC 6455 §1.3 sample `Sec-WebSocket-Key`
 hub handshake doctests — allowlisted in `.gitleaks.toml`. Spot-checks confirmed
 no secret-value file was ever committed on any ref (the long-gone
 `beebox/.env.example` held only dev ports/paths; `deploy/` scripts read
-from gitignored `.env`/`server-ip`; no `config/connectors/` secrets tracked).
+from gitignored `.env`/`target.env`; no `config/connectors/` secrets tracked).
 Boxholder name/`ianb@colorstudy.com` in commit metadata is accepted per the
 history decision. **No history surgery needed.** The repeatable gate is
 `gitleaks detect --log-opts=--all` (config: `.gitleaks.toml`).

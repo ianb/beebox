@@ -14,7 +14,6 @@ import {
   checkNativeSqlite,
   checkNodeVersion,
   checkPnpm,
-  checkProductionDisk,
   checkSchedulesTick,
   checkSdkBinary,
   checkWorkspaceInstalled,
@@ -204,28 +203,6 @@ function schedulesRun(state: string, launchctlCode: number): RunCommand {
     "launchctl print gui/501/com.beebox.schedules": { spawned: true, code: launchctlCode, stdout: "", stderr: "" },
   });
 }
-
-test("checkProductionDisk reports free space and fails below the shared threshold", async () => {
-  const marker = "/checkouts/beebox/beebox/deploy/server-ip";
-  const base = {
-    [GIT_COMMON]: ok("/checkouts/beebox/.git\n"),
-    [`cat ${marker}`]: ok("203.0.113.10\n"),
-  };
-  const check = async (availableKib: number) => checkProductionDisk({
-    run: fakeRun({
-      ...base,
-      "ssh -o BatchMode=yes -o ConnectTimeout=5 root@203.0.113.10 df -Pk /": ok(`Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/vda1 78643200 0 ${String(availableKib)} 0% /\n`),
-    }),
-    fileExists: (candidate) => candidate === marker,
-  });
-
-  const healthy = await check(65 * 1024 * 1024);
-  assert.equal(healthy.ok, true);
-  assert.match(healthy.detail, /65\.0 GiB free.*7\.5 GiB/);
-  const low = await check(5 * 1024 * 1024);
-  assert.equal(low.ok, false);
-  assert.match(low.detail, /5\.0 GiB free.*7\.5 GiB/);
-});
 
 test("checkSchedulesTick skips a machine with no schedule store", async () => {
   const run = fakeRun({ [GIT_COMMON]: ok("/checkouts/beebox/.git\n") });

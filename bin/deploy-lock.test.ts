@@ -29,9 +29,11 @@ function fixture() {
   const fakeBin = join(root, "fake-bin");
   mkdirSync(deployDir, { recursive: true });
   mkdirSync(fakeBin);
-  copyFileSync(join(ROOT, "beebox", "deploy", "deploy.sh"), join(deployDir, "deploy.sh"));
-  chmodSync(join(deployDir, "deploy.sh"), 0o755);
-  writeFileSync(join(deployDir, "server-ip"), "192.0.2.1\n");
+  for (const name of ["deploy.sh", "deploy-target.sh"]) {
+    copyFileSync(join(ROOT, "beebox", "deploy", name), join(deployDir, name));
+    chmodSync(join(deployDir, name), 0o755);
+  }
+  writeFileSync(join(deployDir, "target.env"), "BBX_DEPLOY_HOST=192.0.2.1\n");
   writeFileSync(join(deployDir, ".last-deploy.log"), "");
   execFileSync("git", ["init", "-q", root]);
   execFileSync("git", ["-C", root, "config", "user.email", "test@example.invalid"]);

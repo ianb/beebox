@@ -15,6 +15,9 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+
+import { deployTarget } from "../bin/deploy-target.js";
+
 import { runOnServer } from "./run-on-server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,12 +35,7 @@ function isFeedbackFilename(name: string): boolean {
 }
 
 function getRemoteHost(): string | null {
-  const serverIpFile = path.join(__dirname, "..", "beebox", "deploy", "server-ip");
-  try {
-    return fs.readFileSync(serverIpFile, "utf-8").trim();
-  } catch {
-    return null;
-  }
+  return deployTarget(path.join(__dirname, ".."))?.host ?? null;
 }
 
 function parseArgs(): {
@@ -257,7 +255,7 @@ async function main(): Promise<void> {
     if (remoteHost) {
       items.push(...collectRemoteFeedback(remoteHost));
     } else {
-      console.error("Warning: could not read deploy/server-ip, skipping remote collection.");
+      console.error("Warning: no deploy target configured (beebox/deploy/target.env), skipping remote collection.");
     }
   }
 

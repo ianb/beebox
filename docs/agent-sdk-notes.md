@@ -577,7 +577,7 @@ upstream but **not yet present on this machine**.
   uncommitted edits to `prod.env`-style and `*.tfvars` files, or to editor swap,
   temp, and backup copies of credential files (e.g. `key.pem.tmp`, `id_rsa.swo`);
   they now stay on your machine."* This repo carries exactly that shape of file:
-  `beebox/.env` (gitignored, present) and `beebox/deploy/server-ip`
+  `beebox/.env` (gitignored, present) and `beebox/deploy/target.env`
   (gitignored via `deploy/.gitignore`). The upload went to the boxholder's own
   cloud session rather than anywhere public, so this is not a disclosure to a
   third party — but it is credentials leaving the machine, and the installed

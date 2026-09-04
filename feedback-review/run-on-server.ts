@@ -23,9 +23,10 @@
  */
 
 import { spawnSync } from "node:child_process";
-import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { deployTarget } from "../bin/deploy-target.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -37,7 +38,7 @@ export interface RunOnServerOptions {
    *  the owner of box files). Use `"root"` only for operations that genuinely
    *  require it (systemctl, chown, package installs) and document the why. */
   asUser?: "beebox" | "root";
-  /** Override the target host. Defaults to the IP in `beebox/deploy/server-ip`. */
+  /** Override the target host. Defaults to this machine's configured deploy target. */
   host?: string;
 }
 
@@ -49,8 +50,14 @@ export interface RunOnServerResult {
 }
 
 function defaultHost(): string {
-  const p = path.join(__dirname, "..", "beebox", "deploy", "server-ip");
-  return fs.readFileSync(p, "utf-8").trim();
+  const target = deployTarget(path.join(__dirname, ".."));
+  if (target === null) {
+    throw new Error(
+      "no deploy target configured (beebox/deploy/target.env) — pass an explicit host, " +
+        "or run from the checkout that deploys",
+    );
+  }
+  return target.host;
 }
 
 export function runOnServer(opts: RunOnServerOptions): RunOnServerResult {

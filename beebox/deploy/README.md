@@ -206,8 +206,8 @@ Pulls beebox, rebuilds, and restarts services.
 
 Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations on the server.
 In a worktree, the command falls back to the main checkout's gitignored
-`deploy/server-ip`; a non-empty local copy takes precedence. This fallback is
-for diagnostics only: `deploy.sh` intentionally requires `server-ip` in the
+`deploy/target.env`; a non-empty local copy takes precedence. This fallback is
+for diagnostics only: `deploy.sh` intentionally requires `target.env` in the
 invoking checkout.
 
 ### Production app diagnostics
@@ -228,10 +228,10 @@ bin/browse screenshot --slug prod
 ```
 
 `prod-curl` keeps the signed session cookie on the server. `prod-browse` puts it
-in the local isolated browser profile and also requires the production base URL
-in gitignored `deploy/public-url`; from a worktree it falls back to the main
-checkout's copy just like `server-ip`. Never print or persist either cookie or
-URL in tracked files.
+in the local isolated browser profile and also requires `BBX_DEPLOY_PUBLIC_URL`
+in `deploy/target.env`; from a worktree it falls back to the main checkout's
+copy like everything else there. Never print or persist either cookie or URL in
+tracked files.
 
 ## Server layout
 

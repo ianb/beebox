@@ -1,6 +1,6 @@
 ---
 title: "Separate the boxholder-specific deploy machinery from the repo's release story — abstract the deploy, keep opt-in infrastructure"
-workstream: unattached
+workstream: deploy-separation
 needs: [design]
 area: beebox
 labels: [deploy, soft-launch]

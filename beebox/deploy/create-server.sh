@@ -15,6 +15,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # ── Load .env ───────────────────────────────────────────────────────
 if [[ -f "$SCRIPT_DIR/.env" ]]; then
   set -a
+  # Operator-authored, gitignored, and absent in a fresh clone.
+  # shellcheck source=/dev/null
   source "$SCRIPT_DIR/.env"
   set +a
 fi
@@ -63,8 +65,16 @@ hcloud server create \
   --ssh-key "$SSH_KEY_NAME"
 
 SERVER_IP=$(hcloud server ip "$SERVER_NAME")
-echo "$SERVER_IP" > "$SCRIPT_DIR/server-ip"
-echo "Server created at $SERVER_IP"
+# Seed the opt-in deploy config, which is what makes this checkout one that
+# deploys at all (see deploy/target.env.example). Only the host is written; an
+# existing target.env is left alone — it may carry a whole operator's settings.
+if [[ -f "$SCRIPT_DIR/target.env" ]]; then
+  echo "Server created at $SERVER_IP"
+  echo "NOTE: $SCRIPT_DIR/target.env already exists — set BBX_DEPLOY_HOST=$SERVER_IP in it yourself."
+else
+  printf 'BBX_DEPLOY_HOST=%s\n' "$SERVER_IP" > "$SCRIPT_DIR/target.env"
+  echo "Server created at $SERVER_IP (wrote deploy/target.env)"
+fi
 
 # ── Update Cloudflare DNS ───────────────────────────────────────────
 if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then

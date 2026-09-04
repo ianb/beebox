@@ -26,7 +26,7 @@ checkout: read an item and either fix it on the spot, promote it to an
 2026-08-12). Two reasons it was wrong there. Layering: it made a workstream
 answerable to raw capture rather than to a triaged item, skipping the judgment
 step. And mechanics: `/finish` runs inside a worktree, while `collect.ts` needs
-`deploy/server-ip`, which exists only in the main checkout — so a worktree run
+`deploy/target.env`, which exists only in the main checkout — so a worktree run
 silently skipped every remote box, which is where nearly all real feedback
 lives. The step couldn't do its job by construction.
 

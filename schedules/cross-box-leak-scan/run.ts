@@ -10,13 +10,13 @@
  *
  * Why the prod ssh happens here rather than only from the main checkout: a
  * worktree checkout (where this schedule's own session runs) has no
- * `beebox/deploy/server-ip` — that file is deliberately per-real-checkout
+ * `beebox/deploy/target.env` — that file is deliberately per-real-checkout
  * (see `beebox/deploy/deploy.sh`), so `bin/schedules run` executing this
  * script from whatever checkout it was invoked in is what makes the prod leg
  * possible at all. `run` (this script) does the ssh; the *session* this
  * schedule hands off to runs in its own worktree and never touches prod
  * directly. A real run (not `--dry-run`) is expected to happen from a
- * checkout that HAS `server-ip` — see {@link prodAuditGate}'s refusal when
+ * checkout that HAS a deploy target — see {@link prodAuditGate}'s refusal when
  * it's missing outside a dry run.
  *
  * A watch that cannot watch must refuse (root CLAUDE.md / the authoring
@@ -33,6 +33,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execa } from "execa";
+
+import { deployTarget } from "../../bin/deploy-target.js";
 
 import { runStaticSweep } from "./static-sweep.js";
 
@@ -59,14 +61,14 @@ async function fileExists(target: string): Promise<boolean> {
 }
 
 /**
- * What to do about the prod leg, given whether `server-ip` exists and
- * whether this is a dry run: `"run"` proceeds with the ssh; `"skip"` is the
- * ONLY case a missing file is tolerated (a worktree rehearsal); `"refuse"`
- * means a real run found itself on a checkout without a prod deploy target,
- * which is a broken watch, not a quiet no-op.
+ * What to do about the prod leg, given whether a deploy target is configured
+ * and whether this is a dry run: `"run"` proceeds with the ssh; `"skip"` is
+ * the ONLY case a missing target is tolerated (a worktree rehearsal);
+ * `"refuse"` means a real run found itself on a checkout without a prod deploy
+ * target, which is a broken watch, not a quiet no-op.
  */
-export function prodAuditGate(input: { serverIpFileExists: boolean; dryRun: boolean }): "run" | "skip" | "refuse" {
-  if (input.serverIpFileExists) return "run";
+export function prodAuditGate(input: { deployTargetConfigured: boolean; dryRun: boolean }): "run" | "skip" | "refuse" {
+  if (input.deployTargetConfigured) return "run";
   return input.dryRun ? "skip" : "refuse";
 }
 
@@ -88,19 +90,17 @@ async function runLocalHostAudit(): Promise<string[]> {
  * the host apart from that scratch directory. Gated by {@link prodAuditGate}.
  */
 async function runProdHostAudit(): Promise<string[]> {
-  const serverIpFile = path.join(REPO_ROOT, "beebox", "deploy", "server-ip");
-  const gate = prodAuditGate({ serverIpFileExists: await fileExists(serverIpFile), dryRun: DRY_RUN });
+  const target = deployTarget(REPO_ROOT);
+  const gate = prodAuditGate({ deployTargetConfigured: target !== null, dryRun: DRY_RUN });
   if (gate === "skip") {
-    console.log("[cross-box-leak-scan] dry run: prod audit skipped (no beebox/deploy/server-ip)");
+    console.log("[cross-box-leak-scan] dry run: prod audit skipped (no deploy target configured)");
     return [];
   }
-  if (gate === "refuse") {
-    refuse(`beebox/deploy/server-ip not found at ${serverIpFile} — this schedule must run from the real checkout that has it, not one lacking a prod deploy target`);
+  if (gate === "refuse" || target === null) {
+    refuse("no deploy target configured (beebox/deploy/target.env) — this schedule must run from the real checkout that has one, not one lacking a prod deploy target");
   }
-  const serverIp = (await fs.readFile(serverIpFile, "utf8")).trim();
-  if (serverIp === "") refuse(`${serverIpFile} exists but is empty`);
   const remoteDir = `/tmp/cross-box-leak-scan-${process.pid}`;
-  const sshTarget = `root@${serverIp}`;
+  const sshTarget = target.sshTarget;
   const ship = await execa(
     "rsync",
     ["-a", "-e", "ssh -o ConnectTimeout=12", ...PROD_AUDIT_FILES.map((name) => path.join(SCHEDULE_DIR, name)), `${sshTarget}:${remoteDir}/`],

@@ -191,7 +191,7 @@ The server runs `claude update` nightly via `claude-update.timer` → `claude-up
 ### Run this
 
 ```bash
-ssh root@$(cat ~/src/beebox/deploy/server-ip) 'bash -s' <<'EOF'
+deploy/prod-ssh 'bash -s' <<'EOF'
   echo "=== wrapper log (last 40 lines) ==="
   tail -n 40 /home/beebox/claude-update.log
   echo
