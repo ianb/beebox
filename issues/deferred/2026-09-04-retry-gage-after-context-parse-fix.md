@@ -1,7 +1,7 @@
 ---
 title: "Retry gage (Claude Code session scanner) once gageml/gage#16 is resolved"
 workstream: unattached
-activate-on: 2026-09-18
+activate-on: 2026-09-08
 category: watch
 labels: [external-tool]
 filed-by: agent
@@ -32,7 +32,7 @@ gh release list -R gageml/gage --limit 5
 ```
 
 - **Unresolved, no movement:** move this file back to `deferred/` with a new
-  `activate-on` two to four weeks out (later each time it re-defers; after
+  `activate-on` further out each time — a week, then two, then four; after
   roughly three re-defers with no upstream activity, ask the boxholder whether
   to keep watching or close it).
 - **Fixed or a release that mentions `/context` parsing:** tell the boxholder
