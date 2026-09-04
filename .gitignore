@@ -110,3 +110,10 @@ schedules/*/local.yaml
 
 # Tailscale sidecar credentials (docker-install.md)
 beebox/docker/tailscale.env
+
+# tap's run artifacts. Ignored in beebox/ too, but tap writes them into
+# whatever directory it is invoked from, and a doctest run from the repo root
+# (rather than from `beebox/`) lands them here — where their processinfo JSON
+# records absolute home paths and the next `git add -A` trips path-leak-check.
+# The root is not a tap project, so this is litter wherever it appears.
+.tap/

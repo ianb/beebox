@@ -4,6 +4,7 @@ workstream: deploy-separation
 area: repo
 filed-by: agent
 discovered-in: worktree-deploy-separation — ran a beebox doctest from the wrong cwd
+resolution: implemented
 ---
 
 `beebox/.gitignore` ignores `.tap/`, but the monorepo root's does not. So
@@ -39,3 +40,15 @@ since running the beebox suite from the root is never the intended path —
 `pnpm --dir beebox exec tap …` is.
 
 Filed while landing an unrelated change; not blocking anything.
+
+> 2026-09-04 fixed: `.tap/` added to the monorepo root `.gitignore`, with the
+> reason recorded there (tap writes into whatever directory it is invoked from,
+> and the root is not a tap project). Verified by probe — a planted
+> `.tap/processinfo/*.json` is ignored and leaves `git status` clean.
+>
+> The second half of the fix direction was not taken: the root `package.json`
+> still does not refuse a bare `tap` invocation. The wrong cwd still makes the
+> test itself fail, which remains the first and more confusing signal; that is
+> now the only part of this left, and it is small enough not to keep the issue
+> open for.
+
