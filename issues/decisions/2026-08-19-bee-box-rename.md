@@ -7,6 +7,7 @@ labels: [soft-launch]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-public-site — public-site design conversation
+next-action: fixed
 ---
 
 The developer floated renaming the project to **Bee Box**, alongside a design
