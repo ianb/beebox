@@ -12,17 +12,17 @@ Space-separated list of `type:identifier` pairs indicating where the displayed d
 
 | Type | Identifier | Example |
 |------|-----------|---------|
-| `card` | Relative path to the card file | `card:store/todos/Shopping.doc.card` |
+| `card` | Relative path to the card file | `card:_content/todos/Shopping.doc.card` |
 | `commit` | Git commit hash | `commit:abc1234` |
 | `api` | API endpoint or tRPC procedure name | `api:status.questions` |
-| `dir` | Directory path being browsed | `dir:store/recipes` |
+| `dir` | Directory path being browsed | `dir:_content/recipes` |
 | `session` | Chat session ID | `session:abc-123-def` |
 | `schedule` | Schedule name | `schedule:daily-wakeup` |
 
 Multiple sources on one element are space-separated:
 
 ```tsx
-<div data-bbx-source="card:store/recipes/Pesto.recipe.card card:store/recipes/Pasta.recipe.card">
+<div data-bbx-source="card:_content/recipes/Pesto.recipe.card card:_content/recipes/Pasta.recipe.card">
 ```
 
 ### `data-bbx-source-item`
@@ -30,7 +30,7 @@ Multiple sources on one element are space-separated:
 Optional natural-language description of which part of the source this element represents. Use when multiple sibling elements reference the same source but show different parts of it.
 
 ```tsx
-<div data-bbx-source="card:store/todos/Shopping.doc.card" data-bbx-source-item="item: Buy milk">
+<div data-bbx-source="card:_content/todos/Shopping.doc.card" data-bbx-source-item="item: Buy milk">
   <span>Buy milk</span>
 </div>
 ```

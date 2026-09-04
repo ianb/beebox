@@ -18,7 +18,7 @@ When we talk about what the agent "knows," there are distinct phenomena worth na
 
 7. **Improvised** — The agent constructs a plausible approach without checking if there's an established one. Unlike guessing (which is about facts), this is about strategy: the agent builds something that works but misses patterns or tools it should have used. Example: hand-parsing frontmatter with string splitting when `beebox/cards` already has a parser, or hand-rolling a card file instead of using `bbx create`. The result may actually function, which makes it harder to catch than a wrong guess — the problem is that it's not the *right* way, and it'll diverge from conventions. Often a fallback when the agent decides it can figure things out as it goes rather than looking up how things are done.
 
-8. **Knows it doesn't know** — The agent is aware of the gap. Something is acknowledged to exist but the agent genuinely lacks access to the information. Better than guessing — the agent can say "I don't have that information" or ask. Example: connector auth secrets live in `config/connectors/*.secret.*` — ideally these would be inaccessible to the agent (not just forbidden), so the agent knows connectors need credentials but can't read the actual values. (Today the agent *can* read these files, which makes this "deducible" rather than true "doesn't know" — a gap in the access model.) Relatedly, a box's `.claude/settings.json` permission rules don't gate engine-spawned agents at all — `runAgent` hardcodes `permissionMode: "bypassPermissions"` (`src/core/agent/run.ts`) — so those rules only shape a human's interactive Claude Code session in the box, not the wakeup/procedure/chat runs the engine drives.
+8. **Knows it doesn't know** — The agent is aware of the gap. Something is acknowledged to exist but the agent genuinely lacks access to the information. Better than guessing — the agent can say "I don't have that information" or ask. Example: connector auth secrets live in `_config/connectors/*.secret.*` — ideally these would be inaccessible to the agent (not just forbidden), so the agent knows connectors need credentials but can't read the actual values. (Today the agent *can* read these files, which makes this "deducible" rather than true "doesn't know" — a gap in the access model.) Relatedly, a box's `.claude/settings.json` permission rules don't gate engine-spawned agents at all — `runAgent` hardcodes `permissionMode: "bypassPermissions"` (`src/core/agent/run.ts`) — so those rules only shape a human's interactive Claude Code session in the box, not the wakeup/procedure/chat runs the engine drives.
 
 9. **Does not know** — Beyond the agent's knowledge boundaries. Pursuing the question yields no answer. The agent may have given up while the information was still deducible.
 
@@ -26,7 +26,7 @@ When we talk about what the agent "knows," there are distinct phenomena worth na
 
 The same information can sit at different levels depending on what the agent is currently doing. In Claude Code, this happens concretely through conditional rules:
 
-- `config/schemas/CLAUDE.md` is **knows directly** when the agent is editing files in `config/schemas/` (Claude Code auto-loads directory CLAUDE.md files). But when the agent is working on something unrelated, the same information is only **discoverable** — the agent would have to navigate to that directory and find the file.
+- `src/schemas/CLAUDE.md` is **knows directly** when the agent is editing files in `src/schemas/` (Claude Code auto-loads directory CLAUDE.md files). But when the agent is working on something unrelated, the same information is only **discoverable** — the agent would have to navigate to that directory and find the file.
 
 - `.claude/rules/card-memo.md` is **knows directly** when the agent reads or edits a `*.memo.card` file (the `paths:` glob triggers loading). When working on other card types, memo-specific knowledge is **discoverable** at best.
 
@@ -39,7 +39,7 @@ This means testing should consider: what was the agent *doing* when it answered?
 The agent's context is built in layers, each corresponding to a knowledge level:
 
 - **Always loaded** → *knows directly*: `CLAUDE.md` → `.beebox/agent-guide.md` (~128 lines of operational overview, directory layout, command summaries, card type catalog with doc references)
-- **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-memo.md` loads when touching `*.memo.card`). Also, directory-level `CLAUDE.md` files (e.g., `config/schemas/CLAUDE.md`) are loaded when the agent works in that directory.
+- **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-memo.md` loads when touching `*.memo.card`). Also, directory-level `CLAUDE.md` files (e.g., `src/schemas/CLAUDE.md`) are loaded when the agent works in that directory.
 - **Referenced but not loaded** → *knows about*: `docs/generated/*.md` (~31 files — full card type specs, command reference, procedure authoring guide, domain guides). The agent guide points to these by path.
 - **Present but not referenced** → *discoverable*: config files, procedure definitions, guide cards. Available in the box but the agent has to find them by exploring.
 - **Outside the box** → *deducible*: beebox source code (`src/cards/`, `src/schemas/`, etc., or `node_modules/beebox` from inside the box). Accessible if the agent knows where to look, but outside the box.
@@ -77,7 +77,7 @@ When running `bbx prompt`, watch for:
 bbx prompt "Where would you look for unprocessed incoming items?"
 ```
 - **Expected level: Knows directly** — directory layout is in the agent guide
-- Watch for: does it name `box/inbox/` directly, or does it have to search?
+- Watch for: does it name `_content/inbox/` directly, or does it have to search?
 
 ```
 bbx prompt "If I wanted to find all memo cards in the system, how would you search?"
@@ -89,7 +89,7 @@ bbx prompt "If I wanted to find all memo cards in the system, how would you sear
 bbx prompt "What happens to a card after it's processed?"
 ```
 - **Expected level: Knows directly** — the agent guide describes the inbox→archive lifecycle and `bbx mv`
-- Watch for: does it mention `bbx mv` and `store/archive/`, or guess at a generic pipeline?
+- Watch for: does it mention `bbx mv` and `_bookkeeping/archive/`, or guess at a generic pipeline?
 
 ## 2. Card Types and Schemas
 
@@ -172,13 +172,13 @@ bbx prompt "Explain the relationship between a procedure card and a procedure-ru
 ```
 bbx prompt "What guides exist in this box and what do they do?"
 ```
-- **Expected level: Discoverable** — guide cards are in `config/` but the agent guide doesn't list them all; the agent needs to look at the filesystem
-- Watch for: does it list `config/` and find guide cards, or just describe guides conceptually?
+- **Expected level: Discoverable** — guide cards are in `_config/` but the agent guide doesn't list them all; the agent needs to look at the filesystem
+- Watch for: does it list `_config/` and find guide cards, or just describe guides conceptually?
 
 ```
 bbx prompt "If I wanted to change how inbox items are triaged, what would I modify?"
 ```
-- **Expected level: Discoverable** — needs to find the intake guide card in `config/` and understand guide→rules compilation
+- **Expected level: Discoverable** — needs to find the intake guide card in `_config/` and understand guide→rules compilation
 - Watch for: does it identify the right guide card, or suggest editing rules directly?
 
 ## 6. Tricks (Box-Local Scripts)
@@ -202,7 +202,7 @@ bbx prompt "Where do trick scripts live?"
 ```
 bbx prompt "What connectors are configured for this box?"
 ```
-- **Expected level: Discoverable** — the agent would need to look at `config/connectors/` and/or `docs/generated/connectors.md`
+- **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `docs/generated/connectors.md`
 - Watch for: does it explore the config, or just list connector types it "knows about" generically?
 
 ```
@@ -238,11 +238,11 @@ bbx prompt "How would I add a daily task?"
 
 ### Things the agent CAN do today (in-box):
 - **Create new card types/schemas** — write `.ts` files exporting a `cardSchema()` (the schemas dir is `src/schemas/` at the package root — see the schemas guide installed by `bbx init`)
-- **Create new procedures** — write a procedure card to `config/procedures/`
-- **Modify guides** — edit `config/*.guide.card` to change per-domain processing rules (intake triage, feedback handling, calendar review)
+- **Create new procedures** — write a procedure card to `_config/procedures/`
+- **Modify guides** — edit `_config/*.guide.card` to change per-domain processing rules (intake triage, feedback handling, calendar review)
 - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-cutting intake → triage → handle pipeline; see `docs/triage.md`)
 - **Add tricks** — create scripts in `tricks/scripts/`
-- **Add scheduled tasks** — create `config/scheduled/*.scheduled-script.card`
+- **Add scheduled tasks** — create `_config/schedules/*.scheduled-script.card`
 - **Create any card** — using `bbx create` or writing the frontmatter card directly
 
 ### Things the agent CANNOT do today (require source changes):
@@ -262,7 +262,7 @@ The schemas-guide `CLAUDE.md` (installed by `bbx init` at `src/schemas/CLAUDE.md
 ```
 bbx prompt "I want to track recipes. How would you set that up?"
 ```
-- **Expected level: Discoverable** — the agent needs to discover `config/schemas/CLAUDE.md` to know it can create a new card type, rather than just suggesting freeform memos
+- **Expected level: Discoverable** — the agent needs to discover `src/schemas/CLAUDE.md` to know it can create a new card type, rather than just suggesting freeform memos
 - Watch for: does it find the schemas guide? Does it create a proper schema file, or suggest a workaround?
 
 ```
@@ -280,7 +280,7 @@ bbx prompt "How would you add a new capability to this box?"
 ```
 bbx prompt "What card types do you know about? Can you add new ones?"
 ```
-- **Expected level: Knows directly + Discoverable** — listing types is "knows directly" (agent guide); adding new ones are "discoverable" (requires finding `config/schemas/CLAUDE.md`)
+- **Expected level: Knows directly + Discoverable** — listing types is "knows directly" (agent guide); adding new ones are "discoverable" (requires finding `src/schemas/CLAUDE.md`)
 - Watch for: does it answer both parts? The second part is the interesting one.
 
 ## 9. Views (Agent-Generated React Components)
@@ -326,7 +326,7 @@ These test the interactive chat agent's knowledge (system prompt, not agent guid
 ```
 bbx prompt "Can you show me a view in this chat?"
 ```
-- **Expected level: Knows directly** — the chat system prompt describes the `[Display Name](view:store/path/to/file.md)` syntax for files and `[Display Name](view:slug)` for custom views
+- **Expected level: Knows directly** — the chat system prompt describes the `[Display Name](view:_content/path/to/file.md)` syntax for files and `[Display Name](view:slug)` for custom views
 - Watch for: does it use path-first format for files, and slug format only for custom dashboard views?
 
 ```
@@ -354,7 +354,7 @@ These areas were identified as important but don't have test prompts yet. To be 
 ### Guide Awareness
 Does the agent understand the guide→compile→rules pipeline? Can it trace how preferences flow into behavior?
 
-- "I always want recipes to be archived under store/recipes — how would I make that the default?"
+- "I always want recipes to be archived under _content/recipes — how would I make that the default?"
   - Expected: agent finds the intake guide card, understands triage rules are where routing preferences live
 - "If I wanted to change how the agent handles calendar changes, what would I modify?"
   - Expected: identifies the calendar guide card's action instructions, knows about compilation
@@ -372,7 +372,7 @@ Does the agent know what connectors exist, how data flows in and out?
 ### Routing Domain-Specific Inputs
 Per-domain pipelines (intake, feedback, etc.) get something that needs routing. Can the agent figure out the right destination — including escalating to a guide-rule update when the input is a meta-preference, not a single item?
 
-- "Here's a card from the inbox that says 'I want recipes to always get archived under store/recipes/.' What do you do with it?"
+- "Here's a card from the inbox that says 'I want recipes to always get archived under _content/recipes/.' What do you do with it?"
   - Expected: recognizes this as a preference that should update the intake guide's triage rules, not just archive it
 - "Someone dropped a bookmark URL into the inbox. What happens to it?"
   - Expected: understands bookmark processing procedure or manual flow
@@ -385,7 +385,7 @@ Can the agent use git history, inbox state, recent archives to answer questions 
 - "Has anything new arrived today?"
   - Expected: checks inbox, gives current state
 - "When was the last capture session processed?"
-  - Expected: checks store/archive or git log
+  - Expected: checks _bookkeeping/archive or git log
 
 ### Personality & Identity
 Does the agent know who it is and who it works for?
@@ -411,7 +411,7 @@ bbx prompt "Describe your personality."
 ```
 bbx prompt "How would I change your personality or tone?"
 ```
-- **Expected level: Knows about** — the compiled section has a source comment pointing to `config/main.personality.card`
+- **Expected level: Knows about** — the compiled section has a source comment pointing to `_config/main.personality.card`
 - Watch for: does it identify the personality card as the source? Or suggest editing CLAUDE.md directly?
 
 ```
@@ -440,7 +440,7 @@ First full run of the knowledge audit suite (27 tests). Results and observations
 - **Discoverable** tests for exploration passed well (list-guides, list-connectors both searched the filesystem).
 
 ### Fixes applied based on results
-- **Box-local schemas**: Agent guide had no mention of `config/schemas/`. Agent said "card types are defined by the framework, I can't add new ones." Fix: added one line to the Card Types section pointing to `config/schemas/CLAUDE.md`. After fix, `create-new-card-type` and `card-types-and-add-new` both pass.
+- **Box-local schemas**: Agent guide had no mention of `src/schemas/`. Agent said "card types are defined by the framework, I can't add new ones." Fix: added one line to the Card Types section pointing to `src/schemas/CLAUDE.md`. After fix, `create-new-card-type` and `card-types-and-add-new` both pass.
 - **Scheduled scripts**: Agent guide pointer was too vague. Agent mentioned the doc but didn't read it. Fix: added specifics about what the doc contains (cron, throttling, chaining). After fix, `add-daily-task` passes.
 - **Procedure authoring**: Trimmed the procedure pointer to remove specifics (phases, primitives) that were giving the agent enough to guess from.
 
@@ -450,7 +450,7 @@ First full run of the knowledge audit suite (27 tests). Results and observations
 
 **"Knows about" vs. creation prompts** — Pattern across multiple tests: the agent reads docs when asked to *explain* something but skips the read when asked to *create* something. It seems to treat creation as an opportunity to demonstrate capability rather than a signal to look things up. This affects create-question-card, create-procedure, and add-daily-task (before fix). The schedule fix worked by making the pointer more specific about what the doc contains; the procedure fix (trimming) didn't work. More investigation needed on what makes an agent follow a pointer.
 
-**Recipe test replaced** — Original `track-recipes` test asked about recipes, but recipe is a built-in card type. Agent correctly identified existing support rather than discovering schemas. Replaced with `track-reading-list` (books with progress/ratings) — no built-in type for this. Agent now correctly creates a schema in `config/schemas/book.ts` but does so without reading `config/schemas/CLAUDE.md` — it has enough from the agent guide pointer + the existing bookmark.ts example. This is "knows about" behavior working correctly; the automated `should_read` check is too strict.
+**Recipe test replaced** — Original `track-recipes` test asked about recipes, but recipe is a built-in card type. Agent correctly identified existing support rather than discovering schemas. Replaced with `track-reading-list` (books with progress/ratings) — no built-in type for this. Agent now correctly creates a schema in `src/schemas/book.ts` but does so without reading `src/schemas/CLAUDE.md` — it has enough from the agent guide pointer + the existing bookmark.ts example. This is "knows about" behavior working correctly; the automated `should_read` check is too strict.
 
 ## Personality Test Run Notes (2026-02-23)
 
@@ -463,7 +463,7 @@ Six personality tests run against the default "Egg" template.
 | What's your name? | Knows directly | **Pass** | Immediate answer: "Egg". No file reads. |
 | What's your role? | Knows directly | **Pass** | "Personal information aide" — exact term. |
 | Describe your personality | Knows directly | **Pass** | Paraphrased description paragraph into bullet points. All content grounded in the actual card. |
-| How would I change your personality or tone? | Knows about | **Pass** | Identified `config/main.personality.card`, mentioned `bbx validate` and `bbx init`. |
+| How would I change your personality or tone? | Knows about | **Pass** | Identified `_config/main.personality.card`, mentioned `bbx validate` and `bbx init`. |
 | What tone instructions do you follow? | Discoverable | **Guessed** | Answered from description paragraph, reformatting it as tone instructions. Did NOT read the personality card to find actual `<tone>` elements. Sounds right but isn't surfacing the real data. |
 | Who is your boxholder? | Knows directly (partial) | **Mixed** | Correctly knew the "boxholder" concept. Acknowledged personality card doesn't have a name. But then inferred "Priya Marlowe" from the filesystem path — clever but not personality-card-sourced. |
 
@@ -471,7 +471,7 @@ Six personality tests run against the default "Egg" template.
 
 **Identity tests work well.** The compiled personality section in the agent guide is doing its job — name, role, and description are all "knows directly" and answered accurately without file reads.
 
-**"How to change" works well.** The source comment (`<!-- Source: config/main.personality.card -->`) successfully guides the agent to the right file.
+**"How to change" works well.** The source comment (`<!-- Source: _config/main.personality.card -->`) successfully guides the agent to the right file.
 
 **Tone instructions were a blind spot.** Initially, all default tone instructions were low confidence and filtered from compiled output. The agent didn't know they existed and improvised from the description.
 

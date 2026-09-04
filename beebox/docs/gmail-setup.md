@@ -28,7 +28,7 @@ thread read. A leftover attach scope does not keep a thread tracked.
 
 ## Automatic rules
 
-`config/connectors/gmail.json` is required once Gmail is enabled — sync fails
+`_config/connectors/gmail.json` is required once Gmail is enabled — sync fails
 with an error rather than quietly importing nothing, because "no rules" and "no
 config" used to look identical from the outside.
 
@@ -50,7 +50,7 @@ Named rules may either track newly matching threads or request a procedure:
       "query": "label:inbox is:unread",
       "action": {
         "type": "procedure",
-        "ref": "config/procedures/review-email.procedure.card"
+        "ref": "_config/procedures/review-email.procedure.card"
       }
     }
   ]
@@ -115,7 +115,7 @@ bbx connector gmail pending
 bbx connector gmail pending send-to-agent
 ```
 
-The data lives in gitignored `config/connectors/gmail.state.json`. It is a
+The data lives in gitignored `_bookkeeping/connectors/gmail.state.json`. It is a
 bounded discovery aid, not an offline mailbox mirror or a Git artifact.
 
 Procedure actions run after connector writes and commits finish. Their
@@ -146,8 +146,8 @@ when a question requires mail beyond the tracked cards.
 Each tracked thread is one card with a sibling attach scope:
 
 ```text
-box/inbox/email/Subject.email-thread.card
-box/inbox/email/Subject.attach/
+_content/inbox/email/Subject.email-thread.card
+_content/inbox/email/Subject.attach/
   msg-001.email-message.card
   msg-001.attach/
     msg-001.body.txt

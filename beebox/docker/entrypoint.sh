@@ -9,9 +9,9 @@
 #         docker compose run --rm box claude auth login
 #   * NO arguments   → readiness check, then serve the box.
 #
-# The box lives at /data/box (a package; the operational box is
-# /data/box/content). Both are bind-mounted from the host and owned by the
-# runtime user.
+# The box lives at /data/box — the one root (shapeVersion 3): npm package
+# and operational areas (_content/, _config/, …) in the same directory.
+# Bind-mounted from the host and owned by the runtime user.
 set -euo pipefail
 
 BOX_ROOT=/data/box
@@ -38,12 +38,12 @@ fi
 
 # ── No arguments: readiness check, then serve ────────────────────────────
 #
-# A v2 box is ready only when all three hold. Checking just the marker would
+# A box is ready only when all three hold. Checking just the marker would
 # accept a partial init (bbx init writes the marker early but commits at the
 # end — a crash between the two leaves a box that looks initialized but has no
 # HEAD commit).
 ready=1
-[[ -f "$BOX_ROOT/content/.beebox/box.json" ]] || ready=0
+[[ -f "$BOX_ROOT/.beebox/box.json" ]] || ready=0
 [[ -f "$BOX_ROOT/package.json" ]] || ready=0
 git -C "$BOX_ROOT" rev-parse HEAD >/dev/null 2>&1 || ready=0
 
@@ -82,6 +82,6 @@ if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
       --allow-build=@googleworkspace/cli )
 fi
 
-# Serve the operational box (content/) on all interfaces inside the container;
-# the host-side port mapping (compose) decides who can reach it.
-exec bbx serve "$BOX_ROOT/content" --host 0.0.0.0 --port 3210
+# Serve the box on all interfaces inside the container; the host-side port
+# mapping (compose) decides who can reach it.
+exec bbx serve "$BOX_ROOT" --host 0.0.0.0 --port 3210

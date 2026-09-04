@@ -24,7 +24,7 @@ Assets are tracked by **git-annex**. Git stores a small pointer; git-annex
 stores the bytes under `.git/annex/objects/`, keyed by their SHA-256.
 
 ```
-content/trip.attach/photo-001.jpg      ← ordinary file, readable and writable
+_content/trip.attach/photo-001.jpg      ← ordinary file, readable and writable
                                           (git records a pointer for it)
 ```
 
@@ -44,7 +44,7 @@ Three consequences worth holding onto:
 Nothing special:
 
 ```bash
-cp photo.jpg content/trip.attach/
+cp photo.jpg _content/trip.attach/
 git add -A && git commit -m "Add trip photo"
 ```
 
@@ -62,7 +62,7 @@ renders it into the `annex.largefiles` expression.
 extension list, and the migration removes the `filter=lfs` rules. The allowlist
 is therefore unscoped — it matches a binary anywhere, not only inside
 `.attach/` — because LFS was unscoped and its content (legacy captures under
-`box/inbox/`, 154 files on one box) would otherwise be left behind with no
+`_content/inbox/`, 154 files on one box) would otherwise be left behind with no
 mechanism at all. Where both filters were configured, annex took precedence;
 that was verified rather than assumed.
 
@@ -112,7 +112,7 @@ Two different situations produce that, and they are identical on disk: content
 never fetched, and a checkout made without git-annex installed. Fetch it with:
 
 ```bash
-git annex get content/trip.attach/photo-001.jpg
+git annex get _content/trip.attach/photo-001.jpg
 ```
 
 Every code path that reads asset bytes goes through

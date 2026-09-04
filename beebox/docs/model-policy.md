@@ -6,7 +6,7 @@ effect.
 
 ## Three settings, one file
 
-`config/box.json` holds all of it, beside `agentEngine`:
+`_config/box.json` holds all of it, beside `agentEngine`:
 
 | Field | What it decides |
 |---|---|
@@ -16,7 +16,7 @@ effect.
 
 ## Two levels
 
-**The box default** is `agentModel` in `config/box.json`, beside `agentEngine`.
+**The box default** is `agentModel` in `_config/box.json`, beside `agentEngine`.
 It holds a concrete model id (`claude-sonnet-5`, `gpt-5.6-terra`, …). Missing
 means *no policy*: every run takes its harness's own default. It is owner-only
 to change, and the change is committed to the box's git history like any other

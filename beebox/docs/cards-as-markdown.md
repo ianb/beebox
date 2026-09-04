@@ -19,7 +19,7 @@ A `.card` file is a YAML frontmatter block (`---` fences) optionally followed by
 
 **Naming and type discrimination.** `Name.type.card` — the type segment is the canonical discriminator, not a `type:` frontmatter field. `src/core/card-io.ts` `typeFromFilename()` reads it off the filename; `serializeCardText()` never writes a `type:` key back out. (A YAML `type:` field is tolerated on read for backward compatibility, but must match the filename's type or it's a format error.) Any file matching `<basename>.<type>.card` where `<type>` isn't registered in `cardSchemas` is an error; anything not matching that pattern is just not a card (e.g. `README.md`).
 
-**Schemas** are declared with `cardSchema(type, config)` from `src/cards/` (or the `beebox/cards` public specifier for box-local schemas under `config/schemas/`). `config.fields` is a flat map of Zod validators — one of which may be wrapped in `body(zodSchema)` to mark it as the file's markdown body instead of a frontmatter key. At most one field may be body-wrapped, and it must be named `body`; a schema that declares none is frontmatter-only, and any non-whitespace body content on such a card is a load error. Every schema also gets optional `title` and `contains` frontmatter fields for free (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`) unless it declares its own. See `docs/adding-schemas.md` for the full authoring walkthrough, including the per-schema `validate` hook for cross-field rules Zod can't express.
+**Schemas** are declared with `cardSchema(type, config)` from `src/cards/` (or the `beebox/cards` public specifier for box-local schemas under `src/schemas/`). `config.fields` is a flat map of Zod validators — one of which may be wrapped in `body(zodSchema)` to mark it as the file's markdown body instead of a frontmatter key. At most one field may be body-wrapped, and it must be named `body`; a schema that declares none is frontmatter-only, and any non-whitespace body content on such a card is a load error. Every schema also gets optional `title` and `contains` frontmatter fields for free (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`) unless it declares its own. See `docs/adding-schemas.md` for the full authoring walkthrough, including the per-schema `validate` hook for cross-field rules Zod can't express.
 
 **Body content and Markdoc.** Where a schema declares a body, it's plain markdown text rendered through a shared Markdoc configuration (`src/shared/markdoc-config.ts`) rather than plain CommonMark — this is the same config the frontend renderer and `bbx validate`'s body-ref walker both use. It defines a shared vocabulary of inline/block tags (`{% quote %}`, `{% source %}`, `{% ingredient %}`, `{% task %}`, `{% todo %}`, `{% see-also %}`, etc.) available across card bodies; a card type doesn't declare its own tag set, it just uses whichever shared tags make sense in its body prose.
 
@@ -85,7 +85,7 @@ subcommand. A `todo-view` card (see `src/schemas/todo-view.ts`) is the
 human-facing display surface: it's a live query (a `glob` plus optional
 `status`/`assigned` filters) rendered as plate-state groups, and — per "views
 attach to cards" — dropping one in a directory gives that subtree its own
-plate. `store/plate.todo-view.card` is the box-wide instance. Full design
+plate. `_content/plate.todo-view.card` is the box-wide instance. Full design
 record: `docs/implemented-plans/todo-annotation.md`.
 
 The suggested way to make a todo list at all is a simple `.doc.card` with
@@ -115,9 +115,9 @@ Refs are found **by convention**, not by per-field schema declaration: any key l
 
 ```yaml
 participants:
-  - { ref: /people/Alice.person.card }
+  - { ref: /_content/people/Alice.person.card }
 sources:
-  - ref: /store/archive/articles/Article.record.card
+  - ref: /_bookkeeping/archive/articles/Article.record.card
     usage: primary
 ```
 

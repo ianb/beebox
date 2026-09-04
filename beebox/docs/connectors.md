@@ -9,7 +9,7 @@ External service → Connector.sync() → Writes/reads card files → Git commit
 ```
 
 A connector's `sync()` method:
-1. Reads config from `config/connectors/<name>.secret.json`
+1. Reads config from `_config/connectors/<name>.secret.json`
 2. Pulls new data from the external service
 3. Creates/updates card files in the box
 4. Stages and commits changes with structured trailers
@@ -42,7 +42,7 @@ Telegram also has a webhook route (`routes/telegram.ts`) for real-time message d
 
 ## Configuration
 
-Each connector reads its config from `config/connectors/`:
+Each connector reads its config from `_config/connectors/`:
 - `telegram.secret.json` — `{ botToken, webhookSecret }`
 - `google-calendar.json` — `{ calendars, syncDaysBack, syncDaysForward }`
 - `gmail.json` — named Gmail query rules with a bounded `track` action, a
@@ -51,11 +51,11 @@ Each connector reads its config from `config/connectors/`:
   Every shape states its action explicitly; a missing action, or a missing file,
   is an error that stops the sync rather than a silent no-op. The history
   cursor, budgets, and bounded pending summaries live in gitignored
-  `gmail.state.json`.
+  `_bookkeeping/connectors/gmail.state.json`.
   A live email-thread card is the sole tracking registry; deleting it untracks
   the thread without changing Gmail. See [gmail-setup.md](gmail-setup.md).
 
-Transient state (last sync offsets, mappings) goes in `config/connectors/<name>.state.json` or `<name>-state.json`.
+Transient state (last sync offsets, mappings) goes in `_bookkeeping/connectors/<name>.state.json` or `<name>-state.json`.
 
 ## Service injection
 
@@ -80,7 +80,7 @@ See `src/services/CLAUDE.md` for the full service layer documentation.
 ## Writing a new connector
 
 1. Implement the `Connector` interface (`name`, `produces`, `sync()`)
-2. Read config from `config/connectors/<name>.secret.json`
+2. Read config from `_config/connectors/<name>.secret.json`
 3. Use transient state for sync cursors/offsets
 4. Stage and commit all file changes with descriptive messages and trailers
 5. Create job cards when new items need processing

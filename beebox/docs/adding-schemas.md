@@ -129,7 +129,7 @@ templates, so they don't need this.
 
 The default sync rule is strict: when an upstream template changes, a box gets
 the new version only if its copy is unmodified stock; if the box edited the
-card **at all**, the update is parked in `config/_template-updates/` for review
+card **at all**, the update is parked in `_config/_template-updates/` for review
 rather than clobbering the edit. That's usually right — but some fields are
 per-box **state**, not part of the definition, and a change to one shouldn't
 freeze the box on old content. The canonical case is a schedule's `enabled`: a
@@ -165,7 +165,7 @@ is then already sitting on disk unread. See
 It is deliberately a **field list, not a `merge(box, upstream)` callback**. The
 judgement that matters — "is this box on unmodified old stock, or did the
 boxholder edit the definition?" — needs the last-shipped hash, which lives in
-the version tracker (`config/template-versions.json`), not in the two card
+the version tracker (`_config/template-versions.json`), not in the two card
 texts. A free callback couldn't see that and would have to either clobber real
 edits or freeze old stock. Naming which keys are *state* lets the tracker keep
 making that call correctly. (Implementation: `boxOwnedFields` on
@@ -232,7 +232,7 @@ If the card type has its own storage location, add it to `BOX_DIRS` in `src/lib/
 ```ts
 export const BOX_DIRS = {
   // ...
-  mythings: "store/mythings",
+  mythings: "_content/mythings",
 };
 ```
 

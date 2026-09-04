@@ -55,7 +55,7 @@ and agent-resolvable for another:
 
 A name is a flat identifier; per-box instances use `name/<box-slug>`. The
 mapping below is the migration's contract — the migration script dedupes
-existing `config/connectors/*.secret.json` files into exactly these names, so
+existing `_config/connectors/*.secret.json` files into exactly these names, so
 **the store name matches the legacy file's basename wherever a file existed**.
 
 | Name | Consumers | Legacy file | Env fallback |
@@ -362,7 +362,7 @@ and never taken from argv.
 | `bbx secrets revoke <box> <name>` | Withdraw a grant. |
 | `bbx secrets status <box>` | One box's grants, empty slots, and dangling grants. In an agent session, only the box the command runs in. |
 | `bbx secrets copy-grants <from> <to>` | Give one box the same grants another holds — what `deploy/add-box.sh --secrets-from` runs. Access levels carry over; `shareable: false` entries are skipped and named. |
-| `bbx secrets migrate [--root <dir>] [--dry-run]` | The one-time move of every box's legacy `config/connectors/*.secret.json` into the store. |
+| `bbx secrets migrate [--root <dir>] [--dry-run]` | The one-time move of every box's legacy `_config/connectors/*.secret.json` into the store. |
 
 `<box>` is a slug or a box root path. `set`/`rm`/`grant`/`revoke`/`copy-grants`,
 `describe --remove-use`/`--clear-uses`,
@@ -434,10 +434,10 @@ unattended prod mutation.
 Mistral is the template (`src/core/mistral-key.ts`): resolve from the store
 first, and on an `unknown-secret` refusal — and only that one, via
 `refusalAllowsLegacyFallback` — fall back to the legacy in-tree
-`config/connectors/<name>.secret.json` with a once-per-process deprecation
+`_config/connectors/<name>.secret.json` with a once-per-process deprecation
 warning naming the stray file, then the env
 var. The fallbacks are removed in a later chunk; until then `bbx health` flags
-any surviving `config/connectors/*.secret.json` as a warning
+any surviving `_config/connectors/*.secret.json` as a warning
 (`legacy-secret-files`), because a file that still exists is a live credential
 in the agent's own working directory.
 

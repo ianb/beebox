@@ -4,7 +4,7 @@ A navigation surface for the box: a hand-curated, short list of widgets pointing
 
 ## The problem
 
-`store/` and `box/` accumulate directories at different levels of importance. Some are well-trod (recipes, todos, calendar); others are housekeeping (trash, usage). The Browse page shows everything with equal weight — a flat file tree, no editorial layer. There's no way to say "these few directories are the main pathways into the system; the rest are just files." Landmarks are that editorial layer.
+`_content/` and `_bookkeeping/` accumulate directories at different levels of importance. Some are well-trod (recipes, todos, calendar); others are housekeeping (trash, usage). The Browse page shows everything with equal weight — a flat file tree, no editorial layer. There's no way to say "these few directories are the main pathways into the system; the rest are just files." Landmarks are that editorial layer.
 
 ## What a Landmark is
 
@@ -38,8 +38,8 @@ navigation:
   label: Recipes
   symbol: 🍳
   links:
-    - { ref: /store/recipes/Bread.recipe.card, label: the bread }
-    - { ref: /store/recipes/techniques/Knife_Skills.doc.card }
+    - { ref: /_content/recipes/Bread.recipe.card, label: the bread }
+    - { ref: /_content/recipes/techniques/Knife_Skills.doc.card }
   expand:
     - query: "*.recipe.card"
       order: modified-desc
@@ -58,7 +58,7 @@ All of these live under `navigation`.
 
 ```yaml
 symbol: 🍳                          # emoji or short text
-symbol: { src: /store/recipes/images/portrait.webp }   # image
+symbol: { src: /_content/recipes/images/portrait.webp }   # image
 ```
 
 For character-driven scenarios where the face is the bookmark, the image form makes the Landmarks page look like a real launcher rather than an emoji grid. Image `src` is a box path — write it with a leading `/`, from the box root (a path relative to the landmark's directory still resolves). It is validated: a `src` pointing at nothing is a broken-ref warning at `bbx validate`. The symbol carries most of the "iconic and unique expression" weight — pick well.

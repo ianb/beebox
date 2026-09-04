@@ -13,7 +13,7 @@ An **activity** is a reusable container for that: a module that declares one or 
 ## Concepts
 
 - **Activity** — a code module describing one *kind* of experience (polyglot, notebook-dungeon, reflection-journal). Activities are classes; instances are state.
-- **Instance** — one running experience of that activity (e.g. "teach Ian Spanish"). Lives in its own directory under `store/activities/` and carries state files shared by all modes.
+- **Instance** — one running experience of that activity (e.g. "teach Ian Spanish"). Lives in its own directory under `_content/activities/` and carries state files shared by all modes.
 - **Mode** — one of several parallel framings an instance can be used in. Each mode has its own system prompt, MCP server, sidecar view, and inline-tag renderers. All modes of an instance share the same state files and the same activity metadata (title, icon, singleton flag). Modes are not phases in sequence — they are alternative entry points that may or may not be available at any given moment.
 - **Session** — a chat session bound to a specific `(instance, mode)`. Multiple sessions per `(instance, mode)` are allowed; all sessions across all modes share the instance's state files, but each session has its own transcript.
 
@@ -49,7 +49,7 @@ Box-local overrides built-in of the same name. Same override pattern as `views/`
 
 ### Instance directory
 
-`<box>/store/activities/<activity-name>/<instance-name>/`
+`<box>/_content/activities/<activity-name>/<instance-name>/`
 
 Contents are **entirely activity-defined**. The framework writes nothing here by default. Prompts and other code-like artifacts live in the activity source, not in the instance directory. Activities may lay out `state.json`, a `cards/` subdirectory, `notes.md`, or anything else that fits.
 
@@ -57,7 +57,7 @@ Contents are **entirely activity-defined**. The framework writes nothing here by
 
 Framework-owned files (instance metadata, session bookkeeping) live at:
 
-`<box>/store/activities/<activity-name>/<instance-name>/.beebox/`
+`<box>/_content/activities/<activity-name>/<instance-name>/.beebox/`
 
 Layout:
 - `.beebox/instance.json` — `{ displayName, createdAt, type }` written by `createInstance`.
@@ -280,7 +280,7 @@ src/activities/polyglot/
     Addendum.tsx            # renders <ADDENDUM type="translation"|"correction">
 ```
 
-Instance example: `store/activities/polyglot/spanish-ian/` with:
+Instance example: `_content/activities/polyglot/spanish-ian/` with:
 - `state.json` — language, native, lesson, progress
 - `cards/*.flashcard.card`
 - `CLAUDE.md` — written by `seedInstance` hook from the template, `@`-including generic polyglot docs

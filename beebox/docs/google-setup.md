@@ -51,7 +51,7 @@ Go to **APIs & Services → Credentials**:
 
 ## 5. Authorize Bee Box
 
-Google OAuth tokens are stored centrally (shared across all boxes on the server). Set `BBX_GOOGLE_TOKENS_FILE` env var to point to the token file (e.g., `/home/beebox/.google-tokens.json`). If not set, tokens fall back to per-box `config/connectors/google.secret.json`.
+Google OAuth tokens are stored centrally (shared across all boxes on the server). Set `BBX_GOOGLE_TOKENS_FILE` env var to point to the token file (e.g., `/home/beebox/.google-tokens.json`). If not set, tokens fall back to per-box `_config/connectors/google.secret.json`.
 
 ### Option A: Web Admin (recommended)
 
@@ -70,7 +70,7 @@ bbx google-auth
 
 ### Per-box service policy
 
-After connecting, enable specific services per box in each box's Admin page (Calendar, Gmail, Drive toggles). Or edit `config/box.json` directly:
+After connecting, enable specific services per box in each box's Admin page (Calendar, Gmail, Drive toggles). Or edit `_config/box.json` directly:
 
 ```json
 {
@@ -148,7 +148,7 @@ Design notes: [`implemented-plans/google-auth-reauth-health.md`](implemented-pla
 
 ### Adding more calendars
 
-Edit `config/connectors/google-calendar.json`:
+Edit `_config/connectors/google-calendar.json`:
 
 ```json
 {

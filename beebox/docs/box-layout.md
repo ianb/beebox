@@ -2,25 +2,45 @@
 
 The on-disk shape of a beebox. This is the canonical reference for beebox developers; agents working *inside* a box see a different summary in `.beebox/agent-guide.md`.
 
-> **Keeping this in sync:** the canonical directory list is `BOX_LAYOUT` in `src/lib/box-layout-spec.ts` — `BOX_DIRS` (`src/lib/paths.ts`) and the in-box agent guide (`src/core/agent-guide/box-shape.ts`) both derive from it. When you add, remove, or rename a standard directory, edit `box-layout-spec.ts`, then update the `content/`/`bookkeeping/`/`config`/`publish`/`tmp`/`tricks`/`agent-config` tables below to match — `test/cli/lib/box-layout-spec.doctest.md` fails if this doc's tables drift from the spec.
+> **Keeping this in sync:** the canonical directory list is `BOX_LAYOUT` in `src/lib/box-layout-spec.ts` — `BOX_DIRS` (`src/lib/paths.ts`) and the in-box agent guide (`src/core/agent-guide/box-shape.ts`) both derive from it. When you add, remove, or rename a standard directory, edit `box-layout-spec.ts`, then update the `_content/`/`_bookkeeping/`/`_config`/`_publish`/`_tmp`/`tricks`/`.claude` tables below to match — `test/cli/lib/box-layout-spec.doctest.md` fails if this doc's tables drift from the spec.
 
 ## What a box is
 
 A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working tree is the entire state of the system — there is no separate database. Boxes live outside this repo (typically `~/src/boxes/<name>/`) so agents operating inside a box don't inherit this repo's CLAUDE.md.
 
-## The one-root layout (shapeVersion 3)
+A box has **one root**, and everything about the box lives under it:
+the npm package (`package.json`, `src/`, `node_modules/`), the git
+repository, the agent's own configuration (`CLAUDE.md`, `.claude/`), the
+runtime marker and generated docs (`.beebox/`), and every operational area
+holding the boxholder's content and the machine's working state. There is no
+second root to find or pass around — `boxRoot` means this directory,
+everywhere in the codebase and in every path an agent sees.
 
-A box has **one root**: `.beebox/box.json`'s `shapeVersion` field is `3`, the
-only shape this engine understands. See `getBoxShape`/`boxCodePaths` in
-`src/lib/box-shape.ts`, and `docs/plans/one-root-box-layout.md` for the
-design that replaced the old two-root package layout (a `content/` operational
-root nested inside a separate coding-session package root — shapeVersion 2,
-retired; `getBoxShape` on a v2 box throws a `bbx migrate`-pointing error).
+## The closed root vocabulary
 
-`boxRoot` is this one root, everywhere: `package.json`, `src/`, `.claude/`,
-`.beebox/`, and every underscore-prefixed operational area
-(`_content/`, `_config/`, `_bookkeeping/`, `_publish/`, `_tmp/`) all live at
-the same directory. `getBoxShape` recognizes a box when `<root>/.beebox/box.json`
+The box root is a **closed vocabulary**: a fixed set of top-level names, plus
+the npm/git/agent namespaces above. Everything else at the root is a
+`bbx validate`/`bbx status` error. The operational areas are marked with a
+leading underscore — `_content/`, `_config/`, `_bookkeeping/`, `_publish/`,
+`_tmp/` — so a box path is recognizable *as* a box path on sight: an agent
+also handles ordinary filesystem-absolute paths in the course of its work,
+and the underscore is the visible marker that keeps `/_config/box.json` from
+being mistaken for something like `/etc/hosts`. Below the underscore areas
+the vocabulary opens up — `_content/` in particular is where the boxholder
+and the agent freely create whatever directories and cards the box needs;
+only the root itself is closed. See `docs/plans/one-root-box-layout.md` for
+the full design rationale (the "closed vocabulary at the root, open below
+`_content/`" criterion, and the underscore-as-checksum argument).
+
+`.beebox/box.json`'s `shapeVersion` field is `3`, the only shape this engine
+understands (`getBoxShape`/`boxCodePaths` in `src/lib/box-shape.ts`). A box
+created before this layout landed (shapeVersion 2, retired) had two roots — a
+package root and a nested `content/` operational root — and is the reason
+this layout exists: `getBoxShape` on a v2 box throws a `bbx migrate`-pointing
+error rather than silently resolving the wrong directory. See
+`docs/plans/one-root-box-layout.md` for that history.
+
+`getBoxShape` recognizes a box when `<root>/.beebox/box.json`
 declares `shapeVersion: 3` and `<root>/package.json` declares a `beebox`
 dependency.
 

@@ -21,7 +21,7 @@ A landmark is the right call when the user **keeps returning** to a particular s
 ## What doesn't make something landmark-worthy
 
 - **Size or volume.** The biggest directory in the box probably isn't a landmark if the user never opens it. The smallest might be one if it's where they live.
-- **Technical importance.** `box/jobs/` is critical infrastructure but isn't a landmark — the user doesn't navigate there for their own purposes.
+- **Technical importance.** `_bookkeeping/jobs/` is critical infrastructure but isn't a landmark — the user doesn't navigate there for their own purposes.
 - **Completeness instinct.** Don't add a landmark for every reasonable directory. Resist the urge to "fill out the map." If you're suggesting a landmark because something feels incomplete without one, that's the wrong reason.
 
 ## When to suggest one

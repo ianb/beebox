@@ -104,7 +104,7 @@ The summary:
   strips `ANTHROPIC_API_KEY` so a stray key can't take over billing.
   There is no opt-out — this is the product.
 - **Transcription vendors** — voice goes to Mistral (the default),
-  OpenAI Whisper, or Deepgram, per your `config/transcription.json`.
+  OpenAI Whisper, or Deepgram, per your `_config/transcription.json`.
   Live dictation streams microphone audio from your browser directly to
   the vendor under a short-lived key minted by your box. Search
   embeddings, when configured, send each card's text and your search

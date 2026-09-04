@@ -6,21 +6,22 @@ Procedures replace hand-coded TypeScript orchestration with declarative cards th
 
 ## Two Halves: Definition and Run
 
-A **procedure definition** lives in `config/procedures/` and describes the steps. It's a template — what _should_ happen, not what _did_ happen.
+A **procedure definition** lives in `_config/procedures/` and describes the steps. It's a template — what _should_ happen, not what _did_ happen.
 
 A **procedure run** is created when the procedure executes. It contains a run card tracking progress and per-step results. Effects land in the normal places (inbox, pool, archive, trash) — the run directory is bookkeeping.
 
-Run directories are a **recent cache, not an archive** — git history retains every committed run, so deleting a run dir loses nothing. Two mechanisms keep `procedure/runs/` small (see [Run Hygiene](#run-hygiene)): no-op runs never persist, and finished runs expire.
+Run directories are a **recent cache, not an archive** — git history retains every committed run, so deleting a run dir loses nothing. Two mechanisms keep `_bookkeeping/procedure/runs/` small (see [Run Hygiene](#run-hygiene)): no-op runs never persist, and finished runs expire.
 
 ```
-config/
+_config/
   procedures/
     process-pages.procedure.card
 
-procedure/
-  runs/
-    process-pages_2026-02-06T2000/
-      run.procedure-run.card
+_bookkeeping/
+  procedure/
+    runs/
+      process-pages_2026-02-06T2000/
+        run.procedure-run.card
 ```
 
 ## Building Blocks
@@ -54,7 +55,7 @@ steps:
     precheck:
       shells:
         - |-
-          count=$(ls box/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
+          count=$(ls _content/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
           if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
           echo "Found $count page(s) to process"
       whys:
@@ -68,8 +69,8 @@ steps:
     validate:
       shells:
         - |-
-          remaining=$(ls box/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
-          questions=$(ls box/questions/intake-*.question.card 2>/dev/null | wc -l)
+          remaining=$(ls _content/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
+          questions=$(ls _bookkeeping/questions/intake-*.question.card 2>/dev/null | wc -l)
           [ "$remaining" -eq 0 ] || [ "$questions" -gt 0 ]
       instructions:
         - |-
@@ -191,7 +192,7 @@ engine feature:
 
 - Embed the items in the agent prompt as markdown checkboxes (`- [ ]`), and tell
   the agent to maintain a working copy (e.g.
-  `config/migration-runs/<name>.checklist.md`), flipping `- [ ]` → `- [x]` only
+  `_config/migration-runs/<name>.checklist.md`), flipping `- [ ]` → `- [x]` only
   when an item is genuinely done, with a one-line grounded note (cite the file).
 - Gate completion in `validate.shells` with a completeness check —
   `test -f "$f" && grep -q '\[x\]' "$f" && ! grep -q '\[ \]' "$f"` — so the step
