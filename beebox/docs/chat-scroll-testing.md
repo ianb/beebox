@@ -193,6 +193,74 @@ the finalized entry arrived.
 
 ## `/scrolldebug` — the on-device scroll trace (field probe)
 
+### Repeatable real-composer send failure
+
+Run from the monorepo root against a **disposable test conversation** with at
+least one screen of retained history. This drives the real desktop composer,
+send action, message list, and controller. It submits a synthetic `/fakestream`
+message three times, reloading the stored conversation between trials:
+
+```bash
+node --import tsx beebox/scripts/chat-scroll-repro.ts '/chat?session=TEST_SESSION' scratch/scroll-repro
+```
+
+The script uses the current `bin/browse` viewport (keep it desktop-width), fills
+eight lines, clicks Send, and measures the last user message after 800 ms.
+Exit 1 means at least one trial failed the 2 px top-alignment assertion, did not
+add exactly one user message, or lost trace events. Exit 0 means all three
+aligned. Setup/execution/cleanup errors exit 2. Each trial saves a bounded JSON trace and
+a screenshot. Run the control with `SCROLL_REPRO_TRACE=0` to disable both DOM
+observation and the trace subscription. This tests send anchoring only, **not
+authoritative finalization or native keyboard behavior**.
+
+The 2026-09-04 desktop reproduction failed 3/3: the eight-line composer shrank
+from 176 px to 36 px on send, and the submitted message remained 330 px below
+the scroller top. The trace records the first `ease-write`, a content-resize
+`hold-anchor` with an approximately -116 px delta, an unfinished `ease-stop`,
+and an instant write undoing the animation step. No controller behavior was
+changed in this investigation. The same sequence also failed 3/3 with tracing
+and observation disabled, again at 330 px.
+
+The existing isolated harness in this checkout also reproduced send failures:
+16/18 scenarios passed; `send-anchors-user-message-top` and
+`reply-longer-than-screen-does-not-follow` failed with a 362 px final offset
+and two controller writes. These are outstanding failures, not evidence of a
+completed fix. The reproduction phase intentionally keeps them red.
+
+### Reading the expanded trace
+
+When enabled through the dev API, a read-only observer samples geometry on animation frames and
+emits changed samples (plus frame gaps over 50 ms). `frame` includes composer
+height/position, scroller geometry, visual viewport geometry, page scroll,
+last user-message position, live-turn/spacer heights, and a fixed reading
+marker's position. Presence flags distinguish missing elements from a true
+zero position; only compare offsets whose presence flag is true.
+`reading-anchor` identifies marker replacement with a
+numeric generation; do not compare positions across generations. It prefers
+paragraphs/code blocks, falls back to message wrappers, and resets on a new
+wheel/touch gesture. It is a geometric marker, not eye tracking.
+
+`interaction` records input/focus/touch/wheel event kinds without text or key
+values. `dom` counts additions, removals, and text-node updates; it does not
+identify React renders or prove a remount. `scroller-node` records replacement
+of the scroll element. `ease-write`, `ease-interrupted`, and `ease-stop` cover
+the send animation's writes and cancellation, previously absent from the
+controller trace. `ease-write.want` is the requested position, `to` is the
+actual position read after the write, and `max` exposes clamping limits.
+Animation-frame sampling is not proof of which frames were
+actually painted; use recordings when assessing visible jitter.
+
+In dev builds, `window.__bbxScrollTrace.enable(boolean)` and
+`window.__bbxScrollTrace.subscribe(callbackOrNull)` expose the **live** module.
+Use this seam instead of dynamically importing a bare Vite module URL, which
+can create a second diagnostics singleton after HMR. Subscription is exclusive
+(also used by the isolated harness); detach after a capture. Disabling removes
+the DOM observer and frame loop. HMR disposes those resources too. The normal
+`/scrolldebug` toggle retains lightweight controller-only tracing in production
+and on devices, with the same bounded log transport. DOM observation is opt-in
+through the dev API and does not persist across reloads. Geometry sampling can
+affect timing; always compare a failing sequence with observation disabled.
+
 When scroll behavior misbehaves somewhere `bin/browse` can't reach (a real
 iPhone, a prod-only condition), type `/scrolldebug` in the composer to toggle a
 flag-gated trace of the controller (`lib/scroll-diagnostics.ts`): every scroll

@@ -5,6 +5,7 @@
 
 import type { MutableRefObject } from "react";
 import type { Anchor } from "./chat-scroll.js";
+import { recordScrollTrace } from "../../lib/scroll-diagnostics";
 
 /** The anchor's live offset from the scroller's top edge, or null if it is gone. */
 export function anchorOffset(anchor: Anchor | null, scroller: HTMLDivElement): number | null {
@@ -34,6 +35,7 @@ function animateAnchorToTop(opts: {
   let lastWritten = el.scrollTop;
   let frame = 0;
   const stop = (finish: boolean): void => {
+    recordScrollTrace("ease-stop", { finish, top: el.scrollTop });
     cancelAnimationFrame(frame);
     if (cancelRef.current === cancel) cancelRef.current = null;
     if (finish) onDone();
@@ -42,14 +44,21 @@ function animateAnchorToTop(opts: {
   cancelRef.current?.();
   cancelRef.current = cancel;
   const step = (): void => {
-    if (Math.abs(el.scrollTop - lastWritten) > 4) { stop(false); return; }
+    if (Math.abs(el.scrollTop - lastWritten) > 4) {
+      recordScrollTrace("ease-interrupted", { expected: lastWritten, actual: el.scrollTop });
+      stop(false); return;
+    }
     const remaining = target.getBoundingClientRect().top - el.getBoundingClientRect().top;
     if (Math.abs(remaining) < 1 || performance.now() > deadline) {
+      const from = el.scrollTop;
       el.scrollTop += remaining;
+      recordScrollTrace("ease-write", { from, want: from + remaining, to: el.scrollTop, max: el.scrollHeight - el.clientHeight, final: true });
       stop(true);
       return;
     }
+    const from = el.scrollTop;
     el.scrollTop += remaining * 0.35;
+    recordScrollTrace("ease-write", { from, want: from + remaining * 0.35, to: el.scrollTop, max: el.scrollHeight - el.clientHeight, final: false });
     lastWritten = el.scrollTop;
     frame = requestAnimationFrame(step);
   };

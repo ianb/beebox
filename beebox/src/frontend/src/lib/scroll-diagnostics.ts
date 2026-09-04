@@ -17,6 +17,8 @@
  * by a user action or a resize compensation).
  */
 
+import { startScrollObservation } from "./scroll-observation";
+
 const MAX_EVENTS = 600;
 const FLUSH_INTERVAL_MS = 2000;
 const MAX_PAYLOAD_CHARS = 3600;
@@ -52,6 +54,7 @@ let subscriber: TraceSubscriber | null = null;
 let events: Record<string, TraceValue>[] = [];
 let dropped = 0;
 let timer: number | null = null;
+let stopObservation: (() => void) | null = null;
 
 function flush(): void {
   if (dropped > 0) {
@@ -76,7 +79,19 @@ export function scrollTraceToggle(): boolean {
   return setScrollTrace(!enabled);
 }
 
-function setScrollTrace(on: boolean): boolean {
+function configureObservation(on: boolean): void {
+  if (on && stopObservation === null) stopObservation = startScrollObservation(recordScrollTrace);
+  if (!on) {
+    stopObservation?.();
+    stopObservation = null;
+  }
+}
+
+function setScrollTrace(on: boolean, opts?: { observe: boolean }): boolean {
+  if (enabled === on) {
+    configureObservation(on && opts?.observe === true);
+    return enabled;
+  }
   enabled = on;
   writePersisted(on);
   if (enabled) {
@@ -84,7 +99,9 @@ function setScrollTrace(on: boolean): boolean {
     dropped = 0;
     console.warn(`[scroll-trace] enabled at ${Math.round(performance.now())}ms`);
     timer = window.setInterval(flush, FLUSH_INTERVAL_MS);
+    configureObservation(opts?.observe === true);
   } else {
+    configureObservation(false);
     if (timer !== null) window.clearInterval(timer);
     timer = null;
     flush();
@@ -117,3 +134,24 @@ export function recordScrollTrace(k: string, detail: Record<string, TraceValue>)
 }
 
 if (readPersisted()) setScrollTrace(true);
+
+// Use the live module instance: importing a bare Vite URL from browser eval
+// after HMR can create a second singleton with no controller events.
+declare global {
+  interface Window {
+    __bbxScrollTrace?: {
+      enable: (on: boolean) => boolean;
+      subscribe: typeof scrollTraceSubscribe;
+    };
+  }
+}
+if (typeof window !== "undefined" && import.meta.env.DEV) {
+  window.__bbxScrollTrace = { enable: (on) => setScrollTrace(on, { observe: true }), subscribe: scrollTraceSubscribe };
+}
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    stopObservation?.();
+    if (timer !== null) window.clearInterval(timer);
+    flush();
+  });
+}
