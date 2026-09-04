@@ -1,7 +1,13 @@
 .env
-server-ip
 
-# Prod debug access configuration. The generic helper scripts are tracked, but
-# the deployment URL and owner-specific policy note stay local.
+# The deploy target (see target.env.example). Its presence is what makes a
+# checkout deploy at all, so it is per-operator and never committed.
+target.env
+
+# Superseded by target.env; ignored so a pre-migration checkout stays clean.
+server-ip
 public-url
+
+# Owner-specific policy note for the prod-* debug tools; the tools themselves
+# are tracked.
 prod-debug-access.md

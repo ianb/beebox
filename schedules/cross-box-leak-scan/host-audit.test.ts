@@ -259,11 +259,11 @@ test("loadBoxRoots: a MISSING hub.json (only boxes.json present) is not a findin
 
 // ─── run.ts pure helpers ────────────────────────────────────────────────
 
-test("prodAuditGate: runs when server-ip exists, refuses on a real run when it's missing, skips only under --dry-run", () => {
-  assert.equal(prodAuditGate({ serverIpFileExists: true, dryRun: false }), "run");
-  assert.equal(prodAuditGate({ serverIpFileExists: true, dryRun: true }), "run");
-  assert.equal(prodAuditGate({ serverIpFileExists: false, dryRun: false }), "refuse");
-  assert.equal(prodAuditGate({ serverIpFileExists: false, dryRun: true }), "skip");
+test("prodAuditGate: runs with a deploy target, refuses on a real run without one, skips only under --dry-run", () => {
+  assert.equal(prodAuditGate({ deployTargetConfigured: true, dryRun: false }), "run");
+  assert.equal(prodAuditGate({ deployTargetConfigured: true, dryRun: true }), "run");
+  assert.equal(prodAuditGate({ deployTargetConfigured: false, dryRun: false }), "refuse");
+  assert.equal(prodAuditGate({ deployTargetConfigured: false, dryRun: true }), "skip");
 });
 
 test("describeFirstRun: an empty first report is a quiet fyi, not a handoff", () => {

@@ -18,7 +18,7 @@ The frontend captures browser console errors/warnings and forwards them to the s
 
 ```bash
 # SSH to server and read the log
-ssh root@$(cat deploy/server-ip) \
+deploy/prod-ssh \
   cat /home/beebox/boxes/<box-name>/.beebox/client-debug.log
 ```
 

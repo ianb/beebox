@@ -34,13 +34,13 @@ if [ "$BRANCH" = "main" ]; then
     # The clerk extension still self-gates on its own sources below.
     "$REPO_DIR/beebox-clerk/build/auto-build.sh" || true
   else
-    if [ ! -s "$REPO_DIR/beebox/deploy/server-ip" ]; then
-      # Pre-flight the one prerequisite that silently killed a whole run of
-      # deploys after a repo move. Fail visibly here (in the commit output),
-      # rather than backgrounding a deploy that dies on line 1 into a log
-      # nobody reads. deploy.sh also guards this, but this surfaces it now.
-      echo "[post-commit] ⚠ NOT deploying — beebox/deploy/server-ip is missing" >&2
-      echo "[post-commit]   (gitignored; lost in a repo move?). Nothing shipped — restore it." >&2
+    if ! "$REPO_DIR/beebox/deploy/deploy-target.sh" path >/dev/null 2>&1; then
+      # No beebox/deploy/target.env means this machine has no server to deploy
+      # to — a clone, not a broken setup. Say nothing: the alternative is
+      # telling every visitor to restore a file they never had. A machine that
+      # DOES deploy and drifts is caught by `bbx doctor`'s deploy-currency
+      # check, which compares main against the last completed deploy.
+      :
     else
       # Capture the trigger-time HEAD and deploy exactly that sha, so a commit
       # landed while the (backgrounded) deploy runs can't change what ships.
@@ -54,13 +54,22 @@ if [ "$BRANCH" = "main" ]; then
       mkdir -p "$LOG_DIR"
       LOG_FILE="$LOG_DIR/$(date -u +%Y%m%dT%H%M%SZ)-${SHA:0:8}.log"
       ln -sfn ".deploy-logs/$(basename "$LOG_FILE")" "$REPO_DIR/beebox/deploy/.last-deploy.log"
-      ls -1t "$LOG_DIR"/*.log 2>/dev/null | tail -n +21 | while IFS= read -r old; do rm -f "$old"; done
+      # Newest-first by mtime is the whole point, which `find` cannot express
+      # portably; these are our own timestamped filenames, so ls is safe here.
+      # shellcheck disable=SC2012
+      # Newest-first by mtime is the whole point, which `find` cannot express
+    # portably; these are our own timestamped filenames, so ls is safe here.
+    # shellcheck disable=SC2012
+    ls -1t "$LOG_DIR"/*.log 2>/dev/null | tail -n +21 | while IFS= read -r old; do rm -f "$old"; done
       # Record intent synchronously. A background child can be killed before it
       # executes its first line when the hook process exits; the active holder
       # must still see this ref and chain to it.
       echo "$SHA" > "$REPO_DIR/.deploy-requested"
       echo "Deploy requested for $SHA." > "$LOG_FILE"
       echo "[post-commit] Deploying to server (branch: main, ref: ${SHA:0:8})..."
+      # Single quotes are deliberate: $1..$3 are the detached child's own
+      # positional parameters, bound by the arguments that follow.
+      # shellcheck disable=SC2016
       node "$REPO_DIR/bin/lib/detach.ts" bash -c \
         'exec "$1" --ref "$2" --request-recorded >>"$3" 2>&1' \
         bash "$REPO_DIR/beebox/deploy/deploy.sh" "$SHA" "$LOG_FILE"

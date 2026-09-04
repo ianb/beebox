@@ -98,7 +98,7 @@ The full `install → typecheck → lint → test` chain runs from the **repo al
 - **Build is offline.** `pretest` bundles the `dist/` package exports via esbuild;
   typecheck/lint are offline. Network is only needed at **install**.
 - **Deploy won't fire.** The husky post-commit/post-merge deploy self-skips when
-  `beebox/deploy/server-ip` (gitignored) is absent — a fresh clone can
+  `beebox/deploy/target.env` (gitignored) is absent — a fresh clone can
   commit on `main` with no risk of shipping. git-lfs isn't used anymore (hooks
   warn-and-continue); the commit-blocklist check no-ops without a
   `.commit-blocklist`.
