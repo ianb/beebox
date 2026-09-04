@@ -64,6 +64,7 @@ export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; a
     return (
       <Image
         src={resolved}
+        lightboxSrc={resolved}
         alt={alt ?? ""}
         size="chat"
         lightbox

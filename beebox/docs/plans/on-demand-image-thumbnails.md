@@ -1,6 +1,6 @@
 ---
 title: "On-demand image thumbnails"
-status: draft
+status: active
 workstream: image-thumbnails
 issues:
   - ../../../issues/features/2026-09-03-on-demand-image-thumbnails.md

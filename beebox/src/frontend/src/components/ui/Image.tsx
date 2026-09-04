@@ -54,6 +54,7 @@ function getLoadState({ src, fallbackSrc, retryEnabled, retryFailed, retrySrc }:
 
 interface BaseImageProps {
   src: string;
+  srcSet?: string | undefined; sizes?: string | undefined;
   alt: string;
   size?: ImageSize;
   caption?: ReactNode;
@@ -88,10 +89,9 @@ interface BaseImageProps {
   loading?: "lazy" | "eager";
 }
 
-export type ImageProps = BaseImageProps & (
-  | { lightbox: true; onClick?: never }
-  | { lightbox?: false; onClick?: () => void }
-);
+export type ImageProps =
+  | (BaseImageProps & { lightbox: true; lightboxSrc: string; onClick?: never })
+  | (BaseImageProps & { lightbox?: false; lightboxSrc?: never; onClick?: () => void });
 
 function BrokenImageIcon() {
   return (
@@ -139,6 +139,7 @@ function ErrorPlaceholder({ alt, size, bordered, extraClass }: { alt: string; si
 
 interface ImgElementProps {
   src: string;
+  srcSet: string | undefined; sizes: string | undefined;
   alt: string;
   size: ImageSize;
   bordered: boolean;
@@ -148,13 +149,14 @@ interface ImgElementProps {
   onError: () => void;
   onLoad: () => void;
   lightbox: boolean;
+  lightboxSrc: string | undefined;
   lightboxCaption: string | undefined;
   imgRef: React.RefObject<HTMLImageElement>;
   extraClass?: string;
   loading: "lazy" | "eager" | undefined;
 }
 
-function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, lightbox, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
+function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, lightbox, lightboxSrc, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
   const interactive = onActivate !== null;
   const handleClick = () => {
     if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
@@ -170,6 +172,8 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
     <img
       ref={imgRef}
       src={src}
+      srcSet={srcSet}
+      sizes={sizes}
       alt={alt}
       loading={loading}
       // In the interactive case the button is the outermost element, so
@@ -183,7 +187,7 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
       onError={onError}
       onLoad={onLoad}
       title={title}
-      data-image-src={lightbox ? src : undefined}
+      data-image-src={lightbox ? lightboxSrc ?? src : undefined}
       data-image-alt={lightbox ? alt : undefined}
       data-image-caption={lightbox && lightboxCaption !== undefined ? lightboxCaption : undefined}
     />
@@ -283,6 +287,8 @@ function pickOuterLayer({ caption, overlay, errored, isOrthogonal }: OuterLayerO
 export function Image(props: ImageProps) {
   const {
     src,
+    srcSet,
+    sizes,
     alt,
     size = "md",
     caption,
@@ -296,6 +302,7 @@ export function Image(props: ImageProps) {
     loading,
   } = props;
   const lightbox = props.lightbox === true;
+  const lightboxSrc = lightbox ? props.lightboxSrc : undefined;
   const externalOnClick = lightbox ? undefined : props.onClick;
 
   const lightboxCtx = useLightbox();
@@ -372,6 +379,7 @@ export function Image(props: ImageProps) {
   ) : (
     <ImgElement
       src={displaySrc}
+      srcSet={srcSet} sizes={sizes}
       alt={alt}
       size={size}
       bordered={bordered}
@@ -381,6 +389,7 @@ export function Image(props: ImageProps) {
       onError={handleError}
       onLoad={retry.handleLoad}
       lightbox={lightbox}
+      lightboxSrc={lightboxSrc}
       lightboxCaption={lightboxCaption}
       imgRef={imgRef}
       extraClass={imgExtra}

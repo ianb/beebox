@@ -85,6 +85,34 @@ export function apiRawFileUrl(apiBase: string, path: string): string {
   return `${apiBase}/files/${encodePathForUrl(path)}`;
 }
 
+export function apiRawImageUrl(apiBase: string, path: string): string {
+  return `${apiBase}/image/${encodePathForUrl(path)}`;
+}
+
+export interface ImageTransformUrlOptions {
+  width?: number | undefined;
+  height?: number | undefined;
+  quality?: number | undefined;
+  format?: "auto" | "avif" | "webp" | "jpeg" | undefined;
+  fit?: "scale-down" | "contain" | "cover" | "crop" | "pad" | undefined;
+  dpr?: number | undefined;
+}
+
+export function apiTransformedImageUrl({ apiBase, path, options }: {
+  apiBase: string;
+  path: string;
+  options: ImageTransformUrlOptions;
+}): string {
+  const query = new URLSearchParams();
+  if (options.width !== undefined) query.set("width", String(options.width));
+  if (options.height !== undefined) query.set("height", String(options.height));
+  if (options.fit !== undefined) query.set("fit", options.fit);
+  if (options.quality !== undefined) query.set("quality", String(options.quality));
+  if (options.format !== undefined) query.set("format", options.format);
+  if (options.dpr !== undefined) query.set("dpr", String(options.dpr));
+  return `${apiBase}/images/${encodePathForUrl(path)}?${query.toString()}`;
+}
+
 /**
  * Absolute ws:// / wss:// URL for the box's tRPC WebSocket endpoint, used by
  * the subscription `wsLink`. Built from the page origin + the box-scoped API
