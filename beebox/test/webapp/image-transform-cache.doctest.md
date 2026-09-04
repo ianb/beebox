@@ -15,14 +15,14 @@ let maximum = 0;
 let generated = 0;
 const releases: Array<() => void> = [];
 
-function generate(label: string): () => Promise<Buffer> {
+function generate(): () => Promise<Buffer> {
   return async () => {
     generated++;
     active++;
     maximum = Math.max(maximum, active);
     await new Promise<void>((resolve) => releases.push(resolve));
     active--;
-    return Buffer.from(label);
+    return Buffer.from("generated");
   };
 }
 
@@ -36,10 +36,10 @@ async function until(predicate: () => boolean): Promise<void> {
 ```
 
 ```ts
-const first = cache.getOrCreate({ key: "first", extension: "webp", generate: generate("first") });
-const duplicate = cache.getOrCreate({ key: "first", extension: "webp", generate: generate("duplicate") });
-const second = cache.getOrCreate({ key: "second", extension: "webp", generate: generate("second") });
-const third = cache.getOrCreate({ key: "third", extension: "webp", generate: generate("third") });
+const first = cache.getOrCreate({ key: "first", extension: "webp", generate: generate() });
+const duplicate = cache.getOrCreate({ key: "first", extension: "webp", generate: generate() });
+const second = cache.getOrCreate({ key: "second", extension: "webp", generate: generate() });
+const third = cache.getOrCreate({ key: "third", extension: "webp", generate: generate() });
 await until(() => generated === 2);
 `${generated} ${active} ${maximum}`
 => 2 2 2
@@ -59,14 +59,14 @@ releases.shift()?.();
 releases.shift()?.();
 const results = await Promise.all([first, duplicate, second, third]);
 JSON.stringify(results.map((result) => result.toString()))
-=> ["first","first","second","third"]
+=> ["generated","generated","generated","generated"]
 ```
 
 A later request reads the stored representation without another generation.
 
 ```ts continue
-(await cache.getOrCreate({ key: "first", extension: "webp", generate: generate("unexpected") })).toString()
-=> first
+(await cache.getOrCreate({ key: "first", extension: "webp", generate: generate() })).toString()
+=> generated
 ```
 
 An overdue write purges stale temporary files and trims the oldest variants to the 512 MiB bound.

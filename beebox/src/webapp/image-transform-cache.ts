@@ -7,6 +7,7 @@ const MAX_CACHE_BYTES = 512 * 1024 * 1024;
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const TEMP_MAX_AGE_MS = 60 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+const SWEEP_WRITE_BYTES = 64 * 1024 * 1024;
 const STAT_BATCH_SIZE = 32;
 
 export interface CacheEntry {
@@ -31,6 +32,14 @@ export function selectImageCacheEvictions(entries: CacheEntry[], now: number): s
     total -= entry.size;
   }
   return [...remove];
+}
+
+export function shouldSweepImageCache({ lastSweep, now, bytesSinceSweep }: {
+  lastSweep: number;
+  now: number;
+  bytesSinceSweep: number;
+}): boolean {
+  return now - lastSweep >= SWEEP_INTERVAL_MS || bytesSinceSweep >= SWEEP_WRITE_BYTES;
 }
 
 async function statCacheEntries({ root, names, offset }: { root: string; names: string[]; offset: number }): Promise<CacheEntry[]> {
@@ -71,6 +80,7 @@ export class ImageTransformCache {
   private readonly permits = new PermitPool();
   private readonly inFlight = new Map<string, Promise<Buffer>>();
   private lastSweep = 0;
+  private bytesSinceSweep = 0;
   private sweepPromise: Promise<void> | null = null;
 
   constructor(boxRoot: string) {
@@ -99,7 +109,7 @@ export class ImageTransformCache {
       }
       const content = await generate();
       await this.writeAtomic(target, content);
-      await this.sweepIfDue();
+      await this.sweepIfDue(content.length);
       return content;
     });
     this.inFlight.set(target, pending);
@@ -130,18 +140,21 @@ export class ImageTransformCache {
     }
   }
 
-  private async sweepIfDue(): Promise<void> {
+  private async sweepIfDue(writtenBytes: number): Promise<void> {
+    this.bytesSinceSweep += writtenBytes;
     const now = Date.now();
-    if (now - this.lastSweep < SWEEP_INTERVAL_MS) return;
+    if (!shouldSweepImageCache({ lastSweep: this.lastSweep, now, bytesSinceSweep: this.bytesSinceSweep })) return;
     if (this.sweepPromise !== null) {
       await this.sweepPromise.catch(() => null);
       return;
     }
+    const sweptBytes = this.bytesSinceSweep;
     const sweep = this.sweep(now);
     this.sweepPromise = sweep;
     try {
       await sweep;
       this.lastSweep = now;
+      this.bytesSinceSweep = Math.max(0, this.bytesSinceSweep - sweptBytes);
     } catch (error) {
       console.warn(`[image-cache] could not sweep ${this.root}:`, error);
     } finally {

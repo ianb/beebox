@@ -109,12 +109,15 @@ Containment, dotfiles, and absent annex content retain the original image route'
 
 ```ts continue
 await writeFile(join(server.boxRoot, ".hidden.jpg"), jpeg);
+await mkdir(join(server.boxRoot, ".beebox"), { recursive: true });
+await writeFile(join(server.boxRoot, ".beebox/cached.jpg"), jpeg);
 await server.seed("absent.jpg", "/annex/objects/SHA256E-s300000--2ee2c7d493840de6795751cfb0c75d899624f1e5494f129b840812f129638f92.jpg\n");
 const traversal = await imageRequest("/api/images/%2e%2e%2foutside.jpg?width=40");
 const hidden = await imageRequest("/api/images/.hidden.jpg?width=40");
+const hiddenDirectory = await imageRequest("/api/images/.beebox/cached.jpg?width=40");
 const absent = await imageRequest("/api/images/absent.jpg?width=40");
-`${traversal.statusCode} ${hidden.statusCode} ${absent.statusCode}`
-=> 403 403 409
+`${traversal.statusCode} ${hidden.statusCode} ${hiddenDirectory.statusCode} ${absent.statusCode}`
+=> 403 403 403 409
 ```
 
 An allowed extension containing undecodable bytes is an explicit media error, never an original-byte fallback:

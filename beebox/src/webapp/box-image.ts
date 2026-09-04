@@ -60,7 +60,8 @@ export interface ResolvedBoxImage {
 export async function resolveBoxImage(boxRoot: string, requestedPath: string): Promise<ResolvedBoxImage> {
   if (requestedPath === "") throw new BoxImageError(400, { error: "Path required" });
   const requested = path.resolve(path.join(boxRoot, requestedPath));
-  if (containWithinBox(boxRoot, requested) === null || path.basename(requested).startsWith(".")) {
+  const relativeSegments = path.relative(boxRoot, requested).split(path.sep);
+  if (containWithinBox(boxRoot, requested) === null || relativeSegments.some((segment) => segment.startsWith("."))) {
     throw new BoxImageError(403, { error: "Access denied" });
   }
   let absolutePath = requested;

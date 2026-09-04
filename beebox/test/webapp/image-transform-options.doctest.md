@@ -8,7 +8,7 @@ import {
   negotiateImageFormat,
   parseImageTransformOptions,
 } from "../../src/webapp/image-transform-options.js";
-import { selectImageCacheEvictions } from "../../src/webapp/image-transform-cache.js";
+import { selectImageCacheEvictions, shouldSweepImageCache } from "../../src/webapp/image-transform-cache.js";
 
 function optionError(query: Record<string, unknown>): string {
   try { parseImageTransformOptions(query); return "accepted"; }
@@ -86,5 +86,22 @@ selectImageCacheEvictions([
   "old",
   "stale",
   "temp"
+]
+```
+
+Sustained writes trigger cleanup before the hourly timer, bounding growth between sweeps:
+
+```ts
+const mib = 1024 * 1024;
+[
+  shouldSweepImageCache({ lastSweep: 1000, now: 2000, bytesSinceSweep: 63 * mib }),
+  shouldSweepImageCache({ lastSweep: 1000, now: 2000, bytesSinceSweep: 64 * mib }),
+  shouldSweepImageCache({ lastSweep: 0, now: 3600_000, bytesSinceSweep: 0 }),
+]
+=>
+[
+  false,
+  true,
+  true
 ]
 ```
