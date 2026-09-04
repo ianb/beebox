@@ -41,7 +41,7 @@ generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: <the HEAD the reviewed report reflects>
 date: <YYYY-MM-DD>
 model: <model id that produced the draft>
-reviewed-by: <human name, or "DRAFT — unreviewed">
+reviewed-by: <human first name or handle, or "DRAFT — unreviewed">
 ```
 
 `generated-at-rev` is the **update anchor** — the claim "this accounting
