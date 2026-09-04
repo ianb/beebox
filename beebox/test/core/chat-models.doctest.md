@@ -65,9 +65,7 @@ JSON.stringify([isProcedureModelName("opus"), isProcedureModelName("balanced"), 
 ## The box model policy
 
 Every model id an engine offers belongs to a tier, and a tier round-trips back
-to a model that engine can run. Codex flattens `strong`/`strongest` onto Sol, so
-the reverse of Sol is the lower of the two — the round-trip is by model, not by
-tier name.
+to a model that engine can run. The round-trip is by model, not by tier name.
 
 ```ts setup
 import type { AgentEngine } from "../../src/shared/agent-models.js";
