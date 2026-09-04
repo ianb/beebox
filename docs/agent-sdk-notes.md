@@ -25,29 +25,108 @@ break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
 own entries here, labeled as such, with no pin to apply.
 
-- **Current pin:** `0.3.252` (in `beebox/package.json`. The monorepo root
+- **Current pin:** `0.3.258` (in `beebox/package.json`. The monorepo root
   carries a second, unmanaged pin at `0.3.226` — filed as
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, because the
   root copy is what `bin/` tooling imports and what `update-agent-sdk --check`
   measures, so the check reports "behind" on a current repo and every bump ends
   by printing "Now at 0.3.226")
-- **Latest reviewed upstream version:** `0.3.259` (SDK), `2.1.259` (Claude Code)
+- **Latest reviewed upstream version:** `0.3.260` (SDK), `2.1.260` (Claude Code)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.252` was taken this turn — the newest settled
-  version, and the repair for the Mac Bash regression the `0.3.251` entry
-  probed. Pending: `0.3.257` (~33h), `0.3.258` (~28h), `0.3.259` (~5h), none
-  act-now. Take `0.3.257` or newer before adopting `background_tasks_changed` in
-  the chat task strip.
+- **Current recommendation:** `0.3.258` was taken this turn as the newest settled
+  version, carrying `0.3.257`'s background-task lifecycle fixes with it — so the
+  chat task strip's `background_tasks_changed` work is no longer blocked on the
+  pin. Pending: `0.3.259` (~30h) and `0.3.260` (~5h), neither act-now.
+- **Two turns landed at once.** The 2026-09-02 bump to `0.3.252` was committed
+  but `bin/land` refused on a dirty main checkout, so `main` never advanced and
+  the `0.3.259` review below was invisible to the run script — which is why the
+  briefing for 2026-09-03 re-offered `0.3.259` as unreviewed. It was already
+  reviewed; this turn lands both commits. The refusal worked exactly as
+  designed: nothing was lost and nothing needed rewriting.
 - **Correction carried forward (2026-09-02):** the 2.1.251 and 2.1.257 entries
   below assert that no session here runs with permission enforcement on. **That
-  is wrong**, and the corrected version is in the 2.1.259 entry: two live
-  schedules pass permission rules on the command line, where a search of
-  `.claude/settings*.json` does not see them. The deny-rule fixes in 2.1.251,
-  2.1.257 and 2.1.259 do land here.
+  is wrong** — two live schedules pass permission rules on the command line. See
+  the 0.3.259 entry, as amended by the 0.3.260 entry.
 
 ## Release ledger
 
-### 0.3.259 / Claude Code 2.1.259 — pending (published 2026-09-02T21:22Z, ~5h at this turn)
+### 0.3.260 / Claude Code 2.1.260 — pending (published 2026-09-03T22:33Z, ~5h at this turn)
+
+**Amends the previous turn's entry: 2.1.259's Bash deny-rule fix was reverted.**
+
+> *"Reverted the 2.1.259 change applying `Read()` deny rules to Bash arguments;
+> it denied `npm run build` under a `Read(./**/build/**)` rule in every mode and
+> made `cd … && grep` prompt even in auto mode."*
+
+The `0.3.259` entry recorded that fix as closing the Bash route to
+`Read(private-issues/**)` in the `manual-tests` schedule. One release later it is
+gone: **the Bash route is uncovered again**, and there is now good reason to
+think it will stay that way, since the attempted fix broke ordinary commands
+badly enough to be pulled within a day. What stands is **2.1.251's Grep/Glob
+symlink fix**, which is the one that mattered here — `private-issues` is
+symlink-mounted and the triager has both tools. The remaining Bash exposure is
+the narrow one the previous entry already described: `manual-tests` allowlists
+Bash down to two `bin/schedules` commands, so the deny rule is a second layer
+over an allowlist that does the real work. Nothing to do; recorded because a
+reader of the `0.3.259` entry alone would believe a guard exists that does not.
+
+Other permission-rule fixes in 2.1.260, checked against the rules this repo
+actually passes (`schedules/*/schedule.yaml`):
+
+- *"Fixed `Edit`/`Write`/`Read` permission rules whose path contains parentheses
+  being dropped as invalid or ignored by the Bash sandbox, which left
+  'read-only' folders writable."* A dropped rule is a silent one, so this is
+  worth a real check rather than a glance: no rule here has parentheses **in the
+  path** — `Read(private-issues/**)`, `Edit(beebox/src/**)`,
+  `Edit(issues/bugs/**)` and the rest use parentheses only as rule syntax.
+  Clear.
+- *"Fixed one file permission rule with an uncompilable pattern (e.g. an
+  unclosed `[`) making every file edit fail."* Every pattern here is a plain
+  `**` glob. Clear.
+- *"Glob/Grep: Fixed the search path being probed on disk before the permission
+  check."* Same tools and same rule as the symlink fix above; the leak is
+  existence-of-path rather than contents, and it is now decided in the right
+  order.
+
+- **"task output swap refused" has a second trigger, and it is not Mac-specific.**
+  *"Fixed intermittent `task output swap refused` errors when many sessions
+  share a project directory."* Two turns ago this ledger probed `0.3.251` for
+  the macOS variant of this error and found it did not reproduce — but that
+  probe ran **one** session, which by construction could not have surfaced this
+  trigger. Many sessions sharing a project directory is an ordinary state here:
+  the project directory is keyed on cwd, so every chat thread in one box shares
+  one, as does every session in a given worktree. And this entry carries no "on
+  some Macs" qualifier, so the Linux prod host is not excluded. Searched for
+  real occurrences before treating it as urgent — `~/.claude/projects`
+  transcripts outside this workstream, `~/src/schedule-runs`, box logs and the
+  deploy logs — and found none; the only hits are this monitor's own writing
+  about the error. Not act-now on that basis, but this is the item to remember
+  if Bash calls start failing intermittently in a busy box: the fix is in
+  `2.1.260`, and the current pin (`0.3.258` → CLI 2.1.258) does not have it.
+- **Structured output gets diagnosable.** *"Changed
+  `error_max_structured_output_retries` results to append the last
+  StructuredOutput tool error; validation errors now name the offending key,
+  allowed values, and actual length or count."* beebox uses structured output —
+  `run.ts` passes `outputFormat: { type: "json_schema", schema }` whenever a
+  caller supplies `outputSchema` — and until now a schema the model could not
+  satisfy produced a retry-cap error with nothing in it. This is the kind of
+  change that only shows its value the day something breaks.
+- **Additive, no action:** `user_message_uuid` on `thinking_tokens` system
+  messages; four `first_*_ms` latency fields on the success result for remote
+  sessions; `rewindFiles()` now failing instead of reporting success when
+  checkpoint backups are missing (beebox does not call it). `rate_limit_event`
+  now re-emits about every 30 seconds during an exceeded window — beebox drops
+  that message type in `adaptSdkMessage`, so the extra frames change nothing
+  here.
+- **Harness, worth knowing:** a `/diff` panel beside the conversation in
+  fullscreen; a likely-cause hint for prompt-cache misses in `/cost`; `/advisor`
+  in headless and SDK sessions; and two Fable 5.1 fixes (the `/model` picker not
+  offering it, and prompt caching not covering context attached after tool
+  results, so it was re-sent uncached every tool-call turn).
+- **Action:** Settled path; `0.3.260` takeable 2026-09-05.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03260), [Claude Code 2.1.260](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21260)
+
+### 0.3.259 / Claude Code 2.1.259 — pending (published 2026-09-02T21:22Z, ~30h at this turn; its Bash deny-rule fix was REVERTED in 2.1.260 — see above)
 
 **This entry corrects two earlier ones.** The 2.1.251 entry concluded that
 "nothing here runs with permission enforcement on", having searched
@@ -143,7 +222,7 @@ The rest of 0.3.259 and 2.1.259:
 - **Action:** Settled path; `0.3.259` takeable 2026-09-04.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03259), [Claude Code 2.1.259](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21259)
 
-### 0.3.258 / Claude Code 2.1.258 — pending (published 2026-09-01T22:24Z, ~28h at this turn)
+### 0.3.258 / Claude Code 2.1.258 — APPLIED 2026-09-03 (published 2026-09-01T22:24Z)
 
 - **Upstream:** SDK is parity-only. 2.1.258 is two fixes: *"Fixed Claude Code
   failing to launch on macOS 12 (Monterey), a regression introduced in
@@ -159,7 +238,27 @@ The rest of 0.3.259 and 2.1.259:
   content blocks must be non-empty"* chat wedge, 2.1.258's user-message
   variant); the scope here is Claude Code's own remote and `/schedule` sessions,
   not this repo's `bin/schedules` runs, which are plain CLI invocations.
-- **Action:** Settled path; takeable 2026-09-03.
+- **Action:** Applied 2026-09-03 on the settled path (~53h old), the newest
+  settled version. It carries `0.3.257` with it, so the
+  `background_tasks_changed` half of
+  `issues/bugs/2026-08-26-chat-task-strip-edge-pairing-and-ambient.md` is no
+  longer blocked on the pin — that issue's stated requirement was `0.3.257`+.
+  **Verification took more than one pass, and both wobbles were the gates, not
+  the release.** `sdk-steering-probe` failed its first scenario on the first run
+  ("timed out before the steer answer arrived") and printed its
+  do-not-ship verdict; three consecutive re-runs on this same pin passed
+  cleanly, so the timeout was the probe's own timing sensitivity rather than a
+  steering change — filed as
+  `issues/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md`,
+  because a gate that says "do not ship" for an inconclusive run is a gate whose
+  verdicts get discounted. `pnpm -C beebox test` came back **8,524 pass, 6
+  fail**, of which `test/hub/hub-scan-token.doctest.md` hit a 303-second timeout
+  under load and passes in 3s on its own, and
+  `test/dev/launch-session.doctest.md` fails **reproducibly** — but it fails
+  identically at the previous `0.3.252` pin (checked by setting the bump aside,
+  reinstalling, and re-running), so it is a `main`-side red, not this bump's.
+  It expects a launched codex session to read as `whileRunning: "active"` and
+  gets `"none"`.
 - **Sources:** [Claude Code 2.1.258](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21258)
 
 ### 0.3.253 – 0.3.256 — never published (four versions, both channels)
@@ -177,7 +276,7 @@ being withdrawn. Nothing to review; recorded so a future turn does not go
 looking, and as evidence for how much this train is currently churning — which
 is the argument for the two-day settling window continuing to earn its keep.
 
-### 0.3.257 — pending (published 2026-09-01T17:15Z, ~8h at this turn)
+### 0.3.257 — superseded, included in the 0.3.258 pin (published 2026-09-01T17:15Z)
 
 - **Upstream:** Eleven itemized changes plus parity with 2.1.257 — the first
   substantively itemized SDK release since `0.3.247`. `thinkingTokens` on
@@ -215,9 +314,10 @@ is the argument for the two-day settling window continuing to earn its keep.
   fix does not apply: nothing imports `@anthropic-ai/claude-agent-sdk/browser`.
   `thinkingTokens` is additive and beebox reads no usage fields beyond
   duration; `getContextUsage()` is not called.
-- **Action:** Settled path; takeable 2026-09-03. Worth taking deliberately
-  rather than incidentally, since it is the version the task-strip issue should
-  build against.
+- **Action:** Never installed on its own — `0.3.258` settled hours later and the
+  updater takes the newest settled version, so the pin stepped over it on
+  2026-09-03. It arrives all the same, which is what the task-strip issue
+  needed.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03257)
 
 ### Claude Code 2.1.257 — harness; one change to check for, and it is clear here (its repetition of the "no enforcement" claim is CORRECTED in the 0.3.259 entry)
