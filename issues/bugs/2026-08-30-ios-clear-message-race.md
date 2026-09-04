@@ -35,3 +35,7 @@ text that differs only by content the same dictation stream appended after the
 snapshot. Reproduce first: dictate, say "clear message" mid-flow without
 pausing, watch whether trailing finals defeat the clear. Device territory —
 `field-probe` if it won't reproduce in the sim.
+
+> 2026-09-04 re-encountered (boxholder, on device): "clear message doesn't
+> work on iOS. Some race." Still unreproduced in code; the snapshot-guard
+> hypothesis above stands. Second report in five days.
