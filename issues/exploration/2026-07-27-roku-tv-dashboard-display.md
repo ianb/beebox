@@ -4,6 +4,7 @@ workstream: unknown
 area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked to research
+priority: backlog
 ---
 
 Same want as the [Echo Show dashboard](2026-07-27-echo-show-dashboard-display.md):

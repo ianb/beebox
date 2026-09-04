@@ -4,6 +4,8 @@ workstream: elixir-skills-review
 area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+priority: backlog
+next-action: discuss
 ---
 
 A small mechanism from

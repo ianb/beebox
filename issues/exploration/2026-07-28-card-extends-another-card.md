@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 needs: [design]
 discovered-in: main session — boxholder idea
+priority: backlog
 ---
 
 Idea: let a card **extend** another card and override parts of it — especially

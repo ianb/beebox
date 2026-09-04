@@ -6,6 +6,7 @@ area: beebox
 filed-by: agent
 discovered-in: main session — boxholder's idea, riffing off the Every tools
 labels: [soft-launch]
+priority: normal
 ---
 
 > **⭐ First-release candidate** — boxholder flagged this to look into for the

@@ -2,6 +2,7 @@
 title: "Mid-session context admission: when box state changes during a chat"
 workstream: research-opencode
 area: beebox
+priority: backlog
 ---
 
 The system prompt is sent once at session creation (`src/services/claude-chat.ts`), and

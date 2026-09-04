@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+next-action: fixed
 ---
 
 Boxholder (2026-07-21): "Moving the issue system inside beebox

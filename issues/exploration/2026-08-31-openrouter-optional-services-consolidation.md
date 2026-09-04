@@ -6,6 +6,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — reducing billing and configuration overhead during the external cutover
 labels: [providers, configuration]
+priority: important
 ---
 
 Bee Box can require separate provider accounts, API keys, configuration, and

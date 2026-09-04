@@ -3,6 +3,7 @@ title: "per surface agent vs boxwide reactor"
 workstream: unknown
 area: beebox
 needs: [design]
+next-action: invalid
 ---
 
 From the Rowboat competitive note (`research/rowboat-review.md`, Tier 1). Rowboat's

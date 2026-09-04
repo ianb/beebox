@@ -3,6 +3,7 @@ title: "investigate composio tool layer"
 workstream: unknown
 area: beebox
 
+priority: backlog
 ---
 
 > **Update (2026-07-28) — for the auth-broker / token-custody angle, resolved

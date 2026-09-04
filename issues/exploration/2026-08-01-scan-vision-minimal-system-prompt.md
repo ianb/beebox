@@ -1,6 +1,7 @@
 ---
 title: Measure a minimal system prompt for ClaudeScanVision (~15k tokens/call at stake)
 workstream: unknown
+priority: normal
 ---
 
 `ClaudeScanVision` (`beebox/src/services/scan-vision-claude.ts`) uses
