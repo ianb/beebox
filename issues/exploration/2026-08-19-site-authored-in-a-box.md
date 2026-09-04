@@ -7,6 +7,7 @@ labels: [soft-launch]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-public-site — walkthrough-prototype design conversation
+priority: backlog
 ---
 
 Part of the public site's idea is to demonstrate callback-box *using*
