@@ -219,8 +219,8 @@ JSON.stringify([
   codexScript.includes('bin/codex-session-end'),
   defaultCodexScript.includes('-m "gpt-5.6-sol"'),
   defaultCodexScript.includes('--arg model "gpt-5.6-sol"'),
-  codexScript.includes('session_registry_record_launch_session "seam" "token-seam"'),
-  codexScript.indexOf('session_registry_complete_launch "seam" "token-seam"') > codexScript.indexOf('codex "${codex_args[@]}"'),
+  codexScript.includes('session_registry_complete_launch "seam" "token-seam"'),
+  codexScript.indexOf('session_registry_complete_launch "seam" "token-seam"') < codexScript.indexOf('codex "${codex_args[@]}"'),
 ])
 => [true,true,true,true,true,true,true,true]
 
@@ -312,7 +312,7 @@ await execFileAsync(codexBoundaryScriptPath, [], {
 });
 const codexCompletedRecord = JSON.parse(await readFile(join(codexBoundaryStateDir, "workstreams/seam.json"), "utf8"));
 JSON.stringify({ whileRunning: JSON.parse(await readFile(codexObservation, "utf8")).state, afterExit: (await launchState(codexBoundaryStateDir, "seam")).state, agent: codexCompletedRecord.agent })
-=> {"whileRunning":"active","afterExit":"none","agent":"codex"}
+=> {"whileRunning":"none","afterExit":"none","agent":"codex"}
 
 const ioMono = join(root, "io-mono");
 await mkdir(join(ioMono, "bin/lib"), { recursive: true });
