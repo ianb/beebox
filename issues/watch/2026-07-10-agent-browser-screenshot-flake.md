@@ -3,6 +3,7 @@ title: "agent-browser screenshot op flakes with os error 35"
 workstream: unknown
 area: bin
 filed-by: agent
+priority: backlog
 ---
 
 > **Watch (moved to watch/ 2026-08-06).** Root-caused UPSTREAM in

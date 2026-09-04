@@ -1,6 +1,7 @@
 ---
 title: Scan triage handler — move-into-place procedure or accept manual moves?
 workstream: unknown
+priority: backlog
 ---
 
 The destination-role landmark cards installed on the scanning boxes

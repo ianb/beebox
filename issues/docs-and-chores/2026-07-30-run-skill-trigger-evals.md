@@ -4,6 +4,7 @@ workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+priority: backlog
 ---
 
 We have 16 skills in `.claude/skills/` and **zero evidence any of them fire when

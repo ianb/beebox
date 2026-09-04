@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
 next-action: reconfirm
+priority: normal
 ---
 
 The frontend has two routes that mean "show me this one card":

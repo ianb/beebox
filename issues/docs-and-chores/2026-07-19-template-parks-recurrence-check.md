@@ -4,6 +4,7 @@ workstream: unknown
 area: beebox
 filed-by: agent
 needs: [decision]
+priority: important
 ---
 
 On 2026-07-19 we cleared a backlog of parked template updates

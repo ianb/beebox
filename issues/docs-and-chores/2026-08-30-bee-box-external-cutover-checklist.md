@@ -6,6 +6,7 @@ labels: [rename, release, operations]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-name-change-plan — collecting the owner-operated steps after the repository rename
+priority: important
 ---
 
 The repository uses the Bee Box identity, but several external systems require
