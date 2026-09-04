@@ -122,7 +122,7 @@ The bbox surface uses only `scale-down`. That preserves the source aspect ratio,
 
 ### Track 4 — Switch ordinary in-box chat images
 
-**What.** Apply the established helper to ordinary supported in-box chat images. Keep user attachment object URLs, external images, session media, history blobs, GIF, SVG, BMP, ICO, PDF renders, extracted-document figures, and Browse rows unchanged.
+**What.** Apply the established helper to ordinary supported in-box chat images. Keep user attachment object URLs, external images, session media, history blobs, GIF, SVG, BMP, ICO, PDF renders, and extracted-document figures unchanged. The existing 24px image-card Browse preview is also a thumbnail surface and uses a 48px cached variant without changing the row design or its lightbox metadata.
 
 **Why this needs to change.** `src/frontend/src/components/chat/markdown-rendering.tsx:25-58` sends canonical in-box images and external images through one presentation component.
 
@@ -131,6 +131,11 @@ The bbox surface uses only `scale-down`. That preserves the source aspect ratio,
 **Vocabulary lock-ins.** “In-box image” means a recognized `/api/image/` or `/api/files/` URL under the current router prefix. It does not mean every URL rendered by `Image`.
 
 **First implementation chunk.** Switch recognized supported in-box Markdown images. Add tests proving GIF, SVG, BMP, ICO, external/proxy, blob, session-media, and history URLs pass through, and that retry changes the actual requested `src`. Browser-check chat with one image, an image grid, an external image, and a supported image referenced before it exists.
+
+The shared non-chat Markdown renderer uses the same 960px display policy while
+retaining the original lightbox URL. This covers agent-authored image embeds in
+docs, recipes, saved webpages, commentary, and extracted image-card text—not
+only chat messages.
 
 ## Could this be simpler?
 
@@ -189,7 +194,10 @@ There are no unresolved critical gaps. Every new codepath below has planned hand
 - Do not change `/api/files/*`, its Range behavior, or its download semantics.
 - Do not replace the canonical `/api/image/*` original-image route. `/api/images/*` is the explicit transform route.
 - Do not transform external URLs, proxy responses, session media, history blobs, object URLs, PDF page renders, or extracted-document figures in this workstream.
-- Do not redesign or add Browse row thumbnails. Existing Browse lightbox metadata stays original and establishes the exact full-size identity panel images must match.
+- Do not redesign Browse rows or add thumbnails where none exist. The existing
+  24px image-card preview uses a 48px cached variant. Browse lightbox metadata
+  stays original and establishes the exact full-size identity panel images must
+  match.
 - Do not fix the 90/270-degree image overflow or bbox mapping issue. Verify this work does not worsen the unrotated case.
 - Do not add crop gravity, background query parameters, animation preservation controls, metadata retention controls, or Cloudflare options beyond the settled subset.
 - Do not add cache settings, cache inspection UI, manual purge UI, metrics dashboards, a database, a daemon, or a machine-global cache.
@@ -201,7 +209,19 @@ None block implementation. The public vocabulary, defaults, limits, concurrency,
 
 ## Knowledge audits
 
-Skip. This is HTTP and frontend infrastructure, not a convention, tag, card shape, or instruction exposed to a box agent. Agents that write image references continue using the existing reference vocabulary.
+This route is also an agent-facing view-authoring capability. The generated
+views reference exposes a typed `imageUrl(path, options)` helper so an agent can
+request a bounded, cached image without hand-building router-aware URLs, while
+`fileUrl(path)` remains the original for downloads and full-resolution links.
+The chat prompt separately says that ordinary Markdown photo embeds are already
+bounded automatically and should continue to use plain box paths.
+
+Add a `knows_about` audit which asks an agent authoring an image-heavy custom
+view how it avoids downloading originals for thumbnail-sized displays. It must
+read `docs/generated/views.md`, choose `imageUrl` with a width and `format:
+"auto"`, and preserve `fileUrl` for an original/full-size link. Add a
+chat-mode `knows_directly` audit which verifies that an ordinary inline photo
+embed uses the plain box path rather than a hand-built `/api/images/` URL.
 
 ## What will hold this after it ships
 

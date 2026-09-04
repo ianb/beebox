@@ -461,7 +461,7 @@ description: Give a card type a custom interface — a React component that rend
 
 # Views
 
-Views are React (\`.tsx\`) components that render box data in the browser. **Read \`docs/generated/views.md\` before creating or modifying one** — it carries the full API, the view-host context, and how to test a view.
+Views are React (\`.tsx\`) components that render box data in the browser. **Read \`docs/generated/views.md\` before creating or modifying one** — it carries the full API, including cached \`imageUrl\` variants for image displays, the view-host context, and how to test a view.
 
 A view always gives a **card type** a custom interface: a view exporting \`rendersCardTypes = ["<type>"]\` becomes that type's UI on card pages, peeks, and chat embeds, and is selected on a card's path with \`?view=name\`. Every view is attached to a card type this way — there is no card-less standalone view.
 

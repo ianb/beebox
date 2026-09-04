@@ -45,37 +45,36 @@ function applyImageHeaders(reply: FastifyReply, { contentType, etag, lastModifie
 
 async function transformImage(source: string, options: ImageTransformOptions): Promise<Buffer> {
   const { default: Sharp } = await import("sharp");
-  let metadata: Metadata;
   try {
-    metadata = await Sharp(source, { limitInputPixels: 64 * 1024 * 1024 }).metadata();
+    const metadata: Metadata = await Sharp(source, { limitInputPixels: 64 * 1024 * 1024 }).metadata();
+    const width = physicalDimension(options.width, options.dpr);
+    const height = physicalDimension(options.height, options.dpr);
+    const orientedWidth = metadata.autoOrient.width;
+    const orientedHeight = metadata.autoOrient.height;
+    let fit: "cover" | "inside" = options.fit === "cover" || options.fit === "crop" ? "cover" : "inside";
+    let withoutEnlargement = options.fit === "scale-down" || options.fit === "crop";
+    if (
+      options.fit === "crop" &&
+      (width === undefined || orientedWidth <= width) &&
+      (height === undefined || orientedHeight <= height)
+    ) {
+      fit = "inside";
+      withoutEnlargement = true;
+    }
+    let pipeline = Sharp(source, { limitInputPixels: 64 * 1024 * 1024 }).rotate().resize({
+      width,
+      height,
+      fit,
+      withoutEnlargement,
+      ...(options.fit === "pad" ? { fit: "contain" as const, background: "#ffffff" } : {}),
+    });
+    if (options.format === "avif") pipeline = pipeline.avif({ quality: options.quality, effort: 1 });
+    else if (options.format === "webp") pipeline = pipeline.webp({ quality: options.quality, effort: 4 });
+    else pipeline = pipeline.jpeg({ quality: options.quality, progressive: true });
+    return await pipeline.toBuffer();
   } catch (error) {
     throw new ImageDecodeError(error);
   }
-  const width = physicalDimension(options.width, options.dpr);
-  const height = physicalDimension(options.height, options.dpr);
-  const orientedWidth = metadata.autoOrient.width;
-  const orientedHeight = metadata.autoOrient.height;
-  let fit: "cover" | "inside" = options.fit === "cover" || options.fit === "crop" ? "cover" : "inside";
-  let withoutEnlargement = options.fit === "scale-down" || options.fit === "crop";
-  if (
-    options.fit === "crop" &&
-    (width === undefined || orientedWidth <= width) &&
-    (height === undefined || orientedHeight <= height)
-  ) {
-    fit = "inside";
-    withoutEnlargement = true;
-  }
-  let pipeline = Sharp(source, { limitInputPixels: 64 * 1024 * 1024 }).rotate().resize({
-    width,
-    height,
-    fit,
-    withoutEnlargement,
-    ...(options.fit === "pad" ? { fit: "contain" as const, background: "#ffffff" } : {}),
-  });
-  if (options.format === "avif") pipeline = pipeline.avif({ quality: options.quality, effort: 1 });
-  else if (options.format === "webp") pipeline = pipeline.webp({ quality: options.quality, effort: 4 });
-  else pipeline = pipeline.jpeg({ quality: options.quality, progressive: true });
-  return pipeline.toBuffer();
 }
 
 export function registerApiImagesRoutes({ server, boxRoot }: { server: FastifyInstance; boxRoot: string }): void {
