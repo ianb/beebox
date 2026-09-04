@@ -35,7 +35,6 @@
   { "path": "workstreams-app/test/router/router-config.test.ts", "occurrenceClass": "kebab-name", "expectedCount": 3, "reason": "The router regression proves a renamed product can continue using its existing physical main-checkout directory." },
   { "path": "beebox/src/lib/state-migration.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "The persisted-state migration recognizes the former marker and box state directory." },
   { "path": "beebox/src/lib/state-migration.ts", "occurrenceClass": "config-cli-directory", "expectedCount": 2, "reason": "The persisted-state migration recognizes the former machine config and state directories." },
-  { "path": "beebox/src/hub/child-spawn.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "Hub discovery accepts legacy box identity until the selected engine migrates its state." },
   { "path": "beebox/test/lib/state-migration.doctest.md", "occurrenceClass": "dot-state-directory", "expectedCount": 8, "reason": "Migration fixtures prove former box state and marker paths move, conflict, or converge safely." },
   { "path": "beebox/test/hub/hub-config.doctest.md", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "Hub discovery fixtures prove legacy state is recognized without router-side mutation." },
   { "path": "workstreams-app/src/router/box-entry.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "The shared router recognizes legacy box identity without performing an engine migration." },

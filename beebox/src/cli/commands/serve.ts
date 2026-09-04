@@ -20,8 +20,8 @@ import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { boxSlug } from "../../lib/box-slug.js";
-import { findBoxRoot, BOX_MARKER } from "../../lib/paths.js";
-import { isValidBox } from "../../core/box/index.js";
+import { findBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot, BoxShapeError } from "../../lib/box-shape.js";
 import { loadEnv, serverEnvSchema } from "../../lib/env.js";
 
 /**
@@ -56,24 +56,21 @@ export function devServerEnvironment(
 }
 
 /**
- * Resolve an explicit dir argument to the directory that actually holds the
- * box. A v2 package root (marker at `<dir>/content/.beebox/box.json`) resolves to its
- * `content/` — `bbx serve <package-root>` is the obvious thing to type and
- * used to die later with a raw ENOENT reading `<package-root>/.beebox/box.json`. A
- * dir that is neither a box nor a package root fails here, with the marker
- * path named, instead of as an uncaught stack trace at startup.
- * Exported for its doctest.
+ * Resolve an explicit dir argument to the box root, or print a
+ * `bbx serve`-facing error and exit. The shared resolver (`requireBoxRoot`,
+ * `../../lib/box-shape.js`) throws `BoxShapeError` (naming a v2 shape and
+ * pointing at `bbx migrate`, or plain "not a box") for anything that isn't a
+ * v3 box — this turns that into the CLI's usual print-and-exit instead of an
+ * uncaught stack trace at startup. Exported for its doctest.
  */
-export async function resolveServableBoxRoot(boxRoot: string): Promise<string> {
-  if (await isValidBox(boxRoot)) return boxRoot;
-  const contentRoot = path.join(boxRoot, "content");
-  if (await isValidBox(contentRoot)) return contentRoot;
-  console.error(
-    `Error: ${boxRoot} is not a Bee Box — no ${BOX_MARKER} there or in ` +
-      `${contentRoot}. Run \`bbx init ${boxRoot}\` to create one, or point ` +
-      "`bbx serve` at an existing box."
-  );
-  process.exit(1);
+export async function resolveServableBoxRoot(dir: string): Promise<string> {
+  try {
+    return await requireBoxRoot(dir);
+  } catch (e) {
+    if (!(e instanceof BoxShapeError)) throw e;
+    console.error("Error: " + e.message);
+    process.exit(1);
+  }
 }
 
 /**
@@ -93,7 +90,7 @@ export async function resolveBoxes(dirs: string[], slugOverride: string | undefi
       const boxRoot = await resolveServableBoxRoot(path.resolve(dir));
       const slug = slugOverride ?? (await boxSlug(boxRoot));
       return { slug, boxRoot };
-    })
+    }),
   );
 
   // Check for duplicate slugs

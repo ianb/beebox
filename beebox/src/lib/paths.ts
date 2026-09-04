@@ -6,8 +6,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
 import { invariant } from "./invariant.js";
-import { isRecord } from "./is-record.js";
-import { LEGACY_BOX_MARKER, LEGACY_PACKAGE_NAME, migrateBoxState } from "./state-migration.js";
+import { LEGACY_BOX_MARKER, migrateBoxState } from "./state-migration.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
@@ -66,55 +65,11 @@ async function pathExists(candidate: string): Promise<boolean> {
 }
 
 /**
- * Check whether `dir` is a v2 box's PACKAGE root: no canonical marker of its own,
- * but `dir/content/.beebox/box.json` (or the legacy marker) exists (the operational root moved one level
- * down) and `dir/package.json` actually declares a dependency on
- * `beebox` (or a legacy engine package) (not just any directory that happens to contain a
- * `content/` subdirectory with a marker — e.g. a box's own `content/store/`
- * could coincidentally nest something named `content` one day; the
- * package.json check keeps this fail-closed).
- */
-async function packageRootContentDir(dir: string): Promise<string | null> {
-  const contentRoot = path.join(dir, "content");
-  if (
-    !(await pathExists(path.join(contentRoot, BOX_MARKER))) &&
-    !(await pathExists(path.join(contentRoot, LEGACY_BOX_MARKER)))
-  ) return null;
-
-  const packageJsonPath = path.join(dir, "package.json");
-  let raw: string;
-  try {
-    raw = await fs.readFile(packageJsonPath, "utf-8");
-  } catch (_e) {
-    // No package.json alongside `content/` — not a v2 package root.
-    return null;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (_e) {
-    // Malformed package.json — fail closed, same as "not a box" here.
-    return null;
-  }
-
-  if (!isRecord(parsed)) return null;
-  const deps = parsed["dependencies"];
-  if (!isRecord(deps) || (!("beebox" in deps) && !(LEGACY_PACKAGE_NAME in deps))) return null;
-  return contentRoot;
-}
-
-/**
- * Find the Bee Box root by searching upward from the given path.
- *
- * At each level checked, a box's canonical marker (or legacy marker) wins
- * first.
- * Failing that, this also checks ONE level DOWN for a v2 box's operational
- * root (`<dir>/content/.beebox/box.json`, gated on `<dir>/package.json` declaring a
- * `beebox` dependency) — this is what lets `bbx` run from a box's
- * PACKAGE root (`~/src/boxes/foo/`, where a coding session normally opens)
- * and still resolve to the operational box at `foo/content/`, not just from
- * inside `content/` itself or one of its subdirectories.
+ * Find the Bee Box root by searching upward from the given path. A box has
+ * ONE root (shapeVersion 3): the marker check at each level is the whole
+ * algorithm. A v2 box (marker one level down, at `<dir>/content/`) is no
+ * longer resolved here — `getBoxShape`'s migration-pointing error is what
+ * surfaces that case, not a silent downward resolve.
  *
  * @param startPath - Directory to start searching from
  * @returns The box root path, or null if not found
@@ -128,11 +83,6 @@ export async function findBoxRoot(startPath: string): Promise<string | null> {
       (await pathExists(path.join(current, LEGACY_BOX_MARKER)))
     ) {
       return current;
-    }
-
-    const packageRootContent = await packageRootContentDir(current);
-    if (packageRootContent) {
-      return packageRootContent;
     }
 
     const parent = path.dirname(current);
@@ -266,12 +216,12 @@ export function isViewFile(filePath: string): boolean {
 }
 
 /**
- * Cards under `store/trash/` are by definition orphaned/discarded and routinely
- * have broken refs (their attachments and related cards have been deleted), so
- * the *implicit* box-wide walks skip them — `bbx validate`'s default scan and the
- * `--canonical` normalizer alike. An explicit `bbx validate <path>` on a trash
- * path still validates.
+ * Cards under `_bookkeeping/trash/` are by definition orphaned/discarded and
+ * routinely have broken refs (their attachments and related cards have been
+ * deleted), so the *implicit* box-wide walks skip them — `bbx validate`'s
+ * default scan and the `--canonical` normalizer alike. An explicit
+ * `bbx validate <path>` on a trash path still validates.
  */
 export function isTrashedCard(boxRelOrAbs: string): boolean {
-  return /(^|\/)store\/trash\//.test(boxRelOrAbs);
+  return /(^|\/)_bookkeeping\/trash\//.test(boxRelOrAbs);
 }

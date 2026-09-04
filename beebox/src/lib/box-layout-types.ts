@@ -5,10 +5,10 @@
  */
 
 /** Which section of `docs/box-layout.md` (and, for a subset, the agent guide) an entry belongs under. */
-export type BoxLayoutArea = "box" | "store" | "config" | "people-places" | "tricks" | "agent-config" | "legacy";
+export type BoxLayoutArea = "content" | "bookkeeping" | "config" | "publish" | "tmp" | "tricks" | "agent-config";
 
 export interface BoxLayoutEntry {
-  /** Path relative to the box root (`content/`). */
+  /** Path relative to the box root (the one root — see `docs/box-layout.md`). */
   path: string;
   /**
    * Key this entry is exposed as on `BOX_DIRS`, for directories canonical
@@ -27,4 +27,18 @@ export interface BoxLayoutEntry {
    * `config`/`tricks`/`agent-config` entries aren't in that table at all.
    */
   agentDescription?: string;
+}
+
+/**
+ * One legal entry at the box root — the closed vocabulary later tracks
+ * validate against (`bbx validate`/`bbx status`'s root check). `"area"` is
+ * one of the underscore-prefixed directories in `BOX_LAYOUT`'s area list
+ * (`_content`, `_config`, `_bookkeeping`, `_publish`, `_tmp`); `"tooling"` is
+ * everything else a v3 root legitimately carries (the npm namespace, agent
+ * identity, runtime state, code).
+ */
+export interface BoxRootVocabularyEntry {
+  /** The literal root entry name (e.g. `"_content"`, `"package.json"`). */
+  name: string;
+  kind: "area" | "tooling";
 }

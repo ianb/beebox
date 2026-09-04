@@ -464,22 +464,22 @@ explicitly NOT in scope.
 
 ## Open design questions
 
-- **Redirect table for old `/browse/` URLs?** A static prefix map
-  (`/store/chat → /_content/chat`, …) served as 301s for one release would
-  soften the critical gap. Lean: yes, it is ~20 lines in the browse route
-  and self-expires; decide at Track F.
-- **`_config/box.json` vs `.beebox/`-adjacent placement for machine-owned
-  config** — `box.json` is hand-edited (timezone, emails) so `_config/` is
-  right; connectors' `*.state.json` are machine-owned and could argue for
-  `_bookkeeping/`. Lean: keep connector config+state+secret files together
-  in `_config/connectors/` (splitting a connector across three dirs costs
-  more than the purity buys).
-- **When do relative refs become an error** (vs the Track B warning)? Lean:
-  one release of warning, then error — same cadence as other tightenings.
-- **`usage/` and `reviews/`** (today `store/usage`, `store/reviews/retro`) —
-  placed in `_bookkeeping/` by the mapping table. Lean: correct (machine
-  records); flagged because `reviews/retro` is a boxholder-facing audit trail
-  and could argue for `_content/docs/`.
+All resolved by the boxholder (2026-09-04, in the box-layout-criteria
+session — the message resolving them: "Don't worry about browse URLs. I
+guess state should go in bookkeeping. Probably retro goes in content."):
+
+- **Redirect table for old `/browse/` URLs** — NO. Old URLs 404; the
+  critical-gap note stands as accepted risk.
+- **Connector `*.state.json`** — machine-owned, so it moves to
+  `_bookkeeping/connectors/<name>.state.json` (spec key `connectorState`).
+  Config (`<name>.json`) and secrets (`<name>.secret.json`, gitignored) stay
+  together in `_config/connectors/`.
+- **Relative refs → error timing** — one release of warning, then error
+  (lean accepted by silence; migrated content is already canonical after
+  Track E step 5).
+- **`usage/`** — `_bookkeeping/usage`. **`reviews/retro`** — content: the
+  retro reports are the boxholder's audit trail and live at
+  `_content/reviews/retro/`.
 
 ## Knowledge audits
 

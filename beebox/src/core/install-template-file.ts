@@ -6,9 +6,9 @@
  * landmark, the briefing). When a template changes upstream, we want to
  * push the new version into boxes — but only if the local copy hasn't
  * been customised. If it has, the new version goes into
- * `config/_template-updates/<path>` for the boxholder to review.
+ * `_config/_template-updates/<path>` for the boxholder to review.
  *
- * "Has it been customised" is tracked via `config/template-versions.json`:
+ * "Has it been customised" is tracked via `_config/template-versions.json`:
  * a hash of every template we have ever written cleanly. If the local
  * file's hash matches the last recorded hash, the user hasn't touched
  * it since we installed it — so it's safe to overwrite with the new
@@ -28,21 +28,10 @@
  * template. See `TemplateMergePolicy` in `src/cards/schema.ts`, which is how a
  * schema declares them.
  *
- * **v2 (package-layout) boxes**: `relPath` is normally resolved against
- * `boxRoot` (the operational root, `content/` for a v2 box). Some templates a
- * v2 box owns live one level up, at the package root's `src/` (the schemas,
- * views, and tricks CLAUDE.md guides) — outside `boxRoot` entirely. Rather
- * than invent a second tracker section or a `packageRoot` option, a `relPath`
- * that starts with `../` is simply resolved the normal way: `path.join`
- * already walks it up to the package root (`content/../src/... ===
- * src/...`), and `git status` run from `boxRoot` already reports changes
- * there the same way (see the callers in `box-templates.ts`) — so this is the
- * least-magic option: no new path space, just letting relative-path
- * resolution do what it already does. The one place this needs help is the
- * parked-update mirror (`config/_template-updates/`), which must stay INSIDE
- * `boxRoot` (it's tracked box content) — see `mirrorRelPath` below, which
- * strips a leading `../` there only, since `content/` is always exactly one
- * level under the package root.
+ * `relPath` is always resolved against `boxRoot` — shapeVersion 3 has one
+ * root, so a box-authored template (the schemas/views/tricks CLAUDE.md
+ * guides included) never needs a `../` climb to a separate package root the
+ * way a v2 box did.
  */
 
 import * as fs from "node:fs/promises";
@@ -55,9 +44,9 @@ import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "./card-io.js";
 
-const VERSIONS_FILE = "config/template-versions.json";
+const VERSIONS_FILE = "_config/template-versions.json";
 /** Where a parked update is mirrored, box-relative. */
-export const TEMPLATE_UPDATES_DIR = "config/_template-updates";
+export const TEMPLATE_UPDATES_DIR = "_config/_template-updates";
 
 /**
  * The one sentence that tells a boxholder what to do about a parked update.
@@ -88,49 +77,31 @@ export function parkedUpdatePath(relPath: string): string {
  * here — would drag the whole skill-content module into every consumer.
  */
 const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
-  /^config\/procedures\/.+\.(?:procedure|orig-procedure)\.card$/,
-  /^config\/schedules\/.+\.(?:scheduled-script|orig-scheduled-script)\.card$/,
-  /^config\/.+\.(?:guide|orig-guide)\.card$/,
-  /^config\/.+\.(?:personality|orig-personality)\.card$/,
-  /^store\/plate\.todo-view\.card$/,
-  /^config\/_template-updates\/.+$/,
+  /^_config\/procedures\/.+\.(?:procedure|orig-procedure)\.card$/,
+  /^_config\/schedules\/.+\.(?:scheduled-script|orig-scheduled-script)\.card$/,
+  /^_config\/.+\.(?:guide|orig-guide)\.card$/,
+  /^_config\/.+\.(?:personality|orig-personality)\.card$/,
+  /^_content\/plate\.todo-view\.card$/,
+  /^_config\/_template-updates\/.+$/,
   // The install tracker: installTemplateFile rewrites it when it records a
   // hash, so it commits with the template change instead of leaving dirt.
-  /^config\/template-versions\.json$/,
-  /^config\/schemas\/CLAUDE\.md$/,
-  /^config\/bbx-validate\.ignore$/,
-  /^views\/CLAUDE\.md$/,
-  // v2 (package-layout) equivalents of the two guides above — see the
-  // "v2 (package-layout) boxes" note on `InstallTemplateOptions.relPath`.
-  // These patterns are written in `installTemplateFile`'s own relPath
-  // convention (this file): normally boxRoot-relative, `../...` for the
-  // package-root-level templates below. `isTemplateManagedPath`'s callers
-  // see `git status` output relative to the *repo* root instead — for a v2
-  // box that's the package root, not `boxRoot` (`content/`) — so
-  // `commitTemplateSyncChanges` (generate-docs.ts) normalizes each
-  // git-reported path into this same boxRoot-relative convention before
-  // filtering. `bbx upgrade`'s own commit step still stages everything (`git
-  // add -A`) rather than relying on this selective list.
-  /^\.\.\/src\/schemas\/CLAUDE\.md$/,
-  /^\.\.\/src\/views\/CLAUDE\.md$/,
-  /^\.\.\/src\/tricks\/scripts\/CLAUDE\.md$/,
-  /^briefing\.(?:briefing|orig-briefing)\.card$/,
-  /^briefing\.md$/,
-  // `.claude/` lives at the box's PACKAGE root. For a legacy box that is
-  // `boxRoot` itself; for a v2 box `commitTemplateSyncChanges` normalizes the
-  // git-reported path to `../.claude/...` (it sits outside `content/`) — so
-  // both forms have to match or a v2 box's regenerated rules/skills stay
-  // uncommitted and leave the tree permanently dirty.
-  /^(?:\.\.\/)?\.claude\/rules\/.+\.md$/,
-  /^(?:\.\.\/)?\.claude\/settings\.json$/,
+  /^_config\/template-versions\.json$/,
+  /^_config\/schemas\/CLAUDE\.md$/,
+  /^_config\/bbx-validate\.ignore$/,
+  /^src\/views\/CLAUDE\.md$/,
+  /^src\/schemas\/CLAUDE\.md$/,
+  /^src\/tricks\/scripts\/CLAUDE\.md$/,
+  /^_content\/briefing\.(?:briefing|orig-briefing)\.card$/,
+  /^_content\/briefing\.md$/,
+  /^\.claude\/rules\/.+\.md$/,
+  /^\.claude\/settings\.json$/,
   // Managed box skills (`generateSkills`), including each skill's
   // supplementary files.
-  /^(?:\.\.\/)?\.claude\/skills\/.+$/,
-  /^\.\.\/AGENTS\.md$/,
+  /^\.claude\/skills\/.+$/,
   /^AGENTS\.md$/,
   /^.+\/AGENTS\.md$/,
-  /^(?:\.\.\/)?\.agents\/skills\/.+$/,
-  /^\.\.\/\.codex\/hooks\.json$/,
+  /^\.agents\/skills\/.+$/,
+  /^\.codex\/hooks\.json$/,
 ];
 
 /** Whether `relPath` is beebox template output (see {@link TEMPLATE_MANAGED_PATTERNS}). */
@@ -151,7 +122,7 @@ type VersionsFile = z.infer<typeof versionsFileSchema>;
 export interface InstallTemplateOptions {
   /** Box root absolute path. */
   boxRoot: string;
-  /** Path under boxRoot, e.g. `config/calendar.guide.card`. */
+  /** Path under boxRoot, e.g. `_config/calendar.guide.card`. */
   relPath: string;
   /** New template content to install. */
   templateContent: string;
@@ -264,16 +235,12 @@ function applyBoxOwnedFields(
 }
 
 /**
- * Where a `relPath`'s parked mirror lives under `config/_template-updates/`.
- * Identical to `relPath` except a leading `../` (the packageRoot-relative
- * marker — see the "v2 (package-layout) boxes" note above) is stripped, so
- * the mirror always stays inside `boxRoot` instead of trying to escape
- * `config/_template-updates/` itself. Only one level is stripped —
- * `content/` is always exactly one level under the package root, so a
- * v2-owned template never needs more than one `../`.
+ * Where a `relPath`'s parked mirror lives under `_config/_template-updates/`.
+ * Identical to `relPath` — shapeVersion 3 has one root, so every `relPath`
+ * is already inside `boxRoot` and needs no adjustment to stay there.
  */
 function mirrorRelPath(relPath: string): string {
-  return relPath.startsWith("../") ? relPath.slice(3) : relPath;
+  return relPath;
 }
 
 async function fileExists(absPath: string): Promise<boolean> {
@@ -287,7 +254,7 @@ async function fileExists(absPath: string): Promise<boolean> {
 
 /**
  * Remove the parked mirror for `relPath` (if any) and sweep now-empty parent
- * dirs under `config/_template-updates/`. Called whenever the box's on-disk
+ * dirs under `_config/_template-updates/`. Called whenever the box's on-disk
  * copy converges to the current template (fresh / unchanged / overwritten):
  * the parked "update available" is then obsolete, and leaving it behind is
  * exactly what kept the drift count stuck above the real divergence. Silent
@@ -431,8 +398,8 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
   // Local differs from both the new template and our last-installed
   // record. Either the user edited it, or the file predates the
   // tracker. Park the new template under `_template-updates/` mirroring
-  // the original relpath verbatim (e.g. `config/foo.guide.card` →
-  // `config/_template-updates/config/foo.guide.card`) so the
+  // the original relpath verbatim (e.g. `_config/foo.guide.card` →
+  // `_config/_template-updates/config/foo.guide.card`) so the
   // copy-back-to-accept path is obvious. Don't update the recorded
   // hash — if the user later accepts the new template by copying it
   // into place, the next install will recognise it as the current
@@ -453,25 +420,25 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
  * month, they're not going to. Either they actively want their version (in
  * which case the parked copy is noise) or they missed the prompt (in which
  * case it'll re-park on the next template change). Sweeping prevents
- * `config/_template-updates/` from accumulating cruft indefinitely.
+ * `_config/_template-updates/` from accumulating cruft indefinitely.
  */
 const STALE_TEMPLATE_UPDATE_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * Delete parked template-update files under `config/_template-updates/` that are
+ * Delete parked template-update files under `_config/_template-updates/` that are
  * either **stale** (mtime older than `maxAgeMs`, default 30 days) or **orphaned**
  * (no on-disk `<relpath>` for the mirror to update). Empty parent directories are
  * removed too. Returns the relative paths of removed files.
  *
  * The orphan case matters because a mirror is only ever parked when an on-disk
  * copy existed and diverged; if that copy is later deleted or renamed (e.g. a
- * relpath-scheme migration moves `procedures/X` → `config/procedures/X`), the
+ * relpath-scheme migration moves `procedures/X` → `_config/procedures/X`), the
  * mirror points at nothing and is pure drift-count noise. `installTemplateFile`
  * clears mirrors for files that converge back to the template, but it never sees
  * a relpath that's no longer installed — this sweep is what reaps those.
  *
  * Idempotent and silent — safe to call from `syncTemplatesFromSource` every
- * cycle. Doesn't touch anything outside `config/_template-updates/`.
+ * cycle. Doesn't touch anything outside `_config/_template-updates/`.
  */
 export async function pruneStaleTemplateUpdates(
   boxRoot: string,
@@ -527,9 +494,9 @@ export async function pruneStaleTemplateUpdates(
 
 /**
  * List the box-relative paths of template files that have a **parked** update —
- * i.e. a newer stock template sits in `config/_template-updates/<relpath>` while
+ * i.e. a newer stock template sits in `_config/_template-updates/<relpath>` while
  * a divergent copy remains in place. Returns the ORIGINAL relpaths (the parked
- * mirror's `<relpath>`, with the `config/_template-updates/` prefix stripped), so
+ * mirror's `<relpath>`, with the `_config/_template-updates/` prefix stripped), so
  * a caller can say "these guides/procedures have an update waiting."
  *
  * This is the observable signal for template drift — a box that has diverged from

@@ -1,11 +1,10 @@
-# Views compiler: v2 (package-shaped) boxes
+# Views compiler: v3 (one-root, package-shaped) boxes
 
-A v2 box nests its operational root (`content/`, with `.beebox/box.json` declaring
-`shapeVersion: 2`) inside a package that has a real `node_modules/beebox`
-dependency. Its views live at `packageRoot/src/views`, not `boxRoot/views`.
-`listViews`/`compileView` resolve that directory from the box's shape
-(`getBoxShape`/`boxCodePaths`), and — for both shapes — read a view's metadata
-by compiling it for the node target and importing the real module (in a
+A v3 box has one root — `.beebox/box.json` (declaring `shapeVersion: 3`) sits
+alongside a real `node_modules/beebox` dependency. Its views live at
+`boxRoot/src/views`. `listViews`/`compileView` resolve that directory from
+the box's shape (`getBoxShape`/`boxCodePaths`), reading a view's metadata by
+compiling it for the node target and importing the real module (in a
 timeout-bounded subprocess) rather than regexing source text.
 
 ```ts setup
@@ -20,15 +19,14 @@ import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 
 /**
- * Build a v2 (package-shaped) fixture box: a package root with its own
+ * Build a v3 (one-root, package-shaped) fixture box: a root with its own
  * `node_modules/beebox` and `node_modules/react` — symlinked to the
- * real engine copies, the same temp-symlink trick `bbx view test` uses for a
- * legacy box (src/cli/commands/view.ts), adapted here to simulate what a
- * real `pnpm install` of beebox would produce for a v2 box's OWN
- * node_modules — with `content/` nested inside as the operational root.
+ * real engine copies, the same temp-symlink trick `bbx view test` uses
+ * (src/cli/commands/view.ts), adapted here to simulate what a real
+ * `pnpm install` of beebox would produce for a box's OWN node_modules.
  */
-async function makeV2Box() {
-  const root = await mkdtemp(join(tmpdir(), "bbx-v2box-"));
+async function makeV3Box() {
+  const root = await mkdtemp(join(tmpdir(), "bbx-v3box-"));
   await writeFile(
     join(root, "package.json"),
     JSON.stringify({ name: "my-box", private: true, dependencies: { "beebox": "0.1.0" } }),
@@ -37,13 +35,12 @@ async function makeV2Box() {
   await symlink(PACKAGE_ROOT, join(root, "node_modules", "beebox"), "dir");
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
   await symlink(join(reactNodeModules, "react"), join(root, "node_modules", "react"), "dir");
-  await mkdir(join(root, "content"), { recursive: true });
-  await mkdir(join(root, "content", ".beebox"), { recursive: true });
-  await writeFile(join(root, "content", ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
+  await mkdir(join(root, ".beebox"), { recursive: true });
+  await writeFile(join(root, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
   await mkdir(join(root, "src", "views"), { recursive: true });
   return {
     root,
-    contentRoot: join(root, "content"),
+    contentRoot: root,
     async writeView(name, content) {
       await writeFile(join(root, "src", "views", name), content);
     },
@@ -63,7 +60,7 @@ export const description = "renders a CardLink from beebox/view-widgets";
 export const dependencies = [];
 export const modes = ["page"];
 export default function WidgetView() {
-  return <div><CardLink cardRef="box/inbox/Test.memo.card" /></div>;
+  return <div><CardLink cardRef="_content/inbox/Test.memo.card" /></div>;
 }
 `;
 
@@ -81,10 +78,10 @@ function runViewTest(contentRoot, slug) {
 }
 ```
 
-## listViews finds a v2 box's view at `packageRoot/src/views`, not `boxRoot/views`
+## listViews finds a view at `boxRoot/src/views`
 
 ```ts
-const box = await makeV2Box();
+const box = await makeV3Box();
 await box.writeView("widget-view.tsx", WIDGET_VIEW);
 
 const views = await listViews(box.contentRoot);
@@ -125,7 +122,7 @@ await box.cleanup();
 ## A broken view still appears in the listing, degraded to an error marker
 
 ```ts
-const box = await makeV2Box();
+const box = await makeV3Box();
 await box.writeView("broken.tsx", `
 export const name = "Broken";
 export default function Broken() {
@@ -150,7 +147,7 @@ import runs in a killable subprocess with a timeout, so `listViews` still
 returns promptly with the view marked broken rather than hanging:
 
 ```ts
-const box = await makeV2Box();
+const box = await makeV3Box();
 await box.writeView("hangs.tsx", `
 export const name = "Hangs";
 while (true) {}

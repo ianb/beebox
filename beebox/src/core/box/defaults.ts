@@ -6,7 +6,7 @@
  * default scheduled scripts. All share the same update-or-preserve behavior
  * provided by `installTemplateFile`: a fresh box gets the canonical file, an
  * unmodified box gets the new template, and a user-modified file gets the new
- * version parked under `config/_template-updates/` for manual merging.
+ * version parked under `_config/_template-updates/` for manual merging.
  */
 
 import * as fs from "node:fs/promises";
@@ -47,7 +47,7 @@ function describeInstall(result: InstallResult, displayName: string): string | n
  * On fresh install: copies template procedure cards to config/procedures/.
  * On update: if the box's copy matches the previously installed version,
  * updates it. If the box's copy has been modified, writes the new version
- * into `config/_template-updates/procedures/` for manual merging.
+ * into `_config/_template-updates/procedures/` for manual merging.
  *
  * @returns List of installed/updated procedure names
  */
@@ -57,7 +57,7 @@ function describeInstall(result: InstallResult, displayName: string): string | n
  *
  * Without these, a box whose copy was installed before procedures were tracked
  * has no recorded hash, so any upstream change parks in
- * `config/_template-updates/` instead of landing — silently, since a parked
+ * `_config/_template-updates/` instead of landing — silently, since a parked
  * update is not an error. The boxes running a procedure most are the oldest
  * ones, i.e. exactly the ones that park.
  *
@@ -129,7 +129,7 @@ const GUIDE_DOMAINS = ["intake", "calendar"];
  * On fresh install: writes default guide cards to config/.
  * On update: if the box's copy matches the template, overwrites it with the
  * latest template. If the user has modified the guide, parks the new template
- * under `config/_template-updates/` for manual merging. (Guide templates carry
+ * under `_config/_template-updates/` for manual merging. (Guide templates carry
  * no timestamps, so an unmodified guide compares byte-equal across runs — the
  * former created-at churn is gone.)
  *
@@ -142,7 +142,7 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
     const templateContent = createInitialGuideTemplate({ name: domain });
     const result = await installTemplateFile({
       boxRoot,
-      relPath: path.join("config", fileName),
+      relPath: path.join(BOX_DIRS.config, fileName),
       templateContent,
     });
     const entry = describeInstall(result, fileName);
@@ -162,7 +162,7 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
 export async function installPersonality(boxRoot: string): Promise<boolean> {
   const result = await installTemplateFile({
     boxRoot,
-    relPath: "config/main.personality.card",
+    relPath: path.join(BOX_DIRS.config, "main.personality.card"),
     templateContent: createInitialPersonalityTemplate(),
   });
   return result.outcome === "fresh";
@@ -183,13 +183,14 @@ export async function installPersonality(boxRoot: string): Promise<boolean> {
  *   caller can commit it), or null if a real landmark was already present.
  */
 export async function installRootLandmark(boxRoot: string): Promise<string | null> {
+  const contentDir = path.join(boxRoot, "_content");
   let entries: string[];
   try {
-    entries = await fs.readdir(boxRoot);
+    entries = await fs.readdir(contentDir);
   } catch (e) {
-    // Can't list the box root — skip installing the root landmark rather
-    // than fail, but log: an unreadable box root is unexpected here.
-    console.warn(`Could not read box root ${boxRoot} for landmark check:`, e);
+    // Can't list the content root — skip installing the root landmark rather
+    // than fail, but log: an unreadable content root is unexpected here.
+    console.warn(`Could not read box content root ${contentDir} for landmark check:`, e);
     return null;
   }
   // Named for the box, not the literal word "Box": this label is the box's
@@ -200,26 +201,27 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   const templateContent = createLandmarkTemplate({ label: await boxSlug(boxRoot), symbol: "📦" });
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
   if (existing !== undefined) {
+    const existingRelPath = path.join("_content", existing);
     let hasRole: boolean;
     try {
-      const fields = parseLandmarkFields(await fs.readFile(path.join(boxRoot, existing), "utf-8"));
+      const fields = parseLandmarkFields(await fs.readFile(path.join(contentDir, existing), "utf-8"));
       hasRole = fields !== null && (fields.navigation !== undefined || (fields.destinations?.length ?? 0) > 0);
     } catch (e) {
-      console.warn(`Could not read root landmark ${existing} in ${boxRoot}:`, e);
+      console.warn(`Could not read root landmark ${existing} in ${contentDir}:`, e);
       return null;
     }
     if (hasRole) return null; // a real landmark — leave the user's content alone
     // Inert/unparseable — repair in place, preserving the existing filename.
-    await fs.writeFile(path.join(boxRoot, existing), templateContent);
-    return existing;
+    await fs.writeFile(path.join(contentDir, existing), templateContent);
+    return existingRelPath;
   }
 
   const result = await installTemplateFile({
     boxRoot,
-    relPath: "Box.landmark.card",
+    relPath: "_content/Box.landmark.card",
     templateContent,
   });
-  return result.outcome === "fresh" ? "Box.landmark.card" : null;
+  return result.outcome === "fresh" ? "_content/Box.landmark.card" : null;
 }
 
 /**
@@ -237,7 +239,7 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
 export async function installBriefing(boxRoot: string): Promise<boolean> {
   const result = await installTemplateFile({
     boxRoot,
-    relPath: "briefing.briefing.card",
+    relPath: "_content/briefing.briefing.card",
     templateContent: createBriefingTemplate(),
     priorStockHashes: TEMPLATE_STOCK_HASHES["briefing-seed"].superseded,
   });
@@ -247,7 +249,7 @@ export async function installBriefing(boxRoot: string): Promise<boolean> {
 /**
  * Install the box-wide `todo-view` stock instance if missing
  * (`docs/implemented-plans/todo-annotation.md` Track 4's "provisioned, not just
- * templated" pin): `store/plate.todo-view.card`, explicit `glob: "**"` so
+ * templated" pin): `_content/plate.todo-view.card`, explicit `glob: "**"` so
  * it stays box-wide even though it doesn't live at the box root (an omitted
  * `glob` would scope to `store/**` per `todos.list`'s directory-subtree
  * resolution rule — this card wants the whole box).
@@ -257,7 +259,7 @@ export async function installBriefing(boxRoot: string): Promise<boolean> {
 export async function installTodoView(boxRoot: string): Promise<boolean> {
   const result = await installTemplateFile({
     boxRoot,
-    relPath: "store/plate.todo-view.card",
+    relPath: "_content/plate.todo-view.card",
     templateContent: createTodoViewTemplate({ glob: "**", title: "The Plate" }),
   });
   return result.outcome === "fresh";
@@ -390,7 +392,7 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
     });
     const result = await installTemplateFile({
       boxRoot,
-      relPath: path.join("config/schedules", fileName),
+      relPath: path.join(BOX_DIRS.schedules, fileName),
       templateContent,
       ...(ScheduledScriptSchema.templateMerge && {
         boxOwnedFields: ScheduledScriptSchema.templateMerge.boxOwnedFields,

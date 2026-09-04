@@ -11,7 +11,7 @@
  */
 
 import * as path from "node:path";
-import { resolveOperationalRoot, getBoxShapeIfPresent } from "../../lib/box-shape.js";
+import { resolveBoxRoot, getBoxShapeIfPresent } from "../../lib/box-shape.js";
 
 export interface ResolvedAuditBox {
   /** The operational (`content/`) root — where `.beebox/box.json`, cards, CLAUDE.md live. */
@@ -26,7 +26,7 @@ export interface ResolvedAuditBox {
 }
 
 export async function resolveAuditBox(inputPath: string): Promise<ResolvedAuditBox> {
-  const operationalRoot = await resolveOperationalRoot(path.resolve(inputPath));
+  const operationalRoot = await resolveBoxRoot(path.resolve(inputPath));
   const shape = await getBoxShapeIfPresent(operationalRoot);
   const boxName = path.basename(shape.found ? shape.shape.packageRoot : operationalRoot);
   return { operationalRoot, boxName };

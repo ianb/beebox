@@ -115,33 +115,14 @@ dupeErr.message.includes("test1-again")
 => true
 ```
 
-## A v2 package root and its own `content/` dir are the same box (canonicalized before comparing)
+## A symlinked alias to the same box is caught (canonicalized before comparing)
 
-Without canonicalizing to the actual box root first, `./boxes/pkg` (the
-package root) and `./boxes/pkg/content` (its own content dir) compare as
-different strings and both pass the check -- exactly the "two engines on
-one `events.db`" hazard above, just reached through the v2 bilingual layout
-instead of a literal duplicate path. `resolveBoxRoot` (the same resolution
-`src/hub/supervisor.ts` uses at boot) resolves both to one root before the
+Without canonicalizing to the actual box root first, two differently-spelled
+paths to the same box could compare as different strings and both pass the
+check -- exactly the "two engines on one `events.db`" hazard above.
+`resolveBoxRoot` (the same resolution `src/hub/supervisor.ts` uses at boot)
+resolves both, and `fs.realpath` catches a symlinked alias, before the
 duplicate check runs.
-
-```ts continue
-await box.write("boxes/pkg/content/.beebox/box.json", "");
-const aliasConfig = await writeConfig(box.root, {
-  boxes: {
-    "pkg-root": { path: "./boxes/pkg" },
-    "pkg-content": { path: "./boxes/pkg/content" },
-  },
-});
-const aliasErr = await tryLoad(aliasConfig);
-aliasErr instanceof HubConfigError
-=> true
-
-aliasErr.message.includes("pkg-root") && aliasErr.message.includes("pkg-content")
-=> true
-```
-
-## A symlinked alias to the same box is also caught
 
 ```ts continue
 await fs.symlink(path.join(box.root, "boxes/test1"), path.join(box.root, "boxes/test1-link"));

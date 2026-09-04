@@ -23,16 +23,15 @@ import { writeFileAtomic } from "../lib/atomic-write.js";
 import { fileExists } from "../lib/file-exists.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { getStatus, stageAll, commit } from "../lib/git.js";
-import { resolveBoxRoot } from "../hub/child-spawn.js";
+import { requireBoxRoot } from "../lib/box-shape.js";
 
 /**
- * The test-box marker, RELATIVE TO THE OPERATIONAL BOX ROOT — so in a v2
- * package it lands at `<packageRoot>/content/config/test-box`. Track 1's
- * `BBX_FAKE_GMAIL` gate reads it from the same resolved root the server and the
- * CLI resolve, which is why this module resolves the root rather than guessing
- * `content/`.
+ * The test-box marker, RELATIVE TO THE BOX ROOT — so it lands at
+ * `<boxRoot>/_config/test-box`. Track 1's `BBX_FAKE_GMAIL` gate reads it from
+ * the same resolved root the server and the CLI resolve, which is why this
+ * module resolves the root rather than guessing.
  */
-export const TEST_BOX_MARKER = "config/test-box";
+export const TEST_BOX_MARKER = "_config/test-box";
 
 const TEST_BOX_MARKER_BODY = [
   "This box is a Bee Box field-test fixture, created by `bbx field-test`.",
@@ -115,9 +114,9 @@ export async function createFieldBox(runDir: string): Promise<FieldBox> {
     throw new FieldBoxInitError({ packageRoot, exitCode: result.exitCode, output: String(result.all) });
   }
 
-  // Resolve the operational root the way every other consumer does (marker at
-  // the dir, else at its `content/`) instead of hardcoding `content/`.
-  const boxRoot = await resolveBoxRoot(packageRoot);
+  // `bbx init` scaffolds `packageRoot` itself as the (one) box root; confirm
+  // that via the shared resolver rather than assuming it.
+  const boxRoot = await requireBoxRoot(packageRoot);
   await writeFileAtomic(path.join(boxRoot, TEST_BOX_MARKER), { content: TEST_BOX_MARKER_BODY });
 
   // `bbx init` leaves a fresh box committed and clean, so the only thing to

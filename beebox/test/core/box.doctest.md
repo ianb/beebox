@@ -1,10 +1,10 @@
 # Box Initialization
 
-`scaffoldV2Box` creates a shapeVersion-2 box: a package root (`package.json`,
-`tsconfig.json`, `src/`) with the operational box nested at `content/`.
-`initBox` creates the operational directory structure inside that content
-root. `isValidBox` checks if a directory is a properly initialized box.
-`findBoxRoot` walks up (and one level down, for a package root) to find the
+`scaffoldBoxRoot` creates a shapeVersion-3 box: the npm-package half
+(`package.json`, `tsconfig.json`, `src/`) and the operational half
+(the underscore areas) both scaffolded at the ONE root. `initBox` creates the
+operational directory structure at that root. `isValidBox` checks if a
+directory is a properly initialized box. `findBoxRoot` walks up to find the
 box root.
 
 ```ts setup
@@ -12,7 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { isValidBox, getBoxMetadata, initBox } from "../../src/core/box/index.js";
-import { scaffoldV2Box } from "../../src/core/box/package.js";
+import { scaffoldBoxRoot } from "../../src/core/box/package.js";
 import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths.js";
 
 async function makeTmpDir() {
@@ -39,51 +39,52 @@ async function listDirs(root) {
 
 ## Directory structure
 
-A fresh v2 box's operational tree lives under `content/`. `.claude/` is not
-here — it lives at the package root — but the operational directories are:
+A fresh v3 box's operational tree lives right at `boxRoot` (which is also
+the npm-package root). We filter to just the operational (underscore) areas
+here — `src/`, `.claude/`, `.beebox/`, and `node_modules/` are the code/agent
+side, covered by their own doctests:
 
 ```ts
 const tmp = await makeTmpDir();
-const { boxRoot } = await scaffoldV2Box(tmp);
-await listDirs(boxRoot)
+const { boxRoot } = await scaffoldBoxRoot(tmp);
+const allDirs = (await listDirs(boxRoot)).split("\n");
+allDirs.filter((d) => d.startsWith("_")).join("\n")
 =>
-.beebox
-box
-box/inbox
-box/inbox/intake
-box/inbox/staged
-box/inbox/triaged
-box/inbox/triaged/_unsure
-box/inbox/unhandled
-box/jobs
-box/output
-box/publish
-box/questions
-box/resources
-config
-config/connectors
-config/procedures
-config/schedules
-config/schemas
-people
-places
-store
-store/archive
-store/archive/done
-store/archive/failed
-store/archive/processed
-store/calendar
-store/chat
-store/drive
-store/recipes
-store/reviews
-store/reviews/retro
-store/todos
-store/trash
-store/usage
-tricks
-tricks/lib
-tricks/scripts
+_bookkeeping
+_bookkeeping/archive
+_bookkeeping/archive/done
+_bookkeeping/archive/failed
+_bookkeeping/archive/processed
+_bookkeeping/connectors
+_bookkeeping/jobs
+_bookkeeping/output
+_bookkeeping/questions
+_bookkeeping/resources
+_bookkeeping/trash
+_bookkeeping/usage
+_config
+_config/connectors
+_config/procedures
+_config/schedules
+_config/schemas
+_content
+_content/calendar
+_content/chat
+_content/drive
+_content/inbox
+_content/inbox/intake
+_content/inbox/staged
+_content/inbox/triaged
+_content/inbox/triaged/_unsure
+_content/inbox/unhandled
+_content/people
+_content/places
+_content/recipes
+_content/reviews
+_content/reviews/retro
+_content/todos
+_publish
+_tmp
 ```
 
 The box marker file contains version metadata:
@@ -94,7 +95,7 @@ marker.version
 => 1.0.0
 
 marker.shapeVersion
-=> 2
+=> 3
 ```
 
 A properly initialized directory is recognized as a valid box:
@@ -116,60 +117,21 @@ await isValidBox(empty)
 
 ## Finding the box root
 
-`findBoxRoot` walks up from any subdirectory to find the nearest box root
-(the `content/` operational root):
+`findBoxRoot` walks up from any subdirectory to find the nearest box root:
 
 ```ts
 const tmp = await makeTmpDir();
-const { boxRoot } = await scaffoldV2Box(tmp);
-const found = await findBoxRoot(path.join(boxRoot, "box", "inbox"));
+const { boxRoot } = await scaffoldBoxRoot(tmp);
+const found = await findBoxRoot(path.join(boxRoot, "_content", "inbox"));
 found === boxRoot
 => true
 ```
 
-## Finding a v2 box from its PACKAGE root
-
-A v2 box's operational root is `<packageRoot>/content/` (marker at
-`content/.beebox/box.json`, not at the package root itself). `findBoxRoot` also
-checks one level down: a directory with no `.beebox/box.json` of its own, but a
-`content/.beebox/box.json` AND a `package.json` declaring a `beebox`
-dependency, resolves to `content/`.
-
-```ts
-const tmp = await makeTmpDir();
-const { packageRoot, boxRoot } = await scaffoldV2Box(tmp);
-
-const fromPackageRoot = await findBoxRoot(packageRoot);
-fromPackageRoot === boxRoot
-=> true
-```
-
-Running from inside `content/` itself, or a subdirectory of it, still resolves the same way (the `.beebox/box.json` marker there is found first, before the downward check is even considered):
-
-```ts continue
-const fromContentRoot = await findBoxRoot(boxRoot);
-const fromContentSubdir = await findBoxRoot(path.join(boxRoot, "box", "inbox"));
-fromContentRoot === boxRoot && fromContentSubdir === boxRoot
-=> true
-```
-
-An unrelated directory — no `.beebox/box.json` anywhere upward, and no `content/.beebox/box.json` + qualifying `package.json` at any level — fails closed with `null`, not a guess:
+An unrelated directory — no `.beebox/box.json` anywhere upward — fails closed with `null`, not a guess:
 
 ```ts continue
 const unrelatedDir = await makeTmpDir();
 await findBoxRoot(unrelatedDir)
-=> null
-```
-
-A directory with a `content/.beebox/box.json` but NO `package.json` declaring `beebox` (e.g. an unrelated directory that just happens to contain a `content/` folder) is never mistaken for a package root:
-
-```ts continue
-const lookalikeRoot = await makeTmpDir();
-const lookalikeContent = path.join(lookalikeRoot, "content");
-await fs.mkdir(lookalikeContent, { recursive: true });
-await fs.mkdir(path.join(lookalikeContent, ".beebox"), { recursive: true });
-await fs.writeFile(path.join(lookalikeContent, ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
-await findBoxRoot(lookalikeRoot)
 => null
 ```
 
@@ -179,7 +141,7 @@ await findBoxRoot(lookalikeRoot)
 
 ```ts
 const tmp = await makeTmpDir();
-const { boxRoot } = await scaffoldV2Box(tmp);
+const { boxRoot } = await scaffoldBoxRoot(tmp);
 const meta1 = await getBoxMetadata(boxRoot);
 meta1.version
 => 1.0.0
@@ -210,7 +172,7 @@ false.
 
 ```ts
 const tmp = await makeTmpDir();
-const { boxRoot } = await scaffoldV2Box(tmp);
+const { boxRoot } = await scaffoldBoxRoot(tmp);
 const gitignore = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
 const gitattributes = await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8");
 [
@@ -229,7 +191,7 @@ annex form instead. Before the fix this path silently de-annexed every converted
 box on its next `bbx init`. `.gitattributes` is LFS-free either way.
 
 ```ts continue
-await fs.mkdir(path.join(tmp, ".git", "annex"), { recursive: true });
+await fs.mkdir(path.join(boxRoot, ".git", "annex"), { recursive: true });
 await initBox(boxRoot, { skipGit: true });
 const annexIgnore = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
 const annexAttrs = await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8");
@@ -256,4 +218,8 @@ await initBox(boxRoot, { skipGit: true });
   (await fs.readFile(path.join(boxRoot, ".gitattributes"), "utf-8")) === annexAttrs,
 ].join(" ")
 => true true
+```
+
+```ts cleanup
+await fs.rm(tmp, { recursive: true, force: true });
 ```

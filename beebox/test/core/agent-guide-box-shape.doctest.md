@@ -1,49 +1,49 @@
 # Agent guide — box-shape section
 
 `boxCodeLocationSection` teaches the operating agent where box-authored code
-(schemas/views/tricks) actually lives, for a box using the package layout
-(shapeVersion 2+): the code lives at the package root, reached from the box
-root via `../src/...`.
+(schemas/views/tricks) actually lives, for a shapeVersion 3 (one-root) box:
+the code lives at `src/...`, right at the box root the agent is already
+sitting in — no climb needed.
 
 ```ts setup
 import { boxCodeLocationSection } from "../../src/core/agent-guide/box-shape.js";
 import { generateAgentGuide } from "../../src/core/agent-guide/index.js";
 import type { BoxShape } from "../../src/lib/box-shape.js";
 
-const v2Shape: BoxShape = {
-  shapeVersion: 2,
-  boxRoot: "/tmp/my-box-pkg/content",
-  packageRoot: "/tmp/my-box-pkg",
+const v3Shape: BoxShape = {
+  shapeVersion: 3,
+  boxRoot: "/tmp/my-box",
+  packageRoot: "/tmp/my-box",
 };
 ```
 
 ## The directory layout names the one general temp-file location
 
 ```ts
-const layout = generateAgentGuide({ procedures: [], shape: v2Shape });
-layout.includes("| `tmp/` | General scratch space for temporary files. Use this box-root directory, never the host `/tmp`; it is uncommitted and may be swept, so never rely on persistence. |")
+const layout = generateAgentGuide({ procedures: [], shape: v3Shape });
+layout.includes("| `_tmp/` | General scratch space for temporary files. Use this box-root directory, never the host `/tmp`; it is uncommitted and may be swept, so never rely on persistence. |")
 => true
 ```
 
-## A package (shapeVersion 2) box is told code lives at the package root, reached via `../src/...`
+## A shapeVersion-3 box is told code lives right here, under `src/...`
 
 ```ts
-const text = boxCodeLocationSection(v2Shape);
+const text = boxCodeLocationSection(v3Shape);
 const lines = text.split("\n");
 lines[0]
 => ## Box-Owned Code
 
-lines.some((l) => l.includes("`../src/schemas/`"))
+lines.some((l) => l.includes("`src/schemas/`"))
 => true
 
-lines.some((l) => l.includes("`../src/views/`"))
+lines.some((l) => l.includes("`src/views/`"))
 => true
 
-lines.some((l) => l.includes("`../src/tricks/`"))
+lines.some((l) => l.includes("`src/tricks/`"))
 => true
 ```
 
-## The v2 section states the hot-reload contract and the off-limits package files
+## The section states the hot-reload contract and the off-limits package files
 
 ```ts continue
 text.includes("Editable, hot-reloaded — no restart needed")
@@ -56,7 +56,7 @@ text.includes("boxholder")
 => true
 ```
 
-## The v2 section names exactly the three real library import specifiers
+## The section names exactly the three real library import specifiers
 
 ```ts continue
 text.includes("`beebox/cards`")
@@ -69,11 +69,11 @@ text.includes("`beebox/view-widgets`")
 => true
 ```
 
-## A package box's full generated guide includes the section, positioned after the directory layout
+## A box's full generated guide includes the section, positioned after the directory layout
 
 ```ts
-const guide2 = generateAgentGuide({ procedures: [], shape: v2Shape });
-const guideLines = guide2.split("\n");
+const guide3 = generateAgentGuide({ procedures: [], shape: v3Shape });
+const guideLines = guide3.split("\n");
 guideLines.findIndex((l) => l === "## Directory Layout") < guideLines.findIndex((l) => l === "## Box-Owned Code")
 => true
 ```

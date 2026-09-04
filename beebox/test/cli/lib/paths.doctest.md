@@ -88,11 +88,11 @@ isCardFile("Test.card.bak")
 
 ```ts
 BOX_DIRS.inbox
-=> box/inbox
+=> _content/inbox
 
 BOX_DIRS.questions
-=> box/questions
+=> _bookkeeping/questions
 
 BOX_DIRS.archiveDone
-=> store/archive/done
+=> _bookkeeping/archive/done
 ```

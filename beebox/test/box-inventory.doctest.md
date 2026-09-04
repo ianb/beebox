@@ -73,7 +73,7 @@ print(JSON.stringify({
   hasJavaScript: direct[".js"] !== undefined,
 }));
 =>
-{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[1,81]},"grouped":{"card":[1,20],"markdown":[1,81],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"repository":{"hasCheckoutSize":true,"gitSize":0,"annexed":false,"allRegularFiles":10,"linkedRegularFiles":7,"unlinkedRegularFiles":1},"orphanDirectories":2,"hasJavaScript":false}
+{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[4,9706]},"grouped":{"card":[1,20],"markdown":[4,9706],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"repository":{"hasCheckoutSize":true,"gitSize":0,"annexed":false,"allRegularFiles":54,"linkedRegularFiles":7,"unlinkedRegularFiles":1},"orphanDirectories":2,"hasJavaScript":false}
 ```
 
 A disappearing or unreadable subtree produces labeled lower-bound totals instead
@@ -100,10 +100,10 @@ let annexBox: Awaited<ReturnType<typeof makeTmpBox>> | undefined;
 let annexResult = '{"enabled":true,"available":true,"all":{"files":1,"bytes":11},"linked":{"files":1,"bytes":11},"regular":0}';
 if (hasAnnex()) {
   annexBox = await makeTmpBox({ git: true });
-  const repo = path.dirname(annexBox.root);
+  const repo = annexBox.root;
   await fs.writeFile(annexBox.path("sample.bin"), "annex bytes");
   execFileSync("git", ["annex", "init", "-q", "inventory-test"], { cwd: repo });
-  execFileSync("git", ["annex", "add", "--force", "content/sample.bin"], { cwd: repo });
+  execFileSync("git", ["annex", "add", "--force", "sample.bin"], { cwd: repo });
   const stats = await scanBoxRepositoryStats(annexBox.root, [
     { relativePath: "sample.bin", bytes: 11, linkStatus: "linked" },
   ]);
@@ -119,7 +119,7 @@ annexResult
 
 ```ts cleanup
 if (annexBox !== undefined) {
-  execFileSync("chmod", ["-R", "u+w", path.dirname(annexBox.root)], { stdio: "pipe" });
+  execFileSync("chmod", ["-R", "u+w", annexBox.root], { stdio: "pipe" });
 }
 await annexBox?.cleanup();
 await box.cleanup();

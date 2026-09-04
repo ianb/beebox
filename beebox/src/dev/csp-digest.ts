@@ -25,13 +25,13 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { cspReportLogPath } from "../webapp/routes/api-csp-report.js";
-import { resolveOperationalRoot } from "../lib/box-shape.js";
+import { resolveBoxRoot } from "../lib/box-shape.js";
 import { isRecord } from "../core/card-io.js";
 
 const CURSOR_FILE = "csp-digest-cursor.json";
 // The package root, not the operational root — a v2 box's log lives under
 // its `content/` subdirectory. `runDigest` resolves this (and any `--box`
-// override) through `resolveOperationalRoot` before building the log path, so
+// override) through `resolveBoxRoot` before building the log path, so
 // this constant can stay a stable, human-typeable path (and tolerates a path
 // that isn't a box).
 const DEFAULT_BOX = path.join(process.env.HOME ?? "~", "src/boxes/test1");
@@ -211,7 +211,7 @@ async function runDigest(
     resolvedLog = path.resolve(logPath);
     cursorFile = null;
   } else {
-    resolvedLog = cspReportLogPath(await resolveOperationalRoot(opts.box ?? DEFAULT_BOX));
+    resolvedLog = cspReportLogPath(await resolveBoxRoot(opts.box ?? DEFAULT_BOX));
     cursorFile = opts.all === true ? null : path.join(path.dirname(resolvedLog), CURSOR_FILE);
   }
 

@@ -30,7 +30,7 @@ import { errnoCode } from "../lib/error-guards.js";
 // eslint-disable-next-line no-restricted-syntax -- vendor .d.ts mistypes the CJS default export as the module namespace; verified callable at runtime, no code-level fix exists
 const ignoreFactory = ignoreModule.default as unknown as (options?: Options) => Ignore;
 
-export const VALIDATION_IGNORE_PATH = "config/bbx-validate.ignore";
+export const VALIDATION_IGNORE_PATH = "_config/bbx-validate.ignore";
 
 export interface ValidationIgnore {
   /**

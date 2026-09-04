@@ -163,7 +163,7 @@ const IGNORE_SEED_BODY = `# bbx validate ignore — operator-owned. Gitignore-st
 # Examples (uncomment / adapt as needed):
 #
 #   vendor/**
-#   store/imported/**/*.md
+#   _content/imported/**/*.md
 `;
 
 /** Delimiters for the post-commit block we own, so we can splice it in/out of a

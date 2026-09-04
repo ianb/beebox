@@ -30,7 +30,7 @@ export interface ConnectorRule {
 export const connectorRules: ConnectorRule[] = [
   {
     name: "connector-calendar",
-    paths: ["store/calendar/**/*.ics"],
+    paths: ["_content/calendar/**/*.ics"],
     instructions: `# Calendar Event Files (.ics)
 
 These are Google Calendar events synced via \`bbx wakeup\`. Each file is a single VEVENT in iCalendar format.
