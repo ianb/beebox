@@ -25,3 +25,12 @@ re-applies the idempotent parts of `setup-server.sh` on demand, or have
 what is live. The security report tracks this as an operational gap
 (§5), not an accepted risk — nobody decided the drift is fine, it is
 just currently unaddressed.
+
+> 2026-09-04: the deploy separation moved this script to
+> `deploy/hetzner/setup-server.sh` and put the gap in its file header, where
+> someone about to run it sees it. The gap itself is unchanged — deploy.sh
+> still never re-applies nginx or unit config — and the split makes it sharper
+> rather than resolving it: `deploy/` is now explicitly the half that
+> converges on every ship, and `hetzner/` the half that runs once. The fix
+> direction in this issue still stands.
+

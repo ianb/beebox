@@ -6,7 +6,7 @@ happens to be wrapped in a PDF, and its pages are rendered for the Gemini photo
 flow. `probePdf` is what decides, using poppler's `pdftotext` — an order of
 magnitude cheaper than starting Docling to ask a yes/no question.
 
-Poppler is a deployed-server given (`poppler-utils` in `deploy/setup-server.sh`)
+Poppler is a deployed-server given (`poppler-utils` in `deploy/hetzner/setup-server.sh`)
 but not a developer-machine one, so these assertions are
 availability-appropriate: a real measurement where poppler exists, and the
 documented fallback where it does not. The fallback is deliberately

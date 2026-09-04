@@ -105,7 +105,7 @@ and `beebox/deploy/README.md`.
   `poppler-utils` expected on PATH by the agent guide (`chat.ts:13`);
   `git-lfs` (soft-required — hooks degrade *silently* without it); native
   builds (`better-sqlite3`, `esbuild`) gated on pnpm `onlyBuiltDependencies`.
-  Version drift already exists: `.nvmrc` pins Node 24, `deploy/setup-server.sh`
+  Version drift already exists: `.nvmrc` pins Node 24, `deploy/hetzner/setup-server.sh`
   installs Node 22.
 - **Claude auth is subscription-OAuth-only** (`ANTHROPIC_API_KEY`
   force-stripped in `bootstrap.ts` / `script-env.ts`); a missing login

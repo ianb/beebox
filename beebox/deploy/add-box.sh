@@ -183,19 +183,15 @@ if [[ ${#ALLOW_EMAILS[@]} -gt 0 ]]; then
   ALLOW_CSV=$(IFS=,; echo "${ALLOW_EMAILS[*]}")
 fi
 
-# ── Get server IP ───────────────────────────────────────────────────
-if [[ -f "$SCRIPT_DIR/server-ip" ]]; then
-  SERVER_IP=$(cat "$SCRIPT_DIR/server-ip")
-else
-  SERVER_IP=$(hcloud server ip beebox 2>/dev/null)
-fi
+# ── Resolve the deploy target ───────────────────────────────────────
+# Same opt-in config the deploy uses, so a box is added to the server this
+# checkout actually ships to — never to whatever `hcloud` happens to name.
+# shellcheck source=beebox/deploy/deploy-target.sh
+. "$SCRIPT_DIR/deploy-target.sh"
+require_deploy_target "$SCRIPT_DIR"
+SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
 
-if [[ -z "$SERVER_IP" ]]; then
-  echo "Error: No server IP found. Run create-server.sh first."
-  exit 1
-fi
-
-SSH_OPTS="-A -o StrictHostKeyChecking=no"
+SSH_OPTS=(-A -o StrictHostKeyChecking=no)
 
 # ── Preflight (read-only on the server) ─────────────────────────────
 # `bbx hub add-box --dry-run` validates the slug against the LIVE hub.json:
@@ -206,7 +202,7 @@ SSH_OPTS="-A -o StrictHostKeyChecking=no"
 # unsure how much had landed.
 echo "Preflight: validating slug '$BOX_NAME' against the live hub config..."
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "root@$SERVER_IP" \
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
   "su - $BBX_USER -c \"bbx hub add-box '$BOX_NAME' '$BOX_PATH' --dry-run\""
 
 # ── Preflight for --create (local + GitHub, still no mutation) ──────
@@ -297,7 +293,10 @@ echo "Adding box '$BOX_NAME' from $REPO..."
 # ...) expand here before sending. Keep it free of backticks and bare
 # $(...) (they'd run locally); use \$ for anything the remote evaluates.
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "root@$SERVER_IP" bash -s <<REMOTE
+# The heredoc is deliberately unquoted: the local box name, paths and user are
+# interpolated here, on purpose, before the script is sent.
+# shellcheck disable=SC2087
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s <<REMOTE
 set -euo pipefail
 
 # Clone/pull as root (su drops the SSH agent socket, breaking agent
@@ -364,9 +363,9 @@ fi
 # structurally to one box (a Telegram bot token routes to one webhook URL) are
 # skipped by the command and named in its output.
 #
-# `--agent-confirmed` is correct here and not a rubber stamp: the operator
+# '--agent-confirmed' is correct here and not a rubber stamp: the operator
 # explicitly passed --secrets-from. Without it the command would refuse, since
-# stdin over `ssh`/`su -c` is not a TTY and therefore reads as an agent session.
+# stdin over 'ssh'/'su -c' is not a TTY and therefore reads as an agent session.
 if [[ -n "$SECRETS_FROM" ]]; then
   # A failure here is fatal on purpose: an unreadable store, a missing bbx, or a
   # crash would otherwise register a box with NO credentials and restart the
@@ -425,7 +424,7 @@ chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
 #                             that is where .beebox/box.json lives and what every
 #                             existing entry holds. See
 #                             src/core/box/boxes-config.ts.
-# Passing the package root to `bbx boxes add` fails its .beebox/box.json check, so use
+# Passing the package root to 'bbx boxes add' fails its .beebox/box.json check, so use
 # the content dir resolved above. Neither file is hot-reloaded, hence the
 # restart below.
 #
@@ -449,7 +448,9 @@ REMOTE
 # proves nothing.
 echo "Verifying the new box serves..."
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "root@$SERVER_IP" bash -s <<VERIFY
+# Unquoted for the same reason as the REMOTE heredoc above.
+# shellcheck disable=SC2087
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s <<VERIFY
 set -euo pipefail
 KEY=\$(grep -E '^BBX_DIAG_API_KEY=' $BBX_HOME/.env 2>/dev/null | cut -d= -f2- || true)
 if [ -z "\$KEY" ]; then

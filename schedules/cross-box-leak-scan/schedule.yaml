@@ -1,15 +1,15 @@
 description: "Weekly cross-box leak scan: static sweep + host audit, what's new since last week"
 cadence: 7d
 timeout: 2h
-# `run` ssh's to prod (read-only, host-audit.ts only), reading
-# beebox/deploy/server-ip. That file is per-real-checkout, not per-worktree —
-# this schedule's OWN session runs in a worktree that never has one — so the
+# `run` ssh's to prod (read-only, host-audit.ts only), using the deploy target
+# in beebox/deploy/target.env. That file is per-real-checkout, not per-worktree
+# — this schedule's OWN session runs in a worktree that never has one — so the
 # prod leg only works because `run` executes from whatever checkout invoked
 # `bin/schedules run` (the real checkout, for a real run), not from the
-# session's worktree. A REAL run from a checkout missing server-ip refuses
+# session's worktree. A REAL run from a checkout with no deploy target refuses
 # (exit 2) rather than silently skipping the prod leg — only `--dry-run`
-# (rehearsing from a worktree) tolerates the file being absent. See
-# run.ts's header and `runProdHostAudit`.
+# (rehearsing from a worktree) tolerates it being absent. See run.ts's header
+# and `runProdHostAudit`.
 workstream:
   agent: claude
   model: opus

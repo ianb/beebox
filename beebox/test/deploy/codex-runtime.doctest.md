@@ -11,7 +11,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { codexBinaryPath } from "../../src/services/codex-binary.js";
 
-const setup = await readFile("deploy/setup-server.sh", "utf8");
+const setup = await readFile("deploy/hetzner/setup-server.sh", "utf8");
 const deploy = await readFile("deploy/deploy.sh", "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const execFileAsync = promisify(execFile);
