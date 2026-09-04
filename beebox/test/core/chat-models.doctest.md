@@ -18,7 +18,7 @@ JSON.stringify(chatModelOptions("claude").map((option) => option.label))
 => ["Default (Opus)","Haiku 4.5","Sonnet 5","Opus 5","Fable 5.1"]
 
 JSON.stringify(chatModelOptions("codex"))
-=> [{"label":"Default (Codex)","model":null},{"label":"Sol","model":"gpt-5.6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-5.6-luna"}]
+=> [{"label":"Default (Codex)","model":null},{"label":"Astra","model":"gpt-6-astra"},{"label":"Sol","model":"gpt-5.6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-5.6-luna"}]
 
 isChatModelAllowed("codex", "gpt-5.6-sol")
 => true

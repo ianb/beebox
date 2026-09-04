@@ -34,8 +34,9 @@ const LEGACY_TIER: Record<ProcedureModelName, ProcedureModelTier> = {
 
 /**
  * Provider-relative policy, not a claim that models on the same row have equal
- * capability. Codex currently has three family members, so both high-end tiers
- * select its flagship; that can diverge later without changing procedure cards.
+ * capability. Codex's `strongest` tier still selects Sol: Astra (`gpt-6-astra`)
+ * is offered in the chat picker but procedure cards do not move onto it
+ * without a decision; that can change here without changing procedure cards.
  */
 const PROCEDURE_MODELS: Record<AgentEngine, Record<ProcedureModelTier, string>> = {
   claude: {
@@ -80,6 +81,7 @@ const MODEL_TIERS: Record<string, ProcedureModelTier> = {
   [MODEL_ID.luna]: "efficient",
   [MODEL_ID.terra]: "balanced",
   [MODEL_ID.sol]: "strong",
+  [MODEL_ID.astra]: "strongest",
 };
 
 /** Capability order over tiers. Only the relative order is meaningful. */

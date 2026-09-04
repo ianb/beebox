@@ -23,6 +23,7 @@ const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
   ],
   codex: [
     { label: "Default (Codex)", model: null },
+    { label: "Astra", model: MODEL_ID.astra },
     { label: "Sol", model: MODEL_ID.sol },
     { label: "Terra", model: MODEL_ID.terra },
     { label: "Luna", model: MODEL_ID.luna },

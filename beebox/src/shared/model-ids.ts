@@ -20,6 +20,7 @@ export const MODEL_ID = {
   luna: "gpt-5.6-luna",
   terra: "gpt-5.6-terra",
   sol: "gpt-5.6-sol",
+  astra: "gpt-6-astra",
 } as const;
 
 /**
