@@ -108,7 +108,8 @@ The default export receives a \`ViewProps\` object:
 | \`cards\` | ViewCard[] | All cards matching the dependency globs |
 | \`files\` | ViewFile[] | Metadata for non-card files matching the globs: \`{path, size, mtimeMs}\` |
 | \`readFile\` | (path, opts?) => Promise<string> | Fetch a file's text; \`{start, end}\` byte range, negative start = tail |
-| \`fileUrl\` | (path) => string | URL for a box file — \`<img src>\`, \`<audio src>\`, download links |
+| \`fileUrl\` | (path) => string | Original box file URL — audio, downloads, and full-resolution image links |
+| \`imageUrl\` | (path, options) => string | Cached, bounded image URL; options are \`width\`/\`height\`, \`fit\`, \`quality\`, \`format\`, and \`dpr\` |
 | \`writeFile\` | (path, {content, expect?}) => Promise<ViewFile> | Create/overwrite (parents made); returns the new ViewFile; never commits |
 | \`appendFile\` | (path, {content, expect?}) => Promise<ViewFile> | Append (creates when missing); same semantics |
 | \`commitFile\` | (path, message) => Promise<{committed, hash?}> | Commit the file + its attachments, nothing else |

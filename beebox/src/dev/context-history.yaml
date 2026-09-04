@@ -4052,6 +4052,36 @@ test1:
       peak: 53913
       added: 13099
       turns: 7
+  views-bounded-image:
+    - date: 2026-09-04T05:27:50.447Z
+      boxCommit: 4fe2132cf233a47a112c7e91592a59534075b70f
+      repoCommit: 24c9cb024069d50ce35ee50430145de9146d5767
+      initial: 41880
+      peak: 47094
+      added: 5214
+      turns: 7
+    - date: 2026-09-04T05:30:03.287Z
+      boxCommit: 4fe2132cf233a47a112c7e91592a59534075b70f
+      repoCommit: 24c9cb024069d50ce35ee50430145de9146d5767
+      initial: 41906
+      peak: 47173
+      added: 5267
+      turns: 7
+    - date: 2026-09-04T05:30:52.667Z
+      boxCommit: 4fe2132cf233a47a112c7e91592a59534075b70f
+      repoCommit: 24c9cb024069d50ce35ee50430145de9146d5767
+      initial: 41924
+      peak: 47985
+      added: 6061
+      turns: 9
+  chat-bounded-image-embed:
+    - date: 2026-09-04T05:28:22.254Z
+      boxCommit: 4fe2132cf233a47a112c7e91592a59534075b70f
+      repoCommit: 24c9cb024069d50ce35ee50430145de9146d5767
+      initial: 49514
+      peak: 49514
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

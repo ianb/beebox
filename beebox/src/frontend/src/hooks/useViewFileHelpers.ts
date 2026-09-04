@@ -12,6 +12,7 @@
 
 import { useMemo } from "react";
 import { z } from "zod";
+import { apiTransformedImageUrl } from "../api-core";
 import { encodePathForUrl } from "../lib/view-url";
 
 /**
@@ -93,6 +94,12 @@ export interface ViewFileHelpers {
   adapterFetch: (adapter: string, opts: { path: string } & RequestInit) => Promise<Response>;
   readFile: (path: string, opts?: { start?: number; end?: number }) => Promise<string>;
   fileUrl: (path: string) => string;
+  imageUrl: (path: string, options: {
+    fit?: "scale-down" | "contain" | "cover" | "crop" | "pad";
+    quality?: number;
+    format?: "auto" | "avif" | "webp" | "jpeg";
+    dpr?: number;
+  } & ({ width: number; height?: number } | { width?: number; height: number })) => string;
   writeFile: (path: string, opts: WriteOpts) => Promise<ViewFile>;
   appendFile: (path: string, opts: WriteOpts) => Promise<ViewFile>;
   commitFile: (path: string, message: string) => Promise<{ committed: boolean; hash?: string }>;
@@ -104,6 +111,8 @@ export function useViewFileHelpers(apiBase: string): ViewFileHelpers {
 
 function makeHelpers(apiBase: string): ViewFileHelpers {
   const fileUrl = (filePath: string): string => `${apiBase}/files/${encodePathForUrl(filePath)}`;
+  const imageUrl: ViewFileHelpers["imageUrl"] = (filePath, options) =>
+    apiTransformedImageUrl({ apiBase, path: filePath, options });
 
   const adapterFetch = (
     adapter: string,
@@ -186,6 +195,7 @@ function makeHelpers(apiBase: string): ViewFileHelpers {
     adapterFetch,
     readFile,
     fileUrl,
+    imageUrl,
     writeFile: (filePath, opts) =>
       write(filePath, { content: opts.content, method: "PUT", ...(opts.expect !== undefined && { expect: opts.expect }) }),
     appendFile: (filePath, opts) =>

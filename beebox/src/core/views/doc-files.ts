@@ -51,7 +51,18 @@ export default function PlaygroundHistory({ files, readFile }) {
 \`\`\`
 
 \`mtimeMs\` in the effect deps makes the view re-fetch when the log grows.
-For images and audio, don't fetch — render \`<img src={fileUrl(f.path)} />\`.
+For images and audio, don't fetch. Render a bounded image with
+\`<img src={imageUrl(f.path, { width: 960, format: "auto" })} />\`; use
+\`fileUrl(f.path)\` for audio and for a link to the full-resolution image. Image
+variants are generated on demand and cached, so do not make a small display
+download the original.
+
+\`imageUrl\` requires \`width\` or \`height\`. It uses \`fit: "scale-down"\` and
+\`quality: 85\` by default; \`format: "auto"\` negotiates AVIF/WebP/JPEG. Other
+fits are \`contain\`, \`cover\`, \`crop\`, and \`pad\`. \`quality\` is 1–100 and \`dpr\` is
+at most 2. If adapting to \`window.devicePixelRatio\`, clamp it with
+\`Math.min(window.devicePixelRatio, 2)\`. Invalid options fail clearly instead of
+falling back to the original.
 
 ### Writing files from a view
 

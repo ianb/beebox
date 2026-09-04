@@ -16,10 +16,24 @@ globalThis.React = React;
 function render(size: "chat" | "sm", caption?: string): string {
   const image = React.createElement(Image, {
     src: "/test/api/files/example.png",
+    lightboxSrc: "/test/api/files/example.png",
     alt: "Example",
     size,
     lightbox: true,
     caption,
+  });
+  return renderToStaticMarkup(React.createElement(LightboxProvider, null, image));
+}
+
+function renderResponsive(): string {
+  const image = React.createElement(Image, {
+    src: "/test/api/images/example.png?width=480",
+    srcSet: "/test/api/images/example.png?width=480 480w, /test/api/images/example.png?width=960 960w",
+    sizes: "(max-width: 640px) 100vw, 512px",
+    lightboxSrc: "/test/api/files/example.png",
+    alt: "Example",
+    size: "chat",
+    lightbox: true,
   });
   return renderToStaticMarkup(React.createElement(LightboxProvider, null, image));
 }
@@ -63,4 +77,12 @@ Markdown media frame must not turn those into full-screen letterboxed images.
 const small = render("sm");
 [small.includes("max-w-xs"), small.includes("max-h-64"), small.includes("h-[70vh]")].join(" ")
 => true true false
+```
+
+## Responsive display variants retain the original lightbox source
+
+```ts
+const responsive = renderResponsive();
+[responsive.includes('480 480w, /test/api/images/example.png?width=960 960w'), responsive.includes('sizes="(max-width: 640px) 100vw, 512px"'), responsive.includes('data-image-src="/test/api/files/example.png"')].join(" ")
+=> true true true
 ```

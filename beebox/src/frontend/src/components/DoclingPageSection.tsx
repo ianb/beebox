@@ -86,7 +86,7 @@ function PictureItem({ src, caption }: { src: string | null; caption: string | n
           No extracted render for this picture in the attach scope.
         </Text>
       ) : (
-        <Image src={src} alt={caption ?? "Extracted figure"} size="sm" bordered lightbox loading="lazy" />
+        <Image src={src} lightboxSrc={src} alt={caption ?? "Extracted figure"} size="sm" bordered lightbox loading="lazy" />
       )}
       {caption === null ? null : <Text as="p" size="sm" tone="subtle">{caption}</Text>}
     </Stack>
@@ -113,6 +113,7 @@ export function DoclingPageSection({ page, items, assets }: DoclingPageSectionPr
         {assets.pageRender === null ? null : (
           <Image
             src={assets.pageRender}
+            lightboxSrc={assets.pageRender}
             alt={page === null ? "Page render" : `Render of page ${String(page)}`}
             size="sm"
             bordered

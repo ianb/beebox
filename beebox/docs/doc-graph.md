@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-04T14:34:06Z
-Total documents: 316
+Generated: 2026-09-04T14:47:50Z
+Total documents: 318
 
 ## Issues
 
@@ -29,6 +29,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/markdoc-tags-plan.review.md** — "Plan Engineering Review — Markdoc Tags Design" (505 lines)
 - **docs/implemented-plans/named-places.md** — "Named Places (`place` cards + `bbx location mark`)" (471 lines)
 - **docs/implemented-plans/normalize-chat-links.md** — "Normalize chat/card links" (704 lines)
+- **docs/implemented-plans/on-demand-image-thumbnails.md** — "On-demand image thumbnails" (251 lines)
 - **docs/implemented-plans/open-chat-from-card.md** — "Open chat from a card browse page" (340 lines)
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (446 lines)
 - **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (379 lines)
@@ -133,6 +134,7 @@ Referenced by:
 - docs/implemented-plans/mvp-implementation-guide.md:9 (mention) — > still true in it is documented better in CLAUDE.md and the reference docs
 - docs/implemented-plans/named-places.md:91 (mention) — (the CLAUDE.md parse-mutate-reserialize contract, faithful form). **Not**
 - docs/implemented-plans/normalize-chat-links.md:94 (mention) — - **Monorepo `CLAUDE.md:` "NEVER disable or weaken a lint rule… Ask first."**
+- docs/implemented-plans/on-demand-image-thumbnails.md:22 (mention) — - The repository validation contract says: `CLAUDE.md:17`: *"Run `pnpm test:changed` before committing."* Browser verifi
 - docs/implemented-plans/open-chat-from-card.md:266 (mention) — pane; CLAUDE.md's "don't add features beyond what the task requires."
 - docs/implemented-plans/private-issues-shadow-repo.md:401 (mention) — - Root `CLAUDE.md`: one line in the monorepo-layout section.
 - docs/implemented-plans/procedure-validation-completion.md:39 (mention) — - *"Treat noisy command output as a bug"* (monorepo `CLAUDE.md`) — model calls and retries must stay quiet on the happy
@@ -687,7 +689,7 @@ References:
 
 #### docs/adding-api-endpoints.md
 
-Title: "Adding API Endpoints" | 243 lines
+Title: "Adding API Endpoints" | 244 lines
 
 Referenced by:
 - CLAUDE.md:150 (mention) — | Adding API endpoints | `docs/adding-api-endpoints.md` |
@@ -699,6 +701,7 @@ Referenced by:
 - ../research/claude-elixir-phoenix/authoring-craft.md:28 (mention) — > checklist in docs/adding-api-endpoints.md.
 
 References:
+- → docs/image-transforms.md (link)
 - → docs/secrets.md (mention)
 
 #### docs/adding-schemas.md
@@ -1137,6 +1140,7 @@ Referenced by:
 - docs/implemented-plans/mobile-parity-sync.md:19 (mention) — - `docs/engineering-principles.md` **#4 resilient and never silent** — drift
 - docs/implemented-plans/mobile-token-handshake.md:18 (mention) — - **`docs/engineering-principles.md` #3 (validate at boundaries)** — the cookie is untrusted
 - docs/implemented-plans/model-engine-policy.md:68 (mention) — - `docs/engineering-principles.md:12` **1. Types are structure** — the
+- docs/implemented-plans/on-demand-image-thumbnails.md:18 (mention) — - Principle 3 requires HTTP query input to be validated once at the boundary: `docs/engineering-principles.md:37`: *"Val
 - docs/implemented-plans/questions-end-to-end.md:61 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
 - docs/implemented-plans/refresh-maps-convergence.md:64 (link) — - **[`docs/engineering-principles.md`](../engineering-principles.md) #4
 - docs/implemented-plans/refresh-maps-convergence.review.md:113 (mention) — `docs/engineering-principles.md` (#1 types are structure, #3 validate at
@@ -1353,6 +1357,13 @@ Referenced by:
 
 References:
 - → ../beebox/test/shared/image-orientation.doctest.md (link)
+
+#### docs/image-transforms.md
+
+Title: "On-demand image transforms" | 33 lines
+
+Referenced by:
+- docs/adding-api-endpoints.md:11 (link) — - Bounded, cacheable image representations ([image transforms](image-transforms.md))
 
 #### docs/knowledge-audits.md
 
@@ -1804,7 +1815,7 @@ Title: "Secrets: the machine-level store" | 448 lines
 Referenced by:
 - CLAUDE.md:152 (mention) — | Secrets (machine-level store, grants, `bbx secrets`) | `docs/secrets.md` |
 - docs/adding-a-box.md:111 (link) — one through a **grant** — see [`docs/secrets.md`](secrets.md) for the full
-- docs/adding-api-endpoints.md:18 (mention) — that discloses a stored secret to box code (`secrets.md`).
+- docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
 - docs/implemented-plans/secret-custody.md:751 (mention) — names per `docs/secrets.md`'s table, dedupes shared values into one entry with
 - docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
 
@@ -3523,6 +3534,15 @@ References:
 - → docs/implemented-plans/box-root-paths.md (mention)
 - → code-style.md (mention)
 - → docs/testing.md (mention)
+- → CLAUDE.md (mention)
+
+#### docs/implemented-plans/on-demand-image-thumbnails.md **[ORPHAN]**
+
+Title: "On-demand image thumbnails" | 251 lines
+
+References:
+- → ../issues/closed/features/2026-09-03-on-demand-image-thumbnails.md (frontmatter)
+- → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
 
 #### docs/implemented-plans/open-chat-from-card.md **[ORPHAN]**

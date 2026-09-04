@@ -17,6 +17,18 @@ export interface ViewHistory {
   replaceState: (next: ViewState) => void;
 }
 
+interface ViewImageBaseOptions {
+  fit?: "scale-down" | "contain" | "cover" | "crop" | "pad";
+  quality?: number;
+  format?: "auto" | "avif" | "webp" | "jpeg";
+  dpr?: number;
+}
+
+export type ViewImageOptions = ViewImageBaseOptions & (
+  | { width: number; height?: number }
+  | { width?: number; height: number }
+);
+
 export interface ViewProps {
   cards: ViewCard[];
   /** Metadata for non-card files matched by the dependency globs. */
@@ -37,6 +49,8 @@ export interface ViewProps {
   readFile: (path: string, opts?: { start?: number; end?: number }) => Promise<string>;
   /** URL for a box file — use for <img src>, <audio src>, download links. */
   fileUrl: (path: string) => string;
+  /** URL for a bounded, cached image representation. Keep fileUrl(path) for full-resolution links. */
+  imageUrl: (path: string, options: ViewImageOptions) => string;
   /**
    * Create or overwrite a box file (parent dirs created); returns the new
    * ViewFile. Does NOT commit. Conflict-safe saves pass {expect}: the

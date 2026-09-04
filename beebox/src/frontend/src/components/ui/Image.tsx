@@ -1,6 +1,7 @@
-import { useEffect, useReducer, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
+import { imageUrlKey } from "../../lib/image-url-key";
 import { useImageRetry } from "../../hooks/use-image-retry";
 
 const SIZE_CLASSES = {
@@ -37,14 +38,15 @@ function shouldRetryPrimary({ src, fallbackSrc, retryOnError }: {
 interface LoadStateOpts {
   src: string;
   fallbackSrc: string | undefined;
+  locallyFailed: boolean;
   retryEnabled: boolean;
   retryFailed: boolean;
   retrySrc: string;
 }
 
-function getLoadState({ src, fallbackSrc, retryEnabled, retryFailed, retrySrc }: LoadStateOpts) {
-  const primaryFailed = retryEnabled ? retryFailed : failedImageUrls.has(src);
-  const fallbackFailed = fallbackSrc !== undefined && failedImageUrls.has(fallbackSrc);
+function getLoadState({ src, fallbackSrc, locallyFailed, retryEnabled, retryFailed, retrySrc }: LoadStateOpts) {
+  const primaryFailed = retryEnabled ? retryFailed : locallyFailed || failedImageUrls.has(imageUrlKey(src));
+  const fallbackFailed = fallbackSrc !== undefined && failedImageUrls.has(imageUrlKey(fallbackSrc));
   const usingFallback = primaryFailed && fallbackSrc !== undefined && !fallbackFailed;
   return {
     displaySrc: usingFallback ? fallbackSrc : retryEnabled ? retrySrc : src,
@@ -54,6 +56,7 @@ function getLoadState({ src, fallbackSrc, retryEnabled, retryFailed, retrySrc }:
 
 interface BaseImageProps {
   src: string;
+  srcSet?: string | undefined; sizes?: string | undefined;
   alt: string;
   size?: ImageSize;
   caption?: ReactNode;
@@ -88,10 +91,9 @@ interface BaseImageProps {
   loading?: "lazy" | "eager";
 }
 
-export type ImageProps = BaseImageProps & (
-  | { lightbox: true; onClick?: never }
-  | { lightbox?: false; onClick?: () => void }
-);
+export type ImageProps =
+  | (BaseImageProps & { lightbox: true; lightboxSrc: string; onClick?: never })
+  | (BaseImageProps & { lightbox?: false; lightboxSrc?: never; onClick?: () => void });
 
 function BrokenImageIcon() {
   return (
@@ -139,22 +141,24 @@ function ErrorPlaceholder({ alt, size, bordered, extraClass }: { alt: string; si
 
 interface ImgElementProps {
   src: string;
+  srcSet: string | undefined; sizes: string | undefined;
   alt: string;
   size: ImageSize;
   bordered: boolean;
   rotationStyle: CSSProperties | undefined;
   title: string | undefined;
   onActivate: ((element: HTMLImageElement) => void) | null;
-  onError: () => void;
+  onError: (failedSrc: string) => void;
   onLoad: () => void;
   lightbox: boolean;
+  lightboxSrc: string | undefined;
   lightboxCaption: string | undefined;
   imgRef: React.RefObject<HTMLImageElement>;
   extraClass?: string;
   loading: "lazy" | "eager" | undefined;
 }
 
-function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, lightbox, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
+function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, lightbox, lightboxSrc, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
   const interactive = onActivate !== null;
   const handleClick = () => {
     if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
@@ -170,6 +174,8 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
     <img
       ref={imgRef}
       src={src}
+      srcSet={srcSet}
+      sizes={sizes}
       alt={alt}
       loading={loading}
       // In the interactive case the button is the outermost element, so
@@ -180,10 +186,10 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
       // carries the caller's spacing classes (extraClass) instead.
       className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", interactive ? "m-0" : extraClass)}
       style={rotationStyle}
-      onError={onError}
+      onError={(event) => onError(event.currentTarget.currentSrc || src)}
       onLoad={onLoad}
       title={title}
-      data-image-src={lightbox ? src : undefined}
+      data-image-src={lightbox ? lightboxSrc ?? src : undefined}
       data-image-alt={lightbox ? alt : undefined}
       data-image-caption={lightbox && lightboxCaption !== undefined ? lightboxCaption : undefined}
     />
@@ -283,6 +289,8 @@ function pickOuterLayer({ caption, overlay, errored, isOrthogonal }: OuterLayerO
 export function Image(props: ImageProps) {
   const {
     src,
+    srcSet,
+    sizes,
     alt,
     size = "md",
     caption,
@@ -295,8 +303,7 @@ export function Image(props: ImageProps) {
     className,
     loading,
   } = props;
-  const lightbox = props.lightbox === true;
-  const externalOnClick = lightbox ? undefined : props.onClick;
+  const lightbox = props.lightbox === true; const lightboxSrc = lightbox ? props.lightboxSrc : undefined; const externalOnClick = lightbox ? undefined : props.onClick;
 
   const lightboxCtx = useLightbox();
   const imgRef = useRef<HTMLImageElement>(null);
@@ -305,22 +312,25 @@ export function Image(props: ImageProps) {
   // remount doesn't replay the sequence; `bumpAfterError` only forces a
   // re-render after we record a fresh failure (the set isn't reactive itself).
   const [, bumpAfterError] = useReducer((n: number) => n + 1, 0);
+  const [locallyFailedSrc, setLocallyFailedSrc] = useState<string | null>(null);
   const fallbackSrc = proxyFallbackSrc !== undefined && proxyFallbackSrc !== src ? proxyFallbackSrc : undefined;
   const retryEnabled = shouldRetryPrimary({ src, fallbackSrc, retryOnError });
   const retry = useImageRetry(src, retryEnabled);
   const { displaySrc, errored } = getLoadState({
     src,
     fallbackSrc,
+    locallyFailed: locallyFailedSrc === src,
     retryEnabled,
     retryFailed: retry.failed,
     retrySrc: retry.displaySrc,
   });
-  const handleError = () => {
+  const handleError = (failedSrc?: string) => {
     if (retryEnabled) {
       retry.handleError();
       return;
     }
-    failedImageUrls.add(displaySrc);
+    failedImageUrls.add(imageUrlKey(failedSrc ?? displaySrc));
+    setLocallyFailedSrc(src);
     bumpAfterError();
   };
 
@@ -338,18 +348,15 @@ export function Image(props: ImageProps) {
     const el = imgRef.current;
     if (el === null || errored) return;
     if (el.complete && el.naturalWidth === 0 && el.getAttribute("src") !== null) {
-      handleError();
+      handleError(el.currentSrc || displaySrc);
     }
     // `displaySrc` so a changed source is re-checked; `errored` so a placeholder
     // already showing does not re-enter.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- handleError is redefined every render; depending on it would re-run this on every render rather than on a source change.
   }, [displaySrc, errored]);
 
-  const rotationStyle: CSSProperties | undefined =
-    rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
+  const rotationStyle: CSSProperties | undefined = rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
   const isOrthogonal = rotation === 90 || rotation === 270;
-
-  const lightboxCaption = typeof caption === "string" ? caption : undefined;
 
   const activate: ((element: HTMLImageElement) => void) | null = errored
     ? null
@@ -358,8 +365,6 @@ export function Image(props: ImageProps) {
       : externalOnClick !== undefined
         ? () => externalOnClick()
         : null;
-
-  const effectiveTitle = title;
 
   // Determine which layer is the outermost wrapper so the caller's
   // className lands there. Layer order, inside-out: img → orthogonal
@@ -372,16 +377,18 @@ export function Image(props: ImageProps) {
   ) : (
     <ImgElement
       src={displaySrc}
+      srcSet={srcSet} sizes={sizes}
       alt={alt}
       size={size}
       bordered={bordered}
       rotationStyle={rotationStyle}
-      title={effectiveTitle}
+      title={title}
       onActivate={activate}
       onError={handleError}
       onLoad={retry.handleLoad}
       lightbox={lightbox}
-      lightboxCaption={lightboxCaption}
+      lightboxSrc={lightboxSrc}
+      lightboxCaption={typeof caption === "string" ? caption : undefined}
       imgRef={imgRef}
       extraClass={imgExtra}
       loading={loading}

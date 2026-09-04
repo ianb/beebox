@@ -45,6 +45,7 @@ import {
   type ViewTarget,
 } from "../lib/view-url";
 import { parseMarkdown } from "../lib/markdoc-parse";
+import { transformedResolvedImageUrl } from "../lib/image-transform-url";
 import type { ReactNode } from "react";
 
 // Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
@@ -60,10 +61,17 @@ export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; a
       return <VideoEmbed embedUrl={video.embedUrl} title={alt ?? ""} className="mx-auto" />;
     }
     const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug: ctx.boxSlug, basePath: ctx.basePath }) : "";
+    const displaySrc = transformedResolvedImageUrl(resolved, {
+      width: 960,
+      fit: "scale-down",
+      quality: 85,
+      format: "auto",
+    }) ?? resolved;
     const proxyFallbackSrc = externalImageProxyUrl(resolved, ctx.boxSlug);
     return (
       <Image
-        src={resolved}
+        src={displaySrc}
+        lightboxSrc={resolved}
         alt={alt ?? ""}
         size="chat"
         lightbox
