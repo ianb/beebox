@@ -6,6 +6,7 @@ labels: [testing]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-layout-criteria — Track B/C implementation hit a machine-wide disk-full mid-run, 2026-09-04
+priority: important
 ---
 
 During a normal implementation session the machine hit 0 bytes free. The

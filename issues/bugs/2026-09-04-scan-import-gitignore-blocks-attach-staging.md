@@ -6,6 +6,7 @@ labels: [scan, git]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-layout-criteria — Track A2 (one-root box layout), 2026-09-04
+priority: normal
 ---
 
 `bbx scan-import` (photo flow and PDF extraction) writes originals and derived

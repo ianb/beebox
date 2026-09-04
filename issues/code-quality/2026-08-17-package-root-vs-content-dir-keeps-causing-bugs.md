@@ -6,6 +6,8 @@ labels: [box-shape]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-add-box-process — three instances of this bug in one work unit
+priority: normal
+next-action: reconfirm
 ---
 
 A v2 box has two roots. The **package root** holds `package.json`, `src/`, and

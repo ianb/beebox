@@ -6,6 +6,7 @@ category: code-quality
 filed-by: agent
 discovered-by: Ian
 discovered-in: box-layout-criteria — Track E of docs/plans/one-root-box-layout.md (or docs/implemented-plans/ once moved)
+priority: normal
 ---
 
 Track E of the one-root migration (`docs/plans/one-root-box-layout.md`)
