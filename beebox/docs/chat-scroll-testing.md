@@ -393,6 +393,88 @@ image/keyboard combination matrix remain separate verification gates. See the
 [comparison research](../../research/chat-scroll-comparison-2026-09-04.md) for
 the external product review and its limits.
 
+### Deeper web checks (2026-09-04)
+
+**Composer growth while reading:** run
+`node --import tsx beebox/scripts/chat-scroll-resize-repro.ts '/chat?session=TEST_SESSION'`.
+Use an existing disposable conversation longer than a viewport. It tests both
+starting at the bottom and starting 200px above it, without sending anything,
+in a dedicated browser session at 1280×577.
+Exit 1 means the reading-position check failed; exit 2 is a setup/cleanup error.
+The test deliberately asks for stable reading text when away from the bottom,
+which is stricter than the current controller's unconditional bottom-gap rule.
+
+In desktop Chromium at 1280×577, the eight-line draft grew the textarea from
+36px to 176px and shrank the scroller from 450px to 330px. Starting at the bottom
+preserved the bottom, as expected. Starting 200px above it moved scrollTop
+198 → 318 and the reading marker 48 → -72. The `hold-from-bottom` write caused
+this displacement. Both arms recorded one composer commit, two message-list
+commits, and three enclosing ChatView commits: viewport changes reach the
+message list even though ordinary single-line typing is isolated.
+
+A later fresh-session rerun with connected-marker checks produced a different
+failure: at-bottom scrollTop stayed 398 while the viewport shrank 120px, leaving
+a 120px bottom gap; the away marker stayed steady. Its trace contained input
+and React commit events but no controller reconciliation. The browser then failed a rendering-health check: timers ran, but no animation
+frame arrived within a second, despite visible document state. This run is
+inconclusive, not another established controller failure. The probes now require
+animation-frame delivery before measurement. The earlier explicit
+`hold-from-bottom` trace does not explain this suspended-rendering run.
+After rendering resumed, the guarded probe reproduced the original 120px
+away-marker displacement, with both cached markers still connected.
+
+**The 490px image measurement:** phase-tagged samples resolved the earlier
+uncertainty. In 20 isolated runs, 4 reported 490px. In a second set of 15 runs
+with a Chrome rendering trace, 6 reported it. Each counted +245px in a timer
+task, then -245px in the next resize-observer callback about one frame later.
+There were zero `Paint`/paint-lifecycle events between those samples in the
+page's renderer process. The timer forced layout after asynchronous image
+completion but before the next rendering update; it was not measuring a
+painted displacement. `requestAnimationFrame` followed by `setTimeout` does
+not guarantee that later DOM reads describe the last painted frame. The
+[HTML rendering algorithm](https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering)
+and [Resize Observer processing model](https://drafts.csswg.org/resize-observer/#html-event-loop)
+place resize reconciliation inside a rendering update, before paint.
+
+**Reserved network images:** isolated real-chat tests of the shipping markdown
+`Image size="chat"` path with an eight-second HTTP response produced one request
+and retained one DOM image in each of five arms: no typing, single-line typing,
+five-line typing, diagnostics on at navigation, and diagnostics enabled while
+the request was pending. No DOM image replacement or request abortion occurred.
+The reserved 70vh frame prevented decode-time geometry movement. An earlier
+three-request run coincided with development source edits and was not
+reproduced with source held stable; it is not evidence of a surviving timed
+image retry.
+
+**Lazy user images:** the shipping `MessageImage` → `Image size="sm"` path
+reserves no full image height. A controlled HTTP probe confirmed lazy request
+deferral, exactly one request, successful 800×600 decoding, and the same DOM
+node. When the image was above the reading marker inside one long user message,
+its height grew 238.5px and the marker moved down 238.5px, with no scroll
+compensation. Below the marker, the same growth caused zero marker movement.
+The controller's message-level anchor misses movement within that message.
+
+Run the isolated two-arm reproduction with:
+
+```bash
+node --import tsx beebox/scripts/chat-scroll-lazy-image-repro.ts
+```
+
+It creates temporary test1 sessions, serves a held image response, captures
+before/after screenshots, and cleans up its fixtures. Exit 0 means stable
+reading markers, 1 means unwanted movement, and 2 means setup or cleanup failed.
+Keep frontend source stable during network experiments: HMR can replace nodes
+and restart requests.
+
+The sampler now defers task-phase reads of sizes its ResizeObserver has not
+processed, retaining the previous anchor until reconciliation. Twenty subsequent
+image runs measured zero drift, with 58–64 samples each. The runner fails if
+its observed elements disappear or change, or if it records no samples; both
+real-chat probes reject detached reading markers. Disabling compensation as a negative control
+still failed with 245px drift. The complete harness passed 17 of 19 scenarios;
+the two send-animation scenarios remain failing. These are reproducibility
+improvements, not a production scrolling fix.
+
 When scroll behavior misbehaves somewhere `bin/browse` can't reach (a real
 iPhone, a prod-only condition), type `/scrolldebug` in the composer to toggle a
 flag-gated trace of the controller (`lib/scroll-diagnostics.ts`): every scroll

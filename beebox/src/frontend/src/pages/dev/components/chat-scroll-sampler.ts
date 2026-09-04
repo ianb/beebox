@@ -46,7 +46,13 @@ function topVisible(scroller: HTMLDivElement, content: HTMLDivElement): { el: El
   return null;
 }
 
-/** Per-frame measurement of what the viewer sees, independent of the controller. */
+/** The observed boxes identify which resize cycle a DOM read belongs to. */
+function sizeGeneration(scroller: HTMLDivElement, content: HTMLDivElement): string {
+  const rect = content.getBoundingClientRect();
+  return [scroller.clientWidth, scroller.clientHeight, rect.width, rect.height].join(":");
+}
+
+/** Per-frame measurement of layout, independent of the controller. */
 export class Sampler {
   maxFromBottomWhileAtBottom = 0;
   leftBottomCount = 0;
@@ -55,6 +61,8 @@ export class Sampler {
   driftWhileAwayPx = 0;
   flingReversals = 0;
   samples = 0;
+  invalidReason: string | null = null;
+  private observed: { el: Element; content: Element } | null = null;
 
   private prevAtBottom: boolean;
   private anchor: { el: Element; top: number } | null = null;
@@ -62,6 +70,7 @@ export class Sampler {
   private running = true;
   private inResizeCycle = false;
   private observer: ResizeObserver | null = null;
+  private lastResizeSize: string | null = null;
 
   constructor(private ctx: RunContext) {
     this.prevAtBottom = ctx.atBottom();
@@ -75,7 +84,18 @@ export class Sampler {
   private sample(): void {
     const el = this.ctx.scroller();
     const content = this.ctx.content();
-    if (!el || !content) return;
+    if (!el || !content || el !== this.observed?.el || content !== this.observed.content) {
+      this.invalidReason = "Sampler observed elements missing or replaced";
+      return;
+    }
+    // A timer can run after an image mutation but before the NEXT rendering
+    // update. Its forced layout is not yet reconciled or painted. Keep the
+    // old anchor until the observer samples that size generation; same-size
+    // scroll movement still gets sampled by tasks.
+    if (!this.inResizeCycle && sizeGeneration(el, content) !== this.lastResizeSize) {
+      this.ctx.log("sample-deferred", { reason: "pending-resize" });
+      return;
+    }
     this.samples++;
     const atBottom = this.ctx.atBottom();
     const fb = fromBottomOf(el);
@@ -111,7 +131,13 @@ export class Sampler {
       return;
     }
     const top = anchor.el.getBoundingClientRect().top - el.getBoundingClientRect().top;
-    this.driftWhileAwayPx += Math.abs(top - anchor.top);
+    const delta = top - anchor.top;
+    if (Math.abs(delta) > 0.1) this.ctx.log("sample-drift", {
+      phase: this.inResizeCycle ? "resize" : "task",
+      delta, top, previous: anchor.top, scrollTop: el.scrollTop,
+      scrollHeight: el.scrollHeight,
+    });
+    this.driftWhileAwayPx += Math.abs(delta);
     anchor.top = top;
   }
 
@@ -122,10 +148,12 @@ export class Sampler {
     const el = this.ctx.scroller();
     const content = this.ctx.content();
     if (el && content) {
+      this.observed = { el, content };
       const ro = new ResizeObserver(() => {
         this.inResizeCycle = true;
         try {
           this.sample();
+          this.lastResizeSize = sizeGeneration(el, content);
         } finally {
           this.inResizeCycle = false;
         }
@@ -133,13 +161,12 @@ export class Sampler {
       ro.observe(el);
       ro.observe(content);
       this.observer = ro;
+    } else {
+      this.invalidReason = "Sampler started without elements";
     }
-    // Sample from a task scheduled INSIDE a frame callback, not from the frame
-    // callback itself: a rAF runs before that frame's layout and before its
-    // ResizeObserver delivery, so it would see the scroller mid-growth, before
-    // the controller's re-pin write — a state the user never sees. The task
-    // runs after layout, observers, and paint, so what it measures is what was
-    // on screen.
+    // Between resize cycles, sample scroll movement from tasks. A task isn't
+    // a post-paint guarantee: sample() rejects sizes that haven't reached our
+    // observer yet. The phase-tagged drift log keeps this distinction visible.
     const tick = (): void => {
       if (!this.running) return;
       window.requestAnimationFrame(() => {

@@ -328,6 +328,8 @@ export async function runScenario(scenario: Scenario, ctx: RunContext): Promise<
     samples: sampler.samples,
   };
   const failures = evaluate(scenario, measured);
+  if (sampler.samples === 0) failures.unshift("Sampler produced no measurements");
+  if (sampler.invalidReason !== null) failures.unshift(sampler.invalidReason);
   if (stepFailure !== null) failures.unshift(stepFailure);
   const summary: RunSummary = { ...measured, pass: failures.length === 0, failures };
   ctx.log("scenario-end", { name: scenario.name, pass: summary.pass, failures: failures.join("; ") });
