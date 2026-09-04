@@ -14,7 +14,7 @@ const TRACKED_THREAD_IGNORE = [
   ".git/**",
   `${BOX_DIRS.tmp}/**`,
   ".beebox/**",
-  "procedure/runs/**",
+  `${BOX_DIRS.procedureRuns}/**`,
   `${BOX_DIRS.trash}/**`,
 ];
 

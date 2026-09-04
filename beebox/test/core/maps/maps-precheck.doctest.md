@@ -74,7 +74,7 @@ brief.skippedReason
 await box.cleanup();
 ```
 
-But uncommitted state inside `procedure/runs/` is *not* counted —
+But uncommitted state inside `_bookkeeping/procedure/runs/` is *not* counted —
 the procedure engine intentionally writes "step is running" markers
 there, and blanket-bailing would mean refresh-maps couldn't run
 inside its own procedure step.
@@ -84,7 +84,7 @@ const box = await makeTmpBox({ git: true });
 await box.write("a/b/note.md", "x");
 await box.write("a/c.md", "y");
 box.commitAll("seed");
-await box.write("procedure/runs/refresh-maps_2026-05-09T2052/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/refresh-maps_2026-05-09T2052/run.procedure-run.card",
                 "<run-card status=\"running\"/>");
 
 const brief = await precheck({ boxRoot: box.root });
@@ -336,7 +336,7 @@ await box.cleanup();
 
 ## Ignore patterns
 
-Default patterns include the skeleton hide-list (`procedure/**`,
+Default patterns include the skeleton hide-list (`_bookkeeping/procedure/runs/**`,
 `_content/inbox/**`, `_bookkeeping/archive/**`, etc.) and any directory
 ending in `.attach` (card attach scopes are an implementation detail of
 the card layout):
@@ -346,7 +346,7 @@ const box = await makeTmpBox({ git: true });
 await seedSkeletonMaps(box);
 await box.write("a/b/x.card", "x");
 await box.write("a/c/y.card", "x");  // 2 subdirs for `a` to qualify
-await box.write("procedure/runs/run-1/log.txt", "x");
+await box.write("_bookkeeping/procedure/runs/run-1/log.txt", "x");
 await box.write("emails/Foo.attach/x.card", "x");
 await box.write("emails/keep/sub/y.card", "x");
 await box.write("emails/keep/sub2/z.card", "x");  // 2 subdirs for `emails/keep` to qualify
@@ -365,7 +365,7 @@ emails/keep
 
 Notes:
 - Root is always skipped (every top-level dir is skeleton).
-- `procedure/**` hides the whole `procedure/` tree.
+- `_bookkeeping/procedure/runs/**` hides the whole `_bookkeeping/procedure/runs/` tree.
 - `emails/Foo.attach/` is hidden (matches `**/*.attach`).
 - `_content/inbox/**` hides the whole inbox tree (skeleton, high churn).
 

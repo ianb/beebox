@@ -301,14 +301,14 @@ await box.cleanup();
 
 ## loadRunningProcedures
 
-Reads `procedure/runs/*/run.procedure-run.card` and reports runs whose
+Reads `_bookkeeping/procedure/runs/*/run.procedure-run.card` and reports runs whose
 root status is pending or running.
 
 ### Reports recent running runs
 
 ```ts
 const box = await makeTmpBox();
-const runDir = box.root + "/procedure/runs/test-run_2026-05-16T1200";
+const runDir = box.root + "/_bookkeeping/procedure/runs/test-run_2026-05-16T1200";
 await fs.mkdir(runDir, { recursive: true });
 await fs.writeFile(runDir + "/run.procedure-run.card",
   `---\nprocedure: test\nstatus: running\nstarted-at: 2026-05-16T12:00:00Z\nsteps: []\n---\n`);
@@ -331,7 +331,7 @@ mtime is older than one hour are treated as dead.
 
 ```ts
 const box = await makeTmpBox();
-const runDir = box.root + "/procedure/runs/orphan_2026-03-16T2056";
+const runDir = box.root + "/_bookkeeping/procedure/runs/orphan_2026-03-16T2056";
 await fs.mkdir(runDir, { recursive: true });
 const cardPath = runDir + "/run.procedure-run.card";
 await fs.writeFile(cardPath,
@@ -354,7 +354,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 for (const [name, status] of [["completed_run", "completed"], ["failed_run", "failed"]]) {
-  const runDir = box.root + "/procedure/runs/" + name;
+  const runDir = box.root + "/_bookkeeping/procedure/runs/" + name;
   await fs.mkdir(runDir, { recursive: true });
   await fs.writeFile(runDir + "/run.procedure-run.card",
     `---\nprocedure: test\nstatus: ${status}\nstarted-at: 2026-05-16T12:00:00Z\nsteps: []\n---\n`);

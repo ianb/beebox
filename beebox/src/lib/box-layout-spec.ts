@@ -213,6 +213,14 @@ export const BOX_LAYOUT = [
       "tasks, read by `bbx usage`.",
   },
   {
+    boxDirsKey: "procedureRuns",
+    path: "_bookkeeping/procedure/runs",
+    area: "bookkeeping",
+    description:
+      "Procedure run state. A recent cache, not an archive — no-op runs never persist and " +
+      "`bbx procedure gc` deletes expired runs (git history retains everything).",
+  },
+  {
     boxDirsKey: "connectorState",
     path: "_bookkeeping/connectors",
     area: "bookkeeping",

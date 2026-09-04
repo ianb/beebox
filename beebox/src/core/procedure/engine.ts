@@ -146,7 +146,7 @@ export async function startProcedure(
     .replace("T", "T")
     .slice(0, 15);
   const runDirName = `${procedureName}_${timestamp}`;
-  const runDir = path.join(boxRoot, "procedure/runs", runDirName);
+  const runDir = path.join(getBoxDir(boxRoot, "procedureRuns"), runDirName);
   await fs.mkdir(runDir, { recursive: true });
 
   const runCardPath = path.join(runDir, "run.procedure-run.card");

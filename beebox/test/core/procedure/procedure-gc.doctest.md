@@ -31,21 +31,21 @@ function runCard(attrs: string): string {
 const box = await makeTmpBox({ git: true });
 
 // alpha: two expired runs — keep-newest saves the second despite expiry
-await box.write("procedure/runs/alpha_2025-01-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/alpha_2025-01-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="completed" started-at="2025-01-01T00:00:00Z" completed-at="2025-01-01T00:01:00Z" expires="2025-02-01T00:00:00Z"'));
-await box.write("procedure/runs/alpha_2025-02-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/alpha_2025-02-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="completed" started-at="2025-02-01T00:00:00Z" completed-at="2025-02-01T00:01:00Z" expires="2025-03-01T00:00:00Z"'));
 
 // beta: old run pinned with expires="never", plus a newer one
-await box.write("procedure/runs/beta_2025-01-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/beta_2025-01-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="completed" started-at="2025-01-01T00:00:00Z" completed-at="2025-01-01T00:01:00Z" expires="never"'));
-await box.write("procedure/runs/beta_2026-06-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/beta_2026-06-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="completed" started-at="2026-06-01T00:00:00Z" completed-at="2026-06-01T00:01:00Z" expires="2099-01-01T00:00:00Z"'));
 
 // gamma: legacy cards without expires — completed-at + 30d default applies
-await box.write("procedure/runs/gamma_2025-01-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/gamma_2025-01-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="completed" started-at="2025-01-01T00:00:00Z" completed-at="2025-01-01T00:01:00Z"'));
-await box.write("procedure/runs/gamma_2099-01-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/gamma_2099-01-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="completed" started-at="2099-01-01T00:00:00Z" completed-at="2099-01-01T00:01:00Z"'));
 
 box.commitAll("Seed run history");
@@ -57,8 +57,8 @@ if (!result.ok) throw new Error(result.error.message);
 print(`success: ${result.ok}`);
 print(`removed: ${result.value.removed.sort().join(", ")}`);
 
-const left = await box.list("procedure/runs");
-const dirs = left.split("\n").filter(f => !f.endsWith(".card")).map(f => f.replace("procedure/runs/", ""));
+const left = await box.list("_bookkeeping/procedure/runs");
+const dirs = left.split("\n").filter(f => !f.endsWith(".card") && !f.endsWith(".gitkeep")).map(f => f.replace("_bookkeeping/procedure/runs/", ""));
 print(`kept: ${dirs.join(", ")}`);
 
 // The deletions were committed in one sweep
@@ -90,7 +90,7 @@ const box = await makeTmpBox({ git: true });
 const total = MAX_RUNS_PER_PROCEDURE + 3;
 for (let i = 0; i < total; i++) {
   const stamp = `2025-01-01T${String(i).padStart(4, "0")}`;
-  await box.write(`procedure/runs/loop_${stamp}/run.procedure-run.card`,
+  await box.write(`_bookkeeping/procedure/runs/loop_${stamp}/run.procedure-run.card`,
     runCard(`procedure="loop" status="completed" started-at="2025-01-01T00:00:00Z" completed-at="2025-01-01T00:01:00Z" expires="2099-01-01T00:00:00Z"`));
 }
 box.commitAll("Seed a runaway procedure");
@@ -99,7 +99,7 @@ const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await gcProcedureRuns(ctx);
 if (!result.ok) throw new Error(result.error.message);
 
-const left = await box.list("procedure/runs");
+const left = await box.list("_bookkeeping/procedure/runs");
 const kept = left.split("\n").filter(f => f.includes("loop_") && !f.endsWith(".card")).length;
 print(`removed count: ${result.value.removed.length}`);
 print(`oldest removed: ${result.value.removed.sort()[0]}`);
@@ -124,14 +124,14 @@ default, since crash debris is failure-like.
 ```ts
 const box = await makeTmpBox({ git: true });
 
-await box.write("procedure/runs/crash_2025-01-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/crash_2025-01-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="running" started-at="2025-01-01T00:00:00Z"'));
-await box.write("procedure/runs/crash_2099-01-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/crash_2099-01-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="completed" started-at="2099-01-01T00:00:00Z" completed-at="2099-01-01T00:01:00Z" expires="never"'));
 
 // Age the crashed card's mtime past the running-detection staleness window
 const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
-await utimes(box.path("procedure/runs/crash_2025-01-01T0000/run.procedure-run.card"), stale, stale);
+await utimes(box.path("_bookkeeping/procedure/runs/crash_2025-01-01T0000/run.procedure-run.card"), stale, stale);
 box.commitAll("Seed crashed run");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
@@ -154,9 +154,9 @@ and left alone, even though its started-at is ancient.
 ```ts
 const box = await makeTmpBox({ git: true });
 
-await box.write("procedure/runs/live_2025-01-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/live_2025-01-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="running" started-at="2025-01-01T00:00:00Z"'));
-await box.write("procedure/runs/live_2099-01-01T0000/run.procedure-run.card",
+await box.write("_bookkeeping/procedure/runs/live_2099-01-01T0000/run.procedure-run.card",
   runCard('procedure="p" status="completed" started-at="2099-01-01T00:00:00Z" completed-at="2099-01-01T00:01:00Z" expires="never"'));
 box.commitAll("Seed live run");
 

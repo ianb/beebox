@@ -60,7 +60,7 @@ export const SKELETON_HIDDEN_PATHS: readonly string[] = [
   "_bookkeeping/resources/**",
   "box/commands/**",
   "box/briefs/**",
-  "procedure/**",
+  "_bookkeeping/procedure/runs/**",
   "_bookkeeping/archive/**",
   "_bookkeeping/trash/**",
   "_content/calendar/**",

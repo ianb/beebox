@@ -121,7 +121,7 @@ const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
 testDirs(watcher)
-=> . store store/dir0 store/dir1 store/dir2 store/dir3
+=> . _bookkeeping/procedure store store/dir0 store/dir1 store/dir2 store/dir3
 ```
 
 ```ts cleanup
@@ -278,7 +278,7 @@ await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach/fresh"), 5
 await watcher.settled();
 
 testDirs(watcher)
-=> . store store/Trip.attach store/Trip.attach/fresh
+=> . _bookkeeping/procedure store store/Trip.attach store/Trip.attach/fresh
 ```
 
 ```ts cleanup
@@ -334,14 +334,14 @@ pull an arbitrary outside tree into the watch set and bypass the exclusions.
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
-await mkdir(join(box.root, "procedure", "runs", "noisy"), { recursive: true });
+await mkdir(join(box.root, "junk", "sub", "noisy"), { recursive: true });
 
 const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
 const { symlink } = await import("node:fs/promises");
-await symlink(join(box.root, "procedure", "runs"), join(box.root, "store", "link"));
+await symlink(join(box.root, "junk", "sub"), join(box.root, "store", "link"));
 // Create a real directory after the link and wait for *it*. Asserting an
 // absence is only meaningful once we know the notifications arrived — a bare
 // sleep would pass vacuously whenever delivery was merely slow.
@@ -350,7 +350,7 @@ await waitFor(() => watcher.watchedDirs().includes("store/real"), 5000, "the rea
 await watcher.settled();
 
 testDirs(watcher)
-=> . procedure store store/real
+=> . _bookkeeping/procedure junk junk/sub junk/sub/noisy store store/real
 ```
 
 ```ts cleanup
@@ -414,7 +414,7 @@ await box.cleanup();
 
 ## High-churn trees stay excluded
 
-`procedure/runs` and `_bookkeeping/trash` are never live-rendered and churn constantly;
+`_bookkeeping/procedure/runs` and `_bookkeeping/trash` are never live-rendered and churn constantly;
 watching them exhausted the server's inotify limit on 2026-06-11. Dotfile trees
 (`.git`, `.beebox`) are excluded for the same reason. Ordinary content
 trees receive no path-specific treatment: the generic watch budget is their
@@ -423,7 +423,7 @@ safety boundary.
 ```ts
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
-await mkdir(join(box.root, "procedure", "runs", "r1"), { recursive: true });
+await mkdir(join(box.root, "_bookkeeping", "procedure", "runs", "r1"), { recursive: true });
 await mkdir(join(box.root, "_bookkeeping", "trash", "old"), { recursive: true });
 await mkdir(join(box.root, "_content", "inbox", "email", "thread.attach"), { recursive: true });
 await mkdir(join(box.root, "store", "keep"), { recursive: true });
@@ -432,7 +432,7 @@ const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
 testDirs(watcher)
-=> . _content/inbox/email _content/inbox/email/thread.attach procedure store store/keep
+=> . _bookkeeping/procedure _content/inbox/email _content/inbox/email/thread.attach store store/keep
 ```
 
 ```ts cleanup

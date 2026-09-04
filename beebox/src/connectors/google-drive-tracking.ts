@@ -21,7 +21,7 @@ const DRIVE_CARD_IGNORE = [
   ".git/**",
   `${BOX_DIRS.tmp}/**`,
   ".beebox/**",
-  "procedure/runs/**",
+  `${BOX_DIRS.procedureRuns}/**`,
 ];
 
 /**

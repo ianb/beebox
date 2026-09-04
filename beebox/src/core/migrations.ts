@@ -138,6 +138,17 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // vocabulary sweep's quantity/measurements split — `quantity` itself is new
   // and optional, nothing to migrate). See docs/plans/vocab-glossary-sweep.md.
   { name: "record-measurements", script: "scripts/migrate/record-measurements.ts" },
+  // v2 -> v3 one-root layout conversion (docs/plans/one-root-box-layout.md,
+  // Track E). Unlike every entry above, this migrator runs against a box
+  // that ISN'T v3 yet — `bbx migrate`'s bootstrap path invokes it directly
+  // against a v2 box (see src/core/migrations/one-root-v2-probe.ts), not
+  // through the normal getBoxShape-gated flow. It moves the migrations
+  // manifest itself (content/config/migrations.jsonl -> _config/migrations.jsonl)
+  // as part of the conversion, then appends this entry to the RELOCATED
+  // manifest — so by the time this name is recorded as applied, the box is
+  // already v3 and every migration above it already ran (against v2 boxes,
+  // historically) or is a no-op for a fresh v3 box.
+  { name: "one-root", script: "scripts/migrate/one-root.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

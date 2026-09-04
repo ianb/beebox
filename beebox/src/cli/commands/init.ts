@@ -73,7 +73,7 @@ export interface InitOptions {
  * directly from tests without going through Commander's argv parsing or the
  * process.exit(1)-on-error wrapper below.
  */
-async function runInit(targetPath: string, options: InitOptions): Promise<void> {
+export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
   // Detects what's already at `targetPath`: an existing box (marker at the
   // target itself) or nothing yet. A fresh init always scaffolds the
   // one-root layout — see `docs/plans/one-root-box-layout.md`.

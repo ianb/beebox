@@ -69,8 +69,8 @@ function sourceForPath(relativePath: string): Pick<SubtreeCounts, "source" | "so
     return { source: "user-input", sourceLabel: null };
   }
   if (
-    relativePath === "procedure/runs" ||
-    relativePath.startsWith("procedure/runs/") ||
+    relativePath === BOX_DIRS.procedureRuns ||
+    relativePath.startsWith(`${BOX_DIRS.procedureRuns}/`) ||
     relativePath === "generated" ||
     relativePath.startsWith("generated/") ||
     relativePath === "runtime" ||

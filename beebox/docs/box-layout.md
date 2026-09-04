@@ -145,6 +145,7 @@ user content.
 | `_bookkeeping/archive/processed/` | Items consumed by a procedure step (e.g., raw inputs after digestion). |
 | `_bookkeeping/trash/` | Soft-deleted items (`bbx rm` moves here, not to `/dev/null`). |
 | `_bookkeeping/usage/` | Usage tracking output — session manifest (`session-manifest.jsonl`) mapping agent sessions to tasks, read by `bbx usage`. |
+| `_bookkeeping/procedure/runs/` | Procedure run state. A recent cache, not an archive — no-op runs never persist and `bbx procedure gc` deletes expired runs (git history retains everything). |
 | `_bookkeeping/connectors/` | Per-connector sync state (`<name>.state.json`) — machine-owned, split from `_config/connectors/` (which keeps `<name>.json` config and the gitignored `<name>.secret.json`). |
 
 ## `_publish/` — staged public bundles

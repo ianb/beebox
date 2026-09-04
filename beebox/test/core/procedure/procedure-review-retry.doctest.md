@@ -69,7 +69,7 @@ print(`agent runs: ${runCount}`);
 print(`validate calls: ${validateCount}`);
 print(`retry got failure context: ${retryPrompt.includes("<validation-failure>")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("heal_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
@@ -143,7 +143,7 @@ print(`agent runs: ${runCount}`);
 const files = await box.list("_bookkeeping/output");
 print(`after.txt (next step) exists: ${files.includes("after.txt")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("stuck_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`broken step: ${run.steps[0].status}`);
@@ -206,7 +206,7 @@ print(`success: ${result.ok}`);
 // Judged once; no retry attempted (nothing to resume).
 print(`validate calls: ${validateCount}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("noagent_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
@@ -336,7 +336,7 @@ print(`success: ${result.ok}`);
 print(`run status: ${result.value.status}`);
 print(`agent runs: ${runCount}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("nodecide_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`work step: ${run.steps[0].status}`);

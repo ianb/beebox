@@ -36,10 +36,10 @@ const DOT_SEGMENT = /(^|[/\\])\../;
 
 /**
  * High-churn, never-live-rendered trees that would otherwise eat a watch per
- * subdirectory (procedure/runs/ alone exhausted the server's inotify limit on
- * 2026-06-11).
+ * subdirectory (_bookkeeping/procedure/runs/ alone exhausted the server's
+ * inotify limit on 2026-06-11).
  */
-const HIGH_CHURN_DIRS = ["procedure/runs", BOX_DIRS.trash];
+const HIGH_CHURN_DIRS = [BOX_DIRS.procedureRuns, BOX_DIRS.trash];
 
 /**
  * Absolute ceiling on live directory watches for one box. A watcher is a

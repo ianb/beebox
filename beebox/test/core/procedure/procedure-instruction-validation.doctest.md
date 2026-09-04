@@ -68,7 +68,7 @@ print(`success: ${result.ok}`);
 print(`diff has commit 1: ${judgePrompt.includes("FIRST-CHANGE")}`);
 print(`diff has commit 2: ${judgePrompt.includes("SECOND-CHANGE")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("instr_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
@@ -136,7 +136,7 @@ print(`success: ${result.ok}`);
 const files = await box.list("_bookkeeping/output");
 print(`nope.txt (second step) exists: ${files.includes("nope.txt")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("gate_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`checked step: ${run.steps[0].status}`);
@@ -201,7 +201,7 @@ print(`success: ${result.ok}`);
 const files = await box.list("_bookkeeping/output");
 print(`after.txt exists: ${files.includes("after.txt")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("soft_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`lax step: ${run.steps[0].status}`);
@@ -283,7 +283,7 @@ print(`work agent invocations: ${workAgentRuns}`);
 const files = await box.list("_bookkeeping/output");
 print(`after.txt (second step) exists: ${files.includes("after.txt")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("unjudged_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`card run status: ${run.status}`);

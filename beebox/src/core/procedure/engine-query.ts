@@ -16,7 +16,7 @@ import { getBoxDir } from "../../lib/paths.js";
 
 /**
  * Resolve a run-dir argument to an absolute path. A bare name or relative
- * path resolves under the box's procedure/runs/; an omitted arg picks the
+ * path resolves under the box's _bookkeeping/procedure/runs/; an omitted arg picks the
  * most recent run. Returns null when no run can be located.
  */
 export async function resolveRunDir(
@@ -26,9 +26,12 @@ export async function resolveRunDir(
   if (runDir !== undefined && runDir !== "") {
     return path.isAbsolute(runDir) ? runDir : path.join(boxRoot, runDir);
   }
-  const runsDir = path.join(boxRoot, "procedure/runs");
+  const runsDir = getBoxDir(boxRoot, "procedureRuns");
   try {
-    const dirs = await fs.readdir(runsDir);
+    const entries = await fs.readdir(runsDir, { withFileTypes: true });
+    // Excludes the init-seeded `.gitkeep` (and any other stray file) — only
+    // an actual run directory can be "the most recent run".
+    const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
     const sorted = dirs.toSorted().toReversed();
     if (sorted.length === 0) return null;
     const [latest] = sorted;

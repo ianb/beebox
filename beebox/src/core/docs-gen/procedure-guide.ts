@@ -23,7 +23,7 @@ bbx procedure status                                 # Show latest run status
 bbx procedure gc                                     # Delete expired run dirs
 \`\`\`
 
-Procedure definitions live in \`_config/procedures/\`. Each run creates a tracking card in \`procedure/runs/<name>_<timestamp>/\`. Run dirs are a recent cache, not an archive: a run where every step skips is removed at completion, and finished runs get an \`expires\` stamp (30d completed / 90d failed, or the procedure card's \`run-expiry\`/\`failed-run-expiry\` override) that \`bbx procedure gc\` enforces daily. Git history retains every committed run. To pin a specific run, set \`expires: never\` on its run card.
+Procedure definitions live in \`_config/procedures/\`. Each run creates a tracking card in \`_bookkeeping/procedure/runs/<name>_<timestamp>/\`. Run dirs are a recent cache, not an archive: a run where every step skips is removed at completion, and finished runs get an \`expires\` stamp (30d completed / 90d failed, or the procedure card's \`run-expiry\`/\`failed-run-expiry\` override) that \`bbx procedure gc\` enforces daily. Git history retains every committed run. To pin a specific run, set \`expires: never\` on its run card.
 
 ## Directives
 

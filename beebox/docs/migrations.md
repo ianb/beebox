@@ -387,6 +387,43 @@ rewrite, same shape as `gsheet-rename`. See
 `scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
 `*.document.card` is a clean no-op.
 
+### `one-root` (shape migration — v2 two-root → v3 one-root layout)
+
+Registered at the end of `MIGRATIONS`, but unlike every migrator above it,
+`one-root` runs against a box that ISN'T v3 yet — the v3 engine refuses v2
+boxes outright (`getBoxShape`), so `bbx migrate` has a bootstrap path
+(`src/cli/commands/migrate-bootstrap.ts`) that probes for a v2 box
+(`src/core/migrations/one-root-v2-probe.ts`, tolerant of the pre-v3 marker)
+and hands it straight to `src/core/migrations/one-root-run.ts`'s
+`runOneRootMigration`, entirely outside the normal manifest-driven `pending`
+loop (a v2 box has no `_config/migrations.jsonl` yet — the migration MOVES
+that file into existence as part of converting `content/config/` →
+`_config/`). See `docs/plans/one-root-box-layout.md` Track E for the full
+design. In order: preflight (clean tree, no running-process lock files, the
+v2 package root's own closed-vocabulary check); `git mv` every `content/`
+file per `src/core/migrations/one-root-mapping.ts`'s table (exhaustive,
+`assertNever`-terminated over the frozen v2 layout); `content/CLAUDE.md`
+merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
+filesystem rename (gitignored runtime state, not git); marker bumped to
+`shapeVersion: 3`; `.gitignore`/`.gitattributes` regenerated (reuses
+`initBox`); every card/doc's refs rewritten to canonical `/`-form
+(`one-root-ref-rewrite.ts`, YAML-aware — unlike `bbx mv`'s rewriter it DOES
+handle inline-map `refs:` forms, since a migration commit reorders
+frontmatter keys everywhere anyway); a hard link gate
+(`one-root-link-gate.ts`) refuses to commit if the rewrite left any
+reference dangling; the full `bbx init` tail regenerates rules/guides/docs/
+search index; `hub.json`/`boxes.json` entries pointing at the old
+`<root>/content` path are corrected. Everything lands in exactly ONE commit
+(`migrate: one-root`) — a `git reset --soft` to the pre-migration SHA folds
+in `bbx init`'s own incidental provisioning commit before the final commit,
+so the plan's "one migration, one commit" holds even though the reused
+init tail commits on its own. Rollback on ANY failure: rename `.beebox`
+back under `content/`, `git reset --hard` + clean to the pre-migration SHA
+— nothing commits until the very end, so this always fully undoes the
+attempt. The bootstrap path (everything v2-shape-aware) is scheduled for
+removal once the fleet has converged — see
+`issues/deferred/2026-09-04-remove-one-root-v2-bootstrap.md`.
+
 ## See also
 
 - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implemented-plans/cards-as-markdown-rfc.md` for the design rationale

@@ -176,7 +176,7 @@ const result = await startProcedure({
   procedureNameOrPath: "rejected",
   options: { createAgent },
 });
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find((file) => file.includes("rejected_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 const outputFiles = await box.list("_bookkeeping/output");
@@ -236,7 +236,7 @@ const result = await startProcedure({
   procedureNameOrPath: "judge-rejected",
   options: { createAgent },
 });
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find((file) => file.includes("judge-rejected_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`success: ${result.ok}`);

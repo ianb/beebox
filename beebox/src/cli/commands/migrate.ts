@@ -37,6 +37,7 @@ import {
 import { sweepMigrations, type SweepResult, type SweptMigration } from "../../core/migration-sweep.js";
 import { INCONCLUSIVE_EXIT_CODE } from "../../shared/inconclusive.js";
 import { assertNever } from "../../lib/invariant.js";
+import { findV2Box, runBootstrap } from "./migrate-bootstrap.js";
 
 const BEEBOX_ROOT = PACKAGE_ROOT;
 const BBX_BIN = path.join(BEEBOX_ROOT, "bin", "bbx");
@@ -186,6 +187,57 @@ function reportApplied(applied: SweptMigration[]): void {
   }
 }
 
+/** Handle `--mark-applied <name>`. Split out of the action purely to keep its complexity down. */
+async function handleMarkApplied(boxRoot: string, name: string): Promise<void> {
+  const result = await markMigrationApplied({ boxRoot, name });
+  switch (result.status) {
+    case "unknown-migration":
+      console.error(`Unknown migration "${name}". It must match a name in src/core/migrations.ts (see \`bbx migrate --status\`).`);
+      process.exit(1);
+    // falls through to exit — process.exit returns never
+    case "no-manifest":
+      console.error(`No migration manifest at ${MANIFEST_PATH}. Seed it with \`bbx migrate --mark-all-applied\` (or \`bbx init\`) first, then mark individual migrations.`);
+      process.exit(1);
+    // falls through to exit — process.exit returns never
+    case "already-applied":
+      console.log(`"${name}" is already recorded as applied in ${MANIFEST_PATH}; nothing to do.`);
+      break;
+    case "marked":
+      console.log(`Marked "${name}" as applied in ${MANIFEST_PATH} (did NOT run it). Review the manifest change and commit it.`);
+      break;
+  }
+}
+
+/**
+ * Resolve the box's top-level directory, or run (and fully handle) the v2
+ * bootstrap conversion and return `null` when this turns out to be a v2 box.
+ * Split out of the action purely to keep its complexity down.
+ */
+async function resolveTopPathOrBootstrap(options: MigrateOptions): Promise<string | null> {
+  let topPath: string;
+  try {
+    topPath = await requireBoxRoot();
+  } catch (e) {
+    // No marker found walking up from cwd at all — the common case for a v2
+    // box invoked from its package root (the marker is nested at content/,
+    // which findBoxRoot doesn't look inside). Try the v2 probe before giving up.
+    const v2Box = await findV2Box(null);
+    if (v2Box === null) throw e;
+    await runBootstrap(v2Box, options);
+    return null;
+  }
+
+  // requireBoxRoot found A marker, but it may be the nested v2 one (e.g.
+  // invoked from inside content/ itself) — the normal manifest-driven flow
+  // below can't read a v2 box's manifest, so check for that case here.
+  const v2Box = await findV2Box(topPath);
+  if (v2Box !== null) {
+    await runBootstrap(v2Box, options);
+    return null;
+  }
+  return topPath;
+}
+
 export const migrateCommand = new Command("migrate")
   .description("Apply pending data migrations to this box")
   .option("--apply", "Run all pending migrations in order")
@@ -199,8 +251,11 @@ export const migrateCommand = new Command("migrate")
     // after each migration in the apply loop below; historically the retired
     // `box-packageify` migration relocated the box (legacy → v2), so the
     // re-resolution stays as a safety net even though no current migration
-    // moves the operational root.
-    const topPath = await requireBoxRoot();
+    // moves the operational root. A v2 box is fully handled (and reported)
+    // inside the resolver, which returns null for that case.
+    const topPath = await resolveTopPathOrBootstrap(options);
+    if (topPath === null) return;
+
     let boxRoot = topPath;
 
     if (options.sweep === true) {
@@ -208,24 +263,7 @@ export const migrateCommand = new Command("migrate")
     }
 
     if (options.markApplied !== undefined) {
-      const name = options.markApplied;
-      const result = await markMigrationApplied({ boxRoot, name });
-      switch (result.status) {
-        case "unknown-migration":
-          console.error(`Unknown migration "${name}". It must match a name in src/core/migrations.ts (see \`bbx migrate --status\`).`);
-          process.exit(1);
-        // falls through to exit — process.exit returns never
-        case "no-manifest":
-          console.error(`No migration manifest at ${MANIFEST_PATH}. Seed it with \`bbx migrate --mark-all-applied\` (or \`bbx init\`) first, then mark individual migrations.`);
-          process.exit(1);
-        // falls through to exit — process.exit returns never
-        case "already-applied":
-          console.log(`"${name}" is already recorded as applied in ${MANIFEST_PATH}; nothing to do.`);
-          break;
-        case "marked":
-          console.log(`Marked "${name}" as applied in ${MANIFEST_PATH} (did NOT run it). Review the manifest change and commit it.`);
-          break;
-      }
+      await handleMarkApplied(boxRoot, options.markApplied);
       return;
     }
 
@@ -336,7 +374,7 @@ export const migrateCommand = new Command("migrate")
       // landed. Re-run once the run card's review question is answered.
       if (code === INCONCLUSIVE_EXIT_CODE) {
         console.error(
-          `\nMigration "${m.name}" ran but its check reached no verdict (exit ${String(code)}). The work completed and is committed; nothing judged it. Manifest NOT updated for this entry, and subsequent migrations were not run — read the run card under procedure/runs/, then re-run \`bbx migrate\`.`,
+          `\nMigration "${m.name}" ran but its check reached no verdict (exit ${String(code)}). The work completed and is committed; nothing judged it. Manifest NOT updated for this entry, and subsequent migrations were not run — read the run card under _bookkeeping/procedure/runs/, then re-run \`bbx migrate\`.`,
         );
         process.exit(code);
       }

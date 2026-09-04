@@ -73,7 +73,7 @@ print(JSON.stringify({
   hasJavaScript: direct[".js"] !== undefined,
 }));
 =>
-{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[4,9724]},"grouped":{"card":[1,20],"markdown":[4,9724],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"repository":{"hasCheckoutSize":true,"gitSize":0,"annexed":false,"allRegularFiles":54,"linkedRegularFiles":7,"unlinkedRegularFiles":1},"orphanDirectories":2,"hasJavaScript":false}
+{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[4,9724]},"grouped":{"card":[1,20],"markdown":[4,9724],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"repository":{"hasCheckoutSize":true,"gitSize":0,"annexed":false,"allRegularFiles":55,"linkedRegularFiles":7,"unlinkedRegularFiles":1},"orphanDirectories":2,"hasJavaScript":false}
 ```
 
 A disappearing or unreadable subtree produces labeled lower-bound totals instead

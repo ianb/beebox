@@ -43,7 +43,7 @@ const greeting = await box.read("_bookkeeping/output/greeting.txt");
 print(`greeting: ${greeting.trim()}`);
 
 // Run card exists and shows completed
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("greet_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
 const run = parseProcedureRun(runCard);
@@ -102,7 +102,7 @@ print(`bad.txt exists: ${files.includes("bad.txt")}`);
 print(`good.txt exists: ${files.includes("good.txt")}`);
 
 // Run card shows skip + completed
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("maybe_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
 const run = parseProcedureRun(runCard);
@@ -161,7 +161,7 @@ const result = await startProcedure({ ctx, procedureNameOrPath: "idle" });
 print(`success: ${result.ok}`);
 
 // No run directory persists
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 print(`runs dir contents: "${runs}"`);
 
 // And no commits beyond init + the procedure card itself
@@ -169,7 +169,7 @@ const log = await getLog(box.root);
 print(`commits: ${log.length}`);
 =>
 success: true
-runs dir contents: ""
+runs dir contents: "_bookkeeping/procedure/runs/.gitkeep"
 commits: 2
 ```
 
@@ -270,7 +270,7 @@ print(`work.txt: ${files.includes("work.txt")}`);
 print(`still.txt: ${files.includes("still.txt")}`);
 
 // Check the validate result in run card
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("validate_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
 const run = parseProcedureRun(runCard);
@@ -376,7 +376,7 @@ const files = await box.list("_bookkeeping/output");
 print(`nope.txt: ${files.includes("nope.txt")}`);
 
 // Run card: step failed, with the failure detail captured.
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("runfail_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
@@ -424,7 +424,7 @@ const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "nounset" });
 print(`success: ${result.ok}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("nounset_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
@@ -471,7 +471,7 @@ print(`success: ${result.ok}`);
 const files = await box.list("_bookkeeping/output");
 print(`reached.txt: ${files.includes("reached.txt")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("pipe_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
@@ -516,7 +516,7 @@ const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "precheck-err" });
 print(`success: ${result.ok}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("precheck-err_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
@@ -698,7 +698,7 @@ const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 await startProcedure({ ctx, procedureNameOrPath: "stamped" });
 await startProcedure({ ctx, procedureNameOrPath: "doomed" });
 
-const runs = (await box.list("procedure/runs")).split("\n");
+const runs = (await box.list("_bookkeeping/procedure/runs")).split("\n");
 const dayMs = 24 * 60 * 60 * 1000;
 
 const okDir = runs.find(f => f.includes("stamped_"));
@@ -746,7 +746,7 @@ const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "keeper" });
 print(`success: ${result.ok}`);
 
-const runs = (await box.list("procedure/runs")).split("\n");
+const runs = (await box.list("_bookkeeping/procedure/runs")).split("\n");
 const runDir = runs.find(f => f.includes("keeper_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`expires: ${run.expires}`);
@@ -809,7 +809,7 @@ const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const first = await startProcedure({ ctx, procedureNameOrPath: "staged" });
 print(`first success: ${first.ok}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("staged_"));
 let run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`after first: ${run.steps.map(s => `${s.id}=${s.status}`).join(", ")}`);
@@ -867,7 +867,7 @@ box.commitAll("Add done procedure");
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 await startProcedure({ ctx, procedureNameOrPath: "done" });
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("done_"));
 
 // Resuming an already-completed run changes nothing and reports success.
@@ -895,7 +895,7 @@ printed.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card", `---
+await box.write("_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card", `---
 procedure: _config/procedures/refresh-maps.procedure.card
 status: inconclusive
 started-at: 2026-08-24T05:00:00Z
@@ -913,7 +913,7 @@ box.commitAll("An unjudged run");
 
 const lines = [];
 const ctx = { boxRoot: box.root, writeLine: (l) => lines.push(l), write: () => {} };
-const result = await resumeProcedure({ ctx, runDir: "procedure/runs/refresh-maps_2026-08-24T05-00-00" });
+const result = await resumeProcedure({ ctx, runDir: "_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00" });
 print(`success: ${result.ok}`);
 print(`status: ${result.value.status}`);
 print(JSON.stringify(result.value.inconclusive));
@@ -927,7 +927,7 @@ The run card is left alone: `inconclusive` is terminal, so resume does not
 re-open it as `running`.
 
 ```ts continue
-print(parseProcedureRun(await box.read("procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card")).status);
+print(parseProcedureRun(await box.read("_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00/run.procedure-run.card")).status);
 => inconclusive
 ```
 

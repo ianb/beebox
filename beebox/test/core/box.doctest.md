@@ -58,6 +58,8 @@ _bookkeeping/archive/processed
 _bookkeeping/connectors
 _bookkeeping/jobs
 _bookkeeping/output
+_bookkeeping/procedure
+_bookkeeping/procedure/runs
 _bookkeeping/questions
 _bookkeeping/resources
 _bookkeeping/trash
