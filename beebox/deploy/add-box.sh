@@ -143,6 +143,26 @@ fi
 [[ -n "$BOX_NAME" ]] || BOX_NAME=$(basename "$REPO" .git)
 BOX_PATH="$BOXES_DIR/$BOX_NAME"
 
+# ── Push credential naming ──────────────────────────────────────────
+# A GitHub deploy key attaches to exactly ONE repo, so every box needs its own,
+# reached through a per-box ssh host alias (`IdentitiesOnly yes` in the stanza
+# keeps ssh from offering all of them and tripping GitHub's max-auth-attempts
+# limit). Key filenames take underscores because that is the existing
+# convention on the server; the host alias keeps the box's own hyphens.
+SSH_ALIAS="github.com-box-$BOX_NAME"
+KEY_PATH="$BBX_HOME/.ssh/id_ed25519_box_${BOX_NAME//-/_}"
+
+# Only a GitHub remote gets this treatment: the alias trick exists to select
+# among per-repo deploy keys, which is a GitHub concept. Rewriting a GitLab or
+# self-hosted remote into an alias form would just break it, so those keep
+# whatever credential the operator already arranged.
+PUSH_REMOTE=""
+if [[ "$REPO" =~ ^git@github\.com:(.+)$ ]]; then
+  PUSH_REMOTE="git@$SSH_ALIAS:${BASH_REMATCH[1]}"
+elif [[ "$REPO" =~ ^ssh://git@github\.com/(.+)$ ]]; then
+  PUSH_REMOTE="git@$SSH_ALIAS:${BASH_REMATCH[1]}"
+fi
+
 # The box name is also its URL slug, so it must satisfy the hub's slug rule
 # (SLUG_PATTERN in src/hub/hub-config.ts). Checked locally so a repo whose
 # basename isn't slug-shaped fails before we open an SSH connection; the
@@ -252,6 +272,21 @@ if [[ -n "$DRY_RUN" ]]; then
   echo "  - register with the scheduler manifest (bbx boxes add)"
   echo "  - systemctl restart beebox-hub beebox-scheduler"
   echo "  - verify with the hub's canary for this box"
+  if [[ -z "$PUSH_REMOTE" ]]; then
+    echo "  - NOT set up a push credential ($REPO is not a GitHub remote)"
+  else
+    echo "  - create $KEY_PATH if absent, add an ssh stanza for $SSH_ALIAS,"
+    echo "    and point origin at $PUSH_REMOTE"
+    if [[ -n "$CREATE" ]]; then
+      # A step that grants WRITE access to a repo does not belong only in the
+      # run itself — the dry-run is where an operator decides whether to let it
+      # happen.
+      echo "  - register that key on $CREATE_REPO as a deploy key WITH WRITE ACCESS"
+      echo "    (skipped if this box's key is already registered there)"
+    else
+      echo "  - print the public key for you to register by hand (write access)"
+    fi
+  fi
   echo ""
   echo "[dry-run] Nothing was changed."
   exit 0
@@ -440,6 +475,61 @@ systemctl restart beebox-hub beebox-scheduler
 echo "Registered and restarted (beebox-hub, beebox-scheduler)."
 REMOTE
 
+# ── Push credential ─────────────────────────────────────────────────
+# Without this a box works in every visible way and simply never reaches its
+# remote: it serves, agents run, commits land locally, and nothing says the
+# history is going nowhere. That is how a box reached hundreds of unpushed
+# commits with no offsite copy. Three of the four steps can be done here; the
+# fourth (registering the public key on GitHub) needs the operator's account
+# and is printed as the closing instruction.
+PUBKEY=""
+if [[ -z "$PUSH_REMOTE" ]]; then
+  echo "Push credential: skipped — '$REPO' is not a GitHub remote, so its"
+  echo "  per-repo deploy key convention does not apply. Make sure the box can"
+  echo "  push by whatever means that host uses."
+else
+  echo "Setting up the box's push credential..."
+  # Deliberately unquoted: the key path, alias and remote are interpolated from
+  # local values before the script is sent.
+  # shellcheck disable=SC2087
+  PUBKEY=$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s <<REMOTE
+set -euo pipefail
+
+# Everything here belongs to the service account, which is what actually pushes.
+su - $BBX_USER -s /bin/bash <<'INNER'
+set -euo pipefail
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+
+# NEVER regenerate an existing key. Re-running this script is otherwise safe,
+# but a fresh keypair silently orphans whichever public key is already
+# registered on GitHub — turning a working box into an unpushable one with no
+# error anywhere. Absent is the only case we create.
+if [[ ! -e "$KEY_PATH" ]]; then
+  ssh-keygen -t ed25519 -N "" -f "$KEY_PATH" -C "$SSH_ALIAS deploy key" >/dev/null
+  echo "  generated $KEY_PATH" >&2
+else
+  echo "  key already exists, keeping it (regenerating would orphan the registered one)" >&2
+fi
+
+# The stanza and the remote below ARE safe to re-apply, so they are written
+# whenever they are missing rather than only on first run.
+touch ~/.ssh/config && chmod 600 ~/.ssh/config
+if ! grep -q "^Host $SSH_ALIAS\$" ~/.ssh/config; then
+  printf '\nHost %s\n  HostName github.com\n  User git\n  IdentityFile %s\n  IdentitiesOnly yes\n' \
+    "$SSH_ALIAS" "$KEY_PATH" >> ~/.ssh/config
+  echo "  added ssh config stanza for $SSH_ALIAS" >&2
+fi
+
+cat "$KEY_PATH.pub"
+INNER
+
+# The remote lives in the box repo, which the service account owns.
+su - $BBX_USER -c "git -C '$BOX_PATH' remote set-url origin '$PUSH_REMOTE'"
+echo "  origin -> $PUSH_REMOTE" >&2
+REMOTE
+  )
+fi
+
 # ── Verify the box actually serves ──────────────────────────────────
 # The hub's canary cold-starts THIS box and requires the box's own /healthz to
 # answer 200 — the same check the deploy runs, targeted at the new slug. The
@@ -503,3 +593,72 @@ VERIFY
 # own health endpoint through the hub — is this a success.
 echo ""
 echo "Box '$BOX_NAME' added at $BOX_PATH."
+
+# Last, and deliberately after the success line: this is the one step that
+# cannot be done from here, and a box whose key is unregistered looks entirely
+# healthy — it just never pushes. Ending on the ask is the same reason this
+# script ends on a canary rather than assuming the box serves.
+# On --create the operator has already delegated repo creation to `gh`, which
+# is authenticated right here — so the key can be registered without a detour
+# through the browser, and that path never produces an unpushable box.
+#
+# STICKY, and changes are explicit. Registration happens once, at creation:
+# a re-run finds the title already present and does nothing. Rotating or
+# replacing the credential is deliberately not something this script will do
+# on its own — a silent re-register would be indistinguishable from the
+# orphaned-key failure this whole section exists to prevent. Removing the old
+# key on GitHub and re-running is the explicit path.
+REGISTERED=""
+if [[ -n "$CREATE" && -n "$PUBKEY" ]]; then
+  KEY_TITLE="$SSH_ALIAS"
+  # Match on the KEY MATERIAL, not the title. The question is "is this box's key
+  # registered", and an operator who added it by hand may well have titled it
+  # something else entirely — a title check would then miss it and add a
+  # duplicate. The base64 blob is the key's identity; the comment after it is
+  # not part of it and GitHub does not always keep it.
+  KEY_BLOB=$(printf '%s\n' "$PUBKEY" | awk '{print $2}')
+  if gh repo deploy-key list --repo "$CREATE_REPO" --json key --jq '.[].key' 2>/dev/null \
+       | awk '{print $2}' | grep -qxF "$KEY_BLOB"; then
+    echo "This box's deploy key is already registered on $CREATE_REPO — leaving it alone."
+    REGISTERED=1
+  else
+    PUBKEY_FILE=$(mktemp)
+    printf '%s\n' "$PUBKEY" > "$PUBKEY_FILE"
+    if gh repo deploy-key add "$PUBKEY_FILE" --repo "$CREATE_REPO" --title "$KEY_TITLE" --allow-write; then
+      echo "Registered deploy key '$KEY_TITLE' on $CREATE_REPO with write access."
+      # gh's own caveat, worth repeating because the failure it describes is
+      # silent and looks exactly like the problem this section exists to solve:
+      # a key added through gh is tied to gh's auth token, and de-authorizing
+      # that token removes the key. The box would then quietly stop pushing.
+      echo "  NOTE: a key added via gh is tied to gh's auth token — de-authorizing"
+      echo "        the GitHub CLI later removes it, and the box stops pushing"
+      echo "        silently. Re-add it by hand if that ever happens."
+      REGISTERED=1
+    else
+      # Not fatal: the box is built and serving. The closing instruction below
+      # then carries the manual path, which is where a non-create run lives
+      # anyway.
+      echo "WARNING: could not register the deploy key automatically — falling back to the manual step." >&2
+    fi
+    rm -f "$PUBKEY_FILE"
+  fi
+fi
+
+if [[ -n "$REGISTERED" ]]; then
+  echo ""
+  echo "Push credential is set up and registered. Confirm with:"
+  echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+elif [[ -n "$PUBKEY" ]]; then
+  echo ""
+  echo "ONE STEP LEFT — the box cannot push until you do this:"
+  echo "  1. Open the repo's Settings -> Deploy keys -> Add deploy key"
+  echo "  2. Paste:"
+  echo ""
+  echo "     $PUBKEY"
+  echo ""
+  echo "  3. TICK 'Allow write access'. Without it the box can fetch but never"
+  echo "     push, which looks identical to everything working."
+  echo ""
+  echo "Then confirm with:"
+  echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+fi

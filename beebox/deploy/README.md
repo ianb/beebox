@@ -213,6 +213,44 @@ step that failed, and re-running is safe.
 Re-running is idempotent: pull + re-init, both manifest steps no-op, access
 config left alone.
 
+**The box's push credential is set up too.** A GitHub deploy key attaches to
+exactly one repo, so each box gets its own, reached through a per-box ssh host
+alias (`IdentitiesOnly yes` keeps ssh from offering every key and tripping
+GitHub's max-auth-attempts limit):
+
+```
+Host github.com-box-<name>
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_box_<name>
+  IdentitiesOnly yes
+```
+
+`add-box.sh` creates the key if absent, writes that stanza, and points the box's
+`origin` at `git@github.com-box-<name>:owner/repo.git`. Registering the public
+key on GitHub is the step it cannot do for you on the plain path, so the script
+ends by printing the key and the instruction — **including "Allow write
+access"**, without which the box fetches but never pushes.
+
+That last part matters more than it looks: a box with no usable push credential
+works in every visible way — it serves, agents run, commits land locally — and
+simply never reaches its remote, with nothing saying so. Admin → Backup reports
+the symptom per box (see `src/core/box/backup-status.ts`).
+
+On `--create`, where `gh` is already authenticated and already making the repo,
+the key is registered automatically with write access. It is **sticky**: the
+check is on the key material rather than a title, so a re-run finds the box's
+key already present and does nothing, and a key an operator added by hand under
+a different title still counts. The script never rotates or replaces a
+credential on its own — a silent re-register is indistinguishable from the
+orphaned-key failure this exists to prevent, so replacing one means removing the
+old key on GitHub and re-running deliberately. Note gh's own caveat: a key added
+through `gh` is tied to its auth token, and de-authorizing the GitHub CLI later
+removes the key.
+
+A non-GitHub remote is left alone — the alias convention is a GitHub deploy-key
+mechanism, and rewriting a remote for another host would only break it.
+
 `--dry-run` still needs a `bbx` on the server that has `bbx hub add-box` — i.e.
 a deploy from 2026-08 or later. On an older build the preflight fails with an
 unknown-command error.
