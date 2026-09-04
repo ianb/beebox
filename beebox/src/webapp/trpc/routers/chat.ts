@@ -21,7 +21,7 @@ import {
   getDirectoryForSession,
   getLastSessionForDirectory,
 } from "../../../core/chat/session/history.js";
-import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
+import { nearestLandmarkDir, boxRelativePathSchema } from "../../../core/landmark/nearest.js";
 import { getChatRuntime } from "../../chat-runtime.js";
 import { loadChatLists, deadHuskLabel, type ChatSessionRow } from "../../../core/chat/session/list.js";
 import type { TranscriptState } from "../../../core/chat/session/availability.js";
@@ -177,10 +177,7 @@ export const chatRouter = router({
   openForCard: publicProcedure
     .input(
       z.object({
-        cardPath: z
-          .string()
-          .min(1)
-          .refine(isBoxRelativeCardPath, "card path must be box-relative and contain no '..' segments"),
+        cardPath: boxRelativePathSchema.refine((d) => d.length > 0, "cardPath must not be empty"),
       }),
     )
     .query(async ({ ctx, input }): Promise<{ contextDir: string; sessionId: string | null }> => {
@@ -207,13 +204,7 @@ export const chatRouter = router({
   openers: publicProcedure
     .input(
       z.object({
-        contextDir: z
-          .string()
-          .optional()
-          .refine(
-            (dir) => dir === undefined || isBoxRelativeCardPath(dir),
-            "contextDir must be box-relative and contain no '..' segments",
-          ),
+        contextDir: boxRelativePathSchema.optional(),
       }),
     )
     .query(async ({ ctx, input }): Promise<{ openers: string[] }> => {

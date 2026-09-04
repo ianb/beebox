@@ -1,8 +1,7 @@
 ---
 title: "A dedicated security scan for leaks between boxes on the same host"
-workstream: unattached
+workstream: cross-box-leak-scan
 area: beebox
-needs: [design]
 labels: [security]
 filed-by: agent
 discovered-by: Ian
@@ -54,3 +53,20 @@ Fold-ins: the private task-output item gets fixed or explicitly re-accepted
 as part of this; the agent-containment allowed-directories item
 (`2026-07-20`) is the write-side sibling (an agent escaping its box root)
 and at minimum shares the fixture.
+
+## Built 2026-09-03 (workstream `cross-box-leak-scan`)
+
+- **Dynamic probe**: `beebox/test/webapp/cross-box-probe.doctest.md` on the
+  new two-box fixture (`createTwoBoxTestServer`, `test/helpers/test-server.ts`)
+  — box A's agent bearer against every read surface of box B. Runs with the
+  suite, so the hourly full-suite schedule is its cadence.
+- **Static sweep + host audit**: `schedules/cross-box-leak-scan/` (weekly,
+  knip-sweep shape: baseline in the state dir, only new lines handed off to an
+  adjudicating session). The host audit runs locally and on production over
+  SSH when the main checkout has `deploy/server-ip`.
+- **Report**: security-report §7b and the rubric's 7b entry.
+- **Fixed on the way**: `GET /api/task-output` (now box-scoped; the private
+  item is closed), `chatControl.reserveSession` and the raw `/api/chat/send`
+  body (`contextDir` now uses the shared box-relative schema), `files.summarize`
+  (relative inputs now contained), and
+  [listsessionroots-contextdir-no-containment](../closed/bugs/2026-08-26-listsessionroots-contextdir-no-containment.md).

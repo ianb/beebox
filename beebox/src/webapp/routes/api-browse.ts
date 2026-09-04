@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
 import { parseCardName } from "../../lib/paths.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { containWithinBox } from "../../lib/box-containment.js";
 import { naturalCompare } from "../../lib/natural-sort.js";
 
 interface BrowseCard {
@@ -42,11 +43,10 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
       // Resolve the target directory
       const targetDir = reqPath ? path.join(boxRoot, reqPath) : boxRoot;
 
-      // Security: ensure we stay within boxRoot (reject sibling dirs like
+      // Security: the shared containment floor (rejects sibling dirs like
       // `${boxRoot}-secrets` that a bare startsWith would let through).
-      const root = path.resolve(boxRoot);
       const resolved = path.resolve(targetDir);
-      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+      if (containWithinBox(boxRoot, resolved) === null) {
         return { path: reqPath, dirs: [], cards: [] };
       }
 
