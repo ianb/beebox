@@ -180,6 +180,25 @@ const SCENARIOS_MAIN: Scenario[] = [
     },
   },
   {
+    name: "real-images-around-reading-marker",
+    description: "Real lazy img elements above and below the reading marker receive deterministic data-SVG sources. This measures browser load/decode reflow while reading; data URLs do not demonstrate network lazy-load deferral.",
+    steps: [
+      { k: "mountImage", msgIndex: 2, heightPx: 280 },
+      { k: "mountImage", msgIndex: 20, heightPx: 340 },
+      { k: "userDrag", toTop: 900 },
+      { k: "wait", ms: 400 },
+      { k: "completeImage", msgIndex: 2, expectedPlacement: "above", expectedHeightPx: 280 },
+      { k: "wait", ms: 150 },
+      { k: "completeImage", msgIndex: 20, expectedPlacement: "below", expectedHeightPx: 340 },
+      { k: "wait", ms: 250 },
+    ],
+    expect: {
+      finalAtBottom: false,
+      driftWhileAwayAtMost: 8,
+      finalHasUnseenContent: true,
+    },
+  },
+  {
     name: "chrome-grows",
     description: "Below-list chrome (attachment row / mobile composer) grows and shrinks while at the bottom. Content height never changes; clientHeight does.",
     steps: [

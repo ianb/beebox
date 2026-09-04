@@ -272,13 +272,51 @@ and an instant write undoing the animation step. No controller behavior was
 changed in this investigation. The same sequence also failed 3/3 with tracing
 and observation disabled, again at 330 px.
 
-The existing isolated harness in this checkout also reproduced send failures:
+Before adding the real-image scenario, the isolated harness reproduced send failures:
 16/18 scenarios passed; `send-anchors-user-message-top` and
 `reply-longer-than-screen-does-not-follow` failed with a 362 px final offset
 and two controller writes. These are outstanding failures, not evidence of a
 completed fix. The reproduction phase intentionally keeps them red.
 
 ### Reading the expanded trace
+
+`react-commit` records development React Profiler callbacks for `chat-root`
+(the ChatView subtree), `message-list`, and `composer`. The outer callback
+also fires for commits in descendants; it does not mean InteractiveChat itself
+rendered. Count callbacks per ID within the capture; `actualMs` is React's
+render-duration estimate, not browser layout/paint time. A callback does not
+prove a DOM mutation. The native SwiftUI composer is outside these boundaries.
+Production does not mount React Profilers; disabled development traces leave
+only the Profiler's early-return callback unless a subscriber is attached.
+Like controller events, React commits are available to a subscribe-only client;
+enabling additionally sends them through the bounded log transport.
+
+An initial single-line typing capture produced one composer callback and one
+outer callback, no message-list callback, no transcript mutation, and no scroll
+write. This checks a narrow typing case, not streaming performance.
+
+The isolated `real-images-around-reading-marker` scenario uses actual lazy
+`img` nodes and controlled SVG sources, waiting for load and decode with a
+bounded failure path. It asserts image placement and final dimensions above
+and below the reading marker. Wait 400ms after the user drag before completing
+the first image: the sampler ignores movement for 350ms after input. The
+initial 150ms wait produced a vacuous zero-drift result and was corrected.
+
+After correction, an isolated Chromium run and a fresh full run measured zero
+drift, but another full run reported 490px accumulated drift. Temporarily
+disabling only the harness scroller's `scrollTo` produced a 245px drift failure;
+the override was restored and the page reloaded before the full runs. This
+proves the check can fail without compensation, but does not establish stable
+image behavior. The doubled movement may reflect growth followed by correction
+or an intermediate state sampled before paint. Preserve that uncertainty until
+frame/recording evidence distinguishes them. Full runs currently produce 16/19
+or 17/19 passes; the two send-alignment failures are consistent.
+
+Step exceptions now return failed scenario summaries so the remainder of
+`runAll()` still runs. A forced image-geometry mismatch returned a failure and
+the following prepend scenario passed.
+Data URLs do not establish network lazy-load deferral or delayed server timing;
+those remain in the real-chat matrix above.
 
 When enabled through the dev API, a read-only observer samples geometry on animation frames and
 emits changed samples (plus frame gaps over 50 ms). `frame` includes composer
@@ -311,10 +349,49 @@ Use this seam instead of dynamically importing a bare Vite module URL, which
 can create a second diagnostics singleton after HMR. Subscription is exclusive
 (also used by the isolated harness); detach after a capture. Disabling removes
 the DOM observer and frame loop. HMR disposes those resources too. The normal
-`/scrolldebug` toggle retains lightweight controller-only tracing in production
-and on devices, with the same bounded log transport. DOM observation is opt-in
-through the dev API and does not persist across reloads. Geometry sampling can
+`/scrolldebug` toggle retains lightweight controller-only tracing in production.
+In development builds, including a simulator paired to the worktree, it also
+enables DOM observation; the session flag restores observation after reload.
+Every event carries an ephemeral `traceId` for its module instance. Separate
+concurrent clients and HMR generations by this ID before comparing timelines;
+it identifies neither the conversation nor the device. Geometry sampling can
 affect timing; always compare a failing sequence with observation disabled.
+
+### Native reproduction and motion control (2026-09-04)
+
+The real-chat send runner failed three more times with ordinary motion
+(`userTop: 330`, `easeCancelled: true`) and passed three times at `userTop: 0`
+with `bin/browse set media light reduced-motion`. Restore ordinary motion with
+`bin/browse set media light`. This is an isolation experiment, not a fix:
+reduced motion takes the existing instantaneous-send path.
+
+The authenticated iPhone 17 Pro simulator, iOS 26.5, reproduced the same
+animation conflict in WKWebView. After a multiline native `/fakestream` send,
+the trace showed `ease-write` from 1153 to 1371, followed in the same frame by
+`hold-anchor` with delta -218, `ease-stop` with `finish: false`, and a write
+back to 1153. The requested first step was within the 1929px scroll maximum,
+so clamping cannot explain this cancellation. The web's controller is undoing
+its own animation before the scroll event refreshes its viewport-relative
+anchor snapshot.
+
+A second native run with DOM observation and React profiling enabled showed
+the same sequence (1157 → 1373 → 1157) and a stable `userTop: 619` afterward.
+This repeats the symptom with both lightweight and expanded instrumentation.
+It does not establish that the observers have no effect on timing.
+
+With the software keyboard actually visible (Simulator I/O → Keyboard →
+Toggle Software Keyboard), a separate observation resized the viewport from
+651px to 350px while the reader was 160px from the bottom. `hold-from-bottom`
+moved scrollTop from 1153 to 1454. This matches today's implementation; whether
+the reader's text should move by the keyboard height is a product-policy
+question, not evidence that resize compensation is correct. Hardware-keyboard
+input alone does not exercise this boundary.
+
+The simulator results establish reproduction, not completion. Real-device
+momentum/rubber-band, actual delayed-image network completion, and the full
+image/keyboard combination matrix remain separate verification gates. See the
+[comparison research](../../research/chat-scroll-comparison-2026-09-04.md) for
+the external product review and its limits.
 
 When scroll behavior misbehaves somewhere `bin/browse` can't reach (a real
 iPhone, a prod-only condition), type `/scrolldebug` in the composer to toggle a

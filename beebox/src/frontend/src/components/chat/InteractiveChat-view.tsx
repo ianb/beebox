@@ -26,6 +26,7 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import type { ChatAgentEngine } from "@shared/chat-models.js";
+import { ChatRenderProfiler } from "./ChatRenderProfiler";
 
 
 /**
@@ -139,7 +140,8 @@ function MessageListRegion(props: ChatBodyProps) {
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
   const { handleLoadOlder } = actions;
   return (
-    <MessageList
+    <ChatRenderProfiler id="message-list">
+      <MessageList
       messages={messages}
       groups={groups}
       modelMarkers={modelMarkers}
@@ -167,7 +169,8 @@ function MessageListRegion(props: ChatBodyProps) {
       audioOverlayStore={audioOverlayStore}
       openers={openers}
       onSendOpener={actions.handleSendOpener}
-    />
+      />
+    </ChatRenderProfiler>
   );
 }
 
@@ -186,7 +189,8 @@ function ComposerRegion(props: ChatBodyProps) {
   const { handleSend, handleKeyDown, handlePaste, handleDrop } = actions;
   const targetBusy = chatTargetStatus({ isStreaming, processBusy }).state === "busy";
   return (
-    <ChatComposerSection
+    <ChatRenderProfiler id="composer">
+      <ChatComposerSection
       attachments={attachments}
       pendingImageCount={pendingImageCount}
       fileAttachments={fileAttachments}
@@ -244,7 +248,8 @@ function ComposerRegion(props: ChatBodyProps) {
           onDrop={handleDrop}
         />
       }
-    />
+      />
+    </ChatRenderProfiler>
   );
 }
 
@@ -275,7 +280,8 @@ export function InteractiveChatBody(props: ChatBodyProps) {
     [onZoomView],
   );
   return (
-    <ChatView
+    <ChatRenderProfiler id="chat-root">
+      <ChatView
       hasCompanion={Boolean(activeView)}
       companionPanel={
         activeView ? (
@@ -323,7 +329,8 @@ export function InteractiveChatBody(props: ChatBodyProps) {
         </>
       }
       composerSection={embedded || nativeComposer ? null : <ComposerRegion {...props} />}
-      debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
-    />
+        debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
+      />
+    </ChatRenderProfiler>
   );
 }

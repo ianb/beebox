@@ -1,5 +1,5 @@
 /**
- * Dev-only scroll harness (/dev/chat-scroll).
+ * Scroll diagnostic harness (/dev/chat-scroll).
  *
  * Reproduces chat scroll behavior with no chat: a fixed-height scroller of
  * fake, fixed-height "messages" plus a resizable composer stand-in below it, so
@@ -18,8 +18,8 @@
  * readout shows PASS/FAIL. `window.__scrollHarness` exposes run/state/log/reset
  * so `bin/browse eval` can drive the whole thing headlessly.
  *
- * Not part of the product — mounted only under /dev/chat-scroll in dev builds
- * (router.tsx).
+ * Mounted under /dev/chat-scroll (router.tsx). This diagnostic fixture is not
+ * a substitute for verification in the real chat or on a physical device.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -29,6 +29,7 @@ import { Row } from "../../../components/ui/Row";
 import { Stack } from "../../../components/ui/Stack";
 import { scrollTraceSubscribe } from "../../../lib/scroll-diagnostics";
 import { HarnessStore, type HarnessContent } from "./chat-scroll-model";
+import { ControlledHarnessImage } from "./chat-scroll-images";
 import { CONTROLLERS, DEFAULT_CONTROLLER, type HarnessControllerHook } from "./chat-scroll-controller";
 import { SCENARIOS, findScenario, type Scenario } from "./chat-scroll-scenarios";
 import { runScenario, flushApply, type RunContext, type RunSummary } from "./chat-scroll-runner";
@@ -306,14 +307,19 @@ function ScrollFrame({ content, viewportPx, attachScroller, attachContent }: Scr
         style={{ overflowAnchor: "none" }}
       >
         <div ref={attachContent} data-testid="harness-content" className="flex flex-col gap-2 p-2">
-          {content.messages.map((m) => (
+          {content.messages.map((m, messageIndex) => (
             <div
               key={m.id}
               data-testid="harness-message"
               data-role={m.role}
               className={m.role === "assistant" ? "rounded bg-white border border-warm-200" : "rounded bg-primary-100 border border-primary-200 ml-12"}
-              style={{ height: m.px, minHeight: content.lastTurnSpacer && m.id === lastId ? viewportPx : undefined }}
-            />
+              style={{
+                height: m.image ? undefined : m.px,
+                minHeight: content.lastTurnSpacer && m.id === lastId ? viewportPx : m.image ? m.px : undefined,
+              }}
+            >
+              {m.image ? <ControlledHarnessImage image={m.image} messageIndex={messageIndex} /> : null}
+            </div>
           ))}
         </div>
       </div>
