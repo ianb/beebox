@@ -8,6 +8,7 @@ How to add new API endpoints to beebox using tRPC. Follow an existing router lik
 
 **Keep as REST** (raw Fastify routes in `src/webapp/routes/`) only for what doesn't fit the tRPC shape:
 - File uploads/downloads (`multipart/form-data`, streamed bodies)
+- Bounded, cacheable image representations ([image transforms](image-transforms.md))
 - OAuth redirect flows
 - Webhook receivers (external services POST to us)
 - The `/chat/send` POST (needs the request's user + the session registry)

@@ -1,12 +1,17 @@
 ---
 title: "Serve thumbnails on demand: a card with a full-resolution photo loads the whole file every time"
 workstream: image-thumbnails
+resolution: implemented
 area: beebox
 labels: [images, performance, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — a boardgame card whose photo took many seconds to appear in the chat companion panel on the hosted box
 ---
+
+> Implemented by `fbc55f537` (and its preceding thumbnail-route commits): cached
+> `/api/images/*` representations now serve the bounded display surfaces and
+> authored views, while lightboxes and file URLs retain the original.
 
 Box images are served as stored, through `/api/files/<path>`, and every
 surface that shows one asks for the original: the image renderer
@@ -30,7 +35,7 @@ What exists:
   same invalidation: the thumbnail's identity is the source path plus its
   version plus the requested size.
 - The related format question is filed separately:
-  [avif-webp-for-stored-images](2026-06-18-avif-webp-for-stored-images.md).
+  [avif-webp-for-stored-images](../../features/2026-06-18-avif-webp-for-stored-images.md).
   That one is about what intake STORES; this one is about what a surface
   FETCHES, and a derived thumbnail can be WebP regardless of the original.
 

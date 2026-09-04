@@ -3,7 +3,7 @@ title: "On-demand image thumbnails"
 status: implemented
 workstream: image-thumbnails
 issues:
-  - ../../../issues/features/2026-09-03-on-demand-image-thumbnails.md
+  - ../../../issues/closed/features/2026-09-03-on-demand-image-thumbnails.md
 ---
 # On-demand image thumbnails
 
