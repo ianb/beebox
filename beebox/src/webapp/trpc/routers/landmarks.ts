@@ -18,6 +18,7 @@ import {
   type ResolvedLink,
   type ResolvedGroup,
 } from "../../../core/landmark/resolve.js";
+import { boxRelativePathSchema } from "../../../core/landmark/nearest.js";
 import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 import type { LandmarkProblem } from "../../../core/landmark/summaries.js";
 import { parseLandmarkFields } from "../../../schemas/landmark.js";
@@ -208,12 +209,7 @@ export const landmarksRouter = router({
   forDir: publicProcedure
     .input(
       z.object({
-        dir: z
-          .string()
-          .refine(
-            (d) => !d.startsWith("/") && !d.split("/").includes(".."),
-            "dir must be box-relative and contain no '..' segments",
-          ),
+        dir: boxRelativePathSchema,
       }),
     )
     .query(async ({ ctx, input }): Promise<{ landmark: LandmarkPayload | null }> => {

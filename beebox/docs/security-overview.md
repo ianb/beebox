@@ -1,9 +1,9 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: e2d0c20dc7b063fd7c2be44cc57b47b81c1dcae5
-date: 2026-08-08
-model: claude-sonnet-5
-reviewed-by: Ian Bicking
+generated-at-rev: bf4028989b719ffa87a07198f918be739e91c0c3
+date: 2026-09-03
+model: claude-fable-5-1
+reviewed-by: DRAFT — unreviewed
 ---
 
 # Security overview
@@ -195,6 +195,11 @@ The ones you should actually weigh:
 - **Boxes share a browser origin**: scripts in one box can make
   same-origin requests to a sibling box. Fine single-operator; known
   limitation otherwise.
+- **Boxes share an OS user**: a box's own processes can read a sibling
+  box's files and the host's shared state; the server never lets one
+  box's *credentials* reach another box's data, and that is tested by a
+  two-box probe in the suite and re-swept weekly
+  ([§7b](security-report.md#7b-cross-box-leakage-on-a-shared-host)).
 - **CSP is report-only** so far; enforcement is a staged flip.
 - **Open invite links don't verify email ownership**: pin the invite to
   an email when you know it, and send invite URLs over a channel you

@@ -39,9 +39,12 @@ async function seedLog(cwd: string, opts: { id: string; mtime: string }): Promis
 ## listSessionRoots — box root first, deduped, existence-filtered
 
 The history file below has: a root-bound session, two sessions in the
-same landmark dir (the root must appear only once), and a "ghost"
-landmark whose encoded dir never got a transcript (filtered out). The
-box-root entry is always returned, even before any transcript exists.
+same landmark dir (the root must appear only once), a "ghost" landmark
+whose encoded dir never got a transcript (filtered out), and a row whose
+`contextDir` climbs out of the box. That last row has a transcript seeded
+where the uncontained join would land, and it is still not listed: the
+row is contained to the box root, which is already present. The box-root
+entry is always returned, even before any transcript exists.
 
 ```ts
 const box = await makeTmpBox();
@@ -49,16 +52,19 @@ process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("projects");
 const rootSession = "aaaa1111-0000-0000-0000-000000000001";
 const bunkerOld = "bbbb2222-0000-0000-0000-000000000002";
 const bunkerNew = "cccc3333-0000-0000-0000-000000000003";
+const escaped = "eeee5555-0000-0000-0000-000000000005";
 await box.write(".beebox/chat-session-history.json", JSON.stringify({
   sessions: [
     { id: rootSession, contextDir: "" },
     { id: bunkerOld, contextDir: "store/bunker" },
     { id: bunkerNew, contextDir: "store/bunker" },
     { id: "dddd4444-0000-0000-0000-000000000004", contextDir: "store/gone" },
+    { id: escaped, contextDir: "../../elsewhere" },
   ],
   migrated: true,
 }));
 await seedLog(box.root, { id: rootSession, mtime: "2026-07-02T10:00:00Z" });
+await seedLog(join(box.root, "../../elsewhere"), { id: escaped, mtime: "2026-07-04T10:00:00Z" });
 await seedLog(join(box.root, "store/bunker"), { id: bunkerOld, mtime: "2026-07-01T10:00:00Z" });
 await seedLog(join(box.root, "store/bunker"), { id: bunkerNew, mtime: "2026-07-03T10:00:00Z" });
 

@@ -27,6 +27,8 @@ import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
 import type { Services } from "../../src/services/index.js";
 import { makeBoxAnnexShaped } from "./annex-box.js";
+import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
+import { signSession, type SessionUser } from "../../src/webapp/auth.js";
 
 export const TEST_SLUG = "test";
 
@@ -163,7 +165,14 @@ process.on("exit", () => {
   }
 });
 
-export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
+/**
+ * Clone the shared template box (package files + `content/` + git repo) into
+ * a fresh temp directory, optionally converting it to git-annex shape. The
+ * one place both `createTestServer` (one box) and `createTwoBoxTestServer`
+ * (two independent boxes on one server) get their box(es) from, so the clone
+ * + annex-conversion steps live in exactly one place.
+ */
+async function cloneTemplateBox(opts?: { annexBox?: boolean }): Promise<{ tmpDir: string; boxRoot: string }> {
   const template = await getTemplateBox();
   const tmpDir = await mkdtemp(join(tmpdir(), "bbx-route-test-"));
 
@@ -178,6 +187,12 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
   if (opts?.annexBox === true) {
     await makeBoxAnnexShaped({ packageRoot: tmpDir, boxRoot });
   }
+
+  return { tmpDir, boxRoot };
+}
+
+export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
+  const { tmpDir, boxRoot } = await cloneTemplateBox({ annexBox: opts?.annexBox === true });
 
   // Build the box's event bus here and inject it so the test holds the SAME
   // instance the routes emit on (transient events never leave the process).
@@ -205,6 +220,120 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
       // writes (chat-history backfill, scheduler tick) finish just as we walk.
       // Remove the whole package clone (tmpDir), not just content/.
       await rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    },
+  };
+}
+
+/**
+ * One box's handle within a `createTwoBoxTestServer` fixture: the same
+ * `{ slug, boxRoot, eventBus }` shape route doctests already know, plus
+ * small credential-minting helpers so a cross-box auth test doesn't have to
+ * re-derive them. Named generally (not "leak"/"probe") because this fixture
+ * is meant to carry more than one kind of cross-box test.
+ */
+export interface TwoBoxFixtureBox {
+  slug: string;
+  boxRoot: string;
+  eventBus: EventBus;
+  /**
+   * This box's per-box agent loopback token (`.beebox/agent-token`), as a
+   * ready-to-send `Authorization` header value. Minted (and persisted) on
+   * first call via `getOrCreateAgentToken` — see `src/core/agent/token.ts`.
+   * The per-box auth wall (`server-box-scope.ts`) accepts this bearer as
+   * box-scoped authentication for THIS box only, so box B's handle never
+   * satisfies box A's wall.
+   */
+  agentBearerHeader(): string;
+  /**
+   * A signed `bbx_session` cookie VALUE (not the `name=value` pair) for the
+   * given identity, via `signSession` (`src/webapp/auth.ts`). Session
+   * identity is not box-scoped — `canAccessBox` decides per box from the
+   * server's single `BBX_OWNER_EMAIL`/local-user store plus each box's own
+   * `allowedEmails` — so a caller that needs a cookie to actually clear a
+   * box's wall must also set up that box's access config; this only signs
+   * the cookie.
+   */
+  sessionCookie(user?: SessionUser): string;
+}
+
+export interface TwoBoxTestServerOptions {
+  services?: Services;
+  devSurfaces?: boolean | undefined;
+  /**
+   * Serve behind the real auth wall. Defaults to `false` (unlike
+   * `createTestServer`, which defaults open) — this fixture exists to
+   * exercise cross-box auth, so real auth is the useful default; pass
+   * `true` to boot it open instead.
+   */
+  openAccess?: boolean | undefined;
+  chatBackend?: ChatBackend | undefined;
+}
+
+export interface TwoBoxTestServerContext {
+  server: FastifyInstance;
+  a: TwoBoxFixtureBox;
+  b: TwoBoxFixtureBox;
+  cleanup: () => Promise<void>;
+}
+
+const TWO_BOX_SLUG_A = "alpha";
+const TWO_BOX_SLUG_B = "beta";
+
+/**
+ * Boot ONE server serving TWO independent boxes — each its own template
+ * clone (own git repo, own `.beebox/agent-token`), each its own event bus —
+ * for tests that need to prove one box's credentials/data can't reach the
+ * other's scope. Reuses `cloneTemplateBox`, the same clone logic
+ * `createTestServer` uses, so the two fixtures can't drift.
+ */
+export async function createTwoBoxTestServer(opts?: TwoBoxTestServerOptions): Promise<TwoBoxTestServerContext> {
+  const [cloneA, cloneB] = await Promise.all([cloneTemplateBox(), cloneTemplateBox()]);
+  const eventBusA = createEventBus(cloneA.boxRoot, { pollInterval: 1000 });
+  const eventBusB = createEventBus(cloneB.boxRoot, { pollInterval: 1000 });
+
+  const server = await createServer({
+    boxes: [
+      { slug: TWO_BOX_SLUG_A, boxRoot: cloneA.boxRoot, eventBus: eventBusA },
+      { slug: TWO_BOX_SLUG_B, boxRoot: cloneB.boxRoot, eventBus: eventBusB },
+    ],
+    services: opts?.services,
+    openAccess: opts?.openAccess ?? false,
+    devSurfaces: opts?.devSurfaces === true,
+    frontendPath: TEST_FRONTEND_PATH,
+    ...(opts?.chatBackend !== undefined ? { chatBackend: opts.chatBackend } : {}),
+  });
+
+  function makeFixtureBox({
+    slug,
+    boxRoot,
+    eventBus,
+  }: {
+    slug: string;
+    boxRoot: string;
+    eventBus: EventBus;
+  }): TwoBoxFixtureBox {
+    return {
+      slug,
+      boxRoot,
+      eventBus,
+      agentBearerHeader: () => `Bearer ${getOrCreateAgentToken(boxRoot)}`,
+      sessionCookie: (user?: SessionUser) =>
+        signSession(user ?? { email: `${slug}-owner@example.com`, name: `${slug} owner` }),
+    };
+  }
+
+  return {
+    server,
+    a: makeFixtureBox({ slug: TWO_BOX_SLUG_A, boxRoot: cloneA.boxRoot, eventBus: eventBusA }),
+    b: makeFixtureBox({ slug: TWO_BOX_SLUG_B, boxRoot: cloneB.boxRoot, eventBus: eventBusB }),
+    cleanup: async () => {
+      await server.close();
+      eventBusA.close();
+      eventBusB.close();
+      await Promise.all([
+        rm(cloneA.tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }),
+        rm(cloneB.tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }),
+      ]);
     },
   };
 }

@@ -20,6 +20,7 @@ import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { bundleView } from "../views/compiler.js";
+import { containWithinBox } from "../../lib/box-containment.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -62,14 +63,13 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
         return reply.status(400).send({ error: "Missing ?path" });
       }
 
-      // Security: resolve and ensure within boxRoot. Compare against `root +
-      // sep` (not a bare prefix) so a sibling dir like `<box>-secrets` can't
-      // satisfy the check.
-      const resolved = path.resolve(path.join(boxRoot, reqPath));
-      const root = path.resolve(boxRoot);
-      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+      // Security: the shared containment floor — resolve and verify the
+      // result stays under boxRoot (a sibling dir like `<box>-secrets` fails).
+      if (containWithinBox(boxRoot, path.join(boxRoot, reqPath)) === null) {
         return reply.status(400).send({ error: "Path outside box" });
       }
+      const resolved = path.resolve(path.join(boxRoot, reqPath));
+      const root = path.resolve(boxRoot);
 
       // A figure's code lives in `<card>.attach/…` and is TypeScript — refuse to
       // compile a loose box file as a module, so this endpoint can't be turned

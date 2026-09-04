@@ -24,6 +24,7 @@ import type { ChatSendInput } from "../../core/chat/session/index.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../shared/image-orientation.js";
 import { CHAT_CHANNELS, type ChatChannel } from "../../shared/chat-channel.js";
+import { boxRelativePathSchema } from "../../core/landmark/nearest.js";
 
 // Structural shape only (id/mimeType/dataBase64 present with the right
 // primitive types) — the content-level checks (mime prefix, total byte cap)
@@ -65,7 +66,7 @@ export const sendBodySchema = z.object({
    * Ignored when `session` is anything other than `"new"` — resumed sessions
    * read the binding from `chat-session-history` instead.
    */
-  contextDir: z.string().optional(),
+  contextDir: boxRelativePathSchema.optional(),
   /**
    * Chat-feature seeds chosen before the session existed (e.g. turning on
    * narration in a brand-new chat). Honored only when `session === "new"`,

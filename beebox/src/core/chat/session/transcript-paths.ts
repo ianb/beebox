@@ -87,6 +87,51 @@ export function getSessionDir(cwd: string): string {
   return path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
 }
 
+/**
+ * Whether `filePath` is a background-task output file that belongs to the
+ * box at `boxRoot` — the fail-closed shape check behind `GET
+ * /api/task-output` (`webapp/routes/api.ts`).
+ *
+ * Claude Code writes a background task's output under its OWN tmp root
+ * (distinct from `claudeProjectsRoot()`), shaped exactly like:
+ *
+ *   /private/tmp/claude-<uid>/<encoded agent cwd>/<session-id>/tasks/<id>.output
+ *
+ * (`/tmp/...` on hosts where `/tmp` isn't a `/private/tmp` symlink.) The
+ * `<encoded agent cwd>` segment is `encodeProjectDir` of whatever cwd the
+ * agent process ran with — the box root itself, or a landmark-bound
+ * subdirectory of it, which `encodeProjectDir`'s all-non-alnum-to-`-`
+ * encoding turns into `encodeProjectDir(boxRoot)` followed by a literal
+ * `-` and more encoded characters (a `/` in the real path becomes that
+ * same `-`). So this box's own segment is an EXACT match or a `-`-prefixed
+ * extension of it — never a bare string-prefix match, which would also
+ * accept an unrelated box whose encoded root happens to start with the
+ * same characters.
+ *
+ * Pure path-string logic only — no filesystem access, so it's safe to call
+ * before any `stat`/`realpath` (and the caller re-checks it AFTER
+ * `realpath`, so a symlink inside an otherwise-valid path can't point the
+ * read at another box's task output).
+ */
+export function isTaskOutputPathForBox({ boxRoot, filePath }: { boxRoot: string; filePath: string }): boolean {
+  const resolved = path.resolve(filePath);
+  const tmpRoot = ["/private/tmp/", "/tmp/"].find((root) => resolved.startsWith(root));
+  if (!tmpRoot) return false;
+
+  // Segments after the tmp root: <uid-dir>/<encoded-cwd>/<session-id>/tasks/<file>
+  const rest = resolved.slice(tmpRoot.length).split(path.sep);
+  const [uidDir, encodedCwd, sessionId, tasksSegment, ...fileSegments] = rest;
+  if (uidDir === undefined || !uidDir.startsWith("claude-")) return false;
+  if (encodedCwd === undefined || encodedCwd === "") return false;
+  if (sessionId === undefined || sessionId === "") return false;
+  if (tasksSegment !== "tasks") return false;
+  // Exactly one segment after `tasks/` — a plain output file, not a nested path.
+  if (fileSegments.length !== 1 || fileSegments[0] === "") return false;
+
+  const encodedBoxRoot = encodeProjectDir(boxRoot);
+  return encodedCwd === encodedBoxRoot || encodedCwd.startsWith(`${encodedBoxRoot}-`);
+}
+
 /** One session JSONL discovered on disk in a single encoded project dir. */
 export interface SessionFileInfo {
   sessionId: string;
