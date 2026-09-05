@@ -43,6 +43,27 @@ longer exist.
   the permanent "refuse a v2 box loudly" behavior, not migration tolerance.
   Don't touch those when clearing this issue.
 
+**Update 2026-09-05 — the fleet rollout ran.** Every local box and every
+production box records `one-root`; hub healthz is `ok`. The remaining v2
+population is boxes outside the fleet: soft-launch users' boxes, restored
+backups, and archived boxes (`/home/beebox/archived-boxes/`,
+`~/src/boxes/backups/`). The activation date stands as a floor; before
+clearing, decide whether those out-of-fleet populations still deserve a
+conversion path or an explicit "restore the migrator from git history"
+pointer in `docs/migrations.md`.
+
+**Additional Track E hardening modules that go with the same cleanup**
+(added after this issue was filed, during the review waves):
+`one-root-move-plan.ts`, `one-root-rollback.ts`, `one-root-errors.ts`,
+`one-root-ignore-merge.ts`, `one-root-chat-bindings.ts`,
+`one-root-claude-projects.ts`, `one-root-write-guard.ts`,
+`one-root-ref-rescue.ts`, `one-root-ref-apply.ts`,
+`one-root-view-dependencies.ts`, `one-root-connector-config.ts` — all under
+`beebox/src/core/migrations/`, plus their doctests under
+`test/core/migrations/`. Two pieces migrated INTO production code and stay:
+the reference-definition parsing in `body-refs.ts`/`markdown-lint-rules.ts`
+and the trash/landmark/HTTP namespace fences.
+
 **The migration's manifest name:** `one-root` (see `MIGRATIONS` in
 `beebox/src/core/migrations.ts`).
 
