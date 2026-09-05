@@ -203,7 +203,7 @@ function openerLine(opener: string): string {
  * prose) followed by the frontmatter records (`key-people:`,
  * `properties:`, `openers:`) as `**Label:** …` lines. Prepends a section header. The
  * `directoryLabel` parameter is used for directory briefings (e.g.,
- * `"store/archive/financial"`).
+ * `"_bookkeeping/archive/financial"`).
  */
 export function compileBriefing(fields: BriefingFields, directoryLabel?: string): string {
   const header = directoryLabel !== undefined && directoryLabel !== ""

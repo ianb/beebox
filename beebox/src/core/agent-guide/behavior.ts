@@ -24,7 +24,7 @@ for them, in anything a user-facing surface renders:
 - **Call their things what they call them.** They saved a recipe: say "your
   recipe," not "the recipe card" and never \`Lemon_Chicken.recipe.card\`.
   Filenames and paths go inside links with a human title as the text
-  (\`[your lemon chicken recipe](/store/recipes/…)\`) — never as the noun of
+  (\`[your lemon chicken recipe](/_content/recipes/…)\`) — never as the noun of
   a sentence.
 - **Address the user as "you."** "Boxholder" is this guide's word *about*
   them; never say it to them, and never refer to them in the third person.
@@ -60,7 +60,7 @@ by one when you want a slice:
 
 - \`git log --oneline -20\` — recent activity overview
 - \`git log --all --grep='Phase: brief'\` — every brief-creation commit
-- \`git log -- box/inbox/\` — history of one directory
+- \`git log -- _content/inbox/\` — history of one directory
 - \`git show <hash>\` — the full diff of a change
 `;
 }
@@ -78,23 +78,23 @@ cards, guides, personality — are the record.
 Where each kind of thing goes:
 
 - **Situational context** — what the box is for, who the key people are, the
-  facts every agent needs → the **briefing card** (\`briefing.briefing.card\` at
-  the box root; a directory briefing explains what that subdirectory holds).
-  Adding a key person? Also create \`people/First_Last.person.card\`. Its fields
-  are documented in \`docs/generated/card-briefing.md\` — think notes for a new
+  facts every agent needs → the **briefing card** (\`_content/briefing.briefing.card\`;
+  a directory briefing explains what that subdirectory holds).
+  Adding a key person? Also create \`_content/people/First_Last.person.card\`. Its fields
+  are documented in \`_content/docs/generated/card-briefing.md\` — think notes for a new
   team member.
 - **A discrete item** — a bank account, a contact's phone number, a piece of
-  furniture → a card in \`store/\` (record / memo / bookmark). Most things you
+  furniture → a card in \`_content/\` (record / memo / bookmark). Most things you
   encounter belong here.
 - **A per-domain pipeline rule** — the user says "always do X with Y" for a
   specific pipeline (intake, calendar review, …) → the matching
-  \`config/*.guide.card\`.
+  \`_config/*.guide.card\`.
 - **A filing target** — where a *kind* of item belongs → the destination
   directory's landmark \`destinations\` list (a \`for: [triage]\` routing target or
   a \`for: [commentary]\` capture target), not a guide card. See
-  \`docs/generated/triage.md\`.
+  \`_content/docs/generated/triage.md\`.
 - **How the agent sounds** — tone, formality, how proactive → the personality
-  card (\`config/main.personality.card\`). Voice and manner **only** — never
+  card (\`_config/main.personality.card\`). Voice and manner **only** — never
   situational context, the box's purpose, or facts about people (those are the
   briefing).
 
@@ -104,7 +104,7 @@ chat sessions and writes what it learned into personality/guide cards as
 don't promote them past \`medium\`, and don't use them to contradict a
 \`user-stated\` belief (that takes the boxholder's say-so). The full
 confidence-ladder detail lives with the retrospective procedure; run reports are
-in \`store/reviews/retro/\`.
+in \`_content/reviews/retro/\`.
 
 ### Don't drop unexpected information
 
@@ -117,8 +117,8 @@ is the worst outcome. Handle it by context:
   aside, but acknowledge it and flag that it may need follow-up.
 - **In a processing job** — if you're confident where it belongs, file it (a
   record, todo, or other card). Otherwise raise a question card in
-  \`box/questions/\` (see ${xref(SECTION.QUESTIONS)}) and move the source item
-  to \`box/inbox/unhandled/\` so it isn't lost.
+  \`_bookkeeping/questions/\` (see ${xref(SECTION.QUESTIONS)}) and move the source item
+  to \`_content/inbox/unhandled/\` so it isn't lost.
 
 When in doubt, ask.
 `;

@@ -51,8 +51,18 @@ export function extractViewRefs(source: string): ViewRef[] {
  * Broken-cardRef warning messages for one view file (absolute path). Mirrors the
  * card broken-ref walk in card-lint.ts: existence-only, warning-style. A `?view=`
  * query is stripped before the existence check (only the path addresses a file).
+ *
+ * A symlinked view is skipped outright, same as `markdown-lint-rules.ts`'s
+ * `noBrokenInternalLinks` does for a symlinked `.md`/`.card` (finding 3, round
+ * 5 hardening on top of finding 1): the one-root migration's `rewriteViewRefs`
+ * never opens a symlinked leaf for rewrite (its content belongs to its
+ * target), so a v2-form `cardRef` it still carries after the move is accepted
+ * staleness, not a broken link the hard link gate should fail the commit
+ * over.
  */
 export async function lintViewRefs(viewAbsPath: string, boxRoot: string): Promise<string[]> {
+  const lst = await fs.lstat(viewAbsPath).catch(() => null);
+  if (lst?.isSymbolicLink() === true) return [];
   let source: string;
   try {
     source = await fs.readFile(viewAbsPath, "utf-8");

@@ -1,7 +1,7 @@
 /**
  * Inline card/file embeds in markdown.
  *
- * `![alt](store/figures/Foo.figure.card?p=v)` renders the target inline via its
+ * `![alt](_content/figures/Foo.figure.card?p=v)` renders the target inline via its
  * own viewer — the native `!` embed syntax, distinct from a plain `[label](…)`
  * link, which opens the target in the surrounding surface. Query params pass
  * through to the renderer (e.g. figure params). Any in-box, non-image path

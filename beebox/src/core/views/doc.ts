@@ -1,7 +1,7 @@
 /**
  * Generate the views reference documentation for agents.
  *
- * Called by generate-docs.ts to produce docs/generated/views.md.
+ * Called by generate-docs.ts to produce _content/docs/generated/views.md.
  */
 
 import { dependenciesAndParamsSection } from "./doc-files.js";
@@ -9,7 +9,7 @@ import { examplesSection } from "./doc-examples.js";
 
 const introSection = `# Views: Agent-Generated React Components
 
-Views are \`.tsx\` files in the \`views/\` directory at the box root. They get compiled server-side and rendered in the browser. **A view is always attached to a card type** — it exports \`rendersCardTypes\` and becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less "standalone" view.
+Views are \`.tsx\` files in the \`src/views/\` directory at the box root. They get compiled server-side and rendered in the browser. **A view is always attached to a card type** — it exports \`rendersCardTypes\` and becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less "standalone" view.
 
 ## When to Create a View
 
@@ -27,7 +27,7 @@ Each view is a \`.tsx\` file with named exports for metadata and a default expor
 \`\`\`tsx
 export const name = "Ledger Overview";
 export const description = "Interface for an ledger-overview card";
-export const dependencies = ["store/**/*.ledger-overview.card", "store/archive/**/*.record.card"];
+export const dependencies = ["_content/**/*.ledger-overview.card", "_bookkeeping/archive/**/*.record.card"];
 export const modes = ["page", "chat"];
 export const rendersCardTypes = ["ledger-overview"];
 
@@ -134,7 +134,7 @@ Cards are YAML frontmatter + a markdown body. Each card in the \`cards\` array h
 
 \`\`\`typescript
 {
-  path: string;        // Box-relative path (e.g., "store/archive/Foo.record.card")
+  path: string;        // Box-relative path (e.g., "_bookkeeping/archive/Foo.record.card")
   type: string;        // Card type, from the filename Foo.<type>.card (e.g., "record", "memo")
   frontmatter?: Record<string, unknown>;  // Parsed YAML frontmatter (body and type excluded)
   body?: string;       // Markdown body
@@ -152,7 +152,7 @@ typed \`unknown\` — narrow before use.
 \`attachments\` is how a view discovers what lives next to a card — every file
 in the card's attach scope, recursively, as \`{path, size, mtimeMs}\` with
 box-relative paths (e.g.
-\`store/playground/Playground.attach/sessions/history.jsonl\`). Content is
+\`_content/playground/Playground.attach/sessions/history.jsonl\`). Content is
 never inlined — attachments can be huge or binary — fetch it with
 \`readFile(path)\` or point an \`<img>\`/\`<audio>\` at \`fileUrl(path)\`.`;
 
@@ -170,7 +170,7 @@ ISO form:
 
 \`\`\`yaml
 related:
-  - ref: /store/projects/Garden_Redesign.project.card
+  - ref: /_content/projects/Garden_Redesign.project.card
     note: Background for this recommendation
 sources:
   - href: https://example.com/native-plants
@@ -190,8 +190,8 @@ To show a file to the user, reference it by its plain box path — like a normal
 markdown link or image:
 
 \`\`\`
-[Meeting Notes](/store/notes/meeting.md)
-[Recipe](/store/archive/Pasta.recipe.card)
+[Meeting Notes](/_content/notes/meeting.md)
+[Recipe](/_bookkeeping/archive/Pasta.recipe.card)
 \`\`\`
 
 Clicking a link opens the file in the companion pane. The system picks the
@@ -203,12 +203,12 @@ viewer by file type:
 
 To force a specific viewer, add \`?view=\` with the renderer name (e.g. \`Source\` for the raw card text, \`Card\` for the markdown view):
 \`\`\`
-[Raw source](/store/archive/Pasta.recipe.card?view=Source)
+[Raw source](/_bookkeeping/archive/Pasta.recipe.card?view=Source)
 \`\`\`
 
 Directory paths work too:
 \`\`\`
-[Catalog](/store/catalogs/My_Catalog)
+[Catalog](/_content/catalogs/My_Catalog)
 \`\`\`
 
 Always write the box path with a leading \`/\` — links and embeds in chat resolve from the box root, never from your working directory.`;
@@ -219,12 +219,12 @@ There are two ways to surface a file in chat — the difference is the \`!\`:
 
 **Link \`[label](path)\`** — clicking it opens the file in the **companion pane**, a persistent side panel beside the chat:
 \`\`\`
-[Meeting Notes](/store/notes/meeting.md)
+[Meeting Notes](/_content/notes/meeting.md)
 \`\`\`
 
 **Embed \`![label](path)\`** — renders the file **inline** in the chat message, scrolling with the conversation (the same syntax as an image):
 \`\`\`
-![Meeting Notes](/store/notes/meeting.md)
+![Meeting Notes](/_content/notes/meeting.md)
 \`\`\`
 
 The companion pane:
@@ -240,7 +240,7 @@ Use an embed for a quick, one-off display within a turn. Use a link when the use
 
 When a companion view is open, every user message includes a \`zoomed-view\` attribute naming the open file (a box path):
 \`\`\`xml
-<typed zoomed-view="store/notes/meeting.md">What about the furniture?</typed>
+<typed zoomed-view="_content/notes/meeting.md">What about the furniture?</typed>
 \`\`\`
 
 This tells the agent what the user is looking at, so it can tailor its responses.

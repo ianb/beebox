@@ -12,8 +12,14 @@ import * as path from "node:path";
 import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
 import { parseCardName } from "../../lib/paths.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { containWithinBox } from "../../lib/box-containment.js";
 import { naturalCompare } from "../../lib/natural-sort.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
+import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
+
+/** The underscore area names — what the box root listing shows, and all it shows. */
+const BOX_AREA_NAMES: ReadonlySet<string> = new Set(
+  BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area").map((entry): string => entry.name)
+);
 
 interface BrowseCard {
   relativePath: string;
@@ -37,17 +43,25 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
   // GET /api/browse/* - Browse directory contents (one level)
   server.get<{ Params: { "*": string } }>(
     "/api/browse/*",
-    async (request) => {
+    async (request, reply) => {
       const reqPath = request.params["*"] || "";
 
-      // Resolve the target directory
-      const targetDir = reqPath ? path.join(boxRoot, reqPath) : boxRoot;
-
-      // Security: the shared containment floor (rejects sibling dirs like
-      // `${boxRoot}-secrets` that a bare startsWith would let through).
-      const resolved = path.resolve(targetDir);
-      if (containWithinBox(boxRoot, resolved) === null) {
-        return { path: reqPath, dirs: [], cards: [] };
+      // Resolve the target directory. Box namespace fence, checked on the
+      // RESOLVED path: the root's own listing shows only the underscore
+      // areas (filtered below, and the root itself is allowed here); a
+      // non-root path outside the namespace — src/, node_modules/, .git/,
+      // package.json's siblings, or a traversal form like
+      // `_content/../src` — 403s rather than browsing the npm/agent-identity
+      // machinery (`docs/plans/one-root-box-layout.md` Track B).
+      let resolved: string;
+      if (reqPath === "") {
+        resolved = path.resolve(boxRoot);
+      } else {
+        const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
+        if (ns === null) {
+          return reply.status(403).send({ error: "Access denied" });
+        }
+        resolved = ns.resolved;
       }
 
       let entries: Array<{ name: string; isDirectory: () => boolean }>;
@@ -95,6 +109,20 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
 
         const fullPath = path.join(resolved, entry.name);
         const relativePath = path.relative(boxRoot, fullPath);
+
+        // Round-6 hardening finding 2: the directory fence above only checks
+        // the LISTING TARGET (`resolved`) — it says nothing about a CHILD
+        // entry that is itself a symlink escaping the namespace (e.g.
+        // `_content/alias.memo.card -> ../src/private.memo.card`). Without
+        // this, `loadCardFrontmatter` below follows that symlink and returns
+        // out-of-namespace metadata straight into the listing. Re-fence each
+        // child on its own resolved path (read mode: an annex-style leaf
+        // symlink into `.git/annex/objects/…` still passes, same as every
+        // other read route) and simply omit a rejected child from the
+        // listing rather than 403 the whole directory.
+        const childNs = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: relativePath, mode: "read" });
+        if (childNs === null) continue;
+
         const attachDirName = `${parsed.name}.attach`;
         const hasAttachments = entries.some(
           (e) => e.isDirectory() && e.name === attachDirName,
@@ -111,10 +139,19 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
         });
       }
 
-      dirs.sort(naturalCompare);
-      cards.sort((a, b) => naturalCompare(a.name, b.name));
+      // At the box root, list ONLY the underscore areas — not the npm
+      // namespace, `src/`, or agent-identity entries that also pass the
+      // dotfile filter above (`src`, `node_modules` aren't dotfiles). There
+      // are no ref-addressable root cards either (a stray one is a
+      // closed-vocabulary violation Track C's `bbx validate` flags, not
+      // something to browse here).
+      const rootFilteredDirs = reqPath === "" ? dirs.filter((name) => BOX_AREA_NAMES.has(name)) : dirs;
+      const rootFilteredCards = reqPath === "" ? [] : cards;
 
-      return { path: reqPath, dirs, cards };
+      rootFilteredDirs.sort(naturalCompare);
+      rootFilteredCards.sort((a, b) => naturalCompare(a.name, b.name));
+
+      return { path: reqPath, dirs: rootFilteredDirs, cards: rootFilteredCards };
     }
   );
 }

@@ -50,17 +50,17 @@ directive: Use the picked color
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Color.question.card", SELECT);
+await box.write("_bookkeeping/questions/Color.question.card", SELECT);
 const { caller, events } = contextFor(box);
 
-const res = await caller.answer({ questionPath: "box/questions/Color.question.card", answer: "Red" });
+const res = await caller.answer({ questionPath: "_bookkeeping/questions/Color.question.card", answer: "Red" });
 res.success
 => true
 
 res.message
 => Question answered
 
-(await box.read("box/questions/Color.question.card")).includes("selected: red")
+(await box.read("_bookkeeping/questions/Color.question.card")).includes("selected: red")
 => true
 
 events.map((e) => e.event).join(",")
@@ -80,7 +80,7 @@ into a `BAD_REQUEST`:
 const box = await makeTmpBox({ git: true });
 const { caller } = contextFor(box);
 
-const out = await attempt(() => caller.answer({ questionPath: "box/questions/Nope.question.card", answer: "Red" }));
+const out = await attempt(() => caller.answer({ questionPath: "_bookkeeping/questions/Nope.question.card", answer: "Red" }));
 out.startsWith("THREW:BAD_REQUEST:")
 => true
 ```
@@ -93,17 +93,17 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Color.question.card", SELECT);
+await box.write("_bookkeeping/questions/Color.question.card", SELECT);
 const { caller, events } = contextFor(box);
 
-const res = await caller.dismiss({ questionPath: "box/questions/Color.question.card" });
+const res = await caller.dismiss({ questionPath: "_bookkeeping/questions/Color.question.card" });
 res.success
 => true
 
 res.message
 => Question dismissed
 
-(await box.read("box/questions/Color.question.card")).includes("status: dismissed")
+(await box.read("_bookkeeping/questions/Color.question.card")).includes("status: dismissed")
 => true
 
 events.map((e) => e.event).join(",")
@@ -119,7 +119,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(
-  "box/questions/Color.question.card",
+  "_bookkeeping/questions/Color.question.card",
   // A coherent answered card carries answer + answered-at (schema-required).
   SELECT.replace(
     "status: pending",
@@ -128,7 +128,7 @@ await box.write(
 );
 const { caller } = contextFor(box);
 
-const out = await attempt(() => caller.dismiss({ questionPath: "box/questions/Color.question.card" }));
+const out = await attempt(() => caller.dismiss({ questionPath: "_bookkeeping/questions/Color.question.card" }));
 out.startsWith("THREW:BAD_REQUEST:")
 => true
 ```
@@ -146,10 +146,10 @@ the web boundary does not.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Color.question.card", SELECT);
+await box.write("_bookkeeping/questions/Color.question.card", SELECT);
 const { caller } = contextFor(box);
 
-const absPath = `${box.root}/box/questions/Color.question.card`;
+const absPath = `${box.root}/_bookkeeping/questions/Color.question.card`;
 
 const ans = await attempt(() => caller.answer({ questionPath: absPath, answer: "Red" }));
 ans.startsWith("THREW:BAD_REQUEST:")
@@ -159,7 +159,7 @@ const dis = await attempt(() => caller.dismiss({ questionPath: absPath }));
 dis.startsWith("THREW:BAD_REQUEST:")
 => true
 
-(await box.read("box/questions/Color.question.card")).includes("status: pending")
+(await box.read("_bookkeeping/questions/Color.question.card")).includes("status: pending")
 => true
 ```
 

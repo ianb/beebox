@@ -1,7 +1,7 @@
 /**
  * Shared scan-and-match + filename helpers for connector job cards.
  *
- * Chat and intake connectors both (a) scan `box/jobs` for an existing pending
+ * Chat and intake connectors both (a) scan `_bookkeeping/jobs` for an existing pending
  * job to dedupe/append onto, and (b) mint a fresh timestamped job-card
  * filename. Those two mechanical parts live here; the create-vs-append policy
  * (chat creates a new job per thread; intake appends items to an existing one)

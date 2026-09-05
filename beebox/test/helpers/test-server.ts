@@ -21,7 +21,7 @@ import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 import type { FastifyInstance } from "fastify";
-import { scaffoldV2Box } from "../../src/core/box/package.js";
+import { scaffoldBoxRoot } from "../../src/core/box/package.js";
 import { createServer } from "../../src/webapp/server.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
@@ -124,15 +124,15 @@ let templateDir: string | null = null;
 function getTemplateBox(): Promise<string> {
   if (templatePromise === null) {
     templatePromise = (async () => {
-      // Build a real v2 box: package half at `dir`, operational box at
-      // `dir/content`. Git lives at the package root (`dir`). `deps` symlinks
-      // `node_modules/beebox` so box-local schema/view resolution works
-      // in route tests that need it. `getTemplateBox` returns the PACKAGE
-      // root; `createTestServer` points the server at `<clone>/content`.
+      // Build a real v3 box (one root: package half + operational half both
+      // at `dir`). `deps` symlinks `node_modules/beebox` so box-local
+      // schema/view resolution works in route tests that need it.
+      // `getTemplateBox` returns that root; `createTestServer` points the
+      // server at the clone directly.
       const dir = await mkdtemp(join(tmpdir(), "bbx-route-tmpl-"));
-      await scaffoldV2Box(dir, { deps: true });
+      await scaffoldBoxRoot(dir, { deps: true });
       // A real box resolves react/react-dom from its OWN node_modules (view
-      // metadata import + node-target render). `scaffoldV2Box({deps})` only
+      // metadata import + node-target render). `scaffoldBoxRoot({deps})` only
       // symlinks beebox, so simulate the box's react dependency by
       // symlinking the engine's copy beside it — the same trick `bbx view test`
       // and the view doctests use. Without this, view-metadata import fails to
@@ -176,16 +176,16 @@ async function cloneTemplateBox(opts?: { annexBox?: boolean }): Promise<{ tmpDir
   const template = await getTemplateBox();
   const tmpDir = await mkdtemp(join(tmpdir(), "bbx-route-test-"));
 
-  // Clone the prebuilt v2 package (package files + content/ + git repo) into
-  // the fresh dir — no per-boot git subprocess. See getTemplateBox above. The
-  // operational box root is `content/` inside the clone.
+  // Clone the prebuilt v3 box (package files + operational areas + git repo)
+  // into the fresh dir — no per-boot git subprocess. See getTemplateBox
+  // above. The clone IS the box root — one root, no nesting.
   await cp(template, tmpDir, { recursive: true });
-  const boxRoot = join(tmpDir, "content");
+  const boxRoot = tmpDir;
 
   // Before the server boots: registration-time probes read this shape, so
   // converting after `createServer` would be too late.
   if (opts?.annexBox === true) {
-    await makeBoxAnnexShaped({ packageRoot: tmpDir, boxRoot });
+    await makeBoxAnnexShaped(boxRoot);
   }
 
   return { tmpDir, boxRoot };

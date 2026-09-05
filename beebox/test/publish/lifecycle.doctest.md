@@ -129,7 +129,7 @@ JSON.parse(uploaded).status
 [result.deletedBundleObjects, result.deletedSlug].join(" ")
 => 1 true
 
-JSON.parse(await box.read(`box/publish/${pubId}/manifest.json`)).status
+JSON.parse(await box.read(`_publish/${pubId}/manifest.json`)).status
 => revoked
 
 JSON.stringify(committed) === JSON.stringify([pubId])

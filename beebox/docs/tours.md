@@ -41,7 +41,7 @@ bin/tour --all        # run every tour
 Needs the shared dev router (`pnpm dev` at the monorepo root) reachable;
 the worktree is auto-detected from `$PWD`, box defaults to `test1`
 (`BROWSE_BOX` overrides). The box must be one built for agent browsing —
-`"agentBrowsing": "owner"` in its `config/box.json`, which `test1` and its
+`"agentBrowsing": "owner"` in its `_config/box.json`, which `test1` and its
 clones carry — or every owner-gated surface walks as a 401/403 page
 (`docs/plans/agent-browsing-owner.md`). A healthy tour takes tens of seconds — both
 viewport passes included.

@@ -1,7 +1,7 @@
 /**
  * Telegram message card schema — outbound messages to Telegram chats.
  *
- * Agents create these cards in `box/output/` with `status: pending`.
+ * Agents create these cards in `_bookkeeping/output/` with `status: pending`.
  * The telegram connector sends them during sync, then deletes the card
  * on success or stamps it with an error on failure.
  */
@@ -18,7 +18,7 @@ const TelegramResponse = z.object({
 });
 
 export const TelegramMessageSchema = cardSchema("telegram-message", {
-  description: "An outbound Telegram message queued in box/output/ — the connector sends it on sync and deletes the card on success",
+  description: "An outbound Telegram message queued in _bookkeeping/output/ — the connector sends it on sync and deletes the card on success",
   category: "synced",
   fields: {
     status: TelegramMessageStatus.default("pending"),
@@ -30,7 +30,7 @@ export const TelegramMessageSchema = cardSchema("telegram-message", {
   instructions: `# Sending Telegram Messages
 
 To send a message to a Telegram chat, create a card in
-\`box/output/\` with the \`.telegram-message.card\` extension.
+\`_bookkeeping/output/\` with the \`.telegram-message.card\` extension.
 
 ## Required frontmatter
 - \`chat-id:\` — The Telegram chat ID (negative for groups)

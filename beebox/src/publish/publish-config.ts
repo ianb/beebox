@@ -1,5 +1,5 @@
 /**
- * Persisted, NON-SECRET publish configuration — `config/publish.json` in the
+ * Persisted, NON-SECRET publish configuration — `_config/publish.json` in the
  * box (`docs/implemented-plans/pub-setup-wrangler.md`, amendment 3).
  *
  * The Access values (team-domain origin + application `aud`) are deploy vars,
@@ -16,6 +16,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 import { z } from "zod";
 
+import { getBoxDir } from "../lib/paths.js";
+
 /** Matches the Worker's expectation: a full team origin, no trailing slash. */
 export const TEAM_DOMAIN_PATTERN = /^https:\/\/[\da-z-]+\.cloudflareaccess\.com$/;
 
@@ -30,7 +32,7 @@ export type PublishConfig = z.infer<typeof publishConfigSchema>;
 
 /** The on-disk home: non-secret, committed with the box config. */
 function publishConfigPath(boxRoot: string): string {
-  return path.join(boxRoot, "config", "publish.json");
+  return path.join(getBoxDir(boxRoot, "config"), "publish.json");
 }
 
 /**

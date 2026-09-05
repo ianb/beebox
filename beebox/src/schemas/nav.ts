@@ -12,7 +12,7 @@
  *   entries:
  *     - { href: /questions }
  *     - { href: /chat, label: Recent }
- *     - { ref: /store/projects/Big_Refactor.project.card, label: The Refactor }
+ *     - { ref: /_content/projects/Big_Refactor.project.card, label: The Refactor }
  *   ---
  *
  * `href` entries point at builtin routes and are validated against the
@@ -73,7 +73,7 @@ Entries pointing at a destination the menu already reaches (\`/\`, \`/chat\`, \`
 entries:
   - { href: /questions }       # builtin routes, validated against the route set:
   - { href: /capture, label: Quick capture }   # ${hrefList}
-  - { ref: /store/projects/Big_Refactor.project.card, label: The Refactor }
+  - { ref: /_content/projects/Big_Refactor.project.card, label: The Refactor }
 \`\`\`
 
 - **\`href\`** — a builtin route. \`label\` defaults to the route's standard name.

@@ -6,7 +6,7 @@
  *
  * The adapter injects the provider's auth header server-side, reading the
  * key from the machine secret store under the adapter's own name (falling
- * back to the legacy `config/connectors/<adapter>.secret.json`). The
+ * back to the legacy `_config/connectors/<adapter>.secret.json`). The
  * key never reaches the browser, and providers that (correctly) refuse
  * CORS become callable from views. Adapters may grow other behaviors
  * (header shaping, path restrictions); v1 is auth + forwarding.
@@ -24,6 +24,7 @@ import { Readable } from "node:stream";
 import { errorMessage } from "../../lib/error-guards.js";
 import { refusalAllowsLegacyFallback } from "../../core/secrets/legacy-fallback.js";
 import { resolveSecret } from "../../core/secrets/resolve.js";
+import { getBoxDir } from "../../lib/paths.js";
 
 /** Adapters already warned about a stray legacy file, once per process each. */
 const warnedAboutLegacyAdapter = new Set<string>();
@@ -133,7 +134,7 @@ function singleHeader(request: FastifyRequest, name: string): string | undefined
  * The adapter's key: the machine store's entry of the SAME NAME as the adapter
  * (`mistral`, `openai`, `anthropic`, `replicate`) at `server` access — the key
  * never reaches the browser, so `server` is the right level — then the legacy
- * `config/connectors/<adapter>.secret.json` file it is migrating from
+ * `_config/connectors/<adapter>.secret.json` file it is migrating from
  * (`docs/plans/secret-custody.md`, Track 3).
  *
  * Store name == adapter name == legacy file basename, deliberately: these are
@@ -153,7 +154,7 @@ async function readAdapterKey(boxRoot: string, adapterName: string): Promise<str
   // other refusal is "not configured" (`core/secrets/legacy-fallback.ts`).
   if (!refusalAllowsLegacyFallback({ reader: `api-adapters/${adapterName}`, refusal: resolved.error })) return null;
 
-  const secretPath = path.join(boxRoot, "config", "connectors", `${adapterName}.secret.json`);
+  const secretPath = path.join(getBoxDir(boxRoot, "connectors"), `${adapterName}.secret.json`);
   let content: string;
   try {
     content = await fs.readFile(secretPath, "utf8");

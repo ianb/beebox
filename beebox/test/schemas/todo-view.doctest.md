@@ -32,7 +32,7 @@ getDefaultTemplate("todo-view").name
 
 ```ts
 const bare = "---\n{}\n---\n";
-const parsed = parseCardText(bare, { source: "store/plate.todo-view.card", schemas, type: "todo-view" });
+const parsed = parseCardText(bare, { source: "_content/plate.todo-view.card", schemas, type: "todo-view" });
 parsed.fields.glob
 => undefined
 ```
@@ -40,10 +40,10 @@ parsed.fields.glob
 ## `glob`/`status`/`assigned` all load when present
 
 ```ts
-const full = "---\nglob: \"store/projects/kitchen/**\"\nstatus:\n  - open\n  - parked\nassigned: agent\n---\n";
-const parsedFull = parseCardText(full, { source: "store/kitchen/plate.todo-view.card", schemas, type: "todo-view" });
+const full = "---\nglob: \"_content/projects/kitchen/**\"\nstatus:\n  - open\n  - parked\nassigned: agent\n---\n";
+const parsedFull = parseCardText(full, { source: "_content/kitchen/plate.todo-view.card", schemas, type: "todo-view" });
 parsedFull.fields.glob
-=> store/projects/kitchen/**
+=> _content/projects/kitchen/**
 
 JSON.stringify(parsedFull.fields.status)
 => ["open","parked"]
@@ -78,7 +78,7 @@ A card generated from the box-wide template round-trips through
 `parseCardText`:
 
 ```ts continue
-const parsedBoxWide = parseCardText(boxWide, { source: "store/plate.todo-view.card", schemas, type: "todo-view" });
+const parsedBoxWide = parseCardText(boxWide, { source: "_content/plate.todo-view.card", schemas, type: "todo-view" });
 parsedBoxWide.fields.glob
 => **
 ```

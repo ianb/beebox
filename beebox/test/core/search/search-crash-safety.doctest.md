@@ -44,7 +44,7 @@ Build an index over one card and snapshot the manifest that describes it.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/Dentist.memo.card", MEMO("The dentist appointment is on June 17."));
+await box.write("_content/inbox/Dentist.memo.card", MEMO("The dentist appointment is on June 17."));
 await openSearchIndex(box.root);
 const staleManifest = await readFile(searchManifestPath(box.root), "utf8");
 staleManifest.includes("Dentist.memo.card")
@@ -55,11 +55,11 @@ Edit that card and add another, then refresh so both the index and the manifest
 now reflect the new state.
 
 ```ts continue
-await box.write("box/inbox/Dentist.memo.card", MEMO("Rescheduled to an orthodontist on June 19."));
+await box.write("_content/inbox/Dentist.memo.card", MEMO("Rescheduled to an orthodontist on June 19."));
 await box.write("store/notes/Garden.memo.card", MEMO("Plant the tomatoes after the frost."));
 const fresh = await openSearchIndex(box.root);
 await find(fresh.db, "orthodontist")
-=> box/inbox/Dentist.memo.card
+=> _content/inbox/Dentist.memo.card
 
 await find(fresh.db, "tomatoes")
 => store/notes/Garden.memo.card
@@ -77,7 +77,7 @@ JSON.stringify(healed.warnings)
 => []
 
 await find(healed.db, "orthodontist")
-=> box/inbox/Dentist.memo.card
+=> _content/inbox/Dentist.memo.card
 
 await find(healed.db, "tomatoes")
 => store/notes/Garden.memo.card

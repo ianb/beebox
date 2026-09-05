@@ -65,18 +65,18 @@ export async function ensureAgentsMirror(claudePath: string): Promise<string | n
   return await ensureRelativeSymlink(agentsPath, claudePath) ? agentsPath : null;
 }
 
-async function mirrorClaudeDocs(packageRoot: string): Promise<string[]> {
+async function mirrorClaudeDocs(boxRoot: string): Promise<string[]> {
   const changed: string[] = [];
-  for (const claudePath of await findClaudeDocs(packageRoot)) {
+  for (const claudePath of await findClaudeDocs(boxRoot)) {
     const mirror = await ensureAgentsMirror(claudePath);
     if (mirror !== null) changed.push(mirror);
   }
   return changed;
 }
 
-async function mirrorSkills(packageRoot: string): Promise<string[]> {
-  const sourceDir = join(packageRoot, ".claude", "skills");
-  const targetDir = join(packageRoot, ".agents", "skills");
+async function mirrorSkills(boxRoot: string): Promise<string[]> {
+  const sourceDir = join(boxRoot, ".claude", "skills");
+  const targetDir = join(boxRoot, ".agents", "skills");
   await mkdir(targetDir, { recursive: true });
   let entries;
   try {
@@ -94,8 +94,8 @@ async function mirrorSkills(packageRoot: string): Promise<string[]> {
   return changed;
 }
 
-async function mirrorCodexHooks(packageRoot: string): Promise<string[]> {
-  const hooksPath = join(packageRoot, ".codex", "hooks.json");
+async function mirrorCodexHooks(boxRoot: string): Promise<string[]> {
+  const hooksPath = join(boxRoot, ".codex", "hooks.json");
   const description = "GENERATED from Bee Box's Codex plugin hooks; do not edit.";
   const content = `${JSON.stringify({
     description,
@@ -137,9 +137,9 @@ function ruleSkill(ruleName: string, rule: string): string {
   return `---\nname: beebox-rule-${ruleName}\ndescription: Apply Bee Box's ${ruleName} rules when working with ${selector}.\n---\n\nApplies to: ${selector}\n\n${body.trim()}\n`;
 }
 
-async function mirrorRules(packageRoot: string): Promise<string[]> {
-  const rulesDir = join(packageRoot, ".claude", "rules");
-  const skillsDir = join(packageRoot, ".agents", "skills");
+async function mirrorRules(boxRoot: string): Promise<string[]> {
+  const rulesDir = join(boxRoot, ".claude", "rules");
+  const skillsDir = join(boxRoot, ".agents", "skills");
   let files: string[];
   try {
     files = (await readdir(rulesDir)).filter((file) => file.endsWith(".md"));
@@ -158,7 +158,7 @@ async function mirrorRules(packageRoot: string): Promise<string[]> {
   }
   for (const file of files) {
     const ruleName = file.slice(0, -3);
-    const target = join(packageRoot, ".agents", "skills", `beebox-rule-${ruleName}`, "SKILL.md");
+    const target = join(boxRoot, ".agents", "skills", `beebox-rule-${ruleName}`, "SKILL.md");
     const content = ruleSkill(ruleName, await readFile(join(rulesDir, file), "utf8"));
     await mkdir(dirname(target), { recursive: true });
     let previous: string | undefined;
@@ -179,11 +179,11 @@ async function mirrorRules(packageRoot: string): Promise<string[]> {
  * skills because Codex plugins have no rules component.
  */
 export async function generateAgentContextMirrors(boxRoot: string): Promise<string[]> {
-  const { packageRoot } = await getBoxShape(boxRoot);
+  const shape = await getBoxShape(boxRoot);
   return [
-    ...await mirrorClaudeDocs(packageRoot),
-    ...await mirrorSkills(packageRoot),
-    ...await mirrorRules(packageRoot),
-    ...await mirrorCodexHooks(packageRoot),
+    ...await mirrorClaudeDocs(shape.boxRoot),
+    ...await mirrorSkills(shape.boxRoot),
+    ...await mirrorRules(shape.boxRoot),
+    ...await mirrorCodexHooks(shape.boxRoot),
   ];
 }

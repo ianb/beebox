@@ -2,7 +2,7 @@
  * Canonical ordered list of box data migrations.
  *
  * `bbx migrate` reads this and the per-box manifest at
- * `config/migrations.jsonl` to decide what to run. New migrations get
+ * `_config/migrations.jsonl` to decide what to run. New migrations get
  * appended to the array; never reorder or remove existing entries —
  * the `name` is the manifest key and reordering would change which
  * migrations a box thinks it has applied.
@@ -37,7 +37,7 @@ export interface ScriptMigration extends BaseMigration {
 
 /** An agent-applied migration that runs a procedure definition. */
 export interface ProcedureMigration extends BaseMigration {
-  /** Procedure definition name (resolved from config/procedures/). */
+  /** Procedure definition name (resolved from _config/procedures/). */
   readonly procedure: string;
 }
 
@@ -130,7 +130,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // nothing). *.document.card → *.pdf.card + inbound refs.
   { name: "document-to-pdf", script: "scripts/migrate/document-to-pdf.ts" },
   // Fold the legacy box-wide chat model pointer (.beebox/chat-model.json)
-  // into the box model policy (`agentModel` in config/box.json), which chat and
+  // into the box model policy (`agentModel` in _config/box.json), which chat and
   // the reactor both read. Configuration, not card data — like annex-config
   // above. See docs/implemented-plans/model-engine-policy.md.
   { name: "chat-model-to-box-config", script: "scripts/migrate/chat-model-to-box-config.ts" },
@@ -140,9 +140,20 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "record-measurements", script: "scripts/migrate/record-measurements.ts" },
   { name: "gitignore-2026-09",  script: "scripts/migrate/box-gitignore.ts" },
   { name: "hooks-2026-09",      script: "scripts/migrate/box-hooks.ts" },
+  // v2 -> v3 one-root layout conversion (docs/plans/one-root-box-layout.md,
+  // Track E). Unlike every entry above, this migrator runs against a box
+  // that ISN'T v3 yet — `bbx migrate`'s bootstrap path invokes it directly
+  // against a v2 box (see src/core/migrations/one-root-v2-probe.ts), not
+  // through the normal getBoxShape-gated flow. It moves the migrations
+  // manifest itself (content/config/migrations.jsonl -> _config/migrations.jsonl)
+  // as part of the conversion, then appends this entry to the RELOCATED
+  // manifest — so by the time this name is recorded as applied, the box is
+  // already v3 and every migration above it already ran (against v2 boxes,
+  // historically) or is a no-op for a fresh v3 box.
+  { name: "one-root", script: "scripts/migrate/one-root.ts" },
 ];
 
-export const MANIFEST_PATH = "config/migrations.jsonl";
+export const MANIFEST_PATH = "_config/migrations.jsonl";
 
 export interface ManifestEntry {
   readonly name: string;

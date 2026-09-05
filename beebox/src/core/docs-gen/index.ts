@@ -3,12 +3,12 @@
  *
  * Produces two categories of docs:
  * 1. `.beebox/agent-guide.md` — compact, always-loaded via @-include in CLAUDE.md
- * 2. `docs/generated/*.md` — detailed reference docs, read on demand by agents
+ * 2. `_content/docs/generated/*.md` — detailed reference docs, read on demand by agents
  *
  * Called by `bbx init` and at the start of `bbx reactor`.
  */
 
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { promisify } from "node:util";
@@ -35,6 +35,7 @@ import { generateRules } from "../init-rules.js";
 import { generateSkills } from "../box/skills.js";
 import { installValidationHooks } from "../install-validation-hooks.js";
 import { getBoxShape, type BoxShape } from "../../lib/box-shape.js";
+import { getBoxDir } from "../../lib/paths.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../lib/git.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./shared.js";
 import { generateBbxCommands } from "./bbx-commands.js";
@@ -197,16 +198,16 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
   };
 
   // Config-level inputs
-  await checkDir(join(boxRoot, "config"), /\.(guide|personality)\.card$/);
-  await checkDir(join(boxRoot, "config/procedures"), /\.procedure\.card$/);
-  await checkDir(join(boxRoot, "config/schemas"), /\.ts$/);
+  await checkDir(getBoxDir(boxRoot, "config"), /\.(guide|personality)\.card$/);
+  await checkDir(getBoxDir(boxRoot, "procedures"), /\.procedure\.card$/);
+  await checkDir(getBoxDir(boxRoot, "schemas"), /\.ts$/);
 
   // Briefing cards (root + any subdirectory)
-  await check(join(boxRoot, "briefing.briefing.card"));
+  await check(join(boxRoot, "_content", "briefing.briefing.card"));
 
   // Person cards — a `boxholder: true` flag feeds the compiled personality's
   // boxholder identity line, so editing one must invalidate the doc cache.
-  await checkDir(join(boxRoot, "people"), /\.person\.card$/);
+  await checkDir(getBoxDir(boxRoot, "people"), /\.person\.card$/);
 
   // Per-chat guide cards
   await checkChatGuideMtimes(boxRoot, check);
@@ -221,12 +222,12 @@ async function checkChatGuideMtimes(
   boxRoot: string,
   check: (filePath: string) => Promise<void>
 ): Promise<void> {
-  const chatRoot = join(boxRoot, "store/chat");
+  const chatRoot = getBoxDir(boxRoot, "chat");
   let connectors: string[];
   try {
     connectors = await readdir(chatRoot);
   } catch (_e) {
-    // No store/chat directory — box has no chats yet. Expected; nothing to report.
+    // No _content/chat directory — box has no chats yet. Expected; nothing to report.
     return;
   }
 
@@ -289,75 +290,34 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
 }
 
 /**
- * Normalize a path as `getStatus` reports it (relative to `packageRoot`,
- * since `commitTemplateSyncChanges` runs git there — see its doc comment)
- * into the box-root-relative convention `isTemplateManagedPath` matches
- * against (`install-template-file.ts`'s `relPath`: normally relative to
- * `boxRoot`, with a `../...` prefix for the handful of templates a v2 box
- * owns at the package root, e.g. `src/schemas/CLAUDE.md`).
- *
- * For a legacy box `packageRoot === boxRoot`, so `contentPrefix` is empty
- * and every path passes through unchanged — v1 behavior is bit-for-bit the
- * same as before this function existed. For a v2 box, strip the box's
- * content-dir prefix (`content/`, but read from the shape rather than
- * hardcoded) from paths inside it, and rewrite paths outside it — which can
- * only be one level up, at the package root itself, per the "v2
- * (package-layout) boxes" note in `install-template-file.ts` — as `../...`.
- * Without this, every v2 git-status path retained its `content/` (or
- * `../src/...`) prefix, `isTemplateManagedPath` matched nothing, and the
- * selective sync commit silently committed nothing.
- */
-function toBoxRelativePath(gitPath: string, shape: { packageRoot: string; boxRoot: string }): string {
-  const contentPrefix = relative(shape.packageRoot, shape.boxRoot);
-  if (contentPrefix === "") return gitPath;
-  const prefix = `${contentPrefix}/`;
-  if (gitPath.startsWith(prefix)) return gitPath.slice(prefix.length);
-  return `../${gitPath}`;
-}
-
-/**
  * Commit any template-managed paths the install/generateRules helpers
  * dirtied, leaving user work in progress (in other paths) alone.
  *
- * Runs at the REPO ROOT, not `boxRoot`. `getStatus`/`stageFiles`/`commitPaths`
- * all shell out to `git`, which reports and accepts pathspecs relative to
- * wherever it's invoked from — for a v2 box `boxRoot` (`content/`) is nested
- * one level under the actual repo root (the package root), so a path like
- * `.claude/settings.json` (which git status reports relative to the repo
- * root it found) would resolve to the wrong file (or nothing) if staged with
- * cwd=`boxRoot`. Legacy boxes are unaffected — their repo root IS `boxRoot`.
- * Found via `bbx upgrade`'s end-to-end smoke run: the `.claude/settings.json`
- * hook install landed here, staging fatally errored with "pathspec did not
- * match any files" before this fix.
+ * shapeVersion 3 has one root, so `boxRoot` IS the repo root and every
+ * git-status path `getStatus`/`stageFiles`/`commitPaths` report or accept is
+ * already box-root-relative — no prefix normalization needed.
  *
  * Exported (rather than only reachable through `generateDocs`) so doctests
- * can exercise the git-status normalization directly against a minimal
- * fixture, without also going through `installValidationHooks` + a real,
- * executable `.git/hooks/pre-commit` that shells out to a `bbx` binary — an
- * unrelated hazard in a repo-in-a-repo dev/test environment.
+ * can exercise the sync commit directly against a minimal fixture, without
+ * also going through `installValidationHooks` + a real, executable
+ * `.git/hooks/pre-commit` that shells out to a `bbx` binary — an unrelated
+ * hazard in a repo-in-a-repo dev/test environment.
  */
 export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
   const shape = await getBoxShape(boxRoot);
-  const { packageRoot } = shape;
-  if (!(await isRepo(packageRoot))) return;
-  if (!(await hasCommits(packageRoot))) return;
+  const { boxRoot: repoRoot } = shape;
+  if (!(await isRepo(repoRoot))) return;
+  if (!(await hasCommits(repoRoot))) return;
 
-  // Locked from the status read through the commit. Note the lock is taken on
-  // `packageRoot` while every other writer takes it on `boxRoot` (`content/`) —
-  // both resolve to the same git directory, so they are the same lock.
-  await withBoxGitLock(packageRoot, async () => {
-    const status = await getStatus(packageRoot);
+  await withBoxGitLock(repoRoot, async () => {
+    const status = await getStatus(repoRoot);
     const candidates = [...status.staged, ...status.modified, ...status.untracked];
-    // Filter against the box-root-relative form (what isTemplateManagedPath's
-    // patterns are written against), but keep the original git-reported paths
-    // in `toCommit` — stageFiles/commitPaths run with cwd=packageRoot, so they
-    // need the packageRoot-relative form git itself understands.
-    const toCommit = candidates.filter((p) => isTemplateManagedPath(toBoxRelativePath(p, shape)));
+    const toCommit = candidates.filter((p) => isTemplateManagedPath(p));
     if (toCommit.length === 0) return;
 
     // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
-    await stageFiles(packageRoot, toCommit);
-    await commitPaths(packageRoot, {
+    await stageFiles(repoRoot, toCommit);
+    await commitPaths(repoRoot, {
       paths: toCommit,
       message: "Sync templates from upstream",
       trailers: { "Triggered-By": "generateDocs" },
@@ -474,7 +434,7 @@ async function writeCardDocs(params: {
 export async function generateDocs(boxRoot: string, options?: GenerateDocsOptions): Promise<void> {
   options = options ?? {};
   // TEMPORARY — diagnose unexpected writes to the beebox source repo
-  // (`.beebox/` and `docs/generated/` showing up here as untracked).
+  // (`.beebox/` and `_content/docs/generated/` showing up here as untracked).
   // Remove once the caller is identified.
   if (boxRoot.endsWith("/callback/beebox") || boxRoot.endsWith("/src/callback/beebox")) {
     console.warn(`[generateDocs:DIAG] called with boxRoot=${boxRoot}`);

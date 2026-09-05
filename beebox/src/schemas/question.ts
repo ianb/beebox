@@ -239,7 +239,7 @@ A question card asks the user something and routes the answer back for processin
   - \`answered\` — the boxholder responded; terminal — an answered question does not accept a fresh answer.
   - \`dismissed\` — the boxholder declined to answer. Still answerable later.
   - \`expired\` — aged out of the active view by the aging sweep, without an answer. Still answerable later — expiry demotes visibility, it does not close the question.
-  Before asking something new, check \`box/questions/\` including answered/dismissed/expired cards: an existing answer is a \`user-stated\` fact, and a dismissal or expiry is a signal the boxholder didn't care to answer that.
+  Before asking something new, check \`_bookkeeping/questions/\` including answered/dismissed/expired cards: an existing answer is a \`user-stated\` fact, and a dismissal or expiry is a signal the boxholder didn't care to answer that.
 - \`memo:\` — context explaining WHY you're asking, so the user can answer without looking anything up.
 - \`prompt:\` — the actual question.
 - \`input:\` — \`{type: select|text|confirm, options?: [{id, label}]}\`. \`select\` requires at least two options. \`confirm\` and \`text\` must NOT carry options.

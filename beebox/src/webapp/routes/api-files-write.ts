@@ -26,6 +26,7 @@ import {
   attachDirOwnerBasename,
   isInsideAttachScope,
 } from "../../shared/attach-path.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 
 interface RegisterApiFilesWriteRoutesOptions {
   server: FastifyInstance;
@@ -45,23 +46,31 @@ interface CommitBody {
 export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutesOptions): void {
   const { server, boxRoot, eventBus } = options;
 
-  const guard = (reqPath: string): { resolved: string } | { error: string; status: number } => {
-    const root = path.resolve(boxRoot);
-    const resolved = path.resolve(path.join(boxRoot, reqPath));
-    // Reject escapes, including sibling dirs a bare startsWith would allow.
-    if (resolved !== root && !resolved.startsWith(root + path.sep)) {
-      return { error: "Access denied", status: 403 };
-    }
+  const guard = async (
+    reqPath: string
+  ): Promise<{ resolved: string; relativePath: string } | { error: string; status: number }> => {
     if (reqPath === "") {
       return { error: "File path required", status: 400 };
     }
+    // Box containment + namespace fence, checked on the RESOLVED path: writes
+    // land only inside an underscore area — never `src/`, `node_modules/`,
+    // `.git/`, or any other root entry, and a traversal form like
+    // `_content/../package.json` can't hide behind its raw-string prefix
+    // (`docs/plans/one-root-box-layout.md` Track B). Also checked on the DISK:
+    // a symlinked directory or leaf partway down the path can't walk the
+    // fence into the package internals either (one-root layout).
+    const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
+    if (ns === null) {
+      return { error: "Access denied", status: 403 };
+    }
+    const { resolved, relativePath } = ns;
     if (resolved.endsWith(".card")) {
       return { error: "Card writes go through the card API or bbx create (cards validate)", status: 403 };
     }
     if (path.basename(resolved).startsWith(".")) {
       return { error: "Dotfiles are not writable through this endpoint", status: 403 };
     }
-    return { resolved };
+    return { resolved, relativePath };
   };
 
   const writeHandler = (append: boolean) =>
@@ -74,7 +83,7 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
       reply: { status: (code: number) => { send: (body: unknown) => unknown } }
     ) => {
       const reqPath = boxRelativePath(request.params["*"] || "");
-      const guarded = guard(reqPath);
+      const guarded = await guard(reqPath);
       if ("error" in guarded) {
         return reply.status(guarded.status).send({ error: guarded.error });
       }
@@ -82,8 +91,8 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
       if (typeof body.content !== "string") {
         return reply.status(400).send({ error: 'Body must be {"content": "<text>"}' });
       }
-      const { resolved } = guarded;
-      const current = await statMeta(resolved, reqPath);
+      const { resolved, relativePath } = guarded;
+      const current = await statMeta(resolved, relativePath);
 
       // Mid-air collision detection. If-Match: the write asserts the version
       // it read; a mismatch (or a vanished file) is a 412 carrying the
@@ -110,10 +119,10 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
       const stat = await fs.stat(resolved);
       eventBus.emitTransient("file-change", {
         event: current !== null ? "change" : "add",
-        path: reqPath,
+        path: relativePath,
         timestamp: new Date().toISOString(),
       });
-      const file = { path: reqPath, size: stat.size, mtimeMs: stat.mtimeMs, etag: fileEtag(stat) };
+      const file = { path: relativePath, size: stat.size, mtimeMs: stat.mtimeMs, etag: fileEtag(stat) };
       return reply.status(current !== null ? 200 : 201).send({ ok: true, file });
     };
 
@@ -130,14 +139,13 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
     if (reqPath === "" || message === "") {
       return reply.status(400).send({ error: 'Body must be {"path": "...", "message": "..."}' });
     }
-    const root = path.resolve(boxRoot);
-    const guardResolved = path.resolve(path.join(boxRoot, reqPath));
-    // Reject escapes, including sibling dirs a bare startsWith would allow.
-    if (guardResolved !== root && !guardResolved.startsWith(root + path.sep)) {
+    const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
+    if (ns === null) {
       return reply.status(403).send({ error: "Access denied" });
     }
+    const { relativePath } = ns;
 
-    const paths = await commitScopeFor(boxRoot, reqPath);
+    const paths = await commitScopeFor(boxRoot, relativePath);
     if (!(await pathsHaveChanges(boxRoot, paths))) {
       return { ok: true, committed: false, paths };
     }

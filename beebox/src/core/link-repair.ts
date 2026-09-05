@@ -27,7 +27,7 @@ const INDEX_IGNORE = [
   "**/.pnpm/**",
   "**/.claude/**",
   "**/.beebox/**",
-  "docs/generated/**",
+  "_content/docs/generated/**",
 ];
 
 export type RepairStatus = "fixed" | "ambiguous" | "unresolvable";

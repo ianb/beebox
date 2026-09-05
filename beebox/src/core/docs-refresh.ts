@@ -60,11 +60,11 @@ async function readMarker(boxRoot: string): Promise<string | null> {
 }
 
 /** Commit anything the refresh left in the tree, if it left anything. */
-async function commitRefreshResidue(packageRoot: string): Promise<void> {
-  const status = await getStatus(packageRoot);
+async function commitRefreshResidue(boxRoot: string): Promise<void> {
+  const status = await getStatus(boxRoot);
   if (status.clean) return;
-  await stageAll(packageRoot);
-  await commit(packageRoot, {
+  await stageAll(boxRoot);
+  await commit(boxRoot, {
     message: "Refresh generated docs",
     trailers: { "Created-By": "docs-refresh" },
   });
@@ -76,13 +76,13 @@ async function commitRefreshResidue(packageRoot: string): Promise<void> {
  */
 export async function refreshGeneratedDocs(opts: { boxRoot: string }): Promise<DocsRefreshResult> {
   const { boxRoot } = opts;
-  // The lock is taken on `packageRoot` — the same path (and so the same lock)
+  // The lock is taken on `boxRoot` — the same path (and so the same lock)
   // `commitTemplateSyncChanges` takes deeper in, which is what makes that
   // nested acquisition a pass-through rather than a 60s stall. It covers the
   // clean check through the commit as one unit, exactly as the sweep does.
-  const { packageRoot } = await getBoxShape(boxRoot);
-  return withBoxGitLock(packageRoot, async () => {
-    const status = await getStatus(packageRoot);
+  const shape = await getBoxShape(boxRoot);
+  return withBoxGitLock(shape.boxRoot, async () => {
+    const status = await getStatus(shape.boxRoot);
     if (!status.clean) return { status: "skipped-dirty" };
 
     const before = await readMarker(boxRoot);
@@ -102,7 +102,7 @@ export async function refreshGeneratedDocs(opts: { boxRoot: string }): Promise<D
     // cooperative caveat as the migration sweep applies — a box agent shelling
     // out to raw git is outside the lock — which is why the deploy runs this in
     // the at-rest window.
-    await commitRefreshResidue(packageRoot);
+    await commitRefreshResidue(shape.boxRoot);
     const after = await readMarker(boxRoot);
     // generateDocs rewrites the marker (timestamp + engine version) on every
     // run it does not skip, so an unchanged marker means the cache hit.

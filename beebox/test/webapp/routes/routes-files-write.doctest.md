@@ -17,14 +17,14 @@ import { getStatus } from "../../../src/lib/git.js";
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "PUT",
-  url: "/api/files/store/playground/Playground.attach/sessions/history.jsonl",
+  url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
   payload: { content: '{"summary":"first"}\n' },
 });
 res.statusCode
 => 201
 
 res.body.file.path
-=> store/playground/Playground.attach/sessions/history.jsonl
+=> _content/playground/Playground.attach/sessions/history.jsonl
 
 res.body.file.size
 => 20
@@ -38,7 +38,7 @@ typeof res.body.file.etag
 ```ts continue
 const appended = await ctx.request({
   method: "POST",
-  url: "/api/files/store/playground/Playground.attach/sessions/history.jsonl",
+  url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
   payload: { content: '{"summary":"second"}\n' },
 });
 appended.statusCode
@@ -56,7 +56,7 @@ appended.body.file.etag !== res.body.file.etag
 ```ts continue
 const stale = await ctx.request({
   method: "PUT",
-  url: "/api/files/store/playground/Playground.attach/sessions/history.jsonl",
+  url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
   payload: { content: "clobber" },
   headers: { "if-match": res.body.file.etag },
 });
@@ -71,7 +71,7 @@ stale.body.current.etag === appended.body.file.etag
 
 const fresh = await ctx.request({
   method: "PUT",
-  url: "/api/files/store/playground/Playground.attach/sessions/history.jsonl",
+  url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
   payload: { content: "rewritten\n" },
   headers: { "if-match": appended.body.file.etag },
 });
@@ -84,7 +84,7 @@ fresh.statusCode
 ```ts continue
 const createOnly = await ctx.request({
   method: "PUT",
-  url: "/api/files/store/playground/Playground.attach/sessions/history.jsonl",
+  url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
   payload: { content: "x" },
   headers: { "if-none-match": "*" },
 });
@@ -98,25 +98,34 @@ createOnly.body.error
 ## Cards and escapes are rejected
 
 ```ts continue
-(await ctx.request({ method: "PUT", url: "/api/files/store/notes/A.memo.card", payload: { content: "x" } })).statusCode
+(await ctx.request({ method: "PUT", url: "/api/files/_content/notes/A.memo.card", payload: { content: "x" } })).statusCode
 => 403
 
 // Fastify resolves dot-segments before routing, so a traversal never even
 // reaches the handler (404); the handler's own resolve-guard (403) backstops
 // any encoded form that slips through routing.
-(await ctx.request({ method: "PUT", url: "/api/files/store/../../outside.txt", payload: { content: "x" } })).statusCode
+(await ctx.request({ method: "PUT", url: "/api/files/_content/../../outside.txt", payload: { content: "x" } })).statusCode
 => 404
+```
+
+A path outside the underscore areas — `src/`, `node_modules/`, or any other
+root entry — is rejected too, even though it stays inside the box (Track B's
+namespace fence):
+
+```ts continue
+(await ctx.request({ method: "PUT", url: "/api/files/src/tricks/scripts/x.ts", payload: { content: "x" } })).statusCode
+=> 403
 ```
 
 ## files-commit sweeps the file's card + attach scope, nothing else
 
 ```ts continue
-await ctx.seed("store/playground/Playground.doc.card", "---\ntitle: Playground\n---\nbody\n");
-await ctx.seed("store/notes/unrelated.md", "left dirty on purpose\n");
+await ctx.seed("_content/playground/Playground.doc.card", "---\ntitle: Playground\n---\nbody\n");
+await ctx.seed("_content/notes/unrelated.md", "left dirty on purpose\n");
 const commit = await ctx.request({
   method: "POST",
   url: "/api/files-commit",
-  payload: { path: "store/playground/Playground.attach/sessions/history.jsonl", message: "Save session history" },
+  payload: { path: "_content/playground/Playground.attach/sessions/history.jsonl", message: "Save session history" },
 });
 commit.statusCode
 => 200
@@ -125,7 +134,7 @@ commit.body.committed
 => true
 
 commit.body.paths.join(", ")
-=> store/playground/Playground.doc.card, store/playground/Playground.attach
+=> _content/playground/Playground.doc.card, _content/playground/Playground.attach
 
 const status = await getStatus(ctx.boxRoot);
 status.untracked.some((p) => p.includes("unrelated"))
@@ -141,7 +150,7 @@ Committing again with nothing changed is a no-op:
 const again = await ctx.request({
   method: "POST",
   url: "/api/files-commit",
-  payload: { path: "store/playground/Playground.attach/sessions/history.jsonl", message: "noop" },
+  payload: { path: "_content/playground/Playground.attach/sessions/history.jsonl", message: "noop" },
 });
 again.body.committed
 => false
@@ -153,16 +162,16 @@ again.body.committed
 await ctx.seedView("pg.tsx", `
 export const name = "PG";
 export const description = "pg";
-export const dependencies = ["store/playground/**/*.jsonl", "store/notes/**/*.md"];
+export const dependencies = ["_content/playground/**/*.jsonl", "_content/notes/**/*.md"];
 export const modes = ["page"];
 export default function PG() { return null; }
 `);
 const data = await ctx.request({ method: "GET", url: "/api/views/pg/cards" });
 const byPath = Object.fromEntries(data.body.files.map((f) => [f.path, f.gitStatus]));
-byPath["store/notes/unrelated.md"]
+byPath["_content/notes/unrelated.md"]
 => untracked
 
-JSON.stringify(byPath["store/playground/Playground.attach/sessions/history.jsonl"])
+JSON.stringify(byPath["_content/playground/Playground.attach/sessions/history.jsonl"])
 => undefined
 ```
 

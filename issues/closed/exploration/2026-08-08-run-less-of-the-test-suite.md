@@ -104,7 +104,7 @@ shipped, not as a failing test. Worth surveying before designing:
   concentrated in a handful of route files, in which case targeted fixes to
   those could beat a selection system entirely.
 
-Related: [flaky login-redirect doctest](../../bugs/2026-07-29-flaky-login-redirect-doctest.md)
+Related: [flaky login-redirect doctest](../bugs/2026-07-29-flaky-login-redirect-doctest.md)
 (parallel-load flakes are the same contention this would reduce).
 
 ## Research (2026-08-08)

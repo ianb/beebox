@@ -43,7 +43,7 @@ export default cardSchema("my-type", {
   instructions: \\\`# My Type Cards
 
 Instructions for the agent on how to handle this card type.
-These appear in .claude/rules/ and docs/generated/, and are loaded
+These appear in .claude/rules/ and _content/docs/generated/, and are loaded
 when the agent reads or edits a matching card file.\\\`,
 });
 \`\`\`
@@ -158,7 +158,7 @@ bbx init .
 
 This regenerates, from each schema's \`instructions\`:
 - \`.claude/rules/card-<type>.md\` (auto-loaded when you edit a matching card)
-- \`docs/generated/card-<type>.md\`
+- \`_content/docs/generated/card-<type>.md\`
 and registers any \`template\` exports for \`bbx create\`. Run it after you add or
 change a schema's \`instructions\` so the guidance an agent reads stays current. It
 does not touch the running server's schema registration (a fresh \`bbx\` process
@@ -248,7 +248,7 @@ const boxRoot = process.env.BBX_BOX_ROOT!;
 const trickName = process.env.BBX_TRICK_NAME!;
 const args = process.argv.slice(2);
 
-const inboxDir = path.join(boxRoot, "box/inbox");
+const inboxDir = path.join(boxRoot, "_content/inbox");
 console.log("Done!");
 \`\`\`
 
@@ -301,7 +301,7 @@ const VIEWS_CLAUDE_MD = `# Views Directory
 
 This directory contains agent-generated React components (.tsx files) that render in the browser. **Every view is attached to a card type** via \`rendersCardTypes\` — it becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less standalone view.
 
-**IMPORTANT: Read \`docs/generated/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
+**IMPORTANT: Read \`_content/docs/generated/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
 
 ## Quick Reference
 
@@ -316,18 +316,18 @@ Each view must export:
 React is provided automatically — do not import it.
 
 To link or embed another card, import \`CardLink\`/\`CardRef\` from
-\`beebox/view-widgets\` (point at cards with \`cardRef="/store/…"\`, not a
+\`beebox/view-widgets\` (point at cards with \`cardRef="/_content/…"\`, not a
 hand-rolled \`<a>\`) — see the "Card-aware widgets" section in the doc.
 
 After writing or changing a view, render-test it: \`bbx view test <slug>\` (loads
 the real cards, renders once, prints the output or a source-mapped error).
 
-Full documentation: \`docs/generated/views.md\`
+Full documentation: \`_content/docs/generated/views.md\`
 `;
 
 /**
  * Install tricks scaffold files (package.json, CLAUDE.md) if they don't
- * exist. A box's tricks live at `packageRoot/src/tricks/` (`boxCodePaths`
+ * exist. A box's tricks live at `boxRoot/src/tricks/` (`boxCodePaths`
  * resolves it).
  */
 /** Write `content` to `filePath` only if nothing is there yet (ENOENT is the
@@ -353,7 +353,7 @@ export async function installTricksFiles(boxRoot: string): Promise<void> {
   // without clobbering a customized copy.
   await installTemplateFile({
     boxRoot,
-    relPath: "../src/tricks/scripts/CLAUDE.md",
+    relPath: "src/tricks/scripts/CLAUDE.md",
     templateContent: TRICKS_CLAUDE_MD_V2,
     priorStockHashes: TEMPLATE_STOCK_HASHES["tricks-guide-v2"].superseded,
   });
@@ -372,36 +372,33 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
   relPath: string;
   content: string;
 }> = [
-  // The file lives one level up at the package root (`src/...`), reached via a
-  // `../`-prefixed relPath (see the "v2 (package-layout) boxes" note in
-  // install-template-file.ts). Separate ledger entries so a future divergence
-  // in any one guide never has to be threaded through a shared entry.
-  { name: "schemas-guide-v2", relPath: "../src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
-  { name: "views-guide-v2", relPath: "../src/views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
-  { name: "tricks-guide-v2", relPath: "../src/tricks/scripts/CLAUDE.md", content: TRICKS_CLAUDE_MD_V2 },
-  // The root briefing seed. Unlike the guides it lives in `src/schemas/`
+  // Under `src/` at the (one) box root. Separate ledger entries so a future
+  // divergence in any one guide never has to be threaded through a shared
+  // entry.
+  { name: "schemas-guide-v2", relPath: "src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
+  { name: "views-guide-v2", relPath: "src/views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+  { name: "tricks-guide-v2", relPath: "src/tricks/scripts/CLAUDE.md", content: TRICKS_CLAUDE_MD_V2 },
+  // The root briefing seed. Unlike the guides it lives under `_content/`
   // (it's a card template, `createBriefingTemplate`), but it has the same
   // rollout problem: when the stock openers change, a box still carrying the
   // untouched previous seed must take the update rather than park it.
-  { name: "briefing-seed", relPath: "briefing.briefing.card", content: createBriefingTemplate() },
+  { name: "briefing-seed", relPath: "_content/briefing.briefing.card", content: createBriefingTemplate() },
 ];
 
 /**
  * Install (or refresh) the box-local schemas guide.
  *
  * Goes through the template tracker: refreshed when unmodified, parked under
- * `config/_template-updates/` when the boxholder has customized it (prior
+ * `_config/_template-updates/` when the boxholder has customized it (prior
  * stock hashes come from the ledger so a box on any shipped version overwrites
- * cleanly). The copy lives at the package root (`src/schemas/CLAUDE.md`),
- * reached via the `../`-prefixed relPath convention (see
- * install-template-file.ts) — tracker coverage from a fresh `bbx init` is what
- * lets `bbx upgrade` (Track E) roll out guide updates later without clobbering a
- * customized copy.
+ * cleanly). The copy lives at `src/schemas/CLAUDE.md` — tracker coverage from
+ * a fresh `bbx init` is what lets `bbx upgrade` (Track E) roll out guide
+ * updates later without clobbering a customized copy.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {
   await installTemplateFile({
     boxRoot,
-    relPath: "../src/schemas/CLAUDE.md",
+    relPath: "src/schemas/CLAUDE.md",
     templateContent: SCHEMAS_CLAUDE_MD_V2,
     priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide-v2"].superseded,
   });
@@ -415,7 +412,7 @@ export async function installSchemasGuide(boxRoot: string): Promise<void> {
 export async function installViewsGuide(boxRoot: string): Promise<void> {
   await installTemplateFile({
     boxRoot,
-    relPath: "../src/views/CLAUDE.md",
+    relPath: "src/views/CLAUDE.md",
     templateContent: VIEWS_CLAUDE_MD,
     priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide-v2"].superseded,
   });

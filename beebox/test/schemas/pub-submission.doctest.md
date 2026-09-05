@@ -1,6 +1,6 @@
 # Pub-submission card schema
 
-`pub-submission` cards (`box/inbox/Submission-<id>.pub-submission.card`) carry a
+`pub-submission` cards (`_content/inbox/Submission-<id>.pub-submission.card`) carry a
 form submission pulled from a published page's drop box. The content is
 **untrusted external input** — the schema `instructions` say so in the strongest
 terms, and the connector (`connectors/publish-submissions.ts`) lands these cards.
@@ -49,7 +49,7 @@ const card = createPubSubmissionCard({
   country: "US",
   fields: { name: "Ada", message: "Loved the build journal!" },
 });
-const parsed = parseCardText(card, { source: "box/inbox/Submission-x.pub-submission.card", schemas });
+const parsed = parseCardText(card, { source: "_content/inbox/Submission-x.pub-submission.card", schemas });
 parsed.fields["pub-id"]
 => abc123secretpubid00000000z
 
@@ -83,7 +83,7 @@ const card = createPubSubmissionCard({
   country: null,
   fields: { feedback: "hi" },
 });
-const parsed = parseCardText(card, { source: "box/inbox/Submission-y.pub-submission.card", schemas });
+const parsed = parseCardText(card, { source: "_content/inbox/Submission-y.pub-submission.card", schemas });
 JSON.stringify([parsed.fields.viewer, parsed.fields.country])
 => [null,null]
 ```

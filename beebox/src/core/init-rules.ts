@@ -9,7 +9,7 @@
  * rules.
  */
 
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
 import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
 import { getBoxShape } from "../lib/box-shape.js";
@@ -30,7 +30,7 @@ export interface ConnectorRule {
 export const connectorRules: ConnectorRule[] = [
   {
     name: "connector-calendar",
-    paths: ["store/calendar/**/*.ics"],
+    paths: ["_content/calendar/**/*.ics"],
     instructions: `# Calendar Event Files (.ics)
 
 These are Google Calendar events synced via \`bbx wakeup\`. Each file is a single VEVENT in iCalendar format.
@@ -63,25 +63,15 @@ Use \`bbx calendar today\`, \`bbx calendar upcoming\`, or \`bbx calendar <timesp
 /**
  * Generate rules files from schema instructions and connector rules.
  *
- * `.claude/` lives at the box's package root (which equals `boxRoot` for a
- * legacy box) — see "Where Claude Code runs" in
+ * `.claude/` lives at the box root — see "Where Claude Code runs" in
  * `docs/implemented-plans/boxes-as-packages-v2.md`.
  *
  * Called by `syncTemplatesFromSource`, inside `generateDocs`.
  */
 export async function generateRules(boxRoot: string): Promise<string[]> {
   const shape = await getBoxShape(boxRoot);
-  const { packageRoot } = shape;
-  const rulesDir = join(packageRoot, ".claude", "rules");
+  const rulesDir = join(shape.boxRoot, ".claude", "rules");
   await mkdir(rulesDir, { recursive: true });
-
-  // "" for a legacy box (packageRoot === boxRoot); "content" for a v2 box.
-  // Card rule globs already start with `**/`, which matches at any depth
-  // regardless of shape — but the connector rules below are box-root
-  // anchored (e.g. `store/calendar/**/*.ics`), so they need this prefix or
-  // they'd never match a real file once `.claude/rules` moves to the
-  // package root and the box's own files are a level deeper, under `content/`.
-  const boxPrefix = relative(shape.packageRoot, shape.boxRoot);
 
   // Clean up old generated rules (card-* and connector-*)
   try {
@@ -131,13 +121,10 @@ ${instructions.trim()}
   }
 
   // Connector rules for non-card files. Their paths are box-root anchored
-  // (not `**/`-prefixed), so they need the box-relative-to-package prefix.
+  // (not `**/`-prefixed).
   for (const rule of connectorRules) {
     const filename = `${rule.name}.md`;
-    const pathsYaml = rule.paths
-      .map((p) => (boxPrefix === "" ? p : `${boxPrefix}/${p}`))
-      .map((p) => `  - "${p}"`)
-      .join("\n");
+    const pathsYaml = rule.paths.map((p) => `  - "${p}"`).join("\n");
     const content = `---
 paths:
 ${pathsYaml}

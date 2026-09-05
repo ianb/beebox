@@ -95,7 +95,7 @@ async function runPreActions(ctx: FieldRunContext, item: FieldChecklistItem): Pr
             emailsDir: ctx.scenario.emailsDir,
             fixture: action.fixture,
             statePath: ctx.fakeGmailStatePath,
-            packageRoot: ctx.box.packageRoot,
+            boxRoot: ctx.box.boxRoot,
             env: ctx.childEnv(),
             now: ctx.boxTime(),
           });
@@ -244,7 +244,6 @@ export async function runChecklistItem(options: RunChecklistItemOptions): Promis
   let cleanup: CleanupResult;
   try {
     const outcome = await applyCleanup({
-      packageRoot: ctx.box.packageRoot,
       boxRoot: ctx.box.boxRoot,
       policy: item.cleanup,
       tag,

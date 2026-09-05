@@ -21,13 +21,13 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 async function makeViewBox() {
   const box = await makeTmpBox({ deps: true });
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
-  await symlink(join(reactNodeModules, "react"), join(box.packageRoot, "node_modules", "react"), "dir");
+  await symlink(join(reactNodeModules, "react"), join(box.root, "node_modules", "react"), "dir");
   return box;
 }
 
-// Views live at the package root (`<packageRoot>/src/views`) for a v2 box.
+// Views live at `<boxRoot>/src/views`.
 async function writeView(box, rel, content) {
-  const full = join(box.packageRoot, "src", "views", rel);
+  const full = join(box.root, "src", "views", rel);
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, content);
 }
@@ -58,11 +58,11 @@ A view that renders off its `cards` prop produces HTML and exits 0:
 
 ```ts
 const box = await makeViewBox();
-await box.write("box/inbox/A.memo.card", MEMO_CARD);
-await box.write("box/inbox/B.memo.card", MEMO_CARD);
+await box.write("_content/inbox/A.memo.card", MEMO_CARD);
+await box.write("_content/inbox/B.memo.card", MEMO_CARD);
 await writeView(box, "count.tsx", `
 export const name = "Count";
-export const dependencies = ["box/**/*.card"];
+export const dependencies = ["_content/**/*.card"];
 export const modes = ["page"];
 export default function Count({ cards }) {
   return <div>{"cards: " + cards.length}</div>;
@@ -193,8 +193,8 @@ export const name = "Early";
 export const dependencies = [];
 export const modes = ["page"];
 export default function Early({ readFile, fileUrl }) {
-  readFile("box/x.txt");
-  return <img src={fileUrl("box/y.png")} />;
+  readFile("_content/x.txt");
+  return <img src={fileUrl("_content/y.png")} />;
 }
 `);
 
@@ -239,14 +239,14 @@ the command warns (but still renders):
 const box = await makeViewBox();
 await writeView(box, "page.tsx", `
 export const name = "Page";
-export const dependencies = ["store/**/*.card"];
+export const dependencies = ["_content/**/*.card"];
 export const modes = ["page"];
 export default function Page({ params, viewHistory }) {
   return <div>{"path: " + (params.path || "none") + "; canPush: " + viewHistory.canPush}</div>;
 }
 `);
 
-const r = await runViewTest(box.root, ["page", "--path", "box/inbox/Nope.memo.card"]);
+const r = await runViewTest(box.root, ["page", "--path", "_content/inbox/Nope.memo.card"]);
 r.code
 => 0
 ```
@@ -255,7 +255,7 @@ r.code
 r.stderr.includes("is not among")
 => true
 
-r.stdout.includes("path: box/inbox/Nope.memo.card")
+r.stdout.includes("path: _content/inbox/Nope.memo.card")
 => true
 
 r.stdout.includes("canPush: false")
@@ -273,10 +273,10 @@ reports it, and exits non-zero unless `--allow-invalid-cards`:
 
 ```ts
 const box = await makeViewBox();
-await box.write("box/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema\n");
+await box.write("_content/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema\n");
 await writeView(box, "list.tsx", `
 export const name = "List";
-export const dependencies = ["box/**/*.card"];
+export const dependencies = ["_content/**/*.card"];
 export const modes = ["page"];
 export default function List({ cards }) { return <div>n: {cards.length}</div>; }
 `);

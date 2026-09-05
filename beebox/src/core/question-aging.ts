@@ -150,7 +150,7 @@ function emitQuestionExpired(boxRoot: string, relativePath: string): void {
 /**
  * Age every pending question: nudge once at the halfway/default threshold,
  * expire past the full window. Never synthesizes an answer — expiry only
- * demotes visibility (the card stays in `box/questions/`, still answerable).
+ * demotes visibility (the card stays in `_bookkeeping/questions/`, still answerable).
  * Time comes from `getBoxTime` (BBX_TIME-honoring), never `new Date()`
  * directly, so this is doctestable with frozen time.
  */

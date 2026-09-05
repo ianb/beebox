@@ -8,7 +8,6 @@ import type { AgentResult } from "./types.js";
 import { ensureCodexPluginInstalled } from "./ensure-codex-plugin.js";
 import { checkCodexAuth } from "./auth-preflight.js";
 import { expandClaudeIncludes } from "../agent-context-includes.js";
-import { getBoxShape } from "../../lib/box-shape.js";
 import { validateHookPathsResult } from "../../cli/commands/validate-hook.js";
 import { codexRunErrorText, resultFromCodexTurn } from "./codex-run-result.js";
 import { applyEngineUnavailability } from "./engine-unavailability-apply.js";
@@ -61,10 +60,9 @@ export async function runCodexAgent(
     await checkCodexAuth();
     await ensureCodexPluginInstalled();
     const tzContext = options.resumeSessionId === undefined ? await buildTimezoneContext(options.boxRoot) : "";
-    const { packageRoot } = await getBoxShape(options.boxRoot);
     const includedContext = await expandClaudeIncludes({
       claudePath: join(options.boxRoot, "CLAUDE.md"),
-      packageRoot,
+      boxRoot: options.boxRoot,
     });
     if (options.maxBudgetUsd !== undefined) {
       options.onOutput?.(

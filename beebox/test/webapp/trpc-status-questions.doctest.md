@@ -1,6 +1,6 @@
 # tRPC `status.questions` — malformed cards stay visible
 
-`status.questions` parses each card in `box/questions/` against
+`status.questions` parses each card in `_bookkeeping/questions/` against
 `QuestionSchema` to attach the typed fields (`prompt`, `input`, `answer`,
 …) on top of the lightweight `CardInfo` the state scan already found. A
 card that fails that parse (bad frontmatter, a lifecycle-coherence
@@ -17,10 +17,10 @@ function contextFor(box) {
   return statusRouter.createCaller(ctx);
 }
 
-// makeTmpBox writes a shapeVersion-2 marker with no version/created;
+// makeTmpBox writes a shapeVersion-3 marker with no version/created;
 // status.questions calls getSystemState → getBoxMetadata, which parses those,
-// so seed a marker carrying both (keeping shapeVersion 2 for getBoxShape).
-const MARKER = JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
+// so seed a marker carrying both (keeping shapeVersion 3 for getBoxShape).
+const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
 
 const VALID = `---
 status: pending
@@ -45,8 +45,8 @@ input:
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.seed(".beebox/box.json", MARKER);
-await box.write("box/questions/Receipt.question.card", VALID);
-await box.write("box/questions/Broken.question.card", MALFORMED);
+await box.write("_bookkeeping/questions/Receipt.question.card", VALID);
+await box.write("_bookkeeping/questions/Broken.question.card", MALFORMED);
 
 const caller = contextFor(box);
 const { items } = await caller.questions();
@@ -75,7 +75,7 @@ resolved:
 
 ```ts continue
 broken.relativePath
-=> box/questions/Broken.question.card
+=> _bookkeeping/questions/Broken.question.card
 ```
 
 ```ts cleanup

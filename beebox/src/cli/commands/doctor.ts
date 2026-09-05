@@ -23,12 +23,9 @@ const annexSubcommand = new Command("annex")
   .option("--box <path>", "Box root path (defaults to current directory)")
   .action(async (options: { check?: boolean; json?: boolean; box?: string }) => {
     const boxRoot = options.box ?? (await requireBoxRoot());
-    // The git repository is the package root for a shape-2 box, while attach
-    // scopes live under the operational box root. Passing one for the other
-    // gives a doctor that silently inspects the wrong tree.
-    const shape = await getBoxShape(boxRoot);
+    await getBoxShape(boxRoot);
     const result = await runAnnexDoctor(createGitAnnexService(), {
-      repoRoot: shape.packageRoot,
+      repoRoot: boxRoot,
       boxRoot,
       options: { check: options.check === true },
     });
@@ -60,14 +57,14 @@ const annexFsckSubcommand = new Command("annex-fsck")
   .option("--box <path>", "Box root path (defaults to current directory)")
   .action(async (options: { days?: string; box?: string }) => {
     const boxRoot = options.box ?? (await requireBoxRoot());
-    const shape = await getBoxShape(boxRoot);
+    await getBoxShape(boxRoot);
     const days = Number(options.days ?? "30");
     if (!Number.isFinite(days) || days <= 0) {
       console.error(`--days must be a positive number, got: ${String(options.days)}`);
       process.exitCode = 1;
       return;
     }
-    const report = await createGitAnnexService().fsck(shape.packageRoot, {
+    const report = await createGitAnnexService().fsck(boxRoot, {
       incrementalScheduleDays: days,
     });
     if (report.clean) {

@@ -15,6 +15,7 @@ import type {
   LandmarkOrderType,
 } from "../../schemas/landmark.js";
 import { isCardFile } from "../../lib/paths.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
 import { titleFromFilename } from "../file-summary.js";
 import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
@@ -150,7 +151,8 @@ async function resolveExpand(
   const order = parseOrder(expand.order);
   const matchesRel = await runQuery(expand.query, options.landmarkDir);
   const sorted = await sortMatches(matchesRel, { order, cwd: options.landmarkDir });
-  const capped = options.limit === undefined ? sorted : sorted.slice(0, options.limit);
+  const fenced = await filterFenced(sorted, options);
+  const capped = options.limit === undefined ? fenced : fenced.slice(0, options.limit);
 
   const refTpl = expand["template-ref"];
   const labelTpl = expand["template-label"] ?? "";
@@ -177,7 +179,32 @@ async function resolveExpand(
       options,
     }));
   }
-  return { links: out, total: sorted.length };
+  return { links: out, total: fenced.length };
+}
+
+/**
+ * Reject any glob match whose ON-DISK path (the file the loop above may read
+ * for frontmatter, and offer as a match) escapes the box namespace — finding
+ * 2 (round 5 hardening). An `expand`'s `query` is an author-controlled glob
+ * evaluated with `landmarkDir` as cwd; nothing stopped a pattern like
+ * `../src/private.memo.card` (or a symlinked match landing outside the
+ * namespace) from matching a file OUTSIDE the landmark's own underscore area,
+ * whose frontmatter (title, template fields) would then leak into the
+ * rendered label. Every match is re-resolved through
+ * `resolveBoxNamespacePathOnDisk` (the same on-disk fence every HTTP/tRPC
+ * surface uses) BEFORE it's read or counted; a rejected match is dropped
+ * silently rather than surfaced as a broken/missing link, since surfacing it
+ * would itself leak that something exists there.
+ */
+async function filterFenced(matches: string[], options: ResolveOptions): Promise<string[]> {
+  const out: string[] = [];
+  for (const matchRel of matches) {
+    const abs = path.join(options.landmarkDir, matchRel);
+    const rawPath = path.relative(options.boxRoot, abs).split(path.sep).join("/");
+    const ns = await resolveBoxNamespacePathOnDisk({ boxRoot: options.boxRoot, rawPath, mode: "read" });
+    if (ns !== null) out.push(matchRel);
+  }
+  return out;
 }
 
 /**

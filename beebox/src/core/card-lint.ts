@@ -18,7 +18,7 @@
  * commentary's Markdoc check or extfile's `file:`-URL refinement) is NOT here:
  * it lives on each schema as a `validate` hook, invoked generically below. The
  * one rule that cannot be self-contained — a chat husk's `session` must be
- * unique across `store/chat/**` — is dispatched from here against a per-run
+ * unique across `_content/chat/**` — is dispatched from here against a per-run
  * index (`lint-chat-duplicates.ts`).
  * The ref-existence walk stays here because it is box-aware (resolves refs
  * against the box root), which the self-contained hook deliberately lacks.
@@ -54,6 +54,7 @@ import {
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
 import { lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
 import { lintDuplicateChatSession } from "./lint-chat-duplicates.js";
+import { findAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
 import { errorMessage } from "../lib/error-guards.js";
 
@@ -178,8 +179,16 @@ async function lintFrontmatterCard(input: {
   const bodyLinks = typeof bodyField === "string" ? extractBodyLinks(bodyField) : [];
   const warnings: LintIssue[] = [];
   const allRefs = [...frontmatterRefs, ...bodyRefs, ...bodyLinks];
+  // Relative-ref deprecation (Track B, `docs/plans/one-root-box-layout.md`):
+  // a document-relative ref in the card BODY is on by default, warning-only —
+  // it's the form most likely to be hand-typed or copied between cards, where
+  // relativity silently changes what it means. Frontmatter refs stay behind
+  // `--canonical` (a box can carry them by the hundred; see canonical-refs.ts).
+  warnings.push(
+    ...(await canonicalWarnings({ path, refs: [...bodyRefs, ...bodyLinks], boxRoot: options.boxRoot }))
+  );
   if (options.canonical === true) {
-    warnings.push(...(await canonicalWarnings({ path, refs: allRefs, boxRoot: options.boxRoot })));
+    warnings.push(...(await canonicalWarnings({ path, refs: frontmatterRefs, boxRoot: options.boxRoot })));
   }
   for (const { path: refPath, ref } of allRefs) {
     try {
@@ -238,6 +247,17 @@ async function lintFrontmatterCard(input: {
   // lint-chat-duplicates.ts for why it can't be a schema `validate` hook.
   if (type === "chat") {
     errors.push(...(await lintDuplicateChatSession({ path, fields: parsed.fields, boxRoot: options.boxRoot, run: options })));
+  }
+  // No absolute machine paths (Track B, `docs/plans/one-root-box-layout.md`):
+  // a real developer home directory embedded in card content is a leak, not
+  // a legitimate ref — error, unlike the ref/canonical checks above, which
+  // stay warnings because broken/relative refs are routine data drift.
+  for (const leaked of findAbsoluteMachinePaths(content)) {
+    errors.push({
+      type: "absolute-path",
+      severity: "error",
+      message: `Absolute machine path in card content: ${leaked} — use a box ref (leading \`/\`) or a repo-relative form, never a real machine path`,
+    });
   }
   return { path, errors, warnings };
 }

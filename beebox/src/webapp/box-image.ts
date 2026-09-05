@@ -3,9 +3,10 @@ import type { Stats } from "node:fs";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { probePointer } from "../lib/asset-content.js";
-import { containWithinBox } from "../lib/box-containment.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
+import { isInBoxNamespace } from "../lib/box-namespace.js";
+import { resolveBoxNamespacePathOnDisk, verifyBoxNamespaceOnDisk } from "../lib/box-namespace-resolve.js";
 
 export const BOX_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".svg"]);
 
@@ -59,11 +60,14 @@ export interface ResolvedBoxImage {
 
 export async function resolveBoxImage(boxRoot: string, requestedPath: string): Promise<ResolvedBoxImage> {
   if (requestedPath === "") throw new BoxImageError(400, { error: "Path required" });
-  const requested = path.resolve(path.join(boxRoot, requestedPath));
-  const relativeSegments = path.relative(boxRoot, requested).split(path.sep);
-  if (containWithinBox(boxRoot, requested) === null || relativeSegments.some((segment) => segment.startsWith("."))) {
-    throw new BoxImageError(403, { error: "Access denied" });
-  }
+
+  // Box containment + namespace fence, checked on the RESOLVED path
+  // (`docs/plans/one-root-box-layout.md` Track B).
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: requestedPath, mode: "read" });
+  if (ns === null) throw new BoxImageError(403, { error: "Access denied" });
+  const { resolved: requested } = ns;
+  if (path.basename(requested).startsWith(".")) throw new BoxImageError(403, { error: "Access denied" });
+
   let absolutePath = requested;
   if (requested.endsWith(".image.card")) {
     absolutePath = await resolveImageCard(requested) ?? "";
@@ -71,7 +75,25 @@ export async function resolveBoxImage(boxRoot: string, requestedPath: string): P
   } else if (!BOX_IMAGE_EXTENSIONS.has(path.extname(requested).toLowerCase())) {
     throw new BoxImageError(400, { error: "Not an image path" });
   }
-  if (containWithinBox(boxRoot, absolutePath) === null) throw new BoxImageError(403, { error: "Access denied" });
+
+  // `absolutePath` may be derived from the card's `filename.ref` (the
+  // `.image.card` branch above), not the raw request path — re-fence it the
+  // same way: lexical containment + namespace, then the on-disk symlink
+  // check, so a card whose ref was crafted/rewritten to point outside the
+  // namespace can't be used to walk the fence either.
+  const imageRoot = path.resolve(boxRoot);
+  const imageRelativePath = path.relative(imageRoot, absolutePath).split(path.sep).join("/");
+  const imageContained = absolutePath === imageRoot || absolutePath.startsWith(imageRoot + path.sep);
+  if (!imageContained || !isInBoxNamespace(imageRelativePath)) {
+    throw new BoxImageError(403, { error: "Access denied" });
+  }
+  const imageOnDisk = await verifyBoxNamespaceOnDisk({
+    boxRoot,
+    ns: { resolved: absolutePath, relativePath: imageRelativePath },
+    mode: "read",
+  });
+  if (!imageOnDisk) throw new BoxImageError(403, { error: "Access denied" });
+
   try {
     const stat = await fs.stat(absolutePath);
     if (!stat.isFile()) throw new BoxImageError(404, { error: "Not found" });
@@ -84,7 +106,7 @@ export async function resolveBoxImage(boxRoot: string, requestedPath: string): P
         sha256: pointer.sha256,
       });
     }
-    return { absolutePath, relativePath: path.relative(boxRoot, absolutePath), stat };
+    return { absolutePath, relativePath: imageRelativePath, stat };
   } catch (error) {
     if (error instanceof BoxImageError) throw error;
     if (errnoCode(error) === "ENOENT") throw new BoxImageError(404, { error: "Not found" });

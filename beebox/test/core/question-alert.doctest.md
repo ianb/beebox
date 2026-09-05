@@ -24,7 +24,7 @@ function question(prompt) {
   return `---\nstatus: pending\nprompt: ${prompt}\ninput:\n  type: text\n---\n`;
 }
 
-const MARKER = JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: NOW.toISOString() });
+const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: NOW.toISOString() });
 ```
 
 ## A newly-pending question notifies once, then latches
@@ -33,18 +33,18 @@ const MARKER = JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: NOW.
 const box = await makeTmpBox({ git: true });
 await box.seed(".beebox/box.json", MARKER);
 await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: NOW });
-await box.seed("box/questions/Color.question.card", question("What color?"));
+await box.seed("_bookkeeping/questions/Color.question.card", question("What color?"));
 box.commitAll("seed question");
 
 const first = await checkPendingQuestionsAndNotify(box.root, { now: NOW });
 JSON.stringify(first.notified)
-=> ["box/questions/Color.question.card"]
+=> ["_bookkeeping/questions/Color.question.card"]
 ```
 
 A web-push card was written for it:
 
 ```ts continue
-const cards = (await fs.readdir(path.join(box.root, "box/output"))).filter((f) => f.endsWith(".web-push.card"));
+const cards = (await fs.readdir(path.join(box.root, "_bookkeeping/output"))).filter((f) => f.endsWith(".web-push.card"));
 cards.length
 => 1
 ```
@@ -59,10 +59,10 @@ await checkPendingQuestionsAndNotify(box.root, { now: NOW })
 ## A second question notifies only the new one
 
 ```ts continue
-await box.seed("box/questions/Size.question.card", question("What size?"));
+await box.seed("_bookkeeping/questions/Size.question.card", question("What size?"));
 const third = await checkPendingQuestionsAndNotify(box.root, { now: NOW });
 JSON.stringify(third.notified)
-=> ["box/questions/Size.question.card"]
+=> ["_bookkeeping/questions/Size.question.card"]
 ```
 
 ```ts cleanup
@@ -75,7 +75,7 @@ await fs.rm(storeDir, { recursive: true, force: true });
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.seed(".beebox/box.json", MARKER);
-await box.seed("box/questions/Color.question.card", question("What color?"));
+await box.seed("_bookkeeping/questions/Color.question.card", question("What color?"));
 box.commitAll("seed");
 
 await checkPendingQuestionsAndNotify(box.root, { now: NOW })

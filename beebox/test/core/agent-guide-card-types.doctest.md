@@ -46,7 +46,7 @@ lines.findIndex((l) => l.startsWith("**Types you create")) < lines.findIndex((l)
 => true
 
 // The per-type doc location is stated once up front, not per line
-lines.filter((l) => l.includes("docs/generated/card-")).length
+lines.filter((l) => l.includes("_content/docs/generated/card-")).length
 => 1
 ```
 

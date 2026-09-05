@@ -7,7 +7,7 @@
  * every `ownerProcedure`, chat attribution — is unreachable or wrong for
  * exactly the sessions that exist to drive the app (`bin/browse`, tours,
  * journey walks). A box BUILT for that use declares `agentBrowsing: "owner"`
- * in its `config/box.json`, and inside that box the key resolves to the
+ * in its `_config/box.json`, and inside that box the key resolves to the
  * owner's identity. A box that never said so keeps today's fence.
  *
  * Every box-scoped reader of identity calls this, not `resolveRequestIdentity`
@@ -48,7 +48,7 @@ function warnOnce(key: string, message: string): void {
 /**
  * Does this box declare that agent browsing acts as its owner?
  *
- * The value is read narrowly (`=== "owner"`): `config/box.json` is disk, so any
+ * The value is read narrowly (`=== "owner"`): `_config/box.json` is disk, so any
  * other value is treated as absent and warned about, naming the box and the
  * value. The loader's own `{}`-on-corrupt behaviour means a broken config
  * disables the rung, never enables it.
@@ -60,7 +60,7 @@ async function boxGrantsBrowseOwner(boxRoot: string): Promise<boolean> {
   if (value === "owner") return true;
   warnOnce(
     warnKey("bad-value", boxRoot),
-    `[box-identity] Ignoring agentBrowsing: ${JSON.stringify(value)} in ${boxRoot}/config/box.json — the only supported value is "owner".`,
+    `[box-identity] Ignoring agentBrowsing: ${JSON.stringify(value)} in ${boxRoot}/_config/box.json — the only supported value is "owner".`,
   );
   return false;
 }

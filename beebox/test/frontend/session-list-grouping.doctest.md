@@ -21,9 +21,9 @@ function session(sessionId: string, contextDir: string, landmarkLabel: string) {
 }
 
 const SESSIONS = [
-  session("r1", "store/recipes", "Recipes"),
-  session("n1", "store/notes", "Notes"),
-  session("r2", "store/recipes", "Recipes"),
+  session("r1", "_content/recipes", "Recipes"),
+  session("n1", "_content/notes", "Notes"),
+  session("r2", "_content/recipes", "Recipes"),
   session("root1", "", "Root"),
 ];
 
@@ -45,7 +45,7 @@ Its chats lead, under the landmark's own name. Everything else — including the
 root chats — stays below, in the order it came in (most recent first).
 
 ```ts
-show(layoutSessionList({ sessions: SESSIONS, contextDir: "store/recipes" }))
+show(layoutSessionList({ sessions: SESSIONS, contextDir: "_content/recipes" }))
 =>
 Recipes: r1 r2
 Other chats: n1 root1
@@ -67,7 +67,7 @@ A landmark with no chats of its own yet gets no empty heading — one flat list,
 tagged with each row's landmark since they differ.
 
 ```ts
-show(layoutSessionList({ sessions: SESSIONS, contextDir: "store/empty" }))
+show(layoutSessionList({ sessions: SESSIONS, contextDir: "_content/empty" }))
 => flat (tagged): r1 n1 r2 root1
 ```
 
@@ -84,8 +84,8 @@ the whole list would be pure chrome — so it stays flat, and the rows carry no
 tag because there's only one landmark to name.
 
 ```ts
-const onlyRecipes = SESSIONS.filter((s) => s.contextDir === "store/recipes");
-show(layoutSessionList({ sessions: onlyRecipes, contextDir: "store/recipes" }))
+const onlyRecipes = SESSIONS.filter((s) => s.contextDir === "_content/recipes");
+show(layoutSessionList({ sessions: onlyRecipes, contextDir: "_content/recipes" }))
 => flat: r1 r2
 ```
 

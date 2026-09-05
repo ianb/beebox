@@ -81,7 +81,7 @@ the wrong SDK.
 const codexSession = "0198f0b0-1111-7111-8111-111111111111";
 const box = await makeTmpBox();
 await box.write(
-  `store/chat/web/2026-08-26_${codexSession.slice(0, 8)}.chat.card`,
+  `_content/chat/web/2026-08-26_${codexSession.slice(0, 8)}.chat.card`,
   `---\nsession: ${codexSession}\nengine: codex\n---\n`,
 );
 await resolveChatEngine(box.root, { sessionId: codexSession })
@@ -95,7 +95,7 @@ a nonsense string into engine dispatch.
 ```ts continue
 const junkSession = "0198f0b0-2222-7222-8222-222222222222";
 await box.write(
-  `store/chat/web/2026-08-26_${junkSession.slice(0, 8)}.chat.card`,
+  `_content/chat/web/2026-08-26_${junkSession.slice(0, 8)}.chat.card`,
   `---\nsession: ${junkSession}\nengine: gpt-9\n---\n`,
 );
 await box.write(
@@ -119,7 +119,7 @@ clears the most-active id without erasing its activity timestamp.
 const box = await makeTmpBox();
 await box.write(
   ".beebox/chat-session-history.json",
-  JSON.stringify({ sessions: [{ id: "keep" }, { id: "gone" }, { id: "gone", contextDir: "store/x" }], migrated: true }),
+  JSON.stringify({ sessions: [{ id: "keep" }, { id: "gone" }, { id: "gone", contextDir: "_content/x" }], migrated: true }),
 );
 await setMostActive(box.root, "gone");
 const savedAt = await getMostActiveSavedAt(box.root);
@@ -245,7 +245,7 @@ the existing entry is updated rather than duplicated.
 ```ts
 const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "abc" });
-await appendHistory(box.root, { sessionId: "abc", contextDir: "store/recipes" });
+await appendHistory(box.root, { sessionId: "abc", contextDir: "_content/recipes" });
 
 JSON.stringify(await loadHistoryEntries(box.root), null, 2)
 =>
@@ -253,7 +253,7 @@ JSON.stringify(await loadHistoryEntries(box.root), null, 2)
   {
     "id": "abc",
     "engine": "claude",
-    "contextDir": "store/recipes"
+    "contextDir": "_content/recipes"
   }
 ]
 ```
@@ -270,11 +270,11 @@ supported in v1.
 
 ```ts
 const box = await makeTmpBox();
-await appendHistory(box.root, { sessionId: "abc", contextDir: "store/recipes" });
-await appendHistory(box.root, { sessionId: "abc", contextDir: "store/todos" });
+await appendHistory(box.root, { sessionId: "abc", contextDir: "_content/recipes" });
+await appendHistory(box.root, { sessionId: "abc", contextDir: "_content/todos" });
 
 await getDirectoryForSession(box.root, "abc")
-=> store/recipes
+=> _content/recipes
 ```
 
 ```ts cleanup
@@ -285,11 +285,11 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-await appendHistory(box.root, { sessionId: "abc", contextDir: "store/recipes" });
+await appendHistory(box.root, { sessionId: "abc", contextDir: "_content/recipes" });
 await appendHistory(box.root, { sessionId: "def" });
 
 await getDirectoryForSession(box.root, "abc")
-=> store/recipes
+=> _content/recipes
 
 await getDirectoryForSession(box.root, "def")
 => null
@@ -339,7 +339,7 @@ Both agree, for a bound and an unbound session.
 
 ```ts
 const box = await makeTmpBox();
-await appendHistory(box.root, { sessionId: "bound", contextDir: "store/recipes" });
+await appendHistory(box.root, { sessionId: "bound", contextDir: "_content/recipes" });
 await appendHistory(box.root, { sessionId: "unbound" });
 const entries = await loadHistoryEntries(box.root);
 
@@ -373,27 +373,27 @@ interleave into the result.
 
 ```ts
 const box = await makeTmpBox();
-await appendHistory(box.root, { sessionId: "first", contextDir: "store/recipes" });
-await appendHistory(box.root, { sessionId: "other", contextDir: "store/todos" });
-await appendHistory(box.root, { sessionId: "second", contextDir: "store/recipes" });
-await appendHistory(box.root, { sessionId: "third", contextDir: "store/recipes" });
+await appendHistory(box.root, { sessionId: "first", contextDir: "_content/recipes" });
+await appendHistory(box.root, { sessionId: "other", contextDir: "_content/todos" });
+await appendHistory(box.root, { sessionId: "second", contextDir: "_content/recipes" });
+await appendHistory(box.root, { sessionId: "third", contextDir: "_content/recipes" });
 await seedSessionLog(box.root, "first");
 await seedSessionLog(box.root, "other");
 await seedSessionLog(box.root, "second");
 await seedSessionLog(box.root, "third");
 
-await getLastSessionForDirectory(box.root, "store/recipes")
+await getLastSessionForDirectory(box.root, "_content/recipes")
 => third
 
-await getLastSessionForDirectory(box.root, "store/todos")
+await getLastSessionForDirectory(box.root, "_content/todos")
 => other
 
-await getLastSessionForDirectory(box.root, "store/never")
+await getLastSessionForDirectory(box.root, "_content/never")
 => null
 ```
 
 ```ts cleanup
-await cleanupSessionLogs(box.root, ["store/recipes", "store/todos"]);
+await cleanupSessionLogs(box.root, ["_content/recipes", "_content/todos"]);
 await box.cleanup();
 ```
 
@@ -405,17 +405,17 @@ don't accidentally match any directory query.
 ```ts
 const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "plain" });
-await appendHistory(box.root, { sessionId: "bound", contextDir: "store/recipes" });
+await appendHistory(box.root, { sessionId: "bound", contextDir: "_content/recipes" });
 await appendHistory(box.root, { sessionId: "another-plain" });
 await seedSessionLog(box.root, "plain");
 await seedSessionLog(box.root, "bound");
 await seedSessionLog(box.root, "another-plain");
 
-await getLastSessionForDirectory(box.root, "store/recipes")
+await getLastSessionForDirectory(box.root, "_content/recipes")
 => bound
 ```
 
 ```ts cleanup
-await cleanupSessionLogs(box.root, ["store/recipes"]);
+await cleanupSessionLogs(box.root, ["_content/recipes"]);
 await box.cleanup();
 ```

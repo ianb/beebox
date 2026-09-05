@@ -1,7 +1,7 @@
 /**
  * Generate the "reducing an oversized CLAUDE.md" reference doc for agents.
  *
- * Called by generate-docs.ts to produce docs/generated/reducing-claude-md.md.
+ * Called by generate-docs.ts to produce _content/docs/generated/reducing-claude-md.md.
  * The `claude-md-size` lint warning (src/core/claude-md-lint.ts) points here so
  * an agent that trips it has concrete strategies to fix it, not just "it's big."
  *

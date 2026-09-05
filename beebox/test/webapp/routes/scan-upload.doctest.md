@@ -105,7 +105,7 @@ image grouping keys on scanner `<prefix>_NNN` names, and it records which token
 uploaded the file as provenance:
 
 ```ts continue
-const sidecar = JSON.parse(await ctx.read(`tmp/scan-quarantine/${hash}.json`));
+const sidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${hash}.json`));
 const expectedStored = `${hash}.png`;
 JSON.stringify({
   state: sidecar.state,
@@ -138,7 +138,7 @@ const withProfile = await put(ctx, {
   filename: "Receipts_002.png",
   headers: { "x-scan-profile": "ScanSnap Colour Duplex" },
 });
-const profiled = JSON.parse(await ctx.read(`tmp/scan-quarantine/${sha256(Buffer.concat([png, Buffer.from("\n")]))}.json`));
+const profiled = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${sha256(Buffer.concat([png, Buffer.from("\n")]))}.json`));
 JSON.stringify({ status: withProfile.statusCode, profile: profiled.profile })
 => {"status":200,"profile":"ScanSnap Colour Duplex"}
 ```
@@ -249,7 +249,7 @@ it:
 
 ```ts continue
 const states = await check(ctx, [hash]);
-const sidecar = JSON.parse(await ctx.read(`tmp/scan-quarantine/${hash}.json`));
+const sidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${hash}.json`));
 const heldAsPdf = sidecar.storedFilename === `${hash}.pdf`;
 JSON.stringify({ check: states.body.states[hash], stored: heldAsPdf })
 => {"check":{"state":"rejected","reason":"magic bytes say image/png but the extension is .pdf"},"stored":true}
@@ -498,7 +498,7 @@ The sidecar records which token it was — this becomes `scan-upload/<name>`
 provenance on the card the promote worker files:
 
 ```ts continue
-const tokenSidecar = JSON.parse(await ctx.read(`tmp/scan-quarantine/${sha256(png)}.json`));
+const tokenSidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${sha256(png)}.json`));
 tokenSidecar.tokenName
 => laptop-scansnap
 ```
@@ -581,7 +581,7 @@ Quarantine stays empty — no sidecar, no bytes, nothing for a promote pass to
 find:
 
 ```ts continue
-await ctx.read(`tmp/scan-quarantine/${sha256(png)}.json`).then(() => "recorded", (e) => e.code)
+await ctx.read(`_tmp/scan-quarantine/${sha256(png)}.json`).then(() => "recorded", (e) => e.code)
 => ENOENT
 ```
 

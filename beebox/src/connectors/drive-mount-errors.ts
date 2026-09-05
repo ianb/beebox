@@ -39,6 +39,24 @@ export class PathOutsideBoxError extends DriveMountError {
   }
 }
 
+/**
+ * A mount target's DISK-resolved path escapes the box namespace even though
+ * its lexical form (checked by `resolveMountTarget`) was legal — e.g.
+ * `_content/code` is a symlinked directory pointing at `../src`. Refused
+ * right before the write that would otherwise land through it.
+ */
+export class SymlinkedMountTargetError extends DriveMountError {
+  readonly input: string;
+  constructor(options: { raw: string; label: string }) {
+    super(
+      `${options.label} resolves through a symlink to somewhere outside the box: ${options.raw} — refusing to ` +
+        "write through it. Reconcile by hand (replace the symlink with a real directory), then retry.",
+    );
+    this.name = "SymlinkedMountTargetError";
+    this.input = options.raw;
+  }
+}
+
 export class NotADriveFolderError extends DriveMountError {
   readonly mimeType: string;
   constructor(options: { name: string; mimeType: string }) {

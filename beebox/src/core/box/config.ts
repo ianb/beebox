@@ -1,13 +1,14 @@
 /**
  * Per-box configuration loader.
  *
- * Reads config/box.json from each box root. Caches results.
+ * Reads _config/box.json from each box root. Caches results.
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
+import { getBoxDir } from "../../lib/paths.js";
 import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
 
@@ -242,10 +243,10 @@ export async function buildTimezoneContext(boxRoot: string): Promise<string> {
 }
 
 /**
- * Load box config from config/box.json, with simple mtime-based caching.
+ * Load box config from _config/box.json, with simple mtime-based caching.
  */
 export async function loadBoxConfig(boxRoot: string): Promise<BoxConfig> {
-  const configPath = path.join(boxRoot, "config", "box.json");
+  const configPath = path.join(getBoxDir(boxRoot, "config"), "box.json");
 
   let mtime: number;
   try {

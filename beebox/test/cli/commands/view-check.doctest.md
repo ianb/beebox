@@ -27,13 +27,13 @@ const TEST_VIEW_TIMEOUT_MS = 60000;
 async function makeViewBox() {
   const box = await makeTmpBox({ deps: true });
   const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
-  await symlink(join(reactNodeModules, "react"), join(box.packageRoot, "node_modules", "react"), "dir");
+  await symlink(join(reactNodeModules, "react"), join(box.root, "node_modules", "react"), "dir");
   return box;
 }
 
-// Views live at the package root (`<packageRoot>/src/views`) for a v2 box.
+// Views live at `<boxRoot>/src/views`.
 async function writeView(box, rel, content) {
-  const full = join(box.packageRoot, "src", "views", rel);
+  const full = join(box.root, "src", "views", rel);
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, content);
 }
@@ -59,7 +59,7 @@ export default function Good() {
 // view-card-shape migration exists to find and fix.
 const BROKEN_VIEW = `export const name = "Broken";
 export const description = "reads a removed field";
-export const dependencies = ["box/**/*.memo.card"];
+export const dependencies = ["_content/**/*.memo.card"];
 export const modes = ["page"];
 export default function Broken({ cards }) {
   return <ul>{cards.map((c) => <li key={c.path}>{c.attrs.title}</li>)}</ul>;
@@ -73,7 +73,7 @@ export default function Broken({ cards }) {
 const box = await makeViewBox();
 await writeView(box, "good.tsx", GOOD_VIEW);
 await writeView(box, "broken.tsx", BROKEN_VIEW);
-await box.write("box/inbox/Test.memo.card", MEMO_CARD);
+await box.write("_content/inbox/Test.memo.card", MEMO_CARD);
 
 const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
 result.ok

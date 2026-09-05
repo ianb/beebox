@@ -94,7 +94,7 @@ plaintext, …).
 
 - \`href:\` — required. The full \`file:\` URL of the external file, e.g.
   \`file:/Users/you/src/project/src/foo.ts\`. The path must resolve under one of
-  the box's \`externalRoots\` (\`config/box.json\`). Use a single-slash \`file:/abs\`
+  the box's \`externalRoots\` (\`_config/box.json\`). Use a single-slash \`file:/abs\`
   form. Untracked by \`bbx mv\` (it points outside the box).
 - \`version:\` / \`size:\` / \`mtime:\` — **stamped metadata; do not hand-edit.**
   \`version\` is \`sha256:<hex> git:<rev>\`; its \`sha256\` is what drift detection
@@ -119,8 +119,8 @@ target.
 ## Layout on disk
 
 \`\`\`
-box/reviews/Foo_Source.extfile.card                  # the pointer + stamped metadata
-box/reviews/Foo_Source.attach/Foo_Source.commentary.card   # remarks (optional)
+_content/reviews/Foo_Source.extfile.card                  # the pointer + stamped metadata
+_content/reviews/Foo_Source.attach/Foo_Source.commentary.card   # remarks (optional)
 \`\`\``,
 });
 

@@ -21,9 +21,9 @@ const landmark = {
   depth: 0,
   features: {},
   links: [
-    { ref: "store/Welcome.memo.card", label: "Welcome", title: "Welcome", exists: true },
+    { ref: "_content/Welcome.memo.card", label: "Welcome", title: "Welcome", exists: true },
     { ref: "https://example.com/guide", label: "Guide", title: "Guide", exists: false },
-    { ref: "store/Missing.memo.card", label: null, title: "Missing", exists: false },
+    { ref: "_content/Missing.memo.card", label: null, title: "Missing", exists: false },
   ],
   groups: [],
 };

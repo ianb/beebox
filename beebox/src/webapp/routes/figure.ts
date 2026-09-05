@@ -20,7 +20,7 @@ import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { bundleView } from "../views/compiler.js";
-import { containWithinBox } from "../../lib/box-containment.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -63,13 +63,13 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
         return reply.status(400).send({ error: "Missing ?path" });
       }
 
-      // Security: the shared containment floor — resolve and verify the
-      // result stays under boxRoot (a sibling dir like `<box>-secrets` fails).
-      if (containWithinBox(boxRoot, path.join(boxRoot, reqPath)) === null) {
+      // Box containment + namespace fence, checked on the RESOLVED path
+      // (`docs/plans/one-root-box-layout.md` Track B).
+      const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
+      if (ns === null) {
         return reply.status(400).send({ error: "Path outside box" });
       }
-      const resolved = path.resolve(path.join(boxRoot, reqPath));
-      const root = path.resolve(boxRoot);
+      const { resolved } = ns;
 
       // A figure's code lives in `<card>.attach/…` and is TypeScript — refuse to
       // compile a loose box file as a module, so this endpoint can't be turned
@@ -98,7 +98,7 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       let realRoot: string;
       try {
         realResolved = await fs.realpath(resolved);
-        realRoot = await fs.realpath(root);
+        realRoot = await fs.realpath(path.resolve(boxRoot));
       } catch (_e) {
         // Absent path or dangling symlink — a 404, distinct from a compile
         // error, carrying no detail beyond "missing".

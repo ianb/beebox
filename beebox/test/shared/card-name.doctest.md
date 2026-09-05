@@ -58,12 +58,12 @@ parseCardFileName(".card")
 ## `cardTypeFromName` tolerates paths and `?query` suffixes
 
 ```ts
-cardTypeFromName("store/recipes/Bread.recipe.card")
+cardTypeFromName("_content/recipes/Bread.recipe.card")
 => recipe
 
-cardTypeFromName("store/projects/nav.card?create")
+cardTypeFromName("_content/projects/nav.card?create")
 => nav
 
-JSON.stringify(cardTypeFromName("store/notes/readme.md"))
+JSON.stringify(cardTypeFromName("_content/notes/readme.md"))
 => undefined
 ```

@@ -20,8 +20,8 @@ import * as path from "node:path";
 const run = promisify(execFile);
 
 async function pin(boxRoot: string, config: Record<string, unknown>): Promise<void> {
-  await fs.mkdir(path.join(boxRoot, "config"), { recursive: true });
-  await fs.writeFile(path.join(boxRoot, "config/box.json"), JSON.stringify(config));
+  await fs.mkdir(path.join(boxRoot, "_config"), { recursive: true });
+  await fs.writeFile(path.join(boxRoot, "_config/box.json"), JSON.stringify(config));
   clearBoxConfigCache(boxRoot);
 }
 

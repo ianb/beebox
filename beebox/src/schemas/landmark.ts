@@ -2,7 +2,7 @@
  * Landmark card schema — a hand-curated bookmark for a directory.
  *
  * One landmark per directory; the file lives inside the directory it
- * describes (e.g. `store/recipes/Recipes.landmark.card`). A landmark is
+ * describes (e.g. `_content/recipes/Recipes.landmark.card`). A landmark is
  * pure structured metadata (YAML frontmatter, no body) carrying one or
  * more *roles*:
  *
@@ -11,14 +11,14 @@
  *     label: Recipes
  *     symbol: 🍳
  *     links:
- *       - { ref: /store/recipes/Bread.recipe.card, label: the bread }
+ *       - { ref: /_content/recipes/Bread.recipe.card, label: the bread }
  *     expand:
  *       - { query: "*.recipe.card", order: modified-desc }
  *   destinations:                    # filing targets
  *     - for: [triage]
  *       rules: "Recipes — anything describing how to cook a dish."
  *       procedure:
- *         ref: /config/procedures/archive-recipe.procedure.card
+ *         ref: /_config/procedures/archive-recipe.procedure.card
  *   ---
  *
  * At least one role should be present; a landmark with neither is inert.
@@ -139,7 +139,7 @@ export const LandmarkSchema: CardSchema = cardSchema("landmark", {
   searchable: false,
   instructions: `# Landmark Cards
 
-A landmark marks a directory as a notable spot in the box — a hand-curated bookmark that can also be a triage destination. One per directory; the file lives inside the directory it describes, e.g. \`store/recipes/Recipes.landmark.card\`. Directories without a landmark are invisible to the Landmarks page and to triage.
+A landmark marks a directory as a notable spot in the box — a hand-curated bookmark that can also be a triage destination. One per directory; the file lives inside the directory it describes, e.g. \`_content/recipes/Recipes.landmark.card\`. Directories without a landmark are invisible to the Landmarks page and to triage.
 
 A landmark is pure YAML frontmatter (no body) with one or more roles. At least one role should be present.
 
@@ -148,9 +148,9 @@ A landmark is pure YAML frontmatter (no body) with one or more roles. At least o
 \`\`\`yaml
 navigation:
   label: Recipes            # short bookmark name; treat like a tab name, not a sentence
-  symbol: 🍳                # emoji/short text, OR { src: /store/recipes/images/portrait.webp } for an image
+  symbol: 🍳                # emoji/short text, OR { src: /_content/recipes/images/portrait.webp } for an image
   links:                    # optional curated links to other cards
-    - ref: /store/recipes/Bread.recipe.card  # box path (leading /); validated
+    - ref: /_content/recipes/Bread.recipe.card  # box path (leading /); validated
       label: the bread        # optional; falls back to the target's filename title
   expand:                   # optional templated fan-out
     - query: "*.recipe.card"  # glob, like bbx ls
@@ -177,7 +177,7 @@ destinations:
   - for: [triage]           # kinds: triage, commentary, and/or share
     rules: "Recipes — anything describing how to cook a dish."  # read by the triage agent
     procedure:                # handler run at the handle stage; a card ref ({ ref: <box path> })
-      ref: /config/procedures/archive-recipe.procedure.card
+      ref: /_config/procedures/archive-recipe.procedure.card
   - for: [commentary]       # a commentary-only spot needs neither rules nor procedure
   - for: [share]            # appears under "Save in" in the native iOS share sheet
 \`\`\`

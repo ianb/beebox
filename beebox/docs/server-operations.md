@@ -9,7 +9,7 @@ Services run as the **`beebox` user** (User/Group in systemd unit files), not ro
 | Path | Owner | Purpose |
 |------|-------|---------|
 | `/opt/beebox/` | root (read-only to `beebox`) | Checked-out source code (beebox) |
-| `/home/beebox/boxes/` | `beebox` | Box data — each subdirectory is a v2 (package-layout) box; operational data (inbox/, store/, config/, .beebox/) lives under its `content/` subdirectory |
+| `/home/beebox/boxes/` | `beebox` | Box data — each subdirectory is a box: one root holding both the npm package (`package.json`, `src/`) and the operational areas (`_content/`, `_config/`, `_bookkeeping/`, `.beebox/`) |
 | `/home/beebox/.env` | `beebox` | Environment variables for services (API keys, `BBX_DIAG_API_KEY`, etc.) |
 | `/home/beebox/.claude/.credentials.json` | `beebox` | Claude Code OAuth credentials (see below) |
 
@@ -41,8 +41,8 @@ ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST)
 | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/beebox/.config/beebox/boxes.json` |
 | Service logs | `journalctl -u beebox-hub -n 200 --no-pager` / `journalctl -u beebox-scheduler -n 200 --no-pager` |
 | Service status | `systemctl status beebox-hub beebox-scheduler --no-pager` |
-| Client debug log per box | `/home/beebox/boxes/<box>/content/.beebox/client-debug.log` |
-| Procedure runs | `/home/beebox/boxes/<box>/content/procedure/runs/` |
+| Client debug log per box | `/home/beebox/boxes/<box>/.beebox/client-debug.log` |
+| Procedure runs | `/home/beebox/boxes/<box>/_bookkeeping/procedure/runs/` |
 | Claude Code update log | `/home/beebox/claude-update.log` |
 | Source the server is actually running | `/opt/beebox/beebox/src/` (rsynced `.ts`, no `dist/`) |
 
@@ -65,17 +65,11 @@ su - beebox -c "cd /home/beebox/boxes/<box> && bbx validate"
 >
 > ```bash
 > deploy/prod-ssh \
->   "su - beebox -c 'set -a; . /home/beebox/.env; bbx health --box /home/beebox/boxes/<box>/content'"
+>   "su - beebox -c 'set -a; . /home/beebox/.env; bbx health --box /home/beebox/boxes/<box>'"
 > ```
 >
 > (This produced a bogus "two boxes have missing connectors" health report on
 > 2026-07-14 — the connectors were healthy; the bare invocation was the bug.)
-
-> **Point `--box` at the operational tree.** Prod boxes are v2 packages, so their
-> cards/config/schedules live under `content/` — pass
-> `--box /home/beebox/boxes/<box>/content`. Passing the package root
-> (`/home/beebox/boxes/<box>`) makes `bbx health` see zero schedules and report a
-> misleadingly empty/`never` state.
 
 **Restart services after deploying or after manual config changes:**
 
@@ -234,8 +228,8 @@ For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox
 
 ## Prod git-annex migration (manifest → annex cutover)
 
-`docs/plans/scanner-ingest.md` Track 0 needs both prod boxes (`estate`,
-`box-family`) moved from the manifest asset scheme onto git-annex before
+`docs/plans/scanner-ingest.md` Track 0 needs both prod boxes moved from the
+manifest asset scheme onto git-annex before
 scan-import ships — it stages raw asset bytes and assumes annex
 unconditionally (no manifest-writing code path exists). Track 2's upload
 routes 503 (logged `error`) at registration if a box isn't annex-shaped yet,
@@ -316,9 +310,9 @@ rehearsal.
 
 **Before the real cutover, whoever runs it must:**
 
-1. Confirm from the server itself, not from a local copy, whether `estate`
-   and `box-family` are still manifest-scheme (`find <box>/content -name
-   manifest.json`, `git -C <box>/content config --get-regexp '^annex\.'` —
+1. Confirm from the server itself, not from a local copy, whether the prod
+   boxes are still manifest-scheme (`find <box> -name
+   manifest.json`, `git -C <box> config --get-regexp '^annex\.'` —
    an empty result plus present manifests means still-unconverted; if annex
    config and zero manifests turn up instead, someone already migrated prod
    and this runbook's dry-run step will confirm it as a no-op).
@@ -348,7 +342,7 @@ ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST) "df -h /home/be
 ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST) "ls -la <backup-location>"
 
 # Working tree must be clean — to-annex.ts refuses otherwise (DirtyTreeError)
-ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST) "cd /home/beebox/boxes/<box>/content && git status --porcelain"
+ssh beebox@$(beebox/deploy/deploy-target.sh get BBX_DEPLOY_HOST) "cd /home/beebox/boxes/<box> && git status --porcelain"
 ```
 
 **2. Stop the box's serve child**
@@ -371,16 +365,16 @@ would narrow this blast radius; it doesn't exist yet.)
 
 **3. Run the migration**
 
-As the `callback` user, against the box's operational (`content/`) root:
+As the `beebox` user, against the box root:
 
 ```bash
 deploy/prod-ssh "su - beebox -c '
-  cd /home/beebox/boxes/<box>/content &&
+  cd /home/beebox/boxes/<box> &&
   bbx attachments to-annex --dry-run
 '"
 # Review the reported asset count/bytes against expectations, then:
 deploy/prod-ssh "su - beebox -c '
-  cd /home/beebox/boxes/<box>/content &&
+  cd /home/beebox/boxes/<box> &&
   bbx attachments to-annex
 '"
 ```
@@ -400,7 +394,7 @@ space, post-conversion hash mismatch).
 
 ```bash
 deploy/prod-ssh "su - beebox -c '
-  cd /home/beebox/boxes/<box>/content &&
+  cd /home/beebox/boxes/<box> &&
   bbx doctor annex --check &&
   bbx doctor annex-fsck &&
   find . -name manifest.json &&
@@ -440,7 +434,7 @@ after step 3:
 
 ```bash
 deploy/prod-ssh "su - beebox -c '
-  cd /home/beebox/boxes/<box>/content &&
+  cd /home/beebox/boxes/<box> &&
   git annex uninit &&
   git reset --hard HEAD^
 '"

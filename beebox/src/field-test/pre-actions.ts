@@ -55,12 +55,12 @@ async function readOrCreateState(statePath: string): Promise<FakeGmailState> {
 /** Run a `bbx` subcommand against the run's box, failing loudly with its output. */
 async function runBbx(opts: {
   args: string[];
-  packageRoot: string;
+  boxRoot: string;
   env: NodeJS.ProcessEnv;
   action: string;
 }): Promise<string> {
   const result = await execa(bbxBinary(), opts.args, {
-    cwd: opts.packageRoot,
+    cwd: opts.boxRoot,
     env: { ...process.env, ...opts.env },
     reject: false,
     all: true,
@@ -80,7 +80,7 @@ async function runBbx(opts: {
  * reactor cycle (`maxCycles: 1`, `src/cli/commands/wakeup.ts`), so a job the
  * arrival spawns — or a low-priority follow-up a connector-scoped cycle skips
  * (`src/core/reactor/cycle.ts`: an all-low-priority cycle is skipped under
- * `skipLowPriority`) — survives it and sits in `box/jobs`. That lone leftover
+ * `skipLowPriority`) — survives it and sits in `_bookkeeping/jobs`. That lone leftover
  * keeps the box from ever going quiescent, so without this every email item and
  * every day boundary burns its full quiescence timeout (seen in the first
  * onboarding run: a `gmail.intake` job left by the dentist email was still
@@ -98,10 +98,10 @@ async function runBbx(opts: {
  * budget, so the loop re-checks quiescence after the pre actions
  * (`run-item.ts`) rather than trusting this call's exit code.
  */
-async function drainJobs(opts: { packageRoot: string; env: NodeJS.ProcessEnv; action: string }): Promise<void> {
+async function drainJobs(opts: { boxRoot: string; env: NodeJS.ProcessEnv; action: string }): Promise<void> {
   await runBbx({
     args: ["reactor", "--max-cycles", "5"],
-    packageRoot: opts.packageRoot,
+    boxRoot: opts.boxRoot,
     env: opts.env,
     action: opts.action,
   });
@@ -109,7 +109,7 @@ async function drainJobs(opts: { packageRoot: string; env: NodeJS.ProcessEnv; ac
 
 export interface BaselineGmailSyncOptions {
   statePath: string;
-  packageRoot: string;
+  boxRoot: string;
   env: NodeJS.ProcessEnv;
 }
 
@@ -125,11 +125,11 @@ export interface BaselineGmailSyncOptions {
  * email" rather than as a harness bug.
  */
 export async function baselineGmailSync(options: BaselineGmailSyncOptions): Promise<void> {
-  const { statePath, packageRoot, env } = options;
+  const { statePath, boxRoot, env } = options;
   await saveFakeGmailState(statePath, emptyFakeGmailState());
   await runBbx({
     args: ["wakeup", "--connector", "gmail", "--skip-push", "--skip-housekeeping"],
-    packageRoot,
+    boxRoot,
     env: { ...env, BBX_FAKE_GMAIL: statePath },
     action: "gmail baseline sync",
   });
@@ -142,8 +142,8 @@ export interface InjectEmailOptions {
   fixture: string;
   /** The run's fake-Gmail state file (also the child's `BBX_FAKE_GMAIL`). */
   statePath: string;
-  /** The box's git/package root — the wakeup's working directory. */
-  packageRoot: string;
+  /** The box root — the wakeup's working directory. */
+  boxRoot: string;
   /** Env overlay for the wakeup child (`BBX_TIME`, `BBX_FAKE_GMAIL`). */
   env: NodeJS.ProcessEnv;
   /** The run's simulated clock — the arrival date for a fixture with no `date:`. */
@@ -160,7 +160,7 @@ export interface InjectEmailOptions {
  * harness needs no global `BBX_TIME` of its own.
  */
 export async function injectEmail(options: InjectEmailOptions): Promise<string> {
-  const { emailsDir, fixture, statePath, packageRoot, env, now } = options;
+  const { emailsDir, fixture, statePath, boxRoot, env, now } = options;
   const loaded = await loadEmailFixture(path.join(emailsDir, `${fixture}.yaml`), { now });
   const state = appendMessageToState({
     state: await readOrCreateState(statePath),
@@ -171,13 +171,13 @@ export async function injectEmail(options: InjectEmailOptions): Promise<string> 
   const wakeupEnv = { ...env, BBX_FAKE_GMAIL: statePath };
   await runBbx({
     args: ["wakeup", "--connector", "gmail", "--skip-push", "--skip-housekeeping"],
-    packageRoot,
+    boxRoot,
     env: wakeupEnv,
     action: `inject-email ${fixture}`,
   });
   // The connector-scoped wakeup syncs the mail and runs one reactor cycle; drain
   // the rest so the box is fully caught up before the operator looks at it.
-  await drainJobs({ packageRoot, env: wakeupEnv, action: `inject-email ${fixture} drain` });
+  await drainJobs({ boxRoot, env: wakeupEnv, action: `inject-email ${fixture} drain` });
   return loaded.message.id;
 }
 
@@ -185,7 +185,7 @@ export interface AdvanceDaysOptions {
   days: number;
   /** The box clock BEFORE the advance. */
   from: Date;
-  packageRoot: string;
+  boxRoot: string;
   /** Env overlay minus `BBX_TIME`, which this function sets to the new day. */
   env: NodeJS.ProcessEnv;
 }
@@ -197,14 +197,14 @@ export interface AdvanceDaysOptions {
  * both a scenario `advance-days` and any future manual day step.
  */
 export async function advanceDays(options: AdvanceDaysOptions): Promise<Date> {
-  const { days, from, packageRoot, env } = options;
+  const { days, from, boxRoot, env } = options;
   const to = new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
   const dayEnv = { ...env, BBX_TIME: to.toISOString() };
-  await runBbx({ args: ["wakeup", "--skip-push"], packageRoot, env: dayEnv, action: `advance-days ${String(days)}` });
-  await runBbx({ args: ["tick"], packageRoot, env: dayEnv, action: `advance-days ${String(days)}` });
+  await runBbx({ args: ["wakeup", "--skip-push"], boxRoot, env: dayEnv, action: `advance-days ${String(days)}` });
+  await runBbx({ args: ["tick"], boxRoot, env: dayEnv, action: `advance-days ${String(days)}` });
   // The wakeup and tick each run one reactor cycle; drain any jobs they queued
   // (a new day's scheduled work, mail refreshed overnight) so the next item does
   // not open on a box that is still churning and never goes quiescent.
-  await drainJobs({ packageRoot, env: dayEnv, action: `advance-days ${String(days)} drain` });
+  await drainJobs({ boxRoot, env: dayEnv, action: `advance-days ${String(days)} drain` });
   return to;
 }

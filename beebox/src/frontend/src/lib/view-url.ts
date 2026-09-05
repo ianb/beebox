@@ -2,7 +2,7 @@
  * Parsing and serialization for view URLs.
  *
  * View URLs are file-path-based:
- *   view:store/notes/foo.md?view=markdown&zoom
+ *   view:_content/notes/foo.md?view=markdown&zoom
  *
  * The path is always a file path relative to the box root.
  */
@@ -50,7 +50,7 @@ export function parseViewUrl(raw: string): ViewTarget {
   const rawPath = qIndex !== -1 ? value.slice(0, qIndex) : value;
   // ViewTarget.path is, by contract, the canonical box-root-relative form, and
   // consumers compare it for exact equality against `file-change` events. Card
-  // refs are conventionally written with a leading slash (`view:/store/Foo.card`),
+  // refs are conventionally written with a leading slash (`view:/_content/Foo.card`),
   // so normalize at this parse boundary. Without it a leading-slash path loads on
   // mount (card.get tolerates it) but never matches a `file-change` event, so the
   // companion pane silently stops live-updating. See src/shared/box-path.ts.
@@ -225,7 +225,7 @@ function classifyControlHref(href: string): ControlHref | { kind: "external" } {
 
 /**
  * Classify a markdown link href. A box file/card is referenced by a plain
- * relative or box-root-absolute path (`store/x.card`, `/store/x.card`); callers
+ * relative or box-root-absolute path (`_content/x.card`, `/_content/x.card`); callers
  * `preventDefault` and hand a `relative` result to `onNavigate`. Anything with a
  * URL scheme, an anchor, or empty is `external` (a normal link).
  *
@@ -265,7 +265,7 @@ export function classifyMarkdownHref(
  *  - `http(s)://...`, `data:`, protocol-relative `//...` — pass through
  *  - `api/files/<path>` or `/api/files/<path>` — back-compat form, treat the
  *    rest as box-root-relative
- *  - `/store/foo.png` — leading `/` means box-root-relative
+ *  - `/_content/foo.png` — leading `/` means box-root-relative
  *  - `images/foo.png`, `../sibling/foo.png` — document-relative, resolved
  *    against `basePath`
  *

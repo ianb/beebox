@@ -1,7 +1,7 @@
 # Cross-process box authorization writes
 
 Hub invite acceptance and a running box's Admin UI can mutate the same
-`config/box.json`. The shared file lock preserves both updates when separate
+`_config/box.json`. The shared file lock preserves both updates when separate
 processes race.
 
 ```ts setup
@@ -34,7 +34,7 @@ await Promise.all([
   grantInChild(box.root, "first@example.com"),
   grantInChild(box.root, "second@example.com"),
 ]);
-const config = JSON.parse(await box.read("config/box.json"));
+const config = JSON.parse(await box.read("_config/box.json"));
 config.allowedEmails.sort().join(",")
 => first@example.com,second@example.com
 ```

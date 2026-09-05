@@ -18,7 +18,7 @@ bbx chat review run               # do it
 
 Boxes get a `chat-review` scheduled script (nightly at 04:00, `lockGroup: retro`)
 installed by `bbx init` at
-`config/schedules/chat-review.scheduled-script.card`, shipping **disabled**.
+`_config/schedules/chat-review.scheduled-script.card`, shipping **disabled**.
 
 To turn it on for a box, set `enabled: true` on that card. `enabled` is a
 box-owned field, so the setting survives template updates rather than being
@@ -26,7 +26,7 @@ re-flipped by the next sync.
 
 ## What qualifies
 
-Discovery is husk-first: `store/chat/web/*.chat.card` *is* the corpus, so a
+Discovery is husk-first: `_content/chat/web/*.chat.card` *is* the corpus, so a
 session with no husk is out of scope and a deleted husk is an editorial removal.
 A session qualifies when it is:
 

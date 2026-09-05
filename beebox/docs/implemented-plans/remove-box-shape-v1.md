@@ -269,7 +269,7 @@ is a fail-closed regression.
 | `compiler.ts` caller not passing a shape | planned (compiler v2 doctest) | `defaultBoxShape()` → v2 | clear |
 | Deleting `box-packageify` registry entry breaks a box's migration ledger | planned (migrations doctest still green) | verify: registry = *pending* set, not applied-history | clear (if invariant holds) |
 | An implicit-v1 doctest (no `.bbx-box` written) silently changes behavior | planned (grep sweep for `makeTmpBox()` w/o marker) | each updated to write a v2 marker or assert new default | clear |
-| Resolve-hook deletion breaks schema loading on some box | planned (box-schemas-v2 doctest, live schema rebuild) | v2 boxes resolve natively via package-root node_modules | clear |
+| Resolve-hook deletion breaks schema loading on some box | planned (box-schemas-native doctest, live schema rebuild) | v2 boxes resolve natively via package-root node_modules | clear |
 
 ## Agent-flow / user-flow edge cases
 

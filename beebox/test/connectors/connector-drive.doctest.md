@@ -134,8 +134,8 @@ const cardContent = createGsheetTemplate({
   owner: "test@example.com",
   sheets: [{ ref: "Budget/Sheet1.json", title: "Sheet1", gid: "0" }],
 });
-await box.seed("store/drive/Budget.gsheet.card", cardContent);
-await box.seed("store/drive/Budget/Sheet1.json", '[\n["Name","Age"],\n["Alice","30"]\n]\n');
+await box.seed("_content/drive/Budget.gsheet.card", cardContent);
+await box.seed("_content/drive/Budget/Sheet1.json", '[\n["Name","Age"],\n["Alice","30"]\n]\n');
 box.commitAll("add drive sheet");
 
 const connector = createGoogleDriveConnector(box.root, drive);
@@ -147,7 +147,7 @@ result.success
 The card file contains the spreadsheet metadata:
 
 ```ts continue
-const card = await box.read("store/drive/Budget.gsheet.card");
+const card = await box.read("_content/drive/Budget.gsheet.card");
 card.includes("drive-id: sheet-abc123")
 => true
 
@@ -188,7 +188,7 @@ const drive3 = createFakeGoogleDrive({
 });
 
 const { createGsheetTemplate: tpl3 } = await import("../../src/schemas/gsheet.js");
-await box3.seed("store/drive/Expenses.gsheet.card", tpl3({
+await box3.seed("_content/drive/Expenses.gsheet.card", tpl3({
   driveId: "sheet-push1",
   title: "Expenses",
   modified: "2026-03-29T10:00:00Z",
@@ -196,14 +196,14 @@ await box3.seed("store/drive/Expenses.gsheet.card", tpl3({
   owner: "test@example.com",
   sheets: [{ ref: "Sheet1.json", title: "Sheet1", gid: "0" }],
 }));
-await box3.seed("store/drive/Expenses.attach/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
+await box3.seed("_content/drive/Expenses.attach/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
 box3.commitAll("add expenses");
 
 const conn3 = createGoogleDriveConnector(box3.root, drive3);
 await conn3.sync();
 
 // Edit the JSON locally — change Coffee price and add Tea
-await box3.seed("store/drive/Expenses.attach/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","6"],\n["Tea","3"]\n]\n');
+await box3.seed("_content/drive/Expenses.attach/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","6"],\n["Tea","3"]\n]\n');
 box3.commitAll("edit expenses");
 
 const result3 = await conn3.sync();
@@ -261,7 +261,7 @@ const drive4 = createFakeGoogleDrive({
 });
 
 const { createGsheetTemplate: tpl4 } = await import("../../src/schemas/gsheet.js");
-await box4.seed("store/drive/Multi.gsheet.card", tpl4({
+await box4.seed("_content/drive/Multi.gsheet.card", tpl4({
   driveId: "sheet-multi",
   title: "Multi",
   modified: "2026-03-29T10:00:00Z",
@@ -272,8 +272,8 @@ await box4.seed("store/drive/Multi.gsheet.card", tpl4({
     { ref: "Multi/Expenses.json", title: "Expenses", gid: "1" },
   ],
 }));
-await box4.seed("store/drive/Multi/Summary.json", '[\n["Total","=SUM(Expenses!B:B)"]\n]\n');
-await box4.seed("store/drive/Multi/Expenses.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
+await box4.seed("_content/drive/Multi/Summary.json", '[\n["Total","=SUM(Expenses!B:B)"]\n]\n');
+await box4.seed("_content/drive/Multi/Expenses.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
 box4.commitAll("add multi");
 
 const conn4 = createGoogleDriveConnector(box4.root, drive4);
@@ -281,7 +281,7 @@ const result4 = await conn4.sync();
 result4.success
 => true
 
-const files = await readdir(join(box4.root, "store/drive/Multi"));
+const files = await readdir(join(box4.root, "_content/drive/Multi"));
 files.sort();
 files
 => [
@@ -339,7 +339,7 @@ const drive5 = createFakeGoogleDrive({
 });
 
 const { createGsheetTemplate: tpl5 } = await import("../../src/schemas/gsheet.js");
-await box5.seed("store/drive/Reviewed.gsheet.card", tpl5({
+await box5.seed("_content/drive/Reviewed.gsheet.card", tpl5({
   driveId: "sheet-comm",
   title: "Reviewed",
   modified: "2026-03-29T10:00:00Z",
@@ -353,11 +353,11 @@ const result5 = await createGoogleDriveConnector(box5.root, drive5).sync();
 result5.success
 => true
 
-const card5 = await box5.read("store/drive/Reviewed.gsheet.card");
+const card5 = await box5.read("_content/drive/Reviewed.gsheet.card");
 card5.includes("ref: attach/Reviewed.comments.json")
 => true
 
-const sidecar5 = JSON.parse(await box5.read("store/drive/Reviewed.attach/Reviewed.comments.json"));
+const sidecar5 = JSON.parse(await box5.read("_content/drive/Reviewed.attach/Reviewed.comments.json"));
 sidecar5[0]?.content
 => Should this be Bob?
 
@@ -367,7 +367,7 @@ sidecar5[0]?.author?.displayName
 
 ## Trashing a card stops sync, and restoring it resumes
 
-`bbx rm` moves both the card and its attachment scope into `store/trash`. The
+`bbx rm` moves both the card and its attachment scope into `_bookkeeping/trash`. The
 trash copy remains the durable record of the Drive ID, but it is not part of
 the active sync working set.
 
@@ -375,8 +375,8 @@ the active sync working set.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 const fixture = sheetFixture({ id: "sheet-trash", name: "Trash Me" });
-await box.seed("store/drive/Trash-Me.gsheet.card", fixture.card);
-await box.seed("store/drive/Trash-Me.attach/Sheet1.json", '[["Name"],["Alice"]]\n');
+await box.seed("_content/drive/Trash-Me.gsheet.card", fixture.card);
+await box.seed("_content/drive/Trash-Me.attach/Sheet1.json", '[["Name"],["Alice"]]\n');
 box.commitAll("add drive card");
 
 const inner = createFakeGoogleDrive({
@@ -402,7 +402,7 @@ After the real trash move, another sync makes no request for that Drive file.
 ```ts continue
 const receipt = await moveCardsToTrash(
   createCliContext(box.root),
-  ["store/drive/Trash-Me.gsheet.card"],
+  ["_content/drive/Trash-Me.gsheet.card"],
 );
 getFileCalls = 0;
 const trashed = await connector.sync();
@@ -411,7 +411,7 @@ JSON.stringify({
   changed: trashed.created.length + trashed.updated.length + (trashed.pushed?.length ?? 0),
   trashPath: receipt.moves[0]?.destPath,
 })
-=> {"getFileCalls":0,"changed":0,"trashPath":"store/trash/Trash-Me.gsheet.card"}
+=> {"getFileCalls":0,"changed":0,"trashPath":"_bookkeeping/trash/Trash-Me.gsheet.card"}
 ```
 
 Restoring the exact card and attachment paths makes it live again.
@@ -441,7 +441,7 @@ again.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/folder/Folder.gfolder.card",
+  "_content/drive/folder/Folder.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 const fixture = sheetFixture({
@@ -465,8 +465,8 @@ const drive = {
 };
 const connector = createGoogleDriveConnector(box.root, drive);
 const initial = await connector.sync();
-const liveCard = "store/drive/folder/Folder_Child.gsheet.card";
-const liveSheet = "store/drive/folder/Folder_Child.attach/Sheet1.json";
+const liveCard = "_content/drive/folder/Folder_Child.gsheet.card";
+const liveSheet = "_content/drive/folder/Folder_Child.attach/Sheet1.json";
 JSON.stringify({
   created: initial.created.includes(liveCard),
   attachment: (await box.list()).includes(liveSheet),
@@ -486,7 +486,7 @@ const receipt = await moveCardsToTrash(
 getFileCalls = 0;
 const trashed = await connector.sync();
 const retainedState = JSON.parse(
-  await box.read("config/connectors/google-drive.state.json"),
+  await box.read("_bookkeeping/connectors/google-drive.state.json"),
 ) as { files?: Record<string, { contentHashes?: Record<string, string> }> };
 JSON.stringify({
   getFileCalls,
@@ -529,9 +529,9 @@ as a mounted file.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 const yamlFixture = sheetFixture({ id: "yaml-id", name: "YAML Card" });
-await box.seed("store/drive/Yaml.gsheet.card", yamlFixture.card);
-await box.seed("store/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title><modified>2026-03-01T00:00:00Z</modified><sheet-tab title="Old Tab" gid="0"/></gsheet>\n');
-await box.seed("store/trash/Hidden.gsheet.card", createGsheetTemplate({
+await box.seed("_content/drive/Yaml.gsheet.card", yamlFixture.card);
+await box.seed("_content/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title><modified>2026-03-01T00:00:00Z</modified><sheet-tab title="Old Tab" gid="0"/></gsheet>\n');
+await box.seed("_bookkeeping/trash/Hidden.gsheet.card", createGsheetTemplate({
   driveId: "trash-id",
   title: "Hidden",
   modified: "2026-03-29T10:00:00Z",
@@ -545,7 +545,7 @@ JSON.stringify({
   count: output.includes("2 Drive card(s)"),
   yamlId: output.includes("Drive ID: yaml-id"),
   legacyId: output.includes("Drive ID: legacy-id"),
-  trash: output.includes("trash-id") || output.includes("store/trash"),
+  trash: output.includes("trash-id") || output.includes("_bookkeeping/trash"),
 })
 => {"count":true,"yamlId":true,"legacyId":true,"trash":false}
 ```
@@ -565,7 +565,7 @@ const conflicted = createGdocTemplate({
   status: "conflict",
   lossy: [{ type: "images", count: 2 }, { type: "footnotes", count: 1 }],
 });
-await box.seed("store/drive/Contended.gdoc.card", conflicted);
+await box.seed("_content/drive/Contended.gdoc.card", conflicted);
 
 const health = await captureLogs(() => runDriveStatus(box.root));
 JSON.stringify({
@@ -585,15 +585,15 @@ Cards with an ambiguous identity are listed too — they are not synced, so a
 silent omission would read as "not mounted".
 
 ```ts continue
-await box.seed("store/drive/Yaml-Copy.gsheet.card", yamlFixture.card);
-await box.seed("store/drive/Broken.gsheet.card", "---\ntitle: No identity\n---\n");
+await box.seed("_content/drive/Yaml-Copy.gsheet.card", yamlFixture.card);
+await box.seed("_content/drive/Broken.gsheet.card", "---\ntitle: No identity\n---\n");
 
 const ambiguous = await captureLogs(() => runDriveStatus(box.root));
 JSON.stringify({
   duplicate: ambiguous.includes("Duplicate drive-id yaml-id"),
-  bothPaths: ambiguous.includes("store/drive/Yaml.gsheet.card")
-    && ambiguous.includes("store/drive/Yaml-Copy.gsheet.card"),
-  unreadable: ambiguous.includes("No readable drive-id: store/drive/Broken.gsheet.card"),
+  bothPaths: ambiguous.includes("_content/drive/Yaml.gsheet.card")
+    && ambiguous.includes("_content/drive/Yaml-Copy.gsheet.card"),
+  unreadable: ambiguous.includes("No readable drive-id: _content/drive/Broken.gsheet.card"),
   mounted: ambiguous.includes("2 Drive card(s)"),
 })
 => {"duplicate":true,"bothPaths":true,"unreadable":true,"mounted":true}
@@ -612,17 +612,17 @@ discovery recreate a deleted card. Unparseable frontmatter reads as no ID.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("store/drive/Quoted.gsheet.card", "---\ndrive-id: 'sheet-quoted'\nstatus: synced\ntitle: Quoted\n---\n");
-await box.seed("store/drive/Commented.gsheet.card", "---\ndrive-id: sheet-commented # mounted by hand\ntitle: Commented\n---\n");
-await box.seed("store/drive/Broken.gsheet.card", "---\ndrive-id: [unclosed\n---\n");
-await box.seed("store/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title></gsheet>\n');
+await box.seed("_content/drive/Quoted.gsheet.card", "---\ndrive-id: 'sheet-quoted'\nstatus: synced\ntitle: Quoted\n---\n");
+await box.seed("_content/drive/Commented.gsheet.card", "---\ndrive-id: sheet-commented # mounted by hand\ntitle: Commented\n---\n");
+await box.seed("_content/drive/Broken.gsheet.card", "---\ndrive-id: [unclosed\n---\n");
+await box.seed("_content/drive/Legacy.gsheet.card", '<gsheet drive-id="legacy-id"><title>Legacy</title></gsheet>\n');
 
 const tracking = await findDriveCardTracking(box.root);
 JSON.stringify({
   ids: tracking.liveCards.map((card) => card.driveId),
   unreadable: tracking.unreadable,
 })
-=> {"ids":["sheet-commented","legacy-id","sheet-quoted"],"unreadable":["store/drive/Broken.gsheet.card"]}
+=> {"ids":["sheet-commented","legacy-id","sheet-quoted"],"unreadable":["_content/drive/Broken.gsheet.card"]}
 ```
 
 ```ts cleanup
@@ -639,7 +639,7 @@ the other's, so the connector syncs neither and reports the ambiguity.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 const fixture = sheetFixture({ id: "sheet-dup", name: "Shared" });
-await box.seed("store/drive/Alpha.gsheet.card", fixture.card);
+await box.seed("_content/drive/Alpha.gsheet.card", fixture.card);
 box.commitAll("mount alpha");
 
 const drive = createFakeGoogleDrive({
@@ -650,7 +650,7 @@ const connector = createGoogleDriveConnector(box.root, drive);
 const first = await connector.sync();
 JSON.stringify({
   success: first.success,
-  attach: (await box.list()).includes("store/drive/Alpha.attach/Sheet1.json"),
+  attach: (await box.list()).includes("_content/drive/Alpha.attach/Sheet1.json"),
 })
 => {"success":true,"attach":true}
 ```
@@ -660,11 +660,11 @@ rename gone wrong). Alpha's attachment is edited locally — the exact case that
 used to push Beta's stale copy back over it.
 
 ```ts continue
-await box.seed("store/drive/Beta.gsheet.card", fixture.card);
+await box.seed("_content/drive/Beta.gsheet.card", fixture.card);
 // Beta's own attach copy is the stale data that used to get pushed back over
 // Alpha's edit, because both share one transient-hash entry.
-await box.seed("store/drive/Beta.attach/Sheet1.json", '[\n["Name"],\n["Alice stale"]\n]\n');
-await box.seed("store/drive/Alpha.attach/Sheet1.json", '[\n["Name"],\n["Alice edited"]\n]\n');
+await box.seed("_content/drive/Beta.attach/Sheet1.json", '[\n["Name"],\n["Alice stale"]\n]\n');
+await box.seed("_content/drive/Alpha.attach/Sheet1.json", '[\n["Name"],\n["Alice edited"]\n]\n');
 
 const ambiguous = await connector.sync();
 JSON.stringify({
@@ -673,7 +673,7 @@ JSON.stringify({
   pushed: ambiguous.pushed ?? [],
   updates: drive.updateLog.length,
 })
-=> {"success":false,"error":"Duplicate drive-id sheet-dup claimed by store/drive/Alpha.gsheet.card, store/drive/Beta.gsheet.card — both skipped","pushed":[],"updates":0}
+=> {"success":false,"error":"Duplicate drive-id sheet-dup claimed by _content/drive/Alpha.gsheet.card, _content/drive/Beta.gsheet.card — both skipped","pushed":[],"updates":0}
 ```
 
 Nothing reached Google — the remote spreadsheet still holds its original rows.
@@ -694,15 +694,15 @@ Removing the duplicate makes the surviving card syncable again, and the local
 edit then pushes.
 
 ```ts continue
-await rm(join(box.root, "store/drive/Beta.gsheet.card"));
-await rm(join(box.root, "store/drive/Beta.attach"), { recursive: true });
+await rm(join(box.root, "_content/drive/Beta.gsheet.card"));
+await rm(join(box.root, "_content/drive/Beta.attach"), { recursive: true });
 const resolved = await connector.sync();
 JSON.stringify({
   success: resolved.success,
   pushed: resolved.pushed ?? [],
   remote: drive.spreadsheets.get("sheet-dup")?.sheets.get("Sheet1"),
 })
-=> {"success":true,"pushed":["store/drive/Alpha.attach/Sheet1.json"],"remote":[["Name"],["Alice edited"]]}
+=> {"success":true,"pushed":["_content/drive/Alpha.attach/Sheet1.json"],"remote":[["Name"],["Alice edited"]]}
 ```
 
 ```ts cleanup
@@ -719,7 +719,7 @@ rather than leaving the remote child untracked forever.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/folder/Folder.gfolder.card",
+  "_content/drive/folder/Folder.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 
@@ -729,7 +729,7 @@ const newcomer = sheetFixture({
   name: "Shared Name",
   parent: "folder-1",
 });
-await box.seed("store/drive/folder/Shared_Name.gsheet.card", occupant.card);
+await box.seed("_content/drive/folder/Shared_Name.gsheet.card", occupant.card);
 box.commitAll("mount folder");
 
 const drive = createFakeGoogleDrive({
@@ -743,7 +743,7 @@ const connector = createGoogleDriveConnector(box.root, drive);
 const result = await connector.sync();
 const cards = (await box.list()).split("\n").filter((p) => p.endsWith(".gsheet.card"));
 JSON.stringify({ success: result.success, error: result.error, cards })
-=> {"success":false,"error":"Drive file sheet-newcomer (\"Shared Name\") maps to store/drive/folder/Shared_Name.gsheet.card, already claimed by drive-id sheet-occupant","cards":["store/drive/folder/Shared_Name.gsheet.card"]}
+=> {"success":false,"error":"Drive file sheet-newcomer (\"Shared Name\") maps to _content/drive/folder/Shared_Name.gsheet.card, already claimed by drive-id sheet-occupant","cards":["_content/drive/folder/Shared_Name.gsheet.card"]}
 ```
 
 The same Drive ID at that path is a benign re-mount, not a collision. That is
@@ -759,7 +759,7 @@ const racing = {
   async listFiles(folderId: string) {
     // Stand in for `bbx drive add` landing between the card scan and this
     // folder pass: the card exists on disk but was not in the snapshot.
-    await box.seed("store/drive/folder/Raced_Child.gsheet.card", raced.card);
+    await box.seed("_content/drive/folder/Raced_Child.gsheet.card", raced.card);
     return drive.listFiles(folderId);
   },
 };
@@ -769,7 +769,7 @@ JSON.stringify({
   error: third.error,
   cards: (await box.list()).split("\n").filter((p) => p.endsWith(".gsheet.card")),
 })
-=> {"error":"Drive file sheet-newcomer (\"Shared Name\") maps to store/drive/folder/Shared_Name.gsheet.card, already claimed by drive-id sheet-occupant","cards":["store/drive/folder/Raced_Child.gsheet.card","store/drive/folder/Shared_Name.gsheet.card"]}
+=> {"error":"Drive file sheet-newcomer (\"Shared Name\") maps to _content/drive/folder/Shared_Name.gsheet.card, already claimed by drive-id sheet-occupant","cards":["_content/drive/folder/Raced_Child.gsheet.card","_content/drive/folder/Shared_Name.gsheet.card"]}
 ```
 
 ```ts cleanup
@@ -787,7 +787,7 @@ Drive request, no recreated card, and the failure names the path.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/folder/Folder.gfolder.card",
+  "_content/drive/folder/Folder.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 const fixture = sheetFixture({
@@ -811,7 +811,7 @@ const drive = {
 };
 const connector = createGoogleDriveConnector(box.root, drive);
 const initial = await connector.sync();
-const liveCard = "store/drive/folder/Folder_Child.gsheet.card";
+const liveCard = "_content/drive/folder/Folder_Child.gsheet.card";
 JSON.stringify({ success: initial.success, created: initial.created.includes(liveCard) })
 => {"success":true,"created":true}
 ```
@@ -821,7 +821,7 @@ unreadable.
 
 ```ts continue
 await moveCardsToTrash(createCliContext(box.root), [liveCard]);
-await box.seed("store/trash/Folder_Child.gsheet.card", "---\ntitle: Folder Child\n---\n");
+await box.seed("_bookkeeping/trash/Folder_Child.gsheet.card", "---\ntitle: Folder Child\n---\n");
 getFileCalls = 0;
 const blocked = await connector.sync();
 JSON.stringify({
@@ -831,7 +831,7 @@ JSON.stringify({
   created: blocked.created.length,
   liveCardExists: (await box.list()).includes(liveCard),
 })
-=> {"success":false,"error":"Unreadable Drive card(s), folder discovery skipped: store/trash/Folder_Child.gsheet.card","getFileCalls":0,"created":0,"liveCardExists":false}
+=> {"success":false,"error":"Unreadable Drive card(s), folder discovery skipped: _bookkeeping/trash/Folder_Child.gsheet.card","getFileCalls":0,"created":0,"liveCardExists":false}
 ```
 
 ```ts cleanup

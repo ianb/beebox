@@ -57,6 +57,6 @@ these fixes keep a quote faithful:
   says it again more clearly. Treat the two as one self-correction: keep the
   clean second version, drop the first.
 
-See \`docs/generated/narration-mode.md\`.
+See \`_content/docs/generated/narration-mode.md\`.
 `;
 }

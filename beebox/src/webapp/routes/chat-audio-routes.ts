@@ -112,7 +112,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
   // GET /api/chat/voice-config - Return speaking voice config from personality
   server.get("/api/chat/voice-config", async (_request, _reply): Promise<CompiledSpeakingVoice> => {
     try {
-      const voicePath = path.join(boxRoot, "docs/generated/speaking-voice.json");
+      const voicePath = path.join(boxRoot, "_content/docs/generated/speaking-voice.json");
       const content = await fs.readFile(voicePath, "utf-8");
       const parsed = CompiledSpeakingVoiceSchema.safeParse(JSON.parse(content));
       if (parsed.success) {

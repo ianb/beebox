@@ -25,7 +25,7 @@ to change a user-facing word, change it here first. Decisions recorded
 
 ## Storage and files
 
-**box** — A single user's working directory under `~/src/boxes/` (or `/home/beebox/boxes/` on the server). Contains the user's cards, config, and state. Each box is an independent git repo. For a v2 (package-layout) box, "box" specifically means the `content/` directory (`boxRoot`) nested inside the coding-session package (`packageRoot`) — see `docs/box-layout.md`.
+**box** — A single user's working directory under `~/src/boxes/` (or `/home/beebox/boxes/` on the server). Contains the user's cards, config, and state, and is also its own npm package (`package.json`, `src/`) and git repo — one root, `boxRoot` — see `docs/box-layout.md`.
 *User-facing:* same — "your box" is the user's box, the totality of their stuff. Never the app's name for itself (no "box assistant"), and never a bare place label (the root place is "Home").
 
 **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "users" of the system). See CLAUDE.md note on avoiding personal names.
@@ -51,21 +51,21 @@ to change a user-facing word, change it here first. Decisions recorded
 
 **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scripts → runs connectors (creating job cards) → one reactor cycle over pending jobs → pushes to the box's git remote. Recurring wakeups are fired by `bbx tick` (`docs/scheduler.md`); outbound cards are flushed by `bbx finalize`, not by an "execute commands" step. See `docs/design/processing.md`.
 
-**reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `box/jobs/` → agent processing (batch jobs in one session; chat jobs with per-thread resumable sessions) → `bbx finalize`. The wakeup cycle's engine.
+**reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent processing (batch jobs in one session; chat jobs with per-thread resumable sessions) → `bbx finalize`. The wakeup cycle's engine.
 
 **connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Connector.sync()`. See `src/connectors/CLAUDE.md`.
 
-**procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `config/procedures/`, runs in `procedure/runs/`. See `docs/procedure-implementation.md`.
+**procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `_config/procedures/`, runs in `_bookkeeping/procedure/runs/`. See `docs/procedure-implementation.md`.
 
 **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observable state for testing. See `src/services/CLAUDE.md`.
 
 **cardworks** — A former standalone card library, now removed. Its frontmatter-card primitives (`cardSchema()`, parsing, serialization, Zod-based validation, the frontmatter splitter) were absorbed into `src/cards/` in this repo and are exposed to box-local schemas via the public `beebox/cards` specifier. Its XML-card support (`element()`) was not carried forward — the XML file format went away with the package, not into `src/cards/`. See `docs/implemented-plans/remove-cardworks-package.md`.
 
-**retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what the boxholder implicitly taught the agent and integrates it into personality/guide cards as `source: inferred` beliefs, confidence set by recurrence (1 session = hypothesis, 2–3 = low, 4+ = medium — the ceiling for inferred). Authoritative changes (briefing corrections, conflicts with `user-stated` beliefs) become question cards. Audit trail: run reports in `store/reviews/retro/`, ledger in `.beebox/retro/`, commits trailered `Retro-Run: <runId>`. See `docs/implemented-plans/box-retrospectives.md`.
+**retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what the boxholder implicitly taught the agent and integrates it into personality/guide cards as `source: inferred` beliefs, confidence set by recurrence (1 session = hypothesis, 2–3 = low, 4+ = medium — the ceiling for inferred). Authoritative changes (briefing corrections, conflicts with `user-stated` beliefs) become question cards. Audit trail: run reports in `_content/reviews/retro/`, ledger in `.beebox/retro/`, commits trailered `Retro-Run: <runId>`. See `docs/implemented-plans/box-retrospectives.md`.
 
-**inbox** — `box/inbox/`. Where new cards land before processing.
+**inbox** — `_content/inbox/`. Where new cards land before processing.
 
-**archive** — `store/archive/`. Where processed cards move after the wakeup cycle finishes with them.
+**archive** — `_bookkeeping/archive/`. Where processed cards move after the wakeup cycle finishes with them.
 
 ## Chat and navigation
 

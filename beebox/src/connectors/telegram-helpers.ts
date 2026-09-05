@@ -11,6 +11,7 @@ import { refusalAllowsLegacyFallback } from "../core/secrets/legacy-fallback.js"
 import { resolveSecret } from "../core/secrets/resolve.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { getBoxDir } from "../lib/paths.js";
 import { safeFilename } from "./chat-utils.js";
 import {
   parseDuration as parseScheduledDuration,
@@ -26,23 +27,23 @@ import type {
 
 export class MissingPublicUrlError extends Error {
   constructor() {
-    super("publicUrl not set in config/box.json — cannot set Telegram webhook");
+    super("publicUrl not set in _config/box.json — cannot set Telegram webhook");
     this.name = "MissingPublicUrlError";
   }
 }
 
 /**
- * Load publicUrl from config/box.json. Falls back to PUBLIC_URL env var.
+ * Load publicUrl from _config/box.json. Falls back to PUBLIC_URL env var.
  */
 export async function loadPublicUrl(boxRoot: string): Promise<string | null> {
   try {
-    const content = await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8");
+    const content = await fs.readFile(path.join(getBoxDir(boxRoot, "config"), "box.json"), "utf-8");
     const parsed = JSON.parse(content);
     if (parsed.publicUrl) return parsed.publicUrl;
   } catch (e) {
     // box.json missing or unparseable — fall through to the env var.
     if (errnoCode(e) !== "ENOENT") {
-      console.warn(`Could not read publicUrl from config/box.json, falling back to PUBLIC_URL: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`Could not read publicUrl from _config/box.json, falling back to PUBLIC_URL: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
   return process.env.PUBLIC_URL ?? null;
@@ -55,7 +56,7 @@ export function telegramSecretName(slug: string): string {
 
 /** The legacy in-tree secret file's path — still deleted on disconnect. */
 export function telegramLegacySecretPath(boxRoot: string): string {
-  return path.join(boxRoot, "config/connectors/telegram.secret.json");
+  return path.join(getBoxDir(boxRoot, "connectors"), "telegram.secret.json");
 }
 
 /** Both the store's JSON-string value and the legacy file share this shape. */
@@ -69,7 +70,7 @@ let warnedAboutLegacyFile = false;
 /**
  * Load a box's Telegram credentials: the machine store's `telegram-bot/<slug>`
  * entry (a JSON string `{botToken, webhookSecret}`) at `server` access, then
- * the deprecated in-tree `config/connectors/telegram.secret.json`
+ * the deprecated in-tree `_config/connectors/telegram.secret.json`
  * (`docs/plans/secret-custody.md`, Track 3). `null` when neither exists —
  * Telegram is simply not configured for this box, a normal state.
  *

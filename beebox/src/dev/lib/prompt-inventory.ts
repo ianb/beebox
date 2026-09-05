@@ -21,7 +21,6 @@ import { connectorRules } from "../../core/init-rules.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
-const PLACEHOLDER = "${boxRoot}";
 const TEMPLATES_DIR = path.join(PACKAGE_ROOT, "templates", "procedures");
 
 export interface PromptEntry {
@@ -45,7 +44,7 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
     title: "Reactor System Prompt",
     source: "src/core/reactor/prompts.ts → buildReactorSystemPrompt()",
     scope: "Prepended as the system prompt for every batch job agent session. This is the wrapper that tells the agent what context it already has and how to process jobs.",
-    text: buildReactorSystemPrompt(PLACEHOLDER),
+    text: buildReactorSystemPrompt(),
   });
 
   entries.push({

@@ -33,7 +33,7 @@ Three hooks are installed per box:
 
 ## Canonical ref form (`--canonical`)
 
-Refs should be written from the box root (`/store/notes/Plan.doc.card`); the one
+Refs should be written from the box root (`/_content/notes/Plan.doc.card`); the one
 exception is a card's own `attach/…` scope. A document-relative ref still
 resolves — liberal resolution is permanent (`src/shared/ref-path.ts`) — but it
 means something different depending on where the document lives.
@@ -47,15 +47,15 @@ alone. The rewrite is text-surgical, so frontmatter key order and `?query` /
 `#fragment` suffixes survive untouched.
 
 **Box-root-intent rescue.** Old system code wrote bare refs meaning them from
-the box root — a question card's `ref: box/inbox/scan-….capture-session.card`, a
-chat thread's `participants[0].ref: people/Ian_Bicking`. Read
+the box root — a question card's `ref: _content/inbox/scan-….capture-session.card`, a
+chat thread's `participants[0].ref: _content/people/Priya_Marlowe`. Read
 document-relative, those dangle; read from the box root they resolve. So when a
 non-canonical ref's document-relative target does **not** exist, `--fix` tries
 the same bare path from the box root, and if *that* target exists writes the
 `/`-leading form — turning a broken ref into a working one. Repairs are counted
 and reported separately from ordinary canonicalizations (which only change how a
 ref is written, never what it points at), and the report mode marks them
-`→ /box/inbox/… (repairs dangling ref)`.
+`→ /_content/inbox/… (repairs dangling ref)`.
 
 The rescue is **strictly gated by an ambiguity guard**: if both readings name an
 existing file, the ref is left exactly as written and reported as ambiguous. The

@@ -8,7 +8,7 @@
  * about a list.
  *
  * Unmount asks twice. It is not destructive (children stay; the card is
- * recoverable from `store/trash/`), but it silently stops a thing the box was
+ * recoverable from `_bookkeeping/trash/`), but it silently stops a thing the box was
  * doing, and a mis-click there is not visible until the next sync fails to
  * happen. The second step is inline rather than a browser `confirm()` so it
  * renders like the rest of the page and can say what unmounting actually does.

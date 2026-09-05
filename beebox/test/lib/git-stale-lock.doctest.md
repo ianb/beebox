@@ -22,7 +22,7 @@ import {
   formatAge,
 } from "../../src/lib/git-stale-lock.js";
 
-const lockPathOf = (box) => join(box.packageRoot, ".git", "index.lock");
+const lockPathOf = (box) => join(box.root, ".git", "index.lock");
 
 // Write a lock file and backdate it, standing in for one a killed git left
 // behind `ageMs` ago.
@@ -98,17 +98,6 @@ console.error = realError;
 
 ```ts continue
 logged.length === 1 && logged[0].includes("removed an abandoned")
-=> true
-```
-
-`boxRoot` and the package root are different directories in one repository, and
-both resolve to the same lock — a v2 box's `content/` has no `.git` of its own:
-
-```ts continue
-await plantLock(box, INDEX_LOCK_STALE_MS + 60_000);
-const fromPackageRoot = await inspectIndexLock(box.packageRoot);
-const fromBoxRoot = await inspectIndexLock(box.root);
-fromPackageRoot.lockPath === fromBoxRoot.lockPath
 => true
 ```
 

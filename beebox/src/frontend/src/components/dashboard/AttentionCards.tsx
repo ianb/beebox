@@ -64,7 +64,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
             </h2>
             <Link
               id="bbx-dashboard-inbox-browse"
-              to={href(`/${boxSlug}/browse/box/inbox`)}
+              to={href(`/${boxSlug}/browse/_content/inbox`)}
               className="text-xs text-primary hover:text-primary-dark"
             >
               Browse &rarr;

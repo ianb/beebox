@@ -1,5 +1,5 @@
 /**
- * BrowsePage - File browser for store/ and other directories.
+ * BrowsePage - File browser for _content/ and other box directories.
  *
  * Sidebar with directory listing + card detail panel.
  */
@@ -52,7 +52,7 @@ export interface BrowseNavigateOptions {
 }
 
 interface BrowsePageProps {
-  /** Current path from URL splat (e.g., "store/recipes" or "store/recipes/Foo.recipe.card") */
+  /** Current path from URL splat (e.g., "_content/recipes" or "_content/recipes/Foo.recipe.card") */
   currentPath?: string;
   /**
    * Called for every navigating action — opening a directory, selecting a
@@ -136,7 +136,7 @@ function useBrowsePlace({ dirPath, currentPath }: { dirPath: string; currentPath
  * A selected file is named by its card title, a directory by its landmark —
  * the directory's own name for itself, and the one the app bar and the tab's
  * mark already use. Preferring it keeps a tab from naming a place differently
- * from the icon sitting beside it, which is what `store/recipes` titled
+ * from the icon sitting beside it, which is what `_content/recipes` titled
  * "recipes" next to a 🍳 did.
  */
 function useBrowseTitle({

@@ -76,7 +76,7 @@ export const CaptureSessionSchema: CardSchema = cardSchema("capture-session", {
   fields: captureSessionFields,
   instructions: `# Capture Session Cards
 
-A capture is a user-recorded batch of photos and/or voice, delivered to chat as a \`<capture doc="...">\` message (or, for \`bbx scan-import\` batches, dropped straight into \`box/inbox/\` with no chat message at all — these instructions apply wherever the card is found). The session card groups the images, audio clips, and uploaded files from one recording session; its child cards live inside the session's attach scope (\`{basename}.attach/\`), refs using the \`attach/\` virtual prefix.
+A capture is a user-recorded batch of photos and/or voice, delivered to chat as a \`<capture doc="...">\` message (or, for \`bbx scan-import\` batches, dropped straight into \`_content/inbox/\` with no chat message at all — these instructions apply wherever the card is found). The session card groups the images, audio clips, and uploaded files from one recording session; its child cards live inside the session's attach scope (\`{basename}.attach/\`), refs using the \`attach/\` virtual prefix.
 
 Frontmatter:
 - \`status\` — \`new\` (just written, not yet annotated) → \`delivered\` (the chat message went out) → \`annotated\` (you've done your annotation pass and committed it). Older cards may carry \`transcribing\`/\`transcribed\`/\`intake-complete\`/\`extracted\` — legacy values from a retired pipeline; treat those cards as leftover \`new\` work.

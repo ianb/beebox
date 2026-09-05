@@ -71,9 +71,9 @@ function describeCommit(record) {
   return `${subject} / by=${trailer} / files=${files.join(",")}`;
 }
 
-async function describeLog(packageRoot, count) {
+async function describeLog(boxRoot, count) {
   const format = "--format=%x1e%s|%(trailers:key=Committed-By,valueonly,separator=)";
-  const raw = await simpleGit(packageRoot).raw(["log", format, "--name-only", `-${count}`]);
+  const raw = await simpleGit(boxRoot).raw(["log", format, "--name-only", `-${count}`]);
   const records = raw.split("\u001e").filter((record) => record.trim() !== "");
   const described = records.map(describeCommit);
   described.sort();
@@ -109,12 +109,12 @@ give, because staging and committing were two separately-raced operations and a
 neighbour's staged file could ride along:
 
 ```ts continue
-await describeLog(box.packageRoot, 5)
-=> commit from alpha / by=alpha / files=content/alpha.md
-commit from bravo / by=bravo / files=content/bravo.md
-commit from charlie / by=charlie / files=content/charlie.md
-commit from delta / by=delta / files=content/delta.md
-commit from echo / by=echo / files=content/echo.md
+await describeLog(box.root, 5)
+=> commit from alpha / by=alpha / files=alpha.md
+commit from bravo / by=bravo / files=bravo.md
+commit from charlie / by=charlie / files=charlie.md
+commit from delta / by=delta / files=delta.md
+commit from echo / by=echo / files=echo.md
 ```
 
 Nothing is left behind: no writer's file stayed uncommitted, and no stale index
@@ -126,7 +126,7 @@ lock survived the race.
 ```
 
 ```ts continue
-existsSync(join(box.packageRoot, ".git", "index.lock"))
+existsSync(join(box.root, ".git", "index.lock"))
 => false
 ```
 
@@ -134,7 +134,7 @@ Our own lock releases too — the guard directory is gone, so the next writer
 acquires immediately rather than waiting out a stale window:
 
 ```ts continue
-existsSync(join(box.packageRoot, ".git", "beebox-index.lock.guard"))
+existsSync(join(box.root, ".git", "beebox-index.lock.guard"))
 => false
 ```
 
@@ -155,7 +155,7 @@ rather than an invented one:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-const indexLock = join(box.packageRoot, ".git", "index.lock");
+const indexLock = join(box.root, ".git", "index.lock");
 writeFileSync(indexLock, "");
 const state = startCommitter(box.root, "held", { BBX_BOX_GIT_LOCK_WAIT_MS: "300" });
 await awaitReady(state);

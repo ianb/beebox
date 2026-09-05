@@ -1,13 +1,13 @@
 # Template File Install
 
-`installTemplateFile` is the shared write-path for every template-managed file in a box (procedures, guides, schedules, briefing, root landmark, personality). It tracks the hash of the last template we cleanly wrote into `config/template-versions.json` and uses that to decide whether a new template can safely overwrite the local copy.
+`installTemplateFile` is the shared write-path for every template-managed file in a box (procedures, guides, schedules, briefing, root landmark, personality). It tracks the hash of the last template we cleanly wrote into `_config/template-versions.json` and uses that to decide whether a new template can safely overwrite the local copy.
 
 The four outcomes:
 
 - `fresh` — file didn't exist; write template, record hash
 - `unchanged` — local already matches the new template; no write
 - `overwritten` — local matches the previously recorded hash (user hasn't touched it since last install) → safe to overwrite
-- `parked` — local diverges from both the new template and the recorded hash → write the new template to `config/_template-updates/<relpath>` for the user to review
+- `parked` — local diverges from both the new template and the recorded hash → write the new template to `_config/_template-updates/<relpath>` for the user to review
 
 `pruneStaleTemplateUpdates` sweeps parked files older than 30 days (configurable) so the review pile doesn't accumulate cruft indefinitely.
 
@@ -28,7 +28,7 @@ async function makeBox() {
 }
 
 async function readVersions(box) {
-  const text = await fs.readFile(path.join(box, "config/template-versions.json"), "utf-8");
+  const text = await fs.readFile(path.join(box, "_config/template-versions.json"), "utf-8");
   return JSON.parse(text);
 }
 ```
@@ -41,7 +41,7 @@ A file that doesn't exist gets written and recorded:
 const box = await makeBox();
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/calendar.guide.card",
+  relPath: "_config/calendar.guide.card",
   templateContent: "v1\n",
 });
 result.outcome
@@ -49,7 +49,7 @@ result.outcome
 ```
 
 ```ts continue
-await fs.readFile(path.join(box, "config/calendar.guide.card"), "utf-8")
+await fs.readFile(path.join(box, "_config/calendar.guide.card"), "utf-8")
 => v1
 ```
 
@@ -57,7 +57,7 @@ await fs.readFile(path.join(box, "config/calendar.guide.card"), "utf-8")
 const versions = await readVersions(box);
 Object.keys(versions)
 => [
-  "config/calendar.guide.card"
+  "_config/calendar.guide.card"
 ]
 ```
 
@@ -67,10 +67,10 @@ Re-running with the same template content is a no-op:
 
 ```ts
 const box = await makeBox();
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v1\n" });
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/x.card",
+  relPath: "_config/x.card",
   templateContent: "v1\n",
 });
 result.outcome
@@ -83,10 +83,10 @@ The boxholder hasn't touched the file since we installed it; a new template vers
 
 ```ts
 const box = await makeBox();
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v1\n" });
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/x.card",
+  relPath: "_config/x.card",
   templateContent: "v2\n",
 });
 result.outcome
@@ -94,7 +94,7 @@ result.outcome
 ```
 
 ```ts continue
-await fs.readFile(path.join(box, "config/x.card"), "utf-8")
+await fs.readFile(path.join(box, "_config/x.card"), "utf-8")
 => v2
 ```
 
@@ -102,7 +102,7 @@ The recorded hash updated to v2:
 
 ```ts continue
 const versions = await readVersions(box);
-versions["config/x.card"].sha256.length
+versions["_config/x.card"].sha256.length
 => 64
 ```
 
@@ -112,11 +112,11 @@ When the local file differs from the recorded hash, we don't overwrite — we pa
 
 ```ts
 const box = await makeBox();
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
-await fs.writeFile(path.join(box, "config/x.card"), "user edit\n");
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v1\n" });
+await fs.writeFile(path.join(box, "_config/x.card"), "user edit\n");
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/x.card",
+  relPath: "_config/x.card",
   templateContent: "v2\n",
 });
 result.outcome
@@ -126,7 +126,7 @@ result.outcome
 The user's edit is preserved:
 
 ```ts continue
-await fs.readFile(path.join(box, "config/x.card"), "utf-8")
+await fs.readFile(path.join(box, "_config/x.card"), "utf-8")
 => user edit
 ```
 
@@ -134,7 +134,7 @@ The new template sits in `_template-updates/` mirroring the original relpath ver
 
 ```ts continue
 result.writtenAt
-=> config/_template-updates/config/x.card
+=> _config/_template-updates/_config/x.card
 
 await fs.readFile(path.join(box, result.writtenAt), "utf-8")
 => v2
@@ -144,14 +144,14 @@ And the recorded hash is **not** updated (so if the user copies the parked versi
 
 ```ts continue
 const versions = await readVersions(box);
-const hashBefore = versions["config/x.card"].sha256;
+const hashBefore = versions["_config/x.card"].sha256;
 const result2 = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/x.card",
+  relPath: "_config/x.card",
   templateContent: "v2\n",
 });
 const versions2 = await readVersions(box);
-versions2["config/x.card"].sha256 === hashBefore
+versions2["_config/x.card"].sha256 === hashBefore
 => true
 ```
 
@@ -163,7 +163,7 @@ reports nothing:
 
 ```ts
 const box = await makeBox();
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v1\n" });
 JSON.stringify(await listParkedTemplateUpdates(box))
 => []
 ```
@@ -172,10 +172,10 @@ After the box diverges and a new template parks, the original relpath (not the
 mirrored `_template-updates/` path) is listed:
 
 ```ts continue
-await fs.writeFile(path.join(box, "config/x.card"), "user edit\n");
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
+await fs.writeFile(path.join(box, "_config/x.card"), "user edit\n");
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v2\n" });
 JSON.stringify(await listParkedTemplateUpdates(box))
-=> ["config/x.card"]
+=> ["_config/x.card"]
 ```
 
 ## Bootstrap — pre-existing file with no recorded hash
@@ -184,11 +184,11 @@ A box that was installed before the version tracker existed has files but no `te
 
 ```ts
 const box = await makeBox();
-await fs.mkdir(path.join(box, "config"), { recursive: true });
-await fs.writeFile(path.join(box, "config/x.card"), "v1\n");
+await fs.mkdir(path.join(box, "_config"), { recursive: true });
+await fs.writeFile(path.join(box, "_config/x.card"), "v1\n");
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/x.card",
+  relPath: "_config/x.card",
   templateContent: "v1\n",
 });
 result.outcome
@@ -197,7 +197,7 @@ result.outcome
 
 ```ts continue
 const versions = await readVersions(box);
-versions["config/x.card"].sha256.length
+versions["_config/x.card"].sha256.length
 => 64
 ```
 
@@ -205,11 +205,11 @@ But if local doesn't match (could be user-edited or an old template version we c
 
 ```ts
 const box = await makeBox();
-await fs.mkdir(path.join(box, "config"), { recursive: true });
-await fs.writeFile(path.join(box, "config/x.card"), "mystery content\n");
+await fs.mkdir(path.join(box, "_config"), { recursive: true });
+await fs.writeFile(path.join(box, "_config/x.card"), "mystery content\n");
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/x.card",
+  relPath: "_config/x.card",
   templateContent: "v2\n",
 });
 result.outcome
@@ -223,16 +223,16 @@ longest-running boxes silently frozen on old templates.
 
 ```ts
 const box = await makeBox();
-await fs.mkdir(path.join(box, "config"), { recursive: true });
-await fs.writeFile(path.join(box, "config/x.card"), "old stock\n");
+await fs.mkdir(path.join(box, "_config"), { recursive: true });
+await fs.writeFile(path.join(box, "_config/x.card"), "old stock\n");
 const oldStock = createHash("sha256").update("old stock\n").digest("hex");
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/x.card",
+  relPath: "_config/x.card",
   templateContent: "v2\n",
   priorStockHashes: [oldStock],
 });
-print(`${result.outcome}: ${await fs.readFile(path.join(box, "config/x.card"), "utf-8")}`.trim());
+print(`${result.outcome}: ${await fs.readFile(path.join(box, "_config/x.card"), "utf-8")}`.trim());
 =>
 overwritten: v2
 ```
@@ -242,11 +242,11 @@ recognised stock, it doesn't stop protecting edited files.
 
 ```ts
 const box = await makeBox();
-await fs.mkdir(path.join(box, "config"), { recursive: true });
-await fs.writeFile(path.join(box, "config/x.card"), "someone's edit\n");
+await fs.mkdir(path.join(box, "_config"), { recursive: true });
+await fs.writeFile(path.join(box, "_config/x.card"), "someone's edit\n");
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/x.card",
+  relPath: "_config/x.card",
   templateContent: "v2\n",
   priorStockHashes: [createHash("sha256").update("old stock\n").digest("hex")],
 });
@@ -263,10 +263,10 @@ install has a recorded version:
 
 ```ts
 const box = await makeBox();
-await fs.mkdir(path.join(box, "config"), { recursive: true });
-print(`before: ${await hasRecordedTemplateVersion(box, "config/x.card")}`);
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
-print(`after: ${await hasRecordedTemplateVersion(box, "config/x.card")}`);
+await fs.mkdir(path.join(box, "_config"), { recursive: true });
+print(`before: ${await hasRecordedTemplateVersion(box, "_config/x.card")}`);
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v1\n" });
+print(`after: ${await hasRecordedTemplateVersion(box, "_config/x.card")}`);
 =>
 before: false
 after: true
@@ -276,16 +276,16 @@ So a caller that withholds the allowlist once a version is recorded parks a
 deliberate revert to old stock instead of stomping it:
 
 ```ts continue
-await fs.writeFile(path.join(box, "config/x.card"), "old stock\n");
+await fs.writeFile(path.join(box, "_config/x.card"), "old stock\n");
 const oldStock = createHash("sha256").update("old stock\n").digest("hex");
-const tracked = await hasRecordedTemplateVersion(box, "config/x.card");
+const tracked = await hasRecordedTemplateVersion(box, "_config/x.card");
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/x.card",
+  relPath: "_config/x.card",
   templateContent: "v2\n",
   ...(tracked ? {} : { priorStockHashes: [oldStock] }),
 });
-print(`${result.outcome}, local still: ${(await fs.readFile(path.join(box, "config/x.card"), "utf-8")).trim()}`);
+print(`${result.outcome}, local still: ${(await fs.readFile(path.join(box, "_config/x.card"), "utf-8")).trim()}`);
 =>
 parked, local still: old stock
 ```
@@ -299,13 +299,13 @@ const box = await makeBox();
 const stripTs = (s) => s.replace(/ts="[^"]*"/g, "");
 await installTemplateFile({
   boxRoot: box,
-  relPath: "config/g.card",
+  relPath: "_config/g.card",
   templateContent: `<guide ts="2026-01-01"/>\n`,
   normalize: stripTs,
 });
 const result = await installTemplateFile({
   boxRoot: box,
-  relPath: "config/g.card",
+  relPath: "_config/g.card",
   templateContent: `<guide ts="2026-05-24"/>\n`,
   normalize: stripTs,
 });
@@ -321,7 +321,7 @@ A box installs a schedule, disables it, then upstream ships a new definition:
 
 ```ts
 const box = await makeBox();
-const rel = "config/schedules/s.scheduled-script.card";
+const rel = "_config/schedules/s.scheduled-script.card";
 const v1 = "---\nruns: bbx sync\ndescription: v1\n---\n";
 await installTemplateFile({ boxRoot: box, relPath: rel, templateContent: v1 });
 // Box disables it (adds enabled: false), touching nothing else:
@@ -353,7 +353,7 @@ But an edit *beyond* the owned fields still parks — the box's real customizati
 
 ```ts
 const box = await makeBox();
-const rel = "config/schedules/s.scheduled-script.card";
+const rel = "_config/schedules/s.scheduled-script.card";
 const v1 = "---\nruns: bbx sync\ndescription: v1\n---\n";
 await installTemplateFile({ boxRoot: box, relPath: rel, templateContent: v1 });
 // Box disables AND retimes it (edits the definition):
@@ -372,7 +372,7 @@ When the box is already on current content and only differs by the toggle, it's 
 
 ```ts
 const box = await makeBox();
-const rel = "config/schedules/s.scheduled-script.card";
+const rel = "_config/schedules/s.scheduled-script.card";
 const v = "---\nruns: bbx sync\ndescription: v1\n---\n";
 await installTemplateFile({ boxRoot: box, relPath: rel, templateContent: v });
 await fs.writeFile(path.join(box, rel), "---\nruns: bbx sync\ndescription: v1\nenabled: false\n---\n");
@@ -388,15 +388,15 @@ result.outcome
 
 ## Pruning stale parked files
 
-`pruneStaleTemplateUpdates` deletes files in `config/_template-updates/` older than the threshold (default 30 days). Recent parks are left alone. Each mirror has its on-disk target present (the realistic case — a mirror is only ever parked because an on-disk copy diverged), so only *age* decides removal here:
+`pruneStaleTemplateUpdates` deletes files in `_config/_template-updates/` older than the threshold (default 30 days). Recent parks are left alone. Each mirror has its on-disk target present (the realistic case — a mirror is only ever parked because an on-disk copy diverged), so only *age* decides removal here:
 
 ```ts
 const box = await makeBox();
-await fs.mkdir(path.join(box, "config/_template-updates"), { recursive: true });
+await fs.mkdir(path.join(box, "_config/_template-updates"), { recursive: true });
 await fs.writeFile(path.join(box, "old.card"), "local\n");
 await fs.writeFile(path.join(box, "new.card"), "local\n");
-const oldFile = path.join(box, "config/_template-updates/old.card");
-const newFile = path.join(box, "config/_template-updates/new.card");
+const oldFile = path.join(box, "_config/_template-updates/old.card");
+const newFile = path.join(box, "_config/_template-updates/new.card");
 await fs.writeFile(oldFile, "old\n");
 await fs.writeFile(newFile, "new\n");
 const now = Date.now();
@@ -406,7 +406,7 @@ await fs.utimes(oldFile, oldTime, oldTime);
 const removed = await pruneStaleTemplateUpdates(box, { now });
 removed
 => [
-  "config/_template-updates/old.card"
+  "_config/_template-updates/old.card"
 ]
 ```
 
@@ -439,7 +439,7 @@ Empty subdirectories are swept after files:
 const box = await makeBox();
 await fs.mkdir(path.join(box, "procedures"), { recursive: true });
 await fs.writeFile(path.join(box, "procedures/x.procedure.card"), "local\n");
-const subdir = path.join(box, "config/_template-updates/procedures");
+const subdir = path.join(box, "_config/_template-updates/procedures");
 await fs.mkdir(subdir, { recursive: true });
 const stale = path.join(subdir, "x.procedure.card");
 await fs.writeFile(stale, "stale\n");
@@ -458,7 +458,7 @@ const box = await makeBox();
 await fs.mkdir(path.join(box, "procedures"), { recursive: true });
 await fs.writeFile(path.join(box, "procedures/old.procedure.card"), "local\n");
 await fs.writeFile(path.join(box, "procedures/fresh.procedure.card"), "local\n");
-const subdir = path.join(box, "config/_template-updates/procedures");
+const subdir = path.join(box, "_config/_template-updates/procedures");
 await fs.mkdir(subdir, { recursive: true });
 const stale = path.join(subdir, "old.procedure.card");
 await fs.writeFile(stale, "stale\n");
@@ -471,7 +471,7 @@ const removed = await pruneStaleTemplateUpdates(box);
 =>
 [
   [
-    "config/_template-updates/procedures/old.procedure.card"
+    "_config/_template-updates/procedures/old.procedure.card"
   ],
   true
 ]
@@ -483,7 +483,7 @@ A parked mirror whose on-disk `<relpath>` no longer exists (the copy was deleted
 
 ```ts
 const box = await makeBox();
-const subdir = path.join(box, "config/_template-updates/procedures");
+const subdir = path.join(box, "_config/_template-updates/procedures");
 await fs.mkdir(subdir, { recursive: true });
 // Freshly parked (mtime = now) but NO on-disk box/procedures/gone.procedure.card:
 await fs.writeFile(path.join(subdir, "gone.procedure.card"), "orphan\n");
@@ -491,7 +491,7 @@ await fs.writeFile(path.join(subdir, "gone.procedure.card"), "orphan\n");
 const removed = await pruneStaleTemplateUpdates(box, { now: Date.now() });
 removed
 => [
-  "config/_template-updates/procedures/gone.procedure.card"
+  "_config/_template-updates/procedures/gone.procedure.card"
 ]
 ```
 
@@ -503,18 +503,18 @@ Park an update by diverging the local copy, then bring it back in line:
 
 ```ts
 const box = await makeBox();
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
-await fs.writeFile(path.join(box, "config/x.card"), "user edit\n");
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v1\n" });
+await fs.writeFile(path.join(box, "_config/x.card"), "user edit\n");
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v2\n" });
 JSON.stringify(await listParkedTemplateUpdates(box))
-=> ["config/x.card"]
+=> ["_config/x.card"]
 ```
 
 The local reverts to the last cleanly-installed version (recorded hash = v1), so a fresh v2 push is now a clean `overwritten` — and the obsolete mirror is cleared:
 
 ```ts continue
-await fs.writeFile(path.join(box, "config/x.card"), "v1\n");
-const result = await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
+await fs.writeFile(path.join(box, "_config/x.card"), "v1\n");
+const result = await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v2\n" });
 result.outcome
 => overwritten
 
@@ -526,11 +526,11 @@ An `unchanged` outcome clears it too — e.g. a migration edits the local file t
 
 ```ts
 const box = await makeBox();
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
-await fs.writeFile(path.join(box, "config/x.card"), "user edit\n");
-await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
-await fs.writeFile(path.join(box, "config/x.card"), "v2\n");
-const result = await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v1\n" });
+await fs.writeFile(path.join(box, "_config/x.card"), "user edit\n");
+await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v2\n" });
+await fs.writeFile(path.join(box, "_config/x.card"), "v2\n");
+const result = await installTemplateFile({ boxRoot: box, relPath: "_config/x.card", templateContent: "v2\n" });
 result.outcome
 => unchanged
 
@@ -538,80 +538,73 @@ JSON.stringify(await listParkedTemplateUpdates(box))
 => []
 ```
 
-## v2 (package-layout) boxes: a `../`-prefixed relPath reaches the package root
+## shapeVersion 3: the schemas/views/tricks CLAUDE.md guides live under `src/`, no climb needed
 
-A v2 box's three CLAUDE.md guides (schemas, views, tricks) live one level up
-from `boxRoot` (`content/`), at the package root's `src/`. `relPath` starting
-with `../` is resolved the normal way — `path.join` walks it up — so the
-target lands outside `boxRoot` while the tracker bookkeeping
-(`template-versions.json`) stays inside it, tracked with the box's own git
-history:
+shapeVersion 3 has one root, so a box's three CLAUDE.md guides (schemas,
+views, tricks) live right under `boxRoot`'s own `src/` — `relPath` needs no
+`../` climb the way a v2 box's package-root-nested guides once did:
 
 ```ts continue
-async function makePackageBox() {
-  const packageRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-install-tpl-pkg-"));
-  const boxRoot = path.join(packageRoot, "content");
-  await fs.mkdir(boxRoot, { recursive: true });
-  return { packageRoot, boxRoot };
+async function makeV3Box() {
+  const boxRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-install-tpl-v3-"));
+  return { boxRoot };
 }
 
-const { packageRoot, boxRoot } = await makePackageBox();
+const { boxRoot: v3Root } = await makeV3Box();
 const fresh = await installTemplateFile({
-  boxRoot,
-  relPath: "../src/schemas/CLAUDE.md",
+  boxRoot: v3Root,
+  relPath: "src/schemas/CLAUDE.md",
   templateContent: "v1\n",
 });
 fresh.outcome
 => fresh
 
-await fs.readFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "utf-8")
+await fs.readFile(path.join(v3Root, "src/schemas/CLAUDE.md"), "utf-8")
 => v1
 
-const versions = await readVersions(boxRoot);
+const versions = await readVersions(v3Root);
 JSON.stringify(Object.keys(versions))
-=> ["../src/schemas/CLAUDE.md"]
+=> ["src/schemas/CLAUDE.md"]
 ```
 
-A divergent local copy still parks — but the mirror stays INSIDE `boxRoot`
-(the leading `../` is stripped, not carried into `config/_template-updates/`,
-which would otherwise try to escape it):
+A divergent local copy still parks under `_config/_template-updates/`, mirroring `relPath` exactly:
 
 ```ts continue
-await fs.writeFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "user edit\n");
+await fs.writeFile(path.join(v3Root, "src/schemas/CLAUDE.md"), "user edit\n");
 const parked = await installTemplateFile({
-  boxRoot,
-  relPath: "../src/schemas/CLAUDE.md",
+  boxRoot: v3Root,
+  relPath: "src/schemas/CLAUDE.md",
   templateContent: "v2\n",
 });
 parked.outcome
 => parked
 
 parked.writtenAt
-=> config/_template-updates/src/schemas/CLAUDE.md
+=> _config/_template-updates/src/schemas/CLAUDE.md
 
-await fs.readFile(path.join(boxRoot, parked.writtenAt), "utf-8")
+await fs.readFile(path.join(v3Root, parked.writtenAt), "utf-8")
 => v2
 
-await fs.readFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "utf-8")
+await fs.readFile(path.join(v3Root, "src/schemas/CLAUDE.md"), "utf-8")
 => user edit
 ```
 
-Bringing the local copy back in line clears the mirror, same as the legacy case:
+Bringing the local copy back in line clears the mirror, same as any other tracked template:
 
 ```ts continue
-await fs.writeFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "v1\n");
+await fs.writeFile(path.join(v3Root, "src/schemas/CLAUDE.md"), "v1\n");
 const overwritten = await installTemplateFile({
-  boxRoot,
-  relPath: "../src/schemas/CLAUDE.md",
+  boxRoot: v3Root,
+  relPath: "src/schemas/CLAUDE.md",
   templateContent: "v2\n",
 });
 overwritten.outcome
 => overwritten
 
-JSON.stringify(await listParkedTemplateUpdates(boxRoot))
+JSON.stringify(await listParkedTemplateUpdates(v3Root))
 => []
 ```
 
 ```ts cleanup
-await fs.rm(packageRoot, { recursive: true, force: true });
+await fs.rm(v3Root, { recursive: true, force: true });
 ```

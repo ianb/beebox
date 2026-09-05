@@ -32,8 +32,8 @@ const TrackActionInputSchema = z.object({
 const ProcedureActionInputSchema = z.object({
   type: z.literal("procedure"),
   ref: z.string().regex(
-    /^config\/procedures\/(?!.*\.\.)[^/]+\.procedure\.card$/,
-    "procedure ref under config/procedures/ ending in .procedure.card",
+    /^_config\/procedures\/(?!.*\.\.)[^/]+\.procedure\.card$/,
+    "procedure ref under _config/procedures/ ending in .procedure.card",
   ),
 }).strict();
 
@@ -104,7 +104,7 @@ export interface GmailConnectorConfig {
 
 class GmailConnectorConfigError extends Error {
   constructor(detail: string) {
-    super(`Invalid config/connectors/gmail.json: ${detail}`);
+    super(`Invalid _config/connectors/gmail.json: ${detail}`);
     this.name = "GmailConnectorConfigError";
   }
 }
@@ -136,7 +136,7 @@ class MissingGmailActionError extends GmailConnectorConfigError {
     super(
       'query or labels needs an action — add "action": {"type": "track"} to ' +
       "create a card per matching thread, or " +
-      '"action": {"type": "procedure", "ref": "config/procedures/<name>.procedure.card"} ' +
+      '"action": {"type": "procedure", "ref": "_config/procedures/<name>.procedure.card"} ' +
       "to run a procedure instead",
     );
     this.name = "MissingGmailActionError";

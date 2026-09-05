@@ -65,7 +65,7 @@ next), but a few belong to every card:
   The same goes for a markdown link — in a card body, a plain \`.md\` dossier, or
   a response you hand back to whoever invoked you. When you name another card or
   file, link it with a human title rather than writing a bare filename:
-  \`the dates are in [the beta launch plan](/store/notes/Beta_Launch.doc.card)\`.
+  \`the dates are in [the beta launch plan](/_content/notes/Beta_Launch.doc.card)\`.
   The full \`ref\`/\`href\` semantics (tracking, \`bbx mv\` rewriting, external \`href\`)
   live in ${xref(SECTION.PROVENANCE)}.
 - **Link-shaped fields use one vocabulary.** Internal targets use \`ref\`; external
@@ -94,8 +94,8 @@ Files a card references — images, PDFs, sidecars — live in a sibling
 prefix:
 
 \`\`\`
-store/notes/Trip_Report.doc.card
-store/notes/Trip_Report.attach/photo.jpg
+_content/notes/Trip_Report.doc.card
+_content/notes/Trip_Report.attach/photo.jpg
 \`\`\`
 
 Then in the body: \`![the view from the cabin](attach/photo.jpg)\`. Create the
@@ -132,8 +132,8 @@ warnings you'll see:
   link points at a card that doesn't exist (common after a hand-move — use
   \`bbx mv\`, which rewrites refs).
 - **retired \`view:\` scheme** — drop the prefix and reference the plain box path:
-  \`[the trip report](/store/notes/Trip_Report.doc.card)\` to link, \`![the trip
-  report](/store/notes/Trip_Report.doc.card)\` to embed.
+  \`[the trip report](/_content/notes/Trip_Report.doc.card)\` to link, \`![the trip
+  report](/_content/notes/Trip_Report.doc.card)\` to embed.
 - **duplicate basename** — two cards in one directory share a name; rename one.
 - **\`contains:\` too long** — keep it under 200 characters.
 
@@ -163,7 +163,7 @@ export function cardTypesSection(allCardSchemas: CardSchema[]): string {
   const lines: string[] = [
     `## ${SECTION.CARD_TYPES}`,
     "",
-    "Each type with handling instructions has a full reference at `docs/generated/card-<type>.md` — read it before working with a card of that type.",
+    "Each type with handling instructions has a full reference at `_content/docs/generated/card-<type>.md` — read it before working with a card of that type.",
     "",
   ];
   for (const group of CARD_CATEGORY_GROUPS) {
@@ -177,7 +177,7 @@ export function cardTypesSection(allCardSchemas: CardSchema[]): string {
     }
     lines.push("");
   }
-  lines.push("When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types can be defined in `src/schemas/` at the box's package root using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `src/schemas/CLAUDE.md` for how. Note this is the package root, beside `content/`, NOT `config/schemas/` inside the box — a schema left there is invisible to the loader. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `bbx init` after adding a schema to generate rules and docs.");
+  lines.push("When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types can be defined in `src/schemas/` at the box root using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `src/schemas/CLAUDE.md` for how. NOT `_config/schemas/` — a schema left there is invisible to the loader. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `bbx init` after adding a schema to generate rules and docs.");
   return lines.join("\n");
 }
 
@@ -201,7 +201,7 @@ something as fact rather than guess. Where you are decides the mechanism:
   job hits ambiguity it can't resolve, finish by asking — don't guess past
   it.
 
-Before asking, check \`box/questions/\` — including \`answered\`, \`dismissed\`,
+Before asking, check \`_bookkeeping/questions/\` — including \`answered\`, \`dismissed\`,
 and \`expired\` cards, not just \`pending\` ones. An existing answer is a
 \`user-stated\` fact; don't re-ask it. A dismissal or expiry means the
 boxholder didn't care to answer that — raise the bar before asking again, but
@@ -211,5 +211,5 @@ demotes visibility from the active view; it's not a rejection).
 Always set \`directive:\` — what to do with the answer; the system creates a
 follow-up job carrying it once the user answers. Set \`expires-after:\` for a
 time-sensitive question that should age out sooner than the default. See
-\`docs/generated/card-question.md\` for templates and field reference.`;
+\`_content/docs/generated/card-question.md\` for templates and field reference.`;
 }

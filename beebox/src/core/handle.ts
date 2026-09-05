@@ -28,6 +28,7 @@ import { startProcedure, type ProcedureInconclusive } from "./procedure/engine.j
 import type { CommandContext } from "./command-runner.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
+import { BOX_DIRS } from "../lib/paths.js";
 
 /** Env var the handler procedure reads to get its bucket. */
 export const TRIAGE_ITEMS_ENV = "TRIAGE_ITEMS";
@@ -305,7 +306,7 @@ export async function runHandle(params: HandleParams): Promise<CategoryHandling[
     }
 
     const triageItems = items.map((file) =>
-      path.join("box/inbox/triaged", name, file),
+      path.join(BOX_DIRS.inboxTriaged, name, file),
     );
     const result = await runProcedure({ procedurePath, triageItems, ctx });
     if (result.outcome === "completed") {

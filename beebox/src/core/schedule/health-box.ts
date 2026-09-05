@@ -1,5 +1,5 @@
 /**
- * Box-level schedule health: walk config/schedules/, evaluate each task
+ * Box-level schedule health: walk _config/schedules/, evaluate each task
  * (schedule-health.ts), check the scheduler daemon's heartbeat, and
  * summarize for the surfaces that show health (bbx health, the
  * session-start snapshot, proactive alerts).
@@ -28,6 +28,7 @@ import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { boxEngineUnavailability, engineWaitReason } from "./engine-wait.js";
 import { listParkedTemplateUpdates, parkedUpdatePath } from "../install-template-file.js";
 import { parkedUpdatesForTask } from "./parked-templates.js";
+import { getBoxDir } from "../../lib/paths.js";
 
 const HEARTBEAT_FILE = ".beebox/scheduler-heartbeat";
 const HEARTBEAT_STALE_MS = 5 * 60 * 1000;
@@ -90,7 +91,7 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
   const parked = await listParkedTemplateUpdates(boxRoot);
   const engineUnavailable = await boxEngineUnavailability(boxRoot);
   const engineWait = engineUnavailable === null ? null : engineWaitReason(engineUnavailable);
-  const schedulesDir = path.join(boxRoot, "config/schedules");
+  const schedulesDir = getBoxDir(boxRoot, "schedules");
   let files: string[];
   try {
     files = (await fs.readdir(schedulesDir)).filter((f) => f.endsWith(".scheduled-script.card"));

@@ -3,12 +3,12 @@
  * (e.g. a card opened in the companion pane silently stopped live-updating):
  *
  *  - **Authoring / ref form** — used in card bodies, agent output, and `view:`
- *    links. A leading slash like `/store/archive/Foo.card` means
+ *    links. A leading slash like `/_bookkeeping/archive/Foo.card` means
  *    "box-root-absolute"; a bare `foo.md` is document-relative (resolved
  *    against the containing card's directory). The leading slash is meaningful
  *    HERE, and resolving the relative case is `resolveRelativePath`'s job.
  *
- *  - **Internal box-relative form** — `store/archive/Foo.card`: no leading
+ *  - **Internal box-relative form** — `_bookkeeping/archive/Foo.card`: no leading
  *    slash, forward slashes. This is what the file watcher emits
  *    (`path.relative(boxRoot, …)`), what the `/api/files`, `card.get`, and
  *    `status.browse` boundaries expect, what `ViewTarget.path` is, and what

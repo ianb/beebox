@@ -30,10 +30,10 @@ process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret";
 const NOW = new Date("2026-07-28T12:00:00Z");
 
 async function optIn(box) {
-  await box.seed("config/box.json", JSON.stringify({
+  await box.seed("_config/box.json", JSON.stringify({
     healthAlerts: { telegramChat: "777" },
   }));
-  await box.seed("config/connectors/telegram.secret.json", JSON.stringify({
+  await box.seed("_config/connectors/telegram.secret.json", JSON.stringify({
     botToken: "fake:token", webhookSecret: "s",
   }));
 }

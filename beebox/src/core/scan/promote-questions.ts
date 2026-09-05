@@ -4,7 +4,7 @@
  * A file the upload route refused stays in quarantine with a human-readable
  * reason and never reaches the box — so without this the rejection is visible
  * only in an HTTP response the uploader printed once (principle #4: never
- * silent). Each rejected entry raises one question card in `box/questions/`,
+ * silent). Each rejected entry raises one question card in `_bookkeeping/questions/`,
  * the one directory the pending/notification/aging machinery scans.
  *
  * Emission is idempotent across repeated promote passes: the card's ref is

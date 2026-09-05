@@ -33,7 +33,7 @@ function voiceEntry(messageId: string, text: string): SessionEntry {
 function hqVoiceEntry(messageId: string, text: string): SessionEntry {
   return {
     ...voiceEntry(messageId, text),
-    content: [{ type: "text", text: `<chat-app hq-dictation="on">\n<card-activity ref="store/example.card">viewed</card-activity>\n</chat-app>\n<speech stt="hq" stt-service="whisper-llm" message-id="${messageId}">${text}</speech>` }],
+    content: [{ type: "text", text: `<chat-app hq-dictation="on">\n<card-activity ref="_content/example.card">viewed</card-activity>\n</chat-app>\n<speech stt="hq" stt-service="whisper-llm" message-id="${messageId}">${text}</speech>` }],
   };
 }
 

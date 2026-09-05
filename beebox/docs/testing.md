@@ -36,7 +36,7 @@ The monorepo root's `postinstall` therefore runs `tap build` (~3s) after
 `patch-package`, so every workspace install builds it — a fresh worktree, a
 detached checkout, a deploy. It lives at the root rather than in
 `beebox`'s own `postinstall` because `beebox` is packed and
-installed as a tarball dependency by v2 boxes: a `postinstall` there would run
+installed as a tarball dependency by boxes: a `postinstall` there would run
 in a consumer install that has no `tap` (a devDependency) and fail it.
 `tap plugin list` prints the *configured* set and never shows this; the built
 set is what `tap versions` lists under `plugins:`.
@@ -210,7 +210,7 @@ Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, s
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
-await box.seed("config/connectors/telegram.secret.json", JSON.stringify({...}));
+await box.seed("_config/connectors/telegram.secret.json", JSON.stringify({...}));
 box.commitAll("add config");
 
 const tg = createFakeTelegram({ username: "bot", updates: [...] });
@@ -262,14 +262,14 @@ steps:
     checkpoint: after-sync            # git tag on the step's commit, for manual inspection
     validate:
       - committed: true               # working tree must be clean
-      - script: "ls box/jobs/*.intake.job.card | wc -l | grep -q 2"
+      - script: "ls _bookkeeping/jobs/*.intake.job.card | wc -l | grep -q 2"
       - prompt: "Check that intake jobs were created for the seeded inbox items"
 
   - name: process
     run: bbx reactor
     validate:
       - committed: true
-      - script: "ls box/jobs/*.intake.job.card 2>/dev/null | wc -l | grep -q '^0$'"
+      - script: "ls _bookkeeping/jobs/*.intake.job.card 2>/dev/null | wc -l | grep -q '^0$'"
 ```
 
 ### Stubs (`stubs.yaml`)
@@ -325,7 +325,7 @@ only skipped steps without restoring their state was removed.
 
 Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/` with its own git repo as the test box.
 
-**Directory structure:** `bbx init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an operational `content/` subdirectory — see `docs/implemented-plans/boxes-as-packages-v2.md`), so a freshly-created scenario's `box/` looks like:
+**Directory structure:** `bbx init` scaffolds the one-root layout by default (`package.json`/`tsconfig`/`src/` plus the underscore operational areas at the same root — see `docs/box-layout.md`), so a freshly-created scenario's `box/` looks like:
 ```
 ~/src/boxes/scenarios/my-scenario/
   scenario.yaml      # step definitions (required)
@@ -334,13 +334,12 @@ Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/
     feed.xml
     article.html
   setup.md           # human-readable description of what this tests
-  box/               # the git repo (package root) — a real box initialized with bbx init
-    content/
-      box/inbox/     # pre-seeded test data
-      config/        # connector configs, schedules, etc.
+  box/               # the git repo — a real box initialized with bbx init, boxRoot itself
+    _content/inbox/  # pre-seeded test data
+    _config/         # connector configs, schedules, etc.
     ...
 ```
-The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-chain`) predate this and are still flat on disk (`box/inbox/`, `config/` directly under `box/`, no `content/` nesting) with a pre-v2 `.bbx-box` marker. The v1/legacy box shape has since been removed (`docs/implemented-plans/remove-box-shape-v1.md`), so `getBoxShape` is strict and rejects any marker without `shapeVersion: 2` — these scenarios need converting to the v2 package layout above rather than being a supported second shape.
+The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-chain`) predate this and haven't been migrated — `getBoxShape` is strict and rejects any marker without `shapeVersion: 3`, so these scenarios need `bbx migrate` run against them (or recreating) rather than being a supported second shape.
 
 **Steps to create:**
 
@@ -352,7 +351,7 @@ The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-c
    bbx init .
    ```
 
-2. **Seed the box with test data.** Put cards in `content/box/inbox/`, configure connectors in `content/config/connectors/`, add scheduled scripts, etc. Commit everything — the scenario runner requires a clean `main` branch as starting state.
+2. **Seed the box with test data.** Put cards in `_content/inbox/`, configure connectors in `_config/connectors/`, add scheduled scripts, etc. Commit everything — the scenario runner requires a clean `main` branch as starting state.
 
 3. **Write `scenario.yaml`** with steps. Each step runs a shell command (usually a `bbx` command) and validates the result. See the format description above.
 
@@ -412,9 +411,9 @@ tests:
   - id: box-structure-inbox
     prompt: "Where would you look for unprocessed incoming items?"
     expected_level: knows_directly
-    watch_for: "Names box/inbox/ directly without searching"
-    correct_contains: ["box/inbox"]
-    should_read: ["docs/generated/card-memo.md"]   # optional
+    watch_for: "Names _content/inbox/ directly without searching"
+    correct_contains: ["_content/inbox"]
+    should_read: ["_content/docs/generated/card-memo.md"]   # optional
     should_not_read: ["some/file.md"]              # optional
     tags: [navigation]
 ```

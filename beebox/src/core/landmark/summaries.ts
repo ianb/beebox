@@ -15,6 +15,7 @@ import { readLandmarkCard } from "./card-cache.js";
 import { readLandmarkSymbol } from "./symbol.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { landmarkScanDir, normalizeLandmarkDir } from "./root-dir.js";
 
 /** Landmark cards read at once — see {@link mapInBatchesSettled}. */
 const READ_CONCURRENCY = 64;
@@ -36,7 +37,7 @@ export async function landmarkLabelsForDirs(
   const out = new Map<string, string>();
   await Promise.all(
     [...new Set(dirs)].map(async (dir) => {
-      const absDir = path.join(boxRoot, dir);
+      const absDir = landmarkScanDir(boxRoot, dir);
       let names: string[];
       try {
         names = await fs.readdir(absDir);
@@ -116,13 +117,13 @@ async function readSummary(boxRoot: string, relPath: string): Promise<CardOutcom
   if (fields === null) return { problem: true, path: relPath };
 
   const navigation = fields.navigation;
-  const dir = path.dirname(relPath);
+  const dir = normalizeLandmarkDir(path.dirname(relPath));
   const symbol = readLandmarkSymbol(navigation, { landmarkPath: relPath });
   return {
     problem: false,
     summary: {
       path: relPath,
-      dir: dir === "." ? "" : dir,
+      dir,
       label: (navigation === undefined ? "" : navigation.label ?? "") || path.basename(relPath, ".landmark.card"),
       symbol: symbol.text,
       symbolSrc: symbol.src,
@@ -146,7 +147,7 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
   const matches = await glob("**/*.landmark.card", {
     cwd: boxRoot,
     nodir: true,
-    ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+    ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
   });
 
   // Read the cards concurrently — they're independent files and the picker

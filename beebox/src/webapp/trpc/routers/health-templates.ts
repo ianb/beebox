@@ -1,7 +1,7 @@
 /**
  * Health check for **parked template updates** — an upstream template change
  * that couldn't be written because the box's copy diverged, so it sits in
- * `config/_template-updates/<path>` waiting for a human.
+ * `_config/_template-updates/<path>` waiting for a human.
  *
  * Why it belongs in health and not only in `bbx status`: a parked update is a
  * state the system already knows about and only a person can resolve, which is

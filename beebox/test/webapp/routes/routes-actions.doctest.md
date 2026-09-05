@@ -19,7 +19,7 @@ const res = await ctx.request({
   method: "POST",
   url: "/api/actions/create",
   payload: {
-    path: "box/inbox/new.memo.card",
+    path: "_content/inbox/new.memo.card",
     template: "memo",
     args: { content: "Hello from the API" },
   },
@@ -33,13 +33,13 @@ res.body.success
 => true
 
 res.body.path
-=> box/inbox/new.memo.card
+=> _content/inbox/new.memo.card
 ```
 
 The card exists on disk:
 
 ```ts continue
-const content = await ctx.read("box/inbox/new.memo.card");
+const content = await ctx.read("_content/inbox/new.memo.card");
 content.includes("Hello from the API")
 => true
 ```
@@ -72,7 +72,7 @@ const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
   url: "/api/actions/create",
-  payload: { path: "box/inbox/test.memo.card" },
+  payload: { path: "_content/inbox/test.memo.card" },
 });
 res.statusCode
 => 400

@@ -40,7 +40,7 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
     }
   }
 
-  const systemPrompt = buildReactorSystemPrompt(boxRoot);
+  const systemPrompt = buildReactorSystemPrompt();
   const ambientLine = await computeTodoAmbientLine(boxRoot);
   const userPrompt = buildReactorUserPrompt(jobPaths, { jobDescriptions, ambientLine });
 

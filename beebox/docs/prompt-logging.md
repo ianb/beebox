@@ -129,9 +129,9 @@ If a DOCID is missing, that doc wasn't included in the agent's context.
 
 Available markers:
 - `DOCID:.beebox/agent-guide.md` — the always-loaded agent guide (@-included in CLAUDE.md)
-- `DOCID:docs/generated/bbx-commands.md` — bbx command reference
-- `DOCID:docs/generated/connectors.md` — connector capabilities
-- `DOCID:docs/generated/card-memo.md`, `DOCID:docs/generated/card-question.md`, etc. — per-card-type docs
+- `DOCID:_content/docs/generated/bbx-commands.md` — bbx command reference
+- `DOCID:_content/docs/generated/connectors.md` — connector capabilities
+- `DOCID:_content/docs/generated/card-memo.md`, `DOCID:_content/docs/generated/card-question.md`, etc. — per-card-type docs
 
 ### Find the latest log
 

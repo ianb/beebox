@@ -42,9 +42,10 @@ docker compose up -d
 open http://localhost:3210/box/
 ```
 
-The box is served at **`/box/`** — the slug is the basename of the box package
-directory (`/data/box` → `box`). The operational box is `/data/box/content`;
-the entrypoint serves it for you.
+The box is served at **`/box/`** — the slug is the basename of the box
+directory (`/data/box` → `box`), which is the one root (shapeVersion 3):
+package machinery and the underscore content areas together; the entrypoint
+serves it for you.
 
 The port maps **loopback-only** (`127.0.0.1:3210:3210`) by default, so nothing
 outside the host can reach it until you opt in (see [VPS](#vps-cloud-install)).

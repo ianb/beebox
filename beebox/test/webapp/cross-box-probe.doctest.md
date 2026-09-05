@@ -92,13 +92,14 @@ a real hash that exists only in B's repo.
 ```ts
 const ctx = await createTwoBoxTestServer();
 
+await fs.mkdir(path.join(ctx.b.boxRoot, "_content"), { recursive: true });
 await fs.writeFile(
-  path.join(ctx.b.boxRoot, "Marker.memo.card"),
+  path.join(ctx.b.boxRoot, "_content", "Marker.memo.card"),
   `---\ntype: memo\nstatus: new\ncreated: 2026-01-01T00:00:00Z\n---\n${BETA_MARKER}\n`,
 );
-await fs.mkdir(path.join(ctx.b.boxRoot, "sub"), { recursive: true });
+await fs.mkdir(path.join(ctx.b.boxRoot, "_content", "sub"), { recursive: true });
 await fs.writeFile(
-  path.join(ctx.b.boxRoot, "sub", "Landmark.landmark.card"),
+  path.join(ctx.b.boxRoot, "_content", "sub", "Landmark.landmark.card"),
   "---\nnavigation:\n  label: BetaLandmark\n  chat-app:\n    narration: on\n---\n",
 );
 await commitAll(ctx.b.boxRoot, "seed beta marker + landmark");
@@ -123,9 +124,11 @@ const betaSlug = await boxSlug(ctx.b.boxRoot);
 await setAndGrantSecret({ name: "beta-only-key", value: "placeholder-not-a-real-secret", slug: betaSlug, access: "agent" });
 
 // Relative path from alpha's box root into beta's, computed from the real
-// (randomly-suffixed) boxRoots — never hardcoded "../..".
+// (randomly-suffixed) boxRoots — never hardcoded "../..". The one-root
+// layout makes alpha and beta direct siblings (each `boxRoot` is its own
+// mkdtemp), so this is exactly one ".." segment.
 const relIntoBeta = path.relative(ctx.a.boxRoot, ctx.b.boxRoot);
-const relToBetaMarker = path.relative(ctx.a.boxRoot, path.join(ctx.b.boxRoot, "Marker.memo.card"));
+const relToBetaMarker = path.relative(ctx.a.boxRoot, path.join(ctx.b.boxRoot, "_content", "Marker.memo.card"));
 
 print("seeded");
 =>
@@ -161,10 +164,13 @@ beta/api/browse with alpha's bearer: 401
 
 The literal `..` segments in a `/api/files/*` wildcard path never reach the
 route handler at all: Fastify's router (`find-my-way`) normalizes dot
-segments before matching, so `/alpha/api/files/../../<rest>` collapses to
-`/alpha/<rest>` — a path outside the `/api/*` namespace entirely, which the
-box's catch-all falls through to its browser-auth redirect rather than the
-JSON 401 an unmatched API route would give. Either way B's content is never
+segments before matching. The one-root layout makes alpha and beta direct
+siblings, so `relToBetaMarker` climbs out with exactly one `..` — enough to
+cancel `files` but not to leave `/api/*` — so
+`/alpha/api/files/../<sibling>/_content/Marker.memo.card` collapses to
+`/alpha/api/<sibling>/_content/Marker.memo.card`, an unmatched route under
+`/api/*` that gets a plain JSON 404 rather than the browser-auth redirect a
+path landing outside `/api/*` would get. Either way B's content is never
 read or returned.
 
 ```ts continue
@@ -189,7 +195,7 @@ const figureRes = await ctx.server.inject({
 });
 print(`figure ?path= traversal: ${figureRes.statusCode} ${figureRes.payload}`);
 =>
-files traversal: 302, contains marker: false
+files traversal: 404, contains marker: false
 figure ?path= traversal: 400 {"error":"Path outside box"}
 ```
 
@@ -201,16 +207,19 @@ and `todos.list` degrade to an empty/not-found answer rather than throwing —
 asserted as "does not contain B's marker" since an empty result is still a
 safe result. An absolute path into B (rather than a `..`-relative one) is
 included for `card.get`: `card.ts`'s `resolveCardPath` calls `boxRelativePath`
-first, which only strips a *leading* slash (`src/shared/box-path.ts`) — so an
-absolute path doesn't reach the containment check as an absolute path at all;
-it becomes a nested box-relative lookup (`<boxRoot>/tmp/.../content/Marker...`)
-that simply doesn't exist, so this shape 404s (`NOT_FOUND`) rather than 400s.
-Still fail-closed — B's card is never read — just a different, still-safe
-status than the relative-`..` shape gets.
+first, which only strips a *leading* slash (`src/shared/box-path.ts`), so the
+absolute path becomes a nested box-relative lookup
+(`<boxRoot>/tmp/.../_content/Marker...`) — but `resolveCardPath` then runs
+that through the box namespace fence
+(`resolveBoxNamespacePathOnDisk`, `docs/plans/one-root-box-layout.md` Track
+B), and a path whose first segment is `tmp` rather than an underscore area
+fails the namespace check before any filesystem read, so this shape 400s
+(`BAD_REQUEST`) same as the relative-`..` shape. Still fail-closed either way
+— B's card is never read.
 
 ```ts continue
 const caller = callerFor(ctx.a.boxRoot, ctx.a.eventBus);
-const betaMarkerAbs = path.join(ctx.b.boxRoot, "Marker.memo.card");
+const betaMarkerAbs = path.join(ctx.b.boxRoot, "_content", "Marker.memo.card");
 
 const cardGetRel = await attempt(() => caller.card.get({ path: relToBetaMarker }));
 print(`card.get (relative ..): ${cardGetRel.ok ? "SUCCEEDED" : cardGetRel.code}`);
@@ -227,14 +236,14 @@ print(`history.list (filter.path): ${historyList.ok ? "SUCCEEDED" : historyList.
 const viewsRef = await caller.views.resolveRef({ ref: relToBetaMarker, basePath: "" });
 print(`views.resolveRef: exists=${viewsRef.exists} title-is-filename-only=${viewsRef.title === "Marker"}`);
 
-const landmarksForDir = await attempt(() => caller.landmarks.forDir({ dir: `${relIntoBeta}/sub` }));
+const landmarksForDir = await attempt(() => caller.landmarks.forDir({ dir: `${relIntoBeta}/_content/sub` }));
 print(`landmarks.forDir: ${landmarksForDir.ok ? "SUCCEEDED" : landmarksForDir.code}`);
 
 const todosList = await attempt(() => caller.todos.list({ cardPath: relIntoBeta }));
 print(`todos.list (cardPath): ${todosList.ok ? "SUCCEEDED" : todosList.code}`);
 =>
 card.get (relative ..): BAD_REQUEST
-card.get (absolute): NOT_FOUND
+card.get (absolute): BAD_REQUEST
 status.browse: dirs=0 cards=0 files=0
 history.list (filter.path): BAD_REQUEST
 views.resolveRef: exists=false title-is-filename-only=true
@@ -244,9 +253,11 @@ todos.list (cardPath): BAD_REQUEST
 
 ### `files.summarize`
 
-`normalizePath` in `src/webapp/trpc/routers/files.ts` once contained only
-absolute inputs; it now runs every input through `containWithinBox`. This
-step is the regression anchor and must keep printing `false`.
+`summarizePath` in `src/webapp/trpc/routers/files.ts` once normalized only
+absolute inputs; it now runs every input through
+`resolveBoxNamespacePathOnDisk`, which fences both `..`-relative escapes and
+the box namespace. This step is the regression anchor and must keep printing
+`false`.
 
 ```ts continue
 const summarized = await caller.files.summarize({ paths: [relToBetaMarker] });
@@ -260,14 +271,14 @@ files.summarize leaks beta's card: false
 
 ```ts continue
 const reserve = await attempt(() =>
-  caller.chat.reserveSession({ sessionId: "11111111-1111-4111-8111-111111111111", contextDir: `${relIntoBeta}/sub` }),
+  caller.chat.reserveSession({ sessionId: "11111111-1111-4111-8111-111111111111", contextDir: `${relIntoBeta}/_content/sub` }),
 );
 print(`chatControl.reserveSession: ${reserve.ok ? "SUCCEEDED" : reserve.code}`);
 
-const newFeatures = await attempt(() => caller.chat.newFeatures({ contextDir: `${relIntoBeta}/sub` }));
+const newFeatures = await attempt(() => caller.chat.newFeatures({ contextDir: `${relIntoBeta}/_content/sub` }));
 print(`chat.newFeatures: ${newFeatures.ok ? "SUCCEEDED" : newFeatures.code}`);
 
-const openers = await attempt(() => caller.chat.openers({ contextDir: `${relIntoBeta}/sub` }));
+const openers = await attempt(() => caller.chat.openers({ contextDir: `${relIntoBeta}/_content/sub` }));
 print(`chat.openers: ${openers.ok ? "SUCCEEDED" : openers.code}`);
 =>
 chatControl.reserveSession: BAD_REQUEST
@@ -336,7 +347,7 @@ const sendRes = await ctx2.server.inject({
   method: "POST",
   url: "/alpha/api/chat/send",
   headers: { authorization: ctx2.a.agentBearerHeader(), "content-type": "application/json" },
-  payload: { message: "hi", session: "new", contextDir: `${relIntoBeta2}/sub` },
+  payload: { message: "hi", session: "new", contextDir: `${relIntoBeta2}/_content/sub` },
 });
 print(`chat/send with escaping contextDir: ${sendRes.statusCode}`);
 await ctx2.cleanup();
@@ -356,7 +367,7 @@ print(`history.diff on alpha with beta's hash: diff empty=${diff.diff === ""}`);
 
 const blobRes = await ctx.server.inject({
   method: "GET",
-  url: `/alpha/api/history/blob/${betaHash}/Marker.memo.card`,
+  url: `/alpha/api/history/blob/${betaHash}/_content/Marker.memo.card`,
   headers: { authorization: ctx.a.agentBearerHeader() },
 });
 print(`history/blob on alpha with beta's hash: ${blobRes.statusCode}`);

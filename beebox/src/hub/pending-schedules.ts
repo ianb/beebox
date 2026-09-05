@@ -15,7 +15,7 @@
 
 import { loadChatSchedules } from "../core/chat/schedules.js";
 import { describeError } from "./child-process-utils.js";
-import { resolveBoxRoot } from "./child-spawn.js";
+import { requireBoxRoot } from "../lib/box-shape.js";
 
 /**
  * Whether a hub box entry holds ANY pending (unfired) chat schedule on disk.
@@ -36,7 +36,7 @@ export async function boxHasPendingSchedules({
   entryPath: string;
 }): Promise<boolean> {
   try {
-    const boxRoot = await resolveBoxRoot(entryPath);
+    const boxRoot = await requireBoxRoot(entryPath);
     return loadChatSchedules({ boxRoot }).length > 0;
   } catch (e) {
     console.warn(`[hub] chat-schedule check failed for "${slug}", treating as none: ${describeError(e)}`);

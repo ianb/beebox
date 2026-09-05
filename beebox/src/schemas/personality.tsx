@@ -2,7 +2,7 @@
  * Personality card schema — agent identity, role, tone, and boxholder knowledge.
  *
  * A personality card captures who the agent is and who it works for.
- * It lives at `config/main.personality.card` (one per box).
+ * It lives at `_config/main.personality.card` (one per box).
  *
  * The card's markdown body is the compiled "description" paragraph —
  * the prose that captures the overall vibe. Job-processing agents see
@@ -119,7 +119,7 @@ export function compilePersonality(fields: PersonalityFields, { boxholders }: { 
   const lines: string[] = [];
   lines.push("## Personality");
   lines.push("");
-  lines.push("<!-- Source: config/main.personality.card — edit this file to change personality -->");
+  lines.push("<!-- Source: _config/main.personality.card — edit this file to change personality -->");
   lines.push("");
 
   appendIdentity(lines, fields);

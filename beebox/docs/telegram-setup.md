@@ -4,9 +4,9 @@ The Telegram connector lets you connect a Telegram group chat (or private chat) 
 
 ## How it works
 
-- **Inbound (real-time):** Telegram pushes messages to a webhook on your server. Each message is appended to a `chat-thread` card at `store/chat/telegram/<Chat>/thread.chat-thread.card` (one accumulating thread per chat), and a chat job is created for the agent.
+- **Inbound (real-time):** Telegram pushes messages to a webhook on your server. Each message is appended to a `chat-thread` card at `_content/chat/telegram/<Chat>/thread.chat-thread.card` (one accumulating thread per chat), and a chat job is created for the agent.
 - **Inbound (catch-up):** On `bbx wakeup`, the connector polls for any messages missed while the server was down, then re-establishes the webhook.
-- **Outbound:** Create a `telegram-message.card` in `box/output/` and run `bbx wakeup --connector telegram`. The connector sends it and deletes the card.
+- **Outbound:** Create a `telegram-message.card` in `_bookkeeping/output/` and run `bbx wakeup --connector telegram`. The connector sends it and deletes the card.
 
 ## 1. Create a Telegram bot
 
@@ -34,7 +34,7 @@ By default, bots only see messages that mention them or are replies to them. To 
 
 Create the secret config file in your box:
 
-### `config/connectors/telegram.secret.json`
+### `_config/connectors/telegram.secret.json`
 
 ```json
 {
@@ -64,19 +64,19 @@ bbx wakeup --connector telegram
 This does three things:
 1. Polls for any messages sent while the server was down
 2. Registers the webhook URL (`$PUBLIC_URL/webhook/<box>/telegram`) with Telegram
-3. Sends any pending outbound messages from `box/output/`
+3. Sends any pending outbound messages from `_bookkeeping/output/`
 
 After this, new messages will be pushed to your server in real-time via the webhook.
 
 ## 6. Verify
 
 1. Send a message in the Telegram group
-2. Check that the message was appended to a `thread.chat-thread.card` under `store/chat/telegram/`
+2. Check that the message was appended to a `thread.chat-thread.card` under `_content/chat/telegram/`
 3. The thread entry should contain the message text, sender name, and chat metadata
 
 ## Sending messages
 
-To send a message to the Telegram chat, create a card in `box/output/`:
+To send a message to the Telegram chat, create a card in `_bookkeeping/output/`:
 
 ```yaml
 ---
@@ -99,7 +99,7 @@ The connector sends the message and deletes the card. (There's no reply-to-messa
 Each incoming Telegram message is appended as an entry on the chat's thread card:
 
 ```
-store/chat/telegram/Family_Group/
+_content/chat/telegram/Family_Group/
   thread.chat-thread.card
 ```
 
@@ -111,7 +111,7 @@ chat-id: "-1001234567890"
 connector: telegram
 description: Family Group
 participants:
-  - ref: /people/alice.person.card
+  - ref: /_content/people/alice.person.card
 entries:
   - kind: message
     id: "456"
@@ -125,8 +125,8 @@ entries:
 ## Notes
 
 - The bot token is sensitive — keep it in the `.secret.json` file
-- `publicUrl` must be set in `config/box.json` (e.g. `{"publicUrl": "https://box.example.com"}`) for the webhook to work
+- `publicUrl` must be set in `_config/box.json` (e.g. `{"publicUrl": "https://box.example.com"}`) for the webhook to work
 - The webhook URL must be HTTPS (Telegram requires it)
 - The connector only processes text messages and captions on media. Photos/files without text are skipped.
-- State is tracked in `config/connectors/telegram.state.json` (gitignored, auto-managed)
+- State is tracked in `_bookkeeping/connectors/telegram.state.json` (gitignored, auto-managed)
 - If you need to reset, delete the state file and run `bbx wakeup --connector telegram` again

@@ -4,7 +4,7 @@ The status report (`docs/implemented-plans/pub-setup-wrangler.md`): local public
 counts, the provisioned Cloudflare state (both buckets, script bindings,
 workers.dev routing), the version drift check (the deployed Worker's public
 `GET /__version` against the hash of the committed Worker source), and the
-Access-vars diff against the persisted `config/publish.json`. Every
+Access-vars diff against the persisted `_config/publish.json`. Every
 security-relevant misconfig lands in `problems` (the CLI exits nonzero on
 any). All against the FAKE client and a stubbed probe — no network.
 
@@ -40,7 +40,7 @@ function healthyClient(overrides) {
 
 ## Healthy deployment: no problems, drift no
 
-The persisted `config/publish.json` matches the deployed Access vars, so the
+The persisted `_config/publish.json` matches the deployed Access vars, so the
 Access diff is silent.
 
 ```ts
@@ -75,7 +75,7 @@ JSON.stringify(report.problems)
 await box.cleanup();
 ```
 
-## Local publication counts come from box/publish/ (no Cloudflare needed for them)
+## Local publication counts come from _publish/ (no Cloudflare needed for them)
 
 ```ts
 const box = await makeTmpBox();
@@ -131,7 +131,7 @@ JSON.stringify([unreachable.version.deployed, unreachable.version.drift])
 => [null,true]
 ```
 
-## Access vars are diffed against config/publish.json
+## Access vars are diffed against _config/publish.json
 
 Deployed vars with NO persisted file: the next plain setup would erase them —
 flagged, with the exact JSON to persist:

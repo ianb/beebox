@@ -16,7 +16,7 @@
  * `webapp/routes/sse.ts`). Files that haven't changed get no param, so first
  * loads stay clean and cross-reload freshness keeps relying on the ETag.
  *
- * Keyed by box-relative path (e.g. `store/mara.webp`), matching the path in
+ * Keyed by box-relative path (e.g. `_content/mara.webp`), matching the path in
  * `file-change` events.
  */
 

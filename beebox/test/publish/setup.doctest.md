@@ -110,7 +110,7 @@ const result = await setupPublishing(
 wrangler.runs[0].includes("--var ACCESS_TEAM_DOMAIN:https://myteam.cloudflareaccess.com --var ACCESS_AUD:aud-tag-123")
 => true
 
-// Persisted (config/publish.json) so a later plain rerun redeploys the same vars.
+// Persisted (_config/publish.json) so a later plain rerun redeploys the same vars.
 JSON.stringify(await readPublishConfig(box.root))
 => {"accessTeamDomain":"https://myteam.cloudflareaccess.com","accessAud":"aud-tag-123"}
 ```

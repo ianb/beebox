@@ -18,8 +18,8 @@ const FROZEN = "<html><head><title>X</title></head><body><img src=\"https://exam
 ```ts
 const ctx = await makeTestServer();
 await mkdir(join(ctx.boxRoot, "store"), { recursive: true });
-await writeFile(join(ctx.boxRoot, "store/Page.frozen"), FROZEN);
-const res = await ctx.rawRequest({ method: "GET", url: "/api/files/store/Page.frozen" });
+await writeFile(join(ctx.boxRoot, "_content/Page.frozen"), FROZEN);
+const res = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/Page.frozen" });
 res.statusCode
 => 200
 ```

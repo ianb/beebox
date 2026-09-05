@@ -80,7 +80,7 @@ The dashboard warns on either kind of anomaly:
 - absolute size: more than 250 directories or 1,000 files;
 - hourly rate: at least 10 new directories, 25 new files, or 10 commits;
 - connector subtree rate: at least 5 new directories or 10 new files for a
-  recognized connector-owned path such as `box/inbox/email`.
+  recognized connector-owned path such as `_content/inbox/email`.
 
 Rate checks require two complete samples 30–120 minutes apart. A partial scan,
 first measurement, long scheduler outage, or longer measurement gap still gets
@@ -132,7 +132,7 @@ is surfaced as a warning until an owner accepts it.
 `bbx health`'s box-checks section carries a `template-updates` check reporting
 upstream template changes that were **parked** rather than written: the box's
 copy of a shipped procedure, guide, or schedule card had diverged, so the new
-version went to `config/_template-updates/<path>` for review instead of
+version went to `_config/_template-updates/<path>` for review instead of
 clobbering the local edit. The message lists the parked paths and ends with the
 same resolution sentence `bbx status` prints — copy the parked file over the live
 one, or discard the parked copy.
@@ -150,7 +150,7 @@ list prints the same association under the affected task:
 ```
   ✗ refresh-maps          failing ×5     last attempt 7h ago, never succeeded
       error: step refresh failed
-      parked update: config/_template-updates/config/procedures/refresh-maps.procedure.card — the fix may already be on disk
+      parked update: _config/_template-updates/_config/procedures/refresh-maps.procedure.card — the fix may already be on disk
 ```
 
 The association also rides on `TaskHealth.parkedTemplateUpdates`, so `bbx health

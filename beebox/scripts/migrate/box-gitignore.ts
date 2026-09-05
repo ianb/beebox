@@ -68,10 +68,12 @@ async function main(): Promise<number> {
     return 1;
   }
   const boxRoot = path.resolve(target);
-  const shape = await getBoxShape(boxRoot);
-  const contentPrefix = path.relative(shape.packageRoot, boxRoot).split(path.sep).join("/");
-  const listed = await git(shape.packageRoot, ["ls-files", "-z", "--", contentPrefix]);
-  const tracked = listed.split("\0").filter((p) => p !== "").map((p) => p.slice(contentPrefix.length + 1));
+  await getBoxShape(boxRoot); // validates shape and throws a migration-pointing error on a pre-v3 box
+  // The one-root layout (shapeVersion 3) has no separate package root — the
+  // box root IS the git working tree root, so there is no content-prefix to
+  // strip from `git ls-files` output.
+  const listed = await git(boxRoot, ["ls-files", "-z"]);
+  const tracked = listed.split("\0").filter((p) => p !== "");
   const toUntrack = untrackableStatePaths(tracked);
 
   if (!apply) {
@@ -80,11 +82,10 @@ async function main(): Promise<number> {
     return 0;
   }
 
-  const annexed = await isAnnexInitialized(shape.packageRoot);
+  const annexed = await isAnnexInitialized(boxRoot);
   await writeBoxGitignore(boxRoot, { annexed });
   if (toUntrack.length > 0) {
-    const repoPaths = toUntrack.map((rel) => `${contentPrefix}/${rel}`);
-    await git(shape.packageRoot, ["rm", "-r", "--cached", "--quiet", "--", ...repoPaths]);
+    await git(boxRoot, ["rm", "-r", "--cached", "--quiet", "--", ...toUntrack]);
   }
   process.stdout.write(
     toUntrack.length === 0

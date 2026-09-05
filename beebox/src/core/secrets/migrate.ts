@@ -1,5 +1,5 @@
 /**
- * The one-time migration from per-box `config/connectors/*.secret.json` files
+ * The one-time migration from per-box `_config/connectors/*.secret.json` files
  * into the machine-level store (`docs/plans/secret-custody.md`, "Rollout
  * shape": *Migration*).
  *
@@ -30,7 +30,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { getBoxShapeIfPresent, resolveOperationalRoot } from "../../lib/box-shape.js";
+import { getBoxShapeIfPresent, resolveBoxRoot } from "../../lib/box-shape.js";
 import { boxSlug } from "../../lib/box-slug.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
@@ -175,20 +175,30 @@ async function migrationBoxRoots(opts: { root: string | undefined }): Promise<st
   for (const entry of entries.toSorted((a, b) => a.name.localeCompare(b.name))) {
     if (!entry.isDirectory()) continue;
     const candidate = path.join(opts.root, entry.name);
-    const resolved = await resolveOperationalRoot(candidate);
+    // A v2 box (not yet run through `bbx migrate`) throws the migration-
+    // pointing BoxShapeError here — reaching a v2 box's legacy secrets is
+    // Track E's (`bbx migrate`) job, not this sweep's, so a candidate that
+    // can't resolve (v2 shape, or anything else not-a-box) is skipped rather
+    // than aborting the whole run.
+    let resolved: string;
+    try {
+      resolved = await resolveBoxRoot(candidate);
+    } catch (_e) {
+      continue;
+    }
     const shape = await getBoxShapeIfPresent(resolved);
     if (shape.found) roots.push(resolved);
   }
   return roots;
 }
 
-/** Read one box's `config/connectors/*.secret.json` files into mapped values. */
+/** Read one box's `_config/connectors/*.secret.json` files into mapped values. */
 async function readBoxSecrets(opts: {
   boxRoot: string;
   slug: string;
   skipped: MigrationSkip[];
 }): Promise<FoundSecret[]> {
-  const dir = path.join(opts.boxRoot, "config", "connectors");
+  const dir = path.join(opts.boxRoot, "_config", "connectors");
   let names: string[];
   try {
     names = await fs.readdir(dir);
@@ -378,7 +388,7 @@ export async function applySecretMigration(inventory: LegacyInventory): Promise<
           ...existing,
           value: entry.value,
           updated: now,
-          note: existing?.note ?? "migrated from a per-box config/connectors file",
+          note: existing?.note ?? "migrated from a per-box _config/connectors file",
           owningBox: entry.owningBox ?? existing?.owningBox,
           shareable: entry.singleBox ? false : existing?.shareable,
         };

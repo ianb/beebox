@@ -80,13 +80,13 @@ warnings: 1
 
 ## buildScriptEnv — with publicUrl configured
 
-With a `publicUrl` in `config/box.json`, both env vars get populated:
+With a `publicUrl` in `_config/box.json`, both env vars get populated:
 
 ```ts
 const box = await makeTmpBox();
-await fs.mkdir(path.join(box.root, "config"), { recursive: true });
+await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
 await fs.writeFile(
-  path.join(box.root, "config", "box.json"),
+  path.join(box.root, "_config", "box.json"),
   JSON.stringify({ publicUrl: "https://bbx.example.org/my-box" })
 );
 const env = await buildScriptEnv(box.root);
@@ -110,9 +110,9 @@ when `publicUrl` is absent from config:
 
 ```ts
 const box = await makeTmpBox();
-await fs.mkdir(path.join(box.root, "config"), { recursive: true });
+await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
 await fs.writeFile(
-  path.join(box.root, "config", "box.json"),
+  path.join(box.root, "_config", "box.json"),
   JSON.stringify({ publicUrl: "https://stale.example.org/wrong-name" })
 );
 registerBoxPublicUrl(box.root, "http://localhost:3210/live-name");
@@ -131,7 +131,7 @@ await box.cleanup();
 
 ## buildScriptEnv — ambient works without box.json at all
 
-A box with no `config/box.json` picks up env vars from the ambient
+A box with no `_config/box.json` picks up env vars from the ambient
 registration:
 
 ```ts
@@ -178,9 +178,9 @@ Caller additions override / extend the env:
 
 ```ts
 const box = await makeTmpBox();
-await fs.mkdir(path.join(box.root, "config"), { recursive: true });
+await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
 await fs.writeFile(
-  path.join(box.root, "config", "box.json"),
+  path.join(box.root, "_config", "box.json"),
   JSON.stringify({ publicUrl: "https://bbx.example.org/my-box" })
 );
 const env = await buildScriptEnv(box.root, {

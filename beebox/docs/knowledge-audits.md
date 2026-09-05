@@ -30,16 +30,15 @@ npx tsx src/dev/knowledge-audit.ts run --box ~/src/boxes/test1 [--filter <tag-or
 npx tsx src/dev/knowledge-audit.ts list
 ```
 
-`--box` accepts either a box package root (`~/src/boxes/test1`) or its
-operational `content/` root (`~/src/boxes/test1/content`) — both resolve to the
-same box, and the context-history ledger keys off the package name either way
+`--box` takes the box root (`~/src/boxes/test1`) — there is only the one root
+to pass, and the context-history ledger keys off its basename
 (`src/dev/lib/audit-box.ts`). Pass an absolute path (or `~/…`), never a bare
 name like `test1`, which would resolve inside the monorepo and be refused by the
 nested-box guard.
 
 By default the runner uses the box's configured engine. `--engine` overrides
 that choice for the audit only, so the same definitions can be exercised
-against Claude and Codex without editing `config/box.json`. Reports include the
+against Claude and Codex without editing `_config/box.json`. Reports include the
 engine and use engine-qualified default filenames. Codex behavior is captured
 from the validated live app-server event stream; private rollout files are not
 parsed. Codex does not expose Claude-equivalent per-turn context snapshots on

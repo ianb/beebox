@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
 import { writeFileAtomic } from "../lib/atomic-write.js";
+import { getBoxDir } from "../lib/paths.js";
 import { HTTPError } from "ky";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";
@@ -58,11 +59,11 @@ interface PersistedCalendarState extends CalendarState {
 }
 
 export function calendarStatePath(boxRoot: string): string {
-  return path.join(boxRoot, "config/connectors/google-calendar-state.json");
+  return path.join(getBoxDir(boxRoot, "connectorState"), "google-calendar-state.json");
 }
 
 export function calendarDir(boxRoot: string): string {
-  return path.join(boxRoot, "store/calendar");
+  return getBoxDir(boxRoot, "calendar");
 }
 
 /**
@@ -71,7 +72,7 @@ export function calendarDir(boxRoot: string): string {
  * It FAILS THE SYNC rather than starting from empty maps. `eventFiles` is not a
  * cache — `pushAndCleanOrphans` treats every `.ics` file absent from that index
  * as a locally-created event, so an empty index against a populated
- * `store/calendar/` means "insert a duplicate of every event into Google". A
+ * `_content/calendar/` means "insert a duplicate of every event into Google". A
  * present-but-unreadable index carries no information about which of those two
  * situations we are in, and there is no safe automatic recovery: the file has to
  * be inspected or removed by hand (removing it, with the calendar directory

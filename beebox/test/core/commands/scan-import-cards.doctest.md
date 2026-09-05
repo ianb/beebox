@@ -1,7 +1,7 @@
 # Scan-import card emission — review question shape
 
 `emitPhotoBundle` writes the photo's image card and, when the Gemini analysis
-flags the bundle, a review question in `box/questions/`. The review question
+flags the bundle, a review question in `_bookkeeping/questions/`. The review question
 carries a `learning:` block targeting the scan guide — identification
 ambiguities are where durable scanner priors surface — while the orphan-back
 and unsure questions deliberately carry none (one-off page dispositions; see
@@ -36,7 +36,7 @@ function analysis(index, overrides) {
 
 async function makeSession() {
   const boxRoot = await fs.mkdtemp(path.join(os.tmpdir(), "scan-cards-"));
-  const sessionAttachRelDir = "box/inbox/scan-20260801T0900-abcd1234.attach";
+  const sessionAttachRelDir = "_content/inbox/scan-20260801T0900-abcd1234.attach";
   const sessionAttachAbsDir = path.join(boxRoot, sessionAttachRelDir);
   await fs.mkdir(sessionAttachAbsDir, { recursive: true });
   const pageDir = path.join(boxRoot, "tmp", "pages");
@@ -84,14 +84,14 @@ await emitPhotoBundle({
   questionPaths,
 });
 JSON.stringify(questionPaths)
-=> ["box/questions/scan-20260801T0900-abcd1234-photo-001.review.question.card"]
+=> ["_bookkeeping/questions/scan-20260801T0900-abcd1234-photo-001.review.question.card"]
 
 const fields = await readQuestionFields(session.boxRoot, questionPaths[0]);
 fields.learning.sink
 => guide
 
 fields.learning.ref
-=> config/scan.guide.card
+=> _config/scan.guide.card
 
 fields.learning.proposal.includes("DURABLE identification")
 => true

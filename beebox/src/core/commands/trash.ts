@@ -15,6 +15,7 @@ import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { assertSafeTrashDestination } from "./trash-namespace-guard.js";
 import { findInboundCardRefs, type InboundCardRef } from "../find-inbound-card-refs.js";
 
 class NotACardFileError extends Error {
@@ -159,6 +160,11 @@ async function trashOne(
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
     finalAttachDest = `${destAttachDir}_${timestamp}`;
   }
+
+  // Round-8 hardening finding 4: resolve both destinations through the
+  // box-namespace fence before touching disk — see `trash-namespace-guard.ts`.
+  await assertSafeTrashDestination(ctx.boxRoot, finalDestPath);
+  if (hasAttachments) await assertSafeTrashDestination(ctx.boxRoot, finalAttachDest);
 
   // Move the card, then its attachment scope. If the second move fails, put
   // the card back so callers never lose the receipt for a partial card move.

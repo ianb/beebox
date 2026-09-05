@@ -11,13 +11,13 @@
 export function generateTriageGuide(): string {
   return `# The triage pipeline (intake → triage → handle)
 
-Three stages sort items that land in \`box/inbox/\` into per-category buckets.
+Three stages sort items that land in \`_content/inbox/\` into per-category buckets.
 Each stage is its own command, run directly:
 
-- \`bbx intake\` — prepares raw items in \`box/inbox/intake/\` (transcription, OCR,
-  filename normalization) and advances them to \`box/inbox/staged/\`.
+- \`bbx intake\` — prepares raw items in \`_content/inbox/intake/\` (transcription, OCR,
+  filename normalization) and advances them to \`_content/inbox/staged/\`.
 - \`bbx triage\` — the triage agent reads each staged item and assigns it a
-  category and a confidence level, moving it to \`box/inbox/triaged/<category>/\`.
+  category and a confidence level, moving it to \`_content/inbox/triaged/<category>/\`.
 - \`bbx handle\` — runs each category's handler procedure over its bucket.
 
 A category is a landmark whose \`destinations\` list carries a \`for: [triage]\`
@@ -34,7 +34,7 @@ numeric score, and never a "wrong"/"unknown" level):
   Routed to the bucket, and a \`.probable.txt\` marker is dropped alongside it so
   the boxholder can spot-check.
 - \`guess\` — not enough signal to commit. The item's category is left null; it
-  goes to \`box/inbox/triaged/_unsure/\` paired with a question card, and the
+  goes to \`_content/inbox/triaged/_unsure/\` paired with a question card, and the
   pipeline does not advance it until the boxholder answers.
 
 ## Writing a handler procedure

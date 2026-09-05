@@ -21,8 +21,8 @@ function runMigration(box, apply) {
 
 ```ts
 const box = await makeTmpBox({ git: true });
-const hookPath = join(box.packageRoot, ".git", "hooks", "pre-commit");
-await box.write("../.git/hooks/pre-commit", "#!/usr/bin/env bash\n# beebox validation hook (managed)\nexec /nowhere/former-checkout/bin/former-cli validate\n");
+const hookPath = join(box.root, ".git", "hooks", "pre-commit");
+await box.write(".git/hooks/pre-commit", "#!/usr/bin/env bash\n# beebox validation hook (managed)\nexec /nowhere/former-checkout/bin/former-cli validate\n");
 const first = runMigration(box, true);
 const hook = await readFile(hookPath, "utf8");
 const second = runMigration(box, true);

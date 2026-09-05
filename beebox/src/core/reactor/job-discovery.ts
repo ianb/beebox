@@ -1,5 +1,5 @@
 /**
- * Job card discovery — scans box/jobs/ for pending job cards.
+ * Job card discovery — scans _bookkeeping/jobs/ for pending job cards.
  *
  * Job cards have the suffix `.job.card` (optionally `.TYPE.job.card`
  * for typed jobs like chat). Priority and source are read from the card's

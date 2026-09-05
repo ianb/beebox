@@ -32,7 +32,7 @@ set -euo pipefail
 #                    <your-gh-login>/<box-name>).
 #   --allow EMAIL    grant an extra user access (repeatable). The owner
 #                    always has access; this is only for ADDITIONAL users.
-#                    Written to config/box.json, new boxes only — never
+#                    Written to _config/box.json, new boxes only — never
 #                    clobbers an existing config.
 #   --secrets-from BOX  give the new box the same secret GRANTS another box
 #                    holds (e.g. the shared Mistral key), via
@@ -269,7 +269,7 @@ if [[ -n "$DRY_RUN" ]]; then
   echo "  - clone $REPO to $BOX_PATH (or pull, if it exists)"
   echo "  - run 'bbx init' in it as $BBX_USER"
   if [[ -n "$ALLOW_CSV" ]]; then
-    echo "  - write config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
+    echo "  - write _config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
   fi
   if [[ -n "$SECRETS_FROM" ]]; then
     echo "  - copy box '$SECRETS_FROM's secret grants (bbx secrets copy-grants; no files move)"
@@ -385,12 +385,12 @@ fi
 # Access config: only write for a brand-new box, never clobber an
 # existing one (re-deploys keep their hand-tuned access).
 if [[ -n "$ALLOW_CSV" ]]; then
-  if [[ -f "\$CONTENT_DIR/config/box.json" ]]; then
+  if [[ -f "\$CONTENT_DIR/_config/box.json" ]]; then
     echo "Access: box.json exists — leaving it unchanged (add by hand: $ALLOW_CSV)"
   else
-    mkdir -p "\$CONTENT_DIR/config"
-    python3 -c "import json,sys; json.dump({'allowedEmails': '$ALLOW_CSV'.split(',')}, open(sys.argv[1],'w'), indent=2)" "\$CONTENT_DIR/config/box.json"
-    echo "Access: wrote config/box.json (allowedEmails: $ALLOW_CSV)"
+    mkdir -p "\$CONTENT_DIR/_config"
+    python3 -c "import json,sys; json.dump({'allowedEmails': '$ALLOW_CSV'.split(',')}, open(sys.argv[1],'w'), indent=2)" "\$CONTENT_DIR/_config/box.json"
+    echo "Access: wrote _config/box.json (allowedEmails: $ALLOW_CSV)"
   fi
 fi
 
@@ -419,7 +419,7 @@ if [[ -n "$SECRETS_FROM" ]]; then
   fi
   echo "\$COPY_OUT"
 
-  # Legacy path, for a machine that has not run \`bbx secrets migrate\` yet: the
+  # Legacy path, for a machine that has not run \'bbx secrets migrate\' yet: the
   # source box has NO GRANTS AT ALL but still holds in-tree secret files. Copy
   # them so provisioning still works, and say plainly that this is deprecated.
   #
@@ -427,13 +427,17 @@ if [[ -n "$SECRETS_FROM" ]]; then
   # whose grants are all single-box copies nothing either, and must NOT land
   # here: falling back would hand this box the very Telegram token the command
   # just refused to share.
-  SRC_DIR="$BOXES_DIR/$SECRETS_FROM/content/config/connectors"
+  # v3 (one-root) in-tree location first, then the two retired v2 shapes
+  # (nested content/config/ and bare config/ at a v2 content root) for a
+  # source box that predates the one-root migration.
+  SRC_DIR="$BOXES_DIR/$SECRETS_FROM/_config/connectors"
+  [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/content/config/connectors"
   [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/config/connectors"
   if echo "\$COPY_OUT" | grep -q "has no grants at all" && compgen -G "\$SRC_DIR/*.secret.json" >/dev/null; then
     echo "Secrets: '$SECRETS_FROM' has no grants but still has in-tree secret files — falling back to the OLD file copy."
     echo "         DEPRECATED: run 'bbx secrets migrate' on this server (with the boxholder) to move them into the"
     echo "         machine store, then re-run this with --secrets-from to grant instead of copy."
-    mkdir -p "\$CONTENT_DIR/config/connectors"
+    mkdir -p "\$CONTENT_DIR/_config/connectors"
     for secret_file in "\$SRC_DIR"/*.secret.json; do
       # Same rule as the grant path, applied to files: a Telegram bot token
       # routes to ONE webhook URL and a publish token is scoped to one bucket,
@@ -444,8 +448,8 @@ if [[ -n "$SECRETS_FROM" ]]; then
           echo "Secrets: NOT copying \$(basename "\$secret_file") — it belongs to '$SECRETS_FROM' alone."
           continue ;;
       esac
-      cp "\$secret_file" "\$CONTENT_DIR/config/connectors/"
-      chmod 600 "\$CONTENT_DIR/config/connectors/\$(basename "\$secret_file")"
+      cp "\$secret_file" "\$CONTENT_DIR/_config/connectors/"
+      chmod 600 "\$CONTENT_DIR/_config/connectors/\$(basename "\$secret_file")"
       echo "Secrets: copied \$(basename "\$secret_file") from '$SECRETS_FROM'"
     done
   fi

@@ -55,24 +55,26 @@ await box.write(".bbx-serve.pid", "123\n");
 await box.write(".bbx-trick-commit.lock", "\n");
 await box.write("store/note.md", "content stays\n");
 await box.commitAll("what autocommit swept in");
-const trackedBefore = git(box.packageRoot, "ls-files", "content").split("\n").length;
+const trackedBefore = git(box.root, "ls-files").split("\n").length;
 
 const dryRun = runMigration(box, false);
+const trackedAfterDryRun = git(box.root, "ls-files").split("\n").length;
 const applied = runMigration(box, true);
-const tracked = git(box.packageRoot, "ls-files", "content").split("\n");
+const tracked = git(box.root, "ls-files").split("\n");
 const ignore = await readFile(join(box.root, ".gitignore"), "utf8");
 JSON.stringify({
   trackedBefore,
-  dryRunLeavesTracked: git(box.packageRoot, "ls-files", "content").split("\n").length === tracked.length ? "checked-after" : "n/a",
+  dryRunLeavesTracked: trackedAfterDryRun === trackedBefore ? "checked-after" : "n/a",
   dryRunMentions: dryRun.includes("untrack 4 file(s)"),
   appliedSays: applied.trim(),
-  stillTracked: tracked,
+  stillTrackedState: tracked.filter((p) => p.startsWith(".beebox/") || p.startsWith(".bbx-")),
+  storeFileStillTracked: tracked.includes("store/note.md"),
   onDisk: (await readFile(join(box.root, ".bbx-serve.pid"), "utf8")).trim(),
   ignoreHeader: ignore.split("\n")[0],
   ignoresState: ignore.includes("\n.beebox/\n"),
   ignoresLocks: ignore.includes("\n.bbx-*.lock\n") && ignore.includes("\n.bbx-serve.pid\n"),
 })
-=> {"trackedBefore":7,"dryRunLeavesTracked":"checked-after","dryRunMentions":true,"appliedSays":"[box-gitignore] .gitignore rewritten; untracked 4 state file(s) (still on disk).","stillTracked":["content/.beebox/box.json","content/.gitignore","content/store/note.md"],"onDisk":"123","ignoreHeader":"# Bee Box .gitignore","ignoresState":true,"ignoresLocks":true}
+=> {"trackedBefore":51,"dryRunLeavesTracked":"checked-after","dryRunMentions":true,"appliedSays":"[box-gitignore] .gitignore rewritten; untracked 4 state file(s) (still on disk).","stillTrackedState":[".beebox/box.json"],"storeFileStillTracked":true,"onDisk":"123","ignoreHeader":"# Bee Box .gitignore","ignoresState":true,"ignoresLocks":true}
 ```
 
 Running it again is a no-op apart from rewriting the same file.

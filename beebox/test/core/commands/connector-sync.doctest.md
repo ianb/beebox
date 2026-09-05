@@ -15,7 +15,7 @@ import {
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/connector-review.procedure.card", `---
+await box.write("_config/procedures/connector-review.procedure.card", `---
 name: connector-review
 description: Record that connector review ran
 steps:
@@ -23,7 +23,7 @@ steps:
     description: Record the trigger
     run:
       shells:
-        - mkdir -p box/output && echo reviewed > box/output/connector-review.txt
+        - mkdir -p _bookkeeping/output && echo reviewed > _bookkeeping/output/connector-review.txt
 ---
 `);
 box.commitAll("add connector procedure");
@@ -37,7 +37,7 @@ registerConnector({
       created: [],
       updated: [],
       procedures: [{
-        procedureRef: "config/procedures/connector-review.procedure.card",
+        procedureRef: "_config/procedures/connector-review.procedure.card",
         directive: "Review the connector event",
       }],
     };
@@ -52,10 +52,10 @@ const result = await runCommand({
 result.success
 => true
 
-collector.getOutput().includes("Running procedure config/procedures/connector-review.procedure.card")
+collector.getOutput().includes("Running procedure _config/procedures/connector-review.procedure.card")
 => true
 
-(await box.read("box/output/connector-review.txt")).trim()
+(await box.read("_bookkeeping/output/connector-review.txt")).trim()
 => reviewed
 ```
 

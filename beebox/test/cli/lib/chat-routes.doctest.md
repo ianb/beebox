@@ -54,7 +54,7 @@ joined into a filesystem path — now on behalf of an HTTP request, since
 to. An ordinary binding resolves as you would expect:
 
 ```ts
-containedSessionCwd("/tmp/test-box", "store/recipes") === path.join("/tmp/test-box", "store/recipes")
+containedSessionCwd("/tmp/test-box", "_content/recipes") === path.join("/tmp/test-box", "_content/recipes")
 => true
 ```
 

@@ -63,7 +63,7 @@ the raw TIFF, while Claude receives the same bytes it did before the hoist.
 
 ```ts
 const normalizeBox = await makeTmpBox();
-const originalPath = join(normalizeBox.packageRoot, "oversized-original.tiff");
+const originalPath = join(normalizeBox.root, "oversized-original.tiff");
 await Sharp({
   create: { width: 3200, height: 1200, channels: 3, background: { r: 30, g: 80, b: 120 } },
 }).tiff({ compression: "none" }).toFile(originalPath);

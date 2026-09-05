@@ -19,6 +19,7 @@ import { createCardSchemaMap } from "../../schemas/registry.js";
 import { DOCS_DIR, withDocId } from "./shared.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
 
 /**
  * Scan procedure cards and extract name + first-line description.
@@ -30,7 +31,7 @@ export interface ProcedureSummary {
 }
 
 export async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[]> {
-  const procedureDir = join(boxRoot, "config/procedures");
+  const procedureDir = getBoxDir(boxRoot, "procedures");
   let files: string[];
   try {
     files = await readdir(procedureDir);
@@ -76,20 +77,20 @@ export async function compileBriefings(boxRoot: string, debug: boolean): Promise
   const compiledPaths: string[] = [];
 
   // Check root briefing
-  const rootBriefingPath = join(boxRoot, "briefing.briefing.card");
+  const rootBriefingPath = join(boxRoot, "_content/briefing.briefing.card");
   try {
     const content = await readFile(rootBriefingPath, "utf-8");
     const parsed = parseCardText(content, {
-      source: "briefing.briefing.card",
+      source: "_content/briefing.briefing.card",
       schemas: await createCardSchemaMap(boxRoot),
     });
     const compiled = compileBriefing(cardFields(parsed, BriefingSchema));
-    const mdPath = join(boxRoot, "briefing.md");
+    const mdPath = join(boxRoot, "_content/briefing.md");
     await writeFile(
       mdPath,
-      withDocId({ relativePath: "briefing.md", content: compiled, debug })
+      withDocId({ relativePath: "_content/briefing.md", content: compiled, debug })
     );
-    compiledPaths.push("briefing.md");
+    compiledPaths.push("_content/briefing.md");
   } catch (e) {
     // Missing root briefing is normal (skip); a parse error means a malformed
     // card we failed to compile — surface it either way so bad cards aren't silent.
@@ -105,8 +106,8 @@ export async function compileBriefings(boxRoot: string, debug: boolean): Promise
 }
 
 /**
- * Scan config/*.guide.card, compile each, and generate job-type rules.
- * Also scan per-chat guide cards in store/chat/ directories.
+ * Scan `_config/*.guide.card`, compile each, and generate job-type rules.
+ * Also scan per-chat guide cards in `_content/chat/` directories.
  * Returns summaries of config-level guides (for inclusion in agent guide).
  */
 export async function compileGuides(boxRoot: string, debug: boolean): Promise<GuideSummary[]> {
@@ -142,7 +143,7 @@ export interface GuideSummary {
  */
 async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSummary[]> {
   const { boxRoot, rulesDir, debug } = ctx;
-  const configDir = join(boxRoot, "config");
+  const configDir = getBoxDir(boxRoot, "config");
   let files: string[];
   try {
     files = await readdir(configDir);
@@ -161,7 +162,7 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
   const allGuides: GuideSummary[] = [];
 
   for (const filename of guideFiles) {
-    const guidePath = `config/${filename}`;
+    const guidePath = `${BOX_DIRS.config}/${filename}`;
     const guideName = filename.replace(".guide.card", "");
 
     try {
@@ -235,17 +236,17 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
 }
 
 /**
- * Scan per-chat directory guide cards (chat.guide.card) under store/chat/.
+ * Scan per-chat directory guide cards (chat.guide.card) under `_content/chat/`.
  * Each guide compiles to a rule that loads when accessing files in that chat directory.
  */
 async function compileChatGuides(ctx: GuideCompileContext): Promise<void> {
   const { boxRoot, rulesDir, debug } = ctx;
-  const chatRoot = join(boxRoot, "store/chat");
+  const chatRoot = getBoxDir(boxRoot, "chat");
   let connectors: string[];
   try {
     connectors = await readdir(chatRoot);
   } catch (_e) {
-    // No store/chat directory — box has no chats, so no per-chat guides. Expected.
+    // No _content/chat directory — box has no chats, so no per-chat guides. Expected.
     return;
   }
 
@@ -311,7 +312,7 @@ async function compileChatGuide(params: ChatGuideParams): Promise<void> {
     );
 
     // Generate a rule file scoped to this chat directory
-    const chatDir = `store/chat/${connector}/${slug}`;
+    const chatDir = `${BOX_DIRS.chat}/${connector}/${slug}`;
     const ruleFilename = `guide-for-chat-${connector}-${slug}.md`;
     const lines = [
       "---",
@@ -334,11 +335,11 @@ async function compileChatGuide(params: ChatGuideParams): Promise<void> {
 }
 
 /**
- * Scan config/*.personality.card, compile each, and return the compiled markdown
+ * Scan `_config/*.personality.card`, compile each, and return the compiled markdown
  * and speaking-voice JSON.
  */
 export async function compilePersonalities(boxRoot: string, debug: boolean): Promise<string | undefined> {
-  const configDir = join(boxRoot, "config");
+  const configDir = getBoxDir(boxRoot, "config");
   let files: string[];
   try {
     files = await readdir(configDir);

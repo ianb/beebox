@@ -23,7 +23,7 @@ import {
   HubConfigEditError,
 } from "../../hub/hub-config-edit.js";
 import { Supervisor } from "../../hub/supervisor.js";
-import { resolveBoxRoot } from "../../hub/child-spawn.js";
+import { requireBoxRoot } from "../../lib/box-shape.js";
 import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
 import { hubVerdict } from "../../hub/hub-health.js";
 import { getRootDiskHealth } from "../../hub/disk-health.js";
@@ -48,7 +48,7 @@ function registerAddBoxSubcommand(parent: Command): void {
     .command("add-box")
     .description("Register a box with the hub's routing table (hub.json)")
     .argument("<slug>", "URL prefix the box is served under")
-    .argument("<path>", "Path to the box (package root or content dir)")
+    .argument("<path>", "Path to the box root")
     .option("-c, --config <path>", "Path to hub.json (default: ~/.config/beebox/hub.json)")
     .option("--dry-run", "Validate and print what would change, without writing");
 
@@ -140,7 +140,7 @@ export const hubCommand = new Command("hub")
     const boxEntries = await Promise.all(
       Object.entries(config.boxes).map(async ([slug, entry]): Promise<BoxSpec | undefined> => {
         try {
-          return { slug, boxRoot: await resolveBoxRoot(entry.path) };
+          return { slug, boxRoot: await requireBoxRoot(entry.path) };
         } catch (e) {
           console.error(`Could not resolve box root for "${slug}" (${entry.path}): ${describeError(e)}`);
           return undefined;

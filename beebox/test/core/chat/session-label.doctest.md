@@ -42,7 +42,7 @@ function entry(engine: "claude" | "codex", fields: { preview?: string; logPath?:
     engine,
     contextDir: "",
     mtime: new Date("2026-08-14T21:47:00Z"),
-    huskPath: "store/chat/web/2026-08-14_chat.chat.card",
+    huskPath: "_content/chat/web/2026-08-14_chat.chat.card",
     logPath: fields.logPath ?? "/nonexistent/log.jsonl",
     title: undefined,
     ...(fields.preview === undefined ? {} : { nativePreview: fields.preview }),

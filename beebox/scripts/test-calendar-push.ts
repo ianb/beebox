@@ -34,7 +34,7 @@ async function main() {
   }
 
   // 1. Read the .ics file
-  const icsPath = path.join(boxRoot, "store/calendar", icsFilename);
+  const icsPath = path.join(boxRoot, "_content/calendar", icsFilename);
   const icsContent = await fs.readFile(icsPath, "utf-8");
   console.log("Read:", icsPath);
 
@@ -58,7 +58,7 @@ async function main() {
   console.log(`Location: ${location ?? "(none)"}`);
 
   // 3. Load state to find the Google event ID and calendar ID
-  const statePath = path.join(boxRoot, "config/connectors/google-calendar-state.json");
+  const statePath = path.join(boxRoot, "_bookkeeping/connectors/google-calendar-state.json");
   const state: CalendarState = JSON.parse(await fs.readFile(statePath, "utf-8"));
 
   let googleEventId: string | undefined;

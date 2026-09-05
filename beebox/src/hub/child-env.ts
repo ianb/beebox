@@ -87,7 +87,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
  * more than one suffix, so adding a suffix later doesn't require touching
  * this file again. `BBX_DEEPGRAM_` covers `BBX_DEEPGRAM_API_KEY`
  * + `BBX_DEEPGRAM_PROJECT` (src/core/deepgram-key.ts), the box's own
- * transcription credential fallback when no `config/connectors/deepgram.secret.json`
+ * transcription credential fallback when no `_config/connectors/deepgram.secret.json`
  * exists -- same "box-legitimate config a `bbx serve` child reads directly"
  * category as the exact-name entries above.
  */

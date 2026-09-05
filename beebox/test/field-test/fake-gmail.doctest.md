@@ -230,7 +230,7 @@ const statePath = join(dir, "gmail.json");
 await saveFakeGmailState(statePath, { ...emptyFakeGmailState(), labels });
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", trackInbox);
+await box.seed("_config/connectors/gmail.json", trackInbox);
 box.commitAll("initialize box");
 process.env.BBX_FAKE_GMAIL = statePath;
 

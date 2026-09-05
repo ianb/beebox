@@ -59,10 +59,10 @@ Questions filed in a subdirectory still count — the nav badge is box-wide.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/One.question.card", question("pending"));
-await box.write("box/questions/Two.question.card", question("answered"));
-await box.write("box/questions/Three.question.card", question("dismissed"));
-await box.write("box/questions/inbox-review/Four.question.card", question("pending"));
+await box.write("_bookkeeping/questions/One.question.card", question("pending"));
+await box.write("_bookkeeping/questions/Two.question.card", question("answered"));
+await box.write("_bookkeeping/questions/Three.question.card", question("dismissed"));
+await box.write("_bookkeeping/questions/inbox-review/Four.question.card", question("pending"));
 
 const counts = (await caller(box).navStatus()).counts;
 counts.pendingQuestions
@@ -76,9 +76,9 @@ the same number (it shares this count rather than deriving its own), so the
 nav and the dashboard can't disagree.
 
 ```ts continue
-await box.write("box/questions/Broken.question.card", "---\nstatus: pending\ninput: not-a-mapping\n---\n");
+await box.write("_bookkeeping/questions/Broken.question.card", "---\nstatus: pending\ninput: not-a-mapping\n---\n");
 // `status.status` reads box metadata, so give the marker its full contents.
-await box.write(".beebox/box.json", JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: "2026-01-01T00:00:00Z" }));
+await box.write(".beebox/box.json", JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" }));
 
 const navCount = (await caller(box).navStatus()).counts.pendingQuestions;
 const dashboardCount = (await caller(box).status()).counts.pendingQuestions;
@@ -94,7 +94,7 @@ the same derivation `bbx todos` uses, reached through the shared collector. A
 
 ```ts continue
 await box.write(
-  "box/notes/Plans.memo.card",
+  "_content/notes/Plans.memo.card",
   `---
 created: 2026-01-01T00:00:00Z
 todos:
@@ -122,7 +122,7 @@ card body rather than frontmatter.
 
 ```ts continue
 await box.write(
-  "box/notes/Body.memo.card",
+  "_content/notes/Body.memo.card",
   `---
 created: 2026-01-01T00:00:00Z
 title: Body capture

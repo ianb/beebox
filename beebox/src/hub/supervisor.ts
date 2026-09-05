@@ -16,7 +16,7 @@
 
 import * as path from "node:path";
 import getPorts from "get-port";
-import { getBoxShape } from "../lib/box-shape.js";
+import { getBoxShape, requireBoxRoot } from "../lib/box-shape.js";
 import type { HubConfig, BoxEntry } from "./hub-config.js";
 import { HubState } from "./hub-state.js";
 import { invariant } from "../lib/invariant.js";
@@ -27,13 +27,13 @@ import { forwardChildOutput } from "./child-output-log.js";
 import { boxHasPendingSchedules } from "./pending-schedules.js";
 import { MAX_CONSECUTIVE_FAILURES, BASE_BACKOFF_MS, backoffDelayMs } from "./crash-backoff.js";
 // prettier-ignore
-import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, resolveBoxRoot, resolveBbxBinary } from "./child-spawn.js";
+import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, resolveBbxBinary } from "./child-spawn.js";
 
-// `buildChildEnv` (env allowlist) and the child-spawn/box-resolution
-// primitives moved to sibling files to keep this one under the 300-line cap;
-// `buildChildEnv` is re-exported here so existing importers
-// (`test/hub/supervisor.doctest.md`) don't need to change their import path.
-// `resolveBoxRoot` importers point at `./child-spawn.js` directly.
+// `buildChildEnv` (env allowlist) and the child-spawn primitives moved to
+// sibling files to keep this one under the 300-line cap; `buildChildEnv` is
+// re-exported here so existing importers (`test/hub/supervisor.doctest.md`)
+// don't need to change their import path. Box-path resolution is
+// `requireBoxRoot` (`../lib/box-shape.js`) — the one resolver.
 export { buildChildEnv };
 
 export type BoxRunStatus = "starting" | "running" | "unhealthy" | "stopped";
@@ -430,7 +430,7 @@ export class Supervisor implements EndpointProvider {
     box.status = "starting";
     const generation = ++box.generation;
     try {
-      const boxRoot = await resolveBoxRoot(box.entry.path);
+      const boxRoot = await requireBoxRoot(box.entry.path);
       const shape = await getBoxShape(boxRoot);
       const bbxBinary = await resolveBbxBinary(shape);
       const port = await getPorts();
@@ -440,7 +440,7 @@ export class Supervisor implements EndpointProvider {
       const child = this.spawnChild({
         bbxBinary,
         args: ["serve", boxRoot, "--slug", box.slug, "--port", String(port)],
-        cwd: shape.packageRoot,
+        cwd: shape.boxRoot,
         env,
       });
       // Swallow the execa promise rejection here (not just via .on("exit")) --

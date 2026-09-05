@@ -80,6 +80,171 @@ export function extractBodyLinks(body: string): BodyRef[] {
     if (ref === undefined || isExternalRef(ref)) continue;
     out.push({ path: `body:${String(lineAt(body, match.index))}:link`, ref });
   }
+  out.push(...extractReferenceDefinitions(body));
+  return out;
+}
+
+/**
+ * A destination token in a markdown reference-style link definition, per
+ * CommonMark's link-destination grammar: either angle-bracket delimited
+ * (`<…>`, no unescaped `<`, `>`, or line ending inside — the delimiters are
+ * stripped, not part of the returned url) or a bare run of non-whitespace
+ * characters. `text` is searched starting at its first character (NOT
+ * anchored to the start of a line — callers pass in whatever text follows
+ * the `[id]:` label, which may itself start with whitespace to skip).
+ */
+function matchDestination(text: string): { url: string; offset: number } | null {
+  const leading = /^[\t ]*/.exec(text)?.[0].length ?? 0;
+  const rest = text.slice(leading);
+  const angle = /^<([^\n<>]*)>/.exec(rest);
+  if (angle !== null) {
+    const url = angle[1];
+    if (url === undefined) return null;
+    return { url, offset: leading + 1 }; // +1 skips the opening `<`
+  }
+  const bare = /^(\S+)/.exec(rest);
+  if (bare === null) return null;
+  const url = bare[1];
+  if (url === undefined) return null;
+  return { url, offset: leading };
+}
+
+/** Strip a trailing CRLF `\r` (finding 7, round 3 hardening): JS regex `.`
+ * excludes ALL line-terminator characters, not just `\n` — so
+ * `matchReferenceDefinitionAt`'s `(.*)$` label-line pattern, matched against
+ * a Windows-line-ending body's raw `\r`-suffixed line (after `body.split
+ * ("\n")`, the `\r` stays attached to the preceding line), could never
+ * reach `$` and silently failed to match at all. Only ever trims the FINAL
+ * character, so it never disturbs any offset computed against the result. */
+function stripTrailingCR(line: string): string {
+  return line.endsWith("\r") ? line.slice(0, -1) : line;
+}
+
+/** Strip every leading blockquote-container marker (finding 7): CommonMark
+ * allows a reference-style link definition inside a blockquote —
+ * `> [id]: /path`, or nested `> > [id]: /path` — and this codebase's
+ * Markdoc parser already resolves those into real links, so the
+ * extractor/rewriter must recognize the form too. Each marker is up to 3
+ * leading spaces, `>`, and one optional following space; loops to peel
+ * nested containers. Returns the remaining text and how many characters
+ * were stripped, so a caller can translate an offset in the remainder back
+ * to an offset in the original (unstripped) line. */
+function stripBlockquotePrefixes(line: string): { rest: string; stripped: number } {
+  let rest = line;
+  let stripped = 0;
+  for (;;) {
+    const marker = /^[\t ]{0,3}> ?/.exec(rest);
+    if (marker === null) break;
+    rest = rest.slice(marker[0].length);
+    stripped += marker[0].length;
+  }
+  return { rest, stripped };
+}
+
+/** Strip one leading list-item marker (finding 6, round 4 hardening):
+ * CommonMark allows a reference-style link definition to be the first block
+ * inside a list item — `- [id]: /path`, `* [id]: /path`, `+ [id]: /path`, or
+ * an ordered marker (`1. [id]: /path`, `2) [id]: /path`) — and this
+ * codebase's Markdoc parser already resolves those into real links, exactly
+ * like the blockquote form {@link stripBlockquotePrefixes} already handles.
+ * Before this, only the blockquote prefix was stripped, so
+ * `- [id]: /people/X.person.card` was invisible to extraction, the
+ * migration's rewriter, and the hard link gate alike — all three share this
+ * one matcher. Strips up to 3 leading spaces, ONE marker (bullet or
+ * ordered), and the whitespace run separating it from the content — unlike
+ * the blockquote loop above, a single line never stacks more than one list
+ * marker (list nesting happens across INDENTATION, not repeated markers on
+ * one line), so this strips at most once. */
+function stripListMarker(line: string): { rest: string; stripped: number } {
+  const marker = /^[\t ]{0,3}(?:[*+-]|\d{1,9}[).])[\t ]+/.exec(line);
+  if (marker === null) return { rest: line, stripped: 0 };
+  return { rest: line.slice(marker[0].length), stripped: marker[0].length };
+}
+
+/**
+ * A markdown reference-style link DEFINITION: `[id]: /path "title"`, or
+ * `[id]: </path with spaces>` (angle-bracket delimited destination), or with
+ * the destination on the line AFTER the label when nothing but whitespace
+ * follows the colon:
+ * ```
+ * [id]:
+ *   /path
+ * ```
+ * All three are legal CommonMark, and the Markdoc parser this codebase
+ * already renders/lints with resolves all three to a real link — so an
+ * extractor that only understood same-line destinations was silently
+ * invisible to a form its own renderer treats as a working link. Neither the
+ * inline-link pattern above nor `ref="…"`/frontmatter walking sees this form
+ * at all — a `[text][id]` USAGE carries no path, only the definition does.
+ *
+ * `lines[labelLineIndex]` must start the label (optionally indented up to 3
+ * spaces, per CommonMark); a continuation destination is only recognized on
+ * the immediately following line (a blank line in between means no
+ * definition, matching CommonMark and this codebase's Markdoc parser — see
+ * `body-refs.doctest.md`). Returns the destination's line index (the label
+ * line, or the line after it for the continuation form) and its character
+ * offset within that line, with any angle-bracket delimiters already
+ * stripped, so a rewriter can splice a replacement in without disturbing the
+ * rest of the line and without ever producing a ref value containing `<`/`>`.
+ *
+ * Exported (not just used internally) so `markdown-lint-rules.ts`'s
+ * line-based `extractInlineLinks` and the one-root migration's ref rewriter
+ * share this one grammar instead of each growing its own regex for the same
+ * form.
+ */
+export function matchReferenceDefinitionAt(
+  lines: readonly string[],
+  labelLineIndex: number,
+): { url: string; lineIndex: number; index: number } | null {
+  const rawLabelLine = lines[labelLineIndex];
+  if (rawLabelLine === undefined) return null;
+  // Finding 7 (round 3 hardening): strip a trailing CRLF `\r` and any
+  // leading blockquote-container marker(s) before matching — both `index`
+  // values below add the stripped-prefix LENGTH back in, so they still
+  // locate the destination within the RAW (unstripped) line, which is what
+  // a rewriter's splice must index into.
+  //
+  // Finding 6 (round 4 hardening): also strip one leading list-item marker
+  // (AFTER the blockquote strip, so `> - [id]: /path` — a quoted list item —
+  // is recognized too) — see {@link stripListMarker}'s doc comment.
+  const noCR = stripTrailingCR(rawLabelLine);
+  const { rest: afterBlockquote, stripped: blockquoteStripped } = stripBlockquotePrefixes(noCR);
+  const { rest: labelCore, stripped: listStripped } = stripListMarker(afterBlockquote);
+  const stripped = blockquoteStripped + listStripped;
+  const label = /^[\t ]{0,3}\[[^\]]+]:(.*)$/.exec(labelCore);
+  if (label === null) return null;
+  const afterColon = label[1] ?? "";
+  if (afterColon.trim() !== "") {
+    const dest = matchDestination(afterColon);
+    if (dest === null) return null;
+    return {
+      url: dest.url,
+      lineIndex: labelLineIndex,
+      index: stripped + (labelCore.length - afterColon.length) + dest.offset,
+    };
+  }
+  // Nothing but whitespace after the colon: CommonMark allows the
+  // destination on the next line, but only when that line isn't blank —
+  // a blank line ends the definition (and starts a new block) instead.
+  const rawNextLine = lines[labelLineIndex + 1];
+  if (rawNextLine === undefined) return null;
+  const { rest: nextCore, stripped: nextStripped } = stripBlockquotePrefixes(stripTrailingCR(rawNextLine));
+  if (nextCore.trim() === "") return null;
+  const dest = matchDestination(nextCore);
+  if (dest === null) return null;
+  return { url: dest.url, lineIndex: labelLineIndex + 1, index: nextStripped + dest.offset };
+}
+
+/** Every reference-style link definition in `body`, as refs to check. */
+export function extractReferenceDefinitions(body: string): BodyRef[] {
+  if (body === "") return [];
+  const out: BodyRef[] = [];
+  const lines = body.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const found = matchReferenceDefinitionAt(lines, i);
+    if (found === null || isExternalRef(found.url)) continue;
+    out.push({ path: `body:${String(found.lineIndex + 1)}:ref-def`, ref: found.url });
+  }
   return out;
 }
 

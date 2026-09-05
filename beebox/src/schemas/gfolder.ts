@@ -2,7 +2,7 @@
  * Gfolder card schema — a mirrored Google Drive folder.
  *
  * Landmark-shaped: the card lives *inside* the directory it describes
- * (`store/drive/recipes/Recipes.gfolder.card`), the same convention as
+ * (`_content/drive/recipes/Recipes.gfolder.card`), the same convention as
  * `.landmark.card`. That is deliberate — the card's directory IS the mount, so
  * moving the card is how the mount is re-homed, and trashing it is how the
  * folder is unmounted.
@@ -40,10 +40,10 @@ A \`.gfolder.card\` **mirrors a Google Drive folder into the directory the
 card sits in**. It lives inside that directory, like a landmark:
 
 \`\`\`
-store/drive/recipes/Recipes.gfolder.card     # the mount
-store/drive/recipes/Sourdough.gdoc.card      # a Doc child, synced
-store/drive/recipes/Scan_2024.glink.card     # a PDF child, pointed at
-store/drive/recipes/desserts/Desserts.gfolder.card   # a subfolder, mirrored
+_content/drive/recipes/Recipes.gfolder.card     # the mount
+_content/drive/recipes/Sourdough.gdoc.card      # a Doc child, synced
+_content/drive/recipes/Scan_2024.glink.card     # a PDF child, pointed at
+_content/drive/recipes/desserts/Desserts.gfolder.card   # a subfolder, mirrored
 \`\`\`
 
 ## The directory is the mount
@@ -73,7 +73,7 @@ Membership follows Drive one-way, on each sync:
   \`.glink.card\` pointer. Nothing is copied; read the pointer for what it is
   and where.
 - A shortcut is followed: the card describes the shortcut's target.
-- A child **trashed on Drive** has its card moved to \`store/trash/\`.
+- A child **trashed on Drive** has its card moved to \`_bookkeeping/trash/\`.
 - A child **moved out** of the Drive folder (or one this box lost access to)
   is left alone and keeps syncing; the sync reports it as \`not-in-folder\`
   rather than guessing.

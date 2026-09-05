@@ -10,11 +10,9 @@ import { tmpdir } from "node:os";
 import { generateAgentContextMirrors } from "../../src/core/agent-context-mirrors.js";
 
 const root = await mkdtemp(join(tmpdir(), "bbx-context-"));
-const boxRoot = join(root, "content");
-await mkdir(boxRoot);
-await mkdir(join(boxRoot, ".beebox"), { recursive: true });
+await mkdir(join(root, ".beebox"), { recursive: true });
 await writeFile(join(root, "package.json"), JSON.stringify({ dependencies: { "beebox": "*" } }));
-await writeFile(join(boxRoot, ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
+await writeFile(join(root, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
 await mkdir(join(root, ".claude/skills/calendar"), { recursive: true });
 await mkdir(join(root, ".claude/rules"), { recursive: true });
 await mkdir(join(root, "node_modules/beebox/plugins/beebox-codex/hooks"), { recursive: true });
@@ -32,7 +30,7 @@ paths:
 await writeFile(join(root, "node_modules/beebox/plugins/beebox-codex/hooks/hooks.json"), "{}");
 await mkdir(join(root, ".agents/skills/callback-box-rule-card-memo"), { recursive: true });
 await writeFile(join(root, ".agents/skills/callback-box-rule-card-memo/SKILL.md"), "retired mirror\n");
-await generateAgentContextMirrors(boxRoot);
+await generateAgentContextMirrors(root);
 ```
 
 The editable files are symlinked, including nested context:

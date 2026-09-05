@@ -61,7 +61,7 @@ export function assetGitignorePatterns(): string {
  * anchored every pattern to `.attach/`, inherited from the manifest model,
  * which only ever covered attach scopes. But boxes also run Git LFS with this
  * same extension list and *no* path scoping — on one production box that is 154
- * files, all of them legacy captures under `box/inbox/` rather than in any
+ * files, all of them legacy captures under `_content/inbox/` rather than in any
  * attach scope. Scoping annex to `.attach/` would leave those to LFS forever
  * and keep two mechanisms alive; matching LFS's scope exactly is what lets the
  * LFS filters be removed. Behavior for those paths is unchanged — they were

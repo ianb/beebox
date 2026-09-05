@@ -1,11 +1,11 @@
 /**
- * The box-specific `bbx validate` ignore list: `config/bbx-validate.ignore`.
+ * The box-specific `bbx validate` ignore list: `_config/bbx-validate.ignore`.
  *
  * A gitignore-style file — the `.gitignore` analogue for `bbx validate` — that
  * lets the *boxholder* exclude box-specific paths from validation (a vendored
  * doc tree, imported data full of illustrative example links, etc.) beyond the
  * always-on builtin skips (`isBuiltinLintableMarkdown` in list-cards.ts already
- * covers bbx's own `docs/generated/` output). Lives under `config/` — operator
+ * covers bbx's own `_content/docs/generated/` output). Lives under `_config/` — operator
  * territory, deliberately away from where agents routinely edit.
  *
  * Deliberately undocumented in any agent-facing surface, and `bbx validate`
@@ -30,7 +30,7 @@ import { errnoCode } from "../lib/error-guards.js";
 // eslint-disable-next-line no-restricted-syntax -- vendor .d.ts mistypes the CJS default export as the module namespace; verified callable at runtime, no code-level fix exists
 const ignoreFactory = ignoreModule.default as unknown as (options?: Options) => Ignore;
 
-export const VALIDATION_IGNORE_PATH = "config/bbx-validate.ignore";
+export const VALIDATION_IGNORE_PATH = "_config/bbx-validate.ignore";
 
 export interface ValidationIgnore {
   /**
@@ -43,7 +43,7 @@ export interface ValidationIgnore {
 const ALLOW_ALL: ValidationIgnore = { isIgnored: () => false };
 
 /**
- * Load the box's `config/bbx-validate.ignore` matcher. Returns an allow-all
+ * Load the box's `_config/bbx-validate.ignore` matcher. Returns an allow-all
  * matcher when the file is absent (the common case — the builtin skips already
  * cover bbx's generated docs, so most boxes never need an entry).
  */

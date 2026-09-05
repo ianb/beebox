@@ -46,7 +46,7 @@ export interface ImageItem {
 /** A non-image file attachment (today: `FileAttachmentItem`). */
 export interface FileItem {
   id: number;
-  /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */
+  /** Path relative to box root, e.g. "_tmp/2026-04-27T15-30-12-987Z_report.pdf". */
   path: string;
   originalName: string;
   size: number;

@@ -9,6 +9,7 @@ import { errorMessage } from "../lib/error-guards.js";
 import { glob } from "glob";
 import type { ChatThreadFields } from "../schemas/chat-thread.js";
 import { stageAndCommitPaths } from "../lib/git.js";
+import { getBoxDir } from "../lib/paths.js";
 import { updateTransientState } from "./transient-state.js";
 import { findUnsentAgentMessages, stampSentMessage } from "./chat-utils.js";
 import { parseDuration } from "./telegram-helpers.js";
@@ -27,7 +28,7 @@ interface OutboundContext {
  */
 export async function sendOutbound(ctx: OutboundContext): Promise<string[]> {
   const { boxRoot } = ctx;
-  const chatDir = path.join(boxRoot, "store/chat/telegram");
+  const chatDir = path.join(getBoxDir(boxRoot, "chat"), "telegram");
   let threadPaths: string[];
   try {
     threadPaths = await glob("*/thread.chat-thread.card", { cwd: chatDir });

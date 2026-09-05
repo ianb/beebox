@@ -49,7 +49,7 @@ mutations share.
 ```ts
 const box = await makeTmpBox({ git: true });
 // A decoy the mutation must NOT sweep into its commit.
-await box.write("store/decoy.md", "unrelated\n");
+await box.write("_content/decoy.md", "unrelated\n");
 const res = await caller(box.root).calendar.updateConfig({
   calendars: ["primary", "work@example.com"],
   syncDaysBack: 7,
@@ -59,7 +59,7 @@ JSON.stringify(res)
 ```
 
 ```ts continue
-const cfg = await readJson(box, "config/connectors/google-calendar.json");
+const cfg = await readJson(box, "_config/connectors/google-calendar.json");
 JSON.stringify(cfg)
 => {"calendars":["primary","work@example.com"],"syncDaysBack":7}
 ```
@@ -73,12 +73,12 @@ JSON.stringify(cfg)
 // Commit scoped to just the config file; the decoy stayed uncommitted.
 const files = (await simpleGit(box.root).raw(["show", "--name-only", "--relative", "--format=", "HEAD"])).trim();
 files
-=> config/connectors/google-calendar.json
+=> _config/connectors/google-calendar.json
 
-// `status` porcelain paths are always repo-root-relative (repo root = package
-// root), so the content-dir decoy shows as `content/store/decoy.md`.
+// `status` porcelain paths are repo-root-relative; under the one-root layout
+// that's the same box root the decoy was written into.
 JSON.stringify((await simpleGit(box.root).status()).not_added)
-=> ["content/store/decoy.md"]
+=> ["_content/decoy.md"]
 ```
 
 ```ts cleanup
@@ -98,7 +98,7 @@ const box = await makeTmpBox({ git: true });
 const c = caller(box.root);
 
 await box.write(
-  "config/connectors/google-drive.json",
+  "_config/connectors/google-drive.json",
   JSON.stringify({ folders: [{ driveFolderId: "abc", localPath: "sheets/x" }] }),
 );
 JSON.stringify(await c.drive.config())
@@ -110,7 +110,7 @@ config — reading it as "no folder mounts" would silently drop the mounts still
 owed a conversion.
 
 ```ts continue
-await box.write("config/connectors/google-drive.json", "{oops");
+await box.write("_config/connectors/google-drive.json", "{oops");
 await code(c.drive.config())
 => INTERNAL_SERVER_ERROR
 ```
@@ -149,7 +149,7 @@ const res = await c.admin.updateGmailConfig({
 JSON.stringify(res)
 => {"query":"is:unread","labels":[],"action":{"type":"track"}}
 
-JSON.stringify(await readJson(box, "config/connectors/gmail.json"))
+JSON.stringify(await readJson(box, "_config/connectors/gmail.json"))
 => {"query":"is:unread","action":{"type":"track"}}
 
 (await getLog(box.root, 1))[0].subject
@@ -167,7 +167,7 @@ const byLabel = await c.admin.updateGmailConfig({
 JSON.stringify(byLabel.labels)
 => ["INBOX","Work"]
 
-JSON.stringify(await readJson(box, "config/connectors/gmail.json"))
+JSON.stringify(await readJson(box, "_config/connectors/gmail.json"))
 => {"labels":["INBOX","Work"],"action":{"type":"track"}}
 ```
 
@@ -191,10 +191,10 @@ A procedure action routes matches without creating any card.
 const routed = await c.admin.updateGmailConfig({
   query: "is:unread",
   labels: [],
-  action: { type: "procedure", ref: "config/procedures/review.procedure.card" },
+  action: { type: "procedure", ref: "_config/procedures/review.procedure.card" },
 });
 JSON.stringify(routed.action)
-=> {"type":"procedure","ref":"config/procedures/review.procedure.card"}
+=> {"type":"procedure","ref":"_config/procedures/review.procedure.card"}
 ```
 
 When nothing is left to match, the action is dropped too: an action with no
@@ -206,7 +206,7 @@ const empty = await c.admin.updateGmailConfig({ query: "   ", labels: ["  "] });
 JSON.stringify(empty)
 => {"query":"","labels":[],"action":null}
 
-JSON.stringify(await readJson(box, "config/connectors/gmail.json"))
+JSON.stringify(await readJson(box, "_config/connectors/gmail.json"))
 => {}
 ```
 

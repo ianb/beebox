@@ -10,7 +10,7 @@ type SourceType = "card" | "commit" | "api" | "dir" | "session" | "schedule";
  * Build `data-bbx-source` props from one or more type:identifier pairs.
  *
  * Single source:
- *   bbxSource("card", "store/todos/Shopping.doc.card")
+ *   bbxSource("card", "_content/todos/Shopping.doc.card")
  *
  * Multiple sources (pass tuples):
  *   bbxSource(["card", "path1"], ["card", "path2"])

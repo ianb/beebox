@@ -169,9 +169,9 @@ export async function startFieldServer(box: FieldBox, options: FieldServerOption
 
   const child = execa(
     bbxBinary(),
-    ["serve", box.packageRoot, "--port", String(port), "--host", "127.0.0.1", "--slug", box.slug],
+    ["serve", box.boxRoot, "--port", String(port), "--host", "127.0.0.1", "--slug", box.slug],
     {
-      cwd: box.packageRoot,
+      cwd: box.boxRoot,
     env: { ...process.env, ...options.env, BBX_DIAG_API_KEY: diagKey },
       stdio: ["ignore", "pipe", "pipe"],
       detached: true,

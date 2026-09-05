@@ -68,11 +68,11 @@ The binding is captured at reserve time — nothing else carries it, since
 ```ts
 const box = await makeTmpBox();
 const registry = makeRegistry(box);
-await registry.reserve({ sessionId: COINED, contextDir: "store/recipes", seedFeatures: {} });
+await registry.reserve({ sessionId: COINED, contextDir: "_content/recipes", seedFeatures: {} });
 
 const target = await resolveCaptureDeliveryTarget({ boxRoot: box.root, registry, targetSessionId: COINED });
 JSON.stringify(target)
-=> {"sessionId":"33333333-4444-4555-8666-777777777777","contextDir":"store/recipes"}
+=> {"sessionId":"33333333-4444-4555-8666-777777777777","contextDir":"_content/recipes"}
 ```
 
 ```ts continue cleanup

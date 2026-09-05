@@ -23,6 +23,7 @@ import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
+import { getBoxDir } from "../../../lib/paths.js";
 import { engineHealthChecks } from "./health-engine.js";
 import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";
@@ -104,9 +105,11 @@ export async function readVersionInfo(): Promise<VersionInfo> {
  */
 async function sweepLegacyHealthCheckFiles(boxRoot: string): Promise<void> {
   const dirs = [
-    path.join(boxRoot, "box/inbox"),
-    path.join(boxRoot, "config/connectors"),
-    path.join(boxRoot, "store/archive"),
+    getBoxDir(boxRoot, "inbox"),
+    getBoxDir(boxRoot, "connectors"),
+    // `_bookkeeping/archive` itself (the writability probe's target below,
+    // not one of its done/failed/processed children).
+    path.dirname(getBoxDir(boxRoot, "archiveDone")),
   ];
   for (const dir of dirs) {
     try {
@@ -219,24 +222,21 @@ export async function runHealthChecks(
 
   // --- Permission checks ---
 
-  // box/inbox/ writable (capture finalize writes here)
-  const inboxDir = path.join(boxRoot, "box/inbox");
+  // _content/inbox/ writable (capture finalize writes here)
+  const inboxDir = getBoxDir(boxRoot, "inbox");
   const inboxWritable = await isWritable(inboxDir);
   checks.push({
     name: "inbox-writable",
     ok: inboxWritable,
     message: inboxWritable
-      ? "box/inbox/ is writable"
-      : "box/inbox/ is not writable — captures and connector imports will fail",
+      ? "_content/inbox/ is writable"
+      : "_content/inbox/ is not writable — captures and connector imports will fail",
     severity: "error",
   });
 
-  // .git/objects writable (git add/commit needs this). For a legacy box the
-  // git repo (and its .git) lives at boxRoot; for a v2 box the git repo is
-  // the PACKAGE root one level up — content/ is a plain subdirectory with no
-  // .git of its own (see "One git repository at the repo root" in
-  // docs/implemented-plans/boxes-as-packages-v2.md).
-  const { packageRoot: gitRoot } = await getBoxShape(boxRoot);
+  // .git/objects writable (git add/commit needs this). Under the one-root
+  // layout the git repo (and its .git) lives at boxRoot itself.
+  const { boxRoot: gitRoot } = await getBoxShape(boxRoot);
   const gitObjectsDir = path.join(gitRoot, ".git/objects");
   const gitWritability = await writability(gitObjectsDir);
   const gitWritable = gitWritability === "writable";
@@ -253,27 +253,27 @@ export async function runHealthChecks(
     severity: "error",
   });
 
-  // config/connectors/ writable (secrets are stored here)
-  const connectorsDir = path.join(boxRoot, "config/connectors");
+  // _config/connectors/ writable (secrets are stored here)
+  const connectorsDir = getBoxDir(boxRoot, "connectors");
   const connectorsWritable = await isWritable(connectorsDir);
   checks.push({
     name: "connectors-writable",
     ok: connectorsWritable,
     message: connectorsWritable
-      ? "config/connectors/ is writable"
-      : "config/connectors/ is not writable",
+      ? "_config/connectors/ is writable"
+      : "_config/connectors/ is not writable",
     severity: "warning",
   });
 
-  // store/archive/ writable (inbox processing archives here)
-  const archiveDir = path.join(boxRoot, "store/archive");
+  // _bookkeeping/archive/ writable (inbox processing archives here)
+  const archiveDir = path.dirname(getBoxDir(boxRoot, "archiveDone"));
   const archiveWritable = await isWritable(archiveDir);
   checks.push({
     name: "archive-writable",
     ok: archiveWritable,
     message: archiveWritable
-      ? "store/archive/ is writable"
-      : "store/archive/ is not writable — inbox processing will fail",
+      ? "_bookkeeping/archive/ is writable"
+      : "_bookkeeping/archive/ is not writable — inbox processing will fail",
     severity: "error",
   });
 
@@ -327,7 +327,7 @@ export async function runHealthChecks(
       ok: mistralKey !== null,
       message: mistralKey !== null
         ? "Mistral API key configured (Voxtral)"
-        : "Mistral API key not found — voice transcription will not work. Add config/connectors/mistral.secret.json or set BBX_MISTRAL_API_KEY",
+        : "Mistral API key not found — voice transcription will not work. Add _config/connectors/mistral.secret.json or set BBX_MISTRAL_API_KEY",
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "deepgram") {
@@ -337,7 +337,7 @@ export async function runHealthChecks(
       ok: deepgramCreds !== null,
       message: deepgramCreds !== null
         ? "Deepgram credentials configured"
-        : "Deepgram credentials not found — voice transcription will not work. Add config/connectors/deepgram.secret.json (apiKey + projectId) or set BBX_DEEPGRAM_API_KEY + BBX_DEEPGRAM_PROJECT",
+        : "Deepgram credentials not found — voice transcription will not work. Add _config/connectors/deepgram.secret.json (apiKey + projectId) or set BBX_DEEPGRAM_API_KEY + BBX_DEEPGRAM_PROJECT",
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "openai-realtime") {

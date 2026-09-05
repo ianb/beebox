@@ -115,7 +115,7 @@ passing parameters in the query string. It renders frameless (just the figure)
 in place. A plain \`[label](…figure.card)\` link (no \`!\`) stays a navigable
 link, not an embed.
 
-    ![caffeine](/store/figures/Molecule.figure.card?molecule=H2O2)
+    ![caffeine](/_content/figures/Molecule.figure.card?molecule=H2O2)
 
 The sketch reads those values from \`figure.params\`; the caption (alt text)
 shows beneath the figure.

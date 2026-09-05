@@ -112,7 +112,7 @@ box the staged blob is a small pointer, so a real annexed asset passes here at
 any working-file size.)
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 await put(box.root, "trip.attach/beach.jpg", BIG);
 execSync("git add -A", { cwd: box.root });
 const found = await findStagedUnlistedBinaries(box.root);

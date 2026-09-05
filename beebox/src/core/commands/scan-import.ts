@@ -1,7 +1,7 @@
 /**
  * Scan-Import command — turn a scanned PDF, OCR'd document PDF, or batch of
  * scanned JPEGs into a session whose card lands at
- * `box/inbox/scan-<date>-<id>.capture-session.card`. Child cards and files
+ * `_content/inbox/scan-<date>-<id>.capture-session.card`. Child cards and files
  * live in the session's attach scope (`scan-….attach/`).
  *
  * Internal dispatch (the PDF branch probes for a text layer — `pdf-probe.ts`):
@@ -17,19 +17,19 @@
  *   box/questions/<session-slug>-photo-NNN.review.question.card (optional)
  *   box/questions/<session-slug>-orphan-back-NNN.question.card
  *   box/questions/<session-slug>-unsure-NNN.question.card
- *   box/inbox/<name>.capture-session.card  (at inbox level)
+ *   _content/inbox/<name>.capture-session.card  (at inbox level)
  *   <sessionAttach>/source.file.card + source.attach/source.pdf
  *     (when imported from a PDF source)
  *
- * Question cards live in `box/questions/`, not the attach scope, so the
+ * Question cards live in `_bookkeeping/questions/`, not the attach scope, so the
  * system's pending/notification/aging machinery (which only scans
- * `box/questions/`) sees them; each carries a `context:` ref back into the
+ * `_bookkeeping/questions/`) sees them; each carries a `context:` ref back into the
  * attach scope for the item it's about.
  *
  * Pdf flow output:
  *   <sessionAttach>/source.pdf.card
  *     + source.attach/{source.pdf, docling.json.gz, page-NNN.avif, figure-NNN.avif}
- *   box/inbox/<name>.capture-session.card  (no image refs)
+ *   _content/inbox/<name>.capture-session.card  (no image refs)
  *
  * Internal implementation is split across siblings: `scan-import-session.ts`
  * (layout + input classification + vision-backend selection),
@@ -327,7 +327,7 @@ async function runPhotoMode(
 
 registerCommand({
   name: "scan-import",
-  description: "Import an image batch as photo image cards, or a PDF as a pdf card, into box/inbox/scan-…/",
+  description: "Import an image batch as photo image cards, or a PDF as a pdf card, into _content/inbox/scan-…/",
   args: [
     {
       name: "inputs",

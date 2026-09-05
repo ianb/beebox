@@ -4,10 +4,10 @@
  *
  * Deliberately *not* delete's sibling in behaviour: nothing is removed, and
  * nothing about the chat's local state is touched, because there is no local
- * state left to touch. The card moves from `store/chat/web/` to
- * `store/chat/archive/`, and since `listChatHusks` reads `web/` only, that one
- * move takes it out of every chat list and out of the review corpus while
- * leaving it a searchable, git-tracked card.
+ * state left to touch. The card moves from `_content/chat/web/` to
+ * `_content/chat/archive/`, and since `listChatHusks` reads `web/` only, that
+ * one move takes it out of every chat list and out of the review corpus
+ * while leaving it a searchable, git-tracked card.
  *
  * Offered only for a chat whose transcript is gone. Archiving a live chat
  * would hide a conversation the boxholder can still open — so a present
@@ -23,9 +23,10 @@ import { loadDeadHusks } from "./list.js";
 import { parseSdkSessionId } from "./session-id.js";
 import { resolveSessionAvailability, type TranscriptState } from "./availability.js";
 import type { ChatSessionRegistry } from "./registry.js";
+import { BOX_DIRS } from "../../../lib/paths.js";
 
-/** Where archived husks live. Outside `store/chat/web/`, which is the point. */
-const CHAT_ARCHIVE_DIR = "store/chat/archive";
+/** Where archived husks live. Outside `_content/chat/web/`, which is the point. */
+const CHAT_ARCHIVE_DIR = `${BOX_DIRS.chat}/archive`;
 
 class ChatArchiveMoveError extends Error {
   constructor(huskPath: string, detail: string | undefined) {
@@ -48,7 +49,7 @@ export type ArchiveChatResult =
   | { status: "refused"; sessionId: string; reason: "session-live"; huskPath: string | null }
   | { status: "not-found"; sessionId: string };
 
-/** File a dead chat's card away under `store/chat/archive/`. */
+/** File a dead chat's card away under `_content/chat/archive/`. */
 export async function archiveChatSession(options: { boxRoot: string; sessionId: string; registry: ChatSessionRegistry }): Promise<ArchiveChatResult> {
   const sessionId = parseSdkSessionId(options.sessionId);
   // The same lease delete takes: archiving removes a session from the review

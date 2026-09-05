@@ -16,7 +16,7 @@ const m1 = {
   created: "2024-01-15T10:00:00Z",
   body: "Pick up milk on the way home.",
 };
-const s = memoLoader({ path: "box/inbox/Groceries.memo.card", fields: m1 });
+const s = memoLoader({ path: "_content/inbox/Groceries.memo.card", fields: m1 });
 s.title
 => Pick up milk on the way home.
 
@@ -50,7 +50,7 @@ const m3 = {
   created: "2024-01-15T10:00:00Z",
   body: "",
 };
-memoLoader({ path: "box/inbox/Blank_Thought.memo.card", fields: m3 }).title
+memoLoader({ path: "_content/inbox/Blank_Thought.memo.card", fields: m3 }).title
 => Blank Thought
 ```
 
@@ -101,7 +101,7 @@ const fields2 = {
   status: "new",
   filename: { ref: "photo-001.jpg", captured: "2024-01-15T00:00:00Z", source: "camera-environment" },
 };
-imageLoader({ path: "box/capture/session.image.card", fields: fields2 }).title
+imageLoader({ path: "_content/inbox/session.image.card", fields: fields2 }).title
 => photo 001
 ```
 

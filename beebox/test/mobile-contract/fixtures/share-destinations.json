@@ -7,7 +7,7 @@
           "label": "Article ideas",
           "lastActivity": "2026-08-07T12:00:00.000Z",
           "landmark": {
-            "dir": "store/reading",
+            "dir": "_content/reading",
             "label": "Reading",
             "symbol": "📚"
           }
@@ -20,7 +20,7 @@
           "symbol": null
         },
         {
-          "destination": { "kind": "landmark", "dir": "store/reading" },
+          "destination": { "kind": "landmark", "dir": "_content/reading" },
           "label": "Reading",
           "symbol": "📚"
         }

@@ -2,7 +2,7 @@
 
 `resolveBoxIdentity` (`src/webapp/box-identity.ts`) is `resolveRequestIdentity`
 plus one rung: the machine-wide browse key (`BBX_BROWSE_API_KEY`), on a box whose
-`config/box.json` declares `agentBrowsing: "owner"`, resolves to the box owner's
+`_config/box.json` declares `agentBrowsing: "owner"`, resolves to the box owner's
 identity with `source: "browse"`. Everywhere else the key keeps its old meaning
 — it clears the auth wall and is nobody.
 
@@ -51,8 +51,8 @@ const noKey = { headers: {} };
 
 /** Write the box's opt-in field (any value, so a bad one can be tested too). */
 async function setAgentBrowsing(box, value) {
-  await mkdir(path.join(box.root, "config"), { recursive: true });
-  await writeFile(path.join(box.root, "config", "box.json"), JSON.stringify({ agentBrowsing: value }));
+  await mkdir(path.join(box.root, "_config"), { recursive: true });
+  await writeFile(path.join(box.root, "_config", "box.json"), JSON.stringify({ agentBrowsing: value }));
 }
 ```
 
@@ -93,7 +93,7 @@ JSON.stringify(await resolveBoxIdentity({ boxRoot: optedIn.root, request: noKey,
 
 ## A bad value is treated as absent, and warned once per box
 
-`config/box.json` is disk: the value is read as `=== "owner"`, and anything else
+`_config/box.json` is disk: the value is read as `=== "owner"`, and anything else
 is a hand-edit mistake that must fail closed rather than be guessed at. The warn
 names the box and the value, and fires once however many requests arrive.
 

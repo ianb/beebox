@@ -54,7 +54,7 @@ async function seedSession(box, args) {
   await utimes(logPath, when, when);
   const binding = contextDir === "" ? "" : `context-dir: ${contextDir}\n`;
   await box.write(
-    `store/chat/web/2026-07-28_${sessionId}.chat.card`,
+    `_content/chat/web/2026-07-28_${sessionId}.chat.card`,
     `---\nsession: ${sessionId}\n${binding}---\n\n`,
   );
 }
@@ -62,7 +62,7 @@ async function seedSession(box, args) {
 
 ## Chats with no landmark land in `unassigned`, carrying where they live
 
-The box has one landmark (`store/recipes`) and no root landmark, so both the
+The box has one landmark (`_content/recipes`) and no root landmark, so both the
 root chat and the chat bound to a landmark-less directory are unassigned. Each
 unassigned row says which directory it belongs to — the bucket spans
 directories, so the binding can't live on the bucket.
@@ -71,19 +71,19 @@ directories, so the binding can't live on the bucket.
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-await box.write("store/recipes/Recipes.landmark.card",
+await box.write("_content/recipes/Recipes.landmark.card",
   "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n\n");
 
-await seedSession(box, { sessionId: "inrecipe1", contextDir: "store/recipes", firstMessage: "what can I make with lentils", daysAgo: 1 });
+await seedSession(box, { sessionId: "inrecipe1", contextDir: "_content/recipes", firstMessage: "what can I make with lentils", daysAgo: 1 });
 await seedSession(box, { sessionId: "rootchat1", contextDir: "", firstMessage: "how's my week looking", daysAgo: 2 });
-await seedSession(box, { sessionId: "orphaned1", contextDir: "store/orphan", firstMessage: "leftover thread", daysAgo: 3 });
+await seedSession(box, { sessionId: "orphaned1", contextDir: "_content/orphan", firstMessage: "leftover thread", daysAgo: 3 });
 
 const { landmarks, unassigned } = await caller(box.root).chat.byLandmark();
 print(`landmarks: ${landmarks.map((l) => `${l.label}=${l.sessions.map((s) => s.sessionId).join(",")}`).join(" | ")}`);
 print(`unassigned: ${unassigned.sessions.map((s) => `${s.sessionId} [${s.contextDir}]`).join(" | ")}`);
 =>
 landmarks: Recipes=inrecipe1
-unassigned: rootchat1 [] | orphaned1 [store/orphan]
+unassigned: rootchat1 [] | orphaned1 [_content/orphan]
 ```
 
 A root landmark card takes the root chats back — `unassigned` is what's left
@@ -97,7 +97,7 @@ print(`root tile: ${withRoot.landmarks.find((l) => l.dir === "").sessions.map((s
 print(`unassigned: ${withRoot.unassigned.sessions.map((s) => `${s.sessionId} [${s.contextDir}]`).join(" | ")}`);
 =>
 root tile: rootchat1
-unassigned: orphaned1 [store/orphan]
+unassigned: orphaned1 [_content/orphan]
 ```
 
 ```ts cleanup
@@ -115,15 +115,15 @@ the newest session's mtime whether or not it's fresh.
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-await box.write("store/recipes/Recipes.landmark.card",
+await box.write("_content/recipes/Recipes.landmark.card",
   "---\nnavigation:\n  label: Recipes\n---\n\n");
 
-await seedSession(box, { sessionId: "fresh001", contextDir: "store/recipes", firstMessage: "newest", daysAgo: 1 });
-await seedSession(box, { sessionId: "fresh002", contextDir: "store/recipes", firstMessage: "middle", daysAgo: 2 });
-await seedSession(box, { sessionId: "fresh003", contextDir: "store/recipes", firstMessage: "oldest fresh", daysAgo: 3 });
-await seedSession(box, { sessionId: "stale001", contextDir: "store/recipes", firstMessage: "long ago", daysAgo: 30 });
+await seedSession(box, { sessionId: "fresh001", contextDir: "_content/recipes", firstMessage: "newest", daysAgo: 1 });
+await seedSession(box, { sessionId: "fresh002", contextDir: "_content/recipes", firstMessage: "middle", daysAgo: 2 });
+await seedSession(box, { sessionId: "fresh003", contextDir: "_content/recipes", firstMessage: "oldest fresh", daysAgo: 3 });
+await seedSession(box, { sessionId: "stale001", contextDir: "_content/recipes", firstMessage: "long ago", daysAgo: 30 });
 
-const recipes = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "store/recipes");
+const recipes = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "_content/recipes");
 print(`visible: ${recipes.sessions.map((s) => s.sessionId).join(",")}`);
 print(`older: ${recipes.olderSessions.map((s) => s.sessionId).join(",")}`);
 print(`freshCount: ${recipes.freshCount}`);
@@ -138,10 +138,10 @@ latest is the newest session: true
 An empty bucket reports zero and null rather than inventing an activity time.
 
 ```ts continue
-await box.write("store/trips/Trips.landmark.card",
+await box.write("_content/trips/Trips.landmark.card",
   "---\nnavigation:\n  label: Trips\n---\n\n");
 
-const trips = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "store/trips");
+const trips = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "_content/trips");
 `${trips.freshCount} / ${trips.latestActivity}`
 => 0 / null
 ```
@@ -161,12 +161,12 @@ sank it among the never-used ones, which is what the Landmarks page shows.)
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-await box.write("store/fresh/Fresh.landmark.card", "---\nnavigation:\n  label: Fresh\n---\n\n");
-await box.write("store/stale/Stale.landmark.card", "---\nnavigation:\n  label: Stale\n---\n\n");
-await box.write("store/never/Never.landmark.card", "---\nnavigation:\n  label: Never\n---\n\n");
+await box.write("_content/fresh/Fresh.landmark.card", "---\nnavigation:\n  label: Fresh\n---\n\n");
+await box.write("_content/stale/Stale.landmark.card", "---\nnavigation:\n  label: Stale\n---\n\n");
+await box.write("_content/never/Never.landmark.card", "---\nnavigation:\n  label: Never\n---\n\n");
 
-await seedSession(box, { sessionId: "freshone", contextDir: "store/fresh", firstMessage: "today", daysAgo: 1 });
-await seedSession(box, { sessionId: "staleone", contextDir: "store/stale", firstMessage: "a while back", daysAgo: 30 });
+await seedSession(box, { sessionId: "freshone", contextDir: "_content/fresh", firstMessage: "today", daysAgo: 1 });
+await seedSession(box, { sessionId: "staleone", contextDir: "_content/stale", firstMessage: "a while back", daysAgo: 30 });
 
 const ordered = await caller(box.root).chat.byLandmark();
 ordered.landmarks.map((l) => l.label).join(" > ")
@@ -187,11 +187,11 @@ a hand-edit that breaks the frontmatter must not make them vanish silently.
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-await box.write("store/recipes/Recipes.landmark.card",
+await box.write("_content/recipes/Recipes.landmark.card",
   "---\nnavigation:\n  label: Recipes\n---\n\n");
-await box.write("store/trips/Trips.landmark.card", "no frontmatter here at all\n");
+await box.write("_content/trips/Trips.landmark.card", "no frontmatter here at all\n");
 
-await seedSession(box, { sessionId: "intrips01", contextDir: "store/trips", firstMessage: "where to in august", daysAgo: 1 });
+await seedSession(box, { sessionId: "intrips01", contextDir: "_content/trips", firstMessage: "where to in august", daysAgo: 1 });
 
 const broken = await caller(box.root).chat.byLandmark();
 print(`landmarks: ${broken.landmarks.map((l) => l.label).join(",")}`);
@@ -199,8 +199,8 @@ print(`problems: ${broken.problems.map((p) => p.path).join(",")}`);
 print(`its chats: ${broken.unassigned.sessions.map((s) => `${s.sessionId} [${s.contextDir}]`).join(" | ")}`);
 =>
 landmarks: Recipes
-problems: store/trips/Trips.landmark.card
-its chats: intrips01 [store/trips]
+problems: _content/trips/Trips.landmark.card
+its chats: intrips01 [_content/trips]
 ```
 
 ```ts cleanup
@@ -219,13 +219,13 @@ const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 const here = await localOrigin();
 
-await box.write("store/recipes/Recipes.landmark.card",
+await box.write("_content/recipes/Recipes.landmark.card",
   "---\nnavigation:\n  label: Recipes\n---\n\n");
-await seedSession(box, { sessionId: "livechat1", contextDir: "store/recipes", firstMessage: "what's for dinner", daysAgo: 1 });
-await box.write("store/chat/web/2026-07-20_gone.chat.card",
-  `---\nsession: goneaway1\ntitle: Sourdough attempt\ncontext-dir: store/recipes\norigin: ${here.id}\norigin-name: ${here.name}\n---\n\n`);
-await box.write("store/chat/web/2026-07-19_prod.chat.card",
-  "---\nsession: elsewhere1\ncontext-dir: store/recipes\norigin: prod-machine-id\norigin-name: prod\n---\n\n");
+await seedSession(box, { sessionId: "livechat1", contextDir: "_content/recipes", firstMessage: "what's for dinner", daysAgo: 1 });
+await box.write("_content/chat/web/2026-07-20_gone.chat.card",
+  `---\nsession: goneaway1\ntitle: Sourdough attempt\ncontext-dir: _content/recipes\norigin: ${here.id}\norigin-name: ${here.name}\n---\n\n`);
+await box.write("_content/chat/web/2026-07-19_prod.chat.card",
+  "---\nsession: elsewhere1\ncontext-dir: _content/recipes\norigin: prod-machine-id\norigin-name: prod\n---\n\n");
 
 const picked = await caller(box.root).chat.byLandmark();
 const recipes = picked.landmarks.find((l) => l.label === "Recipes");
@@ -233,7 +233,7 @@ print(`live: ${recipes.sessions.map((s) => s.sessionId).join(",")}`);
 print(`dead: ${recipes.dead.map((d) => `${d.label} [${d.transcript.state}] -> ${d.huskPath}`).join(" | ")}`);
 =>
 live: livechat1
-dead: Sourdough attempt [expired] -> store/chat/web/2026-07-20_gone.chat.card | elsewher [elsewhere] -> store/chat/web/2026-07-19_prod.chat.card
+dead: Sourdough attempt [expired] -> _content/chat/web/2026-07-20_gone.chat.card | elsewher [elsewhere] -> _content/chat/web/2026-07-19_prod.chat.card
 ```
 
 ```ts cleanup

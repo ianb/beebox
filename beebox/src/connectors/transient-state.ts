@@ -13,16 +13,17 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { getBoxDir } from "../lib/paths.js";
 
 import { withCardLock } from "../lib/card-lock.js";
 import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 
 /**
  * Build the transient state file path for a connector.
- * e.g. "gmail" → "config/connectors/gmail.state.json"
+ * e.g. "gmail" → "_bookkeeping/connectors/gmail.state.json"
  */
 export function transientStatePath(boxRoot: string, connectorName: string): string {
-  return path.join(boxRoot, `config/connectors/${connectorName}.state.json`);
+  return path.join(getBoxDir(boxRoot, "connectorState"), `${connectorName}.state.json`);
 }
 
 interface LoadOptions<T> {
@@ -173,8 +174,8 @@ export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T
   // before either one reaches the cross-process lock.
   return withCardLock(statePath, async () => {
     // acquireLock's guard-dir mkdir needs the containing dir to exist; on first
-    // run config/connectors/ may be absent. (acquireLock also mkdirs defensively,
-    // but keep this explicit for the OUTER lock's own reasoning.)
+    // run _bookkeeping/connectors/ may be absent. (acquireLock also mkdirs
+    // defensively, but keep this explicit for the OUTER lock's own reasoning.)
     await fs.mkdir(path.dirname(lockPath), { recursive: true });
 
     for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {

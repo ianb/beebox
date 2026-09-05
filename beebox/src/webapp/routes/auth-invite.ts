@@ -199,7 +199,7 @@ async function acceptInvite(options: {
       return responseHeaders(reply).status(503).type("text/html").send(renderInvitePartialPage(email));
     }
     if (grant.commitError) {
-      console.error(`[auth-invite] access granted but Git commit failed for ${box.boxRoot}/config/box.json:`, grant.commitError);
+      console.error(`[auth-invite] access granted but Git commit failed for ${box.boxRoot}/_config/box.json:`, grant.commitError);
     }
     loginThrottle.recordSuccess({ ip: request.ip, email });
     setSessionCookie(reply, { request, user: { email: member.email, name: member.name } });

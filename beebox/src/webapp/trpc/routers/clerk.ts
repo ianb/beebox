@@ -28,9 +28,10 @@ import { createTabArrangementCard } from "../../../schemas/tab-arrangement.js";
 import { parseFrontmatterObject } from "../../../cards/index.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { BOX_DIRS } from "../../../lib/paths.js";
 
 /** Default filing spot when no commentary destination is chosen. */
-const DEFAULT_COMMENTARY_DIR = "box/inbox";
+const DEFAULT_COMMENTARY_DIR = BOX_DIRS.inbox;
 
 export const clerkRouter = router({
   commentaryDestinations: publicProcedure.output(commentaryDestinationsOutput).query(async ({ ctx }) => {
@@ -45,7 +46,7 @@ export const clerkRouter = router({
     // A provided destination must be a real commentary destination; otherwise
     // file into the inbox. Validating turns a stale/typo'd dir into a clear
     // error rather than a card silently landing somewhere unexpected.
-    let destDir = DEFAULT_COMMENTARY_DIR;
+    let destDir: string = DEFAULT_COMMENTARY_DIR;
     if (input.destinationDir !== undefined && input.destinationDir !== "") {
       const destinations = await listDestinations(boxRoot, "commentary");
       const match = destinations.find((d) => d.dir === input.destinationDir);

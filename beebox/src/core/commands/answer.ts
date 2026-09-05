@@ -21,6 +21,7 @@ import { assertNever } from "../../lib/invariant.js";
 import { type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
 import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
+import { getBoxDir } from "../../lib/paths.js";
 
 const AnswerVia = z.enum(["web", "cli"]);
 type AnswerViaValue = z.infer<typeof AnswerVia>;
@@ -250,7 +251,7 @@ async function executeAnswer(
       const cardContent = renderFrontmatterBlock(fields, split.body);
 
       const jobFilename = buildJobFilename(ctx.boxRoot, relativePath);
-      const jobAbsPath = path.join(ctx.boxRoot, "box/jobs", jobFilename);
+      const jobAbsPath = path.join(getBoxDir(ctx.boxRoot, "jobs"), jobFilename);
       jobRelative = path.relative(ctx.boxRoot, jobAbsPath);
       const jobContent = createQuestionFollowupJobTemplate({
         description: `Follow up on answered question: ${fields.prompt}`,

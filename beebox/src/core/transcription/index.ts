@@ -169,7 +169,7 @@ type StoredTranscriptionConfig = z.infer<typeof storedTranscriptionConfigSchema>
 export async function loadTranscriptionConfig(boxRoot?: string): Promise<TranscriptionConfig> {
   const defaults: TranscriptionConfig = { service: "voxtral", hqService: "whisper" };
   if (!boxRoot) return defaults;
-  const configPath = path.join(boxRoot, "config/transcription.json");
+  const configPath = path.join(boxRoot, "_config/transcription.json");
   let content: string;
   try {
     content = await fs.readFile(configPath, "utf-8");
@@ -194,7 +194,7 @@ export async function updateTranscriptionConfig(
   boxRoot: string,
   updates: Partial<StoredTranscriptionConfig>,
 ): Promise<TranscriptionConfig> {
-  const configPath = path.join(boxRoot, "config/transcription.json");
+  const configPath = path.join(boxRoot, "_config/transcription.json");
   // Serialize the read-merge-write so concurrent setService/setHqService
   // updates can't both read the old config and drop one's change.
   return withCardLock(configPath, async () => {

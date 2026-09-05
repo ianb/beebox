@@ -10,8 +10,8 @@ import { makeTestServer } from "../helpers/doctest-server.js";
 import { buildHistoryBlobUrl } from "../../src/frontend/src/components/history/history-blob-url.js";
 
 const server = await makeTestServer();
-const filePath = "content/media/folder #1/100%25?.txt";
-await server.seed("media/folder #1/100%25?.txt", "encoded path payload");
+const filePath = "_content/media/folder #1/100%25?.txt";
+await server.seed("_content/media/folder #1/100%25?.txt", "encoded path payload");
 server.commitAll("add encoded history path");
 const hash = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: server.boxRoot,

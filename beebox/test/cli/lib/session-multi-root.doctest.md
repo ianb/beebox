@@ -56,21 +56,21 @@ const escaped = "eeee5555-0000-0000-0000-000000000005";
 await box.write(".beebox/chat-session-history.json", JSON.stringify({
   sessions: [
     { id: rootSession, contextDir: "" },
-    { id: bunkerOld, contextDir: "store/bunker" },
-    { id: bunkerNew, contextDir: "store/bunker" },
-    { id: "dddd4444-0000-0000-0000-000000000004", contextDir: "store/gone" },
+    { id: bunkerOld, contextDir: "_content/bunker" },
+    { id: bunkerNew, contextDir: "_content/bunker" },
+    { id: "dddd4444-0000-0000-0000-000000000004", contextDir: "_content/gone" },
     { id: escaped, contextDir: "../../elsewhere" },
   ],
   migrated: true,
 }));
 await seedLog(box.root, { id: rootSession, mtime: "2026-07-02T10:00:00Z" });
 await seedLog(join(box.root, "../../elsewhere"), { id: escaped, mtime: "2026-07-04T10:00:00Z" });
-await seedLog(join(box.root, "store/bunker"), { id: bunkerOld, mtime: "2026-07-01T10:00:00Z" });
-await seedLog(join(box.root, "store/bunker"), { id: bunkerNew, mtime: "2026-07-03T10:00:00Z" });
+await seedLog(join(box.root, "_content/bunker"), { id: bunkerOld, mtime: "2026-07-01T10:00:00Z" });
+await seedLog(join(box.root, "_content/bunker"), { id: bunkerNew, mtime: "2026-07-03T10:00:00Z" });
 
-// Encoded dir names start with the encoded (random) tmp package root —
+// Encoded dir names start with the encoded (random) tmp box root —
 // strip that prefix so expected output stays deterministic.
-const prefix = encodeProjectDir(box.packageRoot);
+const prefix = encodeProjectDir(box.root);
 const roots = await listSessionRoots(box.root);
 JSON.stringify(roots.map((r) => ({
   contextDir: r.contextDir,
@@ -80,11 +80,11 @@ JSON.stringify(roots.map((r) => ({
 [
   {
     "contextDir": "",
-    "dir": "-content"
+    "dir": ""
   },
   {
-    "contextDir": "store/bunker",
-    "dir": "-content-store-bunker"
+    "contextDir": "_content/bunker",
+    "dir": "--content-bunker"
   }
 ]
 ```
@@ -101,7 +101,7 @@ JSON.stringify(sessions.map((s) => ({
 [
   {
     "id": "cccc3333",
-    "contextDir": "store/bunker"
+    "contextDir": "_content/bunker"
   },
   {
     "id": "aaaa1111",
@@ -109,7 +109,7 @@ JSON.stringify(sessions.map((s) => ({
   },
   {
     "id": "bbbb2222",
-    "contextDir": "store/bunker"
+    "contextDir": "_content/bunker"
   }
 ]
 ```
@@ -121,7 +121,7 @@ const found = await findSessionLog(box.root, bunkerNew);
 found.ok
 => true
 
-found.ok && found.value === getSessionLogPath(join(box.root, "store/bunker"), bunkerNew)
+found.ok && found.value === getSessionLogPath(join(box.root, "_content/bunker"), bunkerNew)
 => true
 ```
 
@@ -130,9 +130,9 @@ root (the transcript exists; only the history entry is absent):
 
 ```ts continue
 const orphan = "eeee5555-0000-0000-0000-000000000005";
-await seedLog(join(box.root, "store/bunker"), { id: orphan, mtime: "2026-07-04T10:00:00Z" });
+await seedLog(join(box.root, "_content/bunker"), { id: orphan, mtime: "2026-07-04T10:00:00Z" });
 const foundOrphan = await findSessionLog(box.root, orphan);
-foundOrphan.ok && foundOrphan.value === getSessionLogPath(join(box.root, "store/bunker"), orphan)
+foundOrphan.ok && foundOrphan.value === getSessionLogPath(join(box.root, "_content/bunker"), orphan)
 => true
 ```
 
@@ -149,8 +149,8 @@ missing.ok
 !missing.ok && JSON.stringify(missing.error.map((d) => basename(d).slice(prefix.length)), null, 2)
 =>
 [
-  "-content",
-  "-content-store-bunker"
+  "",
+  "--content-bunker"
 ]
 ```
 
@@ -161,7 +161,7 @@ await box.cleanup();
 
 ## Collision labeling — bindings beat the root a file was found under
 
-The projects-dir encoding is lossy: `store/a-b` and `store/a_b` collapse
+The projects-dir encoding is lossy: `_content/a-b` and `_content/a_b` collapse
 to the same encoded directory. Root-level dedupe keeps only one root for
 that dir, so labels must come from each session's own history binding —
 otherwise every file in the shared dir would inherit the first root's
@@ -174,19 +174,19 @@ const dashId = "1111aaaa-0000-0000-0000-000000000001";
 const underId = "2222bbbb-0000-0000-0000-000000000002";
 await box2.write(".beebox/chat-session-history.json", JSON.stringify({
   sessions: [
-    { id: dashId, contextDir: "store/a-b" },
-    { id: underId, contextDir: "store/a_b" },
+    { id: dashId, contextDir: "_content/a-b" },
+    { id: underId, contextDir: "_content/a_b" },
   ],
   migrated: true,
 }));
 
 // The two contextDirs really do encode to the same projects dir.
-getSessionLogPath(join(box2.root, "store/a-b"), "x")
-  === getSessionLogPath(join(box2.root, "store/a_b"), "x")
+getSessionLogPath(join(box2.root, "_content/a-b"), "x")
+  === getSessionLogPath(join(box2.root, "_content/a_b"), "x")
 => true
 
-await seedLog(join(box2.root, "store/a-b"), { id: dashId, mtime: "2026-07-01T10:00:00Z" });
-await seedLog(join(box2.root, "store/a_b"), { id: underId, mtime: "2026-07-02T10:00:00Z" });
+await seedLog(join(box2.root, "_content/a-b"), { id: dashId, mtime: "2026-07-01T10:00:00Z" });
+await seedLog(join(box2.root, "_content/a_b"), { id: underId, mtime: "2026-07-02T10:00:00Z" });
 const collided = await listSessions(box2.root);
 JSON.stringify(collided.map((s) => ({
   id: s.sessionId.slice(0, 4),
@@ -196,11 +196,11 @@ JSON.stringify(collided.map((s) => ({
 [
   {
     "id": "2222",
-    "contextDir": "store/a_b"
+    "contextDir": "_content/a_b"
   },
   {
     "id": "1111",
-    "contextDir": "store/a-b"
+    "contextDir": "_content/a-b"
   }
 ]
 ```
@@ -225,7 +225,7 @@ const knownId = "aaaa0000-0000-0000-0000-000000000001";
 const foundLandmark = "bbbb0000-0000-0000-0000-000000000002";
 const foundRoot = "cccc0000-0000-0000-0000-000000000003";
 await box3.write(".beebox/chat-session-history.json", JSON.stringify({
-  sessions: [{ id: knownId, contextDir: "store/bunker" }],
+  sessions: [{ id: knownId, contextDir: "_content/bunker" }],
   migrated: false,
 }));
 const chatLine = JSON.stringify({
@@ -235,7 +235,7 @@ const chatLine = JSON.stringify({
 const rootLog = getSessionLogPath(box3.root, foundRoot);
 await mkdir(dirname(rootLog), { recursive: true });
 await writeFile(rootLog, chatLine);
-const landmarkLog = getSessionLogPath(join(box3.root, "store/bunker"), foundLandmark);
+const landmarkLog = getSessionLogPath(join(box3.root, "_content/bunker"), foundLandmark);
 await mkdir(dirname(landmarkLog), { recursive: true });
 await writeFile(landmarkLog, chatLine);
 
@@ -246,7 +246,7 @@ JSON.stringify(await loadHistoryEntries(box3.root), null, 2)
   {
     "id": "aaaa0000-0000-0000-0000-000000000001",
     "engine": "claude",
-    "contextDir": "store/bunker"
+    "contextDir": "_content/bunker"
   },
   {
     "id": "cccc0000-0000-0000-0000-000000000003",
@@ -255,7 +255,7 @@ JSON.stringify(await loadHistoryEntries(box3.root), null, 2)
   {
     "id": "bbbb0000-0000-0000-0000-000000000002",
     "engine": "claude",
-    "contextDir": "store/bunker"
+    "contextDir": "_content/bunker"
   }
 ]
 ```
@@ -277,12 +277,12 @@ never peers of a subdirectory.
 const mk = (id, contextDir) => ({ id, contextDir });
 const input = [
   mk("root-new", ""),
-  mk("anc", "store"),
-  mk("other", "store/other"),
-  mk("exact-new", "store/bunker"),
-  mk("exact-old", "store/bunker"),
+  mk("anc", "_content"),
+  mk("other", "_content/other"),
+  mk("exact-new", "_content/bunker"),
+  mk("exact-old", "_content/bunker"),
 ];
-const { peers, others } = partitionByAffinity(input, "store/bunker");
+const { peers, others } = partitionByAffinity(input, "_content/bunker");
 peers.map((s) => s.id).join(", ")
 => exact-new, exact-old, anc
 
@@ -294,8 +294,8 @@ The list mode partitions BEFORE its 20-item cap, so a peer older than
 the cap still lists first — modeled here with a cap of 3:
 
 ```ts continue
-const many = [mk("a", ""), mk("b", ""), mk("c", ""), mk("old-peer", "store/bunker")];
-const p2 = partitionByAffinity(many, "store/bunker");
+const many = [mk("a", ""), mk("b", ""), mk("c", ""), mk("old-peer", "_content/bunker")];
+const p2 = partitionByAffinity(many, "_content/bunker");
 [...p2.peers, ...p2.others].slice(0, 3).map((s) => s.id).join(", ")
 => old-peer, a, b
 ```

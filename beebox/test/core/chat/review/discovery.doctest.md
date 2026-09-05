@@ -53,7 +53,7 @@ function bulk(uuid: string) {
  */
 async function seed(box, opts: { sessionId: string; entries: object[]; agoHours: number; origin?: string }) {
   const originLine = opts.origin === undefined ? "" : `origin: ${opts.origin}\n`;
-  await box.write(`store/chat/web/2026-07-28_${opts.sessionId}.chat.card`,
+  await box.write(`_content/chat/web/2026-07-28_${opts.sessionId}.chat.card`,
     `---\nsession: ${opts.sessionId}\n${originLine}---\n\n`);
   const logPath = getSessionLogPath(box.root, opts.sessionId);
   await mkdir(dirname(logPath), { recursive: true });
@@ -168,7 +168,7 @@ await seed(box, {
 });
 await seed(box, { sessionId: "sessone1", entries: [bulk("o1")], agoHours: 5 });
 await seed(box, { sessionId: "sessnow", entries: [bulk("n1"), bulk("n2")], agoHours: 0 });
-await box.write("store/chat/web/2026-07-28_sessgone.chat.card", "---\nsession: sessgone\n---\n\n");
+await box.write("_content/chat/web/2026-07-28_sessgone.chat.card", "---\nsession: sessgone\n---\n\n");
 
 const result = await discover(box);
 JSON.stringify({

@@ -30,14 +30,14 @@ async function docsFor(path: string, text: string, inputContents?: Map<string, s
 
 ```ts
 const docs = await docsFor(
-  "box/inbox/Voice_Note.memo.card",
+  "_content/inbox/Voice_Note.memo.card",
   "---\ncreated: 2026-05-22T10:00:00Z\ncontains: Dentist moved to June 17; confirmation in this email.\n---\nThe dentist called — appointment moved to June 17.\n"
 );
 docs.length
 => 1
 
 docs[0].id
-=> box/inbox/Voice_Note.memo.card#
+=> _content/inbox/Voice_Note.memo.card#
 
 docs[0].kind
 => memo
@@ -59,7 +59,7 @@ docs[0].content
 
 ```ts
 const docs = await docsFor(
-  "box/inbox/email/t.attach/msg-001.email-message.card",
+  "_content/inbox/email/t.attach/msg-001.email-message.card",
   "---\nmessage-id: \"<m1@example.com>\"\nthread-id: t1\nfrom: alice@example.com\nto: bob@example.com\ndate: 2026-05-14T19:00:00Z\nsubject: Weekend plans\nsnippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
 );
 docs[0].title
@@ -71,7 +71,7 @@ alice@example.com
 bob@example.com
 Hey, are you free Saturday...
 
-JSON.stringify(declareInputFiles({ path: "box/inbox/email/t.attach/msg-001.email-message.card", card: await loadCardFromText({ content: "---\nmessage-id: \"<m1@example.com>\"\nthread-id: t1\nfrom: a@x.com\ndate: 2026-05-14T19:00:00Z\nsubject: s\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n", source: "box/inbox/email/t.attach/msg-001.email-message.card", ctx }) }))
+JSON.stringify(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.email-message.card", card: await loadCardFromText({ content: "---\nmessage-id: \"<m1@example.com>\"\nthread-id: t1\nfrom: a@x.com\ndate: 2026-05-14T19:00:00Z\nsubject: s\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n", source: "_content/inbox/email/t.attach/msg-001.email-message.card", ctx }) }))
 => []
 ```
 
@@ -79,7 +79,7 @@ JSON.stringify(declareInputFiles({ path: "box/inbox/email/t.attach/msg-001.email
 
 ```ts
 const docs = await docsFor(
-  "box/inbox/email/thread-x.email-thread.card",
+  "_content/inbox/email/thread-x.email-thread.card",
   "---\nthread-id: t1\nsubject: Usage-based pricing demo\nparticipants:\n  - hello@metricly.example\ndate-range:\n  start: 2026-05-14T19:00:00Z\n  end: 2026-05-14T19:00:00Z\nlabels:\n  - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
 );
 docs[0].title
@@ -98,12 +98,12 @@ promotions
 
 ```ts
 const cardText = "---\ndrive-id: d1\ntitle: Project Notes\nmodified: 2026-05-01\nlink: https://docs.google.com/document/d/d1/edit\nowner: owner@example.com\ncontent:\n  ref: attach/Project_Notes.md\n---\n";
-const path = "store/drive/Project_Notes.gdoc.card";
+const path = "_content/drive/Project_Notes.gdoc.card";
 const card = await loadCardFromText({ content: cardText, source: path, ctx });
 JSON.stringify(declareInputFiles({ path, card }))
-=> ["store/drive/Project_Notes.attach/Project_Notes.md"]
+=> ["_content/drive/Project_Notes.attach/Project_Notes.md"]
 
-const inputContents = new Map([["store/drive/Project_Notes.attach/Project_Notes.md", "Quarterly planning notes for the project."]]);
+const inputContents = new Map([["_content/drive/Project_Notes.attach/Project_Notes.md", "Quarterly planning notes for the project."]]);
 const docs = extractCardDocs({ path, card, contentHash: "h1", inputContents });
 docs[0].title
 => Project Notes
@@ -116,7 +116,7 @@ docs[0].content
 
 ```ts
 const docs = await docsFor(
-  "store/archive/photo.image.card",
+  "_bookkeeping/archive/photo.image.card",
   "---\nstatus: analyzed\nfilename:\n  ref: attach/boiler.jpg\n  captured: 2026-05-01T10:00:00Z\n  source: camera-user\ndescription: The boiler's serial-number plate (K-44210)\ntext:\n  - source: plate\n    content: Serial K-44210 Model HX-200 240V\n---\n"
 );
 docs[0].contains
@@ -170,7 +170,7 @@ docs.length
 
 ```ts
 const docs = await docsFor(
-  "store/drive/Budget.gsheet.card",
+  "_content/drive/Budget.gsheet.card",
   "---\ndrive-id: d2\ntitle: Family Budget\nmodified: 2026-05-01\nlink: https://docs.google.com/spreadsheets/d/d2/edit\nowner: o@example.com\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"
 );
 docs[0].content

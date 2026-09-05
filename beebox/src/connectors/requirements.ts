@@ -4,7 +4,7 @@
  * Different connectors hold credentials differently:
  *   - The machine secret store: a grant to this box's slug, with a value
  *     (`docs/secrets.md`) — where every migrated connector now lives.
- *   - Legacy: config/connectors/<name>.secret.json — the transition-window
+ *   - Legacy: _config/connectors/<name>.secret.json — the transition-window
  *     fallback, still authoritative for a box that has not migrated.
  *   - Google OAuth: shared BBX_GOOGLE_TOKENS_FILE + per-box googleServices policy
  *     (gmail, calendar, drive).
@@ -24,6 +24,7 @@ import {
 } from "../core/box/config.js";
 import { loadSecretStore } from "../core/secrets/store.js";
 import { boxSlug } from "../lib/box-slug.js";
+import { getBoxDir } from "../lib/paths.js";
 import type { ScheduleRequirements } from "../schemas/scheduled-script.js";
 
 type Predicate = (boxRoot: string) => Promise<boolean>;
@@ -38,7 +39,7 @@ function googleServicePredicate(service: GoogleServiceName): Predicate {
 function hasGoogleTokens(boxRoot: string): boolean {
   const central = process.env.BBX_GOOGLE_TOKENS_FILE;
   if (central && existsSync(central)) return true;
-  const legacy = path.join(boxRoot, "config/connectors/google.secret.json");
+  const legacy = path.join(getBoxDir(boxRoot, "connectors"), "google.secret.json");
   return existsSync(legacy);
 }
 
@@ -52,7 +53,7 @@ const registry: Record<string, Predicate> = {
 
 async function legacySecretPresent(boxRoot: string, name: string): Promise<boolean> {
   try {
-    await access(path.join(boxRoot, "config/connectors", `${name}.secret.json`));
+    await access(path.join(getBoxDir(boxRoot, "connectors"), `${name}.secret.json`));
     return true;
   } catch (_e) {
     // access() failing here means the secret file isn't present/readable, which

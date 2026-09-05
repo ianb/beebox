@@ -227,7 +227,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
     return (
       <Card as="section" aria-label="Schedules" shadow border="none">
         <h2 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h2>
-        <p className="text-sm text-warm-500">No scheduled scripts in config/schedules/</p>
+        <p className="text-sm text-warm-500">No scheduled scripts in _config/schedules/</p>
       </Card>
     );
   }

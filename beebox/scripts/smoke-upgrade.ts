@@ -6,7 +6,7 @@
  * `smoke-external-box.ts`: pack a release tarball (or reuse the latest one),
  * derive a SECOND tarball with the same code but a different `version` field
  * (no rebuild needed — only `package.json`'s `version` differs), scaffold a
- * fresh v2 box against the first, then `bbx upgrade --to` the second and
+ * fresh box against the first, then `bbx upgrade --to` the second and
  * assert the commit trailer + installed version. Then induces a failure
  * (`--to` a nonexistent path — exactly the preflight `assertSpecResolvable`
  * check in `src/cli/commands/upgrade.ts`) and asserts the box is left
@@ -229,15 +229,16 @@ async function main(): Promise<void> {
     const firstVersion = await readInstalledVersion(boxDir);
     process.stderr.write("[smoke-upgrade] scaffolded at v" + firstVersion + "\n");
 
-    // Absolute, not "node_modules/.bin/bbx" — every step below runs with
-    // cwd=contentDir (a box's `.bin` is at the PACKAGE root, one level up).
+    // Absolute path rather than "node_modules/.bin/bbx" as a matter of
+    // style, consistent with every other step below. v3 (one-root) box: the
+    // package root and the operational root are the same directory, so
+    // every step runs with cwd=boxDir directly — no nested `content/` root.
     const bbxBin = path.join(boxDir, "node_modules/.bin/bbx");
-    const contentDir = path.join(boxDir, "content");
 
     await step("bbx upgrade --to <second tarball>", {
       file: bbxBin,
       args: ["upgrade", "--to", "file:" + secondTarball],
-      cwd: contentDir,
+      cwd: boxDir,
     });
 
     const installedAfterUpgrade = await readInstalledVersion(boxDir);
@@ -271,7 +272,7 @@ async function main(): Promise<void> {
     const failure = await expectFailure("bbx upgrade --to <nonexistent path> (induced failure)", {
       file: bbxBin,
       args: ["upgrade", "--to", "/nonexistent/path/does-not-exist.tgz"],
-      cwd: contentDir,
+      cwd: boxDir,
     });
     if (!failure.output.includes("nothing exists at")) {
       const label = "induced-failure message check";

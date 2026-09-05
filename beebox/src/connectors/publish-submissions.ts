@@ -6,7 +6,7 @@
  * pubs — access logs (`access-log/<pubId>/*.json`). Each object is downloaded,
  * `safeParse`d (the edge is **untrusted from the box's side** — principle #3; a
  * bad object is logged and skipped, never crashes the sync), landed in
- * `box/inbox/` as a card, and only then deleted from R2.
+ * `_content/inbox/` as a card, and only then deleted from R2.
  *
  * **At-least-once with idempotent dedup.** The order is land-then-delete:
  * write + commit the card *before* deleting the remote object, so a crash
@@ -18,7 +18,7 @@
  * duplicate summary is harmless).
  *
  * **Activation.** The credential is the per-box secret file
- * `config/connectors/publish.secret.json` (gitignored via the box scaffold,
+ * `_config/connectors/publish.secret.json` (gitignored via the box scaffold,
  * same pattern as every other connector secret): an API token scoped to ONLY
  * the ingestion bucket — it cannot touch publication manifests/content (the
  * bucket split, `docs/implemented-plans/pub-setup-wrangler.md` amendment 1). The

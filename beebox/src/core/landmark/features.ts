@@ -18,7 +18,8 @@ import { isKnownFeature, isValidValue } from "../chat/features.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import { loadHqDictationDefault } from "../box/config.js";
 import { mergeSeedFeatures } from "../chat/features.js";
-import { containWithinBox } from "../../lib/box-containment.js";
+import { landmarkScanRelDir } from "./root-dir.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 
 class LandmarkDirReadError extends Error {
   constructor(cause: unknown, dir: string) {
@@ -59,12 +60,17 @@ export async function readLandmarkFeaturesForDir(
   boxRoot: string,
   contextDir: string,
 ): Promise<Record<string, string> | null> {
-  const absDir = path.join(boxRoot, contextDir);
-  // Fail closed on a `contextDir` that would resolve outside the box — treated
-  // the same as a missing directory (below), not as an error: the caller
-  // (chat-session creation) just gets no landmark seeds rather than reading
-  // another box's landmark card through this box's scope.
-  if (containWithinBox(boxRoot, absDir) === null) return null;
+  // Fail closed on a `contextDir` that would resolve outside the box
+  // namespace — treated the same as a missing directory (below), not as an
+  // error: the caller (chat-session creation) just gets no landmark seeds
+  // rather than reading another box's landmark card through this box's scope.
+  const ns = await resolveBoxNamespacePathOnDisk({
+    boxRoot,
+    rawPath: landmarkScanRelDir(contextDir),
+    mode: "read",
+  });
+  if (ns === null) return null;
+  const absDir = ns.resolved;
   let entries: string[];
   try {
     entries = await fs.readdir(absDir);

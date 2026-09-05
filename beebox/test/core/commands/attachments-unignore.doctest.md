@@ -19,11 +19,11 @@ function ctxFor(root: string): { boxRoot: string; writeLine: (s: string) => void
   return { boxRoot: root, writeLine: (s: string) => lines.push(s), lines };
 }
 
-function checkIgnore(packageRoot: string, boxRelativePath: string): { ignored: boolean; rule: string } {
+function checkIgnore(boxRoot: string, boxRelativePath: string): { ignored: boolean; rule: string } {
   const result = spawnSync(
     "git",
-    ["check-ignore", "-v", "--no-index", "--", `content/${boxRelativePath}`],
-    { cwd: packageRoot, encoding: "utf-8" },
+    ["check-ignore", "-v", "--no-index", "--", boxRelativePath],
+    { cwd: boxRoot, encoding: "utf-8" },
   );
   if (result.status !== 0 && result.status !== 1) throw new Error(result.stderr);
   const source = result.stdout.split("\t")[0] ?? "";
@@ -76,10 +76,10 @@ await box.write("tmp-capture/cap.attach/photo-001.attach/manifest.json", "{}");
 await box.write("tmp-capture/cap.attach/audio-001.attach/audio-001.timing.json", "{}");
 await box.write("tmp-capture/cap.attach/photo-001.attach/photo-001.jpg", "media");
 [
-  checkIgnore(box.packageRoot, "tmp-capture/cap.attach/photo-001.image.card"),
-  checkIgnore(box.packageRoot, "tmp-capture/cap.attach/photo-001.attach/manifest.json"),
-  checkIgnore(box.packageRoot, "tmp-capture/cap.attach/audio-001.attach/audio-001.timing.json"),
-  checkIgnore(box.packageRoot, "tmp-capture/cap.attach/photo-001.attach/photo-001.jpg"),
+  checkIgnore(box.root, "tmp-capture/cap.attach/photo-001.image.card"),
+  checkIgnore(box.root, "tmp-capture/cap.attach/photo-001.attach/manifest.json"),
+  checkIgnore(box.root, "tmp-capture/cap.attach/audio-001.attach/audio-001.timing.json"),
+  checkIgnore(box.root, "tmp-capture/cap.attach/photo-001.attach/photo-001.jpg"),
 ]
 => [
   {
@@ -106,8 +106,12 @@ the box root, so a root-anchored rule would miss real captures and annex them
 on arrival:
 
 ```ts continue
-after.includes("content/tmp-capture")
-=> false
+await box.write("landmarks/trip/tmp-capture/cap.attach/photo-002.jpg", "media");
+checkIgnore(box.root, "landmarks/trip/tmp-capture/cap.attach/photo-002.jpg")
+=> {
+  "ignored": true,
+  "rule": "**/tmp-capture/**/*.attach/**"
+}
 ```
 
 Re-running is idempotent — it reports no change rather than stacking blocks:

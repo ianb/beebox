@@ -15,7 +15,7 @@ import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas/registry.js";
 
 const schemas = await createCardSchemaMap();
-const source = "box/inbox/scan.attach/source.pdf.card";
+const source = "_content/inbox/scan.attach/source.pdf.card";
 ```
 
 ## Registered as `pdf`

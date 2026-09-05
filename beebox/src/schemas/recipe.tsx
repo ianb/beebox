@@ -59,7 +59,7 @@ export const RecipeSchema = cardSchema("recipe", {
   },
   instructions: `# Recipe Cards
 
-Recipes live in \`store/recipes/\`. Organize with subdirectories only if
+Recipes live in \`_content/recipes/\`. Organize with subdirectories only if
 the user wants that — don't impose a taxonomy.
 
 ## Frontmatter
@@ -93,7 +93,7 @@ Markdoc-annotated markdown. Vocabulary:
 - \`{% substitution for="buttermilk" %}Use milk + 1 tbsp lemon
   juice.{% /substitution %}\` — a substitution. \`for\` names the
   ingredient or step being substituted.
-- \`{% subrecipe ref="/store/recipes/sauces/Marinara.recipe.card" %}
+- \`{% subrecipe ref="/_content/recipes/sauces/Marinara.recipe.card" %}
   Make a half batch.{% /subrecipe %}\` — link to a sibling recipe.
   \`ref\` is a card path — see PROVENANCE for ref semantics.
 - \`{% recipe-section name="Sauce" %}\` — block. Groups a sub-recipe
@@ -113,7 +113,7 @@ whole card. Convert or normalize only when asked, and say that you did.
 
 ## File naming
 
-\`store/recipes/Recipe_Name.recipe.card\``,
+\`_content/recipes/Recipe_Name.recipe.card\``,
 });
 
 export type RecipeFields = InferCardFields<typeof RecipeSchema>;

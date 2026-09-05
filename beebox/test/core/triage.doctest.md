@@ -21,7 +21,7 @@ without one are ignored.
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -35,7 +35,7 @@ destinations:
 `,
 );
 await box.write(
-  "store/todos/Todos.landmark.card",
+  "_content/todos/Todos.landmark.card",
   `---
 navigation:
   label: Todos
@@ -62,12 +62,12 @@ JSON.stringify(categories.map((c) => ({ name: c.name, dir: c.dir, rules: c.rules
 [
   {
     "name": "recipes",
-    "dir": "store/recipes",
+    "dir": "_content/recipes",
     "rules": "Anything describing how to cook a dish."
   },
   {
     "name": "todos",
-    "dir": "store/todos",
+    "dir": "_content/todos",
     "rules": "Action items the user has to do."
   }
 ]
@@ -86,7 +86,7 @@ The triage agent's decisions are applied verbatim for `confident` and
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -97,7 +97,7 @@ destinations:
 ---
 `,
 );
-await box.write("box/inbox/staged/Bread.memo.card", "<memo>flour, water, salt</memo>");
+await box.write("_content/inbox/staged/Bread.memo.card", "<memo>flour, water, salt</memo>");
 
 const result = await runTriage({
   boxRoot: box.root,
@@ -117,11 +117,11 @@ JSON.stringify(result.applications, null, 2)
   {
     "file": "Bread.memo.card",
     "outcome": "routed",
-    "destination": "box/inbox/triaged/recipes"
+    "destination": "_content/inbox/triaged/recipes"
   }
 ]
 
-await box.read("box/inbox/triaged/recipes/Bread.memo.card")
+await box.read("_content/inbox/triaged/recipes/Bread.memo.card")
 => <memo>flour, water, salt</memo>
 ```
 
@@ -134,7 +134,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -145,7 +145,7 @@ destinations:
 ---
 `,
 );
-await box.write("box/inbox/staged/Maybe.memo.card", "<memo>could be a recipe</memo>");
+await box.write("_content/inbox/staged/Maybe.memo.card", "<memo>could be a recipe</memo>");
 
 await runTriage({
   boxRoot: box.root,
@@ -159,7 +159,7 @@ await runTriage({
   }),
 });
 
-await box.read("box/inbox/triaged/recipes/Maybe.memo.card.probable.txt")
+await box.read("_content/inbox/triaged/recipes/Maybe.memo.card.probable.txt")
 =>
 Triage confidence: probable
 Reason: Vague ingredient mention.
@@ -177,7 +177,7 @@ question card naming the candidate categories.
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/recipes/Recipes.landmark.card",
+  "_content/recipes/Recipes.landmark.card",
   `---
 navigation:
   label: Recipes
@@ -189,7 +189,7 @@ destinations:
 `,
 );
 await box.write(
-  "store/todos/Todos.landmark.card",
+  "_content/todos/Todos.landmark.card",
   `---
 navigation:
   label: Todos
@@ -200,7 +200,7 @@ destinations:
 ---
 `,
 );
-await box.write("box/inbox/staged/Mystery.memo.card", "<memo>ambiguous</memo>");
+await box.write("_content/inbox/staged/Mystery.memo.card", "<memo>ambiguous</memo>");
 
 const result = await runTriage({
   boxRoot: box.root,
@@ -225,7 +225,7 @@ JSON.stringify(result.applications.map((a) => ({
   {
     "file": "Mystery.memo.card",
     "outcome": "held",
-    "destination": "box/inbox/triaged/_unsure",
+    "destination": "_content/inbox/triaged/_unsure",
     "hasQuestion": true
   }
 ]

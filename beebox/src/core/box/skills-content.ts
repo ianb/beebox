@@ -131,7 +131,7 @@ Adaptation is expected and a good sign. As you learn more about the learner — 
 - **Be Socratic.** Guide the learner to reason rather than handing them answers — use the answer key to steer your questions, don't just state it. Meet them where they are; build on partial and correct-but-incomplete thinking instead of restarting.
 - **Ground what you teach in sources.** Don't assert facts from memory — especially in answer keys and explanations. Bring the authoritative material into the box (e.g. a \`doc\` or \`webpage\` card) and cite it with the \`{% source %}\` pattern, so the learner can trace what they're told and the content stays trustworthy:
 
-  > Acids {% source ref="/store/courses/Acids.attach/material/Acids_Bases.doc.card" %}donate protons{% /source %} in solution.
+  > Acids {% source ref="/_content/courses/Acids.attach/material/Acids_Bases.doc.card" %}donate protons{% /source %} in solution.
 
   A bare \`{% source ref="..." %}…{% /source %}\` anchors a span to a cited card; use \`href="..."\` to cite an external URL instead. (See the box's source-tagging convention for the full pattern.)
 - **Classify a claim before you lean on it.** Is it solidly *verified* by the source (cite it), *directional* (the effect holds but the exact figure varies — say so), or only *qualitative*? Cite at the strength the source supports. If a claim is *unsupported*, leave it out or name the uncertainty — **missing or fuzzy data is a fine thing to state plainly; never fabricate to fill a gap or to make two sides look balanced.**
@@ -261,20 +261,20 @@ full field reference.
  */
 export const CALENDAR_SKILL = `---
 name: calendar
-description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files in store/calendar/. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
+description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files in _content/calendar/. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
 ---
 
 # Calendar
 
-Calendar events live as \`.ics\` files in \`store/calendar/\`. Sync with Google Calendar is **two-way**:
+Calendar events live as \`.ics\` files in \`_content/calendar/\`. Sync with Google Calendar is **two-way**:
 
 - **View events:** \`bbx calendar\` shows upcoming events (\`bbx calendar today\`, \`bbx calendar 2w\`, …).
-- **Create an event:** write a new \`.ics\` file in \`store/calendar/\`. The next sync pushes it to Google Calendar.
+- **Create an event:** write a new \`.ics\` file in \`_content/calendar/\`. The next sync pushes it to Google Calendar.
   - Include \`X-BBX-CALENDAR-ID:<calendar-id>\` to target a specific calendar (defaults to primary).
   - Optionally include \`X-BBX-REASON:<why>\` and \`X-BBX-REF:<path>\` for tracking.
 - **Edit an event:** modify a tracked \`.ics\` file directly. The next sync pushes the changes.
 - **Delete an event:** add an \`X-BBX-DELETE:<reason>\` property to a tracked \`.ics\` file. The next sync deletes it from Google Calendar.
-- **\`store/calendar/stranded/\`** holds edits Google would never take (the event was deleted there, or the push failed for a week). They are not synced. Move a file back up into \`store/calendar/\` to push it as a new event, or delete it.
+- **\`_content/calendar/stranded/\`** holds edits Google would never take (the event was deleted there, or the push failed for a week). They are not synced. Move a file back up into \`_content/calendar/\` to push it as a new event, or delete it.
 
 **Timezone requirement:** non-all-day events MUST include a VTIMEZONE component and a TZID parameter on DTSTART/DTEND. Never create floating-time events — they'll be rejected.
 
@@ -294,7 +294,7 @@ SUMMARY:Dentist appointment
 DTSTART;TZID=BOX_TZ:20260401T140000
 DTEND;TZID=BOX_TZ:20260401T150000
 X-BBX-REASON:confirmed in the reschedule email
-X-BBX-REF:/store/archive/Dentist_Reschedule.email-message.card
+X-BBX-REF:/_bookkeeping/archive/Dentist_Reschedule.email-message.card
 END:VEVENT
 END:VCALENDAR
 \`\`\`
@@ -327,7 +327,7 @@ That is the normal path (the settings page is the other one). Use \`bbx drive li
 There is no config file — the folder card's own location is the configuration. \`bbx mv\` on the card re-homes the mirror: the next sync mirrors into its new directory and the children left behind stay as ordinary cards. Move the whole *directory* and the mount travels with its children, which is usually what you want.
 
 - **Unmount:** \`bbx drive unmount <dir-or-card>\`. Discovery stops; every child stays exactly where it is, synced ones still syncing. Nothing is deleted.
-- **Stop one file:** \`bbx rm <card-path>\` — the card and attach scope move to \`store/trash/\`, a durable tombstone a mirror will not undo. Restore from trash, or \`bbx drive add\` again, to resume. A child **trashed on Drive** lands there too, and the sync says so; a child *moved out* of the folder is left alone and keeps syncing.
+- **Stop one file:** \`bbx rm <card-path>\` — the card and attach scope move to \`_bookkeeping/trash/\`, a durable tombstone a mirror will not undo. Restore from trash, or \`bbx drive add\` again, to resume. A child **trashed on Drive** lands there too, and the sync says so; a child *moved out* of the folder is left alone and keeps syncing.
 
 ## Inside a synced file
 
@@ -358,8 +358,8 @@ You don't send email directly — you **draft** it, and the user reviews and sen
 
 ## Create the draft
 
-- **Replying** to a thread: put the draft inside that thread's attach scope, beside the message you're answering — e.g. \`box/inbox/email/<thread>.attach/draft-001.email-outbound.card\` — and set \`in-reply-to.ref:\` to the source \`.email-message.card\` (a path relative to the draft, usually just the sibling filename) so Gmail threads it correctly.
-- **A new email** (no thread): a fresh card under \`box/inbox/email/\`.
+- **Replying** to a thread: put the draft inside that thread's attach scope, beside the message you're answering — e.g. \`_content/inbox/email/<thread>.attach/draft-001.email-outbound.card\` — and set \`in-reply-to.ref:\` to the source \`.email-message.card\` (a path relative to the draft, usually just the sibling filename) so Gmail threads it correctly.
+- **A new email** (no thread): a fresh card under \`_content/inbox/email/\`.
 
 \`bbx create <path> -t email-outbound\` scaffolds one. The field details — required headers, threading, lifecycle — are in the \`email-outbound\` card's own instructions, which load when you create or open it. Follow them.
 
@@ -412,7 +412,7 @@ description: Have the box do something later or on a cadence — a reminder, a r
 
 # Schedules
 
-A scheduled script — a \`.scheduled-script.card\` in \`config/schedules/\` — runs a \`bbx\` command on a recurring schedule, or once at a future time. The built-in ones are mechanical (connector syncs, maintenance); the ones **you** create serve the user: checking something on a cadence, revisiting a decision at intervals, or a one-off further out than a chat \`<schedule>\` can reach. Keep them practical, not dramatic.
+A scheduled script — a \`.scheduled-script.card\` in \`_config/schedules/\` — runs a \`bbx\` command on a recurring schedule, or once at a future time. The built-in ones are mechanical (connector syncs, maintenance); the ones **you** create serve the user: checking something on a cadence, revisiting a decision at intervals, or a one-off further out than a chat \`<schedule>\` can reach. Keep them practical, not dramatic.
 
 \`\`\`
 ---
@@ -424,7 +424,7 @@ source: Boxholder wanted a summary to start the week
 ---
 \`\`\`
 
-They run in the background automatically; \`bbx scheduled\` lists them. Use \`at:\` (a future timestamp) instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`docs/generated/card-scheduled-script.md\`.
+They run in the background automatically; \`bbx scheduled\` lists them. Use \`at:\` (a future timestamp) instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`_content/docs/generated/card-scheduled-script.md\`.
 
 (This is for durable, box-level schedules. A quick in-session follow-up while chatting — "remind me in 20 minutes" — is the chat \`<schedule>\` tag, not a card.)
 `;
@@ -461,7 +461,7 @@ description: Give a card type a custom interface — a React component that rend
 
 # Views
 
-Views are React (\`.tsx\`) components that render box data in the browser. **Read \`docs/generated/views.md\` before creating or modifying one** — it carries the full API, including cached \`imageUrl\` variants for image displays, the view-host context, and how to test a view.
+Views are React (\`.tsx\`) components that render box data in the browser. **Read \`_content/docs/generated/views.md\` before creating or modifying one** — it carries the full API, including cached \`imageUrl\` variants for image displays, the view-host context, and how to test a view.
 
 A view always gives a **card type** a custom interface: a view exporting \`rendersCardTypes = ["<type>"]\` becomes that type's UI on card pages, peeks, and chat embeds, and is selected on a card's path with \`?view=name\`. Every view is attached to a card type this way — there is no card-less standalone view.
 

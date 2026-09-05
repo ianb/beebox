@@ -2,7 +2,7 @@
 
 How to decide what becomes a landmark. The decision is a user-facing one, not a tidying-up exercise. The box's file layout exists to keep things organized for the system; landmarks exist to orient that organization toward the *user's* mental model — the places they actually inhabit.
 
-For the design and schema of the card itself, see `docs/landmarks.md` and `docs/generated/card-landmark.md`.
+For the design and schema of the card itself, see `docs/landmarks.md` and `_content/docs/generated/card-landmark.md`.
 
 ## What landmarks are for
 
@@ -21,7 +21,7 @@ A landmark is the right call when the user **keeps returning** to a particular s
 ## What doesn't make something landmark-worthy
 
 - **Size or volume.** The biggest directory in the box probably isn't a landmark if the user never opens it. The smallest might be one if it's where they live.
-- **Technical importance.** `box/jobs/` is critical infrastructure but isn't a landmark — the user doesn't navigate there for their own purposes.
+- **Technical importance.** `_bookkeeping/jobs/` is critical infrastructure but isn't a landmark — the user doesn't navigate there for their own purposes.
 - **Completeness instinct.** Don't add a landmark for every reasonable directory. Resist the urge to "fill out the map." If you're suggesting a landmark because something feels incomplete without one, that's the wrong reason.
 
 ## When to suggest one
@@ -44,4 +44,4 @@ Once the user agrees, the landmark itself is small editorial work:
 - **Symbol** — iconic, recognizable at a glance. Pick something the user would associate with the spot from their own life, not a generic placeholder.
 - **Curated links** — the *handful* of cards in that directory that the user actually reaches for, in the order they'd think about them. Many landmarks won't need any internal links at all — the bookmark itself, plus the directory it points at, is the value. Don't pad the list to make it feel substantive.
 
-The schema details and the `expand` field for templated link lists are documented in `docs/generated/card-landmark.md`.
+The schema details and the `expand` field for templated link lists are documented in `_content/docs/generated/card-landmark.md`.

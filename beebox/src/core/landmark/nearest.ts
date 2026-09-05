@@ -16,6 +16,7 @@
 import * as path from "node:path";
 import { glob } from "glob";
 import { z } from "zod";
+import { normalizeLandmarkDir } from "./root-dir.js";
 
 /**
  * Whether a card path is safe to treat as box-relative — no leading `/` and no
@@ -75,8 +76,11 @@ export async function nearestLandmarkDir(
   const matches = await glob("**/*.landmark.card", {
     cwd: boxRoot,
     nodir: true,
-    ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+    ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
   });
-  const dirs = matches.map(dirOf);
+  // A landmark whose card dirname is exactly the content area (the ROOT
+  // landmark's real parent since the one-root migration — see root-dir.ts)
+  // is the box-root scope `""`, not a real subdirectory named `_content`.
+  const dirs = matches.map((relPath) => normalizeLandmarkDir(dirOf(relPath)));
   return nearestDirFromDirs(cardPath, dirs);
 }

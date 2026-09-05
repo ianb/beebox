@@ -17,7 +17,7 @@ const identity = (box) => readBoxIdentity({ boxRoot: box.root, slug: "kitchen-bo
 
 ```ts
 const box = await makeTmpBox();
-await box.write("Kitchen.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol: 🍳\n---\n");
+await box.write("_content/Kitchen.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol: 🍳\n---\n");
 JSON.stringify(await identity(box))
 => {"slug":"kitchen-box","name":"Kitchen","symbol":"🍳","symbolSrc":null}
 ```
@@ -29,9 +29,9 @@ stays inside the box rather than becoming a filesystem path.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol:\n    src: /art/pan.png\n---\n");
+await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Kitchen\n  symbol:\n    src: /_content/art/pan.png\n---\n");
 JSON.stringify(await identity(box))
-=> {"slug":"kitchen-box","name":"Kitchen","symbol":"","symbolSrc":"art/pan.png"}
+=> {"slug":"kitchen-box","name":"Kitchen","symbol":"","symbolSrc":"_content/art/pan.png"}
 ```
 
 ## Every failure degrades to the slug
@@ -44,10 +44,10 @@ whose frontmatter isn't a landmark all answer with the slug and no mark.
 const bare = await makeTmpBox();
 
 const unlabelled = await makeTmpBox();
-await unlabelled.write("Box.landmark.card", "---\nnavigation:\n  symbol: 📦\n---\n");
+await unlabelled.write("_content/Box.landmark.card", "---\nnavigation:\n  symbol: 📦\n---\n");
 
 const broken = await makeTmpBox();
-await broken.write("Box.landmark.card", "---\nnot-a-landmark: true\n---\n");
+await broken.write("_content/Box.landmark.card", "---\nnot-a-landmark: true\n---\n");
 
 JSON.stringify([
   (await identity(bare)).name,
@@ -65,8 +65,8 @@ name between requests.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("Zebra.landmark.card", "---\nnavigation:\n  label: Zebra\n---\n");
-await box.write("Alpha.landmark.card", "---\nnavigation:\n  label: Alpha\n---\n");
+await box.write("_content/Zebra.landmark.card", "---\nnavigation:\n  label: Zebra\n---\n");
+await box.write("_content/Alpha.landmark.card", "---\nnavigation:\n  label: Alpha\n---\n");
 (await identity(box)).name
 => Alpha
 ```
@@ -79,7 +79,7 @@ slug does. It reads as unset; the box's symbol still counts.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("Box.landmark.card", "---\nnavigation:\n  label: Box\n  symbol: 📦\n---\n");
+await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Box\n  symbol: 📦\n---\n");
 JSON.stringify(await identity(box))
 => {"slug":"kitchen-box","name":"kitchen-box","symbol":"📦","symbolSrc":null}
 ```

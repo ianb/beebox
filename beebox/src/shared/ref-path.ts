@@ -27,6 +27,13 @@
  * `null` means "broken ref": callers must degrade visibly, never substitute a
  * guess.
  *
+ * **Box namespace fence.** A resolved ref must land inside an underscore
+ * area (`BOX_ROOT_VOCABULARY`'s `kind: "area"` names — `_content`,
+ * `_config`, `_bookkeeping`, `_publish`, `_tmp`); anything else — `src/`,
+ * `node_modules/`, `.git/`, `CLAUDE.md`, `package.json`, any unlisted root
+ * name — resolves to `null`, fail-closed like the `..`-escape rule
+ * (`docs/plans/one-root-box-layout.md` Track B).
+ *
  * Pure string operations — no Node deps (the `attach-path.ts` precedent), so
  * the backend (relative `../shared/ref-path.js`) and the frontend
  * (`@shared/ref-path`) share one implementation.
@@ -43,6 +50,7 @@
 
 import { isAttachRef, resolveAttachRef } from "./attach-path.js";
 import { boxRelativePath } from "./box-path.js";
+import { isInBoxNamespace } from "./box-namespace.js";
 import { assertNever } from "./invariant.js";
 
 /** A raw ref split into its addressable parts. `path` may be empty (a bare `#frag`). */
@@ -86,7 +94,7 @@ export interface ResolveRefPathInput {
  * fragment starts at the FIRST `#` and runs to the end (so a `?` inside it is
  * fragment text), and the query is taken from what remains before it.
  *
- * `parseRef("store/Plan.doc.card#risks")` → `{ path, fragment: "risks" }`
+ * `parseRef("_content/Plan.doc.card#risks")` → `{ path, fragment: "risks" }`
  * `parseRef("chart.figure.card?view=ledger")` → `{ path, query: "view=ledger" }`
  */
 export function parseRef(raw: string): ParsedRef {
@@ -158,20 +166,34 @@ export function resolveRefPath({ fromPath, ref, kind }: ResolveRefPathInput): st
   // back the containing directory, which every existence check accepts.
   if (ref === "") return null;
 
-  if (ref.startsWith("/")) return nonRoot(joinSegments("", boxRelativePath(ref)));
+  if (ref.startsWith("/")) return fenced(nonRoot(joinSegments("", boxRelativePath(ref))));
 
   const base = fromPath === undefined ? "" : fromPath;
   if (base !== "" && attachFormAllowed(kind) && isAttachRef(ref)) {
     const attached = resolveAttachRef(base, ref);
-    if (attached !== null) return nonRoot(joinSegments("", attached));
+    if (attached !== null) return fenced(nonRoot(joinSegments("", attached)));
   }
 
-  return nonRoot(joinSegments(dirOf(base), ref));
+  return fenced(nonRoot(joinSegments(dirOf(base), ref)));
 }
 
 /** The box root is not an addressable target: an empty resolution is `null`. */
 function nonRoot(resolved: string | null): string | null {
   return resolved === "" ? null : resolved;
+}
+
+/**
+ * The box namespace fence: a resolved ref must land inside an underscore
+ * area (`_content`, `_config`, …) — everything else (`node_modules/`,
+ * `.git/`, `src/`, `CLAUDE.md`, package.json, any unlisted root name) is
+ * `null`, fail-closed exactly like the `..`-escape rule above. There are no
+ * ref-addressable root files (the box-facing root card/doc files live under
+ * `_content/`) — a ref that resolves to a bare root name is refused, not
+ * clamped or guessed at.
+ */
+function fenced(resolved: string | null): string | null {
+  if (resolved === null) return null;
+  return isInBoxNamespace(resolved) ? resolved : null;
 }
 
 /** Whether the `attach/` virtual prefix is meaningful for a document of this kind. */

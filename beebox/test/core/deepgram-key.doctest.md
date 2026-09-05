@@ -3,7 +3,7 @@
 `src/core/deepgram-key.ts` resolves the box's Deepgram *management* key — the
 long-lived one the server spends to mint browser temp keys. Order
 (`docs/plans/secret-custody.md`, Track 3): the machine store's `deepgram`
-entry, then the deprecated in-tree `config/connectors/deepgram.secret.json`,
+entry, then the deprecated in-tree `_config/connectors/deepgram.secret.json`,
 then `BBX_DEEPGRAM_API_KEY` + `BBX_DEEPGRAM_PROJECT`.
 
 Deepgram needs TWO fields, so the store entry's value is a **JSON string** the
@@ -52,13 +52,13 @@ process.env.BBX_DEEPGRAM_PROJECT = "placeholder-env-project";
 print(`env only: ${JSON.stringify(await getDeepgramCredentials(box.root, { observe: true }))}`);
 
 await box.write(
-  "config/connectors/deepgram.secret.json",
+  "_config/connectors/deepgram.secret.json",
   JSON.stringify({ apiKey: "placeholder-file-key", projectId: "placeholder-file-project" }),
 );
 resetDeepgramLegacyWarning();
 const [fromFile, warnings] = await withWarnings(() => getDeepgramCredentials(box.root, { observe: true }));
 print(`file present: ${JSON.stringify(fromFile)}`);
-print(`warned about the stray file: ${warnings.some((w) => w.includes("config/connectors/deepgram.secret.json"))}`);
+print(`warned about the stray file: ${warnings.some((w) => w.includes("_config/connectors/deepgram.secret.json"))}`);
 
 await setSecret({
   name: "deepgram",
@@ -114,7 +114,7 @@ Nothing configured anywhere is `null`, not a throw:
 delete process.env.BBX_DEEPGRAM_API_KEY;
 delete process.env.BBX_DEEPGRAM_PROJECT;
 process.env.BBX_SECRETS_FILE = join(dir, "no-store-here.json");
-await rm(join(box.root, "config/connectors/deepgram.secret.json"));
+await rm(join(box.root, "_config/connectors/deepgram.secret.json"));
 await getDeepgramCredentials(box.root, { observe: true });
 => null
 ```

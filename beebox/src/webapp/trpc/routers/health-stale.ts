@@ -7,10 +7,10 @@
  * offline.
  */
 
-import * as path from "node:path";
 import { findStaleTmpCaptureCards, TMP_CAPTURE_STALE_MS } from "../../../core/capture/sweep.js";
 import { findJobCards } from "../../../core/reactor/job-discovery.js";
 import { getBoxTime } from "../../../lib/time.js";
+import { getBoxDir } from "../../../lib/paths.js";
 import type { HealthCheck } from "./health.js";
 
 /**
@@ -61,7 +61,7 @@ const MAX_JOBS_SHOWN = 3;
 export async function stalledJobsCheck(boxRoot: string): Promise<HealthCheck> {
   const days = Math.round(STALLED_JOB_MS / (24 * 60 * 60 * 1000));
   const now = getBoxTime(boxRoot).getTime();
-  const jobs = await findJobCards(path.join(boxRoot, "box/jobs"));
+  const jobs = await findJobCards(getBoxDir(boxRoot, "jobs"));
   const stalled: Array<{ file: string; ageMs: number }> = [];
   for (const job of jobs) {
     // A card whose age can't be established (no filename stamp, unreadable

@@ -15,6 +15,7 @@ import { createGoogleOAuthState } from "../../../connectors/google-oauth-state.j
 import { loadBoxConfig } from "../../../core/box/config.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
+import { getBoxDir } from "../../../lib/paths.js";
 
 export const googleAdminProcedures = {
   googleStatus: ownerProcedure.query(async ({ ctx }) => {
@@ -93,7 +94,7 @@ export const googleAdminProcedures = {
     }
     // Also clean up a legacy per-box token file if present.
     try {
-      await fs.unlink(path.join(ctx.boxRoot, "config/connectors/google.secret.json"));
+      await fs.unlink(path.join(getBoxDir(ctx.boxRoot, "connectors"), "google.secret.json"));
     } catch (_e) {
       // Already gone.
     }

@@ -2,7 +2,7 @@
 
 `engineHealthChecks` is the health-check family that would have caught the
 2026-07 incident where every local box's engine symlink went dead after the
-engine checkout was renamed: `engine-link` verifies a v2 box's
+engine checkout was renamed: `engine-link` verifies a box's
 `node_modules/beebox` resolves to a readable engine (and isn't pinned
 to a transient worktree), and `box-schemas` surfaces box-local schema files
 that failed to load (keep-last-good otherwise hides them).
@@ -13,15 +13,15 @@ import { engineHealthChecks } from "../../src/webapp/trpc/routers/health-engine.
 import { invalidateBoxSchemas } from "../../src/schemas/registry.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
-// Hand-scaffold a v2 (package-layout) shape inside a tmp box: package root
-// with a beebox dependency, content/ as the box root.
-async function scaffoldV2(box: Awaited<ReturnType<typeof makeTmpBox>>): Promise<string> {
+// Hand-scaffold a v3 (one-root) shape inside a tmp box: package.json
+// declaring a beebox dependency and the marker, both at the same root.
+async function scaffoldV3(box: Awaited<ReturnType<typeof makeTmpBox>>): Promise<string> {
   await box.write(
     "pkg/package.json",
     JSON.stringify({ name: "tmp-box", private: true, dependencies: { "beebox": "^0.1.0" } }),
   );
-  await box.write("pkg/content/.beebox/box.json", JSON.stringify({ shapeVersion: 2 }));
-  return box.path("pkg/content");
+  await box.write("pkg/.beebox/box.json", JSON.stringify({ shapeVersion: 3 }));
+  return box.path("pkg");
 }
 
 function byName(checks: Array<{ name: string }>, name: string) {
@@ -29,7 +29,7 @@ function byName(checks: Array<{ name: string }>, name: string) {
 }
 ```
 
-## Healthy v2 box: engine link resolves to a readable engine
+## Healthy v3 box: engine link resolves to a readable engine
 
 (A fake engine directory outside any `beebox-worktrees` path — linking the
 test's own running engine would legitimately trip the worktree-pinned
@@ -37,7 +37,7 @@ warning below whenever the suite runs from a worktree.)
 
 ```ts
 const box = await makeTmpBox();
-const boxRoot = await scaffoldV2(box);
+const boxRoot = await scaffoldV3(box);
 await box.write(
   "engines/main/beebox/package.json",
   JSON.stringify({ name: "beebox", version: "9.9.9" }),

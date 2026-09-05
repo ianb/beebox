@@ -110,7 +110,7 @@ const served = ["kitchen", "workshop"];
 JSON.stringify([
   documentBoxSlug("/kitchen/settings", served),
   documentBoxSlug("/kitchen", served),
-  documentBoxSlug("/kitchen/browse/store/recipes?view=sheet", served),
+  documentBoxSlug("/kitchen/browse/_content/recipes?view=sheet", served),
 ])
 => ["kitchen","kitchen","kitchen"]
 ```

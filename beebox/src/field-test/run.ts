@@ -142,12 +142,12 @@ async function prepareRun(opts: {
   if (scenarioNeedsGmail(scenario)) {
     await baselineGmailSync({
       statePath: fakeGmailStatePath,
-      packageRoot: box.packageRoot,
+      boxRoot: box.boxRoot,
       env: { BBX_TIME: scenario.startTime },
     });
   }
-  await tagBaseline(box.packageRoot);
-  emit(`box: ${box.packageRoot} (slug ${box.slug})`);
+  await tagBaseline(box.boxRoot);
+  emit(`box: ${box.boxRoot} (slug ${box.slug})`);
 
   const server = await startFieldServer(box, {
     env: {
@@ -286,7 +286,7 @@ export async function runFieldScenario(options: RunFieldScenarioOptions): Promis
           state.boxTime = await advanceDays({
             days,
             from: state.boxTime,
-            packageRoot: box.packageRoot,
+            boxRoot: box.boxRoot,
             env: childEnv(),
           });
           result.boxTimeEnd = state.boxTime.toISOString();

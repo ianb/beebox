@@ -918,7 +918,7 @@ Same YAML-driven structure, but the prompt asks the agent to *do* something, and
 - id: create-memo-card
   prompt: "Create a memo card titled 'Test' in the inbox"
   expected_outcome: file_created
-  check_path: "box/inbox/*.card"
+  check_path: "_content/inbox/*.card"
   check_contains: ["<title>Test</title>"]
   tags: [actions, cards]
 ```

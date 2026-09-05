@@ -17,7 +17,7 @@ import { rendererDisplayLabel } from "../../../src/frontend/src/lib/renderer-dis
 rendererDisplayLabel({ registeredName: "Card", filePath: "Bread.recipe.card", hasTypeSpecificRenderer: false })
 => Recipe
 
-rendererDisplayLabel({ registeredName: "Card", filePath: "store/plate.concept-map.card", hasTypeSpecificRenderer: false })
+rendererDisplayLabel({ registeredName: "Card", filePath: "_content/plate.concept-map.card", hasTypeSpecificRenderer: false })
 => Concept map
 ```
 

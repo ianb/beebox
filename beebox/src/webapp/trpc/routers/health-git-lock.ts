@@ -27,10 +27,10 @@ const NAME = "stale-git-index-lock";
  * would be noise on every busy box.
  */
 export async function staleIndexLockCheck(boxRoot: string): Promise<HealthCheck> {
-  // The repository is at the PACKAGE root; `boxRoot` is `content/` inside it
-  // and has no `.git` of its own. Same resolution `git-writable` uses.
-  const { packageRoot } = await getBoxShape(boxRoot);
-  const status = await inspectIndexLock(packageRoot);
+  // Under the one-root layout the repository lives at boxRoot itself. Same
+  // resolution `git-writable` uses.
+  const { boxRoot: gitRoot } = await getBoxShape(boxRoot);
+  const status = await inspectIndexLock(gitRoot);
   const minutes = Math.round(INDEX_LOCK_STALE_MS / 60_000);
 
   if (status.state === "absent" || status.state === "fresh" || status.state === "held") {

@@ -1,7 +1,7 @@
 # Capture staging store
 
 The staging store keeps a capture session under
-`<boxRoot>/tmp/capture-staging/<id>/` with a `session.json` manifest. Uploads
+`<boxRoot>/_tmp/capture-staging/<id>/` with a `session.json` manifest. Uploads
 stage as raw files; audio chunks group under their recording segment. The
 lifecycle is `open → sealed → …` and a cancel tears the directory down.
 
@@ -57,7 +57,7 @@ stagingSessionIsEmpty(session)
 `session.json` is written to disk under the staging path:
 
 ```ts continue
-(await box.list("tmp/capture-staging")).includes(`tmp/capture-staging/${session.id}/session.json`)
+(await box.list("_tmp/capture-staging")).includes(`_tmp/capture-staging/${session.id}/session.json`)
 => true
 ```
 
@@ -119,7 +119,7 @@ stagingSessionIsEmpty(staged)
 The raw bytes are on disk, and sealing advances the lifecycle state:
 
 ```ts continue
-await box.read(`tmp/capture-staging/${session.id}/audio-0-001.webm`)
+await box.read(`_tmp/capture-staging/${session.id}/audio-0-001.webm`)
 => A0
 
 await setStagingState({ boxRoot: box.root, id: session.id, state: "sealed" });
@@ -171,8 +171,8 @@ try {
   message = error.message;
 }
 const after = await readStagingSession({ boxRoot: box.root, id: session.id });
-const files = await box.list(`tmp/capture-staging/${session.id}`);
-JSON.stringify({ message, segment: after.segments[0], firstExists: files.includes(`tmp/capture-staging/${session.id}/ios-audio-a.m4a`), rejectedExists: files.includes(`tmp/capture-staging/${session.id}/ios-audio-b.m4a`) })
+const files = await box.list(`_tmp/capture-staging/${session.id}`);
+JSON.stringify({ message, segment: after.segments[0], firstExists: files.includes(`_tmp/capture-staging/${session.id}/ios-audio-a.m4a`), rejectedExists: files.includes(`_tmp/capture-staging/${session.id}/ios-audio-b.m4a`) })
 => {"message":"M4A segment must contain exactly one complete file","segment":{"id":"native-audio","startedAt":"2026-07-09T14:00:00.000Z","format":"m4a-aac","chunks":["ios-audio-a.m4a"]},"firstExists":true,"rejectedExists":false}
 ```
 
@@ -285,8 +285,8 @@ const session = await createStagingSession({
 await setStagingState({ boxRoot: box.root, id: session.id, state: "sealed" });
 const sealedResult = await streamOrThrow(box.root, { id: session.id, filename: "s-a.bin", itemId: "a" });
 const after = await readStagingSession({ boxRoot: box.root, id: session.id });
-const dirFiles = await box.list(`tmp/capture-staging/${session.id}`);
-const landed = dirFiles.includes(`tmp/capture-staging/${session.id}/s-a.bin`);
+const dirFiles = await box.list(`_tmp/capture-staging/${session.id}`);
+const landed = dirFiles.includes(`_tmp/capture-staging/${session.id}/s-a.bin`);
 const tmpLeak = dirFiles.includes(".upload-tmp-");
 JSON.stringify({ sealedResult, files: after.files.length, landed, tmpLeak })
 => {"sealedResult":"StagingSessionNotOpenError","files":0,"landed":false,"tmpLeak":false}
@@ -334,7 +334,7 @@ const missing = await readStagingSession({ boxRoot: box.root, id: "does-not-exis
 missing
 => null
 
-(await box.list("tmp/capture-staging").catch(() => "")).includes(".corrupt")
+(await box.list("_tmp/capture-staging").catch(() => "")).includes(".corrupt")
 => false
 ```
 
@@ -350,9 +350,9 @@ final `session.json`, holding valid JSON that reads back as the same session:
 ```ts
 const box = await makeTmpBox();
 const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
-const entries = await box.list(`tmp/capture-staging/${session.id}`);
+const entries = await box.list(`_tmp/capture-staging/${session.id}`);
 JSON.stringify({
-  onlyFinalManifest: entries === `tmp/capture-staging/${session.id}/session.json`,
+  onlyFinalManifest: entries === `_tmp/capture-staging/${session.id}/session.json`,
   noLeftoverTmp: !entries.includes(".tmp-"),
 })
 => {"onlyFinalManifest":true,"noLeftoverTmp":true}
@@ -379,7 +379,7 @@ rather than silently stranding the staged bytes next to it:
 ```ts
 const box = await makeTmpBox();
 const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
-await box.write(`tmp/capture-staging/${session.id}/session.json`, "{ not valid json");
+await box.write(`_tmp/capture-staging/${session.id}/session.json`, "{ not valid json");
 const errors: string[] = [];
 const originalError = console.error;
 console.error = (...args: unknown[]) => { errors.push(args.join(" ")); };
@@ -394,10 +394,10 @@ errors.length
 errors[0].includes(session.id)
 => true
 
-const fileLines = (await box.list(`tmp/capture-staging/${session.id}`)).split("\n");
+const fileLines = (await box.list(`_tmp/capture-staging/${session.id}`)).split("\n");
 JSON.stringify({
-  corruptExists: fileLines.includes(`tmp/capture-staging/${session.id}/session.json.corrupt`),
-  originalExists: fileLines.includes(`tmp/capture-staging/${session.id}/session.json`),
+  corruptExists: fileLines.includes(`_tmp/capture-staging/${session.id}/session.json.corrupt`),
+  originalExists: fileLines.includes(`_tmp/capture-staging/${session.id}/session.json`),
 })
 => {"corruptExists":true,"originalExists":false}
 ```
@@ -407,8 +407,8 @@ and a repeated read against the already-quarantined session doesn't blow up
 on a missing file — it's ENOENT again, silent:
 
 ```ts continue
-await box.write(`tmp/capture-staging/${session.id}/session.json.corrupt`, "");
-await box.write(`tmp/capture-staging/${session.id}/session.json`, JSON.stringify({ not: "a session" }));
+await box.write(`_tmp/capture-staging/${session.id}/session.json.corrupt`, "");
+await box.write(`_tmp/capture-staging/${session.id}/session.json`, JSON.stringify({ not: "a session" }));
 console.error = (...args: unknown[]) => { errors.push(args.join(" ")); };
 const schemaResult = await readStagingSession({ boxRoot: box.root, id: session.id });
 console.error = originalError;
@@ -418,8 +418,8 @@ schemaResult
 errors.length
 => 2
 
-const filesAfter = await box.list(`tmp/capture-staging/${session.id}`);
-filesAfter.includes(`tmp/capture-staging/${session.id}/session.json.corrupt`)
+const filesAfter = await box.list(`_tmp/capture-staging/${session.id}`);
+filesAfter.includes(`_tmp/capture-staging/${session.id}/session.json.corrupt`)
 => true
 
 const secondRead = await readStagingSession({ boxRoot: box.root, id: session.id });
@@ -494,7 +494,7 @@ const after = await readStagingSession({ boxRoot: box.root, id: session.id });
 ```
 
 ```ts continue
-const staged = await box.list(`tmp/capture-staging/${session.id}`);
+const staged = await box.list(`_tmp/capture-staging/${session.id}`);
 staged.includes("photo-002.jpg")
 => false
 ```

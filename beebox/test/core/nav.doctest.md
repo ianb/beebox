@@ -10,6 +10,8 @@ non-fatal `problems` (dangling refs) for the health check.
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { resolveNav } from "../../src/core/nav.js";
 import { parseNavFields } from "../../src/schemas/nav.js";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 ```
 
 ## No nav.card → absent (no custom section, not a problem)
@@ -66,7 +68,7 @@ surface it.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/projects/Big_Refactor.memo.card", `---
+await box.write("_content/projects/Big_Refactor.memo.card", `---
 title: The Big Refactor
 contains: project memo
 ---
@@ -75,8 +77,8 @@ Notes.
 await box.write("nav.card", `---
 entries:
   - { href: /browse }
-  - { ref: store/projects/Big_Refactor.memo.card }
-  - { ref: store/gone/Missing.memo.card, label: Ghost }
+  - { ref: _content/projects/Big_Refactor.memo.card }
+  - { ref: _content/gone/Missing.memo.card, label: Ghost }
 ---
 `);
 const result = await resolveNav(box.root);
@@ -85,20 +87,20 @@ JSON.stringify(result.status === "ok" ? result.entries.slice(1) : null, null, 2)
 [
   {
     "kind": "ref",
-    "target": "store/projects/Big_Refactor.memo.card",
+    "target": "_content/projects/Big_Refactor.memo.card",
     "label": "The Big Refactor",
     "exists": true
   },
   {
     "kind": "ref",
-    "target": "store/gone/Missing.memo.card",
+    "target": "_content/gone/Missing.memo.card",
     "label": "Ghost",
     "exists": false
   }
 ]
 
 JSON.stringify(result.status === "ok" ? result.problems : null)
-=> ["ref \"store/gone/Missing.memo.card\" does not point at an existing file"]
+=> ["ref \"_content/gone/Missing.memo.card\" does not point at an existing file"]
 ```
 
 ## A box path (leading `/`) is the canonical ref form
@@ -110,7 +112,7 @@ must not survive into the entry).
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/projects/Big_Refactor.memo.card", `---
+await box.write("_content/projects/Big_Refactor.memo.card", `---
 title: The Big Refactor
 contains: project memo
 ---
@@ -118,8 +120,8 @@ Notes.
 `);
 await box.write("nav.card", `---
 entries:
-  - { ref: /store/projects/Big_Refactor.memo.card }
-  - { ref: store/projects/Big_Refactor.memo.card, label: Bare }
+  - { ref: /_content/projects/Big_Refactor.memo.card }
+  - { ref: _content/projects/Big_Refactor.memo.card, label: Bare }
 ---
 `);
 const result = await resolveNav(box.root);
@@ -128,13 +130,13 @@ JSON.stringify(result.status === "ok" ? result.entries : null, null, 2)
 [
   {
     "kind": "ref",
-    "target": "store/projects/Big_Refactor.memo.card",
+    "target": "_content/projects/Big_Refactor.memo.card",
     "label": "The Big Refactor",
     "exists": true
   },
   {
     "kind": "ref",
-    "target": "store/projects/Big_Refactor.memo.card",
+    "target": "_content/projects/Big_Refactor.memo.card",
     "label": "Bare",
     "exists": true
   }
@@ -150,15 +152,15 @@ other — reported in `problems`, still rendered:
 ```ts continue
 await box.write("nav.card", `---
 entries:
-  - { ref: /store/gone/Missing.memo.card }
+  - { ref: /_content/gone/Missing.memo.card }
 ---
 `);
 const missing = await resolveNav(box.root);
 JSON.stringify(missing.status === "ok" ? missing.problems : null)
-=> ["ref \"/store/gone/Missing.memo.card\" does not point at an existing file"]
+=> ["ref \"/_content/gone/Missing.memo.card\" does not point at an existing file"]
 
 JSON.stringify(missing.status === "ok" ? missing.entries[0].target : null)
-=> "store/gone/Missing.memo.card"
+=> "_content/gone/Missing.memo.card"
 ```
 
 ## An unknown href fails validation with the valid set enumerated
@@ -201,18 +203,18 @@ after the realpath check. Neither entry renders.
 
 ```ts
 const box = await makeTmpBox();
-const { symlink, writeFile } = await import("node:fs/promises");
-const outside = `${box.packageRoot}/Secret.memo.card`;
+const outsideDir = await mkdtemp(`${tmpdir()}/bbx-nav-outside-`);
+const outside = `${outsideDir}/Secret.memo.card`;
 await writeFile(outside, "---\ntitle: Secret\n---\n");
-await box.write("store/.keep", "");
-await symlink(outside, box.path("store/Leak.memo.card"));
+await box.write("_content/.keep", "");
+await symlink(outside, box.path("_content/Leak.memo.card"));
 
 await box.write("nav.card", `---
 entries:
   - { href: / }
   - { ref: ../outside/Secret.memo.card }
   - { ref: /../outside/Secret.memo.card }
-  - { ref: /store/Leak.memo.card }
+  - { ref: /_content/Leak.memo.card }
 ---
 `);
 const result = await resolveNav(box.root);
@@ -221,7 +223,7 @@ JSON.stringify(result.status === "ok" ? result.problems : null, null, 2)
 [
   "ref \"../outside/Secret.memo.card\" must be box-relative (must not escape the box via ..)",
   "ref \"/../outside/Secret.memo.card\" must be box-relative (must not escape the box via ..)",
-  "ref \"/store/Leak.memo.card\" must be box-relative (must not escape the box via a symlink)"
+  "ref \"/_content/Leak.memo.card\" must be box-relative (must not escape the box via a symlink)"
 ]
 
 result.status === "ok" ? result.entries.length : null
@@ -230,6 +232,7 @@ result.status === "ok" ? result.entries.length : null
 
 ```ts cleanup
 await box.cleanup();
+await rm(outsideDir, { recursive: true, force: true });
 ```
 
 ## parseNavFields: an entry may be href or ref, not both
@@ -237,7 +240,7 @@ await box.cleanup();
 ```ts
 const bad = parseNavFields(`---
 entries:
-  - { href: /chat, ref: store/x.memo.card }
+  - { href: /chat, ref: _content/x.memo.card }
 ---
 `);
 bad.fields === null

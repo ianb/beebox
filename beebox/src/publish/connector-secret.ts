@@ -8,7 +8,7 @@
  * `{accountId, bucket, apiToken}`, with `owningBox` + `shareable: false`: the
  * token is scoped to ONE box's ingestion bucket, so sharing it would not be
  * merely unwise, it would point another box's submissions at the wrong bucket.
- * The legacy per-box file `config/connectors/publish.secret.json` remains a
+ * The legacy per-box file `_config/connectors/publish.secret.json` remains a
  * read-only fallback for one transition window.
  *
  * One module owns read/write AND the `--mint-connector-token` flow that fills
@@ -27,6 +27,7 @@ import { setAndGrantSecret } from "../core/secrets/lifecycle.js";
 import { refusalAllowsLegacyFallback } from "../core/secrets/legacy-fallback.js";
 import { resolveSecret } from "../core/secrets/resolve.js";
 import { boxSlug } from "../lib/box-slug.js";
+import { getBoxDir } from "../lib/paths.js";
 import { staticBearer } from "../services/cloudflare-bearer.js";
 import {
   type CloudflareTokensClient,
@@ -50,7 +51,7 @@ export function publishSecretName(slug: string): string {
 
 /** Path of the LEGACY per-box secret file, still read during the transition. */
 function publishSecretPath(boxRoot: string): string {
-  return path.join(boxRoot, "config", "connectors", "publish.secret.json");
+  return path.join(getBoxDir(boxRoot, "connectors"), "publish.secret.json");
 }
 
 let warnedAboutLegacyFile = false;

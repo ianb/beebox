@@ -4,7 +4,7 @@
  * `google-auth.ts`; this file knows only about the file.
  *
  * Storage: centralized via the BBX_GOOGLE_TOKENS_FILE env var (preferred), or
- * per-box config/connectors/google.secret.json (legacy fallback). The
+ * per-box _config/connectors/google.secret.json (legacy fallback). The
  * centralized case means ONE refresh token is shared by gmail/calendar/drive
  * across every box on the server — which is why the "this grant is dead" state
  * lives here, with the credential, rather than in per-connector or per-box
@@ -15,6 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { writeFileAtomic } from "../lib/atomic-write.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { getBoxDir } from "../lib/paths.js";
 import { withCardLock } from "../lib/card-lock.js";
 import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
 import { sleep } from "../lib/sleep.js";
@@ -84,7 +85,7 @@ export interface GoogleTokens {
 }
 
 function legacySecretPath(boxRoot: string): string {
-  return path.join(boxRoot, "config/connectors/google.secret.json");
+  return path.join(getBoxDir(boxRoot, "connectors"), "google.secret.json");
 }
 
 /**

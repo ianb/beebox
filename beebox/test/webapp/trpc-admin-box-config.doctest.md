@@ -154,7 +154,7 @@ cfg.agentEngine
 => claude
 
 const engineResult = await caller(box.root).admin.updateBoxConfig({ agentEngine: "codex" });
-const engineConfig = JSON.parse(await box.read("config/box.json"));
+const engineConfig = JSON.parse(await box.read("_config/box.json"));
 JSON.stringify({ returned: engineResult.agentEngine, saved: engineConfig.agentEngine })
 => {"returned":"codex","saved":"codex"}
 
@@ -167,7 +167,7 @@ runtime rejects this value too, so Admin must surface the same configuration
 failure instead of fabricating a usable-looking payload.
 
 ```ts continue
-await box.write("config/box.json", JSON.stringify({ agentEngine: "other" }));
+await box.write("_config/box.json", JSON.stringify({ agentEngine: "other" }));
 const originalConsoleWarn = console.warn;
 console.warn = () => {};
 const invalidConfigResult = await caller(box.root).admin.boxConfig().then(
@@ -178,7 +178,7 @@ console.warn = originalConsoleWarn;
 invalidConfigResult
 => PRECONDITION_FAILED: Box configuration is unreadable.
 
-await box.write("config/box.json", JSON.stringify({ agentEngine: "codex" }));
+await box.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
 ```
 
 Google login availability is reported separately from per-box Google service
@@ -296,7 +296,7 @@ const degraded = await caller(noGitBox.root).admin.updateBoxConfig({
   allowedEmails: ["member@example.com"],
 });
 console.error = originalConsoleError;
-const savedWithoutGit = JSON.parse(await noGitBox.read("config/box.json"));
+const savedWithoutGit = JSON.parse(await noGitBox.read("_config/box.json"));
 JSON.stringify({
   success: degraded.success,
   warning: degraded.commitWarning,

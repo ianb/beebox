@@ -14,6 +14,7 @@ import { claudeProjectsRoot, encodeProjectDir } from "../chat/session/transcript
 import { MIGRATIONS } from "../migrations.js";
 import { GITIGNORE_BLOCK, UNIGNORE_BLOCK } from "../commands/attachments-gitignore.js";
 import { isAnnexInitialized } from "../annex/is-annex-box.js";
+import { MIGRATED_SECTION_HEADER } from "../migrations/one-root-ignore-merge.js";
 import {
   installSchemasGuide,
   installTricksFiles,
@@ -24,6 +25,36 @@ import { errnoCode } from "../../lib/error-guards.js";
 import { migrateBoxState } from "../../lib/state-migration.js";
 
 const BoxMarkerSchema = z.object({ version: z.string(), created: z.string() });
+
+/**
+ * Finding 4 (Track E hardening review, round 3): `initBox` regenerates
+ * `.gitignore`/`.gitattributes` WHOLESALE on every call, not just the one
+ * regen the one-root migration itself runs — a routine `bbx init` re-run
+ * (chat start, wakeup, docs refresh) any time after `mergeIgnoreRules`
+ * appended a box's migrated-forward custom rules under its marked section
+ * silently discarded them again on the very next call. Preserve whatever's
+ * under that marker (verbatim, to EOF) across the regeneration: read it
+ * before overwriting, re-append it after — idempotent, since the marker is
+ * re-extracted fresh each time rather than accumulated.
+ */
+async function readMigratedSection(filePath: string): Promise<string | null> {
+  let current: string;
+  try {
+    current = await fs.readFile(filePath, "utf-8");
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return null;
+    throw e;
+  }
+  const markerIndex = current.indexOf(MIGRATED_SECTION_HEADER);
+  return markerIndex === -1 ? null : current.slice(markerIndex);
+}
+
+async function writeRegeneratedFilePreservingMigratedSection(filePath: string, regeneratedBody: string): Promise<void> {
+  const migratedSection = await readMigratedSection(filePath);
+  const content =
+    migratedSection === null ? regeneratedBody : `${regeneratedBody.trimEnd()}\n\n${migratedSection.trimEnd()}\n`;
+  await fs.writeFile(filePath, content);
+}
 
 export interface InitOptions {
   /** Skip git initialization */
@@ -59,25 +90,26 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   const isUpdate = await isValidBox(resolvedRoot);
 
   if (!isUpdate) {
-    // Create the marker. Every box is shapeVersion 2 (the package layout): the
-    // box root is a `content/` dir nested inside a package. A fresh v2 init
-    // requires the package half to already exist (a parent `package.json`
-    // declaring `beebox`), so direct callers go through `scaffoldV2Box`
-    // (`./package.js`), which lays that down first.
+    // Create the marker. Every box is shapeVersion 3 (the one-root layout):
+    // `package.json`, `src/`, and every `_`-prefixed operational area all
+    // live at this same root. A fresh init requires the npm-package half to
+    // already exist (`package.json` declaring `beebox`), so direct callers
+    // go through `scaffoldBoxRoot` (`./package.js`), which lays that down
+    // first.
     const marker = {
       version: "1.0.0",
-      shapeVersion: 2,
+      shapeVersion: 3,
       created: getBoxTimeISO(resolvedRoot),
     };
     await fs.mkdir(path.dirname(markerPath), { recursive: true });
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
   }
 
-  // Fail fast: validate the box is a well-formed v2 package (marker + parent
-  // package.json declaring beebox) BEFORE creating directories, the
-  // migration manifest, config, or `.gitignore`. A missing/invalid package
-  // half or a stale pre-v2 marker throws here, before any of those mutations
-  // land — so a bad init can't leave a half-written box behind.
+  // Fail fast: validate the box is well-formed (marker + its own package.json
+  // declaring beebox) BEFORE creating directories, the migration manifest,
+  // config, or `.gitignore`. A missing/invalid package half or a stale
+  // pre-v3 marker throws here, before any of those mutations land — so a bad
+  // init can't leave a half-written box behind.
   const shape = await getBoxShape(resolvedRoot);
 
   // Which asset-tracking scheme is this box on? Every box starts on the
@@ -89,13 +121,12 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // The probe is repo-level (`.git/annex/`), so it cannot be flipped by the
   // files this function writes. (`.gitattributes` no longer varies: LFS is
   // retired, so neither scheme gets filter rules.)
-  const annexed = await isAnnexInitialized(shape.packageRoot);
+  const annexed = await isAnnexInitialized(shape.boxRoot);
 
   // Create all standard directories (safe to re-run). `.claude`/`.claude/rules`
-  // (BOX_DIRS) are never created under the box root: a box's `.claude/` lives at
-  // the package root instead (generateRules/generateSkills/installValidationHooks
-  // write it there), so `ensureDirectories` skips those two entries rather than
-  // leaving a vestigial, always-empty `content/.claude/`.
+  // (BOX_DIRS) are skipped: they're populated by generated files
+  // (generateRules/generateSkills/installValidationHooks), not preserved as
+  // empty dirs via `.gitkeep`.
   await ensureDirectories(resolvedRoot);
 
   // Seed the migration manifest for fresh boxes with every known migration
@@ -107,7 +138,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // run `bbx migrate --mark-all-applied` (or --init) to decide its starting
   // state. See `src/cli/commands/migrate.ts`.
   if (!isUpdate) {
-    const manifestPath = path.join(resolvedRoot, "config/migrations.jsonl");
+    const manifestPath = path.join(resolvedRoot, "_config/migrations.jsonl");
     await fs.mkdir(path.dirname(manifestPath), { recursive: true });
     try {
       await fs.access(manifestPath);
@@ -123,13 +154,13 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   }
 
   // Install default transcription config if missing
-  const transcriptionConfigPath = path.join(resolvedRoot, "config/transcription.json");
+  const transcriptionConfigPath = path.join(resolvedRoot, "_config/transcription.json");
   try {
     await fs.access(transcriptionConfigPath);
   } catch (_e) {
     // Config absent (fs.access throws ENOENT) — install the default. The
     // error carries no actionable info; absence is the normal install path.
-    await fs.mkdir(path.join(resolvedRoot, "config"), { recursive: true });
+    await fs.mkdir(path.join(resolvedRoot, "_config"), { recursive: true });
     await fs.writeFile(
       transcriptionConfigPath,
       JSON.stringify({ service: "voxtral" }, null, 2) + "\n"
@@ -145,7 +176,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // file is byte-identical to what `bbx attachments to-annex` leaves behind and
   // re-running init is a no-op on every box. `stripLfsFilters` remains the
   // migration's tool for stripping rules off boxes that still carry them.
-  await fs.writeFile(
+  await writeRegeneratedFilePreservingMigratedSection(
     path.join(resolvedRoot, ".gitattributes"),
     `# Audio files (voice memos, recordings)
 
@@ -186,11 +217,12 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
  * and pid names, and a box that kept its pre-rename file ignored nothing
  * current, so its next autocommit swept the whole state directory in.
  *
- * Always write .gitignore (keep in sync with bbx version). A box's tricks live
- * at `packageRoot/src/tricks/`, outside `boxRoot` (`content/`) entirely, so no
- * trick-dependencies entry belongs here; that box's `src/tricks/node_modules/`
- * is already covered by the package root's own `.gitignore` (`ROOT_GITIGNORE`
- * in `./box-package.js`).
+ * ONE root `.gitignore` covers both halves that used to be two files under
+ * the two-root layout: the npm-package rules (`node_modules/`, trick deps —
+ * formerly `ROOT_GITIGNORE` in `./package.js`) and the operational rules
+ * (formerly written alone at the separate `content/` root). A box migrated
+ * from v2 may carry a marked "Migrated local rules" section; the preserving
+ * write keeps it across regeneration.
  *
  * The trailing asset block comes from `attachments-gitignore.ts` rather than
  * being spelled out here — the two must be identical, and an inlined copy is
@@ -200,28 +232,34 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 export async function writeBoxGitignore(boxRoot: string, options: { annexed: boolean }): Promise<void> {
   const { annexed } = options;
   const gitignore = `# Bee Box .gitignore
+# npm package
+node_modules/
+
+# Trick dependencies (installed by agent) -- see src/tricks/
+src/tricks/node_modules/
+
 # Lock files (every .bbx-*.lock: reactor, trick-commit, and whatever comes next)
 .bbx-lock
 .bbx-*.lock
 
 # Local config (credentials, etc.)
-config/connectors/*.secret.*
+_config/connectors/*.secret.*
 
 # Transient connector state (timestamps, sync tokens — machine-local)
-config/connectors/*.state.*
+_bookkeeping/connectors/*.state.*
 
 # Server PID file
 .bbx-serve.pid
 
 # Generated agent docs (regenerated by bbx init/reactor)
 .beebox/
-docs/generated/
+_content/docs/generated/
 
 # Schedule state (machine-local)
-config/schedules/.state/
+_config/schedules/.state/
 
-# Chat file uploads (transient, swept by bbx wakeup housekeeping)
-tmp/
+# Scratch space (transient, swept by bbx wakeup housekeeping)
+_tmp/
 
 # Temporary files
 *.tmp
@@ -229,16 +267,17 @@ tmp/
 *~
 
 ${annexed ? UNIGNORE_BLOCK : GITIGNORE_BLOCK}`;
-  await fs.writeFile(path.join(boxRoot, ".gitignore"), gitignore);
+  await writeRegeneratedFilePreservingMigratedSection(path.join(boxRoot, ".gitignore"), gitignore);
 }
 
 /**
  * Ensure all standard directories exist.
  *
- * `BOX_DIRS.claude`/`BOX_DIRS.rules` (`.claude/`, `.claude/rules/`) are always
- * skipped: a box's `.claude/` lives at the package root instead (see
- * `initBox`'s caller), so creating them under the box root would leave a
- * vestigial, always-empty `content/.claude/`.
+ * `BOX_DIRS.claude`/`BOX_DIRS.rules` (`.claude/`, `.claude/rules/`) are
+ * always skipped: they're populated by generated files
+ * (generateRules/generateSkills/installValidationHooks), so pre-creating
+ * them here would only leave a vestigial, always-empty directory ahead of
+ * that.
  *
  * @param boxRoot - The box root directory
  */
@@ -318,16 +357,14 @@ export {
 } from "./defaults.js";
 
 /**
- * Ensure `.claude/memory/` exists (at the box's package root — `.claude/`
- * lives there, not in `content/`; see "Where Claude Code runs" in
- * `docs/implemented-plans/boxes-as-packages-v2.md`) and symlink it from
- * `~/.claude/projects/<slug>/memory` so Claude Code's auto-memory is stored
- * inside the git-tracked project directory.
+ * Ensure `.claude/memory/` exists (at the box root — see "Where Claude Code
+ * runs" in `docs/implemented-plans/boxes-as-packages-v2.md`) and symlink it
+ * from `~/.claude/projects/<slug>/memory` so Claude Code's auto-memory is
+ * stored inside the git-tracked box directory.
  *
  * Claude Code derives the project slug from the OPERATING cwd — the box
- * root (`boxRoot`; `content/` for a v2 box, since that's where every agent
- * session actually runs), not the package root. We compute the same slug
- * and create a symlink from the global location to the package-root-local
+ * root, since that's where every agent session actually runs. We compute the
+ * same slug and create a symlink from the global location to the box-local
  * directory.
  *
  * If memory files already exist in the global location, they are
@@ -335,8 +372,8 @@ export {
  */
 export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   const resolvedRoot = path.resolve(boxRoot);
-  const { packageRoot } = await getBoxShape(resolvedRoot);
-  const localMemoryDir = path.join(packageRoot, ".claude", "memory");
+  const shape = await getBoxShape(resolvedRoot);
+  const localMemoryDir = path.join(shape.boxRoot, ".claude", "memory");
   // `claudeProjectsRoot()` and `encodeProjectDir()` (src/core/chat/session/
   // transcript-paths.ts) are the one shared resolver + encoder for
   // `~/.claude/projects/<dir>`. The encoder collapses EVERY non-alphanumeric

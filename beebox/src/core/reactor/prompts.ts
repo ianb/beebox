@@ -10,10 +10,10 @@
 
 import { SECTION } from "../agent-guide/sections.js";
 
-export function buildReactorSystemPrompt(boxRoot: string): string {
+export function buildReactorSystemPrompt(): string {
   return `You are processing jobs in a Bee Box — an agent-managed personal workspace where the filesystem is state and Git is history.
 
-WORKING DIRECTORY: ${boxRoot}
+Your working directory is the box root. Write every link and ref in the leading-\`/\` box-root form, never as a filesystem-absolute path.
 
 ## Your Context
 

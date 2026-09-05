@@ -21,10 +21,10 @@ is a normal state, not an error:
 
 ```ts
 const box = await makeTmpBox();
-await readAnnexInfoAttributes(box.packageRoot)
+await readAnnexInfoAttributes(box.root)
 => null
 
-annexInfoAttributesPath(box.packageRoot).endsWith("/.git/info/attributes")
+annexInfoAttributesPath(box.root).endsWith("/.git/info/attributes")
 => true
 ```
 
@@ -35,18 +35,18 @@ merge would have to guess which of two conflicting `filter=annex` claims wins:
 ```ts continue
 const fs = await import("node:fs/promises");
 const path = await import("node:path");
-await fs.mkdir(path.dirname(annexInfoAttributesPath(box.packageRoot)), { recursive: true });
-await fs.writeFile(annexInfoAttributesPath(box.packageRoot), "\n* filter=annex\n");
-await writeAnnexInfoAttributes(box.packageRoot);
-await readAnnexInfoAttributes(box.packageRoot) === assetAnnexAttributes()
+await fs.mkdir(path.dirname(annexInfoAttributesPath(box.root)), { recursive: true });
+await fs.writeFile(annexInfoAttributesPath(box.root), "\n* filter=annex\n");
+await writeAnnexInfoAttributes(box.root);
+await readAnnexInfoAttributes(box.root) === assetAnnexAttributes()
 => true
 ```
 
 Idempotent, because `bbx init` runs the repair on every invocation:
 
 ```ts continue
-await writeAnnexInfoAttributes(box.packageRoot);
-await readAnnexInfoAttributes(box.packageRoot) === assetAnnexAttributes()
+await writeAnnexInfoAttributes(box.root);
+await readAnnexInfoAttributes(box.root) === assetAnnexAttributes()
 => true
 ```
 

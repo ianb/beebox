@@ -12,6 +12,8 @@ import {
 } from "../../../connectors/calendar-config.js";
 import { createGoogleCalendarService } from "../../../services/google-calendar.js";
 import { createGoogleAuthService } from "../../../services/google-auth.js";
+import { BOX_DIRS } from "../../../lib/paths.js";
+import * as path from "node:path";
 
 export const calendarRouter = router({
   available: publicProcedure.query(async ({ ctx }) => {
@@ -72,7 +74,7 @@ export const calendarRouter = router({
       if (input.syncDaysForward !== undefined) config.syncDaysForward = input.syncDaysForward;
       await saveCalendarConfig(ctx.boxRoot, config);
       await stageAndCommitPaths(ctx.boxRoot, {
-        paths: ["config/connectors/google-calendar.json"],
+        paths: [path.join(BOX_DIRS.connectors, "google-calendar.json")],
         message: "Update calendar sync config",
       });
       return { success: true };

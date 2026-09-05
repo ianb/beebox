@@ -2,7 +2,7 @@
 
 `UnmountControl` (`components/settings/DriveMountRow.tsx`) is the settings
 page's unmount affordance. Unmounting is not destructive — children stay where
-they are and the card is recoverable from `store/trash/` — but it silently
+they are and the card is recoverable from `_bookkeeping/trash/` — but it silently
 stops something the box was doing, and a mis-click is invisible until a sync
 that should have happened doesn't. So it is two steps.
 

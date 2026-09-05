@@ -6,7 +6,7 @@
  * 2. Start ephemeral local server on port 8976
  * 3. Open browser to Google's consent page
  * 4. Receive callback with auth code, exchange for tokens
- * 5. Save tokens to config/connectors/google.secret.json
+ * 5. Save tokens to _config/connectors/google.secret.json
  */
 
 import { Command } from "commander";

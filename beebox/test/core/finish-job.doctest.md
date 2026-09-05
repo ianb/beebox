@@ -20,7 +20,7 @@ const lastCommitMessage = (root: string): string =>
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(
-  "box/jobs/sweep.intake.job.card",
+  "_bookkeeping/jobs/sweep.intake.job.card",
   createIntakeJobTemplate({
     created: "2026-07-01T00:00:00Z",
     source: "gmail",
@@ -30,7 +30,7 @@ await box.write(
 );
 box.commitAll("Queue job");
 
-await finishJob({ boxRoot: box.root, jobRelPath: "box/jobs/sweep.intake.job.card" });
+await finishJob({ boxRoot: box.root, jobRelPath: "_bookkeeping/jobs/sweep.intake.job.card" });
 
 const msg = lastCommitMessage(box.root);
 
@@ -43,7 +43,7 @@ msg.includes("Job-Type: intake")
 => true
 
 // The job card is gone
-(await box.list("box/jobs")).includes("sweep.intake.job.card")
+(await box.list("_bookkeeping/jobs")).includes("sweep.intake.job.card")
 => false
 
 await box.cleanup();
@@ -54,10 +54,10 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 // A job card whose frontmatter carries no description: field.
-await box.write("box/jobs/bare.intake.job.card", `---\nstatus: pending\n---\n`);
+await box.write("_bookkeeping/jobs/bare.intake.job.card", `---\nstatus: pending\n---\n`);
 box.commitAll("Queue bare job");
 
-await finishJob({ boxRoot: box.root, jobRelPath: "box/jobs/bare.intake.job.card" });
+await finishJob({ boxRoot: box.root, jobRelPath: "_bookkeeping/jobs/bare.intake.job.card" });
 
 lastCommitMessage(box.root).includes("Finish intake job")
 => true

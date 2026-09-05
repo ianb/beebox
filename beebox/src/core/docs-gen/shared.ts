@@ -8,7 +8,7 @@
 
 export const AGENT_GUIDE_DIR = ".beebox";
 export const AGENT_GUIDE_FILE = "agent-guide.md";
-export const DOCS_DIR = "docs/generated";
+export const DOCS_DIR = "_content/docs/generated";
 
 /**
  * Parameters for withDocId
@@ -21,7 +21,7 @@ interface WithDocIdParams {
 
 /**
  * Optionally prepend a DOCID marker comment to content.
- * Uses the relative path from box root, e.g. "DOCID:docs/generated/card-question.md"
+ * Uses the relative path from box root, e.g. "DOCID:_content/docs/generated/card-question.md"
  */
 export function withDocId(params: WithDocIdParams): string {
   const { relativePath, content, debug } = params;

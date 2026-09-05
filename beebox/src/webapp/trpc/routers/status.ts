@@ -10,6 +10,9 @@ import { boxRelativePath } from "../../../shared/box-path.js";
 import { getLog } from "../../../lib/git.js";
 import { errnoCode } from "../../../lib/error-guards.js";
 import { containWithinBox } from "../../../lib/box-containment.js";
+import { isInBoxNamespace } from "../../../lib/box-namespace.js";
+import { verifyBoxNamespaceOnDisk } from "../../../lib/box-namespace-resolve.js";
+import { BOX_ROOT_VOCABULARY } from "../../../lib/box-root-vocabulary.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
@@ -55,6 +58,11 @@ export interface BrowseFile {
   relativePath: string;
   name: string;
 }
+
+/** The underscore area names — what the box root listing shows, and all it shows. */
+const BOX_AREA_NAMES: ReadonlySet<string> = new Set(
+  BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area").map((entry): string => entry.name)
+);
 
 export const statusRouter = router({
   /**
@@ -143,10 +151,33 @@ export const statusRouter = router({
         ? path.join(ctx.boxRoot, relPath)
         : ctx.boxRoot;
 
-      // Security: ensure we stay within boxRoot
+      // Security: ensure we stay within boxRoot, then fence the RESOLVED
+      // path (not the raw `relPath` string) against the box namespace — a
+      // non-root path must land inside an underscore area (src/,
+      // node_modules/, .git/, and any other root entry are not browsable
+      // through this endpoint either), and a traversal form like
+      // `_content/../src` can't hide behind its raw-string prefix
+      // (`docs/plans/one-root-box-layout.md` Track B). The root listing
+      // itself is filtered to areas only, below.
       const resolved = path.resolve(targetDir);
-      if (containWithinBox(ctx.boxRoot, resolved) === null) {
-        const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
+      const contained = containWithinBox(ctx.boxRoot, resolved);
+      const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
+      if (contained === null || (contained !== "" && !isInBoxNamespace(contained))) {
+        return { path: relPath, ...empty };
+      }
+      // On-disk re-check for a non-root target: a symlinked directory or leaf
+      // partway down the path could otherwise walk the fence into the
+      // package internals even though the lexical check above passed
+      // (one-root layout — `docs/plans/one-root-box-layout.md` Track B). The
+      // root itself (`contained === ""`) has no walk to verify.
+      if (
+        contained !== "" &&
+        !(await verifyBoxNamespaceOnDisk({
+          boxRoot: ctx.boxRoot,
+          ns: { resolved, relativePath: contained },
+          mode: "read",
+        }))
+      ) {
         return { path: relPath, ...empty };
       }
 
@@ -157,7 +188,6 @@ export const statusRouter = router({
         if (errnoCode(e) !== "ENOENT") {
           console.warn(`browse: cannot read directory ${resolved}, returning empty listing:`, e);
         }
-        const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
         return { path: relPath, ...empty };
       }
 
@@ -235,9 +265,32 @@ export const statusRouter = router({
         files.push({ relativePath, name: entry.name });
       }
 
-      dirs.sort((a, b) => naturalCompare(a.name, b.name));
-      cards.sort((a, b) => naturalCompare(a.name, b.name));
-      files.sort((a, b) => naturalCompare(a.name, b.name));
-      return { path: relPath, dirs, cards, files };
+      // At the box root, list ONLY the underscore areas — mirrors the
+      // REST `/api/browse/*` route's root filtering.
+      const filtered = filterRootListing({ relPath, dirs, cards, files });
+      filtered.dirs.sort((a, b) => naturalCompare(a.name, b.name));
+      filtered.cards.sort((a, b) => naturalCompare(a.name, b.name));
+      filtered.files.sort((a, b) => naturalCompare(a.name, b.name));
+      return { path: relPath, ...filtered };
     }),
 });
+
+/**
+ * At the box root, only the underscore areas are listed — there are no
+ * ref-addressable or servable root files/cards, so `status.browse`'s root
+ * listing (like `/api/browse/*`'s) shows just the area directories.
+ */
+function filterRootListing({
+  relPath,
+  dirs,
+  cards,
+  files,
+}: {
+  relPath: string;
+  dirs: BrowseDir[];
+  cards: BrowseCard[];
+  files: BrowseFile[];
+}): { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } {
+  if (relPath !== "") return { dirs, cards, files };
+  return { dirs: dirs.filter((d) => BOX_AREA_NAMES.has(d.name)), cards: [], files: [] };
+}

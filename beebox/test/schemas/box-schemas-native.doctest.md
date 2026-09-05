@@ -1,14 +1,11 @@
-# Box-Local Schemas: v2 (package-layout) boxes
+# Box-Local Schemas: native resolution in the box package
 
-A shapeVersion 2 box moves its code out of the operational root into a
-package root's `src/` (see "The box repository" in
-`docs/implemented-plans/boxes-as-packages-v2.md`). `loadBoxSchemas` resolves the
-schemas dir from `getBoxShape`/`boxCodePaths` instead of a hardcoded
-`config/schemas`, and for v2 boxes it skips the v1 resolve-hook fakery
-entirely: the box's own `node_modules/beebox` (installed like any
-other dependency) serves `beebox/cards` and `beebox/schema` via
-**native** Node module resolution — no `registerHooks`, no synthesized
-`package.json`.
+A box keeps its code at the box root's `src/` (one-root layout, see
+`docs/plans/one-root-box-layout.md`). `loadBoxSchemas` resolves the schemas
+dir from `getBoxShape`/`boxCodePaths`, and the box's own
+`node_modules/beebox` (installed like any other dependency) serves
+`beebox/cards` and `beebox/schema` via **native** Node module resolution —
+no resolve hooks, no synthesized `package.json`.
 
 We can't run a real `pnpm install` in a doctest, so we use the same trick
 `bbx view test` uses to prove native resolution against the real package
@@ -35,25 +32,23 @@ import {
 } from "../../src/lib/box-shape.js";
 
 /**
- * A v2 box fixture: `<root>/package.json` (declaring beebox),
- * `<root>/node_modules/beebox` symlinked to the real engine package
- * root, and `<root>/content/.beebox/box.json` marking the operational root. Returns
- * the content dir (the box root proper) plus the package root for writing
- * schema files under `src/schemas/`.
+ * A one-root (shapeVersion 3) box fixture: `<root>/package.json` (declaring
+ * beebox), `<root>/node_modules/beebox` symlinked to the real engine
+ * package root, and `<root>/.beebox/box.json` marking the box root. Schema
+ * files go under `<root>/src/schemas/`. `root` and `boxRoot` are the same
+ * directory — both returned so examples read naturally.
  */
-async function makeV2Box() {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-v2box-"));
+async function makeV3Box() {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-v3box-"));
   await fs.writeFile(
     path.join(root, "package.json"),
     JSON.stringify({ name: "my-box", private: true, type: "module", dependencies: { "beebox": "0.1.0" } }),
   );
   await fs.mkdir(path.join(root, "node_modules"), { recursive: true });
   await fs.symlink(PACKAGE_ROOT, path.join(root, "node_modules", "beebox"), "dir");
-  const contentDir = path.join(root, "content");
-  await fs.mkdir(contentDir, { recursive: true });
-  await fs.mkdir(path.join(contentDir, ".beebox"), { recursive: true });
-  await fs.writeFile(path.join(contentDir, ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
-  return { root, boxRoot: contentDir };
+  await fs.mkdir(path.join(root, ".beebox"), { recursive: true });
+  await fs.writeFile(path.join(root, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+  return { root, boxRoot: root };
 }
 
 async function writeSchema(root, relPath, content) {
@@ -78,8 +73,8 @@ export default cardSchema("widget", {
 const V2_WIDGET_SCHEMA_BROKEN = `import { cardSchema } from "beebox/cards";
 export default cardSchema(`;
 
-// v2 boxes don't get the resolve-hook fakery: a bare `zod` import (as
-// opposed to `beebox/schema`) has nothing to resolve against.
+// There is no resolve-hook fakery: a bare `zod` import (as opposed to
+// `beebox/schema`) has nothing to resolve against.
 const V2_SCHEMA_WITH_BARE_ZOD = `import { cardSchema } from "beebox/cards";
 import { z } from "zod";
 
@@ -87,10 +82,10 @@ export default cardSchema("widget", { fields: { size: z.number() } });
 `;
 ```
 
-## A v2 box's `src/schemas/*.ts` loads via native resolution (no resolve hook)
+## A box's `src/schemas/*.ts` loads via native resolution
 
 ```ts
-const { root, boxRoot } = await makeV2Box();
+const { root, boxRoot } = await makeV3Box();
 await writeSchema(root, "src/schemas/widget.ts", V2_WIDGET_SCHEMA);
 
 const loaded = await loadBoxSchemas(boxRoot);
@@ -102,10 +97,10 @@ const loaded = await loadBoxSchemas(boxRoot);
 await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 ```
 
-## Keep-last-good still applies to a v2 box's broken save
+## Keep-last-good still applies to a broken save
 
 ```ts
-const { root, boxRoot } = await makeV2Box();
+const { root, boxRoot } = await makeV3Box();
 const schemaPath = path.join(root, "src/schemas/widget.ts");
 await writeSchema(root, "src/schemas/widget.ts", V2_WIDGET_SCHEMA);
 const good = await loadBoxSchemas(boxRoot);
@@ -133,10 +128,10 @@ const failures = listSchemaLoadFailures(boxRoot);
 await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 ```
 
-## A bare `zod`/`yaml` import fails in a v2 box — only `beebox/*` specifiers resolve
+## A bare `zod`/`yaml` import fails — only `beebox/*` specifiers resolve
 
 ```ts
-const { root, boxRoot } = await makeV2Box();
+const { root, boxRoot } = await makeV3Box();
 await writeSchema(root, "src/schemas/widget.ts", V2_SCHEMA_WITH_BARE_ZOD);
 
 const loaded = await loadBoxSchemas(boxRoot);
@@ -149,17 +144,17 @@ const failures = listSchemaLoadFailures(boxRoot);
 await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 ```
 
-## A schema left in the legacy `config/schemas/` location on a v2 box is flagged
+## A schema left in the legacy `_config/schemas/` location is flagged
 
-`config/schemas/` is where a *legacy* (shapeVersion 1) box's schemas live.
-On a v2 box it's not read by the loader at all (schemas live in
-`src/schemas/` at the package root) and it's not a card path the validate
-hook checks — so a stray file there would otherwise load silently nowhere.
-`findLegacySchemaFiles` catches it for `bbx validate`/`bbx status`:
+`_config/schemas/` is the legacy schema location — the loader never reads it
+(schemas live in `src/schemas/` at the box root) and it's not a card path
+the validate hook checks — so a stray file there would otherwise load
+silently nowhere. `findLegacySchemaFiles` catches it for
+`bbx validate`/`bbx status`:
 
 ```ts
-const { root, boxRoot } = await makeV2Box();
-await writeSchema(boxRoot, "config/schemas/stray.ts", V2_WIDGET_SCHEMA);
+const { root, boxRoot } = await makeV3Box();
+await writeSchema(boxRoot, "_config/schemas/stray.ts", V2_WIDGET_SCHEMA);
 
 const shape = await getBoxShape(boxRoot);
 const legacyFiles = await findLegacySchemaFiles(shape);

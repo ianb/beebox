@@ -59,16 +59,16 @@ labelOf("/test1/history/a1b2c3")
 A directory path is itself the dir.
 
 ```ts
-JSON.stringify(placeLabel({ pathname: "/test1/browse/store/recipes", boxSlug: "test1" }))
-=> {"label":"Browse: store/recipes","dir":"store/recipes"}
+JSON.stringify(placeLabel({ pathname: "/test1/browse/_content/recipes", boxSlug: "test1" }))
+=> {"label":"Browse: _content/recipes","dir":"_content/recipes"}
 ```
 
 A trailing segment with a `.` reads as a file, so the dir is its parent — the
 landmark lookup wants the enclosing directory, not the card.
 
 ```ts
-JSON.stringify(placeLabel({ pathname: "/test1/browse/store/recipes/Bread.card", boxSlug: "test1" }))
-=> {"label":"Browse: store/recipes/Bread.card","dir":"store/recipes"}
+JSON.stringify(placeLabel({ pathname: "/test1/browse/_content/recipes/Bread.card", boxSlug: "test1" }))
+=> {"label":"Browse: _content/recipes/Bread.card","dir":"_content/recipes"}
 ```
 
 Browsing the box root has no path portion, and its dir is the root (`""`, not
@@ -85,11 +85,11 @@ Both `/card/$` and `/views/$` render one card; the card's own title is the page
 heading, so the pill names the kind and spends its dir on the landmark lookup.
 
 ```ts
-JSON.stringify(placeLabel({ pathname: "/test1/card/store/recipes/Bread.card", boxSlug: "test1" }))
-=> {"label":"Card","dir":"store/recipes"}
+JSON.stringify(placeLabel({ pathname: "/test1/card/_content/recipes/Bread.card", boxSlug: "test1" }))
+=> {"label":"Card","dir":"_content/recipes"}
 
-JSON.stringify(placeLabel({ pathname: "/test1/views/store/plate.todo-view.card", boxSlug: "test1" }))
-=> {"label":"Card","dir":"store"}
+JSON.stringify(placeLabel({ pathname: "/test1/views/_content/plate.todo-view.card", boxSlug: "test1" }))
+=> {"label":"Card","dir":"_content"}
 ```
 
 ## Anything unmapped falls back to the landing

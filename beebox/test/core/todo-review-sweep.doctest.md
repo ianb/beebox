@@ -28,12 +28,12 @@ function setTime(iso: string): void {
 // still July 28th locally (same setup as todo-collect.doctest.md).
 async function seedBox() {
   const box = await makeTmpBox({ git: true });
-  await box.write("config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
+  await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
   return box;
 }
 
 async function jobFiles(box: { root: string }) {
-  return findJobCards(path.join(box.root, "box/jobs"), { sourceFilter: "todo-review" });
+  return findJobCards(path.join(box.root, "_bookkeeping/jobs"), { sourceFilter: "todo-review" });
 }
 ```
 
@@ -221,7 +221,7 @@ truth table already guards against for `start`/`due`.
 
 ```ts
 const boxTz = await makeTmpBox({ git: true });
-await boxTz.write("config/box.json", JSON.stringify({ timezone: "Pacific/Kiritimati" }));
+await boxTz.write("_config/box.json", JSON.stringify({ timezone: "Pacific/Kiritimati" }));
 setTime("2026-07-28T23:00:00.000Z"); // 2026-07-29, 13:00 local in Pacific/Kiritimati
 await boxTz.write(
   "store/f.memo.card",

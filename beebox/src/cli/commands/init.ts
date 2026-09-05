@@ -9,7 +9,7 @@
 
 import { Command } from "commander";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
-import { detectBoxTarget, scaffoldV2Box } from "../../core/box/package.js";
+import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
 import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
 import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
@@ -22,15 +22,14 @@ import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Print the "what just happened" banner and (for a fresh init) initialize
- * git at the package root. Split out of the action purely to keep its
+ * git at the box root. Split out of the action purely to keep its
  * cyclomatic complexity down — this is all one linear sequence, just long.
  */
 async function announceAndInitGit(
-  { isFresh, isUpdate, boxRoot, packageRoot, options }: {
+  { isFresh, isUpdate, boxRoot, options }: {
     isFresh: boolean;
     isUpdate: boolean;
     boxRoot: string;
-    packageRoot: string;
     options: { skipGit?: boolean; branch: string };
   }
 ): Promise<void> {
@@ -41,27 +40,26 @@ async function announceAndInitGit(
     return;
   }
 
-  console.log(`Initialized Bee Box package at ${packageRoot}`);
-  console.log(`  Operational box: ${boxRoot}`);
+  console.log(`Initialized Bee Box at ${boxRoot}`);
 
   if (!options.skipGit) {
-    const alreadyRepo = await isRepo(packageRoot);
+    const alreadyRepo = await isRepo(boxRoot);
     if (!alreadyRepo) {
-      await initRepo(packageRoot, options.branch);
+      await initRepo(boxRoot, options.branch);
     }
     console.log("Git repository initialized with initial commit.");
   }
 
   console.log("\nDirectory structure created:");
-  console.log("  package.json, tsconfig.json  - Coding-session package (src/)");
-  console.log("  content/box/inbox/            - Incoming items");
-  console.log("  content/box/inbox/unhandled   - Items with no clear destination");
-  console.log("  content/box/questions/        - Pending questions");
-  console.log("  content/box/resources/        - Synced external state");
-  console.log("  content/store/archive/        - Processed items");
-  console.log("  content/store/trash/          - Soft-deleted items");
-  console.log("  content/config/               - Configuration");
-  console.log("  .claude/                      - Agent configuration (package root)");
+  console.log("  package.json, tsconfig.json, src/   - Box code (schemas, views, tricks)");
+  console.log("  _content/inbox/                      - Incoming items");
+  console.log("  _content/inbox/unhandled              - Items with no clear destination");
+  console.log("  _bookkeeping/questions/               - Pending questions");
+  console.log("  _bookkeeping/resources/               - Synced external state");
+  console.log("  _bookkeeping/archive/                 - Processed items");
+  console.log("  _bookkeeping/trash/                   - Soft-deleted items");
+  console.log("  _config/                              - Configuration");
+  console.log("  .claude/                              - Agent configuration");
 }
 
 export interface InitOptions {
@@ -75,36 +73,33 @@ export interface InitOptions {
  * directly from tests without going through Commander's argv parsing or the
  * process.exit(1)-on-error wrapper below.
  */
-async function runInit(targetPath: string, options: InitOptions): Promise<void> {
-  // Detects what's already at `targetPath`: an existing v2 box (addressed by
-  // its operational `content/` root or by its package root), or nothing yet.
-  // A fresh init always scaffolds the v2 package layout — see "The box
-  // repository" in docs/implemented-plans/boxes-as-packages-v2.md.
-  const { mode, boxRoot, packageRoot } = await detectBoxTarget(targetPath);
+export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
+  // Detects what's already at `targetPath`: an existing box (marker at the
+  // target itself) or nothing yet. A fresh init always scaffolds the
+  // one-root layout — see `docs/plans/one-root-box-layout.md`.
+  const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 
-  // A fresh init scaffolds the whole v2 box (package half + operational box at
-  // `content/`) via the shared builder — `scaffoldV2Box` runs
-  // `scaffoldPackageRoot` then `initBox({shapeVersion:2})`, with the
-  // `node_modules/beebox` symlink (deps) for native schema/view
-  // resolution. It deliberately skips git (the PACKAGE root is the git root,
-  // one level up, initialized explicitly below) and `bbx init`'s card
-  // installers (run below). An existing box (legacy or v2) just re-runs
-  // `initBox` in place.
+  // A fresh init scaffolds the whole box (npm-package half + operational
+  // half, both at the same root) via the shared builder — `scaffoldBoxRoot`
+  // runs `scaffoldPackageRoot` then `initBox`, with the `node_modules/beebox`
+  // symlink (deps) for native schema/view resolution. It deliberately skips
+  // git (initialized explicitly below) and `bbx init`'s card installers (run
+  // below). An existing box just re-runs `initBox` in place.
   let isUpdate: boolean;
   if (isFresh) {
-    await scaffoldV2Box(packageRoot, { deps: true });
+    await scaffoldBoxRoot(boxRoot, { deps: true });
     isUpdate = false;
   } else {
     ({ isUpdate } = await initBox(boxRoot, { skipGit: true, branch: options.branch }));
   }
 
-  await announceAndInitGit({ isFresh, isUpdate, boxRoot, packageRoot, options });
+  await announceAndInitGit({ isFresh, isUpdate, boxRoot, options });
 
   // Install procedure templates
   const procedures = await installProcedures(boxRoot);
   if (procedures.length > 0) {
-    console.log(`\nInstalled ${procedures.length} procedure(s) in config/procedures/`);
+    console.log(`\nInstalled ${procedures.length} procedure(s) in _config/procedures/`);
     for (const p of procedures) {
       console.log(`  ${p}`);
     }
@@ -113,7 +108,7 @@ async function runInit(targetPath: string, options: InitOptions): Promise<void> 
   // Install default guide cards
   const guides = await installGuides(boxRoot);
   if (guides.length > 0) {
-    console.log(`\nInstalled ${guides.length} guide(s) in config/`);
+    console.log(`\nInstalled ${guides.length} guide(s) in _config/`);
     for (const g of guides) {
       console.log(`  ${g}`);
     }
@@ -122,19 +117,19 @@ async function runInit(targetPath: string, options: InitOptions): Promise<void> 
   // Install personality card template
   const personalityInstalled = await installPersonality(boxRoot);
   if (personalityInstalled) {
-    console.log("\nInstalled config/main.personality.card");
+    console.log("\nInstalled _config/main.personality.card");
   }
 
   // Install root briefing card
   const briefingInstalled = await installBriefing(boxRoot);
   if (briefingInstalled) {
-    console.log("\nInstalled briefing.briefing.card");
+    console.log("\nInstalled _content/briefing.briefing.card");
   }
 
   // Install the box-wide todo-view stock instance ("the plate")
   const todoViewInstalled = await installTodoView(boxRoot);
   if (todoViewInstalled) {
-    console.log("\nInstalled store/plate.todo-view.card");
+    console.log("\nInstalled _content/plate.todo-view.card");
   }
 
   // Install the root landmark so the Landmarks page can offer
@@ -144,13 +139,13 @@ async function runInit(targetPath: string, options: InitOptions): Promise<void> 
   if (rootLandmarkInstalled !== null) {
     // Fresh init commits everything below; a re-init refill is left for the
     // next wakeup to commit (see runHousekeeping).
-    console.log("\nInstalled Box.landmark.card (edit to customize the root landmark)");
+    console.log(`\nInstalled ${rootLandmarkInstalled} (edit to customize the root landmark)`);
   }
 
   // Install default scheduled scripts
   const schedules = await installSchedules(boxRoot);
   if (schedules.length > 0) {
-    console.log(`\nInstalled ${schedules.length} schedule(s) in config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
+    console.log(`\nInstalled ${schedules.length} schedule(s) in _config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
     console.log("  refresh-maps may invoke an efficient-tier agent when directory structure changes, including a full map build on a fresh box.");
     console.log("  Enable an opt-in schedule in the dashboard or by setting enabled: true after reviewing it and configuring any required connector secrets.");
     for (const s of schedules) {
@@ -188,7 +183,7 @@ async function runInit(targetPath: string, options: InitOptions): Promise<void> 
   // doing and `bbx health` gates on them.
   const boxShape = await getBoxShape(boxRoot);
   const annexResult = await runAnnexDoctor(createGitAnnexService(), {
-    repoRoot: boxShape.packageRoot,
+    repoRoot: boxShape.boxRoot,
     boxRoot,
   });
   for (const check of annexResult.checks) {
@@ -208,7 +203,7 @@ async function runInit(targetPath: string, options: InitOptions): Promise<void> 
   // and skills moved onto this path, init's own direct calls gave that
   // guarantee; `force` is what preserves it.
   await generateDocs(boxRoot, { force: true });
-  console.log("Generated agent docs in .beebox/ and docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/");
+  console.log("Generated agent docs in .beebox/ and _content/docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/");
 
   // Build the search index so the first `bbx search` isn't a cold build.
   await openSearchIndex(boxRoot, {
@@ -220,12 +215,12 @@ async function runInit(targetPath: string, options: InitOptions): Promise<void> 
   }
 
   // Commit everything (package scaffold, schedules, procedures, guides,
-  // rules, docs, etc.) on fresh init, at the PACKAGE root — that's the
-  // git root for a v2 box. Re-inits (both legacy and v2) never hit this;
-  // the boxholder commits their own review of what `bbx init` changed.
+  // rules, docs, etc.) on fresh init, at the box root — that's the git
+  // root. Re-inits never hit this; the boxholder commits their own review
+  // of what `bbx init` changed.
   if (isFresh && !options.skipGit) {
-    await stageAll(packageRoot);
-    await commit(packageRoot, {
+    await stageAll(boxRoot);
+    await commit(boxRoot, {
       message: "Initialize Bee Box",
       trailers: {
         "Created-By": "bbx init",

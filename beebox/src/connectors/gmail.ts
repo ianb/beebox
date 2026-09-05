@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
 import { errorMessage, errnoCode } from "../lib/error-guards.js";
 import { stageAndCommitPaths } from "../lib/git.js";
+import { BOX_DIRS, getBoxDir } from "../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
 import {
@@ -47,7 +48,7 @@ interface SyncWork {
  * days without importing mail and reported no problem.
  */
 async function readConfig(boxRoot: string): Promise<GmailConnectorConfig> {
-  const configPath = path.join(boxRoot, "config/connectors/gmail.json");
+  const configPath = path.join(getBoxDir(boxRoot, "connectors"), "gmail.json");
   let raw: string;
   try {
     raw = await fs.readFile(configPath, "utf-8");
@@ -132,7 +133,7 @@ async function persistState(boxRoot: string, state: GmailTransientState): Promis
 class GmailConnector implements Connector {
   name = "gmail";
   produces = ["email-thread", "email-message", "email-outbound"];
-  inboxPaths = ["box/inbox/email"];
+  inboxPaths = [`${BOX_DIRS.inbox}/email`];
   triggeredBy?: string;
 
   constructor(
@@ -166,7 +167,7 @@ class GmailConnector implements Connector {
 
   private async cleanupLegacySecret(): Promise<void> {
     try {
-      await fs.unlink(path.join(this.boxRoot, "config/connectors/gmail.secret.json"));
+      await fs.unlink(path.join(getBoxDir(this.boxRoot, "connectors"), "gmail.secret.json"));
     } catch (_error) {
       // Best-effort removal of the obsolete IMAP credential file.
     }

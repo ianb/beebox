@@ -364,7 +364,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     await server.listen({ port, host });
     // Register live public URLs for each served box so subprocess spawns
     // pick up BBX_BOX_NAME / BBX_SERVER_URL via buildScriptEnv without
-    // requiring publicUrl to be set in config/box.json.
+    // requiring publicUrl to be set in _config/box.json.
     for (const box of boxes) {
       registerBoxPublicUrl(box.boxRoot, `http://${host}:${port}/${box.slug}`);
     }

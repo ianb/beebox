@@ -27,13 +27,13 @@ input:
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Receipt.question.card", PENDING);
+await box.write("_bookkeeping/questions/Receipt.question.card", PENDING);
 
-const res = await dismiss(box, { question: "box/questions/Receipt.question.card" });
+const res = await dismiss(box, { question: "_bookkeeping/questions/Receipt.question.card" });
 res.success
 => true
 
-const card = await box.read("box/questions/Receipt.question.card");
+const card = await box.read("_bookkeeping/questions/Receipt.question.card");
 card.includes("status: dismissed")
 => true
 
@@ -44,7 +44,7 @@ card.includes("dismissed-at:")
 No follow-up job is created (dismissal has no directive to execute):
 
 ```ts continue
-(await box.list("box/jobs")).includes(".card")
+(await box.list("_bookkeeping/jobs")).includes(".card")
 => false
 ```
 
@@ -57,7 +57,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write(
-  "box/questions/Done.question.card",
+  "_bookkeeping/questions/Done.question.card",
   // A coherent answered card carries its answer + answered-at (schema-required).
   PENDING.replace(
     "status: pending",
@@ -65,7 +65,7 @@ await box.write(
   ),
 );
 
-const res = await dismiss(box, { question: "box/questions/Done.question.card" });
+const res = await dismiss(box, { question: "_bookkeeping/questions/Done.question.card" });
 res.success
 => false
 

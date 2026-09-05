@@ -5,7 +5,7 @@
  * Usage: bbx serve [dirs...]
  *   - With args: uses the given dirs directly.
  *   - No args: walks up from the current directory to its box root (so this
- *     works from a v2 box's package root or any subdirectory), falling back
+ *     works from anywhere inside the box), falling back
  *     to the bare cwd if no box is found — a one-off local-dev convenience.
  *
  * The `~/.config/beebox/boxes.json` manifest (`bbx boxes add/remove/list`) feeds
@@ -20,18 +20,16 @@ import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { boxSlug } from "../../lib/box-slug.js";
-import { findBoxRoot, BOX_MARKER } from "../../lib/paths.js";
-import { isValidBox } from "../../core/box/index.js";
+import { findBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot, BoxShapeError } from "../../lib/box-shape.js";
 import { loadEnv, serverEnvSchema } from "../../lib/env.js";
 
 /**
  * `<slug>=<boxRoot>` argv encoding `server-main.ts` expects. Exported so
  * `--dev`'s spawn args (below) and its doctest build it the same way a
- * resolved `BoxSpec[]` always does — a v2 box's `content/` dir basename is
- * always the literal string "content", so passing a bare dir instead would
- * silently slug every v2 box "content" (server-main.ts's bare-dir fallback
- * derives the slug from `path.basename`, same gap `--slug`/`resolveBoxes`
- * exist to close for the non-dev path).
+ * resolved `BoxSpec[]` always does — the explicit slug is what lets a caller
+ * override `path.basename` (server-main.ts's bare-dir fallback), same gap
+ * `--slug`/`resolveBoxes` exist to close for the non-dev path.
  */
 export function toBoxArgs(boxes: BoxSpec[]): string[] {
   return boxes.map((box) => `${box.slug}=${box.boxRoot}`);
@@ -56,24 +54,21 @@ export function devServerEnvironment(
 }
 
 /**
- * Resolve an explicit dir argument to the directory that actually holds the
- * box. A v2 package root (marker at `<dir>/content/.beebox/box.json`) resolves to its
- * `content/` — `bbx serve <package-root>` is the obvious thing to type and
- * used to die later with a raw ENOENT reading `<package-root>/.beebox/box.json`. A
- * dir that is neither a box nor a package root fails here, with the marker
- * path named, instead of as an uncaught stack trace at startup.
- * Exported for its doctest.
+ * Resolve an explicit dir argument to the box root, or print a
+ * `bbx serve`-facing error and exit. The shared resolver (`requireBoxRoot`,
+ * `../../lib/box-shape.js`) throws `BoxShapeError` (naming a v2 shape and
+ * pointing at `bbx migrate`, or plain "not a box") for anything that isn't a
+ * v3 box — this turns that into the CLI's usual print-and-exit instead of an
+ * uncaught stack trace at startup. Exported for its doctest.
  */
-export async function resolveServableBoxRoot(boxRoot: string): Promise<string> {
-  if (await isValidBox(boxRoot)) return boxRoot;
-  const contentRoot = path.join(boxRoot, "content");
-  if (await isValidBox(contentRoot)) return contentRoot;
-  console.error(
-    `Error: ${boxRoot} is not a Bee Box — no ${BOX_MARKER} there or in ` +
-      `${contentRoot}. Run \`bbx init ${boxRoot}\` to create one, or point ` +
-      "`bbx serve` at an existing box."
-  );
-  process.exit(1);
+export async function resolveServableBoxRoot(dir: string): Promise<string> {
+  try {
+    return await requireBoxRoot(dir);
+  } catch (e) {
+    if (!(e instanceof BoxShapeError)) throw e;
+    console.error("Error: " + e.message);
+    process.exit(1);
+  }
 }
 
 /**
@@ -93,7 +88,7 @@ export async function resolveBoxes(dirs: string[], slugOverride: string | undefi
       const boxRoot = await resolveServableBoxRoot(path.resolve(dir));
       const slug = slugOverride ?? (await boxSlug(boxRoot));
       return { slug, boxRoot };
-    })
+    }),
   );
 
   // Check for duplicate slugs
@@ -119,8 +114,7 @@ export const serveCommand = new Command("serve")
   .option("-d, --dev", "Run in development mode with auto-reload")
   .option(
     "--slug <slug>",
-    "URL slug to serve the box under (default: the box's own basename — the PACKAGE root's " +
-      "basename for a v2 box, since its content/ dir's basename is always \"content\"). " +
+    "URL slug to serve the box under (default: the box root's own basename). " +
       "Only valid with a single box directory — this is how `bbx hub` names a box's process."
   )
   .action(async (dirs: string[], options: { port: string; host: string; dev?: boolean; slug?: string }) => {
@@ -137,7 +131,7 @@ export const serveCommand = new Command("serve")
     // Resolve which box dirs to serve. Precedence:
     //   1. Explicit positional args.
     //   2. The current directory, walked up to its box root (handles running
-    //      from a v2 box's package root or any subdirectory) — falls back to
+    //      from anywhere inside the box) — falls back to
     //      the bare cwd if no box is found (fixtures, or a plain directory
     //      for one-off local dev).
     // The boxes.json manifest is never consulted here — it feeds the

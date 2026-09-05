@@ -14,7 +14,7 @@ Every one of them is a card; there is no mount config to edit.
 ## Prerequisites
 
 1. **Google OAuth** configured (see [google-setup.md](google-setup.md))
-2. **Drive service** enabled for the box: set `googleServices.drive: true` in `config/box.json` or toggle it in the Admin page
+2. **Drive service** enabled for the box: set `googleServices.drive: true` in `_config/box.json` or toggle it in the Admin page
 3. The OAuth scopes `drive.readonly` and `drive.file` are already included in the default scope set
 
 ## Quick Start
@@ -24,7 +24,7 @@ Every one of them is a card; there is no mount config to edit.
 bbx drive inspect https://docs.google.com/spreadsheets/d/1abc.../edit
 
 # Mount it at a local path
-bbx drive add https://docs.google.com/spreadsheets/d/1abc.../edit store/drive/budget
+bbx drive add https://docs.google.com/spreadsheets/d/1abc.../edit _content/drive/budget
 
 # Sync all mounted files
 bbx drive sync
@@ -36,10 +36,10 @@ bbx drive status
 bbx drive list
 
 # Mirror a whole Drive folder into a directory
-bbx drive mount https://drive.google.com/drive/folders/1xyz... store/drive/recipes
+bbx drive mount https://drive.google.com/drive/folders/1xyz... _content/drive/recipes
 
 # Keep a pointer to something the box should know about but not copy
-bbx drive link https://drive.google.com/file/d/1pdf.../view store/drive/Lease
+bbx drive link https://drive.google.com/file/d/1pdf.../view _content/drive/Lease
 ```
 
 ## How It Works
@@ -49,8 +49,8 @@ bbx drive link https://drive.google.com/file/d/1pdf.../view store/drive/Lease
 Each synced spreadsheet creates a card file and an attach scope of JSON files:
 
 ```
-store/drive/Budget.gsheet.card     # frontmatter metadata (title, Drive ID, link, tabs)
-store/drive/Budget.attach/
+_content/drive/Budget.gsheet.card     # frontmatter metadata (title, Drive ID, link, tabs)
+_content/drive/Budget.attach/
   Summary.json                          # one JSON per sheet tab
   Expenses.json
   Income.json
@@ -64,7 +64,7 @@ The `.gsheet.card` file's frontmatter carries a `drive-id` field that links to G
 
 Use `bbx rm <card-path>` to stop syncing one Drive file without deleting the
 remote Google file. The command moves the card and its attach scope to
-`store/trash/`; the Drive connector treats that committed trash card as a
+`_bookkeeping/trash/`; the Drive connector treats that committed trash card as a
 durable tombstone. It neither syncs the trashed card nor re-creates it from a
 configured folder mount.
 
@@ -75,7 +75,7 @@ A raw hard delete has different folder semantics. Hard-deleting an
 individually added card untracks it, but hard-deleting a child of a configured
 folder mount leaves the folder subscription in force, so the next sync
 discovers the child again. Use `bbx rm` to exclude one folder child, or remove
-the folder entry from `config/connectors/google-drive.json` to stop tracking
+the folder entry from `_config/connectors/google-drive.json` to stop tracking
 the whole folder.
 
 ### Ambiguous local identity fails closed
@@ -104,7 +104,7 @@ declines to sync rather than guessing — the run reports a failure (which
 On `bbx wakeup` or `bbx drive sync`:
 
 1. The connector finds live Drive cards outside infrastructure and
-   `store/trash/`, while retaining trash Drive IDs as folder-discovery
+   `_bookkeeping/trash/`, while retaining trash Drive IDs as folder-discovery
    tombstones
 2. For each live card, reads the `drive-id` field
 3. Compares local JSON content hashes with stored hashes:
@@ -166,7 +166,7 @@ writes a `.gfolder.card` inside `<dir>` and mirrors the Drive folder there
 immediately:
 
 ```bash
-bbx drive mount https://drive.google.com/drive/folders/FOLDER_ID store/drive/recipes
+bbx drive mount https://drive.google.com/drive/folders/FOLDER_ID _content/drive/recipes
 ```
 
 The box's settings page runs the same operation over tRPC
@@ -176,10 +176,10 @@ lists every mount with its status and child counts, and its "Mirror a folder" /
 hold different ideas of what a mount is.
 
 ```
-store/drive/recipes/Recipes.gfolder.card      # the mount
-store/drive/recipes/Sourdough.gdoc.card       # a Doc child, synced two-way
-store/drive/recipes/Scan_2024.glink.card      # a PDF child, pointed at
-store/drive/recipes/desserts/Desserts.gfolder.card   # a subfolder, mirrored
+_content/drive/recipes/Recipes.gfolder.card      # the mount
+_content/drive/recipes/Sourdough.gdoc.card       # a Doc child, synced two-way
+_content/drive/recipes/Scan_2024.glink.card      # a PDF child, pointed at
+_content/drive/recipes/desserts/Desserts.gfolder.card   # a subfolder, mirrored
 ```
 
 **The directory is the mount.** There is no mount table -- the card's own
@@ -204,20 +204,20 @@ off. The connector re-stamps a pointer's Drive metadata on each sync and never
 touches its body.
 
 **Unmounting.** `bbx drive unmount <dir-or-card>` is exactly `bbx rm` on the mount
-card: it moves to `store/trash/` and **every child stays where it is** -- synced
+card: it moves to `_bookkeeping/trash/` and **every child stays where it is** -- synced
 cards keep syncing on their own, pointers keep pointing, nothing is deleted. The
 trashed card also acts as a tombstone, so a parent mirror will not re-create the
 mount. Pass either the mount directory or the card itself; a directory holding
 two mount cards is refused rather than guessed at.
 
-**A child trashed on Drive** has its card moved to `store/trash/` too. A child
+**A child trashed on Drive** has its card moved to `_bookkeeping/trash/` too. A child
 that merely left the folder (moved elsewhere, or access lost) is left alone and
 keeps syncing; the sync reports it as `not-in-folder`.
 
 ### Automatic conversion from the old config
 
 Boxes set up before folder mounts were cards carry a `folders` array in
-`config/connectors/google-drive.json`. The **first sync converts it**: each entry
+`_config/connectors/google-drive.json`. The **first sync converts it**: each entry
 becomes a `.gfolder.card` in its `localPath` (mirrored on the same pass), and the
 config is rewritten without the entry, in the same commit. It is idempotent, and
 nothing needs to be run by hand.
@@ -255,8 +255,8 @@ Run `bbx google-auth` or connect via the Admin page.
 
 ### "Calendar service not enabled" (but you want Drive)
 
-Enable Drive separately: set `googleServices.drive: true` in `config/box.json`.
+Enable Drive separately: set `googleServices.drive: true` in `_config/box.json`.
 
 ### Sync doesn't detect local changes
 
-The connector compares content hashes stored in transient state (`config/connectors/google-drive.state.json`). If this file is missing (e.g., new machine), the connector treats all files as fresh pulls. Re-sync to establish hashes.
+The connector compares content hashes stored in transient state (`_bookkeeping/connectors/google-drive.state.json`). If this file is missing (e.g., new machine), the connector treats all files as fresh pulls. Re-sync to establish hashes.

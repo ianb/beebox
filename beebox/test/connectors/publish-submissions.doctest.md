@@ -93,7 +93,7 @@ order[0]
 The landed card carries the submitted fields and coarse attribution:
 
 ```ts continue
-const text = await box.read("box/inbox/Submission-sub-1.pub-submission.card");
+const text = await box.read("_content/inbox/Submission-sub-1.pub-submission.card");
 text.includes("pub-id: pub-abc") && text.includes("country: US") && text.includes("hello")
 => true
 ```
@@ -202,7 +202,7 @@ The digest names both views; the two valid logs were deleted, the malformed one 
 const dir = getBoxDir(box.root, "inbox");
 const files = await readdir(dir);
 const digestFile = files.find((f) => f.startsWith("Access-Log-Digest"));
-const text = await box.read("box/inbox/" + digestFile);
+const text = await box.read("_content/inbox/" + digestFile);
 text.includes("a@x.com") && text.includes("b@x.com") && text.includes("2 views")
 => true
 ```

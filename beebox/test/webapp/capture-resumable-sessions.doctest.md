@@ -99,7 +99,7 @@ process.env.BBX_AUTH_FILE = join(authDir, "no-such-auth.json");
 
 const keyHeaders = { authorization: `Bearer ${KEY}` };
 const optedIn = await makeTestServer({ openAccess: false });
-await optedIn.seed("config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
+await optedIn.seed("_config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
 
 await optedIn.inject({ method: "GET", url: "/api/capture/sessions/resumable", headers: keyHeaders })
 => 200

@@ -116,10 +116,10 @@ const c = caller(box.root, recipesDrive());
 
 const mounted = await c.drive.mount({
   url: "https://drive.google.com/drive/folders/folder-1",
-  dir: "store/drive/recipes",
+  dir: "_content/drive/recipes",
 });
 JSON.stringify({ cardPath: mounted.cardPath, name: mounted.name, failures: mounted.failures })
-=> {"cardPath":"store/drive/recipes/Recipes.gfolder.card","name":"Recipes","failures":[]}
+=> {"cardPath":"_content/drive/recipes/Recipes.gfolder.card","name":"Recipes","failures":[]}
 ```
 
 ```ts continue
@@ -134,7 +134,7 @@ JSON.stringify(listed.mounts.map((m) => ({
   problems: m.problems,
   error: m.error,
 })))
-=> [{"cardPath":"store/drive/recipes/Recipes.gfolder.card","dir":"store/drive/recipes","driveId":"folder-1","name":"Recipes","status":"ok","children":{"files":1,"links":1},"problems":{"notInFolder":0,"unknown":0},"error":null}]
+=> [{"cardPath":"_content/drive/recipes/Recipes.gfolder.card","dir":"_content/drive/recipes","driveId":"folder-1","name":"Recipes","status":"ok","children":{"files":1,"links":1},"problems":{"notInFolder":0,"unknown":0},"error":null}]
 ```
 
 An injected service is a connected one: the page shows the mount manager, not
@@ -153,31 +153,31 @@ typeof listed.mounts[0].lastSync
 so the pass creates nothing and re-stamps the card.
 
 ```ts continue
-const synced = await c.drive.syncFolder({ cardPath: "store/drive/recipes/Recipes.gfolder.card" });
+const synced = await c.drive.syncFolder({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
 JSON.stringify({
   cardPath: synced.cardPath,
   created: synced.created,
   updated: synced.updated,
   failures: synced.failures,
 })
-=> {"cardPath":"store/drive/recipes/Recipes.gfolder.card","created":[],"updated":["store/drive/recipes/Recipes.gfolder.card"],"failures":[]}
+=> {"cardPath":"_content/drive/recipes/Recipes.gfolder.card","created":[],"updated":["_content/drive/recipes/Recipes.gfolder.card"],"failures":[]}
 ```
 
 `link` writes a pointer to any Drive item, copying nothing. It is a separate
 mount from the mirror, so it can sit anywhere in the box.
 
 ```ts continue
-const linked = await c.drive.link({ url: "https://drive.google.com/file/d/deck-9/view", path: "store/notes/Kickoff" });
+const linked = await c.drive.link({ url: "https://drive.google.com/file/d/deck-9/view", path: "_content/notes/Kickoff" });
 JSON.stringify(linked)
-=> {"cardPath":"store/notes/Kickoff.glink.card","name":"Kickoff.pptx","mimeType":"application/vnd.ms-powerpoint"}
+=> {"cardPath":"_content/notes/Kickoff.glink.card","name":"Kickoff.pptx","mimeType":"application/vnd.ms-powerpoint"}
 ```
 
 Pointing a second card at something the mirror already speaks for is refused —
 one Drive ID, one card.
 
 ```ts continue
-await refusal(c.drive.link({ url: "https://drive.google.com/file/d/pdf-1/view", path: "store/notes/Scan" }))
-=> BAD_REQUEST: Drive item pdf-1 is already claimed by: store/drive/recipes/Scanpdf.glink.card — trash or move that card to put it somewhere else
+await refusal(c.drive.link({ url: "https://drive.google.com/file/d/pdf-1/view", path: "_content/notes/Scan" }))
+=> BAD_REQUEST: Drive item pdf-1 is already claimed by: _content/drive/recipes/Scanpdf.glink.card — trash or move that card to put it somewhere else
 ```
 
 ```ts cleanup
@@ -186,7 +186,7 @@ await box.cleanup();
 
 ## unmount stops the mirror and leaves every child in place
 
-Unmounting is `bbx rm` on the mount card. The card lands in `store/trash/` (where
+Unmounting is `bbx rm` on the mount card. The card lands in `_bookkeeping/trash/` (where
 it also becomes the tombstone that stops a parent mirror re-creating it) and the
 children stay exactly where they are — which is why `mounts` goes empty while
 the directory does not.
@@ -195,11 +195,11 @@ the directory does not.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 const c = caller(box.root, recipesDrive());
-await c.drive.mount({ url: "https://drive.google.com/drive/folders/folder-1", dir: "store/drive/recipes" });
+await c.drive.mount({ url: "https://drive.google.com/drive/folders/folder-1", dir: "_content/drive/recipes" });
 
-const removed = await c.drive.unmount({ cardPath: "store/drive/recipes/Recipes.gfolder.card" });
-JSON.stringify({ cardPath: removed.cardPath, trashed: removed.trashedTo.startsWith("store/trash/") })
-=> {"cardPath":"store/drive/recipes/Recipes.gfolder.card","trashed":true}
+const removed = await c.drive.unmount({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
+JSON.stringify({ cardPath: removed.cardPath, trashed: removed.trashedTo.startsWith("_bookkeeping/trash/") })
+=> {"cardPath":"_content/drive/recipes/Recipes.gfolder.card","trashed":true}
 ```
 
 ```ts continue
@@ -207,8 +207,8 @@ JSON.stringify((await c.drive.mounts()).mounts)
 => []
 
 // The Sheet and the pointer are untouched.
-JSON.stringify((await box.list()).split("\n").filter((p) => p.startsWith("store/drive/recipes/") && p.endsWith(".card")))
-=> ["store/drive/recipes/Budget_2026.gsheet.card","store/drive/recipes/Scanpdf.glink.card"]
+JSON.stringify((await box.list()).split("\n").filter((p) => p.startsWith("_content/drive/recipes/") && p.endsWith(".card")))
+=> ["_content/drive/recipes/Budget_2026.gsheet.card","_content/drive/recipes/Scanpdf.glink.card"]
 ```
 
 ```ts cleanup
@@ -227,14 +227,14 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 const c = caller(box.root, recipesDrive());
 
-await refusal(c.drive.mount({ url: "https://example.com/nope", dir: "store/drive/x" }))
+await refusal(c.drive.mount({ url: "https://example.com/nope", dir: "_content/drive/x" }))
 => BAD_REQUEST: Could not read a Drive ID from: https://example.com/nope — paste a Drive URL or the bare ID
 ```
 
 A Drive URL that is not a folder names the command that would work instead.
 
 ```ts continue
-await refusal(c.drive.mount({ url: "https://drive.google.com/file/d/pdf-1/view", dir: "store/drive/x" }))
+await refusal(c.drive.mount({ url: "https://drive.google.com/file/d/pdf-1/view", dir: "_content/drive/x" }))
 => BAD_REQUEST: Scan.pdf is a application/pdf, not a Drive folder — use `bbx drive add` to sync a Doc or Sheet, or `bbx drive link` to point at it
 ```
 
@@ -242,11 +242,11 @@ await refusal(c.drive.mount({ url: "https://drive.google.com/file/d/pdf-1/view",
 a stale page, or a mount someone removed in between.
 
 ```ts continue
-await refusal(c.drive.syncFolder({ cardPath: "store/drive/recipes/Missing.gfolder.card" }))
-=> BAD_REQUEST: store/drive/recipes/Missing.gfolder.card is not a Drive folder mount card
+await refusal(c.drive.syncFolder({ cardPath: "_content/drive/recipes/Missing.gfolder.card" }))
+=> BAD_REQUEST: _content/drive/recipes/Missing.gfolder.card is not a Drive folder mount card
 
-await refusal(c.drive.syncFolder({ cardPath: "store/notes/Plan.memo.card" }))
-=> BAD_REQUEST: store/notes/Plan.memo.card is not a Drive folder mount card
+await refusal(c.drive.syncFolder({ cardPath: "_content/notes/Plan.memo.card" }))
+=> BAD_REQUEST: _content/notes/Plan.memo.card is not a Drive folder mount card
 ```
 
 ## A path that climbs out of the box is refused before anything is written
@@ -272,10 +272,10 @@ that looks like an escape and is not.
 ```ts continue
 const rooted = await c.drive.mount({
   url: "https://drive.google.com/drive/folders/folder-1",
-  dir: "/store/drive/recipes",
+  dir: "/_content/drive/recipes",
 });
 rooted.cardPath
-=> store/drive/recipes/Recipes.gfolder.card
+=> _content/drive/recipes/Recipes.gfolder.card
 ```
 
 ```ts cleanup

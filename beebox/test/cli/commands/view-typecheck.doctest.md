@@ -11,9 +11,9 @@ import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { typecheckViews } from "../../../src/cli/commands/view-typecheck.js";
 
-// Views live at the package root (`<packageRoot>/src/views`) for a v2 box.
+// Views live at `<boxRoot>/src/views`.
 async function writeView(box, rel, content) {
-  const full = join(box.packageRoot, "src", "views", rel);
+  const full = join(box.root, "src", "views", rel);
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, content);
 }

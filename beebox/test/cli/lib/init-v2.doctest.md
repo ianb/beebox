@@ -1,17 +1,16 @@
-# Box Init Command: v2 (package-layout) scaffolding
+# Box Init Command: v3 (one-root) scaffolding
 
-`bbx init` on a path with no existing box now always scaffolds the v2 package
-layout (see "The box repository" in `docs/implemented-plans/boxes-as-packages-v2.md`):
-the target path becomes the PACKAGE root (`package.json`, `tsconfig.json`, a
-thin root `CLAUDE.md`, `.claude/`, `src/`), and the operational box lives at
-`<target>/content/`. v2 is the only box shape.
+`bbx init` on a path with no existing box scaffolds the one-root layout
+(`docs/plans/one-root-box-layout.md`): the target path becomes the ONE root
+— `package.json`, `tsconfig.json`, `.claude/`, `src/`, AND the operational
+areas (`_content/`, `_config/`, `_bookkeeping/`, `_publish/`, `_tmp/`) all
+live there together. shapeVersion 3 is the only box shape.
 
 This mirrors what `src/cli/commands/init.ts`'s action does, without going
 through Commander — same style as `test/cli/lib/init.doctest.md`'s `fullInit`
-helper for the legacy path. It deliberately skips `symlinkClaudeMemory` (the
-one installer with a REAL global side effect — it touches
-`~/.claude/projects/`), since a filesystem doctest shouldn't leave litter
-outside its own tmpdir.
+helper. It deliberately skips `symlinkClaudeMemory` (the one installer with a
+REAL global side effect — it touches `~/.claude/projects/`), since a
+filesystem doctest shouldn't leave litter outside its own tmpdir.
 
 ```ts setup
 import * as fs from "node:fs/promises";
@@ -29,7 +28,7 @@ import {
 import {
   detectBoxTarget,
   scaffoldPackageRoot,
-  scaffoldV2Box,
+  scaffoldBoxRoot,
   BoxPackageConflictError,
 } from "../../../src/core/box/package.js";
 import { generateRules } from "../../../src/core/init-rules.js";
@@ -44,12 +43,11 @@ import { parseFrontmatterObject } from "../../../src/cards/frontmatter.js";
 const execFileP = promisify(execFile);
 
 async function makeTmpDir() {
-  return fs.mkdtemp(path.join(os.tmpdir(), "bbx-init-v2-test-"));
+  return fs.mkdtemp(path.join(os.tmpdir(), "bbx-init-v3-test-"));
 }
 
-// Replicates cli/commands/init.ts's action: detect → scaffold the package
-// half (fresh only) → initBox the operational half → the installers → git
-// init + commit at the PACKAGE root (fresh only).
+// Replicates cli/commands/init.ts's action: detect → scaffold (fresh only) →
+// the installers → git init + commit at the box root (fresh only).
 //
 // The commit deliberately bypasses hooks (`--no-verify`), unlike production
 // `bbx init`: `installValidationHooks` embeds whichever `bbx` `resolveBbxBin()`
@@ -58,25 +56,24 @@ async function makeTmpDir() {
 // worktree; see `install-validation-hooks.ts`'s module doc). That main
 // checkout may not have this branch's fix yet, so letting the real
 // pre-commit hook fire here would make the doctest's pass/fail depend on
-// unrelated, unmerged state rather than the code under test. The "v2
-// git-hooks trap" section below verifies the hook's CONTENT statically
-// instead of executing it.
+// unrelated, unmerged state rather than the code under test. The hook's
+// CONTENT is verified statically instead of executing it.
 async function fullInit(targetPath) {
-  const { mode, boxRoot, packageRoot } = await detectBoxTarget(targetPath);
+  const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 
   let isUpdate;
   if (isFresh) {
     // Same shared builder cli/commands/init.ts's action uses: scaffold the
-    // package half + initBox({shapeVersion:2}) + node_modules/beebox.
-    await scaffoldV2Box(packageRoot, { deps: true });
+    // npm-package half + initBox + node_modules/beebox, all at boxRoot.
+    await scaffoldBoxRoot(boxRoot, { deps: true });
     isUpdate = false;
   } else {
     ({ isUpdate } = await initBox(boxRoot, { skipGit: true, branch: "main" }));
   }
 
-  if (isFresh && !(await isRepo(packageRoot))) {
-    await initRepo(packageRoot, "main");
+  if (isFresh && !(await isRepo(boxRoot))) {
+    await initRepo(boxRoot, "main");
   }
 
   await installProcedures(boxRoot);
@@ -88,15 +85,15 @@ async function fullInit(targetPath) {
   await installValidationHooks(boxRoot);
 
   if (isFresh) {
-    await stageAll(packageRoot);
+    await stageAll(boxRoot);
     await execFileP(
       "git",
       ["commit", "--no-verify", "-m", "Initialize Bee Box\n\nCreated-By: bbx init"],
-      { cwd: packageRoot }
+      { cwd: boxRoot }
     );
   }
 
-  return { mode, boxRoot, packageRoot, isUpdate };
+  return { mode, boxRoot, isUpdate };
 }
 
 async function readJson(p) {
@@ -113,19 +110,16 @@ async function exists(p) {
 }
 ```
 
-## Fresh init produces the v2 layout
+## Fresh init produces the v3 one-root layout
 
 ```ts
 const target = await makeTmpDir();
-const { mode, boxRoot, packageRoot } = await fullInit(target);
+const { mode, boxRoot } = await fullInit(target);
 
 mode
 => fresh
 
-boxRoot
-=> «*»/content
-
-packageRoot === target
+boxRoot === target
 => true
 ```
 
@@ -135,14 +129,14 @@ because it only spawns an agent once a human chat session has gone quiet — on 
 box nobody chats with, its scan precheck skips and it costs nothing:
 
 ```ts continue
-const seededScheduleNames = (await fs.readdir(path.join(boxRoot, "config/schedules")))
+const seededScheduleNames = (await fs.readdir(path.join(boxRoot, "_config/schedules")))
   .filter((name) => name.endsWith(".scheduled-script.card"))
   .map((name) => name.slice(0, -".scheduled-script.card".length))
   .sort();
 const enabledScheduleNames = [];
 const disabledScheduleNames = [];
 for (const name of seededScheduleNames) {
-  const content = await fs.readFile(path.join(boxRoot, "config/schedules", `${name}.scheduled-script.card`), "utf8");
+  const content = await fs.readFile(path.join(boxRoot, "_config/schedules", `${name}.scheduled-script.card`), "utf8");
   const fields = parseFrontmatterObject(content);
   if (fields === null) throw new Error(`Could not parse seeded schedule ${name}`);
   if (fields.enabled === false) disabledScheduleNames.push(name);
@@ -161,7 +155,7 @@ here an explicit opt-OUT of the retrospective, which the seeded default now
 leaves on:
 
 ```ts continue
-const retroPath = path.join(boxRoot, "config/schedules/process-retrospective.scheduled-script.card");
+const retroPath = path.join(boxRoot, "_config/schedules/process-retrospective.scheduled-script.card");
 const retroContent = await fs.readFile(retroPath, "utf8");
 await fs.writeFile(retroPath, retroContent.replace("---\n", "---\nenabled: false\n"));
 let reinstall: string[] = [];
@@ -179,20 +173,20 @@ try {
 => reinstall=none; retro=false
 ```
 
-The marker at `content/.beebox/box.json` declares `shapeVersion: 2`:
+The marker at `.beebox/box.json` declares `shapeVersion: 3`:
 
 ```ts continue
 const marker = await readJson(path.join(boxRoot, ".beebox/box.json"));
 marker.shapeVersion
-=> 2
+=> 3
 ```
 
-`package.json` at the package root names the package after its basename,
+`package.json` at the box root names the package after its basename,
 declares `beebox` as a dependency, and is a private ESM package:
 
 ```ts continue
-const pkg = await readJson(path.join(packageRoot, "package.json"));
-pkg.name === path.basename(packageRoot)
+const pkg = await readJson(path.join(boxRoot, "package.json"));
+pkg.name === path.basename(boxRoot)
 => true
 
 pkg.private
@@ -237,7 +231,7 @@ Object.keys(pkg.devDependencies).sort()
 `tsconfig.json` extends the shipped base and includes `src`:
 
 ```ts continue
-const tsconfig = await readJson(path.join(packageRoot, "tsconfig.json"));
+const tsconfig = await readJson(path.join(boxRoot, "tsconfig.json"));
 JSON.stringify(tsconfig)
 => {"extends":"beebox/tsconfig.base.json","include":["src"]}
 ```
@@ -249,9 +243,9 @@ No real install happened (no pnpm store dir), but the symlink target — the
 engine's own `PACKAGE_ROOT` — is real:
 
 ```ts continue
-const link = await fs.readlink(path.join(packageRoot, "node_modules", "beebox"));
+const link = await fs.readlink(path.join(boxRoot, "node_modules", "beebox"));
 
-await exists(path.join(packageRoot, "node_modules", ".pnpm"))
+await exists(path.join(boxRoot, "node_modules", ".pnpm"))
 => false
 
 await exists(link)
@@ -259,24 +253,24 @@ await exists(link)
 ```
 
 `src/schemas/`, `src/views/`, and `src/tricks/` exist with their `CLAUDE.md`
-scaffolds, path-adjusted for the package layout:
+scaffolds:
 
 ```ts continue
-const schemasGuide = await fs.readFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "utf-8");
+const schemasGuide = await fs.readFile(path.join(boxRoot, "src/schemas/CLAUDE.md"), "utf-8");
 schemasGuide.includes("src/schemas/")
 => true
 
-(await exists(path.join(packageRoot, "src/views/CLAUDE.md")))
+(await exists(path.join(boxRoot, "src/views/CLAUDE.md")))
 => true
 
-(await fs.readFile(path.join(packageRoot, "src/tricks/scripts/CLAUDE.md"), "utf-8")).includes("src/tricks/")
+(await fs.readFile(path.join(boxRoot, "src/tricks/scripts/CLAUDE.md"), "utf-8")).includes("src/tricks/")
 => true
 ```
 
-The v2 schemas guide teaches `import { z } from "beebox/schema"` (and
+The schemas guide teaches `import { z } from "beebox/schema"` (and
 `stringifyYaml` from the same specifier) — not the bare `zod`/`yaml`
-specifiers, which a v2 box's `src/schemas/` can't resolve (only
-`beebox/*` resolves there, via the package's own `node_modules`; see
+specifiers, which `src/schemas/` can't resolve (only `beebox/*` resolves
+there, via the box's own `node_modules`; see
 `test/schemas/box-schemas-v2.doctest.md`'s "bare zod import fails" case):
 
 ```ts continue
@@ -290,58 +284,53 @@ schemasGuide.includes('from "yaml"')
 => false
 ```
 
-`.claude/` lives at the package root, not under `content/` — rules, skills,
-and the validation hooks all landed there:
+`.claude/` lives at the (one) box root — rules, skills, and the validation
+hooks all landed there:
 
 ```ts continue
-(await exists(path.join(boxRoot, ".claude", "rules")))
-=> false
-
-(await exists(path.join(packageRoot, ".claude", "rules", "card-memo.md")))
+(await exists(path.join(boxRoot, ".claude", "rules", "card-memo.md")))
 => true
 
-(await exists(path.join(packageRoot, ".claude", "skills", "views", "SKILL.md")))
+(await exists(path.join(boxRoot, ".claude", "skills", "views", "SKILL.md")))
 => true
 ```
 
-The generated `connector-calendar` rule is box-root ANCHORED (unlike the
-`**/*.<type>.card` card rules, which match at any depth regardless of
-shape) — its `paths:` glob needs a `content/` prefix so it still matches a
-real `.ics` file, which now lives one level deeper than `.claude/rules`
-itself:
+The generated `connector-calendar` rule's `paths:` glob is `_content/calendar/…` — the underscore area, not the legacy `store/`:
 
 ```ts continue
 const calendarRule = await fs.readFile(
-  path.join(packageRoot, ".claude/rules/connector-calendar.md"),
+  path.join(boxRoot, ".claude/rules/connector-calendar.md"),
   "utf-8"
 );
-calendarRule.includes('"content/store/calendar/**/*.ics"')
+calendarRule.includes('"_content/calendar/**/*.ics"')
 => true
 ```
 
-A thin root `CLAUDE.md` and a root `.gitignore` (`node_modules/`) exist
-alongside the package files:
+A merged root `.gitignore` (covering both the npm namespace and the
+operational rules) exists — `fullInit` here doesn't call `generateDocs`, so
+it doesn't produce a root `CLAUDE.md` (that's `ensureAgentContext`'s job,
+covered by `test/core/agent-context-mirrors.doctest.md`):
 
 ```ts continue
-(await fs.readFile(path.join(packageRoot, "CLAUDE.md"), "utf-8")).includes("content/")
+const gitignore = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
+gitignore.includes("node_modules/")
 => true
 
-(await fs.readFile(path.join(packageRoot, ".gitignore"), "utf-8")).includes("node_modules/")
+gitignore.includes("_tmp/")
 => true
 ```
 
-Git lives at the package root, with one initial commit covering the whole
-tree (package files AND `content/`):
+Git lives at the box root, with one initial commit covering the whole tree:
 
 ```ts continue
-await isRepo(packageRoot)
+await isRepo(boxRoot)
 => true
 
-const status = await getStatus(packageRoot);
+const status = await getStatus(boxRoot);
 status.clean
 => true
 
-const log = await getLog(packageRoot, 5);
+const log = await getLog(boxRoot, 5);
 log.length
 => 1
 
@@ -356,7 +345,7 @@ await fs.rm(target, { recursive: true, force: true });
 ## `scaffoldPackageRoot` refuses to clobber an existing `package.json`
 
 A directory that already has a `package.json` (an unrelated project, or a
-box package that's already been scaffolded) is a hard conflict — fresh `bbx
+box that's already been scaffolded) is a hard conflict — fresh `bbx
 init` must not silently overwrite it:
 
 ```ts
@@ -378,27 +367,18 @@ err.message.includes(conflictDir)
 await fs.rm(conflictDir, { recursive: true, force: true });
 ```
 
-When `package.json` is absent but the other scaffold files
-(`tsconfig.json`, `CLAUDE.md`, `.gitignore`) already exist, `scaffoldPackageRoot`
-leaves their content untouched — those three are create-if-absent, not
-hard conflicts:
+When `package.json` is absent but `tsconfig.json` already exists,
+`scaffoldPackageRoot` leaves its content untouched — that file is
+create-if-absent, not a hard conflict:
 
 ```ts
 const partialDir = await makeTmpDir();
 await fs.writeFile(path.join(partialDir, "tsconfig.json"), '{"extends":"./custom.json"}');
-await fs.writeFile(path.join(partialDir, "CLAUDE.md"), "# Custom instructions\n");
-await fs.writeFile(path.join(partialDir, ".gitignore"), "*.log\n");
 
 await scaffoldPackageRoot(partialDir);
 
 (await fs.readFile(path.join(partialDir, "tsconfig.json"), "utf-8"))
 => {"extends":"./custom.json"}
-
-(await fs.readFile(path.join(partialDir, "CLAUDE.md"), "utf-8"))
-=> # Custom instructions
-
-(await fs.readFile(path.join(partialDir, ".gitignore"), "utf-8"))
-=> *.log
 ```
 
 `package.json` itself was still created fresh, since it was the one file
@@ -414,51 +394,6 @@ partialPkg.name === path.basename(partialDir)
 await fs.rm(partialDir, { recursive: true, force: true });
 ```
 
-## The v2 git-hooks trap: hooks `cd` into `content/`
-
-`.git` sits at the package root, but git always invokes hooks with cwd = the
-package root too (regardless of where `git commit` was run from) — so a hook
-that just ran `bbx validate --pre-commit` without first `cd`-ing into `content/`
-would never find `content/.beebox/box.json` (`requireBoxRoot()` only walks UP). Both
-the pre-commit and post-commit hooks bake in an explicit `cd "content"`
-before invoking `bbx`:
-
-```ts
-const target = await makeTmpDir();
-const { packageRoot } = await fullInit(target);
-
-const preCommit = await fs.readFile(path.join(packageRoot, ".git/hooks/pre-commit"), "utf-8");
-preCommit.includes('cd "content"')
-=> true
-
-const postCommit = await fs.readFile(path.join(packageRoot, ".git/hooks/post-commit"), "utf-8");
-postCommit.includes('cd "content"')
-=> true
-```
-
-The `.claude/settings.json` PostToolUse hook needs no such fix — Claude Code
-invokes it with cwd = the operating agent's own cwd (`content/` or a
-subdirectory), which already resolves correctly without a `cd`:
-
-```ts continue
-const settings = await readJson(path.join(packageRoot, ".claude/settings.json"));
-settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
-=> true
-```
-
-(A live end-to-end run of the installed pre-commit hook via a real `git
-commit` isn't exercised here — spawning the real `bbx` binary through tsx from
-inside a doctest is slow and an unnecessary source of flakiness for what the
-static hook-body assertions above already prove. The hooks' actual git
-plumbing — `git diff --cached --name-only --relative`, which is what makes
-`listStagedCards`/`listStagedMarkdown` report `content/`-relative paths
-correctly once cwd has already been `cd`'d there — is exercised for both
-shapes by the pre-existing `validate.ts`/`validate-markdown.ts` doctests.)
-
-```ts cleanup
-await fs.rm(target, { recursive: true, force: true });
-```
-
 ## `getBoxShape` resolves the fresh box, and its schemas load natively
 
 ```ts
@@ -467,20 +402,20 @@ const { boxRoot } = await fullInit(target);
 
 const shape = await getBoxShape(boxRoot);
 shape.shapeVersion
-=> 2
+=> 3
 
 shape.boxRoot === boxRoot
 => true
 ```
 
-A schema dropped into `src/schemas/` (the package root's code dir) loads via
-native `node_modules` resolution — the same `node_modules/beebox`
-symlink `scaffoldPackageRoot` created above serves `beebox/cards` and
-`beebox/schema`, no resolve-hook fakery:
+A schema dropped into `src/schemas/` loads via native `node_modules`
+resolution — the same `node_modules/beebox` symlink `scaffoldPackageRoot`
+created above serves `beebox/cards` and `beebox/schema`, no resolve-hook
+fakery:
 
 ```ts continue
 await fs.writeFile(
-  path.join(shape.packageRoot, "src/schemas/widget.ts"),
+  path.join(shape.boxRoot, "src/schemas/widget.ts"),
   `import { body, cardSchema } from "beebox/cards";
 import { z } from "beebox/schema";
 

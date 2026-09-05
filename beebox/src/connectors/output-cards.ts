@@ -1,5 +1,5 @@
 /**
- * Shared outbound-delivery loop for `box/output/*.card` cards: scan for
+ * Shared outbound-delivery loop for `_bookkeeping/output/*.card` cards: scan for
  * pending cards of one type, hand each to a caller-supplied `send` step, and
  * delete (on success) or stamp `failed` and leave in place (on failure) —
  * the lifecycle documented on telegram-message.ts and web-push.ts. One
@@ -17,8 +17,9 @@ import { cardFields, parseCardText, serializeCardText } from "../core/card-io.js
 import type { CardSchema } from "../cards/index.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
 import { stageAndCommitPaths } from "../lib/git.js";
+import { BOX_DIRS } from "../lib/paths.js";
 
-const OUTPUT_DIR = "box/output";
+const OUTPUT_DIR = BOX_DIRS.output;
 
 /** The minimal shape `deliverPendingOutputCards` needs to read and stamp a card. */
 export interface DeliverableCardFields {
@@ -50,7 +51,7 @@ export interface DeliverPendingOutputCardsOptions<TFields extends DeliverableCar
 }
 
 /**
- * Deliver all pending cards of one type in box/output/. Returns the relative
+ * Deliver all pending cards of one type in _bookkeeping/output/. Returns the relative
  * paths of cards that were delivered (and deleted).
  */
 export async function deliverPendingOutputCards<TFields extends DeliverableCardFields>(

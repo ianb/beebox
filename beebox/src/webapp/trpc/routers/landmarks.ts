@@ -12,6 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, ownerProcedure } from "../trpc.js";
 import {
   resolveLandmark,
@@ -23,9 +24,11 @@ import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 import type { LandmarkProblem } from "../../../core/landmark/summaries.js";
 import { parseLandmarkFields } from "../../../schemas/landmark.js";
 import { readLandmarkSymbol } from "../../../core/landmark/symbol.js";
+import { normalizeLandmarkDir, landmarkScanRelDir } from "../../../core/landmark/root-dir.js";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { loadHqDictationDefault } from "../../../core/box/config.js";
 import { setLandmarkHqPreference } from "../../../core/landmark/hq-preference.js";
+import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../../../lib/box-namespace-resolve.js";
 
 export interface LandmarkPayload {
   /** Box-relative path of the landmark card. */
@@ -66,12 +69,28 @@ type LandmarkLoad =
 /**
  * Read one `*.landmark.card` file and resolve it into a payload.
  * `relPath` is box-relative.
+ *
+ * Finding 2 (round 4 hardening): a glob match is just a name that satisfied
+ * `**\/*.landmark.card` on disk — it says nothing about where the path
+ * actually RESOLVES to. `_content/A.landmark.card -> ../src/private.landmark.card`
+ * matches the glob and reads back as a real landmark, but its bytes are
+ * `src/private.landmark.card` — outside every underscore area. Every landmark
+ * card this router reads goes through `resolveBoxNamespacePathOnDisk` (read
+ * mode) FIRST, so a symlinked card whose target escapes the box namespace is
+ * refused before `fs.readFile` ever follows the link — the same fence
+ * `forDir`/`list`'s directory-level checks already apply to the scan ROOT,
+ * now applied to each individual card path too.
  */
 async function loadLandmarkPayload(
   relPath: string,
   { boxRoot }: { boxRoot: string },
 ): Promise<LandmarkLoad> {
-  const absPath = path.join(boxRoot, relPath);
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: relPath, mode: "read" });
+  if (ns === null) {
+    console.warn(`landmarks: ${relPath} is outside the box namespace (symlink escape?) — skipping`);
+    return { status: "unreadable" };
+  }
+  const absPath = ns.resolved;
   let fields;
   try {
     const content = await fs.readFile(absPath, "utf-8");
@@ -83,7 +102,7 @@ async function loadLandmarkPayload(
   if (fields === null) return { status: "unparsed" };
 
   const navigation = fields.navigation;
-  const dir = path.dirname(relPath);
+  const dir = normalizeLandmarkDir(path.dirname(relPath));
   const landmarkDir = path.dirname(absPath);
   const { links, groups } = await resolveLandmark(navigation, {
     landmarkDir,
@@ -96,7 +115,7 @@ async function loadLandmarkPayload(
     status: "ok",
     payload: {
       path: relPath,
-      dir: dir === "." ? "" : dir,
+      dir,
       // Filename-basename fallback, matching `loadLandmarkSummaries`: a
       // label-less card (e.g. a destinations-only landmark) must never ship
       // an empty label — the app bar renders it as a blank pill face.
@@ -112,11 +131,39 @@ async function loadLandmarkPayload(
   };
 }
 
+/**
+ * Finding 3 (Track E hardening review, round 3): the tRPC-level `dir`
+ * validation below (`!d.startsWith("/") && !d.split("/").includes("..")`)
+ * rejects an escaping form but NOT a directory outside every underscore
+ * area — `dir: "src/templates"` passes it and named a real on-disk
+ * directory that `setHqPreference` then wrote a landmark card into. Resolve
+ * the logical `dir` to its PHYSICAL box-relative directory
+ * (`landmarkScanRelDir` — "" maps to the root scope's real home,
+ * `_content/`) and require it inside the box namespace, checked on disk (so
+ * a namespace-looking directory that's actually a symlink out doesn't pass
+ * either). `mode: "write"` for the mutation, `"read"` for the two queries.
+ */
+async function assertLandmarkDirInNamespace(params: {
+  boxRoot: string;
+  dir: string;
+  mode: BoxNamespaceAccessMode;
+}): Promise<void> {
+  const ns = await resolveBoxNamespacePathOnDisk({
+    boxRoot: params.boxRoot,
+    rawPath: landmarkScanRelDir(params.dir),
+    mode: params.mode,
+  });
+  if (ns === null) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: `dir is outside the box namespace: ${params.dir}` });
+  }
+}
+
 export const landmarksRouter = router({
   hqPreferences: ownerProcedure
     .input(z.object({ dir: z.string().refine((d) => !d.startsWith("/") && !d.split("/").includes("..")).nullable() }))
     .query(async ({ ctx, input }) => {
-      const pattern = input.dir === null ? null : input.dir === "" ? "*.landmark.card" : `${input.dir}/*.landmark.card`;
+      if (input.dir !== null) await assertLandmarkDirInNamespace({ boxRoot: ctx.boxRoot, dir: input.dir, mode: "read" });
+      const pattern = input.dir === null ? null : `${landmarkScanRelDir(input.dir)}/*.landmark.card`;
       const matches = pattern === null ? [] : await glob(pattern, { cwd: ctx.boxRoot, nodir: true });
       const relPath = matches.toSorted()[0];
       let landmark: "inherit" | "on" | "off" = "inherit";
@@ -133,11 +180,14 @@ export const landmarksRouter = router({
       dir: z.string().refine((d) => !d.startsWith("/") && !d.split("/").includes("..")),
       value: z.enum(["inherit", "on", "off"]),
     }))
-    .mutation(async ({ ctx, input }) => setLandmarkHqPreference({
-      boxRoot: ctx.boxRoot,
-      contextDir: input.dir,
-      value: input.value,
-    })),
+    .mutation(async ({ ctx, input }) => {
+      await assertLandmarkDirInNamespace({ boxRoot: ctx.boxRoot, dir: input.dir, mode: "write" });
+      return setLandmarkHqPreference({
+        boxRoot: ctx.boxRoot,
+        contextDir: input.dir,
+        value: input.value,
+      });
+    }),
   list: publicProcedure.query(async ({ ctx }): Promise<{
     landmarks: LandmarkPayload[];
     problems: LandmarkProblem[];
@@ -145,7 +195,7 @@ export const landmarksRouter = router({
     const matches = await glob("**/*.landmark.card", {
       cwd: ctx.boxRoot,
       nodir: true,
-      ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+      ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
     });
 
     const payloads: LandmarkPayload[] = [];
@@ -213,11 +263,12 @@ export const landmarksRouter = router({
       }),
     )
     .query(async ({ ctx, input }): Promise<{ landmark: LandmarkPayload | null }> => {
-      const pattern = input.dir === "" ? "*.landmark.card" : `${input.dir}/*.landmark.card`;
+      await assertLandmarkDirInNamespace({ boxRoot: ctx.boxRoot, dir: input.dir, mode: "read" });
+      const pattern = `${landmarkScanRelDir(input.dir)}/*.landmark.card`;
       const matches = await glob(pattern, {
         cwd: ctx.boxRoot,
         nodir: true,
-        ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+        ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
       });
       // One landmark per directory by convention; take the first match.
       const relPath = matches.toSorted()[0];

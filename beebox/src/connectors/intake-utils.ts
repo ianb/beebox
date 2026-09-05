@@ -24,6 +24,7 @@ import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
 import { withFileLock } from "../lib/file-lock.js";
 import { withCardLock } from "../lib/card-lock.js";
+import { getBoxDir } from "../lib/paths.js";
 import { parseFrontmatterObject, renderFrontmatterBlock } from "../cards/index.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
 import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";
@@ -74,7 +75,7 @@ async function createOrAppendIntakeJobLocked(
   opts: IntakeJobOptions,
   safeSource: string,
 ): Promise<string> {
-  const jobsDir = path.join(opts.boxRoot, "box/jobs");
+  const jobsDir = getBoxDir(opts.boxRoot, "jobs");
   await fs.mkdir(jobsDir, { recursive: true });
 
   // Look for an existing pending intake job from the same source

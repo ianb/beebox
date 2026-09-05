@@ -21,7 +21,7 @@ const CONTENT_GLOB_IGNORE = [
   "**/.pnpm/**",
   "**/.claude/**",
   "**/.beebox/**",
-  "docs/generated/**",
+  "_content/docs/generated/**",
 ];
 
 // A markdown link/image whose target uses the `view:` scheme:

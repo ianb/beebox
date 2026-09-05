@@ -39,7 +39,7 @@ export interface FolderSyncDeps {
   /** Drop retained transient hashes before a fresh mount of an old Drive ID. */
   forgetFileState(driveId: string): void;
   /**
-   * `bbx rm` for one card: moves it and its attach scope to `store/trash/`, and
+   * `bbx rm` for one card: moves it and its attach scope to `_bookkeeping/trash/`, and
    * records the Drive ID as connector-trashed so a restore on Drive brings the
    * card back (a `bbx rm` tombstone stays durable).
    */

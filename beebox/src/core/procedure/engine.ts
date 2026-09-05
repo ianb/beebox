@@ -28,6 +28,7 @@ import { buildInitialRunCard, updateRunCardStatus } from "./engine-run-card.js";
 import { runSteps, finalizeRun } from "./engine-orchestrate.js";
 import { resolveRunDir } from "./engine-query.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { getBoxDir } from "../../lib/paths.js";
 
 export type { AgentFactory } from "./engine-types.js";
 export type {
@@ -59,10 +60,9 @@ function resolveProcedureCardPath(boxRoot: string, procedureNameOrPath: string):
       ? procedureNameOrPath
       : path.join(boxRoot, procedureNameOrPath);
   }
-  // Bare name → config/procedures/<name>.procedure.card
+  // Bare name → _config/procedures/<name>.procedure.card
   return path.join(
-    boxRoot,
-    "config/procedures",
+    getBoxDir(boxRoot, "procedures"),
     `${procedureNameOrPath}.procedure.card`
   );
 }
@@ -146,7 +146,7 @@ export async function startProcedure(
     .replace("T", "T")
     .slice(0, 15);
   const runDirName = `${procedureName}_${timestamp}`;
-  const runDir = path.join(boxRoot, "procedure/runs", runDirName);
+  const runDir = path.join(getBoxDir(boxRoot, "procedureRuns"), runDirName);
   await fs.mkdir(runDir, { recursive: true });
 
   const runCardPath = path.join(runDir, "run.procedure-run.card");

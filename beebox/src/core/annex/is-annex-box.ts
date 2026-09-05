@@ -122,10 +122,10 @@ export async function isAnnexInitialized(repoRoot: string): Promise<boolean> {
  * would be tracked by nothing and fail at commit, so the honest response is to
  * refuse the work rather than accept it and lose it.
  *
- * @param boxRoot - The operational box root (`<packageRoot>/content`)
+ * @param boxRoot - The box root
  */
 export async function isAnnexBox(boxRoot: string): Promise<boolean> {
   const shape = await getBoxShape(boxRoot);
-  if (!(await isAnnexInitialized(shape.packageRoot))) return false;
+  if (!(await isAnnexInitialized(shape.boxRoot))) return false;
   return !(await gitignoreIgnoresAssets(boxRoot));
 }

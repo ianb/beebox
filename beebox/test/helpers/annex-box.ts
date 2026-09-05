@@ -18,8 +18,8 @@ import { join } from "node:path";
 import { unignoreGitignore } from "../../src/core/commands/attachments-gitignore.js";
 import { invariant } from "../../src/lib/invariant.js";
 
-export async function makeBoxAnnexShaped(opts: { packageRoot: string; boxRoot: string }): Promise<void> {
-  await mkdir(join(opts.packageRoot, ".git", "annex", "objects"), { recursive: true });
-  const outcome = await unignoreGitignore(opts.boxRoot);
+export async function makeBoxAnnexShaped(boxRoot: string): Promise<void> {
+  await mkdir(join(boxRoot, ".git", "annex", "objects"), { recursive: true });
+  const outcome = await unignoreGitignore(boxRoot);
   invariant(outcome.strayRules.length === 0, `temp box could not be un-ignored: ${outcome.message}`);
 }

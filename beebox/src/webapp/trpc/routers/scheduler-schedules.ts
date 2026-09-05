@@ -14,6 +14,7 @@ import {
   type ScriptState,
 } from "../../../core/schedule/state.js";
 import { describeCadence } from "../../../core/schedule/describe.js";
+import { getBoxDir } from "../../../lib/paths.js";
 
 export interface ScheduleEntry {
   name: string;
@@ -128,7 +129,7 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
 
 /** List all schedule cards in a box, parsing each into a resolved entry. */
 export async function listSchedules(boxRoot: string): Promise<ScheduleEntry[]> {
-  const schedulesDir = path.join(boxRoot, "config/schedules");
+  const schedulesDir = getBoxDir(boxRoot, "schedules");
 
   let files: string[];
   try {
