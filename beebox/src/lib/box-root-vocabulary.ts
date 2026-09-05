@@ -51,5 +51,6 @@ export const BOX_ROOT_VOCABULARY = [
   // it, `one-root-run.ts`'s migration cleans up a leftover one, and a stray
   // one on a v3 box is correctly still a stray.
   { name: ".bbx-serve.pid", kind: "tooling" },
+  { name: ".bbx-maps-state.json", kind: "tooling" },
   { name: ".bbx-reactor.lock", kind: "tooling" },
 ] as const satisfies readonly BoxRootVocabularyEntry[];

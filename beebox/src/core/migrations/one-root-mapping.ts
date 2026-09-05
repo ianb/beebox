@@ -126,6 +126,9 @@ const V2_ROOT_FILE_TARGETS: Readonly<Record<string, string>> = {
   "briefing.md": "_content/briefing.md",
   "Box.landmark.card": "_content/Box.landmark.card",
   "MAP.md": "_content/MAP.md",
+  // The maps-state cache (`MAP_STATE_FILE`, maps/state.ts) lives at the
+  // operational root in both layouts — content root in v2, box root in v3.
+  ".bbx-maps-state.json": ".bbx-maps-state.json",
 };
 
 /**
