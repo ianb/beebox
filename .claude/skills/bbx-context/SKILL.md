@@ -62,7 +62,7 @@ true on every turn.
 
 When the root `CLAUDE.md` grows (the `claude-md-size` lint warns at ~12k chars),
 **don't just tolerate it — route the fat out.** The full trimming playbook lives
-in **`docs/generated/reducing-claude-md.md`** (the lint points there); the spine
+in **`node_modules/beebox/box-docs/reducing-claude-md.md`** (the lint points there); the spine
 is one test applied to every line:
 
 > **"If I deleted this line, would the agent start making a mistake it doesn't

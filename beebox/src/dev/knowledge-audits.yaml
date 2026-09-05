@@ -199,7 +199,7 @@ tests:
       resulting tab-arrangement card. How do you represent moving and closing
       tabs, and what happens when the proposal is ready?
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-tab-arrangement.md"]
+    should_read: ["node_modules/beebox/box-docs/card-tab-arrangement.md"]
     watch_for: >
       Preserves every original per-tab UUID exactly once in the proposed
       windows, additionally lists deleted UUIDs in close without removing them
@@ -216,7 +216,7 @@ tests:
   - id: gmail-tracked-subset
     prompt: "Do the email cards in this box represent all of Gmail? How do you reach mail that is not present locally?"
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-email-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-email-thread.md"]
     watch_for: "Says cards are a tracked subset and uses the connector gws surface for other mail"
     correct_contains: ["tracked", "bbx connector gmail gws"]
     tags: [gmail, cards, connectors]
@@ -224,7 +224,7 @@ tests:
   - id: gmail-track-thread
     prompt: "You found one useful Gmail thread that is not in the box. How do you add it to the working set, and what happens afterward?"
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-email-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-email-thread.md"]
     watch_for: "Uses the explicit track command with a thread ID and says regular sync keeps the resulting card current"
     correct_contains: ["bbx connector gmail track", "sync"]
     tags: [gmail, cards, connectors]
@@ -232,7 +232,7 @@ tests:
   - id: gmail-delete-card
     prompt: "What happens in Gmail if I delete or trash a tracked email-thread card?"
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-email-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-email-thread.md"]
     watch_for: "Says card deletion stops tracking but does not delete the remote Gmail thread"
     correct_contains: ["stops tracking", "does not delete"]
     tags: [gmail, cards, lifecycle]
@@ -240,7 +240,7 @@ tests:
   - id: gmail-rule-procedure
     prompt: "Where do I configure a procedure to react to newly matching Gmail, and can it avoid starting an agent when a deterministic check finds nothing?"
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-email-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-email-thread.md"]
     watch_for: "Names _config/connectors/gmail.json rules and says a procedure shell precheck can skip before an agent step"
     correct_contains: ["_config/connectors/gmail.json", "precheck"]
     tags: [gmail, connectors, procedures]
@@ -248,7 +248,7 @@ tests:
   - id: gmail-gws-safety
     prompt: "Can you send, relabel, trash, or delete Gmail through bbx connector gmail gws?"
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-email-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-email-thread.md"]
     watch_for: "Says the passthrough is read-only and rejects Gmail mutations"
     correct_contains: ["read-only"]
     tags: [gmail, connectors, safety]
@@ -437,7 +437,7 @@ tests:
   # Status (2026-07-30): all 3 pass first run against the test1 clone, no
   # guidance changes needed. links-always-box-root and attach-is-the-exception
   # answered with 0 reads / 0 searches (49k / 43k ctx). landmark-ref-box-root
-  # passes but read _content/docs/generated/card-landmark.md first (5 turns) — weakest of
+  # passes but read node_modules/beebox/box-docs/card-landmark.md first (5 turns) — weakest of
   # the three; it recalls the box-path rule but verifies the links[] field shape,
   # so re-check it if the landmark schema docs move.
   - id: links-always-box-root
@@ -592,7 +592,7 @@ tests:
     expected_level: knows_about
     watch_for: "Distinguishes the capture/upload/import timestamp in filename.captured from the photo's original timestamp in exif.date"
     should_read_any:
-      - "_content/docs/generated/card-image.md"
+      - "node_modules/beebox/box-docs/card-image.md"
       - "beebox-rule-card-image/SKILL.md"
     correct_contains: ["filename.captured", "exif.date"]
     correct_matches:
@@ -861,7 +861,7 @@ tests:
   - id: list-connectors
     prompt: "What connectors are configured for this box?"
     expected_level: discoverable
-    watch_for: "Explores _config/connectors/ or reads _content/docs/generated/connectors.md"
+    watch_for: "Explores _config/connectors/ or reads node_modules/beebox/box-docs/connectors.md"
     tags: [connectors]
 
   - id: rss-to-inbox-flow
@@ -890,7 +890,7 @@ tests:
   - id: how-schedules-work
     prompt: "How do scheduled tasks work in this box?"
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-scheduled-script.md"]
+    should_read: ["node_modules/beebox/box-docs/card-scheduled-script.md"]
     watch_for: "Loads the on-demand schedule guidance and describes the scheduled mechanism"
     tags: [schedules]
 
@@ -985,7 +985,7 @@ tests:
     prompt: "I have a chat-thread card with some messages. How do I find which messages are new?"
     expected_level: knows_about
     watch_for: "Describes scanning backward for the last kind: seen or kind: message with sender: agent"
-    should_read: ["_content/docs/generated/card-chat-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-chat-thread.md"]
     correct_contains: ["seen", "agent"]
     tags: [chat, processing]
 
@@ -1000,7 +1000,7 @@ tests:
     prompt: "When processing a chat-thread card, how can I tell the system to re-invoke me later if no new messages arrive?"
     expected_level: knows_about
     watch_for: "Mentions the callback-in field on a kind: seen entry"
-    should_read: ["_content/docs/generated/card-chat-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-chat-thread.md"]
     correct_contains: ["callback-in"]
     tags: [chat, processing]
 
@@ -1034,7 +1034,7 @@ tests:
     prompt: "I have a chat job card. Walk me through how to process it."
     expected_level: knows_about
     watch_for: "Reads job, follows thread ref, finds new messages, responds or acknowledges, commits, finishes"
-    should_read: ["_content/docs/generated/card-chat-job.md"]
+    should_read: ["node_modules/beebox/box-docs/card-chat-job.md"]
     correct_contains: ["thread", "bbx finish"]
     tags: [chat, jobs]
 
@@ -1042,7 +1042,7 @@ tests:
     prompt: "After I process a chat thread, what must be true about the last element?"
     expected_level: knows_about
     watch_for: "States the last entry must be exactly one appended kind: seen or kind: message with sender: agent"
-    should_read: ["_content/docs/generated/card-chat-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-chat-thread.md"]
     correct_contains: ["seen", "agent"]
     tags: [chat, processing]
 
@@ -1056,7 +1056,7 @@ tests:
     prompt: "How do I know who's in a chat thread?"
     expected_level: knows_about
     watch_for: "Mentions <participants> element with <person ref='people/...'> references"
-    should_read: ["_content/docs/generated/card-chat-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-chat-thread.md"]
     correct_contains: ["participants"]
     tags: [chat, processing]
 
@@ -1064,7 +1064,7 @@ tests:
     prompt: "Is there any per-chat configuration for how I should behave in a specific chat thread?"
     expected_level: knows_about
     watch_for: "Mentions looking for a chat.guide.card in the thread directory"
-    should_read: ["_content/docs/generated/card-chat-thread.md"]
+    should_read: ["node_modules/beebox/box-docs/card-chat-thread.md"]
     correct_contains: ["guide"]
     tags: [chat, guides]
 
@@ -1730,9 +1730,9 @@ tests:
   - id: chat-voice-hard-override
     prompt: "You're replying in chat, and one sentence in your response needs to be spoken with a completely different delivery than your usual warm, unhurried style — sharp, urgent, clipped, for an emergency. You know you can add delivery instructions to a <speech> tag, but those normally combine with the personality card's base speaking instructions, and the warm style would bleed through. How do you fully replace the base speaking instructions for just that one <speech> segment?"
     expected_level: knows_about
-    watch_for: "Reads _content/docs/generated/chat-voice.md. Uses override-instructions=\"1\" along with nested <instructions>. Recognizes the distinction between appending (default) and replacing."
+    watch_for: "Reads node_modules/beebox/box-docs/chat-voice.md. Uses override-instructions=\"1\" along with nested <instructions>. Recognizes the distinction between appending (default) and replacing."
     correct_contains: ["override-instructions"]
-    should_read: ["_content/docs/generated/chat-voice.md"]
+    should_read: ["node_modules/beebox/box-docs/chat-voice.md"]
     tags: [chat, voice]
     notes: >
       This tests the hard-override distinction vs. simple additive instructions.
@@ -2203,7 +2203,7 @@ tests:
     prompt: "Show me what a draft reply email card looks like — what XML do I write?"
     expected_level: knows_about
     watch_for: >
-      Reads _content/docs/generated/card-email-outbound.md (or schema source) and
+      Reads node_modules/beebox/box-docs/card-email-outbound.md (or schema source) and
       shows <email-outbound> with <to>, <subject>, <body>, and
       <in-reply-to ref="..." /> for replies.
     correct_contains: ["email-outbound"]
@@ -2259,13 +2259,13 @@ tests:
   # The agent should know they exist and what they're for, but should
   # NOT freelance creation. Curation criteria live in
   # docs/landmark-curation.md; the schema reference is at
-  # _content/docs/generated/card-landmark.md.
+  # node_modules/beebox/box-docs/card-landmark.md.
   #
   # Status (2026-07-03): all 8 pass. The curation trio + dont-create-quietly had
   # should_read pointing at docs/landmark-curation.md, which is a DEV-REPO doc not
   # regenerated into the box — a guaranteed false-fail. Dropped those (curation
   # knowledge is in the always-on guide; the agents answer correctly) and
-  # repointed dont-create-quietly to the real _content/docs/generated/card-landmark.md.
+  # repointed dont-create-quietly to the real node_modules/beebox/box-docs/card-landmark.md.
   # landmark-roles: routing role is now `destinations:` (was XML <triage-destination>).
   #
   # Status (2026-05-04): All 7 pass. landmarks-vs-directories initially
@@ -2341,8 +2341,8 @@ tests:
       Confirms the user's intent and the spot before creating. May
       create the landmark since the user explicitly asked, but should
       NOT proceed without confirming the symbol/label or hand-waving
-      the curated links. Reads _content/docs/generated/card-landmark.md before writing.
-    should_read: ["_content/docs/generated/card-landmark.md"]
+      the curated links. Reads node_modules/beebox/box-docs/card-landmark.md before writing.
+    should_read: ["node_modules/beebox/box-docs/card-landmark.md"]
     tags: [landmarks, curation]
     notes: >
       Even with explicit user direction, creation is editorial work —
@@ -2354,10 +2354,10 @@ tests:
     prompt: "When I add a hand-listed link inside a landmark card, what attribute names the target?"
     expected_level: knows_about
     watch_for: >
-      Reads _content/docs/generated/card-landmark.md and answers `ref` —
+      Reads node_modules/beebox/box-docs/card-landmark.md and answers `ref` —
       not href, not path, not url, not target. May also note that
       templates inside <expand> use template-ref instead.
-    should_read: ["_content/docs/generated/card-landmark.md"]
+    should_read: ["node_modules/beebox/box-docs/card-landmark.md"]
     correct_contains: ["ref"]
     tags: [landmarks, schemas]
 
@@ -2365,12 +2365,12 @@ tests:
     prompt: "I want a landmark that automatically lists every recipe in my recipes directory. How do I write the <link> inside the <expand> template?"
     expected_level: knows_about
     watch_for: >
-      Reads _content/docs/generated/card-landmark.md and uses
+      Reads node_modules/beebox/box-docs/card-landmark.md and uses
       `template-ref="${path}"` (NOT `ref="${path}"`) inside the
       template. Should explain or imply why: ref is for literal
       paths the validator can resolve, template-ref carries
       placeholders that get substituted at render time.
-    should_read: ["_content/docs/generated/card-landmark.md"]
+    should_read: ["node_modules/beebox/box-docs/card-landmark.md"]
     correct_contains: ["template-ref"]
     tags: [landmarks, schemas]
     notes: >
@@ -2536,7 +2536,7 @@ tests:
   # triage-handler-env) — the confident/probable/guess enum (src/core/triage.ts)
   # and the TRIAGE_ITEMS handler contract (src/core/handle.ts) — were FIXED by
   # generating a box-side triage doc (generate-docs-triage.ts →
-  # _content/docs/generated/triage.md) and repointing the always-on guide there (the old
+  # node_modules/beebox/box-docs/triage.md) and repointing the always-on guide there (the old
   # docs/triage.md pointer was a dev-repo path never shipped to
   # boxes). Also cleaned up the should_read-only false-fails (triage-vs-reactor-flow)
   # and triage-pipeline-not-wired's brittle wording check. See findings doc.
@@ -2546,7 +2546,7 @@ tests:
   # Two real knowledge gaps:
   #
   #   - `triage-confidence-levels`: agent invented a "confidence ladder"
-  #     (hypothesis/low/medium/high/confirmed) from `_content/docs/generated/card-guide.md`
+  #     (hypothesis/low/medium/high/confirmed) from `node_modules/beebox/box-docs/card-guide.md`
   #     instead of naming the pipeline's confident/probable/guess. The
   #     pipeline's enum lives in `docs/triage.md` in the beebox
   #     monorepo, which the box agent can't see.
@@ -2593,8 +2593,8 @@ tests:
     watch_for: >
       Names confident (proceed silently), probable (proceed but flag for review),
       guess (block pending a question). Does NOT invent a "wrong" level —
-      _content/docs/generated/triage.md is explicit that wrong is not a confidence level.
-    should_read: ["_content/docs/generated/triage.md"]
+      node_modules/beebox/box-docs/triage.md is explicit that wrong is not a confidence level.
+    should_read: ["node_modules/beebox/box-docs/triage.md"]
     correct_contains: ["confident", "probable", "guess"]
     tags: [triage-pipeline, behavioral]
     notes: >
@@ -2621,8 +2621,8 @@ tests:
       Names the `navigation` role (human-facing bookmark) and `destinations`
       (agent-facing routing targets, each with `for:` listing triage/commentary).
       A landmark must carry at least one role and can carry both. Confirmed by
-      reading `_content/docs/generated/card-landmark.md`.
-    should_read: ["_content/docs/generated/card-landmark.md"]
+      reading `node_modules/beebox/box-docs/card-landmark.md`.
+    should_read: ["node_modules/beebox/box-docs/card-landmark.md"]
     correct_contains: ["navigation", "destinations"]
     tags: [triage-pipeline, landmarks, schemas]
     notes: >
@@ -2689,7 +2689,7 @@ tests:
   # The project standard is to invoke Python CLI tools via `uvx <tool>@<version>`
   # rather than pip-installing into a shared environment. The pin lives at the
   # call site so behavior is reproducible across fresh boxes and cache evictions.
-  # Convention doc: _content/docs/generated/python-tools.md (generated by
+  # Convention doc: node_modules/beebox/box-docs/python-tools.md (generated by
   # src/core/python-tools-doc.ts, pointed to from the agent guide's
   # External Tools section).
 
@@ -2701,7 +2701,7 @@ tests:
       `uvx docling@<version>` or `uvx --from 'docling==<version>' docling`.
       Should NOT suggest `pip install`, a global venv, or adding docling to
       package.json/requirements.txt without a pin.
-    should_read: ["_content/docs/generated/python-tools.md"]
+    should_read: ["node_modules/beebox/box-docs/python-tools.md"]
     correct_contains_any: ["uvx", "uv tool run"]
     tags: [tooling, python]
     notes: >
@@ -2782,7 +2782,7 @@ tests:
     response_not_contains: ["<memo>", "<memo ", "type: memo"]
     tags: [cards, format]
     notes: >
-      `should_read` deliberately omitted — `_content/docs/generated/card-memo.md` is
+      `should_read` deliberately omitted — `node_modules/beebox/box-docs/card-memo.md` is
       stale (still shows XML) because generate-docs.ts iterates `schemas`
       but not `cardSchemas`, so phase-2 per-schema docs never regenerated.
       An agent that greps for a real `*.memo.card` on disk is doing better
@@ -2842,13 +2842,13 @@ tests:
     prompt: "I want to know exactly what fields a `.bookmark.card` allows. How would you find out?"
     expected_level: knows_about
     watch_for: >
-      Names `_content/docs/generated/card-bookmark.md` or `src/schemas/bookmark.ts`
+      Names `node_modules/beebox/box-docs/card-bookmark.md` or `src/schemas/bookmark.ts`
       (or a box-local `_config/schemas/bookmark.ts`) as where to look.
       Does NOT guess fields from memory or pattern-match off another
       schema. `should_read` deliberately omitted — the prompt asks
       "how would you find out", which the agent can correctly answer
       by describing the procedure without actually opening the file.
-    correct_contains_any: ["_content/docs/generated/", "src/schemas/", "_config/schemas/"]
+    correct_contains_any: ["node_modules/beebox/box-docs/", "_content/docs/generated/", "src/schemas/", "_config/schemas/"]
     tags: [schemas, discovery]
     notes: >
       Tests whether the agent reaches for the per-schema generated doc
@@ -3487,7 +3487,7 @@ tests:
   # `{% recipe-section %}`. Recipe vocabulary is intentionally NOT in
   # the always-loaded agent guide (recipes are domain-specific; most
   # boxes don't touch them). It lives in `RecipeSchema.instructions`,
-  # which compiles into `_content/docs/generated/card-recipe.md`. The audits
+  # which compiles into `node_modules/beebox/box-docs/card-recipe.md`. The audits
   # below are `knows_about` — the agent reads the recipe doc on
   # demand when asked about recipes.
   #
@@ -3496,7 +3496,7 @@ tests:
   # directly — so it was dropped.
   #
   # Status (2026-05-30): 3/3 content-correct; 1/3 triggered the
-  # expected `Read _content/docs/generated/card-recipe.md`. The other two:
+  # expected `Read node_modules/beebox/box-docs/card-recipe.md`. The other two:
   # `recipe-ingredient-attrs` discovered the doc via `Bash` (ls / find)
   # without going through Read — answer is correct and cites recipe
   # implementation details (`Fraction`, inline/block) suggesting it
@@ -3513,12 +3513,12 @@ tests:
       structuring the body?
     expected_level: knows_about
     watch_for: >
-      Reads `_content/docs/generated/card-recipe.md`, then names at least
+      Reads `node_modules/beebox/box-docs/card-recipe.md`, then names at least
       `{% ingredient %}` and `{% step %}` (the core pair). Bonus
       credit for naming the rest: `{% yield %}`, `{% substitution %}`,
       `{% subrecipe %}`, `{% recipe-section %}`. Does NOT say "use
       XML elements" (the old schema is gone).
-    should_read: ["_content/docs/generated/card-recipe.md"]
+    should_read: ["node_modules/beebox/box-docs/card-recipe.md"]
     correct_contains_any: ["{% ingredient", "{% step", "ingredient", "step"]
     tags: [recipe, cards, markdown]
 
@@ -3529,12 +3529,12 @@ tests:
       attributes does it take?
     expected_level: knows_about
     watch_for: >
-      Reads `_content/docs/generated/card-recipe.md`, then names the `amount`
+      Reads `node_modules/beebox/box-docs/card-recipe.md`, then names the `amount`
       and `unit` attributes; puts the ingredient name in the body.
       Shape like `{% ingredient amount="2" unit="cups" %}all-purpose
       flour{% /ingredient %}`. Recognises that the recipe view uses
       `amount` for scaling.
-    should_read: ["_content/docs/generated/card-recipe.md"]
+    should_read: ["node_modules/beebox/box-docs/card-recipe.md"]
     correct_contains_any: ["amount=\"2\"", "amount='2'", "amount=", "unit=\"cups\"", "unit="]
     tags: [recipe, cards, markdown]
 
@@ -3546,7 +3546,7 @@ tests:
       markdown?
     expected_level: knows_about
     watch_for: >
-      Reads `_content/docs/generated/card-recipe.md`, then says plain markdown
+      Reads `node_modules/beebox/box-docs/card-recipe.md`, then says plain markdown
       (e.g., `## Tips` followed by prose). The recipe vocabulary is
       the six tags listed in the recipe-card doc; everything else
       stays as plain markdown headings and paragraphs. Does NOT
@@ -3642,7 +3642,7 @@ tests:
   # === Views: reading attachments ===
   #
   # Indirect knowledge: needed only when authoring views, so the agent
-  # should know to read _content/docs/generated/views.md rather than recall details.
+  # should know to read node_modules/beebox/box-docs/views.md rather than recall details.
   #
   # Status (2026-06-13): All 6 pass. views-render-card-type and
   # views-llm-via-adapter are knows_directly — their capability lives in
@@ -3650,7 +3650,7 @@ tests:
   # (rendersCardTypes / adapterFetch) without a file read; the precise
   # signature it looks up in views.md when coding. The earlier
   # attachment/write audits stay knows_about — agent reads
-  # _content/docs/generated/views.md (1 file read each), then describes the
+  # node_modules/beebox/box-docs/views.md (1 file read each), then describes the
   # readFile byte-range tail, attachments-metadata + fileUrl, and the
   # conflict-safe write pattern (expect/ViewFileConflictError/commitFile).
   # Pre-existing view-zoom audits re-verified in the same run.
@@ -3663,13 +3663,13 @@ tests:
       data?
     expected_level: knows_about
     watch_for: >
-      Reads _content/docs/generated/views.md, then describes the metadata +
+      Reads node_modules/beebox/box-docs/views.md, then describes the metadata +
       on-demand pattern: a dependency glob (or the card's attachments
       listing) provides {path, size, mtimeMs}, and readFile with a
       byte-range tail (negative start, e.g. {start: -65536}) fetches
       just the recent end. Must NOT claim file content arrives inlined
       in props, and must not fetch the whole file.
-    should_read: ["_content/docs/generated/views.md"]
+    should_read: ["node_modules/beebox/box-docs/views.md"]
     correct_contains_any: ["readFile", "tail", "range", "Range"]
     tags: [views, attachments]
 
@@ -3679,24 +3679,24 @@ tests:
       card's attach scope, and how would I display an image from there?
     expected_level: knows_about
     watch_for: >
-      Reads _content/docs/generated/views.md, then names the card's attachments
+      Reads node_modules/beebox/box-docs/views.md, then names the card's attachments
       metadata listing ({path, size, mtimeMs}, box-relative, recursive)
       and uses fileUrl(path) as the <img src> — not readFile on a
       binary.
-    should_read: ["_content/docs/generated/views.md"]
+    should_read: ["node_modules/beebox/box-docs/views.md"]
     correct_contains_any: ["attachments", "fileUrl"]
     tags: [views, attachments]
 
   # === Views: render-test command (bbx view test) ===
   #
   # Indirect knowledge, like the other view-authoring audits: the command lives
-  # in _content/docs/generated/views.md (Testing a View), the bbx-commands.md reference, and
+  # in node_modules/beebox/box-docs/views.md (Testing a View), the bbx-commands.md reference, and
   # the views/CLAUDE.md stub — not the always-loaded guide (appropriate altitude
   # for a view-authoring tool). The agent reads the views guide and names the
   # command. The failure mode is telling the user to open it in a browser or
   # asking them whether it works.
   #
-  # Status (2026-06-20): 1/1 passes — agent reads _content/docs/generated/views.md (1 read,
+  # Status (2026-06-20): 1/1 passes — agent reads node_modules/beebox/box-docs/views.md (1 read,
   # 0 searches) and names `bbx view test <slug>` as the verification step. NOTE on
   # prompt shape: a *cold* "how do I test a view" prompt fails — the agent answers
   # from training (0 reads) and misses the post-training command, even proposing a
@@ -3718,7 +3718,7 @@ tests:
       views"), then names `bbx view test <slug>` as how it verifies the view
       renders — not "open it in the browser", "visit the page", or "ask the
       user".
-    should_read: ["_content/docs/generated/views.md"]
+    should_read: ["node_modules/beebox/box-docs/views.md"]
     correct_contains: ["bbx view test"]
     tags: [views]
 
@@ -3736,10 +3736,10 @@ tests:
       giving the user a link to the full-resolution file.
     expected_level: knows_about
     watch_for: >
-      Reads docs/generated/views.md, uses imageUrl with width 480 and
+      Reads node_modules/beebox/box-docs/views.md, uses imageUrl with width 480 and
       format auto for the img src, and uses fileUrl for the full-resolution
       link. Does not hand-build /api/images URLs.
-    should_read: ["docs/generated/views.md"]
+    should_read: ["node_modules/beebox/box-docs/views.md"]
     correct_contains: ["imageUrl", "width", "480", "fileUrl"]
     correct_contains_any: ["format: \"auto\"", "format: 'auto'", "format: `auto`"]
     response_not_contains: ["/api/images/"]
@@ -3885,14 +3885,14 @@ tests:
       and when does the result get committed to git?
     expected_level: knows_about
     watch_for: >
-      Reads _content/docs/generated/views.md, then describes the conflict-safe
+      Reads node_modules/beebox/box-docs/views.md, then describes the conflict-safe
       pattern: writeFile(path, {content, expect: file}) asserting the
       ViewFile's etag, catching ViewFileConflictError (which carries the
       current state) to refresh instead of overwriting. Knows writes do
       NOT auto-commit — commitFile(path, message) commits the file plus
       its attachments at meaningful boundaries, and housekeeping sweeps
       stragglers.
-    should_read: ["_content/docs/generated/views.md"]
+    should_read: ["node_modules/beebox/box-docs/views.md"]
     correct_contains_any: ["expect", "ViewFileConflictError", "commitFile"]
     tags: [views, attachments]
 
@@ -3936,14 +3936,14 @@ tests:
   # === Views: card-aware widgets (CardLink / CardRef) ===
   #
   # Indirect knowledge, like the other view-authoring audits: the widgets are
-  # documented in _content/docs/generated/views.md ("Card-aware widgets") and named in the
+  # documented in node_modules/beebox/box-docs/views.md ("Card-aware widgets") and named in the
   # views/CLAUDE.md stub, not the always-loaded guide (authoring a view is not a
   # frequent task — appropriate altitude). The authoring framing ("check the
   # box's own view docs first") reliably triggers the guide read, mirroring
   # views-render-test-command.
   #
   # Status (2026-06-29): 3/3 pass. view-link-another-card and
-  # view-embed-card-inline read _content/docs/generated/views.md (1 read, 0 searches) and
+  # view-embed-card-inline read node_modules/beebox/box-docs/views.md (1 read, 0 searches) and
   # name CardLink/CardRef + beebox/view-widgets. view-ref-tracked passes on
   # content (the agent confirms bbx mv rewrites cardRefs); it carries no
   # should_read because a yes/no prompt lets the agent confirm from views.md OR
@@ -3961,7 +3961,7 @@ tests:
     correct_contains_any: ["CardLink", "view-widgets"]
     tags: [views, cards]
     notes: >
-      Dropped should_read _content/docs/generated/views.md 2026-07-03: the refreshed
+      Dropped should_read node_modules/beebox/box-docs/views.md 2026-07-03: the refreshed
       views/CLAUDE.md (auto-loaded) now names CardLink/CardRef, so the agent
       answers correctly whether it reads views.md or answers directly. The
       content check is the real assertion; also de-baited the "check the docs
@@ -3976,7 +3976,7 @@ tests:
     watch_for: >
       Names <CardRef> (beebox/view-widgets) with its follow + expand-inline
       controls — not a manual fetch/render of the card.
-    should_read: ["_content/docs/generated/views.md"]
+    should_read: ["node_modules/beebox/box-docs/views.md"]
     correct_contains: ["CardRef"]
     correct_contains_any: ["expand", "inline", "follow"]
     tags: [views, cards]
@@ -4169,7 +4169,7 @@ tests:
       guide) or the attach-to-a-card concept (when it answers directly). See
       docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
-  # Status (2026-09-02): passes after reading _content/docs/generated/views.md (1 file,
+  # Status (2026-09-02): passes after reading node_modules/beebox/box-docs/views.md (1 file,
   # 0 searches). The agent used viewHistory.state, pushState/replaceState, and
   # canPush; distinguished URL navigation state from React state; and did not
   # call window.history directly.
@@ -4180,11 +4180,11 @@ tests:
       make browser Back and Forward useful?
     expected_level: knows_about
     watch_for: >
-      Reads _content/docs/generated/views.md. Uses viewHistory.state with pushState or
+      Reads node_modules/beebox/box-docs/views.md. Uses viewHistory.state with pushState or
       replaceState, checks canPush when Back/Forward behavior matters, validates
       old state before use, and distinguishes navigation state from renderer
       params and transient React useState. Must not call window.history directly.
-    should_read: ["_content/docs/generated/views.md"]
+    should_read: ["node_modules/beebox/box-docs/views.md"]
     correct_contains_any: ["viewHistory", "pushState", "replaceState"]
     response_not_contains: ["window.history.pushState", "window.history.replaceState"]
     tags: [views, navigation, state]
@@ -4228,7 +4228,7 @@ tests:
   - id: courseware-course-composition
     prompt: "What does a course card hold? What are its parts?"
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-course.md"]
+    should_read: ["node_modules/beebox/box-docs/card-course.md"]
     watch_for: >
       Names the concept-map and exposition-plan (embedded), the material/ subdir,
       and that progress is tracked separately.
@@ -4254,7 +4254,7 @@ tests:
       Can a concept-map have two concepts that each depend on the other — a
       cycle? Or is that an error to fix?
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-concept-map.md"]
+    should_read: ["node_modules/beebox/box-docs/card-concept-map.md"]
     watch_for: >
       Says cycles are valid/intended (spirals), often via complements edges —
       NOT an error to fix.
@@ -4269,7 +4269,7 @@ tests:
       I'm recording that a learner has 'solid' understanding of a concept. What
       does that progress entry need to include?
     expected_level: knows_about
-    should_read: ["_content/docs/generated/card-progress.md"]
+    should_read: ["node_modules/beebox/box-docs/card-progress.md"]
     watch_for: >
       Says every status needs evidence (what the learner said/did) plus a basis —
       there is no anonymous rating.
@@ -4520,8 +4520,8 @@ tests:
   # passed after its check loosened from a too-literal contains ["doc"] to
   # the card filename (first run answered correctly, failed the string
   # check). capture-partial-marker: 0 reads, correct. capture-agent-duties:
-  # passes, but note it answers by READING _content/docs/generated/
-  # card-capture-session.md (1 read, 1 search) rather than from context —
+  # passes, but note it answers by READING
+  # node_modules/beebox/box-docs/card-capture-session.md (1 read, 1 search) rather than from context —
   # that is the designed flow (the prompt paragraph says to read the doc
   # rules), so reading here is desired behavior, not a recall failure.
 
@@ -4587,7 +4587,7 @@ tests:
   # needs chat_mode: true. The filing duties (including the "ask before filing
   # an unintroduced batch" rule, boxholder decision 2026-07-27) live in the
   # upload-batch schema's instructions (src/schemas/upload-batch.tsx), surfaced
-  # to the agent as _content/docs/generated/card-upload-batch.md. The second entry below
+  # to the agent as node_modules/beebox/box-docs/card-upload-batch.md. The second entry below
   # is the non-chat case: a chat-agent-only concept (schema instructions say
   # filing is chat-agent-only) discovered by an agent poking around the box
   # outside any chat turn — tmp-upload/ is a landing zone parallel to
@@ -4680,7 +4680,7 @@ tests:
       under one of the chat context directories, holding an `upload-batch`
       card and its attach scope. What does this mean, and what should you do?
     expected_level: discoverable
-    should_read: ["_content/docs/generated/card-upload-batch.md"]
+    should_read: ["node_modules/beebox/box-docs/card-upload-batch.md"]
     watch_for: >
       Recognizes tmp-upload/ as a landing zone (the bulk-upload sibling of
       tmp-capture/) that must not accumulate — a card still sitting there
@@ -5165,7 +5165,7 @@ tests:
   #
   # - secrets-provisioning: FAIL, but not a gap in `secretsSection()`. The
   #   agent grep'd the box for "mistral" and found
-  #   `_content/docs/generated/views.md` (generated by `src/core/views/doc-files.ts`),
+  #   `node_modules/beebox/box-docs/views.md` (generated by `src/core/views/doc-files.ts`),
   #   which documents `adapterFetch`/`/api/adapters/<adapter>` as reading the
   #   key from `_config/connectors/<adapter>.secret.json` — true when that doc
   #   text was written, now stale: `api-adapters.ts` (`readAdapterKey`)

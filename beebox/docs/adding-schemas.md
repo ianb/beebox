@@ -41,7 +41,7 @@ export const MyThingSchema: CardSchema = cardSchema("my-thing", {
   instructions: `# My Thing Cards
 
 Instructions for agents on how to handle this card type.
-This becomes _content/docs/generated/card-my-thing.md in boxes.
+This becomes card-my-thing.md in the package docs (`node_modules/beebox/box-docs/` from a box; `beebox/box-docs/` in this checkout).
 
 Include:
 - What each frontmatter field means
@@ -267,10 +267,10 @@ For typed reads, use `parseCardText({content, source, schemas: createCardSchemaM
 
 1. `bbx init` or `bbx wakeup` calls `generateDocs(boxRoot)`
 2. `generateDocs()` reads both `schemas` (XML) and `cardSchemas` (frontmatter) from `registry.ts`
-3. For each schema with an `instructions` string, it writes `_content/docs/generated/card-<type>.md`
+3. For each schema with an `instructions` string, it writes `card-<type>.md` — to `node_modules/beebox/box-docs/` for a built-in schema, to `_content/docs/generated/` for a box-local one
 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
-6. Agents read `_content/docs/generated/card-<type>.md` on demand for detailed instructions
+6. Agents read `card-<type>.md` on demand for detailed instructions, from whichever of those two locations holds it
 
 ## Verification Checklist
 
@@ -281,5 +281,5 @@ After implementing:
 3. `bbx init <box>` — creates storage directory (if added), generates docs
 4. `bbx create <box>/path/Name.my-thing.card -t my-thing title="..."` — template emits valid YAML
 5. `bbx validate <box>/path/Name.my-thing.card` — validates
-6. Check `<box>/_content/docs/generated/card-my-thing.md` exists and has your instructions
+6. Check `<box>/node_modules/beebox/box-docs/card-my-thing.md` exists and has your instructions
 7. Check `<box>/.beebox/agent-guide.md` lists the new type

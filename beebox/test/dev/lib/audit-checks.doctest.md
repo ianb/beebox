@@ -53,13 +53,13 @@ skill without weakening the expected knowledge.
 ```ts
 const alternateSource = runChecks({
   ...auditTest,
-  should_read_any: ["_content/docs/generated/card-image.md", "beebox-rule-card-image/SKILL.md"],
+  should_read_any: ["node_modules/beebox/box-docs/card-image.md", "beebox-rule-card-image/SKILL.md"],
 }, {
   behavior: { ...behavior("answer"), filesRead: [".agents/skills/beebox-rule-card-image/SKILL.md"] },
   newOrModifiedCards: new Map(),
 });
 JSON.stringify(alternateSource.shouldReadAnyCheck)
-=> {"files":["_content/docs/generated/card-image.md","beebox-rule-card-image/SKILL.md"],"wasRead":true,"matched":"beebox-rule-card-image/SKILL.md"}
+=> {"files":["node_modules/beebox/box-docs/card-image.md","beebox-rule-card-image/SKILL.md"],"wasRead":true,"matched":"beebox-rule-card-image/SKILL.md"}
 ```
 
 Regexes are rejected at the YAML schema boundary before an audit spends an

@@ -10,6 +10,7 @@
  * init` can run repeatedly without clobbering user edits.
  */
 
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { installTemplateFile } from "../install-template-file.js";
@@ -301,7 +302,7 @@ const VIEWS_CLAUDE_MD = `# Views Directory
 
 This directory contains agent-generated React components (.tsx files) that render in the browser. **Every view is attached to a card type** via \`rendersCardTypes\` — it becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less standalone view.
 
-**IMPORTANT: Read \`_content/docs/generated/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
+**IMPORTANT: Read \`${BOX_PACKAGE_DOCS}/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
 
 ## Quick Reference
 
@@ -322,7 +323,7 @@ hand-rolled \`<a>\`) — see the "Card-aware widgets" section in the doc.
 After writing or changing a view, render-test it: \`bbx view test <slug>\` (loads
 the real cards, renders once, prints the output or a source-mapped error).
 
-Full documentation: \`_content/docs/generated/views.md\`
+Full documentation: \`${BOX_PACKAGE_DOCS}/views.md\`
 `;
 
 /**
