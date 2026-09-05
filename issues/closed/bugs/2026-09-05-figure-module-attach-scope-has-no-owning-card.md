@@ -1,13 +1,21 @@
 ---
 title: "Figure cards fail to load their sketch: /api/figure/module.js answers \"Attach scope has no owning card\""
-workstream: unattached
+workstream: sidecar-shell
 area: beebox
 labels: [ui]
 filed-by: agent
 discovered-by: agent
 discovered-in: "worktree-sidecar-shell — while verifying the card sidecar in a browser"
 priority: normal
+resolution: implemented
 ---
+
+Resolved by commit 398548df0 (`fix(figure): find a figure's owning card by
+basename, not filename`): `hasOwningCard` now matches any sibling card whose
+`cardBasename()` equals the attach directory's owner basename, using the
+shared `src/shared/attach-path.ts` helpers. The separate stale-`view:store/…`
+content issue noted below was left as-is, per the issue's own note that it is
+not a code defect.
 
 Every `figure` card in the test box renders "Figure error" instead of its
 sketch. The card view requests its module and the server refuses it.
