@@ -6,8 +6,10 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstreams — reviewing finish latency
 priority: important
-next-action: fixed
+resolution: implemented
 ---
+
+> Closed 2026-09-05 (`fixed?` confirmed): landed as `3a561ddbe` "Speed up finish lint and typecheck gates" (merged `ff4dca4ab`). The root `lint` script filters `!beebox-frontend` as described, and the body's before/after table records the measured gain.
 
 The finish workflow spends too much time on lint and typecheck. A measured finish run on 2026-08-12 took about 3 minutes 26 seconds. Lint and typecheck used about 81 seconds, or 39% of the total.
 

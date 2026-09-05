@@ -4,8 +4,9 @@ workstream: pub-setup-wrangler
 area: beebox
 filed-by: agent
 discovered-in: worktree-pub-setup-wrangler — Codex cross-review of the pub-setup rework surfaced these as pre-existing Worker behavior, out of that item's scope
-next-action: reconfirm
 ---
+
+> `reconfirm?` checked 2026-09-05: both hazards are still in `pub-worker/src/index.ts` — manifest 404/410 checks run before `authenticateAccess`, and the `any-account` tier calls `logAccess` before `serveAsset` validates the path. No fix landed; the decision framed in the body is still open.
 
 Two hardening tensions in `beebox/pub-worker/`, found by an adversarial
 review of the publish credential model. Both are pre-existing behavior of the

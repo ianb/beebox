@@ -2,8 +2,9 @@
 title: Estate box holds three duplicate scan sessions of one photo pair
 workstream: unknown
 priority: backlog
-next-action: invalid
 ---
+
+> `invalid?` checked 2026-09-05: not invalid, half done. The mechanism half is answered — the current ingest (`scan-upload.ts`) dedups by sha256 and reports `duplicate`; the gap was the older path. The data-repair half is untouched: the three sessions with matching md5s are still in the backup copy. That repair is real-box data and the boxholder's call.
 
 Found while sampling the estate box for the scanner model-comparison
 experiment (2026-08-01): three `scan-*` capture sessions in the estate box

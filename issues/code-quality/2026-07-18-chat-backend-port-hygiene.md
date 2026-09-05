@@ -5,8 +5,9 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research
 priority: backlog
-next-action: invalid
 ---
+
+> `invalid?` checked 2026-09-05: not invalid. Item 3 is closed by the recorded 2026-08-26 decision (no durable transcript). Items 1 and 2 are unimplemented — `ChatBackendMessage = SDKMessage | …` still leaks the SDK type (`claude-chat-types.ts`), `adaptSdkMessage` still lives outside the port, `ChatMessageStreamEvent` still carries the raw stream event. Item 4 is undecided.
 
 The [coupling audit](../../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md)
 (Layers 2–3) found the chat backend port leaks SDK types, and our history subsystem

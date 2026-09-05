@@ -6,8 +6,9 @@ labels: [codex, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-honest-diagnostics — while making codex chat failures report their real phase and stack
-next-action: verify-without-me
 ---
+
+> `verify-without-me` audited 2026-09-05: no retry was added to `codex-chat.ts`'s init chain and the `ChatSession` construction rate was never traced (`registry-warm.ts`'s fire-and-forget prewarming is the untested suspect). This is "nobody ran it", not "needs a device": the phase-tagged stack traces from the reporting fix are in place, so the next real occurrence's log settles the cause. Residual risk until then: an intermittent start failure surfaces to the user as a failed turn with no retry.
 
 Some codex chat turns fail with no session. The failure is intermittent: on one
 box, successes and failures alternated over twelve minutes on the same session.
