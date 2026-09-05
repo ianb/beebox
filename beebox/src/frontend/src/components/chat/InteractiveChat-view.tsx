@@ -255,7 +255,7 @@ function ComposerRegion(props: ChatBodyProps) {
 
 export function InteractiveChatBody(props: ChatBodyProps) {
   const { tabs, voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
-  const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
+  const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onTogglePin, onClosePanel } = tabs;
   const {
     handleAddSelection,
     nativeCommandError,
@@ -290,6 +290,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             activePath={activeView.target.path}
             onSelectTab={onSelectTab}
             onCloseTab={onCloseTab}
+            onTogglePin={onTogglePin}
             onClosePanel={onClosePanel}
             onNavigate={handleCompanionNavigate}
             onUpdateTarget={handleCompanionTargetUpdate}
