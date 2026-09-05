@@ -1102,3 +1102,88 @@ JSON.stringify({
 ```ts cleanup
 await cleanup(root);
 ```
+
+## Round-9 hardening (aged-box rehearsal, 2026-09): pre-existing broken refs carry through instead of blocking
+
+A rehearsal migration of a real aged box (a `test1` clone) exposed two
+blocking defects: (1) the hard link gate refused to commit on ANY dangling
+ref, but an aged box carries stale job cards (e.g. `box/jobs` intake jobs)
+whose refs point at long-consumed content — broken BEFORE the migration ever
+ran; (2) a BARE ref written box-root-intent (`box/inbox/…` in a card living
+elsewhere) resolved document-relatively, producing garbage like
+`_bookkeeping/jobs/box/inbox/…` instead of the box-root form.
+
+This fixture is an `intake-job` card at `box/jobs/` — the exact real-box
+shape — with two bare `items[].ref` entries: one a box-root-intent ref to an
+EXISTING card (`box/inbox/Foo.memo.card`, which the base `makeV2Box` fixture
+creates), the other to a target that never existed at all
+(`box/inbox/email/Consumed.email.card` — an already-consumed email, the
+motivating aged-box case). Neither is document-relative to the job card's own
+directory (`box/jobs`), so a naive rewrite would resolve both against
+`box/jobs/box/inbox/…` — nonsense either way.
+
+```ts
+const root = await makeV2Box();
+await fs.mkdir(path.join(root, "content", "box", "jobs"), { recursive: true });
+await fs.writeFile(
+  path.join(root, "content", "box", "jobs", "Aged.intake-job.card"),
+  [
+    "---",
+    "status: pending",
+    "source: gmail",
+    "priority: normal",
+    "description: Aged intake job",
+    "items:",
+    "  - ref: box/inbox/Foo.memo.card",
+    "  - ref: box/inbox/email/Consumed.email.card",
+    "---",
+    "",
+  ].join("\n"),
+);
+execSync("git add -A && git commit -q -m aged-job-fixture", { cwd: root, stdio: "pipe" });
+
+const result = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
+JSON.stringify({ filesMoved: result.filesMoved, preExistingBrokenRefsCarried: result.preExistingBrokenRefsCarried })
+=> {"filesMoved":8,"preExistingBrokenRefsCarried":1}
+```
+
+The migration succeeded (no rollback) — the job card landed at its
+`_bookkeeping/jobs/` v3 home. The ref to the EXISTING card rewrote to its
+correct `/_content/…` form (the box-root-intent rescue), and the ref to the
+never-existed target ALSO rewrote to its structurally-correct box-root-intent
+form (not the document-relative garbage a naive rewrite would produce) —
+carried through as pre-existing broken, not left dangling in its original
+bare shape:
+
+```ts continue
+const jobCard = await fs.readFile(path.join(root, "_bookkeeping", "jobs", "Aged.intake-job.card"), "utf-8");
+JSON.stringify({
+  rescuedExisting: jobCard.includes("/_content/inbox/Foo.memo.card"),
+  carriedThroughPreBroken: jobCard.includes("/_content/inbox/email/Consumed.email.card"),
+  noGarbageDocRelative: !jobCard.includes("box/jobs/box/inbox"),
+})
+=> {"rescuedExisting":true,"carriedThroughPreBroken":true,"noGarbageDocRelative":true}
+```
+
+The tree is clean — the carried-through broken ref did not block the commit:
+
+```ts continue
+const status = execSync("git status --porcelain", { cwd: root, encoding: "utf-8" }).trim();
+status.length
+=> 0
+```
+
+```ts cleanup
+await cleanup(root);
+```
+
+A ref the MIGRATION ITSELF makes dangling — one that resolved perfectly well
+pre-migration but whose rewrite target `mapV2Path` doesn't recognize — still
+blocks and rolls back, exactly as the existing coverage above ("Rollback: a
+dangling ref trips the hard link gate") already asserts: that section's
+`[ghost](../../nonexistent/Ghost.card)` never resolved in the v2 tree either,
+but its target's top-level segment (`nonexistent`) isn't a recognized v2 area
+at all, so the rewriter can't even structurally map it — it stays
+`unresolved` and un-rewritten, which the gate still treats as unconditionally
+blocking (the pre-broken carve-out only ever applies to a ref the rewriter
+successfully mapped to a v3 destination).

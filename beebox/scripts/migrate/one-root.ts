@@ -50,6 +50,13 @@ async function main(): Promise<number> {
   process.stdout.write(
     `[one-root] migrated ${String(result.filesMoved)} file(s); commit ${result.commitSha}.\n`,
   );
+  if (result.preExistingBrokenRefsCarried > 0) {
+    process.stdout.write(
+      `[one-root] ${String(result.preExistingBrokenRefsCarried)} pre-existing broken reference(s) carried ` +
+        "through (already dangling before this migration touched anything — not a new break, so the hard link " +
+        "gate did not block on them).\n",
+    );
+  }
   if (result.unresolvedRefs.length > 0) {
     process.stdout.write(
       `[one-root] ${String(result.unresolvedRefs.length)} ref(s) could not be resolved to a v3 target ` +
