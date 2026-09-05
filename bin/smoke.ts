@@ -42,6 +42,7 @@
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
 import { invariant } from "../beebox/src/lib/invariant.js";
+import { findCardRow } from "./smoke-card-open.js";
 import {
   BrowseListEmptyError,
   CardContentMissingError,
@@ -49,7 +50,6 @@ import {
   CardViewMissingError,
   ChatShellMissingError,
   LandmarkRefUnresolvedError,
-  NoCardToOpenError,
   NoLandmarkToSwitchToError,
   PageErrorsRaisedError,
   SmokeFailureError,
@@ -77,7 +77,6 @@ import {
   cardViewRendered,
   currentPlaceLabel,
   directoryRowCount,
-  firstCardRow,
   hasDomId,
   placeMenuFailure,
   placeSwitchFailure,
@@ -240,15 +239,16 @@ function buildSteps(input: {
     id: "card-open",
     name: "a card opens and renders",
     run: async () => {
-      const listing = await session.snapshot({ interactiveOnly: true });
-      const row = firstCardRow(listing);
-      if (row === null) {
-        throw new NoCardToOpenError(listing);
-      }
+      const initial = await session.snapshot({ interactiveOnly: true });
+      const { listing, row } = await findCardRow(session, initial);
       const ref = refFor(listing, row);
       if (ref === null) {
         throw new CardRefUnresolvedError({ role: row.role, name: row.name, listing });
       }
+      // clickRef's click is a box-center CDP event with no actionability
+      // check, so a row below the fold (routine in a directory with many
+      // siblings) fails outright rather than auto-scrolling.
+      await session.run(["scrollintoview", `@${ref}`]);
       await session.clickRef(ref);
       const snapshot = await session.snapshot({ interactiveOnly: true });
       const url = await session.getUrl();
