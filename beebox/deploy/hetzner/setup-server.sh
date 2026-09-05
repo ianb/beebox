@@ -32,6 +32,17 @@ apt-get update -qq
 # unvalidated bytes, so it is a hard requirement, not a nice-to-have.
 apt-get install -y -qq git git-lfs curl nginx build-essential ca-certificates gnupg poppler-utils pandoc imagemagick python3-openpyxl xlsx2csv qpdf ffmpeg
 
+# fclones — duplicate-file finder the box agent may reach for (reports groups
+# of byte-identical files; never deletes unless told). Not in Ubuntu's apt;
+# upstream publishes an amd64 .deb per release. Pinned; bump deliberately.
+FCLONES_VERSION=0.35.0
+if ! command -v fclones >/dev/null 2>&1 || [[ "$(fclones --version 2>/dev/null | awk '{print $2}')" != "$FCLONES_VERSION" ]]; then
+  curl -fsSL -o /tmp/fclones.deb "https://github.com/pkolaczk/fclones/releases/download/v${FCLONES_VERSION}/fclones_${FCLONES_VERSION}-1_amd64.deb"
+  dpkg -i /tmp/fclones.deb >/dev/null
+  rm -f /tmp/fclones.deb
+fi
+echo "fclones $(fclones --version)"
+
 # Ubuntu 24.04 ships ImageMagick 6 (`convert`); homebrew + IM7 use `magick`.
 # Symlink so scripts written for `magick` work on prod without branching.
 if ! command -v magick >/dev/null 2>&1 && command -v convert >/dev/null 2>&1; then

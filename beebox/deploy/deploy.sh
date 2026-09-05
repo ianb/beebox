@@ -815,13 +815,14 @@ REMOTE
   # scan uploads; poppler pdfinfo/pdftoppm → PDF intake; pandoc → doc convert;
   # imagemagick convert → image ops; openpyxl/xlsx2csv → spreadsheet reads;
   # ffmpeg → audio transcode/concat (capture voice); git-annex/git-lfs →
-  # assets) until someone hits it in the wild. Catch a
+  # assets; fclones → duplicate-file reports) until someone hits it in the
+  # wild. Catch a
   # "declared but not installed on this older box" gap at deploy, not at first use.
   echo "Verifying required external tools..."
   ssh "$SSH_TARGET" bash -s <<'TOOLCHECK'
     set -uo pipefail
     missing=""
-    for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv ffmpeg git git-lfs git-annex codex; do
+    for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv ffmpeg git git-lfs git-annex fclones codex; do
       command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
     done
     python3 -c "import openpyxl" >/dev/null 2>&1 || missing="$missing python3-openpyxl"

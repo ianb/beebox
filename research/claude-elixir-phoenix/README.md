@@ -77,7 +77,7 @@ disposition; nothing below is left at praise.
 
 | # | Call to make | Stakes |
 |---|---|---|
-| D1 | **Should plans carry execution state?** Their load-bearing idea is "plan checkboxes ARE the state — no side state files," which makes a plan resumable after compaction or a crash by re-reading one markdown file. Our 25 docs in `beebox/docs/plans/` contain **zero** checkboxes — they are design artifacts, and execution state lives only in the conversation | This is a real fork, not an obvious win: `bbx-plan` deliberately produces design documents with a "Stated preferences this plan trades against" section, and turning plans into task ledgers could degrade that. Filed: [issues/decisions/2026-07-30-plans-as-execution-state.md](../../issues/decisions/2026-07-30-plans-as-execution-state.md) |
+| D1 | **Should plans carry execution state?** Their load-bearing idea is "plan checkboxes ARE the state — no side state files," which makes a plan resumable after compaction or a crash by re-reading one markdown file. Our 25 docs in `beebox/docs/plans/` contain **zero** checkboxes — they are design artifacts, and execution state lives only in the conversation | This is a real fork, not an obvious win: `bbx-plan` deliberately produces design documents with a "Stated preferences this plan trades against" section, and turning plans into task ledgers could degrade that. Filed: [issues/decisions/2026-07-30-plans-as-execution-state.md](../../issues/closed/decisions/2026-07-30-plans-as-execution-state.md) |
 
 ### Reject
 

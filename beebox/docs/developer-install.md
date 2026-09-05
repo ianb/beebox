@@ -24,15 +24,17 @@ server), the Docker path is simpler: see
 - **pnpm**, via [corepack](https://nodejs.org/api/corepack.html):
   `corepack enable` (the root `package.json` pins the exact pnpm version).
 - **System binaries** the agent uses for document/image/spreadsheet handling —
-  `pandoc`, `imagemagick`, `poppler-utils`, `git-lfs`, plus an Excel reader
-  (`openpyxl` + the `xlsx2csv` CLI, for `.xlsx`):
+  `pandoc`, `imagemagick`, `poppler-utils`, `git-lfs`, an Excel reader
+  (`openpyxl` + the `xlsx2csv` CLI, for `.xlsx`), and `fclones` (duplicate
+  files):
 
   ```bash
   # macOS — openpyxl/xlsx2csv have no brew formula, install them via pip
-  brew install pandoc imagemagick poppler git-lfs
+  brew install pandoc imagemagick poppler git-lfs fclones
   python3 -m pip install --break-system-packages openpyxl xlsx2csv
 
-  # Debian/Ubuntu
+  # Debian/Ubuntu (fclones is not in apt; upstream ships an amd64 .deb —
+  # see deploy/hetzner/setup-server.sh for the pinned download)
   sudo apt-get install pandoc imagemagick poppler-utils git-lfs python3-openpyxl xlsx2csv
   ```
 

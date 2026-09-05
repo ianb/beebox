@@ -7,7 +7,7 @@ install. Everything lives in `beebox/docker/`.
 The image bakes in the host requirements that make a from-source install
 fiddly: Node 24, the system binaries the agent expects (`pandoc`,
 `imagemagick`/`magick`, `poppler-utils`, the Excel reader `python3-openpyxl` +
-`xlsx2csv`, plus `git`/`git-lfs`), the native
+`xlsx2csv`, `fclones` on amd64, plus `git`/`git-lfs`), the native
 Claude Code CLI, and the beebox engine itself. You supply a box (a git
 repo you own, bind-mounted at `./data/box`) and a Claude login.
 

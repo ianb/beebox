@@ -2,8 +2,10 @@
 title: "per surface agent vs boxwide reactor"
 workstream: unknown
 area: beebox
-needs: [design]
+resolution: wontfix
 ---
+
+> Closed 2026-09-05 (boxholder): not the approach. Something similar may arrive later by a different path, and not by following Rowboat's per-surface agents in particular.
 
 > `invalid?` checked 2026-09-05: not moot. `src/core/reactor/` and the one-box-one-agent model are unchanged, no per-surface agent was built, and no design pass settled the question; it is undecided, not invalidated.
 
