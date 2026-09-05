@@ -31,5 +31,5 @@ export class UnsafeTrashDestinationError extends Error {
 export async function assertSafeTrashDestination(boxRoot: string, absDest: string): Promise<void> {
   const rel = path.relative(boxRoot, absDest);
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: rel, mode: "write" });
-  if (ns === null) throw new UnsafeTrashDestinationError(rel);
+  if (!ns.ok) throw new UnsafeTrashDestinationError(rel);
 }

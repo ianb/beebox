@@ -22,11 +22,12 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { isCardFile, boxPath } from "../../lib/paths.js";
+import { isCardFile } from "../../lib/paths.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { invariant } from "../../lib/invariant.js";
 import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { DisplayFormPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
 
 /**
  * Arguments for the move command.
@@ -65,7 +66,7 @@ async function isDirectory(filePath: string): Promise<boolean> {
 }
 
 function resolveBoxRelative(ctx: CommandContext, p: string): string {
-  return path.isAbsolute(p) ? p : boxPath(ctx.boxRoot, p);
+  return resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: p, relativeTo: ctx.boxRoot });
 }
 
 interface MoveSourceState {
@@ -241,6 +242,22 @@ async function commitMoves({
  * Execute the move command (supports single or multiple source paths).
  */
 async function executeMove(
+  ctx: CommandContext,
+  args: Record<string, unknown>
+): Promise<CommandResult> {
+  try {
+    return await executeMoveUnguarded(ctx, args);
+  } catch (e) {
+    // Display-form leak (docs/plans/display-path-guard.subplan.md): reported
+    // as an ordinary CommandResult failure — this function is also called
+    // directly (tests, `runCommand`'s own catch-all only covers a
+    // CLI-dispatched call).
+    if (e instanceof DisplayFormPathArgError) return { success: false, error: e.message };
+    throw e;
+  }
+}
+
+async function executeMoveUnguarded(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {

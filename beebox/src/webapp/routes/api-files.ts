@@ -94,7 +94,10 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
       // `_content/../package.json` can't hide behind its raw-string prefix
       // (`docs/plans/one-root-box-layout.md` Track B).
       const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
-      if (ns === null) {
+      if (!ns.ok) {
+        if (ns.reason === "display-form") {
+          return reply.status(400).send({ error: ns.message });
+        }
         return reply.status(403).send({ error: "Access denied" });
       }
       const { resolved, relativePath } = ns;
@@ -264,7 +267,10 @@ async function deleteBoxFile({
   // Box containment + namespace fence, checked on the RESOLVED path — see
   // `docs/plans/one-root-box-layout.md` Track B.
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
-  if (ns === null) {
+  if (!ns.ok) {
+    if (ns.reason === "display-form") {
+      return reply.status(400).send({ error: ns.message });
+    }
     return reply.status(403).send({ error: "Access denied" });
   }
   const { resolved, relativePath } = ns;

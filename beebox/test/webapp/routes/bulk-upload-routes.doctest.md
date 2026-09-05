@@ -470,7 +470,7 @@ to remove, so a post-seal cancel is refused rather than raced.
 
 ```ts
 const ctx = await makeTestServer();
-await bindSession(ctx, "chat-cancel", "store/photos");
+await bindSession(ctx, "chat-cancel", "_content/photos");
 const created = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "a", name: "a.jpg" }] });
 const sessionId = created.body.sessionId;
 await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { getSystemState } from "../../../core/state.js";
 import { generateContext } from "../../context.js";
@@ -12,6 +13,7 @@ import { errnoCode } from "../../../lib/error-guards.js";
 import { containWithinBox } from "../../../lib/box-containment.js";
 import { isInBoxNamespace } from "../../../lib/box-namespace.js";
 import { verifyBoxNamespaceOnDisk } from "../../../lib/box-namespace-resolve.js";
+import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import { BOX_ROOT_VOCABULARY } from "../../../lib/box-root-vocabulary.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
@@ -63,6 +65,22 @@ export interface BrowseFile {
 const BOX_AREA_NAMES: ReadonlySet<string> = new Set(
   BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area").map((entry): string => entry.name)
 );
+
+/**
+ * Display-form leak (docs/plans/display-path-guard.subplan.md): unlike every
+ * other namespace-fenced choke point, `status.browse` doesn't go through
+ * `resolveBoxNamespacePathOnDisk` (it hand-rolls its own containment +
+ * namespace check, which degrades to an empty listing BEFORE any existence
+ * check), so the display-form detector must be called directly on the raw
+ * input before that check runs. Split out to keep `browse`'s complexity
+ * under the lint budget.
+ */
+function rejectDisplayFormBrowsePath(rawPath: string): void {
+  const displayForm = detectDisplayFormPath(rawPath);
+  if (displayForm !== null) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: displayFormPathMessage(rawPath, displayForm) });
+  }
+}
 
 export const statusRouter = router({
   /**
@@ -143,6 +161,7 @@ export const statusRouter = router({
   browse: publicProcedure
     .input(z.object({ path: z.string().default("") }))
     .query(async ({ input, ctx }) => {
+      rejectDisplayFormBrowsePath(input.path);
       // Accept either ref form but normalize to the canonical box-relative path,
       // so the echoed `path` matches the form everything else uses (the listing's
       // `relativePath`s, file-change events). See src/shared/box-path.ts.

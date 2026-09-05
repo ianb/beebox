@@ -24,6 +24,18 @@ import { execFileSync } from "node:child_process";
 import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
 import { cardRouter } from "../../src/webapp/trpc/routers/card.js";
 import { statusRouter } from "../../src/webapp/trpc/routers/status.js";
+import { historyRouter } from "../../src/webapp/trpc/routers/history.js";
+import { errorMessage } from "../../src/lib/error-guards.js";
+
+/** The message a display-form-rejecting tRPC procedure throws, or "ok". */
+async function trpcDisplayFormMessage(fn: () => Promise<unknown>): Promise<string> {
+  try {
+    await fn();
+    return "ok";
+  } catch (e) {
+    return errorMessage(e);
+  }
+}
 
 interface TestCtx {
   boxRoot: string;
@@ -166,6 +178,68 @@ const summarizeRes = await filesRouterModule.filesRouter.createCaller(ctx).summa
 });
 summarizeRes[0]
 => null
+```
+
+## `card.get` suggests the bare display form's canonical path on refusal
+
+A bare content path (`recipes/Soup.recipe.card`, the boxholder's display
+vocabulary) names nothing inside any underscore area, so `card.get`'s
+canonical `path` input refuses it as an escape — but when
+`/_content/<path>` genuinely exists, the refusal message suggests it
+(`docs/plans/display-path-guard.subplan.md`):
+
+```ts continue
+await server.seed("_content/recipes/Soup.recipe.card", "---\ntype: doc\ntitle: Soup\n---\n");
+await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "recipes/Soup.recipe.card" }))
+=> Invalid card path — did you mean `/_content/recipes/Soup.recipe.card`?
+```
+
+No suggestion when the content-form path doesn't exist either:
+
+```ts continue
+await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "nowhere/at/all.card" }))
+=> Invalid card path
+```
+
+## Display-form paths (`docs/plans/display-path-guard.subplan.md`)
+
+`Config:box.json` (the boxholder's CONVERSATION vocabulary — never a
+canonical path) is rejected with 400 / `BAD_REQUEST` and a message naming
+the canonical form, at every choke point above — distinct from the generic
+403/empty-listing a genuine namespace escape gets:
+
+```ts continue
+const filesDisplayRes = await server.request({ method: "GET", url: "/api/files/Config:box.json" });
+filesDisplayRes.statusCode
+=> 400
+
+filesDisplayRes.body.error
+=> `Config:box.json` is the boxholder's display form; write `/_config/box.json`
+
+const browseDisplayRes = await server.request({ method: "GET", url: "/api/browse/Config:box.json" });
+browseDisplayRes.statusCode
+=> 400
+
+const imageDisplayRes = await server.request({ method: "GET", url: "/api/image/Config:box.json" });
+imageDisplayRes.statusCode
+=> 400
+
+const figureDisplayRes = await server.request({ method: "GET", url: "/api/figure/module.js?path=Config:box.json" });
+figureDisplayRes.statusCode
+=> 400
+```
+
+```ts continue
+await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "Config:box.json" }))
+=> `Config:box.json` is the boxholder's display form; write `/_config/box.json`
+
+await trpcDisplayFormMessage(() => statusRouter.createCaller(ctx).browse({ path: "Bookkeeping:jobs/x.job.card" }))
+=> `Bookkeeping:jobs/x.job.card` is the boxholder's display form; write `/_bookkeeping/jobs/x.job.card`
+
+await trpcDisplayFormMessage(() =>
+  historyRouter.createCaller(ctx).list({ filter: { path: "Config:box.json" } })
+)
+=> `Config:box.json` is the boxholder's display form; write `/_config/box.json`
 ```
 
 ```ts cleanup

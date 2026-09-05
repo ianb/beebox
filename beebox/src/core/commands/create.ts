@@ -13,7 +13,8 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { parseCardName, isCardFile, boxPath } from "../../lib/paths.js";
+import { parseCardName, isCardFile } from "../../lib/paths.js";
+import { resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import {
   getTemplate,
@@ -71,12 +72,7 @@ async function executeCreate(
   }
 
   // Resolve path
-  let fullPath: string;
-  if (path.isAbsolute(createArgs.path)) {
-    fullPath = createArgs.path;
-  } else {
-    fullPath = boxPath(ctx.boxRoot, createArgs.path);
-  }
+  const fullPath = resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: createArgs.path, relativeTo: ctx.boxRoot });
 
   // Validate it's a card file
   if (!isCardFile(fullPath)) {
