@@ -260,6 +260,10 @@ async function collectViewDependencyWarnings(viewPaths: string[], boxRoot: strin
     const relPath = path.relative(boxRoot, viewPath);
     for (const glob of extractDependencyGlobs(text, relPath)) {
       const { prefix } = staticGlobPrefix(glob);
+      // A prefixless, box-wide glob is layout-agnostic — the runtime loader
+      // restricts it to the box namespace; same exemption the rewriter gives
+      // it (one-root-view-dependencies.ts).
+      if (prefix === "" && glob.startsWith("*")) continue;
       const firstSegment = prefix.split("/", 1)[0] ?? "";
       if (!isInBoxNamespace(firstSegment)) {
         warnings.push(`${relPath}: dependency glob "${glob}" does not resolve into a box area`);
