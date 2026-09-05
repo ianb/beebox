@@ -52,7 +52,12 @@ async function expandPath(
   const absolute = resolveCliTargetPath({ boxRoot, raw: pattern, relativeTo: boxRoot });
 
   if (hasGlobChars(pattern)) {
-    const matches = await glob(pattern, { cwd: boxRoot, nodir: true });
+    // Glob the NORMALIZED pattern, not the raw one: a canonical leading-/
+    // box path (`/_config/*.card`) would otherwise be passed to glob as an
+    // OS-absolute pattern and silently match nothing (round-2 review
+    // finding, 2026-09-05).
+    const normalizedPattern = path.relative(boxRoot, absolute).split(path.sep).join("/");
+    const matches = await glob(normalizedPattern, { cwd: boxRoot, nodir: true });
     return matches
       .map((m) => (path.isAbsolute(m) ? m : path.join(boxRoot, m)))
       .filter((m) => isCardFile(m))

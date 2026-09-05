@@ -268,6 +268,11 @@ async function executeMoveUnguarded(
   }
 
   const fromPaths = Array.isArray(moveArgs.from) ? moveArgs.from : [moveArgs.from];
+  // Validate EVERY source (and the destination) before the move loop starts:
+  // a display-form or otherwise-rejected path among later sources must fail
+  // the whole command up front, not abort after earlier sources already moved
+  // (round-2 review finding, 2026-09-05).
+  for (const fromPath of fromPaths) resolveBoxRelative(ctx, fromPath);
   const rawDestPath = resolveBoxRelative(ctx, moveArgs.to);
   const destIsDir = isDirectoryDest(rawDestPath);
 
