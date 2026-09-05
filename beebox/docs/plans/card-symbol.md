@@ -127,9 +127,10 @@ prominence and must not become a way to spell it).
   `docs/implemented-plans/chat-review.md:432`); this plan will not be the third
   to rediscover it.
 - `src/core/lint-path-fields.ts:67` — the inventory of frontmatter fields that
-  hold box paths, which today knows `navigation.symbol.src` and `entry`. A
-  universal `symbolSrc` has to be added here or it silently escapes the
-  path-rewriting and lint that every other ref gets.
+  hold box paths, which today knows `navigation.symbol.src` and `entry`. The
+  universal `symbol.src` has to be added here or it silently escapes the
+  path-rewriting and lint that every other ref gets. (The grouped shape helps:
+  the new entry is one path deeper than the old one, not a new kind of entry.)
 
 ## Prior art (external)
 
@@ -176,23 +177,40 @@ answer to the boxholder's ask.
 
 **Direction.**
 
+One grouped field, not four flat ones (boxholder, 2026-09-05 — "one `symbol:`
+makes sense … feels right to group them"):
+
 ```ts
 // beebox/src/cards/schema.ts — GLOBAL_CARD_FIELDS
-symbol: z.string().optional(),            // the mark: text, usually one emoji
-symbolSrc: z.string().optional(),         // a box ref to an image, for marks text can't carry
-symbolForeground: z.string().optional(),  // any CSS colour; hsl() preferred
-symbolBackground: z.string().optional(),
+symbol: z.object({
+  char: z.string().optional(),        // the mark itself: text, usually one emoji
+  src: z.string().optional(),         // a box ref to an image, for marks text can't carry
+  foreground: z.string().optional(),  // #rgb | #rrggbb | hsl() | hsla() | rgb() | rgba()
+  background: z.string().optional(),
+}).optional(),
 ```
 
-Two fields rather than landmark's `string | { src }` union, because agents
-author these: a union asks the author to know two shapes for one idea, it cannot
-be lint-checked per key, and the wire already splits it
-(`landmarks.ts:32-52`). The union is what makes landmarks special; splitting it
-is what stops them being special.
+```yaml
+symbol:
+  char: 🍞
+  background: hsl(35 60% 88%)
+```
+
+An **object with named keys, never a bare string**. `symbol: 🍞` would be the
+landmark union again in a new place — two shapes for one idea, which is what
+makes landmarks the special case this plan is retiring, and which cannot be
+lint-checked per key. The cost is that the common case is two lines instead of
+one; the migration pays it once for existing landmark cards and authoring
+guidance carries it after that.
+
+`char` and `src` are mutually exclusive: a symbol carrying both is a lint
+warning, and `src` wins at render (it is the more specific intent). A `symbol:`
+key with neither is a lint warning too — an empty group is an author who meant
+something.
 
 `CardMark` (`components/ui/CardMark.tsx`) takes
-`{ symbol, symbolSrc, foreground, background, size, boxSlug, fallback }` and
-renders, in order: the image when `symbolSrc` resolves; else the symbol's
+`{ symbol, size, boxSlug, fallback }` — one prop for the whole group — and
+renders, in order: the image when `symbol.src` resolves; else `symbol.char`'s
 **first grapheme** (`Intl.Segmenter`, not `[0]`) on the coloured ground; else
 `fallback` — which callers supply (📍 for a landmark tile, the type icon for a
 file row, initials for a tab), because the four current copies disagreeing about
@@ -207,8 +225,8 @@ which asserts today's global-key set.
 
 Colour handling, stated honestly:
 
-- The **type** is `z.string().optional()`, so a non-string value (`symbolBackground: 3`)
-  is a hard load error like every other mistyped field. That is the existing
+- Each colour key is `z.string().optional()`, so a non-string value
+  (`background: 3`) is a hard load error like every other mistyped field. That is the existing
   contract and this plan does not carve an exception into it. Note for authoring:
   an unquoted `#3a7` is a YAML **comment**, so hex needs quotes — a lint warning
   catches the resulting empty value.
@@ -216,31 +234,31 @@ Colour handling, stated honestly:
   and is ignored at render. Cosmetic input does not get to make a card
   unreadable (principle 6), and does not get to fail silently either
   (principle 4).
-- `isCssColour()` (`src/shared/css-colour.ts`) accepts **four forms and
-  nothing else** (boxholder, 2026-09-05 — "anything else is weird"):
-  `#rgb`, `#rrggbb`, `hsl(…)`, `rgb(…)`. No named colours, no `hsla()`/`rgba()`
-  spellings (both functions take an optional alpha inside the modern syntax),
-  no `color-mix()`, `lab()`, `oklch()`. This is far narrower than CSS on
-  purpose: the only complete validator is `CSS.supports()`, which does not
-  exist in Node, so a server-side check that claimed completeness would be
-  lying. The lint message lists the four accepted forms rather than saying the
-  value is invalid CSS.
+- `isCssColour()` (`src/shared/css-colour.ts`) accepts **six forms and nothing
+  else** (boxholder, 2026-09-05 — "anything else is weird"): `#rgb`,
+  `#rrggbb`, `hsl(…)`, `hsla(…)`, `rgb(…)`, `rgba(…)`. No named colours, no
+  `color-mix()`, `lab()`, `oklch()`. This is far narrower than CSS on purpose:
+  the only complete validator is `CSS.supports()`, which does not exist in Node,
+  so a server-side check that claimed completeness would be lying. The lint
+  message lists the accepted forms rather than saying the value is invalid
+  CSS.
 - The renderer assigns **`color` and `backgroundColor` only** — never the
   `background` shorthand, which accepts images and URLs and is a different
   failure surface than the one the inline-style note below covers.
 
-**Vocabulary lock-ins.** The four field names above; `CardMark`;
-`isCssColour`; "mark" as the word for the rendered thing and "symbol" for the
-field.
+**Vocabulary lock-ins.** `symbol` and its four keys (`char`, `src`,
+`foreground`, `background`); `CardMark`; `isCssColour`; "mark" as the word for
+the rendered thing and "symbol" for the field.
 
-**First implementation chunk.** The four fields in `GLOBAL_CARD_FIELDS` plus
-`isCssColour` and its lint warning, with a doctest for the validator and one for
-"a card with a symbol round-trips through parse and reserialize". No UI.
+**First implementation chunk.** The `symbol` object in `GLOBAL_CARD_FIELDS`
+plus `isCssColour` and the lint warnings, with a doctest for the validator and
+one for "a card with a symbol round-trips through parse and reserialize". No
+UI.
 
 ### Track B — one source of card identity, live
 
 **What.** A tRPC procedure that answers "for these paths: title, symbol,
-symbolSrc, colours", invalidated on `file-change`. Every surface that lists
+symbol, colours", invalidated on `file-change`. Every surface that lists
 cards it has not loaded uses it.
 
 **Why this needs to change.** The sidecar strip holds a path and a string
@@ -318,7 +336,7 @@ unpinned tab sharing a symbol with a pinned one (not ambiguous — different set
 
 ### Track D — landmarks stop being the special case
 
-**What.** `navigation.symbol` folds into the card's own `symbol`/`symbolSrc`.
+**What.** `navigation.symbol` folds into the card's own top-level `symbol`.
 The landmark schema loses its copy, `readLandmarkSymbol` reads the card fields,
 and the four renderers become `CardMark`.
 
@@ -326,9 +344,9 @@ and the four renderers become `CardMark`.
 universal field true rather than merely additional. Leaving both would give the
 box two spellings of one idea (principle 8).
 
-**Direction.** A migration moves `navigation.symbol` on every landmark card:
-a string becomes `symbol:`, a `{ src }` becomes `symbolSrc:`, both at the card's
-top level. `LandmarkPayload` keeps its wire shape, so no frontend component
+**Direction.** A migration moves `navigation.symbol` on every landmark card to
+the card's own top-level group: a string becomes `symbol: { char: … }`, a
+`{ src }` becomes `symbol: { src: … }`. `LandmarkPayload` keeps its wire shape, so no frontend component
 changes for the fold itself — they change because they are being replaced by
 `CardMark`. The landmark schema keeps `navigation.label`, `links`, `expand`.
 
@@ -353,7 +371,7 @@ symbol.
 ## Could this be simpler?
 
 **The simplest version** is Track A's `symbol` field alone, drawn only in the
-sidecar strip, with no colours, no `symbolSrc`, no identity endpoint, and
+sidecar strip, with no colours, no `symbol.src`, no identity read, and
 landmarks left as they are. Perhaps a day's work.
 
 What the fuller plan buys, in order of how much it buys:
@@ -369,7 +387,7 @@ What the fuller plan buys, in order of how much it buys:
   without them. They stay because the boxholder asked, and because the
   validate-then-warn shape is small — but if the plan has to shrink, this is the
   cut.
-- **`symbolSrc` is not extra work**; it is the existing landmark image form,
+- **`symbol.src` is not extra work**; it is the existing landmark image form,
   which Track D has to carry somewhere.
 
 **Rejected as over-built:** a per-card colour *palette* (a theme, rather than
@@ -394,25 +412,26 @@ None. Four tracks, each one surface, with a settled shape.
 |---|---|---|---|
 | `symbol` holds a word, not a mark | yes — `CardMark` doctest + lint doctest | yes — first grapheme rendered, lint warning | clear |
 | A multi-code-point emoji is cut mid-sequence into a replacement box | yes — grapheme doctest (ZWJ family, flag, skin tone) | yes — `Intl.Segmenter` | would be visible garbage; tested |
-| `symbolBackground` is not a colour | yes — `isCssColour` doctest | yes — ignored at render, lint warning | clear |
+| `symbol.background` is not a colour | yes — `isCssColour` doctest | yes — ignored at render, lint warning | clear |
 | A valid colour makes the mark unreadable (dark on dark) | no | no — accepted; the author picked both | visible to the author immediately |
-| `symbolSrc` points outside the box | yes — existing `readLandmarkSymbol` doctest | yes — refused, resolves to null | clear (logged) |
+| `symbol.src` points outside the box | yes — existing `readLandmarkSymbol` doctest | yes — refused, resolves to null | clear (logged) |
 | `cards.identity` is asked for 200 paths at once | no | partly — it is a per-path read; the caller (the strip) is capped at 12 unpinned + pinned | silent until slow; see open question 2 |
 | A card is deleted while its tab is open | yes — route doctest (missing path omitted) | yes — the tab keeps its fallback label | clear |
 | Identity arrives after first paint, so the strip visibly re-labels | no automated test | yes — the persisted strip carries the last known title | visible flicker; browser-checked |
 | The landmark migration runs twice | yes — migration doctest | yes — idempotent (no `navigation.symbol` left to move) | clear |
 | A migrated landmark loses its mark because a lightweight reader strips global fields | yes — landmarks-router doctest over a migrated fixture | yes — Track D teaches the readers before migrating | would be silent (a landmark simply renders 📍); tested |
-| A universal `symbolSrc` escapes path lint and path rewriting | yes — lint doctest | yes — `lint-path-fields.ts:67` gains the field | would be silent (a moved image quietly 404s) |
+| The universal `symbol.src` escapes path lint and path rewriting | yes — lint doctest | yes — `lint-path-fields.ts:67` gains the field | would be silent (a moved image quietly 404s) |
+| A symbol carries both `char` and `src`, or neither | yes — lint doctest | yes — lint warning; `src` wins at render | clear |
 | A field added to `GLOBAL_CARD_FIELDS` but not to `InferCardFields` | yes — a typed-read doctest | yes — both edited in A1 | silent at the type level; two prior plans hit it |
 | A box on the server has a landmark form the migration does not expect | no | no | **would be silent** — the migration reports what it changed and what it skipped, and the skip list is the check |
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong tag / wrong field** — GAP worth naming: `symbol` and `symbolSrc` are
-  adjacent, and an agent handed an image path may write it into `symbol`. A
-  `symbol` value that looks like a path (contains `/` or ends in an image
-  extension) gets its own lint warning naming `symbolSrc`.
-- **Stale ref** — ADDRESSED: `symbolSrc` resolves through `resolveRefPath` and
+- **Wrong tag / wrong field** — ADDRESSED, and improved by the grouped shape:
+  `char` and `src` sit side by side under one key, so an agent choosing between
+  them sees both. A `char` value that looks like a path (contains `/` or ends in
+  an image extension) still gets its own lint warning naming `src`.
+- **Stale ref** — ADDRESSED: `symbol.src` resolves through `resolveRefPath` and
   yields null when the target is gone (`core/landmark/symbol.ts`); `CardMark`
   falls back.
 - **Two agents touching the same card** — ADDRESSED: `symbol` is one scalar in
@@ -443,7 +462,7 @@ None. Four tracks, each one surface, with a settled shape.
   wins where it exists; where it does not, the type icon stays exactly as it is.
 - **A symbol on directories** — a directory is not a card and has no
   frontmatter. The landmark of a directory is the existing answer.
-- **`symbolSrc` beyond carrying the landmark form forward** — no new image
+- **`symbol.src` beyond carrying the landmark form forward** — no new image
   authoring, no upload flow, no sizing story.
 - **Colour in the browser favicon** — `emojiFaviconUri` stays as it is; a title
   and a favicon take the character, not the ground.
@@ -453,18 +472,18 @@ None. Four tracks, each one surface, with a settled shape.
 
 ## Open design questions
 
-1. **Does the image form (`symbolSrc`) belong in this plan at all?** *(needs the
+1. **Does the image form (`symbol.src`) belong in this plan at all?** *(needs the
    boxholder)* The decision was "text only, for now", and the issue parks the
    image form as a separate question — but "landmark should not be a special
    case" pulls the other way, and the image form is **in use**: ten-plus
    landmark cards in one of the boxholder's own boxes carry the `{ src: … }`
    form today, so dropping it would break real cards. So the
-   options are (a) universal `symbolSrc`, which is what this plan assumes and
-   what fully retires the special case; (b) text-only universal `symbol`, with
-   landmarks keeping a private nested field for images — a smaller plan that
-   leaves a residual special case; or (c) drop image symbols, which breaks real
-   cards and is not on the table. Lean: (a), because (b) leaves the exact thing
-   the ask wanted gone. This is the one question that changes the plan's shape.
+   options are (a) `symbol.src` in the universal group, which is what this plan
+   assumes and what fully retires the special case; (b) a `char`-only universal
+   group, with landmarks keeping a private nested field for images — a smaller
+   plan that leaves a residual special case; or (c) drop image symbols, which
+   breaks real cards and is not on the table. Lean: (a), because (b) leaves the
+   exact thing the ask wanted gone.
 2. **Does `symbol` deserve a per-type default?** A `question` card with no
    symbol could fall back to a type mark rather than the SVG glyph table. Lean:
    no, not in this plan — it is the "every card wears one" failure in a
@@ -486,7 +505,7 @@ value of the field depends entirely on their restraint with it.
   `symbol`?", answers that most cards should not — that a symbol is for a card
   returned to often, and that a box where every card has one has none.
 - `knows_directly`: asked how to give a card an image mark, the agent names
-  `symbolSrc` rather than putting a path in `symbol`.
+  `symbol.src` rather than putting a path in `symbol.char`.
 
 Both land in `beebox/src/dev/knowledge-audits.yaml` **and are run**
 (`pnpm knowledge-audit run --box <absolute path to a test box> --filter card-symbol`),
@@ -500,9 +519,9 @@ directions.
   executably.
 - **`test/cards/card-symbol.doctest.md`** — the universal fields parse,
   reserialize in schema order, and survive a card that declares none of them;
-  `isCssColour` accepts `hsl(210 40% 50%)`, `#3a7`, `#33aa77`, `rgb(1 2 3)` and
-  rejects `rebeccapurple`, `hsla(…)`, `color-mix(…)`, `javascript:…`, `#3a7f`,
-  and an empty string.
+  `isCssColour` accepts `hsl(210 40% 50%)`, `hsla(210, 40%, 50%, .5)`, `#3a7`,
+  `#33aa77`, `rgb(1 2 3)`, `rgba(1, 2, 3, .5)` and rejects `rebeccapurple`,
+  `color-mix(…)`, `javascript:…`, `#3a7f`, and an empty string.
 - **`test/cards/card-lint-symbol.doctest.md`** — the three warnings: a
   multi-grapheme symbol, a bad colour, a path-shaped symbol.
 - **`test/webapp/routes/cards-identity.doctest.md`** — the batch read, including
