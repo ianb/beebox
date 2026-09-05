@@ -31,6 +31,8 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
 import { BOX_BUILT_DEPENDENCIES } from "../src/core/box/package.js";
 import { isRecord } from "../src/lib/is-record.js";
+import { fileExists } from "../src/lib/file-exists.js";
+import { BOX_PACKAGE_DOCS } from "../src/core/docs-gen/shared.js";
 
 /** A gate step (command or assertion) failed. `label` names the step;
  *  `detail` carries the full diagnostic (command line, stdout/stderr, or
@@ -50,6 +52,13 @@ class SmokeStepError extends Error {
 }
 
 /** No `dist-release/*.tgz` to smoke-test — `pnpm release` hasn't run. */
+class PackageDocsMissingError extends Error {
+  constructor(relPath: string) {
+    super("package docs missing from the installed tarball: " + relPath);
+    this.name = "PackageDocsMissingError";
+  }
+}
+
 class NoTarballError extends Error {
   readonly dir: string;
   constructor(dir: string) {
@@ -214,6 +223,23 @@ async function scaffold(args: { tarball: string; boxDir: string }): Promise<void
   });
 }
 
+/**
+ * The agent guide points every agent at `node_modules/beebox/box-docs/`; a
+ * tarball that dropped the directory (a `files` allowlist regression) would
+ * leave those pointers dangling on a read-only install, where nothing can
+ * rewrite them. Assert the index and one card doc made it into the pack.
+ */
+async function packageDocsShipped(boxDir: string): Promise<void> {
+  const dir = path.join(boxDir, BOX_PACKAGE_DOCS);
+  for (const file of ["README.md", "bbx-commands.md", "card-memo.md", ".hash"]) {
+    const p = path.join(dir, file);
+    if (!(await fileExists(p))) {
+      throw new PackageDocsMissingError(path.relative(boxDir, p));
+    }
+  }
+  process.stderr.write("[smoke] ok: package docs shipped (" + BOX_PACKAGE_DOCS + ")\n");
+}
+
 async function importEveryPublicExport(boxDir: string): Promise<void> {
   const specifiers = await publicExportSpecifiers();
   const importScript = specifiers.map((s) => "await import(" + JSON.stringify(s) + ");").join("\n");
@@ -348,6 +374,7 @@ async function main(): Promise<void> {
   try {
     await mkdir(boxDir, { recursive: true });
     await scaffold({ tarball, boxDir });
+    await packageDocsShipped(boxDir);
     await importEveryPublicExport(boxDir);
     await typecheck(boxDir);
     await validate(boxDir);

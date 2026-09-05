@@ -5,6 +5,7 @@
  * this section is the mechanic that carries it.
  */
 
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import { SECTION } from "./sections.js";
 
 export function quotesSection(): string {
@@ -57,6 +58,6 @@ these fixes keep a quote faithful:
   says it again more clearly. Treat the two as one self-correction: keep the
   clean second version, drop the first.
 
-See \`_content/docs/generated/narration-mode.md\`.
+See \`${BOX_PACKAGE_DOCS}/narration-mode.md\`.
 `;
 }

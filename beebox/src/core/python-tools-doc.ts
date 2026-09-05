@@ -1,7 +1,7 @@
 /**
  * Generate the python-tools reference documentation for agents.
  *
- * Called by generate-docs.ts to produce _content/docs/generated/python-tools.md.
+ * Emitted into the package docs as python-tools.md (docs-gen/package-docs.ts).
  * Covers the project convention for invoking Python CLI tools: use `uvx`
  * with a version pin at the call site rather than installing globally.
  */

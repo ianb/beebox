@@ -5,6 +5,7 @@
  * rm) live in ABOUT_CARDS and are only pointed at from here.
  */
 
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import { SECTION, xref } from "./sections.js";
 
 export function keyCommandsSection(): string {
@@ -12,7 +13,7 @@ export function keyCommandsSection(): string {
 
 Card operations — \`bbx create\` / \`bbx mv\` / \`bbx rm\` — live in ${xref(SECTION.ABOUT_CARDS)}.
 This is the rest of the everyday \`bbx\` surface; the full reference is
-\`_content/docs/generated/bbx-commands.md\`.
+\`${BOX_PACKAGE_DOCS}/bbx-commands.md\`.
 
 **Reach for these:**
 
@@ -33,7 +34,7 @@ This is the rest of the everyday \`bbx\` surface; the full reference is
   read it and report back the relevant part instead of pulling the whole
   transcript into your own context.
 - \`bbx procedure run <name-or-path>\` — run a procedure. Procedures are how
-  one-shot structured work gets done (see \`_content/docs/generated/procedures.md\`).
+  one-shot structured work gets done (see \`${BOX_PACKAGE_DOCS}/procedures.md\`).
 - \`bbx chat …\` — a family of commands for the live chat session:
   \`bbx chat self-note "<body>" [--ref <path>] [--commit <hash>]\` posts an
   agent-authored record a scheduled sub-agent leaves for the boxholder (not a

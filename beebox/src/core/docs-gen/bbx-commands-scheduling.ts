@@ -4,6 +4,8 @@
  * file under the line limit; assembled there by generateBbxCommands().
  */
 
+import { BOX_PACKAGE_DOCS } from "./shared.js";
+
 /**
  * Hand-written command sections: procedure, tick, scheduled, scheduler, finalize,
  * scenario.
@@ -12,7 +14,7 @@ export function bbxCommandsScheduling(): string[] {
   return [
     "## bbx procedure",
     "",
-    "Run and manage declarative procedures. See `_content/docs/generated/procedures.md` for details.",
+    `Run and manage declarative procedures. See \`${BOX_PACKAGE_DOCS}/procedures.md\` for details.`,
     "",
     "```bash",
     "bbx procedure run <name-or-path>          # Run a procedure",

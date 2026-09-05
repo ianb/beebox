@@ -1,6 +1,9 @@
 node_modules/
 dist/
 dist-release/
+# Engine reference docs, written into the package by ensurePackageDocs (docs-gen/package-docs.ts)
+box-docs/
+.box-docs-*/
 src/frontend/dist/
 *.log
 # Per-run deploy logs + the .last-deploy.log symlink (see deploy/deploy.sh).
