@@ -7,11 +7,8 @@ const SIZE_CLASSES = {
   thumb: "w-16 h-16 object-cover",
   sm: "max-w-xs max-h-64",
   md: "max-w-full max-h-96",
-  // Chat's ordinary image presentation is deliberately a stable media frame:
-  // reserve the same viewport-relative height before bytes decode, then
-  // letterbox unusual aspect ratios inside it. `max-h` alone collapses until
-  // intrinsic dimensions arrive and makes the transcript jump.
-  chat: "w-full h-[70vh] object-contain",
+  // Preserve intrinsic proportions; the scroll controller compensates decode-time reflow.
+  chat: "max-w-full max-h-[70vh]",
   lg: "max-w-full max-h-[32rem]",
 } as const;
 
@@ -96,10 +93,7 @@ function BrokenImageIcon() {
 }
 
 function errorSizeClass(size: ImageSize): string {
-  // A failed media request should not turn into a viewport-tall empty slab.
-  // The successful chat image reserves that much room because it has visual
-  // content to show; the compact failure state communicates the error without
-  // multiplying dead space through the transcript.
+  // Keep the failure state compact regardless of the successful image cap.
   return size === "chat" ? SIZE_CLASSES.md : SIZE_CLASSES[size];
 }
 
@@ -187,7 +181,6 @@ function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, ti
       aria-label={lightbox ? `${alt} (click to zoom)` : undefined}
       className={cn(
         "block border-0 bg-transparent p-0",
-        size === "chat" ? "w-full" : "",
         lightbox ? "cursor-zoom-in" : "cursor-pointer",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         extraClass,
@@ -215,9 +208,9 @@ function wrapWithOverlay({ node, overlay, extraClass }: { node: ReactNode; overl
   );
 }
 
-function wrapInFigure({ node, caption, extraClass, fullWidth }: { node: ReactNode; caption: ReactNode; extraClass?: string; fullWidth: boolean }): ReactNode {
+function wrapInFigure({ node, caption, extraClass }: { node: ReactNode; caption: ReactNode; extraClass?: string }): ReactNode {
   return (
-    <figure className={cn("inline-flex flex-col items-center", fullWidth ? "w-full" : "", extraClass)}>
+    <figure className={cn("inline-flex flex-col items-center", extraClass)}>
       {node}
       <figcaption className="mt-1 max-w-full text-xs text-warm-600 italic text-center">
         {caption}
@@ -236,10 +229,9 @@ interface AssembleOpts {
   isOrthogonal: boolean;
   outerLayer: OuterLayer;
   className: string | undefined;
-  fullWidth: boolean;
 }
 
-function assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className, fullWidth }: AssembleOpts): ReactNode {
+function assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className }: AssembleOpts): ReactNode {
   let node: ReactNode = base;
   if (isOrthogonal && !errored) {
     node = wrapOrthogonal({ node, extraClass: outerLayer === "orthogonal" ? className : undefined });
@@ -248,7 +240,7 @@ function assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLay
     node = wrapWithOverlay({ node, overlay, extraClass: outerLayer === "overlay" ? className : undefined });
   }
   if (caption !== undefined) {
-    node = wrapInFigure({ node, caption, extraClass: className, fullWidth });
+    node = wrapInFigure({ node, caption, extraClass: className });
   }
   return node;
 }
@@ -365,5 +357,5 @@ export function Image(props: ImageProps) {
     />
   );
 
-  return assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className, fullWidth: size === "chat" });
+  return assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className });
 }

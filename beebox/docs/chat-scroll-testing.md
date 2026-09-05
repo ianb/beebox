@@ -128,8 +128,8 @@ that lands at the top means the hold ended before the first content cycle.
 ### 2.4b Opening a thread whose last turn carries images
 
 The boxholder's 2026-08-26 report: with images in the transcript the page
-opened above the bottom (web and iOS). Assistant images now reserve their
-70vh frame; user-image thumbnails can still gain height when decoded. Use a
+opened above the bottom (web and iOS). Assistant images and user-image thumbnails use natural proportions and
+can gain height when decoded. Use a
 session whose final reply embeds several images, and
 open it **cold** (a hard reload, so the images are fetched, not served from
 the memory cache):
@@ -205,7 +205,8 @@ run does not cover them. Exercise the actual rendering paths separately:
 
 - Assistant Markdown images, both in a paragraph and in an image-only
   paragraph: `ChatInlineImage` / `ChatImage` in `markdown-rendering.tsx` use
-  `Image size="chat"`, reserving a 70vh frame and loading eagerly.
+  `Image size="chat"`, using natural proportions with a 70vh maximum height
+  and loading eagerly.
 - User-message image content blocks: `MessageImage` in `user-entry-content.tsx`
   uses `Image size="sm" loading="lazy"`. Its maximum dimensions do not reserve
   the image's intrinsic height before decode. Use real attachment/content-block
@@ -229,7 +230,7 @@ previous case does not hide a request.
 | Lazy completion during a gesture | Delay a requested user image, move the viewport so it is above the text being read, then release it during a scroll/fling. Check for reversal or a jump; repeat with the keyboard open/closed on the simulator and device. |
 | Several images / finalize | Deliver images in a different order from their transcript order; finish the real assistant turn while an image is pending. Check image/turn node replacement and placeholder/frame collapse across authoritative history refresh. |
 | Missing image | Return 404 and wait at least 12 seconds. The failure placeholder should remain stable and there must be no timed `imageRetry` requests or repeated placeholder/image swaps. Repeat after a Markdown rerender. |
-| Changed image / proxy fallback | For assistant box images, change the underlying file and confirm the file-change versioned URL can load after an earlier failure. Record the short failure placeholder expanding back to a 70vh image frame, with the reading marker above and below it. Separately test an external image's one-time proxy fallback, including a failing proxy. |
+| Changed image / proxy fallback | For assistant box images, change the underlying file and confirm the file-change versioned URL can load after an earlier failure. Record the short failure placeholder expanding back to natural image proportions, with the reading marker above and below it. Separately test an external image's one-time proxy fallback, including a failing proxy. |
 
 The timed missing-image retry hook was removed in this workstream. A missing
 URL now stays failed rather than periodically attempting the same resource.
@@ -436,7 +437,7 @@ not guarantee that later DOM reads describe the last painted frame. The
 and [Resize Observer processing model](https://drafts.csswg.org/resize-observer/#html-event-loop)
 place resize reconciliation inside a rendering update, before paint.
 
-**Reserved network images:** isolated real-chat tests of the shipping markdown
+**Earlier reserved-frame network-image baseline (before natural sizing was restored):** isolated real-chat tests of the shipping markdown
 `Image size="chat"` path with an eight-second HTTP response produced one request
 and retained one DOM image in each of five arms: no typing, single-line typing,
 five-line typing, diagnostics on at navigation, and diagnostics enabled while
@@ -555,3 +556,23 @@ content collapses. Protocol for running a round with the boxholder: the
   (`overscroll-behavior: contain`, iOS 16+).
 - **Retina:** confirm "at the bottom" still registers at `devicePixelRatio` 2
   (the 24px margin should absorb sub-pixel rounding).
+
+### Natural image sizing follow-up
+
+The forced full-width 70vh frame has been removed. Chat images use their
+intrinsic proportions, with available width and 70vh as maximum dimensions;
+small images are not enlarged to fill the transcript. Caption and lightbox
+wrappers no longer force full width.
+
+The ordinary assistant Markdown `ChatImage` renderer was exercised with a
+controlled delayed HTTP response above and below a visible reading marker.
+Both arms decoded the same 800×600 DOM image after exactly one request, gaining
+403.875px height. Above the marker, compensation was 404px and marker drift
+was −0.125px; below it, both compensation and marker drift were zero. This
+covers the now-variable ordinary image path in desktop Chromium; physical-iOS
+image completion remains on the device checklist.
+
+A mounted production `Image` component probe also measured landscape, portrait,
+and small images. In a 400px-wide container, 800×400 rendered at 400×200,
+400×800 rendered at approximately 202×404 (the viewport's 70vh cap), and
+120×80 remained 120×80. Their button and figure widths matched the images.

@@ -9,11 +9,14 @@ discovered-by: Ian
 discovered-in: main session — "we should figure out image size because there's still jank when they load"
 ---
 
-Closed by `3e09d7d9e`. The implementation reserves the existing full-width
-`70vh` chat presentation frame and letterboxes the decoded image, instead of
-plumbing intrinsic dimensions through every upload and transcript path as the
-issue originally sketched. This covers ordinary `size="chat"` images while
-leaving intentionally small attachment thumbnails unchanged.
+Originally closed by `3e09d7d9e` using a forced full-width `70vh` frame.
+The chat-scroll-fixes follow-up removed that frame at the boxholder's request:
+images now retain natural proportions with a `70vh` maximum. The corrected
+scroll controller anchors visible text inside a message and compensates image
+reflow before paint. The remaining physical-device image checks are tracked in
+[the open scroll issue](../../bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md).
+
+## Original investigation
 
 The scroll model *compensates* for image loads (anchor deltas in
 `chat-scroll.ts`; `waitForImages` in the open-thread hold) but compensation is
