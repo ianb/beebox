@@ -475,6 +475,54 @@ still failed with 245px drift. The complete harness passed 17 of 19 scenarios;
 the two send-animation scenarios remain failing. These are reproducibility
 improvements, not a production scrolling fix.
 
+### Controller fix verification (2026-09-04)
+
+The fix uses a visible text character inside each message as the reading
+anchor, measured in content coordinates. Appending below it cannot move that
+coordinate; image growth above it can. Text-prefix validation rejects a reused
+DOM node whose contents changed. A canceled send invalidates its anchor, and
+an active send owns writes while resize reconciliation still measures geometry.
+
+Viewport resizing preserves the bottom only when the signed natural-content
+bottom gap was actually near zero. A negative gap inside a live turn's empty
+spacer is not a bottom-pinning request. The spacer now uses `100cqh` against the
+size-contained scroller, so it resizes in the same layout instead of waiting
+for a React state update. This follows the
+[container-relative length model](https://www.w3.org/TR/css-contain-3/#container-lengths).
+The real multiline typing probe now records zero message-list commits, versus
+two before this change (one composer and one enclosing chat-root commit remain).
+The spacer is scoped to the current send: the production hook was mounted in
+Chrome and driven through initial idle, send, completed idle, background refresh,
+and next send. It stayed absent during the refresh and returned for the next
+send. The harness now attaches the same natural-height live-content wrapper as
+real chat and excludes empty spacer space from its bottom-distance measurement.
+
+Verified locally with rendering-health and connected-marker checks:
+
+- Real desktop multiline send: 3/3 at `userTop: 0`, no ease cancellation.
+- Composer growth: bottom retained at gap 0; marker drift 0 at gap 200.
+  A separate real-chat short-reply probe kept `userTop: 0` through composer
+  grow/shrink (viewport 405 → 285 → 405px, natural live content only 20–56px),
+  proving that unused spacer space does not trigger bottom pinning.
+- Real lazily loaded user image: above-marker drift -0.5px with 239px scroll
+  compensation for 238.5px image growth; below-marker drift 0. Each arm deferred
+  its initial request, fetched once, retained the node, and decoded 800×600.
+- Full deterministic harness: 20/20 with both normal and reduced motion,
+  including the new short-reply/composer
+  grow-and-shrink scenario. That scenario failed at 108px before the spacer
+  layout change. Send is now marked as intentional movement through its bounded
+  animation; final alignment and subsequent streaming drift remain asserted.
+- Authenticated iPhone 17 Pro simulator, iOS 26.5, final WKWebView: send ease
+  finished at scrollTop 1964 with `userTop: 0`; software-keyboard opening shrank
+  the scroller 606 → 305px, with `act: none`, unchanged scrollTop, and
+  `userTop: 0` while the reply continued growing. The later synthetic-stream
+  completion dropped its provisional reply/spacer and clamped to the real
+  bottom; that is outside the send/keyboard assertion window.
+
+Physical iPhone momentum/rubber-band and actual delayed-image completion on iOS
+remain unverified. The open issue stays open for those device checks; desktop
+and simulator success are not a substitute.
+
 When scroll behavior misbehaves somewhere `bin/browse` can't reach (a real
 iPhone, a prod-only condition), type `/scrolldebug` in the composer to toggle a
 flag-gated trace of the controller (`lib/scroll-diagnostics.ts`): every scroll
@@ -494,7 +542,8 @@ content collapses. Protocol for running a round with the boxholder: the
 - **Keyboard:** focus the composer; it must stay above the on-screen keyboard
   (`.h-app` tracks `visualViewport`), and a list that was at the bottom must
   still be at the bottom after the keyboard opens and closes (rule 4's
-  scroller-resize branch preserves the previous `fromBottom`).
+  scroller-resize branch retains the bottom only if already there; reading
+  above it should remain steady).
 - **Send spacer:** after sending, the user message must sit at the top of the
   visible area with the reply growing below it — including for a one-line reply,
   which is what the last-turn `min-height` buys.

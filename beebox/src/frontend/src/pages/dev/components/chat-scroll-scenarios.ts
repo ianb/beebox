@@ -74,7 +74,7 @@ const SCENARIOS_MAIN: Scenario[] = [
     ],
     expect: {
       finalUserMessageTopAtMost: 4,
-      finalAtBottom: false,
+      finalAtBottom: true,
       writesAtMost: 1,
     },
   },
@@ -197,6 +197,20 @@ const SCENARIOS_MAIN: Scenario[] = [
       driftWhileAwayAtMost: 8,
       finalHasUnseenContent: true,
     },
+  },
+  {
+    name: "send-then-composer-grows",
+    description: "A short reply has unused spacer below it. Resizing the composer after send must retain the sent message at the top, not jump to the natural content bottom.",
+    steps: [
+      { k: "send", px: 40 },
+      { k: "append", px: 48, role: "assistant" },
+      { k: "wait", ms: 500 },
+      { k: "chromeResize", px: 260 },
+      { k: "wait", ms: 200 },
+      { k: "chromeResize", px: 96 },
+      { k: "wait", ms: 200 },
+    ],
+    expect: { finalUserMessageTopAtMost: 4, driftWhileAwayAtMost: 8, writesAtMost: 1 },
   },
   {
     name: "chrome-grows",

@@ -14,6 +14,7 @@ import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "./ChatMessages";
 import type { ModelMarker } from "./InteractiveChat-helpers";
+import { useSendSpacer } from "./chat-scroll-spacer";
 import { useChatScroll } from "./chat-scroll";
 import {
   buildDataItems,
@@ -169,7 +170,7 @@ function MessageListInner({
     [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView],
   );
 
-  const { scrollerRef, contentRef, liveContentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen, viewportPx } = useChatScroll();
+  const { scrollerRef, contentRef, liveContentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen } = useChatScroll();
 
   // The content element, for the send anchor's DOM query. Held alongside (never
   // instead of) the controller's attach callback — one authority owns scroll.
@@ -200,7 +201,7 @@ function MessageListInner({
 
   // The bounded open-thread hold ends once the first history render has landed.
   const loading = snapshot.matches("loading");
-  const turnLive = !snapshot.matches("idle");
+  const showSendSpacer = useSendSpacer(sendSignal, snapshot.matches("idle"));
   useEffect(() => {
     if (!loading && messages.length > 0) settleOpen();
   }, [loading, messages.length, settleOpen]);
@@ -276,7 +277,7 @@ function MessageListInner({
         ref={scrollerRef}
         data-testid="chat-scroller"
         className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
-        style={{ overflowAnchor: "none" }}
+        style={{ overflowAnchor: "none", containerType: "size" }}
       >
         <div ref={attachContent} className="mx-auto w-full max-w-5xl">
           <LoadOlderHeader
@@ -303,7 +304,7 @@ function MessageListInner({
               // blank space; dropping it lets the browser clamp the view to the
               // real bottom — one move, at finalize, to a place that shows the
               // whole reply.
-              const spacer = sendSignal > 0 && turnLive && index === data.length - 1 ? viewportPx : undefined;
+              const spacer = showSendSpacer && index === data.length - 1 ? "100cqh" : undefined;
               return (
                 <div key={key} data-role={item.kind === "group" ? item.group.type : item.kind} style={{ minHeight: spacer }}>
                   <div ref={spacer === undefined ? undefined : liveContentRef} data-chat-live-turn-content={spacer === undefined ? undefined : ""}>

@@ -33,6 +33,8 @@ export interface RunContext {
 const INTENT_WINDOW_MS = 350;
 
 export function fromBottomOf(el: HTMLDivElement): number {
+  const live = el.querySelector("[data-chat-live-turn-content]");
+  if (live) return Math.max(0, live.getBoundingClientRect().bottom - el.getBoundingClientRect().top - el.clientHeight);
   return el.scrollHeight - el.scrollTop - el.clientHeight;
 }
 
@@ -66,7 +68,7 @@ export class Sampler {
 
   private prevAtBottom: boolean;
   private anchor: { el: Element; top: number } | null = null;
-  private lastIntentAt = -Infinity;
+  private intentUntil = -Infinity;
   private running = true;
   private inResizeCycle = false;
   private observer: ResizeObserver | null = null;
@@ -76,8 +78,8 @@ export class Sampler {
     this.prevAtBottom = ctx.atBottom();
   }
 
-  markIntent(): void {
-    this.lastIntentAt = performance.now();
+  markIntent(durationMs?: number): void {
+    this.intentUntil = performance.now() + (durationMs ?? INTENT_WINDOW_MS);
     this.anchor = null;
   }
 
@@ -107,7 +109,7 @@ export class Sampler {
     // has already written, so it sees the state that goes to the screen.
     if (atBottom && this.inResizeCycle && fb > this.maxFromBottomWhileAtBottom) this.maxFromBottomWhileAtBottom = fb;
     if (atBottom !== this.prevAtBottom) {
-      const withIntent = performance.now() - this.lastIntentAt < INTENT_WINDOW_MS;
+      const withIntent = performance.now() < this.intentUntil;
       if (atBottom) this.reachedBottomCount++;
       else {
         this.leftBottomCount++;
@@ -124,7 +126,7 @@ export class Sampler {
     // Away from the bottom: accumulate how far the reader's page moved on
     // screen, ignoring the window right after their own scroll (that movement
     // is theirs).
-    const fresh = performance.now() - this.lastIntentAt < INTENT_WINDOW_MS;
+    const fresh = performance.now() < this.intentUntil;
     const anchor = this.anchor;
     if (!anchor || !anchor.el.isConnected || fresh) {
       this.anchor = fresh ? null : topVisible(el, content);

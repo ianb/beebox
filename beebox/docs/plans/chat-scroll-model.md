@@ -88,7 +88,7 @@ Writes, exhaustively:
    scrolling. If the reply outgrows the screen, it continues below the fold;
    the scroll-to-bottom button shows. (The boxholder's proposal and the
    ChatGPT/claude.ai behaviour.) The last turn carries
-   `min-height: <scroller clientHeight>` so "at the top" is reachable when the
+   `min-height: 100cqh` (the scroller is a size container) so "at the top" is reachable when the
    reply is short; the spacer lasts until the reply is complete (2026-08-26:
    it used to persist until the next send, leaving a screen of blank room
    under every finished reply — dropping it at finalize lets the browser
@@ -100,14 +100,18 @@ Writes, exhaustively:
 3. **Click the scroll-to-bottom button** → smooth scroll to the bottom.
 4. **Hold position** across changes the user did not cause:
    - older history prepended above → restore the captured bottom gap;
-   - content above the viewport reflowing (a late image/embed) → keep the
-     top-visible child at its recorded offset. The anchor's offset is updated
-     on every scroll event (the current controller already does this,
-     `InteractiveChat-scroll.ts:266-273`) so a resize landing mid-fling
-     measures only reflow, never the user's own momentum;
+   - content above the reading point reflowing (a late image/embed) → retain a
+     visible character within the message, using a DOM Range. Measure its
+     content coordinate (`rect.top - scroller.top + scrollTop`), so scroll
+     events cannot be mistaken for reflow. An element is a fallback for
+     non-text content. This replaces the message-level anchor after the
+     2026-09-04 lazy user-image reproduction exposed intra-message movement;
    - the scroller shrinking or growing from below (keyboard, composer,
-     banners) → preserve the previous `fromBottom`. This needs the
-     pre-resize `fromBottom`, a number recorded on every scroll and resize.
+     banners) → keep the bottom only if already there; otherwise preserve
+     the reading point within the legal scroll range. This replaces the
+     unconditional bottom-gap policy that moved reading text while typing.
+   A running send ease owns writes until it finishes or is interrupted;
+   resize callbacks measure and update viewport size without superseding it.
    Each is "measure delta, write delta", triggered by a resize. None consults
    whether the user scrolled recently.
 

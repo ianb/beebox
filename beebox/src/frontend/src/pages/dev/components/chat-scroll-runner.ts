@@ -98,6 +98,9 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       await delay(step.ms);
       return;
     case "send":
+      // The discrete send owns a bounded 400ms ease. Its intentional movement
+      // is not drift; streaming continues throughout and is checked afterwards.
+      sampler.markIntent(450);
       // The app's send: the user message lands, takes the last-turn spacer,
       // and the controller anchors it to the top in the same commit.
       ctx.apply((prev) => ({

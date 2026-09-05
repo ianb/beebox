@@ -176,6 +176,7 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
     contentElRef.current = el;
     bindContent(el);
   }, [bindContent]);
+  const attachLiveContent = controller.liveContentRef;
 
   const capture = controller.captureForPrepend;
   const toBottom = controller.scrollToBottom;
@@ -273,9 +274,9 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
       <HarnessToolbar running={running} onReset={reset} />
       <ScrollFrame
         content={content}
-        viewportPx={controller.viewportPx}
         attachScroller={attachScroller}
         attachContent={attachContent}
+        attachLiveContent={attachLiveContent}
       />
       <HarnessStatusRow atBottom={controller.atBottom} unseen={controller.hasUnseenContent} onScrollToBottom={toBottom} />
       <HarnessReadout scroller={scrollerElRef} atBottom={controller.atBottom} unseen={controller.hasUnseenContent} summary={summary} />
@@ -286,13 +287,12 @@ function HarnessFrame({ useController }: { useController: HarnessControllerHook 
 
 interface ScrollFrameProps {
   content: HarnessContent;
-  /** The scroller's clientHeight, from the controller — the send spacer's height. */
-  viewportPx: number;
   attachScroller: (el: HTMLDivElement | null) => void;
   attachContent: (el: HTMLDivElement | null) => void;
+  attachLiveContent: (el: HTMLDivElement | null) => void;
 }
 
-function ScrollFrame({ content, viewportPx, attachScroller, attachContent }: ScrollFrameProps) {
+function ScrollFrame({ content, attachScroller, attachContent, attachLiveContent }: ScrollFrameProps) {
   const lastId = content.messages.at(-1)?.id ?? null;
   return (
     <div
@@ -304,7 +304,7 @@ function ScrollFrame({ content, viewportPx, attachScroller, attachContent }: Scr
         ref={attachScroller}
         data-testid="harness-scroller"
         className="flex-1 min-h-0 overflow-y-auto bg-warm-50"
-        style={{ overflowAnchor: "none" }}
+        style={{ overflowAnchor: "none", containerType: "size" }}
       >
         <div ref={attachContent} data-testid="harness-content" className="flex flex-col gap-2 p-2">
           {content.messages.map((m, messageIndex) => (
@@ -313,12 +313,15 @@ function ScrollFrame({ content, viewportPx, attachScroller, attachContent }: Scr
               data-testid="harness-message"
               data-role={m.role}
               className={m.role === "assistant" ? "rounded bg-white border border-warm-200" : "rounded bg-primary-100 border border-primary-200 ml-12"}
-              style={{
-                height: m.image ? undefined : m.px,
-                minHeight: content.lastTurnSpacer && m.id === lastId ? viewportPx : m.image ? m.px : undefined,
-              }}
+              style={{ minHeight: content.lastTurnSpacer && m.id === lastId ? "100cqh" : undefined }}
             >
-              {m.image ? <ControlledHarnessImage image={m.image} messageIndex={messageIndex} /> : null}
+              <div
+                ref={content.lastTurnSpacer && m.id === lastId ? attachLiveContent : undefined}
+                data-chat-live-turn-content={content.lastTurnSpacer && m.id === lastId ? "" : undefined}
+                style={{ height: m.image ? undefined : m.px, minHeight: m.image ? m.px : undefined }}
+              >
+                {m.image ? <ControlledHarnessImage image={m.image} messageIndex={messageIndex} /> : null}
+              </div>
             </div>
           ))}
         </div>
