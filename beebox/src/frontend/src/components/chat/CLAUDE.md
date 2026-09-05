@@ -29,10 +29,21 @@ screen continues below the fold and the button lights up
 3. **The scroll-to-bottom button** — smooth scroll to the bottom.
 4. **Compensations**, all "measure delta, write delta" on a resize: restore the
    captured gap across an older-history prepend, hold the reading anchor when
-   content above the viewport reflows, and preserve the previous `fromBottom`
-   when the scroller box itself resizes (keyboard, composer, banners). The pure
+   content above the viewport reflows, and keep the bottom visible on a viewport
+   resize only when already there. Away from the bottom, keyboard/composer
+   resizing preserves the reading point, subject to the browser's legal scroll
+   range. The anchor is a visible text character inside a message (an element
+   fallback for non-text content), measured in scroll-content coordinates so
+   ordinary scrolling never looks like reflow. A send ease owns writes while
+   active; reconciliation still measures geometry but cannot cancel it. The pure
    dispatcher is `decideReconcile` in `scroll-reconcile.ts`, unit-checked in
    `test/frontend/chat-scroll-reconcile.doctest.md`.
+
+The live spacer uses `100cqh` inside the size-contained scroller. Do not mirror
+viewport height through React state: the delayed spacer update permits a
+browser clamp before the new height lands and rerenders the message list on
+composer growth. `useSendSpacer` records the completed send on idle so a
+background refresh cannot recreate that send's spacer.
 
 The controller keeps *geometry* state only (previous `scrollHeight`, previous
 `fromBottom`, one anchor) and no *intent* state: it never asks whether a scroll

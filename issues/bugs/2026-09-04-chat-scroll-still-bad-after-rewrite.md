@@ -1,6 +1,6 @@
 ---
 title: "Chat scroll is still bad after the write-on-user-action rewrite — the device half was never verified"
-workstream: unattached
+workstream: chat-scroll-fixes
 area: beebox
 priority: important
 labels: [ui, chat, scroll]
@@ -8,6 +8,19 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "The scroll is still quite bad"
 ---
+
+## 2026-09-04 follow-up — still open
+
+`ee3a07157` fixes the reproduced send, composer-resize, and intra-message
+image-reflow failures; the earlier investigation commits add instrumentation
+and remove timed image retries. Verification covers 20/20 harness scenarios
+in both motion modes, real web send/resize/lazy-image probes, and authenticated
+iOS WKWebView simulator send/keyboard behavior. Physical-iPhone momentum,
+rubber-band, keyboard transitions, and delayed-image completion remain open.
+The current procedure and evidence are in
+[chat scroll testing](../../beebox/docs/chat-scroll-testing.md).
+
+## Original report
 
 The chat scroll controller was rewritten in the `chat-scroll` workstream
 (landed 2026-08-26, `docs/plans/chat-scroll-model.md`, status `partial`). The

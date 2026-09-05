@@ -40,7 +40,6 @@ function ChatInlineImage({ src, alt }: { src: string; alt: string }) {
       alt={alt}
       size="chat"
       lightbox
-      retryOnError={proxyFallbackSrc === undefined}
       className="block mx-auto my-2"
       {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}
     />
@@ -65,7 +64,6 @@ function ChatImage({ src, alt }: { src: string; alt: string }) {
       alt={alt}
       size="chat"
       lightbox
-      retryOnError={proxyFallbackSrc === undefined}
       caption={hasCaption ? alt : undefined}
       className="mx-auto"
       {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}

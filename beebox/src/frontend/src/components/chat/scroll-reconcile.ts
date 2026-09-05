@@ -29,6 +29,8 @@ export interface ReconcileInputs {
    *  reader at the bottom whose reply outgrows the screen is no longer at the
    *  bottom afterwards, and the badge lights. */
   atBottomAfter: boolean;
+  /** Before a viewport resize, was the reader at the bottom? */
+  atBottomBefore: boolean;
   /** The thread is still in its bounded open phase: keep the bottom on every
    *  growth until the first history render has landed. */
   openPhase: boolean;
@@ -41,7 +43,7 @@ export type ReconcileAction =
   /** Opening the thread — the bottom is where the reader starts. */
   | "open-bottom"
   /** The scroller box resized (keyboard, composer, banner) — preserve the
-   *  distance from the bottom the reader had before it. */
+   *  bottom only if the reader was already there. */
   | "hold-from-bottom"
   /** Compensate the shifted anchor so the reading position stays put. */
   | "hold-anchor"
@@ -61,8 +63,8 @@ export type ReconcileAction =
 export function decideReconcile(inputs: ReconcileInputs): ReconcileAction {
   if (inputs.prepend) return "hold-prepend";
   if (inputs.openPhase) return "open-bottom";
-  if (inputs.source === "scroller") return "hold-from-bottom";
+  if (inputs.source === "scroller" && inputs.atBottomBefore) return "hold-from-bottom";
   if (inputs.anchorMoved) return "hold-anchor";
-  if (inputs.grew && !inputs.atBottomAfter) return "flag-unseen";
+  if (inputs.source === "content" && inputs.grew && !inputs.atBottomAfter) return "flag-unseen";
   return "none";
 }

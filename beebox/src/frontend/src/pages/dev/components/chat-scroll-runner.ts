@@ -23,6 +23,7 @@ import { flushSync } from "react-dom";
 import { assertNever } from "@shared/invariant";
 import type { HarnessContent, HarnessMessage } from "./chat-scroll-model";
 import { makeRandom } from "./chat-scroll-model";
+import { isImageStep, runImageStep } from "./chat-scroll-images";
 import type { Scenario, Step } from "./chat-scroll-scenarios";
 import { Sampler, fromBottomOf, type RunContext } from "./chat-scroll-sampler";
 
@@ -88,11 +89,18 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
   const el = ctx.scroller();
   if (!el) throw new HarnessNotMountedError();
   ctx.log("step", { k: step.k, ...stepDetail(step) });
+  if (isImageStep(step)) {
+    await runImageStep(step, { ctx, el, imageLanded: deps.imageLanded });
+    return;
+  }
   switch (step.k) {
     case "wait":
       await delay(step.ms);
       return;
     case "send":
+      // The discrete send owns a bounded 400ms ease. Its intentional movement
+      // is not drift; streaming continues throughout and is checked afterwards.
+      sampler.markIntent(450);
       // The app's send: the user message lands, takes the last-turn spacer,
       // and the controller anchors it to the top in the same commit.
       ctx.apply((prev) => ({
@@ -183,11 +191,6 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       await settle();
       return;
     }
-    case "imageDecode":
-      ctx.apply((prev) => growAt(prev, { index: step.msgIndex, by: step.px }));
-      await settle();
-      deps.imageLanded.shift()?.();
-      return;
     case "userWheel":
       // A real wheel does both: the input event the controller listens for AND
       // the scrollTop move. Either one alone is a different (fake) gesture.
@@ -255,13 +258,6 @@ function prependOlder(prev: HarnessContent, count: number): HarnessContent {
   return { ...prev, messages: [...older, ...prev.messages], nextId: prev.nextId + count };
 }
 
-function growAt(prev: HarnessContent, at: { index: number; by: number }): HarnessContent {
-  const messages = prev.messages.slice();
-  const target = messages[at.index];
-  if (target) messages[at.index] = { ...target, px: target.px + at.by };
-  return { ...prev, messages };
-}
-
 function stepDetail(step: Step): Record<string, string | number | boolean> {
   const detail: Record<string, string | number | boolean> = {};
   for (const [key, value] of Object.entries(step)) {
@@ -306,10 +302,14 @@ export async function runScenario(scenario: Scenario, ctx: RunContext): Promise<
   const writesBefore = ctx.writeCount();
   ctx.log("scenario-start", { name: scenario.name });
   sampler.start();
+  let stepFailure: string | null = null;
   try {
     const imageLanded: StepDeps["imageLanded"] = [];
     for (const step of scenario.steps) await runStep(step, { ctx, sampler, imageLanded });
     await settle();
+  } catch (error) {
+    stepFailure = describeError(error);
+    ctx.log("scenario-error", { name: scenario.name, error: stepFailure });
   } finally {
     sampler.stop();
   }
@@ -331,9 +331,18 @@ export async function runScenario(scenario: Scenario, ctx: RunContext): Promise<
     samples: sampler.samples,
   };
   const failures = evaluate(scenario, measured);
+  if (sampler.samples === 0) failures.unshift("Sampler produced no measurements");
+  if (sampler.invalidReason !== null) failures.unshift(sampler.invalidReason);
+  if (stepFailure !== null) failures.unshift(stepFailure);
   const summary: RunSummary = { ...measured, pass: failures.length === 0, failures };
   ctx.log("scenario-end", { name: scenario.name, pass: summary.pass, failures: failures.join("; ") });
   return summary;
+}
+
+function describeError(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const cause = error.cause === undefined ? "" : `: ${JSON.stringify(error.cause)}`;
+  return `${error.name}: ${error.message}${cause}`;
 }
 
 /**
