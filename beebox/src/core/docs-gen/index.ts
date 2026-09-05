@@ -40,7 +40,7 @@ import { getBoxDir } from "../../lib/paths.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../lib/git.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./shared.js";
 import { getTemplatesOwnedBy, type TemplateDefinition } from "../../schemas/templates.js";
-import { ensureEngineDocs, pruneEngineDocs, writeBoxCardDocs } from "./box-docs.js";
+import { ensureEngineDocs, writeBoxCardDocs } from "./box-docs.js";
 import {
   scanProcedures,
   compileBriefings,
@@ -364,9 +364,9 @@ interface DocWritePlan {
 }
 
 /**
- * Write the agent guide and the box-local card docs, and clear out any engine
- * docs an older engine left in the box's docs dir (they live in the package
- * now — `package-docs.ts`).
+ * Write the agent guide and the box-local card docs (which first clear out any
+ * engine docs an older engine left in the box's docs dir — they live in the
+ * package now, `package-docs.ts`).
  */
 async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
   const { boxRoot, debug, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape } = plan;
@@ -377,8 +377,7 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
         content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape }),
         debug,
       })),
-    writeBoxCardDocs({ boxRoot, debug, boxCardSchemas }),
-    pruneEngineDocs(boxRoot),
+    writeBoxCardDocs({ boxRoot, debug, boxCardSchemas, boxTemplates }),
   ]);
 }
 

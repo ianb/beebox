@@ -231,7 +231,7 @@ async function scaffold(args: { tarball: string; boxDir: string }): Promise<void
  */
 async function packageDocsShipped(boxDir: string): Promise<void> {
   const dir = path.join(boxDir, BOX_PACKAGE_DOCS);
-  for (const file of ["README.md", "bbx-commands.md", "card-memo.md"]) {
+  for (const file of ["README.md", "bbx-commands.md", "card-memo.md", ".hash"]) {
     const p = path.join(dir, file);
     if (!(await fileExists(p))) {
       throw new PackageDocsMissingError(path.relative(boxDir, p));

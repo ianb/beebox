@@ -9,7 +9,10 @@ box never carries a copy and the docs can never lag the engine that reads them.
 Design: `docs/plans/box-docs-in-package.md`.
 
 ```ts setup
-import { mkdtemp, readFile, readdir, chmod, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, chmod, rm, writeFile } from "node:fs/promises";
+import { writeBoxCardDocs } from "../../src/core/docs-gen/box-docs.js";
+import { cardSchema } from "../../src/cards/index.js";
+import { z } from "zod";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { engineDocs, ensurePackageDocs, engineDocFilenames } from "../../src/core/docs-gen/package-docs.js";
@@ -98,4 +101,55 @@ blocked.status === "unwritable" && blocked.dir.endsWith("/box-docs")
 
 await chmod(readOnlyRoot, 0o700);
 await rm(readOnlyRoot, { recursive: true, force: true });
+```
+
+## Concurrent ensures in one process share a single write
+
+```ts
+const sharedRoot = await mkdtemp(join(tmpdir(), "bbx-pkgdocs-race-"));
+const results = await Promise.all([
+  ensurePackageDocs({ packageRoot: sharedRoot }),
+  ensurePackageDocs({ packageRoot: sharedRoot }),
+  ensurePackageDocs({ packageRoot: sharedRoot }),
+]);
+results.map((r) => r.status).join(",")
+=> written,written,written
+
+// One live directory, no temp or old siblings left behind
+(await readdir(sharedRoot)).join(",")
+=> box-docs
+
+await rm(sharedRoot, { recursive: true, force: true });
+```
+
+## The box writer prunes old engine docs first, so a shadowing box-local doc survives
+
+An older engine wrote every engine doc into the box's `_content/docs/generated/`.
+`writeBoxCardDocs` removes those (they live in the package now) and then writes
+the box-local card docs — in that order, so a box-local schema that shadows a
+built-in type (`memo` here) keeps its doc where the agent guide points.
+
+```ts
+const boxRoot = await mkdtemp(join(tmpdir(), "bbx-boxdocs-"));
+const docsDir = join(boxRoot, "_content/docs/generated");
+await mkdir(docsDir, { recursive: true });
+await writeFile(join(docsDir, "bbx-commands.md"), "old engine doc");
+await writeFile(join(docsDir, "card-memo.md"), "old built-in memo doc");
+await writeFile(join(docsDir, "intake-guide.md"), "compiled from this box");
+
+const boxMemo = cardSchema("memo", {
+  description: "this box's memo",
+  category: "authored",
+  fields: { status: z.string() },
+  instructions: "How THIS box memos.",
+});
+await writeBoxCardDocs({ boxRoot, debug: false, boxCardSchemas: [boxMemo], boxTemplates: [] });
+
+(await readdir(docsDir)).sort().join(",")
+=> card-memo.md,intake-guide.md
+
+(await readFile(join(docsDir, "card-memo.md"), "utf-8")).includes("How THIS box memos.")
+=> true
+
+await rm(boxRoot, { recursive: true, force: true });
 ```

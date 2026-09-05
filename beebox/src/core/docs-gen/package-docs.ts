@@ -20,7 +20,7 @@
  */
 
 import { join } from "node:path";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { contentHash } from "../../lib/content-hash.js";
 import { errnoCode } from "../../lib/error-guards.js";
@@ -157,30 +157,44 @@ function isPermissionError(e: unknown): boolean {
 }
 
 /**
+ * In-process single flight, keyed by package root. The hub runs many boxes'
+ * `generateDocs` in one Node process; two concurrent ensures must not race
+ * each other's temp directories, and one write serves them all.
+ */
+const inFlight = new Map<string, Promise<EnsurePackageDocsResult>>();
+
+/**
  * Write the engine docs into `<packageRoot>/box-docs/` when the ones on disk
- * differ (by content hash). Atomic: a temp sibling is filled, then swapped in
- * by rename, so a reader never sees a half-written directory. Two processes
- * racing here write identical content; whoever loses the swap re-reads the
- * hash and reports `current`.
+ * differ (by content fingerprint). Atomic: a fresh temp sibling (`mkdtemp`, so
+ * concurrent PROCESSES never share one) is filled, then swapped in by rename,
+ * so a reader never sees a half-written directory. Two processes racing here
+ * write identical content; whoever loses the swap re-reads the fingerprint
+ * and reports `current`.
  */
 export async function ensurePackageDocs(options?: { packageRoot?: string }): Promise<EnsurePackageDocsResult> {
   const packageRoot = options?.packageRoot ?? PACKAGE_ROOT;
+  const pending = inFlight.get(packageRoot);
+  if (pending) return pending;
+  const run = ensurePackageDocsUncontended(packageRoot).finally(() => inFlight.delete(packageRoot));
+  inFlight.set(packageRoot, run);
+  return run;
+}
+
+async function ensurePackageDocsUncontended(packageRoot: string): Promise<EnsurePackageDocsResult> {
   const dir = join(packageRoot, PACKAGE_DOCS_DIR_NAME);
   const docs = engineDocs();
   const want = docsFingerprint(docs);
   if (await storedFingerprint(dir) === want) return { status: "current" };
 
-  const tmp = join(packageRoot, `.${PACKAGE_DOCS_DIR_NAME}-${String(process.pid)}`);
-  const old = join(packageRoot, `.${PACKAGE_DOCS_DIR_NAME}-old-${String(process.pid)}`);
+  let tmp: string | undefined;
   try {
-    await rm(tmp, { recursive: true, force: true });
-    await mkdir(tmp, { recursive: true });
+    tmp = await mkdtemp(join(packageRoot, `.${PACKAGE_DOCS_DIR_NAME}-`));
     for (const d of docs) await writeFile(join(tmp, d.filename), d.content);
     await writeFile(join(tmp, FINGERPRINT_FILE), `${want}\n`);
-    await swapIn({ tmp, dir, old });
+    await swapIn({ tmp, dir, packageRoot });
     return { status: "written", dir };
   } catch (e) {
-    await rm(tmp, { recursive: true, force: true });
+    if (tmp !== undefined) await rm(tmp, { recursive: true, force: true });
     if (isPermissionError(e)) {
       return { status: "unwritable", dir, reason: `${errnoCode(e) ?? "error"} writing ${dir}` };
     }
@@ -190,7 +204,10 @@ export async function ensurePackageDocs(options?: { packageRoot?: string }): Pro
   }
 }
 
-async function swapIn({ tmp, dir, old }: { tmp: string; dir: string; old: string }): Promise<void> {
+/** Move the live dir aside (to a fresh unique name), swap the new one in, drop the old. */
+async function swapIn({ tmp, dir, packageRoot }: { tmp: string; dir: string; packageRoot: string }): Promise<void> {
+  const old = await mkdtemp(join(packageRoot, `.${PACKAGE_DOCS_DIR_NAME}-old-`));
+  await rm(old, { recursive: true, force: true }); // mkdtemp reserved the name; rename needs it absent
   try {
     await rename(dir, old);
   } catch (e) {
