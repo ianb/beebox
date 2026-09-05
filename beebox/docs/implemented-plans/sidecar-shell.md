@@ -1,11 +1,11 @@
 ---
 title: "Sidecar shell: survive a transient failure, keep tabs, pin one"
-status: active
+status: implemented
 workstream: sidecar-shell
 issues:
-  - ../../../issues/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md
-  - ../../../issues/bugs/2026-08-29-new-tab-not-scrolled-into-view.md
-  - ../../../issues/features/2026-08-30-pin-a-sidecar-tab.md
+  - ../../../issues/closed/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md
+  - ../../../issues/closed/bugs/2026-08-29-new-tab-not-scrolled-into-view.md
+  - ../../../issues/closed/features/2026-08-30-pin-a-sidecar-tab.md
 ---
 # Sidecar shell: survive a transient failure, keep tabs, pin one
 
@@ -24,9 +24,9 @@ When I am working out of one document and opening others beside it, I want to
 keep that one, so it is still there ten opens later.
 
 **Issues addressed:**
-[card-sidecar-stays-failed-after-transient-502](../../../issues/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md),
-[new-tab-not-scrolled-into-view](../../../issues/bugs/2026-08-29-new-tab-not-scrolled-into-view.md),
-[pin-a-sidecar-tab](../../../issues/features/2026-08-30-pin-a-sidecar-tab.md).
+[card-sidecar-stays-failed-after-transient-502](../../../issues/closed/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md),
+[new-tab-not-scrolled-into-view](../../../issues/closed/bugs/2026-08-29-new-tab-not-scrolled-into-view.md),
+[pin-a-sidecar-tab](../../../issues/closed/features/2026-08-30-pin-a-sidecar-tab.md).
 
 Grepped the queue for adjacent items (`sidecar`, `companion`, `tab`, `panel`,
 `persist`, `sessionStorage`, `502`, `reconnect`, `stale`, `scroll`). Related but
