@@ -419,7 +419,12 @@ async function moveAndCommitBox(params: {
       unresolvedRefs,
       skippedSymlinkRefs,
       cwdPairs,
-      preExistingBrokenRefsCarried: gate.carriedThroughCount,
+      // Count what the REWRITER classified as pre-broken, not the gate's
+      // lint-scan tally: the scan only surfaces refs whose card type has a
+      // registered schema, so its count varies with the schema registry
+      // while the rewriter's classification is deterministic for a given
+      // tree. (The gate still uses the same set for its filtering.)
+      preExistingBrokenRefsCarried: preBroken.size,
     };
   } catch (e) {
     // See `one-root-rollback.ts` for the restore-or-preserve logic (findings
