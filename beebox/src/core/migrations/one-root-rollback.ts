@@ -52,6 +52,12 @@ export const V2_PACKAGE_ROOT_VOCABULARY = new Set([
   "README.md",
   "views",
   ".DS_Store",
+  // The Codex mirror entries (`generate-agents-md.ts` writes them into every
+  // worktree box at spin-up) — legal at the v3 root too (BOX_ROOT_VOCABULARY
+  // lists them as tooling); they stay in place across the migration.
+  "AGENTS.md",
+  ".agents",
+  ".codex",
 ]);
 
 /**
