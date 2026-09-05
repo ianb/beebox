@@ -9,6 +9,7 @@
  */
 
 import { type FileLoader, type FileSummary, type LoaderInput, titleFromFilename } from "./file-summary.js";
+import { readCardSymbol } from "./card-symbol.js";
 
 interface TypeRegistration {
   kind: "type";
@@ -99,15 +100,18 @@ function resolveLoader(input: LoaderInput): FileLoader<unknown> {
 export function summarize(input: LoaderInput): FileSummary<unknown> {
   const loader = resolveLoader(input);
   const summary = loader(input);
-  // contains: is a global card field — surface it uniformly rather than
-  // teaching every loader about it.
-  if (summary.contains === undefined && input.fields !== undefined) {
+  // `contains` and `symbol` are global card fields — surface them uniformly
+  // rather than teaching every loader about them.
+  let out = summary;
+  if (out.contains === undefined && input.fields !== undefined) {
     const contains = input.fields["contains"];
-    if (typeof contains === "string" && contains !== "") {
-      return { ...summary, contains };
-    }
+    if (typeof contains === "string" && contains !== "") out = { ...out, contains };
   }
-  return summary;
+  if (out.symbol === undefined && input.fields?.["symbol"] !== undefined) {
+    const symbol = readCardSymbol(input.fields["symbol"], { cardPath: input.path });
+    if (symbol !== null) out = { ...out, symbol };
+  }
+  return out;
 }
 
 /**

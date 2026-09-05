@@ -23,7 +23,7 @@
  * reason).
  */
 
-import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
+import { readCardSymbol } from "../card-symbol.js";
 import type { LandmarkNavigationData } from "../../schemas/landmark.js";
 import type { CardSymbolData } from "../../shared/card-symbol.js";
 
@@ -43,30 +43,13 @@ export function readLandmarkSymbol(
   { landmarkPath }: { landmarkPath: string },
 ): CardSymbolData | null {
   const own = fields?.symbol;
-  if (own !== undefined) return withResolvedSrc(own, landmarkPath);
+  if (own !== undefined) return readCardSymbol(own, { cardPath: landmarkPath });
+  // Legacy: a landmark that has not been through the `landmark-symbol`
+  // migration still carries its mark nested in the navigation role, as the
+  // `string | { src }` union that predates the universal field. Remove this
+  // branch when every box has migrated — see the deferred cleanup issue.
   const legacy = fields?.navigation?.symbol;
   if (legacy === undefined) return null;
-  if (typeof legacy === "string") return legacy.trim() === "" ? null : { glyph: legacy.trim() };
-  return withResolvedSrc({ src: legacy.src }, landmarkPath);
-}
-
-/** The same group with `src` turned into the box-relative path the frontend fetches. */
-function withResolvedSrc(symbol: CardSymbolData, landmarkPath: string): CardSymbolData | null {
-  const glyph = symbol.glyph?.trim();
-  if (symbol.src === undefined || symbol.src === "") {
-    if (glyph === undefined || glyph === "") return null;
-    return { ...symbol, glyph };
-  }
-  const src = resolveSymbolSrc(symbol.src, landmarkPath);
-  if (src === null) return glyph === undefined || glyph === "" ? null : { ...symbol, glyph, src: undefined };
-  return { ...symbol, src };
-}
-
-function resolveSymbolSrc(src: string, landmarkPath: string): string | null {
-  const resolved = resolveRefPath({ fromPath: landmarkPath, ref: parseRef(src).path, kind: "card" });
-  if (resolved === null) {
-    console.warn(`landmarks: symbol src "${src}" in ${landmarkPath} escapes the box`);
-    return null;
-  }
-  return resolved;
+  const group = typeof legacy === "string" ? { glyph: legacy } : { src: legacy.src };
+  return readCardSymbol(group, { cardPath: landmarkPath });
 }
