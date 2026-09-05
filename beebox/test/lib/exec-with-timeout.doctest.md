@@ -27,7 +27,7 @@ spent:
 
 ```ts
 let fired = null;
-const timer = startAwakeTimeout({ timeoutMs: 60, periodMs: 10, onTimeout: (e) => { fired = e; } });
+const timer = startAwakeTimeout({ timeoutMs: 60, periodMs: 10, sleepGapMs: 200, onTimeout: (e) => { fired = e; } });
 await sleep(150);
 fired !== null
 => true
