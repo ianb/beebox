@@ -4,6 +4,7 @@ import type { SmokeFailureError } from "./smoke-errors.js";
 import {
   MENU_ERROR_TEXT,
   cardViewRendered,
+  contentAreaRow,
   currentPlaceLabel,
   directoryRowCount,
   expandedState,
@@ -287,4 +288,19 @@ test("directoryRowCount / firstCardRow: counted rows come from real box content"
   assert.deepEqual(firstCardRow(BROWSE_SNAPSHOT), { role: "button", name: "Box, landmark card" });
   assert.equal(directoryRowCount("- button \"/\" [ref=e1]"), 0);
   assert.equal(firstCardRow("- button \"AGENTS.md\" [ref=e1]"), null);
+});
+
+test("contentAreaRow: finds the one-root content area when a listing has no card row", () => {
+  const oneRootRoot = `- button "/" [ref=e16, id=bbx-browse-crumb-root]
+- button "_bookkeeping directory, 659 items" [ref=e11]
+- button "_config directory, 28 items" [ref=e12]
+- button "_content directory, 184 items" [ref=e13]
+- button "_publish directory" [ref=e14]
+- button "_tmp directory" [ref=e15]`;
+  assert.deepEqual(contentAreaRow(oneRootRoot), {
+    role: "button",
+    name: "_content directory, 184 items",
+  });
+  // A pre-one-root box's listing carries no `_content` row at all.
+  assert.equal(contentAreaRow(BROWSE_SNAPSHOT), null);
 });
