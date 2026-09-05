@@ -7,6 +7,7 @@ labels: [research, skills]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — bbx feedback triage
+priority: important
 ---
 
 A popular skill called **"impeccable"** came up as worth looking into. That's

@@ -4,6 +4,7 @@ workstream: finish-skill-audit
 area: beebox
 filed-by: agent
 discovered-in: worktree-finish-skill-audit — /finish full-suite run after merging main
+priority: important
 ---
 
 > **Checked 2026-08-18 — could not reproduce, and not fixed either.** Tagged

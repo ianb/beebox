@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-dev-comments — boxholder asking whether the persistence issue was resolved
 labels: [comments, workstreams]
+priority: backlog
 ---
 
 The document-comment store

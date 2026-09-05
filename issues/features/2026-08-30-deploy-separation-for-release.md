@@ -7,6 +7,8 @@ labels: [deploy, soft-launch]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — needed for release; the deploy stuff is really specific to my machine and deployment"
+priority: backlog
+next-action: reconfirm
 ---
 
 `beebox/deploy/` is the boxholder's personal pipeline wearing repo

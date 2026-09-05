@@ -6,6 +6,7 @@ labels: [rename, cli, agent-ux]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — noticing that agents still carry vestiges of the pre-rename command
+priority: important
 ---
 
 Some agent context, old transcripts, scripts, and learned behavior still refer

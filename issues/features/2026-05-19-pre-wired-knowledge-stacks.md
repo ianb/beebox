@@ -3,6 +3,7 @@ title: "pre wired knowledge stacks"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: backlog
 ---
 
 The agent currently mostly wings it on domain reasoning — uses general training plus what's in the box. For recurring contexts (an active project the boxholder works on repeatedly, a key relationship) it could be more useful by drawing on canonical references: 2–3 sources whose frameworks apply directly to that project or person. The frameworks load automatically when the context is active, so application becomes reflexive rather than improvised.

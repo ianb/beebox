@@ -3,6 +3,7 @@ title: "context size measurement legibility"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: backlog
 ---
 
 The knowledge-audit report shows each audit's loaded-context size — `initial` (the always-on baseline the box pays every turn) → `peak` (+`added` over N turns), read from the session JSONL's per-turn `usage` (`lib/context-usage.ts`) — and every run appends those numbers to a committed history ledger (`src/dev/context-history.yaml`, `lib/context-history.ts`), so the git history is a free trend line. That closes the *raw-measurement* and *persistence* halves of the loop. What's left is making the trend **legible and enforceable** rather than something you reconstruct by diffing the ledger by hand:

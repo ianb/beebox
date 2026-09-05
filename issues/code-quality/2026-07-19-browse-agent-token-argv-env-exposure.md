@@ -4,6 +4,7 @@ workstream: local-password-auth
 filed-by: agent
 discovered-in: worktree-local-password-auth — Codex adversarial review of the always-on-auth branch (finding #8, Track E)
 area: beebox
+priority: backlog
 ---
 
 Surfaced by a cross-model (Codex) security review of the local-password-auth

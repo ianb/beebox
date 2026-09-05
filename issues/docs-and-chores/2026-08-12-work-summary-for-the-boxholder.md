@@ -7,6 +7,7 @@ labels: [agents, plans, reporting]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — bbx feedback triage
+priority: important
 ---
 
 When a large unit of work completes, what surfaces is **the last step of a

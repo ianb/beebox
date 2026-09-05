@@ -5,6 +5,7 @@ area: beebox
 labels: [cards, performance]
 filed-by: agent
 discovered-in: worktree-card-menu — finish review of card trash reference warnings
+priority: normal
 ---
 
 `bbx rm` reports inbound references before it moves cards to Trash. For a

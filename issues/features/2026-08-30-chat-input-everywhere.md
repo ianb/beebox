@@ -7,6 +7,7 @@ labels: [chat, ui, navigation]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "the chat input should be everywhere and we should make it work everywhere"
+priority: normal
 ---
 
 Today the composer exists only on chat pages. The boxholder wants the chat

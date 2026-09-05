@@ -4,6 +4,7 @@ workstream: unattached
 area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — user-story catalog verification
+priority: backlog
 ---
 
 The publish "drop box" (Track F of `beebox/docs/plans/publish-pages.md`) is complete on the receiving side but has no producing side, so no reader can ever post a reply.

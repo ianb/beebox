@@ -6,6 +6,7 @@ labels: [chat, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — say switch to Haiku, it goes to Opus (default claude); only with Opus selected can I get to Haiku"
+priority: normal
 ---
 
 In a new session's picker (SessionChip panels), engine and model are chosen

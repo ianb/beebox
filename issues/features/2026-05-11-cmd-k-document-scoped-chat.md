@@ -2,6 +2,7 @@
 title: "Cmd-K: document-scoped fast chat"
 workstream: unknown
 area: beebox
+priority: backlog
 ---
 
 The web UI gets a Cmd-K palette that's not really a "command palette" in the Obsidian sense — it's a **lightweight chat session scoped to the current document**, backed by a fast/cheap model (Haiku). Distinct from the main chat assistant (which is cross-context, agentic, can dispatch jobs).

@@ -2,6 +2,8 @@
 title: "check out slopo"
 workstream: unknown
 area: monorepo
+priority: backlog
+next-action: fixed
 ---
 
 [github.com/rafal-qa/slopo](https://github.com/rafal-qa/slopo) — finds *non-exact* code duplication: similar implementations scattered across files/modules that exact-match and lint tools miss (the "same thing written twice under different names" drift). Python CLI (`uv tool install slopo`, `slopo init/index/embed/analyze`): embeds every code unit via an external embedding model, clusters close pairs, boosts by distance (directory hops, line separation), filters through two thresholds, and emits a ranked HTML/markdown report. Supports TypeScript/JS among others; incremental re-index; a shared `slopo.ignore.txt` to persist reviewed clusters; explicitly agent-friendly (an agent can validate the flagged duplicates).

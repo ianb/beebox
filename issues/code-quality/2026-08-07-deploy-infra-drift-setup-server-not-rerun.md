@@ -4,6 +4,7 @@ workstream: security-report
 area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report
+priority: backlog
 ---
 
 `deploy/deploy.sh` ships code but does not re-run

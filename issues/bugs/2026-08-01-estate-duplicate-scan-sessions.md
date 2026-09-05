@@ -1,6 +1,8 @@
 ---
 title: Estate box holds three duplicate scan sessions of one photo pair
 workstream: unknown
+priority: backlog
+next-action: invalid
 ---
 
 Found while sampling the estate box for the scanner model-comparison

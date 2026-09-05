@@ -6,6 +6,7 @@ labels: [chat, text-selection, reactions]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — wanting to acknowledge a question without composing a textual reply
+priority: normal
 ---
 
 When I select a specific question or passage in chat, I want to send an emoji

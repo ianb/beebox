@@ -6,6 +6,7 @@ area: beebox
 filed-by: agent
 discovered-in: main session — boxholder riffing off ProofEditor's inline comment/question threads
 labels: [soft-launch]
+priority: important
 ---
 
 Replace the standalone questions subsystem with **questions embedded inline in

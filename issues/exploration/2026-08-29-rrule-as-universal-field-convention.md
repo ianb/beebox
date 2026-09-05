@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "not 100% sure we should do this"
+priority: normal
 ---
 
 Boxholder idea, explicitly tentative ("not 100% sure we should do this"):

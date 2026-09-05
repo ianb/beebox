@@ -5,6 +5,7 @@ area: docs
 filed-by: agent
 discovered-in: worktree-github-pages-site — building the site while the repo is still private
 labels: [soft-launch]
+priority: important
 ---
 
 The front-door site (principles:

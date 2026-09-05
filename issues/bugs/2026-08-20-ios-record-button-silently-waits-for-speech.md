@@ -7,6 +7,7 @@ labels: [ios, voice, chat, mobile-contract]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder pressed record during speech playback with the volume down
+priority: normal
 ---
 
 > **⏳ Awaiting manual testing** — fix landed in `bd8b5bb4`; on a real phone,

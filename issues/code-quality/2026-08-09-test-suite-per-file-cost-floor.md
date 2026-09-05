@@ -6,6 +6,7 @@ needs: [design]
 labels: [testing, developer-experience]
 filed-by: agent
 discovered-in: worktree-test-selection — sized while planning change-based test selection
+priority: important
 ---
 
 Every test file pays a fixed cost before it runs a single assertion: Node

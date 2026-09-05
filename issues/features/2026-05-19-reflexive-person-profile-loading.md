@@ -3,6 +3,7 @@ title: "reflexive person profile loading"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: backlog
 ---
 
 Two related questions about how the agent handles people.

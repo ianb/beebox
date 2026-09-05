@@ -7,6 +7,8 @@ labels: [cards, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder direction
+priority: normal
+next-action: reconfirm
 ---
 
 Today todo handling routes to a **place**: `{% todo %}` annotations are

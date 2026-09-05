@@ -2,6 +2,7 @@
 title: "draft ahead surface native pattern"
 workstream: unknown
 area: beebox
+priority: normal
 ---
 
 From the Rowboat review (`research/rowboat-review.md`, Tier 2). Rowboat's email surface

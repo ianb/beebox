@@ -6,6 +6,7 @@ labels: [voice]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder shared the announcement
+priority: important
 ---
 
 Google announced Gemini 3.5 Transcribe

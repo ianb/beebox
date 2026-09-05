@@ -4,6 +4,7 @@ workstream: browse-back-url
 area: beebox
 filed-by: agent
 discovered-in: worktree-browse-back-url — first real-browser verification after the browse-key auth work
+priority: backlog
 ---
 
 `useBrowseListLiveRefresh` (`src/frontend/src/pages/browse/BrowsePage.tsx`)

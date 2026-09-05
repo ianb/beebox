@@ -6,6 +6,7 @@ labels: [tours]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-tour-check — weekly tour check, nav-pages tour, admin checkpoint
+priority: normal
 ---
 
 On `/admin`, in the "Agent engine and model" card, the label and the

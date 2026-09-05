@@ -6,6 +6,7 @@ labels: [tests]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-smoke-review — the weekly smoke-tier review, 2026-09-02
+priority: normal
 ---
 
 `smokeLogPath` (`bin/smoke-lib.ts:113`) derives the log's name from the product

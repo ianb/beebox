@@ -5,6 +5,7 @@ needs: [decision]
 area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+next-action: invalid
 ---
 
 All 25 documents in `beebox/docs/plans/` contain **zero checkboxes**. Our

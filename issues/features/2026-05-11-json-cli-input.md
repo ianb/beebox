@@ -2,6 +2,7 @@
 title: "JSON as CLI input — structured arguments and composable profiles"
 workstream: unknown
 area: beebox
+priority: normal
 ---
 
 Google's `gws` (Workspace CLI) takes this approach: instead of many individual flags, you pass a single JSON object constructed from the API schema. ([article](https://betterstack.com/community/guides/ai/cli-gws-ai-agents/)) The agent builds one blob rather than learning a large flag surface — fewer distinct interface elements, lower token cost, and the schema can be introspected directly.

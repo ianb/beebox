@@ -7,6 +7,7 @@ labels: [cards, git]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "autocommit causes a lot of issues; we should think about how to handle it"
+priority: important
 ---
 
 The box commits its own content automatically (after agent turns, procedures,

@@ -6,6 +6,7 @@ labels: [ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder report
+priority: important
 ---
 
 With more open documents than the tab bar can show, opening a new document

@@ -4,6 +4,7 @@ workstream: chores-burn-down
 area: beebox
 filed-by: agent
 discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
+priority: normal
 ---
 
 A bundle of small, independent iOS cleanups surfaced in the 2026-07-17 companion-app review:

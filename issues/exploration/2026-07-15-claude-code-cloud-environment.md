@@ -4,6 +4,7 @@ workstream: unknown
 filed-by: agent
 discovered-in: main session — boxholder asked what it would take; research kicked off with the filing
 area: dev-infra
+priority: backlog
 ---
 
 Claude Code can run agents in a hosted cloud sandbox (claude.ai/code / the Agent

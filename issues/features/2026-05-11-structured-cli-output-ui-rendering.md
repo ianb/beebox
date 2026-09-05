@@ -2,6 +2,7 @@
 title: "Structured CLI output with UI rendering"
 workstream: unknown
 area: beebox
+priority: normal
 ---
 
 `bbx` commands could default to JSON output (or always emit it with `--json`) and the web UI could have per-command renderers — a React component or HTML template that receives the JSON and displays it nicely. This dissolves the tension between "JSON for agents, formatted tables for humans": the CLI is always machine-parseable, and the UI layer is where human-friendly rendering happens.

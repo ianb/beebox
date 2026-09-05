@@ -3,6 +3,7 @@ title: "Canvas tight-loop: browser-less run→render→screenshot programming su
 workstream: unknown
 needs: [design]
 area: beebox
+next-action: fixed
 ---
 
 Idea (Ian, 2026-07-13): instead of the browser-automation stack (`bin/browse`,

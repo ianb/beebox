@@ -3,6 +3,7 @@ title: "agent loop hooks"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: backlog
 ---
 
 beebox already uses hook-shaped mechanisms at the system level: pre-commit card validation, post-commit auto-deploy, the wakeup cycle as a scheduled trigger. What it doesn't currently expose is *agent-loop* hooks — runtime events that fire before/after specific agent actions, executed deterministically by the runtime rather than relying on the agent to remember.

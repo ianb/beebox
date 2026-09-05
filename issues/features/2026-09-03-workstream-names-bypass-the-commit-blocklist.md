@@ -6,6 +6,7 @@ labels: [workstreams, privacy]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder noticed a worktree named after a term that should have been blocked
+priority: important
 ---
 
 `commit-blocklist-check` (`bin/commit-blocklist-check.ts`) guards staged

@@ -4,6 +4,7 @@ workstream: refresh-maps-throughput
 filed-by: agent
 discovered-in: refresh-maps throughput measurement (worktree-refresh-maps-throughput)
 area: beebox
+priority: normal
 ---
 
 `listMappableDirs` decides which directories deserve a MAP.md by walking the

@@ -6,6 +6,7 @@ labels: [codex, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-honest-diagnostics — while making codex chat failures report their real phase and stack
+next-action: verify-without-me
 ---
 
 Some codex chat turns fail with no session. The failure is intermittent: on one
