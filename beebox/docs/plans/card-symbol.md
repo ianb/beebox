@@ -216,13 +216,15 @@ Colour handling, stated honestly:
   and is ignored at render. Cosmetic input does not get to make a card
   unreadable (principle 6), and does not get to fail silently either
   (principle 4).
-- `isCssColour()` (`src/shared/css-colour.ts`) is a regex over `hsl()/hsla()/
-  rgb()/rgba()/#hex/` the named-colour set. This is **narrower than CSS**, which
-  the issue's "any valid CSS colour" invites: `color-mix()`, `lab()`, and
-  `color()` will be rejected. The narrowing is deliberate — the only honest
-  validator is `CSS.supports()`, which does not exist in Node, so a server-side
-  check cannot be complete. The lint message says which syntaxes are accepted
-  rather than claiming the value is invalid CSS.
+- `isCssColour()` (`src/shared/css-colour.ts`) accepts **four forms and
+  nothing else** (boxholder, 2026-09-05 — "anything else is weird"):
+  `#rgb`, `#rrggbb`, `hsl(…)`, `rgb(…)`. No named colours, no `hsla()`/`rgba()`
+  spellings (both functions take an optional alpha inside the modern syntax),
+  no `color-mix()`, `lab()`, `oklch()`. This is far narrower than CSS on
+  purpose: the only complete validator is `CSS.supports()`, which does not
+  exist in Node, so a server-side check that claimed completeness would be
+  lying. The lint message lists the four accepted forms rather than saying the
+  value is invalid CSS.
 - The renderer assigns **`color` and `backgroundColor` only** — never the
   `background` shorthand, which accepts images and URLs and is a different
   failure surface than the one the inline-style note below covers.
@@ -498,8 +500,9 @@ directions.
   executably.
 - **`test/cards/card-symbol.doctest.md`** — the universal fields parse,
   reserialize in schema order, and survive a card that declares none of them;
-  `isCssColour` accepts `hsl(210 40% 50%)`, `#3a7`, `rgb(1 2 3)` and rejects
-  `blueish`, `javascript:…`, and an empty string.
+  `isCssColour` accepts `hsl(210 40% 50%)`, `#3a7`, `#33aa77`, `rgb(1 2 3)` and
+  rejects `rebeccapurple`, `hsla(…)`, `color-mix(…)`, `javascript:…`, `#3a7f`,
+  and an empty string.
 - **`test/cards/card-lint-symbol.doctest.md`** — the three warnings: a
   multi-grapheme symbol, a bad colour, a path-shaped symbol.
 - **`test/webapp/routes/cards-identity.doctest.md`** — the batch read, including
