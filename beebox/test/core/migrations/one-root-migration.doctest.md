@@ -1147,11 +1147,18 @@ await fs.writeFile(
   path.join(root, "content", "box", "jobs", "Thread.email-thread.card"),
   "---\nsubject: Old thread\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n",
 );
+// And an external URL in a ref field (a record card's source) — not a box
+// path at all; the gate must treat it as carried-through history, never a
+// blocker (normal validate only warns on it).
+await fs.writeFile(
+  path.join(root, "content", "box", "jobs", "Obit.record.card"),
+  "---\ntitle: Obituary\nsources:\n  - ref: https://example.org/obituary/dana\n---\n",
+);
 execSync("git add -A && git commit -q -m aged-job-fixture", { cwd: root, stdio: "pipe" });
 
 const result = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
 JSON.stringify({ filesMoved: result.filesMoved, preExistingBrokenRefsCarried: result.preExistingBrokenRefsCarried })
-=> {"filesMoved":9,"preExistingBrokenRefsCarried":2}
+=> {"filesMoved":10,"preExistingBrokenRefsCarried":2}
 ```
 
 The migration succeeded (no rollback) — the job card landed at its

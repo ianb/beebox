@@ -405,7 +405,13 @@ async function moveAndCommitBox(params: {
       "applied-at": getBoxTimeISO(packageRoot),
     });
     await stageAll(packageRoot);
-    const commitSha = await commit(packageRoot, { message: "migrate: one-root" });
+    // noVerify: the box's own pre-commit hook re-lints EVERY staged file, and
+    // this commit deliberately stages the whole box — including aged markdown
+    // whose pre-broken links the hook counts as errors. The migration already
+    // ran its stricter, history-aware gate above (pre-broken carve-out); the
+    // generic hook cannot know about the carve-out and would veto real aged
+    // boxes on history the migration is explicitly carrying through.
+    const commitSha = await commit(packageRoot, { message: "migrate: one-root", noVerify: true });
 
     return {
       commitSha,

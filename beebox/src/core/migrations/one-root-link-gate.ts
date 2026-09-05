@@ -39,6 +39,7 @@ import { buildLoadContext } from "../load-context.js";
 import { boxWideLinkFindings, formatMarkdownResults } from "../../cli/commands/validate-markdown.js";
 import { extractViewRefs } from "../views/refs.js";
 import { resolveRefExists } from "../ref-exists.js";
+import { isExternalRef } from "../../shared/ref-path.js";
 import { isInBoxNamespace } from "../../lib/box-namespace.js";
 import { extractDependencyGlobs, staticGlobPrefix } from "./one-root-view-dependencies.js";
 
@@ -108,6 +109,14 @@ async function collectBrokenCardRefLines(boxRoot: string, preBroken: ReadonlySet
     for (const warning of result.warnings) {
       if (warning.type !== "reference") continue;
       const parsed = parseBrokenReferenceMessage(warning.message);
+      // An external URL in a ref field is not a box path — the migration
+      // neither moved nor could break it. Normal validate only WARNS on
+      // these, so aged boxes carry them (a record card's source URL); the
+      // gate must not turn that history into a migration blocker.
+      if (parsed !== null && isExternalRef(parsed.ref)) {
+        carriedThroughCount++;
+        continue;
+      }
       if (parsed !== null && preBroken.has(preBrokenRefKey(relPath, parsed.ref))) {
         carriedThroughCount++;
         continue;
