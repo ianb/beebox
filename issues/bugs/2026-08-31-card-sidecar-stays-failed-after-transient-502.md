@@ -1,6 +1,6 @@
 ---
 title: "Card sidecar discards loaded content on a transient 502 and never recovers"
-workstream: unattached
+workstream: sidecar-shell
 area: beebox
 filed-by: agent
 discovered-by: Ian
