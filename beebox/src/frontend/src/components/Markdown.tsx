@@ -137,7 +137,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const config: Config = {
     ...markdocConfig,
     nodes: {
-      ...(markdocConfig.nodes ?? {}),
+      ...markdocConfig.nodes,
       document: { render: "Fragment" },
       // Fresh per render config so the duplicate-slug set is scoped to this pass.
       heading: makeHeadingNode(),
