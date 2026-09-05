@@ -391,6 +391,13 @@ test1:
       peak: 42758
       added: 0
       turns: 2
+    - date: 2026-09-05T11:47:09.889Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ff7b23a6ad1354a52a98329c32e3cb638c6e296d
+      initial: 41634
+      peak: 41634
+      added: 0
+      turns: 1
   procedure-instructions-gate:
     - date: 2026-06-27T17:31:49.109Z
       boxCommit: 9df1ee213bfc90a09a101a3ef10f26ba7b3037da
@@ -949,6 +956,13 @@ test1:
       peak: 41186
       added: 0
       turns: 1
+    - date: 2026-09-05T11:47:41.308Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ff7b23a6ad1354a52a98329c32e3cb638c6e296d
+      initial: 41610
+      peak: 43797
+      added: 2187
+      turns: 5
   find-memo-cards:
     - date: 2026-07-03T10:45:45.958Z
       boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
@@ -1002,6 +1016,13 @@ test1:
       repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
       initial: 41190
       peak: 41190
+      added: 0
+      turns: 1
+    - date: 2026-09-05T11:48:20.421Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ff7b23a6ad1354a52a98329c32e3cb638c6e296d
+      initial: 41621
+      peak: 41621
       added: 0
       turns: 1
   wakeup-intake-flow:
@@ -4082,6 +4103,14 @@ test1:
       peak: 49514
       added: 0
       turns: 2
+  content-open-vocabulary:
+    - date: 2026-09-05T11:48:06.082Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ff7b23a6ad1354a52a98329c32e3cb638c6e296d
+      initial: 41630
+      peak: 44604
+      added: 2974
+      turns: 7
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -16,6 +16,15 @@ tests:
     correct_contains: ["_content/inbox"]
     tags: [navigation]
 
+  - id: content-open-vocabulary
+    prompt: "You want to file some woodworking project notes and there's no obvious existing home. May you create a new directory for them, and where?"
+    expected_level: knows_directly
+    watch_for: >
+      Yes — under /_content/ (open vocabulary there); NOT at the box root,
+      which is a closed vocabulary the validator enforces.
+    correct_contains: ["_content"]
+    tags: [navigation, layout]
+
   - id: find-memo-cards
     prompt: "If I wanted to find all memo cards in the system, how would you search?"
     expected_level: knows_directly
@@ -395,7 +404,7 @@ tests:
     tags: [cli, links]
 
   - id: internal-links-resolve-to-box-root
-    prompt: "A markdown link in a card or dossier is [x](/store/foo/bar.jpg). What does the leading slash mean?"
+    prompt: "A markdown link in a card or dossier is [x](/_content/foo/bar.jpg). What does the leading slash mean?"
     expected_level: knows_directly
     watch_for: >
       Box root, not the OS filesystem root; the target must be an existing
