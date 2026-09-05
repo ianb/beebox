@@ -1,18 +1,20 @@
 ---
 title: "Engine docs move out of the box and into the package"
-status: active
+status: implemented
 workstream: launch-docs
 issues:
   - ../../../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md
 ---
 # Engine docs move out of the box and into the package
 
-**Status:** in progress 2026-09-05. Decided with the boxholder: the docs about
-beebox itself should not be regenerated into every box; they should live in the
-installed package at one stable path the agent always knows, and the box keeps
-only what is compiled from the box's own content. Revised after a Codex plan
-review (2026-09-05): runtime-ensured rather than build-time, built-in-only
-generator inputs, an override policy, and visible failure paths.
+**Status:** implemented 2026-09-05. The engine's reference docs live in the
+installed package at `box-docs/` (`src/core/docs-gen/package-docs.ts`,
+`ensurePackageDocs`), and the box keeps only what is compiled from the box's
+own content. Both open questions below were decided by the implementation as
+written: the directory is named `box-docs/`, and box-compiled docs stayed at
+`_content/docs/generated/` rather than moving to `.beebox/`. Revised after a
+Codex plan review (2026-09-05): runtime-ensured rather than build-time,
+built-in-only generator inputs, an override policy, and visible failure paths.
 
 ## Problem
 

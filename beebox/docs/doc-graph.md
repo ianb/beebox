@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-05T22:05:11Z
+Generated: 2026-09-05T22:23:40Z
 Total documents: 321
 
 ## Issues
@@ -13,6 +13,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/agent-applied-migrations.md** — "Agent-applied migrations (via procedure checklists)" (550 lines)
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines)
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines)
+- **docs/implemented-plans/box-docs-in-package.md** — "Engine docs move out of the box and into the package" (194 lines)
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (676 lines)
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (357 lines)
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (160 lines)
@@ -42,7 +43,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (379 lines)
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (550 lines)
-- **docs/plans/box-docs-in-package.md** — "Engine docs move out of the box and into the package" (192 lines)
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines)
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (159 lines)
 - **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines)
@@ -535,6 +535,7 @@ Title: "beebox" | 98 lines
 
 Referenced by:
 - docs/adding-a-box.md:28 (link) — see the root [`README.md`](../README.md) for that path. This doc is about
+- docs/implemented-plans/box-docs-in-package.md:93 (mention) — - `README.md`: an index, one line per doc: filename and a one-line "read this
 - docs/implemented-plans/boxes-as-packages-v2.md:493 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
 - docs/implemented-plans/cards-as-markdown-rfc.md:79 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
@@ -798,6 +799,7 @@ Referenced by:
 - docs/cards-as-markdown.md:5 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
 - docs/glossary.md:28 (mention) — **box** — A single user's working directory under `~/src/boxes/` (or `/home/beebox/boxes/` on the server). Contains the
 - docs/implemented-plans/attach-directories-superseded.md:167 (mention) — - `docs/box-layout.md`
+- docs/implemented-plans/box-docs-in-package.md:184 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
 - docs/implemented-plans/box-growth-health-checks.md:451 (mention) — **What.** Extend `docs/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/box-retrospectives.md:419 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
 - docs/implemented-plans/boxes-as-packages-v2.md:40 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
@@ -810,7 +812,6 @@ Referenced by:
 - docs/implemented-plans/user-location.md:80 (mention) — at `docs/box-layout.md:18-22`. State files there are never committed.
 - docs/implemented-plans/web-push-notifications.md:64 (mention) — `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
 - docs/implemented-plans/web-push-notifications.review-codex.md:41 (mention) — for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
-- docs/plans/box-docs-in-package.md:182 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
 - docs/plans/design-reconciliation.md:594 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
 - docs/plans/docs-reorg.gap-analysis.md:44 (mention) — `docs/box-layout.md`.
 - docs/plans/docs-reorg.md:88 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
@@ -1014,11 +1015,11 @@ Title: "Connectors" | 97 lines
 Referenced by:
 - CLAUDE.md:151 (mention) — | Connectors | `docs/connectors.md` |
 - docs/design/interaction-model.md:27 (link) — cards back out (flushed by `bbx finalize`). See [`../connectors.md`](../connectors.md);
+- docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/gmail-explicit-action.md:111 (mention) — `docs/connectors.md`. Doctests: `connector-gmail-pull.doctest.md` and
 - docs/implemented-plans/gmail-gc-unlabeled.md:16 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:294 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
 - docs/knowledge-taxonomy.md:205 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
-- docs/plans/box-docs-in-package.md:25 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/plans/docs-reorg.gap-analysis.md:24 (mention) — `docs/connectors.md`. The strongest "confidently wrong, silent data
 - docs/plans/docs-reorg.md:96 (mention) — 2. `connectors.md` — Google Calendar row says service-injection "Not yet
 - docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/gmail-setup.md` to describe current code after implementation.
@@ -1424,8 +1425,8 @@ References:
 Title: "Agent Knowledge Audit: What It Should Know and How to Verify" | 493 lines
 
 Referenced by:
+- docs/implemented-plans/box-docs-in-package.md:184 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
 - docs/implemented-plans/card-view-widgets.md:580 (mention) — **Altitude.** Per `docs/knowledge-taxonomy.md:307` view authoring sits at
-- docs/plans/box-docs-in-package.md:182 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
 - docs/plans/docs-reorg.md:339 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
 - docs/plans/source-available-release.md:178 (mention) — test data), `docs/knowledge-taxonomy.md:468-491` (agent inferring the real
 - docs/testing.md:405 (link) — See [knowledge-taxonomy.md](knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
@@ -1730,7 +1731,7 @@ Title: "Prompt Logging for Agent Invocations" | 210 lines
 
 Referenced by:
 - CLAUDE.md:157 (mention) — | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
-- docs/plans/box-docs-in-package.md:98 (mention) — `docs/prompt-logging.md` says so.
+- docs/implemented-plans/box-docs-in-package.md:100 (mention) — `docs/prompt-logging.md` says so.
 - docs/plans/docs-reorg.md:177 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
 - user-stories/catalog/2026-06-26.md:1337 (mention) — 6. **Supporting documentation**: `docs/prompt-logging.md` provides detailed guidance on using the feature, confirming th
 
@@ -2123,13 +2124,13 @@ Referenced by:
 - docs/design/representation.md:92 (link) — [`../triage.md`](../triage.md)). Best effort for the moment; more will be
 - docs/design/teaching.md:22 (link) — rules at the destination ([`../triage.md`](../triage.md)).
 - docs/design/trust.md:38 (link) — ([`../triage.md`](../triage.md)).
+- docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/mvp-implementation-guide.md:18 (mention) — > intake→triage→handle pipeline now, `../triage.md`), and the
 - docs/implemented-plans/one-root-box-layout.md:449 (mention) — (`docs/triage.md`).
 - docs/implemented-plans/questions-end-to-end.md:37 (mention) — ask time). `docs/triage.md:131` already demands this: *"needing to carry both
 - docs/knowledge-taxonomy.md:243 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
 - docs/landmarks.md:33 (mention) — A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fie
 - docs/plans/README.md:88 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
-- docs/plans/box-docs-in-package.md:25 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/plans/cli-restructure.md:95 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `bbx intake`, but the bare `bbx intake` is now
 - docs/plans/docs-reorg.md:339 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
 - docs/plans/scanner-ingest.md:599 (mention) — (guess-level routes to `_unsure` + question card, `docs/triage.md`); Track 6
@@ -2531,6 +2532,20 @@ Title: "Browser-like history state for authored views" | 211 lines
 
 References:
 - → docs/engineering-principles.md (link)
+
+#### docs/implemented-plans/box-docs-in-package.md **[ORPHAN]**
+
+Title: "Engine docs move out of the box and into the package" | 194 lines
+
+References:
+- → ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md (frontmatter)
+- → docs/connectors.md (mention)
+- → docs/plans/narration-mode.md (mention)
+- → docs/triage.md (mention)
+- → README.md (mention)
+- → docs/prompt-logging.md (mention)
+- → docs/box-layout.md (mention)
+- → docs/knowledge-taxonomy.md (mention)
 
 #### docs/implemented-plans/box-git-lock.md
 
@@ -4431,20 +4446,6 @@ References:
 - → docs/prompt-audits.md (mention)
 - → CLAUDE.md (mention)
 
-#### docs/plans/box-docs-in-package.md **[ORPHAN]**
-
-Title: "Engine docs move out of the box and into the package" | 192 lines
-
-References:
-- → ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md (frontmatter)
-- → docs/connectors.md (mention)
-- → docs/plans/narration-mode.md (mention)
-- → docs/triage.md (mention)
-- → docs/plans/README.md (mention)
-- → docs/prompt-logging.md (mention)
-- → docs/box-layout.md (mention)
-- → docs/knowledge-taxonomy.md (mention)
-
 #### docs/plans/capture-fast-landing.md
 
 Title: "Capture fast landing — deliver first, process behind the message" | 313 lines
@@ -5001,8 +5002,8 @@ Title: "Narration Mode — Design" | 469 lines
 
 Referenced by:
 - docs/activities-retrospective.md:43 (mention) — The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode.md`, `stack-de
+- docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/plans/README.md:93 (mention) — to `plans/narration-mode.md` — the doc opens "Status: proposal, for
-- docs/plans/box-docs-in-package.md:25 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - user-stories/catalog/2026-06-26.md:1578 (mention) — The design doc (narration-mode.md line 240) explicitly states: "The chat has a `...` menu where settings live; the expli
 - ../issues/features/2026-05-19-spark-mode.md:9 (link) — Conceptual inverse of narration mode (see [narration-mode.md](../../beebox/docs/plans/narration-mode.md)). Narration is
 
@@ -5141,7 +5142,6 @@ Referenced by:
 - docs/implemented-plans/workstreams.md:706 (mention) — status encodings would drift (§8). `docs/plans/README.md` is rewritten to
 - docs/plans/README.md:35 (mention) — Every plan (including `*.subplan.md`, excluding `README.md` and review
 - docs/plans/asset-annex.md:1071 (mention) — the server. See that directory's `README.md` for the restore
-- docs/plans/box-docs-in-package.md:91 (mention) — - `README.md`: an index, one line per doc: filename and a one-line "read this
 - docs/plans/public-site.md:270 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
