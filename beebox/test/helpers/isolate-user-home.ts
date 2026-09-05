@@ -40,3 +40,10 @@ process.on("exit", () => {
 // out and skipped anyway. The cache is content-addressed and safe to share;
 // sharing it is what makes a warmed environment warm inside the suite.
 process.env["UV_CACHE_DIR"] ??= join(realHome, ".cache", "uv");
+
+// No background URL checks from test boxes. Every commit in a fixture box
+// fires the post-commit hook's detached `bbx validate --urls`; the fixture is
+// then deleted under it, the check spins at full CPU forever, and by
+// 2026-09-05 dozens of them were pinning the machine. Tests have no business
+// on the network from a hook anyway.
+process.env["BBX_NO_URLCHECK"] = "1";
