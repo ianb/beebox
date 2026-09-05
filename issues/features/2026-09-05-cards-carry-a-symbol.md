@@ -56,6 +56,13 @@ Boxholder decisions, already made:
   it. So the design owes two rules: what "abbreviate" means (initials, first
   word, truncation), and how a tab decides it is ambiguous without the answer
   flickering as other tabs open and close.
+- **Where the mark comes from, for a surface that has no card data.** The
+  sidecar strip holds a path and a string, and only an activated tab fetches its
+  card — so a pinned tab restored from storage has no title and no symbol. That
+  is the same gap as
+  [sidecar-tab-label-never-updates](../bugs/2026-09-05-sidecar-tab-label-never-updates.md),
+  and both want one answer: a batch lookup of identity (title + symbol) for a
+  set of paths, invalidated on `file-change`.
 - **Who authors it.** Agents write most cards. A standard field is worth having
   only if the agent guide and the schema instructions say when to set one and
   when to leave it empty — a box where every card has a different emoji is
