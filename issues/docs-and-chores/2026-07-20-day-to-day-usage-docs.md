@@ -1,6 +1,6 @@
 ---
 title: "Day-to-day usage docs: the missing genre"
-workstream: open-source-readiness
+workstream: launch-docs
 area: docs
 filed-by: agent
 discovered-in: worktree-open-source-readiness — docs-genre audit for the soft launch
