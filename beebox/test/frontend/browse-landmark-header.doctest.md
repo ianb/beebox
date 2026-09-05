@@ -53,6 +53,30 @@ is visibly unavailable.
 => true true true true true true true true
 ```
 
+When a landmark has no label, the header falls back to the boxholder display
+form of its path — bare for a `_content` path, `<AreaLabel>:...` for a
+machinery area (`display-path.ts`).
+
+```ts continue
+const unlabeledContentHeader = renderToStaticMarkup(React.createElement(BrowseLandmarkHeader, {
+  landmark: { ...landmark, label: "", path: "_content/recipes/Box.landmark.card" },
+  boxSlug: "test1",
+  onNavigate: () => {},
+}));
+
+const unlabeledMachineryHeader = renderToStaticMarkup(React.createElement(BrowseLandmarkHeader, {
+  landmark: { ...landmark, label: "", path: "_bookkeeping/jobs/Box.landmark.card" },
+  boxSlug: "test1",
+  onNavigate: () => {},
+}));
+
+[
+  unlabeledContentHeader.includes(">recipes/Box.landmark.card<"),
+  unlabeledMachineryHeader.includes(">Bookkeeping:jobs/Box.landmark.card<"),
+].join(" ")
+=> true true
+```
+
 The landmark card itself is not repeated in the raw listing once the header
 represents it. Other cards and files remain present.
 

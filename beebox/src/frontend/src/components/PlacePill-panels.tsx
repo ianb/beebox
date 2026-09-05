@@ -280,7 +280,9 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
           </MenuItem>
           <MenuDivider />
           <MenuItem id="bbx-box-menu-dashboard" to={href(`/${boxSlug}/dashboard`)}>Dashboard</MenuItem>
-          <MenuItem id="bbx-box-menu-browse" to={href(`/${boxSlug}/browse`)}>Browse</MenuItem>
+          {/* Default entry lands in _content — the boxholder's natural home;
+              the box root (underscore areas) stays reachable by going up. */}
+          <MenuItem id="bbx-box-menu-browse" to={href(`/${boxSlug}/browse/_content`)}>Browse</MenuItem>
           <MenuItem id="bbx-box-menu-history" to={href(`/${boxSlug}/history`)}>History</MenuItem>
           <MenuItem id="bbx-box-menu-inventory" to={href(`/${boxSlug}/inventory`)}>Storage summary</MenuItem>
           {boxSwitchingAvailable ? (

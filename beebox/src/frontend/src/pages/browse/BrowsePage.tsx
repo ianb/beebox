@@ -24,6 +24,7 @@ import { usePageTitle } from "../../components/DocumentTitle";
 import { useUrlView } from "../../hooks/useUrlView";
 import { RequestError } from "../../lib/errors";
 import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
+import { toDisplayPath } from "@shared/display-path";
 import { useAppBarPlace } from "../../components/app-bar-chrome";
 
 /**
@@ -126,7 +127,7 @@ function useBrowseListLiveRefresh(dirPath: string): void {
 function useBrowsePlace({ dirPath, currentPath }: { dirPath: string; currentPath: string }): void {
   useAppBarPlace({
     dir: dirPath,
-    label: currentPath === "" ? "Browse" : `Browse: ${currentPath}`,
+    label: currentPath === "" ? "Browse" : `Browse: ${toDisplayPath(currentPath)}`,
   });
 }
 

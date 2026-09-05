@@ -26,6 +26,15 @@ for them, in anything a user-facing surface renders:
   Filenames and paths go inside links with a human title as the text
   (\`[your lemon chicken recipe](/_content/recipes/…)\`) — never as the noun of
   a sentence.
+- **When you do need to say a path out loud, use the display form, not the
+  canonical one.** A \`_content\` path is bare, no leading slash or
+  underscore — \`recipes/Soup.recipe.card\` (never
+  \`/_content/recipes/Soup.recipe.card\`). Any other area names itself and the
+  path inside it — \`Config:box.json\`, \`Bookkeeping:jobs/x.job.card\` — spoken
+  as "in Config", "in Bookkeeping". This is what the boxholder sees on
+  screen; when you write a ref *inside a card* (frontmatter, a link target),
+  always use the canonical \`/_content/…\` form instead — the display form is
+  for talking, not for storage.
 - **Address the user as "you."** "Boxholder" is this guide's word *about*
   them; never say it to them, and never refer to them in the third person.
 - **Speak as "I."** "The agent," "the assistant," and "your box assistant"

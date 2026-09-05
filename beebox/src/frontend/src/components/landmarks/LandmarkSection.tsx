@@ -15,6 +15,7 @@ import { Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import { apiFileUrl, isExternalUrl, type ViewTarget } from "../../lib/view-url";
 import { resolveContentTarget } from "../../lib/view-url";
+import { toDisplayPath } from "@shared/display-path";
 import type { SessionRowItem } from "../session-pickers/SessionRow";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
@@ -75,7 +76,7 @@ function PathLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
        * link refs below truncate, but those have a label above them and this
        * doesn't.
        */}
-      <Text as="span" size="xs" tone="muted" breakAll>{`${dir}/`}</Text>
+      <Text as="span" size="xs" tone="muted" breakAll>{`${toDisplayPath(dir)}/`}</Text>
     </Link>
   );
 }
@@ -97,7 +98,7 @@ export function LandmarkSection({
   /** This landmark's chat bucket, or null when the box has no session data. */
   sessions: { sessions: SessionRowItem[]; olderSessions: SessionRowItem[] } | null;
 }) {
-  const labelText = landmark.label || landmark.path;
+  const labelText = landmark.label || toDisplayPath(landmark.path);
   const indentClass = INDENT_CLASSES[Math.min(landmark.depth, INDENT_CLASSES.length - 1)];
 
   return (
@@ -253,6 +254,9 @@ function LinkTile({
   onNavigate?: (target: ViewTarget) => void;
 }) {
   const display = link.label !== null && link.label.length > 0 ? link.label : link.title;
+  // Box-rooted refs (leading `/`) get the display form; attach/relative refs
+  // and external URLs (handled separately below) pass through as-is.
+  const refDisplay = link.ref.startsWith("/") ? toDisplayPath(link.ref) : link.ref;
 
   if (isExternalUrl(link.ref)) {
     return (
@@ -280,7 +284,7 @@ function LinkTile({
       <button type="button" onClick={() => onNavigate(target)} className="block w-full text-left">
         <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
           <Text as="div" size="sm" weight="medium">{display}</Text>
-          <Text as="div" size="xs" tone="muted" truncate>{link.ref}</Text>
+          <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text>
         </Card>
       </button>
     );
@@ -290,7 +294,7 @@ function LinkTile({
     <Link to={href(`/${boxSlug}/card/${link.ref}`)} className="block">
       <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
         <Text as="div" size="sm" weight="medium">{display}</Text>
-        <Text as="div" size="xs" tone="muted" truncate>{link.ref}</Text>
+        <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text>
       </Card>
     </Link>
   );

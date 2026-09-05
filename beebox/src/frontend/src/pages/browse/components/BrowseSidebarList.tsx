@@ -9,6 +9,7 @@ import { StatusBadge } from "../../../components/ui/StatusBadge";
 import type { RouterOutput } from "../../../lib/trpc";
 import { apiRawFileUrl, getApiBase } from "../../../api";
 import { attachDirFor } from "@shared/attach-path";
+import { areaDisplayLabel } from "@shared/display-path";
 import { encodePathForUrl } from "../../../lib/view-url";
 
 type BrowseData = RouterOutput["status"]["browse"];
@@ -70,7 +71,9 @@ export function BrowseSidebarList({
               <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
             </svg>
           </span>
-          <span className="text-warm-900 font-medium text-sm flex-1">{dir.name}/</span>
+          <span className="text-warm-900 font-medium text-sm flex-1">
+            {dirPath === "" ? areaDisplayLabel(dir.name) : dir.name}/
+          </span>
           {dir.fileCount > 0 ? (
             <span className="text-xs text-warm-400">{dir.fileCount}</span>
           ) : null}

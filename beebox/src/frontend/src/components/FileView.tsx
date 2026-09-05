@@ -34,6 +34,7 @@ import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import { rendererDisplayLabel } from "../lib/renderer-display-label";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { boxRelativePath } from "@shared/box-path";
+import { toDisplayPath } from "@shared/display-path";
 import { RequestError } from "../lib/errors";
 import { busEventData } from "../lib/bus-events";
 import { SelectionCapture } from "./SelectionCapture";
@@ -236,7 +237,7 @@ function ChatHeader({
     <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{title ?? displayName(path)}</div>
-        <div className="text-xs text-warm-500 truncate" title={path}>{path}</div>
+        <div className="text-xs text-warm-500 truncate" title={toDisplayPath(path)}>{toDisplayPath(path)}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact path={path} />
       <CardActions path={path} onTrashed={onTrashed} />
@@ -266,11 +267,11 @@ function PageHeader({
     <div className="p-4 pb-0">
       <div className="flex items-center justify-between mb-2 gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-warm-900 truncate" title={data.path}>
+          <h1 className="text-lg font-bold text-warm-900 truncate" title={toDisplayPath(data.path)}>
             {cardTitle(data) ?? displayName(data.path)}
           </h1>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-warm-500 truncate" title={data.path}>{data.path}</span>
+            <span className="text-xs text-warm-500 truncate" title={toDisplayPath(data.path)}>{toDisplayPath(data.path)}</span>
             {status ? <StatusBadge status={status} /> : null}
           </div>
         </div>
@@ -315,12 +316,12 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   if (error && !(isCardPath(path) && error.startsWith("Card not found:"))) {
     return (
       <div className="p-4 text-danger-dark">
-        <p className="font-medium">Error loading {path}</p>
+        <p className="font-medium">Error loading {toDisplayPath(path)}</p>
         <div className="mt-1"><Pre size="sm" error>{error}</Pre></div>
       </div>
     );
   }
-  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {path}</div>;
+  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {toDisplayPath(path)}</div>;
 
   const userName = userSelection && userSelection.path === path ? userSelection.name : null;
   const requested = userName ?? rendererName ?? null;
