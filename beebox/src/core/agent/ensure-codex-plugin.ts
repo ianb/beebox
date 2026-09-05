@@ -35,11 +35,15 @@ import { assertNever } from "../../lib/invariant.js";
 import { codexBinaryPath } from "../../services/codex-binary.js";
 
 const execFileAsync = promisify(execFile);
+// Only the entry we look for has to carry a local `path`: since codex-cli
+// 0.153.4 the list also carries remote plugins (`source: { source: "remote",
+// id }`), and a parser that demanded a path on every entry failed the whole
+// list — and every chat query behind it — over plugins that are not ours.
 const pluginListSchema = z.object({
   installed: z.array(z.looseObject({
     pluginId: z.string(),
     version: z.string(),
-    source: z.looseObject({ path: z.string() }),
+    source: z.looseObject({ path: z.string().optional() }),
   })),
 });
 const marketplaceListSchema = z.object({
@@ -93,9 +97,15 @@ async function readPluginState(run: CodexCommand): Promise<PluginState> {
   }
   const found = pluginListSchema.parse(JSON.parse(stdout)).installed
     .find((plugin) => plugin.pluginId === PLUGIN_ID);
-  return found === undefined
-    ? { kind: "absent" }
-    : { kind: "installed", version: found.version, path: found.source.path };
+  if (found === undefined) return { kind: "absent" };
+  // Ours is installed from a local marketplace, so a pathless entry under our
+  // id is a registration this module does not understand: treat it as
+  // unreadable and re-register rather than trust or throw.
+  if (found.source.path === undefined) {
+    console.warn("[codex-plugin] our plugin is listed without a local path; re-registering:", found.source);
+    return { kind: "unreadable" };
+  }
+  return { kind: "installed", version: found.version, path: found.source.path };
 }
 
 /** True when a `beebox` marketplace is registered and its root still exists. */

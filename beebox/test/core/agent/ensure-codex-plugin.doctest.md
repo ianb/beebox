@@ -69,6 +69,39 @@ JSON.stringify(codex.calls)
 => ["plugin list --json"]
 ```
 
+Since codex-cli 0.153.4 the list also carries the account's remote plugins,
+whose `source` has an `id` and no `path`. Only our own entry needs a path; a
+parser that demanded one everywhere failed every chat query behind it:
+
+```ts
+const codex = fakeCodex(() => JSON.stringify({
+  installed: [
+    { pluginId: "github@openai-curated-remote", version: "0.1.12", source: { source: "remote", id: "plugin_connector_1p_x" } },
+    { pluginId: "beebox-codex@beebox", version: "0.1.1", source: { source: "local", path: PLUGIN_ROOT } },
+  ],
+}));
+await installCodexPlugin(codex.run);
+
+JSON.stringify(codex.calls)
+=> ["plugin list --json"]
+```
+
+Our own entry without a local path is a registration this module does not
+understand, and it re-registers rather than trusting it:
+
+```ts
+const codex = fakeCodex((args) => {
+  if (args[1] === "list") return JSON.stringify({
+    installed: [{ pluginId: "beebox-codex@beebox", version: "0.1.1", source: { source: "remote", id: "plugin_x" } }],
+  });
+  return "{}";
+});
+await installCodexPlugin(codex.run);
+
+JSON.stringify(codex.calls.at(-1))
+=> "plugin add beebox-codex@beebox --json"
+```
+
 The plugin not being installed here is a different fact from the registration
 being broken, and collapsing the two is how a checkout hijacks the entry: if
 "absent" meant "re-register at me", every fresh worktree would still claim the
