@@ -24,11 +24,16 @@ with the box's actual shape. `Figure_Gallery.doc.card` shows the same failure
 for its embedded figures, as "Failed to load" placeholders rather than an error
 box.
 
-Not investigated: whether this is specific to a worktree's cloned box (the
-request goes through the dev router's `/<worktree>/` prefix, and the module URL
-carries a `?v=` cache-busting parameter), or whether figures are broken
-everywhere. Reproduce by opening `_content/figures/Cube.figure.card` in Browse
-or in the chat sidecar, then re-check on the main checkout's box before
-concluding it is general.
+The cause is in `hasOwningCard` (`beebox/src/webapp/routes/figure.ts`): it
+builds the owner's filename by replacing the `.attach` suffix with `.card`, so
+`Cube.attach/` looks for `Cube.card`. A card filename carries its type, so the
+owner is `Cube.figure.card` — and `Cube.card` is a *positional* card of type
+"Cube", which exists in no box. Every figure in every box was refused. The
+route's own doctests seeded `Demo.figure.attach/`, a dotted form that matches
+the broken rule; no box uses it (0 of 6089 attach directories across every local
+box), so the tests agreed with the code and both disagreed with the boxes.
 
-Owner: the figure/attach-scope resolution behind `/api/figure/module.js`.
+Separate, and NOT a code defect: `_content/figures/Figure_Gallery.doc.card`
+embeds its figures as `view:store/figures/….figure.card`. The `store/` prefix is
+a stale path from an older box layout — those embeds are broken box content in
+test1, and stay broken after this fix.
