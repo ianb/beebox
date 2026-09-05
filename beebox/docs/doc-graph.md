@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-05T22:23:40Z
-Total documents: 321
+Generated: 2026-09-05T22:24:54Z
+Total documents: 322
 
 ## Issues
 
@@ -13,7 +13,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/agent-applied-migrations.md** — "Agent-applied migrations (via procedure checklists)" (550 lines)
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines)
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines)
-- **docs/implemented-plans/box-docs-in-package.md** — "Engine docs move out of the box and into the package" (194 lines)
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (676 lines)
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (357 lines)
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (160 lines)
@@ -41,6 +40,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/remove-open-mode.md** — "Remove the unauthenticated-mode operator path" (117 lines)
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (412 lines)
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (379 lines)
+- **docs/implemented-plans/sidecar-shell.md** — "Sidecar shell: survive a transient failure, keep tabs, pin one" (624 lines)
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (550 lines)
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines)
@@ -2027,6 +2027,7 @@ Referenced by:
 - docs/implemented-plans/responsive-figures.md:404 (mention) — doctest tiers exercise (`docs/testing.md` posture: don't test for coverage's
 - docs/implemented-plans/rest-to-trpc-consolidation.md:389 (mention) — - **Test posture** (`docs/testing.md` — tests as design tool, not coverage): a
 - docs/implemented-plans/see-as-the-user.md:577 (mention) — - **Tests first as design tool** (`docs/testing.md`): B0's extraction is
+- docs/implemented-plans/sidecar-shell.md:56 (mention) — so the doctest tier reaches it, per `docs/testing.md`'s tier table.
 - docs/implemented-plans/slopo-codehealth-adoption.md:62 (mention) — - **`docs/testing.md`** — tests are not for coverage (`docs/testing.md:11`:
 - docs/implemented-plans/todo-annotation.md:586 (mention) — - **Tests first, as a design tool** (`docs/testing.md`): pure-function
 - docs/implemented-plans/view-render-testing.md:37 (mention) — - `beebox/docs/testing.md` — tests as a design tool; doctests are the
@@ -2533,9 +2534,12 @@ Title: "Browser-like history state for authored views" | 211 lines
 References:
 - → docs/engineering-principles.md (link)
 
-#### docs/implemented-plans/box-docs-in-package.md **[ORPHAN]**
+#### docs/implemented-plans/box-docs-in-package.md
 
 Title: "Engine docs move out of the box and into the package" | 194 lines
+
+Referenced by:
+- ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:73 (mention) — > (`docs/implemented-plans/box-docs-in-package.md`), and the agent guide's
 
 References:
 - → ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md (frontmatter)
@@ -4047,6 +4051,24 @@ Referenced by:
 References:
 - → docs/implemented-plans/markdoc-tags-plan.md (mention)
 - → CLAUDE.md (mention)
+
+#### docs/implemented-plans/sidecar-shell.md **[ORPHAN]**
+
+Title: "Sidecar shell: survive a transient failure, keep tabs, pin one" | 624 lines
+
+References:
+- → ../issues/closed/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-29-new-tab-not-scrolled-into-view.md (frontmatter)
+- → ../issues/closed/features/2026-08-30-pin-a-sidecar-tab.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md (link)
+- → ../issues/closed/bugs/2026-08-29-new-tab-not-scrolled-into-view.md (link)
+- → ../issues/closed/features/2026-08-30-pin-a-sidecar-tab.md (link)
+- → ../issues/features/2026-08-26-sticky-hq-transcription-preference.md (link)
+- → ../issues/features/2026-08-30-todos-inline-things-to-think-about.md (link)
+- → ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md (link)
+- → ../issues/closed/bugs/2026-08-30-chat-card-panel-missing-landmark-context.md (link)
+- → docs/testing.md (mention)
+- → ../issues/bugs/2026-09-04-hq-toggle-blocks-on-a-git-commit.md (link)
 
 #### docs/implemented-plans/slopo-codehealth-adoption.md
 

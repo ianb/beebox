@@ -23,6 +23,7 @@ import {
 } from "./lightbox-gesture-math.js";
 import { animateSpring, SPRING_OMEGA, type SpringHandle } from "./lightbox-spring.js";
 import { clampTransformToBounds, settleTarget, type Frame } from "./lightbox-transform.js";
+import { prefersReducedMotion } from "./reduced-motion";
 
 const BASE_BACKDROP_OPACITY = 0.7;
 const ZOOM_TRANSITION_MS = 200;
@@ -40,10 +41,6 @@ export interface LightboxElements {
    * the neighbours frozen while the figure slid.
    */
   peers: () => HTMLElement | null;
-}
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function springTiming(): Parameters<typeof animateSpring>[0]["timing"] {

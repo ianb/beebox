@@ -1,11 +1,19 @@
 ---
 title: "Card sidecar discards loaded content on a transient 502 and never recovers"
-workstream: unattached
+workstream: sidecar-shell
 area: beebox
 filed-by: agent
 discovered-by: Ian
 priority: important
+resolution: implemented
 ---
+
+Resolved by `0f375fe32` (fix(sidecar): a failed refresh keeps the card and says
+it is out of date), part of the `sidecar-shell` plan. `useFileData` now decides
+via `lib/file-load-state.ts` (pure, doctested): cached data wins over a failed
+refresh, showing a "Not up to date" marker with Refresh; the two file-view
+queries retry a transient failure 3x with backoff. No divergence from what the
+issue proposed.
 
 The card sidecar had already loaded a card successfully. A server update then
 made a refresh request return HTTP 502. The sidecar replaced the loaded card
