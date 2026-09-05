@@ -5,9 +5,11 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — checking the chat Advanced menu against its user stories
-next-action: discuss
 priority: backlog
+resolution: wontfix
 ---
+
+> Closed 2026-09-05 as `wontfix` — boxholder's call while working the `discuss` tags: not worth pursuing.
 
 Choosing "Run /compact" from the chat's Advanced menu put a `/compact` user
 bubble in the transcript and the agent replied to it in ordinary prose. No

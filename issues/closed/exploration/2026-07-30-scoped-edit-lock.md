@@ -5,11 +5,13 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
 priority: backlog
-next-action: discuss
+resolution: wontfix
 ---
 
+> Closed 2026-09-05 as `wontfix` — boxholder's call while working the `discuss` tags: not pursuing a sentinel-file edit lock.
+
 A small mechanism from
-[research/claude-elixir-phoenix](../../research/claude-elixir-phoenix/enforcement-and-hooks.md)
+[research/claude-elixir-phoenix](../../../research/claude-elixir-phoenix/enforcement-and-hooks.md)
 that we have no equivalent of. A `PreToolUse` hook on Edit/Write/NotebookEdit
 reads a sentinel file:
 
