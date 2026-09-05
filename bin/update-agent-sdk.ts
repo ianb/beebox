@@ -45,10 +45,14 @@ const MANIFEST = path.join(REPO_ROOT, "beebox", "package.json");
 
 interface Family {
   label: string;
-  /** The package whose registry publish times govern the family's age gate. */
-  npmName: string;
-  /** Every manifest entry pinned to that version, together. */
-  manifestNames: string[];
+  /**
+   * Every package pinned to one version, together. The age gate is measured
+   * over ALL of them: a version is mature only when each package has
+   * published it and each publish is old enough. Codex's CLI and SDK ship
+   * separately, and gating on one would pin the other to a release it has
+   * not made yet or made minutes ago.
+   */
+  npmNames: [string, ...string[]];
   /** The root `.npmrc` exclusion that hands this family's gating to this script. */
   exclusion: RegExp;
   /** Version of the family's agent binary as installed, or null if not found. */
@@ -58,15 +62,13 @@ interface Family {
 const FAMILIES: Family[] = [
   {
     label: "Agent SDK",
-    npmName: "@anthropic-ai/claude-agent-sdk",
-    manifestNames: ["@anthropic-ai/claude-agent-sdk"],
+    npmNames: ["@anthropic-ai/claude-agent-sdk"],
     exclusion: /^minimum-release-age-exclude\[]=@anthropic-ai\/claude-agent-sdk\*\s*$/m,
     binaryVersion: bundledClaudeVersion,
   },
   {
     label: "Codex",
-    npmName: "@openai/codex",
-    manifestNames: ["@openai/codex", "@openai/codex-sdk"],
+    npmNames: ["@openai/codex", "@openai/codex-sdk"],
     exclusion: /^minimum-release-age-exclude\[]=@openai\/codex\*\s*$/m,
     binaryVersion: codexVersion,
   },
@@ -116,7 +118,7 @@ const MINIMUM_RELEASE_AGE_MINUTES = 2 * 24 * 60;
 function requireExclusion(family: Family): void {
   const npmrc = fs.readFileSync(path.join(REPO_ROOT, ".npmrc"), "utf-8");
   if (!family.exclusion.test(npmrc)) {
-    console.error(`update-agent-sdk: root .npmrc is missing the minimum-release-age-exclude entry for ${family.npmName} — the global gate would block the fast lane. Restore it.`);
+    console.error(`update-agent-sdk: root .npmrc is missing the minimum-release-age-exclude entry for ${family.npmNames.join(" + ")} — the global gate would block the fast lane. Restore it.`);
     process.exit(2);
   }
 }
@@ -131,17 +133,28 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-/** Newest mature (release-age-cleared) version of the family on the registry. */
+/**
+ * Newest mature (release-age-cleared) version of the family on the registry:
+ * published by every package in the family, each publish older than the gate.
+ */
 function newestMatureVersion(family: Family): string {
   requireExclusion(family);
   const cutoff = Date.now() - MINIMUM_RELEASE_AGE_MINUTES * 60_000;
+  const [primary, ...others] = family.npmNames;
+  const first = publishTimes(primary);
+  const rest = others.map((npmName) => publishTimes(npmName));
   let best: string | null = null;
-  for (const [version, published] of publishTimes(family.npmName)) {
+  for (const [version, published] of first) {
     if (published.getTime() > cutoff) continue;
+    const matureEverywhere = rest.every((times) => {
+      const other = times.get(version);
+      return other !== undefined && other.getTime() <= cutoff;
+    });
+    if (!matureEverywhere) continue;
     if (best === null || compareVersions(version, best) > 0) best = version;
   }
   if (best === null) {
-    console.error(`update-agent-sdk: no ${family.npmName} release clears minimumReleaseAge`);
+    console.error(`update-agent-sdk: no ${family.npmNames.join(" + ")} release clears minimumReleaseAge in every package`);
     process.exit(2);
   }
   return best;
@@ -194,7 +207,7 @@ function codexVersion(): string | null {
 
 function rewriteManifest(family: Family, target: string): void {
   let manifest = fs.readFileSync(MANIFEST, "utf-8");
-  for (const name of family.manifestNames) {
+  for (const name of family.npmNames) {
     // Textual edit, so the manifest's formatting survives. Exact pin, no caret
     // — see the header: with the family excluded from the global age gate, a
     // range would resolve to brand-new releases.
@@ -214,13 +227,23 @@ const checkOnly = process.argv.includes("--check");
 const behind: { family: Family; current: string; target: string }[] = [];
 
 for (const family of FAMILIES) {
-  const current = pinnedVersion(family.npmName);
+  const [primary] = family.npmNames;
+  const current = pinnedVersion(primary);
+  // Every package in the family must sit on the same pin; a drift is a hand
+  // edit this script never made, and bumping over it would hide it.
+  for (const name of family.npmNames) {
+    const pin = pinnedVersion(name);
+    if (pin !== current) {
+      console.error(`update-agent-sdk: ${family.label} pins disagree: ${primary} ${current}, ${name} ${pin}. Align them by hand first.`);
+      process.exit(2);
+    }
+  }
   const target = newestMatureVersion(family);
   if (compareVersions(target, current) <= 0) {
-    console.log(`${family.npmName} is up to date: ${current} (binary: ${family.binaryVersion() ?? "not found"})`);
+    console.log(`${family.label} (${family.npmNames.join(", ")}) is up to date: ${current} (binary: ${family.binaryVersion() ?? "not found"})`);
     continue;
   }
-  console.log(`${family.npmName} is behind: installed ${current}, newest mature ${target}`);
+  console.log(`${family.label} (${family.npmNames.join(", ")}) is behind: pinned ${current}, newest mature ${target}`);
   behind.push({ family, current, target });
 }
 
@@ -232,7 +255,7 @@ if (checkOnly) {
 }
 
 for (const { family, current, target } of behind) {
-  console.log(`Bumping ${family.label} (${family.manifestNames.join(", ")}): ${current} → ${target}`);
+  console.log(`Bumping ${family.label} (${family.npmNames.join(", ")}): ${current} → ${target}`);
   rewriteManifest(family, target);
 }
 execFileSync("pnpm", ["install"], { cwd: REPO_ROOT, stdio: "inherit" });
@@ -240,6 +263,6 @@ console.log("Typechecking beebox...");
 execFileSync("pnpm", ["-C", "beebox", "typecheck"], { cwd: REPO_ROOT, stdio: "inherit" });
 
 for (const { family } of behind) {
-  console.log(`${family.label} now at ${pinnedVersion(family.npmName)} (binary: ${family.binaryVersion() ?? "not found"}).`);
+  console.log(`${family.label} now at ${pinnedVersion(family.npmNames[0])} (binary: ${family.binaryVersion() ?? "not found"}).`);
 }
 console.log("Next: pnpm -C beebox test (and the steering probe for an SDK bump), then commit.");
