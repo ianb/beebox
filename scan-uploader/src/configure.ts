@@ -7,7 +7,7 @@
  * argv parsing and interactive prompting and calls into this.
  */
 
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import type { Disposition } from "./config.js";
 import { writeUploaderTarget } from "./config-writer.js";
@@ -41,6 +41,14 @@ export async function configure(params: ConfigureParams): Promise<ConfigureResul
     throw new ConfigureError(message);
   }
   const { serverUrl, box } = parseServerUrlWithBox(params.serverUrlWithBox);
+  // Stored absolute: the config is read from launchd (whose cwd is not the
+  // one that ran `configure`) and its folders become the schedule's
+  // `WatchPaths`, where a relative path would silently watch the wrong
+  // directory rather than fail.
+  // An empty folder stays empty so the config validator still rejects it —
+  // `resolve("")` is the current directory, which would turn a missing
+  // `--folder` into a silently valid target.
+  const folderPath = params.folder === "" ? params.folder : resolve(params.folder);
   // Deliberately keyed on box alone (per the plan): two different servers
   // sharing a box slug on the same machine would share this token file. That
   // pairing is not a supported configuration — box slugs are expected to be
@@ -49,14 +57,14 @@ export async function configure(params: ConfigureParams): Promise<ConfigureResul
 
   await writeUploaderTarget({
     configPath: params.configPath,
-    target: { folder: params.folder, serverUrl, box, tokenPath, disposition: params.disposition },
+    target: { folder: folderPath, serverUrl, box, tokenPath, disposition: params.disposition },
   });
 
   await writeTokenFile(tokenPath, params.token);
 
   await verify({ serverUrl, box, token: params.token, configPath: params.configPath, tokenPath });
 
-  return { configPath: params.configPath, tokenPath, box, folder: params.folder, name: params.name };
+  return { configPath: params.configPath, tokenPath, box, folder: folderPath, name: params.name };
 }
 
 interface VerifyParams {
