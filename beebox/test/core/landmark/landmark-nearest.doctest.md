@@ -10,6 +10,7 @@ import {
   nearestDirFromDirs,
   nearestLandmarkDir,
   isBoxRelativeCardPath,
+  boxRelativePathSchema,
 } from "../../../src/core/landmark/nearest.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
@@ -89,4 +90,25 @@ escape the box:
   isBoxRelativeCardPath("a/../../b.card"),
 ].join(" ")
 => true false false false
+```
+
+## `boxRelativePathSchema` rejects a display-form path with a message naming the canonical form
+
+Every tRPC procedure that takes a `contextDir`/`dir`/card-path string through
+this schema (`chat.startSession`'s `contextDir`, `landmarks.hqPreferences`'s
+`dir`, …) gets this for free — a display-form leak (`Config:box.json`) fails
+zod input validation, which tRPC reports as `BAD_REQUEST` carrying the zod
+issue message (`docs/plans/display-path-guard.subplan.md`).
+
+```ts
+const ok = boxRelativePathSchema.safeParse("class/activities/x.card");
+ok.success
+=> true
+
+const displayForm = boxRelativePathSchema.safeParse("Config:box.json");
+displayForm.success
+=> false
+
+displayForm.success ? "" : displayForm.error.issues[0]!.message
+=> `Config:box.json` is the boxholder's display form; write `/_config/box.json`
 ```

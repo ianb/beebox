@@ -22,11 +22,12 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { isCardFile, boxPath } from "../../lib/paths.js";
+import { isCardFile } from "../../lib/paths.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { invariant } from "../../lib/invariant.js";
 import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
 import { errorMessage } from "../../lib/error-guards.js";
+import { DisplayFormPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
 
 /**
  * Arguments for the move command.
@@ -65,7 +66,7 @@ async function isDirectory(filePath: string): Promise<boolean> {
 }
 
 function resolveBoxRelative(ctx: CommandContext, p: string): string {
-  return path.isAbsolute(p) ? p : boxPath(ctx.boxRoot, p);
+  return resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: p, relativeTo: ctx.boxRoot });
 }
 
 interface MoveSourceState {
@@ -244,6 +245,22 @@ async function executeMove(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
+  try {
+    return await executeMoveUnguarded(ctx, args);
+  } catch (e) {
+    // Display-form leak (docs/plans/display-path-guard.subplan.md): reported
+    // as an ordinary CommandResult failure — this function is also called
+    // directly (tests, `runCommand`'s own catch-all only covers a
+    // CLI-dispatched call).
+    if (e instanceof DisplayFormPathArgError) return { success: false, error: e.message };
+    throw e;
+  }
+}
+
+async function executeMoveUnguarded(
+  ctx: CommandContext,
+  args: Record<string, unknown>
+): Promise<CommandResult> {
   const moveArgs = parseCommandArgs(args, MoveArgsSchema);
 
   if (!moveArgs.from || !moveArgs.to) {
@@ -251,6 +268,11 @@ async function executeMove(
   }
 
   const fromPaths = Array.isArray(moveArgs.from) ? moveArgs.from : [moveArgs.from];
+  // Validate EVERY source (and the destination) before the move loop starts:
+  // a display-form or otherwise-rejected path among later sources must fail
+  // the whole command up front, not abort after earlier sources already moved
+  // (round-2 review finding, 2026-09-05).
+  for (const fromPath of fromPaths) resolveBoxRelative(ctx, fromPath);
   const rawDestPath = resolveBoxRelative(ctx, moveArgs.to);
   const destIsDir = isDirectoryDest(rawDestPath);
 

@@ -140,3 +140,17 @@ await rollbackTrashReceipt(rollback.root, receipt);
 JSON.stringify({ inbox: await rollback.list("_content/inbox"), trash: await rollback.list("_bookkeeping/trash") })
 => {"inbox":"_content/inbox/.gitkeep\n_content/inbox/Rollback.attach\n_content/inbox/Rollback.attach/file.txt\n_content/inbox/Rollback.doc.card\n_content/inbox/intake\n_content/inbox/intake/.gitkeep\n_content/inbox/staged\n_content/inbox/staged/.gitkeep\n_content/inbox/triaged\n_content/inbox/triaged/.gitkeep\n_content/inbox/triaged/_unsure\n_content/inbox/triaged/_unsure/.gitkeep\n_content/inbox/unhandled\n_content/inbox/unhandled/.gitkeep","trash":"_bookkeeping/trash/.gitkeep"}
 ```
+
+## A display-form path argument is rejected, not treated as a file path
+
+`Config:box.json` (the boxholder's display vocabulary) is rejected with a
+message naming the canonical form, rather than silently treated as (and
+failing to find) a relative file named `Config:box.json`
+(`docs/plans/display-path-guard.subplan.md`):
+
+```ts
+const dbox = await makeTmpBox();
+const rejected = await rm(dbox, { paths: ["Config:box.json"] });
+JSON.stringify(rejected)
+=> {"success":false,"error":"`Config:box.json` is the boxholder's display form; write `/_config/box.json`"}
+```

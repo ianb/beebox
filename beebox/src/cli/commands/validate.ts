@@ -2,7 +2,6 @@
  * bbx validate - Validate cards and markdown against schemas/rules
  */
 
-import * as path from "node:path";
 import { Command } from "commander";
 import { formatLintResults, countBrokenRefs, type LintSummary } from "../../cards/index.js";
 import {
@@ -34,6 +33,7 @@ import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../cor
 import { loadValidationIgnore, type ValidationIgnore } from "../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../core/card-io.js";
 import { checkLegacySchemaPath, checkRootStrayErrors } from "./validate-box-checks.js";
+import { resolveCliTargetPath } from "../lib/cli-target-path.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /**
@@ -355,7 +355,7 @@ export const validateCommand = new Command("validate")
         const json = options.json === true;
 
         const resolved = targetPaths.map((p) =>
-          path.isAbsolute(p) ? p : path.join(process.cwd(), p)
+          resolveCliTargetPath({ boxRoot, raw: p, relativeTo: process.cwd() })
         );
 
         const collected = await collectResults(options, { boxRoot, ctx, resolved, json, ignore, canonical });

@@ -5,6 +5,7 @@
 import { fileExists } from "../lib/file-exists.js";
 import { invariant } from "../lib/invariant.js";
 import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { matchReferenceDefinitionAt } from "./body-refs.js";
 import * as fs from "node:fs/promises";
@@ -112,6 +113,22 @@ export const noBrokenInternalLinks: Rule = {
     const fileDir = path.dirname(params.name);
 
     for (const link of extractInlineLinks(params.lines)) {
+      // Display-form leak (docs/plans/display-path-guard.subplan.md): a link
+      // written as `Config:box.json` (the boxholder's CONVERSATION
+      // vocabulary) matches `isExternalRef`'s scheme pattern, so
+      // `resolveInternalLink` below would classify it as `internal: false`
+      // and skip it entirely — never checked, never reported. Catch it
+      // BEFORE that classification, as a distinct error naming the
+      // canonical form.
+      const displayForm = detectDisplayFormPath(link.url);
+      if (displayForm !== null) {
+        onError({
+          lineNumber: link.lineNumber,
+          detail: displayFormPathMessage(link.url, displayForm),
+          range: [link.index + 1, link.length],
+        });
+        continue;
+      }
       const res = resolveInternalLink(link.url, { fileDir, boxRoot });
       if (!res.internal) continue;
       if (!res.inside) {

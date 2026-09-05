@@ -53,5 +53,5 @@ export async function assertMountTargetWritable(
 ): Promise<void> {
   const rawPath = path.relative(boxRoot, target.absTarget).split(path.sep).join("/");
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath, mode: "write" });
-  if (ns === null) throw new SymlinkedMountTargetError({ raw: rawPath, label: target.label });
+  if (!ns.ok) throw new SymlinkedMountTargetError({ raw: rawPath, label: target.label });
 }

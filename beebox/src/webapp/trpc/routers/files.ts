@@ -32,7 +32,12 @@ registerBuiltinLoaders();
  */
 async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSummary<unknown> | null> {
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: inputPath, mode: "read" });
-  if (ns === null) return null;
+  // A display-form path here has no visible "does not exist" concept to
+  // report against (this endpoint returns `null` for any unresolvable
+  // input, not an HTTP error) — the caller-visible message is not this
+  // endpoint's place; the tRPC/route choke points that DO surface an error
+  // (card.get, files/*, browse) carry the message instead.
+  if (!ns.ok) return null;
   const { resolved, relativePath } = ns;
   const input: LoaderInput = { path: relativePath };
 

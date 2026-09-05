@@ -58,7 +58,10 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
         resolved = path.resolve(boxRoot);
       } else {
         const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
-        if (ns === null) {
+        if (!ns.ok) {
+          if (ns.reason === "display-form") {
+            return reply.status(400).send({ error: ns.message });
+          }
           return reply.status(403).send({ error: "Access denied" });
         }
         resolved = ns.resolved;
@@ -121,7 +124,7 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
         // other read route) and simply omit a rejected child from the
         // listing rather than 403 the whole directory.
         const childNs = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: relativePath, mode: "read" });
-        if (childNs === null) continue;
+        if (!childNs.ok) continue;
 
         const attachDirName = `${parsed.name}.attach`;
         const hasAttachments = entries.some(

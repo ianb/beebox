@@ -166,6 +166,91 @@ result.results[0]!.warnings[0]!.message
 => Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist
 ```
 
+## A display-form path in a frontmatter ref is a lint ERROR naming the canonical form
+
+`Config:box.json` (the boxholder's CONVERSATION vocabulary — never a
+canonical path) written into a `ref:`/`refs:` field is a lint ERROR, not a
+broken-ref warning: the message names the canonical form so the fix is
+obvious (`docs/plans/display-path-guard.subplan.md`).
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "_content/inbox/email/thread-x/thread.email-thread.card",
+  "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: Config:box.json\n---\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("_content/inbox/email/thread-x/thread.email-thread.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 0
+
+result.totalErrors
+=> 1
+
+result.results[0]!.errors[0]!.message
+=> Display-form path at messages[0].ref: `Config:box.json` is the boxholder's display form; write `/_config/box.json`
+```
+
+## A broken bare ref suggests `/_content/<path>` when that resolves
+
+A ref's bare form is DOCUMENT-relative, not box-root-relative — but a
+boxholder's bare display vocabulary (`recipes/Soup.recipe.card`) reads as
+content-root-relative, so a ref hand-typed that way can silently mean the
+wrong thing and break. When the ordinary resolution fails, the broken-ref
+message probes `/_content/<path>` and appends a suggestion when THAT
+resolves (`docs/plans/display-path-guard.subplan.md`):
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/recipes/Soup.recipe.card", "---\ntype: doc\ntitle: Soup\n---\n");
+await box.write(
+  "_content/box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"recipes/Soup.recipe.card\" usage=\"verbatim\" %}{% /source %}\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("_content/box/notes/Meeting.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+result.results[0]!.warnings.find((w) => w.type === "reference")!.message
+=> Broken reference at body:1:source.ref: recipes/Soup.recipe.card does not exist — did you mean `/_content/recipes/Soup.recipe.card`?
+```
+
+No suggestion is offered when `/_content/<path>` doesn't resolve either — the
+plain "does not exist" message is unchanged:
+
+```ts
+const box2 = await makeTmpBox();
+await box2.write(
+  "_content/box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"nowhere/at/all.card\" usage=\"verbatim\" %}{% /source %}\n",
+);
+const result2 = await lintCardsDispatch(
+  [box2.path("_content/box/notes/Meeting.doc.card")],
+  { boxRoot: box2.root, ctx },
+);
+result2.results[0]!.warnings.find((w) => w.type === "reference")!.message
+=> Broken reference at body:1:source.ref: nowhere/at/all.card does not exist
+```
+
+An `attach/…` ref never gets the content-form suggestion — it's a legitimate,
+different relative form, not the display vocabulary:
+
+```ts
+const box3 = await makeTmpBox();
+await box3.write(
+  "_content/box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"attach/missing.pdf\" usage=\"verbatim\" %}{% /source %}\n",
+);
+const result3 = await lintCardsDispatch(
+  [box3.path("_content/box/notes/Meeting.doc.card")],
+  { boxRoot: box3.root, ctx },
+);
+result3.results[0]!.warnings.find((w) => w.type === "reference")!.message
+=> Broken reference at body:1:source.ref: attach/missing.pdf does not exist
+```
+
 ## A ref's `#fragment` addresses a spot inside the target, not another file
 
 `feedback.target.ref` is documented as `path#fragment`. The fragment (and a
@@ -288,6 +373,28 @@ result.results[0]!.warnings[0]!.message
 => Broken reference at body:1:source.ref: /_content/box/people/missing.person.card does not exist
 ```
 
+## A display-form path in a body Markdoc tag `ref` is a lint ERROR
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "_content/box/notes/Meeting.doc.card",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nSee {% source ref=\"Config:box.json\" usage=\"verbatim\" %}{% /source %}\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("_content/box/notes/Meeting.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 0
+
+result.totalErrors
+=> 1
+
+result.results[0]!.errors[0]!.message
+=> Display-form path at body:1:source.ref: `Config:box.json` is the boxholder's display form; write `/_config/box.json`
+```
+
 ## Resolved body refs lint clean
 
 A body Markdoc tag whose `ref` resolves to an existing target produces
@@ -344,6 +451,43 @@ Markdoc-tag refs:
 ```ts continue
 formatLintResults(result, { colors: false }).split("\n").at(-1)
 => 1 file checked, 1 warning in 0 files (1 broken ref)
+```
+
+A display-form path written into an inline link, or a reference-style link
+DEFINITION, is a lint ERROR too — `body-refs.ts`'s extractors no longer treat
+it as external (`isExternalRef`'s scheme pattern also matches
+`Config:box.json`), so it reaches this same display-form check instead of
+being silently dropped:
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "_content/box/notes/Inline.doc.card",
+  "---\ntype: doc\ntitle: Inline\n---\nSee [config](Config:box.json).\n",
+);
+const inlineResult = await lintCardsDispatch(
+  [box.path("_content/box/notes/Inline.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+JSON.stringify([inlineResult.totalErrors, inlineResult.totalWarnings])
+=> [1,0]
+
+inlineResult.results[0]!.errors[0]!.message
+=> Display-form path at body:1:link: `Config:box.json` is the boxholder's display form; write `/_config/box.json`
+```
+
+```ts continue
+const box2 = await makeTmpBox();
+await box2.write(
+  "_content/box/notes/RefDef.doc.card",
+  "---\ntype: doc\ntitle: RefDef\n---\nSee [config][1].\n\n[1]: Bookkeeping:jobs/x.job.card\n",
+);
+const refDefResult = await lintCardsDispatch(
+  [box2.path("_content/box/notes/RefDef.doc.card")],
+  { boxRoot: box2.root, ctx },
+);
+refDefResult.results[0]!.errors[0]!.message
+=> Display-form path at body:3:ref-def: `Bookkeeping:jobs/x.job.card` is the boxholder's display form; write `/_bookkeeping/jobs/x.job.card`
 ```
 
 Links that resolve are clean, and links that name nothing in the box —
