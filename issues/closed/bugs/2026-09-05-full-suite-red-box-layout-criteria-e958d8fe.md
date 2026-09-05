@@ -6,7 +6,10 @@ priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-box-layout-criteria — the hourly full-suite run on main
+resolution: implemented
 ---
+
+> Closed 2026-09-05: `one-root-move-plan.doctest.md`'s abort-on-unmappable-target case used a plain unknown directory as its unmappable fixture, and `009e00eec` (same workstream) had since made unknown plain directories map into `_content/` by design — so nothing threw and the test died on `err.message`. The fixture is now a dotfile entry, the one thing `mapV2Path` still leaves unmapped. `one-root-migration.doctest.md` passes in isolation (28 s); its red was the load the full-suite run was under.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `8e676155`. Bisecting the landings since the last tested
