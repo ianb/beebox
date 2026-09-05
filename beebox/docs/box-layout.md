@@ -28,7 +28,7 @@ and the underscore is the visible marker that keeps `/_config/box.json` from
 being mistaken for something like `/etc/hosts`. Below the underscore areas
 the vocabulary opens up — `_content/` in particular is where the boxholder
 and the agent freely create whatever directories and cards the box needs;
-only the root itself is closed. See `docs/plans/one-root-box-layout.md` for
+only the root itself is closed. See `docs/implemented-plans/one-root-box-layout.md` for
 the full design rationale (the "closed vocabulary at the root, open below
 `_content/`" criterion, and the underscore-as-checksum argument).
 
@@ -38,7 +38,7 @@ created before this layout landed (shapeVersion 2, retired) had two roots — a
 package root and a nested `content/` operational root — and is the reason
 this layout exists: `getBoxShape` on a v2 box throws a `bbx migrate`-pointing
 error rather than silently resolving the wrong directory. See
-`docs/plans/one-root-box-layout.md` for that history.
+`docs/implemented-plans/one-root-box-layout.md` for that history.
 
 `getBoxShape` recognizes a box when `<root>/.beebox/box.json`
 declares `shapeVersion: 3` and `<root>/package.json` declares a `beebox`

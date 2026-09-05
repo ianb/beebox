@@ -6,7 +6,7 @@ which checks the namespace fence against the RESOLVED filesystem path. Before
 this fix, several routes checked `isInBoxNamespace` on the raw, un-normalized
 request string instead — a traversal form like `_content/../package.json`
 starts with `_content` (so the raw-string check passed) but *resolves* to
-`package.json`, outside the namespace (`docs/plans/one-root-box-layout.md`
+`package.json`, outside the namespace (`docs/implemented-plans/one-root-box-layout.md`
 Track B).
 
 A normal HTTP client (including Fastify's own `inject()`) collapses a literal

@@ -3,7 +3,7 @@
  * reads/speaks, as opposed to the canonical `/_content/...` form refs, URLs,
  * and storage use (`box-path.ts`, `ref-path.ts`).
  *
- * BOXHOLDER-SETTLED vocabulary (`docs/plans/one-root-box-layout.md`):
+ * BOXHOLDER-SETTLED vocabulary (`docs/implemented-plans/one-root-box-layout.md`):
  *
  *  - A `_content` path displays BARE, no leading slash: `recipes/Soup.recipe.card`
  *    (canonical `/_content/recipes/Soup.recipe.card`).

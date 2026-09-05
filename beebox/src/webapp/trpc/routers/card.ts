@@ -23,7 +23,7 @@ import * as path from "node:path";
  * and its siblings (`inboundRefs`, `trash`) all resolve through here, and a
  * traversal form like `_content/../package.json` must not read
  * `package.json` just because the raw string starts with an underscore area
- * (`docs/plans/one-root-box-layout.md` Track B).
+ * (`docs/implemented-plans/one-root-box-layout.md` Track B).
  */
 async function resolveCardPath({
   boxRoot,
@@ -145,7 +145,7 @@ export const cardRouter = router({
       // Security: `input.path` arrives from the client (and now from the chat
       // `?card=` deep-link a card-page click writes). `resolveCardPath` above
       // already confirmed the resolved path stays inside the box AND inside
-      // the box namespace (Track B, `docs/plans/one-root-box-layout.md`) —
+      // the box namespace (Track B, `docs/implemented-plans/one-root-box-layout.md`) —
       // mirrors the `/api/files` boundary guard.
       let raw: string | null = null;
       try {

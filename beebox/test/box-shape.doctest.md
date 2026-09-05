@@ -1,7 +1,7 @@
 # bbx box shape: the v3 one-root predicate
 
 `getBoxShape` reads a box's `.beebox/box.json` marker and resolves its shape.
-shapeVersion 3 (the one-root layout — `docs/plans/one-root-box-layout.md`)
+shapeVersion 3 (the one-root layout — `docs/implemented-plans/one-root-box-layout.md`)
 has ONE root: `package.json`, `src/`, and every underscore-prefixed
 operational area (`_content/`, `_config/`, …) all live at the same directory
 — validated fail-closed against the box's own `package.json` declaring a

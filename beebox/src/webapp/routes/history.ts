@@ -44,7 +44,7 @@ export async function registerHistoryRoutes(
     // role `path.resolve` plays for the fs-backed routes): a traversal form
     // like `_content/../package.json` must not read `package.json` just
     // because the raw string starts with an underscore area
-    // (`docs/plans/one-root-box-layout.md` Track B). This is a
+    // (`docs/implemented-plans/one-root-box-layout.md` Track B). This is a
     // CURRENT-vocabulary check on the REQUESTED path — a historical file
     // that lived at a pre-migration v2 path (e.g. `content/inbox/x`) becomes
     // unreachable via this route once its old path no longer parses as an

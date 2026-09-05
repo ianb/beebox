@@ -176,7 +176,7 @@ export const statusRouter = router({
       // node_modules/, .git/, and any other root entry are not browsable
       // through this endpoint either), and a traversal form like
       // `_content/../src` can't hide behind its raw-string prefix
-      // (`docs/plans/one-root-box-layout.md` Track B). The root listing
+      // (`docs/implemented-plans/one-root-box-layout.md` Track B). The root listing
       // itself is filtered to areas only, below.
       const resolved = path.resolve(targetDir);
       const contained = containWithinBox(ctx.boxRoot, resolved);
@@ -187,7 +187,7 @@ export const statusRouter = router({
       // On-disk re-check for a non-root target: a symlinked directory or leaf
       // partway down the path could otherwise walk the fence into the
       // package internals even though the lexical check above passed
-      // (one-root layout — `docs/plans/one-root-box-layout.md` Track B). The
+      // (one-root layout — `docs/implemented-plans/one-root-box-layout.md` Track B). The
       // root itself (`contained === ""`) has no walk to verify.
       if (
         contained !== "" &&

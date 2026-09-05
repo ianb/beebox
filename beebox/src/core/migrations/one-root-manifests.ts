@@ -1,5 +1,5 @@
 /**
- * Track E step 7 (`docs/plans/one-root-box-layout.md`): update the two
+ * Track E step 7 (`docs/implemented-plans/one-root-box-layout.md`): update the two
  * machine-global manifests that may still point a box's entry at its OLD v2
  * `content/` operational root — `hub.json` (`src/hub/hub-config.ts`) and
  * `~/.config/beebox/boxes.json` (`src/core/box/boxes-config.ts`).

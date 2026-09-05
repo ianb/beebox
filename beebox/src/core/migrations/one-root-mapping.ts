@@ -1,6 +1,6 @@
 /**
  * The v2 → v3 path-mapping table for the `one-root` migration
- * (`docs/plans/one-root-box-layout.md` Track E, step 2).
+ * (`docs/implemented-plans/one-root-box-layout.md` Track E, step 2).
  *
  * A v2 box has TWO roots: the package root (`package.json`, `src/`,
  * `content/`) and the operational root `content/`. Every path this module

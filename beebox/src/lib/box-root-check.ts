@@ -1,5 +1,5 @@
 /**
- * The closed-vocabulary root check (Track C, `docs/plans/one-root-box-layout.md`):
+ * The closed-vocabulary root check (Track C, `docs/implemented-plans/one-root-box-layout.md`):
  * every box-root entry must be in `BOX_ROOT_VOCABULARY` — the npm namespace,
  * spec'd agent-identity files, or one of the five underscore areas. Anything
  * else is a stray, and this is the check that turns a recreated two-root
@@ -59,7 +59,7 @@ export async function checkBoxRoot(boxRoot: string): Promise<BoxRootStray[]> {
     }
 
     // "content" specifically is the recreated-two-root shape this check
-    // exists to catch (the test1 incident, `docs/plans/one-root-box-layout.md`
+    // exists to catch (the test1 incident, `docs/implemented-plans/one-root-box-layout.md`
     // "The evidence") — called out by name rather than folded into the
     // generic message, so it reads as the known failure mode, not a novel one.
     const historical = name === "content" ? " (this is the pre-migration operational-root name — a v2 leftover, not a place to write to)" : "";

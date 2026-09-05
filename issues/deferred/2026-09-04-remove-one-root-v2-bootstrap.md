@@ -5,11 +5,11 @@ activate-on: 2026-10-05
 category: code-quality
 filed-by: agent
 discovered-by: Ian
-discovered-in: box-layout-criteria — Track E of docs/plans/one-root-box-layout.md (or docs/implemented-plans/ once moved)
+discovered-in: box-layout-criteria — Track E of docs/implemented-plans/one-root-box-layout.md (or docs/implemented-plans/ once moved)
 priority: normal
 ---
 
-Track E of the one-root migration (`docs/plans/one-root-box-layout.md`)
+Track E of the one-root migration (`docs/implemented-plans/one-root-box-layout.md`)
 added a v2-tolerant bootstrap path that exists ONLY to let `bbx migrate`
 reach a v2 box the v3 engine otherwise refuses outright. Once every box that
 matters has run the `one-root` migration (recorded as `one-root` in its

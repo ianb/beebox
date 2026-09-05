@@ -1,5 +1,5 @@
 /**
- * The hard link gate — Track E step 6 (`docs/plans/one-root-box-layout.md`).
+ * The hard link gate — Track E step 6 (`docs/implemented-plans/one-root-box-layout.md`).
  * Normal `bbx validate` treats a broken ref as a WARNING (`card-lint.ts`'s
  * `lintFrontmatterCard`; box-wide markdown link scan in
  * `validate-markdown.ts`'s `boxWideLinkWarnings`) — legitimate moves/archives
