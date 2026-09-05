@@ -14,7 +14,6 @@ import { test } from "node:test";
 
 import type { LedgerRecord } from "../../bin/test-ledger-lib.js";
 import {
-  BISECT_MAX_FILES,
   ENVIRONMENT_CLUSTER_FILES,
   ENVIRONMENT_FAILURE_FILES,
   LANDING_FIELD_SEPARATOR as FS,
@@ -35,12 +34,11 @@ import {
   lastTestedCommit,
   narrowBisect,
   parseLandings,
-  renderEnvironmentAlert,
   renderIssue,
-  renderRedAlert,
   workstreamOf,
   unstageIssueArgs,
 } from "./lib.js";
+import { renderEnvironmentAlert } from "./alerts.js";
 
 // ─── the batch ────────────────────────────────────────────────────────────
 
@@ -217,7 +215,7 @@ test("the environment alert says which rule fired", () => {
   const cluster = environmentCluster({ failures: files, firstErrors: firstErrorLines({ raw, files }) });
   const message = renderEnvironmentAlert({ testedCommit: "1".repeat(40), failures: files, cluster });
   assert.match(message, /13 files under `test\/frontend\/` all failed with the same first error/u);
-  assert.match(message, /Shared error: Cannot find module/u);
+  assert.match(message, /\*\*Shared error:\*\* Cannot find module/u);
 });
 
 test("classifyFailure follows the plan's order", () => {
@@ -325,29 +323,6 @@ test("renderIssue on a direct commit to main claims no workstream", () => {
   });
   assert.match(text, /^workstream: unattached$/mu);
   assert.doesNotMatch(text, /^discovered-in:/mu);
-});
-
-test("the red alert names culprits, flakes and what it did not bisect", () => {
-  const message = renderRedAlert({
-    testedCommit: "1".repeat(40),
-    baseCommit: "2".repeat(40),
-    landings: [landing],
-    culprits: [{ landing, files: ["test/a.test.ts"], excerpt: "" }],
-    flakes: ["test/hub/hub-e2e.doctest.md"],
-    unattributed: ["test/b.test.ts"],
-  });
-  assert.match(message, /`abcdef12` \(scanner-ingest\): test\/a\.test\.ts/u);
-  assert.match(message, /hub-e2e/u);
-  assert.ok(message.includes(`${String(BISECT_MAX_FILES)}-file budget`), message);
-});
-
-test("the environment alert says why nothing was filed", () => {
-  const message = renderEnvironmentAlert({
-    testedCommit: "1".repeat(40),
-    failures: Array.from({ length: 40 }, (_unused, i) => `test/f${String(i)}.test.ts`),
-  });
-  assert.match(message, /40 test files failed/u);
-  assert.match(message, /no\nissue was filed/u);
 });
 
 // ─── the excerpt ──────────────────────────────────────────────────────────
