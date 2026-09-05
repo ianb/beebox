@@ -103,3 +103,14 @@ sweeping in whatever is unignored is the mechanism that made this bite).
 > kept. Production converges through the deploy sweep. Still open here: the
 > marker question (layout workstream), the resilience ask for unknown session
 > ids, and the hidden `config/.migrations.jsonl` residue.
+
+> 2026-09-05 (main session): more evidence for the marker question. The
+> marker now lives in the gitignored `.beebox/`, so a box clone that lacks
+> it — the `sdk-update` worktree's `test1` clone had none — is not a box to
+> `detectBoxTarget`, and `bbx init` on it (which `bin/lib/worktree-create.sh`
+> runs to refresh hooks) refuses with "already has a package.json". That
+> blocked the scheduled `sdk-update` run twice tonight ("could not create the
+> worktree"). Unblocked by copying `box.json` into the clone; the durable
+> answer is the marker decision (a box package should be recognizable from
+> tracked files — its `package.json` names `beebox` — not only from a
+> gitignored marker).
