@@ -219,10 +219,15 @@ is the way to get the boxholder's actual traces; the trace pipeline exists.
 4. **Close out** — re-aim the open issue at the model change; the harness
    finding (`prepend-older` badge) is a scenario, not a separate issue.
 
-Tracks 1-3 are done for everything reproducible on desktop Chromium: harness
-13/13, controller rewrite landed (`chat-scroll.ts`), and `MessageList` wired
-to it. **Outstanding:** the iOS device checklist in Track 3 has not been run
-on a real device — the boxholder's original report is device-specific and
-unverified there. `issues/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md`
-stays open with a punch-list note for that verification
-(`/scrolldebug` trace) rather than closing on desktop-only evidence.
+Tracks 1-3 are implemented in the controller and harness. The 2026-09-04
+follow-up corrects intra-message image anchoring, composer resizing, and send
+spacer ownership. The harness passes 20/20 scenarios in normal and reduced
+motion; real Chromium probes cover sends, composer resizing, and delayed images.
+Authenticated iOS WKWebView simulator evidence covers sending and keyboard
+opening during a live reply. See [the current verification record](../chat-scroll-testing.md).
+
+**Outstanding:** physical-iPhone momentum, rubber-band, keyboard transitions,
+and delayed-image checks remain unverified. The earlier issue was closed as
+superseded; [the current scroll issue](../../../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md)
+now carries this punch-list. The historical findings and track descriptions
+above record the original rewrite, not the current verification boundary.

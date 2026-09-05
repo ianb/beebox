@@ -15,6 +15,7 @@ mkdirSync(output, { recursive: true });
 
 function browse(...args: string[]): string {
   return execFileSync(path.join(root, "bin/browse"), ["--session", "chat-scroll-resize", ...args], {
+    // Preserve the CLI environment while pinning the dedicated test box.
     env: { ...process.env, BROWSE_BOX: "test1" },
     cwd: root, encoding: "utf8", timeout: 60_000, maxBuffer: 8 * 1024 * 1024,
   }).trim();

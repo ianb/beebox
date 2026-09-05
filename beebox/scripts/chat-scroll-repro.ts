@@ -7,6 +7,7 @@ import { z } from "zod";
 const root = path.resolve(import.meta.dirname, "../..");
 const url = process.argv[2];
 const output = path.resolve(process.argv[3] ?? path.join(root, "scratch/chat-scroll-repro"));
+// Standalone diagnostic switch, independent of application environment initialization.
 const traceEnabled = process.env.SCROLL_REPRO_TRACE !== "0";
 if (!url?.startsWith("/chat?session=")) {
   console.error("Usage: node --import tsx beebox/scripts/chat-scroll-repro.ts '/chat?session=TEST_SESSION' [output-dir]");

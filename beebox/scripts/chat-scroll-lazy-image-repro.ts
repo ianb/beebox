@@ -11,17 +11,14 @@ import { z } from "zod";
 const execFileAsync = promisify(execFile);
 const root = path.resolve(import.meta.dirname, "../.."), worktree = path.basename(root);
 const boxName = "test1";
+// Standalone probe configuration; do not import application environment initialization.
 const boxRoot = process.env.BBX_SCROLL_TEST_BOX_ROOT
   ?? path.resolve(root, "../../box-worktrees", worktree, boxName, "content");
 const output = path.resolve(process.argv[2] ?? path.join(root, "scratch/web-scroll-deeper", `repro-${Date.now()}`));
 const sessionName = "delayed-images";
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-interface Geometry {
-  clientHeight: number; complete: boolean; currentSrc: string; markerConnected: boolean;
-  imageHeight: number; imageTop: number; markerTop: number; naturalHeight: number; naturalWidth: number; sameNode: boolean;
-  scrollHeight: number; scrollTop: number;
-}
+type Geometry = z.infer<typeof geometrySchema>;
 interface ArmResult {
   name: "above" | "below";
   initial: Geometry; beforeRelease: Geometry; afterDecode: Geometry;
@@ -90,6 +87,7 @@ async function browse(...args: string[]): Promise<string> {
     encoding: "utf8",
     timeout: 60_000,
     maxBuffer: 8 * 1024 * 1024,
+    // Preserve the CLI environment while pinning the dedicated test box.
     env: { ...process.env, BROWSE_BOX: boxName },
   });
   return result.stdout.trim();
