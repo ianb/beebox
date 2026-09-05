@@ -7,8 +7,13 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Codex 0.153.1-0.153.4
 labels: [sdk-update]
-needs: [decision]
+resolution: wontfix
 ---
+
+> **Decided 2026-09-05 (boxholder):** inherit the binary's default; Astra as
+> the default Codex model is fine. No explicit pin. The Codex pin advances to
+> `0.153.4` on the monitor's normal two-day lane (clears 2026-09-06 ~23:30Z).
+> The usage ledger's `codex-default` label stays as filed here; not blocking.
 
 All four Codex releases published since the pin are GPT-6-Astra plumbing, and
 the last one moves a default:

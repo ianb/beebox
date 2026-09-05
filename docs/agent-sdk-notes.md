@@ -50,6 +50,12 @@ Codex entries here are labeled as such; they carry their own pin.
   `issues/decisions/2026-09-04-codex-default-model-becomes-astra.md`. Pending
   SDK: `0.3.260` (~30h), `0.3.261` (~11h), neither act-now.
 
+## Codex default model — decided 2026-09-05
+
+The boxholder decided Astra as Codex's bundled default is fine; beebox keeps
+inheriting the binary's default. `0.153.4` is not held back: take it when it
+settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
+
 ## Release ledger
 
 ### Codex 0.153.1 – 0.153.4 — pending; the first Codex releases this ledger has reviewed
