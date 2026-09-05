@@ -27,6 +27,7 @@ import { loadChatLists, deadHuskLabel, type ChatSessionRow } from "../../../core
 import type { TranscriptState } from "../../../core/chat/session/availability.js";
 import { CHAT_FRESH_WINDOW_MS } from "../../../core/chat/session/recent-landmark.js";
 import { loadLandmarkSummaries, type LandmarkProblem } from "../../../core/landmark/summaries.js";
+import type { CardSymbolData } from "../../../shared/card-symbol.js";
 
 export interface PickerSession {
   sessionId: string;
@@ -81,8 +82,8 @@ export interface PickerLandmark extends PickerBucket {
   /** Box-relative directory; empty string for the root tile. */
   dir: string;
   label: string;
-  symbol: string;
-  symbolSrc: string | null;
+  /** The mark, `src` resolved to a box-relative path; null when there is none. */
+  symbol: CardSymbolData | null;
 }
 
 /** A session in the unassigned bucket, which spans directories. */
@@ -320,7 +321,6 @@ export const chatRouter = router({
         dir: lm.dir,
         label: lm.label,
         symbol: lm.symbol,
-        symbolSrc: lm.symbolSrc,
         sessions: visibleFresh.map(toPicker),
         olderSessions: [...inlineOlder, ...older].map(toPicker),
         freshCount: fresh.length,

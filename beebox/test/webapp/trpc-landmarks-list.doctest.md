@@ -108,7 +108,7 @@ await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Kitche
 
 const { landmark } = await caller(box.root).landmarks.forDir({ dir: "" });
 JSON.stringify({ path: landmark?.path, dir: landmark?.dir, label: landmark?.label, symbol: landmark?.symbol })
-=> {"path":"_content/Box.landmark.card","dir":"","label":"Kitchen","symbol":"🍳"}
+=> {"path":"_content/Box.landmark.card","dir":"","label":"Kitchen","symbol":{"glyph":"🍳"}}
 ```
 
 ```ts cleanup

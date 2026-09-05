@@ -56,7 +56,7 @@ export function DocumentPlace() {
   );
 
   const here = wanted === null ? null : hereQuery.data?.landmark ?? null;
-  usePlaceMark(here === null || here.symbolSrc !== null ? null : here.symbol);
+  usePlaceMark(here?.symbol?.src === undefined ? here?.symbol?.glyph ?? null : null);
 
   return null;
 }

@@ -31,7 +31,7 @@ The document is served before a route is resolved, so the page half genuinely
 isn't known yet — the client composes `<page> — <box>` once it boots.
 
 ```ts
-titleOf(stamp({ name: "Kitchen", symbol: "", symbolSrc: null }))
+titleOf(stamp({ name: "Kitchen", symbol: null }))
 => Kitchen
 ```
 
@@ -42,7 +42,7 @@ SVG-favicon support only in version 26, so the box's own PNG is declared
 alongside it and `type=` lets each browser take the one it renders.
 
 ```ts
-const stamped = stamp({ name: "Kitchen", symbol: "🍳", symbolSrc: null });
+const stamped = stamp({ name: "Kitchen", symbol: { glyph: "🍳" } });
 const icons = iconsOf(stamped);
 [icons[0].startsWith("data:image/svg+xml,"), decodeURIComponent(icons[0]).includes("🍳"), icons[1]].join(" | ")
 => true | true | /kitchen/icon-192.png
@@ -54,7 +54,7 @@ const icons = iconsOf(stamped);
 at the box's own route, which resizes the box's file.
 
 ```ts
-JSON.stringify(iconsOf(stamp({ name: "Kitchen", symbol: "", symbolSrc: "art/pan.png" })))
+JSON.stringify(iconsOf(stamp({ name: "Kitchen", symbol: { src: "art/pan.png" } })))
 => ["/kitchen/icon-192.png"]
 ```
 
@@ -67,7 +67,7 @@ otherwise fetched with no cookies, and every route under `/<slug>` is behind
 the box's auth wall.
 
 ```ts
-const stamped = stamp({ name: "Kitchen", symbol: "🍳", symbolSrc: null });
+const stamped = stamp({ name: "Kitchen", symbol: { glyph: "🍳" } });
 [tagOf(stamped, "apple-touch-icon"), tagOf(stamped, "manifest")].join("\n")
 =>
 <link rel="apple-touch-icon" href="/kitchen/icon-180.png" />
@@ -79,7 +79,7 @@ const stamped = stamp({ name: "Kitchen", symbol: "🍳", symbolSrc: null });
 A box's name comes from a card the boxholder edits, and lands in HTML.
 
 ```ts
-titleOf(stamp({ name: "Fish & <chips>", symbol: "", symbolSrc: null }))
+titleOf(stamp({ name: "Fish & <chips>", symbol: null }))
 => Fish &amp; &lt;chips&gt;
 ```
 
@@ -87,7 +87,7 @@ An emoji field carrying markup can't break out of the SVG either — the icon
 stays a well-formed data URI with the markup escaped inside it.
 
 ```ts
-const nasty = iconsOf(stamp({ name: "x", symbol: '"><script>', symbolSrc: null }))[0];
+const nasty = iconsOf(stamp({ name: "x", symbol: { glyph: '"><script>' } }))[0];
 [nasty.startsWith("data:image/svg+xml,"), nasty.includes("<script>"), decodeURIComponent(nasty).includes("&lt;script&gt;")].join(" ")
 => true false true
 ```

@@ -28,6 +28,7 @@
 import { splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import { CardSymbol } from "../shared/card-symbol.js";
 
 /** Sort order for `expand` fan-out results. */
 export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
@@ -127,9 +128,14 @@ const landmarkFields = {
  * Standalone object schema for the landmark frontmatter, used by
  * lightweight readers (the landmarks router, triage-instructions, etc.)
  * that parse a landmark file directly rather than through the card
- * loader. Unknown keys (global card fields, a stray `type:`) are stripped.
+ * loader. Unknown keys (most global card fields, a stray `type:`) are stripped.
+ *
+ * `symbol` is the exception, admitted explicitly: it is a global field
+ * (`GLOBAL_CARD_FIELDS`) that these readers must see, because a landmark's mark
+ * now lives there rather than under `navigation`. Stripping it is what would
+ * make a migrated landmark render as no symbol at all.
  */
-const LandmarkObject = z.object(landmarkFields);
+const LandmarkObject = z.object({ ...landmarkFields, symbol: CardSymbol.optional() });
 export type LandmarkFields = z.infer<typeof LandmarkObject>;
 
 export const LandmarkSchema: CardSchema = cardSchema("landmark", {

@@ -69,8 +69,12 @@ export function DocumentIcon() {
   const mark = boxQuery.data?.landmark ?? null;
   let href: string | null = null;
   if (mark !== null && boxSlug !== undefined) {
-    if (mark.symbolSrc !== null) href = apiFileUrl(boxSlug, mark.symbolSrc);
-    else if (mark.symbol !== "") href = emojiFaviconUri(mark.symbol);
+    const src = mark.symbol?.src;
+    const glyph = mark.symbol?.glyph;
+    // A title bar takes a character, never an SVG — which is why the mark's
+    // text form is the one that survives into a favicon, colours dropped.
+    if (src !== undefined) href = apiFileUrl(boxSlug, src);
+    else if (glyph !== undefined && glyph !== "") href = emojiFaviconUri(glyph);
   }
 
   useEffect(() => {
