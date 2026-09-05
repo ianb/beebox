@@ -38,6 +38,7 @@ import { annexHealthChecks } from "./health-annex.js";
 import { unfiledCapturesCheck, stalledJobsCheck } from "./health-stale.js";
 import { staleIndexLockCheck } from "./health-git-lock.js";
 import { templateUpdatesCheck } from "./health-templates.js";
+import { packageDocsCheck } from "./health-package-docs.js";
 
 export interface HealthCheck {
   name: string;
@@ -282,6 +283,7 @@ export async function runHealthChecks(
   checks.push(await pendingMigrationsCheck(boxRoot));
   const scheduleHealth = options?.scheduleHealth ?? (await loadScheduleHealth(boxRoot, getBoxTime(boxRoot)));
   checks.push(await templateUpdatesCheck(boxRoot, scheduleHealth));
+  checks.push(await packageDocsCheck(boxRoot));
   checks.push(await unfiledCapturesCheck(boxRoot));
   checks.push(await stalledJobsCheck(boxRoot));
   const now = getBoxTime(boxRoot);

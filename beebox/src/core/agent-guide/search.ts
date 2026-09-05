@@ -51,7 +51,7 @@ rule and the \`bbx contains\` worklist commands are in ${xref(SECTION.ABOUT_CARD
 `;
 }
 
-/** Appended to every searchable card type's _content/docs/generated/card-<type>.md. */
+/** Appended to every searchable card type's card-<type>.md doc. */
 export const CONTAINS_DOC_APPENDIX = `## The \`contains:\` field
 
 Give this card a one-sentence \`contains:\` — the prime retrieval field for

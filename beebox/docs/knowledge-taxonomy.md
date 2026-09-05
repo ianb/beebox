@@ -6,7 +6,7 @@ When we talk about what the agent "knows," there are distinct phenomena worth na
 
 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CLAUDE.md` → `.beebox/agent-guide.md`, plus any `.claude/rules/` files triggered by the current task. These answers should be immediate and accurate.
 
-2. **Knows about** — Knows *that* something exists and *where to learn more*. The agent guide references docs or files by path (e.g., "see `_content/docs/generated/card-memo.md`"), so the agent can follow the pointer to get details. May require multiple hops of file reading (e.g., guide → table of contents → specific doc), but each hop is straightforward traversal — the agent knows where to go next without searching or guessing. Reliability depends on whether the agent actually follows the references vs. guessing from the name alone.
+2. **Knows about** — Knows *that* something exists and *where to learn more*. The agent guide references docs or files by path (e.g., "see `node_modules/beebox/box-docs/card-memo.md`"), so the agent can follow the pointer to get details. May require multiple hops of file reading (e.g., guide → table of contents → specific doc), but each hop is straightforward traversal — the agent knows where to go next without searching or guessing. Reliability depends on whether the agent actually follows the references vs. guessing from the name alone.
 
 3. **Discoverable** — Information is available locally but requires search or exploration to locate. For example, grepping docs for a keyword, listing directory contents, or reading config files. The agent isn't told where to look — it has to figure that out. Success depends on search strategy and how discoverable the information is.
 
@@ -40,7 +40,7 @@ The agent's context is built in layers, each corresponding to a knowledge level:
 
 - **Always loaded** → *knows directly*: `CLAUDE.md` → `.beebox/agent-guide.md` (~128 lines of operational overview, directory layout, command summaries, card type catalog with doc references)
 - **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-memo.md` loads when touching `*.memo.card`). Also, directory-level `CLAUDE.md` files (e.g., `src/schemas/CLAUDE.md`) are loaded when the agent works in that directory.
-- **Referenced but not loaded** → *knows about*: `_content/docs/generated/*.md` (~31 files — full card type specs, command reference, procedure authoring guide, domain guides). The agent guide points to these by path.
+- **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card type specs, command reference, procedure authoring guide, domain guides — see its `README.md` index) and box-compiled docs in `_content/docs/generated/*.md` (guide compilations, personality, box-local card type specs). The agent guide points to these by path.
 - **Present but not referenced** → *discoverable*: config files, procedure definitions, guide cards. Available in the box but the agent has to find them by exploring.
 - **Outside the box** → *deducible*: beebox source code (`src/cards/`, `src/schemas/`, etc., or `node_modules/beebox` from inside the box). Accessible if the agent knows where to look, but outside the box.
 - **On the internet** → *researchable*: Third-party API docs, standards, libraries the codebase depends on but doesn't document locally.
@@ -103,13 +103,13 @@ bbx prompt "What card types do you know about? List them all."
 ```
 bbx prompt "Show me the frontmatter structure of a memo card."
 ```
-- **Expected level: Knows about** — the agent guide references `_content/docs/generated/card-memo.md`; the agent should read that file
+- **Expected level: Knows about** — the agent guide references `node_modules/beebox/box-docs/card-memo.md`; the agent should read that file
 - Watch for: does it read the doc, or guess at the frontmatter fields? Guessing will miss specifics
 
 ```
 bbx prompt "How would you create a new question card asking the user to pick a color?"
 ```
-- **Expected level: Knows about** — needs to read `_content/docs/generated/card-question.md` for the exact structure, but knows `bbx create` exists from the agent guide
+- **Expected level: Knows about** — needs to read `node_modules/beebox/box-docs/card-question.md` for the exact structure, but knows `bbx create` exists from the agent guide
 - Watch for: does it combine `bbx create` knowledge with the question card spec, or wing it?
 
 ```
@@ -143,7 +143,7 @@ bbx prompt "How do you move a card from inbox to archive?"
 bbx prompt "How do you validate a card after editing it?"
 ```
 - **Expected level: Knows directly** — `bbx validate` is in the agent guide
-- Watch for: does it know the syntax, or does it look it up? Looking up `_content/docs/generated/bbx-commands.md` is fine
+- Watch for: does it know the syntax, or does it look it up? Looking up `node_modules/beebox/box-docs/bbx-commands.md` is fine
 
 ## 4. Procedures
 
@@ -157,7 +157,7 @@ bbx prompt "What procedures are configured in this box?"
 ```
 bbx prompt "How would you create a new procedure that processes bookmark cards?"
 ```
-- **Expected level: Knows about** — the agent guide mentions procedures exist; `_content/docs/generated/procedures.md` has the authoring guide
+- **Expected level: Knows about** — the agent guide mentions procedures exist; `node_modules/beebox/box-docs/procedures.md` has the authoring guide
 - Watch for: does it read the procedure docs, or guess at the card structure?
 
 ```
@@ -202,7 +202,7 @@ bbx prompt "Where do trick scripts live?"
 ```
 bbx prompt "What connectors are configured for this box?"
 ```
-- **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `_content/docs/generated/connectors.md`
+- **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/box-docs/connectors.md`
 - Watch for: does it explore the config, or just list connector types it "knows about" generically?
 
 ```
@@ -229,7 +229,7 @@ bbx prompt "How do scheduled tasks work in this box?"
 ```
 bbx prompt "How would I add a daily task?"
 ```
-- **Expected level: Knows about** — needs `_content/docs/generated/card-scheduled-script.md` for the exact card structure
+- **Expected level: Knows about** — needs `node_modules/beebox/box-docs/card-scheduled-script.md` for the exact card structure
 - Watch for: does it read the doc to get the cron/interval format right?
 
 ---
@@ -293,7 +293,7 @@ Views are a capability agents can use to create custom browser UIs. The agent sh
 bbx prompt "I want a dashboard that shows all my todos. Can you make that?"
 ```
 - **Expected level: Knows directly** — the agent guide lists views as a capability with a doc reference
-- Watch for: does it know to create a `.tsx` file in `views/`? Does it read `_content/docs/generated/views.md` for the format, or guess?
+- Watch for: does it know to create a `.tsx` file in `views/`? Does it read `node_modules/beebox/box-docs/views.md` for the format, or guess?
 
 ```
 bbx prompt "What are views and how do they work?"
@@ -304,7 +304,7 @@ bbx prompt "What are views and how do they work?"
 ```
 bbx prompt "How do I create a view that shows all record cards?"
 ```
-- **Expected level: Knows about** — the agent guide references `_content/docs/generated/views.md`; the agent should read it for the exact format
+- **Expected level: Knows about** — the agent guide references `node_modules/beebox/box-docs/views.md`; the agent should read it for the exact format
 - Watch for: does it read the views doc, or guess the file format? Key details to get right: named exports for metadata, default export for component, dependency globs, `ViewProps` shape
 
 ```
@@ -340,7 +340,7 @@ bbx prompt "What views can you embed in chat messages?"
 | Question | Level | Source |
 |----------|-------|--------|
 | Views exist as a capability | Knows directly | Agent guide |
-| How to create a view (format, API) | Knows about | `_content/docs/generated/views.md` |
+| How to create a view (format, API) | Knows about | `node_modules/beebox/box-docs/views.md` |
 | What views exist in this box | Discoverable | `views/` directory listing |
 | How to embed a view in chat | Knows directly | Chat system prompt |
 | When to suggest creating a view | Knows directly | Agent guide description |
@@ -446,7 +446,7 @@ First full run of the knowledge audit suite (27 tests). Results and observations
 
 ### Open questions
 
-**Procedure authoring (`create-procedure`)** — The agent constructs plausible procedure XML without reading `_content/docs/generated/procedures.md`, even after trimming the pointer. The procedure format uses custom conventions (precheck/run/validate phases, shell/agent/instruction primitives, CHECK_SKIP exit codes) but the general shape is close enough to common XML procedure patterns that the model guesses confidently. Open question: should the format be more conventional (so guessing works reliably) or more distinctive (so guessing fails visibly)? Alternatively, the real test might be whether the generated XML actually validates — a scenario test that creates a procedure and runs `bbx validate` would answer this better than a knowledge audit.
+**Procedure authoring (`create-procedure`)** — The agent constructs plausible procedure XML without reading `node_modules/beebox/box-docs/procedures.md`, even after trimming the pointer. The procedure format uses custom conventions (precheck/run/validate phases, shell/agent/instruction primitives, CHECK_SKIP exit codes) but the general shape is close enough to common XML procedure patterns that the model guesses confidently. Open question: should the format be more conventional (so guessing works reliably) or more distinctive (so guessing fails visibly)? Alternatively, the real test might be whether the generated XML actually validates — a scenario test that creates a procedure and runs `bbx validate` would answer this better than a knowledge audit.
 
 **"Knows about" vs. creation prompts** — Pattern across multiple tests: the agent reads docs when asked to *explain* something but skips the read when asked to *create* something. It seems to treat creation as an opportunity to demonstrate capability rather than a signal to look things up. This affects create-question-card, create-procedure, and add-daily-task (before fix). The schedule fix worked by making the pointer more specific about what the doc contains; the procedure fix (trimming) didn't work. More investigation needed on what makes an agent follow a pointer.
 

@@ -7,7 +7,7 @@
  * (generate-docs-bbx-commands.ts, generate-docs-procedure-guide.ts).
  */
 
-import { getTemplatesForCardType, describeTemplateArgs } from "../../schemas/templates.js";
+import { describeTemplate, type TemplateDefinition } from "../../schemas/templates.js";
 
 /**
  * Static connector metadata. Connectors register at runtime with a boxRoot,
@@ -32,11 +32,20 @@ const CONNECTORS: ConnectorInfo[] = [
   },
 ];
 
+export interface CardDocInput {
+  /** The card type. */
+  name: string;
+  /** The schema's `instructions` (with any appendix already applied). */
+  instructions: string;
+  /** Templates that create this type. The caller chooses the set — built-in
+   *  only for the package docs, the box's effective set for a box-local type. */
+  templates: TemplateDefinition[];
+}
+
 /**
  * Generate a detailed doc for a single card type.
  */
-export function generateCardDoc(name: string, instructions: string): string {
-  const templates = getTemplatesForCardType(name);
+export function generateCardDoc({ name, instructions, templates }: CardDocInput): string {
   const lines: string[] = [
     `# ${name} Card`,
     "",
@@ -58,7 +67,7 @@ export function generateCardDoc(name: string, instructions: string): string {
       lines.push("```");
       lines.push("");
 
-      lines.push(describeTemplateArgs(t.name));
+      lines.push(describeTemplate(t));
       lines.push("");
     }
   }

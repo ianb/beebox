@@ -8,6 +8,7 @@
  * the glossary first.
  */
 
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import { SECTION, xref } from "./sections.js";
 
 export function speakingToUserSection(): string {
@@ -93,7 +94,7 @@ Where each kind of thing goes:
   facts every agent needs → the **briefing card** (\`_content/briefing.briefing.card\`;
   a directory briefing explains what that subdirectory holds).
   Adding a key person? Also create \`_content/people/First_Last.person.card\`. Its fields
-  are documented in \`_content/docs/generated/card-briefing.md\` — think notes for a new
+  are documented in \`${BOX_PACKAGE_DOCS}/card-briefing.md\` — think notes for a new
   team member.
 - **A discrete item** — a bank account, a contact's phone number, a piece of
   furniture → a card in \`_content/\` (record / memo / bookmark). Most things you
@@ -104,7 +105,7 @@ Where each kind of thing goes:
 - **A filing target** — where a *kind* of item belongs → the destination
   directory's landmark \`destinations\` list (a \`for: [triage]\` routing target or
   a \`for: [commentary]\` capture target), not a guide card. See
-  \`_content/docs/generated/triage.md\`.
+  \`${BOX_PACKAGE_DOCS}/triage.md\`.
 - **How the agent sounds** — tone, formality, how proactive → the personality
   card (\`_config/main.personality.card\`). Voice and manner **only** — never
   situational context, the box's purpose, or facts about people (those are the

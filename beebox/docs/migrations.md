@@ -69,13 +69,17 @@ deploy log scrolls away.
 ### `bbx docs refresh` — the generated-docs half
 
 Migrating a box's cards is only half of converging it. Its `.claude/rules/card-*.md`,
-`.claude/skills/`, and `_content/docs/generated/` are regenerated from the schema registry
-by `generateDocs`, which is cache-gated on the running engine's version — so it
-regenerates the first time it runs after a deploy, but only when *something runs
-it*, and its triggers are all activity (a chat session start, a `bbx wakeup`
-reactor cycle, `bbx init`). A box nobody talks to kept the previous engine's
-guidance indefinitely: the 2026-08-24 `document`→`pdf` rename left 3 of 6 prod
-boxes teaching a card type that no longer existed until a manual `bbx init` pass.
+`.claude/skills/`, and the box-compiled docs under `_content/docs/generated/` are
+regenerated from the schema registry by `generateDocs`, which is cache-gated on
+the running engine's version — so it regenerates the first time it runs after a
+deploy, but only when *something runs it*, and its triggers are all activity (a
+chat session start, a `bbx wakeup` reactor cycle, `bbx init`). A box nobody talks
+to kept the previous engine's guidance indefinitely: the 2026-08-24 `document`→`pdf`
+rename left 3 of 6 prod boxes teaching a card type that no longer existed until a
+manual `bbx init` pass. (The engine reference docs at `node_modules/beebox/box-docs/`
+aren't part of this gap — `generateDocs` rewrites them unconditionally on every run
+from the currently installed engine, so they can't lag behind the version already
+on disk.)
 
 `bbx docs refresh` closes that gap and takes the sweep's shape deliberately — the
 normal cache (silent no-op on a box that already regenerated), a dirty box
@@ -151,7 +155,7 @@ hand.
 
 6. **Test it.** Run dry-run against a real box you can reset; then `--apply` and validate with `bbx validate`. Confirm the manifest got an entry. If you have a noisy-mode warning, decide explicitly whether to handle it or accept the loss — and document the call.
 
-   **A type/schema migration also has to converge each box's generated docs — the deploy now does this for you, so verify rather than plan it.** `.claude/rules/card-*.md`, `.claude/skills/`, and `_content/docs/generated/` are regenerated from the schema registry, and until 2026-08-24 that happened only on `bbx init`, a chat-session start, or a `bbx wakeup` reactor cycle — so boxes with no such activity kept rules teaching the retired type (the `document`→`pdf` rename left 3 of 6 prod boxes on stale `card-document.md` until a manual `bbx init` pass). `deploy.sh` now runs `bbx docs refresh` per box right after the migration sweep, which regenerates and commits them. What is left for you is the check: a box that was **dirty** at deploy time is skipped and retried next deploy, so after a rollout `grep -rl` the old type name across each box (generated docs included) rather than assuming either half finished the job.
+   **A type/schema migration also has to converge each box's generated docs — the deploy now does this for you, so verify rather than plan it.** `.claude/rules/card-*.md`, `.claude/skills/`, and the box-compiled docs under `_content/docs/generated/` are regenerated from the schema registry, and until 2026-08-24 that happened only on `bbx init`, a chat-session start, or a `bbx wakeup` reactor cycle — so boxes with no such activity kept rules teaching the retired type (the `document`→`pdf` rename left 3 of 6 prod boxes on stale `card-document.md` until a manual `bbx init` pass). `deploy.sh` now runs `bbx docs refresh` per box right after the migration sweep, which regenerates and commits them. What is left for you is the check: a box that was **dirty** at deploy time is skipped and retried next deploy, so after a rollout `grep -rl` the old type name across each box (`.claude/rules/`, `.claude/skills/`, and `_content/docs/generated/`) rather than assuming either half finished the job. The engine reference docs at `node_modules/beebox/box-docs/` need no such check — every `generateDocs` run rewrites them from whatever engine version is currently installed, so they update themselves on the next `bbx` activity with no per-box step.
 
 7. **Defer removal of the legacy support.** A migration almost always leaves code behind that exists only to tolerate the *old* shape — a fallback branch, a lenient parse, a compatibility field, a "both spellings accepted" reader. That code should survive a short, explicit settling period, not live forever, and **you are the last person who can name it precisely**: months later nobody can tell which branches are legacy tolerance and which are load-bearing. Write the cleanup issue when the migration ships, while you can list those paths, but keep it out of the active queue until its removal date.
 

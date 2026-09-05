@@ -40,6 +40,7 @@ import { withBoxGitLock } from "../lib/git-lock.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { generateDocs, GENERATE_MARKER } from "./docs-gen/index.js";
+import { ensureEngineDocs } from "./docs-gen/box-docs.js";
 
 export type DocsRefreshResult =
   /** The cache said everything was current. The common case, and the quiet one. */
@@ -81,6 +82,10 @@ export async function refreshGeneratedDocs(opts: { boxRoot: string }): Promise<D
   // nested acquisition a pass-through rather than a 60s stall. It covers the
   // clean check through the commit as one unit, exactly as the sweep does.
   const shape = await getBoxShape(boxRoot);
+  // The package's own reference docs depend on the engine alone, so they are
+  // ensured before (and regardless of) the dirty-box gate below: a deploy that
+  // finds every box dirty must still leave the package docs current.
+  await ensureEngineDocs();
   return withBoxGitLock(shape.boxRoot, async () => {
     const status = await getStatus(shape.boxRoot);
     if (!status.clean) return { status: "skipped-dirty" };
