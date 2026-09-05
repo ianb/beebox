@@ -100,6 +100,8 @@ import {
   executeMoves,
   remapMovedSymlinkTargets,
   verifyNoIgnoreRegression,
+  isGitTracked,
+  isGitIgnored,
   type PlannedMove,
   type RenamedEntry,
 } from "./one-root-move-plan.js";
@@ -120,6 +122,38 @@ const execFileAsync = promisify(execFile);
  * see `box/index.ts`'s `.gitignore` block for the current names. */
 const V2_LOCK_FILES = [".bbx-lock", ".bbx-reactor.lock", ".bbx-serve.pid"];
 
+/**
+ * Round-6 hardening finding 1: `src`, `src/views`, `src/schemas`,
+ * `src/tricks`, and `.claude` are all ANCESTOR directories the migration
+ * (and later, ordinary box operation) walks through without ever `lstat`ing
+ * every intermediate segment — `listBoxViewFiles`'s `glob` follows a
+ * directory symlink transparently, and a leaf `lstat` inside a symlinked
+ * `src/views` never sees the symlinked PARENT. If `src/views` were a tracked
+ * symlink to, say, `/shared/views`, `rewriteViewRefs` would happily rewrite
+ * every `.tsx` file it finds there — ordinary files EXTERNAL to this box —
+ * and `initBox` can install a starter guide through the same link. Refuse
+ * before any mutation rather than let either happen.
+ */
+const SYMLINK_ANCESTOR_CHECKS = ["src", "src/views", "src/schemas", "src/tricks", ".claude"];
+
+async function assertNoSymlinkedAncestors(packageRoot: string): Promise<void> {
+  for (const rel of SYMLINK_ANCESTOR_CHECKS) {
+    const abs = path.join(packageRoot, rel);
+    const lst = await fs.lstat(abs).catch((e: unknown) => {
+      if (errnoCode(e) === "ENOENT") return null;
+      throw e;
+    });
+    if (lst !== null && lst.isSymbolicLink()) {
+      throw new OneRootPreflightError(
+        `${abs} is a symlink — refusing to migrate through a symlinked code ancestor. A leaf ` +
+          "lstat inside it can't see this parent link, so a rewrite or init step would silently " +
+          "touch files outside the box. Reconcile by hand (replace the symlink with a real " +
+          "directory, or move its contents in), then re-run.",
+      );
+    }
+  }
+}
+
 async function preflight(params: { packageRoot: string; contentRoot: string }): Promise<void> {
   const status = await getStatus(params.packageRoot);
   if (!status.clean) {
@@ -127,6 +161,8 @@ async function preflight(params: { packageRoot: string; contentRoot: string }): 
       params.packageRoot + ": working tree is not clean. Commit or stash before migrating.",
     );
   }
+
+  await assertNoSymlinkedAncestors(params.packageRoot);
 
   for (const lockFile of V2_LOCK_FILES) {
     const exists = await fs
@@ -274,8 +310,23 @@ async function rewriteRefs(params: {
  * here: `lstat` each view path first and skip a symlinked leaf entirely — its
  * ref content belongs to its target, which is either rewritten under its own
  * move entry (if it lives in the box) or left byte-untouched (if it doesn't).
+ *
+ * Round-6 hardening finding 3: a view NEVER moves, so it has no
+ * {@link PlannedMove} / journal entry the way an untracked card/doc gets one
+ * in {@link rewriteRefs} — an untracked (including gitignored) view rewritten
+ * in place here had no record of its pre-rewrite bytes, so a later rollback
+ * (`revertToSnapshot`'s `reset --hard`, which only undoes TRACKED content)
+ * left the migration's rewritten bytes sitting there instead of restoring
+ * the original. Before overwriting an untracked view, append a `journal`
+ * entry with `oldAbs === newAbs` (nothing renamed, only content changed) and
+ * the pre-rewrite bytes — `rollbackMoveAndCommit` already restores any
+ * journal entry's `originalFileBytes` after its (no-op, same-path) rename.
  */
-async function rewriteViewRefs(packageRoot: string): Promise<{ unresolved: string[]; skippedSymlinks: string[] }> {
+async function rewriteViewRefs(params: {
+  packageRoot: string;
+  journal: RenamedEntry[];
+}): Promise<{ unresolved: string[]; skippedSymlinks: string[] }> {
+  const { packageRoot, journal } = params;
   const unresolved: string[] = [];
   const skippedSymlinks: string[] = [];
   for (const viewPath of await listBoxViewFiles(packageRoot)) {
@@ -286,7 +337,12 @@ async function rewriteViewRefs(packageRoot: string): Promise<{ unresolved: strin
     }
     const text = await fs.readFile(viewPath, "utf-8");
     const result = rewriteOneRootViewRefs(text);
-    if (result.text !== text) await fs.writeFile(viewPath, result.text);
+    if (result.text !== text) {
+      if (!(await isGitTracked(packageRoot, viewPath))) {
+        journal.push({ oldAbs: viewPath, newAbs: viewPath, wasIgnored: await isGitIgnored(packageRoot, viewPath), originalFileBytes: text });
+      }
+      await fs.writeFile(viewPath, result.text);
+    }
     for (const u of result.unresolved) unresolved.push(`${path.relative(packageRoot, viewPath)}: ${u}`);
   }
   return { unresolved, skippedSymlinks };
@@ -397,7 +453,10 @@ async function moveAndCommitBox(params: {
       moves,
       journal: untrackedRenames,
     });
-    const { unresolved: unresolvedViewRefs, skippedSymlinks: skippedViewSymlinkRefs } = await rewriteViewRefs(packageRoot);
+    const { unresolved: unresolvedViewRefs, skippedSymlinks: skippedViewSymlinkRefs } = await rewriteViewRefs({
+      packageRoot,
+      journal: untrackedRenames,
+    });
     const unresolvedRefs = [...unresolvedCardRefs, ...unresolvedViewRefs];
     const skippedSymlinkRefs = [...skippedCardSymlinkRefs, ...skippedViewSymlinkRefs];
 

@@ -518,6 +518,95 @@ everListed.length
 await cleanup(root);
 ```
 
+## Finding 1 (round 6 hardening): a symlinked `src/views` ancestor aborts preflight, nothing mutated
+
+`src/views` here is a TRACKED symlink to a directory OUTSIDE the box entirely.
+Before this fix, `listBoxViewFiles`'s `glob` follows a symlinked `cwd`
+transparently, and a per-file `lstat` inside it never sees the symlinked
+PARENT — the ref rewriter would happily rewrite ordinary files EXTERNAL to
+this box. Preflight now `lstat`s `src`, `src/views`, `src/schemas`,
+`src/tricks`, and `.claude` and refuses before anything moves.
+
+```ts
+const root = await makeV2Box();
+const externalViewsDir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-external-views-"));
+await fs.writeFile(path.join(externalViewsDir, "Ordinary.tsx"), "export default function Ordinary() { return null; }\n");
+await fs.rm(path.join(root, "src", "views"), { recursive: true, force: true });
+await fs.symlink(externalViewsDir, path.join(root, "src", "views"));
+execSync("git add -A && git commit -q -m symlinked-views-fixture", { cwd: root, stdio: "pipe" });
+
+const err = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") }).catch((e) => e);
+JSON.stringify({
+  isPreflightError: err instanceof OneRootPreflightError,
+  mentionsPath: err.message.includes(path.join(root, "src", "views")),
+  contentStillThere: await fs.access(path.join(root, "content")).then(() => true, () => false),
+})
+=> {"isPreflightError":true,"mentionsPath":true,"contentStillThere":true}
+```
+
+The external directory's file is untouched — the migration never walked
+through the symlink at all:
+
+```ts continue
+const externalFiles = await fs.readdir(externalViewsDir);
+JSON.stringify(externalFiles)
+=> ["Ordinary.tsx"]
+```
+
+```ts cleanup
+await fs.rm(externalViewsDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+await cleanup(root);
+```
+
+## Finding 3 (round 6 hardening): an ignored view's rewrite is journaled and restored on rollback
+
+`src/views/Private.tsx` is gitignored (never committed) and carries a
+`cardRef` that needs rewriting. Before this fix, `rewriteViewRefs` overwrote
+it in place with no journal entry — a view never moves, so it has no
+{@link PlannedMove} the way an untracked card/doc gets journaled. A later
+gate failure (a separate dangling ref) rolls back everything else via
+`revertToSnapshot`'s `reset --hard`, which only restores TRACKED content —
+the ignored view's rewritten bytes would have survived the rollback
+unrestored. They're now journaled and restored like every other untracked
+in-place edit.
+
+```ts
+const root = await makeV2Box();
+await fs.writeFile(path.join(root, ".gitignore"), "src/views/Private.tsx\n");
+await fs.mkdir(path.join(root, "src", "views"), { recursive: true });
+const privateViewSource = 'export default function Private() { return <div cardRef="/store/recipes/Soup.recipe.card" />; }\n';
+await fs.writeFile(path.join(root, "src", "views", "Private.tsx"), privateViewSource);
+await fs.mkdir(path.join(root, "content", "store", "recipes"), { recursive: true });
+await fs.writeFile(path.join(root, "content", "store", "recipes", "Soup.recipe.card"), '---\ntitle: Soup\n---\nSoup.\n');
+execSync("git add -A && git commit -q -m ignored-view-fixture", { cwd: root, stdio: "pipe" });
+
+// A separate, unrelated dangling ref trips the hard link gate so the WHOLE
+// migration rolls back — the same induced failure the earlier rollback test
+// uses.
+const fooPath = path.join(root, "content", "box", "inbox", "Foo.memo.card");
+const fooBefore = await fs.readFile(fooPath, "utf-8");
+await fs.writeFile(fooPath, fooBefore + "\n[ghost](../../nonexistent/Ghost.card)\n");
+execSync("git add -A && git commit -q -m dangling-plus-ignored-view", { cwd: root, stdio: "pipe" });
+
+const err = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") }).catch((e) => e);
+JSON.stringify({ isLinkGateError: err instanceof OneRootLinkGateError })
+=> {"isLinkGateError":true}
+```
+
+The gitignored view's bytes are restored to exactly what they were before
+the migration touched them — not left at the migration's rewritten (but now
+orphaned, since the whole conversion rolled back) `cardRef`:
+
+```ts continue
+const privateViewAfter = await fs.readFile(path.join(root, "src", "views", "Private.tsx"), "utf-8");
+privateViewAfter === privateViewSource
+=> true
+```
+
+```ts cleanup
+await cleanup(root);
+```
+
 ## Claude Code transcript directories are re-keyed to the new cwd
 
 Claude Code keys `~/.claude/projects/<encoded-cwd>/` by the absolute cwd a

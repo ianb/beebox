@@ -302,3 +302,35 @@ annexDeleteRes.statusCode
 ```ts cleanup
 await annexServer.cleanup();
 ```
+
+## Round-6 hardening: a browse CHILD symlink can't leak out-of-namespace frontmatter
+
+The directory fence above (`/api/browse/_content/pkg`) only checks the
+listing TARGET. A separate hazard: the target directory itself is fine, but
+one CHILD entry inside it is a symlink whose target resolves outside the
+namespace (e.g. `_content/alias.memo.card -> ../src/private.memo.card`) —
+before this fix, the child loop's `loadCardFrontmatter` followed that symlink
+and returned the external card's frontmatter straight into the listing. The
+escaping child is now silently omitted; a normal sibling card still lists.
+
+```ts
+const escServer = await makeTestServer();
+await mkdir(join(escServer.boxRoot, "src"), { recursive: true });
+await writeFile(
+  join(escServer.boxRoot, "src", "private.memo.card"),
+  '---\nstatus: secret\ncreated: "2026-01-01T00:00:00.000Z"\n---\nPrivate.\n',
+);
+await escServer.seed("_content/Normal.memo.card", '---\nstatus: new\ncreated: "2026-01-01T00:00:00.000Z"\n---\nNormal.\n');
+await symlink(join("..", "src", "private.memo.card"), join(escServer.boxRoot, "_content", "alias.memo.card"));
+
+const escBrowseRes = await escServer.request({ method: "GET", url: "/api/browse/_content" });
+JSON.stringify({
+  names: escBrowseRes.body.cards.map((c) => c.name).sort(),
+  statuses: escBrowseRes.body.cards.map((c) => c.status),
+})
+=> {"names":["Normal"],"statuses":["new"]}
+```
+
+```ts cleanup
+await escServer.cleanup();
+```

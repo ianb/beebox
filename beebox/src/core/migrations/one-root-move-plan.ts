@@ -210,6 +210,28 @@ async function assertNoDestinationCollisions(params: { packageRoot: string; move
   }
 }
 
+/**
+ * Round-6 hardening finding 3: whether `absPath` is currently tracked by
+ * git. Used to decide whether a NEVER-MOVED file the migration rewrites in
+ * place (a `src/views/*.tsx` view — never relocated, since its v2 and v3
+ * location are the same) needs its pre-rewrite bytes journaled: a tracked
+ * file's in-place edit is undone for free by `revertToSnapshot`'s `reset
+ * --hard`, but an untracked (including gitignored) one has no git copy to
+ * fall back to.
+ */
+export async function isGitTracked(packageRoot: string, absPath: string): Promise<boolean> {
+  const rel = path.relative(packageRoot, absPath);
+  try {
+    await execFileAsync("git", ["ls-files", "--error-unmatch", "--", rel], { cwd: packageRoot });
+    return true;
+  } catch (_e) {
+    // Exit 1 (not tracked) and any other failure both fold to "not
+    // tracked" — fail CLOSED here: an uncertain answer must never skip the
+    // journal a genuinely untracked file needs restored on rollback.
+    return false;
+  }
+}
+
 /** Exported for {@link verifyNoBoxWideIgnoreRegression} in the sibling
  * `one-root-ignore-merge.ts` (finding 3's box-wide check reuses the exact
  * same fail-closed probe this module's own targeted check uses). */

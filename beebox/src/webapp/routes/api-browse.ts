@@ -109,6 +109,20 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
 
         const fullPath = path.join(resolved, entry.name);
         const relativePath = path.relative(boxRoot, fullPath);
+
+        // Round-6 hardening finding 2: the directory fence above only checks
+        // the LISTING TARGET (`resolved`) — it says nothing about a CHILD
+        // entry that is itself a symlink escaping the namespace (e.g.
+        // `_content/alias.memo.card -> ../src/private.memo.card`). Without
+        // this, `loadCardFrontmatter` below follows that symlink and returns
+        // out-of-namespace metadata straight into the listing. Re-fence each
+        // child on its own resolved path (read mode: an annex-style leaf
+        // symlink into `.git/annex/objects/…` still passes, same as every
+        // other read route) and simply omit a rejected child from the
+        // listing rather than 403 the whole directory.
+        const childNs = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: relativePath, mode: "read" });
+        if (childNs === null) continue;
+
         const attachDirName = `${parsed.name}.attach`;
         const hasAttachments = entries.some(
           (e) => e.isDirectory() && e.name === attachDirName,
