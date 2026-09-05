@@ -11,7 +11,8 @@ fix reuses `lint-path-fields.ts`'s `PATH_FIELDS` inventory directly, so the
 rewriter covers exactly what the gate checks — one list, not two.
 
 ```ts setup
-import { rewriteOneRootRefs, rewriteOneRootViewDependencies } from "../../../src/core/migrations/one-root-ref-rewrite.js";
+import { rewriteOneRootRefs } from "../../../src/core/migrations/one-root-ref-rewrite.js";
+import { rewriteOneRootViewDependencies } from "../../../src/core/migrations/one-root-view-dependencies.js";
 import { OneRootPreflightError } from "../../../src/core/migrations/one-root-errors.js";
 ```
 
