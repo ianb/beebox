@@ -126,6 +126,9 @@ interface ImgElementProps {
   title: string | undefined;
   onActivate: ((element: HTMLImageElement) => void) | null;
   onError: (failedSrc: string) => void;
+  onLoad: (element: HTMLImageElement) => void;
+  /** Widen the wrapping button to its container — see `stretch` in `Image`. */
+  stretch: boolean;
   lightbox: boolean;
   lightboxSrc: string | undefined;
   lightboxCaption: string | undefined;
@@ -134,7 +137,7 @@ interface ImgElementProps {
   loading: "lazy" | "eager" | undefined;
 }
 
-function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, title, onActivate, onError, lightbox, lightboxSrc, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
+function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, stretch, lightbox, lightboxSrc, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
   const interactive = onActivate !== null;
   const handleClick = () => {
     if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
@@ -163,6 +166,7 @@ function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, ti
       className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", interactive ? "m-0" : extraClass)}
       style={rotationStyle}
       onError={(event) => onError(event.currentTarget.currentSrc || src)}
+      onLoad={(event) => onLoad(event.currentTarget)}
       title={title}
       data-image-src={lightbox ? lightboxSrc ?? src : undefined}
       data-image-alt={lightbox ? alt : undefined}
@@ -181,6 +185,7 @@ function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, ti
       aria-label={lightbox ? `${alt} (click to zoom)` : undefined}
       className={cn(
         "block border-0 bg-transparent p-0",
+        stretch ? "w-full" : "",
         lightbox ? "cursor-zoom-in" : "cursor-pointer",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         extraClass,
@@ -199,18 +204,18 @@ function wrapOrthogonal({ node, extraClass }: { node: ReactNode; extraClass?: st
   );
 }
 
-function wrapWithOverlay({ node, overlay, extraClass }: { node: ReactNode; overlay: ReactNode; extraClass?: string }): ReactNode {
+function wrapWithOverlay({ node, overlay, stretch, extraClass }: { node: ReactNode; overlay: ReactNode; stretch: boolean; extraClass?: string }): ReactNode {
   return (
-    <div className={cn("relative inline-block", extraClass)}>
+    <div className={cn("relative inline-block", stretch ? "w-full" : "", extraClass)}>
       {node}
       {overlay}
     </div>
   );
 }
 
-function wrapInFigure({ node, caption, extraClass }: { node: ReactNode; caption: ReactNode; extraClass?: string }): ReactNode {
+function wrapInFigure({ node, caption, stretch, extraClass }: { node: ReactNode; caption: ReactNode; stretch: boolean; extraClass?: string }): ReactNode {
   return (
-    <figure className={cn("inline-flex flex-col items-center", extraClass)}>
+    <figure className={cn("inline-flex flex-col items-center", stretch ? "w-full" : "", extraClass)}>
       {node}
       <figcaption className="mt-1 max-w-full text-xs text-warm-600 italic text-center">
         {caption}
@@ -227,20 +232,21 @@ interface AssembleOpts {
   overlay: ReactNode;
   errored: boolean;
   isOrthogonal: boolean;
+  stretch: boolean;
   outerLayer: OuterLayer;
   className: string | undefined;
 }
 
-function assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className }: AssembleOpts): ReactNode {
+function assembleImage({ base, caption, overlay, errored, isOrthogonal, stretch, outerLayer, className }: AssembleOpts): ReactNode {
   let node: ReactNode = base;
   if (isOrthogonal && !errored) {
     node = wrapOrthogonal({ node, extraClass: outerLayer === "orthogonal" ? className : undefined });
   }
   if (overlay !== undefined && !errored) {
-    node = wrapWithOverlay({ node, overlay, extraClass: outerLayer === "overlay" ? className : undefined });
+    node = wrapWithOverlay({ node, overlay, stretch, extraClass: outerLayer === "overlay" ? className : undefined });
   }
   if (caption !== undefined) {
-    node = wrapInFigure({ node, caption, extraClass: className });
+    node = wrapInFigure({ node, caption, stretch, extraClass: className });
   }
   return node;
 }
@@ -285,6 +291,19 @@ export function Image(props: ImageProps) {
   // re-render after we record a fresh failure (the set isn't reactive itself).
   const [, bumpAfterError] = useReducer((n: number) => n + 1, 0);
   const [locallyFailedSrc, setLocallyFailedSrc] = useState<string | null>(null);
+  // An image with no intrinsic width — an SVG with only a `viewBox` — sizes
+  // itself to its containing block. The lightbox <button> (and the figure /
+  // overlay wrappers) are shrink-to-fit, so the two sizes depend on each other
+  // and the browser resolves both to 0: the image loads, and nothing shows.
+  // Detected from the DOM after load (loaded pixels, laid out at 0 wide, in a
+  // container that has width) rather than guessed from the file extension;
+  // the wrappers then take the container's width, and the image follows.
+  const [stretch, setStretch] = useState(false);
+  const noteLayout = (el: HTMLImageElement) => {
+    if (stretch || !el.complete || el.naturalWidth === 0 || el.clientWidth > 0) return;
+    const container = el.parentElement?.parentElement;
+    if (container !== undefined && container !== null && container.clientWidth > 0) setStretch(true);
+  };
   const fallbackSrc = proxyFallbackSrc !== undefined && proxyFallbackSrc !== src ? proxyFallbackSrc : undefined;
   const { displaySrc, errored } = getLoadState({
     src,
@@ -313,9 +332,12 @@ export function Image(props: ImageProps) {
     if (el.complete && el.naturalWidth === 0 && el.getAttribute("src") !== null) {
       handleError(el.currentSrc || displaySrc);
     }
+    // The same race for `load`: a cached image is complete before the handler
+    // attaches, so the collapsed-layout check runs here too.
+    noteLayout(el);
     // `displaySrc` so a changed source is re-checked; `errored` so a placeholder
     // already showing does not re-enter.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleError is redefined every render; depending on it would re-run this on every render rather than on a source change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleError and noteLayout are redefined every render; depending on them would re-run this on every render rather than on a source change.
   }, [displaySrc, errored]);
 
   const rotationStyle: CSSProperties | undefined = rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
@@ -348,6 +370,8 @@ export function Image(props: ImageProps) {
       title={title}
       onActivate={activate}
       onError={handleError}
+      onLoad={noteLayout}
+      stretch={stretch}
       lightbox={lightbox}
       lightboxSrc={lightboxSrc}
       lightboxCaption={typeof caption === "string" ? caption : undefined}
@@ -357,5 +381,5 @@ export function Image(props: ImageProps) {
     />
   );
 
-  return assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className });
+  return assembleImage({ base, caption, overlay, errored, isOrthogonal, stretch, outerLayer, className });
 }
