@@ -3,7 +3,7 @@
  * the content area once if the current listing has none.
  *
  * The browse root deliberately lists the box's underscore areas rather than
- * its real content (`beebox/docs/plans/one-root-box-layout.md`), so a
+ * its real content (`beebox/docs/implemented-plans/one-root-box-layout.md`), so a
  * one-root-migrated box's root listing carries no card row at all — that
  * alone does not mean the box is broken. Split out of bin/smoke.ts to keep
  * that file's step list under the line budget.

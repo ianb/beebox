@@ -30,7 +30,7 @@ import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
 
 /**
  * The npm-namespace entries `bbx validate --hook` treats as "editing the
- * package surface" (Track C, `docs/plans/one-root-box-layout.md`) — their
+ * package surface" (Track C, `docs/implemented-plans/one-root-box-layout.md`) — their
  * first path segment, whether the edit lands on the entry itself or
  * somewhere underneath it (a file inside `node_modules/`, say). A subset of
  * the full closed vocabulary — these specifically get their own feedback
@@ -43,7 +43,7 @@ const VOCABULARY_NAMES: ReadonlySet<string> = new Set(BOX_ROOT_VOCABULARY.map((e
 
 /**
  * Root-vocabulary tripwire for the hook. Two independent checks on the
- * edited path's TOP-LEVEL segment (Track C, `docs/plans/one-root-box-layout.md`):
+ * edited path's TOP-LEVEL segment (Track C, `docs/implemented-plans/one-root-box-layout.md`):
  *
  *  - Editing anywhere under an npm-namespace entry (`package.json`, a
  *    lockfile, `tsconfig.json`, `node_modules/`) always gets a nudge —

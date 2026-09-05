@@ -182,7 +182,7 @@ async function lintFrontmatterCard(input: {
   const bodyLinks = typeof bodyField === "string" ? extractBodyLinks(bodyField) : [];
   const warnings: LintIssue[] = [];
   const allRefs = [...frontmatterRefs, ...bodyRefs, ...bodyLinks];
-  // Relative-ref deprecation (Track B, `docs/plans/one-root-box-layout.md`):
+  // Relative-ref deprecation (Track B, `docs/implemented-plans/one-root-box-layout.md`):
   // a document-relative ref in the card BODY is on by default, warning-only —
   // it's the form most likely to be hand-typed or copied between cards, where
   // relativity silently changes what it means. Frontmatter refs stay behind
@@ -273,7 +273,7 @@ async function lintFrontmatterCard(input: {
   if (type === "chat") {
     errors.push(...(await lintDuplicateChatSession({ path, fields: parsed.fields, boxRoot: options.boxRoot, run: options })));
   }
-  // No absolute machine paths (Track B, `docs/plans/one-root-box-layout.md`):
+  // No absolute machine paths (Track B, `docs/implemented-plans/one-root-box-layout.md`):
   // a real developer home directory embedded in card content is a leak, not
   // a legitimate ref — error, unlike the ref/canonical checks above, which
   // stay warnings because broken/relative refs are routine data drift.

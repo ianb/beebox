@@ -1,5 +1,5 @@
 /**
- * The `one-root` migration's orchestration (Track E, `docs/plans/one-root-box-layout.md`).
+ * The `one-root` migration's orchestration (Track E, `docs/implemented-plans/one-root-box-layout.md`).
  * Converts a v2 box (package root + nested `content/`) to v3 (one root) in
  * place, atomically, as one commit. `scripts/migrate/one-root.ts` is the thin
  * CLI wrapper; this module is importable directly so doctests exercise the

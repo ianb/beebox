@@ -17,7 +17,7 @@ contract change — is defined in `docs/implemented-plans/mobile-parity-sync.md`
 `ios-app/BeeBox/`. Anchors name a file plus the identifier (function/struct/const) inside it —
 never line numbers, which rot. Box-relative wire values (landmark/share-destination `dir`s,
 uploaded-file `path`s) are opaque tokens iOS round-trips unmodified; under the one-root box
-layout (shapeVersion 3, `docs/plans/one-root-box-layout.md`) they land in underscore areas
+layout (shapeVersion 3, `docs/implemented-plans/one-root-box-layout.md`) they land in underscore areas
 (`_content/…`, `_tmp/…`) — the wire shape is unchanged, only the values moved. A paired box's `baseURL` already includes the hub slug
 (e.g. `http://127.0.0.1:3210/main/test1` in dev, `https://host/<slug>` in prod), so every native
 HTTP path below is `<baseURL>/api/...`.

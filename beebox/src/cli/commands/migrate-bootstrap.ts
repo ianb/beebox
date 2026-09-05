@@ -1,7 +1,7 @@
 /**
  * `bbx migrate`'s v2 bootstrap path — split out of `migrate.ts` purely to
  * keep that file under the 300-line limit. See Track E's "Bootstrap"
- * paragraph, `docs/plans/one-root-box-layout.md`.
+ * paragraph, `docs/implemented-plans/one-root-box-layout.md`.
  *
  * The v3 engine refuses v2 boxes, so `requireBoxRoot()` (`migrate.ts`)
  * either can't find a marker at all (invoked from the v2 PACKAGE root —

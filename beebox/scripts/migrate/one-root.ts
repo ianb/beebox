@@ -2,7 +2,7 @@
 
 /**
  * `one-root` — v2 → v3 one-root layout migration (Track E,
- * `docs/plans/one-root-box-layout.md`). Unlike every other entry in
+ * `docs/implemented-plans/one-root-box-layout.md`). Unlike every other entry in
  * `MIGRATIONS`, this script runs against a box that ISN'T v3 yet — that's the
  * whole point (see the plan's "Bootstrap" paragraph). `bbx migrate`'s
  * bootstrap path (`src/cli/commands/migrate.ts`) invokes this directly,

@@ -402,7 +402,7 @@ and hands it straight to `src/core/migrations/one-root-run.ts`'s
 `runOneRootMigration`, entirely outside the normal manifest-driven `pending`
 loop (a v2 box has no `_config/migrations.jsonl` yet — the migration MOVES
 that file into existence as part of converting `content/config/` →
-`_config/`). See `docs/plans/one-root-box-layout.md` Track E for the full
+`_config/`). See `docs/implemented-plans/one-root-box-layout.md` Track E for the full
 design. In order: preflight (clean tree, no running-process lock files, the
 v2 package root's own closed-vocabulary check); `git mv` every `content/`
 file per `src/core/migrations/one-root-mapping.ts`'s table (exhaustive,

@@ -115,7 +115,7 @@ export const statusCommand = new Command("status")
         console.log(describeLegacySchemaFiles(shape, legacySchemaFiles));
       }
 
-      // Closed-vocabulary root check (Track C, `docs/plans/one-root-box-layout.md`):
+      // Closed-vocabulary root check (Track C, `docs/implemented-plans/one-root-box-layout.md`):
       // a warning here, an error in `bbx validate` — status surfaces drift
       // without blocking, validate is the gate.
       await printRootStrays(boxRoot);

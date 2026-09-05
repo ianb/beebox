@@ -27,7 +27,7 @@ registerBuiltinLoaders();
  * Box containment + namespace fence, checked on the RESOLVED path: this reads
  * arbitrary file content (up to 64KB) for a non-card path, so an unfenced
  * traversal here would leak `package.json`/`src/*`/`node_modules/*` content
- * through the batch summary endpoint (`docs/plans/one-root-box-layout.md`
+ * through the batch summary endpoint (`docs/implemented-plans/one-root-box-layout.md`
  * Track B).
  */
 async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSummary<unknown> | null> {
