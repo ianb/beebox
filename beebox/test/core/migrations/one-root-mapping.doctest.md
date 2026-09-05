@@ -137,7 +137,7 @@ any other unrecognized top-level name:
 
 ```ts
 JSON.stringify(mapV2Path("briefing.md.attach/x"))
-=> {"kind":"unmapped"}
+=> {"kind":"move","newPath":"_content/briefing.md.attach/x"}
 ```
 
 ## Connector state splits from config into bookkeeping
@@ -204,9 +204,25 @@ JSON.stringify(mapV2Path("box/commands/whatever.card"))
 JSON.stringify(mapV2Path("box/bookmarks/whatever.card"))
 => {"kind":"unmapped"}
 
+// Ad hoc loose content file — defaults into `_content/` (round-10 rule).
 JSON.stringify(mapV2Path("interview.md"))
-=> {"kind":"unmapped"}
+=> {"kind":"move","newPath":"_content/interview.md"}
 
 JSON.stringify(mapV2Path(""))
 => {"kind":"unmapped"}
+```
+
+## Unknown content-root entries default into `_content/` (ad hoc user dirs)
+
+v2 allowed loose top-level content dirs (`content/images/…` on a real box);
+v3's `_content/` is open vocabulary, so they move in wholesale. Dotfiles stay
+unmapped (unknown runtime state needs a human).
+
+```ts
+JSON.stringify([
+  mapV2Path("images/portrait.image.card"),
+  mapV2Path("notes.md"),
+  mapV2Path(".mystery-state.json"),
+])
+=> [{"kind":"move","newPath":"_content/images/portrait.image.card"},{"kind":"move","newPath":"_content/notes.md"},{"kind":"unmapped"}]
 ```
