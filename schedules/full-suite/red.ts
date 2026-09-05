@@ -24,13 +24,12 @@ import {
   firstErrorLines,
   isEnvironmentFailure,
   issuePath,
-  renderEnvironmentAlert,
   renderIssue,
-  renderRedAlert,
   unstageIssueArgs,
   type Culprit,
   type Landing,
 } from "./lib.js";
+import { flakesAlertTitle, redAlertTitle, renderEnvironmentAlert, renderRedAlert } from "./alerts.js";
 import { renderDeferredAlert } from "./trust.js";
 import { landingsSince } from "./batch.js";
 import { alertOnce } from "./reporting.js";
@@ -250,7 +249,7 @@ export async function handleRed(input: {
       kind: "flakes",
       files: triaged.flakes,
       priority: "normal",
-      title: `full suite: ${String(triaged.flakes.length)} flake(s), nothing filed`,
+      title: flakesAlertTitle(triaged.flakes),
       message: renderRedAlert({
         testedCommit: batch.pinned,
         baseCommit: batch.base,
@@ -333,10 +332,7 @@ export async function handleRed(input: {
     kind: culprits.length === 0 ? "red-unattributed" : "red-blamed",
     files: triaged.real,
     priority: "important",
-    title:
-      culprits.length === 0
-        ? `full suite red: ${String(triaged.real.length)} file(s), no attributable landing`
-        : `full suite red: ${String(culprits.length)} landing(s) blamed`,
+    title: redAlertTitle({ real: triaged.real, culprits }),
     message,
   });
   return failures;
