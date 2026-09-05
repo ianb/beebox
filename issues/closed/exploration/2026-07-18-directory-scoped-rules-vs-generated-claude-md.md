@@ -6,8 +6,10 @@ filed-by: agent
 discovered-in: main session — boxholder wondering if per-directory rules could replace generated context
 area: beebox
 priority: backlog
-next-action: discuss
+resolution: wontfix
 ---
+
+> Closed 2026-09-05 as `wontfix` — boxholder's call while working the `discuss` tags: the generated root CLAUDE.md + @-includes stays.
 
 Today a box's agent context is assembled by **generating CLAUDE.md** and injecting
 **@-includes to compiled briefing files** — every relevant briefing gets pulled into

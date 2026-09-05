@@ -66,6 +66,14 @@ RUN apt-get update \
        ln -sf "$(command -v convert)" /usr/local/bin/magick; \
      fi
 
+# fclones (duplicate-file finder, same promise as setup-server.sh). Upstream
+# ships an amd64 .deb only; on other architectures the image simply lacks it.
+ARG FCLONES_VERSION=0.35.0
+RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+      curl -fsSL -o /tmp/fclones.deb "https://github.com/pkolaczk/fclones/releases/download/v${FCLONES_VERSION}/fclones_${FCLONES_VERSION}-1_amd64.deb" \
+      && dpkg -i /tmp/fclones.deb && rm -f /tmp/fclones.deb; \
+    fi
+
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 

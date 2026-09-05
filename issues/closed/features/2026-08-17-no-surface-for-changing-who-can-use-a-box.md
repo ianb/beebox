@@ -7,8 +7,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-add-box-process — provisioning a box with a second member
 priority: important
-next-action: reconfirm
+resolution: wontfix
 ---
+
+> Closed 2026-09-05 as `wontfix` (never held): the surface exists. Admin (profile menu → Admin, owner-gated) lists, adds, and removes `allowedEmails` and offers a password reset — `components/admin/AllowedEmailsSection.tsx`, `useAllowedEmails.ts`, the `admin` tRPC router — since the 2026-03 tRPC migration, before this was filed from `add-box.sh`'s vantage. If the real gap is that the surface is hard to find, that is a discoverability item, not this one.
 
 Access to a box is `allowedEmails` in its `content/config/box.json`, read by
 `src/webapp/box-access.ts`. There is exactly one supported way to write it:
@@ -63,4 +65,4 @@ Open questions:
 
 Until something exists, `deploy/add-box.sh --allow` at creation time and a
 hand-edit afterwards is the honest documented answer, and
-[`docs/adding-a-box.md`](../../beebox/docs/adding-a-box.md) says so.
+[`docs/adding-a-box.md`](../../../beebox/docs/adding-a-box.md) says so.

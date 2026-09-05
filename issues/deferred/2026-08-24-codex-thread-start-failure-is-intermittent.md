@@ -6,8 +6,21 @@ labels: [codex, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-honest-diagnostics — while making codex chat failures report their real phase and stack
-next-action: verify-without-me
+activate-on: 2026-09-12
+category: bugs
 ---
+
+> **Deferred 2026-09-05 → 2026-09-12 (boxholder).** When this activates, check
+> whether the failure recurred in the week: grep every box's
+> `.beebox/hub-child.log` (local boxes under `~/src/boxes/*`, production via
+> `deploy/prod-ssh`) for the phase-tagged `ChatSession:init` failure line the
+> reporting fix added, and the chat registry for Codex sessions that never got
+> a thread id. If it recurred, the stack in that log names the phase — act on
+> it (retry vs. construction rate). If there was no occurrence in the week,
+> close this `wontfix` as not reproducible: the diagnostics stay in place, and
+> a later occurrence files fresh with the evidence attached.
+
+> `verify-without-me` audited 2026-09-05: no retry was added to `codex-chat.ts`'s init chain and the `ChatSession` construction rate was never traced (`registry-warm.ts`'s fire-and-forget prewarming is the untested suspect). This is "nobody ran it", not "needs a device": the phase-tagged stack traces from the reporting fix are in place, so the next real occurrence's log settles the cause. Residual risk until then: an intermittent start failure surfaces to the user as a failed turn with no retry.
 
 Some codex chat turns fail with no session. The failure is intermittent: on one
 box, successes and failures alternated over twelve minutes on the same session.

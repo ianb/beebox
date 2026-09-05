@@ -399,7 +399,7 @@ inside the CAS seal respectively.
   both; changing caps is a separate question.
 - **Android.** No shell exists; the contract rows keep it implementable.
 - **Share-sheet intake.** Separately tracked
-  ([`issues/features/2026-03-05-share-to-box-images-files.md`](../../../issues/features/2026-03-05-share-to-box-images-files.md)).
+  ([`issues/features/2026-03-05-share-to-box-images-files.md`](../../../issues/closed/features/2026-03-05-share-to-box-images-files.md)).
 - **Touching capture's uploader.** Already fixed on main by
   `worktree-fixup-capture` (`ac4e12b9`, `d477aa24`); re-doing it here would
   collide.

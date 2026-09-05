@@ -1,12 +1,15 @@
 ---
 title: "Should plans carry execution state (checkboxes), or stay design documents?"
 workstream: elixir-skills-review
-needs: [decision]
 area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
-next-action: invalid
+resolution: wontfix
 ---
+
+> Decided 2026-09-05 (boxholder): no. Plans stay design documents; execution state does not move into them. "It's fixing something that isn't broken."
+
+> `invalid?` checked 2026-09-05: not moot. `requirements-delivered-gate` (closed 2026-07-31) chose prose extraction and deferred checkbox hardening as coupled future work, so the fork is undecided rather than superseded; `docs/plans/*.md` still carries no checkboxes. Still the boxholder's call.
 
 All 25 documents in `beebox/docs/plans/` contain **zero checkboxes**. Our
 plans are design artifacts: `bbx-plan` produces a statement of purpose, a scope
@@ -15,7 +18,7 @@ state lives in the conversation and dies with it — after a compaction, a crash
 or a day away, "where were we" is reconstructed by reading the diff and asking.
 
 The reviewed project makes the opposite bet, and it's the most load-bearing idea
-in their design ([research/claude-elixir-phoenix](../../research/claude-elixir-phoenix/workflow-and-orchestration.md)):
+in their design ([research/claude-elixir-phoenix](../../../research/claude-elixir-phoenix/workflow-and-orchestration.md)):
 
 > **Plan checkboxes ARE the state.** No separate JSON state files.
 
@@ -30,7 +33,7 @@ hook re-injects the active phase's rules.
 
 **For:** state that can't drift from reality, because it *is* the record of what
 happened. Survives compaction with no special machinery. Makes a
-[requirements-delivered gate](../closed/features/2026-07-30-requirements-delivered-gate.md)
+[requirements-delivered gate](../features/2026-07-30-requirements-delivered-gate.md)
 far more reliable — checking a diff against a checklist is tractable, checking it
 against prose is where fabrication risk lives.
 

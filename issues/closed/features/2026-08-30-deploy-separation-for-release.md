@@ -1,15 +1,16 @@
 ---
 title: "Separate the boxholder-specific deploy machinery from the repo's release story — abstract the deploy, keep opt-in infrastructure"
 workstream: deploy-separation
-needs: [design]
 area: beebox
 labels: [deploy, soft-launch]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — needed for release; the deploy stuff is really specific to my machine and deployment"
 priority: backlog
-next-action: reconfirm
+resolution: implemented
 ---
+
+> Closed 2026-09-05 (`reconfirm?` confirmed): built by the `deploy-separation` workstream and landed on main 2026-09-04 (`git log --first-parent main --grep=deploy-separation`; last merge `717e32e41`) — `target.env`, `deploy-target.sh`, `deploy/hetzner/`, the portable lockfile. The setup-server drift it names is a separate item.
 
 `beebox/deploy/` is the boxholder's personal pipeline wearing repo
 clothes: `deploy.sh` assumes one specific server (gitignored `server-ip`),
@@ -33,14 +34,14 @@ Shape to design (not decided):
   when configured; absent config, landings just land.
 - **What stays in the repo**: the smoke harnesses, the health verification,
   the disk gate and cache pruning (recently built and generic), the
-  release/update story ([release-discipline](../decisions/2026-07-20-release-discipline-and-update-story.md)
+  release/update story ([release-discipline](../../decisions/2026-07-20-release-discipline-and-update-story.md)
   is the sibling — a *release* is what a visitor consumes; this issue is
   about not shipping the boxholder's *pipeline* as if it were that).
 - **Boundary cases**: prod-curl/prod-ssh/prod-browse (operator debug tools —
   useful pattern, personal endpoints), add-box/migrate scripts (half setup, half
   personal history), `claude-update.sh`, the notification wiring.
 
-Overlaps to name, not absorb: [setup-server drift](../code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md),
+Overlaps to name, not absorb: [setup-server drift](../../code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md),
 the installation-remaining work (the visitor-facing install paths), and the
 name-change plan (renaming will touch every one of these files anyway —
 sequencing the separation before or with the rename avoids doing it twice).

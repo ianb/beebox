@@ -4,8 +4,9 @@ workstream: unknown
 area: beebox
 needs: [design]
 priority: backlog
-next-action: reconfirm
 ---
+
+> `reconfirm?` checked 2026-09-05: unchanged since the 2026-08-18 check — `session/messages.ts` still returns null for `conversation_reset`.
 
 > **Checked 2026-08-18 — still live, unchanged.** Tagged `reconfirm`; removed.
 > The obvious way this could have gone moot — the SDK renaming or dropping the
