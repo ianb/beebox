@@ -144,7 +144,7 @@ the offending glob, rather than leave a dependency that might match the
 wrong thing (or nothing) post-migration:
 
 ```ts
-const badSource = 'export const dependencies = ["nonexistent-area/**/*.card"];\n';
+const badSource = 'export const dependencies = [".mystery-state/**/*.card"];\n';
 const err = (() => {
   try {
     rewriteOneRootViewDependencies(badSource, "src/views/Broken.tsx");
@@ -156,7 +156,7 @@ const err = (() => {
 JSON.stringify({
   isPreflightError: err instanceof OneRootPreflightError,
   mentionsFile: err.message.includes("src/views/Broken.tsx"),
-  mentionsGlob: err.message.includes("nonexistent-area/**/*.card"),
+  mentionsGlob: err.message.includes(".mystery-state/**/*.card"),
 })
 => {"isPreflightError":true,"mentionsFile":true,"mentionsGlob":true}
 ```
@@ -237,4 +237,15 @@ const nonSpanningSource = 'export const dependencies = ["store/recipes/**/*.card
 const nonSpanningResult = rewriteOneRootViewDependencies(nonSpanningSource, "src/views/NonSpanning.tsx");
 JSON.stringify({ text: nonSpanningResult.text, rewritten: nonSpanningResult.rewritten })
 => {"text":"export const dependencies = [\"_content/recipes/**/*.card\"];\n","rewritten":1}
+```
+
+## A prefixless box-wide dependency glob passes through untouched
+
+`**/*.outline.card` names no v2 directory; the runtime loader restricts it to
+the box namespace, so the migration has nothing to map and must not abort.
+
+```ts
+const view = 'export const dependencies = ["**/*.outline.card"];\n';
+JSON.stringify(rewriteOneRootViewDependencies(view, "src/views/outline.tsx"))
+=> {"text":"export const dependencies = [\"**/*.outline.card\"];\n","rewritten":0}
 ```

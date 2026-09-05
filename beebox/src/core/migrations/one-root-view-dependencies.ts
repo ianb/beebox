@@ -183,6 +183,11 @@ export function rewriteOneRootViewDependencies(
   const newBody = body.replace(STRING_LITERAL, (...innerArgs: string[]) => {
     const [, quote, value] = innerArgs;
     const { prefix, suffix } = staticGlobPrefix(value ?? "");
+    // A prefixless, box-wide glob (`**/*.outline.card`) is layout-agnostic:
+    // it never named a v2 directory, and at runtime the view loader already
+    // restricts dependency globs to the box namespace. Pass it through
+    // untouched rather than aborting on "nothing to map".
+    if (prefix === "" && (value ?? "").startsWith("*")) return innerArgs[0] ?? "";
     const areas = prefix === "" ? [] : areasUnderPrefix(prefix);
     if (areas.length > 1) {
       throw new OneRootPreflightError(
