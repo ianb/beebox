@@ -146,8 +146,8 @@ prominence and must not become a way to spell it).
   the current platform answer, available in every browser we target and in Node
   20+ ([MDN: Intl.Segmenter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter)).
   The plan does **not** truncate a glyph to its first grapheme — that would cut
-  a family emoji into a stranger — it counts graphemes only to decide whether
-  the lint should suggest something shorter.
+  a family emoji into a stranger — it counts graphemes to enforce the
+  eight-grapheme cap, which is the only reason the counting has to be correct.
 - **`CSS.supports("color", value)`** is the one honest browser-side colour
   validator, and it does not exist in Node, so a card validated on the server
   cannot use it ([MDN: CSS.supports](https://developer.mozilla.org/en-US/docs/Web/API/CSS/supports_static)).
@@ -199,12 +199,25 @@ symbol:
 ```
 
 `glyph` rather than `char` (which promises one code point that emoji routinely
-break) or `text` (which promises nothing): a glyph is a mark you draw. Length is
-**not** constrained — an author who tells an agent "use two letters" gets two
-letters, and a skin-toned ZWJ emoji is several code points and one mark either
-way. Brevity is guidance, not a rule: the lint warns past four graphemes, and
-`CardMark` gives the mark a fixed box with the overflow hidden, so a long value
-degrades visually instead of stretching a tab strip.
+break) or `text` (which promises nothing): a glyph is a mark you draw.
+
+**The cap is eight graphemes, enforced as a lint error.** Graphemes, not code
+points: a single emoji can be far more than one code point — 👨‍👩‍👧‍👦 is
+seven, Scotland's flag is seven, and 👨🏻‍❤️‍💋‍👨🏽 is ten — so a
+code-point cap set anywhere near "one or two marks" rejects legitimate single
+emoji while still admitting junk. Eight graphemes admits any emoji (all are one)
+and the two letters an author may deliberately ask for, and rejects a sentence.
+
+A lint **error**, not a Zod constraint: the severity already exists
+(`src/cards/lint-format.ts:31`) and pre-commit runs `bbx validate`, so an
+over-long glyph blocks the commit without making the card unloadable. A
+cosmetic field should never be the reason a card cannot be opened. Below the
+cap, brevity is guidance only.
+
+`CardMark` draws into a fixed box with the overflow hidden regardless, so even a
+value that reached the cap — or a pathological grapheme built from a hundred
+combining marks, which the cap does not catch and which is accepted on a
+personal box — degrades visually instead of stretching a tab strip.
 
 An **object with named keys, never a bare string**. `symbol: 🍞` would be the
 landmark union again in a new place — two shapes for one idea, which is what
@@ -416,14 +429,13 @@ None. Four tracks, each one surface, with a settled shape.
 > **Critical gap:** a card whose glyph holds a long string — an agent writes
 > `glyph: "recipe"` — would stretch every row and tab that draws it, silently,
 > in every surface at once. Closed by `CardMark` drawing into a fixed box with
-> the overflow hidden (so the layout cannot move) and by a lint warning past
-> four graphemes (so the author finds out rather than living with a clipped
-> mark).
+> the overflow hidden (so the layout cannot move) and by a lint error past eight
+> graphemes (so it never reaches a commit).
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| A glyph holds a word, not a mark | yes — `CardMark` doctest + lint doctest | yes — fixed box with overflow hidden, lint warning past four graphemes | clipped, and the author is told |
-| A multi-code-point emoji is counted as several characters and wrongly warned | yes — grapheme doctest (ZWJ family, flag, skin tone) | yes — `Intl.Segmenter`, not `.length` | would be a nagging false warning; tested |
+| A glyph holds a word, not a mark | yes — `CardMark` doctest + lint doctest | yes — fixed box with overflow hidden, lint error past eight graphemes | blocked at commit |
+| A single emoji is counted as many characters and wrongly rejected | yes — grapheme doctest (ZWJ family, Scotland's flag, skin-toned kiss at ten code points) | yes — `Intl.Segmenter`, not `.length` | would be a false rejection of a valid mark; tested |
 | `symbol.background` is not a colour | yes — `isCssColour` doctest | yes — ignored at render, lint warning | clear |
 | A valid colour makes the mark unreadable (dark on dark) | no | no — accepted; the author picked both | visible to the author immediately |
 | `symbol.src` points outside the box | yes — existing `readLandmarkSymbol` doctest | yes — refused, resolves to null | clear (logged) |
