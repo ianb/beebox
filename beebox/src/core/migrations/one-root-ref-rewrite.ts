@@ -35,7 +35,7 @@
 
 import { parse as parseYaml } from "yaml";
 import { splitCardContent, renderFrontmatterBlock } from "../../cards/frontmatter.js";
-import { isAttachRef } from "../../shared/attach-path.js";
+import { attachDirFor, isAttachRef, splitAttachRef } from "../../shared/attach-path.js";
 import { formatRefSuffix, isExternalRef, parseRef } from "../../shared/ref-path.js";
 import { isRecord } from "../../lib/is-record.js";
 import { inlineLinkPattern, matchReferenceDefinitionAt } from "../body-refs.js";
@@ -124,7 +124,23 @@ function makeTransform(params: {
   const transform = (raw: string): string => {
     const parsed = parseRef(raw);
     if (parsed.path === "" || isExternalRef(parsed.path)) return raw;
-    if (params.isCard && isAttachRef(parsed.path)) return raw; // travels with the card, untouched
+    if (params.isCard && isAttachRef(parsed.path)) {
+      // Travels with the card, text untouched — but still CLASSIFY it: an
+      // attach ref whose target never existed pre-migration (aged demo
+      // fixtures are full of these) must join the pre-broken carve-out or
+      // the hard link gate blocks the whole migration on history.
+      const rest = splitAttachRef(parsed.path);
+      if (rest !== null) {
+        const dir = dirOf(params.oldContentRelPath);
+        const fileName = params.oldContentRelPath.slice(dir === "" ? 0 : dir.length + 1);
+        const scopeDir = joinSegments(dir, attachDirFor(fileName));
+        const oldAttachTarget = scopeDir === null ? null : joinSegments(scopeDir, rest);
+        if (oldAttachTarget === null || !params.oldPathExists(oldAttachTarget)) {
+          params.preBrokenRefs.push(raw);
+        }
+      }
+      return raw;
+    }
 
     const isBare = !parsed.path.startsWith("/");
     const docTarget = resolveV2Ref(params.oldContentRelPath, parsed.path);

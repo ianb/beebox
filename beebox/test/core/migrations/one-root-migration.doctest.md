@@ -1140,11 +1140,18 @@ await fs.writeFile(
     "",
   ].join("\n"),
 );
+// The third aged-box shape (also from the rehearsal): an `attach/…` ref whose
+// target never existed. Attach refs travel with the card untouched, but they
+// must still join the pre-broken carve-out or the gate blocks on history.
+await fs.writeFile(
+  path.join(root, "content", "box", "jobs", "Thread.email-thread.card"),
+  "---\nsubject: Old thread\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n",
+);
 execSync("git add -A && git commit -q -m aged-job-fixture", { cwd: root, stdio: "pipe" });
 
 const result = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
 JSON.stringify({ filesMoved: result.filesMoved, preExistingBrokenRefsCarried: result.preExistingBrokenRefsCarried })
-=> {"filesMoved":8,"preExistingBrokenRefsCarried":1}
+=> {"filesMoved":9,"preExistingBrokenRefsCarried":2}
 ```
 
 The migration succeeded (no rollback) — the job card landed at its
