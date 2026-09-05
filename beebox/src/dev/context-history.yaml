@@ -4111,6 +4111,14 @@ test1:
       peak: 44604
       added: 2974
       turns: 7
+  display-path-vocabulary:
+    - date: 2026-09-05T17:58:00.597Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ce3f4d0767a5ced72a0c28062721824bc3fe30ae
+      initial: 41865
+      peak: 43490
+      added: 1625
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
