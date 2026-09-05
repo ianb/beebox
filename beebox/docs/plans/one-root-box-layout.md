@@ -1,9 +1,9 @@
 ---
 title: "One-root box layout (shapeVersion 3)"
-status: draft
+status: partial
 workstream: box-layout-criteria
 issues:
-  - ../../../issues/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md
+  - ../../../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md
 ---
 # One-root box layout (shapeVersion 3)
 
@@ -543,3 +543,14 @@ knowledge audits passing against it, then the real fleet converted with each
 box's migration commit as its rollback point. Cross-model review of this plan
 before implementation begins (monorepo CLAUDE.md rule for anything beyond a
 small-scope fix).
+
+**Status as landed:** the v3 engine, every migrator, and the doctest suite
+(`beebox/src/core/migrations/`, `beebox/scripts/migrate/one-root.ts`) are
+implemented and green — code and fixtures only. The done-when bar above is
+NOT yet cleared: no scratch or production box has been migrated and walked in
+a browser, and the knowledge audits have not run against a migrated box.
+Landing this branch ships the v3-only engine, so any box still at
+`shapeVersion` < 3 (every box today) will refuse to serve until `bbx migrate
+--apply` runs against it — the one-operation cutover window this plan always
+intended. Running that migration, box by box, is the outstanding rollout
+work.

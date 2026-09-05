@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-09-05T05:45:26Z
+Generated: 2026-09-05T07:02:10Z
 Total documents: 320
 
 ## Issues
@@ -820,8 +820,9 @@ Referenced by:
 - user-stories/catalog/2026-08-21.md:7687 (mention) — Files: `beebox/src/lib/box-shape.ts`, `beebox/docs/box-layout.md`
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:14 (mention) — **Supporting stale references in the same family.** `bbx init` still creates the decoy directory: `config/schemas` is a
 - ../issues/closed/bugs/2026-08-22-agents-md-missing-from-claude-md-special-cases.md:44 (mention) — fields are already in `docs/box-layout.md`, so a per-box MAP bullet would only
+- ../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:20 (mention) — > `beebox/docs/box-layout.md`.
+- ../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:24 (link) — an agent sees. See [`box-layout.md`](../../../beebox/docs/box-layout.md).
 - ../issues/closed/docs-and-chores/2026-08-03-one-temp-file-convention-for-agents.md:22 (mention) — the dev-repo `docs/box-layout.md:82` ("scratch space (not committed)"). **Box
-- ../issues/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:15 (link) — an agent sees. See [`box-layout.md`](../../beebox/docs/box-layout.md).
 - ../research/pai/information-layout.md:10 (mention) — knows-about / discoverable layering) and `docs/box-layout.md`. The two systems
 
 References:
@@ -4955,16 +4956,17 @@ References:
 
 #### docs/plans/one-root-box-layout.md
 
-Title: "One-root box layout (shapeVersion 3)" | 546 lines
+Title: "One-root box layout (shapeVersion 3)" | 557 lines
 
 Referenced by:
 - docs/box-layout.md:31 (mention) — only the root itself is closed. See `docs/plans/one-root-box-layout.md` for
 - docs/migrations.md:405 (mention) — `_config/`). See `docs/plans/one-root-box-layout.md` Track E for the full
 - docs/mobile-contract.md:20 (mention) — layout (shapeVersion 3, `docs/plans/one-root-box-layout.md`) they land in underscore areas
+- ../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md:14 (mention) — > (`beebox/docs/plans/one-root-box-layout.md`, `status: partial` — code and
 - ../issues/deferred/2026-09-04-remove-one-root-v2-bootstrap.md:8 (mention) — discovered-in: box-layout-criteria — Track E of docs/plans/one-root-box-layout.md (or docs/implemented-plans/ once moved
 
 References:
-- → ../issues/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md (frontmatter)
+- → ../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md (frontmatter)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)

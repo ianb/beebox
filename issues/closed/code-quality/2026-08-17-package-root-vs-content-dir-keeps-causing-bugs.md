@@ -7,12 +7,21 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-add-box-process — three instances of this bug in one work unit
 priority: normal
-next-action: reconfirm
+resolution: implemented
 ---
+
+> **Closed 2026-09-05.** Structurally resolved by the one-root box layout
+> (`beebox/docs/plans/one-root-box-layout.md`, `status: partial` — code and
+> migrators are implemented and merged to `main`; the fleet rollout that
+> converts existing boxes is the remaining, separately-tracked step). There is
+> no longer a package root vs. `content/` distinction to pick wrong: the
+> package root becomes the box root (`shapeVersion: 3`), and `content/`
+> shrinks to `_content/`, a plain area under it. See
+> `beebox/docs/box-layout.md`.
 
 A v2 box has two roots. The **package root** holds `package.json`, `src/`, and
 `.claude/`. The **box root** is `content/`, and holds `.bbx-box` plus everything
-an agent sees. See [`box-layout.md`](../../beebox/docs/box-layout.md).
+an agent sees. See [`box-layout.md`](../../../beebox/docs/box-layout.md).
 
 Every interface that takes "a box path" must therefore say which root it means,
 and they do not agree. Callers guess, and the guess is silent: both paths exist,
@@ -25,7 +34,7 @@ understand. That is the real issue. The bugs below are symptoms.
 ## The evidence: four instances, one family
 
 Three landed in a single work unit on 2026-08-17
-([add-box.sh](../bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md)):
+([add-box.sh](../../bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md)):
 
 1. `deploy/add-box.sh` wrote access config and connector secrets to
    `<package-root>/config/`. That directory does not exist — `config/` is under
@@ -40,7 +49,7 @@ Three landed in a single work unit on 2026-08-17
    states this; it is only visible by reading existing entries.
 
 The fourth is older and already closed:
-[slug derived from `basename(boxRoot)`](../closed/bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md)
+[slug derived from `basename(boxRoot)`](../bugs/2026-07-11-v2-box-slug-from-boxroot-basename.md)
 was the same mistake — every v2 box slugged as the literal string `content`.
 It was fixed by collapsing every derivation into one helper,
 `src/lib/box-slug.ts`. That fix worked and has not regressed, which is a useful
