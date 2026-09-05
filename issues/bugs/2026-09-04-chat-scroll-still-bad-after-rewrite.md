@@ -1,6 +1,6 @@
 ---
 title: "Chat scroll is still bad after the write-on-user-action rewrite — the device half was never verified"
-workstream: unattached
+workstream: chat-scroll-fixes
 area: beebox
 priority: important
 labels: [ui, chat, scroll]
