@@ -13,6 +13,7 @@ import { ExternalIconLink } from "../ui/ExternalIconLink";
 import { FileView } from "../FileView";
 import { withBase } from "../../api";
 import { cn } from "../../lib/cn";
+import { displayName } from "../../lib/display-name";
 import { prefersReducedMotion } from "../../lib/reduced-motion";
 import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
@@ -187,7 +188,10 @@ function SidecarTabStrip({ tabs, activePath, onSelectTab, onCloseTab, onTogglePi
           else tabRefs.current.set(tab.target.path, el);
         }}
         className={cn(
-          "group flex-shrink-0 max-w-[14rem] flex items-center border-r border-warm-300 border-b-2",
+          "group flex-shrink-0 flex items-center border-r border-warm-300 border-b-2",
+          // A pinned tab is compact, the way a browser's is: it is there to hold
+          // its place, not to be read. The full path is still in its title.
+          tab.pinned ? "max-w-[7rem]" : "max-w-[14rem]",
           isActive ? "bg-white border-b-primary" : "border-b-transparent hover:bg-warm-100",
         )}
       >
@@ -198,11 +202,12 @@ function SidecarTabStrip({ tabs, activePath, onSelectTab, onCloseTab, onTogglePi
           onClick={() => onSelectTab(tab.target.path)}
           title={tab.target.path}
           className={cn(
-            "flex-1 min-w-0 truncate text-left text-sm pl-3 pr-1 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            "flex-1 min-w-0 truncate text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            tab.pinned ? "text-xs pl-2 pr-0.5 py-1.5" : "text-sm pl-3 pr-1 py-1.5",
             isActive ? "text-warm-900 font-medium" : "text-warm-600",
           )}
         >
-          {tab.label}
+          {tab.pinned ? displayName(tab.target.path) : tab.label}
         </button>
         <button
           type="button"
@@ -231,7 +236,12 @@ function SidecarTabStrip({ tabs, activePath, onSelectTab, onCloseTab, onTogglePi
           }}
           aria-label={`Close ${tab.label}`}
           title="Close tab"
-          className="flex-shrink-0 mr-1 p-0.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className={cn(
+            "flex-shrink-0 mr-1 p-0.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            // On a pinned tab the close button is the thing you did not ask
+            // for; it stays out of the way until you reach for it.
+            tab.pinned ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "",
+          )}
         >
           <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M6 6l12 12M18 6l-12 12" />
