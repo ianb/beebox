@@ -2,7 +2,7 @@
 title: "knowledge budget always loaded context"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
 ---
 
 The always-loaded layer (agent-guide.md, CLAUDE.md includes, system prompts) has no size discipline: every addition feels individually justified, and the layer only grows. Establish an explicit budget — a token/line cap the always-loaded corpus must stay under — so adding direct knowledge forces a trade: make the new thing indirect (a pointer to an on-demand doc), or demote something else to indirect to make room. Triggered 2026-06-12 when a credentials section initially landed as full inline policy and got corrected to a pointer; the principle generalizes: **direct knowledge is "where to look + the one rule that can't wait"; everything else is indirect.**

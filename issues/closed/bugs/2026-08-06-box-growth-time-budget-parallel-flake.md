@@ -1,7 +1,7 @@
 ---
 title: "Box-growth partial-scan doctest flakes under parallel load"
 workstream: router-ws-1006
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-router-ws-1006 — finish full-suite re-verification
 resolution: implemented

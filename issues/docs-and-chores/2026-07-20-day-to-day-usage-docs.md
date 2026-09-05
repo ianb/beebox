@@ -7,7 +7,7 @@ discovered-in: worktree-open-source-readiness — docs-genre audit for the soft 
 labels: [soft-launch]
 ---
 
-Genre audit (2026-07-20) of all of `callback-box/docs/`: install is
+Genre audit (2026-07-20) of all of `beebox/docs/`: install is
 well-covered (3 verified guides + per-connector setup), reference/
 architecture dominates (~40 contributor/agent-facing files), and the
 **USE genre — "I have a running box, what do I do with it day to day" —
@@ -52,3 +52,17 @@ inspectable and diffable.
 Gate 3 (README front door) in
 [soft-launch posture](../decisions/2026-07-20-soft-launch-posture.md)
 is the orientation half; this item is the depth behind it.
+
+> 2026-09-05 survey (main session): still true, and still empty. `beebox/docs/`
+> has 64 files and none in the USE genre — `connectors.md` explains the
+> `Connector` interface to a contributor, `tours.md` is test tooling, the
+> architecture narrative is still chapters 01 and 02 of the outlined eight.
+> The nearest things to doc 1 ("using your box day-to-day") live elsewhere:
+> the unmerged `public-site` worktree carries a walkthrough page ("a morning
+> with the box", unlisted, marked editorial placeholder) built from verified
+> user stories, and the 649-story catalog under `beebox/user-stories/` is an
+> internal test corpus, not reader-facing. In-box `*.guide.card` files are
+> agent-addressed rules, not operator docs. The on-demand,
+> version-pinned delivery mechanism decided here has no plan and no code.
+> Pairs with gate 3 of the soft-launch posture (the README front door), which
+> is also unwritten.

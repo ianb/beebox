@@ -1,7 +1,7 @@
 ---
 title: "A fully-modeled fictional-family demo box (alongside test1)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder wants a concrete demo box
 labels: [soft-launch]
@@ -33,7 +33,7 @@ lived-in state every time.
 - **A coherent household.** Named members with real relationships and roles,
   their pronouns and personalities, a `briefing` with the family's situation and
   key-people. Drawn from the canonical fictional roster
-  (`callback-box/docs/example-names.md`) — never real names — and kept
+  (`beebox/docs/example-names.md`) — never real names — and kept
   internally consistent so it reads as an actual family, not placeholder data.
 - **Concrete ongoing tasks**, the kind the system is actually for: school
   calendars and pickups, meal planning, a household project with steps, medical
@@ -76,7 +76,7 @@ be the right builder.
   so it doesn't inherit the dev CLAUDE.md), like every other box.
 - **How much content** is enough to be believable without being a maintenance
   burden — and how it stays current with schema/template changes (a box that
-  can't `cb init` cleanly is a bad demo).
+  can't `bbx init` cleanly is a bad demo).
 - **Connectors:** does the demo family have fake Gmail/Calendar/Drive data, or
   stay filesystem-only? Live connectors make richer demos but need fixtures.
 - **How the boxholder's own boxes stay out of it** — this is the *shareable*

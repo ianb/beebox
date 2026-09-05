@@ -5,7 +5,7 @@ resolution: implemented
 ---
 
 **Resolved** (main session, 2026-07-11): added a `no-restricted-imports` block to
-`callback-box/src/frontend/eslint.config.mjs` banning `useMachine` from
+`beebox/src/frontend/eslint.config.mjs` banning `useMachine` from
 `@xstate/react` with a message pointing at `useSSRMachine`
 (`src/hooks/useSSRMachine.ts`); the wrapper file itself is exempted via
 `ignores`. Zero existing violations, so it was a clean add. Verified: the wrapper

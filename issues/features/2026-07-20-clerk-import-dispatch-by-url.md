@@ -1,10 +1,11 @@
 ---
-title: "callback-clerk's main action should be \"import\", dispatching by URL to the right handler"
+title: "beebox-clerk's main action should be \"import\", dispatching by URL to the right handler"
 workstream: unknown
-area: callback-clerk
+area: beebox-clerk
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder proposed reframing the clerk's primary action
+priority: normal
 ---
 
 > **Checked 2026-08-14 — not started.** Tagged `fixed`; the tag was wrong and
@@ -12,14 +13,14 @@ discovered-in: main session — boxholder proposed reframing the clerk's primary
 > foundation hook, does not exist anywhere in the tree (`git log -S` finds no
 > commit that ever added it), `clerk.ts:35-98` still calls `writeWebpageCard`
 > unconditionally for every URL with no branching on document type, and
-> `callback-clerk/src/` has no dispatch, import, or handler-registry concept.
-> `callback-clerk/` commits since the filing date touch tab arrangement and UI
+> `beebox-clerk/src/` has no dispatch, import, or handler-registry concept.
+> `beebox-clerk/` commits since the filing date touch tab arrangement and UI
 > only. The `needs: [design]` questions below are all still open.
 
 The clerk's main action today is essentially **"capture this web page"**: freeze
 the DOM, render readable markdown, write a `webpage` card
-(`callback-box/src/webapp/trpc/routers/clerk.ts`, extension side in
-`callback-clerk/src/entrypoints/`).
+(`beebox/src/webapp/trpc/routers/clerk.ts`, extension side in
+`beebox-clerk/src/entrypoints/`).
 
 Proposal: reframe the primary action as **"import"** — one button whose meaning
 adapts to what the URL actually *is*.
@@ -43,7 +44,7 @@ fixing a real failure, not adding polish.
 
 ## There is already a foundation
 
-`extractDriveFileId` (`callback-box/src/connectors/drive-types.ts:108`) already
+`extractDriveFileId` (`beebox/src/connectors/drive-types.ts:108`) already
 parses exactly the URL shapes this needs, and documents them:
 
 ```
@@ -96,7 +97,7 @@ what it needs beyond the ID.
 ## Naming
 
 "Import" is a better verb than "capture" for the general case, but it's worth
-checking against the glossary (`callback-box/docs/glossary.md`) — the codebase
+checking against the glossary (`beebox/docs/glossary.md`) — the codebase
 already uses *capture* (capture-session cards, the iOS capture mode) and
 *intake* for related-but-distinct concepts, and adding a third overlapping verb
 without deciding how it relates would be its own mess.

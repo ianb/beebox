@@ -1,0 +1,27 @@
+{
+  "name": "beebox-codex",
+  "version": "0.1.1+codex.20260831184840",
+  "description": "Native Codex lifecycle and validation integration for Bee Box",
+  "author": {
+    "name": "Bee Box"
+  },
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "beebox",
+    "codex",
+    "validation"
+  ],
+  "interface": {
+    "displayName": "Bee Box for Codex",
+    "shortDescription": "Codex integration for Bee Box",
+    "longDescription": "Provides native Codex hooks, validation feedback, and lifecycle integration for Bee Box packages.",
+    "developerName": "Bee Box",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Help me work with this Bee Box."
+    ]
+  }
+}

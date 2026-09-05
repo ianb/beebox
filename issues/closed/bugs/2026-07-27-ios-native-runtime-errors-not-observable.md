@@ -1,7 +1,7 @@
 ---
 title: "iOS native and web-view runtime errors are not observable"
 workstream: ios-log-forwarding
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main — diagnosing automatic speech playback failures in the iOS app
 resolution: implemented
@@ -22,7 +22,7 @@ test nobody is going to run only makes the manual-testing list less
 trustworthy — an item in that list should be something he can pick up and do.
 
 **How this reopens.** Not by someone re-reading this issue, but by the symptom:
-an iOS problem that cannot be diagnosed because `.callback-box/client-debug.log`
+an iOS problem that cannot be diagnosed because `.beebox/client-debug.log`
 lacks the `[ios]` lines it should have, or has them with bare numeric codes
 instead of symbolic labels. That is a new bug with real evidence attached, and
 better than a stale open item.
@@ -47,7 +47,7 @@ separately from any individual playback fix.
 this shipped — native error/warn logs now forward to the box's
 `client-debug.log` via `debugLog.submit`, tagged `[ios]`, with a persisted
 offline queue, metadata-only message discipline, and device-token redaction
-(design: `callback-box/docs/implemented-plans/ios-log-forwarding.md`). Instrumented:
+(design: `beebox/docs/implemented-plans/ios-log-forwarding.md`). Instrumented:
 capture upload/acquisition, bulk photo batch, chat API degradations, webview
 process death and navigation failures. Still open from this issue's scope: a
 user-facing on-device export/share of a diagnostic bundle, and timestamped app
@@ -59,13 +59,13 @@ space. Complete this issue by regularly uploading selected state transitions
 and useful browser media failure metadata through the existing forwarder. Do
 not add a second journal, export renderer, share sheet, or export-specific
 scrubbing. Active design:
-`../../callback-box/docs/implemented-plans/ios-diagnostic-forwarding-completion.md`.
+`../../beebox/docs/implemented-plans/ios-diagnostic-forwarding-completion.md`.
 
 ## Manual verification
 
 On a physical iPhone, open a paired box, background and foreground the app, and
 exercise speech playback. If practical, trigger a rejected media playback. Then
-inspect the box's `.callback-box/client-debug.log`. Confirm that it contains
+inspect the box's `.beebox/client-debug.log`. Confirm that it contains
 timestamped `[ios]` scene, navigation, speech, response, and audio-session lines.
 Confirm that media failures include the operation, error name or media error
 code, network state, and ready state, with symbolic labels rather than bare

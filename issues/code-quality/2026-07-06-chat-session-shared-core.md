@@ -2,7 +2,7 @@
 title: "chat session shared core"
 workstream: architectural-review
 needs: [design, decision]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-architectural-review — while doing Track J.1 (chat-session lifecycle union)
 ---
@@ -48,4 +48,4 @@ which live only on `ChatSession`) justifies a base class or composition, or
 whether two classes over the now-shared primitives (lifecycle union,
 `pumpChatRun`, `adaptSdkMessage`) is the right resting point. No boxholder
 decision is pending on the adapter anymore. Protocol/contract is documented at
-`callback-box/docs/chat-session-lifecycle.md`.
+`beebox/docs/chat-session-lifecycle.md`.

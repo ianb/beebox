@@ -14,10 +14,10 @@ ignoredBuiltDependencies:
   - spawn-sync
 
 packages:
-  - callback-box
-  - callback-box/src/frontend
-  - callback-box/pub-worker
-  - callback-clerk
+  - beebox
+  - beebox/src/frontend
+  - beebox/pub-worker
+  - beebox-clerk
   - personal-vibe-check
   - agent-doctest
   - canvas-loop

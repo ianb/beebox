@@ -1,7 +1,7 @@
 ---
 title: "The box file watcher watches every directory in the box — 69k watches on a real box, and it OOMs the whole server"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: ios-capture-upload-diag worktree — heap snapshot of the live prod box-family child, 2026-08-05
 resolution: implemented
@@ -28,7 +28,7 @@ resolution: implemented
 | estate | 793 |
 | personal | 200 |
 
-A live heap snapshot of prod's box-family `cb serve` (taken at 1.5GB RSS by a
+A live heap snapshot of prod's box-family `bbx serve` (taken at 1.5GB RSS by a
 threshold watcher, mid-climb) shows **69,013 `native:Node / FSEventWrap` +
 69,014 `object:FSWatcher`** — a 1:1 match with the directory count, so this is
 **scale, not a leak**. Plus the walk itself: `addDir` recurses with
@@ -38,7 +38,7 @@ cost. The process reached 2.5GB RSS; V8 heap OOMs followed.
 
 ## Why this is the box-family OOM
 
-Five `cb serve` heap OOMs 2026-08-03/04/05, all on box-family only. This
+Five `bbx serve` heap OOMs 2026-08-03/04/05, all on box-family only. This
 explains every discriminator the investigation kept hitting:
 
 - **Only box-family.** 87× the directories of the next box. Estate has 32GB of
@@ -60,7 +60,7 @@ explains every discriminator the investigation kept hitting:
 ## Two problems, deliberately separate
 
 1. **Isolation (the general lesson).** A subsystem that can be pathological on
-   one box should not be able to kill `cb serve` for everything else. The
+   one box should not be able to kill `bbx serve` for everything else. The
    watcher currently has no budget, no failure mode short of process death, and
    no visibility — nothing logs "I just installed 69,000 watches." Whatever the
    scale fix is, the watcher should also be *containable*: a cap it refuses to

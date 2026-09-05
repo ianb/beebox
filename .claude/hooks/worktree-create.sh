@@ -16,8 +16,8 @@
 set -euo pipefail
 
 input=$(cat)
-mkdir -p "$HOME/.cache/callback-box"
-printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-worktree-create-input.json"
+mkdir -p "$HOME/.cache/beebox"
+printf '%s\n' "$input" > "$HOME/.cache/beebox/last-worktree-create-input.json"
 
 name=$(printf '%s' "$input" | jq -r '.name // .worktree_name // empty')
 requested_path=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')
@@ -44,7 +44,7 @@ fi
 
 # NOTE: --path is deliberately NOT forwarded. Claude Code proposes
 # <repo>/.claude/worktrees/<name>, and the whole point of this hook is to
-# override that (callback-box's file:../personal-vibe-check dep only resolves
+# override that (beebox's file:../personal-vibe-check dep only resolves
 # when the worktree is a sibling of the monorepo). `bin/workstreams create`
 # chooses the location; we accept it.
 exec "$cli" create "$name" --base-ref "$base_ref"

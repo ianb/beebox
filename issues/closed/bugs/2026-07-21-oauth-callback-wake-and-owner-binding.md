@@ -1,7 +1,7 @@
 ---
 title: "OAuth callback: wakes/enumerates boxes before auth, and doesn't bind to the initiating owner"
 workstream: open-source-readiness
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — Codex review of the overnight security fixes
 labels: [soft-launch]

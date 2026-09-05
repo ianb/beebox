@@ -43,7 +43,30 @@ import path from "node:path";
 
 /** Thrown when the blocklist file is unparseable — surfaced as a fail-closed error. */
 export class BlocklistError extends Error {
-  override name = "BlocklistError";
+  constructor(message: string) {
+    super(message);
+    this.name = "BlocklistError";
+  }
+}
+
+/** A `re:` entry whose pattern the RegExp engine rejects. */
+class InvalidBlocklistRegexError extends BlocklistError {
+  constructor(line: number, detail: string) {
+    // The engine's message repeats the whole pattern, which is the blocked
+    // vocabulary itself; keep only the reason after it.
+    super(`invalid regex on line ${line}: ${detail.replace(/^Invalid regular expression: \/.*\/[a-z]*: /, "")}`);
+    this.name = "InvalidBlocklistRegexError";
+  }
+}
+
+/** The message of an unknown thrown value, without asserting it is an Error. */
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+/** Narrow a caught value to a Node syscall error, which carries a string `code`. */
+function isErrnoException(e: unknown): e is NodeJS.ErrnoException {
+  return e instanceof Error && "code" in e;
 }
 
 /** All [start, end) match spans of an entry within one line of text. */
@@ -69,9 +92,10 @@ function literalSpans(needle: string): SpanFn {
 function regexSpans(pattern: string, line: number): SpanFn {
   let re: RegExp;
   try {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- a `re:` entry IS a user-authored regex by contract (bin/CLAUDE.md); escaping it would change the feature's meaning. The source is the developer's own gitignored .commit-blocklist, read locally.
     re = new RegExp(pattern, "gi");
   } catch (e) {
-    throw new BlocklistError(`invalid regex on line ${line}: ${(e as Error).message}`);
+    throw new InvalidBlocklistRegexError(line, errorMessage(e));
   }
   return (text) => {
     const out: Array<[number, number]> = [];
@@ -101,6 +125,7 @@ function globToRegex(glob: string): RegExp {
       re += c;
     }
   }
+  // eslint-disable-next-line security/detect-non-literal-regexp -- `re` is built above one character at a time, with every regex metacharacter escaped and only `*` translated, so no glob character reaches the engine unescaped.
   return new RegExp(`^${re}$`);
 }
 
@@ -123,8 +148,8 @@ function fileMatcher(glob: string): (repoPath: string) => boolean {
 export function parseBlocklist(text: string): Entry[] {
   const entries: Entry[] = [];
   const lines = text.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    let body = lines[i]!.trim();
+  for (const [i, line_] of lines.entries()) {
+    let body = line_!.trim();
     if (body === "" || body.startsWith("#")) continue;
     const line = i + 1;
     if (body.startsWith("file:")) {
@@ -196,6 +221,19 @@ export interface Hit {
   entry: number;
 }
 
+/**
+ * A managed worktree does not receive the gitignored personal blocklist. Use a
+ * worktree-local file when present, otherwise share the main checkout's file
+ * beside Git's common directory. Absolute overrides remain absolute.
+ */
+export function blocklistCandidates(options: { repoRoot: string; rel: string; commonDir: string }): string[] {
+  const { repoRoot, rel, commonDir } = options;
+  if (path.isAbsolute(rel)) return [rel];
+  const local = path.join(repoRoot, rel);
+  const mainCheckout = path.join(path.dirname(commonDir), rel);
+  return local === mainCheckout ? [local] : [local, mainCheckout];
+}
+
 /** True if a block span sits entirely inside one of the allow spans. */
 function covered([bs, be]: [number, number], allowSpans: Array<[number, number]>): boolean {
   return allowSpans.some(([as, ae]) => as <= bs && be <= ae);
@@ -232,30 +270,41 @@ export function findBlocked(added: AddedLine[], entries: Entry[]): Hit[] {
 
 function main(): void {
   const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
-  const rel = process.env.CB_COMMIT_BLOCKLIST ?? ".commit-blocklist";
-  const blocklistPath = path.join(repoRoot, rel);
+  const rel = process.env.BBX_COMMIT_BLOCKLIST ?? ".commit-blocklist";
+  const commonDir = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
+    encoding: "utf8",
+  }).trim();
+  const candidates = blocklistCandidates({ repoRoot, rel, commonDir });
 
-  let text: string;
-  try {
-    text = fs.readFileSync(blocklistPath, "utf8");
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return; // no list => opt-out, silent no-op
-    console.error(`commit-blocklist-check: cannot read ${rel}: ${(e as Error).message}`);
-    process.exit(1); // any other read failure => fail closed
+  let text = "";
+  let blocklistPath = "";
+  for (const candidate of candidates) {
+    try {
+      text = fs.readFileSync(candidate, "utf8");
+      blocklistPath = candidate;
+      break;
+    } catch (e) {
+      if (isErrnoException(e) && e.code === "ENOENT") continue;
+      console.error(`commit-blocklist-check: cannot read ${candidate}: ${errorMessage(e)}`);
+      process.exit(1); // any other read failure => fail closed
+    }
   }
+  if (blocklistPath === "") return; // no list in this worktree or main => opt-out
 
   let entries: Entry[];
   try {
     entries = parseBlocklist(text);
   } catch (e) {
-    console.error(`commit-blocklist-check: ${(e as Error).message}`);
+    console.error(`commit-blocklist-check: ${errorMessage(e)}`);
     process.exit(1); // malformed list => fail closed
   }
   if (entries.every((e) => e.kind !== "block")) return; // no block rules => nothing to enforce
 
   // The personal list must never be committed — it literally contains the
   // strings you're purging. Refuse if it's tracked.
-  const tracked = execFileSync("git", ["ls-files", "--", rel], { cwd: repoRoot, encoding: "utf8" }).trim();
+  const tracked = path.isAbsolute(rel)
+    ? ""
+    : execFileSync("git", ["ls-files", "--", rel], { cwd: repoRoot, encoding: "utf8" }).trim();
   if (tracked !== "") {
     console.error(`commit-blocklist-check: ${rel} is tracked by git — it must stay gitignored (it holds the very strings you block). Run: git rm --cached ${rel}`);
     process.exit(1);
@@ -270,9 +319,9 @@ function main(): void {
   const hits = findBlocked(parseAddedLines(diff), entries);
   if (hits.length > 0) {
     console.error("commit-blocklist-check failed — staged changes add blocklisted content:");
-    for (const h of hits) console.error(`  ${h.file}:${h.lineno} (matches ${rel} line ${h.entry})`);
+    for (const h of hits) console.error(`  ${h.file}:${h.lineno} (matches ${blocklistPath} line ${h.entry})`);
     console.error("The matched value is not printed (it would re-leak). To see which term:");
-    console.error(`  sed -n '<N>p' ${rel}`);
+    console.error(`  sed -n '<N>p' ${blocklistPath}`);
     console.error("Fix it, or add a `!`-allow (specific token) or `file:` ignore (whole file). (--no-verify bypasses — don't.)");
     process.exit(1);
   }

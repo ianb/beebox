@@ -1,7 +1,7 @@
 ---
 title: "capture pipeline retries broken capture forever"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: prod (one personal box) — the box's own agent flagged process-captures failing 3,333×; boxholder asked me to look
 resolution: implemented
@@ -52,7 +52,7 @@ schedule, or quarantine that one May-14 capture out of the inbox.
 ---
 
 **Closed 2026-07-10.** The pipeline this describes was retired by the
-capture-mode work (`callback-box/docs/implemented-plans/capture-mode.md`):
+capture-mode work (`beebox/docs/implemented-plans/capture-mode.md`):
 the `retire-process-captures` migration removes the procedure card and
 trigger from deployed boxes (parking modified copies), so the retry loop
 cannot fire; the broken capture card itself stays in inbox as legacy data

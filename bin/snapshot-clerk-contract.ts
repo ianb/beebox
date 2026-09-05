@@ -3,10 +3,10 @@
  * Clerk contract snapshot generator (`pnpm snapshot:clerk-contract`).
  *
  * Reads the SINGLE leaf schema module
- * (`callback-box/src/webapp/trpc/routers/clerk-contract.ts`) — and imports
- * nothing else from callback-box — and emits the TypeScript types the extension
- * consumes into `callback-clerk/src/contract/clerk-contract.generated.ts`. This
- * closes the enforcement gap where a callback-box-only change to the wire shape
+ * (`beebox/src/webapp/trpc/routers/clerk-contract.ts`) — and imports
+ * nothing else from beebox — and emits the TypeScript types the extension
+ * consumes into `beebox-clerk/src/contract/clerk-contract.generated.ts`. This
+ * closes the enforcement gap where a beebox-only change to the wire shape
  * never exercised the clerk side: the pre-commit staleness gate regenerates and
  * fails if the checked-in snapshot is stale.
  *
@@ -29,9 +29,13 @@ import {
   commentaryDestination,
   tabArrangementPayload,
   tabArrangementOutput,
-} from "../callback-box/src/webapp/trpc/routers/clerk-contract.js";
+} from "../beebox/src/webapp/trpc/routers/clerk-contract.js";
 
-/** A construct outside the printer's whitelist — fail generation loudly. */
+/**
+ * A construct outside the printer's whitelist — fail generation loudly. Kept as
+ * the base class every specific failure below extends, so callers (and
+ * `bin/snapshot-clerk-contract.test.ts`) can catch the family in one place.
+ */
 export class UnsupportedSchemaError extends Error {
   constructor(detail: string) {
     super(`snapshot-clerk-contract: unsupported schema construct — ${detail}`);
@@ -39,11 +43,48 @@ export class UnsupportedSchemaError extends Error {
   }
 }
 
+class NotASchemaObjectError extends UnsupportedSchemaError {
+  constructor(readonly node: unknown) {
+    super(`expected a schema object, got ${JSON.stringify(node)}`);
+    this.name = "NotASchemaObjectError";
+  }
+}
+
+class NonStringEnumMemberError extends UnsupportedSchemaError {
+  constructor() {
+    super("non-string member in string enum");
+    this.name = "NonStringEnumMemberError";
+  }
+}
+
+class UnsupportedNodeTypeError extends UnsupportedSchemaError {
+  constructor(type: unknown, keys: string[]) {
+    super(`type=${JSON.stringify(type)} keys=${JSON.stringify(keys)}`);
+    this.name = "UnsupportedNodeTypeError";
+  }
+}
+
+class MissingPropertiesMapError extends UnsupportedSchemaError {
+  constructor() {
+    super("object schema without a properties map");
+    this.name = "MissingPropertiesMapError";
+  }
+}
+
+class OpenObjectError extends UnsupportedSchemaError {
+  constructor(readonly additionalProperties: unknown) {
+    super(
+      `open object (additionalProperties=${JSON.stringify(additionalProperties)}) — index signatures are not whitelisted`,
+    );
+    this.name = "OpenObjectError";
+  }
+}
+
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
-export const OUT_PATH = path.join(REPO_ROOT, "callback-clerk", "src", "contract", "clerk-contract.generated.ts");
+export const OUT_PATH = path.join(REPO_ROOT, "beebox-clerk", "src", "contract", "clerk-contract.generated.ts");
 const GENERATOR_REL = "bin/snapshot-clerk-contract.ts";
 const PNPM_SCRIPT = "pnpm snapshot:clerk-contract";
-const LEAF_REL = "callback-box/src/webapp/trpc/routers/clerk-contract.ts";
+const LEAF_REL = "beebox/src/webapp/trpc/routers/clerk-contract.ts";
 
 /**
  * The types to emit: a schema, its io side (input types come from the input
@@ -67,7 +108,7 @@ function isObj(value: unknown): value is Record<string, unknown> {
 
 /** Render one JSON-Schema node to a TS type, throwing outside the whitelist. */
 function printType(node: unknown, depth: number): string {
-  if (!isObj(node)) throw new UnsupportedSchemaError(`expected a schema object, got ${JSON.stringify(node)}`);
+  if (!isObj(node)) throw new NotASchemaObjectError(node);
 
   // Nullable and any other union arrive as anyOf — render each member.
   const anyOf = node["anyOf"];
@@ -80,7 +121,7 @@ function printType(node: unknown, depth: number): string {
     if (Array.isArray(node["enum"])) {
       const values = node["enum"];
       if (!values.every((value) => typeof value === "string")) {
-        throw new UnsupportedSchemaError("non-string member in string enum");
+        throw new NonStringEnumMemberError();
       }
       return values.map((value) => JSON.stringify(value)).join(" | ");
     }
@@ -94,29 +135,29 @@ function printType(node: unknown, depth: number): string {
   if (type === "null") return "null";
   if (type === "array") {
     const inner = printType(node["items"], depth);
-    return /^[A-Za-z0-9_.]+$/.test(inner) ? `${inner}[]` : `Array<${inner}>`;
+    return /^[\w.]+$/.test(inner) ? `${inner}[]` : `Array<${inner}>`;
   }
   if (type === "object") return printObject(node, depth);
 
-  throw new UnsupportedSchemaError(`type=${JSON.stringify(type)} keys=${JSON.stringify(Object.keys(node))}`);
+  throw new UnsupportedNodeTypeError(type, Object.keys(node));
 }
 
 /** A bare TS identifier can be emitted unquoted; anything else must be quoted. */
 function propertyKey(key: string): string {
-  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : JSON.stringify(key);
+  return /^[$A-Z_a-z][\w$]*$/.test(key) ? key : JSON.stringify(key);
 }
 
 /** Render an object node to a `{ … }` type literal. */
 function printObject(node: Record<string, unknown>, depth: number): string {
   const properties = node["properties"];
-  if (!isObj(properties)) throw new UnsupportedSchemaError("object schema without a properties map");
+  if (!isObj(properties)) throw new MissingPropertiesMapError();
   // Reject open objects (`.catchall`/`.passthrough` → an additionalProperties
   // schema). Absent (input side) or `false` (output-side strip) is the only
   // shape the whitelist supports — anything else would need an index signature
   // we don't emit, so fail loudly rather than silently drop it.
   const extra = node["additionalProperties"];
   if (extra !== undefined && extra !== false) {
-    throw new UnsupportedSchemaError(`open object (additionalProperties=${JSON.stringify(extra)}) — index signatures are not whitelisted`);
+    throw new OpenObjectError(extra);
   }
   const requiredRaw = node["required"];
   const required = new Set(

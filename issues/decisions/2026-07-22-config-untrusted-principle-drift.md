@@ -2,9 +2,10 @@
 title: "\"Config is untrusted content too\" — boxholder no longer believes it"
 workstream: public-site
 needs: [decision]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-github-pages-site — story-extraction triage of engineering-principles.md
+priority: normal
 ---
 
 During the story-nugget triage pass (2026-07-22), the boxholder dropped the
@@ -12,7 +13,7 @@ engineering-principles claim that hand-editable config is an untrusted input
 boundary, with the note: **"I don't think I believe this anymore."**
 
 The stance is currently documented in
-`callback-box/docs/engineering-principles.md` (principle 3's config clause:
+`beebox/docs/engineering-principles.md` (principle 3's config clause:
 "Config is untrusted content too: a hand-editable file is an input boundary
 like any other"). If the belief has changed, the doc — and possibly
 validation code that implements the stance at config-load boundaries —

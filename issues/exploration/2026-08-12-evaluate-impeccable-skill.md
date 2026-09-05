@@ -6,7 +6,8 @@ needs: [design]
 labels: [research, skills]
 filed-by: agent
 discovered-by: Ian
-discovered-in: main session — cb feedback triage
+discovered-in: main session — bbx feedback triage
+priority: important
 ---
 
 A popular skill called **"impeccable"** came up as worth looking into. That's
@@ -25,7 +26,7 @@ the whole of what's known — this is a "check out X" item.
 
 ## How to judge it
 
-This repo already has a dense skill set — `cb-plan`, `cb-debug`, `cross-model`,
+This repo already has a dense skill set — `bbx-plan`, `bbx-debug`, `cross-model`,
 `finish`, `browse`, `doctest`, `knowledge-audit`, `issues` and more — several of
 which encode hard-won discipline (the tracked-flake protocol, the docs-only fast
 path, cross-model review). So the bar isn't "is this good," it's **"does it do

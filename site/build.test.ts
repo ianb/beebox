@@ -16,9 +16,9 @@ test("baseFromBranch: worktree branch strips prefix; main stays main", () => {
 });
 
 test("normalizeBase: adds a trailing slash, requires a leading slash", () => {
-  assert.equal(normalizeBase("/callback-box"), "/callback-box/");
-  assert.equal(normalizeBase("/callback-box/"), "/callback-box/");
-  assert.throws(() => normalizeBase("callback-box/"), BasePathError);
+  assert.equal(normalizeBase("/beebox"), "/beebox/");
+  assert.equal(normalizeBase("/beebox/"), "/beebox/");
+  assert.throws(() => normalizeBase("beebox/"), BasePathError);
 });
 
 // --- href classification ------------------------------------------------------
@@ -35,9 +35,9 @@ test("classifyHref: external, anchor, internal", () => {
 // --- internal link resolution -------------------------------------------------
 
 test("resolveInternalHref: root-absolute .md rewrites to base + .html", () => {
-  const r = resolveInternalHref({ href: "/docs/x.md", pageSitePath: "index.html", base: "/callback-box/" });
+  const r = resolveInternalHref({ href: "/docs/x.md", pageSitePath: "index.html", base: "/beebox/" });
   assert.equal(r.target, "docs/x.html");
-  assert.equal(r.href, "/callback-box/docs/x.html");
+  assert.equal(r.href, "/beebox/docs/x.html");
 });
 
 test("resolveInternalHref: page-relative link resolves against the page directory", () => {
@@ -99,10 +99,10 @@ test("parseSource: missing required field is named", () => {
 
 test("renderBody: internal links rewrite against base and are collected; externals open in a new tab", () => {
   const body = "See [about](/about.md) and [gh](https://github.com/x).";
-  const underPages = renderBody(body, { file: "cards/index.site-page.card", pageSitePath: "index.html", base: "/callback-box/" });
-  assert.match(underPages.html, /href="\/callback-box\/about\.html"/);
+  const underPages = renderBody(body, { pageSitePath: "index.html", base: "/beebox/" });
+  assert.match(underPages.html, /href="\/beebox\/about\.html"/);
   assert.match(underPages.html, /href="https:\/\/github\.com\/x" target="_blank" rel="noopener noreferrer"/);
-  assert.match(underPages.html, /href="\/callback-box\/about\.html"(?![^>]*target=)/);
+  assert.match(underPages.html, /href="\/beebox\/about\.html"(?![^>]*target=)/);
   assert.deepEqual(underPages.linkTargets, ["about.html"]);
 
   // Same source under the router base: identical target, base-shifted href.

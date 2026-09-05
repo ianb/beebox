@@ -2,22 +2,32 @@
 title: "First-run experience: the empty box explains nothing"
 workstream: open-source-readiness
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — first-run UX audit for the soft launch
 labels: [soft-launch]
 priority: important
 ---
 
-**Update 2026-08-02** (`callback-box/docs/implemented-plans/top-nav-ia.md`): new users
+**Update 2026-08-02** (`beebox/docs/implemented-plans/top-nav-ia.md`): new users
 now land on **chat**, not the dashboard — the dashboard moved to
 `/<box>/dashboard` as an ops plane reached from the app bar's Box submenu.
 That reframes this issue rather than closing it: the "schedule table is the
 first thing you see" complaint below is gone, and the chat zero-state
 (which had no answer) is now the whole first-run surface.
 
+**Update 2026-08-23** (`beebox/docs/implemented-plans/first-run-openers.md`):
+the chat zero-state gap is now partly filled — an empty chat on a `"new"`
+session shows agent-curated `openers:` (suggested opening questions) read from
+the bound directory's briefing card, click-to-send. This is deliberately a
+narrow slice, not the menu-of-flows design direction above: no onboarding
+flag, no flow selection, no dashboard first-run state, no role-marked
+instructions. It's still open for all of that — the "menu of flows that just
+work" design direction, the onboarding directory/landmark mechanism, voice
+demonstration, and the rest of this issue's scope remain undone.
+
 Audited 2026-07-20 by code-reading. What a brand-new user sees after
-creating their account on a fresh `cb init` box:
+creating their account on a fresh `bbx init` box:
 
 - They land on the **Dashboard**, which on an empty box is an ops panel:
   the Attention and Health sections vanish entirely (render `null` —
@@ -31,7 +41,7 @@ creating their account on a fresh `cb init` box:
 - **Chat has no zero-state**: a new chat is an empty scroll area and a
   composer placeholder. Nothing suggests what to say to a system whose
   whole pitch is "feed it things and teach it."
-- **`cb init` seeds zero user-recognizable content** — everything
+- **`bbx init` seeds zero user-recognizable content** — everything
   scaffolded is agent-facing config (guide cards, the personality card,
   schedules, a placeholder briefing). No sample cards, no "try asking me
   to…" seed.
@@ -106,7 +116,7 @@ Mechanism ideas (boxholder, 2026-07-21):
 - **Role-marked users get different instructions.** Mark the admin/
   owner user, and the agent instructs them differently from an invited
   member (auth already distinguishes owner from member accounts —
-  `cb auth create-user` vs `add-user`; the agent-facing instruction
+  `bbx auth create-user` vs `add-user`; the agent-facing instruction
   layer currently doesn't know the difference). An invited member's
   onboarding is a different, smaller menu than the operator's.
 - **The menu needs a layout system.** Beyond the per-flow product
@@ -122,7 +132,7 @@ Mechanism ideas (boxholder, 2026-07-21):
   flow ("would be cool… I probably shouldn't do it… I do kinda like
   it. I don't know. Maybe."). Recorded as a live maybe, adjacent to
   the courseware work
-  (`callback-box/docs/plans/courseware-external-skills-triage.md`,
+  (`beebox/docs/plans/courseware-external-skills-triage.md`,
   [courseware-image-generation](2026-06-25-courseware-image-generation.md)).
 
 Considered and rejected/demoted (boxholder reactions, recorded so they

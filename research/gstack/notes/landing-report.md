@@ -42,6 +42,6 @@ Then a one-line "next action" suggestion: collision warning, sibling-outranks wa
 
 ## Verdict for callback
 
-`skip`. Callback isn't a multi-workspace parallel-development setup. The collision problem this solves doesn't exist for us. Plus all three sub-projects (callback-box, callback-clerk, cardworks) have independent version streams, not a shared one.
+`skip`. Bee Box isn't a multi-workspace parallel-development setup. The collision problem this solves doesn't exist for us. Plus all three sub-projects (beebox, beebox-clerk, cardworks) have independent version streams, not a shared one.
 
 If we ever did adopt parallel workspaces (Conductor or similar), and if we adopted gstack's "commit VERSION on the branch" convention, then queue awareness would matter. Neither is on the horizon.

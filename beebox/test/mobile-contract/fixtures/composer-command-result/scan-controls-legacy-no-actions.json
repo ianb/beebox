@@ -1,0 +1,34 @@
+{
+  "input": {
+    "version": 2,
+    "id": "scan-command-5",
+    "kind": "scan-controls",
+    "ok": true,
+    "controls": [
+      {
+        "id": "bbx-composer-mic",
+        "role": "button",
+        "label": "Start dictation",
+        "container": "Composer",
+        "disabled": false
+      }
+    ]
+  },
+  "expected": {
+    "version": 2,
+    "id": "scan-command-5",
+    "kind": "scan-controls",
+    "ok": true,
+    "controls": [
+      {
+        "id": "bbx-composer-mic",
+        "role": "button",
+        "label": "Start dictation",
+        "does": null,
+        "container": "Composer",
+        "disabled": false,
+        "actions": []
+      }
+    ]
+  }
+}

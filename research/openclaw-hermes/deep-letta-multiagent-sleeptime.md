@@ -1,7 +1,7 @@
 # Letta: multi-agent primitives and sleep-time architecture
 
 Deep dive into how Letta (`github.com/letta-ai/letta`, commit `b76da909`) structures multi-agent
-groups, background/sleep-time agents, and shared-state IPC. Written for Callback Box builders;
+groups, background/sleep-time agents, and shared-state IPC. Written for Bee Box builders;
 memory content/quality is out of scope — the focus is the *concurrency and orchestration
 architecture* underneath.
 
@@ -303,7 +303,7 @@ hit the optimistic-lock/no-retry behavior from §1.3(b).
 
 ## 3. Scheduling / proactivity: there isn't any, inside Letta
 
-This is the most consequential negative finding for Callback Box comparison purposes.
+This is the most consequential negative finding for Bee Box comparison purposes.
 
 - `letta/jobs/scheduler.py` is Letta's only cron-like infrastructure, and it is **entirely internal
   plumbing**: an `AsyncIOScheduler` (APScheduler) that runs exactly one recurring job —

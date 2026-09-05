@@ -5,8 +5,11 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { spawn } from "node:child_process";
 import {
+  isMeasuredRun,
   classifyFailure,
+  carefulCandidates,
   deriveFlakes,
   hashFileset,
   parsePorcelainPaths,
@@ -14,6 +17,7 @@ import {
   summarize,
   type LedgerRecord,
 } from "./test-ledger-lib.js";
+import { terminateChild } from "./child-signals.js";
 
 // ── TAP parsing ─────────────────────────────────────────────────────────────
 
@@ -177,6 +181,73 @@ test("repeated fail-then-pass cycles each count", () => {
   assert.deepEqual([...deriveFlakes({ records, filesets: FILESETS })], [["test/a.doctest.md", 2]]);
 });
 
+// ── careful-tier candidates (mechanism C) ───────────────────────────────────
+
+/** `n` fail-then-pass pairs at distinct trees, then `clean` plain green runs. */
+function flakeHistory(input: { pairs: number; clean: number }): LedgerRecord[] {
+  const records: LedgerRecord[] = [];
+  for (let i = 0; i < input.pairs; i++) {
+    records.push(rec({ treeHash: `t${i}`, failures: [{ file: "test/a.doctest.md", class: "attached" }] }));
+    records.push(rec({ treeHash: `t${i}`, failures: [] }));
+  }
+  for (let i = 0; i < input.clean; i++) records.push(rec({ treeHash: `clean${i}`, failures: [] }));
+  return records;
+}
+
+test("a file over the bar is a candidate; one under it is not", () => {
+  // 3 flakes in a 10-run window is 30%; the same 3 in a 40-run window is 7.5%.
+  const over = carefulCandidates({
+    records: flakeHistory({ pairs: 3, clean: 4 }),
+    filesets: FILESETS,
+    careful: [],
+    window: 10,
+  });
+  assert.deepEqual(
+    over.candidates.map((c) => [c.file, c.flakes, c.runs]),
+    [["test/a.doctest.md", 3, 10]],
+  );
+  const under = carefulCandidates({
+    records: flakeHistory({ pairs: 3, clean: 34 }),
+    filesets: FILESETS,
+    careful: [],
+    window: 40,
+  });
+  assert.deepEqual(under.candidates, []);
+});
+
+test("the window is the last N runs THAT RAN THE FILE, so old flakes age out", () => {
+  const records = [...flakeHistory({ pairs: 3, clean: 0 }), ...flakeHistory({ pairs: 0, clean: 6 })];
+  const { candidates } = carefulCandidates({
+    records,
+    filesets: FILESETS,
+    careful: [],
+    window: 6,
+  });
+  assert.deepEqual(candidates, []);
+});
+
+test("a current member is reported, never re-proposed", () => {
+  const { candidates, members } = carefulCandidates({
+    records: flakeHistory({ pairs: 3, clean: 4 }),
+    filesets: FILESETS,
+    careful: ["test/a.doctest.md"],
+    window: 10,
+  });
+  assert.deepEqual(candidates, []);
+  assert.deepEqual(members.map((m) => [m.file, m.share]), [["test/a.doctest.md", 0.3]]);
+});
+
+test("a run that bailed out is no evidence either way", () => {
+  const records = [...flakeHistory({ pairs: 3, clean: 4 }), rec({ exitCode: 143, failures: [] })];
+  const { candidates } = carefulCandidates({
+    records,
+    filesets: FILESETS,
+    careful: [],
+    window: 10,
+  });
+  assert.deepEqual(candidates.map((c) => c.runs), [10]);
+});
+
 // ── aggregation ─────────────────────────────────────────────────────────────
 
 test("the denominator counts runs that included the file, not all runs", () => {
@@ -233,4 +304,70 @@ test("fileset hashing is order-independent", () => {
 
 test("different filesets hash differently", () => {
   assert.notEqual(hashFileset(["a"]), hashFileset(["a", "b"]));
+});
+
+// ── schema additions ────────────────────────────────────────────────────────
+
+test("a record written before the semaphore, with no tier or concurrency, still counts", () => {
+  // The semaphore added `tier`/`concurrency` (bin/test-locks.ts); the sixteen
+  // days of records that motivated it have neither, and voiding them would
+  // throw away the denominator the whole instrument exists to hold.
+  const parsed: LedgerRecord = { ...rec({}) };
+  delete parsed.tier;
+  delete parsed.concurrency;
+  assert.equal(parsed.tier, undefined);
+  assert.equal(summarize({ records: [parsed], filesets: FILESETS }).get("test/a.doctest.md")?.runs, 1);
+});
+
+test("a record from a run under the semaphore carries both", () => {
+  const record = rec({ tier: "careful", concurrency: 0 });
+  assert.equal(record.tier, "careful");
+  assert.equal(record.concurrency, 0);
+});
+
+// ── markers ─────────────────────────────────────────────────────────────────
+
+test("a marker is not a measured run, however it exited", () => {
+  assert.equal(isMeasuredRun(rec({ marker: true, exitCode: 0 })), false);
+  assert.equal(isMeasuredRun(rec({ exitCode: 0 })), true);
+  assert.equal(isMeasuredRun(rec({ exitCode: 143 })), false);
+});
+
+test("a marker adds no run to any file's denominator", () => {
+  const filesets = { r: ["test/a.test.ts"], empty: [] };
+  const records: LedgerRecord[] = [
+    rec({ ranFiles: "r" }),
+    rec({ marker: true, ranFiles: "empty" }),
+  ];
+  assert.equal(summarize({ records, filesets }).get("test/a.test.ts")?.runs, 1);
+});
+
+// ── signals reach the child ─────────────────────────────────────────────────
+
+test("terminateChild waits for a signalled child to actually exit", async () => {
+  const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"]);
+  await new Promise((resolve) => child.once("spawn", resolve));
+  await terminateChild({ child, signal: "SIGTERM" });
+  // The point of waiting: the slot is released after tap is gone, not while it
+  // is still running and contending with whatever takes the slot next.
+  assert.equal(child.signalCode, "SIGTERM");
+});
+
+test("a child that ignores the signal is killed rather than waited on forever", async () => {
+  const child = spawn(process.execPath, [
+    "-e",
+    "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000); console.log('ready');",
+  ]);
+  // Waiting for the handler to be INSTALLED, not merely for the process to
+  // exist: a signal delivered before that line runs kills it by default and
+  // the test would pass without exercising the escalation at all.
+  await new Promise((resolve) => child.stdout.once("data", resolve));
+  await terminateChild({ child, signal: "SIGTERM", graceMs: 200 });
+  assert.equal(child.signalCode, "SIGKILL");
+});
+
+test("terminateChild returns at once for a child that already exited", async () => {
+  const child = spawn(process.execPath, ["-e", ""]);
+  await new Promise((resolve) => child.once("close", resolve));
+  await terminateChild({ child, signal: "SIGTERM", graceMs: 60_000 });
 });

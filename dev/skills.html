@@ -54,7 +54,7 @@ const SKILLS = [
     law:null,
   },
   {
-    name:"cb-plan", kind:"discipline", words:3030, lines:439, born:"2026-05-29",
+    name:"bbx-plan", kind:"discipline", words:3030, lines:439, born:"2026-05-29",
     purpose:"A plan-writing template for non-trivial work. Reviewing is just filling the template honestly.",
     triggers:'"write a plan", "make a plan for X", "let\'s plan", "review this plan"',
     summary:"A fixed template written to docs/plans/<topic>.md with mandatory sections — what-already-exists, prior-art (web search by default), a failure-modes table, agent/user edge cases, NOT-in-scope, knowledge audits, rollout. The blank sections are the failure modes you haven't thought about yet.",
@@ -62,7 +62,7 @@ const SKILLS = [
     law:"\"A plan is a complete unit of work — designed end-to-end before implementation starts, shipped end-to-end when it finishes.\"",
   },
   {
-    name:"cb-frontend", kind:"discipline", words:1774, lines:201, born:"2026-06-20",
+    name:"bbx-frontend", kind:"discipline", words:1774, lines:201, born:"2026-06-20",
     purpose:"The behavioral half of frontend work (the catalog lives in FRONTEND.md).",
     triggers:'"add a page/component", "build this UI", "make this responsive", "this looks off"',
     summary:"Habits the component catalog can't enforce: compose from primitives, use the semantic palette, ship loading/empty/error states, keep it accessible, let the React Compiler do memoization, and verify in a real browser before calling it done.",
@@ -70,7 +70,7 @@ const SKILLS = [
     law:"\"Consistency reads as 'designed,' novelty reads as 'generated.' Match the existing rhythm.\"",
   },
   {
-    name:"cb-debug", kind:"discipline", words:1710, lines:176, born:"2026-06-20",
+    name:"bbx-debug", kind:"discipline", words:1710, lines:176, born:"2026-06-20",
     purpose:"A discipline for hard bugs — flaky, cross-component, slow, or fixes that didn't hold.",
     triggers:'"why is X broken", "this is flaky", "I tried X and it still fails", "this is slow"',
     summary:"Six phases built around one feedback loop: build a tight, red-capable repro first; reproduce + minimise; generate 3–5 ranked falsifiable hypotheses; instrument one variable at a time; fix at a correct seam with a regression test; clean up and post-mortem.",
@@ -78,7 +78,7 @@ const SKILLS = [
     law:"\"No fix without a red-capable feedback loop first. A symptom patch you can't prove is a guess, and guesses create new bugs.\"",
   },
   {
-    name:"cb-context", kind:"discipline", words:1650, lines:159, born:"2026-06-20",
+    name:"bbx-context", kind:"discipline", words:1650, lines:159, born:"2026-06-20",
     purpose:"Engineering what a *box* agent knows — which surface a durable instruction belongs on.",
     triggers:'"where should this instruction go", "the agent ignores this rule", "trim this CLAUDE.md"',
     summary:"A router: given a durable piece of guidance, place it on the right tier by how eagerly it should load — root CLAUDE.md (every turn) → nested CLAUDE.md → .claude/rules glob → schema instructions → a doc → a procedure. Keep the always-on tier lean; verify the agent absorbed it with a knowledge audit.",
@@ -102,11 +102,11 @@ const SKILLS = [
     law:"\"Different model family → different blind spots. Codex is not authoritative — it's a different set of blind spots, not fewer.\"",
   },
   {
-    name:"cb-codehealth", kind:"discipline", words:1357, lines:143, born:"2026-06-20",
+    name:"bbx-codehealth", kind:"discipline", words:1357, lines:143, born:"2026-06-20",
     purpose:"A deliberate codebase-health pass aimed at deep modules — not every-refactor cleanup.",
     triggers:'"codebase health", "this feels crufty/tangled", "is this architecture okay"',
-    summary:"Run the tooling first (knip for dead code, madge for cycles, oxlint for smells), then explore for friction, report candidates in the deep-module vocabulary, and route the chosen one through cb-plan + a worktree. Code is a liability, not an asset.",
-    bends:"Default refactoring is opportunistic \"while I'm here\" churn and extracting helpers for testability. This reframes the whole exercise: insists on a precise vocabulary (module / interface / depth / seam / leverage / locality — not component/service/API), warns that extracting a pure function for testability is often a *shallow* anti-move that loses locality, applies a deletion test (does removing it concentrate complexity or just move it?), invokes Hyrum's Law (green tests ≠ safe), and refuses to free-hand the change — it goes through cb-plan and a separate worktree.",
+    summary:"Run the tooling first (knip for dead code, madge for cycles, oxlint for smells), then explore for friction, report candidates in the deep-module vocabulary, and route the chosen one through bbx-plan + a worktree. Code is a liability, not an asset.",
+    bends:"Default refactoring is opportunistic \"while I'm here\" churn and extracting helpers for testability. This reframes the whole exercise: insists on a precise vocabulary (module / interface / depth / seam / leverage / locality — not component/service/API), warns that extracting a pure function for testability is often a *shallow* anti-move that loses locality, applies a deletion test (does removing it concentrate complexity or just move it?), invokes Hyrum's Law (green tests ≠ safe), and refuses to free-hand the change — it goes through bbx-plan and a separate worktree.",
     law:"\"The real test of depth: investigation at depth isn't necessary to use it.\"",
   },
   {

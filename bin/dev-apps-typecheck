@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# This-will-build gate for committed exhibit apps (dev/apps/).
+#
+# Committed apps are deliberately outside every package's lint — they are
+# casual by design (root eslint.config.ts is empty on purpose). But they
+# merge to main and live forever, so staged app source gets one bare check:
+# tsc --noEmit with the same compiler settings the exhibits container serves
+# with (dev/apps/tsconfig.json extends workstreams-app's fragment). The
+# pre-commit dispatcher runs this only when a dev/apps/*.ts(x) file is
+# staged; index.html-tier apps have no TS and never trigger it.
+#
+# Optional argument: an alternate project directory holding a tsconfig.json
+# (used by the doctest to exercise the gate against fixtures).
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT="${1:-$REPO_DIR/dev/apps}"
+
+# tsc errors (TS18003) on an include that matches nothing; an app tree with
+# only index.html apps is a normal state, not a failure.
+if ! find "$PROJECT" \( -name "*.ts" -o -name "*.tsx" \) -not -path "*/node_modules/*" -print -quit | grep -q .; then
+  echo "[dev-apps-typecheck] no TypeScript app source under $PROJECT — nothing to check"
+  exit 0
+fi
+
+exec "$REPO_DIR/node_modules/.bin/tsc" -p "$PROJECT" --noEmit

@@ -1,7 +1,7 @@
 ---
 title: "Pre-v2-migration chat sessions are unresumable on prod (project-dir hash changed with content/); schedule-fire responses into them vanish silently"
 workstream: memory-use
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-memory-use — live-testing chat-schedule firing under the lazy hub
 resolution: wontfix
@@ -18,16 +18,16 @@ immediately: the SDK returns `error_during_execution` with `num_turns=0
 duration_ms=0`. Observed on prod (`personal` box) when a chat `<schedule>`
 fired into the most-active session `9b256d7f…` (husk
 `store/chat/web/2026-06-28_9b256d7f.chat.card`, `context-dir:
-store/callback-box`).
+store/beebox`).
 
 Cause: the session's transcript JSONL lives under the Claude Code project dir
 for the PRE-migration cwd —
-`~/.claude/projects/-home-callback-boxes-personal-store-callback-box/` (no
+`~/.claude/projects/-home-beeboxes-personal-store-beebox/` (no
 `content` segment) — but v2 resumes spawn with cwd
-`<boxRoot>/store/callback-box` where boxRoot now includes `content/`, so the
-SDK looks in `…-personal-content-store-callback-box/`, which doesn't exist.
+`<boxRoot>/store/beebox` where boxRoot now includes `content/`, so the
+SDK looks in `…-personal-content-store-beebox/`, which doesn't exist.
 The prod `~/.claude/projects/` listing shows a whole family of stale
-pre-migration dirs (`-home-callback-boxes-personal`,
+pre-migration dirs (`-home-beeboxes-personal`,
 `…-personal-store-writing`, `…-personal-store-spanish`, …) whose sessions are
 all presumably unresumable the same way.
 

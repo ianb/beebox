@@ -3,7 +3,7 @@ title: "No way to submit an uploaded file in chat (mobile; file not attached to 
 workstream: unknown
 filed-by: agent
 discovered-in: main session — boxholder hit it on mobile
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

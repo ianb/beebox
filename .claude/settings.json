@@ -10,7 +10,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/callback-box/node_modules/.bin/vibe-check lint --hook"
+            "command": "$CLAUDE_PROJECT_DIR/beebox/node_modules/.bin/vibe-check lint --hook"
           }
         ]
       }
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/worktree-create.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-create.sh"
           }
         ]
       }
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/worktree-remove.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/worktree-remove.sh"
           }
         ]
       }
@@ -43,7 +43,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/session-end.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-end.sh",
+            "timeout": 300
           }
         ]
       }
@@ -54,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/session-start-registry.sh"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start-registry.sh"
           }
         ]
       },
@@ -63,7 +64,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/auto-sweep.sh session-start"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/auto-sweep.sh session-start",
+            "timeout": 300
           }
         ]
       }

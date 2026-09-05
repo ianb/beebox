@@ -35,14 +35,18 @@ function cliRow(name = "example") {
       baseSha: "base123",
       removed: null,
       archived: null,
+      description: "Workstream routing",
+      launch: { state: "none", startedAt: null, expiresAt: null, failedAt: null, reason: null },
     },
+    routing: { state: "live", action: "manual-forward", lastActivityAt: "2026-08-20T00:00:00Z" },
     boxState: { testSetup: false, keepUnmerged: false, pristine: null },
+    schedule: null,
   };
 }
 
 function fakeServices(workstreams: WorkstreamSummary[] = []): AppServices {
   return {
-    workstreams: { list: async () => workstreams },
+    workstreams: { list: async () => ({ items: workstreams, warnings: [] }) },
     documents: {
       listIssues: async () => [],
       issueDetail: async () => { throw new Error("not configured"); },
@@ -52,6 +56,9 @@ function fakeServices(workstreams: WorkstreamSummary[] = []): AppServices {
       saveIssueChanges: async () => 0,
     },
     quotas: { get: async () => [] },
+    exhibits: {
+      askQueue: async () => ({ origin: "http://127.0.0.1:3230", storeProblem: null, entries: [] }),
+    },
     actions: {
       run: async () => ({ status: "complete" }),
       job: () => null,
@@ -76,7 +83,8 @@ const service = createWorkstreamsCommandService({
   repoRoot: "/repo",
   commandRunner,
 });
-const items = await service.list();
+const result = await service.list();
+const items = result.items;
 JSON.stringify({
   command: request?.command,
   args: request?.args,
@@ -84,8 +92,9 @@ JSON.stringify({
   name: items[0]?.name,
   hasPath: "path" in (items[0] ?? {}),
   hasBox: "box" in (items[0] ?? {}),
+  warnings: result.warnings.length,
 })
-=> {"command":"/repo/bin/workstreams","args":["list","--json","--include-removed"],"cwd":"/repo","name":"example","hasPath":false,"hasBox":false}
+=> {"command":"/repo/bin/workstreams","args":["list","--json","--include-removed"],"cwd":"/repo","name":"example","hasPath":false,"hasBox":false,"warnings":0}
 ```
 
 Invalid JSON and schema drift fail at the boundary with command context. Schema
@@ -100,15 +109,31 @@ const invalidJson = createWorkstreamsCommandService({
 await invalidJson.list()
 => throws InvalidWorkstreamsJsonError: bin/workstreams list --json --include-removed returned invalid JSON
 
-const invalidShape = createWorkstreamsCommandService({
+const partlyInvalid = createWorkstreamsCommandService({
   repoRoot: "/repo",
   commandRunner: async () => ({
-    stdout: JSON.stringify([{ ...cliRow(), git: { ahead: "secret /private/path" } }]),
+    stdout: JSON.stringify([cliRow("good"), { ...cliRow("bad"), git: { ahead: "secret /private/path" } }]),
     stderr: "",
   }),
 });
-await invalidShape.list()
-=> throws InvalidWorkstreamsShapeError: bin/workstreams list --json --include-removed returned an invalid shape at 0.git.ahead, 0.git.dirty, 0.git.merged, 0.git.tip
+const partial = await partlyInvalid.list();
+JSON.stringify({ names: partial.items.map((item) => item.name), warning: partial.warnings[0] })
+=> {"names":["good"],"warning":{"row":1,"name":"bad","fields":["git.ahead","git.dirty","git.merged","git.tip"],"message":"Invalid workstream row 1 (bad): git.ahead, git.dirty, git.merged, git.tip"}}
+
+const invalidTopLevel = createWorkstreamsCommandService({
+  repoRoot: "/repo",
+  commandRunner: async () => ({ stdout: JSON.stringify({ workstreams: [] }), stderr: "" }),
+});
+await invalidTopLevel.list()
+=> throws InvalidWorkstreamsTopLevelError: bin/workstreams list --json --include-removed returned a non-array top-level value
+
+const manyInvalid = createWorkstreamsCommandService({
+  repoRoot: "/repo",
+  commandRunner: async () => ({ stdout: JSON.stringify(Array.from({ length: 10 }, (_, index) => ({ ...cliRow(`bad-${index}`), branch: "" }))), stderr: "inventory anomaly" }),
+});
+const bounded = await manyInvalid.list();
+JSON.stringify({ warnings: bounded.warnings.length, omitted: bounded.warnings.at(-2)?.message, stderr: bounded.warnings.at(-1)?.message })
+=> {"warnings":10,"omitted":"2 additional invalid workstream rows were omitted","stderr":"inventory anomaly"}
 ```
 
 Execution failures contain a bounded, path-scrubbed detail instead of exposing
@@ -116,10 +141,10 @@ the checkout location.
 
 ```ts
 const failed = createWorkstreamsCommandService({
-  repoRoot: "/Users/me/src/callback-box",
+  repoRoot: "/Users/me/src/beebox",
   commandRunner: async () => {
     throw Object.assign(new Error("command failed"), {
-      stderr: "fatal: /Users/me/src/callback-box/bin/workstreams is unavailable",
+      stderr: "fatal: /Users/me/src/beebox/bin/workstreams is unavailable",
     });
   },
 });
@@ -171,7 +196,9 @@ const apiApp = await buildApp({
         runtime: row.runtime,
         agent: row.agent,
         session: row.session,
+        routing: row.routing,
         boxState: row.boxState,
+        schedule: row.schedule,
   }]),
   routerCapability: "correct-capability",
   basePath: "/workstreams",

@@ -19,14 +19,14 @@
 
 # Locations — WT_MONO (where the git bookkeeping runs), WT_BOX_ROOT, and
 # WT_STATE_DIR all come from the shared derivation, so this file makes no $HOME
-# assumption of its own. Better than the old `$HOME/src/callback-box` fallback,
+# assumption of its own. Better than the old `$HOME/src/beebox` fallback,
 # which could point the destructive path at a checkout that isn't the one in
 # play.
 #
 # On derivation failure the four repo-relative roots are cleared, so nothing
 # outside WT_STATE_DIR is reachable: the box trash is guarded on a non-empty
 # WT_BOX_ROOT and `cd "$WT_MONO"` fails before the worktree trash-mv and the
-# branch delete. WT_STATE_DIR is NOT cleared — it comes from $CALLBACK_STATE_DIR
+# branch delete. WT_STATE_DIR is NOT cleared — it comes from $BBX_STATE_DIR
 # or the fixed cache path, neither of which depends on the derivation — so
 # router-stop and browse/log/pid cleanup still run. That is deliberate: those
 # are this tool's own regenerable cache, not anybody's work.
@@ -34,6 +34,10 @@
 . "$(dirname "${BASH_SOURCE[0]}")/worktree-paths.sh"
 # shellcheck source=session-registry.sh
 . "$(dirname "${BASH_SOURCE[0]}")/session-registry.sh"
+# shellcheck source=exhibits-store.sh
+. "$(dirname "${BASH_SOURCE[0]}")/exhibits-store.sh"
+# shellcheck source=worktree-git-lock.sh
+. "$(dirname "${BASH_SOURCE[0]}")/worktree-git-lock.sh"
 if ! wt_paths_init "$(dirname "${BASH_SOURCE[0]}")/.."; then
   # Leave every derived location empty rather than half-set: `cd ""` and
   # `[ -d "" ]` both fail, so each destructive step declines on its own.
@@ -64,6 +68,23 @@ wt_log() {
     >> "$WT_LOG_FILE" 2>/dev/null || true
 }
 
+# Milliseconds since the epoch, for timing a step whose duration is the thing
+# we're trying to learn. BSD `date` has no `%N`, so bash 5's EPOCHREALTIME is
+# the only sub-second source that costs no subprocess; the `date` fallback keeps
+# this working on bash 3.2 at one-second resolution, which still answers the
+# question being asked ("did this step take a minute?").
+wt_now_ms() {
+  local t="${EPOCHREALTIME:-}" sec frac
+  case "$t" in
+    *[.,]*)
+      sec="${t%%[.,]*}"
+      frac="${t#*[.,]}000"
+      printf '%s' "$(( sec * 1000 + 10#${frac:0:3} ))" ;;
+    *)
+      printf '%s' "$(( $(date +%s) * 1000 ))" ;;
+  esac
+}
+
 # Progress line for the human. WT_SAY_PREFIX lets a caller keep its own tag on
 # every line it emits (the hooks prefix "[session-end]").
 wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
@@ -72,9 +93,10 @@ wt_say() { printf '%s%s\n' "${WT_SAY_PREFIX:-  }" "$*"; }
 #
 # wt_other_agent_live <worktree_path> [--exclude-self-ancestor]
 #
-# Always returns 0; the answer is in WT_AGENT_STATE (`none` | `live` |
-# `unknown`) with detail in WT_AGENT_REASON. Callers MUST treat `unknown` the
-# same as `live` — that's the fail-closed half of this guard.
+# Always returns 0; the answer is in WT_AGENT_STATE (`none` | `launching` |
+# `live` | `unknown`) with detail in WT_AGENT_REASON. Callers MUST treat
+# `launching` and `unknown` the same as `live` for destructive decisions —
+# that's the fail-closed half of this guard.
 #
 # Cleaning a worktree that still has a live agent pulls the rug out from under
 # it. `bin/workstreams sweep` has always checked; session-end.sh did not, and that
@@ -180,6 +202,39 @@ wt_agent_snapshot_clear() {
   WT_SNAP_CWDS=""
 }
 
+# Process evidence is authoritative. Consult the launch lease only after both
+# process signals have established that no agent is running: the lease bridges
+# setup before the agent process exists, but must never hide a process that has
+# already started.
+wt_agent_none_or_launching() {
+  local wt_name="$1" launch status reason
+  launch=$(session_registry_launch_status "$wt_name")
+  status=$(jq -r '.state' <<<"$launch")
+  reason=$(jq -r '.reason // empty' <<<"$launch")
+  case "$status" in
+    active)
+      WT_AGENT_STATE="launching"
+      WT_AGENT_REASON="signal=launch-lease"
+      ;;
+    expired)
+      WT_AGENT_STATE="none"
+      WT_AGENT_REASON="launch=expired"
+      ;;
+    failed)
+      WT_AGENT_STATE="none"
+      WT_AGENT_REASON="launch=failed"
+      ;;
+    none)
+      WT_AGENT_STATE="none"
+      WT_AGENT_REASON=""
+      ;;
+    *)
+      WT_AGENT_STATE="unknown"
+      WT_AGENT_REASON="${reason:-invalid-launch-status}"
+      ;;
+  esac
+}
+
 wt_other_agent_live() {
   local worktree_path="$1" exclude_self=""
   [ "${2:-}" = "--exclude-self-ancestor" ] && exclude_self=1
@@ -199,7 +254,7 @@ wt_other_agent_live() {
       return 0
     fi
     case "$WT_SNAP_STATE" in
-      no-agents) WT_AGENT_STATE="none"; return 0 ;;
+      no-agents) wt_agent_none_or_launching "$wt_name"; return 0 ;;
       no-procs)  WT_AGENT_REASON="cannot-enumerate-processes"; return 0 ;;
       no-argv)   WT_AGENT_REASON="cannot-read-agent-argv"; return 0 ;;
       no-cwds)   WT_AGENT_REASON="cannot-read-agent-cwds"; return 0 ;;
@@ -228,7 +283,7 @@ EOF
     done <<EOF
 $WT_SNAP_CWDS
 EOF
-    WT_AGENT_STATE="none"
+    wt_agent_none_or_launching "$wt_name"
     return 0
   fi
 
@@ -256,7 +311,7 @@ EOF
         '{ n = $2; sub(/.*\//, "", n);
            if ((n == "claude" || n == "codex") && $1 != self) print $1 }')
   if [ -z "$other_pids" ]; then
-    WT_AGENT_STATE="none"
+    wt_agent_none_or_launching "$wt_name"
     return 0
   fi
 
@@ -287,7 +342,10 @@ EOF
     [ -n "$acwd" ] || continue
     case "$acwd" in
       "$worktree_path"|"$worktree_path"/*)
+        # Outputs consumed by callers after this function returns.
+        # shellcheck disable=SC2034
         WT_AGENT_STATE="live"
+        # shellcheck disable=SC2034
         WT_AGENT_REASON="signal=cwd others=[$pid_csv]"
         return 0 ;;
     esac
@@ -295,7 +353,7 @@ EOF
 $other_cwds
 EOF
 
-  WT_AGENT_STATE="none"
+  wt_agent_none_or_launching "$wt_name"
   return 0
 }
 
@@ -316,6 +374,8 @@ EOF
 # (modified, untracked, renamed, conflicted) still blocks.
 wt_work_state() {
   local d="$1"
+  # Output consumed by callers after this function returns.
+  # shellcheck disable=SC2034
   WT_BRANCH=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
   WT_AHEAD=$(git -C "$d" rev-list --count main..HEAD 2>/dev/null || echo "?")
 
@@ -335,6 +395,8 @@ wt_work_state() {
     fi
   else
     WT_DIRTY="?"
+    # Output consumed by callers after this function returns.
+    # shellcheck disable=SC2034
     WT_BLOCKERS="git-status-failed"
   fi
   [ -n "$WT_DIRTY" ] || WT_DIRTY="?"
@@ -432,8 +494,10 @@ wt_trash_reap() {
   local entries=("$trash"/*)
   # An unmatched glob stays literal; nothing to reap.
   [ -e "${entries[0]}" ] || return 0
+  # Expansion belongs to the child shell, which receives paths as arguments.
+  # shellcheck disable=SC2016
   nohup sh -c 'for p in "$@"; do chmod -R u+w "$p" 2>/dev/null || true; rm -rf "$p"; done' \
-    sh "${entries[@]}" >/dev/null 2>&1 &
+    sh "${entries[@]}" 197>&- 198>&- 199>&- >/dev/null 2>&1 &
   disown 2>/dev/null || true
   return 0
 }
@@ -456,7 +520,51 @@ wt_remove_private_issues() {
   return 0
 }
 
-wt_remove_now() {
+# wt_removal_patch <record-json> <removed-at> <final-sha> <box-ref> <merged>
+# The registry patch a culled worktree leaves behind. A scheduled record drops
+# its launch lease and records the cull under `culled`, NOT `removed`: marking
+# it removed would hide it from `list` and route it as removed rather than
+# scheduled, but the tip it was culled at is still the pointer `resume` needs to
+# tell the next session what landed since. Everything else records the removal
+# for later recovery.
+wt_removal_patch() {
+  local record="$1" removed_at="$2" final_sha="$3" box_ref="$4" merged="$5"
+  if session_registry_is_scheduled "$record"; then
+    jq -cn \
+      --arg at "$removed_at" \
+      --arg finalSha "$final_sha" \
+      --argjson merged "$merged" \
+      '{launch:null, culled: ({at:$at, merged:$merged}
+        + if $finalSha == "" then {} else {finalSha:$finalSha} end)}'
+    return 0
+  fi
+  jq -cn \
+    --arg at "$removed_at" \
+    --arg finalSha "$final_sha" \
+    --arg boxRef "$box_ref" \
+    --argjson merged "$merged" \
+    '{launch:null, removed: ({at:$at, merged:$merged}
+      + if $finalSha == "" then {} else {finalSha:$finalSha} end
+      + if $boxRef == "" then {} else {boxRef:$boxRef} end)}'
+}
+
+# Print Git's lock reason and succeed when the named worktree is locked.
+wt_git_worktree_lock_reason() {
+  local worktree_path="$1"
+  git -C "$WT_MONO" worktree list --porcelain | awk -v target="$worktree_path" '
+    $1 == "worktree" { current = substr($0, length("worktree ") + 1); next }
+    current == target && $1 == "locked" {
+      reason = substr($0, length("locked") + 1)
+      sub(/^[[:space:]]+/, "", reason)
+      print (reason == "" ? "no reason provided" : reason)
+      found = 1
+      exit
+    }
+    END { if (!found) exit 1 }
+  '
+}
+
+wt_remove_now_locked() {
   local worktree_path="$1" branch="$2" keep_branch="" preserve_box="" arg
   shift 2
   for arg in "$@"; do
@@ -470,6 +578,14 @@ wt_remove_now() {
   removed_merged=false
   [ "${WT_AHEAD:-?}" = "0" ] && [ "${WT_DIRTY:-?}" = "0" ] && removed_merged=true
 
+  # Refuse before any teardown side effect. The second check under the Git
+  # administration lock below closes the race with a newly acquired lock.
+  local git_lock_reason
+  if git_lock_reason=$(wt_git_worktree_lock_reason "$worktree_path"); then
+    wt_say "refusing removal: Git worktree is locked: $git_lock_reason"
+    return 1
+  fi
+
   if [ -n "$preserve_box" ]; then
     workstream_preserve_keep "$name" \
       || { wt_say "refusing removal: failed to preserve keep as $WORKSTREAM_PRESERVED_BOX_REF"; return 1; }
@@ -477,13 +593,46 @@ wt_remove_now() {
   fi
 
   wt_remove_private_issues "$worktree_path"
+
+  # Exhibits: the mount is a symlink, so the trash-mv below only ever takes
+  # the link. A REAL directory here means the mount failed and something
+  # wrote exhibit content into the doomed tree — rescue it into the store
+  # first, and refuse the removal if the rescue fails (a lingering worktree
+  # is collected by the next sweep; trashed exhibit content is gone).
+  if [ -d "$worktree_path/exhibits" ] && [ ! -L "$worktree_path/exhibits" ]; then
+    if ! wt_exhibits_rescue "$worktree_path" "$name"; then
+      wt_say "refusing removal: real exhibits/ dir could not be rescued into the store"
+      wt_log "exhibits rescue failed wt=$worktree_path"
+      return 1
+    fi
+  fi
+
+  # Acquire before the first public destructive step. On timeout the box,
+  # checkout, and Git registration are all still present for a later sweep.
+  if ! wt_git_admin_lock_acquire; then
+    wt_say "refusing removal: could not acquire the Git worktree administration lock"
+    return 1
+  fi
+
+  if git_lock_reason=$(wt_git_worktree_lock_reason "$worktree_path"); then
+    wt_git_admin_lock_release
+    wt_say "refusing removal: Git worktree is locked: $git_lock_reason"
+    return 1
+  fi
+
   wt_remove_satellites "$name"
 
   # Move out of the worktree dir before removing it.
-  cd "$WT_MONO" || return 0
+  if ! cd "$WT_MONO"; then
+    wt_git_admin_lock_release
+    return 0
+  fi
 
   # Trash the worktree directory, then prune the now-dangling registration.
+  # Creation uses this same repository lock around its registration checks and
+  # add, so Git never observes a half-finished concurrent lifecycle mutation.
   if ! mv "$worktree_path" "$WT_TRASH/wt-$name-$(date +%s)"; then
+    wt_git_admin_lock_release
     wt_say "refusing branch cleanup: failed to trash worktree $worktree_path"
     wt_log "trash failed wt=$worktree_path branch=$branch"
     return 1
@@ -497,19 +646,38 @@ wt_remove_now() {
   elif [ -n "$branch" ] && git branch -D "$branch" >/dev/null 2>&1; then
     wt_say "deleted branch $branch"
   fi
+  local setup_state_file
+  if setup_state_file=$(wt_git_setup_state_file "$name"); then
+    rm -f "$setup_state_file"
+  fi
+  wt_git_admin_lock_release
 
   if [ "$moved" = true ]; then
-    removed_patch=$(jq -n \
-      --arg at "$removed_at" \
-      --arg finalSha "$final_sha" \
-      --arg boxRef "$box_ref" \
-      --argjson merged "$removed_merged" \
-      '{removed: ({at:$at, merged:$merged}
-        + if $finalSha == "" then {} else {finalSha:$finalSha} end
-        + if $boxRef == "" then {} else {boxRef:$boxRef} end)}')
+    removed_patch=$(wt_removal_patch \
+      "$(session_registry_read "$name" 2>/dev/null || true)" \
+      "$removed_at" "$final_sha" "$box_ref" "$removed_merged")
     session_registry_merge "$name" "$removed_patch" || true
   fi
 
   wt_trash_reap
   return 0
+}
+
+wt_remove_now() {
+  local worktree_path="$1" name rc=0
+  name=$(basename "$worktree_path")
+  # Never wait and then act on the caller's pre-lock liveness/git snapshot. A
+  # contended setup means state is changing; refuse immediately and make the
+  # caller retry from fresh evidence after creation finishes.
+  if ! wt_git_setup_lock_acquire "$name" 0; then
+    wt_say "refusing removal: workstream setup is active; retry after it finishes"
+    return 1
+  fi
+  # As in creation, keep the fallible body bare: putting it in a conditional
+  # suppresses errexit throughout the sourced implementation. Process exit
+  # releases the kernel lock on abrupt failure; ordinary returns close it here.
+  wt_remove_now_locked "$@"
+  rc=$?
+  wt_git_setup_lock_release
+  return "$rc"
 }

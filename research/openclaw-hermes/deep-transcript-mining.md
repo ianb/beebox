@@ -1,10 +1,10 @@
-# Deep dive: background transcript mining — cb retro vs OpenClaw dreaming vs Hermes learning loop
+# Deep dive: background transcript mining — bbx retro vs OpenClaw dreaming vs Hermes learning loop
 
 *Follow-up to the top-level comparison's "background transcript mining is the consensus memory-write path" confirmation: one level down on HOW each implements it. Sources: implementation dives against real code in all three systems (2026-07).*
 
 ## The three pipelines at a glance
 
-| | CBX `cb retro` | OpenClaw "dreaming" | Hermes background_review + curator |
+| | bbx `bbx retro` | OpenClaw "dreaming" | Hermes background_review + curator |
 |---|---|---|---|
 | Cadence | Weekly cron procedure (Mon 07:00), shipped enabled | Light 6-hourly / deep daily 03:00 / REM weekly; **opt-in, default OFF**; self-reconciling cron | Continuous: every 10 user turns (memory) / 10 tool iterations (skills); weekly curator, inactivity-gated |
 | Character | LLM at both stages (observer + integrator) | **Almost entirely deterministic** — regex extraction, arithmetic scoring; the only LLM call writes a whimsical DREAMS.md diary | LLM fork with **mechanical fences** |
@@ -24,22 +24,22 @@
 
 **Hermes background_review is an in-process fork of the live agent.** The turn finalizer spawns a daemon thread that replays the conversation snapshot byte-for-byte (same cached system prompt, same tools[], shared session id purely for prefix-cache parity — code comments cite ~26% cost reduction on Sonnet 4.5) with the review prompt appended only in the fork. Nothing is ever injected into the live conversation. Fences are code, not prompt: thread-local tool whitelist, a must-`skill_view`-before-patching guard, auto-deny on approval callbacks. The weekly curator cross-checks the model's YAML self-report against captured tool calls and delete-time `absorbed_into` declarations, flagging hallucinated consolidations. Surprise: memory "consolidation" has **no LLM pipeline** — writes past the char caps error out with instructions for the model to merge/remove entries itself. Every memory write is scanned against a threat-pattern library.
 
-**CBX retro** chains `retro status --check` (skip if nothing new) → haiku observer pass per session (quote-required observations, $0.25 cap) → one integrator agent (40 turns) draining all pending reports. Observations land in an append-only ledger with SHA-256 evidence-hash dedup; the integrator assigns confidence reading the ledger.
+**bbx retro** chains `retro status --check` (skip if nothing new) → haiku observer pass per session (quote-required observations, $0.25 cap) → one integrator agent (40 turns) draining all pending reports. Observations land in an append-only ledger with SHA-256 evidence-hash dedup; the integrator assigns confidence reading the ledger.
 
-## Honest assessment: is CBX retro "much simpler/less robust"?
+## Honest assessment: is bbx retro "much simpler/less robust"?
 
-Split verdict. **CBX is *more* robust than both on audit/reversibility** — git-committed outputs, per-run reports, append-only ledger, human-legible confidence/evidence provenance. OpenClaw promotes autonomously with no undo; Hermes hard-deletes memory with no background-review audit trail. Nobody handles contradictions; CBX's evidence model at least *represents* the conflict.
+Split verdict. **bbx is *more* robust than both on audit/reversibility** — git-committed outputs, per-run reports, append-only ledger, human-legible confidence/evidence provenance. OpenClaw promotes autonomously with no undo; Hermes hard-deletes memory with no background-review audit trail. Nobody handles contradictions; bbx's evidence model at least *represents* the conflict.
 
-**CBX is *less* robust on mechanical enforcement** — the three competitor patterns it lacks:
+**bbx is *less* robust on mechanical enforcement** — the three competitor patterns it lacks:
 
-1. **Code-computed recurrence (OpenClaw).** CBX confidence is LLM judgment over the ledger; OpenClaw requires arithmetic thresholds (≥3 recalls, ≥3 unique queries) before anything is promoted. CBX has the ledger to compute this from — it just doesn't.
-2. **Mechanical tool fences (Hermes).** CBX's observer is tool-less by system-prompt request only, running bypassPermissions. The Agent SDK supports per-query `allowedTools`/`disallowedTools`.
+1. **Code-computed recurrence (OpenClaw).** bbx confidence is LLM judgment over the ledger; OpenClaw requires arithmetic thresholds (≥3 recalls, ≥3 unique queries) before anything is promoted. bbx has the ledger to compute this from — it just doesn't.
+2. **Mechanical tool fences (Hermes).** bbx's observer is tool-less by system-prompt request only, running bypassPermissions. The Agent SDK supports per-query `allowedTools`/`disallowedTools`.
 3. **Self-report cross-checks (Hermes curator).** Verify the integrator actually made the edits it claims, from the transcript's tool calls, not its summary.
 
-**CBX-specific defects found during the dive** (independent of the comparison):
+**bbx-specific defects found during the dive** (independent of the comparison):
 
 - **Doc-code gap:** the design doc claims a validate-phase diff-grep blocks integrator edits to `user-stated` beliefs and `speaking-voice`; the shipped procedure only checks no report is left pending. The guard was documented, never implemented.
-- **Re-clone wipes memory-of-mining:** ledger + settled-state live gitignored in `.callback-box/retro/`, so a box re-clone (routine in worktree tooling) silently resets recurrence history and the dedup guard.
+- **Re-clone wipes memory-of-mining:** ledger + settled-state live gitignored in `.beebox/retro/`, so a box re-clone (routine in worktree tooling) silently resets recurrence history and the dedup guard.
 - No transactionality across ledger-append/state-save/report-write; no size caps on retro artifacts or guide cards; observer has a cost cap but the integrator doesn't.
 
 ## Recommended fixes (in rough order)
@@ -51,7 +51,7 @@ Split verdict. **CBX is *more* robust than both on audit/reversibility** — git
 5. Integrator cost ceiling; size caps on guide/personality cards.
 6. (Optional, Hermes-inspired) a curator-style cross-check step: after integration, verify claimed edits against actual tool calls.
 
-## What CBX should *not* copy
+## What bbx should *not* copy
 
 - OpenClaw's fully-autonomous no-gate promotion — our staged, git-audited flow is the better design for a system whose boxholder teaches it.
 - Hermes's continuous every-10-turns cadence as-is — its value is immediacy for *skills that just failed* (better addressed by triage-time feedback routing, see idea 7b) rather than belief mining; weekly is fine for belief drift.

@@ -1,7 +1,7 @@
 ---
 title: "docs-gen never prunes docs/generated/card-<type>.md for a removed schema"
 workstream: todo-annotation
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-todo-annotation — retiring the todo-list card type
 resolution: implemented
@@ -22,7 +22,7 @@ directory that no longer corresponds to a registered type (`readdir` +
 
 Found retiring the `todo-list` schema (2026-07-29,
 `issues/closed/features/2026-07-29-retire-todo-list-schema.md`): after
-removing the schema and running `cb migrate` + doc regeneration on test1,
+removing the schema and running `bbx migrate` + doc regeneration on test1,
 `.claude/rules/card-todo-list.md` was correctly pruned but
 `docs/generated/card-todo-list.md` was left behind as a stale file describing
 a card type that no longer exists (harmless since `docs/generated/` is

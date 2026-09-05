@@ -1,9 +1,10 @@
 ---
 title: "Dormant boxes: sleep after no human activity, and encrypt what sleeps"
 workstream: unknown
-area: callback-box
+area: beebox
 needs: [design, decision]
 labels: [security, soft-launch, lifecycle]
+priority: backlog
 ---
 
 The interesting case for encryption at rest is **deep storage** — someone
@@ -49,7 +50,7 @@ answer to disk pressure.
 
 ## What exists today
 
-- **A first tier already works.** The hub idle-stops a box's `cb serve` child
+- **A first tier already works.** The hub idle-stops a box's `bbx serve` child
   after inactivity (minutes), lazily restarting on request. So "boxes stop when
   unused" is an established pattern — this proposes a second, much longer tier
   with teeth.
@@ -118,7 +119,7 @@ Genuinely open, and not the opt-in's job:
 - Does `git-annex` change the media picture (content-addressed blobs, and
   `numcopies: 1` today)?
 - Is there content deserving stronger treatment even while live — connector
-  credentials on disk, `~/.cb-auth.json`, `.env` — where the
+  credentials on disk, `~/.beebox-auth.json`, `.env` — where the
   agent-needs-plaintext argument doesn't apply?
 - What does a *partial* wake look like, if anything: can the boxholder see that
   a box exists, and its metadata, without the key? A dormant box that's

@@ -1,14 +1,14 @@
 ---
 title: "scheduled task health surfacing"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
 **Closed (2026-07-15): implemented** — as the body's "IMPLEMENTED (June 2026)"
-note details: `cb health` (always-available, exit 1 when unhealthy), a `health`
+note details: `bbx health` (always-available, exit 1 when unhealthy), a `health`
 attribute on the session-start `<chat-app>` snapshot, proactive scheduler-daemon
-telegram alerts, and a per-box heartbeat. Confirmed live this session — `cb health`
+telegram alerts, and a per-box heartbeat. Confirmed live this session — `bbx health`
 surfaces failing/overdue/blocked per box. Only the optional dashboard panel
 remains; not worth holding the issue open (refile if wanted).
 
@@ -20,7 +20,7 @@ Session-start surfacing is the *backup* layer: if you missed the proactive alert
 
 Notes:
 - This is the process-shape of the cache-freshness pattern. `data_through` for data; `last_run_succeeded` for tasks. Same divergence trick (attempted vs. succeeded ≈ checked vs. found-fresh-data).
-- Should also be visible somewhere as an always-available view (status page, `cb health`) so it doesn't *only* surface at session start.
+- Should also be visible somewhere as an always-available view (status page, `bbx health`) so it doesn't *only* surface at session start.
 - The reason the agent should still check at session start, even with proactive alerting in place: catches bugs in the alerting itself. Belt and suspenders.
 
-**IMPLEMENTED (June 2026)** — `src/core/schedule-health.ts` evaluates each task (ok/failing/overdue/blocked/invalid/disabled) from its card + run state (`lastRun`/`lastSuccess` divergence, consecutive failures); overdue derives from the task's own cadence (grace = half-cadence clamped to 30m–24h), and deliberate skips (budget, missing connector, disabled) are never mislabeled as failures. Surfaces: `cb health` (always-available, exit 1 when unhealthy), a `health` attribute on the session-start `<chat-app>` snapshot (only when something is wrong), and proactive alerts from the scheduler daemon — one aggregated telegram-message card per unhealthy episode (latched until the next success), opt-in via `healthAlerts.telegramChat` in `config/box.json`. The daemon also writes a per-box heartbeat so a dead scheduler is itself a finding. Remaining: a dashboard panel (the tRPC health router could reuse the same evaluator).
+**IMPLEMENTED (June 2026)** — `src/core/schedule-health.ts` evaluates each task (ok/failing/overdue/blocked/invalid/disabled) from its card + run state (`lastRun`/`lastSuccess` divergence, consecutive failures); overdue derives from the task's own cadence (grace = half-cadence clamped to 30m–24h), and deliberate skips (budget, missing connector, disabled) are never mislabeled as failures. Surfaces: `bbx health` (always-available, exit 1 when unhealthy), a `health` attribute on the session-start `<chat-app>` snapshot (only when something is wrong), and proactive alerts from the scheduler daemon — one aggregated telegram-message card per unhealthy episode (latched until the next success), opt-in via `healthAlerts.telegramChat` in `config/box.json`. The daemon also writes a per-box heartbeat so a dead scheduler is itself a finding. Remaining: a dashboard panel (the tRPC health router could reuse the same evaluator).

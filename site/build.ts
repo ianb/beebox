@@ -1,6 +1,6 @@
 // Static site generator. Run via tsx:
 //   pnpm --dir site build            # base derived from the git branch
-//   pnpm --dir site build --base /callback-box/   # GitHub Pages
+//   pnpm --dir site build --base /beebox/   # GitHub Pages
 //
 // Reads site/cards/*.site-page.card, renders each through the local Markdoc
 // pipeline (resolving `{% aside ref %}` against the site-aside cards beside

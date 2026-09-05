@@ -1,7 +1,7 @@
 # Alternative harnesses scored against the Claude Code runtime contract
 
 *2026-07-18. Deep-pass per-topic note (subagent web research, Sonnet; lightly edited).
-Question: which alternative agent harnesses could replace Claude Code as callback-box's
+Question: which alternative agent harnesses could replace Claude Code as beebox's
 runtime, scored point-by-point against what we actually use? The contract derives from
 the [coupling audit](2026-07-18-sdk-coupling-audit.md) Layer 4.
 Synthesis: [2026-07-18-synthesis.md](2026-07-18-synthesis.md).*

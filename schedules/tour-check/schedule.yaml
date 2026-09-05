@@ -1,0 +1,38 @@
+# The weekly walk of every browser tour, and the session that keeps the tours
+# true. A tour is the app's walk written down; that only stays worth having
+# while it still describes the app. Three of five tours had been silently
+# failing for months before this existed (2026-08-26) — nobody ran them, so
+# nobody knew.
+#
+# Handoff shape, and the judgment is the whole point: a tour that misses is
+# either drift (the app changed on purpose and the tour is now the wrong
+# description — the session EDITS the tour) or a regression (nothing explains
+# it — the session FILES it). No script can tell those apart; it takes reading
+# the landings and looking at the screenshots. So `run` gathers the evidence and
+# the session decides.
+#
+# Deliberately not a gate. A gate's only response to intended UI change is to go
+# red, which is how a soft-finding instrument becomes permanently red and then
+# ignored (beebox/docs/tours.md).
+description: "Weekly: walk every browser tour, edit the ones the app outgrew, file the rest"
+cadence: 7d
+# Five tours × two viewports, each summary read, each checkpoint screenshot
+# viewed, then edits and issues. Longer than the 2h default is not the risk
+# here; a session that quits before it has looked at the images is.
+timeout: 1h
+workstream:
+  agent: claude
+  # Drift-or-regression is a judgment over screenshots and git history, and the
+  # session may edit committed test files off the back of it. One run a week.
+  model: opus
+  effort: high
+  worktree: true
+  # Nothing carries between weeks: the edited tours, the filed issues and the
+  # baseline in the store are the memory.
+  session: fresh
+  permissionMode: bypassPermissions
+  # The prompt says "never touch src/"; this makes the editing tools refuse it.
+  # Bash stays open (the session needs git, bin/tour, bin/land), so it is a
+  # guard against the ordinary path, not a sandbox.
+  disallowedTools: ["Edit(beebox/src/**)", "Write(beebox/src/**)"]
+  maxBudgetUsd: 4

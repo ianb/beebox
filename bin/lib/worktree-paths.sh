@@ -15,23 +15,25 @@
 #   WT_ROOT       where worktrees are created
 #   WT_BOX_ROOT   where each worktree's box clone is created
 #   WT_BOX_SRC    the source box cloned into each new worktree
+#   WT_EXHIBITS_ROOT  per-workstream exhibit stores (exhibits-store.sh)
+#   WT_SCHEDULES_ROOT scheduled-run store (bin/schedules, bin/lib/schedules.ts)
 #   WT_STATE_DIR  router/agent cache + state
 #
 # WHAT IS DERIVED AND WHAT IS CONVENTION. The *parent* is derived — resolved
 # through `git rev-parse --git-common-dir`, so a copy of this file inside a
 # linked worktree still resolves the main checkout. The *basenames* under it
-# (`callback-worktrees`, `box-worktrees`, `boxes`) are convention, because
-# nothing in git knows them: the main checkout is `callback-box` but its
-# worktrees live in `callback-worktrees`, which is not derivable from anything.
+# (`beebox-worktrees`, `box-worktrees`, `boxes`) are convention, because
+# nothing in git knows them: the main checkout is `beebox` but its
+# worktrees live in `beebox-worktrees`, which is not derivable from anything.
 # This is the same split `bin/private-issues` makes. Each is env-overridable for
 # a developer who wants a different layout, and for isolated testing.
 #
 # FAILS CLOSED. If the main checkout cannot be resolved, this refuses rather
-# than falling back to `$HOME/src/callback-box`. A wrong-but-plausible root is
+# than falling back to `$HOME/src/beebox`. A wrong-but-plausible root is
 # the exact harm the issue above describes — lifecycle hooks operating on a tree
 # that isn't the one in play — and it is invisible when it happens.
 
-WT_STATE_DIR="${CALLBACK_STATE_DIR:-$HOME/.cache/callback-box}"
+WT_STATE_DIR="${BBX_STATE_DIR:-$HOME/.cache/beebox}"
 
 # wt_paths_init [<path-inside-a-checkout>]
 #
@@ -61,21 +63,35 @@ wt_paths_init() {
   fi
   WT_MONO=$(dirname "$common")
 
-  # A checkout without callback-box/ is not this monorepo. Refusing here turns a
-  # would-be silent wrong-tree operation into an error at the first call.
-  if [ ! -d "$WT_MONO/callback-box" ]; then
-    echo "worktree-paths: resolved monorepo '$WT_MONO' has no callback-box/ — refusing" >&2
+  # During the directory-name landing, the linked checkout has beebox/ before
+  # the shared main checkout does. Admit that exact transition while retaining
+  # the wrong-repository guard for every ordinary invocation.
+  local checkout
+  checkout=$(git -C "$anchor" rev-parse --show-toplevel 2>/dev/null || true)
+  if [ ! -d "$WT_MONO/beebox" ] && [ ! -d "$checkout/beebox" ]; then
+    echo "worktree-paths: neither the main nor active checkout has beebox/ — refusing" >&2
     return 1
   fi
 
   WT_PARENT=$(dirname "$WT_MONO")
-  WT_ROOT="${CALLBACK_WORKTREE_ROOT:-$WT_PARENT/callback-worktrees}"
-  WT_BOX_ROOT="${CALLBACK_BOX_ROOT:-$WT_PARENT/box-worktrees}"
-  WT_BOX_SRC="${CALLBACK_BOX_SRC:-$WT_PARENT/boxes/test1}"
+  WT_ROOT="${BBX_WORKTREE_ROOT:-$WT_PARENT/beebox-worktrees}"
+  WT_BOX_ROOT="${BBX_BOX_ROOT:-$WT_PARENT/box-worktrees}"
+  WT_BOX_SRC="${BBX_BOX_SRC:-$WT_PARENT/boxes/test1}"
+  WT_EXHIBITS_ROOT="${BBX_EXHIBITS_ROOT:-$WT_PARENT/workstream-exhibits}"
+  # Document comments (docs/plans/document-comments.md). Unlike the exhibits
+  # root this is NOT per-workstream — one store, mounted whole into every
+  # checkout — and the override name matches what bin/lib/comments-store.ts
+  # reads, so the shell and TypeScript halves cannot disagree about where the
+  # store is.
+  WT_COMMENTS_ROOT="${BBX_COMMENTS_ROOT:-$WT_PARENT/dev-comments}"
+  # Scheduled runs (beebox/docs/plans/scheduled-workstreams.md). Same
+  # store-beside-checkout shape and the same override name bin/lib/schedules.ts
+  # reads, so the shell and TypeScript halves cannot disagree.
+  WT_SCHEDULES_ROOT="${BBX_SCHEDULES_ROOT:-$WT_PARENT/schedule-runs}"
 
   # The roots feed paths that get deleted, so an override must not be able to
   # aim them at data that is not a worktree's to lose. The source box is the
-  # one that would hurt: `CALLBACK_BOX_ROOT=<dir holding the real boxes>` plus a
+  # one that would hurt: `BBX_BOX_ROOT=<dir holding the real boxes>` plus a
   # worktree whose name matches a real box makes teardown trash that box.
   case "$WT_BOX_SRC" in
     "$WT_BOX_ROOT"|"$WT_BOX_ROOT"/*)

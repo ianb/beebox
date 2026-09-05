@@ -10,10 +10,10 @@ resolution: implemented
 **Closed 2026-07-31.** Fixed not by making the agent token work through the
 hub — a Codex review showed that would promote a 0600 file secret to a
 credential valid at the public prod front door — but by adding an opt-in
-`CB_BROWSE_API_KEY` (`callback-box/src/core/browse-key.ts`), absent by default
+`BBX_BROWSE_API_KEY` (`beebox/src/core/browse-key.ts`), absent by default
 and delivered to the browser as a cookie so it also covers the WebSocket
 upgrade. Design and what building it changed:
-`callback-box/docs/implemented-plans/agent-token-browser-auth.md`.
+`beebox/docs/implemented-plans/agent-token-browser-auth.md`.
 
 Defect 3 below (the mobile-bootstrap hard-401) is NOT fixed — it is sidestepped,
 because `bin/browse` now sends no `Authorization` header. The trigger is still
@@ -27,7 +27,7 @@ independent places. Fixing only one does not help.
 ## Defect 1 — wrong token path (fixed 2026-07-31)
 
 `bin/browse` read the token from the box PACKAGE root
-(`<box>/.callback-box/agent-token`). The token actually lives under the box's
+(`<box>/.beebox/agent-token`). The token actually lives under the box's
 OPERATIONAL root, which in the v2 package shape is `<box>/content/`
 (`core/agent/token.ts` is called with the content dir; `bin/box-entry.ts`
 resolves the same `contentDir`). The file therefore never existed at the path
@@ -35,10 +35,10 @@ resolves the same `contentDir`). The file therefore never existed at the path
 unauthenticated — silently, because "no token file yet" is a documented
 non-error.
 
-Fixed in this worktree: `bin/browse` now prefers `<box>/content/.callback-box/`
+Fixed in this worktree: `bin/browse` now prefers `<box>/content/.beebox/`
 and falls back to the package root for legacy (shapeVersion 1) boxes.
 
-## Defect 2 — `cb hub` has no agent-bearer rung
+## Defect 2 — `bbx hub` has no agent-bearer rung
 
 With the token attached, an `/api/` request now passes the ROUTER gate
 (`bin/router-auth-deps.ts:133` verifies the agent bearer against

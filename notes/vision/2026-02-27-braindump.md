@@ -12,7 +12,7 @@
 - Should go open source. Question is when, not if
 - What to open source:
   - **Thinking Machine** — maybe
-  - **Callback Box** — maybe
+  - **Bee Box** — maybe
   - **Cardworks** — feels like not something others would use directly, but wants to develop it as a separable idea. A common concept that's a little abstracted from the rest
   - **Agent Knowledge Audit** — strongest candidate for a standalone release. Could lead with a blog post
 
@@ -31,7 +31,7 @@
   - You could add LLM scoring cards, but why bother with a separate system when the agent can just do it?
 - Wants to write a blog post about this approach
 
-## What is Callback Box?
+## What is Bee Box?
 
 (from earlier in conversation)
 - An execution environment with many things going on

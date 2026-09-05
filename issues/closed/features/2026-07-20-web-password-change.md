@@ -1,7 +1,7 @@
 ---
 title: "Web self-service password change"
 workstream: open-source-readiness
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
@@ -14,7 +14,7 @@ generation, and returns a fresh cookie to the Settings UI.
 
 A logged-in user cannot change their own password in the web UI — the only
 password surfaces are login, first-run setup, and the host-side CLI
-(`cb auth set-password`, `src/cli/commands/auth.ts`). For a box with invited
+(`bbx auth set-password`, `src/cli/commands/auth.ts`). For a box with invited
 members (see [invite links](2026-07-20-invite-links.md)), "ask the operator
 to run a CLI command on the server" is the wrong recovery/rotation story.
 

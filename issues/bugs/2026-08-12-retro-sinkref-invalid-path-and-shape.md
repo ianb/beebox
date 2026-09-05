@@ -1,12 +1,12 @@
 ---
 title: "Retro scan emits an impossible sinkRef, and sink/sinkRef should nest like `learning`"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [retro, vocabulary]
 filed-by: agent
 discovered-by: agent
-discovered-in: main session — cb feedback triage from a real box
+discovered-in: main session — bbx feedback triage from a real box
 priority: important
 ---
 

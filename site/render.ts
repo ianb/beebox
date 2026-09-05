@@ -1,5 +1,5 @@
 // The site's own small Markdoc pipeline. Deliberately NOT imported from
-// bin/router-docs.ts: that module drags in router/runtime dependencies that do
+// workstreams-app/src/router/router-docs.ts: that module drags in router/runtime dependencies that do
 // not belong in the static-site build. This package declares @markdoc/markdoc
 // explicitly and renders through it here.
 //
@@ -232,7 +232,7 @@ header nav svg { width: 20px; height: 20px; fill: currentColor; }
 `.trim();
 
 // Inline SVGs (no external requests at view time): the standard GitHub mark,
-// and a plain chat bubble for the Zulip community link.
+// and a plain chat bubble for the Discord community link.
 const GITHUB_ICON = "<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.66 7.66 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z\"/></svg>";
 const CHAT_ICON = "<svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M2.5 1h11A1.5 1.5 0 0 1 15 2.5v8a1.5 1.5 0 0 1-1.5 1.5H6.7l-3.35 3.03A.75.75 0 0 1 2.1 14.5V12h.4v.01A1.5 1.5 0 0 1 1 10.5v-8A1.5 1.5 0 0 1 2.5 1Zm1.25 3.75a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5Zm0 3a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5h-5.5Z\"/></svg>";
 
@@ -257,10 +257,10 @@ for (const pre of document.querySelectorAll("pre")) {
 function headerHtml(base: string): string {
   return `<header>
 <div class="inner">
-<span class="ident"><a class="home" href="${escapeHtml(base)}">Callback Box</a> <span class="by">by <a href="https://ianbicking.org" target="_blank" rel="noopener noreferrer">Ian Bicking</a></span></span>
+<span class="ident"><a class="home" href="${escapeHtml(base)}">Bee Box</a> <span class="by">by <a href="https://ianbicking.org" target="_blank" rel="noopener noreferrer">Ian Bicking</a></span></span>
 <nav aria-label="Project links">
-<a href="https://github.com/ianb/callback-box" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" title="GitHub">${GITHUB_ICON}</a>
-<a href="https://callback-box.zulipchat.com" target="_blank" rel="noopener noreferrer" aria-label="Zulip community forum" title="Zulip community">${CHAT_ICON}</a>
+<a href="https://github.com/ianb/beebox" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" title="GitHub">${GITHUB_ICON}</a>
+<a href="https://discord.gg/FQYn6zyv" target="_blank" rel="noopener noreferrer" aria-label="Bee Box Discord community" title="Discord community">${CHAT_ICON}</a>
 </nav>
 </div>
 </header>`;

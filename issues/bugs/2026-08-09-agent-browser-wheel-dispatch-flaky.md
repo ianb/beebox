@@ -1,10 +1,11 @@
 ---
 title: "agent-browser `mouse wheel` dispatch is flaky: os error 35 after retries, multi-minute hangs"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — live re-test of the card-views-cannot-scroll finding
 labels: [field-test-findings, harness]
+priority: backlog
 ---
 
 During live UI verification through `bin/browse`, `mouse wheel <dy>` worked

@@ -7,8 +7,8 @@
     "./check": "./src/check.ts",
     "./tap": "./src/tap-check.ts",
     "./loader": "./src/doctest-loader.ts",
-    "./hooks": "./src/doctest-hooks.mjs",
-    "./resolve-rules": "./src/resolve-rules.mjs"
+    "./hooks": "./src/doctest-hooks.ts",
+    "./resolve-rules": "./src/resolve-rules.ts"
   },
   "scripts": {
     "test": "tap",

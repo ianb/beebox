@@ -1,0 +1,59 @@
+---
+title: "Skill descriptions should be triggering conditions, not workflow summaries"
+workstream: elixir-skills-review
+area: docs
+filed-by: agent
+discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+resolution: superseded
+---
+
+> Superseded 2026-08-27: consolidated into
+> [run-skill-trigger-evals](../../docs-and-chores/2026-07-30-run-skill-trigger-evals.md),
+> which now owns the eval run, the description rewrite, and the auto-fire question.
+
+A `description` that *summarizes what the skill does* gets acted on **instead of**
+the skill body being loaded. The model has enough from the listing to answer, so
+it never opens the file — and the checklists, gotchas and decision rules in the
+SKILL.md never reach context. A description's job is to say *when to load this*,
+not *what it says*.
+
+Sourced from [research/claude-elixir-phoenix](../../../research/claude-elixir-phoenix/authoring-craft.md),
+which credits the finding to a review of the *Superpowers* project. Not verified
+on our corpus — see [run-skill-trigger-evals](../../docs-and-chores/2026-07-30-run-skill-trigger-evals.md),
+which is how we'd actually measure it.
+
+## Where we do the anti-pattern
+
+The three `bbx-guide-*` skills, whose descriptions state what the skill explains
+and then name the file holding the real content. `bbx-guide-api`:
+
+> Explains how HTTP endpoints are added in beebox and the
+> tRPC-vs-raw-Fastify decision. […] Instructional (a bbx-guide-\* skill) — full
+> checklist in docs/adding-api-endpoints.md.
+
+A model reading that has been told the topic, the decision at stake, and where
+the checklist lives. Opening the skill is the least attractive of its options.
+`bbx-guide-schemas` and `bbx-guide-testing` have the same shape.
+
+Description lengths across `.claude/skills/*/SKILL.md`, longest first:
+`canvas-loop-sketch` 574, `bbx-prompt-review` 536, `bbx-guide-schemas` 519,
+`bbx-context` 490, `launch-worktree-session` 460, `bbx-guide-testing` 446,
+`bbx-debug` 438, `bbx-codehealth` 433, `bbx-guide-api` 410, `bbx-frontend` 394,
+`bbx-migration` 393, `codex` 335, `skill-creator` 333, `bbx-plan` 293,
+`finish` 289, `browse` 223.
+
+## The tension
+
+Length itself may not be our problem. The reviewed project targets ~200 chars
+because ~40 skills compete for a shared skill-listing budget, where a long
+description crowds out siblings and hurts routing corpus-wide. With 16 skills we
+have room. So this is **not** a "shorten everything" chore — it's specifically
+about descriptions that carry *content* rather than *triggers*.
+
+Also unsettled: the `bbx-guide-*` skills are deliberately thin pointers to a doc.
+If the description names the doc and the skill body mostly does too, it's worth
+asking whether those three should be skills at all, or whether the guide content
+should move into the skill so there's something to load.
+
+Our existing "Triggers include …" convention is the right instinct and should
+probably be the *whole* description for most skills.

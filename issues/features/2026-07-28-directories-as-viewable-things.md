@@ -1,7 +1,7 @@
 ---
 title: "Directories as viewable things in browse/ (+ in-place lenses like a card's own todo view)"
 workstream: todo-annotation
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-todo-annotation — designing the todo-view card surface
 needs: [design]
@@ -9,7 +9,7 @@ priority: normal
 ---
 
 Two related wants surfaced while designing the
-[todo-annotation](../../callback-box/docs/implemented-plans/todo-annotation.md) surface,
+[todo-annotation](../../beebox/docs/implemented-plans/todo-annotation.md) surface,
 both deferred because they're a big thing on their own:
 
 1. **See a card's todo view from inside the card itself** — the aggregated

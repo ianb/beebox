@@ -1,12 +1,38 @@
 ---
-title: "cb serve went unresponsive for ~4 minutes, then self-healed silently"
+title: "bbx serve went unresponsive for ~4 minutes, then self-healed silently"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
 labels: [field-test-findings, code-error]
-next-action: reconfirm
+priority: backlog
 ---
+
+> `reconfirm?` checked 2026-09-05: still live. Nothing since the 2026-08-18 checkpoint touched `bulk-upload.ts`, `bulk-upload/worker.ts`, `git.ts`, or `git-lock.ts`. The remaining suspects (git-index contention vs. a tab hang) need what the checkpoint already named: a credentialed identity driving bulk upload concurrently with a chat turn under `node --cpu-prof` plus a heartbeat curl.
+
+> **Checked 2026-08-18 — still live, and today's git-lock work argues *against*
+> this issue's leading hypothesis.** Tagged `reconfirm`; removed.
+>
+> `0a9b0be5` (today) takes the box git lock in every index mutator, replacing
+> the old best-effort single 2s retry — which is exactly hypothesis (a), index
+> contention between a chat-turn commit and `stageAndCommitPaths`. It is gated
+> by a 5-writer race test (`test/lib/git-concurrent-commit.doctest.md`).
+>
+> **That fix probably does not explain the freeze**, though it fixes a real
+> correctness bug (dropped commits). `src/lib/git-lock.ts` states its design
+> goal outright — the lock "can never wedge a box": on expiry it logs loudly and
+> proceeds unserialized rather than blocking. A mechanism that deliberately
+> refuses to block is a poor candidate for a multi-minute stall, so hypothesis
+> (a) looks weaker after this landed, not stronger.
+>
+> Hypothesis (b) — server hang versus tab hang — remains completely
+> unexercised, and it is now the more likely one.
+>
+> **This needs a credentialed human step, as the issue already anticipated.**
+> Reproducing it wants a boxholder-authorized test identity to drive the
+> bulk-upload panel concurrently with a real chat turn, plus `node --cpu-prof`
+> on the server and a parallel curl heartbeat to tell "server dead" from "tab
+> dead". A test identity was deliberately not minted for this investigation.
 
 During the field-test prototype, the served app stopped responding entirely:
 no clicks landed, and two successive page navigations each hung for ~2 minutes
@@ -14,7 +40,7 @@ before timing out with no response. On the third attempt the app loaded
 normally with all state intact — no error shown, no reconnect notice, no trace
 in the UI that anything happened.
 
-Context: standalone `cb serve <box> --port 3555` (fresh `cb init` box, dev
+Context: standalone `bbx serve <box> --port 3555` (fresh `bbx init` box, dev
 build), immediately after rapid navigation between the three card views
 (chat side panel → browse page → full card view) and keyboard scroll attempts.
 A real chat-agent turn had completed a minute or two earlier.
@@ -23,7 +49,7 @@ Low information — filed so the symptom is on record. Worth checking when it
 recurs: whether the Node process was blocked (event-loop stall — a sync FS
 walk? search-index rebuild? git operation on the box?), whether it correlates
 with the chat session pool, and whether anything landed in the box's
-`.callback-box/` logs. The field-test harness (agent-field-tests plan) will
+`.beebox/` logs. The field-test harness (agent-field-tests plan) will
 surface this class of stall as a harness event if it recurs in runs.
 
 Note: a stall long enough would starve the WS ping/pong watchdog
@@ -49,7 +75,7 @@ Served a copy of run 2's actual box and drove every candidate below hard
 (5,700+ requests over ~6 min with a 500ms stall detector): **no stall
 reproduced**, and code reading confirms all the listed request-path
 candidates are async / bounded-concurrency (`fs.promises`, `mapInBatches`,
-`simple-git` async spawns; the `execSync("which cb")` is unreachable from
+`simple-git` async spawns; the `execSync("which bbx")` is unreachable from
 read routes). Consider `landmarks.list`, `navStatus`, `status.browse`,
 `status.activity`/`getLog`, and the wakeup `execSync` **exonerated**.
 
@@ -91,5 +117,5 @@ that's the next step when this recurs):
 - `src/webapp/trpc/routers/status.ts` (`activity`) + `src/lib/git.ts`
   `getLog` — git-log on the request path; check whether it shells out
   synchronously.
-- `src/core/commands/wakeup.ts` — `execSync("which cb", ...)`, a synchronous
+- `src/core/commands/wakeup.ts` — `execSync("which bbx", ...)`, a synchronous
   subprocess spawn; check reachability from any route handler.

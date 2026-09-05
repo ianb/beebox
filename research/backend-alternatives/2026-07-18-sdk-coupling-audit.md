@@ -1,4 +1,4 @@
-# How coupled is callback-box to the Claude Agent SDK? (code audit)
+# How coupled is beebox to the Claude Agent SDK? (code audit)
 
 *2026-07-18. Part of the deeper backend-alternatives investigation (supersedes the
 architecture framing in the first-pass [README](README.md)). This is a code-reading
@@ -9,7 +9,7 @@ synthesis doc.*
 
 The first pass corrected itself from "we'd be replacing our own loop" to "the loop is
 external — swapping it is a peer engine swap." That correction is right but repeats the
-same category error one level down: **what callback-box delegates to
+same category error one level down: **what beebox delegates to
 `@anthropic-ai/claude-agent-sdk` is not a loop, it's a runtime.** The SDK spawns the
 bundled Claude Code binary, and the product leans on Claude Code's *harness* — built-in
 tools, context-file loading, hooks, session store, transcripts, auth — not just its
@@ -87,7 +87,7 @@ Also SDK-specific on this layer:
   `toSdkUserContent`, `claude-chat-content.ts`).
 - **Task lifecycle messages** (`task_started`/`task_progress`/…) normalized for the
   UI (`messages.ts:138`) — an SDK-0.3.x-specific feature the UI renders.
-- The `cb chat screenshot` session-id file plumbing
+- The `bbx chat screenshot` session-id file plumbing
   (`chat/session/session-id-file.ts`) presumes the subprocess model.
 
 **Portability refactor that would make this a real port:** move `adaptSdkMessage`
@@ -109,7 +109,7 @@ directly from `~/.claude/projects/<encoded-cwd>/<session-id>.jsonl`:
   filtering, tool-call summarization)
 
 Session *resume* is likewise Claude-Code-side state — we store only ids
-(`.callback-box/chat-sessions.json`, reactor chat jobs) and trust the engine to
+(`.beebox/chat-sessions.json`, reactor chat jobs) and trust the engine to
 reconstruct context.
 
 A different harness has a different transcript store (or an API instead of files),
@@ -120,17 +120,17 @@ current one. Several hundred lines either way, plus migration of existing histor
 
 ## Layer 4 — the harness contract: the deepest coupling, invisible from src/core/agent/
 
-callback-box defines **zero tools**. No MCP servers, no custom tool definitions
+beebox defines **zero tools**. No MCP servers, no custom tool definitions
 anywhere in `src/` (verified by grep: no `mcpServers`/`createSdkMcpServer`/
 `allowedTools` outside docs). The product works because Claude Code ships a runtime:
 
 - **Built-in tools** — Read/Write/Edit/Bash/Grep operating on the box directory;
-  the agent drives the `cb` CLI through Bash. The box's whole prompt surface
+  the agent drives the `bbx` CLI through Bash. The box's whole prompt surface
   (agent guide, schema `instructions`, rules) is written against these tools'
   semantics.
 - **Context auto-loading** — `settingSources: ["user","project"]` default loads the
   box's CLAUDE.md walk-up, `.claude/rules/`, skills/slash commands
-  (`run.ts:88` comment). Box context engineering (the `cb-context` discipline)
+  (`run.ts:88` comment). Box context engineering (the `bbx-context` discipline)
   presumes these conventions.
 - **System prompt** — `{type: "preset", preset: "claude_code", append}`
   (`run.ts:91`, `claude-chat.ts:97`): our prompts are *appends to Claude Code's

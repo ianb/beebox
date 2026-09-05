@@ -1,8 +1,8 @@
-# Alternate agent backends for callback-box (beyond the Claude Agent SDK)
+# Alternate agent backends for beebox (beyond the Claude Agent SDK)
 
 *2026-07-18. Research snapshot. Framing: NOT a competitive scorecard — the question is
-**which agent engines/models callback-box could run on besides the Claude Agent SDK,
-how hard the integration is, and what it would buy us.** callback-box is a general
+**which agent engines/models beebox could run on besides the Claude Agent SDK,
+how hard the integration is, and what it would buy us.** beebox is a general
 personal assistant (email/notes/scheduling), a shipped product, handling private user
 data — those three facts, not "is it a good coding tool," decide everything below.*
 
@@ -15,8 +15,8 @@ session transcripts — this README is the synthesis + decision.
 > ⚠️ **FIRST PASS — KNOWN-FLAWED; superseded by a deeper Fable-led investigation
 > (worktree `backend-research`, started 2026-07-18).** Boxholder flagged three gaps that
 > matter enough to redo this:
-> 1. **Wrong architecture model.** This doc treats the agent loop as callback-box's own and
->    frames adopting OpenCode as "replacing our loop, a bigger bet." That's wrong — callback-box
+> 1. **Wrong architecture model.** This doc treats the agent loop as beebox's own and
+>    frames adopting OpenCode as "replacing our loop, a bigger bet." That's wrong — beebox
 >    **delegates the loop to `@anthropic-ai/claude-agent-sdk`'s `query()`** (`src/core/agent/`);
 >    the loop is *external*. So OpenCode/Goose are **peer engine swaps at the same layer**, not
 >    a bigger disruption — possibly *easier* than implied. The real unexamined question is how
@@ -25,7 +25,7 @@ session transcripts — this README is the synthesis + decision.
 >    needed is real practitioner *accounts* of what subscriptions actually allow vs. what's only
 >    announced-but-unenforced (e.g. Anthropic's stated-but-not-yet-applied quota cuts).
 > 3. **Missing: self-hosting (vLLM) and image/multimodal capability** — image understanding is
->    core to callback-box (screenshots, image cards, PDFs, capture), so every candidate needs a
+>    core to beebox (screenshots, image cards, PDFs, capture), so every candidate needs a
 >    vision verdict, and vLLM's multimodal serving story must be assessed.
 >
 > Treat the sections below as a rough map, not conclusions. The corrected framing above still
@@ -44,6 +44,7 @@ session transcripts — this README is the synthesis + decision.
 > | [2026-07-18-anthropic-policy-enforcement.md](2026-07-18-anthropic-policy-enforcement.md) | Anthropic announced-vs-enforced; the paused credit-pool split |
 > | [2026-07-18-vllm-self-hosting.md](2026-07-18-vllm-self-hosting.md) | Self-hosting open vision models; vLLM's native Anthropic endpoint |
 > | [2026-07-18-alt-harnesses.md](2026-07-18-alt-harnesses.md) | OpenCode/Goose/Codex/Gemini/Cline/Amp/Crush vs our runtime contract |
+> | [2026-08-25-oh-my-pi.md](2026-08-25-oh-my-pi.md) | Follow-up: oh-my-pi (pi-mono fork) scored on the same contract and against the shipped Codex engine adapter — LATER as a BYO-model third engine; REJECT on Claude subscription (spoofs Claude Code's auth fingerprint) |
 
 ---
 
@@ -126,7 +127,7 @@ headline coding-plan price.** The cheap number isn't available to us.
 - **Subscription auth from a third-party client is being severed.** Anthropic (Jan 2026)
   blocked non-Claude-Code clients from using Pro/Max OAuth tokens (*"only authorized for use
   with Claude Code"*); Google bans third-party harnesses on Gemini/Antigravity subscription
-  creds. So **"ride an end-user's Claude Max in callback-box" is a non-starter** — API billing
+  creds. So **"ride an end-user's Claude Max in beebox" is a non-starter** — API billing
   only. (Only GitHub Copilot *sanctions* subscription use in a third party, via OpenCode.)
 - **Data/training + jurisdiction** (decisive for a private-data assistant):
   - Anthropic & OpenAI: **do not train on API/business data by default** (individual ChatGPT
@@ -155,7 +156,7 @@ headline coding-plan price.** The cheap number isn't available to us.
 | **Codex** | SDK = local CLI-subprocess / `codex exec` | high friction, wrong layer | yes (unified quota) | — | embed the *Responses API*, not Codex-the-agent |
 | **Antigravity (IDE)** | not embeddable | — | — | — | evaluate Gemini API instead; the IDE is not a backend |
 
-## What a backend swap would actually buy callback-box
+## What a backend swap would actually buy beebox
 
 - **Cost reduction** — real *only* via cheaper models (GLM/Kimi/MiniMax/open-weights) on the
   **general API or self-host** (the cheap plans are off-limits), with a quality step-down and,
@@ -170,7 +171,7 @@ headline coding-plan price.** The cheap number isn't available to us.
 - **Task-tiered routing** — cheap model for cheap work (intake triage), frontier for hard
   reasoning — requires multi-backend plumbing but is a concrete efficiency lever.
 
-## Recommendation (traced to callback-box specifics)
+## Recommendation (traced to beebox specifics)
 
 1. **Cheapest real step: model-API-layer pluggability we already half-have.** Make the
    Agent-SDK backend (base URL + model IDs, `src/core/model-ids.ts`) configurable so we can
@@ -199,7 +200,7 @@ headline coding-plan price.** The cheap number isn't available to us.
   raw messages? (The trivial-P1 story lives or dies here — test against GLM's `/api/anthropic`.)
 - GLM-5.2 **general** (non-coding-plan) per-token prices and the real cost delta vs Anthropic.
 - Whether a self-hosted open-weight model (GLM-5.2 / Kimi K2) is worth the infra for the
-  privacy/jurisdiction win, given callback-box handles email/PII.
+  privacy/jurisdiction win, given beebox handles email/PII.
 
 ## Sources
 

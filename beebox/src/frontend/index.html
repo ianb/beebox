@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#9B6BA6" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="description" content="Bee Box" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <title>Bee Box</title>
+    <!-- Boot fallback shown inside #root until React mounts (createRoot replaces
+         #root's children). If the app never mounts — e.g. its JS bundle fails to
+         load — this stays visible, so a failed load reads as a message, not a
+         blank white screen. Pure CSS (style-src allows 'unsafe-inline'; script-src
+         does not, so no JS): the "couldn't load" hint fades in only after ~5s, so
+         a normal fast load is replaced before it ever appears. -->
+    <style>
+      #root .app-boot {
+        max-width: 22rem;
+        margin: 22vh auto 0;
+        padding: 0 1.25rem;
+        text-align: center;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #6b6b6b;
+      }
+      #root .app-boot-hint {
+        margin-top: 0.75rem;
+        font-size: 0.8rem;
+        color: #9a9a9a;
+        opacity: 0;
+        animation: app-boot-hint-in 0s linear 5s forwards;
+      }
+      @keyframes app-boot-hint-in {
+        to {
+          opacity: 1;
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        #root .app-boot {
+          color: #b8b8b8;
+        }
+        #root .app-boot-hint {
+          color: #808080;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="app-boot">
+        Loading Bee Box&hellip;
+        <div class="app-boot-hint">
+          If this message stays, the app couldn&rsquo;t load. Try reloading, or sign in again.
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

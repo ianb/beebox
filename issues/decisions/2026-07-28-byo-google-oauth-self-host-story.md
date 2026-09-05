@@ -1,7 +1,7 @@
 ---
 title: "Google auth for self-hosters: formalize the bring-your-own-Cloud-project story"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked about BYO-domain auth
 needs: [decision]
@@ -10,7 +10,7 @@ needs: [decision]
 The Google OAuth verification pain (unverified-app warning, restricted-scope
 CASA assessment — see
 [google-oauth-pairing-broken](../bugs/2026-07-28-google-oauth-pairing-broken.md))
-is only a problem if there's a **central, shared** OAuth app. callback-box
+is only a problem if there's a **central, shared** OAuth app. beebox
 already avoids that: it's **bring-your-own**. This item is about deciding to lean
 into that explicitly and smoothing it.
 
@@ -36,7 +36,7 @@ don't be the SaaS middleman that has to pass CASA.
 Commit to **BYO-only** (no project-hosted shared OAuth app), and treat the
 one-time Google Cloud setup as an accepted operator cost — vs. ever offering a
 hosted/shared OAuth app (which would force mandatory CASA + a 100-user cap + make
-callback-box the custodian of everyone's Gmail/Drive tokens). Recommendation:
+beebox the custodian of everyone's Gmail/Drive tokens). Recommendation:
 BYO-only; the alternative contradicts the project's privacy posture.
 
 ## If BYO-only, smooth it (the actual work)
@@ -53,7 +53,7 @@ BYO-only; the alternative contradicts the project's privacy posture.
 3. **Canonical redirect_uri** — finish the origin-derivation cleanup noted in the
    OAuth bug issue so an arbitrary BYO domain resolves to one canonical redirect
    URI (no per-origin drift to register).
-4. **Optional `cb google setup` helper** — a guided walk-through of the Cloud
+4. **Optional `bbx google setup` helper** — a guided walk-through of the Cloud
    project steps (or at least a checklist the box agent can hand the operator),
    to cut the ~15-minute setup friction.
 
@@ -62,7 +62,7 @@ BYO-only; the alternative contradicts the project's privacy posture.
 [How comparable systems connect Google](../../research/google-auth-connect-approaches.md)
 confirms this bet: **OpenClaw and the popular self-hosted Google MCP servers all
 do BYO too**, and eat the same unverified-app / 7-day-token friction — it's a
-universal BYO condition, not a callback-box defect. The only frictionless
+universal BYO condition, not a beebox defect. The only frictionless
 alternative is a **managed auth broker** (Composio/Arcade/Nango/Pipedream) that
 owns the OAuth app and vaults tokens — which trades away local token custody.
 Finding: keep BYO as default; consider an **opt-in broker path** (ideally

@@ -1,7 +1,7 @@
 ---
 title: "redacted text spoiler reveal"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

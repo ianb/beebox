@@ -1,7 +1,7 @@
-// The router injects the trusted `x-cb-base-prefix` header on requests it
+// The router injects the trusted `x-bbx-base-prefix` header on requests it
 // proxies to a worktree, and strips any client-supplied copy first (a client
 // must never set it). This exercises the pure helper the router calls
-// (callback-box/src/webapp/base-prefix.ts) over a plain IncomingHttpHeaders bag
+// (beebox/src/webapp/base-prefix.ts) over a plain IncomingHttpHeaders bag
 // — no server spawn. Run with:
 //   node --import tsx --test bin/base-prefix-injection.test.ts
 // (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
@@ -13,7 +13,7 @@ import {
   injectBasePrefix,
   readBasePrefix,
   BASE_PREFIX_HEADER,
-} from "../callback-box/src/webapp/base-prefix.js";
+} from "../beebox/src/webapp/base-prefix.js";
 
 test("router injects the worktree prefix as the base-prefix header", () => {
   const headers: IncomingHttpHeaders = { host: "localhost:3210" };
@@ -35,10 +35,10 @@ test("injection strips a client copy under any header casing", () => {
   // Node lowercases incoming header keys, but guard the case-insensitive strip
   // directly so a mixed-case smuggled copy can never survive alongside ours.
   const headers: IncomingHttpHeaders = {};
-  headers["X-CB-Base-Prefix"] = "/evil";
+  headers["x-bbx-Base-Prefix"] = "/evil";
   injectBasePrefix(headers, "/main");
   // Only the trusted lowercase key remains; the smuggled mixed-case one is gone.
   assert.equal(headers[BASE_PREFIX_HEADER], "/main");
-  assert.equal(headers["X-CB-Base-Prefix"], undefined);
+  assert.equal(headers["x-bbx-Base-Prefix"], undefined);
   assert.equal(readBasePrefix(headers), "/main");
 });

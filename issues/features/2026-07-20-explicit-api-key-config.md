@@ -1,7 +1,7 @@
 ---
 title: "Explicit-config Anthropic API key as an alternative to subscription auth"
 workstream: open-source-readiness
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
@@ -18,7 +18,7 @@ but the boxholder wants this as an easy early follow ("you're right about
 the API key feature, which should be easy", 2026-07-20).
 
 The design is already fully worked out in
-[the source-available release plan, Track F piece 1](../../callback-box/docs/plans/source-available-release.md):
+[the source-available release plan, Track F piece 1](../../beebox/docs/plans/source-available-release.md):
 keep scrubbing the ambient env var from the SDK child; inject a
 *deliberately configured* key only via the SDK's explicit credential path
 (constructor `apiKey` / `apiKeyHelper` temp file — never by setting the env

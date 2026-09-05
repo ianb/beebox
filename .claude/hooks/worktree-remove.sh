@@ -22,8 +22,8 @@ set -euo pipefail
 exec 1>&2  # everything to stderr; no stdout expected
 
 input=$(cat)
-mkdir -p "$HOME/.cache/callback-box"
-printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-worktree-remove-input.json"
+mkdir -p "$HOME/.cache/beebox"
+printf '%s\n' "$input" > "$HOME/.cache/beebox/last-worktree-remove-input.json"
 
 name_from_input=$(printf '%s' "$input" | jq -r '.name // .worktree_name // empty')
 path_from_input=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')
@@ -52,7 +52,27 @@ wt_log "event: name=$NAME name_in='$name_from_input' path_in='$path_from_input'"
 # can't refuse; with the symlink topology it doesn't need to — Claude Code's
 # removal only deletes the mount symlink.
 WT_PATH="${path_from_input:-$WT_ROOT/$NAME}"
+if [ -d "$(dirname "$WT_PATH")" ]; then
+  WT_PATH="$(cd "$(dirname "$WT_PATH")" && pwd -P)/$(basename "$WT_PATH")"
+fi
+if ! wt_paths_valid_name "$NAME"; then
+  echo "[worktree-remove] invalid worktree name '$NAME'; leaving satellites for sweep"
+  exit 0
+fi
+if ! wt_git_setup_lock_acquire "$NAME"; then
+  echo "[worktree-remove] setup lock unavailable; leaving satellites for sweep"
+  exit 0
+fi
+
+# Claude Code owns the Git removal outside this hook. Keep a tombstone after
+# releasing the setup lock so a same-name create cannot mistake the still-
+# registered checkout for a completed resume in the interval before Claude's
+# own removal lands. Once Git no longer registers it, create starts fresh and
+# replaces this state with in-progress.
+setup_state_file=$(wt_git_setup_state_file "$NAME")
+printf 'native-removal-pending\t%s\n' "$WT_PATH" > "$setup_state_file"
 wt_remove_private_issues "$WT_PATH"
 
 wt_remove_satellites "$NAME"
 wt_trash_reap
+wt_git_setup_lock_release

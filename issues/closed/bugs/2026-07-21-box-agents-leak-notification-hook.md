@@ -1,7 +1,7 @@
 ---
 title: "Box agents occasionally leak a macOS notification — they inherit the user's Notification hook"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder gets occasional stray notification popups from boxes
 resolution: implemented
@@ -17,7 +17,7 @@ resolution: implemented
 > matters, but the boxholder's symptom is resolved.
 
 Occasionally a macOS notification popup appears "from a box" that's normally
-suppressed. Diagnosed via cb-debug; **strong mechanism, not yet reproduced with a
+suppressed. Diagnosed via bbx-debug; **strong mechanism, not yet reproduced with a
 red loop** (the trigger is a rare event — see below).
 
 ## The channel
@@ -59,7 +59,7 @@ box run is not an interactive session the boxholder is watching.
 
 Since the trigger can't be forced on demand, `notify.sh` is instrumented
 (`[DEBUG-notif-leak]`) to append every invocation — event name, cwd, tty, payload
-— to `~/.cache/callback-box/notify-hook-trace.log`. **The next stray popup will
+— to `~/.cache/beebox/notify-hook-trace.log`. **The next stray popup will
 name its `hook_event_name` and which box.** That confirms elicitation-vs-something
 before any fix. (Remove the debug block once pinned.)
 

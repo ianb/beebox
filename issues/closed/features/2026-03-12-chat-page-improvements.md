@@ -1,7 +1,7 @@
 ---
 title: "Chat page improvements"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

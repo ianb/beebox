@@ -1,6 +1,6 @@
-# Callback Box iOS App
+# Bee Box iOS App
 
-Native iOS companion app for Callback Box. This project is intentionally thin
+Native iOS companion app for Bee Box. This project is intentionally thin
 at first: the conversation view stays in the box's web chat via `WKWebView`,
 loaded with `?nativeComposer=1`, while native code owns pairing, native input
 controls, and the paired-box shell.
@@ -9,10 +9,10 @@ Agent and contributor build/test guidance lives in [`CLAUDE.md`](CLAUDE.md).
 
 ## Current Setup
 
-- SwiftUI app target: `CallbackBox`
+- SwiftUI app target: `BeeBox`
 - Minimum iOS: 17.0
 - No external dependencies
-- Pairing: scan/open a `callbackbox://pair?...&pairingToken=...` URL from a
+- Pairing: scan/open a `beebox://pair?...&pairingToken=...` URL from a
   box Settings QR code. The app redeems that token for a per-device mobile
   auth token.
 - Manual/dev pairing is still available from the app and URL scheme. In release
@@ -25,13 +25,19 @@ Agent and contributor build/test guidance lives in [`CLAUDE.md`](CLAUDE.md).
   and `SFSpeechRecognizer` remains the iOS 17–25 fallback. The first use of a
   locale may download its system-managed model. A recorded WAV is still kept in
   parallel for the box's HQ transcription and diarization pass at send time.
+- A floating chevron on the webview's leading edge appears whenever the page
+  has history to go back to, and disappears on the chat itself. The shell has
+  no browser chrome, so before it the only way out of a card or the browse view
+  was the invisible edge-swipe. The web app bar carries its own contextual
+  "back to chat" chip; the native control is the floor under it, for a page
+  that offers nothing.
 - Native speech uses the web chat's earcon files, volumes, and timing for
   recording start/stop/failure, send/wait feedback, and idle listening.
 
 Once Xcode is installed, open:
 
 ```sh
-open ios-app/CallbackBox.xcodeproj
+open ios-app/BeeBox.xcodeproj
 ```
 
 ## Simulator Pairing Shortcut
@@ -49,7 +55,7 @@ The app also supports a URL-scheme import, but iOS shows a first-time
 confirmation dialog when it is opened from outside the app:
 
 ```sh
-xcrun simctl openurl booted 'callbackbox://pair?label=Local%20test%20box&baseURL=http%3A%2F%2F127.0.0.1%3A3210%2Fmain%2Ftest1'
+xcrun simctl openurl booted 'beebox://pair?label=Local%20test%20box&baseURL=http%3A%2F%2F127.0.0.1%3A3210%2Fmain%2Ftest1'
 ```
 
 In DEBUG builds, the empty state also shows a "Use Local Test Box" button.
@@ -59,7 +65,7 @@ In DEBUG builds, the empty state also shows a "Use Local Test Box" button.
 A DEBUG build can render the production native composer without a live box:
 
 ```sh
-xcrun simctl launch --terminate-running-process booted app.callbackbox.ios \
+xcrun simctl launch --terminate-running-process booted app.beebox.ios \
   --composer-fixture=many-attachments
 ```
 
@@ -75,9 +81,9 @@ in [`CLAUDE.md`](CLAUDE.md#native-testing-boundary).
 ## Runtime Diagnostics
 
 Native failures and selected state transitions are regularly uploaded to the
-paired box's `.callback-box/client-debug.log`, alongside browser diagnostics.
+paired box's `.beebox/client-debug.log`, alongside browser diagnostics.
 Entries tagged `[ios]` came from the native app; `[ios@<timestamp>]` records the
 device event time when an offline queue arrived later. See
-[`client-debug-log.md`](../callback-box/docs/client-debug-log.md) for log
+[`client-debug-log.md`](../beebox/docs/client-debug-log.md) for log
 locations and interpretation. Contributor requirements for instrumenting new
 iOS features live in [`CLAUDE.md`](CLAUDE.md#runtime-diagnostics).

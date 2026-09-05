@@ -1,11 +1,14 @@
 ---
 title: "Adopt openclaw-style security pre-commit hooks (dev-repo scope)"
-workstream: openclaw-security-lints
-area: callback-box
+workstream: chores-burn-down
+area: beebox
 labels: [lint, security, openclaw-borrow]
 filed-by: agent
 discovered-in: worktree-openclaw-security-lints — surveying openclaw's .pre-commit-config.yaml
+priority: backlog
 ---
+
+> `invalid?` checked 2026-09-05: not invalid, partly done. `bin/precommit-security.ts` (`6deee0f14`) covers private keys, merge conflicts, and shellcheck. `.gitleaks.toml` exists (`21b4eea7c`) but is wired into no hook or workflow, and `pnpm audit` runs nowhere. The two decisions in the body are still open.
 
 openclaw runs a battery of off-the-shelf hooks via the `pre-commit`/`prek`
 framework. We use husky, so adopting these means adding husky-hook lines + a CI
@@ -33,7 +36,7 @@ Approved to adopt (Ian, 2026-07-24):
 
 Cleared via mature `pnpm.overrides` (all patches ≥7-day `minimum-release-age`):
 `undici ^7.28.0` (prod, via cheerio — the important one), `hono ^4.12.27` (prod,
-transitive), `js-yaml ^4.3.0`, `tmp ^0.2.7`. callback-box typecheck stays green.
+transitive), `js-yaml ^4.3.0`, `tmp ^0.2.7`. beebox typecheck stays green.
 
 Deferred — patched version is younger than our own 7-day maturity gate; forcing
 it would install into the compromised-maintainer window (a worse trade than a
@@ -60,4 +63,11 @@ workflows grow), ruff/pytest/swift* (we're TS-only).
 
 Open decisions before implementing: (a) gitleaks allowlist/baseline approach;
 (b) exactly where `pnpm audit` runs (pre-push vs CI vs a periodic maintenance
-check); (c) whether shellcheck runs in husky pre-commit or as a `pnpm` script.
+check).
+
+## Implemented in this workstream
+
+This commit adds the approved private-key, merge-conflict, and shellcheck guards
+to the root pre-commit dispatcher. Shellcheck runs only for staged shell files.
+The remaining work is gitleaks allowlist/baseline design and deciding where the
+network-dependent `pnpm audit` gate belongs.

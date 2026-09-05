@@ -1,10 +1,11 @@
 ---
 title: "A card that extends another card (package refs + override/merge)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 needs: [design]
 discovered-in: main session — boxholder idea
+priority: backlog
 ---
 
 Idea: let a card **extend** another card and override parts of it — especially
@@ -21,7 +22,7 @@ package** (we don't have them — need a way to *make* and to *resolve* such ref
 and **(b) the override/merge** of the extending card over the base.
 
 *(The `pkg:<package>:` scheme is illustrative — the old `cardworks` package is
-gone/absorbed into `callback-box/src/cards/`, so the actual package target and
+gone/absorbed into `beebox/src/cards/`, so the actual package target and
 scheme name are TBD.)*
 
 ## Why — the practical driver, and the drift problem it could fix

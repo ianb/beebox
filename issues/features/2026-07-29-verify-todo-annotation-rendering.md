@@ -1,15 +1,15 @@
 ---
 title: "Manually verify {% todo %} rendering and the stock todo-view plate card"
 workstream: todo-annotation
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-todo-annotation — landing the todo-annotation system
 needs: [manual-testing]
-design: ../../callback-box/docs/implemented-plans/todo-annotation.md
+design: ../../beebox/docs/implemented-plans/todo-annotation.md
 priority: important
 ---
 
-The todo-annotation system (`{% todo %}`/`{% see-also %}` tags, `cb todos`,
+The todo-annotation system (`{% todo %}`/`{% see-also %}` tags, `bbx todos`,
 the review sweep, the `todos.list` tRPC route, and the `TodoViewCard`/`Todo`/
 `SeeAlso` React components + the `AppNav` plate badge) landed with full green
 tests (5174/5174), clean typecheck/lint, 5/5 knowledge audits, and an

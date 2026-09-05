@@ -1,7 +1,7 @@
 ---
 title: "Chat-embedded image that doesn't exist yet stays 404 until a full page reload"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder report
 resolution: implemented
@@ -18,7 +18,7 @@ lands seconds later.
 
 ## Root cause
 
-`callback-box/src/frontend/src/components/ui/Image.tsx` keeps a **module-level
+`beebox/src/frontend/src/components/ui/Image.tsx` keeps a **module-level
 `failedImageUrls` set**. On an image error, `handleError` (line 256-259) adds the
 URL to that set and re-renders to the `ErrorPlaceholder` (line 283-284). Because
 the set is module-global and never cleared, the URL is **permanently blocklisted**
@@ -48,6 +48,6 @@ scoping the retry to the chat-embedded case (or keep it general but strictly
 bounded so a page full of truly-broken images can't thrash the network).
 
 Chat images render through
-`callback-box/src/frontend/src/components/chat/markdown-rendering.tsx` into the
+`beebox/src/frontend/src/components/chat/markdown-rendering.tsx` into the
 shared `ui/Image.tsx`, so the fix likely lives in `ui/Image.tsx` (with an opt-in
 prop if the retry should be chat-only).

@@ -1,0 +1,21 @@
+# The batched full run of beebox's test suite — the only thing that tests
+# `main`, and the only thing that still runs everything. Iteration and /finish
+# run selected tests; a failure that reaches main surfaces here within the hour.
+#
+# Run-only, deliberately: no `workstream:` block. The plan gives this schedule a
+# mechanical product — bisect a red batch to the landing that caused it, file
+# one issue per landing, alert — and every step of that is derivable, so an
+# agent session would only add cost and a place to be creative. The fixup is the
+# named workstream's, not this schedule's.
+#
+# `cadence: 1h` is the batch: `run` exits via `bin/schedules done` when nothing
+# has landed since the commit it last tested, so a quiet hour costs one git
+# command and a burst of landings inside one hour is a single run.
+#
+# No `check`: a run-only schedule's `check` is never executed (the runner runs
+# it after a SESSION), so the detached worktree is removed in `run.ts`'s own
+# `finally` instead.
+description: "Hourly batched full test-suite run on main, bisected to the landing that broke it"
+cadence: 1h
+# The suite is minutes, and a bisect is several single-file runs on top of it.
+timeout: 2h

@@ -1,17 +1,17 @@
 ---
 title: "iOS: audio drops off Bluetooth and plays very quietly — the mic's AVAudioSession config"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder, using audio on the iOS app
-design: ../../../callback-box/docs/implemented-plans/ios-audio-session-routing.md
+design: ../../../beebox/docs/implemented-plans/ios-audio-session-routing.md
 labels: [mobile]
 resolution: implemented
 ---
 
 > **✅ Closed 2026-07-31** — fixed in `f0b36d5a` + `0dad587f` (merged as
 > `aeac5229`), designed in
-> [the plan](../../../callback-box/docs/implemented-plans/ios-audio-session-routing.md).
+> [the plan](../../../beebox/docs/implemented-plans/ios-audio-session-routing.md).
 > The boxholder confirmed on a real phone with a Bluetooth accessory that
 > audio now stays on Bluetooth at full volume through dictation.
 

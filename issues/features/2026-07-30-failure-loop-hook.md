@@ -1,13 +1,14 @@
 ---
-title: "Make cb-debug's circuit-breaker mechanical — a hook that counts repeated failures"
+title: "Make bbx-debug's circuit-breaker mechanical — a hook that counts repeated failures"
 workstream: elixir-skills-review
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
 next-action: discuss
+priority: normal
 ---
 
-`.claude/skills/cb-debug/SKILL.md:150` has a 3-fix circuit-breaker: after three
+`.claude/skills/bbx-debug/SKILL.md:150` has a 3-fix circuit-breaker: after three
 failed fixes, stop patching and treat it as an architecture problem. It's prose
 asking the agent to notice it's in a loop — which is exactly the thing a looping
 agent is bad at. The same file's "Common rationalizations" table exists because
@@ -30,7 +31,7 @@ escalates:
 
 No LLM call in the hook — shell state plus templated text, with the reasoning
 deferred to the model reading the injected context. For us the commands to watch
-are `pnpm test`, `tsc`, `pnpm lint`, and probably `cb` subcommands.
+are `pnpm test`, `tsc`, `pnpm lint`, and probably `bbx` subcommands.
 
 ## Do not copy their state design
 
@@ -48,7 +49,7 @@ Session-scope ours, and expire the state.
   check the event exists and behaves as assumed on the Claude Code we run before
   building (their docs pin several behaviours to specific point releases that
   aren't verifiable from their checkout).
-- Escalation text must not fight `cb-debug` when the skill is already loaded. It
+- Escalation text must not fight `bbx-debug` when the skill is already loaded. It
   should probably *point at* the skill's Phase 1 rather than restating a recovery
   procedure the skill already owns.
 - Noise risk: a genuinely iterative task (fixing 20 type errors one file at a

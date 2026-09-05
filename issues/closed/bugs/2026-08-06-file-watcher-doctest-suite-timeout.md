@@ -1,7 +1,7 @@
 ---
 title: "`file-watcher.doctest.md` can time out as a whole under parallel suite load"
 workstream: watcher-flake
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-ios-box-switcher-gate — /finish full-suite verification
 resolution: implemented
@@ -55,7 +55,7 @@ exercises macOS, not this module.
   generated test, so a failing example can no longer skip its cleanup. Covered
   by a new end-to-end regression test. This fixes the class of bug for **every**
   doctest that holds a handle, not just this one.
-- `callback-box`: `ensureBoxWatcher` takes its bounds from the caller
+- `beebox`: `ensureBoxWatcher` takes its bounds from the caller
   (`maxWatchedDirs`, `maxNotificationWork`, `coalesceMs`), defaulting to the
   production values. Both bounds tests now prove the boundary at 16 with 64
   fixtures instead of at 1,024 with 1,100. A separate assertion pins the

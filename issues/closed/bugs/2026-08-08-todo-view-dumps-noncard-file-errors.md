@@ -1,7 +1,7 @@
 ---
 title: "Todo/Plate view dumps a '75 cards couldn't be read' error list of every non-card file"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test onboarding-first-days (dentist-email)
 labels: [soft-launch, field-test-findings, code-error]
@@ -16,11 +16,11 @@ resolution: implemented
 > date-only string parsed as UTC midnight then formatted in the local zone
 > (`FriendlyDate.tsx` now pins date-only values to UTC, so `2026-08-14` renders
 > Aug 14 everywhere). The remaining raw-`**` defect is the separate
-> [markdown-not-rendering](../../bugs/2026-08-08-markdown-not-rendering-in-agent-output.md)
+> [markdown-not-rendering](2026-08-08-markdown-not-rendering-in-agent-output.md)
 > issue (ui-error, still open).
 The todo view (`plate.todo-view.card`, "The Plate") renders two real todos at
 the top, then a large box headed **"75 CARDS COULDN'T BE READ"** listing every
-non-card file in the box — `briefing.md`, `CLAUDE.md`, `config/cb-validate.ignore`,
+non-card file in the box — `briefing.md`, `CLAUDE.md`, `config/beebox-validate.ignore`,
 `config/connectors/gmail.json`, `config/connectors/gmail.state.json`,
 `config/migrations.jsonl`, `config/template-versions.json`,
 `docs/generated/*.md`, … — each with "card filename doesn't match the

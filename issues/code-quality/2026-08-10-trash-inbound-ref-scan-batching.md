@@ -1,13 +1,14 @@
 ---
 title: "Batch inbound-reference scans for multi-card trash commands"
 workstream: card-menu
-area: callback-box
+area: beebox
 labels: [cards, performance]
 filed-by: agent
 discovered-in: worktree-card-menu — finish review of card trash reference warnings
+priority: normal
 ---
 
-`cb rm` reports inbound references before it moves cards to Trash. For a
+`bbx rm` reports inbound references before it moves cards to Trash. For a
 multi-card command, it currently scans every card, Markdown file, and view once
 for each target. This repeats file-system and parser work that one traversal
 could share across all targets.

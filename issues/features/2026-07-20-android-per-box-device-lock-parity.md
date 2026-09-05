@@ -1,7 +1,7 @@
 ---
 title: Add Android parity for the device-local per-box lock
 workstream: ios-per-box-device-lock
-area: callback-box
+area: beebox
 needs: [design, manual-testing]
 filed-by: agent
 discovered-in: iOS per-box device lock implementation
@@ -29,7 +29,7 @@ Expected parity:
   device credential is configured.
 
 The threat model and vocabulary are fixed by the
-[iOS design](../../callback-box/docs/implemented-plans/ios-per-box-device-lock.md): this is
+[iOS design](../../beebox/docs/implemented-plans/ios-per-box-device-lock.md): this is
 a phone-share navigation gate, not encryption or server policy. Write an
 Android-specific subplan once the companion's Track 1/2 architecture exists,
 then add unit tests plus emulator and physical-device lifecycle/authentication

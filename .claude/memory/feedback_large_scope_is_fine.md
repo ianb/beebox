@@ -4,7 +4,7 @@ description: "Large AI changes are usually fine, but flag scope when reality div
 metadata: 
   node_type: memory
   type: feedback
-  originSessionId: 6f088193-eb30-436c-80cb-1b6a986f9034
+  originSessionId: 6f088193-eb30-436c-80bbx-1b6a986f9034
 ---
 
 Large scope in AI-driven changes is usually fine — Ian uses the AI's ability to do big coherent work as a feature and enjoys it. But scope is worth flagging when **the actual scope diverges from the expected scope.**

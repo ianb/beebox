@@ -1,6 +1,7 @@
 ---
 title: "Regular doc refreshes (docs-claim vs. code adjudication)"
 workstream: unknown
+priority: normal
 ---
 
 2026-07-04 · process to institutionalize.
@@ -13,7 +14,7 @@ bug (reactor session resume was broken, not the doc) and one real doc error
 detectable by freshness tooling.
 
 Proposal: a periodic doc-refresh pass (add to
-`callback-box/docs/maintenance.md` with a cadence, or a scheduled routine):
+`beebox/docs/maintenance.md` with a cadence, or a scheduled routine):
 
 1. `pnpm doc-graph` + `doc-check` (mechanical layer — already enforced at
    commit time, so this is just the report).

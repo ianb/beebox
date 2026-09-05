@@ -24,7 +24,7 @@ plain `$VAR` are fine, so the constraint is narrow but real when writing
 anything a worktree session must run.
 
 A worktree-isolated Claude Code session can no longer run **any** git
-command targeting the shared main checkout `~/src/callback-box`. The
+command targeting the shared main checkout `~/src/beebox`. The
 harness refuses with:
 
 > "This session is isolated in the worktree … but this command redirects
@@ -57,9 +57,9 @@ main checkout, not from inside the worktree** (`git checkout main &&
 git merge <branch>`). Our `/finish` predates that model.
 
 **Why it breaks `/finish`:** `.claude/agents/finish.md` step 8 performs
-the public merge as `git -C ~/src/callback-box merge --ff-only "$BRANCH"`
+the public merge as `git -C ~/src/beebox merge --ff-only "$BRANCH"`
 (line ~463), and its finalization gate reads main's state with
-`git -C ~/src/callback-box status --porcelain` / `rev-parse` (lines
+`git -C ~/src/beebox status --porcelain` / `rev-parse` (lines
 446-449). All of these are now refused, so the finish subagent completes
 every verification step and then **BLOCKS at the public merge** with
 nothing merged to `main`. The private leg still lands, because it runs
@@ -70,7 +70,7 @@ private leg merged, public merge impossible from the session.
 
 **Current workaround:** run the one merge command from a session/terminal
 that is not worktree-isolated (the main checkout itself):
-`git -C ~/src/callback-box merge --ff-only worktree-<name>`.
+`git -C ~/src/beebox merge --ff-only worktree-<name>`.
 
 **Fix directions (pick one):**
 - A blessed, locked wrapper for the main checkout analogous to

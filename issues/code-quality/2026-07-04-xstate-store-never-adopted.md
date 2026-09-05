@@ -5,7 +5,7 @@ workstream: unknown
 
 2026-07-04 · decision needed.
 
-`callback-box/docs/stack-decisions.md` (~line 143) records `@xstate/store`
+`beebox/docs/stack-decisions.md` (~line 143) records `@xstate/store`
 as the adopted answer for simple-page state, but the package is in neither
 `package.json` nor any import — the decision was planned and never
 implemented. The stack-decisions entry now carries an "unresolved" note

@@ -1,17 +1,17 @@
 ---
 title: "Full-text + semantic search over a box"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 
-**Closed (2026-07-15): implemented** — shipped as `cb search` + the global
+**Closed (2026-07-15): implemented** — shipped as `bbx search` + the global
 `contains:` field (`src/core/search/`, Orama-based; design in
 `docs/implemented-plans/box-search.md`), as the body already records.
 Embeddings/hybrid (phase 3) remain a separate future plan, tracked on their own —
 not a blocker for closing the core search work.
 
-Shipped June 2026 as `cb search` + the global `contains:` field — see
+Shipped June 2026 as `bbx search` + the global `contains:` field — see
 `docs/implemented-plans/box-search.md`. Embeddings/hybrid remain future
 (phase 3, own plan); the notes below are the original thinking.
 
@@ -31,13 +31,13 @@ Why this is a good fit for callback specifically:
 - Typed cards mean the index schema can include `kind` for first-class filtering by card type.
 - Refs already give us a graph; pairing it with text/vector search would close most of the human-discovery gap identified vs. Obsidian (Quick Switcher, Cmd-Shift-F, Omnisearch-style ranking).
 - Vector search on uplifted card text would catch "I'm looking for that thing about X" queries where the user doesn't remember the exact wording.
-- Index lives in `.callback-box/` (already gitignored), rebuilt by `cb init` or incrementally on commit.
+- Index lives in `.beebox/` (already gitignored), rebuilt by `bbx init` or incrementally on commit.
 
 Shape of the work:
 
-1. `cb search "query"` CLI — text + path/kind filters, excerpt output.
+1. `bbx search "query"` CLI — text + path/kind filters, excerpt output.
 2. Web UI Cmd-K palette over the same index.
-3. Optional: an MCP tool or `cb search` invocation surface for the agent itself, useful when "what cards mention X?" beats `grep` (synonyms, partial matches, ranking).
+3. Optional: an MCP tool or `bbx search` invocation surface for the agent itself, useful when "what cards mention X?" beats `grep` (synonyms, partial matches, ranking).
 4. Embedding generation can be lazy / opt-in (cost) — start with text-only.
 
 Not urgent. The agent doesn't currently need it (path conventions + rules cover its discovery), and humans get by with the chat assistant. But it's a high-value, low-risk addition when human direct-browsing becomes a friction point.

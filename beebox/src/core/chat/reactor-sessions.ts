@@ -1,0 +1,135 @@
+/**
+ * Chat Reactor Sessions - Persist Claude Code session IDs per chat thread.
+ *
+ * Enables session reuse across reactor invocations so subsequent messages
+ * in the same chat thread resume the existing session (skipping startup
+ * and the Read-before-Edit gate).
+ *
+ * Ids are minted locally (`randomUUID`) and handed to `createAgent`, whose
+ * first run passes them to the SDK as the create-with-id `sessionId` option —
+ * so the stored id names a real session that later `resume` runs can load.
+ *
+ * Stored in `.beebox/chat-sessions.json`, keyed by thread ref path.
+ */
+
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { errnoCode } from "../../lib/error-guards.js";
+import { isRecord } from "../card-io.js";
+
+const SESSIONS_FILE = ".beebox/chat-sessions.json";
+
+/** Max messages before rotating to a fresh session */
+const MAX_MESSAGES = 50;
+/** Max age in ms before rotating (24 hours) */
+const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+const ChatSessionRecordSchema = z.object({
+  sessionId: z.string(),
+  createdAt: z.string(),
+  lastUsedAt: z.string(),
+  messageCount: z.number(),
+});
+
+export type ChatSessionRecord = z.infer<typeof ChatSessionRecordSchema>;
+
+type SessionStore = Record<string, ChatSessionRecord>;
+
+/** Last successful activity for one reactor thread, independent of web chat. */
+export function lastChatSessionActivity(store: SessionStore, threadRef: string): Date | null {
+  const value = store[threadRef]?.lastUsedAt;
+  if (value === undefined) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export async function loadChatSessions(boxRoot: string): Promise<SessionStore> {
+  const filePath = path.join(boxRoot, SESSIONS_FILE);
+  try {
+    const data = await fs.readFile(filePath, "utf-8");
+    const parsedRaw: unknown = JSON.parse(data);
+    const store: SessionStore = {};
+    if (isRecord(parsedRaw)) {
+      for (const [key, value] of Object.entries(parsedRaw)) {
+        const result = ChatSessionRecordSchema.safeParse(value);
+        if (result.success) {
+          store[key] = result.data;
+        } else {
+          console.warn(`Dropping malformed chat session record for thread ${key}:`, result.error.message);
+        }
+      }
+    }
+    return store;
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`Could not load chat sessions from ${filePath}, starting empty:`, e);
+    }
+    return {};
+  }
+}
+
+export async function saveChatSessions(boxRoot: string, store: SessionStore): Promise<void> {
+  const filePath = path.join(boxRoot, SESSIONS_FILE);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(store, null, 2));
+}
+
+/**
+ * Get or create a session for a chat thread.
+ * Returns { sessionId, resume } where resume=true means an existing session.
+ * Rotates the session if it's stale or has too many messages.
+ */
+export function getOrCreateSession(
+  store: SessionStore,
+  threadRef: string,
+): { sessionId: string; resume: boolean } {
+  const existing = store[threadRef];
+  const now = Date.now();
+
+  if (existing) {
+    const age = now - new Date(existing.lastUsedAt).getTime();
+    if (existing.messageCount < MAX_MESSAGES && age < MAX_AGE_MS) {
+      return { sessionId: existing.sessionId, resume: true };
+    }
+    // Stale or full — rotate
+  }
+
+  // Create new session
+  const sessionId = randomUUID();
+  store[threadRef] = {
+    sessionId,
+    createdAt: new Date(now).toISOString(),
+    lastUsedAt: new Date(now).toISOString(),
+    messageCount: 0,
+  };
+  return { sessionId, resume: false };
+}
+
+/**
+ * Mark a session as used after a successful agent run.
+ */
+export function markSessionUsed(store: SessionStore, threadRef: string): void {
+  const record = store[threadRef];
+  if (record) {
+    record.lastUsedAt = new Date().toISOString();
+    record.messageCount++;
+  }
+}
+
+/**
+ * Delete a session record (e.g., after failure).
+ */
+export function resetSession(store: SessionStore, threadRef: string): void {
+  delete store[threadRef];
+}
+
+/**
+ * Delete all session records.
+ */
+export function resetAllSessions(store: SessionStore): void {
+  for (const key of Object.keys(store)) {
+    delete store[key];
+  }
+}

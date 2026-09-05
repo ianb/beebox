@@ -1,7 +1,7 @@
 ---
 title: "Agent writes a bare `Foo.type.card` filename in chat instead of a link"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 resolution: implemented
 discovered-in: main session — a box produced `name_of_card.gdoc.card` in a chat response
@@ -97,7 +97,7 @@ means non-chat surfaces have *no* linking guidance at all.)
 ## Proposed knowledge audit (the boxholder's suggestion — a clean 0-read test)
 
 No existing audit covers this (the nearest, `internal-links-resolve-to-box-root`
-and `cb-mv-rewrites-references`, are about link *mechanics*). A ready-to-add
+and `bbx-mv-rewrites-references`, are about link *mechanics*). A ready-to-add
 `knowledge-audits.yaml` entry:
 
 ```yaml

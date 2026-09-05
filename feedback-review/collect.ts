@@ -15,29 +15,27 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+
+import { deployTarget } from "../bin/deploy-target.js";
+
 import { runOnServer } from "./run-on-server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const BOX_MARKER = ".cb-box";
+const BOX_MARKER = ".beebox";
 const FEEDBACK_DIR = path.join("config", "feedback");
 const RESOLVED_DIR = path.join("config", "feedback", "resolved");
-const REMOTE_BOXES_DIR = "/home/callback/boxes";
+const REMOTE_BOXES_DIR = "/home/beebox/boxes";
 
-// `cb feedback` names every item `YYYY-MM-DDTHH-MM-SS-<slug>.md`. Match only
+// `bbx feedback` names every item `YYYY-MM-DDTHH-MM-SS-<slug>.md`. Match only
 // that shape so the feedback dir's own docs (CLAUDE.md, MAP.md, README.md) are
 // never collected — and, critically, never swept into resolved/ by --resolve-all.
 function isFeedbackFilename(name: string): boolean {
   return /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-.+\.md$/.test(name);
 }
 
-function getRemoteHost(): string | null {
-  const serverIpFile = path.join(__dirname, "..", "callback-box", "deploy", "server-ip");
-  try {
-    return fs.readFileSync(serverIpFile, "utf-8").trim();
-  } catch {
-    return null;
-  }
+function getRemoteSshTarget(): string | null {
+  return deployTarget(path.join(__dirname, ".."))?.sshTarget ?? null;
 }
 
 function parseArgs(): {
@@ -87,7 +85,7 @@ interface FeedbackFile {
   filePath: string;
   relPath: string;
   content: string;
-  remoteHost?: string;
+  remoteSshTarget?: string;
 }
 
 function collectLocalFeedback(boxes: string[]): FeedbackFile[] {
@@ -126,13 +124,13 @@ function collectLocalFeedback(boxes: string[]): FeedbackFile[] {
   return items;
 }
 
-function collectRemoteFeedback(host: string): FeedbackFile[] {
+function collectRemoteFeedback(sshTarget: string): FeedbackFile[] {
   const find = runOnServer({
-    host,
+    sshTarget,
     script: `find ${REMOTE_BOXES_DIR} -maxdepth 5 -path "*/config/feedback/*.md" ! -path "*/resolved/*" 2>/dev/null`,
   });
   if (find.exitCode !== 0) {
-    console.error(`Warning: could not reach remote host ${host}: ${find.stderr.trim()}`);
+    console.error(`Warning: could not reach ${sshTarget}: ${find.stderr.trim()}`);
     return [];
   }
 
@@ -140,14 +138,14 @@ function collectRemoteFeedback(host: string): FeedbackFile[] {
   const items: FeedbackFile[] = [];
 
   for (const filePath of files.sort()) {
-    // Path format: /home/callback/boxes/<boxname>/config/feedback/<file>
+    // Path format: /home/beebox/boxes/<boxname>/config/feedback/<file>
     const boxName = filePath.split("/")[4];
     if (!boxName) continue;
     const boxRoot = `${REMOTE_BOXES_DIR}/${boxName}`;
     const relPath = filePath.slice(boxRoot.length + 1);
 
     const read = runOnServer({
-      host,
+      sshTarget,
       script: `cat ${JSON.stringify(filePath)}`,
     });
     if (read.exitCode !== 0) continue;
@@ -158,7 +156,7 @@ function collectRemoteFeedback(host: string): FeedbackFile[] {
       filePath,
       relPath,
       content: read.stdout,
-      remoteHost: host,
+      remoteSshTarget: sshTarget,
     });
   }
 
@@ -200,9 +198,9 @@ function resolveRemoteFile(item: FeedbackFile): void {
     "config/feedback/resolved/"
   );
 
-  // Runs as the `callback` user (run-on-server default). NEVER drop the
+  // Runs as the `beebox` user (run-on-server default). NEVER drop the
   // `su` and let git run as root — root-owned commits leave root-owned
-  // objects under .git/objects/ that later block callback-user commits.
+  // objects under .git/objects/ that later block beebox-user commits.
   // See feedback-review/run-on-server.ts for the why.
   const script = [
     "set -e",
@@ -212,7 +210,7 @@ function resolveRemoteFile(item: FeedbackFile): void {
     `git -C ${JSON.stringify(item.boxRoot)} commit -m ${JSON.stringify(`resolve agent feedback: ${path.basename(item.filePath)}`)}`,
   ].join("\n");
 
-  const r = runOnServer({ host: item.remoteHost!, script });
+  const r = runOnServer({ sshTarget: item.remoteSshTarget!, script });
   if (r.exitCode !== 0) {
     console.error(`Remote git error resolving ${item.filePath}: ${r.stderr.trim()}`);
     return;
@@ -221,7 +219,7 @@ function resolveRemoteFile(item: FeedbackFile): void {
 }
 
 function resolveFile(item: FeedbackFile): void {
-  if (item.remoteHost) {
+  if (item.remoteSshTarget) {
     resolveRemoteFile(item);
   } else {
     resolveLocalFile(item);
@@ -253,11 +251,11 @@ async function main(): Promise<void> {
   const items: FeedbackFile[] = collectLocalFeedback(localBoxes);
 
   if (!noRemote) {
-    const remoteHost = getRemoteHost();
-    if (remoteHost) {
-      items.push(...collectRemoteFeedback(remoteHost));
+    const remoteSshTarget = getRemoteSshTarget();
+    if (remoteSshTarget) {
+      items.push(...collectRemoteFeedback(remoteSshTarget));
     } else {
-      console.error("Warning: could not read deploy/server-ip, skipping remote collection.");
+      console.error("Warning: no deploy target configured (beebox/deploy/target.env), skipping remote collection.");
     }
   }
 

@@ -1,7 +1,7 @@
 ---
 title: "Cloudflare Access is walling off the production box (mis-scoped from pub-setup)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 resolution: implemented
 discovered-in: main session — boxholder saw a broken admin page + console errors on the deployed box
@@ -50,7 +50,7 @@ requests. All one cause: Access in front of the box.
 
 ## Why it's there
 
-The Access app was created during the 2026-07-19 `cb pub setup` work, which was
+The Access app was created during the 2026-07-19 `bbx pub setup` work, which was
 meant to protect **`pub-worker.<...>.workers.dev`** (path `a/*`) — see
 [pub Access setup via API](../../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
 The reorganized Cloudflare dashboard made that flow error-prone (documented
@@ -79,7 +79,7 @@ reachable and protected."
 
 ## Prevention
 
-`cb pub setup`'s Access step is a manual dashboard walkthrough precisely because
+`bbx pub setup`'s Access step is a manual dashboard walkthrough precisely because
 we haven't automated it; this incident is the cost of that. Reinforces the case
 in the pub-access issue for provisioning the Access app via the API with the
 hostname passed explicitly, so a human can't point it at the wrong domain.

@@ -2,7 +2,7 @@
 title: "Less-casual releases, and an update story paired with VPS deploy"
 workstream: open-source-readiness
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]

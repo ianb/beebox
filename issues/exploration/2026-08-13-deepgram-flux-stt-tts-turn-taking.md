@@ -1,12 +1,13 @@
 ---
 title: "Evaluate Deepgram Flux — conversational STT, TTS, and turn-taking"
 workstream: unattached
-area: callback-box
+area: beebox
 needs: [design]
 labels: [research, voice, deepgram]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder note
+priority: backlog
 ---
 
 Deepgram has a **Flux** family worth looking at: Flux STT, Flux TTS, and
@@ -34,7 +35,7 @@ From Deepgram's own material (verify against docs before designing anything):
 
 ## Why turn-taking is the interesting part here
 
-Turn-taking is where callback-box's voice UX actually hurts, and the evidence is
+Turn-taking is where beebox's voice UX actually hurts, and the evidence is
 already filed:
 
 - **"clear message" stops the microphone on iOS** but not on web — a spoken
@@ -60,7 +61,7 @@ evaluate them separately rather than as a package.
 
 **The assumption to check first:** Deepgram's voice-agent framing assumes a
 partner that replies in a few hundred milliseconds — stop speaking, detect
-end-of-turn, LLM answers, TTS speaks, repeat. **A callback-box turn is not
+end-of-turn, LLM answers, TTS speaks, repeat. **A beebox turn is not
 that.** It's a Claude Code SDK session that can run for tens of seconds, call
 tools, and edit files. After the user stops speaking there's a long silence that
 isn't the other party thinking — it's work running. A turn-taking model watching
@@ -109,7 +110,7 @@ which would be worse than the button it replaced.
   adopting it for dictation is a **privacy posture change** — there's already a
   filed concern about the legacy fallback streaming audio to Apple, and this
   would be streaming to Deepgram deliberately. Name that trade explicitly.
-- **Does Flux STT replace or complement Voxtral?** `cb chat retranscribe` runs a
+- **Does Flux STT replace or complement Voxtral?** `bbx chat retranscribe` runs a
   high-quality pass; that's a different job (accuracy on demand) from live
   conversational STT, and they may coexist.
 - **TTS**: what do we use today, and is session-long tonal continuity worth

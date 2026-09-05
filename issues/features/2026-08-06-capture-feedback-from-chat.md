@@ -1,7 +1,7 @@
 ---
 title: "Capture feedback / comment on a chat conversation, not just on cards"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — split out of the closed chat-page-improvements item
 priority: normal

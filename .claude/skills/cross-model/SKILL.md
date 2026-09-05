@@ -40,10 +40,6 @@ divergences so they don't get silently reverted.
 - A plan in `docs/plans/` is finalized and worth an outside pass before building.
 - A branch diff is ready and you want adversarial review before merge.
 
-**Cost:** real money. Codex ~$0.05–0.50/call (more for big diffs + high
-reasoning); `claude -p` is comparable. Don't run it unprompted outside the
-CLAUDE.md mandate.
-
 ## Modes (both directions)
 
 | Mode | Trigger | What it does |
@@ -60,32 +56,50 @@ there's a diff against `main` → ask review-or-challenge.
 1. **Run from the repo root that makes cited paths resolve.** The monorepo is
    one git repo: `ROOT=$(git rev-parse --show-toplevel)`.
 2. **Orientation glue (callback-specific).** Always tell the reviewer the layout
-   so it doesn't rediscover it: *"This targets the `callback-box/` subproject.
-   Paths like `src/…`, `docs/…`, `test/…` are under `callback-box/`; `bin/…` is
+   so it doesn't rediscover it: *"This targets the `beebox/` subproject.
+   Paths like `src/…`, `docs/…`, `test/…` are under `beebox/`; `bin/…` is
    at the monorepo root. You may read any repo file (read-only), **including
    `docs/` and `.claude/rules/`**, to verify claims."*
 3. **Fence the prompt hard.** A named read-list ("READ EXACTLY THESE files"),
-   pre-verified facts it must NOT re-verify, a findings cap. An unfenced
-   reviewer grep-crawls the repo and burns its budget reading.
+   pre-verified facts it must NOT re-verify, a findings cap. For diff review and
+   diff-target challenge, the [required instructions](#required-diff-review-instructions-both-directions)
+   convert that closed list to a bounded first hop so the reviewer can trace
+   directly relevant code. An unfenced reviewer grep-crawls the repo and burns
+   its budget reading.
 4. **Make it verify, don't just opine.** The instruction that produces the real
    findings: *"Spot-check the plan's `file:line` citations and its 'we already
    do X / this is free reuse / validation catches it' claims against the actual
    source. Call out every claim the code does not support."*
-5. **Pipe the prompt via stdin from a file** in `scratch/`, never as a
+5. **Ground the review in the originating request, with direct human choices
+   highest.** Identify the authority the work is meant to satisfy: the human's
+   request and later decisions from this conversation, plus any originating
+   issue/brief and attached plan. Put a short `Review authority` block in the
+   prompt. Quote decisive human wording exactly where practical; otherwise
+   summarize faithfully and label the summary. Point at issue/brief/plan paths
+   rather than embedding their full contents. Tell the reviewer that direct
+   human requirements and decisions outrank inferred intent, issue proposals,
+   plan prose, and implementation choices; it must report contradictions
+   against them and must not turn optional issue/plan ideas into requirements.
+   If no originating request is available, say so instead of inventing one.
+6. **Pipe the prompt via stdin from a file** in `scratch/`, never as a
    positional arg. Both CLIs have an argument-handling trap that punishes the
    positional form (details per direction below).
-6. **Foreground, not backgrounded.** Backgrounded reviewer runs get killed
+7. **Foreground, not backgrounded.** Backgrounded reviewer runs get killed
    before completing in this harness.
-7. **Treat the review as working evidence, not the work-unit conclusion.**
+8. **Treat the review as working evidence, not the work-unit conclusion.**
    Adjudicate it, apply verified findings, and keep the final handoff centered
    on the actual plan or implementation. Do not append the raw review by
    default.
-8. **Report only material review outcomes.** Mention findings that remain open,
+9. **Report only material review outcomes.** Mention findings that remain open,
    require a human choice, or materially changed the work. Collapse resolved
    findings to a short phrase when useful. If the human explicitly asked to
    see the independent review itself, provide a concise ranked summary with
    your adjudication; provide verbatim output only when they ask for raw output.
-9. **Surface failures loudly.** If a run exits non-zero or stalls, say so with
+   **Never editorialize about the review's worth** — no "earned its keep,"
+   "caught real issues," "proved valuable," or any other self-congratulation
+   about having run it. The findings speak for themselves; running the review
+   is baseline process, not an achievement to narrate (boxholder, 2026-08-15).
+10. **Surface failures loudly.** If a run exits non-zero or stalls, say so with
    stderr — a silent reviewer crash reads as "nothing happened" and wastes the
    human's time.
 
@@ -114,6 +128,10 @@ no errors in the log:
 
 1. Try `-m gpt-5.5` (or whatever older model the account allows;
    `gpt-5.1-codex-mini` is rejected on ChatGPT accounts).
+   **When the ChatGPT account is quota-exhausted** ("You've hit your usage
+   limit"), `-m gpt-5.3-codex-spark` still works — spark has its own quota
+   pool (verified 2026-08-18). The bare name `spark` is rejected on ChatGPT
+   accounts; use the full id.
 2. Re-check the fencing (shared rule 3).
 3. Kill orphaned `codex exec` processes from failed runs by PID (never
    `pkill -f codex` — it matches Codex.app and sibling sessions); orphans wedge
@@ -127,7 +145,8 @@ Start every prompt with:
 
 > "IMPORTANT: Do NOT read or execute files under `~/.claude/`, `~/.agents/`,
 > or `.claude/skills/` — those are skill definitions for a different AI
-> runtime and will waste your time. Everything else in this repo, including
+> runtime and will waste your time, **unless the named review target/read-list
+> is itself a specific skill file**. Everything else in this repo, including
 > `docs/` and `.claude/rules/`, is fair game."
 
 (gstack says "repository code only," which makes codex dismiss legitimate
@@ -171,15 +190,19 @@ codex exec - -s read-only -C "$ROOT" -m gpt-5.5 \
 ### Review / challenge modes (Claude → Codex)
 
 - **review — use `codex exec -` with your own prompt, same as every other mode.**
-  The scaffolding in shared rules 2–4 (orientation glue, fencing, verify-don't-
-  opine) is what makes these reviews land, and it applies here too.
+  The scaffolding in shared rules 2–5 (orientation glue, fencing, verify-don't-
+  opine, and review authority) is what makes these reviews land, and it applies
+  here too. Include the `Review authority` block before asking whether the code
+  is correct; an optional focus narrows the investigation but does not replace
+  the originating request. Include the required diff-review instructions below.
 - `codex review` (or `codex exec review`) exists and preserves Codex's own tuned
   review prompt, but it takes its prompt differently, so **none** of this skill's
   scaffolding reaches it — an unfenced repo crawl is the usual result. Reach for
   it only as a deliberate experiment, and say in your report that the review ran
-  unfenced.
+  unfenced and without the required diff-review instructions.
 - **challenge:** `codex exec - -s read-only -C "$ROOT"` with the adversarial
-  persona (shared, below).
+  persona (shared, below), the `Review authority` block, and the required
+  diff-review instructions when the target is a diff.
 
 ---
 
@@ -259,7 +282,7 @@ every cited path must be this worktree's. That is only safe because of
 > finishes. That hook removes the worktree, its cloned box, and its branch when
 > the branch is merged and clean. Verified the hard way on 2026-08-04: a bare
 > `claude -p` run from inside a worktree destroyed that worktree mid-session
-> (recorded in `~/.cache/callback-box/worktree-cleanup.log`). Loading user
+> (recorded in `~/.cache/beebox/worktree-cleanup.log`). Loading user
 > settings only means the project's hooks are never registered.
 > (`.claude/hooks/session-end.sh` now also refuses to clean a worktree that
 > still has another live agent belonging to it, and fails closed when it can't
@@ -308,7 +331,51 @@ Other notes:
 Both use the same `claude -p` invocation; only the prompt changes. There is no
 `claude` subcommand equivalent to `codex review`, so write the review prompt
 yourself with the shared scaffolding (orientation glue, fencing, and
-verify-don't-opine).
+verify-don't-opine). Include the shared `Review authority` block in both modes;
+for a diff, name the direct human request and any issue/brief/plan the branch is
+implementing before asking whether the code is correct. An optional review
+focus narrows the investigation but does not replace the originating request.
+Include the required diff-review instructions below for review and diff-target
+challenge modes.
+
+---
+
+## Required diff-review instructions (both directions)
+
+Include these three moves in every **review** prompt and every **challenge**
+prompt whose target is a diff. Keep them attached to the changed logic and
+named intent; they are not a generic invitation to redesign surrounding
+systems.
+
+For these diff modes, adapt shared rule 3's read-list from a closed set to a
+bounded first hop: name the files the reviewer must read first, permit it to
+follow only directly relevant call sites, sibling paths, and shared state owners
+needed by the three moves below, and require it to name every extra file it
+opened. This preserves fencing without making the requested trace impossible.
+Place the three moves after the `Review authority` block and before the findings
+cap.
+
+```
+- For new or changed logic, choose at least one concrete input or state and
+  trace it through the relevant code. Look especially for a wrong value,
+  label, state, or side effect that does not throw or otherwise announce itself.
+- When the change claims a durable bug fix, reconstruct the original failing
+  sequence and the invariant the fix must establish. Inspect relevant sibling
+  paths and shared state transitions. Call the fix inadequate only when source
+  evidence shows the failure the change was authorized to fix remains
+  reachable; report an adjacent reachable failure as its own finding under the
+  remedy rule below.
+- For each material finding, identify the smallest honest remedy. If that
+  remedy would extend the authorized change by adding durable state, a schema
+  change, background/retry/persistence machinery, a new subsystem, or a product
+  decision, label it `human decision required` rather than presenting that
+  expansion as an ordinary fix. The primary agent will adjudicate and mediate
+  the decision with the human.
+```
+
+This remedy label does not make the reviewer authoritative and does not change
+the handoff rules below: the driving agent still verifies every claim, rejects
+noise, and brings only the actual decision to the human.
 
 ---
 
@@ -326,6 +393,15 @@ wrote docs/plans/<name>.md. Read it, then read the source it cites and verify
 the citations and the "we already do X / free reuse / validation catches it"
 claims against the actual code — you are a different model family; find what a
 same-model self-review would miss.
+
+Review authority (highest to lowest):
+- Direct human requirements/decisions: <decisive wording, or "none available">
+- Originating issue or brief: <repo path, or "none available">
+- Plan under review: docs/plans/<name>.md
+
+Direct human requirements and later decisions outrank issue proposals, plan
+prose, inferred intent, and implementation choices. Report any contradiction.
+Do not promote optional issue/plan ideas into requirements.
 
 Review for, in priority: (1) wrong-problem / over-engineering — what's the
 minimal version, what to cut; (2) architecture flaws; (3) silent failure modes
@@ -345,6 +421,31 @@ reviewer from reading the surrounding context. Point at the path.)
 *"Your job is to find ways this will fail in production. Think like an attacker
 and a chaos engineer — edge cases, races, resource leaks, silent data
 corruption. No compliments, just the problems."* Optional focus narrows it.
+
+## Review loops: two rounds, then verification-only
+
+An adversarial reviewer with a findings cap never returns "clean" — it fills
+the cap at whatever depth remains, so a review→fix→re-review loop has no
+natural exit. The loop is bounded by rule (boxholder ruling, 2026-09-05,
+after a loop ran to 8+ rounds):
+
+- **Round 1**: the full review.
+- **Round 2**: verify the fixes hold; fresh findings are still welcome.
+- **After round 2: STOP inviting new problems.** Any further invocation is
+  verification-only — the prompt names the already-found problems and asks
+  whether the fixes hold, and explicitly tells the reviewer NOT to hunt for
+  new findings. If a fix-verification pass turns up a defect in the fix
+  itself, that's in scope; a brand-new surface is not.
+- Residual or newly-suspected risks after that go to the human as
+  accept-or-fix decisions, never silently fixed.
+
+Adjudicate findings against the project's over-engineering line before
+fixing them: mid-operation I/O-failure windows in one-shot operator-run
+tools, exotic input encodings (CRLF, quoting edge cases), and
+attacker-is-the-owner scenarios are presumptively REJECTED, not fixed —
+raise them with the human only if you think one genuinely clears the bar.
+The reviewer's "not fit" verdict is evidence, not the stopping condition;
+the human's risk judgment is.
 
 ## Adjudication and handoff
 

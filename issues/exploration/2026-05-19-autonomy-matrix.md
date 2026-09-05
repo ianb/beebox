@@ -1,7 +1,7 @@
 ---
 title: "autonomy matrix"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 A fixed L0-L4 autonomy ladder is too rigid — what's appropriate varies per box (personal vs. work vs. shared-with-family) and per situation within a box. Cleaner shape:

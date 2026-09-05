@@ -1,7 +1,7 @@
 ---
 title: "Detect a server update and prompt the client to reload"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked for it
 priority: normal
@@ -46,7 +46,7 @@ removes the whole category of "worked after I refreshed" ghosts.
   — Reload", never an auto-reload (that would nuke an in-progress compose or a
   streaming turn). Let the person finish and reload when ready.
 - Decide behavior on the **iOS webview** too — it should get the same signal and
-  reload path (`docs/mobile-contract.md`; cb-ios-overlap territory).
+  reload path (`docs/mobile-contract.md`; bbx-ios-overlap territory).
 
 ## Open questions
 

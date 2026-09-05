@@ -6,7 +6,7 @@ workstream: unknown
 2026-07-04 · boxholder-ruled direction: "there should be one way to log
 everywhere more or less. If not then we should fix it."
 
-Current state: `makeLog` (`callback-box/src/core/chat-session-log.ts`) is
+Current state: `makeLog` (`beebox/src/core/chat-session-log.ts`) is
 the only structured logging convention and is used by ~8 chat-session
 modules; the rest of the codebase has ~900 raw `console.*` calls with no
 convention (no levels, no module tags, no routing).

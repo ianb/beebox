@@ -58,7 +58,7 @@ reintroduction before committing.
 Blocking pre-commit / CI integration is a deliberate follow-up (it requires every
 committer to have `opengrep` installed, and our flow is trunk-based rather than
 PR-based). Tracked in
-[`issues/exploration/2026-07-25-opengrep-self-cve-scanner.md`](../../issues/exploration/2026-07-25-opengrep-self-cve-scanner.md).
+[`issues/exploration/2026-07-25-opengrep-self-cve-scanner.md`](../../issues/closed/exploration/2026-07-25-opengrep-self-cve-scanner.md).
 OpenClaw also compiles rules from source YAML via a `compile-rules.mjs` step that
 injects provenance and validates metadata; at one rule we hand-author
 `precise.yml` directly — adopt the compiler if the pack grows enough to need it.

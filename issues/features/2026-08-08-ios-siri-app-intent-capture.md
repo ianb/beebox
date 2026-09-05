@@ -1,7 +1,7 @@
 ---
 title: "iOS App Intent: capture to your box hands-free via Siri / Shortcuts / Action Button"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked whether we can be a Siri intent
 priority: important
@@ -69,11 +69,11 @@ UI-driven, always fed a concrete shared item. An App Intent is
 **proactive/hands-free** — voice, Action Button, Spotlight, or a user-built
 Shortcut, needing no other app and able to run fully invisibly. They share almost
 all plumbing but are different entry points. (Related, superseded:
-[ios-share-sheet-capture](2026-05-11-ios-share-sheet-capture.md),
-[share-to-box-images-files](2026-03-05-share-to-box-images-files.md); the live
+[ios-share-sheet-capture](../closed/features/2026-05-11-ios-share-sheet-capture.md),
+[share-to-box-images-files](../closed/features/2026-03-05-share-to-box-images-files.md); the live
 precedent for the credential + delivery mechanics is
-[the share-extension capture plan](../../callback-box/docs/plans/ios-share-extension-capture.md),
-and the contract is [mobile-contract.md](../../callback-box/docs/mobile-contract.md).)
+[the share-extension capture plan](../../beebox/docs/plans/ios-share-extension-capture.md),
+and the contract is [mobile-contract.md](../../beebox/docs/mobile-contract.md).)
 
 ## Open questions (for design when picked up)
 

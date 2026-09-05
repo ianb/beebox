@@ -39,6 +39,44 @@ import {
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 
+class TrackedAgentsMdError extends Error {
+  constructor(readonly tracked: string[]) {
+    super(
+      `refusing to overwrite git-tracked AGENTS.md: ${tracked.join(", ")} — ` +
+        "mirrors must stay gitignored (see .gitignore); untrack them first",
+    );
+    this.name = "TrackedAgentsMdError";
+  }
+}
+
+class UnscopedRuleDirectoryError extends Error {
+  constructor(readonly scopeDir: string) {
+    super(`no tracked CLAUDE.md scopes rule directory: ${scopeDir || "."}`);
+    this.name = "UnscopedRuleDirectoryError";
+  }
+}
+
+class MissingWorktreeNameValueError extends Error {
+  constructor() {
+    super("--worktree-name needs a value");
+    this.name = "MissingWorktreeNameValueError";
+  }
+}
+
+class UnknownFlagError extends Error {
+  constructor(readonly flag: string) {
+    super(`unknown flag: ${flag}`);
+    this.name = "UnknownFlagError";
+  }
+}
+
+class TooManyCheckoutDirsError extends Error {
+  constructor(readonly positional: string[]) {
+    super(`expected at most one checkout dir, got: ${positional.join(" ")}`);
+    this.name = "TooManyCheckoutDirsError";
+  }
+}
+
 const GENERATED_HEADER =
   "<!-- GENERATED from Claude guidance by bin/generate-agents-md.ts at" +
   " worktree spin-up. Do not edit or commit this file (it is gitignored);" +
@@ -64,7 +102,7 @@ the shared dev router serves this checkout at
 http://localhost:3210/${worktreeName}/... (the worktree short name, not the
 branch name).
 
-Other in-progress worktrees live at ~/src/callback-worktrees/<name>/ (their box
+Other in-progress worktrees live at ~/src/beebox-worktrees/<name>/ (their box
 clones at ~/src/box-worktrees/<name>/). You MAY read them to see what other work
 is underway — \`git worktree list\` to enumerate, \`git -C <path> status\` and
 \`git -C <path> diff main\` to inspect one. Your sandbox confines writes, not
@@ -141,10 +179,7 @@ export function generateAgentsFiles(
     (p) => basename(p) === "AGENTS.md",
   );
   if (tracked.length > 0) {
-    throw new Error(
-      `refusing to overwrite git-tracked AGENTS.md: ${tracked.join(", ")} — ` +
-        "mirrors must stay gitignored (see .gitignore); untrack them first",
-    );
+    throw new TrackedAgentsMdError(tracked);
   }
   const claudeFiles = gitLsFiles(checkoutDir, "CLAUDE.md", "*CLAUDE.md").filter(
     (p) => basename(p) === "CLAUDE.md",
@@ -160,9 +195,7 @@ export function generateAgentsFiles(
       if (claudeByTarget.has(target)) return target;
       const parent = dirname(candidateDir);
       if (parent === candidateDir || candidateDir === ".") {
-        throw new Error(
-          `no tracked CLAUDE.md scopes rule directory: ${scopeDir || "."}`,
-        );
+        throw new UnscopedRuleDirectoryError(scopeDir);
       }
       candidateDir = parent;
     }
@@ -190,7 +223,7 @@ export function generateAgentsFiles(
 
   const targets = new Set(claudeByTarget.keys());
   const written: string[] = [];
-  for (const target of [...targets].sort()) {
+  for (const target of [...targets].toSorted()) {
     const claudeFile = claudeByTarget.get(target);
     const isRoot = target === "AGENTS.md";
     const content =
@@ -239,7 +272,7 @@ export function generateSkillLinks(checkoutDir: string): string[] {
     )
     .map((parts) => parts[2])
     .filter((name): name is string => name !== undefined)
-    .sort();
+    .toSorted();
   const expected = new Set(skillNames);
   const skillsDir = join(checkoutDir, ".agents", "skills");
   mkdirSync(skillsDir, { recursive: true });
@@ -260,9 +293,23 @@ export function generateSkillLinks(checkoutDir: string): string[] {
     if (existing === undefined) {
       symlinkSync(target, path, "dir");
     } else if (!existing.isSymbolicLink() || readlinkSync(path) !== target) {
-      throw new Error(
-        `refusing to overwrite existing Codex skill path: .agents/skills/${name}`,
+      // Still refuse to overwrite — a hand-authored native Codex skill at a
+      // tracked skill's name is a real thing to protect (see the test of the
+      // same name). But SKIP it and keep going rather than throwing.
+      //
+      // Throwing aborted the whole run at the FIRST such entry, so one
+      // unexpected directory silently cost every later skill AND the AGENTS.md
+      // mirrors after it. The main checkout sat on 2026-07-06 copies of all 15
+      // skills for seven weeks that way, and the only symptom was Codex
+      // sessions working from stale instructions — invisible unless someone ran
+      // the generator by hand. A loud skip keeps the protection and bounds the
+      // damage to the one entry it is protecting.
+      console.warn(
+        `generate-agents-md: refusing to overwrite existing Codex skill path: .agents/skills/${name} — ` +
+          "leaving it as-is. If this is a stale generated copy rather than a native Codex skill, " +
+          "remove it and re-run to restore the symlink.",
       );
+      continue;
     }
     written.push(join(".agents", "skills", name));
   }
@@ -279,17 +326,15 @@ function main(): void {
     if (arg === "--worktree-name") {
       worktreeName = args[++i];
       if (worktreeName === undefined)
-        throw new Error("--worktree-name needs a value");
+        throw new MissingWorktreeNameValueError();
     } else if (arg.startsWith("--")) {
-      throw new Error(`unknown flag: ${arg}`);
+      throw new UnknownFlagError(arg);
     } else {
       positional.push(arg);
     }
   }
   if (positional.length > 1)
-    throw new Error(
-      `expected at most one checkout dir, got: ${positional.join(" ")}`,
-    );
+    throw new TooManyCheckoutDirsError(positional);
   const checkoutDir = resolve(positional[0] ?? process.cwd());
   const agentsFiles = generateAgentsFiles(checkoutDir, worktreeName);
   const skillLinks = generateSkillLinks(checkoutDir);

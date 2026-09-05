@@ -16,7 +16,7 @@ npm run lint:circular  # Circular dependency detector (madge)
 ```
 
 - The tsconfig is strict — no implicit `any` allowed
-- ESLint config is in `eslint.config.mjs` with rules reviewed individually
+- ESLint config is in `eslint.config.ts` with rules reviewed individually
 - oxlint provides supplemental checks (ambiguous constructors, useless spreads, identical ternary branches, etc.) — run periodically, not in pre-commit
 - knip detects unused files, exports, and dependencies — run periodically to catch dead code
 - madge detects circular dependencies — type-only cycles (`import type`) are acceptable, value import cycles are not
@@ -87,7 +87,7 @@ The rule `personal-vibe-check/restrict-component-classes` enforces the conventio
 
 Appearance changes (colors, fonts, borders, shadows) go through the component's typed intent/variant props — not className. This keeps the component's visual contract intact while letting callers control how it sits in the surrounding layout.
 
-**Enable in your project's `eslint.config.mjs`:**
+**Enable in your project's `eslint.config.ts`:**
 
 ```js
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";

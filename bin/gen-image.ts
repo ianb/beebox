@@ -14,6 +14,26 @@
  * PNG (Gemini returns ~1024px); downsize with `sips -Z <px> in.png --out out.png`.
  */
 import { writeFileSync } from "node:fs";
+import { z } from "zod";
+
+/**
+ * Only the sliver of the generateContent response this script reads. Unknown
+ * keys are dropped rather than rejected, and a shape that does not match at all
+ * falls through to the "no image in response" path below.
+ */
+const GenerateContentResponse = z.object({
+  candidates: z
+    .array(
+      z.object({
+        content: z
+          .object({
+            parts: z.array(z.object({ inlineData: z.object({ data: z.string() }).optional() })).optional(),
+          })
+          .optional(),
+      }),
+    )
+    .optional(),
+});
 
 const KEY = process.env.GEMINI_IMAGE_KEY ?? process.env.SKE_GEMINI_API_KEY ?? process.env.GEMINI_KEY;
 const MODEL = process.env.GEMINI_IMAGE_MODEL ?? "gemini-2.5-flash-image";
@@ -41,9 +61,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const json = (await res.json()) as {
-    candidates?: { content?: { parts?: { inlineData?: { data: string } }[] } }[];
-  };
+  const parsed = GenerateContentResponse.safeParse(await res.json());
+  const json = parsed.success ? parsed.data : {};
   const b64 = json.candidates?.[0]?.content?.parts?.find((p) => p.inlineData)?.inlineData?.data;
   if (!b64) {
     console.error("no image in response");

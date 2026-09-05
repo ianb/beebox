@@ -1,7 +1,7 @@
 # Research
 
-Competitive/comparative research written to inform callback-box planning — not
-callback-box's own documentation. Reviews of other systems (OpenClaw, Hermes,
+Competitive/comparative research written to inform beebox planning — not
+beebox's own documentation. Reviews of other systems (OpenClaw, Hermes,
 Letta, PAI, gstack, comparables scouted along the way) done to steal good
 ideas and validate or challenge our own bets.
 
@@ -21,7 +21,7 @@ ideas and validate or challenge our own bets.
 ## What a review must do
 
 Every review ends in **explicit recommendations** — adopt / adapt / reject /
-later, each traced to a concrete callback-box specifics (a file, a design
+later, each traced to a concrete beebox specifics (a file, a design
 doc, a boxholder decision), not left as abstract praise or criticism of the
 other system. "Interesting" isn't a disposition.
 

@@ -1,20 +1,20 @@
 ---
 title: "Standardize agent-authored links on box-root-relative paths (drop document-relative)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder, recurring agent link error
 resolution: implemented
-design: ../../../callback-box/docs/implemented-plans/box-root-paths.md
+design: ../../../beebox/docs/implemented-plans/box-root-paths.md
 ---
 
 ## Implemented (2026-07-30)
 
-Shipped in full by `callback-box/docs/implemented-plans/box-root-paths.md` (branch
+Shipped in full by `beebox/docs/implemented-plans/box-root-paths.md` (branch
 `worktree-path-handling-model`, Tracks A–G): one `src/shared/ref-path.ts`
 algebra behind every parse/resolve, chat re-based on the box root, nav and
 landmark accepting/teaching the leading-`/` form, the guidance stated once in
-`REF_PATH_RULE` with exemplars swept, `cb validate --canonical [--fix]` as the
+`REF_PATH_RULE` with exemplars swept, `bbx validate --canonical [--fix]` as the
 opt-in normalizer, and three knowledge audits (`links-always-box-root`,
 `landmark-ref-box-root`, `attach-is-the-exception`) authored and passing.
 
@@ -102,7 +102,7 @@ implementation is not yet scheduled.
 - Full deprecation of document-relative, or "always recommend `/` but still
   resolve relative" (safer for existing boxes)?
 - Landmark migration: auto-rewrite existing relative refs to `/`-absolute on
-  `cb validate --fix`, or leave them and only change guidance?
+  `bbx validate --fix`, or leave them and only change guidance?
 - Does `attach/` (the sibling-attachment prefix) stay a relative exception? It's
   a genuinely local reference and reads naturally relative.
 

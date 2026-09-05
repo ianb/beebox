@@ -1,9 +1,9 @@
 {
-  "note": "Coverage ledger for story extraction: which repo docs have been scanned, in which runs/variants, and whether the scanned content still matches disk. The runs themselves (dev/story-eval/runs/) are gitignored — this ledger is the only tracked record. Regenerate with `pnpm --dir site coverage`; find docs needing a re-scan with `pnpm --dir site coverage --check`.",
+  "note": "Coverage ledger for story extraction: which repo docs have been scanned, in which runs/variants, and whether the scanned content still matches disk. The runs themselves (dev/apps/story-eval/runs/) are gitignored — this ledger is the only tracked record. Regenerate with `pnpm --dir site coverage`; find docs needing a re-scan with `pnpm --dir site coverage --check`.",
   "generatedAt": "2026-07-24T13:20:29.407Z",
   "docs": [
     {
-      "doc": "callback-box/docs/activities-design.md",
+      "doc": "beebox/docs/activities-design.md",
       "runs": [
         "run-004"
       ],
@@ -17,7 +17,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/activities-retrospective.md",
+      "doc": "beebox/docs/activities-retrospective.md",
       "runs": [
         "run-003"
       ],
@@ -32,7 +32,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/design/README.md",
+      "doc": "beebox/docs/design/README.md",
       "runs": [
         "run-004"
       ],
@@ -46,7 +46,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/engineering-principles.md",
+      "doc": "beebox/docs/engineering-principles.md",
       "runs": [
         "run-002"
       ],
@@ -61,7 +61,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/implemented-plans/attach-directories-superseded.md",
+      "doc": "beebox/docs/implemented-plans/attach-directories-superseded.md",
       "runs": [
         "run-004"
       ],
@@ -75,7 +75,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/implemented-plans/box-retrospectives.md",
+      "doc": "beebox/docs/implemented-plans/box-retrospectives.md",
       "runs": [
         "run-004"
       ],
@@ -89,7 +89,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/implemented-plans/boxes-as-packages-v2.md",
+      "doc": "beebox/docs/implemented-plans/boxes-as-packages-v2.md",
       "runs": [
         "run-004"
       ],
@@ -103,7 +103,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/implemented-plans/capture-mode.md",
+      "doc": "beebox/docs/implemented-plans/capture-mode.md",
       "runs": [
         "run-004"
       ],
@@ -117,7 +117,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/implemented-plans/cards-as-markdown-rfc.md",
+      "doc": "beebox/docs/implemented-plans/cards-as-markdown-rfc.md",
       "runs": [
         "run-001"
       ],
@@ -132,7 +132,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/knowledge-audits.md",
+      "doc": "beebox/docs/knowledge-audits.md",
       "runs": [
         "run-001"
       ],
@@ -147,7 +147,7 @@
       "current": true
     },
     {
-      "doc": "callback-box/docs/todo-security.md",
+      "doc": "beebox/docs/todo-security.md",
       "runs": [
         "run-004"
       ],
@@ -281,7 +281,7 @@
       "current": true
     },
     {
-      "doc": "issues/decisions/2026-07-07-cb-render-vs-bin-browse.md",
+      "doc": "issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md",
       "runs": [
         "run-004",
         "run-006"
@@ -296,7 +296,7 @@
       "current": true
     },
     {
-      "doc": "issues/decisions/2026-07-10-boxes-dead-callback-box-symlinks.md",
+      "doc": "issues/decisions/2026-07-10-boxes-dead-beebox-symlinks.md",
       "runs": [
         "run-004",
         "run-006"

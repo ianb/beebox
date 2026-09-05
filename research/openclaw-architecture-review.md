@@ -1,12 +1,12 @@
-# Architecture Review: OpenClaw vs Callback
+# Architecture Review: OpenClaw vs Bee Box
 
 _February 2026_
 
 ## The Big Picture
 
-OpenClaw is a **multi-channel AI gateway** — it routes messages from WhatsApp/Telegram/Discord/etc. to AI agents. Callback is a **file-based personal automation system** — it uses git-backed cards, a CLI, and Claude Code agents to manage information flows.
+OpenClaw is a **multi-channel AI gateway** — it routes messages from WhatsApp/Telegram/Discord/etc. to AI agents. Bee Box is a **file-based personal automation system** — it uses git-backed cards, a CLI, and Claude Code agents to manage information flows.
 
-They solve different problems but share core concerns: agent orchestration, memory, extensibility, automation, and security. This review identifies ideas from OpenClaw's architecture that could benefit Callback.
+They solve different problems but share core concerns: agent orchestration, memory, extensibility, automation, and security. This review identifies ideas from OpenClaw's architecture that could benefit Bee Box.
 
 ---
 
@@ -14,7 +14,7 @@ They solve different problems but share core concerns: agent orchestration, memo
 
 **What OpenClaw has:** A sophisticated hybrid search memory with vector embeddings (sqlite-vec), BM25 full-text search, temporal decay, and MMR diversity re-ranking. Agents get `memory_search` and `memory_get` tools. Memory lives as markdown files (`MEMORY.md` + daily logs + topic files), indexed into SQLite with chunking.
 
-**What Callback has:** Nothing persistent. Agents lose all context between sessions. The only "memory" is what's in git history and card files.
+**What Bee Box has:** Nothing persistent. Agents lose all context between sessions. The only "memory" is what's in git history and card files.
 
 ### Ideas
 
@@ -22,7 +22,7 @@ They solve different problems but share core concerns: agent orchestration, memo
 |------|--------|-------|
 | **Daily memory logs** — auto-create `memory/YYYY-MM-DD.md` files that agents append to during sessions | Low | High |
 | **Memory flush before compaction** — silent agentic turn that says "write anything important to memory before context is lost" | Low | High |
-| **Memory search tool** — `cb memory search <query>` that searches across memory files, card archives, and git history | Medium | High |
+| **Memory search tool** — `bbx memory search <query>` that searches across memory files, card archives, and git history | Medium | High |
 | **Bootstrap context injection** — load `MEMORY.md` + recent daily logs into agent context at session start | Low | Medium |
 | **Topic-based memory files** — agents create `memory/projects.md`, `memory/contacts.md` etc. for durable knowledge | Low | Medium |
 
@@ -34,7 +34,7 @@ They solve different problems but share core concerns: agent orchestration, memo
 
 **What OpenClaw has:** A formal plugin SDK (`registerTool`, `registerHook`, `registerChannel`, etc.) with manifest-based discovery, config validation without code execution, and exclusive "slots" (only one memory plugin at a time). Skills are separate — they're just markdown files that teach the agent how to use tools, discovered from `skills/` directories with OS/binary/env filtering.
 
-**What Callback has:** Connectors (hardcoded sync interfaces), schemas (card type definitions), and `.claude/rules/` (conditional context injection). No formal plugin or skill system.
+**What Bee Box has:** Connectors (hardcoded sync interfaces), schemas (card type definitions), and `.claude/rules/` (conditional context injection). No formal plugin or skill system.
 
 ### Ideas
 
@@ -53,13 +53,13 @@ They solve different problems but share core concerns: agent orchestration, memo
 
 **What OpenClaw has:** Per-agent session stores with JSONL transcripts, automatic daily reset, idle timeout reset, compaction (summarize old turns to free context), and session maintenance (prune stale sessions, cap disk usage, archive old transcripts).
 
-**What Callback has:** Each agent invocation is a fresh Claude Code session. No continuity between reactor cycles. Session IDs exist for resume-on-uncommitted-work, but there's no conversation history.
+**What Bee Box has:** Each agent invocation is a fresh Claude Code session. No continuity between reactor cycles. Session IDs exist for resume-on-uncommitted-work, but there's no conversation history.
 
 ### Ideas
 
 | Idea | Effort | Value |
 |------|--------|-------|
-| **Session transcripts** — save agent conversation logs to `.callback-box/sessions/<id>.jsonl` for debugging and memory | Medium | High |
+| **Session transcripts** — save agent conversation logs to `.beebox/sessions/<id>.jsonl` for debugging and memory | Medium | High |
 | **Session summaries** — when a reactor cycle completes, generate a 1-paragraph summary of what happened, saved to `memory/` | Low | High |
 | **Compaction-aware context** — inject summaries of recent sessions into agent context so agents know what happened recently | Low | High |
 | **Session reset policies** — daily reset, idle timeout, max entries — to manage disk usage | Low | Low |
@@ -72,7 +72,7 @@ They solve different problems but share core concerns: agent orchestration, memo
 
 **What OpenClaw has:** HTTP webhook endpoints (`/hooks/wake`, `/hooks/agent`) that trigger agent runs from external services. Gmail Pub/Sub integration for push-based email. Cron jobs can deliver results to channels or external webhooks.
 
-**What Callback has:** Pull-based connectors (RSS, Gmail IMAP) that only run during `cb wakeup`. Scheduled scripts with cron/at/rrule. No push triggers.
+**What Bee Box has:** Pull-based connectors (RSS, Gmail IMAP) that only run during `bbx wakeup`. Scheduled scripts with cron/at/rrule. No push triggers.
 
 ### Ideas
 
@@ -91,7 +91,7 @@ They solve different problems but share core concerns: agent orchestration, memo
 
 **What OpenClaw has:** `sessions_spawn` tool lets the main agent spin up background sub-agents with their own sessions. Configurable depth limits (max 2 levels), concurrency caps, model overrides, and announce-back chains. Sub-agents can be orchestrators that spawn their own sub-agents.
 
-**What Callback has:** One agent per reactor cycle processes all jobs sequentially. Procedures can invoke agents per-step, but no parallel execution.
+**What Bee Box has:** One agent per reactor cycle processes all jobs sequentially. Procedures can invoke agents per-step, but no parallel execution.
 
 ### Ideas
 
@@ -110,7 +110,7 @@ They solve different problems but share core concerns: agent orchestration, memo
 
 **What OpenClaw has:** Five-layer trust boundaries, formal threat model (MITRE ATLAS), exec tool with graduated security (sandbox -> allowlist -> full), tool elevation with per-channel approval, SSRF protection for browser automation.
 
-**What Callback has:** Agents run as the user with full filesystem access. No sandboxing, no tool restrictions, no approval workflows.
+**What Bee Box has:** Agents run as the user with full filesystem access. No sandboxing, no tool restrictions, no approval workflows.
 
 ### Ideas
 
@@ -120,7 +120,7 @@ They solve different problems but share core concerns: agent orchestration, memo
 | **External content wrapping** — mark content from external sources (RSS, email) so agents know it's untrusted | Low | Medium |
 | **Agent capability restrictions** — per-job limits on what an agent can do (e.g., "read-only" jobs) | High | Low |
 
-**Key insight:** Callback's security model is "trust the agent, audit via git." This is fine for a single-user system, but external content (RSS feeds, emails) could contain prompt injection. Wrapping external content with safety markers is cheap insurance.
+**Key insight:** Bee Box's security model is "trust the agent, audit via git." This is fine for a single-user system, but external content (RSS feeds, emails) could contain prompt injection. Wrapping external content with safety markers is cheap insurance.
 
 ---
 
@@ -128,7 +128,7 @@ They solve different problems but share core concerns: agent orchestration, memo
 
 **What OpenClaw has:** Playwright-based browser automation with CDP, multi-profile support, SSRF protection. Canvas system for rendering live HTML workspaces.
 
-**What Callback has:** Nothing browser-related. The web frontend is display-only.
+**What Bee Box has:** Nothing browser-related. The web frontend is display-only.
 
 Not worth stealing right now — these are solutions for a different problem (multi-channel chat assistant). But worth noting:
 
@@ -141,7 +141,7 @@ Not worth stealing right now — these are solutions for a different problem (mu
 
 ## 8. Gateway Architecture — Not Applicable
 
-OpenClaw's gateway is a WebSocket multiplexer for multi-device, multi-channel coordination. Callback doesn't need this — it has a single Fastify server with SSE. The gateway pattern is overengineered for our use case.
+OpenClaw's gateway is a WebSocket multiplexer for multi-device, multi-channel coordination. Bee Box doesn't need this — it has a single Fastify server with SSE. The gateway pattern is overengineered for our use case.
 
 ---
 
@@ -149,7 +149,7 @@ OpenClaw's gateway is a WebSocket multiplexer for multi-device, multi-channel co
 
 1. **Daily memory logs** + bootstrap injection — agents write `memory/YYYY-MM-DD.md`, loaded into next session
 2. **Session summaries** — auto-generate "what happened" after each reactor cycle
-3. **Memory search tool** — `cb memory search <query>` for agents to retrieve past context
+3. **Memory search tool** — `bbx memory search <query>` for agents to retrieve past context
 4. **Webhook endpoint** — `POST /api/webhook` creates job cards for push-based triggers
 5. **Skills as markdown** — extend `.claude/rules/` with binary/env filtering and invocability
 6. **Parallel job processing** — reactor runs independent jobs concurrently

@@ -16,10 +16,36 @@ set -e
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMR)"
 
+# Block retired product vocabulary outside the exact historical and migration
+# allowlist. The checker is silent when the baseline is clean.
+(cd "$REPO_DIR" && pnpm --silent retired-product-name-check)
+
+# Fast, offline security guards over staged content: private keys, unresolved
+# merge markers, and shellcheck for staged hook/bin shell files only.
+echo "[pre-commit] .: staged security checks"
+(cd "$REPO_DIR" && node --import tsx bin/precommit-security.ts)
+
 run_in() {
   local dir="$1"; shift
   echo "[pre-commit] $dir: $*"
   (cd "$REPO_DIR/$dir" && "$@")
+}
+
+# lint-staged and typecheck are independent and each ~2.5s of program load;
+# running them together takes a warm code commit from ~7s to ~5s. Output is
+# captured per command and replayed in order so failures read the same as
+# before; the exit status is non-zero if either failed.
+run_pair() {
+  local dir="$1" a="$2" b="$3" out_a out_b rc_a rc_b pid_a pid_b
+  out_a="$(mktemp)"; out_b="$(mktemp)"
+  echo "[pre-commit] $dir: $a  ||  $b"
+  (cd "$REPO_DIR/$dir" && eval "$a") >"$out_a" 2>&1 & pid_a=$!
+  (cd "$REPO_DIR/$dir" && eval "$b") >"$out_b" 2>&1 & pid_b=$!
+  # `|| rc=$?` keeps `set -e` from aborting before the captured output prints.
+  rc_a=0; wait "$pid_a" || rc_a=$?
+  rc_b=0; wait "$pid_b" || rc_b=$?
+  cat "$out_a" "$out_b"; rm -f "$out_a" "$out_b"
+  [ "$rc_a" -eq 0 ] && [ "$rc_b" -eq 0 ]
 }
 
 # Every commit runs the home-directory leak guard (fast, full-tree git grep).
@@ -41,9 +67,25 @@ echo "[pre-commit] .: pnpm commit-blocklist-check"
 echo "[pre-commit] .: pnpm mobile-contract-check"
 (cd "$REPO_DIR" && pnpm --silent mobile-contract-check)
 
+# A schedule that fails lint is a schedule that fails at 03:00 on a Sunday with
+# nobody watching, so the check happens at commit time. Silent on success; one
+# line per finding otherwise. schedules/ is outside every package's lint, so
+# nothing else covers it (scheduled-workstreams.md, Track E).
+#
+# Placed BEFORE the docs-only exit and computed from its own staged list: a
+# commit that only edits schedules/<name>/prompt.md is all-Markdown but is a
+# schedule change (the prompt carries the reporting contract), and a commit that
+# only DELETES a schedule's `run` is exactly the breakage the lint catches —
+# neither reaches the ACMR list this hook otherwise works from.
+staged_schedules="$(git -C "$REPO_DIR" diff --cached --name-only -- schedules)"
+if [ -n "$staged_schedules" ]; then
+  echo "[pre-commit] .: bin/schedules lint"
+  (cd "$REPO_DIR" && bin/schedules lint)
+fi
+
 # Any commit touching markdown runs the fast doc reference/orphan check.
 if echo "$staged" | grep -q '\.md$'; then
-  run_in callback-box pnpm doc-check
+  run_in beebox pnpm doc-check
 fi
 
 # Docs-only commits need nothing further — typecheck/lint add nothing.
@@ -52,7 +94,7 @@ if [ -n "$staged" ] && ! echo "$staged" | grep -qv '\.md$'; then
 fi
 
 # Clerk contract staleness gate. The dispatcher runs the per-subtree checks
-# below independently, so a callback-box-only change to the clerk wire shape
+# below independently, so a beebox-only change to the clerk wire shape
 # never exercises the clerk side — this branch closes that gap. It fires when
 # the staged set touches the leaf schema, the generator, the generated
 # snapshot, or this hook itself; it regenerates and diffs ONLY the generated
@@ -63,12 +105,12 @@ fi
 # touched. Scope caveat: this whole subtree ships across a store release, so a
 # store-version skew gate is deliberately out of scope (runtime validation in
 # clerk-api.ts handles deployed skew by degradation).
-if echo "$staged" | grep -qE '^(callback-box/src/webapp/trpc/routers/clerk-contract\.ts|bin/snapshot-clerk-contract\.ts|callback-clerk/src/contract/clerk-contract\.generated\.ts|\.husky/pre-commit)$'; then
+if echo "$staged" | grep -qE '^(beebox/src/webapp/trpc/routers/clerk-contract\.ts|bin/snapshot-clerk-contract\.ts|beebox-clerk/src/contract/clerk-contract\.generated\.ts|\.husky/pre-commit)$'; then
   echo "[pre-commit] .: pnpm snapshot:clerk-contract (clerk contract staleness gate)"
   (cd "$REPO_DIR" && pnpm --silent snapshot:clerk-contract)
-  if ! git -C "$REPO_DIR" diff --exit-code -- callback-clerk/src/contract/clerk-contract.generated.ts; then
+  if ! git -C "$REPO_DIR" diff --exit-code -- beebox-clerk/src/contract/clerk-contract.generated.ts; then
     echo "[pre-commit] clerk contract is stale — regenerate and stage it:" >&2
-    echo "[pre-commit]   pnpm snapshot:clerk-contract && git add callback-clerk/src/contract/clerk-contract.generated.ts" >&2
+    echo "[pre-commit]   pnpm snapshot:clerk-contract && git add beebox-clerk/src/contract/clerk-contract.generated.ts" >&2
     exit 1
   fi
 fi
@@ -85,17 +127,15 @@ fi
 # --quiet: suppress lint-staged's own progress/warning chatter (STARTED/
 # COMPLETED lines, the --no-stash banner) — task output (eslint errors) still
 # prints on failure.
-if echo "$staged" | grep -q '^callback-box/'; then
-  run_in callback-box pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet
-  run_in callback-box pnpm typecheck
+if echo "$staged" | grep -q '^beebox/'; then
+  run_pair beebox "pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet" "pnpm typecheck"
 fi
 
-if echo "$staged" | grep -q '^callback-clerk/'; then
-  run_in callback-clerk pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet
-  run_in callback-clerk pnpm typecheck
+if echo "$staged" | grep -q '^beebox-clerk/'; then
+  run_pair beebox-clerk "pnpm exec lint-staged --no-stash --no-hide-partially-staged --quiet" "pnpm typecheck"
 fi
 
-# The generated site is a top-level package invisible to the callback-box/clerk
+# The generated site is a top-level package invisible to the beebox/clerk
 # branches above. No lint-staged here (small package, no config) — lint + type
 # the whole thing. A content-only (.md) commit exits early above, so this only
 # fires when TS/config under site/ changed.
@@ -107,4 +147,25 @@ fi
 if echo "$staged" | grep -q '^workstreams-app/'; then
   run_in workstreams-app pnpm lint
   run_in workstreams-app pnpm typecheck
+fi
+
+# bin/ is not a workspace package, so none of the branches above reach it — and
+# the root typecheck alone used to be the whole gate on the dev router, the
+# worktree tooling and the test selector. The root eslint config lints it now;
+# this is what runs that at commit time
+# (issues/code-quality/2026-08-26-bin-typescript-is-not-linted.md). Cached, so a
+# commit that changed one file re-lints one file.
+if echo "$staged" | grep -qE '^bin/.*\.(ts|tsx|js|jsx|cjs)$'; then
+  echo "[pre-commit] .: pnpm lint:bin"
+  (cd "$REPO_DIR" && pnpm --silent lint:bin)
+fi
+
+# Committed exhibit apps (dev/apps/) are deliberately outside every package's
+# lint — casual by design — but they merge to main and live forever, so staged
+# app SOURCE gets one bare this-will-build check: tsc with the same settings
+# the exhibits container serves with (dev/apps/tsconfig.json). index.html-tier
+# apps never trigger it.
+if echo "$staged" | grep -qE '^dev/apps/.*\.(ts|tsx)$'; then
+  echo "[pre-commit] .: pnpm dev-apps-typecheck"
+  (cd "$REPO_DIR" && pnpm --silent dev-apps-typecheck)
 fi

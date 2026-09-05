@@ -73,10 +73,10 @@ Boxholder's words quoted; the rest is agent structure.
   "nuggets that I'm asked to reinterpret" — nothing publishes without his
   rewrite or a verbatim excerpt. "Some interesting git workflow to keep that
   up to date" — source-span content hashes checked at build for staleness.
-  Boxholder notes this is "really a callback box feature" — prototype it
+  Boxholder notes this is "really a beebox feature" — prototype it
   here, move the idea into the box later. Embeddings optional/later
   (clustering, related links). Confirmed enthusiastically (2026-07-21): "I
-  REALLY like the idea extraction… It's also the-story-of-callback-box,
+  REALLY like the idea extraction… It's also the-story-of-beebox,
   which is kind of the point of the page" — the extracted-and-reinterpreted
   ideas ARE the site's content spine, telling the project's story, not
   decoration behind a letter.

@@ -1,7 +1,7 @@
 ---
 title: "No web password reset / account recovery — a member who forgets their password is stuck"
 workstream: unknown
-area: callback-box
+area: beebox
 labels: [soft-launch]
 resolution: implemented
 filed-by: agent
@@ -19,7 +19,7 @@ intentionally out of scope.
 > reset link (a fresh invite-style capability pinned to the member's email) and
 > hands it to the member, who sets their own new password. **Option 3 (email
 > self-service) is rejected** — outbound mail is operationally complex. Option 1
-> (document `cb auth set-password` host recovery) is the interim floor until this
+> (document `bbx auth set-password` host recovery) is the interim floor until this
 > lands.
 
 > **Job to be done:** *When I'm an invited member of someone's box and I've
@@ -33,7 +33,7 @@ intentionally out of scope.
   rotates a password but **requires the current password** (`verifyPassword` on
   `currentPassword`, 401 otherwise). No use to someone who forgot it. There is no
   forgot-password / reset route.
-- **Recovery is host-side only.** `cb auth set-password --email <email>`
+- **Recovery is host-side only.** `bbx auth set-password --email <email>`
   (`src/cli/commands/auth.ts:238`) resets *any* user's password and revokes their
   sessions — but it needs **shell access to the server**.
 
@@ -42,7 +42,7 @@ is **invited members**: invite links ship at launch
 ([invite-links](2026-07-20-invite-links.md)), so a box can now
 have users who are *not* the operator. If one forgets their password, they cannot
 self-serve, there is no admin-UI reset button, and the only path is: contact the
-operator out-of-band → operator SSHes in → `cb auth set-password` → new password
+operator out-of-band → operator SSHes in → `bbx auth set-password` → new password
 communicated back over a trusted channel. For a launch that invites people to add
 collaborators, that's a rough recovery story.
 
@@ -50,7 +50,7 @@ collaborators, that's a rough recovery story.
 
 Full email-based self-service reset was explicitly deferred in the auth plan
 (`docs/implemented-plans/local-password-auth.md`, NOT-in-scope: "requires outbound
-mail identity; the recovery path is `cb auth set-password` on the host, which
+mail identity; the recovery path is `bbx auth set-password` on the host, which
 matches the single-boxholder trust model"). That reasoning holds for a lone
 operator — but invite links changed the trust model to include members who don't
 have the host. The subagent breakdown of `todo-security.md` classified
@@ -61,7 +61,7 @@ boxholder is now reconsidering it specifically because members exist.
 
 1. **Document operator-driven recovery** as the launch answer (honest-docs
    pattern): the day-to-day / SECURITY docs state plainly that a forgotten member
-   password is reset by the operator via `cb auth set-password`. Cheapest; leaves
+   password is reset by the operator via `bbx auth set-password`. Cheapest; leaves
    the member dependent on the operator.
 2. **Admin-UI "reset member password"** — an operator-only button in the existing
    admin user list that sets a member a fresh temporary password (or re-issues an

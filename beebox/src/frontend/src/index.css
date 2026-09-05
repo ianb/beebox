@@ -1,0 +1,494 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+body {
+  @apply bg-warm-50 text-warm-900;
+}
+
+/* App-shell height tracks the visual viewport (the `--app-height` variable is
+   set by useVisualViewportHeight), so the composer stays above the iOS
+   on-screen keyboard. Falls back to 100dvh where the variable is unset. */
+.h-app {
+  height: var(--app-height, 100dvh);
+}
+
+/* "Clipped reads as clipped" — fade the bottom edge of an overflowing scroll
+   box so a hidden bottom is visible without restyling the scrollbar. An
+   earlier version of this used `::-webkit-scrollbar` rules; on macOS
+   Chromium, any webkit-scrollbar rule anywhere in the document disables
+   overlay scrollbars page-wide and the chat scroller picks up a
+   permanent bar as collateral damage. The mask-image approach is scoped
+   per-element and has no global side effect: when content fits, the fade
+   lands on empty padding and is invisible; when it overflows, the last
+   sliver of visible content fades, signaling more below. */
+.bbx-scroll-fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+}
+
+/* Recipe step auto-numbering via CSS counter. RecipeView wraps the body
+   in `.recipe-body`, which resets the counter; each `{% step %}` carries
+   the `.recipe-step` class and renders its number via ::before. Outside
+   a recipe-body container, the counter doesn't reset and the ::before
+   counter is undefined — falls back to nothing gracefully. */
+.recipe-body {
+  counter-reset: recipe-step;
+}
+.recipe-body .recipe-step {
+  counter-increment: recipe-step;
+  display: flex;
+  gap: 0.75rem;
+}
+.recipe-body .recipe-step::before {
+  content: counter(recipe-step) ".";
+  color: rgb(115 100 90);
+  font-weight: 500;
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  text-align: right;
+}
+
+/* Remove backtick decorations from inline code in prose */
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
+  content: none;
+}
+
+/* Wrap long lines in code blocks instead of overflowing */
+.prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Markdown paragraphs render as <div class="bbx-paragraph"> instead of <p> so
+   block-level content (inline file previews, figures, custom tags) can nest
+   without React DOM-nesting warnings. Restore the paragraph vertical rhythm;
+   em-based so it tracks the prose size, with first/last resets to match the
+   typography plugin's edge handling. Applies inside and outside .prose. */
+.bbx-paragraph {
+  margin-top: 1.1428571em;
+  margin-bottom: 1.1428571em;
+}
+.bbx-paragraph:first-child {
+  margin-top: 0;
+}
+.bbx-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+/* ===== Elegant print styles for Markdown / prose in the browse view ===== */
+
+@media print {
+  html, body {
+    background: white !important;
+    color: #1a1a1a !important;
+  }
+
+  /* Release the app-shell / two-pane height & overflow constraints so that
+     content flows naturally across pages instead of being clipped to the
+     viewport. Target the Tailwind utilities directly — all our layout
+     containers build from these. */
+  .h-screen,
+  .h-\[100dvh\],
+  .h-app,
+  .h-full {
+    height: auto !important;
+  }
+
+  .min-h-0 {
+    min-height: 0 !important;
+  }
+
+  .overflow-auto,
+  .overflow-hidden,
+  .overflow-scroll {
+    overflow: visible !important;
+  }
+
+  .max-h-96 {
+    max-height: none !important;
+  }
+
+  /* Upgrade Tailwind's .prose to a print-friendly serif layout. */
+  .prose {
+    color: #1a1a1a !important;
+    font-family: Georgia, "Times New Roman", Times, serif !important;
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+    max-width: none !important;
+  }
+
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    color: #111 !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .prose p, .prose li, .prose blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .prose pre, .prose blockquote, .prose table, .prose figure, .prose img {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .prose a {
+    color: #111 !important;
+    text-decoration: underline;
+  }
+
+  .prose img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Avoid ink-heavy backgrounds on code/blockquote borders */
+  .prose pre, .prose code {
+    background: #f5f5f5 !important;
+    color: #1a1a1a !important;
+  }
+}
+
+/* ===== Print Brief Styles ===== */
+
+.print-brief {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  font-family: Georgia, "Times New Roman", Times, serif;
+  color: #1a1a1a;
+  line-height: 1.65;
+  font-size: 15px;
+  background: white;
+}
+
+.print-masthead {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.print-masthead-rule {
+  height: 0;
+  border-top: 3px solid #1a1a1a;
+  margin: 0 0 12px;
+}
+
+.print-masthead-rule:last-child {
+  margin: 12px 0 0;
+}
+
+.print-masthead-title {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #555;
+  margin: 0;
+}
+
+.print-masthead-date {
+  font-size: 13px;
+  color: #777;
+  font-style: italic;
+}
+
+.print-headline {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.print-headline-text {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0 0 10px;
+  color: #111;
+}
+
+.print-headline-byline {
+  font-size: 15px;
+  color: #555;
+  font-style: italic;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.print-intro {
+  margin-bottom: 28px;
+}
+
+.print-prose p {
+  margin: 0 0 14px;
+}
+
+.print-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.print-section {
+  margin-bottom: 32px;
+}
+
+.print-section-heading {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #ccc;
+  line-height: 1.3;
+}
+
+.print-excerpt {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-left: 3px solid #999;
+  background: #f9f9f9;
+}
+
+.print-excerpt-text {
+  margin: 0 0 6px;
+  font-style: italic;
+  font-size: 14px;
+  color: #333;
+}
+
+.print-excerpt-source {
+  margin: 0;
+  font-size: 12px;
+  color: #777;
+}
+
+.print-expando {
+  margin: 20px 0;
+  padding: 16px 20px;
+  border-left: 3px solid #999;
+  background: #f9f9f9;
+}
+
+.print-expando-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 10px;
+}
+
+.print-footnote-ref {
+  font-size: 11px;
+  color: #555;
+  margin-left: 2px;
+}
+
+.print-nav {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+}
+
+.print-nav a {
+  color: #555;
+  text-decoration: none;
+}
+
+.print-nav a:hover {
+  text-decoration: underline;
+}
+
+@media print {
+  .print-nav {
+    display: none;
+  }
+}
+
+.print-footnotes {
+  margin-top: 40px;
+}
+
+.print-footnotes-rule {
+  height: 0;
+  border-top: 1px solid #ccc;
+  margin-bottom: 16px;
+}
+
+.print-footnotes-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #555;
+  margin: 0 0 10px;
+}
+
+.print-footnotes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.print-footnote-item {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.print-footnote-num {
+  font-weight: 700;
+  color: #333;
+}
+
+.print-footnote-label {
+  font-weight: 500;
+}
+
+.print-footnote-url {
+  color: #888;
+  word-break: break-all;
+}
+
+/* Large print mode — raises the floor, leaves headings roughly alone */
+.print-brief.large-print {
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.large-print .print-masthead-title {
+  font-size: 15px;
+}
+
+.large-print .print-masthead-date {
+  font-size: 15px;
+}
+
+.large-print .print-headline-text {
+  font-size: 28px;
+}
+
+.large-print .print-headline-byline {
+  font-size: 17px;
+}
+
+.large-print .print-section-heading {
+  font-size: 21px;
+}
+
+.large-print .print-excerpt-text {
+  font-size: 16px;
+}
+
+.large-print .print-excerpt-source {
+  font-size: 14px;
+}
+
+.large-print .print-expando-title {
+  font-size: 18px;
+}
+
+.large-print .print-footnote-ref {
+  font-size: 13px;
+}
+
+.large-print .print-footnote-item {
+  font-size: 14px;
+}
+
+.large-print .print-footnotes-title {
+  font-size: 14px;
+}
+
+@media print {
+  .print-brief.large-print {
+    font-size: 13pt;
+  }
+}
+
+.print-loading,
+.print-error {
+  text-align: center;
+  padding: 60px 20px;
+  font-family: system-ui, sans-serif;
+  color: #666;
+}
+
+/* Print media adjustments */
+.print-end-mark {
+  display: none;
+  text-align: center;
+  margin-top: 32px;
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 10pt;
+  color: #999;
+  letter-spacing: 0.2em;
+}
+
+@page {
+  margin: 0.75in 0.75in 1.25in;
+
+  @bottom-right {
+    content: "page " counter(page);
+    font-family: Georgia, "Times New Roman", Times, serif;
+    font-size: 9pt;
+    color: #999;
+  }
+}
+
+@media print {
+  .print-brief {
+    max-width: none;
+    padding: 0;
+    font-size: 11pt;
+  }
+
+  /* Keep the masthead, headline, and intro together on page 1 */
+  .print-masthead {
+    page-break-after: avoid;
+  }
+
+  .print-headline {
+    page-break-before: avoid;
+    page-break-after: avoid;
+  }
+
+  .print-intro {
+    page-break-before: avoid;
+  }
+
+  /* Section headings should stay with their content */
+  .print-section-heading {
+    page-break-after: avoid;
+  }
+
+  /* Expando titles should stay with their content */
+  .print-expando-title {
+    page-break-after: avoid;
+  }
+
+  .print-excerpt {
+    background: none;
+    page-break-inside: avoid;
+  }
+
+  .print-expando {
+    background: none;
+  }
+
+  .print-footnotes {
+    page-break-before: auto;
+  }
+
+  .print-end-mark {
+    display: block;
+  }
+}
+
+/* Span a commentary source-chip jumped to in the saved page (CommentaryView). */
+::highlight(bbx-quote-anchor) {
+  background-color: #fde68a;
+  color: inherit;
+}

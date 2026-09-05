@@ -1,9 +1,10 @@
 ---
-title: "Display callback-box on Roku TVs (custom channel / screensaver)"
+title: "Display beebox on Roku TVs (custom channel / screensaver)"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked to research
+priority: backlog
 ---
 
 Same want as the [Echo Show dashboard](2026-07-27-echo-show-dashboard-display.md):
@@ -62,7 +63,7 @@ neither. This is probably the best-fit surface on Roku.
 Because Roku can't run our web UI, the sane split is:
 
 - **The box renders the dashboard to an image.** NOTE (2026-08-01): the SSR
-  render capability this assumed (`cb render`, `src/ssr/`) has been removed —
+  render capability this assumed (`bbx render`, `src/ssr/`) has been removed —
   it emitted an empty body and nobody used it. Re-cost this step. The nearest
   replacement is `bin/browse`, which drives real headless Chromium and can
   screenshot, so image output is still reachable but by a heavier path.

@@ -1,13 +1,13 @@
 ---
 title: "Codex SDK as an optional second backend (bring-your-ChatGPT-subscription)"
 workstream: codex-engine-plan
-area: callback-box
+area: beebox
 resolution: superseded
 filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research
 ---
 
-Superseded by the [Codex box engine plan](../../../callback-box/docs/implemented-plans/codex-box-engine.md)
+Superseded by the [Codex box engine plan](../../../beebox/docs/implemented-plans/codex-box-engine.md)
 (commit `9c90712a`). The new plan refreshes the evidence and chooses a full optional box
 runtime rather than the narrow subscription-backend framing. The separate port-hygiene
 prerequisite remains open.

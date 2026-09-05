@@ -29,7 +29,7 @@ export function printConfigureHelp(): void {
       "Writes (or updates) this machine's scan-uploader.json target and token",
       "file for one box, then verifies the token against the server.",
       "",
-      "  <server-url-with-box>  e.g. https://cb.example.org/family",
+      "  <server-url-with-box>  e.g. https://beebox.run/family",
       "  --folder <path>        folder to watch for scans (prompted if omitted on a TTY)",
       "  --disposition <value>  keep (default), archive, or trash",
       "  --name <token-name>    label shown in the confirmation message (default: uploader)",

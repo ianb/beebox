@@ -4,7 +4,7 @@ workstream: unknown
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder idea alongside the /admin chat landmark
-area: callback-box
+area: beebox
 priority: backlog
 ---
 
@@ -37,7 +37,7 @@ backends, the model provider). This feature closes that hole.
     process: a real-time widget that captures one value and produces no card, no
     learning destination, and no transcript entry.
 - **A secret store already exists** — connectors read `config/connectors/<name>.secret.json`
-  (legacy) and `CB_GOOGLE_TOKENS_FILE` (Google), gitignored
+  (legacy) and `BBX_GOOGLE_TOKENS_FILE` (Google), gitignored
   (`src/connectors/requirements.ts`). "X" is this store; the request names a target
   within it.
 - **Admin surface** — `AdminPage.tsx` + the admin tRPC router already own
@@ -72,6 +72,16 @@ backends, the model provider). This feature closes that hole.
 - **Post-save verification.** Optionally test the credential (e.g. the token
   authenticates) and report *works/doesn't* to the model — without revealing it.
   Turns "did you paste it right?" into a checkable result the agent can act on.
+  - *Refined 2026-08-17 (secret-custody design)*: this became a three-layer
+    scheme in the custody plan — agent-written walkthrough in the widget's
+    `description`; **soft format validation** from a per-provider format
+    registry (warn-never-block live hints in the input: "OpenAI keys start
+    with `sk-`"); **hard validation** via a server-side probe after save,
+    stored as `verified: ok|failed|unchecked` metadata the agent and admin
+    page see redacted. See
+    `beebox/docs/implemented-plans/secret-custody.md` ("Guided entry +
+    validation"); the widget writes into that plan's store, and its target
+    grammar is the store's name registry.
 - **Scope + gating.** Admin-privileged — only in the `/admin` landmark chat, not
   general chat (writing credentials is not a general-chat power). Tie to the admin
   landmark's context.

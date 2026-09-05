@@ -1,6 +1,6 @@
 # Story-nugget rubric (shared by all prompt variants)
 
-You are extracting **story nuggets** from one document in the callback-box
+You are extracting **story nuggets** from one document in the beebox
 repository. A nugget is raw material for telling the story of this project —
 why it is what it is, what it is becoming, and the structure that fits it
 together. The reader we ultimately serve should feel a bit of surprise, or

@@ -4,7 +4,7 @@
   "private": true,
   "license": "GPL-3.0-or-later",
   "type": "module",
-  "description": "Generated public front-door site for callback-box. Static output to site/dist/, deployed to GitHub Pages and viewable on the dev router. See site/CLAUDE.md.",
+  "description": "Generated public front-door site for beebox. Static output to site/dist/, deployed to GitHub Pages and viewable on the dev router. See site/CLAUDE.md.",
   "scripts": {
     "build": "tsx build.ts",
     "typecheck": "tsc --noEmit",

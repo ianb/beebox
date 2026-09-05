@@ -5,6 +5,7 @@ area: issues
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: normal
 ---
 
 The boxholder wants meta issues as a first-class idea — "that's a
@@ -27,7 +28,7 @@ one-off:
 - `doc-check` already validates the links both ways, so the graph
   stays sound for free.
 
-If [the issue system moves inside callback-box](../exploration/2026-07-21-issues-inside-callback-box.md),
+If [the issue system moves inside beebox](../exploration/2026-07-21-issues-inside-beebox.md),
 meta issues become a card-ref pattern and could get real aggregation
 (open/closed rollup on the meta's view) — worth keeping the two ideas
 linked.

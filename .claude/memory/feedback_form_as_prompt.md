@@ -4,7 +4,7 @@ description: "For analytical/evaluation tasks, prefer structured \"fill in this 
 metadata: 
   node_type: memory
   type: feedback
-  originSessionId: 6f088193-eb30-436c-80cb-1b6a986f9034
+  originSessionId: 6f088193-eb30-436c-80bbx-1b6a986f9034
 ---
 
 For analytical or evaluation work (code review, plan critique, security audit, design review, etc.), prefer a **form-as-prompt** structure over numeric confidence scores OR unstructured prose.

@@ -1,0 +1,448 @@
+#!/usr/bin/env bash
+# CLI for workstream exhibits — the medium an agent uses to show work.
+#
+# An exhibit is a directory in the per-workstream store carrying a manifest
+# (exhibit.json), content files, and whatever the page captures. Every exhibit
+# states one ask: decide | confirm | react | fyi. Design and vocabulary:
+# beebox/docs/plans/workstream-exhibits.md; page contract:
+# workstreams-app/docs/exhibits.md.
+#
+# Commands:
+#   add [files...]     Create an exhibit and print its URL (stdout, one line).
+#                      --title <t>          required
+#                      --ask <type>         decide|confirm|react|fyi (required)
+#                      --prose <p>          what you want, and what happens
+#                                           after the answer (required)
+#                      --option <label>     repeatable; decide needs >= 2
+#                      --workstream <ws>    default: the cwd checkout's own
+#                      --open               also `open` the URL (best effort)
+#                      --permanent          make a committed app skeleton at
+#                                           dev/apps/<slug>/ in THIS checkout
+#                                           instead (tracked; ships by merge)
+#   list               Every exhibit: workstream, slug, ask, answered state.
+#                      --workstream <ws> narrows; --json emits an array.
+#   url <ws>/<name>    Reprint one exhibit's URL (also `url apps/<name>`).
+#   help               This text.
+#
+# The store lives at <parent-of-main-checkout>/workstream-exhibits/<workstream>/
+# (override BBX_EXHIBITS_ROOT), outside git and outside every worktree, so
+# exhibits survive a worktree cull. This CLI writes the store path it derives
+# itself — never through the <checkout>/exhibits symlink — so a broken mount
+# cannot redirect writes into a doomed tree.
+
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+EXHIBITS_PORT="${EXHIBITS_PORT:-3230}"
+
+say() { echo "[exhibits] $*" >&2; }
+die() { echo "exhibits: $*" >&2; exit 1; }
+
+command -v jq >/dev/null || die "jq is required"
+
+# shellcheck source=lib/worktree-paths.sh
+. "$REPO_DIR/bin/lib/worktree-paths.sh"
+# shellcheck source=lib/exhibits-store.sh
+. "$REPO_DIR/bin/lib/exhibits-store.sh"
+
+# Anchored on the CWD's checkout: the workstream an agent means is the one it is
+# working in, which is not necessarily the checkout this script lives in.
+# Failure aborts — a guessed root would write exhibits into the wrong store.
+wt_paths_init "$PWD" || die "cannot resolve the monorepo from $PWD"
+
+# The checkout the cwd is in (a worktree or the main checkout).
+CHECKOUT="$(git -C "$PWD" rev-parse --show-toplevel 2>/dev/null || true)"
+[ -n "$CHECKOUT" ] || die "not inside a git checkout: $PWD"
+
+# current_workstream — the store namespace for the cwd's checkout. The main
+# checkout is "main"; a worktree on branch worktree-<name> is <name>.
+current_workstream() {
+  local branch name
+  if [ "$(cd "$CHECKOUT" && pwd -P)" = "$(cd "$WT_MONO" && pwd -P)" ]; then
+    echo main
+    return 0
+  fi
+  branch="$(git -C "$CHECKOUT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  case "$branch" in
+    worktree-*) name="${branch#worktree-}" ;;
+    *) name="$(basename "$CHECKOUT")" ;;
+  esac
+  wt_paths_valid_name "$name" || return 1
+  echo "$name"
+}
+
+validate_workstream() {
+  local ws="$1"
+  wt_paths_valid_name "$ws" || die "invalid workstream name '$ws' ([a-zA-Z0-9_-]+, no slashes)"
+  [ "$ws" != "apps" ] || die "'apps' is the reserved committed-app namespace, not a workstream"
+}
+
+# slugify <title> — the directory name, kebab-cased from the title and shaped to
+# the segment schema the app routes with (workstreams-app/src/shared/exhibits.ts).
+slugify() {
+  local s
+  s="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9]\{1,\}/-/g' -e 's/^-*//' -e 's/-*$//')"
+  s="${s:0:120}"
+  s="$(printf '%s' "$s" | sed -e 's/-*$//')"
+  printf '%s' "$s"
+}
+
+# sanitize_basename <name> — the filename an exhibit is served under. The app
+# routes sibling files through its segment schema
+# (workstreams-app/src/shared/exhibits.ts), which refuses spaces and most
+# punctuation, so a copied "Screen Shot 2026-08-15.png" would be a figure URL
+# that 404s. Lowercase, one "-" per run of anything else, extension preserved.
+# Prints nothing and fails when there is nothing left to name the file with.
+sanitize_basename() {
+  local name="$1" stem ext
+  case "$name" in
+    *.*) stem="${name%.*}"; ext="${name##*.}" ;;
+    *)   stem="$name"; ext="" ;;
+  esac
+  stem="$(printf '%s' "$stem" | tr '[:upper:]' '[:lower:]' \
+    | sed -e 's/[^a-z0-9._-]\{1,\}/-/g' -e 's/-\{2,\}/-/g' -e 's/^[^a-z0-9]*//' -e 's/[-._]*$//')"
+  ext="$(printf '%s' "$ext" | tr '[:upper:]' '[:lower:]' | sed -e 's/[^a-z0-9]//g')"
+  [ -n "$stem" ] || return 1
+  if [ -n "$ext" ]; then printf '%s.%s' "$stem" "$ext"; else printf '%s' "$stem"; fi
+}
+
+is_figure_file() {
+  case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
+    *.png|*.jpg|*.jpeg|*.gif|*.webp|*.svg|*.mp4|*.webm|*.mp3|*.wav|*.ogg) return 0 ;;
+  esac
+  return 1
+}
+
+is_markdown_file() {
+  case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
+    *.md|*.markdown) return 0 ;;
+  esac
+  return 1
+}
+
+# exhibits_token — the machine-scoped token, minting it if it does not exist.
+#
+# The supervisor mints the same file and REUSES an existing one rather than
+# overwriting it, so whoever gets there first wins and both agree. Minting here
+# matters because the whole point of this CLI is a pasteable URL: before, an
+# exhibit created while the app had never run printed a URL that 401s, which
+# reads as "the exhibit is broken".
+exhibits_token() {
+  local token_file="$WT_STATE_DIR/exhibits-token" token
+  if [ -r "$token_file" ]; then
+    token="$(tr -d '\n' < "$token_file")"
+    if [ "${#token}" -ge 16 ]; then printf '%s' "$token"; return 0; fi
+  fi
+  mkdir -p "$WT_STATE_DIR" || return 1
+  if command -v openssl >/dev/null; then
+    token="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=\n')"
+  else
+    token="$(head -c 32 /dev/urandom | base64 | tr '+/' '-_' | tr -d '=\n')"
+  fi
+  [ "${#token}" -ge 16 ] || return 1
+  # noclobber: an exclusive create, so a supervisor starting at the same moment
+  # cannot have its token replaced by ours. Loser re-reads the winner's file.
+  ( umask 077; set -C; printf '%s\n' "$token" > "$token_file" ) 2>/dev/null || true
+  chmod 600 "$token_file" 2>/dev/null || true
+  token="$(tr -d '\n' < "$token_file")"
+  [ "${#token}" -ge 16 ] || return 1
+  printf '%s' "$token"
+}
+
+# exhibit_url <scope> — scope is "<ws>/<name>" or "apps/<name>".
+exhibit_url() {
+  local scope="$1" token
+  if token="$(exhibits_token)" && [ -n "$token" ]; then
+    printf 'http://127.0.0.1:%s/%s/?token=%s\n' "$EXHIBITS_PORT" "$scope" "$token"
+  else
+    say "could not read or mint $WT_STATE_DIR/exhibits-token — URL printed without ?token=, so it will 401"
+    printf 'http://127.0.0.1:%s/%s/\n' "$EXHIBITS_PORT" "$scope"
+  fi
+}
+
+open_url() {
+  command -v open >/dev/null || { say "no \`open\` command; not opening"; return 0; }
+  open "$1" >/dev/null 2>&1 || say "open failed (not fatal)"
+}
+
+cmd="${1:-help}"
+shift || true
+
+case "$cmd" in
+  add)
+    title=""
+    ask=""
+    prose=""
+    workstream=""
+    want_open=false
+    permanent=false
+    options=()
+    files=()
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --title) [ $# -ge 2 ] || die "add: --title needs a value"; title="$2"; shift 2 ;;
+        --title=*) title="${1#--title=}"; shift ;;
+        --ask) [ $# -ge 2 ] || die "add: --ask needs a value"; ask="$2"; shift 2 ;;
+        --ask=*) ask="${1#--ask=}"; shift ;;
+        --prose) [ $# -ge 2 ] || die "add: --prose needs a value"; prose="$2"; shift 2 ;;
+        --prose=*) prose="${1#--prose=}"; shift ;;
+        --option) [ $# -ge 2 ] || die "add: --option needs a value"; options+=("$2"); shift 2 ;;
+        --option=*) options+=("${1#--option=}"); shift ;;
+        --workstream) [ $# -ge 2 ] || die "add: --workstream needs a value"; workstream="$2"; shift 2 ;;
+        --workstream=*) workstream="${1#--workstream=}"; shift ;;
+        --open) want_open=true; shift ;;
+        --permanent) permanent=true; shift ;;
+        --) shift; while [ $# -ge 1 ]; do files+=("$1"); shift; done ;;
+        -*) die "add: unknown option $1" ;;
+        *) files+=("$1"); shift ;;
+      esac
+    done
+
+    [ -n "$title" ] || die "add: --title is required"
+    if [ "$permanent" = false ]; then
+      [ -n "$ask" ] || die "add: --ask is required (decide|confirm|react|fyi)"
+    fi
+    if [ -n "$ask" ]; then
+      case "$ask" in
+        decide|confirm|react|fyi) ;;
+        *) die "add: --ask must be decide, confirm, react, or fyi (got '$ask')" ;;
+      esac
+      [ -n "$prose" ] || die "add: --prose is required — say what you want and what happens after the answer"
+      case "$ask" in
+        decide) [ "${#options[@]}" -ge 2 ] || die "add: --ask decide needs at least two --option labels" ;;
+        react|fyi) [ "${#options[@]}" -eq 0 ] || die "add: --option is meaningless for --ask $ask" ;;
+      esac
+    else
+      [ "${#options[@]}" -eq 0 ] || die "add: --option needs --ask"
+      [ -z "$prose" ] || die "add: --prose needs --ask"
+    fi
+
+    slug="$(slugify "$title")"
+    [ -n "$slug" ] || die "add: --title '$title' has no slug-able characters"
+
+    doc_source=""
+    for f in ${files[@]+"${files[@]}"}; do
+      [ -f "$f" ] || die "add: not a readable file: $f"
+      if [ "$permanent" = false ] && is_markdown_file "$f"; then
+        [ -z "$doc_source" ] \
+          || die "add: only one Markdown document can be rendered as doc.md (got '$doc_source' and '$f')"
+        doc_source="$f"
+      fi
+    done
+
+    # One line on stdout, structurally: everything a step prints lands on
+    # stderr, and the URL goes out on the stashed fd 3 (bin/workstreams create's
+    # pattern). The single-line contract is what makes this pasteable in chat.
+    exec 3>&1 1>&2
+
+    created="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+    if [ "$permanent" = true ]; then
+      dest="$CHECKOUT/dev/apps/$slug"
+      [ ! -e "$dest" ] || die "add --permanent: $dest already exists — pick another title (e.g. '$title 2' -> $slug-2)"
+      mkdir -p "$dest"
+      scope="apps/$slug"
+    else
+      if [ -z "$workstream" ]; then
+        workstream="$(current_workstream)" \
+          || die "add: cannot derive a workstream from $CHECKOUT — pass --workstream"
+      fi
+      validate_workstream "$workstream"
+      wt_exhibits_ensure_root || die "add: cannot initialize the exhibit store root"
+      if [ "$workstream" = "$(current_workstream || true)" ]; then
+        # Mount semantics belong to the lib (self-heal, rescue, marker checks).
+        wt_exhibits_mount "$CHECKOUT" "$workstream" || say "mount failed; writing to the store directly"
+      fi
+      mkdir -p "$WT_EXHIBITS_ROOT/$workstream"
+      dest="$WT_EXHIBITS_ROOT/$workstream/$slug"
+      [ ! -e "$dest" ] || die "add: exhibit '$workstream/$slug' already exists — nothing is ever overwritten; retry with --title '$title 2' (-> $slug-2)"
+      mkdir -p "$dest"
+      scope="$workstream/$slug"
+    fi
+
+    figures_json="[]"
+    n=0
+    document=false
+    for f in ${files[@]+"${files[@]}"}; do
+      base="$(basename "$f")"
+      if [ -n "$doc_source" ] && [ "$f" = "$doc_source" ]; then
+        safe="doc.md"
+        document=true
+      else
+        safe="$(sanitize_basename "$base")" \
+          || die "add: '$base' has no characters a URL segment can carry — rename it and retry"
+      fi
+      [ ! -e "$dest/$safe" ] || die "add: '$base' becomes '$safe', which is already in this exhibit — rename one of them"
+      cp "$f" "$dest/$safe"
+      if [ "$safe" != "$base" ]; then
+        if [ "$safe" = "doc.md" ]; then
+          say "copied $base as doc.md (the default renderer's Markdown document)"
+        else
+          say "copied $base as $safe (the app routes files by URL segment)"
+        fi
+      fi
+      if is_figure_file "$safe"; then
+        n=$((n + 1))
+        figures_json="$(jq -c --arg label "A$n" --arg file "$safe" '. + [{label: $label, file: $file}]' <<<"$figures_json")"
+      fi
+    done
+
+    options_json="$(printf '%s\n' ${options[@]+"${options[@]}"} | jq -R . | jq -sc 'map(select(. != ""))')"
+
+    manifest="$(jq -n \
+      --arg title "$title" \
+      --arg type "$ask" \
+      --arg prose "$prose" \
+      --arg created "$created" \
+      --argjson options "$options_json" \
+      --argjson figures "$figures_json" \
+      '{title: $title, created: $created}
+       | if $type == "" then . else
+           .ask = ({type: $type, prose: $prose}
+                   | if ($options | length) > 0 then .options = $options else . end)
+         end
+       | if ($figures | length) > 0 then .figures = $figures else . end')"
+    printf '%s\n' "$manifest" > "$dest/exhibit.json"
+
+    if [ "$permanent" = true ]; then
+      if [ ! -e "$dest/index.html" ] && [ ! -e "$dest/index.tsx" ]; then
+        cat > "$dest/index.html" <<'HTML'
+<!-- A committed app: tracked code, store-backed data. Replace this starter.
+     Sibling files are served from this directory, so relative fetch works, and
+     the exhibits API is at /api/apps/<name>/data/<key> (see
+     workstreams-app/docs/exhibits.md). Delete this file to use index.tsx or
+     the default renderer instead. -->
+<h1>New committed app</h1>
+<p>Edit <code>index.html</code> (or swap in <code>index.tsx</code>).</p>
+HTML
+      fi
+      say "committed app skeleton at $dest — it is TRACKED: commit it, and it ships to /apps/$slug/ only once the branch merges to main"
+    else
+      say "exhibit at $dest (ask: ${ask}, document: $document, figures: $n)"
+    fi
+
+    url="$(exhibit_url "$scope")"
+    [ "$want_open" = false ] || open_url "$url"
+    printf '%s\n' "$url" >&3
+    ;;
+
+  list)
+    workstream=""
+    as_json=false
+    while [ $# -ge 1 ]; do
+      case "$1" in
+        --workstream) [ $# -ge 2 ] || die "list: --workstream needs a value"; workstream="$2"; shift 2 ;;
+        --workstream=*) workstream="${1#--workstream=}"; shift ;;
+        --json) as_json=true; shift ;;
+        *) die "list: unknown argument $1" ;;
+      esac
+    done
+    [ -z "$workstream" ] || validate_workstream "$workstream"
+
+    rows="[]"
+    add_row() {
+      local ws="$1" name="$2" dir="$3" data_dir="$4" permanent="$5"
+      local manifest ask_type title answered decided_at problem
+      manifest="$dir/exhibit.json"
+      [ -f "$manifest" ] || return 0
+      jq -e . "$manifest" >/dev/null 2>&1 || { say "skipping unparseable manifest: $manifest"; return 0; }
+      title="$(jq -r '.title // ""' "$manifest")"
+      ask_type="$(jq -r '.ask.type // ""' "$manifest")"
+      answered=false
+      decided_at=""
+      problem=""
+      # Answered means the disposition PARSES and is one — the same rule the app
+      # applies (workstreams-app/src/server/exhibits/disposition.ts). A file that
+      # merely exists used to count, so a half-written answer hid a live ask here
+      # while the app's own queue still showed it waiting.
+      if [ -f "$data_dir/disposition.json" ]; then
+        if decided_at="$(jq -er 'if (.askType | type) == "string" and (.decidedAt | type) == "string"
+                                 then .decidedAt else error("not a disposition") end' \
+                          "$data_dir/disposition.json" 2>/dev/null)"; then
+          answered=true
+        else
+          decided_at=""
+          problem="disposition.json is not a readable answer"
+        fi
+      fi
+      rows="$(jq -c \
+        --arg workstream "$ws" --arg name "$name" --arg title "$title" \
+        --arg ask "$ask_type" --arg decidedAt "$decided_at" --arg problem "$problem" \
+        --argjson answered "$answered" --argjson permanent "$permanent" \
+        '. + [{workstream: $workstream, name: $name, title: $title, ask: $ask,
+               answered: $answered, permanent: $permanent}
+              | if $decidedAt == "" then . else .decidedAt = $decidedAt end
+              | if $problem == "" then . else .problem = $problem end]' <<<"$rows")"
+    }
+
+    if [ -d "${WT_EXHIBITS_ROOT:-}" ]; then
+      for ws_dir in "$WT_EXHIBITS_ROOT"/*; do
+        [ -d "$ws_dir" ] || continue
+        ws="$(basename "$ws_dir")"
+        [ "$ws" != "apps" ] || continue
+        [ -z "$workstream" ] || [ "$ws" = "$workstream" ] || continue
+        for ex_dir in "$ws_dir"/*; do
+          [ -d "$ex_dir" ] || continue
+          add_row "$ws" "$(basename "$ex_dir")" "$ex_dir" "$ex_dir/data" false
+        done
+      done
+    fi
+
+    # Committed apps: code tracked in the MAIN checkout, runtime data in the
+    # store's reserved apps/ namespace. They belong to no workstream, so a
+    # --workstream filter excludes them.
+    if [ -z "$workstream" ]; then
+      for app_dir in "$WT_MONO"/dev/apps/*; do
+        [ -d "$app_dir" ] || continue
+        name="$(basename "$app_dir")"
+        add_row "apps" "$name" "$app_dir" "${WT_EXHIBITS_ROOT:-}/apps/$name/data" true
+      done
+    fi
+
+    if [ "$as_json" = true ]; then
+      jq . <<<"$rows"
+    else
+      count="$(jq 'length' <<<"$rows")"
+      if [ "$count" = "0" ]; then
+        echo "no exhibits yet (bin/exhibits add --title … --ask … --prose …)"
+      else
+        jq -r '(["WORKSTREAM","EXHIBIT","ASK","STATE","TITLE"],
+                (.[] | [.workstream, .name,
+                        (if .ask == "" then "-" else .ask end),
+                        (if .permanent then "permanent"
+                         elif .answered then "answered " + (.decidedAt // "")
+                         elif .problem then "waiting (unreadable answer)"
+                         else "waiting" end),
+                        .title]))
+               | @tsv' <<<"$rows" | column -t -s "$(printf '\t')"
+      fi
+    fi
+    ;;
+
+  url)
+    scope="${1:-}"
+    [ -n "$scope" ] && [ $# -eq 1 ] || die "usage: exhibits url <workstream>/<exhibit>"
+    ws="${scope%%/*}"
+    name="${scope#*/}"
+    [ "$ws" != "$scope" ] && [ -n "$name" ] || die "url: expected <workstream>/<exhibit>, got '$scope'"
+    case "$name" in */*) die "url: expected <workstream>/<exhibit>, got '$scope'" ;; esac
+    if [ "$ws" = "apps" ]; then
+      [ -d "$WT_MONO/dev/apps/$name" ] || die "url: no committed app at $WT_MONO/dev/apps/$name"
+    else
+      validate_workstream "$ws"
+      wt_paths_valid_name "$name" || die "url: invalid exhibit name '$name'"
+      [ -d "${WT_EXHIBITS_ROOT:-}/$ws/$name" ] || die "url: no exhibit at ${WT_EXHIBITS_ROOT:-}/$ws/$name"
+    fi
+    exhibit_url "$scope"
+    ;;
+
+  help | -h | --help)
+    awk 'NR==1 { next } !/^#/ { exit } { sub(/^# ?/, ""); print }' "$0"
+    ;;
+
+  *)
+    echo "exhibits: unknown command: $cmd" >&2
+    echo "run \`bin/exhibits help\` for usage" >&2
+    exit 1
+    ;;
+esac

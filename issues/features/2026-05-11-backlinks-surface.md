@@ -2,7 +2,8 @@
 title: "Backlinks surface (\"what links here?\")"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
+priority: backlog
 ---
 
 Cardworks already exposes the ref graph — `findIncomingRefs(targetPath)` and `findOutgoingRefs(sourcePath)` in `cardworks/src/loader/loader.ts`. The data exists; no read surface does. Obsidian's Backlinks pane is widely considered its most-used navigation surface, and we have a richer (typed, versioned, fragment-addressable) reference model — closing the UI gap is mostly plumbing.
@@ -16,8 +17,8 @@ Sources to merge into one "incoming" list:
 Surfaces:
 
 - **Card detail view** — a "Referenced by" panel listing incoming refs with source card name, kind, and the structural location (XPath fragment or element type). Group by source kind.
-- **`cb refs <card>`** CLI — `--incoming` / `--outgoing`, JSON or table output. Useful for agents during cleanup ("is this card still referenced anywhere?") and humans during direct inspection.
-- **Pre-delete check** — before `cb rm`, surface incoming refs so the user/agent knows what will dangle. Cardworks already updates refs on `cb mv`; delete should at least warn.
+- **`bbx refs <card>`** CLI — `--incoming` / `--outgoing`, JSON or table output. Useful for agents during cleanup ("is this card still referenced anywhere?") and humans during direct inspection.
+- **Pre-delete check** — before `bbx rm`, surface incoming refs so the user/agent knows what will dangle. Cardworks already updates refs on `bbx mv`; delete should at least warn.
 
 Combine well with the search feature above: search results that include a backlink count give a quick "popularity" signal for which cards are central to the box.
 

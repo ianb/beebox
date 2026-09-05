@@ -6,7 +6,14 @@ node-arg:
   - --import=agent-doctest/loader
 include:
   - test/**/*.doctest.md
+  - test/router/**/*.test.ts
 reporter: tap
 color: false
 disable-coverage: true
-timeout: 60
+# Per-file timeout. recency.doctest.md spins up several throwaway git repos
+# and scans them across ~7 headings; solo it finishes in ~30s, but under a
+# loaded machine (see beebox/.taprc for the same phenomenon measured
+# there) that inflated past the previous 60s default and intermittently timed
+# out even though every assertion passed. 180s preserves headroom without
+# masking a genuine hang indefinitely.
+timeout: 180

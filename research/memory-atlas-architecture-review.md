@@ -1,12 +1,12 @@
-# Architecture Review: Memory Atlas vs Callback
+# Architecture Review: Memory Atlas vs Bee Box
 
 _February 2026_
 
 ## The Big Picture
 
-Memory Atlas is a **conversational AI assistant** with persistent memory — a Next.js web app where users chat with an AI that remembers them across sessions, organizes knowledge, and manages structured activities (todos, journals, recipes, catalogs). Callback is a **file-based personal automation system** — git-backed cards, CLI-driven agents, and a reactor loop.
+Memory Atlas is a **conversational AI assistant** with persistent memory — a Next.js web app where users chat with an AI that remembers them across sessions, organizes knowledge, and manages structured activities (todos, journals, recipes, catalogs). Bee Box is a **file-based personal automation system** — git-backed cards, CLI-driven agents, and a reactor loop.
 
-Memory Atlas is the spiritual predecessor — many ideas in Callback originated there. This review focuses on what Memory Atlas does well that Callback hasn't yet absorbed, and patterns worth revisiting now that Callback's architecture has matured.
+Memory Atlas is the spiritual predecessor — many ideas in Bee Box originated there. This review focuses on what Memory Atlas does well that Bee Box hasn't yet absorbed, and patterns worth revisiting now that Bee Box's architecture has matured.
 
 ---
 
@@ -20,7 +20,7 @@ Memory Atlas is the spiritual predecessor — many ideas in Callback originated 
 
 **Storage**: PostgreSQL with pgvector. Three embedding variants per unit (title+content, title+content+details, title+whenUseful). Hybrid retrieval: 70% vector similarity + 30% BM25 keyword search, with optional temporal decay and MMR diversity re-ranking.
 
-**What Callback has:** No knowledge extraction. Agents process cards and commit results, but don't learn from what they process. No persistent memory between agent sessions.
+**What Bee Box has:** No knowledge extraction. Agents process cards and commit results, but don't learn from what they process. No persistent memory between agent sessions.
 
 ### Ideas
 
@@ -32,7 +32,7 @@ Memory Atlas is the spiritual predecessor — many ideas in Callback originated 
 | **Category-balanced retrieval** — when injecting memory into context, balance across categories (don't let one topic dominate) | Medium | Medium |
 | **Knowledge unit types** — structured categories for memories: people, preferences, project context, facts | Low | Medium |
 
-**Key insight:** Memory Atlas extracts knowledge *from* conversations. Callback could extract knowledge *from* agent sessions — what did the agent learn while processing news? What patterns emerged from email triage? What decisions were made about card organization? This is different from OpenClaw's memory (which is agent-maintained markdown) — it's automated extraction.
+**Key insight:** Memory Atlas extracts knowledge *from* conversations. Bee Box could extract knowledge *from* agent sessions — what did the agent learn while processing news? What patterns emerged from email triage? What decisions were made about card organization? This is different from OpenClaw's memory (which is agent-maintained markdown) — it's automated extraction.
 
 ---
 
@@ -48,7 +48,7 @@ Memory Atlas is the spiritual predecessor — many ideas in Callback originated 
 
 Activities register in a global registry and are instantiated dynamically. The LLM can switch between activities mid-conversation, moving messages to the new activity's context.
 
-**What Callback has:** Card schemas (similar to activity types) with embedded instructions, but no formal tool registration, no prompt slot system, and no dynamic activity switching.
+**What Bee Box has:** Card schemas (similar to activity types) with embedded instructions, but no formal tool registration, no prompt slot system, and no dynamic activity switching.
 
 ### Ideas
 
@@ -59,7 +59,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 | **Dynamic context injection** — instead of loading all docs, load docs relevant to the card types currently being processed | Medium | Medium |
 | **Prompt slot system** — structured way for schemas to contribute sections to the agent's system prompt | Medium | Medium |
 
-**Key insight:** Memory Atlas's activity system is essentially "card types that know how to present themselves to the LLM." Callback's schemas already have `instructions` embedded in them, but they don't have tools, knowledge criteria, or prompt slots. The schema could be the natural place to register all of these.
+**Key insight:** Memory Atlas's activity system is essentially "card types that know how to present themselves to the LLM." Bee Box's schemas already have `instructions` embedded in them, but they don't have tools, knowledge criteria, or prompt slots. The schema could be the natural place to register all of these.
 
 ---
 
@@ -72,7 +72,7 @@ Activities register in a global registry and are instantiated dynamically. The L
   - **Questions**: Identifies follow-up topics, generates prompts and provocations for future conversations
 - Journal entries become searchable knowledge units
 
-**What Callback has:** Scheduled scripts (cron/at/rrule) and the reactor loop. No automated journaling or daily summary generation. The news pipeline processes RSS items into briefs, but there's no equivalent for summarizing the system's own activity.
+**What Bee Box has:** Scheduled scripts (cron/at/rrule) and the reactor loop. No automated journaling or daily summary generation. The news pipeline processes RSS items into briefs, but there's no equivalent for summarizing the system's own activity.
 
 ### Ideas
 
@@ -83,7 +83,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 | **Conversation-to-journal** — when chat sessions end, optionally create a memo card summarizing the discussion | Low | Medium |
 | **Timezone-aware scheduling** — scheduled scripts should respect the user's timezone, not just UTC cron | Low | Low |
 
-**Key insight:** Memory Atlas turns raw conversations into curated artifacts (journals, questions). Callback could do the same with its reactor cycles — turn a day's worth of agent work into a readable summary card.
+**Key insight:** Memory Atlas turns raw conversations into curated artifacts (journals, questions). Bee Box could do the same with its reactor cycles — turn a day's worth of agent work into a readable summary card.
 
 ---
 
@@ -95,13 +95,13 @@ Activities register in a global registry and are instantiated dynamically. The L
 - **Activity switching via tools** — tools can return `activateActivityIds` to switch context mid-conversation, moving messages to the new activity
 - **Structured tool results** — tools return typed `structured` data alongside text content, enabling rich UI rendering
 
-**What Callback has:** The chat page has a basic LLM chat, but it doesn't have tool calling. Agents (Claude Code) have full tool access, but the web chat assistant doesn't.
+**What Bee Box has:** The chat page has a basic LLM chat, but it doesn't have tool calling. Agents (Claude Code) have full tool access, but the web chat assistant doesn't.
 
 ### Ideas
 
 | Idea | Effort | Value |
 |------|--------|-------|
-| **Chat assistant with tools** — give the web chat LLM access to `cb` commands as tools (status, create, answer, move, trash) | High | High |
+| **Chat assistant with tools** — give the web chat LLM access to `bbx` commands as tools (status, create, answer, move, trash) | High | High |
 | **Job dispatch from chat** — chat assistant creates job cards instead of doing work synchronously (already noted as planned feature) | Medium | High |
 | **Dynamic tool sets** — tools available to the chat assistant vary based on what's being discussed (questions page → answer tools, browse → move/trash tools) | Medium | Medium |
 | **Structured responses** — tool results rendered as rich UI (card previews, status summaries) instead of plain text | Medium | Medium |
@@ -114,7 +114,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 
 **What Memory Atlas has:** Async generator-based streaming for both LLM responses and server functions. SSE proxy pattern where client calls server functions as if local, with the proxy transparently routing via HTTP/SSE.
 
-**What Callback has:** SSE for file change notifications, Fastify API routes, and the chat page has basic streaming.
+**What Bee Box has:** SSE for file change notifications, Fastify API routes, and the chat page has basic streaming.
 
 ### Ideas
 
@@ -123,7 +123,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 | **Typed RPC proxy** — memory-atlas's `createFuncsProxy` pattern is cleaner than manual fetch calls for API routes | Medium | Low |
 | **Async generator streaming** — for long-running operations (reactor progress, procedure execution), stream status updates as async generators | Medium | Medium |
 
-**Key insight:** The proxy pattern is elegant but may be over-engineering for Callback's simpler API surface. Worth noting but not urgent.
+**Key insight:** The proxy pattern is elegant but may be over-engineering for Bee Box's simpler API surface. Worth noting but not urgent.
 
 ---
 
@@ -135,7 +135,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 - Creates structured observations linking back to source messages
 - Enables meta-analysis: "what patterns appear in my conversations?"
 
-**What Callback has:** Nothing equivalent. Agents process work but don't reflect on patterns or quality.
+**What Bee Box has:** Nothing equivalent. Agents process work but don't reflect on patterns or quality.
 
 ### Ideas
 
@@ -145,7 +145,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 | **Pattern detection across reactor cycles** — identify recurring issues (same card types failing, same connectors erroring) | Medium | Medium |
 | **Quality criteria for card processing** — define what "good" news brief generation looks like, evaluate against it | Medium | Medium |
 
-**Key insight:** Retrospect is essentially automated quality review. Callback could use this to improve agent performance over time — "the last 5 news briefs were too long" or "the agent keeps creating duplicate cards."
+**Key insight:** Retrospect is essentially automated quality review. Bee Box could use this to improve agent performance over time — "the last 5 news briefs were too long" or "the agent keeps creating duplicate cards."
 
 ---
 
@@ -157,7 +157,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 - Iterative processing with self-rescheduling
 - Failure tracking and retry logic
 
-**What Callback has:** The reactor loop (glob jobs → process → loop), scheduled scripts, and the scheduler daemon.
+**What Bee Box has:** The reactor loop (glob jobs → process → loop), scheduled scripts, and the scheduler daemon.
 
 ### Ideas
 
@@ -166,7 +166,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 | **Idempotency for jobs** — prevent duplicate job processing if reactor crashes and restarts | Low | Medium |
 | **Fan-out job pattern** — one job creates multiple child jobs (already somewhat supported via reactor looping) | Low | Low |
 
-**Key insight:** Callback's reactor loop is actually a simpler and more appropriate architecture for its use case. Inngest solves distributed reliability problems that don't apply to a single-machine, git-backed system. The reactor's "glob + process + loop" is elegant.
+**Key insight:** Bee Box's reactor loop is actually a simpler and more appropriate architecture for its use case. Inngest solves distributed reliability problems that don't apply to a single-machine, git-backed system. The reactor's "glob + process + loop" is elegant.
 
 ---
 
@@ -174,7 +174,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 
 **What Memory Atlas has:** Deepgram live transcription, OpenAI TTS, iOS audio unlock pattern, earcon system, wake lock during recording.
 
-**What Callback has:** Whisper transcription (via Electron), TTS speech output, iOS audio unlock (adopted from memory-atlas), earcon system.
+**What Bee Box has:** Whisper transcription (via Electron), TTS speech output, iOS audio unlock (adopted from memory-atlas), earcon system.
 
 ### Ideas
 
@@ -191,7 +191,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 
 **What Memory Atlas has:** Preact Signals for fine-grained reactive state. Persistent signals backed by localStorage. SignalView for nested property access.
 
-**What Callback has:** Standard React state (useState, useEffect).
+**What Bee Box has:** Standard React state (useState, useEffect).
 
 ### Ideas
 
@@ -199,7 +199,7 @@ Activities register in a global registry and are instantiated dynamically. The L
 |------|--------|-------|
 | **Signals for SSE-driven state** — SSE events updating signals instead of triggering full re-renders | Medium | Low |
 
-**Key insight:** Not a priority. React's state management is fine for Callback's current UI complexity.
+**Key insight:** Not a priority. React's state management is fine for Bee Box's current UI complexity.
 
 ---
 
@@ -214,7 +214,7 @@ This deserves its own section because it's a simple but powerful pattern.
 
 This field is embedded separately (title+whenUseful embedding) and searched against, meaning the system can match "the user seems frustrated with their inbox" to a memory about "when the user feels overwhelmed by email."
 
-**What Callback has:** Cards have types and locations, but no "when is this relevant?" metadata.
+**What Bee Box has:** Cards have types and locations, but no "when is this relevant?" metadata.
 
 ### Ideas
 
@@ -229,7 +229,7 @@ This field is embedded separately (title+whenUseful embedding) and searched agai
 ## Top 10 Actionable Ideas (Prioritized)
 
 1. **Knowledge extraction from agent sessions** — extract facts/decisions into memory files after reactor cycles
-2. **Chat assistant with `cb` tools** — give the web chat access to CLI commands as callable tools
+2. **Chat assistant with `bbx` tools** — give the web chat access to CLI commands as callable tools
 3. **`whenUseful` relevance annotations** — natural language descriptions of when knowledge/guides should be surfaced
 4. **Daily activity digest** — scheduled summary of what the system did yesterday
 5. **Agent performance retrospect** — periodic quality analysis of agent sessions

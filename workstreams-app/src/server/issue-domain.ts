@@ -7,6 +7,7 @@ import { issueNextActionSchema, type IssueNextAction } from "../shared/documents
 export const ISSUE_CATEGORIES = [
   "bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch",
 ] as const;
+export type IssueCategory = (typeof ISSUE_CATEGORIES)[number];
 
 export type IssuePriority = "important" | "normal" | "uncategorized" | "backlog";
 export type ResearchState = "none" | "awaiting" | "researched";
@@ -33,6 +34,16 @@ export interface IssueRecord {
   closed: boolean;
   slug: string;
   frontmatter: IssueFrontmatter;
+  /**
+   * Frontmatter keys this parser does not know.
+   *
+   * The schema in `issues/CLAUDE.md` is closed, but this parser used to drop
+   * anything outside it without a word. Eleven issues were filed carrying a
+   * `stories:` list for two months before anyone noticed it reached no tool —
+   * not a filter, not a facet, not `--json`. Silence is what let that happen,
+   * so unknown keys are reported and callers decide how loudly.
+   */
+  unknownKeys: string[];
   research: ResearchState;
   visibility: Visibility;
 }
@@ -104,6 +115,19 @@ function researchState(body: string): ResearchState {
   return "none";
 }
 
+/**
+ * Every frontmatter key `issues/CLAUDE.md` defines. Adding a field to the schema
+ * means adding it here, or it will be reported as unknown on every issue using it.
+ */
+const KNOWN_FRONTMATTER_KEYS = new Set([
+  "title", "workstream", "needs", "design", "area", "labels", "priority",
+  "next-action", "filed-by", "discovered-by", "discovered-in", "resolution",
+  // Deferred-only lifecycle metadata. Deferred files are intentionally not
+  // returned by listIssues(); the activation script consumes these fields and
+  // removes them when it moves the issue into its category directory.
+  "activate-on", "category",
+]);
+
 export function parseIssueFile(options: {
   relPath: string;
   source: string;
@@ -139,6 +163,7 @@ export function parseIssueFile(options: {
       ...(nextAction ? { nextAction } : {}),
     },
     research: researchState(body),
+    unknownKeys: Object.keys(data).filter((k) => !KNOWN_FRONTMATTER_KEYS.has(k)).toSorted(),
     visibility,
   };
 }

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Desktop notification for a failed deploy, macOS flavour. Point
+# BBX_DEPLOY_NOTIFY at this (or at your own equivalent) in deploy/target.env;
+# deploy.sh calls it as `notify-macos <title> <message>`.
+#
+# terminal-notifier is optional — without it this is a no-op, which is why the
+# deploy never fails on account of its own notifier.
+set -euo pipefail
+command -v terminal-notifier >/dev/null 2>&1 || exit 0
+exec terminal-notifier -title "$1" -message "$2" \
+  -group beebox-deploy -activate com.apple.Terminal >/dev/null 2>&1

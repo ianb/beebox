@@ -11,6 +11,10 @@
 # blocked with the touched anchors and the two ways out. Otherwise it passes
 # silently and clears the state. Fast (plain git + fs) — runs on every commit.
 #
+# The second call is a different tripwire sharing this hook: commit-provenance
+# --check refuses a commit whose `Issue:` trailer names no file under issues/
+# (a misspelled name is a permanent dangling link, since commits are immutable).
+#
 # Lives at the monorepo root alongside pre-commit; core.hooksPath (set to
 # .husky/_/ by the root `pnpm install`) is shared across all worktrees.
 
@@ -18,3 +22,4 @@ set -e
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 (cd "$REPO_DIR" && pnpm --silent mobile-contract-check --commit-msg "$1")
+(cd "$REPO_DIR" && pnpm --silent commit-provenance --check "$1")

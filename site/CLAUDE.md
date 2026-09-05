@@ -1,6 +1,6 @@
 # site/
 
-The generated public front-door site for callback-box. A spare static site
+The generated public front-door site for beebox. A spare static site
 built from `site/cards/*.card` to gitignored `site/dist/`, deployed to GitHub
 Pages and viewable on the dev router at `/<worktree>/site/`.
 
@@ -13,7 +13,7 @@ long-term (repo, box export, something else) is an open question — see the
 "Direction shift (2026-08-19)" section of the plan.
 
 - Principles (settled with the boxholder): `issues/features/2026-07-20-public-site.md`
-- Full plan / tracks: `../callback-box/docs/plans/public-site.md`
+- Full plan / tracks: `../beebox/docs/plans/public-site.md`
 
 ## Hard constraint: static output only
 
@@ -43,7 +43,7 @@ router route is the only live view. The Pages workflow
 
 ```bash
 pnpm --dir site build                    # base derived from the git branch (router view)
-pnpm --dir site build --base /callback-box/   # what the Pages workflow runs
+pnpm --dir site build --base /beebox/   # what the Pages workflow runs
 pnpm --dir site lint                     # eslint (roots: ["."] — sources at package root)
 pnpm --dir site typecheck                # tsc --noEmit
 pnpm --dir site test                     # node --test over *.test.ts
@@ -55,7 +55,7 @@ build is **optional for router viewing**: the router auto-builds on request when
 current sources — content-hash based, so it's never-stale and deletion-correct
 (boxholder: "I don't want stale builds"). Builds are serialized per checkout and
 a failure surfaces as a 500 with the build's error text. The Pages workflow
-still builds explicitly (with `--base /callback-box/`). Run `pnpm --dir site
+still builds explicitly (with `--base /beebox/`). Run `pnpm --dir site
 build` yourself when you want to see build errors directly.
 
 The build fails closed: malformed frontmatter (named file:line), a broken
@@ -67,7 +67,7 @@ writes the input manifest last (so a partial build never masks staleness).
 - `build.ts` — CLI entry: reads the page cards, writes HTML + `.md` twins +
   `llms.txt`, link-checks, resolves the base path.
 - `render.ts` — the local Markdoc pipeline + strict (zod) frontmatter parse +
-  the HTML shell. Deliberately does NOT import `bin/router-docs.ts`, whose
+  the HTML shell. Deliberately does NOT import `workstreams-app/src/router/router-docs.ts`, whose
   router/runtime dependencies do not belong in the static-site build; this
   package declares `@markdoc/markdoc` itself. Every body goes through Markdoc's
   `validate` before transform: a malformed tag is otherwise dropped *silently*,
@@ -86,7 +86,7 @@ writes the input manifest last (so a partial build never masks staleness).
 - `links.ts` — base-path handling and internal-link resolution.
 - `sources.ts` — the single definition of the input source set + content-hash
   manifest, shared by `build.ts` (writes `dist/.inputs.json`) and
-  `bin/router-site.ts` (compares it to decide whether to auto-rebuild). One
+  `workstreams-app/src/router/router-site.ts` (compares it to decide whether to auto-rebuild). One
   enumeration, so the two sides can't drift.
 - `cards/` — the page and aside sources. `<slug>.site-page.card` builds
   `<slug>.html` (fields: `title`, `summary`, optional `unlisted` to keep a page
@@ -119,7 +119,7 @@ writes the input manifest last (so a partial build never masks staleness).
 - `story/ingest.ts` — story-extraction ingest CLI (`pnpm --dir site ingest`,
   `--help`): validates raw extraction JSON (strict zod), verifies every span
   appears verbatim in its source (fabrication = hard error), and writes the
-  review app's run files into `dev/story-eval/runs/<run>/` with `docText`
+  review app's run files into `dev/apps/story-eval/runs/<run>/` with `docText`
   embedded. See the story-extraction subplan, Track B.
 - `story/coverage.ts` — coverage-ledger CLI (`pnpm --dir site coverage`,
   `--check`): scans the (gitignored) run dirs and regenerates the tracked

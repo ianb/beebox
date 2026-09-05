@@ -1,0 +1,72 @@
+/**
+ * The session chip's "Advanced" sub-panel — split out of its host file to
+ * keep that under the 300-line cap (the host was `ChatMenu` until the app
+ * bar's `SessionChip` replaced it, docs/plans/top-nav-ia.md Track C2). Debug toggles + process controls only; Model,
+ * Voice settings, and Narration mode moved to the voice chip's own panels
+ * (`VoiceChip-panels.tsx`) in chunk 3 of docs/plans/chat-header-chips.md.
+ */
+
+import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+
+/**
+ * "Advanced" sub-panel: debug toggles and process controls + status footer.
+ */
+export function AdvancedPanel({
+  onBack,
+  debugView,
+  onToggleDebugView,
+  showDebugLog,
+  onToggleDebugLog,
+  onCompactSession,
+  busy,
+  onRestartProcess,
+  onStopProcess,
+  running,
+  sessionId,
+  onDeleteConversation,
+}: {
+  onBack: () => void;
+  debugView: boolean;
+  onToggleDebugView: () => void;
+  showDebugLog: boolean;
+  onToggleDebugLog: () => void;
+  onCompactSession: () => void;
+  busy: boolean;
+  onRestartProcess: () => void;
+  onStopProcess: () => void;
+  running: boolean;
+  sessionId: string | null;
+  onDeleteConversation: () => void;
+}) {
+  return (
+    <>
+      <MenuItem id="bbx-session-advanced-back" onClick={onBack} keepOpen>
+        <span className="text-warm-500">‹ Advanced</span>
+      </MenuItem>
+      <MenuDivider />
+      <MenuItem id="bbx-session-debug-view" onClick={onToggleDebugView}>{debugView ? "✓ " : "  "}Debug View</MenuItem>
+      <span className="sm:hidden">
+        <MenuItem id="bbx-session-debug-log" onClick={onToggleDebugLog}>{showDebugLog ? "✓ " : "  "}Debug Log</MenuItem>
+      </span>
+      <MenuDivider />
+      <MenuItem id="bbx-session-compact" onClick={onCompactSession} disabled={busy}>
+        Run /compact
+      </MenuItem>
+      <MenuItem id="bbx-session-restart" onClick={onRestartProcess} disabled={!running}>
+        Restart Subprocess
+      </MenuItem>
+      <MenuItem id="bbx-session-stop-process" onClick={onStopProcess} disabled={!running}>
+        Stop Process
+      </MenuItem>
+      <MenuDivider />
+      <div className="px-3 py-1.5 text-xs text-warm-500">
+        <div>Chat ID: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
+        <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
+      </div>
+      <MenuDivider />
+      <MenuItem id="bbx-session-delete" danger disabled={sessionId === null} onClick={onDeleteConversation}>
+        Delete conversation…
+      </MenuItem>
+    </>
+  );
+}

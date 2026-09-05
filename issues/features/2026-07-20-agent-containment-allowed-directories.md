@@ -2,7 +2,7 @@
 title: "Agent containment: an allowed-directories control plane (box escapes)"
 workstream: open-source-readiness
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
@@ -33,7 +33,7 @@ So the shape is:
   to be perfect… setting boundaries and expectations using Claude
   Code's own features for that. Nothing that can't be expressed with
   existing config."** So: no custom enforcement engine. The control
-  plane is callback-box generating/managing the box's Claude Code
+  plane is beebox generating/managing the box's Claude Code
   permission configuration — settings `permissions` rules (deny/allow
   on file tools and Bash patterns), additional-directories grants, and
   whatever the SDK's existing settings surface expresses. Known
@@ -52,5 +52,5 @@ feature is what makes that section say something real. The
 question is the network-egress sibling of the same tension. Not a
 launch gate per the
 [posture](../decisions/2026-07-20-soft-launch-posture.md) — launch
-honesty means SECURITY.md describes what IS true today — but it's the
+honesty means security-overview.md describes what IS true today — but it's the
 highest-value post-launch security build.

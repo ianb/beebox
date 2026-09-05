@@ -6,6 +6,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { formatJson, formatTable, runChecks } from "./doctor.js";
 import {
   checkClaudeAuth,
   checkFrontendBuild,
@@ -13,17 +14,17 @@ import {
   checkNativeSqlite,
   checkNodeVersion,
   checkPnpm,
+  checkSchedulesTick,
   checkSdkBinary,
   checkWorkspaceInstalled,
-  formatJson,
-  formatTable,
+} from "./doctor-checks.js";
+import {
   parseVersion,
-  runChecks,
   satisfiesRange,
   type CommandResult,
   type DoctorDeps,
   type RunCommand,
-} from "./doctor.js";
+} from "./doctor-lib.js";
 
 // ─── Version-range comparison (pure) ───────────────────────────────────────
 
@@ -70,7 +71,15 @@ function ok(stdout: string): CommandResult {
   return { spawned: true, code: 0, stdout, stderr: "" };
 }
 
-const notFound: CommandResult = { spawned: false, code: null, stdout: "", stderr: "" };
+/** Stands in for the native-module load failure a Node major bump produces. */
+class FakeAbiDriftError extends Error {
+  constructor() {
+    super(
+      "ERR_DLOPEN_FAILED: The module was compiled against a different Node.js version\nmore detail",
+    );
+    this.name = "FakeAbiDriftError";
+  }
+}
 
 // ─── Individual checks against a fake exec ─────────────────────────────────
 
@@ -181,6 +190,64 @@ test("checkFrontendBuild fails with the build:frontend remedy when dist/index.ht
   assert.match(result.remedy ?? "", /build:frontend/);
 });
 
+// ─── Schedules heartbeat + launchd job ─────────────────────────────────────
+
+const NOW_MS = Date.parse("2026-08-24T12:00:00Z");
+const GIT_COMMON = "git rev-parse --path-format=absolute --git-common-dir";
+
+function schedulesRun(state: string, launchctlCode: number): RunCommand {
+  return fakeRun({
+    [GIT_COMMON]: ok("/checkouts/beebox/.git\n"),
+    "cat /checkouts/schedule-runs/state.json": ok(state),
+    "id -u": ok("501\n"),
+    "launchctl print gui/501/com.beebox.schedules": { spawned: true, code: launchctlCode, stdout: "", stderr: "" },
+  });
+}
+
+test("checkSchedulesTick skips a machine with no schedule store", async () => {
+  const run = fakeRun({ [GIT_COMMON]: ok("/checkouts/beebox/.git\n") });
+  const result = await checkSchedulesTick({ run, fileExists: () => false, nowMs: NOW_MS });
+  assert.equal(result.ok, true);
+  assert.match(result.detail, /no schedules installed/);
+});
+
+test("checkSchedulesTick passes on a fresh heartbeat with the plist loaded", async () => {
+  const run = schedulesRun(JSON.stringify({ lastTickAt: "2026-08-24T11:50:00Z", lastTickExit: 0 }), 0);
+  const result = await checkSchedulesTick({ run, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(result.ok, true);
+  assert.match(result.detail, /10 min ago/);
+});
+
+test("checkSchedulesTick fails on a heartbeat older than an hour", async () => {
+  const run = schedulesRun(JSON.stringify({ lastTickAt: "2026-08-24T08:00:00Z", lastTickExit: 0 }), 0);
+  const result = await checkSchedulesTick({ run, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(result.ok, false);
+  assert.match(result.remedy ?? "", /bin\/schedules install/);
+});
+
+test("checkSchedulesTick fails when the tick job is not loaded, and tolerates a missing launchctl", async () => {
+  const notLoaded = schedulesRun(JSON.stringify({ lastTickAt: "2026-08-24T11:55:00Z", lastTickExit: 0 }), 113);
+  const failed = await checkSchedulesTick({ run: notLoaded, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(failed.ok, false);
+  assert.match(failed.detail, /not loaded in launchd/);
+
+  const noLaunchctl = fakeRun({
+    [GIT_COMMON]: ok("/checkouts/beebox/.git\n"),
+    "cat /checkouts/schedule-runs/state.json": ok(JSON.stringify({ lastTickAt: "2026-08-24T11:55:00Z", lastTickExit: 0 })),
+    "id -u": ok("501\n"),
+  });
+  const tolerated = await checkSchedulesTick({ run: noLaunchctl, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(tolerated.ok, true);
+  assert.match(tolerated.detail, /launchctl unavailable/);
+});
+
+test("checkSchedulesTick fails when the store exists but was never ticked", async () => {
+  const run = fakeRun({ [GIT_COMMON]: ok("/checkouts/beebox/.git\n") });
+  const result = await checkSchedulesTick({ run, fileExists: () => true, nowMs: NOW_MS });
+  assert.equal(result.ok, false);
+  assert.match(result.detail, /never ticked/);
+});
+
 // ─── Aggregate runner + output shapes ──────────────────────────────────────
 
 function passingDeps(overrides: Partial<DoctorDeps>): DoctorDeps {
@@ -203,6 +270,7 @@ function passingDeps(overrides: Partial<DoctorDeps>): DoctorDeps {
     packageManager: "pnpm@10.26.2",
     resolveSdkBinary: () => "/repo/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
     loadBetterSqlite3: async () => "loads and opens (SQLite 3.50.0)",
+    nowMs: Date.parse("2026-08-24T12:00:00Z"),
     ...overrides,
   };
 }
@@ -239,7 +307,7 @@ test("checkNativeSqlite passes with the loader's detail and fails on a load erro
 
   const failResult = await checkNativeSqlite({
     loadBetterSqlite3: async () => {
-      throw new Error("ERR_DLOPEN_FAILED: The module was compiled against a different Node.js version\nmore detail");
+      throw new FakeAbiDriftError();
     },
   });
   assert.equal(failResult.ok, false);

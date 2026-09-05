@@ -1,7 +1,7 @@
 ---
 title: "Invalid at/until dates in scheduled-script cards are silently inert"
 workstream: schedule-cadence
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-schedule-cadence — cross-model review of the cadence formatter
 resolution: implemented
@@ -28,7 +28,7 @@ and then does nothing at runtime:
 - `at`: `new Date(script.at)` invalid means `ctx.now >= atDate` is always
   false, so the one-shot silently never runs.
 
-Neither case produces a warning anywhere. `cb validate` accepts the card.
+Neither case produces a warning anywhere. `bbx validate` accepts the card.
 
 Fix direction: validate `at` and `until` as parseable datetimes in the schema
 (`z.string().refine(...)` or a shared ISO-date field helper), so a bad date is

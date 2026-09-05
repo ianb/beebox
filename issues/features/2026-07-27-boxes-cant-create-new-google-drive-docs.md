@@ -1,7 +1,7 @@
 ---
 title: "Boxes can't create new Google Drive docs easily"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked to file
 needs: [design]
@@ -15,7 +15,7 @@ sync-in + edit-existing, not create.
 
 ## What exists vs. what's missing
 
-The `GoogleDriveService` interface (`callback-box/src/services/google-drive-types.ts:90-126`)
+The `GoogleDriveService` interface (`beebox/src/services/google-drive-types.ts:90-126`)
 is entirely keyed on an **existing** `fileId`:
 
 - `getFile` / `listFiles` / `listSpreadsheets` / `getSpreadsheet` — read
@@ -25,7 +25,7 @@ is entirely keyed on an **existing** `fileId`:
 
 There is **no** `createFile` / `documents.create` / `files.create` — nothing
 that mints a new Drive object. The connector
-(`callback-box/src/connectors/google-drive.ts`) syncs Drive → box and pushes
+(`beebox/src/connectors/google-drive.ts`) syncs Drive → box and pushes
 edits back (`created`/`updated`/`pushed` all describe *synced* folder contents,
 `google-drive.ts:173-185`), so "created" there means "newly seen in the mounted
 folder," not "created by the box."
@@ -47,7 +47,7 @@ Creating the file is the easy half (Drive `files.create` /
   fire-and-forget write. Pre-minting the card and reconciling the returned
   `fileId` needs thought (state lives in `config/connectors/*.state.json`,
   written by two processes — see `google-drive-state.ts`).
-- **What's the agent surface?** A `cb` command, a connector action, or a tool
+- **What's the agent surface?** A `bbx` command, a connector action, or a tool
   the box agent calls mid-chat. This determines how naturally "draft this and
   put it in my Drive" works from a conversation.
 - **Doc vs. Sheet vs. plain file** — start with Docs (the common ask) or make
@@ -55,7 +55,7 @@ Creating the file is the easy half (Drive `files.create` /
 
 ## Related
 
-- [Drive mounting / file-browsing UI](2026-06-26-drive-mounting-file-browsing-ui.md)
+- [Drive mounting / file-browsing UI](../closed/features/2026-06-26-drive-mounting-file-browsing-ui.md)
   — same integration, the browse/mount side.
 - [Agent emits bare card filenames in chat](../closed/bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md)
   — the synced-doc card type is the most exposed surface; a create flow adds

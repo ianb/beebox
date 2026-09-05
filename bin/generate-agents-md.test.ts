@@ -86,7 +86,7 @@ test("writes a mirror beside every tracked CLAUDE.md, skips untracked", () => {
   git("commit", "-q", "-m", "init");
 
   const written = generateAgentsFiles(repo, "wt1");
-  assert.deepEqual(written.sort(), ["AGENTS.md", "sub/AGENTS.md"]);
+  assert.deepEqual(written.toSorted(), ["AGENTS.md", "sub/AGENTS.md"]);
   assert.ok(readFileSync(join(repo, "AGENTS.md"), "utf8").includes("wt1"));
   assert.ok(
     readFileSync(join(repo, "sub", "AGENTS.md"), "utf8").endsWith("sub docs\n"),
@@ -120,7 +120,7 @@ test("embeds path-scoped Claude rules in the nearest AGENTS.md", () => {
   );
   git("commit", "-q", "-m", "add scoped rule");
 
-  assert.deepEqual(generateAgentsFiles(repo).sort(), [
+  assert.deepEqual(generateAgentsFiles(repo).toSorted(), [
     "AGENTS.md",
     "sub/AGENTS.md",
   ]);
@@ -192,22 +192,38 @@ test("regeneration removes stale generated skill links", () => {
   assert.equal(existsSync(join(repo, ".agents", "skills", "finish")), false);
 });
 
-test("refuses to overwrite an existing native Codex skill", () => {
+test("refuses to overwrite an existing native Codex skill, and keeps going", () => {
   mkdirSync(join(repo, ".claude", "skills", "finish"), { recursive: true });
   writeFileSync(
     join(repo, ".claude", "skills", "finish", "SKILL.md"),
     "---\nname: finish\n---\n",
+  );
+  mkdirSync(join(repo, ".claude", "skills", "later"), { recursive: true });
+  writeFileSync(
+    join(repo, ".claude", "skills", "later", "SKILL.md"),
+    "---\nname: later\n---\n",
   );
   mkdirSync(join(repo, ".agents", "skills", "finish"), { recursive: true });
   writeFileSync(
     join(repo, ".agents", "skills", "finish", "SKILL.md"),
     "native\n",
   );
-  git("add", ".claude/skills/finish/SKILL.md");
+  git("add", ".claude/skills/finish/SKILL.md", ".claude/skills/later/SKILL.md");
   git("commit", "-q", "-m", "restore skill");
 
-  assert.throws(
-    () => generateSkillLinks(repo),
-    /refusing to overwrite existing Codex skill path: \.agents\/skills\/finish/,
+  // The native skill is left untouched — that protection is the point.
+  const written = generateSkillLinks(repo);
+  assert.equal(
+    readFileSync(join(repo, ".agents", "skills", "finish", "SKILL.md"), "utf8"),
+    "native\n",
+  );
+
+  // ...but it no longer aborts the run. `later` sorts after `finish`, so under
+  // the old throw-on-first-conflict behavior it was never linked at all — one
+  // unexpected directory silently cost every skill after it.
+  assert.ok(written.includes(".agents/skills/later"));
+  assert.equal(
+    readlinkSync(join(repo, ".agents", "skills", "later")),
+    join("..", "..", ".claude", "skills", "later"),
   );
 });

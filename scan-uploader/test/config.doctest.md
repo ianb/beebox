@@ -35,7 +35,7 @@ defaults to `keep`:
 
 ```
 const path = await writeConfig({
-  targets: [{ folder: "/scans/family", serverUrl: "https://cb.example.org", box: "family", tokenPath: "/secrets/family.token" }],
+  targets: [{ folder: "/scans/family", serverUrl: "https://beebox.run", box: "family", tokenPath: "/secrets/family.token" }],
 });
 const config = await loadConfig(path);
 JSON.stringify(config, null, 2)
@@ -44,7 +44,7 @@ JSON.stringify(config, null, 2)
   "targets": [
     {
       "folder": "/scans/family",
-      "serverUrl": "https://cb.example.org",
+      "serverUrl": "https://beebox.run",
       "box": "family",
       "tokenPath": "/secrets/family.token",
       "disposition": "keep"
@@ -82,7 +82,7 @@ A target missing a required field is rejected:
 
 ```
 const missingBox = await writeConfig({
-  targets: [{ folder: "/scans", serverUrl: "https://cb.example.org", tokenPath: "/t" }],
+  targets: [{ folder: "/scans", serverUrl: "https://beebox.run", tokenPath: "/t" }],
 });
 await rejectedErrorName(loadConfig(missingBox))
 => ConfigError
@@ -102,7 +102,7 @@ An unrecognized `disposition` value is rejected:
 
 ```
 const badDisposition = await writeConfig({
-  targets: [{ folder: "/scans", serverUrl: "https://cb.example.org", box: "family", tokenPath: "/t", disposition: "delete" }],
+  targets: [{ folder: "/scans", serverUrl: "https://beebox.run", box: "family", tokenPath: "/t", disposition: "delete" }],
 });
 await rejectedErrorName(loadConfig(badDisposition))
 => ConfigError
@@ -112,7 +112,7 @@ await rejectedErrorName(loadConfig(badDisposition))
 
 ```
 const trashOnMac = await writeConfig({
-  targets: [{ folder: "/scans", serverUrl: "https://cb.example.org", box: "family", tokenPath: "/t", disposition: "trash" }],
+  targets: [{ folder: "/scans", serverUrl: "https://beebox.run", box: "family", tokenPath: "/t", disposition: "trash" }],
 });
 const macConfig = await loadConfig(trashOnMac, { platform: "darwin" });
 macConfig.targets[0].disposition

@@ -1,6 +1,6 @@
 # Message for Grady
 
-Hey — so I added Telegram support to Callback Box, and I'm thinking about what to do with it. I could invite my family to a group. Set up a little isolated environment for them. And then — why not a whole bunch of these? Each one for a different group of people, each with its own group chat.
+Hey — so I added Telegram support to Bee Box, and I'm thinking about what to do with it. I could invite my family to a group. Set up a little isolated environment for them. And then — why not a whole bunch of these? Each one for a different group of people, each with its own group chat.
 
 ## The group thing is the interesting part
 

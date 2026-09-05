@@ -1,7 +1,7 @@
 ---
 title: "release cloud provider honesty"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

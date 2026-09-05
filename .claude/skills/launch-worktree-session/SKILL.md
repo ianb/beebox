@@ -48,6 +48,37 @@ like:
 Adjust the wording to fit the conversation, but the spirit is constant:
 _understanding first, plan second, work third._
 
+## If YOU are in a worktree: land what the new session needs first
+
+**A new worktree branches from `main`** — `--base-ref` defaults to it, and every
+launch path uses that default. So the child cannot see your branch's work. If
+the thing you are spinning off builds on code, a plan doc, or an issue that
+exists only in your worktree, the new session starts without it and will either
+re-derive it or contradict it.
+
+Before launching, check what you are sitting on:
+
+```bash
+git status --porcelain          # uncommitted here
+git log --oneline main..HEAD    # committed here, not on main
+```
+
+Anything the new session needs must be **committed and merged to main** first
+(`bin/land`, or `/finish` if the work is done). Committing alone is not enough —
+the commit still lives on your branch.
+
+Two honest alternatives when merging isn't right yet:
+
+- **Branch the child from your work** with `--base-ref <your-branch>`. Use it
+  when the two are genuinely one line of work; understand that the child then
+  starts from an unmerged base and both branches have to land in order.
+- **Put what they need in the briefing.** For a decision, a finding, or a file
+  path, prose is often enough and needs no merge at all.
+
+What does *not* work is assuming they will see it. This is silent: the launch
+succeeds, the session opens, and the missing context only surfaces later as
+duplicated or conflicting work.
+
 ## How the briefing reaches the new session
 
 `launch-worktree-session` automatically wraps the briefing in
@@ -65,7 +96,31 @@ briefing.
    sentences, ask anything you're unsure about. Don't fork until they've
    said yes.
 
-2. **Pick a worktree name.** Short, kebab-case, descriptive. Examples:
+2. **Route before creating.** Run `bin/workstreams list` and inspect the name,
+   description, state, action, and age. If a recent live or dormant workstream
+   already covers the subject, prefer it. A workstream marked `stale` has been
+   dormant for roughly 14 days; prefer a new stream unless the boxholder wants
+   that old context specifically.
+
+   To hand new context to an existing workstream, use the same briefing forms
+   as launch:
+
+   ```bash
+   bin/workstreams resume <name> - <<'EOF'
+   <briefing>
+   EOF
+   ```
+
+   Use `--` before literal briefing text that begins with `-`.
+
+   A dormant workstream opens with the briefing. A live workstream cannot be
+   injected from a sibling CLI session: the command focuses its tab when it can
+   and prints `manual forwarding required: <path>`. Tell the human to paste that
+   file. Never describe that outcome as delivered. Multiple new workstreams may
+   be launched concurrently: their Git attachment queues briefly, while the
+   independent setup work continues in parallel.
+
+3. **Pick a worktree name.** Short, kebab-case, descriptive. Examples:
    `fix-timezone-parsing`, `gcal-service-injection`, `chat-route-cleanup`.
    Ask the human if a good name isn't obvious from the discussion.
 
@@ -74,9 +129,12 @@ briefing.
    `workstream:` field inside the new checkout, so the issue immediately appears
    as work owned by the workstream, and the assignment lands with the eventual
    work. This is responsibility, not discovery provenance. Omit `--issue` when
-   the discussion is not taking on a specific filed issue.
+   the discussion is not taking on a specific filed issue. The flag takes one
+   path; when the work is a cluster (see `bbx-pick-issues`), pass the anchor
+   issue here and list every other member's path in the briefing so the new
+   session's plan names the full set and `/finish` reconciles all of them.
 
-3. **Pick an agent and model — and when it isn't clear, ASK rather than
+4. **Pick an agent and model — and when it isn't clear, ASK rather than
    assume.** This is the boxholder's call, not a scope calculation you perform
    on their behalf. Getting it wrong wastes a launch and, on the Claude side,
    quota they may be conserving.
@@ -88,13 +146,17 @@ briefing.
 
    - **Opus** (`--model opus`) — for somewhat harder work. The boxholder will
      usually ask for this explicitly; don't reach for it on your own.
-   - **Fable** (`--model claude-fable-5`) — genuinely hard work, big
-     architecture questions, and decisions that need user empathy to get right.
-     Usually specified directly. **If you think something deserves Fable, ask
-     — don't just launch it there.**
+   - **Fable** (`--model claude-fable-5-1`) or **Astra** (`--agent codex
+     --model gpt-6-astra`) — the top rung on each side, equivalent in
+     capability: genuinely hard work, big architecture questions, and
+     decisions that need user empathy to get right. Usually specified
+     directly. **If you think something deserves Fable or Astra, ask — don't
+     just launch it there.** Astra is the top rung on the Codex path (so it
+     is the choice when a Fable-shaped task should stay on Codex); it is NOT
+     what an omitted `--model` gives you.
 
    **The rule when you're unsure: ask.** A one-line question ("Codex, or does
-   this want Fable?") costs nothing. The exception is a standing instruction
+   this want Fable or Astra?") costs nothing. The exception is a standing instruction
    already given in this conversation — e.g. "I'm low on Claude quota, open
    everything in codex" — which you follow without re-asking until it's
    withdrawn.
@@ -104,7 +166,7 @@ briefing.
    design question is not. But use that to shape the question you ask, not to
    decide silently.
 
-4. **Draft the briefing and launch it.** Write the briefing directly and
+5. **Draft the briefing and launch it.** Write the briefing directly and
    invoke the command — don't pre-review the briefing with the human in
    the current session. The whole point of the launched session is that
    _it_ is where discussion, clarification, and approval happen. Pre-
@@ -121,12 +183,12 @@ briefing.
 
    ```bash
    # The default: Codex.
-   bin/launch-worktree-session --agent codex [--issue issues/<category>/<file>.md] <worktree-name> - <<'EOF'
+   bin/launch-worktree-session --agent codex --description "<one-line scope>" [--issue issues/<category>/<file>.md] <worktree-name> - <<'EOF'
    <briefing text — see "What the briefing is" above>
    EOF
 
    # When the boxholder has asked for a Claude model.
-   bin/launch-worktree-session --model <model> <worktree-name> - <<'EOF'
+   bin/launch-worktree-session --model <model> --description "<one-line scope>" <worktree-name> - <<'EOF'
    …
    EOF
    ```
@@ -143,7 +205,7 @@ briefing.
    briefing. Use `<<EOF` (unquoted) only if you intentionally want to
    interpolate variables.
 
-5. **Tell the human what happened.** One line: worktree name, **which agent and
+6. **Tell the human what happened.** One line: worktree name, **which agent and
    model**,
    where it opened (new tab in Terminal.app), and that they can now switch
    over. Naming the model lets them redirect before the session gets far.
@@ -172,6 +234,12 @@ bin/launch-worktree-session --no-remote-control <name> -     # opt out of Remote
 bin/launch-worktree-session --agent codex [--model gpt-5.6-sol] <name> -  # OpenAI Codex session
 ```
 
+Pass `--description "<one-line scope>"` on every skill-driven launch. It is
+shown by `bin/workstreams list` and the workstreams app so later clerical
+sessions can route related work without reconstructing the full briefing. It
+is explicit rather than inferred from Markdown and is limited to 160
+characters.
+
 **`--agent codex`** launches OpenAI's codex CLI instead of Claude Code: same
 worktree + box clone + installs (both launch paths call the agent-neutral
 `bin/workstreams create` command), plus generated AGENTS.md
@@ -191,14 +259,16 @@ from elsewhere (these run unattended in background tabs, and much of the
 manual testing they generate happens on a phone). The session is named after the
 worktree so concurrent ones stay tellable apart. `--no-remote-control` opts out.
 
-Pass `--model <model>` (e.g. `claude-fable-5`, `opus`, `sonnet`) to spin a
+Pass `--model <model>` (e.g. `claude-fable-5-1`, `opus`, `sonnet`) to spin a
 Claude worktree up on a specific model — never omit it on the Claude path,
 where omitting silently inherits the boxholder's saved default. On the Codex
-path omitting `--model` is correct: the launcher pins `gpt-5.6-sol` itself.
+path omitting `--model` is correct for the default rung: the launcher pins
+`gpt-5.6-sol` itself. The Codex top rung is explicit: `--agent codex --model
+gpt-6-astra`.
 
-A Fable session then follows the delegate-and-Codex-review guidance in the root
-CLAUDE.md, so `claude-fable-5` buys orchestration and cross-model review, not
-just a stronger single pass.
+A Fable or Astra session then follows the delegate-and-cross-model-review
+guidance in the root CLAUDE.md, so the top model buys orchestration and
+cross-model review, not just a stronger single pass.
 
 It opens a new tab in the front Terminal.app window (or a new window if none is
 open), calls `bin/workstreams create <name>`, `cd`s into that checkout, and runs
@@ -248,7 +318,7 @@ think first, not act.
 - **Launching before the human confirms.** Even if the discussion clearly
   pointed at "spin this off", wait for the explicit cue.
 - **Deciding the model yourself when it isn't obvious.** Codex is the default;
-  Opus and Fable are the boxholder's calls. Ask — don't infer one from how hard
+  Opus, Fable, and Astra are the boxholder's calls. Ask — don't infer one from how hard
   the work looks and launch on it.
 - **Omitting `--model` on the Claude path.** The session then inherits whatever
   default is saved. (On the Codex path, omitting it is correct.)

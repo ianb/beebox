@@ -12,77 +12,37 @@
  * turns failure counts into failure rates, and a denominator is free to
  * collect now and impossible to reconstruct later.
  *
- * This is the I/O shell; the parsing, classification and aggregation it calls
- * are pure and live in test-ledger-lib.ts.
+ * This is the process shell — the semaphore, the tap child, the CLI. Building
+ * and appending a record lives in test-ledger-store.ts; the parsing,
+ * classification and aggregation both call are pure and live in
+ * test-ledger-lib.ts.
  *
- * See callback-box/docs/plans/change-based-test-selection.md, Track 5.
+ * See beebox/docs/plans/change-based-test-selection.md, Track 5.
  */
 
-import { execFileSync, spawn } from "node:child_process";
-import { appendFileSync, readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { buildGraph } from "./test-graph.js";
-import { implicatedTests, isAccounted } from "./test-graph-query.js";
+import { spawn, type ChildProcess } from "node:child_process";
+import { signalNumber, terminateChild } from "./child-signals.js";
+import { changedPaths, git, gitCommonDir } from "./test-git.js";
 import { renderReport } from "./test-ledger-report.js";
 import {
-  classifyFailure,
-  foldFilesets,
-  hashFileset,
-  isCompletedRun,
-  ledgerPaths,
-  parsePorcelainPaths,
-  parseTapFiles,
-  summarize,
-  type LedgerRecord,
-} from "./test-ledger-lib.js";
+  computeGraph,
+  recordRun,
+  type RunContext,
+  type RunMode,
+} from "./test-ledger-store.js";
+import { acquire, lockDir, type Held, type Tier } from "./test-locks.js";
+import {
+  PACKAGE_ROOT,
+  readCarefulList,
+  taprcTestFiles,
+  tierCommand,
+  TierListError,
+} from "./test-tiers.js";
 
-/**
- * Strips only the trailing newline, never leading whitespace: `git status
- * --porcelain` encodes status in the first two columns, and one of them is
- * routinely a space.
- */
-const git = (args: string[]): string =>
-  execFileSync("git", args, { encoding: "utf-8", maxBuffer: 64 * 1024 * 1024 }).replace(/\n$/, "");
-
-function gitCommonDir(): string {
-  return execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
-    encoding: "utf-8",
-  }).trim();
-}
-
-/**
- * `--untracked-files=all` is load-bearing in both callers below.
- *
- * Plain `git status --porcelain` collapses a wholly-untracked directory into a
- * single `?? dir/` entry. That breaks two different things: a new test
- * directory reads as one unaccounted path (so every test in it is invisible to
- * `implicated`, and the whole change reads as unaccounted), and — worse —
- * adding another file inside that directory does not change the status output,
- * so `treeHash` would call two genuinely different working states identical
- * and the flake derivation would compare across them.
- */
-const porcelain = (): string => git(["status", "--porcelain", "-z", "--untracked-files=all"]);
-
-/** Changed paths versus `main`, plus anything uncommitted. */
-function changedPaths(): string[] {
-  const committed = git(["diff", "--name-only", "main...HEAD"]).split("\n");
-  const dirty = parsePorcelainPaths(porcelain());
-  return [...new Set([...committed, ...dirty].filter((p) => p !== ""))].sort();
-}
-
-/** Identifies the exact working state, so a re-run with no edits is detectable. */
-function treeHash(): string {
-  return hashFileset([git(["rev-parse", "HEAD^{tree}"]), porcelain()]);
-}
-
-/** A ledger operation that could not complete. Never reaches a caller's exit code. */
-class LedgerRecordError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "LedgerRecordError";
-  }
-}
+// `bin/test-select.ts`, `bin/test-ledger-report.ts`, and
+// `schedules/full-suite/run.ts` reach the store through this module, which is
+// the ledger's public name.
+export { appendLedgerRecord, readRecords } from "./test-ledger-store.js";
 
 class LedgerTimeoutError extends Error {
   constructor(ms: number) {
@@ -91,51 +51,80 @@ class LedgerTimeoutError extends Error {
   }
 }
 
-function readFilesets(path: string): Record<string, string[]> {
-  if (!existsSync(path)) return {};
-  try {
-    return foldFilesets(readFileSync(path, "utf-8").split("\n"));
-  } catch (e) {
-    console.warn(`test-ledger: fileset log unreadable, starting fresh (${String(e)})`);
-    return {};
-  }
-}
-
-function isLedgerRecord(value: unknown): value is LedgerRecord {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as { commit?: unknown; ranFiles?: unknown; failures?: unknown };
-  return (
-    typeof record.commit === "string" &&
-    typeof record.ranFiles === "string" &&
-    Array.isArray(record.failures)
-  );
-}
-
-export function readRecords(path: string): LedgerRecord[] {
-  if (!existsSync(path)) return [];
-  const records: LedgerRecord[] = [];
-  for (const line of readFileSync(path, "utf-8").split("\n")) {
-    if (line.trim() === "") continue;
-    try {
-      const parsed: unknown = JSON.parse(line);
-      // Validated rather than cast: an interleaved append from a concurrent
-      // worktree can leave a half-written line, and a bad shape would surface
-      // far away as a wrong statistic.
-      if (isLedgerRecord(parsed)) records.push(parsed);
-    } catch (e) {
-      // One malformed line must not blind the whole instrument.
-      console.warn(`test-ledger: skipping malformed record (${String(e)})`);
-    }
-  }
-  return records;
-}
-
-async function runWrapped(command: string[]): Promise<number> {
+async function runWrapped(command: string[], context: RunContext): Promise<number> {
   const [executable, ...args] = command;
   if (executable === undefined) {
     console.error("test-ledger run: needs a command after --");
     return 2;
   }
+
+  // The semaphore (plan revision 2026-08-25, mechanism A): concurrent suites
+  // measurably slow each other down and turn each other red. Fail-open — a
+  // lock directory that cannot be used is not a reason to refuse to test.
+  const held = await holdSlot(context.tier);
+  try {
+    return await runUnderSlot({ executable, args, context, concurrency: held?.concurrency ?? null });
+  } finally {
+    releaseHeld(held);
+  }
+}
+
+/** The one lock this process holds, so a signal handler can let it go. */
+let heldSlot: Held | null = null;
+
+function releaseHeld(held: Held | null): void {
+  if (held === null) return;
+  heldSlot = null;
+  held.release();
+}
+
+async function holdSlot(tier: Tier): Promise<Held | null> {
+  try {
+    const held = await acquire({
+      dir: lockDir(gitCommonDir()),
+      tier,
+      branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
+    });
+    heldSlot = held;
+    return held;
+  } catch (e) {
+    console.warn(`test-ledger: running without a slot (${String(e)})`);
+    return null;
+  }
+}
+
+/** The tap child, so a signal handler can pass the signal on and wait for it. */
+let activeChild: ChildProcess | null = null;
+
+/**
+ * A killed run must still give its slot back; the stale rules bound the damage
+ * when it cannot (SIGKILL), but they take two hours to do it.
+ *
+ * The child goes FIRST. Releasing the slot while tap is still running would
+ * hand the semaphore to another suite that then contends with the very run
+ * this signal is taking down — the slot is only free once the tests stop.
+ * SIGINT from a terminal reaches the whole foreground group anyway; a SIGTERM
+ * aimed at this wrapper alone reaches the child only because of this.
+ */
+function installSignalReleases(): void {
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      void (async () => {
+        if (activeChild !== null) await terminateChild({ child: activeChild, signal });
+        releaseHeld(heldSlot);
+        process.kill(process.pid, signal);
+      })();
+    });
+  }
+}
+
+async function runUnderSlot(input: {
+  executable: string;
+  args: string[];
+  context: RunContext;
+  concurrency: number | null;
+}): Promise<number> {
+  const { executable, args } = input;
 
   // Tee stdout rather than using tap's `--output-file`.
   //
@@ -170,8 +159,16 @@ async function runWrapped(command: string[]): Promise<number> {
 
   try {
     await withTimeout(LEDGER_BUDGET_MS, async () => {
-      const changed = changedPaths();
-      record({ tapOutput: output, changed, exitCode, graph: await computeGraph(changed) });
+      const base = input.context.base;
+      const changed = changedPaths(base === null ? {} : { base });
+      recordRun({
+        tapOutput: output,
+        changed,
+        exitCode,
+        context: input.context,
+        concurrency: input.concurrency,
+        graph: await computeGraph(changed),
+      });
     });
   } catch (e) {
     // The ledger gates nothing, and that has to include liveness: the graph
@@ -198,14 +195,6 @@ async function withTimeout(ms: number, fn: () => Promise<void>): Promise<void> {
   }
 }
 
-function signalNumber(signal: NodeJS.Signals): number {
-  const known: Partial<Record<NodeJS.Signals, number>> = {
-    SIGHUP: 1, SIGINT: 2, SIGQUIT: 3, SIGABRT: 6, SIGKILL: 9,
-    SIGALRM: 14, SIGTERM: 15,
-  };
-  return known[signal] ?? 0;
-}
-
 interface StreamResult {
   code: number | null;
   signal: NodeJS.Signals | null;
@@ -217,6 +206,7 @@ interface StreamResult {
 function streamCommand(executable: string, args: string[]): Promise<StreamResult> {
   return new Promise((resolve) => {
     const child = spawn(executable, args, { stdio: ["inherit", "pipe", "inherit"] });
+    activeChild = child;
     let output = "";
     child.stdout.setEncoding("utf-8");
     child.stdout.on("data", (chunk: string) => {
@@ -224,99 +214,103 @@ function streamCommand(executable: string, args: string[]): Promise<StreamResult
       process.stdout.write(chunk);
     });
     child.on("error", (error) => {
+      activeChild = null;
       resolve({ code: null, signal: null, output, spawnError: error });
     });
     child.on("close", (code, signal) => {
+      activeChild = null;
       resolve({ code, signal, output, spawnError: null });
     });
   });
 }
 
-interface GraphView {
-  implicated: Set<string>;
-  accounted: boolean;
+/** Reads `--mode` from the wrapper's own flags; null on an unknown value. */
+function parseMode(flags: string[]): RunMode | null {
+  const index = flags.indexOf("--mode");
+  if (index === -1) return "full";
+  const value = flags[index + 1];
+  return value === "full" || value === "selected" ? value : null;
 }
 
-function record(input: {
-  tapOutput: string;
-  changed: string[];
-  exitCode: number;
-  graph: GraphView | null;
-}): void {
-  const results = parseTapFiles(input.tapOutput);
-  if (results.length === 0) throw new LedgerRecordError("TAP output named no test files");
-
-  const paths = ledgerPaths(gitCommonDir());
-  const changed = input.changed;
-  const implicated = input.graph === null ? null : input.graph.implicated;
-  const accounted = input.graph === null ? null : input.graph.accounted;
-
-  const ranFiles = results.map((r) => r.file);
-  const implicatedFiles = implicated === null ? [] : [...implicated].map(stripPackagePrefix);
-  const implicatedForClass = implicated === null ? null : new Set(implicatedFiles);
-
-  const record: LedgerRecord = {
-    ts: new Date().toISOString(),
-    commit: git(["rev-parse", "HEAD"]),
-    branch: git(["rev-parse", "--abbrev-ref", "HEAD"]),
-    treeHash: treeHash(),
-    mode: "full",
-    exitCode: input.exitCode,
-    accounted,
-    changed,
-    ranFiles: hashFileset(ranFiles),
-    implicated: hashFileset(implicatedFiles),
-    durations: Object.fromEntries(results.map((r) => [r.file, r.ms])),
-    failures: results
-      .filter((r) => !r.ok)
-      .map((r) => ({ file: r.file, class: classifyFailure({ file: r.file, implicated: implicatedForClass }) })),
-  };
-
-  // Append both, never rewrite: this directory is shared by every worktree on
-  // the machine and concurrent suite runs are routine. Duplicate hashes are
-  // harmless — the reader folds them into a map.
-  const filesetLines = [
-    { hash: record.ranFiles, files: [...ranFiles].sort() },
-    { hash: record.implicated, files: [...implicatedFiles].sort() },
-  ].map((entry) => `${JSON.stringify(entry)}\n`);
-  appendFileSync(paths.filesets, filesetLines.join(""));
-  appendFileSync(paths.ledger, `${JSON.stringify(record)}\n`);
+/** Reads a `--flag value` pair from the wrapper's own flags; null when absent. */
+function parseValue(flags: string[], name: string): string | null {
+  const index = flags.indexOf(name);
+  if (index === -1) return null;
+  return flags[index + 1] ?? null;
 }
 
-/** Graph paths are repo-relative; TAP names them relative to callback-box. */
-function stripPackagePrefix(path: string): string {
-  return path.startsWith("callback-box/") ? path.slice("callback-box/".length) : path;
-}
-
-async function computeGraph(changed: string[]): Promise<GraphView | null> {
-  try {
-    const graph = await buildGraph();
-    return {
-      implicated: implicatedTests({ graph, changed }),
-      accounted: isAccounted({ graph, changed }),
-    };
-  } catch (e) {
-    console.warn(`test-ledger: graph unavailable, failures recorded as unknown (${String(e)})`);
-    return null;
-  }
+/** Reads `--tier` from the wrapper's own flags; null on an unknown value. */
+function parseTier(flags: string[]): Tier | null {
+  const index = flags.indexOf("--tier");
+  if (index === -1) return "ordinary";
+  const value = flags[index + 1];
+  return value === "ordinary" || value === "careful" ? value : null;
 }
 
 export async function main(argv: string[]): Promise<void> {
   const [subcommand, ...rest] = argv;
   if (subcommand === "run") {
     const sepIndex = rest.indexOf("--");
-    const command = sepIndex === -1 ? rest : rest.slice(sepIndex + 1);
-    process.exitCode = await runWrapped(command);
+    const given = sepIndex === -1 ? rest : rest.slice(sepIndex + 1);
+    const flags = sepIndex === -1 ? [] : rest.slice(0, sepIndex);
+    const tier = parseTier(flags);
+    if (tier === null) {
+      console.error("test-ledger run: --tier takes ordinary or careful");
+      process.exitCode = 2;
+      return;
+    }
+    const mode = parseMode(flags);
+    if (mode === null) {
+      console.error("test-ledger run: --mode takes full or selected");
+      process.exitCode = 2;
+      return;
+    }
+    // The tier's file list is argv, not shell expansion (mechanism C): a list
+    // that expands to nothing would leave a bare `tap` running everything.
+    let command: string[];
+    try {
+      command = tierCommand({
+        command: given,
+        tier,
+        taprcFiles: taprcTestFiles(PACKAGE_ROOT),
+        careful: readCarefulList(),
+      });
+    } catch (e) {
+      if (!(e instanceof TierListError)) throw e;
+      console.error(`test-ledger: ${e.message}`);
+      process.exitCode = 2;
+      return;
+    }
+    // `--base` takes a ref rather than validating it here: an unresolvable ref
+    // fails inside `git diff`, which names it, and the ledger's own failure is
+    // a warning rather than a broken run.
+    const base = parseValue(flags, "--base");
+    if (flags.includes("--base") && (base === null || base === "")) {
+      console.error("test-ledger run: --base takes a ref");
+      process.exitCode = 2;
+      return;
+    }
+    const source = parseValue(flags, "--source");
+    if (flags.includes("--source") && (source === null || source === "")) {
+      console.error("test-ledger run: --source takes a name");
+      process.exitCode = 2;
+      return;
+    }
+    installSignalReleases();
+    process.exitCode = await runWrapped(command, { tier, mode, base, source });
     return;
   }
   if (subcommand === "report") {
     renderReport();
     return;
   }
-  console.error("usage: test-ledger run -- <command…> | test-ledger report");
+  console.error(
+    "usage: test-ledger run [--tier ordinary|careful] [--mode full|selected]" +
+      " [--base <ref>] [--source <name>] -- <command…> | test-ledger report",
+  );
   process.exitCode = 2;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] === import.meta.filename) {
   await main(process.argv.slice(2));
 }

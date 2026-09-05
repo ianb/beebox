@@ -2,7 +2,7 @@
 title: "Agent-maintained security report: committed prompts, regenerated document"
 workstream: open-source-readiness
 needs: [design]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
@@ -10,10 +10,10 @@ resolution: implemented
 ---
 
 **Closed 2026-08-14.** Built and signed off. `db7901c5` created the system (the
-`/security-report` skill as the committed rubric, `callback-box/docs/security-report.md`,
-and `callback-box/SECURITY.md`); `3589d96c` and `3bbddcc5` applied cross-model
+`/security-report` skill as the committed rubric, `beebox/docs/security-report.md`,
+and `beebox/docs/security-overview.md`); `3589d96c` and `3bbddcc5` applied cross-model
 review findings; `8c9c3ec9` stamped the boxholder sign-off, live now in the
-`reviewed-by:` header at `callback-box/SECURITY.md:6`. `a8aa45fd` shows a
+`reviewed-by:` header at `beebox/docs/security-overview.md:6`. `a8aa45fd` shows a
 second regeneration cycle has already run in practice, which is the property
 the issue actually wanted — a document an agent maintains, not a one-time audit.
 
@@ -22,12 +22,12 @@ boxholder review", which the sign-off commit superseded a week ago.
 
 > **Status 2026-08-07 (superseded)** — built on `worktree-security-report`: the
 > `/security-report` skill (the committed rubric), the structured report
-> (`callback-box/docs/security-report.md`), and a DRAFT
-> `callback-box/SECURITY.md`, cross-model-reviewed (7 findings applied).
+> (`beebox/docs/security-report.md`), and a DRAFT
+> `beebox/docs/security-overview.md`, cross-model-reviewed (7 findings applied).
 > Awaiting boxholder review of the two report artifacts before merge;
 > the headers carry `reviewed-by: DRAFT — unreviewed` until then.
 
-The launch needs a SECURITY.md-shaped "what this can touch" page (the
+The launch needs a security-overview.md-shaped "what this can touch" page (the
 OpenClaw lesson from
 [the competitive research](../../../research/openclaw-hermes/README.md):
 install UX was never the complaint, blast radius was — what saved them was an
@@ -45,15 +45,15 @@ boxholder, 2026-07-20.)
 Content the generation pass should inventory: unauthenticated endpoints,
 auth surfaces and bind defaults, what the agent can touch (filesystem/tools),
 external services data flows to, residual accepted risks.
-[todo-security.md](../../../callback-box/docs/todo-security.md) is the seed —
+[todo-security.md](../../../beebox/docs/todo-security.md) is the seed —
 it's already an honest posture doc (auth model, setup-token window, no MFA)
 and shows the right register.
 
 Fits existing infrastructure: knowledge-audits
-([docs](../../../callback-box/docs/knowledge-audits.md)) and the doc-generation
+([docs](../../../beebox/docs/knowledge-audits.md)) and the doc-generation
 tooling are precedents for committed-prompt → generated-artifact loops.
 
-**First run produces the launch SECURITY.md** — gate 4 in
+**First run produces the launch security-overview.md** — gate 4 in
 [soft-launch posture](../../decisions/2026-07-20-soft-launch-posture.md) — so
 the system and the gate are one piece of work, not two.
 
@@ -118,7 +118,7 @@ duplicated in the README.
 
 ## Breakdown sweep (2026-08-07): report content outline + adjudication
 
-Three subagents broke down `callback-box/docs/todo-security.md`. Most findings are
+Three subagents broke down `beebox/docs/todo-security.md`. Most findings are
 **report content** (what the structured version must cover), not new issues —
 captured here so the report author has the outline.
 
@@ -132,7 +132,7 @@ captured here so the report author has the outline.
 **Already fixed / already tracked (seed the accepted-risks + inventory sections;
 do not re-file):**
 - **File permissions: FIXED** — token writes use `writeFileAtomic` mode `0600`;
-  `deploy/add-box.sh` chmods copied secrets; `~/.cb-session-secret` is `0600`,
+  `deploy/add-box.sh` chmods copied secrets; `~/.beebox-session-secret` is `0600`,
   written with mode `0600`. So `todo-security.md`'s "File permissions" section is
   now stale.
 - Residual accept-forever: setup-token window, no MFA/reset, open-invite email
@@ -150,12 +150,12 @@ do not re-file):**
   the CSP-report sink (`api-csp-report.ts`, amplification-bounded), dev-only
   `GET /api/external` (prod-excluded). Note the hub health endpoints are now
   diag-key-gated (were open, leaked slugs/PIDs/ports).
-- **Credentials inventory** — `~/.cb-auth.json`, `~/.cb-session-secret`, the
+- **Credentials inventory** — `~/.beebox-auth.json`, `~/.beebox-session-secret`, the
   Google token file, mobile device tokens, invite capabilities, and the env-var
-  secrets: `CB_DIAG_API_KEY`, `CB_HUB_SECRET`, `CB_BROWSE_API_KEY`,
-  `CB_AGENT_TOKEN`, `CB_VAPID_PRIVATE_KEY`, `ANTHROPIC_API_KEY`,
+  secrets: `BBX_DIAG_API_KEY`, `BBX_HUB_SECRET`, `BBX_BROWSE_API_KEY`,
+  `BBX_AGENT_TOKEN`, `BBX_VAPID_PRIVATE_KEY`, `ANTHROPIC_API_KEY`,
   `GOOGLE_OAUTH_CLIENT_SECRET`. Each: what it gates, where it lives, blast radius.
-  Cite the hub's allowlisted child env keeping `CB_SESSION_SECRET` from sibling
+  Cite the hub's allowlisted child env keeping `BBX_SESSION_SECRET` from sibling
   boxes as a positive control.
 - **Data egress (biggest gap — only Google documented today)** — Anthropic (the
   agent + `scan-vision-claude.ts` images), OpenAI (`openai-audio.ts` voice,

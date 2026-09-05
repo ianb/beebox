@@ -9,7 +9,7 @@ resolution: implemented
 
 **Resolved** (worktree-fix-bugs, 2026-07-11): implemented option 3.
 `.husky/pre-commit` now invokes `pnpm exec lint-staged --no-stash` for both
-callback-box and callback-clerk. `--no-stash` is safe here specifically
+beebox and beebox-clerk. `--no-stash` is safe here specifically
 because both lint-staged configs are check-only eslint (no `--fix`) — there's
 no task-written output that the stash/backup was ever protecting, so removing
 the backup only removes the failure-path `git reset --hard HEAD` + partial-

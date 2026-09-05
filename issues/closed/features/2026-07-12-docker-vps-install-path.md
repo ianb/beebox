@@ -8,13 +8,13 @@ resolution: implemented
 
 The public server-hosting story should be a Dockerfile + docker-compose
 example + one generic VPS guide, written fresh — rather than parametrizing the
-personal `callback-box/deploy/` scripts (Track C of
-`callback-box/docs/plans/source-available-release.md`, currently deferred
+personal `beebox/deploy/` scripts (Track C of
+`beebox/docs/plans/source-available-release.md`, currently deferred
 because of the live-deployment transition-state problem). A new Docker path
 sidesteps that problem entirely: the Hetzner/Cloudflare scripts stay honestly
 personal and the public doc never mentions them.
 
-Why Docker specifically fits callback-box: beyond the field-standard argument
+Why Docker specifically fits beebox: beyond the field-standard argument
 (native modules — `better-sqlite3` etc. — prebuilt in the image), our image
 also bakes in the external binaries the agent expects on PATH (`pandoc`,
 `imagemagick`, `poppler-utils`, `git-lfs`), which no comparable project even
@@ -22,7 +22,7 @@ carries.
 
 Shape (2025–2026 field consensus, per the research doc):
 
-- compose: `cb hub` service (`restart: unless-stopped`) + Caddy for automatic
+- compose: `bbx hub` service (`restart: unless-stopped`) + Caddy for automatic
   TLS; boxes directory and `~/.claude` (or `CLAUDE_CONFIG_DIR`) volume-mounted
 - loopback/Tailscale-only variant documented first-class (zero open ports)
 - headless Claude auth documented: `claude setup-token` on a laptop →

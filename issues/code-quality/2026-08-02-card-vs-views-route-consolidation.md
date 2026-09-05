@@ -1,10 +1,13 @@
 ---
 title: "/card/$ and /views/$ are two parallel single-card routes"
 workstream: top-nav-ia
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
+priority: normal
 ---
+
+> `reconfirm?` checked 2026-09-05: still live. `router.tsx` still defines both `/card/$` (`CardViewPage`) and `/views/$` (`ViewPage`); no consolidation landed. The direction stands: views attach to cards (`?view=`), standalone view routes go.
 
 The frontend has two routes that mean "show me this one card":
 `/<box>/card/<path>` and `/<box>/views/<path>`. Both resolve a box path to

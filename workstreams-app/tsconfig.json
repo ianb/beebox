@@ -15,10 +15,9 @@
     "declaration": false,
     "sourceMap": true,
     "outDir": "dist",
-    "rootDir": ".",
     "lib": ["ES2023"],
-    "types": ["node"]
+    "types": ["node", "@fastify/cookie"]
   },
-  "include": ["src/server/**/*", "src/shared/**/*"],
+  "include": ["eslint.frontend.config.ts", "eslint.config.ts", "src/router/**/*", "src/server/**/*", "src/shared/**/*", "test/router/**/*"],
   "exclude": ["node_modules", "dist", "src/frontend"]
 }

@@ -1,0 +1,62 @@
+# Deploy
+
+ONE OPERATOR'S rsync-to-VPS pipeline, opt-in via a gitignored `target.env`. It
+is not the install path — that is the container flow in `docs/docker-install.md`
+— so don't send anyone here to set up a Bee Box. See `deploy/README.md`.
+
+Key files:
+- `deploy.sh` — commit-based deploy: builds the requested ref in a persistent
+  build checkout (`<main-repo-root>/.deploy-checkout`, a detached git worktree)
+  and rsyncs FROM there — never from anyone's working tree. `--ref <ref>`
+  selects the commit (default HEAD); concurrent runs collapse latest-wins.
+- `add-box.sh` — add a box to the live server: clone, `bbx init`, access +
+  secrets, register with the hub (`bbx hub add-box` → `hub.json`) and the
+  scheduler (`bbx boxes add` → `boxes.json`), restart both units, then canary
+  the new slug. Preflight-validates the slug before it clones; `--dry-run`
+  prints the plan without touching anything.
+- `hetzner/` — example provisioners for the one server shape `deploy.sh` ships
+  to: `create-server.sh` (Hetzner VPS + Cloudflare DNS) and `setup-server.sh`
+  (Ubuntu packages, `beebox` user, units, nginx). Neither runs on deploy.
+- `target.env` — the deploy target: which server, which paths, how to notify
+  (gitignored, per-operator). Its PRESENCE is what makes a checkout one that
+  deploys — without it the commit hooks skip silently and deploy.sh refuses.
+  `deploy-target.sh` loads it (and answers `path`/`ssh-target`/`get VAR` for
+  callers that aren't bash). Template: `target.env.example`.
+- `prod-ssh` — SSH to prod as root for diagnostics and administration
+- `prod-curl` / `prod-browse` — inspect the authenticated production app
+
+## Rollback
+
+Any commit in history redeploys with one command (full pipeline — build,
+frozen install, restart, healthcheck — so a rollback is as safe as a deploy):
+
+```bash
+./deploy/deploy.sh --ref <old-sha>
+```
+
+`deploy-info.json` records `requestedRef` so rollbacks are recognizable in
+`deploy-history.json` on the server.
+
+## Waiting for a deploy to finish
+
+The post-commit hook backgrounds `deploy.sh` and writes each run to its own
+file under `deploy/.deploy-logs/`, with `deploy/.last-deploy.log` kept as a
+symlink to the newest run — so the poll below always follows the latest deploy
+(including a chained latest-wins deploy). Poll the log tail — do NOT use a
+long leading `sleep` (the harness blocks it):
+
+```bash
+until tail -3 deploy/.last-deploy.log | grep -qE "Deploy complete|Deploy interrupted|Deploy failed|ERR_PNPM|ELIFECYCLE"; do sleep 5; done
+tail -15 deploy/.last-deploy.log
+```
+
+Then confirm the server picked up the new commit:
+
+```bash
+deploy/prod-ssh 'cat /opt/beebox/beebox/deploy-info.json'
+```
+
+The production diagnostic tools resolve `target.env` from the current checkout
+first, then from the main checkout via Git's common directory. `deploy.sh` is
+deliberately different: it requires a local `deploy/target.env` so deployment
+remains main-checkout-only.

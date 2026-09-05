@@ -1,18 +1,25 @@
 ---
 name: security-report
-description: Generate or update callback-box's security report — the structured accounting in callback-box/docs/security-report.md and the readable callback-box/SECURITY.md derived from it. Use when the boxholder asks to regenerate, update, or audit the security report, or after changes to security-relevant surfaces (routes, auth, credentials, egress, publishing). Triggers include "update the security report", "regenerate SECURITY.md", "security report pass", "/security-report". The body of this skill IS the committed rubric — the auditable process the report claims to follow.
+description: Generate or update beebox's security report — the structured accounting in beebox/docs/security-report.md and the readable beebox/docs/security-overview.md derived from it. Use when the boxholder asks to regenerate, update, or audit the security report, or after changes to security-relevant surfaces (routes, auth, credentials, egress, publishing). Triggers include "update the security report", "regenerate the security overview", "security report pass", "/security-report". The body of this skill IS the committed rubric — the auditable process the report claims to follow.
 ---
 
 # Security report: the committed rubric
 
 This skill is the **process** behind two committed artifacts:
 
-- **`callback-box/docs/security-report.md`** — the *structured version*: an
+- **`beebox/docs/security-report.md`** — the *structured version*: an
   exhaustive, section-by-section accounting (every endpoint, credential,
   egress point, …) with per-item evaluation. An agent is the primary
   consumer; it is the substrate updates are adjudicated against.
-- **`callback-box/SECURITY.md`** — the *final report*: the human-facing
+- **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
   synthesis derived from the structured version. A reader's front door.
+
+**`SECURITY.md` at the repo root is NOT generated.** It is the short,
+conventional reporting policy (how to report a vulnerability, supported
+versions, pointers to the two documents above) — the file GitHub recognizes and
+surfaces. It is hand-maintained and stable; this skill must never rewrite it or
+recreate a `beebox/SECURITY.md`. Touch it only if a *link* here goes
+stale.
 
 The honesty claim these artifacts make is a **process claim**: a reader
 cannot verify the report wasn't influenced by error or malice, but they can
@@ -34,7 +41,7 @@ generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: <the HEAD the reviewed report reflects>
 date: <YYYY-MM-DD>
 model: <model id that produced the draft>
-reviewed-by: <human name, or "DRAFT — unreviewed">
+reviewed-by: <human first name or handle, or "DRAFT — unreviewed">
 ```
 
 `generated-at-rev` is the **update anchor** — the claim "this accounting
@@ -52,7 +59,7 @@ is what makes the update range == "the commits not yet reflected."
 
 ## Update procedure (the normal case)
 
-1. Read `callback-box/docs/security-report.md`; take `generated-at-rev`.
+1. Read `beebox/docs/security-report.md`; take `generated-at-rev`.
 2. Run `git diff --stat <generated-at-rev>..HEAD -- <surface map paths>`
    (the map below). Also `git log --oneline` the range for context.
 3. **Adjudicate, don't re-derive**: for each changed file, decide which
@@ -90,19 +97,19 @@ is what makes the update range == "the commits not yet reflected."
    the last report? A fixed one becomes ordinary public history — move it
    back to the public queue and let the report reference it directly.
    Are there new private items to reference by class?
-6. Re-derive any SECURITY.md paragraph whose underlying items changed —
+6. Re-derive any security-overview.md paragraph whose underlying items changed —
    and expect that to be **few or none**. The two artifacts have different
    jobs: **every** security-relevant detail belongs in
-   `security-report.md`; SECURITY.md changes **only** when the
+   `security-report.md`; security-overview.md changes **only** when the
    reader-facing overall picture does (a new egress destination, a changed
    blast-radius claim, a new accepted risk, a materially different auth
-   story). Do not feel obligated to touch SECURITY.md just because you
+   story). Do not feel obligated to touch security-overview.md just because you
    edited the structured report — most per-item accounting changes need no
-   SECURITY.md edit at all, and a change that's already represented there
-   often needs no *more* exposure than it has. When SECURITY.md does need
+   security-overview.md edit at all, and a change that's already represented there
+   often needs no *more* exposure than it has. When security-overview.md does need
    to move, **prefer a small edit to an addition**: if an existing
    sentence can be clarified or corrected in place, do that rather than
-   append new content. The structured report grows with detail; SECURITY.md
+   append new content. The structured report grows with detail; security-overview.md
    stays a tight synthesis.
 7. Update the provenance headers (new rev, date, model,
    `reviewed-by: DRAFT — unreviewed`); present the diff to the boxholder.
@@ -126,7 +133,7 @@ process to lean on):
   Surfacing that drift (a `git diff --stat <rev>..HEAD -- <map>` that
   comes back non-empty) is what tells you it's time; it converts a
   cadence you don't keep into a signal you can see. This report is also
-  listed in `callback-box/docs/maintenance.md` alongside knowledge-audits
+  listed in `beebox/docs/maintenance.md` alongside knowledge-audits
   as slow-drift maintenance.
 - **On demand** — invoking `/security-report` is always the thing that
   does the update; the triggers above just say *when* to invoke it.
@@ -144,13 +151,13 @@ it current (step 4 above).
 
 | Category | Paths |
 |---|---|
-| Endpoints & auth | `callback-box/src/webapp/`, `callback-box/src/hub/`, `callback-box/pub-worker/src/` |
-| Credentials | `callback-box/src/webapp/auth*`, `callback-box/src/webapp/local-users*`, `callback-box/src/webapp/auth-capabilities.ts`, `callback-box/src/webapp/setup-token.ts`, `callback-box/src/core/token-store.ts`, `callback-box/src/core/agent/token.ts`, `callback-box/src/core/mobile/`, `callback-box/src/core/scan/tokens.ts`, `callback-box/src/core/*-key.ts`, `callback-box/src/core/search/embeddings-key.ts`, `callback-box/src/connectors/google-token-store.ts`, `callback-box/src/connectors/google-auth.ts`, `callback-box/src/webapp/trpc/routers/admin.ts`, `callback-box/src/publish/connector-secret.ts`, `callback-box/src/lib/env.ts`, `callback-box/deploy/`, any `process.env` addition anywhere |
-| Data egress | `callback-box/src/connectors/`, `callback-box/src/core/agent/`, `callback-box/src/core/transcription/`, `callback-box/src/services/`, `callback-box/src/publish/`, `callback-box/src/core/external/` |
-| Internal practices | `callback-box/src/shared/ref-path.ts`, `callback-box/src/lib/file-lock.ts`, `callback-box/src/lib/card-lock.ts`, `callback-box/src/webapp/` (CSP, throttles), `callback-box/src/lib/atomic-write.ts` |
-| Operational | `callback-box/deploy/`, `callback-box/src/services/tailscale-exposure.ts`, `callback-box/src/hub/` (child-env allowlist), systemd units |
-| Publishing | `callback-box/src/publish/`, `callback-box/pub-worker/` |
-| Clients | `ios-app/` (token storage, pairing), `callback-clerk/` (host permissions, what it sends) |
+| Endpoints & auth | `beebox/src/webapp/`, `beebox/src/hub/`, `beebox/pub-worker/src/` |
+| Credentials | `beebox/src/webapp/auth*`, `beebox/src/webapp/local-users*`, `beebox/src/webapp/auth-capabilities.ts`, `beebox/src/webapp/setup-token.ts`, `beebox/src/core/token-store.ts`, `beebox/src/core/agent/token.ts`, `beebox/src/core/mobile/`, `beebox/src/core/scan/tokens.ts`, `beebox/src/core/*-key.ts`, `beebox/src/core/search/embeddings-key.ts`, `beebox/src/connectors/google-token-store.ts`, `beebox/src/connectors/google-auth.ts`, `beebox/src/webapp/trpc/routers/admin.ts`, `beebox/src/publish/connector-secret.ts`, `beebox/src/lib/env.ts`, `beebox/deploy/`, any `process.env` addition anywhere |
+| Data egress | `beebox/src/connectors/`, `beebox/src/core/agent/`, `beebox/src/core/transcription/`, `beebox/src/services/`, `beebox/src/publish/`, `beebox/src/core/external/` |
+| Internal practices | `beebox/src/shared/ref-path.ts`, `beebox/src/lib/file-lock.ts`, `beebox/src/lib/card-lock.ts`, `beebox/src/webapp/` (CSP, throttles), `beebox/src/lib/atomic-write.ts` |
+| Operational | `beebox/deploy/`, `beebox/src/services/tailscale-exposure.ts`, `beebox/src/hub/` (child-env allowlist), systemd units |
+| Publishing | `beebox/src/publish/`, `beebox/pub-worker/` |
+| Clients | `ios-app/` (token storage, pairing), `beebox-clerk/` (host permissions, what it sends) |
 
 ## The inventory (section order and per-item fields)
 
@@ -283,8 +290,20 @@ with no tool allowlist). Enumerate every channel by which outside content
 becomes agent context (each connector, vision/OCR, transcripts, card
 bodies) and state plainly that structural mitigation is thin — the real
 controls are deployment-shaped (single-operator, schedules-off-by-default,
-human-in-the-loop on dangerous actions), not containment. Add a threats
-entry only when a second architecture-level threat earns one.
+human-in-the-loop on dangerous actions), not containment.
+
+**7b. Cross-box leakage on a shared host** — several boxes, one OS user,
+env-level isolation. Three channels, each with a named verifier: network
+(box A's credential reaching box B's data — the `cross-box-probe` doctest
+and the `schedules/cross-box-leak-scan` static sweep), filesystem
+(same-user reach — accepted; the schedule's host audit checks modes,
+per-cwd keying, undocumented shared files), and inheritance (hub secrets
+in a child env — `supervisor.doctest.md`). Regenerating this entry means
+re-running the schedule (`bin/schedules run cross-box-leak-scan --force`)
+and reconciling its findings table with the report: every `static`/`host`
+line the run produced is either a row here or a false positive named in
+the run's alert. Add a further threats entry only when another
+architecture-level threat earns one.
 
 ### 8. Accepted risks (roll-up)
 
@@ -292,7 +311,7 @@ Every `accepted` item from the sections above, repeated as a flat list
 with its rationale. This is the "residual risks" register a reader can
 take in at a glance.
 
-## The final report (SECURITY.md)
+## The readable overview (docs/security-overview.md)
 
 Derived from the structured version — never introduce a claim that isn't
 backed by an item there. Shape:
@@ -314,11 +333,11 @@ Register: honest, specific, unpromotional. Weaknesses are stated as
 plainly as strengths — the OpenClaw lesson is that an explicit blast-radius
 doc is what earns trust, not reassurance.
 
-**What reaches this document — and what doesn't.** SECURITY.md is a
+**What reaches this document — and what doesn't.** security-overview.md is a
 synthesis, not a mirror of the structured report. Its job is to give a
 reader an accurate *overall picture*; it is not obligated to surface every
 item, and an item it already covers rarely needs more prominence. A great
-many structured-report changes leave SECURITY.md untouched, and that is the
+many structured-report changes leave security-overview.md untouched, and that is the
 correct outcome — the pressure to "reflect the update somewhere visible" is
 a trap that bloats the synthesis and buries the picture. When you do edit
 it, reach for the smallest change that keeps it true: correct or clarify an
@@ -327,7 +346,7 @@ the structured report is where completeness lives.
 
 ## README linkage
 
-`callback-box/README.md` keeps a short "What leaves your machine" section
-(a personal-register summary) linking to SECURITY.md. When the egress
+`beebox/README.md` keeps a short "What leaves your machine" section
+(a personal-register summary) linking to security-overview.md. When the egress
 section changes materially, check the README summary still tells the
 truth.

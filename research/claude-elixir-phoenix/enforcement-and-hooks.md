@@ -100,7 +100,7 @@ failure log.
 No LLM call in the hook — it's shell state plus templated text; the reasoning is
 deferred to the model reading the injected context.
 
-This is `cb-debug`'s 3-fix circuit-breaker made mechanical. Ours is prose asking
+This is `bbx-debug`'s 3-fix circuit-breaker made mechanical. Ours is prose asking
 the agent to notice its own loop, which is precisely the thing a looping agent is
 bad at.
 

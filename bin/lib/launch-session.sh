@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 # Shared Terminal session launcher. Callers set the LS_* inputs below, then
 # call launch_session_build followed by launch_session_open.
+#
+# Everything here opens a Terminal tab. The unattended counterpart —
+# `claude -p` / `codex exec` in the foreground, briefing on stdin, for
+# scheduled runs — is launch-headless.sh, sourced here so that a caller who
+# sources this file has both launchers and neither duplicates the other's flag
+# assembly (beebox/docs/plans/scheduled-workstreams.md, Track B).
+
+# shellcheck source=launch-headless.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/launch-headless.sh"
 
 launch_session_build() {
-  local model_arg="" rc_arg="" model_line=""
+  local model_arg="" rc_arg="" model_line="" resume_arg=""
   LS_LAUNCHER="$LS_LAUNCH_DIR/launch.sh"
+  LS_LAUNCH_TOKEN="${LS_LAUNCH_TOKEN:-$(uuidgen 2>/dev/null || printf '%s-%s-%s' "$(date +%s)" "$$" "$RANDOM")}"
 
   if [ "$LS_AGENT" = "codex" ] && [ -z "$LS_MODEL" ]; then
     LS_MODEL="gpt-5.6-sol"
@@ -13,11 +23,32 @@ launch_session_build() {
   if [ "$LS_AGENT" = "claude" ]; then
     [ -n "$LS_MODEL" ] && model_arg="--model $LS_MODEL"
     [ "$LS_REMOTE_CONTROL" = "1" ] && rc_arg="--remote-control $LS_WORKSTREAM"
+    # Continuing a conversation instead of starting one. The id is interpolated
+    # into a generated script unquoted, and `--resume` takes an OPTIONAL value —
+    # a malformed id would swallow the next flag or, empty, eat the briefing as
+    # the session to resume. Refuse anything that is not a uuid.
+    if [ -n "${LS_CLAUDE_RESUME_SESSION:-}" ]; then
+      if [[ ! "$LS_CLAUDE_RESUME_SESSION" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+        echo "launch-session: LS_CLAUDE_RESUME_SESSION is not a uuid: $LS_CLAUDE_RESUME_SESSION" >&2
+        return 1
+      fi
+      resume_arg="--resume $LS_CLAUDE_RESUME_SESSION"
+    fi
     cat > "$LS_LAUNCHER" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 printf '\033]0;%s\007' "$LS_SESSION_NAME"
 cd "$LS_MONO"
+. "$LS_MONO/bin/lib/session-registry.sh"
+launch_pending=1
+launch_on_exit() {
+  launch_status=\$?
+  if [ "\$launch_pending" = "1" ]; then
+    session_registry_fail_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "setup-exited-status-\$launch_status" >/dev/null || true
+  fi
+  return "\$launch_status"
+}
+trap launch_on_exit EXIT
 if [ -n "${LS_WORKTREE_PATH:-}" ]; then
   wt_path="$LS_WORKTREE_PATH"
 elif ! wt_path=\$(./bin/workstreams create "$LS_WORKSTREAM"); then
@@ -31,7 +62,6 @@ fi
 if [ -n "${LS_ISSUE:-}" ]; then
   node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/${LS_ISSUE:-}" "$LS_WORKSTREAM"
 fi
-. "$LS_MONO/bin/lib/session-registry.sh"
 launch_patch=\$(jq -n \
   --arg branch "worktree-$LS_WORKSTREAM" \
   --arg emoji "$LS_EMOJI" \
@@ -39,16 +69,34 @@ launch_patch=\$(jq -n \
   --arg model "$LS_MODEL" \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" merge-base main HEAD 2>/dev/null || true)" \
-  --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
-   + if \$model == "" then {} else {model:\$model} end')
-session_registry_merge "$LS_WORKSTREAM" "\$launch_patch" --preserve-base-sha || true
+    --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg description "\$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
+    '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
+     + if \$model == "" then {} else {model:\$model} end
+     + if \$description == "" then {} else {description:\$description} end')
 cd "\$wt_path"
-if [ -s "$LS_PROMPT_FILE" ]; then
-  exec claude --name "$LS_WORKSTREAM" $model_arg $rc_arg --dangerously-skip-permissions "\$(cat "$LS_PROMPT_FILE")"
+if session_registry_complete_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "\$launch_patch" --preserve-base-sha; then
+  launch_pending=0
 else
-  exec claude --name "$LS_WORKSTREAM" $model_arg $rc_arg --dangerously-skip-permissions
+  launch_registry_status=\$?
+  if [ "\$launch_registry_status" = "2" ]; then
+    launch_pending=0
+    echo "launch-worktree-session: launch for $LS_WORKSTREAM was superseded — refusing to start a second agent" >&2
+    exit 1
+  fi
+  echo "launch-worktree-session: could not complete launch registry for $LS_WORKSTREAM — starting agent with process liveness only" >&2
 fi
+claude_status=0
+if [ -s "$LS_PROMPT_FILE" ]; then
+  claude --name "$LS_WORKSTREAM" $model_arg $rc_arg $resume_arg --dangerously-skip-permissions "\$(cat "$LS_PROMPT_FILE")" || claude_status=\$?
+else
+  claude --name "$LS_WORKSTREAM" $model_arg $rc_arg $resume_arg --dangerously-skip-permissions || claude_status=\$?
+fi
+echo ""
+echo "Reopen this WORKSTREAM (not just the session):  bin/workstreams resume $LS_WORKSTREAM"
+echo "  (from the main checkout — continues the agent session where possible, recreates the worktree if culled;"
+echo "   the 'claude --resume' line above reopens only the conversation, without the workstream machinery)"
+exit \$claude_status
 EOF
   else
     [ -n "$LS_MODEL" ] && model_line="  -m \"$LS_MODEL\""
@@ -57,6 +105,16 @@ EOF
 set -euo pipefail
 printf '\033]0;%s\007' "$LS_SESSION_NAME"
 cd "$LS_MONO"
+. "$LS_MONO/bin/lib/session-registry.sh"
+launch_pending=1
+launch_on_exit() {
+  launch_status=\$?
+  if [ "\$launch_pending" = "1" ]; then
+    session_registry_fail_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "setup-exited-status-\$launch_status" >/dev/null || true
+  fi
+  return "\$launch_status"
+}
+trap launch_on_exit EXIT
 if [ -n "${LS_WORKTREE_PATH:-}" ]; then
   wt_path="$LS_WORKTREE_PATH"
 else
@@ -69,7 +127,6 @@ fi
 if [ -n "${LS_ISSUE:-}" ]; then
   node --import tsx "$LS_MONO/bin/assign-issue-workstream.ts" "\$wt_path/${LS_ISSUE:-}" "$LS_WORKSTREAM"
 fi
-. "$LS_MONO/bin/lib/session-registry.sh"
 launch_patch=\$(jq -n \
   --arg branch "worktree-$LS_WORKSTREAM" \
   --arg emoji "$LS_EMOJI" \
@@ -77,10 +134,11 @@ launch_patch=\$(jq -n \
   --arg model "$LS_MODEL" \
   --arg tty "\$(tty 2>/dev/null || true)" \
   --arg baseSha "\$(git -C "\$wt_path" rev-parse HEAD 2>/dev/null || true)" \
-  --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt}
-   + if \$model == "" then {} else {model:\$model} end')
-session_registry_merge "$LS_WORKSTREAM" "\$launch_patch" --preserve-base-sha || true
+    --arg launchedAt "\$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg description "\$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
+    '{branch:\$branch, emoji:\$emoji, agent:\$agent, tty:\$tty, baseSha:\$baseSha, launchedAt:\$launchedAt, removed:null}
+     + if \$model == "" then {} else {model:\$model} end
+     + if \$description == "" then {} else {description:\$description} end')
 for claude_skill in "\$wt_path"/.claude/skills/*/SKILL.md; do
   [ -f "\$claude_skill" ] || continue
   skill_name=\$(basename "\$(dirname "\$claude_skill")")
@@ -97,16 +155,40 @@ codex_args=(
 $model_line
 )
 
+# Clear the launch lease the moment codex starts, exactly as the Claude
+# launcher does: from here on the running process is the liveness signal
+# (wt_other_agent_live matches it by cwd). Leaving the lease in place for the
+# whole run meant a tab closed or a machine restarted mid-session left it
+# expired forever, and the workstream rendered as a failed setup.
+if session_registry_complete_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "\$launch_patch" --preserve-base-sha; then
+  launch_pending=0
+else
+  launch_registry_status=\$?
+  if [ "\$launch_registry_status" = "2" ]; then
+    launch_pending=0
+    echo "launch-worktree-session: launch for $LS_WORKSTREAM was superseded — refusing to start a second agent" >&2
+    exit 1
+  fi
+  echo "launch-worktree-session: could not complete launch registry for $LS_WORKSTREAM — starting agent with process liveness only" >&2
+fi
+
 trap 'true' INT
 codex_status=0
 if [ "${LS_CODEX_RESUME:-0}" = "1" ]; then
-  codex resume --last "\${codex_args[@]}" || codex_status=\$?
+  if [ -s "$LS_PROMPT_FILE" ]; then
+    codex resume --last "\${codex_args[@]}" "\$(cat "$LS_PROMPT_FILE")" || codex_status=\$?
+  else
+    codex resume --last "\${codex_args[@]}" || codex_status=\$?
+  fi
 elif [ -s "$LS_PROMPT_FILE" ]; then
   codex "\${codex_args[@]}" "\$(cat "$LS_PROMPT_FILE")" || codex_status=\$?
 else
   codex "\${codex_args[@]}" || codex_status=\$?
 fi
 trap - INT
+echo ""
+echo "Reopen this WORKSTREAM:  bin/workstreams resume $LS_WORKSTREAM"
+echo "  (from the main checkout — continues this codex session, recreates the worktree if culled)"
 
 teardown="$LS_MONO/bin/codex-session-end"
 if [ -x "\$teardown" ]; then
@@ -128,18 +210,43 @@ launch_session_default_emoji() {
 }
 
 launch_session_open() {
-  local result
-  if result=$(osascript <<APPLESCRIPT
+  local launch_intent
+  # Record intent before asking Terminal to start a shell. The generated script
+  # owns this token until it reaches the agent boundary or reports setup failure.
+  # shellcheck source=session-registry.sh
+  . "$LS_MONO/bin/lib/session-registry.sh"
+  case "${LS_AGENT:-}" in
+    claude|codex) ;;
+    *) echo "workstreams launch: agent must be claude or codex; Terminal was not opened" >&2; return 1 ;;
+  esac
+  launch_intent=$(jq -cn \
+    --arg branch "worktree-$LS_WORKSTREAM" \
+    --arg emoji "${LS_EMOJI:-}" \
+    --arg agent "$LS_AGENT" \
+    --arg model "${LS_MODEL:-}" \
+    --arg description "$(if [ -s "${LS_DESCRIPTION_FILE:-}" ]; then cat "${LS_DESCRIPTION_FILE:-}"; fi)" \
+    '{branch:$branch,agent:$agent}
+     + if $emoji == "" then {} else {emoji:$emoji} end
+     + if $model == "" then {} else {model:$model} end
+     + if $description == "" then {} else {description:$description} end')
+  if ! session_registry_begin_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "$launch_intent"; then
+    echo "workstreams launch: could not record launch intent; Terminal was not opened" >&2
+    return 1
+  fi
+  if osascript >/dev/null <<APPLESCRIPT
 tell application "Terminal"
   activate
   do script "$LS_LAUNCHER"
 end tell
 APPLESCRIPT
-  ); then
+  then
     printf '%s\n' "new tab/window (per your Terminal tab preference)"
     return 0
   else
     local status=$?
+    if ! session_registry_fail_launch "$LS_WORKSTREAM" "$LS_LAUNCH_TOKEN" "terminal-automation-failed"; then
+      echo "workstreams launch: could not record Terminal automation failure" >&2
+    fi
     echo "workstreams launch: Terminal automation failed" >&2
     return "$status"
   fi

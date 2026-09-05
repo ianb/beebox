@@ -1,7 +1,7 @@
 ---
 title: "Speech playback timing"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

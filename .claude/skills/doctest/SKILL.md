@@ -1,22 +1,22 @@
 ---
 name: doctest
-description: Directs writing, running, and triaging callback-box's `.doctest.md` tests — when a doctest is the right tier, how to author and run one, and the flake-triage discipline (never call a flaky test "fixed" without re-running it). Use when writing a new doctest, debugging a failing/flaky one, or deciding whether a suite failure is a real regression. Triggers include "write a doctest", "this doctest is flaky", "is this a real test failure", "add a test for X" (once the tier is decided).
+description: Directs writing, running, and triaging beebox's `.doctest.md` tests — when a doctest is the right tier, how to author and run one, and the flake-triage discipline (never call a flaky test "fixed" without re-running it). Use when writing a new doctest, debugging a failing/flaky one, or deciding whether a suite failure is a real regression. Triggers include "write a doctest", "this doctest is flaky", "is this a real test failure", "add a test for X" (once the tier is decided).
 ---
 
 # Doctests: author, run, triage
 
 Directs the workflow. Per-file syntax mechanics live in
-`callback-box/.claude/rules/doctest.md` (auto-loads when you edit a
+`beebox/.claude/rules/doctest.md` (auto-loads when you edit a
 `.doctest.md` file) and the deeper reference in the monorepo's
 `agent-doctest/docs/`. Whether a doctest is even the right tier —
 pure/route/filesystem, vs scenario/knowledge-audit/browser-probe — is
-`cb-guide-testing`'s call, not this skill's; read it first if that's
+`bbx-guide-testing`'s call, not this skill's; read it first if that's
 still open.
 
 ## Authoring
 
 Create `test/<name>.doctest.md` (path mirrors the `src/` file under
-test, per `callback-box/CLAUDE.md`). Write prose, then fenced examples.
+test, per `beebox/CLAUDE.md`). Write prose, then fenced examples.
 Don't restate syntax here — when in doubt, read the rule file and an
 existing doctest near the code you're touching. Blocks are full
 TypeScript (esbuild); the traps are in assertion semantics (see the
@@ -25,8 +25,9 @@ rule file's string-comparison rules), not syntax.
 ## Running
 
 - One file: `pnpm exec tap test/<path>.doctest.md`
-- Whole suite: `pnpm test`. Note pre-commit runs typecheck + lint only,
-  NOT the suite — run `pnpm test` yourself before declaring done.
+- What your diff implicates: `pnpm test:changed`. Pre-commit runs typecheck +
+  lint only, not tests — run this yourself before declaring done. The whole
+  suite (`pnpm test`) runs hourly on `main`; not for iteration.
 - Force serial (rule out contention as a cause): add `-j1`
 
 **Never declare a doctest fixed without actually running it.** Reading
@@ -36,7 +37,7 @@ failure first, then rerun after the fix, in isolation at minimum.
 
 ## Flake triage
 
-The suite runs `jobs: 6` in parallel (`callback-box/.taprc`) and that
+The suite runs `jobs: 6` in parallel (`beebox/.taprc`) and that
 contention is a real, tracked hazard — not every red run is your bug.
 Shapes seen repeatedly in `issues/bugs/` (grep there for the current
 list before assuming a new one):

@@ -27,9 +27,9 @@ async function makeRepo() {
   await Promise.all([
     fs.mkdir(path.join(root, "issues", "bugs"), { recursive: true }),
     fs.mkdir(path.join(privateRoot, "bugs"), { recursive: true }),
-    fs.mkdir(path.join(root, "callback-box", "docs", "plans"), { recursive: true }),
-    fs.mkdir(path.join(root, "callback-box", "docs", "implemented-plans"), { recursive: true }),
-    fs.mkdir(path.join(root, "callback-box", "docs", "unimplemented-plans"), { recursive: true }),
+    fs.mkdir(path.join(root, "beebox", "docs", "plans"), { recursive: true }),
+    fs.mkdir(path.join(root, "beebox", "docs", "implemented-plans"), { recursive: true }),
+    fs.mkdir(path.join(root, "beebox", "docs", "unimplemented-plans"), { recursive: true }),
     fs.mkdir(worktreesRoot, { recursive: true }),
   ]);
   const issuePath = path.join(root, "issues", "bugs", "2026-08-13-example.md");
@@ -71,7 +71,7 @@ priority: normal
 ---
 Private body.
 `);
-  await fs.writeFile(path.join(root, "callback-box", "docs", "plans", "example.md"), `---
+  await fs.writeFile(path.join(root, "beebox", "docs", "plans", "example.md"), `---
 title: Example plan
 status: draft
 workstream: example
@@ -101,11 +101,12 @@ path prefix supplied by a client.
 JSON.stringify({
   open: issueRelPathSchema.safeParse("bugs/2026-08-13-example.md").success,
   closed: issueRelPathSchema.safeParse("closed/watch/2026-08-13-example.md").success,
+  deferred: issueRelPathSchema.safeParse("deferred/2026-08-13-example.md").success,
   privatePrefix: issueRelPathSchema.safeParse("private/bugs/2026-08-13-example.md").success,
   traversal: issueRelPathSchema.safeParse("bugs/../../secret.md").success,
   wrongExtension: issueRelPathSchema.safeParse("bugs/2026-08-13-example.txt").success,
 })
-=> {"open":true,"closed":true,"privatePrefix":false,"traversal":false,"wrongExtension":false}
+=> {"open":true,"closed":true,"deferred":true,"privatePrefix":false,"traversal":false,"wrongExtension":false}
 ```
 
 ## Documents retain issue, plan, body, and testing semantics

@@ -1,0 +1,17 @@
+{
+  "description": "Validate Bee Box files after Claude Code edits them.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bbx validate --hook",
+            "statusMessage": "Validating box files"
+          }
+        ]
+      }
+    ]
+  }
+}

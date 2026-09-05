@@ -2,8 +2,8 @@
 set -euo pipefail
 
 device="${1:-booted}"
-output_dir="${2:-/tmp/callback-box-composer-fixtures}"
-bundle_id="app.callbackbox.ios"
+output_dir="${2:-/tmp/beebox-composer-fixtures}"
+bundle_id="app.beebox.ios"
 states=(
   empty
   typing
@@ -13,13 +13,16 @@ states=(
   failed-upload
   selection-detail
   recording
+  starting-dictation
   interrupted
   hq-preparation
   sending
   two-pending
   rejected-send
+  stuck-pending
   expired-attachment
   keyboard-shown
+  control-registry
 )
 
 mkdir -p "$output_dir"

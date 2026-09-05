@@ -1,7 +1,7 @@
 ---
 title: "markdown cards replacing xml"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

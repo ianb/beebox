@@ -21,7 +21,7 @@ could be good to do.")
 read→mutate→whole-file-write with no lock and no version token: two
 concurrent checkbox toggles lose one update silently. The conflict-safe
 primitive already exists on the view-widget path — `writeFile {expect}`
-(`callback-box/src/types/views.ts` ~:86) — so the fix is adoption, not
+(`beebox/src/types/views.ts` ~:86) — so the fix is adoption, not
 invention: thread an expected-content (or hash) token through the mutating
 tRPC procedures and surface a retry/conflict result to the UI.
 

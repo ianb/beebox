@@ -2,15 +2,32 @@
 title: "Sent message disappears then reappears ~20s later when an intermediate history snapshot omits it"
 workstream: sent-message-disappears-fix
 needs: [manual-testing]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder; got much worse recently
-next-action: reconfirm
+priority: normal
 ---
+
+> `reconfirm?` checked 2026-09-05: the code side holds — `reconcilePendingWithDiagnostics` (chatMachine.ts) keeps a pending message until its own durable echo (`4ceb0de6`), and `test/frontend/reconcile-pending.doctest.md` passes 18/18. The manual-testing gate stays; the one step that settles it: send a message while a long turn is running and watch it through the next history refresh.
 
 > **⏳ Awaiting manual testing** — fix landed in `4ceb0de6`; send typed, capture,
 > and voice messages during a long turn and confirm each message stays visible
-> through intermediate history updates. Only Ian clears this.
+> through intermediate history updates. Only the developer clears this.
+>
+> **Checked 2026-08-18** (`next-action: reconfirm` removed — it was right that
+> the code side holds, and it cannot clear the human check). `4ceb0de6` "Keep
+> optimistic chat messages until durable echo" is on `main`.
+>
+> **The smallest thing that would settle it**, if the three-message protocol
+> above is more than you want to do: send **one** message while a long turn is
+> already running, and watch it through the next history refresh. That is the
+> whole failure — an optimistic message dropped when intermediate history
+> arrives. Typed is enough; capture and voice exercise the same path.
+>
+> Worth re-testing now specifically, because the surrounding machinery moved
+> today: `6e928be6` acks a send when it is durably recorded rather than when the
+> engine starts, and `1110b7b5` gave send acceptance one durability point. Both
+> change when the "durable echo" this fix waits for arrives.
 
 The fix tracks every optimistic send until a new durable history entry echoes that
 specific send. It also preserves distinct repeated messages and messages that the
@@ -77,7 +94,7 @@ reactive background refetch still is. Reproduce the disappear before fixing.
 
 ## Related
 
-- [chat-send-receipts-fail-often…](2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
+- [chat-send-receipts-fail-often…](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
   — same optimistic-message-vs-durable-history-timing family; this is the specific
   deferred-resync mechanism.
 - `add0c339` / `546310cb` — the OOM/refetch-storm fixes this regressed out of.
@@ -110,7 +127,7 @@ Corrected fix direction: make the optimistic/pending message **survive any
 `reconcilePending` to keep an un-echoed pending message rather than dropping it when
 an intermediate server-history snapshot omits it. Then no intermediate refresh (from
 any source) can open a disappear-gap, regardless of timing. Confirm the exact clearing
-event by instrumentation before fixing (cb-debug).
+event by instrumentation before fixing (bbx-debug).
 
 ## Manual testing
 

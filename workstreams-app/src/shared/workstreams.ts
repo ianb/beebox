@@ -35,6 +35,39 @@ const sessionStateSchema = z.object({
   baseSha: z.string().min(1).nullable(),
   removed: removedStateSchema.nullable(),
   archived: archivedStateSchema.nullable(),
+  description: z.string().min(1).nullable(),
+  launch: z.object({
+    state: z.enum(["none", "active", "expired", "failed", "unknown"]),
+    startedAt: z.iso.datetime().nullable(),
+    expiresAt: z.iso.datetime().nullable(),
+    failedAt: z.iso.datetime().nullable(),
+    reason: z.string().min(1).nullable(),
+  }),
+});
+
+export const routingStateSchema = z.enum(["launching", "live", "scheduled", "dormant", "stale", "removed", "uncertain"]);
+export const routingActionSchema = z.enum(["wait-for-launch", "resume-with-briefing", "manual-forward", "new-stream-preferred", "investigate"]);
+const routingSchema = z.object({
+  state: routingStateSchema,
+  action: routingActionSchema,
+  lastActivityAt: z.iso.datetime().nullable(),
+});
+
+/**
+ * The scheduler's view of a row, joined by name from `bin/schedules list
+ * --json`. Null on every workstream that is not a schedule. `heartbeat` is the
+ * whole scheduler's last tick, not this schedule's — carried per row so a
+ * consumer that only ever sees rows can still tell that the tick itself died.
+ */
+const scheduleSchema = z.object({
+  cadence: z.string().min(1),
+  enabled: z.boolean(),
+  lastRunAt: z.iso.datetime().nullable(),
+  lastOutcome: z.string().min(1).nullable(),
+  overdue: z.boolean(),
+  nextDueAt: z.iso.datetime().nullable(),
+  openAlerts: z.number().int().nonnegative(),
+  heartbeat: z.object({ lastTickAt: z.iso.datetime() }).nullable(),
 });
 
 const boxStateSchema = z.object({
@@ -53,7 +86,9 @@ export const workstreamsCliRowSchema = z.object({
   runtime: runtimeStateSchema,
   agent: agentStateSchema,
   session: sessionStateSchema,
+  routing: routingSchema,
   boxState: boxStateSchema,
+  schedule: scheduleSchema.nullable(),
 });
 
 export const workstreamsCliListSchema = z.array(workstreamsCliRowSchema);
@@ -65,6 +100,12 @@ export const workstreamSummarySchema = workstreamsCliRowSchema.omit({
 
 export const workstreamListResultSchema = z.object({
   items: z.array(workstreamSummarySchema),
+  warnings: z.array(z.object({
+    row: z.number().int().nonnegative().nullable(),
+    name: z.string().min(1).nullable(),
+    fields: z.array(z.string()),
+    message: z.string().min(1),
+  })),
 });
 
 export const workstreamIssueSchema = z.object({
@@ -81,6 +122,7 @@ export const workstreamDetailSchema = z.object({
 
 export const dashboardSchema = z.object({
   workstreams: z.array(workstreamSummarySchema),
+  workstreamWarnings: workstreamListResultSchema.shape.warnings,
   issues: z.array(issueSchema),
   plans: z.array(planSchema),
   quotas: z.array(quotaSchema),

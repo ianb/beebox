@@ -1,9 +1,10 @@
 ---
 title: "iOS small cleanups: legacy STT off-device partials, temp WAV leak, dev pairing defaults, duplicate extension, no strict concurrency"
-workstream: unknown
-area: callback-box
+workstream: chores-burn-down
+area: beebox
 filed-by: agent
-discovered-in: 2026-07-17 iOS companion review — callback-box/docs/plans/ios-companion-review-2026-07-17.md
+discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
+priority: normal
 ---
 
 A bundle of small, independent iOS cleanups surfaced in the 2026-07-17 companion-app review:
@@ -29,7 +30,7 @@ A bundle of small, independent iOS cleanups surfaced in the 2026-07-17 companion
 - **`SWIFT_VERSION = 5.0` across all build configs** (`project.pbxproj`) means Swift's strict-concurrency
   checking is off, despite the new bridge code (`AppleSpeechAnalyzerSession` and friends) using
   `@Sendable` closures, `NSLock`, and `@MainActor` hops that strict concurrency mode would actually check.
-- **Stale comment in the web frontend.** `callback-box/src/frontend/src/input/emission.ts` still says
+- **Stale comment in the web frontend.** `beebox/src/frontend/src/input/emission.ts` still says
   voice sends carry no images, but `createVoiceEmission` now accepts `images` and native `.voice`
   emissions do carry photos — the comment is simply wrong now and should be updated or removed.
 - **A routine simulator build emits two avoidable Xcode warnings.** The app-icon catalog still includes
@@ -37,3 +38,10 @@ A bundle of small, independent iOS cleanups surfaced in the 2026-07-17 companion
   and App Intents metadata extraction runs despite the target not linking AppIntents.framework. Remove
   the obsolete icon slot and disable the inapplicable metadata-generation build step/setting so a clean
   `xcodebuild -quiet ... build` is actually quiet.
+
+## Implemented in this workstream
+
+This commit keeps the manual-pairing label and localhost URL defaults in debug
+builds only. It also consolidates `String.nilIfEmpty` into one module-wide
+extension. The legacy speech privacy, temporary WAV cleanup, strict concurrency,
+stale web comment, and simulator-warning items remain open.

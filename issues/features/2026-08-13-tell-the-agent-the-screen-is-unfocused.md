@@ -1,7 +1,7 @@
 ---
 title: "Tell the agent when the screen isn't focused, and that it should lean on voice"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [chat, voice, agent-context]
 filed-by: agent
 discovered-by: Ian
@@ -28,7 +28,7 @@ prompt tells the agent to skim it (`prompts.ts:99`).
 So this is a new attribute on an existing channel rather than new plumbing. The
 client already tracks focus for other reasons — visibility changes are a
 suspected trigger in
-[send receipts fail](../bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md),
+[send receipts fail](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md),
 and iOS scene transitions already forward to the box log as `[ios] lifecycle`.
 
 ## Unspeakable content must be announced, not dropped

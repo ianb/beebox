@@ -13,30 +13,56 @@ import {
   issueVisibilitySchema,
   planSchema,
   quotaSchema,
+  relatedResultSchema,
   testingQueueSchema,
 } from "../../shared/documents.js";
+import { askQueueSchema } from "../../shared/exhibits.js";
+import {
+  scheduleAlertIdSchema,
+  scheduleAlertsResultSchema,
+} from "../../shared/schedules.js";
 import {
   actionResultSchema,
   actionVerbSchema,
   lifecycleJobSchema,
 } from "../../shared/actions.js";
 import { procedure, router } from "./trpc.js";
+import { commentsRouter } from "./comments-router.js";
+import { documentsRouter } from "./documents-router.js";
 
 const workstreamsRouter = router({
   list: procedure
     .output(workstreamListResultSchema)
-    .query(async ({ ctx }) => ({ items: await ctx.services.workstreams.list() })),
+    .query(async ({ ctx }) => ctx.services.workstreams.list()),
   detail: procedure
     .input(z.object({ name: z.string().regex(/^[a-zA-Z0-9_-]+$/u) }))
     .output(workstreamDetailSchema)
     .query(async ({ input, ctx }) => {
       const workstreams = await ctx.services.workstreams.list();
-      const workstream = workstreams.find((candidate) => candidate.name === input.name);
+      const workstream = workstreams.items.find((candidate) => candidate.name === input.name);
       if (!workstream) throw new TRPCError({ code: "NOT_FOUND", message: "Workstream not found" });
       return {
         workstream,
         issues: await ctx.services.documents.issuesForWorkstream(input.name),
       };
+    }),
+});
+
+/** Reads and acknowledges through `bin/schedules`; the store's only writer is
+ *  still that CLI (scheduled-workstreams.md, Track D). */
+const schedulesRouter = router({
+  alerts: procedure
+    .input(z.object({ workstream: z.string().regex(/^[a-zA-Z0-9_-]+$/u).nullable() }))
+    .output(scheduleAlertsResultSchema)
+    .query(async ({ input, ctx }) => ({
+      items: await ctx.services.schedules.alerts(input.workstream),
+    })),
+  acknowledge: procedure
+    .input(z.object({ id: scheduleAlertIdSchema }))
+    .output(z.object({ id: scheduleAlertIdSchema }))
+    .mutation(async ({ input, ctx }) => {
+      await ctx.services.schedules.acknowledge(input.id);
+      return { id: input.id };
     }),
 });
 
@@ -49,6 +75,18 @@ const issuesRouter = router({
     visibility: issueVisibilitySchema,
   })).output(issueSchema).query(async ({ input, ctx }) =>
     ctx.services.documents.issueDetail(input.relPath, input.visibility)),
+  /**
+   * Nearest issues and design docs for one issue. Deliberately the same
+   * ranking as `bin/issues similar <path> --all --docs`, over the same
+   * `.issues-index/` cache — the browser is a second caller, not a second
+   * implementation. A missing embeddings key is a reported state in the
+   * result, not an error: the rest of the browser works without one.
+   */
+  related: procedure.input(z.object({
+    relPath: issueRelPathSchema,
+    visibility: issueVisibilitySchema,
+  })).output(relatedResultSchema).query(async ({ input, ctx }) =>
+    ctx.services.related.related(input)),
   save: procedure.input(z.object({ changes: z.array(issueChangeSchema).max(1_000) }))
     .output(z.object({ saved: z.number().int().nonnegative() }))
     .mutation(async ({ input, ctx }) => ({
@@ -65,6 +103,11 @@ const plansRouter = router({
 const testingRouter = router({
   list: procedure.output(testingQueueSchema).query(async ({ ctx }) =>
     ctx.services.documents.testingQueue()),
+});
+
+/** Read-only: answering an ask happens on the exhibits origin, never here. */
+const exhibitsRouter = router({
+  askQueue: procedure.output(askQueueSchema).query(async ({ ctx }) => ctx.services.exhibits.askQueue()),
 });
 
 const quotasRouter = router({
@@ -93,24 +136,28 @@ const actionsRouter = router({
 
 const dashboardRouter = router({
   get: procedure.output(dashboardSchema).query(async ({ ctx }) => {
-    const [workstreams, issues, plans, quotas, testing] = await Promise.all([
+    const [workstreamResult, issues, plans, quotas, testing] = await Promise.all([
       ctx.services.workstreams.list(),
       ctx.services.documents.listIssues(),
       ctx.services.documents.listPlans(),
       ctx.services.quotas.get(),
       ctx.services.documents.testingQueue(),
     ]);
-    return { workstreams, issues, plans, quotas, testing };
+    return { workstreams: workstreamResult.items, workstreamWarnings: workstreamResult.warnings, issues, plans, quotas, testing };
   }),
 });
 
 export const appRouter = router({
   dashboard: dashboardRouter,
   workstreams: workstreamsRouter,
+  schedules: schedulesRouter,
   issues: issuesRouter,
+  comments: commentsRouter,
+  documents: documentsRouter,
   plans: plansRouter,
   testing: testingRouter,
   quotas: quotasRouter,
+  exhibits: exhibitsRouter,
   actions: actionsRouter,
 });
 

@@ -1,7 +1,0 @@
-.env
-server-ip
-
-# Prod debug access configuration. The generic helper scripts are tracked, but
-# the deployment URL and owner-specific policy note stay local.
-public-url
-prod-debug-access.md

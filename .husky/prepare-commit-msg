@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Monorepo prepare-commit-msg hook — commit provenance trailers.
+#
+# Stamps `Workstream: <name>` (and `Plan: <basename>` when exactly one active
+# plan claims that workstream) into the pending commit message, so a commit
+# records which stream produced it even after the worktree is culled. No-op on
+# main and any non-`worktree-*` branch. Silent on success, and it never blocks:
+# the script reports failures on stderr and still exits 0.
+#
+# Plan: beebox/docs/plans/commit-provenance-trailers.md
+# Lives at the monorepo root alongside commit-msg; core.hooksPath (set to
+# .husky/_/ by the root `pnpm install`) is shared across all worktrees.
+
+# No `set -e`, and the call cannot fail the hook: if pnpm/tsx/node itself dies
+# before the script's own try/catch can run, the commit must still go through.
+
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+(cd "$REPO_DIR" && pnpm --silent commit-provenance --prepare "$1" "$2") \
+  || echo "commit-provenance: prepare hook failed (commit proceeds without trailers)" >&2
+
+exit 0

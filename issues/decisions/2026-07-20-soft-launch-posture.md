@@ -5,14 +5,15 @@ area: docs
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: important
 ---
 
 Record of the 2026-07-20 launch-shape decisions (all made by the boxholder in
 conversation), plus the remaining gates. Open until the repo is actually shown
 to people; close when the soft launch happens. Builds on
-[the source-available release plan](../../callback-box/docs/plans/source-available-release.md)
+[the source-available release plan](../../beebox/docs/plans/source-available-release.md)
 (secret scan clean, PII scrub, licensing — all done 2026-07) and
-[the installation story](../../callback-box/docs/plans/installation-story.md)
+[the installation story](../../beebox/docs/plans/installation-story.md)
 (phase 1 shipped, verified).
 
 ## Decisions (2026-07-20)
@@ -24,14 +25,14 @@ to people; close when the soft launch happens. Builds on
 - **Deploy**: local run first-class; **one blessed deploy happy path**
   (Docker/compose + optional Caddy, Tailscale as the protect story). No
   platform matrix — for unverified environments, the sanctioned path is
-  handing [the agent install guide](../../callback-box/docs/agent-install.md)
+  handing [the agent install guide](../../beebox/docs/agent-install.md)
   to the user's agent and letting it reinterpret.
 - **iOS ships at release** (boxholder, 2026-07-21) — via local builds (no
   App Store distribution this cut). This escalates
   [ios-pairing-flow-robustness](../bugs/2026-07-17-ios-pairing-flow-robustness.md)
   to a gate (the external-URL auto-redeem phishing surface).
 - **Dev is never open** (boxholder, 2026-07-21): local dev **always**
-  requires a username/password login — never `CB_ALLOW_UNAUTHENTICATED` as a
+  requires a username/password login — never `BBX_ALLOW_UNAUTHENTICATED` as a
   default — with explicit testing provisions (a seeded dev credential +
   automation auth path) rather than disabling the wall. This reverses the
   dev-router login fix's approach and is the resolution for
@@ -63,7 +64,7 @@ to people; close when the soft launch happens. Builds on
   boxholder to them, not neutral product docs. It should also state
   cost/usage expectations honestly (a running box burns the operator's
   Claude subscription quota).
-- **Agent-legible docs as capability** (the SECURITY.md /
+- **Agent-legible docs as capability** (the security-overview.md /
   [EXPORT.md](../features/2026-07-20-export-md-agent-instructions.md) /
   agent-install pattern): instruction docs addressed to the user's agent
   are the product surface; small helper tools, not end-to-end automation.
@@ -112,9 +113,16 @@ to people; close when the soft launch happens. Builds on
    [installation-remaining-work](../features/2026-07-19-installation-remaining-work.md)):
    what-is-this / should-you-use-it, the subscription requirement stated
    plainly, what-leaves-your-machine, contribution stance.
-4. **SECURITY.md**, produced as the first run of the
+4. **Security docs — DONE.** The
    [agent-maintained security report](../closed/features/2026-07-20-agent-maintained-security-report.md)
-   (seed: [todo-security.md](../../callback-box/docs/todo-security.md)).
+   shipped 2026-08-14 (seed:
+   [todo-security.md](../../beebox/docs/todo-security.md)), producing
+   [security-overview.md](../../beebox/docs/security-overview.md) — the
+   readable threat model — over the structured
+   [security-report.md](../../beebox/docs/security-report.md). The root
+   `SECURITY.md` is the short, conventional reporting policy GitHub recognizes,
+   pointing at both (split out 2026-08-22; the overview previously sat at
+   `beebox/SECURITY.md`, where GitHub never saw it).
 5. **Issues scrub** — done except one open question: whether "the ledger
    box" in
    [stale-image-refs-after-renames](../closed/bugs/2026-05-14-stale-image-refs-after-renames.md)
@@ -136,13 +144,13 @@ to people; close when the soft launch happens. Builds on
 7. **First-hour experience** — reviewed, boxholder-flagged ("the
    dashboard is crap"): at minimum decide how much of
    [first-run-experience](../features/2026-07-20-first-run-experience.md)
-   and [chat-thread-management](../features/2026-07-20-chat-thread-management.md)
+   and [chat-thread-management](../closed/features/2026-07-20-chat-thread-management.md)
    (delete is the ask) lands pre-launch; the
    [day-to-day usage docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md)
    are the docs half of the same gap.
-8. **[Discussion channel](../closed/decisions/2026-07-21-discussion-channel.md)** — boxholder
-   wants **live** discussion (not async), disliking Discord; decision
-   deferred. Field is Zulip (lead) vs Matrix. Cheap to stand up once picked.
+8. **[Discussion channel](../closed/decisions/2026-07-21-discussion-channel.md)** — live
+   discussion is now on the Bee Box Discord server; the public invite is
+   linked from the README and site.
 
 ## Explicitly not gates
 
@@ -169,7 +177,7 @@ Filed — features:
 [explicit-api-key-config](../features/2026-07-20-explicit-api-key-config.md),
 [export-md-agent-instructions](../features/2026-07-20-export-md-agent-instructions.md),
 [schedules-off-by-default](../features/2026-07-20-schedules-off-by-default.md),
-[chat-thread-management](../features/2026-07-20-chat-thread-management.md),
+[chat-thread-management](../closed/features/2026-07-20-chat-thread-management.md),
 [first-run-experience](../features/2026-07-20-first-run-experience.md),
 [agent-containment-allowed-directories](../features/2026-07-20-agent-containment-allowed-directories.md).
 
@@ -181,7 +189,7 @@ this doc,
 Filed — docs-and-chores / exploration:
 [day-to-day-usage-docs](../docs-and-chores/2026-07-20-day-to-day-usage-docs.md),
 [meta-issues](../docs-and-chores/2026-07-21-meta-issues.md),
-[issues-inside-callback-box](../exploration/2026-07-21-issues-inside-callback-box.md).
+[issues-inside-beebox](../exploration/2026-07-21-issues-inside-beebox.md).
 
 Closed this session:
 [google-oauth-callback-unauthenticated](../closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md),

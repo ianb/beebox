@@ -1,11 +1,12 @@
 ---
 title: "Per-file fixed cost is ~12–13% of the suite — Node boot, tsx, loader, and a cold template box, paid 480 times"
 workstream: test-selection
-area: callback-box
+area: beebox
 needs: [design]
 labels: [testing, developer-experience]
 filed-by: agent
 discovered-in: worktree-test-selection — sized while planning change-based test selection
+priority: important
 ---
 
 Every test file pays a fixed cost before it runs a single assertion: Node
@@ -13,7 +14,7 @@ process boot, the tsx import hook, the doctest loader, and — for the 37 files
 that call `makeTestServer()` — a cold template-box build.
 
 The measured figures come from the profiling in
-[run less of the full suite](../exploration/2026-08-08-run-less-of-the-test-suite.md)
+[run less of the full suite](../closed/exploration/2026-08-08-run-less-of-the-test-suite.md)
 (`## Research (2026-08-08)`; loaded-machine caveat applies to all of them):
 
 - Cold template-box build: **1,023 ms**. Warm clones after it: 387 ms mean,
@@ -63,7 +64,7 @@ number above is an upper bound from a heavily loaded machine (load average ~18,
 on a quiet machine — see the research section's conclusion, which says the same
 thing.
 
-Related: [change-based test selection](../../callback-box/docs/plans/change-based-test-selection.md)
+Related: [change-based test selection](../../beebox/docs/plans/change-based-test-selection.md)
 sizes this lever in its NOT-in-scope section and measures itself against it in
 Track 0 — if selection's realistic saving turns out comparable to this, this work
 is the better investment and selection should be shelved.

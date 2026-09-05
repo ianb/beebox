@@ -1,0 +1,167 @@
+/**
+ * `chat.bootstrap` — everything the chat page needs to render, in one round
+ * trip.
+ *
+ * Opening a bare `/chat` used to cost three serial stages: `chat.defaultSession`
+ * to learn the session id, then a client navigation, then `chat.history` +
+ * `chat.status` (both of which require a concrete id server-side, so the client
+ * couldn't ask for them earlier). On a phone that's three RTTs of blank page.
+ * This resolves the session and answers all three at once.
+ *
+ * It composes the existing implementations — `getMostActive`,
+ * `loadSessionHistory`, `readSessionStatus` — rather than restating them, so
+ * the atomic path and the individual procedures cannot report different things.
+ */
+
+import { z } from "zod";
+import { readAcceptedMessages, type AcceptedMessage, type HistoryMarker } from "../../../core/chat/session/accepted-messages.js";
+import { publicProcedure } from "../trpc.js";
+import { getMostActive } from "../../../core/chat/session/history.js";
+import { historySliceSchema, loadHistoryForSession, type SessionHistory } from "./chat-session-procedures.js";
+import { readSessionStatus, type ChatSessionStatus } from "./chat-control-procedures.js";
+import { titleForSession } from "../../../core/chat/session/list.js";
+import { resolveSessionAvailability, type SessionAvailability } from "../../../core/chat/session/availability.js";
+import { getChatRuntime } from "../../chat-runtime.js";
+import { TRPCError } from "@trpc/server";
+
+interface ChatBootstrapBase {
+  /**
+   * The session's *editorial* title — the husk card's `title`, or null when
+   * it has none (or `sessionId` is null). Deliberately NOT the pickers'
+   * first-message/id fallback chain: a fabricated title reads wrong on the
+   * app bar's session chip, which shows an icon face until the session has
+   * a real name (boxholder call, 2026-08-03).
+   */
+  label: string | null;
+  status: ChatSessionStatus;
+  /**
+   * Messages this box has ACCEPTED but has not yet written into a transcript.
+   *
+   * A send is answered 200 once it is durably recorded, which happens before
+   * the engine starts — so a page loaded in that window would otherwise show a
+   * conversation missing the question the box already promised to have, or (for
+   * a message that opened a new chat, before an id exists) no conversation at
+   * all. `history` is what is durable; this is what is owed. Kept separate
+   * rather than merged into `entries` so the client can render it as pending
+   * and retire it through the same `reconcilePending` it applies to its own
+   * optimistic copies — the entries here are deliberately NOT filtered against
+   * the history, because that comparison already exists client-side and a
+   * second implementation could disagree with it.
+   */
+  pending: AcceptedMessage[];
+}
+
+/**
+ * The availability answer, minus its own `kind` (the bootstrap's `kind` says
+ * `"unavailable"` already). Distributed over the union member by member —
+ * a plain `Omit` would collapse the two arms into their common keys and lose
+ * `transcript` entirely, which is the distinction this carries.
+ */
+type UnavailableDetail = Extract<SessionAvailability, { kind: "unavailable" }> extends infer U
+  ? U extends { kind: "unavailable" }
+    ? Omit<U, "kind">
+    : never
+  : never;
+
+export type ChatBootstrap =
+  | (ChatBootstrapBase & {
+      kind: "empty";
+      sessionId: null;
+      history: null;
+      label: null;
+    })
+  | (ChatBootstrapBase & {
+      kind: "resumable";
+      sessionId: string;
+      history: SessionHistory;
+    })
+  | (ChatBootstrapBase & UnavailableDetail & {
+      kind: "unavailable";
+      sessionId: string;
+      history: null;
+    });
+
+export const chatBootstrapProcedure = {
+  bootstrap: publicProcedure
+    // `session` omitted means "whatever the default session is" — the same
+    // resolution `chat.defaultSession` does. An empty string is not a session
+    // id: accepting one would report `sessionId: ""` alongside a status that
+    // (correctly) says there's no session.
+    .input(
+      z.object({
+        session: z.string().min(1).optional(),
+        slice: historySliceSchema,
+      }),
+    )
+    .query(async ({ input, ctx }): Promise<ChatBootstrap> => {
+      const { session, slice } = input;
+      const resolved = session ?? (await getMostActive(ctx.boxRoot));
+      // The persisted pointer is a file another process wrote; an empty id in
+      // it means "none", not a session named "".
+      const sessionId = resolved === "" ? null : resolved;
+      // The acceptance record is read against whatever history goes back with
+      // it: the entries that already existed when a message was accepted are
+      // that message's reconciliation baseline, so an old turn repeating the
+      // same words cannot stand in for the echo it is still waiting for — and,
+      // because the baseline is dated per message rather than being the whole
+      // returned list, the message's own echo is never blacklisted along with
+      // them when the transcript has already caught up.
+      const acceptedFor = (history: HistoryMarker[]): AcceptedMessage[] =>
+        readAcceptedMessages(ctx.eventBus, {
+          sessionId,
+          now: new Date(),
+          viewerEmail: ctx.user?.email ?? null,
+          history,
+        });
+      if (sessionId === null) {
+        // "No session" is the reload that loses the most: a first message is
+        // accepted before the engine assigns an id, so there is nothing yet for
+        // the page to resolve. The acceptance record is the only evidence the
+        // message exists, and it is what makes this an empty chat that is
+        // visibly waiting rather than one that never happened.
+        return {
+          kind: "empty",
+          sessionId: null,
+          history: null,
+          label: null,
+          status: await readSessionStatus(ctx.boxRoot, null),
+          pending: acceptedFor([]),
+        };
+      }
+      const runtime = getChatRuntime(ctx.boxRoot);
+      if (runtime === undefined) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Chat runtime not initialized for this box",
+        });
+      }
+      const availability = await resolveSessionAvailability({
+        boxRoot: ctx.boxRoot,
+        sessionId,
+        registry: runtime.registry,
+      });
+      if (availability.kind === "unavailable") {
+        // Spread rather than restated field-by-field: the availability union
+        // carries `transcript` on one arm only, and a hand-copied literal here
+        // is exactly where that distinction gets flattened back to a string.
+        return {
+          ...availability,
+          kind: "unavailable",
+          sessionId,
+          history: null,
+          label: await titleForSession(ctx.boxRoot, sessionId),
+          status: await readSessionStatus(ctx.boxRoot, sessionId),
+          pending: acceptedFor([]),
+        };
+      }
+      const [history, label] = await Promise.all([loadHistoryForSession(ctx.boxRoot, { session: sessionId, slice }), titleForSession(ctx.boxRoot, sessionId)]);
+      return {
+        kind: "resumable",
+        sessionId,
+        history,
+        label,
+        status: await readSessionStatus(ctx.boxRoot, sessionId),
+        pending: acceptedFor(history.entries.map((entry) => ({ uuid: entry.uuid, timestamp: entry.timestamp }))),
+      };
+    }),
+};

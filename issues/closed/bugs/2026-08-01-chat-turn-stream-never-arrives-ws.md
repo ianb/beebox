@@ -1,9 +1,9 @@
 ---
 title: "Chat turn stream never arrives — UI stuck on 'Agent is working…'"
-workstream: remove-cb-render
-area: callback-box
+workstream: remove-bbx-render
+area: beebox
 filed-by: agent
-discovered-in: worktree-remove-cb-render — browser-verifying the chat surfaces after removing cb render
+discovered-in: worktree-remove-bbx-render — browser-verifying the chat surfaces after removing bbx render
 resolution: superseded
 ---
 
@@ -24,7 +24,7 @@ The chat UI never leaves the streaming state. The agent turn completes normally
 on the server, but no stream event reaches the browser, so the reply never
 renders and the composer stays disabled behind "Queue message (agent is busy)".
 
-**This is NOT caused by the `cb render` removal.** It reproduces identically on
+**This is NOT caused by the `bbx render` removal.** It reproduces identically on
 `main` (see Evidence).
 
 ## Reproduce
@@ -41,7 +41,7 @@ So the data is fine and history rendering is fine. Only the live push is lost.
 ## Evidence
 
 Server completed the turn in about 2 seconds
-(`~/src/box-worktrees/<wt>/test1/content/.callback-box/hub-child.log`):
+(`~/src/box-worktrees/<wt>/test1/content/.beebox/hub-child.log`):
 
 ```
 2026-08-01T11:26:03.226Z [stdout] [ChatSession:send] Sending message (177 chars, 0 image(s), 1 block(s))
@@ -66,7 +66,7 @@ page, for **both** the worktree and `main`:
 
 ```
 /main/test1/api/trpc            => ERROR
-/remove-cb-render/test1/api/trpc => ERROR
+/remove-bbx-render/test1/api/trpc => ERROR
 ```
 
 `main` still has the SSR machinery intact, so the failure predates and is

@@ -1,7 +1,7 @@
 ---
 title: "gmail sync improvements"
 workstream: unknown
-area: callback-box
+area: beebox
 resolution: implemented
 ---
 

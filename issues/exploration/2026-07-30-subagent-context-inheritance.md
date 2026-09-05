@@ -4,6 +4,7 @@ workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+priority: normal
 ---
 
 The reviewed project injects a condensed restatement of all 26 of its
@@ -45,7 +46,7 @@ reachable.
   smaller thing than our whole CLAUDE.md, and worth choosing deliberately rather
   than injecting everything.
 
-Related: `callback-box/src/core/agent-guide/laws.ts` already does the
+Related: `beebox/src/core/agent-guide/laws.ts` already does the
 "small set of named, inviolable rules that outrank everything else" pattern for
 *box* agents. There's no dev-repo equivalent, and if this turns out to be a real
 gap, that file is the model for what a good answer looks like.

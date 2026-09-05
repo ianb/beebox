@@ -1,7 +1,7 @@
 ---
 title: "Tailscale to expose and protect boxes — tooling, not another documented path"
 workstream: tailscale-exposure
-area: callback-box
+area: beebox
 needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder asked for it; worktree-tailscale-exposure spun up on Fable
@@ -10,7 +10,7 @@ resolution: implemented
 
 **Closed:** The tooling deliverable this issue asked for ("tooling, not
 documentation") is implemented and merged from `worktree-tailscale-exposure` —
-`cb tailscale status`/`setup`/`stop`, the persisted-exposure listen-time guard
+`bbx tailscale status`/`setup`/`stop`, the persisted-exposure listen-time guard
 in `webapp/auth.ts`, the router loopback fix (`:3210` now binds `127.0.0.1`
 only), and the OpenClaw research dispositions recorded in
 `research/openclaw-hermes/`. Design/history: `docs/implemented-plans/tailscale-expose-and-protect.md`
@@ -37,8 +37,8 @@ general capability, not personal plumbing.
 > I want something much tighter than just docs.
 
 This is the whole point of the item. Tailscale is **already documented** — as a
-first-class alternative in `callback-box/docs/plans/installation-story.md` and
-as a variant in `callback-box/docs/docker-install.md` (keep loopback mapping,
+first-class alternative in `beebox/docs/plans/installation-story.md` and
+as a variant in `beebox/docs/docker-install.md` (keep loopback mapping,
 join tailnet, zero open ports) — and has **never once been exercised**
 ([installation-remaining-work](../../features/2026-07-19-installation-remaining-work.md) item 2:
 "documented in `docs/docker-install.md`, never exercised (needs a tailnet + auth
@@ -49,7 +49,7 @@ untested prose path would leave this exactly where it already is. What's wanted
 is **automation of everything automatable, and tooling that closes the gap on
 what isn't** — the boxholder's own sketch:
 
-> Or even have like `cb doctor tailscale` that checks status and gives better
+> Or even have like `bbx doctor tailscale` that checks status and gives better
 > context aware instructions on next steps.
 
 That's the shape: the tool inspects actual state and tells you the next concrete
@@ -78,8 +78,8 @@ it open this box — and Tailscale answers only the first.
 - `bin/doctor.ts` (+ `bin/doctor.test.ts`) — monorepo preflight doctor, run as
   `pnpm run doctor`. Note `pnpm doctor` collides with pnpm's own builtin, a
   gotcha `docs/developer-install.md` has to warn about — a real argument for a
-  `cb`-side entry point.
-- `callback-box/src/cli/commands/health.ts` — `cb health` for a running box
+  `bbx`-side entry point.
+- `beebox/src/cli/commands/health.ts` — `bbx health` for a running box
   (`docs/health-checks.md`). Decide where a Tailscale check belongs rather than
   adding a third diagnostic surface by default.
 - Docker compose already defaults to `127.0.0.1:3210:3210`, with public access
@@ -93,7 +93,7 @@ it open this box — and Tailscale answers only the first.
 
 ## Constraints carried in from today's lessons
 
-- **Don't transcribe a vendor's dashboard.** `cb pub setup` printed a manual
+- **Don't transcribe a vendor's dashboard.** `bbx pub setup` printed a manual
   Cloudflare console walkthrough; Cloudflare reorganized and it became a dead end
   that cost real time — see
   [pub Access setup via API](../../features/2026-07-19-pub-access-setup-via-api-not-dashboard.md).
@@ -101,10 +101,10 @@ it open this box — and Tailscale answers only the first.
   say what's next, and link the vendor's own doc rather than re-describing their
   UI.
 - **Auth keys are secrets — don't invent a fourth storage pattern.** Publishing
-  already added a divergent one (`~/.cb-publish.env`) that fits neither
+  already added a divergent one (`~/.beebox-publish.env`) that fits neither
   `config/connectors/*.secret.json` nor anything else, and left its connector
   with no credential path on the server. Join
-  [per-box secret management](../../decisions/2026-03-15-per-box-secret-management.md)
+  [per-box secret management](../decisions/2026-03-15-per-box-secret-management.md)
   rather than adding to the pile.
 - Fail-closed by default; a machine that isn't on the tailnet should be
   unreachable, not quietly public.

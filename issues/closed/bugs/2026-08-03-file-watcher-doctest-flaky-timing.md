@@ -1,7 +1,7 @@
 ---
 title: "`core/box/file-watcher.doctest.md` flakes intermittently under load"
 workstream: top-nav-ia
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-top-nav-ia — /finish full-suite verification
 resolution: implemented
@@ -14,7 +14,7 @@ was actually delivering. The updated test also throws when a polling deadline
 expires instead of silently proceeding.
 
 Verification: the focused file passed 30 consecutive runs (the original failed
-by run 2), and the full callback-box suite passed 6,136/6,136 assertions.
+by run 2), and the full beebox suite passed 6,136/6,136 assertions.
 
 The reported `grew < 20` failure was misleading: the failing TAP subtest was a
 later event-delivery assertion, while the diagnostic `source` field pointed to

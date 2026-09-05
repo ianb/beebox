@@ -1,7 +1,7 @@
 ---
 title: "Check out `proving-it-works` — a Claude Code plugin that records and verifies demo videos"
 workstream: unattached
-area: callback-box
+area: beebox
 labels: [tooling-eval, demo-video]
 filed-by: agent
 discovered-by: Ian
@@ -47,7 +47,7 @@ That is a real epistemic point and it generalizes past video. It is the same
 shape as several tensions we already carry: a check that passes because it was
 measuring the wrong axis, and a checker that should report *inconclusive*
 instead of a verdict — compare
-[health masks a review-step turn cap](../bugs/2026-08-12-health-masks-review-step-turn-cap.md).
+[health masks a review-step turn cap](../closed/bugs/2026-08-12-health-masks-review-step-turn-cap.md).
 Even if we never record a video, the "verify along the axis the failure actually
 lives on, then hand a human something to look at" pattern is worth stealing.
 

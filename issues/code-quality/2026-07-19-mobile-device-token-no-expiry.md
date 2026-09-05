@@ -1,16 +1,17 @@
 ---
 title: "Mobile device tokens still have no expiry or rotation"
 workstream: mobile-token-handshake
-area: callback-box
+area: beebox
 filed-by: agent
-discovered-in: worktree-mobile-token-handshake — deferred from the cb_mobile cookie work
+discovered-in: worktree-mobile-token-handshake — deferred from the bbx_mobile cookie work
+priority: backlog
 ---
 
-`MobileDevice` (`callback-box/src/core/mobile/pairing.ts`) tracks `revokedAt` but no
+`MobileDevice` (`beebox/src/core/mobile/pairing.ts`) tracks `revokedAt` but no
 `expiresAt`. A paired device's durable token is valid forever unless a human notices and
 revokes it.
 
-The cb_mobile cookie work (`../../callback-box/docs/implemented-plans/mobile-token-handshake.md`) removed
+The bbx_mobile cookie work (`../../beebox/docs/implemented-plans/mobile-token-handshake.md`) removed
 the urgent half of this: the token no longer travels in URLs, so it no longer lands in access
 logs, `Referer` headers, or WebKit history, and the *session* now expires hourly. What remains
 is that the durable token itself — held in the iOS app and in web localStorage — never ages
@@ -18,7 +19,7 @@ out.
 
 Deferred from that plan deliberately: adding `expiresAt` is a shape change to
 `mobile-devices.secret.json` on boxes that already hold pairings, so it needs a migration per
-the `cb-migration` skill, and a naive rollout would silently un-pair every existing device.
+the `bbx-migration` skill, and a naive rollout would silently un-pair every existing device.
 
 Open questions, none settled:
 

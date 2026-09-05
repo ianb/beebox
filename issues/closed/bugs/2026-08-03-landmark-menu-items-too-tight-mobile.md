@@ -1,7 +1,7 @@
 ---
 title: "Mobile: landmark menu items are too tight — hard to tap the one you want"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder on mobile
 resolution: implemented

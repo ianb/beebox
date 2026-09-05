@@ -1,14 +1,14 @@
 ---
 title: "Chat agent narrates internal bookkeeping the user doesn't care about"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder noticed it in a live chat exchange
 resolution: implemented
 ---
 
 > **Closed** — a "Do your bookkeeping silently" bullet added to `CHAT_SYSTEM_PROMPT`
-> ("Working in chat", `callback-box/src/core/chat/session/prompts.ts`), general to
+> ("Working in chat", `beebox/src/core/chat/session/prompts.ts`), general to
 > the whole bookkeeping class, with an explicit guard that a direct "what did you
 > change?" still gets a full answer. Verified in live chats against a box: the work
 > (card edit + `contains:` refresh, including an over-budget trim 361→160 chars)
@@ -37,7 +37,7 @@ a prose play-by-play of the edit.
 
 ## Likely fix — a prompt line
 
-`CHAT_SYSTEM_PROMPT` (`callback-box/src/core/chat/session/prompts.ts:21`) already
+`CHAT_SYSTEM_PROMPT` (`beebox/src/core/chat/session/prompts.ts:21`) already
 opens "Working in chat" with **"Be concise. This is a conversation, not a
 report."** The natural home for the fix is right there: add a short line that
 internal bookkeeping — updating a `contains:` summary, keeping a field under a
@@ -56,5 +56,5 @@ bookkeeping." Watch the wording so it doesn't over-suppress genuinely useful
   — adjacent chat-prompt/output-shaping work, but that item is about the *tag
   vocabulary* (`<ack>`, `<callout>`, `{% quote %}`); this is about *what the agent
   chooses to say*, so it's a separate, smaller tweak.
-- `callback-box/docs/prompt-surface-review.md` — the workflow for reasoning about
+- `beebox/docs/prompt-surface-review.md` — the workflow for reasoning about
   prompt-content changes like this, if the fix wants more than a one-liner.

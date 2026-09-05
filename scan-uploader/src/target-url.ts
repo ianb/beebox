@@ -28,7 +28,7 @@ export function parseServerUrlWithBox(input: string): ParsedServerTarget {
   // silently target the wrong server path.
   const box = segments.at(-1);
   if (box === undefined) {
-    const message = `URL must include a box slug in its path, e.g. https://cb.example.org/family (got "${input}")`;
+    const message = `URL must include a box slug in its path, e.g. https://beebox.run/family (got "${input}")`;
     throw new ConfigureError(message);
   }
   if (!BOX_SLUG_PATTERN.test(box)) {

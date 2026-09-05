@@ -7,44 +7,15 @@
 
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
-import { buildGraphFrom, testEntrypoints, type GraphConfig } from "./test-graph.js";
+import { buildGraphFrom } from "./test-graph.js";
+import { fixture } from "./test-graph-fixture.js";
 import { scopedChanges, type TestGraph } from "./test-graph-query.js";
-
-interface Fixture {
-  root: string;
-  config: GraphConfig;
-  cleanup: () => void;
-}
-
-/** Write a fixture package: `files` maps package-relative path -> contents. */
-function fixture(files: Record<string, string>): Fixture {
-  const root = mkdtempSync(join(tmpdir(), "test-graph-"));
-  const packageRoot = join(root, "pkg");
-  for (const [rel, contents] of Object.entries(files)) {
-    const abs = join(packageRoot, rel);
-    mkdirSync(dirname(abs), { recursive: true });
-    writeFileSync(abs, contents);
-  }
-  return {
-    root,
-    config: {
-      repoRoot: root,
-      packageRoot,
-      aliases: { "@shared/": join(packageRoot, "src/shared") },
-      entrypoints: testEntrypoints(packageRoot),
-    },
-    cleanup: () => rmSync(root, { recursive: true, force: true }),
-  };
-}
 
 /** Dependencies of one entrypoint, as package-relative paths. */
 function depsOf(graph: TestGraph, entry: string): string[] {
   const deps = graph.tests.get(`pkg/${entry}`);
   assert.ok(deps !== undefined, `no graph entry for ${entry}; have ${[...graph.tests.keys()].join(", ")}`);
-  return [...deps].map((d) => d.replace(/^pkg\//, "")).sort();
+  return [...deps].map((d) => d.replace(/^pkg\//, "")).toSorted();
 }
 
 async function withFixture(files: Record<string, string>, fn: (g: TestGraph) => void): Promise<void> {
@@ -185,7 +156,7 @@ test("the @shared alias resolves, and only the configured prefix does", async ()
 
 // ── scope ───────────────────────────────────────────────────────────────────
 
-test("paths outside callback-box cannot make a change unaccounted", () => {
+test("paths outside beebox cannot make a change unaccounted", () => {
   // /finish routes bin/, issues/, ios-app/ etc. to their own verification.
   // Treating them as unaccounted here would send almost every branch to the
   // full suite for reasons that have nothing to do with this suite.
@@ -195,9 +166,9 @@ test("paths outside callback-box cannot make a change unaccounted", () => {
       "issues/bugs/x.md",
       "ios-app/App.swift",
       "research/notes.md",
-      "callback-box/src/core/box.ts",
+      "beebox/src/core/box.ts",
     ]),
-    ["callback-box/src/core/box.ts"],
+    ["beebox/src/core/box.ts"],
   );
 });
 
@@ -207,12 +178,12 @@ test("prose markdown is out of scope, but a .doctest.md is not", () => {
   // and it is a pre-commit hook outside tap.
   assert.deepEqual(
     scopedChanges([
-      "callback-box/docs/testing.md",
-      "callback-box/SECURITY.md",
-      "callback-box/src/services/CLAUDE.md",
-      "callback-box/test/core/box.doctest.md",
+      "beebox/docs/testing.md",
+      "beebox/docs/security-overview.md",
+      "beebox/src/services/CLAUDE.md",
+      "beebox/test/core/box.doctest.md",
     ]),
-    ["callback-box/test/core/box.doctest.md"],
+    ["beebox/test/core/box.doctest.md"],
   );
 });
 

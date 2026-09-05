@@ -2,7 +2,7 @@
 title: "Restart the chat send receipt investigation after the next real incident"
 workstream: send-receipt-logging
 needs: [manual-testing]
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-by: boxholder
 discovered-in: worktree-send-receipt-logging — after landing send receipt diagnostics
@@ -13,7 +13,7 @@ discovered-in: worktree-send-receipt-logging — after landing send receipt diag
 > timeline. Only Ian clears this.
 
 The instrumentation for
-[chat sends that appear unconfirmed after they succeeded](../bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
+[chat sends that appear unconfirmed after they succeeded](../closed/bugs/2026-08-04-chat-send-receipts-fail-often-message-actually-sent.md)
 is deployed. The failure trigger is still unknown. More speculative work before
 another incident would not add evidence.
 
@@ -35,7 +35,7 @@ follow the investigation procedure below. Only the boxholder removes
 ## Investigation procedure
 
 1. Start a new worktree for the receipt investigation.
-2. Inspect `.callback-box/client-debug.log` around the incident time.
+2. Inspect `.beebox/client-debug.log` around the incident time.
 3. Find the `[chat-send-diagnostic]` entries for the affected emission ID.
 4. Compare the millisecond offsets for dispatch, POST attempts and responses,
    local receipt settlement, visibility and network changes, event-bus state,

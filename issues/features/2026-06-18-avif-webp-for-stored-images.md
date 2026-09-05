@@ -2,7 +2,8 @@
 title: "avif webp for stored images"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
+priority: backlog
 ---
 
 Every re-encode path today emits **JPEG** (or passes PNG through): `src/frontend/src/lib/image-paste.ts` downscales pasted/captured images to JPEG @0.85 (`outputType = isPng ? "image/png" : "image/jpeg"`). Connector intake (gmail attachments, etc.) stores originals as-is — usually JPEG, often *many* per thread. The box already **accepts** `.webp`/`.avif` (LFS + gitignore patterns at `src/core/box.ts:158-159`, mime maps in `commands/create.ts` and `describe-images-helpers.ts`), so storage/serving is ready — nothing *produces* the compact formats. AVIF cuts ~50% over JPEG at similar quality; WebP ~25–30%.

@@ -247,7 +247,7 @@ skill-directory-relative path and its absolute resolved path, plus an
 explicit call-out that the shell tool runs in the session's working
 directory (not the skill directory), so the model knows to `cd` or use the
 absolute path (`loaded_skill_context`, `mod.rs:102-132`, tested at
-`mod.rs:541-555`) — a small but real papercut CBX and others often miss.
+`mod.rs:541-555`) — a small but real papercut bbx and others often miss.
 Skills also support `$ARGUMENTS`-style templated invocation
 (`skills/arguments.rs`, `apply_skill_arguments`) and an `argument-hint`
 metadata field (`skill_argument_hint`, `mod.rs:144-151`).
@@ -280,26 +280,26 @@ the agent navigates the tree (`SubdirectoryHintTracker`,
 context assembly (glob/gitignore-aware file loading), not a memory or
 learning system — no equivalent here to a durable "what did I learn" store.
 
-## 4. CBX comparison
+## 4. bbx comparison
 
 **Recipes.** Goose's recipe format (parameters + typed defaults/options +
 JSON-schema response contract + sub-recipe composition + retry-with-shell-
 checks) is considerably more built-out as a *shareable artifact* than
-anything CBX currently has for "repeatable tasks" — CBX's closest analog is
+anything bbx currently has for "repeatable tasks" — bbx's closest analog is
 schedule cards driving a wakeup→reactor cycle, which is procedural/box-local
 rather than a portable, parameterized, community-shareable file. The
 retry-with-success-checks pattern (`RetryConfig`/`SuccessCheck::Shell`) is
 steal-worthy on its own: a recipe that says "keep retrying until this shell
 command exits 0, and run this cleanup command if it fails" is a clean,
-generic primitive CBX doesn't have an equivalent to, and would compose well
-with CBX's schedule cards (schedule → recipe → retry-until-verified, then
+generic primitive bbx doesn't have an equivalent to, and would compose well
+with bbx's schedule cards (schedule → recipe → retry-until-verified, then
 report).
 
 **Scheduling/crash-safety.** Goose's "reset stale flags on boot, don't
-resume, don't guarantee delivery" model is actually *less* robust than CBX's
-schedules→wakeup→reactor loop as I understand it (CBX treats missed wakeups
+resume, don't guarantee delivery" model is actually *less* robust than bbx's
+schedules→wakeup→reactor loop as I understand it (bbx treats missed wakeups
 as recoverable state to reconcile, not silently-dropped cron ticks) — this is
-a case where CBX's design is arguably already ahead, not a gap to close. Worth
+a case where bbx's design is arguably already ahead, not a gap to close. Worth
 confirming this is a deliberate contrast to call out rather than an
 assumption.
 
@@ -307,20 +307,20 @@ assumption.
 ad-hoc subagents, named recipes, and named "agents," with async + peek +
 cancel + notification-streaming + a hard concurrency cap + TTL'd result
 retention) is meaningfully richer than a typical bare `Task`-tool subagent
-call and is the single highest-value thing to mine from this repo. CBX's
+call and is the single highest-value thing to mine from this repo. bbx's
 current subagent story (via the Agent tool here) has async/background
 patterns but not this level of built-in lifecycle management (peek without
 consuming, TTL-bounded result retention, a global concurrency cap configurable
 via env var). The cross-model-override hygiene (dropping
 provider-specific request params on model switch while keeping
 reasoning-family-agnostic ones) is a subtle correctness detail worth
-replicating if CBX subagents ever gain per-delegate model overrides.
+replicating if bbx subagents ever gain per-delegate model overrides.
 
 **Permission / tool gating.** `SmartApprove`'s self-caching LLM read-only
 judge is a genuinely clever middle ground between "trust everything" and
-"ask about everything," and CBX doesn't have anything like it (CBX doesn't
+"ask about everything," and bbx doesn't have anything like it (bbx doesn't
 currently expose a graduated approval mode at all, as far as this scan
-covered) — worth considering, though CBX's context (a personal assistant with
+covered) — worth considering, though bbx's context (a personal assistant with
 box-scoped trust already established) may reduce the need relative to a
 general local dev-tool agent used across arbitrary MCP servers.
 
@@ -331,11 +331,11 @@ polluted by summarization) is more disciplined than a single-compaction
 approach. The agent-visible/user-visible metadata split in particular is a
 clean pattern: it means the summarization mechanism never has to lie to the
 user about what happened, because the user's view was never touched in the
-first place. Callback Box builders relying on the Claude Agent SDK's own
+first place. Bee Box builders relying on the Claude Agent SDK's own
 context/compaction handling get this "for free" at the SDK layer, but the
 *policy knobs* here (protect-last-N, batch-of-10 rolling summarization,
 manual-vs-automatic continuation wording) are a good checklist for anywhere
-CBX does its own context assembly (e.g., reactor prompt assembly) rather than
+bbx does its own context assembly (e.g., reactor prompt assembly) rather than
 delegating to the SDK entirely.
 
 **Skills.** Goose's skills system is a straight, careful implementation of
@@ -343,11 +343,11 @@ the same agentskills.io `SKILL.md` spec that Claude Code's own skills use
 (including reading `.claude/skills/` directly) — this is confirmation of a
 converging standard rather than a novel mechanism, but the supporting-file
 path-resolution UX (showing both relative and resolved absolute paths,
-flagging the shell-cwd mismatch) is a nice small detail worth checking CBX's
+flagging the shell-cwd mismatch) is a nice small detail worth checking bbx's
 own skill-loading path handles equally well.
 
 **Hooks.** Goose's plugin-scoped, command-only hook system is a lighter-
-weight cousin of Claude Code's own hooks (which CBX's harness already builds
+weight cousin of Claude Code's own hooks (which bbx's harness already builds
 on, per this monorepo's `WorktreeCreate`/`WorktreeRemove` hooks) — nothing new
 to steal here, mostly confirms the pattern is industry-standard now (matcher
 regex + JSON-on-stdin + timeout + allow/deny).

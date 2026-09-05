@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" font-family="-apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="arr5" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arr5w" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" fill="#d97706"/>
+    </marker>
+  </defs>
+
+  <!-- nodes -->
+  <g font-size="13" font-weight="600" fill="#1f2933">
+    <rect x="20" y="40" width="120" height="52" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="80" y="62" text-anchor="middle">plan</text>
+    <text x="80" y="80" text-anchor="middle" font-size="11" font-weight="400" fill="#6b7280">issues attached</text>
+
+    <rect x="190" y="40" width="120" height="52" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="250" y="62" text-anchor="middle">build</text>
+    <text x="250" y="80" text-anchor="middle" font-size="11" font-weight="400" fill="#6b7280">in the worktree</text>
+
+    <rect x="360" y="40" width="140" height="52" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="430" y="62" text-anchor="middle">cross-model review</text>
+    <text x="430" y="80" text-anchor="middle" font-size="11" font-weight="400" fill="#6b7280">the other model family</text>
+
+    <rect x="550" y="40" width="120" height="52" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/>
+    <text x="610" y="62" text-anchor="middle">/finish</text>
+    <text x="610" y="80" text-anchor="middle" font-size="11" font-weight="400" fill="#6b7280">merge · test · settle</text>
+
+    <rect x="550" y="170" width="120" height="52" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+    <text x="610" y="192" text-anchor="middle">on main ✓</text>
+    <text x="610" y="210" text-anchor="middle" font-size="11" font-weight="400" fill="#6b7280">issues closed / tagged</text>
+
+    <rect x="360" y="170" width="140" height="52" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="430" y="192" text-anchor="middle" fill="#64748b">worktree culled</text>
+    <text x="430" y="210" text-anchor="middle" font-size="11" font-weight="400" fill="#94a3b8">workstream lives on</text>
+  </g>
+
+  <!-- forward arrows -->
+  <g stroke="#2563eb" stroke-width="2" fill="none" marker-end="url(#arr5)">
+    <path d="M140 66 L 186 66"/>
+    <path d="M310 66 L 356 66"/>
+    <path d="M500 66 L 546 66"/>
+    <path d="M610 92 L 610 166"/>
+    <path d="M546 196 L 504 196"/>
+  </g>
+
+  <!-- feedback arrow -->
+  <path d="M356 210 C 180 230, 100 190, 78 96" stroke="#d97706" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#arr5w)"/>
+  <text x="180" y="252" font-size="12" fill="#d97706" font-weight="600">human tries it, finds a wrinkle → resume the workstream</text>
+</svg>

@@ -8,13 +8,17 @@ labels: [soft-launch]
 resolution: implemented
 ---
 
-> **Done 2026-08-06.** The Zulip forum is live at https://callback-box.zulipchat.com/
+> **Superseded 2026-08-31.** The community moved to the
+> [Bee Box Discord server](https://discord.gg/FQYn6zyv); current public surfaces
+> link there.
+>
+> **Originally done 2026-08-06.** The Zulip forum was live at https://callback-box.zulipchat.com/
 > and linked in the root README under Community — the soft-launch discussion-channel
 > gate is satisfied. Any further cross-surface links fold into the README front-door
 > gate.
 
-The project's discussion forum is live on Zulip:
-[callback-box.zulipchat.com](https://callback-box.zulipchat.com/). It's listed in
+The project's discussion forum was live on Zulip:
+[callback-box.zulipchat.com](https://callback-box.zulipchat.com/). It was listed in
 the root `README.md` under Community. This is a small **findability** chore, not a
 build.
 
@@ -26,8 +30,9 @@ build.
 - **Weight:** no code of conduct, no moderation apparatus, no stream taxonomy up
   front. It's a small forum for people in his network; keep it that way.
 
-So the earlier open questions (who monitors, does the agent post, CoC, Zulip-vs-
-alternatives) are **closed by decision** — the answer is "light, human, Zulip."
+So the earlier open questions (who monitors, does the agent post, CoC, and
+platform choice) were **closed by decision** — the operating posture remains
+light and human, while the platform is now Discord.
 
 ## What's left: just make it findable
 

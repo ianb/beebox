@@ -1,7 +1,7 @@
 ---
 title: "Field-test scenario briefs name weekdays that don't match the box clock"
 workstream: integration-tests
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test run 2, whats-needed item
 labels: [field-test-findings, test-content]
@@ -19,7 +19,7 @@ The `onboarding-first-days` briefs narrate fictional wall time ("It's the
 next evening", "Saturday morning, a quiet moment") while the box clock is
 `startTime` plus the accumulated `advance-days` — which lands on unrelated
 weekdays. In run 2 the final item's brief said Saturday morning while
-CB_TIME was 2026-08-12, a Wednesday; the operator noticed the app "corrected"
+BBX_TIME was 2026-08-12, a Wednesday; the operator noticed the app "corrected"
 it ("Afternoon, actually — it's 2:41 on Sunday") and couldn't resolve whose
 clock was wrong.
 

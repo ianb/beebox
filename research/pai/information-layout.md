@@ -6,7 +6,7 @@ Sources:
 - `$PAI/PAI/MEMORY/KNOWLEDGE/README.md`
 - `$PAI/PAI/PULSE/PULSE.toml` (scheduling config)
 
-cb's comparable thinking is `docs/knowledge-taxonomy.md` (the knows-directly /
+bbx's comparable thinking is `docs/knowledge-taxonomy.md` (the knows-directly /
 knows-about / discoverable layering) and `docs/box-layout.md`. The two systems
 arrived at the same core architecture independently; the differences are at the
 edges, and a few of PAI's edges are better.
@@ -48,17 +48,17 @@ The stated token economics (from `IsaFormat.md` §Design Rationale): "**Referenc
 file pattern**: This spec lives at `~/.claude/PAI/DOCUMENTATION/IsaFormat.md`, not
 inline in CLAUDE.md. Saves ~2,500 tokens/response."
 
-**vs. cb:** same layering as `docs/knowledge-taxonomy.md` (always-loaded → rules
-triggered by path globs → referenced-but-not-loaded → discoverable), and cb's
+**vs. bbx:** same layering as `docs/knowledge-taxonomy.md` (always-loaded → rules
+triggered by path globs → referenced-but-not-loaded → discoverable), and bbx's
 ~3000-line generated agent guide already contains pointer sections. Differences
 worth noting:
 
 - PAI's always-loaded core is *who you are, who I am, what you're working toward,
   what's active* — identity and goals, with operational detail demoted to routing.
-  cb's guide leads with operational material (directory layout, commands, card
-  types) and has no goals layer to load. If cb adds telos (see
+  bbx's guide leads with operational material (directory layout, commands, card
+  types) and has no goals layer to load. If bbx adds telos (see
   [telos.md](./telos.md)), it belongs in the always-loaded tier.
-- PAI's routing is one flat, visually scannable table per topic area; cb's
+- PAI's routing is one flat, visually scannable table per topic area; bbx's
   pointers are distributed through guide prose. A consolidated topic→path table in
   the agent guide is a cheap legibility win and is also where a rule-routing table
   (see [prompts.md](./prompts.md) §3) naturally sits.
@@ -87,7 +87,7 @@ inward.** From `KNOWLEDGE/README.md`:
 > promoted into here only after curation. … Treat structure here as load-bearing —
 > schema changes ripple through every consumer.
 
-This is the same shape as cb's retro pipeline (transcripts → observation ledger →
+This is the same shape as bbx's retro pipeline (transcripts → observation ledger →
 integrated beliefs), generalized to all knowledge, not just beliefs about the
 boxholder.
 
@@ -114,22 +114,22 @@ From `MemorySystem.md:128-140`, the full contract:
 Three things here are genuinely good:
 
 1. **The lookup test** — a one-sentence membership rule ("would you look this up by
-   name?") that keeps an archive from becoming a junk drawer. cb's store
+   name?") that keeps an archive from becoming a junk drawer. bbx's store
    directories would benefit from membership tests this crisp in their briefings.
 2. **The decay lifecycle** — `seedling → budding → evergreen`, with unreferenced
-   seedlings auto-archived after 90 days. cb's evidence model promotes beliefs on
+   seedlings auto-archived after 90 days. bbx's evidence model promotes beliefs on
    recurrence but nothing ever demotes or expires; a symmetric rule (hypothesis
    beliefs untouched for N months → archived, or escalated to a question card)
    would keep the personality/guide cards honest. Same applies to any future
    knowledge store.
 3. **Topic as tag, not directory** — "Topic (security, AI, business) is a tag on
-   the entity, not a separate domain." Prevents the taxonomy explosion cb's
+   the entity, not a separate domain." Prevents the taxonomy explosion bbx's
    landmark system solves a different way (landmarks discovered by glob, not by a
    central registry).
 
 The 8 typed link types (supports, contradicts, extends, part-of, instance-of,
 caused-by, preceded-by, related) live in the Knowledge skill (`$PACKS/Knowledge/`);
-the only enforcement is prose. Probably more ontology than cb wants — but
+the only enforcement is prose. Probably more ontology than bbx wants — but
 `contradicts` alone is interesting, since "find conflicting claims" is a retro-like
 audit operation.
 
@@ -151,7 +151,7 @@ The taxonomy of *whose fault was it* (the infrastructure vs. the approach) is th
 useful bit — it routes the fix to the right surface (patch a hook vs. amend a
 guide). The capture mechanisms feeding it (SatisfactionCapture hook ratings,
 implicit sentiment) are the lightweight-signal approach we're explicitly not
-taking; cb retro's qualitative transcript mining feeds the same taxonomy fine.
+taking; bbx retro's qualitative transcript mining feeds the same taxonomy fine.
 
 ## 3. WORK: spec and log co-located, sync derived
 
@@ -162,8 +162,8 @@ pipeline is strictly one-directional (`IsaFormat.md` §Sync Pipeline):
 > The AI is the sole writer. Hooks only read. work.json is derived state. KV is
 > derived from work.json.
 
-That sentence is a good invariant statement, and it matches cb's stance (cards are
-canonical; `.callback-box/` artifacts are derived). PAI is stricter in one way:
+That sentence is a good invariant statement, and it matches bbx's stance (cards are
+canonical; `.beebox/` artifacts are derived). PAI is stricter in one way:
 *hooks never write the artifact*, so there's exactly one writer per file class.
 
 ## 4. Naming conventions
@@ -171,7 +171,7 @@ canonical; `.callback-box/` artifacts are derived). PAI is stricter in one way:
 Casing is used as a signal channel: SCREAMING_SNAKE for identity/goal files the
 human owns (`MISSION.md`, `DA_IDENTITY.md`, MEMORY dir names), PascalCase for
 skills/workflows/tools, camelCase for code, `*.hook.ts` suffix for hooks,
-`YYYYMMDD-HHMMSS_kebab` slugs for work dirs. Not better than cb's
+`YYYYMMDD-HHMMSS_kebab` slugs for work dirs. Not better than bbx's
 `Title.type.card` (which carries *machine-read* type information and validation);
 noted because it's at least consistent, and the type-in-filename principle is
 shared ("canonical discriminator: filename" in both systems).
@@ -191,14 +191,14 @@ Two ideas:
 
 - **Sentinel outputs.** A scheduled job whose output is a sentinel produces no
   notification. This is the right contract for "daily check that usually has
-  nothing to say," and maps directly onto cb scheduled scripts that end in
+  nothing to say," and maps directly onto bbx scheduled scripts that end in
   notification cards: define a sentinel (or a structured-output field) meaning
   "ran fine, nothing to report," and have finalize/notification dispatch skip it.
   Cheap, immediately useful.
 - **Cost class declared per job** (`script` = $0 vs `claude` = tokens), with
   per-job cost ceilings elsewhere in the config (`heartbeat_cost_ceiling = 0.01`).
-  cb has `maxBudgetUsd` on invocations; surfacing the cost class in the
-  scheduled-script card (and in `cb scheduler status` output) is a legibility win
+  bbx has `maxBudgetUsd` on invocations; surfacing the cost class in the
+  scheduled-script card (and in `bbx scheduler status` output) is a legibility win
   more than new capability.
 
 (The `[da]` section of this file configures DA heartbeat/diary/growth schedules —
@@ -212,19 +212,19 @@ PAI's privacy layout is structural: zones declared in code
 writes that move content across zones, `.pai-protected.json` at the repo root
 (protected files, secret-detection regexes, forbidden directories), and a
 12-gate shadow-release pipeline as "the ONLY sanctioned path" from private to
-public. cb's exposure profile is different (boxes aren't published), but cb does
+public. bbx's exposure profile is different (boxes aren't published), but bbx does
 have outbound paths — email, Telegram, deploy. A deterministic pattern scan over
-outbound cards at `cb finalize` time (PAI's egress-inspector idea: pattern
+outbound cards at `bbx finalize` time (PAI's egress-inspector idea: pattern
 matching, explicitly *not* LLM judgment) is the transferable piece.
 
-## Summary of layout-level takeaways for cb
+## Summary of layout-level takeaways for bbx
 
 1. Always-loaded tier should be identity + goals + active state, compressed via
    compile steps; operational detail demoted to an explicit topic→path routing
-   table. cb has the compile machinery; it lacks the goals content and the
+   table. bbx has the compile machinery; it lacks the goals content and the
    consolidated table.
 2. Adopt membership tests ("would you look this up by name?") and a decay
    lifecycle for inferred knowledge/beliefs.
-3. State the one-writer-per-file-class invariant where cb already practices it.
+3. State the one-writer-per-file-class invariant where bbx already practices it.
 4. Sentinel outputs for scheduled scripts; cost class surfaced on schedule cards.
 5. Pattern-based egress scan at finalize.

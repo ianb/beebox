@@ -1,16 +1,16 @@
 ---
 title: "Lightbox mobile gestures: double-tap to zoom + pan, swipe up/down to close"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked for it after using the lightbox on a phone
 resolution: implemented
-design: ../../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md
+design: ../../../beebox/docs/implemented-plans/lightbox-mobile-gestures.md
 ---
 
 **Closed (implemented + boxholder-confirmed) 2026-07-31.** Double-tap zoom + pan,
 pinch, and swipe-to-dismiss landed (`c326d4a5` + `299297e5`, design in
-[`lightbox-mobile-gestures.md`](../../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md)),
+[`lightbox-mobile-gestures.md`](../../../beebox/docs/implemented-plans/lightbox-mobile-gestures.md)),
 mode-aware so a vertical drag dismisses at fit and pans when zoomed. Boxholder
 confirms the gestures on a real device. A separate follow-up bug on rapid paging
 stays open:
@@ -79,7 +79,7 @@ matching rather than inventing — muscle memory is the whole point of a gesture
 ## What to try on the phone (manual-testing checklist, 2026-07-20)
 
 Implementation landed (`c326d4a5` + `299297e5`, design in
-`../../callback-box/docs/implemented-plans/lightbox-mobile-gestures.md`). Desktop
+`../../beebox/docs/implemented-plans/lightbox-mobile-gestures.md`). Desktop
 pointer-event testing verified the logic; the phone pass is about **feel and
 iOS specifics**:
 

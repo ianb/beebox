@@ -1,0 +1,26 @@
+{
+  // The Worker is bundled by wrangler/esbuild (and by vitest-pool-workers), so
+  // resolution is `bundler` and nothing here emits — tsc is typecheck-only.
+  // `types` pulls in the workerd globals (Request/Response/R2Bucket/...) and the
+  // `cloudflare:test` module surface; DOM is deliberately absent so the Worker
+  // is typed against workerd, not the browser.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "lib": ["ES2023"],
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["eslint.config.ts", "src/**/*", "test/**/*", "vitest.config.ts"]
+}

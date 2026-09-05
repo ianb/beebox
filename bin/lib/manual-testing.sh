@@ -26,7 +26,7 @@ workstream_confirm_tested() {
   [ -z "$(git -C "$WT_MONO" status --porcelain)" ] \
     || { echo "confirm-tested: main checkout must be clean" >&2; return 1; }
   local matches issue rel match_count
-  matches=$(find "$WT_MONO/issues" -type f -name "$basename" ! -path '*/closed/*')
+  matches=$(find "$WT_MONO/issues" -type f -name "$basename" ! -path '*/closed/*' ! -path '*/deferred/*')
   match_count=$(printf '%s\n' "$matches" | grep -c . || true)
   [ "$match_count" -eq 1 ] || { echo "confirm-tested: expected one open issue named $basename" >&2; return 1; }
   issue="$matches"
@@ -71,7 +71,7 @@ workstream_confirm_tested() {
       mv "$issue" "$target" || exit
     fi
     git -C "$WT_MONO" add -- "$rel" "$new_rel" || exit
-    pnpm --dir "$WT_MONO/callback-box" doc-check --fix >/dev/null || exit
+    pnpm --dir "$WT_MONO/beebox" doc-check --fix >/dev/null || exit
     git -C "$WT_MONO" commit --only -m "Confirm manual testing for ${basename%.md}" -- "$rel" "$new_rel" >/dev/null || exit
   ); then
     # Main was clean at preflight, so every tracked worktree/index change here

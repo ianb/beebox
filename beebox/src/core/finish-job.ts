@@ -1,0 +1,77 @@
+/**
+ * Core logic for finishing a job — deleting the job card and committing.
+ *
+ * Extracted from CLI `finish` command so it can be called programmatically.
+ */
+
+import * as path from "node:path";
+import * as fs from "node:fs/promises";
+import { stageAndCommitPaths } from "../lib/git.js";
+import { readCardFrontmatter } from "./card-io.js";
+import { invariant } from "../lib/invariant.js";
+import { errnoCode } from "../lib/error-guards.js";
+
+class JobDeleteError extends Error {
+  readonly jobPath: string;
+  constructor(jobPath: string, cause: unknown) {
+    super(`failed to delete job card: ${jobPath}`, { cause });
+    this.name = "JobDeleteError";
+    this.jobPath = jobPath;
+  }
+}
+
+export interface FinishJobParams {
+  boxRoot: string;
+  /** Job card path relative to boxRoot (e.g., "_bookkeeping/jobs/foo.intake.job.card") */
+  jobRelPath: string;
+}
+
+export async function finishJob(params: FinishJobParams): Promise<void> {
+  const { boxRoot, jobRelPath } = params;
+  const absPath = path.join(boxRoot, jobRelPath);
+
+  // Read the job card for context before deleting
+  let description = "";
+  let jobType = "";
+  try {
+    const content = await fs.readFile(absPath, "utf-8");
+    const desc = readCardFrontmatter(content)?.["description"];
+    if (typeof desc === "string") {
+      description = desc.trim();
+    }
+    const parts = path.basename(jobRelPath).split(".");
+    // parts: ["foo", "intake", "job", "card"]
+    if (parts.length >= 4) {
+      const candidate = parts[parts.length - 3];
+      invariant(candidate !== undefined, "checked parts.length >= 4 above, so index parts.length - 3 is in range");
+      jobType = candidate; // "intake"
+    }
+  } catch (_e) {
+    // Reading the card here is best-effort context for the commit message;
+    // if it's already gone or unreadable we proceed with empty desc/type
+    // and the unlink below handles the real "already gone" case.
+  }
+
+  // Delete the job file
+  try {
+    await fs.unlink(absPath);
+  } catch (err) {
+    const code = errnoCode(err);
+    if (code === "ENOENT") {
+      return; // Already gone
+    }
+    throw new JobDeleteError(absPath, err);
+  }
+
+  // Stage and commit the deletion
+  const commitMsg = description
+    ? `Finish job: ${description}`
+    : `Finish ${jobType || "unknown"} job`;
+
+  const trailers: Record<string, string> = {};
+  if (jobType) {
+    trailers["Job-Type"] = jobType;
+  }
+
+  await stageAndCommitPaths(boxRoot, { paths: [jobRelPath], message: commitMsg, trailers });
+}

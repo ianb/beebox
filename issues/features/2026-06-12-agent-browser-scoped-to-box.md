@@ -2,7 +2,8 @@
 title: "agent browser scoped to box"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
+priority: backlog
 ---
 
 The box agent can read and write box files directly, but it can't *see the rendered box the way the principal does* — the actual web UI: how a custom view renders, whether a card page shows anything (cf. the workshop `.sandbox.card` blank-page incident, 2026-06-12, where the agent built a correct view but had no way to look at it), whether a dashboard or interactive app actually works in the browser. The dev-side `bin/browse` (agent-browser wrapper) gives main-repo agents exactly this against the local dev router; the box agent has no equivalent against its own deployed box.

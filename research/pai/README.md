@@ -1,19 +1,19 @@
-# PAI review — comparison substrate for Callback Box planning
+# PAI review — comparison substrate for Bee Box planning
 
 A review of Daniel Miessler's **Personal AI Infrastructure** (PAI), written to inform
-Callback Box planning. Checkout: `~/src/Personal_AI_Infrastructure`. The runtime under
+Bee Box planning. Checkout: `~/src/Personal_AI_Infrastructure`. The runtime under
 review is release v5.0.0; throughout these docs:
 
 - `$PAI` = `~/src/Personal_AI_Infrastructure/Releases/v5.0.0/.claude` (the installable scaffold — this is what replaces a user's `~/.claude/`)
 - `$PACKS` = `~/src/Personal_AI_Infrastructure/Packs` (the same ~45 skills repackaged for standalone install)
-- cb paths are relative to `callback-box/` unless noted
+- bbx paths are relative to `beebox/` unless noted
 
 ## Documents
 
 | Doc | Contents |
 |---|---|
-| [isa.md](./isa.md) | The ISA primitive — spec quotes, a real example, what it actually is, what cb should take |
-| [telos.md](./telos.md) | TELOS life-context files + the identity pair — full template quotes, mapping onto cb's personality/boxholder layer |
+| [isa.md](./isa.md) | The ISA primitive — spec quotes, a real example, what it actually is, what bbx should take |
+| [telos.md](./telos.md) | TELOS life-context files + the identity pair — full template quotes, mapping onto bbx's personality/boxholder layer |
 | [prompts.md](./prompts.md) | The actual prompt text — system prompt, CLAUDE.md, Algorithm doctrine — quoted and annotated |
 | [information-layout.md](./information-layout.md) | How PAI organizes information: context loading, MEMORY tiers, knowledge lifecycle, rule routing |
 
@@ -38,7 +38,7 @@ Worth keeping in mind when reading any of these docs:
   "heartbeat / diary / growth" subsystem (`[da]` section) that no shipped code
   consumes. A comment in the same file says email triage, calendar reminders, and
   the morning brief run on a *second private DA* ("Devi") on another machine.
-  PAI's coverage of cb's core territory (inbound email/calendar processing) is
+  PAI's coverage of bbx's core territory (inbound email/calendar processing) is
   therefore mostly invisible.
 - **Almost nothing is validated.** The "types" are prose contracts in READMEs and
   doc files; the only machine-parsed structure is ISA frontmatter (read by sync
@@ -51,39 +51,39 @@ Worth keeping in mind when reading any of these docs:
 
 The two projects share a worldview — plain files over databases, filesystem-as-index
 over RAG, one named personal assistant, Claude Code as substrate — and diverge on one
-axis: **PAI encodes its pipeline as doctrine the model is trusted to follow; cb
+axis: **PAI encodes its pipeline as doctrine the model is trusted to follow; bbx
 encodes its pipeline as TypeScript with the model invoked at typed seams.** Almost
-every PAI mechanism has a cb counterpart that is smaller and enforced in code:
+every PAI mechanism has a bbx counterpart that is smaller and enforced in code:
 
-| Concern | PAI | Callback Box |
+| Concern | PAI | Bee Box |
 |---|---|---|
 | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle in code (`src/core/reactor/`, `docs/triage.md`) |
 | Task spec | ISA markdown file per task, model-maintained | job cards + procedures, schema-validated |
 | Output structure | visual format templates the model must self-enforce | `invokeStructured` with Zod; chat tags parsed by UI |
 | Identity | static user-authored `DA_IDENTITY.md` / `PRINCIPAL_IDENTITY.md` | evolving personality card with evidence model (`config/main.personality.card`) |
 | Learning | SessionEnd hooks + Learning Router (inline writes) | retro: post-hoc, audited, recurrence-gated (`src/cli/commands/retro.ts`) |
-| Scheduling | Pulse daemon, `[[job]]` cron in one TOML | `cb tick` + per-box `scheduled-script.card`s (`docs/scheduler.md`) |
-| Goals | TELOS files — **no cb counterpart exists** | — |
+| Scheduling | Pulse daemon, `[[job]]` cron in one TOML | `bbx tick` + per-box `scheduled-script.card`s (`docs/scheduler.md`) |
+| Goals | TELOS files — **no bbx counterpart exists** | — |
 | Safety | disclosure containment (zones, release gates) | action containment (staged output, question cards) |
 
 ## Recommendation summary (detail in the individual docs)
 
 **Adopt (high confidence):**
-1. **A goals/telos layer** — cb knows the boxholder's preferences but not their
+1. **A goals/telos layer** — bbx knows the boxholder's preferences but not their
    goals. The TELOS decomposition (mission / measurable goals / personal challenges /
-   beliefs / wisdom) is a usable starting taxonomy, and cb's evidence model
+   beliefs / wisdom) is a usable starting taxonomy, and bbx's evidence model
    (source + confidence) ports onto it directly. → [telos.md](./telos.md)
 2. **Done-criteria for procedure runs** — the kernel of ISA: a procedure run opens
    by writing testable claims about the end state ("one binary tool probe each"),
    checks them with evidence, and records where the spec was wrong. → [isa.md](./isa.md)
 3. **A rule-routing table for the agent** — PAI's "Self-Healing Infrastructure"
-   section maps *kind of rule → which surface it lives in*. cb has the surfaces
+   section maps *kind of rule → which surface it lives in*. bbx has the surfaces
    (guides, rules, schemas, CLAUDE.md) but no written routing. → [prompts.md](./prompts.md)
 4. **Explicit autonomy boundary in the personality surface** — `Can initiate: …` /
-   `Must ask: …`. cb enforces this structurally; stating it makes it legible and
+   `Must ask: …`. bbx enforces this structurally; stating it makes it legible and
    editable. → [telos.md](./telos.md)
 5. **Belief/knowledge decay** — KNOWLEDGE's `seedling → budding → evergreen` status
-   with 90-day expiry of unreferenced seedlings; cb retro beliefs gain confidence
+   with 90-day expiry of unreferenced seedlings; bbx retro beliefs gain confidence
    but never expire. → [information-layout.md](./information-layout.md)
 
 **Adopt (small, cheap):**
@@ -97,6 +97,6 @@ every PAI mechanism has a cb counterpart that is smaller and enforced in code:
 **Reject:**
 - The Algorithm as universal doctrine; tier ISC count floors (E4 ≥128 criteria);
   mandatory visual output formats; closed "thinking capability" enumerations;
-  pack-style distribution (cb explicitly chose knowledge-first
-  composition over plugins — `callback-box/docs/design/extensibility.md`); lightweight satisfaction-signal capture (Ian prefers
-  qualitative feedback; cb retro already mines transcripts qualitatively).
+  pack-style distribution (bbx explicitly chose knowledge-first
+  composition over plugins — `beebox/docs/design/extensibility.md`); lightweight satisfaction-signal capture (Ian prefers
+  qualitative feedback; bbx retro already mines transcripts qualitatively).

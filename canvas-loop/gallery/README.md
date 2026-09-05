@@ -4,7 +4,7 @@ The agent-exercise corpus: real tasks given to real agent runs against
 canvas-loop, kept with enough metadata to understand how the library performs
 across time, tasks, and models. This is not a demo folder — it's the evidence
 base the [`LIBRARY-PLAN.md`](../LIBRARY-PLAN.md) and
-[the design issue](../../issues/exploration/2026-07-13-canvas-tight-loop-agent-programming.md)
+[the design issue](../../issues/closed/exploration/2026-07-13-canvas-tight-loop-agent-programming.md)
 draw on.
 
 ## Schema

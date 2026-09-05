@@ -1,7 +1,7 @@
 ---
 title: "Worktree box clones lack attachment binaries — image cards 404 their images"
 workstream: lightbox-gestures
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-lightbox-gestures — every image in the lightbox rendered as alt text
 resolution: implemented
@@ -24,7 +24,7 @@ Root cause is **not** git-lfs and not a broken hook. The source box has the
 binaries (69 images in `~/src/boxes/test1`), and **none of them are tracked in
 git — by design.** Assets inside `*.attach/` scopes are deliberately gitignored
 and tracked by a per-dir `manifest.json` (size + sha256) instead; see
-`callback-box/docs/asset-manifests.md` and the `cb-assets` block in the box
+`beebox/docs/asset-manifests.md` and the `bbx-assets` block in the box
 `.gitignore`. So `git clone` faithfully reproduces the repository and the bytes
 were never in it.
 

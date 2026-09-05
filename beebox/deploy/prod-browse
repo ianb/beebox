@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+#
+# prod-browse — open the deployed server as the configured owner in the clean
+# browser profile used by bin/browse. The session cookie reaches that local
+# profile but must never be persisted in the repository.
+#
+# IDENTITY BOUNDARY: this authenticates only as BBX_OWNER_EMAIL. Do not alter it
+# to mint a session for another identity without the boxholder's express,
+# in-the-moment permission. See deploy/README.md.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck source=beebox/deploy/deploy-target.sh
+. "$SCRIPT_DIR/deploy-target.sh"
+require_deploy_target "$SCRIPT_DIR"
+
+if [[ -z "${BBX_DEPLOY_PUBLIC_URL:-}" ]]; then
+  echo "Error: BBX_DEPLOY_PUBLIC_URL is unset in $BBX_DEPLOY_TARGET_FILE — prod-browse" >&2
+  echo "  scopes the session cookie to it. See deploy/target.env.example." >&2
+  exit 1
+fi
+
+[ $# -ge 1 ] || { echo "usage: prod-browse <path>  (e.g. /box-family/)" >&2; exit 2; }
+REQ_PATH="$1"
+
+COOKIE=$(ssh -o ConnectTimeout=12 "$BBX_DEPLOY_SSH_TARGET" \
+  "bash -s -- $(printf '%q' "$BBX_DEPLOY_SERVICE_HOME")" <<'REMOTE'
+set -euo pipefail
+SERVICE_HOME="$1"
+set -a; . "$SERVICE_HOME/.env"; set +a
+if [[ -z "${BBX_OWNER_EMAIL:-}" ]]; then
+  echo "Error: BBX_OWNER_EMAIL is unset in $SERVICE_HOME/.env." >&2
+  exit 1
+fi
+BBX_SESSION_SECRET=$(cat "$SERVICE_HOME/.bbx-session-secret")
+export BBX_SESSION_SECRET
+node -e 'const c=require("crypto");const e=process.env.BBX_OWNER_EMAIL;const s=process.env.BBX_SESSION_SECRET;const p=JSON.stringify({email:e,name:e,exp:Date.now()+2592000000});const sig=c.createHmac("sha256",s).update(p).digest("hex");process.stdout.write(Buffer.from(p).toString("base64url")+"."+sig)'
+REMOTE
+)
+
+"$REPO_ROOT/bin/browse" cookies set bbx_session "$COOKIE" --url "$BBX_DEPLOY_PUBLIC_URL" --httpOnly --secure --sameSite Lax >/dev/null
+echo "opening ${BBX_DEPLOY_PUBLIC_URL}${REQ_PATH} as owner — follow with: bin/browse screenshot" >&2
+exec "$REPO_ROOT/bin/browse" open "${BBX_DEPLOY_PUBLIC_URL}${REQ_PATH}"

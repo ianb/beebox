@@ -2,7 +2,8 @@
 title: "typed log attachments on cards"
 workstream: unknown
 needs: [design]
-area: callback-box
+area: beebox
+priority: backlog
 ---
 
 A card should be able to carry **typed, append-only logs** as a first-class kind

@@ -1,9 +1,10 @@
 ---
 title: "Compressing subagent fan-out results, with a coverage invariant"
 workstream: elixir-skills-review
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+priority: backlog
 ---
 
 When we fan out subagents, each returns a full report straight into the parent's

@@ -20,7 +20,7 @@
 <div class="wrap">
 <nav class="topnav"><a href="agent-knowledge.html">Narrative</a> · <b>Skill rhythm</b> · <a href="viz-skill-pairs.html">Skill pairs</a> · <a href="viz-claude-constellation.html">CLAUDE.md tree</a></nav>
 <h1>Skill rhythm</h1>
-<p class="sub">Every time a skill fired, as a dot on a timeline — one lane per skill. You can see the cadence: <code>cb-plan</code>'s steady drumbeat, <code>codex</code> ramping through June, the <code>finish</code> bursts, and the brand-new craft cohort that's been <em>born but not yet used</em> (hollow markers).</p>
+<p class="sub">Every time a skill fired, as a dot on a timeline — one lane per skill. You can see the cadence: <code>bbx-plan</code>'s steady drumbeat, <code>codex</code> ramping through June, the <code>finish</code> bursts, and the brand-new craft cohort that's been <em>born but not yet used</em> (hollow markers).</p>
 <svg id="chart" viewBox="0 0 960 560" width="100%" role="img" aria-label="Timeline of skill invocations"></svg>
 <p><small>Hollow ◦ = skill created (first commit), no invocations yet. Solid ● = one invocation. Range: 2026-05-26 → 2026-06-21.</small></p>
 </div>
@@ -30,25 +30,25 @@ browse 2026-05-27
 browse 2026-06-01
 browse 2026-06-02
 browse 2026-06-09
-cb-plan 2026-05-30
-cb-plan 2026-05-30
-cb-plan 2026-06-04
-cb-plan 2026-06-08
-cb-plan 2026-06-09
-cb-plan 2026-06-09
-cb-plan 2026-06-11
-cb-plan 2026-06-12
-cb-plan 2026-06-13
-cb-plan 2026-06-14
-cb-plan 2026-06-17
-cb-plan 2026-06-18
-cb-plan 2026-06-18
-cb-plan 2026-06-18
-cb-plan 2026-06-18
-cb-plan 2026-06-20
-cb-plan 2026-06-21
-cb-plan 2026-06-21
-cb-plan 2026-06-21
+bbx-plan 2026-05-30
+bbx-plan 2026-05-30
+bbx-plan 2026-06-04
+bbx-plan 2026-06-08
+bbx-plan 2026-06-09
+bbx-plan 2026-06-09
+bbx-plan 2026-06-11
+bbx-plan 2026-06-12
+bbx-plan 2026-06-13
+bbx-plan 2026-06-14
+bbx-plan 2026-06-17
+bbx-plan 2026-06-18
+bbx-plan 2026-06-18
+bbx-plan 2026-06-18
+bbx-plan 2026-06-18
+bbx-plan 2026-06-20
+bbx-plan 2026-06-21
+bbx-plan 2026-06-21
+bbx-plan 2026-06-21
 claude-api 2026-06-12
 claude-api 2026-06-12
 codex 2026-06-08
@@ -82,8 +82,8 @@ update-config 2026-06-09`.trim().split("\n").map(l=>{const i=l.lastIndexOf(" ");
 
 // born-but-unused (the craft cohort) — hollow marker at birth, no dots
 const BORN = [
-  ["cb-debug","2026-06-20"], ["cb-codehealth","2026-06-20"],
-  ["cb-context","2026-06-20"], ["cb-frontend","2026-06-20"], ["skill-creator","2026-06-20"],
+  ["bbx-debug","2026-06-20"], ["bbx-codehealth","2026-06-20"],
+  ["bbx-context","2026-06-20"], ["bbx-frontend","2026-06-20"], ["skill-creator","2026-06-20"],
 ];
 
 const counts = {}; for(const [s] of EVENTS) counts[s]=(counts[s]||0)+1;
@@ -121,7 +121,7 @@ const seen={};
 for(const [s,d] of EVENTS){
   const key=s+d; seen[key]=(seen[key]||0)+1;
   const jit=((seen[key]-1)%4-1.5)*5;
-  const col = s==="cb-plan"?"#c98a18": s==="codex"?"#2255aa": s==="finish"?"#2a8a4a":"#888";
+  const col = s==="bbx-plan"?"#c98a18": s==="codex"?"#2255aa": s==="finish"?"#2a8a4a":"#888";
   svg.append(mk("circle",{cx:x(d),cy:yOf[s]+jit,r:4,fill:col,"fill-opacity":.82}));
 }
 </script>

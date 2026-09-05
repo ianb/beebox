@@ -1,7 +1,7 @@
 ---
 title: "Recovered dictation should have a minimum size before it's surfaced"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder
 resolution: implemented
@@ -17,7 +17,7 @@ silently clears smaller drafts through its existing `clearDraft()` path.
 
 Recovered dictation was surfaced whenever a `recoveredDraft` existed, with no
 size floor — `useRecoveredDictation`
-(`callback-box/src/frontend/src/components/chat/InteractiveChat-recovery.tsx:63`) gated only
+(`beebox/src/frontend/src/components/chat/InteractiveChat-recovery.tsx:63`) gated only
 on `recoveredDraft && !isTranscribing && !hqInFlight`. So a trivially small
 recovery (a word or two) still popped the recovery affordance, which was not worth
 the interruption.

@@ -1,10 +1,11 @@
 ---
 title: "Three layers each verify credentials independently — is that the right shape?"
 workstream: browse-back-url
-area: callback-box
+area: beebox
 filed-by: agent
-discovered-in: worktree-browse-back-url — adding CB_BROWSE_API_KEY touched six call sites across three layers
+discovered-in: worktree-browse-back-url — adding BBX_BROWSE_API_KEY touched six call sites across three layers
 needs: [decision]
+priority: important
 ---
 
 A request to a box in local dev crosses three authenticating layers, and each
@@ -20,12 +21,12 @@ and it is now the main cost of touching auth.
    or cold-starting anything. Per-box credentials resolve in
    `resolveMobileForBox` (`router-auth-deps.ts:128`); worktree Vite assets have
    their own separate rung, `resolveWorktreeAsset`.
-2. **`cb hub`** (`callback-box/src/hub/hub-server.ts`). Gates the HTTP
+2. **`bbx hub`** (`beebox/src/hub/hub-server.ts`). Gates the HTTP
    catch-all (`:478`) and the WebSocket upgrade (`:535`) through
    `hasMobileAuth` (`:148`) plus `decideHubAuth` (`:246`), then injects the
    identity headers the box trusts. `/api/boxes` (`:190`) reaches auth
    independently of both.
-3. **The box's own Fastify wall** (`callback-box/src/webapp/server-box-scope.ts`).
+3. **The box's own Fastify wall** (`beebox/src/webapp/server-box-scope.ts`).
    The preHandler ladder runs diag key (`:82`), agent bearer (`:91`), browse key
    (`:96`), mobile (`:102`), then session identity (`:107`) and `canAccessBox`
    (`:139`). The tRPC context (`:217`, `:242`) is a **fourth** verification
@@ -46,7 +47,7 @@ Each layer is individually defensible. The tension is only visible in aggregate.
 
 ## What it actually cost
 
-Adding `CB_BROWSE_API_KEY` (`callback-box/src/core/browse-key.ts`) needed six
+Adding `BBX_BROWSE_API_KEY` (`beebox/src/core/browse-key.ts`) needed six
 call sites: router per-box resolver, router worktree-asset resolver, hub
 catch-all, hub `/api/boxes`, box preHandler, box tRPC context.
 

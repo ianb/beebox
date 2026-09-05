@@ -1,6 +1,6 @@
 # Deep dive: channel capability asymmetry & unclear-input flow in OpenClaw and Hermes
 
-Sources: clones at `scratchpad/openclaw` and `scratchpad/hermes-agent` (paths below are relative to each repo root). Audience: Callback Box — we handle unclear input via async triage + question cards; this examines how two chat-first systems handle (Q1) capability asymmetry across channels and (Q2) ambiguous/unactionable input.
+Sources: clones at `scratchpad/openclaw` and `scratchpad/hermes-agent` (paths below are relative to each repo root). Audience: Bee Box — we handle unclear input via async triage + question cards; this examines how two chat-first systems handle (Q1) capability asymmetry across channels and (Q2) ambiguous/unactionable input.
 
 ---
 
@@ -209,7 +209,7 @@ Note the opposite defaults: OpenClaw defaults to **steer** (fold the new message
 
 ---
 
-## Takeaways for Callback Box
+## Takeaways for Bee Box
 
 1. **Neither system has async triage.** Both are strictly synchronous on ambiguity: OpenClaw has literally nothing (model's in-thread judgment only, zero prompt guidance); Hermes has one structured tool (`clarify`) that still blocks the turn and evaporates on timeout ("use your best judgement and proceed"). Nobody persists an open question. Our question-card model has no equivalent in either codebase — the closest structural cousin is their *approval* flows, which do persist a pending decision with an id, a multi-surface rendering, and a resolution callback. An approval is a question card with exactly one schema.
 2. **Capability degradation ladders are the mature pattern**: buttons → reaction taps → numbered/typed text fallback, in both systems independently. Hermes's `send_clarify` base implementation is the cleanest: a universal text rendering plus `mark_awaiting_text` next-message capture means the feature works on 100% of platforms and merely gets nicer where buttons exist.

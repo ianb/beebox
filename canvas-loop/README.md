@@ -240,7 +240,7 @@ host-side choice.
 ### Persistence is host composition
 
 Persistence isn't a component feature — it falls out of controlled mode. Own the
-values in the host and write them wherever you like (a callback-box card,
+values in the host and write them wherever you like (a beebox card,
 `localStorage`, anything):
 
 ```tsx

@@ -7,7 +7,7 @@ dist/
 # never become repository state.
 /logs/
 
-# Deploy build checkout + latest-wins lock state (see callback-box/deploy/deploy.sh).
+# Deploy build checkout + latest-wins lock state (see beebox/deploy/deploy.sh).
 # The checkout is a disposable detached git worktree; the other two are runtime
 # lock/coordination files. All live at the main repo root.
 /.deploy-checkout/
@@ -17,6 +17,12 @@ dist/
 # Per-worktree dev config
 .env
 .overmind.sock
+
+# Document-comment store mount (docs/plans/document-comments.md). A symlink to
+# the store beside the main checkout; comments are a communication medium and
+# never repository state. NO trailing slash — a dir-only pattern does not match
+# a symlink, which would make the mount stageable.
+/comments
 
 # Personal commit blocklist (the guard's strings live here, never in git).
 # The tracked .commit-blocklist.example documents the format.
@@ -32,7 +38,7 @@ AGENTS.md
 .codex/
 
 # Claude Code worktrees (the WorktreeCreate hook puts ours at
-# ~/src/callback-worktrees/ instead, but the default location would still
+# ~/src/beebox-worktrees/ instead, but the default location would still
 # be created if the hook is somehow bypassed)
 .claude/worktrees/
 
@@ -60,7 +66,7 @@ scratch/*
 !scratch/README.md
 
 # Prompt viewer generated data (regenerate with `pnpm prompt-viewer` in
-# callback-box). The size ledger (size-ledger.jsonl) and index.html are tracked.
+# beebox). The size ledger (size-ledger.jsonl) and index.html are tracked.
 dev/prompts/data.json
 
 # Story-eval triage process is NOT tracked (boxholder, 2026-07-22): extraction
@@ -68,8 +74,7 @@ dev/prompts/data.json
 # committed (promoted nuggets in site/, rubric/prompt revisions, distilled
 # learnings folded into the subplan). The app + prompts + ingest tool stay
 # tracked as real code.
-dev/story-eval/runs/
-dev/story-eval/verdicts/
+dev/apps/story-eval/runs/
 
 # OpenGrep SARIF/JSON scan output
 .opengrep-out/
@@ -77,3 +82,38 @@ dev/story-eval/verdicts/
 # Private-issues shadow-repo mount (a SYMLINK in every checkout — no trailing
 # slash: dir-only patterns do not match symlinks). See issues/CLAUDE.md.
 /private-issues
+
+# Exhibit-store mount (same symlink rule — bin/lib/exhibits-store.sh; design
+# in beebox/docs/plans/workstream-exhibits.md).
+/exhibits
+beebox/user-stories/work/
+
+# Workflow scripts, built from the `.ts` sources beside them by
+# `user-stories/pipeline/build-workflows.ts`. The Workflow tool parses plain
+# JavaScript and cannot import anything, so the runnable form has to be `.mjs`;
+# only the TypeScript is committed. Build before invoking one.
+
+# Journey assets. Photographs are committed once compressed (a few hundred KB of
+# webp) so a journey is self-contained and runnable from a clean checkout.
+# Anonymized mail stays out until the boxholder has read it, since it is derived
+# from a real family's inbox — prepare.ts fails loudly naming anything absent.
+beebox/user-stories/journeys/E-school/assets/
+
+# Per-machine schedule overrides (beebox/docs/plans/scheduled-workstreams.md,
+# Track A): same schema as schedule.yaml, every field optional, so a laptop can
+# disable a schedule without a commit.
+schedules/*/local.yaml
+# Embedding/search cache for `bin/issues` (see bin/CLAUDE.md). Disposable: a
+# delete just means the next run re-embeds the whole queue, which costs money
+# rather than correctness.
+/.issues-index
+
+# Tailscale sidecar credentials (docker-install.md)
+beebox/docker/tailscale.env
+
+# tap's run artifacts. Ignored in beebox/ too, but tap writes them into
+# whatever directory it is invoked from, and a doctest run from the repo root
+# (rather than from `beebox/`) lands them here — where their processinfo JSON
+# records absolute home paths and the next `git add -A` trips path-leak-check.
+# The root is not a tap project, so this is litter wherever it appears.
+.tap/

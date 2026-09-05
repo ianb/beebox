@@ -2,7 +2,7 @@
 title: "v1-removal residue: stale legacy-box src comments + flat scenario boxes"
 workstream: unknown
 
-area: callback-box
+area: beebox
 ---
 
 Fallout from the box-shape v1 removal (`docs/plans/remove-box-shape-v1.md`,
@@ -34,14 +34,14 @@ Sites (verified stale-misleading): `core/asset-manifest-scan.ts:87`,
 
 Leave as-is (not this cleanup): `core/box/index.ts:94` ("legacy box" = a box
 lacking a migrations manifest, unrelated to shape), `cli/commands/view.ts:54`
-("(v1)" = the `cb view test` render-feature version), and
+("(v1)" = the `bbx view test` render-feature version), and
 `lib/box-shape.ts:206-234` (`findLegacySchemaFiles` is a still-live stray-file
 detector referencing the old location as historical fact).
 
 ## 2. Flat scenario boxes break under strict `getBoxShape`
 
 The scenario fixtures `intake-basic`, `tick-basic`, `tick-chain` under
-`~/src/boxes/scenarios/` are still flat, pre-v2 boxes (`.cb-box` has no
+`~/src/boxes/scenarios/` are still flat, pre-v2 boxes (`.bbx-box` has no
 `shapeVersion`, or is `{}`; no `content/` nesting). Step 1a converted the in-repo
 test fixtures but not these external scenario dirs. Under strict `getBoxShape` a
 marker without `shapeVersion >= 2` is a hard `BoxShapeError`, so any command that

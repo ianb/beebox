@@ -1,7 +1,7 @@
 ---
 title: "hub-e2e doctest times out under parallel suite runs"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main — scheduled agent-SDK update (0.3.210 → 0.3.214)
 resolution: implemented
@@ -11,7 +11,7 @@ Resolved by commit `6d3c7073`, which gives this deliberately heavy test a
 10-minute file-local TAP timeout and two-minute startup readiness polls. The
 shorter teardown polls stay unchanged so orphaned processes still fail quickly.
 
-`test/hub/hub-e2e.doctest.md` failed twice in a row in full `pnpm -C callback-box test`
+`test/hub/hub-e2e.doctest.md` failed twice in a row in full `pnpm -C beebox test`
 runs, both times as `waitFor: timed out` at `test/hub/hub-e2e.doctest.md:51` (the
 30s poll wrapper), with the whole file taking ~31s. In isolation
 (`pnpm exec tap run test/hub/hub-e2e.doctest.md`) it passes 8/8 in ~5s.

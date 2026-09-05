@@ -7,14 +7,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { buildRunFile, IngestError, type RawNugget } from "./ingest.js";
 
-const DOC = "callback-box/docs/example.md";
+const DOC = "beebox/docs/example.md";
 
 // A valid raw nugget whose span is a substring of `sampleDoc` below.
 function nugget(overrides?: Partial<RawNugget>): RawNugget {
   return {
     slug: "unconventional-choice",
     span: "the filesystem is the database",
-    gloss: "cb stores state as files, not rows.",
+    gloss: "bbx stores state as files, not rows.",
     tags: ["filesystem", "storage"],
     criteria: [1, 3],
     confidence: "strong",
@@ -22,7 +22,7 @@ function nugget(overrides?: Partial<RawNugget>): RawNugget {
   };
 }
 
-const sampleDoc = "Callback box is unusual: the filesystem is the database, and git is history.\n";
+const sampleDoc = "Bee Box is unusual: the filesystem is the database, and git is history.\n";
 
 function ingest(rawJson: unknown, docText?: string): ReturnType<typeof buildRunFile> {
   return buildRunFile({

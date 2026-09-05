@@ -1,9 +1,9 @@
 ---
 title: "Publish-pages: resume the Cloudflare publishing feature"
 workstream: publish-pages
-area: callback-box
+area: beebox
 needs: [manual-testing]
-design: ../../callback-box/docs/plans/publish-pages.md
+design: ../../beebox/docs/plans/publish-pages.md
 priority: important
 ---
 
@@ -11,7 +11,7 @@ Handoff for the external-publishing feature (publish box docs/views to public(is
 Cloudflare-hosted URLs). Most of it is built and committed on branch
 `worktree-publish-pages`; the remaining work needs a live Cloudflare account and is
 best finished in a fresh session. Full design + security review:
-[publish-pages.md](../../callback-box/docs/plans/publish-pages.md).
+[publish-pages.md](../../beebox/docs/plans/publish-pages.md).
 
 ## What's done (committed on `worktree-publish-pages`, 11 commits, all tested)
 
@@ -32,10 +32,10 @@ best finished in a fresh session. Full design + security review:
 - **Track D** — Worker-side Cloudflare **Access JWT** validation for account tiers
   (RS256 pinned, aud/iss/exp checked, JWKS cached, fail-closed), per-pub allowlist,
   per-view access logging. Tested with a stubbed in-test keypair.
-- **Track E (partial)** — `cb pub draft` (render + leak-scan + write + human-gated
-  commit), `cb pub ls`, `cb pub revoke`, `cb pub go` (the **human flip**: TTY confirm,
+- **Track E (partial)** — `bbx pub draft` (render + leak-scan + write + human-gated
+  commit), `bbx pub ls`, `bbx pub revoke`, `bbx pub go` (the **human flip**: TTY confirm,
   refuses non-TTY, bundle-first/manifest-last upload). Leak scan in
-  `src/publish/leak-scan.ts`. **`cb pub setup` and `cb pub status` are NOT done.**
+  `src/publish/leak-scan.ts`. **`bbx pub setup` and `bbx pub status` are NOT done.**
 - **Track F** — submit endpoint (`pub-worker/src/submit.ts`, twice-enforced
   no-public-submit, tier-based submitter identity, size/cap limits) + the pull
   connector (`src/connectors/publish-submissions.ts`, land-then-delete, idempotent) +
@@ -46,8 +46,8 @@ best finished in a fresh session. Full design + security review:
 
 ## What remains
 
-1. ~~**`cb pub setup`**~~ DONE (plus `cb pub status`) — merged to `main` in
-   `0597b59f` (`feat(publish): cb pub setup + cb pub status behind an
+1. ~~**`bbx pub setup`**~~ DONE (plus `bbx pub status`) — merged to `main` in
+   `0597b59f` (`feat(publish): bbx pub setup + bbx pub status behind an
    injectable Cloudflare client (Track E)`, via `worktree-agent-ab7a0f30e32308676`).
    Implemented behind an
    injectable `CloudflareProvisioningClient` (`src/services/cloudflare-provisioning.ts`,
@@ -62,10 +62,10 @@ best finished in a fresh session. Full design + security review:
    has been made; iterate their specifics during the live pass (exact endpoints to
    check: R2 bucket GET/POST, `workers/subdomain`, `workers/scripts/<name>/settings`,
    `workers/scripts/<name>/subdomain` with `previews_enabled`).
-2. **End-to-end verification** (plan step 7): `cb pub draft` a doc → `cb pub go` (needs
+2. **End-to-end verification** (plan step 7): `bbx pub draft` a doc → `bbx pub go` (needs
    a TTY; the human types the pub-id) → fetch the `workers.dev` URL, confirm it serves
-   + carries the strict headers → `cb pub revoke` → confirm 410. Then a `secret`-tier
-   submission → confirm the connector lands a `pub-submission` card on `cb wakeup`.
+   + carries the strict headers → `bbx pub revoke` → confirm 410. Then a `secret`-tier
+   submission → confirm the connector lands a `pub-submission` card on `bbx wakeup`.
 3. **Views subplan** — `docs/plans/publish-view-snapshot.subplan.md` (referenced by the
    plan, not yet written): the publish-mode view host, runtime bundling, and the
    p5/figure-CSP question. Extends publishing beyond docs.
@@ -84,27 +84,27 @@ best finished in a fresh session. Full design + security review:
   rides `wrangler login`, the connector reads
   `config/connectors/publish.secret.json` (ingestion-bucket-scoped token), and the
   ingestion data moved to a second R2 bucket. See
-  [pub-setup-wrangler](../../callback-box/docs/implemented-plans/pub-setup-wrangler.md). The
-  original text (for archaeology): lived in `~/.cb-publish.env` (mode 600, outside the repo — machine-
+  [pub-setup-wrangler](../../beebox/docs/implemented-plans/pub-setup-wrangler.md). The
+  original text (for archaeology): lived in `~/.beebox-publish.env` (mode 600, outside the repo — machine-
   level like the Google OAuth creds). Holds `CLOUDFLARE_API_TOKEN` +
   `CLOUDFLARE_ACCOUNT_ID`. Still needs `CLOUDFLARE_R2_BUCKET` added once a bucket name
   is chosen in setup. Source it with
-  `set -a; . ~/.cb-publish.env; set +a`. **One-token REST model** — no separate R2 S3
+  `set -a; . ~/.beebox-publish.env; set +a`. **One-token REST model** — no separate R2 S3
   token needed. NOTE: the token was pasted into an earlier chat, so **rotate it** once
   the feature is proven.
-- **The human-flip is intentional**: `cb pub go` refuses a non-TTY stdin and never
+- **The human-flip is intentional**: `bbx pub go` refuses a non-TTY stdin and never
   auto-flips. For an end-to-end test the human runs `go` and types the pub-id; automated
   tests inject a confirm stub. Don't "fix" this by adding a `--yes` that the agent can use.
 
 ## Open security decision (not yet made)
 
 **Least-privilege R2 token.** The single management token (Workers Scripts:Edit +
-R2:Edit) is used by everything, including the connector that runs every `cb wakeup`. A
+R2:Edit) is used by everything, including the connector that runs every `bbx wakeup`. A
 box compromise would then hand an attacker a token that can **redeploy the pub Worker**
 (take over the public surface), not just read/write R2 objects. A scoped R2-only token
-for the connector (with the broad token reserved for one-time `cb pub setup`) is the
+for the connector (with the broad token reserved for one-time `bbx pub setup`) is the
 hardening — at the cost of a second credential. Deferred for v1 simplicity; the Worker
-being versioned in git + the `cb pub status` drift check bound the risk. Decide before
+being versioned in git + the `bbx pub status` drift check bound the risk. Decide before
 this goes anywhere beyond the boxholder's own account.
 
 ## Manual testing

@@ -14,7 +14,7 @@ before the fake server answers the check request.
 test/run-target.doctest.md`) in a full `pnpm test` run of `scan-uploader/`
 (`{ total: 172, pass: 169, fail: 3 }`), but passed cleanly (16/16, ~440ms) run
 in isolation (`npx tap test/run-target.doctest.md`). Shape matches the
-tracked-flake pattern documented for callback-box's suite: a real-clock
+tracked-flake pattern documented for beebox's suite: a real-clock
 doctest (this one spins up a real HTTP fake-scan-server and runs several
 `runTarget` subtests with `setTimeout`/`sleep`-based polling) that's fine
 alone but starves for CPU time under the full suite's parallel job count.

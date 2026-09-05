@@ -4,7 +4,7 @@ description: "Callback values transparency — errors and unexpected states must
 metadata: 
   node_type: memory
   type: feedback
-  originSessionId: 6f088193-eb30-436c-80cb-1b6a986f9034
+  originSessionId: 6f088193-eb30-436c-80bbx-1b6a986f9034
 ---
 
 Transparency is a core principle for callback. Concretely:

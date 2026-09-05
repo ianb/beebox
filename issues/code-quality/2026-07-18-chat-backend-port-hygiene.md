@@ -1,10 +1,13 @@
 ---
 title: "Chat backend port hygiene: keep SDK types inside the port, own our transcripts"
-workstream: backend-research
-area: callback-box
+workstream: chat-session-identity
+area: beebox
 filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research
+priority: backlog
 ---
+
+> `invalid?` checked 2026-09-05: not invalid. Item 3 is closed by the recorded 2026-08-26 decision (no durable transcript). Items 1 and 2 are unimplemented — `ChatBackendMessage = SDKMessage | …` still leaks the SDK type (`claude-chat-types.ts`), `adaptSdkMessage` still lives outside the port, `ChatMessageStreamEvent` still carries the raw stream event. Item 4 is undecided.
 
 The [coupling audit](../../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md)
 (Layers 2–3) found the chat backend port leaks SDK types, and our history subsystem
@@ -30,6 +33,14 @@ stand on their own as hygiene, whether or not a second backend ever exists:
    decouple history from the engine's store and remove the encoding hazards.
    Biggest of the three; needs a migration story for existing transcripts.
 
+   **Decision 2026-08-26 (boxholder, `chat-session-identity`):** transcripts do
+   not go into the box's git repository. A durable box-owned transcript would be
+   a separate storage mechanism, and is not planned. The cluster this item
+   anchored is handled instead by recording `engine` and `origin` on the husk
+   ([plan](../../beebox/docs/implemented-plans/chat-session-identity.md)); `contains-evidence`
+   remains the durable record past retention. Revisit item 3 only if retention
+   loss exceeds what the review account preserves, or a third engine arrives.
+
 4. **(Boxholder, 2026-07-18) Consider file-reference images over inline blocks.**
    Chat uploads could be written into the box (alongside existing attachment
    conventions) and sent as paths for the agent to Read, instead of base64
@@ -42,3 +53,10 @@ stand on their own as hygiene, whether or not a second backend ever exists:
 Order matters: 1 and 2 are mechanical; 3 is a design (and 4 folds into its
 design space). Doing 1 first makes 3's "log the wire messages" trivially
 well-defined.
+
+**Addendum 2026-08-25** (from the [oh-my-pi review](../../research/backend-alternatives/2026-08-25-oh-my-pi.md)):
+add to the engine contract "validator findings reach the model within the same
+turn". The Codex engine plan recorded losing this (validation now fails the turn
+with no feedback), and the Claude plugin's PostToolUse path dropped the SDK
+in-process validator's advisory context. omp's `tool_result` rewrite is the
+reference shape.

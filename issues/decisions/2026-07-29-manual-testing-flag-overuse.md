@@ -2,10 +2,11 @@
 title: "needs: [manual-testing] is being over-applied — recalibrate when agents add it"
 workstream: unknown
 area: process
-design: ../../callback-box/docs/implemented-plans/workstreams.md
+design: ../../beebox/docs/implemented-plans/workstreams.md
 filed-by: agent
 discovered-in: finish-skill-audit worktree — boxholder remark while reviewing /finish changes
 needs: [decision]
+priority: important
 ---
 
 While approving the /finish edits (2026-07-29), Ian noted that

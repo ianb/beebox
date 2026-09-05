@@ -1,7 +1,7 @@
 ---
 title: "Box-content linting: shellcheck procedure-card shells + duplicate-key guard"
 workstream: openclaw-security-lints
-area: callback-box
+area: beebox
 labels: [lint, security, openclaw-borrow]
 filed-by: agent
 discovered-in: worktree-openclaw-security-lints — while scoping shellcheck for embedded box shell
@@ -11,7 +11,7 @@ priority: normal
 
 Distinct scope from the dev-repo hooks
 ([../code-quality/2026-07-24-security-precommit-hooks.md](../code-quality/2026-07-24-security-precommit-hooks.md)):
-this validates **box content**, so it belongs in `cb`'s card-validation path
+this validates **box content**, so it belongs in `bbx`'s card-validation path
 (per-box), not the monorepo pre-commit.
 
 `.card` files are YAML, schema-validated on load (`src/cards/schema.ts`). Two
@@ -30,7 +30,7 @@ gaps that schema validation can't cover:
   duplicate-key/tab guard**, not a full yamllint (schema validation already beats
   yamllint on structure/types).
 
-**Needs design:** where these hook into `cb` (card save? a `cb validate` pass?
+**Needs design:** where these hook into `bbx` (card save? a `bbx validate` pass?
 box pre-commit?), how per-box vs. repo-wide, and how failures surface to the
 authoring agent. The duplicate-key guard is lower priority — only worth it if we
 actually see cards corrupt this way.

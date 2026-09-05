@@ -16,8 +16,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Keep the parser out of the already-large app bundle so routine builds remain warning-free.
-          return id.includes("@markdoc/markdoc") ? "markdown" : undefined;
+          // Keep the two document-rendering payloads out of the already-large
+          // app bundle so routine builds remain warning-free. Separate chunks
+          // because they answer to different views: every rendered document
+          // needs the parser, and every source file needs the highlighter.
+          if (id.includes("@markdoc/markdoc")) return "markdown";
+          if (id.includes("highlight.js")) return "highlight";
+          return null;
         },
       },
     },
@@ -30,7 +35,7 @@ export default defineConfig({
       "/workstreams/api": {
         target: `http://127.0.0.1:${backendPort}`,
         changeOrigin: true,
-        ...(routerCapability ? { headers: { "x-cb-workstreams-capability": routerCapability } } : {}),
+        ...(routerCapability ? { headers: { "x-bbx-workstreams-capability": routerCapability } } : {}),
       },
     },
   },

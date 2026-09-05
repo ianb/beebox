@@ -50,7 +50,7 @@ jobs:
           pnpm --dir site test
 
       - name: Build site
-        run: pnpm --dir site build --base /callback-box/
+        run: pnpm --dir site build --base /beebox/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

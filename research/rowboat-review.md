@@ -1,4 +1,4 @@
-# Rowboat vs Callback Box — competitive note
+# Rowboat vs Bee Box — competitive note
 
 *Reviewed 2026-07-08 from the Show HN (https://news.ycombinator.com/item?id=48819808) and Rowboat's pitch. A dated snapshot of both systems as they stood; not maintained as our code evolves.*
 
@@ -6,7 +6,7 @@
 
 **Rowboat** is an open-source, **local-first desktop app** billed as an alternative to Claude Desktop — but organized around *work surfaces* rather than a chat box. Its thesis: *"it's not enough for the AI to be right, the help has to show up where the work is happening."* Data *"lives on your machine as plain Markdown,"* it runs without their servers, and you can point it at local models (Ollama/LM Studio). Built-in surfaces cover email, meeting notes, a browser, parallel coding, and notes. The headline capability: **you build your own work surfaces (web apps) inside Rowboat — each app gets its own UI and a background agent** — and the community ships more by publishing a GitHub repo and registering it. (Its background email agent *"pre-creates drafts for important emails"* and learns your writing style.)
 
-**Callback Box**, for contrast: cards-first, **filesystem + git as the database**, the Claude Agent SDK as a rented loop, one box = one agent = one human, agent-*generated* views attached to cards, proactivity via schedules → wakeup → reactor over job cards, served through a hub to a browser (not a desktop app).
+**Bee Box**, for contrast: cards-first, **filesystem + git as the database**, the Claude Agent SDK as a rented loop, one box = one agent = one human, agent-*generated* views attached to cards, proactivity via schedules → wakeup → reactor over job cards, served through a hub to a browser (not a desktop app).
 
 This is the closest external parallel we've scouted — closer than OpenClaw/Hermes on the *product* thesis, if not the architecture.
 
@@ -19,7 +19,7 @@ This is the closest external parallel we've scouted — closer than OpenClaw/Her
 
 ## The real divergences (different bets)
 
-| Axis | Rowboat | Callback Box |
+| Axis | Rowboat | Bee Box |
 |---|---|---|
 | Shell | **Desktop app** (Electron-ish), its own runtime | Claude-Code-operated; hub → browser; git-native |
 | Agent granularity | **One background agent per work-surface/app** | Box-wide reactor + chat agents; views are agent-*generated*, not agent-*owned* |

@@ -1,5 +1,5 @@
 // The dev demo: two <SketchFigure> instances proving the ./react component
-// embeds outside callback-box (this is a plain client page, no callback-box
+// embeds outside beebox (this is a plain client page, no beebox
 // import anywhere in ./react). Bundled by dev-demo/build.ts into the tracked,
 // self-contained dev/canvas-loop.html. Imports the component through its public
 // package name — exactly how a consumer would.
@@ -114,7 +114,7 @@ function App(): JSX.Element {
       <header className="demo-header">
         <h1>canvas-loop · &lt;SketchFigure&gt;</h1>
         <p className="demo-note">
-          The <code>@ianbicking/canvas-loop/react</code> component embedding two TEA sketches — no callback-box in
+          The <code>@ianbicking/canvas-loop/react</code> component embedding two TEA sketches — no beebox in
           sight. Drag on a canvas, move the sliders, reload the page.
         </p>
       </header>

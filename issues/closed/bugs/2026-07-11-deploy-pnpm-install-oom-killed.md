@@ -10,7 +10,7 @@ resolution: implemented
 **Resolved** (worktree `fix-bugs`, 2026-07-11): implemented option 2/4 (retry
 with backoff) — the bare `pnpm install --frozen-lockfile` in the remote
 heredoc is now wrapped in an `install_with_retry` function
-(`callback-box/deploy/deploy.sh:430-448`) that retries up to 3 attempts,
+(`beebox/deploy/deploy.sh:430-448`) that retries up to 3 attempts,
 **only** on exit 137, with 60s then 180s backoff between attempts, logging
 each retry to stderr; a non-137 failure or a third 137 fails immediately and
 returns the code so the deploy still fails loudly. Options 1 and 3 (add swap /
@@ -27,7 +27,7 @@ Deploy failed (exit 137)
 ```
 
 Checked the server directly (`deploy/ssh-server.sh "free -h"`): 3.7Gi total
-RAM, ~830Mi free, **0B swap**. `ps aux --sort=-%mem` showed 7 running `cb serve`
+RAM, ~830Mi free, **0B swap**. `ps aux --sort=-%mem` showed 7 running `bbx serve`
 box processes plus 5 concurrent `claude-agent-sdk` subprocesses (active box
 agent sessions) already consuming the bulk of it — `pnpm install` on the deploy
 checkout needs enough headroom to resolve/link the workspace, and there wasn't

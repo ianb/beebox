@@ -1,7 +1,7 @@
 ---
 title: "behavioral profile"
 workstream: unknown
-area: callback-box
+area: beebox
 ---
 
 A specific cut of the user-model work (see [User-model dimensions](2026-05-19-user-model-dimensions.md)): a profile of what the boxholder wants done autonomously vs. wants to be consulted on. The agent decides this constantly ("just do it, or confirm first?") and miscalibration is visible in both directions — too cautious produces nag fatigue, too autonomous produces unwelcome surprises.

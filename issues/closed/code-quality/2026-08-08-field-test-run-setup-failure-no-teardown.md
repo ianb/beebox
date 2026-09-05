@@ -14,7 +14,7 @@ resolution: implemented
 > server is stopped and `results.json` + `report.md` are written.
 
 
-`runFieldScenario` (`callback-box/src/field-test/run.ts`) starts the dedicated
+`runFieldScenario` (`beebox/src/field-test/run.ts`) starts the dedicated
 server, writes the operator's system prompt, and calls `startOperatorSession()`
 — all *before* the `try { ... } finally { ... }` block that owns teardown and
 now (as of Track 5) writes `results.json` + `report.md`. If `startOperatorSession`

@@ -2,7 +2,7 @@
 title: "Watch for a Claude worktree-isolation off switch"
 workstream: streams-and-issues
 area: tooling
-design: ../../../callback-box/docs/implemented-plans/workstreams.md
+design: ../../../beebox/docs/implemented-plans/workstreams.md
 filed-by: agent
 discovered-in: worktree-workstreams — reviewing the landing and router action boundaries
 resolution: wontfix

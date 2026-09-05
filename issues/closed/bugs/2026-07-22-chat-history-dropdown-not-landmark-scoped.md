@@ -1,7 +1,7 @@
 ---
 title: "Chat history dropdown lists all chats, not just the current landmark's"
 workstream: unknown
-area: callback-box
+area: beebox
 filed-by: agent
 discovered-in: main session — boxholder in a landmark-scoped chat
 resolution: implemented

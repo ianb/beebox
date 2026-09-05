@@ -5,7 +5,7 @@ device="${1:-booted}"
 base_url="${2:-http://127.0.0.1:3210/main/test1}"
 label="${3:-Local test box}"
 session="${4:-}"
-bundle_id="app.callbackbox.ios"
+bundle_id="app.beebox.ios"
 
 data_dir="$(xcrun simctl get_app_container "$device" "$bundle_id" data)"
 store_dir="$data_dir/Library/Application Support"

@@ -1,0 +1,10 @@
+{
+  "name": "beebox-claude",
+  "version": "0.1.0",
+  "description": "Native Claude Code lifecycle and validation integration for Bee Box",
+  "author": {
+    "name": "Bee Box"
+  },
+  "license": "GPL-3.0-or-later",
+  "keywords": ["beebox", "claude-code", "validation"]
+}

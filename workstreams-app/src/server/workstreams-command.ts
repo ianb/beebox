@@ -3,9 +3,9 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import {
+  workstreamsCliRowSchema,
   workstreamSummarySchema,
-  workstreamsCliListSchema,
-  type WorkstreamSummary,
+  type WorkstreamListResult,
 } from "../shared/workstreams.js";
 import type { WorkstreamsService } from "./services.js";
 
@@ -44,11 +44,11 @@ class InvalidWorkstreamsJsonError extends WorkstreamsCommandError {
   }
 }
 
-class InvalidWorkstreamsShapeError extends WorkstreamsCommandError {
-  constructor(issuePaths: string, stderr: string) {
+class InvalidWorkstreamsTopLevelError extends WorkstreamsCommandError {
+  constructor(stderr: string) {
     const suffix = stderr ? `: ${stderr}` : "";
-    super(`${publicCommandName()} returned an invalid shape at ${issuePaths}${suffix}`);
-    this.name = "InvalidWorkstreamsShapeError";
+    super(`${publicCommandName()} returned a non-array top-level value${suffix}`);
+    this.name = "InvalidWorkstreamsTopLevelError";
   }
 }
 
@@ -107,7 +107,7 @@ function schemaIssuePaths(error: { issues: Array<{ path: PropertyKey[] }> }): st
 function normalizeRows(
   result: CommandResult,
   repoRoot: string,
-): WorkstreamSummary[] {
+): WorkstreamListResult {
   const stderr = boundedStderr(result.stderr, repoRoot);
   let json: unknown;
   try {
@@ -115,14 +115,35 @@ function normalizeRows(
   } catch (_error) {
     throw new InvalidWorkstreamsJsonError(stderr);
   }
-  const parsed = workstreamsCliListSchema.safeParse(json);
-  if (!parsed.success) {
-    throw new InvalidWorkstreamsShapeError(
-      schemaIssuePaths(parsed.error),
-      stderr,
-    );
+  if (!Array.isArray(json)) {
+    throw new InvalidWorkstreamsTopLevelError(stderr);
   }
-  return parsed.data.map((row) => workstreamSummarySchema.parse(row));
+  const items: WorkstreamListResult["items"] = [];
+  const warnings: WorkstreamListResult["warnings"] = [];
+  let invalidRows = 0;
+  for (const [row, value] of json.entries()) {
+    const parsed = workstreamsCliRowSchema.safeParse(value);
+    if (parsed.success) {
+      items.push(workstreamSummarySchema.parse(parsed.data));
+      continue;
+    }
+    invalidRows += 1;
+    if (warnings.length >= 8) continue;
+    const fields = schemaIssuePaths(parsed.error).split(", ");
+    const name = typeof value === "object" && value !== null && "name" in value && typeof value.name === "string" && value.name
+      ? value.name
+      : null;
+    const label = name ? ` (${name})` : "";
+    warnings.push({ row, name, fields, message: `Invalid workstream row ${row}${label}: ${fields.join(", ")}` });
+  }
+  if (invalidRows > warnings.length) {
+    const omitted = invalidRows - warnings.length;
+    warnings.push({ row: null, name: null, fields: [], message: `${omitted} additional invalid workstream ${omitted === 1 ? "row was" : "rows were"} omitted` });
+  }
+  if (stderr) {
+    warnings.push({ row: null, name: null, fields: [], message: stderr });
+  }
+  return { items, warnings };
 }
 
 export interface WorkstreamsCommandServiceOptions {
@@ -136,7 +157,7 @@ export function createWorkstreamsCommandService(
   const commandRunner = options.commandRunner ?? runCommand;
   const command = path.join(options.repoRoot, "bin", "workstreams");
   return {
-    async list(): Promise<WorkstreamSummary[]> {
+    async list(): Promise<WorkstreamListResult> {
       let result: CommandResult;
       try {
         result = await commandRunner({
