@@ -4,6 +4,7 @@ workstream: ios-share-extension-capture
 area: beebox
 needs: [manual-testing]
 design: ../../beebox/docs/plans/ios-share-extension-capture.md
+next-action: manually-confirmed
 ---
 
 ## Current design decision

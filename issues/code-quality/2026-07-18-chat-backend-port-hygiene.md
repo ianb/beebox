@@ -4,6 +4,8 @@ workstream: chat-session-identity
 area: beebox
 filed-by: agent
 discovered-in: worktree-backend-research — deep-pass backend-alternatives research
+priority: backlog
+next-action: invalid
 ---
 
 The [coupling audit](../../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md)

@@ -5,6 +5,7 @@ area: clerk
 needs: [manual-testing]
 filed-by: agent
 discovered-in: worktree-tab-organizer-clerk — following up after the guarded tab-arrangement feature landed
+priority: normal
 ---
 
 > **⏳ Awaiting manual testing** — the feature landed in `86614e16`, with viewer polish in `29da64ec`; exercise a real Chrome Apply and best-effort Undo. Only Ian clears this.

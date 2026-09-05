@@ -19,7 +19,7 @@ Assertions are on shape — files present, counts — never on what the agent
 decided to do with the mail.
 
 ```ts setup
-import { mkdtemp, mkdir, rm, writeFile, readdir } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createFieldBox } from "../../src/field-test/run-box.js";
@@ -85,9 +85,10 @@ await seedFieldBox({ box, scenario });
 await fileExists(join(box.boxRoot, "_config/connectors/gmail.json"))
 => true
 
-// The pinned chat model is gitignored runtime state, not part of the
-// committed baseline a `reset` rewinds to.
-await fileExists(join(box.boxRoot, ".beebox/chat-model.json"))
+// The scenario's chat model is pinned as the box's model policy
+// (`agentModel` in `config/box.json`), which `seedFieldBox` writes and commits
+// as part of the baseline (`src/field-test/run-seed.ts`).
+JSON.parse(await readFile(join(box.boxRoot, "config/box.json"), "utf8")).agentModel === scenario.models.chat
 => true
 ```
 

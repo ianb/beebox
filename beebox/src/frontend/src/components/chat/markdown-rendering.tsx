@@ -13,6 +13,7 @@ import { detectVideoEmbed } from "../../lib/video-url";
 import { FileView } from "../FileView";
 import { externalImageProxyUrl, isExternalUrl, resolveContentTarget, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
 import { useBustedImageSrc } from "../../lib/file-version";
+import { transformedResolvedImageUrl } from "../../lib/image-transform-url";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 import { isImagePath, stripSpeechTags } from "./message-parsing";
 
@@ -24,15 +25,21 @@ export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
  */
 function ChatInlineImage({ src, alt }: { src: string; alt: string }) {
   const bustedSrc = useBustedImageSrc(src);
+  const transformedSrc = transformedResolvedImageUrl(bustedSrc, {
+    width: 960,
+    fit: "scale-down",
+    quality: 85,
+    format: "auto",
+  }) ?? bustedSrc;
   const { boxSlug } = useParams({ strict: false });
   const proxyFallbackSrc = externalImageProxyUrl(src, boxSlug);
   return (
     <Image
-      src={bustedSrc}
+      src={transformedSrc}
+      lightboxSrc={bustedSrc}
       alt={alt}
       size="chat"
       lightbox
-      retryOnError={proxyFallbackSrc === undefined}
       className="block mx-auto my-2"
       {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}
     />
@@ -42,15 +49,21 @@ function ChatInlineImage({ src, alt }: { src: string; alt: string }) {
 function ChatImage({ src, alt }: { src: string; alt: string }) {
   const hasCaption = alt.trim() !== "";
   const bustedSrc = useBustedImageSrc(src);
+  const transformedSrc = transformedResolvedImageUrl(bustedSrc, {
+    width: 960,
+    fit: "scale-down",
+    quality: 85,
+    format: "auto",
+  }) ?? bustedSrc;
   const { boxSlug } = useParams({ strict: false });
   const proxyFallbackSrc = externalImageProxyUrl(src, boxSlug);
   return (
     <Image
-      src={bustedSrc}
+      src={transformedSrc}
+      lightboxSrc={bustedSrc}
       alt={alt}
       size="chat"
       lightbox
-      retryOnError={proxyFallbackSrc === undefined}
       caption={hasCaption ? alt : undefined}
       className="mx-auto"
       {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}

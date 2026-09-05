@@ -7,6 +7,7 @@ labels: [voice, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "something like narration mode, but listening/note mode"
+priority: backlog
 ---
 
 A subtle alternative to narration mode: the box **listens** rather than takes

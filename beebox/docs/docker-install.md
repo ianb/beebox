@@ -80,6 +80,19 @@ docker compose up -d
 Your box (`./data/box`) and Claude credentials (the named volume) are
 untouched by a rebuild.
 
+**The box converges on start.** Before serving, the container runs
+`bbx migrate --sweep` (card data) and `bbx docs refresh` (the box's generated
+agent docs, card rules, and managed skills) against `/data/box`, so an engine
+update does not leave the box on the old shape. A box with nothing pending
+prints nothing; the sweep commits each migration it applies to your box's git
+history, skips a box whose tree is dirty until next start, and stops at a
+migration that needs a human. None of that can stop the server coming up —
+watch `docker compose logs box` for what it did. See
+[`migrations.md`](./migrations.md).
+
+Set `BBX_SKIP_CONVERGE=1` to turn it off and run
+`docker compose run --rm box bbx migrate --sweep` yourself instead.
+
 ## VPS (cloud install)
 
 The same compose project runs on any small VPS (a $5/month box is plenty).

@@ -83,6 +83,32 @@ r.stdout.includes("cards: 2")
 await box.cleanup();
 ```
 
+## Image variants are safe to construct during render
+
+The mock exposes the same synchronous `imageUrl` helper as the browser host,
+including URL-encoded options and a separate original `fileUrl`.
+
+```ts
+const box = await makeViewBox();
+await writeView(box, "image.tsx", `
+export const name = "Image";
+export const dependencies = [];
+export const modes = ["page"];
+export default function Image({ imageUrl, fileUrl }) {
+  const path = "store/Trip.attach/beach photo.jpg";
+  return <a href={fileUrl(path)}><img src={imageUrl(path, { width: 480, format: "auto" })} /></a>;
+}
+`);
+
+const r = await runViewTest(box.root, ["image"]);
+[r.code, r.stdout.includes('/api/images/store/Trip.attach/beach photo.jpg?width=480&amp;format=auto'), r.stdout.includes('/api/files/store/Trip.attach/beach photo.jpg')].join(" ")
+=> 0 true true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Render failure — source-mapped stack
 
 A view that throws during render exits 1 with the error and a stack that maps

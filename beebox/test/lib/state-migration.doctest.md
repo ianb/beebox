@@ -41,6 +41,26 @@ print(await migrationConflict());
 => true
 ```
 
+## An empty canonical directory is not a second generation
+
+Something creating `.beebox/` ahead of the migration (a booting hub child, a
+`mkdir -p`) used to leave the box refusing every command until a person
+deleted the empty directory. Empty means nothing to merge.
+
+```ts
+const emptyRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bbx-empty-new-migration-"));
+fs.mkdirSync(path.join(emptyRoot, ".callback-box"));
+fs.writeFileSync(path.join(emptyRoot, ".callback-box", "state.json"), "old\n");
+fs.mkdirSync(path.join(emptyRoot, ".beebox"));
+print(await migrateBoxState(emptyRoot));
+print(fs.readFileSync(path.join(emptyRoot, ".beebox", "state.json"), "utf-8").trim());
+print(fs.existsSync(path.join(emptyRoot, ".callback-box")));
+fs.rmSync(emptyRoot, { recursive: true, force: true });
+=> migrated
+old
+false
+```
+
 ## The legacy box marker joins the canonical state directory
 
 ```ts

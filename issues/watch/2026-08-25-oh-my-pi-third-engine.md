@@ -6,6 +6,7 @@ labels: [engine, vendor-risk, research]
 filed-by: agent
 discovered-by: Ian
 discovered-in: research-ohmypi worktree — backend-alternatives follow-up
+priority: backlog
 ---
 
 Reviewed 2026-08-25:

@@ -626,6 +626,30 @@ final class ComposerDraftRepositoryTests: XCTestCase {
     }
 
     @MainActor
+    func testEraseDetachesOldDraftBeforeTakingDictationRestartSeed() async throws {
+        let suite = "ComposerDraftErase.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let boxID = UUID()
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = ComposerDraftStore(repository: repository, defaults: defaults)
+        await store.activate(boxID: boxID)
+        store.setText("old dictated words")
+
+        let discarded = try XCTUnwrap(store.detachCurrentDraftForDiscard())
+        let restartSeed = store.draft.text
+        store.setText("new words after erase")
+        await store.finishDiscarding(discarded)
+        await store.flush()
+
+        XCTAssertEqual(restartSeed, "")
+        XCTAssertEqual(store.draft.text, "new words after erase")
+        let relaunched = ComposerDraftStore(repository: repository, defaults: defaults)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertEqual(relaunched.draft.text, "new words after erase")
+    }
+
+    @MainActor
     func testStoredImagesKeepStableIDsAcrossRemovalAndRelaunch() async throws {
         let suite = "ComposerDraftImages.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

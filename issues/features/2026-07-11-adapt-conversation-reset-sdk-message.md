@@ -3,6 +3,8 @@ title: "adapt the SDK's new conversation_reset message"
 workstream: unknown
 area: beebox
 needs: [design]
+priority: backlog
+next-action: reconfirm
 ---
 
 > **Checked 2026-08-18 — still live, unchanged.** Tagged `reconfirm`; removed.

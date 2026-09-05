@@ -6,6 +6,7 @@ labels: [security, secrets]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-secret-custody — after running the data migration on dev + prod
+priority: important
 ---
 
 The secret store shipped 2026-08-17

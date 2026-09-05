@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-in: main session — boxholder hit it
 needs: [decision]
+priority: backlog
 ---
 
 **Update 3 — RESOLVED as not-a-code-bug (2026-07-28).** Boxholder traced the full

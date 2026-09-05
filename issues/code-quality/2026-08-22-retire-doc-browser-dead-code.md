@@ -5,6 +5,7 @@ area: monorepo
 filed-by: agent
 discovered-in: worktree-dev-comments — retiring the doc browser into the general browser
 labels: [cleanup, router]
+priority: important
 ---
 
 `/<worktree>/dev/docs/…` now 301s to `/workstreams/browse?file=…&workstream=…`

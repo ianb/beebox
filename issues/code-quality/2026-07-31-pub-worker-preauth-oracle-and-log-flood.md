@@ -4,6 +4,7 @@ workstream: pub-setup-wrangler
 area: beebox
 filed-by: agent
 discovered-in: worktree-pub-setup-wrangler — Codex cross-review of the pub-setup rework surfaced these as pre-existing Worker behavior, out of that item's scope
+next-action: reconfirm
 ---
 
 Two hardening tensions in `beebox/pub-worker/`, found by an adversarial

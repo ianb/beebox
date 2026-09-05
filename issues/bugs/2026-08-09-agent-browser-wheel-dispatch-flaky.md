@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — live re-test of the card-views-cannot-scroll finding
 labels: [field-test-findings, harness]
+priority: backlog
 ---
 
 During live UI verification through `bin/browse`, `mouse wheel <dy>` worked

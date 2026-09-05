@@ -88,11 +88,11 @@ const reserved = await reserveChatSession({
   sessionId: coined,
   contextDir: null,
   seedFeatures: {},
-  model: "claude-fable-5",
+  model: "claude-fable-5-1",
 });
 
 JSON.stringify([reserved.kind, store.get(coined)?.model, store.get(coined)?.engine])
-=> ["reserved","claude-fable-5","claude"]
+=> ["reserved","claude-fable-5-1","claude"]
 
 const codexReserved = await reserveChatSession({
   boxRoot: box.root,

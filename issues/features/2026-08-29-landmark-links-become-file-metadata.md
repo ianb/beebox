@@ -7,6 +7,7 @@ labels: [navigation, cards]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder proposal
+priority: normal
 ---
 
 Today a landmark's link list is **centralized**: `links:` (and glob `expand`

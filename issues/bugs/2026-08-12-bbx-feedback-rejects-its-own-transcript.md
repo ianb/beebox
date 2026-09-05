@@ -6,6 +6,7 @@ labels: [cli, feedback]
 filed-by: agent
 discovered-by: agent
 discovered-in: main session — bbx feedback triage from a real box
+priority: normal
 ---
 
 > **Checked 2026-08-18 — still live, nothing changed.** Tagged `reconfirm`;

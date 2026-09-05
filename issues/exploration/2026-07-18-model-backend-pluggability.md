@@ -5,6 +5,7 @@ needs: [design]
 filed-by: agent
 discovered-in: main session — backend-alternatives research (research/backend-alternatives/README.md)
 area: beebox
+priority: backlog
 ---
 
 Research on alternate agent backends

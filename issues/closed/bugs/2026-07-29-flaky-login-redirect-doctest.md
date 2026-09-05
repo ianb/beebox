@@ -3,10 +3,12 @@ title: "login-redirect doctest flakes under parallel suite runs"
 workstream: finish-skill-audit
 area: beebox
 filed-by: agent
+resolution: wontfix
 discovered-in: worktree-finish-skill-audit — /finish full-suite run after merging main
+priority: important
 ---
 
-> **Checked 2026-08-18 — could not reproduce, and not fixed either.** Tagged
+> **Closed 2026-09-04 — could not reproduce, and not fixed either.** Tagged
 > `reconfirm`; removed. Roughly **40 runs, zero reproductions** of the reported
 > `actual: "undefined"` Location-header failure: 20 isolated runs, two full
 > `pnpm test` passes (7315/7315 and 7314/7315 — that one failure was an

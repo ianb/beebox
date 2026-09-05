@@ -36,7 +36,7 @@ set -euo pipefail
 #     the raw requested ref so a rollback (`deploy.sh --ref <old-sha>`) is
 #     recognizable in deploy-history.json.
 #
-# Only server-ip, the failure trap/notify, and the lock/meta files stay keyed to
+# Only target.env, the failure trap/notify, and the lock/meta files stay keyed to
 # the invoking repo; EVERYTHING built or synced comes from the build checkout.
 #
 # Usage: ./deploy/deploy.sh [--ref <ref>] [--skip-restart]
@@ -50,15 +50,17 @@ MONO_DIR="$(cd "$REPO_DIR/.." && pwd)"     # the invoking tree's monorepo root
 # deploy/.last-deploy.log) that nobody watches — so on any non-zero exit, echo a
 # "Deploy failed" line (the poll pattern in deploy/CLAUDE.md keys off it) AND
 # fire a desktop notification. Skipped when run interactively — you already see
-# the output. terminal-notifier is optional.
+# the output. The notifier is whatever BBX_DEPLOY_NOTIFY names in target.env
+# (invoked as `<cmd> <title> <message>`); unset means no notification, which is
+# the default on a machine that has no opinion about desktop alerts.
 LOG_HINT="beebox/deploy/.last-deploy.log"
 notify() {  # $1=title  $2=message
   [ -t 1 ] && return 0
-  command -v terminal-notifier >/dev/null 2>&1 &&
-    terminal-notifier -title "$1" -message "$2" -group beebox-deploy -activate com.apple.Terminal >/dev/null 2>&1 || true
+  [ -n "${BBX_DEPLOY_NOTIFY:-}" ] || return 0
+  $BBX_DEPLOY_NOTIFY "$1" "$2" >/dev/null 2>&1 || true
 }
-# The trap also releases the deploy lock (LOCK_HELD is set only after shlock
-# succeeds, further below). If a held deploy fails after a newer request was
+# The trap also releases the deploy lock (LOCK_HELD is set only after the lock
+# is actually taken, further below). If a held deploy fails after a newer request was
 # recorded, it still hands off to that request: otherwise the non-blocking lock
 # loser has already exited successfully and nobody remains to deploy the newest
 # ref. The failed attempt remains explicit before the chained attempt begins.
@@ -67,7 +69,7 @@ deploy_exit() {
   trap - EXIT
   local held="${LOCK_HELD:-}"
   if [ -n "$held" ]; then
-    rm -f "${LOCK_FILE:-}"
+    rm -rf "${LOCK_FILE:-}"
     LOCK_HELD=""
   fi
   if [ "$rc" -eq 0 ]; then
@@ -101,31 +103,56 @@ deploy_exit() {
 }
 trap deploy_exit EXIT
 
-# The deploy target IP lives in a gitignored file; a repo move or fresh clone
-# leaves it behind — which is exactly how a run of silent no-op deploys just
-# happened. Fail loud and actionable instead of a bare "cat: No such file".
-# Stays keyed to the invoking tree: server-ip exists only in real checkouts, not
-# the (git-clean) build checkout below.
-if [ ! -s "$SCRIPT_DIR/server-ip" ]; then
-  echo "deploy: $SCRIPT_DIR/server-ip is missing or empty — it holds the deploy" >&2
-  echo "  target IP and is gitignored (never committed). Restore it from a backup," >&2
-  echo "  or:  echo <SERVER_IP> > $SCRIPT_DIR/server-ip" >&2
-  exit 1
-fi
-SERVER_IP=$(cat "$SCRIPT_DIR/server-ip")
-INSTALL_DIR="/opt/beebox"
+# The deploy target lives in a gitignored deploy/target.env, and its presence is
+# what makes this machine one that deploys at all. Absent, this is not a
+# misconfiguration to repair — it is a checkout with no server — so require_
+# deploy_target exits with the setup instructions and a pointer at the
+# container install path. Stays keyed to the invoking tree: target.env exists
+# only in real checkouts, not the (git-clean) build checkout below.
+# shellcheck source=beebox/deploy/deploy-target.sh
+. "$SCRIPT_DIR/deploy-target.sh"
+# NO_FALLBACK: the diagnostics may borrow the main checkout's target from a
+# worktree; deploying must not, or `deploy.sh` run from a worktree would ship
+# an unlanded branch to production.
+BBX_DEPLOY_NO_FALLBACK=1 require_deploy_target "$SCRIPT_DIR"
+SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
+INSTALL_DIR="$BBX_DEPLOY_INSTALL_DIR"
 
-# The latest-wins lock below uses shlock(1) — a PID-based lock that ships with
-# macOS at /usr/bin/shlock and auto-breaks a stale lock left by a dead process
-# (flock would be the natural choice but stock macOS doesn't have it). Guard
-# here with the same loud-and-actionable pattern as server-ip rather than dying
-# on a bare "shlock: command not found" deep inside the run.
-if ! command -v shlock >/dev/null 2>&1; then
-  echo "deploy: shlock is required for deploy serialization but is not on PATH." >&2
-  echo "  It ships with macOS (/usr/bin/shlock). On another OS, install inn's" >&2
-  echo "  shlock or adapt the locking section to flock(1)." >&2
-  exit 1
-fi
+
+# The latest-wins lock below is a lock DIRECTORY holding the owner's pid.
+# `mkdir` is atomic on POSIX, and a directory needs no external tool: this used
+# to call shlock(1), which is a macOS-only path (flock is the natural choice
+# but stock macOS lacks it), so a deploy from anything but a Mac died on
+# "shlock: command not found" deep inside the run.
+#
+# take_deploy_lock is non-blocking and breaks a lock whose owner is gone,
+# matching shlock's PID-liveness behavior. Breaking is done by RENAMING the
+# stale directory aside before removing it, so two deploys that both judge a
+# lock stale cannot have the loser delete the winner's fresh lock — only one
+# rename can succeed. A lock with no readable pid is stale too: that is a
+# creator that died between the mkdir and the write. (A leftover lock FILE from
+# a pre-2026-09 deploy takes the same path and is cleaned up on first use.)
+take_deploy_lock() {  # $1 = lock directory
+  local lock="$1" owner stale
+  if mkdir "$lock" 2>/dev/null; then
+    echo $$ > "$lock/pid"
+    return 0
+  fi
+  owner="$(cat "$lock/pid" 2>/dev/null || true)"
+  if [ -n "$owner" ] && kill -0 "$owner" 2>/dev/null; then
+    return 1
+  fi
+  stale="$lock.stale.$$"
+  if mv "$lock" "$stale" 2>/dev/null; then
+    echo "Breaking a stale deploy lock (owner ${owner:-unknown} is gone)."
+    rm -rf "$stale"
+  fi
+  if mkdir "$lock" 2>/dev/null; then
+    echo $$ > "$lock/pid"
+    return 0
+  fi
+  return 1
+}
 
 # --- Argument parsing -------------------------------------------------------
 # --skip-frontend is intentionally gone: it's incompatible with "ref == prod"
@@ -186,7 +213,7 @@ REQUESTED_FILE="$MAIN_ROOT/.deploy-requested"
 
 # checkout_belongs_to_repo: true iff the persistent checkout's root .git file
 # points at a worktree gitdir under THIS repo's common dir. A repo move/rename
-# (the exact failure that bit server-ip) leaves the old absolute gitdir dangling,
+# (the exact failure that once bit server-ip) leaves the old absolute gitdir dangling,
 # so this catches it and we recreate from scratch below.
 checkout_belongs_to_repo() {
   # $CHECKOUT is a standalone local clone (its own `.git` DIR), not a worktree.
@@ -206,13 +233,13 @@ checkout_belongs_to_repo() {
 # --- Locking: latest-wins ---------------------------------------------------
 # Record the requested sha (plain overwrite — last writer wins; a manual
 # rollback to an OLDER sha is still the LATEST intent, which is why this is
-# write-time ordering, not commit ancestry), then try to take the lock. shlock
-# is non-blocking, so a loser doesn't queue: it exits, trusting the current
+# write-time ordering, not commit ancestry), then try to take the lock. The
+# lock is non-blocking, so a loser doesn't queue: it exits, trusting the current
 # holder to CHAIN — after finishing, the holder re-reads .deploy-requested and
 # re-execs itself (see end of script). This collapses a rapid `main` commit
 # burst to at most one extra deploy, always ending on the latest requested ref.
-# A stale lock from a crashed deploy is auto-broken by shlock's PID liveness
-# check.
+# A stale lock from a crashed deploy is broken by take_deploy_lock's PID
+# liveness check.
 #
 # A CHAINED invocation does NOT stamp the file: it carries no new intent, it
 # only relays whatever is currently requested. (If it re-stamped, a stale sha
@@ -221,7 +248,7 @@ checkout_belongs_to_repo() {
 if [[ "$CHAINED" != true && "$REQUEST_RECORDED" != true ]]; then
   echo "$SHA" > "$REQUESTED_FILE"
 fi
-if ! shlock -f "$LOCK_FILE" -p $$; then
+if ! take_deploy_lock "$LOCK_FILE"; then
   echo "Deploy superseded: $SHA queued; another deploy holds $LOCK_FILE and will chain to it."
   exit 0
 fi
@@ -244,7 +271,7 @@ echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 # below is authoritative, while this recovery pass may be running on a full
 # filesystem with partially broken tools.
 echo "Pruning deploy package caches before disk gate..."
-ssh "root@$SERVER_IP" bash -s <<'PREFLIGHTCLEAN'
+ssh "$SSH_TARGET" bash -s <<'PREFLIGHTCLEAN'
 pnpm store prune || echo "  WARNING: root pnpm store preflight prune failed" >&2
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune' \
   || echo "  WARNING: Bee Box pnpm store preflight prune failed" >&2
@@ -258,7 +285,7 @@ PREFLIGHTCLEAN
 # remote installs. The 15%-free entry gate stays meaningful across differently
 # sized hosts; its 3 GiB floor preserves minimum package/temp/write headroom.
 echo "Checking server disk headroom..."
-ssh "root@$SERVER_IP" bash -s <<'DISKCHECK'
+ssh "$SSH_TARGET" bash -s <<'DISKCHECK'
 set -euo pipefail
 read -r total_kib free_kib < <(df -Pk / | awk 'NR == 2 { print $2, $4 }')
 if [[ ! "$total_kib" =~ ^[0-9]+$ || ! "$free_kib" =~ ^[0-9]+$ ]]; then
@@ -387,10 +414,11 @@ RSYNC_OPTS=(-az --delete
   --exclude '.claude/'
   --exclude 'deploy-info.json'
   --exclude 'deploy-history.json'
-  # server-ip and the per-run logs never exist in the git-clean build checkout,
+  # target.env and the per-run logs never exist in the git-clean build checkout,
   # so these excludes are belt-and-suspenders — but stated explicitly so the
   # --delete semantics are documented: neither is a build artifact, and neither
   # should ever be pushed to (or deleted from) the server based on the checkout.
+  --exclude 'deploy/target.env'
   --exclude 'deploy/server-ip'
   --exclude 'deploy/.deploy-logs'
   # pub-worker is a Cloudflare Worker deployed via `bbx pub setup` (wrangler), NOT
@@ -415,7 +443,7 @@ for repo in personal-vibe-check agent-doctest beebox; do
     continue
   fi
   echo "Syncing $repo..."
-  rsync "${RSYNC_OPTS[@]}" "$local_path" "root@$SERVER_IP:$INSTALL_DIR/$repo/"
+  rsync "${RSYNC_OPTS[@]}" "$local_path" "$SSH_TARGET:$INSTALL_DIR/$repo/"
 done
 
 # Sync the workspace root itself, FROM THE BUILD CHECKOUT. With workspace deps,
@@ -429,8 +457,8 @@ rsync -az --no-owner --no-group \
   "$CHECKOUT/pnpm-workspace.yaml" \
   "$CHECKOUT/.npmrc" \
   "$CHECKOUT/pnpm-lock.yaml" \
-  "root@$SERVER_IP:$INSTALL_DIR/"
-rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "root@$SERVER_IP:$INSTALL_DIR/patches/"
+  "$SSH_TARGET:$INSTALL_DIR/"
+rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "$SSH_TARGET:$INSTALL_DIR/patches/"
 
 # --no-owner/--no-group above leave everything owned by root (the ssh
 # connection user) rather than the sender's uid — still wrong for `beebox`,
@@ -440,11 +468,11 @@ rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "root@$SERVER_IP:$
 echo "Fixing ownership..."
 # INSTALL_DIR must expand locally before the remote command runs.
 # shellcheck disable=SC2029
-ssh "root@$SERVER_IP" "chown -R beebox:beebox $INSTALL_DIR"
+ssh "$SSH_TARGET" "chown -R beebox:beebox $INSTALL_DIR"
 
 # Install deps if package-lock changed (compare hash)
 echo "Checking dependencies..."
-ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
+ssh -A "$SSH_TARGET" bash -s <<'REMOTE'
   set -e
   # Bootstrap pnpm on demand. corepack ships with Node 24; this is idempotent
   # and a no-op if pnpm is already on PATH.
@@ -550,7 +578,7 @@ REMOTE
 # change independently — an agent `pnpm add`s a view dependency, or a fresh
 # `box-packageify` runs — between deploys.
 echo "Reconciling box package installs..."
-ssh "root@$SERVER_IP" bash -s <<'REMOTE'
+ssh "$SSH_TARGET" bash -s <<'REMOTE'
   set -e
   for box in /home/beebox/boxes/*/; do
     pj="$box/package.json"
@@ -588,7 +616,7 @@ REMOTE
 # its home so upward config discovery cannot reach /root/uv.toml; `-H`
 # separately gives HOME-based tools the Bee Box user's home.
 echo "Pruning deploy package caches..."
-ssh "root@$SERVER_IP" bash -s <<'CACHECLEAN'
+ssh "$SSH_TARGET" bash -s <<'CACHECLEAN'
 set -euo pipefail
 pnpm store prune
 sudo -u beebox -H bash -lc 'cd /home/beebox && pnpm store prune'
@@ -619,12 +647,12 @@ process.stdout.write(JSON.stringify(out, null, 2) + "\n");
 ')
 # INSTALL_DIR is the locally configured remote deployment path.
 # shellcheck disable=SC2029
-ssh "root@$SERVER_IP" "cat > $INSTALL_DIR/beebox/deploy-info.json" <<< "$DEPLOY_INFO"
+ssh "$SSH_TARGET" "cat > $INSTALL_DIR/beebox/deploy-info.json" <<< "$DEPLOY_INFO"
 
 # Append to deploy history (keep last 20 entries)
 # INSTALL_DIR is intentionally interpolated locally; remote variables are escaped below.
 # shellcheck disable=SC2087
-ssh "root@$SERVER_IP" bash -s <<HISTEOF
+ssh "$SSH_TARGET" bash -s <<HISTEOF
   HIST_FILE="$INSTALL_DIR/beebox/deploy-history.json"
   if [[ -f "\$HIST_FILE" ]]; then
     # Prepend new entry, keep last 20
@@ -657,10 +685,10 @@ if [[ "$SKIP_RESTART" != true ]]; then
   # the wait entirely — silently, because the skip was best-effort.
   # INSTALL_DIR is the locally configured remote deployment path.
   # shellcheck disable=SC2029
-  ssh "root@$SERVER_IP" "install -m 0755 $INSTALL_DIR/beebox/deploy/server-bin/bbx-wait-quiet /usr/local/bin/bbx-wait-quiet"
+  ssh "$SSH_TARGET" "install -m 0755 $INSTALL_DIR/beebox/deploy/server-bin/bbx-wait-quiet /usr/local/bin/bbx-wait-quiet"
 
   echo "Waiting for boxes to be at rest (best-effort)..."
-  ssh "root@$SERVER_IP" /usr/local/bin/bbx-wait-quiet
+  ssh "$SSH_TARGET" /usr/local/bin/bbx-wait-quiet
 
   # Converge each box onto the code that just shipped, in the at-rest window —
   # after bbx-wait-quiet, before the restart brings box children back up. A box
@@ -672,7 +700,7 @@ if [[ "$SKIP_RESTART" != true ]]; then
   # guidance). They own their own policy — see src/core/migration-sweep.ts and
   # src/core/docs-refresh.ts.
   echo "Converging boxes (migrations, generated docs)..."
-  ssh "root@$SERVER_IP" bash -s <<'REMOTE'
+  ssh "$SSH_TARGET" bash -s <<'REMOTE'
     for boxdir in /home/beebox/boxes/*/; do
       name=$(basename "$boxdir")
       # v3 (one-root) boxes carry the shape marker directly at their root —
@@ -742,7 +770,7 @@ REMOTE
   # daemon-reload only when something actually changed, so an unchanged deploy
   # stays quiet. The restart below then picks up whatever was reloaded.
   echo "Reconfirming systemd drop-ins..."
-  ssh "root@$SERVER_IP" bash -s "$INSTALL_DIR" <<'REMOTE'
+  ssh "$SSH_TARGET" bash -s "$INSTALL_DIR" <<'REMOTE'
 set -euo pipefail
 install_dir="$1"
 changed=0
@@ -766,7 +794,7 @@ fi
 REMOTE
 
   echo "Restarting services..."
-  ssh "root@$SERVER_IP" 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"'
+  ssh "$SSH_TARGET" 'systemctl restart beebox-hub beebox-scheduler && echo "Services restarted"'
 
   # Verify the deploy at two depths, on the server (localhost + local key):
   #   1. Hub /healthz returns a verdict of "ok" — the hub is up AND no box is
@@ -790,7 +818,7 @@ REMOTE
   # assets) until someone hits it in the wild. Catch a
   # "declared but not installed on this older box" gap at deploy, not at first use.
   echo "Verifying required external tools..."
-  ssh "root@$SERVER_IP" bash -s <<'TOOLCHECK'
+  ssh "$SSH_TARGET" bash -s <<'TOOLCHECK'
     set -uo pipefail
     missing=""
     for t in qpdf pdfinfo pdftoppm pandoc convert xlsx2csv ffmpeg git git-lfs git-annex codex; do
@@ -813,7 +841,7 @@ REMOTE
 TOOLCHECK
 
   echo "Verifying hub health + box canary..."
-  ssh "root@$SERVER_IP" bash -s "$INSTALL_DIR" <<'HEALTHCHECK'
+  ssh "$SSH_TARGET" bash -s "$INSTALL_DIR" <<'HEALTHCHECK'
     set -euo pipefail
     install_dir="$1"
     KEY=$(grep -E '^BBX_DIAG_API_KEY=' /home/beebox/.env 2>/dev/null | cut -d= -f2- || true)
@@ -926,7 +954,7 @@ echo "Verify externally: curl -H \"Authorization: Bearer \$BBX_DIAG_API_KEY\" ht
 
 # --- Chain to a newer request (latest-wins, second half) ----------------------
 # If a deploy was requested while this one ran, its invocation exited early
-# (shlock held) trusting us to pick it up. Release the lock and re-exec in
+# (the lock was held) trusting us to pick it up. Release the lock and re-exec in
 # --chained mode (which re-reads .deploy-requested itself rather than trusting
 # the sha we read here — see the stamping comment above). Ordering matters:
 # release BEFORE the re-check, so a request that lands in the gap either gets
@@ -934,7 +962,7 @@ echo "Verify externally: curl -H \"Authorization: Bearer \$BBX_DIAG_API_KEY\" ht
 # a request is silently dropped. --skip-restart is deliberately not propagated:
 # the chained request came from a hook wanting a full deploy. (exec does not
 # fire the EXIT trap, hence the manual release.)
-rm -f "$LOCK_FILE"
+rm -rf "$LOCK_FILE"
 LOCK_HELD=""
 NEWREQ="$(cat "$REQUESTED_FILE" 2>/dev/null || true)"
 if [ -n "$NEWREQ" ] && [ "$NEWREQ" != "$SHA" ]; then

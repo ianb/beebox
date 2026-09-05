@@ -1,6 +1,8 @@
 # Deploy
 
-Server provisioning and deployment scripts for Hetzner cloud. See `deploy/README.md` for full setup guide.
+ONE OPERATOR'S rsync-to-VPS pipeline, opt-in via a gitignored `target.env`. It
+is not the install path — that is the container flow in `docs/docker-install.md`
+— so don't send anyone here to set up a Bee Box. See `deploy/README.md`.
 
 Key files:
 - `deploy.sh` — commit-based deploy: builds the requested ref in a persistent
@@ -12,9 +14,14 @@ Key files:
   scheduler (`bbx boxes add` → `boxes.json`), restart both units, then canary
   the new slug. Preflight-validates the slug before it clones; `--dry-run`
   prints the plan without touching anything.
-- `create-server.sh` — provision a Hetzner box
-- `setup-server.sh` — install software, create `beebox` user, clone repos
-- `server-ip` — target server IP (not committed)
+- `hetzner/` — example provisioners for the one server shape `deploy.sh` ships
+  to: `create-server.sh` (Hetzner VPS + Cloudflare DNS) and `setup-server.sh`
+  (Ubuntu packages, `beebox` user, units, nginx). Neither runs on deploy.
+- `target.env` — the deploy target: which server, which paths, how to notify
+  (gitignored, per-operator). Its PRESENCE is what makes a checkout one that
+  deploys — without it the commit hooks skip silently and deploy.sh refuses.
+  `deploy-target.sh` loads it (and answers `path`/`ssh-target`/`get VAR` for
+  callers that aren't bash). Template: `target.env.example`.
 - `prod-ssh` — SSH to prod as root for diagnostics and administration
 - `prod-curl` / `prod-browse` — inspect the authenticated production app
 
@@ -49,7 +56,7 @@ Then confirm the server picked up the new commit:
 deploy/prod-ssh 'cat /opt/beebox/beebox/deploy-info.json'
 ```
 
-The production diagnostic tools resolve `server-ip` from the current checkout
+The production diagnostic tools resolve `target.env` from the current checkout
 first, then from the main checkout via Git's common directory. `deploy.sh` is
-deliberately different: it requires a local `deploy/server-ip` so deployment
+deliberately different: it requires a local `deploy/target.env` so deployment
 remains main-checkout-only.

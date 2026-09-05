@@ -2,6 +2,7 @@
 title: "Fancier PDF manipulation"
 workstream: unknown
 area: beebox
+next-action: reconfirm
 ---
 
 If we ever want richer PDF handling than scan-import currently does — form-field detection, structured extraction, layout-aware parsing — `commonforms` looks worth a look.

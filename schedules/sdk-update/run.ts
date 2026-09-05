@@ -8,12 +8,15 @@
  * All of that is the session's work, and starting an Opus session every day to
  * discover "nothing was published" is the cost this head exists to avoid.
  *
- * Two packages, because two channels reach this repo. RUNTIME is
+ * Three packages, because three channels reach this repo. RUNTIME is
  * `@anthropic-ai/claude-agent-sdk`, which beebox imports. HARNESS is
  * `@anthropic-ai/claude-code`, the CLI every worker session runs in — most SDK
  * releases say only "parity with Claude Code v2.1.N", and a Claude Code change
  * with zero SDK API surface can still break this repo (v2.1.218's worktree git
- * isolation silently broke `/finish`'s merge step for days).
+ * isolation silently broke `/finish`'s merge step for days). CODEX is
+ * `@openai/codex` (pinned together with `@openai/codex-sdk`): the box's Codex
+ * chats and the production server's `codex` run the pinned binary, so a model
+ * upstream adds is invisible to boxes until the pin moves.
  *
  * The baseline is the ledger's own header line, not the installed pin: the
  * ledger records versions it has *reviewed*, which is ahead of what is applied.
@@ -30,20 +33,21 @@ const SCHEDULE_DIR = import.meta.dirname;
 const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
 const LEDGER = path.join(REPO_ROOT, "docs", "agent-sdk-notes.md");
 
-/** The two npm packages, in the order the briefing lists them. */
+/** The three npm packages, in the order the briefing lists them. */
 const PACKAGES = [
   { channel: "SDK", npmName: "@anthropic-ai/claude-agent-sdk" },
   { channel: "Claude Code", npmName: "@anthropic-ai/claude-code" },
+  { channel: "Codex", npmName: "@openai/codex" },
 ];
 
 /**
  * The ledger's own statement of where it has read to, maintained by the
  * session in the header:
  *
- *     - **Latest reviewed upstream version:** `0.3.241` (SDK), `2.1.241` (Claude Code)
+ *     - **Latest reviewed upstream version:** `0.3.241` (SDK), `2.1.241` (Claude Code), `0.153.0` (Codex)
  */
 const REVIEWED_PATTERN =
-  /^- \*\*Latest reviewed upstream version:\*\*\s*`([^`]+)`\s*\(SDK\),\s*`([^`]+)`\s*\(Claude Code\)/mu;
+  /^- \*\*Latest reviewed upstream version:\*\*\s*`([^`]+)`\s*\(SDK\),\s*`([^`]+)`\s*\(Claude Code\),\s*`([^`]+)`\s*\(Codex\)/mu;
 
 function refuse(message: string): never {
   // Non-zero is the report: the runner turns it into an `important` alert with
@@ -92,12 +96,14 @@ async function readBaselines(): Promise<{ channel: string; version: string }[]> 
   const match = REVIEWED_PATTERN.exec(text);
   const sdk = match?.[1];
   const claudeCode = match?.[2];
-  if (sdk === undefined || claudeCode === undefined) {
-    refuse('docs/agent-sdk-notes.md has no "Latest reviewed upstream version" line to measure from');
+  const codex = match?.[3];
+  if (sdk === undefined || claudeCode === undefined || codex === undefined) {
+    refuse('docs/agent-sdk-notes.md has no "Latest reviewed upstream version" line (SDK, Claude Code, Codex) to measure from');
   }
   return [
     { channel: "SDK", version: sdk },
     { channel: "Claude Code", version: claudeCode },
+    { channel: "Codex", version: codex },
   ];
 }
 
@@ -130,7 +136,7 @@ const body = [
   ...sections,
   "",
   "This head checked versions only — it read no changelogs and judged no",
-  "relevance. Assess each one on both channels, update",
+  "relevance. Assess each one on its channel, update",
   "`docs/agent-sdk-notes.md`, and bump the pin if the rules in your system",
   "prompt say to.",
   "",

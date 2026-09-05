@@ -5,6 +5,7 @@ needs: [decision]
 area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — endpoint inventory for the security report
+priority: backlog
 ---
 
 The tRPC surface has three auth tiers: `ownerProcedure`,

@@ -6,6 +6,7 @@ labels: [ui, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder ask
+priority: normal
 ---
 
 The sidecar's tabs (the card/document panel beside chat) are all equal:

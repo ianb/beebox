@@ -4,6 +4,7 @@ workstream: chores-burn-down
 area: beebox
 filed-by: agent
 discovered-in: worktree-quick-seeing-p5js — adversarial review of the figure compile route while adding the canvas-loop runtime
+priority: backlog
 ---
 
 Two residual findings from the 2026-07-15 route review (the symlink

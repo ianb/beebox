@@ -6,6 +6,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — /finish full-suite re-run
 labels: [testing, flake]
+priority: important
 ---
 
 `test/dev/auto-sweep-detach.doctest.md:72` (`await fakeSweep(2);`), assertion

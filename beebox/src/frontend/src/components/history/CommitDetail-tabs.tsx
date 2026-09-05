@@ -30,7 +30,7 @@ function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
   if (IMAGE_EXTS.includes(ext)) {
     return (
       <div className="px-3 py-2">
-        <Image src={blobUrl} alt={file.path} size="md" lightbox />
+        <Image src={blobUrl} lightboxSrc={blobUrl} alt={file.path} size="md" lightbox />
       </div>
     );
   }

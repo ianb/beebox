@@ -3701,6 +3701,45 @@ tests:
     correct_contains: ["bbx view test"]
     tags: [views]
 
+  # Status (2026-09-04): 2/2 pass. views-bounded-image read the generated views
+  # reference and used imageUrl(width 480, format auto) plus fileUrl for the
+  # original (4 reads, 2 searches). Its initial answer used an unbounded DPR;
+  # after the reference documented the dpr=2 cap, the rerun correctly clamps it.
+  # chat-bounded-image-embed answered from the chat prompt with a plain box-path
+  # Markdown embed and no API URL (0 reads, 0 searches).
+  - id: views-bounded-image
+    prompt: >
+      I am authoring a custom view with a grid of large stored photos. Check
+      the box's own view docs, then show the JSX pattern for displaying each
+      photo at about 480px without downloading every original, while still
+      giving the user a link to the full-resolution file.
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/views.md, uses imageUrl with width 480 and
+      format auto for the img src, and uses fileUrl for the full-resolution
+      link. Does not hand-build /api/images URLs.
+    should_read: ["docs/generated/views.md"]
+    correct_contains: ["imageUrl", "width", "480", "fileUrl"]
+    correct_contains_any: ["format: \"auto\"", "format: 'auto'", "format: `auto`"]
+    response_not_contains: ["/api/images/"]
+    tags: [views, images]
+
+  - id: chat-bounded-image-embed
+    prompt: >
+      I want to show the user the stored photo
+      store/trips/Beach.attach/sunrise.jpg inline in chat without making the
+      small inline display download the full original. What should I write?
+    expected_level: knows_directly
+    watch_for: >
+      Uses ordinary Markdown image syntax with the leading-slash box path and
+      explains that the renderer requests the bounded cached display while the
+      lightbox retains the original. Does not construct an API URL.
+    correct_contains: ["![", "/store/trips/Beach.attach/sunrise.jpg"]
+    correct_contains_any: ["cached", "bounded", "lightbox"]
+    response_not_contains: ["/api/images/"]
+    chat_mode: true
+    tags: [chat, images]
+
   # === Retrospective (docs/implemented-plans/box-retrospectives.md) ===
 
   - id: retro-report-location

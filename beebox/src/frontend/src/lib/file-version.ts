@@ -25,7 +25,7 @@ import { useCallback, useSyncExternalStore } from "react";
 const versions = new Map<string, string>();
 const pathListeners = new Map<string, Set<() => void>>();
 
-const API_FILES_MARKER = "/api/files/";
+const API_IMAGE_MARKERS = ["/api/files/", "/api/image/", "/api/images/"] as const;
 
 /**
  * Record a new version token for a path and notify subscribers. Call this
@@ -50,9 +50,10 @@ function getFileVersion(path: string): string | undefined {
  * or null if the URL isn't a box-file URL. Strips any query/hash.
  */
 function fileVersionPath(resolvedUrl: string): string | null {
-  const i = resolvedUrl.indexOf(API_FILES_MARKER);
-  if (i === -1) return null;
-  const rest = resolvedUrl.slice(i + API_FILES_MARKER.length);
+  const marker = API_IMAGE_MARKERS.find((candidate) => resolvedUrl.includes(candidate));
+  if (marker === undefined) return null;
+  const i = resolvedUrl.indexOf(marker);
+  const rest = resolvedUrl.slice(i + marker.length);
   return rest.replace(/[#?].*$/, "");
 }
 

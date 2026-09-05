@@ -6,6 +6,7 @@ labels: [output-noise]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-add-box-process — provisioning a box ran bbx init twice
+priority: important
 ---
 
 `bbx init` reports everything it did, every time, whether or not anything

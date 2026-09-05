@@ -6,6 +6,7 @@ labels: [typescript, tooling]
 filed-by: agent
 discovered-by: agent
 discovered-in: mjs-to-typescript worktree — adding `scripts/build-cli.ts` to a tsconfig
+priority: normal
 ---
 
 `beebox/package.json` lints four trees:

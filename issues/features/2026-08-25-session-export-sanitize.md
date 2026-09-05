@@ -2,6 +2,7 @@
 title: "bbx session export --sanitize: structure-preserving redacted transcript"
 workstream: research-opencode
 area: beebox
+priority: important
 ---
 
 A chat or wakeup bug on a real box can't be shown to anyone: the boxholder rule is that

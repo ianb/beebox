@@ -5,6 +5,8 @@ area: beebox
 labels: [lint, security, openclaw-borrow]
 filed-by: agent
 discovered-in: worktree-openclaw-security-lints — surveying openclaw's .pre-commit-config.yaml
+priority: backlog
+next-action: invalid
 ---
 
 openclaw runs a battery of off-the-shelf hooks via the `pre-commit`/`prek`

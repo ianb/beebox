@@ -106,7 +106,7 @@
     "tsx": "^4.23.1"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.3.251",
+    "@anthropic-ai/claude-agent-sdk": "0.3.259",
     "@fastify/cookie": "^11.0.2",
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",
@@ -114,8 +114,8 @@
     "@google/genai": "^1.44.0",
     "@googleworkspace/cli": "0.22.5",
     "@markdoc/markdoc": "^0.5.7",
-    "@openai/codex": "0.147.0",
-    "@openai/codex-sdk": "0.147.0",
+    "@openai/codex": "0.153.0",
+    "@openai/codex-sdk": "0.153.0",
     "@orama/orama": "3.1.18",
     "@orama/plugin-data-persistence": "3.1.18",
     "@parcel/markdown-ansi": "^2.16.3",

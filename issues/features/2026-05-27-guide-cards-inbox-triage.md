@@ -3,6 +3,7 @@ title: "guide cards inbox triage"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: normal
 ---
 
 Guide cards (`config/*.guide.card`) capture the boxholder's preferences as triage rules, named actions, default actions, and accumulated feedback. Today the compiled guide is read by job-processing agents (a `paths:` rule loads it when a matching job runs). But there's no live mechanism for the guide's *triage rules* to actually drive inbox routing — the agent decides per-item, and the guide only nudges in retrospect.

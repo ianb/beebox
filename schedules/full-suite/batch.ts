@@ -22,5 +22,21 @@ export async function readBatch(): Promise<Batch> {
   const pinned = await git(["rev-parse", "main"]);
   const base = lastTestedCommit(readRecords(ledgerPaths(gitCommonDir(REPO_ROOT)).ledger));
   if (base === null) return { pinned, base: null, landings: [] };
+  // A ledger commit that no longer resolves (history rewritten under it, a
+  // clone from before a force-push) is not a base: start over from `main`
+  // rather than fail every hourly run until someone edits the ledger.
+  if (!(await commitExists(base))) {
+    console.warn(`full-suite: last tested commit ${base} does not resolve; testing main without a baseline`);
+    return { pinned, base: null, landings: [] };
+  }
   return { pinned, base, landings: await landingsSince(base, pinned) };
+}
+
+async function commitExists(sha: string): Promise<boolean> {
+  try {
+    await git(["cat-file", "-e", `${sha}^{commit}`]);
+    return true;
+  } catch (_error) {
+    return false;
+  }
 }

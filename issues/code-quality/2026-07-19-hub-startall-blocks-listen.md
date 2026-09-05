@@ -1,6 +1,7 @@
 ---
 title: Hub blocks on startAll() before it listens, so /healthz is unanswerable during a slow/failing boot
 workstream: unknown
+priority: backlog
 ---
 
 `src/cli/commands/hub.ts` does `await supervisor.startAll()` *before*

@@ -5,6 +5,8 @@ needs: [design]
 filed-by: agent
 discovered-in: main session — boxholder wondering if per-directory rules could replace generated context
 area: beebox
+priority: backlog
+next-action: discuss
 ---
 
 Today a box's agent context is assembled by **generating CLAUDE.md** and injecting

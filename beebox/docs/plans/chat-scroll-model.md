@@ -88,7 +88,7 @@ Writes, exhaustively:
    scrolling. If the reply outgrows the screen, it continues below the fold;
    the scroll-to-bottom button shows. (The boxholder's proposal and the
    ChatGPT/claude.ai behaviour.) The last turn carries
-   `min-height: <scroller clientHeight>` so "at the top" is reachable when the
+   `min-height: 100cqh` (the scroller is a size container) so "at the top" is reachable when the
    reply is short; the spacer lasts until the reply is complete (2026-08-26:
    it used to persist until the next send, leaving a screen of blank room
    under every finished reply — dropping it at finalize lets the browser
@@ -100,14 +100,18 @@ Writes, exhaustively:
 3. **Click the scroll-to-bottom button** → smooth scroll to the bottom.
 4. **Hold position** across changes the user did not cause:
    - older history prepended above → restore the captured bottom gap;
-   - content above the viewport reflowing (a late image/embed) → keep the
-     top-visible child at its recorded offset. The anchor's offset is updated
-     on every scroll event (the current controller already does this,
-     `InteractiveChat-scroll.ts:266-273`) so a resize landing mid-fling
-     measures only reflow, never the user's own momentum;
+   - content above the reading point reflowing (a late image/embed) → retain a
+     visible character within the message, using a DOM Range. Measure its
+     content coordinate (`rect.top - scroller.top + scrollTop`), so scroll
+     events cannot be mistaken for reflow. An element is a fallback for
+     non-text content. This replaces the message-level anchor after the
+     2026-09-04 lazy user-image reproduction exposed intra-message movement;
    - the scroller shrinking or growing from below (keyboard, composer,
-     banners) → preserve the previous `fromBottom`. This needs the
-     pre-resize `fromBottom`, a number recorded on every scroll and resize.
+     banners) → keep the bottom only if already there; otherwise preserve
+     the reading point within the legal scroll range. This replaces the
+     unconditional bottom-gap policy that moved reading text while typing.
+   A running send ease owns writes until it finishes or is interrupted;
+   resize callbacks measure and update viewport size without superseding it.
    Each is "measure delta, write delta", triggered by a resize. None consults
    whether the user scrolled recently.
 
@@ -215,10 +219,15 @@ is the way to get the boxholder's actual traces; the trace pipeline exists.
 4. **Close out** — re-aim the open issue at the model change; the harness
    finding (`prepend-older` badge) is a scenario, not a separate issue.
 
-Tracks 1-3 are done for everything reproducible on desktop Chromium: harness
-13/13, controller rewrite landed (`chat-scroll.ts`), and `MessageList` wired
-to it. **Outstanding:** the iOS device checklist in Track 3 has not been run
-on a real device — the boxholder's original report is device-specific and
-unverified there. `issues/bugs/2026-08-13-chat-cannot-stay-at-bottom-while-growing.md`
-stays open with a punch-list note for that verification
-(`/scrolldebug` trace) rather than closing on desktop-only evidence.
+Tracks 1-3 are implemented in the controller and harness. The 2026-09-04
+follow-up corrects intra-message image anchoring, composer resizing, and send
+spacer ownership. The harness passes 20/20 scenarios in normal and reduced
+motion; real Chromium probes cover sends, composer resizing, and delayed images.
+Authenticated iOS WKWebView simulator evidence covers sending and keyboard
+opening during a live reply. See [the current verification record](../chat-scroll-testing.md).
+
+**Outstanding:** physical-iPhone momentum, rubber-band, keyboard transitions,
+and delayed-image checks remain unverified. The earlier issue was closed as
+superseded; [the current scroll issue](../../../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md)
+now carries this punch-list. The historical findings and track descriptions
+above record the original rewrite, not the current verification boundary.

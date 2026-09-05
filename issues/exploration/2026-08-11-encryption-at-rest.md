@@ -4,6 +4,7 @@ workstream: unknown
 area: beebox
 needs: [design, decision]
 labels: [security, soft-launch, lifecycle]
+priority: backlog
 ---
 
 The interesting case for encryption at rest is **deep storage** — someone

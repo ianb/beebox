@@ -146,13 +146,17 @@ briefing.
 
    - **Opus** (`--model opus`) — for somewhat harder work. The boxholder will
      usually ask for this explicitly; don't reach for it on your own.
-   - **Fable** (`--model claude-fable-5`) — genuinely hard work, big
-     architecture questions, and decisions that need user empathy to get right.
-     Usually specified directly. **If you think something deserves Fable, ask
-     — don't just launch it there.**
+   - **Fable** (`--model claude-fable-5-1`) or **Astra** (`--agent codex
+     --model gpt-6-astra`) — the top rung on each side, equivalent in
+     capability: genuinely hard work, big architecture questions, and
+     decisions that need user empathy to get right. Usually specified
+     directly. **If you think something deserves Fable or Astra, ask — don't
+     just launch it there.** Astra is the top rung on the Codex path (so it
+     is the choice when a Fable-shaped task should stay on Codex); it is NOT
+     what an omitted `--model` gives you.
 
    **The rule when you're unsure: ask.** A one-line question ("Codex, or does
-   this want Fable?") costs nothing. The exception is a standing instruction
+   this want Fable or Astra?") costs nothing. The exception is a standing instruction
    already given in this conversation — e.g. "I'm low on Claude quota, open
    everything in codex" — which you follow without re-asking until it's
    withdrawn.
@@ -255,14 +259,16 @@ from elsewhere (these run unattended in background tabs, and much of the
 manual testing they generate happens on a phone). The session is named after the
 worktree so concurrent ones stay tellable apart. `--no-remote-control` opts out.
 
-Pass `--model <model>` (e.g. `claude-fable-5`, `opus`, `sonnet`) to spin a
+Pass `--model <model>` (e.g. `claude-fable-5-1`, `opus`, `sonnet`) to spin a
 Claude worktree up on a specific model — never omit it on the Claude path,
 where omitting silently inherits the boxholder's saved default. On the Codex
-path omitting `--model` is correct: the launcher pins `gpt-5.6-sol` itself.
+path omitting `--model` is correct for the default rung: the launcher pins
+`gpt-5.6-sol` itself. The Codex top rung is explicit: `--agent codex --model
+gpt-6-astra`.
 
-A Fable session then follows the delegate-and-Codex-review guidance in the root
-CLAUDE.md, so `claude-fable-5` buys orchestration and cross-model review, not
-just a stronger single pass.
+A Fable or Astra session then follows the delegate-and-cross-model-review
+guidance in the root CLAUDE.md, so the top model buys orchestration and
+cross-model review, not just a stronger single pass.
 
 It opens a new tab in the front Terminal.app window (or a new window if none is
 open), calls `bin/workstreams create <name>`, `cd`s into that checkout, and runs
@@ -312,7 +318,7 @@ think first, not act.
 - **Launching before the human confirms.** Even if the discussion clearly
   pointed at "spin this off", wait for the explicit cue.
 - **Deciding the model yourself when it isn't obvious.** Codex is the default;
-  Opus and Fable are the boxholder's calls. Ask — don't infer one from how hard
+  Opus, Fable, and Astra are the boxholder's calls. Ask — don't infer one from how hard
   the work looks and launch on it.
 - **Omitting `--model` on the Claude path.** The session then inherits whatever
   default is saved. (On the Codex path, omitting it is correct.)

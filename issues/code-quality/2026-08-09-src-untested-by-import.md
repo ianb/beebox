@@ -5,6 +5,7 @@ area: beebox
 labels: [testing]
 filed-by: agent
 discovered-in: worktree-test-selection — measured while running the test-selection Track 0 spike
+priority: backlog
 ---
 
 Measured 2026-08-09 by building the full test→source import graph with esbuild

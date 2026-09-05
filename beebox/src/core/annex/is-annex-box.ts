@@ -68,7 +68,7 @@ async function readPointer(filePath: string, prefix: string): Promise<string | n
  * Cheap filesystem reads only — no `git rev-parse` subprocess, since this is a
  * gate consulted at route registration and on every promote pass.
  */
-async function gitDirsOf(repoRoot: string): Promise<string[]> {
+export async function gitDirsOf(repoRoot: string): Promise<string[]> {
   const dotGit = path.join(repoRoot, ".git");
   let stat;
   try {

@@ -3,6 +3,7 @@ title: "spark mode"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: backlog
 ---
 
 Conceptual inverse of narration mode (see [narration-mode.md](../../beebox/docs/plans/narration-mode.md)). Narration is user-talks-mostly (long dumps, agent files quietly). /spark is agent-talks-mostly (agent surfaces everything it's been holding back; user triages). Both intentionally break the turn-balanced rhythm in opposite directions.

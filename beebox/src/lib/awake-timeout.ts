@@ -60,6 +60,7 @@ export function startAwakeTimeout(options: AwakeTimeoutOptions): AwakeTimeout {
     lastTick = now;
     if (gap >= sleepGapMs) {
       sleepDetected = true;
+      awakeMs += Math.min(gap, periodMs);
     } else if (gap > 0) {
       awakeMs += gap;
     }

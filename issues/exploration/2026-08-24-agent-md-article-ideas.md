@@ -6,6 +6,7 @@ labels: [tooling-eval, agent-instructions]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — link passed along for evaluation
+priority: important
 ---
 
 [agent.md](https://fabiensanglard.net/agent.md/index.html) — Fabien Sanglard's

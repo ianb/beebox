@@ -13,8 +13,9 @@ import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Card } from "../components/ui/Card";
 import { BboxOverlay } from "../components/ui/BboxOverlay";
-import { apiRawFileUrl, getApiBase } from "../api";
+import { apiRawFileUrl, apiRawImageUrl, apiTransformedImageUrl, getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
+import { isTransformablePhotoPath } from "../lib/image-transform-url";
 import type { RendererProps } from "./index";
 import { registerFileType } from "./index";
 
@@ -87,7 +88,16 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
   // A filename ref that escapes the box root names no servable file. An empty
   // src renders as the browser's broken-image affordance with the alt text —
   // visibly wrong, rather than showing a clamped-to-root image instead.
-  const imageSrc = resolvedPath === null ? "" : apiRawFileUrl(getApiBase(), resolvedPath);
+  const apiBase = getApiBase();
+  const rawImageSrc = resolvedPath === null ? "" : apiRawFileUrl(apiBase, resolvedPath);
+  const lightboxSrc = apiRawImageUrl(apiBase, data.path);
+  const canTransform = resolvedPath !== null && isTransformablePhotoPath(card.filename);
+  const smallSrc = canTransform
+    ? apiTransformedImageUrl({ apiBase, path: data.path, options: { width: 480, fit: "scale-down", quality: 85, format: "auto" } })
+    : rawImageSrc;
+  const largeSrc = canTransform
+    ? apiTransformedImageUrl({ apiBase, path: data.path, options: { width: 960, fit: "scale-down", quality: 85, format: "auto" } })
+    : null;
   const altText = card.description || card.filename;
 
   // Embedded inline (`![caption](…image.card)`): render exactly like a
@@ -102,7 +112,12 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
     return (
       <Row justify="center" className="my-2">
         <Image
-          src={imageSrc}
+          src={smallSrc}
+          lightboxSrc={lightboxSrc}
+          {...(largeSrc === null ? {} : {
+            srcSet: `${smallSrc} 480w, ${largeSrc} 960w`,
+            sizes: "(max-width: 640px) 100vw, 960px",
+          })}
           alt={caption ?? altText}
           size="chat"
           lightbox
@@ -127,7 +142,12 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
   return (
     <div className="p-4">
       <Image
-        src={imageSrc}
+        src={smallSrc}
+        lightboxSrc={lightboxSrc}
+        {...(largeSrc === null ? {} : {
+          srcSet: `${smallSrc} 480w, ${largeSrc} 960w`,
+          sizes: "(max-width: 640px) 100vw, 512px",
+        })}
         alt={altText}
         size="lg"
         lightbox
@@ -183,10 +203,24 @@ registerFileType({ type: "image" }, {
 
 function RawImageRenderer({ data }: RendererProps) {
   const basename = data.path.split("/").pop() || data.path;
+  const apiBase = getApiBase();
+  const original = apiRawFileUrl(apiBase, data.path);
+  const canTransform = isTransformablePhotoPath(data.path);
+  const smallSrc = canTransform
+    ? apiTransformedImageUrl({ apiBase, path: data.path, options: { width: 480, fit: "scale-down", quality: 85, format: "auto" } })
+    : original;
+  const largeSrc = canTransform
+    ? apiTransformedImageUrl({ apiBase, path: data.path, options: { width: 960, fit: "scale-down", quality: 85, format: "auto" } })
+    : null;
   return (
     <div className="p-4">
       <Image
-        src={apiRawFileUrl(getApiBase(), data.path)}
+        src={smallSrc}
+        lightboxSrc={original}
+        {...(largeSrc === null ? {} : {
+          srcSet: `${smallSrc} 480w, ${largeSrc} 960w`,
+          sizes: "(max-width: 640px) 100vw, 512px",
+        })}
         alt={basename}
         size="lg"
         lightbox

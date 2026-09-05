@@ -34,8 +34,7 @@ const LEGACY_TIER: Record<ProcedureModelName, ProcedureModelTier> = {
 
 /**
  * Provider-relative policy, not a claim that models on the same row have equal
- * capability. Codex currently has three family members, so both high-end tiers
- * select its flagship; that can diverge later without changing procedure cards.
+ * capability. Both engines now have four family members, one per tier.
  */
 const PROCEDURE_MODELS: Record<AgentEngine, Record<ProcedureModelTier, string>> = {
   claude: {
@@ -48,7 +47,7 @@ const PROCEDURE_MODELS: Record<AgentEngine, Record<ProcedureModelTier, string>> 
     efficient: MODEL_ID.luna,
     balanced: MODEL_ID.terra,
     strong: MODEL_ID.sol,
-    strongest: MODEL_ID.sol,
+    strongest: MODEL_ID.astra,
   },
 };
 
@@ -68,9 +67,7 @@ export function resolveProcedureModel(engine: AgentEngine, model: ProcedureModel
  * translate a box's pinned model for an engine that cannot run it and to rank
  * one model against another (smarter/dumber).
  *
- * The reverse is lossy where the forward table is: Codex's `strong` and
- * `strongest` both select Sol, so Sol reverses to the lower of the two. That
- * flattening is deliberate and visible here rather than inferred at a call site.
+ * The forward table is one-to-one per engine, so the reverse is exact.
  */
 const MODEL_TIERS: Record<string, ProcedureModelTier> = {
   [MODEL_ID.haiku]: "efficient",
@@ -80,6 +77,7 @@ const MODEL_TIERS: Record<string, ProcedureModelTier> = {
   [MODEL_ID.luna]: "efficient",
   [MODEL_ID.terra]: "balanced",
   [MODEL_ID.sol]: "strong",
+  [MODEL_ID.astra]: "strongest",
 };
 
 /** Capability order over tiers. Only the relative order is meaningful. */

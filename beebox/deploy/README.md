@@ -1,10 +1,28 @@
 # Deploy
 
-Scripts for provisioning and managing a Hetzner cloud server running beebox. This doc
-describes one example deployment (`box.example.com`) — the paths, domain, and service names
-below are specific to it, not something beebox requires.
+> **This is not how you install a Bee Box.** The supported install-and-update
+> path — local or on a VPS, with TLS — is the container flow in
+> [`../docs/docker-install.md`](../docs/docker-install.md). Read that one.
+>
+> What lives here is *one operator's* pipeline: rsync a built commit to a
+> long-lived Ubuntu VPS that serves many boxes behind nginx and systemd, then
+> converge and health-check them. It is in the repo because it is real, it is
+> exercised daily, and the multi-box convergence it does has no container
+> equivalent yet — not because it is the recommended shape.
+
+Nothing here runs until you opt in. `deploy/target.env` (gitignored; copy
+[`target.env.example`](./target.env.example)) names the server, and its
+presence is the switch: without it the commit hooks ship nothing and say
+nothing, and every script below refuses with the setup steps. The example
+deployment described throughout (`box.example.com`, `/opt/beebox`,
+`/home/beebox`, the unit names) is that one operator's; most of it is
+configurable in `target.env`, and the rest is what
+`hetzner/setup-server.sh` happens to build.
 
 ## Prerequisites
+
+For the `hetzner/` provisioners only. `deploy.sh` itself needs nothing but SSH
+to an already-provisioned host.
 
 - **hcloud CLI**: `brew install hcloud`
 - **Hetzner API token**: Create at [Hetzner Cloud Console](https://console.hetzner.cloud/), then `hcloud context create beebox`
@@ -14,7 +32,17 @@ below are specific to it, not something beebox requires.
 
 ## Setup
 
-Create `deploy/.env` (gitignored):
+`deploy/target.env` (gitignored) — the deploy target. At minimum:
+
+```
+BBX_DEPLOY_HOST=203.0.113.10
+```
+
+`target.env.example` lists the rest: SSH user, install dir, service account and
+home, hub port, the public URL `prod-browse` needs, and `BBX_DEPLOY_NOTIFY` (a
+command run on deploy failure — `deploy/notify-macos` is the macOS one).
+
+`deploy/.env` (gitignored), for the `hetzner/` provisioners:
 
 ```
 CLOUDFLARE_API_TOKEN=your-token-here
@@ -70,12 +98,15 @@ The hook records its requested SHA synchronously before launching through
 process group. That ordered hook request stays authoritative: a late-starting
 older child cannot overwrite newer intent.
 
-### `create-server.sh` — Create a new server from scratch
+### `hetzner/create-server.sh` — Create a new server from scratch
 
-Destroys any existing server, creates a fresh Hetzner VPS, provisions it, and sets up DNS.
+One example provisioner, kept because `deploy.sh` needs a host of this exact
+shape. Destroys any existing server, creates a fresh Hetzner VPS, provisions
+it, and sets up DNS. The server name, region, domain, and zone are constants at
+the top of the script — the boxholder's. Edit before running.
 
 ```bash
-./deploy/create-server.sh
+./deploy/hetzner/create-server.sh
 ```
 
 What it does:
@@ -84,9 +115,9 @@ What it does:
 3. Creates a cpx21 (3 vCPU, 4GB RAM) in Ashburn
 4. Updates Cloudflare DNS for `box.example.com` (if token provided)
 5. Sets Cloudflare SSL to Flexible
-6. Uploads and runs `setup-server.sh` on the server
+6. Uploads and runs `hetzner/setup-server.sh` on the server
 
-### `setup-server.sh` — Provision a bare server (runs remotely)
+### `hetzner/setup-server.sh` — Provision a bare server (runs remotely)
 
 Installs everything on Ubuntu 24.04:
 - System packages (git, Node.js 22, nginx)
@@ -101,7 +132,7 @@ Installs everything on Ubuntu 24.04:
 per-box `bbx@<box>.service` units. The live server has since been switched
 over to the hub by hand (see "Systemd units" below and
 `docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
-`create-server.sh` run today would need the same by-hand steps repeated
+`hetzner/create-server.sh` run today would need the same by-hand steps repeated
 until this script catches up.
 
 **This script does not run on deploy.** `deploy.sh` never invokes it, so any
@@ -182,17 +213,64 @@ step that failed, and re-running is safe.
 Re-running is idempotent: pull + re-init, both manifest steps no-op, access
 config left alone.
 
+**The box's push credential is set up too.** A GitHub deploy key attaches to
+exactly one repo, so each box gets its own, reached through a per-box ssh host
+alias (`IdentitiesOnly yes` keeps ssh from offering every key and tripping
+GitHub's max-auth-attempts limit):
+
+```
+Host github.com-box-<name>
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_box_<name>
+  IdentitiesOnly yes
+```
+
+`add-box.sh` creates the key if absent, writes that stanza, and points the box's
+`origin` at `git@github.com-box-<name>:owner/repo.git`. Registering the public
+key on GitHub is the step it cannot do for you on the plain path, so the script
+ends by printing the key and the instruction — **including "Allow write
+access"**, without which the box fetches but never pushes.
+
+That last part matters more than it looks: a box with no usable push credential
+works in every visible way — it serves, agents run, commits land locally — and
+simply never reaches its remote, with nothing saying so. Admin → Backup reports
+the symptom per box (see `src/core/box/backup-status.ts`).
+
+On `--create`, where `gh` is already authenticated and already making the repo,
+the key is registered automatically with write access. It is **sticky**: the
+check is on the key material *and its write access*, not a title — so a re-run
+finds the box's key already present and does nothing, a key an operator added by
+hand under a different title still counts, and a key registered **read-only** is
+reported rather than accepted (it would fetch and never push, which is the
+failure this exists to prevent wearing a disguise). Read-only keys are not
+auto-upgraded: GitHub has no in-place permission change, so fixing one means
+deleting and re-adding it, which is the operator's call. The script never
+rotates or replaces a credential on its own — a silent re-register is
+indistinguishable from the orphaned-key failure — so replacing one means
+removing the old key on GitHub and re-running deliberately.
+
+If registration does not happen on a `--create` run, the script **exits
+non-zero** after printing the manual step. The box is added and serving at that
+point, but it cannot reach its remote, and exiting 0 would report exactly the
+silent success this change exists to end.
+
+Two caveats worth knowing. A key added through `gh` is tied to gh's auth token:
+de-authorizing the GitHub CLI later removes the key, and the box stops pushing
+silently. And the ssh alias is verified with `ssh -G` after the stanza is
+written — if some other stanza already claims that alias with a different
+identity, the script refuses rather than pointing `origin` at a key that will
+not work.
+
+A non-GitHub remote is left alone — the alias convention is a GitHub deploy-key
+mechanism, and rewriting a remote for another host would only break it. An
+`https://github.com/...` URL *is* handled: it clones fine, but a deploy key is
+an SSH credential, so origin is moved to the aliased SSH form rather than left
+on a URL the key cannot authenticate.
+
 `--dry-run` still needs a `bbx` on the server that has `bbx hub add-box` — i.e.
 a deploy from 2026-08 or later. On an older build the preflight fails with an
 unknown-command error.
-
-### `rebuild.sh` — Pull latest code and rebuild
-
-Pulls beebox, rebuilds, and restarts services.
-
-```bash
-./deploy/rebuild.sh
-```
 
 ### `prod-ssh` — SSH into the production server
 
@@ -206,8 +284,8 @@ Pulls beebox, rebuilds, and restarts services.
 
 Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations on the server.
 In a worktree, the command falls back to the main checkout's gitignored
-`deploy/server-ip`; a non-empty local copy takes precedence. This fallback is
-for diagnostics only: `deploy.sh` intentionally requires `server-ip` in the
+`deploy/target.env`; a non-empty local copy takes precedence. This fallback is
+for diagnostics only: `deploy.sh` intentionally requires `target.env` in the
 invoking checkout.
 
 ### Production app diagnostics
@@ -228,10 +306,10 @@ bin/browse screenshot --slug prod
 ```
 
 `prod-curl` keeps the signed session cookie on the server. `prod-browse` puts it
-in the local isolated browser profile and also requires the production base URL
-in gitignored `deploy/public-url`; from a worktree it falls back to the main
-checkout's copy just like `server-ip`. Never print or persist either cookie or
-URL in tracked files.
+in the local isolated browser profile and also requires `BBX_DEPLOY_PUBLIC_URL`
+in `deploy/target.env`; from a worktree it falls back to the main checkout's
+copy like everything else there. Never print or persist either cookie or URL in
+tracked files.
 
 ## Server layout
 
@@ -246,7 +324,6 @@ URL in tracked files.
 /home/beebox/.local/bin/claude  # Claude Code (native install, auto-updates)
 /usr/local/bin/bbx           # CLI symlink
 /usr/local/bin/codex         # Workspace-pinned Codex CLI symlink
-/usr/local/bin/bbx-rebuild   # Rebuild shortcut
 ```
 
 ## Systemd units
@@ -492,5 +569,5 @@ echo '{"botToken":"...","webhookSecret":"..."}' > telegram.secret.json
 
 ## DNS and HTTPS
 
-- DNS: `box.example.com` → server IP (Cloudflare proxied, auto-managed by `create-server.sh`)
+- DNS: `box.example.com` → server IP (Cloudflare proxied, auto-managed by `hetzner/create-server.sh`)
 - HTTPS: Handled by Cloudflare (SSL mode: Flexible — HTTPS to Cloudflare, HTTP to origin)

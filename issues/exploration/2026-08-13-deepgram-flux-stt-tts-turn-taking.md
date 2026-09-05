@@ -7,6 +7,7 @@ labels: [research, voice, deepgram]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder note
+priority: backlog
 ---
 
 Deepgram has a **Flux** family worth looking at: Flux STT, Flux TTS, and

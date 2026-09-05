@@ -4,6 +4,7 @@ workstream: unattached
 area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — a journey walkthrough landed in an old chat and read it
+priority: normal
 ---
 
 A stored user turn in `test1` contains this text:

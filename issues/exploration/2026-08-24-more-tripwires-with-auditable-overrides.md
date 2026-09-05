@@ -7,6 +7,7 @@ labels: [git, hooks, process]
 filed-by: agent
 discovered-by: Ian
 discovered-in: commit-provenance workstream — reviewing what Contract-Unchanged does
+priority: normal
 ---
 
 `Contract-Unchanged` (`.husky/pre-commit` + `.husky/commit-msg` +

@@ -6,6 +6,7 @@ labels: [capture, chat, notifications]
 filed-by: agent
 discovered-by: Ian
 discovered-in: capture-chip-states — split out of the capture-success issue while fixing it
+priority: normal
 ---
 
 Capture is often the last thing a user does before putting the phone away.

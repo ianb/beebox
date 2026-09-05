@@ -7,6 +7,7 @@ labels: [architecture, plugins, schemas]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder thinking about what belongs in core
+priority: important
 ---
 
 Much of what ships in beebox could be a plugin — the educational

@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-vocab-sweep — split out of 2026-08-08-markdown-not-rendering-in-agent-output while sweeping vocabulary issues
+priority: normal
 ---
 
 "Wren's" renders as "Wrens" and "Nana Odette's" as "Nana Odettes" in tabs,

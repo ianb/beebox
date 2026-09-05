@@ -36,6 +36,27 @@ The same read is why every successful bump ends with the misleading
 no schedule), so this is latent rather than breaking, but it is a check that
 cannot go green and a success message that names the wrong version.
 
+
+## Partly fixed as of 2026-09-04
+
+`bin/update-agent-sdk.ts` has since been rewritten for multi-family updates
+(`8903f08ac`, `340a567a0`) and now reads the **manifest pin** rather than the
+root install, so effect 1 is gone:
+
+    $ pnpm update-agent-sdk --check
+    Agent SDK (@anthropic-ai/claude-agent-sdk) is up to date: 0.3.259 (binary: 2.1.226 (Claude Code))
+    Codex (@openai/codex, @openai/codex-sdk) is up to date: 0.153.0 (binary: codex-cli 0.153.0)
+    (exit 0)
+
+Two things still stand. The parenthetical **`binary: 2.1.226`** is still the root
+copy's bundled CLI, so the line reports a current pin next to a three-month-old
+binary version — note that the Codex line beside it resolves correctly, which
+makes the Claude one read as a typo rather than a different install. And effect 2
+is untouched: the root `package.json` still pins `0.3.226`, and
+`bin/agent-quotas-requests.ts` still imports the SDK from `bin/`, which resolves
+there. The fork this issue describes — decide what the root pin is *for* — is
+unchanged.
+
 **2. `bin/` tooling runs the old SDK, and therefore an old bundled CLI.** (This
 is the part the ledger's original note did not reach: it treated the split as a
 reporting defect in the updater, but the root copy is also *executed*.)

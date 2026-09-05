@@ -3,6 +3,7 @@ title: "triage agent session routing"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: normal
 ---
 
 An incoming message doesn't always belong in a fresh chat — often it's a

@@ -186,16 +186,51 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 `,
   );
 
-  // Always write .gitignore (keep in sync with bbx version). ONE root
-  // .gitignore now covers both halves that used to be two files: the
-  // npm-package rules (`node_modules/`, trick deps — formerly
-  // `ROOT_GITIGNORE` in `./package.js`) and the operational rules below
-  // (formerly written here alone, at the separate `content/` root).
-  //
-  // The trailing asset block comes from `attachments-gitignore.ts` rather than
-  // being spelled out here — the two must be identical, and an inlined copy is
-  // what let `bbx init` keep writing the manifest-scheme block onto boxes that
-  // had migrated to git-annex.
+  await writeBoxGitignore(resolvedRoot, { annexed });
+
+  // Install tricks types.d.ts and CLAUDE.md if missing
+  await installTricksFiles(resolvedRoot);
+
+  // Install schemas guide CLAUDE.md if missing
+  await installSchemasGuide(resolvedRoot);
+
+  // Install views CLAUDE.md if missing
+  await installViewsGuide(resolvedRoot);
+
+  // Initialize git repo (only on fresh init) — don't commit yet;
+  // the init command installs more files (schedules, procedures, etc.)
+  // after this returns and commits everything together.
+  if (!options.skipGit && !isUpdate) {
+    const isExistingRepo = await isRepo(resolvedRoot);
+    if (!isExistingRepo) {
+      await initRepo(resolvedRoot, options.branch ?? "main");
+    }
+  }
+
+  return { isUpdate };
+}
+
+/**
+ * Write the box's `.gitignore` from the current rendering. `bbx init` calls
+ * this on every run, and the `gitignore-2026-09` migration calls it once per
+ * existing box: the 2026-08 rename changed the state directory and the lock
+ * and pid names, and a box that kept its pre-rename file ignored nothing
+ * current, so its next autocommit swept the whole state directory in.
+ *
+ * ONE root `.gitignore` covers both halves that used to be two files under
+ * the two-root layout: the npm-package rules (`node_modules/`, trick deps —
+ * formerly `ROOT_GITIGNORE` in `./package.js`) and the operational rules
+ * (formerly written alone at the separate `content/` root). A box migrated
+ * from v2 may carry a marked "Migrated local rules" section; the preserving
+ * write keeps it across regeneration.
+ *
+ * The trailing asset block comes from `attachments-gitignore.ts` rather than
+ * being spelled out here — the two must be identical, and an inlined copy is
+ * what let `bbx init` keep writing the manifest-scheme block onto boxes that
+ * had migrated to git-annex.
+ */
+export async function writeBoxGitignore(boxRoot: string, options: { annexed: boolean }): Promise<void> {
+  const { annexed } = options;
   const gitignore = `# Bee Box .gitignore
 # npm package
 node_modules/
@@ -203,9 +238,9 @@ node_modules/
 # Trick dependencies (installed by agent) -- see src/tricks/
 src/tricks/node_modules/
 
-# Lock files
+# Lock files (every .bbx-*.lock: reactor, trick-commit, and whatever comes next)
 .bbx-lock
-.bbx-reactor.lock
+.bbx-*.lock
 
 # Local config (credentials, etc.)
 _config/connectors/*.secret.*
@@ -232,28 +267,7 @@ _tmp/
 *~
 
 ${annexed ? UNIGNORE_BLOCK : GITIGNORE_BLOCK}`;
-  await writeRegeneratedFilePreservingMigratedSection(path.join(resolvedRoot, ".gitignore"), gitignore);
-
-  // Install tricks types.d.ts and CLAUDE.md if missing
-  await installTricksFiles(resolvedRoot);
-
-  // Install schemas guide CLAUDE.md if missing
-  await installSchemasGuide(resolvedRoot);
-
-  // Install views CLAUDE.md if missing
-  await installViewsGuide(resolvedRoot);
-
-  // Initialize git repo (only on fresh init) — don't commit yet;
-  // the init command installs more files (schedules, procedures, etc.)
-  // after this returns and commits everything together.
-  if (!options.skipGit && !isUpdate) {
-    const isExistingRepo = await isRepo(resolvedRoot);
-    if (!isExistingRepo) {
-      await initRepo(resolvedRoot, options.branch ?? "main");
-    }
-  }
-
-  return { isUpdate };
+  await writeRegeneratedFilePreservingMigratedSection(path.join(boxRoot, ".gitignore"), gitignore);
 }
 
 /**

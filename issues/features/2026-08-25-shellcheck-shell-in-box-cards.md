@@ -6,6 +6,7 @@ labels: [validation, procedures, scheduler]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-document-card-view — a merge tripped the new schedules/ shellcheck gate; the boxholder assumed procedures already got one
+priority: backlog
 ---
 
 Shell that lives inside box cards is executed but never linted. The

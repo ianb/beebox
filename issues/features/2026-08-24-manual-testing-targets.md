@@ -8,6 +8,7 @@ labels: [workstreams, manual-testing, testing-queue]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-streams-and-issues — reviewing the staging-slot exploration
+priority: normal
 ---
 
 *When a fix needs verification on a specific environment, I want the testing

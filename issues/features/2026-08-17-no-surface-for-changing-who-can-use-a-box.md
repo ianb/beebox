@@ -6,6 +6,8 @@ labels: [access, provisioning]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-add-box-process — provisioning a box with a second member
+priority: important
+next-action: reconfirm
 ---
 
 Access to a box is `allowedEmails` in its `content/config/box.json`, read by

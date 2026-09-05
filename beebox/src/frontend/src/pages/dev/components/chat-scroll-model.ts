@@ -14,6 +14,13 @@ export interface HarnessMessage {
   id: number;
   role: "user" | "assistant";
   px: number;
+  image?: HarnessImage;
+}
+
+/** A real browser image whose source is assigned by a later scenario step. */
+export interface HarnessImage {
+  heightPx: number;
+  sourceReady: boolean;
 }
 
 export interface HarnessContent {

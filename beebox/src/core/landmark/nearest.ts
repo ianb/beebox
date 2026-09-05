@@ -15,6 +15,7 @@
 
 import * as path from "node:path";
 import { glob } from "glob";
+import { z } from "zod";
 import { normalizeLandmarkDir } from "./root-dir.js";
 
 /**
@@ -27,6 +28,20 @@ import { normalizeLandmarkDir } from "./root-dir.js";
 export function isBoxRelativeCardPath(cardPath: string): boolean {
   return !cardPath.startsWith("/") && !cardPath.split("/").includes("..");
 }
+
+/**
+ * The single string-level shape check for a box-relative directory/card path
+ * input — no leading `/`, no `..` segment. Every tRPC procedure that takes a
+ * `contextDir`/`dir`/card-path string and joins it onto `boxRoot` needs this
+ * (a string-level check alone is not containment — a call site whose result
+ * feeds a filesystem read still MUST verify with `containWithinBox` /
+ * `realpathContained` from `lib/box-containment.ts`; this only rejects the
+ * textually obvious escape at the input boundary, cheaply and uniformly).
+ * `.optional()` / `.nullable()` on top as each procedure's input shape needs.
+ */
+export const boxRelativePathSchema = z
+  .string()
+  .refine(isBoxRelativeCardPath, "must be box-relative and contain no '..' segments");
 
 /** Box-relative dir of a path, normalized so a box-root file yields `""`. */
 function dirOf(boxRelPath: string): string {

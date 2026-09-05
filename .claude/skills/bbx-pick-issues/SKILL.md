@@ -37,9 +37,10 @@ Rules that come from real failures:
 - **Model choice is part of the proposal, never of the act.** Say what kind of
   issue it is — how much is *undecided*, not how many files move — and suggest
   the rung from the launch skill's ladder (Codex default; Opus for harder work;
-  Fable for genuinely open architecture or judgment). The human confirms. A
-  measurement or design question that needs judgment about *what to measure*
-  is a Fable-shaped task even when the diff will be small.
+  Fable or Astra — `gpt-6-astra`, the Codex-side equivalent — for genuinely
+  open architecture or judgment). The human confirms. A measurement or design
+  question that needs judgment about *what to measure* is a Fable/Astra-shaped
+  task even when the diff will be small.
 
 ## A cluster is a hypothesis
 

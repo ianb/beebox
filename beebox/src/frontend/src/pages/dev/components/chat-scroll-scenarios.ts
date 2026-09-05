@@ -74,7 +74,7 @@ const SCENARIOS_MAIN: Scenario[] = [
     ],
     expect: {
       finalUserMessageTopAtMost: 4,
-      finalAtBottom: false,
+      finalAtBottom: true,
       writesAtMost: 1,
     },
   },
@@ -178,6 +178,39 @@ const SCENARIOS_MAIN: Scenario[] = [
       driftWhileAwayAtMost: 8,
       finalHasUnseenContent: false,
     },
+  },
+  {
+    name: "real-images-around-reading-marker",
+    description: "Real lazy img elements above and below the reading marker receive deterministic data-SVG sources. This measures browser load/decode reflow while reading; data URLs do not demonstrate network lazy-load deferral.",
+    steps: [
+      { k: "mountImage", msgIndex: 2, heightPx: 280 },
+      { k: "mountImage", msgIndex: 20, heightPx: 340 },
+      { k: "userDrag", toTop: 900 },
+      { k: "wait", ms: 400 },
+      { k: "completeImage", msgIndex: 2, expectedPlacement: "above", expectedHeightPx: 280 },
+      { k: "wait", ms: 150 },
+      { k: "completeImage", msgIndex: 20, expectedPlacement: "below", expectedHeightPx: 340 },
+      { k: "wait", ms: 250 },
+    ],
+    expect: {
+      finalAtBottom: false,
+      driftWhileAwayAtMost: 8,
+      finalHasUnseenContent: true,
+    },
+  },
+  {
+    name: "send-then-composer-grows",
+    description: "A short reply has unused spacer below it. Resizing the composer after send must retain the sent message at the top, not jump to the natural content bottom.",
+    steps: [
+      { k: "send", px: 40 },
+      { k: "append", px: 48, role: "assistant" },
+      { k: "wait", ms: 500 },
+      { k: "chromeResize", px: 260 },
+      { k: "wait", ms: 200 },
+      { k: "chromeResize", px: 96 },
+      { k: "wait", ms: 200 },
+    ],
+    expect: { finalUserMessageTopAtMost: 4, driftWhileAwayAtMost: 8, writesAtMost: 1 },
   },
   {
     name: "chrome-grows",

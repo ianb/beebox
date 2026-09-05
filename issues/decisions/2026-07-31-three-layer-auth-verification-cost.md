@@ -5,6 +5,7 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-browse-back-url — adding BBX_BROWSE_API_KEY touched six call sites across three layers
 needs: [decision]
+priority: important
 ---
 
 A request to a box in local dev crosses three authenticating layers, and each

@@ -6,6 +6,7 @@ labels: [rename, release, operations]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-name-change-plan — collecting the owner-operated steps after the repository rename
+priority: important
 ---
 
 The repository uses the Bee Box identity, but several external systems require
@@ -134,3 +135,11 @@ before the move.
 - [ ] Confirm that GitHub, npm, Cloudflare, Google, Discord, production, Apple
   records, and personal devices all use the current identity.
 - [ ] Record the completion date here, then close this issue as implemented.
+
+> 2026-09-03 survey (main session): section 7 is done in fact though unchecked
+> here. The production server today runs `beebox-hub.service` and
+> `beebox-scheduler.service`, the boxes live under `/home/beebox/boxes`, the
+> live checkout is `/opt/beebox/beebox`, and `/usr/local/bin/bbx` resolves
+> there; the deploy sweep converged all six boxes through it today. The
+> hostname (section 5), OAuth redirects (6), and everything after remain open;
+> the boxholder's own links still use the previous hostname.

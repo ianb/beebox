@@ -5,6 +5,7 @@ area: monorepo
 filed-by: agent
 discovered-in: worktree-dev-comments — using the issues browser as the model for the general browser
 labels: [workstreams-app]
+priority: normal
 ---
 
 `/workstreams/issues` filters by category, priority, needs, status, and sort

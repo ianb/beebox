@@ -4,6 +4,7 @@ workstream: unknown
 area: beebox
 needs: [decision]
 labels: [cli, agent-surface]
+priority: important
 ---
 
 `bbx` is the box-agent-facing command surface, but operator, deploy, and dev

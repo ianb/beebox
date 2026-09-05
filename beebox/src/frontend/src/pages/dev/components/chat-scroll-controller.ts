@@ -1,7 +1,7 @@
 /**
  * The seam between the dev scroll harness and whatever controller it is
- * exercising. The harness knows only this interface — the two attach points,
- * the two observable flags, the viewport height the send spacer needs, and the
+ * exercising. The harness knows only this interface — the scroller, content,
+ * and live-turn attach points, the two observable flags, and the
  * imperative calls the chat makes (send anchor, button, prepend capture,
  * open-thread hold) — so a replacement controller can be registered here and
  * driven by the same scenarios without touching the harness or the scripts.

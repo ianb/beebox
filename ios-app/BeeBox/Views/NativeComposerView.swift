@@ -626,11 +626,18 @@ struct NativeComposerView: View {
             statusText = "Microphone off."
         case .erase:
             selectedPhotoItems = []
+            // Detach the old draft before the active voice turn restarts.
+            // `startIfNeeded` snapshots the composer's current text as its seed;
+            // letting the asynchronous discard run later can therefore seed the
+            // new recognizer with the very message this command just erased.
+            let discardedDraft = draftStore.detachCurrentDraftForDiscard()
             dictation.resetDictationState()
             applyVoiceTurn(.draftErased)
             statusText = "Message erased."
-            Task {
-                await draftStore.discardCurrentDraft()
+            if let discardedDraft {
+                Task {
+                    await draftStore.finishDiscarding(discardedDraft)
+                }
             }
         }
     }

@@ -6,6 +6,7 @@ needs: [design]
 labels: [ui, pdf, renderers]
 filed-by: agent
 discovered-in: document-card-view worktree — building the pdf.card view
+priority: normal
 ---
 
 Trimmed 2026-08-24: the first two gaps are built — `lib/docling.ts` parses

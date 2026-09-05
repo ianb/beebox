@@ -1,9 +1,9 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: 17afd862b86f29330e6126d19eafa6c711d60b2c
-date: 2026-08-23
-model: codex
-reviewed-by: Ian Bicking
+generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
+date: 2026-09-03
+model: claude-fable-5-1
+reviewed-by: Ian
 ---
 
 # Security report — structured version
@@ -102,7 +102,7 @@ Notable abilities, and the items that are more than routine:
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | `mock: true` TTS is rejected unless explicit development surfaces are enabled; it cannot silently fall through to a paid provider call |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |
 | `ANY /api/adapters/:adapter/*` (`api-adapters.ts:63`) | Proxy to Replicate/Mistral/Anthropic/OpenAI, injecting the box's stored key server-side | ok | — | authed | Key never reaches the client |
-| `GET /api/task-output` | Reads task-output files, not box-scoped | gap | med | authed | A cross-box read gap on multi-box servers, **tracked privately** (location-precise defect; disclosure withheld until fixed per the rubric's disclosure rule) |
+| `GET /api/task-output` | Reads this box's own background-task output files (`isTaskOutputPathForBox`, `transcript-paths.ts:116`; re-checked after `realpath`) | ok | — | authed | Was host-tmp-wide until 2026-09-03 — a cross-box read on multi-box servers, tracked privately while unpatched; now fixed and disclosed in §7b |
 | `GET /api/proxy-image` | Server-side fetch of arbitrary public image URLs | gap | low | authed | SSRF-guarded (see §4). A possible auth-scope mismatch is under verification and **tracked privately** until confirmed harmless or fixed |
 | `GET /api/external` (`api-external.ts:47`) | Reads configured paths outside the box root | mitigated | high | unreachable | Registered only with explicit `devSurfaces`; production launchers omit it and absence fails closed. If enabled, an authed member can rewrite `_config/box.json` through the raw file API and widen `externalRoots`, so this remains a high-impact local-development capability rather than a hardened member boundary |
 | tRPC `admin.*`, `pairing.*`, `scanTokens.*` | Connector setup, device pairing, credential minting | ok | — | owner | Uniformly `ownerProcedure` |
@@ -264,10 +264,10 @@ gathered here so the lifecycle reads as one story.
 
 ## 7. Cross-cutting threats
 
-Sections 1–6 inventory what exists. This section names a threat that does
-not reduce to any single row — it is the emergent risk of the
-architecture. Prompt injection is the first and, today, the only entry;
-add an entry when a second architecture-level threat earns one.
+Sections 1–6 inventory what exists. This section names threats that do
+not reduce to any single row — the emergent risks of the architecture.
+Two entries: prompt injection (7a) and cross-box leakage on a shared host
+(7b); add an entry when another architecture-level threat earns one.
 
 ### 7a. Prompt injection via external content
 
@@ -311,6 +311,50 @@ agent's full shell/file capability, and nothing structural stops it. The
 containment direction is [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md);
 until that lands, this is a real and accepted-by-deployment-model risk,
 not a solved one.
+
+### 7b. Cross-box leakage on a shared host
+
+A host serves several boxes as one OS user: the hub spawns one `bbx serve`
+child per box, and the boxholder's own machine typically runs more boxes
+than a server does. Isolation is **env-level, not OS-level** (§5 process model, overview
+"Threat model"): the hub strips cross-box credentials from each child's env,
+and every box-scoped surface derives its box from the request scope, never
+from caller input. A leak here is one box's confidential content reaching
+another box's caller. Three channels, and what covers each:
+
+| Channel | What a leak looks like | Control | Verified by |
+|---|---|---|---|
+| **A. Network** — a request carrying box A's credential (session cookie, agent bearer, mobile token) reaches box B's data, through B's scope or through A's scope with a path that climbs out | The recurring shape: a caller-supplied path-like input joined onto `boxRoot` without a containment helper (`boxRelativePath`, `containWithinBox`, `resolveContainedRef`, `resolveCardPath`, …) | Per-scope auth wall (`server-box-scope.ts`, §1) rejects A's credential on B; every path input in the route and tRPC inventory (§1) is bounded by a containment helper — must be **zero** exceptions | `test/webapp/cross-box-probe.doctest.md` (the regression anchor: box A's bearer against every read surface of box B); `schedules/cross-box-leak-scan` static sweep, weekly, hands off any new unbounded path input |
+| **B. Filesystem** — a box process reads another box's files or shared host state directly | `~/.bbx-session-secret`, `~/.bbx-auth.json`, the machine secret store, the shared Google token, `~/.claude/projects/<encoded cwd>`, `/tmp/claude-<uid>/…` | **Accepted for now** as the env-level posture (§8), with a fix on the books — [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md): one OS user, files are readable by any same-user process. Compensations: 0600/0700 modes; per-cwd keying of transcripts and task output; `bbx secrets` refuses an agent asking about another box (`secrets-guard.ts`) | `schedules/cross-box-leak-scan` host audit (local, and production over SSH from the main checkout): modes, per-cwd keying maps each project dir to at most one box, no nested box roots, no undocumented file under `~/.config/beebox` / `~/.local/share/beebox` |
+| **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2) | `test/hub/supervisor.doctest.md` |
+
+**Findings of the 2026-09-03 scan** (state after this pass):
+
+| Item | Where | State | Sev | Reach | Notes |
+|---|---|---|---|---|---|
+| `GET /api/task-output` read any host-tmp task output | `routes/api.ts:100` | fixed | med | authed | Was not box-scoped; now `isTaskOutputPathForBox` (`transcript-paths.ts:116`) requires this box's encoded-cwd segment, re-checked after `realpath`, regular files only. Previously the §1 "tracked privately" gap; disclosed here because the fix reveals it |
+| `chatControl.reserveSession` accepted an unbounded `contextDir` | `trpc/routers/chat-control-procedures.ts:317`, `core/landmark/features.ts:67` | fixed | low | member | The directory was joined onto the box root without containment. Input now uses the shared `boxRelativePathSchema` (`core/landmark/nearest.ts:41`, which also replaced four duplicated inline refines and the raw `/api/chat/send` body's `contextDir`, `routes/chat-helpers.ts:69`); the core reader also refuses a dir outside the box |
+| `files.summarize` accepted a relative `..` path | `trpc/routers/files.ts:30` | fixed | med | member | `normalizePath` contained only absolute inputs, so a relative path could resolve outside the box. Found by the probe; now every input goes through `containWithinBox` |
+| `listSessionRoots` joined a history-file `contextDir` | `core/chat/session/history.ts:193` | fixed | low | local file | Source is the box's own history file, not a request; now resolved through `containedSessionCwd` — [listsessionroots-contextdir-no-containment](../../issues/closed/bugs/2026-08-26-listsessionroots-contextdir-no-containment.md) |
+| Aggregated scheduler stderr | `~/.local/share/beebox/scheduler-stderr.log` (`schedule/scheduler.ts:36`) | accepted | low | local file | One file collects stderr from every box's scheduled runs; same-user readable like everything in channel B. The host audit reports it while it exists |
+| Box paths and slugs in shared config | `~/.config/beebox/{hub,boxes,hub-state}.json`, `~/.codex/config.toml` | ok | — | — | Not confidential: a box's existence and path is not its content |
+
+**Scope of the claim.** Channel A is tested to zero and re-swept weekly,
+with one stated residual: containment is string-level (`containWithinBox`)
+at most read sinks, and only `views.resolveRef` re-checks after
+`fs.realpath`. A symlink planted *inside* box A that points at box B would
+carry A's credential to B's content through `files.summarize`,
+`/api/image/*`, or the landmark feature reader. Planting it needs same-user
+filesystem access to A, which already reads B directly (channel B), so it
+is not a credential-only path; recorded as accepted rather than closed
+(cross-model review, 2026-09-04). Channel B is not defended and is not
+claimed to be; a determined same-user process reads what it likes. That is
+accepted for now and tracked for a fix in
+[cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md)
+(the agent-side half is
+[agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md),
+which shares the two-box fixture). Boxes also share one browser origin
+(§4, accepted).
 
 ## 8. Accepted risks (roll-up)
 
@@ -357,9 +401,18 @@ Every `accepted` item, with its rationale:
     the agent is contained; see §7a. This is the roll-up's most important
     entry.
 
+12. **Cross-box filesystem reach on a shared host** — one OS user, so a
+   box process can read a sibling box's files and the shared host state
+   (`~/.bbx-session-secret`, the machine secret store, `~/.claude/projects`,
+   the aggregated `scheduler-stderr.log`), and a symlink it plants inside its
+   own box is followed by string-contained read sinks. Env-level isolation is
+   the posture for now — a per-box boundary is tracked in
+   [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md);
+   the network channel is tested to zero and re-swept weekly. (§7b)
+
 Not in this roll-up because no acceptance decision has been made — these
 are **gaps**, tracked, awaiting fix or a decision: bind host being
 override-able (`mitigated`, §5), deploy infra drift (§5), the
 member-capability tier (§6b), Cloudflare Flexible SSL edge→origin
-plaintext (§5), the connector secret-file modes (§2), and two
-location-precise defects tracked privately (§1).
+plaintext (§5), the connector secret-file modes (§2), and one
+location-precise defect tracked privately (§1).

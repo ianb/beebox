@@ -2,6 +2,7 @@
 title: "dev scripts into bin"
 workstream: unknown
 area: monorepo
+priority: important
 ---
 
 The worktree-tooling instance of this is now **implemented** (2026-08,
