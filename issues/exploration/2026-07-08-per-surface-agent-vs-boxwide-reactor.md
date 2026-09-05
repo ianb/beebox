@@ -3,8 +3,9 @@ title: "per surface agent vs boxwide reactor"
 workstream: unknown
 area: beebox
 needs: [design]
-next-action: invalid
 ---
+
+> `invalid?` checked 2026-09-05: not moot. `src/core/reactor/` and the one-box-one-agent model are unchanged, no per-surface agent was built, and no design pass settled the question; it is undecided, not invalidated.
 
 From the Rowboat competitive note (`research/rowboat-review.md`, Tier 1). Rowboat's
 sharpest divergence from us: **each work-surface has its own persistent background

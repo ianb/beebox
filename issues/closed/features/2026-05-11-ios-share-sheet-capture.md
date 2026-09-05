@@ -2,10 +2,11 @@
 title: "iOS Share Sheet capture via native extension"
 workstream: ios-share-extension-capture
 area: beebox
-needs: [manual-testing]
-design: ../../beebox/docs/plans/ios-share-extension-capture.md
-next-action: manually-confirmed
+design: ../../../beebox/docs/plans/ios-share-extension-capture.md
+resolution: implemented
 ---
+
+> Closed 2026-09-05 on the boxholder's `manually-confirmed`: URL and text delivery, chat-send, save-in, and the box picker — `571bb83f7`, `2809544ea`, `d5420006d`, `f01f793e4`. Image/audio/file capture is the follow-up named in `docs/plans/ios-share-extension-capture.md`, not this item.
 
 ## Current design decision
 

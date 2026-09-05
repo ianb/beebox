@@ -5,8 +5,9 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-fix-bugs — bug-queue validation; split out of the closed box-child-stderr issue
 priority: backlog
-next-action: reconfirm
 ---
+
+> `reconfirm?` checked 2026-09-05: unchanged since the 2026-08-18 check — the result message's `errors` field is still captured nowhere in `message-types.ts` / `messages.ts`.
 
 > **Checked 2026-08-18 — still live, and the real gap is sharper than filed.**
 > Tagged `reconfirm`; removed.

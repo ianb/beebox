@@ -8,8 +8,9 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder direction
 priority: normal
-next-action: reconfirm
 ---
+
+> `reconfirm?` checked 2026-09-05: still live. Inline annotation rendering exists (`Todo.tsx`, older than this issue) but neither ask is built — no "N open things here" edge summary and no card companion view.
 
 Today todo handling routes to a **place**: `{% todo %}` annotations are
 collected into todo-view plate cards (the implemented

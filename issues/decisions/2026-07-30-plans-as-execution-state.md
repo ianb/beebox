@@ -5,8 +5,9 @@ needs: [decision]
 area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
-next-action: invalid
 ---
+
+> `invalid?` checked 2026-09-05: not moot. `requirements-delivered-gate` (closed 2026-07-31) chose prose extraction and deferred checkbox hardening as coupled future work, so the fork is undecided rather than superseded; `docs/plans/*.md` still carries no checkboxes. Still the boxholder's call.
 
 All 25 documents in `beebox/docs/plans/` contain **zero checkboxes**. Our
 plans are design artifacts: `bbx-plan` produces a statement of purpose, a scope
