@@ -1,6 +1,6 @@
 ---
 title: "Sidecar shell: survive a transient failure, keep tabs, pin one"
-status: draft
+status: active
 workstream: sidecar-shell
 issues:
   - ../../../issues/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md
@@ -285,13 +285,19 @@ in view must not be re-centred (the churn the pin issue warns about).
 `chat-scroll-ease.ts:78` to a shared `lib/reduced-motion.ts` and used by both
 (principle 8 — there should not be two copies of this predicate).
 
-One interaction with Track C that is easy to miss: `scrollIntoView` knows
-nothing about occlusion, so once pinned tabs are `position: sticky` at the left
-edge, a tab sitting *behind* them counts as "in view" and does not scroll. The
-platform answer is `scroll-padding-inline-start` on the strip, sized to the
-pinned block, which `scrollIntoView` does respect. Track C sets it from the
-pinned tabs' measured width; with no pinned tabs it is zero and Track B behaves
-exactly as written here.
+One interaction with Track C is easy to miss: `scrollIntoView` knows nothing
+about occlusion, so a pinned tab made `position: sticky` at the left edge would
+leave a tab sitting *behind* it counted as "in view" and never scrolled to.
+**Built instead as two scrollers** — a pinned group and the rest, inside one
+`role="tablist"` with `role="none"` wrappers — which makes "pinned tabs stay
+put" true by construction and leaves nothing for the scroll code to special-case
+(`InteractiveChat-controls.tsx`, `SidecarTabStrip`).
+
+A second timing problem showed up only in the running app: on a restored strip
+the pane's width is not settled when the effect first runs, so every tab
+measures as visible and nothing scrolls. A `ResizeObserver` on the scroller
+re-runs the reveal, and the reveal returns early when the active tab is already
+visible, so a resize cannot churn.
 
 **Vocabulary lock-ins.** `lib/reduced-motion.ts` exporting
 `prefersReducedMotion(): boolean`.
@@ -369,9 +375,9 @@ Affordance: the pin control lives in the tab, left of the close button, and is
 shown on hover/focus or always when pinned — matching where the close button
 already is (`InteractiveChat-controls.tsx:190-204`). A pinned tab keeps its
 label (no shrink-to-icon: there is no favicon) and is marked with the pin glyph.
-Pinned tabs are `position: sticky; left: 0` inside the strip, which is what
-keeps them out of the scroll-into-view churn Track B introduces — no special
-case in the scroll code.
+Pinned tabs render in their own scroller ahead of the rest (see Track B), which
+keeps them out of the scroll-into-view churn with no special case in the scroll
+code.
 
 **Vocabulary lock-ins.** `SidecarTab` / `SidecarState` / `SidecarAction` and
 `sidecarReducer` in `components/chat/sidecar-tabs.ts`; the storage key
@@ -444,7 +450,8 @@ paragraph, not a design step.
 | Two browser tabs on the same chat write the same key | n/a | yes — `sessionStorage` is per browser tab by definition | n/a |
 | Restore fights `?card=` and flips the active tab on load | yes — restore doctest asserts URL wins | yes — restore-then-activate order | clear |
 | Restore overrides a one-shot `?companion=` deep link | yes — restore doctest covers the deep-link-last order | yes — the deep link opens and activates after restore | clear |
-| A tab hidden behind sticky pinned tabs is treated as in view and never scrolled to | no unit test (DOM behaviour) | yes — `scroll-padding-inline-start` sized to the pinned block | visible immediately in `bin/browse` |
+| A tab hidden behind pinned tabs is treated as in view and never scrolled to | no unit test (DOM behaviour) | yes — pinned tabs are a separate scroller, so occlusion cannot arise | visible immediately in `bin/browse` |
+| A restored strip renders before the pane's width settles, so nothing scrolls | no unit test (DOM behaviour) | yes — a ResizeObserver re-runs the reveal | found this way in `bin/browse`; fixed |
 
 ## Agent-flow / user-flow edge cases
 
@@ -503,12 +510,18 @@ paragraph, not a design step.
 
 ## Open design questions
 
-1. **`MAX_UNPINNED_TABS` value, or no cap at all.** Lean: 12. It is high enough
+All three were settled during implementation; kept here with their answers,
+because the reasoning is the part worth reading later.
+
+1. **`MAX_UNPINNED_TABS` value, or no cap at all.** Settled: 12, the
+   boxholder's call.
+   Original lean and reasoning: Lean: 12. It is high enough
    that nobody hits it in a normal conversation and low enough that a restored
    strip is legible. Cutting the cap entirely is the acceptable alternative —
    it is the weakest piece of Track C, and eviction is the only part of this
    plan that removes something the person did not ask to remove.
 2. **Whether the `"new"`-chat strip should follow the assigned session id.**
+   Settled: yes, implemented as `moveSidecarState`.
    The mechanism exists (`onSessionAssignment`,
    `components/chat/InteractiveChat.tsx:134`), so this is a behaviour choice,
    not a blocker. Lean: yes — rename `bbx:sidecar-tabs:${boxSlug}:new` to the
@@ -516,10 +529,11 @@ paragraph, not a design step.
    belong to the conversation that message started. The alternative (drop them)
    is defensible only if the rename proves fiddly.
 3. **Does the stale marker belong in `chat` mode too**, where a card is embedded
-   inline in the transcript and there may be several? Lean: yes, same component,
-   because a silently-stale card is the same defect wherever it renders — but if
-   it reads as noise with five cards in a transcript, restrict it to
-   `companion` and `page`.
+   inline in the transcript and there may be several? Settled: yes in `chat`,
+   `companion` and `page` — a silently-stale card is the same defect wherever it
+   renders — and no in `embed`, the frameless mode figures use inside a card
+   body, which has no chrome to carry a marker and whose host card reports its
+   own staleness.
 
 ## Knowledge audits
 
@@ -581,6 +595,14 @@ before the code they cover, because in all three the decision is the artifact.
 doctests pass; `pnpm typecheck` and `pnpm exec eslint` are clean on the touched
 files; the three `bin/browse` checks above pass on `/sidecar-shell/test1/chat`;
 `bin/smoke` passes at `/finish`.
+
+**Verified in the running app** (`/sidecar-shell/test1/chat`) rather than only
+by test: a 502 injected at `window.fetch` leaves the card on screen with the
+marker, Refresh recovers it, and window focus does too; a restored ten-tab strip
+scrolls its active tab into view; a pinned tab holds its place across nine
+further opens and a reload; the twelve-tab cap evicts the oldest unpinned tab
+and never the pinned one; closing the panel clears the stored strip; and a
+`?companion=` deep link still wins the active tab over the restored strip.
 
 No migration: nothing on disk changes shape. The only persisted state is
 `sessionStorage`, which is per-browser-tab and discarded when the tab closes, so
