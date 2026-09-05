@@ -83,7 +83,11 @@ function isTransientMessage(message: string): boolean {
   const status = /Failed to load: (\d{3})/.exec(message);
   if (status !== null) return isTransientStatus(Number(status[1]));
   if (/failed to fetch|networkerror|load failed|network error|err_connection/.test(message.toLowerCase())) return true;
-  return /is not valid JSON|Failed to execute 'json'|Unexpected token/.test(message);
+  // Deliberately not a bare "Unexpected token": that also describes a genuinely
+  // malformed answer from our own API, which is a bug to see rather than an
+  // outage to retry. These two shapes are what a proxy's HTML/text body
+  // produces inside the batch link.
+  return /is not valid JSON|Failed to execute 'json'/.test(message);
 }
 
 /**

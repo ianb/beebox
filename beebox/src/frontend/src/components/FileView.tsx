@@ -32,6 +32,7 @@ import { rendererDisplayLabel } from "../lib/renderer-display-label";
 import { toDisplayPath } from "@shared/display-path";
 import { SelectionCapture } from "./SelectionCapture";
 import { Pre } from "./ui/Pre";
+import { Button } from "./ui/Button";
 import { ActiveFileRenderer, AuthoredRendererMarker } from "./ActiveFileRenderer";
 import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
@@ -142,13 +143,19 @@ function PageHeader({
   );
 }
 
-/** The hard-failure state: nothing loaded, and the failure is not a missing card. */
-function FileErrorState({ path, failure }: { path: string; failure: LoadFailure }) {
+/**
+ * The hard-failure state: nothing loaded, and the failure is not a missing
+ * card. It offers the same Try again the stale marker does — a card opened
+ * while the box is restarting has no previous body to fall back on, and
+ * reloading the whole page should not be the only way forward.
+ */
+function FileErrorState({ path, failure, onRetry }: { path: string; failure: LoadFailure; onRetry: () => void }) {
   return (
     <div className="p-4 text-danger-dark">
       <p className="font-medium">{failure.headline}</p>
       <p className="text-sm mt-1">Could not load {toDisplayPath(path)}.</p>
       <div className="mt-1"><Pre size="sm" error>{failure.detail}</Pre></div>
+      <div className="mt-2"><Button intent="secondary" size="sm" onClick={onRetry}>Try again</Button></div>
     </div>
   );
 }
@@ -187,7 +194,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
   // A missing card is not an error state: it falls through to MissingCardState,
   // which offers to create or close it.
-  if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} />;
+  if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} onRetry={refresh} />;
   if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {toDisplayPath(path)}</div>;
 
   const userName = userSelection && userSelection.path === path ? userSelection.name : null;

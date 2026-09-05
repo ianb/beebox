@@ -81,7 +81,12 @@ export function parseSidecarState(raw: string | null): SidecarState | null {
     return null;
   }
   if (!isRecord(value) || !Array.isArray(value["tabs"])) return null;
-  const tabs = value["tabs"].map(parseTab).filter((t): t is SidecarTab => t !== null);
+  const parsed = value["tabs"].map(parseTab).filter((t): t is SidecarTab => t !== null);
+  // One tab per path is an invariant of the strip (the reducer, the React keys,
+  // and every action look tabs up by path). A hand-edited or double-written
+  // store could carry the same path twice, which would render two tabs that act
+  // as one; keep the last, which is the more recently written.
+  const tabs = [...new Map(parsed.map((t) => [t.target.path, t])).values()];
   if (tabs.length === 0) return null;
   // An active path naming a tab that did not survive the parse would leave the
   // pane rendering nothing; fall back to the last tab, which is where an open

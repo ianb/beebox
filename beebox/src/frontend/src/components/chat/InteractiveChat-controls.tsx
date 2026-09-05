@@ -139,7 +139,6 @@ function SidecarTabStrip({ tabs, activePath, onSelectTab, onCloseTab, onTogglePi
   // outside the visible range and the open read as a no-op — the highlight
   // existed, off-screen (2026-08-29).
   const tabRefs = useRef<Map<string, HTMLElement>>(new Map());
-  const looseRef = useRef<HTMLDivElement | null>(null);
   const pinned = tabs.filter((t) => t.pinned);
   const loose = tabs.filter((t) => !t.pinned);
 
@@ -167,19 +166,22 @@ function SidecarTabStrip({ tabs, activePath, onSelectTab, onCloseTab, onTogglePi
   // The strip's width is not settled when a restored strip first renders — the
   // pane is still laying out, so every tab measures as visible and nothing
   // scrolls. Watching the scroller catches that, and a window resize with it.
+  // Whichever scroller holds the active tab is the one to watch: pinned tabs
+  // have their own, and it overflows too once several are pinned.
   useEffect(() => {
-    const scroller = looseRef.current;
-    if (scroller === null) return;
+    const scroller = tabRefs.current.get(activePath)?.parentElement;
+    if (scroller === undefined || scroller === null) return;
     const observer = new ResizeObserver(() => revealActive());
     observer.observe(scroller);
     return () => observer.disconnect();
-  }, [revealActive]);
+  }, [revealActive, activePath]);
 
   function renderTab(tab: PanelTab) {
     const isActive = tab.target.path === activePath;
     return (
       <div
         key={tab.target.path}
+        role="none"
         ref={(el) => {
           if (el === null) tabRefs.current.delete(tab.target.path);
           else tabRefs.current.set(tab.target.path, el);
@@ -251,7 +253,7 @@ function SidecarTabStrip({ tabs, activePath, onSelectTab, onCloseTab, onTogglePi
           {pinned.map(renderTab)}
         </div>
       ) : null}
-      <div role="none" ref={looseRef} className="flex-1 min-w-0 flex overflow-x-auto">
+      <div role="none" className="flex-1 min-w-0 flex overflow-x-auto">
         {loose.map(renderTab)}
       </div>
     </div>

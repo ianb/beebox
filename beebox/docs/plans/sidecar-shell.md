@@ -244,6 +244,17 @@ a **Refresh** button that refetches. The existing triggers (`file-change`,
 bus reconnect, window focus) still clear it whenever they fire first. No polling
 timer is added — see *Could this be simpler?*.
 
+**Verified after the fact, because it is the issue's central requirement:** a
+real box restart under an open, stale sidecar recovers on its own. Stopping the
+worktree drops the tRPC WebSocket; when the box comes back the subscription
+restarts, `FileView`'s existing `onConnect` resync invalidates the card query,
+the refetch succeeds, and the marker clears with no click and no reload. So the
+stranded state needs a narrower failure than "the box restarted": HTTP has to
+fail while the WebSocket never drops, and stay failed until the person acts. The
+Refresh button is the backstop for that, and a hard load failure now carries the
+same **Try again** so a card opened *during* an outage is not a dead end
+either.
+
 The marker itself: a `Badge tone="warning"` reading **Not up to date** with the
 failure as its `title`, rendered by `FileView` above the renderer output in
 every mode, so a card in chat, in the sidecar, and on the card page all report

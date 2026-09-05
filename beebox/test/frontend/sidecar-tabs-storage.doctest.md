@@ -127,6 +127,28 @@ JSON.stringify([sparse.tabs[0]!.pinned, sparse.tabs[0]!.lastActiveAt])
 => [false,0]
 ```
 
+## The same path twice collapses to one tab
+
+One tab per path is an invariant the reducer and the React keys both rely on.
+A double-written or hand-edited store must not be able to produce two tabs that
+act as one.
+
+```ts
+const duped = parseSidecarState(JSON.stringify({
+  v: 1,
+  activePath: "_content/Twice.card",
+  tabs: [
+    { url: "_content/Twice.card", label: "first", pinned: false, lastActiveAt: 1 },
+    { url: "_content/Twice.card", label: "second", pinned: true, lastActiveAt: 2 },
+  ],
+}))!;
+duped.tabs.length
+=> 1
+
+duped.tabs[0]!.label
+=> second
+```
+
 ## An active path naming a tab that did not survive falls back
 
 Otherwise the pane would restore a strip and render nothing in it.

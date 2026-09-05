@@ -114,7 +114,8 @@ isTransientQueryError({ data: { httpStatus: 503 }, message: "Service Unavailable
 
 A missing card, a rejected request, and an expired session are answers, not
 outages: retrying them delays the correct state by several seconds and changes
-nothing.
+nothing. Nor is a bare parse complaint enough on its own — a malformed answer
+from our own API is a bug to look at, not an outage to wait out.
 
 ```ts
 isTransientQueryError({ data: { code: "NOT_FOUND", httpStatus: 404 }, message: "Card not found: Foo.card" })
@@ -124,6 +125,9 @@ isTransientQueryError({ data: { code: "UNAUTHORIZED", httpStatus: 401 }, message
 => false
 
 isTransientQueryError({ message: "Failed to load: 404 Not Found" })
+=> false
+
+isTransientQueryError({ message: `Unexpected token 'x' at position 4` })
 => false
 
 isTransientQueryError(null)
