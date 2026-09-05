@@ -12,7 +12,7 @@ opportunities elsewhere in the code. The monitor automatically bumps settled
 releases and immediately applies beebox-relevant security, memory, and
 correctness fixes.
 
-Two channels are assessed, not one. **Runtime** is beebox's own use of the
+Three channels are assessed. **Runtime** is beebox's own use of the
 SDK (`src/core/agent/`, `src/core/chat/session/`, `src/services/claude-chat.ts`,
 `src/services/scan-vision-claude.ts`, `src/core/sdk-hooks.ts`). **Harness** is
 the Claude Code the boxholder and every worker session run in — `.claude/hooks/`,
@@ -23,7 +23,14 @@ Claude Code changelog, which is read every turn regardless of whether an SDK
 release claims parity. A Claude Code change with zero SDK API surface can still
 break this repo — v2.1.218's worktree git isolation silently broke `/finish`'s
 merge step for days. Claude Code versions that move harness behavior get their
-own entries here, labeled as such, with no pin to apply.
+own entries here, labeled as such, with no pin to apply. **Codex** is the
+third channel, added 2026-09-05: `@openai/codex` and `@openai/codex-sdk`,
+pinned together in `beebox/package.json`, are the binary the box's Codex chats
+run (`src/services/codex-sdk-session.ts`, `src/services/codex-binary.ts`) and
+what the production server's `codex` symlink resolves to — nothing else
+updates Codex on the server, so a model upstream adds is invisible to boxes
+until the pin moves. Its releases are read from `openai/codex` on GitHub.
+Codex entries here are labeled as such; they carry their own pin.
 
 - **Current pin:** `0.3.258` (in `beebox/package.json`. The monorepo root
   carries a second, unmanaged pin at `0.3.226` — filed as
@@ -31,8 +38,9 @@ own entries here, labeled as such, with no pin to apply.
   root copy is what `bin/` tooling imports and what `update-agent-sdk --check`
   measures, so the check reports "behind" on a current repo and every bump ends
   by printing "Now at 0.3.226")
-- **Latest reviewed upstream version:** `0.3.260` (SDK), `2.1.260` (Claude Code)
-- **Ledger floor:** `0.3.220` (earlier releases are out of scope)
+- **Latest reviewed upstream version:** `0.3.260` (SDK), `2.1.260` (Claude Code), `0.153.0` (Codex)
+- **Ledger floor:** `0.3.220` (earlier releases are out of scope); Codex floor `0.153.0`
+- **Codex pin:** `0.153.0` (`@openai/codex` + `@openai/codex-sdk`, exact, same 2-day lane via `pnpm update-agent-sdk`)
 - **Current recommendation:** `0.3.258` was taken this turn as the newest settled
   version, carrying `0.3.257`'s background-task lifecycle fixes with it — so the
   chat task strip's `background_tasks_changed` work is no longer blocked on the
@@ -47,6 +55,17 @@ own entries here, labeled as such, with no pin to apply.
   below assert that no session here runs with permission enforcement on. **That
   is wrong** — two live schedules pass permission rules on the command line. See
   the 0.3.259 entry, as amended by the 0.3.260 entry.
+
+## Codex 0.153.0 — applied 2026-09-05 (channel added; not itemized)
+
+The first Codex entry. The pin moved `0.147.0` → `0.153.0` (newest release
+older than two days) when the boxholder noticed the production server's
+`codex` was behind and Astra (`gpt-6-astra`) had just been added to the box
+model picker. Releases 0.148–0.153 were **not** read for this entry — the
+channel was added in the same change, and the next monitor turn starts from
+this floor. Verified: beebox typecheck, the Codex doctests (transcript, usage,
+chat models, session registry and history), and the deploy gate's
+`codex plugin --help`.
 
 ## Release ledger
 
