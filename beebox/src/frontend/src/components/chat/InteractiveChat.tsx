@@ -209,7 +209,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
 
   const model = useChatModelFeatures({ sessionId, contextDir: effectiveContextDir, groupCount: groups.length, send, startEngine, startModel });
   const mute = useChatMute();
-  const tabs = useChatTabs();
+  const tabs = useChatTabs({ boxSlug, sessionInput });
   const { activeView } = tabs;
   useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView, boxSlug });
   const cardSend = useCompanionCard({ initialCard: card, activeView, onZoomView: tabs.onZoomView, boxSlug, error });

@@ -16,6 +16,7 @@ import { cn } from "../../lib/cn";
 import { prefersReducedMotion } from "../../lib/reduced-motion";
 import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import type { SidecarTab } from "./sidecar-tabs";
 import type { AddSelectionInput } from "../../lib/selection/position";
 import type { ActivityKind } from "@core/chat/card-activity.js";
 
@@ -101,21 +102,168 @@ export function NarrationMicIcon({ className }: { className?: string }) {
   );
 }
 
-export interface PanelTab {
-  target: ViewTarget;
-  label: string;
+/**
+ * The pin. Filled when the tab is pinned, outline when the control is only
+ * offering — the state and the offer must not look the same (principle 13).
+ */
+function PinIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width={12} height={12} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 4h6l-1 6 4 3v2H6v-2l4-3z" />
+      <path d="M12 15v5" />
+    </svg>
+  );
 }
+
+export type PanelTab = SidecarTab;
 
 /**
  * Companion view panel shown alongside chat when one or more views are open.
  * Tabs are keyed by path: opening a file that's already open reactivates it
  * rather than duplicating a tab, and in-file link clicks open new tabs.
  */
+/**
+ * The tab strip. Its own component because it owns two behaviours the pane
+ * around it does not: the element refs that let the active tab scroll itself
+ * into view, and the pin control on each tab.
+ */
+function SidecarTabStrip({ tabs, activePath, onSelectTab, onCloseTab, onTogglePin }: {
+  tabs: PanelTab[];
+  activePath: string;
+  onSelectTab: (path: string) => void;
+  onCloseTab: (path: string) => void;
+  onTogglePin: (path: string) => void;
+}) {
+  // Tab elements by path, so the active one can be scrolled into view. With
+  // more open documents than the strip can show, a newly opened tab landed
+  // outside the visible range and the open read as a no-op — the highlight
+  // existed, off-screen (2026-08-29).
+  const tabRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const looseRef = useRef<HTMLDivElement | null>(null);
+  const pinned = tabs.filter((t) => t.pinned);
+  const loose = tabs.filter((t) => !t.pinned);
+
+  const revealActive = useCallback(() => {
+    const el = tabRefs.current.get(activePath);
+    if (el === undefined) return;
+    const scroller = el.parentElement;
+    if (scroller !== null) {
+      const strip = scroller.getBoundingClientRect();
+      const tab = el.getBoundingClientRect();
+      // Already visible: leave it alone. Re-scrolling a visible tab is the
+      // churn that makes a strip feel like it is fighting you.
+      if (tab.left >= strip.left - 1 && tab.right <= strip.right + 1) return;
+    }
+    // `inline: "nearest"` scrolls the minimum needed; `block: "nearest"` keeps
+    // this from scrolling any ancestor, since scrollIntoView walks every
+    // scrollable ancestor and the chat shell is fixed.
+    el.scrollIntoView({ inline: "nearest", block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  }, [activePath]);
+
+  useEffect(() => {
+    revealActive();
+  }, [revealActive, tabs.length, pinned.length]);
+
+  // The strip's width is not settled when a restored strip first renders — the
+  // pane is still laying out, so every tab measures as visible and nothing
+  // scrolls. Watching the scroller catches that, and a window resize with it.
+  useEffect(() => {
+    const scroller = looseRef.current;
+    if (scroller === null) return;
+    const observer = new ResizeObserver(() => revealActive());
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, [revealActive]);
+
+  function renderTab(tab: PanelTab) {
+    const isActive = tab.target.path === activePath;
+    return (
+      <div
+        key={tab.target.path}
+        ref={(el) => {
+          if (el === null) tabRefs.current.delete(tab.target.path);
+          else tabRefs.current.set(tab.target.path, el);
+        }}
+        className={cn(
+          "group flex-shrink-0 max-w-[14rem] flex items-center border-r border-warm-300 border-b-2",
+          isActive ? "bg-white border-b-primary" : "border-b-transparent hover:bg-warm-100",
+        )}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={isActive}
+          onClick={() => onSelectTab(tab.target.path)}
+          title={tab.target.path}
+          className={cn(
+            "flex-1 min-w-0 truncate text-left text-sm pl-3 pr-1 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            isActive ? "text-warm-900 font-medium" : "text-warm-600",
+          )}
+        >
+          {tab.label}
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin(tab.target.path);
+          }}
+          aria-label={tab.pinned ? `Unpin ${tab.label}` : `Pin ${tab.label}`}
+          aria-pressed={tab.pinned}
+          title={tab.pinned ? "Unpin tab" : "Pin tab"}
+          className={cn(
+            "flex-shrink-0 p-0.5 rounded hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            // Pinned: always shown, because it is the only thing that says the
+            // tab is pinned. Unpinned: revealed on hover or keyboard focus, so
+            // a row of tabs is not a row of icons.
+            tab.pinned ? "text-primary" : "text-warm-500 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+          )}
+        >
+          <PinIcon filled={tab.pinned} />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onCloseTab(tab.target.path);
+          }}
+          aria-label={`Close ${tab.label}`}
+          title="Close tab"
+          className="flex-shrink-0 mr-1 p-0.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6l-12 12" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  // Two scrollers, not one strip with sticky pins: a sticky tab occludes what
+  // scrolls under it, and `scrollIntoView` cannot see occlusion — it would call
+  // a tab parked behind the pins visible and never scroll to it. Separate
+  // scrollers make "pinned tabs stay put" true by construction. The inner
+  // wrappers carry `role="none"` so the tablist still owns the tabs themselves.
+  return (
+    <div id="bbx-panel-tabs" role="tablist" aria-label="Open files" className="flex-1 min-w-0 flex">
+      {pinned.length > 0 ? (
+        <div role="none" className="flex-shrink-0 max-w-[50%] flex overflow-x-auto border-r-2 border-warm-400 bg-warm-100">
+          {pinned.map(renderTab)}
+        </div>
+      ) : null}
+      <div role="none" ref={looseRef} className="flex-1 min-w-0 flex overflow-x-auto">
+        {loose.map(renderTab)}
+      </div>
+    </div>
+  );
+}
+
 function CompanionViewPanelInner({
   tabs,
   activePath,
   onSelectTab,
   onCloseTab,
+  onTogglePin,
   onClosePanel,
   onNavigate,
   onUpdateTarget,
@@ -126,6 +274,7 @@ function CompanionViewPanelInner({
   activePath: string;
   onSelectTab: (path: string) => void;
   onCloseTab: (path: string) => void;
+  onTogglePin: (path: string) => void;
   onClosePanel: () => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   onUpdateTarget: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -139,20 +288,6 @@ function CompanionViewPanelInner({
   // own scroll position and interactive state while inactive (it's hidden, not
   // unmounted). Unopened tabs stay unrendered until first selected.
   const [mounted, setMounted] = useState<ReadonlySet<string>>(() => new Set());
-  // Tab elements by path, so the active one can be scrolled into view. With
-  // more open documents than the strip can show, a newly opened tab landed
-  // outside the visible range and the open read as a no-op — the highlight
-  // existed, off-screen (2026-08-29).
-  const tabRefs = useRef<Map<string, HTMLElement>>(new Map());
-  useEffect(() => {
-    const el = tabRefs.current.get(activePath);
-    if (el === undefined) return;
-    // `inline: "nearest"` leaves a tab that is already visible where it is —
-    // re-centring every switch is the churn a pinned tab must not suffer.
-    // `block: "nearest"` keeps this from scrolling any ancestor: the chat shell
-    // is fixed, and scrollIntoView walks every scrollable ancestor by default.
-    el.scrollIntoView({ inline: "nearest", block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  }, [activePath, tabs.length]);
   useEffect(() => {
     if (mounted.has(activePath)) return;
     setMounted((prev) => new Set(prev).add(activePath));
@@ -177,54 +312,7 @@ function CompanionViewPanelInner({
   return (
     <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
       <div className="flex-shrink-0 flex items-stretch border-b border-warm-300 bg-warm-50 min-w-0">
-        <div id="bbx-panel-tabs" role="tablist" aria-label="Open files" className="flex-1 min-w-0 flex overflow-x-auto">
-          {tabs.map((tab) => {
-            const isActive = tab.target.path === activePath;
-            return (
-              <div
-                key={tab.target.path}
-                ref={(el) => {
-                  if (el === null) tabRefs.current.delete(tab.target.path);
-                  else tabRefs.current.set(tab.target.path, el);
-                }}
-                className={cn(
-                  "flex-shrink-0 max-w-[14rem] flex items-center border-r border-warm-300 border-b-2",
-                  isActive
-                    ? "bg-white border-b-primary"
-                    : "border-b-transparent hover:bg-warm-100",
-                )}
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => onSelectTab(tab.target.path)}
-                  title={tab.target.path}
-                  className={cn(
-                    "flex-1 min-w-0 truncate text-left text-sm pl-3 pr-1 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                    isActive ? "text-warm-900 font-medium" : "text-warm-600",
-                  )}
-                >
-                  {tab.label}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCloseTab(tab.target.path);
-                  }}
-                  aria-label={`Close ${tab.label}`}
-                  title="Close tab"
-                  className="flex-shrink-0 mr-1 p-0.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M6 6l12 12M18 6l-12 12" />
-                  </svg>
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <SidecarTabStrip tabs={tabs} activePath={activePath} onSelectTab={onSelectTab} onCloseTab={onCloseTab} onTogglePin={onTogglePin} />
         <div className="flex-shrink-0 flex items-center gap-1 px-2 border-l border-warm-300">
           <ExternalIconLink id="bbx-panel-open-browse" href={browseHref} label="Open in browse view (new tab)" size="sm" />
           <CloseButton id="bbx-panel-close" onClick={onClosePanel} label="Close companion view" size="sm" />
