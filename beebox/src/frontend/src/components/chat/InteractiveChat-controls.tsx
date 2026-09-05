@@ -13,6 +13,7 @@ import { ExternalIconLink } from "../ui/ExternalIconLink";
 import { FileView } from "../FileView";
 import { withBase } from "../../api";
 import { cn } from "../../lib/cn";
+import { prefersReducedMotion } from "../../lib/reduced-motion";
 import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import type { AddSelectionInput } from "../../lib/selection/position";
@@ -138,6 +139,20 @@ function CompanionViewPanelInner({
   // own scroll position and interactive state while inactive (it's hidden, not
   // unmounted). Unopened tabs stay unrendered until first selected.
   const [mounted, setMounted] = useState<ReadonlySet<string>>(() => new Set());
+  // Tab elements by path, so the active one can be scrolled into view. With
+  // more open documents than the strip can show, a newly opened tab landed
+  // outside the visible range and the open read as a no-op — the highlight
+  // existed, off-screen (2026-08-29).
+  const tabRefs = useRef<Map<string, HTMLElement>>(new Map());
+  useEffect(() => {
+    const el = tabRefs.current.get(activePath);
+    if (el === undefined) return;
+    // `inline: "nearest"` leaves a tab that is already visible where it is —
+    // re-centring every switch is the churn a pinned tab must not suffer.
+    // `block: "nearest"` keeps this from scrolling any ancestor: the chat shell
+    // is fixed, and scrollIntoView walks every scrollable ancestor by default.
+    el.scrollIntoView({ inline: "nearest", block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  }, [activePath, tabs.length]);
   useEffect(() => {
     if (mounted.has(activePath)) return;
     setMounted((prev) => new Set(prev).add(activePath));
@@ -168,6 +183,10 @@ function CompanionViewPanelInner({
             return (
               <div
                 key={tab.target.path}
+                ref={(el) => {
+                  if (el === null) tabRefs.current.delete(tab.target.path);
+                  else tabRefs.current.set(tab.target.path, el);
+                }}
                 className={cn(
                   "flex-shrink-0 max-w-[14rem] flex items-center border-r border-warm-300 border-b-2",
                   isActive
