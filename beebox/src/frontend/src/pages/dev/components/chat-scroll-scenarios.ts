@@ -14,17 +14,10 @@
  * Runner + measurement live in chat-scroll-runner.ts; this file is data.
  */
 
-import type { Step, Expectation } from "./chat-scroll-steps";
+import type { Scenario } from "./chat-scroll-steps";
 import { OPEN_THREAD_SCENARIOS } from "./chat-scroll-scenarios-open";
 
-export type { Step, Expectation } from "./chat-scroll-steps";
-
-export interface Scenario {
-  name: string;
-  description: string;
-  steps: Step[];
-  expect: Expectation;
-}
+export type { Step, Expectation, Scenario } from "./chat-scroll-steps";
 
 const STREAM_CHUNK_PX = 26;
 
