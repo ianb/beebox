@@ -3,7 +3,7 @@
 `checkBoxRoot` (`src/lib/box-root-check.ts`) readdirs a box root and reports
 every entry outside `BOX_ROOT_VOCABULARY` — the check that turns a recreated
 two-root shape into one loud `bbx validate` (Track C,
-`docs/plans/one-root-box-layout.md`).
+`docs/implemented-plans/one-root-box-layout.md`).
 
 ```ts setup
 import { checkBoxRoot } from "../../src/lib/box-root-check.js";

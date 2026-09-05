@@ -86,7 +86,7 @@ async function loadLandmarkPayload(
   { boxRoot }: { boxRoot: string },
 ): Promise<LandmarkLoad> {
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: relPath, mode: "read" });
-  if (ns === null) {
+  if (!ns.ok) {
     console.warn(`landmarks: ${relPath} is outside the box namespace (symlink escape?) — skipping`);
     return { status: "unreadable" };
   }
@@ -153,8 +153,10 @@ async function assertLandmarkDirInNamespace(params: {
     rawPath: landmarkScanRelDir(params.dir),
     mode: params.mode,
   });
-  if (ns === null) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: `dir is outside the box namespace: ${params.dir}` });
+  if (!ns.ok) {
+    const message =
+      ns.reason === "display-form" ? ns.message : `dir is outside the box namespace: ${params.dir}`;
+    throw new TRPCError({ code: "BAD_REQUEST", message });
   }
 }
 

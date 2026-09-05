@@ -14,7 +14,7 @@
  * through a per-route copy of `path.resolve` + `isInBoxNamespace(rawPath)`.
  * Checking the raw string is a traversal bypass: `_content/../package.json`
  * starts with `_content` (passes a raw-string check) but *resolves* to
- * `package.json` (outside the namespace) — `docs/plans/one-root-box-layout.md`
+ * `package.json` (outside the namespace) — `docs/implemented-plans/one-root-box-layout.md`
  * Track B.
  *
  * `resolveBoxNamespacePath` itself deliberately does NOT `fs.realpath` the
@@ -39,6 +39,7 @@ import * as path from "node:path";
 import { isInBoxNamespace } from "./box-namespace.js";
 import { errnoCode } from "./error-guards.js";
 import { invariant } from "./invariant.js";
+import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
 
 export interface BoxNamespacePath {
   /** Absolute, normalized filesystem path (symlinks unresolved). */
@@ -46,6 +47,30 @@ export interface BoxNamespacePath {
   /** The canonical box-relative form of `resolved` (forward slashes, no leading slash). */
   relativePath: string;
 }
+
+/**
+ * The result of resolving a request path against the box namespace,
+ * distinguishing WHY it failed so callers can report each case differently
+ * (`docs/plans/display-path-guard.subplan.md`):
+ *
+ *  - `ok: true` — resolved and in-namespace; carries the same fields as the
+ *    former `BoxNamespacePath`.
+ *  - `reason: "display-form"` — `rawPath` is a boxholder DISPLAY-FORM path
+ *    (`Config:box.json`) leaked into a canonical-path slot. Carries a
+ *    caller-VISIBLE message naming the canonical form — an HTTP route
+ *    should respond 400 with it, a tRPC procedure should throw
+ *    `TRPCError({ code: "BAD_REQUEST", message })` (a plain throw is
+ *    sanitized to "Internal server error" by `trpc.ts`'s `errorFormatter`).
+ *  - `reason: "escaped"` — every other rejection this module already made
+ *    (path escapes the box root, or lands outside the underscore-area
+ *    namespace): the existing behavior, unchanged. Callers that don't need
+ *    to distinguish it from `"display-form"` can keep treating any
+ *    `ok: false` as "not found" / "access denied".
+ */
+export type BoxNamespaceResult =
+  | ({ ok: true } & BoxNamespacePath)
+  | { ok: false; reason: "escaped" }
+  | { ok: false; reason: "display-form"; message: string };
 
 /**
  * `"read"` — serving/listing a path back to a client. A leaf that is itself a
@@ -65,25 +90,34 @@ export type BoxNamespaceAccessMode = "read" | "write";
 
 /**
  * Resolve `rawPath` against `boxRoot` and check the RESOLVED path against
- * both the box-containment floor and the box namespace fence. Returns `null`
- * when the resolved path escapes `boxRoot` entirely, or lands outside the
- * underscore-area namespace (including the box root itself — the empty
- * relative path is never in-namespace; a caller that must allow the root,
- * e.g. a directory-listing route, special-cases `rawPath === ""` itself
- * before calling in).
+ * both the box-containment floor and the box namespace fence. Returns
+ * `{ ok: false, reason: "escaped" }` when the resolved path escapes
+ * `boxRoot` entirely, or lands outside the underscore-area namespace
+ * (including the box root itself — the empty relative path is never
+ * in-namespace; a caller that must allow the root, e.g. a directory-listing
+ * route, special-cases `rawPath === ""` itself before calling in). Returns
+ * `{ ok: false, reason: "display-form", message }` when `rawPath` is itself
+ * a boxholder display-form path (`Config:box.json`) — checked BEFORE the
+ * escape/namespace check, since such a path is meaningless to resolve as a
+ * filesystem segment and deserves a caller-visible message naming the
+ * canonical form rather than a bare not-found.
  *
  * Lexical only — see the module doc comment. A consuming route must also
  * call {@link verifyBoxNamespaceOnDisk} (or use
  * {@link resolveBoxNamespacePathOnDisk}, which does both in one call) before
  * touching the filesystem.
  */
-export function resolveBoxNamespacePath(boxRoot: string, rawPath: string): BoxNamespacePath | null {
+export function resolveBoxNamespacePath(boxRoot: string, rawPath: string): BoxNamespaceResult {
+  const displayForm = detectDisplayFormPath(rawPath);
+  if (displayForm !== null) {
+    return { ok: false, reason: "display-form", message: displayFormPathMessage(rawPath, displayForm) };
+  }
   const root = path.resolve(boxRoot);
   const resolved = path.resolve(path.join(root, rawPath));
-  if (resolved !== root && !resolved.startsWith(root + path.sep)) return null;
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) return { ok: false, reason: "escaped" };
   const relativePath = path.relative(root, resolved).split(path.sep).join("/");
-  if (!isInBoxNamespace(relativePath)) return null;
-  return { resolved, relativePath };
+  if (!isInBoxNamespace(relativePath)) return { ok: false, reason: "escaped" };
+  return { ok: true, resolved, relativePath };
 }
 
 /** `path.relative`, canonicalized to the ref form (forward slashes). */
@@ -269,6 +303,12 @@ export async function verifyBoxNamespaceOnDisk({
 /**
  * Convenience wrapper: {@link resolveBoxNamespacePath} followed by
  * {@link verifyBoxNamespaceOnDisk}. What every consuming route should call.
+ *
+ * Returns the same {@link BoxNamespaceResult} shape as the lexical layer —
+ * a display-form rejection short-circuits before any disk access, and the
+ * on-disk symlink-walk failure collapses into `{ ok: false, reason:
+ * "escaped" }` (it was already indistinguishable from a lexical escape
+ * before this change; only the display-form case is new).
  */
 export async function resolveBoxNamespacePathOnDisk({
   boxRoot,
@@ -278,8 +318,8 @@ export async function resolveBoxNamespacePathOnDisk({
   boxRoot: string;
   rawPath: string;
   mode: BoxNamespaceAccessMode;
-}): Promise<BoxNamespacePath | null> {
+}): Promise<BoxNamespaceResult> {
   const ns = resolveBoxNamespacePath(boxRoot, rawPath);
-  if (ns === null) return null;
-  return (await verifyBoxNamespaceOnDisk({ boxRoot, ns, mode })) ? ns : null;
+  if (!ns.ok) return ns;
+  return (await verifyBoxNamespaceOnDisk({ boxRoot, ns, mode })) ? ns : { ok: false, reason: "escaped" };
 }

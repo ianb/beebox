@@ -1,5 +1,5 @@
 /**
- * The `one-root` migration's orchestration (Track E, `docs/plans/one-root-box-layout.md`).
+ * The `one-root` migration's orchestration (Track E, `docs/implemented-plans/one-root-box-layout.md`).
  * Converts a v2 box (package root + nested `content/`) to v3 (one root) in
  * place, atomically, as one commit. `scripts/migrate/one-root.ts` is the thin
  * CLI wrapper; this module is importable directly so doctests exercise the
@@ -106,6 +106,7 @@ import {
 } from "./one-root-move-plan.js";
 import { captureIgnoreRules, mergeIgnoreRules, snapshotBoxWideIgnored, verifyNoBoxWideIgnoreRegression } from "./one-root-ignore-merge.js";
 import { OneRootPreflightError, OneRootLinkGateError } from "./one-root-errors.js";
+import { mergeClaudeMdText } from "./one-root-claude-md.js";
 import { rollbackMoveAndCommit, V2_PACKAGE_ROOT_VOCABULARY } from "./one-root-rollback.js";
 import { assertWriteTargetNotSymlink, assertNoSymlinkedCalleeWriteTargets } from "./one-root-write-guard.js";
 
@@ -193,13 +194,7 @@ async function mergeClaudeMd(params: { packageRoot: string; contentRoot: string 
       if (errnoCode(e) === "ENOENT") return "";
       throw e;
     });
-  const merged =
-    rootText.trimEnd() +
-    (rootText.trim() === "" ? "" : "\n\n") +
-    "## Box persona\n\n" +
-    "(Merged from the v2 operational-root CLAUDE.md by the one-root migration.)\n\n" +
-    contentText.trimEnd() +
-    "\n";
+  const merged = mergeClaudeMdText(rootText, contentText);
   await assertWriteTargetNotSymlink(rootClaudeMd);
   await fs.writeFile(rootClaudeMd, merged);
   await execFileAsync("git", ["add", rootClaudeMd], { cwd: params.packageRoot });

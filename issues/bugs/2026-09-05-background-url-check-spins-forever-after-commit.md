@@ -53,3 +53,16 @@ Two fixes, both wanted:
 
 Related: `issues/closed/bugs/2026-08-24-full-suite-timeouts-under-concurrent-worktree-load.md`
 (load-induced flakes) — this is one source of that load.
+
+
+> 2026-09-05, later: **mechanism confirmed.** Sixty more appeared within
+> hours; `lsof` put their working directories in deleted test fixture boxes
+> (`bbx-doctest-*`, `bbx-route-test-*` under the temp dir). Tests commit in
+> fixture boxes, each commit fires the hook's detached check, the fixture is
+> removed under it, and the check spins. Two of the fixes landed the same
+> day: the hook now runs the check under `perl -e 'alarm'` (600 s, a bound
+> the spinning process cannot ignore) and skips entirely when
+> `BBX_NO_URLCHECK=1`, which the test suite's HOME-isolation helper sets.
+> Still open: *why* a deleted cwd turns into a synchronous spin rather than
+> an error — reproduce by hand (commit in a box, delete it, watch) with
+> `--cpu-prof`.

@@ -11,7 +11,7 @@ resolution: implemented
 ---
 
 > **Closed 2026-09-05.** Structurally resolved by the one-root box layout
-> (`beebox/docs/plans/one-root-box-layout.md`, `status: partial` — code and
+> (`beebox/docs/implemented-plans/one-root-box-layout.md`, `status: partial` — code and
 > migrators are implemented and merged to `main`; the fleet rollout that
 > converts existing boxes is the remaining, separately-tracked step). There is
 > no longer a package root vs. `content/` distinction to pick wrong: the

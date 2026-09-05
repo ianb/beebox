@@ -34,6 +34,7 @@
 import Markdoc from "@markdoc/markdoc";
 import type { Node } from "@markdoc/markdoc";
 import { isExternalRef } from "../shared/ref-path.js";
+import { detectDisplayFormPath } from "../shared/display-path.js";
 
 // eslint-disable-next-line import-x/no-named-as-default-member
 const { parse } = Markdoc;
@@ -43,6 +44,19 @@ export interface BodyRef {
   path: string;
   /** The ref value. */
   ref: string;
+}
+
+/**
+ * Whether `ref` should be skipped as a genuine external target (a URL scheme,
+ * `//host`, a bare `#anchor`, empty). A boxholder DISPLAY-FORM path
+ * (`Config:box.json`) also matches `isExternalRef`'s scheme pattern, but it
+ * is NOT external — it names an in-box path the boxholder wrote in the wrong
+ * vocabulary, and must reach card-lint's ref walk (which reports it as a
+ * display-form ERROR) rather than being silently dropped here. See
+ * `docs/plans/display-path-guard.subplan.md`.
+ */
+function isGenuinelyExternal(ref: string): boolean {
+  return isExternalRef(ref) && detectDisplayFormPath(ref) === null;
 }
 
 /**
@@ -77,7 +91,7 @@ export function extractBodyLinks(body: string): BodyRef[] {
   const out: BodyRef[] = [];
   for (const match of body.matchAll(inlineLinkPattern())) {
     const ref = match[2];
-    if (ref === undefined || isExternalRef(ref)) continue;
+    if (ref === undefined || isGenuinelyExternal(ref)) continue;
     out.push({ path: `body:${String(lineAt(body, match.index))}:link`, ref });
   }
   out.push(...extractReferenceDefinitions(body));
@@ -242,7 +256,7 @@ export function extractReferenceDefinitions(body: string): BodyRef[] {
   const lines = body.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const found = matchReferenceDefinitionAt(lines, i);
-    if (found === null || isExternalRef(found.url)) continue;
+    if (found === null || isGenuinelyExternal(found.url)) continue;
     out.push({ path: `body:${String(found.lineIndex + 1)}:ref-def`, ref: found.url });
   }
   return out;

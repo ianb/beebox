@@ -1,6 +1,6 @@
 # `bbx validate`'s box-wide error buckets
 
-`checkRootStrayErrors` (Track C, `docs/plans/one-root-box-layout.md`) formats
+`checkRootStrayErrors` (Track C, `docs/implemented-plans/one-root-box-layout.md`) formats
 `checkBoxRoot`'s findings as the error lines `bbx validate` prints and counts
 toward its exit code. The check itself (`checkBoxRoot`) is doctested in
 `test/lib/box-root-check.doctest.md`; this covers only the formatting.

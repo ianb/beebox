@@ -384,7 +384,7 @@ export async function updateFeaturesForSession(boxRoot: string, opts: { sessionI
       entry = { id: sessionId, engine: await loadAgentEngine(boxRoot) };
       file.sessions.push(entry);
     }
-    const merged: Record<string, string> = { ...(entry.features ?? {}) };
+    const merged: Record<string, string> = { ...entry.features };
     for (const [k, v] of Object.entries(updates)) merged[k] = v;
     entry.features = merged;
     await writeHistoryFile(boxRoot, file);

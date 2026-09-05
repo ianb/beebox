@@ -83,7 +83,7 @@ export async function loadViewCards(boxRoot: string, dependencies: string[]): Pr
     const matches = await glob(pattern, { cwd: boxRoot, nodir: true, ignore: ignorePatterns });
     for (const m of matches) {
       const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: m, mode: "read" });
-      if (ns === null) continue; // escapes the namespace on disk — dropped, not served
+      if (!ns.ok) continue; // escapes the namespace on disk — dropped, not served
       if (m.endsWith(".card")) cardPaths.add(m);
       else filePaths.add(m);
     }

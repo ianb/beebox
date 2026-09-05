@@ -152,6 +152,35 @@ JSON.stringify(await lintLinks(sbox.root, sdoc), null, 2)
 await sbox.cleanup();
 ```
 
+### A display-form path is a distinct error, not silently skipped
+
+`Config:box.json` (the boxholder's display form) matches the external-scheme
+pattern `resolveInternalLink` classifies as "not internal" — before this
+guard, such a link was silently never checked at all. It is now flagged
+BEFORE that classification, with a message naming the canonical form
+(`docs/plans/display-path-guard.subplan.md`):
+
+```ts
+const dbox = await makeTmpBox();
+const ddoc = join(dbox.root, "_content/store/docs/saoirse.md");
+await mkdir(dirname(ddoc), { recursive: true });
+await writeFile(
+  ddoc,
+  ["[config](Config:box.json)", "[jobs](Bookkeeping:jobs/x.job.card)", ""].join("\n"),
+);
+
+JSON.stringify(await lintLinks(dbox.root, ddoc), null, 2)
+=>
+[
+  "BBX002: `Config:box.json` is the boxholder's display form; write `/_config/box.json`",
+  "BBX002: `Bookkeeping:jobs/x.job.card` is the boxholder's display form; write `/_bookkeeping/jobs/x.job.card`"
+]
+```
+
+```ts continue
+await dbox.cleanup();
+```
+
 boxRoot is required: enabling the rule without it (e.g. `true`) is a caller error
 and throws rather than silently mis-resolving every box-root link:
 

@@ -3,7 +3,7 @@
  * reads/speaks, as opposed to the canonical `/_content/...` form refs, URLs,
  * and storage use (`box-path.ts`, `ref-path.ts`).
  *
- * BOXHOLDER-SETTLED vocabulary (`docs/plans/one-root-box-layout.md`):
+ * BOXHOLDER-SETTLED vocabulary (`docs/implemented-plans/one-root-box-layout.md`):
  *
  *  - A `_content` path displays BARE, no leading slash: `recipes/Soup.recipe.card`
  *    (canonical `/_content/recipes/Soup.recipe.card`).
@@ -43,6 +43,16 @@ export function areaDisplayLabel(areaName: string): string {
 
 const LABEL_TO_AREA: ReadonlyMap<string, string> = new Map(
   AREA_NAMES.map((name): [string, string] => [areaDisplayLabel(name).toLowerCase(), name])
+);
+
+/**
+ * `LABEL_TO_AREA` minus `_content`: `content:` is a real, registered URI
+ * scheme (IANA-provisional; Android `content://` URIs) and displays bare
+ * anyway (`toDisplayPath` never emits `Content:...`), so it must never be
+ * detected as a display-form leak — see {@link detectDisplayFormPath}.
+ */
+const DETECTABLE_LABEL_TO_AREA: ReadonlyMap<string, string> = new Map(
+  Array.from(LABEL_TO_AREA).filter(([, area]) => area !== "_content")
 );
 
 /**
@@ -102,4 +112,52 @@ export function fromDisplayPath(display: string): string {
 
   // Bare content-relative form.
   return `/_content/${stripped}`;
+}
+
+/** A raw string recognized as a boxholder DISPLAY-FORM path, and what it means. */
+export interface DisplayFormPathMatch {
+  /** The canonical box path this display form names. */
+  canonical: string;
+  /** The area's display label as matched (canonical casing, e.g. "Config"). */
+  areaLabel: string;
+}
+
+/**
+ * Detect a boxholder DISPLAY-FORM path (`Config:box.json`,
+ * `bookkeeping:jobs/x.job.card`) leaked into a slot that expects a canonical
+ * box path — a ref, an HTTP/tRPC path input, a CLI path argument.
+ *
+ * Matches a case-insensitive area display label immediately followed by `:`
+ * — `content:` is deliberately EXCLUDED (a real, registered URI scheme;
+ * `_content` also displays bare, never with a label, so `content:` is never
+ * a display form beebox itself would produce). A `<label>://` double-slash
+ * form is a URL, never a display form, and is never matched (checked before
+ * the label lookup so `Config://x` — which is not a form this codebase ever
+ * emits — is left alone rather than misreported).
+ *
+ * Returns `null` for anything else, including a bare relative path (e.g.
+ * `recipes/Soup.recipe.card` is indistinguishable from a legitimate
+ * relative ref — see the "did you mean" suggestion at diagnostic boundaries
+ * instead, not this detector).
+ */
+export function detectDisplayFormPath(raw: string): DisplayFormPathMatch | null {
+  const colon = raw.indexOf(":");
+  if (colon === -1) return null;
+  if (raw.slice(colon + 1, colon + 3) === "//") return null;
+  const label = raw.slice(0, colon).toLowerCase();
+  const area = DETECTABLE_LABEL_TO_AREA.get(label);
+  if (area === undefined) return null;
+  const rest = raw.slice(colon + 1);
+  const canonical = rest === "" ? `/${area}` : `/${area}/${rest}`;
+  return { canonical, areaLabel: areaDisplayLabel(area) };
+}
+
+/**
+ * The canonical caller-visible message for a detected display-form path leak
+ * — one sentence, shared by every choke point (ref lint, HTTP/tRPC path
+ * inputs, CLI path arguments) so the wording never drifts between them:
+ * "`Config:box.json` is the boxholder's display form; write `/_config/box.json`".
+ */
+export function displayFormPathMessage(raw: string, match: DisplayFormPathMatch): string {
+  return `\`${raw}\` is the boxholder's display form; write \`${match.canonical}\``;
 }

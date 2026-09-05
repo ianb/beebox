@@ -1,6 +1,6 @@
 /**
  * Absolute-machine-path guard for card content (Track B,
- * `docs/plans/one-root-box-layout.md`): a card body or frontmatter that
+ * `docs/implemented-plans/one-root-box-layout.md`): a card body or frontmatter that
  * embeds a real developer's home directory (`/Users/<name>/…`,
  * `/home/<name>/…`) leaks a machine-specific path into content that's meant
  * to be portable across boxes and machines — the same failure mode the

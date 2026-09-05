@@ -5,7 +5,7 @@
  * the box's directory name — no "content dir" trap to work around (the v2
  * layout's `boxRoot` was a `content/` directory, so its basename was the
  * literal string "content" for EVERY box; that trap is gone with the
- * two-root layout — see `docs/plans/one-root-box-layout.md`).
+ * two-root layout — see `docs/implemented-plans/one-root-box-layout.md`).
  *
  * Prefer the authoritative slug when you have one: a served box carries
  * `box.slug` (honouring `bbx serve --slug`) through `BoxSpec` and the tRPC

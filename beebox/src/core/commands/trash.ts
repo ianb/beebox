@@ -9,7 +9,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { registerCommand, parseCommandArgs, type CommandContext, type CommandResult } from "../command-runner.js";
-import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../lib/paths.js";
+import { getBoxDir, isCardFile, parseCardName } from "../../lib/paths.js";
+import { DisplayFormPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
@@ -72,7 +73,7 @@ async function reportInboundRefs(
   for (const cardPath of cardPaths) {
     const relPath = path.relative(
       ctx.boxRoot,
-      path.isAbsolute(cardPath) ? cardPath : boxPath(ctx.boxRoot, cardPath),
+      resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: cardPath, relativeTo: ctx.boxRoot }),
     );
     const refs = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
     inboundRefs[relPath] = refs;
@@ -109,12 +110,7 @@ async function trashOne(
   fileMoves: Array<{ sourcePath: string; destPath: string }>;
 }> {
   // Resolve source path
-  let sourcePath: string;
-  if (path.isAbsolute(cardPath)) {
-    sourcePath = cardPath;
-  } else {
-    sourcePath = boxPath(ctx.boxRoot, cardPath);
-  }
+  const sourcePath = resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: cardPath, relativeTo: ctx.boxRoot });
 
   // Validate it's a card file
   if (!isCardFile(sourcePath)) {
@@ -231,6 +227,20 @@ export async function commitTrashReceipt(boxRoot: string, options: { receipt: Tr
  * Execute the trash command (supports single or multiple paths).
  */
 async function executeTrash(ctx: CommandContext, args: Record<string, unknown>): Promise<CommandResult> {
+  try {
+    return await executeTrashUnguarded(ctx, args);
+  } catch (e) {
+    // Display-form leak (docs/plans/display-path-guard.subplan.md): reported
+    // as an ordinary CommandResult failure, matching every other user-input
+    // rejection in this command — not an uncaught throw. (`runCommand`'s own
+    // catch-all would do this too for a CLI-dispatched call, but this
+    // function is also called directly, bypassing that wrapper.)
+    if (e instanceof DisplayFormPathArgError) return { success: false, error: e.message };
+    throw e;
+  }
+}
+
+async function executeTrashUnguarded(ctx: CommandContext, args: Record<string, unknown>): Promise<CommandResult> {
   const trashArgs = parseCommandArgs(args, TrashArgsSchema);
 
   // Collect all paths (support both single `path` and array `paths`)
@@ -254,7 +264,7 @@ async function executeTrash(ctx: CommandContext, args: Record<string, unknown>):
     const wouldTrash: string[] = [];
     const dryErrors: string[] = [];
     for (const cardPath of allPaths) {
-      const sourcePath = path.isAbsolute(cardPath) ? cardPath : boxPath(ctx.boxRoot, cardPath);
+      const sourcePath = resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: cardPath, relativeTo: ctx.boxRoot });
       if (!isCardFile(sourcePath)) {
         dryErrors.push(`Not a card file: ${cardPath}`);
         continue;

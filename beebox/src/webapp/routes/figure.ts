@@ -64,10 +64,11 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       }
 
       // Box containment + namespace fence, checked on the RESOLVED path
-      // (`docs/plans/one-root-box-layout.md` Track B).
+      // (`docs/implemented-plans/one-root-box-layout.md` Track B).
       const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
-      if (ns === null) {
-        return reply.status(400).send({ error: "Path outside box" });
+      if (!ns.ok) {
+        const error = ns.reason === "display-form" ? ns.message : "Path outside box";
+        return reply.status(400).send({ error });
       }
       const { resolved } = ns;
 

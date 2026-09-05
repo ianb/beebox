@@ -640,3 +640,23 @@ Run by [Dana](../../../_content/box/people/dana.person.card); the [scan](scan.ca
 ```ts continue
 await box.cleanup();
 ```
+
+## A display-form path argument is rejected, not treated as a file path
+
+`Config:box.json` and `Bookkeeping:jobs/x.job.card` (the boxholder's display
+vocabulary) are rejected with a message naming the canonical form, whether
+written as the source or the destination
+(`docs/plans/display-path-guard.subplan.md`):
+
+```ts
+const dbox = await makeTmpBox();
+await dbox.write("_content/box/notes/Real.doc.card", "---\ntype: doc\ntitle: Real\n---\n");
+
+const fromRejected = await mv(dbox, { from: "Config:box.json", to: "_content/box/notes/Elsewhere.doc.card" });
+JSON.stringify(fromRejected)
+=> {"success":false,"error":"`Config:box.json` is the boxholder's display form; write `/_config/box.json`"}
+
+const toRejected = await mv(dbox, { from: "_content/box/notes/Real.doc.card", to: "Bookkeeping:jobs/x.job.card" });
+JSON.stringify(toRejected)
+=> {"success":false,"error":"`Bookkeeping:jobs/x.job.card` is the boxholder's display form; write `/_bookkeeping/jobs/x.job.card`"}
+```

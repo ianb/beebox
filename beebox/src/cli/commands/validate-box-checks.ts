@@ -22,7 +22,7 @@ export async function checkLegacySchemaPath(boxRoot: string): Promise<string[]> 
 
 /**
  * The closed-vocabulary root check (Track C,
- * `docs/plans/one-root-box-layout.md`): every box-root entry outside
+ * `docs/implemented-plans/one-root-box-layout.md`): every box-root entry outside
  * `BOX_ROOT_VOCABULARY`, formatted as one error line each. `bbx status`'s
  * warnings-section counterpart lives directly in `status.ts` (a few lines,
  * no shared formatting worth a helper).

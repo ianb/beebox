@@ -69,7 +69,7 @@ export async function readLandmarkFeaturesForDir(
     rawPath: landmarkScanRelDir(contextDir),
     mode: "read",
   });
-  if (ns === null) return null;
+  if (!ns.ok) return null;
   const absDir = ns.resolved;
   let entries: string[];
   try {

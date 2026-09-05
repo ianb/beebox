@@ -140,7 +140,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "record-measurements", script: "scripts/migrate/record-measurements.ts" },
   { name: "gitignore-2026-09",  script: "scripts/migrate/box-gitignore.ts" },
   { name: "hooks-2026-09",      script: "scripts/migrate/box-hooks.ts" },
-  // v2 -> v3 one-root layout conversion (docs/plans/one-root-box-layout.md,
+  // v2 -> v3 one-root layout conversion (docs/implemented-plans/one-root-box-layout.md,
   // Track E). Unlike every entry above, this migrator runs against a box
   // that ISN'T v3 yet — `bbx migrate`'s bootstrap path invokes it directly
   // against a v2 box (see src/core/migrations/one-root-v2-probe.ts), not

@@ -56,11 +56,14 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
     // land only inside an underscore area — never `src/`, `node_modules/`,
     // `.git/`, or any other root entry, and a traversal form like
     // `_content/../package.json` can't hide behind its raw-string prefix
-    // (`docs/plans/one-root-box-layout.md` Track B). Also checked on the DISK:
+    // (`docs/implemented-plans/one-root-box-layout.md` Track B). Also checked on the DISK:
     // a symlinked directory or leaf partway down the path can't walk the
     // fence into the package internals either (one-root layout).
     const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
-    if (ns === null) {
+    if (!ns.ok) {
+      if (ns.reason === "display-form") {
+        return { error: ns.message, status: 400 };
+      }
       return { error: "Access denied", status: 403 };
     }
     const { resolved, relativePath } = ns;
@@ -140,7 +143,10 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
       return reply.status(400).send({ error: 'Body must be {"path": "...", "message": "..."}' });
     }
     const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
-    if (ns === null) {
+    if (!ns.ok) {
+      if (ns.reason === "display-form") {
+        return reply.status(400).send({ error: ns.message });
+      }
       return reply.status(403).send({ error: "Access denied" });
     }
     const { relativePath } = ns;

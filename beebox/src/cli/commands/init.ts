@@ -76,7 +76,7 @@ export interface InitOptions {
 export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
   // Detects what's already at `targetPath`: an existing box (marker at the
   // target itself) or nothing yet. A fresh init always scaffolds the
-  // one-root layout — see `docs/plans/one-root-box-layout.md`.
+  // one-root layout — see `docs/implemented-plans/one-root-box-layout.md`.
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 

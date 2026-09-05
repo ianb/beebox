@@ -202,7 +202,7 @@ async function filterFenced(matches: string[], options: ResolveOptions): Promise
     const abs = path.join(options.landmarkDir, matchRel);
     const rawPath = path.relative(options.boxRoot, abs).split(path.sep).join("/");
     const ns = await resolveBoxNamespacePathOnDisk({ boxRoot: options.boxRoot, rawPath, mode: "read" });
-    if (ns !== null) out.push(matchRel);
+    if (ns.ok) out.push(matchRel);
   }
   return out;
 }

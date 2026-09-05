@@ -2,7 +2,7 @@
 
 `findAbsoluteMachinePaths` (`src/lib/absolute-path-check.ts`) flags a real
 developer home directory embedded in card content — `bbx validate`'s Track B
-check (`docs/plans/one-root-box-layout.md`) that a box carries no machine-
+check (`docs/implemented-plans/one-root-box-layout.md`) that a box carries no machine-
 specific paths. Same allowlist shape as the monorepo's `bin/path-leak-check.ts`.
 
 ```ts setup

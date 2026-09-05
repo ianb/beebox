@@ -14,6 +14,7 @@ import { findInboundCardRefs } from "../../../core/find-inbound-card-refs.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash.js";
 import { rollbackTrashReceipt } from "../../../core/commands/trash-recovery.js";
 import { createCollectorContext } from "../../../core/commands/index.js";
+import * as path from "node:path";
 
 /**
  * Box containment + namespace fence, checked on the RESOLVED path (both
@@ -22,7 +23,7 @@ import { createCollectorContext } from "../../../core/commands/index.js";
  * and its siblings (`inboundRefs`, `trash`) all resolve through here, and a
  * traversal form like `_content/../package.json` must not read
  * `package.json` just because the raw string starts with an underscore area
- * (`docs/plans/one-root-box-layout.md` Track B).
+ * (`docs/implemented-plans/one-root-box-layout.md` Track B).
  */
 async function resolveCardPath({
   boxRoot,
@@ -38,10 +39,41 @@ async function resolveCardPath({
     rawPath: boxRelativePath(inputPath),
     mode,
   });
-  if (ns === null) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid card path" });
+  if (!ns.ok) {
+    if (ns.reason === "display-form") {
+      // Display-form leak (docs/plans/display-path-guard.subplan.md): a
+      // caller-visible message naming the canonical form.
+      throw new TRPCError({ code: "BAD_REQUEST", message: ns.message });
+    }
+    // "Did you mean `/_content/<path>`?" — suggestion-on-failure for the
+    // boxholder's BARE display vocabulary. A bare content path
+    // (`recipes/Soup.recipe.card`) reads to a boxholder as "the box's
+    // content", but `card.get`'s `path` input is canonical — a bare path
+    // with no area prefix is refused here as an escape (it names nothing
+    // inside any underscore area) even though `/_content/<path>` exists.
+    // This is already the diagnostic boundary that has `boxRoot` in hand
+    // and is about to refuse anyway, so the one extra probe is cheap.
+    const bare = boxRelativePath(inputPath);
+    const suggestion = bare.startsWith("_") ? null : await suggestContentFormCardPath(boxRoot, bare);
+    const suffix = suggestion === null ? "" : ` — did you mean \`${suggestion}\`?`;
+    throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid card path${suffix}` });
   }
   return { relPath: ns.relativePath, fullPath: ns.resolved };
+}
+
+/**
+ * Whether `_content/<relPath>` exists, for {@link resolveCardPath}'s
+ * suggestion — the returned path is the canonical leading-`/` ref form, not
+ * the bare box-relative form used for the filesystem check.
+ */
+async function suggestContentFormCardPath(boxRoot: string, relPath: string): Promise<string | null> {
+  const candidate = `_content/${relPath}`;
+  try {
+    await fs.access(path.join(boxRoot, candidate));
+    return `/${candidate}`;
+  } catch (_e) {
+    return null;
+  }
 }
 
 export interface FrontmatterCardResponse {
@@ -113,7 +145,7 @@ export const cardRouter = router({
       // Security: `input.path` arrives from the client (and now from the chat
       // `?card=` deep-link a card-page click writes). `resolveCardPath` above
       // already confirmed the resolved path stays inside the box AND inside
-      // the box namespace (Track B, `docs/plans/one-root-box-layout.md`) —
+      // the box namespace (Track B, `docs/implemented-plans/one-root-box-layout.md`) —
       // mirrors the `/api/files` boundary guard.
       let raw: string | null = null;
       try {
@@ -121,6 +153,10 @@ export const cardRouter = router({
       } catch (e) {
         const msg = errorMessage(e);
         if (msg.includes("ENOENT") || msg.includes("no such file")) {
+          // `relPath` here is already canonical (area-prefixed) — a bare
+          // display-form path never reaches this point at all; it's refused
+          // earlier by `resolveCardPath` (with the "did you mean" suggestion
+          // attached there instead — see its doc comment).
           throw new TRPCError({ code: "NOT_FOUND", message: `Card not found: ${relPath}` });
         }
         throw new TRPCError({ code: "BAD_REQUEST", message: msg });
