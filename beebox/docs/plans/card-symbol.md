@@ -141,11 +141,13 @@ prominence and must not become a way to spell it).
   plan deliberately goes further (an abbreviation on collision), so the
   behaviour is ours to define and ours to keep stable.
 - **Emoji are not one character.** A "single emoji" can be several code points
-  (ZWJ sequences, skin-tone modifiers, flags), so `.length` and `[0]` are the
-  wrong tools; `Intl.Segmenter` with `granularity: "grapheme"` is the current
-  platform answer and is available in every browser we target and in Node 20+.
-  Cited because the naive `symbol.slice(0, 1)` truncation is exactly the bug
-  this footnote prevents ([MDN: Intl.Segmenter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter)).
+  (ZWJ sequences, skin-tone modifiers, flags), so `.length` is the wrong ruler
+  for "is this glyph short?"; `Intl.Segmenter` with `granularity: "grapheme"` is
+  the current platform answer, available in every browser we target and in Node
+  20+ ([MDN: Intl.Segmenter](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter)).
+  The plan does **not** truncate a glyph to its first grapheme — that would cut
+  a family emoji into a stranger — it counts graphemes only to decide whether
+  the lint should suggest something shorter.
 - **`CSS.supports("color", value)`** is the one honest browser-side colour
   validator, and it does not exist in Node, so a card validated on the server
   cannot use it ([MDN: CSS.supports](https://developer.mozilla.org/en-US/docs/Web/API/CSS/supports_static)).
@@ -183,7 +185,7 @@ makes sense … feels right to group them"):
 ```ts
 // beebox/src/cards/schema.ts — GLOBAL_CARD_FIELDS
 symbol: z.object({
-  char: z.string().optional(),        // the mark itself: text, usually one emoji
+  glyph: z.string().optional(),       // the mark itself: an emoji, or a letter or two
   src: z.string().optional(),         // a box ref to an image, for marks text can't carry
   foreground: z.string().optional(),  // #rgb | #rrggbb | hsl() | hsla() | rgb() | rgba()
   background: z.string().optional(),
@@ -192,9 +194,17 @@ symbol: z.object({
 
 ```yaml
 symbol:
-  char: 🍞
+  glyph: 🍞
   background: hsl(35 60% 88%)
 ```
+
+`glyph` rather than `char` (which promises one code point that emoji routinely
+break) or `text` (which promises nothing): a glyph is a mark you draw. Length is
+**not** constrained — an author who tells an agent "use two letters" gets two
+letters, and a skin-toned ZWJ emoji is several code points and one mark either
+way. Brevity is guidance, not a rule: the lint warns past four graphemes, and
+`CardMark` gives the mark a fixed box with the overflow hidden, so a long value
+degrades visually instead of stretching a tab strip.
 
 An **object with named keys, never a bare string**. `symbol: 🍞` would be the
 landmark union again in a new place — two shapes for one idea, which is what
@@ -203,15 +213,16 @@ lint-checked per key. The cost is that the common case is two lines instead of
 one; the migration pays it once for existing landmark cards and authoring
 guidance carries it after that.
 
-`char` and `src` are mutually exclusive: a symbol carrying both is a lint
+`glyph` and `src` are mutually exclusive: a symbol carrying both is a lint
 warning, and `src` wins at render (it is the more specific intent). A `symbol:`
 key with neither is a lint warning too — an empty group is an author who meant
 something.
 
 `CardMark` (`components/ui/CardMark.tsx`) takes
 `{ symbol, size, boxSlug, fallback }` — one prop for the whole group — and
-renders, in order: the image when `symbol.src` resolves; else `symbol.char`'s
-**first grapheme** (`Intl.Segmenter`, not `[0]`) on the coloured ground; else
+renders, in order: the image when `symbol.src` resolves; else `symbol.glyph`
+as written, in a fixed-size box with the overflow hidden, on the coloured
+ground; else
 `fallback` — which callers supply (📍 for a landmark tile, the type icon for a
 file row, initials for a tab), because the four current copies disagreeing about
 📍 is a symptom of the fallback belonging to the caller, not the mark.
@@ -246,7 +257,7 @@ Colour handling, stated honestly:
   `background` shorthand, which accepts images and URLs and is a different
   failure surface than the one the inline-style note below covers.
 
-**Vocabulary lock-ins.** `symbol` and its four keys (`char`, `src`,
+**Vocabulary lock-ins.** `symbol` and its four keys (`glyph`, `src`,
 `foreground`, `background`); `CardMark`; `isCssColour`; "mark" as the word for
 the rendered thing and "symbol" for the field.
 
@@ -345,7 +356,7 @@ universal field true rather than merely additional. Leaving both would give the
 box two spellings of one idea (principle 8).
 
 **Direction.** A migration moves `navigation.symbol` on every landmark card to
-the card's own top-level group: a string becomes `symbol: { char: … }`, a
+the card's own top-level group: a string becomes `symbol: { glyph: … }`, a
 `{ src }` becomes `symbol: { src: … }`. `LandmarkPayload` keeps its wire shape, so no frontend component
 changes for the fold itself — they change because they are being replaced by
 `CardMark`. The landmark schema keeps `navigation.label`, `links`, `expand`.
@@ -402,16 +413,17 @@ None. Four tracks, each one surface, with a settled shape.
 
 ## Failure modes
 
-> **Critical gap:** a card whose `symbol` holds a long string — an agent writes
-> `symbol: "recipe"` — would stretch every row and tab that draws it, silently,
-> in every surface at once. Closed by `CardMark` rendering the first *grapheme*
-> only (never the raw string) and by a lint warning when the value is more than
-> one grapheme, so the author finds out.
+> **Critical gap:** a card whose glyph holds a long string — an agent writes
+> `glyph: "recipe"` — would stretch every row and tab that draws it, silently,
+> in every surface at once. Closed by `CardMark` drawing into a fixed box with
+> the overflow hidden (so the layout cannot move) and by a lint warning past
+> four graphemes (so the author finds out rather than living with a clipped
+> mark).
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| `symbol` holds a word, not a mark | yes — `CardMark` doctest + lint doctest | yes — first grapheme rendered, lint warning | clear |
-| A multi-code-point emoji is cut mid-sequence into a replacement box | yes — grapheme doctest (ZWJ family, flag, skin tone) | yes — `Intl.Segmenter` | would be visible garbage; tested |
+| A glyph holds a word, not a mark | yes — `CardMark` doctest + lint doctest | yes — fixed box with overflow hidden, lint warning past four graphemes | clipped, and the author is told |
+| A multi-code-point emoji is counted as several characters and wrongly warned | yes — grapheme doctest (ZWJ family, flag, skin tone) | yes — `Intl.Segmenter`, not `.length` | would be a nagging false warning; tested |
 | `symbol.background` is not a colour | yes — `isCssColour` doctest | yes — ignored at render, lint warning | clear |
 | A valid colour makes the mark unreadable (dark on dark) | no | no — accepted; the author picked both | visible to the author immediately |
 | `symbol.src` points outside the box | yes — existing `readLandmarkSymbol` doctest | yes — refused, resolves to null | clear (logged) |
@@ -421,16 +433,16 @@ None. Four tracks, each one surface, with a settled shape.
 | The landmark migration runs twice | yes — migration doctest | yes — idempotent (no `navigation.symbol` left to move) | clear |
 | A migrated landmark loses its mark because a lightweight reader strips global fields | yes — landmarks-router doctest over a migrated fixture | yes — Track D teaches the readers before migrating | would be silent (a landmark simply renders 📍); tested |
 | The universal `symbol.src` escapes path lint and path rewriting | yes — lint doctest | yes — `lint-path-fields.ts:67` gains the field | would be silent (a moved image quietly 404s) |
-| A symbol carries both `char` and `src`, or neither | yes — lint doctest | yes — lint warning; `src` wins at render | clear |
+| A symbol carries both `glyph` and `src`, or neither | yes — lint doctest | yes — lint warning; `src` wins at render | clear |
 | A field added to `GLOBAL_CARD_FIELDS` but not to `InferCardFields` | yes — a typed-read doctest | yes — both edited in A1 | silent at the type level; two prior plans hit it |
 | A box on the server has a landmark form the migration does not expect | no | no | **would be silent** — the migration reports what it changed and what it skipped, and the skip list is the check |
 
 ## Agent-flow / user-flow edge cases
 
 - **Wrong tag / wrong field** — ADDRESSED, and improved by the grouped shape:
-  `char` and `src` sit side by side under one key, so an agent choosing between
-  them sees both. A `char` value that looks like a path (contains `/` or ends in
-  an image extension) still gets its own lint warning naming `src`.
+  `glyph` and `src` sit side by side under one key, so an agent choosing between
+  them sees both. A `glyph` value that looks like a path (contains `/` or ends
+  in an image extension) still gets its own lint warning naming `src`.
 - **Stale ref** — ADDRESSED: `symbol.src` resolves through `resolveRefPath` and
   yields null when the target is gone (`core/landmark/symbol.ts`); `CardMark`
   falls back.
@@ -479,7 +491,7 @@ None. Four tracks, each one surface, with a settled shape.
    landmark cards in one of the boxholder's own boxes carry the `{ src: … }`
    form today, so dropping it would break real cards. So the
    options are (a) `symbol.src` in the universal group, which is what this plan
-   assumes and what fully retires the special case; (b) a `char`-only universal
+   assumes and what fully retires the special case; (b) a `glyph`-only universal
    group, with landmarks keeping a private nested field for images — a smaller
    plan that leaves a residual special case; or (c) drop image symbols, which
    breaks real cards and is not on the table. Lean: (a), because (b) leaves the
@@ -504,8 +516,11 @@ value of the field depends entirely on their restraint with it.
 - `knows_directly`: a box agent, asked "when should a card you write have a
   `symbol`?", answers that most cards should not — that a symbol is for a card
   returned to often, and that a box where every card has one has none.
+- `knows_directly`: asked what goes in `symbol.glyph`, the agent answers an
+  emoji or a letter or two — short enough to read at tab size — and does not
+  believe it is limited to a single character.
 - `knows_directly`: asked how to give a card an image mark, the agent names
-  `symbol.src` rather than putting a path in `symbol.char`.
+  `symbol.src` rather than putting a path in `symbol.glyph`.
 
 Both land in `beebox/src/dev/knowledge-audits.yaml` **and are run**
 (`pnpm knowledge-audit run --box <absolute path to a test box> --filter card-symbol`),
