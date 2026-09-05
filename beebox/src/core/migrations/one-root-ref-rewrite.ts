@@ -1,6 +1,6 @@
 /**
  * The dedicated ref rewriter for the `one-root` migration (Track E, step 5,
- * `docs/plans/one-root-box-layout.md`). Rewrites every ref a card or `.md`
+ * `docs/implemented-plans/one-root-box-layout.md`). Rewrites every ref a card or `.md`
  * dossier carries from its v2 form (relative to `content/`, no underscore
  * fence) to the v3 canonical leading-`/` form (relative to the one root,
  * landing in an underscore area).

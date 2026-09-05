@@ -2,7 +2,7 @@
 
 `toDisplayPath`/`fromDisplayPath` convert between the canonical box path form
 (`/_content/...`, used by refs/URLs/storage) and the boxholder-facing display
-form (BOXHOLDER-SETTLED, `docs/plans/one-root-box-layout.md`): a content path
+form (BOXHOLDER-SETTLED, `docs/implemented-plans/one-root-box-layout.md`): a content path
 displays bare with no leading slash; any other area displays as
 `<AreaLabel>:path/inside`, with the label derived from the area name.
 

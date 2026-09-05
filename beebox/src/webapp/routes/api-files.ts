@@ -92,7 +92,7 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
       // underscore-area paths are servable — not `src/`, `node_modules/`,
       // `.git/`, or any other root entry, and a traversal form like
       // `_content/../package.json` can't hide behind its raw-string prefix
-      // (`docs/plans/one-root-box-layout.md` Track B).
+      // (`docs/implemented-plans/one-root-box-layout.md` Track B).
       const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
       if (!ns.ok) {
         if (ns.reason === "display-form") {
@@ -265,7 +265,7 @@ async function deleteBoxFile({
   }
 
   // Box containment + namespace fence, checked on the RESOLVED path — see
-  // `docs/plans/one-root-box-layout.md` Track B.
+  // `docs/implemented-plans/one-root-box-layout.md` Track B.
   const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
   if (!ns.ok) {
     if (ns.reason === "display-form") {

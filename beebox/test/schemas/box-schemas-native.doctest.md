@@ -1,7 +1,7 @@
 # Box-Local Schemas: native resolution in the box package
 
 A box keeps its code at the box root's `src/` (one-root layout, see
-`docs/plans/one-root-box-layout.md`). `loadBoxSchemas` resolves the schemas
+`docs/implemented-plans/one-root-box-layout.md`). `loadBoxSchemas` resolves the schemas
 dir from `getBoxShape`/`boxCodePaths`, and the box's own
 `node_modules/beebox` (installed like any other dependency) serves
 `beebox/cards` and `beebox/schema` via **native** Node module resolution —

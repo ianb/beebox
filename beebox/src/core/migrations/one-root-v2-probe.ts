@@ -1,6 +1,6 @@
 /**
  * The v2-tolerant shape probe — Track E's "Bootstrap" paragraph
- * (`docs/plans/one-root-box-layout.md`). `getBoxShape` (`src/lib/box-shape.ts`)
+ * (`docs/implemented-plans/one-root-box-layout.md`). `getBoxShape` (`src/lib/box-shape.ts`)
  * refuses every v2 box on purpose (the v3-only engine's whole point), but
  * `bbx migrate` still has to REACH a v2 box to convert it. This module is the
  * one place allowed to read a v2 marker without throwing — used ONLY by the

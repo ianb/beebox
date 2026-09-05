@@ -22,7 +22,7 @@ import * as path from "node:path";
 ### Key instructions, and no absolute filesystem paths
 
 The system prompt must never embed the box's absolute path — agent-visible
-text stays box-relative (`docs/plans/one-root-box-layout.md`, criterion 4).
+text stays box-relative (`docs/implemented-plans/one-root-box-layout.md`, criterion 4).
 
 ```ts
 const prompt = buildReactorSystemPrompt();

@@ -3,7 +3,7 @@
 Every fenced HTTP/tRPC route resolves a client-supplied box path through
 `resolveBoxNamespacePath` (`src/lib/box-namespace-resolve.ts`), which checks
 the box namespace fence (`isInBoxNamespace`, Track B,
-`docs/plans/one-root-box-layout.md`) against the RESOLVED filesystem path —
+`docs/implemented-plans/one-root-box-layout.md`) against the RESOLVED filesystem path —
 not the raw request string. Checking the raw string is a traversal bypass:
 `_content/../package.json` starts with `_content` (passes a naive raw-string
 check) but *resolves* to `package.json`, outside the namespace.

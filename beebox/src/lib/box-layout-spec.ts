@@ -14,7 +14,7 @@
  *     `test/cli/lib/box-layout-spec.doctest.md` (a doc that drifts fails the
  *     test rather than silently going stale).
  *
- * shapeVersion 3 (the one-root layout — `docs/plans/one-root-box-layout.md`):
+ * shapeVersion 3 (the one-root layout — `docs/implemented-plans/one-root-box-layout.md`):
  * a box has ONE root (`boxRoot`). Every path below is
  * relative to that one root. The root's own vocabulary is closed: the
  * underscore-prefixed areas below (`_content`, `_config`, `_bookkeeping`,
@@ -22,7 +22,7 @@
  * `BOX_ROOT_VOCABULARY`. Content is open below `_content/`; nothing else at
  * the root is.
  *
- * See "Track A — Shape v3 core" in `docs/plans/one-root-box-layout.md`.
+ * See "Track A — Shape v3 core" in `docs/implemented-plans/one-root-box-layout.md`.
  */
 
 import type { BoxLayoutEntry } from "./box-layout-types.js";

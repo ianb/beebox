@@ -1,7 +1,7 @@
 # Box Init Command: v3 (one-root) scaffolding
 
 `bbx init` on a path with no existing box scaffolds the one-root layout
-(`docs/plans/one-root-box-layout.md`): the target path becomes the ONE root
+(`docs/implemented-plans/one-root-box-layout.md`): the target path becomes the ONE root
 — `package.json`, `tsconfig.json`, `.claude/`, `src/`, AND the operational
 areas (`_content/`, `_config/`, `_bookkeeping/`, `_publish/`, `_tmp/`) all
 live there together. shapeVersion 3 is the only box shape.

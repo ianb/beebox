@@ -1,6 +1,6 @@
 /**
  * Package-root scaffolding for shapeVersion 3 boxes (the one-root layout —
- * `docs/plans/one-root-box-layout.md`). `bbx init` on a path with no
+ * `docs/implemented-plans/one-root-box-layout.md`). `bbx init` on a path with no
  * existing box detects a fresh init and scaffolds the npm-package half
  * (`package.json`, `tsconfig.json`, `src/`) directly at the box root; the
  * operational half (the marker, the underscore areas, `.gitignore`) is

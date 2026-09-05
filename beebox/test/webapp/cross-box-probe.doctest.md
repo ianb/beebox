@@ -211,7 +211,7 @@ first, which only strips a *leading* slash (`src/shared/box-path.ts`), so the
 absolute path becomes a nested box-relative lookup
 (`<boxRoot>/tmp/.../_content/Marker...`) — but `resolveCardPath` then runs
 that through the box namespace fence
-(`resolveBoxNamespacePathOnDisk`, `docs/plans/one-root-box-layout.md` Track
+(`resolveBoxNamespacePathOnDisk`, `docs/implemented-plans/one-root-box-layout.md` Track
 B), and a path whose first segment is `tmp` rather than an underscore area
 fails the namespace check before any filesystem read, so this shape 400s
 (`BAD_REQUEST`) same as the relative-`..` shape. Still fail-closed either way

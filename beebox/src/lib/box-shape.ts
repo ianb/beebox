@@ -1,6 +1,6 @@
 /**
  * The layout predicate: given a box root, resolve its shape. shapeVersion 3
- * (the one-root layout — `docs/plans/one-root-box-layout.md`) collapses the
+ * (the one-root layout — `docs/implemented-plans/one-root-box-layout.md`) collapses the
  * old two-root package layout (package root + nested `content/` operational
  * root) into ONE root: `.beebox/box.json`, `package.json`, `src/`, and every
  * underscore-prefixed operational area (`_content/`, `_config/`, …) all live
