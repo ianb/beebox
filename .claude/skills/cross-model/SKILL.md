@@ -422,6 +422,19 @@ reviewer from reading the surrounding context. Point at the path.)
 and a chaos engineer — edge cases, races, resource leaks, silent data
 corruption. No compliments, just the problems."* Optional focus narrows it.
 
+## Review loops are bounded — cap at 4 rounds
+
+A review→fix→re-review loop must not run to "clean": an adversarial reviewer
+with a findings cap essentially never returns clean — it fills the cap at
+whatever depth remains. **Cap the loop at 4 rounds** (boxholder ruling,
+2026-09-05, after a loop ran to 8+). Stop earlier when the convergence signal
+appears: prior fixes verify as holding AND the new findings are narrower in
+blast radius than the last round's (contrived inputs, attacker-planted state,
+parser edge cases). At the cap, present the residual findings to the human as
+accept-or-fix decisions instead of fixing them unasked — the reviewer's
+"not fit" verdict is evidence, not the stopping condition; the human's risk
+judgment is.
+
 ## Adjudication and handoff
 
 The reviewer is evidence, not authority. Verify each actionable claim against
