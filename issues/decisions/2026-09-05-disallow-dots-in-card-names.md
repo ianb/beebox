@@ -1,5 +1,5 @@
 ---
-title: "Decide whether a card's name segment may contain dots — `Foo.bar.doc.card` vs `Foo_bar.doc.card`"
+title: "Card filenames: every dotted segment must be an extension we understand (`Foo.bar.doc.card` is not)"
 workstream: unattached
 area: beebox
 needs: [decision]
@@ -16,9 +16,16 @@ directory is `<basename>.attach/`, and `cardBasename()`/`parseCardFileName()`
 (`beebox/src/shared/attach-path.ts`, `beebox/src/shared/card-name.ts`) split it
 back apart on dots. A dot inside the *name* segment is therefore legal but
 ambiguous to read: `Foo.bar.doc.card` parses as name `Foo.bar`, type `doc`,
-because the type match is the last segment before `.card`. The proposal is to
-forbid it — a name uses `_` (the existing `First_Last` authoring convention),
-and a dot appears only as a grammar separator.
+because the type match is the last segment before `.card`.
+
+**The rule to decide on is not "no dots" — it is that every dotted segment
+after the name must be an extension the system understands.** `.card` and the
+type segment are understood. `.kind.job.card` is understood: the reactor
+discovers jobs by that suffix and `parseCardFileName` maps
+`Foo.intake.job.card` to type `intake-job` (boxholder, 2026-09-05 — this form
+stays). `Foo.bar.doc.card` is not: `bar` names nothing, so it silently becomes
+part of the card's name. Under the rule, a name that wants a dot uses `_`
+instead (the existing `First_Last` authoring convention).
 
 ## Why it is worth deciding now
 
@@ -44,11 +51,11 @@ and the grammar cannot express it, or it was an accident nothing caught.
 
 ## What the decision has to cover
 
-- **The job-card exception is real.** `Name.<kind>.job.card` is a deliberate
-  dotted form (`parseCardFileName` maps `Foo.intake.job.card` → type
-  `intake-job`, and the reactor discovers jobs by that suffix). A ban has to
-  carve it out, or job cards need a different shape — which is a bigger change
-  than this issue proposes.
+- **The set of understood suffixes, written down in one place.** Today the
+  grammar lives in `parseCardFileName` as three regexes (nominal, positional,
+  job). The rule needs that list to be the authority a validator reads, so
+  adding an understood form is one edit rather than a lint and a parser
+  drifting apart.
 - **Positional cards** (bare `<type>.card`, "the ‹type› of this directory")
   are unaffected: they have no name segment.
 - **Enforcement layer.** The natural home is `bbx validate` alongside the
@@ -56,12 +63,12 @@ and the grammar cannot express it, or it was an accident nothing caught.
   blocker rather than a silent reinterpretation. Agents author most card
   filenames, so the schema `instructions` and the agent guide would carry the
   rule too.
-- **Cost of the ban.** Two cards locally (one of them in a backup), unknown on
-  the deployed server. Renaming a card is not a file rename: refs to it live in
-  other cards, and its attach directory changes name with it — that is
-  `bbx-migration` work, small but not free. A grandfather clause (warn, do not
-  block, on existing names) is the cheaper alternative and leaves the ambiguity
-  in place.
+- **Cost of the rule.** Two cards locally break it (one of them in a backup),
+  unknown on the deployed server. Renaming a card is not a file rename: refs to
+  it live in other cards, and its attach directory changes name with it — that
+  is `bbx-migration` work, small but not free. A grandfather clause (warn, do
+  not block, on existing names) is the cheaper alternative and leaves the
+  ambiguity in place.
 
 ## The alternative worth weighing
 
