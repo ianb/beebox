@@ -42,6 +42,7 @@ import {
 } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "./card-io.js";
+import { symbolIssues } from "./lint-symbol.js";
 import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
 import { isAttachRef } from "../shared/attach-path.js";
@@ -232,6 +233,8 @@ async function lintFrontmatterCard(input: {
   }
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
+  const symbolFindings = symbolIssues(parsed.fields);
+  warnings.push(...symbolFindings.filter((issue) => issue.severity === "warning"));
   warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
   // Universal Markdoc body validation (docs/implemented-plans/todo-annotation.md, Track 1
   // chunk 2): every card with a markdown body gets Markdoc parse+validate,
@@ -265,6 +268,7 @@ async function lintFrontmatterCard(input: {
   // the loader (box-aware), which the self-contained hook deliberately lacks.
   const errors: LintIssue[] = [
     ...displayPathErrors,
+    ...symbolFindings.filter((issue) => issue.severity === "error"),
     ...(parsed.schema.validate ? parsed.schema.validate({ fields: parsed.fields }) : []),
   ];
   // The one cross-file rule: a chat husk's `session` is its identity, so two

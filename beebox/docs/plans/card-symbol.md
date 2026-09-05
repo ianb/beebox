@@ -1,6 +1,6 @@
 ---
 title: "Cards carry a symbol"
-status: draft
+status: active
 workstream: sidecar-shell
 issues:
   - ../../../issues/features/2026-09-05-cards-carry-a-symbol.md

@@ -2,6 +2,7 @@ import { z, type ZodType } from "zod";
 import type { LintIssue } from "./lint-format.js";
 import { isRecord } from "../lib/is-record.js";
 import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
+import { CardSymbol, type CardSymbolData } from "./symbol.js";
 
 /**
  * Card schemas describe a card file's full shape: most fields live in the
@@ -80,6 +81,10 @@ export type FieldDecl = ZodType | BodyField;
  * - `todos` — a list of todo entries for intentions that don't belong to any
  *   particular sentence of the body (see `src/shared/todo-model.ts`, the
  *   frontmatter counterpart to the `{% todo %}` Markdoc tag).
+ * - `symbol` — the small mark that stands for this card in a tab strip, a
+ *   listing, or a tile: `{ glyph, src, foreground, background }`. Most cards
+ *   have none; a box where everything is marked has nothing marked. See
+ *   `src/cards/symbol.ts`.
  *
  * Adding/removing a field here? Update the enumerations in
  * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/adding-schemas.md`.
@@ -89,6 +94,7 @@ export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   contains: z.string().optional(),
   "contains-evidence": z.string().optional(),
   todos: TodosFieldSchema,
+  symbol: CardSymbol.optional(),
 };
 
 /**
@@ -295,6 +301,7 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
         contains?: string;
         "contains-evidence"?: string;
         todos?: TodoEntry[];
+        symbol?: CardSymbolData;
       },
       keyof TFields
     >
