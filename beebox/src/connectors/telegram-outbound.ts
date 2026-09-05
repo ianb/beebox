@@ -132,7 +132,7 @@ async function recordCallbackTimers(
     connectorName: "telegram",
     defaultValue: {},
     update: (fresh) => {
-      const callbacks = { ...(fresh.callbacks ?? {}) };
+      const callbacks = { ...fresh.callbacks };
       callbacks[threadRelPath] = { at };
       return { ...fresh, callbacks };
     },

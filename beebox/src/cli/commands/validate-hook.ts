@@ -188,7 +188,7 @@ async function validateHookPathResult(fp: string): Promise<HookValidationResult>
 export async function validateHookPathsResult(paths: string[]): Promise<HookValidationResult> {
   const feedback: string[] = [];
   let hasErrors = false;
-  for (const fp of [...new Set(paths)]) {
+  for (const fp of new Set(paths)) {
     const result = await validateHookPathResult(fp);
     if (result.feedback !== null) {
       feedback.push(result.feedback);
