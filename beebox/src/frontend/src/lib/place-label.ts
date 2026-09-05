@@ -14,6 +14,8 @@
  * symbol + label and enables the "here" half.
  */
 
+import { toDisplayPath } from "@shared/display-path";
+
 /** A place the bar can name: a display label plus the dir it lives in. */
 export interface Place {
   /** Face text for the pill's left half when no landmark resolves. */
@@ -80,7 +82,7 @@ export function placeLabel({ pathname, boxSlug }: { pathname: string; boxSlug: s
 
   if (head === "browse") {
     return {
-      label: tail === "" ? "Browse" : `Browse: ${tail}`,
+      label: tail === "" ? "Browse" : `Browse: ${toDisplayPath(tail)}`,
       dir: dirOfPath(tail),
     };
   }

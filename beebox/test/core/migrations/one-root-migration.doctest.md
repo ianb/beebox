@@ -267,7 +267,7 @@ and the whole conversion rolls back: `.beebox` is back under `content/`, and
 const root = await makeV2Box();
 const fooPath = path.join(root, "content", "box", "inbox", "Foo.memo.card");
 const before = await fs.readFile(fooPath, "utf-8");
-await fs.writeFile(fooPath, before + "\n[ghost](../../nonexistent/Ghost.card)\n");
+await fs.writeFile(fooPath, before + "\n[ghost](../../.nonexistent/Ghost.card)\n");
 execSync("git add -A && git commit -q -m dangling", { cwd: root, stdio: "pipe" });
 const preSha = execSync("git rev-parse HEAD", { cwd: root, encoding: "utf-8" }).trim();
 
@@ -295,7 +295,7 @@ Fixing the dangling ref and re-running succeeds — the migration is retryable a
 ```ts continue
 const fooPath2 = path.join(root, "content", "box", "inbox", "Foo.memo.card");
 const dangling = await fs.readFile(fooPath2, "utf-8");
-await fs.writeFile(fooPath2, dangling.replace("\n[ghost](../../nonexistent/Ghost.card)\n", ""));
+await fs.writeFile(fooPath2, dangling.replace("\n[ghost](../../.nonexistent/Ghost.card)\n", ""));
 execSync("git add -A && git commit -q -m fix-dangling", { cwd: root, stdio: "pipe" });
 
 const retried = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
@@ -586,7 +586,7 @@ execSync("git add -A && git commit -q -m ignored-view-fixture", { cwd: root, std
 // uses.
 const fooPath = path.join(root, "content", "box", "inbox", "Foo.memo.card");
 const fooBefore = await fs.readFile(fooPath, "utf-8");
-await fs.writeFile(fooPath, fooBefore + "\n[ghost](../../nonexistent/Ghost.card)\n");
+await fs.writeFile(fooPath, fooBefore + "\n[ghost](../../.nonexistent/Ghost.card)\n");
 execSync("git add -A && git commit -q -m dangling-plus-ignored-view", { cwd: root, stdio: "pipe" });
 
 const err = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") }).catch((e) => e);
@@ -1195,8 +1195,11 @@ A ref the MIGRATION ITSELF makes dangling — one that resolved perfectly well
 pre-migration but whose rewrite target `mapV2Path` doesn't recognize — still
 blocks and rolls back, exactly as the existing coverage above ("Rollback: a
 dangling ref trips the hard link gate") already asserts: that section's
-`[ghost](../../nonexistent/Ghost.card)` never resolved in the v2 tree either,
-but its target's top-level segment (`nonexistent`) isn't a recognized v2 area
+`[ghost](../../.nonexistent/Ghost.card)` never resolved in the v2 tree either,
+but its target's top-level segment (`.nonexistent`) is a DOTFILE name — the
+round-10 content-root default deliberately leaves dotfile areas unmapped (a
+plain unknown dir would map to `_content/` and carve through as pre-broken
+history)
 at all, so the rewriter can't even structurally map it — it stays
 `unresolved` and un-rewritten, which the gate still treats as unconditionally
 blocking (the pre-broken carve-out only ever applies to a ref the rewriter

@@ -32,6 +32,7 @@
 import { memo, useState, type ReactNode } from "react";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { withBase } from "../../api";
+import { toDisplayPath } from "@shared/display-path";
 import { LandmarkLinksPanel } from "./LandmarkLinksPanel";
 import { RecentFilesPanel } from "./RecentFilesPanel";
 import type { SessionEntry } from "../../api";
@@ -58,9 +59,10 @@ type RecentFilesPanelFileHandler = Parameters<typeof RecentFilesPanel>[0]["onPan
  */
 function OpenDirLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
   const href = dir === "" ? withBase(`/${boxSlug}/browse`) : withBase(`/${boxSlug}/browse/${dir}`);
+  const display = toDisplayPath(dir);
   return (
     <MenuItem id="bbx-here-open-dir" href={href}>
-      Open {dir}/
+      Open {display === "/" ? display : `${display}/`}
     </MenuItem>
   );
 }

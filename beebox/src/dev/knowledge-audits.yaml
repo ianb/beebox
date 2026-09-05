@@ -25,6 +25,18 @@ tests:
     correct_contains: ["_content"]
     tags: [navigation, layout]
 
+  - id: display-path-vocabulary
+    prompt: "The boxholder says: open recipes/Soup.recipe.card and also check Bookkeeping:questions. Which files are these?"
+    expected_level: knows_directly
+    watch_for: "Maps the bare content path and the Area:path form to their canonical /_content/... and /_bookkeeping/... locations without confusion"
+    correct_contains: ["_content/recipes/Soup.recipe.card", "_bookkeeping/questions"]
+    tags: [navigation, layout]
+    notes: >
+      The boxholder-facing display vocabulary: a _content path shows bare
+      (no leading slash or underscore), and any other area shows as
+      <AreaLabel>:path/inside. The agent should translate both back to their
+      canonical box-relative forms.
+
   - id: find-memo-cards
     prompt: "If I wanted to find all memo cards in the system, how would you search?"
     expected_level: knows_directly

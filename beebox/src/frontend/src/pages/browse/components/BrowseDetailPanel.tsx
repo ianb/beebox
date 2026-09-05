@@ -6,6 +6,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { cardTypeFromName } from "@shared/card-name";
+import { toDisplayPath } from "@shared/display-path";
 import { href, toSearch } from "../../../lib/routing";
 import { viewStateSearchValue } from "../../../lib/view-url";
 import { displayName } from "../../../lib/display-name";
@@ -78,11 +79,11 @@ export function BrowseDetailPanel({
       <div className="bg-white rounded-lg shadow print:bg-transparent print:rounded-none print:shadow-none">
         <div className="flex items-start justify-between gap-4 border-b border-warm-200 px-4 py-3 print:hidden">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-bold text-warm-900" title={selectedFilePath}>
+            <h2 className="truncate text-lg font-bold text-warm-900" title={toDisplayPath(selectedFilePath)}>
               {displayName(selectedFilePath)}
             </h2>
-            <div className="truncate text-sm text-warm-500" title={selectedFilePath}>
-              {selectedFilePath}
+            <div className="truncate text-sm text-warm-500" title={toDisplayPath(selectedFilePath)}>
+              {toDisplayPath(selectedFilePath)}
             </div>
           </div>
           <div className="flex items-center gap-2">

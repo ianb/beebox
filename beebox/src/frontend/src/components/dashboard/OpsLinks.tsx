@@ -22,7 +22,7 @@ export function OpsLinks() {
       <nav aria-label="Box tools" className="flex items-center gap-3">
         <Link
           id="bbx-dashboard-browse"
-          to={href(`/${boxSlug}/browse`)}
+          to={href(`/${boxSlug}/browse/_content`)}
           className="text-sm text-primary hover:text-primary-dark"
         >
           Browse &rarr;

@@ -14,6 +14,7 @@
 import type { ReactNode } from "react";
 import { useViewHost, refToTarget } from "../../lib/view-host";
 import { serializeViewUrl } from "../../lib/view-url";
+import { toDisplayPath } from "@shared/display-path";
 
 export interface CardLinkProps {
   /** Box-relative card path (box-absolute `/…`, relative, or `attach/…`). */
@@ -29,7 +30,10 @@ export interface CardLinkProps {
 export function CardLink({ cardRef, view, params, children }: CardLinkProps) {
   const host = useViewHost();
   const resolved = host.useResolvedRef(cardRef);
-  const label = children ?? resolved?.title ?? cardRef;
+  // Only a box-rooted ref (leading `/`) has a display form; attach/relative
+  // refs pass through unchanged (display-path.ts is canonical-path-only).
+  const displayRef = cardRef.startsWith("/") ? toDisplayPath(cardRef) : cardRef;
+  const label = children ?? resolved?.title ?? displayRef;
   const missing = resolved !== null && !resolved.exists;
 
   // A real href (the card's page URL) so middle-click / open-in-new-tab work;
@@ -40,7 +44,7 @@ export function CardLink({ cardRef, view, params, children }: CardLinkProps) {
     // Render the label as inert text with the broken marker rather than an
     // anchor that leads to a clamped-to-root card the ref never named.
     return (
-      <span title={`Ref escapes the box root: ${cardRef}`}>
+      <span title={`Ref escapes the box root: ${displayRef}`}>
         {label}
         <span className="ml-1 text-xs text-danger">(unresolvable)</span>
       </span>

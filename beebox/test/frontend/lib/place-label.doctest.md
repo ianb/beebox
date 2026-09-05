@@ -56,11 +56,13 @@ labelOf("/test1/history/a1b2c3")
 
 ## Browse names the path, and carries the dir
 
-A directory path is itself the dir.
+A directory path is itself the dir. The label uses the boxholder display
+form — a `_content` path shows bare, no leading area prefix
+(`display-path.ts`).
 
 ```ts
 JSON.stringify(placeLabel({ pathname: "/test1/browse/_content/recipes", boxSlug: "test1" }))
-=> {"label":"Browse: _content/recipes","dir":"_content/recipes"}
+=> {"label":"Browse: recipes","dir":"_content/recipes"}
 ```
 
 A trailing segment with a `.` reads as a file, so the dir is its parent — the
@@ -68,7 +70,15 @@ landmark lookup wants the enclosing directory, not the card.
 
 ```ts
 JSON.stringify(placeLabel({ pathname: "/test1/browse/_content/recipes/Bread.card", boxSlug: "test1" }))
-=> {"label":"Browse: _content/recipes/Bread.card","dir":"_content/recipes"}
+=> {"label":"Browse: recipes/Bread.card","dir":"_content/recipes"}
+```
+
+A machinery-area path shows the area's friendly label instead of the
+underscore name.
+
+```ts
+JSON.stringify(placeLabel({ pathname: "/test1/browse/_bookkeeping/jobs", boxSlug: "test1" }))
+=> {"label":"Browse: Bookkeeping:jobs","dir":"_bookkeeping/jobs"}
 ```
 
 Browsing the box root has no path portion, and its dir is the root (`""`, not
