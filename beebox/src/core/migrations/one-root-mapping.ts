@@ -216,7 +216,17 @@ export function mapV2Path(contentRelPath: string): MapV2PathResult {
   if (normalized === "") return { kind: "unmapped" };
   const { top, rest } = topLevelOf(normalized);
   const category = classify(top, normalized);
-  if (category === null) return { kind: "unmapped" };
+  if (category === null) {
+    // An unknown top-level entry under content/ that isn't a dotfile and
+    // isn't v2 machinery is the user's own ad hoc content — v2 allowed such
+    // dirs loosely, and v3's `_content/` is open vocabulary by design
+    // ("content = things that come from the user", the plan's criterion 2).
+    // Real boxes carry these (one fleet box held a whole `images/` tree), so
+    // defaulting them into `_content/` is the correct general rule; only
+    // dotfiles (unknown runtime state) stay unmapped for a human.
+    if (!top.startsWith(".")) return { kind: "move", newPath: "_content/" + normalized };
+    return { kind: "unmapped" };
+  }
 
   switch (category) {
     case "rootFile": {
