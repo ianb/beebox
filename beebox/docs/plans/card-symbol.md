@@ -107,8 +107,29 @@ prominence and must not become a way to spell it).
 - Searched for an existing CSS-colour validator anywhere in `src/` and **found
   nothing**; searched for any card field holding a colour and **found nothing**.
   This plan introduces the first one.
-- Searched for an existing batch "identity for these paths" endpoint and **found
-  nothing**: `card.get` is one path at a time and returns the whole card.
+- `src/webapp/trpc/routers/files.ts` — **`files.summarize`**: a batch endpoint
+  taking up to 200 paths and returning `FileSummary` records
+  (`src/core/file-summary.ts:13` — `{ path, type, title, contains, attrs }`,
+  with `title` already computed by the per-type loader and falling back to the
+  filename). **Reuse and extend.** A first draft of this plan proposed a new
+  `cards.identity` procedure after searching for the wrong words; that would
+  have been a second endpoint answering a question this one already answers.
+- `src/schemas/landmark.ts:121-131` — `landmarkFields` / the standalone
+  `LandmarkObject` used by "lightweight readers (the landmarks router,
+  triage-instructions, etc.) that parse a landmark file directly rather than
+  through the card loader. Unknown keys (global card fields, a stray `type:`)
+  are stripped." **This is the obstacle to the landmark fold** — see Track D.
+- `src/cards/schema.ts:286-296` — `InferCardFields` carries a **second,
+  hand-written list** of the global fields at the type level. A field added to
+  `GLOBAL_CARD_FIELDS` alone exists at runtime and not in any card's inferred
+  type. Two shipped plans already recorded this trap
+  (`docs/implemented-plans/todo-annotation.md:292`,
+  `docs/implemented-plans/chat-review.md:432`); this plan will not be the third
+  to rediscover it.
+- `src/core/lint-path-fields.ts:67` — the inventory of frontmatter fields that
+  hold box paths, which today knows `navigation.symbol.src` and `entry`. A
+  universal `symbolSrc` has to be added here or it silently escapes the
+  path-rewriting and lint that every other ref gets.
 
 ## Prior art (external)
 
@@ -130,9 +151,11 @@ prominence and must not become a way to spell it).
   A regex over the syntaxes we mean to accept is the portable option; the plan
   takes it and accepts that it is narrower than CSS.
 - React sets inline styles through CSSOM property assignment rather than by
-  concatenating declaration text, so an arbitrary string in `style={{ background: value }}`
-  cannot inject a second declaration — an invalid value is dropped by the
-  browser. Relevant because the colour comes from a card an agent wrote.
+  concatenating declaration text, so an arbitrary string in
+  `style={{ backgroundColor: value }}` cannot inject a second declaration — an
+  invalid value is dropped by the browser. This covers declaration injection and
+  nothing else: the `background` shorthand would still accept a `url(…)`, which
+  is why Track A assigns the longhand properties only.
 - Searched for prior art on "abbreviate a title into initials" as a named
   pattern and **found nothing worth citing** — it is chat-app avatar behaviour
   (Slack, Google), consistently "initials of the first two words", which is what
@@ -175,11 +198,34 @@ renders, in order: the image when `symbolSrc` resolves; else the symbol's
 file row, initials for a tab), because the four current copies disagreeing about
 📍 is a symptom of the fallback belonging to the caller, not the mark.
 
-Colour handling: `isCssColour()` in `src/shared/css-colour.ts` — a regex over
-`hsl()/hsla()/rgb()/rgba()/#hex/` the named-colour set. A value that fails is a
-**lint warning** (`card-lint.ts`'s existing channel), never a load error, and is
-ignored at render. Cosmetic input does not get to make a card unreadable
-(principle 6), and it does not get to fail silently either (principle 4).
+**This is not a one-edit change.** Four places move together: the runtime
+declaration (`GLOBAL_CARD_FIELDS`), the hand-written type list in
+`InferCardFields` (`schema.ts:286-296`) or every typed reader silently cannot
+see the fields, the enumerations in `docs/adding-schemas.md:72` and the
+`bbx-guide-schemas` skill, and `test/core/search/contains-evidence.doctest.md:31`,
+which asserts today's global-key set.
+
+Colour handling, stated honestly:
+
+- The **type** is `z.string().optional()`, so a non-string value (`symbolBackground: 3`)
+  is a hard load error like every other mistyped field. That is the existing
+  contract and this plan does not carve an exception into it. Note for authoring:
+  an unquoted `#3a7` is a YAML **comment**, so hex needs quotes — a lint warning
+  catches the resulting empty value.
+- An invalid colour *string* is a **lint warning** (`card-lint.ts`'s channel)
+  and is ignored at render. Cosmetic input does not get to make a card
+  unreadable (principle 6), and does not get to fail silently either
+  (principle 4).
+- `isCssColour()` (`src/shared/css-colour.ts`) is a regex over `hsl()/hsla()/
+  rgb()/rgba()/#hex/` the named-colour set. This is **narrower than CSS**, which
+  the issue's "any valid CSS colour" invites: `color-mix()`, `lab()`, and
+  `color()` will be rejected. The narrowing is deliberate — the only honest
+  validator is `CSS.supports()`, which does not exist in Node, so a server-side
+  check cannot be complete. The lint message says which syntaxes are accepted
+  rather than claiming the value is invalid CSS.
+- The renderer assigns **`color` and `backgroundColor` only** — never the
+  `background` shorthand, which accepts images and URLs and is a different
+  failure surface than the one the inline-style note below covers.
 
 **Vocabulary lock-ins.** The four field names above; `CardMark`;
 `isCssColour`; "mark" as the word for the rendered thing and "symbol" for the
@@ -202,25 +248,30 @@ retitling a card leaves its tab saying the old thing while the body below it
 updates — [the filed bug](../../../issues/bugs/2026-09-05-sidecar-tab-label-never-updates.md).
 A mark drawn from the open-time label would be stale in exactly the same way.
 
-**Direction.** `cards.identity({ paths: string[] })` →
-`Array<{ path, title, symbol, symbolSrc, symbolForeground, symbolBackground }>`,
-one small read per path, missing paths omitted rather than erroring (a card can
-be deleted while its tab is open). The frontend wraps it in a
-`useCardIdentities(paths)` hook that subscribes to `file-change` for the paths
-it holds and invalidates just those — the same bus subscription
-`FileView` already uses (`components/file-view-data.ts`).
+**Direction.** Extend what exists rather than adding a parallel endpoint:
+`FileSummary` (`src/core/file-summary.ts:13`) gains the mark fields, and
+`files.summarize` — already batched, already capped at 200, already returning a
+computed `title` with a filename fallback — carries them. The frontend gets a
+`useCardIdentities(paths)` hook over that procedure which subscribes to
+`file-change` for the paths it holds and invalidates just those, the same bus
+subscription `FileView` uses (`components/file-view-data.ts`).
+
+Adding fields to `FileSummary` touches every loader that builds one, so the
+first chunk is the type plus the generic fallback path; per-type loaders inherit
+the fields without changes because the marks come from frontmatter, not from
+per-type attrs.
 
 The tab's stored `label` stops being the display name and becomes what it always
 was — the text the link that opened it used — a *fallback* for a card whose
 identity has not arrived yet. The persisted strip keeps the last known title so
 a restored strip is not blank for a beat.
 
-**Vocabulary lock-ins.** `cards.identity`; `CardIdentity` as the payload type;
-`useCardIdentities`.
+**Vocabulary lock-ins.** The mark fields on `FileSummary`; `useCardIdentities`.
 
-**First implementation chunk.** The procedure plus a route doctest: identities
-for three paths, one of them missing; a card with no symbol; a card whose title
-is absent (falls back to `displayName`).
+**First implementation chunk.** The `FileSummary` fields and their extraction,
+plus a route doctest over `files.summarize`: three paths with one missing, a
+card with no symbol, and a card with no title (the existing filename
+fallback).
 
 ### Track C — the strip: mark, abbreviation, ambiguity
 
@@ -250,6 +301,11 @@ depend on what else is on screen.
 graphemes of a single word, uppercased — the chat-avatar convention. It runs on
 the *title*, which Track B is what makes available.
 
+What this does **not** settle: the boxholder also asked about abbreviating "when
+they don't fit", which is the unpinned tab's problem and is CSS truncation
+today. Treat the rule above as the first pinned-tab behaviour to live with and
+browser-test, not as the final answer to every title-fit case.
+
 **Vocabulary lock-ins.** `abbreviateTitle`, `markAmbiguity`, and the rule that
 ambiguity is pinned-scoped.
 
@@ -273,6 +329,18 @@ a string becomes `symbol:`, a `{ src }` becomes `symbolSrc:`, both at the card's
 top level. `LandmarkPayload` keeps its wire shape, so no frontend component
 changes for the fold itself — they change because they are being replaced by
 `CardMark`. The landmark schema keeps `navigation.label`, `links`, `expand`.
+
+**The obstacle, which is most of this track's work.** Landmarks are not read
+through the card loader in the paths that matter: `landmarkFields` /
+`LandmarkObject` (`src/schemas/landmark.ts:121-131`) is a standalone object
+schema whose own doc comment says unknown keys — "global card fields" among them
+— are **stripped**, and `loadLandmarkPayload`
+(`src/webapp/trpc/routers/landmarks.ts:104`) reads `fields.navigation` alone.
+`core/landmark/summaries.ts` and `core/landmark/box-identity.ts` follow the same
+pattern. A migrated landmark carrying a top-level `symbol:` would therefore
+render as *no symbol at all* until each of those readers learns the card's own
+fields. So the order within this track is: teach the lightweight readers first,
+then migrate, then delete the nested field — not the other way round.
 
 **Vocabulary lock-ins.** None new; this track removes one.
 
@@ -331,6 +399,9 @@ None. Four tracks, each one surface, with a settled shape.
 | A card is deleted while its tab is open | yes — route doctest (missing path omitted) | yes — the tab keeps its fallback label | clear |
 | Identity arrives after first paint, so the strip visibly re-labels | no automated test | yes — the persisted strip carries the last known title | visible flicker; browser-checked |
 | The landmark migration runs twice | yes — migration doctest | yes — idempotent (no `navigation.symbol` left to move) | clear |
+| A migrated landmark loses its mark because a lightweight reader strips global fields | yes — landmarks-router doctest over a migrated fixture | yes — Track D teaches the readers before migrating | would be silent (a landmark simply renders 📍); tested |
+| A universal `symbolSrc` escapes path lint and path rewriting | yes — lint doctest | yes — `lint-path-fields.ts:67` gains the field | would be silent (a moved image quietly 404s) |
+| A field added to `GLOBAL_CARD_FIELDS` but not to `InferCardFields` | yes — a typed-read doctest | yes — both edited in A1 | silent at the type level; two prior plans hit it |
 | A box on the server has a landmark form the migration does not expect | no | no | **would be silent** — the migration reports what it changed and what it skipped, and the skip list is the check |
 
 ## Agent-flow / user-flow edge cases
@@ -380,19 +451,29 @@ None. Four tracks, each one surface, with a settled shape.
 
 ## Open design questions
 
-1. **Does `symbol` deserve a per-type default?** A `question` card with no
+1. **Does the image form (`symbolSrc`) belong in this plan at all?** *(needs the
+   boxholder)* The decision was "text only, for now", and the issue parks the
+   image form as a separate question — but "landmark should not be a special
+   case" pulls the other way, and the image form is **in use**: ten-plus
+   landmark cards in one of the boxholder's own boxes carry the `{ src: … }`
+   form today, so dropping it would break real cards. So the
+   options are (a) universal `symbolSrc`, which is what this plan assumes and
+   what fully retires the special case; (b) text-only universal `symbol`, with
+   landmarks keeping a private nested field for images — a smaller plan that
+   leaves a residual special case; or (c) drop image symbols, which breaks real
+   cards and is not on the table. Lean: (a), because (b) leaves the exact thing
+   the ask wanted gone. This is the one question that changes the plan's shape.
+2. **Does `symbol` deserve a per-type default?** A `question` card with no
    symbol could fall back to a type mark rather than the SVG glyph table. Lean:
    no, not in this plan — it is the "every card wears one" failure in a
    different costume, and the type icon already covers the case.
-2. **How `cards.identity` is called for many paths.** The strip is capped
-   (12 unpinned plus pinned), but browse listings are not, and Track D's
-   deferred surfaces would want hundreds. Lean: keep the procedure honest for
-   tens, and let the deferred surfaces bring their own read when they land —
-   rather than designing a caching layer for callers that do not exist.
 3. **Whether an unpinned tab draws the mark at all.** It has room for the title,
    so the mark is decoration there rather than identification. Lean: yes, small
    and leading — it is what teaches the mark before you pin anything — but this
    is the first thing to try both ways in the browser.
+4. **`files.summarize` already caps at 200 paths**, which the strip never
+   approaches. The deferred surfaces (browse listings) could. Lean: leave the
+   cap alone and let a surface that needs paging bring it when it lands.
 
 ## Knowledge audits
 
@@ -436,11 +517,13 @@ directions.
 1. **A1** — the four fields in `GLOBAL_CARD_FIELDS`, `isCssColour`, the lint
    warnings, and their doctests. Nothing renders yet.
 2. **A2** — `CardMark`, with the grapheme rule and caller-supplied fallback.
-3. **D1** — the landmark migration, with `readLandmarkSymbol` reading the new
-   fields and falling back to `navigation.symbol`.
-4. **D2** — the four landmark renderers become `CardMark`; the landmark schema
-   drops its `symbol`; the fallback in `readLandmarkSymbol` is removed.
-5. **B1** — `cards.identity` and its route doctest.
+3. **D1** — the lightweight landmark readers (`LandmarkObject`,
+   `loadLandmarkPayload`, `summaries.ts`, `box-identity.ts`) learn the card's own
+   fields, with `readLandmarkSymbol` preferring them and falling back to
+   `navigation.symbol`. Nothing has moved yet, so this chunk changes no output.
+4. **D2** — the migration; then the four landmark renderers become `CardMark`,
+   the landmark schema drops its nested `symbol`, and the fallback is removed.
+5. **B1** — the `FileSummary` mark fields and the `files.summarize` doctest.
 6. **B2** — `useCardIdentities`, the strip's labels become live, the persisted
    strip carries the last known title. **This is where the stale-label bug
    closes**, before any mark is drawn in the strip.
