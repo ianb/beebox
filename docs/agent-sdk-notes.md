@@ -32,44 +32,115 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pin:** `0.3.258` (in `beebox/package.json`. The monorepo root
-  carries a second, unmanaged pin at `0.3.226` — filed as
-  `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, because the
-  root copy is what `bin/` tooling imports and what `update-agent-sdk --check`
-  measures, so the check reports "behind" on a current repo and every bump ends
-  by printing "Now at 0.3.226")
-- **Latest reviewed upstream version:** `0.3.260` (SDK), `2.1.260` (Claude Code), `0.153.0` (Codex)
-- **Ledger floor:** `0.3.220` (earlier releases are out of scope); Codex floor `0.153.0`
-- **Codex pin:** `0.153.0` (`@openai/codex` + `@openai/codex-sdk`, exact, same 2-day lane via `pnpm update-agent-sdk`)
-- **Current recommendation:** `0.3.258` was taken this turn as the newest settled
-  version, carrying `0.3.257`'s background-task lifecycle fixes with it — so the
-  chat task strip's `background_tasks_changed` work is no longer blocked on the
-  pin. Pending: `0.3.259` (~30h) and `0.3.260` (~5h), neither act-now.
-- **Two turns landed at once.** The 2026-09-02 bump to `0.3.252` was committed
-  but `bin/land` refused on a dirty main checkout, so `main` never advanced and
-  the `0.3.259` review below was invisible to the run script — which is why the
-  briefing for 2026-09-03 re-offered `0.3.259` as unreviewed. It was already
-  reviewed; this turn lands both commits. The refusal worked exactly as
-  designed: nothing was lost and nothing needed rewriting.
-- **Correction carried forward (2026-09-02):** the 2.1.251 and 2.1.257 entries
-  below assert that no session here runs with permission enforcement on. **That
-  is wrong** — two live schedules pass permission rules on the command line. See
-  the 0.3.259 entry, as amended by the 0.3.260 entry.
-
-## Codex 0.153.0 — applied 2026-09-05 (channel added; not itemized)
-
-The first Codex entry. The pin moved `0.147.0` → `0.153.0` (newest release
-older than two days) when the boxholder noticed the production server's
-`codex` was behind and Astra (`gpt-6-astra`) had just been added to the box
-model picker. Releases 0.148–0.153 were **not** read for this entry — the
-channel was added in the same change, and the next monitor turn starts from
-this floor. Verified: beebox typecheck, the Codex doctests (transcript, usage,
-chat models, session registry and history), and the deploy gate's
-`codex plugin --help`.
+- **Current pins:** Agent SDK `0.3.259`, Codex `0.153.0` (both `@openai/codex`
+  and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
+  still carries a second, unmanaged Agent SDK pin at `0.3.226` —
+  `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
+  fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
+  `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
+  the root copy and `bin/` tooling still imports it.
+- **Latest reviewed upstream version:** `0.3.261` (SDK), `2.1.261` (Claude Code), `0.153.4` (Codex)
+- **Ledger floor:** `0.3.220` (earlier releases are out of scope)
+- **Current recommendation:** `0.3.259` was taken this turn as the newest settled
+  SDK version. **No Codex bump was due** — all four new Codex releases were
+  under the two-day window (the oldest, `0.153.1`, at ~31h) — and when they do
+  settle, `0.153.4` should be taken **deliberately**: it makes GPT-6-Astra the
+  default model, and beebox chats that configure no model ride the binary's
+  default. See
+  `issues/decisions/2026-09-04-codex-default-model-becomes-astra.md`. Pending
+  SDK: `0.3.260` (~30h), `0.3.261` (~11h), neither act-now.
 
 ## Release ledger
 
-### 0.3.260 / Claude Code 2.1.260 — pending (published 2026-09-03T22:33Z, ~5h at this turn)
+### Codex 0.153.1 – 0.153.4 — pending; the first Codex releases this ledger has reviewed
+
+All four are GPT-6-Astra plumbing, published between 2026-09-03T21:09Z and
+2026-09-04T23:31Z, and all four were inside the two-day window at this turn
+(~31h, ~29h, ~9h, ~5h). `@openai/codex` and `@openai/codex-sdk` publish in
+lockstep and beebox pins both at the same version, so they move together.
+
+- `0.153.1` — configure Astra through the API "without changing the default
+  model or showing it in the model picker".
+- `0.153.2` — corrects the Astra Fast tier description from "1.5x" to "2x
+  speed, increased usage"; display text only.
+- `0.153.3` — adds GPT-6-Astra to the Amazon Bedrock catalogs (Mantle and
+  Runtime global/US routes), plus a correction to Astra's guidance for
+  asynchronous clarification questions.
+- **`0.153.4` — "Fixed Astra's visibility in the bundled model picker and made
+  it the bundled default when no model is explicitly configured."**
+
+**Beebox applicability — the fourth one moves a default beebox actually rides.**
+`codex-sdk-session.ts:149` includes the model only when a caller supplies one
+(`...(options.model === undefined ? {} : { model: options.model })`), and
+`codex-chat.ts` passes `opts.model` straight through, so a box whose Codex chat
+configures no model runs on whatever the pinned binary defaults to. Taking
+`0.153.4` therefore moves those chats onto GPT-6-Astra — different model,
+different behavior, different price — with no beebox-side change. And it would
+be close to invisible afterwards: `codex-chat.ts:185` writes per-turn usage as
+`model: opts.model ?? "codex-default"`, so the ledger records the same string
+before and after the switch. Filed as
+`issues/decisions/2026-09-04-codex-default-model-becomes-astra.md`.
+
+The same default governs `.claude/skills/cross-model/`, which runs the Codex CLI
+for adversarial reviews; note that the skill invokes `codex` from `PATH` (a
+global install, "verified around 0.146.x" per its own text) rather than the
+workspace pin, so its model default is not governed by this pin at all — a
+separate inconsistency worth knowing about, not filed.
+
+- **Action:** No Codex bump this turn — nothing settled. When they settle, take
+  `0.153.4` deliberately rather than incidentally; the deploy gate
+  (`CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin --help` from the repo
+  root) applies as usual.
+- **Sources:** [Codex releases](https://github.com/openai/codex/releases) —
+  `rust-v0.153.1` through `rust-v0.153.4`
+
+### 0.3.261 / Claude Code 2.1.261 — pending (published 2026-09-04T17:56Z, ~11h at this turn)
+
+- **Upstream (SDK):** `pluginDelivery: 'initialize'` sends `plugins` over stdin
+  so the launch command line stops growing with the plugin count (it fixes
+  Windows start failures); and a fix for `query()` throwing "Object not
+  disposable" in runtimes without a native `Symbol.dispose` — Node ≤22 `vm`
+  contexts (Jest's `node` environment, vitest `vmThreads`/`vmForks`) and Node
+  <18.18.
+- **Beebox applicability (runtime):** Neither bites. beebox passes exactly one
+  local plugin in `run.ts`, so the command line is nowhere near a length limit,
+  and the deployment is macOS and Linux, not Windows. The `Symbol.dispose` fix
+  needs an old Node or a `vm`-based test runner; this repo is on Node 24 and
+  runs tap, which does not sandbox tests in `vm` contexts. Recorded because the
+  second one is the kind of thing that would show up as an inexplicable test-only
+  failure if either of those changed.
+- **Beebox applicability (harness), from 2.1.261:**
+  - *"Fixed SDK and cloud sessions ignoring a Stop or interrupt sent just after
+    the first prompt, before the turn had started; the turn now stops instead of
+    running to completion."* This is a boxholder-visible chat bug: press stop
+    early enough and the turn kept going. beebox's stop path is `interrupt()`
+    (`chat/session/index.ts:374`), so it was the caller on the wrong side of
+    this. It joins the interrupt-semantics material in
+    `issues/decisions/2026-08-25-chat-stop-and-background-subagents.md`.
+  - *"Fixed resuming a session losing hook output and other context around
+    parallel tool calls, which changed the resumed request."* beebox resumes
+    sessions constantly and registers hooks on both routes (the `hooks` option
+    and the local plugin), so a resumed turn silently differing from the
+    pre-resume one is squarely in scope.
+  - *"Fixed sustained high CPU usage when a background agent could not be
+    resumed and its wake-up was retried in a tight loop."* A tight retry loop on
+    a laptop that also runs the boxholder's own sessions is worth having fixed.
+  - *"Added `bashOutputMaxChars` and `taskOutputMaxChars` settings to raise how
+    much command and background-task output Claude receives inline before it is
+    saved to a file, up to 128K characters."* The fourth release in the
+    output-volume family (2.1.247, 2.1.248, 2.1.252). These are the knobs, if a
+    box agent ever needs more of a long command's output inline.
+  - *"Fixed `claude -p --resume <file>` adopting a malformed session ID recorded
+    in the transcript; it now resumes under a fresh session ID."* This
+    schedule's own shape — `session: persistent`, a minted id resumed each run.
+  - Also: `--append-subagent-system-prompt-file` for oversized subagent prompts,
+    `/skill-doctor` for finding unused skills and what they cost in context, and
+    a dangerous-`rm` prompt that now catches `rm -rf` on positional parameters
+    and inside double-quoted `sh -c` scripts.
+- **Action:** Settled path; takeable 2026-09-06.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03261), [Claude Code 2.1.261](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21261)
+
+### 0.3.260 / Claude Code 2.1.260 — pending (published 2026-09-03T22:33Z, ~30h at this turn)
 
 **Amends the previous turn's entry: 2.1.259's Bash deny-rule fix was reverted.**
 
@@ -145,7 +216,7 @@ actually passes (`schedules/*/schedule.yaml`):
 - **Action:** Settled path; `0.3.260` takeable 2026-09-05.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03260), [Claude Code 2.1.260](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21260)
 
-### 0.3.259 / Claude Code 2.1.259 — pending (published 2026-09-02T21:22Z, ~30h at this turn; its Bash deny-rule fix was REVERTED in 2.1.260 — see above)
+### 0.3.259 / Claude Code 2.1.259 — APPLIED 2026-09-04 (published 2026-09-02T21:22Z; its Bash deny-rule fix was REVERTED in 2.1.260 — see above)
 
 **This entry corrects two earlier ones.** The 2.1.251 entry concluded that
 "nothing here runs with permission enforcement on", having searched
@@ -238,7 +309,11 @@ The rest of 0.3.259 and 2.1.259:
   but agent definitions are a different path and were already honored (2.1.248
   spelled out that precedence). `managedMcpServers` and `allowedMcpServers`
   changes need managed settings and MCP servers; this repo has neither.
-- **Action:** Settled path; `0.3.259` takeable 2026-09-04.
+- **Action:** Applied 2026-09-04 on the settled path (~55h old), the newest
+  settled version. `pnpm -C beebox test`: **8,617 pass, 0 fail** — which also
+  clears the previous turn's `test/dev/launch-session.doctest.md` red; it was a
+  `main`-side failure and `main` has since fixed it. `sdk-steering-probe`: all
+  four steering behaviors pass on the first run this time.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03259), [Claude Code 2.1.259](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21259)
 
 ### 0.3.258 / Claude Code 2.1.258 — APPLIED 2026-09-03 (published 2026-09-01T22:24Z)
