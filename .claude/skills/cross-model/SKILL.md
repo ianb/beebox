@@ -422,18 +422,30 @@ reviewer from reading the surrounding context. Point at the path.)
 and a chaos engineer — edge cases, races, resource leaks, silent data
 corruption. No compliments, just the problems."* Optional focus narrows it.
 
-## Review loops are bounded — cap at 4 rounds
+## Review loops: two rounds, then verification-only
 
-A review→fix→re-review loop must not run to "clean": an adversarial reviewer
-with a findings cap essentially never returns clean — it fills the cap at
-whatever depth remains. **Cap the loop at 4 rounds** (boxholder ruling,
-2026-09-05, after a loop ran to 8+). Stop earlier when the convergence signal
-appears: prior fixes verify as holding AND the new findings are narrower in
-blast radius than the last round's (contrived inputs, attacker-planted state,
-parser edge cases). At the cap, present the residual findings to the human as
-accept-or-fix decisions instead of fixing them unasked — the reviewer's
-"not fit" verdict is evidence, not the stopping condition; the human's risk
-judgment is.
+An adversarial reviewer with a findings cap never returns "clean" — it fills
+the cap at whatever depth remains, so a review→fix→re-review loop has no
+natural exit. The loop is bounded by rule (boxholder ruling, 2026-09-05,
+after a loop ran to 8+ rounds):
+
+- **Round 1**: the full review.
+- **Round 2**: verify the fixes hold; fresh findings are still welcome.
+- **After round 2: STOP inviting new problems.** Any further invocation is
+  verification-only — the prompt names the already-found problems and asks
+  whether the fixes hold, and explicitly tells the reviewer NOT to hunt for
+  new findings. If a fix-verification pass turns up a defect in the fix
+  itself, that's in scope; a brand-new surface is not.
+- Residual or newly-suspected risks after that go to the human as
+  accept-or-fix decisions, never silently fixed.
+
+Adjudicate findings against the project's over-engineering line before
+fixing them: mid-operation I/O-failure windows in one-shot operator-run
+tools, exotic input encodings (CRLF, quoting edge cases), and
+attacker-is-the-owner scenarios are presumptively REJECTED, not fixed —
+raise them with the human only if you think one genuinely clears the bar.
+The reviewer's "not fit" verdict is evidence, not the stopping condition;
+the human's risk judgment is.
 
 ## Adjudication and handoff
 
