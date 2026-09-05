@@ -159,3 +159,42 @@ assertCodexThreadCwd(boxRoot, path.join(boxRoot, "outside-link"))
 ```ts cleanup
 fs.rmSync(root, { recursive: true, force: true });
 ```
+
+## Finding 4 (round 5 hardening): a retired v2 `content/` cwd still resolves post-migration
+
+A Codex thread recorded before a box ran the one-root migration carries a
+`cwd` under the retired v2 operational root — Codex's own session storage is
+external to the box, so that `cwd` is frozen exactly as recorded. Once
+`content/` is gone, a plain `realpathSync` would throw ENOENT and strand the
+thread. `assertCodexThreadCwd` translates a missing `<boxRoot>/content[/…]`
+cwd through the same v2 → v3 mapping the migration itself used before
+re-checking: the content root itself maps to the box root, and a nested
+`content/<sub>` maps to wherever `<sub>` actually landed.
+
+```ts
+const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-v2-cwd-"));
+const boxRoot = path.join(root, "box");
+// The v3 area `store/recipes` (v2) maps to — no `content/` directory at all,
+// since it was removed by the migration.
+fs.mkdirSync(path.join(boxRoot, "_content", "recipes"), { recursive: true });
+
+assertCodexThreadCwd(boxRoot, path.join(boxRoot, "content"))
+=> undefined
+
+assertCodexThreadCwd(boxRoot, path.join(boxRoot, "content", "store", "recipes"))
+=> undefined
+```
+
+A `content/`-shaped path `mapV2Path` doesn't recognize still fails closed —
+this fallback only covers what the migration itself knew how to move, so it's
+left to fail on the original ENOENT rather than being waved through:
+
+```ts continue
+const err = (() => { try { assertCodexThreadCwd(boxRoot, path.join(boxRoot, "content", "nonexistent-nonsense")); return null; } catch (e) { return e; } })();
+JSON.stringify({ isCodexSessionOutsideBoxError: err instanceof Error && err.name === "CodexSessionOutsideBoxError", code: err.code })
+=> {"isCodexSessionOutsideBoxError":false,"code":"ENOENT"}
+```
+
+```ts cleanup
+fs.rmSync(root, { recursive: true, force: true });
+```

@@ -86,6 +86,51 @@ JSON.stringify(migratedLines(gitattributes))
 await cleanup(root);
 ```
 
+## Finding 5 (round 5 hardening): an octal-escaped byte round-trips as UTF-8, not per-byte code points
+
+`"docs/caf\303\251.bin"` is café.bin's real name — é is the two UTF-8 BYTES
+0xC3 0xA9, each escaped separately as its own three-digit octal. Decoding
+each octal escape as its own Unicode code point (the old behavior) produces
+mojibake (Ã©) instead of é; encoding must re-escape byte-for-byte too, not
+just pass a decoded character through literally.
+
+```ts
+const { root, contentRoot } = await makeFixture();
+await fs.writeFile(path.join(contentRoot, ".gitignore"), '"docs/caf\\303\\251.bin"\n');
+const snapshot = await captureIgnoreRules({ packageRoot: root, contentRoot });
+await mergeIgnoreRules({ packageRoot: root, snapshot });
+const gitignore = await fs.readFile(path.join(root, ".gitignore"), "utf-8");
+JSON.stringify(migratedLines(gitignore))
+=> ["\"/_content/docs/caf\\303\\251.bin\""]
+```
+
+```ts cleanup
+await cleanup(root);
+```
+
+## Finding 5 (round 5 hardening): an embedded newline never splits the rule line
+
+A single-char escape (`\n`) decodes to a real newline byte. Encoding it back
+out LITERALLY (the old behavior) would write that byte straight into the
+`.gitignore` file, splitting one rule into two physical lines — this
+re-escapes it as `\n` again, byte-for-byte, so the migrated line stays one
+line.
+
+```ts
+const { root, contentRoot } = await makeFixture();
+await fs.writeFile(path.join(contentRoot, ".gitignore"), '"docs/weird\\nname.bin"\n');
+const snapshot = await captureIgnoreRules({ packageRoot: root, contentRoot });
+await mergeIgnoreRules({ packageRoot: root, snapshot });
+const gitignore = await fs.readFile(path.join(root, ".gitignore"), "utf-8");
+const lines = migratedLines(gitignore);
+JSON.stringify({ lineCount: lines.length, line: lines[0] })
+=> {"lineCount":1,"line":"\"/_content/docs/weird\\nname.bin\""}
+```
+
+```ts cleanup
+await cleanup(root);
+```
+
 ## Finding 5: quoting this decoder can't handle aborts the migration rather than mis-splitting
 
 An unrecognized backslash escape (`\q` isn't a C escape) means the decoder

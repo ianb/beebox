@@ -115,47 +115,93 @@ const SINGLE_CHAR_ESCAPES: Readonly<Record<string, string>> = {
  * closing quote. Returns `null` on an unterminated quote or an escape this
  * decoder doesn't recognize — the caller must ABORT rather than guess at a
  * quoting form it can't round-trip.
+ *
+ * Finding 5 (round 5 hardening, on top of the above): git's `\NNN` octal
+ * escape names a raw BYTE, not a Unicode code point — `"docs/caf\303\251.bin"`
+ * is café.bin's UTF-8 bytes (0xC3, 0xA9) for é escaped one byte at a time,
+ * NOT the two separate code points U+00C3 (Ã) and U+00A9 (©). The old decoder
+ * called `String.fromCodePoint` directly on each octal escape's numeric
+ * value, corrupting any non-ASCII byte sequence into mojibake (café.bin →
+ * cafÃ©.bin). This now accumulates every decoded unit — an octal escape's raw
+ * byte, a single-char escape's ASCII byte, and a plain (already UTF-8-decoded
+ * JS string) character's own UTF-8 byte sequence — into ONE byte buffer for
+ * the whole token, then decodes it as UTF-8 exactly once at the end. A plain
+ * character is read by CODE POINT (`codePointAt`/`fromCodePoint`), not UTF-16
+ * code unit, so an astral character (outside the BMP, a UTF-16 surrogate
+ * pair) round-trips too.
  */
 function decodeCQuotedToken(text: string): { value: string; endIndex: number } | null {
   if (text[0] !== '"') return null;
-  let value = "";
+  const bytes: number[] = [];
   let i = 1;
   while (i < text.length) {
     const ch = text[i];
-    if (ch === '"') return { value, endIndex: i + 1 };
+    if (ch === '"') return { value: Buffer.from(bytes).toString("utf-8"), endIndex: i + 1 };
     if (ch === "\\") {
       const next = text[i + 1];
       if (next === undefined) return null; // dangling backslash — unterminated
       const single = SINGLE_CHAR_ESCAPES[next];
       if (single !== undefined) {
-        value += single;
+        bytes.push(single.codePointAt(0) ?? 0);
         i += 2;
         continue;
       }
       const octal = /^[0-7]{3}/.exec(text.slice(i + 1));
       if (octal !== null) {
-        value += String.fromCodePoint(parseInt(octal[0], 8));
+        bytes.push(parseInt(octal[0], 8)); // a raw BYTE, not a code point — see the doc comment above
         i += 4;
         continue;
       }
       return null; // unsupported escape
     }
-    value += ch;
-    i += 1;
+    const codePoint = text.codePointAt(i) ?? 0; // `i < text.length`, so this is always defined
+    const charText = String.fromCodePoint(codePoint);
+    for (const byte of Buffer.from(charText, "utf-8")) bytes.push(byte);
+    i += charText.length; // 2 UTF-16 code units for an astral character, else 1
   }
   return null; // never closed
 }
 
-/** `"` + `\`-escape whatever the decoder above would need to reverse, then
- * `"` — always valid quoted syntax, whether or not the value actually
- * contains a space. Used to re-quote a remapped pattern that was quoted in
- * its v2 form, so the migrated rule round-trips through the same quoting
- * convention rather than landing unquoted (which would silently change its
- * meaning if the new path also needs quoting, e.g. still contains a space). */
+/**
+ * Single-character C escapes' byte values, reversed for {@link encodeCQuoted}.
+ */
+const REVERSE_SINGLE_CHAR_ESCAPES: ReadonlyMap<number, string> = new Map(
+  Object.entries(SINGLE_CHAR_ESCAPES).map(([escapeChar, decoded]) => [decoded.codePointAt(0) ?? 0, escapeChar]),
+);
+
+/**
+ * `"` + byte-oriented `\`-escaping, then `"` — always valid quoted syntax,
+ * whether or not the value actually contains a space. Used to re-quote a
+ * remapped pattern that was quoted in its v2 form, so the migrated rule
+ * round-trips through the same quoting convention rather than landing
+ * unquoted (which would silently change its meaning if the new path also
+ * needs quoting, e.g. still contains a space).
+ *
+ * Finding 5 (round 5 hardening): the old encoder escaped only `\` and `"`,
+ * emitting every OTHER decoded character — including a literal `\n` a
+ * single-char escape had just decoded, or a raw non-ASCII character — as
+ * itself. A decoded newline written out literally splits the migrated rule
+ * across two physical lines (the LINE is the unit `.gitignore`/
+ * `.gitattributes` parses); a raw multi-byte UTF-8 character, while not
+ * incorrect to write literally, doesn't match how git's own `quote_c_style`
+ * would encode it. This now works byte-by-byte over the value's UTF-8
+ * encoding — the exact reverse of the decoder above — so every control
+ * character, `\`, `"`, and non-ASCII byte round-trips through the same
+ * escape git itself uses, and a printable-ASCII byte is written literally.
+ */
 function encodeCQuoted(value: string): string {
   let out = '"';
-  for (const ch of value) {
-    out += ch === "\\" || ch === '"' ? `\\${ch}` : ch;
+  for (const byte of Buffer.from(value, "utf-8")) {
+    if (byte === 0x5c || byte === 0x22) {
+      out += `\\${String.fromCodePoint(byte)}`;
+      continue;
+    }
+    const singleEscape = REVERSE_SINGLE_CHAR_ESCAPES.get(byte);
+    if (singleEscape !== undefined) {
+      out += `\\${singleEscape}`;
+      continue;
+    }
+    out += byte < 0x20 || byte >= 0x7f ? `\\${byte.toString(8).padStart(3, "0")}` : String.fromCodePoint(byte);
   }
   return out + '"';
 }

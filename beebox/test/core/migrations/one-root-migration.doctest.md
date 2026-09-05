@@ -433,6 +433,91 @@ await fs.rm(externalDir, { recursive: true, force: true, maxRetries: 5, retryDel
 await cleanup(root);
 ```
 
+## Finding 3 (round 5 hardening): a symlinked view is never opened for rewrite
+
+`src/views/Shared.tsx` is a TRACKED symlink to a file OUTSIDE the box
+entirely (an external shared component) — `rewriteViewRefs` used to
+`fs.readFile`/`writeFile` every path `listBoxViewFiles` returns, which FOLLOW
+a symlink and would overwrite the external referent's bytes. Same policy as
+the card/doc rewriter (finding 1 above): `lstat` first, skip a symlinked
+leaf, and report it in `skippedSymlinkRefs`.
+
+```ts
+const root = await makeV2Box();
+const externalDir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-external-view-"));
+const externalView = path.join(externalDir, "Shared.tsx");
+await fs.writeFile(externalView, 'export default function Shared() { return <div cardRef="/store/recipes/Soup.recipe.card" />; }\n');
+
+await fs.mkdir(path.join(root, "src", "views"), { recursive: true });
+await fs.symlink(externalView, path.join(root, "src", "views", "Shared.tsx"));
+execSync("git add -A && git commit -q -m external-view-symlink-fixture", { cwd: root, stdio: "pipe" });
+
+const externalBytesBefore = await fs.readFile(externalView, "utf-8");
+const result = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
+JSON.stringify({ filesMoved: result.filesMoved, skippedSymlinkRefs: result.skippedSymlinkRefs })
+=> {"filesMoved":7,"skippedSymlinkRefs":["src/views/Shared.tsx"]}
+```
+
+The external view's bytes are byte-for-byte unchanged — the migration never
+opened it — and the symlink still points at the same external absolute path:
+
+```ts continue
+const externalBytesAfter = await fs.readFile(externalView, "utf-8");
+const linkTarget = await fs.readlink(path.join(root, "src", "views", "Shared.tsx"));
+JSON.stringify({ unchanged: externalBytesAfter === externalBytesBefore, linkTargetUnchanged: linkTarget === externalView })
+=> {"unchanged":true,"linkTargetUnchanged":true}
+```
+
+```ts cleanup
+await fs.rm(externalDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+await cleanup(root);
+```
+
+## Finding 1 (round 5 hardening): a package-root-ignored private file is never staged
+
+`.claude/rules/private.md` is ignored by the v2 package-root `.gitignore` —
+custom, hand-added, not part of the closed v2 vocabulary. `initBox`'s
+`.gitignore` regen (step 5) briefly REPLACES that file wholesale before the
+migrated-forward custom rule is merged back in; the old code ran
+`mergeIgnoreRules` only after the FULL `bbx init` tail (`runInitTail`), whose
+own provisioning step (`commitTemplateSyncChanges`) makes a real git commit of
+any now-briefly-unignored template-managed path — `.claude/rules/*.md`
+matches. That window let `private.md`'s bytes land in a git object before the
+merge ever ran to re-ignore it; a later rollback's `reset --hard` can't
+un-commit an object already written to the store. The merge now runs
+immediately after the first `initBox` call, closing the window: the file is
+never staged, and no git object for its content exists at any point.
+
+```ts
+const root = await makeV2Box();
+await fs.writeFile(path.join(root, ".gitignore"), ".claude/rules/private.md\n");
+await fs.mkdir(path.join(root, ".claude", "rules"), { recursive: true });
+const privateContent = "# Private rules\n\nSecret operating instructions.\n";
+await fs.writeFile(path.join(root, ".claude", "rules", "private.md"), privateContent);
+execSync("git add -A && git commit -q -m private-rule-fixture", { cwd: root, stdio: "pipe" });
+const privateBlobSha = execSync("git hash-object --stdin", { cwd: root, input: privateContent, encoding: "utf-8" }).trim();
+
+await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
+
+const stillThere = await fs.readFile(path.join(root, ".claude", "rules", "private.md"), "utf-8");
+const stillIgnored = execSync("git check-ignore -q .claude/rules/private.md && echo yes || echo no", { cwd: root, encoding: "utf-8" }).trim();
+const objectExists = execSync(`git cat-file -e ${privateBlobSha} && echo yes || echo no`, { cwd: root, encoding: "utf-8" }).trim();
+JSON.stringify({ contentUnchanged: stillThere === privateContent, stillIgnored, objectExists })
+=> {"contentUnchanged":true,"stillIgnored":"yes","objectExists":"no"}
+```
+
+It also never appears in any commit's tree, not just the object store:
+
+```ts continue
+const everListed = execSync('git log --all --name-only --pretty=format: -- .claude/rules/private.md', { cwd: root, encoding: "utf-8" }).trim();
+everListed.length
+=> 0
+```
+
+```ts cleanup
+await cleanup(root);
+```
+
 ## Claude Code transcript directories are re-keyed to the new cwd
 
 Claude Code keys `~/.claude/projects/<encoded-cwd>/` by the absolute cwd a

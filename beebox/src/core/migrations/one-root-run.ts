@@ -27,14 +27,37 @@
  *  3. `.beebox/` — filesystem rename, not git (gitignored runtime state).
  *  4. Marker bump to shapeVersion 3 (original bytes captured first, so a
  *     later failure can restore them — see the rollback note below).
- *  5. `bbx init` tail: regenerates `.gitignore`/`.gitattributes` (the v3
- *     merged form), ensures directories, rules/guide/docs/search index.
- *  6. Ref rewrite across every card/doc (`one-root-ref-rewrite.ts`), plus
+ *  5. `initBox` (the .gitignore/.gitattributes regen + directory-ensure half
+ *     of `bbx init` — see `initBox`'s own module comment), THEN
+ *     `mergeIgnoreRules`/`verifyNoIgnoreRegression`/
+ *     `verifyNoBoxWideIgnoreRegression` (`one-root-ignore-merge.ts`) restore
+ *     v2-local ignore coverage IMMEDIATELY — before anything downstream can
+ *     stage a now-briefly-unignored file into git. Finding 1 (round 5
+ *     hardening): this merge used to run only after step 6's full `bbx init`
+ *     tail, which itself runs a provisioning commit
+ *     (`commitTemplateSyncChanges`) — a package-root-ignored file (e.g.
+ *     `.claude/rules/private.md`) that `initBox`'s wholesale regen alone left
+ *     briefly unignored got scooped up and committed for real by that
+ *     provisioning commit, its bytes landing in a git object BEFORE the merge
+ *     ever ran to restore its ignore coverage; the later regression check's
+ *     failure then rolled the migration back, but `reset --hard` only clears
+ *     the working tree and refs — it can't un-commit an object already
+ *     written to the store. Merging right after `initBox` (not after the
+ *     full tail) closes that window entirely.
+ *  6. `bbx init` tail proper (`runInitTail`): rules/guide/docs/search index,
+ *     card installers — everything `initBox` alone doesn't cover. Its own
+ *     `initBox` re-run (step 5's regen, called again as part of its
+ *     provisioning) preserves whatever step 5 just merged forward (see
+ *     `box/index.ts`'s migrated-section preservation), so this can't
+ *     re-open the step-5 window — a second, final
+ *     `verifyNoBoxWideIgnoreRegression` after this step is a cheap sanity
+ *     check against exactly that, not a load-bearing fix.
+ *  7. Ref rewrite across every card/doc (`one-root-ref-rewrite.ts`), plus
  *     `src/views/*.tsx` (a view never moves — same relative location in v2
  *     and v3 — so its `cardRef="…"` refs need rewriting in place).
- *  7. Hard link gate (`one-root-link-gate.ts`) — refuses to commit on any
+ *  8. Hard link gate (`one-root-link-gate.ts`) — refuses to commit on any
  *     dangling card/markdown/view ref.
- *  8. `git add -A` + one commit `migrate: one-root`; THEN the manifests
+ *  9. `git add -A` + one commit `migrate: one-root`; THEN the manifests
  *     staged in step 1 are written, and Claude Code's per-cwd transcript
  *     directories (`~/.claude/projects/<encoded-cwd>/`) are re-keyed from
  *     the old content-root cwd to the new box-root cwd — both are external
@@ -240,16 +263,33 @@ async function rewriteRefs(params: {
 /** A view never moves (same relative location in v2 and v3), but its
  * `cardRef="…"` refs still address the old v2 vocabulary — rewrite them in
  * place. Returns any unresolved ref tokens (the hard link gate's view check
- * is the real backstop). */
-async function rewriteViewRefs(packageRoot: string): Promise<string[]> {
+ * is the real backstop) plus any view path left untouched because it's a
+ * symlink.
+ *
+ * Finding 3 (round 5 hardening): `fs.readFile`/`writeFile` FOLLOW a symlink —
+ * a `src/views/*.tsx` entry that is itself a symlink (e.g.
+ * `src/views/Shared.tsx -> ../../../external/Shared.tsx`) would otherwise
+ * have its REFERENT read and overwritten, the same data-corruption risk
+ * {@link rewriteRefs} already guards against for cards/docs. Same policy
+ * here: `lstat` each view path first and skip a symlinked leaf entirely — its
+ * ref content belongs to its target, which is either rewritten under its own
+ * move entry (if it lives in the box) or left byte-untouched (if it doesn't).
+ */
+async function rewriteViewRefs(packageRoot: string): Promise<{ unresolved: string[]; skippedSymlinks: string[] }> {
   const unresolved: string[] = [];
+  const skippedSymlinks: string[] = [];
   for (const viewPath of await listBoxViewFiles(packageRoot)) {
+    const lst = await fs.lstat(viewPath);
+    if (lst.isSymbolicLink()) {
+      skippedSymlinks.push(path.relative(packageRoot, viewPath));
+      continue;
+    }
     const text = await fs.readFile(viewPath, "utf-8");
     const result = rewriteOneRootViewRefs(text);
     if (result.text !== text) await fs.writeFile(viewPath, result.text);
     for (const u of result.unresolved) unresolved.push(`${path.relative(packageRoot, viewPath)}: ${u}`);
   }
-  return unresolved;
+  return { unresolved, skippedSymlinks };
 }
 
 export interface OneRootMigrationResult {
@@ -337,13 +377,29 @@ async function moveAndCommitBox(params: {
     // migration never pays that cost.
     await initBox(packageRoot);
 
-    const { unresolved: unresolvedCardRefs, skippedSymlinks: skippedSymlinkRefs } = await rewriteRefs({
+    // Finding 1 (round 5 hardening): restore v2-local .gitignore/.gitattributes
+    // coverage IMMEDIATELY after this first regen — before `runInitTail`
+    // (below) gets a chance to run its own provisioning commit
+    // (`commitTemplateSyncChanges`) against a tree where a package-root
+    // rule (e.g. `.claude/rules/private.md`) is still only briefly
+    // unignored. Waiting until after the full `bbx init` tail (the old
+    // order) left exactly that window open: a real, separate git commit
+    // could land the file's bytes in a git object before the merge ever ran
+    // to re-ignore it, and `reset --hard` on a later rollback can't un-commit
+    // an object already written to the store. See this module's header
+    // comment (step 5) for the full incident.
+    await mergeIgnoreRules({ packageRoot, snapshot: ignoreSnapshot });
+    await verifyNoIgnoreRegression({ packageRoot, untrackedRenames });
+    await verifyNoBoxWideIgnoreRegression({ packageRoot, before: boxWideIgnored });
+
+    const { unresolved: unresolvedCardRefs, skippedSymlinks: skippedCardSymlinkRefs } = await rewriteRefs({
       packageRoot,
       moves,
       journal: untrackedRenames,
     });
-    const unresolvedViewRefs = await rewriteViewRefs(packageRoot);
+    const { unresolved: unresolvedViewRefs, skippedSymlinks: skippedViewSymlinkRefs } = await rewriteViewRefs(packageRoot);
     const unresolvedRefs = [...unresolvedCardRefs, ...unresolvedViewRefs];
+    const skippedSymlinkRefs = [...skippedCardSymlinkRefs, ...skippedViewSymlinkRefs];
 
     // Finding 1 (round 4 hardening): a symlinked card/doc the ref rewriter
     // deliberately skipped is excluded from the gate's own scan too — but at
@@ -354,18 +410,14 @@ async function moveAndCommitBox(params: {
     if (!gate.ok) throw new OneRootLinkGateError(gate.report);
 
     // `runInitTail` (the real `bbx init`) itself calls `initBox` again as
-    // part of its provisioning — so it REWRITES `.gitignore`/`.gitattributes`
-    // a second time, wholesale, same as the call above. The merge and both
-    // regression checks below run AFTER this, against the file that actually
-    // lands in the commit — not the intermediate one `initBox` alone wrote.
+    // part of its provisioning — REWRITING `.gitignore`/`.gitattributes` a
+    // second time, wholesale — but `initBox`'s own migrated-section
+    // preservation (`box/index.ts`) carries forward whatever the merge above
+    // just appended, so this can't reopen the finding-1 window. Re-run the
+    // box-wide regression check anyway, cheaply, against the file that
+    // actually lands in the commit — a pure ordering-regression backstop,
+    // not the fix itself (that's the merge above, run before this point).
     await runInitTail(packageRoot);
-
-    // Finding 3: carry forward whatever v2-local .gitignore/.gitattributes
-    // rule the wholesale regen(s) above just discarded, then verify nothing
-    // formerly-ignored — anywhere in the box, not just this run's own
-    // untracked renames — lost coverage at its new location.
-    await mergeIgnoreRules({ packageRoot, snapshot: ignoreSnapshot });
-    await verifyNoIgnoreRegression({ packageRoot, untrackedRenames });
     await verifyNoBoxWideIgnoreRegression({ packageRoot, before: boxWideIgnored });
 
     // `runInitTail` (the real `bbx init`) makes its own provisioning

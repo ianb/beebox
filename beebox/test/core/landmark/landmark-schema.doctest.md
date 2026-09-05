@@ -214,6 +214,52 @@ _content/recipes/Carrot.recipe.card
 await box.cleanup();
 ```
 
+## Expand: an escaping query yields no rows
+
+An `expand` `query` glob is evaluated with the landmark's own directory as
+cwd — a pattern that climbs out of the box namespace (e.g. into `src/`,
+outside every underscore area) must never be read or reported, since its
+frontmatter (title, template fields) would otherwise leak into the rendered
+label. The match is silently dropped, not surfaced as a broken link.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("src/private.memo.card", "---\ntitle: Secret Memo\n---\n");
+
+const navigation = {
+  label: "Recipes",
+  expand: [{ query: "../../src/private.memo.card", "template-label": "${title}" }],
+};
+const { links } = await resolveLandmark(navigation, {
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
+  boxRoot: box.root,
+});
+
+links.length
+=> 0
+```
+
+Normal in-namespace expansion still works alongside it:
+
+```ts continue
+const navigation2 = { label: "Recipes", expand: [{ query: "*.recipe.card" }] };
+const { links: links2 } = await resolveLandmark(navigation2, {
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
+  boxRoot: box.root,
+});
+
+links2.map((l) => l.ref).join("\n")
+=>
+_content/recipes/Bread.recipe.card
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Expand: generated refs are box paths
 
 The default (no `template-ref`) emits the match's **box path** — the canonical
