@@ -11,7 +11,7 @@
  */
 
 import { readFile, stat, unlink } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 
 import { loadConfig, type UploaderConfig } from "./config.js";
 import { writeFileAtomic } from "./atomic-write.js";
@@ -244,6 +244,17 @@ export async function installSchedule(params: InstallParams): Promise<InstallRes
   const config = await requireValidConfig(params.configPath);
   const intervalSeconds = params.intervalMinutes * 60;
   const watchPaths = config.targets.map((target) => target.folder);
+  // `configure` resolves folders, but a hand-maintained config can still hold
+  // a relative one. launchd would accept it and watch something else entirely,
+  // so refuse rather than install a schedule that silently watches nothing.
+  const relative = watchPaths.filter((folder) => !isAbsolute(folder));
+  if (relative.length > 0) {
+    const message =
+      `refusing to install: config at ${params.configPath} has non-absolute folder(s): ` +
+      `${relative.join(", ")} — launchd resolves WatchPaths against its own working directory, ` +
+      "so a relative folder would watch the wrong place";
+    throw new ScheduleError(message);
+  }
   const path = plistPath(params.homeDir);
   const log = logPath(params.homeDir);
   const invocation = await resolveLaunchdInvocation({

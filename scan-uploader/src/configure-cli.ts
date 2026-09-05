@@ -159,9 +159,13 @@ function printResult(result: ConfigureResult): void {
   console.log("  - Format: searchable PDF (ScanSnap's own OCR text layer)");
   console.log("  - Output: one PDF per scan job (don't batch unrelated documents)");
   console.log(`  - Destination folder: ${result.folder}`);
+  console.log("");
+  console.log("Then, for uploads the moment a scan lands:");
+  console.log("  scan-uploader schedule install");
   console.log(
-    "  - Post-scan hook: point the post-scan action at a wrapper running " +
-      `"node /path/to/scan-uploader.mjs ${result.configPath}"`,
+    "  (watches the folders above and sweeps on a timer; ScanSnap Home's own " +
+      "post-scan action targets an application bundle, not a script, so the " +
+      "trigger lives in launchd instead)",
   );
   console.log(
     "  - Periodic sweep (safety net for scans that land while the hook " +

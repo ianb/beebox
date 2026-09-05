@@ -11,7 +11,7 @@ The seams below stand in for the real uploader and the real wait, so the policy
 is asserted without spending a settle window.
 
 ```ts setup
-import { runAllTargets, type RunAllDeps } from "../src/cli.js";
+import { runAllTargets, type RunAllDeps } from "../src/run-all.js";
 import type { TargetConfig, UploaderConfig } from "../src/config.js";
 import type { RunSummary } from "../src/run-target.js";
 
@@ -111,4 +111,53 @@ exit code stays 0. A rejection still fails the run:
 const rejectedRun = scripted({ "/receipts": [summary({ rejected: 1 })] });
 await runAllTargets({ targets: [target("/receipts")] }, { retryRejected: false, deps: rejectedRun.deps })
 => 1
+```
+
+A target whose folder is missing or unreadable fails that target alone.
+`listCandidateFiles` throws straight out of `readdir` — ENOENT on a renamed or
+unmounted folder, EACCES on a permissions change — and one throw used to
+abandon the whole run, so a stale first target meant the second never swept.
+The run reports it, exits non-zero, and keeps going:
+
+```
+const thrown: RunAllDeps = {
+  runOne: (t) => {
+    if (t.folder === "/gone") return Promise.reject(new Error("ENOENT: no such directory"));
+    return Promise.resolve(summary({ uploaded: 1 }));
+  },
+  wait: () => Promise.resolve(),
+};
+const swept: string[] = [];
+const code = await runAllTargets(
+  { targets: [target("/gone"), target("/still-here")] },
+  {
+    retryRejected: false,
+    deps: {
+      runOne: (t, o) => {
+        swept.push(t.folder);
+        return thrown.runOne(t, o);
+      },
+      wait: thrown.wait,
+    },
+  },
+);
+`${swept.join(" ")} | exit=${String(code)}`
+=> /gone /still-here | exit=1
+```
+
+A throwing target is not retried as unsettled — it produced no summary at all,
+so it fails this run and waits for the next trigger rather than spinning:
+
+```
+const waits: number[] = [];
+const allThrow: RunAllDeps = {
+  runOne: () => Promise.reject(new Error("ENOENT")),
+  wait: (ms) => {
+    waits.push(ms);
+    return Promise.resolve();
+  },
+};
+await runAllTargets({ targets: [target("/gone")] }, { retryRejected: false, deps: allThrow });
+waits.length
+=> 0
 ```
