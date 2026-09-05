@@ -12,12 +12,25 @@
  * home can replace HOME after preloads have run.
  */
 
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 const realHome = process.env["HOME"] ?? homedir();
-process.env["HOME"] = mkdtempSync(join(tmpdir(), "bbx-test-home-"));
+const testHome = mkdtempSync(join(tmpdir(), "bbx-test-home-"));
+process.env["HOME"] = testHome;
+
+// Removed when this process exits. Nothing else ever did: every test process
+// left its HOME behind, and by 2026-09-05 the machine's temp dir held 56,000
+// of them. Best-effort — a HOME a child still holds open is deleted by the
+// next run's sweep, not by a throw here.
+process.on("exit", () => {
+  try {
+    rmSync(testHome, { recursive: true, force: true });
+  } catch (_e) {
+    // Leaving one directory behind is the pre-existing behavior, not a failure.
+  }
+});
 
 // One thing is NOT isolated: uv's package cache. It defaults to
 // `$HOME/.cache/uv`, so under the throwaway HOME every `uvx` a test runs
