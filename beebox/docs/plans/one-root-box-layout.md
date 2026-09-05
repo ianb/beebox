@@ -1,6 +1,6 @@
 ---
 title: "One-root box layout (shapeVersion 3)"
-status: partial
+status: implemented
 workstream: box-layout-criteria
 issues:
   - ../../../issues/closed/code-quality/2026-08-17-package-root-vs-content-dir-keeps-causing-bugs.md
@@ -544,13 +544,15 @@ box's migration commit as its rollback point. Cross-model review of this plan
 before implementation begins (monorepo CLAUDE.md rule for anything beyond a
 small-scope fix).
 
-**Status as landed:** the v3 engine, every migrator, and the doctest suite
-(`beebox/src/core/migrations/`, `beebox/scripts/migrate/one-root.ts`) are
-implemented and green — code and fixtures only. The done-when bar above is
-NOT yet cleared: no scratch or production box has been migrated and walked in
-a browser, and the knowledge audits have not run against a migrated box.
-Landing this branch ships the v3-only engine, so any box still at
-`shapeVersion` < 3 (every box today) will refuse to serve until `bbx migrate
---apply` runs against it — the one-operation cutover window this plan always
-intended. Running that migration, box by box, is the outstanding rollout
-work.
+**Status: rollout complete (2026-09-05).** The fleet is converted: a scratch
+rehearsal clone first, then every local box and every production box
+(smallest as canary). The hub healthz verdict is `ok` with every box
+serving; the layout knowledge audits ran green against the migrated real
+test1. The rollout surfaced and fixed a further round of aged-box engine
+gaps (pre-broken-ref carve-through with box-root-intent rescue, attach-ref
+classification, external-URL refs, the noVerify migration commit,
+content-root defaults, maps-state mapping, prefixless dependency globs, the
+dev router's own v2 slug rule) — each landed with doctests before the boxes
+that needed it migrated. Two boxes carry divergent-content set-asides under
+`*-superseded*` names for boxholder reconciliation. Residual known slowness:
+`issues/code-quality/2026-09-05-one-root-migration-per-file-git-mv-is-slow.md`.
