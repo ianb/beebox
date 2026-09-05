@@ -11,6 +11,10 @@
  * several code points, and an author may want two letters. It IS capped at
  * `MAX_GLYPH_GRAPHEMES` by lint, because a mark that is a sentence is not a
  * mark. See `docs/plans/card-symbol.md`.
+ *
+ * Lives in `shared/` rather than `cards/` because the frontend draws these and
+ * only `shared/` is inside its tsconfig — the same reason `todo-model.ts`, the
+ * other global field with a shape, lives here.
  */
 
 import { z } from "zod";

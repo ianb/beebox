@@ -1,6 +1,6 @@
 /**
  * Lint for a card's `symbol` group — the small mark that stands for the card in
- * a tab strip, a listing, or a tile (`src/cards/symbol.ts`).
+ * a tab strip, a listing, or a tile (`src/shared/card-symbol.ts`).
  *
  * Its own module because `card-lint.ts` is at its line budget, and because this
  * is one self-contained rule over one field: it needs the parsed fields and
@@ -11,7 +11,7 @@ import type { LintIssue } from "../cards/lint-format.js";
 import { isRecord } from "../lib/is-record.js";
 import { countGraphemes } from "../shared/graphemes.js";
 import { isCssColour, CSS_COLOUR_FORMS } from "../shared/css-colour.js";
-import { MAX_GLYPH_GRAPHEMES } from "../cards/symbol.js";
+import { MAX_GLYPH_GRAPHEMES } from "../shared/card-symbol.js";
 
 /**
  * A card's `symbol` group: the mark that stands for it in a listing or a tab.

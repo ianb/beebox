@@ -1,4 +1,4 @@
-# A card's symbol (`cards/symbol.ts`, `shared/css-colour.ts`, `shared/graphemes.ts`)
+# A card's symbol (`shared/card-symbol.ts`, `shared/css-colour.ts`, `shared/graphemes.ts`)
 
 Every card may carry a `symbol` — the small mark that stands for it in a tab
 strip, a listing, or a tile. It is a global field, so no schema declares it, and
@@ -8,7 +8,7 @@ sees both.
 
 ```ts setup
 import { GLOBAL_CARD_FIELDS } from "../../src/cards/schema.js";
-import { CardSymbol, MAX_GLYPH_GRAPHEMES } from "../../src/cards/symbol.js";
+import { CardSymbol, MAX_GLYPH_GRAPHEMES } from "../../src/shared/card-symbol.js";
 import { isCssColour } from "../../src/shared/css-colour.js";
 import { countGraphemes } from "../../src/shared/graphemes.js";
 ```

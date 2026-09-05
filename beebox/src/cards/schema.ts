@@ -2,7 +2,7 @@ import { z, type ZodType } from "zod";
 import type { LintIssue } from "./lint-format.js";
 import { isRecord } from "../lib/is-record.js";
 import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
-import { CardSymbol, type CardSymbolData } from "./symbol.js";
+import { CardSymbol, type CardSymbolData } from "../shared/card-symbol.js";
 
 /**
  * Card schemas describe a card file's full shape: most fields live in the
@@ -84,7 +84,7 @@ export type FieldDecl = ZodType | BodyField;
  * - `symbol` — the small mark that stands for this card in a tab strip, a
  *   listing, or a tile: `{ glyph, src, foreground, background }`. Most cards
  *   have none; a box where everything is marked has nothing marked. See
- *   `src/cards/symbol.ts`.
+ *   `src/shared/card-symbol.ts`.
  *
  * Adding/removing a field here? Update the enumerations in
  * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/adding-schemas.md`.
