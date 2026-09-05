@@ -53,4 +53,10 @@ export const BOX_ROOT_VOCABULARY = [
   { name: ".bbx-serve.pid", kind: "tooling" },
   { name: ".bbx-maps-state.json", kind: "tooling" },
   { name: ".bbx-reactor.lock", kind: "tooling" },
+  // The boxholder's maps-precheck ignore patterns (`core/maps/precheck-ignore.ts`
+  // reads it at the box root, and the one-root migration rewrites a v2 one
+  // there in v3 form). Missing from this list, it made the pre-commit root
+  // check refuse every commit on a migrated production box that had one
+  // (2026-09-05).
+  { name: ".bbx-maps-ignore", kind: "tooling" },
 ] as const satisfies readonly BoxRootVocabularyEntry[];
