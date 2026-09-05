@@ -136,8 +136,9 @@ await fakeSweep(0);
 await execFileAsync(hook, ["session-end"], { env });
 
 const reclaimed = await until((s) => s.includes("END"));
+await until((s) => s.includes("reclaiming stale lock"));
 JSON.stringify({
-  noticed: reclaimed.includes("reclaiming stale lock"),
+  noticed: (await readLog()).includes("reclaiming stale lock"),
   ranAnyway: reclaimed.includes("auto-sweep trigger=session-end END"),
 })
 => {"noticed":true,"ranAnyway":true}

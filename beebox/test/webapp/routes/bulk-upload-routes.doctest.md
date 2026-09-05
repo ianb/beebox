@@ -47,6 +47,16 @@ async function uploadItem(ctx, opts) {
     },
   });
 }
+
+async function waitForSessionState(ctx, sessionId, targetState) {
+  for (let i = 0; i < 80; i++) {
+    const session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+    if (session?.state === targetState) return;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  const finalState = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+  throw new Error(`timed out waiting for session ${sessionId} to reach ${String(targetState)}, last state was ${String(finalState?.state)}`);
+}
 ```
 
 ## Create requires a target chat, then registers the initial item set
@@ -460,10 +470,12 @@ to remove, so a post-seal cancel is refused rather than raced.
 
 ```ts
 const ctx = await makeTestServer();
+await bindSession(ctx, "chat-cancel", "store/photos");
 const created = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "a", name: "a.jpg" }] });
 const sessionId = created.body.sessionId;
 await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
 await ctx.request({ method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`, payload: {} });
+await waitForSessionState(ctx, sessionId, "sealed");
 
 const late = await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${sessionId}` });
 late.statusCode

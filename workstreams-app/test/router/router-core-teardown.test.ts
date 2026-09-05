@@ -201,6 +201,7 @@ test("shutdown supersedes an in-flight start: it self-cleans instead of publishi
     assert.equal(probes.length, 2);
     assert.equal(h.core.getHandle("wt")?.lifecycle.phase, "starting", "still mid cold-start");
 
+    assert.equal(h.spawner.lifecycleCalls().length, 2, "vite + fastify were spawned for this start");
     const fastifyPid = h.spawner.lifecycleCalls()[0]!.child.pid;
     const vitePid = h.spawner.lifecycleCalls()[1]!.child.pid;
 
@@ -214,9 +215,11 @@ test("shutdown supersedes an in-flight start: it self-cleans instead of publishi
 
     // Readiness now resolves — the start finds itself superseded and self-cleans.
     for (const p of probes) p.resolve();
-    await startP;
+    const startedHandle = await startP;
     await shutdownP;
 
+    assert.equal(startedHandle.lifecycle.phase, "stopping", "superseded start completed via self-clean");
+    assert.equal(startedHandle.lifecycle.reason, "requested", "self-clean follows the shutdown reason");
     const termed = h.killCalls.filter((k) => k.signal === "SIGTERM").map((k) => k.pid).toSorted();
     assert.deepEqual(termed, [fastifyPid, vitePid].toSorted(), "shutdown's supersession made the start self-clean");
     assert.ok(
