@@ -9,12 +9,28 @@
  * arrow keys navigate (wrapping at the ends).
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { CloseButton } from "./ui/CloseButton";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { useLightboxGestures } from "../hooks/use-lightbox-gestures.js";
 import { SWIPE_GUTTER_PX } from "../lib/lightbox-gesture-math.js";
+
+/**
+ * The fitted width for an image the browser laid out at 0×0: one with no
+ * intrinsic width (an SVG with only a `viewBox`) inside the flex-centered,
+ * shrink-to-fit figure, where each side waits on the other. Same failure the
+ * <Image> primitive detects after load; here the answer is the largest width
+ * the viewport allows for the image's aspect ratio. Null when the image laid
+ * out normally, so raster images keep their natural size. A fitted image also
+ * gets a white backing: such SVGs are drawn for a page, with no background of
+ * their own, and are unreadable over the dimmed backdrop.
+ */
+function collapsedFitWidth(el: HTMLImageElement, maxHeightFraction: number): number | null {
+  if (!el.complete || el.naturalWidth === 0 || el.naturalHeight === 0 || el.clientWidth > 0) return null;
+  const ratio = el.naturalWidth / el.naturalHeight;
+  return Math.floor(Math.min(window.innerWidth * 0.95, window.innerHeight * maxHeightFraction * ratio));
+}
 
 export interface LightboxImage {
   src: string;
@@ -49,6 +65,25 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
     canSwipe: hasMany,
     onNavigate: (by) => onIndexChange(step(by)),
   });
+
+  // See `collapsedFitWidth`. Reset per image; checked on load and once after
+  // mount, since a cached image is complete before the load handler attaches.
+  const [fitWidth, setFitWidth] = useState<number | null>(null);
+  const currentSrc = current?.src ?? "";
+  const currentCaption = current === undefined ? null : captionOf(current);
+  const currentHasCaption = currentCaption !== null && currentCaption !== "";
+  const fitCollapsed = (el: HTMLImageElement) => {
+    const width = collapsedFitWidth(el, currentHasCaption ? 0.8 : 0.92);
+    if (width !== null) setFitWidth(width);
+  };
+  useEffect(() => {
+    setFitWidth(null);
+    const el = imgRef.current;
+    if (el !== null) {
+      const width = collapsedFitWidth(el, currentHasCaption ? 0.8 : 0.92);
+      if (width !== null) setFitWidth(width);
+    }
+  }, [currentSrc, currentHasCaption, imgRef]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -139,7 +174,9 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
             ref={imgRef}
             src={current.src}
             alt={current.alt}
-            className={`max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"}`}
+            className={`max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"} ${fitWidth === null ? "" : "bg-white"}`}
+            style={fitWidth === null ? undefined : { width: fitWidth }}
+            onLoad={(event) => fitCollapsed(event.currentTarget)}
           />
         </div>
         {captionText ? (
@@ -194,6 +231,7 @@ function captionOf(image: LightboxImage): string | null {
  * jog vertically the moment the swap happened.
  */
 function SwipePeer({ image, side }: { image: LightboxImage | undefined; side: "prev" | "next" }) {
+  const [fitWidth, setFitWidth] = useState<number | null>(null);
   if (!image) return null;
   const captionText = captionOf(image);
   const sign = side === "prev" ? "-" : "";
@@ -206,7 +244,9 @@ function SwipePeer({ image, side }: { image: LightboxImage | undefined; side: "p
         <img
           src={image.src}
           alt=""
-          className={`max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"}`}
+          className={`max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"} ${fitWidth === null ? "" : "bg-white"}`}
+          style={fitWidth === null ? undefined : { width: fitWidth }}
+          onLoad={(event) => setFitWidth(collapsedFitWidth(event.currentTarget, captionText ? 0.8 : 0.92))}
         />
         {captionText ? (
           <div className="mt-3 max-w-[80ch] text-sm text-white/90 text-center px-4 leading-relaxed">
