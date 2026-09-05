@@ -11,8 +11,10 @@ import { loadConfig, type UploaderConfig, type TargetConfig } from "./config.js"
 import { MISSING_CONFIG_MESSAGE, pathExists, resolveConfigPath } from "./config-path.js";
 import { runConfigureCommand } from "./configure-cli.js";
 import { errorMessage } from "./error-guards.js";
-import { runTarget, type RunSummary } from "./run-target.js";
+import { runTarget, type RunOptions, type RunSummary } from "./run-target.js";
 import { runScheduleCommand } from "./schedule-cli.js";
+import { SETTLE_WINDOW_MS } from "./settle.js";
+import { sleep } from "./sleep.js";
 
 function printHelp(): void {
   console.log(
@@ -46,14 +48,55 @@ function hasFailure(summary: RunSummary): boolean {
   return summary.rejected > 0 || summary.errors > 0;
 }
 
-async function runAllTargets(config: UploaderConfig, options: { retryRejected: boolean }): Promise<number> {
+/**
+ * How many times a run comes back for files the settle gate skipped, and how
+ * long it waits before each retry.
+ *
+ * The launchd agent fires on `WatchPaths` as well as on its interval, so a run
+ * routinely starts the instant a file appears — inside the settle window, when
+ * the scanner may still be writing. Without this, that run would skip the file
+ * and nothing would retry it until the next filesystem event or the next
+ * interval sweep, which is exactly the latency the watch exists to remove.
+ *
+ * Bounded on purpose: three rounds covers a scanner still flushing a multi-page
+ * PDF, and anything slower is left to the interval sweep rather than held here
+ * indefinitely.
+ */
+const MAX_SETTLE_RETRIES = 3;
+const SETTLE_RETRY_WAIT_MS = SETTLE_WINDOW_MS + 2_000;
+
+/** Seams for the doctest: real runs use `runTarget` and a real sleep, the test
+ * substitutes a scripted runner and a no-op wait so it can assert the retry
+ * policy without spending the settle window. */
+export interface RunAllDeps {
+  readonly runOne: (target: TargetConfig, options: RunOptions) => Promise<RunSummary>;
+  readonly wait: (ms: number) => Promise<void>;
+}
+
+const DEFAULT_RUN_ALL_DEPS: RunAllDeps = { runOne: runTarget, wait: sleep };
+
+export interface RunAllOptions extends RunOptions {
+  /** Omitted in production; the doctest supplies scripted seams. */
+  readonly deps?: RunAllDeps;
+}
+
+export async function runAllTargets(config: UploaderConfig, options: RunAllOptions): Promise<number> {
+  const deps = options.deps ?? DEFAULT_RUN_ALL_DEPS;
+  const runOptions: RunOptions = { retryRejected: options.retryRejected };
   let exitCode = 0;
-  for (const target of config.targets) {
-    const summary = await runTarget(target, options);
-    printSummary(target, summary);
-    if (hasFailure(summary)) exitCode = 1;
+  let pending: readonly TargetConfig[] = config.targets;
+  for (let round = 0; ; round++) {
+    const unsettled: TargetConfig[] = [];
+    for (const target of pending) {
+      const summary = await deps.runOne(target, runOptions);
+      printSummary(target, summary);
+      if (hasFailure(summary)) exitCode = 1;
+      if (summary.skippedUnsettled > 0) unsettled.push(target);
+    }
+    if (unsettled.length === 0 || round >= MAX_SETTLE_RETRIES) return exitCode;
+    await deps.wait(SETTLE_RETRY_WAIT_MS);
+    pending = unsettled;
   }
-  return exitCode;
 }
 
 async function main(): Promise<number> {

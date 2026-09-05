@@ -13,7 +13,7 @@
 import { readFile, stat, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { loadConfig } from "./config.js";
+import { loadConfig, type UploaderConfig } from "./config.js";
 import { writeFileAtomic } from "./atomic-write.js";
 import { errorMessage, isErrnoException } from "./error-guards.js";
 import { ScheduleError } from "./errors.js";
@@ -66,6 +66,11 @@ export interface PlistParams {
    * holding the `node` binary that resolved `tsx` is added explicitly. */
   readonly environmentVariables?: Readonly<Record<string, string>>;
   readonly intervalSeconds: number;
+  /** Folders whose contents launchd watches, firing a sweep the moment one
+   * changes. The interval sweep stays the backstop: `WatchPaths` misses
+   * nothing that a later sweep would catch, and catches a new scan long
+   * before the interval would. Empty/absent omits the key entirely. */
+  readonly watchPaths?: readonly string[];
   readonly logPath: string;
 }
 
@@ -85,6 +90,7 @@ export function generatePlist(params: PlistParams): string {
     ...environmentVariablesLines(params.environmentVariables),
     "\t<key>StartInterval</key>",
     `\t<integer>${String(params.intervalSeconds)}</integer>`,
+    ...watchPathsLines(params.watchPaths),
     "\t<key>RunAtLoad</key>",
     "\t<true/>",
     "\t<key>StandardOutPath</key>",
@@ -96,6 +102,16 @@ export function generatePlist(params: PlistParams): string {
     "",
   ];
   return lines.join("\n");
+}
+
+function watchPathsLines(watchPaths: readonly string[] | undefined): string[] {
+  if (watchPaths === undefined || watchPaths.length === 0) return [];
+  return [
+    "\t<key>WatchPaths</key>",
+    "\t<array>",
+    ...watchPaths.map((watchPath) => `\t\t<string>${xmlEscape(watchPath)}</string>`),
+    "\t</array>",
+  ];
 }
 
 function workingDirectoryLines(workingDirectory: string | undefined): string[] {
@@ -225,8 +241,9 @@ export interface InstallResult {
  * `bootstrap`, so re-installing over an already-loaded agent reloads it
  * with the new plist rather than erroring. */
 export async function installSchedule(params: InstallParams): Promise<InstallResult> {
-  await requireValidConfig(params.configPath);
+  const config = await requireValidConfig(params.configPath);
   const intervalSeconds = params.intervalMinutes * 60;
+  const watchPaths = config.targets.map((target) => target.folder);
   const path = plistPath(params.homeDir);
   const log = logPath(params.homeDir);
   const invocation = await resolveLaunchdInvocation({
@@ -234,7 +251,7 @@ export async function installSchedule(params: InstallParams): Promise<InstallRes
     execPath: params.execPath,
     configPath: params.configPath,
   });
-  const plist = generatePlist({ ...invocation, intervalSeconds, logPath: log });
+  const plist = generatePlist({ ...invocation, intervalSeconds, watchPaths, logPath: log });
   await writeFileAtomic(path, { contents: plist });
   await params.runner.run(["bootout", serviceTarget(params.uid)]);
   const bootstrap = await params.runner.run(["bootstrap", domainTarget(params.uid), path]);
@@ -248,9 +265,9 @@ export async function installSchedule(params: InstallParams): Promise<InstallRes
   return { plistPath: path, logPath: log, intervalMinutes: params.intervalMinutes };
 }
 
-async function requireValidConfig(configPath: string): Promise<void> {
+async function requireValidConfig(configPath: string): Promise<UploaderConfig> {
   try {
-    await loadConfig(configPath);
+    return await loadConfig(configPath);
   } catch (e) {
     const message = `refusing to install: config at ${configPath} is missing or invalid: ${errorMessage(e)}`;
     throw new ScheduleError(message);
