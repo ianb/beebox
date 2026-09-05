@@ -18,7 +18,8 @@
 
 import * as path from "node:path";
 import { parseRef, resolveRefPath } from "../shared/ref-path.js";
-import { PathOutsideBoxError } from "./drive-mount-errors.js";
+import { resolveBoxNamespacePathOnDisk } from "../lib/box-namespace-resolve.js";
+import { PathOutsideBoxError, SymlinkedMountTargetError } from "./drive-mount-errors.js";
 
 /**
  * The absolute path a mount target names, or a refusal naming what was typed.
@@ -33,4 +34,24 @@ export function resolveMountTarget(boxRoot: string, target: { raw: string; label
   const resolved = resolveRefPath({ fromPath: undefined, ref: parsed.path, kind: "write-target" });
   if (resolved === null) throw new PathOutsideBoxError(target);
   return path.join(boxRoot, resolved);
+}
+
+/**
+ * Round-7 hardening finding 3: `resolveMountTarget` above is lexical only —
+ * with `_content/code -> ../src` on disk, a lexically-legal target under
+ * `_content/code` actually resolves outside the box entirely.
+ * `resolveBoxNamespacePathOnDisk` re-verifies the RESOLVED path (walking any
+ * symlink, including the final path component — the card filename after
+ * suffix expansion) in WRITE mode, which allows no leaf-symlink exception.
+ * Every Drive filesystem operation (mount, link, unmount) calls this right
+ * before its write, so a symlinked-away directory fails the operation
+ * cleanly instead of silently writing through it.
+ */
+export async function assertMountTargetWritable(
+  boxRoot: string,
+  target: { absTarget: string; label: string },
+): Promise<void> {
+  const rawPath = path.relative(boxRoot, target.absTarget).split(path.sep).join("/");
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath, mode: "write" });
+  if (ns === null) throw new SymlinkedMountTargetError({ raw: rawPath, label: target.label });
 }

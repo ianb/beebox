@@ -92,6 +92,55 @@ async function trackedContentRelPaths(params: { packageRoot: string; contentRoot
   return out;
 }
 
+/**
+ * Round-7 hardening finding 1(a): a class fix for the round-6 fixed
+ * package-root ancestor list ({@link assertNoSymlinkedAncestors} in
+ * `one-root-run.ts`), which never sees a v2 `content/`-relative directory
+ * that is ITSELF a symlink — e.g. `content/.claude -> /shared/agent-config`.
+ * Nothing in that fixed list names it (it names the package-root `.claude`,
+ * which doesn't exist yet), so it sailed through preflight, got relocated by
+ * `git mv` (which moves the symlink entry itself, not its target) to become
+ * the box's OWN `.claude` at the package root, and every subsequent write
+ * into `.claude` (init's rule generation, `initBox`'s directory-ensure) then
+ * wrote through it into `/shared/agent-config`.
+ *
+ * Walks the WHOLE `content/` tree once, bounded, before anything moves, and
+ * aborts on any entry that is itself a symlink resolving to a DIRECTORY. A
+ * leaf FILE symlink (the annex-asset shape) is untouched by this check —
+ * only a directory-valued symlink lets a later step walk or write through it
+ * to wherever it points; a file leaf still moves as an opaque unit
+ * ({@link executeMoves}), and a migration write through an existing leaf is
+ * separately refused by `one-root-write-guard.ts`'s
+ * `assertWriteTargetNotSymlink`.
+ */
+export async function assertNoSymlinkedContentDirectories(contentRoot: string): Promise<void> {
+  const flagged: string[] = [];
+  async function walk(dir: string): Promise<void> {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const abs = path.join(dir, entry.name);
+      if (entry.isSymbolicLink()) {
+        const targetIsDirectory = await fs
+          .stat(abs)
+          .then((s) => s.isDirectory())
+          .catch(() => false);
+        if (targetIsDirectory) flagged.push(abs);
+        continue; // never walk through a symlink either way
+      }
+      if (entry.isDirectory()) await walk(abs);
+    }
+  }
+  await walk(contentRoot);
+  if (flagged.length > 0) {
+    throw new OneRootPreflightError(
+      `Found ${String(flagged.length)} symlinked director${flagged.length === 1 ? "y" : "ies"} inside content/ — ` +
+        "refusing to migrate through a directory symlink (relocating it would carry every later read/write " +
+        "into wherever it points):\n  " +
+        flagged.join("\n  "),
+    );
+  }
+}
+
 /** Walk `content/` (skipping `.beebox/`) and map every file/symlink. Pure
  * planning pass — throws with the FULL unmapped/unsupported list before any
  * mutation happens. */

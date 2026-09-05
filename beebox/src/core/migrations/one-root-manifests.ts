@@ -38,6 +38,7 @@ import * as path from "node:path";
 import { isRecord } from "../../lib/is-record.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { assertWriteTargetNotSymlink } from "./one-root-write-guard.js";
 
 function defaultHubConfigPath(): string {
   return path.join(os.homedir(), ".config", "beebox", "hub.json");
@@ -163,6 +164,7 @@ export async function commitManifestUpdatesForOneRoot(plan: OneRootManifestPlan)
   try {
     for (const file of [plan.hub, plan.boxes]) {
       if (file.updatedJson === null) continue;
+      await assertWriteTargetNotSymlink(file.path);
       await writeFileAtomic(file.path, { content: JSON.stringify(file.updatedJson, null, 2) + "\n" });
       written.push(file);
     }

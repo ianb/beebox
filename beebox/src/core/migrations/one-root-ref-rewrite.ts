@@ -41,6 +41,7 @@ import { isRecord } from "../../lib/is-record.js";
 import { inlineLinkPattern, matchReferenceDefinitionAt } from "../body-refs.js";
 import { PATH_FIELDS } from "../lint-path-fields.js";
 import { mapV2Path } from "./one-root-mapping.js";
+import { OneRootPreflightError } from "./one-root-errors.js";
 
 export interface OneRootRewriteInput {
   text: string;
@@ -272,4 +273,87 @@ export function rewriteOneRootViewRefs(text: string): OneRootRewriteResult {
     return (prefix ?? "") + (quote ?? "") + transform(value ?? "") + (quote ?? "");
   });
   return { text: newText, rewritten: getRewritten(), unresolved };
+}
+
+const GLOB_METACHAR = /[*?[{]/;
+const DEPENDENCIES_ARRAY = /(export\s+const\s+dependencies\s*(?::[^=]+)?=\s*\[)([^\]]*)(])/;
+const STRING_LITERAL = /(["'])((?:(?!\1)[^\\]|\\.)*)\1/g;
+
+/**
+ * Every literal string entry in a view source's exported `dependencies`
+ * array, in source order. Shared with {@link OneRootLinkGateResult}'s
+ * dependency-prefix check (`one-root-link-gate.ts`) so the rewriter and the
+ * gate that double-checks its output read the exact same grammar.
+ */
+export function extractDependencyGlobs(text: string): string[] {
+  const arrayMatch = DEPENDENCIES_ARRAY.exec(text);
+  if (arrayMatch === null) return [];
+  const body = arrayMatch[2] ?? "";
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  STRING_LITERAL.lastIndex = 0;
+  while ((m = STRING_LITERAL.exec(body)) !== null) {
+    if (m[2] !== undefined) out.push(m[2]);
+  }
+  return out;
+}
+
+/** Split a dependency glob into its static directory prefix (everything
+ * before the first glob metacharacter, trimmed back to the previous `/`) and
+ * the remaining suffix (kept byte-for-byte, including its leading `/`). An
+ * empty prefix means the pattern has no static directory context at all
+ * (e.g. `**\/*.card`) — nothing to resolve confidently. */
+export function staticGlobPrefix(pattern: string): { prefix: string; suffix: string } {
+  const idx = pattern.search(GLOB_METACHAR);
+  if (idx === -1) return { prefix: pattern, suffix: "" };
+  const cut = pattern.lastIndexOf("/", idx);
+  const prefix = cut === -1 ? "" : pattern.slice(0, cut);
+  return { prefix, suffix: pattern.slice(prefix.length) };
+}
+
+/**
+ * Round-7 hardening finding 4: a view's exported `dependencies` array
+ * (`["store/recipes/**\/*.card"]`) carries plain glob strings that
+ * {@link rewriteOneRootViewRefs} never touches — that function only rewrites
+ * `cardRef="…"` attributes. Left alone, a v2 dependency glob survives the
+ * migration verbatim, and since the directory it named just moved, it
+ * matches nothing post-migration — a view that silently renders empty rather
+ * than a ref the hard link gate can catch (a dependency glob is not a ref).
+ *
+ * Maps each entry's STATIC prefix (the part before the first glob
+ * metacharacter) through the same v2→v3 table every other path goes through
+ * and splices the original glob suffix back on unchanged — a dependency glob
+ * is used directly as a `glob()` cwd-relative pattern (`core/views/cards.ts`),
+ * never in the leading-`/` canonical ref form the other rewriters produce.
+ *
+ * Fails CLOSED: a prefix `mapV2Path` can't resolve — including the
+ * degenerate empty-prefix case (no static directory context at all) — throws
+ * naming `viewRelPath` AND the offending glob, rather than leave a migrated
+ * box with a dependency nobody can be sure still matches the right thing.
+ */
+export function rewriteOneRootViewDependencies(
+  text: string,
+  viewRelPath: string,
+): { text: string; rewritten: number } {
+  let rewritten = 0;
+  const newText = text.replace(DEPENDENCIES_ARRAY, (...outerArgs: string[]) => {
+    const [, head, body] = outerArgs;
+    const tail = outerArgs[3];
+    const newBody = (body ?? "").replace(STRING_LITERAL, (...innerArgs: string[]) => {
+      const [, quote, value] = innerArgs;
+      const { prefix, suffix } = staticGlobPrefix(value ?? "");
+      const mapped = prefix === "" ? null : mapV2Path(prefix);
+      if (mapped === null || mapped.kind !== "move") {
+        throw new OneRootPreflightError(
+          `${viewRelPath}: dependency glob "${value}" has no confidently-mappable static directory prefix — ` +
+            "refusing to migrate rather than leave a dependency that may match the wrong thing (or nothing) " +
+            "post-migration. Reconcile by hand, then re-run.",
+        );
+      }
+      rewritten++;
+      return `${quote}${mapped.newPath}${suffix}${quote}`;
+    });
+    return `${head}${newBody}${tail}`;
+  });
+  return { text: newText, rewritten };
 }

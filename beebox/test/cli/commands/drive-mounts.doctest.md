@@ -26,6 +26,8 @@ import { loadDriveConfig, saveDriveConfig } from "../../../src/connectors/drive-
 import { syncFolderMount } from "../../../src/connectors/drive-mount-sync.js";
 import { createGfolderTemplate } from "../../../src/schemas/gfolder.js";
 import { runDriveStatus } from "../../../src/cli/commands/drive.js";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 const FOLDER_URL = (id: string) => `https://drive.google.com/drive/folders/${id}`;
@@ -633,6 +635,62 @@ const mounted = await mountDriveFolder({
 });
 mounted.cardPath
 => _content/drive/recipes/Recipes.gfolder.card
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Round-7 hardening finding 3: a symlinked-away directory refuses the write, not just the lexical check
+
+`shared/ref-path.ts`'s check above is lexical only. `_content/code` here is a
+TRACKED symlink to `../src` — a package-internal directory outside the box
+namespace entirely. The lexical check passes (`_content/code/New` reads as a
+normal in-namespace path), so without an on-disk re-check `linkDriveItem`
+would write `New.glink.card` straight into `src/`. It's now refused, on the
+FINAL filename (after the `.glink.card` suffix is appended), before anything
+is written:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+const drive = recipesDrive();
+
+await fs.symlink(path.join("..", "src"), path.join(box.root, "_content", "code"));
+
+const refusal = async (op: Promise<unknown>): Promise<string> => {
+  try {
+    await op;
+    return "no refusal";
+  } catch (e) {
+    return e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  }
+};
+
+await refusal(linkDriveItem({
+  boxRoot: box.root, service: drive, input: FILE_URL("pdf-1"), target: "/_content/code/New",
+}))
+=> SymlinkedMountTargetError: The pointer path resolves through a symlink to somewhere outside the box: _content/code/New.glink.card — refusing to write through it. Reconcile by hand (replace the symlink with a real directory), then retry.
+```
+
+Nothing landed in `src/`:
+
+```ts continue
+JSON.stringify((await fs.readdir(path.join(box.root, "src"))).filter((n) => n.endsWith(".card")))
+=> []
+```
+
+The same disk re-check refuses `mount` and `unmount` through the same
+symlinked directory:
+
+```ts continue
+await refusal(mountDriveFolder({
+  boxRoot: box.root, service: drive, input: FOLDER_URL("folder-1"), dir: "/_content/code",
+}))
+=> SymlinkedMountTargetError: The target directory resolves through a symlink to somewhere outside the box: _content/code — refusing to write through it. Reconcile by hand (replace the symlink with a real directory), then retry.
+
+await refusal(unmountDriveFolder({ boxRoot: box.root, target: "/_content/code" }))
+=> SymlinkedMountTargetError: The mount card resolves through a symlink to somewhere outside the box: _content/code — refusing to write through it. Reconcile by hand (replace the symlink with a real directory), then retry.
 ```
 
 ```ts cleanup

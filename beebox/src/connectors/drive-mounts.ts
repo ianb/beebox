@@ -23,7 +23,7 @@ import { DRIVE_FOLDER_MIME } from "./drive-folder-plan.js";
 import { gfolderCardsIn } from "./drive-folder-cards.js";
 import { mirrorFolderOnce } from "./drive-mount-sync.js";
 import { withDriveMirrorLock } from "./drive-lock.js";
-import { resolveMountTarget } from "./drive-mount-path.js";
+import { resolveMountTarget, assertMountTargetWritable } from "./drive-mount-path.js";
 import { safeFilename } from "./chat-utils.js";
 import {
   AmbiguousFolderMountError,
@@ -118,6 +118,10 @@ export async function mountDriveFolder(options: {
     throw new NotADriveFolderError({ name: file.name, mimeType: file.mimeType });
   }
   const mountDir = resolveMountTarget(boxRoot, { raw: dir, label: "The target directory" });
+  // Round-7 hardening finding 3: `resolveMountTarget` is lexical only — a
+  // symlinked-away directory (e.g. `_content/code -> ../src`) still passes
+  // it. Re-verify on disk, in WRITE mode, before anything is created inside.
+  await assertMountTargetWritable(boxRoot, { absTarget: mountDir, label: "The target directory" });
   // The claim check, the card write, the first mirror pass, and the commit are
   // one Drive-writer span — a wakeup sync landing in the middle would mirror
   // the same folder into the same directory from another process. Reentrant,
@@ -193,6 +197,10 @@ export async function linkDriveItem(options: {
   const cardPath = resolved.endsWith(`.${GLINK_CARD_TYPE}.card`)
     ? resolved
     : `${resolved}.${GLINK_CARD_TYPE}.card`;
+  // Round-7 hardening finding 3: check the FINAL filename, after suffix
+  // expansion — a symlinked-away directory can still resolve legally right
+  // up until this exact path.
+  await assertMountTargetWritable(boxRoot, { absTarget: cardPath, label: "The pointer path" });
   await refuseIfExists({ boxRoot, cardPath });
 
   await fs.mkdir(path.dirname(cardPath), { recursive: true });
@@ -228,6 +236,9 @@ export async function unmountDriveFolder(options: {
 }): Promise<UnmountResult> {
   const { boxRoot, target } = options;
   const resolved = resolveMountTarget(boxRoot, { raw: target, label: "The mount card" });
+  // Round-7 hardening finding 3: refuse before reading/deleting through a
+  // symlinked-away directory or card.
+  await assertMountTargetWritable(boxRoot, { absTarget: resolved, label: "The mount card" });
   const cardPath = resolved.endsWith(`.${GFOLDER_CARD_TYPE}.card`)
     ? resolved
     : await onlyMountIn({ boxRoot, dir: resolved });

@@ -86,7 +86,7 @@ import { getBoxTimeISO } from "../../lib/time.js";
 import { runInit } from "../../cli/commands/init.js";
 import { appendManifestEntry } from "../migration-run.js";
 import { listBoxViewFiles } from "../list-cards.js";
-import { rewriteOneRootRefs, rewriteOneRootViewRefs } from "./one-root-ref-rewrite.js";
+import { rewriteOneRootRefs, rewriteOneRootViewRefs, rewriteOneRootViewDependencies } from "./one-root-ref-rewrite.js";
 import { runOneRootLinkGate } from "./one-root-link-gate.js";
 import {
   planManifestUpdatesForOneRoot,
@@ -102,12 +102,14 @@ import {
   verifyNoIgnoreRegression,
   isGitTracked,
   isGitIgnored,
+  assertNoSymlinkedContentDirectories,
   type PlannedMove,
   type RenamedEntry,
 } from "./one-root-move-plan.js";
 import { captureIgnoreRules, mergeIgnoreRules, snapshotBoxWideIgnored, verifyNoBoxWideIgnoreRegression } from "./one-root-ignore-merge.js";
 import { OneRootPreflightError, OneRootLinkGateError } from "./one-root-errors.js";
 import { rollbackMoveAndCommit, V2_PACKAGE_ROOT_VOCABULARY } from "./one-root-rollback.js";
+import { assertWriteTargetNotSymlink } from "./one-root-write-guard.js";
 
 export {
   OneRootPreflightError,
@@ -134,7 +136,7 @@ const V2_LOCK_FILES = [".bbx-lock", ".bbx-reactor.lock", ".bbx-serve.pid"];
  * and `initBox` can install a starter guide through the same link. Refuse
  * before any mutation rather than let either happen.
  */
-const SYMLINK_ANCESTOR_CHECKS = ["src", "src/views", "src/schemas", "src/tricks", ".claude"];
+const SYMLINK_ANCESTOR_CHECKS = ["src", "src/views", "src/schemas", "src/tricks", ".claude", "content", "views"];
 
 async function assertNoSymlinkedAncestors(packageRoot: string): Promise<void> {
   for (const rel of SYMLINK_ANCESTOR_CHECKS) {
@@ -154,6 +156,7 @@ async function assertNoSymlinkedAncestors(packageRoot: string): Promise<void> {
   }
 }
 
+
 async function preflight(params: { packageRoot: string; contentRoot: string }): Promise<void> {
   const status = await getStatus(params.packageRoot);
   if (!status.clean) {
@@ -163,6 +166,7 @@ async function preflight(params: { packageRoot: string; contentRoot: string }): 
   }
 
   await assertNoSymlinkedAncestors(params.packageRoot);
+  await assertNoSymlinkedContentDirectories(params.contentRoot);
 
   for (const lockFile of V2_LOCK_FILES) {
     const exists = await fs
@@ -204,6 +208,7 @@ async function mergeClaudeMd(params: { packageRoot: string; contentRoot: string 
     "(Merged from the v2 operational-root CLAUDE.md by the one-root migration.)\n\n" +
     contentText.trimEnd() +
     "\n";
+  await assertWriteTargetNotSymlink(rootClaudeMd);
   await fs.writeFile(rootClaudeMd, merged);
   await execFileAsync("git", ["add", rootClaudeMd], { cwd: params.packageRoot });
   await execFileAsync("git", ["rm", "-f", contentClaudeMd], { cwd: params.packageRoot });
@@ -223,6 +228,7 @@ async function bumpMarker(packageRoot: string): Promise<void> {
     shapeVersion: 3,
     "migrated-at": getBoxTimeISO(packageRoot),
   };
+  await assertWriteTargetNotSymlink(markerPath);
   await fs.writeFile(markerPath, JSON.stringify(withVersion, null, 2) + "\n");
 }
 
@@ -336,7 +342,12 @@ async function rewriteViewRefs(params: {
       continue;
     }
     const text = await fs.readFile(viewPath, "utf-8");
-    const result = rewriteOneRootViewRefs(text);
+    const cardRefResult = rewriteOneRootViewRefs(text);
+    // Finding 4 (round 7 hardening): `dependencies` globs are a separate
+    // ref-bearing form (see `rewriteOneRootViewDependencies`'s doc comment) —
+    // applied to the cardRef-rewritten text so both land in one pass.
+    const depsPath = path.relative(packageRoot, viewPath);
+    const result = { ...rewriteOneRootViewDependencies(cardRefResult.text, depsPath), unresolved: cardRefResult.unresolved };
     if (result.text !== text) {
       if (!(await isGitTracked(packageRoot, viewPath))) {
         journal.push({ oldAbs: viewPath, newAbs: viewPath, wasIgnored: await isGitIgnored(packageRoot, viewPath), originalFileBytes: text });

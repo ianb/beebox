@@ -893,3 +893,80 @@ JSON.stringify({
 ```ts cleanup
 await cleanup(root);
 ```
+
+## Round-7 hardening finding 1(b): a symlinked root `CLAUDE.md` write target aborts
+
+A tracked root `CLAUDE.md -> /shared/persona.md` is a FILE symlink — legal on
+disk — but the migration's own merge step writes the box's persona text
+straight into it via `fs.writeFile`, which FOLLOWS the link. Before this fix
+that landed the merged content at `/shared/persona.md`, outside the box's own
+git history where rollback could never undo it. The write now `lstat`s its
+target first and aborts rather than write through it:
+
+```ts
+const root = await makeV2Box();
+const externalPersona = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-external-persona-"));
+const personaFile = path.join(externalPersona, "persona.md");
+await fs.writeFile(personaFile, "external persona bytes\n");
+await fs.rm(path.join(root, "CLAUDE.md"));
+await fs.symlink(personaFile, path.join(root, "CLAUDE.md"));
+execSync("git add -A && git commit -q -m symlinked-claude-md-fixture", { cwd: root, stdio: "pipe" });
+
+const err = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") }).catch((e) => e);
+JSON.stringify({
+  isPreflightError: err instanceof OneRootPreflightError,
+  mentionsPath: err.message.includes(path.join(root, "CLAUDE.md")),
+})
+=> {"isPreflightError":true,"mentionsPath":true}
+```
+
+The external file was never touched:
+
+```ts continue
+await fs.readFile(personaFile, "utf-8")
+=> external persona bytes
+```
+
+```ts cleanup
+await fs.rm(externalPersona, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+await cleanup(root);
+```
+
+## Round-7 hardening finding 1(a): a symlinked `content/.claude` directory aborts preflight
+
+`content/.claude` here is a TRACKED symlink to a directory OUTSIDE the box —
+the shape the round-6 fixed ancestor list couldn't see (it only checks the
+PACKAGE-ROOT `.claude`, which doesn't exist yet at preflight time). Left
+unchecked, `git mv` would relocate the symlink ENTRY itself to become the
+box's own `.claude`, and every later write into it (init's rule generation)
+would land in the external directory. The full `content/` tree is now walked
+once, before anything moves, and aborts on any symlinked DIRECTORY:
+
+```ts
+const root = await makeV2Box();
+const externalClaudeDir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-external-claude-"));
+await fs.writeFile(path.join(externalClaudeDir, "settings.json"), "{}\n");
+await fs.symlink(externalClaudeDir, path.join(root, "content", ".claude"));
+execSync("git add -A && git commit -q -m symlinked-content-claude-fixture", { cwd: root, stdio: "pipe" });
+
+const err = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") }).catch((e) => e);
+JSON.stringify({
+  isPreflightError: err instanceof OneRootPreflightError,
+  mentionsPath: err.message.includes(path.join(root, "content", ".claude")),
+  contentStillThere: await fs.access(path.join(root, "content")).then(() => true, () => false),
+})
+=> {"isPreflightError":true,"mentionsPath":true,"contentStillThere":true}
+```
+
+The external directory's file is untouched — nothing walked through the
+symlink at all:
+
+```ts continue
+JSON.stringify(await fs.readdir(externalClaudeDir))
+=> ["settings.json"]
+```
+
+```ts cleanup
+await fs.rm(externalClaudeDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+await cleanup(root);
+```

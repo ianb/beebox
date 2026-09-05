@@ -19,12 +19,16 @@
  * this module needs no special-casing of its own for that case.
  */
 
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { lintCardsDispatch, type LintDispatchOptions } from "../card-lint.js";
 import { countBrokenRefs } from "../../cards/lint-format.js";
 import { listBoxCardFiles, listBoxViewFiles } from "../list-cards.js";
 import { buildLoadContext } from "../load-context.js";
 import { boxWideLinkWarnings } from "../../cli/commands/validate-markdown.js";
 import { collectViewRefWarnings } from "../views/refs.js";
+import { isInBoxNamespace } from "../../lib/box-namespace.js";
+import { extractDependencyGlobs, staticGlobPrefix } from "./one-root-ref-rewrite.js";
 
 export interface OneRootLinkGateResult {
   ok: boolean;
@@ -47,8 +51,9 @@ export async function runOneRootLinkGate(boxRoot: string): Promise<OneRootLinkGa
 
   const viewPaths = await listBoxViewFiles(boxRoot);
   const viewWarnings = await collectViewRefWarnings(viewPaths, boxRoot);
+  const dependencyWarnings = await collectViewDependencyWarnings(viewPaths, boxRoot);
 
-  if (brokenCardRefs === 0 && mdReport === null && viewWarnings.length === 0) {
+  if (brokenCardRefs === 0 && mdReport === null && viewWarnings.length === 0 && dependencyWarnings.length === 0) {
     return { ok: true, report: "" };
   }
 
@@ -71,5 +76,37 @@ export async function runOneRootLinkGate(boxRoot: string): Promise<OneRootLinkGa
     lines.push(`${String(viewWarnings.length)} broken view reference(s):`);
     for (const warning of viewWarnings) lines.push(`  ${warning}`);
   }
+  if (dependencyWarnings.length > 0) {
+    lines.push(`${String(dependencyWarnings.length)} unmigrated view dependency glob(s):`);
+    for (const warning of dependencyWarnings) lines.push(`  ${warning}`);
+  }
   return { ok: false, report: lines.join("\n") };
+}
+
+/**
+ * Round-7 hardening finding 4's backstop: {@link rewriteOneRootViewDependencies}
+ * (`one-root-ref-rewrite.ts`) already fails the migration closed on an
+ * unmappable dependency glob, but that check runs against the OLD v2 table —
+ * it can't see whether the v3 area it produced is one the box namespace
+ * actually recognizes today. Re-derive each view's (already rewritten)
+ * dependency globs and flag any whose static prefix's first path segment
+ * isn't an underscore area, the same class of gap the hard link gate exists
+ * to catch for every other ref form.
+ */
+async function collectViewDependencyWarnings(viewPaths: string[], boxRoot: string): Promise<string[]> {
+  const warnings: string[] = [];
+  for (const viewPath of viewPaths) {
+    const lst = await fs.lstat(viewPath).catch(() => null);
+    if (lst === null || lst.isSymbolicLink()) continue; // same skip as collectViewRefWarnings
+    const text = await fs.readFile(viewPath, "utf-8");
+    const relPath = path.relative(boxRoot, viewPath);
+    for (const glob of extractDependencyGlobs(text)) {
+      const { prefix } = staticGlobPrefix(glob);
+      const firstSegment = prefix.split("/", 1)[0] ?? "";
+      if (!isInBoxNamespace(firstSegment)) {
+        warnings.push(`${relPath}: dependency glob "${glob}" does not resolve into a box area`);
+      }
+    }
+  }
+  return warnings;
 }

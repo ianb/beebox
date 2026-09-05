@@ -37,6 +37,7 @@ import { errnoCode } from "../../lib/error-guards.js";
 import { mapV2Path } from "./one-root-mapping.js";
 import { isGitIgnored } from "./one-root-move-plan.js";
 import { OneRootGitignoreRegressionError, OneRootPreflightError } from "./one-root-errors.js";
+import { assertWriteTargetNotSymlink } from "./one-root-write-guard.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -348,6 +349,7 @@ async function mergeOneFile(params: {
   ];
   if (additions.length === 0) return;
   const merged = `${current.trimEnd()}\n\n${MIGRATED_SECTION_HEADER}\n${additions.join("\n")}\n`;
+  await assertWriteTargetNotSymlink(params.filePath);
   await fs.writeFile(params.filePath, merged);
 }
 

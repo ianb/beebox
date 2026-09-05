@@ -43,6 +43,7 @@ import { errnoCode } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { mapV2Path } from "./one-root-mapping.js";
+import { assertWriteTargetNotSymlink } from "./one-root-write-guard.js";
 import type { CwdRemap } from "./one-root-claude-projects.js";
 
 export async function rewriteChatBindings(params: {
@@ -91,6 +92,9 @@ export async function rewriteChatBindings(params: {
     session["contextDir"] = mapped.newPath;
     changed = true;
   }
-  if (changed) await writeFileAtomic(historyPath, { content: JSON.stringify(parsed, null, 2) });
+  if (changed) {
+    await assertWriteTargetNotSymlink(historyPath);
+    await writeFileAtomic(historyPath, { content: JSON.stringify(parsed, null, 2) });
+  }
   return { cwdPairs };
 }

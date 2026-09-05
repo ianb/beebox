@@ -11,7 +11,8 @@ fix reuses `lint-path-fields.ts`'s `PATH_FIELDS` inventory directly, so the
 rewriter covers exactly what the gate checks — one list, not two.
 
 ```ts setup
-import { rewriteOneRootRefs } from "../../../src/core/migrations/one-root-ref-rewrite.js";
+import { rewriteOneRootRefs, rewriteOneRootViewDependencies } from "../../../src/core/migrations/one-root-ref-rewrite.js";
+import { OneRootPreflightError } from "../../../src/core/migrations/one-root-errors.js";
 ```
 
 ## A landmark's `navigation.symbol.src` rewrites like any other ref
@@ -92,4 +93,69 @@ const plain = ["---", "status: new", "---", "Body.", ""].join("\n");
 const plainResult = rewriteOneRootRefs({ text: plain, oldContentRelPath: "box/inbox/Foo.memo.card", isCard: true });
 JSON.stringify({ text: plainResult.text, unresolved: plainResult.unresolved })
 => {"text":"---\nstatus: new\n---\nBody.\n","unresolved":[]}
+```
+
+## Round-7 hardening finding 4: a view's `dependencies` glob migrates through the v2→v3 table
+
+`rewriteOneRootViewRefs` only rewrites `cardRef="…"` attributes — a view's
+exported `dependencies` array survived the migration verbatim before this
+fix, and since the directory it named just moved, it matched nothing
+post-migration. The STATIC prefix (everything before the first glob
+metacharacter) is mapped through the same table every other path goes
+through; the glob suffix is spliced back on unchanged:
+
+```ts
+const viewSource = 'export const dependencies = ["store/recipes/**/*.card"];\n';
+const result = rewriteOneRootViewDependencies(viewSource, "src/views/Recipes.tsx");
+result.text
+=> export const dependencies = ["_content/recipes/**/*.card"];
+
+result.rewritten
+=> 1
+```
+
+Multiple entries in the same array all rewrite:
+
+```ts
+const multiSource = 'export const dependencies = ["store/recipes/**/*.card", "box/inbox/**/*.memo.card"];\n';
+const multiResult = rewriteOneRootViewDependencies(multiSource, "src/views/Multi.tsx");
+multiResult.text
+=> export const dependencies = ["_content/recipes/**/*.card", "_content/inbox/**/*.memo.card"];
+
+multiResult.rewritten
+=> 2
+```
+
+A view with no `dependencies` export is left untouched:
+
+```ts
+const noDeps = 'export default function View() { return null; }\n';
+const noDepsResult = rewriteOneRootViewDependencies(noDeps, "src/views/Bare.tsx");
+JSON.stringify({ text: noDepsResult.text === noDeps, rewritten: noDepsResult.rewritten })
+=> {"text":true,"rewritten":0}
+```
+
+## An unmappable dependency prefix aborts, naming the view file
+
+A prefix `mapV2Path` has never heard of (here: a made-up top-level directory)
+can't be migrated confidently — this fails CLOSED, naming the view file and
+the offending glob, rather than leave a dependency that might match the
+wrong thing (or nothing) post-migration:
+
+```ts
+const badSource = 'export const dependencies = ["nonexistent-area/**/*.card"];\n';
+const err = (() => {
+  try {
+    rewriteOneRootViewDependencies(badSource, "src/views/Broken.tsx");
+    return null;
+  } catch (e) {
+    return e;
+  }
+})();
+JSON.stringify({
+  isPreflightError: err instanceof OneRootPreflightError,
+  mentionsFile: err.message.includes("src/views/Broken.tsx"),
+  mentionsGlob: err.message.includes("nonexistent-area/**/*.card"),
+})
+=> {"isPreflightError":true,"mentionsFile":true,"mentionsGlob":true}
 ```
