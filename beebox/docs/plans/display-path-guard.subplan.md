@@ -95,7 +95,7 @@ form is the display vocabulary's most common shape.
 | Display-form ref written to a card | planned (lint doctest) | new error, pre-external-classification | clear (was SILENT) |
 | Display form in an HTTP/tRPC path input | planned (route doctest) | namespace resolver rejection | clear |
 | Display form as a bbx CLI path argument | planned (CLI doctest) | shared normalization rejection | clear |
-| A real external scheme colliding with an area label (`config:` URL scheme) | n/a | no registered URI scheme is `config`/`bookkeeping`/`publish`/`tmp`/`content`; collision risk accepted | clear (rejected with the display-form message) |
+| A real external scheme colliding with an area label | n/a | `content:` IS a real scheme and is excluded from detection; no registry entry exists for `config`/`bookkeeping`/`publish`/`tmp`, and `<label>://` double-slash forms are never treated as display form | clear (rejected with the display-form message) |
 | A content file literally named `Config:x` | not planned | colons are effectively absent from card names; the guard makes such names unaddressable by canonical-form workaround (`/_content/Config:x` still works) | accepted |
 
 ## NOT in scope
