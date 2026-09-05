@@ -32,7 +32,7 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.259`, Codex `0.153.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.259`, Codex `0.153.4` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
@@ -49,6 +49,12 @@ Codex entries here are labeled as such; they carry their own pin.
   default. See
   `issues/decisions/2026-09-04-codex-default-model-becomes-astra.md`. Pending
   SDK: `0.3.260` (~30h), `0.3.261` (~11h), neither act-now.
+
+## Codex 0.153.4 — applied 2026-09-05 (boxholder asked for it now)
+
+Bumped ahead of the two-day window at the boxholder's request, once the
+default-model decision was made. Verified: beebox typecheck, the Codex
+doctests, and the deploy gate's `codex plugin --help`.
 
 ## Codex default model — decided 2026-09-05
 
