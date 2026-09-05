@@ -95,6 +95,7 @@ import {
 } from "./one-root-manifests.js";
 import { migrateClaudeProjectDirs, type CwdRemap } from "./one-root-claude-projects.js";
 import { rewriteChatBindings } from "./one-root-chat-bindings.js";
+import { rewriteConnectorConfigRefs } from "./one-root-connector-config.js";
 import {
   planMoves,
   executeMoves,
@@ -109,14 +110,9 @@ import {
 import { captureIgnoreRules, mergeIgnoreRules, snapshotBoxWideIgnored, verifyNoBoxWideIgnoreRegression } from "./one-root-ignore-merge.js";
 import { OneRootPreflightError, OneRootLinkGateError } from "./one-root-errors.js";
 import { rollbackMoveAndCommit, V2_PACKAGE_ROOT_VOCABULARY } from "./one-root-rollback.js";
-import { assertWriteTargetNotSymlink } from "./one-root-write-guard.js";
+import { assertWriteTargetNotSymlink, assertNoSymlinkedCalleeWriteTargets } from "./one-root-write-guard.js";
 
-export {
-  OneRootPreflightError,
-  OneRootLinkGateError,
-  OneRootGitignoreRegressionError,
-  OneRootRollbackError,
-} from "./one-root-errors.js";
+export { OneRootPreflightError, OneRootLinkGateError, OneRootGitignoreRegressionError, OneRootRollbackError } from "./one-root-errors.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -156,7 +152,6 @@ async function assertNoSymlinkedAncestors(packageRoot: string): Promise<void> {
   }
 }
 
-
 async function preflight(params: { packageRoot: string; contentRoot: string }): Promise<void> {
   const status = await getStatus(params.packageRoot);
   if (!status.clean) {
@@ -167,7 +162,7 @@ async function preflight(params: { packageRoot: string; contentRoot: string }): 
 
   await assertNoSymlinkedAncestors(params.packageRoot);
   await assertNoSymlinkedContentDirectories(params.contentRoot);
-
+  await assertNoSymlinkedCalleeWriteTargets({ packageRoot: params.packageRoot, contentRoot: params.contentRoot });
   for (const lockFile of V2_LOCK_FILES) {
     const exists = await fs
       .access(path.join(params.contentRoot, lockFile))
@@ -430,6 +425,8 @@ async function moveAndCommitBox(params: {
       originalBytesOut: originalHistoryBytesBox,
     });
     cwdPairs = bindingResult.cwdPairs;
+
+    await rewriteConnectorConfigRefs({ packageRoot, journal: untrackedRenames });
 
     originalMarkerBytes = await fs.readFile(path.join(packageRoot, ".beebox", "box.json"), "utf-8");
     await bumpMarker(packageRoot);

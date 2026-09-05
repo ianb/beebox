@@ -17,7 +17,8 @@ import { runOneRootMigration, OneRootPreflightError, OneRootLinkGateError, OneRo
 import { probeV2Box } from "../../../src/core/migrations/one-root-v2-probe.js";
 import { initBox } from "../../../src/core/box/index.js";
 import { getBoxShape } from "../../../src/lib/box-shape.js";
-import { executeMoves } from "../../../src/core/migrations/one-root-move-plan.js";
+import { executeMoves, planMoves } from "../../../src/core/migrations/one-root-move-plan.js";
+import { appendManifestEntry, SymlinkedManifestError } from "../../../src/core/migration-run.js";
 
 // The box's git hooks embed an absolute `bbx` path (`install-validation-hooks.ts`);
 // running inside a worktree it defaults to the STABLE MAIN checkout's `bbx`,
@@ -968,5 +969,136 @@ JSON.stringify(await fs.readdir(externalClaudeDir))
 
 ```ts cleanup
 await fs.rm(externalClaudeDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+await cleanup(root);
+```
+
+## Round-8 hardening finding 1: a symlinked package-root `.gitattributes` aborts preflight
+
+`initBox`'s `.gitattributes` regen (step 5) runs BEFORE `mergeIgnoreRules`'s
+own guard — a tracked package-root `.gitattributes -> /shared/attributes`
+would otherwise have the migration's regenerated content written straight
+through it via `fs.writeFile`, landing external bytes with no record in the
+box's own git history. Preflight now `lstat`s this exact callee-written
+target (along with `.gitignore`, `CLAUDE.md`, and the migration manifest's
+old and new paths) before anything moves.
+
+```ts
+const root = await makeV2Box();
+const externalAttrs = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-external-attrs-"));
+const attrsFile = path.join(externalAttrs, "attributes");
+await fs.writeFile(attrsFile, "external attributes bytes\n");
+// `scaffoldPackageRoot` (`makeV2Box`) never writes a package-root
+// `.gitattributes` — that file is first created by `initBox` at migration
+// step 5, which is exactly the write this symlink must intercept.
+await fs.symlink(attrsFile, path.join(root, ".gitattributes"));
+execSync("git add -A && git commit -q -m symlinked-gitattributes-fixture", { cwd: root, stdio: "pipe" });
+
+const err = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") }).catch((e) => e);
+JSON.stringify({
+  isPreflightError: err instanceof OneRootPreflightError,
+  mentionsPath: err.message.includes(path.join(root, ".gitattributes")),
+  contentStillThere: await fs.access(path.join(root, "content")).then(() => true, () => false),
+})
+=> {"isPreflightError":true,"mentionsPath":true,"contentStillThere":true}
+```
+
+The external file was never touched:
+
+```ts continue
+await fs.readFile(attrsFile, "utf-8")
+=> external attributes bytes
+```
+
+```ts cleanup
+await fs.rm(externalAttrs, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+await cleanup(root);
+```
+
+## Round-8 hardening finding 1: `appendManifestEntry` refuses a symlinked manifest path
+
+Even past preflight, `appendManifestEntry` (`core/migration-run.ts`) is the
+engine-general backstop: a symlinked `_config/migrations.jsonl` at the box's
+v3 location — created here directly, bypassing the migration's own preflight
+to exercise this call site in isolation — refuses rather than appending the
+migration record through it.
+
+```ts continue
+const isolatedRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-manifest-symlink-"));
+const externalManifestDir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-external-manifest-"));
+const externalManifest = path.join(externalManifestDir, "migrations.jsonl");
+await fs.writeFile(externalManifest, "external manifest bytes\n");
+await fs.mkdir(path.join(isolatedRoot, "_config"), { recursive: true });
+await fs.symlink(externalManifest, path.join(isolatedRoot, "_config", "migrations.jsonl"));
+
+const manifestErr = await appendManifestEntry(isolatedRoot, { name: "one-root", "applied-at": "2026-01-01T00:00:00.000Z" }).catch((e) => e);
+JSON.stringify({ isSymlinkedManifestError: manifestErr instanceof SymlinkedManifestError })
+=> {"isSymlinkedManifestError":true}
+```
+
+The external file is untouched:
+
+```ts continue
+await fs.readFile(externalManifest, "utf-8")
+=> external manifest bytes
+```
+
+```ts cleanup
+await fs.rm(externalManifestDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+await fs.rm(isolatedRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+```
+
+## Round-8 hardening finding 2: an untracked persona-merge source aborts move planning
+
+`content/CLAUDE.md` untracked (never committed at all) can't be reached
+through the FULL migration entry point in this exact shape — an untracked
+file anywhere already fails `runOneRootMigration`'s own clean-tree preflight
+check first. So this exercises `planMoves` (`one-root-move-plan.ts`) — the
+function that actually classifies the merge source — directly, the same way
+`bbx migrate`'s bootstrap would if it ever called it against a tree that
+somehow got here (e.g. a hand-rolled partial migration). Before this fix,
+the old code merged an untracked source into the tracked root `CLAUDE.md`
+and `git add`ed the result regardless — staging its bytes into a git object
+even before a LATER step could fail and roll the whole migration back
+(`reset --hard` cannot un-commit an object already written to the store).
+
+```ts
+const root = await makeV2Box();
+execSync("git rm -q --cached content/CLAUDE.md", { cwd: root, stdio: "pipe" });
+execSync("git commit -q -m untrack-persona", { cwd: root, stdio: "pipe" });
+
+const planErr = await planMoves({ packageRoot: root, contentRoot: path.join(root, "content") }).catch((e) => e);
+JSON.stringify({
+  isPreflightError: planErr instanceof OneRootPreflightError,
+  mentionsPath: planErr.message.includes(path.join(root, "content", "CLAUDE.md")),
+  mentionsUntracked: planErr.message.includes("untracked"),
+})
+=> {"isPreflightError":true,"mentionsPath":true,"mentionsUntracked":true}
+```
+
+```ts cleanup
+await cleanup(root);
+```
+
+## Round-8 hardening finding 2: a gitignored persona-merge source aborts the full migration
+
+Same refusal for a `content/CLAUDE.md` that's genuinely ignored (not just
+uncommitted) — the message distinguishes the two so the operator knows which
+fix applies.
+
+```ts
+const root = await makeV2Box();
+await fs.writeFile(path.join(root, ".gitignore"), "content/CLAUDE.md\n");
+execSync("git rm -q --cached content/CLAUDE.md", { cwd: root, stdio: "pipe" });
+execSync("git add -A && git commit -q -m ignored-persona-fixture", { cwd: root, stdio: "pipe" });
+
+const err = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") }).catch((e) => e);
+JSON.stringify({
+  isPreflightError: err instanceof OneRootPreflightError,
+  mentionsIgnored: err.message.includes("gitignored"),
+})
+=> {"isPreflightError":true,"mentionsIgnored":true}
+```
+
+```ts cleanup
 await cleanup(root);
 ```

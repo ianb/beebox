@@ -276,8 +276,50 @@ export function rewriteOneRootViewRefs(text: string): OneRootRewriteResult {
 }
 
 const GLOB_METACHAR = /[*?[{]/;
-const DEPENDENCIES_ARRAY = /(export\s+const\s+dependencies\s*(?::[^=]+)?=\s*\[)([^\]]*)(])/;
+const DEPENDENCIES_HEAD = /export\s+const\s+dependencies\s*(?::[^=]+)?=\s*\[/;
 const STRING_LITERAL = /(["'])((?:(?!\1)[^\\]|\\.)*)\1/g;
+
+/**
+ * Round-8 hardening finding 5: the old extraction regex captured the array
+ * body as `[^\]]*` — everything up to the FIRST `]` — which closes early on a
+ * glob CHARACTER CLASS inside a quoted entry (`"store/recipes/[AB]*.recipe.card"`
+ * has its own `]`), silently truncating the body the rewriter/gate then read.
+ * This walks `text` from the `dependencies = [` head one character at a time,
+ * tracking whether it's inside a quoted string (honoring `\`-escapes), and
+ * only treats an UNQUOTED `]` as the array's real close.
+ *
+ * Returns `null` when there's no `dependencies` declaration at all (nothing
+ * to do, not an error). Throws naming `viewRelPath` when a declaration IS
+ * found but no close can be located before EOF — fail closed rather than
+ * guess at the array's extent the way the old regex did.
+ */
+function findDependenciesArray(text: string, viewRelPath: string): { bodyStart: number; bodyEnd: number } | null {
+  const head = DEPENDENCIES_HEAD.exec(text);
+  if (head === null) return null;
+  const bodyStart = head.index + head[0].length;
+  let quote: string | null = null;
+  for (let i = bodyStart; i < text.length; i++) {
+    const ch = text[i];
+    if (quote !== null) {
+      if (ch === "\\") {
+        i++;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "]") return { bodyStart, bodyEnd: i };
+  }
+  throw new OneRootPreflightError(
+    `${viewRelPath}: "dependencies" array declaration has no closing "]" this migration can find — refusing ` +
+      'to guess at its extent (a glob character class\'s own "]" can look like the array\'s closing bracket to ' +
+      "a naive scan). Reconcile by hand, then re-run.",
+  );
+}
 
 /**
  * Every literal string entry in a view source's exported `dependencies`
@@ -285,10 +327,10 @@ const STRING_LITERAL = /(["'])((?:(?!\1)[^\\]|\\.)*)\1/g;
  * dependency-prefix check (`one-root-link-gate.ts`) so the rewriter and the
  * gate that double-checks its output read the exact same grammar.
  */
-export function extractDependencyGlobs(text: string): string[] {
-  const arrayMatch = DEPENDENCIES_ARRAY.exec(text);
-  if (arrayMatch === null) return [];
-  const body = arrayMatch[2] ?? "";
+export function extractDependencyGlobs(text: string, viewRelPath: string): string[] {
+  const found = findDependenciesArray(text, viewRelPath);
+  if (found === null) return [];
+  const body = text.slice(found.bodyStart, found.bodyEnd);
   const out: string[] = [];
   let m: RegExpExecArray | null;
   STRING_LITERAL.lastIndex = 0;
@@ -311,6 +353,62 @@ export function staticGlobPrefix(pattern: string): { prefix: string; suffix: str
   return { prefix, suffix: pattern.slice(prefix.length) };
 }
 
+/** The v3 top-level "area" a moved path lands under — its first path
+ * segment. Used to detect a v2 static PREFIX whose subtree crosses more than
+ * one v3 area (round-8 hardening finding 6, below). */
+function areaOf(newPath: string): string {
+  const slash = newPath.indexOf("/");
+  return slash === -1 ? newPath : newPath.slice(0, slash);
+}
+
+/**
+ * Round-8 hardening finding 6: every v3 area a v2 static directory PREFIX's
+ * subtree can land in — probed by feeding {@link mapV2Path} itself synthetic
+ * children, one per literal case the mapping table's own switches recognize
+ * at the places a v2 prefix's subtree splits across more than one v3 area:
+ * `box/*` (`_content`/`_bookkeeping`/`_publish`), `store/*`
+ * (`_content`/`_bookkeeping`), and `config/connectors/*` (`_config`, except
+ * a `*.state.json` FILE, which lands in `_bookkeeping/connectors`). A prefix
+ * this finds more than one area for is a split IN THE MAPPING TABLE ITSELF,
+ * not a guess — `store/**` cannot assume every match it selects lands in one
+ * place post-migration, and neither can `config/connectors/*.state.json`'s
+ * own static directory prefix.
+ */
+function areasUnderPrefix(prefix: string): string[] {
+  const normalized = prefix.replace(/\/+$/, "");
+  if (normalized === "") return ["_content", "_bookkeeping", "_publish", "_config", "src", ".claude"];
+  const connectorsPrefix = normalized === "config" ? "config/connectors" : normalized;
+  const probes: readonly string[] =
+    normalized === "box"
+      ? ["box/inbox/x", "box/jobs/x", "box/output/x", "box/questions/x", "box/resources/x", "box/publish/x"]
+      : normalized === "store"
+        ? [
+            "store/archive/x",
+            "store/trash/x",
+            "store/usage/x",
+            "store/recipes/x",
+            "store/todos/x",
+            "store/drive/x",
+            "store/calendar/x",
+            "store/chat/x",
+            "store/reviews/x",
+            "store/other/x",
+          ]
+        : normalized === "config" || normalized === "config/connectors"
+          ? [`${connectorsPrefix}/x.json`, `${connectorsPrefix}/x.state.json`]
+          : [];
+  if (probes.length === 0) {
+    const direct = mapV2Path(normalized);
+    return direct.kind === "move" ? [areaOf(direct.newPath)] : [];
+  }
+  const areas = new Set<string>();
+  for (const probe of probes) {
+    const mapped = mapV2Path(probe);
+    if (mapped.kind === "move") areas.add(areaOf(mapped.newPath));
+  }
+  return [...areas];
+}
+
 /**
  * Round-7 hardening finding 4: a view's exported `dependencies` array
  * (`["store/recipes/**\/*.card"]`) carries plain glob strings that
@@ -330,30 +428,40 @@ export function staticGlobPrefix(pattern: string): { prefix: string; suffix: str
  * degenerate empty-prefix case (no static directory context at all) — throws
  * naming `viewRelPath` AND the offending glob, rather than leave a migrated
  * box with a dependency nobody can be sure still matches the right thing.
+ * Same stance for a prefix whose subtree crosses more than one v3 area
+ * (finding 6): the migration can't confidently rewrite a glob it can't be
+ * sure lands in one place, so it aborts naming both destination areas rather
+ * than picking one and silently losing the other's matches.
  */
 export function rewriteOneRootViewDependencies(
   text: string,
   viewRelPath: string,
 ): { text: string; rewritten: number } {
   let rewritten = 0;
-  const newText = text.replace(DEPENDENCIES_ARRAY, (...outerArgs: string[]) => {
-    const [, head, body] = outerArgs;
-    const tail = outerArgs[3];
-    const newBody = (body ?? "").replace(STRING_LITERAL, (...innerArgs: string[]) => {
-      const [, quote, value] = innerArgs;
-      const { prefix, suffix } = staticGlobPrefix(value ?? "");
-      const mapped = prefix === "" ? null : mapV2Path(prefix);
-      if (mapped === null || mapped.kind !== "move") {
-        throw new OneRootPreflightError(
-          `${viewRelPath}: dependency glob "${value}" has no confidently-mappable static directory prefix — ` +
-            "refusing to migrate rather than leave a dependency that may match the wrong thing (or nothing) " +
-            "post-migration. Reconcile by hand, then re-run.",
-        );
-      }
-      rewritten++;
-      return `${quote}${mapped.newPath}${suffix}${quote}`;
-    });
-    return `${head}${newBody}${tail}`;
+  const found = findDependenciesArray(text, viewRelPath);
+  if (found === null) return { text, rewritten };
+  const body = text.slice(found.bodyStart, found.bodyEnd);
+  const newBody = body.replace(STRING_LITERAL, (...innerArgs: string[]) => {
+    const [, quote, value] = innerArgs;
+    const { prefix, suffix } = staticGlobPrefix(value ?? "");
+    const areas = prefix === "" ? [] : areasUnderPrefix(prefix);
+    if (areas.length > 1) {
+      throw new OneRootPreflightError(
+        `${viewRelPath}: dependency glob "${value}" spans more than one v3 area under "${prefix}" ` +
+          `(${areas.join(", ")}) — the migration can't assume every match it selects lands in the same place. ` +
+          "Split the glob into one pattern per destination area, then re-run.",
+      );
+    }
+    const mapped = prefix === "" ? null : mapV2Path(prefix);
+    if (mapped === null || mapped.kind !== "move") {
+      throw new OneRootPreflightError(
+        `${viewRelPath}: dependency glob "${value}" has no confidently-mappable static directory prefix — ` +
+          "refusing to migrate rather than leave a dependency that may match the wrong thing (or nothing) " +
+          "post-migration. Reconcile by hand, then re-run.",
+      );
+    }
+    rewritten++;
+    return `${quote}${mapped.newPath}${suffix}${quote}`;
   });
-  return { text: newText, rewritten };
+  return { text: text.slice(0, found.bodyStart) + newBody + text.slice(found.bodyEnd), rewritten };
 }

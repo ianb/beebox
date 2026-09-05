@@ -100,7 +100,7 @@ async function collectViewDependencyWarnings(viewPaths: string[], boxRoot: strin
     if (lst === null || lst.isSymbolicLink()) continue; // same skip as collectViewRefWarnings
     const text = await fs.readFile(viewPath, "utf-8");
     const relPath = path.relative(boxRoot, viewPath);
-    for (const glob of extractDependencyGlobs(text)) {
+    for (const glob of extractDependencyGlobs(text, relPath)) {
       const { prefix } = staticGlobPrefix(glob);
       const firstSegment = prefix.split("/", 1)[0] ?? "";
       if (!isInBoxNamespace(firstSegment)) {

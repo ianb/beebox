@@ -159,3 +159,81 @@ JSON.stringify({
 })
 => {"isPreflightError":true,"mentionsFile":true,"mentionsGlob":true}
 ```
+
+## Round-8 hardening finding 5: a glob character class inside the array doesn't truncate parsing
+
+The old extractor captured the array body as "everything up to the first
+`]`" — a glob CHARACTER CLASS inside a quoted entry (`[AB]`) has its own `]`,
+so the old regex stopped there and silently missed the rest of the pattern
+(and any later array entries). The rewriter now walks the source respecting
+string-literal boundaries, so the character class's own `]` doesn't end the
+array early:
+
+```ts
+const classSource = 'export const dependencies = ["store/recipes/[AB]*.recipe.card"];\n';
+const classResult = rewriteOneRootViewDependencies(classSource, "src/views/Classy.tsx");
+classResult.text
+=> export const dependencies = ["_content/recipes/[AB]*.recipe.card"];
+
+classResult.rewritten
+=> 1
+```
+
+A `dependencies` declaration whose closing `]` this migration can't find at
+all (malformed on purpose here) aborts naming the file, rather than guess at
+where the array ends:
+
+```ts continue
+const unclosedSource = 'export const dependencies = ["store/recipes/*.card";\n';
+const unclosedErr = (() => {
+  try {
+    rewriteOneRootViewDependencies(unclosedSource, "src/views/Unclosed.tsx");
+    return null;
+  } catch (e) {
+    return e;
+  }
+})();
+JSON.stringify({
+  isPreflightError: unclosedErr instanceof OneRootPreflightError,
+  mentionsFile: unclosedErr.message.includes("src/views/Unclosed.tsx"),
+})
+=> {"isPreflightError":true,"mentionsFile":true}
+```
+
+## Round-8 hardening finding 6: a dependency glob spanning more than one v3 area aborts, naming both
+
+`store/**` is not one v3 destination — `mapStoreArea`'s own switch sends
+`store/archive`/`trash`/`usage` into `_bookkeeping` and everything else
+(`recipes`, `todos`, `drive`, …) into `_content`. Rewriting `store/**` through
+just ONE of those would silently lose every match that belonged in the
+other. The migration now derives the split from the mapping table itself and
+aborts, naming both destination areas:
+
+```ts continue
+const spanningSource = 'export const dependencies = ["store/**/*.card"];\n';
+const spanningErr = (() => {
+  try {
+    rewriteOneRootViewDependencies(spanningSource, "src/views/Spanning.tsx");
+    return null;
+  } catch (e) {
+    return e;
+  }
+})();
+JSON.stringify({
+  isPreflightError: spanningErr instanceof OneRootPreflightError,
+  mentionsFile: spanningErr.message.includes("src/views/Spanning.tsx"),
+  mentionsContent: spanningErr.message.includes("_content"),
+  mentionsBookkeeping: spanningErr.message.includes("_bookkeeping"),
+})
+=> {"isPreflightError":true,"mentionsFile":true,"mentionsContent":true,"mentionsBookkeeping":true}
+```
+
+A glob whose static prefix does NOT cross a split still rewrites normally —
+`store/recipes` is entirely `_content`, no ambiguity:
+
+```ts continue
+const nonSpanningSource = 'export const dependencies = ["store/recipes/**/*.card"];\n';
+const nonSpanningResult = rewriteOneRootViewDependencies(nonSpanningSource, "src/views/NonSpanning.tsx");
+JSON.stringify({ text: nonSpanningResult.text, rewritten: nonSpanningResult.rewritten })
+=> {"text":"export const dependencies = [\"_content/recipes/**/*.card\"];\n","rewritten":1}
+```

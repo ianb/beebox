@@ -6,6 +6,8 @@ this doctest pins that contract, because the flag was once advertised by the
 CLI while the command silently ignored it and trashed the files anyway.
 
 ```ts setup
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { executeTrash, moveCardsToTrash } from "../../../src/core/commands/trash.js";
 import { rollbackTrashReceipt } from "../../../src/core/commands/trash-recovery.js";
 import { createCollectorContext } from "../../../src/core/commands/index.js";
@@ -63,6 +65,36 @@ _bookkeeping/trash/Engine.doc.card
 
 await box.list("_content/box/notes")
 =>
+```
+
+## Round-8 hardening finding 4: a symlinked trash directory refuses, nothing moves
+
+`_bookkeeping/trash -> ../src` — a symlink pointing at the box's own source
+tree — would otherwise let an ordinary trash rename land a card in `src/`
+instead of the trash. `getBoxDir`/`fs.rename` alone never check this; the
+destination is now resolved through the box-namespace fence's on-disk check
+before any rename.
+
+```ts continue
+const escapeBox = await makeTmpBox();
+await escapeBox.write("_content/box/notes/Escape.doc.card", "---\ntype: doc\ntitle: Escape\n---\nBody.\n");
+await fs.rm(path.join(escapeBox.root, "_bookkeeping", "trash"), { recursive: true, force: true });
+await fs.symlink("../src", path.join(escapeBox.root, "_bookkeeping", "trash"));
+
+const escapeResult = await rm(escapeBox, { paths: ["_content/box/notes/Escape.doc.card"] });
+JSON.stringify({ success: escapeResult.success, error: escapeResult.error })
+=> {"success":false,"error":"Trash destination escapes the box's data namespace: _bookkeeping/trash/Escape.doc.card"}
+```
+
+The card never moved, and nothing landed in `src/`:
+
+```ts continue
+await escapeBox.list("_content/box/notes")
+=> _content/box/notes/Escape.doc.card
+
+const srcFiles = await fs.readdir(path.join(escapeBox.root, "src"));
+srcFiles.includes("Escape.doc.card")
+=> false
 ```
 
 ## Inbound refs are resolved from each referring document

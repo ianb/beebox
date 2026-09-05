@@ -155,7 +155,7 @@ export async function planMoves(params: {
   const unmapped: string[] = [];
   const unsupported: string[] = [];
 
-  function planOne(contentRelPath: string): void {
+  async function planOne(contentRelPath: string): Promise<void> {
     const mapped = mapV2Path(contentRelPath);
     switch (mapped.kind) {
       case "move":
@@ -163,6 +163,24 @@ export async function planMoves(params: {
         break;
       case "merge-claude-md":
         claudeMdMerge = true;
+        // Round-8 hardening finding 2: an untracked (or gitignored)
+        // `content/CLAUDE.md` would otherwise get merged verbatim into the
+        // TRACKED root `CLAUDE.md` and `git add`ed (`mergeClaudeMd`) — its
+        // bytes land in a git object even if a LATER step (e.g. the
+        // subsequent `git rm` of the now-empty source) fails and the whole
+        // migration rolls back, since `reset --hard` cannot un-commit an
+        // object already written to the store. Refuse here, before
+        // anything moves, naming the file so the operator can track it or
+        // remove it rather than have the migration decide silently.
+        if (!tracked.has(contentRelPath)) {
+          const abs = path.join(contentRoot, contentRelPath);
+          const ignored = await isGitIgnored(params.packageRoot, abs);
+          throw new OneRootPreflightError(
+            `${abs} exists but is ${ignored ? "gitignored" : "untracked"} — refusing to merge it into the ` +
+              "tracked root CLAUDE.md (this would stage its bytes into a git object even if a later step " +
+              "fails and the whole migration rolls back). Track it (git add) or remove it, then re-run.",
+          );
+        }
         break;
       case "discard":
         break;
@@ -184,7 +202,7 @@ export async function planMoves(params: {
       // silently falls through every branch below and is neither moved nor
       // walked into.
       if (entry.isSymbolicLink()) {
-        planOne(contentRelPath);
+        await planOne(contentRelPath);
         continue;
       }
       if (entry.isDirectory()) {
@@ -192,7 +210,7 @@ export async function planMoves(params: {
         continue;
       }
       if (entry.isFile()) {
-        planOne(contentRelPath);
+        await planOne(contentRelPath);
         continue;
       }
       // Socket, FIFO, or block/character device — never produced by

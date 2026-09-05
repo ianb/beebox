@@ -18,8 +18,10 @@
  */
 
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
 import { OneRootPreflightError } from "./one-root-errors.js";
+import { MANIFEST_PATH } from "../migrations.js";
 
 export async function assertWriteTargetNotSymlink(absPath: string): Promise<void> {
   const lst = await fs.lstat(absPath).catch((e: unknown) => {
@@ -33,4 +35,33 @@ export async function assertWriteTargetNotSymlink(absPath: string): Promise<void
         "with a real file, or move its contents in), then re-run.",
     );
   }
+}
+
+/** v2's manifest lived at `content/config/migrations.jsonl` — no underscore
+ * fence, unlike every v3-relative path (`MANIFEST_PATH` itself). */
+const V2_MANIFEST_REL = "config/migrations.jsonl";
+
+/**
+ * Round-8 hardening finding 1: every one of THESE specific paths gets written
+ * through by a migration callee before the CLAUDE.md-merge/marker-bump call
+ * sites above ever run — `initBox`'s `.gitignore`/`.gitattributes` regen
+ * (step 5, called before `mergeIgnoreRules`'s own guard) and
+ * `appendManifestEntry`'s (`core/migration-run.ts`) bare `fs.appendFile` into
+ * whatever `_config/migrations.jsonl` resolves to. `assertNoSymlinkedAncestors`
+ * (`one-root-run.ts`) only lstats DIRECTORY ancestors; a symlinked LEAF at any
+ * of these exact paths sails through it untouched. Called from preflight,
+ * before anything moves — the manifest is checked at BOTH its pre-migration
+ * location (`content/config/migrations.jsonl`) and its post-move v3 path
+ * (`packageRoot/_config/migrations.jsonl`), since the file itself relocates
+ * mid-migration and `appendManifestEntry` only ever touches the latter.
+ */
+export async function assertNoSymlinkedCalleeWriteTargets(params: {
+  packageRoot: string;
+  contentRoot: string;
+}): Promise<void> {
+  await assertWriteTargetNotSymlink(path.join(params.packageRoot, ".gitignore"));
+  await assertWriteTargetNotSymlink(path.join(params.packageRoot, ".gitattributes"));
+  await assertWriteTargetNotSymlink(path.join(params.packageRoot, "CLAUDE.md"));
+  await assertWriteTargetNotSymlink(path.join(params.contentRoot, V2_MANIFEST_REL));
+  await assertWriteTargetNotSymlink(path.join(params.packageRoot, MANIFEST_PATH));
 }
