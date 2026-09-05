@@ -28,6 +28,23 @@ test("legacy box dir: contentDir and slug are the entry itself", async () => {
   }
 });
 
+test("v3 one-root box: the entry is the box and carries its own name", async () => {
+  const dir = await makeFixtureDir();
+  try {
+    const boxRoot = path.join(dir, "test1");
+    await fs.mkdir(path.join(boxRoot, ".beebox"), { recursive: true });
+    await fs.writeFile(path.join(boxRoot, ".beebox", "box.json"), JSON.stringify({ shapeVersion: 3 }));
+    const resolved = await resolveBoxEntry(boxRoot);
+    assert.equal(resolved.contentDir, boxRoot);
+    // Regression: the v2-era parent-basename rule named every migrated box
+    // "boxes" (the shared parent dir) and same-slug entries overwrote each
+    // other in the generated hub config.
+    assert.equal(resolved.slug, "test1");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("v2 content dir passed directly: slug comes from the package root basename", async () => {
   const dir = await makeFixtureDir();
   try {

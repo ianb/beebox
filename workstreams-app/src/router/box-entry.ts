@@ -92,9 +92,16 @@ export async function resolveBoxEntry(entry: string): Promise<ResolvedBoxEntry> 
   const directMarker = await findMarkerPath(resolved);
   if (directMarker) {
     const shapeVersion = await readShapeVersion(directMarker);
-    if (shapeVersion >= 2) {
+    if (shapeVersion === 2) {
+      // A v2 `content/` dir passed directly: slug comes from the PACKAGE
+      // root (entry's parent) — `content/`'s own basename is always the
+      // literal string "content".
       return { contentDir: resolved, slug: path.basename(path.dirname(resolved)) };
     }
+    // v3 (one-root layout) or legacy: the entry IS the box and carries its
+    // name. Taking the parent here turned every migrated box into a box
+    // named "boxes" (the shared parent dir), and same-slug entries then
+    // overwrote each other in the generated hub config.
     return { contentDir: resolved, slug: path.basename(resolved) };
   }
   if (await hasLegacyState(resolved)) return { contentDir: resolved, slug: path.basename(resolved) };
