@@ -13,7 +13,17 @@
  */
 
 import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
+const realHome = process.env["HOME"] ?? homedir();
 process.env["HOME"] = mkdtempSync(join(tmpdir(), "bbx-test-home-"));
+
+// One thing is NOT isolated: uv's package cache. It defaults to
+// `$HOME/.cache/uv`, so under the throwaway HOME every `uvx` a test runs
+// started from an empty cache — the Docling integration probe rebuilt a
+// multi-hundred-MB torch environment on every suite run (and macOS Gatekeeper
+// popped "Verifying libtorch…" for each freshly downloaded dylib), then timed
+// out and skipped anyway. The cache is content-addressed and safe to share;
+// sharing it is what makes a warmed environment warm inside the suite.
+process.env["UV_CACHE_DIR"] ??= join(realHome, ".cache", "uv");
