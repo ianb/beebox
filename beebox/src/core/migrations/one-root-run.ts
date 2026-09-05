@@ -182,7 +182,20 @@ async function runInitTail(packageRoot: string): Promise<void> {
 
 /** Ref-rewrite every migrated card/doc, using the mv plan to recover each
  * file's OLD content-relative path. Returns any unresolved ref tokens seen
- * (informational — the hard link gate is the real backstop).
+ * (informational — the hard link gate is the real backstop) plus any
+ * migrated card/doc PATH that was left untouched because it's a symlink.
+ *
+ * Finding 1 (round 4 hardening): `fs.readFile`/`writeFile` FOLLOW a symlink —
+ * a tracked `.card`/`.md` entry that is itself a symlink (e.g.
+ * `content/docs/alias.md -> ../../../shared.md`) would otherwise have its
+ * REFERENT's bytes read and rewritten, which for a target resolving outside
+ * the box is data corruption rollback cannot undo (the box's own git history
+ * has no record of that external file). `lstat` each candidate first: a
+ * symlinked card/doc is NEVER opened for rewrite — its ref content belongs
+ * to its target. A target that also lives in the box is already rewritten
+ * when ITS OWN move entry is inventoried; a target resolving OUTSIDE the box
+ * is left byte-untouched (its refs may go stale — acceptable, and reported
+ * back to the caller so the migration report can note it).
  *
  * Finding 6 (round 3 hardening): before overwriting an UNTRACKED move's
  * rewritten text, record its pre-rewrite bytes into the matching journal
@@ -194,12 +207,18 @@ async function rewriteRefs(params: {
   packageRoot: string;
   moves: PlannedMove[];
   journal: RenamedEntry[];
-}): Promise<string[]> {
+}): Promise<{ unresolved: string[]; skippedSymlinks: string[] }> {
   const unresolved: string[] = [];
+  const skippedSymlinks: string[] = [];
   const journalByNewAbs = new Map(params.journal.map((entry) => [entry.newAbs, entry]));
   for (const move of params.moves) {
     if (!move.newRelPath.endsWith(".card") && !move.newRelPath.endsWith(".md")) continue;
     const abs = path.join(params.packageRoot, move.newRelPath);
+    const lst = await fs.lstat(abs);
+    if (lst.isSymbolicLink()) {
+      skippedSymlinks.push(move.newRelPath);
+      continue;
+    }
     const text = await fs.readFile(abs, "utf-8");
     const result = rewriteOneRootRefs({
       text,
@@ -215,7 +234,7 @@ async function rewriteRefs(params: {
     }
     for (const u of result.unresolved) unresolved.push(`${move.newRelPath}: ${u}`);
   }
-  return unresolved;
+  return { unresolved, skippedSymlinks };
 }
 
 /** A view never moves (same relative location in v2 and v3), but its
@@ -237,12 +256,16 @@ export interface OneRootMigrationResult {
   commitSha: string;
   filesMoved: number;
   unresolvedRefs: string[];
+  /** Migrated card/doc paths (v3-relative) left byte-untouched because
+   * they're symlinks — see {@link rewriteRefs}'s Finding 1 doc comment. */
+  skippedSymlinkRefs: string[];
 }
 
 interface BoxMoveResult {
   commitSha: string;
   filesMoved: number;
   unresolvedRefs: string[];
+  skippedSymlinkRefs: string[];
   cwdPairs: CwdRemap[];
 }
 
@@ -266,7 +289,11 @@ async function moveAndCommitBox(params: {
   const { packageRoot, contentRoot, preSha, moves, claudeMdMerge } = params;
   let beeboxMoved = false;
   let originalMarkerBytes: string | null = null;
-  let originalHistoryBytes: string | null = null;
+  // Finding 3 (round 4 hardening): a mutable box `rewriteChatBindings` writes
+  // into DIRECTLY, the moment it reads the pre-write bytes — not a value
+  // this function only learns from a `return` that a write failure would
+  // skip. Same shape as the `untrackedRenames` journal below.
+  const originalHistoryBytesBox: { value: string | null } = { value: null };
   // Caller-owned journal (finding 1): `executeMoves` appends to this array
   // itself, immediately after each untracked rename succeeds, rather than
   // building its own local array and returning it only on full success. A
@@ -290,8 +317,11 @@ async function moveAndCommitBox(params: {
     await moveBeebox({ packageRoot, contentRoot });
     beeboxMoved = true;
 
-    const bindingResult = await rewriteChatBindings({ packageRoot, contentRoot });
-    originalHistoryBytes = bindingResult.originalRaw;
+    const bindingResult = await rewriteChatBindings({
+      packageRoot,
+      contentRoot,
+      originalBytesOut: originalHistoryBytesBox,
+    });
     cwdPairs = bindingResult.cwdPairs;
 
     originalMarkerBytes = await fs.readFile(path.join(packageRoot, ".beebox", "box.json"), "utf-8");
@@ -307,10 +337,19 @@ async function moveAndCommitBox(params: {
     // migration never pays that cost.
     await initBox(packageRoot);
 
-    const unresolvedCardRefs = await rewriteRefs({ packageRoot, moves, journal: untrackedRenames });
+    const { unresolved: unresolvedCardRefs, skippedSymlinks: skippedSymlinkRefs } = await rewriteRefs({
+      packageRoot,
+      moves,
+      journal: untrackedRenames,
+    });
     const unresolvedViewRefs = await rewriteViewRefs(packageRoot);
     const unresolvedRefs = [...unresolvedCardRefs, ...unresolvedViewRefs];
 
+    // Finding 1 (round 4 hardening): a symlinked card/doc the ref rewriter
+    // deliberately skipped is excluded from the gate's own scan too — but at
+    // the SOURCE (`markdown-lint-rules.ts`'s `noBrokenInternalLinks` skips a
+    // symlinked leaf outright; a `.card` file's ref problems are
+    // warning-only regardless), not by threading a skip list through here.
     const gate = await runOneRootLinkGate(packageRoot);
     if (!gate.ok) throw new OneRootLinkGateError(gate.report);
 
@@ -349,7 +388,7 @@ async function moveAndCommitBox(params: {
     await stageAll(packageRoot);
     const commitSha = await commit(packageRoot, { message: "migrate: one-root" });
 
-    return { commitSha, filesMoved: moves.length, unresolvedRefs, cwdPairs };
+    return { commitSha, filesMoved: moves.length, unresolvedRefs, skippedSymlinkRefs, cwdPairs };
   } catch (e) {
     // See `one-root-rollback.ts` for the restore-or-preserve logic (findings
     // 1 and 6, round 3 hardening) — split out purely to keep this file under
@@ -360,7 +399,7 @@ async function moveAndCommitBox(params: {
       preSha,
       beeboxMoved,
       originalMarkerBytes,
-      originalHistoryBytes,
+      originalHistoryBytes: originalHistoryBytesBox.value,
       untrackedRenames,
       error: e,
     });
@@ -384,7 +423,7 @@ export async function runOneRootMigration(params: {
   const preSha = await getHead(packageRoot);
   const { moves, claudeMdMerge } = await planMoves({ packageRoot, contentRoot });
 
-  const { commitSha, filesMoved, unresolvedRefs, cwdPairs } = await moveAndCommitBox({
+  const { commitSha, filesMoved, unresolvedRefs, skippedSymlinkRefs, cwdPairs } = await moveAndCommitBox({
     packageRoot,
     contentRoot,
     preSha,
@@ -404,5 +443,5 @@ export async function runOneRootMigration(params: {
   });
   await migrateClaudeProjectDirs(cwdPairs);
 
-  return { commitSha, filesMoved, unresolvedRefs };
+  return { commitSha, filesMoved, unresolvedRefs, skippedSymlinkRefs };
 }

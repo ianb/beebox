@@ -215,6 +215,45 @@ JSON.stringify(extractReferenceDefinitions(nestedQuoted), null, 2)
 ]
 ```
 
+## A reference definition inside a list item is recognized (finding 6, round 4 hardening)
+
+CommonMark allows a link reference definition to be the first block inside a
+list item — `- [id]: /path` — and this codebase's Markdoc parser already
+resolves it into a real link. Before this fix, only the blockquote prefix was
+stripped, so a list-contained definition was invisible to extraction (and to
+the migration's rewriter and the hard link gate, which share this matcher).
+
+```ts
+const bulleted = "- [id]: /people/X.person.card\n\nSee [x][id].\n";
+JSON.stringify(extractReferenceDefinitions(bulleted), null, 2)
+=>
+[
+  {
+    "path": "body:1:ref-def",
+    "ref": "/people/X.person.card"
+  }
+]
+```
+
+`*` and `+` bullets, and an ordered marker (`1.` / `2)`), all work:
+
+```ts
+JSON.stringify({
+  star: extractReferenceDefinitions("* [id]: /a.card").map((r) => r.ref),
+  plus: extractReferenceDefinitions("+ [id]: /a.card").map((r) => r.ref),
+  ordered: extractReferenceDefinitions("1. [id]: /a.card").map((r) => r.ref),
+  orderedParen: extractReferenceDefinitions("2) [id]: /a.card").map((r) => r.ref),
+})
+=> {"star":["/a.card"],"plus":["/a.card"],"ordered":["/a.card"],"orderedParen":["/a.card"]}
+```
+
+A quoted list item (blockquote containing a list) strips both prefixes:
+
+```ts
+JSON.stringify(extractReferenceDefinitions("> - [id]: /people/X.person.card").map((r) => r.ref))
+=> ["/people/X.person.card"]
+```
+
 ## Malformed bodies are swallowed
 
 A body that throws on parse is treated as "no refs" rather than crashing the

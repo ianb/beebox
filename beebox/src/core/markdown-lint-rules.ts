@@ -5,7 +5,9 @@
 import { fileExists } from "../lib/file-exists.js";
 import { invariant } from "../lib/invariant.js";
 import { isExternalRef, parseRef, resolveRefPath } from "../shared/ref-path.js";
+import { errnoCode } from "../lib/error-guards.js";
 import { matchReferenceDefinitionAt } from "./body-refs.js";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
 
@@ -70,6 +72,27 @@ function readBoxRoot(config: Parameters<Rule["function"]>[0]["config"]): string 
   return cfg.boxRoot;
 }
 
+/**
+ * Whether `filePath` (as given to markdownlint — an absolute path) is itself
+ * a symlink. Finding 1 (round 4 hardening, `one-root-run.ts`): a symlinked
+ * `.md`/`.card` file's content belongs to its TARGET, not the link — the
+ * one-root migration never opens one for rewrite, so a v2-form ref it still
+ * carries is an accepted, reported staleness, not a genuine broken link. The
+ * same file can land STAGED as part of that migration's own commit, where
+ * `bbx validate --pre-commit`'s staged pass treats a BBX002 hit as a
+ * commit-blocking error — so the rule itself must recognize a symlinked leaf
+ * and skip it, the one place every caller (staged, box-wide, the migration's
+ * own hard link gate) shares.
+ */
+async function isSymlinkPath(filePath: string): Promise<boolean> {
+  try {
+    return (await fs.lstat(filePath)).isSymbolicLink();
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") return false; // fail open — a stat error here is not this rule's problem to report
+    return false;
+  }
+}
+
 export const noBrokenInternalLinks: Rule = {
   names: ["BBX002", "no-broken-internal-links"],
   description: "Internal links (relative, or box-root absolute) must point to an existing file or directory inside the box",
@@ -84,6 +107,7 @@ export const noBrokenInternalLinks: Rule = {
   // so this is a genuine type/runtime mismatch, not a wiring bug.
   // eslint-disable-next-line @typescript-eslint/no-misused-promises -- markdownlint's RuleFunction type is void-only but the runtime awaits async rule functions when `asynchronous: true` (see lib/markdownlint.mjs); a sync wrapper would silently drop the async work.
   function: async (params: Parameters<Rule["function"]>[0], onError: RuleOnError): Promise<void> => {
+    if (await isSymlinkPath(params.name)) return;
     const boxRoot = readBoxRoot(params.config);
     const fileDir = path.dirname(params.name);
 

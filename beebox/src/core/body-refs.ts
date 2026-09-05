@@ -141,6 +141,26 @@ function stripBlockquotePrefixes(line: string): { rest: string; stripped: number
   return { rest, stripped };
 }
 
+/** Strip one leading list-item marker (finding 6, round 4 hardening):
+ * CommonMark allows a reference-style link definition to be the first block
+ * inside a list item — `- [id]: /path`, `* [id]: /path`, `+ [id]: /path`, or
+ * an ordered marker (`1. [id]: /path`, `2) [id]: /path`) — and this
+ * codebase's Markdoc parser already resolves those into real links, exactly
+ * like the blockquote form {@link stripBlockquotePrefixes} already handles.
+ * Before this, only the blockquote prefix was stripped, so
+ * `- [id]: /people/X.person.card` was invisible to extraction, the
+ * migration's rewriter, and the hard link gate alike — all three share this
+ * one matcher. Strips up to 3 leading spaces, ONE marker (bullet or
+ * ordered), and the whitespace run separating it from the content — unlike
+ * the blockquote loop above, a single line never stacks more than one list
+ * marker (list nesting happens across INDENTATION, not repeated markers on
+ * one line), so this strips at most once. */
+function stripListMarker(line: string): { rest: string; stripped: number } {
+  const marker = /^[\t ]{0,3}(?:[*+-]|\d{1,9}[).])[\t ]+/.exec(line);
+  if (marker === null) return { rest: line, stripped: 0 };
+  return { rest: line.slice(marker[0].length), stripped: marker[0].length };
+}
+
 /**
  * A markdown reference-style link DEFINITION: `[id]: /path "title"`, or
  * `[id]: </path with spaces>` (angle-bracket delimited destination), or with
@@ -183,8 +203,14 @@ export function matchReferenceDefinitionAt(
   // values below add the stripped-prefix LENGTH back in, so they still
   // locate the destination within the RAW (unstripped) line, which is what
   // a rewriter's splice must index into.
+  //
+  // Finding 6 (round 4 hardening): also strip one leading list-item marker
+  // (AFTER the blockquote strip, so `> - [id]: /path` — a quoted list item —
+  // is recognized too) — see {@link stripListMarker}'s doc comment.
   const noCR = stripTrailingCR(rawLabelLine);
-  const { rest: labelCore, stripped } = stripBlockquotePrefixes(noCR);
+  const { rest: afterBlockquote, stripped: blockquoteStripped } = stripBlockquotePrefixes(noCR);
+  const { rest: labelCore, stripped: listStripped } = stripListMarker(afterBlockquote);
+  const stripped = blockquoteStripped + listStripped;
   const label = /^[\t ]{0,3}\[[^\]]+]:(.*)$/.exec(labelCore);
   if (label === null) return null;
   const afterColon = label[1] ?? "";

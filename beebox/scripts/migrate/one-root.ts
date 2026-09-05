@@ -58,6 +58,16 @@ async function main(): Promise<number> {
         "\n",
     );
   }
+  if (result.skippedSymlinkRefs.length > 0) {
+    process.stdout.write(
+      `[one-root] ${String(result.skippedSymlinkRefs.length)} migrated card/doc path(s) are symlinks and were ` +
+        "left byte-untouched (their ref content belongs to their target, not the link — an in-box target was " +
+        "already rewritten when its own entry was inventoried; a target outside the box may now carry stale " +
+        "refs):\n" +
+        result.skippedSymlinkRefs.map((r) => `  ${r}`).join("\n") +
+        "\n",
+    );
+  }
   return 0;
 }
 

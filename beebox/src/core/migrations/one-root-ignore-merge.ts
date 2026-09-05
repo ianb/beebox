@@ -36,7 +36,7 @@ import { promisify } from "node:util";
 import { errnoCode } from "../../lib/error-guards.js";
 import { mapV2Path } from "./one-root-mapping.js";
 import { isGitIgnored } from "./one-root-move-plan.js";
-import { OneRootGitignoreRegressionError } from "./one-root-errors.js";
+import { OneRootGitignoreRegressionError, OneRootPreflightError } from "./one-root-errors.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -86,6 +86,81 @@ export async function captureIgnoreRules(params: { packageRoot: string; contentR
 }
 
 /**
+ * Single-character C-style escapes git's `unquote_c_style` recognizes inside
+ * a quoted `.gitignore`/`.gitattributes` pattern token, keyed by the
+ * character right after the backslash.
+ */
+const SINGLE_CHAR_ESCAPES: Readonly<Record<string, string>> = {
+  a: "\u0007",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "\t",
+  v: "\v",
+  "\\": "\\",
+  '"': '"',
+};
+
+/**
+ * Decode a git C-style-quoted token starting at `text[0]` (a `"`). Finding 5
+ * (round 4 hardening): `splitAttributesLine`'s old plain `/^(\S+)/` split
+ * broke on a quoted pattern containing a space — `"docs/My Draft.bin" -diff`
+ * split at the FIRST whitespace, landing inside the quotes (pattern
+ * `"docs/My`, attrs ` Draft.bin" -diff`), so the mapping silently failed and
+ * the stale v2 rule was carried forward unchanged while the real file moved
+ * out from under it. This decodes the backslash escapes git itself supports
+ * for a quoted pattern (`\\`, `\"`, the single-character C escapes, and
+ * three-digit octal `\NNN`) and returns the point in `text` right after the
+ * closing quote. Returns `null` on an unterminated quote or an escape this
+ * decoder doesn't recognize — the caller must ABORT rather than guess at a
+ * quoting form it can't round-trip.
+ */
+function decodeCQuotedToken(text: string): { value: string; endIndex: number } | null {
+  if (text[0] !== '"') return null;
+  let value = "";
+  let i = 1;
+  while (i < text.length) {
+    const ch = text[i];
+    if (ch === '"') return { value, endIndex: i + 1 };
+    if (ch === "\\") {
+      const next = text[i + 1];
+      if (next === undefined) return null; // dangling backslash — unterminated
+      const single = SINGLE_CHAR_ESCAPES[next];
+      if (single !== undefined) {
+        value += single;
+        i += 2;
+        continue;
+      }
+      const octal = /^[0-7]{3}/.exec(text.slice(i + 1));
+      if (octal !== null) {
+        value += String.fromCodePoint(parseInt(octal[0], 8));
+        i += 4;
+        continue;
+      }
+      return null; // unsupported escape
+    }
+    value += ch;
+    i += 1;
+  }
+  return null; // never closed
+}
+
+/** `"` + `\`-escape whatever the decoder above would need to reverse, then
+ * `"` — always valid quoted syntax, whether or not the value actually
+ * contains a space. Used to re-quote a remapped pattern that was quoted in
+ * its v2 form, so the migrated rule round-trips through the same quoting
+ * convention rather than landing unquoted (which would silently change its
+ * meaning if the new path also needs quoting, e.g. still contains a space). */
+function encodeCQuoted(value: string): string {
+  let out = '"';
+  for (const ch of value) {
+    out += ch === "\\" || ch === '"' ? `\\${ch}` : ch;
+  }
+  return out + '"';
+}
+
+/**
  * Split a `.gitattributes` line into its leading PATTERN token and the
  * trailing attribute list — `config/connectors/x.json -diff` is the pattern
  * `config/connectors/x.json` plus attributes ` -diff`. Only the pattern
@@ -96,19 +171,41 @@ export async function captureIgnoreRules(params: { packageRoot: string; contentR
  * instead of its real v3 home, `_bookkeeping/connectors/`). `.gitignore`
  * has no such second column — callers pass `hasAttributes: false` there and
  * get the whole line back as the pattern.
+ *
+ * A pattern token that starts with `"` is C-quoted (finding 5) — decoded via
+ * {@link decodeCQuotedToken} rather than split on whitespace, so an embedded
+ * space never gets mistaken for the pattern/attrs boundary. Throws
+ * {@link OneRootPreflightError} naming the raw line when the quoting can't be
+ * decoded, rather than silently mis-splitting it and stranding a stale rule.
  */
-function splitAttributesLine(rule: string, { hasAttributes }: { hasAttributes: boolean }): { pattern: string; attrs: string } {
-  if (!hasAttributes) return { pattern: rule, attrs: "" };
+function splitAttributesLine(
+  rule: string,
+  { hasAttributes }: { hasAttributes: boolean },
+): { pattern: string; attrs: string; quoted: boolean } {
+  if (rule.startsWith('"')) {
+    const decoded = decodeCQuotedToken(rule);
+    if (decoded === null) {
+      throw new OneRootPreflightError(
+        "Cannot decode the quoted pattern on this .gitignore/.gitattributes line — refusing to migrate rather " +
+          `than risk mis-splitting it and stranding a stale rule pointing at a path that's about to move: ${rule}`,
+      );
+    }
+    return { pattern: decoded.value, attrs: hasAttributes ? rule.slice(decoded.endIndex) : "", quoted: true };
+  }
+  if (!hasAttributes) return { pattern: rule, attrs: "", quoted: false };
   const match = /^(\S+)(\s.*)?$/.exec(rule);
-  if (match === null) return { pattern: rule, attrs: "" };
-  return { pattern: match[1] ?? rule, attrs: match[2] ?? "" };
+  if (match === null) return { pattern: rule, attrs: "", quoted: false };
+  return { pattern: match[1] ?? rule, attrs: match[2] ?? "", quoted: false };
 }
 
 /**
  * Remap one ignore/attributes rule's PATH portion to its v3 equivalent via
  * `mapV2Path`, preserving a leading `!` (negation), a leading `/` (anchor),
  * a trailing `/` (directory marker), and — for `.gitattributes`
- * (`hasAttributes: true`) — the trailing attribute list untouched.
+ * (`hasAttributes: true`) — the trailing attribute list untouched. A
+ * quoted pattern (finding 5) is re-quoted on the way back out, so it stays
+ * valid (and round-trips) whether or not the remapped path still needs
+ * quoting.
  *
  * `stripPrefix`, when non-null, is required and stripped before mapping:
  * a PACKAGE-root rule (finding 8) is package-root-relative, so only a rule
@@ -121,7 +218,7 @@ function splitAttributesLine(rule: string, { hasAttributes }: { hasAttributes: b
  * smaller risk than silently losing coverage over a secret.
  */
 function remapRule(rule: string, { hasAttributes, stripPrefix }: { hasAttributes: boolean; stripPrefix: string | null }): string {
-  const { pattern, attrs } = splitAttributesLine(rule, { hasAttributes });
+  const { pattern, attrs, quoted } = splitAttributesLine(rule, { hasAttributes });
   let negated = false;
   let body = pattern;
   if (body.startsWith("!")) {
@@ -139,7 +236,8 @@ function remapRule(rule: string, { hasAttributes, stripPrefix }: { hasAttributes
   if (corePath === "") return rule;
   const mapped = mapV2Path(corePath);
   if (mapped.kind !== "move") return rule;
-  const newPattern = `${negated ? "!" : ""}/${mapped.newPath}${trailingSlash ? "/" : ""}`;
+  const newPatternBody = `${negated ? "!" : ""}/${mapped.newPath}${trailingSlash ? "/" : ""}`;
+  const newPattern = quoted ? encodeCQuoted(newPatternBody) : newPatternBody;
   return hasAttributes ? `${newPattern}${attrs}` : newPattern;
 }
 
@@ -175,23 +273,33 @@ async function mergeOneFile(params: {
   contentRules: string[];
 }): Promise<void> {
   const current = (await readIfExists(params.filePath)) ?? "";
-  const currentLines = new Set(ruleLines(current));
   // Finding 8: a PACKAGE-root rule is only migration-affected when it names
   // something under `content/` (e.g. `content/docs/private.env`) — anything
   // else is package-root-relative and untouched by the migration, so
   // `remapRule`'s `stripPrefix` requirement leaves it unchanged. A
   // CONTENT-root rule is already content-relative (`stripPrefix: null`).
-  const candidates = [
+  //
+  // Finding 4 (round 4 hardening): this used to dedup `candidates` — against
+  // the freshly regenerated `current` file's lines AND against each other —
+  // before appending. Both git's `.gitattributes` attribute list and a
+  // `.gitignore` negation are ORDER-DEPENDENT (the LAST matching rule wins),
+  // so collapsing a repeated line down to its first occurrence can silently
+  // flip the effective final rule: `X -diff` / `X diff` / `X -diff` dedupes
+  // to `X -diff` / `X diff` (two rules instead of three), which now reads as
+  // "diff" instead of the original "-diff". There is no dedup that preserves
+  // both "no duplicate lines" AND "the last occurrence stays last" without
+  // reasoning about every later rule's relationship to every earlier one, so
+  // this doesn't try one: every migrated candidate is appended VERBATIM, in
+  // its original relative order, duplicates included. A candidate that
+  // happens to already be a line in the freshly regenerated `current` file
+  // is harmless redundancy here (it still applies to the same path the same
+  // way), not a correctness risk — matching `box/index.ts`'s own migrated-
+  // section preservation, which is likewise a verbatim carry-forward, not a
+  // deduped one.
+  const additions = [
     ...params.packageRules.map((rule) => remapRule(rule, { hasAttributes: params.hasAttributes, stripPrefix: "content/" })),
     ...params.contentRules.map((rule) => remapRule(rule, { hasAttributes: params.hasAttributes, stripPrefix: null })),
   ];
-  const additions: string[] = [];
-  const seen = new Set<string>();
-  for (const rule of candidates) {
-    if (currentLines.has(rule) || seen.has(rule)) continue;
-    seen.add(rule);
-    additions.push(rule);
-  }
   if (additions.length === 0) return;
   const merged = `${current.trimEnd()}\n\n${MIGRATED_SECTION_HEADER}\n${additions.join("\n")}\n`;
   await fs.writeFile(params.filePath, merged);

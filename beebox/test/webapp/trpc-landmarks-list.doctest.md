@@ -12,7 +12,7 @@ and appears in neither list, since there's nothing to say about a card we never
 read.
 
 ```ts setup
-import { mkdir } from "node:fs/promises";
+import { mkdir, symlink } from "node:fs/promises";
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
@@ -80,7 +80,11 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
+// The v3 root landmark lives at `_content/Box.landmark.card`, not at the
+// literal box root (`root-dir.ts`) — a card sitting directly at the box
+// root is outside every underscore area and, since the namespace fence
+// findings (round 4 hardening), correctly excluded from the scan.
+await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
 
 const { landmarks, problems } = await caller(box.root).landmarks.list();
 `${landmarks.length} landmark(s), ${problems.length} problem(s)`
@@ -179,6 +183,41 @@ await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Root\n
 const rootPref = await ownerCaller(box.root).landmarks.hqPreferences({ dir: "" });
 JSON.stringify({ hasLandmark: rootPref.hasLandmark })
 => {"hasLandmark":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A symlinked landmark card that escapes the box namespace is skipped, not read through
+
+Finding 2 (round 4 hardening): `_content/escape/A.landmark.card` is a symlink
+to `src/private.landmark.card` — outside every underscore area. It still
+matches the `**/*.landmark.card` glob `list`/`forDir` scan with, but its
+bytes belong to a file outside the namespace, so it must never be read
+through. A normal (non-symlinked) landmark elsewhere in the box still loads.
+
+```ts
+const box = await makeTmpBox();
+await box.write("src/private.landmark.card", "---\nnavigation:\n  label: Private\n---\n");
+await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n");
+await mkdir(box.path("_content/escape"), { recursive: true });
+await symlink(box.path("src/private.landmark.card"), box.path("_content/escape/A.landmark.card"));
+
+const { landmarks, problems } = await caller(box.root).landmarks.list();
+JSON.stringify({ labels: landmarks.map((l) => l.label).toSorted(), problemCount: problems.length })
+=> {"labels":["Recipes"],"problemCount":0}
+```
+
+`forDir` on the escaping symlink's directory answers `null` (same as any
+other unreadable card — no landmark to render), while the normal landmark's
+directory still resolves:
+
+```ts continue
+const { landmark: escaped } = await caller(box.root).landmarks.forDir({ dir: "_content/escape" });
+const { landmark: recipes } = await caller(box.root).landmarks.forDir({ dir: "_content/recipes" });
+JSON.stringify({ escaped, recipesLabel: recipes?.label })
+=> {"escaped":null,"recipesLabel":"Recipes"}
 ```
 
 ```ts cleanup

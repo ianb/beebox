@@ -11,7 +11,12 @@
  *
  * Reuses the same box-wide scanners `bbx validate` uses — the "error mode" is
  * just this module's own decision to treat their (normally warning-level)
- * findings as fatal, not a separate checker.
+ * findings as fatal, not a separate checker. A symlinked card/doc the
+ * migration deliberately left byte-untouched (Finding 1, round 4 hardening)
+ * is excluded from both the card and markdown scans at their SOURCE
+ * (`markdown-lint-rules.ts`'s `noBrokenInternalLinks` skips a symlinked leaf
+ * outright; a `.card` file's ref problems are warning-only regardless), so
+ * this module needs no special-casing of its own for that case.
  */
 
 import { lintCardsDispatch, type LintDispatchOptions } from "../card-lint.js";

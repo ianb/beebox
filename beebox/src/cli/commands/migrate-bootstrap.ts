@@ -51,6 +51,14 @@ export async function runBootstrap(v2Box: V2Box, opts: { apply?: boolean }): Pro
       );
       for (const r of result.unresolvedRefs) console.log(`  ${r}`);
     }
+    if (result.skippedSymlinkRefs.length > 0) {
+      console.log(
+        `${String(result.skippedSymlinkRefs.length)} migrated card/doc path(s) are symlinks and were left ` +
+          "byte-untouched (their ref content belongs to their target, not the link; a target outside the box " +
+          "may now carry stale refs):",
+      );
+      for (const r of result.skippedSymlinkRefs) console.log(`  ${r}`);
+    }
     console.log("\nThe box is now v3. Run `bbx migrate` again to apply any remaining card-data migrations.");
   } catch (e) {
     console.error(`\nOne-root conversion failed and was rolled back: ${errorMessage(e)}`);

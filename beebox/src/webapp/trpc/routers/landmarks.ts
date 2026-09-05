@@ -68,12 +68,28 @@ type LandmarkLoad =
 /**
  * Read one `*.landmark.card` file and resolve it into a payload.
  * `relPath` is box-relative.
+ *
+ * Finding 2 (round 4 hardening): a glob match is just a name that satisfied
+ * `**\/*.landmark.card` on disk — it says nothing about where the path
+ * actually RESOLVES to. `_content/A.landmark.card -> ../src/private.landmark.card`
+ * matches the glob and reads back as a real landmark, but its bytes are
+ * `src/private.landmark.card` — outside every underscore area. Every landmark
+ * card this router reads goes through `resolveBoxNamespacePathOnDisk` (read
+ * mode) FIRST, so a symlinked card whose target escapes the box namespace is
+ * refused before `fs.readFile` ever follows the link — the same fence
+ * `forDir`/`list`'s directory-level checks already apply to the scan ROOT,
+ * now applied to each individual card path too.
  */
 async function loadLandmarkPayload(
   relPath: string,
   { boxRoot }: { boxRoot: string },
 ): Promise<LandmarkLoad> {
-  const absPath = path.join(boxRoot, relPath);
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: relPath, mode: "read" });
+  if (ns === null) {
+    console.warn(`landmarks: ${relPath} is outside the box namespace (symlink escape?) — skipping`);
+    return { status: "unreadable" };
+  }
+  const absPath = ns.resolved;
   let fields;
   try {
     const content = await fs.readFile(absPath, "utf-8");

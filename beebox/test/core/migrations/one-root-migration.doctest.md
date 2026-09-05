@@ -391,6 +391,48 @@ JSON.stringify({
 await cleanup(root);
 ```
 
+## Finding 1 (round 4 hardening): a symlinked card/doc is never opened for rewrite
+
+`content/docs/alias.md` is a TRACKED symlink to a file OUTSIDE the box
+entirely (not even under the v2 package root) — the annex-style shape, but
+pointing somewhere the ref rewriter must never touch. `fs.readFile`/
+`writeFile` FOLLOW a symlink, so the old code read and rewrote the EXTERNAL
+file's bytes; rollback can't undo that (the box's own git history has no
+record of a file outside it). The migration now `lstat`s each candidate and
+skips a symlinked entry outright, reporting it in `skippedSymlinkRefs`.
+
+```ts
+const root = await makeV2Box();
+const externalDir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-external-"));
+const externalFile = path.join(externalDir, "shared.md");
+await fs.writeFile(externalFile, "# Shared\n\nSee [Dana](../../people/Dana_Lee.person.card).\n");
+
+await fs.mkdir(path.join(root, "content", "docs"), { recursive: true });
+await fs.symlink(externalFile, path.join(root, "content", "docs", "alias.md"));
+execSync("git add -A && git commit -q -m external-symlink-fixture", { cwd: root, stdio: "pipe" });
+
+const externalBytesBefore = await fs.readFile(externalFile, "utf-8");
+const result = await runOneRootMigration({ packageRoot: root, contentRoot: path.join(root, "content") });
+JSON.stringify({ filesMoved: result.filesMoved, skippedSymlinkRefs: result.skippedSymlinkRefs })
+=> {"filesMoved":8,"skippedSymlinkRefs":["_content/docs/alias.md"]}
+```
+
+The external file's bytes are byte-for-byte unchanged — the migration never
+opened it — and the migrated symlink still points at the same external
+absolute path:
+
+```ts continue
+const externalBytesAfter = await fs.readFile(externalFile, "utf-8");
+const linkTarget = await fs.readlink(path.join(root, "_content", "docs", "alias.md"));
+JSON.stringify({ unchanged: externalBytesAfter === externalBytesBefore, linkTargetUnchanged: linkTarget === externalFile })
+=> {"unchanged":true,"linkTargetUnchanged":true}
+```
+
+```ts cleanup
+await fs.rm(externalDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+await cleanup(root);
+```
+
 ## Claude Code transcript directories are re-keyed to the new cwd
 
 Claude Code keys `~/.claude/projects/<encoded-cwd>/` by the absolute cwd a
