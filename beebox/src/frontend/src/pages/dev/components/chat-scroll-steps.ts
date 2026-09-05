@@ -81,3 +81,12 @@ export interface Expectation {
   /** Backwards jumps in scrollTop observed during a fling — a yank. */
   flingReversalsAtMost?: number;
 }
+
+/** A named script plus the outcome it asserts. The scripts live in
+ *  chat-scroll-scenarios.ts (and chat-scroll-scenarios-open.ts). */
+export interface Scenario {
+  name: string;
+  description: string;
+  steps: Step[];
+  expect: Expectation;
+}

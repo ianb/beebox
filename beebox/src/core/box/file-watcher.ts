@@ -450,6 +450,8 @@ class BoxWatcher implements BoxWatcherHandle {
   close(): void {
     this.closed = true;
     this.pendingDirs.clear();
+    // Snapshot the keys: dropSubtree deletes the dir and its whole subtree
+    // from this.dirs as we go, so this iterates a list that is being emptied.
     for (const dir of [...this.dirs.keys()]) this.dropSubtree(dir);
     for (const window of this.windows.values()) clearTimeout(window.timer);
     this.windows.clear();

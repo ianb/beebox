@@ -74,10 +74,14 @@ await cleanup(root);
 
 ## A directory-level target `mapV2Path` can't resolve either aborts preflight, naming the link
 
+An unknown *dotfile* entry under `content/` is the one thing `mapV2Path`
+leaves unmapped (unknown plain directories are the user's own content and
+default into `_content/` — `009e00eec`), so a link into one has no v3 home:
+
 ```ts
 const root2 = await mkTmp();
 await fs.mkdir(path.join(root2, "_content", "drive"), { recursive: true });
-await fs.symlink("../../bogus-unmapped-dir", path.join(root2, "_content", "drive", "broken-link"));
+await fs.symlink("../../.bogus-unmapped-state", path.join(root2, "_content", "drive", "broken-link"));
 
 const moves2 = [
   { contentRelPath: "store/drive/broken-link", newRelPath: "_content/drive/broken-link", tracked: false },
