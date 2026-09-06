@@ -8,9 +8,12 @@
  */
 import { Button } from "../../../components/ui/Button";
 import { Column } from "../../../components/ui/Column";
+import { Row } from "../../../components/ui/Row";
 import { Text } from "../../../components/ui/Text";
+import { Toggle } from "../../../components/ui/Toggle";
 import { BrowseSidebarList } from "./BrowseSidebarList";
 import { BrowseLandmarkHeader } from "./BrowseLandmarkHeader";
+import { useBrowseListingMode } from "../useBrowseListingMode";
 import type { RouterOutput } from "../../../lib/trpc";
 import type { ViewTarget } from "../../../lib/view-url";
 
@@ -35,6 +38,7 @@ interface Props {
 
 export function BrowseSidebarBody(props: Props) {
   const { data, loading, isError, error, onRetry, dirPath, selectedFilePath, onNavigate, onFileContextMenu, landmark, boxSlug, onLinkNavigate, landmarkError, onLandmarkRetry } = props;
+  const [listingMode, setListingMode] = useBrowseListingMode();
 
   if (data) {
     return (
@@ -47,6 +51,16 @@ export function BrowseSidebarBody(props: Props) {
             <Button size="sm" intent="secondary" onClick={onLandmarkRetry}>Try again</Button>
           </Column>
         ) : null}
+        <Row gap="xs" align="center" justify="end" className="px-4 py-1.5 border-b border-warm-200">
+          <Text as="span" size="xs" tone="muted">Compact</Text>
+          <Toggle
+            id="bbx-browse-listing-mode"
+            checked={listingMode === "raw"}
+            onChange={(raw) => setListingMode(raw ? "raw" : "compact")}
+            label={listingMode === "raw" ? "Showing raw listing — switch to compact" : "Showing compact listing — switch to raw"}
+          />
+          <Text as="span" size="xs" tone="muted">Raw</Text>
+        </Row>
         <BrowseSidebarList
           data={data}
           dirPath={dirPath}
@@ -55,6 +69,7 @@ export function BrowseSidebarBody(props: Props) {
           selectedFilePath={selectedFilePath}
           onFileContextMenu={onFileContextMenu}
           omitCardPath={landmark?.path}
+          mode={listingMode}
         />
       </>
     );
