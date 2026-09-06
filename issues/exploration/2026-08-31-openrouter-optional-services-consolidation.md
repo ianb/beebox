@@ -257,6 +257,22 @@ how a silently-dropped passthrough behaves. So `voxtral-diarized` could not have
 diarized at all. Both Voxtral variants now stay on Mistral, and `bbx health`
 says so rather than naming a fallback that will never run.
 
+**Diarization exists on OpenRouter, just not on any model we use.** Probed
+because ruling Voxtral out left the box with no speaker-labeled route at all.
+Only 9 of the 20 transcription models accept `verbose_json`, and of those,
+`microsoft/mai-transcribe-2` with `azure.diarization.enabled` labeled a
+four-turn two-voice clip correctly (`0,1,0,1`) for $0.00047, while
+`x-ai/grok-stt-1.0` produced labels but over-split. `deepgram/nova-3` forwarded
+the flag yet returned one speaker throughout — on synthetic test audio, so that
+is not a verdict on the model. Written up as
+[a diarizing HQ backend over OpenRouter](2026-09-06-openrouter-diarizing-stt-backend.md);
+adopting one is a new-model decision, not a routing one.
+
+The same probe settles a doubt worth recording: OpenRouter's speaker
+normalization is sound. The field appears only when a diarize flag is sent —
+never with `diarize: false`, a bogus option key, or empty options — so the
+passthrough genuinely reaches the provider and real speaker values survive it.
+
 **Both Gemini arms work.** `ask-about-audio` transcribed the clip correctly and
 answered a question about the voice. Scan-import analyzed a two-image batch
 through the JSON Schema derived from `rawScanAnalysisSchema`: the
