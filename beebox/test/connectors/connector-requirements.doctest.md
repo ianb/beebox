@@ -14,7 +14,7 @@ credential.
 Placeholder values throughout.
 
 ```ts setup
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkMissingConnectors } from "../../src/connectors/requirements.js";
@@ -90,6 +90,36 @@ stored per-box, not granted: ["telegram"]
 granted per-box: []
 ```
 
+## Google needs the client-credential grant too, not just tokens
+
+Tokens plus an enabled policy used to be enough. They are not: without a grant
+for the OAuth app's client credentials, `getGoogleAuth` returns null, so
+Calendar and Gmail no-op and Drive reports a sync failure. A script that runs
+and does nothing is worse than one the scheduler skips with a named reason.
+
+```ts continue
+const tokensFile = join(dir, "google-tokens.json");
+await writeFile(tokensFile, JSON.stringify({ refreshToken: "placeholder-refresh" }));
+process.env.BBX_GOOGLE_TOKENS_FILE = tokensFile;
+await box.write("_config/box.json", JSON.stringify({ googleServices: { gmail: true } }));
+
+print(`tokens + policy, no client grant: ${await missing(box.root, "gmail")}`);
+
+for (const name of ["google-oauth-client-id", "google-oauth-client-secret"]) {
+  await setSecret({ name, value: `placeholder-${name}` });
+  await grantSecret({ slug, name, access: "server" });
+}
+print(`client credentials granted: ${await missing(box.root, "gmail")}`);
+
+// The per-box policy still gates it independently.
+await box.write("_config/box.json", JSON.stringify({ googleServices: { gmail: false } }));
+print(`policy disabled: ${await missing(box.root, "gmail")}`);
+=>
+tokens + policy, no client grant: ["gmail"]
+client credentials granted: []
+policy disabled: ["gmail"]
+```
+
 ## A retired in-tree file does not satisfy it
 
 `bbx health` flags such a file separately; here it is simply not a credential.
@@ -104,6 +134,7 @@ several at once: ["pocket","raindrop","nothinghere"]
 ```
 
 ```ts cleanup
+delete process.env.BBX_GOOGLE_TOKENS_FILE;
 await box.cleanup();
 await rm(dir, { recursive: true, force: true });
 ```

@@ -4,8 +4,9 @@
  * Different connectors hold credentials differently:
  *   - The machine secret store: a grant to this box's slug, with a value
  *     (`docs/secrets.md`) — where every migrated connector now lives.
- *   - Google OAuth: shared BBX_GOOGLE_TOKENS_FILE + per-box googleServices policy
- *     (gmail, calendar, drive).
+ *   - Google OAuth: three things at once — the shared BBX_GOOGLE_TOKENS_FILE
+ *     record, the per-box `googleServices` policy, and a box grant for the
+ *     OAuth app's client credentials (gmail, calendar, drive).
  *
  * This module dispatches the "is this connector configured for this box?" check
  * by name. Names with no special entry need a granted store entry. A retired
@@ -19,6 +20,7 @@ import {
   isGoogleServiceAllowed,
   type GoogleServiceName,
 } from "../core/box/config.js";
+import { getBoxGoogleClientCreds } from "./google-auth.js";
 import { loadSecretStore } from "../core/secrets/store.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { getBoxDir } from "../lib/paths.js";
@@ -26,9 +28,20 @@ import type { ScheduleRequirements } from "../schemas/scheduled-script.js";
 
 type Predicate = (boxRoot: string) => Promise<boolean>;
 
+/**
+ * A Google connector needs all three of: an authorization record, permission
+ * from this box's policy, and a grant for the OAuth app's client credentials.
+ *
+ * The client-credential grant is the one that is easy to forget, and skipping
+ * the check here is worse than a missing credential: `getGoogleAuth` returns
+ * null without it, so Calendar and Gmail silently no-op and Drive reports a
+ * sync failure — a script that ran and did nothing, rather than one the
+ * scheduler skipped cleanly with a named reason.
+ */
 function googleServicePredicate(service: GoogleServiceName): Predicate {
   return async (boxRoot) => {
     if (!hasGoogleTokens(boxRoot)) return false;
+    if ((await getBoxGoogleClientCreds(boxRoot)) === null) return false;
     return isGoogleServiceAllowed(boxRoot, service);
   };
 }
