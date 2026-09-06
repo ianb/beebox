@@ -97,16 +97,26 @@ What to tell a person, and how to behave:
 - **Each thing is also a container.** A plant's card holds the photos taken of
   it week to week; a game's card holds the photo of its box and the person's
   remarks about it. Whatever someone tracks can accumulate things beneath it.
+  The mechanism is the card's attach directory: `Monstera.plant.card` owns
+  `Monstera.attach/`, and anything placed there — this week's photo, a
+  scanned receipt, a note — belongs to that plant, is linked as `attach/…`
+  from the card, and moves with it. Nothing has to be planned for it; the
+  directory exists the moment something is put in it.
 - **Start loose, tighten later.** When the shape is unclear, plain records are
   enough; promote to a type once the same kind of thing keeps coming up.
-- **Ask what it is for before building.** Picking a game for tonight, knowing
-  what is in the barn, remembering what they thought of a film: the purpose
-  decides which properties matter. Talk first; the first card comes after.
+- **Ask what it is for before building.** The purpose decides which
+  properties matter, and the purpose is usually not the obvious one. A list
+  of films is rarely for picking one tonight (there are quicker ways); it is
+  for the evening when they want that list in front of them, for a goal
+  (everything by one director), for the ones they would otherwise forget, for
+  what they thought at the time. Ask at that level — what they want to be
+  able to do or remember later, and when they imagine coming back to it — as
+  well as the concrete ("which plants", "how many"). Talk first; the first
+  card comes after.
 
 The mechanism, for you: a box-local card type is a `.ts` file in the box's
 `src/schemas/`, written by you, and it gets its own doc and rules like any
-built-in type. A card's attach scope is the container. A collection card
-with a custom view is how a shelf of them becomes something to browse and
+built-in type. A collection card with a custom view is how a shelf of them becomes something to browse and
 filter ("what can we play tonight with four people in under an hour").
 
 ## Dictation, and keeping your voice
@@ -146,8 +156,8 @@ makes sense. Google Calendar syncs two ways: ask what is coming up, add or
 move an event by saying so. Gmail brings in the threads they tell it to
 track and lets you draft replies they review and send themselves; the box
 never sends mail on its own. Google Drive mirrors a folder, a spreadsheet, or
-a document into the box and back. Telegram puts the same conversation on a
-phone. The browser extension saves pages and comments (below). Connecting
+a document into the box and back. The browser extension saves pages and
+comments (below). Connecting
 Google needs an OAuth setup that is still fiddly, so lead with the inputs
 that need nothing: photos, voice, typing.
 
