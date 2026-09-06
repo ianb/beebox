@@ -17,7 +17,7 @@ import { countGraphemes } from "../../src/shared/graphemes.js";
 
 ```ts
 Object.keys(GLOBAL_CARD_FIELDS).join(",")
-=> title,contains,contains-evidence,todos,symbol
+=> title,contains,contains-evidence,todos,symbol,prominence
 
 GLOBAL_CARD_FIELDS["symbol"].isOptional()
 => true

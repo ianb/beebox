@@ -69,7 +69,7 @@ lingering as its last good parse.
 await box.write("Box.landmark.card", "not a frontmatter card at all\n");
 const after = await loadLandmarkSummaries(box.root);
 JSON.stringify([after.summaries.length, after.problems])
-=> [0,[{"path":"Box.landmark.card"}]]
+=> [0,[{"kind":"landmark-parse","path":"Box.landmark.card"}]]
 ```
 
 ```ts cleanup

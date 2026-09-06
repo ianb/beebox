@@ -18,6 +18,7 @@ import {
   type SmokeFailureError,
 } from "./smoke-errors.js";
 import { LANDMARK_CONTENT_DIR } from "../beebox/src/core/landmark/root-dir.js";
+import { areaDisplayLabel } from "../beebox/src/shared/display-path.js";
 
 /**
  * A `[ref=eN]` for a role + accessible name in an agent-browser snapshot.
@@ -312,15 +313,18 @@ export function firstCardRow(snapshot: string): { role: "button"; name: string }
 }
 
 /**
- * The box's content-area directory row (`_content`, one-root's only
- * open-vocabulary area at the box root — `core/landmark/root-dir.ts`). The
- * browse root deliberately lists the underscore areas rather than the box's
- * real content (`one-root-box-layout.md`), so a freshly migrated box's root
- * listing carries no card row at all; this is how the card-open step finds
- * where the actual content lives instead of misreading that as a broken box.
+ * The box's content-area directory row (`_content`, displayed as "Content" —
+ * `shared/display-path.ts` — one-root's only open-vocabulary area at the box
+ * root — `core/landmark/root-dir.ts`). The browse root deliberately lists the
+ * underscore areas rather than the box's real content (`one-root-box-layout.md`),
+ * so a freshly migrated box's root listing carries no card row at all; this is
+ * how the card-open step finds where the actual content lives instead of
+ * misreading that as a broken box.
  */
 export function contentAreaRow(snapshot: string): { role: "button"; name: string } | null {
-  const prefix = `button "${LANDMARK_CONTENT_DIR} directory`;
+  // The sidebar shows the area's DISPLAY label ("Content"), not its raw
+  // underscore name — `display-path.ts`, "Display-path vocabulary".
+  const prefix = `button "${areaDisplayLabel(LANDMARK_CONTENT_DIR)} directory`;
   for (const line of snapshot.split("\n")) {
     const at = line.indexOf(prefix);
     if (at === -1) continue;

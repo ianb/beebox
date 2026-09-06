@@ -25,7 +25,8 @@ import {
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
 import { collectViewRefWarnings } from "../../core/views/refs.js";
 import { getStatus } from "../../lib/git.js";
-import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
+import { lintAttachLayout, formatAttachLintErrors, type AttachLintError } from "../../lib/attach-lint.js";
+import { lintProminenceBudget, formatProminenceLintWarnings, type ProminenceLintWarning } from "../../core/lint-prominence.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
 import { lintAllClaudeMd } from "../../core/claude-md-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
@@ -46,15 +47,6 @@ export function useColor(): boolean {
   return process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
 }
 
-function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors: boolean }): string {
-  if (errors.length === 0) return "";
-  const ESC = "";
-  const red = colors ? (s: string) => `${ESC}[31m${s}${ESC}[0m` : (s: string) => s;
-  return errors
-    .map((e) => `${red("error")}  ${e.path}  [${e.rule}] ${e.message}`)
-    .join("\n");
-}
-
 interface CollectedResults {
   cardSummary: LintSummary | null;
   mdSummary: MarkdownLintSummary | null;
@@ -70,6 +62,8 @@ interface CollectedResults {
   canonicalViewWarnings: string[];
   /** Non-canonical `[text](path)` links in `.md` dossiers — the second bucket. */
   canonicalDossierWarnings: string[];
+  /** `prominence` budget warnings (`core/lint-prominence.ts`) — box-wide only; absent for `--staged`/explicit-path scopes. */
+  prominenceWarnings?: ProminenceLintWarning[];
 }
 
 interface ValidationResults extends CollectedResults {
@@ -198,6 +192,7 @@ async function collectAllResults({ boxRoot, ctx, ignore, canonical }: CollectArg
   const mdFiles = (await listBoxMarkdownFiles(boxRoot)).filter((p) => !ignore.isIgnored(p));
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
+  const prominenceWarnings = await lintProminenceBudget(boxRoot, ctx);
   const claudeMdWarnings = await lintAllClaudeMd(boxRoot);
   const viewPaths = await listBoxViewFiles(boxRoot);
   const viewWarnings = await collectViewRefWarnings(viewPaths, boxRoot);
@@ -207,6 +202,7 @@ async function collectAllResults({ boxRoot, ctx, ignore, canonical }: CollectArg
     cardSummary,
     mdSummary,
     attachErrors,
+    prominenceWarnings,
     claudeMdWarnings,
     viewWarnings,
     canonicalViewWarnings,
@@ -260,6 +256,9 @@ function printTextResults(results: ValidationResults): void {
     const output = formatAttachLintErrors(attachErrors, { colors });
     console.log(`\n${output}`);
     console.log(`\nAttach layout: ${attachErrors.length} issue(s)`);
+  }
+  if (results.prominenceWarnings !== undefined && results.prominenceWarnings.length > 0) {
+    console.log(`\n${formatProminenceLintWarnings(results.prominenceWarnings, { colors })}`);
   }
   if (claudeMdWarnings.length > 0) {
     console.log(`\n${claudeMdWarnings.join("\n")}`);
@@ -376,6 +375,7 @@ export const validateCommand = new Command("validate")
             brokenRefs: results.cardSummary !== null ? countBrokenRefs(results.cardSummary) : 0,
             markdown: results.mdSummary,
             attach: results.attachErrors,
+            prominence: results.prominenceWarnings ?? [],
             claudeMd: results.claudeMdWarnings,
             views: results.viewWarnings,
             legacySchemaPath: results.legacySchemaErrors,

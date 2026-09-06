@@ -61,12 +61,12 @@ export function DocumentIcon() {
   // the title carries the place (`lib/document-title.ts`). Landmark-first
   // icons were the other way round and cost exactly this: two boxes' tabs
   // could wear the same mark while neither said which box it was.
-  const boxQuery = trpc.landmarks.forDir.useQuery(
+  const boxQuery = trpc.landmarks.identity.useQuery(
     { dir: "" },
     { enabled: boxSlug !== undefined },
   );
 
-  const mark = boxQuery.data?.landmark ?? null;
+  const mark = boxQuery.data?.identity ?? null;
   let href: string | null = null;
   if (mark !== null && boxSlug !== undefined) {
     const src = mark.symbol?.src;

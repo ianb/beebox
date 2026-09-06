@@ -31,7 +31,7 @@ await box.write(
 
 const { summaries, problems } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"Box.landmark.card","dir":"","label":"Home","symbol":{"glyph":"🏠"}},{"path":"recipes/Recipes.landmark.card","dir":"recipes","label":"Recipes","symbol":{"glyph":"🍳"}}]
+=> [{"path":"Box.landmark.card","dir":"","label":"Home","symbol":{"glyph":"🏠"},"prominence":null},{"path":"recipes/Recipes.landmark.card","dir":"recipes","label":"Recipes","symbol":{"glyph":"🍳"},"prominence":null}]
 
 JSON.stringify(problems)
 => []
@@ -48,7 +48,7 @@ await box.write(
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":{"src":"_content/trips/Trips.attach/pin.png"}}]
+=> [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":{"src":"_content/trips/Trips.attach/pin.png"},"prominence":null}]
 ```
 
 ## A box-root `symbol.src` (leading `/`) resolves against the box, not the card
@@ -87,7 +87,7 @@ await box.write(
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"archive/Old_Mail.landmark.card","dir":"archive","label":"Old_Mail","symbol":null}]
+=> [{"path":"archive/Old_Mail.landmark.card","dir":"archive","label":"Old_Mail","symbol":null,"prominence":null}]
 ```
 
 ## A card whose frontmatter doesn't parse is reported, not silently skipped
@@ -108,5 +108,5 @@ JSON.stringify(summaries.map((s) => s.label))
 => ["Good"]
 
 JSON.stringify(problems)
-=> [{"path":"Bad.landmark.card"},{"path":"deep/Broken.landmark.card"}]
+=> [{"kind":"landmark-parse","path":"Bad.landmark.card"},{"kind":"landmark-parse","path":"deep/Broken.landmark.card"}]
 ```

@@ -162,7 +162,7 @@ await cardGetThrows(ctx, "_content/../package.json")
 ```ts continue
 const statusBrowseRes = await statusRouter.createCaller(ctx).browse({ path: "_content/../src" });
 JSON.stringify(statusBrowseRes)
-=> {"path":"_content/../src","dirs":[],"cards":[],"files":[]}
+=> {"path":"_content/../src","dirs":[],"cards":[],"files":[],"background":false}
 ```
 
 ## `files.summarize` (tRPC) — the straggler
@@ -311,7 +311,7 @@ directory's contents:
 ```ts continue
 const symStatusBrowseRes = await statusRouter.createCaller(symCtx).browse({ path: "_content/pkg" });
 JSON.stringify(symStatusBrowseRes)
-=> {"path":"_content/pkg","dirs":[],"cards":[],"files":[]}
+=> {"path":"_content/pkg","dirs":[],"cards":[],"files":[],"background":false}
 ```
 
 `files.summarize` (tRPC) refuses it — no `package.json` content leaks through
