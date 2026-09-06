@@ -18,6 +18,7 @@ import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { runBbxWakeup } from "../commands/wakeup.js";
+import type { WakeupOutcomeReport } from "../../cli/commands/wakeup-outcome.js";
 import { ensureQuarantineDir, quarantineDir } from "./quarantine.js";
 import {
   clearWakeupAbandoned,
@@ -67,10 +68,48 @@ async function clearWakeupMarker(boxRoot: string): Promise<void> {
 /** Run one full `bbx wakeup` for the box. Injected in tests. */
 export type WakeupRunner = (opts: { boxRoot: string }) => Promise<{ ok: boolean; detail: string }>;
 
-/** The real runner: a supervised `bbx wakeup` child, awaited, output captured. */
+/**
+ * The real runner: a supervised `bbx wakeup` child, awaited, output captured.
+ *
+ * What counts as failure here is narrower than the child's exit code. That
+ * code is non-zero whenever ANY connector errored (`wakeup-connectors.ts`), so
+ * an expired credential on an unrelated connector would mark every future scan
+ * wakeup failed — forever. What this worker actually waits on is the reactor
+ * cycle that drains the intake job its import created. So when the child
+ * reports its per-step outcome, judge by that step; fall back to the exit code
+ * only when there is no outcome to read (an older binary, or a crash before
+ * the cycle ended).
+ */
 export const spawnBbxWakeup: WakeupRunner = async ({ boxRoot }) => {
   const result = await runBbxWakeup({ boxRoot, triggeredBy: "scan-promote" });
-  return { ok: result.ok, detail: result.ok ? "" : `${result.detail}\n${result.output}`.trim() };
+  const ok = wakeupSatisfiedScanPromote({ exitOk: result.ok, outcome: result.outcome });
+  if (ok) {
+    if (!result.ok && result.outcome !== null) {
+      console.warn(
+        `[scan] bbx wakeup reported ${String(result.outcome.connectorErrors)} connector error(s); ` +
+          "the intake drain this worker waits on succeeded, so the scan is not retried.",
+      );
+    }
+    return { ok: true, detail: "" };
+  }
+  return { ok: false, detail: `${result.detail}\n${result.output}`.trim() };
+};
+
+/**
+ * Did the wakeup do the part the scan promote worker depends on? Pure, so the
+ * rule is testable without spawning anything.
+ */
+export function wakeupSatisfiedScanPromote(opts: {
+  exitOk: boolean;
+  outcome: WakeupOutcomeReport | null;
+}): boolean {
+  // No structured outcome: nothing better than the exit code to go on, and
+  // guessing "fine" would resurrect the lost-wakeup bug the marker exists for.
+  if (opts.outcome === null) return opts.exitOk;
+  // `jobsRemaining` is deliberately not consulted: the reactor skips
+  // low-priority work every run, so a queued backfill job is normal and is not
+  // this worker's business.
+  return opts.outcome.reactorOk;
 };
 
 /** Where a caller should look when a wakeup has been abandoned. */

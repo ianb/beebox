@@ -33,6 +33,7 @@ import { installRootLandmark } from "../../core/box/index.js";
 import { getBoxTime } from "../../lib/time.js";
 import { runOnWakeupScripts } from "./tick-utils.js";
 import { runTodoReviewSweep } from "../../core/todo/review-sweep.js";
+import { reportWakeupOutcome } from "./wakeup-outcome.js";
 import { runReactor } from "../../core/reactor/index.js";
 import {
   runConnectors,
@@ -127,7 +128,7 @@ async function runHousekeeping(boxRoot: string): Promise<void> {
 async function processPendingJobs(
   boxRoot: string,
   activeConnectorName: string | undefined
-): Promise<void> {
+): Promise<{ reactorOk: boolean; jobsProcessed: number; jobsRemaining: number }> {
   // Step 5: Process pending jobs. Under --connector X, the source
   // filter restricts processing to jobs tagged source="X" so a
   // gmail-scoped tick doesn't drain other connectors' work.
@@ -149,6 +150,11 @@ async function processPendingJobs(
     console.log(`  ${result.jobsRemaining} job(s) still remaining`);
   }
   console.log("");
+  return {
+    reactorOk: result.success,
+    jobsProcessed: result.jobsProcessed,
+    jobsRemaining: result.jobsRemaining,
+  };
 }
 
 async function pushChanges(boxRoot: string): Promise<void> {
@@ -275,7 +281,7 @@ export const wakeupCommand = new Command("wakeup")
     // connector must scope the reactor's sourceFilter to that (unmatched)
     // name, not to "everything" (which is what `activeConnector` collapses
     // to when the name didn't match).
-    await processPendingJobs(boxRoot, activeConnectorName);
+    const jobs = await processPendingJobs(boxRoot, activeConnectorName);
 
     // Step 6: Push committed changes to the box's git remote.
     if (!options.skipPush) {
@@ -284,4 +290,14 @@ export const wakeupCommand = new Command("wakeup")
 
     const connectorExitCode = wakeupExitCodeForConnectorErrors(connectorErrorCount);
     if (connectorExitCode !== undefined) process.exitCode = connectorExitCode;
+
+    // Opt-in, so a human's `bbx wakeup` stays quiet: a supervising caller sets
+    // the env var and reads this back, because the exit code alone cannot say
+    // WHICH step failed. See `wakeup-outcome.ts`.
+    reportWakeupOutcome({
+      connectorErrors: connectorErrorCount,
+      reactorOk: jobs.reactorOk,
+      jobsProcessed: jobs.jobsProcessed,
+      jobsRemaining: jobs.jobsRemaining,
+    });
   });
