@@ -111,8 +111,13 @@ async function landmarkAtDirIsBackground(boxRoot: string, dir: string): Promise<
   return fields?.prominence === "background";
 }
 
-/** The (sorted-first, by convention) `*.landmark.card` filename directly in `physicalDir`, or null. */
-async function findLandmarkCardName(physicalDir: string): Promise<string | null> {
+/**
+ * The (sorted-first, by convention) `*.landmark.card` filename directly in
+ * `physicalDir`, or null. Exported for `status.browse` (Track C), which
+ * needs a subdirectory's own landmark identity (label/symbol) the same way
+ * this module finds a nested landmark's.
+ */
+export async function findLandmarkCardName(physicalDir: string): Promise<string | null> {
   let names: string[];
   try {
     names = await fs.readdir(physicalDir);

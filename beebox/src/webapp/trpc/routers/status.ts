@@ -21,6 +21,15 @@ import { QuestionSchema, type QuestionFields } from "../../../schemas/question.j
 import { getNavCounts } from "../../../core/nav-counts.js";
 import { naturalCompare } from "../../../lib/natural-sort.js";
 import type { CardInfo } from "../../../core/state.js";
+import type { DirectorySummary } from "../../../core/landmark/prominence-index.js";
+import {
+  cardEffectiveProminence,
+  directorySummary,
+  subdirLandmarkIdentity,
+  type BrowseDirLandmark,
+} from "../../../core/landmark/browse-prominence.js";
+import type { EffectiveLevel } from "../../../shared/prominence.js";
+import type { CardSchema } from "../../../cards/schema.js";
 
 /** A question card's answerable/archive-relevant fields, layered onto its `CardInfo`. */
 export interface QuestionInfo extends CardInfo {
@@ -44,6 +53,10 @@ export interface QuestionInfo extends CardInfo {
 export interface BrowseDir {
   name: string;
   fileCount: number;
+  /** The pruned-subtree rollup (`docs/plans/card-prominence.md`, Track B): does anything under it lead? */
+  summary: DirectorySummary;
+  /** This subdirectory's OWN landmark identity, when it holds a landmark card directly. */
+  landmark?: BrowseDirLandmark | undefined;
 }
 
 export interface BrowseCard {
@@ -54,6 +67,8 @@ export interface BrowseCard {
   title?: string | undefined;
   /** True if this card has a `<basename>.attach/` directory (i.e. attachments). */
   hasAttachments?: boolean;
+  /** The card's effective level: its own declared `prominence`, else its type's default. */
+  prominence: EffectiveLevel;
 }
 
 export interface BrowseFile {
@@ -80,6 +95,65 @@ function rejectDisplayFormBrowsePath(rawPath: string): void {
   if (displayForm !== null) {
     throw new TRPCError({ code: "BAD_REQUEST", message: displayFormPathMessage(rawPath, displayForm) });
   }
+}
+
+/**
+ * One subdirectory entry: the existing recursive `.card` count plus Track
+ * C's pruned-subtree summary and own landmark identity. Split out to keep
+ * `browse`'s complexity under the lint budget.
+ */
+async function buildBrowseDir(boxRoot: string, { resolved, entryName }: { resolved: string; entryName: string }): Promise<BrowseDir> {
+  const dirFullPath = path.join(resolved, entryName);
+  const dirRelPath = path.relative(boxRoot, dirFullPath);
+  let fileCount = 0;
+  try {
+    const subEntries = await fs.readdir(dirFullPath, { recursive: true });
+    fileCount = subEntries.filter((f) => typeof f === "string" && f.endsWith(".card")).length;
+  } catch (e) {
+    // Can't read subdirectory — leave fileCount at 0 rather than failing the whole listing.
+    if (errnoCode(e) !== "ENOENT") {
+      console.warn(`browse: cannot count cards in ${dirFullPath}:`, e);
+    }
+  }
+  const [summary, landmark] = await Promise.all([
+    directorySummary(boxRoot, dirRelPath),
+    subdirLandmarkIdentity(boxRoot, dirRelPath),
+  ]);
+  return { name: entryName, fileCount, summary, ...(landmark !== undefined && { landmark }) };
+}
+
+/**
+ * One `.card` entry: its frontmatter-derived fields plus Track C's
+ * effective `prominence`. Split out for the same reason as `buildBrowseDir`.
+ */
+async function buildBrowseCard(
+  { fullPath, relativePath, parsed, hasAttachments, cardSchemas }: {
+    fullPath: string;
+    relativePath: string;
+    parsed: { name: string; type: string };
+    hasAttachments: boolean;
+    cardSchemas: Map<string, CardSchema>;
+  },
+): Promise<BrowseCard> {
+  const fm = await loadCardFrontmatter(fullPath);
+  const prominence = cardEffectiveProminence(fm, { type: parsed.type, cardSchemas });
+  if (fm === null) {
+    // Card failed to parse — still list it (as unknown) so the UI shows it.
+    return { relativePath, name: parsed.name, type: parsed.type, hasAttachments, prominence };
+  }
+  const str = (key: string): string | undefined => {
+    const value = fm[key];
+    return typeof value === "string" ? value : undefined;
+  };
+  return {
+    relativePath,
+    name: parsed.name,
+    type: parsed.type,
+    ...(str("status") !== undefined && { status: str("status") }),
+    ...(str("title") !== undefined && { title: str("title") }),
+    hasAttachments,
+    prominence,
+  };
 }
 
 export const statusRouter = router({
@@ -180,7 +254,8 @@ export const statusRouter = router({
       // itself is filtered to areas only, below.
       const resolved = path.resolve(targetDir);
       const contained = containWithinBox(ctx.boxRoot, resolved);
-      const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
+      const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[]; background: boolean } =
+        { dirs: [], cards: [], files: [], background: false };
       if (contained === null || (contained !== "" && !isInBoxNamespace(contained))) {
         return { path: relPath, ...empty };
       }
@@ -213,6 +288,7 @@ export const statusRouter = router({
       const dirs: BrowseDir[] = [];
       const cards: BrowseCard[] = [];
       const files: BrowseFile[] = [];
+      const cardSchemas = await createCardSchemaMap(ctx.boxRoot);
 
       // Build a set of card basenames so we can fold owned `<basename>.attach/`
       // directories into their owning card (cards-as-directories UI).
@@ -233,18 +309,7 @@ export const statusRouter = router({
             const owner = entry.name.slice(0, -".attach".length);
             if (cardBasenames.has(owner)) continue;
           }
-          const dirFullPath = path.join(resolved, entry.name);
-          let fileCount = 0;
-          try {
-            const subEntries = await fs.readdir(dirFullPath, { recursive: true });
-            fileCount = subEntries.filter((f) => typeof f === "string" && f.endsWith(".card")).length;
-          } catch (e) {
-            // Can't read subdirectory — leave fileCount at 0 rather than failing the whole listing.
-            if (errnoCode(e) !== "ENOENT") {
-              console.warn(`browse: cannot count cards in ${dirFullPath}:`, e);
-            }
-          }
-          dirs.push({ name: entry.name, fileCount });
+          dirs.push(await buildBrowseDir(ctx.boxRoot, { resolved, entryName: entry.name }));
           continue;
         }
         const fullPath = path.join(resolved, entry.name);
@@ -259,24 +324,7 @@ export const statusRouter = router({
             (e) => e.isDirectory() && e.name === attachDirName,
           );
 
-          const fm = await loadCardFrontmatter(fullPath);
-          if (fm === null) {
-            // Card failed to parse — still list it (as unknown) so the UI shows it.
-            cards.push({ relativePath, name: parsed.name, type: parsed.type, hasAttachments });
-            continue;
-          }
-          const str = (key: string): string | undefined => {
-            const value = fm[key];
-            return typeof value === "string" ? value : undefined;
-          };
-          cards.push({
-            relativePath,
-            name: parsed.name,
-            type: parsed.type,
-            ...(str("status") !== undefined && { status: str("status") }),
-            ...(str("title") !== undefined && { title: str("title") }),
-            hasAttachments,
-          });
+          cards.push(await buildBrowseCard({ fullPath, relativePath, parsed, hasAttachments, cardSchemas }));
           continue;
         }
 
@@ -290,7 +338,11 @@ export const statusRouter = router({
       filtered.dirs.sort((a, b) => naturalCompare(a.name, b.name));
       filtered.cards.sort((a, b) => naturalCompare(a.name, b.name));
       filtered.files.sort((a, b) => naturalCompare(a.name, b.name));
-      return { path: relPath, ...filtered };
+      // The listed directory's own background cascade (its landmark, or an
+      // ancestor's) — Track C's fold folds everything when this is true,
+      // regardless of any individual card's own level.
+      const background = (await directorySummary(ctx.boxRoot, relPath)).background;
+      return { path: relPath, background, ...filtered };
     }),
 });
 
