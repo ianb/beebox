@@ -34,6 +34,16 @@ export interface AttachLintError {
   message: string;
 }
 
+/** Format attach-layout errors for `bbx validate`'s text output. */
+export function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors: boolean }): string {
+  if (errors.length === 0) return "";
+  const ESC = "";
+  const red = colors ? (s: string) => `${ESC}[31m${s}${ESC}[0m` : (s: string) => s;
+  return errors
+    .map((e) => `${red("error")}  ${e.path}  [${e.rule}] ${e.message}`)
+    .join("\n");
+}
+
 const SKIP_DIRS = new Set([
   ".git",
   ".beebox",

@@ -40,6 +40,9 @@ import { recordChatSendEnvironmentEvent } from "../../lib/chat-send-diagnostics"
 const voiceConfigSchema = z.object({
   model: z.string().optional(),
   instructions: z.array(z.string()),
+  // Kept a plain string for the same reason as `model`: the client only needs
+  // it as a cache-key component, so it needn't import the backend enum.
+  backend: z.string().optional(),
 });
 
 // An agent (or anything) wrote a box file. Stamp a fresh cache-buster for that
@@ -336,6 +339,11 @@ export function useChatWs(opts: {
         }
         if (config.instructions.length > 0) {
           tts.setVoiceConfig({ baseInstructions: config.instructions.join(" ") });
+        }
+        // Part of the audio cache key: without it, switching backend replays
+        // the previous engine's voice from cache until a reload.
+        if (config.backend !== undefined) {
+          tts.setVoiceConfig({ backend: config.backend });
         }
       })
       .catch((e) => {

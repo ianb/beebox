@@ -1,23 +1,35 @@
 /**
- * OpenAI Embeddings service — typed interface for text embedding.
+ * Embeddings service — typed interface for text embedding.
  *
- * Real implementation calls the OpenAI REST API. Fake derives deterministic
- * unit vectors from each text so tests never need a real key.
+ * Real implementation calls `/v1/embeddings`, either at OpenAI directly or at
+ * OpenRouter when the box has no OpenAI key of its own (`core/openrouter.ts`).
+ * Fake derives deterministic unit vectors from each text so tests never need a
+ * real key.
  *
  * Provider decision (sticky, see docs/plans/semantic-search.md § Direction):
  * text-embedding-3-small at 512 dims via Matryoshka truncation. Model + dims
  * are code constants, not per-box config — a config knob would let boxes
  * drift apart for no benefit; changing the model is a code change whose cost
  * (re-embedding every card) should look like a code change.
+ *
+ * **The route is not part of the embedder's identity.** {@link EMBEDDER_ID} is
+ * hashed into every card's embed record, so changing it re-embeds every card in
+ * every box — and the OpenRouter arm asks for the same model, at the same
+ * dimensions, pinned to OpenAI itself (`openRouterProvider("openai")`, which
+ * also refuses the Azure host that otherwise serves this model). Same model,
+ * same provider, same vectors; a box that swaps its key keeps its index.
  */
 
 import ky from "ky";
 import { errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
+import { OPENROUTER_BASE_URL, openRouterProvider, type ModelRoute } from "../core/openrouter.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
+/** The same model, under OpenRouter's `<author>/<model>` naming. */
+const OPENROUTER_EMBEDDING_MODEL = `openai/${EMBEDDING_MODEL}`;
 export const EMBEDDING_DIMENSIONS = 512;
 /** `"<provider>:<model>@<dims>"` — folded into every embedded-text hash. */
 export const EMBEDDER_ID = `openai:${EMBEDDING_MODEL}@${String(EMBEDDING_DIMENSIONS)}`;
@@ -40,7 +52,7 @@ const MAX_CHARS_PER_REQUEST = 400_000;
  */
 export class EmbeddingsError extends Error {
   constructor(detail: string, opts?: { cause?: unknown }) {
-    super(`OpenAI embeddings error: ${detail}`, opts);
+    super(`Embeddings error: ${detail}`, opts);
     this.name = "EmbeddingsError";
   }
 }
@@ -122,10 +134,17 @@ export function chunkTexts(texts: string[]): string[][] {
   return chunks;
 }
 
-export function createOpenAIEmbeddingsService(apiKey: string): EmbeddingsService {
+/**
+ * Build the service for a resolved route. The two arms differ only in base
+ * URL, model name, and OpenRouter's `provider` pin — the request and response
+ * shapes are identical, which is the reason embeddings were the first workload
+ * moved.
+ */
+export function createEmbeddingsService(route: ModelRoute): EmbeddingsService {
+  const viaOpenRouter = route.via === "openrouter";
   const api = ky.create({
-    prefixUrl: "https://api.openai.com/v1",
-    headers: { Authorization: `Bearer ${apiKey}` },
+    prefixUrl: viaOpenRouter ? OPENROUTER_BASE_URL : "https://api.openai.com/v1",
+    headers: { Authorization: `Bearer ${route.apiKey}` },
     retry: 2,
     timeout: 60_000,
   });
@@ -135,7 +154,12 @@ export function createOpenAIEmbeddingsService(apiKey: string): EmbeddingsService
     try {
       body = await api
         .post("embeddings", {
-          json: { model: EMBEDDING_MODEL, input: texts, dimensions: EMBEDDING_DIMENSIONS },
+          json: {
+            model: viaOpenRouter ? OPENROUTER_EMBEDDING_MODEL : EMBEDDING_MODEL,
+            input: texts,
+            dimensions: EMBEDDING_DIMENSIONS,
+            ...(viaOpenRouter && { provider: openRouterProvider("openai") }),
+          },
         })
         .json<unknown>();
     } catch (e) {

@@ -13,17 +13,23 @@
  * that separation predates the store.
  */
 
-import { resolveSecret } from "../secrets/resolve.js";
+import { resolveSecret, type SecretRead } from "../secrets/resolve.js";
 
 /** The store name this key lives under — matches the retired file's basename. */
 const OPENAI_SECRET_NAME = "openai";
 
-export async function getOpenAiEmbeddingsKey(boxRoot: string): Promise<string | null> {
+/**
+ * `read` is optional because most callers just want the key; the health check
+ * passes `observe: false` so asking "is this configured?" does not stamp the
+ * entry as used (`resolveSecret`).
+ */
+export async function getOpenAiEmbeddingsKey(boxRoot: string, read?: SecretRead): Promise<string | null> {
   const resolved = await resolveSecret({
     boxRoot,
     name: OPENAI_SECRET_NAME,
     purpose: "embeddings",
     access: "server",
+    ...(read?.observe !== undefined && { observe: read.observe }),
   });
   if (!resolved.ok) return null;
   if (resolved.value.suspect) {

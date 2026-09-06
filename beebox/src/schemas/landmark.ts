@@ -30,6 +30,7 @@ import { splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema }
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { CardSymbol } from "../shared/card-symbol.js";
+import { Prominence } from "../shared/prominence.js";
 
 /** Sort order for `expand` fan-out results. */
 export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
@@ -135,13 +136,28 @@ const landmarkFields = {
  * (`GLOBAL_CARD_FIELDS`) that these readers must see, because a landmark's mark
  * now lives there rather than under `navigation`. Stripping it is what would
  * make a migrated landmark render as no symbol at all.
+ *
+ * `prominence` is admitted the same way: a written value describes the
+ * *place*, not the file (the file itself is background by type — see
+ * `LandmarkSchema`'s `prominence: "background"` below), and these readers
+ * must see it to apply the `background` cascade.
  */
-const LandmarkObject = z.object({ ...landmarkFields, symbol: CardSymbol.optional() });
+const LandmarkObject = z.object({
+  ...landmarkFields,
+  symbol: CardSymbol.optional(),
+  prominence: Prominence.optional(),
+});
 export type LandmarkFields = z.infer<typeof LandmarkObject>;
 
 export const LandmarkSchema: CardSchema = cardSchema("landmark", {
   description: "Marks its directory as a notable spot — a curated navigation bookmark and/or a triage filing destination; one per directory",
   category: "authored",
+  // A landmark is a place marker, not a visitable file: it never lists in a
+  // fold, and the directory's identity is drawn from it instead
+  // (docs/implemented-plans/card-prominence.md, "Type defaults"). A written `prominence`
+  // still means something — see LandmarkObject above — but it describes the
+  // place, not this file.
+  prominence: "background",
   fields: landmarkFields,
   searchable: false,
   instructions: `# Landmark Cards
@@ -194,7 +210,13 @@ destinations:
 
 A pure routing target (an archive humans don't browse) can have only \`destinations\`; a pure bookmark can have only \`navigation\`.
 
-**Dedup**: a card appearing in both a hand-listed \`links\` entry and an \`expand\` result shows once — hand-listed links come first.`,
+**Dedup**: a card appearing in both a hand-listed \`links\` entry and an \`expand\` result shows once — hand-listed links come first.
+
+## Derived links, and \`prominence\`
+
+Most of a landmark's list is **derived**, not listed: every card under its directory carrying \`prominence: entry-point\` or \`prominence: primary\` appears automatically (entry points first, then primary cards, then nested landmarks, then \`expand\` results), and the walk stops at any subdirectory with its own landmark. So the way to surface a card in its own place is to mark the card, not to edit the landmark. \`links:\` is for what a card cannot say about itself: a target outside this directory, a contextual label, or a fixed position. A \`links:\` entry that duplicates a marked in-directory card is harmless (it shows once, listed first) and \`bbx validate\` notes it as a trim candidate.
+
+A landmark card is a place marker, not a visitable file — it is \`background\` by type and never needs \`prominence\` written to be on the Landmarks page. The one value that means something on a landmark is \`prominence: background\`: the place is housekeeping (logs, imports, machinery), it leaves the Landmarks page and the place menu, and everything under it folds in Browse. \`entry-point\` or \`primary\` on a landmark is a lint warning; the place's entry point is a visitable card inside it.`,
 });
 
 export type Landmark = LandmarkFields;

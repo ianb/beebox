@@ -17,6 +17,7 @@ import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { landmarkScanDir, normalizeLandmarkDir } from "./root-dir.js";
 import type { CardSymbolData } from "../../shared/card-symbol.js";
+import type { ProminenceLevel } from "../../shared/prominence.js";
 
 /** Landmark cards read at once — see {@link mapInBatchesSettled}. */
 const READ_CONCURRENCY = 64;
@@ -77,13 +78,28 @@ export interface LandmarkSummary {
   label: string;
   /** The card's mark, `src` resolved to a box-relative path; null when it has none. */
   symbol: CardSymbolData | null;
-
+  /** The landmark's own WRITTEN `prominence` (the place-level cascade field), null when absent. */
+  prominence: ProminenceLevel | null;
 }
 
-/** A `*.landmark.card` that exists but doesn't parse as a landmark. */
-export interface LandmarkProblem {
-  /** Box-relative path of the offending card. */
+/**
+ * Something a landmark reader couldn't fully honor. Two distinct causes, kept
+ * as a discriminated union rather than one flat shape (`docs/implemented-plans/card-prominence.md`,
+ * Track B): a `*.landmark.card` that exists but doesn't parse as a landmark,
+ * or a derived link (Track B) whose target couldn't be read. Every producer/
+ * consumer switches on `kind` — see `landmarks.ts`, `chat-place-menu-procedure.ts`,
+ * and the frontend's `LandmarksList.tsx`.
+ */
+export type LandmarkProblem = { kind: "landmark-parse"; path: string } | DerivedReadProblem;
+
+/** A derived link (Track B) whose target couldn't be read. */
+export interface DerivedReadProblem {
+  kind: "derived-read";
+  /** The landmark whose pruned subtree produced the link. */
+  landmarkPath: string;
+  /** The unreadable target's box-relative path. */
   path: string;
+  message: string;
 }
 
 export interface LandmarkSummaries {
@@ -128,6 +144,7 @@ async function readSummary(boxRoot: string, relPath: string): Promise<CardOutcom
       dir,
       label: (navigation === undefined ? "" : navigation.label ?? "") || path.basename(relPath, ".landmark.card"),
       symbol,
+      prominence: fields.prominence ?? null,
     },
   };
 }
@@ -170,7 +187,7 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
       continue;
     }
     if (outcome.value === null) continue;
-    if (outcome.value.problem) problems.push({ path: outcome.value.path });
+    if (outcome.value.problem) problems.push({ kind: "landmark-parse", path: outcome.value.path });
     else out.push(outcome.value.summary);
   }
   out.sort((a, b) => {

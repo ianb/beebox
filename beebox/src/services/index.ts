@@ -13,7 +13,7 @@ import type { CodexCliService } from "./codex-cli.js";
 import type { GoogleAuthService } from "./google-auth.js";
 import type { GoogleCalendarService } from "./google-calendar.js";
 import type { GoogleGmailService } from "./google-gmail.js";
-import type { OpenAIAudioService } from "./openai-audio.js";
+import type { TtsService } from "./tts.js";
 import type { EmbeddingsService } from "./openai-embeddings.js";
 import type { GoogleDriveService } from "./google-drive.js";
 
@@ -26,7 +26,7 @@ export interface Services {
   googleAuth?: GoogleAuthService | undefined;
   calendar?: GoogleCalendarService | undefined;
   gmail?: GoogleGmailService | undefined;
-  openaiAudio?: OpenAIAudioService | undefined;
+  openaiAudio?: TtsService | undefined;
   embeddings?: EmbeddingsService | undefined;
   drive?: GoogleDriveService | undefined;
 }

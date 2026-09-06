@@ -75,6 +75,7 @@ one in this table; see "Google client credentials" below.
 | `gemini` | `core/gemini-key.ts` (audio questions, scan-import vision) | — | `GEMINI_KEY`, then `SKE_GEMINI_API_KEY` |
 | `google-oauth-client-id` / `google-oauth-client-secret` | `connectors/google-auth.ts` `getBoxGoogleClientCreds` | — | — |
 | `anthropic`, `replicate` | `/api/adapters/<name>` | `<name>.secret.json` | — |
+| `openrouter` | `core/openrouter.ts` (the fallback route for embeddings, audio questions, Whisper HQ transcription, and the opt-in Gemini scan backend; the *only* route for the `mai` HQ services and the `gemini` TTS backend), `/api/adapters/openrouter` | — | — (new since custody; store-only from the start) |
 | `telegram-bot/<box>` | `connectors/telegram-helpers.ts`, admin setup | `telegram.secret.json` | — |
 
 **One deliberate reuse outside this table.** The dev repo's document-comment
@@ -467,3 +468,31 @@ Tests get an isolated store automatically: `makeTmpBox()` points
 `BBX_SECRETS_FILE` at a throwaway file unless the test set one itself, so a
 store-writing test can never mutate the developer's real
 `~/.config/beebox/secrets.json`.
+
+## One key that stands in for several
+
+`openrouter` is the only name here that is not a service's own credential. It
+is a fallback: each model-backed service uses its own provider key when the box
+has one, and reaches the same model through OpenRouter when it does not
+(`core/openrouter.ts`). Granting it lights up semantic search, audio
+questions, and the Whisper high-quality transcription pass without any further
+configuration. It also unlocks two HQ transcription services that exist only
+behind it — `mai` and `mai-diarized`, Microsoft's MAI-Transcribe-2, which the
+box can reach no other way and which is its only speaker-labelling option that
+does not need a Mistral key, and granting it changes nothing about a service that already has
+its own key.
+
+Scan-import is the one that still needs a second thing set. Its default vision
+backend is Claude on the agent's own subscription auth, which needs no key at
+all and is the better backend; an OpenRouter key must not quietly move scan
+import off it. So `BBX_SCAN_VISION=gemini` still selects the Gemini backend, and
+the OpenRouter key only decides how that backend is reached once selected.
+
+It does not cover everything. Chat text-to-speech and the three realtime
+dictation paths stay on their own providers — OpenRouter carries no OpenAI TTS
+model and has no realtime protocol at all. Voxtral HQ transcription stays on
+Mistral too: through OpenRouter that model answers in plain JSON only and cannot
+diarize, so `hqService: voxtral` or `voxtral-diarized` still needs a `mistral`
+key. A box that wants any of these needs `openai-thinking`, `mistral`, or
+`deepgram` as before. `bbx health` prints a
+`model-routes` line naming what each service is currently using.

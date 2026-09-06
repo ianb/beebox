@@ -10,9 +10,15 @@
  */
 
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+import type { HqTranscriptionService, TranscriptionService } from "@shared/transcription-services.js";
+import type { TtsBackend } from "@shared/tts-backends.js";
 
-export type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper" | "openai-realtime";
-export type HqTranscriptionOption = "whisper" | "whisper-llm" | "whisper-llm-mini" | "voxtral" | "voxtral-diarized";
+// The vocabulary comes from `shared/`, not a copy: these unions used to be
+// hand-written here and drifted from the engine's the moment a service was
+// added. `fake` is a test backend and never appears in the picker.
+export type TranscriptionServiceOption = Exclude<TranscriptionService, "fake">;
+export type HqTranscriptionOption = HqTranscriptionService;
+export type TtsBackendOption = TtsBackend;
 
 const TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   label: string;
@@ -32,6 +38,24 @@ const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   { label: "Whisper LLM mini", service: "whisper-llm-mini" },
   { label: "Voxtral (Mistral)", service: "voxtral" },
   { label: "Voxtral + diarization (labels who's speaking)", service: "voxtral-diarized" },
+  { label: "MAI (Microsoft, needs an OpenRouter key)", service: "mai" },
+  { label: "MAI + diarization (labels who's speaking)", service: "mai-diarized" },
+];
+
+/**
+ * The speaking-voice backends. `note` is shown under the label when the
+ * backend changes what the boxholder's style instructions can do — a control
+ * may only display what is actually true (principle 13), and "your personality
+ * card's tone setting does nothing here" is exactly the kind of truth that is
+ * otherwise discovered by ear.
+ */
+const TTS_BACKEND_OPTIONS: ReadonlyArray<{
+  label: string;
+  backend: TtsBackendOption;
+  note?: string;
+}> = [
+  { label: "OpenAI (gpt-4o-mini-tts)", backend: "openai" },
+  { label: "Gemini (via OpenRouter)", backend: "gemini", note: "preview model; needs an OpenRouter key. Its voices differ, so a personality-card voice is replaced." },
 ];
 
 function optionLabel(options: ReadonlyArray<{ label: string; service: string }>, service: string | null): string {
@@ -52,6 +76,12 @@ export function hqTranscriptionServiceLabel(service: string | null): string {
   return optionLabel(HQ_TRANSCRIPTION_OPTIONS, service);
 }
 
+/** Speaking-voice counterpart, for the root-panel summary line. */
+export function ttsBackendLabel(backend: string | null): string {
+  if (backend === null) return "…";
+  return TTS_BACKEND_OPTIONS.find((o) => o.backend === backend)?.label ?? backend;
+}
+
 /** "Voice settings" sub-panel: live + HQ transcription service pickers. */
 export function VoicePanel({
   onBack,
@@ -59,6 +89,8 @@ export function VoicePanel({
   onSelectTranscriptionService,
   currentHqService,
   onSelectHqTranscriptionService,
+  currentTtsBackend,
+  onSelectTtsBackend,
 }: {
   onBack: () => void;
   /** Comparison-only — may be "fake" (dev/test service) which never appears in the option lists. */
@@ -67,6 +99,8 @@ export function VoicePanel({
   /** Comparison-only — may be "fake" (dev/test service) which never appears in the option lists. */
   currentHqService: string | null;
   onSelectHqTranscriptionService: (hqService: HqTranscriptionOption) => void;
+  currentTtsBackend: string | null;
+  onSelectTtsBackend: (backend: TtsBackendOption) => void;
 }) {
   return (
     <>
@@ -87,6 +121,16 @@ export function VoicePanel({
           {currentHqService === opt.service ? "✓ " : "  "}{opt.label}
         </MenuItem>
       ))}
-    </>
+          <MenuDivider />
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">When the box speaks</div>
+      {TTS_BACKEND_OPTIONS.map((opt) => (
+        <MenuItem key={opt.backend} id={`bbx-voice-tts-${opt.backend}`} onClick={() => onSelectTtsBackend(opt.backend)} keepOpen>
+          <span>
+            {currentTtsBackend === opt.backend ? "✓ " : "  "}{opt.label}
+            {opt.note !== undefined && <span className="block pl-4 text-xs text-warm-500">{opt.note}</span>}
+          </span>
+        </MenuItem>
+      ))}
+</>
   );
 }

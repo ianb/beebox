@@ -13,6 +13,7 @@ import { healthRouter } from "./routers/health.js";
 import { driveRouter } from "./routers/drive.js";
 import { filesRouter } from "./routers/files.js";
 import { transcriptionRouter } from "./routers/transcription.js";
+import { ttsRouter } from "./routers/tts.js";
 import { landmarksRouter } from "./routers/landmarks.js";
 import { navRouter } from "./routers/nav.js";
 import { chatRouter } from "./routers/chat.js";
@@ -43,6 +44,7 @@ export const appRouter = router({
   drive: driveRouter,
   files: filesRouter,
   transcription: transcriptionRouter,
+  tts: ttsRouter,
   landmarks: landmarksRouter,
   nav: navRouter,
   chat: chatRouter,

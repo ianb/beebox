@@ -83,10 +83,11 @@ represents it. Other cards and files remain present.
 ```ts
 const listing = renderToStaticMarkup(React.createElement(BrowseSidebarList, {
   data: {
+    background: false,
     dirs: [],
     cards: [
-      { relativePath: "Box.landmark.card", name: "Box", type: "landmark", hasAttachments: false },
-      { relativePath: "briefing.memo.card", name: "briefing", type: "memo", hasAttachments: false },
+      { relativePath: "Box.landmark.card", name: "Box", type: "landmark", hasAttachments: false, prominence: "background" },
+      { relativePath: "briefing.memo.card", name: "briefing", type: "memo", hasAttachments: false, prominence: "ordinary" },
     ],
     files: [{ relativePath: "MAP.md", name: "MAP.md" }],
   },
@@ -96,6 +97,7 @@ const listing = renderToStaticMarkup(React.createElement(BrowseSidebarList, {
   selectedFilePath: null,
   onFileContextMenu: () => {},
   omitCardPath: landmark.path,
+  mode: "raw",
 }));
 [
   listing.includes("Box.landmark.card"),

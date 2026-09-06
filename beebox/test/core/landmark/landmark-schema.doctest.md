@@ -74,6 +74,20 @@ JSON.stringify(fields, null, 2)
 }
 ```
 
+`prominence` is admitted the same way `symbol` is (`landmark.ts`): a written
+value describes the place, not the file, so a reader must still see it.
+
+```ts continue
+const withProminence = parseLandmarkFields(`---
+navigation:
+  label: Logs
+prominence: background
+---
+`);
+withProminence.prominence
+=> background
+```
+
 ## Template
 
 `createLandmarkTemplate` produces a starter card with a `navigation` role for
