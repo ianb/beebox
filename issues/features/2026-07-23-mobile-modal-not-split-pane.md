@@ -87,3 +87,11 @@ used — one thing in focus at a time — where desktop rewards side-by-side.
 
 Central to a credible mobile/soft-launch experience — the phone is where most
 people will first try this.
+
+> 2026-09-06 (boxholder, via main session): queued as "mobile sidecar fixing
+> up" — to be taken after `2026-08-30-chat-input-everywhere.md`, since the
+> composer-everywhere design decides what the mobile document view has to
+> leave room for. The sidecar shell fixes in flight (`sidecar-shell`
+> worktree: 502 recovery, tab scroll, pin, landmark strip) are desktop-first
+> and land before this.
+

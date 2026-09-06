@@ -30,7 +30,8 @@ written
   "location",
   "schedules",
   "tricks",
-  "views"
+  "views",
+  "what-can-you-do"
 ]
 ```
 

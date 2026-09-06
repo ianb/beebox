@@ -14,6 +14,11 @@ import {
 } from "../command-runner.js";
 import { buildToolingScriptEnv } from "../script-env.js";
 import { runCollectedChild } from "../../lib/run-child.js";
+import {
+  parseWakeupOutcome,
+  WAKEUP_OUTCOME_ENV,
+  type WakeupOutcomeReport,
+} from "../../cli/commands/wakeup-outcome.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /** Resolve the `bbx` binary path, matching the pattern in scheduler.ts */
@@ -37,10 +42,15 @@ export async function runBbxWakeup(opts: {
   boxRoot: string;
   triggeredBy: string;
   onChunk?: ((text: string) => void) | undefined;
-}): Promise<{ ok: boolean; detail: string; output: string }> {
+}): Promise<{ ok: boolean; detail: string; output: string; outcome: WakeupOutcomeReport | null }> {
   const bbxPath = resolveBbxPath();
   // Tooling profile: `bbx wakeup` runs the connectors themselves.
-  const env = await buildToolingScriptEnv(opts.boxRoot, { BBX_TRIGGERED_BY: opts.triggeredBy });
+  const env = await buildToolingScriptEnv(opts.boxRoot, {
+    BBX_TRIGGERED_BY: opts.triggeredBy,
+    // Ask for the per-step outcome: the exit code alone cannot say which step
+    // failed, and a supervising caller needs to know.
+    [WAKEUP_OUTCOME_ENV]: "1",
+  });
   try {
     const { code, output } = await runCollectedChild({
       command: bbxPath,
@@ -49,10 +59,11 @@ export async function runBbxWakeup(opts: {
       env,
       ...(opts.onChunk === undefined ? {} : { onChunk: opts.onChunk }),
     });
-    if (code === 0) return { ok: true, detail: "", output };
-    return { ok: false, detail: `bbx wakeup exited with code ${code}`, output };
+    const outcome = parseWakeupOutcome(output);
+    if (code === 0) return { ok: true, detail: "", output, outcome };
+    return { ok: false, detail: `bbx wakeup exited with code ${code}`, output, outcome };
   } catch (err) {
-    return { ok: false, detail: errorMessage(err), output: "" };
+    return { ok: false, detail: errorMessage(err), output: "", outcome: null };
   }
 }
 

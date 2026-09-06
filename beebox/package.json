@@ -27,6 +27,7 @@
     "dist",
     "bin",
     "box-docs",
+    "docs/box",
     "templates",
     "plugins",
     ".agents",
@@ -108,7 +109,7 @@
     "tsx": "^4.23.1"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.3.259",
+    "@anthropic-ai/claude-agent-sdk": "0.3.260",
     "@fastify/cookie": "^11.0.2",
     "@fastify/multipart": "^9.4.0",
     "@fastify/static": "^9.0.0",

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-06T00:54:14Z
-Total documents: 323
+Generated: 2026-09-06T05:01:32Z
+Total documents: 325
 
 ## Issues
 
@@ -51,6 +51,7 @@ These documents are not referenced by any other document.
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
 - **docs/plans/public-site-orientation.md** — "Public site — orientation & re-entry map" (123 lines)
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines)
+- **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
 - **docs/plans/sticky-hq-ios-parity.md** — "Sticky HQ dictation on iOS" (100 lines)
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
@@ -87,13 +88,13 @@ These references point to files that don't exist.
 
 #### CLAUDE.md
 
-Title: "Bee Box" | 184 lines
+Title: "Bee Box" | 185 lines
 
 Referenced by:
 - CLAUDE.md:9 (mention) — **Dev server** — one shared router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...` (lazy star
 - README.md:36 (mention) — `CLAUDE.md`) and the box itself under `content/` — directories, default
 - code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is
-- docs/README.md:52 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
+- docs/README.md:57 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 - docs/activities-design.md:46 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
 - docs/activities-retrospective.md:21 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
 - docs/adding-schemas.md:272 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
@@ -263,6 +264,7 @@ Referenced by:
 - ../issues/exploration/2026-06-17-loading-eagerness-axis.md:9 (mention) — *instructions* (akin to CLAUDE.md), where should it land? Today the only home
 - ../issues/exploration/2026-07-30-subagent-context-inheritance.md:2 (mention) — title: "Do our subagents inherit the monorepo CLAUDE.md and its rules?"
 - ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:86 (mention) — system alongside CLAUDE.md, `docs/`, plans, and the generated box docs. This
+- ../issues/exploration/2026-09-06-per-box-symbol-strategy-note.md:37 (mention) — `CLAUDE.md`, a `.claude/rules/` glob that fires on the files it governs, or a
 - ../issues/features/2026-05-28-retrospective-session-scan.md:9 (mention) — Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user
 - ../issues/features/2026-06-20-context-size-measurement-legibility.md:14 (mention) — - **Compositional breakdown.** The most *actionable* and the most work: split the baseline into system prompt vs. agent-
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:16 (mention) — and what else to sweep. The knowledge is scattered across box CLAUDE.md-equivalents,
@@ -370,7 +372,7 @@ Title: "Code Style" | 118 lines
 
 Referenced by:
 - CLAUDE.md:123 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
-- CLAUDE.md:183 (at-include) — @code-style.md
+- CLAUDE.md:184 (at-include) — @code-style.md
 - docs/engineering-principles.md:4 (link) — They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
 - docs/implemented-plans/agent-applied-migrations.md:90 (mention) — - `beebox/code-style.md` — max 2 positional params (named options), no
 - docs/implemented-plans/agent-field-tests.md:40 (mention) — - `beebox/code-style.md` — mechanical rules for all new code.
@@ -786,12 +788,12 @@ References:
 Title: "Third-party assets and their attribution" | 32 lines
 
 Referenced by:
-- CLAUDE.md:179 (mention) — | Third-party asset attribution | `docs/attribution.md` |
+- CLAUDE.md:180 (mention) — | Third-party asset attribution | `docs/attribution.md` |
 - frontend.md:55 (mention) — rejected; see `docs/attribution.md` for why the artwork is a dependency.
 
 #### docs/box-layout.md
 
-Title: "Box Layout" | 252 lines
+Title: "Box Layout" | 261 lines
 
 Referenced by:
 - CLAUDE.md:93 (mention) — **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md); `~/src/boxes/test1/` is the
@@ -844,7 +846,7 @@ References:
 Title: "Calendar Integration" | 106 lines
 
 Referenced by:
-- CLAUDE.md:173 (mention) — | Calendar integration | `docs/calendar.md` |
+- CLAUDE.md:174 (mention) — | Calendar integration | `docs/calendar.md` |
 - docs/connectors.md:29 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](calendar.md) |
 - docs/design/README.md:29 (link) — [`../calendar.md`](../calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../calendar.md).
@@ -976,7 +978,7 @@ Title: "Client Debug Log" | 107 lines
 
 Referenced by:
 - CLAUDE.md:116 (mention) — - **Check client debug logs when debugging frontend or iOS issues.** Browser errors and native iOS diagnostics share the
-- docs/box-layout.md:212 (mention) — | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
+- docs/box-layout.md:221 (mention) — | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:552 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server-operations.md:227 (link) — For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-l
@@ -1089,7 +1091,7 @@ References:
 Title: "(no title)" | 1 lines
 
 Referenced by:
-- docs/README.md:33 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
+- docs/README.md:38 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
 - docs/implemented-plans/remove-bbx-render.md:358 (mention) — **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/docs-reorg.md:114 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
@@ -1210,6 +1212,7 @@ Referenced by:
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/publish-pages.md:15 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
+- docs/plans/scan-retry-and-document-route.md:31 (mention) — (`docs/engineering-principles.md:49`): *"Degradation is allowed for failures
 - docs/plans/scan-vision-claude.md:25 (mention) — - `beebox/docs/engineering-principles.md` — especially
 - docs/plans/scanner-ingest.md:23 (mention) — - `docs/engineering-principles.md` — findings trace to: **#3
 - docs/plans/workstream-exhibits.md:92 (mention) — - Principle 3, **validate at boundaries** (`docs/engineering-principles.md:37`):
@@ -1256,7 +1259,7 @@ Referenced by:
 Title: "Glossary" | 92 lines
 
 Referenced by:
-- CLAUDE.md:180 (mention) — | Glossary | `docs/glossary.md` |
+- CLAUDE.md:181 (mention) — | Glossary | `docs/glossary.md` |
 - docs/design/trust.md:40 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/implemented-plans/vocab-glossary-sweep.md:37 (mention) — editing a label has one place to check. `docs/glossary.md` already claims
 - docs/plans/design-reconciliation.md:25 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
@@ -1661,7 +1664,7 @@ Title: "Which model a box thinks with" | 125 lines
 
 Referenced by:
 - CLAUDE.md:168 (mention) — | Which model a box thinks with | `docs/model-policy.md` |
-- docs/box-layout.md:193 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
+- docs/box-layout.md:202 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
 - docs/implemented-plans/model-engine-policy.md:45 (mention) — passes. The reference doc is `docs/model-policy.md`.
 - docs/mobile-contract.md:811 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 
@@ -1782,7 +1785,7 @@ References:
 
 #### docs/README.md
 
-Title: "docs/ — map and naming conventions" | 76 lines
+Title: "docs/ — map and naming conventions" | 81 lines
 
 Referenced by:
 - docs/README.md:20 (mention) — Each entry in the directory's `README.md` disposition table says what
@@ -1801,6 +1804,7 @@ References:
 - → docs/plans/README.md (mention)
 - → docs/README.md (mention)
 - → docs/stack-decisions.md (mention)
+- → docs/box/what-you-could-do.md (link)
 - → docs/doc-graph.md (mention)
 - → CLAUDE.md (mention)
 
@@ -2046,6 +2050,7 @@ Referenced by:
 - docs/plans/ios-input-plane-parity.md:38 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
 - docs/plans/ios-native-capture-mode.md:36 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
 - docs/plans/publish-pages.md:270 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
+- docs/plans/scan-retry-and-document-route.md:417 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
 - docs/tours.md:29 (link) — ([testing.md](testing.md)); "does the app boot at all" is the smoke tier
 - ../.claude/skills/bbx-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/bbx-guide-testing/SKILL.md:3 (mention) — description: Explains beebox's testing system — the test tiers, what each is for, and how to choose. Use when deciding h
@@ -2121,7 +2126,7 @@ Title: "Triage" | 266 lines
 
 Referenced by:
 - CLAUDE.md:159 (mention) — | Triage pipeline design | `docs/triage.md` |
-- docs/box-layout.md:142 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
+- docs/box-layout.md:151 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
 - docs/connectors.md:94 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:28 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:36 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
@@ -2236,6 +2241,15 @@ Referenced by:
 
 References:
 - → docs/architecture/spirit.md (mention)
+
+### docs/box/
+
+#### docs/box/what-you-could-do.md
+
+Title: "What you could do with your box" | 212 lines
+
+Referenced by:
+- docs/README.md:34 (link) — [what you could do with your box](box/what-you-could-do.md).
 
 ### docs/design/
 
@@ -2690,7 +2704,7 @@ References:
 Title: "Bulk file upload" | 461 lines
 
 Referenced by:
-- docs/box-layout.md:121 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
+- docs/box-layout.md:130 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
 - docs/mobile-contract.md:841 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:15 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
@@ -2720,7 +2734,7 @@ References:
 Title: "Capture mode — unifying capture into the input" | 668 lines
 
 Referenced by:
-- docs/box-layout.md:110 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
+- docs/box-layout.md:119 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
 - docs/implemented-plans/bulk-file-upload.md:36 (mention) — - **Shipped precedent: capture mode** (`docs/implemented-plans/capture-mode.md`,
 - docs/plans/cli-restructure.md:13 (mention) — **2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`bbx transcribe-captures`, `b
 - docs/plans/input-widget.md:532 (link) — [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)
@@ -2744,6 +2758,7 @@ Title: "Cards carry a symbol" | 610 lines
 
 Referenced by:
 - ../issues/closed/features/2026-09-05-cards-carry-a-symbol.md:15 (mention) — (see `beebox/docs/implemented-plans/card-symbol.md`): `symbol` is now a
+- ../issues/deferred/2026-09-05-remove-landmark-symbol-legacy-fallback.md:8 (mention) — discovered-in: sidecar-shell — docs/implemented-plans/card-symbol.md Track D
 
 References:
 - → ../issues/closed/features/2026-09-05-cards-carry-a-symbol.md (frontmatter)
@@ -4898,7 +4913,7 @@ References:
 Title: "The interface as cards — design" | 477 lines
 
 Referenced by:
-- CLAUDE.md:176 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
+- CLAUDE.md:177 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
 - docs/design/identity.md:17 (link) — [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
 - docs/design/interaction-model.md:17 (link) — ([interface-as-cards](../plans/interface-as-cards.md)).
 - docs/design/representation.md:85 (link) — ([interface-as-cards](../plans/interface-as-cards.md) owns that guardrail).
@@ -5079,7 +5094,7 @@ References:
 Title: "PDF Intake" | 204 lines
 
 Referenced by:
-- CLAUDE.md:174 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
+- CLAUDE.md:175 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
 - docs/implemented-plans/user-story-audit-followups.md:61 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
 - docs/plans/README.md:87 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
 - docs/plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
@@ -5161,7 +5176,7 @@ References:
 Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 281 lines
 
 Referenced by:
-- docs/box-layout.md:179 (mention) — | `_publish/` | Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each holding a
+- docs/box-layout.md:188 (mention) — | `_publish/` | Publications staged for external (Cloudflare) hosting — one `<pub-id>/` per publication, each holding a
 - docs/implemented-plans/pub-setup-wrangler.md:160 (mention) — Status extension per above; update `docs/plans/publish-pages.md` pointers, the
 - docs/implemented-plans/remove-bbx-render.md:310 (mention) — emitter — `docs/plans/publish-pages.md` contemplates one) re-arms it. Comments
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
@@ -5253,6 +5268,18 @@ References:
 - → docs/plans/scan-guide-card.md (mention)
 - → docs/plans/scanner-ingest.md (mention)
 
+#### docs/plans/scan-retry-and-document-route.md **[ORPHAN]**
+
+Title: "Bound the promote retry, and stop routing documents into the photo flow" | 432 lines
+
+References:
+- → ../issues/closed/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md (link)
+- → ../issues/features/2026-03-04-agent-give-up-mechanism.md (link)
+- → docs/engineering-principles.md (mention)
+- → docs/plans/scanner-ingest.md (link)
+- → docs/testing.md (mention)
+
 #### docs/plans/scan-vision-claude.md
 
 Title: "Scan vision: Claude Sonnet default, Gemini opt-in" | 613 lines
@@ -5296,12 +5323,12 @@ Referenced by:
 - docs/migrations.md:391 (mention) — `docs/plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
 - docs/plans/scan-guide-card.md:17 (mention) — This is a subplan of `docs/plans/scanner-ingest.md` (Track 6 reshaped).
 - docs/plans/scan-guide-card.review.md:13 (mention) — (`scanner-ingest.md:510`); the minimal version keeps `readScanContextFile`
+- docs/plans/scan-retry-and-document-route.md:110 (link) — [`scanner-ingest.md`](scanner-ingest.md), because Track 3 depends on them.
 - docs/plans/scan-vision-claude.md:443 (mention) — scan section of `docs/plans/scanner-ingest.md`.
 - docs/plans/scanner-ingest-docling-decisions.md:13 (link) — decision changes. Parent plan: [`scanner-ingest.md`](scanner-ingest.md).
 - docs/plans/scanner-ingest.review.md:3 (mention) — Cross-model review of `scanner-ingest.md`, run 2026-08-01 with OpenAI Codex
 - docs/scan-upload-contract.md:16 (link) — history: [`plans/scanner-ingest.md`](plans/scanner-ingest.md).
 - docs/server-operations.md:231 (mention) — `docs/plans/scanner-ingest.md` Track 0 needs both prod boxes moved from the
-- ../issues/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md:15 (mention) — instead (`docs/plans/scanner-ingest.md`). That reasoning holds for the
 - ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:34 (mention) — > `docs/plans/scanner-ingest.md`'s Track 4 already carries the dated note
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:22 (mention) — amended by `scanner-ingest.md`. `bbx document reanalyze` re-runs extraction over
 
@@ -5365,7 +5392,7 @@ References:
 Title: "Source Editor Plan" | 144 lines
 
 Referenced by:
-- CLAUDE.md:175 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
+- CLAUDE.md:176 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
 - docs/plans/README.md:88 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
 - docs/plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
 
