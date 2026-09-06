@@ -3,6 +3,7 @@ title: "Gemini TTS over OpenRouter — a prosody-steerable speech backend that i
 workstream: unattached
 area: beebox
 needs: [design]
+design: ../../beebox/docs/plans/tts-backend-selection.md
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-openrouter-services — boxholder asked whether OpenRouter has any TTS options
@@ -48,6 +49,8 @@ list --workstream openrouter-services`, "TTS prosody: OpenAI instructions vs
 Gemini via OpenRouter". Numbers show the direction and magnitude of the
 response; only ears settle whether it is good enough.
 
+**Designed:** [tts-backend-selection](../../beebox/docs/plans/tts-backend-selection.md).
+
 ## What has to be built
 
 1. **A TTS backend seam.** There is none. `services/openai-audio.ts` hardcodes
@@ -74,15 +77,23 @@ response; only ears settle whether it is good enough.
 
 ## Risks to weigh before building
 
-- **It is a preview model.** During testing it returned an **empty audio stream
-  with HTTP 200 and no error** on three different phrasings of a whisper
-  instruction, having produced whispered audio for a shorter sentence minutes
-  earlier. A silent success is the worst failure shape for a speech path, and
-  whatever ships needs to detect a zero-length body and say so.
-- **The style prefix is a prompt convention, not an API contract.** Nothing in
-  OpenRouter's schema says the first sentence of `input` is direction rather
-  than script. A model revision could start reading it aloud, and the failure
-  would be audible to the user before it was visible to us.
+- **It is a preview model, and it silently returns nothing on some inputs.**
+  Across two measurement sessions it answered **HTTP 200 with a zero-length
+  body**, with no error and no pattern that survived a second run: a styled
+  85-character sentence failed 3 of 4, a styled 59-character sentence failed 5
+  of 5, while styled 94- and 218-character sentences succeeded 5 of 5 and every
+  unstyled input succeeded at all lengths. Two inputs failed all five
+  consecutive attempts, so it may not even be retryable. A silent success is the
+  worst failure shape for a speech path — the boxholder hears nothing and blames
+  their speakers.
+- **Correction (2026-09-06): the style prefix IS a documented contract.** An
+  earlier version of this issue called it a fragile prompt convention. Google
+  documents prompt-embedded style control as supported — *"you can use natural
+  language to structure interactions and guide the style, accent, pace, and tone
+  of the audio"* (ai.google.dev/gemini-api/docs/speech-generation) — with
+  `Say in an spooky whisper: "…"` as their own example, plus inline tags such as
+  `[whispers]`. Both forms were verified working through OpenRouter. The
+  residual risk is only that OpenRouter sits between us and that contract.
 - **Third-party comparisons no longer put OpenAI clearly ahead** on prosody
   (ElevenLabs measured higher on prosody accuracy; Hume exposes explicit
   parameters), so "match OpenAI" may be the wrong bar — worth deciding what the
