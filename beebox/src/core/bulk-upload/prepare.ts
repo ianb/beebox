@@ -4,8 +4,8 @@
  * Turns a bulk staging session into a committed `upload-batch` document under
  * the target chat's `tmp-upload/`: it **copies** (never moves — parity with
  * capture, which retains staging until delivery is confirmed) the staged files
- * into the batch's attach scope, writes that scope's asset `manifest.json` + a
- * batch-local `.gitattributes`, writes the summary card, and commits the card
+ * into the batch's attach scope, writes a batch-local `.gitattributes`, writes
+ * the summary card, and commits the card
  * + the whole attach scope, so git-annex takes the blobs (see the staging
  * comment below for why the blobs must be staged, not excluded).
  *
@@ -21,7 +21,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { sanitizeFilename, dedupeName, summarizeBatch } from "./batch-format.js";
-import { computeEntry, emptyManifest, saveManifest } from "../asset-manifest.js";
 import { createUploadBatchTemplate, parseUploadBatch, type UploadBatchReceived } from "../../schemas/upload-batch.js";
 import {
   readStagingSession,
@@ -73,7 +72,7 @@ export interface PreparedBulkBatch {
   batchSlug: string;
   /** Box-relative path of the written `upload-batch` card. */
   cardRelPath: string;
-  /** Box-relative attach-scope dir holding the blobs + `manifest.json`. */
+  /** Box-relative attach-scope dir holding the blobs. */
   attachRelDir: string;
   counts: { registered: number; received: number; missing: number; failed: number };
   totalBytes: number;
@@ -84,7 +83,7 @@ export interface PreparedBulkBatch {
 }
 
 /**
- * Prepare (copy + card + attach manifest + commit) one bulk staging session.
+ * Prepare (copy + card + commit) one bulk staging session.
  * Returns the batch summary, or `null` if the session vanished before prepare
  * ran (cleaned up / cancelled). Throws {@link NotABulkSessionError} if the id
  * names a non-bulk session.
@@ -119,7 +118,7 @@ export async function prepareBulkBatch(opts: {
   // Stage the BLOB DIRECTORY, not just the control files.
   //
   // This used to stage exactly [card, manifest, .gitignore] and never the
-  // blobs — correct under the manifest model, where the bytes were gitignored
+  // blobs — correct under the retired manifest model, where the bytes were gitignored
   // on purpose. Under git-annex it would silently commit a card describing
   // content that exists in no repository: `git annex pre-commit` cannot annex
   // a path that was never passed to `git add`, and the staging copy is cleaned
@@ -160,8 +159,8 @@ export async function prepareBulkBatch(opts: {
  *
  * `annex.largefiles=anything` is correct HERE and only here — a bulk batch
  * genuinely does hold arbitrary types, unlike an ordinary attach scope where
- * cards and manifests sit beside the assets. The control files are exempted so
- * they stay ordinary git objects.
+ * cards sit beside the assets. The control files are exempted so they stay
+ * ordinary git objects.
  *
  * **It takes two files to annex a `.zip`.** This one widens what git-annex
  * *would* annex; `.git/info/attributes` decides what the filter-process ever
@@ -174,7 +173,6 @@ export async function prepareBulkBatch(opts: {
 const ATTACH_GITATTRIBUTES = `# Managed by bbx bulk-upload. A batch holds arbitrary file types, so annex
 # everything in this scope except the control files. See docs/plans/asset-annex.md.
 * annex.largefiles=anything
-manifest.json annex.largefiles=nothing
 .gitattributes annex.largefiles=nothing
 *.card annex.largefiles=nothing
 `;
@@ -198,8 +196,7 @@ interface BatchSummary {
 /**
  * Build (or, on an idempotent re-run, recover) the batch's received/missing/
  * failed summary. When the card doesn't yet exist this copies the staged files
- * into the attach scope, writes the manifest, and writes the card (last, as the
- * completion marker); when it exists the card is parsed back rather than
+ * into the attach scope and writes the card (last, as the completion marker); when it exists the card is parsed back rather than
  * rewriting bytes (which would change mtimes and defeat idempotence).
  */
 async function buildBatchSummary(opts: {
@@ -216,7 +213,6 @@ async function buildBatchSummary(opts: {
   const sessionDir = stagingSessionDir(boxRoot, session.id);
   await fs.mkdir(attachAbsDir, { recursive: true });
 
-  const manifest = emptyManifest();
   const received: UploadBatchReceived[] = [];
   const usedNames = new Set<string>();
   const arrivedKeys = new Set<string>();
@@ -225,10 +221,9 @@ async function buildBatchSummary(opts: {
     const destName = dedupeName(sanitizeFilename(file.originalName || file.filename), usedNames);
     const destAbs = path.join(attachAbsDir, destName);
     await fs.copyFile(path.join(sessionDir, file.filename), destAbs);
-    const entry = await computeEntry(destAbs);
-    manifest.files[destName] = entry;
+    const { size } = await fs.stat(destAbs);
 
-    const item: UploadBatchReceived = { name: destName, size: entry.size };
+    const item: UploadBatchReceived = { name: destName, size };
     if (file.mimeType !== "") item.mimetype = file.mimeType;
     received.push(item);
 
@@ -239,8 +234,6 @@ async function buildBatchSummary(opts: {
     if (file.itemId !== undefined) arrivedKeys.add(`id:${file.itemId}`);
     else arrivedKeys.add(`name:${file.originalName}`);
   }
-
-  await saveManifest(attachAbsDir, manifest);
 
   const failed = failedItems.map((f) => ({ name: f.name, reason: f.reason }));
   const failedKeys = new Set<string>();

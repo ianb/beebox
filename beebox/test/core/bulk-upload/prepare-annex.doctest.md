@@ -96,9 +96,9 @@ function classify(repo: string, attachRelDir: string): string {
 
 A batch of four 200 KB files: an ordinary photo, the same extension in mixed
 case, a `.zip` no asset allowlist covers, and a file with no extension at all.
-All four are content the box must not carry in git's object database. The card,
-the manifest, and the batch's own `.gitattributes` have to stay in git — an
-annexed `.gitattributes` would be a pointer where git expects rules.
+All four are content the box must not carry in git's object database. The card
+and the batch's own `.gitattributes` have to stay in git — an annexed
+`.gitattributes` would be a pointer where git expects rules.
 
 ```ts
 const { repo, box } = await makeAnnexBox();
@@ -109,7 +109,6 @@ ANNEX ? classify(repo, batch.attachRelDir) : "skipped: git-annex not installed"
 .gitattributes in-git
 Mixed.Jpg ANNEXED
 archive.zip ANNEXED
-manifest.json in-git
 noext ANNEXED
 plain.jpg ANNEXED
 ```

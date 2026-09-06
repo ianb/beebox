@@ -1,6 +1,6 @@
 ---
 title: Asset-manifest writers still run after the annex migration retired the scheme
-workstream: unattached
+workstream: transition-cleanup
 area: beebox
 filed-by: agent
 discovered-by: agent
@@ -33,13 +33,36 @@ harder: a box agent independently wrote 16 files also named `manifest.json` with
 a different schema (`filename`/`captured`/`source`) while filing photos, and the
 two are only distinguishable by opening them.
 
-**What's unresolved.** Whether retirement means deleting `asset-manifest.ts` +
-`asset-manifest-scan.ts` (the plan's stated intent, ~490 lines) or just stopping
-the writers first, and whether existing manifests get removed from boxes as a
-migration or left as inert files. Also worth checking what still reads them —
-`to-annex.ts:50` uses `loadManifest` for its verification step, which is the
-migration's own tooling and may want to stay until every box has converted.
+## Done: the automatic writers
 
-Doc drift to fix alongside: `test/core/bulk-upload/prepare.doctest.md` still says
-"blobs stay out of git" and titles a section "blobs untracked", while the
-assertion below it correctly expects `blobTracked: true`.
+`core/bulk-upload/prepare.ts` and `core/capture/write-cards.ts` no longer write
+a manifest. Capture had to change what it stages, not merely stop writing: it
+staged the manifest and never the media, so removing the manifest without
+staging the bytes would have committed a card describing content in no
+repository — the exact trap `prepare.ts` documents at its own staging call. It
+now stages the media, and git-annex takes it. The batch-local `.gitattributes`
+drops its `manifest.json annex.largefiles=nothing` exemption.
+
+The doc drift this issue named is gone, as is the doctest prose about the
+manifest recording each blob's size and sha256.
+
+## Still open, and why
+
+**`bbx attachments` is left intact.** Its `migrate`, `add`, and `overwrite`
+subcommands do write manifests, but they are the maintenance surface for a box
+that has NOT converted, and on the production machine two boxes have not (each
+holding several dozen tracked manifests, against 0-1 on the rest). Removing the
+maintenance commands before those boxes convert would strand them: an asset
+written without its manifest updated fails `to-annex`'s pre-conversion
+verification, which is the check that makes deleting the manifests safe rather
+than merely tidy.
+
+**Deleting `asset-manifest.ts` + `asset-manifest-scan.ts` is blocked on those
+same boxes.** `annex/to-annex.ts` reads manifests for both halves of its
+verification, and `commands/attachments-gitignore.ts` reads them too.
+
+So the remaining work is one decision and one operational act, in that order:
+run `bbx attachments to-annex` on the two unconverted production boxes (a
+one-way migration of real boxes — the boxholder's call, not an agent's), then
+delete the modules and the manifest subcommands with nothing left reading
+them.
