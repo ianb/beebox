@@ -141,7 +141,7 @@ export async function runPdfReanalyze(
       sourcePath,
       attachAbsDir,
       workDir,
-      forceOcr,
+      ocr: forceOcr ? "replace" : "off",
       languages,
     });
   } finally {
@@ -186,7 +186,7 @@ export async function runPdfReanalyze(
     data: {
       card: cardRelPath,
       status: fields["status"],
-      forceOcr,
+      ocr: forceOcr ? "replace" : "off",
       pages: extraction.ok ? extraction.value.pageCount : 0,
     },
   };

@@ -47,8 +47,8 @@ async function importPdf(box, bytes) {
 
 ## A PDF with no text layer is still a document — and Docling is told to OCR it
 
-The card is a `pdf.card`, not a set of photo cards, and the extraction ran with
-OCR on because there was no text layer to read.
+The card is a `pdf.card`, not a set of photo cards, and the extraction ran OCR
+over the layout's regions, because there was no text layer to read.
 
 ```ts
 const box = await makeTmpBox({ git: true, annex: true });
@@ -58,8 +58,8 @@ const { result, docling } = await importPdf(box, textlessPdf());
 ```
 
 ```ts continue
-havePdftotext ? docling.calls[0].forceOcr : true
-=> true
+havePdftotext ? docling.calls[0].ocr : "regions"
+=> regions
 ```
 
 ```ts cleanup
@@ -68,9 +68,8 @@ await box.cleanup();
 
 ## A PDF that already carries text is left alone
 
-Its own text layer is better than re-OCRing an image of it, and Docling's
-full-page OCR mode would discard it (docling#1499 and #3582 report that path
-corrupting long documents).
+A good text layer beats re-OCRing an image of itself. (A layer that is present
+but junk is a third case — see `pdf-probe.doctest.md`.)
 
 ```ts
 const box = await makeTmpBox({ git: true, annex: true });
@@ -80,8 +79,8 @@ const { result, docling } = await importPdf(box, textPdf());
 ```
 
 ```ts continue
-havePdftotext ? docling.calls[0].forceOcr : false
-=> false
+havePdftotext ? docling.calls[0].ocr : "off"
+=> off
 ```
 
 ```ts cleanup

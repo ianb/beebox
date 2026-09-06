@@ -42,6 +42,18 @@ export interface PdfProbe {
   /** True when the PDF carries enough embedded text to treat as a document. */
   hasTextLayer: boolean;
   /**
+   * Whether that embedded text is worth reading.
+   *
+   * A scanner that OCRs to a "searchable PDF" can embed a layer that is
+   * technically present and practically useless — one 8-page typewritten scan
+   * embedded `p o w e r f u l  a n d  r u l e d`, one character per token,
+   * where re-OCRing the same pages recovered 2056 usable words against 112.
+   * Trusting character count alone filed that document with the unusable
+   * version and nothing flagged it: a bad layer reads exactly like a good one
+   * downstream. `none` when there is no layer to judge.
+   */
+  textLayerQuality: "good" | "junk" | "none";
+  /**
    * How the answer was reached — `probed` when `pdftotext` ran, `assumed` when
    * it could not (no poppler on the host), in which case `hasTextLayer` is the
    * conservative default rather than a measurement.
@@ -119,17 +131,49 @@ async function runPdftotext(
  * document through Gemini page-by-page — expensive and wrong — on nothing more
  * than a missing package.
  */
-async function probeTextLayer(pdfPath: string): Promise<{ hasTextLayer: boolean; textLayerSource: "probed" | "assumed" }> {
+async function probeTextLayer(
+  pdfPath: string,
+): Promise<{ hasTextLayer: boolean; textLayerSource: "probed" | "assumed"; textLayerQuality: "good" | "junk" | "none" }> {
   const sample = await runPdftotext(pdfPath, {
     lastPage: TEXT_LAYER_PAGE_SAMPLE,
     timeoutMs: PROBE_TIMEOUT_MS,
   });
   if (!sample.ok) {
     console.warn(`[scan] ${sample.error} on ${path.basename(pdfPath)}; assuming a text layer`);
-    return { hasTextLayer: true, textLayerSource: "assumed" };
+    // Unmeasured, so claim nothing about quality: `good` keeps the existing
+    // no-poppler behaviour of trusting the layer rather than paying for OCR.
+    return { hasTextLayer: true, textLayerSource: "assumed", textLayerQuality: "good" };
   }
   const characters = sample.value.replaceAll(/\s/gu, "").length;
-  return { hasTextLayer: characters >= TEXT_LAYER_MIN_CHARS, textLayerSource: "probed" };
+  const hasTextLayer = characters >= TEXT_LAYER_MIN_CHARS;
+  return {
+    hasTextLayer,
+    textLayerSource: "probed",
+    textLayerQuality: hasTextLayer ? assessTextLayer(sample.value) : "none",
+  };
+}
+
+/**
+ * A layer this fragmented is a failed OCR, not prose. The pathology is one
+ * character per token — `p o w e r f u l` — so the share of single-character
+ * alphabetic tokens separates it from ordinary text without any judgement
+ * about content. Real prose sits near zero; English's only one-letter words
+ * are "a" and "I", and even a page thick with them stays far below this.
+ */
+const JUNK_SINGLE_CHAR_TOKEN_SHARE = 0.4;
+
+/** Below this there is too little to judge, so say `good` and read it. */
+const MIN_TOKENS_TO_JUDGE = 20;
+
+/**
+ * Is this text layer worth reading, or is it failed OCR? Pure, so the
+ * threshold is testable without a PDF.
+ */
+export function assessTextLayer(text: string): "good" | "junk" {
+  const tokens = text.split(/\s+/u).filter((t) => /[A-Za-z]/u.test(t));
+  if (tokens.length < MIN_TOKENS_TO_JUDGE) return "good";
+  const singles = tokens.filter((t) => t.replaceAll(/[^A-Za-z]/gu, "").length === 1).length;
+  return singles / tokens.length >= JUNK_SINGLE_CHAR_TOKEN_SHARE ? "junk" : "good";
 }
 
 /**
