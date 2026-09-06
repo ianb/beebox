@@ -1,6 +1,6 @@
 ---
 title: "Card prominence: visibility lives on the card, landmarks derive from it"
-status: draft
+status: active
 workstream: card-visibility
 issues:
   - ../../../issues/features/2026-06-12-card-level-prominence.md
