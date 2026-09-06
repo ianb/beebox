@@ -33,45 +33,52 @@ harder: a box agent independently wrote 16 files also named `manifest.json` with
 a different schema (`filename`/`captured`/`source`) while filing photos, and the
 two are only distinguishable by opening them.
 
-## Done: the automatic writers
+## Attempted, reverted: the premise is wrong for both writers
 
-`core/bulk-upload/prepare.ts` and `core/capture/write-cards.ts` no longer write
-a manifest. Capture had to change what it stages, not merely stop writing: it
-staged the manifest and never the media, so removing the manifest without
-staging the bytes would have committed a card describing content in no
-repository — the exact trap `prepare.ts` documents at its own staging call. It
-now stages the media, and git-annex takes it. The batch-local `.gitattributes`
-drops its `manifest.json annex.largefiles=nothing` exemption.
+Both writers were removed and the removal was reverted. The claim above —
+"nothing reads the manifests to make a decision that annex does not make
+better" — does not hold for either path, and the check that establishes it is
+`git check-ignore`, run against real boxes rather than reasoned about.
 
-The doc drift this issue named is gone, as is the doctest prose about the
-manifest recording each blob's size and sha256.
+**Capture staging media is deliberately never annexed on arrival.** The
+annex-converted gitignore block says why: a capture is pre-triage and gets
+renamed, re-encoded, and EXIF-rotated before it is filed, so annexing it on
+arrival would mint objects for superseded versions; it joins the annex when an
+agent files it (`core/commands/attachments-gitignore.ts`, `UNIGNORE_BLOCK`).
+The re-include list under `tmp-capture/` admits exactly directories, `*.card`,
+`manifest.json`, and `*.timing.json`. So on an annex box the manifest is the
+ONLY record of a capture's media between the commit and the filing, and
+`git check-ignore` confirms the media itself is ignored on every production box.
+Deleting the writer there does not remove a duplicate record; it removes the
+only one. Staging the media instead does not work either — it is ignored, so
+`git add` skips it silently, and the existing doctest already asserts
+`git ls-files` over a capture attach scope is empty.
 
-## Still open, and why
+**One production box is still manifest-shaped.** Five of six have assets
+un-ignored (annex takes them); one still ignores `.attach/` assets, so for that
+box the bulk-upload manifest is likewise the only record of an uploaded blob.
+Annex-shape is per box and has to be checked per box; the count of tracked
+manifests is not the same question.
 
-**`bbx attachments` is left intact.** Its `migrate`, `add`, and `overwrite`
-subcommands do write manifests, but they are the maintenance surface for a box
-that has NOT converted, and on the production machine two boxes have not (each
-holding several dozen tracked manifests, against 0-1 on the rest). Removing the
-maintenance commands before those boxes convert would strand them: an asset
-written without its manifest updated fails `to-annex`'s pre-conversion
-verification, which is the check that makes deleting the manifests safe rather
-than merely tidy.
+## What retirement would actually take
 
-**Deleting `asset-manifest.ts` + `asset-manifest-scan.ts` is blocked on those
-same boxes.** `annex/to-annex.ts` reads manifests for both halves of its
-verification, and `commands/attachments-gitignore.ts` reads them too.
+- **Bulk upload:** gate on annex shape (`core/annex/is-annex-box.ts`) and write
+  a manifest only for a manifest-shaped box, or convert the last box first.
+  Straightforward once the shape check is in the path.
+- **Capture:** a design question, not a cleanup. Something has to record a
+  staged capture's media between commit and filing, or the window has to be
+  accepted as unrecorded. Annex deliberately does not cover it.
+- **Deleting `asset-manifest.ts` + `asset-manifest-scan.ts`** stays blocked on
+  the readers in `annex/to-annex.ts` (both halves of its verification) and
+  `commands/attachments-gitignore.ts`, and on the capture question above.
 
-So the remaining work is: run `bbx attachments to-annex` on the two unconverted
-production boxes, then delete the modules and the manifest subcommands with
-nothing left reading them.
+A third thing worth fixing whatever the outcome: `SessionBuilder.filesToStage`
+(`core/capture/write-cards.ts`) is written and never read — `writeCaptureDocument`
+does not return it, and `core/capture/prepare.ts` commits a directory pathspec
+instead. An array that looks like it controls staging and does not is how the
+attempt above went unnoticed through a green suite.
 
-**The conversion is blocked on the boxes' working trees.** `to-annex` refuses
-on a dirty tree, and both are dirty — one with eight entries, the other with
-twenty-one, including a set of uncommitted deletions that look like a
-capture-archive move someone started and never committed. Both boxes commit
-regularly (last commits within the hour when this was checked, 2026-09-06), so
-the residue is not a stalled box; it is ordinary live-box working state several
-hours old. Clearing it means committing the boxholder's own uncommitted box
-content, which is theirs to do, not an agent's — and one of the two holds
-personal material. The conversion runs once the boxholder has settled those
-trees.
+## Doc drift, fixed
+
+`test/core/bulk-upload/prepare.doctest.md` no longer says "blobs stay out of
+git" or titles a section "blobs untracked".

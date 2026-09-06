@@ -7,9 +7,10 @@
  *
  * Originated in the retired `webapp/routes/capture-finalize.ts`; the
  * preparation worker (prepare.ts) is now the only consumer. Media bytes are
- * staged along with their cards and taken by git-annex, whose key carries the
- * size and hash the retired per-scope `manifest.json` used to record
- * (`docs/plans/asset-annex.md`).
+ * gitignored assets
+ * tracked via a per-scope `manifest.json` (see docs/implemented-plans/asset-manifests.md); we
+ * write the media, write its manifest, and stage the *manifest* + card, never
+ * the raw bytes.
  */
 
 import * as fs from "node:fs/promises";
@@ -19,6 +20,7 @@ import { createImageTemplate, type ImageSource } from "../../schemas/image.js";
 import { createFileTemplate } from "../../schemas/file.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { concatSegmentChunks } from "./audio-concat.js";
+import { computeEntry, saveManifest, emptyManifest } from "../asset-manifest.js";
 import type { StagingSession, StagingSegment, StagingPhoto, StagingFile } from "./staging-store.js";
 import { M4ASegmentFileCountError } from "./audio-format.js";
 import { CardIOError, parseCardText, serializeCardText } from "../card-io.js";
@@ -49,14 +51,9 @@ export class SessionBuilder {
 
   /**
    * Each child card (audio/image/file) gets its own attach scope holding the
-   * bound media. The MEDIA itself is staged, alongside the card: git-annex
-   * takes the bytes and its key carries the size and hash the retired
-   * `manifest.json` used to record (`docs/plans/asset-annex.md`).
-   *
-   * Staging the bytes is not optional. `git annex pre-commit` cannot annex a
-   * path that was never passed to `git add`, so staging only the card would
-   * commit a card describing content that exists in no repository — the same
-   * trap `core/bulk-upload/prepare.ts` documents at its own staging call.
+   * bound media. The media bytes are gitignored assets tracked by a
+   * `manifest.json` (size + sha256) — so we write the media, write its
+   * manifest, and stage the *manifest* and card, never the raw bytes.
    */
   async writeChildCard(opts: {
     childBasename: string;
@@ -71,7 +68,11 @@ export class SessionBuilder {
     const mediaAbsPath = path.join(childAttachAbs, opts.mediaFilename);
     await fs.writeFile(mediaAbsPath, opts.mediaContent);
 
-    this.filesToStage.push(`${childAttachRel}/${opts.mediaFilename}`);
+    // Track the asset in the scope's manifest (committable), not the bytes.
+    const manifest = emptyManifest();
+    manifest.files[opts.mediaFilename] = await computeEntry(mediaAbsPath);
+    await saveManifest(childAttachAbs, manifest);
+    this.filesToStage.push(`${childAttachRel}/manifest.json`);
 
     const cardFilename = `${opts.childBasename}.${opts.cardType}.card`;
     const cardAbsPath = path.join(this.sessionAttachAbsDir, cardFilename);
@@ -226,8 +227,8 @@ export interface WrittenCaptureDocument {
 /**
  * Write the full capture document (capture-session card + child audio/image/
  * file cards) into `destRelDir` (box-relative). The transcript body is left
- * empty — the preparation worker fills it after transcription. Media bytes and
- * cards are both collected for staging.
+ * empty — the preparation worker fills it after transcription. Media bytes are
+ * written but only manifests + cards are collected for staging.
  */
 export async function writeCaptureDocument(opts: {
   boxRoot: string;
