@@ -1,6 +1,7 @@
 ---
 title: Disallow underscore-area names anywhere below the box root
 workstream: box-layout-criteria
+resolution: implemented
 ---
 
 The v3 root closed vocabulary (`beebox/src/lib/box-root-vocabulary.ts`,
