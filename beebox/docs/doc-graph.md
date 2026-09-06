@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-05T22:24:54Z
-Total documents: 322
+Generated: 2026-09-06T00:54:14Z
+Total documents: 323
 
 ## Issues
 
@@ -49,7 +49,7 @@ These documents are not referenced by any other document.
 - **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines)
 - **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines)
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
-- **docs/plans/public-site-orientation.md** — "Public site — orientation & re-entry map" (93 lines)
+- **docs/plans/public-site-orientation.md** — "Public site — orientation & re-entry map" (123 lines)
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
 - **docs/plans/sticky-hq-ios-parity.md** — "Sticky HQ dictation on iOS" (100 lines)
@@ -186,7 +186,7 @@ Referenced by:
 - docs/plans/operator-member-password-reset.md:87 (mention) — - **HTTP route boundary.** `CLAUDE.md:110` says: *“HTTP endpoints go in tRPC by
 - docs/plans/prompt-surface-ia-review.md:145 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
 - docs/plans/public-site-story-extraction.subplan.md:59 (mention) — per CLAUDE.md ("Sonnet 5 is good at subagent work"; extraction is
-- docs/plans/public-site.md:30 (mention) — - Root `CLAUDE.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
+- docs/plans/public-site.md:31 (mention) — - Root `CLAUDE.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/publish-pages.md:150 (mention) — - **Preview:** a raw Fastify route inside the box auth wall (`server-box-scope.ts:59` preHandler applies) serving `box/p
 - docs/plans/scan-vision-claude.md:494 (mention) — | Box CLAUDE.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` —
 - docs/plans/scanner-ingest.md:263 (mention) — CLAUDE.md rule that file upload doesn't fit the tRPC shape), a quarantine
@@ -724,6 +724,7 @@ Referenced by:
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/implemented-plans/box-schema-reload.md:250 (mention) — - Mirror in `docs/adding-schemas.md` if it implies `bbx init` re-registers.
 - docs/implemented-plans/box-search.md:51 (mention) — - `docs/adding-schemas.md`: the checklist any schema-surface change follows
+- docs/implemented-plans/card-symbol.md:246 (mention) — see the fields, the enumerations in `docs/adding-schemas.md:72` and the
 - docs/implemented-plans/mvp-implementation-guide.md:418 (link) — See [adding-schemas.md](../adding-schemas.md) for concrete card examples.
 - docs/implemented-plans/remove-cardworks-and-xml.md:423 (mention) — `docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
 - docs/implemented-plans/remove-cardworks-deletion.md:461 (mention) — `CLAUDE.md:87`/`docs/adding-schemas.md` (the cardworks bullet → `src/cards/`),
@@ -751,7 +752,7 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.md:534 (mention) — `docs/agent-install.md` gain the first-run account step;
 - docs/implemented-plans/remove-open-mode.md:51 (mention) — `docs/agent-install.md`, implemented-plans (historical — leave those).
 - docs/implemented-plans/tailscale-expose-and-protect.md:545 (mention) — surface is `docs/agent-install.md`'s existing "widening exposure is a real
-- docs/plans/public-site.md:226 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
+- docs/plans/public-site.md:252 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/developer-install.md`, `docs/docker-install.md`, `docs/agent-install.md`
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:28 (link) — handing [the agent install guide](../../beebox/docs/agent-install.md)
 - ../issues/features/2026-07-19-installation-remaining-work.md:24 (mention) — (`docs/agent-install.md`). Node pin + `engine-strict` landed at 22, then
@@ -1206,7 +1207,7 @@ Referenced by:
 - docs/plans/ios-share-extension-capture.md:36 (mention) — - `docs/engineering-principles.md` principle 3, validate at boundaries. The extension validates provider values, and the
 - docs/plans/operator-member-password-reset.md:50 (mention) — - **Principle 1, types are structure.** `docs/engineering-principles.md:12-21`
 - docs/plans/public-site-story-extraction.subplan.md:39 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
-- docs/plans/public-site.md:23 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
+- docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/publish-pages.md:15 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
 - docs/plans/scan-vision-claude.md:25 (mention) — - `beebox/docs/engineering-principles.md` — especially
@@ -1406,7 +1407,7 @@ Referenced by:
 - user-stories/catalog/2026-06-26.md:5681 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't
 - ../.claude/skills/bbx-context/SKILL.md:138 (mention) — `docs/knowledge-audits.md`).
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:47 (mention) — (`docs/knowledge-audits.md`).
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:49 (mention) — (`docs/knowledge-audits.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Explains beebox's knowledge-audit harness — YAML-defined tests that prompt a real box agent and check what
 - ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:19 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:56 (mention) — for someone to remember (`beebox/docs/knowledge-audits.md`).
@@ -1472,6 +1473,7 @@ Referenced by:
 - user-stories/catalog/2026-06-26.md:743 (mention) — The file src/core/frontmatter-field.ts exports two functions that implement the exact capability described. lookupField(
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:66 (mention) — `src/schemas/landmark.ts` and `docs/landmarks.md`; an `expand` entry fans out to
 - ../issues/closed/bugs/2026-08-04-ios-landmark-opens-new-session-not-most-recent.md:70 (mention) — - `docs/landmarks.md` — the landmark↔session association model.
+- ../issues/closed/features/2026-09-05-cards-carry-a-symbol.md:22 (mention) — A card has no mark. A landmark does — `navigation.symbol` (`beebox/docs/landmarks.md`)
 - ../issues/features/2026-06-12-card-level-prominence.md:9 (mention) — Started as "a landmark-ish marker in the card itself" and resolved (2026-06-12 discussion) into a unification: **there i
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:28 (mention) — Landmarks are already the box's "notable spots" surface (`docs/landmarks.md`), and
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:70 (link) — - [Landmarks](../../beebox/docs/landmarks.md) — the navigation surface the
@@ -1531,6 +1533,7 @@ Referenced by:
 - docs/implemented-plans/box-migration.subplan.md:54 (mention) — - **`docs/migrations.md`** — the established migration framework: `bbx migrate`
 - docs/implemented-plans/boxes-as-packages-v2.md:67 (mention) — | `bbx migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/migrati
 - docs/implemented-plans/capture-mode.md:445 (mention) — wakeup-time failure). Migration (per `docs/migrations.md` runbook
+- docs/implemented-plans/card-symbol.md:606 (mention) — `docs/migrations.md` — it runs to completion or not at all, and reports both what
 - docs/implemented-plans/cards-as-markdown-rfc.md:51 (mention) — **Tracking which migrations have been applied per box** is handled by `bbx migrate` against the per-box append-only mani
 - docs/implemented-plans/one-root-box-layout.md:127 (mention) — | Migration registry + runbook | `src/core/migrations.ts`, `docs/migrations.md`, precedent `box-packageify` (`boxes-as-p
 - docs/implemented-plans/questions-end-to-end.md:255 (mention) — `docs/migrations.md` on test1 + prod boxes. The two live test1 retro
@@ -1747,7 +1750,7 @@ Referenced by:
 - docs/prompt-audits.md:3 (link) — Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each
 - src/dev/CLAUDE.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
 - ../.claude/skills/bbx-context/SKILL.md:20 (mention) — `beebox/docs/prompt-surface-review.md`; this skill routes a single
-- ../.claude/skills/bbx-guide-schemas/SKILL.md:32 (mention) — `docs/prompt-surface-review.md` before writing more than a couple of
+- ../.claude/skills/bbx-guide-schemas/SKILL.md:34 (mention) — `docs/prompt-surface-review.md` before writing more than a couple of
 - ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:59 (mention) — - `beebox/docs/prompt-surface-review.md` — the workflow for reasoning about
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:25 (link) — [prompt-surface-review.md](../../beebox/docs/prompt-surface-review.md)
 - ../research/openclaw-hermes/README.md:74 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
@@ -1863,7 +1866,7 @@ Title: "Security overview" | 225 lines
 Referenced by:
 - README.md:88 (link) — what the agent can actually do — is in [the security overview](docs/security-overview.md).
 - docs/implemented-plans/webapp-production-mode.md:239 (mention) — `security-overview.md` alone unless the rubric finds a reader-facing posture
-- docs/plans/public-site.md:226 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
+- docs/plans/public-site.md:252 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
 - docs/security-report.md:11 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:3 (mention) — description: Generate or update beebox's security report — the structured accounting in beebox/docs/security-report.md a
@@ -2099,7 +2102,7 @@ Title: "Tours — scripted browser walks for rendering + a11y review" | 162 line
 Referenced by:
 - CLAUDE.md:139 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
 - docs/plans/agent-points-at-ui.md:133 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
-- docs/plans/public-site.md:95 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
+- docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
 - docs/testing.md:656 (link) — rule, and when NOT to use them: [tours.md](tours.md).
 - ../.claude/skills/bbx-plan/TEMPLATE.md:134 (mention) — (docs/tours.md), not a regression anchor for behaviour — put behaviour
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:46 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
@@ -2735,6 +2738,26 @@ References:
 - → docs/migrations.md (mention)
 - → src/services/CLAUDE.md (mention)
 
+#### docs/implemented-plans/card-symbol.md
+
+Title: "Cards carry a symbol" | 610 lines
+
+Referenced by:
+- ../issues/closed/features/2026-09-05-cards-carry-a-symbol.md:15 (mention) — (see `beebox/docs/implemented-plans/card-symbol.md`): `symbol` is now a
+
+References:
+- → ../issues/closed/features/2026-09-05-cards-carry-a-symbol.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-05-sidecar-tab-label-never-updates.md (frontmatter)
+- → ../issues/closed/features/2026-09-05-cards-carry-a-symbol.md (link)
+- → ../issues/closed/bugs/2026-09-05-sidecar-tab-label-never-updates.md (link)
+- → ../issues/decisions/2026-09-05-disallow-dots-in-card-names.md (link)
+- → ../issues/features/2026-06-12-card-level-prominence.md (link)
+- → ../issues/features/2026-06-12-directory-head-cards.md (link)
+- → docs/implemented-plans/todo-annotation.md (mention)
+- → docs/implemented-plans/chat-review.md (mention)
+- → docs/adding-schemas.md (mention)
+- → docs/migrations.md (mention)
+
 #### docs/implemented-plans/card-view-widgets.md
 
 Title: "Card-aware widgets for box-authored views" | 668 lines
@@ -2808,6 +2831,7 @@ Title: "Chat review: size-gated overnight compaction and generated titles" | 854
 
 Referenced by:
 - docs/chat-review.md:9 (link) — [docs/implemented-plans/chat-review.md](implemented-plans/chat-review.md).
+- docs/implemented-plans/card-symbol.md:127 (mention) — `docs/implemented-plans/chat-review.md:432`); this plan will not be the third
 - ../issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md:6 (mention) — discovered-in: worktree-compacting — while designing chat review (docs/implemented-plans/chat-review.md)
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:4 (frontmatter) — design: ../../../beebox/docs/implemented-plans/chat-review.md
 - ../issues/closed/features/2026-05-19-overnight-session-compaction.md:12 (link) — current reference and [the design doc](../../../beebox/docs/implemented-plans/chat-review.md)
@@ -4135,6 +4159,7 @@ Title: "`{% todo %}` — universal todo annotation" | 596 lines
 
 Referenced by:
 - docs/cards-as-markdown.md:89 (mention) — record: `docs/implemented-plans/todo-annotation.md`.
+- docs/implemented-plans/card-symbol.md:126 (mention) — (`docs/implemented-plans/todo-annotation.md:292`,
 - docs/migrations.md:378 (mention) — annotation (`docs/implemented-plans/todo-annotation.md`); see
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:8 (frontmatter) — design: ../../../beebox/docs/implemented-plans/todo-annotation.md
 - ../issues/closed/features/2026-07-28-todo-markdoc-annotation.md:13 (link) — > [todo-annotation](../../../beebox/docs/implemented-plans/todo-annotation.md)
@@ -5083,12 +5108,14 @@ References:
 
 #### docs/plans/public-site-orientation.md **[ORPHAN]**
 
-Title: "Public site — orientation & re-entry map" | 93 lines
+Title: "Public site — orientation & re-entry map" | 123 lines
 
 References:
 - → docs/plans/public-site.md (link)
 - → docs/plans/public-site-story-extraction.subplan.md (link)
 - → ../issues/features/2026-07-20-public-site.md (link)
+- → ../issues/exploration/2026-08-19-site-authored-in-a-box.md (link)
+- → ../issues/decisions/2026-08-19-bee-box-rename.md (link)
 
 #### docs/plans/public-site-story-extraction.subplan.md
 
@@ -5096,7 +5123,7 @@ Title: "Story extraction: rubric, prompts, and the A/B review loop" | 297 lines
 
 Referenced by:
 - docs/plans/public-site-orientation.md:16 (link) — [the extraction subplan](public-site-story-extraction.subplan.md).
-- docs/plans/public-site.md:320 (link) — [public-site-story-extraction.subplan.md](public-site-story-extraction.subplan.md)
+- docs/plans/public-site.md:346 (link) — [public-site-story-extraction.subplan.md](public-site-story-extraction.subplan.md)
 
 References:
 - → ../issues/features/2026-07-05-writing-skill.md (link)
@@ -5108,18 +5135,20 @@ References:
 
 #### docs/plans/public-site.md
 
-Title: "Public site" | 487 lines
+Title: "Public site" | 512 lines
 
 Referenced by:
 - docs/plans/public-site-orientation.md:15 (link) — [the site plan](public-site.md) and
 - docs/plans/public-site-story-extraction.subplan.md:52 (link) — format ([public-site.md](public-site.md), Track E). Eval runs add
-- ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md:13 (link) — [plan doc](../../beebox/docs/plans/public-site.md)) builds and
+- ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md:13 (link) — [plan doc](../../beebox/docs/plans/public-site.md)) builds and deploys through
 
 References:
 - → ../issues/features/2026-07-20-public-site.md (link)
 - → docs/engineering-principles.md (mention)
 - → CLAUDE.md (mention)
 - → docs/tours.md (mention)
+- → ../issues/exploration/2026-08-19-site-authored-in-a-box.md (link)
+- → ../issues/decisions/2026-08-19-bee-box-rename.md (link)
 - → docs/agent-install.md (mention)
 - → docs/security-overview.md (mention)
 - → docs/plans/README.md (mention)
@@ -5164,7 +5193,7 @@ Referenced by:
 - docs/implemented-plans/workstreams.md:706 (mention) — status encodings would drift (§8). `docs/plans/README.md` is rewritten to
 - docs/plans/README.md:35 (mention) — Every plan (including `*.subplan.md`, excluding `README.md` and review
 - docs/plans/asset-annex.md:1071 (mention) — the server. See that directory's `README.md` for the restore
-- docs/plans/public-site.md:270 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
+- docs/plans/public-site.md:296 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - ../.claude/skills/bbx-plan/SKILL.md:27 (mention) — Subplans: `<topic>.subplan.md`. Frontmatter per `docs/plans/README.md`:
@@ -5272,6 +5301,7 @@ Referenced by:
 - docs/plans/scanner-ingest.review.md:3 (mention) — Cross-model review of `scanner-ingest.md`, run 2026-08-01 with OpenAI Codex
 - docs/scan-upload-contract.md:16 (link) — history: [`plans/scanner-ingest.md`](plans/scanner-ingest.md).
 - docs/server-operations.md:231 (mention) — `docs/plans/scanner-ingest.md` Track 0 needs both prod boxes moved from the
+- ../issues/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md:15 (mention) — instead (`docs/plans/scanner-ingest.md`). That reasoning holds for the
 - ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:34 (mention) — > `docs/plans/scanner-ingest.md`'s Track 4 already carries the dated note
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:22 (mention) — amended by `scanner-ingest.md`. `bbx document reanalyze` re-runs extraction over
 

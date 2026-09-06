@@ -1,35 +1,32 @@
 ---
-title: "Take the Pages site live once the repo is public"
+title: "Take the public site live on beebox.run"
 workstream: public-site
 area: docs
 filed-by: agent
-discovered-in: worktree-github-pages-site — building the site while the repo is still private
+discovered-in: worktree-github-pages-site — building the site while the repo was private
 labels: [soft-launch]
 priority: important
 ---
 
 The front-door site (principles:
 [public-site](../features/2026-07-20-public-site.md); plan:
-[plan doc](../../beebox/docs/plans/public-site.md)) builds and
-deploys via a GitHub Actions workflow whose **deploy job is gated on the repo
-being public** (`if: !github.event.repository.private` — an ungated deploy
-fails 404 and emails the owner on every push to main, observed 2026-07-21).
-The build job runs on every main push regardless, as free CI for the site.
-Until the repo goes public the dev-router route is the only live view; at
-go-public the deploy job un-gates by itself, but still fails until the
-settings flip below is done.
+[plan doc](../../beebox/docs/plans/public-site.md)) builds and deploys through
+Cloudflare Pages' Git integration. Cloudflare builds each `main` push; the
+checks-only GitHub workflow is not the deploy mechanism.
 
-When the repo goes public (or at soft launch), the go-live steps:
+For go-live, configure the public stack in this order:
 
-- Repo Settings → Pages → source = **GitHub Actions** (one-time manual flip,
-  or via `gh api`).
-- Confirm the first green run of `.github/workflows/pages.yml` and the site
-  at `ianb.github.io/beebox` — check internal links under the
-  `/beebox/` base path and that `llms.txt` + the `.md` twins are
-  reachable.
-- If a custom domain has been chosen by then (open question in the plan):
-  the `CNAME` file must be *inside the build artifact* (Actions deploys
-  ignore a repo-level CNAME), and the build's `--base` changes to `/`.
+- In Cloudflare Pages, connect `ianb/beebox` to a new Git-integrated project
+  named `beebox`, with production branch `main`, root directory `/`, build
+  command `pnpm install --frozen-lockfile && pnpm --dir site build --base /`,
+  and build output directory `site/dist`.
+- Configure `beebox.run` as that project's custom domain. Do not use a Direct
+  Upload project or store Cloudflare deploy credentials in GitHub.
+- Ensure DNS for `beebox.run` points at Cloudflare Pages and the certificate is
+  valid before exposing links.
+- Confirm Cloudflare's first green production build and the site at
+  `https://beebox.run`, including internal links and that `llms.txt` + the `.md`
+  twins are reachable.
 - Link the site from the README once it's live.
 
 Not before the boxholder's own words are on the page — the plan's marked

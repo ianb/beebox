@@ -10,6 +10,8 @@
  * path not to reach into attrs.
  */
 
+import type { CardSymbolData } from "../shared/card-symbol.js";
+
 export interface FileSummary<T = unknown> {
   /** Box-relative path to the file */
   path: string;
@@ -19,6 +21,8 @@ export interface FileSummary<T = unknown> {
   title: string;
   /** The card's agent-written contains: sentence, when present. */
   contains?: string;
+  /** The card's mark, `src` resolved to a box-relative path. Most cards have none. */
+  symbol?: CardSymbolData;
   /** Typed attrs — shape depends on the loader */
   attrs?: T;
 }

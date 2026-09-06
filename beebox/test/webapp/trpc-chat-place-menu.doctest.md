@@ -73,7 +73,7 @@ await seedSession(box, { sessionId: "recipe03", contextDir: "_content/recipes", 
 
 const menu = await caller(box.root).chat.placeMenu();
 JSON.stringify(menu.landmarks)
-=> [{"path":"_content/recipes/Recipes.landmark.card","dir":"_content/recipes","label":"Recipes","symbol":"🍳","symbolSrc":null,"freshCount":2}]
+=> [{"path":"_content/recipes/Recipes.landmark.card","dir":"_content/recipes","label":"Recipes","symbol":{"glyph":"🍳"},"freshCount":2}]
 ```
 
 Nothing session-shaped rides along — that's the whole point of the split.

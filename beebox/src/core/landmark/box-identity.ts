@@ -31,6 +31,7 @@ import * as fs from "node:fs/promises";
 import { readLandmarkCard } from "./card-cache.js";
 import { readLandmarkSymbol } from "./symbol.js";
 import { LANDMARK_CONTENT_DIR, landmarkRelPath } from "./root-dir.js";
+import type { CardSymbolData } from "../../shared/card-symbol.js";
 
 /**
  * Which file is the root landmark, remembered per box root.
@@ -68,9 +69,9 @@ export interface BoxIdentity {
   /** Display name — the root landmark's label, falling back to the slug. */
   name: string;
   /** Symbol text (emoji or short text); empty when the box uses an image. */
-  symbol: string;
-  /** Box-relative path to the symbol image, or null for a text symbol. */
-  symbolSrc: string | null;
+  /** The box's mark, `src` resolved to a box-relative path; null when it has none. */
+  symbol: CardSymbolData | null;
+
 }
 
 /**
@@ -87,7 +88,7 @@ export async function readBoxIdentity({
   boxRoot: string;
   slug: string;
 }): Promise<BoxIdentity> {
-  const bare: BoxIdentity = { slug, name: slug, symbol: "", symbolSrc: null };
+  const bare: BoxIdentity = { slug, name: slug, symbol: null };
 
   // Box-relative (e.g. `_content/Box.landmark.card`), not a bare filename —
   // `readLandmarkSymbol` resolves document-relative `symbol.src` refs
@@ -111,12 +112,11 @@ export async function readBoxIdentity({
   if (fields === null) return bare;
 
   const label = fields.navigation?.label?.trim();
-  const symbol = readLandmarkSymbol(fields.navigation, { landmarkPath: cardRelPath });
+  const symbol = readLandmarkSymbol(fields, { landmarkPath: cardRelPath });
   return {
     slug,
     name: label !== undefined && label !== "" && label !== STOCK_LABEL ? label : slug,
-    symbol: symbol.text,
-    symbolSrc: symbol.src,
+    symbol,
   };
 }
 

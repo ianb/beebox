@@ -10,14 +10,14 @@
 import { withBase } from "../api.js";
 import { RequestError } from "./errors";
 import { withMobileAuth } from "./mobile-auth";
+import type { CardSymbolData } from "@shared/card-symbol";
 
 export interface KnownBox {
   slug: string;
   name: string;
   /** Symbol text (emoji); empty when the box uses an image or has no mark. */
-  symbol?: string;
-  /** Box-relative path to the symbol image, or null for a text symbol. */
-  symbolSrc?: string | null;
+  /** The box's mark, `src` resolved to a box-relative path; null when it has none. */
+  symbol?: CardSymbolData | null;
 }
 
 export interface BoxesResult {

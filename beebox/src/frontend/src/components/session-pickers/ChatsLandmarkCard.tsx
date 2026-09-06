@@ -10,19 +10,19 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
-import { apiFileUrl } from "../../lib/view-url";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 import { SessionRow, type SessionRowItem } from "./SessionRow";
 import { DeadSessionSection, type DeadSessionRowItem } from "./DeadSessionRow";
+import type { CardSymbolData } from "@shared/card-symbol";
+import { CardMark } from "../ui/CardMark";
 
 export interface PickerLandmark {
   /** Box-relative path; empty string for the root tile. */
   dir: string;
   label: string;
-  symbol: string;
-  symbolSrc: string | null;
+  symbol: CardSymbolData | null;
   sessions: SessionRowItem[];
   olderSessions: SessionRowItem[];
   /** Chats with no transcript left — listed after the live ones, or not at all. */
@@ -95,27 +95,7 @@ export function ChatsLandmarkCard({
   );
 }
 
-function LandmarkSymbol({
-  landmark,
-  boxSlug,
-  compact,
-}: {
-  landmark: PickerLandmark;
-  boxSlug: string;
-  compact: boolean;
-}) {
-  if (landmark.symbolSrc) {
-    return (
-      <img
-        src={apiFileUrl(boxSlug, landmark.symbolSrc)}
-        alt=""
-        className={compact ? "w-8 h-8 rounded-full object-cover flex-shrink-0" : "w-12 h-12 rounded-full object-cover flex-shrink-0"}
-      />
-    );
-  }
-  return (
-    <span className={compact ? "text-xl leading-none flex-shrink-0" : "text-3xl leading-none flex-shrink-0"} aria-hidden>
-      {landmark.symbol || "📍"}
-    </span>
-  );
+/** The landmark's mark at picker size — `CardMark` draws it. */
+function LandmarkSymbol({ landmark, boxSlug, compact }: { landmark: PickerLandmark; boxSlug: string; compact: boolean }) {
+  return <CardMark symbol={landmark.symbol} size={compact ? "md" : "lg"} boxSlug={boxSlug} fallback="📍" />;
 }

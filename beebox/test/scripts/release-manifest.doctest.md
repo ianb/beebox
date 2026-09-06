@@ -100,6 +100,7 @@ const checkedIn = pkg.files.filter((f) => f !== "dist" && f !== "src/frontend/di
 checkedIn
 => [
   "bin",
+  "box-docs",
   "templates",
   "plugins",
   ".agents",

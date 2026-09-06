@@ -63,7 +63,23 @@ keep/drop, destined to become his-voice content on the page:
   away very big ideas with much less regret"). The note field is quietly
   becoming the interview. This shapes the elicit step below.
 
-## The open fork — what to do next (boxholder chooses)
+## Direction shift (2026-08-19)
+
+The fork below is now historical: (d) was chosen and prototyped (fisheye →
+three-voice categorized asides; unlisted pages `fisheye.md` and
+`walkthrough.md`), and the design moved again in conversation — **a box
+authors the site** (box-defined page/aside card types + views as the CMS; a
+separate ad hoc React/Tailwind static builder with cards as source; publish
+as its own path). See the "Direction shift" section of
+[the site plan](public-site.md), the
+[box-CMS exploration issue](../../../issues/exploration/2026-08-19-site-authored-in-a-box.md),
+and the [Bee Box rename decision](../../../issues/decisions/2026-08-19-bee-box-rename.md)
+(character/mascot direction: Brown Paper School register, wordless bee = the
+agent, the boxholder as a voice strictly in his own words). Next experiment:
+a `page` schema in a test box, the walkthrough authored as a card, a crude
+export.
+
+## The open fork — superseded (kept for history)
 
 The back half of the pipeline, and the site itself, are undesigned. Pick one:
 
@@ -81,12 +97,26 @@ The back half of the pipeline, and the site itself, are undesigned. Pick one:
 
 No default is right — it's a boxholder call about where energy goes.
 
-## Practical state
+## Practical state (updated 2026-08-15)
 
-- Branch `worktree-github-pages-site`, several commits ahead of `main` (rubric,
-  re-extraction outcomes, picker dropdown, ingest fix). **`/finish` to land
-  before continuing** so a new session starts from merged main.
-- Triage verdicts live in the browser's localStorage until exported (`e`) —
-  export before abandoning a browser.
+- **All tooling is landed on `main`** (through `e84d2ac6`); the workstream was
+  renamed `github-pages-site` → `public-site` and the old worktree/branch
+  removed. Current work happens in the `public-site` worktree.
+- **The triage working set did not survive the old worktree's removal.** The
+  extraction runs (`dev/story-eval/runs/`, ~37 docs of nuggets) and the
+  autosave verdicts file were gitignored and lived only in that worktree; no
+  manual export exists on disk. What remains:
+  - `site/story/coverage.json` — which docs were scanned, content hashes,
+    nugget counts (but not the nuggets themselves).
+  - Browser localStorage (`story-eval-verdicts-v1`, origin `localhost:3210`,
+    shared across worktree prefixes) — likely still holds decisions, chips,
+    and the triage **notes** (the proto-elicitation material). The app's
+    Export builds from loaded runs, which now 404, so salvage means reading
+    the key directly via devtools console, not pressing `e`.
+  - Verdicts key on group ids derived from run spans, and re-extraction is
+    not deterministic — so decisions can't be re-joined to spans. The notes
+    text (keyed by doc) is the recoverable part worth salvaging.
+  - The rubric sharpenings and learnings above were committed — the durable
+    outcomes survived; the working process did not (as the principles said).
 - App/`dev/` changes need no router restart (served from disk); past
   `router.ts` changes did.

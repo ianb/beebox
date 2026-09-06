@@ -94,11 +94,12 @@ export function stampBoxIdentity(html: string, identity: BoxIdentity): string {
     const png =
       `<link rel="icon" type="image/png" href="${base}/icon-192.png"` +
       ` data-bbx-default-icon="${escapeHtml(built)}" />`;
-    if (identity.symbol === "") return png;
+    const glyph = identity.symbol?.glyph;
+    if (glyph === undefined || glyph === "") return png;
     // SVG first: a browser that understands it picks it and never fetches the
     // PNG; one that does not ignores the type it cannot render and takes the
     // PNG. Safari gained SVG-favicon support only in 26, so this is live.
-    return `<link rel="icon" type="image/svg+xml" href="${emojiFaviconUri(identity.symbol)}" />` + png;
+    return `<link rel="icon" type="image/svg+xml" href="${emojiFaviconUri(glyph)}" />` + png;
   });
 
   out = out.replace(
