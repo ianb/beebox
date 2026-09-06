@@ -12,7 +12,7 @@ labels: [providers, voice]
 cannot run over OpenRouter: `mistralai/voxtral-mini-transcribe` rejects
 `verbose_json` outright and returns no speaker data in `json` mode
 (measured 2026-09-06, recorded in
-[the OpenRouter consolidation issue](2026-08-31-openrouter-optional-services-consolidation.md)).
+[the OpenRouter consolidation issue](../closed/exploration/2026-08-31-openrouter-optional-services-consolidation.md)).
 So a box holding only an OpenRouter key has HQ transcription — the Whisper
 family works at full fidelity — but no way to get a diarized transcript at all.
 
@@ -102,6 +102,14 @@ correctly. That model is the box's `whisper-llm` HQ mode, and a confident
 fabrication is worse than a garbled transcript because nothing downstream can
 tell. Worth its own look, on real noisy recordings, independent of anything
 about diarization.
+
+**Status (finish, 2026-09-06):** the second open question below is answered —
+`mai`/`mai-diarized` shipped as their own `hqService` values (merge commit
+`6d11c1a2a`, `core/transcription/openrouter.ts`,
+`shared/transcription-services.ts`), not a silent substitution for
+`voxtral-diarized`. Left open because the first open question — WER and turn
+accuracy against Voxtral diarized on the boxholder's real recordings — has not
+been done; every measurement above is on synthetic TTS audio.
 
 ## The tension
 

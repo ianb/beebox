@@ -3,7 +3,7 @@ title: "TTS backend selection, and per-backend style direction"
 status: partial
 workstream: unattached
 issues:
-  - ../../../issues/features/2026-09-06-gemini-tts-over-openrouter.md
+  - ../../../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md
 ---
 # TTS backend selection, and per-backend style direction
 
@@ -18,7 +18,7 @@ boxholder writes survive the choice of backend — translated into whatever form
 that backend understands, or refused visibly where it has none.
 
 **Issues addressed:**
-[gemini-tts-over-openrouter](../../../issues/features/2026-09-06-gemini-tts-over-openrouter.md).
+[gemini-tts-over-openrouter](../../../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md).
 Grepped the queue for `tts`, `speech`, `voice`, `prosody`, `speaking-voice`: the
 only other live items are
 [openrouter-diarizing-stt-backend](../../../issues/exploration/2026-09-06-openrouter-diarizing-stt-backend.md)

@@ -7,7 +7,20 @@ discovered-by: Ian
 discovered-in: main session — reducing billing and configuration overhead during the external cutover
 labels: [providers, configuration]
 priority: important
+resolution: implemented
 ---
+
+**Closing note (finish, 2026-09-06):** resolved by the `openrouter-services`
+workstream — merge commit `6d11c1a2a` (worktree branch `worktree-openrouter-services`,
+squashing in `10c6425d3..HEAD`). The research inventory, three-way grouping, and
+live-API verification below are all recorded in this issue; the OpenRouter
+fallback route shipped for semantic-search embeddings, `ask-about-audio`, the
+opt-in Gemini scan-vision backend, and Whisper HQ transcription, plus
+`mai`/`mai-diarized` as new HQ services. Diverges from the original ask only in
+scope of what actually consolidated: Voxtral stays Mistral-only (OpenRouter
+cannot serve `verbose_json` for it), and diarization ships on a new model
+(`microsoft/mai-transcribe-2`) rather than an existing route, tracked
+separately: [openrouter-diarizing-stt-backend](../../exploration/2026-09-06-openrouter-diarizing-stt-backend.md).
 
 Bee Box can require separate provider accounts, API keys, configuration, and
 bills for auxiliary model-backed services. Determine which of these workloads
@@ -15,7 +28,7 @@ can use one OpenRouter account without losing important behavior. Consolidation
 is the goal. Using OpenRouter for every workload is not a requirement.
 
 This question is separate from routing the main agent model through OpenRouter.
-That work belongs to [provider-endpoint config](../features/2026-07-18-provider-endpoint-config.md).
+That work belongs to [provider-endpoint config](../../features/2026-07-18-provider-endpoint-config.md).
 This issue covers optional services around the agent:
 
 - OpenAI embeddings for semantic search.
@@ -33,9 +46,9 @@ necessarily a replacement for a speech API. Check realtime streaming, partial
 and final transcript boundaries, word timing and confidence, diarization,
 custom vocabulary, text-to-speech output, latency, and browser-safe ephemeral
 credentials. It is acceptable for voice to remain on specialist providers.
-Compare the findings with the existing [Gemini transcription watch](../watch/2026-08-27-gemini-transcribe-as-transcription-backend.md),
-[Deepgram Flux exploration](2026-08-13-deepgram-flux-stt-tts-turn-taking.md),
-and [Fish Audio exploration](2026-06-15-fish-audio-s2-streaming-transcription.md).
+Compare the findings with the existing [Gemini transcription watch](../../watch/2026-08-27-gemini-transcribe-as-transcription-backend.md),
+[Deepgram Flux exploration](../../exploration/2026-08-13-deepgram-flux-stt-tts-turn-taking.md),
+and [Fish Audio exploration](../../exploration/2026-06-15-fish-audio-s2-streaming-transcription.md).
 
 ## Research
 
@@ -270,7 +283,7 @@ four-turn two-voice clip correctly (`0,1,0,1`) for $0.00047, while
 `x-ai/grok-stt-1.0` produced labels but over-split. `deepgram/nova-3` forwarded
 the flag yet returned one speaker throughout — on synthetic test audio, so that
 is not a verdict on the model. Written up as
-[a diarizing HQ backend over OpenRouter](2026-09-06-openrouter-diarizing-stt-backend.md);
+[a diarizing HQ backend over OpenRouter](../../exploration/2026-09-06-openrouter-diarizing-stt-backend.md);
 adopting one is a new-model decision, not a routing one.
 
 The same probe settles a doubt worth recording: OpenRouter's speaker

@@ -1,13 +1,14 @@
 ---
 title: "Gemini TTS over OpenRouter — a prosody-steerable speech backend that isn't OpenAI"
-workstream: unattached
+workstream: openrouter-services
 area: beebox
 needs: [design]
-design: ../../beebox/docs/plans/tts-backend-selection.md
+design: ../../../beebox/docs/plans/tts-backend-selection.md
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-openrouter-services — boxholder asked whether OpenRouter has any TTS options
 labels: [providers, voice]
+resolution: implemented
 ---
 
 > When the box speaks a reply and I want it to sound a particular way — hushed
@@ -49,7 +50,19 @@ list --workstream openrouter-services`, "TTS prosody: OpenAI instructions vs
 Gemini via OpenRouter". Numbers show the direction and magnitude of the
 response; only ears settle whether it is good enough.
 
-**Designed:** [tts-backend-selection](../../beebox/docs/plans/tts-backend-selection.md).
+**Designed:** [tts-backend-selection](../../../beebox/docs/plans/tts-backend-selection.md).
+
+**Closing note (finish, 2026-09-06):** built per
+[tts-backend-selection](../../../beebox/docs/plans/tts-backend-selection.md) — merge
+commit `6d11c1a2a` (worktree branch `worktree-openrouter-services`). All four
+build items shipped: the backend seam (`core/tts/resolve.ts`,
+`_config/tts.json`), per-backend voice resolution with an explicit
+substitution/mapping report rather than a silent one (`core/tts/voices.ts`),
+style-instruction translation per backend (`core/tts/style.ts`), and the PCM→WAV
+wrapper (`core/tts/wav.ts`). One thing not yet true: nobody has heard Gemini TTS
+in the live chat UI, and the voice-menu picker hasn't been exercised in a
+browser — both are automated/API-verified only. See the plan's own
+"Done-when" for that gap.
 
 ## What has to be built
 
