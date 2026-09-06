@@ -76,8 +76,10 @@ JSON.stringify(fields, null, 2)
 
 ## Template
 
-`createLandmarkTemplate` produces a starter card with a `navigation`
-role holding the label and a text symbol:
+`createLandmarkTemplate` produces a starter card with a `navigation` role for
+the label and the card's own `symbol` group for the mark. A new landmark is
+never written in the legacy `navigation.symbol` shape — that is read for boxes
+that predate the `landmark-symbol` migration and written by nothing.
 
 ```ts
 createLandmarkTemplate({ label: "Recipes", symbol: "🍳" })
@@ -85,11 +87,12 @@ createLandmarkTemplate({ label: "Recipes", symbol: "🍳" })
 ---
 navigation:
   label: Recipes
-  symbol: 🍳
+symbol:
+  glyph: 🍳
 ---
 ```
 
-An image symbol becomes a `{ src }` mapping:
+An image symbol becomes a `{ src }` mapping under the same key:
 
 ```ts
 createLandmarkTemplate({ label: "Character", symbolSrc: "images/portrait.webp" })
@@ -97,8 +100,8 @@ createLandmarkTemplate({ label: "Character", symbolSrc: "images/portrait.webp" }
 ---
 navigation:
   label: Character
-  symbol:
-    src: images/portrait.webp
+symbol:
+  src: images/portrait.webp
 ---
 ```
 

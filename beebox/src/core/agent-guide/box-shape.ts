@@ -10,6 +10,7 @@
  * `_bookkeeping/archive/` rollup that the spec doesn't itself model.
  */
 
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import { boxLayoutEntry, type BoxDirs } from "../../lib/paths.js";
 import { boxCodePathsRelativeToBoxRoot, type BoxShape } from "../../lib/box-shape.js";
 
@@ -96,7 +97,7 @@ Most items arrive on their own — you rarely need to place one by hand (though 
 Two sorting mechanisms process items that land in \`_content/inbox/\`. Don't confuse a **job** (a card in \`_bookkeeping/jobs/\` that tells the reactor to do a unit of work) with a **triaged item** (an inbox item routed to a category to await its handler) — they're different things that happen to share the word "intake":
 
 - **Jobs → reactor** — the primary routing path: \`bbx wakeup\` and the connectors create job cards in \`_bookkeeping/jobs/\`, and the reactor processes them one cycle per wakeup.
-- **The intake → triage → handle pipeline** — runs when invoked directly (\`bbx intake\` / \`bbx triage\` / \`bbx handle\`), moving items through \`_content/inbox/intake/\` → \`staged/\` → \`triaged/<category>/\`. See \`_content/docs/generated/triage.md\` (confidence levels, handler \`TRIAGE_ITEMS\` contract).
+- **The intake → triage → handle pipeline** — runs when invoked directly (\`bbx intake\` / \`bbx triage\` / \`bbx handle\`), moving items through \`_content/inbox/intake/\` → \`staged/\` → \`triaged/<category>/\`. See \`${BOX_PACKAGE_DOCS}/triage.md\` (confidence levels, handler \`TRIAGE_ITEMS\` contract).
 
 **Common mistake:** Do NOT tell users to "put" or "place" files in directories. Users interact through the web UI, chat, or external services. Only agents use \`bbx create\` and \`bbx mv\`.`;
 }

@@ -39,11 +39,11 @@
 import { useEffect, useState } from "react";
 import { Dropdown } from "./ui/Dropdown";
 import { trpc } from "../lib/trpc";
-import { apiFileUrl } from "../lib/view-url";
 import type { Place } from "../lib/place-label";
 import { useOpenLandmarkChat } from "../hooks/useOpenLandmarkChat";
 import { useNavMenuEntries } from "../hooks/useNavMenuEntries";
 import { SwitchMenuBody, type SwitchLandmark, type SwitchPanel } from "./PlacePill-panels";
+import { CardMark } from "./ui/CardMark";
 import { HereMenuBody } from "./PlacePill-here";
 import { AppBarHereSlot, useAppBarHereMenuClaimed, useAppBarRecentFilesClaimed } from "./app-bar-chrome";
 import { isNativeShell } from "./chat/native-post";
@@ -65,25 +65,6 @@ function CaretIcon() {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
     </svg>
   );
-}
-
-/** The resolved landmark's symbol on the pill's face; nothing when unresolved. */
-function FaceSymbol({
-  symbol,
-  symbolSrc,
-  boxSlug,
-}: {
-  symbol: string;
-  symbolSrc: string | null;
-  boxSlug: string;
-}) {
-  if (symbolSrc !== null) {
-    return (
-      <img src={apiFileUrl(boxSlug, symbolSrc)} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
-    );
-  }
-  if (symbol === "") return null;
-  return <span className="shrink-0 leading-none" aria-hidden>{symbol}</span>;
 }
 
 /** Last segment of a box path; the root reads as "/". */
@@ -172,7 +153,7 @@ export function PlacePill({
     if (switchData === undefined) return null;
     if (switchData.landmarks.some((lm) => lm.dir === "")) return switchData.landmarks;
     const root: SwitchLandmark = {
-      path: "", dir: "", label: "Box root", symbol: "🏠", symbolSrc: null,
+      path: "", dir: "", label: "Box root", symbol: { glyph: "🏠" },
       freshCount: switchData.rootFreshCount,
     };
     return [root, ...switchData.landmarks];
@@ -203,7 +184,7 @@ export function PlacePill({
           >
             <span className="hidden sm:inline shrink-0 opacity-65">{boxName} ▸</span>
             {landmark !== null ? (
-              <FaceSymbol symbol={landmark.symbol} symbolSrc={landmark.symbolSrc} boxSlug={boxSlug} />
+              <CardMark symbol={landmark.symbol} size="xs" boxSlug={boxSlug} />
             ) : place.dir === "" ? (
               // The box root is a place like any other — with no root landmark
               // card it still gets a symbol, matching its switch-menu row.

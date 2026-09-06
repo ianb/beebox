@@ -31,7 +31,7 @@ await box.write(
 
 const { summaries, problems } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"Box.landmark.card","dir":"","label":"Home","symbol":"🏠","symbolSrc":null},{"path":"recipes/Recipes.landmark.card","dir":"recipes","label":"Recipes","symbol":"🍳","symbolSrc":null}]
+=> [{"path":"Box.landmark.card","dir":"","label":"Home","symbol":{"glyph":"🏠"}},{"path":"recipes/Recipes.landmark.card","dir":"recipes","label":"Recipes","symbol":{"glyph":"🍳"}}]
 
 JSON.stringify(problems)
 => []
@@ -48,7 +48,7 @@ await box.write(
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":"","symbolSrc":"_content/trips/Trips.attach/pin.png"}]
+=> [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":{"src":"_content/trips/Trips.attach/pin.png"}}]
 ```
 
 ## A box-root `symbol.src` (leading `/`) resolves against the box, not the card
@@ -69,7 +69,7 @@ await box.write(
 );
 
 const { summaries } = await loadLandmarkSummaries(box.root);
-summaries[0].symbolSrc
+summaries[0].symbol?.src
 => _content/archive/people/marlowe/images/priya-portrait.webp
 ```
 
@@ -87,7 +87,7 @@ await box.write(
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"archive/Old_Mail.landmark.card","dir":"archive","label":"Old_Mail","symbol":"","symbolSrc":null}]
+=> [{"path":"archive/Old_Mail.landmark.card","dir":"archive","label":"Old_Mail","symbol":null}]
 ```
 
 ## A card whose frontmatter doesn't parse is reported, not silently skipped

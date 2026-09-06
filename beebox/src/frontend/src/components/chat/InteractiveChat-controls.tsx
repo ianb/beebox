@@ -6,15 +6,19 @@
  * their own.
  */
 
-import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { CloseButton } from "../ui/CloseButton";
 import { ExternalIconLink } from "../ui/ExternalIconLink";
 import { FileView } from "../FileView";
 import { withBase } from "../../api";
 import { cn } from "../../lib/cn";
+
+import { useCardIdentities } from "../../hooks/useCardIdentities";
+import { SidecarTabStrip } from "./SidecarTabStrip";
 import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import type { SidecarTab } from "./sidecar-tabs";
 import type { AddSelectionInput } from "../../lib/selection/position";
 import type { ActivityKind } from "@core/chat/card-activity.js";
 
@@ -100,21 +104,24 @@ export function NarrationMicIcon({ className }: { className?: string }) {
   );
 }
 
-export interface PanelTab {
-  target: ViewTarget;
-  label: string;
-}
+export type PanelTab = SidecarTab;
 
 /**
  * Companion view panel shown alongside chat when one or more views are open.
  * Tabs are keyed by path: opening a file that's already open reactivates it
  * rather than duplicating a tab, and in-file link clicks open new tabs.
  */
+/**
+ * The tab strip. Its own component because it owns two behaviours the pane
+ * around it does not: the element refs that let the active tab scroll itself
+ * into view, and the pin control on each tab.
+ */
 function CompanionViewPanelInner({
   tabs,
   activePath,
   onSelectTab,
   onCloseTab,
+  onTogglePin,
   onClosePanel,
   onNavigate,
   onUpdateTarget,
@@ -125,6 +132,7 @@ function CompanionViewPanelInner({
   activePath: string;
   onSelectTab: (path: string) => void;
   onCloseTab: (path: string) => void;
+  onTogglePin: (path: string) => void;
   onClosePanel: () => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   onUpdateTarget: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -133,6 +141,10 @@ function CompanionViewPanelInner({
   reportActivity: (kind: ActivityKind, detail?: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
+  // One batched read for every open path, invalidated on file-change — so a
+  // retitled card retitles its tab, and a pinned tab restored from storage has
+  // a title it never saw when it was opened.
+  const identities = useCardIdentities(useMemo(() => tabs.map((t) => t.target.path), [tabs]));
   // Tabs that have been activated at least once. We mount a tab's view on
   // first activation and keep it mounted thereafter, so each view retains its
   // own scroll position and interactive state while inactive (it's hidden, not
@@ -162,50 +174,15 @@ function CompanionViewPanelInner({
   return (
     <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
       <div className="flex-shrink-0 flex items-stretch border-b border-warm-300 bg-warm-50 min-w-0">
-        <div id="bbx-panel-tabs" role="tablist" aria-label="Open files" className="flex-1 min-w-0 flex overflow-x-auto">
-          {tabs.map((tab) => {
-            const isActive = tab.target.path === activePath;
-            return (
-              <div
-                key={tab.target.path}
-                className={cn(
-                  "flex-shrink-0 max-w-[14rem] flex items-center border-r border-warm-300 border-b-2",
-                  isActive
-                    ? "bg-white border-b-primary"
-                    : "border-b-transparent hover:bg-warm-100",
-                )}
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => onSelectTab(tab.target.path)}
-                  title={tab.target.path}
-                  className={cn(
-                    "flex-1 min-w-0 truncate text-left text-sm pl-3 pr-1 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-                    isActive ? "text-warm-900 font-medium" : "text-warm-600",
-                  )}
-                >
-                  {tab.label}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCloseTab(tab.target.path);
-                  }}
-                  aria-label={`Close ${tab.label}`}
-                  title="Close tab"
-                  className="flex-shrink-0 mr-1 p-0.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                >
-                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M6 6l12 12M18 6l-12 12" />
-                  </svg>
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        <SidecarTabStrip
+          tabs={tabs}
+          activePath={activePath}
+          identities={identities}
+          boxSlug={boxSlug}
+          onSelectTab={onSelectTab}
+          onCloseTab={onCloseTab}
+          onTogglePin={onTogglePin}
+        />
         <div className="flex-shrink-0 flex items-center gap-1 px-2 border-l border-warm-300">
           <ExternalIconLink id="bbx-panel-open-browse" href={browseHref} label="Open in browse view (new tab)" size="sm" />
           <CloseButton id="bbx-panel-close" onClick={onClosePanel} label="Close companion view" size="sm" />

@@ -82,6 +82,10 @@ export interface ReactorResult {
   jobsProcessed: number;
   jobsRemaining: number;
   error?: string;
+  /** Set when another reactor held the lock, so this call did no work at all.
+   * `success` stays true — nothing went wrong — but a caller waiting on a
+   * specific job must not read that as "my job drained". */
+  skipped?: "locked";
 }
 
 /**
@@ -113,7 +117,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
   const lockAcquired = await acquireReactorLock(lockFile);
   if (!lockAcquired) {
     onLog?.(fmt.dim("Another reactor is already running, skipping.\n"));
-    return { success: true, jobsProcessed: 0, jobsRemaining: 0 };
+    return { success: true, jobsProcessed: 0, jobsRemaining: 0, skipped: "locked" };
   }
 
   // Handle --reset-sessions

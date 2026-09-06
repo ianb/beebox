@@ -18,7 +18,17 @@ import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { runBbxWakeup } from "../commands/wakeup.js";
+import type { WakeupOutcomeReport } from "../../cli/commands/wakeup-outcome.js";
 import { ensureQuarantineDir, quarantineDir } from "./quarantine.js";
+import {
+  clearWakeupAbandoned,
+  clearWakeupFailures,
+  decideWakeupRetry,
+  isWakeupAbandoned,
+  MAX_WAKEUP_ATTEMPTS,
+  recordWakeupAbandoned,
+  recordWakeupFailure,
+} from "./wakeup-retry.js";
 
 /** Not a `.json` file, so `readAllQuarantineEntries` never sees it as an entry. */
 const MARKER_FILENAME = "wakeup-pending";
@@ -27,10 +37,29 @@ export function wakeupMarkerPath(boxRoot: string): string {
   return path.join(quarantineDir(boxRoot), MARKER_FILENAME);
 }
 
-/** Record that a wakeup is owed. Idempotent: the newest reason wins. */
-export async function markWakeupPending(boxRoot: string, reason: string): Promise<void> {
+/**
+ * Record that a wakeup is owed. Idempotent: the newest reason wins.
+ *
+ * `newWork` is the retry budget's reset, and it must mean *genuinely new
+ * files*, not *this pass ran again*. A pass re-drives entries still stuck in
+ * `promoting` from a failed upload, and marking on every such pass would clear
+ * the budget before each failure was recorded — the counter would never reach
+ * abandonment and the bound would be decorative. So only a batch containing an
+ * unattempted (`pending`) entry resets it.
+ *
+ * New files DO reset it, including after an abandonment: otherwise one
+ * permanently-broken connector would silently strand every future scan on the
+ * box, trading a loud loop for a quiet one.
+ */
+export async function markWakeupPending(
+  boxRoot: string,
+  opts: { reason: string; newWork: boolean },
+): Promise<void> {
   await ensureQuarantineDir(boxRoot);
-  await fs.writeFile(wakeupMarkerPath(boxRoot), `${getBoxTimeISO(boxRoot)} ${reason}\n`);
+  await fs.writeFile(wakeupMarkerPath(boxRoot), `${getBoxTimeISO(boxRoot)} ${opts.reason}\n`);
+  if (!opts.newWork) return;
+  await clearWakeupFailures(boxRoot);
+  await clearWakeupAbandoned(boxRoot);
 }
 
 /** The pending marker's contents, or null when no wakeup is owed. */
@@ -50,11 +79,67 @@ async function clearWakeupMarker(boxRoot: string): Promise<void> {
 /** Run one full `bbx wakeup` for the box. Injected in tests. */
 export type WakeupRunner = (opts: { boxRoot: string }) => Promise<{ ok: boolean; detail: string }>;
 
-/** The real runner: a supervised `bbx wakeup` child, awaited, output captured. */
+/**
+ * The real runner: a supervised `bbx wakeup` child, awaited, output captured.
+ *
+ * What counts as failure here is narrower than the child's exit code. That
+ * code is non-zero whenever ANY connector errored (`wakeup-connectors.ts`), so
+ * an expired credential on an unrelated connector would mark every future scan
+ * wakeup failed — forever. What this worker actually waits on is the reactor
+ * cycle that drains the intake job its import created. So when the child
+ * reports its per-step outcome, judge by that step; fall back to the exit code
+ * only when there is no outcome to read (an older binary, or a crash before
+ * the cycle ended).
+ */
 export const spawnBbxWakeup: WakeupRunner = async ({ boxRoot }) => {
   const result = await runBbxWakeup({ boxRoot, triggeredBy: "scan-promote" });
-  return { ok: result.ok, detail: result.ok ? "" : `${result.detail}\n${result.output}`.trim() };
+  const ok = wakeupSatisfiedScanPromote({ exitOk: result.ok, outcome: result.outcome });
+  if (ok) {
+    if (!result.ok && result.outcome !== null) {
+      console.warn(
+        `[scan] bbx wakeup reported ${String(result.outcome.connectorErrors)} connector error(s); ` +
+          "the intake drain this worker waits on succeeded, so the scan is not retried.",
+      );
+    }
+    return { ok: true, detail: "" };
+  }
+  return { ok: false, detail: `${result.detail}\n${result.output}`.trim() };
 };
+
+/**
+ * Did the wakeup do the part the scan promote worker depends on? Pure, so the
+ * rule is testable without spawning anything.
+ */
+export function wakeupSatisfiedScanPromote(opts: {
+  exitOk: boolean;
+  outcome: WakeupOutcomeReport | null;
+}): boolean {
+  // No structured outcome: nothing better than the exit code to go on, and
+  // guessing "fine" would resurrect the lost-wakeup bug the marker exists for.
+  if (opts.outcome === null) return opts.exitOk;
+  // A lock-skip did no work at all, so it proves nothing about the intake job
+  // this worker is waiting on — retry rather than clear the marker.
+  if (opts.outcome.reactorSkipped) return false;
+  // `jobsRemaining` is deliberately not consulted: the reactor skips
+  // low-priority work every run, so a queued backfill job is normal and is not
+  // this worker's business.
+  return opts.outcome.reactorOk;
+};
+
+/** Where a caller should look when a wakeup has been abandoned. */
+const wakeupAbandonedRelPath = "_tmp/scan-quarantine/wakeup-abandoned";
+
+/**
+ * What one pass did about the owed wakeup. `failed` carries how long the
+ * caller should wait before the next attempt; `abandoned` means the budget is
+ * spent and the caller must NOT re-arm — that re-arm is the loop this
+ * vocabulary exists to end.
+ */
+export type WakeupOutcome =
+  | { kind: "ran" }
+  | { kind: "not-needed" }
+  | { kind: "abandoned" }
+  | { kind: "failed"; retryDelayMs: number };
 
 /**
  * Run the owed wakeup, if one is owed, clearing the marker only on success.
@@ -63,17 +148,37 @@ export const spawnBbxWakeup: WakeupRunner = async ({ boxRoot }) => {
 export async function runPendingWakeup(opts: {
   boxRoot: string;
   runWakeup: WakeupRunner;
-}): Promise<"ran" | "failed" | "not-needed"> {
+}): Promise<WakeupOutcome> {
   const { boxRoot, runWakeup } = opts;
   const marker = await readWakeupMarker(boxRoot);
-  if (marker === null) return "not-needed";
+  if (marker === null) return { kind: "not-needed" };
+  // The budget is spent and no new files have arrived since. Retrying would
+  // re-enter the loop the budget exists to stop.
+  if (await isWakeupAbandoned(boxRoot)) return { kind: "abandoned" };
+
   const result = await runWakeup({ boxRoot });
-  if (!result.ok) {
-    // Left deliberately: the marker IS the retry, and the next promote pass
-    // (debounced or at startup) picks it up.
-    console.error(`[scan] bbx wakeup after promote failed (marker kept, will retry): ${result.detail}`);
-    return "failed";
+  if (result.ok) {
+    await clearWakeupMarker(boxRoot);
+    await clearWakeupFailures(boxRoot);
+    return { kind: "ran" };
   }
-  await clearWakeupMarker(boxRoot);
-  return "ran";
+
+  const failures = await recordWakeupFailure(boxRoot);
+  const decision = decideWakeupRetry(failures);
+  if (decision.kind === "abandon") {
+    await recordWakeupAbandoned(boxRoot, { failures, detail: result.detail });
+    console.error(
+      `[scan] bbx wakeup after promote failed ${String(failures)} time(s); giving up. ` +
+        "The intake job stays undrained until this is fixed and " +
+        `${wakeupAbandonedRelPath} is removed: ${result.detail}`,
+    );
+    return { kind: "abandoned" };
+  }
+  // The marker IS the retry: the next promote pass, debounced or at startup,
+  // picks it up. The caller schedules that pass `delayMs` from now.
+  console.error(
+    `[scan] bbx wakeup after promote failed (attempt ${String(failures)} of ` +
+      `${String(MAX_WAKEUP_ATTEMPTS)}, retrying in ${String(Math.round(decision.delayMs / 1000))}s): ${result.detail}`,
+  );
+  return { kind: "failed", retryDelayMs: decision.delayMs };
 }

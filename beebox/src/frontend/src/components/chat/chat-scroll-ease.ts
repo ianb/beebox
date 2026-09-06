@@ -5,6 +5,7 @@
 
 import type { MutableRefObject } from "react";
 import { recordScrollTrace } from "../../lib/scroll-diagnostics";
+import { prefersReducedMotion } from "../../lib/reduced-motion";
 
 /**
  * Quick eased scroll that brings `target`'s top to the scroller's top.
@@ -75,7 +76,7 @@ export function easeOrSnapToTop(opts: {
   cancelRef: MutableRefObject<(() => void) | null>;
 }): void {
   const { el, target, writeInstant, onDone, onCancel, cancelRef } = opts;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (prefersReducedMotion()) {
     const offset = target.getBoundingClientRect().top - el.getBoundingClientRect().top;
     writeInstant(el.scrollTop + offset);
     onDone();

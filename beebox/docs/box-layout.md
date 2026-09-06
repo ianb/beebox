@@ -9,9 +9,10 @@ The on-disk shape of a beebox. This is the canonical reference for beebox develo
 A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working tree is the entire state of the system — there is no separate database. Boxes live outside this repo (typically `~/src/boxes/<name>/`) so agents operating inside a box don't inherit this repo's CLAUDE.md.
 
 A box has **one root**, and everything about the box lives under it:
-the npm package (`package.json`, `src/`, `node_modules/`), the git
+the npm package (`package.json`, `src/`, `node_modules/` — which is also where the
+installed `beebox` package's own reference docs live), the git
 repository, the agent's own configuration (`CLAUDE.md`, `.claude/`), the
-runtime marker and generated docs (`.beebox/`), and every operational area
+runtime marker and agent guide (`.beebox/`), and every operational area
 holding the boxholder's content and the machine's working state. There is no
 second root to find or pass around — `boxRoot` means this directory,
 everywhere in the codebase and in every path an agent sees.
@@ -64,7 +65,7 @@ dependency.
 ├── AGENTS.md                      symlink to CLAUDE.md (Codex-facing mirror)
 ├── .agents/                       Codex-facing mirror of .claude/skills/
 ├── .codex/                        Codex-facing hook config (mirrors .claude/settings.json)
-├── .beebox/                       runtime: box.json marker, dbs, logs, generated docs
+├── .beebox/                       runtime: box.json marker, dbs, logs, agent guide
 ├── src/
 │   ├── schemas/                    box-local card-type definitions
 │   ├── views/                      custom view definitions
@@ -116,7 +117,7 @@ chat's context area (tracked and committed, unlike `_tmp/`) as a
 capture-session card + attach scope; the chat agent annotates and files
 them out — `tmp-capture/` must not accumulate. Flow reference:
 `docs/implemented-plans/capture-mode.md`; agent duties:
-`_content/docs/generated/card-capture-session.md`.
+`node_modules/beebox/box-docs/card-capture-session.md`.
 
 A bulk file-upload batch (dozens of items / ~100 MB dropped at once — camera-roll
 batches, document folders) lands the same way, as a sibling `tmp-upload/`
@@ -127,7 +128,7 @@ scope, or `_content/inbox/`) and deletes the card + attach dir once
 everything is placed — there is no terminal "filed" status, deletion *is* the
 completion signal, and `tmp-upload/` must not accumulate either. Plan:
 `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-`_content/docs/generated/card-upload-batch.md`.
+`node_modules/beebox/box-docs/card-upload-batch.md`.
 
 ## Marker and runtime files (root)
 

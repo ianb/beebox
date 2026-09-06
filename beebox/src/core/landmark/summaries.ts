@@ -16,6 +16,7 @@ import { readLandmarkSymbol } from "./symbol.js";
 import { mapInBatchesSettled } from "../../lib/map-batched.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { landmarkScanDir, normalizeLandmarkDir } from "./root-dir.js";
+import type { CardSymbolData } from "../../shared/card-symbol.js";
 
 /** Landmark cards read at once — see {@link mapInBatchesSettled}. */
 const READ_CONCURRENCY = 64;
@@ -74,8 +75,9 @@ export interface LandmarkSummary {
   path: string;
   dir: string;
   label: string;
-  symbol: string;
-  symbolSrc: string | null;
+  /** The card's mark, `src` resolved to a box-relative path; null when it has none. */
+  symbol: CardSymbolData | null;
+
 }
 
 /** A `*.landmark.card` that exists but doesn't parse as a landmark. */
@@ -118,15 +120,14 @@ async function readSummary(boxRoot: string, relPath: string): Promise<CardOutcom
 
   const navigation = fields.navigation;
   const dir = normalizeLandmarkDir(path.dirname(relPath));
-  const symbol = readLandmarkSymbol(navigation, { landmarkPath: relPath });
+  const symbol = readLandmarkSymbol(fields, { landmarkPath: relPath });
   return {
     problem: false,
     summary: {
       path: relPath,
       dir,
       label: (navigation === undefined ? "" : navigation.label ?? "") || path.basename(relPath, ".landmark.card"),
-      symbol: symbol.text,
-      symbolSrc: symbol.src,
+      symbol,
     },
   };
 }

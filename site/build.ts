@@ -2,21 +2,28 @@
 //   pnpm --dir site build            # base derived from the git branch
 //   pnpm --dir site build --base /beebox/   # GitHub Pages
 //
-// Reads site/content/*.md, renders each through the local Markdoc pipeline,
-// writes HTML + a machine-facing .md twin to site/dist/, generates llms.txt,
-// and link-checks every internal link against the emitted output. Any broken
-// internal link, malformed frontmatter, or missing source fails the build.
-// On success it prints one summary line — routine noise is a bug.
+// Reads site/cards/*.site-page.card, renders each through the local Markdoc
+// pipeline (resolving `{% aside ref %}` against the site-aside cards beside
+// them), writes HTML + a machine-facing .md twin to site/dist/, generates
+// llms.txt, and link-checks every internal link against the emitted output. Any
+// broken internal link, malformed frontmatter, unknown ref, or missing source
+// fails the build. On success it prints one summary line — noise is a bug.
 
 import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { embedAsides, flatAside, loadAsides, renderAside, type AsideCard } from "./asides.js";
+import { listCardFiles } from "./cards.js";
 import { baseFromBranch, normalizeBase } from "./links.js";
+import { embedNuggets, isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
 import { parseSource, renderBody, pageShell, type PageFrontmatter } from "./render.js";
 import { writeManifest } from "./sources.js";
 
 const SITE_DIR = import.meta.dirname;
-const CONTENT_DIR = path.join(SITE_DIR, "content");
+const CARDS_DIR = path.join(SITE_DIR, "cards");
+const NUGGETS_DIR = path.join(SITE_DIR, "nuggets");
+const REPO_ROOT = path.resolve(SITE_DIR, "..");
 const DIST_DIR = path.join(SITE_DIR, "dist");
 
 class BuildError extends Error {
@@ -55,28 +62,6 @@ function resolveBase(args: CliArgs): string {
   return baseFromBranch(branch);
 }
 
-interface ContentFile {
-  /** Absolute source path. */
-  abs: string;
-  /** Site-root-relative path without extension, e.g. "index" or "sub/about". */
-  stem: string;
-}
-
-async function collectContent(dir: string, prefix: string): Promise<ContentFile[]> {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  const out: ContentFile[] = [];
-  for (const entry of entries.toSorted((a, b) => a.name.localeCompare(b.name))) {
-    if (entry.name.startsWith(".")) continue;
-    const abs = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...(await collectContent(abs, `${prefix}${entry.name}/`)));
-    } else if (entry.name.endsWith(".md")) {
-      out.push({ abs, stem: `${prefix}${entry.name.slice(0, -".md".length)}` });
-    }
-  }
-  return out;
-}
-
 interface BuiltPage {
   stem: string;
   frontmatter: PageFrontmatter;
@@ -84,49 +69,109 @@ interface BuiltPage {
   linkTargets: { target: string; href: string }[];
 }
 
-// The machine-facing twin is the page's flat markdown form: the body verbatim
-// (which already carries its own H1). Frontmatter is build metadata, not content.
-function twinMarkdown(body: string): string {
-  return `${body.trimStart().trimEnd()}\n`;
+// The machine-facing twin is the page's flat markdown form: fisheye tag
+// markers stripped (all text present, no disclosure), an embedded nugget
+// flattened to a blockquote with its provenance, and fenced code blocks left
+// untouched — a literal `{% %}` in an example is content, not markup. The
+// body carries its own H1; frontmatter is build metadata, not content.
+function flatNugget(slug: string, nuggets: readonly Nugget[]): string {
+  const nugget = nuggets.find((n) => n.slug === slug);
+  // Unknown/refused slugs already failed the build in embedNuggets; this
+  // guard only keeps the twin pass from ever being the thing that throws.
+  if (!nugget || !isRenderable(nugget)) return "";
+  const text = nugget.body === "" ? nugget.span : nugget.body;
+  const quoted = text.split("\n").map((line) => `> ${line}`.trimEnd()).join("\n");
+  return `${quoted}\n> — from ${nugget.source}`;
+}
+
+export function twinMarkdown(
+  body: string,
+  refs: { nuggets: readonly Nugget[]; asides: ReadonlyMap<string, AsideCard> },
+): string {
+  const flat = body
+    .split(/(```[\S\s]*?```)/g)
+    .map((part, i) => {
+      if (i % 2 === 1) return part; // inside a code fence: literal content
+      // Asides flatten FIRST: flatAside splices in the aside's published body,
+      // which may itself carry a {% nugget %} tag — the nugget pass must run
+      // after it, or the catch-all strip below silently deletes that nugget.
+      return part
+        .replace(/{%\s*aside\s+ref="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatAside(slug, refs.asides))
+        .replace(/{%\s*nugget\s+slug="([^"]*)"\s*\/%}/g, (_m, slug: string) => flatNugget(slug, refs.nuggets))
+        .replace(/{%[\S\s]*?%}/g, "");
+    })
+    .join("");
+  return `${flat.trimStart().trimEnd()}\n`;
 }
 
 function renderLlmsTxt(params: { home: PageFrontmatter; pages: BuiltPage[]; base: string }): string {
   const lines = [`# ${params.home.title}`, "", `> ${params.home.summary}`, "", "## Pages", ""];
-  for (const page of params.pages) {
+  for (const page of params.pages.filter((p) => p.frontmatter.unlisted !== true)) {
     lines.push(`- [${page.frontmatter.title}](${params.base}${page.stem}.md): ${page.frontmatter.summary}`);
   }
   return `${lines.join("\n")}\n`;
+}
+
+// Nugget enforcement at build: `proposed` nuggets are refused (never rendered,
+// always listed by slug — the AI-words rule is code, not convention), and every
+// publishable one is rendered here so a nugget that cannot render fails the
+// build now rather than on the page that later embeds it. Span drift is not a
+// failure: it renders with a stale marker and is counted in the summary.
+function checkNuggets(nuggets: readonly Nugget[], base: string): string[] {
+  const refused = nuggets.filter((n) => !isRenderable(n));
+  const publishable = nuggets.filter((n) => isRenderable(n));
+  const stale: string[] = [];
+  for (const nugget of publishable) {
+    renderNugget(nugget, { base, pageSitePath: "index.html" });
+    if (nugget.spanState !== "current") stale.push(`${nugget.slug} (${nugget.spanState} in ${nugget.source})`);
+  }
+  const lines: string[] = [];
+  if (nuggets.length > 0) {
+    lines.push(`site: ${publishable.length} nugget(s) publishable, ${refused.length} refused, ${stale.length} stale`);
+  }
+  if (refused.length > 0) {
+    lines.push(`site: refused (status proposed, never published): ${refused.map((n) => n.slug).join(", ")}`);
+  }
+  for (const line of stale) lines.push(`site: nugget span drifted — ${line}`);
+  return lines;
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const base = resolveBase(args);
 
-  const content = await collectContent(CONTENT_DIR, "");
-  if (content.length === 0) throw new BuildError(`no .md sources found in ${CONTENT_DIR}`);
+  const cards = await listCardFiles({ cardsDir: CARDS_DIR, siteDir: SITE_DIR });
+  if (cards.pages.length === 0) throw new BuildError(`no *.site-page.card sources found in ${CARDS_DIR}`);
 
   await fs.rm(DIST_DIR, { recursive: true, force: true });
   await fs.mkdir(DIST_DIR, { recursive: true });
 
   const emitted = new Set<string>();
   const built: BuiltPage[] = [];
+  const nuggets = await loadNuggets({ nuggetsDir: NUGGETS_DIR, repoRoot: REPO_ROOT });
+  const asides = await loadAsides(cards.asides);
+  // Render every aside once up front, referenced or not: an empty ready aside
+  // or a nested ref fails the build here rather than only on the page that
+  // happens to embed it.
+  for (const aside of asides.values()) renderAside(aside, { pageSitePath: "index.html", base });
 
-  for (const file of content) {
-    const src = await fs.readFile(file.abs, "utf8");
-    const relForErrors = path.relative(SITE_DIR, file.abs);
-    const { frontmatter, body } = parseSource(src, relForErrors);
-    const pageSitePath = `${file.stem}.html`;
-    const { html, linkTargets } = renderBody(body, { pageSitePath, base });
+  for (const card of cards.pages) {
+    const src = await fs.readFile(card.abs, "utf8");
+    const { frontmatter, body } = parseSource(src, card.file);
+    const pageSitePath = `${card.slug}.html`;
+    const rendered = renderBody(body, { file: card.file, pageSitePath, base });
+    const withAsides = embedAsides(rendered.html, { asides, base, pageSitePath });
+    const html = embedNuggets(withAsides.html, { nuggets, base, pageSitePath });
+    const linkTargets = [...rendered.linkTargets, ...withAsides.linkTargets];
 
     const htmlOut = path.join(DIST_DIR, pageSitePath);
-    const twinOut = path.join(DIST_DIR, `${file.stem}.md`);
-    await fs.mkdir(path.dirname(htmlOut), { recursive: true });
+    const twinOut = path.join(DIST_DIR, `${card.slug}.md`);
     await fs.writeFile(htmlOut, pageShell({ title: frontmatter.title, bodyHtml: html, base }), "utf8");
-    await fs.writeFile(twinOut, twinMarkdown(body), "utf8");
+    await fs.writeFile(twinOut, twinMarkdown(body, { nuggets, asides }), "utf8");
 
     emitted.add(pageSitePath);
     built.push({
-      stem: file.stem,
+      stem: card.slug,
       frontmatter,
       linkTargets: linkTargets.map((target) => ({ target, href: target })),
     });
@@ -143,8 +188,10 @@ async function main(): Promise<void> {
     throw new BuildError(`broken internal link(s):\n  ${broken.join("\n  ")}`);
   }
 
+  const nuggetSummary = checkNuggets(nuggets, base);
+
   const home = built.find((p) => p.stem === "index");
-  if (!home) throw new BuildError("no index.md — the site needs a home page");
+  if (!home) throw new BuildError("no cards/index.site-page.card — the site needs a home page");
   await fs.writeFile(
     path.join(DIST_DIR, "llms.txt"),
     renderLlmsTxt({ home: home.frontmatter, pages: built, base }),
@@ -156,11 +203,17 @@ async function main(): Promise<void> {
   // build never leaves a manifest that could mask staleness.
   await writeManifest(SITE_DIR, DIST_DIR);
 
-  process.stdout.write(`site: built ${built.length} page(s) → dist/ (base ${base})\n`);
+  process.stdout.write(
+    [`site: built ${built.length} page(s) → dist/ (base ${base})`, ...nuggetSummary].join("\n") + "\n",
+  );
 }
 
-main().catch((e: unknown) => {
-  const message = e instanceof Error ? e.message : String(e);
-  process.stderr.write(`site build failed: ${message}\n`);
-  process.exitCode = 1;
-});
+// Run only when invoked as the CLI — the test file imports twinMarkdown and
+// must not trigger a build.
+if (process.argv[1] !== undefined && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
+  main().catch((e: unknown) => {
+    const message = e instanceof Error ? e.message : String(e);
+    process.stderr.write(`site build failed: ${message}\n`);
+    process.exitCode = 1;
+  });
+}

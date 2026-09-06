@@ -8,6 +8,8 @@
  * sections used to re-teach; they should cross-reference it instead.
  */
 
+import { BOX_PACKAGE_DOCS, DOCS_DIR } from "../docs-gen/shared.js";
+import type { TemplateDefinition } from "../../schemas/templates.js";
 import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
 import { SECTION, xref } from "./sections.js";
@@ -59,6 +61,14 @@ next), but a few belong to every card:
   sentence still holds, \`bbx contains update <card> --text "..."\` clears the
   staleness flag; \`bbx contains list --missing\` / \`--stale\` shows which cards
   still need one written or refreshed.
+- **\`symbol:\`** — the small mark that stands for the card in a tab strip, a
+  listing, or a tile: \`symbol: { glyph: 🍞 }\`, optionally with
+  \`foreground:\`/\`background:\` colours (\`#rgb\`, \`#rrggbb\`, \`hsl()\`,
+  \`hsla()\`, \`rgb()\`, \`rgba()\` — nothing else), or \`symbol: { src: <box ref
+  to an image> }\` for a picture. The glyph is an emoji or a letter or two, not
+  a word. **Most cards should have none.** Mark the handful someone returns to
+  often; a box where everything is marked has nothing marked, so do not add one
+  by reflex when you create a card.
 - **refs** — not a fixed field but a pattern: wherever frontmatter or a body tag
   points at another card (a \`ref:\` value, \`key-people[].ref\`, a \`{% source %}\`
   anchor), the path works the same way. ${REF_PATH_RULE}
@@ -159,21 +169,59 @@ const CARD_CATEGORY_GROUPS = [
   },
 ] as const;
 
-export function cardTypesSection(allCardSchemas: CardSchema[]): string {
+export interface CardTypesInput {
+  /** Every schema the box sees: built-in plus box-local. A box-local schema
+   *  that shares a built-in's type shadows it (last write wins, as in
+   *  `createCardSchemaMap`), so the list is deduplicated by type with the
+   *  box-local entry kept. */
+  allCardSchemas: CardSchema[];
+  /** The box-local subset. Their docs are compiled into the box; every other
+   *  type's doc is in the package. */
+  boxCardSchemas?: CardSchema[];
+  /** Templates this box's own schemas registered. The package's
+   *  `bbx-commands.md` lists only built-in templates, so these are listed
+   *  here — the one place the agent learns they exist. */
+  boxTemplates?: TemplateDefinition[];
+}
+
+/** Where a type's `card-<type>.md` lives: the package for built-ins, the box for box-local. */
+function cardDocPath(type: string, boxTypes: Set<string>): string {
+  return `${boxTypes.has(type) ? DOCS_DIR : BOX_PACKAGE_DOCS}/card-${type}.md`;
+}
+
+/** Deduplicate by type, keeping the LAST schema with that type (box-local shadows built-in). */
+function effectiveSchemas(allCardSchemas: CardSchema[]): CardSchema[] {
+  const byType = new Map<string, CardSchema>();
+  for (const s of allCardSchemas) byType.set(s.type, s);
+  return [...byType.values()];
+}
+
+export function cardTypesSection({ allCardSchemas, boxCardSchemas, boxTemplates }: CardTypesInput): string {
+  const boxTypes = new Set((boxCardSchemas ?? []).map((s) => s.type));
   const lines: string[] = [
     `## ${SECTION.CARD_TYPES}`,
     "",
-    "Each type with handling instructions has a full reference at `_content/docs/generated/card-<type>.md` — read it before working with a card of that type.",
+    `Each type with handling instructions has a full reference doc, linked below — read it before working with a card of that type. Built-in types are documented in the package (\`${BOX_PACKAGE_DOCS}/\`); a box-local type's doc is compiled into this box (\`${DOCS_DIR}/\`).`,
     "",
   ];
+  const effective = effectiveSchemas(allCardSchemas);
   for (const group of CARD_CATEGORY_GROUPS) {
-    const schemas = allCardSchemas.filter((s) => s.category === group.category);
+    const schemas = effective.filter((s) => s.category === group.category);
     if (schemas.length === 0) continue;
     lines.push(group.heading);
     lines.push("");
     for (const schema of schemas) {
       const desc = schema.description === undefined ? "" : ` — ${schema.description}`;
-      lines.push(`- **${schema.type}**${desc}`);
+      const doc = schema.instructions === undefined ? "" : ` → \`${cardDocPath(schema.type, boxTypes)}\``;
+      lines.push(`- **${schema.type}**${desc}${doc}`);
+    }
+    lines.push("");
+  }
+  if (boxTemplates !== undefined && boxTemplates.length > 0) {
+    lines.push("**Box-local templates** — registered by this box's own schemas, so they are not in the package's `bbx-commands.md`. Use with `bbx create <path> -t <name>`:");
+    lines.push("");
+    for (const t of boxTemplates) {
+      lines.push(`- **${t.name}** — ${t.description} (card types: ${t.cardTypes.join(", ")})`);
     }
     lines.push("");
   }
@@ -211,5 +259,5 @@ demotes visibility from the active view; it's not a rejection).
 Always set \`directive:\` — what to do with the answer; the system creates a
 follow-up job carrying it once the user answers. Set \`expires-after:\` for a
 time-sensitive question that should age out sooner than the default. See
-\`_content/docs/generated/card-question.md\` for templates and field reference.`;
+\`${BOX_PACKAGE_DOCS}/card-question.md\` for templates and field reference.`;
 }

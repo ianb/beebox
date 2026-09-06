@@ -41,7 +41,7 @@ export const MyThingSchema: CardSchema = cardSchema("my-thing", {
   instructions: `# My Thing Cards
 
 Instructions for agents on how to handle this card type.
-This becomes _content/docs/generated/card-my-thing.md in boxes.
+This becomes card-my-thing.md in the package docs (`node_modules/beebox/box-docs/` from a box; `beebox/box-docs/` in this checkout).
 
 Include:
 - What each frontmatter field means
@@ -69,7 +69,7 @@ export function createMyThingTemplate(options: { title: string }): string {
 
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
-- Every schema automatically gets four optional frontmatter fields — `title`, `contains`, `contains-evidence`, and `todos` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query.ts`). The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
+- Every schema automatically gets five optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, and `symbol` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query.ts`). The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
 - `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
 - The `type` field in YAML is the discriminator — the loader uses it to look up the schema. Templates must emit it.
 - Refs live in the YAML as either `{ref: "..."}` objects or strings in obvious places (e.g. `participants: [{ref: "people/..."}]`). The validator's ref-walker finds them by walking for `ref:` keys.
@@ -267,10 +267,10 @@ For typed reads, use `parseCardText({content, source, schemas: createCardSchemaM
 
 1. `bbx init` or `bbx wakeup` calls `generateDocs(boxRoot)`
 2. `generateDocs()` reads both `schemas` (XML) and `cardSchemas` (frontmatter) from `registry.ts`
-3. For each schema with an `instructions` string, it writes `_content/docs/generated/card-<type>.md`
+3. For each schema with an `instructions` string, it writes `card-<type>.md` — to `node_modules/beebox/box-docs/` for a built-in schema, to `_content/docs/generated/` for a box-local one
 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
-6. Agents read `_content/docs/generated/card-<type>.md` on demand for detailed instructions
+6. Agents read `card-<type>.md` on demand for detailed instructions, from whichever of those two locations holds it
 
 ## Verification Checklist
 
@@ -281,5 +281,5 @@ After implementing:
 3. `bbx init <box>` — creates storage directory (if added), generates docs
 4. `bbx create <box>/path/Name.my-thing.card -t my-thing title="..."` — template emits valid YAML
 5. `bbx validate <box>/path/Name.my-thing.card` — validates
-6. Check `<box>/_content/docs/generated/card-my-thing.md` exists and has your instructions
+6. Check `<box>/node_modules/beebox/box-docs/card-my-thing.md` exists and has your instructions
 7. Check `<box>/.beebox/agent-guide.md` lists the new type

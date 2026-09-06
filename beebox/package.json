@@ -25,6 +25,7 @@
   "files": [
     "dist",
     "bin",
+    "box-docs",
     "templates",
     "plugins",
     ".agents",

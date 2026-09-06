@@ -208,7 +208,7 @@ steps:
               root briefing, or the relevant guide/personality edit), and set
               learning: declaring the sink so the confirmed or declined belief
               gets recorded — this is the same two-product contract every
-              question card uses (see `docs/generated/card-question.md`).
+              question card uses (see `node_modules/beebox/box-docs/card-question.md`).
 
             STEP 5 - FINALIZE EVERY PENDING REPORT:
             For EACH pending report — including ones whose observations you skipped

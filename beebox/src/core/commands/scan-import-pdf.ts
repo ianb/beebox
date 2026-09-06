@@ -79,7 +79,11 @@ export async function runPdfMode(
       sourcePath: pdfDestPath,
       attachAbsDir,
       workDir,
-      forceOcr: false,
+      // A scan with no text layer of its own has nothing for Docling to read,
+      // so the OCR pass is the only way to get text out of it. A PDF that
+      // already carries text is left alone: its own layer is better than
+      // re-OCRing an image of it, and `--ocr-mode full_page` would discard it.
+      forceOcr: !probe.hasTextLayer,
       languages: null,
     });
   } finally {
