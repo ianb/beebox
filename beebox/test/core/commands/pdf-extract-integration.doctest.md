@@ -53,16 +53,24 @@ This part runs everywhere — it is a pure function, and it is the thing most
 likely to rot when Docling changes its CLI.
 
 ```ts
-doclingArgs("/scan/source.pdf", { workDir: "/work", forceOcr: false, languages: null }).join(" ")
-=> --from docling==«*» docling convert /scan/source.pdf --to md --to json --image-export-mode referenced --table-mode fast --device cpu --document-timeout 600 --output /work -q --no-ocr
+doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "off", languages: null }).join(" ")
+=> --from docling==«*» --with onnxruntime --with rapidocr docling convert /scan/source.pdf --to md --to json --image-export-mode referenced --table-mode fast --device cpu --document-timeout 600 --output /work -q --no-ocr
 ```
 
-`--force-ocr` is deprecated upstream; the supported spelling for
-"replace the text layer wholesale" is `--ocr-mode full_page`:
+`--force-ocr` is deprecated upstream; `--ocr-mode` is the supported spelling.
+A junk text layer must be replaced wholesale, so it gets `full_page`:
 
 ```ts continue
-doclingArgs("/scan/source.pdf", { workDir: "/work", forceOcr: true, languages: ["en", "de"] }).slice(-5).join(" ")
-=> --ocr --ocr-mode full_page --ocr-lang en,de
+doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "replace", languages: ["en", "de"] }).slice(-7).join(" ")
+=> --ocr --ocr-mode full_page --ocr-engine rapidocr --ocr-lang en,de
+```
+
+A PDF with no text layer instead gets `layout_regions`, which measured better
+on dense scanned forms:
+
+```ts continue
+doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "regions", languages: null }).slice(-5).join(" ")
+=> --ocr --ocr-mode layout_regions --ocr-engine rapidocr
 ```
 
 ## A real extraction over a real PDF
@@ -76,7 +84,7 @@ await import("node:fs/promises").then((fs) => fs.mkdir(workDir, { recursive: tru
 
 const result = skipReason
   ? { skipped: true }
-  : await createDoclingService().extract(pdfPath, { workDir, forceOcr: false, languages: null });
+  : await createDoclingService().extract(pdfPath, { workDir, ocr: "off", languages: null });
 
 // One line, whichever path ran — so a skip is visible rather than a silent pass.
 skipReason ? "SKIPPED" : (result.ok ? "EXTRACTED" : `FAILED: ${result.error}`)

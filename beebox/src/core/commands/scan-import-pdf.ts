@@ -23,8 +23,15 @@ import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { ensureBoxTmpDir } from "../../lib/box-tmp.js";
 import { createDoclingService, type DoclingService } from "../../services/docling.js";
 import { extractPdf } from "./pdf-extract.js";
-import { probePdf } from "./pdf-probe.js";
+import { probePdf, type PdfProbe } from "./pdf-probe.js";
+import type { DoclingOcr } from "../../services/docling.js";
 import { createSessionLayout } from "./scan-import-session.js";
+
+/** The OCR intent a probed PDF calls for. Pure, so the mapping is testable. */
+export function ocrIntentFor(probe: Pick<PdfProbe, "hasTextLayer" | "textLayerQuality">): DoclingOcr {
+  if (!probe.hasTextLayer) return "regions";
+  return probe.textLayerQuality === "junk" ? "replace" : "off";
+}
 
 /** Basename of the pdf card and its attach scope inside the session. */
 const PDF_BASENAME = "source";
@@ -79,11 +86,13 @@ export async function runPdfMode(
       sourcePath: pdfDestPath,
       attachAbsDir,
       workDir,
-      // A scan with no text layer of its own has nothing for Docling to read,
-      // so the OCR pass is the only way to get text out of it. A PDF that
-      // already carries text is left alone: its own layer is better than
-      // re-OCRing an image of it, and `--ocr-mode full_page` would discard it.
-      forceOcr: !probe.hasTextLayer,
+      // Three cases, not two. No layer at all: OCR the layout's regions, the
+      // only way to get text out of it. A layer that is present but junk —
+      // a scanner's own failed OCR, one character per token — is replaced
+      // wholesale, because reading it would file the document with text
+      // nobody can use and nothing downstream would notice. A good layer is
+      // left alone: it beats re-OCRing an image of itself.
+      ocr: ocrIntentFor(probe),
       languages: null,
     });
   } finally {
