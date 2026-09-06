@@ -63,17 +63,16 @@ export interface TtsService {
 // ─── Real implementations ────────────────────────────────────────────────────
 
 /**
- * Pick the voice this backend can serve, saying so when the boxholder's choice
- * is not one of them. Warned once per call rather than latched: the substituted
- * voice changes with the personality card, so a latch would hide the second
- * one.
+ * Pick the voice this backend can serve. A `mapped` result is silent on
+ * purpose — it is the boxholder's own chosen equivalent, not a degradation —
+ * while a `substituted` one names what was lost, because nobody asked for it.
  */
 function voiceFor(backend: TtsBackend, requested: string | undefined): string {
   const choice = resolveVoice({ backend, requested });
   if (choice.kind === "substituted") {
     console.warn(
-      `[tts] backend "${backend}" has no voice "${choice.requested}" — speaking as "${choice.voice}". `
-        + "Pick a voice this backend offers, or switch backends.",
+      `[tts] backend "${backend}" has no voice "${choice.requested}" and no mapping for it — speaking as `
+        + `"${choice.voice}". Add a mapping in core/tts/voices.ts, or pick a voice this backend offers.`,
     );
   }
   return choice.voice;

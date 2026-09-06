@@ -293,8 +293,10 @@ preference with no visible state is exactly the affordance that rule is about.
 
 ## Subplans
 
-**One is needed, and it blocks Track 4 rather than the plan.**
-`tts-backend-selection.voices.subplan.md` — the per-backend voice vocabulary.
+**None, in the end.** One was planned — `tts-backend-selection.voices.subplan.md`,
+the per-backend voice vocabulary — and it was made unnecessary by the boxholder
+mapping the voices directly (see Progress). The original framing, kept because
+it explains why the question looked like a design step:
 `VOICE_MODELS` is a closed `z.enum` in a card schema
 (`src/schemas/personality.tsx:47`), Gemini's 30 voices share none of those
 names, and the questions are a decision table, not an implementation: does the
@@ -337,7 +339,7 @@ different field.
 |---|---|---|---|
 | Gemini returns 200 + empty body | `deliverStyle` doctest asserts the colon form; Track 4 doctest asserts the throw | trigger removed by the prefix format, plus `EmptyTtsResponseError` below a byte floor | clear once built |
 | Backend has no style mechanism, `instructions` dropped | to write (Track 3 doctest, `unsupported` kind) | `StyleDelivery.unsupported` + one warn + a menu note | clear once built |
-| `speaking-voice.model` names a voice the backend lacks | subplan | subplan | **silent until the subplan lands — hence Track 4 gates on it** |
+| `speaking-voice.model` names a voice the backend lacks | `tts-voices.doctest.md` | boxholder's mapping for all 13; `substituted` + warn otherwise | clear |
 | WAV-returning backend hits the MediaSource path | to write (frontend doctest) | route on `contentType`, not on `supportsMediaSource()` alone (`context.ts:111-117`) | clear: playback throws today rather than silently failing |
 | OpenRouter key absent, backend is `gemini` | to write (config doctest) | typed error naming the secret, as `MissingOpenRouterKeyError` does for MAI | clear |
 | Gemini preview model withdrawn or renamed | none possible | health line shows the live backend; error surfaces on next speak | clear |
@@ -377,7 +379,8 @@ costs more than the failure. Google documents the behavior as supported
 
 ## NOT in scope
 
-- **Per-backend voice vocabulary** — the subplan; Track 4 gates on it.
+- ~~**Per-backend voice vocabulary**~~ — settled by the boxholder's mapping; no
+  subplan and no card migration needed. See Progress.
 - **The other sixteen OpenRouter TTS backends.** Two backends prove the seam;
   Aura-2's 90 voices are attractive but it has no style mechanism at all, so it
   should land after `unsupported` has been seen working.
@@ -480,12 +483,22 @@ mirroring `style.ts`. Two related surprises: the OpenAI and Gemini voice sets
 overlap in **zero** names, and OpenRouter's `supported_voices` cannot be used to
 validate — `nova` is absent from its list for this model and renders anyway.
 
-**What the subplan still owns** is the product question, not the plumbing:
-whether `onyx` should map to whichever Gemini voice resembles it, what the
-personality schema accepts once voices are per-backend, and whether existing
-cards migrate. The mechanical substitution shipped here is deliberately not a
-semantic mapping — how the box should sound on a new backend is the
-boxholder's call.
+**The subplan is no longer needed, and the mapping is why.** Its three open
+questions were whether `onyx` should map semantically, what the personality
+schema accepts once voices are per-backend, and whether cards migrate. The
+boxholder settled the first by ear — auditioning all 43 voices in the
+`voice-mapping-openai-to-gemini` exhibit and choosing an equivalent for each of
+ours — and that answer collapses the other two: cards keep naming
+`VOICE_MODELS`, the translation happens at the seam, and nothing migrates.
+
+The mapping is theirs, not a heuristic, and the difference is visible in the
+data: several picks sit four to six semitones from the nearest candidate by
+measured pitch, and `nova` maps to the 29th-nearest of thirty. Character, not
+frequency. All 13 were verified rendering through the live API.
+
+`resolveVoice` therefore has three outcomes rather than two: `as-requested`,
+`mapped` (silent — the boxholder chose it), and `substituted` (warned — nobody
+did).
 
 Two things the build changed from the design:
 
