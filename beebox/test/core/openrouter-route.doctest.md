@@ -37,7 +37,6 @@ Claude scan backend, a CLI that says what to grant).
 await useTempStore();
 const box = await makeTmpBox();
 const slug = await boxSlug(box.root);
-delete process.env.BBX_OPENROUTER_API_KEY;
 
 const nothing = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: null });
 JSON.stringify(nothing)
@@ -49,7 +48,6 @@ JSON.stringify(nothing)
 ```ts
 await useTempStore();
 const box = await makeTmpBox();
-delete process.env.BBX_OPENROUTER_API_KEY;
 
 const direct = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: "placeholder-openai-key" });
 JSON.stringify(direct)
@@ -62,7 +60,6 @@ JSON.stringify(direct)
 await useTempStore();
 const box = await makeTmpBox();
 const slug = await boxSlug(box.root);
-delete process.env.BBX_OPENROUTER_API_KEY;
 
 await setSecret({ name: "openrouter", value: "placeholder-openrouter-key" });
 await grantSecret({ slug, name: "openrouter", access: "server" });
@@ -81,7 +78,6 @@ usable, and it is not used — the box keeps the provider it already had.
 await useTempStore();
 const box = await makeTmpBox();
 const slug = await boxSlug(box.root);
-delete process.env.BBX_OPENROUTER_API_KEY;
 
 await setSecret({ name: "openrouter", value: "placeholder-openrouter-key" });
 await grantSecret({ slug, name: "openrouter", access: "server" });
@@ -96,14 +92,12 @@ openrouter key is genuinely available: placeholder-openrouter-key
 
 ## An ungranted OpenRouter key is not a route
 
-Storing a secret on the machine is not granting it to a box. A box that has not
-been given the key falls back no further than "unconfigured", and the env var
-is the only remaining arm.
+Storing a secret on the machine is not granting it to a box, and there is no
+further arm to fall to — the box is simply unconfigured.
 
 ```ts
 await useTempStore();
 const box = await makeTmpBox();
-delete process.env.BBX_OPENROUTER_API_KEY;
 
 await setSecret({ name: "openrouter", value: "placeholder-openrouter-key" });
 const ungranted = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: null });
@@ -111,16 +105,17 @@ JSON.stringify(ungranted)
 => null
 ```
 
-`BBX_OPENROUTER_API_KEY` is that last arm, for a deployment that has not moved
-its credentials into the store yet.
+There is no env-var arm and no legacy file: secret custody retired both for
+every provider key, so a credential introduced after that migration is
+store-only from the start rather than born with a deprecated path.
 
 ```ts
 await useTempStore();
 const box = await makeTmpBox();
 process.env.BBX_OPENROUTER_API_KEY = "placeholder-env-openrouter-key";
 
-const fromEnv = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: null });
+const ignored = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: null });
 delete process.env.BBX_OPENROUTER_API_KEY;
-JSON.stringify(fromEnv)
-=> {"via":"openrouter","apiKey":"placeholder-env-openrouter-key"}
+JSON.stringify(ignored)
+=> null
 ```

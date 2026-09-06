@@ -31,3 +31,19 @@ been), that tolerance is dead weight.
 
 Safe to remove once every box that matters has `landmark-symbol` in its
 `_config/migrations.jsonl`, prod included.
+
+## Generated docs converge before the data does
+
+Noticed 2026-09-06 by another workstream: a box's regenerated
+`.agents/skills/beebox-rule-card-landmark/SKILL.md` teaches the new top-level
+`symbol` while that box's landmark cards still carry `navigation.symbol` and its
+`_config/migrations.jsonl` has no `landmark-symbol` entry. The per-box docs
+regenerate from the engine schema on ordinary `bbx` activity, while the data
+migration runs on its own schedule, so the two are never in step.
+
+This is benign — readers accept both shapes, new landmarks are written the new
+way, and the sweep converges the data later — but it *looks* like a finished
+migration in a box that has not run one. Two consequences for whoever picks this
+up: do not read a regenerated rule file as evidence that a box has migrated
+(check the manifest), and do not remove the legacy fallback on the strength of
+the docs having converged.

@@ -1,6 +1,6 @@
 /**
  * The one-time migration from per-box `_config/connectors/*.secret.json` files
- * into the machine-level store (`docs/plans/secret-custody.md`, "Rollout
+ * into the machine-level store (`docs/implemented-plans/secret-custody.md`, "Rollout
  * shape": *Migration*).
  *
  * It plans, then applies. Planning reads every box's connector directory, maps

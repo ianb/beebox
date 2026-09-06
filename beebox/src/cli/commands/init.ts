@@ -21,25 +21,20 @@ import { openSearchIndex } from "../../core/search/refresh.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /**
- * Print the "what just happened" banner and (for a fresh init) initialize
- * git at the box root. Split out of the action purely to keep its
- * cyclomatic complexity down — this is all one linear sequence, just long.
+ * Print the fresh-init banner and initialize git at the box root. Split out of
+ * the action purely to keep its cyclomatic complexity down — this is all one
+ * linear sequence, just long.
+ *
+ * A re-init prints nothing here: "ensured the directories exist" and "updated
+ * .gitignore" are the steps running, not news. `runInit` reports what actually
+ * changed instead.
  */
 async function announceAndInitGit(
-  { isFresh, isUpdate, boxRoot, options }: {
-    isFresh: boolean;
-    isUpdate: boolean;
+  { boxRoot, options }: {
     boxRoot: string;
     options: { skipGit?: boolean; branch: string };
   }
 ): Promise<void> {
-  if (!isFresh && isUpdate) {
-    console.log(`Updated Bee Box at ${boxRoot}`);
-    console.log("  Ensured standard directories exist");
-    console.log("  Updated .gitignore");
-    return;
-  }
-
   console.log(`Initialized Bee Box at ${boxRoot}`);
 
   if (!options.skipGit) {
@@ -86,51 +81,64 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // symlink (deps) for native schema/view resolution. It deliberately skips
   // git (initialized explicitly below) and `bbx init`'s card installers (run
   // below). An existing box just re-runs `initBox` in place.
-  let isUpdate: boolean;
   if (isFresh) {
     await scaffoldBoxRoot(boxRoot, { deps: true });
-    isUpdate = false;
+    await announceAndInitGit({ boxRoot, options });
   } else {
-    ({ isUpdate } = await initBox(boxRoot, { skipGit: true, branch: options.branch }));
+    await initBox(boxRoot, { skipGit: true, branch: options.branch });
   }
 
-  await announceAndInitGit({ isFresh, isUpdate, boxRoot, options });
+  // What CHANGED, gathered rather than printed as it happens. A fresh init
+  // flushes this after its banner, where the whole list is the point. A re-init
+  // that changed nothing prints nothing at all — the repo's rule is that
+  // routine success is silent, and re-init is a step every scripted path runs
+  // (`deploy/add-box.sh` runs it twice to provision one box). A re-init that
+  // DID change something still needs to say which box, so the header is
+  // printed with the list or not at all.
+  const changes: string[] = [];
+
+  /**
+   * Print and clear whatever has been gathered. The header only goes on a
+   * re-init, where the list is the whole output and nothing else says which
+   * box; a fresh init's banner already did.
+   *
+   * A throw before the final call loses whatever was gathered — accepted. The
+   * error itself is loud and names the cause, and the alternative (reporting
+   * from an error path) buys a rare, cosmetic gain for a try/finally around the
+   * whole body.
+   */
+  function flushChanges(): void {
+    if (changes.length === 0) return;
+    if (!isFresh) console.log(`Updated Bee Box at ${boxRoot}`);
+    console.log(changes.join("\n"));
+    changes.length = 0;
+  }
 
   // Install procedure templates
   const procedures = await installProcedures(boxRoot);
   if (procedures.length > 0) {
-    console.log(`\nInstalled ${procedures.length} procedure(s) in _config/procedures/`);
-    for (const p of procedures) {
-      console.log(`  ${p}`);
-    }
+    changes.push(`Installed ${procedures.length} procedure(s) in _config/procedures/`);
+    for (const p of procedures) changes.push(`  ${p}`);
   }
 
   // Install default guide cards
   const guides = await installGuides(boxRoot);
   if (guides.length > 0) {
-    console.log(`\nInstalled ${guides.length} guide(s) in _config/`);
-    for (const g of guides) {
-      console.log(`  ${g}`);
-    }
+    changes.push(`Installed ${guides.length} guide(s) in _config/`);
+    for (const g of guides) changes.push(`  ${g}`);
   }
 
   // Install personality card template
   const personalityInstalled = await installPersonality(boxRoot);
-  if (personalityInstalled) {
-    console.log("\nInstalled _config/main.personality.card");
-  }
+  if (personalityInstalled) changes.push("Installed _config/main.personality.card");
 
   // Install root briefing card
   const briefingInstalled = await installBriefing(boxRoot);
-  if (briefingInstalled) {
-    console.log("\nInstalled _content/briefing.briefing.card");
-  }
+  if (briefingInstalled) changes.push("Installed _content/briefing.briefing.card");
 
   // Install the box-wide todo-view stock instance ("the plate")
   const todoViewInstalled = await installTodoView(boxRoot);
-  if (todoViewInstalled) {
-    console.log("\nInstalled _content/plate.todo-view.card");
-  }
+  if (todoViewInstalled) changes.push("Installed _content/plate.todo-view.card");
 
   // Install the root landmark so the Landmarks page can offer
   // "chat scoped to the box root." Magical — refilled on wakeup
@@ -139,30 +147,39 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   if (rootLandmarkInstalled !== null) {
     // Fresh init commits everything below; a re-init refill is left for the
     // next wakeup to commit (see runHousekeeping).
-    console.log(`\nInstalled ${rootLandmarkInstalled} (edit to customize the root landmark)`);
+    changes.push(`Installed ${rootLandmarkInstalled} (edit to customize the root landmark)`);
   }
 
   // Install default scheduled scripts
   const schedules = await installSchedules(boxRoot);
   if (schedules.length > 0) {
-    console.log(`\nInstalled ${schedules.length} schedule(s) in _config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
-    console.log("  refresh-maps may invoke an efficient-tier agent when directory structure changes, including a full map build on a fresh box.");
-    console.log("  Enable an opt-in schedule in the dashboard or by setting enabled: true after reviewing it and configuring any required connector secrets.");
-    for (const s of schedules) {
-      console.log(`  ${s}`);
-    }
+    changes.push(`Installed ${schedules.length} schedule(s) in _config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
+    changes.push("  refresh-maps may invoke an efficient-tier agent when directory structure changes, including a full map build on a fresh box.");
+    changes.push("  Enable an opt-in schedule in the dashboard or by setting enabled: true after reviewing it and configuring any required connector secrets.");
+    for (const s of schedules) changes.push(`  ${s}`);
   }
 
   // Symlink .claude/memory/ so auto-memory is git-tracked
   const memoryLinked = await symlinkClaudeMemory(boxRoot);
-  if (memoryLinked) {
-    console.log("\nLinked .claude/memory/ → ~/.claude/projects/ (auto-memory now git-tracked)");
-  }
+  if (memoryLinked) changes.push("Linked .claude/memory/ → ~/.claude/projects/ (auto-memory now git-tracked)");
 
-  // Set or clear the docid-debug marker
+  // Set or clear the docid-debug marker. Both directions are reported: the
+  // marker persists across runs, so "it is off now" is as much a change as
+  // "it is on now", and a silent clear leaves the operator guessing.
   if (options.docidDebug !== undefined) {
     await setDocIdDebug(boxRoot, options.docidDebug);
+    changes.push(
+      options.docidDebug
+        ? "DOCID markers enabled (grep for DOCID: in prompt logs to verify inclusion)"
+        : "DOCID markers disabled",
+    );
   }
+
+  // A fresh init prints its list here, in step order, so the slow generate/
+  // index progress below still reads as progress rather than arriving before
+  // the things it follows. A re-init cannot: it has to know whether the list is
+  // empty before deciding to print a header at all, so it flushes at the end.
+  if (isFresh) flushChanges();
 
   // Install/refresh validation hooks (.git/hooks/pre-commit and
   // .claude/settings.json PostToolUse entry) so the bbx path embedded in
@@ -203,16 +220,35 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // and skills moved onto this path, init's own direct calls gave that
   // guarantee; `force` is what preserves it.
   await generateDocs(boxRoot, { force: true });
-  console.log("Generated the agent guide in .beebox/, box-compiled docs in _content/docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/ (beebox reference docs: node_modules/beebox/box-docs/)");
+  if (isFresh) {
+    console.log("Generated the agent guide in .beebox/, box-compiled docs in _content/docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/ (beebox reference docs: node_modules/beebox/box-docs/)");
+  }
 
   // Build the search index so the first `bbx search` isn't a cold build.
+  //
+  // The progress callback fires only on a FIRST build (`core/search/refresh.ts`
+  // gates it on an empty manifest), which is the one case slow enough that
+  // silence would read as a hang — so it prints live.
+  //
+  // On a RE-INIT it is also recorded as a change. `.beebox/` is gitignored, so
+  // a box cloned onto a server has no index and re-inits into a first build;
+  // without the entry, that progress line would be the entire output and would
+  // name no box. A fresh init needs no entry — its banner already named the
+  // box, and announcing completion of the step it just announced is the
+  // redundancy this pass exists to remove.
+  // An array rather than a boolean: TypeScript does not track a flag assigned
+  // inside a callback, so `builtIndex` would narrow to `false` and the check
+  // below would read as dead code.
+  const indexProgress: string[] = [];
   await openSearchIndex(boxRoot, {
-    onProgress: (message) => console.log(message),
+    onProgress: (message) => {
+      indexProgress.push(message);
+      console.log(message);
+    },
   });
-  console.log("Built search index in .beebox/");
-  if (options.docidDebug) {
-    console.log("  DOCID markers enabled (grep for DOCID: in prompt logs to verify inclusion)");
-  }
+  if (indexProgress.length > 0 && !isFresh) changes.push("Built the search index in .beebox/");
+
+  flushChanges();
 
   // Commit everything (package scaffold, schedules, procedures, guides,
   // rules, docs, etc.) on fresh init, at the box root — that's the git
@@ -242,6 +278,10 @@ export const initCommand = new Command("init")
   .option("--skip-git", "Skip git initialization")
   .option("-b, --branch <name>", "Initial branch name", "main")
   .option("--docid-debug", "Add DOCID markers to generated docs (persists until --no-docid-debug)")
+  // Declared explicitly: commander does not derive `--no-x` from `--x`, so the
+  // help text above promised a flag that did not exist and the marker could
+  // only ever be set, never cleared, from the CLI.
+  .option("--no-docid-debug", "Clear the DOCID marker set by a previous --docid-debug")
   .action(async (targetPath: string, options: InitOptions) => {
     try {
       await runInit(targetPath, options);

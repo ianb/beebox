@@ -11,7 +11,7 @@
  * `CHILD_ENV_ALLOWLIST` one level down: the hub refuses to spread its env
  * into a box's `bbx serve` child, and this refuses to spread that child's env
  * into the box's own agents, scripts, and tricks (Track 1 of
- * `docs/plans/secret-custody.md`).
+ * `docs/implemented-plans/secret-custody.md`).
  *
  * This used to be `{ ...process.env }` minus four names. A denylist only ever
  * withheld the secrets someone remembered to name — every connector credential
@@ -103,73 +103,50 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
 ];
 
 /**
- * Connector credentials, allowlisted ONLY for the `bbx`-tooling spawn profile
+ * Credential-store PATHS, allowlisted ONLY for the `bbx`-tooling spawn profile
  * (`buildToolingScriptEnv`) — never for an agent. A spawned `bbx wakeup` runs
- * the connectors themselves (gmail/calendar/drive sync, preprocessing), and on
- * a server configured by env vars these are the only place those credentials
- * exist, so withholding them here would silently disable connector sync rather
- * than protect anything.
+ * the connectors themselves (gmail/calendar/drive sync, preprocessing), and
+ * they resolve their credentials from the machine secret store, so what a
+ * tooling child needs is the way to FIND the store, not the credentials.
  *
- * Duplicated from `src/hub/child-env.ts`'s `CHILD_ENV_ALLOWLIST` rather than
- * shared: that list also carries names an agent-side spawn must never see
- * (`BBX_DIAG_API_KEY`) and omits the harness/tooling names above, so one shared
- * constant would grow spurious entries on both sides. Keep the two in sync by
- * hand — Track 3 of `docs/plans/secret-custody.md` deletes both groups when
- * connector readers resolve from the secret store instead of env.
+ * The connector credentials themselves used to be listed here too, which meant
+ * an arbitrary `runs:` command inherited every connector key on the machine.
+ * The secret-store transition closed that
+ * (`docs/implemented-plans/secret-custody.md`): the readers no longer look at
+ * env, so nothing is withheld by leaving the names out.
+ *
+ * `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET` stay out for the same reason. They remain
+ * live process configuration for the LOGIN surface
+ * (`connectors/google-auth.ts`'s `getLoginGoogleClientCreds`), and a spawned
+ * wakeup does not host login.
  */
 const CONNECTOR_ENV_ALLOWLIST: readonly string[] = [
-  "GOOGLE_OAUTH_CLIENT_ID", // src/connectors/google-auth.ts getGoogleClientCreds().
-  "GOOGLE_OAUTH_CLIENT_SECRET", // ditto.
   "BBX_GOOGLE_TOKENS_FILE", // src/connectors/google-token-store.ts -- a path, but to the OAuth token store.
-  "BBX_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path. Tooling ONLY: a spawned `bbx wakeup` runs the connectors, which now resolve their keys from the store. Deliberately absent from the agent profile — an agent has no store interface yet, and pointing it at the file is the opposite of what Track 4 is for.
-  "BBX_MISTRAL_API_KEY", // src/core/mistral-key.ts -- transcription key fallback.
-  "THINKING_OPENAI_API_KEY", // src/core/transcription/index.ts -- transcription key.
-  "BBX_OPENAI_API_KEY", // src/core/search/embeddings-key.ts -- embeddings key.
-  "GEMINI_KEY", // src/core/audio-question.ts, services/scan-vision.ts -- image/audio description key.
-  "SKE_GEMINI_API_KEY", // same call sites -- documented fallback read alongside GEMINI_KEY.
-  "BBX_OPENROUTER_API_KEY", // src/core/openrouter.ts -- the fallback route for each of the keys above.
+  "BBX_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path. Tooling ONLY: a spawned `bbx wakeup` runs the connectors, which resolve their keys from the store. Deliberately absent from the agent profile -- an agent has no store interface yet, and pointing it at the file is the opposite of what the store is for.
 ];
 
-/**
- * Connector credential PREFIXES for the tooling profile. `BBX_DEEPGRAM_`
- * covers `BBX_DEEPGRAM_API_KEY` + `BBX_DEEPGRAM_PROJECT`
- * (src/core/deepgram-key.ts) — same category as the exact names above.
- */
-const CONNECTOR_ENV_PREFIX_ALLOWLIST: readonly string[] = ["BBX_DEEPGRAM_"];
-
-/** Copy the allowed names/prefixes out of `sourceEnv` into a fresh env. */
-function pickAllowed(
-  sourceEnv: NodeJS.ProcessEnv,
-  { names, prefixes }: { names: readonly string[]; prefixes: readonly string[] }
-): NodeJS.ProcessEnv {
+/** Copy the allowed names out of `sourceEnv` into a fresh env. */
+function pickAllowed(sourceEnv: NodeJS.ProcessEnv, names: readonly string[]): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
   for (const key of names) {
     const value = sourceEnv[key];
     if (value !== undefined) env[key] = value;
-  }
-  if (prefixes.length > 0) {
-    for (const [key, value] of Object.entries(sourceEnv)) {
-      if (value === undefined) continue;
-      if (prefixes.some((prefix) => key.startsWith(prefix))) env[key] = value;
-    }
   }
   return env;
 }
 
 /**
  * Build the inherited base env for a box-spawned subprocess: the allowlisted
- * names only. `connectorCreds` adds `CONNECTOR_ENV_ALLOWLIST` /
- * `CONNECTOR_ENV_PREFIX_ALLOWLIST` for the `bbx`-tooling spawn profile — see
- * `buildToolingScriptEnv` in `script-env.ts`.
+ * names only. `connectorCreds` adds `CONNECTOR_ENV_ALLOWLIST` for the
+ * `bbx`-tooling spawn profile — see `buildToolingScriptEnv` in
+ * `script-env.ts`.
  */
 export function pickBoxSubprocessEnv(
   sourceEnv: NodeJS.ProcessEnv,
   { connectorCreds }: { connectorCreds: boolean }
 ): NodeJS.ProcessEnv {
-  return pickAllowed(sourceEnv, {
-    names: connectorCreds
-      ? [...SCRIPT_ENV_ALLOWLIST, ...CONNECTOR_ENV_ALLOWLIST]
-      : SCRIPT_ENV_ALLOWLIST,
-    prefixes: connectorCreds ? CONNECTOR_ENV_PREFIX_ALLOWLIST : [],
-  });
+  return pickAllowed(
+    sourceEnv,
+    connectorCreds ? [...SCRIPT_ENV_ALLOWLIST, ...CONNECTOR_ENV_ALLOWLIST] : SCRIPT_ENV_ALLOWLIST,
+  );
 }

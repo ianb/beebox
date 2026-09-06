@@ -19,11 +19,23 @@ import {
   readGoogleAuthStatus,
 } from "../../src/connectors/google-auth-status.js";
 import { saveGoogleTokens, markGoogleAuthDead } from "../../src/connectors/google-token-store.js";
+import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
+import { boxSlug } from "../../src/lib/box-slug.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), "google-auth-status-"));
 process.env.BBX_GOOGLE_TOKENS_FILE = path.join(tmp, "google-tokens.json");
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id";
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret";
+
+/** A box holding the OAuth app's client credentials — `configured` is per-box. */
+async function grantedBox() {
+  const box = await makeTmpBox();
+  const slug = await boxSlug(box.root);
+  for (const name of ["google-oauth-client-id", "google-oauth-client-secret"]) {
+    await setSecret({ name, value: `placeholder-${name}` });
+    await grantSecret({ slug, name, access: "server" });
+  }
+  return box;
+}
 
 /** Run `fn`, returning whatever it throws instead of propagating. */
 async function tryCall(fn) {
@@ -91,9 +103,17 @@ const expired = await classifyRefreshFailure(
 expired.name
 => GoogleAuthExpiredError
 
-const dead = await readGoogleAuthStatus();
+// The token state is machine-wide, but `configured` asks whether THIS box holds
+// a grant for the OAuth app's credentials — so the read is per-box.
+const box = await grantedBox();
+const dead = await readGoogleAuthStatus(box.root);
 JSON.stringify({ configured: dead.configured, connected: dead.connected, broken: dead.needsReauthSince !== null })
 => {"configured":true,"connected":true,"broken":true}
+
+// An ungranted box reads the same token state, but is not configured.
+const other = await makeTmpBox();
+(await readGoogleAuthStatus(other.root)).configured
+=> false
 ```
 
 ## Re-marking preserves when the breakage started
@@ -104,7 +124,7 @@ both key on *when it broke* — so the original timestamp has to survive.
 ```ts continue
 const firstSince = dead.needsReauthSince;
 await markGoogleAuthDead({ reason: "a later failure" });
-const again = await readGoogleAuthStatus();
+const again = await readGoogleAuthStatus(box.root);
 JSON.stringify({ sameSince: again.needsReauthSince === firstSince, reason: again.reauthReason })
 => {"sameSince":true,"reason":"a later failure"}
 ```

@@ -678,6 +678,14 @@ ssh "$SSH_TARGET" bash -s <<HISTEOF
   fi
 HISTEOF
 
+# Refresh the retired-command tombstone (beebox/bin/cb) from the tree we just
+# synced. Every server predates it, and the symlink it replaces points into the
+# retired install path, which no longer exists — so without this a stale call
+# gets command-not-found instead of the migration message.
+# INSTALL_DIR is the locally configured remote deployment path.
+# shellcheck disable=SC2029
+ssh "$SSH_TARGET" "ln -sf $INSTALL_DIR/beebox/bin/cb /usr/local/bin/cb"
+
 # Restart services
 if [[ "$SKIP_RESTART" != true ]]; then
   # Give an active chat turn / running script a bounded chance to finish before

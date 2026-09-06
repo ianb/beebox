@@ -16,20 +16,13 @@ import type {
 } from "../../schemas/landmark.js";
 import { isCardFile } from "../../lib/paths.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
-import { parseRef, resolveRefPath } from "../../shared/ref-path.js";
-import { titleFromFilename } from "../file-summary.js";
+import { resolveRefPath } from "../../shared/ref-path.js";
 import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
+import { buildLink, type ResolvedLink, type ResolveOptions } from "./link-build.js";
+import { resolveDerivedTiers } from "./derived-links.js";
+import type { DerivedReadProblem } from "./summaries.js";
 
-export interface ResolvedLink {
-  /** Box-relative path to the target card. */
-  ref: string;
-  /** Explicit landmark label; null means "fall back to title". */
-  label: string | null;
-  /** Display title for the target (filename-derived for now). */
-  title: string;
-  /** True if the target file exists on disk. */
-  exists: boolean;
-}
+export type { ResolvedLink, ResolveOptions } from "./link-build.js";
 
 /**
  * A named `expand` rendered as a collapsible submenu. `count` is the total
@@ -47,10 +40,17 @@ export interface ResolvedGroup {
 
 /** Flat links plus named groups for one landmark's navigation role. */
 export interface ResolvedNavigation {
-  /** Static links + unnamed expands, deduped, in source order. */
+  /** Listed + derived + unnamed-expand links, deduped, in tier order (see `resolveLandmark`). */
   links: ResolvedLink[];
   /** Named expands, each kept as a collapsible group. */
   groups: ResolvedGroup[];
+  /**
+   * Derived entries whose target couldn't be read (deleted between the
+   * prominence-index walk and resolution). Empty when `options.derived` was
+   * omitted. The caller decides what to do with these — see
+   * `derived-links.ts`'s header.
+   */
+  derivedProblems: DerivedReadProblem[];
 }
 
 /**
@@ -61,28 +61,18 @@ export interface ResolvedNavigation {
  */
 const GROUP_CHILD_CAP = 50;
 
-export interface ResolveOptions {
-  /** Absolute path to the landmark card's directory (the `expand` glob's cwd). */
-  landmarkDir: string;
-  /**
-   * Box-relative path of the landmark card itself — the document every `ref`
-   * resolves against (see `src/shared/ref-path.ts`).
-   */
-  landmarkPath: string;
-  /** Absolute path to the box root. */
-  boxRoot: string;
-}
-
 const PLACEHOLDER_RE = /\${([^}]+)}/g;
 
 /**
  * Resolve a landmark's navigation into a flat link list plus named groups.
  *
- * Flat list: hand-listed links come first, then *unnamed* expands;
- * duplicates by ref are dropped (first wins). Each expand carrying a
- * `group` instead becomes a collapsible group, deduped within itself and
- * independent of the flat list. A landmark without a `navigation` role
- * resolves to no links and no groups.
+ * Flat list tier order: hand-listed `links`, then (when `options.derived` is
+ * given) derived `entry-point` cards, then derived `primary` cards, then
+ * nested landmarks, then unnamed `expand` results. Duplicates by ref are
+ * dropped across every tier (first wins). Each expand carrying a `group`
+ * instead becomes a collapsible group, deduped within itself and independent
+ * of the flat list. A landmark without a `navigation` role and no `derived`
+ * input resolves to no links and no groups.
  */
 export async function resolveLandmark(
   navigation: LandmarkNavigationData | undefined,
@@ -91,14 +81,20 @@ export async function resolveLandmark(
   const links: ResolvedLink[] = [];
   const groups: ResolvedGroup[] = [];
   const seen = new Set<string>();
-  if (navigation === undefined) return { links, groups };
+  let derivedProblems: DerivedReadProblem[] = [];
+  if (navigation === undefined && options.derived === undefined) return { links, groups, derivedProblems };
 
-  for (const link of navigation.links ?? []) {
+  for (const link of navigation?.links ?? []) {
     if (link.ref === "") continue;
-    const resolved = await buildLink({ rawRef: link.ref, label: link.label ?? null, options });
+    const resolved = await buildLink({ rawRef: link.ref, label: link.label ?? null, source: "listed", options });
     addUnique(resolved, { out: links, seen });
   }
-  for (const expand of navigation.expand ?? []) {
+  if (options.derived !== undefined) {
+    const derived = await resolveDerivedTiers(options.derived, { seen, options });
+    links.push(...derived.links);
+    derivedProblems = derived.problems;
+  }
+  for (const expand of navigation?.expand ?? []) {
     if (expand.group !== undefined && expand.group !== "") {
       groups.push(await resolveGroup(expand, options));
       continue;
@@ -106,7 +102,7 @@ export async function resolveLandmark(
     const expanded = await resolveExpand(expand, options);
     for (const link of expanded.links) addUnique(link, { out: links, seen });
   }
-  return { links, groups };
+  return { links, groups, derivedProblems };
 }
 
 /**
@@ -176,6 +172,7 @@ async function resolveExpand(
     out.push(await buildLink({
       rawRef: ref,
       label: label.length > 0 ? label : null,
+      source: "expand",
       options,
     }));
   }
@@ -278,39 +275,3 @@ async function sortMatches(matches: string[], opts: SortOptions): Promise<string
   return stamped.map((x) => x.relPath);
 }
 
-interface BuildLinkInput {
-  rawRef: string;
-  label: string | null;
-  options: ResolveOptions;
-}
-
-/**
- * Resolve one `ref` into a link the client can follow. Resolution goes through
- * the shared ref algebra (`src/shared/ref-path.ts`), so a leading-`/` ref means
- * the box root — the form validate and `bbx mv` already understood, which this
- * layer used to mis-resolve to an OS-absolute path. A `?query`/`#fragment`
- * addresses a location within the target: it's kept on the emitted `ref` but
- * dropped before the existence check. A ref that escapes the box resolves to
- * nothing and is reported missing, the same as a broken ref at validate time.
- */
-async function buildLink({ rawRef, label, options }: BuildLinkInput): Promise<ResolvedLink> {
-  const parsed = parseRef(rawRef);
-  const title = titleFromFilename(parsed.path);
-  const resolved = resolveRefPath({
-    fromPath: options.landmarkPath,
-    ref: parsed.path,
-    kind: "card",
-  });
-  if (resolved === null) return { ref: rawRef, label, title, exists: false };
-  const suffix =
-    (parsed.query === undefined ? "" : `?${parsed.query}`) +
-    (parsed.fragment === undefined ? "" : `#${parsed.fragment}`);
-  let exists = false;
-  try {
-    await fs.stat(path.resolve(options.boxRoot, resolved));
-    exists = true;
-  } catch (_e) {
-    exists = false;
-  }
-  return { ref: resolved + suffix, label, title, exists };
-}

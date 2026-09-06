@@ -122,7 +122,7 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
     });
     if (route === null) {
       console.error(
-        `${label}: no key reaches the audio model. Ask the boxholder to grant the "gemini" or "openrouter" secret to this box, or set GEMINI_KEY`,
+        `${label}: no key reaches the audio model. Ask the boxholder to grant the "gemini" or "openrouter" secret to this box`,
       );
       process.exit(1);
     }

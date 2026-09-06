@@ -29,7 +29,7 @@ function memo(fields: string) {
 
 ```ts
 Object.keys(GLOBAL_CARD_FIELDS).join(",")
-=> title,contains,contains-evidence,todos,symbol
+=> title,contains,contains-evidence,todos,symbol,prominence
 
 GLOBAL_CARD_FIELDS["contains-evidence"].isOptional()
 => true

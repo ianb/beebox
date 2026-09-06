@@ -181,8 +181,11 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   // selection state to diverge from the route, so every file click is a
   // history entry the back button can walk.
   const selectedFilePath = pathIsFile ? currentPath : null;
-  // Same query key as the place pill's and the title mark's, so the browse
-  // header reuses their cache entry rather than adding a request.
+  // `forDir`, not `identity`: the sidebar header renders the landmark's full
+  // resolved link list (listed + derived + expand), which only `forDir`
+  // carries. The place pill and title mark need just label/symbol, so they
+  // read `identity` instead and this query no longer shares their cache
+  // entry (`docs/implemented-plans/card-prominence.md`, "Split identity from resolution").
   const landmarkQuery = trpc.landmarks.forDir.useQuery({ dir: dirPath }, { enabled: !selectedFilePath });
   const landmark = landmarkQuery.data?.landmark ?? null;
 

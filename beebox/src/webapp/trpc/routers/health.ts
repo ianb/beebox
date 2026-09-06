@@ -307,7 +307,7 @@ export async function runHealthChecks(
       ok: mistralKey !== null,
       message: mistralKey !== null
         ? "Mistral API key configured (Voxtral)"
-        : "Mistral API key not found — voice transcription will not work. Add _config/connectors/mistral.secret.json or set BBX_MISTRAL_API_KEY",
+        : 'Mistral API key not found — voice transcription will not work. Grant the "mistral" secret to this box',
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "deepgram") {
@@ -317,7 +317,7 @@ export async function runHealthChecks(
       ok: deepgramCreds !== null,
       message: deepgramCreds !== null
         ? "Deepgram credentials configured"
-        : "Deepgram credentials not found — voice transcription will not work. Add _config/connectors/deepgram.secret.json (apiKey + projectId) or set BBX_DEEPGRAM_API_KEY + BBX_DEEPGRAM_PROJECT",
+        : 'Deepgram credentials not found — voice transcription will not work. Grant the "deepgram" secret to this box',
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "openai-realtime") {
@@ -327,7 +327,7 @@ export async function runHealthChecks(
       ok: hasKey,
       message: hasKey
         ? "OpenAI API key configured (gpt-realtime-whisper)"
-        : 'No OpenAI key — realtime transcription will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY.',
+        : 'No OpenAI key — realtime transcription will not work. Grant the "openai-thinking" secret to this box.',
       severity: "warning",
     });
   }
@@ -341,8 +341,8 @@ export async function runHealthChecks(
     message: openaiKey !== null
       ? 'OpenAI API key configured ("openai-thinking")'
       : openaiRequired
-        ? 'OpenAI API key not found — Whisper transcription and TTS will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY'
-        : 'OpenAI API key not found — TTS will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY',
+        ? 'OpenAI API key not found — Whisper transcription and TTS will not work. Grant the "openai-thinking" secret to this box'
+        : 'OpenAI API key not found — TTS will not work. Grant the "openai-thinking" secret to this box',
     severity: "warning",
   });
 

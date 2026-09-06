@@ -17,7 +17,7 @@ export class MissingMistralKeyError extends Error implements TranscriptionError 
   readonly code = "missing_api_key";
   constructor() {
     super(
-      "Mistral API key not found (checked _config/connectors/mistral.secret.json and BBX_MISTRAL_API_KEY env var)"
+      'Mistral API key not found — ask the boxholder to grant the "mistral" secret to this box'
     );
     this.name = "MissingMistralKeyError";
   }

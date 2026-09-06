@@ -29,7 +29,7 @@ class MissingWhisperKeyError extends Error implements TranscriptionError {
   constructor() {
     super(
       'No OpenAI key for transcription — ask the boxholder to grant the "openai-thinking" ' +
-        "secret to this box, or set THINKING_OPENAI_API_KEY",
+        "secret to this box",
     );
     this.name = "MissingWhisperKeyError";
   }

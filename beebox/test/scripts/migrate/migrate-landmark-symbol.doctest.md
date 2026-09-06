@@ -40,6 +40,23 @@ symbol:
 ---
 ```
 
+A long scalar elsewhere in the block stays on one line: the rewrite is
+surgical, never a reflow (yaml's default wraps at ~80 columns).
+
+```ts continue
+const longRules = "Recipes — anything describing how to cook a dish, including techniques, equipment notes, and shopping lists that belong to a specific dish.";
+rewrite(`---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    rules: "${longRules}"
+---
+`).includes(`rules: "${longRules}"`)
+=> true
+```
+
 ## An image symbol becomes a src, ref form untouched
 
 The ref is moved verbatim — resolution is the reader's job, and rewriting a

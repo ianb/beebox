@@ -2,7 +2,7 @@
  * Google OAuth routes for the login surface (`GET /auth/google`,
  * `GET /auth/callback`). Split out of `routes/auth.ts` to keep that module under
  * the line cap; registered by `registerAuthSurface` there ONLY when Google is
- * configured (`getGoogleClientCreds()` returns an id+secret pair). Google
+ * configured (`getLoginGoogleClientCreds()` returns an id+secret pair). Google
  * availability is a private concern of the login surface — the always-on-auth
  * plan severed it from "is this box protected."
  */
@@ -14,7 +14,7 @@ import { signSession, COOKIE_NAME, SESSION_MAX_AGE_MS } from "../auth.js";
 import { readBasePrefix } from "../base-prefix.js";
 import { sanitizeReturnTo } from "../login-page.js";
 import { getPublicUrl } from "../../lib/public-url.js";
-import { getGoogleClientCreds } from "../../connectors/google-auth.js";
+import { getLoginGoogleClientCreds } from "../../connectors/google-auth.js";
 import type { AuthRoutesOptions } from "./auth.js";
 import { canonicalizeEmail } from "../local-users.js";
 
@@ -35,7 +35,7 @@ export async function registerAuthRoutes(
   server: FastifyInstance,
   options: AuthRoutesOptions,
 ) {
-  const creds = await getGoogleClientCreds();
+  const creds = getLoginGoogleClientCreds();
   if (!creds) throw new MissingOAuthClientSecretError();
   const { clientId, clientSecret } = creds;
   const publicUrl = getPublicUrl(options.publicUrlFallback ?? "http://localhost:3210");

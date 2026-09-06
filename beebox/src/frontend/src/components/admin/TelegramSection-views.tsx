@@ -37,7 +37,7 @@ export function TelegramConnectedView({
 
       {/* The bot token is deliberately NOT shown or returned by the API — it
           lives in the machine secret store and terminates in the server
-          process (docs/plans/secret-custody.md). The bot's @username above is
+          process (docs/implemented-plans/secret-custody.md). The bot's @username above is
           the identifying detail this panel needs. */}
       {status.webhookUrl ? (
         <div className="mb-4 p-3 bg-warm-50 border border-warm-200 rounded text-sm text-warm-700">

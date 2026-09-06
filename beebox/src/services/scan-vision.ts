@@ -6,7 +6,7 @@
  * (`scan-vision-claude.ts`) — zero extra setup beyond the Claude auth the
  * reactor already requires. Gemini Flash stays available as an opt-in
  * (`BBX_SCAN_VISION=gemini`) for deployments that hold a key that reaches it —
- * the box's own Gemini key, or an OpenRouter key standing in for it
+ * a granted `gemini` secret, or an `openrouter` one standing in for it
  * (`core/openrouter.ts`). It wraps the engines in `scan-import-gemini.ts` and
  * `scan-import-openrouter.ts` unchanged.
  * Design + measured evidence: `docs/plans/scan-vision-claude.md`.
@@ -96,11 +96,10 @@ export type ScanVisionSelection = { backend: "claude" } | { backend: "gemini"; r
 /**
  * Resolve which backend `bbx scan-import` should use. `env` selects the backend;
  * `route` is the ALREADY-RESOLVED credential and path from `core/openrouter.ts`
- * — the box's own Gemini key (`core/gemini-key.ts`: store, then
- * `GEMINI_KEY`/`SKE_GEMINI_API_KEY`) when it has one, OpenRouter otherwise.
- * This function reads no credential out of the environment itself, so there is
- * exactly one Gemini resolution order in the codebase
- * (`docs/plans/secret-custody.md`, Track 3).
+ * — the box's own Gemini key (`core/gemini-key.ts`, the machine secret store)
+ * when it has one, OpenRouter otherwise. This function never reads a credential
+ * out of the environment itself, so there is exactly one place a Gemini key is
+ * resolved (`docs/implemented-plans/secret-custody.md`).
  *
  * The `gemini` backend name stays the backend's name because it names the
  * MODEL, which is the same either way; `route.via` says how it is reached.
@@ -118,7 +117,7 @@ export function selectScanVisionBackend(
   if (selected === "gemini") {
     if (route === null || route.apiKey === "") {
       return err(
-    'BBX_SCAN_VISION=gemini but no key can reach the model — grant the "gemini" or "openrouter" secret to this box, or set GEMINI_KEY (or SKE_GEMINI_API_KEY)',
+    'BBX_SCAN_VISION=gemini but no key can reach the model — grant the "gemini" or "openrouter" secret to this box',
       );
     }
     return ok({ backend: "gemini", route });

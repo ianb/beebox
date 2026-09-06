@@ -64,12 +64,24 @@ const OUTPUT_TAIL_BYTES = 64 * 1024;
 export const MAX_EXTRACTION_ARTIFACTS = 500;
 const MAX_EXTRACTION_BYTES = 512 * 1024 ** 2;
 
+/**
+ * What OCR should do with this document. Three intents, not a boolean, because
+ * "there is no text to read" and "the text there is unusable" want different
+ * modes — see `doclingArgs`.
+ */
+export type DoclingOcr =
+  /** Read the embedded text layer; run no OCR. */
+  | "off"
+  /** Nothing to read. OCR the layout's regions. */
+  | "regions"
+  /** There IS a layer and it is junk. Replace it wholesale. */
+  | "replace";
+
 export interface DoclingExtractOptions {
   /** Scratch directory Docling writes into. Caller owns creation and cleanup. */
   workDir: string;
-  /** Re-OCR every page, discarding the embedded text layer. Off by default (D1). */
-  forceOcr: boolean;
-  /** OCR language codes, only meaningful with `forceOcr`. Null leaves Docling's default. */
+  ocr: DoclingOcr;
+  /** OCR language codes, only meaningful when `ocr` is not `off`. Null leaves Docling's default. */
   languages: string[] | null;
 }
 
@@ -113,6 +125,13 @@ function condense(text: string): string {
 export function doclingArgs(sourcePath: string, options: DoclingExtractOptions): string[] {
   const args = [
     "--from", `docling==${DOCLING_VERSION}`,
+    // rapidocr, not Docling's easyocr default. Scored against the page itself
+    // on a notarized form: rapidocr read 6/6 handwritten fields and produced
+    // no run-together words, where easyocr managed 5/6 and ran words together
+    // seven times on the same page. `uvx --with` keeps it in the throwaway
+    // environment, so the host needs nothing installed.
+    "--with", "onnxruntime",
+    "--with", "rapidocr",
     "docling", "convert", sourcePath,
     "--to", "md",
     "--to", "json",
@@ -127,15 +146,24 @@ export function doclingArgs(sourcePath: string, options: DoclingExtractOptions):
     // Routine-success chatter is a bug (CLAUDE.md); warnings/errors still print.
     "-q",
   ];
-  if (options.forceOcr) {
-    // `--force-ocr` is deprecated in 2.117; `--ocr-mode full_page` is the
-    // supported spelling for "replace the text layer wholesale" (D7).
-    args.push("--ocr", "--ocr-mode", "full_page");
-    if (options.languages && options.languages.length > 0) {
-      args.push("--ocr-lang", options.languages.join(","));
-    }
-  } else {
+  if (options.ocr === "off") {
     args.push("--no-ocr");
+    return args;
+  }
+  // `--force-ocr` is deprecated in 2.117; `--ocr-mode` is the supported
+  // spelling (D7). Which mode depends on why we are OCRing:
+  //
+  // `regions` feeds the layout's regions to the engine. Measured better on
+  // dense forms than full-page — on four scanned documents it never produced
+  // more run-together words and recovered up to 61% more of them.
+  //
+  // `full_page` replaces the page's text wholesale, which is what a junk
+  // layer needs: `regions` leaves the existing layer in place around what it
+  // OCRs, so fragments of the garbage survive into the output.
+  args.push("--ocr", "--ocr-mode", options.ocr === "regions" ? "layout_regions" : "full_page");
+  args.push("--ocr-engine", "rapidocr");
+  if (options.languages && options.languages.length > 0) {
+    args.push("--ocr-lang", options.languages.join(","));
   }
   return args;
 }
@@ -312,7 +340,7 @@ export interface FakeDoclingOptions {
 
 export interface FakeDoclingService extends DoclingService {
   /** One entry per `extract` call, in order. */
-  calls: Array<{ sourcePath: string; forceOcr: boolean; languages: string[] | null }>;
+  calls: Array<{ sourcePath: string; ocr: DoclingOcr; languages: string[] | null }>;
   describe(): string;
 }
 
@@ -333,7 +361,7 @@ export function createFakeDocling(options: FakeDoclingOptions): FakeDoclingServi
     async extract(sourcePath, extractOptions): Promise<Result<DoclingExtraction>> {
       calls.push({
         sourcePath,
-        forceOcr: extractOptions.forceOcr,
+        ocr: extractOptions.ocr,
         languages: extractOptions.languages,
       });
       if (options.failWith !== undefined) return err(options.failWith);
@@ -370,7 +398,7 @@ export function createFakeDocling(options: FakeDoclingOptions): FakeDoclingServi
       const lines = [`docling fake (${options.failWith === undefined ? "succeeds" : "fails"}), ${calls.length} call(s)`];
       for (const call of calls) {
         const languages = call.languages === null ? "-" : call.languages.join(",");
-        lines.push(`  ${path.basename(call.sourcePath)} force-ocr=${String(call.forceOcr)} languages=${languages}`);
+        lines.push(`  ${path.basename(call.sourcePath)} ocr=${call.ocr} languages=${languages}`);
       }
       return lines.join("\n");
     },

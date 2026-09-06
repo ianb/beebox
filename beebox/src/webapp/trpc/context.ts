@@ -41,7 +41,7 @@ export interface TrpcContext {
    * boxholder deliberately opted out of the auth wall) passing them is correct.
    * The secret store is the exception: it is MACHINE-level, spanning every box
    * on the host, so one box's opt-out must not become a grant surface for its
-   * neighbours' credentials (`docs/plans/secret-custody.md`, bias toward strict).
+   * neighbours' credentials (`docs/implemented-plans/secret-custody.md`, bias toward strict).
    */
   isAuthenticatedOwner: boolean;
 }

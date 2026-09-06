@@ -96,7 +96,7 @@ export async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
         ? "Gemini API key configured"
         : "No Gemini key — audio questions and the Gemini scan backend go through OpenRouter"
       : geminiSelected
-        ? 'BBX_SCAN_VISION=gemini but no key reaches the model — scan-import will fail. Grant the "gemini" or "openrouter" secret to this box, or set GEMINI_KEY'
+        ? 'BBX_SCAN_VISION=gemini but no key reaches the model — scan-import will fail. Grant the "gemini" or "openrouter" secret to this box'
         : 'No key reaches Gemini (optional) — audio questions will not work; scan-import uses the Claude backend by default. Grant the "gemini" or "openrouter" secret to change that';
   return {
     name: "gemini-api-key",

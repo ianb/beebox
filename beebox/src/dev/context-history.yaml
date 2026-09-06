@@ -4279,6 +4279,30 @@ test1:
       peak: 44219
       added: 0
       turns: 1
+  prominence-mark-own-artifact:
+    - date: 2026-09-06T18:25:43.193Z
+      boxCommit: b467eb9ac1920573873521dc2db3149844388c4f
+      repoCommit: 1f640149859ad42b0e7020208e38ba0e4d6a4aa8
+      initial: 45589
+      peak: 45589
+      added: 0
+      turns: 2
+  prominence-housekeeping-directory:
+    - date: 2026-09-06T18:25:43.193Z
+      boxCommit: b467eb9ac1920573873521dc2db3149844388c4f
+      repoCommit: 1f640149859ad42b0e7020208e38ba0e4d6a4aa8
+      initial: 45505
+      peak: 46090
+      added: 585
+      turns: 4
+  prominence-vs-links:
+    - date: 2026-09-06T18:25:43.193Z
+      boxCommit: b467eb9ac1920573873521dc2db3149844388c4f
+      repoCommit: 1f640149859ad42b0e7020208e38ba0e4d6a4aa8
+      initial: 45493
+      peak: 46319
+      added: 826
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

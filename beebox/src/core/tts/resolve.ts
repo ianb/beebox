@@ -26,8 +26,8 @@ export class TtsNotConfiguredError extends Error {
         ? 'TTS backend "gemini" needs an OpenRouter key — it is reachable no other way. '
           + 'Grant the "openrouter" secret to this box, or choose a different TTS backend.'
         : 'TTS backend "openai" needs an OpenAI key — OpenRouter carries no OpenAI speech model, '
-          + 'so it cannot stand in. Grant the "openai-thinking" secret to this box, set '
-          + "THINKING_OPENAI_API_KEY, or choose a different TTS backend.",
+          + 'so it cannot stand in. Grant the "openai-thinking" secret to this box, or choose a '
+          + "different TTS backend.",
     );
     this.name = "TtsNotConfiguredError";
   }

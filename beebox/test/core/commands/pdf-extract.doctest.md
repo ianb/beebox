@@ -92,7 +92,7 @@ an option the caller has to remember:
 docling.describe()
 =>
 docling fake (succeeds), 1 call(s)
-  source.pdf force-ocr=false languages=-
+  source.pdf ocr=off languages=-
 ```
 
 The attach scope holds the original, the canonical JSON, one AVIF per page, and
@@ -217,7 +217,7 @@ const result = await extractPdf({
   sourcePath: textlessPath,
   attachAbsDir,
   workDir,
-  forceOcr: false,
+  ocr: "off",
   languages: null,
 });
 JSON.stringify([result.ok, result.value.assetNames.includes("text-layer.txt"), (await readdir(attachAbsDir)).includes("text-layer.txt")])
@@ -369,7 +369,7 @@ The flags reached the extractor:
 docling.describe()
 =>
 docling fake (succeeds), 1 call(s)
-  source.pdf force-ocr=true languages=en,de
+  source.pdf ocr=replace languages=en,de
 ```
 
 The body and page count are the new run's; the description is the old card's:
@@ -457,7 +457,7 @@ const tooMany = await extractPdf({
   sourcePath: join(scratch, "source.pdf"),
   attachAbsDir,
   workDir,
-  forceOcr: false,
+  ocr: "off",
   languages: null,
 });
 JSON.stringify([tooMany.ok, tooMany.error])
@@ -480,7 +480,7 @@ const atCap = await extractPdf({
   sourcePath: join(scratch, "source.pdf"),
   attachAbsDir,
   workDir,
-  forceOcr: false,
+  ocr: "off",
   languages: null,
 });
 JSON.stringify([atCap.ok, atCap.value.assetNames.length])

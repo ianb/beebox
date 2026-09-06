@@ -34,7 +34,6 @@
  *   has no such parameter. The HQ path passes none, so the HQ path can route.
  */
 
-import { refusalAllowsLegacyFallback } from "./secrets/legacy-fallback.js";
 import { resolveSecret } from "./secrets/resolve.js";
 
 /** The store name this key lives under. */
@@ -90,11 +89,11 @@ export interface ModelRoute {
 /**
  * The box's OpenRouter key, or null when it has none.
  *
- * Order follows the other resolvers (`docs/plans/secret-custody.md`, Track 3):
- * the machine store's `openrouter` entry at `server` access, then
- * `BBX_OPENROUTER_API_KEY`. There is no legacy per-box file arm — this
- * credential is new, so it never had one, and adding one would be inventing
- * a deprecated path.
+ * The machine store's `openrouter` entry at `server` access, and nothing else.
+ * No legacy file arm and no env var: secret custody retired both for every
+ * other provider key (`docs/implemented-plans/secret-custody.md`), and this
+ * credential is new enough that giving it a fallback would be inventing a
+ * deprecated path rather than keeping one alive.
  */
 export async function getOpenRouterKey(
   boxRoot: string | undefined,
@@ -114,11 +113,8 @@ export async function getOpenRouterKey(
       }
       return resolved.value.value;
     }
-    // Only "no such secret on this machine" degrades to the env var; every
-    // other refusal is "not configured" (`secrets/legacy-fallback.ts`).
-    if (!refusalAllowsLegacyFallback({ reader: "openrouter", refusal: resolved.error })) return null;
   }
-  return process.env["BBX_OPENROUTER_API_KEY"] ?? null;
+  return null;
 }
 
 /**

@@ -1,6 +1,6 @@
 ---
 title: "Close the secret-store transition window: remove legacy file/env fallbacks"
-workstream: secret-custody
+workstream: transition-cleanup
 area: beebox
 labels: [security, secrets]
 filed-by: agent

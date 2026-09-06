@@ -179,3 +179,59 @@ c.lines.join("")
 
 await stale.cleanup();
 ```
+
+## A path-anchored stray rule is still a stray rule
+
+The one-root migration carried a v2 box's own `.gitignore` rules across
+verbatim, and that box spelled the same patterns path-anchored:
+`/_content/**/*.attach/**/*.jpg` rather than `**/*.attach/**/*.jpg`. Both hide
+exactly the same files from `git add`.
+
+The stray-rule check matched only the second spelling, so on a box holding the
+first, `unignore` reported success and `to-annex` converted a box whose every
+asset stayed ignored — reaching neither git nor the annex, with the annex-shape
+probe reporting the box as converted. One production box was in that state.
+
+```ts continue
+const anchored = await makeTmpBox({ git: true });
+await runInitGitignore(ctxFor(anchored.root));
+await anchored.write(
+  ".gitignore",
+  `${await anchored.read(".gitignore")}\n# Migrated local rules\n/_content/**/*.attach/**/*.jpg\n`,
+);
+const strayResult = await runUnignore(ctxFor(anchored.root));
+JSON.stringify({ success: strayResult.success, error: strayResult.error })
+=> {"success":false,"error":"1 unmanaged asset ignore rule(s)"}
+```
+
+The rule really does hide an asset, which is what makes refusing correct:
+
+```ts continue
+checkIgnore(anchored.root, "_content/photos.attach/a.jpg").ignored
+=> true
+```
+
+Removing it by hand is what the message asks for, and then `unignore` proceeds:
+
+```ts continue
+await anchored.write(
+  ".gitignore",
+  (await anchored.read(".gitignore")).split("\n").filter((l) => !l.includes("/_content/**/*.attach/")).join("\n"),
+);
+const ok = await runUnignore(ctxFor(anchored.root));
+JSON.stringify({ success: ok.success, stillIgnored: checkIgnore(anchored.root, "_content/photos.attach/a.jpg").ignored })
+=> {"success":true,"stillIgnored":false}
+```
+
+The capture-staging re-includes share that middle and must not read as stray —
+they are negations, and the managed block would otherwise look like a pile of
+unmanaged rules:
+
+```ts continue
+(await anchored.read(".gitignore")).includes("!**/tmp-capture/**/*.attach/**/*.card")
+=> true
+```
+
+```ts cleanup
+await anchored.cleanup();
+```

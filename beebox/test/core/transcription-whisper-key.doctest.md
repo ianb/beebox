@@ -1,14 +1,13 @@
 # The Whisper path resolves its key through the store
 
 `core/transcription/index.ts` was the last consumer still reading
-`THINKING_OPENAI_API_KEY` from the environment directly. It now goes through
+`THINKING_OPENAI_API_KEY` from the environment directly. It goes through
 `getOpenAiThinkingKey(boxRoot)` like its siblings — the machine secret store's
-`openai-thinking` entry first, the env var as the transition fallback
-(`docs/plans/secret-custody.md`, Track 3).
+`openai-thinking` entry, and nothing else
+(`docs/implemented-plans/secret-custody.md`).
 
 `boxRoot` was already on `TranscribeAudioParams`, so nothing above changed
-shape; a caller that omits it has no box whose grants to check and gets the env
-path only.
+shape; a caller that omits it has no box whose grants to check, and so no key.
 
 Values below are obvious placeholders. The success path is not exercised here —
 it would mean an outbound call to OpenAI — so this covers the refusal an
@@ -54,12 +53,13 @@ print(`${failure.name} permanent=${failure.permanent} code=${failure.code}`);
 print(failure.message);
 =>
 MissingWhisperKeyError permanent=true code=missing_api_key
-No OpenAI key for transcription — ask the boxholder to grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY
+No OpenAI key for transcription — ask the boxholder to grant the "openai-thinking" secret to this box
 ```
 
-## The store wins over the env var; the env var is the fallback
+## Only the grant resolves
 
-This is the reader the Whisper path now calls, exercised against the same box.
+This is the reader the Whisper path calls, exercised against the same box. The
+retired env var is exported first to show it no longer participates.
 
 ```ts continue
 const slug = await boxSlug(box.root);
@@ -70,12 +70,11 @@ await setSecret({ name: "openai-thinking", value: "placeholder-whisper-store-key
 await grantSecret({ slug, name: "openai-thinking", access: "server" });
 print(`granted: ${await getOpenAiThinkingKey(box.root, { observe: true })}`);
 
-delete process.env.THINKING_OPENAI_API_KEY;
-print(`no env, no box: ${await getOpenAiThinkingKey(undefined, { observe: true })}`);
+print(`no box: ${await getOpenAiThinkingKey(undefined, { observe: true })}`);
 =>
-ungranted: placeholder-whisper-env-key
+ungranted: null
 granted: placeholder-whisper-store-key
-no env, no box: null
+no box: null
 ```
 
 ```ts cleanup

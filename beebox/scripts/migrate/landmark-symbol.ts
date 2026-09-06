@@ -81,7 +81,9 @@ export function rewriteLandmarkSymbol(original: string): RewriteResult {
   if (isMap(nav)) nav.delete("symbol");
   if (isMap(nav) && nav.items.length === 0) doc.delete("navigation");
   if (moved !== null) doc.set("symbol", doc.createNode(moved));
-  const text = `---\n${doc.toString().trimEnd()}\n---${rest}`;
+  // `lineWidth: 0` keeps yaml from reflowing long scalars elsewhere in the
+  // block (a long `rules:` string) — the edit must stay surgical.
+  const text = `---\n${doc.toString({ lineWidth: 0 }).trimEnd()}\n---${rest}`;
   return { text: text === original ? null : text, warnings };
 }
 

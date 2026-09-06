@@ -91,7 +91,7 @@ export async function transcribeAudioVoxtral(
       // it is the actual call the box needs. Flagging it here is what makes
       // the admin page say "this key may be expired" instead of the boxholder
       // discovering it from a failed transcription card
-      // (`docs/plans/secret-custody.md`, "Guided entry + validation").
+      // (`docs/implemented-plans/secret-custody.md`, "Guided entry + validation").
       if (isAuthRejection(error.response.status)) {
         await markSecretVerificationFailed(
           MISTRAL_SECRET_NAME,
