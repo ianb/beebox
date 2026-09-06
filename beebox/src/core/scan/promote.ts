@@ -39,7 +39,13 @@ import {
 } from "./quarantine.js";
 import { collectQuarantine } from "./promote-gc.js";
 import { emitRejectionQuestions } from "./promote-questions.js";
-import { markWakeupPending, runPendingWakeup, spawnBbxWakeup, type WakeupRunner } from "./promote-wakeup.js";
+import {
+  markWakeupPending,
+  runPendingWakeup,
+  spawnBbxWakeup,
+  type WakeupOutcome,
+  type WakeupRunner,
+} from "./promote-wakeup.js";
 import { isAnnexBox } from "../annex/is-annex-box.js";
 
 // A batch that promoted nothing still owes no wakeup of its own, but a marker
@@ -72,7 +78,7 @@ export interface ScanPromoteResult {
   failed: number;
   /** Question cards written for rejections. */
   questions: number;
-  wakeup: "ran" | "failed" | "not-needed";
+  wakeup: WakeupOutcome;
   importedRemoved: number;
   tombstoned: number;
   tombstonesRemoved: number;
@@ -229,7 +235,7 @@ export async function runScanPromotePass(opts: {
         "Quarantined files stay put until it is converted (`bbx attachments to-annex`).",
     );
     return {
-      skipped: "not-annex", imported: 0, failed: 0, questions: 0, wakeup: "not-needed",
+      skipped: "not-annex", imported: 0, failed: 0, questions: 0, wakeup: { kind: "not-needed" },
       importedRemoved: 0, tombstoned: 0, tombstonesRemoved: 0,
     };
   }
@@ -239,7 +245,7 @@ export async function runScanPromotePass(opts: {
   } catch (e) {
     if (e instanceof LockHeldError) {
       return {
-        skipped: "locked", imported: 0, failed: 0, questions: 0, wakeup: "not-needed",
+        skipped: "locked", imported: 0, failed: 0, questions: 0, wakeup: { kind: "not-needed" },
         importedRemoved: 0, tombstoned: 0, tombstonesRemoved: 0,
       };
     }
