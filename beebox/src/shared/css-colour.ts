@@ -19,13 +19,16 @@
 const HEX = /^#[\da-f]{3}$|^#[\da-f]{6}$/i;
 
 /**
- * `hsl(…)` / `hsla(…)` / `rgb(…)` / `rgba(…)` with any argument list that
- * holds only the characters those functions take: digits, signs, decimal
- * points, percent, degrees/turns/radians units, separators, and the `/` of the
- * modern alpha syntax. A nested function call cannot pass, because parentheses
- * are not in the set.
+ * `hsl(…)` / `hsla(…)` / `rgb(…)` / `rgba(…)` over an argument list of numbers
+ * — each optionally signed, optionally fractional, optionally carrying a
+ * percent or an angle unit — separated by commas, whitespace, or the `/` of the
+ * modern alpha syntax. A nested function call cannot pass (no parentheses), and
+ * neither can alphabetic junk like `rgb(foo)`: letters appear only as a unit
+ * directly after a number.
  */
-const FUNCTIONAL = /^(?:hsla?|rgba?)\(\s*[\d\s%+,./a-z-]*\)$/i;
+/* One channel: a signed/fractional number with an optional percent or angle unit, or `none`. */
+const FUNCTIONAL =
+  /^(?:hsla?|rgba?)\(\s*(?:none|[+-]?(?:\d+\.?\d*|\.\d+)(?:%|deg|grad|rad|turn)?)(?:\s*[,/]?\s*(?:none|[+-]?(?:\d+\.?\d*|\.\d+)(?:%|deg|grad|rad|turn)?))*\s*\)$/i;
 
 export function isCssColour(value: string): boolean {
   const trimmed = value.trim();

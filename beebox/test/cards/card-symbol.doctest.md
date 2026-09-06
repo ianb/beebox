@@ -90,8 +90,17 @@ parentheses are not in the accepted character set.
 
 ```ts continue
 ["rebeccapurple", "color-mix(in srgb, red, blue)", "oklch(70% 0.1 200)", "#3a7f", "", "  ",
- "javascript:alert(1)", "rgb(url(evil))", "hsl(210 40% 50%); background: red"].some(isCssColour)
+ "javascript:alert(1)", "rgb(url(evil))", "hsl(210 40% 50%); background: red",
+ "rgb(foo)", "hsl(degdeg)"].some(isCssColour)
 => false
+```
+
+Letters are admitted only as a unit directly after a number, so the modern
+slash-alpha and angle forms pass while junk inside the parentheses does not.
+
+```ts continue
+["rgb(1 2 3 / 50%)", "hsl(0.5turn 40% 50%)", "rgb(1,2,3)"].every(isCssColour)
+=> true
 ```
 
 Whitespace around a value is tolerated — a hand-authored card should not fail on

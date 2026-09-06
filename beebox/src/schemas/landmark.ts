@@ -7,9 +7,10 @@
  * more *roles*:
  *
  *   ---
+ *   symbol:                          # the card's mark
+ *     glyph: 🍳
  *   navigation:                      # human-facing surface
  *     label: Recipes
- *     symbol: 🍳
  *     links:
  *       - { ref: /_content/recipes/Bread.recipe.card, label: the bread }
  *     expand:
@@ -152,9 +153,10 @@ A landmark is pure YAML frontmatter (no body) with one or more roles. At least o
 ## \`navigation\` (human-facing surface)
 
 \`\`\`yaml
+symbol:                     # the card's mark — every card may carry one
+  glyph: 🍳                 # emoji or a letter or two; OR src: /_content/recipes/images/portrait.webp for an image
 navigation:
   label: Recipes            # short bookmark name; treat like a tab name, not a sentence
-  symbol: 🍳                # emoji/short text, OR { src: /_content/recipes/images/portrait.webp } for an image
   links:                    # optional curated links to other cards
     - ref: /_content/recipes/Bread.recipe.card  # box path (leading /); validated
       label: the bread        # optional; falls back to the target's filename title
@@ -217,11 +219,15 @@ export function parseLandmarkFields(content: string): LandmarkFields | null {
 }
 
 /**
- * Template for `bbx create` — produces a starter landmark with a
- * `navigation` role containing label + symbol.
+ * Template for `bbx create` — produces a starter landmark with a `navigation`
+ * role for the label and the card's own `symbol` group for the mark.
  *
- * Pass `symbol` for an emoji/text symbol, or `symbolSrc` for an image box
- * path (leading `/`; a landmark-dir-relative path also resolves).
+ * A new landmark is never born in the legacy shape: `navigation.symbol` is
+ * read for boxes that predate the `landmark-symbol` migration, and written by
+ * nothing (docs/plans/card-symbol.md).
+ *
+ * Pass `symbol` for an emoji/text mark, or `symbolSrc` for an image box path
+ * (leading `/`; a landmark-dir-relative path also resolves).
  */
 export function createLandmarkTemplate(options: {
   label: string;
@@ -229,10 +235,11 @@ export function createLandmarkTemplate(options: {
   symbolSrc?: string;
 }): string {
   const navigation: Record<string, unknown> = { label: options.label };
+  const fields: Record<string, unknown> = { navigation };
   if (typeof options.symbolSrc === "string" && options.symbolSrc !== "") {
-    navigation.symbol = { src: options.symbolSrc };
+    fields["symbol"] = { src: options.symbolSrc };
   } else if (typeof options.symbol === "string" && options.symbol !== "") {
-    navigation.symbol = options.symbol;
+    fields["symbol"] = { glyph: options.symbol };
   }
-  return renderFrontmatterBlock({ navigation });
+  return renderFrontmatterBlock(fields);
 }

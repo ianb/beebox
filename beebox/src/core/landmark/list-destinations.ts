@@ -9,7 +9,8 @@
 
 import * as path from "node:path";
 import { glob } from "glob";
-import { type LandmarkSymbolData } from "../../schemas/landmark.js";
+import { type LandmarkFields } from "../../schemas/landmark.js";
+import { readLandmarkSymbol } from "./symbol.js";
 import { readLandmarkCard } from "./card-cache.js";
 import { findDestination, type DestinationKind } from "./destination.js";
 import { errorMessage } from "../../lib/error-guards.js";
@@ -28,10 +29,16 @@ export interface DestinationInfo {
   symbol: string | null;
 }
 
-/** A symbol is displayable text only when it's a plain string (not an image). */
-function symbolText(symbol: LandmarkSymbolData | undefined): string | null {
-  if (typeof symbol === "string" && symbol.trim() !== "") return symbol.trim();
-  return null;
+/**
+ * A destination row shows text only — the share sheet and the clerk picker take
+ * a glyph, not an image — so an image-marked landmark shows none. Reads through
+ * `readLandmarkSymbol`, which is what makes a migrated landmark (mark on the
+ * card) and a legacy one (mark under `navigation`) both work here.
+ */
+function symbolText(fields: LandmarkFields, relPath: string): string | null {
+  const symbol = readLandmarkSymbol(fields, { landmarkPath: relPath });
+  const glyph = symbol?.glyph?.trim();
+  return glyph === undefined || glyph === "" ? null : glyph;
 }
 
 /** One card's destination entry for `kind`, or null when it advertises none. */
@@ -52,7 +59,7 @@ async function readDestination(
 
   const normalizedDir = normalizeLandmarkDir(path.dirname(relPath));
   const label = fields.navigation?.label ?? (normalizedDir === "" ? "root" : path.basename(normalizedDir));
-  return { dir: normalizedDir, label, symbol: symbolText(fields.navigation?.symbol) };
+  return { dir: normalizedDir, label, symbol: symbolText(fields, relPath) };
 }
 
 export async function listDestinations(

@@ -6,7 +6,7 @@ for is browser-pinned-tab behaviour plus a discriminator — and the discriminat
 is why ambiguity has to be defined carefully.
 
 ```ts setup
-import { abbreviateTitle, ambiguousGlyphs, pinnedFace } from "../../src/frontend/src/components/chat/tab-identity.js";
+import { abbreviateTitle, ambiguousMarks, pinnedFace } from "../../src/frontend/src/components/chat/tab-identity.js";
 
 /** A pinned tab's face as "mark|abbreviation", with "-" for an absent half. */
 function face(symbol: unknown, title: string, ambiguous: ReadonlySet<string>): string {
@@ -59,15 +59,15 @@ const pinned = [
   { symbol: { glyph: "🍞" } },
   { symbol: null },
 ];
-[...ambiguousGlyphs(pinned)].join(",")
-=> 🍳
+[...ambiguousMarks(pinned)].join(",")
+=> glyph:🍳
 ```
 
 Whole glyphs are compared, not first characters: an author who wrote two
 different marks meant them to differ.
 
 ```ts continue
-[...ambiguousGlyphs([{ symbol: { glyph: "🍞" } }, { symbol: { glyph: "🍞🥖" } }])].length
+[...ambiguousMarks([{ symbol: { glyph: "🍞" } }, { symbol: { glyph: "🍞🥖" } }])].length
 => 0
 ```
 
@@ -76,7 +76,7 @@ different marks meant them to differ.
 An unambiguous mark stands alone — this is the browser pinned tab.
 
 ```ts
-const ambiguous = new Set(["🍳"]);
+const ambiguous = new Set(["glyph:🍳"]);
 
 face({ glyph: "🍞" }, "Sourdough Bread", ambiguous)
 => 🍞|-
@@ -100,12 +100,16 @@ face({ foreground: "#333" }, "Weekend Errands", ambiguous)
 => -|WE
 ```
 
-An image mark always stands alone: it is per-card by construction, so it cannot
-collide the way a shared emoji does.
+An image mark stands alone when it is the only tab wearing that picture — but
+`src` is only a path, so two cards CAN name the same image, and then it needs
+the discriminator like any other repeated mark.
 
 ```ts continue
 face({ src: "_content/marks/bread.webp" }, "Sourdough Bread", ambiguous)
 => [image]|-
+
+face({ src: "_content/marks/bread.webp" }, "Sourdough Bread", new Set(["src:_content/marks/bread.webp"]))
+=> [image]|SB
 ```
 
 ## The ambiguity set is the pinned tabs, not every open tab
@@ -116,9 +120,9 @@ wear the same emoji.
 
 ```ts
 const pinnedOnly = [{ symbol: { glyph: "🍳" } }];
-[...ambiguousGlyphs(pinnedOnly)].length
+[...ambiguousMarks(pinnedOnly)].length
 => 0
 
-face({ glyph: "🍳" }, "Recipes", ambiguousGlyphs(pinnedOnly))
+face({ glyph: "🍳" }, "Recipes", ambiguousMarks(pinnedOnly))
 => 🍳|-
 ```

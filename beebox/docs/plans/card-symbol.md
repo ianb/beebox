@@ -520,6 +520,16 @@ None. Four tracks, each one surface, with a settled shape.
    approaches. The deferred surfaces (browse listings) could. Lean: leave the
    cap alone and let a surface that needs paging bring it when it lands.
 
+## Accepted, not fixed
+
+The migration does not carry YAML comments or anchors attached to the
+`navigation.symbol` node itself: it reads the value and writes a fresh node
+(`scripts/migrate/landmark-symbol.ts`). Every *other* key keeps its formatting,
+which is the property that matters for a hand-authored card, and a comment
+attached to a symbol line is both rare and cheap to lose visibly. Preserving it
+would mean moving YAML nodes between maps rather than reading values, which is
+more machinery than the case is worth.
+
 ## Knowledge audits
 
 Required: this adds agent-facing vocabulary. Agents write most cards, so the

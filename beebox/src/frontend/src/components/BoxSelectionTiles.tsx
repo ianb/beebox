@@ -6,13 +6,13 @@
 
 import { Link } from "@tanstack/react-router";
 import { href, toSearch } from "../lib/routing";
-import { apiFileUrl } from "../lib/view-url";
+import { CardMark } from "./ui/CardMark";
+import type { CardSymbolData } from "@shared/card-symbol";
 
 interface Box {
   slug: string;
   name: string;
-  symbol?: string;
-  symbolSrc?: string | null;
+  symbol?: CardSymbolData | null;
 }
 
 /**
@@ -28,21 +28,9 @@ interface Box {
  * glyph on every box would read as a mark that happens to be identical.
  */
 function BoxMark({ box }: { box: Box }) {
-  if (box.symbolSrc !== undefined && box.symbolSrc !== null) {
-    return (
-      <img
-        src={apiFileUrl(box.slug, box.symbolSrc)}
-        alt=""
-        className="w-6 h-6 object-contain flex-shrink-0"
-      />
-    );
-  }
-  if (box.symbol !== undefined && box.symbol !== "") {
-    // Decorative: the name beside it already identifies the box, so a screen
-    // reader announcing the emoji's CLDR name would only repeat it noisily.
-    return <span aria-hidden="true" className="text-lg leading-none flex-shrink-0">{box.symbol}</span>;
-  }
-  return null;
+  // Decorative: the name beside it already identifies the box, so no fallback
+  // and nothing for a screen reader to announce twice.
+  return <CardMark symbol={box.symbol ?? null} size="md" boxSlug={box.slug} />;
 }
 
 /**

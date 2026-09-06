@@ -13,7 +13,7 @@ import { prefersReducedMotion } from "../../lib/reduced-motion";
 import { displayName } from "../../lib/display-name";
 import { CardMark } from "../ui/CardMark";
 import type { CardIdentity } from "../../hooks/useCardIdentities";
-import { ambiguousGlyphs, pinnedFace } from "./tab-identity";
+import { ambiguousMarks, pinnedFace } from "./tab-identity";
 import type { PanelTab } from "./InteractiveChat-controls";
 
 /**
@@ -47,7 +47,7 @@ export function SidecarTabStrip({ tabs, activePath, identities, boxSlug, onSelec
   const pinned = tabs.filter((t) => t.pinned);
   const loose = tabs.filter((t) => !t.pinned);
   // Scoped to the pinned tabs on purpose — see `tab-identity.ts`.
-  const ambiguous = ambiguousGlyphs(pinned.map((t) => ({ symbol: identities.get(t.target.path)?.symbol ?? null })));
+  const ambiguous = ambiguousMarks(pinned.map((t) => ({ symbol: identities.get(t.target.path)?.symbol ?? null })));
 
   const revealActive = useCallback(() => {
     const el = tabRefs.current.get(activePath);

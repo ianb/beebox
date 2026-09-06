@@ -45,21 +45,30 @@ function firstGraphemes(value: string, count: number): string {
 }
 
 /**
- * The glyphs worn by more than one pinned tab. A tab whose glyph is in this set
+ * The marks worn by more than one pinned tab. A tab whose mark is in this set
  * cannot stand alone, because it no longer says which card it is.
  *
  * Compares whole glyphs, not first graphemes: 🍞 and 🍞🥖 are different marks,
- * and an author who wrote two of them meant them to differ.
+ * and an author who wrote two of them meant them to differ. Image marks are
+ * keyed too — `src` is only a path, so two cards can name the same picture.
  */
-export function ambiguousGlyphs(pinned: Array<{ symbol: CardSymbolData | null }>): ReadonlySet<string> {
+export function markKey(symbol: CardSymbolData | null): string | null {
+  const src = symbol?.src?.trim();
+  if (src !== undefined && src !== "") return `src:${src}`;
+  const glyph = symbol?.glyph?.trim();
+  if (glyph !== undefined && glyph !== "") return `glyph:${glyph}`;
+  return null;
+}
+
+export function ambiguousMarks(pinned: Array<{ symbol: CardSymbolData | null }>): ReadonlySet<string> {
   const seen = new Map<string, number>();
   for (const tab of pinned) {
-    const glyph = tab.symbol?.glyph?.trim();
-    if (glyph === undefined || glyph === "") continue;
-    seen.set(glyph, (seen.get(glyph) ?? 0) + 1);
+    const key = markKey(tab.symbol);
+    if (key === null) continue;
+    seen.set(key, (seen.get(key) ?? 0) + 1);
   }
   const out = new Set<string>();
-  for (const [glyph, count] of seen) if (count > 1) out.add(glyph);
+  for (const [key, count] of seen) if (count > 1) out.add(key);
   return out;
 }
 
@@ -75,13 +84,9 @@ export function pinnedFace(input: {
   ambiguous: ReadonlySet<string>;
 }): PinnedFace {
   const { symbol, title, ambiguous } = input;
-  const glyph = symbol?.glyph?.trim();
-  const hasImage = symbol?.src !== undefined && symbol.src !== "";
-  // An image mark is per-card by construction, so it never collides the way a
-  // shared emoji does; it always stands alone.
-  if (hasImage) return { mark: symbol, abbreviation: null };
-  if (glyph === undefined || glyph === "") return { mark: null, abbreviation: abbreviateTitle(title) };
-  if (!ambiguous.has(glyph)) return { mark: symbol, abbreviation: null };
+  const key = markKey(symbol);
+  if (key === null) return { mark: null, abbreviation: abbreviateTitle(title) };
+  if (!ambiguous.has(key)) return { mark: symbol, abbreviation: null };
   return { mark: symbol, abbreviation: abbreviateTitle(title) };
 }
 
