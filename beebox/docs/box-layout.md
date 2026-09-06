@@ -207,6 +207,7 @@ Mostly hand-edited by humans, but `bbx init` installs templates.
 | `_config/*.guide.card` | Guide cards (intake, calendar, chat) — agent-facing handling rules. |
 | `_config/main.personality.card` | Personality card — voice and behavior tuning for the box's agent. |
 | `_config/transcription.json` | Voice-memo transcription settings. |
+| `_config/tts.json` | Which backend speaks chat replies (`openai` or `gemini`); see `docs/plans/tts-backend-selection.md`. |
 
 `*.orig-*.card` and `*.bak` files are pre-edit snapshots, kept for diffing.
 

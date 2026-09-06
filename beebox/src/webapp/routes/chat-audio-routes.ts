@@ -30,8 +30,9 @@ import {
 import { errnoCode } from "../../lib/error-guards.js";
 import { serveMockTts } from "../tts-mock.js";
 import { resolveTtsService, TtsNotConfiguredError } from "../../core/tts/resolve.js";
+import { loadTtsConfig } from "../../core/tts/config.js";
 import { EmptyTtsResponseError, type TtsService } from "../../services/tts.js";
-import { DEFAULT_VOICE } from "../../shared/tts-backends.js";
+import { DEFAULT_VOICE, type TtsBackend } from "../../shared/tts-backends.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { readSessionLogTail } from "./chat-helpers.js";
 
@@ -110,22 +111,26 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
     }
   });
 
-  // GET /api/chat/voice-config - Return speaking voice config from personality
-  server.get("/api/chat/voice-config", async (_request, _reply): Promise<CompiledSpeakingVoice> => {
+  // GET /api/chat/voice-config — the personality's speaking voice, plus which
+  // engine will speak it. The backend rides along because the client keys its
+  // audio cache on it: the same text in the same voice sounds like a different
+  // person on a different backend.
+  server.get("/api/chat/voice-config", async (_request, _reply): Promise<CompiledSpeakingVoice & { backend: TtsBackend }> => {
+    const { backend } = await loadTtsConfig(boxRoot);
     try {
       const voicePath = path.join(boxRoot, "_content/docs/generated/speaking-voice.json");
       const content = await fs.readFile(voicePath, "utf-8");
       const parsed = CompiledSpeakingVoiceSchema.safeParse(JSON.parse(content));
       if (parsed.success) {
-        return { model: parsed.data.model, instructions: parsed.data.instructions };
+        return { model: parsed.data.model, instructions: parsed.data.instructions, backend };
       }
       console.warn("[chat] speaking-voice.json failed validation:", parsed.error.message);
-      return { model: undefined, instructions: [] };
+      return { model: undefined, instructions: [], backend };
     } catch (e) {
       if (errnoCode(e) !== "ENOENT") {
         console.warn("[chat] failed to read speaking-voice.json:", e);
       }
-      return { model: undefined, instructions: [] };
+      return { model: undefined, instructions: [], backend };
     }
   });
 
