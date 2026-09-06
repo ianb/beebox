@@ -9,11 +9,10 @@
  */
 
 import { getGeminiApiKey } from "../../../core/gemini-key.js";
-import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { getOpenRouterKey, routeVia } from "../../../core/openrouter.js";
 import { getOpenAiEmbeddingsKey } from "../../../core/search/embeddings-key.js";
-import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
+import { hqRoutesThroughOpenRouter, loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import type { HealthCheck } from "./health.js";
 
 /**
@@ -33,19 +32,24 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
   if (openRouterKey === null) return [];
 
   const hqService = (await loadTranscriptionConfig(boxRoot)).hqService;
-  const hqDirect = hqService === "voxtral" || hqService === "voxtral-diarized"
-    ? await getMistralApiKey(boxRoot, { observe: false })
-    : await getOpenAiThinkingKey(boxRoot, { observe: false });
   const geminiKey = await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false });
 
   const routes: Array<[string, string | null]> = [
     ["semantic search", await getOpenAiEmbeddingsKey(boxRoot, { observe: false })],
-    [`HQ transcription (${hqService})`, hqDirect],
     ["audio questions", geminiKey],
   ];
+  // Voxtral HQ cannot use OpenRouter at all (`transcription/openrouter.ts`), so
+  // this line must not offer it as the route — it would name a fallback that
+  // will never run and read as "covered" when it is not.
+  if (hqRoutesThroughOpenRouter(hqService)) {
+    routes.push([`HQ transcription (${hqService})`, await getOpenAiThinkingKey(boxRoot, { observe: false })]);
+  }
   if (process.env["BBX_SCAN_VISION"] === "gemini") routes.push(["scan vision", geminiKey]);
 
   const lines = routes.map(([label, direct]) => `${label} → ${direct === null ? "OpenRouter" : "its own provider"}`);
+  if (!hqRoutesThroughOpenRouter(hqService)) {
+    lines.push(`HQ transcription (${hqService}) → Mistral only; OpenRouter cannot serve Voxtral`);
+  }
   return [
     {
       name: "model-routes",

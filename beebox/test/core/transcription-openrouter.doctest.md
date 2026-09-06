@@ -1,12 +1,28 @@
 # OpenRouter transcription: shaping the normalized response
 
 The HQ transcription fallback (`src/core/transcription/openrouter.ts`) reaches
-the same models the direct arms use, but OpenRouter hands back one normalized
-shape for all of them. These tests cover the translation into the result every
+the same OpenAI models `whisper.ts` calls directly, and OpenRouter hands back
+one normalized shape. These tests cover the translation into the result every
 transcription caller already handles — no network, just the shaper.
+
+Voxtral is deliberately absent: measured against the live API, OpenRouter's
+`voxtral-mini-transcribe` refuses `verbose_json` and cannot diarize, so that
+service stays on Mistral rather than routing here.
 
 ```ts setup
 import { shapeOpenRouterResult, audioFormatToken } from "../../src/core/transcription/openrouter.js";
+import { hqRoutesThroughOpenRouter } from "../../src/core/transcription/index.js";
+```
+
+## Which HQ services route here at all
+
+Voxtral stays on Mistral. `whisper.ts`'s three variants are the whole set.
+
+```ts
+const routable = (["whisper", "whisper-llm", "whisper-llm-mini", "voxtral", "voxtral-diarized"] as const)
+  .filter(hqRoutesThroughOpenRouter);
+routable.join(",")
+=> whisper,whisper-llm,whisper-llm-mini
 ```
 
 ## The format token comes off the filename
@@ -31,7 +47,7 @@ const wordBody = {
   language: "english",
   words: [{ word: " hello ", start: 0, end: 0.4 }, { word: "there", start: 0.4, end: 0.9 }],
 };
-const withWords = shapeOpenRouterResult(wordBody, { diarization: false, wordTimestamps: true });
+const withWords = shapeOpenRouterResult(wordBody, { wordTimestamps: true });
 JSON.stringify(withWords)
 => {"text":"hello there","duration":1.5,"language":"english","words":[{"word":"hello","start":0,"end":0.4},{"word":"there","start":0.4,"end":0.9}]}
 ```
@@ -42,47 +58,9 @@ would read as "this recording has no words".
 
 ```ts
 const bare = { text: "hello there", duration: 1.5, language: "english" };
-const noWords = shapeOpenRouterResult(bare, { diarization: false, wordTimestamps: true });
+const noWords = shapeOpenRouterResult(bare, { wordTimestamps: true });
 JSON.stringify(noWords)
-=> {"text":"hello there","duration":1.5,"language":"english","diarized":false}
-```
-
-## Diarization: a numeric speaker becomes a speaker line
-
-OpenRouter reports the speaker as a number per segment where Voxtral reports a
-`speaker_id` string. The number is renamed so the shared `buildDiarizedText`
-produces the same "Speaker N:" transcript a direct Voxtral call would.
-
-```ts
-const twoSpeakers = {
-  text: "Where did you go?I went home.",
-  duration: 4,
-  language: "english",
-  segments: [{ text: "Where did you go?", start: 0, end: 2, speaker: 0 }, { text: "I went home.", start: 2, end: 4, speaker: 1 }],
-};
-const diarized = shapeOpenRouterResult(twoSpeakers, { diarization: true, wordTimestamps: false });
-diarized.text
-=> Speaker 0: Where did you go?
-Speaker 1: I went home.
-
-diarized.diarized
-=> true
-```
-
-Diarization requested but no speaker on any segment is the mono-speaker case:
-the text is rebuilt from the segments, and `diarized` says plainly that it is
-not speaker-labeled.
-
-```ts
-const unlabeled = {
-  text: "Where did you go?I went home.",
-  duration: 4,
-  language: "english",
-  segments: [{ text: "Where did you go?", start: 0, end: 2 }, { text: "I went home.", start: 2, end: 4 }],
-};
-const mono = shapeOpenRouterResult(unlabeled, { diarization: true, wordTimestamps: false });
-`${mono.text} | ${String(mono.diarized)}`
-=> Where did you go? I went home. | false
+=> {"text":"hello there","duration":1.5,"language":"english"}
 ```
 
 ## Duration falls back rather than reporting a confident zero
@@ -93,9 +71,9 @@ then the seconds OpenRouter billed for, then the end of the last timed thing.
 
 ```ts
 const billed = { text: "hi", usage: { seconds: 9.2 } };
-const fromUsage = shapeOpenRouterResult(billed, { diarization: false, wordTimestamps: false });
+const fromUsage = shapeOpenRouterResult(billed, { wordTimestamps: false });
 const timed = { text: "hi", segments: [{ text: "hi", start: 0, end: 3.5 }] };
-const fromSegment = shapeOpenRouterResult(timed, { diarization: false, wordTimestamps: false });
+const fromSegment = shapeOpenRouterResult(timed, { wordTimestamps: false });
 `${String(fromUsage.duration)} ${String(fromSegment.duration)}`
 => 9.2 3.5
 ```
@@ -104,14 +82,16 @@ const fromSegment = shapeOpenRouterResult(timed, { diarization: false, wordTimes
 
 The `verbose_json` variants usually return segments, but the LLM audio models
 answer with `json` and nothing else. Rejoining is then impossible, so the raw
-text goes through the same missing-space repair the Voxtral arm uses, and the
-absent duration and language read as empty rather than as guesses.
+text goes through the same missing-space repair the Voxtral arm uses. The absent
+duration and language read as empty, and the empty language matches what
+`whisper.ts` fills on the same models — one recording must not describe itself
+differently depending on which key the box holds.
 
 ```ts
 const unsegmented = { text: "have gone.Generic tools" };
-const plain = shapeOpenRouterResult(unsegmented, { diarization: false, wordTimestamps: false });
+const plain = shapeOpenRouterResult(unsegmented, { wordTimestamps: false });
 JSON.stringify(plain)
-=> {"text":"have gone. Generic tools","duration":0,"language":"unknown","diarized":false}
+=> {"text":"have gone. Generic tools","duration":0,"language":""}
 ```
 
 ## A response with no transcript fails permanently
@@ -121,6 +101,6 @@ retrying the same request would produce the same non-answer.
 
 ```ts
 const textless = { usage: { seconds: 3 } };
-shapeOpenRouterResult(textless, { diarization: false, wordTimestamps: false })
+shapeOpenRouterResult(textless, { wordTimestamps: false })
 => throws OpenRouterTranscriptionShapeError: OpenRouter transcription response is unusable: expected text
 ```

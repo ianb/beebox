@@ -12,8 +12,7 @@ import { transcribeAudioFake } from "./fake.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { getOpenAiThinkingKey } from "../openai-thinking-key.js";
-import { transcribeAudioWhisper } from "./whisper.js";
-import { getMistralApiKey } from "../mistral-key.js";
+import { transcribeAudioWhisper, type WhisperVariant } from "./whisper.js";
 import { routeVia } from "../openrouter.js";
 import { transcribeAudioOpenRouter } from "./openrouter.js";
 
@@ -210,43 +209,44 @@ export async function transcribeAudioHq(
 }
 
 /**
- * The provider key each HQ service would use if the box has one. Consulted
- * only to decide the ROUTE — when it comes back null and the box has an
- * OpenRouter key, the same model is reached through OpenRouter instead
- * (`core/openrouter.ts`); when it comes back non-null the direct arm resolves
- * it again for itself, which keeps each arm's own error and legacy handling
- * where it already lives.
+ * Which HQ services can fall back to OpenRouter, and how each is reached.
  *
- * Only the HQ pass gets this fallback. `transcribeAudio` can carry a
+ * The Whisper family can: `openai/whisper-1` through OpenRouter returns the
+ * same text, duration, language, and word timings as the direct call, and the
+ * two LLM variants are text-only on both routes. **Voxtral cannot** — measured
+ * against the live API on 2026-09-06, `mistralai/voxtral-mini-transcribe`
+ * refuses `verbose_json` and cannot diarize at all through OpenRouter
+ * (`transcription/openrouter.ts` records the evidence). A box on voxtral HQ
+ * with no Mistral key therefore gets the direct arm's "not configured" error,
+ * which is the honest answer.
+ *
+ * Only the HQ pass gets the fallback at all. `transcribeAudio` can carry a
  * context-biasing prompt that OpenRouter's transcription request cannot
  * express, so it stays on the direct arms.
  */
-async function hqDirectKey(
-  params: TranscribeAudioParams,
-  service: HqTranscriptionService,
-): Promise<string | null> {
-  return service === "voxtral" || service === "voxtral-diarized"
-    ? getMistralApiKey(params.boxRoot, { observe: false })
-    : getOpenAiThinkingKey(params.boxRoot, { observe: false });
+export function hqRoutesThroughOpenRouter(service: HqTranscriptionService): service is WhisperVariant {
+  return service !== "voxtral" && service !== "voxtral-diarized";
 }
 
 async function dispatchHqTranscription(
   params: TranscribeAudioParams,
   service: HqTranscriptionService,
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
-  const route = await routeVia({
-    boxRoot: params.boxRoot,
-    purpose: "transcription",
-    directKey: await hqDirectKey(params, service),
-  });
-  if (route?.via === "openrouter") {
-    return transcribeAudioOpenRouter(route.apiKey, { ...params, service });
-  }
   if (service === "voxtral") {
     return transcribeAudioVoxtral(params);
   }
   if (service === "voxtral-diarized") {
     return transcribeAudioVoxtral(params, { diarization: true });
   }
-  return transcribeAudioWhisper(params, { variant: service });
+  // The direct key is resolved here only to pick the route; the direct arm
+  // resolves it again for itself, which keeps its own error and legacy
+  // handling where it already lives.
+  const route = await routeVia({
+    boxRoot: params.boxRoot,
+    purpose: "transcription",
+    directKey: await getOpenAiThinkingKey(params.boxRoot, { observe: false }),
+  });
+  return route?.via === "openrouter"
+    ? transcribeAudioOpenRouter(route.apiKey, { ...params, variant: service })
+    : transcribeAudioWhisper(params, { variant: service });
 }

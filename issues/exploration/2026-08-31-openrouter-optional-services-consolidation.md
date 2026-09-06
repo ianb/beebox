@@ -7,14 +7,7 @@ discovered-by: Ian
 discovered-in: main session — reducing billing and configuration overhead during the external cutover
 labels: [providers, configuration]
 priority: important
-needs: [manual-testing]
 ---
-
-> **⏳ Awaiting manual testing** — the OpenRouter fallback route landed; one
-> check needs a real OpenRouter key, which no agent has: that
-> `openai/text-embedding-3-small` through OpenRouter returns the same vectors as
-> the direct call. Steps in [Manual testing](#manual-testing) below. Only the
-> boxholder clears this.
 
 Bee Box can require separate provider accounts, API keys, configuration, and
 bills for auxiliary model-backed services. Determine which of these workloads
@@ -152,20 +145,24 @@ auth, so it is out of scope with the main agent model.
 3. Scan-import Gemini vision (#3) and `ask-about-audio` (#4) — both are
    SDK-to-HTTP rewrites onto endpoints and models that exist; both are opt-in
    or manual, so a regression is cheap.
-4. HQ transcription (#5, #6) — `transcribeAudioHq` passes no prompt, so the
-   Whisper and Voxtral HQ variants move with no feature loss; word timestamps
-   survive via `verbose_json` + `timestamp_granularities[]`. The non-HQ batch
-   path (`transcribeAudio`, reached from capture and the transcribe preaction)
-   keeps its prompt/`context_bias` bias and stays direct.
-5. Deepgram batch (#7) — the model exists, but OpenRouter's normalized `STTWord`
-   has no confidence field, and per-word confidence is the reason to run this
-   backend.
+4. Whisper HQ transcription (#5) — `transcribeAudioHq` passes no prompt, so the
+   three Whisper variants move with no feature loss; word timestamps survive via
+   `verbose_json` + `timestamp_granularities[]`, and the live check below
+   confirms an exact match. The non-HQ batch path (`transcribeAudio`, reached
+   from capture and the transcribe preaction) keeps its prompt/`context_bias`
+   and stays direct.
 
 **Keep on a specialist provider.**
 
-6. All three realtime dictation paths (#9, #10, #11) — structural, not a gap
+5. Voxtral HQ transcription (#6) — moved here from the adapter group once the
+   live check showed OpenRouter's Voxtral refuses `verbose_json` and cannot
+   diarize; see below.
+6. Deepgram batch (#7) — the model exists, but OpenRouter's normalized `STTWord`
+   has no confidence field, and per-word confidence is the reason to run this
+   backend.
+7. All three realtime dictation paths (#9, #10, #11) — structural, not a gap
    that closes with a model release.
-7. Text-to-speech (#8) — no model, and the voice vocabulary is schema-level.
+8. Text-to-speech (#8) — no model, and the voice vocabulary is schema-level.
 
 ### Voice, as its own line
 
@@ -187,10 +184,11 @@ the direct call does.
   provider field either way.
 - **First build: the consolidate-now group, the two Gemini rewrites, and HQ
   transcription** — embeddings, an `openrouter` API-adapter entry, scan-import
-  vision, `ask-about-audio`, and the Whisper/Voxtral HQ variants. HQ joined the
-  set once it was clear that no HQ caller passes a prompt, so nothing is lost
-  there. The non-HQ batch path, Deepgram batch, TTS, and all three realtime
-  paths stay on their direct providers.
+  vision, `ask-about-audio`, and the Whisper HQ variants. HQ joined the set once
+  it was clear that no HQ caller passes a prompt, so nothing is lost there.
+  Voxtral HQ was in this set until the live check ruled it out. The non-HQ batch
+  path, Deepgram batch, TTS, and all three realtime paths stay on their direct
+  providers.
 
 ### Cross-model review (2026-09-06)
 
@@ -221,42 +219,47 @@ change:
 The seventh is the open one, below. The `whisper.ts` extraction was checked
 against `main` and carries no behavior change.
 
-## Manual testing
+## Live verification (2026-09-06)
 
-**What needs a human:** confirming that `openai/text-embedding-3-small` through
-OpenRouter returns the same vectors as the direct OpenAI call. Everything else
-in this change is covered by doctests.
+The boxholder supplied an OpenRouter key, so every route was exercised against
+the real API rather than reasoned about. This retires the manual-testing gate
+this issue briefly carried.
 
-**Why it matters.** `EMBEDDER_ID` is `openai:text-embedding-3-small@512` and is
-hashed into every card's embed record (`beebox/src/core/search/embed-pass.ts`),
-so it deliberately does not name the route — a box that swaps its OpenAI key for
-an OpenRouter one keeps its index instead of re-embedding every card. That is
-only correct if the vectors match. The request pins
-`provider: { only: ["openai"], allow_fallbacks: false }` so the model is served
-by OpenAI itself and not the Azure host that also carries it, which is the
-reason to expect a match — but expecting is not checking, and a mismatch would
-be silent: nothing re-embeds, mixed-route vectors sit in one index, and hybrid
-search just quietly gets worse.
+**Embedding vectors are bit-identical.** The same two strings embedded direct
+and through OpenRouter (`openai/text-embedding-3-small`, 512 dims, pinned
+`only: ["openai"]`) came back with `maxAbsDiff` of exactly `0.000e+0` and cosine
+`1.000000000000` on both. Keeping the route out of `EMBEDDER_ID` is correct: a
+box that swaps an OpenAI key for an OpenRouter one keeps its index.
 
-**What to run** (needs an OpenAI key and an OpenRouter key; nothing is written):
+**Whisper HQ transcription matches the direct call exactly.** `openai/whisper-1`
+through OpenRouter returned the same text, `duration` 3.21, `language` english,
+and 9 word timestamps with the same timings as the direct arm on the same clip.
+The LLM variants are text-only on both routes.
 
-```bash
-TEXT='the quick brown fox jumps over the lazy dog'
-curl -s https://api.openai.com/v1/embeddings \
-  -H "Authorization: Bearer $OPENAI_API_KEY" -H 'content-type: application/json' \
-  -d "{\"model\":\"text-embedding-3-small\",\"dimensions\":512,\"input\":\"$TEXT\"}" \
-  | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["embedding"][:8])'
+**Voxtral cannot route, and this was the find that mattered.**
+`mistralai/voxtral-mini-transcribe` answers a `verbose_json` request with
+`400 The selected model does not support response_format "verbose_json"`, so
+every Voxtral HQ pass through OpenRouter would have failed outright. In `json`
+mode it returns text and nothing else — no segments, no words, no language, no
+speaker labels. Mistral's `diarize` sent through OpenRouter's provider-option
+passthrough produced byte-identical output and identical cost, which is exactly
+how a silently-dropped passthrough behaves. So `voxtral-diarized` could not have
+diarized at all. Both Voxtral variants now stay on Mistral, and `bbx health`
+says so rather than naming a fallback that will never run.
 
-curl -s https://openrouter.ai/api/v1/embeddings \
-  -H "Authorization: Bearer $OPENROUTER_API_KEY" -H 'content-type: application/json' \
-  -d "{\"model\":\"openai/text-embedding-3-small\",\"dimensions\":512,\"input\":\"$TEXT\",\"provider\":{\"only\":[\"openai\"],\"allow_fallbacks\":false}}" \
-  | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["embedding"][:8])'
-```
+**Both Gemini arms work.** `ask-about-audio` transcribed the clip correctly and
+answered a question about the voice. Scan-import analyzed a two-image batch
+through the JSON Schema derived from `rawScanAnalysisSchema`: the
+`{ analyses: [...] }` wrapper round-tripped, batch alignment passed, and
+reasoning tokens parsed (928 thinking tokens on that batch).
 
-**What should happen:** the two lines match to at least six decimal places.
-Small float noise is fine; a different vector is not.
+**One cross-route inconsistency, fixed.** The LLM transcription variants filled
+`language: "unknown"` on the OpenRouter route where the direct arm fills `""`.
+That value reaches a card's frontmatter, so the same recording would have
+described itself differently depending on which key the box held. The OpenRouter
+arm now matches `whisper.ts`.
 
-**If they do not match:** the route belongs in `EMBEDDER_ID`
-(`beebox/src/services/openai-embeddings.ts`), which makes a key swap re-embed
-the box — correct, and visibly expensive, instead of silently wrong. That is a
-one-line change plus a note in the migration runbook.
+All six request bodies were also validated against OpenRouter's published
+OpenAPI schemas before any of this — worth noting that the schema check passed
+the Voxtral request that the live API rejects. A published schema says what is
+well-formed, not what a model supports.

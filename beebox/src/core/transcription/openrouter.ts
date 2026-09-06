@@ -1,9 +1,21 @@
 /**
- * The HQ transcription pass over OpenRouter — the same models the direct arms
- * use, reached through the aggregator when the box holds no key of its own for
- * them (`core/openrouter.ts` decides which). One module covers every HQ variant
- * because OpenRouter normalizes the providers behind a single request and a
- * single response shape, which the direct arms emphatically do not share.
+ * The HQ transcription pass over OpenRouter — the same OpenAI models
+ * `whisper.ts` calls directly, reached through the aggregator when the box
+ * holds no `openai-thinking` key of its own (`core/openrouter.ts` decides
+ * which).
+ *
+ * **The Whisper family only. Voxtral does not route here**, and that is a
+ * measured limit rather than a scoping choice. Checked against the live API on
+ * 2026-09-06: `mistralai/voxtral-mini-transcribe` rejects `verbose_json` with a
+ * 400 and answers `json` alone — no segments, no words, no language, and no
+ * speaker labels. Mistral's `diarize` flag sent through OpenRouter's
+ * provider-option passthrough changed nothing: byte-identical output and
+ * identical cost, which is exactly how a silently-dropped passthrough behaves.
+ * So `voxtral-diarized` over OpenRouter could not diarize at all, and plain
+ * `voxtral` would quietly lose word timing and language detection. A box on
+ * voxtral HQ with no Mistral key gets today's "not configured" error instead —
+ * visibly unconfigured beats invisibly worse. `openai/whisper-1`, by contrast,
+ * returns duration, language, and word timings identical to the direct call.
  *
  * **Only the HQ pass routes here.** `transcribeAudio` — the capture and
  * transcribe-preaction path — can carry a `prompt` that biases the model toward
@@ -19,24 +31,23 @@
  * **The provider is not pinned, and does not need to be.** Unlike embeddings
  * and chat, OpenRouter's transcription request takes no `only`/`data_collection`
  * preferences — just provider-specific option passthrough. Checked 2026-09-06:
- * every model id below has exactly one serving provider (OpenAI for the Whisper
- * family, Mistral for Voxtral), so the request reaches the same company the
- * direct call would have regardless. If a second provider ever appears for one
- * of them, that assumption is what breaks.
+ * every model id below has exactly one serving provider (OpenAI), so the
+ * request reaches the same company the direct call would have regardless. If a
+ * second provider ever appears for one of them, that assumption is what breaks.
  */
 
 import ky from "ky";
 import { isRecord } from "../../lib/is-record.js";
 import { OPENROUTER_BASE_URL } from "../openrouter.js";
-import { buildDiarizedText, joinSegmentTexts, repairMissingSentenceSpaces } from "./voxtral-text.js";
+import { joinSegmentTexts, repairMissingSentenceSpaces } from "./voxtral-text.js";
 import type {
   DetailedTranscriptionResult,
-  HqTranscriptionService,
   TranscribeAudioParams,
   TranscriptionError,
   TranscriptionResult,
   WordTimestamp,
 } from "./index.js";
+import type { WhisperVariant } from "./whisper.js";
 
 /**
  * OpenRouter answered, but not with a transcript. Permanent: a response
@@ -53,17 +64,15 @@ class OpenRouterTranscriptionShapeError extends Error implements TranscriptionEr
 }
 
 /**
- * Each HQ service's model id on OpenRouter, and whether that model can answer
- * in `verbose_json`. The two LLM audio models cannot — same limitation they
- * have when called directly, where the direct arm fills duration and language
- * with empty defaults for exactly this reason.
+ * Each Whisper variant's model id on OpenRouter, and whether that model can
+ * answer in `verbose_json`. The two LLM audio models cannot — the same
+ * limitation they have when called directly, where the direct arm fills
+ * duration and language with empty defaults for exactly this reason.
  */
-const OPENROUTER_HQ_MODELS: Record<HqTranscriptionService, { model: string; verbose: boolean }> = {
+const OPENROUTER_WHISPER_MODELS: Record<WhisperVariant, { model: string; verbose: boolean }> = {
   whisper: { model: "openai/whisper-1", verbose: true },
   "whisper-llm": { model: "openai/gpt-4o-transcribe", verbose: false },
   "whisper-llm-mini": { model: "openai/gpt-4o-mini-transcribe", verbose: false },
-  voxtral: { model: "mistralai/voxtral-mini-transcribe", verbose: true },
-  "voxtral-diarized": { model: "mistralai/voxtral-mini-transcribe", verbose: true },
 };
 
 /** Said once per process, not once per recording. */
@@ -90,10 +99,9 @@ export function audioFormatToken(filename: string): string {
 
 export async function transcribeAudioOpenRouter(
   apiKey: string,
-  { service, ...params }: TranscribeAudioParams & { service: HqTranscriptionService },
+  { variant, ...params }: TranscribeAudioParams & { variant: WhisperVariant },
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
-  const { model, verbose } = OPENROUTER_HQ_MODELS[service];
-  const diarization = service === "voxtral-diarized";
+  const { model, verbose } = OPENROUTER_WHISPER_MODELS[variant];
   const wordTimestamps = params.options?.wordTimestamps === true;
 
   if (params.prompt !== undefined && params.prompt !== "" && !warnedAboutDroppedPrompt) {
@@ -104,9 +112,6 @@ export async function transcribeAudioOpenRouter(
     );
   }
 
-  // `["word"]` implies segment timestamps too, so the diarized variant asks for
-  // words when both are wanted and reads speakers off the segments either way.
-  const granularities = wordTimestamps ? ["word"] : diarization ? ["segment"] : undefined;
 
   const body = await ky
     .post("audio/transcriptions", {
@@ -118,61 +123,40 @@ export async function transcribeAudioOpenRouter(
         model,
         input_audio: { data: params.audioBuffer.toString("base64"), format: audioFormatToken(params.filename) },
         response_format: verbose ? "verbose_json" : "json",
-        ...(verbose && granularities !== undefined && { timestamp_granularities: granularities }),
-        // Diarization is not a normalized OpenRouter parameter — asking for
-        // segment timestamps gets you segments, not speakers. It reaches
-        // Mistral the only way it can, through the provider-option
-        // passthrough, under the same `diarize` name the direct arm uses
-        // (`voxtral-request.ts`: the wrong name is silently ignored and you
-        // get an unlabeled transcript back).
-        ...(diarization && { provider: { options: { mistral: { diarize: true } } } }),
+        ...(verbose && wordTimestamps && { timestamp_granularities: ["word"] }),
       },
     })
     .json<unknown>();
 
-  const result = shapeOpenRouterResult(body, { diarization, wordTimestamps });
-  // A passthrough option that the provider ignores fails silently by
-  // construction, and an unlabeled transcript looks exactly like a
-  // single-speaker recording. Say so rather than letting the caller believe
-  // diarization ran — the same guard `warnIfDiarizationUnlabeled` gives the
-  // direct arm.
-  if (diarization && result.diarized !== true) {
-    console.warn(
-      "[transcription/openrouter] diarization requested but no speaker labels came back. Either the recording has " +
-        "one speaker, or OpenRouter did not forward the provider's `diarize` option.",
-    );
-  }
-  return result;
+  return shapeOpenRouterResult(body, { wordTimestamps });
 }
 
 interface ParsedSegment {
   text: string;
   /** Segment end in seconds, when the provider timed it — the duration ladder's last rung. */
   end?: number;
-  speaker_id?: string | null;
 }
 
 /**
  * Turn OpenRouter's normalized response into the shape every transcription
- * caller already handles. Deliberately mirrors `shapeVoxtralResult`'s
- * decisions — word timestamps win, then diarized speaker lines, then segment
- * rejoining, then the raw text — so a box switching routes sees the same
- * transcript structure it saw before.
- *
- * OpenRouter reports a speaker as a NUMBER on each word and segment, where
- * Voxtral reports a `speaker_id` string; the number is renamed here so the
- * shared `buildDiarizedText` keeps producing "Speaker 0:" lines.
+ * caller already handles. Mirrors the direct arms' precedence — word timestamps
+ * win, then segment rejoining, then the raw text — so a box switching routes
+ * sees the same transcript structure it saw before.
  */
 export function shapeOpenRouterResult(
   body: unknown,
-  { diarization, wordTimestamps }: { diarization: boolean; wordTimestamps: boolean },
+  { wordTimestamps }: { wordTimestamps: boolean },
 ): TranscriptionResult | DetailedTranscriptionResult {
   if (!isRecord(body)) throw new OpenRouterTranscriptionShapeError({ missing: "object" });
   if (typeof body["text"] !== "string") {
     throw new OpenRouterTranscriptionShapeError({ missing: "text" });
   }
   const rawText = body["text"];
-  const language = typeof body["language"] === "string" ? body["language"] : "unknown";
+  // Empty, not "unknown", when the model did not report one: `whisper.ts` fills
+  // `""` in the same case (the LLM audio variants never report a language), and
+  // this value reaches a card's frontmatter — the same recording must not
+  // describe itself differently depending on which key the box happens to hold.
+  const language = typeof body["language"] === "string" ? body["language"] : "";
   const segments = parseSegments(body["segments"]);
   const words = parseWords(body["words"]);
   const duration = resolveDuration(body, { segments, words });
@@ -181,9 +165,8 @@ export function shapeOpenRouterResult(
     return { text: rawText, duration, language, words } satisfies DetailedTranscriptionResult;
   }
 
-  const labeledText = diarization ? buildDiarizedText(segments) : null;
-  const text = labeledText ?? joinSegmentTexts(segments) ?? repairMissingSentenceSpaces(rawText);
-  return { text, duration, language, diarized: labeledText !== null };
+  const text = joinSegmentTexts(segments) ?? repairMissingSentenceSpaces(rawText);
+  return { text, duration, language };
 }
 
 /**
@@ -208,11 +191,9 @@ function parseSegments(raw: unknown): ParsedSegment[] | undefined {
   const segments: ParsedSegment[] = [];
   for (const item of raw) {
     if (!isRecord(item) || typeof item["text"] !== "string") continue;
-    const speaker = item["speaker"];
     segments.push({
       text: item["text"],
       ...(typeof item["end"] === "number" && { end: item["end"] }),
-      ...(typeof speaker === "number" && { speaker_id: `speaker_${String(speaker)}` }),
     });
   }
   return segments.length === 0 ? undefined : segments;

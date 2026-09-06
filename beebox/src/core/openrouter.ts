@@ -25,6 +25,10 @@
  * - **Deepgram batch transcription.** The model is there, but OpenRouter's
  *   normalized word shape has no confidence field, and per-word confidence is
  *   the reason that backend exists.
+ * - **Voxtral HQ transcription.** Measured 2026-09-06:
+ *   `mistralai/voxtral-mini-transcribe` refuses `verbose_json` through
+ *   OpenRouter and cannot diarize at all, so `voxtral-diarized` would lose the
+ *   only thing it is for. `transcription/openrouter.ts` carries the evidence.
  * - **The non-HQ batch transcription path.** It passes a context-bias `prompt`
  *   (`core/preactions/transcribe.ts`), and OpenRouter's transcription request
  *   has no such parameter. The HQ path passes none, so the HQ path can route.
