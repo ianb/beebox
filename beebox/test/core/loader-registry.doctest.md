@@ -85,3 +85,49 @@ warnings.length
 summarize({ path: "a.memo.card", type: "memo" }).title
 => second
 ```
+
+## Global card fields are surfaced without teaching every loader about them
+
+`title`, `contains` and `symbol` belong to every card, so `summarize` reads them
+rather than each loader remembering to.
+
+```ts
+resetLoaderRegistry();
+const s = summarize({
+  path: "_content/figures/Cube.figure.card",
+  type: "figure",
+  fields: { title: "Rotating Cube Demo", contains: "A spinning cube.", symbol: { glyph: "🧊" } },
+});
+[s.title, s.contains, s.symbol?.glyph].join("|")
+=> Rotating Cube Demo|A spinning cube.|🧊
+```
+
+A card's own `title:` beats the filename — that is the whole point, and it is
+what makes a retitled card retitle its tab.
+
+```ts continue
+summarize({ path: "_content/notes/Old_Name.doc.card", type: "doc", fields: { title: "New Name" } }).title
+=> New Name
+```
+
+But it never beats a title the loader computed on purpose. A memo's title IS
+its text, and a loader that made a real choice keeps it; the test is that the
+loader's title differs from what the filename alone would give.
+
+```ts continue
+registerTypeLoader("memo", (raw) => ({ path: raw.path, title: "the memo's own text", attrs: {} }));
+summarize({ path: "_content/inbox/Note.memo.card", type: "memo", fields: { title: "Ignored" } }).title
+=> the memo's own text
+```
+
+A malformed symbol is dropped rather than shipped — `readCardSymbol` validates
+before it resolves.
+
+```ts continue
+resetLoaderRegistry();
+summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: "🧊" } }).symbol
+=> undefined
+
+summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: { glyph: "  " } } }).symbol
+=> undefined
+```

@@ -100,9 +100,17 @@ function resolveLoader(input: LoaderInput): FileLoader<unknown> {
 export function summarize(input: LoaderInput): FileSummary<unknown> {
   const loader = resolveLoader(input);
   const summary = loader(input);
-  // `contains` and `symbol` are global card fields — surface them uniformly
-  // rather than teaching every loader about them.
+  // `title`, `contains` and `symbol` are global card fields — surface them
+  // uniformly rather than teaching every loader about them.
   let out = summary;
+  // A card's own `title:` beats the filename, but never beats a title a loader
+  // computed on purpose: a memo's title IS its text (`schemas/memo.ts`), and a
+  // loader that made a real choice must keep it. The test for "made a choice"
+  // is that the title differs from what the filename alone would give.
+  const declared = input.fields?.["title"];
+  if (typeof declared === "string" && declared.trim() !== "" && out.title === titleFromFilename(input.path)) {
+    out = { ...out, title: declared.trim() };
+  }
   if (out.contains === undefined && input.fields !== undefined) {
     const contains = input.fields["contains"];
     if (typeof contains === "string" && contains !== "") out = { ...out, contains };
