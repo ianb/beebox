@@ -154,7 +154,7 @@ export interface LandmarkIdentity {
  * walk. Backs `identity`, the mount-path query for callers that only need to
  * know WHERE they are (`PlacePill`'s face, `DocumentIcon`, `DocumentPlace`,
  * `ChatBarChrome`) — Track B splits this off so those don't pay for
- * derivation on every page load (see `docs/plans/card-prominence.md`,
+ * derivation on every page load (see `docs/implemented-plans/card-prominence.md`,
  * "Split identity from resolution"). Reads through the shared parse cache
  * (`card-cache.ts`) that `loadLandmarkSummaries` already warms.
  */

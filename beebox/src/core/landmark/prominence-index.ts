@@ -1,7 +1,7 @@
 /**
  * The prominence index: "which cards under this directory carry a level,
  * and what does each subdirectory's derived list boil down to" —
- * `docs/plans/card-prominence.md`, Track B.
+ * `docs/implemented-plans/card-prominence.md`, Track B.
  *
  * The unit of work is a landmark's **pruned subtree**: its directory and
  * every descendant directory, stopping at any directory that has its own

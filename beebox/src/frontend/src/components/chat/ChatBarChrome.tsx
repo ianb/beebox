@@ -91,7 +91,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   // The same landmark lookup the retired ContextChip made — react-query
   // dedupes it with the pill's own `identity` call for the same dir. Only
   // the label is needed here, so `identity` (not `forDir`'s full resolved
-  // link list) is the right query — `docs/plans/card-prominence.md`, "Split
+  // link list) is the right query — `docs/implemented-plans/card-prominence.md`, "Split
   // identity from resolution".
   const { data: landmarkData } = trpc.landmarks.identity.useQuery(
     { dir: contextDir ?? "" },

@@ -1,6 +1,6 @@
 /**
  * Browse's compact/raw listing-mode preference — persisted per viewer in
- * `localStorage` (`docs/plans/card-prominence.md`, Track C). Compact leads
+ * `localStorage` (`docs/implemented-plans/card-prominence.md`, Track C). Compact leads
  * with what matters and folds the rest behind "N more"
  * (`src/shared/browse-fold.ts`); raw is today's full listing, unfolded.
  *

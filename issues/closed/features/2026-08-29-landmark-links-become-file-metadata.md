@@ -1,6 +1,6 @@
 ---
 title: "Landmark links move from curated lists in the landmark card to metadata on the files themselves, with a fast aggregated view"
-workstream: unattached
+workstream: card-visibility
 area: beebox
 needs: [design]
 labels: [navigation, cards]
@@ -8,7 +8,11 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder proposal
 priority: normal
+resolution: implemented
 ---
+
+> Closed 2026-09-06 (card-visibility): implemented by `docs/implemented-plans/card-prominence.md` — the `prominence` frontmatter field, derived landmark links, and compact Browse folding.
+
 
 Today a landmark's link list is **centralized**: `links:` (and glob `expand`
 groups) in the landmark card's frontmatter (`src/schemas/landmark.ts:99,152`).
@@ -47,7 +51,7 @@ Design questions:
   file-side membership, or die — decide.
 - **Ordering/grouping.** Centralized lists encode order; distributed metadata
   needs an ordering story (weight? name? the sort-modes issue
-  [2026-08-06](2026-08-06-landmark-list-sort-modes-used-name-tree.md) is
+  [2026-08-06](../../features/2026-08-06-landmark-list-sort-modes-used-name-tree.md) is
   adjacent and should be designed with this).
 - **Who writes it.** Agents on card creation (guide + knowledge audit), and
   `refresh-maps` reconciling stragglers.

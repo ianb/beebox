@@ -3,7 +3,7 @@
  * raw-file rows. Appearance-heavy (hover states, selected highlight, row
  * chrome) so it lives in components/ rather than in the page.
  *
- * Compact mode (`docs/plans/card-prominence.md`, Track C) leads with
+ * Compact mode (`docs/implemented-plans/card-prominence.md`, Track C) leads with
  * `foldListing`'s `lead` tier, then folds `more` behind a single "N more"
  * disclosure, background items dimmed and last. Raw mode ignores prominence
  * entirely — today's flat listing, unchanged.

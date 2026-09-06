@@ -159,7 +159,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // A landmark's hand-curated `links:` entries and a target's own
   // `prominence` used to be two ways to say "surface this" and could
   // disagree. Marks every in-subtree link target that has no `prominence`
-  // yet as `primary` (docs/plans/card-prominence.md, Track D). The landmark
+  // yet as `primary` (docs/implemented-plans/card-prominence.md, Track D). The landmark
   // itself is never written.
   { name: "landmark-links-prominence", script: "scripts/migrate/landmark-links-prominence-run.ts" },
 ];

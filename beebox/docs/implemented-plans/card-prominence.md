@@ -1,10 +1,10 @@
 ---
 title: "Card prominence: visibility lives on the card, landmarks derive from it"
-status: active
+status: implemented
 workstream: card-visibility
 issues:
-  - ../../../issues/features/2026-06-12-card-level-prominence.md
-  - ../../../issues/features/2026-08-29-landmark-links-become-file-metadata.md
+  - ../../../issues/closed/features/2026-06-12-card-level-prominence.md
+  - ../../../issues/closed/features/2026-08-29-landmark-links-become-file-metadata.md
 ---
 # Card prominence: visibility lives on the card, landmarks derive from it
 

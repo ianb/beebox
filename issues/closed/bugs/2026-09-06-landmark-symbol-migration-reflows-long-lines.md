@@ -10,7 +10,7 @@ discovered-in: card-visibility worktree, Track D, writing the landmark-links-pro
 resolution: implemented
 ---
 
-> Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/docs/plans/card-prominence.md`.
+> Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/docs/implemented-plans/card-prominence.md`.
 
 `scripts/migrate/landmark-symbol.ts`'s `rewriteLandmarkSymbol` edits the
 frontmatter YAML document in place (`parseDocument` + `.set()`/`.delete()`)
@@ -23,7 +23,7 @@ touches — the exact "surgical edit, not a whole-file reflow" property the
 migration's own doc comment promises.
 
 Found while writing `landmark-links-prominence.ts` (Track D,
-`docs/plans/card-prominence.md`): its own `markPrimary` hit the identical bug
+`docs/implemented-plans/card-prominence.md`): its own `markPrimary` hit the identical bug
 against real `test1` cards (long `contains:`/`note:`/`evidence:` scalars in
 `.lesson-plan.card`/`.progress.card`) and was fixed there by passing
 `{ lineWidth: 0 }` to `doc.toString()` — the same option

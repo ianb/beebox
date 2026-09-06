@@ -53,7 +53,7 @@ export interface QuestionInfo extends CardInfo {
 export interface BrowseDir {
   name: string;
   fileCount: number;
-  /** The pruned-subtree rollup (`docs/plans/card-prominence.md`, Track B): does anything under it lead? */
+  /** The pruned-subtree rollup (`docs/implemented-plans/card-prominence.md`, Track B): does anything under it lead? */
   summary: DirectorySummary;
   /** This subdirectory's OWN landmark identity, when it holds a landmark card directly. */
   landmark?: BrowseDirLandmark | undefined;

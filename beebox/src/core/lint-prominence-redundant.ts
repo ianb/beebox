@@ -1,5 +1,5 @@
 /**
- * The redundant-`links:` info rule (`docs/plans/card-prominence.md`, Budget
+ * The redundant-`links:` info rule (`docs/implemented-plans/card-prominence.md`, Budget
  * lint): a landmark `links:` entry whose target is inside the landmark's OWN
  * pruned subtree (Track B), carries no `label`, and whose target already
  * says `primary`/`entry-point` says nothing a reader doesn't already get

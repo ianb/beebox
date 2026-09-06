@@ -154,7 +154,7 @@ export const LandmarkSchema: CardSchema = cardSchema("landmark", {
   category: "authored",
   // A landmark is a place marker, not a visitable file: it never lists in a
   // fold, and the directory's identity is drawn from it instead
-  // (docs/plans/card-prominence.md, "Type defaults"). A written `prominence`
+  // (docs/implemented-plans/card-prominence.md, "Type defaults"). A written `prominence`
   // still means something — see LandmarkObject above — but it describes the
   // place, not this file.
   prominence: "background",

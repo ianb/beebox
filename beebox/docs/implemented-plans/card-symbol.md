@@ -29,7 +29,7 @@ Grepped the queue for adjacent items (`symbol`, `icon`, `favicon`, `emoji`,
 `landmark`, `tab label`, `title`). Related but not resolved here:
 [disallow-dots-in-card-names](../../../issues/decisions/2026-09-05-disallow-dots-in-card-names.md)
 (a filename-grammar decision, independent),
-[card-level-prominence](../../../issues/features/2026-06-12-card-level-prominence.md)
+[card-level-prominence](../../../issues/closed/features/2026-06-12-card-level-prominence.md)
 and [directory-head-cards](../../../issues/features/2026-06-12-directory-head-cards.md)
 (both about which cards matter, not how they are marked — a symbol is not
 prominence and must not become a way to spell it).

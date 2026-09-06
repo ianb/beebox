@@ -1,7 +1,7 @@
 /**
  * Budget lint for `prominence` (`src/shared/prominence.ts`) — box-level rules
  * that catch the case where many individually-reasonable local decisions add
- * up wrong (`docs/plans/card-prominence.md`, "Budget lint"). Its own module,
+ * up wrong (`docs/implemented-plans/card-prominence.md`, "Budget lint"). Its own module,
  * on the pattern `lint-symbol.ts` sets, but box-level rather than one-card:
  * these rules need to see a directory's other cards, so it scans the box
  * itself instead of being dispatched per-card from `card-lint.ts`.

@@ -2,7 +2,7 @@
  * The `prominence:` bullet of the guide's "Frontmatter every card shares"
  * list (`cards.ts`). Its own module only for `cards.ts`'s line budget; the
  * vocabulary it teaches is the one settled with the boxholder on 2026-09-06
- * (`docs/plans/card-prominence.md`, Track A). One definition, one place: the
+ * (`docs/implemented-plans/card-prominence.md`, Track A). One definition, one place: the
  * landmark section and the package docs point here rather than restate it.
  */
 

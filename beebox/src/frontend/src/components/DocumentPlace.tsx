@@ -18,7 +18,7 @@
  *
  * The lookup is the same `landmarks.identity` query the app bar's place pill
  * runs for the same directory (both need only label/symbol, not the full
- * resolved link list `forDir` carries — `docs/plans/card-prominence.md`,
+ * resolved link list `forDir` carries — `docs/implemented-plans/card-prominence.md`,
  * "Split identity from resolution"), so this is that query's cache entry,
  * not a second request.
  *

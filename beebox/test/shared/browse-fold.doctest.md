@@ -1,7 +1,7 @@
 # `browse-fold.ts` — the Browse compact/raw fold decision
 
 `foldListing(listing)` is the pure fold decision behind compact Browse
-(`docs/plans/card-prominence.md`, Track C): what leads a directory's
+(`docs/implemented-plans/card-prominence.md`, Track C): what leads a directory's
 listing, and what folds behind "N more". Every branch in the module doc.
 
 ```ts setup

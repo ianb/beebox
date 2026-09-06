@@ -1,6 +1,6 @@
 # Browse's compact/raw listing modes
 
-`BrowseSidebarList`'s `mode` prop (`docs/plans/card-prominence.md`, Track C):
+`BrowseSidebarList`'s `mode` prop (`docs/implemented-plans/card-prominence.md`, Track C):
 compact leads with `foldListing`'s `lead` tier and folds the rest behind one
 "N more" disclosure; raw ignores prominence and renders today's flat
 listing. A listing with nothing prominent renders identically in both

@@ -15,7 +15,7 @@
  *
  * Three lazinesses matter. The FACE's landmark lookup (`landmarks.identity`)
  * runs per-place on mount — cheap, one glob and one cached parse, no link/
- * expand resolution and no pruned-subtree walk (`docs/plans/card-prominence.md`,
+ * expand resolution and no pruned-subtree walk (`docs/implemented-plans/card-prominence.md`,
  * "Split identity from resolution"). The switch menu's `chat.placeMenu` —
  * which globs every landmark — and the here menu's `landmarks.forDir` — which
  * resolves this landmark's full link list, including its derived children —

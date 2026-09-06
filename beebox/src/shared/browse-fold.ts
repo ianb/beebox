@@ -1,5 +1,5 @@
 /**
- * The Browse fold decision — `docs/plans/card-prominence.md`, Track C.
+ * The Browse fold decision — `docs/implemented-plans/card-prominence.md`, Track C.
  *
  * Pure function over a plain listing shape: given a directory's cards
  * (carrying an effective `prominence`), plain files, and subdirectories

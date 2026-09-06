@@ -84,7 +84,7 @@ export interface LandmarkSummary {
 
 /**
  * Something a landmark reader couldn't fully honor. Two distinct causes, kept
- * as a discriminated union rather than one flat shape (`docs/plans/card-prominence.md`,
+ * as a discriminated union rather than one flat shape (`docs/implemented-plans/card-prominence.md`,
  * Track B): a `*.landmark.card` that exists but doesn't parse as a landmark,
  * or a derived link (Track B) whose target couldn't be read. Every producer/
  * consumer switches on `kind` — see `landmarks.ts`, `chat-place-menu-procedure.ts`,

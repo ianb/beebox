@@ -16,7 +16,7 @@ Key properties:
 - **Thing-first, container-secondary.** The card itself is the widget. It can point at nearby cards, but it doesn't *contain* them — it references them.
 - **Evergreen.** Content describes what the spot is and what's notable, long-term. Not "this week's top three." Permanence is implied by the metaphor.
 - **Derived first, curated for the rest.** The list is mostly the cards under the directory that carry `prominence: entry-point` or `prominence: primary` (see "Derived links" below); `links:` is the curated exception for what a card cannot say about itself, and an `expand` entry is templated fan-out for "list everything matching X". Ordering is by tier, then by name; a fixed order is what `links:` is for.
-- **A place marker, not a visitable file.** The landmark card is `background` by type: Browse folds it and draws the directory's identity from it. The place's entry point, if it has one, is a visitable card inside the directory. See `docs/implemented-plans/card-prominence.md` once shipped, `docs/plans/card-prominence.md` until then.
+- **A place marker, not a visitable file.** The landmark card is `background` by type: Browse folds it and draws the directory's identity from it. The place's entry point, if it has one, is a visitable card inside the directory. See `docs/implemented-plans/card-prominence.md`.
 
 ### Distinct from `briefing`
 

@@ -2,7 +2,7 @@
 
 `prunedSubtree(boxRoot, dir)` answers "which cards under this landmark's
 directory carry a level, and what does the pruned tree boil down to" —
-`docs/plans/card-prominence.md`, Track B. It stops at any directory that has
+`docs/implemented-plans/card-prominence.md`, Track B. It stops at any directory that has
 its own landmark card (contributing one `nested` entry instead), never
 enters an OWNED `<basename>.attach/` scope unless that scope holds its own
 landmark, and folds to nothing under a `background` landmark — the top one

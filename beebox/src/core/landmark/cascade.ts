@@ -1,5 +1,5 @@
 /**
- * The box-wide `background` cascade (`docs/plans/card-prominence.md`, "Box-wide
+ * The box-wide `background` cascade (`docs/implemented-plans/card-prominence.md`, "Box-wide
  * cascade"): a landmark written `prominence: background` drops off the
  * Landmarks page (`landmarks.list`) and the switch menu (`chat.placeMenu`),
  * and so does every landmark nested under it — a directory doesn't stop

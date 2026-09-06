@@ -2,7 +2,7 @@
  * `*.landmark.card`: give every `navigation.links[]` target inside the
  * landmark's own pruned subtree (`core/landmark/prominence-index.ts`,
  * `prunedSubtree`) an explicit `prominence: primary`, when the target has
- * none written yet — `docs/plans/card-prominence.md`, Track D. CLI entry
+ * none written yet — `docs/implemented-plans/card-prominence.md`, Track D. CLI entry
  * point and usage: `landmark-links-prominence-run.ts`.
  *
  * A landmark's list predates `prominence`. Without this, a curated link and

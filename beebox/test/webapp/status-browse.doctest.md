@@ -1,6 +1,6 @@
 # `status.browse` — the listing carries prominence
 
-Track C of `docs/plans/card-prominence.md`: `status.browse` adds each
+Track C of `docs/implemented-plans/card-prominence.md`: `status.browse` adds each
 card's effective `prominence`, each subdirectory's pruned-subtree
 `DirectorySummary` (plus its own landmark identity when it has one), and
 the listed directory's own `background` cascade. No doctest previously

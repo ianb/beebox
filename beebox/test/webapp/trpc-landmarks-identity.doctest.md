@@ -3,7 +3,7 @@
 `landmarks.identity` is the cheap mount-path read (label, symbol, dir, the
 landmark's own written `prominence`) that `PlacePill`, `DocumentIcon`,
 `DocumentPlace`, and `ChatBarChrome` use instead of `forDir` — no link/expand
-resolution, no pruned-subtree walk (`docs/plans/card-prominence.md`, "Split
+resolution, no pruned-subtree walk (`docs/implemented-plans/card-prominence.md`, "Split
 identity from resolution"). `forDir` keeps the full payload, now including
 Track B's derived children spliced into `links`.
 

@@ -1,6 +1,6 @@
 # Derived children in the resolved link list
 
-Track B (`docs/plans/card-prominence.md`) splices a landmark's pruned subtree
+Track B (`docs/implemented-plans/card-prominence.md`) splices a landmark's pruned subtree
 (`prominence-index.ts`) into `resolveLandmark`'s flat list: hand-listed
 `links` first, then derived `entry-point` cards, then derived `primary`
 cards, then nested landmarks, then unnamed `expand` results — deduped by ref
