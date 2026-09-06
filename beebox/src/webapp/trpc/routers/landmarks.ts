@@ -8,158 +8,25 @@
  * rather than silently dropping it. See docs/landmarks.md.
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, ownerProcedure } from "../trpc.js";
-import {
-  resolveLandmark,
-  type ResolvedLink,
-  type ResolvedGroup,
-} from "../../../core/landmark/resolve.js";
 import { boxRelativePathSchema } from "../../../core/landmark/nearest.js";
-import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 import type { LandmarkProblem } from "../../../core/landmark/summaries.js";
-import { parseLandmarkFields } from "../../../schemas/landmark.js";
-import { readLandmarkSymbol } from "../../../core/landmark/symbol.js";
-import { normalizeLandmarkDir, landmarkScanRelDir } from "../../../core/landmark/root-dir.js";
-import { errorMessage } from "../../../lib/error-guards.js";
+import { landmarkScanRelDir } from "../../../core/landmark/root-dir.js";
+import { isListedLandmark } from "../../../core/landmark/cascade.js";
 import { loadHqDictationDefault } from "../../../core/box/config.js";
 import { setLandmarkHqPreference } from "../../../core/landmark/hq-preference.js";
-import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../../../lib/box-namespace-resolve.js";
-import type { CardSymbolData } from "../../../shared/card-symbol.js";
+import {
+  loadLandmarkPayload,
+  loadLandmarkIdentity,
+  assertLandmarkDirInNamespace,
+  type LandmarkPayload,
+  type LandmarkIdentity,
+} from "./landmark-payload.js";
 
-export interface LandmarkPayload {
-  /** Box-relative path of the landmark card. */
-  path: string;
-  /** Box-relative directory containing the landmark. */
-  dir: string;
-  /** Label text (falls back to filename-derived title). */
-  label: string;
-  /**
-   * The landmark's mark — the card's own `symbol` group, with `src` resolved to
-   * a box-relative path. Null when the card has none.
-   */
-  symbol: CardSymbolData | null;
-  /** Resolved hand-listed + unnamed-expand links, in source order with dedup. */
-  links: ResolvedLink[];
-  /** Named expands kept as collapsible groups (submenus). */
-  groups: ResolvedGroup[];
-  /** Nesting depth relative to ancestor landmarks (root = 0). */
-  depth: number;
-  /**
-   * Chat-feature seeds (e.g. `{ narration: "on" }`) declared via
-   * `navigation.chat-app`. Applied at session-open time for chats bound
-   * to this landmark's directory.
-   */
-  features: Record<string, string>;
-}
-
-/**
- * Outcome of reading one landmark card. A card that exists but doesn't parse
- * is a distinct failure from one we couldn't read at all: the first is a
- * hand-edit the boxholder can fix and is surfaced as a `problem`, the second
- * is an fs error we've already warned about and can say nothing useful about.
- */
-type LandmarkLoad =
-  | { status: "ok"; payload: LandmarkPayload }
-  | { status: "unparsed" }
-  | { status: "unreadable" };
-
-/**
- * Read one `*.landmark.card` file and resolve it into a payload.
- * `relPath` is box-relative.
- *
- * Finding 2 (round 4 hardening): a glob match is just a name that satisfied
- * `**\/*.landmark.card` on disk — it says nothing about where the path
- * actually RESOLVES to. `_content/A.landmark.card -> ../src/private.landmark.card`
- * matches the glob and reads back as a real landmark, but its bytes are
- * `src/private.landmark.card` — outside every underscore area. Every landmark
- * card this router reads goes through `resolveBoxNamespacePathOnDisk` (read
- * mode) FIRST, so a symlinked card whose target escapes the box namespace is
- * refused before `fs.readFile` ever follows the link — the same fence
- * `forDir`/`list`'s directory-level checks already apply to the scan ROOT,
- * now applied to each individual card path too.
- */
-async function loadLandmarkPayload(
-  relPath: string,
-  { boxRoot }: { boxRoot: string },
-): Promise<LandmarkLoad> {
-  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: relPath, mode: "read" });
-  if (!ns.ok) {
-    console.warn(`landmarks: ${relPath} is outside the box namespace (symlink escape?) — skipping`);
-    return { status: "unreadable" };
-  }
-  const absPath = ns.resolved;
-  let fields;
-  try {
-    const content = await fs.readFile(absPath, "utf-8");
-    fields = parseLandmarkFields(content);
-  } catch (e) {
-    console.warn(`landmarks: failed to read ${relPath}: ${errorMessage(e)}`);
-    return { status: "unreadable" };
-  }
-  if (fields === null) return { status: "unparsed" };
-
-  const navigation = fields.navigation;
-  const dir = normalizeLandmarkDir(path.dirname(relPath));
-  const landmarkDir = path.dirname(absPath);
-  const { links, groups } = await resolveLandmark(navigation, {
-    landmarkDir,
-    landmarkPath: relPath,
-    boxRoot,
-  });
-  const symbol = readLandmarkSymbol(fields, { landmarkPath: relPath });
-
-  return {
-    status: "ok",
-    payload: {
-      path: relPath,
-      dir,
-      // Filename-basename fallback, matching `loadLandmarkSummaries`: a
-      // label-less card (e.g. a destinations-only landmark) must never ship
-      // an empty label — the app bar renders it as a blank pill face.
-      label: (navigation?.label ?? "") || path.basename(relPath, ".landmark.card"),
-      symbol,
-      links,
-      groups,
-      // Overwritten by the ancestor traversal in `list` after sorting.
-      depth: 0,
-      features: readLandmarkFeatures(navigation),
-    },
-  };
-}
-
-/**
- * Finding 3 (Track E hardening review, round 3): the tRPC-level `dir`
- * validation below (`!d.startsWith("/") && !d.split("/").includes("..")`)
- * rejects an escaping form but NOT a directory outside every underscore
- * area — `dir: "src/templates"` passes it and named a real on-disk
- * directory that `setHqPreference` then wrote a landmark card into. Resolve
- * the logical `dir` to its PHYSICAL box-relative directory
- * (`landmarkScanRelDir` — "" maps to the root scope's real home,
- * `_content/`) and require it inside the box namespace, checked on disk (so
- * a namespace-looking directory that's actually a symlink out doesn't pass
- * either). `mode: "write"` for the mutation, `"read"` for the two queries.
- */
-async function assertLandmarkDirInNamespace(params: {
-  boxRoot: string;
-  dir: string;
-  mode: BoxNamespaceAccessMode;
-}): Promise<void> {
-  const ns = await resolveBoxNamespacePathOnDisk({
-    boxRoot: params.boxRoot,
-    rawPath: landmarkScanRelDir(params.dir),
-    mode: params.mode,
-  });
-  if (!ns.ok) {
-    const message =
-      ns.reason === "display-form" ? ns.message : `dir is outside the box namespace: ${params.dir}`;
-    throw new TRPCError({ code: "BAD_REQUEST", message });
-  }
-}
+export type { LandmarkPayload, LandmarkIdentity } from "./landmark-payload.js";
 
 export const landmarksRouter = router({
   hqPreferences: ownerProcedure
@@ -171,7 +38,7 @@ export const landmarksRouter = router({
       const relPath = matches.toSorted()[0];
       let landmark: "inherit" | "on" | "off" = "inherit";
       if (relPath !== undefined) {
-        const loaded = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot });
+        const loaded = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot, derive: false });
         const value = loaded.status === "ok" ? loaded.payload.features["hq-dictation"] : undefined;
         if (value === "on" || value === "off") landmark = value;
       }
@@ -205,9 +72,13 @@ export const landmarksRouter = router({
     const problems: LandmarkProblem[] = [];
 
     for (const relPath of matches) {
-      const load = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot });
-      if (load.status === "ok") payloads.push(load.payload);
-      else if (load.status === "unparsed") problems.push({ path: relPath });
+      const load = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot, derive: true });
+      if (load.status === "ok") {
+        payloads.push(load.payload);
+        problems.push(...load.derivedProblems);
+      } else if (load.status === "unparsed") {
+        problems.push({ kind: "landmark-parse", path: relPath });
+      }
     }
     problems.sort((a, b) => a.path.localeCompare(b.path));
 
@@ -249,7 +120,11 @@ export const landmarksRouter = router({
       lm.depth = depth;
     }
 
-    return { landmarks: payloads, problems };
+    // Box-wide background cascade: drop a landmark written `background`, and
+    // any landmark with a `background` ancestor landmark.
+    const listed = payloads.filter((lm) => isListedLandmark(lm, payloads));
+
+    return { landmarks: listed, problems };
   }),
 
   /**
@@ -276,7 +151,43 @@ export const landmarksRouter = router({
       // One landmark per directory by convention; take the first match.
       const relPath = matches.toSorted()[0];
       if (relPath === undefined) return { landmark: null };
-      const load = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot });
-      return { landmark: load.status === "ok" ? load.payload : null };
+      const load = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot, derive: true });
+      if (load.status !== "ok") return { landmark: null };
+      // No `problems` channel here (this is the mount-scoped, per-directory
+      // read, not the box-wide scan) — a derived link that vanished between
+      // the walk and resolution is logged and dropped rather than shown
+      // missing, same as `derivedProblems`' doc comment says.
+      for (const problem of load.derivedProblems) {
+        console.warn(`landmarks.forDir: ${problem.path} (linked from ${problem.landmarkPath}): ${problem.message}`);
+      }
+      return { landmark: load.payload };
+    }),
+
+  /**
+   * Label, symbol, path, and the written `prominence` for the landmark
+   * living directly in `dir` — no link/expand resolution, no pruned-subtree
+   * walk. For the mount-path callers that only need to know WHERE they are
+   * (`PlacePill`'s face, `DocumentIcon`, `DocumentPlace`, `ChatBarChrome`);
+   * `forDir` stays the one to call when the caller actually renders a link
+   * list. See `loadLandmarkIdentity`'s header.
+   */
+  identity: publicProcedure
+    .input(
+      z.object({
+        dir: boxRelativePathSchema,
+      }),
+    )
+    .query(async ({ ctx, input }): Promise<{ identity: LandmarkIdentity | null }> => {
+      await assertLandmarkDirInNamespace({ boxRoot: ctx.boxRoot, dir: input.dir, mode: "read" });
+      const pattern = `${landmarkScanRelDir(input.dir)}/*.landmark.card`;
+      const matches = await glob(pattern, {
+        cwd: ctx.boxRoot,
+        nodir: true,
+        ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
+      });
+      const relPath = matches.toSorted()[0];
+      if (relPath === undefined) return { identity: null };
+      const identity = await loadLandmarkIdentity(relPath, { boxRoot: ctx.boxRoot });
+      return { identity: typeof identity === "string" ? null : identity };
     }),
 });

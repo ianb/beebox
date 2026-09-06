@@ -24,6 +24,7 @@ import { publicProcedure } from "../trpc.js";
 import { listSessionEntries } from "../../../core/chat/session/list.js";
 import { CHAT_FRESH_WINDOW_MS } from "../../../core/chat/session/recent-landmark.js";
 import { loadLandmarkSummaries, type LandmarkProblem } from "../../../core/landmark/summaries.js";
+import { isListedLandmark } from "../../../core/landmark/cascade.js";
 import type { CardSymbolData } from "../../../shared/card-symbol.js";
 
 /** One switchable place as the menu draws it. */
@@ -88,7 +89,12 @@ export const chatPlaceMenuProcedure = {
       }
     }
 
-    const landmarks: PlaceMenuLandmark[] = summaries.map((lm) => ({
+    // Box-wide background cascade: drop a landmark written `background`, and
+    // any landmark with a `background` ancestor landmark — the switch menu
+    // should not offer a place that folds away everywhere else.
+    const visible = summaries.filter((lm) => isListedLandmark(lm, summaries));
+
+    const landmarks: PlaceMenuLandmark[] = visible.map((lm) => ({
       path: lm.path,
       dir: lm.dir,
       label: lm.label,
@@ -108,7 +114,7 @@ export const chatPlaceMenuProcedure = {
       return a.label.localeCompare(b.label);
     });
 
-    const hasRootLandmark = summaries.some((lm) => lm.dir === "");
+    const hasRootLandmark = visible.some((lm) => lm.dir === "");
     return {
       landmarks,
       rootFreshCount: hasRootLandmark ? 0 : byDir.get("")?.fresh ?? 0,

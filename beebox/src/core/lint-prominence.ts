@@ -20,6 +20,7 @@ import { typeFromFilename, type LoadCardContext } from "./card-io.js";
 import { effectiveLevel, type ProminenceLevel } from "../shared/prominence.js";
 import { attachDirOwnerBasename, cardBasename, isAttachDirName, isInsideAttachScope } from "../shared/attach-path.js";
 import { LANDMARK_CONTENT_DIR } from "./landmark/root-dir.js";
+import { redundantLinkWarnings } from "./lint-prominence-redundant.js";
 
 /** More than this many entry points in one directory is a warning. */
 export const MAX_ENTRY_POINTS_PER_DIR = 2;
@@ -35,8 +36,16 @@ export interface ProminenceLintWarning {
     | "under-background-landmark"
     | "inside-attach-scope"
     | "landmark-prominence"
-    | "background-root-landmark";
+    | "background-root-landmark"
+    | "redundant-link";
   message: string;
+  /**
+   * `"warning"` (the default budget/cascade rules) or `"info"` (the
+   * redundant-link rule alone) — a directory over budget is untidy, a
+   * redundant link is a cleanup opportunity, never urgent either way. Never
+   * counted toward `bbx validate`'s exit code regardless of severity.
+   */
+  severity: "warning" | "info";
 }
 
 interface CardRecord {
@@ -73,6 +82,7 @@ export async function lintProminenceBudget(
   await readCardRecords(state, ctx);
 
   const byDir = new Map<string, CardRecord[]>();
+  const backgroundLandmarksByDir = new Map<string, CardRecord>();
   for (const card of state.records) {
     const existing = byDir.get(card.dir);
     if (existing) {
@@ -80,22 +90,21 @@ export async function lintProminenceBudget(
     } else {
       byDir.set(card.dir, [card]);
     }
+    if (card.isLandmark && card.declared === "background") backgroundLandmarksByDir.set(card.dir, card);
   }
 
-  for (const [dir, dirCards] of byDir) {
-    budgetWarnings({ dir, dirCards }, state.warnings);
-    const landmark = dirCards.find((c) => c.isLandmark);
-    if (landmark === undefined || landmark.declared !== "background") continue;
-    cascadeWarnings({ landmark, dirCards }, state.warnings);
-    if (dir === LANDMARK_CONTENT_DIR) {
-      state.warnings.push({
-        path: landmark.relPath,
-        rule: "background-root-landmark",
-        message:
-          "the root landmark is marked prominence: background — that folds the whole box away everywhere " +
-          "the root landmark's place is consulted; remove it, or confirm the box is meant to open empty",
-      });
-    }
+  for (const [dir, dirCards] of byDir) budgetWarnings({ dir, dirCards }, state.warnings);
+
+  for (const landmark of backgroundLandmarksByDir.values()) {
+    if (landmark.dir !== LANDMARK_CONTENT_DIR) continue;
+    state.warnings.push({
+      path: landmark.relPath,
+      rule: "background-root-landmark",
+      severity: "warning",
+      message:
+        "the root landmark is marked prominence: background — that folds the whole box away everywhere " +
+        "the root landmark's place is consulted; remove it, or confirm the box is meant to open empty",
+    });
   }
 
   for (const card of state.records) {
@@ -103,8 +112,14 @@ export async function lintProminenceBudget(
       landmarkOwnLevelWarning(card, state.warnings);
       continue;
     }
+    cascadeWarning(card, { backgroundLandmarksByDir, warnings: state.warnings });
     attachScopeWarning(card, state);
   }
+
+  await redundantLinkWarnings(state.boxRoot, {
+    landmarks: state.records.filter((r) => r.isLandmark),
+    warnings: state.warnings,
+  });
 
   state.warnings.sort((a, b) => a.path.localeCompare(b.path) || a.rule.localeCompare(b.rule));
   return state.warnings;
@@ -120,6 +135,7 @@ function budgetWarnings(
     warnings.push({
       path: dirLabel,
       rule: "too-many-entry-points",
+      severity: "warning",
       message:
         `${String(entryPoints.length)} entry points in one directory; an entry point is where a newcomer ` +
         "starts, and a directory usually has one",
@@ -130,6 +146,7 @@ function budgetWarnings(
     warnings.push({
       path: dirLabel,
       rule: "too-many-primary",
+      severity: "warning",
       message:
         `${String(primaries.length)} primary cards in ${dirLabel}; primary is the thing itself, ` +
         "not everything good — if everything here is the thing, mark nothing and give the directory an entry point",
@@ -137,22 +154,41 @@ function budgetWarnings(
   }
 }
 
-/** `primary`/`entry-point` cards sharing a directory with a landmark explicitly marked `background`. */
-function cascadeWarnings(
-  { landmark, dirCards }: { landmark: CardRecord; dirCards: CardRecord[] },
-  warnings: ProminenceLintWarning[]
+/**
+ * `primary`/`entry-point` on a card whose OWN directory's landmark, or any
+ * ANCESTOR directory's landmark, is written `background` — walking every
+ * ancestor directory (not only the nearest landmark-holding one), so a
+ * background landmark two levels up still folds a grandchild even through
+ * an intervening non-background landmark. Same ancestor-walk shape as
+ * `cascade.ts`'s `isListedLandmark`, at the card level instead of the
+ * landmark level.
+ */
+function cascadeWarning(
+  card: CardRecord,
+  { backgroundLandmarksByDir, warnings }: { backgroundLandmarksByDir: Map<string, CardRecord>; warnings: ProminenceLintWarning[] },
 ): void {
-  for (const card of dirCards) {
-    if (card.isLandmark) continue;
-    if (card.effective !== "primary" && card.effective !== "entry-point") continue;
+  if (card.isLandmark) return;
+  if (card.effective !== "primary" && card.effective !== "entry-point") return;
+  for (let cursor: string | null = card.dir; cursor !== null; cursor = ancestorDir(cursor)) {
+    const landmark = backgroundLandmarksByDir.get(cursor);
+    if (landmark === undefined) continue;
     warnings.push({
       path: card.relPath,
       rule: "under-background-landmark",
+      severity: "warning",
       message:
         `${card.relPath} is marked ${card.effective}, but its landmark ${landmark.relPath} is marked ` +
         "prominence: background — a background place folds away everything under it",
     });
+    return;
   }
+}
+
+/** Ancestor directory of `dir`, or null once past the box root. Mirrors `prominence-index.ts`'s `parentLandmarkDir`. */
+function ancestorDir(dir: string): string | null {
+  if (dir === "") return null;
+  const parent = path.dirname(dir);
+  return parent === "." ? "" : parent;
 }
 
 /** `entry-point`/`primary` written directly on a landmark card. */
@@ -161,6 +197,7 @@ function landmarkOwnLevelWarning(landmark: CardRecord, warnings: ProminenceLintW
   warnings.push({
     path: landmark.relPath,
     rule: "landmark-prominence",
+    severity: "warning",
     message: "a landmark marks a place; the place's entry point is a visitable card inside it",
   });
 }
@@ -173,6 +210,7 @@ function attachScopeWarning(card: CardRecord, state: ScanState): void {
   state.warnings.push({
     path: card.relPath,
     rule: "inside-attach-scope",
+    severity: "warning",
     message: "prominence inside an attach scope has no effect; mark the owner card, or list it in the landmark's `links:`",
   });
 }
@@ -239,12 +277,13 @@ function dirOf(relPath: string): string {
   return dir === "." ? "" : dir;
 }
 
-/** Format prominence-budget warnings for `bbx validate`'s text output. Warning-severity: never counted toward the exit code. */
+/** Format prominence-budget warnings for `bbx validate`'s text output. Never counted toward the exit code, `info` included. */
 export function formatProminenceLintWarnings(warnings: ProminenceLintWarning[], { colors }: { colors: boolean }): string {
   if (warnings.length === 0) return "";
   const ESC = "";
   const yellow = colors ? (s: string) => `${ESC}[33m${s}${ESC}[0m` : (s: string) => s;
+  const cyan = colors ? (s: string) => `${ESC}[36m${s}${ESC}[0m` : (s: string) => s;
   return warnings
-    .map((w) => `${yellow("warning")}  ${w.path}  [${w.rule}] ${w.message}`)
+    .map((w) => `${w.severity === "info" ? cyan("info") : yellow("warning")}  ${w.path}  [${w.rule}] ${w.message}`)
     .join("\n");
 }

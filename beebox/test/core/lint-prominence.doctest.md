@@ -196,3 +196,59 @@ await warningsFor(box10)
 await box9.cleanup();
 await box10.cleanup();
 ```
+
+## A `background` landmark cascades through an intervening non-background landmark
+
+`_content/A` is `background`; `_content/A/B` has its OWN (non-background)
+landmark; a `primary` card two levels down in `_content/A/B/C` is still
+under `A`'s cascade even though the nearest landmark isn't the background
+one.
+
+```ts
+const box11 = await makeTmpBox();
+await box11.write("_content/A/A.landmark.card", "---\nprominence: background\n---\n");
+await box11.write("_content/A/B/B.landmark.card", "---\nnavigation:\n  label: B\n---\n");
+await box11.write("_content/A/B/C/Deep.memo.card", "---\nprominence: primary\n---\n");
+await warningsFor(box11)
+=> under-background-landmark: _content/A/B/C/Deep.memo.card: _content/A/B/C/Deep.memo.card is marked primary, but its landmark _content/A/A.landmark.card is marked prominence: background — a background place folds away everything under it
+```
+
+```ts cleanup
+await box11.cleanup();
+```
+
+## A redundant `links:` entry — info, not a warning
+
+The landmark links its own `Plan.memo.card`, which is already marked
+`primary` and inside the landmark's pruned subtree, with no label: the
+derived list already shows it, so the entry is redundant.
+
+```ts
+const box12 = await makeTmpBox();
+await box12.write(
+  "_content/proj/Proj.landmark.card",
+  "---\nnavigation:\n  label: Proj\n  links:\n    - ref: /_content/proj/Plan.memo.card\n---\n",
+);
+await box12.write("_content/proj/Plan.memo.card", "---\nprominence: primary\n---\n");
+await warningsFor(box12)
+=> redundant-link: _content/proj/Proj.landmark.card: link to _content/proj/Plan.memo.card is redundant with the target's own prominence: primary — the derived list already surfaces it
+```
+
+A LABELED entry, or one pointing outside the landmark's pruned subtree
+(a nested landmark's territory), is not flagged.
+
+```ts continue
+const box13 = await makeTmpBox();
+await box13.write(
+  "_content/proj/Proj.landmark.card",
+  "---\nnavigation:\n  label: Proj\n  links:\n    - ref: /_content/proj/Plan.memo.card\n      label: the plan\n---\n",
+);
+await box13.write("_content/proj/Plan.memo.card", "---\nprominence: primary\n---\n");
+await warningsFor(box13)
+=>
+```
+
+```ts cleanup
+await box12.cleanup();
+await box13.cleanup();
+```

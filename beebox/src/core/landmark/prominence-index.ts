@@ -84,8 +84,12 @@ export async function prunedSubtree(boxRoot: string, dir: string): Promise<Prune
   return { entries: state.entries, nested: state.nested, summary: { hasEntryPoint, primaryCount, background: false } };
 }
 
-/** Logical parent of a box-relative landmark dir ("" has none). */
-function parentDir(dir: string): string | null {
+/**
+ * Logical parent of a box-relative landmark dir ("" has none). Exported for
+ * `cascade.ts`'s `isListedLandmark`, which walks the same ancestor chain to
+ * decide whether a landmark is under a `background` ancestor.
+ */
+export function parentLandmarkDir(dir: string): string | null {
   if (dir === "") return null;
   const i = dir.lastIndexOf("/");
   return i === -1 ? "" : dir.slice(0, i);
@@ -93,7 +97,7 @@ function parentDir(dir: string): string | null {
 
 /** Whether `dir`'s own landmark, or any ancestor's, is written `prominence: background`. */
 async function isUnderBackgroundAncestor(boxRoot: string, dir: string): Promise<boolean> {
-  for (let cursor: string | null = dir; cursor !== null; cursor = parentDir(cursor)) {
+  for (let cursor: string | null = dir; cursor !== null; cursor = parentLandmarkDir(cursor)) {
     if (await landmarkAtDirIsBackground(boxRoot, cursor)) return true;
   }
   return false;
@@ -214,7 +218,13 @@ async function addNestedLandmark(state: WalkState, absPath: string): Promise<voi
   // can't say so statically.
   const level = resolved === "ordinary" ? "background" : resolved;
 
-  state.nested.push({ path: relPath, dir: normalizeLandmarkDir(path.dirname(relPath)), label, symbol });
+  state.nested.push({
+    path: relPath,
+    dir: normalizeLandmarkDir(path.dirname(relPath)),
+    label,
+    symbol,
+    prominence: fields.prominence ?? null,
+  });
   state.entries.push({ boxPath: `/${relPath}`, level, kind: "landmark" });
 }
 
