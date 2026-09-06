@@ -50,6 +50,7 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
   } else {
     lines.push(`HQ transcription (${hqService}) → Mistral only; OpenRouter cannot serve Voxtral`);
   }
+  // TODO(env-migration): long-tail feature-gate var, direct read per src/lib/env.ts.
   if (process.env["BBX_SCAN_VISION"] === "gemini") routes.push(["scan vision", geminiKey]);
   // Speech is a chosen backend, not a fallback, so it reports the choice
   // rather than which key won: `gemini` reaches OpenRouter by definition.
@@ -89,6 +90,7 @@ export async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
     directKey: await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false }),
     observe: false,
   });
+  // TODO(env-migration): long-tail feature-gate var, direct read per src/lib/env.ts.
   const geminiSelected = process.env["BBX_SCAN_VISION"] === "gemini";
   const message =
     route !== null
