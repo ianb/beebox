@@ -72,7 +72,7 @@ nope.statusCode
 => 404
 
 nope.body.error
-=> Unknown adapter "nope" — available: replicate, mistral, anthropic, openai
+=> Unknown adapter "nope" — available: replicate, mistral, anthropic, openai, openrouter
 ```
 
 ```ts cleanup
