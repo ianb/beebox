@@ -109,7 +109,12 @@ auth, so it is out of scope with the main agent model.
 - **No OpenAI TTS.** Not a quality trade-off; the model is absent. Our
   `VOICE_MODELS` vocabulary (alloy…verse) is a closed set in the personality
   card schema, so any substitute is a schema and content migration, not a
-  routing change.
+  routing change. **Corrected 2026-09-06:** "no model" was too strong —
+  OpenRouter carries eighteen TTS models from other vendors and most work well
+  (measured in
+  [TTS over OpenRouter](2026-09-06-openrouter-tts-options.md)). What is missing
+  is an OpenAI model, a backend seam to select a substitute, and the
+  `instructions` style prompt, which OpenRouter's speech request drops silently.
 
 ### Egress, retention, cost, concentration
 
@@ -162,7 +167,7 @@ auth, so it is out of scope with the main agent model.
    backend.
 7. All three realtime dictation paths (#9, #10, #11) — structural, not a gap
    that closes with a model release.
-8. Text-to-speech (#8) — no model, and the voice vocabulary is schema-level.
+8. Text-to-speech (#8) — no *OpenAI* model, and the voice vocabulary is schema-level.
 
 ### Voice, as its own line
 
