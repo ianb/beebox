@@ -76,7 +76,7 @@ export interface InitOptions {
 export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
   // Detects what's already at `targetPath`: an existing box (marker at the
   // target itself) or nothing yet. A fresh init always scaffolds the
-  // one-root layout — see `docs/plans/one-root-box-layout.md`.
+  // one-root layout — see `docs/implemented-plans/one-root-box-layout.md`.
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 
@@ -203,7 +203,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // and skills moved onto this path, init's own direct calls gave that
   // guarantee; `force` is what preserves it.
   await generateDocs(boxRoot, { force: true });
-  console.log("Generated agent docs in .beebox/ and _content/docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/");
+  console.log("Generated the agent guide in .beebox/, box-compiled docs in _content/docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/ (beebox reference docs: node_modules/beebox/box-docs/)");
 
   // Build the search index so the first `bbx search` isn't a cold build.
   await openSearchIndex(boxRoot, {

@@ -9,9 +9,10 @@ The on-disk shape of a beebox. This is the canonical reference for beebox develo
 A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working tree is the entire state of the system — there is no separate database. Boxes live outside this repo (typically `~/src/boxes/<name>/`) so agents operating inside a box don't inherit this repo's CLAUDE.md.
 
 A box has **one root**, and everything about the box lives under it:
-the npm package (`package.json`, `src/`, `node_modules/`), the git
+the npm package (`package.json`, `src/`, `node_modules/` — which is also where the
+installed `beebox` package's own reference docs live), the git
 repository, the agent's own configuration (`CLAUDE.md`, `.claude/`), the
-runtime marker and generated docs (`.beebox/`), and every operational area
+runtime marker and agent guide (`.beebox/`), and every operational area
 holding the boxholder's content and the machine's working state. There is no
 second root to find or pass around — `boxRoot` means this directory,
 everywhere in the codebase and in every path an agent sees.
@@ -28,7 +29,7 @@ and the underscore is the visible marker that keeps `/_config/box.json` from
 being mistaken for something like `/etc/hosts`. Below the underscore areas
 the vocabulary opens up — `_content/` in particular is where the boxholder
 and the agent freely create whatever directories and cards the box needs;
-only the root itself is closed. See `docs/plans/one-root-box-layout.md` for
+only the root itself is closed. See `docs/implemented-plans/one-root-box-layout.md` for
 the full design rationale (the "closed vocabulary at the root, open below
 `_content/`" criterion, and the underscore-as-checksum argument).
 
@@ -38,7 +39,7 @@ created before this layout landed (shapeVersion 2, retired) had two roots — a
 package root and a nested `content/` operational root — and is the reason
 this layout exists: `getBoxShape` on a v2 box throws a `bbx migrate`-pointing
 error rather than silently resolving the wrong directory. See
-`docs/plans/one-root-box-layout.md` for that history.
+`docs/implemented-plans/one-root-box-layout.md` for that history.
 
 `getBoxShape` recognizes a box when `<root>/.beebox/box.json`
 declares `shapeVersion: 3` and `<root>/package.json` declares a `beebox`
@@ -55,7 +56,7 @@ dependency.
 ├── AGENTS.md                      symlink to CLAUDE.md (Codex-facing mirror)
 ├── .agents/                       Codex-facing mirror of .claude/skills/
 ├── .codex/                        Codex-facing hook config (mirrors .claude/settings.json)
-├── .beebox/                       runtime: box.json marker, dbs, logs, generated docs
+├── .beebox/                       runtime: box.json marker, dbs, logs, agent guide
 ├── src/
 │   ├── schemas/                    box-local card-type definitions
 │   ├── views/                      custom view definitions
@@ -107,7 +108,7 @@ chat's context area (tracked and committed, unlike `_tmp/`) as a
 capture-session card + attach scope; the chat agent annotates and files
 them out — `tmp-capture/` must not accumulate. Flow reference:
 `docs/implemented-plans/capture-mode.md`; agent duties:
-`_content/docs/generated/card-capture-session.md`.
+`node_modules/beebox/box-docs/card-capture-session.md`.
 
 A bulk file-upload batch (dozens of items / ~100 MB dropped at once — camera-roll
 batches, document folders) lands the same way, as a sibling `tmp-upload/`
@@ -118,7 +119,7 @@ scope, or `_content/inbox/`) and deletes the card + attach dir once
 everything is placed — there is no terminal "filed" status, deletion *is* the
 completion signal, and `tmp-upload/` must not accumulate either. Plan:
 `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-`_content/docs/generated/card-upload-batch.md`.
+`node_modules/beebox/box-docs/card-upload-batch.md`.
 
 ## Marker and runtime files (root)
 

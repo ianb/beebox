@@ -14,7 +14,7 @@
  * through a per-route copy of `path.resolve` + `isInBoxNamespace(rawPath)`.
  * Checking the raw string is a traversal bypass: `_content/../package.json`
  * starts with `_content` (passes a raw-string check) but *resolves* to
- * `package.json` (outside the namespace) — `docs/plans/one-root-box-layout.md`
+ * `package.json` (outside the namespace) — `docs/implemented-plans/one-root-box-layout.md`
  * Track B.
  *
  * `resolveBoxNamespacePath` itself deliberately does NOT `fs.realpath` the

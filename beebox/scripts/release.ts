@@ -64,6 +64,14 @@ async function main(): Promise<void> {
     args: ["run", "build:cli"],
     cwd: PACKAGE_ROOT,
   });
+  // The engine's reference docs ship in the package (`box-docs` in `files`);
+  // a packed install may be read-only, so they must be present before pack.
+  await runStep({
+    label: "build box-docs (package reference docs)",
+    file: "pnpm",
+    args: ["exec", "tsx", "scripts/build-box-docs.ts"],
+    cwd: PACKAGE_ROOT,
+  });
   await runStep({
     label: "build frontend",
     file: "pnpm",

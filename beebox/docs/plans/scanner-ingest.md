@@ -11,7 +11,7 @@ box. ScanSnap profiles save searchable PDFs and images into per-box folders on
 the boxholder's laptop. A stand-alone uploader sends new files to
 bbx.ianbicking.org with a scoped, upload-only credential. The server validates
 each file, runs the existing scan-import path (extended with a Docling-based
-document mode), and the result lands in `box/inbox/` with an intake job, where
+document mode), and the result lands in `_content/inbox/` with an intake job, where
 the existing triage flow takes over.
 
 Two boxes take scans initially: the family box and the estate box. The design
@@ -75,12 +75,12 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   treatment for PDFs is deferred"* — there is **no** text-layer check or
   textless-PDF-to-photo-flow path today; that split is Track 4 work, not
   existing behavior). Output is a `capture-session` card + attach scope in
-  `box/inbox/`,
+  `_content/inbox/`,
   committed with `Created-By: scan-import`, then
   `createOrAppendIntakeJob` (`src/connectors/intake-utils.ts:36-38`: *"Create
   a new intake job or append items to an existing pending one from the same
   source."*). **Reused**; Track 4 replaces only the document-mode internals.
-- **Per-box scan priors** — now `config/scan.guide.card`, compiled in-memory
+- **Per-box scan priors** — now `_config/scan.guide.card`, compiled in-memory
   into the per-page analysis prompt (`resolveScanGuideContext`,
   `src/core/commands/scan-guide-context.ts`); `CLAUDE_SCANS.md` remains a
   deprecated, warning-logged fallback. Reshaped by the `scan-guide-card.md`
@@ -102,10 +102,10 @@ Reuse throughout; the only rebuilt piece is the document-mode internals
   non-draining one, so item uploads can stream `request.raw` straight to disk
   (never buffering a ~50 MB file in memory)."* and `:181-182`: filename via
   `X-Upload-Filename` header. **Reused** as the upload wire shape (Track 2).
-- **Box-scoped staging area** — `src/lib/box-tmp.ts:1-6`: `<boxRoot>/tmp/` is
+- **Box-scoped staging area** — `src/lib/box-tmp.ts:1-6`: `<boxRoot>/_tmp/` is
   *"the blessed home for ephemeral, box-runtime scratch — uploaded files,
   capture staging …"*, gitignored, swept after 7 days. **Reused**: quarantine
-  lives at `tmp/scan-quarantine/`.
+  lives at `_tmp/scan-quarantine/`.
 - **Server packages already installed** — `deploy/setup-server.sh:19` installs
   `poppler-utils pandoc imagemagick …`; adding `qpdf` follows the pattern.
 - **Body size limit** — `src/webapp/server.ts:90`: `bodyLimit: 50 * 1024 *
@@ -306,7 +306,7 @@ Tracks 1–3 live on prod.
     order of magnitude above real scanner cadence) that 429s with
     `Retry-After` and logs at `warn`.
 - **Direction — quarantine and validation:** files land in
-  `tmp/scan-quarantine/<sha256>.<ext>` with a sidecar `<sha256>.json`
+  `_tmp/scan-quarantine/<sha256>.<ext>` with a sidecar `<sha256>.json`
   carrying the entry's **durable state machine** — `state: "pending" |
   "promoting" | "imported" | "rejected"`, original filename, token name,
   profile, received-at, and (for rejected) `reason` plus `question-ref`
@@ -315,7 +315,7 @@ Tracks 1–3 live on prod.
   `promoting` entries (re-running `bbx upload` is safe — the ledger dedups),
   mirroring the bulk-upload worker's persisted-state + startup-resume shape
   rather than approximating it (review finding 4). Quarantine has its own
-  GC (the generic `tmp/` sweep skips directories entirely —
+  GC (the generic `_tmp/` sweep skips directories entirely —
   `src/core/housekeeping.ts:55` `if (!stat.isFile()) continue;` — so
   nothing else will clean it): `imported` entries are deleted on the next
   promote pass; `rejected` entries are deleted 30 days after their
@@ -340,7 +340,7 @@ Tracks 1–3 live on prod.
   through the sidecar state machine under a per-box cross-process
   promotion lock (`src/lib/file-lock.ts` — the route process and any CLI
   invocation must serialize). For each batch: mark `promoting`,
-  **materialize each file into `tmp/scan-staging/` under its original
+  **materialize each file into `_tmp/scan-staging/` under its original
   sanitized filename from the sidecar** — not its hash name — because
   scan-import's image grouping keys on scanner `<prefix>_NNN` names
   (`upload-helpers.ts:37`) and the document path records
@@ -363,7 +363,7 @@ Tracks 1–3 live on prod.
   command accepts provenance and the schema has no such field (review
   finding 6) — this is a small, explicit extension, not free reuse.
 - **Vocabulary lock-ins:** route prefix `/api/scan/`; header `X-Scan-Profile`;
-  quarantine dir `tmp/scan-quarantine/`; sidecar states
+  quarantine dir `_tmp/scan-quarantine/`; sidecar states
   `pending | promoting | imported | rejected`; check states
   `unknown | pending | imported | rejected`; PUT statuses
   `accepted | duplicate | rejected`; card field `source`.
@@ -533,14 +533,14 @@ Tracks 1–3 live on prod.
 *(Reshaped 2026-08-01 by the `scan-guide-card.md` subplan: scanner priors
 are now a guide card, not a bespoke file.)*
 
-- **What:** Scanner priors live in `config/scan.guide.card` (the guide
+- **What:** Scanner priors live in `_config/scan.guide.card` (the guide
   system's evidence model: confidence/source-tagged beliefs, compiled
   in-memory into the vision prompt by `resolveScanGuideContext`,
   `src/core/commands/scan-guide-context.ts`); `CLAUDE_SCANS.md` is a
   deprecated, warning-logged fallback. Per-box content: `scan.guide.card`
   drafts for the family and estate boxes (`scratch/box-readiness/`); triage
   landmark destination cards in the estate box matching its existing
-  `store/documents/README.md` taxonomy (`property/ financial/ legal/
+  `_content/documents/README.md` taxonomy (`property/ financial/ legal/
   personal/`) — categories are landmark cards discovered by glob, so that
   part stays content, not code.
 - **Why:** without priors the photo flow misreads names/dates; without
@@ -589,7 +589,7 @@ scan job) removes the need rather than deferring a design.
 | Hash-membership oracle via `/check` | n/a (accepted risk) | none — a `scan-upload` token holder can test whether a specific file was ever uploaded | documented here; accepted: smallest possible read surface, confined to scan hashes |
 | Uploader's Trash disposition on a non-Mac | planned (unit test of platform guard) | `trash` disposition refuses with a clear error on non-darwin platforms rather than falling back to `unlink` | clear |
 | Rate limit trips during a legitimate huge session | planned (route doctest) | 429 with `Retry-After`; uploader backs off and resumes; nothing lost (files stay local) | clear |
-| Quarantine fills with rejected files | planned (worker doctest) | scan-specific GC in the promote worker (Track 2): `imported` entries deleted next pass, `rejected` deleted 30 days after question resolution. The generic `tmp/` sweep does NOT cover this — it skips directories (`housekeeping.ts:55`) | clear |
+| Quarantine fills with rejected files | planned (worker doctest) | scan-specific GC in the promote worker (Track 2): `imported` entries deleted next pass, `rejected` deleted 30 days after question resolution. The generic `_tmp/` sweep does NOT cover this — it skips directories (`housekeeping.ts:55`) | clear |
 | Repeated promote runs re-emit questions for the same rejected file | planned (worker doctest) | `question-ref` recorded in the sidecar makes emission idempotent (Track 2) | clear |
 
 ## Agent-flow / user-flow edge cases
@@ -689,7 +689,7 @@ New agent-facing concepts and their audit posture
   from CLAUDE.md/schema instructions without re-reading source.
 - **Scan provenance (`source: scan-upload/<device>`)** — one `knows_directly`
   entry: the agent processing an intake job can say where a scanned session
-  came from and what the scan guide (`config/scan.guide.card`) is for.
+  came from and what the scan guide (`_config/scan.guide.card`) is for.
 - **The wire contract itself** — skip, with rationale: purely infrastructural;
   no box agent ever constructs an upload request. The breadcrumb comments and
   contract doc serve the maintainer agent, which reads code, not recall.

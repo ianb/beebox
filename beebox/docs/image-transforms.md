@@ -28,5 +28,5 @@ evicts oldest entries to stay within 512 MiB. Callers should use this route for
 bounded display images and keep the original URL for downloads or lightboxes.
 
 Custom views receive `imageUrl(path, options)`, which builds this URL without
-hand-assembling it; their generated `docs/generated/views.md` reference
+hand-assembling it; their engine reference doc, `node_modules/beebox/box-docs/views.md`,
 documents the helper.

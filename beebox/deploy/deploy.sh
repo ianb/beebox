@@ -390,6 +390,12 @@ echo "Building frontend..."
 # load. Building here keeps dist/ in lockstep with the source we rsync.
 echo "Building CLI bundle (dist/cli.mjs + dist/cards)..."
 (cd "$CHECKOUT/beebox" && node scripts/build-cli.ts >/dev/null)
+# box-docs/ (the engine's reference docs, gitignored) rides along in the rsync
+# the same way dist/ does. Any bbx activity on the server would rewrite it,
+# but the per-box docs refresh below skips a dirty box, so build it here
+# rather than rely on that.
+echo "Building package reference docs (box-docs/)..."
+(cd "$CHECKOUT/beebox" && node --import tsx scripts/build-box-docs.ts)
 
 RSYNC_OPTS=(-az --delete
   # rsync runs as root over ssh, and -a preserves the sender's (local dev

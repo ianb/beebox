@@ -10,60 +10,96 @@ import { useNavigate } from "@tanstack/react-router";
 import { getChatHistory, getChatStatus, type SessionEntry } from "../../api";
 import { trpcClient } from "../../lib/trpc";
 import { chatTailSlice } from "../../machines/chatMachine.js";
-import type { PanelTab } from "./InteractiveChat-controls";
+import { EMPTY_SIDECAR, sidecarReducer, type SidecarAction, type SidecarState } from "./sidecar-tabs";
+import { loadSidecarState, moveSidecarState, saveSidecarState, sidecarTabsKey } from "./sidecar-tabs-storage";
+import { usePersistScheduler, PERSIST_DEBOUNCE_MS } from "../../hooks/usePersistScheduler";
 import type { OnZoomView } from "./ChatMessages";
 import { href, toSearch } from "../../lib/routing";
-import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
+import { parseViewUrl } from "../../lib/view-url";
 import { toastError } from "../ui/toast-store";
 import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { ChatEvent } from "../../machines/chat-types";
 
 /**
- * Companion-view tab state: opening a view activates an existing tab (keyed
- * by path) or appends a new one; closing falls back to the neighboring tab.
+ * Companion-view tab state: opening a view activates an existing tab (keyed by
+ * path) or appends a new one; closing falls back to the neighboring tab.
+ *
+ * The decisions live in `sidecarReducer` (`sidecar-tabs.ts`) — ordering,
+ * pinning, eviction — so they are testable apart from React. This hook owns
+ * only the wiring: the clock the reducer needs, and the sessionStorage slot
+ * that lets the strip survive a reload.
  */
-export function useChatTabs() {
-  const [panel, setPanel] = useState<{ tabs: PanelTab[]; activePath: string | null }>({ tabs: [], activePath: null });
+export function useChatTabs({ boxSlug, sessionInput }: { boxSlug: string | undefined; sessionInput: string }) {
+  const storageKey = sidecarTabsKey({ boxSlug, sessionInput });
+  // Restored during the initializer, not in an effect: a strip that appeared a
+  // frame after the first paint would fight `?card=`'s restore for the active
+  // tab, and would flash an empty pane on every reload.
+  const [panel, setPanel] = useState<SidecarState>(() => loadSidecarState(storageKey) ?? EMPTY_SIDECAR);
   const activeView = panel.activePath
     ? panel.tabs.find((t) => t.target.path === panel.activePath) ?? null
     : null;
 
-  const onZoomView = useCallback<OnZoomView>((view) => {
-    setPanel((p) => {
-      // One tab per card path. Re-opening the same card with a different
-      // viewer/params refreshes the existing tab's target in place (so
-      // `?view=` actually switches) rather than colliding silently.
-      const idx = p.tabs.findIndex((t) => t.target.path === view.target.path);
-      const existing = idx === -1 ? undefined : p.tabs[idx];
-      const key = serializeViewUrl(view.target);
-      const tabs =
-        existing === undefined
-          ? [...p.tabs, view]
-          : serializeViewUrl(existing.target) === key
-          ? p.tabs
-          : p.tabs.map((t, i) => (i === idx ? view : t));
-      return { tabs, activePath: view.target.path };
-    });
-  }, []);
-  const onSelectTab = useCallback((path: string) => {
-    setPanel((p) => ({ ...p, activePath: path }));
-  }, []);
-  const onCloseTab = useCallback((path: string) => {
-    setPanel((p) => {
-      const idx = p.tabs.findIndex((t) => t.target.path === path);
-      if (idx === -1) return p;
-      const tabs = p.tabs.filter((_, i) => i !== idx);
-      const activePath = p.activePath === path
-        ? (tabs.length === 0 ? null : (tabs[Math.min(idx, tabs.length - 1)]?.target.path ?? null))
-        : p.activePath;
-      return { tabs, activePath };
-    });
-  }, []);
-  const onClosePanel = useCallback(() => {
-    setPanel({ tabs: [], activePath: null });
+  const dispatch = useCallback((action: SidecarAction) => {
+    setPanel((state) => sidecarReducer(state, action));
   }, []);
 
-  return { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel };
+  const onZoomView = useCallback<OnZoomView>((view) => {
+    dispatch({ type: "open", target: view.target, label: view.label, at: Date.now() });
+  }, [dispatch]);
+  const onSelectTab = useCallback((path: string) => {
+    dispatch({ type: "select", path, at: Date.now() });
+  }, [dispatch]);
+  const onCloseTab = useCallback((path: string) => {
+    dispatch({ type: "close", path });
+  }, [dispatch]);
+  const onTogglePin = useCallback((path: string) => {
+    dispatch({ type: "togglePin", path, at: Date.now() });
+  }, [dispatch]);
+  const onClosePanel = useCallback(() => {
+    dispatch({ type: "closeAll" });
+  }, [dispatch]);
+
+  // Mirrors of the current panel and key for the flush callbacks, which run
+  // outside render (a visibility change, an unmount) and must not close over a
+  // stale one. Updated in the persist effect below, never during render.
+  const panelRef = useRef(panel);
+  const keyRef = useRef(storageKey);
+
+  // Debounced through the shared scheduler (400ms), and flushed when the tab
+  // hides — the moment a session is most likely to end.
+  const { schedule, flush } = usePersistScheduler({
+    debounceMs: PERSIST_DEBOUNCE_MS,
+    onHide: useCallback((cancel: () => void) => {
+      cancel();
+      saveSidecarState(keyRef.current, panelRef.current);
+    }, []),
+  });
+
+  // A chat that started as "new" is assigned its id after the first turn.
+  // Carry the strip over rather than stranding it under the placeholder key.
+  // Before the panel effect below, so the pending write lands under the key it
+  // was scheduled for.
+  useEffect(() => {
+    const previous = keyRef.current;
+    if (previous === storageKey) return;
+    keyRef.current = storageKey;
+    flush();
+    moveSidecarState({ from: previous, to: storageKey });
+  }, [storageKey, flush]);
+
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    // Skip the mount pass: writing back what was just restored is a needless
+    // write, and on a fresh chat it would create an empty entry.
+    panelRef.current = panel;
+    if (!restoredRef.current) {
+      restoredRef.current = true;
+      return;
+    }
+    schedule(() => saveSidecarState(storageKey, panelRef.current));
+  }, [panel, storageKey, schedule]);
+
+  return { panel, activeView, onZoomView, onSelectTab, onCloseTab, onTogglePin, onClosePanel };
 }
 
 /**

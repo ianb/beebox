@@ -21,6 +21,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { bundleView } from "../views/compiler.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
+import { attachDirOwnerBasename, cardBasename, isAttachDirName } from "../../shared/attach-path.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -42,14 +43,26 @@ function figureErrorModule(message: string): string {
 async function hasOwningCard(sourcePath: string, root: string): Promise<boolean> {
   const relative = path.relative(root, sourcePath);
   const segments = relative.split(path.sep);
-  const attachIndex = segments.findIndex((segment) => segment.endsWith(".attach"));
+  const attachIndex = segments.findIndex((segment) => isAttachDirName(segment));
   if (attachIndex === -1) return false;
   const attachName = segments[attachIndex];
   if (attachName === undefined) return false;
-  const ownerCard = `${attachName.slice(0, -".attach".length)}.card`;
+  const owner = attachDirOwnerBasename(attachName);
+  if (owner === null) return false;
   const parent = path.join(root, ...segments.slice(0, attachIndex));
   const entries = await fs.readdir(parent);
-  return entries.some((entry) => entry.toLowerCase() === ownerCard.toLowerCase());
+  // The owner of `Cube.attach/` is any card whose BASENAME is `Cube` —
+  // `Cube.figure.card`, since a card filename carries its type
+  // (`shared/attach-path.ts`, `shared/card-name.ts`). This used to look for a
+  // literal `Cube.card`, which is a positional card of type "Cube" and exists
+  // in no box: every figure in every box was refused with "Attach scope has no
+  // owning card" while the card sat right beside its attach directory
+  // (issues/bugs/2026-09-05-figure-module-attach-scope-has-no-owning-card.md).
+  // Case-insensitive because a case-insensitive filesystem would otherwise let
+  // the same path resolve differently here than when opened.
+  return entries.some(
+    (entry) => entry.endsWith(".card") && cardBasename(entry).toLowerCase() === owner.toLowerCase(),
+  );
 }
 
 export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void {
@@ -64,7 +77,7 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       }
 
       // Box containment + namespace fence, checked on the RESOLVED path
-      // (`docs/plans/one-root-box-layout.md` Track B).
+      // (`docs/implemented-plans/one-root-box-layout.md` Track B).
       const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
       if (!ns.ok) {
         const error = ns.reason === "display-form" ? ns.message : "Path outside box";
@@ -76,7 +89,7 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       // compile a loose box file as a module, so this endpoint can't be turned
       // into a general code server for arbitrary box paths.
       const ext = path.extname(resolved);
-      const inAttachScope = resolved.split(path.sep).some((seg) => seg.endsWith(".attach"));
+      const inAttachScope = resolved.split(path.sep).some((seg) => isAttachDirName(seg));
       if (!inAttachScope || (ext !== ".ts" && ext !== ".tsx")) {
         return reply
           .status(400)
@@ -113,7 +126,7 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
         return reply.status(400).send({ error: "Path outside box" });
       }
       const realExt = path.extname(realResolved);
-      const realInAttachScope = realResolved.split(path.sep).some((seg) => seg.endsWith(".attach"));
+      const realInAttachScope = realResolved.split(path.sep).some((seg) => isAttachDirName(seg));
       if (!realInAttachScope || (realExt !== ".ts" && realExt !== ".tsx")) {
         return reply
           .status(400)

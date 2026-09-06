@@ -1,17 +1,17 @@
 /**
  * Entry point. Bundled by esbuild into a single `dist/scan-uploader.mjs`,
- * runnable with plain `node` — no checkout, no install, no `bbx`. Invoked
- * either by a ScanSnap post-scan hook or as a manual/periodic sweep; the
+ * runnable with plain `node` — no checkout, no install, no `bbx`. Invoked by
+ * the launchd agent (on a folder change or on its interval) or by hand; the
  * check endpoint's dedup makes double-runs harmless.
  */
 
 import { homedir } from "node:os";
 
-import { loadConfig, type UploaderConfig, type TargetConfig } from "./config.js";
+import { loadConfig, type UploaderConfig } from "./config.js";
 import { MISSING_CONFIG_MESSAGE, pathExists, resolveConfigPath } from "./config-path.js";
 import { runConfigureCommand } from "./configure-cli.js";
 import { errorMessage } from "./error-guards.js";
-import { runTarget, type RunSummary } from "./run-target.js";
+import { runAllTargets } from "./run-all.js";
 import { runScheduleCommand } from "./schedule-cli.js";
 
 function printHelp(): void {
@@ -32,28 +32,6 @@ function printHelp(): void {
       "for those subcommands' options.",
     ].join("\n"),
   );
-}
-
-function printSummary(target: TargetConfig, summary: RunSummary): void {
-  console.log(
-    `${target.folder}: uploaded=${String(summary.uploaded)} duplicate=${String(summary.duplicate)} ` +
-      `rejected=${String(summary.rejected)} skipped-unsettled=${String(summary.skippedUnsettled)} ` +
-      `skipped-identity-changed=${String(summary.skippedIdentityChanged)} errors=${String(summary.errors)}`,
-  );
-}
-
-function hasFailure(summary: RunSummary): boolean {
-  return summary.rejected > 0 || summary.errors > 0;
-}
-
-async function runAllTargets(config: UploaderConfig, options: { retryRejected: boolean }): Promise<number> {
-  let exitCode = 0;
-  for (const target of config.targets) {
-    const summary = await runTarget(target, options);
-    printSummary(target, summary);
-    if (hasFailure(summary)) exitCode = 1;
-  }
-  return exitCode;
 }
 
 async function main(): Promise<number> {

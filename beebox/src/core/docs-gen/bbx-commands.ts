@@ -1,13 +1,14 @@
 /**
- * Generator for the `bbx` command reference doc (_content/docs/generated/bbx-commands.md).
+ * Generator for the `bbx` command reference doc (bbx-commands.md in the package docs).
  *
  * Pure function: the static command prose is assembled here, with the
  * auto-generated "Available Templates" listing interleaved. Split out of
  * generate-docs-content.ts to keep each file under the line limit.
  */
 
+import { BOX_PACKAGE_DOCS } from "./shared.js";
 import { z } from "zod";
-import { getAllTemplates } from "../../schemas/templates.js";
+import { getBuiltinTemplates } from "../../schemas/templates.js";
 import { bbxCommandsScheduling } from "./bbx-commands-scheduling.js";
 
 /**
@@ -61,7 +62,9 @@ function bbxCommandsIntro(): string[] {
  */
 function bbxCommandsTemplates(): string[] {
   const lines: string[] = [];
-  for (const t of getAllTemplates()) {
+  // Built-in only: this doc ships in the package, so a box's own templates
+  // must not leak into it (they are listed in that box's agent guide).
+  for (const t of getBuiltinTemplates()) {
     lines.push(`#### ${t.name}`);
     lines.push("");
     lines.push(t.description);
@@ -141,7 +144,7 @@ function bbxCommandsCore(): string[] {
     "Compiles the view, loads the real cards its `dependencies` select, renders it once, and",
     "prints the HTML — or, on failure, the error with a stack mapped to your `.tsx` source.",
     "Use it to check a view after writing it. It's a synchronous render (no effects/async",
-    "helpers); see `_content/docs/generated/views.md` for what it does and doesn't cover.",
+    `helpers); see \`${BOX_PACKAGE_DOCS}/views.md\` for what it does and doesn't cover.`,
     "",
     "## bbx answer",
     "",

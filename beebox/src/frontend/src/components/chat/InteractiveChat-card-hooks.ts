@@ -55,16 +55,29 @@ function useCardUrlPersistence(opts: {
     // Don't write before the restore has had its chance — otherwise the first
     // render (activeView still null) would strip a card from the URL before we
     // ever open it. Navigate only on a real change (serialize∘parse is stable,
-    // so this can't loop); spread the previous search so other params survive;
-    // `replace: true` keeps reload on the same card and doesn't spam history.
-    // toSearch() is the sanctioned router-boundary escape hatch (see routing.ts).
+    // so this can't loop); `replace: true` keeps reload on the same card and
+    // doesn't spam history. toSearch() is the sanctioned router-boundary escape
+    // hatch (see routing.ts).
+    //
+    // A FUNCTIONAL updater, not a spread of the captured `search`: the
+    // companion deep-link hook strips `?companion=` in the same commit, and a
+    // write built from a snapshot taken before that put the param back — so a
+    // reload re-fired the one-shot deep link and reopened a card that had been
+    // closed, which is the exact bug useCompanionDeepLink's own comment warns
+    // about.
     if (!restoredRef.current) return;
     if (liveCard === currentCard) return;
-    const next = { ...search };
-    if (currentCard === undefined) delete next.card;
-    else next.card = currentCard;
-    void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch(next), replace: true });
-  }, [currentCard, liveCard, search, navigate, boxSlug]);
+    void navigate({
+      to: href(`/${boxSlug}/chat`),
+      search: toSearch((prev: Record<string, unknown>) => {
+        const next = { ...prev };
+        if (currentCard === undefined) delete next["card"];
+        else next["card"] = currentCard;
+        return next;
+      }),
+      replace: true,
+    });
+  }, [currentCard, liveCard, navigate, boxSlug]);
 }
 
 /** What `useCardSend` carries on a SEND event: open card + activity since the

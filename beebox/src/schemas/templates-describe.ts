@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { getTemplate } from "./templates-registry.js";
+import { getTemplate, type TemplateDefinition } from "./templates-registry.js";
 
 /**
  * Check if a Zod schema is an array type (possibly wrapped in optional/default).
@@ -55,14 +55,24 @@ function describeArgLine(key: string, zodSchema: z.ZodTypeAny): string {
 }
 
 /**
- * Describe a template's arguments in human-readable format.
+ * Describe a template's arguments in human-readable format, by name (looked
+ * up in the effective registry).
  */
 export function describeTemplateArgs(name: string): string {
   const template = getTemplate(name);
   if (!template) {
     return `Unknown template: ${name}`;
   }
+  return describeTemplate(template);
+}
 
+/**
+ * Describe a template definition's arguments in human-readable format. Takes
+ * the definition itself so a caller holding a specific registration (e.g. the
+ * built-in one behind a box-shadowed name) describes that one, not whichever
+ * is effective in the process.
+ */
+export function describeTemplate(template: TemplateDefinition): string {
   const shape = template.argsSchema.shape;
   const lines: string[] = [
     `Template: ${template.name}`,
