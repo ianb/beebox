@@ -131,6 +131,35 @@ parseIntervalSeconds(sourcePlist)
 => 900
 ```
 
+`watchPaths` adds a `WatchPaths` array, so launchd fires a sweep the moment a
+scan folder changes rather than waiting out the interval. The interval stays —
+the two triggers are complementary, and the check endpoint's dedup makes a
+double-fire harmless:
+
+```
+const watchPlist = generatePlist({
+  programArguments: ["/repo/bin/scan-uploader", "/config.json"],
+  intervalSeconds: 900,
+  watchPaths: ["/Users/A B & C/Receipts/", "/Users/A B & C/Invoices/"],
+  logPath: "/log",
+});
+watchPlist.includes("\t<key>WatchPaths</key>\n\t<array>\n\t\t<string>/Users/A B &amp; C/Receipts/</string>\n\t\t<string>/Users/A B &amp; C/Invoices/</string>\n\t</array>")
+=> true
+```
+
+An absent or empty list omits the key entirely, which is what keeps a
+schedule with no watched folders byte-identical to the plists above:
+
+```continue
+generatePlist({ programArguments: ["/x"], intervalSeconds: 900, logPath: "/log" }).includes("WatchPaths")
+=> false
+```
+
+```continue
+generatePlist({ programArguments: ["/x"], intervalSeconds: 900, watchPaths: [], logPath: "/log" }).includes("WatchPaths")
+=> false
+```
+
 ## `detectRunMode` — the `.ts` vs `.mjs` suffix check
 
 ```

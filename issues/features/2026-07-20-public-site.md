@@ -1,6 +1,6 @@
 ---
 title: "Public site — un-polished on purpose, cool some other way"
-workstream: open-source-readiness
+workstream: public-site
 needs: [design]
 area: docs
 filed-by: agent

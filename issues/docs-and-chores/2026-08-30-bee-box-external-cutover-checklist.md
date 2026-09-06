@@ -61,10 +61,10 @@ before the move.
 - [ ] Complete domain registration and attach the domain to the intended
   Cloudflare account.
 - [ ] Configure the production DNS record and Cloudflare proxy/TLS settings.
-- [ ] Set the canonical production URL to `https://beebox.run`, including
-  `BBX_PUBLIC_URL` and the gitignored deploy `public-url` file.
-- [ ] Confirm that `https://beebox.run` reaches the production server and that
-  the certificate is valid before changing OAuth redirects.
+- [ ] Set the public site host to `https://beebox.run` (site, not a public
+  box hostname) on the Git-integrated Cloudflare Pages project.
+- [ ] Confirm that `https://beebox.run` reaches the public site and that
+  the certificate is valid before exposing it as the public link.
 - [ ] Decide whether the previous hostname redirects to `beebox.run` and, if
   so, keep that redirect for bookmarks and inbound links.
 
@@ -72,14 +72,12 @@ before the move.
 
 - [x] Treat the OAuth client as personal-box configuration. There is no public
   OAuth service or public-app launch to prepare.
-- [ ] Add `https://beebox.run/auth/callback` to the existing client for owner
-  login.
-- [ ] Add `https://beebox.run/auth/google-services/callback` to the existing
-  client for Google connector authorization.
-- [ ] Keep the previous redirect URIs during the cutover if active sessions can
-  still return through the previous hostname.
-- [ ] Confirm that owner login and one Google connector authorization complete
-  through `https://beebox.run`.
+- [ ] Do not add public OAuth callbacks for a hosted box at `beebox.run` while
+  public boxes remain unsupported.
+- [ ] Keep the previous production OAuth URIs during the cutover if active
+  sessions can still return through them.
+- [ ] Confirm owner login and Google connector authorization flow through the
+  existing private box host after deployment.
 
 ## 7. Cut over the production server
 
@@ -97,8 +95,8 @@ before the move.
 - [ ] Check `beebox-hub`, `beebox-scheduler`, and recycle services with
   `systemctl` and `journalctl`.
 - [ ] Verify owner login, one existing box, schedules, Google connectors,
-  browser automation, push delivery, and one agent turn through
-  `https://beebox.run`.
+  browser automation, push delivery, and one agent turn through the existing
+  private box host. Do not use `beebox.run` for this verification.
 - [ ] Keep the retired account and unit files until the new deployment has run
   successfully long enough to make rollback unnecessary. Remove them only in
   a separate, deliberate cleanup.
@@ -119,8 +117,8 @@ before the move.
   **Bee Box** and confirm the bundle IDs `app.beebox.ios`,
   `app.beebox.ios.share`, and `app.beebox.ios.tests`. No distributed-app
   compatibility work is required because no build has been distributed.
-- [ ] Build and pair a fresh development install after the production hostname
-  changes.
+- [ ] Build and pair a fresh development install after any private box-host
+  change.
 - [ ] Remove and reinstall each saved PWA so its name, icon, start URL, and
   service-worker scope use Bee Box.
 - [ ] Update browser bookmarks, pinned tabs, home-screen links, and shortcuts.
