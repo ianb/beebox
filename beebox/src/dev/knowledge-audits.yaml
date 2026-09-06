@@ -5301,6 +5301,9 @@ tests:
     tags: [starter, chat, behavioral]
 
   # === Prominence (docs/plans/card-prominence.md, Track E) ===
+  #
+  # Status (2026-09-06, Claude): 3/3 pass on the first run — mark-own-artifact
+  # answered with 0 reads / 0 searches; the other two with one read each.
 
   - id: prominence-mark-own-artifact
     prompt: >
