@@ -75,30 +75,47 @@ manifests is not the same question, and `.git/annex/` existing answers neither
 
 ## Conversion progress (2026-09-06)
 
-One of the two boxes carrying manifests converted cleanly: `to-annex` annexed
-70 assets (210 MB) and removed all 70 manifests, leaving the tree clean and
-`annex fsck --fast` quiet. Four other boxes were already at zero.
+Every production box is now annex-shaped, with zero asset manifests, a clean
+tree, and a quiet `annex fsck --fast`. Four boxes were converted in this pass
+(133 assets, ~494 MB); two were already at zero.
 
-Two boxes still stand between here and deleting the modules:
+Three things blocked it, none of them the conversion itself:
 
-- The remaining manifest-carrying box (78) has an uncommitted regenerated
-  `.agents/skills/…/SKILL.md` from a `landmark-symbol` migration that box never
-  recorded, plus freshly arrived scan content. `to-annex` refuses on a dirty
-  tree, and committing a half-applied migration or someone's just-arrived scan
-  is the boxholder's call. It needs the migration finished and the scan handled,
-  then the conversion runs.
-- The manifest-shaped box (0 manifests, but assets still gitignored) is a
-  different problem: nothing to convert, but it is where bulk upload's manifest
-  is still the only record of a blob. It needs `bbx attachments unignore` plus a
-  conversion, or the shape gate above.
+- **16 agent-written `manifest.json` files** — the collision this issue's
+  Observed cost section named. A box agent wrote them while filing property
+  photos, with its own `{filename, captured, source}` schema, and `to-annex`
+  read them as corrupt asset manifests and refused rather than blessing
+  unverified state. Nothing referenced them; removed on the boxholder's call.
+- **A live box's uncommitted tree** — an unrecorded migration and a
+  just-arrived scan. Cleared by the boxholder, not around them.
+- **17 path-anchored asset ignore rules** on one box, left by the one-root
+  migration copying a v2 box's `.gitignore` verbatim. See below.
 
-A third thing worth fixing whatever the outcome: `SessionBuilder.filesToStage`
-(`core/capture/write-cards.ts`) is written and never read — `writeCaptureDocument`
-does not return it, and `core/capture/prepare.ts` commits a directory pathspec
-instead. An array that looks like it controls staging and does not is how the
-attempt above went unnoticed through a green suite.
+## The ignore-rule blind spot (fixed)
 
-## Doc drift, fixed
+`isAssetIgnoreRule` matched only `**/*.attach/**/*.<ext>`, so the anchored
+spelling `/_content/**/*.attach/**/*.<ext>` was invisible to it. Both hide the
+same files from `git add`, and both of that predicate's callers failed open:
+`unignore` found no stray rules and reported success, `to-annex` converted and
+reported success, and `gitignoreIgnoresAssets` told the annex-shape probe the
+box was converted. The box sat in exactly the state `core/annex/is-annex-box.ts`
+describes in its own doc comment — every asset ignored, reaching neither git nor
+the annex, nothing reporting it — while every tool called it healthy.
 
-`test/core/bulk-upload/prepare.doctest.md` no longer says "blobs stay out of
-git" or titles a section "blobs untracked".
+It surfaced only because the fleet was checked with `git check-ignore` per box
+instead of by asking the probe. That is the check to use; `.git/annex/` existing
+answers a different question, and so does the count of tracked manifests.
+
+The matcher now keys on the pattern's distinctive middle. The repaired box's 536
+previously-hidden assets (3.4 MB, mostly page snapshots) are committed and
+annexed; they had never been recorded anywhere.
+
+## What retirement still needs
+
+The box-side blockers are gone. What remains is the capture question above: on
+an annex box, capture staging media is deliberately ignored until an agent files
+it, so the manifest is its only record in that window. Deleting
+`asset-manifest.ts` + `asset-manifest-scan.ts` needs an answer there, plus the
+readers in `annex/to-annex.ts` and `commands/attachments-gitignore.ts` retired
+with them. Bulk upload's writer is now redundant on every box and can go once
+capture is settled.
