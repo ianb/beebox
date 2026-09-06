@@ -1,8 +1,11 @@
 ---
 title: A PDF's text layer is trusted without checking whether it is usable, and OCR settings are left at defaults that lose words
-workstream: unknown
+workstream: scanner-setup
 priority: backlog
+resolution: implemented
 ---
+
+Resolved by `e09cd6d23` ("pdf: judge the text layer, and stop OCRing at weak defaults"): added `assessTextLayer`/`PdfProbe.textLayerQuality` to detect a junk layer, switched OCR intent from a boolean to `off | regions | replace` (no layer -> `layout_regions`, junk layer -> `full_page`, good layer -> off), and switched the OCR engine to rapidocr. No divergence from what the issue proposed for findings 1-3; the scanner-ingest.md prior-art correction was left as a note rather than rewriting the plan (see the issue's own correction section).
 
 Three findings from measuring the PDF extraction path against real scanned
 documents. They compound: the first silently produces bad text, the other two
@@ -90,7 +93,7 @@ saying nothing, which is worse than an obvious garble.
 
 ## Correction to a prior conclusion
 
-[`plans/scanner-ingest.md`](../../beebox/docs/plans/scanner-ingest.md) records
+[`plans/scanner-ingest.md`](../../../beebox/docs/plans/scanner-ingest.md) records
 that Docling has no hybrid "OCR only pages without a text layer" mode, citing
 upstream feature requests. That is no longer accurate for 2.117:
 `--ocr-mode pdf_aware_layout_regions` preserves an existing text layer and
