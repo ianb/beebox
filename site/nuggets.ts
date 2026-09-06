@@ -26,7 +26,13 @@ import { escapeHtml, parseFrontmatter, renderBody } from "./render.js";
 import { countOccurrences } from "./story/span-locate.js";
 
 /** Repo roots a nugget may cite. Closed set — everything else fails the build. */
-const ALLOWED_SOURCE_PREFIXES = ["issues/", "callback-box/docs/", "research/"] as const;
+const ALLOWED_SOURCE_PREFIXES = [
+  "issues/",
+  "callback-box/docs/",
+  "research/",
+  "beebox/docs/",
+  "beebox/user-stories/",
+] as const;
 const ALLOWED_SOURCE_FILES: ReadonlySet<string> = new Set(["README.md"]);
 
 const ALLOWLIST_TEXT = [...ALLOWED_SOURCE_PREFIXES, ...ALLOWED_SOURCE_FILES].join(", ");

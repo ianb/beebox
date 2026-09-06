@@ -7,7 +7,8 @@ issues: []
 # Public site
 
 A static public site for beebox, generated from repo content, deployed to
-GitHub Pages, and viewable on the dev router. The design principles were settled
+Cloudflare Pages, and viewable on the dev router. The design principles were
+settled
 with the boxholder in discussion (recorded in
 [the issue](../../../issues/features/2026-07-20-public-site.md)): spare and
 antiprofessional to start, iterating toward "cool in a different way";
@@ -72,8 +73,9 @@ exploration.
   `.husky/post-merge:22-23` gate on
   `^(beebox|agent-doctest|personal-vibe-check|patches)/` + root pnpm
   files — a top-level `site/` matches nothing, so site commits never trigger
-  the box deploy. No change needed; the Pages deploy is a separate GitHub
-  Actions workflow (none exist today — no `.github/` directory).
+  the box deploy. No change needed; the box deploy remains separate from the
+  site's Cloudflare Pages Git integration. `.github/workflows/pages.yml` runs
+  checks only.
 - **doc-check**: `beebox/src/dev/doc-check.ts` sweeps markdown for
   broken references and duplicate issue basenames — but its external-scan
   root list is a fixed set that does **not** include a top-level `site/`
@@ -95,9 +97,7 @@ exploration.
   `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
   screenshots ever land ("something fancier and more automated" — boxholder).
   Not used in this plan; cited so the hook point is known.
-- **Repo identity**: remote is `github.com/ianb/beebox` → default Pages
-  URL `ianb.github.io/beebox` (base path `/beebox/`), unless a
-  custom domain is chosen (open question).
+- **Deploy target**: the public site domain is `https://beebox.run`.
 
 ## Prior art (external)
 
@@ -135,13 +135,9 @@ Verified 2026-07-21 (URLs fetched):
   llms.txt proposal itself ("same-URL markdown versions") and practiced by
   Cloudflare docs et al. — a spec recommendation plus convention, so we
   follow the proposal's shape.
-- **Pages via Actions**: `actions/upload-pages-artifact` +
-  `actions/deploy-pages` (permissions `pages: write`, `id-token: write`) is
-  the current recommended no-committed-dist path
-  ([GitHub docs](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)).
-  Pitfalls: with Actions deploys a custom domain's `CNAME` must be inside the
-  artifact; project sites serve under `/<repo>/`, so the generator needs a
-  base-path config baked at build.
+- **Cloudflare Pages deploy**: Cloudflare's Git integration builds and deploys
+  from `main`; GitHub Actions remains checks-only. The public host uses a root
+  base path (`/`).
 - **Repo-issue-queue as public site**: no prior art found — open ground. The
   nearest provenance pattern is git-revision-date plugins
   ([mkdocs plugin](https://github.com/timvink/mkdocs-git-revision-date-localized-plugin));
@@ -167,7 +163,7 @@ Three layers:
    evolves, or live in the repo; either is fine. Output stays static,
    generated at deploy.
 3. **Publishing is its own path.** Distinct from the box's normal serving:
-   export/commit → build on deploy → Pages.
+   export/commit → Cloudflare Git build → deploy.
 
 What this supersedes: the hand-rolled Markdoc generator below (Tracks A/F
 implementation) becomes the *interim* press and prototype bench, not the
@@ -193,10 +189,10 @@ Ordered by implementation dependency, then surface size.
   Markdoc, applies the site shell (spare: readable margins, specified
   non-Courier fonts, no colors yet), and emits static HTML plus the machine
   layer (llms.txt, per-page `.md` twins).
-- **Why**: everything else (router serving, Pages deploy, nuggets, fisheye)
+- **Why**: everything else (router serving, Cloudflare deploy, nuggets, fisheye)
   consumes this.
-- **Direction**: base path is a build input (`--base /beebox/` for
-  Pages, `--base /<worktree>/site/` for the router, `/` for a custom domain).
+- **Direction**: base path is a build input (`--base /` for Cloudflare,
+  `--base /<worktree>/site/` for the router, `/` for any custom host override).
   Internal links are emitted resolved against the base — never hand-relative.
   Frontmatter parsing is site-own and strict (see What already exists).
   `site/` gets its own `package.json` in the workspace, on the vibe-check
@@ -207,7 +203,7 @@ Ordered by implementation dependency, then surface size.
   (`.husky/pre-commit:88-95`) and root tsconfig includes only `bin/**/*.ts`
   (`tsconfig.json:20-21`), so `tsx` would transpile `site/` without ever
   typechecking it): `site/` gets lint/typecheck/test scripts, the pre-commit
-  dispatcher gains a `site/` branch, and the Pages workflow runs the same
+  dispatcher gains a `site/` branch, and the Cloudflare workflow runs the same
   checks before building (principle 11).
 - **First chunk**: `site/` package + build.ts rendering one placeholder page
   from `site/content/index.md` to `site/dist/` with base-path handling and a
@@ -243,7 +239,7 @@ Ordered by implementation dependency, then surface size.
   and a build **failure is loud** — HTTP 500 with the build's actual error
   output, never a silent stale-serve. The build derives its base path from git
   (branch `worktree-<name>` → `/<name>/site/`, `main` → `/main/site/`);
-  `--base` overrides for the Pages/custom-domain builds. Router changes ride
+  `--base` overrides for the deploy/router builds. Router changes ride
   the usual main-merge-then-restart lifecycle (`bin/CLAUDE.md`).
 - **First chunk**: the route + auto-build (content-hash staleness,
   serialized, 500-on-failure) + the old-worktree 404 hint + a router test
@@ -269,11 +265,12 @@ Ordered by implementation dependency, then surface size.
 - **First chunk**: page structure + links + llms.txt generation with the
   marked placeholder letter.
 
-### Track D — Pages deploy workflow
+### Track D — Cloudflare Pages Git deploy
 
-- **What**: `.github/workflows/pages.yml` — on push to `main` affecting
-  `site/` or its sources: pnpm install, `site` build with
-  `--base /beebox/`, `upload-pages-artifact` → `deploy-pages`.
+- **What**: Cloudflare Pages Git integration — on each push to `main`,
+  Cloudflare installs dependencies, builds `site` with `--base /`, and deploys
+  `site/dist`. `.github/workflows/pages.yml` runs the matching checks but does
+  not deploy.
 - **Why**: "We probably should be generating the site on deploy" — no
   committed dist, no gh-pages branch.
 - **Direction**: **build on every push to `main`** — no path filter — plus
@@ -287,10 +284,9 @@ Ordered by implementation dependency, then surface size.
   generator enforces, never a hand-maintained glob list. Build failure
   leaves the previous deploy live and shows red in Actions (visible, not
   silent).
-- **First chunk**: the workflow, landed together with the rest of the plan
-  (it only activates on merge to main; Pages must also be flipped to
-  "GitHub Actions" source in repo settings — a manual boxholder step, noted
-  in rollout).
+- **First chunk**: checks workflow plus the Cloudflare project connection,
+  landed together with the rest of the plan. Project setup and domain routing
+  stay in deployment runbooks.
 
 ### Track E — nugget pipeline (extraction with reinterpretation)
 
@@ -390,9 +386,9 @@ below were the candidates; both are handled in code by Track E's enforcement.
 | A `status: proposed` nugget reaches the published site (AI words passing as content) | planned (Track E chunk) | generator refuses to render `proposed` | clear — build lists the refused slugs |
 | Nugget's source span edited after extraction | planned | span re-located at build; zero/ambiguous match → visible stale marker | clear — marker on the page + build summary line |
 | Nugget's source file deleted/moved, or outside the source allowlist | planned | build fails naming the nugget and path | clear |
-| Nugget source edited on `main` without a site rebuild (stale badge never appears) | n/a (workflow config) | Pages workflow builds on **every** main push — no path filter (Track D) | clear — the contract holds by construction |
-| Base-path mismatch (works on router, broken links on Pages `/beebox/`) | planned — link-check runs against both base configs | links emitted via base-path resolver only | clear — link-check fails the build |
-| Pages workflow build fails on main | n/a (CI itself) | previous deploy stays live | clear — red Actions run |
+| Nugget source edited on `main` without a site rebuild (stale badge never appears) | n/a (Cloudflare Git configuration) | Cloudflare builds on **every** main push — no path filter (Track D) | clear — the contract holds by construction |
+| Base-path mismatch (works on router, broken links on site host) | planned — link-check runs against both base configs | links emitted via base-path resolver only | clear — link-check fails the build |
+| Cloudflare production build fails on main | n/a (Cloudflare itself) | previous deploy stays live | clear — red Cloudflare build |
 | Malformed frontmatter in a nugget/content file | planned | parse errors fail the build with file+line | clear |
 | Markdoc renders odd markdown to broken HTML silently | partial — link-check catches broken hrefs, not layout | accepted residual: visual review on the router | semi-silent, accepted (low stakes, human-reviewed surface) |
 | Router serves stale `dist/` after source edits | yes (`bin/router-site.test.ts`: changed/deleted source and missing-manifest all rebuild) | never-serve-stale contract: router rebuilds on any content-hash difference vs `dist/.inputs.json` before serving (boxholder override, Track B) | clear — stale sources rebuild; a build failure is a loud 500 |
@@ -446,17 +442,16 @@ machinery, so several translate rather than apply directly:
 - **Porting the nugget practice into beebox itself** — acknowledged as
   "really a beebox feature"; prototype here, file the box feature when
   it proves out.
-- **Custom domain purchase/decision** — open question; the build's base-path
-  config makes either answer cheap later.
+- **Site host decision** — resolved as `beebox.run`; router builds use
+  `/main/site/` and deploy builds use `/`.
 
 ## Open design questions
 
 - **The letter itself** — content and when the boxholder's words arrive via
   the writing practice. The site frame doesn't wait (marked placeholder),
   but v1 isn't *shown to anyone* until the letter is real.
-- **Custom domain vs `ianb.github.io/beebox`** — lean: default project
-  URL for v1 (zero cost, honest register); revisit if the site becomes the
-  canonical link target.
+- **Canonical public host** — now `beebox.run`; do not shift this to another
+  public host without explicit re-decision.
 - **Fisheye interaction specifics** — deliberately deferred to the Track F
   prototype; deciding them in prose now would be planning past the taste
   checkpoint.
@@ -485,7 +480,8 @@ feature's plan owns the audits.
 2. **B1** — router route serving `site/dist/` + test.
 3. **C1** — v1 page structure, links, llms.txt + `.md` twins, marked
    placeholder letter.
-4. **D1** — Pages workflow (inert until merge; settings flip at rollout).
+4. **D1** — Cloudflare Git integration (activates after connection; deployment
+   project setup and DNS in rollout).
 5. **E1** — nugget schema, loader, enforcement (proposed-refusal, stale
    marker, fail-on-missing) + tests + one fixture nugget.
 6. **F1** — fisheye prototype page; boxholder reacts. (Spike gate.)
@@ -507,9 +503,8 @@ boxholder says ship.
   `frontmatter errors name file+line`. Test harness: whatever `bin/`-adjacent
   tooling already uses (to be confirmed at A1 — not assumed here); plain
   vitest is the fallback.
-- **Manual step at ship**: repo Settings → Pages → source = GitHub Actions
-  (boxholder or agent-with-gh, one-time), and confirming the first green
-  deploy at `ianb.github.io/beebox`.
+- **Manual step at ship**: connect the Cloudflare Pages project to GitHub, then
+  confirm the first green Cloudflare production build at `https://beebox.run`.
 - **No data migration** — nothing existing changes shape.
 - **Post-ship**: the site iterates in place (colors, exhibits, more nuggets);
   the agent-maintained cadence question reopens only after the bootstrap has

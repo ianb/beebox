@@ -99,7 +99,7 @@ test("parseSource: missing required field is named", () => {
 
 test("renderBody: internal links rewrite against base and are collected; externals open in a new tab", () => {
   const body = "See [about](/about.md) and [gh](https://github.com/x).";
-  const underPages = renderBody(body, { pageSitePath: "index.html", base: "/beebox/" });
+  const underPages = renderBody(body, { file: "cards/index.site-page.card", pageSitePath: "index.html", base: "/beebox/" });
   assert.match(underPages.html, /href="\/beebox\/about\.html"/);
   assert.match(underPages.html, /href="https:\/\/github\.com\/x" target="_blank" rel="noopener noreferrer"/);
   assert.match(underPages.html, /href="\/beebox\/about\.html"(?![^>]*target=)/);
