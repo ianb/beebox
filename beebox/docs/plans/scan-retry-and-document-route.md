@@ -3,7 +3,7 @@ title: "Bound the promote retry, and stop routing documents into the photo flow"
 status: partial
 workstream: scanner-setup
 issues:
-  - ../../../issues/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md
+  - ../../../issues/closed/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md
 ---
 # Bound the promote retry, and stop routing documents into the photo flow
 
@@ -15,7 +15,7 @@ the photo flow, where it is offered a `photo | back-of-photo | trash` question
 it cannot answer — and one such document was trashed unfiled.
 
 **Issues addressed:**
-[`2026-09-05-scan-import-textless-pdf-photo-taxonomy.md`](../../../issues/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md).
+[`2026-09-05-scan-import-textless-pdf-photo-taxonomy.md`](../../../issues/closed/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md).
 Queue searched for prior items on both halves. `bin/issues search --all
 "wakeup retry loop unbounded connector error exit code"` returned only closed
 items about connector exits and one unrelated open browse-daemon wedge; no open
