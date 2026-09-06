@@ -7,9 +7,12 @@ read-when: The user asks what the box can do, what to try, what it is for, or ho
 This is for you, the box's agent, to draw on when someone asks what the box
 can do or what they could try. It is not a script to read aloud. Pick the two
 or three things that fit what this person has to hand and what they came for,
-say them in plain words, and offer to start. Everything here works today; how
-each mechanism works is in the rest of these docs and in the agent guide, so
-this file only says what a person could do with it and why they might.
+and say them in plain words. Nothing here is something to jump into: when the
+person shows interest in one, the next step is to talk about it — what they
+want out of it, what they already have, how they'd use it — and only then to
+build. Everything here works today; how each mechanism works is in the rest
+of these docs and in the agent guide, so this file only says what a person
+could do with it and why they might.
 
 Where a passage is the author's own words, it is quoted. Use those words for
 the *why*; they are the shape the author wants the idea to have. Restate the
@@ -17,27 +20,66 @@ mechanics in your own words.
 
 ## Photograph things, talk about them, and get a record
 
-Three entry points, one arc.
+Three entry points, one arc. This section is more detailed than the others
+because it is the input most people try first and the one with the most
+moving parts behind it.
 
-**Photograph.** A photo sent in chat or through a capture becomes a card the
-box can read: it describes what is in the picture and files it. A batch of
-photos with no words (a camera roll, a stack of scanned pages) goes through
-upload and lands in the inbox for sorting.
+**Photograph.** A photo attached to a chat message is not a card yet: it
+arrives as a file under `_tmp/` (an `[file#N]` token with its
+`<attachments>` path), and `_tmp/` is swept after a week. You read it and
+decide what it becomes: a card that keeps the image (an image card, or a
+record with the photo attached), a fact written onto an existing card, or
+nothing kept at all once it has served its purpose. Say which you did.
 
-**Photograph and talk at the same time.** Capture is the box's own input:
-open it, take pictures, and describe them out loud as you go, in several
-takes if you like. The box assembles a transcript in real-time order, with
-the photos and the pauses where they happened, and you sort it out
-together. Walk through the kitchen narrating what is in the pantry; go
-through a shelf of games photographing each box and saying what you think of
-it. What the person said stays quoted as theirs on whatever record comes out
-of it.
+A **batch of photos with no words** is different. A camera-roll dump or a
+folder of scans dropped into the box arrives as an `<upload doc="…">`
+message pointing at an upload-batch card under `tmp-upload/`, with a
+manifest of every file (dozens of items, on the order of 100 MB); your job
+is to file each one to where it belongs and leave `tmp-upload/` empty. Pages
+scanned from a desktop uploader (`bbx scan-import`) skip chat and land as a
+capture-session card straight in `_content/inbox/` for triage. Both are
+first-class input expecting a reply, and both carry their own card
+instructions (`card-upload-batch.md`, `card-capture-session.md` in these
+docs).
 
-**Take inventory.** What comes out of a walk like that is a set of records:
-one per thing, with a name, a description, where it is, dates, quantities,
-who it belongs to, and a link back to the photo and the words it came from.
-Records are the general-purpose "a thing I keep track of" card. Ask "what do
-we have in the barn" later and the box answers from them.
+**Photograph and talk at the same time.** Capture is the box's own input,
+and the one to show first. The person opens it, takes pictures, and talks
+while they do, in as many takes as they like: stop recording, take more
+photos, start again. They can say anything about what they are showing you.
+Details, opinions, asides, half-thoughts, what it reminds them of, what is
+wrong with it. Nothing has to be phrased for the box or fit any expected
+shape; a stream of consciousness is the intended input. What you receive is
+a `<capture>` message pointing at a capture-session card whose body is a
+timeline: the transcribed speech in order, with each photo placed where it
+was taken (`{% image %}`) and the long pauses marked (`{% silence %}`). The
+words and the pictures arrive together, so you can work out which words go
+with which photo. The person's words stay theirs, quoted, on whatever comes
+out of it.
+
+Where Capture is, if they ask: on a phone it is the camera button on the
+composer row (control `bbx-composer-capture`); on a desktop it is inside the
+composer's Add menu (control `bbx-composer-add`, which also holds attach and
+upload). Before you name a location, run `bbx chat ui` to see what is
+actually on their screen, then link the control and locate it in words in
+the same sentence, as the chat prompt's "Pointing at the interface" rules
+say. For example: "Tap the camera button at the left of the message box
+([Capture](control:bbx-composer-capture)) and start talking as you take
+pictures." Or on a desktop: "Open the plus menu beside the message box
+([Add](control:bbx-composer-add?action=reveal&description=capture%2C%20attach%2C%20upload))
+and choose Capture." Never point at a control the dump did not show.
+
+**Take inventory.** What comes out of a walk like that is a set of records,
+one per thing: a name, where it is, dates, quantities, who it belongs to, a
+link back to the photo and to the words it came from. That is the structured
+part, and it is deliberately loose. The person does not have to know what
+the box "expects" or "understands". If they mention that one pan is the good
+one for baking, that a bowl was their grandmother's, that the toaster is
+getting old and should be replaced, all of that has a home: quoted in the
+record's body, or as a note, with no field to fit it into. Do not turn an
+aside into a checkbox; keep it as what they said, and let a later question
+("what should we replace?") find it by searching. Records are the
+general-purpose "a thing I keep track of" card. Ask "what do we have in the
+barn" later and the box answers from them.
 
 ## New kinds of things, with their own structure
 
@@ -64,10 +106,13 @@ we have in the barn" later and the box answers from them.
 
 The mechanism, for you: a box can define its own card types (a `.ts` file in
 the box's `src/schemas/`, written by you, with fields the person actually
-wants), and each type gets its own doc and rules. Start with records when the
-shape is unclear; promote to a type when the same kind of thing keeps coming
-up. A card's attach scope is the "container": a plant's weekly photo files
-beside the plant. A collection card with a custom view is how a shelf of them
+wants), and each type gets its own doc and rules. Before defining anything,
+find out what they want to do with the collection — pick a game for tonight,
+know what's in the barn, remember what they thought of a film — since that
+decides which properties matter. Start with records when the shape is
+unclear; promote to a type when the same kind of thing keeps coming up. A
+card's attach scope is the "container": a plant's weekly photo files beside
+the plant. A collection card with a custom view is how a shelf of them
 becomes something to browse and filter ("what can we play tonight with four
 people in under an hour").
 

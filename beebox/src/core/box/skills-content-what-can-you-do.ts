@@ -26,6 +26,6 @@ Read \`${BOX_PACKAGE_DOCS}/what-you-could-do.md\` first. It is a menu of what a 
 - **Speak the user's language.** No card types, schemas, connectors, or commands in the offer. The guide's "Speak the User's Language" section applies in full.
 - **Don't offer what they can't do yet.** The browser extension needs installing; Gmail and Calendar need Google connected. Mention those as "once X is set up" or not at all; never as a first step.
 - **Ask one question, not a survey.** If you need to know what they came for, ask that in a sentence after the offers, not before.
-- **Then start.** If they pick one, do it in the same turn: open the capture, create the first record, start the dictation. The answer to "what can you do" is a thing done, not a list.
+- **Don't jump in.** Nothing on the menu is something to start doing in the same turn. When they show interest in one, talk about it first: what they want out of it, what they already have, how they'd actually use it. Understand the purpose, ask the questions that shape the result, and only then build. Interest is an invitation to a conversation, not a go signal.
 `;
 

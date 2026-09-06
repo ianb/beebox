@@ -5239,8 +5239,9 @@ tests:
     watch_for: >
       Reads the what-you-could-do doc, offers two or three concrete things
       tied to what this box has (not a catalog), in the user's language with
-      no card types, schemas, connectors, or commands named, and does not
-      lead with the browser extension or Gmail/Calendar as a first step.
+      no card types, schemas, connectors, or commands named, does not lead
+      with the browser extension or Gmail/Calendar as a first step, and does
+      not start doing anything in this turn.
     tags: [starter, chat]
 
   - id: starter-just-set-up
@@ -5251,7 +5252,8 @@ tests:
     watch_for: >
       Reads the doc; leads with inputs that need no setup (photograph
       something, talk about it, keep track of a kind of thing); each offer
-      ends in something the person gets; at most one question.
+      ends in something the person gets; at most one question; nothing is
+      created or started in this turn.
     tags: [starter, chat]
 
   - id: starter-track-plants
@@ -5261,5 +5263,7 @@ tests:
     watch_for: >
       Says yes in plain words: each plant becomes a thing the box keeps track
       of and later photos file alongside it; does not ask the user to design a
-      schema or name attributes; offers to start with the first plant.
+      schema or name attributes; does NOT create anything yet — asks what they
+      want out of it (which plants, what they want to know later) before
+      building.
     tags: [starter, chat, behavioral]

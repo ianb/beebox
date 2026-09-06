@@ -217,7 +217,7 @@ export function cardTypesSection({ allCardSchemas, boxCardSchemas, boxTemplates 
     }
     lines.push("");
   }
-  lines.push("When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types can be defined in `src/schemas/` at the box root using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `src/schemas/CLAUDE.md` for how. NOT `_config/schemas/` — a schema left there is invisible to the loader. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `bbx init` after adding a schema to generate rules and docs.");
+  lines.push("A new kind of thing to keep track of is a conversation before it is a file: when the user shows interest in tracking something (plants, games, bills), first find out what they want out of it and how they'd use it — that decides the shape — and only then build; don't create the first card or type in the same breath as the offer. When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types can be defined in `src/schemas/` at the box root using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `src/schemas/CLAUDE.md` for how. NOT `_config/schemas/` — a schema left there is invisible to the loader. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `bbx init` after adding a schema to generate rules and docs.");
   return lines.join("\n");
 }
 
