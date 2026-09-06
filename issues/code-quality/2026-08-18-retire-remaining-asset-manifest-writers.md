@@ -61,8 +61,17 @@ than merely tidy.
 same boxes.** `annex/to-annex.ts` reads manifests for both halves of its
 verification, and `commands/attachments-gitignore.ts` reads them too.
 
-So the remaining work is one decision and one operational act, in that order:
-run `bbx attachments to-annex` on the two unconverted production boxes (a
-one-way migration of real boxes — the boxholder's call, not an agent's), then
-delete the modules and the manifest subcommands with nothing left reading
-them.
+So the remaining work is: run `bbx attachments to-annex` on the two unconverted
+production boxes, then delete the modules and the manifest subcommands with
+nothing left reading them.
+
+**The conversion is blocked on the boxes' working trees.** `to-annex` refuses
+on a dirty tree, and both are dirty — one with eight entries, the other with
+twenty-one, including a set of uncommitted deletions that look like a
+capture-archive move someone started and never committed. Both boxes commit
+regularly (last commits within the hour when this was checked, 2026-09-06), so
+the residue is not a stalled box; it is ordinary live-box working state several
+hours old. Clearing it means committing the boxholder's own uncommitted box
+content, which is theirs to do, not an agent's — and one of the two holds
+personal material. The conversion runs once the boxholder has settled those
+trees.
