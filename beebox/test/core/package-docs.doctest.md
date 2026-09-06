@@ -46,6 +46,14 @@ index.includes(BOX_PACKAGE_DOCS)
 // Package docs never carry a per-box DOCID marker
 docs.some((d) => d.content.includes("DOCID:"))
 => false
+
+// Prose docs from docs/box/ ship with their frontmatter stripped and their read-when in the index
+const prose = byName.get("what-you-could-do.md") ?? "";
+prose.startsWith("# What you could do with your box")
+=> true
+
+index.includes("| `what-you-could-do.md` | The user asks what the box can do")
+=> true
 ```
 
 ## A card doc uses only built-in templates and carries the contains: appendix for searchable types
