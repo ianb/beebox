@@ -10,59 +10,55 @@ or three things that fit what this person has to hand and what they came for,
 and say them in plain words. Nothing here is something to jump into: when the
 person shows interest in one, the next step is to talk about it — what they
 want out of it, what they already have, how they'd use it — and only then to
-build. Everything here works today; how each mechanism works is in the rest
-of these docs and in the agent guide, so this file only says what a person
-could do with it and why they might.
-
-Where a passage is the author's own words, it is quoted. Use those words for
-the *why*; they are the shape the author wants the idea to have. Restate the
-mechanics in your own words.
+build. Everything here works today. How each mechanism works is in the rest
+of these docs and in the agent guide; this file says what a person could do
+with it and why they might want to.
 
 ## Photograph things, talk about them, and get a record
 
-Three entry points, one arc. This section is more detailed than the others
-because it is the input most people try first and the one with the most
-moving parts behind it.
+Three entry points, one arc. This is the input most people try first, so it
+gets the most detail.
 
 **Photograph.** A photo attached to a chat message is not a card yet: it
 arrives as a file under `_tmp/` (an `[file#N]` token with its
 `<attachments>` path), and `_tmp/` is swept after a week. You read it and
 decide what it becomes: a card that keeps the image (an image card, or a
 record with the photo attached), a fact written onto an existing card, or
-nothing kept at all once it has served its purpose. Say which you did.
+nothing kept once it has served its purpose. Say which you did.
 
-A **batch of photos with no words** is different. A camera-roll dump or a
-folder of scans dropped into the box arrives as an `<upload doc="…">`
-message pointing at an upload-batch card under `tmp-upload/`, with a
-manifest of every file (dozens of items, on the order of 100 MB); your job
-is to file each one to where it belongs and leave `tmp-upload/` empty. Pages
-scanned from a desktop uploader (`bbx scan-import`) skip chat and land as a
-capture-session card straight in `_content/inbox/` for triage. Both are
-first-class input expecting a reply, and both carry their own card
-instructions (`card-upload-batch.md`, `card-capture-session.md` in these
-docs).
+A **batch of photos or scans with no words** arrives differently. A
+camera-roll dump or a folder dropped in at once comes as an `<upload>`
+message pointing at an upload-batch card under `tmp-upload/`, with a manifest
+of every file (dozens of items, on the order of 100 MB). Each file is yours
+to look at and place: a photo becomes an image card or attaches to a record,
+a document becomes a doc card, and the batch card goes away once
+`tmp-upload/` is empty. Pages scanned in bulk land as a capture-session card
+in `_content/inbox/` with one image card per page; after your annotation pass
+each page carries its OCR text and a description, so the stack becomes
+searchable. Both are first-class input expecting a reply, and both have their
+own card instructions in these docs (`card-upload-batch.md`,
+`card-capture-session.md`).
 
-**Photograph and talk at the same time.** Capture is the box's own input,
-and the one to show first. The person opens it, takes pictures, and talks
-while they do, in as many takes as they like: stop recording, take more
-photos, start again. They can say anything about what they are showing you.
-Details, opinions, asides, half-thoughts, what it reminds them of, what is
-wrong with it. Nothing has to be phrased for the box or fit any expected
-shape; a stream of consciousness is the intended input. What you receive is
-a `<capture>` message pointing at a capture-session card whose body is a
-timeline: the transcribed speech in order, with each photo placed where it
-was taken (`{% image %}`) and the long pauses marked (`{% silence %}`). The
-words and the pictures arrive together, so you can work out which words go
-with which photo. The person's words stay theirs, quoted, on whatever comes
-out of it.
+**Photograph and talk at the same time.** Capture is the box's own input, and
+the one to show first. The person opens it, takes pictures, and talks while
+they do, in as many takes as they like: stop recording, take more photos,
+start again. They can say anything about what they are showing you. Details,
+opinions, asides, half-thoughts, what it reminds them of, what is wrong with
+it. Nothing has to be phrased for the box or fit any expected shape; a stream
+of consciousness is the intended input. What you receive is a `<capture>`
+message pointing at a capture-session card whose body is a timeline: the
+transcribed speech in order, each photo placed where it was taken
+(`{% image %}`), the long pauses marked (`{% silence %}`). Words and pictures
+arrive together, so you can work out which words go with which photo. The
+person's words stay theirs, quoted, on whatever comes out of it.
 
 Where Capture is, if they ask: on a phone it is the camera button on the
 composer row (control `bbx-composer-capture`); on a desktop it is inside the
 composer's Add menu (control `bbx-composer-add`, which also holds attach and
-upload). Before you name a location, run `bbx chat ui` to see what is
-actually on their screen, then link the control and locate it in words in
-the same sentence, as the chat prompt's "Pointing at the interface" rules
-say. For example: "Tap the camera button at the left of the message box
+upload). Before naming a location, run `bbx chat ui` to see what is on their
+screen, then link the control and locate it in words in the same sentence,
+as the chat prompt's "Pointing at the interface" rules say. For example: "Tap
+the camera button at the left of the message box
 ([Capture](control:bbx-composer-capture)) and start talking as you take
 pictures." Or on a desktop: "Open the plus menu beside the message box
 ([Add](control:bbx-composer-add?action=reveal&description=capture%2C%20attach%2C%20upload))
@@ -70,109 +66,103 @@ and choose Capture." Never point at a control the dump did not show.
 
 **Take inventory.** What comes out of a walk like that is a set of records,
 one per thing: a name, where it is, dates, quantities, who it belongs to, a
-link back to the photo and to the words it came from. That is the structured
-part, and it is deliberately loose. The person does not have to know what
-the box "expects" or "understands". If they mention that one pan is the good
-one for baking, that a bowl was their grandmother's, that the toaster is
-getting old and should be replaced, all of that has a home: quoted in the
-record's body, or as a note, with no field to fit it into. Do not turn an
-aside into a checkbox; keep it as what they said, and let a later question
-("what should we replace?") find it by searching. Records are the
-general-purpose "a thing I keep track of" card. Ask "what do we have in the
-barn" later and the box answers from them.
+link back to the photo and to the words it came from. That structure is
+deliberately loose. The person does not have to know what the box "expects"
+or "understands". If they mention that one pan is the good one for baking,
+that a bowl was their grandmother's, that the toaster is getting old and
+should be replaced, all of it has a home: quoted in the record's body, or as
+a note, with no field to fit it into. Do not turn an aside into a checkbox;
+keep it as what they said, and let a later question ("what should we
+replace?") find it by searching. Records are the general-purpose "a thing I
+keep track of" card. Ask "what do we have in the barn" later and the box
+answers from them.
 
 ## New kinds of things, with their own structure
 
-> For instance, we did a project where we wanted to create a site with all
-> the galleries in all the Twin Cities. And so there's a special kind of card
-> for that. Board games, movies. We can keep track of things that we own,
-> and you can add to them.
->
-> One of the important parts is you don't have to come up with a careful
-> schema or something. You don't have to know what a schema is. The agent can
-> start with a reasonable set of properties that you're going to collect. You
-> can also collect stuff that's not part of that, and it can go back and
-> refactor it. You don't have to decide exactly what attributes you have to
-> keep track of. You can change those in the future. You can add opinionated
-> ones.
->
-> You can keep track of your plants. And then each plant, when you take a
-> picture of it, they can file that alongside the plant. Anything that you
-> keep track of also becomes a container for other things. A plant might
-> become a container for when you track it week to week. You can keep track
-> of bills coming in. You can keep track of notes or classes. They can just be
-> set up as records and then eventually changed as well. So it's really
-> flexible how you use that.
+People keep collections: board games, movies, books, plants, bills, the notes
+for a class, every gallery in a city for a site about them. The box can give
+each kind its own card type, with its own properties and its own page.
 
-The mechanism, for you: a box can define its own card types (a `.ts` file in
-the box's `src/schemas/`, written by you, with fields the person actually
-wants), and each type gets its own doc and rules. Before defining anything,
-find out what they want to do with the collection — pick a game for tonight,
-know what's in the barn, remember what they thought of a film — since that
-decides which properties matter. Start with records when the shape is
-unclear; promote to a type when the same kind of thing keeps coming up. A
-card's attach scope is the "container": a plant's weekly photo files beside
-the plant. A collection card with a custom view is how a shelf of them
-becomes something to browse and filter ("what can we play tonight with four
-people in under an hour").
+What to tell a person, and how to behave:
+
+- **They never have to design anything.** Nobody needs to know what a schema
+  is or decide up front which attributes to track. You propose a reasonable
+  set of properties for what they are collecting, and you can add opinionated
+  ones (a "would play again" for games, a "who liked it" for films).
+- **Anything that does not fit still gets kept.** Say something about an item
+  that has no property, and it goes in as words on the card. Later, if the
+  same kind of remark keeps appearing, you can turn it into a property and
+  move the existing ones over. Properties change over time; nothing is
+  locked in.
+- **Each thing is also a container.** A plant's card holds the photos taken of
+  it week to week; a game's card holds the photo of its box and the person's
+  remarks about it. Whatever someone tracks can accumulate things beneath it.
+- **Start loose, tighten later.** When the shape is unclear, plain records are
+  enough; promote to a type once the same kind of thing keeps coming up.
+- **Ask what it is for before building.** Picking a game for tonight, knowing
+  what is in the barn, remembering what they thought of a film: the purpose
+  decides which properties matter. Talk first; the first card comes after.
+
+The mechanism, for you: a box-local card type is a `.ts` file in the box's
+`src/schemas/`, written by you, and it gets its own doc and rules like any
+built-in type. A card's attach scope is the container. A collection card
+with a custom view is how a shelf of them becomes something to browse and
+filter ("what can we play tonight with four people in under an hour").
 
 ## Dictation, and keeping your voice
 
-> Dictation with your voice is a great way to just collect your thoughts, to
-> collect reactions. You can use it along with other things. As you're
-> talking, you can select items: if you're working on something and there's
-> a document or a card, you can select parts of the card and then talk about
-> them, and the agent can see what you were talking about at the time.
->
-> You don't have to be short about it. You can talk for five minutes or ten
-> minutes or twenty minutes. You can pause for a full minute as you put your
-> thoughts together. You can say something and then be like, oh no, I didn't
-> mean that, and it's going to be able to figure that out and put that
-> together as still your words, but not necessarily the most literal
-> transcription of your words. It can take your words and make non-paraphrasing
-> results from your words, so that you can talk, say things, and then have
-> something that comes out that is still your words.
+Talking is the way to collect thoughts and reactions: not short commands but
+five, ten, twenty minutes of thinking out loud, with pauses of a minute while
+the person puts the next thought together. Tell them this is welcome.
 
-The mechanism, for you: dictation into the chat has live transcription and
-spoken controls ("send message", "erase message", "microphone off"). A
-high-quality transcription pass can run over the recording before the message
-goes out. Words the recognizer was unsure of are marked, and you can go back
-to the audio when it matters. A selection made in an open card arrives with
-the message, so "this part" means exactly that passage. Narration mode is for
-the long, loose dump: the person talks, you stay silent and collect. And the
-law of quoting applies to all of it: the person's words are kept as theirs,
-inside `{% quote %}`, trimmed and arranged but never paraphrased. A person
-who dictates a page and gets back their own sentences, cleaned of the false
-starts, is the thing to show.
+What they can expect, and what you owe them:
+
+- **Talk about what is on screen.** With a document or card open, they can
+  select a passage and then talk about it, and you see which passage they
+  meant, at the moment they said it.
+- **False starts are fine.** "Oh no, I didn't mean that" is handled: you keep
+  the corrected thought, drop the abandoned one, and what remains is still
+  their words.
+- **Their words come back as their words.** Cleaned of fillers and restarts,
+  arranged, trimmed, but never paraphrased. Not the most literal transcript,
+  and not your rewording either. Someone who dictates a page and gets back
+  their own sentences, in order, is the thing to show.
+- **You never rewrite them.** The law of quoting applies to everything they
+  say: their words go inside `{% quote %}`, and edits to those words happen
+  only when they ask for them.
+
+The mechanism, for you: live transcription with spoken controls ("send
+message", "erase message", "microphone off"); an optional high-quality pass
+over the recording before the message goes out; words the recognizer was
+unsure of marked so you can go back to the audio when it matters; a
+selection made in an open card arriving with the message as
+`<user-selection>`. Narration mode is for the long, loose dump: the person
+talks, you stay silent and collect.
 
 ## Connecting things
 
-The box pulls from services you connect and pushes back where it makes
-sense. Google Calendar syncs two ways: ask what is coming up, add or move an
-event by saying so. Gmail brings in the threads you tell it to track and
-lets you draft replies the person reviews and sends themselves; the box
+The box pulls from services the person connects and pushes back where it
+makes sense. Google Calendar syncs two ways: ask what is coming up, add or
+move an event by saying so. Gmail brings in the threads they tell it to
+track and lets you draft replies they review and send themselves; the box
 never sends mail on its own. Google Drive mirrors a folder, a spreadsheet, or
 a document into the box and back. Telegram puts the same conversation on a
 phone. The browser extension saves pages and comments (below). Connecting
 Google needs an OAuth setup that is still fiddly, so lead with the inputs
-that need nothing: photos, voice, typing, the extension.
+that need nothing: photos, voice, typing.
 
 ## Plans, and keeping track
 
-> Plans, keeping track. All these kinds of things are things that you keep
-> track of, and use this ability to create your own properties and responses.
+Plans and lists are things a person keeps track of, and the same freedom
+applies: their own properties, their own way of noting progress, kept as
+records or as a type of their own. Behind it all is a persistent record:
+every change is a commit, so "what did you do overnight" and "why did you
+move that" have answers you can trace.
 
-Todos, questions the box asks when it is unsure, reminders and recurring
-jobs on a schedule, and behind all of it a persistent record: every change is
-a commit, so "what did you do overnight" and "why did you move that" have
-answers you can trace. The author on the current limits:
-
-> The one thing that is missing for plans is really good forward thinking and
-> triggers. So the documentation will be a little light in that area because
-> it just doesn't exist yet.
-
-So: offer to keep track, to remind, to run something weekly. Do not promise
-that the box will anticipate.
+What the box does not yet do well is think ahead: notice on its own that a
+plan needs attention, or trigger on something happening. Offer to keep
+track, to remind, to run something weekly on a schedule. Do not promise that
+the box will anticipate.
 
 ## What the agent itself can do
 
@@ -185,25 +175,22 @@ custom view when a kind of card wants a better display.
 
 ## Landmarks and areas
 
-> Landmarks are something you can think of as you develop these things, and
-> as it comes together, you're going to start working in one area instead of
-> the whole box together. Landmarks are a way of jumping into that spot and
-> starting a chat in that context, and also just finding those things that
-> you created in that context.
-
-For someone who knows ChatGPT or Claude: a landmark is like a project, a
-place with its own context where a chat starts already knowing what it is
-about, except that the agent can still look anywhere in the box. Suggest one
-when the same kind of thing keeps coming up; do not make them for trivia.
+As someone's box fills in, they stop working in the whole box at once and
+start working in one area: the games, the renovation, the class. A landmark
+marks such an area. It is the way to jump to that spot, to start a chat that
+already knows what it is about, and to find the things made there. For a
+person who knows ChatGPT or Claude: like a project, with one difference: the
+agent can still look anywhere in the box. Suggest a landmark when the same
+kind of thing keeps coming up; do not make them for trivia.
 
 ## The browser extension
 
-Bee Box Clerk (Chrome) saves the page you are reading into the box as a
-readable copy with a frozen snapshot, or saves it with your comment attached
-to the passage you were looking at; the box can open a chat with that page
-beside it. It can also share your open tabs so the box can propose an
-arrangement you apply. Before offering it, know whether the person has it:
-if their box has no saved webpage cards, they probably do not yet.
+Bee Box Clerk (Chrome) saves the page the person is reading into the box as
+a readable copy with a frozen snapshot, or saves it with their comment
+attached to the passage they were looking at; the box can open a chat with
+that page beside it. It can also share their open tabs so the box can
+propose an arrangement they apply. Before offering it, know whether they
+have it: if the box has no saved webpage cards, they probably do not yet.
 
 ## Gmail and Calendar in particular
 
