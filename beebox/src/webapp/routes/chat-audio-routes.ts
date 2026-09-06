@@ -13,7 +13,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import ky from "ky";
 import type { FastifyReply } from "fastify";
 import { WebSocket as WsWebSocket } from "ws";
 import { transcribeAudioHq } from "../../core/transcription/index.js";
@@ -22,7 +21,6 @@ import {
   nextSpeakerLetter,
   relabelDiarizedSpeakers,
 } from "../../core/transcription/voxtral.js";
-import { getOpenAiThinkingKey } from "../../core/openai-thinking-key.js";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import {
   VOICE_MODELS,
@@ -31,6 +29,9 @@ import {
 } from "../../schemas/personality.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { serveMockTts } from "../tts-mock.js";
+import { resolveTtsService, TtsNotConfiguredError } from "../../core/tts/resolve.js";
+import { EmptyTtsResponseError, type TtsService } from "../../services/tts.js";
+import { DEFAULT_VOICE } from "../../shared/tts-backends.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { readSessionLogTail } from "./chat-helpers.js";
 
@@ -137,36 +138,35 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
     if (mockReply !== undefined) return mockReply;
 
     const { text, instructions, voice } = request.body;
-    const resolvedVoice = voice && VOICE_MODEL_SET.has(voice) ? voice : "marin";
+    const resolvedVoice = voice && VOICE_MODEL_SET.has(voice) ? voice : DEFAULT_VOICE;
 
-    if (openaiAudio) {
-      const ttsOpts: { voice?: string; instructions?: string } = { voice: resolvedVoice };
-      if (instructions) ttsOpts.instructions = instructions;
-      const result = await openaiAudio.textToSpeech(text, ttsOpts);
+    // The injected service is the test seam; production resolves one from the
+    // box's configured backend. There is no third path — the inline provider
+    // call this route used to carry is what let the service interface sit
+    // unused (docs/plans/tts-backend-selection.md, Track 1).
+    let service: TtsService;
+    try {
+      service = openaiAudio ?? await resolveTtsService(boxRoot);
+    } catch (e) {
+      if (e instanceof TtsNotConfiguredError) return reply.status(500).send({ error: e.message });
+      throw e;
+    }
+
+    const ttsOpts: { voice?: string; instructions?: string } = { voice: resolvedVoice };
+    if (instructions) ttsOpts.instructions = instructions;
+    try {
+      const result = await service.textToSpeech(text, ttsOpts);
       reply.header("Content-Type", result.contentType);
       return reply.send(result.audio);
+    } catch (e) {
+      if (e instanceof EmptyTtsResponseError) {
+        // Loud rather than silent: a zero-length body played as success is
+        // indistinguishable from broken speakers (principle 4).
+        console.error(`[chat-tts] ${e.message}`);
+        return reply.status(502).send({ error: e.message });
+      }
+      throw e;
     }
-
-    const apiKey = await getOpenAiThinkingKey(boxRoot, { observe: true });
-    if (!apiKey) {
-      return reply.status(500).send({ error: "TTS API key not configured" });
-    }
-    const response = await ky.post("https://api.openai.com/v1/audio/speech", {
-      json: {
-        model: "gpt-4o-mini-tts-2025-03-20",
-        input: text,
-        voice: resolvedVoice,
-        response_format: "mp3",
-        instructions:
-          instructions ||
-          "Fast and concise, but with a friendly lilting tone.",
-      },
-      headers: { Authorization: `Bearer ${apiKey}` },
-      retry: 2,
-      timeout: 30_000,
-    });
-    reply.header("Content-Type", "audio/mpeg");
-    return reply.send(response.body);
   });
 
   // GET /api/chat/transcribe-ws - WebSocket proxy to Mistral Voxtral Realtime

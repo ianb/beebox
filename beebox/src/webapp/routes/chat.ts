@@ -29,7 +29,7 @@ import { getMostActive } from "../../core/chat/session/history.js";
 import { runBackfillIfNeeded } from "../../core/chat/session/backfill.js";
 import { reconcileChatHusks } from "../../core/chat/husk.js";
 import type { EventBus } from "../../core/event-bus.js";
-import type { OpenAIAudioService } from "../../services/openai-audio.js";
+import type { TtsService } from "../../services/tts.js";
 import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../core/chat/schedules.js";
 import { fireChatSchedule } from "./chat-schedule-fire.js";
 import { registerChatUploadRoutes } from "./chat-uploads.js";
@@ -48,7 +48,7 @@ interface RegisterChatRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
   eventBus: EventBus;
-  openaiAudio?: OpenAIAudioService | undefined;
+  openaiAudio?: TtsService | undefined;
   /** Enable local speech-test facilities. Production leaves this false. */
   devSurfaces?: boolean | undefined;
   /**

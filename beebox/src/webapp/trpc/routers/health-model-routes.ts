@@ -13,6 +13,7 @@ import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { getOpenRouterKey, routeVia } from "../../../core/openrouter.js";
 import { getOpenAiEmbeddingsKey } from "../../../core/search/embeddings-key.js";
 import { hqRoutesThroughOpenRouter, isMaiHqService, loadTranscriptionConfig } from "../../../core/transcription/index.js";
+import { loadTtsConfig } from "../../../core/tts/config.js";
 import type { HealthCheck } from "./health.js";
 
 /**
@@ -50,6 +51,14 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
     lines.push(`HQ transcription (${hqService}) → Mistral only; OpenRouter cannot serve Voxtral`);
   }
   if (process.env["BBX_SCAN_VISION"] === "gemini") routes.push(["scan vision", geminiKey]);
+  // Speech is a chosen backend, not a fallback, so it reports the choice
+  // rather than which key won: `gemini` reaches OpenRouter by definition.
+  const ttsBackend = (await loadTtsConfig(boxRoot)).backend;
+  if (ttsBackend === "gemini") {
+    lines.push("speech (gemini) → OpenRouter only; chosen in the voice menu");
+  } else {
+    routes.push([`speech (${ttsBackend})`, await getOpenAiThinkingKey(boxRoot, { observe: false })]);
+  }
 
   lines.unshift(...routes.map(([label, direct]) => `${label} → ${direct === null ? "OpenRouter" : "its own provider"}`));
   return [

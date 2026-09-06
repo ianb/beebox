@@ -1,6 +1,6 @@
 ---
 title: "TTS backend selection, and per-backend style direction"
-status: draft
+status: partial
 workstream: unattached
 issues:
   - ../../../issues/features/2026-09-06-gemini-tts-over-openrouter.md
@@ -219,7 +219,11 @@ export function deliverStyle(opts: {
 }): StyleDelivery;
 ```
 
-Gemini's `prefix` follows the documented form (`<instruction> "<text>"`). A
+Gemini's `prefix` follows the documented form **exactly** — `<instruction>:
+"<text>"`, colon and quotes. This is load-bearing, not cosmetic: a period
+separator before a short text returns empty audio every time (Failure modes),
+so the separator is the function's whole reason to exist rather than a detail
+its callers could choose. A
 `discriminated union` rather than an optional field so a new backend cannot be
 added without deciding — principle 2, exhaustiveness. `unsupported` carries the
 dropped text so the log line can name what was lost rather than saying
@@ -305,27 +309,33 @@ different field.
 
 ## Failure modes
 
-> **Critical gap:** Gemini returns **HTTP 200 with a zero-length body**,
-> intermittently, and **the trigger could not be characterized**. Measured
-> 2026-09-06 across two sessions: a style prefix on an 85-character sentence
-> failed 3 of 4, then a style prefix on a 59-character sentence failed 5 of 5
-> while the same style on 94- and 218-character sentences succeeded 5 of 5, and
-> every unstyled input succeeded at all three lengths. An earlier reading of the
-> first sample suggested style-plus-length was the cause; the second run
-> refutes that — the short styled case failed where the long styled case did
-> not. Some inputs were homogeneous across five attempts (0/5 or 5/5), others
-> mixed within four (1/4).
+> **Resolved, and it was our bug, not theirs.** Gemini returned **HTTP 200 with
+> a zero-length body** on some inputs, and two rounds of measurement failed to
+> characterize it — first blamed on style-plus-length, then refuted. A third
+> round found the actual rule: a style sentence ending in a **period**, followed
+> by a **short** text, yields empty audio deterministically (0 of 10 on one
+> input, and 0 of 6 on another). Every other combination is fine, and the
+> separator is the whole story:
 >
-> **The unpredictability is the finding, and it is worse than a known trigger.**
-> A zero-length buffer returned as success reaches the browser as silence: the
-> boxholder hears nothing, and has no reason to suspect the backend rather than
-> their speakers. A typed throw below a byte floor is mandatory and is resolved
-> in-plan. Whether anything beyond the throw is possible depends on the retry
-> question below, which the 0-of-5 runs make doubtful.
+> | Text | `style. text` | `style: text` | `style: "text"` | `style\ntext` |
+> |---|---|---|---|---|
+> | short (29 chars) | **0/6** | 6/6 | 6/6 | 6/6 |
+> | long (85 chars) | 6/6 | 6/6 | 6/6 | 6/6 |
+>
+> The failing form is one I invented; **Google's documented form is the colon**
+> (`Say in an spooky whisper: "…"`). So `deliverStyle` emits colon-and-quotes,
+> and the failure disappears. This is why the plan's Track 3 fixes the prefix
+> format rather than leaving it to the caller.
+>
+> **The empty-body guard is still built.** Not because this failure remains
+> reachable, but because a zero-length buffer returned as success is inaudible
+> to us and reaches the boxholder as silence they will blame on their speakers
+> (principle 4). A guard whose trigger we think we have eliminated is cheap; a
+> silent speech path is not.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Gemini returns 200 + empty body, unpredictably | to write (Track 4 doctest, fake HTTP) | to build: throw `EmptyTtsResponseError` below a byte floor; retry only if the probe says it helps | clear once built; **silent today** |
+| Gemini returns 200 + empty body | `deliverStyle` doctest asserts the colon form; Track 4 doctest asserts the throw | trigger removed by the prefix format, plus `EmptyTtsResponseError` below a byte floor | clear once built |
 | Backend has no style mechanism, `instructions` dropped | to write (Track 3 doctest, `unsupported` kind) | `StyleDelivery.unsupported` + one warn + a menu note | clear once built |
 | `speaking-voice.model` names a voice the backend lacks | subplan | subplan | **silent until the subplan lands — hence Track 4 gates on it** |
 | WAV-returning backend hits the MediaSource path | to write (frontend doctest) | route on `contentType`, not on `supportsMediaSource()` alone (`context.ts:111-117`) | clear: playback throws today rather than silently failing |
@@ -384,17 +394,14 @@ costs more than the failure. Google documents the behavior as supported
 
 ## Open design questions
 
-- **Is the empty-body failure retryable at all?** This is now the question the
-  Gemini track turns on. If failures were uniformly random a bounded retry would
-  fix it — but two inputs failed **5 of 5 consecutive attempts**, which looks
-  like some inputs are deterministically unrenderable rather than unlucky, and
-  no number of retries rescues those. **Lean:** run a retry probe on a
-  known-failing input before Track 4. If a deterministic-failure class is
-  confirmed, Gemini cannot be the box's speaking voice by default, and this plan
-  ships Tracks 1-3 and 5 with Gemini present but labelled experimental in the
-  picker — which is still worth doing, because the seam and the style
-  translation are what the boxholder asked for and they outlive this one
-  backend. This is why the question does not block Tracks 1-3.
+- ~~**Is the empty-body failure retryable at all?**~~ **Settled 2026-09-06
+  before implementation, and it is not a retry question.** Retrying the failing
+  input failed 0 of 10, and changing the voice did not help — but changing the
+  separator from a period to a colon fixed it 6 of 6. The trigger is a prompt
+  form this plan controls, so Gemini ships as a selectable backend rather than
+  an experimental one, and Track 4 is no longer gated on this. Detail in Failure
+  modes.
+
 - **Should `stylable: false` be selectable at all?** A backend that cannot honor
   the boxholder's stated style is arguably not a valid choice for a box whose
   personality card sets one. **Lean:** allow it, note it in the menu — refusing
@@ -441,9 +448,9 @@ written.
    Behavior-neutral; existing tests must pass untouched.
 2. **Track 2** — `shared/tts-backends.ts`, `_config/tts.json`, load/update, tRPC.
 3. **Track 3** — `deliverStyle` + doctest. Independent of 2; can be concurrent.
-4. **Measure the retry question** (Open design questions) — a scratch probe, not
-   a commit. Its answer decides whether Gemini ships as a default or as an
-   experimental option, so it precedes Track 4 rather than following it.
+4. ~~Measure the retry question~~ — **done before implementation started**; the
+   answer changed Track 3's output format (colon, not period) and removed the
+   gate on Track 4. See Failure modes.
 5. **Subplan** — per-backend voices, designed and reviewed.
 6. **Track 4** — the Gemini backend, WAV wrapper, empty-body guard. Gated on 3,
    4 and 5.
@@ -452,6 +459,33 @@ written.
 Tracks 1-3 are useful on their own and could be merged as a unit if the
 boxholder wants the dead abstraction removed before deciding about Gemini —
 but the plan ships as one piece unless they say otherwise.
+
+## Progress
+
+Tracks 1, 2, 3 and 5 are built; the doctests named below pass and
+`pnpm test:changed` is green (2574).
+
+Track 4 (the Gemini backend) is written and verified end-to-end against the
+live API — both backends resolve from config, Gemini's WAV parses as 24 kHz
+mono 16-bit, and a round-trip transcription confirms the style direction is
+obeyed without being spoken. **It still gates on the voices subplan**, which is
+not written: `speaking-voice.model` is currently carried through to Gemini,
+where the 13 OpenAI voice names mean nothing, so the backend falls back to
+`Zephyr` and silently ignores the card's choice. That is the same silent-drop
+bug this plan exists to prevent, in a different field, and it must be closed
+before this ships.
+
+Two things the build changed from the design:
+
+- **`createTtsService` takes an `apiKey`, not a `ModelRoute`.** Passing a route
+  was actively wrong: with no `openai-thinking` key, `routeVia` returned the
+  box's OpenRouter credential and the OpenAI backend sent it to
+  `api.openai.com` for a 401. Neither backend has a fallback — OpenRouter
+  carries no OpenAI speech model — so each takes exactly one credential.
+  Caught by an end-to-end probe, not by the doctests.
+- **The empty-body floor is 512 bytes, not zero.** A four-byte "success" is as
+  useless as an empty one, and the fake returns a genuinely short buffer so the
+  guard is asserted against the real shape.
 
 ## Rollout shape
 
