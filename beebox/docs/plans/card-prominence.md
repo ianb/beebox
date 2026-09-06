@@ -266,7 +266,8 @@ export type ProminenceLevel = z.infer<typeof Prominence>;
 prominence: Prominence.optional(),
 ```
 
-Absent is a level: **ordinary**. Code that dispatches on the level uses a
+Absent means the type's default, which is **ordinary** for every content
+type (type defaults below). Code that dispatches on the level uses a
 four-member union `ProminenceLevel | "ordinary"` with `assertNever` (principle
 #2). A wrong value is a schema error at parse time, and the message lists the
 three values (Zod enum errors do; the lint formatter already renders them).
@@ -294,10 +295,10 @@ does not, never a comparison with its neighbours:
 >   orient a reader to this directory or area and send them onward: an
 >   index, an overview, a dashboard, a roster, a gallery, a collection view.
 >   Do not use it for a card that is merely important or useful; a recipe is
->   never an entry point, the recipe index is. A landmark card is its
->   directory's entry point by being a landmark. Ask: *would a newcomer open
->   this first to understand what is here?* Usually one per directory; a
->   second is exceptional.
+>   never an entry point, the recipe index is. A landmark card is not one
+>   either: it marks a place, and the place's entry point is a visitable
+>   card inside it. Ask: *would a newcomer open this first to understand
+>   what is here?* Usually one per directory; a second is exceptional.
 > - **`primary`** — *The thing itself.* The card a reader came to this
 >   directory for, as opposed to material toward it or about it: a project's
 >   plan is primary, its research notes, quotes, drafts, and call logs are
@@ -314,8 +315,10 @@ does not, never a comparison with its neighbours:
 >   imports, scratch, generated intermediates, and anything already embedded
 >   in another card (an image that appears inside a primary document is
 >   background on its own; the document is where a reader sees it). Still
->   readable and addressable; folded last and shown dimmed. On a landmark
->   card it marks the whole directory as background.
+>   readable and addressable; folded last and shown dimmed. Cards the box
+>   writes for itself (jobs, runs, chat threads) and landmark cards are
+>   background by type; you never mark them. On a landmark card a written
+>   `background` marks the whole place as background.
 >
 > `prominence` is not `status`. `status` is lifecycle (new, done, archived);
 > `prominence` is who the card is for. A finished card is not automatically
@@ -337,25 +340,54 @@ rest of the box, and never needs to compare siblings. The
 budget lint (below) is the enforcement for the case where many local
 decisions add up wrong.
 
-**On a landmark card** the same field describes the directory. A landmark is
-its directory's entry point by type, the way it is its directory's identity
-by type, so the field on a landmark is only ever a demotion:
+**Type defaults.** Absent means the card type's default level, and for
+every content type that default is ordinary. Two kinds of card are
+background by type, because a reader never visits the file itself:
 
-- absent, or `entry-point`: the directory is a spot on the Landmarks page and
-  in the switch menu, as today. `bbx create` never writes the value.
-- `primary`: a notable sub-area. It appears with its label and symbol in
-  its parent directory's compact listing and in the parent landmark's derived
-  list, but not on the Landmarks page or the switch menu.
-- `background`: a housekeeping directory. Off the Landmarks page and the
-  switch menu, folded in its parent's compact listing, and the level
-  cascades: every card under it is treated as background for folding and
-  derivation, whatever the card says. A card that says `primary` under a
-  background landmark gets a lint warning.
+- **Cards the box writes for its own use**: every schema with
+  `category: "system"` (`src/cards/schema.ts:171`; chat-job, chat-thread,
+  contains-backfill-job, procedure-run, question-followup-job,
+  todo-review-job). Nothing to declare per schema; the category is the
+  declaration.
+- **Landmark cards.** The boxholder, 2026-09-06: "landmarks are about
+  locations and chats, but not particularly visitable files, so rather they
+  are more like ordinary or background but serve their own alternate
+  purposes." A landmark is a place marker: it gives a directory a label and
+  a symbol, binds chats to it, and names it as a filing destination. It is
+  not the directory's entry point; the entry point, if there is one, is a
+  visitable card inside the directory (an index, a gallery, an overview).
+  The `landmark` schema declares `prominence: "background"` as its type
+  default, so the file folds in Browse and the directory's identity is
+  drawn from it (Browse already heads a directory with its landmark's
+  label, `BrowsePage.tsx:137-169`).
+
+A schema declares a type default with a new `cardSchema` option,
+`prominence?: ProminenceLevel` (default ordinary); `category: "system"`
+implies `background` unless the schema says otherwise. `bbx ls --format
+"{prominence}"` prints the declared field only; the effective level is what
+the index and Browse compute.
+
+**On a landmark card, `prominence` describes the place, not the file.** The
+file is background by type. A written value means:
+
+- `background`: a housekeeping place. Off the Landmarks page and the switch
+  menu, folded in its parent's compact listing, and the level cascades:
+  every card under it is treated as background for folding and derivation,
+  whatever the card says. A card that says `primary` under a background
+  landmark gets a lint warning.
+- `entry-point` or `primary` on a landmark: a lint warning, "a landmark
+  marks a place; the place's entry point is a visitable card inside it."
+  The place is on the Landmarks page by being a landmark, as today; there
+  is no promotion above that to write.
+
+The Landmarks page therefore stays what it is, a list of places with their
+chats, minus background places. The pruned tree of what matters is each
+place's derived list (Track B), not a re-ranking of the places.
 
 **Budget lint** (`src/core/lint-prominence.ts`, box-level, run by `bbx validate`):
 
 - more than `MAX_ENTRY_POINTS_PER_DIR = 2` entry points in one directory
-  (landmark counted): warning, "N entry points in one directory; an entry
+  warning, "N entry points in one directory; an entry
   point is where a newcomer starts, and a directory usually has one". The
   lint allows the exceptional second and warns at a third.
 - more than `MAX_PRIMARY_PER_DIR = 7` primary cards in one directory: warning,
@@ -471,10 +503,10 @@ here menu render derived entries with no change and a later UI can badge
 them.
 
 *Box-wide cascade.* `landmarks.list` and the switch menu's `chat.placeMenu`
-drop a landmark whose own level is `primary` or `background`, and any
-landmark with a `background` ancestor landmark, using the ancestor lookup
-`list` already performs for `depth` (`landmarks.ts:194-253`). The rule lives
-in one function, `isListedLandmark(landmark, ancestors)`, used by both.
+drop a landmark whose written level is `background`, and any landmark with
+a `background` ancestor landmark, using the ancestor lookup `list` already
+performs for `depth` (`landmarks.ts:194-253`). The rule lives in one
+function, `isListedLandmark(landmark, ancestors)`, used by both.
 
 *Signature.*
 
@@ -755,16 +787,15 @@ settled on 2026-09-06 and are kept for the record.
    tell whether a card is embedded by another. Lean: declare now, derive
    later if agents keep forgetting; a derived signal is a second source of
    truth for the same field.
-4. **Whether a landmark is an entry point by type, so the field on it is
-   only a demotion.** Lean: yes. A landmark already carries its directory's
-   identity by type; carrying its entry-point standing the same way means an
-   agent reading `Recipes.landmark.card` knows what it is from the filename,
-   and absent keeps one meaning for the agent ("nothing to say"). The
-   alternative, an explicit `prominence: entry-point` on every landmark,
-   adds a line to every landmark and a migration to write it, and leaves an
-   unmigrated box with an empty Landmarks page. The reviewer's concern is
-   real: "absent" then reads differently on a landmark than on a memo. The
-   guide states it as a type rule, not a default rule.
+4. **What a landmark is on this scale.** Settled 2026-09-06: not the
+   directory's entry point. A landmark marks a place (label, symbol, chats,
+   filing destination) and is not a visitable file, so it is background by
+   type; the place's entry point is a visitable card inside it. An earlier
+   draft made every landmark an entry point by type; the cross-model
+   reviewer had flagged that absent would then mean two things, and the
+   boxholder's framing removes the question. Type defaults (Track A) are
+   the mechanism, and they also cover the box's own job and run cards
+   without per-card marking.
 5. **Budget thresholds.** Lean: two entry points, seven primary cards, per
    directory. Numbers are constants and the lint is a warning; the question
    is whether the boxholder wants the primary budget lower.
@@ -827,7 +858,8 @@ and their status recorded in the file header:
    names, the type rule for landmarks, and the agent-facing block with its
    examples. Nothing below starts before this; it is the conversation this
    plan exists for.
-1. Track A field, type, `LandmarkObject` admission, docs enumeration, schema
+1. Track A field, type, `LandmarkObject` admission, schema type defaults
+   (landmark, system category), docs enumeration, schema
    and landmark-schema doctests. (one commit)
 2. Track A lint module and doctest. (one commit)
 3. Track B index and doctest. (one commit)
