@@ -32,6 +32,15 @@ only the root itself is closed. See `docs/implemented-plans/one-root-box-layout.
 the full design rationale (the "closed vocabulary at the root, open below
 `_content/`" criterion, and the underscore-as-checksum argument).
 
+One reservation carries below the root: the area names themselves. A nested
+`_content`, `_config`, `_bookkeeping`, or `_publish` (directory or file) is
+refused — by the CLI path guard, the HTTP namespace fence, `bbx validate`,
+and the edit hook (`src/lib/box-reserved-segments.ts`). `_tmp` is the one
+area name that may nest: it acts the same at any depth (the box `.gitignore`
+ignores `_tmp/` unanchored). `_config/_template-updates/` is exempt as a
+subtree — it mirrors box-relative destination paths. Other underscore names
+below the root (`_unsure`, say) are ordinary names, not reserved.
+
 `.beebox/box.json`'s `shapeVersion` field is `3`, the only shape this engine
 understands (`getBoxShape`/`boxCodePaths` in `src/lib/box-shape.ts`). A box
 created before this layout landed (shapeVersion 2, retired) had two roots — a

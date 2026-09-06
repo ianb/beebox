@@ -27,7 +27,7 @@ import { stageAndCommitPaths } from "../../lib/git.js";
 import { invariant } from "../../lib/invariant.js";
 import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { DisplayFormPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
+import { BoxPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
 
 /**
  * Arguments for the move command.
@@ -252,7 +252,7 @@ async function executeMove(
     // as an ordinary CommandResult failure — this function is also called
     // directly (tests, `runCommand`'s own catch-all only covers a
     // CLI-dispatched call).
-    if (e instanceof DisplayFormPathArgError) return { success: false, error: e.message };
+    if (e instanceof BoxPathArgError) return { success: false, error: e.message };
     throw e;
   }
 }

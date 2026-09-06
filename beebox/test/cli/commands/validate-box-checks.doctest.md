@@ -6,7 +6,7 @@ toward its exit code. The check itself (`checkBoxRoot`) is doctested in
 `test/lib/box-root-check.doctest.md`; this covers only the formatting.
 
 ```ts setup
-import { checkRootStrayErrors } from "../../../src/cli/commands/validate-box-checks.js";
+import { checkReservedSegmentErrors, checkRootStrayErrors } from "../../../src/cli/commands/validate-box-checks.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 
@@ -35,4 +35,31 @@ await strayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
 
 ```ts cleanup
 await strayBox.cleanup();
+```
+
+## Below-root reserved area names
+
+`checkReservedSegmentErrors` walks every underscore area except `_tmp` and
+reports entries nesting a reserved area name (`box-reserved-segments.ts`) —
+the net for out-of-band writes (a plain `mkdir` from an agent shell) that the
+CLI/HTTP guards never saw. The shallowest offender is reported once, not
+every file inside it:
+
+```ts
+const nestedBox = await makeTmpBox();
+await nestedBox.write("_content/recipes/_config/x.md", "stray\n");
+(await checkReservedSegmentErrors(nestedBox.root)).join("\n")
+=> Reserved name: _content/recipes/_config: "_config" is a reserved box-area name, legal only at the box root (a nested _tmp is the one exception) — rename this entry
+```
+
+The template-updates mirror stays clean:
+
+```ts continue
+await nestedBox.write("_config/_template-updates/_content/briefing.md", "parked\n");
+JSON.stringify((await checkReservedSegmentErrors(nestedBox.root)).length)
+=> 1
+```
+
+```ts cleanup
+await nestedBox.cleanup();
 ```
