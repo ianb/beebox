@@ -468,12 +468,24 @@ Tracks 1, 2, 3 and 5 are built; the doctests named below pass and
 Track 4 (the Gemini backend) is written and verified end-to-end against the
 live API — both backends resolve from config, Gemini's WAV parses as 24 kHz
 mono 16-bit, and a round-trip transcription confirms the style direction is
-obeyed without being spoken. **It still gates on the voices subplan**, which is
-not written: `speaking-voice.model` is currently carried through to Gemini,
-where the 13 OpenAI voice names mean nothing, so the backend falls back to
-`Zephyr` and silently ignores the card's choice. That is the same silent-drop
-bug this plan exists to prevent, in a different field, and it must be closed
-before this ships.
+obeyed without being spoken.
+
+**A voice seam had to be built alongside it, ahead of the subplan.** The design
+assumed an unmapped voice would degrade; measured, it does not — Gemini answers
+**HTTP 400** to every `VOICE_MODELS` name, including the `marin` the route
+sends when a box has set no voice. Selecting Gemini would therefore have broken
+speech outright for essentially every box. `core/tts/voices.ts` now resolves a
+voice per backend and reports a substitution rather than performing it quietly,
+mirroring `style.ts`. Two related surprises: the OpenAI and Gemini voice sets
+overlap in **zero** names, and OpenRouter's `supported_voices` cannot be used to
+validate — `nova` is absent from its list for this model and renders anyway.
+
+**What the subplan still owns** is the product question, not the plumbing:
+whether `onyx` should map to whichever Gemini voice resembles it, what the
+personality schema accepts once voices are per-backend, and whether existing
+cards migrate. The mechanical substitution shipped here is deliberately not a
+semantic mapping — how the box should sound on a new backend is the
+boxholder's call.
 
 Two things the build changed from the design:
 

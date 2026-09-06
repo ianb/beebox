@@ -21,6 +21,30 @@ export const TTS_BACKENDS = ["openai", "gemini"] as const;
 export type TtsBackend = (typeof TTS_BACKENDS)[number];
 
 /**
+ * Gemini's own voice names. Zero of them overlap `VOICE_MODELS`, so a voice a
+ * personality card names is never usable here — sending one is an HTTP 400
+ * from the provider, not a graceful default (measured 2026-09-06:
+ * `marin` and `alloy` both 400).
+ *
+ * Kept as our own list rather than read from OpenRouter's `supported_voices`,
+ * which is not exhaustive: `nova` is absent from it and renders anyway. A
+ * catalog that accepts values it does not list cannot be used to validate.
+ */
+export const GEMINI_VOICES = [
+  "Zephyr", "Puck", "Charon", "Kore", "Fenrir", "Leda", "Orus", "Aoede",
+  "Callirrhoe", "Autonoe", "Enceladus", "Iapetus", "Umbriel", "Algieba",
+  "Despina", "Erinome", "Algenib", "Rasalgethi", "Laomedeia", "Achernar",
+  "Alnilam", "Schedar", "Gacrux", "Pulcherrima", "Achird", "Zubenelgenubi",
+  "Vindemiatrix", "Sadachbia", "Sadaltager", "Sulafat",
+] as const;
+
+/** What each backend answers to when nothing usable was asked for. */
+export const BACKEND_DEFAULT_VOICE: Record<TtsBackend, string> = {
+  openai: "marin",
+  gemini: "Zephyr",
+};
+
+/**
  * The voice used when neither the personality card nor the request names one.
  * Was written three different ways across the stack before this existed
  * (`alloy` in the service, `marin` in the route and the client); `marin` is

@@ -16,8 +16,9 @@
 import ky from "ky";
 import { OPENROUTER_BASE_URL, openRouterProvider } from "../core/openrouter.js";
 import { deliverStyle } from "../core/tts/style.js";
+import { resolveVoice } from "../core/tts/voices.js";
 import { pcmToWav } from "../core/tts/wav.js";
-import { DEFAULT_TTS_INSTRUCTIONS, DEFAULT_VOICE, type TtsBackend } from "../shared/tts-backends.js";
+import { DEFAULT_TTS_INSTRUCTIONS, type TtsBackend } from "../shared/tts-backends.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -61,6 +62,23 @@ export interface TtsService {
 
 // ─── Real implementations ────────────────────────────────────────────────────
 
+/**
+ * Pick the voice this backend can serve, saying so when the boxholder's choice
+ * is not one of them. Warned once per call rather than latched: the substituted
+ * voice changes with the personality card, so a latch would hide the second
+ * one.
+ */
+function voiceFor(backend: TtsBackend, requested: string | undefined): string {
+  const choice = resolveVoice({ backend, requested });
+  if (choice.kind === "substituted") {
+    console.warn(
+      `[tts] backend "${backend}" has no voice "${choice.requested}" — speaking as "${choice.voice}". `
+        + "Pick a voice this backend offers, or switch backends.",
+    );
+  }
+  return choice.voice;
+}
+
 function assertPlayable(audio: Buffer, backend: TtsBackend): Buffer {
   if (audio.length < MIN_PLAUSIBLE_AUDIO_BYTES) {
     throw new EmptyTtsResponseError({ backend, bytes: audio.length });
@@ -90,7 +108,7 @@ function createOpenAiTts(apiKey: string): TtsService {
         json: {
           model: "gpt-4o-mini-tts-2025-03-20",
           input: style.kind === "prefix" ? style.input : text,
-          voice: opts?.voice ?? DEFAULT_VOICE,
+          voice: voiceFor("openai", opts?.voice),
           response_format: "mp3",
           ...(style.kind === "field" && { instructions: style.instructions }),
         },
@@ -126,7 +144,7 @@ function createGeminiTts(apiKey: string): TtsService {
           model: "google/gemini-3.1-flash-tts-preview",
           provider: openRouterProvider("google-ai-studio"),
           input: style.kind === "prefix" ? style.input : text,
-          voice: opts?.voice ?? "Zephyr",
+          voice: voiceFor("gemini", opts?.voice),
           response_format: "pcm",
         },
       });
