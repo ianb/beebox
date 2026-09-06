@@ -35,6 +35,7 @@ import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { readBoxIdentity } from "../landmark/box-identity.js";
 import { twemojiSvgPath } from "../../lib/twemoji.js";
+import type { CardSymbolData } from "../../shared/card-symbol.js";
 
 /** A rendered mark: the PNG bytes plus an ETag identifying what produced it. */
 export interface BoxIconPng {
@@ -112,13 +113,14 @@ export async function renderBoxIcon({
 async function readIconSource({
   identity,
 }: {
-  identity: { symbol: string; symbolSrc: string | null };
+  identity: { symbol: CardSymbolData | null };
 }): Promise<Buffer | null> {
   // An image symbol is box content; see the file header for why it does not
   // render here.
-  if (identity.symbolSrc !== null) return null;
+  const glyph = identity.symbol?.glyph;
+  if (identity.symbol?.src !== undefined || glyph === undefined) return null;
 
-  const artwork = twemojiSvgPath(identity.symbol);
+  const artwork = twemojiSvgPath(glyph);
   if (artwork === null) return null;
   try {
     return await readFile(artwork);

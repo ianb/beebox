@@ -37,6 +37,38 @@ tests:
       <AreaLabel>:path/inside. The agent should translate both back to their
       canonical box-relative forms.
 
+  - id: card-symbol-restraint
+    prompt: "When you write a new card, should you give it a `symbol`? What makes a card worth marking?"
+    expected_level: knows_directly
+    watch_for: >
+      Says most cards should NOT have one — a symbol is for a card returned to
+      often, and a box where everything is marked has nothing marked. Must not
+      answer that every card should get an emoji.
+    correct_contains: ["symbol"]
+    tags: [cards]
+    notes: >
+      The field is cheap to set and agents write most cards, so the whole value
+      of the mark depends on restraint. See docs/plans/card-symbol.md.
+      Status (2026-09-05): PASSES on content — the agent answered that most
+      cards should not have one, named the "everything marked is nothing
+      marked" reason, and listed card types that should almost never carry one.
+      It reached that by grepping the generated box docs rather than answering
+      from always-on context, so the level is really finds_by_searching; the
+      guidance is in the agent guide's shared-frontmatter section, and whether
+      that section is always-on is a separate question from this field.
+
+  - id: card-symbol-image-key
+    prompt: "You want a card's symbol to be a picture stored in the box rather than an emoji. What do you write?"
+    expected_level: knows_directly
+    watch_for: >
+      Names `symbol.src` (a box ref to the image). Must NOT put the path in
+      `symbol.glyph`, which holds an emoji or a letter or two.
+    correct_contains: ["src"]
+    tags: [cards]
+    notes: >
+      Status (2026-09-05): PASSES at knows_directly — answered with the `src`
+      form and a box ref, no files read and no searches.
+
   - id: find-memo-cards
     prompt: "If I wanted to find all memo cards in the system, how would you search?"
     expected_level: knows_directly

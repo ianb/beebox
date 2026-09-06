@@ -61,6 +61,14 @@ next), but a few belong to every card:
   sentence still holds, \`bbx contains update <card> --text "..."\` clears the
   staleness flag; \`bbx contains list --missing\` / \`--stale\` shows which cards
   still need one written or refreshed.
+- **\`symbol:\`** — the small mark that stands for the card in a tab strip, a
+  listing, or a tile: \`symbol: { glyph: 🍞 }\`, optionally with
+  \`foreground:\`/\`background:\` colours (\`#rgb\`, \`#rrggbb\`, \`hsl()\`,
+  \`hsla()\`, \`rgb()\`, \`rgba()\` — nothing else), or \`symbol: { src: <box ref
+  to an image> }\` for a picture. The glyph is an emoji or a letter or two, not
+  a word. **Most cards should have none.** Mark the handful someone returns to
+  often; a box where everything is marked has nothing marked, so do not add one
+  by reflex when you create a card.
 - **refs** — not a fixed field but a pattern: wherever frontmatter or a body tag
   points at another card (a \`ref:\` value, \`key-people[].ref\`, a \`{% source %}\`
   anchor), the path works the same way. ${REF_PATH_RULE}

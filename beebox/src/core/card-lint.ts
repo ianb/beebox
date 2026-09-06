@@ -42,6 +42,7 @@ import {
 } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "./card-io.js";
+import { symbolIssues } from "./lint-symbol.js";
 import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
 import { isAttachRef } from "../shared/attach-path.js";
@@ -55,7 +56,7 @@ import {
   planCanonicalRef,
 } from "./canonical-refs.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
-import { lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
+import { lintCardSymbolSrc, lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
 import { lintDuplicateChatSession } from "./lint-chat-duplicates.js";
 import { findAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
@@ -232,6 +233,11 @@ async function lintFrontmatterCard(input: {
   }
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
+  const symbolFindings = symbolIssues(parsed.fields);
+  // Every card may carry an image mark, so this one is not type-gated like the
+  // per-type path fields below.
+  warnings.push(...(await lintCardSymbolSrc({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
+  warnings.push(...symbolFindings.filter((issue) => issue.severity === "warning"));
   warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
   // Universal Markdoc body validation (docs/implemented-plans/todo-annotation.md, Track 1
   // chunk 2): every card with a markdown body gets Markdoc parse+validate,
@@ -265,6 +271,7 @@ async function lintFrontmatterCard(input: {
   // the loader (box-aware), which the self-contained hook deliberately lacks.
   const errors: LintIssue[] = [
     ...displayPathErrors,
+    ...symbolFindings.filter((issue) => issue.severity === "error"),
     ...(parsed.schema.validate ? parsed.schema.validate({ fields: parsed.fields }) : []),
   ];
   // The one cross-file rule: a chat husk's `session` is its identity, so two

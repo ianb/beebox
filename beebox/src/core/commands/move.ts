@@ -27,7 +27,8 @@ import { stageAndCommitPaths } from "../../lib/git.js";
 import { invariant } from "../../lib/invariant.js";
 import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
 import { errorMessage } from "../../lib/error-guards.js";
-import { DisplayFormPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
+import { BoxPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
+import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
 
 /**
  * Arguments for the move command.
@@ -99,6 +100,19 @@ async function handleDirectorySource({
   const destPath = destExists
     ? path.join(rawDestPath, path.basename(sourcePath))
     : rawDestPath;
+
+  // The argument guard checked `to` as typed, but the EFFECTIVE destination
+  // appends the source basename — moving a directory named `_content` (legal
+  // inside the template-updates mirror) into an ordinary directory would
+  // nest a reserved area name (cross-model review finding, 2026-09-05).
+  const relDestPath = path.relative(ctx.boxRoot, destPath).split(path.sep).join("/");
+  const reserved = findReservedNestedSegment(relDestPath);
+  if (reserved !== null) {
+    const message = reservedNestedSegmentMessage(relDestPath, reserved);
+    state.errors.push(message);
+    ctx.writeLine(`Error: ${message}`);
+    return;
+  }
 
   if (moveArgs.dryRun) {
     const relSource = path.relative(ctx.boxRoot, sourcePath);
@@ -252,7 +266,7 @@ async function executeMove(
     // as an ordinary CommandResult failure — this function is also called
     // directly (tests, `runCommand`'s own catch-all only covers a
     // CLI-dispatched call).
-    if (e instanceof DisplayFormPathArgError) return { success: false, error: e.message };
+    if (e instanceof BoxPathArgError) return { success: false, error: e.message };
     throw e;
   }
 }

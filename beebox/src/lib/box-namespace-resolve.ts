@@ -37,6 +37,7 @@ import { lstat, readlink, realpath } from "node:fs/promises";
 import type { Stats } from "node:fs";
 import * as path from "node:path";
 import { isInBoxNamespace } from "./box-namespace.js";
+import { findReservedNestedSegment } from "./box-reserved-segments.js";
 import { errnoCode } from "./error-guards.js";
 import { invariant } from "./invariant.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
@@ -117,6 +118,11 @@ export function resolveBoxNamespacePath(boxRoot: string, rawPath: string): BoxNa
   if (resolved !== root && !resolved.startsWith(root + path.sep)) return { ok: false, reason: "escaped" };
   const relativePath = path.relative(root, resolved).split(path.sep).join("/");
   if (!isInBoxNamespace(relativePath)) return { ok: false, reason: "escaped" };
+  // Below-root reserved names (box-reserved-segments.ts): a nested area name
+  // is refused like any other out-of-vocabulary path. The loud, named error
+  // lives at the creation surfaces (CLI arg guard, validate, the edit hook);
+  // here fail-closed is enough.
+  if (findReservedNestedSegment(relativePath) !== null) return { ok: false, reason: "escaped" };
   return { ok: true, resolved, relativePath };
 }
 

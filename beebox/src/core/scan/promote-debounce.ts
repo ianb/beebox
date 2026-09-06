@@ -19,6 +19,9 @@ export const SCAN_SETTLE_MS = 2 * 60 * 1000;
 export interface PromoteDebouncer {
   /** Called on every accepted upload; (re)starts the settle window. */
   notify(): void;
+  /** Re-arm at a caller-chosen delay instead of the settle window. Used by
+   * the retry backoff, where each successive attempt waits longer. */
+  notifyAfter(delayMs: number): void;
   /** Cancel a pending run (server close). Idempotent. */
   cancel(): void;
 }
@@ -37,22 +40,29 @@ export function createPromoteDebouncer(opts: {
   let timer: AwakeTimeout | null = null;
   let cancelled = false;
 
+  const arm = (timeoutMs: number): void => {
+    if (cancelled) return;
+    timer?.stop();
+    timer = startAwakeTimeout({
+      timeoutMs,
+      // The tick has to be finer than the window, or a two-minute window
+      // measured in five-second ticks would never observe a shorter one.
+      periodMs: Math.max(50, Math.min(5_000, Math.floor(timeoutMs / 4))),
+      onTimeout: () => {
+        timer = null;
+        void run().catch((e: unknown) => {
+          console.error(`[scan] Promote pass for ${label} failed:`, e);
+        });
+      },
+    });
+  };
+
   return {
     notify() {
-      if (cancelled) return;
-      timer?.stop();
-      timer = startAwakeTimeout({
-        timeoutMs: settleMs,
-        // The tick has to be finer than the window, or a two-minute window
-        // measured in five-second ticks would never observe a shorter one.
-        periodMs: Math.max(50, Math.min(5_000, Math.floor(settleMs / 4))),
-        onTimeout: () => {
-          timer = null;
-          void run().catch((e: unknown) => {
-            console.error(`[scan] Promote pass for ${label} failed:`, e);
-          });
-        },
-      });
+      arm(settleMs);
+    },
+    notifyAfter(delayMs: number) {
+      arm(delayMs);
     },
     cancel() {
       cancelled = true;

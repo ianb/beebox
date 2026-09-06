@@ -9,6 +9,7 @@
  */
 
 import { type FileLoader, type FileSummary, type LoaderInput, titleFromFilename } from "./file-summary.js";
+import { readCardSymbol } from "./card-symbol.js";
 
 interface TypeRegistration {
   kind: "type";
@@ -73,11 +74,11 @@ const fallbackLoader: FileLoader<unknown> = (raw: LoaderInput) => ({
  *   2. path predicate match
  *   3. fallback
  */
-function resolveLoader(input: LoaderInput): FileLoader<unknown> {
+function resolveLoader(input: LoaderInput): { loader: FileLoader<unknown>; isFallback: boolean } {
   const type = input.type;
   if (type) {
     const match = registrations.find(r => r.kind === "type" && r.type === type);
-    if (match) return match.loader;
+    if (match) return { loader: match.loader, isFallback: false };
   }
   const pathMatches = registrations.filter(
     r => r.kind === "match" && r.match(input.path),
@@ -89,25 +90,38 @@ function resolveLoader(input: LoaderInput): FileLoader<unknown> {
     );
   }
   const pathMatch = pathMatches[0];
-  if (pathMatch) return pathMatch.loader;
-  return fallbackLoader;
+  if (pathMatch) return { loader: pathMatch.loader, isFallback: false };
+  return { loader: fallbackLoader, isFallback: true };
 }
 
 /**
  * Run the resolved loader to produce a summary.
  */
 export function summarize(input: LoaderInput): FileSummary<unknown> {
-  const loader = resolveLoader(input);
+  const { loader, isFallback } = resolveLoader(input);
   const summary = loader(input);
-  // contains: is a global card field — surface it uniformly rather than
-  // teaching every loader about it.
-  if (summary.contains === undefined && input.fields !== undefined) {
-    const contains = input.fields["contains"];
-    if (typeof contains === "string" && contains !== "") {
-      return { ...summary, contains };
-    }
+  // `title`, `contains` and `symbol` are global card fields — surface them
+  // uniformly rather than teaching every loader about them.
+  let out = summary;
+  // A card's own `title:` beats the FALLBACK loader's filename-derived title,
+  // and never beats a title a real loader computed on purpose — a memo's title
+  // IS its text (`schemas/memo.ts`). Asking the resolver which one ran, rather
+  // than comparing the title against the filename: a memo whose body happens to
+  // read "Bread" in `Bread.memo.card` would lose to its frontmatter under a
+  // string comparison.
+  const declared = input.fields?.["title"];
+  if (isFallback && typeof declared === "string" && declared.trim() !== "") {
+    out = { ...out, title: declared.trim() };
   }
-  return summary;
+  if (out.contains === undefined && input.fields !== undefined) {
+    const contains = input.fields["contains"];
+    if (typeof contains === "string" && contains !== "") out = { ...out, contains };
+  }
+  if (out.symbol === undefined && input.fields?.["symbol"] !== undefined) {
+    const symbol = readCardSymbol(input.fields["symbol"], { cardPath: input.path });
+    if (symbol !== null) out = { ...out, symbol };
+  }
+  return out;
 }
 
 /**

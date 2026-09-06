@@ -32,7 +32,7 @@ import { buildLoadContext } from "../../core/load-context.js";
 import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external/url-check.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../core/card-io.js";
-import { checkLegacySchemaPath, checkRootStrayErrors } from "./validate-box-checks.js";
+import { checkLegacySchemaPath, checkReservedSegmentErrors, checkRootStrayErrors } from "./validate-box-checks.js";
 import { resolveCliTargetPath } from "../lib/cli-target-path.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -89,6 +89,8 @@ interface ValidationResults extends CollectedResults {
    * `legacySchemaErrors` above.
    */
   rootStrayErrors: string[];
+  /** Below-root reserved-name check (`box-reserved-segments.ts`): entries nesting an area name below the root. Same box-wide treatment. */
+  reservedSegmentErrors: string[];
   /** Whether `--canonical` asked for the canonical-form report. */
   canonical: boolean;
 }
@@ -236,7 +238,7 @@ const NO_CANONICAL = { canonicalViewWarnings: [], canonicalDossierWarnings: [] }
 
 /** Print human-readable card/markdown/attach/legacy-schema-path results to stdout. */
 function printTextResults(results: ValidationResults): void {
-  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors } = results;
+  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors } = results;
   const colors = useColor();
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors });
@@ -265,7 +267,7 @@ function printTextResults(results: ValidationResults): void {
   if (viewWarnings.length > 0) {
     console.log(`\n${viewWarnings.join("\n")}`);
   }
-  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors];
+  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors, ...reservedSegmentErrors];
   if (boxWideErrors.length > 0) console.log(`\n${boxWideErrors.join("\n")}`);
   if (results.canonical) {
     console.log(`\n${formatCanonicalReport(canonicalBuckets(results), { colors })}`);
@@ -291,13 +293,14 @@ async function checkCommitted(boxRoot: string, { json }: { json: boolean }): Pro
   }
 }
 
-function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors }: ValidationResults): number {
+function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors }: ValidationResults): number {
   return (
     (cardSummary !== null ? cardSummary.totalErrors : 0) +
     (mdSummary !== null ? mdSummary.totalErrors : 0) +
     attachErrors.length +
     legacySchemaErrors.length +
-    rootStrayErrors.length
+    rootStrayErrors.length +
+    reservedSegmentErrors.length
   );
 }
 
@@ -361,7 +364,7 @@ export const validateCommand = new Command("validate")
         const collected = await collectResults(options, { boxRoot, ctx, resolved, json, ignore, canonical });
         const legacySchemaErrors = await checkLegacySchemaPath(boxRoot);
         const rootStrayErrors = await checkRootStrayErrors(boxRoot);
-        const results: ValidationResults = { ...collected, legacySchemaErrors, rootStrayErrors, canonical };
+        const results: ValidationResults = { ...collected, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors: await checkReservedSegmentErrors(boxRoot), canonical };
 
         if (json) {
           const counts = canonicalCounts(canonicalBuckets(results));
@@ -377,6 +380,7 @@ export const validateCommand = new Command("validate")
             views: results.viewWarnings,
             legacySchemaPath: results.legacySchemaErrors,
             rootStrays: results.rootStrayErrors,
+            reservedSegments: results.reservedSegmentErrors,
             // The `--canonical` buckets, top-level and separate for the same
             // reason `brokenRefs` is: a relative-but-resolving ref is a
             // different signal from a broken one. Zeroed when --canonical

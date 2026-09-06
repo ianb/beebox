@@ -18,15 +18,17 @@ schemas under the package `src/schemas/`, importing `beebox/cards`
 
 Things the schema system does that you'd otherwise miss:
 
-- **Every schema silently gets four optional global fields** —
-  `title`, `contains`, `contains-evidence`, and `todos`
+- **Every schema silently gets five optional global fields** —
+  `title`, `contains`, `contains-evidence`, `todos`, and `symbol`
   (`GLOBAL_CARD_FIELDS`, `src/cards/schema.ts`). `contains` is the prime
   retrieval field (search boosts it 3×) — a card type whose writers
   never populate it is invisible to search. `contains-evidence` is the
   detail `contains` was derived from (uncapped, not searched, not
   embedded — not a second summary). `todos` is the frontmatter
-  counterpart to the `{% todo %}` tag. Don't redeclare any of these —
-  a schema's own declaration silently wins.
+  counterpart to the `{% todo %}` tag. `symbol` is the card's mark
+  (`{ glyph, src, foreground, background }`) — most cards have none.
+  Don't redeclare any of these — a schema's own declaration silently
+  wins.
 - **`instructions` prose is injected into agent context** when an agent
   processes cards of that type — it's prompt surface (see
   `docs/prompt-surface-review.md` before writing more than a couple of

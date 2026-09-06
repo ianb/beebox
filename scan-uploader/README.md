@@ -29,6 +29,13 @@ Each run, for every configured folder:
    the `trash` CLI or, failing that, an AppleScript Finder fallback — macOS
    only). It never deletes a file outright.
 
+If a run skipped anything as unsettled, it waits out the settle window and
+re-walks those folders — up to three rounds, then it leaves the rest to the
+next sweep. A folder-change trigger fires the instant a file appears, which is
+inside the settle window, so without this the run would skip the very file
+that woke it. A target whose folder is missing or unreadable fails that target
+alone; the others are still swept.
+
 Files the server rejects (failed validation) are never moved or deleted —
 they stay in place, print with the server's reason, and make the process
 exit non-zero. Pass `--retry-rejected` to re-`PUT` them (the server
@@ -83,19 +90,27 @@ and mints the token; the steps in full:
    stores the token at `~/.scan-tokens/<box>.token` (0600) and verifies
    against the server. Repeat per box with its own folder and token.
 
-4. **ScanSnap profile** — see "ScanSnap profile setup" below; point its
-   post-scan action at the plain run command.
+4. **ScanSnap profile** — see "ScanSnap profile setup" below.
+
+5. **Install the agent** (`scan-uploader schedule install`) — this is what
+   makes a scan upload the moment it lands; see "Scheduling the sweep".
 
 `smoke-install.sh` is the executable check that step 1 works from a clean
 clone and that the built bundle runs self-contained.
 
 ### Scheduling the sweep
 
-The ScanSnap post-scan hook is the primary trigger — it uploads right after
-each scan. The periodic sweep below is a safety net for scans that land
-while the hook didn't run (the machine was asleep, the hook misfired, a
-file was dropped in by hand): the `check` endpoint's dedup makes the hook
-and the sweep running back-to-back harmless.
+The launchd agent is the trigger, on two schedules at once. It watches every
+configured folder (`WatchPaths`), so a scan uploads within seconds of landing,
+and it also sweeps on an interval as the backstop for scans that arrive while
+the machine is asleep or a filesystem event is missed. The `check` endpoint's
+dedup makes the two firing back-to-back harmless.
+
+The trigger lives here rather than in the scanner because **ScanSnap Home's
+post-scan action launches an application bundle, not a shell script** — there
+is no supported way to point it at a command. Watching the folder gets the
+same result without touching ScanSnap's configuration, and also catches files
+dropped in by hand.
 
 On macOS, `schedule` manages a `launchd` LaunchAgent that runs the sweep on
 an interval:
@@ -160,7 +175,10 @@ unknown keys already in the file. Shape, for hand-maintenance:
 }
 ```
 
-- `folder` — absolute path to watch. Required.
+- `folder` — absolute path to watch. Required. `configure` resolves what
+  you pass to an absolute path; `schedule install` refuses a relative one,
+  since launchd would resolve it against its own working directory and
+  watch the wrong place.
 - `serverUrl` — the beebox instance's base URL. Required.
 - `box` — the box slug this folder uploads to. Required.
 - `tokenPath` — path to a file containing the bearer scan-token (minted via
@@ -210,12 +228,10 @@ Configure one ScanSnap profile per box:
   single multi-document PDF — splitting a mixed batch is out of scope on
   both the scanner and server sides).
 - **Destination folder**: the `folder` configured for that box above.
-- **Post-scan hook**: point the ScanSnap application's post-scan action at
-  a one-line shell wrapper that runs `node /path/to/scan-uploader.mjs
-  /path/to/scan-uploader.json`. The same command can also be run manually,
-  or scheduled as a periodic safety-net sweep via `schedule install` (see
-  "Scheduling the sweep" above) — the check endpoint's dedup makes a
-  hook-plus-sweep double-run harmless.
+- **Nothing else** — in particular, no post-scan action. ScanSnap Home can
+  only launch an application bundle there, not a script, so uploads are
+  triggered by the launchd agent watching the destination folder instead
+  (`schedule install`; see "Scheduling the sweep" above).
 
 ## Development
 

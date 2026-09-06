@@ -151,6 +151,11 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // already v3 and every migration above it already ran (against v2 boxes,
   // historically) or is a no-op for a fresh v3 box.
   { name: "one-root", script: "scripts/migrate/one-root.ts" },
+  // A landmark's mark moves out of the navigation role and onto the card
+  // itself, now that `symbol` is a field every card may carry
+  // (docs/plans/card-symbol.md). Readers accept both shapes during the
+  // settling period; see the deferred cleanup issue.
+  { name: "landmark-symbol", script: "scripts/migrate/landmark-symbol.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
