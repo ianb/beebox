@@ -89,12 +89,15 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   } = props;
 
   // The same landmark lookup the retired ContextChip made — react-query
-  // dedupes it with the pill's own `forDir` call for the same dir.
-  const { data: landmarkData } = trpc.landmarks.forDir.useQuery(
+  // dedupes it with the pill's own `identity` call for the same dir. Only
+  // the label is needed here, so `identity` (not `forDir`'s full resolved
+  // link list) is the right query — `docs/plans/card-prominence.md`, "Split
+  // identity from resolution".
+  const { data: landmarkData } = trpc.landmarks.identity.useQuery(
     { dir: contextDir ?? "" },
     { enabled: contextDir !== null },
   );
-  const landmarkLabel = landmarkData?.landmark?.label ?? null;
+  const landmarkLabel = landmarkData?.identity?.label ?? null;
   // `contextChipLabel`'s chain (landmark → dir basename → "Box root"), except
   // that a chat with no context at all is a "Chat", not "Files" — the pill
   // names a place, and the place is the chat itself.
