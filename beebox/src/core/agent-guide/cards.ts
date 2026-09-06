@@ -14,6 +14,7 @@ import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
 import { SECTION, xref } from "./sections.js";
 import { REF_PATH_RULE } from "./source.js";
+import { PROMINENCE_FIELD_BULLET } from "./prominence.js";
 
 export function aboutCardsSection(): string {
   const createExamples = getAllTemplates().map(
@@ -69,6 +70,7 @@ next), but a few belong to every card:
   a word. **Most cards should have none.** Mark the handful someone returns to
   often; a box where everything is marked has nothing marked, so do not add one
   by reflex when you create a card.
+${PROMINENCE_FIELD_BULLET}
 - **refs** — not a fixed field but a pattern: wherever frontmatter or a body tag
   points at another card (a \`ref:\` value, \`key-people[].ref\`, a \`{% source %}\`
   anchor), the path works the same way. ${REF_PATH_RULE}

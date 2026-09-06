@@ -165,9 +165,23 @@ await warningsFor(box8)
 =>
 ```
 
+An owned attach scope that holds its OWN landmark is that landmark's home
+(`prunedSubtree` walks it), so a mark inside it feeds the landmark's derived
+list and is not warned about.
+
+```ts continue
+const box8b = await makeTmpBox();
+await box8b.write("_content/courses/Foo.course.card", "---\ntitle: Foo\n---\n");
+await box8b.write("_content/courses/Foo.attach/Foo.landmark.card", "---\nnavigation:\n  label: Foo\n---\n");
+await box8b.write("_content/courses/Foo.attach/Plan.memo.card", "---\nprominence: primary\n---\n");
+await warningsFor(box8b)
+=>
+```
+
 ```ts cleanup
 await box7.cleanup();
 await box8.cleanup();
+await box8b.cleanup();
 ```
 
 ## A `background` root landmark

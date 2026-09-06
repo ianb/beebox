@@ -7,7 +7,10 @@ labels: [migrations, yaml]
 filed-by: agent
 discovered-by: agent
 discovered-in: card-visibility worktree, Track D, writing the landmark-links-prominence migration (a sibling of landmark-symbol.ts)
+resolution: implemented
 ---
+
+> Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/docs/plans/card-prominence.md`.
 
 `scripts/migrate/landmark-symbol.ts`'s `rewriteLandmarkSymbol` edits the
 frontmatter YAML document in place (`parseDocument` + `.set()`/`.delete()`)
@@ -37,3 +40,4 @@ Track D against test1: `landmark-symbol` is one of the box's pending
 migrations, unexercised so far), so it hasn't corrupted a real box yet, but
 it will the first time a landmark card's `label` or `destinations[].rules`
 runs long.
+

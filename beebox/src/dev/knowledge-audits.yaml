@@ -5299,3 +5299,54 @@ tests:
       want out of it (which plants, what they want to know later) before
       building.
     tags: [starter, chat, behavioral]
+
+  # === Prominence (docs/plans/card-prominence.md, Track E) ===
+
+  - id: prominence-mark-own-artifact
+    prompt: >
+      You just wrote _content/projects/kitchen/Kitchen_Remodel_Plan.doc.card.
+      The same directory holds your research notes, three contractor quotes,
+      and a log of the calls you made. How do you make the plan the thing
+      Browse leads with, and what do you do about the rest?
+    expected_level: knows_directly
+    watch_for: >
+      Sets `prominence: primary` on the plan card ONLY; leaves the notes and
+      quotes ordinary (or marks the call log background); does not edit a
+      landmark; does not mark several cards primary. FAILS on marking the
+      notes primary, inventing a `featured`/`pinned` field, or editing
+      landmark `links:`.
+    correct_contains: ["prominence: primary"]
+    response_not_matches:
+      - 'featured'
+      - 'pinned: true'
+    tags: [prominence, navigation]
+
+  - id: prominence-housekeeping-directory
+    prompt: >
+      _content/projects/deck/logs/ holds fifty generated log cards that
+      clutter the deck project's listing. How do you keep them out of the way
+      without deleting them?
+    expected_level: knows_directly
+    watch_for: >
+      A landmark in logs/ carrying `prominence: background` (or `background`
+      on the cards); explains they stay readable and addressable. FAILS on
+      deletion, a gitignore, moving them to trash, or `status: archived` as
+      the mechanism.
+    correct_contains: ["background"]
+    response_not_matches:
+      - 'bbx rm'
+      - 'gitignore'
+    tags: [prominence, navigation]
+
+  - id: prominence-vs-links
+    prompt: >
+      The boxholder wants the bread recipe to show up under the Recipes
+      landmark. Do you edit the landmark's links list?
+    expected_level: knows_directly
+    watch_for: >
+      No — marks _content/recipes/Bread.recipe.card `prominence: primary` and
+      says the landmark derives its list; `links:` is for a card outside the
+      directory, a contextual label, or a fixed order. FAILS if the first
+      move is adding a `links:` entry.
+    correct_contains: ["primary"]
+    tags: [prominence, navigation]

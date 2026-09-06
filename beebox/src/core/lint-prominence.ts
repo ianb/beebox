@@ -207,6 +207,10 @@ function attachScopeWarning(card: CardRecord, state: ScanState): void {
   if (card.effective !== "primary" && card.effective !== "entry-point") return;
   if (!isInsideAttachScope(card.relPath)) return;
   if (!isOwnedAttachScope(card.relPath, state.basenamesByDir)) return;
+  // An attach scope that holds its own landmark is that landmark's home:
+  // `prunedSubtree` walks it, so prominence inside it DOES feed the
+  // landmark's derived list (test1's Acids_Bases.attach/ is the live case).
+  if (attachScopeHasLandmark(card.relPath, state.records)) return;
   state.warnings.push({
     path: card.relPath,
     rule: "inside-attach-scope",
@@ -221,6 +225,15 @@ function attachScopeWarning(card: CardRecord, state: ScanState): void {
  * attach scope, mirroring `webapp/routes/figure.ts`'s `hasOwningCard` but
  * against the box-wide basename index this scan already built.
  */
+/** Whether the attach scope `relPath` sits in holds a landmark card anywhere inside it. */
+function attachScopeHasLandmark(relPath: string, records: CardRecord[]): boolean {
+  const segments = relPath.split("/");
+  const attachIndex = segments.findIndex((segment) => isAttachDirName(segment));
+  if (attachIndex === -1) return false;
+  const scopeDir = segments.slice(0, attachIndex + 1).join("/");
+  return records.some((r) => r.isLandmark && (r.dir === scopeDir || r.dir.startsWith(`${scopeDir}/`)));
+}
+
 function isOwnedAttachScope(relPath: string, basenamesByDir: Map<string, Set<string>>): boolean {
   const segments = relPath.split("/");
   const attachIndex = segments.findIndex((segment) => isAttachDirName(segment));

@@ -7,7 +7,10 @@ labels: [prominence, landmarks, lint]
 filed-by: agent
 discovered-by: agent
 discovered-in: card-visibility worktree, Track D (landmark-links-prominence migration), running against the test1 clone
+resolution: implemented
 ---
+
+> Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/docs/plans/card-prominence.md`.
 
 `src/core/lint-prominence.ts`'s `attachScopeWarning` fires "prominence inside
 an attach scope has no effect; mark the owner card, or list it in the
@@ -46,3 +49,4 @@ Non-blocking: `ProminenceLintWarning` severities are "warning"/"info" and per
 its own doc comment "never counted toward `bbx validate`'s exit code
 regardless of severity", so this is a false-positive info surface, not a
 correctness break in derivation itself.
+
