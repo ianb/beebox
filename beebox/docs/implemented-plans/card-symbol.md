@@ -1,10 +1,10 @@
 ---
 title: "Cards carry a symbol"
-status: active
+status: implemented
 workstream: sidecar-shell
 issues:
-  - ../../../issues/features/2026-09-05-cards-carry-a-symbol.md
-  - ../../../issues/bugs/2026-09-05-sidecar-tab-label-never-updates.md
+  - ../../../issues/closed/features/2026-09-05-cards-carry-a-symbol.md
+  - ../../../issues/closed/bugs/2026-09-05-sidecar-tab-label-never-updates.md
 ---
 # Cards carry a symbol
 
@@ -20,8 +20,8 @@ the cards I use often to be findable by their mark. And when I retitle a card,
 I want every place showing it to say the new thing.
 
 **Issues addressed:**
-[cards-carry-a-symbol](../../../issues/features/2026-09-05-cards-carry-a-symbol.md),
-[sidecar-tab-label-never-updates](../../../issues/bugs/2026-09-05-sidecar-tab-label-never-updates.md).
+[cards-carry-a-symbol](../../../issues/closed/features/2026-09-05-cards-carry-a-symbol.md),
+[sidecar-tab-label-never-updates](../../../issues/closed/bugs/2026-09-05-sidecar-tab-label-never-updates.md).
 The second is not a side quest: the strip cannot draw a mark it has no way to
 read, and the fix for both is the same lookup.
 
@@ -289,7 +289,7 @@ cards it has not loaded uses it.
 captured when the tab opened; only an activated tab fetches its card. So a
 pinned tab restored from `sessionStorage` has no title and no symbol, and
 retitling a card leaves its tab saying the old thing while the body below it
-updates — [the filed bug](../../../issues/bugs/2026-09-05-sidecar-tab-label-never-updates.md).
+updates — [the filed bug](../../../issues/closed/bugs/2026-09-05-sidecar-tab-label-never-updates.md).
 A mark drawn from the open-time label would be stale in exactly the same way.
 
 **Direction.** Extend what exists rather than adding a parallel endpoint:
