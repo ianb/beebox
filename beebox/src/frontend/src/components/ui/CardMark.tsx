@@ -55,10 +55,10 @@ export function CardMark({ symbol, size, boxSlug, fallback, className }: {
   // An image is the more specific intent, so it wins when a card carries both
   // (which lint warns about).
   if (src !== undefined && src !== "" && boxSlug !== undefined) {
-    return <img src={apiFileUrl(boxSlug, src)} alt="" className={cn(box, "rounded-full object-cover")} />;
+    return <img src={apiFileUrl(boxSlug, src)} alt="" aria-hidden className={cn(box, "rounded-full object-cover")} />;
   }
   if (glyph === undefined || glyph === "") {
-    return fallback === undefined ? null : <span className={box}>{fallback}</span>;
+    return fallback === undefined ? null : <span className={box} aria-hidden>{fallback}</span>;
   }
 
   const background = colour(symbol?.background);
@@ -70,6 +70,7 @@ export function CardMark({ symbol, size, boxSlug, fallback, className }: {
         ...(background === undefined ? {} : { backgroundColor: background }),
         ...(foreground === undefined ? {} : { color: foreground }),
       }}
+      aria-hidden
     >
       {glyph}
     </span>
