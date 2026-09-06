@@ -112,7 +112,7 @@ auth, so it is out of scope with the main agent model.
   routing change. **Corrected 2026-09-06:** "no model" was too strong —
   OpenRouter carries eighteen TTS models from other vendors and most work well
   (measured in
-  [TTS over OpenRouter](2026-09-06-openrouter-tts-options.md)). What is missing
+  [Gemini TTS over OpenRouter](../features/2026-09-06-gemini-tts-over-openrouter.md)). What is missing
   is an OpenAI model, a backend seam to select a substitute, and the
   `instructions` style prompt, which OpenRouter's speech request drops silently.
 
