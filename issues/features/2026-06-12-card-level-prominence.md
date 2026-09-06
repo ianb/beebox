@@ -1,6 +1,6 @@
 ---
 title: "card level prominence"
-workstream: unknown
+workstream: card-visibility
 needs: [design]
 area: beebox
 priority: important
