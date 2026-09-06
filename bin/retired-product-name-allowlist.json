@@ -2,7 +2,7 @@
   { "path": "beebox/docs/name-history.md", "occurrenceClass": "display-name", "expectedCount": 1, "reason": "The sole historical record names the former display name." },
   { "path": "beebox/docs/name-history.md", "occurrenceClass": "compact-name", "expectedCount": 2, "reason": "The sole historical record maps both former code-case forms." },
   { "path": "beebox/docs/name-history.md", "occurrenceClass": "kebab-name", "expectedCount": 2, "reason": "The sole historical record maps the former package and repository slug." },
-  { "path": "beebox/docs/name-history.md", "occurrenceClass": "standalone-cli-token", "expectedCount": 1, "reason": "The sole historical record maps the former command." },
+  { "path": "beebox/docs/name-history.md", "occurrenceClass": "standalone-cli-token", "expectedCount": 2, "reason": "The sole historical record maps the former command and explains the tombstone that answers it." },
   { "path": "beebox/docs/name-history.md", "occurrenceClass": "dot-state-directory", "expectedCount": 1, "reason": "The sole historical record maps the former box state directory." },
   { "path": "beebox/docs/name-history.md", "occurrenceClass": "config-cli-directory", "expectedCount": 1, "reason": "The sole historical record maps the former machine config directory." },
   { "path": "beebox/docs/name-history.md", "occurrenceClass": "old-domain", "expectedCount": 1, "reason": "The sole historical record maps the former public domain." },
@@ -24,5 +24,11 @@
   { "path": "beebox/test/lib/state-migration.doctest.md", "occurrenceClass": "dot-state-directory", "expectedCount": 11, "reason": "Migration fixtures prove former box state and marker paths move, conflict, or converge safely." },
   { "path": "beebox/test/hub/hub-config.doctest.md", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "Hub discovery fixtures prove legacy state is recognized without router-side mutation." },
   { "path": "workstreams-app/src/router/box-entry.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "The shared router recognizes legacy box identity without performing an engine migration." },
-  { "path": "workstreams-app/test/router/box-entry.test.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 3, "reason": "Router fixtures cover legacy marker and state discovery without mutation." }
+  { "path": "workstreams-app/test/router/box-entry.test.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 3, "reason": "Router fixtures cover legacy marker and state discovery without mutation." },
+  { "path": "beebox/bin/cb", "occurrenceClass": "path-cli-segment", "expectedCount": 1, "reason": "The tombstone must be installed under the retired command's own name to intercept stale calls." },
+  { "path": "beebox/bin/cb", "occurrenceClass": "standalone-cli-token", "expectedCount": 3, "reason": "The tombstone's own comment explains which retired command it answers and why it refuses to forward." },
+  { "path": "beebox/deploy/deploy.sh", "occurrenceClass": "standalone-cli-token", "expectedCount": 1, "reason": "The deploy refreshes the retired command's symlink so servers provisioned before the tombstone still answer stale calls." },
+  { "path": "beebox/deploy/hetzner/setup-server.sh", "occurrenceClass": "standalone-cli-token", "expectedCount": 1, "reason": "Provisioning installs the tombstone under the retired command's name alongside bbx." },
+  { "path": "beebox/package.json", "occurrenceClass": "standalone-cli-token", "expectedCount": 2, "reason": "The package bin map ships the tombstone under the retired command's name for installed dependencies." },
+  { "path": "beebox/test/cli/cb-tombstone.doctest.md", "occurrenceClass": "standalone-cli-token", "expectedCount": 9, "reason": "The regression fixture proves stale invocations of the retired command get the migration message and never perform work." }
 ]

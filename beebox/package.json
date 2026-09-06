@@ -20,7 +20,8 @@
     "./tsconfig.base.json": "./tsconfig.base.json"
   },
   "bin": {
-    "bbx": "./bin/bbx"
+    "bbx": "./bin/bbx",
+    "cb": "./bin/cb"
   },
   "files": [
     "dist",

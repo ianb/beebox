@@ -146,6 +146,8 @@ pnpm build
 # ── Symlink bbx CLI ──────────────────────────────────────────────────
 echo "Symlinking bbx CLI..."
 ln -sf "$INSTALL_DIR/beebox/bin/bbx" /usr/local/bin/bbx
+# Tombstone for the retired command: fails with a pointer to bbx, never forwards.
+ln -sf "$INSTALL_DIR/beebox/bin/cb" /usr/local/bin/cb
 bbx --help >/dev/null 2>&1 && echo "bbx CLI is working" || echo "WARNING: bbx CLI test failed"
 
 # ── Verify AVIF encoding ────────────────────────────────────────────

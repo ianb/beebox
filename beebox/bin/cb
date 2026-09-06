@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Tombstone for the pre-rename `cb` command.
+#
+# `cb` became `bbx` when the project was renamed. Stale agent context, old
+# transcripts, and scripts still reach for `cb`, and a bare command-not-found
+# tells the caller nothing about where the interface went.
+#
+# It does NOT forward. Translating `cb <args>` into `bbx <args>` would keep
+# stale knowledge alive indefinitely and let old scripts keep working, so the
+# rename would never finish; a hard failure with a specific message lets the
+# caller correct itself instead. For the same reason the behavior is identical
+# for no arguments, `--help`, and any subcommand — there is no input that makes
+# this command do work.
+set -euo pipefail
+
+echo "cb: renamed to bbx. This command does nothing and never forwards." >&2
+echo "Use 'bbx' instead (same subcommands): bbx --help" >&2
+exit 1
