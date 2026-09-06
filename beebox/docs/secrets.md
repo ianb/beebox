@@ -67,7 +67,7 @@ existing `_config/connectors/*.secret.json` files into exactly these names, so
 | `gemini` | `core/gemini-key.ts` (audio questions, scan-import vision) | — | `GEMINI_KEY`, then `SKE_GEMINI_API_KEY` |
 | `google-oauth-client-id` / `google-oauth-client-secret` | `connectors/google-auth.ts` | — | `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` |
 | `anthropic`, `replicate` | `/api/adapters/<name>` | `<name>.secret.json` | — |
-| `openrouter` | `core/openrouter.ts` (the fallback route for embeddings, audio questions, Whisper HQ transcription, and the opt-in Gemini scan backend), `/api/adapters/openrouter` | — | `BBX_OPENROUTER_API_KEY` |
+| `openrouter` | `core/openrouter.ts` (the fallback route for embeddings, audio questions, Whisper HQ transcription, and the opt-in Gemini scan backend; the *only* route for the `mai` HQ services), `/api/adapters/openrouter` | — | `BBX_OPENROUTER_API_KEY` |
 | `telegram-bot/<box>` | `connectors/telegram-helpers.ts`, admin setup | `telegram.secret.json` | — |
 
 **One deliberate reuse outside this table.** The dev repo's document-comment
@@ -454,7 +454,10 @@ is a fallback: each model-backed service uses its own provider key when the box
 has one, and reaches the same model through OpenRouter when it does not
 (`core/openrouter.ts`). Granting it lights up semantic search, audio
 questions, and the Whisper high-quality transcription pass without any further
-configuration, and granting it changes nothing about a service that already has
+configuration. It also unlocks two HQ transcription services that exist only
+behind it — `mai` and `mai-diarized`, Microsoft's MAI-Transcribe-2, which the
+box can reach no other way and which is its only speaker-labelling option that
+does not need a Mistral key, and granting it changes nothing about a service that already has
 its own key.
 
 Scan-import is the one that still needs a second thing set. Its default vision

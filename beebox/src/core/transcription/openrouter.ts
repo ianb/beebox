@@ -1,11 +1,16 @@
 /**
- * The HQ transcription pass over OpenRouter — the same OpenAI models
- * `whisper.ts` calls directly, reached through the aggregator when the box
- * holds no `openai-thinking` key of its own (`core/openrouter.ts` decides
- * which).
+ * The HQ transcription pass over OpenRouter. Two kinds of service arrive here:
  *
- * **The Whisper family only. Voxtral does not route here**, and that is a
- * measured limit rather than a scoping choice. Checked against the live API on
+ * - **The Whisper family**, which `whisper.ts` also calls directly. OpenRouter
+ *   is the fallback when the box holds no `openai-thinking` key of its own
+ *   (`core/openrouter.ts` decides which).
+ * - **MAI-Transcribe-2** (`mai`, `mai-diarized`), which has NO direct arm — the
+ *   box holds no Azure credential and the model is served nowhere else we
+ *   reach — so an OpenRouter key is its requirement rather than its fallback.
+ *   It is also the box's only speaker-labelling route over OpenRouter.
+ *
+ * **Voxtral does not route here**, and that is a measured limit rather than a
+ * scoping choice. Checked against the live API on
  * 2026-09-06: `mistralai/voxtral-mini-transcribe` rejects `verbose_json` with a
  * 400 and answers `json` alone — no segments, no words, no language, and no
  * speaker labels. Mistral's `diarize` flag sent through OpenRouter's
@@ -39,7 +44,7 @@
 import ky from "ky";
 import { isRecord } from "../../lib/is-record.js";
 import { OPENROUTER_BASE_URL } from "../openrouter.js";
-import { joinSegmentTexts, repairMissingSentenceSpaces } from "./voxtral-text.js";
+import { buildDiarizedText, joinSegmentTexts, repairMissingSentenceSpaces } from "./voxtral-text.js";
 import type {
   DetailedTranscriptionResult,
   TranscribeAudioParams,
@@ -47,6 +52,7 @@ import type {
   TranscriptionResult,
   WordTimestamp,
 } from "./index.js";
+import type { MaiHqService } from "./index.js";
 import type { WhisperVariant } from "./whisper.js";
 
 /**
@@ -63,16 +69,33 @@ class OpenRouterTranscriptionShapeError extends Error implements TranscriptionEr
   }
 }
 
+/** What one HQ service needs from OpenRouter's transcription endpoint. */
+interface OpenRouterSttModel {
+  model: string;
+  /**
+   * Whether the model answers `verbose_json`. The two LLM audio models do not —
+   * the same limitation they have when called directly, where the direct arm
+   * fills duration and language with empty defaults for exactly this reason.
+   */
+  verbose: boolean;
+  /** Present when this service wants speaker labels: the options that ask for them. */
+  diarize?: Record<string, unknown>;
+}
+
 /**
- * Each Whisper variant's model id on OpenRouter, and whether that model can
- * answer in `verbose_json`. The two LLM audio models cannot — the same
- * limitation they have when called directly, where the direct arm fills
- * duration and language with empty defaults for exactly this reason.
+ * Diarization is not a normalized OpenRouter parameter, so it travels as
+ * provider-specific option passthrough. Verified honored on 2026-09-06: the
+ * `speaker` field comes back only when this block is sent — never with the flag
+ * false, a bogus option key, or an empty options object.
  */
-const OPENROUTER_WHISPER_MODELS: Record<WhisperVariant, { model: string; verbose: boolean }> = {
+const AZURE_DIARIZATION = { azure: { diarization: { enabled: true } } } as const;
+
+const OPENROUTER_STT_MODELS: Record<WhisperVariant | MaiHqService, OpenRouterSttModel> = {
   whisper: { model: "openai/whisper-1", verbose: true },
   "whisper-llm": { model: "openai/gpt-4o-transcribe", verbose: false },
   "whisper-llm-mini": { model: "openai/gpt-4o-mini-transcribe", verbose: false },
+  mai: { model: "microsoft/mai-transcribe-2", verbose: true },
+  "mai-diarized": { model: "microsoft/mai-transcribe-2", verbose: true, diarize: AZURE_DIARIZATION },
 };
 
 /** Said once per process, not once per recording. */
@@ -99,9 +122,10 @@ export function audioFormatToken(filename: string): string {
 
 export async function transcribeAudioOpenRouter(
   apiKey: string,
-  { variant, ...params }: TranscribeAudioParams & { variant: WhisperVariant },
+  { variant, ...params }: TranscribeAudioParams & { variant: WhisperVariant | MaiHqService },
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
-  const { model, verbose } = OPENROUTER_WHISPER_MODELS[variant];
+  const { model, verbose, diarize } = OPENROUTER_STT_MODELS[variant];
+  const diarization = diarize !== undefined;
   const wordTimestamps = params.options?.wordTimestamps === true;
 
   if (params.prompt !== undefined && params.prompt !== "" && !warnedAboutDroppedPrompt) {
@@ -123,18 +147,39 @@ export async function transcribeAudioOpenRouter(
         model,
         input_audio: { data: params.audioBuffer.toString("base64"), format: audioFormatToken(params.filename) },
         response_format: verbose ? "verbose_json" : "json",
-        ...(verbose && wordTimestamps && { timestamp_granularities: ["word"] }),
+        // MAI returns segments — and so speaker labels — only when word
+        // granularity is asked for, so diarization implies it.
+        ...(verbose && (wordTimestamps || diarization) && { timestamp_granularities: ["word"] }),
+        ...(diarize !== undefined && { provider: { options: diarize } }),
       },
     })
     .json<unknown>();
 
-  return shapeOpenRouterResult(body, { wordTimestamps });
+  const result = shapeOpenRouterResult(body, { diarization, wordTimestamps });
+  // A provider-option passthrough the provider ignores fails silently by
+  // construction, and an unlabeled transcript looks exactly like a
+  // single-speaker recording. Say so rather than let the caller believe
+  // diarization ran — the same guard `warnIfDiarizationUnlabeled` gives the
+  // direct Voxtral arm.
+  if (diarization && result.diarized !== true) {
+    console.warn(
+      "[transcription/openrouter] diarization requested but no speaker labels came back. Either the recording has "
+        + "one speaker, or the provider did not honor the diarization option.",
+    );
+  }
+  return result;
 }
 
 interface ParsedSegment {
   text: string;
   /** Segment end in seconds, when the provider timed it — the duration ladder's last rung. */
   end?: number;
+  /**
+   * Renamed from OpenRouter's numeric `speaker` so the shared
+   * `buildDiarizedText` — written against Voxtral's string ids — keeps
+   * producing the same "Speaker 0:" lines from either backend.
+   */
+  speaker_id?: string | null;
 }
 
 /**
@@ -145,7 +190,7 @@ interface ParsedSegment {
  */
 export function shapeOpenRouterResult(
   body: unknown,
-  { wordTimestamps }: { wordTimestamps: boolean },
+  { diarization, wordTimestamps }: { diarization: boolean; wordTimestamps: boolean },
 ): TranscriptionResult | DetailedTranscriptionResult {
   if (!isRecord(body)) throw new OpenRouterTranscriptionShapeError({ missing: "object" });
   if (typeof body["text"] !== "string") {
@@ -161,12 +206,20 @@ export function shapeOpenRouterResult(
   const words = parseWords(body["words"]);
   const duration = resolveDuration(body, { segments, words });
 
+  // Word timing wins over speaker labels when both are asked for, matching
+  // `shapeVoxtralResult` — two diarized services must not disagree about what
+  // `--timestamps` returns. MAI could in principle serve both at once (it puts
+  // a `speaker` on every word), but `WordTimestamp` has nowhere to carry one,
+  // so honoring the existing precedence beats inventing a divergence here.
   if (wordTimestamps && words !== null) {
     return { text: rawText, duration, language, words } satisfies DetailedTranscriptionResult;
   }
 
-  const text = joinSegmentTexts(segments) ?? repairMissingSentenceSpaces(rawText);
-  return { text, duration, language };
+  // Diarized output is speaker-prefixed lines, the shape `voxtral-diarized`
+  // already produces, so a reader downstream cannot tell the backends apart.
+  const labeledText = diarization ? buildDiarizedText(segments) : null;
+  const text = labeledText ?? joinSegmentTexts(segments) ?? repairMissingSentenceSpaces(rawText);
+  return { text, duration, language, ...(diarization && { diarized: labeledText !== null }) };
 }
 
 /**
@@ -191,9 +244,11 @@ function parseSegments(raw: unknown): ParsedSegment[] | undefined {
   const segments: ParsedSegment[] = [];
   for (const item of raw) {
     if (!isRecord(item) || typeof item["text"] !== "string") continue;
+    const speaker = item["speaker"];
     segments.push({
       text: item["text"],
       ...(typeof item["end"] === "number" && { end: item["end"] }),
+      ...(typeof speaker === "number" && { speaker_id: `speaker_${String(speaker)}` }),
     });
   }
   return segments.length === 0 ? undefined : segments;

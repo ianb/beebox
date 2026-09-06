@@ -10,9 +10,13 @@
  */
 
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
+import type { HqTranscriptionService, TranscriptionService } from "@shared/transcription-services.js";
 
-export type TranscriptionServiceOption = "voxtral" | "deepgram" | "whisper" | "openai-realtime";
-export type HqTranscriptionOption = "whisper" | "whisper-llm" | "whisper-llm-mini" | "voxtral" | "voxtral-diarized";
+// The vocabulary comes from `shared/`, not a copy: these unions used to be
+// hand-written here and drifted from the engine's the moment a service was
+// added. `fake` is a test backend and never appears in the picker.
+export type TranscriptionServiceOption = Exclude<TranscriptionService, "fake">;
+export type HqTranscriptionOption = HqTranscriptionService;
 
 const TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   label: string;
@@ -32,6 +36,8 @@ const HQ_TRANSCRIPTION_OPTIONS: ReadonlyArray<{
   { label: "Whisper LLM mini", service: "whisper-llm-mini" },
   { label: "Voxtral (Mistral)", service: "voxtral" },
   { label: "Voxtral + diarization (labels who's speaking)", service: "voxtral-diarized" },
+  { label: "MAI (Microsoft, needs an OpenRouter key)", service: "mai" },
+  { label: "MAI + diarization (labels who's speaking)", service: "mai-diarized" },
 ];
 
 function optionLabel(options: ReadonlyArray<{ label: string; service: string }>, service: string | null): string {

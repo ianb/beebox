@@ -12,10 +12,36 @@ import { transcribeAudioFake } from "./fake.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { getOpenAiThinkingKey } from "../openai-thinking-key.js";
+import {
+  HQ_TRANSCRIPTION_SERVICES,
+  isMaiHqService,
+  TRANSCRIPTION_SERVICES,
+  type HqTranscriptionService,
+  type MaiHqService,
+  type TranscriptionService,
+} from "../../shared/transcription-services.js";
 import { transcribeAudioWhisper, type WhisperVariant } from "./whisper.js";
-import { routeVia } from "../openrouter.js";
+import { getOpenRouterKey, routeVia } from "../openrouter.js";
 import { transcribeAudioOpenRouter } from "./openrouter.js";
 
+
+/**
+ * The box is configured for a MAI HQ pass but holds no OpenRouter key. Unlike
+ * the other services this is not "the fallback is unavailable" — MAI has no
+ * direct arm, so the key is the only way to reach it. Permanent: no retry
+ * produces a credential.
+ */
+class MissingOpenRouterKeyError extends Error implements TranscriptionError {
+  readonly permanent = true;
+  readonly code = "missing_openrouter_key";
+  constructor({ service }: { service: MaiHqService }) {
+    super(
+      `HQ transcription service "${service}" needs an OpenRouter key — MAI-Transcribe-2 is reachable no other way. `
+        + "Grant the \"openrouter\" secret to this box, or pick a different hqService.",
+    );
+    this.name = "MissingOpenRouterKeyError";
+  }
+}
 
 export interface TranscriptionResult {
   text: string;
@@ -73,21 +99,17 @@ export interface TranscribeAudioParams {
   boxRoot?: string;
 }
 
-export const TRANSCRIPTION_SERVICES = ["whisper", "voxtral", "deepgram", "openai-realtime", "fake"] as const;
-export type TranscriptionService = (typeof TRANSCRIPTION_SERVICES)[number];
-/**
- * Narration mode's checkpoint HQ pass — non-streaming services only.
- * - `whisper`: OpenAI's classic `whisper-1` model.
- * - `whisper-llm`: OpenAI's full LLM-based audio transcription
- *   (`gpt-4o-transcribe`). Higher quality, slower, more expensive.
- * - `whisper-llm-mini`: Smaller/faster/cheaper LLM variant
- *   (`gpt-4o-mini-transcribe`).
- * - `voxtral`: Mistral's Voxtral non-streaming model.
- * - `voxtral-diarized`: Voxtral with diarization on — output is
- *   speaker-prefixed lines ("Speaker 0: …\nSpeaker 1: …").
- */
-export const HQ_TRANSCRIPTION_SERVICES = ["whisper", "whisper-llm", "whisper-llm-mini", "voxtral", "voxtral-diarized"] as const;
-export type HqTranscriptionService = (typeof HQ_TRANSCRIPTION_SERVICES)[number];
+// The vocabulary itself lives in `shared/` so the frontend picker and the tRPC
+// input schema read the same closed set this dispatcher does; re-exported here
+// because this module is what most callers already import.
+export {
+  HQ_TRANSCRIPTION_SERVICES,
+  isMaiHqService,
+  TRANSCRIPTION_SERVICES,
+  type HqTranscriptionService,
+  type MaiHqService,
+  type TranscriptionService,
+} from "../../shared/transcription-services.js";
 
 export interface TranscriptionConfig {
   /**
@@ -224,7 +246,9 @@ export async function transcribeAudioHq(
  * context-biasing prompt that OpenRouter's transcription request cannot
  * express, so it stays on the direct arms.
  */
-export function hqRoutesThroughOpenRouter(service: HqTranscriptionService): service is WhisperVariant {
+export function hqRoutesThroughOpenRouter(
+  service: HqTranscriptionService,
+): service is WhisperVariant | MaiHqService {
   return service !== "voxtral" && service !== "voxtral-diarized";
 }
 
@@ -237,6 +261,13 @@ async function dispatchHqTranscription(
   }
   if (service === "voxtral-diarized") {
     return transcribeAudioVoxtral(params, { diarization: true });
+  }
+  if (isMaiHqService(service)) {
+    // No fallback to weigh: MAI has no direct arm at all, so this is the one
+    // HQ service that simply requires an OpenRouter key.
+    const key = await getOpenRouterKey(params.boxRoot, { purpose: "transcription", observe: true });
+    if (key === null) throw new MissingOpenRouterKeyError({ service });
+    return transcribeAudioOpenRouter(key, { ...params, variant: service });
   }
   // The direct key is resolved here only to pick the route; the direct arm
   // resolves it again for itself, which keeps its own error and legacy

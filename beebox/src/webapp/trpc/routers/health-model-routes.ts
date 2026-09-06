@@ -12,7 +12,7 @@ import { getGeminiApiKey } from "../../../core/gemini-key.js";
 import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { getOpenRouterKey, routeVia } from "../../../core/openrouter.js";
 import { getOpenAiEmbeddingsKey } from "../../../core/search/embeddings-key.js";
-import { hqRoutesThroughOpenRouter, loadTranscriptionConfig } from "../../../core/transcription/index.js";
+import { hqRoutesThroughOpenRouter, isMaiHqService, loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import type { HealthCheck } from "./health.js";
 
 /**
@@ -38,18 +38,20 @@ export async function modelRoutesCheck(boxRoot: string): Promise<HealthCheck[]> 
     ["semantic search", await getOpenAiEmbeddingsKey(boxRoot, { observe: false })],
     ["audio questions", geminiKey],
   ];
-  // Voxtral HQ cannot use OpenRouter at all (`transcription/openrouter.ts`), so
-  // this line must not offer it as the route — it would name a fallback that
-  // will never run and read as "covered" when it is not.
-  if (hqRoutesThroughOpenRouter(hqService)) {
+  const lines: string[] = [];
+  // Three different truths about HQ transcription, and conflating them would
+  // mislead: MAI runs ONLY on OpenRouter, Voxtral runs only on Mistral, and the
+  // Whisper family genuinely falls back.
+  if (isMaiHqService(hqService)) {
+    lines.push(`HQ transcription (${hqService}) → OpenRouter only; MAI is reachable no other way`);
+  } else if (hqRoutesThroughOpenRouter(hqService)) {
     routes.push([`HQ transcription (${hqService})`, await getOpenAiThinkingKey(boxRoot, { observe: false })]);
+  } else {
+    lines.push(`HQ transcription (${hqService}) → Mistral only; OpenRouter cannot serve Voxtral`);
   }
   if (process.env["BBX_SCAN_VISION"] === "gemini") routes.push(["scan vision", geminiKey]);
 
-  const lines = routes.map(([label, direct]) => `${label} → ${direct === null ? "OpenRouter" : "its own provider"}`);
-  if (!hqRoutesThroughOpenRouter(hqService)) {
-    lines.push(`HQ transcription (${hqService}) → Mistral only; OpenRouter cannot serve Voxtral`);
-  }
+  lines.unshift(...routes.map(([label, direct]) => `${label} → ${direct === null ? "OpenRouter" : "its own provider"}`));
   return [
     {
       name: "model-routes",
