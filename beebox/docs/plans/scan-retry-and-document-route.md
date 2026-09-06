@@ -1,6 +1,6 @@
 ---
 title: "Bound the promote retry, and stop routing documents into the photo flow"
-status: draft
+status: partial
 workstream: scanner-setup
 issues:
   - ../../../issues/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md
@@ -356,6 +356,12 @@ questions, not its own plan.
   transient failure recovers and a permanent one is abandoned within one
   working session. Not settled; it belongs in Direction before Track 1's chunk
   is cut.
+- **A persistently failing upload still retries on the 6-hour GC sweep and at
+  every box start.** SETTLED 2026-09-06, boxholder: *"I guess every 6 hours is
+  okay."* Accepted as documented behaviour rather than fixed. The in-process
+  cap stops the fast re-arm; what remains is a slow poll, and bounding it would
+  need durable per-entry dead-letter state for a failure mode that has not been
+  observed.
 - **Should abandonment raise a question card on the box** rather than only
   writing a record? It would be visible where the boxholder already looks.
   Against: a question card the boxholder cannot act on is the exact
@@ -385,6 +391,12 @@ gets a `knows_directly` entry before it ships.
   this needs no network.
 - **Track 4** leaves no code behind, so nothing holds it but this plan's
   record of what was done.
+
+## Status, 2026-09-06
+
+Tracks 1, 2 and 3 are implemented, reviewed cross-model, and landed. Track 4
+(recovering the one trashed document) is an operator procedure against a
+production box and has not run yet.
 
 ## Implementation order
 
