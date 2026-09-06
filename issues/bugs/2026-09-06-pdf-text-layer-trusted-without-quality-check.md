@@ -69,8 +69,24 @@ dependency (`onnxruntime`), cross-platform. ocrmac is slightly better but
 macOS-only, so it is a reference point rather than a deployable option for a
 Linux host.
 
-All three engines miss handwritten signatures that a vision model reads
-correctly — printed forms are OCR's domain, handwriting is not.
+Scored against the page itself (read directly, rather than against another
+extraction), on a notarized form with both printed and handwritten fields:
+
+| engine | printed fields found | handwritten fields found |
+|---|---|---|
+| easyocr (current) | 5/8 | 5/6 |
+| rapidocr | 6/8 | 6/6 |
+| ocrmac | 8/8 | 6/6 |
+
+Handwriting is not the weak spot — all three read cursive signatures and
+hand-printed entries. What easyocr and rapidocr miss is small print in page
+corners (form codes, page numbers); ocrmac catches those too.
+
+A separate failure shape worth naming, seen under the current `full_page`
+mode: a checkbox list came out as `- [x] includedonthisform.` — the checkbox
+state correct, but only the wrapped tail of the line, dropping what was
+actually being attested. On a legal certification that reads as complete while
+saying nothing, which is worse than an obvious garble.
 
 ## Correction to a prior conclusion
 
