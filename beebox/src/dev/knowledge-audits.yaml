@@ -5223,3 +5223,43 @@ tests:
       - "call time|per[- ]call|each (?:call|request)|every (?:call|request|time)"
     response_not_contains: ["write it to a file", "save it to a file", "store it in a file", "_config/connectors", ".secret.json"]
     tags: [secrets]
+
+  # === Starter: "what can you do" ===
+  # The stock opener on a fresh box and its cousins. The what-can-you-do skill
+  # points at node_modules/beebox/box-docs/what-you-could-do.md; a specific ask
+  # (the plants one) is answered from context and is judged on behavior only.
+  # Status (2026-09-05): 3/3 Claude on substance (plants read nothing, by
+  # design), 3/3 Codex.
+
+  - id: starter-what-can-you-do
+    prompt: "What can you do?"
+    chat_mode: true
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/what-you-could-do.md"]
+    watch_for: >
+      Reads the what-you-could-do doc, offers two or three concrete things
+      tied to what this box has (not a catalog), in the user's language with
+      no card types, schemas, connectors, or commands named, and does not
+      lead with the browser extension or Gmail/Calendar as a first step.
+    tags: [starter, chat]
+
+  - id: starter-just-set-up
+    prompt: "I just set this up. What should I try first?"
+    chat_mode: true
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/what-you-could-do.md"]
+    watch_for: >
+      Reads the doc; leads with inputs that need no setup (photograph
+      something, talk about it, keep track of a kind of thing); each offer
+      ends in something the person gets; at most one question.
+    tags: [starter, chat]
+
+  - id: starter-track-plants
+    prompt: "Can I use this to keep track of my plants? I'd take a picture of each one now and then."
+    chat_mode: true
+    expected_level: knows_directly
+    watch_for: >
+      Says yes in plain words: each plant becomes a thing the box keeps track
+      of and later photos file alongside it; does not ask the user to design a
+      schema or name attributes; offers to start with the first plant.
+    tags: [starter, chat, behavioral]

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-05T22:24:54Z
-Total documents: 322
+Generated: 2026-09-06T00:38:20Z
+Total documents: 323
 
 ## Issues
 
@@ -87,13 +87,13 @@ These references point to files that don't exist.
 
 #### CLAUDE.md
 
-Title: "Bee Box" | 184 lines
+Title: "Bee Box" | 185 lines
 
 Referenced by:
 - CLAUDE.md:9 (mention) — **Dev server** — one shared router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...` (lazy star
 - README.md:36 (mention) — `CLAUDE.md`) and the box itself under `content/` — directories, default
 - code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per CLAUDE.md, noisy output is
-- docs/README.md:52 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
+- docs/README.md:57 (mention) — `CLAUDE.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 - docs/activities-design.md:46 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code,
 - docs/activities-retrospective.md:21 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
 - docs/adding-schemas.md:272 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
@@ -370,7 +370,7 @@ Title: "Code Style" | 118 lines
 
 Referenced by:
 - CLAUDE.md:123 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
-- CLAUDE.md:183 (at-include) — @code-style.md
+- CLAUDE.md:184 (at-include) — @code-style.md
 - docs/engineering-principles.md:4 (link) — They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
 - docs/implemented-plans/agent-applied-migrations.md:90 (mention) — - `beebox/code-style.md` — max 2 positional params (named options), no
 - docs/implemented-plans/agent-field-tests.md:40 (mention) — - `beebox/code-style.md` — mechanical rules for all new code.
@@ -785,7 +785,7 @@ References:
 Title: "Third-party assets and their attribution" | 32 lines
 
 Referenced by:
-- CLAUDE.md:179 (mention) — | Third-party asset attribution | `docs/attribution.md` |
+- CLAUDE.md:180 (mention) — | Third-party asset attribution | `docs/attribution.md` |
 - frontend.md:55 (mention) — rejected; see `docs/attribution.md` for why the artwork is a dependency.
 
 #### docs/box-layout.md
@@ -843,7 +843,7 @@ References:
 Title: "Calendar Integration" | 106 lines
 
 Referenced by:
-- CLAUDE.md:173 (mention) — | Calendar integration | `docs/calendar.md` |
+- CLAUDE.md:174 (mention) — | Calendar integration | `docs/calendar.md` |
 - docs/connectors.md:29 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](calendar.md) |
 - docs/design/README.md:29 (link) — [`../calendar.md`](../calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../calendar.md).
@@ -1088,7 +1088,7 @@ References:
 Title: "(no title)" | 1 lines
 
 Referenced by:
-- docs/README.md:33 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
+- docs/README.md:38 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
 - docs/implemented-plans/remove-bbx-render.md:358 (mention) — **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/docs-reorg.md:114 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
@@ -1255,7 +1255,7 @@ Referenced by:
 Title: "Glossary" | 92 lines
 
 Referenced by:
-- CLAUDE.md:180 (mention) — | Glossary | `docs/glossary.md` |
+- CLAUDE.md:181 (mention) — | Glossary | `docs/glossary.md` |
 - docs/design/trust.md:40 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/implemented-plans/vocab-glossary-sweep.md:37 (mention) — editing a label has one place to check. `docs/glossary.md` already claims
 - docs/plans/design-reconciliation.md:25 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
@@ -1779,7 +1779,7 @@ References:
 
 #### docs/README.md
 
-Title: "docs/ — map and naming conventions" | 76 lines
+Title: "docs/ — map and naming conventions" | 81 lines
 
 Referenced by:
 - docs/README.md:20 (mention) — Each entry in the directory's `README.md` disposition table says what
@@ -1798,6 +1798,7 @@ References:
 - → docs/plans/README.md (mention)
 - → docs/README.md (mention)
 - → docs/stack-decisions.md (mention)
+- → docs/box/what-you-could-do.md (link)
 - → docs/doc-graph.md (mention)
 - → CLAUDE.md (mention)
 
@@ -2233,6 +2234,15 @@ Referenced by:
 
 References:
 - → docs/architecture/spirit.md (mention)
+
+### docs/box/
+
+#### docs/box/what-you-could-do.md
+
+Title: "What you could do with your box" | 170 lines
+
+Referenced by:
+- docs/README.md:34 (link) — [what you could do with your box](box/what-you-could-do.md).
 
 ### docs/design/
 
@@ -4873,7 +4883,7 @@ References:
 Title: "The interface as cards — design" | 477 lines
 
 Referenced by:
-- CLAUDE.md:176 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
+- CLAUDE.md:177 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
 - docs/design/identity.md:17 (link) — [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
 - docs/design/interaction-model.md:17 (link) — ([interface-as-cards](../plans/interface-as-cards.md)).
 - docs/design/representation.md:85 (link) — ([interface-as-cards](../plans/interface-as-cards.md) owns that guardrail).
@@ -5054,7 +5064,7 @@ References:
 Title: "PDF Intake" | 204 lines
 
 Referenced by:
-- CLAUDE.md:174 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
+- CLAUDE.md:175 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
 - docs/implemented-plans/user-story-audit-followups.md:61 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
 - docs/plans/README.md:87 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
 - docs/plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
@@ -5335,7 +5345,7 @@ References:
 Title: "Source Editor Plan" | 144 lines
 
 Referenced by:
-- CLAUDE.md:175 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
+- CLAUDE.md:176 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
 - docs/plans/README.md:88 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
 - docs/plans/docs-reorg.md:42 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
 

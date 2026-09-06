@@ -4211,6 +4211,30 @@ test1:
       peak: 46084
       added: 2328
       turns: 7
+  starter-what-can-you-do:
+    - date: 2026-09-06T00:39:37.334Z
+      boxCommit: 248b6c9bd03687adee02a752f45bb26b2f0b12b0
+      repoCommit: 912ccabedb1b0e094276b3f757f338f7df007ef5
+      initial: 51191
+      peak: 56241
+      added: 5050
+      turns: 7
+  starter-just-set-up:
+    - date: 2026-09-06T00:39:37.334Z
+      boxCommit: 248b6c9bd03687adee02a752f45bb26b2f0b12b0
+      repoCommit: 912ccabedb1b0e094276b3f757f338f7df007ef5
+      initial: 51198
+      peak: 54951
+      added: 3753
+      turns: 5
+  starter-track-plants:
+    - date: 2026-09-06T00:39:37.334Z
+      boxCommit: 248b6c9bd03687adee02a752f45bb26b2f0b12b0
+      repoCommit: 912ccabedb1b0e094276b3f757f338f7df007ef5
+      initial: 51214
+      peak: 51214
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
