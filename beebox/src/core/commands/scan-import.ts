@@ -355,6 +355,14 @@ registerCommand({
       type: "string[]",
     },
     {
+      name: "mode",
+      description:
+        "document (default for a PDF) or photos — use photos for a scanned photo album, " +
+        "where front/back pairing applies",
+      required: false,
+      type: "string",
+    },
+    {
       name: "context",
       description: "Extra context appended to the scan-guide context for this run",
       required: false,

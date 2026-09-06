@@ -128,7 +128,7 @@ async function runHousekeeping(boxRoot: string): Promise<void> {
 async function processPendingJobs(
   boxRoot: string,
   activeConnectorName: string | undefined
-): Promise<{ reactorOk: boolean; jobsProcessed: number; jobsRemaining: number }> {
+): Promise<{ reactorOk: boolean; reactorSkipped: boolean; jobsProcessed: number; jobsRemaining: number }> {
   // Step 5: Process pending jobs. Under --connector X, the source
   // filter restricts processing to jobs tagged source="X" so a
   // gmail-scoped tick doesn't drain other connectors' work.
@@ -152,6 +152,7 @@ async function processPendingJobs(
   console.log("");
   return {
     reactorOk: result.success,
+    reactorSkipped: result.skipped === "locked",
     jobsProcessed: result.jobsProcessed,
     jobsRemaining: result.jobsRemaining,
   };
@@ -297,6 +298,7 @@ export const wakeupCommand = new Command("wakeup")
     reportWakeupOutcome({
       connectorErrors: connectorErrorCount,
       reactorOk: jobs.reactorOk,
+      reactorSkipped: jobs.reactorSkipped,
       jobsProcessed: jobs.jobsProcessed,
       jobsRemaining: jobs.jobsRemaining,
     });

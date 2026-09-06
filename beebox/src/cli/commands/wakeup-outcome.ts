@@ -33,6 +33,10 @@ export interface WakeupOutcomeReport {
   /** Whether the reactor cycle itself completed. This is the step a caller
    * waiting on an intake job actually depends on. */
   readonly reactorOk: boolean;
+  /** True when another reactor held the lock, so this cycle did no work.
+   * `reactorOk` is still true — nothing failed — but no job drained, so a
+   * caller waiting on one has learned nothing and must try again. */
+  readonly reactorSkipped: boolean;
   readonly jobsProcessed: number;
   /** Jobs left queued. Routinely non-zero for benign reasons — the reactor
    * skips low-priority work — so it is NOT a failure signal. */
@@ -67,14 +71,15 @@ export function parseWakeupOutcome(output: string): WakeupOutcomeReport | null {
     return null;
   }
   if (!isRecord(parsed)) return null;
-  const { connectorErrors, reactorOk, jobsProcessed, jobsRemaining } = parsed;
+  const { connectorErrors, reactorOk, reactorSkipped, jobsProcessed, jobsRemaining } = parsed;
   if (
     typeof connectorErrors !== "number" ||
     typeof reactorOk !== "boolean" ||
+    typeof reactorSkipped !== "boolean" ||
     typeof jobsProcessed !== "number" ||
     typeof jobsRemaining !== "number"
   ) {
     return null;
   }
-  return { connectorErrors, reactorOk, jobsProcessed, jobsRemaining };
+  return { connectorErrors, reactorOk, reactorSkipped, jobsProcessed, jobsRemaining };
 }

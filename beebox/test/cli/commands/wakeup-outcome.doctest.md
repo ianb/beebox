@@ -18,7 +18,7 @@ import {
 import { wakeupSatisfiedScanPromote } from "../../../src/core/scan/promote-wakeup.js";
 
 const line = (report) => WAKEUP_OUTCOME_PREFIX + JSON.stringify(report);
-const healthy = { connectorErrors: 0, reactorOk: true, jobsProcessed: 1, jobsRemaining: 0 };
+const healthy = { connectorErrors: 0, reactorOk: true, reactorSkipped: false, jobsProcessed: 1, jobsRemaining: 0 };
 ```
 
 ## The outcome round-trips out of captured output
@@ -26,7 +26,7 @@ const healthy = { connectorErrors: 0, reactorOk: true, jobsProcessed: 1, jobsRem
 ```ts
 const output = ["[Running connectors]", line(healthy), "[Pushing to remote]"].join("\n");
 JSON.stringify(parseWakeupOutcome(output))
-=> {"connectorErrors":0,"reactorOk":true,"jobsProcessed":1,"jobsRemaining":0}
+=> {"connectorErrors":0,"reactorOk":true,"reactorSkipped":false,"jobsProcessed":1,"jobsRemaining":0}
 ```
 
 The last line wins, so output containing an earlier nested run reads the run
@@ -70,7 +70,7 @@ done.
 ```ts
 wakeupSatisfiedScanPromote({
   exitOk: false,
-  outcome: { connectorErrors: 3, reactorOk: true, jobsProcessed: 1, jobsRemaining: 0 },
+  outcome: { connectorErrors: 3, reactorOk: true, reactorSkipped: false, jobsProcessed: 1, jobsRemaining: 0 },
 })
 => true
 ```
@@ -81,7 +81,7 @@ zero:
 ```ts
 wakeupSatisfiedScanPromote({
   exitOk: true,
-  outcome: { connectorErrors: 0, reactorOk: false, jobsProcessed: 0, jobsRemaining: 1 },
+  outcome: { connectorErrors: 0, reactorOk: false, reactorSkipped: false, jobsProcessed: 0, jobsRemaining: 1 },
 })
 => false
 ```
@@ -93,7 +93,7 @@ the loop look justified.
 ```ts
 wakeupSatisfiedScanPromote({
   exitOk: true,
-  outcome: { connectorErrors: 0, reactorOk: true, jobsProcessed: 0, jobsRemaining: 5 },
+  outcome: { connectorErrors: 0, reactorOk: true, reactorSkipped: false, jobsProcessed: 0, jobsRemaining: 5 },
 })
 => true
 ```
@@ -107,4 +107,16 @@ crash before the cycle ended.
   wakeupSatisfiedScanPromote({ exitOk: false, outcome: null }),
 ].join(" ")
 => true false
+```
+
+A cycle that skipped because another reactor held the lock did no work at all.
+Nothing failed, so `reactorOk` is true — but no job drained, so the marker must
+survive and the wakeup must be tried again.
+
+```ts
+wakeupSatisfiedScanPromote({
+  exitOk: true,
+  outcome: { connectorErrors: 0, reactorOk: true, reactorSkipped: true, jobsProcessed: 0, jobsRemaining: 1 },
+})
+=> false
 ```

@@ -40,13 +40,24 @@ export function wakeupMarkerPath(boxRoot: string): string {
 /**
  * Record that a wakeup is owed. Idempotent: the newest reason wins.
  *
- * New files entering promote are new information, so the retry budget starts
- * over — including after an abandonment. Otherwise one permanently-broken
- * connector would silently strand every future scan on the box.
+ * `newWork` is the retry budget's reset, and it must mean *genuinely new
+ * files*, not *this pass ran again*. A pass re-drives entries still stuck in
+ * `promoting` from a failed upload, and marking on every such pass would clear
+ * the budget before each failure was recorded — the counter would never reach
+ * abandonment and the bound would be decorative. So only a batch containing an
+ * unattempted (`pending`) entry resets it.
+ *
+ * New files DO reset it, including after an abandonment: otherwise one
+ * permanently-broken connector would silently strand every future scan on the
+ * box, trading a loud loop for a quiet one.
  */
-export async function markWakeupPending(boxRoot: string, reason: string): Promise<void> {
+export async function markWakeupPending(
+  boxRoot: string,
+  opts: { reason: string; newWork: boolean },
+): Promise<void> {
   await ensureQuarantineDir(boxRoot);
-  await fs.writeFile(wakeupMarkerPath(boxRoot), `${getBoxTimeISO(boxRoot)} ${reason}\n`);
+  await fs.writeFile(wakeupMarkerPath(boxRoot), `${getBoxTimeISO(boxRoot)} ${opts.reason}\n`);
+  if (!opts.newWork) return;
   await clearWakeupFailures(boxRoot);
   await clearWakeupAbandoned(boxRoot);
 }
@@ -106,6 +117,9 @@ export function wakeupSatisfiedScanPromote(opts: {
   // No structured outcome: nothing better than the exit code to go on, and
   // guessing "fine" would resurrect the lost-wakeup bug the marker exists for.
   if (opts.outcome === null) return opts.exitOk;
+  // A lock-skip did no work at all, so it proves nothing about the intake job
+  // this worker is waiting on — retry rather than clear the marker.
+  if (opts.outcome.reactorSkipped) return false;
   // `jobsRemaining` is deliberately not consulted: the reactor skips
   // low-priority work every run, so a queued backfill job is normal and is not
   // this worker's business.

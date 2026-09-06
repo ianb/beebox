@@ -112,7 +112,7 @@ rather than another `failed` that would be re-armed.
 
 ```ts
 const box = await makeTmpBox();
-await markWakeupPending(box.root, "1 scan file(s) entering promote");
+await markWakeupPending(box.root, { reason: "1 scan file(s) entering promote", newWork: true });
 
 let calls = 0;
 const alwaysFails = () => {
@@ -148,7 +148,7 @@ Otherwise one permanently-broken connector would silently strand every future
 scan on the box — trading a loud loop for a quiet one.
 
 ```ts continue
-await markWakeupPending(box.root, "2 scan file(s) entering promote");
+await markWakeupPending(box.root, { reason: "2 scan file(s) entering promote", newWork: true });
 await isWakeupAbandoned(box.root)
 => false
 ```
@@ -172,7 +172,7 @@ budget, not a nearly-spent one.
 
 ```ts
 const box = await makeTmpBox();
-await markWakeupPending(box.root, "1 scan file(s) entering promote");
+await markWakeupPending(box.root, { reason: "1 scan file(s) entering promote", newWork: true });
 await runPendingWakeup({ boxRoot: box.root, runWakeup: () => Promise.resolve({ ok: false, detail: "x" }) });
 await runPendingWakeup({ boxRoot: box.root, runWakeup: () => Promise.resolve({ ok: false, detail: "x" }) });
 await readWakeupFailures(box.root)
@@ -198,6 +198,30 @@ after.kind
 ```ts
 const box = await makeTmpBox();
 await clearWakeupFailures(box.root);
+await readWakeupFailures(box.root)
+=> 0
+```
+
+## A retry of already-counted work does not refresh the budget
+
+A pass re-drives entries still stuck in `promoting` from a failed upload, and
+marks the wakeup owed each time. If that reset the counter, the budget would
+never reach abandonment and the bound would be decorative.
+
+```ts
+const box = await makeTmpBox();
+await markWakeupPending(box.root, { reason: "1 scan file(s) entering promote", newWork: true });
+await recordWakeupFailure(box.root);
+await recordWakeupFailure(box.root);
+await markWakeupPending(box.root, { reason: "1 scan file(s) entering promote", newWork: false });
+await readWakeupFailures(box.root)
+=> 2
+```
+
+Genuinely new files still reset it:
+
+```ts continue
+await markWakeupPending(box.root, { reason: "3 scan file(s) entering promote", newWork: true });
 await readWakeupFailures(box.root)
 => 0
 ```
