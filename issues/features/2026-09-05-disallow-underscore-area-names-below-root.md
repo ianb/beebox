@@ -22,10 +22,16 @@ Why it matters:
 - Agents naming a directory `_tmp` inside content is a plausible accident; the
   underscore prefix should stay a reserved, single-purpose signal.
 
-Sketch: reject any non-root path segment matching an area name (or more
-strictly, any leading-underscore segment — decide) in `bbx validate`, the
-pre-commit check, and at the write path (`resolveBoxNamespacePath` /
-`bbx create`/`mv`), with an error naming the reserved word.
+Decision (boxholder, 2026-09-05): `_tmp` MAY nest — it genuinely acts the
+same at any depth (the box `.gitignore` ships an unanchored `_tmp/` pattern,
+so a nested one is already ignored anywhere). The other four area names
+(`_content`, `_config`, `_bookkeeping`, `_publish`) are disallowed below
+the root.
+
+Sketch: reject a non-root path segment matching one of those four in
+`bbx validate`, the pre-commit check, and at the write path
+(`resolveBoxNamespacePath` / `bbx create`/`mv`), with an error naming the
+reserved word.
 
 Fleet scan (2026-09-05): the only hits are `_config/_template-updates/…`,
 which deliberately mirrors box-relative destination paths (parked template
