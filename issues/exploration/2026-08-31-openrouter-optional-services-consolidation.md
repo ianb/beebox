@@ -231,10 +231,20 @@ and through OpenRouter (`openai/text-embedding-3-small`, 512 dims, pinned
 `1.000000000000` on both. Keeping the route out of `EMBEDDER_ID` is correct: a
 box that swaps an OpenAI key for an OpenRouter one keeps its index.
 
-**Whisper HQ transcription matches the direct call exactly.** `openai/whisper-1`
-through OpenRouter returned the same text, `duration` 3.21, `language` english,
-and 9 word timestamps with the same timings as the direct arm on the same clip.
-The LLM variants are text-only on both routes.
+**All three Whisper HQ modes match the direct call exactly.** Every variant was
+run on both routes, with and without word timestamps — twelve runs, identical in
+all four result fields:
+
+| HQ mode | Model | Result, both routes |
+|---|---|---|
+| `whisper` | `openai/whisper-1` | text, `duration` 3.21, `language` english, 9 word timestamps |
+| `whisper-llm` | `openai/gpt-4o-transcribe` | text, `duration` 0, `language` `""` |
+| `whisper-llm-mini` | `openai/gpt-4o-mini-transcribe` | text, `duration` 0, `language` `""` |
+
+The empty duration and language on the two LLM variants are a property of those
+models, not of OpenRouter — they answer in plain `json` on the direct route too.
+`whisper` is the default `hqService`, so a box holding only an OpenRouter key
+gets a working HQ pass with nothing else set.
 
 **Voxtral cannot route, and this was the find that mattered.**
 `mistralai/voxtral-mini-transcribe` answers a `verbose_json` request with
