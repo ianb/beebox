@@ -73,6 +73,55 @@ JSON.stringify({
 => {"header":true,"refilled":true,"lines":2}
 ```
 
+## A fresh init never says "Updated"
+
+The two headers are mutually exclusive, and the flag that reaches furthest into
+the run — `--docid-debug`, whose marker is written after the fresh flush — is
+the one that used to produce both.
+
+```ts continue
+const freshBox = path.join(dir, "bbox");
+const both = await withOutput(() => runInit(freshBox, { branch: "main", docidDebug: true }));
+JSON.stringify({
+  initialized: both.filter((l) => l.startsWith("Initialized Bee Box at ")).length,
+  updated: both.filter((l) => l.startsWith("Updated Bee Box at ")).length,
+  docid: both.some((l) => l.startsWith("DOCID markers enabled")),
+})
+=> {"initialized":1,"updated":0,"docid":true}
+```
+
+## Clearing the DOCID marker is reported too
+
+The marker persists across runs, so turning it off is as much a change as
+turning it on. `--no-docid-debug` had to be declared for this to be reachable
+from the CLI at all — the help text promised it, and commander does not derive
+it from `--docid-debug`.
+
+```ts continue
+const cleared = await withOutput(() => runInit(freshBox, { branch: "main", docidDebug: false }));
+JSON.stringify({ header: cleared[0].startsWith("Updated Bee Box at "), lines: cleared })
+=> {"header":true,"lines":["Updated Bee Box at «*»","DOCID markers disabled"]}
+```
+
+## A rebuilt search index is a change, not just progress
+
+`.beebox/` is gitignored, so an index can be absent on a box that is otherwise
+untouched. The build announces itself live because it is slow enough that
+silence would read as a hang, and it is also recorded — otherwise that progress
+line would be the entire output of the run, naming no box.
+
+```ts continue
+await fs.rm(path.join(freshBox, ".beebox/search-index-manifest.json"));
+await fs.rm(path.join(freshBox, ".beebox/search-index.json"));
+const rebuilt = await withOutput(() => runInit(freshBox, { branch: "main" }));
+JSON.stringify({
+  progress: rebuilt.some((l) => l.startsWith("Building the search index over ")),
+  header: rebuilt.some((l) => l.startsWith("Updated Bee Box at ")),
+  recorded: rebuilt.includes("Built the search index in .beebox/"),
+})
+=> {"progress":true,"header":true,"recorded":true}
+```
+
 ```ts cleanup
 await fs.rm(dir, { recursive: true, force: true });
 ```

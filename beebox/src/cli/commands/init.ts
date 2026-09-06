@@ -97,6 +97,23 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // printed with the list or not at all.
   const changes: string[] = [];
 
+  /**
+   * Print and clear whatever has been gathered. The header only goes on a
+   * re-init, where the list is the whole output and nothing else says which
+   * box; a fresh init's banner already did.
+   *
+   * A throw before the final call loses whatever was gathered — accepted. The
+   * error itself is loud and names the cause, and the alternative (reporting
+   * from an error path) buys a rare, cosmetic gain for a try/finally around the
+   * whole body.
+   */
+  function flushChanges(): void {
+    if (changes.length === 0) return;
+    if (!isFresh) console.log(`Updated Bee Box at ${boxRoot}`);
+    console.log(changes.join("\n"));
+    changes.length = 0;
+  }
+
   // Install procedure templates
   const procedures = await installProcedures(boxRoot);
   if (procedures.length > 0) {
@@ -146,19 +163,23 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   const memoryLinked = await symlinkClaudeMemory(boxRoot);
   if (memoryLinked) changes.push("Linked .claude/memory/ → ~/.claude/projects/ (auto-memory now git-tracked)");
 
+  // Set or clear the docid-debug marker. Both directions are reported: the
+  // marker persists across runs, so "it is off now" is as much a change as
+  // "it is on now", and a silent clear leaves the operator guessing.
+  if (options.docidDebug !== undefined) {
+    await setDocIdDebug(boxRoot, options.docidDebug);
+    changes.push(
+      options.docidDebug
+        ? "DOCID markers enabled (grep for DOCID: in prompt logs to verify inclusion)"
+        : "DOCID markers disabled",
+    );
+  }
+
   // A fresh init prints its list here, in step order, so the slow generate/
   // index progress below still reads as progress rather than arriving before
   // the things it follows. A re-init cannot: it has to know whether the list is
   // empty before deciding to print a header at all, so it flushes at the end.
-  if (isFresh && changes.length > 0) {
-    console.log(changes.join("\n"));
-    changes.length = 0;
-  }
-
-  // Set or clear the docid-debug marker
-  if (options.docidDebug !== undefined) {
-    await setDocIdDebug(boxRoot, options.docidDebug);
-  }
+  if (isFresh) flushChanges();
 
   // Install/refresh validation hooks (.git/hooks/pre-commit and
   // .claude/settings.json PostToolUse entry) so the bbx path embedded in
@@ -203,23 +224,31 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     console.log("Generated the agent guide in .beebox/, box-compiled docs in _content/docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/ (beebox reference docs: node_modules/beebox/box-docs/)");
   }
 
-  // Build the search index so the first `bbx search` isn't a cold build. The
-  // progress line fires only on a first build (`core/search/refresh.ts`), which
-  // is the one case slow enough to be worth announcing; a refresh over an
-  // existing index says nothing.
+  // Build the search index so the first `bbx search` isn't a cold build.
+  //
+  // The progress callback fires only on a FIRST build (`core/search/refresh.ts`
+  // gates it on an empty manifest), which is the one case slow enough that
+  // silence would read as a hang — so it prints live.
+  //
+  // On a RE-INIT it is also recorded as a change. `.beebox/` is gitignored, so
+  // a box cloned onto a server has no index and re-inits into a first build;
+  // without the entry, that progress line would be the entire output and would
+  // name no box. A fresh init needs no entry — its banner already named the
+  // box, and announcing completion of the step it just announced is the
+  // redundancy this pass exists to remove.
+  // An array rather than a boolean: TypeScript does not track a flag assigned
+  // inside a callback, so `builtIndex` would narrow to `false` and the check
+  // below would read as dead code.
+  const indexProgress: string[] = [];
   await openSearchIndex(boxRoot, {
-    onProgress: (message) => console.log(message),
+    onProgress: (message) => {
+      indexProgress.push(message);
+      console.log(message);
+    },
   });
-  if (options.docidDebug) {
-    changes.push("DOCID markers enabled (grep for DOCID: in prompt logs to verify inclusion)");
-  }
+  if (indexProgress.length > 0 && !isFresh) changes.push("Built the search index in .beebox/");
 
-  // The re-init flush: the list is the entire output, and the header only earns
-  // its line when there is a list under it. Nothing changed ⇒ nothing printed.
-  if (changes.length > 0) {
-    console.log(`Updated Bee Box at ${boxRoot}`);
-    console.log(changes.join("\n"));
-  }
+  flushChanges();
 
   // Commit everything (package scaffold, schedules, procedures, guides,
   // rules, docs, etc.) on fresh init, at the box root — that's the git
@@ -249,6 +278,10 @@ export const initCommand = new Command("init")
   .option("--skip-git", "Skip git initialization")
   .option("-b, --branch <name>", "Initial branch name", "main")
   .option("--docid-debug", "Add DOCID markers to generated docs (persists until --no-docid-debug)")
+  // Declared explicitly: commander does not derive `--no-x` from `--x`, so the
+  // help text above promised a flag that did not exist and the marker could
+  // only ever be set, never cleared, from the CLI.
+  .option("--no-docid-debug", "Clear the DOCID marker set by a previous --docid-debug")
   .action(async (targetPath: string, options: InitOptions) => {
     try {
       await runInit(targetPath, options);
