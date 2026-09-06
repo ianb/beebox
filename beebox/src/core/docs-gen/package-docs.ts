@@ -3,8 +3,9 @@
  * the installed package (`<PACKAGE_ROOT>/box-docs/`), not into each box.
  *
  * Every file here is a pure function of the engine source: the static
- * reference docs, one `card-<type>.md` per built-in schema with
- * `instructions`, and a `README.md` index. Nothing depends on a box, so the
+ * reference docs, the prose docs under `docs/box/` (written for box agents,
+ * each with a `read-when:` frontmatter line), one `card-<type>.md` per
+ * built-in schema with `instructions`, and a `README.md` index. Nothing depends on a box, so the
  * docs cannot lag the engine that reads them, and no box carries a copy.
  * Docs compiled from a box's own content stay in the box (`DOCS_DIR`).
  *
@@ -19,8 +20,10 @@
  * Design: `docs/plans/box-docs-in-package.md`.
  */
 
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
 import { mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { parseFrontmatterObject, splitCardContent } from "../../cards/frontmatter.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { contentHash } from "../../lib/content-hash.js";
 import { errnoCode } from "../../lib/error-guards.js";
@@ -61,6 +64,29 @@ const STATIC_DOCS: readonly StaticDoc[] = [
   { filename: "reducing-claude-md.md", readWhen: "The box's CLAUDE.md is flagged as too large.", generate: generateReducingClaudeMdDoc },
   { filename: "python-tools.md", readWhen: "Reaching for a box-specific Python CLI.", generate: generatePythonToolsDoc },
 ];
+
+/** Prose docs for box agents, shipped as-is (frontmatter stripped). */
+const PROSE_DOCS_DIR = join("docs", "box");
+
+class ProseDocFrontmatterError extends Error {
+  constructor(file: string) {
+    super(`docs/box/${file}: needs frontmatter with a one-line \`read-when:\` for the box-docs index`);
+    this.name = "ProseDocFrontmatterError";
+  }
+}
+
+/** The hand-written docs under `docs/box/`: body as the doc, `read-when` as its index row. */
+function proseDocs(packageRoot: string): { doc: EngineDoc; readWhen: string }[] {
+  const dir = join(packageRoot, PROSE_DOCS_DIR);
+  const files = readdirSync(dir).filter((f) => f.endsWith(".md")).toSorted();
+  return files.map((file) => {
+    const raw = readFileSync(join(dir, file), "utf-8");
+    const fm = parseFrontmatterObject(raw);
+    const readWhen = fm?.["read-when"];
+    if (typeof readWhen !== "string" || readWhen === "") throw new ProseDocFrontmatterError(file);
+    return { doc: { filename: basename(file), content: splitCardContent(raw).body }, readWhen };
+  });
+}
 
 const FINGERPRINT_FILE = ".hash";
 const INDEX_FILE = "README.md";
@@ -118,11 +144,13 @@ function indexDoc(entries: { filename: string; readWhen: string }[]): string {
   return lines.join("\n");
 }
 
-/** Every engine doc, computed from the running source. Pure. */
-export function engineDocs(): EngineDoc[] {
+/** Every engine doc, computed from the running source (and `docs/box/`). */
+export function engineDocs(options?: { packageRoot?: string }): EngineDoc[] {
+  const packageRoot = options?.packageRoot ?? PACKAGE_ROOT;
   const statics = STATIC_DOCS.map((d) => ({ doc: { filename: d.filename, content: d.generate() }, readWhen: d.readWhen }));
+  const prose = proseDocs(packageRoot);
   const cards = builtinCardDocs();
-  const all = [...statics, ...cards];
+  const all = [...statics, ...prose, ...cards];
   const index: EngineDoc = {
     filename: INDEX_FILE,
     content: indexDoc(all.map((e) => ({ filename: e.doc.filename, readWhen: e.readWhen }))),

@@ -10,7 +10,8 @@ one place that resolution now happens, guarding two leaks
 real OS-absolute path — resolves against `boxRoot`, not the filesystem root.
 
 ```ts setup
-import { DisplayFormPathArgError, resolveCliTargetPath } from "../../../src/cli/lib/cli-target-path.js";
+import { DisplayFormPathArgError,
+  ReservedSegmentPathArgError, resolveCliTargetPath } from "../../../src/cli/lib/cli-target-path.js";
 ```
 
 ## A plain relative argument joins onto `relativeTo`
@@ -81,4 +82,30 @@ argument:
 ```ts continue
 tryResolve("Config://box.json")
 => /box/Config:/box.json
+```
+
+## Nested reserved area names are refused
+
+A path nesting a non-`_tmp` area name below the root throws
+`ReservedSegmentPathArgError` (`box-reserved-segments.ts`) — same guard shape
+as the display-form rejection, and both share the `BoxPathArgError` base the
+commands catch:
+
+```ts
+function tryReserved(raw: string): string {
+  try {
+    return resolveCliTargetPath({ boxRoot: "/box", raw, relativeTo: "/box" });
+  } catch (e) {
+    return e instanceof ReservedSegmentPathArgError ? `ReservedSegmentPathArgError: ${e.message}` : "unexpected error";
+  }
+}
+
+tryReserved("/_content/recipes/_config/x.card")
+=> ReservedSegmentPathArgError: _content/recipes/_config/x.card: "_config" is a reserved box-area name, legal only at the box root (a nested _tmp is the one exception) — rename this entry
+
+tryReserved("_content/scratch/_tmp/x.txt")
+=> /box/_content/scratch/_tmp/x.txt
+
+tryReserved("/_config/_template-updates/_content/briefing.md")
+=> /box/_config/_template-updates/_content/briefing.md
 ```

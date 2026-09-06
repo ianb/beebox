@@ -10,7 +10,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { registerCommand, parseCommandArgs, type CommandContext, type CommandResult } from "../command-runner.js";
 import { getBoxDir, isCardFile, parseCardName } from "../../lib/paths.js";
-import { DisplayFormPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
+import { BoxPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
@@ -230,12 +230,13 @@ async function executeTrash(ctx: CommandContext, args: Record<string, unknown>):
   try {
     return await executeTrashUnguarded(ctx, args);
   } catch (e) {
-    // Display-form leak (docs/plans/display-path-guard.subplan.md): reported
-    // as an ordinary CommandResult failure, matching every other user-input
-    // rejection in this command — not an uncaught throw. (`runCommand`'s own
-    // catch-all would do this too for a CLI-dispatched call, but this
-    // function is also called directly, bypassing that wrapper.)
-    if (e instanceof DisplayFormPathArgError) return { success: false, error: e.message };
+    // Path-guard rejection (display-form leak or nested reserved area name):
+    // reported as an ordinary CommandResult failure, matching every other
+    // user-input rejection in this command — not an uncaught throw.
+    // (`runCommand`'s own catch-all would do this too for a CLI-dispatched
+    // call, but this function is also called directly, bypassing that
+    // wrapper.)
+    if (e instanceof BoxPathArgError) return { success: false, error: e.message };
     throw e;
   }
 }

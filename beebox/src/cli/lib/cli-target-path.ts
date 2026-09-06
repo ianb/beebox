@@ -25,16 +25,33 @@ import {
   type DisplayFormPathMatch,
 } from "../../shared/display-path.js";
 import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
+import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
 
 const AREA_NAMES: ReadonlySet<string> = new Set(
   BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area").map((entry): string => entry.name)
 );
 
+/** A CLI path argument this guard refuses — see the two subclasses. */
+export class BoxPathArgError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BoxPathArgError";
+  }
+}
+
 /** A CLI path argument was written in the boxholder's display form, not a canonical path. */
-export class DisplayFormPathArgError extends Error {
+export class DisplayFormPathArgError extends BoxPathArgError {
   constructor(raw: string, match: DisplayFormPathMatch) {
     super(displayFormPathMessage(raw, match));
     this.name = "DisplayFormPathArgError";
+  }
+}
+
+/** A CLI path argument nests a reserved area name below the box root (`box-reserved-segments.ts`). */
+export class ReservedSegmentPathArgError extends BoxPathArgError {
+  constructor(relativePath: string, segment: string) {
+    super(reservedNestedSegmentMessage(relativePath, segment));
+    this.name = "ReservedSegmentPathArgError";
   }
 }
 
@@ -64,6 +81,16 @@ export function resolveCliTargetPath({
 }): string {
   const displayForm = detectDisplayFormPath(raw);
   if (displayForm !== null) throw new DisplayFormPathArgError(raw, displayForm);
-  if (looksLikeCanonicalBoxRef(raw)) return path.join(boxRoot, raw);
-  return path.isAbsolute(raw) ? raw : path.join(relativeTo, raw);
+  const resolved = looksLikeCanonicalBoxRef(raw)
+    ? path.join(boxRoot, raw)
+    : path.isAbsolute(raw)
+      ? raw
+      : path.join(relativeTo, raw);
+  const boxRelative = path.relative(path.resolve(boxRoot), resolved);
+  if (!boxRelative.startsWith("..") && !path.isAbsolute(boxRelative)) {
+    const relativePath = boxRelative.split(path.sep).join("/");
+    const segment = findReservedNestedSegment(relativePath);
+    if (segment !== null) throw new ReservedSegmentPathArgError(relativePath, segment);
+  }
+  return resolved;
 }

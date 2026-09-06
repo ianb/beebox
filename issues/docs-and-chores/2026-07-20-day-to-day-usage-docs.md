@@ -74,3 +74,14 @@ is the orientation half; this item is the depth behind it.
 > "Where the docs are" section points there. That is agent-facing reference
 > material, not the USE-genre operator docs this issue is about — those (the
 > five items above) are still unwritten and are this workstream's next piece.
+
+> 2026-09-06 (worktree-launch-docs): the first prose doc landed —
+> `beebox/docs/box/what-you-could-do.md`, written for box agents (not the
+> operator directly) and reviewed section by section with the boxholder, plus
+> a `what-can-you-do` skill that reads it and offers a person two or three
+> concrete things instead of the menu. It supersedes the five-doc list above
+> with the boxholder's own outline, organized by what the person has to hand
+> rather than by doc topic: photograph/capture/inventory, new kinds of things
+> to track, dictation, connecting accounts, plans, agent abilities,
+> landmarks, the browser extension, Gmail/Calendar. Next is turning the doc's
+> offers into testable user stories; this issue stays open for that.
