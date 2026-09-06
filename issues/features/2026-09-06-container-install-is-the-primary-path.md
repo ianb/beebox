@@ -1,6 +1,6 @@
 ---
 title: "Make the containerized setup the primary way a new user installs"
-workstream: unattached
+workstream: container-first
 area: docs
 priority: important
 labels: [soft-launch, install]
