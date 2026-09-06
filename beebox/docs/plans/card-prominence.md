@@ -207,7 +207,7 @@ Grep of the queue for `prominen`, `featured`, `entry point`, `landmark`,
 - **Trash.** `bbx rm` moves cards to `_bookkeeping/trash/`
   (`src/core/box/skills-content.ts:332`), outside `_content`, so the root
   landmark's walk (`src/core/landmark/root-dir.ts:21,30-32`: logical `""`
-  maps to `_content`) never reaches trashed headline cards. No stock
+  maps to `_content`) never reaches trashed primary cards. No stock
   housekeeping marker is needed for trash.
 
 ## Prior art (external)
@@ -240,7 +240,7 @@ into a tree" and converged on the same three moves this plan makes.
   links. Lesson: a curated hub drifts; the derived map is what people build
   next.
 - No prior art found for a three-level *editorial* scale on the page itself
-  (entry point / headline / background) as opposed to order plus exclude.
+  (entry point / primary / background) as opposed to order plus exclude.
   The closest is Hugo's `_index.md` (entry) plus `weight` (order) plus
   headless (exclude), three mechanisms for the one axis this plan names once.
 
@@ -260,7 +260,7 @@ describes."
 **Direction.** In `GLOBAL_CARD_FIELDS`:
 
 ```ts
-export const Prominence = z.enum(["entry-point", "headline", "background"]);
+export const Prominence = z.enum(["entry-point", "primary", "background"]);
 export type ProminenceLevel = z.infer<typeof Prominence>;
 // in GLOBAL_CARD_FIELDS:
 prominence: Prominence.optional(),
@@ -277,51 +277,63 @@ misunderstanding"). Unlike a bad `symbol`, this is a hard error because the
 value is a closed enum on a global field, and every other enum field in the
 tree behaves that way.
 
-The levels, as written for the agent guide (this text is the proposal; the
-words are the open question at the end of this plan):
+The levels, as written for the agent guide. The names were settled with the
+boxholder on 2026-09-06 (`headline` was rejected as singular and
+top-of-page; `visibility` was rejected because nothing is ever invisible or
+private; `artifact` was rejected because it means both the deliverable and
+the by-product). Each level is an absolute bar the card either meets or
+does not, never a comparison with its neighbours:
 
-> **`prominence`** — how much the box should surface this card when someone
-> is looking around rather than looking for it. Leave it absent for most
-> cards; absent is a level, and it is the right one by default.
+> **`prominence`** — who a card is for, and whether the box should put it in
+> front of a reader who is looking around rather than looking for it. Leave
+> it absent for most cards; absent is a level, and it is the right one by
+> default. This is not access: every card, at every level, is readable and
+> addressable.
 >
-> - **`entry-point`** — *Start here.* A card whose main job is to orient a
->   reader to this directory or area and send them onward: an index, an
->   overview, a dashboard, a roster, a gallery, a collection view. Do not use
->   it for a card that is merely important or useful; a recipe is never an
->   entry point, the recipe index is. A landmark card is its directory's
->   entry point by being a landmark. Ask: *would a newcomer open this first
->   to understand what is here?* Usually one per directory; a second is
->   exceptional.
-> - **`headline`** — *What this place is about.* The artifact a reader should
->   see before its supports: a project's plan before its notes, logs,
->   drafts, quotes, and attachments; in a directory of peers, the one or two
->   this place leads with. Do not mark a card headline because it is good;
->   mark it because this directory is about it. Ask: *is this one of the few
->   cards this directory should lead with?* A piece of work produces one
->   headline; if you are marking a second for the same work, the first was
->   not the artifact.
-> - *(absent)* — **ordinary.** Listed in full views, folded under "more" in
->   compact ones. Most cards.
-> - **`background`** — *Only when looked for.* Logs, state, imports, scratch,
->   generated intermediates. Still readable and addressable; folded last and
->   shown dimmed. On a landmark card it marks the whole directory as
->   housekeeping.
+> - **`entry-point`** — *Where a reader starts.* A card whose main job is to
+>   orient a reader to this directory or area and send them onward: an
+>   index, an overview, a dashboard, a roster, a gallery, a collection view.
+>   Do not use it for a card that is merely important or useful; a recipe is
+>   never an entry point, the recipe index is. A landmark card is its
+>   directory's entry point by being a landmark. Ask: *would a newcomer open
+>   this first to understand what is here?* Usually one per directory; a
+>   second is exceptional.
+> - **`primary`** — *The thing itself.* The card a reader came to this
+>   directory for, as opposed to material toward it or about it: a project's
+>   plan is primary, its research notes, quotes, drafts, and call logs are
+>   not. Do not mark a card primary because it is good; mark it because it
+>   is the thing. Ask: *is this the thing itself, or material toward it?* A
+>   piece of work produces one primary card; if you are marking a second for
+>   the same work, the first was not the thing. If everything here is the
+>   thing (forty recipes), mark nothing and give the directory an entry
+>   point instead.
+> - *(absent)* — **ordinary.** For the reader, if they look. Listed in full
+>   views, folded under "more" in compact ones. Most cards.
+> - **`background`** — *For the agent, not the reader.* Material the agent
+>   uses but does not write for the boxholder to look at: logs, state,
+>   imports, scratch, generated intermediates, and anything already embedded
+>   in another card (an image that appears inside a primary document is
+>   background on its own; the document is where a reader sees it). Still
+>   readable and addressable; folded last and shown dimmed. On a landmark
+>   card it marks the whole directory as background.
 >
 > `prominence` is not `status`. `status` is lifecycle (new, done, archived);
-> `prominence` is editorial weight. A finished card is not automatically a
-> headline, and an archived headline should usually go back to ordinary.
+> `prominence` is who the card is for. A finished card is not automatically
+> primary, and an archived primary card should usually go back to ordinary.
 >
-> **Who sets it.** You do, when you produce the main artifact of a piece of
-> work: mark that artifact, and only that one. Marking your own output
-> headline is expected. Marking every output headline is the failure this
-> field exists to avoid. To surface a card in a spot that is not its own
-> directory, or to give it a contextual label or a fixed position, use the
-> landmark's `links:`; the card cannot say that about itself.
+> **Who sets it.** You do, when you produce the thing a piece of work was
+> for: mark that card, and only that one; mark what you wrote for yourself
+> along the way background. Marking your own output primary is expected.
+> Marking every output primary is the failure this field exists to avoid.
+> To surface a card in a spot that is not its own directory, or to give it a
+> contextual label or a fixed position, use the landmark's `links:`; the
+> card cannot say that about itself.
 
 How the local decision stays globally responsible: each test is answerable
-from the one card the agent is holding ("is this the artifact or a support?",
-"does this card exist to send the reader elsewhere?"), so an agent never
-needs to know the rest of the box, and never needs to compare siblings. The
+from the one card the agent is holding ("is this the thing itself, or
+material toward it?", "is this for the reader or for me?", "does this card
+exist to send the reader elsewhere?"), so an agent never needs to know the
+rest of the box, and never needs to compare siblings. The
 budget lint (below) is the enforcement for the case where many local
 decisions add up wrong.
 
@@ -331,13 +343,13 @@ by type, so the field on a landmark is only ever a demotion:
 
 - absent, or `entry-point`: the directory is a spot on the Landmarks page and
   in the switch menu, as today. `bbx create` never writes the value.
-- `headline`: a notable sub-area. It appears with its label and symbol in
+- `primary`: a notable sub-area. It appears with its label and symbol in
   its parent directory's compact listing and in the parent landmark's derived
   list, but not on the Landmarks page or the switch menu.
 - `background`: a housekeeping directory. Off the Landmarks page and the
   switch menu, folded in its parent's compact listing, and the level
   cascades: every card under it is treated as background for folding and
-  derivation, whatever the card says. A card that says `headline` under a
+  derivation, whatever the card says. A card that says `primary` under a
   background landmark gets a lint warning.
 
 **Budget lint** (`src/core/lint-prominence.ts`, box-level, run by `bbx validate`):
@@ -346,27 +358,30 @@ by type, so the field on a landmark is only ever a demotion:
   (landmark counted): warning, "N entry points in one directory; an entry
   point is where a newcomer starts, and a directory usually has one". The
   lint allows the exceptional second and warns at a third.
-- more than `MAX_HEADLINES_PER_DIR = 7` headlines in one directory: warning,
-  "N headline cards in <dir>; headline is for the few things a directory is
-  about — if everything is a headline, nothing is".
-- `headline` or `entry-point` under a `background` landmark: warning naming
+- more than `MAX_PRIMARY_PER_DIR = 7` primary cards in one directory: warning,
+  "N primary cards in <dir>; primary is the thing itself, not everything
+  good — if everything here is the thing, mark nothing and give the
+  directory an entry point".
+- `primary` or `entry-point` under a `background` landmark: warning naming
   both cards.
-- `headline` or `entry-point` on a card inside an owned attach scope:
+- `primary` or `entry-point` on a card inside an owned attach scope:
   warning, "prominence inside an attach scope has no effect; mark the owner
   card, or list it in the landmark's `links:`".
 - A landmark `links:` entry whose target is inside the landmark's own pruned
-  subtree, carries no `label`, and whose target already says `headline` or
+  subtree, carries no `label`, and whose target already says `primary` or
   `entry-point`: info, "redundant with the target's prominence".
 
 The thresholds are constants. They are warnings, not errors, because a
-directory with eight headlines is untidy, not broken (principle #6).
+directory with eight primary cards is untidy, not broken (principle #6).
 
 **Vocabulary lock-ins.** Field name `prominence`; values `entry-point`,
-`headline`, `background`; the word **ordinary** for absent in every doc and
-error message; "surface" as the verb in prose ("the box surfaces a
-headline"). Not used: `hidden` (279 hits in `src` for CSS and UI state),
+`primary`, `background`; the word **ordinary** for absent in every doc and
+error message; "surface" as the verb in prose ("the box surfaces a primary
+card"). Not used: `hidden` (279 hits in `src` for CSS and UI state),
 `pinned` (136 hits, chat and session pins), `featured`, `visibility`
-(collides with access and CSS), `entry` alone (a journal entry).
+(collides with access and CSS, and nothing is ever invisible), `headline`
+(singular, top-of-page), `artifact` (deliverable and by-product both),
+`entry` alone (a journal entry).
 
 **First implementation chunk** (after the vocabulary gate in Implementation
 order). Add `Prominence` to `src/shared/` (the frontend reads it too), add it
@@ -441,7 +456,7 @@ an attach scope, mark the owner, or list it in `links:`.
 
 *Derived list order.* Within the flat list: hand-listed `links` (as today,
 first and winning dedup), then derived `entry-point` cards, then derived
-`headline` cards, then nested landmarks, then unnamed `expand` results; named
+`primary` cards, then nested landmarks, then unnamed `expand` results; named
 groups unchanged. Within each derived tier, by box path (`naturalCompare`,
 the browse order). There is no per-card order number: a fixed order is
 `links:`' job, and Docusaurus's `sidebar_position` scatter is the failure the
@@ -456,7 +471,7 @@ here menu render derived entries with no change and a later UI can badge
 them.
 
 *Box-wide cascade.* `landmarks.list` and the switch menu's `chat.placeMenu`
-drop a landmark whose own level is `headline` or `background`, and any
+drop a landmark whose own level is `primary` or `background`, and any
 landmark with a `background` ancestor landmark, using the ancestor lookup
 `list` already performs for `depth` (`landmarks.ts:194-253`). The rule lives
 in one function, `isListedLandmark(landmark, ancestors)`, used by both.
@@ -471,7 +486,7 @@ export interface ProminenceEntry {
 }
 export interface DirectorySummary {
   hasEntryPoint: boolean;
-  headlineCount: number;
+  primaryCount: number;
   background: boolean;          // this dir's landmark says background, or an ancestor's does
 }
 export async function prunedSubtree(boxRoot: string, dir: string): Promise<{
@@ -486,9 +501,9 @@ landmark", `source` on the resolved link, `landmarks.identity`.
 
 **First implementation chunk.** `prominence-index.ts` with `prunedSubtree`
 and the parse cache, and a doctest under `test/core/landmark/` that builds a
-fixture tree (an entry point, two headlines, an ordinary card, a nested
-landmark with a headline inside it, a background landmark with a headline
-inside it, an owned attach scope holding a headline card), asserts the
+fixture tree (an entry point, two primary cards, an ordinary card, a nested
+landmark with a primary inside it, a background landmark with a primary
+inside it, an owned attach scope holding a primary card), asserts the
 entries, the stop at the nested landmark, the exclusion under background,
 the skipped attach scope, and zero parses on a warm second call. The
 identity/resolution split and the resolver wiring are the second chunk.
@@ -511,8 +526,8 @@ walk that already counts `.card` files recursively at `status.ts:239-241`;
 the two are merged into one). A pure `foldListing(listing) → { lead, more }`
 in `src/shared/browse-fold.ts` decides:
 
-- **lead**: entry-point cards; headline cards; subdirectories whose summary
-  has an entry point or a headline (shown with their landmark identity when
+- **lead**: entry-point cards; primary cards; subdirectories whose summary
+  has an entry point or a primary (shown with their landmark identity when
   they have one); the directory's own landmark's hand-listed `links` are
   not repeated here (they are the here menu's job).
 - **more** (one disclosure, "N more"): ordinary cards, plain files,
@@ -540,7 +555,7 @@ procedure's added fields, then the page.
 
 **What.** `landmark-links-prominence`: for every landmark, each `links:`
 entry whose target is a card inside the landmark's pruned subtree gets
-`prominence: headline` written on the target when the target has no
+`prominence: primary` written on the target when the target has no
 `prominence` yet. The link entry is kept. The script reports the entries that
 are now redundant (no label, in-subtree) so a person or agent can trim them.
 
@@ -579,10 +594,10 @@ understand is a field the agent either ignores or sprays.
 **Direction.** One definition, one place: the agent guide holds the level
 block; the landmark instructions and `docs/landmarks.md` link to it rather
 than restate it. The guide block carries examples and non-examples drawn
-from `docs/example-names.md` (a plan card marked headline beside unmarked
+from `docs/example-names.md` (a plan card marked primary beside unmarked
 notes; a gallery view marked entry-point; a logs landmark marked background;
 a well-written recipe among forty peers left ordinary, with the recipe index
-as the entry point and the two the household cooks weekly as headlines). `bbx ls --format "{prominence} {title}" <dir>`
+as the entry point and the two the household cooks weekly as primary cards). `bbx ls --format "{prominence} {title}" <dir>`
 is documented as the way to inspect a directory's levels.
 
 **First implementation chunk.** The agent-guide section and the audit
@@ -619,7 +634,7 @@ use before anything consumes them.
 
 A one-bit `prominent: true` was considered as the simplest version and
 rejected: an entry point is what shows from *outside* its directory and a
-headline what shows from *inside*, and with one bit either every marked card
+primary what shows from *inside*, and with one bit either every marked card
 climbs into the parent's tree or none does. The boxholder asked for the
 levels; the pruned tree (08-29 requirement 2) needs them; `background` has
 no boolean form.
@@ -632,8 +647,8 @@ own design.
 
 ## Failure modes
 
-> **Critical gap, accepted as documented risk:** a headline card moved by a
-> shell `mv` into a directory that already has seven headlines — nothing
+> **Critical gap, accepted as documented risk:** a primary card moved by a
+> shell `mv` into a directory that already has seven primary cards — nothing
 > fails, the listing shows eight, and only `bbx validate` says so. Accepted:
 > the outcome is untidy, not wrong, and the lint is the stated enforcement.
 
@@ -641,14 +656,14 @@ own design.
 |---|---|---|---|
 | `prominence: headlien` (typo) | Track A doctest | Zod enum error naming the three values; card invalid until fixed | Clear |
 | `prominent: true` (wrong key) | existing unknown-key lint | stripped in memory, lint warning (`schema.ts` "Lenient (not `.strict()`)") | Clear (warning) |
-| 40 cards marked headline in one directory | Track A lint doctest | budget warning; Browse shows all 40 in lead | Clear (lint), silent (page) |
-| headline card under a background landmark | Track A lint doctest | cascade folds it; lint warning | Clear |
+| 40 cards marked primary in one directory | Track A lint doctest | budget warning; Browse shows all 40 in lead | Clear (lint), silent (page) |
+| primary card under a background landmark | Track A lint doctest | cascade folds it; lint warning | Clear |
 | landmark says `background` on the box root | Track B doctest | derived list empty; Landmarks page shows the box with no spots; `bbx validate` warns "root landmark is background" | Clear |
 | index parse cache stale after an in-place edit that keeps mtime, size, and inode | Track B doctest (identity key) | same exposure as `card-cache.ts` today; ctimeNs changes on any metadata write, which covers `touch -r` but not a same-second overwrite | Silent, accepted (existing pattern) |
 | `forDir` on a subtree of 5k cards | Track B doctest asserts warm parses = 0; no timing test | one stat per card; same order as an `expand` glob | Silent, measured in the rollout step |
 | two landmarks in one directory | existing `forDir` takes the first match | unchanged; existing "one per directory" rule | Silent (existing) |
 | derived entry's target is unreadable mid-walk (deleted between readdir and read) | Track B doctest | skipped; in `landmarks.list` counted in `problems`; in `forDir` logged at warn only (no `problems` channel there) | Clear on the page, log-only in the menu (accepted) |
-| a card inside an owned attach scope says `headline` | Track B doctest | not walked; lint warning "prominence inside an attach scope has no effect; mark the owner" | Clear |
+| a card inside an owned attach scope says `primary` | Track B doctest | not walked; lint warning "prominence inside an attach scope has no effect; mark the owner" | Clear |
 | `prominence: background` on a landmark, engine reader not updated | Track A landmark-schema doctest | `LandmarkObject` admits the field in the same chunk | Clear (test) |
 | migration target file has no frontmatter block | Track D doctest | reported and skipped, nothing written | Clear |
 | migration on a box whose engine predates the field | n/a | the field is an unknown key there: stripped with a warning, `links:` still resolve | Clear (warning) |
@@ -675,7 +690,7 @@ own design.
   level: ADDRESSED. The honest default (absent) costs nothing: ADDRESSED by
   design.
 - **Validation error UX** — the enum error reads "Invalid enum value.
-  Expected 'entry-point' | 'headline' | 'background', received 'headlien'"
+  Expected 'entry-point' | 'primary' | 'background', received 'headlien'"
   through the existing lint formatter; the budget warnings are written above
   in the agent's terms: ADDRESSED.
 - **Partial migration / transition state** — engine new, box unmigrated:
@@ -683,7 +698,7 @@ own design.
   marked). Engine old, box migrated: field stripped with a warning. Both
   states are today's behavior plus a warning: ADDRESSED.
 - **An agent marks its own output** — the guide asks for exactly one
-  headline per piece of work: ADDRESSED in text; enforced only by the
+  primary per piece of work: ADDRESSED in text; enforced only by the
   directory budget: DEFERRED to the audit results (Track E) for whether the
   text lands.
 
@@ -721,21 +736,26 @@ own design.
 
 ## Open design questions
 
-These are the conversation with the boxholder. Nothing in the first
-implementation chunks depends on them except the spelling of the names.
+These are the conversation with the boxholder. Questions 1 and 2 were
+settled on 2026-09-06 and are kept for the record.
 
-1. **The field name.** Lean: `prominence`, the 06-12 issue's own word, unused
-   in `src`. Alternatives: `surface` (a verb in prose already; as a field it
-   reads as a noun for the wrong thing), `standing`.
-2. **The level names.** Lean: `entry-point` / `headline` / `background`,
-   because each names what the card *is* in its directory, which is the
-   question an agent can answer locally. Alternatives, per slot:
-   `start-here` (clearer to a human, odd as a value), `featured` (a CMS word
-   that invites "is this good?" rather than "is this the thing?"), `hidden`
-   (wrong: the card is not hidden, and the word is taken), `primary` (the
-   issue's original; vaguer than `headline`), `supporting` for background
-   (accurate for attachments, wrong for logs and state).
-3. **Whether a landmark is an entry point by type, so the field on it is
+1. **The field name.** Settled: `prominence`. `visibility` was considered
+   and rejected by the boxholder: "the bad part of visibility is that it's
+   never invisible, it's not private or anything like that."
+2. **The level names.** Settled: `entry-point` / `primary` / `background`.
+   `headline` was rejected as reading singular and more important than an
+   entry point; `foreground` as relational (only "more than ordinary") with
+   no absolute bar; `artifact` as meaning both the deliverable and the
+   by-product. `primary` names a category (the thing itself versus
+   material toward it) that an agent can test on one card.
+3. **Whether embedded-elsewhere should be derived rather than declared.**
+   The boxholder's rule, "things that are embedded elsewhere probably are
+   background items," is stated in the guide as something the agent
+   declares. It is also computable: `core/find-inbound-card-refs.ts` can
+   tell whether a card is embedded by another. Lean: declare now, derive
+   later if agents keep forgetting; a derived signal is a second source of
+   truth for the same field.
+4. **Whether a landmark is an entry point by type, so the field on it is
    only a demotion.** Lean: yes. A landmark already carries its directory's
    identity by type; carrying its entry-point standing the same way means an
    agent reading `Recipes.landmark.card` knows what it is from the filename,
@@ -745,14 +765,14 @@ implementation chunks depends on them except the spelling of the names.
    unmigrated box with an empty Landmarks page. The reviewer's concern is
    real: "absent" then reads differently on a landmark than on a memo. The
    guide states it as a type rule, not a default rule.
-4. **Budget thresholds.** Lean: two entry points, seven headlines, per
+5. **Budget thresholds.** Lean: two entry points, seven primary cards, per
    directory. Numbers are constants and the lint is a warning; the question
-   is whether the boxholder wants the headline budget lower.
-5. **Whether a redundant `links:` entry should be a lint warning or only
+   is whether the boxholder wants the primary budget lower.
+6. **Whether a redundant `links:` entry should be a lint warning or only
    reported once by the migration.** Lean: an info-level lint, permanent, so
    agents trim them when they touch the landmark; the migration report alone
    is forgotten.
-6. **Order within a derived tier.** Lean: by box path. Alternative:
+7. **Order within a derived tier.** Lean: by box path. Alternative:
    `modified-desc`, which puts fresh work first but reorders the list under
    the reader and makes the listing disagree with `bbx ls`.
 
@@ -766,8 +786,8 @@ and their status recorded in the file header:
 - `prominence-mark-own-artifact`: "You just wrote `Kitchen_Remodel_Plan.doc.card`
   in a directory that also holds your research notes, three quotes, and a
   log of the calls. How do you make the plan the thing Browse leads with?"
-  Expected: sets `prominence: headline` on the plan only; does not mark the
-  notes; does not edit a landmark. `correct_contains: ["prominence: headline"]`.
+  Expected: sets `prominence: primary` on the plan only; does not mark the
+  notes; does not edit a landmark. `correct_contains: ["prominence: primary"]`.
 - `prominence-housekeeping-directory`: "`_content/projects/deck/logs/` holds
   fifty generated log cards. How do you keep them from cluttering the deck
   project's listing?" Expected: a landmark in `logs/` with
@@ -775,8 +795,8 @@ and their status recorded in the file header:
   a gitignore. `correct_contains: ["background"]`.
 - `prominence-vs-links`: "The Recipes landmark should show the bread recipe.
   Do you edit the landmark's `links:`?" Expected: marks
-  `Bread.recipe.card` `headline` and explains `links:` is for cards outside
-  the directory or needing a label. `correct_contains: ["headline"]`.
+  `Bread.recipe.card` `primary` and explains `links:` is for cards outside
+  the directory or needing a label. `correct_contains: ["primary"]`.
 
 ## What will hold this after it ships
 
