@@ -58,7 +58,8 @@ only one. Staging the media instead does not work either — it is ignored, so
 un-ignored (annex takes them); one still ignores `.attach/` assets, so for that
 box the bulk-upload manifest is likewise the only record of an uploaded blob.
 Annex-shape is per box and has to be checked per box; the count of tracked
-manifests is not the same question.
+manifests is not the same question, and `.git/annex/` existing answers neither
+— `git check-ignore` on an `.attach/` asset is the check that does.
 
 ## What retirement would actually take
 
@@ -71,6 +72,25 @@ manifests is not the same question.
 - **Deleting `asset-manifest.ts` + `asset-manifest-scan.ts`** stays blocked on
   the readers in `annex/to-annex.ts` (both halves of its verification) and
   `commands/attachments-gitignore.ts`, and on the capture question above.
+
+## Conversion progress (2026-09-06)
+
+One of the two boxes carrying manifests converted cleanly: `to-annex` annexed
+70 assets (210 MB) and removed all 70 manifests, leaving the tree clean and
+`annex fsck --fast` quiet. Four other boxes were already at zero.
+
+Two boxes still stand between here and deleting the modules:
+
+- The remaining manifest-carrying box (78) has an uncommitted regenerated
+  `.agents/skills/…/SKILL.md` from a `landmark-symbol` migration that box never
+  recorded, plus freshly arrived scan content. `to-annex` refuses on a dirty
+  tree, and committing a half-applied migration or someone's just-arrived scan
+  is the boxholder's call. It needs the migration finished and the scan handled,
+  then the conversion runs.
+- The manifest-shaped box (0 manifests, but assets still gitignored) is a
+  different problem: nothing to convert, but it is where bulk upload's manifest
+  is still the only record of a blob. It needs `bbx attachments unignore` plus a
+  conversion, or the shape gate above.
 
 A third thing worth fixing whatever the outcome: `SessionBuilder.filesToStage`
 (`core/capture/write-cards.ts`) is written and never read — `writeCaptureDocument`
