@@ -52,6 +52,14 @@ export interface PrunedSubtree {
   /** Stopped directories' landmarks — background ones excluded. */
   nested: LandmarkSummary[];
   summary: DirectorySummary;
+  /**
+   * Box paths (leading "/") of every ordinary card the walk reached,
+   * regardless of level — including `ordinary` ones `entries` omits. Used
+   * by the `landmark-links-prominence` migration to test subtree
+   * membership for a target that has no level yet, so it doesn't
+   * reimplement the walk's stop rules (nested landmark, owned attach scope).
+   */
+  cardBoxPaths: ReadonlySet<string>;
 }
 
 // Directories a pruned walk never descends into, even when they hold cards —
@@ -68,7 +76,12 @@ const WALK_SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".beebox", "_tm
  */
 export async function prunedSubtree(boxRoot: string, dir: string): Promise<PrunedSubtree> {
   if (await isUnderBackgroundAncestor(boxRoot, dir)) {
-    return { entries: [], nested: [], summary: { hasEntryPoint: false, primaryCount: 0, background: true } };
+    return {
+      entries: [],
+      nested: [],
+      summary: { hasEntryPoint: false, primaryCount: 0, background: true },
+      cardBoxPaths: new Set(),
+    };
   }
 
   const state: WalkState = {
@@ -76,12 +89,18 @@ export async function prunedSubtree(boxRoot: string, dir: string): Promise<Prune
     ctx: { cardSchemas: await createCardSchemaMap(boxRoot) },
     entries: [],
     nested: [],
+    cardBoxPaths: new Set(),
   };
   await walk(state, { physicalDir: landmarkScanDir(boxRoot, dir), isTop: true });
 
   const hasEntryPoint = state.entries.some((e) => e.kind === "card" && e.level === "entry-point");
   const primaryCount = state.entries.filter((e) => e.kind === "card" && e.level === "primary").length;
-  return { entries: state.entries, nested: state.nested, summary: { hasEntryPoint, primaryCount, background: false } };
+  return {
+    entries: state.entries,
+    nested: state.nested,
+    summary: { hasEntryPoint, primaryCount, background: false },
+    cardBoxPaths: state.cardBoxPaths,
+  };
 }
 
 /**
@@ -138,6 +157,7 @@ interface WalkState {
   ctx: LoadCardContext;
   entries: ProminenceEntry[];
   nested: LandmarkSummary[];
+  cardBoxPaths: Set<string>;
 }
 
 async function walk(state: WalkState, start: WalkItem): Promise<void> {
@@ -199,12 +219,14 @@ async function addCardEntry(state: WalkState, absPath: string): Promise<void> {
   if (type === undefined) return;
   const schema = state.ctx.cardSchemas.get(type);
   if (schema === undefined) return;
+  const boxPath = boxPathOf(state.boxRoot, absPath);
+  state.cardBoxPaths.add(boxPath);
   const frontmatter = await readFrontmatterCached(absPath);
   const declaredRaw = frontmatter?.["prominence"];
   const declared = isProminenceLevel(declaredRaw) ? declaredRaw : undefined;
   const level = effectiveLevel({ declared, typeDefault: schema.defaultProminence });
   if (level === "ordinary") return;
-  state.entries.push({ boxPath: boxPathOf(state.boxRoot, absPath), level, kind: "card" });
+  state.entries.push({ boxPath, level, kind: "card" });
 }
 
 async function addNestedLandmark(state: WalkState, absPath: string): Promise<void> {

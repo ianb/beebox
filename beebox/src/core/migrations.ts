@@ -156,6 +156,12 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // (docs/plans/card-symbol.md). Readers accept both shapes during the
   // settling period; see the deferred cleanup issue.
   { name: "landmark-symbol", script: "scripts/migrate/landmark-symbol.ts" },
+  // A landmark's hand-curated `links:` entries and a target's own
+  // `prominence` used to be two ways to say "surface this" and could
+  // disagree. Marks every in-subtree link target that has no `prominence`
+  // yet as `primary` (docs/plans/card-prominence.md, Track D). The landmark
+  // itself is never written.
+  { name: "landmark-links-prominence", script: "scripts/migrate/landmark-links-prominence-run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
