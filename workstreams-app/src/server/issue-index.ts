@@ -30,7 +30,7 @@ import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/s
 import { z } from "zod";
 
 import {
-  createOpenAIEmbeddingsService,
+  createEmbeddingsService,
   EMBEDDER_ID,
   EMBEDDING_DIMENSIONS,
   type EmbeddingsService,
@@ -184,7 +184,9 @@ export const EMBEDDING_KEY_VARS = [
 export function resolveEmbeddingsService(env: NodeJS.ProcessEnv): EmbeddingsService | null {
   for (const name of EMBEDDING_KEY_VARS) {
     const key = env[name];
-    if (key !== undefined && key.trim() !== "") return createOpenAIEmbeddingsService(key);
+    // A direct OpenAI route: the dev-side index takes its key from the
+    // environment and never consults a box's secret store or OpenRouter.
+    if (key !== undefined && key.trim() !== "") return createEmbeddingsService({ via: "direct", apiKey: key });
   }
   return null;
 }
