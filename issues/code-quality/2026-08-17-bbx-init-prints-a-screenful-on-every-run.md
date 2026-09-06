@@ -1,6 +1,6 @@
 ---
 title: "`bbx init` prints a screenful of routine success on every run, including when scripted"
-workstream: unattached
+workstream: transition-cleanup
 area: beebox
 labels: [output-noise]
 filed-by: agent

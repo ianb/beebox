@@ -21,25 +21,20 @@ import { openSearchIndex } from "../../core/search/refresh.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /**
- * Print the "what just happened" banner and (for a fresh init) initialize
- * git at the box root. Split out of the action purely to keep its
- * cyclomatic complexity down — this is all one linear sequence, just long.
+ * Print the fresh-init banner and initialize git at the box root. Split out of
+ * the action purely to keep its cyclomatic complexity down — this is all one
+ * linear sequence, just long.
+ *
+ * A re-init prints nothing here: "ensured the directories exist" and "updated
+ * .gitignore" are the steps running, not news. `runInit` reports what actually
+ * changed instead.
  */
 async function announceAndInitGit(
-  { isFresh, isUpdate, boxRoot, options }: {
-    isFresh: boolean;
-    isUpdate: boolean;
+  { boxRoot, options }: {
     boxRoot: string;
     options: { skipGit?: boolean; branch: string };
   }
 ): Promise<void> {
-  if (!isFresh && isUpdate) {
-    console.log(`Updated Bee Box at ${boxRoot}`);
-    console.log("  Ensured standard directories exist");
-    console.log("  Updated .gitignore");
-    return;
-  }
-
   console.log(`Initialized Bee Box at ${boxRoot}`);
 
   if (!options.skipGit) {
@@ -86,51 +81,47 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // symlink (deps) for native schema/view resolution. It deliberately skips
   // git (initialized explicitly below) and `bbx init`'s card installers (run
   // below). An existing box just re-runs `initBox` in place.
-  let isUpdate: boolean;
   if (isFresh) {
     await scaffoldBoxRoot(boxRoot, { deps: true });
-    isUpdate = false;
+    await announceAndInitGit({ boxRoot, options });
   } else {
-    ({ isUpdate } = await initBox(boxRoot, { skipGit: true, branch: options.branch }));
+    await initBox(boxRoot, { skipGit: true, branch: options.branch });
   }
 
-  await announceAndInitGit({ isFresh, isUpdate, boxRoot, options });
+  // What CHANGED, gathered rather than printed as it happens. A fresh init
+  // flushes this after its banner, where the whole list is the point. A re-init
+  // that changed nothing prints nothing at all — the repo's rule is that
+  // routine success is silent, and re-init is a step every scripted path runs
+  // (`deploy/add-box.sh` runs it twice to provision one box). A re-init that
+  // DID change something still needs to say which box, so the header is
+  // printed with the list or not at all.
+  const changes: string[] = [];
 
   // Install procedure templates
   const procedures = await installProcedures(boxRoot);
   if (procedures.length > 0) {
-    console.log(`\nInstalled ${procedures.length} procedure(s) in _config/procedures/`);
-    for (const p of procedures) {
-      console.log(`  ${p}`);
-    }
+    changes.push(`Installed ${procedures.length} procedure(s) in _config/procedures/`);
+    for (const p of procedures) changes.push(`  ${p}`);
   }
 
   // Install default guide cards
   const guides = await installGuides(boxRoot);
   if (guides.length > 0) {
-    console.log(`\nInstalled ${guides.length} guide(s) in _config/`);
-    for (const g of guides) {
-      console.log(`  ${g}`);
-    }
+    changes.push(`Installed ${guides.length} guide(s) in _config/`);
+    for (const g of guides) changes.push(`  ${g}`);
   }
 
   // Install personality card template
   const personalityInstalled = await installPersonality(boxRoot);
-  if (personalityInstalled) {
-    console.log("\nInstalled _config/main.personality.card");
-  }
+  if (personalityInstalled) changes.push("Installed _config/main.personality.card");
 
   // Install root briefing card
   const briefingInstalled = await installBriefing(boxRoot);
-  if (briefingInstalled) {
-    console.log("\nInstalled _content/briefing.briefing.card");
-  }
+  if (briefingInstalled) changes.push("Installed _content/briefing.briefing.card");
 
   // Install the box-wide todo-view stock instance ("the plate")
   const todoViewInstalled = await installTodoView(boxRoot);
-  if (todoViewInstalled) {
-    console.log("\nInstalled _content/plate.todo-view.card");
-  }
+  if (todoViewInstalled) changes.push("Installed _content/plate.todo-view.card");
 
   // Install the root landmark so the Landmarks page can offer
   // "chat scoped to the box root." Magical — refilled on wakeup
@@ -139,24 +130,29 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   if (rootLandmarkInstalled !== null) {
     // Fresh init commits everything below; a re-init refill is left for the
     // next wakeup to commit (see runHousekeeping).
-    console.log(`\nInstalled ${rootLandmarkInstalled} (edit to customize the root landmark)`);
+    changes.push(`Installed ${rootLandmarkInstalled} (edit to customize the root landmark)`);
   }
 
   // Install default scheduled scripts
   const schedules = await installSchedules(boxRoot);
   if (schedules.length > 0) {
-    console.log(`\nInstalled ${schedules.length} schedule(s) in _config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
-    console.log("  refresh-maps may invoke an efficient-tier agent when directory structure changes, including a full map build on a fresh box.");
-    console.log("  Enable an opt-in schedule in the dashboard or by setting enabled: true after reviewing it and configuring any required connector secrets.");
-    for (const s of schedules) {
-      console.log(`  ${s}`);
-    }
+    changes.push(`Installed ${schedules.length} schedule(s) in _config/schedules/ (map refresh and run cleanup enabled; other seeds disabled)`);
+    changes.push("  refresh-maps may invoke an efficient-tier agent when directory structure changes, including a full map build on a fresh box.");
+    changes.push("  Enable an opt-in schedule in the dashboard or by setting enabled: true after reviewing it and configuring any required connector secrets.");
+    for (const s of schedules) changes.push(`  ${s}`);
   }
 
   // Symlink .claude/memory/ so auto-memory is git-tracked
   const memoryLinked = await symlinkClaudeMemory(boxRoot);
-  if (memoryLinked) {
-    console.log("\nLinked .claude/memory/ → ~/.claude/projects/ (auto-memory now git-tracked)");
+  if (memoryLinked) changes.push("Linked .claude/memory/ → ~/.claude/projects/ (auto-memory now git-tracked)");
+
+  // A fresh init prints its list here, in step order, so the slow generate/
+  // index progress below still reads as progress rather than arriving before
+  // the things it follows. A re-init cannot: it has to know whether the list is
+  // empty before deciding to print a header at all, so it flushes at the end.
+  if (isFresh && changes.length > 0) {
+    console.log(changes.join("\n"));
+    changes.length = 0;
   }
 
   // Set or clear the docid-debug marker
@@ -203,15 +199,26 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // and skills moved onto this path, init's own direct calls gave that
   // guarantee; `force` is what preserves it.
   await generateDocs(boxRoot, { force: true });
-  console.log("Generated the agent guide in .beebox/, box-compiled docs in _content/docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/ (beebox reference docs: node_modules/beebox/box-docs/)");
+  if (isFresh) {
+    console.log("Generated the agent guide in .beebox/, box-compiled docs in _content/docs/generated/, card rules in .claude/rules/, and box skills in .claude/skills/ (beebox reference docs: node_modules/beebox/box-docs/)");
+  }
 
-  // Build the search index so the first `bbx search` isn't a cold build.
+  // Build the search index so the first `bbx search` isn't a cold build. The
+  // progress line fires only on a first build (`core/search/refresh.ts`), which
+  // is the one case slow enough to be worth announcing; a refresh over an
+  // existing index says nothing.
   await openSearchIndex(boxRoot, {
     onProgress: (message) => console.log(message),
   });
-  console.log("Built search index in .beebox/");
   if (options.docidDebug) {
-    console.log("  DOCID markers enabled (grep for DOCID: in prompt logs to verify inclusion)");
+    changes.push("DOCID markers enabled (grep for DOCID: in prompt logs to verify inclusion)");
+  }
+
+  // The re-init flush: the list is the entire output, and the header only earns
+  // its line when there is a list under it. Nothing changed ⇒ nothing printed.
+  if (changes.length > 0) {
+    console.log(`Updated Bee Box at ${boxRoot}`);
+    console.log(changes.join("\n"));
   }
 
   // Commit everything (package scaffold, schedules, procedures, guides,
