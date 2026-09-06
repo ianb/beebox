@@ -2,7 +2,8 @@
  * bbx google-auth — Set up or refresh Google OAuth2 credentials.
  *
  * Flow:
- * 1. Accept --client-id and --client-secret (or read from existing config)
+ * 1. Accept --client-id and --client-secret (or the box's granted
+ *    `google-oauth-client-id`/`-secret` store entries)
  * 2. Start ephemeral local server on port 8976
  * 3. Open browser to Google's consent page
  * 4. Receive callback with auth code, exchange for tokens
@@ -15,7 +16,7 @@ import open from "open";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { isRecord } from "../../lib/is-record.js";
 import {
-  getGoogleClientCreds,
+  getBoxGoogleClientCreds,
   createOAuth2Client,
   GOOGLE_SCOPES,
 } from "../../connectors/google-auth.js";
@@ -35,14 +36,15 @@ export const googleAuthCommand = new Command("google-auth")
     }) => {
       const boxRoot = await requireBoxRoot();
 
-      // Client credentials from env vars or CLI flags
-      const envCreds = await getGoogleClientCreds(boxRoot);
-      const clientId = options.clientId || envCreds?.clientId;
-      const clientSecret = options.clientSecret || envCreds?.clientSecret;
+      // Client credentials from the box's store grants, or CLI flags.
+      const storedCreds = await getBoxGoogleClientCreds(boxRoot);
+      const clientId = options.clientId || storedCreds?.clientId;
+      const clientSecret = options.clientSecret || storedCreds?.clientSecret;
 
       if (!clientId || !clientSecret) {
         console.error(
-          "Error: Set GOOGLE_OAUTH_CLIENT_ID/SECRET env vars, or pass --client-id and --client-secret."
+          'Error: grant this box the "google-oauth-client-id" and "google-oauth-client-secret" ' +
+            "secrets, or pass --client-id and --client-secret."
         );
         console.error(
           "Get these from Google Cloud Console → APIs & Services → Credentials."

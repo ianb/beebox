@@ -1,7 +1,7 @@
 /**
  * Hard validation for stored secrets: a cheap, harmless, authenticated call
  * that answers "does this credential actually work?"
- * (`docs/plans/secret-custody.md`, "Guided entry + validation").
+ * (`docs/implemented-plans/secret-custody.md`, "Guided entry + validation").
  *
  * **The registry is SERVER-OWNED, and that is the security property, not a
  * convenience.** A probe sends the freshly-saved secret to the URL it names, so

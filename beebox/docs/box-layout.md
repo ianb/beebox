@@ -200,7 +200,7 @@ Mostly hand-edited by humans, but `bbx init` installs templates.
 | Path | What it holds |
 |------|---------------|
 | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md`), etc. |
-| `_config/connectors/` | Per-connector config + secrets. Files: `<name>.json` (config), `<name>.secret.json` (credentials, gitignored). Sync state lives separately, in `_bookkeeping/connectors/`. |
+| `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`docs/secrets.md`), not in the box; the connectors not yet moved there still keep a gitignored `<name>.secret.json`, as do Google/Gmail OAuth token records. Sync state lives separately, in `_bookkeeping/connectors/`. |
 | `_config/schemas/` | Legacy-location check only: schemas live at `src/schemas/` now. A `.ts` file left in `_config/schemas/` is invisible to the loader — `findLegacySchemaFiles` flags it. |
 | `_config/procedures/` | Procedure cards (`*.procedure.card`). `bbx init` installs default templates. |
 | `_config/schedules/` | Scheduled-script cards (`*.scheduled-script.card`). Fresh `bbx init` boxes enable map refresh and procedure-run cleanup; other seeded schedules require opt-in. |
@@ -250,7 +250,7 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 ## What's *not* in a box
 
 - **No app code.** A box stores state and config; behaviour lives in the beebox repo.
-- **No global secrets.** Each box keeps its own `_config/connectors/*.secret.json`. Secrets do not commute between boxes.
+- **No global secrets file inside a box.** Connector credentials live in the machine-level secret store (`docs/secrets.md`), outside every box tree, with a per-box grant deciding who may resolve what; secrets do not commute between boxes without an explicit grant. A handful of not-yet-migrated connectors still keep a box-local `_config/connectors/*.secret.json`.
 - **No cross-box references.** Boxes are self-contained — one box never reads from another's filesystem.
 
 ## Verifying

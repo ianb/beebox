@@ -131,7 +131,7 @@ async function refreshUnderLock(
 
   const total = current.size;
   if (Object.keys(manifest.files).length === 0 && total > 0) {
-    opts.onProgress?.(`building search index over ${String(total)} files...`);
+    opts.onProgress?.(`Building the search index over ${String(total)} files...`);
   }
 
   const containsState = await loadContainsState(boxRoot);

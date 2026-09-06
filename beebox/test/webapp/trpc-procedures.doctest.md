@@ -90,7 +90,7 @@ await attempt(() => caller({ authed: true }).authed())
 surfaces that is right. The machine-level secret store is the exception — its
 router is the only user of the strict gate — so an open-access box reaches every
 other owner surface and none of the secrets ones
-(`docs/plans/secret-custody.md`).
+(`docs/implemented-plans/secret-custody.md`).
 
 ```ts
 const open = caller({ authed: true, isOwner: true, isAuthenticatedOwner: false });

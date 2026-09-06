@@ -1,6 +1,6 @@
 /**
  * The guards every mutating `bbx secrets` subcommand shares
- * (`docs/plans/secret-custody.md`, Track 2's lifecycle-CLI bullet).
+ * (`docs/implemented-plans/secret-custody.md`, Track 2's lifecycle-CLI bullet).
  *
  * They live here rather than in one command module because `secrets.ts` and
  * `secrets-migrate.ts` both need them and neither should import the other: the
@@ -47,7 +47,7 @@ export function refuseIfUnconfirmedAgent(opts: { action: string; agentConfirmed:
  * the one it is standing in.
  *
  * An agent's view of the store is its OWN box's grants and declared slots
- * (`docs/plans/secret-custody.md`, "name visibility scoping") — never a reading
+ * (`docs/implemented-plans/secret-custody.md`, "name visibility scoping") — never a reading
  * of what other boxes on the machine hold. `status` is not a disclosure of
  * values, but a machine-wide inventory of names and grants is a map of what to
  * go after, and an agent has no business drawing it for a box that is not its
@@ -93,7 +93,7 @@ export async function refuseIfAgentAskingAboutAnotherBox(opts: {
  * declared it throws `SecretNotFoundError`. That difference alone enumerates
  * every secret on the machine, one guess at a time, which is exactly the map
  * `list` and `status` already refuse to draw
- * (`docs/plans/secret-custody.md`, "name visibility scoping").
+ * (`docs/implemented-plans/secret-custody.md`, "name visibility scoping").
  *
  * So the refusal is UNIFORM: out-of-scope and nonexistent read identically,
  * and it fires before the store lookup that would tell them apart. In scope

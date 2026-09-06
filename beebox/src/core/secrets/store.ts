@@ -1,6 +1,6 @@
 /**
  * The machine-level secret store: one 0600 JSON file per machine, outside every
- * box tree (`docs/plans/secret-custody.md`, Track 2).
+ * box tree (`docs/implemented-plans/secret-custody.md`, Track 2).
  *
  * Shape: `secrets` maps a flat name to one entry (the single copy of a value,
  * plus its metadata); `grants` maps a BOX SLUG to the names that box may

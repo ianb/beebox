@@ -13,17 +13,25 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/index.js";
 import { createFakeTelegram } from "../../src/services/telegram.js";
 import { createTelegramConnector, processWebhookUpdate } from "../../src/connectors/telegram.js";
+import { telegramSecretName } from "../../src/connectors/telegram-helpers.js";
+import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
+import { boxSlug } from "../../src/lib/box-slug.js";
+
+/** Configure Telegram the only way it is configurable: a granted store entry. */
+async function grantTelegram(box) {
+  const slug = await boxSlug(box.root);
+  const name = telegramSecretName(slug);
+  await setSecret({ name, value: JSON.stringify({ botToken: "fake:token", webhookSecret: "secret" }) });
+  await grantSecret({ slug, name, access: "server" });
+}
 
 async function seededBox() {
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
-  await box.seed(
-    "_config/connectors/telegram.secret.json",
-    JSON.stringify({ botToken: "fake:token", webhookSecret: "secret" }),
-  );
   await box.seed("_config/box.json", JSON.stringify({ publicUrl: "https://example.com" }));
   box.commitAll("add config");
+  await grantTelegram(box);
   return box;
 }
 

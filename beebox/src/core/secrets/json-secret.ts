@@ -13,7 +13,7 @@
  * — the same surface a missing grant produces — with one warning naming the
  * secret. It is never a throw: a hand-fixed store entry with a typo must not
  * take down a box's server, and the connector already has a not-configured
- * path (`docs/plans/secret-custody.md`, Track 3).
+ * path (`docs/implemented-plans/secret-custody.md`, Track 3).
  */
 
 import type { z } from "zod";

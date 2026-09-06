@@ -264,7 +264,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         // `source: "browse"`: the machine-level secret store is shared across
         // every box on the machine, so neither "this box opted out of the auth
         // wall" nor "this box lets agent browsing act as its owner" may read as
-        // "the boxholder is here" (`docs/plans/secret-custody.md`).
+        // "the boxholder is here" (`docs/implemented-plans/secret-custody.md`).
         isAuthenticatedOwner:
           user !== null && identity.source !== "browse" && user.email === getOwnerEmail(),
       };

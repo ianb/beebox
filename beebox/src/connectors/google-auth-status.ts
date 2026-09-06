@@ -17,7 +17,7 @@
 import type { OAuth2Client } from "google-auth-library";
 import { isRecord } from "../lib/is-record.js";
 import { errorMessage } from "../lib/error-guards.js";
-import { getGoogleAuth, getGoogleClientCreds } from "./google-auth.js";
+import { getGoogleAuth, getBoxGoogleClientCreds } from "./google-auth.js";
 import {
   loadGoogleTokens,
   markGoogleAuthDead,
@@ -79,7 +79,7 @@ export async function classifyRefreshFailure(
 
 /** The read side of the credential's health, for health checks and alerts. */
 export interface GoogleAuthStatus {
-  /** Are GOOGLE_OAUTH_CLIENT_ID/SECRET set at all? */
+  /** Does this box hold a grant for the Google OAuth app's credentials? */
   configured: boolean;
   /** Is there a stored refresh token? */
   connected: boolean;
@@ -92,7 +92,9 @@ export interface GoogleAuthStatus {
 }
 
 export async function readGoogleAuthStatus(boxRoot?: string): Promise<GoogleAuthStatus> {
-  const configured = (await getGoogleClientCreds(boxRoot)) !== null;
+  // Box-less callers have no grants to check, so nothing is configured for
+  // them — the connector is per-box even when the status read is not.
+  const configured = boxRoot !== undefined && (await getBoxGoogleClientCreds(boxRoot)) !== null;
   const tokens = await loadGoogleTokens(boxRoot);
   return {
     configured,

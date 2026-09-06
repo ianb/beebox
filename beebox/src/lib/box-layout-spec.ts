@@ -265,8 +265,10 @@ export const BOX_LAYOUT = [
     path: "_config/connectors",
     area: "config",
     description:
-      "Per-connector config + secrets. Files: `<name>.json` (config), `<name>.secret.json` " +
-      "(credentials, gitignored). Sync state lives separately, in `_bookkeeping/connectors/`.",
+      "Per-connector config: `<name>.json`. Connector credentials live in the machine secret " +
+      "store (`docs/secrets.md`), not in the box; the connectors not yet moved there still keep " +
+      "a gitignored `<name>.secret.json`, as do Google/Gmail OAuth token records. Sync state " +
+      "lives separately, in `_bookkeeping/connectors/`.",
   },
   {
     boxDirsKey: "schemas",
