@@ -3,7 +3,7 @@
 `src/core/secrets/store.ts` holds one 0600 JSON file per machine
 (`$BBX_SECRETS_FILE`, default `~/.config/beebox/secrets.json`); the lifecycle
 operations in `src/core/secrets/lifecycle.ts` are the only writers. Design:
-`docs/plans/secret-custody.md`, Track 2.
+`docs/implemented-plans/secret-custody.md`, Track 2.
 
 Every value below is an obvious placeholder — a real-looking key must never
 appear in a fixture.

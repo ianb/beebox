@@ -26,7 +26,7 @@ import { gmailAdminProcedures } from "./admin-gmail.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
 import { passwordResetAdminProcedures } from "./admin-password-resets.js";
 import { describeAllowedUsers } from "./admin-user-details.js";
-import { getGoogleClientCreds } from "../../../connectors/google-auth.js";
+import { getLoginGoogleClientCreds } from "../../../connectors/google-auth.js";
 
 /**
  * Shape of `_config/box.json`, validated on read (config is untrusted input).
@@ -67,7 +67,7 @@ export const adminRouter = router({
    * unscopable, all-powerful credential to the admin frontend on every page
    * load. Telegram has no derived-credential primitive at all (no scoping, no
    * TTL, revoke-only via BotFather), so the token must terminate in the server
-   * process (`docs/plans/secret-custody.md`, "Broker escalations"). Callers
+   * process (`docs/implemented-plans/secret-custody.md`, "Broker escalations"). Callers
    * that want to identify the bot use `botUsername`.
    */
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
@@ -176,8 +176,9 @@ export const adminRouter = router({
     const secretSlug = await boxSlug(ctx.boxRoot);
     await forgetBoxSecret({ name: telegramSecretName(secretSlug), slug: secretSlug });
 
-    // The legacy in-tree file is still deleted, for a box that was configured
-    // before the migration and never reconnected.
+    // The retired in-tree file is no longer read, but it is still deleted:
+    // a box configured before the store must not be left holding a stray
+    // credential file after disconnect.
     const configPath = telegramLegacySecretPath(ctx.boxRoot);
     try {
       await fs.unlink(configPath);
@@ -220,7 +221,7 @@ export const adminRouter = router({
         .map((user) => user.email),
       publicUrl: config.publicUrl,
       ownerEmail: userDetails.ownerEmail,
-      googleLoginConfigured: (await getGoogleClientCreds(ctx.boxRoot)) !== null,
+      googleLoginConfigured: getLoginGoogleClientCreds() !== null,
       googleServices: config.googleServices,
       agentEngine: config.agentEngine,
       agentModel: config.agentModel ?? null,

@@ -14,9 +14,22 @@ import * as path from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { googleAuthHealthChecks } from "../../src/webapp/trpc/routers/health-google.js";
 import { saveGoogleTokens, markGoogleAuthDead } from "../../src/connectors/google-token-store.js";
+import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
+import { boxSlug } from "../../src/lib/box-slug.js";
 
 const tmp = await mkdtemp(path.join(os.tmpdir(), "health-google-"));
 process.env.BBX_GOOGLE_TOKENS_FILE = path.join(tmp, "google-tokens.json");
+
+const CLIENT_SECRET_NAMES = ["google-oauth-client-id", "google-oauth-client-secret"];
+
+/** Configure the OAuth app's client credentials for `tmp`: a per-box grant. */
+async function configureGoogle() {
+  const slug = await boxSlug(tmp);
+  for (const name of CLIENT_SECRET_NAMES) {
+    await setSecret({ name, value: `placeholder-${name}` });
+    await grantSecret({ slug, name, access: "server" });
+  }
+}
 
 const NOW = new Date("2026-07-28T12:00:00Z");
 const describe = (checks) =>
@@ -29,15 +42,13 @@ Neither is a problem, and a permanent "not connected" line would be noise on
 every box that doesn't use Google.
 
 ```ts
-delete process.env.GOOGLE_OAUTH_CLIENT_ID;
-delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-
+// No grants at all yet.
 describe(await googleAuthHealthChecks(tmp, { now: NOW }))
 => []
 
-// Configured, but no grant has ever been stored.
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id";
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret";
+// Configured — the box holds the client-credential grants — but no Google
+// authorization has ever been stored.
+await configureGoogle();
 describe(await googleAuthHealthChecks(tmp, { now: NOW }))
 => []
 ```

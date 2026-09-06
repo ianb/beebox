@@ -1,6 +1,6 @@
 /**
  * The secret access log: one JSONL line per resolve or refusal, in monthly
- * segments beside the store (`docs/plans/secret-custody.md`, Track 2).
+ * segments beside the store (`docs/implemented-plans/secret-custody.md`, Track 2).
  *
  * What it buys is ATTRIBUTION — which box used which secret, when, for what —
  * not tamper-proof audit. So it is best-effort BY DECLARATION: if the log

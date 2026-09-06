@@ -1,6 +1,6 @@
 /**
  * The loopback secret resolver: the ONE interface that discloses a stored value
- * to box code running outside a server process (`docs/plans/secret-custody.md`,
+ * to box code running outside a server process (`docs/implemented-plans/secret-custody.md`,
  * Track 2, "Access levels on grants").
  *
  * POST /api/secrets/resolve  { name, purpose } -> { value, suspect }

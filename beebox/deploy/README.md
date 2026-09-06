@@ -459,10 +459,16 @@ BBX_VAPID_PRIVATE_KEY=...
 # VAPID contact (optional — defaults to PUBLIC_URL). A mailto: or https: URI.
 BBX_VAPID_SUBJECT=mailto:you@example.com
 
-# Optional
-THINKING_OPENAI_API_KEY=sk-...
-BBX_MISTRAL_API_KEY=...
+# Optional — Google sign-in for the fleet login surface. Login runs before any
+# box exists, so this pair cannot come from a per-box grant; a box's own Google
+# connectors read the store instead.
+GOOGLE_OAUTH_CLIENT_ID=...
+GOOGLE_OAUTH_CLIENT_SECRET=...
 ```
+
+Connector credentials are not `.env` entries. They live in the machine secret
+store — `bbx secrets set <name>` then `bbx secrets grant <box> <name>`, one copy
+per machine with a per-box grant. See [`../docs/secrets.md`](../docs/secrets.md).
 
 After editing `.env`, restart services: `systemctl restart beebox-hub beebox-scheduler`
 

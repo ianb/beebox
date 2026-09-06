@@ -3,7 +3,7 @@
 The one interface that discloses a stored value to code running outside a server
 process: an agent-authored trick asks its OWN box, with the box's
 `BBX_AGENT_TOKEN`, and gets back a value it holds in memory for the length of one
-outbound call (`docs/secrets.md`, `docs/plans/secret-custody.md` Track 2).
+outbound call (`docs/secrets.md`, `docs/implemented-plans/secret-custody.md` Track 2).
 
 It is a raw route rather than a tRPC procedure because it must require the
 **agent auth source specifically** — the tRPC context folds cookie, hub header,

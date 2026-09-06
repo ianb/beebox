@@ -3,7 +3,7 @@
 Telegram is the sharpest case in the custody plan: the bot token has no scoping
 primitive at all — no derived credentials, no TTL, revoke-only through
 BotFather — so blast-radius reduction has to come from custody rather than from
-a narrower credential (`docs/plans/secret-custody.md`, "Broker escalations").
+a narrower credential (`docs/implemented-plans/secret-custody.md`, "Broker escalations").
 
 Three behaviours follow, all covered here:
 

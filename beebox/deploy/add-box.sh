@@ -42,9 +42,8 @@ set -euo pipefail
 #                    machine store and this adds a grant to it, so rotation
 #                    still touches one place (docs/secrets.md). Secrets that
 #                    bind to one box (a Telegram bot token) are skipped and
-#                    named. If the source box predates the store — it still
-#                    has *.secret.json files and no grants — the old file
-#                    copy runs instead, with a deprecation warning.
+#                    named. A source box with no grants at all copies nothing:
+#                    grant it the secrets it should have first.
 #   --dry-run        run the preflight checks against the live server and
 #                    print what would change. Nothing is cloned, written, or
 #                    restarted. Read-only on the server.
@@ -418,41 +417,6 @@ if [[ -n "$SECRETS_FROM" ]]; then
     exit 1
   fi
   echo "\$COPY_OUT"
-
-  # Legacy path, for a machine that has not run \'bbx secrets migrate\' yet: the
-  # source box has NO GRANTS AT ALL but still holds in-tree secret files. Copy
-  # them so provisioning still works, and say plainly that this is deprecated.
-  #
-  # The phrase below is the one copy-grants prints only for that case — a source
-  # whose grants are all single-box copies nothing either, and must NOT land
-  # here: falling back would hand this box the very Telegram token the command
-  # just refused to share.
-  # v3 (one-root) in-tree location first, then the two retired v2 shapes
-  # (nested content/config/ and bare config/ at a v2 content root) for a
-  # source box that predates the one-root migration.
-  SRC_DIR="$BOXES_DIR/$SECRETS_FROM/_config/connectors"
-  [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/content/config/connectors"
-  [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/config/connectors"
-  if echo "\$COPY_OUT" | grep -q "has no grants at all" && compgen -G "\$SRC_DIR/*.secret.json" >/dev/null; then
-    echo "Secrets: '$SECRETS_FROM' has no grants but still has in-tree secret files — falling back to the OLD file copy."
-    echo "         DEPRECATED: run 'bbx secrets migrate' on this server (with the boxholder) to move them into the"
-    echo "         machine store, then re-run this with --secrets-from to grant instead of copy."
-    mkdir -p "\$CONTENT_DIR/_config/connectors"
-    for secret_file in "\$SRC_DIR"/*.secret.json; do
-      # Same rule as the grant path, applied to files: a Telegram bot token
-      # routes to ONE webhook URL and a publish token is scoped to one bucket,
-      # so copying either would break the box already using it. (The old
-      # version of this script copied them, which was the bug.)
-      case "\$(basename "\$secret_file")" in
-        telegram.secret.json|publish.secret.json|google.secret.json|gmail.secret.json)
-          echo "Secrets: NOT copying \$(basename "\$secret_file") — it belongs to '$SECRETS_FROM' alone."
-          continue ;;
-      esac
-      cp "\$secret_file" "\$CONTENT_DIR/_config/connectors/"
-      chmod 600 "\$CONTENT_DIR/_config/connectors/\$(basename "\$secret_file")"
-      echo "Secrets: copied \$(basename "\$secret_file") from '$SECRETS_FROM'"
-    done
-  fi
 fi
 
 # Re-chown everything (bbx init / the writes above ran as root in places).

@@ -48,7 +48,7 @@ export const transcriptionRouter = router({
    * Mint a TTL'd, usage-scoped Deepgram key for the browser. This SPENDS the
    * box's stored management key without disclosing it — the derived-credential
    * pattern — so it is logged to the secrets access log as a `mint` event
-   * (`docs/plans/secret-custody.md`, "operation surface"). Deliberately
+   * (`docs/implemented-plans/secret-custody.md`, "operation surface"). Deliberately
    * uncapped (Decision 7): logged-and-visible, not throttled.
    */
   deepgramTempKey: publicProcedure.mutation(async ({ ctx }) => {
@@ -57,7 +57,7 @@ export const transcriptionRouter = router({
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
         message:
-          'Deepgram not configured — ask the boxholder to grant the "deepgram" secret to this box, or set BBX_DEEPGRAM_API_KEY + BBX_DEEPGRAM_PROJECT',
+          'Deepgram not configured — ask the boxholder to grant the "deepgram" secret to this box',
       });
     }
     await recordSecretMint({
@@ -113,7 +113,7 @@ export const transcriptionRouter = router({
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
         message:
-          'OpenAI not configured — ask the boxholder to grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY',
+          'OpenAI not configured — ask the boxholder to grant the "openai-thinking" secret to this box',
       });
     }
     await recordSecretMint({

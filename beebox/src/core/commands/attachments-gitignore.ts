@@ -159,10 +159,26 @@ ${CAPTURE_STAGING_TRACKED_PATTERNS.join("\n")}
  * `.gitignore` still hide assets from git" is the same question this asks, and
  * two spellings of one pattern is how the answer drifts.
  *
+ * It drifted. This used to test `startsWith("**\/*.attach/**\/*.")`, which
+ * misses the PATH-ANCHORED spelling — `/_content/**\/*.attach/**\/*.jpg` — that
+ * the one-root migration carried over from a v2 box's own `.gitignore`. On a
+ * box holding those, `to-annex` found no stray rules, reported success, and
+ * left every asset ignored: reaching neither git nor the annex, with the
+ * annex-shape gate reporting the box as converted. So the match is on the
+ * distinctive middle of the pattern rather than its start.
+ *
+ * A negation (`!…`) is never an ignore rule, and the capture-staging
+ * re-includes are spelled with the same middle — matching those would make the
+ * managed block look like a pile of stray rules.
+ *
  * @param line - A single `.gitignore` line
  */
+const ASSET_IGNORE_RULE = /\*\*\/\*\.attach\/\*\*\/\*\./;
+
 function isAssetIgnoreRule(line: string): boolean {
-  return line.trim().startsWith("**/*.attach/**/*.");
+  const trimmed = line.trim();
+  if (trimmed.startsWith("!") || trimmed.startsWith("#")) return false;
+  return ASSET_IGNORE_RULE.test(trimmed);
 }
 
 /** Does the box `.gitignore` still hide asset binaries from git? */

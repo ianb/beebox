@@ -109,11 +109,11 @@ export function generateConnectorsDocs(): string {
     "- Built-in connectors (Telegram, Gmail, transcription, …) resolve their own credentials",
     "  inside the server process. You never see or need those values.",
     "- A scheduled script can declare `<requires><connector>name</connector></requires>`; the",
-    "  scheduler checks whether the box has a granted credential for that connector (or a legacy",
-    "  file, during the transition) and skips the script cleanly when it doesn't.",
-    "- Legacy: `_config/connectors/<service>.secret.json` files still work as a deprecated",
-    "  fallback and `bbx health` flags any that survive. If you find one, report it for migration",
-    "  — do not create new ones, and do not read one to \"retrieve\" a key.",
+    "  scheduler checks whether the box has a granted credential for that connector and skips",
+    "  the script cleanly when it doesn't.",
+    "- A retired `_config/connectors/<service>.secret.json` file is read by nothing; `bbx health`",
+    "  flags any that survive. If you find one, report it for deletion — do not create new ones,",
+    "  and do not read one to \"retrieve\" a key.",
     "",
   ];
 

@@ -7,11 +7,12 @@ Two `src/hub/supervisor.ts` behaviors, both found by cross-model review:
    is a hub-only credential (see `supervisor.ts`'s `CHILD_ENV_ALLOWLIST` doc
    comment for why: it's symmetric, so any box that could verify a cookie
    could also forge one for a sibling box) and must never reach a child.
-   `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`, by contrast, DO pass
-   through: they're the app's connector identity, not a hub secret, and every
-   box's Google connectors read them directly to run/refresh their own
-   per-box tokens (connector OAuth stays per-box under the current
-   architecture -- the box owns its tokens).
+   Connector credentials do not pass either: a box's connectors resolve them
+   from the machine secret store under the box's own grants, so what a child
+   inherits is the store's PATH (`BBX_SECRETS_FILE`), not the keys. That
+   includes `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`, which
+   configure the fleet LOGIN surface -- and a hub-spawned child is in hub mode,
+   where `/auth/*` is a 404 and login lives at the hub.
 2. When `launch()`'s readiness timeout fires and it kills the still-starting
    child itself, that kill's own eventual "exit" event must NOT ALSO be
    treated as an unexpected crash -- otherwise one failure gets counted (and
@@ -61,14 +62,13 @@ const sourceEnv = {
   BBX_AUTH_FILE: "/home/beebox/.bbx-auth.json",
   BBX_DIAG_API_KEY: "diag-key-value",
   BBX_GOOGLE_TOKENS_FILE: "/home/beebox/.google-tokens.json",
+  BBX_SECRETS_FILE: "/home/beebox/.config/beebox/secrets.json",
+  // Connector credentials, all withheld: the child resolves these from the
+  // store instead, and the login pair configures a surface a hub-mode child
+  // does not serve.
   THINKING_OPENAI_API_KEY: "sk-thinking-value",
-  // Box-legitimate connector identity -- DOES pass through (shared per-box
-  // by design; see block comment above and in supervisor.ts).
   GOOGLE_OAUTH_CLIENT_ID: "app-oauth-client-id",
   GOOGLE_OAUTH_CLIENT_SECRET: "app-oauth-client-secret",
-  // Box-legitimate transcription/image-description keys a `bbx serve` child
-  // reads directly -- BBX_DEEPGRAM_* is a PREFIX (covers both
-  // API_KEY and PROJECT suffixes), GEMINI_KEY is an exact name.
   BBX_DEEPGRAM_API_KEY: "dg-api-key-value",
   BBX_DEEPGRAM_PROJECT: "dg-project-value",
   GEMINI_KEY: "gemini-key-value",
@@ -76,7 +76,7 @@ const sourceEnv = {
   BBX_SESSION_SECRET: "hub-only-session-secret",
   // Not on the allowlist at all -- an arbitrary var from the hub's shell.
   SOME_UNRELATED_VAR: "should-not-leak",
-  // Looks like the Deepgram prefix but isn't it -- must not leak by accident.
+  // Was never on the list; kept as one more unlisted name.
   BBX_DEEPGRAM: "not-actually-prefixed",
 };
 
@@ -90,15 +90,10 @@ JSON.stringify({
   authFile: env.BBX_AUTH_FILE,
   diagKey: env.BBX_DIAG_API_KEY,
   tokensFile: env.BBX_GOOGLE_TOKENS_FILE,
-  thinkingKey: env.THINKING_OPENAI_API_KEY,
-  googleClientId: env.GOOGLE_OAUTH_CLIENT_ID,
-  googleClientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
-  deepgramApiKey: env.BBX_DEEPGRAM_API_KEY,
-  deepgramProject: env.BBX_DEEPGRAM_PROJECT,
-  geminiKey: env.GEMINI_KEY,
+  secretsFile: env.BBX_SECRETS_FILE,
   hubSecret: env.BBX_HUB_SECRET,
 })
-=> {"path":"/usr/bin:/bin","home":"/home/beebox","devSurfaces":"1","publicUrl":"https://bbx.example.org","authFile":"/home/beebox/.bbx-auth.json","diagKey":"diag-key-value","tokensFile":"/home/beebox/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","deepgramApiKey":"dg-api-key-value","deepgramProject":"dg-project-value","geminiKey":"gemini-key-value","hubSecret":"per-boot-hub-secret"}
+=> {"path":"/usr/bin:/bin","home":"/home/beebox","devSurfaces":"1","publicUrl":"https://bbx.example.org","authFile":"/home/beebox/.bbx-auth.json","diagKey":"diag-key-value","tokensFile":"/home/beebox/.google-tokens.json","secretsFile":"/home/beebox/.config/beebox/secrets.json","hubSecret":"per-boot-hub-secret"}
 ```
 
 ```ts continue
@@ -109,10 +104,19 @@ JSON.stringify({
 => false
 
 "GOOGLE_OAUTH_CLIENT_ID" in env
-=> true
+=> false
 
 "GOOGLE_OAUTH_CLIENT_SECRET" in env
-=> true
+=> false
+
+"THINKING_OPENAI_API_KEY" in env
+=> false
+
+"BBX_DEEPGRAM_API_KEY" in env
+=> false
+
+"GEMINI_KEY" in env
+=> false
 
 "SOME_UNRELATED_VAR" in env
 => false

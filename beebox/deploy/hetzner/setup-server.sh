@@ -146,6 +146,8 @@ pnpm build
 # ── Symlink bbx CLI ──────────────────────────────────────────────────
 echo "Symlinking bbx CLI..."
 ln -sf "$INSTALL_DIR/beebox/bin/bbx" /usr/local/bin/bbx
+# Tombstone for the retired command: fails with a pointer to bbx, never forwards.
+ln -sf "$INSTALL_DIR/beebox/bin/cb" /usr/local/bin/cb
 bbx --help >/dev/null 2>&1 && echo "bbx CLI is working" || echo "WARNING: bbx CLI test failed"
 
 # ── Verify AVIF encoding ────────────────────────────────────────────
@@ -207,11 +209,16 @@ PUBLIC_URL=https://box.example.com
 # services (which don't source .bashrc) can find the `claude` binary.
 PATH=/home/beebox/.local/bin:/usr/local/bin:/usr/bin:/bin
 
-# Optional
-# THINKING_OPENAI_API_KEY=sk-REPLACE_ME
-# BBX_MISTRAL_API_KEY=REPLACE_ME
-# BBX_DEEPGRAM_API_KEY=REPLACE_ME
-# BBX_DEEPGRAM_PROJECT=REPLACE_ME
+# Connector credentials do NOT go here. They live in the machine secret store:
+#   bbx secrets set <name>      (mistral, deepgram, openai, openai-thinking, gemini, ...)
+#   bbx secrets grant <box> <name>
+# See docs/secrets.md.
+
+# Optional — Google sign-in for the fleet login surface. This pair IS env
+# configuration: login runs before any box exists, so it cannot use a per-box
+# grant. A box's own Google connectors read the store instead.
+# GOOGLE_OAUTH_CLIENT_ID=REPLACE_ME
+# GOOGLE_OAUTH_CLIENT_SECRET=REPLACE_ME
 ENVEOF
   chown "$BBX_USER:$BBX_USER" "$ENV_FILE"
   chmod 600 "$ENV_FILE"
