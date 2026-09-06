@@ -63,6 +63,7 @@ export const SECRET_ENV_NAMES: ReadonlySet<string> = new Set([
   "GEMINI_KEY",
   "SKE_GEMINI_API_KEY",
   "BBX_DEEPGRAM_API_KEY",
+  "BBX_OPENROUTER_API_KEY",
 ]);
 
 /** Thrown by {@link loadEnv} when one or more env vars fail validation. */

@@ -8,8 +8,9 @@ import { search, type TypedDocument } from "@orama/orama";
 import { getSearchableTypes } from "../../schemas/registry.js";
 import { invariant } from "../../lib/invariant.js";
 import { getOpenAiEmbeddingsKey } from "./embeddings-key.js";
+import { routeVia } from "../openrouter.js";
 import {
-  createOpenAIEmbeddingsService,
+  createEmbeddingsService,
   EmbeddingsError,
   type EmbeddingsService,
 } from "../../services/openai-embeddings.js";
@@ -137,8 +138,12 @@ export async function searchBox(
   // it must keep working with a broken secret file).
   let service = mode === "text" ? undefined : options.embeddings;
   if (service === undefined && mode !== "text") {
-    const key = await getOpenAiEmbeddingsKey(boxRoot);
-    if (key !== null) service = createOpenAIEmbeddingsService(key);
+    const route = await routeVia({
+      boxRoot,
+      purpose: "embeddings",
+      directKey: await getOpenAiEmbeddingsKey(boxRoot),
+    });
+    if (route !== null) service = createEmbeddingsService(route);
   }
 
   const openOpts: OpenSearchIndexOptions = {};

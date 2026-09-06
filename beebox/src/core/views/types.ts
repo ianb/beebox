@@ -34,7 +34,7 @@ export interface ViewProps {
   /** Metadata for non-card files matched by the dependency globs. */
   files: ViewFile[];
   /**
-   * Call an external provider API (replicate, mistral, anthropic, openai)
+   * Call an external provider API (replicate, mistral, anthropic, openai, openrouter)
    * through the box's authenticated adapter — the server injects the API
    * key from _config/connectors/<adapter>.secret.json; the browser never
    * sees it, and CORS doesn't apply. `path` accepts upstream absolute

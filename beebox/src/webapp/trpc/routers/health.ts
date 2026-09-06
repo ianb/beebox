@@ -18,7 +18,6 @@ import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
-import { getGeminiApiKey } from "../../../core/gemini-key.js";
 import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
@@ -33,6 +32,7 @@ import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
 import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
 import { isWritable, writability } from "./health-writability.js";
 import { legacySecretFilesCheck } from "./health-secrets.js";
+import { geminiKeyCheck, modelRoutesCheck } from "./health-model-routes.js";
 import { pendingMigrationsCheck } from "./health-migrations.js";
 import { annexHealthChecks } from "./health-annex.js";
 import { unfiledCapturesCheck, stalledJobsCheck } from "./health-stale.js";
@@ -142,28 +142,6 @@ export interface RunHealthChecksOptions {
 }
 
 
-/**
- * Gemini key check — the key is optional: it powers audio questions
- * (ask-about-audio) and scan-import's opt-in Gemini backend
- * (`BBX_SCAN_VISION=gemini`); scan-import defaults to the Claude backend,
- * which needs no extra key.
- */
-async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
-  const geminiKey = await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false });
-  const geminiSelected = process.env["BBX_SCAN_VISION"] === "gemini";
-  const message =
-    geminiKey !== null
-      ? "Gemini API key configured"
-      : geminiSelected
-        ? 'BBX_SCAN_VISION=gemini but no Gemini API key — scan-import will fail. Grant the "gemini" secret to this box, or set GEMINI_KEY'
-        : "Gemini API key not found (optional) — audio questions will not work; scan-import uses the Claude backend by default";
-  return {
-    name: "gemini-api-key",
-    ok: geminiKey !== null || !geminiSelected,
-    message,
-    severity: "warning",
-  };
-}
 
 /**
  * Claude Code auth, for agent operations (chat, reactor, procedures).
@@ -369,6 +347,7 @@ export async function runHealthChecks(
   });
 
   checks.push(await geminiKeyCheck(boxRoot));
+  checks.push(...(await modelRoutesCheck(boxRoot)));
   checks.push(await legacySecretFilesCheck(boxRoot));
 
   // Claude Code auth (needed for agent operations — chat, reactor, procedures).

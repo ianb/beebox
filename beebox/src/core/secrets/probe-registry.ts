@@ -19,6 +19,7 @@
  * | `openai`, `openai-thinking` | `GET https://api.openai.com/v1/models` |
  * | `gemini` | `GET https://generativelanguage.googleapis.com/v1beta/models` |
  * | `deepgram` | `GET https://api.deepgram.com/v1/projects` |
+ * | `openrouter` | `GET https://openrouter.ai/api/v1/key` |
  * | `telegram-bot/<box>` | `GET https://api.telegram.org/bot<token>/getMe` |
  *
  * `publish/<box>` deliberately has NO probe: verifying an R2 token means a
@@ -92,6 +93,9 @@ const probes: Record<string, ProbeEntry> = {
   mistral: { describe: "lists Mistral models", request: bearer("https://api.mistral.ai/v1/models") },
   openai: { describe: "lists OpenAI models", request: bearer("https://api.openai.com/v1/models") },
   "openai-thinking": { describe: "lists OpenAI models", request: bearer("https://api.openai.com/v1/models") },
+  // `/key` reports the key's own limits and spend — the cheapest authenticated
+  // read OpenRouter has, and it names nothing but the credential itself.
+  openrouter: { describe: "reads the OpenRouter key's own limits", request: bearer("https://openrouter.ai/api/v1/key") },
   gemini: {
     describe: "lists Gemini models",
     request: (value) => ({

@@ -73,6 +73,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "BBX_MISTRAL_API_KEY", // src/core/mistral-key.ts -- box's own transcription key fallback.
   "GEMINI_KEY", // src/core/audio-question.ts, services/scan-vision.ts, chat-audio.ts, webapp/trpc/routers/health.ts -- box's own image/audio description key.
   "SKE_GEMINI_API_KEY", // same call sites as GEMINI_KEY -- documented fallback read alongside it (checked first in src/core/audio-question.ts etc.).
+  "BBX_OPENROUTER_API_KEY", // src/core/openrouter.ts -- the fallback route's key, standing in for whichever of the above the box lacks.
   "BBX_SCAN_VISION", // src/services/scan-vision.ts -- scan-import photo-analysis backend selection (claude default, gemini opt-in).
 
   // --- Claude Agent SDK config knobs (not credentials) ---

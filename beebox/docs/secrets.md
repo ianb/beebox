@@ -67,6 +67,7 @@ existing `_config/connectors/*.secret.json` files into exactly these names, so
 | `gemini` | `core/gemini-key.ts` (audio questions, scan-import vision) | — | `GEMINI_KEY`, then `SKE_GEMINI_API_KEY` |
 | `google-oauth-client-id` / `google-oauth-client-secret` | `connectors/google-auth.ts` | — | `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` |
 | `anthropic`, `replicate` | `/api/adapters/<name>` | `<name>.secret.json` | — |
+| `openrouter` | `core/openrouter.ts` (the fallback route for embeddings, audio questions, HQ transcription, and the opt-in Gemini scan backend), `/api/adapters/openrouter` | — | `BBX_OPENROUTER_API_KEY` |
 | `telegram-bot/<box>` | `connectors/telegram-helpers.ts`, admin setup | `telegram.secret.json` | — |
 
 **One deliberate reuse outside this table.** The dev repo's document-comment
@@ -445,3 +446,25 @@ Tests get an isolated store automatically: `makeTmpBox()` points
 `BBX_SECRETS_FILE` at a throwaway file unless the test set one itself, so a
 store-writing test can never mutate the developer's real
 `~/.config/beebox/secrets.json`.
+
+## One key that stands in for several
+
+`openrouter` is the only name here that is not a service's own credential. It
+is a fallback: each model-backed service uses its own provider key when the box
+has one, and reaches the same model through OpenRouter when it does not
+(`core/openrouter.ts`). Granting it lights up semantic search, audio
+questions, and the high-quality transcription pass without any further
+configuration, and granting it changes nothing about a service that already has
+its own key.
+
+Scan-import is the one that still needs a second thing set. Its default vision
+backend is Claude on the agent's own subscription auth, which needs no key at
+all and is the better backend; an OpenRouter key must not quietly move scan
+import off it. So `BBX_SCAN_VISION=gemini` still selects the Gemini backend, and
+the OpenRouter key only decides how that backend is reached once selected.
+
+It does not cover everything. Chat text-to-speech and the three realtime
+dictation paths stay on their own providers — OpenRouter carries no OpenAI TTS
+model and has no realtime protocol at all — so a box that wants those still
+needs `openai-thinking`, `mistral`, or `deepgram`. `bbx health` prints a
+`model-routes` line naming what each service is currently using.

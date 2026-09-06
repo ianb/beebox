@@ -59,12 +59,16 @@ const openAiSecretFileSchema = z.object({
   apiKey: z.string().trim().min(1),
 });
 
-export async function getOpenAiEmbeddingsKey(boxRoot: string): Promise<string | null> {
+export async function getOpenAiEmbeddingsKey(
+  boxRoot: string,
+  read?: { observe?: boolean | undefined },
+): Promise<string | null> {
   const resolved = await resolveSecret({
     boxRoot,
     name: OPENAI_SECRET_NAME,
     purpose: "embeddings",
     access: "server",
+    ...(read?.observe !== undefined && { observe: read.observe }),
   });
   if (resolved.ok) {
     if (resolved.value.suspect) {

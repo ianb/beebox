@@ -127,6 +127,7 @@ const CONNECTOR_ENV_ALLOWLIST: readonly string[] = [
   "BBX_OPENAI_API_KEY", // src/core/search/embeddings-key.ts -- embeddings key.
   "GEMINI_KEY", // src/core/audio-question.ts, services/scan-vision.ts -- image/audio description key.
   "SKE_GEMINI_API_KEY", // same call sites -- documented fallback read alongside GEMINI_KEY.
+  "BBX_OPENROUTER_API_KEY", // src/core/openrouter.ts -- the fallback route for each of the keys above.
 ];
 
 /**
