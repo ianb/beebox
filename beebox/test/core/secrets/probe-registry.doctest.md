@@ -2,7 +2,7 @@
 
 `src/core/secrets/probe-registry.ts` answers "does this credential actually
 work?" by making one cheap, harmless, authenticated call and recording the
-verdict on the entry (`docs/plans/secret-custody.md`, "Guided entry +
+verdict on the entry (`docs/implemented-plans/secret-custody.md`, "Guided entry +
 validation").
 
 Two properties matter more than the happy path:

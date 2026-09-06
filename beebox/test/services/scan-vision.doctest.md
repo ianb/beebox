@@ -20,8 +20,8 @@ import {
 Default (no `BBX_SCAN_VISION`) is Claude — the zero-setup path. Gemini is
 explicit opt-in and fails closed without a key; unknown values are errors,
 never silent fallbacks. The env selects the *backend*; the key itself arrives
-already resolved from `core/gemini-key.ts` (store, then `GEMINI_KEY` /
-`SKE_GEMINI_API_KEY`), so there is one Gemini resolution order in the codebase.
+already resolved from `core/gemini-key.ts` (the machine secret store), so there
+is one place a Gemini key is resolved.
 
 ```ts
 const claude = selectScanVisionBackend({}, null);
@@ -34,7 +34,7 @@ JSON.stringify(gemini)
 
 const noKey = selectScanVisionBackend({ BBX_SCAN_VISION: "gemini" }, null);
 noKey.ok ? "ok" : noKey.error
-=> BBX_SCAN_VISION=gemini but no Gemini key is available — grant the "gemini" secret to this box, or set GEMINI_KEY (or SKE_GEMINI_API_KEY)
+=> BBX_SCAN_VISION=gemini but no Gemini key is available — grant the "gemini" secret to this box
 
 const typo = selectScanVisionBackend({ BBX_SCAN_VISION: "gemnii" }, "placeholder-gemini-key");
 typo.ok ? "ok" : typo.error

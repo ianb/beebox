@@ -32,26 +32,13 @@ By default, bots only see messages that mention them or are replies to them. To 
 
 ## 4. Configure the connector
 
-Create the secret config file in your box:
-
-### `_config/connectors/telegram.secret.json`
-
-```json
-{
-  "botToken": "123456789:ABCdefGHIjklMNOpqrSTUvwxYZ",
-  "webhookSecret": "pick-a-random-string-here"
-}
-```
-
-The chat ID is not needed in the config — it comes with each incoming message and is included on outbound cards automatically.
-
-The `webhookSecret` can be any random string — it's used to verify that webhook requests actually come from Telegram. Generate one with:
-
-```bash
-openssl rand -hex 32
-```
-
-This file is gitignored by the `*.secret.*` pattern.
+Paste the bot token into the box's admin page (Telegram section) and submit —
+that's the whole setup step. The admin page validates the token against
+Telegram's `getMe`, generates a random `webhookSecret` itself, and stores both
+in the machine secret store as this box's `telegram-bot/<slug>` entry
+(`docs/secrets.md`); there is no config file to create or edit by hand, and
+nothing lands in the box tree. The chat ID is not needed either — it comes
+with each incoming message and is included on outbound cards automatically.
 
 ## 5. Set up the webhook
 
@@ -124,7 +111,7 @@ entries:
 
 ## Notes
 
-- The bot token is sensitive — keep it in the `.secret.json` file
+- The bot token is sensitive — it lives only in the machine secret store, never a box file
 - `publicUrl` must be set in `_config/box.json` (e.g. `{"publicUrl": "https://box.example.com"}`) for the webhook to work
 - The webhook URL must be HTTPS (Telegram requires it)
 - The connector only processes text messages and captions on media. Photos/files without text are skipped.

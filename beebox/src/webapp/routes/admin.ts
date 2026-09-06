@@ -8,7 +8,7 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { getGoogleClientCreds, createOAuth2Client } from "../../connectors/google-auth.js";
+import { getBoxGoogleClientCreds, createOAuth2Client } from "../../connectors/google-auth.js";
 import { saveGoogleTokens, type GoogleTokens } from "../../connectors/google-token-store.js";
 import { parseOAuthState, consumeGoogleOAuthState } from "../../connectors/google-oauth-state.js";
 import { resolveRequestIdentity } from "../auth.js";
@@ -79,9 +79,9 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       return reply.redirect(`${returnUrl}?google=error&message=No+code+received`);
     }
 
-    const creds = await getGoogleClientCreds(box.boxRoot);
+    const creds = await getBoxGoogleClientCreds(box.boxRoot);
     if (!creds) {
-      console.log("[google-oauth] OAuth not configured (no store grant, no env vars)");
+      console.log("[google-oauth] OAuth not configured (no store grant for this box)");
       return reply.redirect(`${returnUrl}?google=error&message=OAuth+not+configured`);
     }
 

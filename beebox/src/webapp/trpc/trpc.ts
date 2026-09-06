@@ -49,7 +49,7 @@ export const ownerProcedure = t.procedure.use(({ ctx, next }) => {
  * proved anything). Used by the secrets router alone: those procedures read and
  * mutate the MACHINE-level store, which spans every box on the host, so one
  * box's opt-out from the auth wall must never become a management surface for
- * its neighbours' credentials (`docs/plans/secret-custody.md`).
+ * its neighbours' credentials (`docs/implemented-plans/secret-custody.md`).
  */
 export const authenticatedOwnerProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.isAuthenticatedOwner) {

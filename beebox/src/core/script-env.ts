@@ -183,7 +183,7 @@ export async function buildScriptEnv(
  * connectors, so on an env-var-configured server they need the connector
  * credentials the agent profile withholds.
  *
- * Honest scope, per `docs/plans/secret-custody.md`: a scheduled-script card is
+ * Honest scope, per `docs/implemented-plans/secret-custody.md`: a scheduled-script card is
  * agent-authorable, so this profile is agent-*reachable* by writing a script
  * card and waiting for it to fire. What Track 1 closes is the trivial path —
  * the agent's own process env — not every path; Track 3 closes this one by

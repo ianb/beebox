@@ -204,14 +204,14 @@ printCalls(tg.callLog);
 
 ### Connector testing pattern
 
-Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake, and run `sync()`:
+Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake, and run `sync()`. Credentials go through the machine secret store (`docs/secrets.md`), not a seeded box file — `setSecret`/`grantSecret` (`src/core/secrets/lifecycle.js`) put a value in and grant it to the box's slug, same as `bbx secrets set`/`grant` would:
 
 ```typescript
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
-await box.seed("_config/connectors/telegram.secret.json", JSON.stringify({...}));
-box.commitAll("add config");
+await setSecret({ name: `telegram-bot/${slug}`, value: JSON.stringify({...}) });
+await grantSecret({ slug, name: `telegram-bot/${slug}`, access: "server" });
 
 const tg = createFakeTelegram({ username: "bot", updates: [...] });
 const connector = createTelegramConnector(box.root, tg);

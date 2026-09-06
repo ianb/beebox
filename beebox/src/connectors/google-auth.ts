@@ -3,12 +3,11 @@
  *
  * Not a connector — just builds the OAuth2Client all Google connectors
  * (calendar, gmail API, drive) share. The token record it reads and writes
- * lives in `google-token-store.ts`; client credentials come from the machine
- * secret store, falling back to the GOOGLE_OAUTH_CLIENT_ID/SECRET env vars.
+ * lives in `google-token-store.ts`; a box's client credentials come from the
+ * machine secret store (see `getBoxGoogleClientCreds`).
  */
 
 import { OAuth2Client } from "google-auth-library";
-import { refusalAllowsLegacyFallback } from "../core/secrets/legacy-fallback.js";
 import { resolveSecret } from "../core/secrets/resolve.js";
 import {
   loadGoogleTokens,
@@ -49,46 +48,49 @@ const GOOGLE_CLIENT_ID_SECRET_NAME = "google-oauth-client-id";
 const GOOGLE_CLIENT_SECRET_SECRET_NAME = "google-oauth-client-secret";
 
 /**
- * Get Google OAuth client credentials: the machine store first (names
- * `google-oauth-client-id` / `google-oauth-client-secret`, `server` access),
- * then the `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET` env vars
- * (`docs/plans/secret-custody.md`, Track 3). Never had a per-box file, so there
- * is no legacy-file arm.
+ * A BOX's Google OAuth client credentials: the machine store's
+ * `google-oauth-client-id` / `google-oauth-client-secret` entries at `server`
+ * access (`docs/implemented-plans/secret-custody.md`). `null` when the box has
+ * no grant — the connector is simply not configured for it.
  *
  * These are the OAuth *app's* identity, not a user's tokens — the token record
- * (`google-token-store.ts`, `BBX_GOOGLE_TOKENS_FILE`) is untouched by this
- * migration and stays where it is.
+ * (`google-token-store.ts`, `BBX_GOOGLE_TOKENS_FILE`) is a separate thing and
+ * stays where it is.
  *
- * `boxRoot` is optional because two callers are box-less: the hub's
- * login-config surface asks "is Google login configured at all?" before any box
- * is in play. Those keep the env-only answer.
+ * Both halves must come from the SAME source, so a half-granted box is `null`
+ * rather than a mixed pair.
  *
- * Both halves must come from the SAME source: a store id paired with an env
- * secret would be a silent cross-app mismatch, so a partial store answer falls
- * through to env rather than mixing.
+ * The LOGIN surface has its own reader (`getLoginGoogleClientCreds`): grants
+ * are per-box, and fleet login runs before any box is in play, so the two
+ * cannot share one resolution path.
  */
-export async function getGoogleClientCreds(
-  boxRoot?: string,
+export async function getBoxGoogleClientCreds(
+  boxRoot: string,
 ): Promise<{ clientId: string; clientSecret: string } | null> {
-  if (boxRoot !== undefined) {
-    const [id, secret] = await Promise.all([
-      resolveSecret({ boxRoot, name: GOOGLE_CLIENT_ID_SECRET_NAME, purpose: "google-oauth", access: "server" }),
-      resolveSecret({ boxRoot, name: GOOGLE_CLIENT_SECRET_SECRET_NAME, purpose: "google-oauth", access: "server" }),
-    ]);
-    if (id.ok && secret.ok) return { clientId: id.value.value, clientSecret: secret.value.value };
-    // Only "no such secret on this machine" degrades to the env vars — for
-    // EITHER half, since a partial store answer must not mix sources. Any other
-    // refusal (revoked, withheld, empty, unreadable store) is "not configured";
-    // falling through would let a stale export outlive a revoked grant
-    // (`core/secrets/legacy-fallback.ts`).
-    const blocked = [id, secret].some(
-      (result) => !result.ok && !refusalAllowsLegacyFallback({ reader: "google-auth", refusal: result.error }),
-    );
-    if (blocked) return null;
-  }
-  // TODO(env-migration): GOOGLE_OAUTH_* are validated + redacted at startup
-  // (lib/env.ts server/hub schemas); reads stay direct — creds are read lazily
-  // per-connector and may be unset (auth simply disabled).
+  const [id, secret] = await Promise.all([
+    resolveSecret({ boxRoot, name: GOOGLE_CLIENT_ID_SECRET_NAME, purpose: "google-oauth", access: "server" }),
+    resolveSecret({ boxRoot, name: GOOGLE_CLIENT_SECRET_SECRET_NAME, purpose: "google-oauth", access: "server" }),
+  ]);
+  if (id.ok && secret.ok) return { clientId: id.value.value, clientSecret: secret.value.value };
+  return null;
+}
+
+/**
+ * The LOGIN surface's Google OAuth client credentials, from
+ * `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`.
+ *
+ * This is process-level configuration, not a transition-window fallback. Fleet
+ * login (`webapp/routes/auth.ts`, `auth-google.ts`) answers "is Google sign-in
+ * available for this server" before any box exists, and the secret store grants
+ * per box — so there is nothing for it to ask. Removing the env pair here would
+ * disable Google sign-in outright, which is why the secret-store transition
+ * kept it while retiring every genuine fallback around it.
+ *
+ * TODO(env-migration): GOOGLE_OAUTH_* are validated + redacted at startup
+ * (lib/env.ts server/hub schemas); reads stay direct — they may be unset, in
+ * which case Google sign-in is simply not offered.
+ */
+export function getLoginGoogleClientCreds(): { clientId: string; clientSecret: string } | null {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
   if (clientId && clientSecret) return { clientId, clientSecret };
@@ -100,12 +102,12 @@ export async function getGoogleClientCreds(
  * Returns null if not configured or missing refresh token.
  *
  * Loads tokens from centralized storage (or legacy per-box fallback).
- * Client credentials come from the store, then env.
+ * Client credentials come from the box's store grant.
  */
 export async function getGoogleAuth(
   boxRoot?: string,
 ): Promise<OAuth2Client | null> {
-  const creds = await getGoogleClientCreds(boxRoot);
+  const creds = boxRoot === undefined ? null : await getBoxGoogleClientCreds(boxRoot);
   if (!creds) return null;
 
   const tokens = await loadGoogleTokens(boxRoot);

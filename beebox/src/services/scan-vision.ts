@@ -5,7 +5,7 @@
  * The default backend is Claude Sonnet via the Claude Agent SDK
  * (`scan-vision-claude.ts`) — zero extra setup beyond the Claude auth the
  * reactor already requires. Gemini Flash stays available as an opt-in
- * (`BBX_SCAN_VISION=gemini` + `GEMINI_KEY`) for deployments that hold the
+ * (`BBX_SCAN_VISION=gemini`, plus a granted `gemini` secret) for deployments that hold the
  * key; it wraps the existing engine in `scan-import-gemini.ts` unchanged.
  * Design + measured evidence: `docs/plans/scan-vision-claude.md`.
  *
@@ -89,10 +89,10 @@ export type ScanVisionSelection = { backend: "claude" } | { backend: "gemini"; a
 
 /**
  * Resolve which backend `bbx scan-import` should use. `env` selects the backend;
- * `geminiKey` is the ALREADY-RESOLVED key from `core/gemini-key.ts` (store,
- * then `GEMINI_KEY`/`SKE_GEMINI_API_KEY`) — this function no longer reads a
- * credential out of the environment itself, so there is exactly one Gemini
- * resolution order in the codebase (`docs/plans/secret-custody.md`, Track 3).
+ * `geminiKey` is the ALREADY-RESOLVED key from `core/gemini-key.ts` (the
+ * machine secret store) — this function never reads a credential out of the
+ * environment itself, so there is exactly one place a Gemini key is resolved
+ * (`docs/implemented-plans/secret-custody.md`).
  *
  * Fail-closed: an explicit `BBX_SCAN_VISION=gemini` without a key is an error,
  * never a silent fallback to Claude; so is an unknown value.
@@ -107,7 +107,7 @@ export function selectScanVisionBackend(
   if (selected === "gemini") {
     if (geminiKey === null || geminiKey === "") {
       return err(
-    'BBX_SCAN_VISION=gemini but no Gemini key is available — grant the "gemini" secret to this box, or set GEMINI_KEY (or SKE_GEMINI_API_KEY)',
+    'BBX_SCAN_VISION=gemini but no Gemini key is available — grant the "gemini" secret to this box',
       );
     }
     return ok({ backend: "gemini", apiKey: geminiKey });

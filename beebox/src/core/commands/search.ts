@@ -18,7 +18,6 @@ import {
   HybridUnavailableError,
   type SearchBoxOptions,
 } from "../search/query.js";
-import { EmbeddingsKeyError } from "../search/embeddings-key.js";
 
 /**
  * Arguments for the search command. `query` is optional here because the
@@ -72,7 +71,7 @@ async function executeSearch(
       };
     }
     // Config/mode errors surface as clean CLI errors, not stack traces.
-    if (e instanceof HybridUnavailableError || e instanceof EmbeddingsKeyError) {
+    if (e instanceof HybridUnavailableError) {
       return { success: false, error: e.message };
     }
     throw e;

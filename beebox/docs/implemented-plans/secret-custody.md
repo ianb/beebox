@@ -769,6 +769,21 @@ the operational acts, which are deliberately not code:
   box that has not migrated, so they are a named later chunk that follows the
   operational step, not a side effect of this one.
 
+  **Closed.** All of the above has since shipped: `src/core/secrets/legacy-fallback.ts`
+  and `refusalAllowsLegacyFallback` are deleted, the env-var fallbacks
+  (`BBX_MISTRAL_API_KEY`, `BBX_DEEPGRAM_API_KEY`/`_PROJECT`,
+  `BBX_OPENAI_API_KEY`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`,
+  `SKE_GEMINI_API_KEY`) are gone from every reader, and the connector entries
+  are out of both `script-env-allowlist.ts` and `child-env.ts`. The
+  stray-file flagger stayed a warning rather than promoting to an error — a
+  leftover `*.secret.json` is now dead weight, not a live credential path, so
+  `bbx health` still just names it. The one credential pair that stays
+  env-configured, `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`, is not
+  a residual of this migration: it's real configuration for the fleet login
+  surface, which runs before any box exists (`getLoginGoogleClientCreds`,
+  `src/connectors/google-auth.ts`) — a box's own connectors resolve the same
+  pair from the store instead (`getBoxGoogleClientCreds`).
+
 - **Tests first as design tool**: doctests named per chunk above — env
   allowlist (poisoned-env), store module (grant-check, corrupt-file,
   concurrent-write via lock), resolver fallback ordering, `bbx secrets` CLI

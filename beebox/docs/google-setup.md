@@ -47,7 +47,16 @@ Go to **APIs & Services → Credentials**:
    - **Web (recommended):** `https://<your-server>/auth/google-services/callback`
    - **CLI:** `http://localhost:8976/oauth/callback`
 5. Click **Create**
-6. Copy the **Client ID** and **Client Secret** — set them as `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` env vars on the server (these are the same credentials used for app login)
+6. Copy the **Client ID** and **Client Secret**. They serve two different
+   surfaces, configured two different ways:
+   - **App login** (signing in to beebox itself, before any box exists) reads
+     them from the `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET`
+     env vars on the server — set those there.
+   - **A box's Google connectors** (Calendar, Gmail, Drive) resolve the same
+     pair from the machine secret store instead: `bbx secrets set
+     google-oauth-client-id`, `bbx secrets set google-oauth-client-secret`,
+     then `bbx secrets grant <box> google-oauth-client-id` (and the `-secret`
+     name) for each box that needs them. Env vars are not read for this path.
 
 ## 5. Authorize Bee Box
 
@@ -66,7 +75,7 @@ Google OAuth tokens are stored centrally (shared across all boxes on the server)
 bbx google-auth
 ```
 
-(Client ID/Secret come from env vars `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`.)
+(Client ID/Secret come from the box's granted `google-oauth-client-id`/`google-oauth-client-secret` machine-store entries — see step 4 above.)
 
 ### Per-box service policy
 

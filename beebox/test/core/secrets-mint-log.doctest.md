@@ -4,7 +4,7 @@ Two endpoints hand a *derived* credential to the browser: `deepgramTempKey`
 mints a TTL'd usage-scoped Deepgram key, and `openaiRealtimeKey` mints an
 OpenAI realtime client secret. Neither discloses the box's stored key — but
 both SPEND it, and a custody design that logged only value resolution would
-audit the door and ignore the window (`docs/plans/secret-custody.md`, the
+audit the door and ignore the window (`docs/implemented-plans/secret-custody.md`, the
 "operation surface" paragraph).
 
 So the access log carries a third event, `mint`, beside `resolve` and `refuse`.

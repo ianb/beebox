@@ -26,8 +26,8 @@
  *
  * Secrets and networking vars are modeled here so they're validated at
  * startup and covered by redaction ({@link SECRET_ENV_NAMES}). The long-tail
- * feature-gate/harness vars (`BBX_STRICT_FETCH`, `BBX_PUSH_FAKE`, `GEMINI_KEY`,
- * scenario stubs, …) keep their direct reads for now, each marked with a
+ * feature-gate/harness vars (`BBX_STRICT_FETCH`, `BBX_PUSH_FAKE`,
+ * `BBX_SCAN_VISION`, scenario stubs, …) keep their direct reads for now, each marked with a
  * `// TODO(env-migration)` comment at the read site. A handful of secret
  * read sites (`webapp/auth.ts`'s session/hub/diag secrets, `core/send-push.ts`'s
  * VAPID keys) also keep their lazy reads — they carry caching / file-fallback
@@ -56,13 +56,6 @@ export const SECRET_ENV_NAMES: ReadonlySet<string> = new Set([
   "BBX_VAPID_PRIVATE_KEY",
   "GOOGLE_OAUTH_CLIENT_ID",
   "GOOGLE_OAUTH_CLIENT_SECRET",
-  // Transcription / vision provider keys (validated when present, redacted).
-  "THINKING_OPENAI_API_KEY",
-  "BBX_MISTRAL_API_KEY",
-  "BBX_OPENAI_API_KEY",
-  "GEMINI_KEY",
-  "SKE_GEMINI_API_KEY",
-  "BBX_DEEPGRAM_API_KEY",
 ]);
 
 /** Thrown by {@link loadEnv} when one or more env vars fail validation. */

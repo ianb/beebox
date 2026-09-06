@@ -127,10 +127,11 @@ from its admin page.
 Without a granted key the affected connector emits a health warning but the box
 still runs; `bbx secrets status` names exactly which grant is missing.
 
-Legacy `_config/connectors/*.secret.json` files still work as a deprecated
-fallback during the transition, and `bbx health` flags any it finds. Don't
-create new ones — move a machine's existing files into the store once with
-`bbx secrets migrate` (`--dry-run` prints the plan first).
+Legacy `_config/connectors/*.secret.json` files no longer work as a fallback —
+the machine secret store is the only source a connector reads from — but
+`bbx health` still flags any stray file it finds. Don't create new ones — move
+a machine's existing files into the store once with `bbx secrets migrate`
+(`--dry-run` prints the plan first), then delete the originals.
 
 ## Example deployment: box.example.com
 

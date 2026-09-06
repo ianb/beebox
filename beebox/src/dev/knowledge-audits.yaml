@@ -5151,7 +5151,7 @@ tests:
 
   # === Secrets (machine-level store) ===
   #
-  # The two audits named in docs/plans/secret-custody.md, "Knowledge audits":
+  # The two audits named in docs/implemented-plans/secret-custody.md, "Knowledge audits":
   # provisioning (Track 3) and ad-hoc secret use in box code (`agent`-access
   # grants). Both guard the same failure family — the old
   # `_config/connectors/*.secret.json` answer, which the machine-level store

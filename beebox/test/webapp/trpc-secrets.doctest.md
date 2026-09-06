@@ -1,7 +1,7 @@
 # The admin Secrets procedures: owner-gated, and never a value
 
 `src/webapp/trpc/routers/secrets.ts` is the boxholder's management surface for
-the machine store (`docs/plans/secret-custody.md`, Track 2's management-surface
+the machine store (`docs/implemented-plans/secret-custody.md`, Track 2's management-surface
 bullet, and Decision 8 for the machine-wide view).
 
 The load-bearing property is negative and is asserted on every response below:

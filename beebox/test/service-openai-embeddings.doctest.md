@@ -2,9 +2,11 @@
 
 `EmbeddingsService` wraps OpenAI's `/v1/embeddings` endpoint. The fake
 derives deterministic unit vectors from each text so tests never need a
-real key. `getOpenAiEmbeddingsKey` resolves the API key the same way
-`mistral-key.ts` does, but stricter: an absent secret file falls through to
-the env var; a present-but-malformed one throws.
+real key. `getOpenAiEmbeddingsKey` resolves the box's `openai` grant from the
+machine secret store — the grant semantics are covered in
+`test/core/secrets-key-readers.doctest.md`; what matters here is that an
+unconfigured box yields `null` rather than throwing, so the search path can
+degrade to text mode.
 
 ```ts setup
 import {
@@ -162,58 +164,19 @@ EMBEDDER_ID
 => openai:text-embedding-3-small@512
 ```
 
-## Key resolution: absent secret file + no env falls through to null
+## Key resolution: an unconfigured box is `null`, not an error
+
+A stray in-tree `openai.secret.json` is not a key source; nothing reads it.
 
 ```ts continue
 const box = await makeTmpBox();
-await getOpenAiEmbeddingsKey(box.root)
-=> null
-```
+print(`no grant: ${await getOpenAiEmbeddingsKey(box.root)}`);
 
-## Key resolution: absent secret file falls through to the env var
-
-```ts continue
-process.env["BBX_OPENAI_API_KEY"] = "env-key-123";
-const fromEnv = await getOpenAiEmbeddingsKey(box.root);
-delete process.env["BBX_OPENAI_API_KEY"];
-fromEnv
-=> env-key-123
-```
-
-## Key resolution: a valid secret file wins over the env var
-
-```ts continue
 await box.write("_config/connectors/openai.secret.json", JSON.stringify({ apiKey: "file-key-456" }));
-process.env["BBX_OPENAI_API_KEY"] = "env-key-123";
-const fromFile = await getOpenAiEmbeddingsKey(box.root);
-delete process.env["BBX_OPENAI_API_KEY"];
-fromFile
-=> file-key-456
-```
-
-## Key resolution: a malformed secret file throws loudly, never falls back
-
-```ts continue
-async function keyErrorName(): Promise<string> {
-  try {
-    await getOpenAiEmbeddingsKey(box.root);
-    return "(no error thrown)";
-  } catch (e) {
-    return (e as Error).name;
-  }
-}
-
-await box.write("_config/connectors/openai.secret.json", "not valid json");
-await keyErrorName()
-=> EmbeddingsKeyError
-
-await box.write("_config/connectors/openai.secret.json", JSON.stringify({ notAnApiKey: "x" }));
-await keyErrorName()
-=> EmbeddingsKeyError
-
-await box.write("_config/connectors/openai.secret.json", JSON.stringify({ apiKey: "" }));
-await keyErrorName()
-=> EmbeddingsKeyError
+print(`stray file present: ${await getOpenAiEmbeddingsKey(box.root)}`);
+=>
+no grant: null
+stray file present: null
 ```
 
 ```ts cleanup

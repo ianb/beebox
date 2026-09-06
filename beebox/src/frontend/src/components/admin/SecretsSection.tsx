@@ -1,6 +1,6 @@
 /**
  * Admin Secrets section — the boxholder's management surface for the machine
- * secret store (`docs/plans/secret-custody.md`, Track 2).
+ * secret store (`docs/implemented-plans/secret-custody.md`, Track 2).
  *
  * Leads with THIS box (the common case: what can it resolve, what is it waiting
  * on) and offers the machine-wide table behind a toggle, since the store is one
