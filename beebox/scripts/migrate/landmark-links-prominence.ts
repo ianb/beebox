@@ -50,7 +50,7 @@ import { prunedSubtree, type PrunedSubtree } from "../../src/core/landmark/promi
 import { normalizeLandmarkDir } from "../../src/core/landmark/root-dir.js";
 import { typeFromFilename } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas/registry.js";
-import { resolveRefPath } from "../../src/shared/ref-path.js";
+import { parseRef, resolveRefPath } from "../../src/shared/ref-path.js";
 import { Prominence, type ProminenceLevel } from "../../src/shared/prominence.js";
 import type { CardSchema } from "../../src/cards/index.js";
 
@@ -193,7 +193,9 @@ function recordTrimCandidate(
  * nothing is silently dropped.
  */
 async function processLink(ctx: LinkContext, link: LandmarkLinkData): Promise<void> {
-  const resolved = resolveRefPath({ fromPath: ctx.landmarkRelPath, ref: link.ref, kind: "card" });
+  // `Bread.recipe.card#notes` names Bread: the path part is what resolves;
+  // the fragment/query ride along in the report's `ref` only.
+  const resolved = resolveRefPath({ fromPath: ctx.landmarkRelPath, ref: parseRef(link.ref).path, kind: "card" });
   if (resolved === null) {
     skip(ctx, { ref: link.ref, target: null, reason: "ref does not resolve to an in-box path" });
     return;

@@ -187,13 +187,13 @@ await box8b.cleanup();
 ## A `background` root landmark
 
 The root landmark lives directly in `_content/`. Marking it `background`
-folds the whole box away everywhere the root landmark's place is consulted.
+is the box's identity, not a place that can be housekeeping — the value is ignored and warned about.
 
 ```ts
 const box9 = await makeTmpBox();
 await box9.write("_content/Box.landmark.card", "---\nprominence: background\n---\n");
 await warningsFor(box9)
-=> background-root-landmark: _content/Box.landmark.card: the root landmark is marked prominence: background — that folds the whole box away everywhere the root landmark's place is consulted; remove it, or confirm the box is meant to open empty
+=> background-root-landmark: _content/Box.landmark.card: the root landmark is marked prominence: background — the root is the box's identity, not a place that can be housekeeping, so the value is ignored; remove it
 ```
 
 A landmark elsewhere in the tree marked `background` is an ordinary

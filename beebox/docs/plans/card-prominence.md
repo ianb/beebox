@@ -690,11 +690,11 @@ own design.
 | `prominent: true` (wrong key) | existing unknown-key lint | stripped in memory, lint warning (`schema.ts` "Lenient (not `.strict()`)") | Clear (warning) |
 | 40 cards marked primary in one directory | Track A lint doctest | budget warning; Browse shows all 40 in lead | Clear (lint), silent (page) |
 | primary card under a background landmark | Track A lint doctest | cascade folds it; lint warning | Clear |
-| landmark says `background` on the box root | Track B doctest | derived list empty; Landmarks page shows the box with no spots; `bbx validate` warns "root landmark is background" | Clear |
+| landmark says `background` on the box root | Track B doctest (prominence-index, root case) | ignored: the root landmark is the box's identity, not a place that can be housekeeping; nothing folds; `bbx validate` warns and says the value is ignored | Clear |
 | index parse cache stale after an in-place edit that keeps mtime, size, and inode | Track B doctest (identity key) | same exposure as `card-cache.ts` today; ctimeNs changes on any metadata write, which covers `touch -r` but not a same-second overwrite | Silent, accepted (existing pattern) |
 | `forDir` on a subtree of 5k cards | Track B doctest asserts warm parses = 0; no timing test | one stat per card; same order as an `expand` glob | Silent, measured in the rollout step |
 | two landmarks in one directory | existing `forDir` takes the first match | unchanged; existing "one per directory" rule | Silent (existing) |
-| derived entry's target is unreadable mid-walk (deleted between readdir and read) | Track B doctest | skipped; in `landmarks.list` counted in `problems`; in `forDir` logged at warn only (no `problems` channel there) | Clear on the page, log-only in the menu (accepted) |
+| derived entry's target is unreadable mid-walk (deleted between readdir and read) | no test (a race) | the index walk treats `ENOENT` after `readdir` as "not there" and skips the file; a read that fails after that point is a `derived-read` problem row on the Landmarks page and a warn log in `forDir` | Clear on the page, log-only in the menu (accepted) |
 | a card inside an owned attach scope says `primary` | Track B doctest | not walked; lint warning "prominence inside an attach scope has no effect; mark the owner" | Clear |
 | `prominence: background` on a landmark, engine reader not updated | Track A landmark-schema doctest | `LandmarkObject` admits the field in the same chunk | Clear (test) |
 | migration target file has no frontmatter block | Track D doctest | reported and skipped, nothing written | Clear |

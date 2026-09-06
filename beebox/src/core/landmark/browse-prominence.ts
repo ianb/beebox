@@ -11,7 +11,12 @@ import * as path from "node:path";
 import type { CardSchema } from "../../cards/schema.js";
 import { effectiveLevel, Prominence, type EffectiveLevel } from "../../shared/prominence.js";
 import type { CardSymbolData } from "../../shared/card-symbol.js";
-import { prunedSubtree, findLandmarkCardName, type DirectorySummary } from "./prominence-index.js";
+import {
+  prunedSubtreeWith,
+  findLandmarkCardName,
+  type DirectorySummary,
+  type ProminenceWalkContext,
+} from "./prominence-index.js";
 import { readLandmarkFieldsCached } from "./prominence-cache.js";
 import { readLandmarkSymbol } from "./symbol.js";
 import { landmarkScanDir, normalizeLandmarkDir } from "./root-dir.js";
@@ -35,8 +40,8 @@ export function cardEffectiveProminence(
  * listed SUBdirectory's own summary and, reading just `.background`, for
  * whether the LISTED directory itself is background.
  */
-export async function directorySummary(boxRoot: string, dir: string): Promise<DirectorySummary> {
-  return (await prunedSubtree(boxRoot, normalizeLandmarkDir(dir))).summary;
+export async function directorySummary(walk: ProminenceWalkContext, dir: string): Promise<DirectorySummary> {
+  return (await prunedSubtreeWith(walk, normalizeLandmarkDir(dir))).summary;
 }
 
 export interface BrowseDirLandmark {

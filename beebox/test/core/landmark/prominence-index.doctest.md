@@ -163,6 +163,21 @@ JSON.stringify(summary)
 => {"hasEntryPoint":false,"primaryCount":0,"background":true}
 ```
 
+The root landmark is the box's identity, not a place that can be
+housekeeping: `background` written there is ignored (and lint-warned), so the
+root's own walk and every descendant's still run.
+
+```ts continue
+await box.write("_content/Box.landmark.card", "---\nprominence: background\nnavigation:\n  label: Box\n---\n");
+await box.write("_content/Top.memo.card", "---\nprominence: primary\n---\n");
+const root = await prunedSubtree(box.root, "");
+fmt(root.entries)
+=> card:primary /_content/Top.memo.card
+
+root.summary.background
+=> false
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

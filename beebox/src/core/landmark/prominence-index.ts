@@ -21,6 +21,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { typeFromFilename, type LoadCardContext } from "../card-io.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { effectiveLevel, type ProminenceLevel } from "../../shared/prominence.js";
 import { attachDirOwnerBasename, cardBasename, isAttachDirName } from "../../shared/attach-path.js";
@@ -75,6 +76,20 @@ const WALK_SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".beebox", "_tm
  * ancestor of `dir` short-circuits to an empty, `background: true` result.
  */
 export async function prunedSubtree(boxRoot: string, dir: string): Promise<PrunedSubtree> {
+  return prunedSubtreeWith({ boxRoot, cardSchemas: await createCardSchemaMap(boxRoot) }, dir);
+}
+
+/** A box root plus its schema map, so a caller walking many directories builds the map once. */
+export interface ProminenceWalkContext {
+  boxRoot: string;
+  cardSchemas: LoadCardContext["cardSchemas"];
+}
+
+/** {@link prunedSubtree} with a caller-supplied schema map (Browse lists many subdirectories per request). */
+export async function prunedSubtreeWith(
+  { boxRoot, cardSchemas }: ProminenceWalkContext,
+  dir: string,
+): Promise<PrunedSubtree> {
   if (await isUnderBackgroundAncestor(boxRoot, dir)) {
     return {
       entries: [],
@@ -86,7 +101,7 @@ export async function prunedSubtree(boxRoot: string, dir: string): Promise<Prune
 
   const state: WalkState = {
     boxRoot,
-    ctx: { cardSchemas: await createCardSchemaMap(boxRoot) },
+    ctx: { cardSchemas },
     entries: [],
     nested: [],
     cardBoxPaths: new Set(),
@@ -123,6 +138,10 @@ async function isUnderBackgroundAncestor(boxRoot: string, dir: string): Promise<
 }
 
 async function landmarkAtDirIsBackground(boxRoot: string, dir: string): Promise<boolean> {
+  // The root landmark is the box's identity, not a place that can be
+  // housekeeping: a written `background` there is ignored (and lint-warned),
+  // never cascaded over the whole box.
+  if (dir === "") return false;
   const physical = landmarkScanDir(boxRoot, dir);
   const cardName = await findLandmarkCardName(physical);
   if (cardName === null) return false;
@@ -220,8 +239,9 @@ async function addCardEntry(state: WalkState, absPath: string): Promise<void> {
   const schema = state.ctx.cardSchemas.get(type);
   if (schema === undefined) return;
   const boxPath = boxPathOf(state.boxRoot, absPath);
+  const frontmatter = await unlessVanished(() => readFrontmatterCached(absPath));
+  if (frontmatter === undefined) return; // gone between readdir and read: not there, not an error
   state.cardBoxPaths.add(boxPath);
-  const frontmatter = await readFrontmatterCached(absPath);
   const declaredRaw = frontmatter?.["prominence"];
   const declared = isProminenceLevel(declaredRaw) ? declaredRaw : undefined;
   const level = effectiveLevel({ declared, typeDefault: schema.defaultProminence });
@@ -229,9 +249,24 @@ async function addCardEntry(state: WalkState, absPath: string): Promise<void> {
   state.entries.push({ boxPath, level, kind: "card" });
 }
 
+/**
+ * Run a read that raced a concurrent delete or atomic move: `ENOENT` after
+ * `readdir` listed the file means "not there", answered as `undefined`, so one
+ * vanished card never fails the whole landmark or Browse resolution. Every
+ * other error is real and propagates.
+ */
+async function unlessVanished<T>(read: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await read();
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return undefined;
+    throw e;
+  }
+}
+
 async function addNestedLandmark(state: WalkState, absPath: string): Promise<void> {
-  const fields = await readLandmarkFieldsCached(absPath);
-  if (fields === null) return;
+  const fields = await unlessVanished(() => readLandmarkFieldsCached(absPath));
+  if (fields === null || fields === undefined) return;
   if (fields.prominence === "background") return; // a written background landmark contributes nothing (Track A cascade)
 
   const relPath = path.relative(state.boxRoot, absPath).split(path.sep).join("/");

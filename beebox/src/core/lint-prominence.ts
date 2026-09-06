@@ -102,8 +102,8 @@ export async function lintProminenceBudget(
       rule: "background-root-landmark",
       severity: "warning",
       message:
-        "the root landmark is marked prominence: background — that folds the whole box away everywhere " +
-        "the root landmark's place is consulted; remove it, or confirm the box is meant to open empty",
+        "the root landmark is marked prominence: background — the root is the box's identity, not a place " +
+        "that can be housekeeping, so the value is ignored; remove it",
     });
   }
 

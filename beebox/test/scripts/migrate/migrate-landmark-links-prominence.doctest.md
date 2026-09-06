@@ -163,3 +163,28 @@ redundant.
 ```ts cleanup
 await box.cleanup();
 ```
+
+## A ref with a fragment names its card
+
+`Bread.recipe.card#notes` is a valid link (the renderer scrolls to `notes`);
+the migration resolves the path part and marks `Bread`, never treating the
+fragment as part of the filename.
+
+```ts
+const fragBox = await makeTmpBox();
+await fragBox.write(
+  "_content/Kitchen/Kitchen.landmark.card",
+  "---\nnavigation:\n  label: Kitchen\n  links:\n    - ref: /_content/Kitchen/Bread.memo.card#notes\n---\n",
+);
+await fragBox.write("_content/Kitchen/Bread.memo.card", "---\ndescription: test\n---\n");
+const fragRun = await migrateBox(fragBox.root, true);
+fmt(fragRun.marked)
+=> /_content/Kitchen/Bread.memo.card#notes -> /_content/Kitchen/Bread.memo.card
+
+(await fragBox.read("_content/Kitchen/Bread.memo.card")).includes("prominence: primary")
+=> true
+```
+
+```ts cleanup
+await fragBox.cleanup();
+```

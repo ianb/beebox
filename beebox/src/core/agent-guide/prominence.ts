@@ -32,7 +32,9 @@ export const PROMINENCE_FIELD_BULLET = `- **\`prominence:\`** — who the card i
     (an image that appears inside a primary document is background on its
     own; the document is where a reader sees it). Cards the box writes for
     itself (jobs, runs, chat threads) and landmark cards are background by
-    type; you never mark those.
+    type. On a landmark card, \`prominence: background\` is the one value to
+    write: it marks the whole place as housekeeping and folds everything
+    under it. Never write \`entry-point\` or \`primary\` on a landmark.
 
   \`prominence\` is not \`status\`: \`status\` is lifecycle, \`prominence\` is who
   the card is for. When you finish the thing a piece of work was for, mark

@@ -26,9 +26,12 @@ export interface LandmarkPlace {
  * not — the walk never queries `landmark.dir` itself).
  */
 export function isListedLandmark(landmark: LandmarkPlace, others: LandmarkPlace[]): boolean {
+  // The root landmark is the box's identity and is always listed; a written
+  // `background` there is ignored here (and lint-warned), and never cascades.
+  if (landmark.dir === "") return true;
   if (landmark.prominence === "background") return false;
   const byDir = new Map(others.map((o) => [o.dir, o]));
-  for (let cursor = parentLandmarkDir(landmark.dir); cursor !== null; cursor = parentLandmarkDir(cursor)) {
+  for (let cursor = parentLandmarkDir(landmark.dir); cursor !== null && cursor !== ""; cursor = parentLandmarkDir(cursor)) {
     if (byDir.get(cursor)?.prominence === "background") return false;
   }
   return true;

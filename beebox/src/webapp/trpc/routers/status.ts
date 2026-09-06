@@ -21,7 +21,7 @@ import { QuestionSchema, type QuestionFields } from "../../../schemas/question.j
 import { getNavCounts } from "../../../core/nav-counts.js";
 import { naturalCompare } from "../../../lib/natural-sort.js";
 import type { CardInfo } from "../../../core/state.js";
-import type { DirectorySummary } from "../../../core/landmark/prominence-index.js";
+import type { DirectorySummary, ProminenceWalkContext } from "../../../core/landmark/prominence-index.js";
 import {
   cardEffectiveProminence,
   directorySummary,
@@ -102,7 +102,8 @@ function rejectDisplayFormBrowsePath(rawPath: string): void {
  * C's pruned-subtree summary and own landmark identity. Split out to keep
  * `browse`'s complexity under the lint budget.
  */
-async function buildBrowseDir(boxRoot: string, { resolved, entryName }: { resolved: string; entryName: string }): Promise<BrowseDir> {
+async function buildBrowseDir(walk: ProminenceWalkContext, { resolved, entryName }: { resolved: string; entryName: string }): Promise<BrowseDir> {
+  const { boxRoot } = walk;
   const dirFullPath = path.join(resolved, entryName);
   const dirRelPath = path.relative(boxRoot, dirFullPath);
   let fileCount = 0;
@@ -116,7 +117,7 @@ async function buildBrowseDir(boxRoot: string, { resolved, entryName }: { resolv
     }
   }
   const [summary, landmark] = await Promise.all([
-    directorySummary(boxRoot, dirRelPath),
+    directorySummary(walk, dirRelPath),
     subdirLandmarkIdentity(boxRoot, dirRelPath),
   ]);
   return { name: entryName, fileCount, summary, ...(landmark !== undefined && { landmark }) };
@@ -309,7 +310,7 @@ export const statusRouter = router({
             const owner = entry.name.slice(0, -".attach".length);
             if (cardBasenames.has(owner)) continue;
           }
-          dirs.push(await buildBrowseDir(ctx.boxRoot, { resolved, entryName: entry.name }));
+          dirs.push(await buildBrowseDir({ boxRoot: ctx.boxRoot, cardSchemas }, { resolved, entryName: entry.name }));
           continue;
         }
         const fullPath = path.join(resolved, entry.name);
@@ -341,7 +342,7 @@ export const statusRouter = router({
       // The listed directory's own background cascade (its landmark, or an
       // ancestor's) — Track C's fold folds everything when this is true,
       // regardless of any individual card's own level.
-      const background = (await directorySummary(ctx.boxRoot, relPath)).background;
+      const background = (await directorySummary({ boxRoot: ctx.boxRoot, cardSchemas }, relPath)).background;
       return { path: relPath, background, ...filtered };
     }),
 });
