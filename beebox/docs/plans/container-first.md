@@ -240,18 +240,25 @@ Rebuilt, with reason:
   - One grammar, one string used as the engine version, the image tag, and
     the `.env` pin. Validated with a zod regex at every read (principle 3):
     - release: `MAJOR.MINOR.PATCH`, from the tag `vMAJOR.MINOR.PATCH`;
-    - edge: `MAJOR.MINOR.PATCH-edge.N.SHA7`, where the triple is the last
+    - edge: `MAJOR.MINOR.PATCH-edge.N.gSHA7`, where the triple is the last
       release tag's patch plus one, `N` is the commit count since that tag,
-      and `SHA7` the short commit, all from `git describe --tags --long`;
-    - local: `MAJOR.MINOR.PATCH-local.N.SHA7` with the same derivation, or
+      and `gSHA7` is `git describe --tags --long`'s own `g`-prefixed short
+      commit. The `g` keeps the identifier alphanumeric: a bare seven-hex
+      SHA that happens to be all digits with a leading zero is not a valid
+      semver identifier, and about one commit in three hundred has one;
+    - local: `MAJOR.MINOR.PATCH-local.N.gSHA7` with the same derivation, or
       `-local.0.unknown` when the build context has no git.
     Ordering is semver: core triple, then a release beats a prerelease of
     the same triple, then `N` numerically. So every edge build orders
     against every other and against releases, and a rollback from any build
     to any older one is detectable. `src/lib/engine-version-id.ts` exports
-    `parseEngineVersion` and `compareEngineVersions`. No `semver`
-    dependency: it is transitive only (`pnpm-lock.yaml:8346`), and the
-    grammar is ours.
+    `parseEngineVersion`, `compareEngineVersions`, and `coreTriple`. No
+    `semver` dependency: it is transitive only (`pnpm-lock.yaml:8346`), and
+    the grammar is ours. The doctest asserts every form the workflow can
+    emit is accepted by npm's own `semver.valid` (the transitive copy is
+    fine for a test).
+  - The string is the image tag as well as the engine version; the tag
+    grammar `[A-Za-z0-9_][A-Za-z0-9._-]*` accepts every form above.
   - `bin/release <MAJOR.MINOR.PATCH>` on a clean `main`: writes
     `package.json` `version`, commits `Release vX.Y.Z`, tags `vX.Y.Z`,
     pushes the commit and the tag. The existing post-commit hook deploys
@@ -259,10 +266,16 @@ Rebuilt, with reason:
     tag is `v0.1.0`; edge builds before it derive from `0.1.0-edge.N.SHA7`
     with `N` counted from the first commit (`git describe` has no tag to
     find; the workflow handles the empty case once).
-  - `Dockerfile` takes `ARG BEEBOX_VERSION` (default `0.1.0-local.0.unknown`)
-    and writes it into `package.json` in the build stage before `pnpm release`,
-    so the tarball, `/app/node_modules/beebox/package.json`, and the OCI
-    label `org.opencontainers.image.version` agree. Also labels
+  - `Dockerfile` takes `ARG BEEBOX_VERSION` (default `0.1.0-local.0.unknown`),
+    declared AFTER the `pnpm install --frozen-lockfile` layer so a version
+    change never invalidates the workspace install, and writes it into
+    `package.json` before `pnpm release`, so the tarball,
+    `/app/node_modules/beebox/package.json`, and the OCI label
+    `org.opencontainers.image.version` agree. The runtime stage sets
+    `BBX_INIT_BEEBOX_SPEC=^<core triple>` from the same arg (for an edge
+    image `^0.1.1`, never the prerelease string), so a scaffolded box's
+    tracked `package.json` stays registry-shaped whichever image scaffolded
+    it. Also labels
     `org.opencontainers.image.source=https://github.com/ianb/beebox` and
     `org.opencontainers.image.revision`.
   - `<root>/.github/workflows/image.yml`: on `push` to `main` and on tags
@@ -332,17 +345,30 @@ Rebuilt, with reason:
   - **Box `node_modules` without a package manager.** `bbx-setup` writes
     `node_modules/` as a symlink farm derived from the box's own
     `package.json`: for every name under `dependencies` and
-    `devDependencies`, a link to that package as resolved from
-    `/app/node_modules/beebox` (so `beebox` links to the engine, `react` to
-    the engine's own `react`, keeping the single-instance invariant
-    `package.ts:191-197` describes), plus `node_modules/.bin/tsc`. The image
-    installs `typescript`, `@types/node`, and `@types/react` into `/app` at
-    build at the ranges `readEngineVersions()` reports (`package.ts:122-137`).
-    A name the image cannot resolve is a loud `bbx-setup` failure naming
-    it: a box that added its own dependency is outside this plan (NOT in
-    scope). A box whose `node_modules` is not this shape (the boxholder's
-    `file:`-installed test boxes) is relinked wholesale. No `pnpm` runs in
-    the box, so there is no lockfile, no store, no cache, and no network.
+    `devDependencies`, a link to the directory Node's own resolver returns
+    for that name with the engine's **realpath**
+    (`/app/node_modules/.pnpm/beebox@<key>/node_modules/beebox`) as the
+    base, plus `node_modules/.bin/tsc`. The realpath is the rule because
+    pnpm's isolated layout puts the engine's dependencies beside its
+    realpath, not under the lexical `/app/node_modules/beebox/node_modules/`
+    (which holds only `.bin`); from the realpath, `react` resolves to the
+    engine's own copy (the single-instance invariant `package.ts:191-197`
+    describes) and `typescript`/`@types/*`, which the image installs into
+    `/app` at build at the ranges `readEngineVersions()` reports
+    (`package.ts:122-137`), resolve by the walk up to `/app/node_modules`.
+    After writing, `bbx-setup` verifies every link by resolving
+    `<name>/package.json` from the box's `src/` and comparing it to the
+    engine's resolution; any difference or failure exits nonzero naming the
+    package, so a farm that would break at first render breaks at setup
+    instead. A name the image cannot resolve is that same failure: a box
+    that added its own dependency is outside this plan (NOT in scope).
+    Link targets are image-specific (the `.pnpm` key carries the version),
+    so the entrypoint runs the same code as `bbx-setup --relink` on every
+    start and rewrites the farm whenever a link is dangling or resolves
+    differently; one implementation, two callers. A box whose
+    `node_modules` is not this shape (the boxholder's `file:`-installed
+    test boxes) is relinked wholesale. No `pnpm` runs in the box, so there
+    is no lockfile, no store, no cache, and no network.
   - Codex: `ENV CODEX_HOME=/app/codex-config`, a `codex-auth` named volume
     on it (the `claude-auth` pattern, `compose.yaml:33`), and
     `/usr/local/bin/codex` symlinked to the pnpm bin shim
@@ -357,8 +383,12 @@ Rebuilt, with reason:
     (cached by the workflow), so both images honor the tool promise.
   - `bbx-setup` (shell, in the image, on PATH; the `bbx-wait-quiet` naming
     precedent). With `/deploy` mounted: (1) refuse unless `/deploy` is
-    writable by the container user, printing the two fixes
-    (`chown -R 1000:1000 .` or a compose `user:` override); (2) write every
+    writable by the container user, printing the one fix,
+    `sudo chown -R 1000:1000 .`, with the reason (the image's git identity,
+    `safe.directory` entries, and credential-volume ownership are all set
+    for uid 1000, `Dockerfile:88-119`, so a compose `user:` override is not
+    supported and the guide's existing ownership note changes to say so);
+    (2) write every
     file in `container/deployment/` into `/deploy` by temp-file-and-rename,
     overwriting only files it owns, never `.env`, `compose.override.yaml`,
     `tailscale.env`, or `data/`; (3) create `.env` from the example when
@@ -370,28 +400,38 @@ Rebuilt, with reason:
     empty; (5) when `/deploy/data/box` holds no box, `bbx init` it; (6) write
     the box's symlink farm. Re-running it changes nothing and exits 0. It
     refuses to run without `/deploy` mounted.
-  - `deployment/compose.yaml`: `image: ghcr.io/ianb/beebox:${BEEBOX_VERSION:?set BEEBOX_VERSION in .env}`,
+  - `deployment/compose.yaml`:
+    `image: ${BEEBOX_IMAGE:-ghcr.io/ianb/beebox}:${BEEBOX_VERSION:?set BEEBOX_VERSION in .env}`,
     no `build:`; `stop_grace_period: 120s`; `environment: BBX_DEPLOY_SHAPE: "1"`;
     the `codex-auth` volume; `restart: unless-stopped` as today (safe
     because a refusal is a served state, Track D); everything else as
-    today. Contributors build `docker build -f container/Dockerfile -t ghcr.io/ianb/beebox:local .`
-    and set `BEEBOX_VERSION=local`; there is no second compose file.
-  - `deployment/update [VERSION|edge]`: validates the argument against the
-    grammar or the literal `edge`; waits for quiet when the box is running
-    (`docker compose exec box bbx activity /data/box`, 180 s cap, 10 s
-    poll); pulls the target (`latest` with no argument, `edge`, or the
-    concrete tag), reads the pulled image's `org.opencontainers.image.version`
-    label, and writes that concrete string as the `BEEBOX_VERSION=` line,
-    touching nothing else in `.env`; runs
+    today. `BEEBOX_VERSION` is only a tag; the engine version that converge
+    compares is read from inside the image, so a local tag such as `local`
+    or `smoke-a` is fine. Contributors build
+    `docker build -f container/Dockerfile -t beebox:local .`, set
+    `BEEBOX_IMAGE=beebox` and `BEEBOX_VERSION=local`, and run
+    `./update --no-pull`; there is no second compose file.
+  - `deployment/update [VERSION|edge] [--no-pull]`: validates the argument
+    against the grammar or the literal `edge`; when the box is running,
+    waits for quiet (`docker compose exec box bbx activity /data/box`,
+    180 s cap, 10 s poll); unless `--no-pull`, pulls the target
+    (`latest` with no argument, `edge`, or the concrete tag), reads the
+    pulled image's `org.opencontainers.image.version` label with
+    `docker image inspect`, and writes that concrete string as the
+    `BEEBOX_VERSION=` line, touching nothing else in `.env`; then
+    `docker compose stop box`, so the old container never serves a box
+    whose links point into the new image; then
     `docker compose run --rm --no-deps -v "$PWD:/deploy" box bbx-setup`
-    (the pinned, new image; `--no-deps` so Caddy is not started; `run`
-    publishes no ports, so it coexists with the live container); then
-    `docker compose up -d` and `docker compose exec box bbx status`. Because
+    (the pinned, new image; `--no-deps` so Caddy is not started); then
+    `docker compose up -d` and `docker compose exec box bbx status`. If
+    `up -d` fails, the box is stopped and the pin has moved; running
+    `./update` again is the recovery and the script says so. Because
     `bbx-setup` replaces `update` by rename, the running copy keeps its
     inode and finishes.
-- **Vocabulary lock-ins.** `container/`; `/deploy` mount; `bbx-setup`;
-  `BEEBOX_VERSION`; `BBX_DEPLOY_SHAPE`; `codex-auth`; the owned-file list;
-  "the symlink farm".
+- **Vocabulary lock-ins.** `container/`; `/deploy` mount; `bbx-setup` and
+  `--relink`; `BEEBOX_IMAGE` and `BEEBOX_VERSION`; `update --no-pull`;
+  `BBX_DEPLOY_SHAPE`; `codex-auth`; the owned-file list; "the symlink
+  farm".
 - **First implementation chunk.** `git mv beebox/docker container` with
   path fixes and the guide moved to `container/README.md` (doc-check clean);
   then the Dockerfile changes (drop the `file:` spec, box devDeps into
@@ -426,18 +466,28 @@ Rebuilt, with reason:
   - `--check` does step 0 only and is what the entrypoint runs regardless
     of `BBX_SKIP_CONVERGE`, so the escape hatch keeps its present size
     (skip the sweep and refresh) and never covers the refusal.
-  - Steps, each bounded at 600 s of awake time (`startAwakeTimeout`,
+  - Steps 3 to 5 run as child processes through the command runner, the
+    way `upgrade.ts:272-289` spawns them, and the runner gains a
+    `timeoutMs` that sends SIGTERM and then SIGKILL (`src/core/command-runner.ts`
+    has no timeout or kill today; the shell it replaces used `timeout 600`,
+    which kills). The bound is 600 s of awake time (`startAwakeTimeout`,
     `src/lib/awake-timeout.ts:44`; the bound `entrypoint.sh:107-110` names
-    as load-bearing, moved into the engine with the policy):
+    as load-bearing, moved into the engine with the policy), and the reset
+    below runs only after the child is dead:
     (0) read `serving` from `PACKAGE_ROOT/package.json` and `recorded` from
     `engine.json`. Equal: exit 0 silently. `recorded` newer than `serving`
     by `compareEngineVersions`: exit 3 with the refusal text, touching
     nothing. (1) Dirty tree: `git add -A` and commit
     `Checkpoint before engine <serving> (unvalidated)` with
-    `Created-By: bbx-converge`, passing `--no-verify`. The box's pre-commit
-    hook validates cards the author asserts are valid; a checkpoint asserts
-    nothing, and a half-written card is the usual reason a tree is dirty at
-    restart. Secrets stay out by the box `.gitignore`
+    `Created-By: bbx-converge`, passing `--no-verify` (`src/lib/git.ts:76`
+    supports it). The box's pre-commit hook has two gates
+    (`src/core/install-validation-hooks.ts:208-260`): card validation, and
+    `git annex pre-commit .` (`:220-236`). The checkpoint skips only the
+    first: validation is for cards the author asserts are valid, and a
+    checkpoint asserts nothing, while a half-written card is the usual
+    reason a tree is dirty at restart. The annex step runs explicitly
+    before the commit, so annexed content is handled exactly as the hook
+    would. Secrets stay out by the box `.gitignore`
     (`src/core/box/index.ts:246`, `_config/connectors/*.secret.*`); large
     files go where the box's annex attributes send them, as any commit does.
     (2) `snapshotSha = HEAD`. (3) The sweep as it exists, script-kind only,
@@ -496,11 +546,21 @@ Rebuilt, with reason:
   (`compose.yaml:20`) a nonzero exit is a crash loop, which is what a
   refusal would look like today.
 - **Direction.**
-  - `bbx serve --refusal <file>`: serves the file's text as a 503 on every
+  - `bbx serve --refusal <reason>`: serves a fixed page as a 503 on every
     path, no auth, no agents, no box. Small (one Fastify route), and it is
     how a refusal is shown at the URL the user opens (principle 13) while
-    the container stays up under its restart policy. `bbx-setup`'s refusal
-    text and `bbx converge --check`'s refusal text are what it serves.
+    the container stays up under its restart policy. The page carries one
+    sentence per reason (`deployment files out of date` or `box is newer
+    than this engine`) and `see the container log`, nothing else: on the
+    Caddy or Tailscale profiles it is reachable without a login, so
+    versions, paths, and commands stay in the log and in `bbx status`. That
+    is the trade against "dev is never open" (soft-launch posture): a
+    static page that names no box and reads nothing is the state the
+    system is in, and hiding it behind the auth wall would need the box.
+    `/healthz` (`src/webapp/server-root.ts:176`) answers 503 while
+    refusing; the Dockerfile gains `HEALTHCHECK CMD curl -fsS http://127.0.0.1:3210/healthz`,
+    so `docker compose ps` shows `unhealthy` rather than `Up` for a
+    refusing container.
   - Sequence: (1) `BBX_DEPLOY_SHAPE` must equal the image's constant (`1`);
     absent or different serves a refusal naming
     `docker compose run --rm -v "$PWD:/deploy" box bbx-setup` and `./update`.
@@ -511,7 +571,8 @@ Rebuilt, with reason:
     loudly and continues (the shipped policy at `entrypoint.sh:100-103`).
     (5) `exec bbx serve` as today (`:130`). Argument forwarding is
     untouched.
-- **Vocabulary lock-ins.** `bbx serve --refusal`.
+- **Vocabulary lock-ins.** `bbx serve --refusal`; the image `HEALTHCHECK`
+  on `/healthz`.
 - **First implementation chunk.** `--refusal` on `bbx serve` with a doctest;
   then the entrypoint as one commit, verified by `smoke-docker.sh`.
 
@@ -575,22 +636,29 @@ Rebuilt, with reason:
   skip.
 - **Direction.**
   - Image tags in the harnesses are local tags (`beebox:smoke-a`); the
-    engine version inside each is set by `--build-arg BEEBOX_VERSION`, and
-    the scratch `.env` pins the local tag. The two namespaces are named
+    engine version inside each is set by `--build-arg BEEBOX_VERSION`; the
+    scratch `.env` sets `BEEBOX_IMAGE=beebox` and pins the local tag; every
+    `update` call passes `--no-pull`. The two namespaces are named
     separately in every script.
-  - `smoke-docker.sh`: build with `BEEBOX_VERSION=0.1.0-local.1.aaaaaaa`,
+  - `smoke-docker.sh`: build with `BEEBOX_VERSION=0.1.0-local.1.gaaaaaaa`,
     then the three commands into a scratch directory (the bare `docker run`
     form first), `up`, 200, a second `bbx-setup` run asserting no change,
     teardown. The box step runs with `--network none` to prove no package
-    manager is needed.
-  - `smoke-update.sh` (new): build images `smoke-a` (`0.1.0-local.1.aaaaaaa`),
-    `smoke-b` (`0.1.0-local.2.bbbbbbb`), and `smoke-old` (`0.0.9`) from the
-    same tree. Scenario 1: box with a seeded schema (the `WIDGET_SCHEMA` in
-    `smoke-upgrade.ts:43-49`), a dirty file, and an invalid card, `update`
-    to `smoke-b`: expect a `--no-verify` checkpoint commit containing the
-    invalid card, a converge commit, `engine.json` at `b`, 200, and that
-    `update` completed even though `bbx-setup` rewrote it (the harness
-    changes `update`'s length between images). Scenario 2: seed a schema
+    manager is needed, and a negative case adds a dependency the image
+    lacks to a scratch box's `package.json` and asserts `bbx-setup` fails
+    naming it.
+  - `smoke-update.sh` (new): build images `smoke-a` (`0.1.0-local.1.gaaaaaaa`),
+    `smoke-b` (`0.1.0-local.2.gbbbbbbb`), and `smoke-old` (`0.0.9`) from the
+    same tree; the three builds share the workspace-install layer because
+    `ARG BEEBOX_VERSION` sits after it. `smoke-b` is built from a copy of
+    the tree with one comment line appended to
+    `container/deployment/update`, so its `bbx-setup` rewrites `update` to
+    a different length. Scenario 1: box with a seeded schema (the
+    `WIDGET_SCHEMA` in `smoke-upgrade.ts:43-49`), a dirty file, and an
+    invalid card, `update` to `smoke-b`: expect a `--no-verify` checkpoint
+    commit containing the invalid card, a converge commit, `engine.json` at
+    `b`, 200, every farm link resolving into the `smoke-b` image, and that
+    `update` completed to its last line. Scenario 2: seed a schema
     that cannot typecheck, `update`: expect exit 2 in the log, HEAD equal to
     the snapshot, `converge-failure.json` present, 200, the health warning
     in `/healthz`. Scenario 3: seed an annexed file, pin `smoke-old`: expect
@@ -683,6 +751,10 @@ are out of scope.
 | Restart lands mid-commit, orphan `.git/index.lock` | none | `update` waits for quiet; `stop_grace_period: 120s`; `git-stale-lock.ts` recovers an abandoned lock | clear (lock recovery logs) |
 | User's compose file predates the image (`BBX_DEPLOY_SHAPE` absent or old) | Track F scenario 4 | refusal served naming `bbx-setup` | clear |
 | `update` rewritten by `bbx-setup` while running | Track F scenario 1 | rename-over, running inode intact | clear |
+| Farm links dangle after the image changes without `bbx-setup` (pin edited by hand) | Track F scenario 1 (link assertion) | entrypoint runs `--relink` on every start | clear |
+| A farm link resolves to a different package than the engine's | smoke-docker (verification step) | `bbx-setup` compares resolutions and fails naming the package | clear |
+| `update`'s `up -d` fails after the pin moved | none | box is stopped, not serving stale links; script names `./update` as the recovery | clear |
+| A converge step is killed by the bound mid-write | converge doctest (fake runner) | reset runs after the child is dead | clear |
 | `bbx-setup` run without `/deploy` mounted | smoke-docker | refuses with the mount command | clear |
 | `/deploy` not writable by the container user (Linux, uid not 1000) | smoke-vps chown-removed step | refuses with the chown and `user:` fixes | clear |
 | `bbx-setup` run from an older image than the pin | none | it never rewrites an existing `BEEBOX_VERSION`; only `update` does | clear |
