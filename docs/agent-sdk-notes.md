@@ -32,23 +32,23 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.259`, Codex `0.153.4` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.260`, Codex `0.153.4` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.261` (SDK), `2.1.261` (Claude Code), `0.153.4` (Codex)
+- **Latest reviewed upstream version:** `0.3.263` (SDK), `2.1.263` (Claude Code), `0.153.4` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.259` was taken this turn as the newest settled
-  SDK version. **No Codex bump was due** — all four new Codex releases were
-  under the two-day window (the oldest, `0.153.1`, at ~31h) — and when they do
-  settle, `0.153.4` should be taken **deliberately**: it makes GPT-6-Astra the
-  default model, and beebox chats that configure no model ride the binary's
-  default. See
-  `issues/decisions/2026-09-04-codex-default-model-becomes-astra.md`. Pending
-  SDK: `0.3.260` (~30h), `0.3.261` (~11h), neither act-now.
+- **Current recommendation:** `0.3.260` was taken this turn as the newest
+  settled SDK version, which matters more than a routine step: it is the release
+  that fixes *"intermittent `task output swap refused` errors when many sessions
+  share a project directory"* — the failure mode flagged on 2026-09-03 as the
+  one to watch in a busy box, since the project directory is keyed on cwd and
+  every chat thread in a box shares one. Pending SDK: `0.3.261` (~35h) and
+  `0.3.263` (~3h), neither act-now. No Codex release since `0.153.4`, which the
+  boxholder pinned on 2026-09-05.
 
 ## Codex 0.153.4 — applied 2026-09-05 (boxholder asked for it now)
 
@@ -64,7 +64,22 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### Codex 0.153.1 – 0.153.4 — pending; the first Codex releases this ledger has reviewed
+### 0.3.263 / Claude Code 2.1.263 — pending, nothing to assess (published 2026-09-06T02:09Z, ~3h at this turn)
+
+- **Upstream:** The SDK entry is parity-only, and 2.1.263 says only "Bug fixes
+  and reliability improvements". Checked the tagged `v2.1.263` changelog as well
+  as `main`'s — the lesson from 2.1.247, when a section was missing from `main`
+  and present at the tag — and it carries the same one line. Genuinely opaque,
+  not merely unpublished-yet.
+- **`0.3.262` / `2.1.262` never shipped:** the SDK changelog has a `0.3.262`
+  parity section, but npm has no such version, and Claude Code has neither a
+  `2.1.262` section nor a tag. The fourth such gap in two weeks
+  (`0.3.244`, `0.3.249`, `0.3.253`–`0.3.256`).
+- **Beebox applicability:** Nothing assessable on either channel.
+- **Action:** Settled path; takeable 2026-09-08.
+- **Sources:** [Claude Code 2.1.263](https://github.com/anthropics/claude-code/blob/v2.1.263/CHANGELOG.md#21263)
+
+### Codex 0.153.1 – 0.153.4 — APPLIED 2026-09-05 by the boxholder; the first Codex releases this ledger reviewed
 
 All four are GPT-6-Astra plumbing, published between 2026-09-03T21:09Z and
 2026-09-04T23:31Z, and all four were inside the two-day window at this turn
@@ -99,10 +114,17 @@ global install, "verified around 0.146.x" per its own text) rather than the
 workspace pin, so its model default is not governed by this pin at all — a
 separate inconsistency worth knowing about, not filed.
 
-- **Action:** No Codex bump this turn — nothing settled. When they settle, take
-  `0.153.4` deliberately rather than incidentally; the deploy gate
-  (`CODEX_HOME=$(mktemp -d) node_modules/.bin/codex plugin --help` from the repo
-  root) applies as usual.
+- **Action:** Resolved the day after this entry was written, and by the person
+  the decision belonged to. The boxholder decided that inheriting the binary's
+  default is fine, closed the decision issue, and pinned `0.153.4` ahead of the
+  settling window on that basis (`6ee370620`), verified with beebox typecheck,
+  the Codex doctests, and the deploy gate's `codex plugin --help`. The
+  "deliberately rather than incidentally" this entry asked for is exactly what
+  happened. One thread outlived the decision and is carried separately:
+  `codex-chat.ts:185` still records usage as `model: opts.model ??
+  "codex-default"`, which matters *more* under a policy of inheriting, since the
+  model behind that sentinel now changes whenever the pin moves —
+  `issues/code-quality/2026-09-05-codex-usage-records-sentinel-not-model.md`.
 - **Sources:** [Codex releases](https://github.com/openai/codex/releases) —
   `rust-v0.153.1` through `rust-v0.153.4`
 
@@ -152,7 +174,7 @@ separate inconsistency worth knowing about, not filed.
 - **Action:** Settled path; takeable 2026-09-06.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03261), [Claude Code 2.1.261](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21261)
 
-### 0.3.260 / Claude Code 2.1.260 — pending (published 2026-09-03T22:33Z, ~30h at this turn)
+### 0.3.260 / Claude Code 2.1.260 — APPLIED 2026-09-05 (published 2026-09-03T22:33Z)
 
 **Amends the previous turn's entry: 2.1.259's Bash deny-rule fix was reverted.**
 
@@ -225,7 +247,12 @@ actually passes (`schedules/*/schedule.yaml`):
   in headless and SDK sessions; and two Fable 5.1 fixes (the `/model` picker not
   offering it, and prompt caching not covering context attached after tool
   results, so it was re-sent uncached every tool-call turn).
-- **Action:** Settled path; `0.3.260` takeable 2026-09-05.
+- **Action:** Applied 2026-09-05 on the settled path (~54h old), the newest
+  settled version. This is the pin that carries the "task output swap refused"
+  fix for many sessions sharing a project directory, so the item this ledger
+  flagged as the one to watch is now closed by the pin rather than only by luck.
+  `pnpm -C beebox test`: **9,176 pass, 0 fail**. `sdk-steering-probe`: all four
+  steering behaviors pass.
 - **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03260), [Claude Code 2.1.260](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21260)
 
 ### 0.3.259 / Claude Code 2.1.259 — APPLIED 2026-09-04 (published 2026-09-02T21:22Z; its Bash deny-rule fix was REVERTED in 2.1.260 — see above)
