@@ -15,6 +15,7 @@
 import { getApiBase } from "../../api";
 import { playAudioBlob, playAudioStream, supportsMediaSource } from "./context";
 import { getAudioCache, cacheKey } from "./cache";
+import { DEFAULT_VOICE_CONFIG } from "./tts-types";
 import { logSpeechEvent } from "./speech-test-log";
 import { isTTSVoice, type TTSVoice } from "./speech-parsing";
 import { RequestError } from "../errors";
@@ -24,8 +25,6 @@ import { PlaybackError, PlaybackStoppedError } from "./tts-errors";
 
 export type { PrefetchHandle, VoiceConfig } from "./tts-types";
 
-const DEFAULT_VOICE: TTSVoice = "marin";
-const DEFAULT_INSTRUCTIONS = "Fast and concise, but with a friendly lilting tone.";
 
 interface SpeechQueueItem {
   text: string;
@@ -45,10 +44,7 @@ class TTSClient {
   // normal use; the dev test harness sets mock/delay fields here so the
   // backend serves slow fixture audio instead of calling OpenAI.
   private testExtras: Record<string, unknown> = {};
-  private voiceConfig: VoiceConfig = {
-    voice: DEFAULT_VOICE,
-    baseInstructions: DEFAULT_INSTRUCTIONS,
-  };
+  private voiceConfig: VoiceConfig = { ...DEFAULT_VOICE_CONFIG };
   // Resolved once the personality's voice config has loaded (or failed to
   // load). fetchAudio/prefetch await this so the first utterance after
   // page load can't slip out with the default voice. Callers must invoke
@@ -325,7 +321,7 @@ class TTSClient {
       options?.overrideInstructions,
     );
     const voice = this.resolveVoice(options?.voice);
-    return { key: cacheKey({ text, voice, instructions }), instructions, voice };
+    return { key: cacheKey({ text, voice, instructions, backend: this.voiceConfig.backend }), instructions, voice };
   }
 
   private requestBody(text: string, { instructions, voice }: { instructions: string; voice: string }): string {

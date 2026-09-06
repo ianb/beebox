@@ -111,7 +111,7 @@ CORS so API keys never live in pages. Views go through the box's **API
 adapters** instead — \`adapterFetch(adapter, {path, ...init})\` hits
 \`/api/adapters/<adapter>/<path>\`, where the server injects the key it
 resolves from the machine-level secret store under the adapter's own name.
-Adapters: \`replicate\`, \`mistral\`, \`anthropic\`, \`openai\`.
+Adapters: \`replicate\`, \`mistral\`, \`anthropic\`, \`openai\`, \`openrouter\`.
 
 A key is never a file you write: the boxholder grants the adapter's secret
 to this box (\`bbx secrets status <this box>\` shows what is granted and what is

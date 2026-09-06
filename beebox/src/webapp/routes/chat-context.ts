@@ -12,13 +12,13 @@ import type { ChatSession } from "../../core/chat/session/index.js";
 import type { ChatSessionRegistry } from "../../core/chat/session/registry.js";
 import type { ChatScheduleManager } from "../../core/chat/schedules.js";
 import type { EventBus } from "../../core/event-bus.js";
-import type { OpenAIAudioService } from "../../services/openai-audio.js";
+import type { TtsService } from "../../services/tts.js";
 
 export interface ChatRoutesContext {
   server: FastifyInstance;
   boxRoot: string;
   eventBus: EventBus;
-  openaiAudio: OpenAIAudioService | undefined;
+  openaiAudio: TtsService | undefined;
   devSurfaces: boolean;
   registry: ChatSessionRegistry;
   scheduleManager: ChatScheduleManager;

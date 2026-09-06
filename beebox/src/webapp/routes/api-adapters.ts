@@ -44,6 +44,13 @@ const ADAPTERS: Record<string, AdapterDef> = {
     base: "https://api.openai.com",
     authHeader: (key) => ["authorization", `Bearer ${key}`],
   },
+  // Not a fallback for the four above — a view names the adapter it wants, so
+  // this is simply the aggregator offered alongside them. The engine's own
+  // OpenRouter fallback lives in `core/openrouter.ts` and is unrelated.
+  openrouter: {
+    base: "https://openrouter.ai",
+    authHeader: (key) => ["authorization", `Bearer ${key}`],
+  },
 };
 
 /** Request headers forwarded upstream; everything else (cookies!) is dropped. */
@@ -123,10 +130,11 @@ function singleHeader(request: FastifyRequest, name: string): string | undefined
 
 /**
  * The adapter's key: the machine store's entry of the SAME NAME as the adapter
- * (`mistral`, `openai`, `anthropic`, `replicate`) at `server` access — the key
- * never reaches the browser, so `server` is the right level. The store is the
- * only source; the `_config/connectors/<adapter>.secret.json` file this was
- * migrated from is gone (`docs/implemented-plans/secret-custody.md`).
+ * (`mistral`, `openai`, `anthropic`, `replicate`, `openrouter`) at `server`
+ * access — the key never reaches the browser, so `server` is the right level.
+ * The store is the only source; the `_config/connectors/<adapter>.secret.json`
+ * file this was migrated from is gone
+ * (`docs/implemented-plans/secret-custody.md`).
  *
  * Store name == adapter name, deliberately: these are the same credentials the
  * dedicated readers use (`core/mistral-key.ts`,

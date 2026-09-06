@@ -22,7 +22,7 @@ import { toastError } from "../ui/toast-store";
 import { voiceChipLabel } from "./voice-chip-label";
 import {
   VoicePanel, transcriptionServiceLabel, hqTranscriptionServiceLabel,
-  type TranscriptionServiceOption, type HqTranscriptionOption,
+  type TranscriptionServiceOption, type HqTranscriptionOption, type TtsBackendOption,
 } from "./VoiceChip-panels";
 import { HqPreferenceRow, type HqDefaultsState } from "./HqPreferenceRow";
 
@@ -116,6 +116,8 @@ interface VoiceChipBodyProps {
   onSelectTranscriptionService: (service: TranscriptionServiceOption) => void;
   currentHqService: string | null;
   onSelectHqTranscriptionService: (hqService: HqTranscriptionOption) => void;
+  currentTtsBackend: string | null;
+  onSelectTtsBackend: (backend: TtsBackendOption) => void;
 }
 
 /**
@@ -129,7 +131,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
     panel, muted, onToggleMute, narrationEnabled, onToggleNarration,
     hqDictationEnabled, onToggleHqDictation, hqDefaults, onOpenVoice,
     onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
-    onSelectHqTranscriptionService,
+    onSelectHqTranscriptionService, currentTtsBackend, onSelectTtsBackend,
   } = props;
   switch (panel) {
     case "root":
@@ -180,6 +182,8 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
           onSelectTranscriptionService={onSelectTranscriptionService}
           currentHqService={currentHqService}
           onSelectHqTranscriptionService={onSelectHqTranscriptionService}
+          currentTtsBackend={currentTtsBackend}
+          onSelectTtsBackend={onSelectTtsBackend}
         />
       );
   }
@@ -229,8 +233,14 @@ export const VoiceChip = memo(function VoiceChip({
     onSuccess: () => { void utils.transcription.config.invalidate(); },
     onError: (e) => { toastError("Failed to switch the HQ transcription service", { cause: e }); },
   });
+  const ttsConfigQuery = trpc.tts.config.useQuery();
+  const setTtsBackend = trpc.tts.setBackend.useMutation({
+    onSuccess: () => { void utils.tts.config.invalidate(); },
+    onError: (e) => { toastError("Failed to switch the speaking-voice backend", { cause: e }); },
+  });
   const currentService = transcriptionConfigQuery.data?.service ?? null;
   const currentHqService = transcriptionConfigQuery.data?.hqService ?? null;
+  const currentTtsBackend = ttsConfigQuery.data?.backend ?? null;
   const hqDefaultsQuery = trpc.landmarks.hqPreferences.useQuery(
     { dir: contextDir },
     { enabled: canManageDefaults },
@@ -269,6 +279,11 @@ export const VoiceChip = memo(function VoiceChip({
   const onSelectHqTranscriptionService = (hqService: HqTranscriptionOption) => {
     if (currentHqService === hqService) return;
     setHqTranscriptionService.mutate({ hqService });
+  };
+
+  const onSelectTtsBackend = (backend: TtsBackendOption) => {
+    if (currentTtsBackend === backend) return;
+    setTtsBackend.mutate({ backend });
   };
 
   const [panel, setPanel] = useState<VoiceChipPanel>("root");
@@ -313,6 +328,8 @@ export const VoiceChip = memo(function VoiceChip({
         onSelectTranscriptionService={onSelectTranscriptionService}
         currentHqService={currentHqService}
         onSelectHqTranscriptionService={onSelectHqTranscriptionService}
+        currentTtsBackend={currentTtsBackend}
+        onSelectTtsBackend={onSelectTtsBackend}
       />
     </Dropdown>
   );
