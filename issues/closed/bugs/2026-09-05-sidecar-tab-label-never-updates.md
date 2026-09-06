@@ -1,13 +1,21 @@
 ---
 title: "A sidecar tab keeps the label it was opened with — renaming or retitling the card does not change it"
-workstream: unattached
+workstream: sidecar-shell
 area: beebox
 labels: [ui, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "worktree-sidecar-shell — while designing the card symbol field"
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-09-05** by the same work as
+[cards-carry-a-symbol](../features/2026-09-05-cards-carry-a-symbol.md):
+`useCardIdentities` batches title+symbol lookups for open paths and
+invalidates on `file-change` and bus reconnect; `SidecarTabStrip` reads it, so
+a retitle now updates the tab with no reload. No divergence from what this
+issue proposed.
 
 A companion tab's label is captured once, when the document is opened, and is
 never refreshed. `onZoomView({ target, label })` takes the label from whatever

@@ -6,15 +6,16 @@
  * their own.
  */
 
-import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { CloseButton } from "../ui/CloseButton";
 import { ExternalIconLink } from "../ui/ExternalIconLink";
 import { FileView } from "../FileView";
 import { withBase } from "../../api";
 import { cn } from "../../lib/cn";
-import { displayName } from "../../lib/display-name";
-import { prefersReducedMotion } from "../../lib/reduced-motion";
+
+import { useCardIdentities } from "../../hooks/useCardIdentities";
+import { SidecarTabStrip } from "./SidecarTabStrip";
 import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import type { SidecarTab } from "./sidecar-tabs";
@@ -103,19 +104,6 @@ export function NarrationMicIcon({ className }: { className?: string }) {
   );
 }
 
-/**
- * The pin. Filled when the tab is pinned, outline when the control is only
- * offering — the state and the offer must not look the same (principle 13).
- */
-function PinIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg width={12} height={12} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 4h6l-1 6 4 3v2H6v-2l4-3z" />
-      <path d="M12 15v5" />
-    </svg>
-  );
-}
-
 export type PanelTab = SidecarTab;
 
 /**
@@ -128,148 +116,6 @@ export type PanelTab = SidecarTab;
  * around it does not: the element refs that let the active tab scroll itself
  * into view, and the pin control on each tab.
  */
-function SidecarTabStrip({ tabs, activePath, onSelectTab, onCloseTab, onTogglePin }: {
-  tabs: PanelTab[];
-  activePath: string;
-  onSelectTab: (path: string) => void;
-  onCloseTab: (path: string) => void;
-  onTogglePin: (path: string) => void;
-}) {
-  // Tab elements by path, so the active one can be scrolled into view. With
-  // more open documents than the strip can show, a newly opened tab landed
-  // outside the visible range and the open read as a no-op — the highlight
-  // existed, off-screen (2026-08-29).
-  const tabRefs = useRef<Map<string, HTMLElement>>(new Map());
-  const pinned = tabs.filter((t) => t.pinned);
-  const loose = tabs.filter((t) => !t.pinned);
-
-  const revealActive = useCallback(() => {
-    const el = tabRefs.current.get(activePath);
-    if (el === undefined) return;
-    const scroller = el.parentElement;
-    if (scroller !== null) {
-      const strip = scroller.getBoundingClientRect();
-      const tab = el.getBoundingClientRect();
-      // Already visible: leave it alone. Re-scrolling a visible tab is the
-      // churn that makes a strip feel like it is fighting you.
-      if (tab.left >= strip.left - 1 && tab.right <= strip.right + 1) return;
-    }
-    // `inline: "nearest"` scrolls the minimum needed; `block: "nearest"` keeps
-    // this from scrolling any ancestor, since scrollIntoView walks every
-    // scrollable ancestor and the chat shell is fixed.
-    el.scrollIntoView({ inline: "nearest", block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  }, [activePath]);
-
-  useEffect(() => {
-    revealActive();
-  }, [revealActive, tabs.length, pinned.length]);
-
-  // The strip's width is not settled when a restored strip first renders — the
-  // pane is still laying out, so every tab measures as visible and nothing
-  // scrolls. Watching the scroller catches that, and a window resize with it.
-  // Whichever scroller holds the active tab is the one to watch: pinned tabs
-  // have their own, and it overflows too once several are pinned.
-  useEffect(() => {
-    const scroller = tabRefs.current.get(activePath)?.parentElement;
-    if (scroller === undefined || scroller === null) return;
-    const observer = new ResizeObserver(() => revealActive());
-    observer.observe(scroller);
-    return () => observer.disconnect();
-  }, [revealActive, activePath]);
-
-  function renderTab(tab: PanelTab) {
-    const isActive = tab.target.path === activePath;
-    return (
-      <div
-        key={tab.target.path}
-        role="none"
-        ref={(el) => {
-          if (el === null) tabRefs.current.delete(tab.target.path);
-          else tabRefs.current.set(tab.target.path, el);
-        }}
-        className={cn(
-          "group flex-shrink-0 flex items-center border-r border-warm-300 border-b-2",
-          // A pinned tab is compact, the way a browser's is: it is there to hold
-          // its place, not to be read. The full path is still in its title.
-          tab.pinned ? "max-w-[7rem]" : "max-w-[14rem]",
-          isActive ? "bg-white border-b-primary" : "border-b-transparent hover:bg-warm-100",
-        )}
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={isActive}
-          onClick={() => onSelectTab(tab.target.path)}
-          title={tab.target.path}
-          className={cn(
-            "flex-1 min-w-0 truncate text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-            tab.pinned ? "text-xs pl-2 pr-0.5 py-1.5" : "text-sm pl-3 pr-1 py-1.5",
-            isActive ? "text-warm-900 font-medium" : "text-warm-600",
-          )}
-        >
-          {tab.pinned ? displayName(tab.target.path) : tab.label}
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onTogglePin(tab.target.path);
-          }}
-          aria-label={tab.pinned ? `Unpin ${tab.label}` : `Pin ${tab.label}`}
-          aria-pressed={tab.pinned}
-          title={tab.pinned ? "Unpin tab" : "Pin tab"}
-          className={cn(
-            "flex-shrink-0 p-0.5 rounded hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-            // Pinned: always shown, because it is the only thing that says the
-            // tab is pinned. Unpinned: revealed on hover or keyboard focus, so
-            // a row of tabs is not a row of icons.
-            tab.pinned ? "text-primary" : "text-warm-500 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
-          )}
-        >
-          <PinIcon filled={tab.pinned} />
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onCloseTab(tab.target.path);
-          }}
-          aria-label={`Close ${tab.label}`}
-          title="Close tab"
-          className={cn(
-            "flex-shrink-0 mr-1 p-0.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-            // On a pinned tab the close button is the thing you did not ask
-            // for; it stays out of the way until you reach for it.
-            tab.pinned ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "",
-          )}
-        >
-          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6l-12 12" />
-          </svg>
-        </button>
-      </div>
-    );
-  }
-
-  // Two scrollers, not one strip with sticky pins: a sticky tab occludes what
-  // scrolls under it, and `scrollIntoView` cannot see occlusion — it would call
-  // a tab parked behind the pins visible and never scroll to it. Separate
-  // scrollers make "pinned tabs stay put" true by construction. The inner
-  // wrappers carry `role="none"` so the tablist still owns the tabs themselves.
-  return (
-    <div id="bbx-panel-tabs" role="tablist" aria-label="Open files" className="flex-1 min-w-0 flex">
-      {pinned.length > 0 ? (
-        <div role="none" className="flex-shrink-0 max-w-[50%] flex overflow-x-auto border-r-2 border-warm-400 bg-warm-100">
-          {pinned.map(renderTab)}
-        </div>
-      ) : null}
-      <div role="none" className="flex-1 min-w-0 flex overflow-x-auto">
-        {loose.map(renderTab)}
-      </div>
-    </div>
-  );
-}
-
 function CompanionViewPanelInner({
   tabs,
   activePath,
@@ -295,6 +141,10 @@ function CompanionViewPanelInner({
   reportActivity: (kind: ActivityKind, detail?: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
+  // One batched read for every open path, invalidated on file-change — so a
+  // retitled card retitles its tab, and a pinned tab restored from storage has
+  // a title it never saw when it was opened.
+  const identities = useCardIdentities(useMemo(() => tabs.map((t) => t.target.path), [tabs]));
   // Tabs that have been activated at least once. We mount a tab's view on
   // first activation and keep it mounted thereafter, so each view retains its
   // own scroll position and interactive state while inactive (it's hidden, not
@@ -324,7 +174,15 @@ function CompanionViewPanelInner({
   return (
     <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
       <div className="flex-shrink-0 flex items-stretch border-b border-warm-300 bg-warm-50 min-w-0">
-        <SidecarTabStrip tabs={tabs} activePath={activePath} onSelectTab={onSelectTab} onCloseTab={onCloseTab} onTogglePin={onTogglePin} />
+        <SidecarTabStrip
+          tabs={tabs}
+          activePath={activePath}
+          identities={identities}
+          boxSlug={boxSlug}
+          onSelectTab={onSelectTab}
+          onCloseTab={onCloseTab}
+          onTogglePin={onTogglePin}
+        />
         <div className="flex-shrink-0 flex items-center gap-1 px-2 border-l border-warm-300">
           <ExternalIconLink id="bbx-panel-open-browse" href={browseHref} label="Open in browse view (new tab)" size="sm" />
           <CloseButton id="bbx-panel-close" onClick={onClosePanel} label="Close companion view" size="sm" />

@@ -41,7 +41,7 @@ export async function listRecentLandmarkChats(
         landmark: {
           dir: landmark.dir,
           label: landmark.label,
-          symbol: landmark.symbol === "" ? null : landmark.symbol,
+          symbol: landmark.symbol?.glyph ?? null,
         },
     });
     if (result.length === limit) break;

@@ -29,6 +29,7 @@ import { errorMessage } from "../../../lib/error-guards.js";
 import { loadHqDictationDefault } from "../../../core/box/config.js";
 import { setLandmarkHqPreference } from "../../../core/landmark/hq-preference.js";
 import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../../../lib/box-namespace-resolve.js";
+import type { CardSymbolData } from "../../../shared/card-symbol.js";
 
 export interface LandmarkPayload {
   /** Box-relative path of the landmark card. */
@@ -37,10 +38,11 @@ export interface LandmarkPayload {
   dir: string;
   /** Label text (falls back to filename-derived title). */
   label: string;
-  /** Symbol text (emoji or short text); empty when an image is used. */
-  symbol: string;
-  /** Box-relative path to the symbol image, or null for text symbols. */
-  symbolSrc: string | null;
+  /**
+   * The landmark's mark — the card's own `symbol` group, with `src` resolved to
+   * a box-relative path. Null when the card has none.
+   */
+  symbol: CardSymbolData | null;
   /** Resolved hand-listed + unnamed-expand links, in source order with dedup. */
   links: ResolvedLink[];
   /** Named expands kept as collapsible groups (submenus). */
@@ -109,7 +111,7 @@ async function loadLandmarkPayload(
     landmarkPath: relPath,
     boxRoot,
   });
-  const symbol = readLandmarkSymbol(navigation, { landmarkPath: relPath });
+  const symbol = readLandmarkSymbol(fields, { landmarkPath: relPath });
 
   return {
     status: "ok",
@@ -120,8 +122,7 @@ async function loadLandmarkPayload(
       // label-less card (e.g. a destinations-only landmark) must never ship
       // an empty label — the app bar renders it as a blank pill face.
       label: (navigation?.label ?? "") || path.basename(relPath, ".landmark.card"),
-      symbol: symbol.text,
-      symbolSrc: symbol.src,
+      symbol,
       links,
       groups,
       // Overwritten by the ancestor traversal in `list` after sorting.

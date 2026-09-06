@@ -61,8 +61,7 @@ export function ChatsPicker() {
               landmark={{
                 dir: "",
                 label: "Other chats",
-                symbol: "💬",
-                symbolSrc: null,
+                symbol: { glyph: "💬" },
                 sessions: unassigned.sessions,
                 olderSessions: unassigned.olderSessions,
                 dead: unassigned.dead,
