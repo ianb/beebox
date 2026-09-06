@@ -1,13 +1,17 @@
 ---
 title: "The retired cb command should fail with a direct pointer to bbx"
-workstream: unattached
+workstream: transition-cleanup
 area: beebox
 labels: [rename, cli, agent-ux]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — noticing that agents still carry vestiges of the pre-rename command
 priority: important
+resolution: implemented
 ---
+
+**Closed** by `b2edf31a5`. Added a `cb` tombstone (`beebox/bin/cb`) that prints the rename to stderr, exits 1, and never forwards or proxies — identical behavior for no args, `--help`, and any subcommand. Ships via the package `bin` map, `beebox/bin` on PATH, and the deploy-refreshed `/usr/local/bin/cb` symlink; six entries added to `bin/retired-product-name-allowlist.json`. No divergence from the proposal.
+
 
 Some agent context, old transcripts, scripts, and learned behavior still refer
 to the pre-rename `cb` command. Today those calls can fail as a generic
