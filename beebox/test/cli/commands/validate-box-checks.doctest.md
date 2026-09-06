@@ -63,3 +63,20 @@ JSON.stringify((await checkReservedSegmentErrors(nestedBox.root)).length)
 ```ts cleanup
 await nestedBox.cleanup();
 ```
+
+`_tmp` is walked too (nesting the NAME `_tmp` is legal; a `_config` hiding in
+scratch is not), and a descendant of an offender — even one itself named
+`_config` — is not re-reported:
+
+```ts
+const tmpBox = await makeTmpBox();
+await tmpBox.write("_tmp/_config/x.txt", "stray\n");
+await tmpBox.write("_content/_config/_config/y.txt", "stray\n");
+(await checkReservedSegmentErrors(tmpBox.root)).join("\n")
+=> Reserved name: _content/_config: "_config" is a reserved box-area name, legal only at the box root (a nested _tmp is the one exception) — rename this entry
+Reserved name: _tmp/_config: "_config" is a reserved box-area name, legal only at the box root (a nested _tmp is the one exception) — rename this entry
+```
+
+```ts cleanup
+await tmpBox.cleanup();
+```

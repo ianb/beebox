@@ -39,15 +39,16 @@ export async function checkRootStrayErrors(boxRoot: string): Promise<string[]> {
 
 /**
  * The below-root reserved-name check (`box-reserved-segments.ts`): walk every
- * underscore area except `_tmp` (scratch — gitignored, and the one area name
- * allowed to nest) and report any entry whose path nests a reserved area
- * name. The write paths refuse to create these, so a hit here means an
- * out-of-band write (a plain `mkdir` from an agent shell, say) — exactly what
- * a box-wide validate pass exists to catch.
+ * underscore area (`_tmp` included — nesting the NAME `_tmp` is legal, but a
+ * `_config` hiding inside scratch is still a violation, matching the CLI and
+ * HTTP guards) and report any entry whose path nests a reserved area name.
+ * The write paths refuse to create these, so a hit here means an out-of-band
+ * write (a plain `mkdir` from an agent shell, say) — exactly what a box-wide
+ * validate pass exists to catch.
  */
 export async function checkReservedSegmentErrors(boxRoot: string): Promise<string[]> {
   const errors: string[] = [];
-  const areas = BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area" && entry.name !== "_tmp");
+  const areas = BOX_ROOT_VOCABULARY.filter((entry) => entry.kind === "area");
   for (const area of areas) {
     let entries: string[];
     try {
@@ -59,9 +60,14 @@ export async function checkReservedSegmentErrors(boxRoot: string): Promise<strin
     for (const entry of entries.toSorted()) {
       const relativePath = area.name + "/" + entry.split(path.sep).join("/");
       const segment = findReservedNestedSegment(relativePath);
-      // Report the shallowest offender once, not every descendant of it.
+      // Report only the shallowest offender: the entry whose FIRST offending
+      // segment is its own final segment (a descendant of an offender — even
+      // one itself named `_config` — repeats the same rename instruction).
       if (segment !== null && relativePath.endsWith("/" + segment)) {
-        errors.push(`Reserved name: ${reservedNestedSegmentMessage(relativePath, segment)}`);
+        const parent = relativePath.slice(0, relativePath.length - segment.length - 1);
+        if (findReservedNestedSegment(parent) === null) {
+          errors.push(`Reserved name: ${reservedNestedSegmentMessage(relativePath, segment)}`);
+        }
       }
     }
   }
