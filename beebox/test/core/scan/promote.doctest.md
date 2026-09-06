@@ -123,7 +123,7 @@ JSON.stringify(upload.calls)
 => [{"source":"scan-upload/laptop-scansnap","files":["Scan_001.pdf","Scan_002.pdf"]}]
 
 JSON.stringify({ imported: result.imported, failed: result.failed, wakeup: result.wakeup, wakeups: wakeup.runs })
-=> {"imported":2,"failed":0,"wakeup":"ran","wakeups":1}
+=> {"imported":2,"failed":0,"wakeup":{"kind":"ran"},"wakeups":1}
 ```
 
 Imported entries are swept in the same pass — file and sidecar both — and the
@@ -241,7 +241,7 @@ const result = await runScanPromotePass({
   deps: { runUpload: fakeUpload({ fail: true }).runner, runWakeup: fakeWakeup().runner },
 });
 JSON.stringify({ imported: result.imported, failed: result.failed, wakeup: result.wakeup })
-=> {"imported":0,"failed":1,"wakeup":"ran"}
+=> {"imported":0,"failed":1,"wakeup":{"kind":"ran"}}
 
 (await readQuarantineEntry(box.root, HASH_A)).state
 => promoting
@@ -255,7 +255,9 @@ await box.cleanup();
 
 Connector-scoped scheduled wakeups never drain a `source: scan` job, so a lost
 wakeup is indefinite rather than late. The marker is written before the run and
-survives a restart; every later pass retries it.
+survives a restart; every later pass retries it — but only a bounded number of
+times, and the outcome carries how long the caller should wait before the next
+attempt (`core/scan/wakeup-retry.doctest.md` pins the budget itself).
 
 ```ts
 const box = await makeTmpBox({ git: true, annex: true });
@@ -267,7 +269,7 @@ const first = await runScanPromotePass({
   deps: { runUpload: fakeUpload().runner, runWakeup: failing.runner },
 });
 JSON.stringify({ imported: first.imported, wakeup: first.wakeup, marker: await exists(wakeupMarkerPath(box.root)) })
-=> {"imported":1,"wakeup":"failed","marker":true}
+=> {"imported":1,"wakeup":{"kind":"failed","retryDelayMs":120000},"marker":true}
 ```
 
 The retry needs no new files — an empty pass still owes the wakeup:
@@ -279,7 +281,7 @@ const second = await runScanPromotePass({
   deps: { runUpload: fakeUpload().runner, runWakeup: recovered.runner },
 });
 JSON.stringify({ imported: second.imported, wakeup: second.wakeup, runs: recovered.runs, marker: await exists(wakeupMarkerPath(box.root)) })
-=> {"imported":0,"wakeup":"ran","runs":1,"marker":false}
+=> {"imported":0,"wakeup":{"kind":"ran"},"runs":1,"marker":false}
 ```
 
 ```ts cleanup

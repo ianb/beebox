@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-06T00:54:14Z
-Total documents: 323
+Generated: 2026-09-06T04:27:47Z
+Total documents: 324
 
 ## Issues
 
@@ -51,6 +51,7 @@ These documents are not referenced by any other document.
 - **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines)
 - **docs/plans/public-site-orientation.md** — "Public site — orientation & re-entry map" (123 lines)
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines)
+- **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
 - **docs/plans/sticky-hq-ios-parity.md** — "Sticky HQ dictation on iOS" (100 lines)
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
@@ -263,6 +264,7 @@ Referenced by:
 - ../issues/exploration/2026-06-17-loading-eagerness-axis.md:9 (mention) — *instructions* (akin to CLAUDE.md), where should it land? Today the only home
 - ../issues/exploration/2026-07-30-subagent-context-inheritance.md:2 (mention) — title: "Do our subagents inherit the monorepo CLAUDE.md and its rules?"
 - ../issues/exploration/2026-08-25-coherence-agent-spine-evaluation.md:86 (mention) — system alongside CLAUDE.md, `docs/`, plans, and the generated box docs. This
+- ../issues/exploration/2026-09-06-per-box-symbol-strategy-note.md:37 (mention) — `CLAUDE.md`, a `.claude/rules/` glob that fires on the files it governs, or a
 - ../issues/features/2026-05-28-retrospective-session-scan.md:9 (mention) — Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user
 - ../issues/features/2026-06-20-context-size-measurement-legibility.md:14 (mention) — - **Compositional breakdown.** The most *actionable* and the most work: split the baseline into system prompt vs. agent-
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:16 (mention) — and what else to sweep. The knowledge is scattered across box CLAUDE.md-equivalents,
@@ -1210,6 +1212,7 @@ Referenced by:
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/publish-pages.md:15 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
+- docs/plans/scan-retry-and-document-route.md:31 (mention) — (`docs/engineering-principles.md:49`): *"Degradation is allowed for failures
 - docs/plans/scan-vision-claude.md:25 (mention) — - `beebox/docs/engineering-principles.md` — especially
 - docs/plans/scanner-ingest.md:23 (mention) — - `docs/engineering-principles.md` — findings trace to: **#3
 - docs/plans/workstream-exhibits.md:92 (mention) — - Principle 3, **validate at boundaries** (`docs/engineering-principles.md:37`):
@@ -2046,6 +2049,7 @@ Referenced by:
 - docs/plans/ios-input-plane-parity.md:38 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
 - docs/plans/ios-native-capture-mode.md:36 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
 - docs/plans/publish-pages.md:270 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
+- docs/plans/scan-retry-and-document-route.md:417 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
 - docs/tours.md:29 (link) — ([testing.md](testing.md)); "does the app boot at all" is the smoke tier
 - ../.claude/skills/bbx-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/bbx-guide-testing/SKILL.md:3 (mention) — description: Explains beebox's testing system — the test tiers, what each is for, and how to choose. Use when deciding h
@@ -2744,6 +2748,7 @@ Title: "Cards carry a symbol" | 610 lines
 
 Referenced by:
 - ../issues/closed/features/2026-09-05-cards-carry-a-symbol.md:15 (mention) — (see `beebox/docs/implemented-plans/card-symbol.md`): `symbol` is now a
+- ../issues/deferred/2026-09-05-remove-landmark-symbol-legacy-fallback.md:8 (mention) — discovered-in: sidecar-shell — docs/implemented-plans/card-symbol.md Track D
 
 References:
 - → ../issues/closed/features/2026-09-05-cards-carry-a-symbol.md (frontmatter)
@@ -5253,6 +5258,18 @@ References:
 - → docs/plans/scan-guide-card.md (mention)
 - → docs/plans/scanner-ingest.md (mention)
 
+#### docs/plans/scan-retry-and-document-route.md **[ORPHAN]**
+
+Title: "Bound the promote retry, and stop routing documents into the photo flow" | 432 lines
+
+References:
+- → ../issues/closed/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md (frontmatter)
+- → ../issues/closed/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md (link)
+- → ../issues/features/2026-03-04-agent-give-up-mechanism.md (link)
+- → docs/engineering-principles.md (mention)
+- → docs/plans/scanner-ingest.md (link)
+- → docs/testing.md (mention)
+
 #### docs/plans/scan-vision-claude.md
 
 Title: "Scan vision: Claude Sonnet default, Gemini opt-in" | 613 lines
@@ -5296,12 +5313,12 @@ Referenced by:
 - docs/migrations.md:391 (mention) — `docs/plans/scanner-ingest.md`, Track 4) bought nothing. Modeled on
 - docs/plans/scan-guide-card.md:17 (mention) — This is a subplan of `docs/plans/scanner-ingest.md` (Track 6 reshaped).
 - docs/plans/scan-guide-card.review.md:13 (mention) — (`scanner-ingest.md:510`); the minimal version keeps `readScanContextFile`
+- docs/plans/scan-retry-and-document-route.md:110 (link) — [`scanner-ingest.md`](scanner-ingest.md), because Track 3 depends on them.
 - docs/plans/scan-vision-claude.md:443 (mention) — scan section of `docs/plans/scanner-ingest.md`.
 - docs/plans/scanner-ingest-docling-decisions.md:13 (link) — decision changes. Parent plan: [`scanner-ingest.md`](scanner-ingest.md).
 - docs/plans/scanner-ingest.review.md:3 (mention) — Cross-model review of `scanner-ingest.md`, run 2026-08-01 with OpenAI Codex
 - docs/scan-upload-contract.md:16 (link) — history: [`plans/scanner-ingest.md`](plans/scanner-ingest.md).
 - docs/server-operations.md:231 (mention) — `docs/plans/scanner-ingest.md` Track 0 needs both prod boxes moved from the
-- ../issues/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md:15 (mention) — instead (`docs/plans/scanner-ingest.md`). That reasoning holds for the
 - ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:34 (mention) — > `docs/plans/scanner-ingest.md`'s Track 4 already carries the dated note
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:22 (mention) — amended by `scanner-ingest.md`. `bbx document reanalyze` re-runs extraction over
 
