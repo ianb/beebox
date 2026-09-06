@@ -1,13 +1,17 @@
 ---
 title: "`bbx init` prints a screenful of routine success on every run, including when scripted"
-workstream: unattached
+workstream: transition-cleanup
 area: beebox
 labels: [output-noise]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-add-box-process — provisioning a box ran bbx init twice
 priority: important
+resolution: implemented
 ---
+
+**Closed** by `c7336dffb, 7dbb79f33`. Implemented the fresh-vs-re-init split as proposed: a re-init that changed nothing now prints nothing; fresh init keeps its full report. Also fixed along the way (per the issue's own follow-on note): a fresh `--docid-debug` run printed both "Initialized" and "Updated", and `--no-docid-debug` was documented in help text but never declared as a flag.
+
 
 `bbx init` reports everything it did, every time, whether or not anything
 changed. A single re-init prints roughly fifteen lines:

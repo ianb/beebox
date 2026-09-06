@@ -23,6 +23,7 @@ import {
   TRICKS_SKILL,
   VIEWS_SKILL,
 } from "./skills-content.js";
+import { WHAT_CAN_YOU_DO_SKILL } from "./skills-content-what-can-you-do.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 
 interface BoxSkill {
@@ -54,6 +55,7 @@ function buildBoxSkills(): BoxSkill[] {
     { name: "schedules", content: SCHEDULES_SKILL },
     { name: "tricks", content: TRICKS_SKILL },
     { name: "views", content: VIEWS_SKILL },
+    { name: "what-can-you-do", content: WHAT_CAN_YOU_DO_SKILL },
   ];
 }
 

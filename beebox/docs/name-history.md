@@ -22,6 +22,14 @@ The coordinated machine-name changes were:
 | `cb.ianbicking.org` | `beebox.run` |
 | `ianb/callback-box` | `ianb/beebox` |
 
+The retired command still exists as a tombstone (`beebox/bin/cb`), installed
+wherever `bbx` is: it prints the rename and exits nonzero, and never forwards or
+translates. Stale agent context and old scripts reach for the old name long
+after the rename, and a bare command-not-found does not say where the interface
+went. Forwarding would have kept those callers working indefinitely, so the
+failure is deliberate. The tombstone can be removed once such calls stop
+appearing.
+
 Repository documentation, issues, examples, and generated material use the
 current vocabulary. This document is the sole in-tree explanation of the old
 name; git history preserves the detailed pre-rename record. Temporary migration

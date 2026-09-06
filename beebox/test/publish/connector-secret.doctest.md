@@ -1,14 +1,14 @@
-# The publish connector credential: store round-trip and legacy fallback
+# The publish connector credential: store round-trip
 
 `src/publish/connector-secret.ts` both READS and WRITES the submissions
 connector's R2 credential, which makes it the one migrated reader whose two
-halves must agree (`docs/plans/secret-custody.md`, Track 3). It writes to the
+halves must agree (`docs/implemented-plans/secret-custody.md`, Track 3). It writes to the
 machine store under `publish/<box-slug>` as a JSON string, marked single-box
 (`owningBox` + `shareable: false` — the token is scoped to one box's ingestion
 bucket, so a second grant would point another box's submissions at the wrong
-bucket), and reads it straight back. The legacy in-tree
-`_config/connectors/publish.secret.json` stays readable for one transition
-window.
+bucket), and reads it straight back. The store is the only source: the in-tree
+`_config/connectors/publish.secret.json` this was migrated from is no longer
+read.
 
 Every token below is an obvious placeholder.
 
@@ -20,7 +20,6 @@ import {
   ensureConnectorSecret,
   publishSecretName,
   readPublishSecret,
-  resetPublishLegacyWarning,
 } from "../../src/publish/connector-secret.js";
 import { grantSecret, listSecrets, setSecret } from "../../src/core/secrets/lifecycle.js";
 import { createFakeTokensClient } from "../../src/services/cloudflare-tokens.js";
@@ -98,7 +97,7 @@ result: null
 warned: true
 ```
 
-## The legacy file still reads, once, with a warning
+## A retired file on disk configures nothing
 
 ```ts continue
 process.env.BBX_SECRETS_FILE = join(dir, "no-store-here.json");
@@ -106,20 +105,11 @@ await box.write(
   "_config/connectors/publish.secret.json",
   JSON.stringify({ accountId: "file-account", bucket: "file-bucket", apiToken: "placeholder-file-token" }),
 );
-resetPublishLegacyWarning();
-const [fromFile, fileWarnings] = await withWarnings(() => readPublishSecret(box.root));
-print(`from file: ${JSON.stringify({ accountId: fromFile.accountId, bucket: fromFile.bucket })}`);
-print(`warned about the stray file: ${fileWarnings.some((w) => w.includes("_config/connectors/publish.secret.json"))}`);
-
-const [, second] = await withWarnings(() => readPublishSecret(box.root));
-print(`second call warned: ${second.length > 0}`);
-=>
-from file: {"accountId":"file-account","bucket":"file-bucket"}
-warned about the stray file: true
-second call warned: false
+await readPublishSecret(box.root)
+=> null
 ```
 
-Neither source configured is `null` — publishing is simply off:
+No entry is `null` — publishing is simply off:
 
 ```ts continue
 await rm(join(box.root, "_config/connectors/publish.secret.json"));

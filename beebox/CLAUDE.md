@@ -170,6 +170,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Content-Security-Policy | `docs/content-security-policy.md` |
 | Periodic maintenance | `docs/maintenance.md` |
 | Knowledge audits | `docs/knowledge-audits.md` |
+| Docs shipped to box agents (`box-docs/`) | `docs/box/` (prose sources) + `src/core/docs-gen/package-docs.ts` (generated reference) |
 | Calendar integration | `docs/calendar.md` |
 | PDF intake design | `docs/plans/pdf-intake-design.md` |
 | Source editor plan | `docs/plans/source-editor.md` |

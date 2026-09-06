@@ -27,6 +27,11 @@ current truth.
   shaped this way, one small file per topic (split from the former
   `design.md`, reconciled to boxholder rulings 2026-07-04). Peer of
   `stack-decisions.md`; answers *why*, never *how to*.
+- **`docs/box/`** — prose docs written for box agents, shipped into every
+  installed package's `box-docs/` beside the generated reference docs
+  (`src/core/docs-gen/package-docs.ts`). Each has a `read-when:` frontmatter
+  line that becomes its row in the `box-docs/README.md` index. Currently
+  [what you could do with your box](box/what-you-could-do.md).
 - **`docs/architecture/`** — the onboarding narrative series: longform,
   human-facing "what is this thing" writing. Not required reading, not a
   design-rationale reference (that's `docs/design/`).

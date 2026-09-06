@@ -7,7 +7,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { parseJsonSecret } from "../core/secrets/json-secret.js";
-import { refusalAllowsLegacyFallback } from "../core/secrets/legacy-fallback.js";
 import { resolveSecret } from "../core/secrets/resolve.js";
 import { boxSlug } from "../lib/box-slug.js";
 import { errnoCode } from "../lib/error-guards.js";
@@ -54,25 +53,23 @@ export function telegramSecretName(slug: string): string {
   return `telegram-bot/${slug}`;
 }
 
-/** The legacy in-tree secret file's path — still deleted on disconnect. */
+/** The retired in-tree secret file's path — no longer read, still deleted on
+ *  disconnect so a box configured before the store leaves nothing behind. */
 export function telegramLegacySecretPath(boxRoot: string): string {
   return path.join(getBoxDir(boxRoot, "connectors"), "telegram.secret.json");
 }
 
-/** Both the store's JSON-string value and the legacy file share this shape. */
+/** The shape of the store's JSON-string value. */
 const telegramSecretSchema = z.object({
   botToken: z.string().min(1),
   webhookSecret: z.string().min(1),
 });
 
-let warnedAboutLegacyFile = false;
-
 /**
  * Load a box's Telegram credentials: the machine store's `telegram-bot/<slug>`
- * entry (a JSON string `{botToken, webhookSecret}`) at `server` access, then
- * the deprecated in-tree `_config/connectors/telegram.secret.json`
- * (`docs/plans/secret-custody.md`, Track 3). `null` when neither exists —
- * Telegram is simply not configured for this box, a normal state.
+ * entry (a JSON string `{botToken, webhookSecret}`) at `server` access, and
+ * nothing else (`docs/implemented-plans/secret-custody.md`). `null` when there
+ * is no entry — Telegram is simply not configured for this box, a normal state.
  *
  * The entry is single-box by construction (`owningBox` + `shareable: false`):
  * a bot token binds to ONE webhook URL, so a second box holding it would break
@@ -85,39 +82,8 @@ export async function loadTelegramConfig(boxRoot: string): Promise<TelegramConfi
   const slug = await boxSlug(boxRoot);
   const name = telegramSecretName(slug);
   const resolved = await resolveSecret({ boxRoot, name, purpose: "telegram", access: "server" });
-  if (resolved.ok) {
-    return parseJsonSecret({ name, value: resolved.value.value, schema: telegramSecretSchema });
-  }
-
-  // Only "no such secret on this machine" degrades to the legacy file; every
-  // other refusal is "not configured" (`core/secrets/legacy-fallback.ts`).
-  if (!refusalAllowsLegacyFallback({ reader: "telegram", refusal: resolved.error })) return null;
-
-  let content: string;
-  const legacyPath = telegramLegacySecretPath(boxRoot);
-  try {
-    content = await fs.readFile(legacyPath, "utf-8");
-  } catch (_e) {
-    // No stray file: the common case now. Silent by design.
-    return null;
-  }
-  let json: unknown;
-  try {
-    json = JSON.parse(content);
-  } catch (e) {
-    console.warn(`[telegram] ignoring unreadable legacy secret file ${legacyPath}:`, e);
-    return null;
-  }
-  const parsed = telegramSecretSchema.safeParse(json);
-  if (!parsed.success) return null;
-  if (!warnedAboutLegacyFile) {
-    warnedAboutLegacyFile = true;
-    console.warn(
-      `[telegram] using the deprecated in-tree secret file ${legacyPath}. ` +
-        "Reconnect Telegram from the admin page to move it into the machine store, then delete the file.",
-    );
-  }
-  return parsed.data;
+  if (!resolved.ok) return null;
+  return parseJsonSecret({ name, value: resolved.value.value, schema: telegramSecretSchema });
 }
 
 /**

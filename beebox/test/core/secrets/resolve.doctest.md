@@ -4,7 +4,7 @@
 outcome is a typed `Result` (callers branch on *why*) and every outcome is
 logged — refusals included, because a box repeatedly asking for a secret it was
 never granted is exactly what an access log is for. Design:
-`docs/plans/secret-custody.md`, Track 2.
+`docs/implemented-plans/secret-custody.md`, Track 2.
 
 Values below are obvious placeholders.
 

@@ -1,6 +1,6 @@
 /**
  * `resolveSecret` — the one way a value leaves the store
- * (`docs/plans/secret-custody.md`, Track 2).
+ * (`docs/implemented-plans/secret-custody.md`, Track 2).
  *
  * Grant-check → log → return. The grant lives under the box's SLUG (Decision
  * 2), so worktree clones of a box inherit its grants and a renamed box shows as

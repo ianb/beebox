@@ -116,7 +116,7 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
     });
     if (!apiKey) {
       console.error(
-        `${label}: no Gemini key — the audio model is not configured. Ask the boxholder to grant the "gemini" secret to this box, or set GEMINI_KEY`,
+        `${label}: no Gemini key — the audio model is not configured. Ask the boxholder to grant the "gemini" secret to this box`,
       );
       process.exit(1);
     }

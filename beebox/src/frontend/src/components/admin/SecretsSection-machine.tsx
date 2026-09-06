@@ -1,5 +1,5 @@
 /**
- * The machine-wide view (`docs/plans/secret-custody.md`, Decision 8: a
+ * The machine-wide view (`docs/implemented-plans/secret-custody.md`, Decision 8: a
  * machine-wide situation gets a machine-wide interface).
  *
  * The store is one file per machine while an admin page belongs to one box, so

@@ -27,7 +27,7 @@ class MissingDeepgramKeyError extends Error implements TranscriptionError {
   readonly code = "missing_api_key";
   constructor() {
     super(
-      "Deepgram API key not found (checked _config/connectors/deepgram.secret.json and BBX_DEEPGRAM_API_KEY env var)"
+      'Deepgram credentials not found — ask the boxholder to grant the "deepgram" secret to this box'
     );
     this.name = "MissingDeepgramKeyError";
   }

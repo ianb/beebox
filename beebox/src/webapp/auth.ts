@@ -373,7 +373,7 @@ export function getOwnerEmail(): string | null {
  * `agentBrowsing: "owner"`. It carries the owner's email, so it is a person for
  * box-scoped purposes — but it is still a machine credential, so a gate over the
  * MACHINE-level secret store must exclude it explicitly (see
- * `docs/plans/secret-custody.md`). `resolveRequestIdentity` itself never returns
+ * `docs/implemented-plans/secret-custody.md`). `resolveRequestIdentity` itself never returns
  * it.
  */
 export type IdentitySource = "hub" | "cookie" | "open" | "unavailable" | "browse" | null;

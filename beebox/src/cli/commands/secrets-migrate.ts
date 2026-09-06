@@ -1,7 +1,7 @@
 /**
  * `bbx secrets migrate` and `bbx secrets copy-grants` — the two plumbing
  * subcommands that exist for scripts and operators rather than for daily use
- * (`docs/plans/secret-custody.md`, "Rollout shape").
+ * (`docs/implemented-plans/secret-custody.md`, "Rollout shape").
  *
  * `migrate` moves a machine's per-box `_config/connectors/*.secret.json` files
  * into the store, once. `copy-grants` is what `deploy/add-box.sh

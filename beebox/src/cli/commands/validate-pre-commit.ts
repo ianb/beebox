@@ -32,6 +32,7 @@ import {
 import { listStagedCards, listStagedRelPaths } from "../../lib/staged-files.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
 import { checkBoxRoot } from "../../lib/box-root-check.js";
+import { checkReservedSegmentErrors } from "./validate-box-checks.js";
 import {
   boxWideLinkWarnings,
   formatMarkdownResults,
@@ -114,6 +115,15 @@ export async function runPreCommitChecks(
   if (strays.length > 0) {
     errorCount += strays.length;
     sections.push(strays.map((s) => `Box root: ${s.message}`).join("\n"));
+  }
+
+  // Below-root reserved area names block the commit too — the pre-commit
+  // walk is the declared net for out-of-band writes (a plain `mkdir` from an
+  // agent shell) that the CLI/HTTP guards never saw.
+  const reservedSegmentErrors = await checkReservedSegmentErrors(boxRoot);
+  if (reservedSegmentErrors.length > 0) {
+    errorCount += reservedSegmentErrors.length;
+    sections.push(reservedSegmentErrors.join("\n"));
   }
 
   const removals = await listStagedRelPaths(boxRoot, { diffFilter: "DR" });

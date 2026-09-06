@@ -209,10 +209,11 @@ The ones you should actually weigh:
 
 Known **gaps** (tracked, not yet accepted or fixed) live in the issue
 queue — at this writing they include plain-HTTP between Cloudflare's edge
-and the origin on the public deploy path, two connector secret files
-written without restrictive permissions, deploy-time infra config drift,
-and how much capability an invited member should hold. The structured
-report lists each with a pointer.
+and the origin on the public deploy path, deploy-time infra config drift,
+and how much capability an invited member should hold. (The connector
+secret-file permission gap this list used to carry is closed: connector
+credentials now live in the machine secret store, not box files.) The
+structured report lists each with a pointer.
 
 A few gaps are **tracked privately** rather than in the public queue:
 where a defect is specific and unpatched enough that publishing its

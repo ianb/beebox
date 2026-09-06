@@ -45,6 +45,21 @@ describe(resolveBoxNamespacePath("/box", "node_modules/foo/index.js"))
 => escaped
 ```
 
+A nested reserved area name (`box-reserved-segments.ts`) is refused like any
+other out-of-vocabulary path — the loud, named error lives at the creation
+surfaces; the template-updates mirror and nested `_tmp` stay legal:
+
+```ts
+describe(resolveBoxNamespacePath("/box", "_content/recipes/_config/x.card"))
+=> escaped
+
+describe(resolveBoxNamespacePath("/box", "_config/_template-updates/_content/briefing.md"))
+=> _config/_template-updates/_content/briefing.md
+
+describe(resolveBoxNamespacePath("/box", "_content/scratch/_tmp/x.txt"))
+=> _content/scratch/_tmp/x.txt
+```
+
 The box root itself (empty relative path) is never in-namespace:
 
 ```ts

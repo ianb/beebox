@@ -224,10 +224,13 @@ a few names deleted. The hub's cross-box trust secrets (`BBX_HUB_SECRET`,
 sibling box's loopback port; `BBX_SESSION_SECRET` is the symmetric
 cookie-signing key (verify == forge), so an agent holding it could mint a
 `bbx_session` for anyone; `ANTHROPIC_API_KEY` would silently bill the API
-instead of the boxholder's subscription. Connector credentials
-(`BBX_MISTRAL_API_KEY`, `BBX_DEEPGRAM_*`, `GEMINI_KEY`,
-`GOOGLE_OAUTH_CLIENT_SECRET`, …) are withheld from agents too — and so is any
-name nobody thought to list, which is the point of an allowlist.
+instead of the boxholder's subscription. `GOOGLE_OAUTH_CLIENT_SECRET` — the
+login surface's own configuration — is withheld too, and so is any name nobody
+thought to list, which is the point of an allowlist. The connector keys that
+used to be named here are no longer read from the environment at all
+(`docs/implemented-plans/secret-custody.md`); they are exercised below anyway,
+because an allowlist must keep withholding a name after the reason for naming
+it goes away.
 
 ```ts
 const box = await makeTmpBox();
@@ -319,34 +322,39 @@ message.includes("Bee Box CLI launcher is missing")
 => true
 ```
 
-## buildToolingScriptEnv — the `bbx`-tooling profile adds connector credentials
+## buildToolingScriptEnv — the `bbx`-tooling profile adds the store's path
 
 Spawning the box's own tooling (`bbx wakeup`, `bbx finalize`, scheduled `runs:`
-commands) means spawning the process that runs the connectors, so that profile
-inherits the connector credentials — and nothing else the agent profile
-withholds: the hub trust secrets and unknown names stay out.
+commands) means spawning the process that runs the connectors. What that profile
+adds is the way to FIND the machine secret store, not the credentials in it —
+the connectors resolve their own, under the box's grants. Everything the agent
+profile withholds stays withheld, and connector keys that happen to be exported
+are not inherited by either profile.
 
 ```ts
 const box = await makeTmpBox();
 const vars = {
-  BBX_MISTRAL_API_KEY: "mistral-key",
-  BBX_DEEPGRAM_PROJECT: "deepgram-project",
-  GOOGLE_OAUTH_CLIENT_SECRET: "google-secret",
+  BBX_SECRETS_FILE: "/placeholder/secrets.json",
+  BBX_GOOGLE_TOKENS_FILE: "/placeholder/google-tokens.json",
+  BBX_MISTRAL_API_KEY: "mistral-should-not-leak",
+  GOOGLE_OAUTH_CLIENT_SECRET: "google-secret-should-not-leak",
   BBX_HUB_SECRET: "hub-secret-should-not-leak",
   SOME_RANDOM_SECRET: "unknown-name-should-not-leak",
 };
 Object.assign(process.env, vars);
 const env = await buildToolingScriptEnv(box.root);
 for (const key of Object.keys(vars)) delete process.env[key];
-print(`mistral: ${env.BBX_MISTRAL_API_KEY}`);
-print(`deepgram: ${env.BBX_DEEPGRAM_PROJECT}`);
-print(`google: ${env.GOOGLE_OAUTH_CLIENT_SECRET}`);
+print(`secret store path: ${env.BBX_SECRETS_FILE}`);
+print(`google tokens path: ${env.BBX_GOOGLE_TOKENS_FILE}`);
+print(`mistral: ${env.BBX_MISTRAL_API_KEY ?? "(unset)"}`);
+print(`google client secret: ${env.GOOGLE_OAUTH_CLIENT_SECRET ?? "(unset)"}`);
 print(`hub secret: ${env.BBX_HUB_SECRET ?? "(unset)"}`);
 print(`random: ${env.SOME_RANDOM_SECRET ?? "(unset)"}`);
 =>
-mistral: mistral-key
-deepgram: deepgram-project
-google: google-secret
+secret store path: /placeholder/secrets.json
+google tokens path: /placeholder/google-tokens.json
+mistral: (unset)
+google client secret: (unset)
 hub secret: (unset)
 random: (unset)
 ```

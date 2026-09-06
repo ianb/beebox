@@ -104,8 +104,7 @@ await box.cleanup();
 ## mode "text" is fully offline: zero embed calls, works with a broken secret
 
 `--mode text` skips key resolution entirely and passes no service into the
-refresh — never a paid call, and a malformed secret file (which auto mode
-must fail loudly on) doesn't stop it.
+refresh — never a paid call, and never dependent on a key being configured.
 
 ```ts
 const boxT = await makeTmpBox();
@@ -119,14 +118,11 @@ resT.searchMode
 fakeT.calls.length
 => 0
 
-await boxT.write("_config/connectors/openai.secret.json", "not valid json");
-const resTBroken = await searchBox(boxT.root, { query: "dentist", mode: "text" });
-resTBroken.searchMode
+// With no `openai` grant, auto mode has no service and ranks as text too --
+// unconfigured is a normal state, not an error.
+const resTAuto = await searchBox(boxT.root, { query: "dentist" });
+resTAuto.searchMode
 => text
-
-// The same broken secret file makes auto mode fail loudly (config error).
-await throwName(() => searchBox(boxT.root, { query: "dentist" }))
-=> EmbeddingsKeyError
 ```
 
 ```ts cleanup

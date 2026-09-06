@@ -53,7 +53,9 @@ Location is state — a card's directory determines its lifecycle stage:
 
 | Directory | Purpose |
 |-----------|---------|
-${rows}`;
+${rows}
+
+The area names are reserved words: never create a nested \`_content\`, \`_config\`, \`_bookkeeping\`, or \`_publish\` below the root (a nested \`_tmp\` scratch directory is fine — it is ignored at any depth).`;
 }
 
 /**
