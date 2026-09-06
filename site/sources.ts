@@ -13,6 +13,7 @@ import type { Dirent } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { listNuggetSourceRefs } from "./nuggets.js";
 
 /** One input file: path relative to site/ (posix), and a short content hash. */
 export interface SourceInput {
@@ -28,8 +29,14 @@ const manifestSchema = z.object({
 
 /**
  * The input source set the generator reads, as site/-relative posix paths,
- * sorted: package.json, every top-level *.ts, and everything under content/.
+ * sorted: package.json, every top-level *.ts, everything under cards/ and
+ * nuggets/, and every repo file a nugget cites (as `../<repo-relative path>`).
  * dist/ and node_modules/ are excluded by construction (never descended into).
+ *
+ * The cited sources belong here even though they live outside site/: a nugget's
+ * span is re-located against its source at build, so editing that source can
+ * change whether the nugget renders stale. Leaving them out would let the router
+ * serve a nugget whose stale marker never appears.
  */
 export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
   const rels: string[] = ["package.json"];
@@ -37,11 +44,15 @@ export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
   for (const entry of top) {
     if (entry.isFile() && entry.name.endsWith(".ts")) rels.push(entry.name);
   }
-  const contentEntries = await readdirDirents(path.join(siteDir, "content"));
-  for (const entry of contentEntries) {
-    if (!entry.isFile() || entry.name.startsWith(".")) continue;
-    const rel = path.relative(siteDir, path.join(entry.parentPath, entry.name));
-    rels.push(rel.split(path.sep).join("/"));
+  for (const dir of ["cards", "nuggets"]) {
+    for (const entry of await readdirDirents(path.join(siteDir, dir))) {
+      if (!entry.isFile() || entry.name.startsWith(".")) continue;
+      const rel = path.relative(siteDir, path.join(entry.parentPath, entry.name));
+      rels.push(rel.split(path.sep).join("/"));
+    }
+  }
+  for (const source of await listNuggetSourceRefs(path.join(siteDir, "nuggets"))) {
+    rels.push(`../${source}`);
   }
   return rels.toSorted((a, b) => a.localeCompare(b));
 }
@@ -50,7 +61,7 @@ async function readdirDirents(dir: string): Promise<Dirent[]> {
   try {
     return await fs.readdir(dir, { recursive: true, withFileTypes: true });
   } catch (_err) {
-    return []; // no content/ dir → nothing to add
+    return []; // no such dir → nothing to add
   }
 }
 

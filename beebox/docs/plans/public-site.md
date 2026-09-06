@@ -1,7 +1,7 @@
 ---
 title: "Public site"
 status: partial
-workstream: unknown
+workstream: public-site
 issues: []
 ---
 # Public site
@@ -150,6 +150,36 @@ Verified 2026-07-21 (URLs fetched):
   [Generalized Fisheye Views, CHI 1986](https://dl.acm.org/doi/10.1145/22627.22342)
   is the frame; no shipped prose-reading instantiation found. Also open
   ground.
+
+## Direction shift (2026-08-19) — the box authors the site
+
+Settled in conversation with the boxholder after the walkthrough prototype
+(see [the exploration issue](../../../issues/exploration/2026-08-19-site-authored-in-a-box.md)
+and [the rename decision](../../../issues/decisions/2026-08-19-bee-box-rename.md)).
+Three layers:
+
+1. **A box is the CMS.** The box defines its own page/aside card types
+   (box-local schemas) and views — authoring, preview, and agent
+   regeneration all happen as ordinary card work inside a box.
+2. **A site builder consumes cards.** A separate, deliberately ad hoc
+   static builder — standard React/Tailwind, nothing precious — with cards
+   as source material. It may itself be something the box creates and
+   evolves, or live in the repo; either is fine. Output stays static,
+   generated at deploy.
+3. **Publishing is its own path.** Distinct from the box's normal serving:
+   export/commit → build on deploy → Pages.
+
+What this supersedes: the hand-rolled Markdoc generator below (Tracks A/F
+implementation) becomes the *interim* press and prototype bench, not the
+destination. What carries over regardless of stack: the enforcement
+invariants (author's-words-only for the author voice, verbatim-span
+provenance, fail-closed on anything unverifiable) and the vocabulary the
+prototypes established — the three-voice aside scheme (bee / author /
+generated, each with visible provenance) and expand-in-place reveals.
+Register: Brown Paper School books; characters are provenance, wordless-ish
+bee, the boxholder as the aspiration/design voice strictly in his own words;
+showcased interactions come from real system output (user stories,
+scenarios), never mocked.
 
 ## Tracks / scope
 
