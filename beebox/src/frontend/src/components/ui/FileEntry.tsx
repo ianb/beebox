@@ -19,6 +19,7 @@ import { cn } from "../../lib/cn";
 import { FileView } from "../FileView";
 import { withBase } from "../../api";
 import { useViewNavigate } from "../../hooks/useViewNavigate";
+import { CardMark } from "./CardMark";
 
 interface FileEntryProps {
   summary: FileSummary<unknown>;
@@ -149,14 +150,19 @@ function ExpandedControls({
   );
 }
 
-function TitleSlot({ summary, compact }: { summary: FileSummary<unknown>; compact: boolean }) {
+function TitleSlot({ summary, compact, boxSlug }: { summary: FileSummary<unknown>; compact: boolean; boxSlug: string | undefined }) {
   const ui = resolveFileTypeUI(summary);
   const Icon = ui.icon;
   const ListComponent = ui.ListComponent;
   return (
     <div className="flex-1 min-w-0 flex items-center gap-2">
+      {/*
+        A card's own mark beats the type icon: the icon says what kind of thing
+        this is, and the mark says which one it is. Most cards have no mark, so
+        most rows still show the type icon — CardMark falls back to it.
+      */}
       <span className="flex-shrink-0 text-warm-500">
-        <Icon size={18} />
+        <CardMark symbol={summary.symbol ?? null} size="sm" boxSlug={boxSlug} fallback={<Icon size={18} />} />
       </span>
       <div className="flex-1 min-w-0">
         {ListComponent ? (
@@ -191,7 +197,7 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
             aria-label={`Collapse ${summary.title}`}
             className="flex-1 flex items-center min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
           >
-            <TitleSlot summary={summary} compact={compact} />
+            <TitleSlot summary={summary} compact={compact} boxSlug={boxSlug} />
           </button>
           <ExpandedControls
             summary={summary}
@@ -220,7 +226,7 @@ export function FileEntry({ summary, compact, onPanel, className }: FileEntryPro
         aria-label={`Preview ${summary.title}`}
         className="flex-1 flex items-center min-w-0 py-1.5 px-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded"
       >
-        <TitleSlot summary={summary} compact={compact} />
+        <TitleSlot summary={summary} compact={compact} boxSlug={boxSlug} />
       </button>
       <button
         type="button"

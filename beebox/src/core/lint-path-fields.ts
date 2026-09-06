@@ -64,7 +64,28 @@ function setNavigationSymbolSrc(fields: Record<string, unknown>, newValue: strin
   symbol["src"] = newValue;
 }
 
+function getSymbolSrc(fields: Record<string, unknown>): string | undefined {
+  const symbol = fields["symbol"];
+  if (!isRecord(symbol)) return undefined;
+  const src = symbol["src"];
+  return typeof src === "string" ? src : undefined;
+}
+
+function setSymbolSrc(fields: Record<string, unknown>, newValue: string): void {
+  const symbol = fields["symbol"];
+  if (!isRecord(symbol)) return;
+  symbol["src"] = newValue;
+}
+
 export const PATH_FIELDS: readonly PathField[] = [
+  {
+    // The universal card mark's image. Every card may carry one, so unlike the
+    // two below this is not a per-type field — and without it here a moved
+    // image escapes `bbx mv`'s rewriting and 404s silently.
+    name: "symbol.src",
+    getValue: getSymbolSrc,
+    setValue: setSymbolSrc,
+  },
   {
     name: "navigation.symbol.src",
     getValue: getNavigationSymbolSrc,
@@ -83,9 +104,19 @@ export const PATH_FIELDS: readonly PathField[] = [
 ];
 
 /**
- * Warn when a landmark's `navigation.symbol.src` names a file that doesn't
- * exist (or escapes the box). A text/emoji symbol and an absent symbol are both
- * silent — there is nothing to resolve.
+ * Warn when a card's `symbol.src` names a file that doesn't exist (or escapes
+ * the box). Runs for every card type, since the mark is a universal field.
+ */
+export async function lintCardSymbolSrc(input: PathFieldLintInput): Promise<LintIssue[]> {
+  const src = getSymbolSrc(input.fields);
+  if (src === undefined || src.trim() === "") return [];
+  return checkPathField({ input, ref: src, field: "symbol.src" });
+}
+
+/**
+ * Warn when a landmark's legacy `navigation.symbol.src` names a file that
+ * doesn't exist (or escapes the box). A text/emoji symbol and an absent symbol
+ * are both silent — there is nothing to resolve.
  */
 export async function lintLandmarkSymbolSrc(input: PathFieldLintInput): Promise<LintIssue[]> {
   const src = getNavigationSymbolSrc(input.fields);

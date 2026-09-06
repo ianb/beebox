@@ -4211,6 +4211,22 @@ test1:
       peak: 46084
       added: 2328
       turns: 7
+  card-symbol-restraint:
+    - date: 2026-09-05T23:58:44.433Z
+      boxCommit: 0a0b31c71f7652064343389287ab6272695322c2
+      repoCommit: 82021b6961a312d3d4640a66b537a4f3bdcfd5a8
+      initial: 44277
+      peak: 44891
+      added: 614
+      turns: 3
+  card-symbol-image-key:
+    - date: 2026-09-05T23:58:44.433Z
+      boxCommit: 0a0b31c71f7652064343389287ab6272695322c2
+      repoCommit: 82021b6961a312d3d4640a66b537a4f3bdcfd5a8
+      initial: 44219
+      peak: 44219
+      added: 0
+      turns: 1
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

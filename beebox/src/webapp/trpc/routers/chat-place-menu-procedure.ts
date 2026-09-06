@@ -24,6 +24,7 @@ import { publicProcedure } from "../trpc.js";
 import { listSessionEntries } from "../../../core/chat/session/list.js";
 import { CHAT_FRESH_WINDOW_MS } from "../../../core/chat/session/recent-landmark.js";
 import { loadLandmarkSummaries, type LandmarkProblem } from "../../../core/landmark/summaries.js";
+import type { CardSymbolData } from "../../../shared/card-symbol.js";
 
 /** One switchable place as the menu draws it. */
 export interface PlaceMenuLandmark {
@@ -35,8 +36,8 @@ export interface PlaceMenuLandmark {
   /** Box-relative directory; "" for the box root. */
   dir: string;
   label: string;
-  symbol: string;
-  symbolSrc: string | null;
+  /** The mark, `src` resolved to a box-relative path; null when there is none. */
+  symbol: CardSymbolData | null;
   /** Chats bound here and touched inside the fresh window. */
   freshCount: number;
 }
@@ -92,7 +93,6 @@ export const chatPlaceMenuProcedure = {
       dir: lm.dir,
       label: lm.label,
       symbol: lm.symbol,
-      symbolSrc: lm.symbolSrc,
       freshCount: byDir.get(lm.dir)?.fresh ?? 0,
     }));
 

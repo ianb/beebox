@@ -1,6 +1,6 @@
 ---
 title: "Cards carry a `symbol` — one mark beside the title, and landmarks stop being the special case"
-workstream: unattached
+workstream: sidecar-shell
 area: beebox
 needs: [design]
 labels: [cards, ui]
@@ -8,7 +8,16 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: "worktree-sidecar-shell — boxholder direction after the pinned-tab work"
 priority: normal
+resolution: implemented
 ---
+
+**Closed 2026-09-05** by `a706e09a9` and follow-ups on `worktree-sidecar-shell`
+(see `beebox/docs/implemented-plans/card-symbol.md`): `symbol` is now a
+GLOBAL_CARD_FIELDS group (`glyph`/`src`/`foreground`/`background`), drawn by
+one component (`CardMark`), with landmarks folded onto it via the
+`landmark-symbol` migration. No divergence from the design questions above —
+all were answered in the plan (image `src` included, contrary to the
+original "text only, for now").
 
 A card has no mark. A landmark does — `navigation.symbol` (`beebox/docs/landmarks.md`)
 — and it is the only card type that does, which is the wrong shape: the mark is
@@ -46,7 +55,7 @@ Boxholder decisions, already made:
 - **Which surfaces draw it, through what one component.** The pinned sidecar
   tab is the prompt for this (a compact pinned tab has room for a mark and not
   much else — see the closed
-  [pin-a-sidecar-tab](../closed/features/2026-08-30-pin-a-sidecar-tab.md)), but
+  [pin-a-sidecar-tab](2026-08-30-pin-a-sidecar-tab.md)), but
   browse rows, recent files, the place menu, and chat file chips all want the
   same mark. One renderer, or the mark drifts.
 - **Abbreviation, and what a pinned tab shows.** The boxholder's call

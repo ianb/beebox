@@ -99,14 +99,41 @@ test("parseSource: missing required field is named", () => {
 
 test("renderBody: internal links rewrite against base and are collected; externals open in a new tab", () => {
   const body = "See [about](/about.md) and [gh](https://github.com/x).";
-  const underPages = renderBody(body, { pageSitePath: "index.html", base: "/beebox/" });
+  const underPages = renderBody(body, { file: "cards/index.site-page.card", pageSitePath: "index.html", base: "/beebox/" });
   assert.match(underPages.html, /href="\/beebox\/about\.html"/);
   assert.match(underPages.html, /href="https:\/\/github\.com\/x" target="_blank" rel="noopener noreferrer"/);
   assert.match(underPages.html, /href="\/beebox\/about\.html"(?![^>]*target=)/);
   assert.deepEqual(underPages.linkTargets, ["about.html"]);
 
   // Same source under the router base: identical target, base-shifted href.
-  const underRouter = renderBody(body, { pageSitePath: "index.html", base: "/wt/site/" });
+  const underRouter = renderBody(body, { file: "cards/index.site-page.card", pageSitePath: "index.html", base: "/wt/site/" });
   assert.match(underRouter.html, /href="\/wt\/site\/about\.html"/);
   assert.deepEqual(underRouter.linkTargets, ["about.html"]);
+});
+
+// --- twin flattening order (cross-model review, 2026-08-20) --------------------
+
+test("twin: a nugget tag inside a referenced aside's body survives flattening", async () => {
+  const { twinMarkdown } = await import("./build.js");
+  const asides = new Map([
+    ["a1", {
+      slug: "a1",
+      file: "cards/a1.site-aside.card",
+      fields: { kind: "generated" as const, label: "with a nugget", status: "ready" as const },
+      body: "Intro.\n\n{% nugget slug=\"n1\" /%}",
+    }],
+  ]);
+  const nuggets = [{
+    slug: "n1",
+    file: "nuggets/n1.md",
+    source: "callback-box/docs/a.md",
+    span: "the span text",
+    status: "excerpt" as const,
+    body: "",
+    spanState: "current" as const,
+  }];
+  const twin = twinMarkdown("Page.\n\n{% aside ref=\"a1\" /%}\n", { nuggets, asides });
+  assert.match(twin, /with a nugget/);
+  assert.match(twin, /> the span text/);
+  assert.match(twin, /— from callback-box\/docs\/a.md/);
 });
