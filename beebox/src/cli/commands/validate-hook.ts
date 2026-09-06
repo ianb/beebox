@@ -26,6 +26,7 @@ import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
 import { loadValidationIgnore } from "../../core/validation-ignore.js";
 import { checkBoxRoot } from "../../lib/box-root-check.js";
+import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
 import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
 
 /**
@@ -64,6 +65,11 @@ const VOCABULARY_NAMES: ReadonlySet<string> = new Set(BOX_ROOT_VOCABULARY.map((e
 async function checkPackageSurfaceEdit(fp: string, boxRoot: string): Promise<HookValidationResult | null> {
   const rel = path.relative(boxRoot, fp);
   if (rel === "" || rel.startsWith("..")) return null;
+  const relativePath = rel.split(path.sep).join("/");
+  const reserved = findReservedNestedSegment(relativePath);
+  if (reserved !== null) {
+    return { feedback: `Reserved name: ${reservedNestedSegmentMessage(relativePath, reserved)}`, hasErrors: true };
+  }
   const firstSegment = rel.split(path.sep)[0];
   if (firstSegment === undefined) return null;
 
