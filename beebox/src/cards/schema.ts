@@ -3,6 +3,7 @@ import type { LintIssue } from "./lint-format.js";
 import { isRecord } from "../lib/is-record.js";
 import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
 import { CardSymbol, type CardSymbolData } from "../shared/card-symbol.js";
+import { Prominence, type ProminenceLevel, type EffectiveLevel } from "../shared/prominence.js";
 
 /**
  * Card schemas describe a card file's full shape: most fields live in the
@@ -85,6 +86,10 @@ export type FieldDecl = ZodType | BodyField;
  *   listing, or a tile: `{ glyph, src, foreground, background }`. Most cards
  *   have none; a box where everything is marked has nothing marked. See
  *   `src/shared/card-symbol.ts`.
+ * - `prominence` — who a card is for, and whether the box should surface it
+ *   to a reader looking around: `entry-point`, `primary`, or `background`.
+ *   Absent (most cards) means the card type's default level — see
+ *   `defaultProminence` below. See `src/shared/prominence.ts`.
  *
  * Adding/removing a field here? Update the enumerations in
  * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/adding-schemas.md`.
@@ -95,6 +100,7 @@ export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   "contains-evidence": z.string().optional(),
   todos: TodosFieldSchema,
   symbol: CardSymbol.optional(),
+  prominence: Prominence.optional(),
 };
 
 /**
@@ -169,6 +175,14 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
   description?: string;
   /** Who creates cards of this type (see {@link CardCategory}). Defaults to "authored". */
   category?: CardCategory;
+  /**
+   * This type's default `prominence` level, applied when a card of this type
+   * leaves the field absent. Omit for the ordinary default; `category:
+   * "system"` implies `"background"` unless this is set to something else.
+   * A card's own `prominence:` always wins over the type default — see
+   * `effectiveLevel()` in `src/shared/prominence.ts`.
+   */
+  prominence?: ProminenceLevel;
   /** Handling instructions for agents working with this card type. */
   instructions?: string;
   /**
@@ -226,6 +240,13 @@ export interface CardSchema<
   readonly description?: string;
   /** Who creates cards of this type. Defaults to "authored". */
   readonly category: CardCategory;
+  /**
+   * This type's default `prominence` level for a card that leaves the field
+   * absent (see {@link CardSchemaConfig.prominence}). Resolved at
+   * declaration time: an explicit `prominence` option wins, otherwise
+   * `category: "system"` yields `"background"`, otherwise `"ordinary"`.
+   */
+  readonly defaultProminence: EffectiveLevel;
   /** Name of the single body field, or null if the card is frontmatter-only. */
   readonly bodyFieldName: string | null;
   /** Resolved body field (kind + schema), or null. */
@@ -302,6 +323,7 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
         "contains-evidence"?: string;
         todos?: TodoEntry[];
         symbol?: CardSymbolData;
+        prominence?: ProminenceLevel;
       },
       keyof TFields
     >
@@ -366,6 +388,13 @@ export function cardSchema<
     config.superRefine !== undefined
       ? baseFrontmatter.superRefine(config.superRefine)
       : baseFrontmatter;
+  const category: CardCategory = config.category === undefined ? "authored" : config.category;
+  // A card the box writes for its own use is background by type — nothing to
+  // declare per schema, the category is the declaration. An explicit
+  // `prominence` option always wins (e.g. a system schema that wants to stay
+  // ordinary would set it, though none currently do).
+  const defaultProminence: EffectiveLevel =
+    config.prominence ?? (category === "system" ? "background" : "ordinary");
   const schema: CardSchema<TTag, TFields> = {
     type,
     fields: config.fields,
@@ -374,7 +403,8 @@ export function cardSchema<
     frontmatterSchema,
     globalFieldNames,
     searchable: config.searchable === undefined ? true : config.searchable,
-    category: config.category === undefined ? "authored" : config.category,
+    category,
+    defaultProminence,
   };
   // Optional members are spread in only when present so a schema that declares
   // neither still produces the same object shape (exactOptionalPropertyTypes).
