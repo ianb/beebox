@@ -222,7 +222,13 @@ async function commitChanges(repoRoot: string, message: string): Promise<void> {
   const changed = await changedMarkdown(repoRoot);
   if (changed.length === 0) return;
   await execa("git", ["add", "-A", "--", ...changed], { cwd: repoRoot });
-  await execa("git", ["commit", "-m", message], { cwd: repoRoot, stdout: "inherit", stderr: "inherit" });
+  // The commit's stdout goes to OUR stderr, never inherited: this runs under
+  // `bin/issues activate-due --json`, whose stdout is the JSON a schedule
+  // parses, and the pre-commit hook's `> beebox@0.1.0 doc-check` banner on an
+  // inherited stdout broke that parse the first time an activation fired
+  // (2026-09-07). Hook output stays visible, on the stream for diagnostics.
+  const commit = await execa("git", ["commit", "-m", message], { cwd: repoRoot, stderr: "inherit" });
+  if (commit.stdout !== "") process.stderr.write(`${commit.stdout}\n`);
 }
 
 async function repairPrivateLinks(privateRoot: string): Promise<void> {
