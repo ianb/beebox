@@ -26,7 +26,10 @@ export function PendingSendStorageRecovery({ boxSlug, blocked, onRecovered }: {
 }) {
   const [copies, setCopies] = useState<PendingSendRecoveryCopy[]>(() => {
     try { return pendingSendRecoveryCopies(sessionStorage, boxSlug); }
-    catch (_cause) { return []; }
+    catch (_cause) {
+      // The owning hook separately exposes storage failure as a blocking alert.
+      return [];
+    }
   });
   const [error, setError] = useState<string | null>(null);
   function recover(preserve: boolean): void {

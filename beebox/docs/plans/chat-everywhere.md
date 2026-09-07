@@ -1,6 +1,6 @@
 ---
 title: "Chat everywhere: one input, explicit conversational focus"
-status: active
+status: partial
 workstream: chat-everywhere
 issues:
   - ../../../issues/features/2026-08-30-chat-input-everywhere.md
@@ -26,8 +26,10 @@ The issue queue was searched with `bin/issues similar --all --docs` and for `eve
 - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), and [interface as cards](interface-as-cards.md): foundations and design context, not additional completion obligations.
 
 The boxholder authorized planning on 2026-09-07, after reviewing seven
-storyboards. Implementation was authorized later in the same conversation. The work is
-active in this worktree; this document is not a record of deployed behavior.
+storyboards. Implementation was authorized later in the same conversation. The
+implementation is complete in this branch and locally verified; physical-device
+acceptance and the product reconfirmations recorded below remain open. This
+document is not evidence of deployed behavior.
 
 ## Stated preferences this plan trades against
 
@@ -657,12 +659,13 @@ requirements; existing tests named below are anchors, not proof of new behavior.
 
 ## Open design questions
 
-None block the first implementation chunks. The defaults in A-F are proposed
-choices for plan review, not assertions that the human approved every detail.
-The consequential defaults to reconfirm are: cold card entry uses that card's
-landmark once; dashboard entry uses root only when no conversation is already
-selected; inspecting a result card preserves the recipient; Open conversation
-switches it; drafts follow explicit selection without a blocking confirmation.
+None block the implementation. A-F now implement the reviewed defaults: cold
+card entry uses that card's landmark once; dashboard entry uses root only when
+no conversation is already selected; inspecting a result card preserves the
+recipient; Open conversation switches it; drafts follow explicit selection
+without a blocking confirmation. The actual-interface review still needs to
+reconfirm generic labels for multiple untitled conversations and the broader
+notice scope described in the engineering review.
 
 Exact truncation and expansion sizes for mobile reply/input regions should be
 settled against the existing UI during E's visual pass. No new layout aesthetic
@@ -678,23 +681,22 @@ entries to `src/dev/knowledge-audits.yaml` for:
 2. Explicit selected text keeps its source after the focused card changes.
 3. Hidden transcript calls for self-contained visual output, but does not enable narration or establish that speech can be heard.
 
-During implementation, run the filtered audits against the isolated test box
-and record their dated pass/fail comments. This planning turn does not run
-model-behavior audits or claim they pass. Keep prompt/docs and audits in the
-same implementation track; follow the existing prompt-surface review workflow.
+The filtered audits run against the isolated test box passed for focused-card
+versus conversation context and for hidden-transcript visual output. Their dated
+records live in `src/dev/context-history.yaml`. Keep prompt/docs and audits in
+the same implementation track when this context changes again.
 
 ## What will hold this after it ships
 
-Use the existing doctest tiers. New proposed files:
+The implementation uses the existing doctest tiers. Its focused coverage lives in:
 
-- `test/frontend/chat/conversation-intent.doctest.md`: intent table, cold entry, history restore, lookup supersession, unavailable target.
-- `test/frontend/chat/send-binding.doctest.md`: captured recipient/context across upload wait, assignment, queue, rejection, and box change.
-- `test/frontend/chat/attention-snapshot.doctest.md`: content focus versus composer focus, selection sources, overlay return, activity restoration.
-- `test/frontend/chat/ambient-replies.doctest.md`: transcript projection, ordinary-prose fallback, background attribution, dismiss versus question resolution, reconnect/tail comparison, incomplete groups, missing UUIDs, and persistent attention across later replies. Reuse `test/core/chat/session/load-history.doctest.md` and `test/core/codex-transcript.doctest.md` for history behavior.
-- Extend `test/frontend/native-emission-bridge.doctest.md`, `native-emission-redelivery.doctest.md`, and `native-box-switching.doctest.md` with session/start binding, assignment, URL-to-binding authority, and version cases, using shared mobile fixtures.
-- Add route-tier coverage alongside `test/webapp/trpc-chat-by-landmark.doctest.md` for reserved/committed selection and exact sends; extend existing chat snapshot/queue tests for optional context fields.
-- Preserve `test/frontend/sidecar-tabs.doctest.md`, `sidecar-tabs-storage.doctest.md`, `lib/last-chat.doctest.md`, and `chat/reconnect-refresh-gate.doctest.md` contracts where the owner moves.
-- XCTest covers binding persistence through HQ preparation, legacy record recovery, duplicate/late receipts, and target publication. Use a simulator for the deterministic bridge/layout portions.
+- `test/frontend/chat/conversation-intent.doctest.md` for route intent, cold entry, restoration, and unavailable targets.
+- `test/frontend/chat/send-binding.doctest.md`, `pending-sends.doctest.md`, and `conversation-controller-pool.doctest.md` for frozen recipients, startup assignment, persistence, rejection, and overlapping delivery.
+- `test/frontend/chat/card-conversation-context.doctest.md` and `card-activity-store.doctest.md` for focused content, selection sources, and source-scoped activity.
+- `test/frontend/chat/ambient-replies.doctest.md` for transcript projection, background attribution, dismissal, reconnect, and incomplete history.
+- `test/mobile-contract/fixtures.doctest.md` plus shared composer-binding/native-emission fixtures for version, target, assignment, and recovery boundaries.
+- `test/webapp/chat-exact-committed.doctest.md` and `chat-send-routes-validation.doctest.md` for exact-session admission and context validation.
+- `ComposerDraftTests.swift` and `SpeechKeywordsTests.swift` for native binding persistence, record upgrade, receipts, keyword send, and box isolation. The recorded native run used a simulator.
 
 Extract decisions into pure functions; route tests exercise actual backend
 queues/history rather than reproducing the implementation in a fake UI. A small
@@ -786,5 +788,10 @@ cases passed. The implementation review and adjudications are recorded in the
 Physical phone acceptance remains for S4–S6: live dictation through navigation,
 keyboard/safe-area behavior, interruptions and screen-away recovery. Browser
 viewport checks and deterministic voice tests do not close these gates. The
-actual-interface exhibit requests the boxholder's reconfirmation. This plan
-remains active; the worktree has not been merged or deployed.
+actual-interface exhibit requests the boxholder's reconfirmation. Generic
+Conversation labels for untitled sessions can still be ambiguous, and retained
+visited-session metadata allows later scheduled completions to raise notices
+beyond the original sent-to/left-running set; active history subscriptions are
+still pruned. This plan remains partial until those product calls and the phone
+checks are accepted. Landing this branch does not itself verify deployment or a
+physical device.

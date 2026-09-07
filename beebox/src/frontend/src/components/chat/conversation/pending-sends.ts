@@ -46,7 +46,9 @@ const emissionSchema = z.object({
   words: z.array(z.object({ word: z.string(), confidence: z.number().optional() })).optional(),
   spokenStart: z.number().optional(), hqText: z.literal(true).optional(), hqService: z.string().optional(),
 });
-const savedRowSchema = z.object({
+// PendingConversationSend is also the live store API; bind its storage schema
+// to that domain type so either side fails typecheck if their fields drift.
+const savedRowSchema: z.ZodType<PendingConversationSend> = z.object({
   emission: emissionSchema, binding: sendBindingSchema,
   status: z.enum(["preparing", "pending", "rejected", "recovered", "accepted", "restored"]), reason: z.string().optional(),
 });

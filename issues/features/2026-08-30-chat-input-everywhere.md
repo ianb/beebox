@@ -2,7 +2,7 @@
 title: "The chat input should be everywhere — send to the box from any page, not just chat pages"
 workstream: chat-everywhere
 area: beebox
-needs: [design]
+needs: [manual-testing]
 labels: [chat, ui, navigation]
 filed-by: agent
 discovered-by: Ian
@@ -43,6 +43,23 @@ This is a real design item, not a widget move:
 - **iOS parity** from day one (`bbx-ios-overlap`): the native composer is a
   separate implementation; "everywhere" on web widens a gap unless planned
   together — the input-plane-parity issue (`2026-07-19`) is the sibling.
+
+The 2026-09-07 implementation checkpoint supplies the persistent web composer,
+explicit conversation selection, frozen send binding and recovery, ambient
+results, mobile foreground switching, and native V3 binding/pending parity.
+Deterministic web/native checks, simulator XCTest, knowledge audits, and local
+browser sends pass. The issue remains open for physical iPhone dictation through
+navigation, keyboard/safe-area behavior, interruptions and screen-away return.
+Product reconfirmation also remains for ambiguous generic Conversation labels
+and for scheduled completions in previously visited sessions raising notices
+beyond the narrower sent-to/left-running set.
+
+## Manual testing
+
+- [ ] On a physical iPhone, dictate while navigating between cards and confirm the live draft, source selections, and bound recipient survive.
+- [ ] Exercise keyboard and safe-area behavior with the card and transcript foreground controls.
+- [ ] Interrupt and background the app during recording/delivery, then confirm recovery and screen-away results remain reachable.
+- [ ] Reconfirm whether generic Conversation labels and notices from later scheduled completions are acceptable product behavior.
 
 Related: `2026-07-08-draft-ahead-surface-native-pattern.md`,
 `2026-08-13-tell-the-agent-the-screen-is-unfocused.md` (same instinct: the

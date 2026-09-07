@@ -2,7 +2,9 @@
 import { z } from "zod";
 import { EMPTY_ATTENTION, type AmbientAttention } from "./projection";
 
-const attentionSchema = z.object({
+// Keep projection.ts dependency-free for its pure doctest; this annotation
+// still makes the storage schema prove it returns the domain type it validates.
+const attentionSchema: z.ZodType<AmbientAttention> = z.object({
   initialized: z.boolean(), lastCompletion: z.string().nullable().default(null), lastReply: z.string().nullable(),
   attention: z.boolean(), dismissedReply: z.string().nullable(),
 });

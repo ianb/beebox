@@ -50,7 +50,10 @@ export function useBoundEmission(opts: {
   const { pool, target, selection, attention, emissionStore, captureCardSend, acceptCardSend, getWitness, onSent } = opts;
   const [pending, setPending] = useState(() => {
     try { return createPendingSendsStore(sessionStorage, pool.boxSlug); }
-    catch (_cause) { return null; }
+    catch (_cause) {
+      // Null drives the visible recovery alert below and disables web sends.
+      return null;
+    }
   });
   const [error, setError] = useState<string | null>(pending === null ? new RecoveryStorageUnavailableError().message : null);
   const utils = trpc.useUtils();
