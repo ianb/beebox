@@ -1,97 +1,143 @@
 # File routing (chat composer)
 
-`routeAddedFiles` decides where a set of files handed to the chat composer goes:
-inline in the message being composed, or up as a bulk-upload batch. It is the
-whole answer to the composer's one "Add files…" menu entry — the user never
-picks a path (`issues/features/2026-08-03-attach-vs-upload-menu-confusing.md`).
+`routeAddedFiles` decides how a set of files handed to the chat composer is
+*represented* in the message being written — not where it goes. Both halves of
+its answer land in that message; the user never picks a path
+(`issues/features/2026-08-03-attach-vs-upload-menu-confusing.md`).
 
-A few photos belong in the message; a camera roll does not — inlining one
-base64-encodes tens of megabytes into a single `/chat/send` that cannot be sent
-(`issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md`). Non-images have no
-inline representation at all, so they always batch.
+- **inline** — a photo, base64-encoded into the `/chat/send` body and anchored
+  by `[image#N]`. Bounded by `INLINE_PHOTO_LIMIT`, because this is the one thing
+  that puts bytes in the send: a camera roll inlined is tens of megabytes in a
+  single request that cannot be sent
+  (`issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md`).
+- **upload** — everything else: any non-image, and photos over that limit.
+  Uploaded ahead of the send and anchored by `[file#N]`, carrying only a path,
+  so it adds nothing to the payload however large it is. No count or size limit.
 
-The photo-limit half of the rule is duplicated in the iOS composer, which cannot
-import it; the shared statement of record is `docs/mobile-contract.md`.
+An earlier version routed every non-image to the full-screen bulk-upload
+overlay, which sends a message of its own — so a PDF could not be attached to
+the sentence you were writing
+(`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
 
 ```ts setup
 import { INLINE_PHOTO_LIMIT, routeAddedFiles } from "../../src/frontend/src/components/chat/file-routing.js";
 
 /** Stand-ins for `File`s — routing reads nothing but the MIME type. */
-const photos = (n: number) => Array.from({ length: n }, () => ({ type: "image/jpeg" }));
-const pdf = { type: "application/pdf" };
+const photo = (name: string) => ({ type: "image/jpeg", name });
+const pdf = (name: string) => ({ type: "application/pdf", name });
+const photos = (n: number) => Array.from({ length: n }, (_v, i) => photo(`p${String(i)}`));
+
+/** Report the split by name, so which file went where is visible. */
+const split = (files: { type: string; name: string }[], existingInlinePhotos: number) => {
+  const r = routeAddedFiles({ files, existingInlinePhotos });
+  return { inline: r.inline.map((f) => f.name), upload: r.upload.map((f) => f.name) };
+};
 ```
 
-## Up to the limit stays inline; one more batches
+## A few photos ride inline; a document rides alongside them
+
+The everyday case, and the one the regression broke: a PDF and a photo picked
+together both attach to the message, each in the representation that suits it.
 
 ```ts
 JSON.stringify({
   limit: INLINE_PHOTO_LIMIT,
-  one: routeAddedFiles({ files: photos(1), existingInline: 0 }),
-  atLimit: routeAddedFiles({ files: photos(3), existingInline: 0 }),
-  overLimit: routeAddedFiles({ files: photos(4), existingInline: 0 }),
-  cameraRoll: routeAddedFiles({ files: photos(70), existingInline: 0 }),
+  onePhoto: split([photo("a.jpg")], 0),
+  onePdf: split([pdf("report.pdf")], 0),
+  mixed: split([photo("a.jpg"), pdf("report.pdf")], 0),
 })
-=> {"limit":3,"one":"inline","atLimit":"inline","overLimit":"batch","cameraRoll":"batch"}
+=> {"limit":3,"onePhoto":{"inline":["a.jpg"],"upload":[]},"onePdf":{"inline":[],"upload":["report.pdf"]},"mixed":{"inline":["a.jpg"],"upload":["report.pdf"]}}
 ```
 
-## Anything that isn't an image batches, however few
+## Non-images have no count or size limit
 
-A document can't ride inline as an image, and one is something to file rather
-than something for the model to look at mid-sentence. A mixed set goes whole to
-the batch — splitting it would put half the selection somewhere the composer
-text no longer describes.
+Their bound was the payload, and they aren't in it — a `[file#N]` carries a
+path. So "a couple of files" and "a folder of scans" differ only in how many
+chips appear.
 
 ```ts
 JSON.stringify({
-  onePdf: routeAddedFiles({ files: [pdf], existingInline: 0 }),
-  mixed: routeAddedFiles({ files: [...photos(1), pdf], existingInline: 0 }),
-  pdfWhenEmpty: routeAddedFiles({ files: [pdf], existingInline: 0 }),
+  threePdfs: split([pdf("a"), pdf("b"), pdf("c")], 0).upload,
+  manyPdfs: routeAddedFiles({ files: Array.from({ length: 40 }, () => pdf("x")), existingInlinePhotos: 0 }).upload.length,
 })
-=> {"onePdf":"batch","mixed":"batch","pdfWhenEmpty":"batch"}
+=> {"threePdfs":["a","b","c"],"manyPdfs":40}
 ```
 
-## Photos already in the composer count toward the limit
+## Photos past the inline limit take the upload representation
 
-The decision is made against the composer's *total* inline count, not just the
-new selection — so the inline payload stays bounded however many separate
-selections a user makes. Two already inline plus two more is four, so the new
-two batch rather than pushing the message to four inline photos.
+They aren't refused and they don't open anything — they just travel as
+references instead of payload, which is the whole reason the limit is safe to
+hold at a small number.
 
 ```ts
 JSON.stringify({
-  twoPlusOne: routeAddedFiles({ files: photos(1), existingInline: 2 }),
-  twoPlusTwo: routeAddedFiles({ files: photos(2), existingInline: 2 }),
-  fullPlusOne: routeAddedFiles({ files: photos(1), existingInline: 3 }),
+  atLimit: split(photos(3), 0).inline.length,
+  overLimit: split(photos(4), 0),
+  cameraRoll: routeAddedFiles({ files: photos(70), existingInlinePhotos: 0 }),
 })
-=> {"twoPlusOne":"inline","twoPlusTwo":"batch","fullPlusOne":"batch"}
+=> {"atLimit":3,"overLimit":{"inline":[],"upload":["p0","p1","p2","p3"]},"cameraRoll":{"inline":[],"upload":«*»}}
 ```
+
+## When the photos don't fit, the whole selection goes up together
+
+Inlining part of a selection and uploading the rest would scatter one act across
+two representations for no reason the user could predict — so the PDF's
+companion photos join it rather than splitting off.
+
+```ts
+JSON.stringify({
+  mixedOverLimit: split([...photos(4), pdf("report.pdf")], 0),
+})
+=> {"mixedOverLimit":{"inline":[],"upload":["p0","p1","p2","p3","report.pdf"]}}
+```
+
+## What's already in the composer counts, so picking twice builds one message
+
+The decision reads the composer's *current* inline photo count, not just the new
+selection. Two photos already there plus two more is four, so the new pair
+uploads rather than pushing the message past the bound. (On iOS a pick is
+per-source — photos or files, never both at once — so picking twice before
+sending has to keep working.)
+
+```ts
+JSON.stringify({
+  twoPlusOne: split(photos(1), 2).inline.length,
+  twoPlusTwo: split(photos(2), 2),
+  fullPlusOne: split(photos(1), 3),
+  fullPlusPdf: split([pdf("report.pdf")], 3),
+})
+=> {"twoPlusOne":1,"twoPlusTwo":{"inline":[],"upload":["p0","p1"]},"fullPlusOne":{"inline":[],"upload":["p0"]},"fullPlusPdf":{"inline":[],"upload":["report.pdf"]}}
+```
+
+A file never costs a photo slot, and vice versa: `fullPlusPdf` above uploads the
+PDF because that is what a PDF always does, not because the photos are full.
 
 ## Photos still encoding count too
 
-`existingInline` must include the store's `pendingImages`, not just finished
-ones. Image processing is async, so two three-photo pastes in quick succession
-would otherwise both observe zero finished images, both inline, and land six
-inline photos — breaking the bound via exactly the race it exists to prevent.
+`existingInlinePhotos` must include the store's `pendingImages`, not just
+finished ones. Image processing is async, so two three-photo pastes in quick
+succession would otherwise both observe zero finished images, both inline, and
+land six inline photos — breaking the bound via exactly the race it exists to
+prevent.
 
 ```ts
 JSON.stringify({
-  threeStillEncodingPlusOne: routeAddedFiles({ files: photos(1), existingInline: 3 }),
-  oneDonePlusTwoEncodingPlusOne: routeAddedFiles({ files: photos(1), existingInline: 1 + 2 }),
-  twoEncodingPlusOne: routeAddedFiles({ files: photos(1), existingInline: 2 }),
+  threeStillEncodingPlusOne: split(photos(1), 3).inline.length,
+  oneDonePlusTwoEncodingPlusOne: split(photos(1), 1 + 2).inline.length,
+  twoEncodingPlusOne: split(photos(1), 2).inline.length,
 })
-=> {"threeStillEncodingPlusOne":"batch","oneDonePlusTwoEncodingPlusOne":"batch","twoEncodingPlusOne":"inline"}
+=> {"threeStillEncodingPlusOne":0,"oneDonePlusTwoEncodingPlusOne":0,"twoEncodingPlusOne":1}
 ```
 
-## An empty selection never batches
+## An empty selection splits into nothing
 
-Paste and drop both route through the same function, and both can fire with
-nothing attached. Saying "inline" for an empty set keeps a stray event from
-opening an empty batch overlay.
+Paste and drop both route through here, and both can fire with nothing
+attached.
 
 ```ts
 JSON.stringify({
-  emptyFresh: routeAddedFiles({ files: [], existingInline: 0 }),
-  emptyWhenFull: routeAddedFiles({ files: [], existingInline: 3 }),
+  emptyFresh: split([], 0),
+  emptyWhenFull: split([], 3),
 })
-=> {"emptyFresh":"inline","emptyWhenFull":"inline"}
+=> {"emptyFresh":{"inline":[],"upload":[]},"emptyWhenFull":{"inline":[],"upload":[]}}
 ```

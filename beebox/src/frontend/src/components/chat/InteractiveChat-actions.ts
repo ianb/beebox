@@ -7,7 +7,7 @@
  * body stays focused on composition.
  */
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getChatHistory, restartChatSubprocess, type SessionEntry } from "../../api";
 import { extractTransferFiles } from "../../lib/image-paste";
@@ -15,7 +15,6 @@ import { unlockAudioContext } from "../../lib/audio/context";
 import { href, toSearch } from "../../lib/routing";
 import { newMessageId } from "./InteractiveChat-helpers";
 import { toastError } from "../ui/toast-store";
-import { type SelectionItem } from "../../lib/selection/serialize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { createTypedEmission, draftAttachments, type Emission } from "../../input/emission";
 import type { InputStore } from "./input-store";
@@ -34,11 +33,12 @@ interface ChatActionsOpts {
   inputStore: InputStore;
   /** Read at send-time via `.get()` — not a reactive prop, see module doc. */
   emissionStore: EmissionStore;
-  selections: SelectionItem[];
   resetAttachments: () => void;
   resetSelections: () => void;
-  /** Composer file ingest — routing decides inline vs. batch (`file-routing.ts`). */
+  /** Composer file ingest — routing decides inline vs. upload (`file-routing.ts`). */
   addFiles: (files: File[]) => void;
+  /** Resolves when no file attachment is still uploading; a send waits on it. */
+  awaitPendingUploads: () => Promise<void>;
   onSend: () => void;
   isTranscribing: boolean;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
@@ -53,26 +53,69 @@ interface ChatActionsOpts {
 export function useChatActions(opts: ChatActionsOpts) {
   const {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
-    inputStore, emissionStore, selections, resetAttachments, resetSelections, addFiles,
+    inputStore, emissionStore, resetAttachments, resetSelections, addFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
-    dispatchEmission,
+    dispatchEmission, awaitPendingUploads,
   } = opts;
   const navigate = useNavigate();
 
-  const handleSend = useCallback(() => {
-    const text = inputStore.get().trim();
+  /**
+   * True while a send is waiting on uploads. Sending is no longer instantaneous
+   * — it can sit on a slow upload for seconds — so a second Enter would
+   * otherwise start a second send that wakes up after the first cleared the
+   * composer and dispatches an EMPTY message (nothing downstream rejects one).
+   */
+  const sendInFlightRef = useRef(false);
+
+  const runSend = useCallback(async (): Promise<void> => {
+    if (sendInFlightRef.current) return;
     // Point-in-time read, not a subscription — attachments aren't reactive
     // props here (see module doc); this only runs on an actual send click.
-    const { images: attachments, files: fileAttachments } = emissionStore.get();
-    if (!text && attachments.length === 0 && fileAttachments.length === 0 && selections.length === 0) return;
-    onSend();
+    const pre = emissionStore.get();
+    if (!inputStore.get().trim() && pre.images.length === 0 && pre.files.length === 0 && pre.selections.length === 0) return;
     unlockAudioContext();
 
+    // Hold until every file attachment has finished uploading. A file's token
+    // goes into the text the moment it is picked, so a send can land on one
+    // whose bytes are still moving — and `draftAttachments` would drop it,
+    // sending a token that references nothing. The composer stays live and the
+    // chips keep showing progress, so anything typed during the wait joins this
+    // same message.
+    sendInFlightRef.current = true;
+    try {
+      await awaitPendingUploads();
+    } finally {
+      sendInFlightRef.current = false;
+    }
+
+    // Re-read EVERYTHING after the wait — text may have grown, a selection may
+    // have been added or dropped, and the file states have certainly changed.
+    // Reading selections from the store rather than the `selections` prop
+    // matters here: the prop is the value captured when this callback was
+    // built, so a selection made during the wait would ship its token with no
+    // payload behind it.
+    const { images: attachments, files: fileAttachments, selections: liveSelections } = emissionStore.get();
+    const text = inputStore.get().trim();
+    const failed = fileAttachments.filter((f) => f.state.status === "failed");
+    if (failed.length > 0) {
+      // Refuse rather than quietly send a message missing the files it names.
+      // Everything stays put, so the chips' retry is right there.
+      const names = failed.map((f) => f.originalName).join(", ");
+      toastError(`Not sent — ${names} didn't upload. Retry or remove ${failed.length === 1 ? "it" : "them"}, then send.`);
+      return;
+    }
+    // The composer can have been emptied while we waited — another send path
+    // (a voice keyword fire) clears it wholesale.
+    if (!text && attachments.length === 0 && fileAttachments.length === 0 && liveSelections.length === 0) return;
+
+    // Only now has a message definitely gone out: `onSend` tells the voice
+    // machine a send happened, and a refusal above must not claim one did.
+    onSend();
     const emission = createTypedEmission({
       text,
       // UI attachments become the wire-format payloads.
       ...draftAttachments({ images: attachments, files: fileAttachments }),
-      selections,
+      selections: liveSelections,
     });
 
     resetAttachments();
@@ -82,7 +125,14 @@ export function useChatActions(opts: ChatActionsOpts) {
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setTypingMode]);
+  }, [inputStore, emissionStore, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setTypingMode, awaitPendingUploads]);
+
+  /**
+   * The send every caller uses. Void-returning: sending now waits on in-flight
+   * uploads, but a click handler, a key handler and a composer prop all have
+   * nothing to resume on, and `runSend` reports its own failures with a toast.
+   */
+  const handleSend = useCallback(() => { void runSend(); }, [runSend]);
 
   // Clicking a suggested opener is typing it and pressing enter: seed the
   // composer store, then run the exact same send funnel — so an opener carries
@@ -94,8 +144,8 @@ export function useChatActions(opts: ChatActionsOpts) {
   }, [inputStore, handleSend]);
 
   // Paste and drop take WHATEVER files came with the event, not just images:
-  // routing (`file-routing.ts`) sends a non-image set to the bulk batch, so
-  // filtering here would silently discard a dropped PDF instead of filing it.
+  // routing (`file-routing.ts`) gives a non-image the upload representation, so
+  // filtering here would silently discard a dropped PDF instead of attaching it.
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const files = extractTransferFiles(e.clipboardData);
     if (files.length === 0) return;

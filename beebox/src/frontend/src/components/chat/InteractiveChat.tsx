@@ -29,7 +29,6 @@ import { useChatModelFeatures } from "./use-chat-model";
 import { useProcessingStatusPoll } from "./processing-status-display";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
 import { useChatAttachments, useEnsureComposerVisible } from "./InteractiveChat-attachments";
-import { useBulkUploadLaunch, type BulkUploadLaunch } from "./use-bulk-upload-launch";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
 import { useChatWs } from "./InteractiveChat-ws";
@@ -41,7 +40,6 @@ import type { EmissionStore } from "../../input/emission-store";
 import type { Emission } from "../../input/emission";
 import { useCaptureBubbles } from "./useCaptureBubbles";
 import { CaptureOverlay } from "../capture/CaptureOverlay";
-import { BulkUploadOverlay } from "../bulk-upload/BulkUploadOverlay";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../DocumentTitle";
@@ -135,35 +133,23 @@ interface InteractiveChatProps {
 }
 
 /**
- * The two full-screen composer overlays (capture, bulk upload), grouped so the
- * InteractiveChat body carries one line rather than their gating. Both are
- * suppressed for native shells; bulk additionally requires a server-assigned
- * session id (its batch binds to a target chat) — the launcher already refuses
- * to open one without it, so this gate is the type-level backstop.
+ * The full-screen composer overlay (capture), kept out of the InteractiveChat
+ * body so it carries one line rather than the gating. Suppressed for native
+ * shells, which run their own.
+ *
+ * This was two overlays until the composer stopped sending files to the
+ * bulk-upload batch: routing now attaches them to the message being written
+ * instead, so nothing opened the bulk one any more
+ * (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
  */
-function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId, onExitCapture, onExitBulkUpload, onBulkUploadDelivered }: {
+function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCapture }: {
   captureMode: boolean;
-  bulkUpload: BulkUploadLaunch | null;
   usesNativeShell: boolean;
   sessionId: string | null;
   onExitCapture: () => void;
-  onExitBulkUpload: () => void;
-  onBulkUploadDelivered: () => void;
 }) {
-  return (
-    <>
-      {captureMode && !usesNativeShell ? <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} /> : null}
-      {bulkUpload !== null && !usesNativeShell && sessionId !== null ? (
-        <BulkUploadOverlay
-          targetSessionId={sessionId}
-          seedFiles={bulkUpload.seedFiles}
-          note={bulkUpload.note}
-          onExit={onExitBulkUpload}
-          onDelivered={onBulkUploadDelivered}
-        />
-      ) : null}
-    </>
-  );
+  if (!captureMode || usesNativeShell) return null;
+  return <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} />;
 }
 
 export function InteractiveChat({ sessionInput, contextDir, startEngine, startModel, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment }: InteractiveChatProps) {
@@ -225,17 +211,15 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   // same ref pattern as clearDraftRef.
   const ensureComposerVisibleRef = useRef<() => void>(() => {});
   // Set by the draft hook further down; threaded into voice so a committed
-  // segment drops the persisted draft, and into the bulk-upload launcher so a
-  // delivered batch drops the text it carried away. A ref breaks the
-  // voice→draft→voice cycle.
+  // segment drops the persisted draft. A ref breaks the voice→draft→voice
+  // cycle.
   const clearDraftRef = useRef<() => void>(() => {});
-  const { launch: bulkUploadLaunch, openWithFiles: handleBatchFiles, close: handleCloseBulkUpload, onDelivered: handleBulkUploadDelivered } = useBulkUploadLaunch({ emissionStore, clearDraftRef, sessionId });
-  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef, onBatchFiles: handleBatchFiles });
+  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef });
   const selections = useChatSelections({ emissionStore, textareaRef });
   const { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    resetAttachments: attach.resetAttachments,
+    resetAttachments: attach.resetAttachments, awaitPendingUploads: attach.awaitPendingUploads,
     onSent: bumpSendSignal,
   });
   // useChatVoice/useChatActions only ever fire-and-forget dispatchEmission
@@ -249,6 +233,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     selections: selections.selections, resetSelections: selections.resetSelections,
     emissionStore, resetAttachments: attach.resetAttachments,
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid, nativeComposer: usesNativeComposer,
+    awaitPendingUploads: attach.awaitPendingUploads,
   });
   useNativeBridges({
     enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug, sessionId,
@@ -286,12 +271,11 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore,
-    selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
     // Both addFiles and dispatchEmission already catch their own errors
     // internally; voided here so useChatActions' option types can stay
     // honestly void-returning.
-    addFiles: (files) => { void attach.addFiles(files); },
+    addFiles: (files) => { void attach.addFiles(files); }, awaitPendingUploads: attach.awaitPendingUploads,
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
     dispatchEmission: dispatchEmissionVoid,
@@ -351,7 +335,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
       audioOverlayStore={audioOverlayStore}
       openers={openers}
       />
-      <ChatModeOverlays captureMode={captureMode} bulkUpload={bulkUploadLaunch} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={handleCloseBulkUpload} onBulkUploadDelivered={handleBulkUploadDelivered} />
+      <ChatModeOverlays captureMode={captureMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} />
     </InputStoreProvider>
   );
 }

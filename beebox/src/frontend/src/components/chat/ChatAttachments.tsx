@@ -131,9 +131,12 @@ export type FileAttachmentItem = FileItem;
 export function FileAttachmentPanel({
   attachments,
   onRemove,
+  onRetry,
 }: {
   attachments: FileAttachmentItem[];
   onRemove: (id: number) => void;
+  /** Re-run a failed upload. The chip offers this in place of its size line. */
+  onRetry: (id: number) => void;
 }) {
   if (attachments.length === 0) return null;
 
@@ -144,25 +147,41 @@ export function FileAttachmentPanel({
           key={att.id}
           attachment={att}
           onRemove={() => onRemove(att.id)}
+          onRetry={() => onRetry(att.id)}
         />
       ))}
     </div>
   );
 }
 
+/**
+ * One file attachment, showing where it is in its trip to the box: a progress
+ * bar while it uploads, its size once it lands, and the failure with a retry if
+ * it doesn't. The token is already in the text by the time this renders, so the
+ * chip is the only place the user can see that the bytes haven't arrived yet.
+ */
 function FileChip({
   attachment,
   onRemove,
+  onRetry,
 }: {
   attachment: FileAttachmentItem;
   onRemove: () => void;
+  onRetry: () => void;
 }) {
+  const { state } = attachment;
   const sizeLabel = formatBytes(attachment.size);
+  const statusLabel = state.status === "uploaded"
+    ? sizeLabel
+    : state.status === "failed" ? state.message : `${sizeLabel} · uploading…`;
   return (
     <div
-      className="relative group flex items-center gap-2 pl-2 pr-7 py-1.5 rounded bg-warm-200 border border-warm-300 max-w-xs"
+      className={`relative group flex items-center gap-2 pl-2 pr-7 py-1.5 rounded border max-w-xs ${
+        state.status === "failed" ? "bg-danger-muted border-danger" : "bg-warm-200 border-warm-300"
+      }`}
       data-bbx-source={`file-attachment-${attachment.id}`}
-      title={`file#${String(attachment.id)} · ${attachment.originalName} · ${sizeLabel}`}
+      data-bbx-upload-state={state.status}
+      title={`file#${String(attachment.id)} · ${attachment.originalName} · ${statusLabel}`}
     >
       <span className="text-[10px] font-mono bg-warm-800 text-white px-1 rounded flex-shrink-0">
         {attachment.id}
@@ -174,7 +193,34 @@ function FileChip({
         <span className="truncate text-xs font-medium text-warm-800">
           {attachment.originalName}
         </span>
-        <span className="text-[10px] text-warm-600">{sizeLabel}</span>
+        {state.status === "failed" ? (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="text-[10px] text-danger text-left underline hover:no-underline focus:outline-none focus:ring-1 focus:ring-danger rounded truncate"
+          >
+            Upload failed — retry
+          </button>
+        ) : (
+          <span className="text-[10px] text-warm-600">{statusLabel}</span>
+        )}
+        {state.status === "uploading" ? (
+          // Indeterminate until the first progress event reports a total; a
+          // zero-width bar would read as "stuck" rather than "starting".
+          <span
+            className="mt-1 h-0.5 w-full bg-warm-300 rounded overflow-hidden"
+            role="progressbar"
+            aria-label={`Uploading ${attachment.originalName}`}
+            aria-valuenow={Math.round(state.progress * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <span
+              className="block h-full bg-accent transition-[width] duration-150"
+              style={{ width: `${String(Math.max(4, Math.round(state.progress * 100)))}%` }}
+            />
+          </span>
+        ) : null}
       </div>
       <button
         type="button"

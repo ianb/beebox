@@ -163,7 +163,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       voicePaused={spec.voicePaused}
       onUnpause={noop}
       onAddFiles={noop}
-      addFiles={() => Promise.resolve({ route: "inline", added: 0 })}
+      addFiles={() => Promise.resolve({ added: 0 })}
       onEnterCapture={noop}
       captureEnabled
       narrationEnabled={spec.narrationEnabled}
@@ -208,6 +208,7 @@ function StateBlock({ spec }: { spec: Spec }) {
         selections={[]}
         onRemoveAttachment={noop}
         onRemoveFileAttachment={noop}
+        onRetryFileAttachment={noop}
         onRemoveSelection={noop}
         fileInputRef={fileInputRef}
         onFileInputChange={noop}

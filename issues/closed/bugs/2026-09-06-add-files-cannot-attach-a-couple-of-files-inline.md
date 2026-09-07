@@ -1,13 +1,25 @@
 ---
 title: "\"Add files…\" sends every non-image file to the bulk-upload process — you can no longer attach a couple of files to a message"
-workstream: unattached
+workstream: add-files-inline
 area: beebox
 priority: important
 labels: [chat, composer, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "Add files now just goes to a big dedicated upload process, and doesn't let me attach a couple files"
+resolution: implemented
 ---
+
+Closed: fixed in `af42d07ec` (`worktree-add-files-inline`). `routeAddedFiles`
+now returns a split — a representation, not a destination: photos inline
+while the composer's total stays within `INLINE_PHOTO_LIMIT`, everything else
+uploads and is referenced with a `[file#N]` token, and both halves land in the
+same message. No file-count limit and no byte ceiling were added — the
+developer specified that directly, superseding this issue's proposal of a
+size- and count-aware rule (3 files / 25MB): an inline file is a path token,
+not bytes in the send, so there is nothing to cap. The web bulk-upload
+overlay was deleted as unreachable; the bulk backend and the native iOS
+composer are unchanged.
 
 Picking one or two files (a PDF, a document) from the composer's "Add files…"
 opens the full-screen bulk-upload overlay instead of attaching them to the

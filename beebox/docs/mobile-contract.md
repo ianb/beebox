@@ -1150,25 +1150,42 @@ without the other is a contract break.
   legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
 - **Inline photo limit** `3` — `components/chat/file-routing.ts` · `INLINE_PHOTO_LIMIT` /
   `routeAddedFiles` ↔ the iOS composer's mirrored constant. **The most photos that may ride
-  inline (base64) in one chat message.** A selection that would put the composer's *total* inline
-  count above the limit is uploaded as a bulk batch (§5.6) instead, and so is any set containing a
-  **non-image** (a document has no inline representation), however few files it holds. Photos **already inline join that
-  batch** and are removed from the composer, so one selection act has one destination — batching only
-  the new photos would send the composer text off as the batch's introduction while the older photos
-  sat behind with nothing describing them. (Photos still *encoding* can't be folded, having no bytes
-  yet; they finish and land inline rather than being discarded — never losing a photo outranks
-  arriving in one piece.) The inline total is bounded by the limit however many separate selections a
-  user makes, counting in-flight encodes. The rule applies identically to the picker, paste, drop
-  and screenshot grab — on the web the composer's Add menu offers one "Add files…" entry and routing
-  decides the rest, rather than asking the user to pick a path.
+  inline (base64) in one chat message.**
 
-  This is a real behavioral contract, not a tuning knob: inlining a camera roll base64-encodes tens
-  of megabytes into a single `/chat/send`, which is what
+  Routing chooses how each file is **represented in the message the user is writing** — never
+  where the act goes. Both outcomes land in that message:
+
+  - **inline** — a photo, base64 in the `/chat/send` body, anchored by `[image#N]`, while the
+    composer's *total* inline photo count (in-flight encodes included) stays within the limit.
+  - **upload** — everything else: any **non-image**, and **photos past the limit**. Uploaded ahead
+    of the send (`/chat/upload-file`) and anchored by `[file#N]`, which carries only a path — so it
+    adds nothing to the send payload however large it is. **No count or size limit applies**, since
+    the cost that would justify one isn't there.
+
+  A file's token goes in the moment it is picked, before its bytes move, so the user keeps writing
+  around it; the surface shows the upload's progress and offers a retry on failure. **A send waits
+  until no upload is in flight**, and refuses (leaving everything in place to retry) if one failed
+  — a token that references a path never written is worse than a delayed send. When the photos
+  don't fit, the *whole* selection takes the upload representation rather than scattering one act
+  across two.
+
+  Because both representations stay in the composer, a selection **accumulates**: picking twice
+  before sending builds one message. This matters most on iOS, where a pick is per-source — photos
+  or files, never both at once — so a mixed message is necessarily two picks.
+
+  The photo limit is a real behavioral contract, not a tuning knob: inlining a camera roll
+  base64-encodes tens of megabytes into a single `/chat/send`, which is what
   `issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` reports failing client-side with no
   server-side trace. There is **no documented size ceiling** for a WKWebView script message — the
   failure is memory pressure, not a published limit — so "inline just under the cliff" is not
   implementable; keeping the inline payload categorically small is the only sound posture. A
-  surface that raises or ignores the limit reintroduces the bug.
+  surface that raises or ignores it reintroduces the bug. A surface that applies it to *files*, or
+  spends a photo slot on one, makes "attach a couple of documents" impossible — the regression
+  `issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md` reports.
+
+  A surface that instead hands a selection to the **bulk-upload batch** (§5.6) — as the native
+  composer still does for a camera roll — MUST send the composer text as that batch's `note`,
+  and folds the composer's already-inline photos into it so one act keeps one destination.
 
   An uploader that routes a selection this way MUST send the composer text as the batch's `note`
   (§5.6) — otherwise the batch is unintroduced and the agent asks what the files are instead of

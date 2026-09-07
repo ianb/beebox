@@ -62,7 +62,7 @@ interface VoiceDevices {
  * in-flight + pending-draft state for the UI.
  * Module-level so the hook body stays under the per-function line budget.
  */
-function runKeywordSend(opts: {
+async function runKeywordSend(opts: {
   /** The realtime keyword spotter's "submit" intent (docs/implemented-plans/input-extraction.md, chunk 5). */
   intent: Extract<VoiceIntent, { kind: "submit" }>;
   transcription: { start: () => void };
@@ -81,8 +81,10 @@ function runKeywordSend(opts: {
   clearDraftRef: React.MutableRefObject<() => void>;
   /** Composer text store; the latest text is prepended at fire time so it isn't dropped. */
   inputStore: InputStore;
-}) {
-  const { intent, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, hqDictationEnabledRef, selectionsRef, resetSelections, emissionStore, resetAttachments, dispatchEmission, clearDraftRef, inputStore } = opts;
+  /** Resolves once no file attachment is still uploading — see the freeze below. */
+  awaitPendingUploads: () => Promise<void>;
+}): Promise<void> {
+  const { intent, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, hqDictationEnabledRef, selectionsRef, resetSelections, emissionStore, resetAttachments, dispatchEmission, clearDraftRef, inputStore, awaitPendingUploads } = opts;
   const { text, audioBlob, closeMic } = intent;
   // Restart the mic for a continuous conversation, or — for "send and close" —
   // end dictation (STOP_DICTATION clears turnTaking, suppressing the
@@ -109,9 +111,19 @@ function runKeywordSend(opts: {
   if (selectionsSnapshot.length > 0) {
     resetSelections();
   }
-  // Pending image/file attachments freeze at keyword-fire the same way —
-  // they belong to *this* utterance; ones added during the HQ window go to
-  // the next message. (They used to be silently dropped from voice sends.)
+  // Wait for any file still uploading before freezing the attachments. A
+  // file's `[file#N]` token goes into the text the moment it is picked, but
+  // `draftAttachments` carries only files that LANDED — so freezing mid-upload
+  // would commit the token, drop the file, and then `resetAttachments` would
+  // destroy the last handle to it. Same rule as the typed send
+  // (`InteractiveChat-actions.ts`): a send never ships a token whose bytes
+  // aren't on the box. Resolves immediately when nothing is in flight, so the
+  // hands-free path is unaffected in the ordinary case.
+  await awaitPendingUploads();
+  // Pending image/file attachments freeze at keyword-fire the same way as
+  // selections — they belong to *this* utterance; ones added during the HQ
+  // window go to the next message. (They used to be silently dropped from
+  // voice sends.)
   const { images: imagesSnapshot, files: filesSnapshot } = draftAttachments(emissionStore.get());
   if (imagesSnapshot.length > 0 || filesSnapshot.length > 0) {
     resetAttachments();
@@ -216,8 +228,10 @@ export function useChatVoice(opts: {
   dispatchEmission: (emission: Emission) => void;
   /** Native shell (§3.2): the app owns the microphone, and the screen (§4.10). */
   nativeComposer: boolean;
+  /** Resolves once no file attachment is still uploading; a voice send waits on it. */
+  awaitPendingUploads: () => Promise<void>;
 }) {
-  const { snapshot, sessionId, muted, narrationEnabled, hqDictationEnabled, selections, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, dispatchEmission, nativeComposer } = opts;
+  const { snapshot, sessionId, muted, narrationEnabled, hqDictationEnabled, selections, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, dispatchEmission, nativeComposer, awaitPendingUploads } = opts;
 
   // Live device handles, in a ref the command subscriber reads at emit time
   // (never during render). Effects below keep its fields current.
@@ -270,10 +284,12 @@ export function useChatVoice(opts: {
     onVoiceIntent: (intent) => {
       switch (intent.kind) {
         case "submit":
-          runKeywordSend({
+          // Fire-and-forget: it only awaits in-flight uploads, and reports
+          // its own outcomes through the composer machine.
+          void runKeywordSend({
             intent, transcription, stopTickRef, composerSend, sessionId,
             narrationEnabledRef, hqDictationEnabledRef, selectionsRef, resetSelections, emissionStore, resetAttachments,
-            dispatchEmission, clearDraftRef, inputStore,
+            dispatchEmission, clearDraftRef, inputStore, awaitPendingUploads,
           });
           break;
         case "cancel":

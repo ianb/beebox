@@ -60,6 +60,18 @@ already held by the launch object for as long as the overlay is open. What is
 missing is only the restore path on a cancel/discard exit, plus re-minting the
 `[imageN]` tokens and object URLs.
 
+## Superseded on the web (2026-09-06)
+
+`worktree-add-files-inline` deleted the web mechanism this issue is about —
+`components/bulk-upload/BulkUploadOverlay.tsx`, `chat/use-bulk-upload-launch.ts`,
+and `chat/composer-fold.ts` no longer exist; the web composer never folds
+inline photos into a batch anymore (`routeAddedFiles` in `file-routing.ts`
+now splits a selection by representation instead). The manual-testing steps
+below can no longer be run on the web composer. Left open (not closed) because
+`needs: [manual-testing]` only the developer clears, and because this may
+still describe live behavior in the native iOS composer, which keeps using
+the bulk pipeline and was not touched by that branch.
+
 ## Manual testing
 
 1. **Attach two or three photos** to the chat composer, and type something

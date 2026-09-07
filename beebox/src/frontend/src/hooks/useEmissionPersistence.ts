@@ -43,6 +43,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { uploadedPath } from "../input/emission-store";
 import type { EmissionStore, ImageItem } from "../input/emission-store";
 import {
   loadPersistedEmission,
@@ -146,7 +147,14 @@ export function useEmissionPersistence(opts: {
     });
 
     async function restorePersisted(p: PersistedEmission): Promise<void> {
-      const checks = await Promise.all(p.files.map(async (f) => [f.path, await fileExists(f.path)] as const));
+      // Persistence only ever saves landed files (`emission-persist.ts`), so
+      // every entry here has a path; a defensive skip keeps a hand-edited or
+      // older payload from throwing mid-restore.
+      const checks = await Promise.all(p.files.flatMap((f) => {
+        const path = uploadedPath(f);
+        if (path === null) return [];
+        return [fileExists(path).then((exists) => [path, exists] as const)];
+      }));
       // Commit-time recheck: the file HEADs are a network round trip, and
       // the user may have started typing during it. Their live composition
       // wins — abort rather than clobber (the persisted draft is then
