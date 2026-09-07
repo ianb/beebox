@@ -79,10 +79,14 @@ export function serializePersistedEmission(
     version: 1,
     text: draft.text,
     images: [...draft.images],
-    // Only landed files are worth persisting: an in-flight or failed upload
-    // cannot be resumed after a reload (its `File` handle is gone), so saving
-    // one would restore a chip that can only be removed.
-    files: draft.files.filter((f) => uploadedPath(f) !== null),
+    // Unfinished uploads are persisted too, even though they can never be
+    // resumed (the `File` handle dies with the page). Filtering them out here
+    // would leave their `[file#N]` tokens in the saved TEXT with no entry to
+    // explain them: no chip, no expired-attachment note, and an id
+    // `reserveIds` never covers — so the next attachment could mint that id and
+    // adopt the orphan token. Keeping them lets `partitionFiles` find them
+    // pathless, class them dead, and strip their tokens on the way back in.
+    files: [...draft.files],
     selections: [...draft.selections],
     updatedAt: opts.updatedAt,
   };

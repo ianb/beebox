@@ -219,7 +219,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    resetAttachments: attach.resetAttachments,
+    resetAttachments: attach.resetAttachments, awaitPendingUploads: attach.awaitPendingUploads,
     onSent: bumpSendSignal,
   });
   // useChatVoice/useChatActions only ever fire-and-forget dispatchEmission
@@ -233,6 +233,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     selections: selections.selections, resetSelections: selections.resetSelections,
     emissionStore, resetAttachments: attach.resetAttachments,
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid, nativeComposer: usesNativeComposer,
+    awaitPendingUploads: attach.awaitPendingUploads,
   });
   useNativeBridges({
     enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug, sessionId,
@@ -270,7 +271,6 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore,
-    selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
     // Both addFiles and dispatchEmission already catch their own errors
     // internally; voided here so useChatActions' option types can stay

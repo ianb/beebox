@@ -36,12 +36,14 @@ export function useEmissionDispatch(opts: {
   resetSelections: () => void;
   /** Clears pending images/files after a stop-and-send sweeps them (revokes object URLs too). */
   resetAttachments: () => void;
+  /** Resolves once no file attachment is still uploading; a send waits on it. */
+  awaitPendingUploads: () => Promise<void>;
   /** Every user send goes through here — the scroll controller's send anchor
    *  (rule 2, chat-scroll.ts) hangs off this, not off the composer button, so a
    *  voice segment, a stop-and-send and a native send anchor the same way. */
   onSent: () => void;
 }) {
-  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore, selections, resetSelections, resetAttachments, onSent } = opts;
+  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore, selections, resetSelections, resetAttachments, onSent, awaitPendingUploads } = opts;
 
   // Frame state at the moment of sending, as plain values — consumed by the
   // chat-target assembler (input/targets/chat-assemble.ts).
@@ -121,8 +123,14 @@ export function useEmissionDispatch(opts: {
   // input-extraction.md). Pending images/files sweep in the same way (a file
   // attached mid-dictation used to be silently dropped). Selections and
   // attachments reset after send, same as runKeywordSend's freeze-and-clear.
-  const sendStopSend = useCallback(
-    (text: string, voice: VoiceSegmentMeta) => {
+  const runStopSend = useCallback(
+    async (text: string, voice: VoiceSegmentMeta): Promise<void> => {
+      // Same rule as every other send: never ship a `[file#N]` whose bytes
+      // aren't on the box. `draftAttachments` carries only files that landed,
+      // and `resetAttachments` below destroys the rest — so without this wait a
+      // tap-send during an upload commits the token and deletes the file.
+      // Resolves immediately when nothing is in flight.
+      await awaitPendingUploads();
       const { images, files } = draftAttachments(emissionStore.get());
       const emission = createVoiceEmission({
         text, images, files, selections, diarized: false,
@@ -139,7 +147,16 @@ export function useEmissionDispatch(opts: {
       resetSelections();
       resetAttachments();
     },
-    [dispatchEmission, emissionStore, selections, resetSelections, resetAttachments]
+    [dispatchEmission, emissionStore, selections, resetSelections, resetAttachments, awaitPendingUploads]
+  );
+  /**
+   * Void-returning for the composer prop. The send now waits on in-flight
+   * uploads, but a button has nothing to resume on and `runStopSend` reports
+   * its own outcomes through the emission receipt.
+   */
+  const sendStopSend = useCallback(
+    (text: string, voice: VoiceSegmentMeta): void => { void runStopSend(text, voice); },
+    [runStopSend]
   );
 
   return { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend };

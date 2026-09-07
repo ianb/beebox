@@ -34,8 +34,7 @@
 
 import { useRef, useCallback, useEffect, useSyncExternalStore } from "react";
 import { processImageBlob, unsupportedImageMessage } from "../../lib/image-paste";
-import { uploadChatFile } from "../../lib/file-upload";
-import { errorMessage } from "@shared/error-guards";
+import { useComposerFileUploads } from "./composer-file-uploads";
 import { useEmissionStore } from "./input-store";
 import { toastError } from "../ui/toast-store";
 import { routeAddedFiles } from "./file-routing";
@@ -153,20 +152,8 @@ export function useChatAttachments(opts: {
   const { emissionStore, textareaRef, ensureComposerVisibleRef } = opts;
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
-  /**
-   * The `File` behind each uploading attachment, for retry. Not in the emission
-   * store: it is a DOM object, and the store is a serializable value by
-   * contract. Entries are dropped on success, removal and reset, so this never
-   * outlives the chips it backs.
-   */
-  const pendingUploadsRef = useRef(new Map<number, File>());
-  /**
-   * The in-flight upload for each file, so a send can wait on them. Settles
-   * (never rejects) as each upload reaches `uploaded` or `failed` — the outcome
-   * is read off the store, not off the promise.
-   */
-  const uploadsInFlightRef = useRef(new Map<number, Promise<void>>());
-
+  const { addUploadFiles, retryFileUpload, awaitPendingUploads, forget: forgetUpload, forgetAll: forgetAllUploads } =
+    useComposerFileUploads(editor);
   /**
    * Downscale, encode and store the photo half of an inline selection,
    * returning the items that made it. Placeholder tiles go up immediately so
@@ -218,82 +205,6 @@ export function useChatAttachments(opts: {
    * something the user retries or removes rather than something a caller
    * unwinds.
    */
-  const runUpload = useCallback(async (id: number, file: File): Promise<void> => {
-    try {
-      const uploaded = await uploadChatFile(file, {
-        onProgress: (fraction) => { editor.setFileState({ id, state: { status: "uploading", progress: fraction } }); },
-      });
-      pendingUploadsRef.current.delete(id);
-      editor.setFileState({ id, state: { status: "uploaded", path: uploaded.path } });
-    } catch (e) {
-      // Keep the handle: retry needs it, and the chip offers exactly that.
-      console.error("[chat] Failed to upload file:", e);
-      editor.setFileState({ id, state: { status: "failed", message: errorMessage(e) } });
-    }
-  }, [editor]);
-
-  /** Hold an upload's promise until it settles, so a send can wait on it. */
-  const track = useCallback((id: number, running: Promise<void>): void => {
-    const done = running.finally(() => {
-      // Only clear the entry if it is still THIS run — a retry replaces it.
-      if (uploadsInFlightRef.current.get(id) === done) uploadsInFlightRef.current.delete(id);
-    });
-    uploadsInFlightRef.current.set(id, done);
-  }, []);
-
-  /**
-   * Resolve once no file upload is still running. `runUpload` never rejects, so
-   * this settles on failures too — the caller inspects the store to see whether
-   * everything actually landed.
-   */
-  const awaitPendingUploads = useCallback(async (): Promise<void> => {
-    // A retry started while we wait registers a new promise, so loop until the
-    // map is genuinely empty rather than snapshotting it once.
-    while (uploadsInFlightRef.current.size > 0) {
-      await Promise.all([...uploadsInFlightRef.current.values()]);
-    }
-  }, []);
-
-  /**
-   * Register the upload half of a selection and start it moving.
-   *
-   * The items (and their tokens) exist before a single byte goes up, so the
-   * user can keep writing around an attachment that hasn't landed yet. Returns
-   * as soon as they are registered — the uploads run on behind it, and the send
-   * sites are what wait.
-   */
-  const addUploadFiles = useCallback((others: File[]): FileItem[] => {
-    const items: FileItem[] = others.map((f) => ({
-      id: editor.nextFileId(),
-      originalName: f.name,
-      size: f.size,
-      mimetype: f.type === "" ? "application/octet-stream" : f.type,
-      state: { status: "uploading", progress: 0 },
-    }));
-    for (const [i, item] of items.entries()) {
-      const file = others[i];
-      if (file === undefined) continue;
-      pendingUploadsRef.current.set(item.id, file);
-      editor.addFile(item);
-      track(item.id, runUpload(item.id, file));
-    }
-    return items;
-  }, [editor, runUpload, track]);
-
-  /** Re-run a failed upload from the handle kept for it. */
-  const retryFileUpload = useCallback((id: number) => {
-    const file = pendingUploadsRef.current.get(id);
-    if (file === undefined) {
-      // The handle is gone only if the page reloaded under a restored draft,
-      // and persistence never restores an unfinished file — so this is a state
-      // that shouldn't arise rather than one to paper over.
-      editor.setFileState({ id, state: { status: "failed", message: "This file can't be retried — remove it and pick it again." } });
-      return;
-    }
-    editor.setFileState({ id, state: { status: "uploading", progress: 0 } });
-    track(id, runUpload(id, file));
-  }, [editor, runUpload, track]);
-
   const addFiles = useCallback(async (files: File[]): Promise<AddFilesOutcome> => {
     if (files.length === 0) return { added: 0 };
     // One routing rule for every entry point — picker, paste, drop, screenshot
@@ -357,11 +268,10 @@ export function useChatAttachments(opts: {
     // The upload may still be running; `setFileState` no-ops once the item is
     // gone, so a late result can't resurrect the chip. Dropping the handle here
     // is what keeps the map from outliving what it backs.
-    pendingUploadsRef.current.delete(id);
-    uploadsInFlightRef.current.delete(id);
+    forgetUpload(id);
     // Strips the matching `[fileN]` token from the text too.
     editor.removeFile(id);
-  }, [editor]);
+  }, [editor, forgetUpload]);
 
   /** The Add menu's one file entry — opens the hidden picker; routing decides the rest. */
   const handleAddFiles = useCallback(() => {
@@ -374,13 +284,12 @@ export function useChatAttachments(opts: {
     // of the object URL, so dropping them doesn't affect the message. The
     // store hands the URLs back rather than revoking them itself (DOM APIs
     // don't belong in the framework-free store).
-    pendingUploadsRef.current.clear();
-    uploadsInFlightRef.current.clear();
+    forgetAllUploads();
     const { removedImageObjectUrls } = editor.reset("attachments");
     for (const url of removedImageObjectUrls) {
       try { URL.revokeObjectURL(url); } catch (_e) { /* already revoked — harmless */ }
     }
-  }, [editor]);
+  }, [editor, forgetAllUploads]);
 
   return {
     fileInputRef,

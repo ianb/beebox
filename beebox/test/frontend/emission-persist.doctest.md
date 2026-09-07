@@ -142,6 +142,34 @@ Object.keys(s.dump()).sort().join(",")
 => bbx-composer-draft:otherbox:sess-z
 ```
 
+## An unfinished upload is persisted, so restore can strip its token
+
+A file's `[file#N]` token enters the composer text the moment it is picked,
+before its bytes move. If a save dropped the still-uploading entry, the token
+would survive in the saved text with nothing to explain it — no chip, no
+expired note, and an id `reserveIds` never covers, so the next attachment could
+mint that id and adopt the orphan token. Persisting it keeps the two halves
+together; `partitionFiles` then finds it pathless and classes it dead, which is
+what strips the token on the way back in.
+
+```ts
+const uploading = { id: 2, originalName: "big.pdf", size: 9, mimetype: "application/pdf", state: { status: "uploading", progress: 0.4 } } as const;
+const midUpload = { ...draft, text: "half a thought [file#1] [file#2]", files: [...draft.files, uploading] };
+const s2 = fakeStorage();
+savePersistedEmission(s2, { boxSlug: "test1", draft: midUpload, updatedAt: 2000 });
+JSON.stringify(loadPersistedEmission(s2, "test1")?.files.map((f) => [f.id, f.state.status]))
+=> [[1,"uploaded"],[2,"uploading"]]
+```
+
+```ts continue
+const { live, dead } = partitionFiles(
+  loadPersistedEmission(s2, "test1")?.files ?? [],
+  new Set(["_tmp/2026-07-04_report.pdf"]),
+);
+JSON.stringify({ live: live.map((f) => f.id), dead: dead.map((f) => f.id) })
+=> {"live":[1],"dead":[2]}
+```
+
 ## Restored files partition into live and dead (_tmp/ sweeps)
 
 ```ts
