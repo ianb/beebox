@@ -65,12 +65,22 @@ unknown toolkit, so a miss is real) and read one toolkit's auth block
 
 - **Already connected in beebox, OAuth setup removable:** Gmail, Google
   Calendar, Google Drive, Sheets, Docs, Dropbox, Raindrop.
-- **New connectors it would make cheap, personal-box value:** Google Photos
-  (caveat: Google's 2025 Photos API change limits reads to app-created
-  media, through any intermediary), Splitwise, YNAB, Strava, Fitbit,
-  Todoist, TickTick, YouTube and Reddit (saved items as capture sources),
-  Instacart (if the toolkit is the consumer flow), Outlook and Box for
-  non-Google people.
+- **New connectors it would make cheap, personal-box value:** Splitwise,
+  YNAB, Strava, Fitbit, Todoist, TickTick, Outlook and Box for non-Google
+  people. Struck after a closer look (boxholder, 2026-09-06): Google Photos
+  (since 2025 the Library API sees only app-uploaded media; the Picker API
+  is user-driven selection, so "ingest my library" is not available through
+  anyone), YouTube and Reddit (not interesting).
+- **Not Composio's, but came up:** Instacart's toolkit is the API-key
+  Developer Platform — it creates shopping lists and recipe pages that open
+  in Instacart, not orders from your account; a fine direct trick for a
+  family box ("this week's recipes → one list"), no OAuth to remove. Bank
+  transactions: Composio has no aggregator (no Plaid, Teller, MX, Finicity,
+  SimpleFIN, Akoya); for a personal box the direct answer is SimpleFIN
+  Bridge (consumer-priced, API key), or the statement PDFs and emails the
+  scanner and Gmail paths already carry. Weather: absent, irrelevant —
+  Open-Meteo and `api.weather.gov` are keyless and the tricks already call
+  them.
 - **Present, low value for a box:** Facebook, Instagram, LinkedIn,
   Pinterest, TikTok (business-oriented APIs), Telegram and Discord (bot
   tokens; no OAuth pain to remove), Trello, Asana, Linear, Jira, Zoom,
