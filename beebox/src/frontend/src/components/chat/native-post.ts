@@ -18,7 +18,8 @@ export type NativeShellChannel =
   | "beeboxResponseState"
   | "beeboxComposerCommand"
   | "beeboxLastAudioRequest"
-  | "beeboxSession";
+  | "beeboxSession"
+  | "beeboxComposerBinding";
 
 export interface NativeShellWindow {
   beeboxNativePost?: (channel: string, payload: string) => void;

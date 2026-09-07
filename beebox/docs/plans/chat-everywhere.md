@@ -1,6 +1,6 @@
 ---
 title: "Chat everywhere: one input, explicit conversational focus"
-status: draft
+status: active
 workstream: chat-everywhere
 issues:
   - ../../../issues/features/2026-08-30-chat-input-everywhere.md
@@ -26,8 +26,8 @@ The issue queue was searched with `bin/issues similar --all --docs` and for `eve
 - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), and [interface as cards](interface-as-cards.md): foundations and design context, not additional completion obligations.
 
 The boxholder authorized planning on 2026-09-07, after reviewing seven
-storyboards. This document is a proposed implementation direction, not
-implementation authorization or a record of shipped behavior.
+storyboards. Implementation was authorized later in the same conversation. The work is
+active in this worktree; this document is not a record of deployed behavior.
 
 ## Stated preferences this plan trades against
 
@@ -752,3 +752,39 @@ semantics require coordinated client rollout; legacy sends are not silently
 upgraded to a guarantee their payload cannot express.
 
 Plan validation record: documentation checks passed; the [engineering review](chat-everywhere.review.md) records cross-model findings and their disposition. The focused cross-model re-review completed; its two startup/recovery findings are addressed in B/F and recorded in the review. These are source-reviewed requirements, not evidence of implemented behavior.
+
+## Implementation verification — 2026-09-07
+
+A–F are implemented in the `chat-everywhere` worktree. The box shell owns one
+composer and chooses independent session controllers; sends capture target and
+attention before asynchronous preparation. Web recovery retains full emissions;
+native V3 owns its own pending content and mirrors startup identity. Ambient
+replies use existing callout rendering. Mobile foregrounds cards or transcript
+without remounting the input service.
+
+Local browser replay used the isolated test box's recipe and Acids & Bases
+landmark in place of the illustrative Kitchen/Garden content. A real send from
+the recipe stayed on the page and the reply correctly identified the focused
+card and surface. Switching landmarks left that reply under its original
+conversation. Explicitly opening it preserved the composer DOM element.
+Ordinary page navigation also preserved that element. An expired exact target
+was refused without fallback and retained a separate recovery entry. Mobile
+browser replay checked direct card links, transcript foregrounding and return.
+A companion restored from desktop stays behind an Open card action on mobile;
+opening it and returning to chat does not create a redirect loop.
+
+Final affected-test verification passed: 226 files and 2,737 assertions. All
+four TypeScript checks, changed-file lint and documentation checks passed.
+Deterministic tests cover the remaining timing boundaries: captured recipient
+across waits, overlapping startup, definitive versus uncertain refusal, reload
+recovery, accepted-message storage cleanup, source-scoped card activity, native
+protocol/upgrade behavior and box isolation. Two context knowledge audits passed
+against the isolated box. Native simulator build passed and 45 focused XCTest
+cases passed. The implementation review and adjudications are recorded in the
+[engineering review](chat-everywhere.review.md).
+
+Physical phone acceptance remains for S4–S6: live dictation through navigation,
+keyboard/safe-area behavior, interruptions and screen-away recovery. Browser
+viewport checks and deterministic voice tests do not close these gates. The
+actual-interface exhibit requests the boxholder's reconfirmation. This plan
+remains active; the worktree has not been merged or deployed.

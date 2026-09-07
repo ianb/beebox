@@ -21,6 +21,7 @@
  *                     with renderer toggle.
  */
 
+import { useConversationCard, selectionReceiver } from "./chat/everywhere/card-context";
 import { useState, useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { displayName } from "../lib/display-name";
@@ -160,10 +161,19 @@ function FileErrorState({ path, failure, onRetry }: { path: string; failure: Loa
   );
 }
 
+function selectedRenderer({ path, userSelection, rendererName }: {
+  path: string; userSelection: { path: string; name: string } | null; rendererName?: string | null;
+}) { return userSelection?.path === path ? userSelection.name : rendererName; }
+
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
   const mode = modeProp ?? "page";
+  const [userSelection, setUserSelection] = useState<{ path: string; name: string } | null>(null);
+  const cardContext = useConversationCard({ path, mode, rendererName: selectedRenderer({ path, userSelection, rendererName }), params, viewState: ownedViewState });
+  const onAddSelection = selectionReceiver(suppliedAddSelection, cardContext.capture);
+  const handleCardFocus = cardContext.handleFocus;
+  const handleRendererFocus = cardContext.handleRendererFocus;
   const { data, loading, error, stale, refresh } = useFileData(path);
 
   const handleCapture = useCallback((selection: { text: string; position: string }) => {
@@ -172,17 +182,17 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     onAddSelection({ ref, text: selection.text, position: selection.position });
   }, [onAddSelection, path]);
 
-  const [userSelection, setUserSelection] = useState<{ path: string; name: string } | null>(null);
   const selectForPath = useCallback((name: string) => {
     // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
     // "explored" action. No-op outside the companion pane (reportActivity unset).
     reportActivity?.("explored", `viewing as ${name}`);
+    handleRendererFocus(name);
     if (onSelectRenderer) {
       onSelectRenderer(name);
       return;
     }
     setUserSelection({ path, name });
-  }, [onSelectRenderer, path, reportActivity]);
+  }, [onSelectRenderer, path, reportActivity, handleRendererFocus]);
 
   const binding = useCardViewBinding(data?.type);
   const renderers: FileRenderer[] = useMemo(() => {
@@ -265,7 +275,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     // (the PDF frame) can take the leftover height, while a taller renderer
     // still grows past it and scrolls in the pane's own overflow-auto.
     return (
-      <div className="flex flex-col min-h-full">
+      <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus} className="flex flex-col min-h-full">
         {renderers.length > 1 || isCardPath(data.path) ? (
           <div className="flex-shrink-0 flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
             <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact path={data.path} />
@@ -278,7 +288,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   }
 
   return (
-    <div>
+    <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus}>
       <PageHeader data={data} renderers={renderers} active={active} onSelect={selectForPath} onTrashed={onClose} />
       {body}
     </div>

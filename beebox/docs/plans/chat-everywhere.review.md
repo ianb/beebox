@@ -218,3 +218,81 @@ afterward. The final corrections have not received a third independent pass.
 Reservation expiry timing and non-iOS wrapper behavior were not independently
 verified in the focused review; implementation must exercise the stated
 failure and compatibility boundaries before claiming completion.
+
+## Implementation review — 2026-09-07
+
+Implementation was subsequently authorized by the boxholder. An independent
+Claude Opus review examined the web shell, both send paths, startup ownership,
+native V3 delivery, ambient replies, and attention context. Its eight findings
+were source-checked and addressed:
+
+1. **First-start refusal:** distinguish definitive HTTP refusal from uncertain
+   delivery. A definitive refusal permits the same first emission to retry;
+   observed rejection wakes held follow-ups. Uncertain delivery retains the
+   startup identity and never silently creates another conversation.
+2. **Voice refused before staging:** capture/upload failure preserves spoken
+   text and settles the keyword mic lifecycle. Durable-stage failure leaves
+   attachments and selections in the draft. Deterministic refusal tests cover
+   both resolving selection and upload failure.
+3. **Explicit conversation URL:** opening another conversation while already
+   on the chat route now updates its exact session URL.
+4. **Unreadable pending storage:** explicit recovery preserves and verifies an
+   unreadable raw copy before starting a fresh store. It remains inspectable
+   after reload. The suggestion to send without durable staging was rejected:
+   it contradicts B's accepted recovery guarantee. Failure to preserve the copy
+   still refuses the send and keeps the draft.
+5. **Overlay ownership:** Open conversation closes the foreground card overlay
+   so the selected transcript is actually visible.
+6. **Ambient subscription lifetime:** only selected and active conversations
+   mount tail/status queries; dormant conversation metadata is reactivated by
+   activity events instead of polling every previously visited history.
+7. **Fresh recipient label:** new conversations have an explicit label without
+   a duplicated root-place label.
+8. **Attention identity:** named renderers and view parameters survive focus
+   serialization; the historical zoomed-view field retains its expected form.
+
+The review also traced immutable binding across upload/HQ waits, both POST
+sites, exact committed-session validation, background assignment isolation,
+source-scoped card activity, native box scoping and protocol negotiation, and
+single ownership of native pending content. It did not execute tests or verify
+physical-device behavior; those are separate evidence below/in the plan.
+
+### Bounded second implementation review
+
+The second independent pass verified the original eight fixes and found three
+additional reachable failures: a restored/edited first message could remain
+locked to the refused emission ID; an accepted startup with no eventual init
+could leave follow-ups waiting forever; and Escape could close both a card
+overlay and the ambient transcript beneath it. These are implementation defects
+within the approved delivery and foreground-surface behavior, not new product
+scope. Focused corrections and regressions follow; no further new-findings
+review rounds are planned.
+
+The same pass found a remaining path-only route fallback for attention before
+a card's mounted focus publication; it is included in the context correction.
+It also distinguished fixed observer growth from a small remaining behavior:
+visited conversations retain metadata, so a scheduled completion in a previously
+visited conversation can raise a notice. This is broader than D's proposed
+sent-to/left-running set. No history observer remains mounted merely because
+that metadata exists. The notice-scope difference is left explicit for product
+reconfirmation rather than adding another tracking subsystem during final
+verification.
+
+Second-pass corrections are implemented. A new gesture after definitive refusal
+captures permission to replace the first emission; an older delayed capture
+cannot acquire that permission retroactively. Native pending/preparation records
+mirror this local gesture metadata. A 30-second awake-time ceiling releases an
+accepted-but-unassigned follow-up into explicit recovery, retaining the uncertain
+first identity. Focused controller regressions verify both sequences. Escape's
+listener is separate from focus restoration and ignores the transcript while a
+card overlay is present. Route attention now includes the query string before
+parsing/serialization, with a named-view regression.
+
+Live replay additionally found and corrected acknowledgment during a resolving
+conversation switch: navigating to chat must not acknowledge the still-rendered
+old conversation. A regression covers resolving/unavailable selection and the
+final browser replay retained a distinct background reply after explicit switch.
+Layered-overlay Escape was source-verified but not separately replayed in the
+browser. Untitled sessions currently use the generic Conversation label; where
+several are present, source labels need product reconfirmation alongside the
+notice-scope difference above.

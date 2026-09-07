@@ -6,7 +6,7 @@ it, or someone edited it — so it is parsed rather than trusted, and one bad
 entry is dropped on its own instead of taking the strip with it.
 
 ```ts setup
-import { serializeSidecarState, parseSidecarState, sidecarTabsKey } from "../../src/frontend/src/components/chat/sidecar-tabs-storage.js";
+import { serializeSidecarState, parseSidecarState, sidecarTabsKey, selectSidecarSession, persistSidecarTransition, loadSidecarState, saveSidecarState } from "../../src/frontend/src/components/chat/sidecar-tabs-storage.js";
 
 function target(path: string) {
   return { path, viewer: null, params: {}, viewState: null };
@@ -161,4 +161,35 @@ const orphaned = parseSidecarState(JSON.stringify({
 }))!;
 orphaned.activePath
 => _content/Here.card
+```
+
+## Explicit conversation changes restore; assignment only renames
+
+```ts
+const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "sessionStorage");
+const values = new Map();
+Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: {
+  getItem: (key) => values.get(key) ?? null,
+  setItem: (key, value) => values.set(key, value),
+  removeItem: (key) => values.delete(key),
+} });
+const kitchen = { storageKey: "kitchen", logicalKey: "kitchen", panel: strip };
+const gardenStrip = { ...strip, activePath: "_content/Kept.card" };
+saveSidecarState("garden", gardenStrip);
+const garden = selectSidecarSession(kitchen, { storageKey: "garden", logicalKey: "garden" });
+persistSidecarTransition(kitchen, garden);
+const returned = selectSidecarSession(garden, kitchen);
+JSON.stringify({ garden: garden.panel.activePath, kitchen: returned.panel.activePath, kitchenStillStored: loadSidecarState("kitchen") !== null });
+=> {"garden":"_content/Kept.card","kitchen":"_content/Loose.md","kitchenStillStored":true}
+
+const provisional = { storageKey: "start-one", logicalKey: "logical-one", panel: strip };
+const assigned = selectSidecarSession(provisional, { storageKey: "assigned-one", logicalKey: "logical-one" });
+persistSidecarTransition(provisional, assigned);
+JSON.stringify({ samePanel: assigned.panel === strip, oldRemoved: !values.has("start-one"), newStored: values.has("assigned-one") });
+=> {"samePanel":true,"oldRemoved":true,"newStored":true}
+```
+
+```ts cleanup
+if (previousStorage === undefined) delete globalThis.sessionStorage;
+else Object.defineProperty(globalThis, "sessionStorage", previousStorage);
 ```

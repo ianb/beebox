@@ -26,6 +26,7 @@ verbatim at the real route by `test/webapp/debug-log-submit.doctest.md`, because
 its server-side consumer is an HTTP endpoint rather than a parser.
 
 ```ts setup
+import { composerBindingPublicationSchema } from "../../src/shared/chat-composer-binding.js";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -158,6 +159,7 @@ function validateReceipt(fx) {
   const r = fx.input;
   const projected = { disposition: r.disposition, emissionId: r.emissionId };
   if (typeof r.reason === "string") projected.reason = r.reason;
+  if (typeof r.definitive === "boolean") projected.definitive = r.definitive;
   return deepEqual(projected, fx.expected)
     ? { ok: true }
     : { ok: false, detail: `native projection ${JSON.stringify(projected)} != expected ${JSON.stringify(fx.expected)}` };
@@ -360,7 +362,7 @@ valid `Receipt`; the native decoder projects away `deduplicated` on `sent`.
 
 ```ts
 runFamily("receipt", validateReceipt)
-=> {"family":"receipt","cases":3,"pass":3}
+=> {"family":"receipt","cases":4,"pass":4}
 ```
 
 ## location
@@ -412,4 +414,20 @@ re-injection (including XML-escaped phrases).
 ```ts
 runFamily("speech-keywords", validateSpeechKeyword)
 => {"family":"speech-keywords","cases":39,"pass":39}
+```
+
+## Conversation binding publication
+
+```ts
+runFamily("composer-binding", (fixture) => ({
+  ok: composerBindingPublicationSchema.safeParse(fixture.input).success === fixture.expectedValid,
+}));
+// => '{"family":"composer-binding","cases":6,"pass":6}'
+```
+
+```ts
+runFamily("native-emission-v3", (fixture) => ({
+  ok: parseNativeEmissionDetail(fixture.input).ok === fixture.expectedValid,
+}));
+// => '{"family":"native-emission-v3","cases":3,"pass":3}'
 ```

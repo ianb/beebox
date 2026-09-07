@@ -65,3 +65,12 @@ JSON.stringify({
 })
 => {"queued":[true,"queued"],"duplicate":[true,"sent"],"malformed":[true,"rejected"]}
 ```
+
+## Only an explicit refusal carries retry permission
+
+```ts
+const observed = expectReceipt("definitive-refusal");
+settleRejectedTurnStart({ messageId: "definitive-refusal", reason: "invalid model", definitive: true });
+JSON.stringify(await observed)
+=> {"disposition":"rejected","emissionId":"definitive-refusal","reason":"invalid model","definitive":true}
+```

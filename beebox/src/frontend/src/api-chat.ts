@@ -1,3 +1,5 @@
+import { startAwakeTimeout } from "@shared/awake-timeout.js";
+import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
 /**
  * Chat API surface: SSE streaming send, session/status/history queries, model
  * and feature toggles, and HQ audio transcription. Split out of api.ts to keep
@@ -274,7 +276,19 @@ export interface ChatTurnStart {
  *
  * Retries once on network failure with a stable messageId to prevent dup turns.
  */
+/** An explicit client-error response was refused before route acceptance. */
+export class ChatSendRejectedError extends RequestError {
+  constructor(message: string) { super(message); this.name = "ChatSendRejectedError"; }
+}
+
+class ConversationStartupPendingError extends Error {
+  constructor() { super("Waiting for conversation — retry this send"); this.name = "ConversationStartupPendingError"; }
+}
+
 export async function startChatTurn(params: {
+  startup?: boolean;
+  exactSession?: boolean;
+  viewContext?: AttentionSnapshot;
   /** Session to send into. Pass `"new"` to start a fresh conversation. */
   session: string;
   message: string;
@@ -302,17 +316,20 @@ export async function startChatTurn(params: {
   cardState?: CardStateDetails;
 }): Promise<ChatTurnStart> {
   const { session, message, images, contextDir, seedFeatures, engine, model, openCard, cardActivity, cardState } = params;
+  const apiBase = getApiBase();
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   let attemptNumber = 0;
   const attempt = async (): Promise<Response> => {
     attemptNumber++;
     recordChatSendEvent(messageId, { event: "post-issued", detail: { attempt: attemptNumber } });
-    const response = await fetch(`${getApiBase()}/chat/send`, {
+    const response = await fetch(`${apiBase}/chat/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...mobileAuthHeaders() },
       body: JSON.stringify({
         session,
+        ...(params.exactSession !== undefined ? { exactSession: params.exactSession } : {}),
+        ...(params.viewContext !== undefined ? { viewContext: params.viewContext } : {}),
         message,
         messageId,
         ...(images && images.length > 0 ? { images } : {}),
@@ -331,11 +348,19 @@ export async function startChatTurn(params: {
     });
     recordChatSendEvent(messageId, { event: "post-http-response", detail: { attempt: attemptNumber, status: response.status } });
 
+    if (response.status === 404 && params.startup === true && attemptNumber <= 3) {
+      const delay = [250, 1000, 3000][attemptNumber - 1] ?? 3000;
+      await new Promise<void>((resolve) => startAwakeTimeout({ timeoutMs: delay, periodMs: 50, onTimeout: () => resolve() }));
+      return attempt();
+    }
     if (!response.ok) {
+      if (response.status === 404 && params.startup === true) throw new ConversationStartupPendingError();
       const error = await response
         .json()
         .catch(() => ({ error: response.statusText }));
-      throw new RequestError(error.error || "Chat send failed");
+      const reason = error.error || "Chat send failed";
+      if (response.status >= 400 && response.status < 500) throw new ChatSendRejectedError(reason);
+      throw new RequestError(reason);
     }
 
     return response;

@@ -35,6 +35,9 @@ export interface ViewOverlayApi {
   close: () => void;
 }
 
+const ViewOverlayVisibility = createContext(false);
+export function useViewOverlayVisible(): boolean { return useContext(ViewOverlayVisibility); }
+
 const ViewOverlayContext = createContext<ViewOverlayApi | null>(null);
 
 /** The overlay API, or null when no provider is mounted (SSR / bare pages). */
@@ -65,10 +68,12 @@ export function ViewOverlayProvider({ children }: { children: ReactNode }): Reac
   const api = useMemo<ViewOverlayApi>(() => ({ open, close }), [open, close]);
 
   return (
+    <ViewOverlayVisibility.Provider value={state !== null}>
     <ViewOverlayContext.Provider value={api}>
       {children}
       {state ? <ViewOverlayPanel state={state} onOpen={open} onClose={close} /> : null}
     </ViewOverlayContext.Provider>
+    </ViewOverlayVisibility.Provider>
   );
 }
 
@@ -101,7 +106,7 @@ function ViewOverlayPanel({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex print:hidden">
+    <div className="fixed inset-x-0 top-0 z-50 flex print:hidden" style={{ bottom: "var(--bbx-composer-height, 0px)" }}>
       {/* Backdrop is a real button so click-to-close is keyboard-accessible;
           tabIndex -1 keeps it out of the tab order (the ✕ is the reachable
           close), while Escape and the ✕ remain the primary dismiss paths. */}
@@ -114,7 +119,7 @@ function ViewOverlayPanel({
       />
       <div
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-label={title}
         className="relative m-auto flex flex-col w-full h-full sm:h-[85vh] sm:max-w-3xl bg-white sm:rounded-lg shadow-xl overflow-hidden"
       >

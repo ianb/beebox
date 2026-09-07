@@ -1,0 +1,51 @@
+{
+  "input": {
+    "version": 3,
+    "id": "ios-v2-full-1",
+    "origin": "voice",
+    "text": "Review [file3] with [selection4]",
+    "diarized": true,
+    "images": [
+      {
+        "id": 2,
+        "mimeType": "image/png",
+        "dataBase64": "aW1hZ2U="
+      }
+    ],
+    "files": [
+      {
+        "id": 3,
+        "path": "tmp/report.pdf",
+        "originalName": "report.pdf",
+        "size": 2048,
+        "mimetype": "application/pdf"
+      }
+    ],
+    "selections": [
+      {
+        "id": 4,
+        "ref": "/notes/plan.md",
+        "text": "Ship the complete contract",
+        "position": "body; paragraph 2",
+        "anchor": "Review this",
+        "spokenWords": 2
+      }
+    ],
+    "bindingRevision": -1,
+    "binding": {
+      "boxSlug": "test1",
+      "target": {
+        "kind": "start",
+        "clientConversationId": "start-kitchen",
+        "contextDir": "kitchen",
+        "engine": "codex"
+      },
+      "attention": {
+        "surface": "card",
+        "focusedRef": "/_content/house/report.md",
+        "transcript": "hidden"
+      }
+    }
+  },
+  "expectedValid": false
+}

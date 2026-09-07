@@ -204,9 +204,9 @@ export function deleteSessionFile(boxRoot: string, sessionFile: string | null): 
  * image attachments concatenated with per-message id offsets so `[imageN]`
  * tokens from different messages don't collide. The latest queued `channel`
  * and `openCard` win — they reflect where the user is now — but
- * `cardActivity` is **unioned** across the batch: an earlier queued
- * message's "scrolled"/"modified" must survive into the combined turn, not
- * be clobbered by a later send that reported different activity.
+ * `cardActivity` is unioned for that subject. With captured attention, only
+ * sends about the latest focused ref participate; activity on another card
+ * must not be attributed to it. Legacy clients retain their batch union.
  */
 export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   const combinedImages: ChatImage[] = [];
@@ -235,12 +235,19 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     combinedTextParts.push(text);
     idOffset += imgs.length;
   }
-  const cardActivity = unionActivityKinds(queued.map((q) => q.cardActivity));
-  const cardState = mergeCardStateDetails(queued.map((q) => q.cardState));
+  // A later subject must not inherit an earlier card's activity. Old clients
+  // retain the historical union; a captured attention snapshot scopes it.
+  const viewContext = queued.findLast((q) => q.viewContext !== undefined)?.viewContext;
+  const activityInputs = viewContext === undefined ? queued : queued.filter((q) =>
+    q.viewContext?.focusedRef === viewContext.focusedRef && q.viewContext?.surface === viewContext.surface);
+  if (viewContext !== undefined) openCard = activityInputs.at(-1)?.openCard;
+  const cardActivity = unionActivityKinds(activityInputs.map((q) => q.cardActivity));
+  const cardState = mergeCardStateDetails(activityInputs.map((q) => q.cardState));
   return {
     text: combinedTextParts.join("\n\n"),
     images: combinedImages,
     ...(channel !== undefined ? { channel } : {}),
+    ...(viewContext !== undefined ? { viewContext } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
     ...(cardActivity.length > 0 ? { cardActivity } : {}),
     ...(Object.keys(cardState).length > 0 ? { cardState } : {}),

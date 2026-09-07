@@ -1,0 +1,44 @@
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import type { ConversationSelection } from "@shared/chat-composer-binding";
+import { trpc } from "../../../lib/trpc";
+import { readConversation, saveConversation } from "./conversation-state";
+import { resolveConversation, type ConversationRequest, type ResolvedConversation } from "./resolve-conversation";
+import { createResolutionGate } from "./conversation-intent";
+import { postNativeMessage } from "../native-post";
+
+export function useConversationSelection(boxSlug: string) {
+  const utils = trpc.useUtils();
+  const { mutateAsync: reserve } = trpc.chat.reserveSession.useMutation();
+  const restored = useMemo(() => readConversation(boxSlug), [boxSlug]);
+  const [state, setState] = useState<ResolvedConversation>(() => ({ selection: restored?.kind === "ready" && restored.target.kind === "start" ? restored : { kind: "resolving", requestId: "initial", contextDir: "" } }));
+  const [rendered, setRendered] = useState(() => restored?.kind === "ready" ? restored : null);
+  const gate = useMemo(() => createResolutionGate(), []);
+  const lastRequest = useRef<ConversationRequest>({ kind: "default" });
+  const select = useCallback(async (request: ConversationRequest) => {
+    lastRequest.current = request;
+    const requestId = gate.claim();
+    setState((old) => ({ ...old, selection: { kind: "resolving", requestId: String(requestId), contextDir: request.contextDir ?? "" } }));
+    try {
+      const next = await resolveConversation({ utils, reserve, request });
+      if (!gate.accepts(requestId)) return;
+      setState(next);
+      if (next.selection.kind === "ready") setRendered(next.selection);
+    } catch (error) {
+      if (!gate.accepts(requestId)) return;
+      setState((old) => ({ ...old, selection: { kind: "unavailable", contextDir: request.contextDir ?? "", reason: error instanceof Error ? error.message : "Could not resolve conversation" } }));
+    }
+  }, [utils, reserve, gate]);
+  useEffect(() => () => gate.cancel(), [gate]);
+  useEffect(() => { saveConversation(boxSlug, state.selection); }, [boxSlug, state.selection]);
+  const assigned = useCallback((sessionId: string, assignment?: { clientConversationId: string; contextDir: string }) => {
+    const { clientConversationId, contextDir } = assignment ?? {};
+    if (clientConversationId !== undefined && contextDir !== undefined) postNativeMessage(window, { channel: "beeboxComposerBinding", payload: { version: 1, kind: "assigned", boxSlug, clientConversationId, sessionId, contextDir } });
+    function replace(selection: ConversationSelection): ConversationSelection {
+      if (selection.kind !== "ready" || selection.target.kind !== "start" || selection.target.clientConversationId !== clientConversationId) return selection;
+      return { ...selection, target: { kind: "session", sessionId, contextDir: selection.target.contextDir } };
+    }
+    setState((old) => ({ ...old, selection: replace(old.selection) }));
+    setRendered((old) => { if (!old) return old; const next = replace(old); return next.kind === "ready" ? next : old; });
+  }, [boxSlug]);
+  return { ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
+}

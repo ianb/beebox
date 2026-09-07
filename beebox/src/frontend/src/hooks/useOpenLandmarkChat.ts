@@ -12,6 +12,7 @@
  * (docs/plans/top-nav-ia.md Track C1).
  */
 
+import { useBoxConversation } from "../components/chat/everywhere/conversation-context";
 import { useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { href, toSearch } from "../lib/routing";
@@ -24,10 +25,16 @@ import { trpc } from "../lib/trpc";
  */
 export function useOpenLandmarkChat(boxSlug: string): (dir: string) => Promise<void> {
   const navigate = useNavigate();
+  const conversation = useBoxConversation();
   const utils = trpc.useUtils();
 
   return useCallback(
     async (dir: string) => {
+      if (conversation) {
+        await conversation.select({ kind: "landmark", contextDir: dir });
+        void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({}) });
+        return;
+      }
       try {
         const { sessionId } = await utils.chat.lastSessionForDirectory.fetch({ contextDir: dir });
         // navigate()'s promise only rejects on a superseded/redirected
@@ -44,6 +51,6 @@ export function useOpenLandmarkChat(boxSlug: string): (dir: string) => Promise<v
         console.error(`[landmarks] failed to open chat for ${dir}:`, e);
       }
     },
-    [boxSlug, navigate, utils],
+    [boxSlug, navigate, utils, conversation],
   );
 }

@@ -270,6 +270,41 @@ final class SpeechKeywordsTests: XCTestCase {
 /// neutral transport exactly as the web layer posts them. Shares the fixtures
 /// under `beebox/test/mobile-contract/fixtures/` with the TS doctest.
 final class MobileContractFixtureDecodeTests: XCTestCase {
+    func testConversationBindingFixtures() throws {
+        for (name, fixture) in try MobileContractFixtures.load("composer-binding") {
+            let data = try JSONSerialization.data(withJSONObject: XCTUnwrap(fixture["input"]))
+            let binding = try? JSONDecoder().decode(NativeComposerBinding.self, from: data)
+            XCTAssertEqual(binding?.isValid == true, fixture["expectedValid"] as? Bool, name)
+        }
+    }
+
+    func testV3SharedFixtures() throws {
+        for (name, fixture) in try MobileContractFixtures.load("native-emission-v3") {
+            let input = try XCTUnwrap(fixture["input"] as? [String: Any])
+            let revision = input["bindingRevision"] as? Int
+            let bindingData = (input["binding"] as? [String: Any]).flatMap {
+                try? JSONSerialization.data(withJSONObject: $0)
+            }
+            let binding = bindingData.flatMap { try? JSONDecoder().decode(NativeSendBinding.self, from: $0) }
+            let valid = binding?.target.isValid == true && (revision ?? -1) >= 0
+            XCTAssertEqual(valid, fixture["expectedValid"] as? Bool, name)
+        }
+    }
+
+    func testV3EmissionCarriesImmutableBinding() throws {
+        let target = NativeConversationTarget(kind: .session, sessionId: "first", contextDir: "kitchen")
+        let binding = NativeSendBinding(boxSlug: "test1", target: target,
+            attention: NativeAttentionSnapshot(surface: .card, focusedRef: "/report.md", transcript: .hidden))
+        let emission = NativeChatEmission(binding: binding, bindingRevision: 7,
+            text: "Review this", origin: .typed, diarized: false, images: [])
+        let data = try JSONEncoder().encode(NativeEmissionV3(emission: emission))
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(object["version"] as? Int, 3)
+        XCTAssertEqual(object["bindingRevision"] as? Int, 7)
+        let targetObject = (object["binding"] as? [String: Any])?["target"] as? [String: Any]
+        XCTAssertEqual(targetObject?["sessionId"] as? String, "first")
+    }
+
     func testReceiptFixturesDecodeThroughDictionaryPayload() throws {
         let fixtures = try MobileContractFixtures.load("receipt")
         XCTAssertFalse(fixtures.isEmpty, "no receipt fixtures found")
@@ -288,6 +323,7 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
             XCTAssertEqual(dispositionString, expected["disposition"] as? String, "\(name): disposition")
             XCTAssertEqual(payload["emissionId"] as? String, expected["emissionId"] as? String, "\(name): emissionId")
             XCTAssertEqual(payload["reason"] as? String, expected["reason"] as? String, "\(name): reason")
+            XCTAssertEqual(payload["definitive"] as? Bool, expected["definitive"] as? Bool, "\(name): definitive")
         }
     }
 

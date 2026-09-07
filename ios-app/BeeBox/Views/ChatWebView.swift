@@ -4,6 +4,8 @@ import UIKit
 import WebKit
 
 struct NativeChatEmission: Equatable, Identifiable {
+    var binding: NativeSendBinding? = nil
+    var bindingRevision: Int? = nil
     typealias Origin = NativeEmissionV2.Origin
 
     var id = UUID()
@@ -27,6 +29,7 @@ struct NativeEmissionReceipt: Equatable {
     var emissionID: NativeChatEmission.ID
     var disposition: Disposition
     var reason: String?
+    var definitive: Bool?
 }
 
 struct NativeLocationShareRequest: Equatable, Identifiable {
@@ -84,6 +87,7 @@ struct ChatWebView: UIViewRepresentable {
     var speechStopRequest: NativeSpeechStopRequest?
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
     var composerCommandResults: [NativeComposerCommandResult]
+    var onComposerBinding: (NativeComposerBinding?) -> Void
     var onSessionChange: (String?) -> Void
     var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
     var onEmissionReceipt: (NativeEmissionReceipt) -> Void
@@ -109,6 +113,7 @@ struct ChatWebView: UIViewRepresentable {
         speechStopRequest: NativeSpeechStopRequest? = nil,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
         composerCommandResults: [NativeComposerCommandResult] = [],
+        onComposerBinding: @escaping (NativeComposerBinding?) -> Void = { _ in },
         onSessionChange: @escaping (String?) -> Void = { _ in },
         onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void = { _ in },
         onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
@@ -133,6 +138,7 @@ struct ChatWebView: UIViewRepresentable {
         self.speechStopRequest = speechStopRequest
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
         self.composerCommandResults = composerCommandResults
+        self.onComposerBinding = onComposerBinding
         self.onSessionChange = onSessionChange
         self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         self.onEmissionReceipt = onEmissionReceipt
@@ -152,6 +158,7 @@ struct ChatWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = Self.makeConfiguration()
+        configuration.userContentController.add(context.coordinator, name: "beeboxComposerBinding")
         configuration.userContentController.add(context.coordinator, name: "beeboxSession")
         configuration.userContentController.add(context.coordinator, name: "beeboxEmissionReceipt")
         configuration.userContentController.add(context.coordinator, name: "beeboxLocationResult")
@@ -182,6 +189,7 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
+        context.coordinator.onComposerBinding = onComposerBinding
         context.coordinator.onSessionChange = onSessionChange
         context.coordinator.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         context.coordinator.onEmissionReceipt = onEmissionReceipt
@@ -222,6 +230,7 @@ struct ChatWebView: UIViewRepresentable {
         Coordinator(
             boxID: box.id,
             allowedOrigin: Self.origin(from: box.baseURL),
+            onComposerBinding: onComposerBinding,
             onSessionChange: onSessionChange,
             onEmissionDeliveryAttempt: onEmissionDeliveryAttempt,
             onEmissionReceipt: onEmissionReceipt,
@@ -243,7 +252,8 @@ struct ChatWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate {
         var boxID: PairedBox.ID
         var allowedOrigin: String?
-        var onSessionChange: (String?) -> Void
+        var onComposerBinding: (NativeComposerBinding?) -> Void
+    var onSessionChange: (String?) -> Void
         var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
         var onEmissionReceipt: (NativeEmissionReceipt) -> Void
         var onLocationShareResult: (NativeLocationShareResult) -> Void
@@ -274,6 +284,7 @@ struct ChatWebView: UIViewRepresentable {
         /// Monotonic across every emission; only equality against the stored
         /// generation is ever asked, so one counter is enough.
         private var lastEmissionGeneration = 0
+        var composerBindingNegotiated = false
         private var handledRedeliveryRequestID: NativeEmissionRedeliveryRequest.ID?
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
@@ -295,7 +306,8 @@ struct ChatWebView: UIViewRepresentable {
         init(
             boxID: PairedBox.ID,
             allowedOrigin: String?,
-            onSessionChange: @escaping (String?) -> Void,
+            onComposerBinding: @escaping (NativeComposerBinding?) -> Void = { _ in },
+        onSessionChange: @escaping (String?) -> Void,
             onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void,
             onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void,
             onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
@@ -319,7 +331,8 @@ struct ChatWebView: UIViewRepresentable {
         ) {
             self.boxID = boxID
             self.allowedOrigin = allowedOrigin
-            self.onSessionChange = onSessionChange
+            self.onComposerBinding = onComposerBinding
+        self.onSessionChange = onSessionChange
             self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
             self.onEmissionReceipt = onEmissionReceipt
             self.onLocationShareResult = onLocationShareResult
@@ -355,6 +368,8 @@ struct ChatWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             pageLoaded = false
+            composerBindingNegotiated = false
+            onComposerBinding(nil)
             if navigationStartLogged == false {
                 navigationStartLogged = true
                 BoxLog.info("chat navigation started", category: .webview, targetBoxID: boxID)
@@ -422,6 +437,8 @@ struct ChatWebView: UIViewRepresentable {
                 category: .webview
             )
             pageLoaded = false
+            composerBindingNegotiated = false
+            onComposerBinding(nil)
             inflightEmissionGenerations.removeAll()
             webView.reload()
         }
@@ -470,6 +487,19 @@ struct ChatWebView: UIViewRepresentable {
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "beeboxComposerBinding" {
+                guard message.frameInfo.isMainFrame,
+                      let frameURL = message.frameInfo.request.url,
+                      ChatWebView.origin(from: frameURL) == allowedOrigin,
+                      let payload = ChatWebView.dictionaryPayload(from: message.body),
+                      let data = try? JSONSerialization.data(withJSONObject: payload),
+                      let binding = try? JSONDecoder().decode(NativeComposerBinding.self, from: data),
+                      binding.isValid else { return }
+                composerBindingNegotiated = true
+                onComposerBinding(binding)
+                message.webView?.evaluateJavaScript("window.beeboxComposerBindingVersion=1; window.dispatchEvent(new Event('beebox:composer-binding-ready'));")
+                return
+            }
             if message.name == "beeboxEmissionReceipt" {
                 receiveEmissionReceipt(message.body)
                 return
@@ -540,6 +570,7 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             for emission in emissions where inflightEmissionGenerations[emission.id] == nil {
+                guard emission.binding == nil || composerBindingNegotiated else { continue }
                 guard let detail = Self.javascriptDetail(for: emission) else {
                     continue
                 }
@@ -604,7 +635,8 @@ struct ChatWebView: UIViewRepresentable {
             onEmissionReceipt(NativeEmissionReceipt(
                 emissionID: emissionID,
                 disposition: disposition,
-                reason: payload["reason"] as? String
+                reason: payload["reason"] as? String,
+                definitive: payload["definitive"] as? Bool
             ))
         }
 
@@ -884,7 +916,7 @@ struct ChatWebView: UIViewRepresentable {
         }
 
         private static func javascriptDetail(for emission: NativeChatEmission) -> String? {
-            let payload = NativeEmissionV2(emission: emission)
+            let payload = NativeEmissionV3(emission: emission)
             guard let data = try? JSONEncoder().encode(payload) else {
                 return nil
             }

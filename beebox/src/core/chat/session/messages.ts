@@ -9,6 +9,7 @@
  * `buildContentBlocks`) so existing importers are unaffected.
  */
 
+import type { AttentionSnapshot } from "../../../shared/chat-composer-binding.js";
 import { assertNever } from "../../../lib/invariant.js";
 import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
 import type { ChatContentBlock } from "../../../services/claude-chat.js";
@@ -77,6 +78,8 @@ export interface ChatImage {
 }
 
 export interface ChatSendInput {
+  /** Send-time presentation context, independent of the conversation directory. */
+  viewContext?: AttentionSnapshot;
   text: string;
   images?: ChatImage[];
   /**

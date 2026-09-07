@@ -215,3 +215,19 @@ res.statusCode
 ```ts cleanup
 await ctx.cleanup();
 ```
+
+Invalid ambient attention is rejected before session resolution:
+
+```ts
+const ctx = await makeTestServer();
+const res = await ctx.request({
+  method: "POST", url: "/api/chat/send",
+  payload: { message: "hi", session: "new", viewContext: { surface: "card", focusedRef: "https://example.com/?token=private", transcript: "hidden" } },
+});
+res.statusCode
+=> 400
+```
+
+```ts cleanup
+await ctx.cleanup();
+```

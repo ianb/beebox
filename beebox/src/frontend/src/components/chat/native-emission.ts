@@ -1,3 +1,4 @@
+import { sendBindingSchema, type SendBinding } from "../../../../shared/chat-composer-binding.js";
 import {
   createTypedEmission,
   createVoiceEmission,
@@ -24,7 +25,7 @@ export interface NativeEmissionV2 {
 }
 
 export type NativeEmissionParseResult =
-  | { ok: true; emission: Emission }
+  | { ok: true; emission: Emission; binding?: SendBinding; bindingRevision?: number }
   | { ok: false; emissionId: string | null; reason: string };
 
 export function nativeEmissionFromDetail(detail: unknown): Emission | null {
@@ -37,6 +38,14 @@ export function parseNativeEmissionDetail(detail: unknown): NativeEmissionParseR
     return { ok: false, emissionId: null, reason: "Invalid native message" };
   }
   if ("version" in detail) {
+    if (detail.version === 3) {
+      const binding = sendBindingSchema.safeParse(detail.binding);
+      if (!binding.success || !Number.isSafeInteger(detail.bindingRevision) || Number(detail.bindingRevision) < 0) {
+        return reject(detail, "Invalid native emission V3 binding");
+      }
+      const content = parseV2(detail);
+      return content.ok ? { ...content, binding: binding.data, bindingRevision: Number(detail.bindingRevision) } : content;
+    }
     if (detail.version !== 2) {
       return reject(detail, `Unsupported native emission version: ${String(detail.version)}`);
     }

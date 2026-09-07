@@ -1,0 +1,37 @@
+{
+  "input": {
+    "version": 3,
+    "id": "ios-v2-full-1",
+    "origin": "voice",
+    "text": "Review [file3] with [selection4]",
+    "diarized": true,
+    "images": [
+      {
+        "id": 2,
+        "mimeType": "image/png",
+        "dataBase64": "aW1hZ2U="
+      }
+    ],
+    "files": [
+      {
+        "id": 3,
+        "path": "tmp/report.pdf",
+        "originalName": "report.pdf",
+        "size": 2048,
+        "mimetype": "application/pdf"
+      }
+    ],
+    "selections": [
+      {
+        "id": 4,
+        "ref": "/notes/plan.md",
+        "text": "Ship the complete contract",
+        "position": "body; paragraph 2",
+        "anchor": "Review this",
+        "spokenWords": 2
+      }
+    ],
+    "bindingRevision": 4
+  },
+  "expectedValid": false
+}
