@@ -37,3 +37,17 @@ This is a real design item, not a widget move:
 Related: `2026-07-08-draft-ahead-surface-native-pattern.md`,
 `2026-08-13-tell-the-agent-the-screen-is-unfocused.md` (same instinct: the
 box is present everywhere, not a page you visit).
+
+> 2026-09-06 (boxholder, via main session): chosen as an Astra task, launching
+> when quota allows. The frame it must sit in, his words: "We're going to have
+> to work more on embracing 'everything is a card' (which was kind of
+> implemented, but not entirely exposed). That is, we basically have a
+> windowing (tiled) system where chat is one part of it. And chat is actually
+> a bit distinct, because of its ubiquity. But in different forms (dedicated,
+> split, 'ambient'? Where that last mode is what we made callouts to support).
+> And think about that context that's brought into the chat (things like
+> selections, `<chat-app>` or whatever it is), and then also what the chat is
+> in (the context, the session, etc)." Four things to design together: the
+> tiled system with chat as one tile; chat's forms (dedicated, split,
+> ambient); the context brought into chat; the context chat is in.
+
