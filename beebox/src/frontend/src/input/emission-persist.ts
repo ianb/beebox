@@ -24,6 +24,7 @@
  * layer performs (drop dead ones with a visible note).
  */
 
+import { uploadedPath } from "./emission-store";
 import type { EmissionDraft, ImageItem, FileItem } from "./emission-store";
 import type { SelectionItem } from "../lib/selection/serialize";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
@@ -78,7 +79,10 @@ export function serializePersistedEmission(
     version: 1,
     text: draft.text,
     images: [...draft.images],
-    files: [...draft.files],
+    // Only landed files are worth persisting: an in-flight or failed upload
+    // cannot be resumed after a reload (its `File` handle is gone), so saving
+    // one would restore a chip that can only be removed.
+    files: draft.files.filter((f) => uploadedPath(f) !== null),
     selections: [...draft.selections],
     updatedAt: opts.updatedAt,
   };
@@ -256,7 +260,11 @@ export function partitionFiles(
   const live: FileItem[] = [];
   const dead: FileItem[] = [];
   for (const f of files) {
-    (existingPaths.has(f.path) ? live : dead).push(f);
+    // A file that never finished uploading has no path to check and no way to
+    // resume — the `File` handle it would need died with the page. It is dead
+    // on restore, and reported as such rather than silently dropped.
+    const path = uploadedPath(f);
+    (path !== null && existingPaths.has(path) ? live : dead).push(f);
   }
   return { live, dead };
 }

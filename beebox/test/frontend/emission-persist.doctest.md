@@ -34,7 +34,7 @@ function fakeStorage(): KeyValueStorage & { dump(): Record<string, string> } {
 const draft = {
   text: "half a thought [file1]",
   images: [],
-  files: [{ id: 1, path: "_tmp/2026-07-04_report.pdf", originalName: "report.pdf", size: 100, mimetype: "application/pdf" }],
+  files: [{ id: 1, originalName: "report.pdf", size: 100, mimetype: "application/pdf", state: { status: "uploaded", path: "_tmp/2026-07-04_report.pdf" } }],
   selections: [],
 };
 ```
@@ -48,8 +48,8 @@ const loaded = loadPersistedEmission(s, "test1");
 loaded?.text
 => half a thought [file1]
 
-loaded?.files[0]?.path
-=> _tmp/2026-07-04_report.pdf
+JSON.stringify(loaded?.files[0]?.state)
+=> {"status":"uploaded","path":"_tmp/2026-07-04_report.pdf"}
 
 emissionKey("test1")
 => bbx-input-emission:test1
@@ -145,10 +145,9 @@ Object.keys(s.dump()).sort().join(",")
 ## Restored files partition into live and dead (_tmp/ sweeps)
 
 ```ts
-const files = [
-  { id: 1, path: "_tmp/alive.pdf", originalName: "a", size: 1, mimetype: "x" },
-  { id: 2, path: "_tmp/swept.pdf", originalName: "b", size: 1, mimetype: "x" },
-];
+const uploaded = (id: number, path: string) =>
+  ({ id, originalName: "f", size: 1, mimetype: "x", state: { status: "uploaded", path } }) as const;
+const files = [uploaded(1, "_tmp/alive.pdf"), uploaded(2, "_tmp/swept.pdf")];
 const { live, dead } = partitionFiles(files, new Set(["_tmp/alive.pdf"]));
 live.map((f) => f.id).join(",") + " | " + dead.map((f) => f.id).join(",")
 => 1 | 2

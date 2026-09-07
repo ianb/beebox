@@ -144,12 +144,14 @@ export function applyRestorePlan(editor: EmissionEditor, plan: RestorePlan): voi
     editor.addImage(item);
   }
   for (const file of plan.files) {
+    // A file arriving on an emission has already been uploaded by whoever built
+    // it (the native composer, a restored draft) — the path IS its identity.
     const item: FileItem = {
       id: file.id,
-      path: file.path,
       originalName: pathBasename(file.path),
       size: 0,
       mimetype: "application/octet-stream",
+      state: { status: "uploaded", path: file.path },
     };
     editor.addFile(item);
   }

@@ -229,8 +229,8 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   // delivered batch drops the text it carried away. A ref breaks the
   // voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
-  const { launch: bulkUploadLaunch, openWithFiles: handleBatchFiles, close: handleCloseBulkUpload, onDelivered: handleBulkUploadDelivered } = useBulkUploadLaunch({ emissionStore, clearDraftRef, sessionId });
-  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef, onBatchFiles: handleBatchFiles });
+  const { launch: bulkUploadLaunch, close: handleCloseBulkUpload, onDelivered: handleBulkUploadDelivered } = useBulkUploadLaunch({ emissionStore, clearDraftRef, sessionId });
+  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef });
   const selections = useChatSelections({ emissionStore, textareaRef });
   const { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
@@ -291,7 +291,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     // Both addFiles and dispatchEmission already catch their own errors
     // internally; voided here so useChatActions' option types can stay
     // honestly void-returning.
-    addFiles: (files) => { void attach.addFiles(files); },
+    addFiles: (files) => { void attach.addFiles(files); }, awaitPendingUploads: attach.awaitPendingUploads,
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
     dispatchEmission: dispatchEmissionVoid,

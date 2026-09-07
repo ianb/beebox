@@ -6,12 +6,17 @@
  * goes to the bulk-upload batch — the split is decided by `file-routing.ts`,
  * never by which entry point the files came from.
  *
- * `[fileN]` attachments (a server-side `tmp/` upload referenced by token) are
- * still carried by the emission format and restored from a persisted draft, but
- * nothing in this web composer creates them any more: the Add menu's old
- * "Attach file…" path was the only producer, and it now routes here
- * (`issues/features/2026-08-03-attach-vs-upload-menu-confusing.md`). The native
- * iOS composer still uploads and sends them.
+ * Everything else — any non-image, and photos over the inline limit — is
+ * uploaded to the box's `tmp/` dir and anchored by a `[file#N]` token carrying
+ * only its path, so it adds nothing to the send payload however large it is.
+ * Its token goes in **immediately**, before the bytes have moved, so the user
+ * can keep writing around it; the chip shows the upload's progress and the send
+ * sites hold until nothing is in flight.
+ *
+ * A retry needs the original `File`, which is a DOM object the emission store
+ * is forbidden to hold (see its serializable-boundary rule). The handles live
+ * in a ref here instead, keyed by attachment id, and are dropped when the file
+ * is removed or the composer resets.
  *
  * State itself lives in the emission store (`../../input/emission-store.ts`,
  * docs/implemented-plans/input-extraction.md chunk 2). `useChatAttachments`
@@ -27,6 +32,8 @@
 
 import { useRef, useCallback, useEffect, useSyncExternalStore } from "react";
 import { processImageBlob, unsupportedImageMessage } from "../../lib/image-paste";
+import { uploadChatFile } from "../../lib/file-upload";
+import { errorMessage } from "@shared/error-guards";
 import { useEmissionStore } from "./input-store";
 import { toastError } from "../ui/toast-store";
 import { routeAddedFiles } from "./file-routing";
@@ -122,16 +129,15 @@ export function useEnsureComposerVisible(opts: {
 }
 
 /**
- * What became of a set of files handed to {@link useChatAttachments}'s
- * `addFiles`. The route is reported rather than folded into a count because a
- * batched set adds nothing inline — a caller that toasts on "nothing was
- * attached" (the screenshot grab) must not read a successful hand-off to the
- * bulk-upload overlay as a failure.
+ * What a set of files handed to {@link useChatAttachments}'s `addFiles` added
+ * to the composer. Counts an uploading file as added — its token and chip are
+ * already there, and the send waits for it — so a caller that toasts on
+ * "nothing was attached" (the screenshot grab) doesn't misread a slow upload as
+ * a failure.
  */
-export type AddFilesOutcome =
-  | { route: "batch" }
-  /** `added` counts the images that actually finished; a processing failure adds none. */
-  | { route: "inline"; added: number };
+export interface AddFilesOutcome {
+  added: number;
+}
 
 /** The composer's one file-ingest entry point, shared by picker, paste, drop and screenshot. */
 export type AddFiles = (files: File[]) => Promise<AddFilesOutcome>;
@@ -141,60 +147,38 @@ export function useChatAttachments(opts: {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   /** Opens the mobile typing row when a token insert happens with no visible composer (see useEnsureComposerVisible). */
   ensureComposerVisibleRef: React.MutableRefObject<() => void>;
-  /**
-   * Hand a file set to the bulk-upload path instead of inlining it (see
-   * `file-routing.ts`). `foldInComposerImages` asks the caller to sweep the
-   * composer's existing inline photos into the same batch, so one selection act
-   * doesn't end up split across two destinations.
-   */
-  onBatchFiles: (opts: { files: File[]; foldInComposerImages: boolean }) => void;
 }) {
-  const { emissionStore, textareaRef, ensureComposerVisibleRef, onBatchFiles } = opts;
+  const { emissionStore, textareaRef, ensureComposerVisibleRef } = opts;
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /**
+   * The `File` behind each uploading attachment, for retry. Not in the emission
+   * store: it is a DOM object, and the store is a serializable value by
+   * contract. Entries are dropped on success, removal and reset, so this never
+   * outlives the chips it backs.
+   */
+  const pendingUploadsRef = useRef(new Map<number, File>());
+  /**
+   * The in-flight upload for each file, so a send can wait on them. Settles
+   * (never rejects) as each upload reaches `uploaded` or `failed` — the outcome
+   * is read off the store, not off the promise.
+   */
+  const uploadsInFlightRef = useRef(new Map<number, Promise<void>>());
 
-  const addFiles = useCallback(async (files: File[]): Promise<AddFilesOutcome> => {
-    if (files.length === 0) return { route: "inline", added: 0 };
-    // One routing rule for every entry point — picker, paste, drop, screenshot
-    // — so where a file lands depends on the file set, never on how it arrived
-    // (`file-routing.ts`). Non-images have no in-message representation, and a
-    // photo set too big to ride inline gets uploaded rather than base64-ing a
-    // camera roll into one /chat/send that can't be sent.
-    //
-    // `pendingImages` counts too: encoding is async, so two fast pastes would
-    // otherwise both see zero finished images and both inline.
-    const draft = emissionStore.get();
-    if (routeAddedFiles({
-      files,
-      existingInline: draft.images.length + draft.pendingImages,
-    }) === "batch") {
-      // Hand over the photos ALREADY in the composer as well. Batching only the
-      // new ones would split one intended message in two: the batch would carry
-      // the whole composer text as its introduction while the older photos sat
-      // behind in the composer with nothing describing them, and the agent would
-      // be told about photos it hadn't been given. One selection act, one
-      // destination.
-      // Fold in the finished images — the ones we actually have bytes for.
-      //
-      // Photos still ENCODING cannot be folded (there are no bytes yet) and are
-      // deliberately NOT dropped: they finish and land inline, going out with the
-      // next ordinary send. That leaves a narrow race where one act produces a
-      // batch plus a few inline photos, which is a worse *presentation* than
-      // "one destination" — but discarding them to tidy that up would silently
-      // destroy photos the user picked, and never losing anything outranks
-      // arriving in one piece. The inline bound still holds: those photos were
-      // already counted above.
-      onBatchFiles({ files, foldInComposerImages: draft.images.length > 0 });
-      return { route: "batch" };
-    }
-    // Show placeholder tiles immediately; each clears as its image finishes
-    // encoding, so the gap between cmd-V and the thumbnail isn't a dead beat.
-    editor.bumpPendingImages(files.length);
-    // Process images in parallel; a failure decrements its own pending slot
+  /**
+   * Downscale, encode and store the photo half of an inline selection,
+   * returning the items that made it. Placeholder tiles go up immediately so
+   * the gap between cmd-V and the thumbnail isn't a dead beat; each clears as
+   * its image finishes.
+   */
+  const addInlinePhotos = useCallback(async (photos: File[]): Promise<ImageItem[]> => {
+    if (photos.length === 0) return [];
+    editor.bumpPendingImages(photos.length);
+    // Process in parallel; a failure decrements its own pending slot
     // immediately (nothing was added), while a success's slot is cleared by
     // `addImage` itself once all results are in.
     const processed = await Promise.all(
-      files.map(async (f) => {
+      photos.map(async (f) => {
         try {
           return await processImageBlob(f);
         } catch (e) {
@@ -218,20 +202,136 @@ export function useChatAttachments(opts: {
       newItems.push(item);
     }
     // Say so when an image didn't make it. The encoder rejects formats the
-    // browser can't decode (a HEIC straight off a phone, some SVGs), and with
-    // the old explicit attach path gone this is the only path such a file has:
-    // a console-only log would let a picked file vanish with no signal at all
-    // (code-style.md defensiveness rule 5).
-    const failedFiles = files.filter((_f, i) => processed[i] === null);
-    if (failedFiles.length > 0) toastError(unsupportedImageMessage(failedFiles));
-    if (newItems.length === 0) return { route: "inline", added: 0 };
-    const tokens = newItems.map((a) => composerToken("image", a.id)).join(" ");
-    insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: false });
-    ensureComposerVisibleRef.current();
-    // Count actually added — the screenshot path toasts when an inline route
-    // adds 0 (a single-file capture that failed processing).
-    return { route: "inline", added: newItems.length };
-  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef, onBatchFiles]);
+    // browser can't decode (a HEIC straight off a phone, some SVGs), and this
+    // is the only path such a file has: a console-only log would let a picked
+    // file vanish with no signal at all (code-style.md defensiveness rule 5).
+    const failed = photos.filter((_f, i) => processed[i] === null);
+    if (failed.length > 0) toastError(unsupportedImageMessage(failed));
+    return newItems;
+  }, [editor]);
+
+  /**
+   * Run one file's upload, moving its chip through `uploading` → `uploaded` or
+   * `failed`. Never throws: the outcome is the chip's state, and a failure is
+   * something the user retries or removes rather than something a caller
+   * unwinds.
+   */
+  const runUpload = useCallback(async (id: number, file: File): Promise<void> => {
+    try {
+      const uploaded = await uploadChatFile(file, {
+        onProgress: (fraction) => { editor.setFileState({ id, state: { status: "uploading", progress: fraction } }); },
+      });
+      pendingUploadsRef.current.delete(id);
+      editor.setFileState({ id, state: { status: "uploaded", path: uploaded.path } });
+    } catch (e) {
+      // Keep the handle: retry needs it, and the chip offers exactly that.
+      console.error("[chat] Failed to upload file:", e);
+      editor.setFileState({ id, state: { status: "failed", message: errorMessage(e) } });
+    }
+  }, [editor]);
+
+  /** Hold an upload's promise until it settles, so a send can wait on it. */
+  const track = useCallback((id: number, running: Promise<void>): void => {
+    const done = running.finally(() => {
+      // Only clear the entry if it is still THIS run — a retry replaces it.
+      if (uploadsInFlightRef.current.get(id) === done) uploadsInFlightRef.current.delete(id);
+    });
+    uploadsInFlightRef.current.set(id, done);
+  }, []);
+
+  /**
+   * Resolve once no file upload is still running. `runUpload` never rejects, so
+   * this settles on failures too — the caller inspects the store to see whether
+   * everything actually landed.
+   */
+  const awaitPendingUploads = useCallback(async (): Promise<void> => {
+    // A retry started while we wait registers a new promise, so loop until the
+    // map is genuinely empty rather than snapshotting it once.
+    while (uploadsInFlightRef.current.size > 0) {
+      await Promise.all([...uploadsInFlightRef.current.values()]);
+    }
+  }, []);
+
+  /**
+   * Register the upload half of a selection and start it moving.
+   *
+   * The items (and their tokens) exist before a single byte goes up, so the
+   * user can keep writing around an attachment that hasn't landed yet. Returns
+   * as soon as they are registered — the uploads run on behind it, and the send
+   * sites are what wait.
+   */
+  const addUploadFiles = useCallback((others: File[]): FileItem[] => {
+    const items: FileItem[] = others.map((f) => ({
+      id: editor.nextFileId(),
+      originalName: f.name,
+      size: f.size,
+      mimetype: f.type === "" ? "application/octet-stream" : f.type,
+      state: { status: "uploading", progress: 0 },
+    }));
+    for (const [i, item] of items.entries()) {
+      const file = others[i];
+      if (file === undefined) continue;
+      pendingUploadsRef.current.set(item.id, file);
+      editor.addFile(item);
+      track(item.id, runUpload(item.id, file));
+    }
+    return items;
+  }, [editor, runUpload, track]);
+
+  /** Re-run a failed upload from the handle kept for it. */
+  const retryFileUpload = useCallback((id: number) => {
+    const file = pendingUploadsRef.current.get(id);
+    if (file === undefined) {
+      // The handle is gone only if the page reloaded under a restored draft,
+      // and persistence never restores an unfinished file — so this is a state
+      // that shouldn't arise rather than one to paper over.
+      editor.setFileState({ id, state: { status: "failed", message: "This file can't be retried — remove it and pick it again." } });
+      return;
+    }
+    editor.setFileState({ id, state: { status: "uploading", progress: 0 } });
+    track(id, runUpload(id, file));
+  }, [editor, runUpload, track]);
+
+  const addFiles = useCallback(async (files: File[]): Promise<AddFilesOutcome> => {
+    if (files.length === 0) return { added: 0 };
+    // One routing rule for every entry point — picker, paste, drop, screenshot
+    // — so how a file is represented depends on the file set, never on how it
+    // arrived (`file-routing.ts`). Both halves land in THIS message.
+    //
+    // `pendingImages` counts toward the inline bound too: encoding is async, so
+    // two fast pastes would otherwise both see zero finished images and both
+    // inline.
+    const draft = emissionStore.get();
+    const routed = routeAddedFiles({
+      files,
+      existingInlinePhotos: draft.images.length + draft.pendingImages,
+    });
+
+    // Uploads first, and synchronously: their tokens and chips exist before any
+    // bytes move, so the user can keep writing around a file that hasn't landed
+    // yet. Waiting for the photo half to encode before showing them would hide
+    // exactly the progress this is here to show.
+    const fileItems = addUploadFiles(routed.upload);
+    if (fileItems.length > 0) {
+      const fileTokens = fileItems.map((f) => composerToken("file", f.id)).join(" ");
+      // Always focus: a file selection comes from an explicit act (the Add menu,
+      // a drop), so focus is on the menu button and the user is ready to keep
+      // typing after the token.
+      insertTokensAtCursor(fileTokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: true });
+      ensureComposerVisibleRef.current();
+    }
+
+    const imageItems = await addInlinePhotos(routed.inline);
+    if (imageItems.length > 0) {
+      const imageTokens = imageItems.map((a) => composerToken("image", a.id)).join(" ");
+      // A paste must not steal focus, so this half never forces it.
+      insertTokensAtCursor(imageTokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: false });
+      ensureComposerVisibleRef.current();
+    }
+    // Count what actually reached the composer — the screenshot path toasts on
+    // 0 (a single-file capture that failed to encode).
+    return { added: imageItems.length + fileItems.length };
+  }, [editor, emissionStore, textareaRef, ensureComposerVisibleRef, addInlinePhotos, addUploadFiles]);
 
   const removeAttachment = useCallback((id: number) => {
     const target = emissionStore.get().images.find((a) => a.id === id);
@@ -252,6 +352,11 @@ export function useChatAttachments(opts: {
   }, [addFiles]);
 
   const removeFileAttachment = useCallback((id: number) => {
+    // The upload may still be running; `setFileState` no-ops once the item is
+    // gone, so a late result can't resurrect the chip. Dropping the handle here
+    // is what keeps the map from outliving what it backs.
+    pendingUploadsRef.current.delete(id);
+    uploadsInFlightRef.current.delete(id);
     // Strips the matching `[fileN]` token from the text too.
     editor.removeFile(id);
   }, [editor]);
@@ -267,6 +372,8 @@ export function useChatAttachments(opts: {
     // of the object URL, so dropping them doesn't affect the message. The
     // store hands the URLs back rather than revoking them itself (DOM APIs
     // don't belong in the framework-free store).
+    pendingUploadsRef.current.clear();
+    uploadsInFlightRef.current.clear();
     const { removedImageObjectUrls } = editor.reset("attachments");
     for (const url of removedImageObjectUrls) {
       try { URL.revokeObjectURL(url); } catch (_e) { /* already revoked — harmless */ }
@@ -275,7 +382,7 @@ export function useChatAttachments(opts: {
 
   return {
     fileInputRef,
-    addFiles, removeAttachment, removeFileAttachment,
+    addFiles, removeAttachment, removeFileAttachment, retryFileUpload, awaitPendingUploads,
     handleAddFiles, handleFileInputChange, resetAttachments,
   };
 }

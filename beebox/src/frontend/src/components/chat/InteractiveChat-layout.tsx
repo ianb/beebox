@@ -114,6 +114,8 @@ export interface ComposerSectionProps {
   selections: SelectionItem[];
   onRemoveAttachment: (id: number) => void;
   onRemoveFileAttachment: (id: number) => void;
+  /** Re-run a failed file upload from the chip. */
+  onRetryFileAttachment: (id: number) => void;
   onRemoveSelection: (id: number) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
   onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -132,7 +134,7 @@ export interface ComposerSectionProps {
 
 export function ChatComposerSection(props: ComposerSectionProps) {
   const {
-    attachments, pendingImageCount, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRemoveSelection,
+    attachments, pendingImageCount, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRetryFileAttachment, onRemoveSelection,
     fileInputRef, onFileInputChange, typingMode, typingLocked, setTypingMode, setTypingLocked,
     isTranscribing, recoveredDictation, expiredAttachmentsNotice, inputArea, mobileRow,
   } = props;
@@ -151,7 +153,7 @@ export function ChatComposerSection(props: ComposerSectionProps) {
       <SelectionPanel selections={selections} onRemove={onRemoveSelection} />
 
       {/* File attachment panel: chips for non-image uploads */}
-      <FileAttachmentPanel attachments={fileAttachments} onRemove={onRemoveFileAttachment} />
+      <FileAttachmentPanel attachments={fileAttachments} onRemove={onRemoveFileAttachment} onRetry={onRetryFileAttachment} />
 
       {/* Hidden file input — opened by the "+" attach button. */}
       <input

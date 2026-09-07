@@ -1,6 +1,6 @@
 ---
 title: "\"Add files…\" sends every non-image file to the bulk-upload process — you can no longer attach a couple of files to a message"
-workstream: unattached
+workstream: add-files-inline
 area: beebox
 priority: important
 labels: [chat, composer, ui]

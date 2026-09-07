@@ -37,8 +37,10 @@ interface ChatActionsOpts {
   selections: SelectionItem[];
   resetAttachments: () => void;
   resetSelections: () => void;
-  /** Composer file ingest — routing decides inline vs. batch (`file-routing.ts`). */
+  /** Composer file ingest — routing decides inline vs. upload (`file-routing.ts`). */
   addFiles: (files: File[]) => void;
+  /** Resolves when no file attachment is still uploading; a send waits on it. */
+  awaitPendingUploads: () => Promise<void>;
   onSend: () => void;
   isTranscribing: boolean;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
@@ -55,18 +57,38 @@ export function useChatActions(opts: ChatActionsOpts) {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore, selections, resetAttachments, resetSelections, addFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
-    dispatchEmission,
+    dispatchEmission, awaitPendingUploads,
   } = opts;
   const navigate = useNavigate();
 
-  const handleSend = useCallback(() => {
-    const text = inputStore.get().trim();
+  const runSend = useCallback(async (): Promise<void> => {
     // Point-in-time read, not a subscription — attachments aren't reactive
     // props here (see module doc); this only runs on an actual send click.
-    const { images: attachments, files: fileAttachments } = emissionStore.get();
-    if (!text && attachments.length === 0 && fileAttachments.length === 0 && selections.length === 0) return;
+    const pre = emissionStore.get();
+    if (!inputStore.get().trim() && pre.images.length === 0 && pre.files.length === 0 && selections.length === 0) return;
     onSend();
     unlockAudioContext();
+
+    // Hold until every file attachment has finished uploading. A file's token
+    // goes into the text the moment it is picked, so a send can land on one
+    // whose bytes are still moving — and `draftAttachments` would drop it,
+    // sending a token that references nothing. The composer stays live and the
+    // chips keep showing progress, so anything typed during the wait joins this
+    // same message.
+    await awaitPendingUploads();
+
+    // Re-read AFTER the wait: the text may have grown, and the file states have
+    // certainly changed.
+    const { images: attachments, files: fileAttachments } = emissionStore.get();
+    const text = inputStore.get().trim();
+    const failed = fileAttachments.filter((f) => f.state.status === "failed");
+    if (failed.length > 0) {
+      // Refuse rather than quietly send a message missing the files it names.
+      // Everything stays put, so the chips' retry is right there.
+      const names = failed.map((f) => f.originalName).join(", ");
+      toastError(`Not sent — ${names} didn't upload. Retry or remove ${failed.length === 1 ? "it" : "them"}, then send.`);
+      return;
+    }
 
     const emission = createTypedEmission({
       text,
@@ -82,7 +104,14 @@ export function useChatActions(opts: ChatActionsOpts) {
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setTypingMode]);
+  }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setTypingMode, awaitPendingUploads]);
+
+  /**
+   * The send every caller uses. Void-returning: sending now waits on in-flight
+   * uploads, but a click handler, a key handler and a composer prop all have
+   * nothing to resume on, and `runSend` reports its own failures with a toast.
+   */
+  const handleSend = useCallback(() => { void runSend(); }, [runSend]);
 
   // Clicking a suggested opener is typing it and pressing enter: seed the
   // composer store, then run the exact same send funnel — so an opener carries
@@ -94,8 +123,8 @@ export function useChatActions(opts: ChatActionsOpts) {
   }, [inputStore, handleSend]);
 
   // Paste and drop take WHATEVER files came with the event, not just images:
-  // routing (`file-routing.ts`) sends a non-image set to the bulk batch, so
-  // filtering here would silently discard a dropped PDF instead of filing it.
+  // routing (`file-routing.ts`) gives a non-image the upload representation, so
+  // filtering here would silently discard a dropped PDF instead of attaching it.
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const files = extractTransferFiles(e.clipboardData);
     if (files.length === 0) return;

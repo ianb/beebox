@@ -1148,27 +1148,41 @@ without the other is a contract break.
 - **Neutral web→native transport** `beeboxNativePost(channel, payload)` (string payloads) —
   startup script in `Views/ChatWebView.swift` ↔ `native-post.ts` · `postNativeMessage` (with the
   legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
-- **Inline photo limit** `3` — `components/chat/file-routing.ts` · `INLINE_PHOTO_LIMIT` /
-  `routeAddedFiles` ↔ the iOS composer's mirrored constant. **The most photos that may ride
-  inline (base64) in one chat message.** A selection that would put the composer's *total* inline
-  count above the limit is uploaded as a bulk batch (§5.6) instead, and so is any set containing a
-  **non-image** (a document has no inline representation), however few files it holds. Photos **already inline join that
-  batch** and are removed from the composer, so one selection act has one destination — batching only
-  the new photos would send the composer text off as the batch's introduction while the older photos
-  sat behind with nothing describing them. (Photos still *encoding* can't be folded, having no bytes
-  yet; they finish and land inline rather than being discarded — never losing a photo outranks
-  arriving in one piece.) The inline total is bounded by the limit however many separate selections a
-  user makes, counting in-flight encodes. The rule applies identically to the picker, paste, drop
-  and screenshot grab — on the web the composer's Add menu offers one "Add files…" entry and routing
-  decides the rest, rather than asking the user to pick a path.
+- **Inline attachment limits** `3` photos / `3` files / `25 MB` per file —
+  `components/chat/file-routing.ts` · `INLINE_PHOTO_LIMIT` / `INLINE_FILE_LIMIT` /
+  `INLINE_FILE_MAX_BYTES` / `routeAddedFiles` ↔ the iOS composer's mirrored constants. **How much
+  may ride inline in one chat message.** Photos and files are counted **separately**, each against
+  the composer's *total* inline count for its own kind, and a selection that would breach either
+  limit — or that carries a file over the size ceiling — is uploaded as a bulk batch (§5.6) instead,
+  **whole**. Photos **already inline join that batch** and are removed from the composer, so one
+  selection act has one destination — batching only the new photos would send the composer text off
+  as the batch's introduction while the older photos sat behind with nothing describing them.
+  (Photos still *encoding* can't be folded, having no bytes yet; they finish and land inline rather
+  than being discarded — never losing a photo outranks arriving in one piece.) The rule applies
+  identically to the picker, paste, drop and screenshot grab — on the web the composer's Add menu
+  offers one "Add files…" entry and routing decides the rest, rather than asking the user to pick a
+  path.
 
-  This is a real behavioral contract, not a tuning knob: inlining a camera roll base64-encodes tens
-  of megabytes into a single `/chat/send`, which is what
+  **The two limits are separate because they guard different mechanisms, and a surface that merges
+  them is wrong in both directions.** A photo rides inline as **base64 in the `/chat/send` body**, so
+  its limit is a payload bound and a real behavioral contract, not a tuning knob: inlining a camera
+  roll base64-encodes tens of megabytes into a single request, which is what
   `issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` reports failing client-side with no
   server-side trace. There is **no documented size ceiling** for a WKWebView script message — the
   failure is memory pressure, not a published limit — so "inline just under the cliff" is not
-  implementable; keeping the inline payload categorically small is the only sound posture. A
-  surface that raises or ignores the limit reintroduces the bug.
+  implementable; keeping the inline payload categorically small is the only sound posture. A file
+  rides inline only as a **`tmp/…` path**, uploaded ahead of the send by its own request (§ the
+  `/chat/upload-file` entry), so it adds nothing to the send payload and that failure mode does not
+  apply to it. Its count limit marks where "read these with my message" turns into "file these",
+  which is the bulk pipeline's job; its **25 MB ceiling** keeps the largest uploads on the bulk
+  route, which streams to disk, rather than the chat-upload route, which buffers a whole file in
+  memory. The ceiling is deliberately **not** applied to photos: an inline photo is downscaled
+  client-side before encoding, so the size of the file the user picked never reaches the wire.
+
+  A surface that raises or ignores the photo limit reintroduces the iOS bug. One that applies the
+  photo limit to files — or spends a photo slot on a file — makes "attach a couple of documents"
+  impossible, which is the regression
+  `issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md` reports.
 
   An uploader that routes a selection this way MUST send the composer text as the batch's `note`
   (§5.6) — otherwise the batch is unintroduced and the agent asks what the files are instead of

@@ -17,6 +17,7 @@
 
 import type { ChatImageAttachment } from "../api-chat";
 import type { SelectionItem } from "../lib/selection/serialize";
+import { uploadedPath } from "./emission-store";
 import type { ImageItem, FileItem } from "./emission-store";
 import type { FinalWord } from "../machines/transcription-events";
 import { newMessageId } from "../components/chat/InteractiveChat-helpers";
@@ -93,13 +94,15 @@ export function draftAttachments(draft: { images: ImageItem[]; files: FileItem[]
 } {
   return {
     images: draft.images.map((a) => ({ id: a.id, mimeType: a.mimeType, dataBase64: a.dataBase64 })),
-    files: draft.files.map((f) => ({
-      id: f.id,
-      path: f.path,
-      originalName: f.originalName,
-      size: f.size,
-      mimetype: f.mimetype,
-    })),
+    // Only files that finished uploading have a path to reference. The send
+    // sites hold until nothing is in flight, so in practice this drops nothing
+    // — but a file whose upload FAILED must not become a token pointing at a
+    // path that was never written.
+    files: draft.files.flatMap((f) => {
+      const path = uploadedPath(f);
+      if (path === null) return [];
+      return [{ id: f.id, path, originalName: f.originalName, size: f.size, mimetype: f.mimetype }];
+    }),
   };
 }
 
