@@ -36,6 +36,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   const attention = useMemo(() => ({ ...route.attention, ...(focusedRef ? { surface: "card" as const, focusedRef } : {}), ...(viewOverlayVisible ? { transcript: "hidden" as const } : {}) }), [focusedRef, route.attention, viewOverlayVisible]);
   const emissionStore = useEmissionStoreInstance(boxSlug);
   const target = conversation.rendered?.target;
+  const usesNativeComposer = search.nativeComposer === "1" || isNativeShell();
   const sessionId = target?.kind === "session" ? target.sessionId : null;
   const sessionLabel = conversation.rendered?.label ?? "Conversation";
   const inspect = useViewNavigate();
@@ -66,7 +67,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   const handleAssignment = conversation.assigned;
   const handleShowConversation = route.showConversation;
   const handleHideConversation = route.hideConversation;
-  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} />;
+  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} nativeComposer={usesNativeComposer} />;
   return <InteractiveChat
     sessionInput={sessionId ?? "new"}
     initial={conversation.initial}
@@ -81,7 +82,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     emissionStore={emissionStore}
     sessionLabel={sessionLabel}
     onSessionAssignment={handleAssignment}
-    nativeComposer={search.nativeComposer === "1" || isNativeShell()}
+    nativeComposer={usesNativeComposer}
     openCaptureOnMount={search.capture === "1"}
     transcriptVisible={route.transcriptVisible}
     routeContent={route.chatPage ? undefined : children}
@@ -94,8 +95,9 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   />;
 }
 
-function ConversationNotice({ selection, onRetry }: { selection: ConversationSelection; onRetry: () => Promise<void> }) {
+function ConversationNotice({ selection, onRetry, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; nativeComposer: boolean }) {
   if (selection.kind === "ready") {
+    if (nativeComposer) return null;
     const place = selection.target.contextDir || "Box root";
     return <Text as="div" size="xs" tone="muted" className="px-3 py-1">To: {selection.label}{selection.label.replace(/^\//, "") === place.replace(/^\//, "") ? "" : ` · ${place}`}</Text>;
   }
