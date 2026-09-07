@@ -7,6 +7,7 @@
  */
 
 import { useCallback } from "react";
+import { useMobileChatViewport } from "./everywhere/use-mobile-card-navigation";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { MessageList } from "./InteractiveChat-messages";
@@ -91,6 +92,7 @@ function BarChromeRegion(props: ChatBodyProps) {
   }, [sessionId, agentEngine, handleChooseStart, handleSelectModel]);
   return (
     <ChatBarChrome
+      transcriptVisible={props.transcriptVisible ?? true}
       contextDir={effectiveContextDir}
       boxSlug={boxSlug}
       sessionLabel={sessionLabel}
@@ -215,6 +217,7 @@ function ComposerRegion(props: ChatBodyProps) {
           isTranscribing={isTranscribing}
           transcription={transcription}
           targetBusy={targetBusy}
+          sendDisabledReason={props.sendDisabledReason}
           handleKeyDown={handleKeyDown}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
@@ -240,6 +243,7 @@ function ComposerRegion(props: ChatBodyProps) {
           isTranscribing={isTranscribing}
           transcription={transcription}
           targetBusy={targetBusy}
+          sendDisabledReason={props.sendDisabledReason}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
           clearDraft={clearDraft}
@@ -257,6 +261,7 @@ function ComposerRegion(props: ChatBodyProps) {
 export function InteractiveChatBody(props: ChatBodyProps) {
   const { tabs, voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onTogglePin, onClosePanel } = tabs;
+  const mobile = useMobileChatViewport();
   const {
     handleAddSelection,
     nativeCommandError,
@@ -283,7 +288,13 @@ export function InteractiveChatBody(props: ChatBodyProps) {
   return (
     <ChatRenderProfiler id="chat-root">
       <ChatView
-      hasCompanion={Boolean(activeView)}
+      hasCompanion={!mobile && Boolean(activeView) && props.routeContent === undefined}
+      onOpenStoredCard={mobile && activeView && props.routeContent === undefined ? () => onZoomView(activeView) : undefined}
+      transcriptVisible={props.transcriptVisible} routeContent={props.routeContent}
+      onShowConversation={props.onShowConversation}
+      onHideConversation={props.onHideConversation}
+      ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice}
+      failedRegion={props.failedRegion}
       companionPanel={
         activeView ? (
           <CompanionViewPanel
@@ -301,7 +312,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
         ) : null
       }
       barChrome={embedded ? null : <BarChromeRegion {...props} />}
-      messageList={<MessageListRegion {...props} />}
+      messageList={<MessageListRegion key={props.conversationKey} {...props} />}
       statusBanners={
         <>
           <BackgroundTasks tasks={props.backgroundTasks} />

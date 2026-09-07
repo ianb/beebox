@@ -1,0 +1,24 @@
+{
+  "input": {
+    "version": 1,
+    "kind": "selection",
+    "boxSlug": "test1",
+    "revision": 4,
+    "selection": {
+      "kind": "ready",
+      "label": "Kitchen",
+      "target": {
+        "kind": "start",
+        "clientConversationId": "start-kitchen",
+        "contextDir": "kitchen",
+        "engine": "codex"
+      }
+    },
+    "attention": {
+      "surface": "card",
+      "focusedRef": "https://example.com",
+      "transcript": "hidden"
+    }
+  },
+  "expectedValid": false
+}

@@ -26,6 +26,7 @@ import type { ChatEvent } from "../../machines/chat-types";
  * `chat-features-changed` handler in the parent.
  */
 export function useChatModelFeatures(opts: {
+  conversationKey?: string;
   sessionId: string | null;
   groupCount: number;
   contextDir: string | null;
@@ -53,6 +54,9 @@ export function useChatModelFeatures(opts: {
   const [modelMarkers, setModelMarkers] = useState<ModelMarker[]>([]);
   const [chatFeatures, setChatFeatures] = useState<Record<string, string>>({});
   const preSessionFeatureTouchedRef = useRef(false);
+  const conversationKey = opts.conversationKey ?? sessionId ?? contextDir;
+  const resetConversation = useCallback(() => { setModelMarkers([]); setChatFeatures({}); setSelectedModel(null); setModelInForce(null); }, []);
+  const { modelRequestIdRef, scopeGenerationRef } = useModelConversationScope(conversationKey, { sessionId, reset: resetConversation });
 
   useEffect(() => {
     preSessionFeatureTouchedRef.current = false;
@@ -78,14 +82,16 @@ export function useChatModelFeatures(opts: {
    * default it read when it loaded.
    */
   const refreshModelStatus = useCallback(async () => {
+    const generation = scopeGenerationRef.current;
     const status = await getChatStatus({ sessionId });
+    if (generation !== scopeGenerationRef.current) return;
     setSelectedModel(status.source === "explicit" ? status.model : null);
     setModelInForce(status.model);
     setBoxDefault(status.boxDefault);
     setAgentEngine(status.engine);
     setEnabledEngines(status.enabledEngines);
     setBoxEngine(status.boxEngine);
-  }, [sessionId]);
+  }, [sessionId, scopeGenerationRef]);
 
   // For a fresh chat, status reports the box's configured engine and default.
   useEffect(() => {
@@ -111,21 +117,21 @@ export function useChatModelFeatures(opts: {
   // fresh through chat-features-changed events on the global SSE stream.
   useEffect(() => {
     if (!sessionId) return;
+    let current = true;
     getChatFeatures({ sessionId })
-      .then((res) => { setChatFeatures(res.features); })
+      .then((res) => { if (current) setChatFeatures(res.features); })
       .catch((e: unknown) => {
         console.warn(`[chatfsm] get-features failed: ${e instanceof Error ? e.message : String(e)}`);
       });
+    return () => { current = false; };
   }, [sessionId]);
 
   const {
     narrationEnabled, handleToggleNarration, hqDictationEnabled, handleToggleHqDictation,
-  } = useChatFeatureToggles({ sessionId, chatFeatures, setChatFeatures, send, preSessionFeatureTouchedRef });
+  } = useChatFeatureToggles({ conversationKey, sessionId, chatFeatures, setChatFeatures, send, preSessionFeatureTouchedRef });
 
   // Generation counter so an out-of-order completion (an older select
   // resolving after a newer one) cannot clobber state a later request set.
-  const modelRequestIdRef = useRef(0);
-
   const handleSelectModel = useCallback((model: string | null) => {
     if (model === selectedModel) return;
     const previous = selectedModel;
@@ -140,10 +146,8 @@ export function useChatModelFeatures(opts: {
     setSelectedModel(model);
     setModelInForce(model ?? boxDefault);
     if (sessionId) {
-      console.debug(`[chatfsm] set-model request sessionId=${sessionId} model=${model ?? "<default>"}`);
       setChatModel({ sessionId, model })
         .then((res) => {
-          console.debug(`[chatfsm] set-model response model=${res.model ?? "<default>"} ok=${res.ok}`);
           if (modelRequestIdRef.current !== requestId) return;
           // Re-sync UI to whatever the server actually persisted, in case a
           // race / bug means the request landed differently than expected.
@@ -162,10 +166,8 @@ export function useChatModelFeatures(opts: {
           setSelectedModel(previous);
           setModelInForce(previous ?? boxDefault);
         });
-    } else {
-      console.debug("[chatfsm] set-model skipped — sessionId is null");
     }
-  }, [selectedModel, boxDefault, groupCount, sessionId, agentEngine]);
+  }, [selectedModel, boxDefault, groupCount, sessionId, agentEngine, modelRequestIdRef]);
 
   /**
    * Pin the box default. Deliberately does not touch this chat: a follower
@@ -219,6 +221,17 @@ export function useChatModelFeatures(opts: {
 }
 
 
+function useModelConversationScope(key: string | null, { sessionId, reset }: { sessionId: string | null; reset: () => void }) {
+  const modelRequestIdRef = useRef(0);
+  const scopeGenerationRef = useRef(0);
+  useEffect(() => {
+    scopeGenerationRef.current++;
+    modelRequestIdRef.current++;
+  }, [key, sessionId]);
+  useEffect(reset, [key, reset]);
+  return { modelRequestIdRef, scopeGenerationRef };
+}
+
 /**
  * The chat-feature toggles (narration, HQ dictation) — split from
  * `useChatModelFeatures` for its line budget. Both follow one shape: set
@@ -226,6 +239,7 @@ export function useChatModelFeatures(opts: {
  * rejection, since no event corrects a write the server refused.
  */
 function useChatFeatureToggles(opts: {
+  conversationKey: string | null;
   sessionId: string | null;
   chatFeatures: Record<string, string>;
   setChatFeatures: Dispatch<SetStateAction<Record<string, string>>>;
@@ -242,6 +256,10 @@ function useChatFeatureToggles(opts: {
   // most recent one in flight.
   const narrationRequestIdRef = useRef(0);
   const hqDictationRequestIdRef = useRef(0);
+  useEffect(() => {
+    narrationRequestIdRef.current++;
+    hqDictationRequestIdRef.current++;
+  }, [opts.conversationKey, sessionId]);
 
   const handleToggleNarration = useCallback(() => {
     const next = narrationEnabled ? "off" : "on";
@@ -253,6 +271,7 @@ function useChatFeatureToggles(opts: {
     // (or, pre-session, reconciles from the server once the id is assigned).
     setChatFeatures((prev) => ({ ...prev, narration: next }));
     if (!sessionId) {
+      preSessionFeatureTouchedRef.current = true;
       // Brand-new chat: no session to set the flag on yet. Stash the choice
       // as a machine seed so it rides along on the first send and applies to
       // the very first turn.
@@ -273,7 +292,7 @@ function useChatFeatureToggles(opts: {
         // only when no newer toggle has since taken over.
         setChatFeatures((prev) => ({ ...prev, narration: previous }));
       });
-  }, [sessionId, narrationEnabled, send, setChatFeatures]);
+  }, [sessionId, narrationEnabled, send, setChatFeatures, preSessionFeatureTouchedRef]);
 
   // Mirrors handleToggleNarration exactly (docs/implemented-plans/hq-dictation-switch.md,
   // chunk 1) — a separate feature slot, separate request-id generation, same

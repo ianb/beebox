@@ -99,7 +99,7 @@ interface SecondaryEventDeps {
  * main dispatcher to keep each handler's branching legible.
  */
 function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
-  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore } = deps;
+  const { sessionId, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore } = deps;
   const capture = busEventData(event, "capture-status");
   if (capture) {
     // `sessionId` on the event is null until delivery, so we don't filter by
@@ -169,21 +169,11 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     applyFeaturesChange({ data: features, currentSessionId: sessionId, setFeatures: setChatFeatures });
     return;
   }
-  const assigned = busEventData(event, "chat-session-assigned");
-  if (assigned) {
-    // The authoritative, per-tab assignment is the in-stream `system/init`
-    // delivered over this tab's own turnStream — it always corrects the id.
-    // This bus broadcast is a backup (restart recovery), and it carries no
-    // client correlation, so only adopt it when this tab actually has a turn in
-    // flight. Otherwise a second, idle "new" tab would bind to another tab's
-    // session. URL navigation is the useEffect below.
-    if (sessionInput === "new" && !sessionId && isStreaming) {
-      send({ type: "SESSION_ASSIGNED", sessionId: assigned.sessionId });
-    }
-  }
+
 }
 
 export function useChatWs(opts: {
+  shellManaged?: boolean;
   sessionId: string | null;
   sessionInput: string;
   boxSlug: string | undefined;
@@ -307,6 +297,7 @@ export function useChatWs(opts: {
   // can't strand the chat on `?session=new`. `replace: true` so reload lands
   // on the right session.
   useEffect(() => {
+    if (opts.shellManaged === true) return;
     if (sessionInput !== "new") return;
     if (!sessionId) return;
     onSessionAssignment?.(sessionId);
@@ -320,7 +311,7 @@ export function useChatWs(opts: {
       search: toSearch({ ...search, session: sessionId }),
       replace: true,
     });
-  }, [sessionInput, sessionId, navigate, boxSlug, search, onSessionAssignment]);
+  }, [sessionInput, sessionId, navigate, boxSlug, search, onSessionAssignment, opts.shellManaged]);
 
   // Load voice config from personality on mount
   useEffect(() => {

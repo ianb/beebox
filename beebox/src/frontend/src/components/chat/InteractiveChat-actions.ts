@@ -1,3 +1,4 @@
+import type { EmissionDispatch } from "./conversation/use-bound-emission";
 /**
  * Composer + session action handlers for InteractiveChat: building and
  * dispatching the wrapped send payload, paste/drop image intake, the
@@ -16,12 +17,13 @@ import { href, toSearch } from "../../lib/routing";
 import { newMessageId } from "./InteractiveChat-helpers";
 import { toastError } from "../ui/toast-store";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { createTypedEmission, draftAttachments, type Emission } from "../../input/emission";
+import { submitTypedDraft } from "./conversation/typed-submit";
 import type { InputStore } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
 import { MAX_RETAINED_MESSAGES, type ChatEvent } from "../../machines/chat-types";
 
 interface ChatActionsOpts {
+  captureEmissionDispatch: () => EmissionDispatch;
   send: (event: ChatEvent) => void;
   sessionId: string | null;
   boxSlug: string | undefined;
@@ -46,8 +48,6 @@ interface ChatActionsOpts {
   typingMode: boolean;
   typingLocked: boolean;
   setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
-  /** The one send funnel — assembly happens target-side (InteractiveChat-dispatch.ts). */
-  dispatchEmission: (emission: Emission) => void;
 }
 
 export function useChatActions(opts: ChatActionsOpts) {
@@ -55,7 +55,7 @@ export function useChatActions(opts: ChatActionsOpts) {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore, resetAttachments, resetSelections, addFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
-    dispatchEmission, awaitPendingUploads,
+    awaitPendingUploads, captureEmissionDispatch,
   } = opts;
   const navigate = useNavigate();
 
@@ -75,64 +75,31 @@ export function useChatActions(opts: ChatActionsOpts) {
     if (!inputStore.get().trim() && pre.images.length === 0 && pre.files.length === 0 && pre.selections.length === 0) return;
     unlockAudioContext();
 
-    // Hold until every file attachment has finished uploading. A file's token
-    // goes into the text the moment it is picked, so a send can land on one
-    // whose bytes are still moving — and `draftAttachments` would drop it,
-    // sending a token that references nothing. The composer stays live and the
-    // chips keep showing progress, so anything typed during the wait joins this
-    // same message.
     sendInFlightRef.current = true;
     try {
-      await awaitPendingUploads();
+      await submitTypedDraft({
+        emissionStore, capture: captureEmissionDispatch, awaitUploads: awaitPendingUploads,
+        onCommitted: () => {
+          onSend();
+          resetAttachments();
+          resetSelections();
+          inputStore.set("");
+          if (typingMode && !typingLocked) setTypingMode(false);
+        },
+        onReceipt: (receipt) => { void receipt.catch((error: unknown) => toastError("Message kept for recovery", { cause: error })); },
+      });
     } finally {
       sendInFlightRef.current = false;
     }
 
-    // Re-read EVERYTHING after the wait — text may have grown, a selection may
-    // have been added or dropped, and the file states have certainly changed.
-    // Reading selections from the store rather than the `selections` prop
-    // matters here: the prop is the value captured when this callback was
-    // built, so a selection made during the wait would ship its token with no
-    // payload behind it.
-    const { images: attachments, files: fileAttachments, selections: liveSelections } = emissionStore.get();
-    const text = inputStore.get().trim();
-    const failed = fileAttachments.filter((f) => f.state.status === "failed");
-    if (failed.length > 0) {
-      // Refuse rather than quietly send a message missing the files it names.
-      // Everything stays put, so the chips' retry is right there.
-      const names = failed.map((f) => f.originalName).join(", ");
-      toastError(`Not sent — ${names} didn't upload. Retry or remove ${failed.length === 1 ? "it" : "them"}, then send.`);
-      return;
-    }
-    // The composer can have been emptied while we waited — another send path
-    // (a voice keyword fire) clears it wholesale.
-    if (!text && attachments.length === 0 && fileAttachments.length === 0 && liveSelections.length === 0) return;
-
-    // Only now has a message definitely gone out: `onSend` tells the voice
-    // machine a send happened, and a refusal above must not claim one did.
-    onSend();
-    const emission = createTypedEmission({
-      text,
-      // UI attachments become the wire-format payloads.
-      ...draftAttachments({ images: attachments, files: fileAttachments }),
-      selections: liveSelections,
-    });
-
-    resetAttachments();
-    resetSelections();
-    inputStore.set("");
-    dispatchEmission(emission);
-    if (typingMode && !typingLocked) {
-      setTypingMode(false);
-    }
-  }, [inputStore, emissionStore, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setTypingMode, awaitPendingUploads]);
+  }, [inputStore, emissionStore, captureEmissionDispatch, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setTypingMode, awaitPendingUploads]);
 
   /**
    * The send every caller uses. Void-returning: sending now waits on in-flight
    * uploads, but a click handler, a key handler and a composer prop all have
    * nothing to resume on, and `runSend` reports its own failures with a toast.
    */
-  const handleSend = useCallback(() => { void runSend(); }, [runSend]);
+  const handleSend = useCallback(() => { void runSend().catch((error: unknown) => toastError("Message kept for recovery", { cause: error })); }, [runSend]);
 
   // Clicking a suggested opener is typing it and pressing enter: seed the
   // composer store, then run the exact same send funnel — so an opener carries

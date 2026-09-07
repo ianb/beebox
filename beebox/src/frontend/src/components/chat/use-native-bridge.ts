@@ -1,3 +1,4 @@
+import type { SendBinding } from "@shared/chat-composer-binding";
 import { useEffect } from "react";
 import type { Emission } from "../../input/emission";
 import type { Receipt } from "../../input/targets/receipts";
@@ -29,7 +30,7 @@ declare global {
 
 function useNativeEmissionBridge(opts: {
   enabled: boolean;
-  dispatchEmission: (emission: Emission) => Promise<Receipt>;
+  dispatchEmission: (emission: Emission, binding?: SendBinding) => Promise<Receipt>;
 }) {
   const { enabled, dispatchEmission } = opts;
   useEffect(() => {
@@ -128,7 +129,7 @@ function useNativeResponseBridge(opts: { enabled: boolean; active: boolean }) {
  */
 export function useNativeBridges(opts: {
   enabled: boolean;
-  dispatchEmission: (emission: Emission) => Promise<Receipt>;
+  dispatchEmission: (emission: Emission, binding?: SendBinding) => Promise<Receipt>;
   boxSlug: string | undefined;
   sessionId: string | null;
   narrationEnabled: boolean;
@@ -154,7 +155,7 @@ const dispatchedNativeEmissions = createNativeDispatchRegistry();
 
 async function handleNativeEmission(
   detail: unknown,
-  dispatchEmission: (emission: Emission) => Promise<Receipt>
+  dispatchEmission: (emission: Emission, binding?: SendBinding) => Promise<Receipt>
 ): Promise<void> {
   const parsed = parseNativeEmissionDetail(detail);
   if (!parsed.ok) {
@@ -166,7 +167,13 @@ async function handleNativeEmission(
   const { emission } = parsed;
   const { outcome } = resolveNativeDispatch(emission.id, {
     registry: dispatchedNativeEmissions,
-    dispatch: () => dispatchEmission(emission),
+    dispatch: () => {
+      if (parsed.binding === undefined && !window.location.pathname.endsWith("/chat")) {
+        return Promise.resolve({ disposition: "rejected", emissionId: emission.id,
+          reason: "Update the native app to send here. Return to chat and Restore this message before sending." });
+      }
+      return dispatchEmission(emission, parsed.binding);
+    },
   });
   try {
     postNativeReceipt(await outcome);

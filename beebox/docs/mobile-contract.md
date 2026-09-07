@@ -260,7 +260,7 @@ the contract.
 
 ### 4.1 Emission (native → web)
 
-- **Canonical V2 wire shape** (native → `window.beeboxNativeReceive(<json>)`):
+- **V2 content wire shape** (native → `window.beeboxNativeReceive(<json>)`):
   ```json
   { "version": 2, "id": "<UUID string>", "text": "<string>",
     "origin": "typed"|"voice", "diarized": <bool>,
@@ -270,13 +270,49 @@ the contract.
     "selections": [ { "id": <int>, "ref": "<string>", "text": "<string>",
       "position": "<string>", "anchor": <string|null>, "spokenWords": <number|null> } ] }
   ```
+- **V3 destination binding:** updated iOS sends the same V2 content fields with
+  `version: 3`, `bindingRevision`, and immutable
+  `binding: {boxSlug, target, attention}`. Target is either
+  `{kind:"session", sessionId, contextDir}` or
+  `{kind:"start", clientConversationId, contextDir, engine, model?, seedFeatures?}`.
+  Capture happens at the send gesture before HQ processing, and survives native
+  pending/voice-preparation persistence. Native remains the only durable content
+  queue. Older saved messages require explicit conversation selection before
+  delivery, retaining their IDs for deduplication.
+- **Composer binding negotiation:** web posts `beeboxComposerBinding` with
+  `{version:1, kind:"selection", revision, boxSlug, selection, attention}`.
+  Selection is ready (target/label), resolving (requestId/contextDir), or
+  unavailable (contextDir/reason). Attention carries surface, optional in-box
+  focusedRef, and visible/hidden transcript. Native acknowledges valid publication
+  through `window.beeboxComposerBindingVersion = 1` and the
+  `beebox:composer-binding-ready` event. Until then updated iOS retains its draft
+  and explains that sending requires an updated host. URL-derived session state
+  is only the pre-negotiation fallback; ordinary route movement never retargets.
+- **Assignment-only publication:** the same channel accepts
+  `{version:1, kind:"assigned", boxSlug, clientConversationId, sessionId, contextDir}`.
+  Native saves this alias without selecting it. Its atomic per-box startup ledger
+  records the first emission ID and attempted/accepted/assigned state. Later
+  emissions for that start wait for the alias, including after relaunch; they
+  never become independent fresh starts. Receipts are backend acceptance only.
+- **Definitive refusal:** rejected receipts may add `definitive: true` for an
+  explicit HTTP 4xx refusal. This resets only the designated first-start record
+  to prepared, retaining its emission ID for safe retry. Network/5xx/malformed
+  outcomes remain uncertain. A new send gesture after definitive refusal can
+  replace the first ID; native freezes that permission before async preparation
+  in the optional local `replacesFirstEmissionID` field (not a bridge field).
+  Already-held follow-ups never become first sends. Web alias waits have a
+  30-second awake-time ceiling; expiry keeps the uncertain first identity and
+  exposes the follow-up for recovery instead of creating another conversation.
+- **Mixed-version delivery:** new web accepts V2 only from visible chat. Outside
+  chat it rejects with update guidance; navigating cannot change the cached receipt
+  of that rejected ID. Return to chat and Restore before submitting anew.
 - **Transport globals + event (native-authored startup script):**
   `window.beeboxNativeReceive(detail)` pushes onto `window.beeboxNativeQueue` and
   dispatches `CustomEvent('beebox:native-emission', { detail })`. The **queue is authoritative**;
   the event is only a wake signal (its `detail` is never read).
 - **Web drain/handle:** `use-native-bridge.ts` — `useNativeEmissionBridge` drains
   `beeboxNativeQueue` on mount + each event → `handleNativeEmission` →
-  `nativeEmissionFromDetail` (`native-emission.ts`) → `createTypedEmission`/`createVoiceEmission`
+  `parseNativeEmissionDetail` (`native-emission.ts`, including V3 binding) → `createTypedEmission`/`createVoiceEmission`
   (native `id` preserved via `withNativeId`) → dispatched to `/chat/send`.
 - **Legacy image parse:** malformed image entries are dropped individually; V2 rejects the whole
   payload when any image is malformed.
@@ -297,7 +333,7 @@ the contract.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native payload | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeEmissionV2`, `NativeEmissionFile`, `NativeEmissionSelection`; `ios-app/BeeBox/Views/ChatWebView.swift` — `NativeChatEmission` |
+  | native payload | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeEmissionV3`, `NativeEmissionV2`, `NativeEmissionFile`, `NativeEmissionSelection`; `ios-app/BeeBox/Views/ChatWebView.swift` — `NativeChatEmission` |
   | web parse | `src/frontend/src/components/chat/native-emission.ts` — `parseNativeEmissionDetail`, `nativeEmissionFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
 - **Drift:** LOUD for V2 (a rejected receipt carries the validation reason); legacy coercion remains
   SILENT except when no usable text or image survives.
@@ -341,7 +377,7 @@ mint them independently; the ids are per-emission and per-kind.
   ```
   { disposition: "sent";     emissionId: string; deduplicated: boolean }
   { disposition: "queued";   emissionId: string }
-  { disposition: "rejected"; emissionId: string; reason: string }
+  { disposition: "rejected"; emissionId: string; reason: string; definitive?: boolean }
   ```
 - **Anchors:**
   | side | anchor |
@@ -1039,8 +1075,9 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | A4 | tRPC context identity | box internal | `authed` from mobile token; `user=null,isOwner=false` | — | `server-box-scope.ts` · `createContext` | SILENT |
 | W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session]` — carries NO credential | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `request()` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `beeboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
-| B1 | Native emission | native→web | V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2 / SILENT legacy |
-| B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `beeboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
+| B1 | Native emission | native→web | V3 adds immutable `binding` + `bindingRevision` to V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2/V3 / SILENT legacy |
+| B12 | Composer destination | web→native | V1 selection/assigned publications via `beeboxComposerBinding`; native acknowledges `beeboxComposerBindingVersion=1` + `beebox:composer-binding-ready` | `NativeComposerContract.swift` · `NativeComposerBinding`; `PendingEmissionStore.swift` · `receiveBinding` | `shared/chat-composer-binding.ts`; `everywhere/BoxConversationShell.tsx` | LOUD: unresolved disables send |
+| B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?/definitive?}` via `beeboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location toggle | native→web | `beeboxNativeShareLocation("<uuid>","toggle")`, queue `beeboxNativeLocationQueue`, event `beebox:native-share-location`, detail `{id,action:"toggle"}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
 | B4 | Location state/result | web→native | state `{enabled}` via `beeboxLocationState`; result `{id,success,enabled,message}` via `beeboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationState`, `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationState`, `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
 | B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
@@ -1089,7 +1126,9 @@ without the other is a contract break.
 - **Emission V2 JSON keys** `{version,id,text,origin,diarized,images,files,selections}` —
   `Models/NativeComposerContract.swift` · `NativeEmissionV2` ↔
   `native-emission.ts` · `NativeEmissionV2` / `parseNativeEmissionDetail`.
-- **Receipt shape** `{disposition,emissionId,reason?,deduplicated?}`, dispositions
+- **Emission V3 JSON keys** V2 content plus `{binding,bindingRevision}`; binding uses the
+  shared target/attention unions in `shared/chat-composer-binding.ts`.
+- **Receipt shape** `{disposition,emissionId,reason?,deduplicated?,definitive?}`, dispositions
   `sent|queued|rejected` — `Views/ChatWebView.swift` · `NativeEmissionReceipt.Disposition` ↔
   `input/targets/receipts.ts` · `Receipt`.
 - **Location result** `{id,success,message}` — `Views/ChatWebView.swift` · `receiveLocationResult`
@@ -1142,7 +1181,7 @@ without the other is a contract break.
   `beeboxLocationResult` / `beeboxLocationState` / `beeboxNarrationState` /
   `beeboxHqDictationState` /
   `beeboxSpeechPlaybackState` / `beeboxResponseState` /
-  `beeboxComposerCommand` / `beeboxLastAudioRequest` —
+  `beeboxComposerCommand` / `beeboxLastAudioRequest` / `beeboxComposerBinding` —
   `Views/ChatWebView.swift` (`userContentController.add`) ↔
   `native-post.ts` · `NativeShellChannel`.
 - **Neutral web→native transport** `beeboxNativePost(channel, payload)` (string payloads) —

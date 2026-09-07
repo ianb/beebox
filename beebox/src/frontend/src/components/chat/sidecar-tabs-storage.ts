@@ -15,7 +15,7 @@
 
 import { isRecord } from "@shared/is-record";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
-import type { SidecarState, SidecarTab } from "./sidecar-tabs";
+import { EMPTY_SIDECAR, type SidecarState, type SidecarTab } from "./sidecar-tabs";
 
 const KEY_PREFIX = "bbx:sidecar-tabs";
 
@@ -139,5 +139,27 @@ export function moveSidecarState({ from, to }: { from: string; to: string }): vo
     store.removeItem(from);
   } catch (e) {
     console.warn(`[sidecar-tabs] could not move the stored strip: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+
+export interface SessionSidecar {
+  storageKey: string;
+  logicalKey: string;
+  panel: SidecarState;
+}
+
+/** A rename carries the panel; explicit focus loads that conversation's panel. */
+export function selectSidecarSession(previous: SessionSidecar, next: Omit<SessionSidecar, "panel">): SessionSidecar {
+  if (previous.storageKey === next.storageKey) return previous;
+  return { ...next, panel: previous.logicalKey === next.logicalKey
+    ? previous.panel : loadSidecarState(next.storageKey) ?? EMPTY_SIDECAR };
+}
+
+/** Called after flushing the old scheduled write, before changing its mirrors. */
+export function persistSidecarTransition(previous: SessionSidecar, next: Omit<SessionSidecar, "panel">): void {
+  saveSidecarState(previous.storageKey, previous.panel);
+  if (previous.logicalKey === next.logicalKey) {
+    moveSidecarState({ from: previous.storageKey, to: next.storageKey });
   }
 }

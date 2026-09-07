@@ -1,3 +1,4 @@
+import type { SendBinding } from "@shared/chat-composer-binding.js";
 /**
  * Shared types, constants, and logging for the chat machine and its actors.
  * Kept in a leaf module so `chatMachine.ts` and `chat-actors.ts` can both
@@ -16,7 +17,7 @@ import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js
 // -- Events --
 
 export type ChatEvent =
-  | { type: "SEND"; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }
+  | { type: "SEND"; binding?: SendBinding; startup?: boolean; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }
   | { type: "INTERRUPT" }
   | { type: "DISMISS_ERROR" }
   | { type: "STREAM_TEXT"; text: string }

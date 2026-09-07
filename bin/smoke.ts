@@ -75,6 +75,9 @@ import { isFreshGeneration } from "./smoke-probe.js";
 import type { SmokeStepRecord } from "./smoke-lib.js";
 import {
   cardViewRendered,
+  composerDestination,
+  conversationPreservationFailure,
+  conversationSwitchFailure,
   currentPlaceLabel,
   directoryRowCount,
   hasDomId,
@@ -110,6 +113,7 @@ function buildSteps(input: {
   // the second one proves the generation answering it is not the one the first
   // replaced. `undefined` means the restart step did not run.
   let replaced: { before: number | null } | undefined;
+  let selectedDestination: string | undefined;
 
   if (options.restart) {
     steps.push({
@@ -181,11 +185,10 @@ function buildSteps(input: {
 
   steps.push({
     id: "place-switch",
-    name: "selecting a landmark moves you there",
-    // The menu listing landmarks is the affordance; going somewhere is what the
-    // affordance is FOR, and that is where the 2026-08-20 bug lived — the menu
-    // listed all seven landmarks, reported no problems, and selecting one did
-    // not move you. Every assertion the step above makes would have passed.
+    name: "selecting a landmark switches the conversation",
+    // The menu listing landmarks is the affordance; changing the selected
+    // conversation is what the affordance is FOR. Keep checking the existing
+    // chat navigation consequence as well as the persistent composer's target.
     run: async () => {
       // Re-read rather than reuse the previous step's snapshot: the menu starts
       // its landmark and recent-file queries when it opens, and a row arriving
@@ -198,12 +201,15 @@ function buildSteps(input: {
       if (target === null) {
         throw new NoLandmarkToSwitchToError({ current, snapshot: before });
       }
-      const ref = refFor(before, { role: "menuitem", name: target.rawName });
-      if (ref === null) {
+      if (refFor(before, { role: "menuitem", name: target.rawName }) === null) {
         throw new LandmarkRefUnresolvedError({ name: target.rawName, snapshot: before });
       }
+      const destinationBefore = composerDestination(before);
       const urlBefore = await session.getUrl();
-      await session.clickRef(ref);
+      // Click the exact visible label. The menuitem's centre is its full-width
+      // child span, which current agent-browser correctly reports as covering
+      // the parent ref; activating the label bubbles through the same control.
+      await session.run(["find", "text", target.label, "click", "--exact"]);
       // Client-side navigation: nothing loads, so wait for the app to settle
       // rather than for a page load that will not happen. A timed-out wait is
       // not fatal on its own — the assertions below decide — but it changes
@@ -220,6 +226,11 @@ function buildSteps(input: {
         snapshot: after,
       });
       if (failure !== null) throw failure;
+      const destinationAfter = composerDestination(after);
+      const switchFailure = conversationSwitchFailure(destinationBefore, after);
+      if (switchFailure !== null) throw switchFailure;
+      invariant(destinationAfter !== null, "conversationSwitchFailure accepted a missing destination");
+      selectedDestination = destinationAfter;
     },
   });
 
@@ -228,10 +239,13 @@ function buildSteps(input: {
     name: "browse lists the box's real content",
     run: async () => {
       await session.open(`${baseUrl}/browse`);
-      const snapshot = await session.snapshot({ interactiveOnly: true });
+      const snapshot = await session.snapshot();
       if (!hasDomId(snapshot, "bbx-browse-crumb-root") || directoryRowCount(snapshot) === 0) {
         throw new BrowseListEmptyError(snapshot);
       }
+      const destinationFailure = selectedDestination === undefined
+        ? null : conversationPreservationFailure(selectedDestination, snapshot);
+      if (destinationFailure !== null) throw destinationFailure;
     },
   });
 
@@ -250,7 +264,7 @@ function buildSteps(input: {
       // siblings) fails outright rather than auto-scrolling.
       await session.run(["scrollintoview", `@${ref}`]);
       await session.clickRef(ref);
-      const snapshot = await session.snapshot({ interactiveOnly: true });
+      const snapshot = await session.snapshot();
       const url = await session.getUrl();
       if (!url.includes("/browse/") || !hasDomId(snapshot, "bbx-browse-open-card")) {
         throw new CardViewMissingError({ name: row.name, url, snapshot });
@@ -258,6 +272,9 @@ function buildSteps(input: {
       if (!cardViewRendered(snapshot)) {
         throw new CardContentMissingError({ name: row.name, snapshot });
       }
+      const destinationFailure = selectedDestination === undefined
+        ? null : conversationPreservationFailure(selectedDestination, snapshot);
+      if (destinationFailure !== null) throw destinationFailure;
     },
   });
 

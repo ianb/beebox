@@ -191,6 +191,7 @@ export async function composeTurnContent(
   });
   const snapshot = await composeSendSnapshot(boxRoot, {
     features: features.snapshot(),
+    ...(rawInput.viewContext !== undefined ? { viewContext: rawInput.viewContext } : {}),
     sessionStart,
     ...(rawInput.channel !== undefined ? { channel: rawInput.channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),

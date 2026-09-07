@@ -569,6 +569,12 @@ final class ComposerDraftReducerTests: XCTestCase {
 }
 
 final class ComposerDraftRepositoryTests: XCTestCase {
+    private var testBinding: NativeSendBinding {
+        NativeSendBinding(boxSlug: "test1", target: NativeConversationTarget(
+            kind: .session, sessionId: "fixture-session", contextDir: "_content"),
+            attention: NativeAttentionSnapshot(surface: .chat, transcript: .visible))
+    }
+
     private var rootURL: URL!
 
     override func setUpWithError() throws {
@@ -578,6 +584,128 @@ final class ComposerDraftRepositoryTests: XCTestCase {
 
     override func tearDownWithError() throws {
         try? FileManager.default.removeItem(at: rootURL)
+    }
+
+    @MainActor
+    func testStartupAssignmentDoesNotSelectAndSurvivesAcceptedFirstSend() async throws {
+        let boxID = UUID()
+        let box = PairedBox(id: boxID, label: "Test", baseURL: URL(string: "https://example.com/test1")!,
+            sessionID: nil, authToken: nil, requiresDeviceUnlock: false)
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        var binding = testBinding
+        binding.target = NativeConversationTarget(kind: .start, clientConversationId: "start-one",
+            contextDir: "_content", engine: .codex)
+        let first = try await store.enqueue(draft: .empty, text: "first", origin: .typed,
+            diarized: false, boxID: boxID, binding: binding, bindingRevision: 1)
+        await store.handleReceipt(NativeEmissionReceipt(emissionID: first.id, disposition: .sent))
+        let second = try await store.enqueue(draft: .empty, text: "second", origin: .typed,
+            diarized: false, boxID: boxID, binding: binding, bindingRevision: 1)
+        XCTAssertTrue(store.deliveries.isEmpty)
+        let relaunched = PendingEmissionStore(repository: repository)
+        await relaunched.activate(boxID: boxID)
+        XCTAssertTrue(relaunched.deliveries.isEmpty)
+        await relaunched.receiveBinding(NativeComposerBinding(version: 1, kind: .assigned,
+            boxSlug: "test1", clientConversationId: "start-one", sessionId: "assigned-one",
+            contextDir: "_content"), box: box)
+        XCTAssertNil(relaunched.composerBinding)
+        XCTAssertEqual(relaunched.deliveries.first?.id, second.id)
+        XCTAssertEqual(relaunched.deliveries.first?.binding?.target.sessionId, "assigned-one")
+    }
+
+    @MainActor
+    func testLegacyPendingNeedsExplicitBindingAndKeepsID() async throws {
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let boxID = UUID()
+        let old = PendingEmission(id: UUID(), boxID: boxID, draft: .empty, text: "old",
+            origin: .typed, diarized: false, state: .pending(deliveryAttempts: 0, lastAttemptAt: nil),
+            createdAt: Date())
+        try await repository.savePendingEmissions([old], boxID: boxID)
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        XCTAssertTrue(store.deliveries.isEmpty)
+        XCTAssertEqual(store.pending.first?.id, old.id)
+        XCTAssertNil(store.pending.first?.binding)
+    }
+
+    @MainActor
+    func testMissingStartupLedgerCannotTurnRestoredFollowupIntoFreshStart() async throws {
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let boxID = UUID()
+        var binding = testBinding
+        binding.target = NativeConversationTarget(kind: .start, clientConversationId: "lost-start",
+            contextDir: "_content", engine: .codex)
+        let pending = PendingEmission(binding: binding, bindingRevision: 1, id: UUID(), boxID: boxID,
+            draft: .empty, text: "held followup", origin: .typed, diarized: false,
+            state: .pending(deliveryAttempts: 0, lastAttemptAt: nil), createdAt: Date())
+        try await repository.savePendingEmissions([pending], boxID: boxID)
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        XCTAssertTrue(store.deliveries.isEmpty)
+        XCTAssertEqual(store.pending.first?.id, pending.id)
+        guard case .rejected = store.pending.first?.state else {
+            XCTFail("Missing startup metadata must require explicit target review")
+            return
+        }
+    }
+
+    @MainActor
+    func testDefinitiveStartupRefusalRetriesOnlyOriginalID() async throws {
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let boxID = UUID()
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        var binding = testBinding
+        binding.target = NativeConversationTarget(kind: .start, clientConversationId: "refused-start",
+            contextDir: "_content", engine: .codex)
+        let first = try await store.enqueue(draft: .empty, text: "first", origin: .typed,
+            diarized: false, boxID: boxID, binding: binding, bindingRevision: 1)
+        let second = try await store.enqueue(draft: .empty, text: "second", origin: .typed,
+            diarized: false, boxID: boxID, binding: binding, bindingRevision: 1)
+        await store.handleReceipt(NativeEmissionReceipt(emissionID: first.id, disposition: .rejected,
+            reason: "invalid model", definitive: true))
+        let ledger = try await repository.loadConversationStartups(boxID: boxID)
+        XCTAssertEqual(ledger.first?.state, .prepared)
+        XCTAssertEqual(ledger.first?.firstEmissionId, first.id)
+        await store.retry(id: first.id)
+        XCTAssertEqual(store.deliveries.map(\.id), [first.id])
+        XCTAssertTrue(store.pending.contains { $0.id == second.id })
+    }
+
+    @MainActor
+    func testNewGestureAfterRefusalCanReplaceFirstButDelayedCaptureCannot() async throws {
+        let repository = ComposerDraftRepository(rootURL: rootURL)
+        let boxID = UUID()
+        let store = PendingEmissionStore(repository: repository)
+        await store.activate(boxID: boxID)
+        var binding = testBinding
+        binding.target = NativeConversationTarget(kind: .start, clientConversationId: "replace-start",
+            contextDir: "_content", engine: .codex)
+        let first = try await store.enqueue(draft: .empty, text: "first", origin: .typed,
+            diarized: false, boxID: boxID, binding: binding)
+        let delayedPermission = store.replacementFirstEmissionID(for: binding)
+        XCTAssertNil(delayedPermission)
+        await store.handleReceipt(NativeEmissionReceipt(emissionID: first.id, disposition: .rejected,
+            reason: "invalid request", definitive: true))
+        let delayed = try await store.enqueue(draft: .empty, text: "delayed", origin: .typed,
+            diarized: false, boxID: boxID, binding: binding, replacesFirstEmissionID: delayedPermission)
+        XCTAssertTrue(store.deliveries.isEmpty)
+        guard case .rejected = store.pending.first(where: { $0.id == delayed.id })?.state else {
+            XCTFail("A capture from before refusal must settle visibly")
+            return
+        }
+        let replacementPermission = store.replacementFirstEmissionID(for: binding)
+        XCTAssertEqual(replacementPermission, first.id)
+        let edited = try await store.enqueue(draft: .empty, text: "restored and edited", origin: .typed,
+            diarized: false, boxID: boxID, binding: binding, replacesFirstEmissionID: replacementPermission)
+        XCTAssertEqual(store.deliveries.map(\.id), [edited.id])
+        let ledger = try await repository.loadConversationStartups(boxID: boxID)
+        XCTAssertEqual(ledger.first?.firstEmissionId, edited.id)
+        XCTAssertEqual(ledger.first?.state, .attempted)
+        XCTAssertTrue(store.pending.contains { $0.id == delayed.id })
+        let restored = try await repository.loadPendingEmissions(boxID: boxID)
+        XCTAssertEqual(restored.first { $0.id == edited.id }?.replacesFirstEmissionID, first.id)
     }
 
     func testAtomicManifestReloadsForItsBox() async throws {
@@ -917,14 +1045,14 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             text: "first",
             origin: .typed,
             diarized: false,
-            boxID: boxID
+            boxID: boxID, binding: testBinding, bindingRevision: 1
         )
         let second = try await store.enqueue(
             draft: secondDraft,
             text: "second",
             origin: .voice,
             diarized: true,
-            boxID: boxID
+            boxID: boxID, binding: testBinding, bindingRevision: 1
         )
         await store.markDeliveryAttempt(id: first.id, at: Date(timeIntervalSince1970: 10))
         await store.markDeliveryAttempt(id: second.id, at: Date(timeIntervalSince1970: 11))
@@ -989,7 +1117,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             text: draft.text,
             origin: .typed,
             diarized: false,
-            boxID: boxID
+            boxID: boxID, binding: testBinding, bindingRevision: 1
         )
         let restored = await store.takeForRestore(id: first.id)
         let restoredPayload = try await repository.loadPayload(filename: filename, boxID: boxID)
@@ -1001,7 +1129,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             text: draft.text,
             origin: .typed,
             diarized: false,
-            boxID: boxID
+            boxID: boxID, binding: testBinding, bindingRevision: 1
         )
         await store.discard(id: second.id)
         await XCTAssertThrowsErrorAsync {
@@ -1021,7 +1149,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             text: "first box",
             origin: .typed,
             diarized: false,
-            boxID: firstBoxID
+            boxID: firstBoxID, binding: testBinding, bindingRevision: 1
         )
 
         await store.activate(boxID: secondBoxID)
@@ -1032,7 +1160,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             text: "second box",
             origin: .typed,
             diarized: false,
-            boxID: secondBoxID
+            boxID: secondBoxID, binding: testBinding, bindingRevision: 1
         )
         XCTAssertEqual(store.deliveries.map(\.id), [second.id])
 
@@ -1067,7 +1195,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             action: .send,
             matchedPhrase: "send now",
             audioURL: audioURL,
-            boxID: boxID
+            boxID: boxID, binding: testBinding, bindingRevision: 1
         )
         await draftStore.clearForSending(boxID: boxID)
         draftStore.setText("next draft")
@@ -1077,7 +1205,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             text: "next draft",
             origin: .typed,
             diarized: false,
-            boxID: boxID
+            boxID: boxID, binding: testBinding, bindingRevision: 1
         )
         XCTAssertTrue(pendingStore.deliveries.isEmpty, "later sends wait behind durable voice preparation")
 
@@ -1185,7 +1313,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             text: "stuck",
             origin: .typed,
             diarized: false,
-            boxID: boxID
+            boxID: boxID, binding: testBinding, bindingRevision: 1
         )
         let sentAt = Date(timeIntervalSince1970: 1_500)
         await store.markDeliveryAttempt(id: emission.id, at: sentAt)
@@ -1235,7 +1363,7 @@ final class ComposerDraftRepositoryTests: XCTestCase {
             text: "hello",
             origin: .typed,
             diarized: false,
-            boxID: boxID
+            boxID: boxID, binding: testBinding, bindingRevision: 1
         )
         XCTAssertEqual(store.pending.first?.state, .pending(deliveryAttempts: 0, lastAttemptAt: nil))
 

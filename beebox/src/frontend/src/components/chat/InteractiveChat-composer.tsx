@@ -80,7 +80,7 @@ export function ComposerSendButton({
  * buttons. Hidden below the `sm` breakpoint.
  */
 function DesktopComposerRow({
-  textareaRef, input, setInput, isTranscribing, transcription, targetBusy,
+  textareaRef, input, setInput, isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend, onPaste, onDrop,
 }: {
@@ -91,6 +91,7 @@ function DesktopComposerRow({
   transcription: TranscriptionHandle;
   /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
   targetBusy: boolean;
+  sendDisabledReason?: string;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
@@ -172,8 +173,8 @@ function DesktopComposerRow({
             },
           });
         }}
-        disabled={!(isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim()}
-        title={isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)"}
+        disabled={sendDisabledReason !== undefined || !(isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim()}
+        title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
       />
     </div>
   );
@@ -185,7 +186,7 @@ function DesktopComposerRow({
  * On mobile: [capture] [camera] [spacer] [stop] [keyboard] [voice] — textarea appears below when typing.
  */
 export function ChatInputArea({
-  textareaRef, isTranscribing, transcription, targetBusy,
+  textareaRef, isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
@@ -197,6 +198,7 @@ export function ChatInputArea({
   transcription: TranscriptionHandle;
   /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
   targetBusy: boolean;
+  sendDisabledReason?: string;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
@@ -306,6 +308,7 @@ export function ChatInputArea({
           isTranscribing={isTranscribing}
           transcription={transcription}
           targetBusy={targetBusy}
+          sendDisabledReason={sendDisabledReason}
           handleKeyDown={handleKeyDown}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}

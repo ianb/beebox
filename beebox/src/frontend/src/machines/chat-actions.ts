@@ -31,8 +31,10 @@ export function sendInterrupt(sessionId: string): void {
 
 /** Pull the companion-card fields off a SEND event, omitting empties — shared
  *  by the streaming input builder and the queued-send dispatcher. */
-export function cardFieldsFromEvent(event: SendEvent): Pick<SendEvent, "openCard" | "cardActivity" | "cardState"> {
+export function cardFieldsFromEvent(event: SendEvent): Pick<SendEvent, "openCard" | "cardActivity" | "cardState" | "binding" | "startup"> {
   return {
+    ...(event.startup !== undefined ? { startup: event.startup } : {}),
+    ...(event.binding !== undefined ? { binding: event.binding } : {}),
     ...(event.openCard !== undefined ? { openCard: event.openCard } : {}),
     ...(event.cardActivity && event.cardActivity.length > 0 ? { cardActivity: event.cardActivity } : {}),
     ...(event.cardState && Object.keys(event.cardState).length > 0 ? { cardState: event.cardState } : {}),

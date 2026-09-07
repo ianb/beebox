@@ -5353,3 +5353,39 @@ tests:
       move is adding a `links:` entry.
     correct_contains: ["primary"]
     tags: [prominence, navigation]
+
+  # === Send-time attention, independent of conversation focus ===
+  # Status (2026-09-07): 2/2 pass on Claude; both 0 reads/searches.
+  # Hidden transcript preserved project focus, did not imply audio availability,
+  # and important output used a self-contained callout.
+  - id: chat-attention-does-not-retarget
+    prompt: >
+      <chat-app surface="card" transcript="hidden" open-card="_content/house/Energy.doc.card"/>
+      <typed user="boxholder">We're discussing the kitchen renovation in this
+      conversation. I opened the house energy report to compare costs. Does
+      that change which project our conversation belongs to? Also, what does
+      the snapshot tell you about whether I can hear audio right now?</typed>
+    chat_mode: true
+    expected_level: knows_directly
+    correct_matches:
+      - '(does not|doesn.t|no|still|remains).*(kitchen|conversation|project|change)'
+      - '(cannot|can.t|doesn.t|does not|unknown|not).*(hear|audio|tell|infer|know)'
+    watch_for: >
+      Treats attention as send-time presentation context, preserves the selected
+      conversation, and makes no unsupported claim about audio availability.
+    tags: [chat-everywhere, chat-attention]
+
+  - id: chat-hidden-transcript-important-output
+    prompt: >
+      <chat-app surface="card" transcript="hidden" open-card="_content/teaching/Lesson.doc.card" narration="off" prose="on"/>
+      <typed user="boxholder">Exercise 3 currently says 7 times 8 is 54.
+      Please give me the corrected answer so I can see it while staying on
+      the lesson. No file edits needed.</typed>
+    chat_mode: true
+    expected_level: knows_directly
+    correct_contains: ["<callout", "56"]
+    response_not_contains: ['narration="on"', 'prose="off"']
+    watch_for: >
+      Gives the corrected value in a self-contained callout without changing
+      narration or prose features.
+    tags: [chat-everywhere, chat-attention]

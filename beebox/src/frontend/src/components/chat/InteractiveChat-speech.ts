@@ -26,6 +26,7 @@ interface ComposerSnapshotLike {
 }
 
 export function useSpeechDispatch(opts: {
+  conversationKey?: string;
   snapshot: SnapshotLike;
   composerSnapshot: ComposerSnapshotLike;
   composerSend: (event: ComposerEvent) => void;
@@ -51,6 +52,20 @@ export function useSpeechDispatch(opts: {
   // every render (it keys on onComplete).
   const handleSpeechComplete = useCallback(() => { composerSend({ type: "SPEECH_DONE" }); }, [composerSend]);
   const speechPlayback = useSpeechPlayback({ onComplete: handleSpeechComplete });
+
+  const previousConversation = useRef(opts.conversationKey);
+  useEffect(() => {
+    if (previousConversation.current === opts.conversationKey) return;
+    previousConversation.current = opts.conversationKey;
+    // Selection changes speech ownership, not the singleton draft/microphone.
+    // Already-visible speech in the new conversation is not a new reply.
+    composerSend({ type: "STOP_SPEECH" });
+    stopTickRef.current?.();
+    stopTickRef.current = null;
+    playedSegmentCountRef.current = (snapshot.context.streamText.match(/<\/speech>/gi) ?? []).length;
+    speechPlayedRef.current = false;
+    prevStateRef.current = snapshot.value;
+  }, [opts.conversationKey, snapshot.context.streamText, snapshot.value, composerSend]);
 
   const dispatch = useCallback((segments: ReturnType<typeof parseAllSpeechTags>, baseIndex: number) => {
     if (segments.length === 0) return;

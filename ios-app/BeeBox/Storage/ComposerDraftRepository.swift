@@ -86,6 +86,19 @@ actor ComposerDraftRepository {
         try data.write(to: manifestURL(boxID: boxID), options: .atomic)
     }
 
+    func loadConversationStartups(boxID: UUID) throws -> [NativeConversationStartup] {
+        let url = boxDirectory(boxID: boxID).appendingPathComponent("conversation-startups.json")
+        guard fileManager.fileExists(atPath: url.path) else { return [] }
+        return try JSONDecoder().decode([NativeConversationStartup].self, from: Data(contentsOf: url))
+    }
+
+    func saveConversationStartups(_ startups: [NativeConversationStartup], boxID: UUID) throws {
+        let directory = boxDirectory(boxID: boxID)
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(startups).write(
+            to: directory.appendingPathComponent("conversation-startups.json"), options: .atomic)
+    }
+
     func loadPendingEmissions(boxID: UUID) throws -> [PendingEmission] {
         let url = pendingManifestURL(boxID: boxID)
         guard fileManager.fileExists(atPath: url.path) else {

@@ -1,0 +1,14 @@
+{
+  "input": {
+    "disposition": "rejected",
+    "emissionId": "22222222-2222-2222-2222-222222222222",
+    "reason": "Invalid model",
+    "definitive": true
+  },
+  "expected": {
+    "disposition": "rejected",
+    "emissionId": "22222222-2222-2222-2222-222222222222",
+    "reason": "Invalid model",
+    "definitive": true
+  }
+}

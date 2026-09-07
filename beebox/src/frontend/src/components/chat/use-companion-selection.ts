@@ -1,3 +1,4 @@
+import { useConversationSelectionSink } from "./everywhere/card-context";
 import { useCallback, useEffect, useRef } from "react";
 import { countWords, lastWords } from "../../lib/selection/serialize";
 import type { AddSelectionInput } from "../../lib/selection/position";
@@ -51,6 +52,7 @@ export function useCompanionSelection(
       spokenWords: countWords(transcript),
     });
   }, [addNativeSelection, nativeComposer, addSelection]);
+  useConversationSelectionSink(handleAddSelection);
   return {
     handleAddSelection,
     nativeCommandError,

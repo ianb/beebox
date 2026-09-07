@@ -65,7 +65,9 @@ struct RootView: View {
     private var rootContent: some View {
         Group {
             if let box = store.selectedBox {
-                let composerBox = box.withSessionID(visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID)
+                let composerBox = box.withSessionID(pendingEmissionStore.composerBinding != nil
+                    ? pendingEmissionStore.selectedSessionID
+                    : (visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID))
                 let locked = boxLockManager.isLocked(box)
                 ZStack {
                     boxContent(box: box, composerBox: composerBox)
@@ -242,7 +244,20 @@ struct RootView: View {
             speechStopRequest: speechStopRequest,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
             composerCommandResults: composerCommandResults,
+            onComposerBinding: { publication in
+                guard let publication else { pendingEmissionStore.invalidateBinding(); return }
+                guard publication.boxSlug == box.baseURL.lastPathComponent else { return }
+                if pendingEmissionStore.changesConversation(publication) {
+                    narrationEnabled = false
+                    hqDictationEnabled = false
+                    speechPlaybackActive = false
+                    responseActive = false
+                    speechStopRequest = nil
+                }
+                Task { await pendingEmissionStore.receiveBinding(publication, box: box) }
+            },
             onSessionChange: { sessionID in
+                guard pendingEmissionStore.composerBinding == nil else { return }
                 if visibleChatSessionID != sessionID {
                     narrationEnabled = false
                     hqDictationEnabled = false
@@ -335,7 +350,7 @@ struct RootView: View {
                 box: composerBox,
                 draftStore: composerDraftStore,
                 pendingStore: pendingEmissionStore,
-                captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
+                captureAvailable: composerBox.sessionID?.isEmpty == false,
                 narrationEnabled: narrationEnabled,
                 hqDictationEnabled: hqDictationEnabled,
                 speechPlaybackActive: speechPlaybackActive,
@@ -353,7 +368,8 @@ struct RootView: View {
                 },
                 onInterruptSpeech: {
                     speechStopRequest = NativeSpeechStopRequest()
-                }
+                },
+                requiresConversationBinding: true
             )
         }
     }

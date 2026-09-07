@@ -77,6 +77,8 @@ const SHARED_ALIAS_PATTERN = {
 // Modules exercised outside the Vite bundler that legitimately import src/shared/
 // by raw relative path (@shared unresolvable there — see SHARED_ALIAS_PATTERN).
 const OUTSIDE_VITE_SHARED_RAW = [
+  "src/components/chat/conversation/controller-pool.ts",
+  "src/components/chat/conversation/start-records.ts",
   "src/lib/view-url.ts",
   "src/lib/parseTags.ts",
   "src/lib/structured-output-parsing.ts",

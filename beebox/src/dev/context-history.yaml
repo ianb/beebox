@@ -4303,6 +4303,22 @@ test1:
       peak: 46319
       added: 826
       turns: 4
+  chat-attention-does-not-retarget:
+    - date: 2026-09-07T11:34:47.640Z
+      boxCommit: 0f7030f9d4a19a88de5498d7b74b24b39cb4a052
+      repoCommit: 7a7ed255641b46777a8c83b763f079eb4d3e1a2a
+      initial: 53518
+      peak: 53518
+      added: 0
+      turns: 1
+  chat-hidden-transcript-important-output:
+    - date: 2026-09-07T11:34:47.640Z
+      boxCommit: 0f7030f9d4a19a88de5498d7b74b24b39cb4a052
+      repoCommit: 7a7ed255641b46777a8c83b763f079eb4d3e1a2a
+      initial: 53496
+      peak: 53496
+      added: 0
+      turns: 1
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

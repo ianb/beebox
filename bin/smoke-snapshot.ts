@@ -9,6 +9,8 @@
  */
 
 import {
+  ConversationChangedWhileBrowsingError,
+  ConversationDidNotSwitchError,
   PlaceMenuCollapsedError,
   PlaceMenuErroredError,
   PlaceMenuMissingFixedRowsError,
@@ -206,6 +208,37 @@ export function currentPlaceLabel(snapshot: string): string | null {
   const line = snapshot.split("\n").find((candidate) => candidate.includes("id=bbx-nav-place"));
   if (line === undefined) return null;
   return /"Where you are:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
+}
+
+/** The persistent composer's user-visible `To:` destination. */
+export function composerDestination(snapshot: string): string | null {
+  for (const line of snapshot.split("\n")) {
+    const destination = /StaticText\s+"To:\s*([^"]+)"/.exec(line)?.[1]?.trim();
+    if (destination !== undefined) return destination;
+  }
+  return null;
+}
+
+/** Verify an explicit switch changed the persistent composer's recipient. */
+export function conversationSwitchFailure(
+  before: string | null,
+  snapshot: string,
+): SmokeFailureError | null {
+  const after = composerDestination(snapshot);
+  return after === null || after === before
+    ? new ConversationDidNotSwitchError({ before, after, snapshot })
+    : null;
+}
+
+/** Verify ordinary content navigation preserved the selected recipient. */
+export function conversationPreservationFailure(
+  expected: string,
+  snapshot: string,
+): SmokeFailureError | null {
+  const actual = composerDestination(snapshot);
+  return actual === expected
+    ? null
+    : new ConversationChangedWhileBrowsingError({ expected, actual, snapshot });
 }
 
 /**
