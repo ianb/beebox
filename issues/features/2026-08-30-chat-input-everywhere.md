@@ -1,6 +1,6 @@
 ---
 title: "The chat input should be everywhere — send to the box from any page, not just chat pages"
-workstream: unattached
+workstream: chat-everywhere
 area: beebox
 needs: [design]
 labels: [chat, ui, navigation]
@@ -13,6 +13,15 @@ priority: normal
 Today the composer exists only on chat pages. The boxholder wants the chat
 input available on **every** page — browsing a card, the landmarks page, the
 dashboard — and working: send from wherever you are.
+
+Planning is in [Chat everywhere](../../beebox/docs/plans/chat-everywhere.md)
+(2026-09-07). The boxholder clarified that selecting a landmark explicitly
+switches conversational focus, while following cards across landmarks does
+not. Dedicated and split are the same desktop conversation experience with
+different space available; mobile needs one foreground surface and voice.
+Seven walkthroughs establish the movement/multitasking acceptance cases and
+will be replayed against the actual interface after implementation. The
+mockups were accepted as roughly useful behavior sketches, not a visual redesign.
 
 This is a real design item, not a widget move:
 
@@ -28,8 +37,9 @@ This is a real design item, not a widget move:
 - **Where replies land.** Send-and-stay (a callout/toast with the reply?
   navigate on tap?) vs jump-to-chat; the back-to-chat chip exists for the
   return path.
-- **Drafts** are per-chat today (`useDictationDraft` keyed by box); an
-  everywhere-composer needs a draft story for "typed on a card page."
+- **Drafts** are already box-scoped (`useDictationDraft` and the emission
+  store; verified during planning). Their live services remain owned by
+  ChatPage; an everywhere-composer must preserve them across page movement.
 - **iOS parity** from day one (`bbx-ios-overlap`): the native composer is a
   separate implementation; "everywhere" on web widens a gap unless planned
   together — the input-plane-parity issue (`2026-07-19`) is the sibling.
@@ -50,4 +60,3 @@ box is present everywhere, not a page you visit).
 > in (the context, the session, etc)." Four things to design together: the
 > tiled system with chat as one tile; chat's forms (dedicated, split,
 > ambient); the context brought into chat; the context chat is in.
-
