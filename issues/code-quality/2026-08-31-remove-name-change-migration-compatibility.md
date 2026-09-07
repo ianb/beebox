@@ -1,8 +1,6 @@
 ---
 title: "Remove temporary Bee Box name-change migration compatibility"
 workstream: unattached
-activate-on: 2026-09-07
-category: code-quality
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-name-change-plan — retaining compatibility during the Bee Box rename
