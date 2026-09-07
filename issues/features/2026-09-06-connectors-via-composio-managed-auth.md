@@ -56,3 +56,31 @@ tool catalog attached, and the question closes.
 - **Disclosure.** Admin shows which mode a connector is on; the security
   report's egress table and the front door's "what leaves your machine" gain a
   line for it.
+
+## Which connectors it would actually help (surveyed 2026-09-06)
+
+Checked ~130 services against Composio's catalog (their site 404s on an
+unknown toolkit, so a miss is real) and read one toolkit's auth block
+(Dropbox: OAuth2 with Composio-managed auth offered).
+
+- **Already connected in beebox, OAuth setup removable:** Gmail, Google
+  Calendar, Google Drive, Sheets, Docs, Dropbox, Raindrop.
+- **New connectors it would make cheap, personal-box value:** Google Photos
+  (caveat: Google's 2025 Photos API change limits reads to app-created
+  media, through any intermediary), Splitwise, YNAB, Strava, Fitbit,
+  Todoist, TickTick, YouTube and Reddit (saved items as capture sources),
+  Instacart (if the toolkit is the consumer flow), Outlook and Box for
+  non-Google people.
+- **Present, low value for a box:** Facebook, Instagram, LinkedIn,
+  Pinterest, TikTok (business-oriented APIs), Telegram and Discord (bot
+  tokens; no OAuth pain to remove), Trello, Asana, Linear, Jira, Zoom,
+  Calendly, Coinbase, QuickBooks.
+- **Absent:** TMDB, OMDb, Open Library, Letterboxd, Trakt, Goodreads,
+  weather APIs, Home Assistant, Hue, Nest, Sonos, Apple (iCloud, Reminders,
+  Health), Garmin, Oura, Withings, Plaid and banks, Obsidian, Bear, Things,
+  Zotero, Pocket, Readwise, Signal, iMessage. The movie and book databases
+  the boxes use today are keyless or API-key and stay direct.
+
+So the scope is OAuth consumer platforms only: the Google set plus Dropbox
+and Raindrop now, and the second group as the connectors it unlocks.
+
