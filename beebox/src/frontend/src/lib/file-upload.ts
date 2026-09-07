@@ -30,7 +30,7 @@ const uploadedFileSchema = z.object({
 export type UploadedFile = z.infer<typeof uploadedFileSchema>;
 
 /** The transfer never completed — the connection dropped mid-upload. */
-export class ChatFileUploadNetworkError extends Error {
+class ChatFileUploadNetworkError extends Error {
   constructor() {
     super("The connection dropped before the file finished uploading.");
     this.name = "ChatFileUploadNetworkError";
@@ -38,7 +38,7 @@ export class ChatFileUploadNetworkError extends Error {
 }
 
 /** The transfer was aborted (the page navigated away, or a caller cancelled it). */
-export class ChatFileUploadAbortedError extends Error {
+class ChatFileUploadAbortedError extends Error {
   constructor() {
     super("The file upload was cancelled.");
     this.name = "ChatFileUploadAbortedError";
@@ -46,7 +46,7 @@ export class ChatFileUploadAbortedError extends Error {
 }
 
 /** The route refused the upload — too large, unreadable, or unauthorized. */
-export class ChatFileUploadRejectedError extends Error {
+class ChatFileUploadRejectedError extends Error {
   constructor(opts: { detail: string }) {
     super(`The box refused the upload: ${opts.detail}`);
     this.name = "ChatFileUploadRejectedError";
@@ -54,7 +54,7 @@ export class ChatFileUploadRejectedError extends Error {
 }
 
 /** The route answered 2xx with something that isn't an uploaded-file record. */
-export class ChatFileUploadMalformedResponseError extends Error {
+class ChatFileUploadMalformedResponseError extends Error {
   constructor(opts: { detail: string }) {
     super(`The box's reply to the upload could not be read: ${opts.detail}`);
     this.name = "ChatFileUploadMalformedResponseError";

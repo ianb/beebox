@@ -1,10 +1,12 @@
 /**
  * Composer attachment bindings for InteractiveChat: files picked, pasted,
- * dropped or captured into the composer. Images small enough to ride inline are
- * downscaled + base64-encoded client-side and drop an `[imageN]` token at the
- * textarea cursor (removal strips the matching token back out); everything else
- * goes to the bulk-upload batch — the split is decided by `file-routing.ts`,
+ * dropped or captured into the composer. Everything lands in the message being
+ * written; `file-routing.ts` decides only how each file is represented there,
  * never by which entry point the files came from.
+ *
+ * Photos small enough to ride inline are downscaled + base64-encoded
+ * client-side and drop an `[image#N]` token at the textarea cursor (removal
+ * strips the matching token back out).
  *
  * Everything else — any non-image, and photos over the inline limit — is
  * uploaded to the box's `tmp/` dir and anchored by a `[file#N]` token carrying
