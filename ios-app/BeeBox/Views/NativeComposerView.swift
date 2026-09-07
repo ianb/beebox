@@ -259,9 +259,7 @@ struct NativeComposerView: View {
             }
 
             if requiresConversationBinding {
-                Text(pendingStore.composerBinding?.selection?.label
-                    ?? pendingStore.composerBinding?.selection?.reason
-                    ?? "Waiting for conversation. Sending requires an updated host.")
+                Text(composerDestinationText)
                     .font(.caption).foregroundStyle(.secondary)
                     .accessibilityIdentifier("bbx-composer-destination")
             }
@@ -287,6 +285,15 @@ struct NativeComposerView: View {
             .padding(.bottom, 5)
             .offset(y: 10)
         }
+    }
+
+    private var composerDestinationText: String {
+        if let contextDir = pendingStore.composerBinding?.sendBinding?.target.contextDir {
+            return contextDir.isEmpty ? "Send to: / (box root)" : "Send to: \(contextDir)"
+        }
+        return pendingStore.composerBinding?.selection?.label
+            ?? pendingStore.composerBinding?.selection?.reason
+            ?? "Waiting for conversation. Sending requires an updated host."
     }
 
     private var composerContext: some View {
