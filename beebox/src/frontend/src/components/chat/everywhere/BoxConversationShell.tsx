@@ -98,8 +98,8 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
 function ConversationNotice({ selection, onRetry, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; nativeComposer: boolean }) {
   if (selection.kind === "ready") {
     if (nativeComposer) return null;
-    const place = selection.target.contextDir || "Box root";
-    return <Text as="div" size="xs" tone="muted" className="px-3 py-1">To: {selection.label}{selection.label.replace(/^\//, "") === place.replace(/^\//, "") ? "" : ` · ${place}`}</Text>;
+    const place = selection.target.contextDir || "/ (box root)";
+    return <Text as="div" size="xs" tone="muted" className="px-3 py-1">Send to: {place}</Text>;
   }
   return <div className="px-3 py-2" role="status">
     <Text size="sm" tone={selection.kind === "unavailable" ? "danger" : "muted"}>

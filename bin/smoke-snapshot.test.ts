@@ -94,19 +94,19 @@ test("currentPlaceLabel: reads the pill's `Where you are: <label>` accessible na
 
 test("composerDestination: reads the persistent composer's visible recipient", () => {
   assert.equal(
-    composerDestination('- generic\n  - StaticText "To: Conversation · store/courses/Acids_Bases.attach"'),
-    "Conversation · store/courses/Acids_Bases.attach",
+    composerDestination('- generic\n  - StaticText "Send to: _content/courses/Acids_Bases.attach"'),
+    "_content/courses/Acids_Bases.attach",
   );
   assert.equal(composerDestination('- textbox "Type a message..."'), null);
 });
 
 test("conversation destination checks distinguish switching from browsing", () => {
-  const root = '- StaticText "To: Conversation · Box root"';
-  const acids = '- StaticText "To: Conversation · Acids_Bases.attach"';
-  assert.equal(conversationSwitchFailure("Conversation · Box root", acids), null);
-  assert.match(conversationSwitchFailure("Conversation · Box root", root)?.message ?? "", /did not switch/);
-  assert.equal(conversationPreservationFailure("Conversation · Acids_Bases.attach", acids), null);
-  assert.match(conversationPreservationFailure("Conversation · Acids_Bases.attach", root)?.message ?? "", /changed/);
+  const root = '- StaticText "Send to: / (box root)"';
+  const acids = '- StaticText "Send to: _content/courses/Acids_Bases.attach"';
+  assert.equal(conversationSwitchFailure("/ (box root)", acids), null);
+  assert.match(conversationSwitchFailure("/ (box root)", root)?.message ?? "", /did not switch/);
+  assert.equal(conversationPreservationFailure("_content/courses/Acids_Bases.attach", acids), null);
+  assert.match(conversationPreservationFailure("_content/courses/Acids_Bases.attach", root)?.message ?? "", /changed/);
 });
 
 test("switchTarget: never the place we are already in", () => {

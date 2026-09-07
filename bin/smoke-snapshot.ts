@@ -210,10 +210,10 @@ export function currentPlaceLabel(snapshot: string): string | null {
   return /"Where you are:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
 }
 
-/** The persistent composer's user-visible `To:` destination. */
+/** The persistent composer's user-visible `Send to:` destination. */
 export function composerDestination(snapshot: string): string | null {
   for (const line of snapshot.split("\n")) {
-    const destination = /StaticText\s+"To:\s*([^"]+)"/.exec(line)?.[1]?.trim();
+    const destination = /StaticText\s+"Send to:\s*([^"]+)"/.exec(line)?.[1]?.trim();
     if (destination !== undefined) return destination;
   }
   return null;
