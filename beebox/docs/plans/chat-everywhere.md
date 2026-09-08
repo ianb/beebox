@@ -817,3 +817,9 @@ Browser replay retained a foreign legacy selection, reloaded this worktree,
 and confirmed its own conversation restored without the unavailable banner.
 The separate development checkout needs this change incorporated before its
 page benefits. This does not close the remaining physical-device checks above.
+
+For this correction, all 58 affected assertions, four TypeScript checks, and
+changed-file lint passed. Cross-model review found no defect in the scoped
+conversation stores. It identified the separate, pre-existing
+[draft storage collision](../../../issues/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md),
+which remains outside this correction.
