@@ -7,11 +7,19 @@ import { readConversation, saveConversation } from "./conversation-state";
 import { resolveConversation, type ConversationRequest, type ResolvedConversation } from "./resolve-conversation";
 import { createResolutionGate } from "./conversation-intent";
 import { postNativeMessage } from "../native-post";
+import { ReservationReceipts } from "./reservation-receipts";
 
 export function useConversationSelection(boxSlug: string) {
   const storageScope = conversationStorageScope(getApiBase());
   const utils = trpc.useUtils();
   const { mutateAsync: reserve } = trpc.chat.reserveSession.useMutation();
+  const receipts = useMemo(() => {
+    try { return new ReservationReceipts(sessionStorage, storageScope); }
+    catch (error) {
+      console.warn("Conversation reservation receipts could not be restored", error);
+      return null;
+    }
+  }, [storageScope]);
   const restored = useMemo(() => readConversation(storageScope), [storageScope]);
   const [state, setState] = useState<ResolvedConversation>(() => ({ selection: restored?.kind === "ready" && restored.target.kind === "start" ? restored : { kind: "resolving", requestId: "initial", contextDir: "" } }));
   const [rendered, setRendered] = useState(() => restored?.kind === "ready" ? restored : null);
@@ -22,7 +30,7 @@ export function useConversationSelection(boxSlug: string) {
     const requestId = gate.claim();
     setState((old) => ({ ...old, selection: { kind: "resolving", requestId: String(requestId), contextDir: request.contextDir ?? "" } }));
     try {
-      const next = await resolveConversation({ utils, reserve, request });
+      const next = await resolveConversation({ utils, reserve, receipts, request });
       if (!gate.accepts(requestId)) return;
       setState(next);
       if (next.selection.kind === "ready") setRendered(next.selection);
@@ -30,7 +38,7 @@ export function useConversationSelection(boxSlug: string) {
       if (!gate.accepts(requestId)) return;
       setState((old) => ({ ...old, selection: { kind: "unavailable", contextDir: request.contextDir ?? "", reason: error instanceof Error ? error.message : "Could not resolve conversation" } }));
     }
-  }, [utils, reserve, gate]);
+  }, [utils, reserve, receipts, gate]);
   useEffect(() => () => gate.cancel(), [gate]);
   useEffect(() => { saveConversation(storageScope, state.selection); }, [storageScope, state.selection]);
   const assigned = useCallback((sessionId: string, assignment?: { clientConversationId: string; contextDir: string }) => {

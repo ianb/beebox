@@ -48,6 +48,7 @@ interface ChatActionsOpts {
   typingMode: boolean;
   typingLocked: boolean;
   setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
+  sendDisabledReason?: string;
 }
 
 export function useChatActions(opts: ChatActionsOpts) {
@@ -55,7 +56,7 @@ export function useChatActions(opts: ChatActionsOpts) {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore, resetAttachments, resetSelections, addFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
-    awaitPendingUploads, captureEmissionDispatch,
+    awaitPendingUploads, captureEmissionDispatch, sendDisabledReason,
   } = opts;
   const navigate = useNavigate();
 
@@ -69,6 +70,7 @@ export function useChatActions(opts: ChatActionsOpts) {
 
   const runSend = useCallback(async (): Promise<void> => {
     if (sendInFlightRef.current) return;
+    if (sendDisabledReason !== undefined) return;
     // Point-in-time read, not a subscription — attachments aren't reactive
     // props here (see module doc); this only runs on an actual send click.
     const pre = emissionStore.get();
@@ -92,7 +94,7 @@ export function useChatActions(opts: ChatActionsOpts) {
       sendInFlightRef.current = false;
     }
 
-  }, [inputStore, emissionStore, captureEmissionDispatch, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setTypingMode, awaitPendingUploads]);
+  }, [inputStore, emissionStore, captureEmissionDispatch, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setTypingMode, awaitPendingUploads, sendDisabledReason]);
 
   /**
    * The send every caller uses. Void-returning: sending now waits on in-flight

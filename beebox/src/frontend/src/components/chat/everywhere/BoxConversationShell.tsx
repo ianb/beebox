@@ -29,7 +29,8 @@ export function BoxConversationShell({ children }: { children: ReactNode }) {
 function ConversationRuntime({ conversation, children }: { conversation: NonNullable<ReturnType<typeof useBoxConversation>>; children: ReactNode }) {
   const { storageScope } = conversation;
   const { boxSlug = "" } = useParams({ strict: false });
-  const search = shellSearch.parse(useSearch({ strict: false }));
+  const routeSearch = useSearch({ strict: false });
+  const search = shellSearch.parse(routeSearch);
   const route = useConversationRoute(conversation);
   const focusedRef = useFocusedConversationCard();
   const viewOverlayVisible = useViewOverlayVisible();
@@ -52,6 +53,15 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     void conversation.select({ kind: "session", sessionId: id });
     route.showConversation();
   }
+  function handleNewConversation() {
+    const contextDir = conversation.selection.kind === "ready" ? conversation.selection.target.contextDir : conversation.selection.contextDir;
+    if (route.chatPage) {
+      void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ ...routeSearch, session: "new", contextDir }),
+        state: (old) => ({ ...old, bbxConversation: undefined }) });
+      return;
+    }
+    void conversation.select({ kind: "new", contextDir });
+  }
   const [sessions, setSessions] = useState<AmbientSession[]>(() => readTrackedSessions(storageScope));
   const publicationRevision = useRef(0);
   usePageTitle(route.chatPage ? sessionLabel : null);
@@ -68,7 +78,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   const handleAssignment = conversation.assigned;
   const handleShowConversation = route.showConversation;
   const handleHideConversation = route.hideConversation;
-  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} nativeComposer={usesNativeComposer} />;
+  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onNewConversation={handleNewConversation} nativeComposer={usesNativeComposer} />;
   return <InteractiveChat
     sessionInput={sessionId ?? "new"}
     initial={conversation.initial}
@@ -97,7 +107,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   />;
 }
 
-function ConversationNotice({ selection, onRetry, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; nativeComposer: boolean }) {
+function ConversationNotice({ selection, onRetry, onNewConversation, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; onNewConversation: () => void; nativeComposer: boolean }) {
   if (selection.kind === "ready") {
     if (nativeComposer) return null;
     const place = selection.target.contextDir || "/ (box root)";
@@ -107,6 +117,9 @@ function ConversationNotice({ selection, onRetry, nativeComposer }: { selection:
     <Text size="sm" tone={selection.kind === "unavailable" ? "danger" : "muted"}>
       {selection.kind === "unavailable" ? selection.reason : "Choosing conversation…"}
     </Text>
-    {selection.kind === "unavailable" ? <Button id="bbx-conversation-retry" size="sm" onClick={onRetry}>Retry</Button> : null}
+    {selection.kind === "unavailable" ? <>
+      <Button id="bbx-conversation-retry" size="sm" onClick={onRetry}>Retry</Button>
+      <Button id="bbx-conversation-new" size="sm" onClick={onNewConversation}>Start new conversation</Button>
+    </> : null}
   </div>;
 }
