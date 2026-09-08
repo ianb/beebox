@@ -773,3 +773,23 @@ actual pane, tab, and card size changes. Browser checks covered tab scrolling,
 Properties height changes, and a narrow desktop resize; physical-device keyboard
 behavior was not checked. Frontend typechecking, changed-file lint, documentation
 checks, and diff whitespace checks pass.
+
+### Fold cues and saturated app chrome
+
+The front fold now carries a quiet Properties label that strengthens on hover
+or keyboard focus. Its reverse becomes a wider Back to card control; the
+heading reserves room for it. The control retains its identity and focus
+through the turn.
+
+The existing box chrome selector now exposes its stock to the frontend. Paper
+chrome uses saturated teal, rust, or ink blue with grain and a contrasting
+lower paper edge, while plain retains the existing bar. Card choices remain
+independent. The place pill and other bar controls retain their capsule or circular
+outlines, with raised rims and contact shadows. The bar is one textured surface; stacked sheets belong to cards, not navigation. Portaled menus remain unclipped and keep their own colors.
+
+Desktop and 390-pixel browser checks covered live stock updates, menu opening,
+keyboard return, retained focus, and overflow. The cross-model review caught a
+visible/accessibility label mismatch, which was fixed. Its suggested title
+collision did not reproduce: at phone width the cue starts at x=357 while the
+front heading content ends at x=310, inside the existing reserved gutter.
+Frontend typecheck, focused lint, and documentation checks pass.

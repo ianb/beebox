@@ -95,3 +95,14 @@ frame.
 Themes may provide optional app chrome, but a card theme does not require a
 top-bar or composer implementation. Do not invent a new theme name or stock in
 a card: built-ins are catalogued by the engine and unknown values are errors.
+
+## App bar materials
+
+`presentation.chrome` selects the surrounding app appearance independently of
+individual cards. Plain retains the original app bar. Paper gives the bar a
+single saturated, textured surface with raised round controls: `cream` uses
+deep teal, `manila` uses rust, and `blue` uses ink blue. These are chrome
+interpretations of the stocks; card surfaces retain their pale paper colors.
+For example, `"chrome": { "name": "paper", "stock": "blue" }` selects the
+blue bar. Changing this choice updates open pages through the box's existing
+configuration subscription.

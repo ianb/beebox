@@ -162,7 +162,7 @@ export function PlacePill({
   const title = place.dir === null ? faceLabel : `${boxName} — ${place.dir === "" ? "/" : `${place.dir}/`}`;
 
   return (
-    <div className="flex items-stretch min-w-0 rounded-full bg-white/10 border border-white/22 text-white text-xs overflow-hidden">
+    <div className="bbx-place-pill flex items-stretch min-w-0 rounded-full bg-white/10 border border-white/22 text-white text-xs overflow-hidden">
       <Dropdown
         align="left"
         width="w-[20rem]"

@@ -32,7 +32,7 @@ export function BoxPresentationProvider({ boxSlug, children }: { boxSlug: string
   const chrome = query.data?.chrome;
   return (
     <PresentationContext.Provider value={state}>
-      <div className="bbx-box-presentation h-full" data-chrome-theme={chrome?.choice.name ?? "plain"}>
+      <div className="bbx-box-presentation h-full" data-chrome-theme={chrome?.choice.name ?? "plain"} data-chrome-stock={chrome?.choice.stock ?? "neutral"}>
         {children}
       </div>
     </PresentationContext.Provider>

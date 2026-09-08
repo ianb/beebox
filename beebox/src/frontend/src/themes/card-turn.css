@@ -4,6 +4,41 @@
   transform-origin: top right;
   transition: transform 160ms ease-out;
 }
+.bbx-card-properties-label {
+  position: absolute;
+  pointer-events: none;
+  font: 600 0.68rem/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.bbx-card-surface[data-card-side="front"] .bbx-card-properties-label {
+  top: calc(100% + 0.35rem);
+  right: 0.25rem;
+  opacity: 0.28;
+  transform: rotate(-90deg) translateY(-100%);
+  transform-origin: top right;
+  transition: opacity 160ms ease-out;
+}
+.bbx-card-surface[data-card-side="front"] .bbx-card-properties:hover .bbx-card-properties-label,
+.bbx-card-surface[data-card-side="front"] .bbx-card-properties:focus-visible .bbx-card-properties-label {
+  opacity: 0.78;
+}
+.bbx-card-surface[data-card-side="back"] .bbx-card-properties {
+  width: 7.5rem;
+  border-radius: 0 8px 0 6px;
+  background: var(--bbx-underlay);
+  box-shadow: -2px 2px 5px #493c2835;
+}
+.bbx-card-surface[data-card-side="back"] .bbx-card-properties-label {
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--bbx-ink);
+  font-size: 0.78rem;
+}
+.bbx-card-surface[data-card-side="back"] > .bbx-card-heading {
+  padding-right: 8.5rem;
+}
 .bbx-card-properties:hover,
 .bbx-card-properties:focus-visible { transform: scale(1.12); }
 .bbx-card-properties[aria-busy="true"] { transform: scale(1.2); }
@@ -26,7 +61,8 @@
   to { transform: perspective(2000px) rotateY(0deg) scale(1); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bbx-card-properties { transition: none; }
+  .bbx-card-properties,
+  .bbx-card-properties-label { transition: none; }
   .bbx-card-properties:hover,
   .bbx-card-properties:focus-visible,
   .bbx-card-properties[aria-busy="true"] { transform: none; }
