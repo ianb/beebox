@@ -89,9 +89,10 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     onShowConversation={handleShowConversation}
     onHideConversation={handleHideConversation}
     selectionNotice={notice}
-    ambientRegion={<AmbientReplies boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}
+    // Keep reply observation alive, but show its panels only away from the transcript.
+    ambientRegion={<div hidden={route.transcriptVisible}><AmbientReplies boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}
       transcriptVisible={canAcknowledgeAmbientReply(route.transcriptVisible, conversation.selection.kind)} onInspectCard={inspect}
-      onOpenConversation={handleOpenConversation} />}
+      onOpenConversation={handleOpenConversation} /></div>}
   />;
 }
 

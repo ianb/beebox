@@ -427,6 +427,12 @@ add a second paging consumer for this feature.
 **Vocabulary lock-ins:** reply attention is separate from send receipt.
 A notice is session-labeled; inspect and open-conversation are separate actions.
 
+**Device feedback correction (2026-09-08):** Ambient reply panels are unnecessary
+when the transcript is already visible, including panels from other conversations.
+Hide the whole ambient region in dedicated/split chat and when the transcript is
+foregrounded over a page. Keep observation mounted so returning to browsing does
+not reset reply tracking. Panels remain available while away from the transcript.
+
 **First implementation chunk:** Implement/test recent-history projection,
 background attribution, ordinary-prose fallback, incomplete-group fallback,
 and persistent attention flag; then attach the box observer. No new agent
