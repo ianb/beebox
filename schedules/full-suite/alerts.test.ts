@@ -47,6 +47,19 @@ test("the environment alert says why nothing was filed", () => {
   assert.match(message, /no\nissue was filed/u);
 });
 
+test("one failing file reads as singular", () => {
+  const message = renderRedAlert({
+    testedCommit: "1".repeat(40),
+    baseCommit: "2".repeat(40),
+    landings: [landing],
+    culprits: [],
+    flakes: [],
+    unattributed: ["test/a.test.ts"],
+    unattributedReason: "already red at baseline",
+  });
+  assert.match(message, /^\*\*1 test file fails on main\*\*, not attributable to a landing\./u);
+});
+
 test("titles count what failed, not the colour of the run", () => {
   assert.equal(flakesAlertTitle(["test/a.test.ts"]), "full suite green after re-run: 1 flaky file");
   assert.equal(

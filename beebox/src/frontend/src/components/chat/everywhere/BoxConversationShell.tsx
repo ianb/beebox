@@ -48,7 +48,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
       void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: id }) });
       return;
     }
-    void conversation.select({ kind: "session", sessionId: id });
+    void conversation.select({ kind: "session", sessionId: id, named: true });
     route.showConversation();
   }
   const [sessions, setSessions] = useState<AmbientSession[]>(() => readTrackedSessions(boxSlug));
@@ -67,7 +67,14 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   const handleAssignment = conversation.assigned;
   const handleShowConversation = route.showConversation;
   const handleHideConversation = route.hideConversation;
-  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} nativeComposer={usesNativeComposer} />;
+  // The reset for a dead chat the user did ask for: a fresh conversation in
+  // the same place, forgetting the one that cannot be resumed.
+  const handleStartNew = () => {
+    const current = conversation.selection;
+    const contextDir = current.kind === "ready" ? current.target.contextDir : current.contextDir;
+    return conversation.select({ kind: "new", contextDir });
+  };
+  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onStartNew={handleStartNew} nativeComposer={usesNativeComposer} />;
   return <InteractiveChat
     sessionInput={sessionId ?? "new"}
     initial={conversation.initial}
@@ -95,7 +102,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   />;
 }
 
-function ConversationNotice({ selection, onRetry, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; nativeComposer: boolean }) {
+function ConversationNotice({ selection, onRetry, onStartNew, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; onStartNew: () => Promise<void>; nativeComposer: boolean }) {
   if (selection.kind === "ready") {
     if (nativeComposer) return null;
     const place = selection.target.contextDir || "/ (box root)";
@@ -105,6 +112,9 @@ function ConversationNotice({ selection, onRetry, nativeComposer }: { selection:
     <Text size="sm" tone={selection.kind === "unavailable" ? "danger" : "muted"}>
       {selection.kind === "unavailable" ? selection.reason : "Choosing conversation…"}
     </Text>
-    {selection.kind === "unavailable" ? <Button id="bbx-conversation-retry" size="sm" onClick={onRetry}>Retry</Button> : null}
+    {selection.kind === "unavailable" ? <>
+      <Button id="bbx-conversation-retry" size="sm" onClick={onRetry}>Retry</Button>
+      <Button id="bbx-conversation-start-new" size="sm" onClick={onStartNew}>Start new conversation</Button>
+    </> : null}
   </div>;
 }

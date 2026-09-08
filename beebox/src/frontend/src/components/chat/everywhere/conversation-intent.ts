@@ -21,7 +21,9 @@ function explicitChatRequest(input: RouteIntentInput): ConversationRequest | nul
   const target = selection.kind === "ready" ? selection.target : null;
   if (!first && target?.kind === "session" && target.sessionId === search.session) return null;
   if (first && search.session === "new" && samePendingStartup(target, remembered)) return null;
-  return { kind: search.session === "new" ? "new" : "session", sessionId: search.session,
+  // The one request that names a chat on the user's behalf: `?session=` in
+  // the URL. A remembered or previously-rendered selection is not that.
+  return { kind: search.session === "new" ? "new" : "session", sessionId: search.session, named: true,
     contextDir: search.contextDir, engine: parseChatAgentEngine(search.engine ?? "") ?? undefined, model: search.model };
 }
 
@@ -31,7 +33,7 @@ export function routeConversationRequest(input: RouteIntentInput): ConversationR
   if (chatPage && search.session) return explicitChatRequest(input);
   if (remembered?.kind === "ready" && remembered.target.kind === "session") {
     if (!first && target?.kind === "session" && target.sessionId === remembered.target.sessionId) return null;
-    return { kind: "session", sessionId: remembered.target.sessionId };
+    return { kind: "session", sessionId: remembered.target.sessionId, contextDir: remembered.target.contextDir };
   }
   if (remembered?.kind === "ready" && remembered.target.kind === "start") return { kind: "restore", target: remembered.target, label: remembered.label };
   if (!first) return null;
