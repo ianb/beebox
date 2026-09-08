@@ -6,6 +6,7 @@ import { expectReceipt, settleReceipt } from "../../../input/targets/receipts";
 import { getApiBase } from "../../../api-core";
 import { StartRecords, ConversationRoutingError, type RoutingStorage } from "./start-records";
 import { startAwakeTimeout } from "../../../../../shared/awake-timeout.js";
+import { conversationStorageScope } from "./storage-scope";
 
 export interface SessionAssignment { clientConversationId: string; contextDir: string }
 export type ChatController = ActorRefFrom<typeof chatMachine>;
@@ -34,6 +35,7 @@ export class ConversationControllerPool {
   private lifecycleGeneration = 0;
   private readonly apiBase: string;
   private readonly readApiBase: () => string;
+  readonly storageScope: string;
   private readonly createController: (input: ChatMachineInput) => ChatController;
   private readonly aliasWaitMs: number;
   private readonly starts: StartRecords | null;
@@ -46,13 +48,14 @@ export class ConversationControllerPool {
     getApiBase?: () => string;
     aliasWaitMs?: number;
   }) {
-    try { this.starts = new StartRecords(options.storage, boxSlug); }
+    this.readApiBase = options.getApiBase ?? getApiBase;
+    this.apiBase = this.readApiBase();
+    this.storageScope = conversationStorageScope(this.apiBase);
+    try { this.starts = new StartRecords(options.storage, this.storageScope); }
     catch (error) {
       this.starts = null;
       this.recoveryNotice = error instanceof Error ? error.message : "Conversation startup records need recovery";
     }
-    this.readApiBase = options.getApiBase ?? getApiBase;
-    this.apiBase = this.readApiBase();
     this.createController = options.createController ?? ((input) => createActor(chatMachine, { input }));
     this.aliasWaitMs = options.aliasWaitMs ?? 30000;
   }

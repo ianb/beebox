@@ -10,6 +10,7 @@ import { AmbientSessionReply } from "./AmbientSessionReply";
 export interface AmbientSession { sessionId: string; label: string }
 export interface AmbientRepliesProps {
   boxSlug: string;
+  storageScope: string;
   sessions: AmbientSession[];
   selectedSessionId: string | null;
   transcriptVisible: boolean;
@@ -19,14 +20,14 @@ export interface AmbientRepliesProps {
 
 export function AmbientReplies(props: AmbientRepliesProps) {
   const utils = trpc.useUtils();
-  const [active, setActive] = useState(() => readActiveSessions(props.boxSlug));
+  const [active, setActive] = useState(() => readActiveSessions(props.storageScope));
   const handleActivity = useCallback((sessionId: string, needed: boolean) => {
     setActive((old) => {
       if (old.includes(sessionId) === needed) return old;
       return needed ? [...old, sessionId] : old.filter((id) => id !== sessionId);
     });
   }, []);
-  useEffect(() => { writeActiveSessions(props.boxSlug, active); }, [props.boxSlug, active]);
+  useEffect(() => { writeActiveSessions(props.storageScope, active); }, [props.storageScope, active]);
   const [completed, setCompleted] = useState<Record<string, string>>({});
   const sessions = [...new Map(props.sessions.map((session) => [session.sessionId, session])).values()];
   function refresh(sessionId: string) {

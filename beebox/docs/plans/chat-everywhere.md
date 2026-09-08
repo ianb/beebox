@@ -801,3 +801,19 @@ beyond the original sent-to/left-running set; active history subscriptions are
 still pruned. This plan remains partial until those product calls and the phone
 checks are accepted. Landing this branch does not itself verify deployment or a
 physical device.
+
+### 2026-09-08: isolate remembered conversations across development worktrees
+
+A card page in a second development worktree restored the first worktree's
+`test1` selection and displayed `missing-local-transcript`. Directory discovery
+already skips missing transcripts; the tab's box-slug-only storage key was the
+cause. Conversation selection, startup records, pending-send recovery, and
+ambient metadata now use the box API path as their storage scope, including
+the worktree prefix. Production keys retain their existing shape. Ambiguous
+legacy development records remain untouched and are not automatically imported
+into a clone. Explicit missing session requests remain unavailable.
+
+Browser replay retained a foreign legacy selection, reloaded this worktree,
+and confirmed its own conversation restored without the unavailable banner.
+The separate development checkout needs this change incorporated before its
+page benefits. This does not close the remaining physical-device checks above.

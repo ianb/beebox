@@ -8,6 +8,7 @@ import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../src/frontend/src/machines/chatMachine.js";
 import { ConversationControllerPool } from "../../src/frontend/src/components/chat/conversation/controller-pool.js";
 import { StartRecords } from "../../src/frontend/src/components/chat/conversation/start-records.js";
+import { conversationStorageScope } from "../../src/frontend/src/components/chat/conversation/storage-scope.js";
 import { settleReceipt, expectReceipt } from "../../src/frontend/src/input/targets/receipts.js";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 function fixture() {
@@ -34,6 +35,40 @@ const session = (sessionId) => ({ kind: "session", sessionId, contextDir: "_cont
 const start = { kind: "start", clientConversationId: "logical-new", contextDir: "_content", engine: "codex" };
 const bind = (target) => ({ boxSlug: "test1", target, attention: { surface: "card", focusedRef: "/_content/report.md", transcript: "hidden" } });
 const send = (messageId) => ({ type: "SEND", messageId, message: "test" });
+```
+
+## Startup recovery is isolated by API base when worktrees share a box slug
+
+Two worktrees live under one browser origin during development. Their frozen
+API bases must produce separate startup records even though both boxes are
+named `test1`; production keeps the historical `test1` scope.
+
+```ts
+const f = fixture();
+const paperTarget = { ...start, clientConversationId: "paper-start" };
+const chatTarget = { ...start, clientConversationId: "chat-start" };
+const paper = new ConversationControllerPool("test1", { ...f.options, getApiBase: () => "/paper-cards/test1/api" });
+const chat = new ConversationControllerPool("test1", { ...f.options, getApiBase: () => "/chat-everywhere/test1/api" });
+paper.select(paperTarget);
+chat.select(chatTarget);
+await tick();
+const paperSend = paper.capture(bind(paperTarget));
+paperSend.send(send("paper-message"));
+await paperSend.finished();
+const chatSend = chat.capture(bind(chatTarget));
+chatSend.send(send("chat-message"));
+await chatSend.finished();
+const paperRecords = new StartRecords(f.storage, paper.storageScope);
+const chatRecords = new StartRecords(f.storage, chat.storageScope);
+const isolated = {
+  scopes: [paper.storageScope, chat.storageScope, conversationStorageScope("/test1/api")],
+  paper: [paperRecords.get("paper-start")?.firstEmissionId, paperRecords.get("chat-start")],
+  chat: [chatRecords.get("chat-start")?.firstEmissionId, chatRecords.get("paper-start")],
+};
+paper.suspend();
+chat.suspend();
+JSON.stringify(isolated)
+=> {"scopes":["paper-cards/test1","chat-everywhere/test1","test1"],"paper":["paper-message",null],"chat":["chat-message",null]}
 ```
 
 ## A captured send survives navigation and inactive actors are released

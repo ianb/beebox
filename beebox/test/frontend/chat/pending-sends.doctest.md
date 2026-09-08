@@ -6,6 +6,7 @@ resends a saved message automatically.
 
 ```ts setup
 import { createPendingSendsStore, quarantineUnreadablePendingSends, pendingSendRecoveryCopies } from "../../../src/frontend/src/components/chat/conversation/pending-sends.js";
+import { conversationStorageScope } from "../../../src/frontend/src/components/chat/conversation/storage-scope.js";
 import type { Emission } from "../../../src/frontend/src/input/emission.js";
 import type { SendBinding } from "../../../src/shared/chat-composer-binding.js";
 ```
@@ -25,7 +26,7 @@ const emission: Emission = { id: "voice-1", origin: "voice", text: "Check [image
   words: [{ word: "Check", confidence: 0.9 }], spokenStart: 0,
 };
 const binding: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "kitchen", contextDir: "_content/kitchen" }, attention: { surface: "card", focusedRef: "_content/house/Report.doc.card", transcript: "hidden" } };
-const store = createPendingSendsStore(storage, "test");
+const store = createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" });
 let notices = 0;
 const unsubscribe = store.subscribe(() => { notices++; });
 blocked = true;
@@ -40,7 +41,7 @@ notices
 
 blocked = false;
 store.stage(emission, binding);
-const recovered = createPendingSendsStore(storage, "test");
+const recovered = createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" });
 recovered.getSnapshot()[0]?.status
 => recovered
 
@@ -56,7 +57,7 @@ JSON.stringify(recovered.getSnapshot()[0]?.emission.selections)
 recovered.getSnapshot()[0]?.binding.target.kind === "session" && recovered.getSnapshot()[0]?.binding.target.sessionId
 => kitchen
 
-createPendingSendsStore(storage, "other").getSnapshot().length
+createPendingSendsStore(storage, { boxSlug: "other", storageScope: "other" }).getSnapshot().length
 => 0
 ```
 
@@ -80,7 +81,7 @@ store.accepted("voice-1");
 store.getSnapshot().length
 => 1
 
-const hq = createPendingSendsStore(storage, "test").getSnapshot()[0]?.emission;
+const hq = createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot()[0]?.emission;
 `${hq?.hqText} ${hq?.hqService}`
 => true openai
 
@@ -109,6 +110,34 @@ store.stage({ ...emission, id: "hq-work", text: "different" }, binding)
 store.accepted("hq-work");
 ```
 
+## Pending recovery is isolated by API base when worktrees share a box slug
+
+The dev router serves every worktree from one origin. Recovery for `test1` in
+one worktree must not load completed sends saved by another worktree, while the
+production API base retains the historical `test1` key.
+
+```ts
+const data = new Map<string, string>();
+const storage = {
+  getItem: (key: string) => data.get(key) ?? null,
+  setItem: (key: string, value: string) => { data.set(key, value); },
+  removeItem: (key: string) => { data.delete(key); },
+};
+const binding: SendBinding = { boxSlug: "test1", target: { kind: "session", sessionId: "chat", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
+const paperScope = conversationStorageScope("/paper-cards/test1/api");
+const chatScope = conversationStorageScope("/chat-everywhere/test1/api");
+createPendingSendsStore(storage, { boxSlug: "test1", storageScope: paperScope }).stage(
+  { id: "paper", origin: "typed", text: "Paper message", images: [], files: [], selections: [], diarized: false }, binding);
+createPendingSendsStore(storage, { boxSlug: "test1", storageScope: chatScope }).stage(
+  { id: "chat", origin: "typed", text: "Chat message", images: [], files: [], selections: [], diarized: false }, binding);
+JSON.stringify({
+  scopes: [paperScope, chatScope, conversationStorageScope("/test1/api")],
+  paper: createPendingSendsStore(storage, { boxSlug: "test1", storageScope: paperScope }).getSnapshot().map((row) => row.emission.text),
+  chat: createPendingSendsStore(storage, { boxSlug: "test1", storageScope: chatScope }).getSnapshot().map((row) => row.emission.text),
+})
+=> {"scopes":["paper-cards/test1","chat-everywhere/test1","test1"],"paper":["Paper message"],"chat":["Chat message"]}
+```
+
 An acceptance remains authoritative when storage cleanup fails. The UI receives
 an accepted row, with neither Retry nor Restore; if writes still work, that
 marker also survives reload. Even a later rejected callback cannot reverse it.
@@ -123,13 +152,13 @@ const storage = {
 };
 const binding: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "chat", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
 const emission: Emission = { id: "accepted", origin: "typed", text: "Sent", images: [], files: [], selections: [], diarized: false };
-const store = createPendingSendsStore(storage, "test");
+const store = createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" });
 store.stage(emission, binding);
 store.accepted(emission.id);
 store.getSnapshot()[0]?.status
 => accepted
 
-createPendingSendsStore(storage, "test").getSnapshot()[0]?.status
+createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot()[0]?.status
 => accepted
 
 refuseWrites = true;
@@ -156,14 +185,14 @@ const storage = {
   setItem: (key: string, value: string) => { if (refuseWrites) throw new Error("quota"); data.set(key, value); },
   removeItem: (key: string) => { data.delete(key); },
 };
-quarantineUnreadablePendingSends(storage, "test")
+quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" })
 => throws Error: quota
 
 storage.getItem(key) === raw
 => true
 
 refuseWrites = false;
-const fresh = quarantineUnreadablePendingSends(storage, "test");
+const fresh = quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" });
 fresh.getSnapshot().length
 => 0
 
@@ -176,7 +205,7 @@ pendingSendRecoveryCopies(storage, "test")[0]?.raw === raw
 const emission: Emission = { id: "new", origin: "typed", text: "A new message", images: [], files: [], selections: [], diarized: false };
 const binding: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "chat", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
 fresh.stage(emission, binding);
-quarantineUnreadablePendingSends(storage, "test").getSnapshot()[0]?.emission.text
+quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot()[0]?.emission.text
 => A new message
 
 pendingSendRecoveryCopies(storage, "test").length
@@ -184,7 +213,7 @@ pendingSendRecoveryCopies(storage, "test").length
 
 // Wrong-box envelopes are also preserved intact, never routed to this box.
 data.set(key, JSON.stringify({ version: 1, rows: [{ emission, binding: { ...binding, boxSlug: "other" }, status: "pending" }] }));
-quarantineUnreadablePendingSends(storage, "test").getSnapshot().length
+quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot().length
 => 0
 
 pendingSendRecoveryCopies(storage, "test").length
@@ -202,7 +231,7 @@ const storage = {
   setItem: (_key: string, _value: string) => {},
   removeItem: (_key: string) => { removed = true; },
 };
-quarantineUnreadablePendingSends(storage, "test")
+quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" })
 => throws PendingSendPreservationError
 
 removed

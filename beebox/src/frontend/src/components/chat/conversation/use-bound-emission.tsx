@@ -49,7 +49,7 @@ export function useBoundEmission(opts: {
 }) {
   const { pool, target, selection, attention, emissionStore, captureCardSend, acceptCardSend, getWitness, onSent } = opts;
   const [pending, setPending] = useState(() => {
-    try { return createPendingSendsStore(sessionStorage, pool.boxSlug); }
+    try { return createPendingSendsStore(sessionStorage, { boxSlug: pool.boxSlug, storageScope: pool.storageScope }); }
     catch (_cause) {
       // Null drives the visible recovery alert below and disables web sends.
       return null;
@@ -152,7 +152,7 @@ export function useBoundEmission(opts: {
   };
   const failedRegion = <>
     {error !== null && <p role="alert" className="text-sm text-danger">{error}</p>}
-    <PendingSendStorageRecovery boxSlug={pool.boxSlug} blocked={pending === null}
+    <PendingSendStorageRecovery boxSlug={pool.boxSlug} storageScope={pool.storageScope} blocked={pending === null}
       onRecovered={(store) => { setPending(store); setError(null); }} />
     {pending !== null && <FailedConversationSends store={pending}
       onRetry={async (row) => { await capture(row.binding)(row.emission); }}

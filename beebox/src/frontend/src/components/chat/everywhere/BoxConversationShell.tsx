@@ -27,6 +27,7 @@ export function BoxConversationShell({ children }: { children: ReactNode }) {
   return <ConversationRuntime conversation={conversation}>{children}</ConversationRuntime>;
 }
 function ConversationRuntime({ conversation, children }: { conversation: NonNullable<ReturnType<typeof useBoxConversation>>; children: ReactNode }) {
+  const { storageScope } = conversation;
   const { boxSlug = "" } = useParams({ strict: false });
   const search = shellSearch.parse(useSearch({ strict: false }));
   const route = useConversationRoute(conversation);
@@ -51,14 +52,14 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     void conversation.select({ kind: "session", sessionId: id });
     route.showConversation();
   }
-  const [sessions, setSessions] = useState<AmbientSession[]>(() => readTrackedSessions(boxSlug));
+  const [sessions, setSessions] = useState<AmbientSession[]>(() => readTrackedSessions(storageScope));
   const publicationRevision = useRef(0);
   usePageTitle(route.chatPage ? sessionLabel : null);
   useEffect(() => {
     if (!sessionId) return;
     setSessions((old) => [...old.filter((session) => session.sessionId !== sessionId), { sessionId, label: sessionLabel }]);
   }, [sessionId, sessionLabel]);
-  useEffect(() => { writeTrackedSessions(boxSlug, sessions); }, [boxSlug, sessions]);
+  useEffect(() => { writeTrackedSessions(storageScope, sessions); }, [storageScope, sessions]);
   useEffect(() => {
     const publication = { version: 1, kind: "selection", revision: ++publicationRevision.current, boxSlug, selection: conversation.selection, attention };
     postNativeMessage(window, { channel: "beeboxComposerBinding", payload: publication });
@@ -90,7 +91,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     onHideConversation={handleHideConversation}
     selectionNotice={notice}
     // Keep reply observation alive, but show its panels only away from the transcript.
-    ambientRegion={<div hidden={route.transcriptVisible}><AmbientReplies boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}
+    ambientRegion={<div hidden={route.transcriptVisible}><AmbientReplies storageScope={storageScope} boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}
       transcriptVisible={canAcknowledgeAmbientReply(route.transcriptVisible, conversation.selection.kind)} onInspectCard={inspect}
       onOpenConversation={handleOpenConversation} /></div>}
   />;

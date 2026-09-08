@@ -5,6 +5,7 @@ import type { ConversationRequest } from "./resolve-conversation";
 import { useConversationSelection } from "./use-conversation-selection";
 
 export interface ConversationContextValue {
+  storageScope: string;
   selection: ConversationSelection;
   rendered: Extract<ConversationSelection, { kind: "ready" }> | null;
   initial: ChatInitialLoad | undefined;

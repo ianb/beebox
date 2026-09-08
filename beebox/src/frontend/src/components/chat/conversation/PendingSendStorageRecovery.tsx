@@ -19,13 +19,14 @@ function PreservedCopy({ copy }: { copy: PendingSendRecoveryCopy }) {
 }
 
 /** A damaged envelope can be set aside only after preserving every original byte. */
-export function PendingSendStorageRecovery({ boxSlug, blocked, onRecovered }: {
+export function PendingSendStorageRecovery({ boxSlug, storageScope, blocked, onRecovered }: {
   boxSlug: string;
+  storageScope: string;
   blocked: boolean;
   onRecovered(store: PendingSendsStore): void;
 }) {
   const [copies, setCopies] = useState<PendingSendRecoveryCopy[]>(() => {
-    try { return pendingSendRecoveryCopies(sessionStorage, boxSlug); }
+    try { return pendingSendRecoveryCopies(sessionStorage, storageScope); }
     catch (_cause) {
       // The owning hook separately exposes storage failure as a blocking alert.
       return [];
@@ -34,9 +35,10 @@ export function PendingSendStorageRecovery({ boxSlug, blocked, onRecovered }: {
   const [error, setError] = useState<string | null>(null);
   function recover(preserve: boolean): void {
     try {
-      const store = preserve ? quarantineUnreadablePendingSends(sessionStorage, boxSlug)
-        : createPendingSendsStore(sessionStorage, boxSlug);
-      setCopies(pendingSendRecoveryCopies(sessionStorage, boxSlug));
+      const location = { boxSlug, storageScope };
+      const store = preserve ? quarantineUnreadablePendingSends(sessionStorage, location)
+        : createPendingSendsStore(sessionStorage, location);
+      setCopies(pendingSendRecoveryCopies(sessionStorage, storageScope));
       setError(null);
       onRecovered(store);
     } catch (_cause) {

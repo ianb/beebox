@@ -13,7 +13,7 @@ import type { AmbientRepliesProps, AmbientSession } from "./AmbientReplies";
 type Props = AmbientRepliesProps & { session: AmbientSession; completion: string | null; onActivity: (sessionId: string, needed: boolean) => void };
 function useAmbientSessionReply(props: Props) {
   const { session, completion } = props;
-  const key = `bbx-ambient:${props.boxSlug}:${session.sessionId}`;
+  const key = `bbx-ambient:${props.storageScope}:${session.sessionId}`;
   const [attention, setAttention] = useState(() => readAttention(key));
   const history = trpc.chat.history.useQuery({ session: session.sessionId, slice: { mode: "tail", tail: 100 } });
   const status = trpc.chat.status.useQuery({ session: session.sessionId });

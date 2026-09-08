@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import type { ConversationSelection } from "@shared/chat-composer-binding";
+import { getApiBase } from "../../../api-core";
+import { conversationStorageScope } from "../conversation/storage-scope";
 import { trpc } from "../../../lib/trpc";
 import { readConversation, saveConversation } from "./conversation-state";
 import { resolveConversation, type ConversationRequest, type ResolvedConversation } from "./resolve-conversation";
@@ -7,9 +9,10 @@ import { createResolutionGate } from "./conversation-intent";
 import { postNativeMessage } from "../native-post";
 
 export function useConversationSelection(boxSlug: string) {
+  const storageScope = conversationStorageScope(getApiBase());
   const utils = trpc.useUtils();
   const { mutateAsync: reserve } = trpc.chat.reserveSession.useMutation();
-  const restored = useMemo(() => readConversation(boxSlug), [boxSlug]);
+  const restored = useMemo(() => readConversation(storageScope), [storageScope]);
   const [state, setState] = useState<ResolvedConversation>(() => ({ selection: restored?.kind === "ready" && restored.target.kind === "start" ? restored : { kind: "resolving", requestId: "initial", contextDir: "" } }));
   const [rendered, setRendered] = useState(() => restored?.kind === "ready" ? restored : null);
   const gate = useMemo(() => createResolutionGate(), []);
@@ -29,7 +32,7 @@ export function useConversationSelection(boxSlug: string) {
     }
   }, [utils, reserve, gate]);
   useEffect(() => () => gate.cancel(), [gate]);
-  useEffect(() => { saveConversation(boxSlug, state.selection); }, [boxSlug, state.selection]);
+  useEffect(() => { saveConversation(storageScope, state.selection); }, [storageScope, state.selection]);
   const assigned = useCallback((sessionId: string, assignment?: { clientConversationId: string; contextDir: string }) => {
     const { clientConversationId, contextDir } = assignment ?? {};
     if (clientConversationId !== undefined && contextDir !== undefined) postNativeMessage(window, { channel: "beeboxComposerBinding", payload: { version: 1, kind: "assigned", boxSlug, clientConversationId, sessionId, contextDir } });
@@ -40,5 +43,5 @@ export function useConversationSelection(boxSlug: string) {
     setState((old) => ({ ...old, selection: replace(old.selection) }));
     setRendered((old) => { if (!old) return old; const next = replace(old); return next.kind === "ready" ? next : old; });
   }, [boxSlug]);
-  return { ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
+  return { storageScope, ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
 }
