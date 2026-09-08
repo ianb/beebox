@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef, useState, type CSSProperties, type React
 import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
 import { imageUrlKey } from "../../lib/image-url-key";
+import { useImageRecovery, withVersionStamp } from "../../hooks/use-image-recovery";
 
 const SIZE_CLASSES = {
   thumb: "w-16 h-16 object-cover",
@@ -305,14 +306,32 @@ export function Image(props: ImageProps) {
     if (container !== undefined && container !== null && container.clientWidth > 0) setStretch(true);
   };
   const fallbackSrc = proxyFallbackSrc !== undefined && proxyFallbackSrc !== src ? proxyFallbackSrc : undefined;
+  // An in-box image that failed because its file did not exist yet: once a
+  // probe says it serves, forget the failure and load it under a fresh URL so
+  // neither the failed set nor the browser cache sees the old one. The stamp
+  // rides in `v=`, the cache-buster the file and image routes already accept
+  // (`lib/file-version.ts`); the image-transform route rejects any other
+  // query key with a 400. See `hooks/use-image-recovery.ts` for why this is
+  // a probe, not a timed re-load.
+  const [recoveredStamp, setRecoveredStamp] = useState<string | null>(null);
+  const loadSrc = recoveredStamp === null ? src : withVersionStamp(src, recoveredStamp);
   const { displaySrc, errored } = getLoadState({
-    src,
+    src: loadSrc,
     fallbackSrc,
-    locallyFailed: locallyFailedSrc === src,
+    locallyFailed: locallyFailedSrc === loadSrc,
+  });
+  useImageRecovery({
+    src: loadSrc,
+    errored,
+    onRecovered: (stamp) => {
+      failedImageUrls.delete(imageUrlKey(loadSrc));
+      setLocallyFailedSrc(null);
+      setRecoveredStamp(stamp);
+    },
   });
   const handleError = (failedSrc?: string) => {
     failedImageUrls.add(imageUrlKey(failedSrc ?? displaySrc));
-    setLocallyFailedSrc(src);
+    setLocallyFailedSrc(loadSrc);
     bumpAfterError();
   };
 

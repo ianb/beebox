@@ -4,7 +4,10 @@ workstream: unknown
 area: beebox
 filed-by: agent
 discovered-in: main session — boxholder report
+resolution: implemented
 ---
+
+> Closed again 2026-09-07: `hooks/use-image-recovery.ts` — while an in-box image is errored, a `HEAD` probe on a bounded schedule (2 s, 5 s, 10 s, 20 s, 30 s, then once a minute for four minutes) asks whether the file serves; on the first OK the URL leaves the failed set and the image loads once under a fresh `v=` stamp. No timed re-load of the `<img>` (the reflow the chat-scroll work removed): one reflow, when the image is real. Verified live in a test box: placeholder before the file existed, loaded on its own within nine seconds of the file landing. Doctested in `test/frontend/hooks/image-recovery.doctest.md`. The watcher ceiling that made this necessary is `2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md`.
 
 > **Reopened 2026-09-07 — regressed.** The bounded retry `e209e50a` added was
 > removed by `7e68eadd5` ("Remove timed image retries", the chat-scroll
