@@ -101,6 +101,7 @@ checkedIn
 => [
   "bin",
   "box-docs",
+  "docs/box",
   "templates",
   "plugins",
   ".agents",
