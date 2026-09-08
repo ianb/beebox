@@ -41,6 +41,7 @@ function fakeUtils(options: {
         bootstrap: { fetch: async () => options.bootstraps?.[bootstrapCalls++] },
         directoryFor: { fetch: async () => ({ contextDir: options.directory ?? "" }) },
       },
+    // This test double implements only the router procedures exercised below.
     } as unknown as ResolveParams["utils"],
     bootstrapCalls: () => bootstrapCalls,
   };
@@ -66,6 +67,7 @@ function cachedBootstrapUtils(options: {
           ...fetchOptions,
         }) },
       },
+    // This test double implements only the QueryClient-backed procedures used here.
     } as unknown as ResolveParams["utils"],
     networkCalls: () => networkCalls,
     directoryNetworkCalls: () => directoryNetworkCalls,
