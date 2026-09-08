@@ -1,0 +1,65 @@
+/* A quote's words and attribution share a single slip. Only the paper behind
+   them is a little askew: text stays crisp, selectable, and in normal flow. */
+.bbx-quote-block,
+.bbx-blockquote {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  --bbx-slip-reach: var(--bbx-slip-overhang, 0px);
+}
+.bbx-quote-block::before,
+.bbx-blockquote::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(-1 * var(--bbx-slip-reach)) 0 0;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid #6b573223;
+  border-top-color: #ffffffcc;
+  border-radius: var(--bbx-sheet-radius, 8px);
+  background-color: var(--bbx-quote-layer-paper, #fff);
+  background-image:
+    var(--bbx-slip-grain, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='fiber'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.1' filter='url(%23fiber)'/%3E%3C/svg%3E")),
+    linear-gradient(175deg, #ffffff35, transparent 65%, #8467350c);
+  background-size: 160px 160px, auto;
+  transform: rotate(var(--bbx-slip-angle, -0.25deg));
+  transform-origin: 45% 15%;
+  box-shadow: 0 1px 1px #4e3d2529, 1px 4px 5px -2px #4e3d2540,
+    2px 10px 14px -8px #4e3d2540;
+}
+.bbx-quote-block::before { display: var(--bbx-quote-sheet-display, none); }
+.bbx-blockquote::before { display: var(--bbx-blockquote-sheet-display, none); }
+.bbx-blockquote { margin: 1.3em 0.25rem; }
+.bbx-quote-block[data-treatment="layered"] {
+  background: transparent;
+  box-shadow: none;
+}
+.bbx-quote-block[data-treatment="layered"]::before { display: block; }
+.bbx-quote-block[data-treatment="inset"] {
+  background: var(--bbx-quote-layer-paper, #f5f4f1);
+}
+.bbx-quote-block[data-treatment="inset"]::before,
+.bbx-quote-block[data-treatment="plain"]::before { display: none; }
+/* Para is a div so it can host card embeds. Keep its prose margins from
+   making the little sheet's top and bottom appear uneven. */
+.bbx-blockquote > :first-child,
+.bbx-quote-body > :first-child { margin-top: 0; }
+.bbx-blockquote > :last-child,
+.bbx-quote-body > :last-child { margin-bottom: 0; }
+/* Nested quotations stay on their enclosing slip instead of accumulating
+   overhang beyond the card. Only decorative paper extends; text never does. */
+.bbx-blockquote :is(.bbx-blockquote, .bbx-quote-block),
+.bbx-quote-block :is(.bbx-blockquote, .bbx-quote-block) { --bbx-slip-reach: 0px; }
+/* Compact chat cards scroll their front; keep the decoration inside that
+   scrolling boundary instead of introducing a horizontal scrollbar. */
+.bbx-card-front[data-card-mode="chat"] { --bbx-slip-overhang: 0px; }
+@media (max-width: 520px) {
+  .bbx-quote-block::before,
+  .bbx-blockquote::before { transform: rotate(0.15deg); }
+}
+@media print {
+  .bbx-quote-block::before,
+  .bbx-quote-block[data-treatment]::before,
+  .bbx-blockquote::before { display: none; }
+  .bbx-blockquote { background: transparent; box-shadow: none; }
+}

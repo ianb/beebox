@@ -75,8 +75,9 @@ async function reportInboundRefs(
       ctx.boxRoot,
       resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: cardPath, relativeTo: ctx.boxRoot }),
     );
-    const refs = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
+    const { referrers: refs, errors } = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
     inboundRefs[relPath] = refs;
+    for (const error of errors) ctx.writeLine(`Warning: inbound reference scan incomplete: ${error}`);
     for (const referrer of refs) {
       ctx.writeLine(`Inbound ref: ${referrer.path} (${referrer.refs}) → ${relPath}`);
     }

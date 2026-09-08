@@ -37,7 +37,7 @@ function RefLink({ refPath }: { refPath: string }): ReactNode {
     <button
       type="button"
       onClick={() => nav.onNavigate({ path: resolved, viewer: null, params: {}, viewState: null }, { label: refPath })}
-      className="text-warm-600 hover:text-warm-800 underline-offset-2 hover:underline cursor-pointer break-words text-left"
+      className="bbx-theme-link cursor-pointer break-words text-left"
     >
       {refPath}
     </button>
@@ -57,7 +57,7 @@ function ValueView({ value }: { value: unknown }): ReactNode {
         href={value}
         target="_blank"
         rel="noreferrer"
-        className="text-warm-600 hover:text-warm-800 underline underline-offset-2 break-all"
+        className="bbx-theme-link break-all"
       >
         {value}
       </a>
@@ -90,10 +90,10 @@ function FieldsTable({ fields }: { fields: Record<string, unknown> }): ReactNode
   const entries = Object.entries(fields);
   if (entries.length === 0) return null;
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm text-warm-800">
+    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm text-warm-800 bbx-card-fields">
       {entries.map(([name, value]) => (
         <div key={name} className="contents">
-          <dt className="text-warm-500 text-right whitespace-nowrap">{name}:</dt>
+          <dt className="text-warm-500 text-right whitespace-nowrap bbx-card-field-label">{name}:</dt>
           <dd className="min-w-0">
             {name === "ref" && typeof value === "string" ? <RefLink refPath={value} /> : <ValueView value={value} />}
           </dd>

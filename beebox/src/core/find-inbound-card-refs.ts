@@ -20,6 +20,11 @@ export interface InboundCardRef {
   refs: number;
 }
 
+export interface InboundCardRefScan {
+  referrers: InboundCardRef[];
+  errors: string[];
+}
+
 /**
  * Find every card with at least one incoming reference in one referrer pass.
  * This is the box-wide counterpart to {@link findInboundCardRefs}; it keeps the
@@ -99,7 +104,8 @@ function linkedCardsForResolvedPath(input: {
 export async function findInboundCardRefs(params: {
   boxRoot: string;
   cardPath: string;
-}): Promise<InboundCardRef[]> {
+  readText?: (filePath: string) => Promise<string>;
+}): Promise<InboundCardRefScan> {
   const boxRoot = path.resolve(params.boxRoot);
   const target = path.resolve(boxRoot, params.cardPath);
   const attachDir = attachDirFor(target);
@@ -117,12 +123,14 @@ export async function findInboundCardRefs(params: {
   ];
   const ignore = await loadValidationIgnore(boxRoot);
   const found: InboundCardRef[] = [];
+  const errors: string[] = [];
+  const readText = params.readText ?? ((filePath: string) => fs.readFile(filePath, "utf-8"));
   for (const referrerPath of referrers) {
     const relPath = path.relative(boxRoot, referrerPath);
     if (referrerPath === target || referrerPath.startsWith(attachDir + path.sep)) continue;
     if (isTrashedCard(relPath) || ignore.isIgnored(referrerPath)) continue;
     try {
-      const text = await fs.readFile(referrerPath, "utf-8");
+      const text = await readText(referrerPath);
       const count = referrerPath.endsWith(".tsx")
         ? rewriteViewRefs({ boxRoot, viewAbsPath: referrerPath, text, remap }).count
         : countReferrerRefs({ boxRoot, cardAbsPath: referrerPath, text, remap, skipFencedCode: true });
@@ -130,8 +138,8 @@ export async function findInboundCardRefs(params: {
         found.push({ path: relPath, refs: count });
       }
     } catch (error) {
-      console.warn(`Skipping unreadable referrer while checking inbound refs: ${referrerPath}:`, error);
+      errors.push(`${relPath}: ${String(error).replaceAll(referrerPath, relPath)}`);
     }
   }
-  return found.toSorted((a, b) => a.path.localeCompare(b.path));
+  return { referrers: found.toSorted((a, b) => a.path.localeCompare(b.path)), errors };
 }

@@ -4026,6 +4026,84 @@ tests:
     correct_contains_any: ["rewrites", "tracked", "bbx mv", "validate"]
     tags: [views, cards]
 
+  # === Card themes ===
+  # Status (2026-09-08, Codex): 4/4 pass against paper-cards test boxes
+  # after guide/package-doc regeneration. card-theme-choice used 1 file
+  # read and 1 search; card-theme-selection used 2 reads and 2 searches;
+  # card-theme-location-rule used 5 reads and 3 searches while authoring the
+  # box rule and card override; card-quote-treatment used 2 reads and 1 search.
+  # These are knows_directly / knows_about checks as declared; none answered
+  # with zero reads.
+
+  - id: card-theme-choice
+    prompt: >
+      I want one memo to look like a cream paper card while the rest of the
+      box keeps its defaults. What should I write, and where can I inspect or
+      remove that choice?
+    expected_level: knows_directly
+    watch_for: >
+      Uses the card's theme object with name paper and stock cream, identifies
+      Properties as the inspection surface, and says Use default removes the
+      card override. Must not confuse theme with preferred view or invent CSS.
+    correct_contains: ["theme", "paper", "cream", "Properties"]
+    correct_contains_any: ["Use default", "default"]
+    tags: [cards, themes]
+
+  - id: card-theme-selection
+    prompt: >
+      A card has no explicit theme, but the box has both a matching path rule
+      and a card-type preference. Which one wins, and what is the fallback?
+    expected_level: knows_about
+    watch_for: >
+      Explains that the first matching path rule wins before the type choice,
+      and that the engine falls back to plain if no configured choice applies.
+    correct_contains: ["path", "type", "plain"]
+    tags: [cards, themes]
+
+  - id: card-theme-location-rule
+    prompt: >
+      Set a persistent box location rule so every current or future memo card
+      under _content/notes/ uses the yellow sticky-note theme. Keep
+      _content/notes/Exception.memo.card as a cream-paper exception. Make both
+      changes now and validate the box.
+    expected_level: knows_about
+    fixture:
+      _content/notes/Exception.memo.card: |
+        ---
+        type: memo
+        status: processed
+        created: 2026-09-07T12:00:00-05:00
+        ---
+        This memo is the paper exception.
+      _content/notes/Ordinary.memo.card: |
+        ---
+        type: memo
+        status: processed
+        created: 2026-09-07T12:00:00-05:00
+        ---
+        This memo should follow the location rule.
+    watch_for: >
+      Edits _config/box.json presentation.rules with a box-relative
+      _content/notes/** match and post-it/yellow theme, puts a paper/cream theme
+      on the exceptional card, says the card override wins, and runs bbx
+      validate. Must not propose a custom schema, view, or arbitrary CSS.
+    correct_contains: ["yellow", "post-it", "paper", "cream"]
+    cards_contain: ["theme:", "paper", "cream"]
+    bash_contains: ["git diff -- _config/box.json", "bbx validate"]
+    max_turns: 20
+    tags: [cards, themes]
+
+  - id: card-quote-treatment
+    prompt: >
+      How do I ask for a layered blockquote while keeping the quoted words and
+      attribution attached to it?
+    expected_level: knows_about
+    watch_for: >
+      Uses the universal quote tag with treatment layered and a from
+      attribution. Must not suggest styling the card with arbitrary CSS.
+    correct_contains: ["quote", "layered", "from"]
+    tags: [cards, themes, quotes]
+
   # === Web-page capture + commentary (clerk) ===
   #
   # Conventions from docs/plans/webpage-card-and-commentary.md. The landmark

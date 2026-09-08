@@ -1,20 +1,24 @@
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc.js";
+import { router, publicProcedure, ownerProcedure } from "../trpc.js";
 import { splitCardContent, type CardSchema } from "../../../cards/index.js";
 import { isRecord } from "../../../lib/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { resolveBoxNamespacePathOnDisk, type BoxNamespaceAccessMode } from "../../../lib/box-namespace-resolve.js";
-import { parse as parseYaml } from "yaml";
+import { Document, isMap, parse as parseYaml, parseDocument } from "yaml";
 import { errorMessage } from "../../../lib/error-guards.js";
 import { findInboundCardRefs } from "../../../core/find-inbound-card-refs.js";
 import { commitTrashReceipt, moveCardsToTrash } from "../../../core/commands/trash.js";
 import { rollbackTrashReceipt } from "../../../core/commands/trash-recovery.js";
 import { createCollectorContext } from "../../../core/commands/index.js";
 import * as path from "node:path";
+import { ThemeChoiceSchema, validateThemeChoice } from "../../../shared/card-theme.js";
+import { withCardLock } from "../../../lib/card-lock.js";
+import { writeFileAtomic } from "../../../lib/atomic-write.js";
+import { stageAndCommitPaths } from "../../../lib/git.js";
 
 /**
  * Box containment + namespace fence, checked on the RESOLVED path (both
@@ -189,14 +193,78 @@ export const cardRouter = router({
     .input(z.object({ path: z.string().min(1) }))
     .query(async ({ input, ctx }) => {
       const { relPath } = await resolveCardPath({ boxRoot: ctx.boxRoot, inputPath: input.path, mode: "read" });
-      return { referrers: await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath }) };
+      return findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
+    }),
+
+  setTheme: ownerProcedure
+    .input(z.object({
+      path: z.string().min(1),
+      theme: ThemeChoiceSchema.nullable(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (input.theme !== null) {
+        const checked = validateThemeChoice(input.theme, "theme");
+        if (checked.problem !== null) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: checked.problem.message });
+        }
+      }
+      const { relPath, fullPath } = await resolveCardPath({
+        boxRoot: ctx.boxRoot,
+        inputPath: input.path,
+        mode: "write",
+      });
+      if (typeFromFilename(relPath) === undefined) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Theme selection applies only to card files" });
+      }
+      const saved = await withCardLock(fullPath, async () => {
+        let raw: string;
+        try {
+          raw = await fs.readFile(fullPath, "utf-8");
+        } catch (error) {
+          if (errorMessage(error).includes("ENOENT")) {
+            throw new TRPCError({ code: "NOT_FOUND", message: `Card not found: ${relPath}` });
+          }
+          throw error;
+        }
+        const split = splitCardContent(raw);
+        if (!split.hasFrontmatter) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Card has no frontmatter block" });
+        }
+        const document = split.frontmatterText.trim() === ""
+          ? new Document({})
+          : parseDocument(split.frontmatterText);
+        if (document.errors.length > 0 || !isMap(document.contents)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Card frontmatter is not a valid YAML mapping" });
+        }
+        if (input.theme === null) document.delete("theme");
+        else document.set("theme", input.theme);
+        const yaml = String(document);
+        const content = `---\n${yaml.endsWith("\n") ? yaml : `${yaml}\n`}---\n${split.body}`;
+        await writeFileAtomic(fullPath, { content });
+        try {
+          const commit = await stageAndCommitPaths(ctx.boxRoot, {
+            paths: [relPath],
+            message: input.theme === null ? `Clear card theme: ${relPath}` : `Set card theme: ${relPath}`,
+            trailers: { "Source": "webapp", "Endpoint": "card.setTheme" },
+          });
+          return { commit, commitWarning: null };
+        } catch (_error) {
+          return { commit: null, commitWarning: "Saved, but the Git commit failed." };
+        }
+      });
+      ctx.eventBus.emitTransient("file-change", {
+        event: "change",
+        path: relPath,
+        timestamp: new Date().toISOString(),
+      });
+      return { theme: input.theme, ...saved };
     }),
 
   trash: publicProcedure
     .input(z.object({ path: z.string().min(1), allowDanglingRefs: z.boolean().default(false) }))
     .mutation(async ({ input, ctx }) => {
       const { relPath } = await resolveCardPath({ boxRoot: ctx.boxRoot, inputPath: input.path, mode: "write" });
-      const referrers = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
+      const { referrers } = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
       if (referrers.length > 0 && !input.allowDanglingRefs) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",

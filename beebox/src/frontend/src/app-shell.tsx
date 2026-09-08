@@ -16,6 +16,7 @@ import { ViewOverlayProvider } from "./components/ViewOverlay";
 import { ConversationCardProvider } from "./components/chat/everywhere/card-context";
 import { BoxConversationProvider } from "./components/chat/everywhere/conversation-context";
 import { BoxConversationShell } from "./components/chat/everywhere/BoxConversationShell";
+import { BoxPresentationProvider, PresentationNotice } from "./components/themes/BoxPresentationProvider";
 import { AppNav } from "./components/AppNav";
 import { AppBarChromeProvider } from "./components/app-bar-chrome";
 import { Column } from "./components/ui/Column";
@@ -97,6 +98,7 @@ export function AppLayout() {
             onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
             onToggleSourceView={handleToggleSourceView}
           />
+          <PresentationNotice />
           <main className="flex-1 min-h-0">
             {boxExists ? (
               <BoxConversationShell><Outlet /></BoxConversationShell>
@@ -113,9 +115,9 @@ export function AppLayout() {
 
 /** Providers retain their children identity when a chat publishes chrome. */
 function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
-  return <BoxConversationProvider boxSlug={boxSlug}>
+  return <BoxPresentationProvider boxSlug={boxSlug}><BoxConversationProvider boxSlug={boxSlug}>
     <AppBarChromeProvider><ConversationCardProvider><ViewOverlayProvider>{children}</ViewOverlayProvider></ConversationCardProvider></AppBarChromeProvider>
-  </BoxConversationProvider>;
+  </BoxConversationProvider></BoxPresentationProvider>;
 }
 
 /**

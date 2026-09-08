@@ -317,6 +317,18 @@ export function hasDomId(snapshot: string, domId: string): boolean {
   return snapshot.includes(`id=${domId}`);
 }
 
+/** The accessibility ref on the element carrying a stable DOM id. */
+export function refForDomId(snapshot: string, domId: string): string | null {
+  for (const line of snapshot.split("\n")) {
+    if (!line.includes(`id=${domId}`)) continue;
+    for (const part of line.split("[", 2).at(1)?.split("]", 1).at(0)?.split(",") ?? []) {
+      const ref = REF_ATTR.exec(part.trimStart())?.[1];
+      if (ref !== undefined) return ref;
+    }
+  }
+  return null;
+}
+
 /**
  * Directory rows in the browse sidebar, which the box's real content produces
  * (`button "store directory, 46 items"`). Counting them is how this tier

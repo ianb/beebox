@@ -61,6 +61,7 @@ import { lintDuplicateChatSession } from "./lint-chat-duplicates.js";
 import { findAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
 import { errorMessage } from "../lib/error-guards.js";
+import { validateThemeChoice } from "../shared/card-theme.js";
 
 export interface LintDispatchOptions {
   /**
@@ -234,6 +235,9 @@ async function lintFrontmatterCard(input: {
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
   const symbolFindings = symbolIssues(parsed.fields);
+  const themeFinding = parsed.fields["theme"] === undefined
+    ? null
+    : validateThemeChoice(parsed.fields["theme"], "theme").problem;
   // Every card may carry an image mark, so this one is not type-gated like the
   // per-type path fields below.
   warnings.push(...(await lintCardSymbolSrc({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
@@ -273,6 +277,11 @@ async function lintFrontmatterCard(input: {
     ...displayPathErrors,
     ...symbolFindings.filter((issue) => issue.severity === "error"),
     ...(parsed.schema.validate ? parsed.schema.validate({ fields: parsed.fields }) : []),
+    ...(themeFinding === null ? [] : [{
+      type: "validation" as const,
+      severity: "error" as const,
+      message: themeFinding.message,
+    }]),
   ];
   // The one cross-file rule: a chat husk's `session` is its identity, so two
   // husks carrying the same one is an error, not a warning — see
@@ -410,4 +419,3 @@ function errorResult(path: string, message: string): LintResult {
   };
   return { path, errors: [issue], warnings: [] };
 }
-

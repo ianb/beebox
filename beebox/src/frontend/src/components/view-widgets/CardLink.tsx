@@ -65,7 +65,7 @@ export function CardLink({ cardRef, view, params, children }: CardLinkProps) {
           params,
         });
       }}
-      className="underline decoration-warm-400 underline-offset-2 hover:decoration-current"
+      className="bbx-theme-link"
     >
       {label}
       {missing ? <span className="ml-1 text-xs text-danger">(missing)</span> : null}

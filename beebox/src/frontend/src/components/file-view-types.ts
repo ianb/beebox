@@ -10,7 +10,7 @@ export interface FileViewProps {
   /** Force a renderer by name, usually from the surface's `?view=` value. */
   rendererName?: string | null;
   /** Let the surface own renderer choice instead of keeping it locally. */
-  onSelectRenderer?: (name: string) => void;
+  onSelectRenderer?: (name: string | null) => void;
   /** Open a link according to the surrounding surface's navigation semantics. */
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   /** Surface selected text to a surrounding chat composer. */

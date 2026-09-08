@@ -65,6 +65,7 @@ export function CardActions({ path, onTrashed }: { path: string; onTrashed?: (()
           <Text as="p" size="sm" tone="subtle" className="mt-2">The card remains recoverable from box Trash and git history.</Text>
           {refs.isLoading ? <Text as="p" size="sm" tone="muted" className="mt-4">Checking links…</Text> : null}
           {refs.error ? <Text as="p" size="sm" tone="danger" className="mt-4">Could not check links: {refs.error.message}</Text> : null}
+          {refs.data?.errors.length ? <Text as="p" size="sm" tone="danger" className="mt-4">Some files could not be checked. The list of links may be incomplete.</Text> : null}
           {referrers.length > 0 ? (
             <section className="mt-4">
               <Text as="h3" size="sm" weight="semibold">{referrers.length} file{referrers.length === 1 ? "" : "s"} link to this card</Text>
