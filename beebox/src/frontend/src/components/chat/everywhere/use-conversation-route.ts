@@ -46,11 +46,12 @@ export function useConversationRoute(conversation: ConversationContextValue) {
     previousUrl.current = routeKey;
     const saved = conversationSelectionSchema.safeParse(location.state.bbxConversation);
     const request = routeConversationRequest({ first, chatPage, search: chatSearch.parse(location.search), selection: first && conversation.rendered ? conversation.rendered : selection,
+      stored: first ? conversation.restored : null,
       remembered: saved.success ? saved.data : null,
       cardPath: location.pathname.includes("/views/") && _splat ? parseViewUrl(_splat).path : null,
       browseDir: location.pathname.includes("/browse/") ? (_splat ?? "") : null });
     if (request) choose(request);
-  }, [routeKey, chatPage, location.search, location.state.bbxConversation, location.pathname, select, selection, _splat, conversation.rendered]);
+  }, [routeKey, chatPage, location.search, location.state.bbxConversation, location.pathname, select, selection, _splat, conversation.rendered, conversation.restored]);
   // Every app history entry keeps the focus it inherited. Back can restore it;
   // a normal link into another landmark never derives a new focus from its path.
   useEffect(() => {

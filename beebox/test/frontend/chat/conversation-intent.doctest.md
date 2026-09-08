@@ -31,6 +31,22 @@ routeConversationRequest({ ...base, chatPage: true, search: { session: "garden-c
 const garden: ConversationSelection = { kind: "ready", label: "Garden", target: { kind: "session", sessionId: "garden-chat", contextDir: "garden" } };
 routeConversationRequest({ ...base, remembered: garden })?.sessionId
 => garden-chat
+
+const stored: ConversationSelection = { kind: "ready", label: "Study", target: { kind: "session", sessionId: "study-chat", contextDir: "study" } };
+routeConversationRequest({ ...base, first: true, selection: cold, remembered: null, stored })
+=> {
+  "kind": "session",
+  "sessionId": "study-chat",
+  "contextDir": "study"
+}
+
+routeConversationRequest({ ...base, first: true, chatPage: true,
+  search: { session: "garden-chat" }, selection: cold, stored })?.sessionId
+=> garden-chat
+
+routeConversationRequest({ ...base, first: true, selection: cold,
+  remembered: garden, stored })?.sessionId
+=> garden-chat
 ```
 
 The first lookup can finish last without replacing the user's newer intent.

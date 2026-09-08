@@ -61,5 +61,5 @@ export function useConversationSelection(boxSlug: string) {
     setState((old) => ({ ...old, selection: replace(old.selection) }));
     setRendered((old) => { if (!old) return old; const next = replace(old); return next.kind === "ready" ? next : old; });
   }, [boxSlug]);
-  return { storageScope, forgetReservation, ensureReservation, ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
+  return { storageScope, forgetReservation, ensureReservation, restored, ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
 }

@@ -8,6 +8,8 @@ import { useConversationSelection } from "./use-conversation-selection";
 export interface ConversationContextValue {
   storageScope: string;
   selection: ConversationSelection;
+  /** Persisted focus used only to choose the first request; never mounted before validation. */
+  restored: ConversationSelection | null;
   rendered: Extract<ConversationSelection, { kind: "ready" }> | null;
   initial: ChatInitialLoad | undefined;
   select: (request: ConversationRequest) => Promise<void>;
