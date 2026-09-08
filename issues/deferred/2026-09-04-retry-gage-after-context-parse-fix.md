@@ -5,7 +5,11 @@ labels: [external-tool]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder filed the upstream bug and wants to try the tool later
+activate-on: 2026-09-15
+category: watch
 ---
+
+> Re-check 2026-09-08 (first): gageml/gage#16 still open, no comments, no release after 0.1.0 (2026-09-04). Re-deferred one week to 2026-09-15; next backoff two weeks, then four.
 
 gage (https://github.com/gageml/gage) scans Claude Code sessions with
 scanners such as `code-review`, `general`, `hidden-thinking`, and
