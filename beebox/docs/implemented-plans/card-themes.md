@@ -1,6 +1,6 @@
 ---
 title: "Card themes: paper, Post-it, and plain"
-status: active
+status: implemented
 workstream: paper-cards
 issues: []
 ---
@@ -15,8 +15,8 @@ three built-in themes, optional app chrome, and a lasting visual tour in test1.
 `issues/decisions`, and `issues/exploration` for theme, Post-it, backside, and
 back-of-card found no matching theme-system item. Related context:
 [public-site aesthetic principles](../../../issues/features/2026-07-20-public-site.md),
-[interface as cards](interface-as-cards.md),
-[chat everywhere](chat-everywhere.md), and
+[interface as cards](../plans/interface-as-cards.md),
+[chat everywhere](../plans/chat-everywhere.md), and
 [card prominence](../implemented-plans/card-prominence.md).
 This plan does not close those workstreams or import their remaining obligations.
 

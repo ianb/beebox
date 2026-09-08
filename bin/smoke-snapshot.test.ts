@@ -12,6 +12,7 @@ import {
   directoryRowCount,
   expandedState,
   firstCardRow,
+  refForDomId,
   hasDomId,
   menuItemNames,
   placeMenuFailure,
@@ -308,6 +309,12 @@ test("directoryRowCount / firstCardRow: counted rows come from real box content"
   assert.deepEqual(firstCardRow(BROWSE_SNAPSHOT), { role: "button", name: "Box, landmark card" });
   assert.equal(directoryRowCount("- button \"/\" [ref=e1]"), 0);
   assert.equal(firstCardRow("- button \"AGENTS.md\" [ref=e1]"), null);
+});
+
+test("refForDomId: finds a stable control without depending on its accessible copy", () => {
+  const listing = '- switch "Showing compact listing — switch to raw" [checked=false, ref=e14, id=bbx-browse-listing-mode]';
+  assert.equal(refForDomId(listing, "bbx-browse-listing-mode"), "e14");
+  assert.equal(refForDomId(listing, "missing"), null);
 });
 
 test("contentAreaRow: finds the one-root content area when a listing has no card row", () => {
