@@ -74,6 +74,7 @@
 
 import Markdoc from "@markdoc/markdoc";
 import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc";
+import { QUOTE_TREATMENTS, validateQuoteTreatment } from "./quote-treatment.js";
 import { validateSourceAttributes } from "./source-model.js";
 import { TODO_STATUSES, validateTodoAttributes } from "./todo-model.js";
 
@@ -147,7 +148,9 @@ export function makeHeadingNode(): Schema {
 const quote: Schema = {
   attributes: {
     from: { type: String },
+    treatment: { type: String, matches: [...QUOTE_TREATMENTS] },
   },
+  validate: (node) => validateQuoteTreatment(node.inline, node.attributes["treatment"]),
   transform(node, config) {
     const attributes = node.transformAttributes(config);
     const children = node.transformChildren(config);

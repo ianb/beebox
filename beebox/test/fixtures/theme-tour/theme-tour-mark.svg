@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120" viewBox="0 0 320 120" role="img" aria-labelledby="title desc">
+  <title id="title">Theme tour mark</title>
+  <desc id="desc">Three overlapping rectangles in paper, sticky note, and plain colors.</desc>
+  <rect width="320" height="120" fill="#f8f7f2"/>
+  <rect x="24" y="22" width="120" height="76" rx="3" fill="#e7dfc8" stroke="#6b6251"/>
+  <rect x="100" y="14" width="120" height="76" rx="3" fill="#f7e889" stroke="#786d2d" transform="rotate(4 160 52)"/>
+  <rect x="178" y="25" width="120" height="76" rx="3" fill="#ffffff" stroke="#454545" transform="rotate(-3 238 63)"/>
+</svg>

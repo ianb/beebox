@@ -54,7 +54,7 @@ export function AmbientReplies(props: AmbientRepliesProps) {
     return () => document.removeEventListener("visibilitychange", visible);
   });
   return (
-    <div className="max-h-72 overflow-y-auto" aria-label="Conversation activity">
+    <div role="region" className="max-h-72 overflow-y-auto" aria-label="Conversation activity">
       {sessions.filter((session) => session.sessionId === props.selectedSessionId || active.includes(session.sessionId)).map((session) => (
         <AmbientSessionReply key={`${props.boxSlug}:${session.sessionId}`} {...props}
           session={session} completion={completed[session.sessionId] ?? null} onActivity={handleActivity} />

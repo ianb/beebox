@@ -2,6 +2,15 @@
 
 UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers conventions that apply to both halves.
 
+## Card themes
+
+Card presentation is theme-driven and independent of view selection. Theme
+surfaces live under `src/frontend/src/themes/`; keep theme IDs and stocks in
+the shared catalog and use literal class maps so Tailwind includes them in the
+build. The user-facing selection and read-only origin details belong in card
+Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
+authoring contract.
+
 ## Data Source Tagging
 
 UI elements that display data from a known source (card, commit, session, etc.) must be tagged with `data-cb-source` attributes for traceability. Use the `cbSource()` and `cbSourceItem()` helpers from `src/frontend/src/lib/source-tag.ts`. Tag the outermost meaningful data boundary — not every inner element. See `docs/data-source-tagging.md` for the full convention.
@@ -165,3 +174,16 @@ What fails lint:
 3. Is it genuinely a one-off in a specific context (inside `components/`)? Then keep it local — don't force abstraction.
 
 New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic role in frontend.md.
+
+The generic theme gallery is installed explicitly into a development box from
+`test/fixtures/theme-tour`. From the monorepo root:
+
+```sh
+node --import tsx beebox/scripts/install-theme-tour.ts <box-root>
+bin/tour card-themes
+bin/tour card-theme-previews
+```
+
+The installer leaves changed files alone and reports conflicts. Its entry card
+is `_content/theme-tour/Theme_Tour.memo.card`. Knowledge audits reset their test
+box; reinstall the gallery afterward if that box was used for an audit.

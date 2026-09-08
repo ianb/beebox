@@ -1,0 +1,19 @@
+---
+status: new
+title: Tucked-card experiment
+created: "2026-09-07T12:04:00+00:00"
+theme:
+  name: paper
+  stock: blue
+---
+This is a static composition study, not a working related-card layout. It shows
+one possible use of a **Project notes** context tab and two deliberately placed
+cards tucked beneath the blue paper card.
+
+![Static composition study of a blue paper card with a Project notes tab and two titled cards tucked beneath it](./stack-experiment.attach/stack.svg)
+
+The two labels point to explicit sample inputs: [one note, three
+stocks](./comparison.memo.card) and [quotes and
+attribution](./quotes.memo.card). Their placement is authored inside the
+illustration. The engine does not currently choose related cards or position a
+stack automatically.

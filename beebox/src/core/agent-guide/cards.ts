@@ -71,6 +71,11 @@ next), but a few belong to every card:
   often; a box where everything is marked has nothing marked, so do not add one
   by reflex when you create a card.
 ${PROMINENCE_FIELD_BULLET}
+- **\`theme:\`** — an optional visual choice, \`{ name: "paper", stock: "cream" }\`.
+  It is independent of the preferred view. Use card Properties to inspect the
+  effective theme or choose a catalogued override; see the card-themes guide
+  for available names, stocks, and the **Use default** action. Do not invent
+  theme IDs or stocks.
 - **refs** — not a fixed field but a pattern: wherever frontmatter or a body tag
   points at another card (a \`ref:\` value, \`key-people[].ref\`, a \`{% source %}\`
   anchor), the path works the same way. ${REF_PATH_RULE}

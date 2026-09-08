@@ -43,7 +43,7 @@ function QuoteSpeakersLine({
 }): ReactNode {
   if (speakers.length === 0) return null;
   return (
-    <div className="text-xs text-warm-500 mb-3">
+    <div className="text-xs text-warm-500 mb-3 bbx-quote-speakers">
       <span className="font-medium">Direct quotes from:</span>{" "}
       {speakers.map((speaker, i) => {
         const display = speakerDisplay(speaker);
@@ -60,7 +60,7 @@ function QuoteSpeakersLine({
               };
               onNavigate(target, { label: display });
             }}
-            className="text-warm-600 hover:text-warm-800 underline-offset-2 hover:underline cursor-pointer"
+            className="bbx-theme-link cursor-pointer"
           >
             {display}
           </button>
@@ -78,8 +78,10 @@ function QuoteSpeakersLine({
   );
 }
 
-export function MarkdownCardView({ data, onNavigate }: RendererProps) {
-  const frontmatter = data.frontmatter;
+export function MarkdownCardView({ data, onNavigate, mode }: RendererProps) {
+  const frontmatter = data.frontmatter === undefined ? undefined : Object.fromEntries(
+    Object.entries(data.frontmatter).filter(([key]) => key !== "theme" && (key !== "title" || mode === "embed")),
+  );
   const body = data.body;
   const speakers = body === undefined ? [] : extractQuoteSpeakers(body);
   const { boxSlug } = useParams({ strict: false });
@@ -90,7 +92,7 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
   );
 
   return (
-    <div className="p-4 max-w-3xl">
+    <div className="bbx-card-content">
       {frontmatter !== undefined && Object.keys(frontmatter).length > 0 ? (
         <div className="mb-4 pb-3 border-b border-warm-200" data-card-section="frontmatter">
           <FrontmatterFields fields={frontmatter} onNavigate={onNavigate} basePath={data.path} />

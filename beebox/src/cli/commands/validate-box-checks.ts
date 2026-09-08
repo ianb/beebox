@@ -12,6 +12,7 @@ import { checkBoxRoot } from "../../lib/box-root-check.js";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../lib/box-reserved-segments.js";
 import { BOX_ROOT_VOCABULARY } from "../../lib/box-root-vocabulary.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { loadPresentationConfig } from "../../core/box/presentation.js";
 
 /**
  * Check for schemas left in the legacy `_config/schemas/` location.
@@ -35,6 +36,14 @@ export async function checkLegacySchemaPath(boxRoot: string): Promise<string[]> 
 export async function checkRootStrayErrors(boxRoot: string): Promise<string[]> {
   const strays = await checkBoxRoot(boxRoot);
   return strays.map((stray) => `Box root: ${stray.message}`);
+}
+
+/** Validate `_config/box.json`'s optional card/chrome presentation subtree. */
+export async function checkPresentationErrors(boxRoot: string): Promise<string[]> {
+  const result = await loadPresentationConfig(boxRoot);
+  return result.status === "invalid"
+    ? result.problems.map((problem) => `Presentation: ${problem}`)
+    : [];
 }
 
 /**

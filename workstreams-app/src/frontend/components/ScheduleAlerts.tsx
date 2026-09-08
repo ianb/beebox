@@ -21,7 +21,7 @@ function AlertBody({ alert }: { alert: ScheduleAlert }) {
         <span className="muted">{friendlyTimestamp(alert.createdAt)}</span>
         {alert.runId ? <span className="muted">run {alert.runId}</span> : null}
       </div>
-      {alert.message ? <p className="schedule-alert-message">{alert.message}</p> : null}
+      {alert.message ? <div className="schedule-alert-message"><Markdown source={alert.message} /></div> : null}
       {alert.details ? <Markdown source={alert.details} /> : null}
     </div>
   );

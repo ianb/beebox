@@ -40,13 +40,8 @@ export class BrowseSession {
     this.session = session;
   }
 
-  // agent-browser's `--session <name>` launches a second Chrome with the
-  // same profile, which fails on the SingletonLock our per-worktree
-  // bin/browse daemon already holds. Until we have per-session profile
-  // dirs, all tour work happens in the default browse session — meaning
-  // tours and interactive bin/browse share one Chrome window.
   private spawnArgs(rest: readonly string[]): string[] {
-    return [...rest];
+    return ["--session", this.session, ...rest];
   }
 
   async run(args: readonly string[], stdinInput?: string): Promise<RunResult> {

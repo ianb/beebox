@@ -48,8 +48,8 @@ export function renderRedAlert(input: {
       ? `**Nothing is broken.** ${count(input.flakes.length, "test file")} failed in the batched run and passed` +
         " again on an isolated re-run, so the failure is recorded as a flake and no issue was filed."
       : input.culprits.length > 0
-        ? `**${count(realFiles.length, "test file")} fail on main**, bisected to ${count(input.culprits.length, "landing")}.`
-        : `**${count(realFiles.length, "test file")} fail on main**, not attributable to a landing.`;
+        ? `**${count(realFiles.length, "test file")} ${realFiles.length === 1 ? "fails" : "fail"} on main**, bisected to ${count(input.culprits.length, "landing")}.`
+        : `**${count(realFiles.length, "test file")} ${realFiles.length === 1 ? "fails" : "fail"} on main**, not attributable to a landing.`;
   const tested =
     `\`${input.testedCommit.slice(0, 8)}\`` +
     (input.baseCommit === null

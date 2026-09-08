@@ -162,6 +162,10 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // yet as `primary` (docs/implemented-plans/card-prominence.md, Track D). The landmark
   // itself is never written.
   { name: "landmark-links-prominence", script: "scripts/migrate/landmark-links-prominence-run.ts" },
+  // Scheduled-script cards still invoking the retired `cb` command point at
+  // `bbx`. Configuration, not card data, like the hooks and gitignore
+  // entries above; the rename rewrote everything but the boxes' own `runs:`.
+  { name: "schedule-runs-bbx-2026-09", script: "scripts/migrate/schedule-runs-bbx.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

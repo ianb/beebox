@@ -1,48 +1,296 @@
 [
-  { "path": "beebox/docs/name-history.md", "occurrenceClass": "display-name", "expectedCount": 1, "reason": "The sole historical record names the former display name." },
-  { "path": "beebox/docs/name-history.md", "occurrenceClass": "compact-name", "expectedCount": 2, "reason": "The sole historical record maps both former code-case forms." },
-  { "path": "beebox/docs/name-history.md", "occurrenceClass": "kebab-name", "expectedCount": 2, "reason": "The sole historical record maps the former package and repository slug." },
-  { "path": "beebox/docs/name-history.md", "occurrenceClass": "standalone-cli-token", "expectedCount": 2, "reason": "The sole historical record maps the former command and explains the tombstone that answers it." },
-  { "path": "beebox/docs/name-history.md", "occurrenceClass": "dot-state-directory", "expectedCount": 1, "reason": "The sole historical record maps the former box state directory." },
-  { "path": "beebox/docs/name-history.md", "occurrenceClass": "config-cli-directory", "expectedCount": 1, "reason": "The sole historical record maps the former machine config directory." },
-  { "path": "beebox/docs/name-history.md", "occurrenceClass": "old-domain", "expectedCount": 1, "reason": "The sole historical record maps the former public domain." },
-  { "path": "issues/closed/decisions/2026-07-21-discussion-channel.md", "occurrenceClass": "old-domain", "expectedCount": 2, "reason": "The closed decision records the actual historical Zulip organization before the move to Discord." },
-  { "path": "issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md", "occurrenceClass": "old-domain", "expectedCount": 3, "reason": "The closed implementation record preserves the actual historical Zulip URL while marking it superseded by Discord." },
-  { "path": "bin/lib/worktree-create.sh", "occurrenceClass": "kebab-name", "expectedCount": 8, "reason": "Worktree setup must recognize and migrate cloned box packages that still declare the retired engine dependency." },
-  { "path": "beebox/test/dev/workstream-box-state.doctest.md", "occurrenceClass": "kebab-name", "expectedCount": 4, "reason": "The regression fixture proves worktree setup migrates the retired engine dependency in existing box packages." },
-  { "path": "bin/lib/worktree-create.sh", "occurrenceClass": "dot-state-directory", "expectedCount": 1, "reason": "Worktree setup migrates the tracked pre-rename box marker when cloning an existing test box." },
-  { "path": "beebox/test/dev/workstream-box-state.doctest.md", "occurrenceClass": "dot-state-directory", "expectedCount": 1, "reason": "The regression fixture proves cloned pre-rename box markers are migrated without changing the source box." },
-  { "path": "issues/closed/bugs/2026-08-31-retired-cb-command-should-direct-to-bbx.md", "occurrenceClass": "standalone-cli-token", "expectedCount": 5, "reason": "The closed issue specifies the deliberate tombstone command that redirects stale callers to bbx without executing work, plus its shipped locations named in the closing note." },
-  { "path": "beebox/src/lib/state-migration.ts", "occurrenceClass": "kebab-name", "expectedCount": 1, "reason": "The persisted-state migration recognizes the former package dependency." },
-  { "path": "beebox/src/core/agent-context-mirrors.ts", "occurrenceClass": "kebab-name", "expectedCount": 1, "reason": "Agent context convergence removes mirrors generated with the retired prefix." },
-  { "path": "beebox/src/core/install-validation-hooks.ts", "occurrenceClass": "kebab-name", "expectedCount": 3, "reason": "Hook convergence recognizes and replaces the retired managed markers." },
-  { "path": "beebox/test/core/agent-context-mirrors.doctest.md", "occurrenceClass": "kebab-name", "expectedCount": 3, "reason": "The regression fixture proves retired agent mirrors are removed." },
-  { "path": "beebox/test/core/install-validation-hooks.doctest.md", "occurrenceClass": "kebab-name", "expectedCount": 6, "reason": "The regression fixture proves repeated retired managed hooks are replaced." },
-  { "path": "workstreams-app/test/router/router-config.test.ts", "occurrenceClass": "kebab-name", "expectedCount": 3, "reason": "The router regression proves a renamed product can continue using its existing physical main-checkout directory." },
-  { "path": "issues/bugs/2026-08-19-box-local-schemas-silently-skip-without-zod.md", "occurrenceClass": "kebab-name", "expectedCount": 2, "reason": "The issue records the former package name while describing migration of box-local schemas." },
-  { "path": "issues/bugs/2026-08-19-box-local-schemas-silently-skip-without-zod.md", "occurrenceClass": "standalone-cli-token", "expectedCount": 2, "reason": "The issue records the former command in historical examples." },
-  { "path": "issues/code-quality/2026-08-19-site-page-cards-noisy-under-validate.md", "occurrenceClass": "kebab-name", "expectedCount": 1, "reason": "The issue records the former repository context for the site-card validation problem." },
-  { "path": "issues/code-quality/2026-08-19-site-page-cards-noisy-under-validate.md", "occurrenceClass": "standalone-cli-token", "expectedCount": 1, "reason": "The issue records the former command in a historical example." },
-  { "path": "issues/decisions/2026-08-19-bee-box-rename.md", "occurrenceClass": "kebab-name", "expectedCount": 2, "reason": "The decision records the retired repository name." },
-  { "path": "issues/decisions/2026-08-19-bee-box-rename.md", "occurrenceClass": "standalone-cli-token", "expectedCount": 1, "reason": "The decision records the retired command." },
-  { "path": "issues/decisions/2026-08-19-bee-box-rename.md", "occurrenceClass": "old-domain", "expectedCount": 1, "reason": "The decision records the retired community hostname." },
-  { "path": "issues/exploration/2026-08-19-site-authored-in-a-box.md", "occurrenceClass": "kebab-name", "expectedCount": 4, "reason": "The exploration records the former repository name as historical context." },
-  { "path": "site/CLAUDE.md", "occurrenceClass": "kebab-name", "expectedCount": 2, "reason": "The site authoring guidance names the former repository only to describe source provenance." },
-  { "path": "site/build.test.ts", "occurrenceClass": "kebab-name", "expectedCount": 2, "reason": "Site rendering fixtures preserve former-repository source references." },
-  { "path": "site/cards.ts", "occurrenceClass": "kebab-name", "expectedCount": 1, "reason": "The site-card loader recognizes the former source root during the transition." },
-  { "path": "site/fisheye.test.ts", "occurrenceClass": "kebab-name", "expectedCount": 2, "reason": "Fisheye fixtures preserve former-repository source references." },
-  { "path": "site/nuggets.test.ts", "occurrenceClass": "kebab-name", "expectedCount": 3, "reason": "Nugget fixtures preserve former-repository source references." },
-  { "path": "site/nuggets.ts", "occurrenceClass": "kebab-name", "expectedCount": 1, "reason": "The nugget loader recognizes the former source root during the transition." },
-  { "path": "beebox/src/lib/state-migration.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "The persisted-state migration recognizes the former marker and box state directory." },
-  { "path": "beebox/src/lib/state-migration.ts", "occurrenceClass": "config-cli-directory", "expectedCount": 2, "reason": "The persisted-state migration recognizes the former machine config and state directories." },
-  { "path": "beebox/test/lib/state-migration.doctest.md", "occurrenceClass": "dot-state-directory", "expectedCount": 11, "reason": "Migration fixtures prove former box state and marker paths move, conflict, or converge safely." },
-  { "path": "beebox/test/hub/hub-config.doctest.md", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "Hub discovery fixtures prove legacy state is recognized without router-side mutation." },
-  { "path": "workstreams-app/src/router/box-entry.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 2, "reason": "The shared router recognizes legacy box identity without performing an engine migration." },
-  { "path": "workstreams-app/test/router/box-entry.test.ts", "occurrenceClass": "dot-state-directory", "expectedCount": 3, "reason": "Router fixtures cover legacy marker and state discovery without mutation." },
-  { "path": "beebox/bin/cb", "occurrenceClass": "path-cli-segment", "expectedCount": 1, "reason": "The tombstone must be installed under the retired command's own name to intercept stale calls." },
-  { "path": "beebox/bin/cb", "occurrenceClass": "standalone-cli-token", "expectedCount": 3, "reason": "The tombstone's own comment explains which retired command it answers and why it refuses to forward." },
-  { "path": "beebox/deploy/deploy.sh", "occurrenceClass": "standalone-cli-token", "expectedCount": 1, "reason": "The deploy refreshes the retired command's symlink so servers provisioned before the tombstone still answer stale calls." },
-  { "path": "beebox/deploy/hetzner/setup-server.sh", "occurrenceClass": "standalone-cli-token", "expectedCount": 1, "reason": "Provisioning installs the tombstone under the retired command's name alongside bbx." },
-  { "path": "beebox/package.json", "occurrenceClass": "standalone-cli-token", "expectedCount": 2, "reason": "The package bin map ships the tombstone under the retired command's name for installed dependencies." },
-  { "path": "beebox/test/cli/cb-tombstone.doctest.md", "occurrenceClass": "standalone-cli-token", "expectedCount": 9, "reason": "The regression fixture proves stale invocations of the retired command get the migration message and never perform work." }
+  {
+    "path": "beebox/docs/name-history.md",
+    "occurrenceClass": "display-name",
+    "expectedCount": 1,
+    "reason": "The sole historical record names the former display name."
+  },
+  {
+    "path": "beebox/docs/name-history.md",
+    "occurrenceClass": "compact-name",
+    "expectedCount": 2,
+    "reason": "The sole historical record maps both former code-case forms."
+  },
+  {
+    "path": "beebox/docs/name-history.md",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 2,
+    "reason": "The sole historical record maps the former package and repository slug."
+  },
+  {
+    "path": "beebox/docs/name-history.md",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 2,
+    "reason": "The sole historical record maps the former command and explains the tombstone that answers it."
+  },
+  {
+    "path": "beebox/docs/name-history.md",
+    "occurrenceClass": "dot-state-directory",
+    "expectedCount": 1,
+    "reason": "The sole historical record maps the former box state directory."
+  },
+  {
+    "path": "beebox/docs/name-history.md",
+    "occurrenceClass": "config-cli-directory",
+    "expectedCount": 1,
+    "reason": "The sole historical record maps the former machine config directory."
+  },
+  {
+    "path": "beebox/docs/name-history.md",
+    "occurrenceClass": "old-domain",
+    "expectedCount": 1,
+    "reason": "The sole historical record maps the former public domain."
+  },
+  {
+    "path": "issues/closed/decisions/2026-07-21-discussion-channel.md",
+    "occurrenceClass": "old-domain",
+    "expectedCount": 2,
+    "reason": "The closed decision records the actual historical Zulip organization before the move to Discord."
+  },
+  {
+    "path": "issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md",
+    "occurrenceClass": "old-domain",
+    "expectedCount": 3,
+    "reason": "The closed implementation record preserves the actual historical Zulip URL while marking it superseded by Discord."
+  },
+  {
+    "path": "bin/lib/worktree-create.sh",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 8,
+    "reason": "Worktree setup must recognize and migrate cloned box packages that still declare the retired engine dependency."
+  },
+  {
+    "path": "beebox/test/dev/workstream-box-state.doctest.md",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 4,
+    "reason": "The regression fixture proves worktree setup migrates the retired engine dependency in existing box packages."
+  },
+  {
+    "path": "bin/lib/worktree-create.sh",
+    "occurrenceClass": "dot-state-directory",
+    "expectedCount": 1,
+    "reason": "Worktree setup migrates the tracked pre-rename box marker when cloning an existing test box."
+  },
+  {
+    "path": "beebox/test/dev/workstream-box-state.doctest.md",
+    "occurrenceClass": "dot-state-directory",
+    "expectedCount": 1,
+    "reason": "The regression fixture proves cloned pre-rename box markers are migrated without changing the source box."
+  },
+  {
+    "path": "issues/closed/bugs/2026-08-31-retired-cb-command-should-direct-to-bbx.md",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 5,
+    "reason": "The closed issue specifies the deliberate tombstone command that redirects stale callers to bbx without executing work, plus its shipped locations named in the closing note."
+  },
+  {
+    "path": "beebox/src/lib/state-migration.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 1,
+    "reason": "The persisted-state migration recognizes the former package dependency."
+  },
+  {
+    "path": "beebox/src/core/agent-context-mirrors.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 1,
+    "reason": "Agent context convergence removes mirrors generated with the retired prefix."
+  },
+  {
+    "path": "beebox/src/core/install-validation-hooks.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 3,
+    "reason": "Hook convergence recognizes and replaces the retired managed markers."
+  },
+  {
+    "path": "beebox/test/core/agent-context-mirrors.doctest.md",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 3,
+    "reason": "The regression fixture proves retired agent mirrors are removed."
+  },
+  {
+    "path": "beebox/test/core/install-validation-hooks.doctest.md",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 6,
+    "reason": "The regression fixture proves repeated retired managed hooks are replaced."
+  },
+  {
+    "path": "workstreams-app/test/router/router-config.test.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 3,
+    "reason": "The router regression proves a renamed product can continue using its existing physical main-checkout directory."
+  },
+  {
+    "path": "issues/bugs/2026-08-19-box-local-schemas-silently-skip-without-zod.md",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 2,
+    "reason": "The issue records the former package name while describing migration of box-local schemas."
+  },
+  {
+    "path": "issues/bugs/2026-08-19-box-local-schemas-silently-skip-without-zod.md",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 2,
+    "reason": "The issue records the former command in historical examples."
+  },
+  {
+    "path": "issues/code-quality/2026-08-19-site-page-cards-noisy-under-validate.md",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 1,
+    "reason": "The issue records the former repository context for the site-card validation problem."
+  },
+  {
+    "path": "issues/code-quality/2026-08-19-site-page-cards-noisy-under-validate.md",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 1,
+    "reason": "The issue records the former command in a historical example."
+  },
+  {
+    "path": "issues/decisions/2026-08-19-bee-box-rename.md",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 2,
+    "reason": "The decision records the retired repository name."
+  },
+  {
+    "path": "issues/decisions/2026-08-19-bee-box-rename.md",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 1,
+    "reason": "The decision records the retired command."
+  },
+  {
+    "path": "issues/decisions/2026-08-19-bee-box-rename.md",
+    "occurrenceClass": "old-domain",
+    "expectedCount": 1,
+    "reason": "The decision records the retired community hostname."
+  },
+  {
+    "path": "issues/exploration/2026-08-19-site-authored-in-a-box.md",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 4,
+    "reason": "The exploration records the former repository name as historical context."
+  },
+  {
+    "path": "site/CLAUDE.md",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 2,
+    "reason": "The site authoring guidance names the former repository only to describe source provenance."
+  },
+  {
+    "path": "site/build.test.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 2,
+    "reason": "Site rendering fixtures preserve former-repository source references."
+  },
+  {
+    "path": "site/cards.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 1,
+    "reason": "The site-card loader recognizes the former source root during the transition."
+  },
+  {
+    "path": "site/fisheye.test.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 2,
+    "reason": "Fisheye fixtures preserve former-repository source references."
+  },
+  {
+    "path": "site/nuggets.test.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 3,
+    "reason": "Nugget fixtures preserve former-repository source references."
+  },
+  {
+    "path": "site/nuggets.ts",
+    "occurrenceClass": "kebab-name",
+    "expectedCount": 1,
+    "reason": "The nugget loader recognizes the former source root during the transition."
+  },
+  {
+    "path": "beebox/src/lib/state-migration.ts",
+    "occurrenceClass": "dot-state-directory",
+    "expectedCount": 2,
+    "reason": "The persisted-state migration recognizes the former marker and box state directory."
+  },
+  {
+    "path": "beebox/src/lib/state-migration.ts",
+    "occurrenceClass": "config-cli-directory",
+    "expectedCount": 2,
+    "reason": "The persisted-state migration recognizes the former machine config and state directories."
+  },
+  {
+    "path": "beebox/test/lib/state-migration.doctest.md",
+    "occurrenceClass": "dot-state-directory",
+    "expectedCount": 11,
+    "reason": "Migration fixtures prove former box state and marker paths move, conflict, or converge safely."
+  },
+  {
+    "path": "beebox/test/hub/hub-config.doctest.md",
+    "occurrenceClass": "dot-state-directory",
+    "expectedCount": 2,
+    "reason": "Hub discovery fixtures prove legacy state is recognized without router-side mutation."
+  },
+  {
+    "path": "workstreams-app/src/router/box-entry.ts",
+    "occurrenceClass": "dot-state-directory",
+    "expectedCount": 2,
+    "reason": "The shared router recognizes legacy box identity without performing an engine migration."
+  },
+  {
+    "path": "workstreams-app/test/router/box-entry.test.ts",
+    "occurrenceClass": "dot-state-directory",
+    "expectedCount": 3,
+    "reason": "Router fixtures cover legacy marker and state discovery without mutation."
+  },
+  {
+    "path": "beebox/bin/cb",
+    "occurrenceClass": "path-cli-segment",
+    "expectedCount": 1,
+    "reason": "The tombstone must be installed under the retired command's own name to intercept stale calls."
+  },
+  {
+    "path": "beebox/bin/cb",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 3,
+    "reason": "The tombstone's own comment explains which retired command it answers and why it refuses to forward."
+  },
+  {
+    "path": "beebox/deploy/deploy.sh",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 1,
+    "reason": "The deploy refreshes the retired command's symlink so servers provisioned before the tombstone still answer stale calls."
+  },
+  {
+    "path": "beebox/deploy/hetzner/setup-server.sh",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 1,
+    "reason": "Provisioning installs the tombstone under the retired command's name alongside bbx."
+  },
+  {
+    "path": "beebox/package.json",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 2,
+    "reason": "The package bin map ships the tombstone under the retired command's name for installed dependencies."
+  },
+  {
+    "path": "beebox/test/cli/cb-tombstone.doctest.md",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 9,
+    "reason": "The regression fixture proves stale invocations of the retired command get the migration message and never perform work."
+  },
+  {
+    "path": "beebox/scripts/migrate/schedule-runs-bbx.ts",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 4,
+    "reason": "The migrator that rewrites boxes' scheduled-script runs: fields off the retired command must name it to explain and match it."
+  },
+  {
+    "path": "beebox/src/core/migrations.ts",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 1,
+    "reason": "The registry comment for schedule-runs-bbx-2026-09 names the retired command the migration retires."
+  },
+  {
+    "path": "beebox/test/core/migrations/schedule-runs-bbx.doctest.md",
+    "occurrenceClass": "standalone-cli-token",
+    "expectedCount": 5,
+    "reason": "The regression fixture proves the retired command word is rewritten and nothing else is."
+  }
 ]

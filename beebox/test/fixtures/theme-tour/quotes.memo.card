@@ -1,0 +1,34 @@
+---
+status: new
+title: Quotes and attribution
+created: "2026-09-07T12:02:00+00:00"
+theme:
+  name: post-it
+  stock: mint
+---
+Rowan Vale's line appears four times in the studio notes. The words and
+attribution stay fixed while the card's default and explicit treatments change.
+
+Default treatment
+
+{% quote from="Rowan Vale" %}
+Make room for the next useful thing.
+{% /quote %}
+
+Layered treatment
+
+{% quote treatment="layered" from="Rowan Vale" %}
+Make room for the next useful thing.
+{% /quote %}
+
+Inset treatment
+
+{% quote treatment="inset" from="Rowan Vale" %}
+Make room for the next useful thing.
+{% /quote %}
+
+Plain treatment
+
+{% quote treatment="plain" from="Rowan Vale" %}
+Make room for the next useful thing.
+{% /quote %}

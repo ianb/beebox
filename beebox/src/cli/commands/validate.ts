@@ -15,13 +15,7 @@ import { requireBoxRoot, isCardFile, isMarkdownFile, isTrashedCard, isViewFile }
 import { listStagedCards } from "../../lib/staged-files.js";
 import { runPreCommitChecks, rejectUnsupportedPreCommitScope } from "./validate-pre-commit.js";
 import { collectDossierCanonicalWarnings, collectViewCanonicalWarnings } from "../../core/canonical-refs.js";
-import {
-  canonicalCounts,
-  formatCanonicalReport,
-  rejectUnsupportedCanonicalScope,
-  runCanonicalFix,
-  type CanonicalBuckets,
-} from "./validate-canonical.js";
+import { canonicalCounts, formatCanonicalReport, rejectUnsupportedCanonicalScope, runCanonicalFix, type CanonicalBuckets } from "./validate-canonical.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
 import { collectViewRefWarnings } from "../../core/views/refs.js";
 import { getStatus } from "../../lib/git.js";
@@ -33,7 +27,7 @@ import { buildLoadContext } from "../../core/load-context.js";
 import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external/url-check.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../core/card-io.js";
-import { checkLegacySchemaPath, checkReservedSegmentErrors, checkRootStrayErrors } from "./validate-box-checks.js";
+import { checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors } from "./validate-box-checks.js";
 import { resolveCliTargetPath } from "../lib/cli-target-path.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
@@ -85,6 +79,8 @@ interface ValidationResults extends CollectedResults {
   rootStrayErrors: string[];
   /** Below-root reserved-name check (`box-reserved-segments.ts`): entries nesting an area name below the root. Same box-wide treatment. */
   reservedSegmentErrors: string[];
+  /** Invalid card/chrome presentation configuration from `_config/box.json`. */
+  presentationErrors: string[];
   /** Whether `--canonical` asked for the canonical-form report. */
   canonical: boolean;
 }
@@ -234,7 +230,7 @@ const NO_CANONICAL = { canonicalViewWarnings: [], canonicalDossierWarnings: [] }
 
 /** Print human-readable card/markdown/attach/legacy-schema-path results to stdout. */
 function printTextResults(results: ValidationResults): void {
-  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors } = results;
+  const { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors } = results;
   const colors = useColor();
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors });
@@ -266,7 +262,7 @@ function printTextResults(results: ValidationResults): void {
   if (viewWarnings.length > 0) {
     console.log(`\n${viewWarnings.join("\n")}`);
   }
-  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors, ...reservedSegmentErrors];
+  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors, ...reservedSegmentErrors, ...presentationErrors];
   if (boxWideErrors.length > 0) console.log(`\n${boxWideErrors.join("\n")}`);
   if (results.canonical) {
     console.log(`\n${formatCanonicalReport(canonicalBuckets(results), { colors })}`);
@@ -292,14 +288,15 @@ async function checkCommitted(boxRoot: string, { json }: { json: boolean }): Pro
   }
 }
 
-function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors }: ValidationResults): number {
+function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors }: ValidationResults): number {
   return (
     (cardSummary !== null ? cardSummary.totalErrors : 0) +
     (mdSummary !== null ? mdSummary.totalErrors : 0) +
     attachErrors.length +
     legacySchemaErrors.length +
     rootStrayErrors.length +
-    reservedSegmentErrors.length
+    reservedSegmentErrors.length +
+    presentationErrors.length
   );
 }
 
@@ -363,7 +360,9 @@ export const validateCommand = new Command("validate")
         const collected = await collectResults(options, { boxRoot, ctx, resolved, json, ignore, canonical });
         const legacySchemaErrors = await checkLegacySchemaPath(boxRoot);
         const rootStrayErrors = await checkRootStrayErrors(boxRoot);
-        const results: ValidationResults = { ...collected, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors: await checkReservedSegmentErrors(boxRoot), canonical };
+        const reservedSegmentErrors = await checkReservedSegmentErrors(boxRoot);
+        const presentationErrors = await checkPresentationErrors(boxRoot);
+        const results: ValidationResults = { ...collected, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, canonical };
 
         if (json) {
           const counts = canonicalCounts(canonicalBuckets(results));
@@ -381,6 +380,7 @@ export const validateCommand = new Command("validate")
             legacySchemaPath: results.legacySchemaErrors,
             rootStrays: results.rootStrayErrors,
             reservedSegments: results.reservedSegmentErrors,
+            presentation: results.presentationErrors,
             // The `--canonical` buckets, top-level and separate for the same
             // reason `brokenRefs` is: a relative-but-resolving ref is a
             // different signal from a broken one. Zeroed when --canonical

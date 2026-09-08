@@ -266,7 +266,7 @@ export function ChatView(props: {
   }, [visible, hasRoute, onHideConversation, overlayVisible]);
   return (
     <>
-      <div className="h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden">
+      <div className="bbx-conversation-desk h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden">
         {barChrome}
         <div className={`flex flex-1 min-h-0 min-w-0 ${hasCompanion ? "flex-col md:flex-row" : ""}`}>
           {hasRoute ? <div className={visible ? "hidden md:block flex-1 min-w-0 overflow-auto" : "flex-1 min-w-0 overflow-auto"}>{props.routeContent}</div> : null}
@@ -278,7 +278,7 @@ export function ChatView(props: {
             {messageList}
           </div>
         </div>
-        <div ref={composer} className="flex flex-col w-full max-w-5xl mx-auto min-w-0">
+        <div ref={composer} className="bbx-composer-material flex flex-col w-full max-w-5xl mx-auto min-w-0">
           {!visible ? <div className="px-3 py-1"><Button id="bbx-chat-show-conversation" size="sm" intent="ghost" onClick={props.onShowConversation}>Open conversation</Button></div> : null}
           {props.selectionNotice}
           {props.ambientRegion}

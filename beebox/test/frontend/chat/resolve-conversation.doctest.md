@@ -112,7 +112,7 @@ const recoveryUtils = cachedBootstrapUtils({
 await recoveryUtils.utils.chat.directoryFor.fetch({ sessionId: coinedId });
 const recovered = await resolveConversation({
   utils: recoveryUtils.utils, reserve, receipts: reloadedReceipts,
-  request: { kind: "session", sessionId: coinedId },
+  request: { kind: "session", named: true, sessionId: coinedId },
 });
 const recoveryCall = reserveCalls[1];
 const recoveredContext = recovered.selection.kind === "ready" ? recovered.selection.target.contextDir : "unavailable";
@@ -136,11 +136,11 @@ let reserves = 0;
 const reserve: ResolveParams["reserve"] = async () => { reserves += 1; return { kind: "taken" }; };
 const unknownUtils = fakeUtils({ bootstraps: [unavailable("unknown-id")] });
 const unknown = await resolveConversation({ utils: unknownUtils.utils, reserve,
-  receipts: paperReceipts, request: { kind: "session", sessionId: "unknown-id" } });
+  receipts: paperReceipts, request: { kind: "session", named: true, sessionId: "unknown-id" } });
 const chatReceipts = new ReservationReceipts(storage, "chat-everywhere/test1");
 const crossScopeUtils = fakeUtils({ bootstraps: [unavailable("other-scope-id")] });
 const crossScope = await resolveConversation({ utils: crossScopeUtils.utils, reserve,
-  receipts: chatReceipts, request: { kind: "session", sessionId: "other-scope-id" } });
+  receipts: chatReceipts, request: { kind: "session", named: true, sessionId: "other-scope-id" } });
 JSON.stringify({ unknown: unknown.selection.kind, crossScope: crossScope.selection.kind, reserves,
   unknownBootstraps: unknownUtils.bootstrapCalls(), crossScopeBootstraps: crossScopeUtils.bootstrapCalls() })
 => {"unknown":"unavailable","crossScope":"unavailable","reserves":0,"unknownBootstraps":1,"crossScopeBootstraps":1}
@@ -158,7 +158,7 @@ let reserves = 0;
 const reserve: ResolveParams["reserve"] = async () => { reserves += 1; return { kind: "taken" }; };
 const utils = fakeUtils({ bootstraps: [unavailable("still-missing"), { kind: "empty" }] });
 const result = await resolveConversation({ utils: utils.utils, reserve, receipts,
-  request: { kind: "session", sessionId: "still-missing" } });
+  request: { kind: "session", named: true, sessionId: "still-missing" } });
 const context = result.selection.kind === "unavailable" ? result.selection.contextDir : "wrong";
 JSON.stringify({ kind: result.selection.kind, context, reserves, bootstraps: utils.bootstrapCalls() })
 => {"kind":"unavailable","context":"papers","reserves":1,"bootstraps":2}
@@ -173,7 +173,7 @@ const receipts = new ReservationReceipts(storage, "paper-cards/test1");
 receipts.put({ sessionId: "became-real", contextDir: "papers", engine: "claude" });
 const utils = fakeUtils({ bootstraps: [unavailable("became-real"), resumable("became-real", 1)], directory: "papers" });
 const result = await resolveConversation({ utils: utils.utils, reserve: async () => ({ kind: "taken" }), receipts,
-  request: { kind: "session", sessionId: "became-real" } });
+  request: { kind: "session", named: true, sessionId: "became-real" } });
 JSON.stringify({ kind: result.selection.kind, receipt: receipts.get("became-real") ?? null })
 => {"kind":"ready","receipt":null}
 ```
@@ -194,4 +194,20 @@ const result = await resolveConversation({ utils: utils.utils,
 const target = result.selection.kind === "ready" ? result.selection.target : null;
 JSON.stringify({ target: target?.kind === "start" ? { ...target, clientConversationId: "<uuid>" } : target, reserves })
 => {"target":{"kind":"start","clientConversationId":"<uuid>","contextDir":"_content/lessons","engine":"codex","model":"gpt-5","seedFeatures":{"audience":"teacher"}},"reserves":0}
+```
+
+## An implicitly chosen missing transcript starts fresh
+
+An old box default or remembered chat does not require the user to recover an
+unavailable transcript. Explicit picks above still preserve the requested id.
+
+```ts
+const utils = fakeUtils({ boxEngine: "codex", bootstraps: [unavailable("old-default")] });
+const result = await resolveConversation({ utils: utils.utils,
+  reserve: async () => ({ kind: "unsupported" }), receipts: null,
+  request: { kind: "session", sessionId: "old-default", contextDir: "papers" },
+});
+const target = result.selection.kind === "ready" ? result.selection.target : null;
+JSON.stringify({ kind: result.selection.kind, target: target?.kind, contextDir: target?.contextDir })
+=> {"kind":"ready","target":"start","contextDir":"papers"}
 ```

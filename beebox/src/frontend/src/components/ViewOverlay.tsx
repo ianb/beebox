@@ -22,6 +22,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { FileView } from "./FileView";
+import { isCardPath } from "./file-view-data";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
 interface ViewOverlayState {
@@ -87,6 +88,7 @@ function ViewOverlayPanel({
   onClose: () => void;
 }): React.JSX.Element {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const card = isCardPath(state.target.path);
   const title = state.label !== undefined && state.label !== "" ? state.label : basename(state.target.path);
 
   // Focus the close button on open (keyboard/AT reach the dismiss immediately),
@@ -121,16 +123,16 @@ function ViewOverlayPanel({
         role="dialog"
         aria-modal="false"
         aria-label={title}
-        className="relative m-auto flex flex-col w-full h-full sm:h-[85vh] sm:max-w-3xl bg-white sm:rounded-lg shadow-xl overflow-hidden"
+        className={card ? "bbx-card-overlay" : "relative m-auto flex flex-col w-full h-full sm:h-[85vh] sm:max-w-3xl bg-white sm:rounded-lg shadow-xl overflow-hidden"}
       >
-        <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
-          <span className="flex-1 min-w-0 truncate text-sm font-medium">{title}</span>
+        <div className={card ? "bbx-card-overlay-dismiss" : "flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50"}>
+          {card ? null : <span className="flex-1 min-w-0 truncate text-sm font-medium">{title}</span>}
           <CloseButton closeRef={closeRef} onClose={onClose} />
         </div>
         {/* The zoomed card is user content — excluded from the `bbx chat ui`
-            walk the way the companion pane's is; the dialog's title row and
+            walk the way the companion pane's is; the dialog landmark and
             close button stay scannable. */}
-        <div data-bbx-scan="exclude" className="flex-1 min-h-0 overflow-auto">
+        <div data-bbx-scan="exclude" className={card ? "bbx-card-overlay-desk" : "flex-1 min-h-0 overflow-auto"}>
           <FileView
             path={state.target.path}
             mode="companion"
@@ -138,6 +140,7 @@ function ViewOverlayPanel({
             params={state.target.params}
             viewState={state.target.viewState}
             onViewStateChange={(next) => onOpen({ ...state.target, viewState: next }, state.label === undefined ? undefined : { label: state.label })}
+            onSelectRenderer={(viewer) => onOpen({ ...state.target, viewer, viewState: null }, state.label === undefined ? undefined : { label: state.label })}
             onNavigate={onOpen}
           />
         </div>
@@ -159,7 +162,7 @@ function CloseButton({
       id="bbx-view-overlay-close"
       type="button"
       onClick={onClose}
-      aria-label="Close"
+      aria-label="Close preview"
       className="flex-shrink-0 p-1.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

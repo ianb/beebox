@@ -11,12 +11,21 @@
 
 import type { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { CardRefUnresolvedError, NoCardToOpenError } from "./smoke-errors.js";
-import { contentAreaRow, firstCardRow, refFor } from "./smoke-snapshot.js";
+import { contentAreaRow, firstCardRow, refFor, refForDomId } from "./smoke-snapshot.js";
+
+async function revealFoldedRows(session: BrowseSession, listing: string): Promise<string> {
+  if (firstCardRow(listing) !== null) return listing;
+  const modeRef = refForDomId(listing, "bbx-browse-listing-mode");
+  if (modeRef === null) return listing;
+  await session.clickRef(modeRef);
+  return session.snapshot({ interactiveOnly: true });
+}
 
 export async function findCardRow(
   session: BrowseSession,
   listing: string,
 ): Promise<{ listing: string; row: { role: "button"; name: string } }> {
+  listing = await revealFoldedRows(session, listing);
   const row = firstCardRow(listing);
   if (row !== null) return { listing, row };
   const contentRow = contentAreaRow(listing);
@@ -34,7 +43,10 @@ export async function findCardRow(
   // auto-scrolling.
   await session.run(["scrollintoview", `@${contentRef}`]);
   await session.clickRef(contentRef);
-  const drilled = await session.snapshot({ interactiveOnly: true });
+  const drilled = await revealFoldedRows(
+    session,
+    await session.snapshot({ interactiveOnly: true }),
+  );
   const drilledRow = firstCardRow(drilled);
   if (drilledRow === null) {
     throw new NoCardToOpenError(drilled);

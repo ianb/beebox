@@ -17,6 +17,8 @@ export interface ConversationRequest {
   cardPath?: string;
   engine?: ChatAgentEngine;
   model?: string;
+  /** The user named this chat (the URL's `?session=`, or a pick from a list); a restored or remembered one is not named. */
+  named?: boolean;
 }
 export interface ResolvedConversation { selection: ConversationSelection; initial?: ChatInitialLoad }
 type Reserve = (input: { sessionId: string; contextDir: string; engine?: ChatAgentEngine; model?: string }) => Promise<RouterOutput["chat"]["reserveSession"]>;
@@ -100,6 +102,8 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
   const recovered = await recoverMissingReservation({ ...params, sessionId: session, data, contextDir });
   data = recovered.data;
   contextDir = recovered.contextDir;
+  // Recover a proven empty reservation before replacing an implicitly selected missing chat.
+  if (data.kind === "unavailable" && request.named !== true && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
   if (data.kind === "unavailable") return { selection: { kind: "unavailable", contextDir, reason: data.reason === "missing-local-transcript" ? "This conversation has no saved transcript in this box." : `Conversation unavailable: ${data.reason}` } };
   if (data.history.total > 0) {
     try { params.receipts?.remove(data.sessionId); }

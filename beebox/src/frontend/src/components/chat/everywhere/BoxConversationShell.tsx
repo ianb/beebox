@@ -50,7 +50,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
       void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: id }) });
       return;
     }
-    void conversation.select({ kind: "session", sessionId: id });
+    void conversation.select({ kind: "session", sessionId: id, named: true });
     route.showConversation();
   }
   function handleNewConversation() {

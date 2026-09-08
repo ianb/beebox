@@ -6,7 +6,12 @@ toward its exit code. The check itself (`checkBoxRoot`) is doctested in
 `test/lib/box-root-check.doctest.md`; this covers only the formatting.
 
 ```ts setup
-import { checkReservedSegmentErrors, checkRootStrayErrors } from "../../../src/cli/commands/validate-box-checks.js";
+import {
+  checkPresentationErrors,
+  checkReservedSegmentErrors,
+  checkRootStrayErrors,
+} from "../../../src/cli/commands/validate-box-checks.js";
+import { clearBoxConfigCache } from "../../../src/core/box/config.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 
@@ -79,4 +84,35 @@ Reserved name: _tmp/_config: "_config" is a reserved box-area name, legal only a
 
 ```ts cleanup
 await tmpBox.cleanup();
+```
+
+## Card-theme presentation configuration
+
+The box-wide validator checks `_config/box.json`, including catalog membership
+and the deliberately small path-pattern language:
+
+```ts
+const themeBox = await makeTmpBox();
+await themeBox.write("_config/box.json", JSON.stringify({
+  presentation: {
+    default: { name: "paper", stock: "cream" },
+    rules: [{ match: "_content/**", theme: { name: "post-it", stock: "yellow" } }],
+  },
+}));
+JSON.stringify(await checkPresentationErrors(themeBox.root))
+=> []
+
+await themeBox.write("_config/box.json", JSON.stringify({
+  presentation: {
+    rules: [{ match: "../outside/**", theme: { name: "post-it", stock: "purple" } }],
+  },
+}));
+clearBoxConfigCache(themeBox.root);
+(await checkPresentationErrors(themeBox.root)).join("\n")
+=> Presentation: presentation.rules.0.match: pattern must not contain . or .. path segments
+Presentation: presentation.rules[0].theme names unknown stock "purple" for "post-it"; available stocks: "yellow", "rose", "mint"
+```
+
+```ts cleanup
+await themeBox.cleanup();
 ```
