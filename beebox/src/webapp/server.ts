@@ -124,7 +124,11 @@ export async function createServer(options?: InternalServerOptions): Promise<Fas
   // eslint-disable-next-line max-params -- Fastify's setErrorHandler callback signature is (error, request, reply)
   server.setErrorHandler<FastifyError>((error, request, reply) => {
     const statusCode = error.statusCode ?? 500;
-    console.error(`[http] ${request.method} ${request.url} failed (${statusCode}): ${error.message}`);
+    // A fetch that never got a response says only "fetch failed"; the reason
+    // (ENOTFOUND, ECONNRESET, a certificate) rides in `cause`, and a log line
+    // without it cannot be acted on (a TTS 500 on 2026-09-08 read that way).
+    const cause = error.cause instanceof Error ? ` — cause: ${error.cause.message}` : "";
+    console.error(`[http] ${request.method} ${request.url} failed (${statusCode}): ${error.message}${cause}`);
     reply.status(statusCode).send({
       error: statusCode < 500 ? error.message : "Internal server error",
     });

@@ -92,3 +92,39 @@ JSON.stringify({ status: emptyRes.statusCode, body: emptyRes.body })
 ```ts cleanup
 await emptyCtx.cleanup();
 ```
+
+## A backend that never answers is a 502 that says why
+
+`fetch` reports a connection that never got a response as a `TypeError`
+whose message is only "fetch failed"; the reason — DNS, a reset, a
+certificate — rides in `cause`. Passing that up as a bare 500 "Internal
+server error" loses it (2026-09-08: a TTS play reached the boxholder exactly
+that way). The route names the backend's failure instead; the server's error
+log gains the cause for everything else.
+
+```ts
+const unreachable = {
+  backend: "openai" as const,
+  stylable: true,
+  textToSpeech: async () => {
+    throw new TypeError("fetch failed", { cause: new Error("getaddrinfo ENOTFOUND api.openai.com") });
+  },
+};
+const downCtx = await makeTestServer({ services: { openaiAudio: unreachable } });
+const errors: string[] = [];
+const originalError = console.error;
+console.error = (...args: unknown[]) => errors.push(args.map(String).join(" "));
+const downRes = await (async () => {
+  try {
+    return await downCtx.request({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
+  } finally {
+    console.error = originalError;
+  }
+})();
+JSON.stringify({ status: downRes.statusCode, body: downRes.body, logged: errors.some((line) => line.includes("ENOTFOUND")) })
+=> {"status":502,"body":{"error":"TTS backend unreachable: getaddrinfo ENOTFOUND api.openai.com"},"logged":true}
+```
+
+```ts cleanup
+await downCtx.cleanup();
+```
