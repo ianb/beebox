@@ -187,6 +187,37 @@ JSON.stringify({ kind: result.selection.kind, receipt: receipts.get("became-real
 => {"kind":"ready","receipt":null}
 ```
 
+## A proven implicit selection never silently changes identity
+
+Passive navigation can restore a remembered conversation without naming it in
+the URL. Its exact receipt remains identity evidence even when the recovery
+request itself fails: a missing or unexpectedly empty bootstrap must stay on
+that conversation rather than minting a fresh default chat.
+
+```ts
+const storage = new MemoryStorage();
+const receipts = new ReservationReceipts(storage, "paper-cards/test1");
+receipts.put({ sessionId: "remembered", contextDir: "papers", engine: "claude" });
+let fallbackReserves = 0;
+const reserve: ResolveParams["reserve"] = async () => {
+  fallbackReserves += 1;
+  return { kind: "reserved", sessionId: "replacement" };
+};
+const originalWarn = console.warn;
+console.warn = () => {};
+const missingUtils = fakeUtils({ bootstraps: [unavailable("remembered")] });
+const missing = await resolveConversation({ utils: missingUtils.utils, reserve, receipts,
+  ensureReservation: async () => { throw new Error("server restarting"); },
+  request: { kind: "session", sessionId: "remembered", contextDir: "elsewhere" } });
+const emptyUtils = fakeUtils({ bootstraps: [{ kind: "empty" }] });
+const empty = await resolveConversation({ utils: emptyUtils.utils, reserve, receipts,
+  ensureReservation: async () => { throw new Error("server restarting"); },
+  request: { kind: "session", sessionId: "remembered", contextDir: "elsewhere" } });
+console.warn = originalWarn;
+JSON.stringify({ missing: missing.selection, empty: empty.selection, fallbackReserves })
+=> {"missing":{"kind":"unavailable","contextDir":"papers","reason":"This conversation has no saved transcript in this box."},"empty":{"kind":"unavailable","contextDir":"papers","reason":"This conversation has no saved transcript in this box."},"fallbackReserves":0}
+```
+
 ## Codex retains the existing first-send assignment path
 
 Codex cannot accept a client-coined id, so it still carries context, engine,

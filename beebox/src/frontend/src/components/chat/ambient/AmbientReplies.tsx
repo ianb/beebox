@@ -5,7 +5,6 @@ import { useBusSubscription } from "../../../hooks/useBusSubscription";
 import { busEventData } from "../../../lib/bus-events";
 import type { ViewTarget } from "../../../lib/view-url";
 import { readActiveSessions, writeActiveSessions } from "./active-sessions";
-import { useBoxConversation } from "../everywhere/conversation-context";
 import { AmbientSessionReply } from "./AmbientSessionReply";
 
 export interface AmbientSession { sessionId: string; label: string }
@@ -21,7 +20,6 @@ export interface AmbientRepliesProps {
 
 export function AmbientReplies(props: AmbientRepliesProps) {
   const utils = trpc.useUtils();
-  const ensureReservation = useBoxConversation()?.ensureReservation;
   const [active, setActive] = useState(() => readActiveSessions(props.storageScope));
   const handleActivity = useCallback((sessionId: string, needed: boolean) => {
     setActive((old) => {
@@ -32,13 +30,11 @@ export function AmbientReplies(props: AmbientRepliesProps) {
   useEffect(() => { writeActiveSessions(props.storageScope, active); }, [props.storageScope, active]);
   const [completed, setCompleted] = useState<Record<string, string>>({});
   const sessions = [...new Map(props.sessions.map((session) => [session.sessionId, session])).values()];
-  async function refresh(sessionId: string) {
-    try { await ensureReservation?.(sessionId); }
-    catch (error) { console.warn("Conversation reservation could not be refreshed", error); }
+  function refresh(sessionId: string) {
     void utils.chat.history.invalidate({ session: sessionId });
     void utils.chat.status.invalidate({ session: sessionId });
   }
-  function refreshAll() { for (const session of sessions) { if (session.sessionId === props.selectedSessionId || active.includes(session.sessionId)) void refresh(session.sessionId); } }
+  function refreshAll() { for (const session of sessions) { if (session.sessionId === props.selectedSessionId || active.includes(session.sessionId)) refresh(session.sessionId); } }
   useBusSubscription({
     onConnect: refreshAll,
     onEvent(event) {
@@ -49,7 +45,7 @@ export function AmbientReplies(props: AmbientRepliesProps) {
       if (!sessionId || !sessions.some((session) => session.sessionId === sessionId)) return;
       if (completion || user) handleActivity(sessionId, true);
       if (completion) setCompleted((old) => ({ ...old, [sessionId]: completion.timestamp }));
-      void refresh(sessionId);
+      refresh(sessionId);
     },
   });
   useEffect(() => {

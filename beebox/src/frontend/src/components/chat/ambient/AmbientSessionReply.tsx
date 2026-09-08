@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { trpc } from "../../../lib/trpc";
+import { trpc, trpcClient } from "../../../lib/trpc";
+import { useQuery } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
 import { bbxSource } from "../../../lib/source-tag";
 import { Button } from "../../ui/Button";
 import { Text } from "../../ui/Text";
@@ -14,10 +16,22 @@ import type { AmbientRepliesProps, AmbientSession } from "./AmbientReplies";
 type Props = AmbientRepliesProps & { session: AmbientSession; completion: string | null; onActivity: (sessionId: string, needed: boolean) => void };
 function useAmbientSessionReply(props: Props) {
   const { session, completion } = props;
-  const ensureReservation = useBoxConversation()?.ensureReservation;
+  const conversation = useBoxConversation();
+  const ensureReservation = conversation?.ensureReservation;
+  const forgetReservation = conversation?.forgetReservation;
   const key = `bbx-ambient:${props.storageScope}:${session.sessionId}`;
   const [attention, setAttention] = useState(() => readAttention(key));
-  const history = trpc.chat.history.useQuery({ session: session.sessionId, slice: { mode: "tail", tail: 100 } });
+  const historyInput = { session: session.sessionId, slice: { mode: "tail" as const, tail: 100 } };
+  const history = useQuery({
+    queryKey: getQueryKey(trpc.chat.history, historyInput, "query"),
+    queryFn: async ({ signal }) => {
+      await ensureReservation?.(session.sessionId);
+      return trpcClient.chat.history.query(historyInput, { signal });
+    },
+  });
+  useEffect(() => {
+    if (history.data && history.data.total > 0) forgetReservation?.(session.sessionId);
+  }, [history.data, forgetReservation, session.sessionId]);
   const status = trpc.chat.status.useQuery({ session: session.sessionId });
   const reply = projectAmbientReply(session.sessionId, { entries: history.data?.entries ?? [], total: history.data?.total ?? 0, running: status.data?.busy ?? true });
   useEffect(() => {
@@ -30,11 +44,7 @@ function useAmbientSessionReply(props: Props) {
   function acknowledge() {
     setAttention((old) => ({ ...old, attention: false, dismissedReply: old.lastReply }));
   }
-  async function retry() {
-    try { await ensureReservation?.(session.sessionId); }
-    catch (error) { console.warn("Conversation reservation could not be refreshed", error); }
-    await Promise.all([history.refetch(), status.refetch()]);
-  }
+  async function retry() { await Promise.all([history.refetch(), status.refetch()]); }
   const selected = props.selectedSessionId === session.sessionId;
   const { transcriptVisible } = props;
   useEffect(() => {

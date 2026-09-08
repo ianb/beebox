@@ -70,8 +70,8 @@ async function fresh(params: { utils: Utils; reserve: Reserve; receipts: Reserva
   } } };
 }
 function resolveEmptyBootstrap(input: { params: Parameters<typeof resolveConversation>[0]; contextDir: string;
-  receipt: ReservationReceipt | null }): Promise<ResolvedConversation> | ResolvedConversation {
-  if (input.receipt !== null && input.params.request.named === true) {
+  receiptProven: boolean }): Promise<ResolvedConversation> | ResolvedConversation {
+  if (input.receiptProven) {
     return { selection: { kind: "unavailable", contextDir: input.contextDir, reason: "This conversation has no saved transcript in this box." } };
   }
   return fresh({ ...input.params, contextDir: input.contextDir });
@@ -95,6 +95,9 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
     session = (await utils.chat.lastSessionForDirectory.fetch({ contextDir })).sessionId ?? undefined;
   }
   if (request.kind === "new" || (request.kind !== "default" && !session)) return fresh({ ...params, contextDir });
+  const provenReceipt = session === undefined ? undefined : params.receipts?.get(session);
+  const receiptProven = provenReceipt !== undefined;
+  if (provenReceipt !== undefined) contextDir = provenReceipt.contextDir;
   const ensureReservation = params.ensureReservation ?? createReservationRecovery(params.receipts, params.reserve);
   const restored = await restoreBeforeBootstrap({ sessionId: session, contextDir, ensureReservation });
   contextDir = restored.contextDir;
@@ -102,9 +105,9 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
     { session, slice: chatTailSlice() },
     { staleTime: 0 },
   );
-  if (data.kind === "empty") return resolveEmptyBootstrap({ params, contextDir, receipt: restored.receipt });
+  if (data.kind === "empty") return resolveEmptyBootstrap({ params, contextDir, receiptProven });
   // Recover a proven empty reservation before replacing an implicitly selected missing chat.
-  if (data.kind === "unavailable" && request.named !== true && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
+  if (data.kind === "unavailable" && request.named !== true && !receiptProven && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
   if (data.kind === "unavailable") return { selection: { kind: "unavailable", contextDir, reason: data.reason === "missing-local-transcript" ? "This conversation has no saved transcript in this box." : `Conversation unavailable: ${data.reason}` } };
   retireUsedReceipt(data, params.receipts);
   const directory = await utils.chat.directoryFor.fetch(

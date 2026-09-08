@@ -885,3 +885,9 @@ never authorize it. Ambient Retry follows the same path. A real server
 stop/wake with the browser left mounted restored the same empty Claude ID and
 directory without a page reload. The wrong-engine case is also covered by a
 backend regression with a Claude reservation on a Codex-default box.
+
+The follow-up review moved ambient recovery into the history query function,
+covering initial load, focus refetch, invalidation, and Retry with one ordering
+guarantee. Observed nonempty history retires its receipt. A receipt-backed
+selection that cannot recover stays unavailable even during passive browsing;
+it cannot silently fall back to the box's default engine.
