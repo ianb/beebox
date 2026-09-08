@@ -12,6 +12,7 @@ export interface ConversationContextValue {
   select: (request: ConversationRequest) => Promise<void>;
   assigned: (...args: [sessionId: string, assignment?: { clientConversationId: string; contextDir: string }]) => void;
   retry: () => Promise<void>;
+  forgetReservation: (sessionId: string) => void;
 }
 const ConversationContext = createContext<ConversationContextValue | null>(null);
 export function BoxConversationProvider({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {

@@ -8,6 +8,7 @@ turning arbitrary missing ids into new chats.
 ```ts setup
 import { resolveConversation } from "../../../src/frontend/src/components/chat/everywhere/resolve-conversation.js";
 import { ReservationReceipts } from "../../../src/frontend/src/components/chat/everywhere/reservation-receipts.js";
+import { QueryClient } from "@tanstack/react-query";
 
 type ResolveParams = Parameters<typeof resolveConversation>[0];
 class MemoryStorage {
@@ -44,6 +45,32 @@ function fakeUtils(options: {
     bootstrapCalls: () => bootstrapCalls,
   };
 }
+function cachedBootstrapUtils(options: {
+  bootstraps: object[];
+  directories: string[];
+}): { utils: ResolveParams["utils"]; networkCalls: () => number; directoryNetworkCalls: () => number } {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 5000, retry: false } } });
+  let networkCalls = 0;
+  let directoryNetworkCalls = 0;
+  return {
+    utils: {
+      chat: {
+        bootstrap: { fetch: (input: object, fetchOptions?: { staleTime?: number }) => queryClient.fetchQuery({
+          queryKey: ["chat.bootstrap", input],
+          queryFn: async () => options.bootstraps[networkCalls++],
+          ...fetchOptions,
+        }) },
+        directoryFor: { fetch: (input: object, fetchOptions?: { staleTime?: number }) => queryClient.fetchQuery({
+          queryKey: ["chat.directoryFor", input],
+          queryFn: async () => ({ contextDir: options.directories[directoryNetworkCalls++] }),
+          ...fetchOptions,
+        }) },
+      },
+    } as unknown as ResolveParams["utils"],
+    networkCalls: () => networkCalls,
+    directoryNetworkCalls: () => directoryNetworkCalls,
+  };
+}
 ```
 
 ## A fresh reservation writes its receipt before exposing the id
@@ -78,19 +105,22 @@ missing. The matching receipt authorizes re-reserving that same id and retrying
 bootstrap once; context, engine, and model are preserved.
 
 ```ts continue
-const recoveryUtils = fakeUtils({
+const recoveryUtils = cachedBootstrapUtils({
   bootstraps: [unavailable(coinedId), resumable(coinedId)],
-  directory: "_content/courses",
+  directories: ["", "_content/courses"],
 });
+await recoveryUtils.utils.chat.directoryFor.fetch({ sessionId: coinedId });
 const recovered = await resolveConversation({
   utils: recoveryUtils.utils, reserve, receipts: reloadedReceipts,
   request: { kind: "session", sessionId: coinedId },
 });
 const recoveryCall = reserveCalls[1];
-JSON.stringify({ kind: recovered.selection.kind, calls: recoveryUtils.bootstrapCalls(),
+const recoveredContext = recovered.selection.kind === "ready" ? recovered.selection.target.contextDir : "unavailable";
+JSON.stringify({ kind: recovered.selection.kind, recoveredContext, networkCalls: recoveryUtils.networkCalls(),
+  directoryNetworkCalls: recoveryUtils.directoryNetworkCalls(),
   recoveryCall: recoveryCall ? { ...recoveryCall, sessionId: "<same>" } : null,
   sameId: recoveryCall?.sessionId === coinedId })
-=> {"kind":"ready","calls":2,"recoveryCall":{"sessionId":"<same>","contextDir":"_content/courses","engine":"claude","model":"sonnet"},"sameId":true}
+=> {"kind":"ready","recoveredContext":"_content/courses","networkCalls":2,"directoryNetworkCalls":2,"recoveryCall":{"sessionId":"<same>","contextDir":"_content/courses","engine":"claude","model":"sonnet"},"sameId":true}
 ```
 
 ## Missing ids without exact local provenance remain unavailable

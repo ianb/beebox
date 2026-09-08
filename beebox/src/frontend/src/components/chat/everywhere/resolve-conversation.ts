@@ -45,7 +45,10 @@ async function recoverMissingReservation(params: {
     if (recovered.kind !== "reserved" && recovered.kind !== "taken") {
       return { data, contextDir: receipt.contextDir };
     }
-    const retried = await params.utils.chat.bootstrap.fetch({ session: sessionId, slice: chatTailSlice() });
+    const retried = await params.utils.chat.bootstrap.fetch(
+      { session: sessionId, slice: chatTailSlice() },
+      { staleTime: 0 },
+    );
     // A missing explicit id never becomes a newly selected conversation.
     // `empty` after recovery means the server still cannot prove this id.
     return { data: retried.kind === "empty" ? data : retried, contextDir: receipt.contextDir };
@@ -102,7 +105,10 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
     try { params.receipts?.remove(data.sessionId); }
     catch (error) { console.warn("Conversation reservation receipt could not be removed", error); }
   }
-  const directory = await utils.chat.directoryFor.fetch({ sessionId: data.sessionId });
+  const directory = await utils.chat.directoryFor.fetch(
+    { sessionId: data.sessionId },
+    { staleTime: 0 },
+  );
   return { selection: { kind: "ready", label: data.label ?? "Conversation", target: {
     kind: "session", sessionId: data.sessionId, contextDir: directory.contextDir,
   } }, initial: preload(data) };

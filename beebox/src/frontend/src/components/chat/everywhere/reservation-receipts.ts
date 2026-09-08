@@ -9,13 +9,6 @@ const receiptSchema = z.object({
 export type ReservationReceipt = z.infer<typeof receiptSchema>;
 export type ReservationReceiptStorage = Pick<Storage, "getItem" | "setItem">;
 
-export class ReservationReceiptRecoveryError extends Error {
-  constructor() {
-    super("Conversation reservation receipts need recovery");
-    this.name = "ReservationReceiptRecoveryError";
-  }
-}
-
 /** Same-tab proof that this client successfully reserved an otherwise empty id. */
 export class ReservationReceipts {
   private readonly key: string;
@@ -28,9 +21,17 @@ export class ReservationReceipts {
       this.records = new Map();
       return;
     }
-    const parsed = z.array(z.tuple([z.string().min(1), receiptSchema])).safeParse(JSON.parse(raw));
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(raw);
+    } catch (_parseError) {
+      this.records = new Map();
+      return;
+    }
+    const parsed = z.array(z.tuple([z.string().min(1), receiptSchema])).safeParse(decoded);
     if (!parsed.success || parsed.data.some(([id, receipt]) => receipt.sessionId !== id)) {
-      throw new ReservationReceiptRecoveryError();
+      this.records = new Map();
+      return;
     }
     this.records = new Map(parsed.data);
   }

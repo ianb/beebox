@@ -840,7 +840,8 @@ receipt permits re-reserving that exact ID and bootstrapping it once more.
 The server still refuses IDs already present in committed history/transcripts.
 Unknown IDs, foreign-scope receipts, and still-unavailable results do not become
 new chats automatically. Receipts are metadata, not user-message storage; they
-last for the tab and are removed when bootstrap observes a real transcript.
+last for the tab and are removed before a send or deletion attempt, when a
+user-message event is observed, or when bootstrap observes a real transcript.
 
 Already-lost IDs from before this change have no receipt. The unavailable
 notice offers an explicit Start new conversation action that retains the card
@@ -861,3 +862,14 @@ A real stop/restart of this isolated worktree followed by reload re-reserved the
 same empty Claude ID and restored the same directory/card. The 64 affected
 assertions and 30 reservation/bootstrap backend assertions passed, as did the
 frontend typecheck and changed-file lint. No physical-device check is claimed.
+
+Review and browser replay required fresh bootstrap and directory lookups after
+re-reservation (the cache could otherwise return unavailable or the wrong root
+directory), recovery
+from malformed metadata, and receipt retirement when a chat is used or deleted.
+Those corrections are in place. The cache regression uses a real QueryClient with stale bootstrap and root-directory entries;
+the final affected run passed 71 assertions. In the browser, the delete action
+removed the test reservation receipt, and a subsequent server restart left that
+ID unavailable instead of recreating it. A fresh receipt still recovered its
+exact ID through a separate restart. These checks do not establish cross-tab
+recovery or durable deletion knowledge across other clients.

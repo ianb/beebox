@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import type { ConversationSelection } from "@shared/chat-composer-binding";
 import { getApiBase } from "../../../api-core";
 import { conversationStorageScope } from "../conversation/storage-scope";
+import { useBusSubscription } from "../../../hooks/useBusSubscription";
+import { busEventData } from "../../../lib/bus-events";
 import { trpc } from "../../../lib/trpc";
 import { readConversation, saveConversation } from "./conversation-state";
 import { resolveConversation, type ConversationRequest, type ResolvedConversation } from "./resolve-conversation";
@@ -20,6 +22,11 @@ export function useConversationSelection(boxSlug: string) {
       return null;
     }
   }, [storageScope]);
+  const forgetReservation = useCallback((sessionId: string) => { receipts?.remove(sessionId); }, [receipts]);
+  useBusSubscription({ onEvent(event) {
+    const message = busEventData(event, "chat-user-message");
+    if (message?.sessionId) forgetReservation(message.sessionId);
+  } });
   const restored = useMemo(() => readConversation(storageScope), [storageScope]);
   const [state, setState] = useState<ResolvedConversation>(() => ({ selection: restored?.kind === "ready" && restored.target.kind === "start" ? restored : { kind: "resolving", requestId: "initial", contextDir: "" } }));
   const [rendered, setRendered] = useState(() => restored?.kind === "ready" ? restored : null);
@@ -51,5 +58,5 @@ export function useConversationSelection(boxSlug: string) {
     setState((old) => ({ ...old, selection: replace(old.selection) }));
     setRendered((old) => { if (!old) return old; const next = replace(old); return next.kind === "ready" ? next : old; });
   }, [boxSlug]);
-  return { storageScope, ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
+  return { storageScope, forgetReservation, ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
 }
