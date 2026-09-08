@@ -1,8 +1,6 @@
 ---
 title: "Retry gage (Claude Code session scanner) once gageml/gage#16 is resolved"
 workstream: unattached
-activate-on: 2026-09-08
-category: watch
 labels: [external-tool]
 filed-by: agent
 discovered-by: Ian
