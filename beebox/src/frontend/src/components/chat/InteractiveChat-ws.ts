@@ -12,6 +12,7 @@ import { useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { useBoxConversation } from "./everywhere/conversation-context";
 import { useDeferredResync } from "../../hooks/useDeferredResync";
 import { busEventData } from "../../lib/bus-events";
 import { createReconnectRefreshGate, type ReconnectRefreshGate } from "./reconnect-refresh-gate";
@@ -192,6 +193,7 @@ export function useChatWs(opts: {
   audioOverlayStore: AudioOverlayStore;
 }) {
   const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, onSessionAssignment, audioOverlayStore } = opts;
+  const ensureReservation = useBoxConversation()?.ensureReservation;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
   // Rate-gates reconnect-driven REFRESHes: a connect within PROMPT_SUBSCRIPTION_MS
@@ -219,8 +221,13 @@ export function useChatWs(opts: {
   // again — and fires once on becoming visible, no matter how many reconnects
   // (gate-eligible or not) accumulated in the meantime.
   const triggerRefresh = useDeferredResync(useCallback(() => {
-    send({ type: "REFRESH" });
-  }, [send]));
+    async function refresh() {
+      try { if (sessionId) await ensureReservation?.(sessionId); }
+      catch (error) { console.warn("Conversation reservation could not be refreshed", error); }
+      send({ type: "REFRESH" });
+    }
+    void refresh();
+  }, [send, sessionId, ensureReservation]));
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
   // chat-history, chat-complete, chat-user-message, chat-session-assigned.

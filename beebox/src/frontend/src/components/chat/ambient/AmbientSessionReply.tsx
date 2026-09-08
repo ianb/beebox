@@ -8,11 +8,13 @@ import { CalloutStack } from "../CalloutBlock";
 import { AckBadgeCluster } from "../ack-badge";
 import { projectAmbientReply, observeAmbientReply, recordAmbientCompletion } from "./projection";
 import { readAttention, writeAttention } from "./attention-store";
+import { useBoxConversation } from "../everywhere/conversation-context";
 import type { AmbientRepliesProps, AmbientSession } from "./AmbientReplies";
 
 type Props = AmbientRepliesProps & { session: AmbientSession; completion: string | null; onActivity: (sessionId: string, needed: boolean) => void };
 function useAmbientSessionReply(props: Props) {
   const { session, completion } = props;
+  const ensureReservation = useBoxConversation()?.ensureReservation;
   const key = `bbx-ambient:${props.storageScope}:${session.sessionId}`;
   const [attention, setAttention] = useState(() => readAttention(key));
   const history = trpc.chat.history.useQuery({ session: session.sessionId, slice: { mode: "tail", tail: 100 } });
@@ -28,7 +30,11 @@ function useAmbientSessionReply(props: Props) {
   function acknowledge() {
     setAttention((old) => ({ ...old, attention: false, dismissedReply: old.lastReply }));
   }
-  async function retry() { await Promise.all([history.refetch(), status.refetch()]); }
+  async function retry() {
+    try { await ensureReservation?.(session.sessionId); }
+    catch (error) { console.warn("Conversation reservation could not be refreshed", error); }
+    await Promise.all([history.refetch(), status.refetch()]);
+  }
   const selected = props.selectedSessionId === session.sessionId;
   const { transcriptVisible } = props;
   useEffect(() => {

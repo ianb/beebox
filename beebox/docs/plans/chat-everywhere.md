@@ -835,11 +835,15 @@ by a transcript.
 Keep Claude reservations because full camera capture and bulk upload can need
 an addressable target before the first message. A tab records the context,
 engine, and model of each successful reservation under its box-instance storage
-scope. When bootstrap reports a missing local transcript, only a matching
-receipt permits re-reserving that exact ID and bootstrapping it once more.
+scope. A matching receipt permits restoring that exact reservation before
+bootstrap or reconnect history refresh. This must precede history lookup: after
+a restart, raw history refresh for an empty Claude chat on a Codex-default
+box otherwise queries the wrong engine, bypassing bootstrap's unavailable answer.
 The server still refuses IDs already present in committed history/transcripts.
-Unknown IDs, foreign-scope receipts, and still-unavailable results do not become
-new chats automatically. Receipts are metadata, not user-message storage; they
+Explicitly requested unknown IDs, foreign-scope receipts, and still-unavailable
+results do not become new chats automatically. An implicitly selected old chat
+with a missing local transcript starts fresh, as established by the main-branch
+resolver correction. Receipts are metadata, not user-message storage; they
 last for the tab and are removed before a send or deletion attempt, when a
 user-message event is observed, or when bootstrap observes a real transcript.
 
@@ -873,3 +877,11 @@ removed the test reservation receipt, and a subsequent server restart left that
 ID unavailable instead of recreating it. A fresh receipt still recovered its
 exact ID through a separate restart. These checks do not establish cross-tab
 recovery or durable deletion knowledge across other clients.
+
+Mounted-page correction (2026-09-08): transcript reconnect and ambient refresh
+now await the same receipt-backed reservation recovery before reading history.
+Concurrent consumers share the in-flight recovery; retired or absent receipts
+never authorize it. Ambient Retry follows the same path. A real server
+stop/wake with the browser left mounted restored the same empty Claude ID and
+directory without a page reload. The wrong-engine case is also covered by a
+backend regression with a Claude reservation on a Codex-default box.

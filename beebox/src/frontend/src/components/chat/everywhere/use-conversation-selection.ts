@@ -10,6 +10,7 @@ import { resolveConversation, type ConversationRequest, type ResolvedConversatio
 import { createResolutionGate } from "./conversation-intent";
 import { postNativeMessage } from "../native-post";
 import { ReservationReceipts } from "./reservation-receipts";
+import { createReservationRecovery } from "./reservation-recovery";
 
 export function useConversationSelection(boxSlug: string) {
   const storageScope = conversationStorageScope(getApiBase());
@@ -22,6 +23,7 @@ export function useConversationSelection(boxSlug: string) {
       return null;
     }
   }, [storageScope]);
+  const ensureReservation = useMemo(() => createReservationRecovery(receipts, reserve), [receipts, reserve]);
   const forgetReservation = useCallback((sessionId: string) => { receipts?.remove(sessionId); }, [receipts]);
   useBusSubscription({ onEvent(event) {
     const message = busEventData(event, "chat-user-message");
@@ -37,7 +39,7 @@ export function useConversationSelection(boxSlug: string) {
     const requestId = gate.claim();
     setState((old) => ({ ...old, selection: { kind: "resolving", requestId: String(requestId), contextDir: request.contextDir ?? "" } }));
     try {
-      const next = await resolveConversation({ utils, reserve, receipts, request });
+      const next = await resolveConversation({ utils, reserve, receipts, ensureReservation, request });
       if (!gate.accepts(requestId)) return;
       setState(next);
       if (next.selection.kind === "ready") setRendered(next.selection);
@@ -45,7 +47,7 @@ export function useConversationSelection(boxSlug: string) {
       if (!gate.accepts(requestId)) return;
       setState((old) => ({ ...old, selection: { kind: "unavailable", contextDir: request.contextDir ?? "", reason: error instanceof Error ? error.message : "Could not resolve conversation" } }));
     }
-  }, [utils, reserve, receipts, gate]);
+  }, [utils, reserve, receipts, ensureReservation, gate]);
   useEffect(() => () => gate.cancel(), [gate]);
   useEffect(() => { saveConversation(storageScope, state.selection); }, [storageScope, state.selection]);
   const assigned = useCallback((sessionId: string, assignment?: { clientConversationId: string; contextDir: string }) => {
@@ -58,5 +60,5 @@ export function useConversationSelection(boxSlug: string) {
     setState((old) => ({ ...old, selection: replace(old.selection) }));
     setRendered((old) => { if (!old) return old; const next = replace(old); return next.kind === "ready" ? next : old; });
   }, [boxSlug]);
-  return { storageScope, forgetReservation, ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
+  return { storageScope, forgetReservation, ensureReservation, ...state, initial: state.initial, rendered, select, assigned, retry: () => select(lastRequest.current) };
 }

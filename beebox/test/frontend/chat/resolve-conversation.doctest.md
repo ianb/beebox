@@ -100,18 +100,27 @@ JSON.stringify({ target: freshTarget?.kind, targetContext: freshTarget?.contextD
 => {"target":"session","targetContext":"_content/courses","receipt":{"sessionId":"<same>","contextDir":"_content/courses","engine":"claude","model":"sonnet"},"calls":1}
 ```
 
-After the server forgets the reservation, bootstrap first reports the exact id
-missing. The matching receipt authorizes re-reserving that same id and retrying
-bootstrap once; context, engine, and model are preserved.
+After the server forgets the reservation, the matching receipt authorizes
+re-reserving that same id before bootstrap. This matters on a Codex-default box:
+without the reservation, a history consumer can choose the wrong engine before
+the resolver gets a missing-transcript answer. Context, engine, and model are
+preserved.
 
 ```ts continue
+let reservationRestored = false;
 const recoveryUtils = cachedBootstrapUtils({
-  bootstraps: [unavailable(coinedId), resumable(coinedId)],
+  bootstraps: [{ get kind(): string {
+    if (!reservationRestored) throw new Error("Codex history request failed");
+    return "resumable";
+  }, sessionId: coinedId, history: { entries: [], total: 0 }, label: null,
+  status: { running: false, busy: false }, pending: [] }],
   directories: ["", "_content/courses"],
 });
 await recoveryUtils.utils.chat.directoryFor.fetch({ sessionId: coinedId });
 const recovered = await resolveConversation({
-  utils: recoveryUtils.utils, reserve, receipts: reloadedReceipts,
+  utils: recoveryUtils.utils,
+  reserve: async (input) => { reservationRestored = true; return reserve(input); },
+  receipts: reloadedReceipts,
   request: { kind: "session", named: true, sessionId: coinedId },
 });
 const recoveryCall = reserveCalls[1];
@@ -120,7 +129,7 @@ JSON.stringify({ kind: recovered.selection.kind, recoveredContext, networkCalls:
   directoryNetworkCalls: recoveryUtils.directoryNetworkCalls(),
   recoveryCall: recoveryCall ? { ...recoveryCall, sessionId: "<same>" } : null,
   sameId: recoveryCall?.sessionId === coinedId })
-=> {"kind":"ready","recoveredContext":"_content/courses","networkCalls":2,"directoryNetworkCalls":2,"recoveryCall":{"sessionId":"<same>","contextDir":"_content/courses","engine":"claude","model":"sonnet"},"sameId":true}
+=> {"kind":"ready","recoveredContext":"_content/courses","networkCalls":1,"directoryNetworkCalls":2,"recoveryCall":{"sessionId":"<same>","contextDir":"_content/courses","engine":"claude","model":"sonnet"},"sameId":true}
 ```
 
 ## Missing ids without exact local provenance remain unavailable
@@ -156,12 +165,12 @@ const receipts = new ReservationReceipts(storage, "paper-cards/test1");
 receipts.put({ sessionId: "still-missing", contextDir: "papers", engine: "claude" });
 let reserves = 0;
 const reserve: ResolveParams["reserve"] = async () => { reserves += 1; return { kind: "taken" }; };
-const utils = fakeUtils({ bootstraps: [unavailable("still-missing"), { kind: "empty" }] });
+const utils = fakeUtils({ bootstraps: [{ kind: "empty" }] });
 const result = await resolveConversation({ utils: utils.utils, reserve, receipts,
   request: { kind: "session", named: true, sessionId: "still-missing" } });
 const context = result.selection.kind === "unavailable" ? result.selection.contextDir : "wrong";
 JSON.stringify({ kind: result.selection.kind, context, reserves, bootstraps: utils.bootstrapCalls() })
-=> {"kind":"unavailable","context":"papers","reserves":1,"bootstraps":2}
+=> {"kind":"unavailable","context":"papers","reserves":1,"bootstraps":1}
 ```
 
 If the retry proves the chat became real, normal bootstrap wins and its stale
@@ -171,7 +180,7 @@ receipt is removed.
 const storage = new MemoryStorage();
 const receipts = new ReservationReceipts(storage, "paper-cards/test1");
 receipts.put({ sessionId: "became-real", contextDir: "papers", engine: "claude" });
-const utils = fakeUtils({ bootstraps: [unavailable("became-real"), resumable("became-real", 1)], directory: "papers" });
+const utils = fakeUtils({ bootstraps: [resumable("became-real", 1)], directory: "papers" });
 const result = await resolveConversation({ utils: utils.utils, reserve: async () => ({ kind: "taken" }), receipts,
   request: { kind: "session", named: true, sessionId: "became-real" } });
 JSON.stringify({ kind: result.selection.kind, receipt: receipts.get("became-real") ?? null })

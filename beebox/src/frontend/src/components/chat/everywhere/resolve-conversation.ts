@@ -3,11 +3,11 @@ import type { ConversationSelection, ConversationTarget } from "@shared/chat-com
 import type { trpc, RouterOutput } from "../../../lib/trpc";
 import { chatTailSlice, type ChatInitialLoad } from "../../../machines/chat-types";
 import type { ChatAgentEngine } from "@shared/chat-models";
-import type { ReservationReceipts } from "./reservation-receipts";
+import type { ReservationReceipt, ReservationReceipts } from "./reservation-receipts";
+import { createReservationRecovery } from "./reservation-recovery";
 
 type Utils = ReturnType<typeof trpc.useUtils>;
 type Bootstrap = RouterOutput["chat"]["bootstrap"];
-type ResolvedBootstrap = Exclude<Bootstrap, { kind: "empty" }>;
 export interface ConversationRequest {
   kind: "session" | "landmark" | "card" | "default" | "new" | "restore";
   target?: ConversationTarget;
@@ -27,36 +27,21 @@ function preload(data: RouterOutput["chat"]["bootstrap"]): ChatInitialLoad | und
   return { status: "loaded", entries: data.history.entries, total: data.history.total,
     sessionId: data.sessionId, running: data.status.running, busy: data.status.busy, pending: data.pending };
 }
-async function recoverMissingReservation(params: {
-  utils: Utils;
-  reserve: Reserve;
-  receipts: ReservationReceipts | null;
+async function restoreBeforeBootstrap(params: {
   sessionId: string | undefined;
-  data: ResolvedBootstrap;
   contextDir: string;
-}): Promise<{ data: ResolvedBootstrap; contextDir: string }> {
-  const { data, receipts, sessionId } = params;
-  if (data.kind !== "unavailable" || data.reason !== "missing-local-transcript" || sessionId === undefined) {
-    return { data, contextDir: params.contextDir };
-  }
-  const receipt = receipts?.get(sessionId);
-  if (receipt === undefined) return { data, contextDir: params.contextDir };
+  ensureReservation: (sessionId: string) => Promise<ReservationReceipt | null>;
+}): Promise<{ contextDir: string; receipt: ReservationReceipt | null }> {
+  if (params.sessionId === undefined) return { contextDir: params.contextDir, receipt: null };
   try {
-    const recovered = await params.reserve({ sessionId: receipt.sessionId, contextDir: receipt.contextDir,
-      engine: receipt.engine, ...(receipt.model !== undefined ? { model: receipt.model } : {}) });
-    if (recovered.kind !== "reserved" && recovered.kind !== "taken") {
-      return { data, contextDir: receipt.contextDir };
-    }
-    const retried = await params.utils.chat.bootstrap.fetch(
-      { session: sessionId, slice: chatTailSlice() },
-      { staleTime: 0 },
-    );
-    // A missing explicit id never becomes a newly selected conversation.
-    // `empty` after recovery means the server still cannot prove this id.
-    return { data: retried.kind === "empty" ? data : retried, contextDir: receipt.contextDir };
+    const receipt = await params.ensureReservation(params.sessionId);
+    return { contextDir: receipt?.contextDir ?? params.contextDir, receipt };
   } catch (error) {
+    // The id may have become a real chat since the receipt was written. Let
+    // bootstrap prove that before turning a recovery transport error into the
+    // selected conversation's error state.
     console.warn("Conversation reservation could not be recovered", error);
-    return { data, contextDir: receipt.contextDir };
+    return { contextDir: params.contextDir, receipt: null };
   }
 }
 async function fresh(params: { utils: Utils; reserve: Reserve; receipts: ReservationReceipts | null; request: ConversationRequest; contextDir: string }): Promise<ResolvedConversation> {
@@ -84,7 +69,20 @@ async function fresh(params: { utils: Utils; reserve: Reserve; receipts: Reserva
     ...(request.model ? { model: request.model } : {}), seedFeatures: features,
   } } };
 }
-export async function resolveConversation(params: { utils: Utils; reserve: Reserve; receipts: ReservationReceipts | null; request: ConversationRequest }): Promise<ResolvedConversation> {
+function resolveEmptyBootstrap(input: { params: Parameters<typeof resolveConversation>[0]; contextDir: string;
+  receipt: ReservationReceipt | null }): Promise<ResolvedConversation> | ResolvedConversation {
+  if (input.receipt !== null && input.params.request.named === true) {
+    return { selection: { kind: "unavailable", contextDir: input.contextDir, reason: "This conversation has no saved transcript in this box." } };
+  }
+  return fresh({ ...input.params, contextDir: input.contextDir });
+}
+function retireUsedReceipt(data: Extract<Bootstrap, { kind: "resumable" }>, receipts: ReservationReceipts | null): void {
+  if (data.history.total === 0) return;
+  try { receipts?.remove(data.sessionId); }
+  catch (error) { console.warn("Conversation reservation receipt could not be removed", error); }
+}
+export async function resolveConversation(params: { utils: Utils; reserve: Reserve; receipts: ReservationReceipts | null; request: ConversationRequest;
+  ensureReservation?: (sessionId: string) => Promise<ReservationReceipt | null> }): Promise<ResolvedConversation> {
   const { utils, request } = params;
   if (request.kind === "restore" && request.target) return { selection: { kind: "ready", target: request.target, label: request.label ?? "New conversation" } };
   let contextDir = request.contextDir ?? "";
@@ -97,18 +95,18 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
     session = (await utils.chat.lastSessionForDirectory.fetch({ contextDir })).sessionId ?? undefined;
   }
   if (request.kind === "new" || (request.kind !== "default" && !session)) return fresh({ ...params, contextDir });
-  let data: Bootstrap = await utils.chat.bootstrap.fetch({ session, slice: chatTailSlice() });
-  if (data.kind === "empty") return fresh({ ...params, contextDir });
-  const recovered = await recoverMissingReservation({ ...params, sessionId: session, data, contextDir });
-  data = recovered.data;
-  contextDir = recovered.contextDir;
+  const ensureReservation = params.ensureReservation ?? createReservationRecovery(params.receipts, params.reserve);
+  const restored = await restoreBeforeBootstrap({ sessionId: session, contextDir, ensureReservation });
+  contextDir = restored.contextDir;
+  const data: Bootstrap = await utils.chat.bootstrap.fetch(
+    { session, slice: chatTailSlice() },
+    { staleTime: 0 },
+  );
+  if (data.kind === "empty") return resolveEmptyBootstrap({ params, contextDir, receipt: restored.receipt });
   // Recover a proven empty reservation before replacing an implicitly selected missing chat.
   if (data.kind === "unavailable" && request.named !== true && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
   if (data.kind === "unavailable") return { selection: { kind: "unavailable", contextDir, reason: data.reason === "missing-local-transcript" ? "This conversation has no saved transcript in this box." : `Conversation unavailable: ${data.reason}` } };
-  if (data.history.total > 0) {
-    try { params.receipts?.remove(data.sessionId); }
-    catch (error) { console.warn("Conversation reservation receipt could not be removed", error); }
-  }
+  retireUsedReceipt(data, params.receipts);
   const directory = await utils.chat.directoryFor.fetch(
     { sessionId: data.sessionId },
     { staleTime: 0 },
