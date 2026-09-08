@@ -27,8 +27,8 @@ export type RoutingStorage = Pick<Storage, "getItem" | "setItem">;
 export class StartRecords {
   private records = new Map<string, StartRecord>();
   private readonly key: string;
-  constructor(private readonly storage: RoutingStorage, boxSlug: string) {
-    this.key = `bbx-conversation-starts:${boxSlug}`;
+  constructor(private readonly storage: RoutingStorage, storageScope: string) {
+    this.key = `bbx-conversation-starts:${storageScope}`;
     const raw = storage.getItem(this.key);
     if (raw === null) return;
     let decoded: unknown;

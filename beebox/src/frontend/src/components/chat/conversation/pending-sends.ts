@@ -1,7 +1,7 @@
 /**
  * Completed WEB emissions held for delivery, separate from the live draft.
  * The native repository owns native content; never stage a native emission here.
- * Session storage scopes recovery to one tab/box. No load path sends anything.
+ * Session storage scopes recovery to one tab/app instance. No load path sends anything.
  */
 import { z } from "zod";
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- Pure recovery module runs in tap/tsx outside Vite, where @shared cannot resolve.
@@ -27,6 +27,7 @@ export interface PendingSendsStore {
   restored(id: string): void;
 }
 export type PendingSendsStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+interface PendingSendsLocation { boxSlug: string; storageScope: string }
 
 // The draft serializer intentionally drops large images and does not carry
 // speech/HQ metadata. Completed sends need a lossless envelope instead: storage
@@ -87,13 +88,13 @@ function parseRows(raw: string, boxSlug: string): PendingConversationSend[] {
 }
 
 export interface PendingSendRecoveryCopy { key: string; raw: string }
-const quarantinePrefix = (boxSlug: string) => `bbx-pending-web-sends-quarantine:${boxSlug}:`;
+const quarantinePrefix = (storageScope: string) => `bbx-pending-web-sends-quarantine:${storageScope}:`;
 
 /** Preserved copies remain accessible after reload in the same tab. */
-export function pendingSendRecoveryCopies(storage: PendingSendsStorage, boxSlug: string): PendingSendRecoveryCopy[] {
+export function pendingSendRecoveryCopies(storage: PendingSendsStorage, storageScope: string): PendingSendRecoveryCopy[] {
   const copies: PendingSendRecoveryCopy[] = [];
   for (let index = 0; ; index++) {
-    const key = `${quarantinePrefix(boxSlug)}${index}`;
+    const key = `${quarantinePrefix(storageScope)}${index}`;
     const raw = storage.getItem(key);
     if (raw === null) return copies;
     copies.push({ key, raw });
@@ -113,8 +114,9 @@ export class PendingSendPreservationError extends Error {
  * Storage access failure still refuses sending: completed-emission durability
  * is required, unlike the best-effort selected-conversation history preference.
  */
-export function quarantineUnreadablePendingSends(storage: PendingSendsStorage, boxSlug: string): PendingSendsStore {
-  const key = `bbx-pending-web-sends:${boxSlug}`;
+export function quarantineUnreadablePendingSends(storage: PendingSendsStorage, location: PendingSendsLocation): PendingSendsStore {
+  const { boxSlug, storageScope } = location;
+  const key = `bbx-pending-web-sends:${storageScope}`;
   const raw = storage.getItem(key);
   let unreadable = false;
   if (raw !== null) {
@@ -122,18 +124,18 @@ export function quarantineUnreadablePendingSends(storage: PendingSendsStorage, b
     catch (_parseCause) { unreadable = true; }
   }
   if (unreadable && raw !== null) {
-    const copies = pendingSendRecoveryCopies(storage, boxSlug);
+    const copies = pendingSendRecoveryCopies(storage, storageScope);
     const copyKey = copies.find((copy) => copy.raw === raw)?.key
-      ?? `${quarantinePrefix(boxSlug)}${copies.length}`;
+      ?? `${quarantinePrefix(storageScope)}${copies.length}`;
     storage.setItem(copyKey, raw);
     if (storage.getItem(copyKey) !== raw) throw new PendingSendPreservationError();
     storage.removeItem(key);
   }
-  return createPendingSendsStore(storage, boxSlug);
+  return createPendingSendsStore(storage, location);
 }
 
-export function createPendingSendsStore(storage: PendingSendsStorage, boxSlug: string): PendingSendsStore {
-  const key = `bbx-pending-web-sends:${boxSlug}`;
+export function createPendingSendsStore(storage: PendingSendsStorage, { boxSlug, storageScope }: PendingSendsLocation): PendingSendsStore {
+  const key = `bbx-pending-web-sends:${storageScope}`;
   let rows: readonly PendingConversationSend[] = loadRows(storage, { key, boxSlug });
   const listeners = new Set<() => void>();
   function publish(next: readonly PendingConversationSend[]): void {

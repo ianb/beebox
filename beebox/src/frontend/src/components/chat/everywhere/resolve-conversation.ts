@@ -3,8 +3,11 @@ import type { ConversationSelection, ConversationTarget } from "@shared/chat-com
 import type { trpc, RouterOutput } from "../../../lib/trpc";
 import { chatTailSlice, type ChatInitialLoad } from "../../../machines/chat-types";
 import type { ChatAgentEngine } from "@shared/chat-models";
+import type { ReservationReceipt, ReservationReceipts } from "./reservation-receipts";
+import { createReservationRecovery } from "./reservation-recovery";
 
 type Utils = ReturnType<typeof trpc.useUtils>;
+type Bootstrap = RouterOutput["chat"]["bootstrap"];
 export interface ConversationRequest {
   kind: "session" | "landmark" | "card" | "default" | "new" | "restore";
   target?: ConversationTarget;
@@ -24,14 +27,39 @@ function preload(data: RouterOutput["chat"]["bootstrap"]): ChatInitialLoad | und
   return { status: "loaded", entries: data.history.entries, total: data.history.total,
     sessionId: data.sessionId, running: data.status.running, busy: data.status.busy, pending: data.pending };
 }
-async function fresh(params: { utils: Utils; reserve: Reserve; request: ConversationRequest; contextDir: string }): Promise<ResolvedConversation> {
-  const { utils, reserve, request, contextDir } = params;
+async function restoreBeforeBootstrap(params: {
+  sessionId: string | undefined;
+  contextDir: string;
+  ensureReservation: (sessionId: string) => Promise<ReservationReceipt | null>;
+}): Promise<{ contextDir: string; receipt: ReservationReceipt | null }> {
+  if (params.sessionId === undefined) return { contextDir: params.contextDir, receipt: null };
+  try {
+    const receipt = await params.ensureReservation(params.sessionId);
+    return { contextDir: receipt?.contextDir ?? params.contextDir, receipt };
+  } catch (error) {
+    // The id may have become a real chat since the receipt was written. Let
+    // bootstrap prove that before turning a recovery transport error into the
+    // selected conversation's error state.
+    console.warn("Conversation reservation could not be recovered", error);
+    return { contextDir: params.contextDir, receipt: null };
+  }
+}
+async function fresh(params: { utils: Utils; reserve: Reserve; receipts: ReservationReceipts | null; request: ConversationRequest; contextDir: string }): Promise<ResolvedConversation> {
+  const { utils, reserve, receipts, request, contextDir } = params;
   const status = await utils.chat.status.fetch({});
   const engine = request.engine ?? status.boxEngine;
-  if (engine === "claude") {
+  if (engine === "claude" && receipts !== null) {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const reserved = await reserve({ sessionId: crypto.randomUUID(), contextDir, engine, model: request.model });
-      if (reserved.kind === "reserved") return { selection: { kind: "ready", label: "New conversation", target: { kind: "session", sessionId: reserved.sessionId, contextDir } } };
+      if (reserved.kind === "reserved") {
+        try { receipts.put({ sessionId: reserved.sessionId, contextDir, engine,
+          ...(request.model !== undefined ? { model: request.model } : {}) }); }
+        catch (error) {
+          console.warn("Conversation reservation receipt could not be saved", error);
+          break;
+        }
+        return { selection: { kind: "ready", label: "New conversation", target: { kind: "session", sessionId: reserved.sessionId, contextDir } } };
+      }
       if (reserved.kind === "unsupported") break;
     }
   }
@@ -41,7 +69,20 @@ async function fresh(params: { utils: Utils; reserve: Reserve; request: Conversa
     ...(request.model ? { model: request.model } : {}), seedFeatures: features,
   } } };
 }
-export async function resolveConversation(params: { utils: Utils; reserve: Reserve; request: ConversationRequest }): Promise<ResolvedConversation> {
+function resolveEmptyBootstrap(input: { params: Parameters<typeof resolveConversation>[0]; contextDir: string;
+  receiptProven: boolean }): Promise<ResolvedConversation> | ResolvedConversation {
+  if (input.receiptProven) {
+    return { selection: { kind: "unavailable", contextDir: input.contextDir, reason: "This conversation has no saved transcript in this box." } };
+  }
+  return fresh({ ...input.params, contextDir: input.contextDir });
+}
+function retireUsedReceipt(data: Extract<Bootstrap, { kind: "resumable" }>, receipts: ReservationReceipts | null): void {
+  if (data.history.total === 0) return;
+  try { receipts?.remove(data.sessionId); }
+  catch (error) { console.warn("Conversation reservation receipt could not be removed", error); }
+}
+export async function resolveConversation(params: { utils: Utils; reserve: Reserve; receipts: ReservationReceipts | null; request: ConversationRequest;
+  ensureReservation?: (sessionId: string) => Promise<ReservationReceipt | null> }): Promise<ResolvedConversation> {
   const { utils, request } = params;
   if (request.kind === "restore" && request.target) return { selection: { kind: "ready", target: request.target, label: request.label ?? "New conversation" } };
   let contextDir = request.contextDir ?? "";
@@ -54,22 +95,25 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
     session = (await utils.chat.lastSessionForDirectory.fetch({ contextDir })).sessionId ?? undefined;
   }
   if (request.kind === "new" || (request.kind !== "default" && !session)) return fresh({ ...params, contextDir });
-  const data = await utils.chat.bootstrap.fetch({ session, slice: chatTailSlice() });
-  if (data.kind === "empty") return fresh({ ...params, contextDir });
-  if (data.kind === "unavailable") {
-    // A chat the user did not name — the landmark's latest, a card's, the
-    // box default — whose transcript is not on this machine (expired, or run
-    // elsewhere) is not an error to show: it is "no conversation to resume",
-    // and the shell starts a fresh one, as the chat page always did before
-    // this resolver existed (2026-09-08: every box whose last chat had aged
-    // out opened to "Conversation unavailable" with nothing to do). The same
-    // goes for a chat the shell merely remembered or last rendered. A chat
-    // the user named — `?session=` in the URL, a pick from a list — stays an
-    // honest dead end: they asked for that one.
-    if (request.named !== true && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
-    return { selection: { kind: "unavailable", contextDir, reason: `Conversation unavailable: ${data.reason}` } };
-  }
-  const directory = await utils.chat.directoryFor.fetch({ sessionId: data.sessionId });
+  const provenReceipt = session === undefined ? undefined : params.receipts?.get(session);
+  const receiptProven = provenReceipt !== undefined;
+  if (provenReceipt !== undefined) contextDir = provenReceipt.contextDir;
+  const ensureReservation = params.ensureReservation ?? createReservationRecovery(params.receipts, params.reserve);
+  const restored = await restoreBeforeBootstrap({ sessionId: session, contextDir, ensureReservation });
+  contextDir = restored.contextDir;
+  const data: Bootstrap = await utils.chat.bootstrap.fetch(
+    { session, slice: chatTailSlice() },
+    { staleTime: 0 },
+  );
+  if (data.kind === "empty") return resolveEmptyBootstrap({ params, contextDir, receiptProven });
+  // Recover a proven empty reservation before replacing an implicitly selected missing chat.
+  if (data.kind === "unavailable" && request.named !== true && !receiptProven && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
+  if (data.kind === "unavailable") return { selection: { kind: "unavailable", contextDir, reason: data.reason === "missing-local-transcript" ? "This conversation has no saved transcript in this box." : `Conversation unavailable: ${data.reason}` } };
+  retireUsedReceipt(data, params.receipts);
+  const directory = await utils.chat.directoryFor.fetch(
+    { sessionId: data.sessionId },
+    { staleTime: 0 },
+  );
   return { selection: { kind: "ready", label: data.label ?? "Conversation", target: {
     kind: "session", sessionId: data.sessionId, contextDir: directory.contextDir,
   } }, initial: preload(data) };
