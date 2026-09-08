@@ -14,6 +14,8 @@ export interface ConversationRequest {
   cardPath?: string;
   engine?: ChatAgentEngine;
   model?: string;
+  /** The user named this chat (the URL's `?session=`, or a pick from a list); a restored or remembered one is not named. */
+  named?: boolean;
 }
 export interface ResolvedConversation { selection: ConversationSelection; initial?: ChatInitialLoad }
 type Reserve = (input: { sessionId: string; contextDir: string; engine?: ChatAgentEngine; model?: string }) => Promise<RouterOutput["chat"]["reserveSession"]>;
@@ -54,7 +56,19 @@ export async function resolveConversation(params: { utils: Utils; reserve: Reser
   if (request.kind === "new" || (request.kind !== "default" && !session)) return fresh({ ...params, contextDir });
   const data = await utils.chat.bootstrap.fetch({ session, slice: chatTailSlice() });
   if (data.kind === "empty") return fresh({ ...params, contextDir });
-  if (data.kind === "unavailable") return { selection: { kind: "unavailable", contextDir, reason: `Conversation unavailable: ${data.reason}` } };
+  if (data.kind === "unavailable") {
+    // A chat the user did not name — the landmark's latest, a card's, the
+    // box default — whose transcript is not on this machine (expired, or run
+    // elsewhere) is not an error to show: it is "no conversation to resume",
+    // and the shell starts a fresh one, as the chat page always did before
+    // this resolver existed (2026-09-08: every box whose last chat had aged
+    // out opened to "Conversation unavailable" with nothing to do). The same
+    // goes for a chat the shell merely remembered or last rendered. A chat
+    // the user named — `?session=` in the URL, a pick from a list — stays an
+    // honest dead end: they asked for that one.
+    if (request.named !== true && data.reason === "missing-local-transcript") return fresh({ ...params, contextDir });
+    return { selection: { kind: "unavailable", contextDir, reason: `Conversation unavailable: ${data.reason}` } };
+  }
   const directory = await utils.chat.directoryFor.fetch({ sessionId: data.sessionId });
   return { selection: { kind: "ready", label: data.label ?? "Conversation", target: {
     kind: "session", sessionId: data.sessionId, contextDir: directory.contextDir,
