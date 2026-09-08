@@ -27,7 +27,7 @@ interface BrowseDetailPanelProps {
   /** Renderer override from the URL's `?view=`. */
   rendererName?: string | null;
   /** Renderer-toggle choice, written back to the URL by the page. */
-  onSelectRenderer: (name: string) => void;
+  onSelectRenderer: (name: string | null) => void;
   viewState?: ViewState | null;
   onViewStateChange: (next: ViewState, method: "push" | "replace") => void;
   selectedCard: { relativePath: string } | null;
@@ -76,7 +76,7 @@ export function BrowseDetailPanel({
           {deleteError}
         </div>
       ) : null}
-      <div className="bg-white rounded-lg shadow print:bg-transparent print:rounded-none print:shadow-none">
+      <div className={selectedCard ? "min-w-0" : "bg-white rounded-lg shadow print:bg-transparent print:rounded-none print:shadow-none"}>
         <div className="flex items-start justify-between gap-4 border-b border-warm-200 px-4 py-3 print:hidden">
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-lg font-bold text-warm-900" title={toDisplayPath(selectedFilePath)}>

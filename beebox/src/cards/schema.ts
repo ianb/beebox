@@ -4,6 +4,7 @@ import { isRecord } from "../lib/is-record.js";
 import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
 import { CardSymbol, type CardSymbolData } from "../shared/card-symbol.js";
 import { Prominence, type ProminenceLevel, type EffectiveLevel } from "../shared/prominence.js";
+import { ThemeChoiceSchema, validateThemeChoice, type ThemeChoice } from "../shared/card-theme.js";
 
 /**
  * Card schemas describe a card file's full shape: most fields live in the
@@ -90,6 +91,8 @@ export type FieldDecl = ZodType | BodyField;
  *   to a reader looking around: `entry-point`, `primary`, or `background`.
  *   Absent (most cards) means the card type's default level — see
  *   `defaultProminence` below. See `src/shared/prominence.ts`.
+ * - `theme` — an optional presentation choice. Catalog membership is checked
+ *   by the host because a self-contained Zod schema cannot read box settings.
  *
  * Adding/removing a field here? Update the enumerations in
  * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/adding-schemas.md`.
@@ -101,6 +104,7 @@ export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   todos: TodosFieldSchema,
   symbol: CardSymbol.optional(),
   prominence: Prominence.optional(),
+  theme: ThemeChoiceSchema.optional(),
 };
 
 /**
@@ -183,6 +187,8 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
    * `effectiveLevel()` in `src/shared/prominence.ts`.
    */
   prominence?: ProminenceLevel;
+  /** This card type's preferred presentation when no card/rule/type override wins. */
+  theme?: ThemeChoice;
   /** Handling instructions for agents working with this card type. */
   instructions?: string;
   /**
@@ -247,6 +253,8 @@ export interface CardSchema<
    * `category: "system"` yields `"background"`, otherwise `"ordinary"`.
    */
   readonly defaultProminence: EffectiveLevel;
+  /** This type's optional theme preference; an explicit card choice still wins. */
+  readonly defaultTheme?: ThemeChoice;
   /** Name of the single body field, or null if the card is frontmatter-only. */
   readonly bodyFieldName: string | null;
   /** Resolved body field (kind + schema), or null. */
@@ -324,6 +332,7 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
         todos?: TodoEntry[];
         symbol?: CardSymbolData;
         prominence?: ProminenceLevel;
+        theme?: ThemeChoice;
       },
       keyof TFields
     >
@@ -341,6 +350,12 @@ export function cardSchema<
   TTag extends string,
   TFields extends Record<string, FieldDecl>,
 >(type: TTag, config: CardSchemaConfig<TFields>): CardSchema<TTag, TFields> {
+  if (config.theme !== undefined) {
+    const checkedTheme = validateThemeChoice(config.theme, `cardSchema(${type}) theme`);
+    if (checkedTheme.problem !== null) {
+      throw new CardSchemaDeclarationError(type, checkedTheme.problem.message);
+    }
+  }
   let bodyFieldName: string | null = null;
   let bodyField: BodyField | null = null;
   const frontmatterShape: Record<string, ZodType> = {
@@ -411,6 +426,9 @@ export function cardSchema<
   let resolved: CardSchema<TTag, TFields> = schema;
   if (config.description !== undefined) {
     resolved = { ...resolved, description: config.description };
+  }
+  if (config.theme !== undefined) {
+    resolved = { ...resolved, defaultTheme: config.theme };
   }
   if (config.instructions !== undefined) {
     resolved = { ...resolved, instructions: config.instructions };

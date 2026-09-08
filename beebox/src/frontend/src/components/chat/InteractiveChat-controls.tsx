@@ -223,6 +223,7 @@ function CompanionViewPanelInner({
                 params={tab.target.params}
                 viewState={tab.target.viewState}
                 onViewStateChange={(next) => onUpdateTarget({ ...tab.target, viewState: next }, { label: tab.label })}
+                onSelectRenderer={(viewer) => onUpdateTarget({ ...tab.target, viewer, viewState: null }, { label: tab.label })}
                 onNavigate={onNavigate}
                 onAddSelection={onAddSelection}
                 reportActivity={reportActivity}

@@ -134,7 +134,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const place = publishedPlace ?? placeLabel({ pathname: location.pathname, boxSlug: boxSlug ?? "" });
 
   return (
-    <nav aria-label="Primary" className="bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
+    <nav aria-label="Primary" className="bbx-app-nav bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
       <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 text-sm">
         <PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} place={place} />
         <BackToChatChip boxSlug={boxSlug ?? ""} onChatPage={location.pathname === `${base}/chat`} />

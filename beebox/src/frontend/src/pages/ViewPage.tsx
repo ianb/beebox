@@ -39,6 +39,17 @@ export function ViewPage() {
     });
   }, [location.pathname, navigate, target]);
 
+  const selectRenderer = useCallback((name: string | null) => {
+    if (target === null) return;
+    void navigate({
+      to: href(location.pathname),
+      search: toSearch(name === null
+        ? target.params
+        : { ...target.params, view: name, viewState: viewStateSearchValue(target.viewState) }),
+      replace: true,
+    });
+  }, [location.pathname, navigate, target]);
+
   if (!target) {
     return <Text as="div" tone="muted" className="p-8">No view specified.</Text>;
   }
@@ -53,6 +64,7 @@ export function ViewPage() {
         viewState={target.viewState}
         canPushViewState
         onViewStateChange={updateViewState}
+        onSelectRenderer={selectRenderer}
         onNavigate={handleNavigate}
       />
     </div>

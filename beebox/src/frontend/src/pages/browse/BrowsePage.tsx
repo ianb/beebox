@@ -205,13 +205,16 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   const handleViewStateChange = useBrowseViewStateNavigation({ currentPath, onNavigate, params: urlParams, viewer });
 
   const handleSelectRenderer = useCallback(
-    (name: string) => {
+    (name: string | null) => {
       // The renderer toggle is a view switch, so it belongs in the URL like
       // every other one — otherwise the choice sits in FileView's local state
       // where it outranks `?view=`, survives a same-path navigation, and can't
       // be shared or restored by back/forward. Replace: looking at the same
       // card a different way is not a new place.
-      onNavigate(currentPath, { search: { ...urlParams, view: name, ...(viewState ? { viewState: viewStateSearchValue(viewState) } : {}) }, replace: true });
+      const search = name === null
+        ? urlParams
+        : { ...urlParams, view: name, ...(viewState ? { viewState: viewStateSearchValue(viewState) } : {}) };
+      onNavigate(currentPath, { search, replace: true });
     },
     [currentPath, onNavigate, urlParams, viewState],
   );

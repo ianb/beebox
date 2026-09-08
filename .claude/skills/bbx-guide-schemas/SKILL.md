@@ -18,9 +18,9 @@ schemas under the package `src/schemas/`, importing `beebox/cards`
 
 Things the schema system does that you'd otherwise miss:
 
-- **Every schema silently gets six optional global fields** —
+- **Every schema silently gets seven optional global fields** —
   `title`, `contains`, `contains-evidence`, `todos`, `symbol`, and
-  `prominence` (`GLOBAL_CARD_FIELDS`, `src/cards/schema.ts`).
+  `prominence`, and `theme` (`GLOBAL_CARD_FIELDS`, `src/cards/schema.ts`).
   `contains` is the prime retrieval field (search boosts it 3×) — a
   card type whose writers never populate it is invisible to search.
   `contains-evidence` is the detail `contains` was derived from
@@ -32,8 +32,14 @@ Things the schema system does that you'd otherwise miss:
   reader looking around — absent means the type's default level
   (`src/shared/prominence.ts`; `cardSchema`'s own `prominence` option
   sets it per type, and `category: "system"` implies `background`).
+  `theme: { name, stock? }` selects presentation independently of the view;
+  `cardSchema`'s own `theme` option sets the type preference.
   Don't redeclare any of these — a schema's own declaration silently
   wins.
+- Cards also accept an optional catalog-validated `theme: {name, stock?}`
+  presentation choice. It is independent of the preferred view; read
+  `node_modules/beebox/box-docs/card-themes.md` before setting a schema theme
+  preference or advising on a card override.
 - **`instructions` prose is injected into agent context** when an agent
   processes cards of that type — it's prompt surface (see
   `docs/prompt-surface-review.md` before writing more than a couple of

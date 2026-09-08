@@ -95,6 +95,7 @@ export function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string;
         const resolvedHref = viewHref(ctx.boxSlug, target);
         return (
           <a
+            className="bbx-theme-link"
             href={resolvedHref}
             title={title}
             onClick={(e) => {
@@ -115,12 +116,12 @@ export function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string;
     const isExternal = href.startsWith("http://") || href.startsWith("https://");
     if (isExternal) {
       return (
-        <a href={href} title={title} target="_blank" rel="noopener noreferrer">
+        <a className="bbx-theme-link" href={href} title={title} target="_blank" rel="noopener noreferrer">
           {children}
         </a>
       );
     }
-    return <a href={href} title={title}>{children}</a>;
+    return <a className="bbx-theme-link" href={href} title={title}>{children}</a>;
   };
 }
 

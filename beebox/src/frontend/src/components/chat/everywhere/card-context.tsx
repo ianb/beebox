@@ -31,7 +31,7 @@ export function useConversationCard({ path, mode, rendererName, params, viewStat
     return () => store.release(owner);
   }, [enabled, store, owner, ref]);
   function handleFocus() { if (enabled) store?.focus(owner, ref); }
-  function handleRendererFocus(viewer: string) { if (enabled) store?.focus(owner, serializeViewUrl({ ...target, viewer })); }
+  function handleRendererFocus(viewer: string | null) { if (enabled) store?.focus(owner, serializeViewUrl({ ...target, viewer })); }
   return { handleFocus, handleRendererFocus, capture: enabled ? store?.capture : undefined };
 }
 

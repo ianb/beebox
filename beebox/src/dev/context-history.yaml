@@ -4319,6 +4319,30 @@ test1:
       peak: 53496
       added: 0
       turns: 1
+  card-theme-choice:
+    - date: 2026-09-08T03:17:14.090Z
+      boxCommit: 693441c45fc9e990e58320c8bec94dd7cc0e1a00
+      repoCommit: 23f49033dece1e46616ce82780e71504848511cc
+      initial: 45052
+      peak: 46722
+      added: 1670
+      turns: 4
+  card-theme-selection:
+    - date: 2026-09-08T03:17:14.090Z
+      boxCommit: 693441c45fc9e990e58320c8bec94dd7cc0e1a00
+      repoCommit: 23f49033dece1e46616ce82780e71504848511cc
+      initial: 45634
+      peak: 46476
+      added: 842
+      turns: 5
+  card-quote-treatment:
+    - date: 2026-09-08T03:17:14.090Z
+      boxCommit: 693441c45fc9e990e58320c8bec94dd7cc0e1a00
+      repoCommit: 23f49033dece1e46616ce82780e71504848511cc
+      initial: 45622
+      peak: 46956
+      added: 1334
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

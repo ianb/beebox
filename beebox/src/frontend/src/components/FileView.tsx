@@ -21,6 +21,7 @@
  *                     with renderer toggle.
  */
 
+import { ThemedFileCard } from "./themes/ThemedFileCard";
 import { useConversationCard, selectionReceiver } from "./chat/everywhere/card-context";
 import { useState, useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
@@ -162,14 +163,14 @@ function FileErrorState({ path, failure, onRetry }: { path: string; failure: Loa
 }
 
 function selectedRenderer({ path, userSelection, rendererName }: {
-  path: string; userSelection: { path: string; name: string } | null; rendererName?: string | null;
+  path: string; userSelection: { path: string; name: string | null } | null; rendererName?: string | null;
 }) { return userSelection?.path === path ? userSelection.name : rendererName; }
 
 /* ---------- main component ---------- */
 
 export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
   const mode = modeProp ?? "page";
-  const [userSelection, setUserSelection] = useState<{ path: string; name: string } | null>(null);
+  const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const cardContext = useConversationCard({ path, mode, rendererName: selectedRenderer({ path, userSelection, rendererName }), params, viewState: ownedViewState });
   const onAddSelection = selectionReceiver(suppliedAddSelection, cardContext.capture);
   const handleCardFocus = cardContext.handleFocus;
@@ -182,10 +183,10 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     onAddSelection({ ref, text: selection.text, position: selection.position });
   }, [onAddSelection, path]);
 
-  const selectForPath = useCallback((name: string) => {
+  const selectForPath = useCallback((name: string | null) => {
     // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
     // "explored" action. No-op outside the companion pane (reportActivity unset).
-    reportActivity?.("explored", `viewing as ${name}`);
+    reportActivity?.("explored", name === null ? "using preferred view" : `viewing as ${name}`);
     handleRendererFocus(name);
     if (onSelectRenderer) {
       onSelectRenderer(name);
@@ -207,8 +208,8 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} onRetry={refresh} />;
   if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {toDisplayPath(path)}</div>;
 
-  const userName = userSelection && userSelection.path === path ? userSelection.name : null;
-  const requested = userName ?? rendererName ?? null;
+  const hasUserSelection = userSelection?.path === path;
+  const requested = hasUserSelection ? userSelection.name : rendererName ?? null;
   // renderers can be empty (no renderer matches this file); the frontend
   // tsconfig lacks noUncheckedIndexedAccess, so `renderers[0]` would type
   // `active` as always-defined. `.at(0)` is typed `T | undefined` regardless
@@ -257,6 +258,12 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     // stale marker either — an embed has no chrome to carry one, and the card
     // that hosts it reports its own staleness.
     return captured;
+  }
+
+  if (isCardPath(path)) {
+    return <ThemedFileCard key={path} data={data} mode={mode} renderers={renderers}
+      active={active} hasExplicitView={requested !== null} onSelect={selectForPath} onNavigate={onNavigate} onFocus={handleCardFocus}
+      onClose={onClose} onOpenInPanel={onOpenInPanel}>{body}</ThemedFileCard>;
   }
 
   if (mode === "chat") {

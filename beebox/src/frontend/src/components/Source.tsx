@@ -98,7 +98,7 @@ function CitationChip({
       type="button"
       onClick={handleClick}
       title={title}
-      className="not-italic text-warm-500 hover:text-warm-700 underline-offset-2 hover:underline cursor-pointer text-xs ml-1"
+      className="bbx-theme-link not-italic cursor-pointer text-xs ml-1"
     >
       [→ {label}{usage !== undefined && usage !== "" ? <span className="italic">{`: ${usage}`}</span> : null}]
     </button>
@@ -126,7 +126,7 @@ function ContainerChip({
       type="button"
       onClick={handleClick}
       title="Jump to this passage on the page"
-      className="not-italic text-warm-500 hover:text-warm-700 underline-offset-2 hover:underline cursor-pointer text-xs ml-1"
+      className="bbx-theme-link not-italic cursor-pointer text-xs ml-1"
     >
       [→]
     </button>
