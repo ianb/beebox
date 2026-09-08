@@ -182,6 +182,7 @@ The generic theme gallery is installed explicitly into a development box from
 node --import tsx beebox/scripts/install-theme-tour.ts <box-root>
 bin/tour card-themes
 bin/tour card-theme-previews
+bin/tour card-theme-interface
 ```
 
 The installer leaves changed files alone and reports conflicts. Its entry card

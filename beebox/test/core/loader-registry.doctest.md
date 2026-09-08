@@ -96,10 +96,28 @@ resetLoaderRegistry();
 const s = summarize({
   path: "_content/figures/Cube.figure.card",
   type: "figure",
-  fields: { title: "Rotating Cube Demo", contains: "A spinning cube.", symbol: { glyph: "🧊" } },
+  fields: { title: "Rotating Cube Demo", contains: "A spinning cube.", symbol: { glyph: "🧊" }, theme: { name: "paper", stock: "blue" } },
 });
-[s.title, s.contains, s.symbol?.glyph].join("|")
-=> Rotating Cube Demo|A spinning cube.|🧊
+[s.type, s.title, s.contains, s.symbol?.glyph, s.cardTheme?.name, s.cardTheme?.stock].join("|")
+=> figure|Rotating Cube Demo|A spinning cube.|🧊|paper|blue
+```
+
+An authored theme remains present even when its selection is invalid; the plain
+result lets the shared resolver preserve the
+explicit-choice precedence over box and schema defaults.
+
+```ts continue
+const invalidTheme = summarize({ path: "_content/x.doc.card", type: "doc", fields: { theme: { name: "velvet" } } });
+JSON.stringify([invalidTheme.type, invalidTheme.cardTheme])
+=> ["doc",{"name":"plain","stock":"neutral"}]
+
+const malformedTheme = summarize({ path: "_content/y.doc.card", type: "doc", fields: { theme: "paper" } });
+JSON.stringify(malformedTheme.cardTheme)
+=> {"name":"plain","stock":"neutral"}
+
+const raw = summarize({ path: "_content/x.txt" });
+JSON.stringify([raw.type, raw.cardTheme])
+=> [null,null]
 ```
 
 A card's own `title:` beats the filename — that is the whole point, and it is

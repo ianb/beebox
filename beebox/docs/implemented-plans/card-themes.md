@@ -724,3 +724,52 @@ Manila paper adds irregular short fibers to its grain, echoed more softly on
 quote slips. Other stocks retain their existing finishes. A matching-content
 manila example remains in the test1 gallery. The expanded preview tour passed
 five checkpoints with no findings or axe violations.
+
+### Full-interface framing and card tabs
+
+Companion cards and Browse details now rest on a padded desk (20 pixels on
+roomy layouts, 12 on narrow ones), retaining their natural sheet height. Browse
+keeps the path and full-view action outside the card without duplicating its
+heading. Raw file views retain their previous container structure.
+
+Open-card tabs share one shape, while their paper,
+ink, font and subtle grain follow the card's theme. The existing batched file
+summaries now include type and an authored theme choice, so tabs use the same
+box/schema/card cascade as the full surface without loading card bodies. An
+invalid explicit choice stays an explicit plain fallback. Existing realtime
+summary invalidation and the shared presentation provider update tab material
+when the card or box rules change.
+
+A focused cross-model review caught asynchronous desk classification and a
+Browse shadow-clipping rule; both were corrected. The interface tour checks
+Browse at desktop and phone widths, including visible gutters and no horizontal
+overflow. It passes with zero findings and zero axe violations. Live companion
+checks also confirmed that selecting a stock in Properties updates its tab and
+that narrow desktop layouts retain their gutters. The metadata and consumer
+checks passed 36 assertions, with frontend/backend/tooling typechecks and lint.
+
+The companion tab row now sits on the same desk inset as its card, with no
+gutter between the selected tab and the sheet. The selected tab rises slightly
+above inactive tabs and joins the card edge without an underline. When the
+leftmost tab is active, the sheet corner squares off at that joint. The outer
+gutter surrounds the combined tab and card.
+
+Active tabs now reuse the actual stock texture layer, including manila fibers.
+Attached cards retain their full vignette and raised shadow. Tab and sheet
+sample one material canvas, with geometry refreshed on resize, tab scrolling,
+and Properties turns; the bright top rim breaks only at the tab joint. Frontmatter grids
+use shrinkable value columns and overflow-wrap:anywhere; reference labels use
+the shared display-path formatter without changing navigation targets. Actual
+nested reference fields were checked at desktop, narrow desktop, and phone
+widths with no horizontal overflow.
+
+A focused cross-model review of the shared material geometry confirmed the
+coordinate math and turn-animation guard. It raised two transition concerns:
+a themed tab temporarily uses its own material bounds before its card loads,
+and mobile keyboard changes may emit only a visual-viewport event. Neither
+requires another listener or retained stale geometry: there is no sheet to
+align during loading, mounting triggers measurement, and ResizeObserver tracks
+actual pane, tab, and card size changes. Browser checks covered tab scrolling,
+Properties height changes, and a narrow desktop resize; physical-device keyboard
+behavior was not checked. Frontend typechecking, changed-file lint, documentation
+checks, and diff whitespace checks pass.

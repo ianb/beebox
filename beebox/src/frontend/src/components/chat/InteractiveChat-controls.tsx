@@ -15,6 +15,8 @@ import { withBase } from "../../api";
 import { cn } from "../../lib/cn";
 
 import { useCardIdentities } from "../../hooks/useCardIdentities";
+import { useCompanionMaterial } from "../../hooks/useCompanionMaterial";
+import { cardTypeFromName } from "@shared/card-name";
 import { SidecarTabStrip } from "./SidecarTabStrip";
 import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
@@ -141,6 +143,7 @@ function CompanionViewPanelInner({
   reportActivity: (kind: ActivityKind, detail?: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
+  const companionDeskRef = useCompanionMaterial(activePath);
   // One batched read for every open path, invalidated on file-change — so a
   // retitled card retitles its tab, and a pinned tab restored from storage has
   // a title it never saw when it was opened.
@@ -172,8 +175,8 @@ function CompanionViewPanelInner({
   if (!active) return null;
   const browseHref = withBase(`/${boxSlug}/browse/${active.target.path}`);
   return (
-    <div className="h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
-      <div className="flex-shrink-0 flex items-stretch border-b border-warm-300 bg-warm-50 min-w-0">
+    <div ref={companionDeskRef} data-active-card={cardTypeFromName(active.target.path) !== undefined || undefined} className="bbx-companion-desk h-[40vh] md:h-full md:w-1/2 flex-shrink-0 flex flex-col border-b md:border-b-0 md:border-r border-warm-300 bg-white">
+      <div className="bbx-companion-tabs flex-shrink-0 flex items-stretch border-b border-warm-300 bg-warm-50 min-w-0">
         <SidecarTabStrip
           tabs={tabs}
           activePath={activePath}
@@ -205,12 +208,13 @@ function CompanionViewPanelInner({
               // chrome — the tab strip, the close button — is above this and
               // stays scannable.
               data-bbx-scan="exclude"
+              data-card-content={cardTypeFromName(tab.target.path) === undefined ? "neutral" : "card"}
               // tabIndex 0: a scrolling tabpanel must be keyboard-focusable
               // (both the tabpanel ARIA pattern and axe's
               // scrollable-region-focusable) — the fixed shell's window never
               // scrolls, so keys only reach a container that can take focus.
               tabIndex={0}
-              className={cn("absolute inset-0 overflow-auto", !isActive && "hidden")}
+              className={cn("bbx-interface-card-desk absolute inset-0 overflow-auto", !isActive && "hidden")}
               // Scrolling the active card reports a quantized read position
               // (nearest tenth); reportScroll de-dupes so a scroll only fires
               // when it crosses a tenth. Only the visible tab scrolls.

@@ -20,10 +20,13 @@ import { useBusSubscription, type RealtimeEvent } from "./useBusSubscription";
 import { busEventData } from "../lib/bus-events";
 import { boxRelativePath } from "@shared/box-path";
 import type { CardSymbolData } from "@shared/card-symbol";
+import type { ThemeChoice } from "@shared/card-theme";
 
 export interface CardIdentity {
   title: string;
   symbol: CardSymbolData | null;
+  type?: string;
+  cardTheme?: ThemeChoice;
 }
 
 export function useCardIdentities(paths: string[]): Map<string, CardIdentity> {
@@ -63,7 +66,12 @@ export function useCardIdentities(paths: string[]): Map<string, CardIdentity> {
     const out = new Map<string, CardIdentity>();
     for (const summary of query.data ?? []) {
       if (summary === null) continue;
-      out.set(summary.path, { title: summary.title, symbol: summary.symbol ?? null });
+      out.set(summary.path, {
+        title: summary.title,
+        symbol: summary.symbol ?? null,
+        ...(summary.type === undefined ? {} : { type: summary.type }),
+        ...(summary.cardTheme === undefined ? {} : { cardTheme: summary.cardTheme }),
+      });
     }
     return out;
   }, [query.data]);

@@ -64,24 +64,42 @@ export function BrowseDetailPanel({
     selectedRawFile ? undefined : cardTypeFromPath(selectedFilePath),
   );
   const wide = selectedRawFile !== null || viewBinding !== null;
+  const fileView = (
+    <FileView
+      path={selectedFilePath}
+      mode="companion"
+      onNavigate={onNavigate}
+      onSelectRenderer={onSelectRenderer}
+      params={params}
+      rendererName={rendererName}
+      viewState={viewState}
+      canPushViewState
+      onViewStateChange={onViewStateChange}
+      onClose={onBack}
+    />
+  );
   // w-full: without it, mx-auto suppresses flex stretch and the panel
   // shrink-wraps to its content's intrinsic width — one wide child (a
   // fixed-size canvas, an unbreakable path) then pans the whole card
   // sideways on narrow viewports instead of the child scaling down.
   return (
     <div className={`${wide ? "max-w-7xl" : "max-w-4xl"} w-full mx-auto py-4 sm:py-8 print:max-w-none print:mx-0 print:py-0`}>
+      <h1 className="sr-only md:hidden">Browse</h1>
       <MobileBackButton id="bbx-browse-back" label="Back" onClick={onBack} className="mb-4 mx-4 print:hidden" />
       {deleteError ? (
         <div className="mb-4 mx-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-dark print:hidden">
           {deleteError}
         </div>
       ) : null}
-      <div className={selectedCard ? "min-w-0" : "bg-white rounded-lg shadow print:bg-transparent print:rounded-none print:shadow-none"}>
-        <div className="flex items-start justify-between gap-4 border-b border-warm-200 px-4 py-3 print:hidden">
+      <div
+        className={selectedCard ? "bbx-interface-browse-panel min-w-0" : "bg-white rounded-lg shadow print:bg-transparent print:rounded-none print:shadow-none"}
+        data-card-content={selectedCard ? "card" : "neutral"}
+      >
+        <div className={`flex items-start justify-between gap-4 px-4 py-3 print:hidden ${selectedCard ? "bbx-interface-card-toolbar" : "border-b border-warm-200"}`}>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-bold text-warm-900" title={toDisplayPath(selectedFilePath)}>
+            {selectedCard ? null : <h2 className="truncate text-lg font-bold text-warm-900" title={toDisplayPath(selectedFilePath)}>
               {displayName(selectedFilePath)}
-            </h2>
+            </h2>}
             <div className="truncate text-sm text-warm-500" title={toDisplayPath(selectedFilePath)}>
               {toDisplayPath(selectedFilePath)}
             </div>
@@ -118,18 +136,7 @@ export function BrowseDetailPanel({
             ) : null}
           </div>
         </div>
-        <FileView
-          path={selectedFilePath}
-          mode="companion"
-          onNavigate={onNavigate}
-          onSelectRenderer={onSelectRenderer}
-          params={params}
-          rendererName={rendererName}
-          viewState={viewState}
-          canPushViewState
-          onViewStateChange={onViewStateChange}
-          onClose={onBack}
-        />
+        {selectedCard ? <div className="bbx-interface-card-desk">{fileView}</div> : fileView}
       </div>
     </div>
   );

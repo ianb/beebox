@@ -11,6 +11,7 @@ import "./themes/quote-sheets.css";
 import "./themes/card-turn.css";
 import "./themes/stock-textures.css";
 import "./themes/chrome.css";
+import "./themes/interface.css";
 import "./renderers/setup";
 import { registerBuiltinFileTypes } from "./file-types/builtins";
 import { withBase } from "./api";
