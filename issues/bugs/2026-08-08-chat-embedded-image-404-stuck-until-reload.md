@@ -4,8 +4,20 @@ workstream: unknown
 area: beebox
 filed-by: agent
 discovered-in: main session — boxholder report
-resolution: implemented
 ---
+
+> **Reopened 2026-09-07 — regressed.** The bounded retry `e209e50a` added was
+> removed by `7e68eadd5` ("Remove timed image retries", the chat-scroll
+> workstream, 2026-09-06), which kept only the `file-change` refresh
+> (`lib/file-version.ts`: a change event busts the URL). That refresh cannot
+> fire where the box file watcher has hit its 1,024-directory ceiling — the
+> reported box has 5,948 directories, 5,564 of them `.attach` scopes — so an
+> image the agent posts before the file exists 404s once, lands in
+> `failedImageUrls`, and stays the placeholder until a reload
+> (`2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md`). The
+> fix this time re-checks the file's existence on a bounded schedule and only
+> swaps the image in once it is there — one reflow, when real — rather than
+> re-loading the `<img>` on a timer.
 
 Closed by `e209e50a` (`Retry chat images that appear after rendering`). Chat-embedded
 in-box images now retry on a bounded leaf-local backoff, while external proxy
