@@ -17,14 +17,25 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 const realHome = process.env["HOME"] ?? homedir();
-const testHome = mkdtempSync(join(tmpdir(), "bbx-test-home-"));
-process.env["HOME"] = testHome;
+
+// The manual tier (`pnpm test:manual`) exists to exercise REAL services, and
+// the one real thing a throwaway HOME hides is the developer's Claude Code
+// login: `claude auth status` reports logged-out under any other HOME, even
+// with `~/.claude` linked in, so the real-SDK doctest failed its auth
+// preflight every week from 2026-09-08. That tier opts out of the HOME swap
+// with this variable and keeps its real home; every other isolation below
+// (uv cache, url checks) and beside this file (secret store, auth file,
+// origin id, Codex home) is its own variable and stays in force.
+const keepRealHome = process.env["BBX_TEST_REAL_HOME"] === "1";
+const testHome = keepRealHome ? null : mkdtempSync(join(tmpdir(), "bbx-test-home-"));
+if (testHome !== null) process.env["HOME"] = testHome;
 
 // Removed when this process exits. Nothing else ever did: every test process
 // left its HOME behind, and by 2026-09-05 the machine's temp dir held 56,000
 // of them. Best-effort — a HOME a child still holds open is deleted by the
 // next run's sweep, not by a throw here.
 process.on("exit", () => {
+  if (testHome === null) return;
   try {
     rmSync(testHome, { recursive: true, force: true });
   } catch (_e) {
