@@ -100,15 +100,6 @@ export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: ()
   );
 }
 
-/** Full-height placeholder while the chat machine loads a session. */
-export function ChatLoading() {
-  return (
-    <div className="h-full flex items-center justify-center text-warm-500">
-      Loading chat...
-    </div>
-  );
-}
-
 export interface ComposerSectionProps {
   attachments: AttachmentItem[];
   pendingImageCount: number;
