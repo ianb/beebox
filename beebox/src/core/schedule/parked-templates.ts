@@ -10,14 +10,16 @@
  * (issues/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
  *
  * Two files can be behind a task, and both are template-managed:
- *   - the task's own card, `config/schedules/<name>.scheduled-script.card`
+ *   - the task's own card, `_config/schedules/<name>.scheduled-script.card`
  *   - the procedure it runs, when `runs` is a `bbx procedure run <name>` command
  */
+
+import { BOX_DIRS } from "../../lib/paths.js";
 
 /**
  * The box-relative procedure card a `runs` command executes, or null when the
  * command isn't a procedure run. Mirrors `resolveProcedurePath`
- * (`core/procedure/engine.ts`): a bare name resolves under `config/procedures/`,
+ * (`core/procedure/engine.ts`): a bare name resolves under `_config/procedures/`,
  * an explicit `.procedure.card` path is used as given.
  */
 export function procedureCardForRuns(runs: string): string | null {
@@ -29,7 +31,7 @@ export function procedureCardForRuns(runs: string): string | null {
   if (nameOrPath.endsWith(".procedure.card")) {
     return nameOrPath.replace(/^\.?\//, "");
   }
-  return `config/procedures/${nameOrPath}.procedure.card`;
+  return `${BOX_DIRS.procedures}/${nameOrPath}.procedure.card`;
 }
 
 /**
@@ -67,7 +69,7 @@ function firstOperand(tail: string): string | null {
 
 /** The box-relative card path for a scheduled task. */
 function scheduleCardForTask(name: string): string {
-  return `config/schedules/${name}.scheduled-script.card`;
+  return `${BOX_DIRS.schedules}/${name}.scheduled-script.card`;
 }
 
 /**

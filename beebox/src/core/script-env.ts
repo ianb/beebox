@@ -8,7 +8,7 @@
  * `bbx chat self-note` without each spawn site re-implementing the
  * derivation.
  *
- * Source of truth is `config/box.json`'s `publicUrl` field (which may
+ * Source of truth is `_config/box.json`'s `publicUrl` field (which may
  * also come from the `PUBLIC_URL` env var as a fallback). `publicUrl`
  * encodes both the server base URL and the box slug in one string,
  * e.g. `https://bbx.example.org/test1` → server `https://bbx.example.org`,
@@ -67,7 +67,7 @@ interface BoxEnvPieces {
 
 /**
  * Per-box live server URLs, populated at server startup. Preferred over
- * `config/box.json#publicUrl` so that a running local dev server (which
+ * `_config/box.json#publicUrl` so that a running local dev server (which
  * knows its actual port and slug) can supply the env vars even when
  * `publicUrl` is absent from box config.
  *
@@ -78,7 +78,7 @@ const ambientPublicUrls = new Map<string, string>();
 /**
  * Register the live public URL for a box. Called by `startServer` after
  * the server binds, once per served box. Format matches
- * `config/box.json#publicUrl`: full URL including slug (e.g.
+ * `_config/box.json#publicUrl`: full URL including slug (e.g.
  * `http://localhost:3210/test1`).
  */
 export function registerBoxPublicUrl(boxRoot: string, publicUrl: string): void {
@@ -163,7 +163,7 @@ async function buildEnv(
  * - Starts from `SCRIPT_ENV_ALLOWLIST` applied to `process.env`; nothing else
  *   is inherited, connector credentials included.
  * - Adds `BBX_BOX_NAME` and `BBX_SERVER_URL` when derivable from
- *   `config/box.json#publicUrl` (or `PUBLIC_URL` env fallback).
+ *   `_config/box.json#publicUrl` (or `PUBLIC_URL` env fallback).
  * - Adds `BBX_AGENT_TOKEN` so the subprocess's `bbx chat …` calls get through
  *   its own box's auth wall.
  * - Applies any caller-provided `additions` last (callers can override
@@ -183,7 +183,7 @@ export async function buildScriptEnv(
  * connectors, so on an env-var-configured server they need the connector
  * credentials the agent profile withholds.
  *
- * Honest scope, per `docs/plans/secret-custody.md`: a scheduled-script card is
+ * Honest scope, per `docs/implemented-plans/secret-custody.md`: a scheduled-script card is
  * agent-authorable, so this profile is agent-*reachable* by writing a script
  * card and waiting for it to fire. What Track 1 closes is the trivial path —
  * the agent's own process env — not every path; Track 3 closes this one by

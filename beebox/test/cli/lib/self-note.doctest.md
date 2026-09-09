@@ -17,12 +17,12 @@ import { makeTestServer } from "../../helpers/doctest-server.js";
 ### Full tag — ref and commit and body
 
 ```ts
-const note = parseSelfNote('<self-note ref="config/schedules/daily.card" commit="abc123">body text</self-note>');
+const note = parseSelfNote('<self-note ref="_config/schedules/daily.card" commit="abc123">body text</self-note>');
 print(`ref: ${note.ref}`);
 print(`commit: ${note.commit}`);
 print(`body: ${note.body}`);
 =>
-ref: config/schedules/daily.card
+ref: _config/schedules/daily.card
 commit: abc123
 body: body text
 ```

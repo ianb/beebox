@@ -50,11 +50,11 @@ function slugFor(courseDir: string): string {
     .toLowerCase();
 }
 
-function renderRule(input: { courseDir: string; rulePath: string; rules: string[] }): string {
+function renderRule(input: { courseDir: string; rules: string[] }): string {
   return [
     "---",
     "paths:",
-    `  - "${input.rulePath}/**"`,
+    `  - "${input.courseDir}/**"`,
     "---",
     `# Exposition rules — ${input.courseDir}`,
     "",
@@ -71,16 +71,13 @@ function renderRule(input: { courseDir: string; rulePath: string; rules: string[
  * Clean-and-rewrite the `exposition-*.md` rules in `.claude/rules/` from every
  * exposition-plan card in the box. Returns the filenames written.
  *
- * `.claude/rules` lives at the box's package root (equal to `boxRoot` for a
- * legacy box) — see "Where Claude Code runs" in
- * `docs/implemented-plans/boxes-as-packages-v2.md`. A v2 box's course directories are
- * nested under `content/` relative to that package root, so the generated
- * `paths:` glob needs the box-root-relative-to-package-root prefix
- * (`content/`) or it never matches anything under the operational root.
+ * `.claude/rules` lives at the box root (shapeVersion 3: the one root), the
+ * same root course directories live under, so the generated `paths:` glob is
+ * just the course directory relative to `boxRoot` — no cross-root prefix.
  */
 export async function compileExpositionRules(boxRoot: string): Promise<string[]> {
   const shape = await getBoxShape(boxRoot);
-  const rulesDir = join(shape.packageRoot, ".claude", "rules");
+  const rulesDir = join(shape.boxRoot, ".claude", "rules");
   await mkdir(rulesDir, { recursive: true });
 
   // Remove stale exposition-*.md so a renamed/deleted course leaves no orphan.
@@ -96,18 +93,14 @@ export async function compileExpositionRules(boxRoot: string): Promise<string[]>
     }
   }
 
-  // "" for a legacy box (packageRoot === boxRoot); "content" for a v2 box.
-  const boxPrefix = relative(shape.packageRoot, shape.boxRoot);
-
   const cards = (await listBoxCardFiles(boxRoot)).filter((p) => p.endsWith(".exposition-plan.card"));
   const written: string[] = [];
   for (const abs of cards) {
     const rules = await readRules(abs);
     if (rules.length === 0) continue;
     const courseDir = relative(boxRoot, dirname(abs));
-    const rulePath = boxPrefix === "" ? courseDir : `${boxPrefix}/${courseDir}`;
     const filename = `${RULE_PREFIX}${slugFor(courseDir)}.md`;
-    await writeFile(join(rulesDir, filename), renderRule({ courseDir, rulePath, rules }));
+    await writeFile(join(rulesDir, filename), renderRule({ courseDir, rules }));
     written.push(filename);
   }
   return written;

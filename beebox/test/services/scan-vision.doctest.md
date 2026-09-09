@@ -19,24 +19,25 @@ import {
 
 Default (no `BBX_SCAN_VISION`) is Claude — the zero-setup path. Gemini is
 explicit opt-in and fails closed without a key; unknown values are errors,
-never silent fallbacks. The env selects the *backend*; the key itself arrives
-already resolved from `core/gemini-key.ts` (store, then `GEMINI_KEY` /
-`SKE_GEMINI_API_KEY`), so there is one Gemini resolution order in the codebase.
+never silent fallbacks. The env selects the *backend*; the route arrives
+already resolved from `core/openrouter.ts` — the box's own Gemini key
+(`core/gemini-key.ts`, the machine secret store) when it has one, OpenRouter
+otherwise — so there is one place a Gemini key is resolved.
 
 ```ts
 const claude = selectScanVisionBackend({}, null);
 JSON.stringify(claude)
 => {"ok":true,"value":{"backend":"claude"}}
 
-const gemini = selectScanVisionBackend({ BBX_SCAN_VISION: "gemini" }, "placeholder-gemini-key");
+const gemini = selectScanVisionBackend({ BBX_SCAN_VISION: "gemini" }, { via: "direct", apiKey: "placeholder-gemini-key" });
 JSON.stringify(gemini)
-=> {"ok":true,"value":{"backend":"gemini","apiKey":"placeholder-gemini-key"}}
+=> {"ok":true,"value":{"backend":"gemini","route":{"via":"direct","apiKey":"placeholder-gemini-key"}}}
 
 const noKey = selectScanVisionBackend({ BBX_SCAN_VISION: "gemini" }, null);
 noKey.ok ? "ok" : noKey.error
-=> BBX_SCAN_VISION=gemini but no Gemini key is available — grant the "gemini" secret to this box, or set GEMINI_KEY (or SKE_GEMINI_API_KEY)
+=> BBX_SCAN_VISION=gemini but no key can reach the model — grant the "gemini" or "openrouter" secret to this box
 
-const typo = selectScanVisionBackend({ BBX_SCAN_VISION: "gemnii" }, "placeholder-gemini-key");
+const typo = selectScanVisionBackend({ BBX_SCAN_VISION: "gemnii" }, { via: "direct", apiKey: "placeholder-gemini-key" });
 typo.ok ? "ok" : typo.error
 => BBX_SCAN_VISION=gemnii is not a valid backend (valid: claude, gemini)
 
@@ -45,7 +46,7 @@ typo.ok ? "ok" : typo.error
 A key present but empty is still "no key" — the same fail-closed answer:
 
 ```ts continue
-const emptyKey = selectScanVisionBackend({ BBX_SCAN_VISION: "gemini" }, "");
+const emptyKey = selectScanVisionBackend({ BBX_SCAN_VISION: "gemini" }, { via: "direct", apiKey: "" });
 emptyKey.ok
 => false
 ```
@@ -137,7 +138,7 @@ assert only its declared shape (batch size 8 is the historical Gemini batch
 default).
 
 ```ts
-const gsvc = createGeminiScanVision({ apiKey: "k-1" });
+const gsvc = createGeminiScanVision({ route: { via: "direct", apiKey: "k-1" } });
 `${gsvc.backend} ${gsvc.batchSize}`
 => gemini 8
 ```

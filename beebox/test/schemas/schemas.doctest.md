@@ -192,8 +192,8 @@ createIntakeJobTemplate({
   source: "capture-connector",
   description: "Triage 2 new capture sessions",
   items: [
-    "box/inbox/capture-1/session.capture-session.card",
-    "box/inbox/capture-2/session.capture-session.card",
+    "_content/inbox/capture-1/session.capture-session.card",
+    "_content/inbox/capture-2/session.capture-session.card",
   ],
 })
 =>
@@ -203,8 +203,8 @@ source: capture-connector
 priority: normal
 description: Triage 2 new capture sessions
 items:
-  - ref: box/inbox/capture-1/session.capture-session.card
-  - ref: box/inbox/capture-2/session.capture-session.card
+  - ref: _content/inbox/capture-1/session.capture-session.card
+  - ref: _content/inbox/capture-2/session.capture-session.card
 ---
 ```
 
@@ -214,7 +214,7 @@ Supports `priority: "low"`:
 createIntakeJobTemplate({
   source: "capture-connector",
   description: "Triage bookmarks",
-  items: ["box/inbox/bookmark.bookmark.card"],
+  items: ["_content/inbox/bookmark.bookmark.card"],
   priority: "low",
 })
 =>
@@ -224,7 +224,7 @@ source: capture-connector
 priority: low
 description: Triage bookmarks
 items:
-  - ref: box/inbox/bookmark.bookmark.card
+  - ref: _content/inbox/bookmark.bookmark.card
 ---
 ```
 

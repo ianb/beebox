@@ -28,7 +28,7 @@ async function guard(p) {
 
 ```ts
 const root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-guard-"));
-execSync("git init -q", { cwd: root });
+execSync("git init -q -b main", { cwd: root });
 await guard(root)
 => ok
 ```
@@ -55,23 +55,44 @@ await fs.rm(root, { recursive: true, force: true });
 await fs.rm(plain, { recursive: true, force: true });
 ```
 
-## A package-layout (v2) box's `content/` passes — its own repo top level is the package root, not `content/` itself
+## A shapeVersion-3 box (one root, same as its git top level) passes
 
 ```ts continue
 const pkgRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-guard-pkg-"));
-execSync("git init -q", { cwd: pkgRoot });
+execSync("git init -q -b main", { cwd: pkgRoot });
 await fs.writeFile(
   path.join(pkgRoot, "package.json"),
   JSON.stringify({ name: "my-box", dependencies: { "beebox": "^0.1.0" } })
 );
-const contentDir = path.join(pkgRoot, "content");
-await fs.mkdir(contentDir);
-await fs.mkdir(path.join(contentDir, ".beebox"), { recursive: true });
-await fs.writeFile(path.join(contentDir, ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
-await guard(contentDir)
+await fs.mkdir(path.join(pkgRoot, ".beebox"), { recursive: true });
+await fs.writeFile(path.join(pkgRoot, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+await guard(pkgRoot)
 => ok
 ```
 
 ```ts continue
 await fs.rm(pkgRoot, { recursive: true, force: true });
+```
+
+A v2 box (marker one level down, at `content/`) is a real, more-specific
+error — the migration-pointing `BoxShapeError`, not one of the guard's own
+errors — so it never reads as a false "nested inside another repo":
+
+```ts continue
+const v2Root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-guard-v2-"));
+execSync("git init -q -b main", { cwd: v2Root });
+await fs.writeFile(
+  path.join(v2Root, "package.json"),
+  JSON.stringify({ name: "my-box", dependencies: { "beebox": "^0.1.0" } })
+);
+const contentDir = path.join(v2Root, "content");
+await fs.mkdir(contentDir);
+await fs.mkdir(path.join(contentDir, ".beebox"), { recursive: true });
+await fs.writeFile(path.join(contentDir, ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
+await guard(contentDir)
+=> PreV3ShapeError
+```
+
+```ts continue
+await fs.rm(v2Root, { recursive: true, force: true });
 ```

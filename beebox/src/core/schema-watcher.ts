@@ -1,5 +1,5 @@
 /**
- * Per-box watcher over `config/schemas/` that hot-reloads box-local schemas in
+ * Per-box watcher over `src/schemas/` that hot-reloads box-local schemas in
  * the long-lived server.
  *
  * `loadBoxSchemas` caches its assembled result (and Node permanently caches
@@ -14,7 +14,7 @@
  * Started at box registration (not on a UI subscription) so a headless server
  * still reloads. One watcher per boxRoot, idempotent.
  *
- * Caveat: chokidar watches the `config/schemas` leaf directly, which reliably
+ * Caveat: chokidar watches the `src/schemas` leaf directly, which reliably
  * catches edits/adds/removals once the dir exists, but does not catch the dir
  * being *created* (a box's first-ever local schema in a previously-empty box).
  * That one-time case is covered by the manual reload endpoint or the next

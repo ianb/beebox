@@ -27,7 +27,7 @@ import {
  *
  * These are three different bugs and the tier must not blur them: `failed` is
  * the app refusing to boot (the failure this tier exists for, which the router
- * renders as an HTML page — bin/router.ts `renderFailedPage`); `unauthorized`
+ * renders as an HTML page — workstreams-app/src/router/router.ts `renderFailedPage`); `unauthorized`
  * is our own credential missing; `unexpected` is anything else.
  */
 export type ProbeVerdict =

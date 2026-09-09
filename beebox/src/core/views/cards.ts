@@ -20,7 +20,25 @@ import { buildLoadContext } from "../load-context.js";
 import { getStatus, gitBoxPrefix, isRepo } from "../../lib/git.js";
 import { fileEtag } from "../../webapp/file-etag.js";
 import { attachDirFor } from "../../shared/attach-path.js";
+import { isInBoxNamespace } from "../../lib/box-namespace.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 import type { ViewCard, ViewFile } from "./types.js";
+
+/**
+ * Every top-level box entry that is NOT an underscore area, each as a glob
+ * `ignore` pattern (`name` and `name/**`) — passed to every dependency
+ * glob so its search root is effectively restricted to box content,
+ * regardless of how the pattern itself is phrased (`**\/*.card` included).
+ */
+async function nonNamespaceIgnorePatterns(boxRoot: string): Promise<string[]> {
+  const entries = await fs.readdir(boxRoot, { withFileTypes: true }).catch(() => []);
+  const ignore: string[] = [];
+  for (const entry of entries) {
+    if (isInBoxNamespace(entry.name)) continue;
+    ignore.push(entry.name, `${entry.name}/**`);
+  }
+  return ignore;
+}
 
 /** A card whose dependency glob matched but that failed to load. */
 export interface SkippedCard {
@@ -47,11 +65,25 @@ export async function loadViewCards(boxRoot: string, dependencies: string[]): Pr
   // Collect matching files from all dependency globs: cards parse into
   // ViewCard; everything else (attachments, .md, .jsonl, ...) arrives as
   // metadata in `files`.
+  //
+  // Round-7 hardening finding 2: a dependency is box CONTENT by definition,
+  // so (a) every glob's ROOT is restricted to the underscore areas —
+  // `ignorePatterns` excludes every top-level entry that isn't one, so a
+  // box-wide pattern like `**/*.memo.card` can never reach `src/` (package
+  // internals) even though `boxRoot` is now also the npm package root — and
+  // (b) each surviving match still has to clear
+  // `resolveBoxNamespacePathOnDisk` in READ mode before it's trusted: a
+  // match INSIDE an underscore area can still be a leaf symlink resolving
+  // OUTSIDE the namespace (annex-style assets are the legitimate case the
+  // "read" mode allows; anything else is dropped).
+  const ignorePatterns = await nonNamespaceIgnorePatterns(boxRoot);
   const cardPaths = new Set<string>();
   const filePaths = new Set<string>();
   for (const pattern of dependencies) {
-    const matches = await glob(pattern, { cwd: boxRoot, nodir: true });
+    const matches = await glob(pattern, { cwd: boxRoot, nodir: true, ignore: ignorePatterns });
     for (const m of matches) {
+      const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: m, mode: "read" });
+      if (!ns.ok) continue; // escapes the namespace on disk — dropped, not served
       if (m.endsWith(".card")) cardPaths.add(m);
       else filePaths.add(m);
     }

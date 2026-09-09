@@ -3,6 +3,7 @@ title: "procedure runs as jsonl"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: normal
 ---
 
 The 2026-06 hygiene work (no-op suppression, `expires` stamps, `bbx procedure gc`) treats `procedure/runs/` as a recent cache — which raises the next question: do per-run XML card files committed to git earn their keep at all? Each materialized run costs a directory, a card, and several bookkeeping commits (`Start procedure`, per-step, `Complete`), and most of what the card records is already structured data that would sit more naturally as an append-only line in something like `.beebox/procedure-runs.jsonl` (gitignored, size-rotated — same shape as `scheduler.jsonl`). Agent *work* commits would remain; only the engine's bookkeeping would leave git. The `Procedure:`/`Step:` commit trailers already carry run identity in history, so the archival story may not even need the card.

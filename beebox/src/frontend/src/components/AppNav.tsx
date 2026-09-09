@@ -26,7 +26,7 @@ import { useBoxName } from "../hooks/useBoxName";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
 import { trpc } from "../lib/trpc";
-import { useErrorCount, clearErrorCount } from "./DebugLog";
+import { useErrorCount, clearErrorCount, hasDebugLogBeenOpened } from "./DebugLog";
 import { Dropdown } from "./ui/Dropdown";
 import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
 import { Avatar } from "./ui/Avatar";
@@ -134,7 +134,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const place = publishedPlace ?? placeLabel({ pathname: location.pathname, boxSlug: boxSlug ?? "" });
 
   return (
-    <nav aria-label="Primary" className="bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
+    <nav aria-label="Primary" className="bbx-app-nav bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
       <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 text-sm">
         <PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} place={place} />
         <BackToChatChip boxSlug={boxSlug ?? ""} onChatPage={location.pathname === `${base}/chat`} />
@@ -162,7 +162,7 @@ function PlateIcon() {
 
 /**
  * Open on-plate todo count (escalated + on-plate) — links to the stock
- * box-wide `todo-view` card ("The Plate", `store/plate.todo-view.card`),
+ * box-wide `todo-view` card ("The Plate", `_content/plate.todo-view.card`),
  * per the plan's one app-level todo affordance
  * (`docs/implemented-plans/todo-annotation.md` Track 4). Zero renders nothing.
  */
@@ -171,7 +171,7 @@ function PlateBadge({ base, count }: { base: string; count: number }) {
   return (
     <Link
       id="bbx-nav-todo"
-      to={href(`${base}/browse/store/plate.todo-view.card`)}
+      to={href(`${base}/browse/_content/plate.todo-view.card`)}
       className="flex items-center gap-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-full hover:bg-white/30 transition-colors"
       title={`${count} todo${count !== 1 ? "s" : ""} on the plate`}
       aria-label={`${count} todo${count !== 1 ? "s" : ""} on the plate`}
@@ -184,10 +184,16 @@ function PlateBadge({ base, count }: { base: string; count: number }) {
 
 /**
  * Small red dot in the nav bar when console errors have occurred.
+ *
+ * Gated on `hasDebugLogBeenOpened()`: this is a developer affordance, and a
+ * first-run screen must never lead with one, so it stays hidden until the
+ * person has opened the debug log at least once in this browser (the count
+ * still accumulates underneath; the profile menu's "Debug Log" item is the
+ * always-reachable path in).
  */
 function ErrorBadge({ onToggleDebugLog }: { onToggleDebugLog: () => void }) {
   const errorCount = useErrorCount();
-  if (errorCount === 0) return null;
+  if (errorCount === 0 || !hasDebugLogBeenOpened()) return null;
   return (
     <button
       id="bbx-nav-errors"

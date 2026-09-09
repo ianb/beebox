@@ -1,3 +1,4 @@
+import { useMobileCardNavigation } from "./everywhere/use-mobile-card-navigation";
 /**
  * InteractiveChat - the live chat UI for the box's conversational assistant.
  *
@@ -5,16 +6,17 @@
  * User input is wrapped in <typed> tags before sending.
  * User messages are right-aligned dark bubbles; assistant uses markdown.
  *
- * Receives `sessionInput` from ChatPage — either an existing session id or
- * the `"new"` sentinel for a fresh conversation. Keyed on that prop so
- * a session switch (or new-chat reset) cleanly remounts the machine.
+ * The box shell keeps this input owner mounted across navigation. Session
+ * actors are selected or pinned independently, so switching conversations
+ * replaces the transcript without discarding the draft or microphone.
  */
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, type ReactNode } from "react";
 import { createAudioOverlayStore } from "./audio-overlay-store";
 // search params read via window.location — avoids coupling to route definition
-import { useMachine } from "@xstate/react";
-import { chatMachine } from "../../machines/chatMachine.js";
+import { useConversationMachine } from "./conversation/use-conversation-machine";
+import { conversationKey } from "./conversation/controller-pool";
+import type { ConversationTarget, ConversationSelection, AttentionSnapshot } from "@shared/chat-composer-binding.js";
 import type { ChatInitialLoad } from "../../machines/chat-types";
 import { groupMessages } from "./ChatMessages";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
@@ -23,13 +25,11 @@ import { trpc } from "../../lib/trpc";
 import { useEmissionDispatch } from "./InteractiveChat-dispatch";
 import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
 import { useRecoveryWidgets } from "./InteractiveChat-recovery";
-import { ChatLoading } from "./InteractiveChat-layout";
 import { useChatMute, useChatSchedules, usePendingMessagePoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useChatModelFeatures } from "./use-chat-model";
 import { useProcessingStatusPoll } from "./processing-status-display";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
 import { useChatAttachments, useEnsureComposerVisible } from "./InteractiveChat-attachments";
-import { useBulkUploadLaunch, type BulkUploadLaunch } from "./use-bulk-upload-launch";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
 import { useChatWs } from "./InteractiveChat-ws";
@@ -38,13 +38,16 @@ import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./InteractiveChat-view";
 import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
-import type { Emission } from "../../input/emission";
 import { useCaptureBubbles } from "./useCaptureBubbles";
 import { CaptureOverlay } from "../capture/CaptureOverlay";
-import { BulkUploadOverlay } from "../bulk-upload/BulkUploadOverlay";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../DocumentTitle";
+import { Text } from "../ui/Text";
+
+function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
+  return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Choosing conversation…" : selection.reason;
+}
 
 /**
  * Everything the chat derives from the directory it is bound to.
@@ -74,6 +77,15 @@ function useChatBinding(params: {
 }
 
 interface InteractiveChatProps {
+  conversationTarget?: ConversationTarget;
+  conversationSelection?: ConversationSelection;
+  attention?: AttentionSnapshot;
+  transcriptVisible?: boolean;
+  routeContent?: ReactNode;
+  onShowConversation?: () => void;
+  onHideConversation?: () => void;
+  ambientRegion?: ReactNode;
+  selectionNotice?: ReactNode;
   /** Either an existing session id or `"new"` for a fresh conversation. */
   sessionInput: string;
   /**
@@ -131,65 +143,31 @@ interface InteractiveChatProps {
    */
   sessionLabel: string | null;
   /** Announce a backend-assigned id before the fresh-chat URL is rewritten. */
-  onSessionAssignment?: (sessionId: string) => void;
+  onSessionAssignment?: (sessionId: string, assignment?: { clientConversationId: string; contextDir: string }) => void;
 }
 
 /**
- * The two full-screen composer overlays (capture, bulk upload), grouped so the
- * InteractiveChat body carries one line rather than their gating. Both are
- * suppressed for native shells; bulk additionally requires a server-assigned
- * session id (its batch binds to a target chat) — the launcher already refuses
- * to open one without it, so this gate is the type-level backstop.
+ * The full-screen composer overlay (capture), kept out of the InteractiveChat
+ * body so it carries one line rather than the gating. Suppressed for native
+ * shells, which run their own.
+ *
+ * This was two overlays until the composer stopped sending files to the
+ * bulk-upload batch: routing now attaches them to the message being written
+ * instead, so nothing opened the bulk one any more
+ * (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
  */
-function ChatModeOverlays({ captureMode, bulkUpload, usesNativeShell, sessionId, onExitCapture, onExitBulkUpload, onBulkUploadDelivered }: {
+function ChatModeOverlays({ captureMode, usesNativeShell, sessionId, onExitCapture }: {
   captureMode: boolean;
-  bulkUpload: BulkUploadLaunch | null;
   usesNativeShell: boolean;
   sessionId: string | null;
   onExitCapture: () => void;
-  onExitBulkUpload: () => void;
-  onBulkUploadDelivered: () => void;
 }) {
-  return (
-    <>
-      {captureMode && !usesNativeShell ? <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} /> : null}
-      {bulkUpload !== null && !usesNativeShell && sessionId !== null ? (
-        <BulkUploadOverlay
-          targetSessionId={sessionId}
-          seedFiles={bulkUpload.seedFiles}
-          note={bulkUpload.note}
-          onExit={onExitBulkUpload}
-          onDelivered={onBulkUploadDelivered}
-        />
-      ) : null}
-    </>
-  );
+  if (!captureMode || usesNativeShell) return null;
+  return <CaptureOverlay targetSessionId={sessionId} onExit={onExitCapture} />;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, startEngine, startModel, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment }: InteractiveChatProps) {
-  const usesNativeComposer = nativeComposer === true; const usesNativeShell = embedded === true || usesNativeComposer;
-  const [snapshot, send] = useMachine(chatMachine, {
-    input: { sessionInput, contextDir, startEngine, startModel, initial },
-  });
-  const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
-  const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, sessionInput, contextDir });
-  const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing"); const isLoading = snapshot.matches("loading");
-  // Put the turn in the tab title, so a chat left in a background tab says
-  // whether the box is still working on it. The deps are one boolean, so this
-  // publishes once per turn rather than once per streamed token.
-  useWorking(isStreaming);
-  const currentUser = useCurrentUser();
-  const { boxSlug } = useParams({ strict: false });
-  const backgroundTasks = useBackgroundTasks(); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts
-  // Composer text lives outside React state, so keystrokes re-render only its textareas.
-  // The full emission store is a prop (see above); this derives the
-  // text-only view every render — cheap, and stable in identity as long as
-  // `emissionStore` is (it always is, across a session switch).
-  const inputStore = useMemo(() => createInputStoreAdapter(emissionStore), [emissionStore]);
-  // Persist the whole in-progress emission (text, images, files, selections)
-  // under one singleton key per box, so it survives a session switch AND a
-  // reload — the design's singleton-draft promise.
-  const { expiredAttachments, dismissExpiredAttachments } = useEmissionPersistence({ boxSlug, emissionStore });
+/** Presentation toggles stay with the box input, independently of session actors. */
+function useChatFrameState(openCaptureOnMount: boolean | undefined) {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [sendSignal, setSendSignal] = useState(0);
   const bumpSendSignal = useCallback(() => setSendSignal((n) => n + 1), []);
@@ -201,19 +179,60 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   // it lives in root state; the overlay's recording-timer ticks stay in its own
   // subtree. Seeded from the `?capture=1` deep link, consumed once.
   const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
+  return { loadingOlder, setLoadingOlder, sendSignal, bumpSendSignal, debugView, setDebugView, showDebugLog, setShowDebugLog, typingMode, setTypingMode,
+    typingLocked, setTypingLocked, captureMode, setCaptureMode };
+}
+
+/** Sidecar navigation shares identity across assignment and foregrounds cards on phones. */
+function useConversationTabs({ boxSlug, sessionId, target, logicalKey }: {
+  boxSlug: string | undefined; sessionId: string | null; target: ConversationTarget; logicalKey: string;
+}) {
+  const rawTabs = useChatTabs({ boxSlug, sessionInput: sessionId ?? conversationKey(target), logicalKey });
+  const onZoomView = useMobileCardNavigation(rawTabs.onZoomView);
+  return { ...rawTabs, onZoomView };
+}
+
+export function InteractiveChat({ sessionInput, contextDir, startEngine, startModel, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, routeContent, onShowConversation, onHideConversation, ambientRegion, selectionNotice }: InteractiveChatProps) {
+  const usesNativeComposer = nativeComposer === true; const usesNativeShell = embedded === true || usesNativeComposer;
+  const { boxSlug } = useParams({ strict: false });
+  const { snapshot, send, pool, target, recoveryNotice } = useConversationMachine({
+    boxSlug: boxSlug ?? "default", target: conversationTarget,
+    input: { sessionInput, contextDir, startEngine, startModel, initial }, onSessionAssignment,
+  });
+  const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
+  const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, sessionInput, contextDir });
+  const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
+  // Put the turn in the tab title, so a chat left in a background tab says
+  // whether the box is still working on it. The deps are one boolean, so this
+  // publishes once per turn rather than once per streamed token.
+  useWorking(isStreaming);
+  const currentUser = useCurrentUser();
+  const backgroundTasks = useBackgroundTasks(); const audioOverlayStore = useMemo(() => createAudioOverlayStore(), []); // see audio-overlay-store.ts
+  // Composer text lives outside React state, so keystrokes re-render only its textareas.
+  // The full emission store is a prop (see above); this derives the
+  // text-only view every render — cheap, and stable in identity as long as
+  // `emissionStore` is (it always is, across a session switch).
+  const inputStore = useMemo(() => createInputStoreAdapter(emissionStore), [emissionStore]);
+  // Persist the whole in-progress emission (text, images, files, selections)
+  // under one singleton key per box, so it survives a session switch AND a
+  // reload — the design's singleton-draft promise.
+  const { expiredAttachments, dismissExpiredAttachments } = useEmissionPersistence({ boxSlug, emissionStore });
+  const { loadingOlder, setLoadingOlder, sendSignal, bumpSendSignal, debugView, setDebugView, showDebugLog, setShowDebugLog, typingMode, setTypingMode,
+    typingLocked, setTypingLocked, captureMode, setCaptureMode } = useChatFrameState(openCaptureOnMount);
   // Server-derived pending capture bubbles (survive reload; refined live below).
   const { bubbles: captureBubbleList, applyCaptureStatus, verbs: captureVerbs } = useCaptureBubbles(sessionId);
   const screenshots = useScreenshotRequests(sessionId);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const groups = useMemo(() => groupMessages(messages), [messages]);
 
-  const model = useChatModelFeatures({ sessionId, contextDir: effectiveContextDir, groupCount: groups.length, send, startEngine, startModel });
+  const logicalConversation = pool.conversationIdentity(target);
+  const model = useChatModelFeatures({ conversationKey: logicalConversation, sessionId, contextDir: effectiveContextDir, groupCount: groups.length, send, startEngine, startModel });
   const mute = useChatMute();
-  const tabs = useChatTabs();
+  const tabs = useConversationTabs({ boxSlug, sessionId, target, logicalKey: logicalConversation });
   const { activeView } = tabs;
   useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView, boxSlug });
-  const cardSend = useCompanionCard({ initialCard: card, activeView, onZoomView: tabs.onZoomView, boxSlug, error });
-  const schedules = useChatSchedules({ messages, loaded: !isLoading, isStreaming, send });
+  const cardSend = useCompanionCard({ initialCard: card, focusedRef: attention?.focusedRef, activeView, onZoomView: tabs.onZoomView, boxSlug, error });
+  const schedules = useChatSchedules({ messages, loaded: !snapshot.matches("loading"), isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.filter((entry) => entry.pending === true).length, sessionId, send });
   const showAgentWorking = useProcessingStatusPoll({ processBusy: Boolean(processBusy), snapshot, sessionId, send });
   useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
@@ -225,30 +244,26 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   // same ref pattern as clearDraftRef.
   const ensureComposerVisibleRef = useRef<() => void>(() => {});
   // Set by the draft hook further down; threaded into voice so a committed
-  // segment drops the persisted draft, and into the bulk-upload launcher so a
-  // delivered batch drops the text it carried away. A ref breaks the
-  // voice→draft→voice cycle.
+  // segment drops the persisted draft. A ref breaks the voice→draft→voice
+  // cycle.
   const clearDraftRef = useRef<() => void>(() => {});
-  const { launch: bulkUploadLaunch, openWithFiles: handleBatchFiles, close: handleCloseBulkUpload, onDelivered: handleBulkUploadDelivered } = useBulkUploadLaunch({ emissionStore, clearDraftRef, sessionId });
-  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef, onBatchFiles: handleBatchFiles });
+  const attach = useChatAttachments({ emissionStore, textareaRef, ensureComposerVisibleRef });
   const selections = useChatSelections({ emissionStore, textareaRef });
-  const { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
-    send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
+  const { captureEmissionDispatch, dispatchNativeEmission, sendVoiceSegment, sendStopSend, failedRegion } = useEmissionDispatch({
+    send, pool, target, selection: conversationSelection, attention,
+    captureCardSend: cardSend.capture, acceptCardSend: cardSend.accepted, boxSlug, activeView, messages, emissionStore,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    resetAttachments: attach.resetAttachments,
+    resetAttachments: attach.resetAttachments, awaitPendingUploads: attach.awaitPendingUploads,
     onSent: bumpSendSignal,
   });
-  // useChatVoice/useChatActions only ever fire-and-forget dispatchEmission
-  // (its Promise<Receipt> is for callers that want to await the outcome,
-  // per InteractiveChat-dispatch.ts) -- void it once here so both callees'
-  // option types can stay honestly void-returning.
-  const dispatchEmissionVoid = useCallback((emission: Emission) => { void dispatchEmission(emission); }, [dispatchEmission]);
   const voice = useChatVoice({
+    conversationKey: logicalConversation,
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     hqDictationEnabled: model.hqDictationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
     emissionStore, resetAttachments: attach.resetAttachments,
-    clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid, nativeComposer: usesNativeComposer,
+    clearDraftRef, inputStore, captureEmissionDispatch, nativeComposer: usesNativeComposer,
+    awaitPendingUploads: attach.awaitPendingUploads,
   });
   useNativeBridges({
     enabled: usesNativeShell, dispatchEmission: dispatchNativeEmission, boxSlug, sessionId,
@@ -280,28 +295,32 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     onTaskEvent: backgroundTasks.onTaskEvent,
     onCaptureStatus: applyCaptureStatus,
     onScreenshotRequest: screenshots.onScreenshotRequest,
-    onSessionAssignment,
+    shellManaged: true,
     audioOverlayStore,
   });
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, emissionStore,
-    selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
     // Both addFiles and dispatchEmission already catch their own errors
     // internally; voided here so useChatActions' option types can stay
     // honestly void-returning.
-    addFiles: (files) => { void attach.addFiles(files); },
+    addFiles: (files) => { void attach.addFiles(files); }, awaitPendingUploads: attach.awaitPendingUploads,
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
-    dispatchEmission: dispatchEmissionVoid,
+    captureEmissionDispatch, sendDisabledReason: sendDisabledReasonFor(conversationSelection),
   });
 
-  if (isLoading) return <ChatLoading />;
+  // Loading changes the transcript, never the input service owner.
 
   return (
     <InputStoreProvider value={inputStore}>
       <InteractiveChatBody
+      conversationKey={logicalConversation}
+      sendDisabledReason={sendDisabledReasonFor(conversationSelection)}
+      transcriptVisible={transcriptVisible} routeContent={routeContent}
+      onShowConversation={onShowConversation} onHideConversation={onHideConversation}
+      ambientRegion={ambientRegion} selectionNotice={<>{selectionNotice}{recoveryNotice !== null && <div role="alert"><Text size="sm" tone="danger">{recoveryNotice}</Text></div>}</>} failedRegion={failedRegion}
       tabs={tabs}
       model={model}
       mute={mute}
@@ -351,7 +370,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
       audioOverlayStore={audioOverlayStore}
       openers={openers}
       />
-      <ChatModeOverlays captureMode={captureMode} bulkUpload={bulkUploadLaunch} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} onExitBulkUpload={handleCloseBulkUpload} onBulkUploadDelivered={handleBulkUploadDelivered} />
+      <ChatModeOverlays captureMode={captureMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={() => setCaptureMode(false)} />
     </InputStoreProvider>
   );
 }

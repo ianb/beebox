@@ -6,8 +6,9 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
 import { invariant } from "./invariant.js";
+import { LEGACY_BOX_MARKER, migrateBoxState } from "./state-migration.js";
+import { PreV3ShapeError } from "./box-shape-errors.js";
 import { isRecord } from "./is-record.js";
-import { LEGACY_BOX_MARKER, LEGACY_PACKAGE_NAME, migrateBoxState } from "./state-migration.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
@@ -66,73 +67,70 @@ async function pathExists(candidate: string): Promise<boolean> {
 }
 
 /**
- * Check whether `dir` is a v2 box's PACKAGE root: no canonical marker of its own,
- * but `dir/content/.beebox/box.json` (or the legacy marker) exists (the operational root moved one level
- * down) and `dir/package.json` actually declares a dependency on
- * `beebox` (or a legacy engine package) (not just any directory that happens to contain a
- * `content/` subdirectory with a marker — e.g. a box's own `content/store/`
- * could coincidentally nest something named `content` one day; the
- * package.json check keeps this fail-closed).
+ * Best-effort read of a box marker's `shapeVersion` field. Tolerates a
+ * missing, empty, or malformed marker as `undefined` (the same "predates the
+ * one-root layout" bucket `PreV3ShapeError` reports for an absent field) —
+ * this is a walk-time discovery check, not the strict marker parse `getBoxShape`
+ * does; a genuinely corrupt marker still surfaces loudly there.
  */
-async function packageRootContentDir(dir: string): Promise<string | null> {
-  const contentRoot = path.join(dir, "content");
-  if (
-    !(await pathExists(path.join(contentRoot, BOX_MARKER))) &&
-    !(await pathExists(path.join(contentRoot, LEGACY_BOX_MARKER)))
-  ) return null;
-
-  const packageJsonPath = path.join(dir, "package.json");
+async function markerShapeVersion(markerPath: string): Promise<number | undefined> {
   let raw: string;
   try {
-    raw = await fs.readFile(packageJsonPath, "utf-8");
+    raw = await fs.readFile(markerPath, "utf-8");
   } catch (_e) {
-    // No package.json alongside `content/` — not a v2 package root.
-    return null;
+    return undefined;
   }
-
-  let parsed: unknown;
+  if (raw.trim() === "") return undefined;
   try {
-    parsed = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(raw);
+    if (isRecord(parsed) && typeof parsed["shapeVersion"] === "number") {
+      return parsed["shapeVersion"];
+    }
+    return undefined;
   } catch (_e) {
-    // Malformed package.json — fail closed, same as "not a box" here.
-    return null;
+    return undefined;
   }
-
-  if (!isRecord(parsed)) return null;
-  const deps = parsed["dependencies"];
-  if (!isRecord(deps) || (!("beebox" in deps) && !(LEGACY_PACKAGE_NAME in deps))) return null;
-  return contentRoot;
 }
 
+/** The lowest shapeVersion `findBoxRoot` accepts without throwing — mirrors `box-shape.ts`'s `MIN_KNOWN_SHAPE_VERSION`. */
+const MIN_ACCEPTED_SHAPE_VERSION = 3;
+
 /**
- * Find the Bee Box root by searching upward from the given path.
+ * Find the Bee Box root by searching upward from the given path. A box has
+ * ONE root (shapeVersion 3): the marker check at each level is the whole
+ * algorithm. A v2 box (marker one level down, at `<dir>/content/`) is no
+ * longer resolved here — `getBoxShape`'s migration-pointing error is what
+ * surfaces that case, not a silent downward resolve.
  *
- * At each level checked, a box's canonical marker (or legacy marker) wins
- * first.
- * Failing that, this also checks ONE level DOWN for a v2 box's operational
- * root (`<dir>/content/.beebox/box.json`, gated on `<dir>/package.json` declaring a
- * `beebox` dependency) — this is what lets `bbx` run from a box's
- * PACKAGE root (`~/src/boxes/foo/`, where a coding session normally opens)
- * and still resolve to the operational box at `foo/content/`, not just from
- * inside `content/` itself or one of its subdirectories.
+ * A marker found here that declares `shapeVersion` below 3 (or omits it)
+ * throws the same migration-pointing error `getBoxShape` would — this is
+ * ordinary CLI path discovery, not a fully tolerant probe, so a v2 box's
+ * marker must not be handed back as if it were a valid v3 root: a caller that
+ * then read `_content/` or `_config/` under it would find nothing there and
+ * report false success (the original bug — `bbx tick` inside a v2 `content/`
+ * dir silently found zero jobs). The migration bootstrap probe
+ * (`cli/commands/migrate-bootstrap.ts` → `probeV2Box`) is the one place
+ * allowed to tolerate a v2 marker, and it reads the marker directly rather
+ * than going through this function.
  *
  * @param startPath - Directory to start searching from
- * @returns The box root path, or null if not found
+ * @returns The box root path, or null if no marker exists anywhere above it
+ * @throws PreV3ShapeError if the marker found declares a pre-v3 (or absent) shapeVersion
  */
 export async function findBoxRoot(startPath: string): Promise<string | null> {
   let current = path.resolve(startPath);
 
   for (;;) {
-    if (
-      (await pathExists(path.join(current, BOX_MARKER))) ||
-      (await pathExists(path.join(current, LEGACY_BOX_MARKER)))
-    ) {
+    const primaryMarker = path.join(current, BOX_MARKER);
+    const legacyMarker = path.join(current, LEGACY_BOX_MARKER);
+    const hasPrimary = await pathExists(primaryMarker);
+    const hasLegacy = !hasPrimary && (await pathExists(legacyMarker));
+    if (hasPrimary || hasLegacy) {
+      const shapeVersion = await markerShapeVersion(hasPrimary ? primaryMarker : legacyMarker);
+      if (shapeVersion === undefined || shapeVersion < MIN_ACCEPTED_SHAPE_VERSION) {
+        throw new PreV3ShapeError(current, shapeVersion);
+      }
       return current;
-    }
-
-    const packageRootContent = await packageRootContentDir(current);
-    if (packageRootContent) {
-      return packageRootContent;
     }
 
     const parent = path.dirname(current);
@@ -266,12 +264,12 @@ export function isViewFile(filePath: string): boolean {
 }
 
 /**
- * Cards under `store/trash/` are by definition orphaned/discarded and routinely
- * have broken refs (their attachments and related cards have been deleted), so
- * the *implicit* box-wide walks skip them — `bbx validate`'s default scan and the
- * `--canonical` normalizer alike. An explicit `bbx validate <path>` on a trash
- * path still validates.
+ * Cards under `_bookkeeping/trash/` are by definition orphaned/discarded and
+ * routinely have broken refs (their attachments and related cards have been
+ * deleted), so the *implicit* box-wide walks skip them — `bbx validate`'s
+ * default scan and the `--canonical` normalizer alike. An explicit
+ * `bbx validate <path>` on a trash path still validates.
  */
 export function isTrashedCard(boxRelOrAbs: string): boolean {
-  return /(^|\/)store\/trash\//.test(boxRelOrAbs);
+  return /(^|\/)_bookkeeping\/trash\//.test(boxRelOrAbs);
 }

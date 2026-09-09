@@ -21,12 +21,6 @@ struct RootView: View {
     @State private var speechPlaybackActive = false
     @State private var responseActive = false
     @State private var screenshotRequest: NativeScreenshotRequest?
-    /// Whether the webview has anywhere to go back to, and the press that sends
-    /// it there. The shell has no browser chrome, so before this the only way
-    /// out of a card or the browse view was the invisible edge-swipe
-    /// (`issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md`).
-    @State private var chatCanGoBack = false
-    @State private var chatBackRequest: NativeBackRequest?
     @State private var screenshotResult: NativeScreenshotResult?
     @State private var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
     @State private var composerCommandResults: [NativeComposerCommandResult] = []
@@ -71,7 +65,9 @@ struct RootView: View {
     private var rootContent: some View {
         Group {
             if let box = store.selectedBox {
-                let composerBox = box.withSessionID(visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID)
+                let composerBox = box.withSessionID(pendingEmissionStore.composerBinding != nil
+                    ? pendingEmissionStore.selectedSessionID
+                    : (visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID))
                 let locked = boxLockManager.isLocked(box)
                 ZStack {
                     boxContent(box: box, composerBox: composerBox)
@@ -246,10 +242,22 @@ struct RootView: View {
             locationShareRequest: locationShareRequest,
             screenshotRequest: screenshotRequest,
             speechStopRequest: speechStopRequest,
-            backRequest: chatBackRequest,
             composerCommandAcknowledgements: composerCommandAcknowledgements,
             composerCommandResults: composerCommandResults,
+            onComposerBinding: { publication in
+                guard let publication else { pendingEmissionStore.invalidateBinding(); return }
+                guard publication.boxSlug == box.baseURL.lastPathComponent else { return }
+                if pendingEmissionStore.changesConversation(publication) {
+                    narrationEnabled = false
+                    hqDictationEnabled = false
+                    speechPlaybackActive = false
+                    responseActive = false
+                    speechStopRequest = nil
+                }
+                Task { await pendingEmissionStore.receiveBinding(publication, box: box) }
+            },
             onSessionChange: { sessionID in
+                guard pendingEmissionStore.composerBinding == nil else { return }
                 if visibleChatSessionID != sessionID {
                     narrationEnabled = false
                     hqDictationEnabled = false
@@ -333,30 +341,16 @@ struct RootView: View {
                     return
                 }
                 speechStopRequest = nil
-            },
-            onCanGoBackChange: { canGoBack in
-                chatCanGoBack = canGoBack
             }
         )
         .environment(\.nativeControlRegistry, controlRegistry)
-        // On the leading edge, where the back-forward swipe already lives:
-        // the control marks the gesture rather than competing with the web app
-        // bar at the top or the composer at the bottom.
-        .overlay(alignment: .leading) {
-            if chatCanGoBack {
-                ChatBackButton { chatBackRequest = NativeBackRequest() }
-                    .padding(.leading, 8)
-                    .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut(duration: 0.15), value: chatCanGoBack)
         .id(box.id)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             NativeComposerView(
                 box: composerBox,
                 draftStore: composerDraftStore,
                 pendingStore: pendingEmissionStore,
-                captureAvailable: visibleChatBoxID == box.id && visibleChatSessionID?.isEmpty == false,
+                captureAvailable: composerBox.sessionID?.isEmpty == false,
                 narrationEnabled: narrationEnabled,
                 hqDictationEnabled: hqDictationEnabled,
                 speechPlaybackActive: speechPlaybackActive,
@@ -374,7 +368,8 @@ struct RootView: View {
                 },
                 onInterruptSpeech: {
                     speechStopRequest = NativeSpeechStopRequest()
-                }
+                },
+                requiresConversationBinding: true
             )
         }
     }
@@ -634,26 +629,4 @@ private struct EmptyBoxView: View {
     RootView()
         .environmentObject(PairedBoxStore())
         .environmentObject(BoxLockManager())
-}
-
-/// The shell's back control: a floating chevron on the webview's leading edge,
-/// shown only while there is history to walk. The web app bar carries its own
-/// contextual "back to chat" chip; this one is the shell's floor, so a page
-/// that offers nothing still has a visible way out.
-private struct ChatBackButton: View {
-    var onPress: () -> Void
-
-    var body: some View {
-        Button(action: onPress) {
-            Image(systemName: "chevron.left")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.primary)
-                .frame(width: 34, height: 34)
-                .background(.regularMaterial, in: Circle())
-                .overlay {
-                    Circle().stroke(.separator, lineWidth: 0.5)
-                }
-        }
-        .accessibilityLabel("Back")
-    }
 }

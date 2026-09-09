@@ -80,15 +80,17 @@ export function LandmarksList() {
     unassigned !== null && (unassigned.sessions.length > 0 || unassigned.olderSessions.length > 0);
 
   // Both readers glob the same cards, so the same broken card is reported
-  // twice; the page names each one once.
-  const problemPaths = [
-    ...new Set([
-      ...(list.data ? list.data.problems : []).map((p) => p.path),
-      ...(chats.data ? chats.data.problems : []).map((p) => p.path),
-    ]),
-  ].toSorted((a, b) => a.localeCompare(b));
+  // twice; the page names each one once (keyed on kind+path — a
+  // "derived-read" and a "landmark-parse" can legitimately share a path).
+  const problems = [
+    ...new Map(
+      [...(list.data ? list.data.problems : []), ...(chats.data ? chats.data.problems : [])].map(
+        (p) => [`${p.kind}:${p.path}`, p] as const,
+      ),
+    ).values(),
+  ].toSorted((a, b) => a.path.localeCompare(b.path));
 
-  if (landmarks.length === 0 && !hasUnassigned && problemPaths.length === 0) {
+  if (landmarks.length === 0 && !hasUnassigned && problems.length === 0) {
     return (
       <Text as="p" tone="subtle">
         No landmarks yet. Add a *.landmark.card to any directory you
@@ -99,7 +101,7 @@ export function LandmarksList() {
 
   return (
     <Stack gap="md">
-      {problemPaths.length > 0 ? <LandmarkProblems paths={problemPaths} /> : null}
+      {problems.length > 0 ? <LandmarkProblems problems={problems} /> : null}
 
       {joinByDir(landmarks, buckets).map(({ landmark, bucket }) => (
         <LandmarkSection
@@ -148,13 +150,24 @@ export function LandmarksList() {
  * rather than skipped: once a landmark is how you reach its chats, a
  * hand-edit that breaks the frontmatter must not make it vanish silently.
  */
-function LandmarkProblems({ paths }: { paths: string[] }) {
+type LandmarkProblemRow = RouterOutput["landmarks"]["list"]["problems"][number];
+
+function problemText(problem: LandmarkProblemRow): string {
+  switch (problem.kind) {
+    case "landmark-parse":
+      return `⚠ ${problem.path} didn’t parse — not shown`;
+    case "derived-read":
+      return `⚠ ${problem.path} (linked from ${problem.landmarkPath}) couldn’t be read — skipped`;
+  }
+}
+
+function LandmarkProblems({ problems }: { problems: LandmarkProblemRow[] }) {
   return (
     <Card padding="sm" border="subtle" muted>
       <Stack gap="xs">
-        {paths.map((path) => (
-          <Text key={path} as="div" size="sm" breakAll>
-            ⚠ {path} didn&rsquo;t parse — not shown
+        {problems.map((problem) => (
+          <Text key={`${problem.kind}:${problem.path}`} as="div" size="sm" breakAll>
+            {problemText(problem)}
           </Text>
         ))}
       </Stack>

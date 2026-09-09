@@ -5,6 +5,7 @@
  * rm) live in ABOUT_CARDS and are only pointed at from here.
  */
 
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import { SECTION, xref } from "./sections.js";
 
 export function keyCommandsSection(): string {
@@ -12,13 +13,13 @@ export function keyCommandsSection(): string {
 
 Card operations — \`bbx create\` / \`bbx mv\` / \`bbx rm\` — live in ${xref(SECTION.ABOUT_CARDS)}.
 This is the rest of the everyday \`bbx\` surface; the full reference is
-\`docs/generated/bbx-commands.md\`.
+\`${BOX_PACKAGE_DOCS}/bbx-commands.md\`.
 
 **Reach for these:**
 
 - \`bbx feedback "<message>"\` — record anything that feels off about the tooling:
   a confusing flag, an unclear error message, an awkward workflow, a surprising
-  behavior. It's **silent** — writes a file to \`config/feedback/\` and commits it
+  behavior. It's **silent** — writes a file to \`_config/feedback/\` and commits it
   without interrupting your task — so reach for it reflexively the moment
   something is off. Good feedback is specific about *what* was confusing and
   *why*.
@@ -33,7 +34,7 @@ This is the rest of the everyday \`bbx\` surface; the full reference is
   read it and report back the relevant part instead of pulling the whole
   transcript into your own context.
 - \`bbx procedure run <name-or-path>\` — run a procedure. Procedures are how
-  one-shot structured work gets done (see \`docs/generated/procedures.md\`).
+  one-shot structured work gets done (see \`${BOX_PACKAGE_DOCS}/procedures.md\`).
 - \`bbx chat …\` — a family of commands for the live chat session:
   \`bbx chat self-note "<body>" [--ref <path>] [--commit <hash>]\` posts an
   agent-authored record a scheduled sub-agent leaves for the boxholder (not a
@@ -59,8 +60,8 @@ procedure run):
 **System-run — you don't invoke these** (the wakeup cycle and scheduler do; they
 appear here so you recognize them in \`git log\` and health output):
 
-- \`bbx reactor\` — process pending jobs in \`box/jobs/\`.
-- \`bbx finalize\` — flush outbound cards in \`box/output/\`.
+- \`bbx reactor\` — process pending jobs in \`_bookkeeping/jobs/\`.
+- \`bbx finalize\` — flush outbound cards in \`_bookkeeping/output/\`.
 - \`bbx health\` — scheduled-task health (failing / overdue / blocked /
   inconclusive tasks + scheduler liveness). \`inconclusive\` means the last run
   did its work but its check never reached a verdict — unknown, not broken; do

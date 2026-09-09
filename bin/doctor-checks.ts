@@ -185,6 +185,29 @@ export function checkFrontendBuild(deps: Pick<DoctorDeps, "fileExists" | "repoRo
 }
 
 /**
+ * The deploy target this machine is configured for, as `user@host`, or null
+ * when it has none.
+ *
+ * `beebox/deploy/deploy-target.sh` owns the answer — it is the same opt-in
+ * layer the deploy and the commit hooks consult, so the doctor cannot form its
+ * own opinion about which server is "production". Spawned through `deps.run`
+ * rather than `bin/deploy-target.ts` because every check here is driven by a
+ * fake `run` in the tests; the module and this share the one script.
+ *
+ * The config lives in the MAIN checkout (worktrees have their own, absent,
+ * copy), which is why callers pass the shared-git-dir root, not `repoRoot`.
+ */
+async function deployTarget(
+  deps: Pick<DoctorDeps, "run">,
+  mainRoot: string,
+): Promise<string | null> {
+  const result = await deps.run(path.join(mainRoot, "beebox", "deploy", "deploy-target.sh"), ["ssh-target"]);
+  if (!result.spawned || result.code !== 0) return null;
+  const target = result.stdout.trim();
+  return target === "" ? null : target;
+}
+
+/**
  * Is main's HEAD actually live on the server?
  *
  * A deploy killed outright — OOM, closed terminal — never runs deploy.sh's EXIT
@@ -207,10 +230,14 @@ export async function checkDeployCurrency(deps: Pick<DoctorDeps, "run" | "fileEx
   const common = await deps.run("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   if (!common.spawned || common.stdout.trim() === "") return pass(name, "not a git checkout — skipped");
   const mainRoot = path.dirname(common.stdout.trim());
-  const marker = path.join(mainRoot, "beebox", "deploy", "server-ip");
-  // No server-ip means this machine doesn't deploy at all (a fresh clone, a
-  // contributor's checkout). Nothing to be stale about.
-  if (!deps.fileExists(marker)) return pass(name, "this checkout does not deploy — skipped");
+  // No deploy/target.env means this machine doesn't deploy at all (a fresh
+  // clone, a contributor's checkout). Nothing to be stale about. This check is
+  // also the drift net the commit hooks used to be: they now skip silently when
+  // unconfigured, so a machine that DOES deploy and quietly stopped is caught
+  // here rather than in every commit's output.
+  if ((await deployTarget(deps, mainRoot)) === null) {
+    return pass(name, "this checkout does not deploy — skipped");
+  }
 
   const shaFile = path.join(mainRoot, "beebox", "deploy", ".last-deployed-sha");
   if (!deps.fileExists(shaFile)) {
@@ -242,34 +269,28 @@ export async function checkDeployCurrency(deps: Pick<DoctorDeps, "run" | "fileEx
  * The threshold comes from `beebox/src/hub/disk-health.ts` so the doctor
  * and the hub's own health route cannot disagree about what "low" means.
  *
- * Skips machines with no deploy marker, same as `checkDeployCurrency`.
+ * Skips machines with no configured deploy target, same as `checkDeployCurrency`.
  */
 export async function checkProductionDisk(
-  deps: Pick<DoctorDeps, "run" | "fileExists">,
+  deps: Pick<DoctorDeps, "run">,
 ): Promise<CheckResult> {
   const name = "Production disk";
   const common = await deps.run("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   if (!common.spawned || common.stdout.trim() === "") return pass(name, "not a git checkout — skipped");
-  const marker = path.join(path.dirname(common.stdout.trim()), "beebox", "deploy", "server-ip");
-  if (!deps.fileExists(marker)) return pass(name, "this checkout does not deploy — skipped");
+  const mainRoot = path.dirname(common.stdout.trim());
+  const sshTarget = await deployTarget(deps, mainRoot);
+  if (sshTarget === null) return pass(name, "this checkout does not deploy — skipped");
 
-  const serverIp = (await deps.run("cat", [marker])).stdout.trim();
-  if (serverIp === "") {
-    return fail(name, {
-      detail: `${marker} is empty`,
-      remedy: "restore the production server IP in deploy/server-ip",
-    });
-  }
   const disk = await deps.run("ssh", [
     "-o", "BatchMode=yes",
     "-o", "ConnectTimeout=5",
-    `root@${serverIp}`,
+    sshTarget,
     "df", "-Pk", "/",
   ]);
   if (!disk.spawned || disk.code !== 0) {
     return fail(name, {
       detail: "could not query free space on production /",
-      remedy: `check SSH access to root@${serverIp}, then rerun bin/doctor`,
+      remedy: `check SSH access to ${sshTarget}, then rerun bin/doctor`,
     });
   }
   const fields = disk.stdout.trim().split("\n").at(-1)?.trim().split(/\s+/);
@@ -278,7 +299,7 @@ export async function checkProductionDisk(
   if (!Number.isFinite(totalKib) || !Number.isFinite(freeKib)) {
     return fail(name, {
       detail: "production df output was unparseable",
-      remedy: `run \`ssh root@${serverIp} df -Pk /\` and inspect the output`,
+      remedy: `run \`ssh ${sshTarget} df -Pk /\` and inspect the output`,
     });
   }
   const health = diskHealthFromBytes(freeKib * 1024, totalKib * 1024);

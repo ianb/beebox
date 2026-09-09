@@ -14,7 +14,7 @@ import {
 
 const SNAPSHOT = [
   '- navigation "Primary" [ref=e1]',
-  '  - button "Place: Chat" [expanded=false, ref=e7]',
+  '  - button "Where you are: Chat" [expanded=false, ref=e7]',
   "  - generic [ref=e2] clickable [onclick]",
   '    - button "Close" [ref=e9]',
   '  - button "User" [expanded=false, ref=e8]',
@@ -26,7 +26,7 @@ const SNAPSHOT = [
 
 const ENTRIES = [
   { id: null, role: "navigation", name: "Primary" },
-  { id: "bbx-nav-place", role: "button", name: "Place: Chat" },
+  { id: "bbx-nav-place", role: "button", name: "Where you are: Chat" },
   { id: "bbx-nav-profile", role: "button", name: "Menu" },
   { id: "bbx-panel-close", role: "button", name: "Close" },
   { id: "bbx-composer-input", role: "textbox", name: "Type a message..." },
@@ -55,7 +55,7 @@ assert.equal(upstreamSelector({ kind: "opaque", selector: "text=Send" }), "text=
 ```ts
 const out = annotateSnapshot(SNAPSHOT, ENTRIES);
 const lines = out.text.split("\n");
-assert.equal(lines[1], '  - button "Place: Chat" [expanded=false, ref=e7, id=bbx-nav-place]');
+assert.equal(lines[1], '  - button "Where you are: Chat" [expanded=false, ref=e7, id=bbx-nav-place]');
 assert.equal(lines[2], "  - generic [ref=e2] clickable [onclick]", "non-control line untouched, trailing text preserved");
 assert.equal(lines[3], '    - button "Close" [ref=e9]', "two Close buttons in the snapshot: not guessed");
 assert.equal(lines[4], '  - button "User" [expanded=false, ref=e8]', "engines disagree on the name: left for the live lookup");

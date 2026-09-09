@@ -8,6 +8,7 @@
  * authoring mechanics when it forms the intent to use them.
  */
 
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 import type { ProcedureSummary, GuideSummary } from "../docs-gen/index.js";
 
 export function proceduresSection(procedures: ProcedureSummary[]): string {
@@ -15,14 +16,14 @@ export function proceduresSection(procedures: ProcedureSummary[]): string {
   const lines: string[] = [
     "## Procedures",
     "",
-    "Available procedures in `config/procedures/`:",
+    "Available procedures in `_config/procedures/`:",
     "",
   ];
   for (const p of procedures) {
     lines.push(`- **${p.name}** — ${p.description}`);
   }
   lines.push("");
-  lines.push("Run with `bbx procedure run <name>`. Read `docs/generated/procedures.md` before writing or modifying.");
+  lines.push(`Run with \`bbx procedure run <name>\`. Read \`${BOX_PACKAGE_DOCS}/procedures.md\` before writing or modifying.`);
   return lines.join("\n");
 }
 

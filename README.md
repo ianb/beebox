@@ -1,8 +1,8 @@
 # beebox
 
-A personal assistant built on Claude Code. Feed it inputs (voice memos, emails, web clippings); agents process them and take actions or ask questions. The filesystem is state, git is history, the `bbx` CLI is the interface.
+A personal assistant built on a coding agent — Claude Code and Codex (ChatGPT) are supported today. Feed it inputs (voice memos, emails, web clippings); agents process them and take actions or ask questions. The filesystem is state, git is history, the `bbx` CLI is the interface.
 
-Claude Code operates it. You teach it by writing rules, answering questions, and correcting mistakes. All of it lives in files and commits.
+The coding agent operates it. You teach it by writing rules, answering questions, and correcting mistakes. All of it lives in files and commits.
 
 ## Layout
 

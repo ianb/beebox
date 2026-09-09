@@ -15,7 +15,10 @@ contract change — is defined in `docs/implemented-plans/mobile-parity-sync.md`
 
 **Path conventions.** Box code paths are relative to `beebox/`; iOS paths are under
 `ios-app/BeeBox/`. Anchors name a file plus the identifier (function/struct/const) inside it —
-never line numbers, which rot. A paired box's `baseURL` already includes the hub slug
+never line numbers, which rot. Box-relative wire values (landmark/share-destination `dir`s,
+uploaded-file `path`s) are opaque tokens iOS round-trips unmodified; under the one-root box
+layout (shapeVersion 3, `docs/implemented-plans/one-root-box-layout.md`) they land in underscore areas
+(`_content/…`, `_tmp/…`) — the wire shape is unchanged, only the values moved. A paired box's `baseURL` already includes the hub slug
 (e.g. `http://127.0.0.1:3210/main/test1` in dev, `https://host/<slug>` in prod), so every native
 HTTP path below is `<baseURL>/api/...`.
 
@@ -257,23 +260,59 @@ the contract.
 
 ### 4.1 Emission (native → web)
 
-- **Canonical V2 wire shape** (native → `window.beeboxNativeReceive(<json>)`):
+- **V2 content wire shape** (native → `window.beeboxNativeReceive(<json>)`):
   ```json
   { "version": 2, "id": "<UUID string>", "text": "<string>",
     "origin": "typed"|"voice", "diarized": <bool>,
     "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ],
-    "files": [ { "id": <int>, "path": "<tmp/...>", "originalName": "<string>",
+    "files": [ { "id": <int>, "path": "<_tmp/...>", "originalName": "<string>",
       "size": <number>, "mimetype": "<string>" } ],
     "selections": [ { "id": <int>, "ref": "<string>", "text": "<string>",
       "position": "<string>", "anchor": <string|null>, "spokenWords": <number|null> } ] }
   ```
+- **V3 destination binding:** updated iOS sends the same V2 content fields with
+  `version: 3`, `bindingRevision`, and immutable
+  `binding: {boxSlug, target, attention}`. Target is either
+  `{kind:"session", sessionId, contextDir}` or
+  `{kind:"start", clientConversationId, contextDir, engine, model?, seedFeatures?}`.
+  Capture happens at the send gesture before HQ processing, and survives native
+  pending/voice-preparation persistence. Native remains the only durable content
+  queue. Older saved messages require explicit conversation selection before
+  delivery, retaining their IDs for deduplication.
+- **Composer binding negotiation:** web posts `beeboxComposerBinding` with
+  `{version:1, kind:"selection", revision, boxSlug, selection, attention}`.
+  Selection is ready (target/label), resolving (requestId/contextDir), or
+  unavailable (contextDir/reason). Attention carries surface, optional in-box
+  focusedRef, and visible/hidden transcript. Native acknowledges valid publication
+  through `window.beeboxComposerBindingVersion = 1` and the
+  `beebox:composer-binding-ready` event. Until then updated iOS retains its draft
+  and explains that sending requires an updated host. URL-derived session state
+  is only the pre-negotiation fallback; ordinary route movement never retargets.
+- **Assignment-only publication:** the same channel accepts
+  `{version:1, kind:"assigned", boxSlug, clientConversationId, sessionId, contextDir}`.
+  Native saves this alias without selecting it. Its atomic per-box startup ledger
+  records the first emission ID and attempted/accepted/assigned state. Later
+  emissions for that start wait for the alias, including after relaunch; they
+  never become independent fresh starts. Receipts are backend acceptance only.
+- **Definitive refusal:** rejected receipts may add `definitive: true` for an
+  explicit HTTP 4xx refusal. This resets only the designated first-start record
+  to prepared, retaining its emission ID for safe retry. Network/5xx/malformed
+  outcomes remain uncertain. A new send gesture after definitive refusal can
+  replace the first ID; native freezes that permission before async preparation
+  in the optional local `replacesFirstEmissionID` field (not a bridge field).
+  Already-held follow-ups never become first sends. Web alias waits have a
+  30-second awake-time ceiling; expiry keeps the uncertain first identity and
+  exposes the follow-up for recovery instead of creating another conversation.
+- **Mixed-version delivery:** new web accepts V2 only from visible chat. Outside
+  chat it rejects with update guidance; navigating cannot change the cached receipt
+  of that rejected ID. Return to chat and Restore before submitting anew.
 - **Transport globals + event (native-authored startup script):**
   `window.beeboxNativeReceive(detail)` pushes onto `window.beeboxNativeQueue` and
   dispatches `CustomEvent('beebox:native-emission', { detail })`. The **queue is authoritative**;
   the event is only a wake signal (its `detail` is never read).
 - **Web drain/handle:** `use-native-bridge.ts` — `useNativeEmissionBridge` drains
   `beeboxNativeQueue` on mount + each event → `handleNativeEmission` →
-  `nativeEmissionFromDetail` (`native-emission.ts`) → `createTypedEmission`/`createVoiceEmission`
+  `parseNativeEmissionDetail` (`native-emission.ts`, including V3 binding) → `createTypedEmission`/`createVoiceEmission`
   (native `id` preserved via `withNativeId`) → dispatched to `/chat/send`.
 - **Legacy image parse:** malformed image entries are dropped individually; V2 rejects the whole
   payload when any image is malformed.
@@ -294,7 +333,7 @@ the contract.
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | native payload | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeEmissionV2`, `NativeEmissionFile`, `NativeEmissionSelection`; `ios-app/BeeBox/Views/ChatWebView.swift` — `NativeChatEmission` |
+  | native payload | `ios-app/BeeBox/Models/NativeComposerContract.swift` — `NativeEmissionV3`, `NativeEmissionV2`, `NativeEmissionFile`, `NativeEmissionSelection`; `ios-app/BeeBox/Views/ChatWebView.swift` — `NativeChatEmission` |
   | web parse | `src/frontend/src/components/chat/native-emission.ts` — `parseNativeEmissionDetail`, `nativeEmissionFromDetail`; `src/frontend/src/components/chat/use-native-bridge.ts` — `useNativeEmissionBridge`, `drainNativeEmissionQueue` |
 - **Drift:** LOUD for V2 (a rejected receipt carries the validation reason); legacy coercion remains
   SILENT except when no usable text or image survives.
@@ -338,7 +377,7 @@ mint them independently; the ids are per-emission and per-kind.
   ```
   { disposition: "sent";     emissionId: string; deduplicated: boolean }
   { disposition: "queued";   emissionId: string }
-  { disposition: "rejected"; emissionId: string; reason: string }
+  { disposition: "rejected"; emissionId: string; reason: string; definitive?: boolean }
   ```
 - **Anchors:**
   | side | anchor |
@@ -792,7 +831,7 @@ See §1.3 (full request/response/errors).
   `Authorization: Bearer <token>`. One file field named `file` with the original filename and MIME
   type. Native reports `URLSession` byte progress while uploading.
 - **Response 200:** `{ path: string, originalName: string, size: number, mimetype: string }`; `path`
-  points under the box's `tmp/` directory and becomes the Emission V2 file `path`.
+  points under the box's `_tmp/` directory and becomes the Emission V2 file `path`.
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -1036,8 +1075,9 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | A4 | tRPC context identity | box internal | `authed` from mobile token; `user=null,isOwner=false` | — | `server-box-scope.ts` · `createContext` | SILENT |
 | W1 | Chat webview URL | native→web | `/chat?nativeComposer=1[&session]` — carries NO credential | `Models/PairedBox.swift` · `chatURL`; `Views/ChatWebView.swift` · `request()` | `pages/ChatPage.tsx`; `router.tsx` | SILENT |
 | W2 | Session report | web→native | `beeboxSession` = `location.href` (string) | `Views/ChatWebView.swift` · `userContentController`, `visibleSessionID` | native-authored startup script | SILENT |
-| B1 | Native emission | native→web | V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2 / SILENT legacy |
-| B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?}` via `beeboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
+| B1 | Native emission | native→web | V3 adds immutable `binding` + `bindingRevision` to V2 `{version:2,id,text,origin,diarized,hqText?,hqService?,images,files,selections}`; legacy `{id,text,origin,diarized,images}` remains accepted; delivered via `beeboxNativeReceive`, queue `beeboxNativeQueue`, event `beebox:native-emission` | `Models/NativeComposerContract.swift` · `NativeEmissionV2`; `Views/ChatWebView.swift` · `NativeChatEmission` | `use-native-bridge.ts` · `useNativeEmissionBridge`; `native-emission.ts` · `parseNativeEmissionDetail` | LOUD V2/V3 / SILENT legacy |
+| B12 | Composer destination | web→native | V1 selection/assigned publications via `beeboxComposerBinding`; native acknowledges `beeboxComposerBindingVersion=1` + `beebox:composer-binding-ready` | `NativeComposerContract.swift` · `NativeComposerBinding`; `PendingEmissionStore.swift` · `receiveBinding` | `shared/chat-composer-binding.ts`; `everywhere/BoxConversationShell.tsx` | LOUD: unresolved disables send |
+| B2 | Emission receipt | web→native | `{disposition:sent\|queued\|rejected, emissionId, deduplicated?/reason?/definitive?}` via `beeboxEmissionReceipt` | `Views/ChatWebView.swift` · `receiveEmissionReceipt` | `use-native-bridge.ts` · `postNativeReceipt` → `native-post.ts` · `postNativeMessage`; `input/targets/receipts.ts` · `Receipt` | SILENT→LOUD |
 | B3 | Location toggle | native→web | `beeboxNativeShareLocation("<uuid>","toggle")`, queue `beeboxNativeLocationQueue`, event `beebox:native-share-location`, detail `{id,action:"toggle"}` | `Views/ChatWebView.swift` · location script | `use-native-bridge.ts` · `useNativeLocationBridge` | SILENT→LOUD |
 | B4 | Location state/result | web→native | state `{enabled}` via `beeboxLocationState`; result `{id,success,enabled,message}` via `beeboxLocationResult` | `Views/ChatWebView.swift` · `receiveLocationState`, `receiveLocationResult` | `use-native-bridge.ts` · `postNativeLocationState`, `postNativeLocationResult` → `native-post.ts` · `postNativeMessage` | LOUD |
 | B5 | Companion selection command | web→native | V1 `{version:1,id,kind:add-selection,selection:{ref,text,position}}` via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand`; `Views/ChatWebView.swift` · `receiveComposerCommand`; `Storage/ComposerDraftStore.swift` · `applySelectionCommand` | `native-composer-command.ts`; `use-native-composer-commands.ts`; `InteractiveChat-view.tsx` | LOUD |
@@ -1086,7 +1126,9 @@ without the other is a contract break.
 - **Emission V2 JSON keys** `{version,id,text,origin,diarized,images,files,selections}` —
   `Models/NativeComposerContract.swift` · `NativeEmissionV2` ↔
   `native-emission.ts` · `NativeEmissionV2` / `parseNativeEmissionDetail`.
-- **Receipt shape** `{disposition,emissionId,reason?,deduplicated?}`, dispositions
+- **Emission V3 JSON keys** V2 content plus `{binding,bindingRevision}`; binding uses the
+  shared target/attention unions in `shared/chat-composer-binding.ts`.
+- **Receipt shape** `{disposition,emissionId,reason?,deduplicated?,definitive?}`, dispositions
   `sent|queued|rejected` — `Views/ChatWebView.swift` · `NativeEmissionReceipt.Disposition` ↔
   `input/targets/receipts.ts` · `Receipt`.
 - **Location result** `{id,success,message}` — `Views/ChatWebView.swift` · `receiveLocationResult`
@@ -1139,7 +1181,7 @@ without the other is a contract break.
   `beeboxLocationResult` / `beeboxLocationState` / `beeboxNarrationState` /
   `beeboxHqDictationState` /
   `beeboxSpeechPlaybackState` / `beeboxResponseState` /
-  `beeboxComposerCommand` / `beeboxLastAudioRequest` —
+  `beeboxComposerCommand` / `beeboxLastAudioRequest` / `beeboxComposerBinding` —
   `Views/ChatWebView.swift` (`userContentController.add`) ↔
   `native-post.ts` · `NativeShellChannel`.
 - **Neutral web→native transport** `beeboxNativePost(channel, payload)` (string payloads) —
@@ -1147,25 +1189,42 @@ without the other is a contract break.
   legacy `webkit.messageHandlers` object-form fallback for pre-neutral shells).
 - **Inline photo limit** `3` — `components/chat/file-routing.ts` · `INLINE_PHOTO_LIMIT` /
   `routeAddedFiles` ↔ the iOS composer's mirrored constant. **The most photos that may ride
-  inline (base64) in one chat message.** A selection that would put the composer's *total* inline
-  count above the limit is uploaded as a bulk batch (§5.6) instead, and so is any set containing a
-  **non-image** (a document has no inline representation), however few files it holds. Photos **already inline join that
-  batch** and are removed from the composer, so one selection act has one destination — batching only
-  the new photos would send the composer text off as the batch's introduction while the older photos
-  sat behind with nothing describing them. (Photos still *encoding* can't be folded, having no bytes
-  yet; they finish and land inline rather than being discarded — never losing a photo outranks
-  arriving in one piece.) The inline total is bounded by the limit however many separate selections a
-  user makes, counting in-flight encodes. The rule applies identically to the picker, paste, drop
-  and screenshot grab — on the web the composer's Add menu offers one "Add files…" entry and routing
-  decides the rest, rather than asking the user to pick a path.
+  inline (base64) in one chat message.**
 
-  This is a real behavioral contract, not a tuning knob: inlining a camera roll base64-encodes tens
-  of megabytes into a single `/chat/send`, which is what
+  Routing chooses how each file is **represented in the message the user is writing** — never
+  where the act goes. Both outcomes land in that message:
+
+  - **inline** — a photo, base64 in the `/chat/send` body, anchored by `[image#N]`, while the
+    composer's *total* inline photo count (in-flight encodes included) stays within the limit.
+  - **upload** — everything else: any **non-image**, and **photos past the limit**. Uploaded ahead
+    of the send (`/chat/upload-file`) and anchored by `[file#N]`, which carries only a path — so it
+    adds nothing to the send payload however large it is. **No count or size limit applies**, since
+    the cost that would justify one isn't there.
+
+  A file's token goes in the moment it is picked, before its bytes move, so the user keeps writing
+  around it; the surface shows the upload's progress and offers a retry on failure. **A send waits
+  until no upload is in flight**, and refuses (leaving everything in place to retry) if one failed
+  — a token that references a path never written is worse than a delayed send. When the photos
+  don't fit, the *whole* selection takes the upload representation rather than scattering one act
+  across two.
+
+  Because both representations stay in the composer, a selection **accumulates**: picking twice
+  before sending builds one message. This matters most on iOS, where a pick is per-source — photos
+  or files, never both at once — so a mixed message is necessarily two picks.
+
+  The photo limit is a real behavioral contract, not a tuning knob: inlining a camera roll
+  base64-encodes tens of megabytes into a single `/chat/send`, which is what
   `issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` reports failing client-side with no
   server-side trace. There is **no documented size ceiling** for a WKWebView script message — the
   failure is memory pressure, not a published limit — so "inline just under the cliff" is not
   implementable; keeping the inline payload categorically small is the only sound posture. A
-  surface that raises or ignores the limit reintroduces the bug.
+  surface that raises or ignores it reintroduces the bug. A surface that applies it to *files*, or
+  spends a photo slot on one, makes "attach a couple of documents" impossible — the regression
+  `issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md` reports.
+
+  A surface that instead hands a selection to the **bulk-upload batch** (§5.6) — as the native
+  composer still does for a camera roll — MUST send the composer text as that batch's `note`,
+  and folds the composer's already-inline photos into it so one act keeps one destination.
 
   An uploader that routes a selection this way MUST send the composer text as the batch's `note`
   (§5.6) — otherwise the batch is unintroduced and the agent asks what the files are instead of

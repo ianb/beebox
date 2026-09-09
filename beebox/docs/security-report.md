@@ -1,9 +1,9 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
-generated-at-rev: 17afd862b86f29330e6126d19eafa6c711d60b2c
-date: 2026-08-23
-model: codex
-reviewed-by: Ian Bicking
+generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
+date: 2026-09-03
+model: claude-fable-5-1
+reviewed-by: Ian
 ---
 
 # Security report — structured version
@@ -102,9 +102,9 @@ Notable abilities, and the items that are more than routine:
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | `mock: true` TTS is rejected unless explicit development surfaces are enabled; it cannot silently fall through to a paid provider call |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |
 | `ANY /api/adapters/:adapter/*` (`api-adapters.ts:63`) | Proxy to Replicate/Mistral/Anthropic/OpenAI, injecting the box's stored key server-side | ok | — | authed | Key never reaches the client |
-| `GET /api/task-output` | Reads task-output files, not box-scoped | gap | med | authed | A cross-box read gap on multi-box servers, **tracked privately** (location-precise defect; disclosure withheld until fixed per the rubric's disclosure rule) |
+| `GET /api/task-output` | Reads this box's own background-task output files (`isTaskOutputPathForBox`, `transcript-paths.ts:116`; re-checked after `realpath`) | ok | — | authed | Was host-tmp-wide until 2026-09-03 — a cross-box read on multi-box servers, tracked privately while unpatched; now fixed and disclosed in §7b |
 | `GET /api/proxy-image` | Server-side fetch of arbitrary public image URLs | gap | low | authed | SSRF-guarded (see §4). A possible auth-scope mismatch is under verification and **tracked privately** until confirmed harmless or fixed |
-| `GET /api/external` (`api-external.ts:47`) | Reads configured paths outside the box root | mitigated | high | unreachable | Registered only with explicit `devSurfaces`; production launchers omit it and absence fails closed. If enabled, an authed member can rewrite `config/box.json` through the raw file API and widen `externalRoots`, so this remains a high-impact local-development capability rather than a hardened member boundary |
+| `GET /api/external` (`api-external.ts:47`) | Reads configured paths outside the box root | mitigated | high | unreachable | Registered only with explicit `devSurfaces`; production launchers omit it and absence fails closed. If enabled, an authed member can rewrite `_config/box.json` through the raw file API and widen `externalRoots`, so this remains a high-impact local-development capability rather than a hardened member boundary |
 | tRPC `admin.*`, `pairing.*`, `scanTokens.*` | Connector setup, device pairing, credential minting | ok | — | owner | Uniformly `ownerProcedure` |
 | tRPC `scheduler.trigger`, `commands.executeSync`, `drive.updateConfig`, `calendar.updateConfig` | Run scheduled script cards / registered commands; rewrite sync config | gap | med | authed | Member-level code execution and config writes; moot single-operator (fail-closed owner-only), bites on multi-member boxes — [member-level-writing-procedures](../../issues/code-quality/2026-08-07-member-level-writing-procedures.md) |
 | tRPC `transcription.deepgramTempKey` / `openaiRealtimeKey` | Mint short-TTL (≤20 min) scoped third-party keys for browser-direct streaming | mitigated | low | authed | Long-lived provider keys never leave the server |
@@ -124,17 +124,17 @@ pub-worker routes are in §6a.
 | Setup token (`setup-token.ts`) | Memory only; printed once to console | Claim a zero-user box | Per-process | 15-min TTL, self-disabling | accepted (§8) |
 | `BBX_HUB_SECRET` (`supervisor.ts:106,429`) | Env only, minted per hub boot | Impersonate any user to hub-fronted boxes | Hub + direct children; never allowlisted into box subprocesses (`script-env-allowlist.ts`) | Hub process lifetime | ok |
 | `BBX_DIAG_API_KEY` | Server `.env` (0600, `deploy/setup-server.sh:186`) | Read-only: fleet health + debug log (exact-match whitelist, `auth.ts:90-98`) | Fleet-wide | Operator-set, no rotation | ok |
-| `BBX_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router, plus the router's read-only dev surfaces — `GET`/`HEAD` on `/<w>/dev/…` and `/workstreams/…`, the `dev-read` class in `bin/router-auth.ts`). On a box whose `config/box.json` sets `agentBrowsing: "owner"` (test boxes built for agent-driven browsing) the key resolves to the **box owner's identity** inside that box — `ownerProcedure`, capture, chat attribution — but never `authenticatedOwnerProcedure` (the machine-level secret store); on every other box it is nobody (`webapp/box-identity.ts`). NOT the control surfaces: `/`, `/__router/*`, and every mutating `/workstreams/*` verb stay owner-session-only | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
+| `BBX_BROWSE_API_KEY` (`browse-key.ts`) | Env only; fail-closed when unset | **Full app access, machine-wide** (every box/worktree on the dev router, plus the router's read-only dev surfaces — `GET`/`HEAD` on `/<w>/dev/…` and `/workstreams/…`, the `dev-read` class in `bin/router-auth.ts`). On a box whose `_config/box.json` sets `agentBrowsing: "owner"` (test boxes built for agent-driven browsing) the key resolves to the **box owner's identity** inside that box — `ownerProcedure`, capture, chat attribution — but never `authenticatedOwnerProcedure` (the machine-level secret store); on every other box it is nobody (`webapp/box-identity.ts`). NOT the control surfaces: `/`, `/__router/*`, and every mutating `/workstreams/*` verb stay owner-session-only | Machine | No expiry | mitigated — dev-only by design, absent on deploys; module warns against public use |
 | Agent loopback token — `.beebox/agent-token` (`agent/token.ts:26-48`) | 0600, gitignored; injected as `BBX_AGENT_TOKEN` into box subprocesses | Call back into its **own** box only | Per-box | Permanent, no rotation | ok — trust boundary is explicit: the agents are the box |
 | Mobile device tokens — `.beebox/mobile-devices.secret.json` (`pairing.ts`, `token-store.ts`) | SHA-256 hash at rest, 0600, locked atomic RMW | Full member-level box access per device | Per-box, per-device | **No expiry**; explicit revoke propagates ≤1h via the `bbx_mobile` cookie TTL | gap — [mobile-device-token-no-expiry](../../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md). On-device (iOS) storage moved from plaintext JSON to Keychain (`AfterFirstUnlockThisDeviceOnly`, shared app-group access group for the main app + the new share extension) in `571bb83f` — [ios-token-plaintext-not-keychain](../../issues/closed/bugs/2026-07-17-ios-token-plaintext-not-keychain.md), now closed |
 | Mobile session secret — `.beebox/mobile-session.secret` (`mobile-session.ts`) | 0600; 1-hour signed cookie | Rides WS upgrades without exposing the device token | Per-box | 1h TTL, renewed per response | ok |
 | Scan-uploader tokens — `.beebox/scan-tokens.secret.json` (`scan/tokens.ts`) | Same TokenStore guarantees; deliberately a separate store from mobile | Scan-ingestion only | Per-box | Permanent until named revoke | ok |
-| Google OAuth client — `GOOGLE_OAUTH_CLIENT_ID/SECRET` (`google-auth.ts:48-52`) | Env; redacted; shared to children by design | OAuth app identity | Fleet | Operator-set | ok |
+| Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleClientCreds`, `google-auth.ts`); box connectors: `google-oauth-client-id`/`google-oauth-client-secret` in the machine secret store, per-box grant (`getBoxGoogleClientCreds`) | Env: redacted, shared to children by design. Store: same guarantees as every other secret-store entry (§ secrets.md) | OAuth app identity | Fleet (login) / per-box grant (connectors) | Operator-set | ok |
 | Google tokens — `BBX_GOOGLE_TOKENS_FILE` (`google-token-store.ts`) | 0600 atomic, double-locked, fail-closed read-for-update | **All authorized Google services (gmail/calendar/drive), fleet-wide** — one shared refresh token | **Fleet** (legacy per-box fallback exists) | Effectively permanent; dead-grant tracking | accepted (§8) — [google-auth-policy-proxy](../../issues/features/2026-07-28-google-auth-policy-proxy.md) |
 | VAPID keys — `BBX_VAPID_*` (`send-push.ts:46-60`) | Env only; redacted | Send push notifications as the box (no data access) | Server-wide | Operator-set | ok |
-| Provider keys — Mistral / Deepgram / OpenAI (`mistral-key.ts`, `deepgram-key.ts`, `embeddings-key.ts`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`) | Box `config/connectors/<name>.secret.json` first, env fallback; all in `SECRET_ENV_NAMES` + hub allowlist, and withheld from agent subprocesses (`script-env-allowlist.ts` — the tooling profile only) | Spend/abuse the provider account | Per-box (file) or server (env) | Operator-set | gap — hand-placed files have no mode enforcement: [connector-secret-file-modes](../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md) |
-| Telegram — `config/connectors/telegram.secret.json` (`routers/admin.ts:96-101`) | Written **without** an explicit 0600 mode | Bot token = full bot control; webhook secret = forge inbound updates | Per-box | Permanent until re-setup | gap — same issue as above |
-| Publish connector — `config/connectors/publish.secret.json` (`connector-secret.ts`) | 0600, strict-Zod, minted scoped | R2 **ingestion bucket only** — cannot touch published content or `allowedEmails` | Per-box, per-bucket | Permanent; revoke via Cloudflare dashboard | ok |
+| Provider keys — Mistral / Deepgram / OpenAI / Gemini / OpenRouter (`mistral-key.ts`, `deepgram-key.ts`, `embeddings-key.ts`, `openai-thinking-key.ts`, `gemini-key.ts`, `openrouter.ts`) | Machine secret store only, per-box grant (`docs/secrets.md`) — the box-file and env-var fallbacks (`BBX_MISTRAL_API_KEY`, `BBX_DEEPGRAM_API_KEY`/`_PROJECT`, `BBX_OPENAI_API_KEY`, `THINKING_OPENAI_API_KEY`, `GEMINI_KEY`, `SKE_GEMINI_API_KEY`) have been removed, along with their entries in `SECRET_ENV_NAMES` and the hub/tooling allowlists | Spend/abuse the provider account | Per-box grant | Operator-set | ok — the file-mode gap this row used to carry is closed with the fallback that created it: [connector-secret-file-modes](../../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md) |
+| Telegram — `telegram-bot/<box>` in the machine secret store (`routers/admin.ts`, `telegram-helpers.ts`) | Same store guarantees as every entry; no longer a box file | Bot token = full bot control; webhook secret = forge inbound updates | Per-box, `shareable: false` | Permanent until re-setup | ok — the missing-mode gap this row used to carry no longer applies now that the value isn't a box file |
+| Publish connector — `publish/<box>` in the machine secret store (`connector-secret.ts`) | Same store guarantees as every entry; strict-Zod, minted scoped, no longer a box file | R2 **ingestion bucket only** — cannot touch published content or `allowedEmails` | Per-box, per-bucket, `shareable: false` | Permanent; revoke via Cloudflare dashboard | ok |
 | `ANTHROPIC_API_KEY` | **Deliberately withheld** (absent from both the hub and script-env allowlists; also stripped in `cli/bootstrap.ts`) | — | — | — | ok — a leak-prevention control forcing subscription auth, not a stored credential |
 
 **Positive control — the hub child-env allowlist**
@@ -146,11 +146,12 @@ reasoned comment. `src/core/script-env.ts` applies the same posture one
 level down (Track 1 of `docs/plans/secret-custody.md`, 2026-08-17): a box
 subprocess inherits only `script-env-allowlist.ts`'s named entries, so the
 hub trust secrets, `BBX_SESSION_SECRET`, `BBX_BROWSE_API_KEY`,
-`ANTHROPIC_API_KEY`, every connector credential, and any unlisted name never
-reach an agent. Connector credentials reach only the `bbx`-tooling spawn
-profile (`buildToolingScriptEnv`, used for `bbx wakeup`/`bbx finalize` and
-scheduled `runs:` commands, which run the connectors); Track 3 retires that
-carve-out with the env-var credential path itself. State: mitigated (this is the named control for
+`ANTHROPIC_API_KEY`, and any unlisted name never reach an agent. Connector
+credentials never reach either allowlist at all now: both
+`script-env-allowlist.ts` and `child-env.ts` have had every connector
+credential name and prefix removed, since the store is the only place a
+connector reads one from and a spawned `runs:` command has no reason to
+inherit it. State: mitigated (this is the named control for
 cross-box credential isolation). Tested in `test/hub/supervisor.doctest.md`.
 **Scope of the control**: env-level, not OS-level. Everything runs as
 one OS user, so file-backed secrets (`~/.bbx-session-secret`,
@@ -166,14 +167,15 @@ wakeup cycle or routine use without a per-action confirmation.
 | Destination | Trigger | Data sent | Credential | Scoping / opt-out | State |
 |---|---|---|---|---|---|
 | **Anthropic** (`agent/run.ts`, via Claude Code subprocess) | Automatic — every wakeup job, chat turn, scan batch | Full agent-turn context: prompts plus **whatever box files the agent reads during the turn** (any card, email, chat); user-uploaded images; scanned photos (`scan-vision-claude.ts`, hermetic `tools: []` call) | Claude subscription auth (`ANTHROPIC_API_KEY` stripped to force it) | None — this is the product | ok (stated plainly) |
-| **Mistral** (`voxtral.ts`) | Automatic — the **default** transcription backend (batch + streaming) | Raw voice audio | Per-box key | `config/transcription.json`; switch service | ok |
+| **Mistral** (`voxtral.ts`) | Automatic — the **default** transcription backend (batch + streaming) | Raw voice audio | Per-box key | `_config/transcription.json`; switch service | ok |
 | **OpenAI** (`openai-audio.ts`, `openai-embeddings.ts`) | When configured: Whisper is the default HQ re-transcription pass; embeddings run on the automatic index refresh | Raw audio + context prompt; **each card's searchable text** + literal search queries; TTS reply text | Separate keys (transcription ≠ embeddings, deliberate) | Switch transcription service; omit embeddings key → text-only search | ok |
 | **Deepgram / OpenAI Realtime — browser-direct** (`deepgram-key.ts`, `openai-realtime-key.ts`) | Live dictation when selected | Raw microphone audio streamed **from the browser straight to the vendor** | Server-minted ephemeral key (≤20 min); long-lived key stays server-side | Per-box transcription config | ok — distinct risk shape, named in SECURITY.md |
-| **Google Gemini** (`scan-vision.ts:79-106`) | Only when `BBX_SCAN_VISION=gemini` (default is Claude) | Scanned photos | `GEMINI_KEY` | Env opt-in | ok |
+| **Google Gemini** (`scan-vision.ts:79-106`) | Only when `BBX_SCAN_VISION=gemini` (default is Claude) | Scanned photos | `gemini` secret-store entry, per-box grant | Env opt-in (`BBX_SCAN_VISION`) selects the backend; the key itself is store-only | ok |
+| **OpenRouter** (`core/openrouter.ts`) | Only for a service whose own provider key is absent — an added intermediary, never an override. Covers embeddings, audio questions, the Whisper HQ transcription pass, and the opt-in Gemini scan backend. Also the sole route for the `mai` HQ transcription services (Microsoft MAI-Transcribe-2, served by Azure) and for the `gemini` TTS backend, neither of which has a direct arm | Whatever that service already sends: card text and search queries, scanned photos, voice audio, chat reply text | Single `openrouter` secret, store-only | Grant the service's own key instead, or omit the OpenRouter key entirely | ok — requests pin `data_collection: "deny"`, and pin the upstream provider (`only`) wherever the endpoint accepts routing preferences, so the data reaches the same company the direct call would |
 | **Google Gmail** (`gmail.ts`, `gmail-drafts.ts`) | Automatic sync | IN: full messages/attachments. OUT: **drafts only — no `gmail.send` scope exists**; autonomous sending is architecturally impossible today | Shared fleet OAuth token | `googleServices.gmail` per-box flag (default off) | ok |
 | **Google Calendar** (`google-calendar.ts`) | Automatic sync | Event create/edit/delete (title, description, attendees) | Same token | `googleServices.calendar` | ok |
 | **Google Drive/Sheets/Docs** (`google-drive.ts`, handlers) | Automatic sync | Two-way edits to files the box already tracks; **full `drive` scope**, not `drive.file` (deliberate, to sync pre-existing docs by URL) | Same token | `googleServices.drive` | accepted (§8 — shared broad token) |
-| **Telegram** (`connectors/telegram.ts`, `telegram-outbound.ts`) | Automatic once configured | Agent-authored reply text (no attachment path); registers the public webhook URL | Per-box bot token | Presence of the secret file | ok |
+| **Telegram** (`connectors/telegram.ts`, `telegram-outbound.ts`) | Automatic once configured | Agent-authored reply text (no attachment path); registers the public webhook URL | Per-box bot token (`telegram-bot/<box>` in the secret store) | Presence of the granted secret | ok |
 | **Web Push** (`send-push.ts`, `services/push.ts`) | Automatic on finalize | Full notification payload (agent-authored title/body/URL), VAPID-encrypted, through the browser's push service (FCM/Mozilla/Apple) | Server VAPID keypair | Browser subscription | ok |
 | **Box git remote** (`lib/git.ts:416-460`, `wakeup.ts:149`) | Automatic at the end of every wakeup | **The entire incremental box history** — every card, email, chat | Host git credentials | Operator-chosen remote; no remote → skipped | ok (stated plainly; see [git-push-confirmation](../../issues/decisions/2026-07-20-git-push-confirmation.md)) |
 | **Cloudflare (publish)** (`publish/setup.ts`, `go.ts`) | Human-gated CLI only. `bbx pub setup` itself calls Cloudflare's API (buckets, subdomain, Access provisioning, worker deploy — `setup.ts:165-207`) with no confirm beyond running it; **content** uploads only on `bbx pub go`'s interactive TTY confirm | Provisioning: static config, no content. Publish: the rendered bundle + a stripped edge manifest (no box identifiers) | Operator's wrangler OAuth (never stored on the box); box holds only the ingestion-scoped token | Never run `bbx pub setup` → fully inert | ok |
@@ -264,10 +266,10 @@ gathered here so the lifecycle reads as one story.
 
 ## 7. Cross-cutting threats
 
-Sections 1–6 inventory what exists. This section names a threat that does
-not reduce to any single row — it is the emergent risk of the
-architecture. Prompt injection is the first and, today, the only entry;
-add an entry when a second architecture-level threat earns one.
+Sections 1–6 inventory what exists. This section names threats that do
+not reduce to any single row — the emergent risks of the architecture.
+Two entries: prompt injection (7a) and cross-box leakage on a shared host
+(7b); add an entry when another architecture-level threat earns one.
 
 ### 7a. Prompt injection via external content
 
@@ -311,6 +313,50 @@ agent's full shell/file capability, and nothing structural stops it. The
 containment direction is [agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md);
 until that lands, this is a real and accepted-by-deployment-model risk,
 not a solved one.
+
+### 7b. Cross-box leakage on a shared host
+
+A host serves several boxes as one OS user: the hub spawns one `bbx serve`
+child per box, and the boxholder's own machine typically runs more boxes
+than a server does. Isolation is **env-level, not OS-level** (§5 process model, overview
+"Threat model"): the hub strips cross-box credentials from each child's env,
+and every box-scoped surface derives its box from the request scope, never
+from caller input. A leak here is one box's confidential content reaching
+another box's caller. Three channels, and what covers each:
+
+| Channel | What a leak looks like | Control | Verified by |
+|---|---|---|---|
+| **A. Network** — a request carrying box A's credential (session cookie, agent bearer, mobile token) reaches box B's data, through B's scope or through A's scope with a path that climbs out | The recurring shape: a caller-supplied path-like input joined onto `boxRoot` without a containment helper (`boxRelativePath`, `containWithinBox`, `resolveContainedRef`, `resolveCardPath`, …) | Per-scope auth wall (`server-box-scope.ts`, §1) rejects A's credential on B; every path input in the route and tRPC inventory (§1) is bounded by a containment helper — must be **zero** exceptions | `test/webapp/cross-box-probe.doctest.md` (the regression anchor: box A's bearer against every read surface of box B); `schedules/cross-box-leak-scan` static sweep, weekly, hands off any new unbounded path input |
+| **B. Filesystem** — a box process reads another box's files or shared host state directly | `~/.bbx-session-secret`, `~/.bbx-auth.json`, the machine secret store, the shared Google token, `~/.claude/projects/<encoded cwd>`, `/tmp/claude-<uid>/…` | **Accepted for now** as the env-level posture (§8), with a fix on the books — [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md): one OS user, files are readable by any same-user process. Compensations: 0600/0700 modes; per-cwd keying of transcripts and task output; `bbx secrets` refuses an agent asking about another box (`secrets-guard.ts`) | `schedules/cross-box-leak-scan` host audit (local, and production over SSH from the main checkout): modes, per-cwd keying maps each project dir to at most one box, no nested box roots, no undocumented file under `~/.config/beebox` / `~/.local/share/beebox` |
+| **C. Inheritance** — a hub secret reaches a box child's env | `BBX_SESSION_SECRET` in a child process | Child-env allowlist (§2) | `test/hub/supervisor.doctest.md` |
+
+**Findings of the 2026-09-03 scan** (state after this pass):
+
+| Item | Where | State | Sev | Reach | Notes |
+|---|---|---|---|---|---|
+| `GET /api/task-output` read any host-tmp task output | `routes/api.ts:100` | fixed | med | authed | Was not box-scoped; now `isTaskOutputPathForBox` (`transcript-paths.ts:116`) requires this box's encoded-cwd segment, re-checked after `realpath`, regular files only. Previously the §1 "tracked privately" gap; disclosed here because the fix reveals it |
+| `chatControl.reserveSession` accepted an unbounded `contextDir` | `trpc/routers/chat-control-procedures.ts:317`, `core/landmark/features.ts:67` | fixed | low | member | The directory was joined onto the box root without containment. Input now uses the shared `boxRelativePathSchema` (`core/landmark/nearest.ts:41`, which also replaced four duplicated inline refines and the raw `/api/chat/send` body's `contextDir`, `routes/chat-helpers.ts:69`); the core reader also refuses a dir outside the box |
+| `files.summarize` accepted a relative `..` path | `trpc/routers/files.ts:30` | fixed | med | member | `normalizePath` contained only absolute inputs, so a relative path could resolve outside the box. Found by the probe; now every input goes through `containWithinBox` |
+| `listSessionRoots` joined a history-file `contextDir` | `core/chat/session/history.ts:193` | fixed | low | local file | Source is the box's own history file, not a request; now resolved through `containedSessionCwd` — [listsessionroots-contextdir-no-containment](../../issues/closed/bugs/2026-08-26-listsessionroots-contextdir-no-containment.md) |
+| Aggregated scheduler stderr | `~/.local/share/beebox/scheduler-stderr.log` (`schedule/scheduler.ts:36`) | accepted | low | local file | One file collects stderr from every box's scheduled runs; same-user readable like everything in channel B. The host audit reports it while it exists |
+| Box paths and slugs in shared config | `~/.config/beebox/{hub,boxes,hub-state}.json`, `~/.codex/config.toml` | ok | — | — | Not confidential: a box's existence and path is not its content |
+
+**Scope of the claim.** Channel A is tested to zero and re-swept weekly,
+with one stated residual: containment is string-level (`containWithinBox`)
+at most read sinks, and only `views.resolveRef` re-checks after
+`fs.realpath`. A symlink planted *inside* box A that points at box B would
+carry A's credential to B's content through `files.summarize`,
+`/api/image/*`, or the landmark feature reader. Planting it needs same-user
+filesystem access to A, which already reads B directly (channel B), so it
+is not a credential-only path; recorded as accepted rather than closed
+(cross-model review, 2026-09-04). Channel B is not defended and is not
+claimed to be; a determined same-user process reads what it likes. That is
+accepted for now and tracked for a fix in
+[cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md)
+(the agent-side half is
+[agent-containment-allowed-directories](../../issues/features/2026-07-20-agent-containment-allowed-directories.md),
+which shares the two-box fixture). Boxes also share one browser origin
+(§4, accepted).
 
 ## 8. Accepted risks (roll-up)
 
@@ -357,9 +403,18 @@ Every `accepted` item, with its rationale:
     the agent is contained; see §7a. This is the roll-up's most important
     entry.
 
+12. **Cross-box filesystem reach on a shared host** — one OS user, so a
+   box process can read a sibling box's files and the shared host state
+   (`~/.bbx-session-secret`, the machine secret store, `~/.claude/projects`,
+   the aggregated `scheduler-stderr.log`), and a symlink it plants inside its
+   own box is followed by string-contained read sinks. Env-level isolation is
+   the posture for now — a per-box boundary is tracked in
+   [cross-box-filesystem-isolation](../../issues/features/2026-09-04-cross-box-filesystem-isolation.md);
+   the network channel is tested to zero and re-swept weekly. (§7b)
+
 Not in this roll-up because no acceptance decision has been made — these
 are **gaps**, tracked, awaiting fix or a decision: bind host being
 override-able (`mitigated`, §5), deploy infra drift (§5), the
 member-capability tier (§6b), Cloudflare Flexible SSL edge→origin
-plaintext (§5), the connector secret-file modes (§2), and two
-location-precise defects tracked privately (§1).
+plaintext (§5), the connector secret-file modes (§2), and one
+location-precise defect tracked privately (§1).

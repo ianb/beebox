@@ -5,6 +5,7 @@ area: router
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-workstream-story — while removing the /dev sandbox CSP
+priority: backlog
 ---
 When the `/dev/` sandbox CSP was removed (2026-08-19, see
 [dev md images broken](../closed/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md)),

@@ -25,21 +25,79 @@ const SCAN_SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const debouncers = new Map<string, PromoteDebouncer>();
 
 /**
- * Run a pass and re-arm the settle window when it left work behind.
+ * Consecutive incomplete passes allowed before this box stops re-arming
+ * itself.
+ *
+ * The re-arm below is a self-trigger: an incomplete pass schedules another
+ * pass, which can be incomplete again. Without a bound that is an infinite
+ * loop, and each iteration is a full `bbx wakeup`. It is not hypothetical —
+ * an expired connector credential ran exactly this loop in production, twelve
+ * passes before a person noticed. Nothing retries forever.
+ *
+ * The wakeup half of this carries its own durable budget
+ * (`core/scan/wakeup-retry.ts`), because a wakeup owed across a restart must
+ * not get a fresh budget. This counter is the coarser in-process guard over
+ * the other two reasons — a held lock and a failed upload — whose retries do
+ * not survive a restart anyway.
+ */
+const MAX_CONSECUTIVE_INCOMPLETE_PASSES = 8;
+
+/** Consecutive incomplete passes per box; cleared by any genuinely new work. */
+const incompletePasses = new Map<string, number>();
+
+/**
+ * Run a pass and re-arm when it left work behind.
  *
  * A pass can end incomplete three ways — the promotion lock was held (another
  * process, or this box's startup pass, was mid-run), an upload failed, or the
  * wakeup failed. All three are retryable, and none of them re-trigger on their
  * own: the next PUT might be days away. Re-arming turns each into "try again
- * after another settle window" instead of "wait for the next scan".
+ * later" instead of "wait for the next scan" — bounded, so a failure that will
+ * never clear stops instead of spinning.
+ *
+ * A held lock is deliberately NOT counted against the budget: it means another
+ * pass is doing the work right now, which is the opposite of a stuck box.
  */
 async function runPass(boxRoot: string): Promise<void> {
   const result = await runScanPromotePass({ boxRoot });
-  const incomplete = result.skipped === "locked" || result.failed > 0 || result.wakeup === "failed";
+
   if (result.failed > 0) {
-    console.warn(`[scan] Promote pass left ${result.failed} file(s) in promoting; retrying after the settle window`);
+    console.warn(`[scan] Promote pass left ${result.failed} file(s) in promoting; will retry`);
   }
-  if (incomplete) debouncers.get(boxRoot)?.notify();
+
+  // The wakeup gave up under its own durable budget. Re-arming here would
+  // restart the loop that budget exists to end.
+  if (result.wakeup.kind === "abandoned") {
+    incompletePasses.delete(boxRoot);
+    return;
+  }
+
+  if (result.skipped === "locked") {
+    debouncers.get(boxRoot)?.notify();
+    return;
+  }
+
+  const incomplete = result.failed > 0 || result.wakeup.kind === "failed";
+  if (!incomplete) {
+    incompletePasses.delete(boxRoot);
+    return;
+  }
+
+  const passes = (incompletePasses.get(boxRoot) ?? 0) + 1;
+  incompletePasses.set(boxRoot, passes);
+  if (passes >= MAX_CONSECUTIVE_INCOMPLETE_PASSES) {
+    console.error(
+      `[scan] Promote pass for box=${boxRoot} ended incomplete ${String(passes)} times in a row; ` +
+        "no longer re-arming. The next upload, or a box restart, starts it again.",
+    );
+    return;
+  }
+
+  // The wakeup's own backoff decides its delay; the other reasons use the
+  // settle window, which is the pace new work arrives at anyway.
+  const debouncer = debouncers.get(boxRoot);
+  if (result.wakeup.kind === "failed") debouncer?.notifyAfter(result.wakeup.retryDelayMs);
+  else debouncer?.notify();
 }
 
 /**
@@ -49,6 +107,10 @@ async function runPass(boxRoot: string): Promise<void> {
  * routes without a server lifecycle.
  */
 export function notifyScanUpload(boxRoot: string): void {
+  // A new file is new information: whatever was failing before, this is a
+  // fresh reason to try. Mirrors `markWakeupPending` clearing the durable
+  // wakeup budget.
+  incompletePasses.delete(boxRoot);
   debouncers.get(boxRoot)?.notify();
 }
 
@@ -98,5 +160,6 @@ export function startScanPromoteLifecycle(opts: { server: FastifyInstance; boxRo
     cancelSweep();
     debouncer.cancel();
     debouncers.delete(boxRoot);
+    incompletePasses.delete(boxRoot);
   });
 }

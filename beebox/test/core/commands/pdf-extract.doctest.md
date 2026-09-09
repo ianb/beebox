@@ -37,7 +37,7 @@ const havePdftotext = await execa("pdftotext", ["-v"], { reject: false }).then((
 
 // Seed a box with a text-layer PDF sitting outside it, and run pdf mode.
 async function importPdf(box, docling, source) {
-  const pdfPath = join(box.packageRoot, "incoming.pdf");
+  const pdfPath = join(box.root, "incoming.pdf");
   await writeFile(pdfPath, textPdf());
   const { ctx } = createCollectorContext(box.root);
   return runPdfMode(ctx, { pdfPath, docling, source });
@@ -45,7 +45,7 @@ async function importPdf(box, docling, source) {
 
 // The session attach dir of the one session this box has.
 async function sessionDir(box) {
-  const entries = await readdir(join(box.root, "box/inbox"));
+  const entries = await readdir(join(box.root, "_content/inbox"));
   return entries.find((e) => e.endsWith(".attach"));
 }
 
@@ -54,13 +54,13 @@ async function sessionDir(box) {
 // its own section below.
 async function attachContents(box) {
   const dir = await sessionDir(box);
-  const names = await readdir(join(box.root, "box/inbox", dir, "source.attach"));
+  const names = await readdir(join(box.root, "_content/inbox", dir, "source.attach"));
   return names.filter((n) => n !== "text-layer.txt").sort().join("\n");
 }
 
 async function readPdfCard(box) {
   const dir = await sessionDir(box);
-  const rel = `box/inbox/${dir}/source.pdf.card`;
+  const rel = `_content/inbox/${dir}/source.pdf.card`;
   return { rel, content: await box.read(rel) };
 }
 ```
@@ -68,7 +68,7 @@ async function readPdfCard(box) {
 ## A successful extraction lands an `analyzed` pdf card
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const docling = createFakeDocling({
   markdown: "## Invoice 2026-04\n\n![Image](out/source_artifacts/image_000000_fake.png)\n",
   pageCount: 2,
@@ -92,7 +92,7 @@ an option the caller has to remember:
 docling.describe()
 =>
 docling fake (succeeds), 1 call(s)
-  source.pdf force-ocr=false languages=-
+  source.pdf ocr=off languages=-
 ```
 
 The attach scope holds the original, the canonical JSON, one AVIF per page, and
@@ -109,11 +109,11 @@ page-002.avif
 source.pdf
 
 const dir = await sessionDir(box);
-const avif = await readFile(join(box.root, "box/inbox", dir, "source.attach/page-001.avif"));
+const avif = await readFile(join(box.root, "_content/inbox", dir, "source.attach/page-001.avif"));
 avif.subarray(4, 12).toString("latin1")
 => ftypavif
 
-const json = gunzipSync(await readFile(join(box.root, "box/inbox", dir, "source.attach/docling.json.gz")));
+const json = gunzipSync(await readFile(join(box.root, "_content/inbox", dir, "source.attach/docling.json.gz")));
 JSON.parse(json.toString()).schema_name
 => DoclingDocument
 ```
@@ -157,7 +157,7 @@ const sessionCard = await box.read(result.data.sessionCardPath);
 sessionCard.includes("- attach/source.pdf.card")
 => true
 
-result.data.intakeJobPath.startsWith("box/jobs/")
+result.data.intakeJobPath.startsWith("_bookkeeping/jobs/")
 => true
 ```
 
@@ -174,10 +174,10 @@ frontmatter points at it; the schema instructions name the convention, the same
 way they do for the page renders.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 await importPdf(box, createFakeDocling({ markdown: "rendered", pageCount: 1 }));
 const dir = await sessionDir(box);
-const names = await readdir(join(box.root, "box/inbox", dir, "source.attach"));
+const names = await readdir(join(box.root, "_content/inbox", dir, "source.attach"));
 havePdftotext ? names.includes("text-layer.txt") : true
 => true
 ```
@@ -186,7 +186,7 @@ It holds the PDF's own words, not Docling's rendering of them:
 
 ```ts continue
 const raw = havePdftotext
-  ? await readFile(join(box.root, "box/inbox", dir, "source.attach/text-layer.txt"), "utf-8")
+  ? await readFile(join(box.root, "_content/inbox", dir, "source.attach/text-layer.txt"), "utf-8")
   : "Invoice 2026-04 Northwind Traders";
 raw.includes("Northwind Traders")
 => true
@@ -217,7 +217,7 @@ const result = await extractPdf({
   sourcePath: textlessPath,
   attachAbsDir,
   workDir,
-  forceOcr: false,
+  ocr: "off",
   languages: null,
 });
 JSON.stringify([result.ok, result.value.assetNames.includes("text-layer.txt"), (await readdir(attachAbsDir)).includes("text-layer.txt")])
@@ -237,7 +237,7 @@ the generic `scan-import`) and on the session card — so a batch that looks wro
 identifies the device that produced it.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "billed", pageCount: 1 }), "scan-upload/laptop-scansnap");
 const { rel, content } = await readPdfCard(box);
 const card = parseCardText(content, { source: rel, schemas });
@@ -254,7 +254,7 @@ carries no `source` at all — the field means "came from somewhere identifiable
 so an absent one is the honest answer:
 
 ```ts continue
-const plain = await makeTmpBox({ git: true });
+const plain = await makeTmpBox({ git: true, annex: true });
 const plainResult = await importPdf(plain, createFakeDocling({ markdown: "billed", pageCount: 1 }));
 const plainDoc = await readPdfCard(plain);
 JSON.stringify([
@@ -276,7 +276,7 @@ Nothing is lost: the original PDF is the card's only asset, the reason is on the
 card rather than only in a log, and intake proceeds.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const docling = createFakeDocling({ failWith: "Docling exited 1: killed by the OOM killer" });
 const result = await importPdf(box, docling);
 result.success
@@ -303,7 +303,7 @@ JSON.stringify(card.rawBody.trim())
 Intake still completed — a Docling problem is not an intake problem:
 
 ```ts continue
-result.data.intakeJobPath.startsWith("box/jobs/")
+result.data.intakeJobPath.startsWith("_bookkeeping/jobs/")
 => true
 ```
 
@@ -318,7 +318,7 @@ A document with no readable text is a real answer. The card says `analyzed`
 there to look at.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const result = await importPdf(box, createFakeDocling({ markdown: "", pageCount: 1 }));
 result.data.status
 => analyzed
@@ -345,10 +345,10 @@ The card is re-extracted in place. `description` (and anything else an agent
 wrote) survives; the body, `docling`, and the page assets are replaced.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 await importPdf(box, createFakeDocling({ markdown: "first pass", pageCount: 3 }));
 const dir = await sessionDir(box);
-const cardRel = `box/inbox/${dir}/source.pdf.card`;
+const cardRel = `_content/inbox/${dir}/source.pdf.card`;
 
 // Stand in for an agent's downstream processing pass.
 await box.write(cardRel, (await box.read(cardRel)).replace("format: pdf", "format: pdf\ndescription: A utility bill"));
@@ -369,7 +369,7 @@ The flags reached the extractor:
 docling.describe()
 =>
 docling fake (succeeds), 1 call(s)
-  source.pdf force-ocr=true languages=en,de
+  source.pdf ocr=replace languages=en,de
 ```
 
 The body and page count are the new run's; the description is the old card's:
@@ -398,15 +398,15 @@ await box.cleanup();
 ## Reanalyze refuses clearly on a card it cannot work with
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const { ctx } = createCollectorContext(box.root);
-const missing = await runPdfReanalyze(ctx, { args: { card: "box/inbox/Nope.pdf.card" } });
+const missing = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/Nope.pdf.card" } });
 JSON.stringify([missing.success, missing.error])
-=> [false,"Card not found: box/inbox/Nope.pdf.card"]
+=> [false,"Card not found: _content/inbox/Nope.pdf.card"]
 
-const wrongType = await runPdfReanalyze(ctx, { args: { card: "box/inbox/Nope.memo.card" } });
+const wrongType = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/Nope.memo.card" } });
 wrongType.error
-=> Not a pdf card: box/inbox/Nope.memo.card
+=> Not a pdf card: _content/inbox/Nope.memo.card
 ```
 
 The `card` argument is user-supplied, so it resolves through `shared/ref-path.ts`
@@ -429,9 +429,9 @@ A `..` that stays inside the box is fine — it just normalizes, and the refusal
 that follows is about the card, not the path:
 
 ```ts continue
-const inside = await runPdfReanalyze(ctx, { args: { card: "box/inbox/../inbox/Nope.pdf.card" } });
+const inside = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/../inbox/Nope.pdf.card" } });
 inside.error
-=> Card not found: box/inbox/Nope.pdf.card
+=> Card not found: _content/inbox/Nope.pdf.card
 ```
 
 ```ts cleanup
@@ -457,7 +457,7 @@ const tooMany = await extractPdf({
   sourcePath: join(scratch, "source.pdf"),
   attachAbsDir,
   workDir,
-  forceOcr: false,
+  ocr: "off",
   languages: null,
 });
 JSON.stringify([tooMany.ok, tooMany.error])
@@ -480,7 +480,7 @@ const atCap = await extractPdf({
   sourcePath: join(scratch, "source.pdf"),
   attachAbsDir,
   workDir,
-  forceOcr: false,
+  ocr: "off",
   languages: null,
 });
 JSON.stringify([atCap.ok, atCap.value.assetNames.length])

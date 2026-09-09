@@ -220,6 +220,9 @@ extension PendingEmissionState: Codable {
 }
 
 struct PendingEmission: Codable, Equatable, Identifiable, Sendable {
+    var binding: NativeSendBinding? = nil
+    var bindingRevision: Int? = nil
+    var replacesFirstEmissionID: UUID? = nil
     var id: UUID
     var boxID: UUID
     var draft: ComposerDraft
@@ -309,6 +312,9 @@ enum EmissionRedeliveryPolicy {
 }
 
 struct VoicePreparation: Codable, Equatable, Identifiable, Sendable {
+    var binding: NativeSendBinding? = nil
+    var bindingRevision: Int? = nil
+    var replacesFirstEmissionID: UUID? = nil
     var id: UUID
     var boxID: UUID
     var draft: ComposerDraft

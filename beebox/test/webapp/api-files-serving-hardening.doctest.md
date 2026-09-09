@@ -24,8 +24,8 @@ const server = await makeTestServer();
 A `.html` file is forced to download, not render inline:
 
 ```ts
-await server.seed("page.html", "<html><body><script>alert(1)</script></body></html>");
-const html = await server.rawRequest({ method: "GET", url: "/api/files/page.html" });
+await server.seed("_content/page.html", "<html><body><script>alert(1)</script></body></html>");
+const html = await server.rawRequest({ method: "GET", url: "/api/files/_content/page.html" });
 `${html.statusCode} ${html.headers["content-type"]} ${html.headers["content-disposition"]} ${html.headers["x-content-type-options"]}`
 => 200 text/html attachment; filename="page.html" nosniff
 ```
@@ -34,8 +34,8 @@ An `.svg` file (script-capable when rendered as a document) gets the same
 treatment:
 
 ```ts continue
-await server.seed("mark.svg", "<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>");
-const svg = await server.rawRequest({ method: "GET", url: "/api/files/mark.svg" });
+await server.seed("_content/mark.svg", "<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>");
+const svg = await server.rawRequest({ method: "GET", url: "/api/files/_content/mark.svg" });
 `${svg.statusCode} ${svg.headers["content-type"]} ${svg.headers["content-disposition"]}`
 => 200 image/svg+xml attachment; filename="mark.svg"
 ```
@@ -45,8 +45,8 @@ no `Content-Disposition`, and its own sandboxed CSP instead of a bare
 `nosniff`-only treatment:
 
 ```ts continue
-await server.seed("snapshot.frozen", "<html><body>captured page</body></html>");
-const frozen = await server.rawRequest({ method: "GET", url: "/api/files/snapshot.frozen" });
+await server.seed("_content/snapshot.frozen", "<html><body>captured page</body></html>");
+const frozen = await server.rawRequest({ method: "GET", url: "/api/files/_content/snapshot.frozen" });
 `${frozen.statusCode} ${frozen.headers["content-type"]} ${JSON.stringify(frozen.headers["content-disposition"] ?? null)} ${frozen.headers["x-content-type-options"]} ${frozen.headers["content-security-policy"]}`
 => 200 text/html null nosniff sandbox allow-scripts; script-src '«*»'
 ```
@@ -59,7 +59,7 @@ unhardened cached response forever:
 ```ts continue
 const notModified = await server.rawRequest({
   method: "GET",
-  url: "/api/files/page.html",
+  url: "/api/files/_content/page.html",
   headers: { "if-none-match": html.headers.etag },
 });
 `${notModified.statusCode} ${notModified.headers["content-disposition"]} ${notModified.headers["x-content-type-options"]}`
@@ -70,8 +70,8 @@ An ordinary inert type (an image) still serves inline, but now also carries
 `nosniff`:
 
 ```ts continue
-await server.seed("photo.jpg", "fake-jpeg-bytes");
-const img = await server.rawRequest({ method: "GET", url: "/api/files/photo.jpg" });
+await server.seed("_content/photo.jpg", "fake-jpeg-bytes");
+const img = await server.rawRequest({ method: "GET", url: "/api/files/_content/photo.jpg" });
 `${img.statusCode} ${img.headers["content-type"]} ${JSON.stringify(img.headers["content-disposition"] ?? null)} ${img.headers["x-content-type-options"]}`
 => 200 image/jpeg null nosniff
 ```
@@ -82,7 +82,7 @@ through it is forced to download with `nosniff`, not rendered inline
 (closing the incomplete-coverage gap the codex review flagged):
 
 ```ts continue
-const svgImage = await server.rawRequest({ method: "GET", url: "/api/image/mark.svg" });
+const svgImage = await server.rawRequest({ method: "GET", url: "/api/image/_content/mark.svg" });
 `${svgImage.statusCode} ${svgImage.headers["content-type"]} ${svgImage.headers["content-disposition"]} ${svgImage.headers["x-content-type-options"]}`
 => 200 image/svg+xml attachment; filename="mark.svg" nosniff
 ```
@@ -90,7 +90,7 @@ const svgImage = await server.rawRequest({ method: "GET", url: "/api/image/mark.
 An ordinary image through `/api/image/*` stays inline but gains `nosniff`:
 
 ```ts continue
-const jpgImage = await server.rawRequest({ method: "GET", url: "/api/image/photo.jpg" });
+const jpgImage = await server.rawRequest({ method: "GET", url: "/api/image/_content/photo.jpg" });
 `${jpgImage.statusCode} ${jpgImage.headers["content-type"]} ${JSON.stringify(jpgImage.headers["content-disposition"] ?? null)} ${jpgImage.headers["x-content-type-options"]}`
 => 200 image/jpeg null nosniff
 ```
@@ -155,8 +155,10 @@ path):
 ```ts continue
 const ctx = { boxRoot: server.boxRoot, boxSlug: "t", user: null, authed: true, isOwner: true };
 const escapeBrowse = await statusRouter.createCaller(ctx).browse({ path: `../${boxDirName}-other` });
-JSON.stringify(escapeBrowse)
-=> {"path":"../content-other","dirs":[],"cards":[],"files":[]}
+// The box root's own directory name varies per run (a temp dir), so compare
+// against the same computed sibling name rather than a fixed literal.
+JSON.stringify(escapeBrowse) === JSON.stringify({ path: `../${boxDirName}-other`, dirs: [], cards: [], files: [], background: false })
+=> true
 ```
 
 ```ts cleanup

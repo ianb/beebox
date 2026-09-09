@@ -31,6 +31,8 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
 import { BOX_BUILT_DEPENDENCIES } from "../src/core/box/package.js";
 import { isRecord } from "../src/lib/is-record.js";
+import { fileExists } from "../src/lib/file-exists.js";
+import { BOX_PACKAGE_DOCS } from "../src/core/docs-gen/shared.js";
 
 /** A gate step (command or assertion) failed. `label` names the step;
  *  `detail` carries the full diagnostic (command line, stdout/stderr, or
@@ -50,6 +52,13 @@ class SmokeStepError extends Error {
 }
 
 /** No `dist-release/*.tgz` to smoke-test — `pnpm release` hasn't run. */
+class PackageDocsMissingError extends Error {
+  constructor(relPath: string) {
+    super("package docs missing from the installed tarball: " + relPath);
+    this.name = "PackageDocsMissingError";
+  }
+}
+
 class NoTarballError extends Error {
   readonly dir: string;
   constructor(dir: string) {
@@ -156,7 +165,7 @@ export const rendersCardTypes = ["widget"];
 export default function Widget({ boxSlug }: { boxSlug: string }) {
   return (
     <div>
-      Widget view for {boxSlug} <CardLink cardRef="box/inbox">inbox</CardLink>
+      Widget view for {boxSlug} <CardLink cardRef="/_content/inbox">inbox</CardLink>
     </div>
   );
 }
@@ -214,6 +223,23 @@ async function scaffold(args: { tarball: string; boxDir: string }): Promise<void
   });
 }
 
+/**
+ * The agent guide points every agent at `node_modules/beebox/box-docs/`; a
+ * tarball that dropped the directory (a `files` allowlist regression) would
+ * leave those pointers dangling on a read-only install, where nothing can
+ * rewrite them. Assert the index and one card doc made it into the pack.
+ */
+async function packageDocsShipped(boxDir: string): Promise<void> {
+  const dir = path.join(boxDir, BOX_PACKAGE_DOCS);
+  for (const file of ["README.md", "bbx-commands.md", "card-memo.md", ".hash"]) {
+    const p = path.join(dir, file);
+    if (!(await fileExists(p))) {
+      throw new PackageDocsMissingError(path.relative(boxDir, p));
+    }
+  }
+  process.stderr.write("[smoke] ok: package docs shipped (" + BOX_PACKAGE_DOCS + ")\n");
+}
+
 async function importEveryPublicExport(boxDir: string): Promise<void> {
   const specifiers = await publicExportSpecifiers();
   const importScript = specifiers.map((s) => "await import(" + JSON.stringify(s) + ");").join("\n");
@@ -244,24 +270,27 @@ async function typecheck(boxDir: string): Promise<void> {
   });
 }
 
-async function validate(contentDir: string): Promise<void> {
+async function validate(boxDir: string): Promise<void> {
+  // v3 (one-root) box: `node_modules/` lives at the box root itself, so the
+  // bbx binary is a direct child of the cwd we run these in — no nested
+  // `content/` root to climb out of.
   // The engine's own view/ViewProps boundary check.
   await step("bbx view typecheck", {
-    file: "../node_modules/.bin/bbx",
+    file: "node_modules/.bin/bbx",
     args: ["view", "typecheck"],
-    cwd: contentDir,
+    cwd: boxDir,
   });
   await step("bbx validate --all", {
-    file: "../node_modules/.bin/bbx",
+    file: "node_modules/.bin/bbx",
     args: ["validate", "--all"],
-    cwd: contentDir,
+    cwd: boxDir,
   });
   // Real node-target render: proves react/jsx-runtime AND the view-widgets
   // bundle resolve at runtime in an installed (non-symlinked) box.
   await step("bbx view test widget (node-target render)", {
-    file: "../node_modules/.bin/bbx",
+    file: "node_modules/.bin/bbx",
     args: ["view", "test", "widget"],
-    cwd: contentDir,
+    cwd: boxDir,
   });
 }
 
@@ -274,7 +303,9 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
   const diagKey = "smoke-test-diag-key";
   const bbxServe: Subprocess = execa(
     "node_modules/.bin/bbx",
-    ["serve", "content", "--port", String(args.port)],
+    // No directory arg needed: `bbx serve` with no positional dirs defaults
+    // to the current directory, and a v3 box's root IS its operational root.
+    ["serve", "--port", String(args.port)],
     { cwd: args.boxDir, env: { ...strangerEnv(), BBX_DIAG_API_KEY: diagKey }, extendEnv: false, reject: false, all: true }
   );
   try {
@@ -291,7 +322,7 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
       }),
       crashed,
     ]);
-    // A v2 box's slug is the basename of its PACKAGE dir, not of `content/`
+    // A v3 (one-root) box's slug is the basename of its own root directory
     // (src/lib/box-slug.ts; docs/docker-install.md: `/data/box` → `/box/`).
     const slug = path.basename(args.boxDir);
     const boxHealthUrl = `http://localhost:${String(args.port)}/${slug}/api/trpc/health.check`;
@@ -335,7 +366,6 @@ async function main(): Promise<void> {
   const tarball = await findTarball();
   const tmpRoot = await mkdtemp(path.join(os.tmpdir(), "bbx-smoke-"));
   const boxDir = path.join(tmpRoot, "smoke-box");
-  const contentDir = path.join(boxDir, "content");
   const port = 20000 + Math.floor(Math.random() * 20000);
   process.stderr.write(
     "[smoke] tarball: " + path.relative(PACKAGE_ROOT, tarball) + "\n[smoke] box: " + boxDir + "\n"
@@ -344,9 +374,10 @@ async function main(): Promise<void> {
   try {
     await mkdir(boxDir, { recursive: true });
     await scaffold({ tarball, boxDir });
+    await packageDocsShipped(boxDir);
     await importEveryPublicExport(boxDir);
     await typecheck(boxDir);
-    await validate(contentDir);
+    await validate(boxDir);
     await serveAndProbe({ boxDir, port });
 
     process.stderr.write(
@@ -354,7 +385,7 @@ async function main(): Promise<void> {
         "  mkdir my-box && cd my-box\n" +
         "  pnpm dlx --package=<beebox tarball URL> bbx init .\n" +
         "  pnpm install\n" +
-        "  pnpm exec bbx serve content\n\n"
+        "  pnpm exec bbx serve\n\n"
     );
   } finally {
     await rm(tmpRoot, { recursive: true, force: true });

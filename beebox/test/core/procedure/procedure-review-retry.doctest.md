@@ -20,7 +20,7 @@ completes; the retry invocation carried the `<validation-failure>` context.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/heal.procedure.card", `---
+await box.write("_config/procedures/heal.procedure.card", `---
 name: heal
 description: Review heals on retry
 steps:
@@ -35,7 +35,7 @@ steps:
         - The work must be complete.
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add heal procedure");
 
 let runCount = 0;
@@ -46,7 +46,7 @@ const createAgent = (opts) => createFakeAgent({
   act: async ({ prompt }) => {
     runCount++;
     if (prompt.includes("validation-failure")) retryPrompt = prompt;
-    await box.write("box/output/work.txt", `attempt ${runCount}`);
+    await box.write("_bookkeeping/output/work.txt", `attempt ${runCount}`);
     box.commitAll(`agent attempt ${runCount}`);
     return { success: true };
   },
@@ -69,7 +69,7 @@ print(`agent runs: ${runCount}`);
 print(`validate calls: ${validateCount}`);
 print(`retry got failure context: ${retryPrompt.includes("<validation-failure>")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("heal_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
@@ -94,7 +94,7 @@ procedure halts.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/stuck.procedure.card", `---
+await box.write("_config/procedures/stuck.procedure.card", `---
 name: stuck
 description: Review never heals
 steps:
@@ -112,10 +112,10 @@ steps:
     run:
       shells:
         - |
-          echo "nope" > box/output/after.txt
+          echo "nope" > _bookkeeping/output/after.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add stuck procedure");
 
 let runCount = 0;
@@ -123,7 +123,7 @@ const createAgent = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     runCount++;
-    await box.write("box/output/try.txt", `try ${runCount}`);
+    await box.write("_bookkeeping/output/try.txt", `try ${runCount}`);
     box.commitAll(`agent try ${runCount}`);
     return { success: true };
   },
@@ -140,10 +140,10 @@ print(`success: ${result.ok}`);
 // Initial run + MAX_REVIEW_RETRIES (1) retry = 2 agent runs.
 print(`agent runs: ${runCount}`);
 
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`after.txt (next step) exists: ${files.includes("after.txt")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("stuck_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`broken step: ${run.steps[0].status}`);
@@ -167,7 +167,7 @@ fails terminally rather than silently warning.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/noagent.procedure.card", `---
+await box.write("_config/procedures/noagent.procedure.card", `---
 name: noagent
 description: Review but no agent to retry
 steps:
@@ -176,14 +176,14 @@ steps:
     run:
       shells:
         - |
-          echo "did something" > box/output/thing.txt
+          echo "did something" > _bookkeeping/output/thing.txt
     validate:
       severity: review
       instructions:
         - Must meet the bar.
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add noagent procedure");
 
 let validateCount = 0;
@@ -206,7 +206,7 @@ print(`success: ${result.ok}`);
 // Judged once; no retry attempted (nothing to resume).
 print(`validate calls: ${validateCount}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("noagent_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);
@@ -227,7 +227,7 @@ the shell (which appends a line) runs exactly once.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/once.procedure.card", `---
+await box.write("_config/procedures/once.procedure.card", `---
 name: once
 description: Shell runs once even with retries
 steps:
@@ -238,21 +238,21 @@ steps:
         - prompt: Do the work.
       shells:
         - |
-          echo "shell-ran" >> box/output/count.txt
+          echo "shell-ran" >> _bookkeeping/output/count.txt
     validate:
       severity: review
       instructions:
         - Must be complete.
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add once procedure");
 
 let validateCount = 0;
 const createAgent = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
-    await box.write("box/output/agentwork.txt", "work");
+    await box.write("_bookkeeping/output/agentwork.txt", "work");
     box.commitAll("agent work");
     return { success: true };
   },
@@ -273,7 +273,7 @@ const result = await startProcedure({
 print(`success: ${result.ok}`);
 
 // The shell appended exactly one line despite the retry.
-const count = await box.read("box/output/count.txt");
+const count = await box.read("_bookkeeping/output/count.txt");
 const lines = count.trim().split("\n").filter(Boolean);
 print(`shell ran ${lines.length} time(s)`);
 =>
@@ -295,7 +295,7 @@ So the self-heal does not fire, the agent runs exactly once, and the run ends
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/nodecide.procedure.card", `---
+await box.write("_config/procedures/nodecide.procedure.card", `---
 name: nodecide
 description: Review never decides
 steps:
@@ -310,7 +310,7 @@ steps:
         - Some criterion.
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add nodecide procedure");
 
 let runCount = 0;
@@ -318,7 +318,7 @@ const createAgent = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     runCount++;
-    await box.write("box/output/try.txt", `try ${runCount}`);
+    await box.write("_bookkeeping/output/try.txt", `try ${runCount}`);
     box.commitAll(`agent try ${runCount}`);
     return { success: true };
   },
@@ -336,7 +336,7 @@ print(`success: ${result.ok}`);
 print(`run status: ${result.value.status}`);
 print(`agent runs: ${runCount}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("nodecide_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`work step: ${run.steps[0].status}`);

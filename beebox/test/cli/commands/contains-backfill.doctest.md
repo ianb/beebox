@@ -28,15 +28,15 @@ const MEMO = (text: string) =>
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("store/notes/A.memo.card", MEMO("alpha notes"));
-await box.write("store/notes/B.memo.card", MEMO("beta notes"));
+await box.write("_content/notes/A.memo.card", MEMO("alpha notes"));
+await box.write("_content/notes/B.memo.card", MEMO("beta notes"));
 box.commitAll("seed cards");
 await refreshSearchIndex(box.root);
 const queued = await createContainsBackfillJob(box.root);
 queued
 => 2
 
-const listing = await box.list("box/jobs");
+const listing = await box.list("_bookkeeping/jobs");
 listing.includes("contains-backfill.job.card")
 => true
 ```
@@ -45,7 +45,7 @@ The job card is frontmatter carrying the source, a description, and the item
 refs:
 
 ```ts continue
-const jobs = (await box.list("box/jobs")).split("\n").filter((f) => f.includes("contains-backfill.job.card"));
+const jobs = (await box.list("_bookkeeping/jobs")).split("\n").filter((f) => f.includes("contains-backfill.job.card"));
 const job = await box.read(jobs[0]!);
 job.startsWith("---\n")
 => true
@@ -56,7 +56,7 @@ job.includes("source: contains-backfill")
 job.includes("Write the contains: field for 2 cards missing it.")
 => true
 
-job.includes("ref: store/notes/A.memo.card")
+job.includes("ref: _content/notes/A.memo.card")
 => true
 ```
 
@@ -72,7 +72,7 @@ await createContainsBackfillJob(box.root)
 ```ts
 const box2 = await makeTmpBox({ git: true });
 await box2.write(
-  "store/notes/Done.memo.card",
+  "_content/notes/Done.memo.card",
   "---\ncreated: 2026-05-22T10:00:00Z\ncontains: Already annotated.\n---\nbody\n"
 );
 box2.commitAll("seed");
@@ -95,7 +95,7 @@ suppress the refresh — and a card added afterwards still reaches the index.
 
 ```ts
 const box3 = await makeTmpBox({ git: true });
-await box3.write("store/notes/A.memo.card", MEMO("alpha notes"));
+await box3.write("_content/notes/A.memo.card", MEMO("alpha notes"));
 box3.commitAll("seed");
 await refreshSearchIndex(box3.root);
 await createContainsBackfillJob(box3.root);
@@ -105,13 +105,13 @@ await createContainsBackfillJob(box3.root)
 => 0
 
 // ...but the refresh still indexes the new card.
-await box3.write("store/notes/Later.memo.card", MEMO("distinctive kumquat filing"));
+await box3.write("_content/notes/Later.memo.card", MEMO("distinctive kumquat filing"));
 box3.commitAll("add a card");
 await refreshSearchIndex(box3.root)
 => true
 
 const hits = await searchBox(box3.root, { query: "kumquat", mode: "text" });
-hits.results.some((r) => r.path === "store/notes/Later.memo.card")
+hits.results.some((r) => r.path === "_content/notes/Later.memo.card")
 => true
 ```
 
@@ -131,7 +131,7 @@ most: the first run after deploy, when the reconciliation is large and slow.
 
 ```ts
 const box4 = await makeTmpBox({ git: true });
-await box4.write("store/notes/A.memo.card", MEMO("alpha notes"));
+await box4.write("_content/notes/A.memo.card", MEMO("alpha notes"));
 box4.commitAll("seed");
 
 // Hold the search lock, as a concurrent query or a second wakeup would.
@@ -161,14 +161,14 @@ that is never old is a job that is never overdue.
 ```ts
 process.env.BBX_TIME = "2026-03-04T05:06:07Z";
 const box5 = await makeTmpBox({ git: true });
-await box5.write("store/notes/A.memo.card", MEMO("alpha notes"));
+await box5.write("_content/notes/A.memo.card", MEMO("alpha notes"));
 box5.commitAll("seed");
 await refreshSearchIndex(box5.root);
 await createContainsBackfillJob(box5.root);
 
-const queuedName = (await box5.list("box/jobs")).split("\n").find((f) => f.includes("contains-backfill"));
+const queuedName = (await box5.list("_bookkeeping/jobs")).split("\n").find((f) => f.includes("contains-backfill"));
 queuedName
-=> box/jobs/2026-03-04T05-06.contains-backfill.job.card
+=> _bookkeeping/jobs/2026-03-04T05-06.contains-backfill.job.card
 ```
 
 ```ts cleanup

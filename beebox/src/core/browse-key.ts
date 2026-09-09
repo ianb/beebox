@@ -29,7 +29,7 @@
  * **What the key means inside a box is the box's call.** By default it clears
  * the auth wall and is nobody — `authed`, never a `user`. A box built for
  * agent-driven browsing declares `agentBrowsing: "owner"` in its
- * `config/box.json`, and inside that box the key resolves to the owner's
+ * `_config/box.json`, and inside that box the key resolves to the owner's
  * identity (`webapp/box-identity.ts`). A box that never said so keeps the
  * fence, so a machine-wide key does not silently become a person on a box
  * somebody actually uses.
@@ -42,7 +42,7 @@
  * Header-based (not Fastify-typed) so the three gates that need it can share
  * one implementation: the box's own wall (`webapp/server-box-scope.ts`), the
  * hub (`hub/hub-server.ts`, both its HTTP and upgrade paths), and the dev
- * router (`bin/router-auth-deps.ts`).
+ * router (`workstreams-app/src/router/router-auth-deps.ts`).
  */
 
 import * as crypto from "node:crypto";

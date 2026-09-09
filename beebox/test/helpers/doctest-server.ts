@@ -59,10 +59,9 @@ export interface TestServer {
   /** Write a card file into the test box. */
   seed(relativePath: string, content: string): Promise<void>;
   /**
-   * Write a view `.tsx` into the box's code directory. For a v2 (package) box
-   * that's `<packageRoot>/src/views/`, one level up from the operational box
-   * root — where `resolveViewsDir`/`boxCodePaths` look. Doctests use this
-   * instead of writing to `boxRoot/views/` so they don't hardcode a layout.
+   * Write a view `.tsx` into the box's code directory (`<boxRoot>/src/views/`,
+   * where `resolveViewsDir`/`boxCodePaths` look). Doctests use this instead of
+   * a hand-joined path so they don't hardcode a layout.
    */
   seedView(relativePath: string, content: string): Promise<void>;
   /** Read a file from the test box. */
@@ -157,7 +156,7 @@ export async function makeTestServer(options?: TestServerOptions): Promise<TestS
       await writeFile(fullPath, content);
     },
     async seedView(relativePath: string, content: string) {
-      const fullPath = join(dirname(ctx.boxRoot), "src/views", relativePath);
+      const fullPath = join(ctx.boxRoot, "src/views", relativePath);
       await mkdir(dirname(fullPath), { recursive: true });
       await writeFile(fullPath, content);
     },

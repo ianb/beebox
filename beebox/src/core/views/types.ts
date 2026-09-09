@@ -6,15 +6,37 @@
  */
 
 import type { ActivityKind } from "../chat/card-activity.js";
+import type { ViewState } from "../../shared/view-state.js";
+
+export type { ViewState, ViewStateValue } from "../../shared/view-state.js";
+
+export interface ViewHistory {
+  readonly state: ViewState;
+  readonly canPush: boolean;
+  pushState: (next: ViewState) => "pushed" | "replaced" | "rejected";
+  replaceState: (next: ViewState) => void;
+}
+
+interface ViewImageBaseOptions {
+  fit?: "scale-down" | "contain" | "cover" | "crop" | "pad";
+  quality?: number;
+  format?: "auto" | "avif" | "webp" | "jpeg";
+  dpr?: number;
+}
+
+export type ViewImageOptions = ViewImageBaseOptions & (
+  | { width: number; height?: number }
+  | { width?: number; height: number }
+);
 
 export interface ViewProps {
   cards: ViewCard[];
   /** Metadata for non-card files matched by the dependency globs. */
   files: ViewFile[];
   /**
-   * Call an external provider API (replicate, mistral, anthropic, openai)
+   * Call an external provider API (replicate, mistral, anthropic, openai, openrouter)
    * through the box's authenticated adapter — the server injects the API
-   * key from config/connectors/<adapter>.secret.json; the browser never
+   * key from the box's granted secret store entry; the browser never
    * sees it, and CORS doesn't apply. `path` accepts upstream absolute
    * URLs (polling URLs) — the origin is stripped and routed via the
    * adapter. The rest of the options object is standard RequestInit.
@@ -27,6 +49,8 @@ export interface ViewProps {
   readFile: (path: string, opts?: { start?: number; end?: number }) => Promise<string>;
   /** URL for a box file — use for <img src>, <audio src>, download links. */
   fileUrl: (path: string) => string;
+  /** URL for a bounded, cached image representation. Keep fileUrl(path) for full-resolution links. */
+  imageUrl: (path: string, options: ViewImageOptions) => string;
   /**
    * Create or overwrite a box file (parent dirs created); returns the new
    * ViewFile. Does NOT commit. Conflict-safe saves pass {expect}: the
@@ -54,6 +78,8 @@ export interface ViewProps {
   boxSlug: string;
   /** Query parameters from the view URL (e.g., path, custom filters). */
   params: Record<string, string>;
+  /** Explicit, JSON-safe navigation state owned by this authored view. */
+  viewHistory: ViewHistory;
   /**
    * Report user activity on this card to the chat's companion-pane accumulator,
    * with an optional free-text detail. A no-op outside the companion pane

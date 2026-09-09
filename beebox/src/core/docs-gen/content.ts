@@ -7,7 +7,7 @@
  * (generate-docs-bbx-commands.ts, generate-docs-procedure-guide.ts).
  */
 
-import { getTemplatesForCardType, describeTemplateArgs } from "../../schemas/templates.js";
+import { describeTemplate, type TemplateDefinition } from "../../schemas/templates.js";
 
 /**
  * Static connector metadata. Connectors register at runtime with a boxRoot,
@@ -32,11 +32,20 @@ const CONNECTORS: ConnectorInfo[] = [
   },
 ];
 
+export interface CardDocInput {
+  /** The card type. */
+  name: string;
+  /** The schema's `instructions` (with any appendix already applied). */
+  instructions: string;
+  /** Templates that create this type. The caller chooses the set — built-in
+   *  only for the package docs, the box's effective set for a box-local type. */
+  templates: TemplateDefinition[];
+}
+
 /**
  * Generate a detailed doc for a single card type.
  */
-export function generateCardDoc(name: string, instructions: string): string {
-  const templates = getTemplatesForCardType(name);
+export function generateCardDoc({ name, instructions, templates }: CardDocInput): string {
   const lines: string[] = [
     `# ${name} Card`,
     "",
@@ -58,7 +67,7 @@ export function generateCardDoc(name: string, instructions: string): string {
       lines.push("```");
       lines.push("");
 
-      lines.push(describeTemplateArgs(t.name));
+      lines.push(describeTemplate(t));
       lines.push("");
     }
   }
@@ -74,7 +83,7 @@ export function generateConnectorsDocs(): string {
     "# Connectors",
     "",
     "Connectors bridge external services to the box filesystem.",
-    "They are configured per-box in `config/connectors/`.",
+    "They are configured per-box in `_config/connectors/`.",
     "",
     "## Credentials",
     "",
@@ -82,7 +91,7 @@ export function generateConnectorsDocs(): string {
     "box's directory, and this box holds a *grant* to the ones the boxholder decided it may use.",
     "You cannot read that store, add to it, or grant anything — those are the boxholder's",
     "decisions, made from the admin page or the `bbx secrets` CLI. Google services are separate",
-    "again: shared OAuth tokens plus the box's `googleServices` policy in `config/box.json`.",
+    "again: shared OAuth tokens plus the box's `googleServices` policy in `_config/box.json`.",
     "",
     "Rules for handling keys:",
     "",
@@ -100,11 +109,11 @@ export function generateConnectorsDocs(): string {
     "- Built-in connectors (Telegram, Gmail, transcription, …) resolve their own credentials",
     "  inside the server process. You never see or need those values.",
     "- A scheduled script can declare `<requires><connector>name</connector></requires>`; the",
-    "  scheduler checks whether the box has a granted credential for that connector (or a legacy",
-    "  file, during the transition) and skips the script cleanly when it doesn't.",
-    "- Legacy: `config/connectors/<service>.secret.json` files still work as a deprecated",
-    "  fallback and `bbx health` flags any that survive. If you find one, report it for migration",
-    "  — do not create new ones, and do not read one to \"retrieve\" a key.",
+    "  scheduler checks whether the box has a granted credential for that connector and skips",
+    "  the script cleanly when it doesn't.",
+    "- A retired `_config/connectors/<service>.secret.json` file is read by nothing; `bbx health`",
+    "  flags any that survive. If you find one, report it for deletion — do not create new ones,",
+    "  and do not read one to \"retrieve\" a key.",
     "",
   ];
 

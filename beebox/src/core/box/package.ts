@@ -1,10 +1,12 @@
 /**
- * Package-root scaffolding for shapeVersion 2 boxes (see "The box
- * repository" in `docs/implemented-plans/boxes-as-packages-v2.md`). `bbx init` on a path
- * with no existing box detects a fresh init and lays down BOTH halves: a
- * thin coding-session package at the target path, and the operational box
- * at `<target>/content/`. An existing v2 box is left in place — `bbx init`
- * re-runs its provisioning without moving anything.
+ * Package-root scaffolding for shapeVersion 3 boxes (the one-root layout —
+ * `docs/implemented-plans/one-root-box-layout.md`). `bbx init` on a path with no
+ * existing box detects a fresh init and scaffolds the npm-package half
+ * (`package.json`, `tsconfig.json`, `src/`) directly at the box root; the
+ * operational half (the marker, the underscore areas, `.gitignore`) is
+ * `initBox` in `./index.js`, run on the SAME directory right after. An
+ * existing box is left in place — `bbx init` re-runs its provisioning
+ * without moving anything.
  */
 
 import * as fs from "node:fs/promises";
@@ -22,7 +24,7 @@ const FrontendPackageJsonSchema = z.object({
   devDependencies: z.record(z.string(), z.string()).optional(),
 });
 
-export type BoxInitMode = "fresh" | "update-v2";
+export type BoxInitMode = "fresh" | "update";
 
 /**
  * Thrown when a fresh `bbx init` would overwrite a package.json it didn't
@@ -75,52 +77,20 @@ export const BOX_BUILT_DEPENDENCIES = [
 
 export interface BoxTarget {
   mode: BoxInitMode;
-  /** The operational root — where `.beebox/box.json`, `box/`, `config/`, etc. live (or will). */
+  /** The box root — the ONE root; `.beebox/box.json`, `_content/`,
+   * `_config/`, `package.json`/`node_modules`/`src/` all live here (or will). */
   boxRoot: string;
-  /** The package root — where `package.json`/`node_modules`/`src/` live (or
-   * will). The parent of `boxRoot` (the box's `content/` directory). */
-  packageRoot: string;
 }
 
 /**
- * Decide what `bbx init <path>` is looking at: an existing v2 box whose
- * operational root is the target itself (marker at `<target>`, so the target
- * IS the `content/` root and the package root is its parent), an existing v2
- * box addressed by its package root (marker at `<target>/content`), or
- * nothing yet. Every box is v2 — a marker at the target is that box's
- * operational root, not a legacy flat box.
+ * Decide what `bbx init <path>` is looking at: an existing box (marker at
+ * the target itself) or nothing yet.
  */
 export async function detectBoxTarget(targetPath: string): Promise<BoxTarget> {
   const resolvedRoot = path.resolve(targetPath);
-  if (await isValidBox(resolvedRoot)) {
-    return { mode: "update-v2", boxRoot: resolvedRoot, packageRoot: path.dirname(resolvedRoot) };
-  }
-  const contentRoot = path.join(resolvedRoot, "content");
-  if (await isValidBox(contentRoot)) {
-    return { mode: "update-v2", boxRoot: contentRoot, packageRoot: resolvedRoot };
-  }
-  return { mode: "fresh", boxRoot: contentRoot, packageRoot: resolvedRoot };
+  const mode: BoxInitMode = (await isValidBox(resolvedRoot)) ? "update" : "fresh";
+  return { mode, boxRoot: resolvedRoot };
 }
-
-const ROOT_GITIGNORE = `node_modules/
-
-# Trick dependencies (installed by agent) -- see src/tricks/
-src/tricks/node_modules/
-`;
-
-const ROOT_CLAUDE_MD = `# Box Package
-
-This is a beebox PACKAGE. The live, operational box is \`content/\` --
-that's where an agent (chat, wakeup, scheduled run) actually works; it never
-sees this directory's package machinery directly.
-
-- \`src/\` holds box-authored code (schemas, views, tricks) -- edited in a
-  coding session opened at this root, not by the operating agent.
-- \`content/\` is the box: cards, config, runtime state. Its own \`CLAUDE.md\`
-  is the operating agent's context.
-- This package depends on \`beebox\` (see \`package.json\`) the way any
-  Node package depends on a library.
-`;
 
 interface EngineVersions {
   /** The engine's own package version, to pin the scaffolded `beebox` dependency. */
@@ -166,46 +136,47 @@ async function readEngineVersions(): Promise<EngineVersions> {
 }
 
 /**
- * Scaffold the coding-session half of a fresh v2 box: `package.json`,
- * `tsconfig.json`, a thin root `CLAUDE.md`, and a root `.gitignore`.
- * Idempotent in the sense that every write is a plain overwrite, but it's
- * only ever called for a genuinely fresh init (see `detectBoxTarget`) — an
- * existing package root is never touched by `bbx init`.
+ * Scaffold the npm-package half of a fresh box: `package.json`,
+ * `tsconfig.json`, `src/`. Idempotent in the sense that every write is a
+ * plain overwrite, but it's only ever called for a genuinely fresh init (see
+ * `detectBoxTarget`) — an existing box root is never touched by `bbx init`.
  *
  * Deliberately does NOT run `pnpm install` — the `beebox` dependency
  * isn't resolvable through a real registry/tarball channel yet (Track F).
  * Instead, when `node_modules/` is absent, it symlinks
  * `node_modules/beebox` straight at the running engine's own
- * `PACKAGE_ROOT` — the same trick the v2 fixture doctests and `bbx view test`
+ * `PACKAGE_ROOT` — the same trick the fixture doctests and `bbx view test`
  * use — so the box is loadable (`getBoxShape`'s dependency check, native
  * schema/view resolution) before a real install ever happens. Track F's real
  * install replaces this symlink with an actual dependency.
  *
- * `detectBoxTarget` only checks whether `targetPath` (and `targetPath/content`)
- * is a *box* — a plain non-empty directory (an existing project, a directory
- * with an unrelated package.json) still reads as "fresh." Overwriting that
- * directory's `package.json` would silently clobber someone else's package,
- * so a pre-existing `package.json` is a hard conflict; the other three
- * scaffold files (`tsconfig.json`, `CLAUDE.md`, `.gitignore`) are only
+ * `detectBoxTarget` only checks whether `targetPath` is a *box* — a plain
+ * non-empty directory (an existing project, a directory with an unrelated
+ * package.json) still reads as "fresh." Overwriting that directory's
+ * `package.json` would silently clobber someone else's package, so a
+ * pre-existing `package.json` is a hard conflict; `tsconfig.json` is only
  * written when absent, so a directory that already has its own is left
- * alone.
+ * alone. `CLAUDE.md` and `.gitignore` are NOT written here — `initBox`
+ * (`./index.js`, run right after on the same root) owns both, since they
+ * cover the operational half too (the CLAUDE.md `@`-includes, the merged
+ * ignore rules).
  * @param options.symlinkBeeBox - Whether to symlink
  *   `node_modules/beebox` at the running engine's `PACKAGE_ROOT`.
  *   Production `bbx init` wants it (native schema/view resolution); cheap
  *   fixtures that only read/write cards don't, and skip it. Defaults to true.
- * @throws BoxPackageConflictError if `packageRoot` already has a `package.json`
+ * @throws BoxPackageConflictError if `boxRoot` already has a `package.json`
  */
 export async function scaffoldPackageRoot(
-  packageRoot: string,
+  boxRoot: string,
   options?: { symlinkBeeBox?: boolean }
 ): Promise<void> {
   const symlinkBeeBox = options?.symlinkBeeBox ?? true;
-  await fs.mkdir(packageRoot, { recursive: true });
+  await fs.mkdir(boxRoot, { recursive: true });
 
-  const packageJsonPath = path.join(packageRoot, "package.json");
+  const packageJsonPath = path.join(boxRoot, "package.json");
   if (await pathExists(packageJsonPath)) {
     throw new BoxPackageConflictError(
-      `Cannot initialize a beebox package at ${packageRoot}: it already has a ` +
+      `Cannot initialize a beebox package at ${boxRoot}: it already has a ` +
         "package.json. Fresh `bbx init` scaffolds a new coding-session package there and " +
         "won't overwrite an existing one — remove it first, or run `bbx init` on the " +
         "directory only after confirming it's meant to become a box package."
@@ -215,7 +186,7 @@ export async function scaffoldPackageRoot(
   const versions = await readEngineVersions();
   const beeBoxSpec = process.env.BBX_INIT_BEEBOX_SPEC ?? defaultBeeBoxSpec(versions.engine);
   const packageJson = {
-    name: path.basename(packageRoot),
+    name: path.basename(boxRoot),
     private: true,
     type: "module",
     // react/react-dom are DIRECT deps of the box, not left to hoisting:
@@ -259,17 +230,14 @@ export async function scaffoldPackageRoot(
   await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
 
   await writeFileIfAbsent(
-    path.join(packageRoot, "tsconfig.json"),
+    path.join(boxRoot, "tsconfig.json"),
     JSON.stringify({ extends: "beebox/tsconfig.base.json", include: ["src"] }, null, 2) + "\n"
   );
 
-  await writeFileIfAbsent(path.join(packageRoot, "CLAUDE.md"), ROOT_CLAUDE_MD);
-  await writeFileIfAbsent(path.join(packageRoot, ".gitignore"), ROOT_GITIGNORE);
-
-  await fs.mkdir(path.join(packageRoot, "src"), { recursive: true });
+  await fs.mkdir(path.join(boxRoot, "src"), { recursive: true });
 
   if (symlinkBeeBox) {
-    const nodeModulesDir = path.join(packageRoot, "node_modules");
+    const nodeModulesDir = path.join(boxRoot, "node_modules");
     if (!(await pathExists(nodeModulesDir))) {
       await fs.mkdir(nodeModulesDir, { recursive: true });
       await fs.symlink(PACKAGE_ROOT, path.join(nodeModulesDir, "beebox"), "dir");
@@ -277,40 +245,38 @@ export async function scaffoldPackageRoot(
   }
 }
 
-/** A scaffolded v2 box: the package root and its nested operational box root. */
-export interface ScaffoldedV2Box {
-  /** Where `package.json`/`node_modules`/`src/` live. */
-  packageRoot: string;
-  /** The operational box root — `<packageRoot>/content` (holds `.beebox/box.json`). */
+/** A scaffolded shapeVersion-3 box: one root. */
+export interface ScaffoldedBox {
+  /** The box root — where `package.json`/`node_modules`/`src/`,
+   * `.beebox/box.json`, and every `_`-prefixed operational area live. */
   boxRoot: string;
 }
 
 /**
- * Build a valid shapeVersion-2 box: scaffold the coding-session package at
- * `target`, then `initBox` the operational box at `<target>/content`. This is
- * the single composition that `bbx init` (fresh), the `init-v2` doctest, and
- * every test fixture (`makeTmpBox`, `test-server`) delegate to, so a valid v2
- * layout is produced exactly one way.
+ * Build a valid shapeVersion-3 box at `target`: the npm-package half
+ * (`scaffoldPackageRoot`) then the operational half (`initBox`), both on the
+ * SAME root. This is the single composition that `bbx init` (fresh), the
+ * `init` doctest, and every test fixture (`makeTmpBox`, `test-server`)
+ * delegate to, so a valid box is produced exactly one way.
  *
  * Does NOT initialize git or run `bbx init`'s card installers — callers that
- * need those add them on top (production `bbx init` inits git at the package
- * root and runs the installers; fixtures skip both).
+ * need those add them on top (production `bbx init` inits git at the root
+ * and runs the installers; fixtures skip both).
  *
- * @param target - The package root to create (its `content/` becomes the box).
+ * @param target - The box root to create.
  * @param options.deps - Symlink `node_modules/beebox` at the running
  *   engine (native schema/view resolution). Needed by view-compile /
  *   box-local-schema fixtures; skipped by default so card-only fixtures pay
  *   nothing.
  */
-export async function scaffoldV2Box(
+export async function scaffoldBoxRoot(
   target: string,
   options?: { deps?: boolean }
-): Promise<ScaffoldedV2Box> {
-  const packageRoot = path.resolve(target);
-  await scaffoldPackageRoot(packageRoot, { symlinkBeeBox: options?.deps ?? false });
-  const boxRoot = path.join(packageRoot, "content");
+): Promise<ScaffoldedBox> {
+  const boxRoot = path.resolve(target);
+  await scaffoldPackageRoot(boxRoot, { symlinkBeeBox: options?.deps ?? false });
   await initBox(boxRoot, { skipGit: true });
-  return { packageRoot, boxRoot };
+  return { boxRoot };
 }
 
 /** Whether `filePath` exists, tolerating (only) the not-found case. */
@@ -328,8 +294,8 @@ async function pathExists(filePath: string): Promise<boolean> {
 /**
  * Write `content` to `filePath` only if nothing is there yet. Used for the
  * package scaffold files that a directory might already have its own
- * version of (`tsconfig.json`, `CLAUDE.md`, `.gitignore`) — unlike
- * `package.json`, which is a hard conflict, these are fine to leave in place.
+ * version of (`tsconfig.json`) — unlike `package.json`, which is a hard
+ * conflict, this is fine to leave in place.
  */
 async function writeFileIfAbsent(filePath: string, content: string): Promise<void> {
   if (await pathExists(filePath)) return;

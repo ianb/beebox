@@ -7,9 +7,9 @@
  * Google 404s on every future patch, and a locally-edited event missing from a
  * post-410 resync is reported every run forever.
  *
- * Stranding ends it. The file moves to `store/calendar/stranded/` — out of the
+ * Stranding ends it. The file moves to `_content/calendar/stranded/` — out of the
  * tracked index, out of the orphan scan's reach (that scan is a non-recursive
- * readdir of `store/calendar` filtered to `.ics`, so it never descends into the
+ * readdir of `_content/calendar` filtered to `.ics`, so it never descends into the
  * subdirectory and cannot re-insert the file as a new Google event), and still
  * on disk with the boxholder's edit intact. The sync says so once, in the
  * commit narrative and in its failure list, and never mentions it again.
@@ -161,7 +161,7 @@ async function moveWithoutOverwriting(opts: {
  * Move one event's file into `stranded/`, untrack it, and say so once.
  *
  * Untracking and moving happen together on purpose: an untracked `.ics` left in
- * `store/calendar/` is a locally-created event to the next run's orphan scan,
+ * `_content/calendar/` is a locally-created event to the next run's orphan scan,
  * which would insert it into Google as a brand-new duplicate. So a move that
  * fails for any reason other than the file already being gone leaves the entry
  * tracked — the run reports the failure and tries again next time — rather than

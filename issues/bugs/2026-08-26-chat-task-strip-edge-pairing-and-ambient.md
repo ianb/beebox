@@ -50,3 +50,30 @@ reached 0.3.243 on 2026-08-26; `ambient` needs 0.3.247, `background_tasks_change
 is already available. See the 0.3.247 entry in `../../docs/agent-sdk-notes.md`.
 
 Related: [chat stop and background subagents](../decisions/2026-08-25-chat-stop-and-background-subagents.md).
+
+
+## Upstream movement (2026-09-01, SDK 0.3.257)
+
+Two fixes in `0.3.257` bear directly on this item, and they cut in opposite
+directions.
+
+The first **confirms the failure path in part 1 and removes one cause of it**:
+*"Fixed a background Bash task that is still running when a stream-json session
+ends right after an interrupt (stdin closed) never receiving its final
+`task_notification`."* That is this repo's chat stop path exactly — beebox calls
+`interrupt()` and the run then ends — so a background Bash task started in that
+turn was losing its `settled` bookend upstream, and the strip has no way to
+clear it. The reducer defect stands on its own, but this was a live producer of
+the missed bookends it wedges on.
+
+The second is **a caveat for the fix proposed in part 1**: *"Fixed `-p` giving up
+on a long-running background subagent without actually stopping it, so
+`background_tasks_changed` kept listing it and events for it arrived after its
+`stopped` notification."* The level signal this item recommends adopting was
+itself reporting phantom running tasks before `0.3.257`. Adopting it against an
+older bundled CLI would trade a wedged strip for a strip that shows work which
+is already gone. Whoever picks this up should require the pin to be at
+**`0.3.257` or newer** before switching the strip over — **satisfied as of
+2026-09-03, when the pin reached `0.3.258`** — which is a stronger
+version requirement than the `ambient` flag in part 2 (`0.3.247`, already in the
+pin).

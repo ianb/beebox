@@ -15,8 +15,8 @@ const TEMPLATED = "---\nthread-id: t1\nsubject: Pricing\nstatus: new\n---\n";
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/email/t.email-thread.card", "---\nthread-id: t1\nsubject: Pricing\ncontains: Metricly demo offer; no action needed.\n---\n");
-const preserved = await preserveAgentFields(TEMPLATED, { existingPath: box.path("box/inbox/email/t.email-thread.card") });
+await box.write("_content/inbox/email/t.email-thread.card", "---\nthread-id: t1\nsubject: Pricing\ncontains: Metricly demo offer; no action needed.\n---\n");
+const preserved = await preserveAgentFields(TEMPLATED, { existingPath: box.path("_content/inbox/email/t.email-thread.card") });
 preserved.includes("contains: Metricly demo offer; no action needed.")
 => true
 
@@ -27,7 +27,7 @@ preserved.includes("status: new")
 ## No existing card (first sync): template passes through untouched
 
 ```ts continue
-await preserveAgentFields(TEMPLATED, { existingPath: box.path("box/inbox/email/new.email-thread.card") })
+await preserveAgentFields(TEMPLATED, { existingPath: box.path("_content/inbox/email/new.email-thread.card") })
 => ---
 thread-id: t1
 subject: Pricing
@@ -40,7 +40,7 @@ status: new
 
 ```ts continue
 const withOwn = "---\nthread-id: t1\ncontains: from-template\n---\n";
-const result = await preserveAgentFields(withOwn, { existingPath: box.path("box/inbox/email/t.email-thread.card") });
+const result = await preserveAgentFields(withOwn, { existingPath: box.path("_content/inbox/email/t.email-thread.card") });
 result.includes("contains: from-template")
 => true
 ```
@@ -48,8 +48,8 @@ result.includes("contains: from-template")
 ## A hand-mangled existing card contributes nothing (sync never breaks)
 
 ```ts continue
-await box.write("box/inbox/email/broken.email-thread.card", "no frontmatter here");
-await preserveAgentFields(TEMPLATED, { existingPath: box.path("box/inbox/email/broken.email-thread.card") }) === TEMPLATED
+await box.write("_content/inbox/email/broken.email-thread.card", "no frontmatter here");
+await preserveAgentFields(TEMPLATED, { existingPath: box.path("_content/inbox/email/broken.email-thread.card") }) === TEMPLATED
 => true
 ```
 

@@ -6,13 +6,17 @@
  * classes sit next to the logic. This file is routing glue.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Outlet, useParams, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { BrowsePage, type BrowseNavigateOptions } from "./pages/browse/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { ViewOverlayProvider } from "./components/ViewOverlay";
+import { ConversationCardProvider } from "./components/chat/everywhere/card-context";
+import { BoxConversationProvider } from "./components/chat/everywhere/conversation-context";
+import { BoxConversationShell } from "./components/chat/everywhere/BoxConversationShell";
+import { BoxPresentationProvider, PresentationNotice } from "./components/themes/BoxPresentationProvider";
 import { AppNav } from "./components/AppNav";
 import { AppBarChromeProvider } from "./components/app-bar-chrome";
 import { Column } from "./components/ui/Column";
@@ -86,8 +90,7 @@ export function AppLayout() {
     // `children` element: a page publishing its place / a chip slot mounting
     // re-renders the provider, and React then skips the whole Outlet subtree
     // (only the bar's context consumers re-render). See app-bar-chrome.tsx.
-    <AppBarChromeProvider>
-      <ViewOverlayProvider>
+    <BoxShellProviders key={boxSlug} boxSlug={boxSlug ?? ""}>
         <DocumentIcon />
         <DocumentPlace />
         <Column className="h-app">
@@ -95,9 +98,10 @@ export function AppLayout() {
             onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
             onToggleSourceView={handleToggleSourceView}
           />
+          <PresentationNotice />
           <main className="flex-1 min-h-0">
             {boxExists ? (
-              <Outlet />
+              <BoxConversationShell><Outlet /></BoxConversationShell>
             ) : (
               <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />
             )}
@@ -105,9 +109,15 @@ export function AppLayout() {
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
           <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
         </Column>
-      </ViewOverlayProvider>
-    </AppBarChromeProvider>
+    </BoxShellProviders>
   );
+}
+
+/** Providers retain their children identity when a chat publishes chrome. */
+function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
+  return <BoxPresentationProvider boxSlug={boxSlug}><BoxConversationProvider boxSlug={boxSlug}>
+    <AppBarChromeProvider><ConversationCardProvider><ViewOverlayProvider>{children}</ViewOverlayProvider></ConversationCardProvider></AppBarChromeProvider>
+  </BoxConversationProvider></BoxPresentationProvider>;
 }
 
 /**
@@ -158,7 +168,7 @@ function BoxNotFound({ slug, boxes }: { slug: string; boxes: KnownBox[] }) {
         Box not found
       </Text>
       <Text as="p" tone="subtle">
-        No box matches <code>{slug}</code> on this server.
+        There&rsquo;s no box called <code>{slug}</code> here.
       </Text>
       {isWorktreeUrl ? (
         <Text as="p" tone="subtle" size="sm">

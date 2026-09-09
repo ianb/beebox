@@ -9,6 +9,17 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/index.js";
 import { createFakeTelegram } from "../../src/services/telegram.js";
 import { createTelegramConnector, processWebhookUpdate, extractMessage } from "../../src/connectors/telegram.js";
+import { telegramSecretName } from "../../src/connectors/telegram-helpers.js";
+import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
+import { boxSlug } from "../../src/lib/box-slug.js";
+
+/** Configure Telegram the only way it is configurable: a granted store entry. */
+async function grantTelegram(box) {
+  const slug = await boxSlug(box.root);
+  const name = telegramSecretName(slug);
+  await setSecret({ name, value: JSON.stringify({ botToken: "fake:token", webhookSecret: "secret" }) });
+  await grantSecret({ slug, name, access: "server" });
+}
 ```
 
 ## extractMessage — basic field extraction
@@ -83,7 +94,7 @@ const update = {
 const result = await processWebhookUpdate({ boxRoot: box.root, update, skipJob: true });
 const threadPath = result.threadRef;
 threadPath
-=> store/chat/telegram/Alice/thread.chat-thread.card
+=> _content/chat/telegram/Alice/thread.chat-thread.card
 ```
 
 The thread file contains the message:
@@ -112,14 +123,11 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
 
-// Write telegram config
-await box.seed(
-  "config/connectors/telegram.secret.json",
-  JSON.stringify({ botToken: "fake:token", webhookSecret: "secret" }),
-);
 // Write box.json with publicUrl (needed for webhook setup)
-await box.seed("config/box.json", JSON.stringify({ publicUrl: "https://example.com" }));
+await box.seed("_config/box.json", JSON.stringify({ publicUrl: "https://example.com" }));
 box.commitAll("add config");
+// Telegram's credentials live in the machine store, granted to this box.
+await grantTelegram(box);
 
 const tg = createFakeTelegram({
   username: "test_bot",
@@ -173,15 +181,12 @@ const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
 
-await box.seed(
-  "config/connectors/telegram.secret.json",
-  JSON.stringify({ botToken: "fake:token", webhookSecret: "secret" }),
-);
-await box.seed("config/box.json", JSON.stringify({ publicUrl: "https://example.com" }));
+await box.seed("_config/box.json", JSON.stringify({ publicUrl: "https://example.com" }));
+await grantTelegram(box);
 
 // Create a thread file with an unsent agent message
 await box.seed(
-  "store/chat/telegram/TestUser/thread.chat-thread.card",
+  "_content/chat/telegram/TestUser/thread.chat-thread.card",
   `---\ntype: chat-thread\nchat-id: "999"\nconnector: telegram\nentries:\n  - kind: message\n    sender: TestUser\n    time: "2024-01-01T00:00:00Z"\n    text: Hello\n  - kind: message\n    sender: agent\n    time: "2024-01-01T00:01:00Z"\n    text: Hi there!\n---\n`,
 );
 box.commitAll("add thread");

@@ -53,7 +53,7 @@ const testOverrides = {
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/task.intake.job.card", intakeJob("Write a haiku"));
+await box.write("_bookkeeping/jobs/task.intake.job.card", intakeJob("Write a haiku"));
 box.commitAll("Add job");
 
 let fakeAgent;
@@ -61,7 +61,7 @@ const agentFactory = (opts) => {
   fakeAgent = createFakeAgent({
     name: opts.name,
     act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: "box/jobs/task.intake.job.card" });
+      await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/task.intake.job.card" });
       return { success: true };
     },
   });
@@ -87,9 +87,10 @@ result.jobsRemaining
 fakeAgent.invocations.length
 => 1
 
-// System prompt includes box root
+// System prompt no longer carries the absolute box path (dropped so it
+// doesn't leak this machine's temp/home directory into agent context).
 fakeAgent.invocations[0].systemPrompt.includes(box.root)
-=> true
+=> false
 
 // User prompt includes job content
 fakeAgent.invocations[0].prompt.includes("Write a haiku")
@@ -102,8 +103,8 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/task1.intake.job.card", intakeJob("Task one"));
-await box.write("box/jobs/task2.intake.job.card", intakeJob("Task two"));
+await box.write("_bookkeeping/jobs/task1.intake.job.card", intakeJob("Task one"));
+await box.write("_bookkeeping/jobs/task2.intake.job.card", intakeJob("Task two"));
 box.commitAll("Add jobs");
 
 let fakeAgent;
@@ -112,8 +113,8 @@ const agentFactory = (opts) => {
     name: opts.name,
     act: async ({ boxRoot }) => {
       // Finish both jobs
-      await finishJob({ boxRoot, jobRelPath: "box/jobs/task1.intake.job.card" });
-      await finishJob({ boxRoot, jobRelPath: "box/jobs/task2.intake.job.card" });
+      await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/task1.intake.job.card" });
+      await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/task2.intake.job.card" });
       return { success: true };
     },
   });
@@ -146,7 +147,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/task.intake.job.card", intakeJob("Should not run"));
+await box.write("_bookkeeping/jobs/task.intake.job.card", intakeJob("Should not run"));
 box.commitAll("Add job");
 
 let agentCreated = false;
@@ -175,7 +176,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/digest.intake.job.card", intakeJob("Daily digest", { priority: "low" }));
+await box.write("_bookkeeping/jobs/digest.intake.job.card", intakeJob("Daily digest", { priority: "low" }));
 box.commitAll("Add low-pri job");
 
 let agentCreated = false;
@@ -207,7 +208,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/threads/conv1.card", `---\nstatus: new\n---\nHi there`);
-await box.write("box/jobs/msg.chat.job.card", chatJob("Reply to user", "store/threads/conv1.card"));
+await box.write("_bookkeeping/jobs/msg.chat.job.card", chatJob("Reply to user", "store/threads/conv1.card"));
 await box.write(".beebox/chat-sessions.json", JSON.stringify({
   "store/threads/conv1.card": {
     sessionId: "stale-session",
@@ -225,7 +226,7 @@ const agentFactory = (opts) => {
     sessionId: opts.sessionId,
     resume: opts.resume,
     act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: "box/jobs/msg.chat.job.card" });
+      await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/msg.chat.job.card" });
       return { success: true };
     },
   });
@@ -274,8 +275,8 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 await box.write("store/threads/a.card", `---\nstatus: new\n---\nThread A`);
 await box.write("store/threads/b.card", `---\nstatus: new\n---\nThread B`);
-await box.write("box/jobs/a.chat.job.card", chatJob("Reply A", "store/threads/a.card"));
-await box.write("box/jobs/b.chat.job.card", chatJob("Reply B", "store/threads/b.card"));
+await box.write("_bookkeeping/jobs/a.chat.job.card", chatJob("Reply A", "store/threads/a.card"));
+await box.write("_bookkeeping/jobs/b.chat.job.card", chatJob("Reply B", "store/threads/b.card"));
 box.commitAll("Add chat jobs");
 
 let agents = [];
@@ -286,7 +287,7 @@ const agentFactory = (opts) => {
     sessionId: opts.sessionId,
     resume: opts.resume,
     act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: `box/jobs/${jobFile}` });
+      await finishJob({ boxRoot, jobRelPath: `_bookkeeping/jobs/${jobFile}` });
       return { success: true };
     },
   });
@@ -322,7 +323,7 @@ the ids the SDK really knows about.
 ```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/threads/conv1.card", `---\nstatus: new\n---\nHi there`);
-await box.write("box/jobs/msg1.chat.job.card", chatJob("First message", "store/threads/conv1.card"));
+await box.write("_bookkeeping/jobs/msg1.chat.job.card", chatJob("First message", "store/threads/conv1.card"));
 box.commitAll("Add first chat job");
 
 const knownSessions = new Set();
@@ -335,7 +336,7 @@ const agentFactory = (opts) => {
     resume: opts.resume,
     knownSessions,
     act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: `box/jobs/${jobToFinish}` });
+      await finishJob({ boxRoot, jobRelPath: `_bookkeeping/jobs/${jobToFinish}` });
       return { success: true };
     },
   });
@@ -365,7 +366,7 @@ knownSessions.has(agents[0].sessionId)
 => true
 
 // Second message in the same thread, next reactor cycle
-await box.write("box/jobs/msg2.chat.job.card", chatJob("Second message", "store/threads/conv1.card"));
+await box.write("_bookkeeping/jobs/msg2.chat.job.card", chatJob("Second message", "store/threads/conv1.card"));
 box.commitAll("Add second chat job");
 jobToFinish = "msg2.chat.job.card";
 
@@ -455,7 +456,7 @@ await fs.writeFile(lockFile, JSON.stringify({
   metadata: { kind: "reactor" },
 }));
 
-await box.write("box/jobs/task.intake.job.card", intakeJob("After stale lock"));
+await box.write("_bookkeeping/jobs/task.intake.job.card", intakeJob("After stale lock"));
 box.commitAll("Add job");
 
 let fakeAgent;
@@ -463,7 +464,7 @@ const agentFactory = (opts) => {
   fakeAgent = createFakeAgent({
     name: opts.name,
     act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: "box/jobs/task.intake.job.card" });
+      await finishJob({ boxRoot, jobRelPath: "_bookkeeping/jobs/task.intake.job.card" });
       return { success: true };
     },
   });
@@ -492,8 +493,8 @@ The reactor loops when jobs remain after a cycle. Here we start with
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/task1.intake.job.card", intakeJob("First task"));
-await box.write("box/jobs/task2.intake.job.card", intakeJob("Second task"));
+await box.write("_bookkeeping/jobs/task1.intake.job.card", intakeJob("First task"));
+await box.write("_bookkeeping/jobs/task2.intake.job.card", intakeJob("Second task"));
 box.commitAll("Add jobs");
 
 let cycle = 0;
@@ -504,7 +505,7 @@ const agentFactory = (opts) => {
     act: async ({ boxRoot }) => {
       // Each cycle finishes only one job
       const jobFile = currentCycle === 0 ? "task1.intake.job.card" : "task2.intake.job.card";
-      await finishJob({ boxRoot, jobRelPath: `box/jobs/${jobFile}` });
+      await finishJob({ boxRoot, jobRelPath: `_bookkeeping/jobs/${jobFile}` });
       return { success: true };
     },
   });

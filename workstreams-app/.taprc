@@ -6,6 +6,7 @@ node-arg:
   - --import=agent-doctest/loader
 include:
   - test/**/*.doctest.md
+  - test/router/**/*.test.ts
 reporter: tap
 color: false
 disable-coverage: true

@@ -9,12 +9,14 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { registerCommand, parseCommandArgs, type CommandContext, type CommandResult } from "../command-runner.js";
-import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../lib/paths.js";
+import { getBoxDir, isCardFile, parseCardName } from "../../lib/paths.js";
+import { BoxPathArgError, resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { assertSafeTrashDestination } from "./trash-namespace-guard.js";
 import { findInboundCardRefs, type InboundCardRef } from "../find-inbound-card-refs.js";
 
 class NotACardFileError extends Error {
@@ -71,10 +73,11 @@ async function reportInboundRefs(
   for (const cardPath of cardPaths) {
     const relPath = path.relative(
       ctx.boxRoot,
-      path.isAbsolute(cardPath) ? cardPath : boxPath(ctx.boxRoot, cardPath),
+      resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: cardPath, relativeTo: ctx.boxRoot }),
     );
-    const refs = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
+    const { referrers: refs, errors } = await findInboundCardRefs({ boxRoot: ctx.boxRoot, cardPath: relPath });
     inboundRefs[relPath] = refs;
+    for (const error of errors) ctx.writeLine(`Warning: inbound reference scan incomplete: ${error}`);
     for (const referrer of refs) {
       ctx.writeLine(`Inbound ref: ${referrer.path} (${referrer.refs}) → ${relPath}`);
     }
@@ -108,12 +111,7 @@ async function trashOne(
   fileMoves: Array<{ sourcePath: string; destPath: string }>;
 }> {
   // Resolve source path
-  let sourcePath: string;
-  if (path.isAbsolute(cardPath)) {
-    sourcePath = cardPath;
-  } else {
-    sourcePath = boxPath(ctx.boxRoot, cardPath);
-  }
+  const sourcePath = resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: cardPath, relativeTo: ctx.boxRoot });
 
   // Validate it's a card file
   if (!isCardFile(sourcePath)) {
@@ -159,6 +157,11 @@ async function trashOne(
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
     finalAttachDest = `${destAttachDir}_${timestamp}`;
   }
+
+  // Round-8 hardening finding 4: resolve both destinations through the
+  // box-namespace fence before touching disk — see `trash-namespace-guard.ts`.
+  await assertSafeTrashDestination(ctx.boxRoot, finalDestPath);
+  if (hasAttachments) await assertSafeTrashDestination(ctx.boxRoot, finalAttachDest);
 
   // Move the card, then its attachment scope. If the second move fails, put
   // the card back so callers never lose the receipt for a partial card move.
@@ -225,6 +228,21 @@ export async function commitTrashReceipt(boxRoot: string, options: { receipt: Tr
  * Execute the trash command (supports single or multiple paths).
  */
 async function executeTrash(ctx: CommandContext, args: Record<string, unknown>): Promise<CommandResult> {
+  try {
+    return await executeTrashUnguarded(ctx, args);
+  } catch (e) {
+    // Path-guard rejection (display-form leak or nested reserved area name):
+    // reported as an ordinary CommandResult failure, matching every other
+    // user-input rejection in this command — not an uncaught throw.
+    // (`runCommand`'s own catch-all would do this too for a CLI-dispatched
+    // call, but this function is also called directly, bypassing that
+    // wrapper.)
+    if (e instanceof BoxPathArgError) return { success: false, error: e.message };
+    throw e;
+  }
+}
+
+async function executeTrashUnguarded(ctx: CommandContext, args: Record<string, unknown>): Promise<CommandResult> {
   const trashArgs = parseCommandArgs(args, TrashArgsSchema);
 
   // Collect all paths (support both single `path` and array `paths`)
@@ -248,7 +266,7 @@ async function executeTrash(ctx: CommandContext, args: Record<string, unknown>):
     const wouldTrash: string[] = [];
     const dryErrors: string[] = [];
     for (const cardPath of allPaths) {
-      const sourcePath = path.isAbsolute(cardPath) ? cardPath : boxPath(ctx.boxRoot, cardPath);
+      const sourcePath = resolveCliTargetPath({ boxRoot: ctx.boxRoot, raw: cardPath, relativeTo: ctx.boxRoot });
       if (!isCardFile(sourcePath)) {
         dryErrors.push(`Not a card file: ${cardPath}`);
         continue;

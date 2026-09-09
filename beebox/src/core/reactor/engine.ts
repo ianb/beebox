@@ -8,7 +8,7 @@
  * 3. Loop up to maxCycles times:
  *    a. Sync (bbx wakeup) — pulls from external sources, creates jobs
  *    b. generateDocs — refresh agent docs (fast mtime-cached no-op)
- *    c. Find job cards in box/jobs/
+ *    c. Find job cards in _bookkeeping/jobs/
  *    d. Run jobs via batch or chat processing (each worked by an agent)
  *    e. Stop if no jobs remain or none were processed (stuck)
  * 4. Finalize (bbx finalize) — flush outbound cards
@@ -82,6 +82,10 @@ export interface ReactorResult {
   jobsProcessed: number;
   jobsRemaining: number;
   error?: string;
+  /** Set when another reactor held the lock, so this call did no work at all.
+   * `success` stays true — nothing went wrong — but a caller waiting on a
+   * specific job must not read that as "my job drained". */
+  skipped?: "locked";
 }
 
 /**
@@ -113,7 +117,7 @@ export async function runReactor(options: ReactorOptions): Promise<ReactorResult
   const lockAcquired = await acquireReactorLock(lockFile);
   if (!lockAcquired) {
     onLog?.(fmt.dim("Another reactor is already running, skipping.\n"));
-    return { success: true, jobsProcessed: 0, jobsRemaining: 0 };
+    return { success: true, jobsProcessed: 0, jobsRemaining: 0, skipped: "locked" };
   }
 
   // Handle --reset-sessions

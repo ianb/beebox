@@ -28,7 +28,7 @@ import {
 import { canAccessBox } from "../box-access.js";
 import { readBasePrefix } from "../base-prefix.js";
 import type { BoxSpec } from "../server.js";
-import { getGoogleClientCreds } from "../../connectors/google-auth.js";
+import { getLoginGoogleClientCreds } from "../../connectors/google-auth.js";
 import { registerAuthRoutes } from "./auth-google.js";
 import { listUsers } from "../local-users.js";
 import { AuthStoreUnavailableError } from "../local-users-errors.js";
@@ -73,7 +73,7 @@ export interface AuthRoutesOptions {
  *   PROCESS itself is not in hub mode (it mints the secret, it doesn't receive
  *   one). `registerPasswordRoutes` asserts that invariant.
  * - **Google OAuth routes** (`/auth/google`, `/auth/callback`) register ONLY
- *   when Google is configured (`getGoogleClientCreds()` returns a pair). Google
+ *   when Google is configured (`getLoginGoogleClientCreds()` returns a pair). Google
  *   availability is now a private concern of this module — the always-on-auth
  *   plan severed it from "is this box protected." An ID-without-secret
  *   half-config is a misconfiguration, not "Google absent", so it still fails
@@ -126,7 +126,7 @@ async function loginPageState(
     error: query.error === "1",
     // Box-less surface: this asks whether Google login is configured for the
     // process at all, before any box is in play, so it reads the env fallback.
-    googleConfigured: (await getGoogleClientCreds()) !== null,
+    googleConfigured: getLoginGoogleClientCreds() !== null,
     setupRequired: computeSetupRequired(request),
     passwordReset: query.passwordReset === "1",
   };
@@ -166,7 +166,7 @@ async function registerPasswordRoutes(server: FastifyInstance, options: AuthRout
   server.get("/auth/methods", async (request) => {
     return {
       password: true,
-      google: (await getGoogleClientCreds()) !== null,
+      google: getLoginGoogleClientCreds() !== null,
       setupRequired: !request.server.openAccess && listUsers().length === 0,
     };
   });

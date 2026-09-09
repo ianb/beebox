@@ -1,5 +1,5 @@
 /**
- * Box-scoped temp directory: `<boxRoot>/tmp/`.
+ * Box-scoped temp directory: `<boxRoot>/_tmp/`.
  *
  * This is the blessed home for ephemeral, box-runtime scratch — uploaded files,
  * capture staging, screenshots, and anything else produced while serving a
@@ -15,14 +15,14 @@
  * (build scratch, one-off subprocess IPC) may still use the host temp dir.
  */
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
+import { getBoxDir } from "./paths.js";
 
-/** Path of the box's swept temp dir (`<boxRoot>/tmp`). Pure — touches no disk. */
+/** Path of the box's swept temp dir (`<boxRoot>/_tmp`). Pure — touches no disk. */
 export function boxTmpDir(boxRoot: string): string {
-  return path.join(boxRoot, "tmp");
+  return getBoxDir(boxRoot, "tmp");
 }
 
-/** Ensure `<boxRoot>/tmp/` exists and return its absolute-under-box path. */
+/** Ensure `<boxRoot>/_tmp/` exists and return its absolute-under-box path. */
 export async function ensureBoxTmpDir(boxRoot: string): Promise<string> {
   const dir = boxTmpDir(boxRoot);
   await fs.mkdir(dir, { recursive: true });

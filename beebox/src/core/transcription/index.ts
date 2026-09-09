@@ -5,69 +5,42 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import ky, { isHTTPError } from "ky";
 import { z } from "zod";
 import { transcribeAudioVoxtral } from "./voxtral.js";
 import { transcribeAudioDeepgram } from "./deepgram.js";
 import { transcribeAudioFake } from "./fake.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { buildMultipartForm, type MultipartPart } from "../../lib/multipart.js";
-import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import { getOpenAiThinkingKey } from "../openai-thinking-key.js";
+import {
+  HQ_TRANSCRIPTION_SERVICES,
+  isMaiHqService,
+  TRANSCRIPTION_SERVICES,
+  type HqTranscriptionService,
+  type MaiHqService,
+  type TranscriptionService,
+} from "../../shared/transcription-services.js";
+import { transcribeAudioWhisper, type WhisperVariant } from "./whisper.js";
+import { getOpenRouterKey, routeVia } from "../openrouter.js";
+import { transcribeAudioOpenRouter } from "./openrouter.js";
 
-const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
-
-class MissingWhisperKeyError extends Error implements TranscriptionError {
-  readonly permanent = true;
-  readonly code = "missing_api_key";
-  constructor() {
-    super(
-      'No OpenAI key for transcription — ask the boxholder to grant the "openai-thinking" ' +
-        "secret to this box, or set THINKING_OPENAI_API_KEY",
-    );
-    this.name = "MissingWhisperKeyError";
-  }
-}
-
-class WhisperNetworkError extends Error implements TranscriptionError {
-  readonly permanent = false;
-  readonly code = "network_error";
-  constructor(cause: string) {
-    super(`Network error: ${cause}`);
-    this.name = "WhisperNetworkError";
-  }
-}
-
-class WhisperApiError extends Error implements TranscriptionError {
-  readonly permanent: boolean;
-  readonly code: string;
-  constructor(
-    { status, statusText, details }: { status: number; statusText: string; details: string },
-    meta: { permanent: boolean; code: string },
-  ) {
-    super(`Whisper API error: ${status} ${statusText} - ${details}`);
-    this.name = "WhisperApiError";
-    this.permanent = meta.permanent;
-    this.code = meta.code;
-  }
-}
 
 /**
- * Map our HQ service identifiers to OpenAI model names. The classic
- * Whisper model (`whisper-1`) returns verbose_json with duration/language
- * and supports word timestamps. The newer LLM-based audio models
- * (`gpt-4o-transcribe`, `gpt-4o-mini-transcribe`) only support
- * `response_format: "json"` and don't return timestamps — same endpoint,
- * different request shape.
+ * The box is configured for a MAI HQ pass but holds no OpenRouter key. Unlike
+ * the other services this is not "the fallback is unavailable" — MAI has no
+ * direct arm, so the key is the only way to reach it. Permanent: no retry
+ * produces a credential.
  */
-const OPENAI_WHISPER_MODELS = {
-  whisper: "whisper-1",
-  "whisper-llm": "gpt-4o-transcribe",
-  "whisper-llm-mini": "gpt-4o-mini-transcribe",
-} as const;
-type WhisperVariant = keyof typeof OPENAI_WHISPER_MODELS;
-function isLlmWhisperVariant(variant: WhisperVariant): boolean {
-  return variant === "whisper-llm" || variant === "whisper-llm-mini";
+class MissingOpenRouterKeyError extends Error implements TranscriptionError {
+  readonly permanent = true;
+  readonly code = "missing_openrouter_key";
+  constructor({ service }: { service: MaiHqService }) {
+    super(
+      `HQ transcription service "${service}" needs an OpenRouter key — MAI-Transcribe-2 is reachable no other way. `
+        + "Grant the \"openrouter\" secret to this box, or pick a different hqService.",
+    );
+    this.name = "MissingOpenRouterKeyError";
+  }
 }
 
 export interface TranscriptionResult {
@@ -126,21 +99,17 @@ export interface TranscribeAudioParams {
   boxRoot?: string;
 }
 
-export const TRANSCRIPTION_SERVICES = ["whisper", "voxtral", "deepgram", "openai-realtime", "fake"] as const;
-export type TranscriptionService = (typeof TRANSCRIPTION_SERVICES)[number];
-/**
- * Narration mode's checkpoint HQ pass — non-streaming services only.
- * - `whisper`: OpenAI's classic `whisper-1` model.
- * - `whisper-llm`: OpenAI's full LLM-based audio transcription
- *   (`gpt-4o-transcribe`). Higher quality, slower, more expensive.
- * - `whisper-llm-mini`: Smaller/faster/cheaper LLM variant
- *   (`gpt-4o-mini-transcribe`).
- * - `voxtral`: Mistral's Voxtral non-streaming model.
- * - `voxtral-diarized`: Voxtral with diarization on — output is
- *   speaker-prefixed lines ("Speaker 0: …\nSpeaker 1: …").
- */
-export const HQ_TRANSCRIPTION_SERVICES = ["whisper", "whisper-llm", "whisper-llm-mini", "voxtral", "voxtral-diarized"] as const;
-export type HqTranscriptionService = (typeof HQ_TRANSCRIPTION_SERVICES)[number];
+// The vocabulary itself lives in `shared/` so the frontend picker and the tRPC
+// input schema read the same closed set this dispatcher does; re-exported here
+// because this module is what most callers already import.
+export {
+  HQ_TRANSCRIPTION_SERVICES,
+  isMaiHqService,
+  TRANSCRIPTION_SERVICES,
+  type HqTranscriptionService,
+  type MaiHqService,
+  type TranscriptionService,
+} from "../../shared/transcription-services.js";
 
 export interface TranscriptionConfig {
   /**
@@ -169,7 +138,7 @@ type StoredTranscriptionConfig = z.infer<typeof storedTranscriptionConfigSchema>
 export async function loadTranscriptionConfig(boxRoot?: string): Promise<TranscriptionConfig> {
   const defaults: TranscriptionConfig = { service: "voxtral", hqService: "whisper" };
   if (!boxRoot) return defaults;
-  const configPath = path.join(boxRoot, "config/transcription.json");
+  const configPath = path.join(boxRoot, "_config/transcription.json");
   let content: string;
   try {
     content = await fs.readFile(configPath, "utf-8");
@@ -194,7 +163,7 @@ export async function updateTranscriptionConfig(
   boxRoot: string,
   updates: Partial<StoredTranscriptionConfig>,
 ): Promise<TranscriptionConfig> {
-  const configPath = path.join(boxRoot, "config/transcription.json");
+  const configPath = path.join(boxRoot, "_config/transcription.json");
   // Serialize the read-merge-write so concurrent setService/setHqService
   // updates can't both read the old config and drop one's change.
   return withCardLock(configPath, async () => {
@@ -261,7 +230,29 @@ export async function transcribeAudioHq(
   return { ...result, service };
 }
 
-function dispatchHqTranscription(
+/**
+ * Which HQ services can fall back to OpenRouter, and how each is reached.
+ *
+ * The Whisper family can: `openai/whisper-1` through OpenRouter returns the
+ * same text, duration, language, and word timings as the direct call, and the
+ * two LLM variants are text-only on both routes. **Voxtral cannot** — measured
+ * against the live API on 2026-09-06, `mistralai/voxtral-mini-transcribe`
+ * refuses `verbose_json` and cannot diarize at all through OpenRouter
+ * (`transcription/openrouter.ts` records the evidence). A box on voxtral HQ
+ * with no Mistral key therefore gets the direct arm's "not configured" error,
+ * which is the honest answer.
+ *
+ * Only the HQ pass gets the fallback at all. `transcribeAudio` can carry a
+ * context-biasing prompt that OpenRouter's transcription request cannot
+ * express, so it stays on the direct arms.
+ */
+export function hqRoutesThroughOpenRouter(
+  service: HqTranscriptionService,
+): service is WhisperVariant | MaiHqService {
+  return service !== "voxtral" && service !== "voxtral-diarized";
+}
+
+async function dispatchHqTranscription(
   params: TranscribeAudioParams,
   service: HqTranscriptionService,
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
@@ -271,175 +262,22 @@ function dispatchHqTranscription(
   if (service === "voxtral-diarized") {
     return transcribeAudioVoxtral(params, { diarization: true });
   }
-  return transcribeAudioWhisper(params, { variant: service });
-}
-
-/**
- * Transcribe audio using OpenAI Whisper API.
- *
- * `variant` picks the underlying model:
- * - `whisper` (default): classic `whisper-1`. Returns verbose_json with
- *   duration, language, and optional word timestamps.
- * - `whisper-llm` / `whisper-llm-mini`: the newer LLM-based audio models
- *   (`gpt-4o-transcribe`, `gpt-4o-mini-transcribe`). These only support
- *   `response_format: "json"` and don't return duration, language, or
- *   timestamps — we fill those with empty defaults.
- */
-async function transcribeAudioWhisper(
-  params: TranscribeAudioParams,
-  opts?: { variant: WhisperVariant },
-): Promise<TranscriptionResult | DetailedTranscriptionResult> {
-  opts = opts ?? { variant: "whisper" };
-  const { audioBuffer, filename, prompt, options } = params;
-  // The same `openai-thinking` resolver its siblings use (voxtral, deepgram):
-  // the machine secret store first, then the env var. `boxRoot` is optional on
-  // `TranscribeAudioParams`, and a caller that omits it gets the env path only
-  // — there is no box to check grants for.
-  const apiKey = await getOpenAiThinkingKey(params.boxRoot, { observe: true });
-  if (!apiKey) {
-    throw new MissingWhisperKeyError();
+  if (isMaiHqService(service)) {
+    // No fallback to weigh: MAI has no direct arm at all, so this is the one
+    // HQ service that simply requires an OpenRouter key.
+    const key = await getOpenRouterKey(params.boxRoot, { purpose: "transcription", observe: true });
+    if (key === null) throw new MissingOpenRouterKeyError({ service });
+    return transcribeAudioOpenRouter(key, { ...params, variant: service });
   }
-  const model = OPENAI_WHISPER_MODELS[opts.variant];
-  const isLlm = isLlmWhisperVariant(opts.variant);
-
-  // Detect content type from extension
-  const ext = filename.split(".").pop()?.toLowerCase();
-  const contentType = getContentType(ext);
-
-  // Build multipart form data
-  const parts: MultipartPart[] = [
-    {
-      kind: "file",
-      file: { name: "file", filename, contentType, data: audioBuffer },
-    },
-    { kind: "field", field: { name: "model", value: model } },
-    // response_format field. LLM models only support `json`.
-    {
-      kind: "field",
-      field: { name: "response_format", value: isLlm ? "json" : "verbose_json" },
-    },
-  ];
-
-  // timestamp_granularities[] is whisper-1 only; the LLM models reject it.
-  if (!isLlm && options?.wordTimestamps) {
-    parts.push({ kind: "field", field: { name: "timestamp_granularities[]", value: "word" } });
-  }
-
-  // Add prompt if provided
-  if (prompt) {
-    parts.push({ kind: "field", field: { name: "prompt", value: prompt } });
-  }
-
-  const { body, boundary } = buildMultipartForm(parts);
-
-  try {
-    const result = await ky
-      .post(OPENAI_ENDPOINT, {
-        body,
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        },
-        retry: 2,
-        timeout: 120_000,
-      })
-      .json<{
-        text: string;
-        duration?: number;
-        language?: string;
-        words?: Array<{ word: string; start: number; end: number }>;
-      }>();
-
-    if (!isLlm && options?.wordTimestamps && result.words) {
-      return {
-        text: result.text,
-        duration: result.duration ?? 0,
-        language: result.language ?? "",
-        words: result.words.map((w) => ({
-          word: w.word,
-          start: w.start,
-          end: w.end,
-        })),
-      } satisfies DetailedTranscriptionResult;
-    }
-
-    return {
-      text: result.text,
-      duration: result.duration ?? 0,
-      language: result.language ?? "",
-    };
-  } catch (error) {
-    if (isTranscriptionError(error)) {
-      throw error;
-    }
-
-    // ky HTTPError — parse the response for error details
-    if (isHTTPError(error)) {
-      throw await parseErrorResponse(error.response);
-    }
-
-    // Network or other errors are intermittent
-    throw new WhisperNetworkError(errorMessage(error));
-  }
-}
-
-const AUDIO_CONTENT_TYPES: Record<string, string> = {
-  webm: "audio/webm",
-  mp3: "audio/mpeg",
-  m4a: "audio/m4a",
-  wav: "audio/wav",
-  ogg: "audio/ogg",
-  flac: "audio/flac",
-};
-
-function getContentType(ext: string | undefined): string {
-  const contentType = ext === undefined ? undefined : AUDIO_CONTENT_TYPES[ext];
-  return contentType ?? "audio/webm";
-}
-
-const whisperErrorBodySchema = z.object({
-  error: z.object({ message: z.string().optional(), code: z.string().optional() }).optional(),
-});
-
-async function parseErrorResponse(response: Response): Promise<TranscriptionError> {
-  let errorDetails: string;
-  let errorCode: string | undefined;
-
-  try {
-    const raw: unknown = await response.json();
-    const errorJson = whisperErrorBodySchema.safeParse(raw).data;
-    errorDetails = errorJson?.error?.message ?? JSON.stringify(raw);
-    errorCode = errorJson?.error?.code;
-  } catch (e) {
-    console.warn("Whisper error response was not JSON, falling back to text body:", e);
-    errorDetails = await response.text();
-  }
-
-  // Determine if error is permanent
-  const permanent = isPermanentError(response.status, errorCode);
-
-  return new WhisperApiError(
-    { status: response.status, statusText: response.statusText, details: errorDetails },
-    { permanent, code: errorCode ?? `http_${response.status}` }
-  );
-}
-
-function isPermanentError(status: number, code: string | undefined): boolean {
-  // 4xx errors (except 429 rate limit) are usually permanent
-  if (status >= 400 && status < 500 && status !== 429) {
-    return true;
-  }
-
-  // Specific permanent error codes
-  const permanentCodes = ["invalid_api_key", "invalid_request_error", "invalid_file_format"];
-  return code !== undefined && permanentCodes.includes(code);
-}
-
-function isTranscriptionError(error: unknown): error is TranscriptionError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "message" in error &&
-    "permanent" in error
-  );
+  // The direct key is resolved here only to pick the route; the direct arm
+  // resolves it again for itself, which keeps its own error and legacy
+  // handling where it already lives.
+  const route = await routeVia({
+    boxRoot: params.boxRoot,
+    purpose: "transcription",
+    directKey: await getOpenAiThinkingKey(params.boxRoot, { observe: false }),
+  });
+  return route?.via === "openrouter"
+    ? transcribeAudioOpenRouter(route.apiKey, { ...params, variant: service })
+    : transcribeAudioWhisper(params, { variant: service });
 }

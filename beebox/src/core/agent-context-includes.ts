@@ -28,7 +28,7 @@ async function readIfPresent(path: string): Promise<string | null> {
 /** Expand include-only lines recursively, bounded to the box package. */
 export async function expandClaudeIncludes(options: {
   claudePath: string;
-  packageRoot: string;
+  boxRoot: string;
 }): Promise<string> {
   const seen = new Set<string>();
   const sections: string[] = [];
@@ -40,7 +40,7 @@ export async function expandClaudeIncludes(options: {
       if (specifier === undefined) continue;
       if (isAbsolute(specifier)) throw new UnsafeAgentContextIncludeError(specifier);
       const included = resolve(dirname(path), specifier);
-      const rel = relative(options.packageRoot, included);
+      const rel = relative(options.boxRoot, included);
       if (rel.startsWith("..") || isAbsolute(rel)) throw new UnsafeAgentContextIncludeError(specifier);
       if (seen.has(included)) continue;
       seen.add(included);

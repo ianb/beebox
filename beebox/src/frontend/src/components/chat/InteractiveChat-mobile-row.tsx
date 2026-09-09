@@ -15,7 +15,7 @@ import { ComposerSendButton, type TranscriptionHandle } from "./InteractiveChat-
  * Mobile-only textarea row shown below the button bar when typing or transcribing.
  */
 export function MobileTextareaRow({
-  isTranscribing, transcription, targetBusy,
+  isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend,
   onPaste, onDrop,
@@ -24,6 +24,7 @@ export function MobileTextareaRow({
   transcription: TranscriptionHandle;
   /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
   targetBusy: boolean;
+  sendDisabledReason?: string;
   handleSend: () => void;
   handleCancelTranscription: () => void;
   /** Drops the persisted dictation draft when transcript is moved to input or sent. */
@@ -117,8 +118,8 @@ export function MobileTextareaRow({
             },
           });
         }}
-        disabled={!(isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim()}
-        title={isTranscribing || !targetBusy ? "Send" : "Queue message (agent is busy)"}
+        disabled={sendDisabledReason !== undefined || !(isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim()}
+        title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
       />
     </div>
   );

@@ -17,30 +17,25 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 ## The lock is keyed on the git directory, not the caller's path
 
-A shapeVersion-2 box is one repository whose git directory sits at the package
-root, while the operational box root is `content/`. Different modules pass
-different directories for the same index — `docs-gen` commits at the package
-root, everything else at `boxRoot` — so keying on the caller's path would give
-one index two locks.
-
-Both spellings resolve to the same lock, which is why one blocks the other:
+A box is one repository with one git index, so two concurrent spans on the
+same box must serialize — the second waits for the first:
 
 ```ts
 const box = await makeTmpBox({ git: true });
 
 const order: string[] = [];
-const outer = withBoxGitLock(box.packageRoot, async () => {
-  order.push("packageRoot-enter");
+const outer = withBoxGitLock(box.root, async () => {
+  order.push("first-enter");
   await delay(50);
-  order.push("packageRoot-exit");
+  order.push("first-exit");
 });
 await delay(10);
 const inner = withBoxGitLock(box.root, async () => {
-  order.push("boxRoot");
+  order.push("second");
 });
 await Promise.all([outer, inner]);
 order.join(" ")
-=> packageRoot-enter packageRoot-exit boxRoot
+=> first-enter first-exit second
 ```
 
 The lock file itself lives inside the git directory, so holding it leaves
@@ -48,7 +43,7 @@ nothing behind in the working tree:
 
 ```ts continue
 await withBoxGitLock(box.root, async () => "held");
-(await getStatus(box.packageRoot)).clean
+(await getStatus(box.root)).clean
 => true
 ```
 
@@ -201,7 +196,7 @@ console.error = (...args) => { errors.push(args.map(String).join(" ")); };
 
 // Hold the lock as an unrelated owner would, then release our in-process
 // record of it so `withBoxGitLock` sees a foreign holder.
-const gitDir = join(box.packageRoot, ".git");
+const gitDir = join(box.root, ".git");
 const lockPath = join(gitDir, "beebox-index.lock");
 await acquireLock(lockPath, { purpose: "doctest-foreign-holder" });
 

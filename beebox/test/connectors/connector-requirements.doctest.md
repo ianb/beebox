@@ -4,17 +4,17 @@ A scheduled script can declare `<requires><connector>name</connector></requires>
 and the scheduler skips it cleanly when the connector isn't configured
 (`src/connectors/requirements.ts`).
 
-That probe used to check one thing: does `config/connectors/<name>.secret.json`
-exist? Once credentials moved to the machine store
-(`docs/plans/secret-custody.md`, Track 3) a fully migrated box has no such file
-— so a file-only probe would report every connector as missing and silently skip
-every script that requires one. A grant with a value now counts too, and the
-legacy file remains as the transition-window fallback.
+That probe used to check one thing: does `_config/connectors/<name>.secret.json`
+exist? Credentials now live in the machine store
+(`docs/implemented-plans/secret-custody.md`), so the probe asks about a grant
+with a value instead. A leftover file is not an answer either way: nothing reads
+those files, so counting one would start a script that then fails for want of a
+credential.
 
 Placeholder values throughout.
 
 ```ts setup
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkMissingConnectors } from "../../src/connectors/requirements.js";
@@ -90,21 +90,51 @@ stored per-box, not granted: ["telegram"]
 granted per-box: []
 ```
 
-## The legacy in-tree file still satisfies it
+## Google needs the client-credential grant too, not just tokens
 
-A box that has not migrated keeps working — that is the whole point of the
-transition window (`bbx health` flags the surviving file separately).
+Tokens plus an enabled policy used to be enough. They are not: without a grant
+for the OAuth app's client credentials, `getGoogleAuth` returns null, so
+Calendar and Gmail no-op and Drive reports a sync failure. A script that runs
+and does nothing is worse than one the scheduler skips with a named reason.
 
 ```ts continue
-await box.write("config/connectors/pocket.secret.json", JSON.stringify({ apiKey: "placeholder-pocket-key" }));
-print(`legacy file only: ${await missing(box.root, "pocket")}`);
+const tokensFile = join(dir, "google-tokens.json");
+await writeFile(tokensFile, JSON.stringify({ refreshToken: "placeholder-refresh" }));
+process.env.BBX_GOOGLE_TOKENS_FILE = tokensFile;
+await box.write("_config/box.json", JSON.stringify({ googleServices: { gmail: true } }));
+
+print(`tokens + policy, no client grant: ${await missing(box.root, "gmail")}`);
+
+for (const name of ["google-oauth-client-id", "google-oauth-client-secret"]) {
+  await setSecret({ name, value: `placeholder-${name}` });
+  await grantSecret({ slug, name, access: "server" });
+}
+print(`client credentials granted: ${await missing(box.root, "gmail")}`);
+
+// The per-box policy still gates it independently.
+await box.write("_config/box.json", JSON.stringify({ googleServices: { gmail: false } }));
+print(`policy disabled: ${await missing(box.root, "gmail")}`);
+=>
+tokens + policy, no client grant: ["gmail"]
+client credentials granted: []
+policy disabled: ["gmail"]
+```
+
+## A retired in-tree file does not satisfy it
+
+`bbx health` flags such a file separately; here it is simply not a credential.
+
+```ts continue
+await box.write("_config/connectors/pocket.secret.json", JSON.stringify({ apiKey: "placeholder-pocket-key" }));
+print(`stray file only: ${await missing(box.root, "pocket")}`);
 print(`several at once: ${await missing(box.root, "pocket", "raindrop", "nothinghere")}`);
 =>
-legacy file only: []
-several at once: ["raindrop","nothinghere"]
+stray file only: ["pocket"]
+several at once: ["pocket","raindrop","nothinghere"]
 ```
 
 ```ts cleanup
+delete process.env.BBX_GOOGLE_TOKENS_FILE;
 await box.cleanup();
 await rm(dir, { recursive: true, force: true });
 ```

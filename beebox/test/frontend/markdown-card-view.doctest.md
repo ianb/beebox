@@ -16,7 +16,7 @@ const html = renderToStaticMarkup(
       context: [{ ref: "../Course.course.card", text: "Acids and bases" }],
     },
     onNavigate: () => undefined,
-    basePath: "questions/Question.question.card",
+    basePath: "_content/questions/Question.question.card",
   }),
 );
 ```

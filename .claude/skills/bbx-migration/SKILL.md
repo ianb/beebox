@@ -34,10 +34,14 @@ need a migration. New boxes are seeded all-applied by `bbx init`, so they skip i
 
 **The compatibility horizon is short (as of 2026-08).** Every box in existence
 lives on the development machine or the production server. Once those are
-migrated, nothing old remains: no back-compat reads, no dual-format loaders, no
-"support the old shape for a while." Migrate everything, then delete the old
-path in the same plan. (This changes if boxes ever run on machines we don't
-control — revisit this note then, not before.)
+migrated, nothing old remains. Keep back-compat reads or dual-format loaders only
+for a short, explicit settling period, then remove them. When the migration ships,
+file that cleanup in `issues/deferred/` with an `activate-on` date and
+`category: code-quality`; name the exact compatibility paths and the convergence
+check so the deferred issue becomes ordinary cleanup work when due. Do not leave
+the removal as an undated active-queue item or permanent "support the old shape
+for a while." (This changes if boxes ever run on machines we don't control —
+revisit this note then, not before.)
 
 ## Which kind — script (default) or agent-applied
 
@@ -79,13 +83,17 @@ skip them:
   which migrations a box thinks it ran.
 - **Verify the generated per-box docs converged.** A schema/type change leaves
   every box's generated `.claude/rules/card-*.md`, `.claude/skills/`, and
-  `docs/generated/` teaching the old shape, and regeneration used to be purely
-  activity-gated (`bbx init`, chat start, a `bbx wakeup` cycle) — the 2026-08-24
-  `document`→`pdf` scar: 3 of 6 prod boxes kept `card-document.md` until a manual
-  `bbx init` pass. `deploy.sh` now runs `bbx docs refresh` per box right after the
-  migration sweep, so this converges on its own. It still **skips a dirty box**,
-  so after the rollout confirm it rather than assuming: grep each box for the old
-  type name, generated docs included.
+  box-compiled `_content/docs/generated/` teaching the old shape, and
+  regeneration used to be purely activity-gated (`bbx init`, chat start, a
+  `bbx wakeup` cycle) — the 2026-08-24 `document`→`pdf` scar: 3 of 6 prod boxes
+  kept `card-document.md` until a manual `bbx init` pass. `deploy.sh` now runs
+  `bbx docs refresh` per box right after the migration sweep, so this converges
+  on its own. It still **skips a dirty box**, so after the rollout confirm it
+  rather than assuming: grep each box for the old type name, `.claude/rules/`
+  and `_content/docs/generated/` included. (The engine reference docs at
+  `node_modules/beebox/box-docs/` aren't part of this hazard — they're rewritten
+  from the running engine on every `generateDocs` call, so they can't go stale
+  relative to the engine.)
 - **Cover *every* card that holds the old shape.** The XML-landmark escapee is the
   lesson: a migrator that matches `*.thing.card` but a box has the data under a
   different type/extension/body leaves it behind. Grep the real boxes for the old

@@ -7,6 +7,7 @@ labels: [cards, links, search, embeddings]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — after reading how Microcosm expressed links
+priority: normal
 ---
 
 A convention for cards to accumulate links to each other in frontmatter, where

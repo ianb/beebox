@@ -4,6 +4,7 @@ workstream: unknown
 area: beebox
 filed-by: agent
 discovered-in: main session — todo-security breakdown for the security-overview.md report
+priority: backlog
 ---
 
 The tRPC WebSocket adapter (`useWSS`, the per-box plugin) hands `createContext`

@@ -71,6 +71,14 @@ const builtinUses: Record<string, string[]> = {
     "Anthropic API calls from box views, through the server-side adapter (the agent itself uses subscription auth, not this key)",
   ],
   replicate: ["Replicate model calls from box views, through the server-side adapter"],
+  openrouter: [
+    "embeddings for semantic and hybrid card search, when the box has no OpenAI key",
+    "answering questions about recordings, and describing scanned images when the Gemini scan backend is selected, when the box has no Gemini key",
+    "the Whisper high-quality transcription pass, when the box has no OpenAI key",
+    "the MAI-Transcribe-2 high-quality transcription pass, which is reachable no other way",
+    "speech generation for chat, when the box's TTS backend is set to Gemini",
+    "OpenRouter API calls from box views, through the server-side adapter",
+  ],
   "google-oauth-client-id": [
     "the Google OAuth application's identity — the consent flow and token refresh behind Gmail, Calendar, Drive and Google sign-in",
   ],

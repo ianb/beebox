@@ -190,7 +190,10 @@ export async function listSessionRoots(boxRoot: string): Promise<SessionRoot[]> 
   for (const entry of entries) {
     const contextDir = entry.contextDir;
     if (contextDir === undefined || contextDir === "") continue;
-    const dir = getSessionDir(path.join(boxRoot, contextDir));
+    // A history row is box-local data, but it is still a string joined into a
+    // path: contain it like every other box-path resolution. An escaping row
+    // resolves to the box root, which is already in `seen`, so it is skipped.
+    const dir = getSessionDir(containedSessionCwd(boxRoot, contextDir));
     const encoded = path.basename(dir);
     if (seen.has(encoded)) continue;
     seen.add(encoded);
@@ -381,7 +384,7 @@ export async function updateFeaturesForSession(boxRoot: string, opts: { sessionI
       entry = { id: sessionId, engine: await loadAgentEngine(boxRoot) };
       file.sessions.push(entry);
     }
-    const merged: Record<string, string> = { ...(entry.features ?? {}) };
+    const merged: Record<string, string> = { ...entry.features };
     for (const [k, v] of Object.entries(updates)) merged[k] = v;
     entry.features = merged;
     await writeHistoryFile(boxRoot, file);

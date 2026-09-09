@@ -31,12 +31,14 @@ export function settleFromTurnStart(options: TurnStartSettlement): boolean {
 export function settleRejectedTurnStart(options: {
   messageId: string;
   reason: string;
+  definitive?: boolean;
   actorCancelled?: boolean;
 }): boolean {
   recordChatSendEvent(options.messageId, {
     event: "post-error",
     detail: { reasonKind: chatSendReasonKind(options.reason) },
   });
-  settleReceipt({ disposition: "rejected", emissionId: options.messageId, reason: options.reason });
+  settleReceipt({ disposition: "rejected", emissionId: options.messageId, reason: options.reason,
+    ...(options.definitive === true ? { definitive: true } : {}) });
   return options.actorCancelled !== true;
 }

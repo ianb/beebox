@@ -6,6 +6,7 @@ labels: [chat, codex, ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "Codex always seems to show bash in its bash calls, in a way Claude doesn't. Not a big deal"
+priority: backlog
 ---
 
 On codex-engine chats, command activity lines show the shell machinery —

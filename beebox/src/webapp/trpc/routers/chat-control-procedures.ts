@@ -27,6 +27,7 @@ import { LockHeldError } from "../../../core/chat/review/lock.js";
 import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
 import type { ReserveResult } from "../../../core/chat/session/reserve.js";
 import { seedFeaturesForNewChat } from "../../../core/landmark/features.js";
+import { boxRelativePathSchema } from "../../../core/landmark/nearest.js";
 
 function requireRuntime(boxRoot: string): ChatRuntime {
   const runtime = getChatRuntime(boxRoot);
@@ -109,9 +110,7 @@ export async function readSessionStatus(boxRoot: string, sessionId: string | nul
 export const chatControlProcedures = {
   newFeatures: publicProcedure
     .input(z.object({
-      contextDir: z.string()
-        .refine((dir) => !dir.startsWith("/") && !dir.split("/").includes(".."), "contextDir must stay inside the box")
-        .nullable(),
+      contextDir: boxRelativePathSchema.nullable(),
     }))
     .query(({ input, ctx }) => seedFeaturesForNewChat({ boxRoot: ctx.boxRoot, contextDir: input.contextDir })),
   deleteSession: ownerProcedure.input(z.object({ sessionId: sdkSessionIdSchema })).mutation(async ({ input, ctx }) => {
@@ -153,7 +152,7 @@ export const chatControlProcedures = {
   }),
 
   /**
-   * File a dead chat's card away under `store/chat/archive/`.
+   * File a dead chat's card away under `_content/chat/archive/`.
    *
    * Beside `deleteSession` because it is the same decision made differently:
    * one removes the conversation, the other only stops listing it. Nothing is
@@ -315,7 +314,7 @@ export const chatControlProcedures = {
   reserveSession: publicProcedure
     .input(z.object({
       sessionId: sdkSessionIdSchema,
-      contextDir: z.string().optional(),
+      contextDir: boxRelativePathSchema.optional(),
       /**
        * Engine and model chosen before the first message. A non-Claude engine
        * comes back `unsupported` — not an error: the client then sends `"new"`,

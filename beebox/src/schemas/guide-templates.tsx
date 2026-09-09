@@ -28,17 +28,17 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Archive",
         when: "Item is useful reference material",
-        instructions: "Move to store/archive/ with appropriate subdirectory",
+        instructions: "Move to _bookkeeping/archive/ with appropriate subdirectory",
       },
       {
         name: "Convert to Recipe",
         when: "Item contains a recipe or cooking instructions",
-        instructions: "Create a recipe card in store/recipes/ using bbx create, then trash the original",
+        instructions: "Create a recipe card in _content/recipes/ using bbx create, then trash the original",
       },
       {
         name: "Keep for Reading",
         when: "Item is worth reading later but not urgent",
-        instructions: "Move to a suitable location under store/ (e.g. store/reading/) with bbx mv",
+        instructions: "Move to a suitable location under _content/ (e.g. _content/reading/) with bbx mv",
       },
       {
         name: "Trash",
@@ -48,7 +48,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Ask User",
         when: "Unsure about disposition or need clarification",
-        instructions: "Create a question card in box/questions/",
+        instructions: "Create a question card in _bookkeeping/questions/",
       },
     ],
     triageRules: [
@@ -73,7 +73,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Create Reminder",
         when: "Event needs preparation (meeting prep, travel, etc.)",
-        instructions: "Create a memo card in box/inbox/ with preparation notes",
+        instructions: "Create a memo card in _content/inbox/ with preparation notes",
       },
       {
         name: "Note Change",
@@ -83,12 +83,12 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Create Event",
         when: "User asks to add a new event to their calendar",
-        instructions: "Write a new .ics file in store/calendar/ with proper ICS format including VTIMEZONE and TZID. Use X-BBX-CALENDAR-ID to target a specific calendar. The event will be pushed to Google Calendar on next sync.",
+        instructions: "Write a new .ics file in _content/calendar/ with proper ICS format including VTIMEZONE and TZID. Use X-BBX-CALENDAR-ID to target a specific calendar. The event will be pushed to Google Calendar on next sync.",
       },
       {
         name: "Edit Event",
         when: "User asks to change an existing calendar event (time, title, location, etc.)",
-        instructions: "Find the .ics file in store/calendar/ and edit the relevant properties. Changes are pushed to Google Calendar on next sync.",
+        instructions: "Find the .ics file in _content/calendar/ and edit the relevant properties. Changes are pushed to Google Calendar on next sync.",
       },
       {
         name: "Delete Event",
@@ -150,7 +150,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Ask User",
         when: "An identification or date on a scanned page is ambiguous and these priors don't resolve it",
-        instructions: "Create a question card in box/questions/",
+        instructions: "Create a question card in _bookkeeping/questions/",
       },
     ],
     triageRules: [
@@ -219,7 +219,7 @@ export function createInitialGuideTemplate(options: { name: string }): string {
       {
         name: "Ask User",
         when: "Unsure about disposition",
-        instructions: "Create a question card in box/questions/",
+        instructions: "Create a question card in _bookkeeping/questions/",
       },
     ];
     fields.experiments = [

@@ -1,6 +1,6 @@
 /**
  * Gmail draft uploader — finds agent-authored email-outbound cards under
- * box/inbox/email/, builds RFC 2822 MIME messages, uploads them as Gmail
+ * _content/inbox/email/, builds RFC 2822 MIME messages, uploads them as Gmail
  * drafts, and stamps each card with `gmail-draft-id` and `gmail-draft-url`
  * so the user can open the draft in Gmail.
  *
@@ -22,6 +22,7 @@ import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent } from
 import { parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
 import { containWithinBox, realpathContained } from "../lib/box-containment.js";
+import { getBoxDir } from "../lib/paths.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
 
 interface DraftFields {
@@ -41,7 +42,7 @@ interface UploadResult {
 }
 
 /**
- * Walk box/inbox/email/ and upload any draft cards that haven't been
+ * Walk _content/inbox/email/ and upload any draft cards that haven't been
  * stamped with a gmail-draft-id yet.
  */
 export async function uploadPendingDrafts(opts: {
@@ -71,11 +72,11 @@ export async function uploadPendingDrafts(opts: {
 }
 
 /**
- * Walk box/inbox/email/ for email-outbound cards in draft status without
+ * Walk _content/inbox/email/ for email-outbound cards in draft status without
  * a gmail-draft-id stamp. Returns absolute paths.
  */
 async function findDraftCards(boxRoot: string): Promise<string[]> {
-  const emailDir = path.join(boxRoot, "box/inbox/email");
+  const emailDir = path.join(getBoxDir(boxRoot, "inbox"), "email");
   const drafts: string[] = [];
   let entries: string[];
   try {
@@ -235,7 +236,7 @@ async function readSourceMessage(
  * Resolve a ref attribute (e.g. on <in-reply-to ref="...">) to a contained
  * box-relative path (or null on escape). Three forms: card-relative
  * ("msg-001.email-message.card" → next to the draft card), box-relative
- * ("box/inbox/email/…"), box-absolute ("/box/inbox/email/…", leading slash) —
+ * ("_content/inbox/email/…"), box-absolute ("/_content/inbox/email/…", leading slash) —
  * both box forms resolve from the box root. (`path.resolve` alone mishandles
  * the leading-slash form as host-absolute.) Returns an absolute path proven to
  * stay inside the box (string containment + realpath symlink check), or null on
@@ -250,7 +251,7 @@ async function resolveCardRef(opts: {
   let abs: string;
   if (ref.startsWith("/")) {
     abs = path.join(opts.boxRoot, ref.slice(1));
-  } else if (/^(?:box|store|config|people)\//.test(ref)) {
+  } else if (/^_[a-z]+\//.test(ref)) {
     abs = path.join(opts.boxRoot, ref);
   } else {
     abs = path.resolve(path.dirname(opts.cardPath), ref);

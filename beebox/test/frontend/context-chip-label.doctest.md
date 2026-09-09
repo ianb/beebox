@@ -13,7 +13,7 @@ import { contextChipLabel } from "../../src/frontend/src/components/chat/context
 ## Landmark label wins when present
 
 ```ts
-contextChipLabel({ landmarkLabel: "Recipes", dir: "store/recipes" })
+contextChipLabel({ landmarkLabel: "Recipes", dir: "_content/recipes" })
 => Recipes
 ```
 
@@ -28,7 +28,7 @@ contextChipLabel({ landmarkLabel: "Home", dir: "" })
 ## No landmark label: basename of a nested dir
 
 ```ts
-contextChipLabel({ landmarkLabel: null, dir: "store/recipes" })
+contextChipLabel({ landmarkLabel: null, dir: "_content/recipes" })
 => recipes
 ```
 
@@ -38,7 +38,7 @@ A label-less landmark card (e.g. a destinations-only landmark) must not
 blank the face — `""` falls through the same way `null` does.
 
 ```ts
-contextChipLabel({ landmarkLabel: "", dir: "store/recipes" })
+contextChipLabel({ landmarkLabel: "", dir: "_content/recipes" })
 => recipes
 ```
 

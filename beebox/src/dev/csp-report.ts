@@ -3,7 +3,7 @@
  *
  * Gathers the JSONL CSP violation logs from every local box
  * (`~/src/boxes/<box>/.beebox/csp-reports.log`) and from prod (over SSH,
- * using `deploy/server-ip` like the deploy does), digests them via the shared
+ * using `deploy/target.env` like the deploy does), digests them via the shared
  * `csp-digest` primitives, writes a styled HTML report to the monorepo's
  * gitignored `scratch/`, `open`s it every run so you can see the run happened,
  * and fires a macOS notification ONLY when something's worth acting on:
@@ -42,7 +42,7 @@ import * as path from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
 import { cspReportLogPath } from "../webapp/routes/api-csp-report.js";
-import { resolveOperationalRoot } from "../lib/box-shape.js";
+import { resolveBoxRoot } from "../lib/box-shape.js";
 import { digestEntries, entriesSince, newestTs, parseCspLog, type CspDigest, type CspEntry } from "./csp-digest.js";
 
 const execFileP = promisify(execFile);
@@ -62,7 +62,7 @@ const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 const SCRATCH_DIR = path.join(MONOREPO_ROOT, "scratch");
 const REPORT_PATH = path.join(SCRATCH_DIR, "csp-report.html");
 const STATE_PATH = path.join(SCRATCH_DIR, "csp-report-state.json");
-const SERVER_IP_PATH = path.resolve(import.meta.dirname, "../../deploy/server-ip");
+const DEPLOY_TARGET_SCRIPT = path.resolve(import.meta.dirname, "../../deploy/deploy-target.sh");
 const PROD_LOG_GLOB = "/home/beebox/boxes/*/.beebox/csp-reports.log";
 
 type Scope = "local" | "prod";
@@ -112,9 +112,10 @@ async function gatherLocal(): Promise<Source[]> {
   const sources: Source[] = [];
   for (const d of dirents) {
     if (!d.isDirectory()) continue;
-    // `d.name` is the package root's basename; a v2 box's log lives under its
-    // `content/` subdirectory, so resolve to the operational root first.
-    const logPath = cspReportLogPath(await resolveOperationalRoot(path.join(BOXES_DIR, d.name)));
+    // `d.name` is the box root's own basename; resolve through
+    // `resolveBoxRoot` for the same tolerant-of-non-boxes behavior as
+    // `csp-digest.ts`.
+    const logPath = cspReportLogPath(await resolveBoxRoot(path.join(BOXES_DIR, d.name)));
     if (!existsSync(logPath)) continue;
     const text = await fs.readFile(logPath, "utf-8").catch(() => "");
     sources.push({ scope: "local", box: d.name, entries: parseCspLog(text) });
@@ -129,13 +130,16 @@ async function gatherLocal(): Promise<Source[]> {
  * of hanging the unattended run.
  */
 async function gatherProd(): Promise<{ sources: Source[]; error: string | null }> {
-  let ip: string;
+  // The opt-in deploy target (deploy/target.env) is the one place that knows
+  // which server is production; absent, this checkout simply has no prod leg.
+  let sshTarget: string;
   try {
-    ip = (await fs.readFile(SERVER_IP_PATH, "utf-8")).trim();
+    const { stdout } = await execFileP(DEPLOY_TARGET_SCRIPT, ["ssh-target"]);
+    sshTarget = stdout.trim();
   } catch (_e) {
-    return { sources: [], error: "deploy/server-ip not present in this checkout" };
+    return { sources: [], error: "no deploy target configured (deploy/target.env) in this checkout" };
   }
-  if (ip === "") return { sources: [], error: "deploy/server-ip is empty" };
+  if (sshTarget === "") return { sources: [], error: "deploy/target.env names no server" };
   // Trailing `exit 0` so a no-logs-yet server (the glob matches nothing, the loop's
   // last `[ -f ]` is false) doesn't look like a connection failure — only a real
   // ssh/connection error (exit 255) should surface as "unreachable".
@@ -143,7 +147,7 @@ async function gatherProd(): Promise<{ sources: Source[]; error: string | null }
   try {
     const { stdout } = await execFileP(
       "ssh",
-      ["-o", "BatchMode=yes", "-o", "ConnectTimeout=8", `root@${ip}`, remoteCmd],
+      ["-o", "BatchMode=yes", "-o", "ConnectTimeout=8", sshTarget, remoteCmd],
       { maxBuffer: 32_000_000 },
     );
     return { sources: parseProdSections(stdout), error: null };

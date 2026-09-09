@@ -9,6 +9,8 @@
 import * as fs from "node:fs/promises";
 import type { IncomingHttpHeaders } from "node:http";
 import { z } from "zod";
+import { attentionSnapshotSchema } from "../../shared/chat-composer-binding.js";
+import { parseRef } from "../../shared/ref-path.js";
 import { AGENT_ENGINES } from "../../shared/agent-models.js";
 import { localUserName, type SessionUser } from "../auth.js";
 import { resolveMobileRequestAuth } from "../../core/mobile/request-auth.js";
@@ -19,11 +21,12 @@ import {
   SUPPORTED_IMAGE_MEDIA_TYPES,
   isSupportedImageMediaType,
 } from "../../services/claude-chat-content.js";
-import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
+import { isActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
 import type { ChatSendInput } from "../../core/chat/session/index.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../shared/image-orientation.js";
 import { CHAT_CHANNELS, type ChatChannel } from "../../shared/chat-channel.js";
+import { boxRelativePathSchema } from "../../core/landmark/nearest.js";
 
 // Structural shape only (id/mimeType/dataBase64 present with the right
 // primitive types) — the content-level checks (mime prefix, total byte cap)
@@ -65,7 +68,7 @@ export const sendBodySchema = z.object({
    * Ignored when `session` is anything other than `"new"` — resumed sessions
    * read the binding from `chat-session-history` instead.
    */
-  contextDir: z.string().optional(),
+  contextDir: boxRelativePathSchema.optional(),
   /**
    * Chat-feature seeds chosen before the session existed (e.g. turning on
    * narration in a brand-new chat). Honored only when `session === "new"`,
@@ -92,6 +95,8 @@ export const sendBodySchema = z.object({
    * attribute. Omitted when no card is open.
    */
   openCard: z.string().optional(),
+  /** Frozen content attention at the send gesture; never a session target. */
+  viewContext: attentionSnapshotSchema.optional(),
   /**
    * What the user did to the companion-pane card since the agent's last
    * reply (`scrolled`/`navigated`/`explored`/`modified`), surfaced as the
@@ -172,10 +177,14 @@ export function resolveChannel(
  * defensively at this parse boundary; absent/invalid fields are simply omitted.
  */
 export function extractCardFields(
-  body: Pick<SendBody, "openCard" | "cardActivity" | "cardState">,
-): { openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails } {
-  const out: { openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails } = {};
-  if (typeof body.openCard === "string" && body.openCard !== "") out.openCard = body.openCard;
+  body: Pick<SendBody, "openCard" | "cardActivity" | "cardState" | "viewContext">,
+): Pick<ChatSendInput, "openCard" | "cardActivity" | "cardState" | "viewContext"> {
+  const out: Pick<ChatSendInput, "openCard" | "cardActivity" | "cardState" | "viewContext"> = {};
+  if (body.viewContext !== undefined) {
+    out.viewContext = body.viewContext;
+    if (body.viewContext.focusedRef !== undefined) out.openCard = parseRef(body.viewContext.focusedRef).path;
+  } else if (typeof body.openCard === "string" && body.openCard !== "") out.openCard = body.openCard;
+  if (body.viewContext !== undefined && body.viewContext.focusedRef === undefined) return out;
   const kinds = Array.isArray(body.cardActivity) ? body.cardActivity.filter(isActivityKind) : [];
   if (kinds.length > 0) out.cardActivity = kinds;
   const details: CardStateDetails = {};
@@ -198,7 +207,7 @@ export function buildSendInput(
     text: string;
     images: SendBody["images"];
     channel: ChatChannel | undefined;
-    cardFields: { openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
+    cardFields: Pick<ChatSendInput, "openCard" | "cardActivity" | "cardState" | "viewContext">;
   },
 ): ChatSendInput {
   return {

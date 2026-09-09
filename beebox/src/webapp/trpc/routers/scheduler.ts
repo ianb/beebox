@@ -19,6 +19,7 @@ import { listSchedules, type ScheduleEntry } from "./scheduler-schedules.js";
 import { checkTriggerPreconditions, runScheduledScript } from "./scheduler-run.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { isRecord } from "../../../lib/is-record.js";
+import { BOX_DIRS } from "../../../lib/paths.js";
 
 export type { ScheduleEntry };
 
@@ -122,7 +123,7 @@ export const schedulerRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const fileName = `${input.name}.scheduled-script.card`;
-      const relPath = path.join("config/schedules", fileName);
+      const relPath = path.join(BOX_DIRS.schedules, fileName);
       const fullPath = path.join(ctx.boxRoot, relPath);
 
       try {
@@ -166,7 +167,7 @@ export const schedulerRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const fileName = `${input.name}.scheduled-script.card`;
-      const cardPath = path.join(ctx.boxRoot, "config/schedules", fileName);
+      const cardPath = path.join(ctx.boxRoot, BOX_DIRS.schedules, fileName);
 
       let content: string;
       try {

@@ -9,9 +9,12 @@ the operational reference for what exists today.
 Built so far: the store, the resolver, `bbx secrets`, **every connector reader**
 migrated (see "Secret names" below), the loopback resolve endpoint that box code
 uses for `agent`-access grants, the probe + format registries, and the **admin
-page's Secrets section** (this box's grants plus a machine-wide view). The chat
-capture widget and the removal of the legacy file/env fallbacks are later
-chunks.
+page's Secrets section** (this box's grants plus a machine-wide view). The
+legacy in-box file and env-var fallbacks have since been removed (every
+connector credential now resolves from the store only); the chat capture
+widget remains a later chunk. The one exception is `GOOGLE_OAUTH_CLIENT_ID` /
+`GOOGLE_OAUTH_CLIENT_SECRET`, which stay live env configuration for the fleet
+login surface — see "Google client credentials" below.
 
 ## The shape
 
@@ -54,19 +57,25 @@ and agent-resolvable for another:
 ## Secret names
 
 A name is a flat identifier; per-box instances use `name/<box-slug>`. The
-mapping below is the migration's contract — the migration script dedupes
-existing `config/connectors/*.secret.json` files into exactly these names, so
+mapping below was the migration's contract — the migration script deduped
+existing `_config/connectors/*.secret.json` files into exactly these names, so
 **the store name matches the legacy file's basename wherever a file existed**.
+The "legacy file" and "env fallback" columns are historical: both fallback
+paths have been removed from every reader below, so the store is now the only
+source. Google's OAuth client credentials are the one row with a real,
+non-legacy env path — but only for a different surface than the store-backed
+one in this table; see "Google client credentials" below.
 
-| Name | Consumers | Legacy file | Env fallback |
+| Name | Consumers | Former legacy file | Former env fallback |
 |---|---|---|---|
 | `mistral` | `core/mistral-key.ts`, `/api/adapters/mistral` | `mistral.secret.json` | `BBX_MISTRAL_API_KEY` |
 | `deepgram` | `core/deepgram-key.ts` | `deepgram.secret.json` | `BBX_DEEPGRAM_API_KEY` + `BBX_DEEPGRAM_PROJECT` |
 | `openai` | `core/search/embeddings-key.ts`, `/api/adapters/openai` | `openai.secret.json` | `BBX_OPENAI_API_KEY` |
 | `openai-thinking` | chat TTS, Whisper, the realtime mint | — | `THINKING_OPENAI_API_KEY` |
 | `gemini` | `core/gemini-key.ts` (audio questions, scan-import vision) | — | `GEMINI_KEY`, then `SKE_GEMINI_API_KEY` |
-| `google-oauth-client-id` / `google-oauth-client-secret` | `connectors/google-auth.ts` | — | `GOOGLE_OAUTH_CLIENT_ID` / `_SECRET` |
+| `google-oauth-client-id` / `google-oauth-client-secret` | `connectors/google-auth.ts` `getBoxGoogleClientCreds` | — | — |
 | `anthropic`, `replicate` | `/api/adapters/<name>` | `<name>.secret.json` | — |
+| `openrouter` | `core/openrouter.ts` (the fallback route for embeddings, audio questions, Whisper HQ transcription, and the opt-in Gemini scan backend; the *only* route for the `mai` HQ services and the `gemini` TTS backend), `/api/adapters/openrouter` | — | — (new since custody; store-only from the start) |
 | `telegram-bot/<box>` | `connectors/telegram-helpers.ts`, admin setup | `telegram.secret.json` | — |
 
 **One deliberate reuse outside this table.** The dev repo's document-comment
@@ -88,6 +97,22 @@ transcription key is not consent to pay for embeddings, and the split predates
 the store. Google's *tokens* are NOT here — `google-token-store.ts` /
 `BBX_GOOGLE_TOKENS_FILE` is untouched; only the OAuth app's client credentials
 moved.
+
+### Google client credentials: store, plus one real env exception
+
+`connectors/google-auth.ts` splits the OAuth app's client credentials into two
+functions with two different sources, because they serve two different
+surfaces:
+
+- `getBoxGoogleClientCreds(boxRoot)` — a **box's** Drive/Calendar/Gmail
+  connectors. Resolves `google-oauth-client-id` / `google-oauth-client-secret`
+  from the store only, at `server` access, the same as every other connector
+  credential.
+- `getLoginGoogleClientCreds()` — the **fleet login surface**, which
+  authenticates before any box exists and so has no box root to resolve a
+  store grant against. This one reads `GOOGLE_OAUTH_CLIENT_ID` /
+  `GOOGLE_OAUTH_CLIENT_SECRET` from the environment, and that is real
+  configuration for that surface, not a legacy fallback.
 
 The last two are **single-box** entries: they carry `owningBox` +
 `shareable: false` and are granted automatically by the flow that creates them
@@ -197,16 +222,13 @@ a violation, and an in-process caller (our own code) trips an invariant.
 Refusal kinds, each with a distinct remediation: `unknown-secret`, `empty-slot`,
 `not-granted`, `agent-access-not-granted`, `dangling-grant`, `store-unreadable`
 (`src/core/secrets/errors.ts`). Connectors degrade to their existing "not
-configured" path on any of them.
-
-**Only `unknown-secret` falls through to a legacy file or env var**
-(`src/core/secrets/legacy-fallback.ts`, shared by every migrated reader): that
-kind means no entry of the name exists on this machine at all, which is the
-unmigrated-box case the transition window is for. Every other refusal is "not
-configured", with one warning per reader per kind. Falling through on
-`not-granted` would make `bbx secrets revoke` a no-op wherever a legacy file or
-an exported env var still exists — the boxholder would withdraw a grant, see it
-succeed, and the connector would keep working.
+configured" path on any of them — there is no fallback of any kind left to
+fall through to. `src/core/secrets/legacy-fallback.ts` and
+`refusalAllowsLegacyFallback`, which used to let an `unknown-secret` refusal
+fall through to a legacy in-box file or env var during the migration's
+transition window, have been deleted; a `not-granted` refusal from
+`bbx secrets revoke` is now always final, with no legacy file or exported env
+var left to keep a connector working behind it.
 
 Every resolve and refusal appends a line to the access log —
 `~/.config/beebox/secrets-log/YYYY-MM.jsonl`, `{ts, box, secret, purpose, event,
@@ -362,7 +384,7 @@ and never taken from argv.
 | `bbx secrets revoke <box> <name>` | Withdraw a grant. |
 | `bbx secrets status <box>` | One box's grants, empty slots, and dangling grants. In an agent session, only the box the command runs in. |
 | `bbx secrets copy-grants <from> <to>` | Give one box the same grants another holds — what `deploy/add-box.sh --secrets-from` runs. Access levels carry over; `shareable: false` entries are skipped and named. |
-| `bbx secrets migrate [--root <dir>] [--dry-run]` | The one-time move of every box's legacy `config/connectors/*.secret.json` into the store. |
+| `bbx secrets migrate [--root <dir>] [--dry-run]` | The one-time move of every box's legacy `_config/connectors/*.secret.json` into the store. |
 
 `<box>` is a slug or a box root path. `set`/`rm`/`grant`/`revoke`/`copy-grants`,
 `describe --remove-use`/`--clear-uses`,
@@ -402,24 +424,23 @@ bbx secrets migrate --root /home/beebox/boxes --agent-confirmed
 With no `--root` it migrates the machine's registered boxes
 (`~/.config/beebox/boxes.json`). Four properties worth knowing before running it:
 
-- **The original files stay.** A reader still falls back to them when the store
-  has no entry of that name, so a mis-migrated box keeps working; deleting them
-  is a separate later pass. (A box that is granted nothing is a *refusal*, not a
-  missing entry — that fails closed rather than reading the file.)
+- **The original files stay.** `migrate` never deletes them — deleting a
+  migrated box's stray files is a separate pass, and `bbx health` flags any it
+  finds (see below). Readers no longer fall back to them at all: since the
+  legacy-fallback removal, a box with no grant for a migrated name is a
+  *refusal* regardless of whether a stray legacy file still sits on disk.
 - **Existing store entries are never overwritten** — re-running is a no-op, and
   a key rotated in the store is not reverted to what a stale file holds.
 - **A value already in the store wins its name**, and boxes that disagree with
   it are never granted it — a grant to a box holding a different key would
-  silently switch that box onto another box's credential, silently because the
-  grant succeeds and the legacy fallback then never runs. Each other distinct
+  silently switch that box onto another box's credential. Each other distinct
   value is parked as `<name>/<first-holder-slug>` (one entry per distinct value,
   so boxes that agree with each other still share one) with a printed CONFLICT
   line. With nothing stored yet, the alphabetically-first slug's value wins, so
   the choice is stable across runs. A parked entry is *not* what its reader
   looks up, and the contested name now EXISTS in the store — so a parked box
-  gets `not-granted` and reads as not configured (the legacy file is no longer
-  a fallback once the name exists). Reconcile those boxes promptly: pick the key
-  each should use and grant it.
+  gets `not-granted` and reads as not configured. Reconcile those boxes
+  promptly: pick the key each should use and grant it.
 - **Unrecognized files are reported, not imported.** `google.secret.json` and
   `gmail.secret.json` hold OAuth *tokens* (`google-token-store.ts` keeps them);
   a guessed store name would create an entry no reader asks for.
@@ -431,17 +452,47 @@ unattended prod mutation.
 
 ## Migrating a connector
 
-Mistral is the template (`src/core/mistral-key.ts`): resolve from the store
-first, and on an `unknown-secret` refusal — and only that one, via
-`refusalAllowsLegacyFallback` — fall back to the legacy in-tree
-`config/connectors/<name>.secret.json` with a once-per-process deprecation
-warning naming the stray file, then the env
-var. The fallbacks are removed in a later chunk; until then `bbx health` flags
-any surviving `config/connectors/*.secret.json` as a warning
-(`legacy-secret-files`), because a file that still exists is a live credential
-in the agent's own working directory.
+Mistral is the template (`src/core/mistral-key.ts`): resolve from the store,
+full stop — no fallback to a legacy in-tree `_config/connectors/<name>.secret.json`
+or an env var. That fallback path (`refusalAllowsLegacyFallback`,
+`src/core/secrets/legacy-fallback.ts`) existed only for the migration's
+transition window and has since been deleted, along with the env-var
+fallbacks it used to reach for `mistral`, `deepgram`, `openai`,
+`openai-thinking`, and `gemini`. `bbx health` still flags any surviving
+`_config/connectors/*.secret.json` as a warning (`legacy-secret-files`),
+because a file that still exists is a live credential sitting in the agent's
+own working directory even though nothing reads it anymore — delete it once
+`bbx secrets migrate` has moved its value into the store.
 
 Tests get an isolated store automatically: `makeTmpBox()` points
 `BBX_SECRETS_FILE` at a throwaway file unless the test set one itself, so a
 store-writing test can never mutate the developer's real
 `~/.config/beebox/secrets.json`.
+
+## One key that stands in for several
+
+`openrouter` is the only name here that is not a service's own credential. It
+is a fallback: each model-backed service uses its own provider key when the box
+has one, and reaches the same model through OpenRouter when it does not
+(`core/openrouter.ts`). Granting it lights up semantic search, audio
+questions, and the Whisper high-quality transcription pass without any further
+configuration. It also unlocks two HQ transcription services that exist only
+behind it — `mai` and `mai-diarized`, Microsoft's MAI-Transcribe-2, which the
+box can reach no other way and which is its only speaker-labelling option that
+does not need a Mistral key, and granting it changes nothing about a service that already has
+its own key.
+
+Scan-import is the one that still needs a second thing set. Its default vision
+backend is Claude on the agent's own subscription auth, which needs no key at
+all and is the better backend; an OpenRouter key must not quietly move scan
+import off it. So `BBX_SCAN_VISION=gemini` still selects the Gemini backend, and
+the OpenRouter key only decides how that backend is reached once selected.
+
+It does not cover everything. Chat text-to-speech and the three realtime
+dictation paths stay on their own providers — OpenRouter carries no OpenAI TTS
+model and has no realtime protocol at all. Voxtral HQ transcription stays on
+Mistral too: through OpenRouter that model answers in plain JSON only and cannot
+diarize, so `hqService: voxtral` or `voxtral-diarized` still needs a `mistral`
+key. A box that wants any of these needs `openai-thinking`, `mistral`, or
+`deepgram` as before. `bbx health` prints a
+`model-routes` line naming what each service is currently using.

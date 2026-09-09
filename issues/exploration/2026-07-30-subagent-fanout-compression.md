@@ -4,6 +4,7 @@ workstream: elixir-skills-review
 area: beebox
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+priority: backlog
 ---
 
 When we fan out subagents, each returns a full report straight into the parent's

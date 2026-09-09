@@ -5,6 +5,7 @@ needs: [decision]
 area: beebox
 filed-by: agent
 discovered-in: worktree-github-pages-site — story-extraction triage of engineering-principles.md
+priority: normal
 ---
 
 During the story-nugget triage pass (2026-07-22), the boxholder dropped the

@@ -32,7 +32,7 @@ export function TargetStrip(props: {
   return (
     <div className="px-4 py-1.5 border-t border-info-light bg-info-50 text-info-dark text-xs flex items-center gap-3">
       <div className="flex-1 flex items-center gap-3">
-        {status.state === "busy" ? <span>Agent is working…</span> : null}
+        {status.state === "busy" ? <span>Thinking…</span> : null}
         {pendingCount > 0 ? (
           <span>{pendingCount === 1 ? "1 message queued" : `${pendingCount} messages queued`}</span>
         ) : null}
@@ -55,7 +55,7 @@ export function TargetStrip(props: {
           id="bbx-chat-stop-agent"
           onClick={onInterrupt}
           className={`${STRIP_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
-          title="Stop agent"
+          title="Stop"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />

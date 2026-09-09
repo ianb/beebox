@@ -1,0 +1,19 @@
+---
+status: draft
+title: Lantern inventory
+name: Lantern inventory
+description: A compact structured example for testing property and back views.
+dates:
+  - value: "2026-09-07"
+    note: inspected
+quantity:
+  value: "2"
+  note: matching lamps
+theme:
+  name: plain
+  stock: neutral
+---
+Two brass reading lamps, one by the window and one beside the green chair.
+
+The structured fields above should remain discoverable when the card front is
+styled as paper, Post-it, or plain.

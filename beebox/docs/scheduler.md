@@ -18,7 +18,7 @@ launchctl load ~/Library/LaunchAgents/com.beebox.scheduler.plist
 
 ## How It Works
 
-The daemon runs `bbx tick` every 60 seconds for each configured box. `bbx tick` checks all `config/schedules/*.scheduled-script.card` files against their cron/at/rrule schedules and runs any that are due.
+The daemon runs `bbx tick` every 60 seconds for each configured box. `bbx tick` checks all `_config/schedules/*.scheduled-script.card` files against their cron/at/rrule schedules and runs any that are due.
 
 Key behaviors:
 - **Config reload** — The box list is reloaded each cycle, so `bbx boxes add/remove` takes effect without restarting

@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { commitPaths, pathsHaveChanges } from "../../lib/git.js";
+import { getBoxDir, BOX_DIRS } from "../../lib/paths.js";
 import { fmt } from "../../lib/format.js";
 import { parseDuration } from "../../schemas/scheduled-script-duration.js";
 import { loadRunningProcedures } from "../schedule/state.js";
@@ -73,14 +74,14 @@ async function resolveExpiry(runDir: string): Promise<number | "never" | "invali
 }
 
 /**
- * Delete expired run dirs under procedure/runs/, plus per-procedure overflow
+ * Delete expired run dirs under _bookkeeping/procedure/runs/, plus per-procedure overflow
  * past MAX_RUNS_PER_PROCEDURE (oldest first). Always keeps the newest run per
  * procedure (`bbx procedure status` reads it), pinned runs, and anything still
  * running. Commits once when it deleted something; silent when not.
  */
 export async function gcProcedureRuns(ctx: CommandContext): Promise<Result<{ removed: string[] }, ProcedureError>> {
   const { boxRoot } = ctx;
-  const runsDir = path.join(boxRoot, "procedure/runs");
+  const runsDir = getBoxDir(boxRoot, "procedureRuns");
 
   let dirNames: string[];
   try {
@@ -146,9 +147,9 @@ export async function gcProcedureRuns(ctx: CommandContext): Promise<Result<{ rem
   if (removed.length > 0) {
     // Untracked dirs (crash debris that never materialized) leave no git
     // change, so only commit when the deletion touched tracked files
-    if (await pathsHaveChanges(boxRoot, ["procedure/runs"])) {
+    if (await pathsHaveChanges(boxRoot, [BOX_DIRS.procedureRuns])) {
       await commitPaths(boxRoot, {
-        paths: ["procedure/runs"],
+        paths: [BOX_DIRS.procedureRuns],
         message: `GC procedure runs: removed ${removed.length} expired run dir(s)`,
         trailers: { "Commit-Source": "procedure-gc" },
       });

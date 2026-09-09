@@ -49,7 +49,7 @@ test("the union rule: implicated tests, and only paths this suite could care abo
     changed: [
       `${BOX}src/core/box.ts`,
       // Out of scope entirely: another package, and prose inside this one.
-      "bin/router.ts",
+      "bin/doctor.ts",
       "issues/bugs/x.md",
       `${BOX}docs/testing.md`,
     ],

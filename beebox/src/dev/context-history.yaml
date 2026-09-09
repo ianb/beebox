@@ -391,6 +391,13 @@ test1:
       peak: 42758
       added: 0
       turns: 2
+    - date: 2026-09-05T11:47:09.889Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ff7b23a6ad1354a52a98329c32e3cb638c6e296d
+      initial: 41634
+      peak: 41634
+      added: 0
+      turns: 1
   procedure-instructions-gate:
     - date: 2026-06-27T17:31:49.109Z
       boxCommit: 9df1ee213bfc90a09a101a3ef10f26ba7b3037da
@@ -767,6 +774,13 @@ test1:
       peak: 41213
       added: 0
       turns: 1
+    - date: 2026-09-05T21:18:41.743Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43768
+      peak: 45204
+      added: 1436
+      turns: 5
   card-type-from-filename:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -949,6 +963,13 @@ test1:
       peak: 41186
       added: 0
       turns: 1
+    - date: 2026-09-05T11:47:41.308Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ff7b23a6ad1354a52a98329c32e3cb638c6e296d
+      initial: 41610
+      peak: 43797
+      added: 2187
+      turns: 5
   find-memo-cards:
     - date: 2026-07-03T10:45:45.958Z
       boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
@@ -1002,6 +1023,13 @@ test1:
       repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
       initial: 41190
       peak: 41190
+      added: 0
+      turns: 1
+    - date: 2026-09-05T11:48:20.421Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ff7b23a6ad1354a52a98329c32e3cb638c6e296d
+      initial: 41621
+      peak: 41621
       added: 0
       turns: 1
   wakeup-intake-flow:
@@ -1346,6 +1374,13 @@ test1:
       peak: 41464
       added: 282
       turns: 3
+    - date: 2026-09-05T21:21:27.366Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43735
+      peak: 50709
+      added: 6974
+      turns: 6
   rss-to-inbox-flow:
     - date: 2026-07-03T11:01:45.769Z
       boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
@@ -1370,6 +1405,13 @@ test1:
       peak: 42914
       added: 1729
       turns: 4
+    - date: 2026-09-05T21:22:24.617Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43738
+      peak: 51935
+      added: 8197
+      turns: 7
   add-daily-task:
     - date: 2026-07-03T11:01:45.769Z
       boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
@@ -1460,6 +1502,13 @@ test1:
       peak: 42210
       added: 998
       turns: 3
+    - date: 2026-09-05T21:22:49.925Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43765
+      peak: 45922
+      added: 2157
+      turns: 7
   chat-thread-structure:
     - date: 2026-07-03T11:14:29.560Z
       boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
@@ -1490,6 +1539,13 @@ test1:
       peak: 42644
       added: 1449
       turns: 3
+    - date: 2026-09-05T21:19:12.594Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43748
+      peak: 44974
+      added: 1226
+      turns: 4
   chat-thread-respond-vs-acknowledge:
     - date: 2026-07-03T11:14:29.560Z
       boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
@@ -2051,6 +2107,13 @@ test1:
       peak: 43175
       added: 1862
       turns: 3
+    - date: 2026-09-05T21:23:06.040Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43863
+      peak: 45489
+      added: 1626
+      turns: 4
   chat-user-selection-tag:
     - date: 2026-07-03T11:26:09.904Z
       boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
@@ -2427,6 +2490,13 @@ test1:
       peak: 42725
       added: 1529
       turns: 3
+    - date: 2026-09-05T21:19:25.177Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43750
+      peak: 45127
+      added: 1377
+      turns: 3
   landmark-template-ref:
     - date: 2026-07-03T11:51:45.838Z
       boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
@@ -2519,6 +2589,13 @@ test1:
       initial: 41349
       peak: 42553
       added: 1204
+      turns: 3
+    - date: 2026-09-05T21:21:49.403Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43753
+      peak: 44427
+      added: 674
       turns: 3
   triage-rules-location:
     - date: 2026-07-03T11:51:45.838Z
@@ -2664,6 +2741,13 @@ test1:
       peak: 42817
       added: 1619
       turns: 3
+    - date: 2026-09-05T21:18:59.759Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43752
+      peak: 45262
+      added: 1510
+      turns: 3
   recipe-ingredient-attrs:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -2756,6 +2840,13 @@ test1:
       peak: 56724
       added: 15265
       turns: 12
+    - date: 2026-09-05T21:21:02.018Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43790
+      peak: 60742
+      added: 16952
+      turns: 13
   retro-report-location:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -3753,6 +3844,20 @@ test1:
       peak: 44601
       added: 885
       turns: 5
+    - date: 2026-09-05T21:04:42.117Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: a5b19c0331c6e46c8d5e813cef926266607274a1
+      initial: 43802
+      peak: 44561
+      added: 759
+      turns: 4
+    - date: 2026-09-05T21:17:05.922Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43788
+      peak: 44556
+      added: 768
+      turns: 4
   law-data-fidelity-units:
     - date: 2026-08-09T09:56:06.424Z
       boxCommit: b33ab9e2f374cda1c07d90bcd09c05d2825eab19
@@ -4028,6 +4133,216 @@ test1:
       peak: 47134
       added: 0
       turns: 1
+  no-self-jargon:
+    - date: 2026-09-02T19:32:44.303Z
+      boxCommit: 8a488c951173b704888eb2986beb35148dab3a59
+      repoCommit: 3c1ecdea047ba2521199a76e1e1b4b8b3b4bf07d
+      initial: 40841
+      peak: 40841
+      added: 0
+      turns: 2
+  record-quantity-field:
+    - date: 2026-09-02T19:32:59.201Z
+      boxCommit: 8a488c951173b704888eb2986beb35148dab3a59
+      repoCommit: 3c1ecdea047ba2521199a76e1e1b4b8b3b4bf07d
+      initial: 40833
+      peak: 43368
+      added: 2535
+      turns: 5
+  authored-view-history-state:
+    - date: 2026-09-02T18:05:46.905Z
+      boxCommit: c64cb6c28b98b15726a9799038da192a005c42c8
+      repoCommit: 969687b954cccd2ef2b942dce4ff9912ceead52e
+      initial: 40814
+      peak: 53913
+      added: 13099
+      turns: 7
+  views-bounded-image:
+    - date: 2026-09-04T05:27:50.447Z
+      boxCommit: 4fe2132cf233a47a112c7e91592a59534075b70f
+      repoCommit: 24c9cb024069d50ce35ee50430145de9146d5767
+      initial: 41880
+      peak: 47094
+      added: 5214
+      turns: 7
+    - date: 2026-09-04T05:30:03.287Z
+      boxCommit: 4fe2132cf233a47a112c7e91592a59534075b70f
+      repoCommit: 24c9cb024069d50ce35ee50430145de9146d5767
+      initial: 41906
+      peak: 47173
+      added: 5267
+      turns: 7
+    - date: 2026-09-04T05:30:52.667Z
+      boxCommit: 4fe2132cf233a47a112c7e91592a59534075b70f
+      repoCommit: 24c9cb024069d50ce35ee50430145de9146d5767
+      initial: 41924
+      peak: 47985
+      added: 6061
+      turns: 9
+  chat-bounded-image-embed:
+    - date: 2026-09-04T05:28:22.254Z
+      boxCommit: 4fe2132cf233a47a112c7e91592a59534075b70f
+      repoCommit: 24c9cb024069d50ce35ee50430145de9146d5767
+      initial: 49514
+      peak: 49514
+      added: 0
+      turns: 2
+  content-open-vocabulary:
+    - date: 2026-09-05T11:48:06.082Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ff7b23a6ad1354a52a98329c32e3cb638c6e296d
+      initial: 41630
+      peak: 44604
+      added: 2974
+      turns: 7
+  display-path-vocabulary:
+    - date: 2026-09-05T17:58:00.597Z
+      boxCommit: 4e633bf74021145fb5a7ff29f7a454d79a651f38
+      repoCommit: ce3f4d0767a5ced72a0c28062721824bc3fe30ae
+      initial: 41865
+      peak: 43490
+      added: 1625
+      turns: 5
+  gmail-tracked-subset:
+    - date: 2026-09-05T21:17:40.072Z
+      boxCommit: 1056c8d4a93b90f98eb69598a2763b9e1a0a1287
+      repoCommit: c644629980eaa66b4810af074a9be1ba2ba9eeea
+      initial: 43756
+      peak: 46084
+      added: 2328
+      turns: 7
+  starter-what-can-you-do:
+    - date: 2026-09-06T00:39:37.334Z
+      boxCommit: 248b6c9bd03687adee02a752f45bb26b2f0b12b0
+      repoCommit: 912ccabedb1b0e094276b3f757f338f7df007ef5
+      initial: 51191
+      peak: 56241
+      added: 5050
+      turns: 7
+    - date: 2026-09-06T03:56:39.884Z
+      boxCommit: cf43e5714ce0e423a98b4ca7dacf0876ddea68e5
+      repoCommit: d8785ba69501584a2310a3d7a804088df8eb76a3
+      initial: 51192
+      peak: 56479
+      added: 5287
+      turns: 7
+  starter-just-set-up:
+    - date: 2026-09-06T00:39:37.334Z
+      boxCommit: 248b6c9bd03687adee02a752f45bb26b2f0b12b0
+      repoCommit: 912ccabedb1b0e094276b3f757f338f7df007ef5
+      initial: 51198
+      peak: 54951
+      added: 3753
+      turns: 5
+    - date: 2026-09-06T03:56:39.884Z
+      boxCommit: cf43e5714ce0e423a98b4ca7dacf0876ddea68e5
+      repoCommit: d8785ba69501584a2310a3d7a804088df8eb76a3
+      initial: 51199
+      peak: 56232
+      added: 5033
+      turns: 6
+  starter-track-plants:
+    - date: 2026-09-06T00:39:37.334Z
+      boxCommit: 248b6c9bd03687adee02a752f45bb26b2f0b12b0
+      repoCommit: 912ccabedb1b0e094276b3f757f338f7df007ef5
+      initial: 51214
+      peak: 51214
+      added: 0
+      turns: 2
+    - date: 2026-09-06T03:56:39.884Z
+      boxCommit: cf43e5714ce0e423a98b4ca7dacf0876ddea68e5
+      repoCommit: d8785ba69501584a2310a3d7a804088df8eb76a3
+      initial: 51215
+      peak: 51215
+      added: 0
+      turns: 2
+    - date: 2026-09-06T04:15:23.598Z
+      boxCommit: cf43e5714ce0e423a98b4ca7dacf0876ddea68e5
+      repoCommit: cff1c903348cfc15953878d66ed91631d799edaa
+      initial: 51306
+      peak: 51306
+      added: 0
+      turns: 2
+  card-symbol-restraint:
+    - date: 2026-09-05T23:58:44.433Z
+      boxCommit: 0a0b31c71f7652064343389287ab6272695322c2
+      repoCommit: 82021b6961a312d3d4640a66b537a4f3bdcfd5a8
+      initial: 44277
+      peak: 44891
+      added: 614
+      turns: 3
+  card-symbol-image-key:
+    - date: 2026-09-05T23:58:44.433Z
+      boxCommit: 0a0b31c71f7652064343389287ab6272695322c2
+      repoCommit: 82021b6961a312d3d4640a66b537a4f3bdcfd5a8
+      initial: 44219
+      peak: 44219
+      added: 0
+      turns: 1
+  prominence-mark-own-artifact:
+    - date: 2026-09-06T18:25:43.193Z
+      boxCommit: b467eb9ac1920573873521dc2db3149844388c4f
+      repoCommit: 1f640149859ad42b0e7020208e38ba0e4d6a4aa8
+      initial: 45589
+      peak: 45589
+      added: 0
+      turns: 2
+  prominence-housekeeping-directory:
+    - date: 2026-09-06T18:25:43.193Z
+      boxCommit: b467eb9ac1920573873521dc2db3149844388c4f
+      repoCommit: 1f640149859ad42b0e7020208e38ba0e4d6a4aa8
+      initial: 45505
+      peak: 46090
+      added: 585
+      turns: 4
+  prominence-vs-links:
+    - date: 2026-09-06T18:25:43.193Z
+      boxCommit: b467eb9ac1920573873521dc2db3149844388c4f
+      repoCommit: 1f640149859ad42b0e7020208e38ba0e4d6a4aa8
+      initial: 45493
+      peak: 46319
+      added: 826
+      turns: 4
+  chat-attention-does-not-retarget:
+    - date: 2026-09-07T11:34:47.640Z
+      boxCommit: 0f7030f9d4a19a88de5498d7b74b24b39cb4a052
+      repoCommit: 7a7ed255641b46777a8c83b763f079eb4d3e1a2a
+      initial: 53518
+      peak: 53518
+      added: 0
+      turns: 1
+  chat-hidden-transcript-important-output:
+    - date: 2026-09-07T11:34:47.640Z
+      boxCommit: 0f7030f9d4a19a88de5498d7b74b24b39cb4a052
+      repoCommit: 7a7ed255641b46777a8c83b763f079eb4d3e1a2a
+      initial: 53496
+      peak: 53496
+      added: 0
+      turns: 1
+  card-theme-choice:
+    - date: 2026-09-08T03:17:14.090Z
+      boxCommit: 693441c45fc9e990e58320c8bec94dd7cc0e1a00
+      repoCommit: 23f49033dece1e46616ce82780e71504848511cc
+      initial: 45052
+      peak: 46722
+      added: 1670
+      turns: 4
+  card-theme-selection:
+    - date: 2026-09-08T03:17:14.090Z
+      boxCommit: 693441c45fc9e990e58320c8bec94dd7cc0e1a00
+      repoCommit: 23f49033dece1e46616ce82780e71504848511cc
+      initial: 45634
+      peak: 46476
+      added: 842
+      turns: 5
+  card-quote-treatment:
+    - date: 2026-09-08T03:17:14.090Z
+      boxCommit: 693441c45fc9e990e58320c8bec94dd7cc0e1a00
+      repoCommit: 23f49033dece1e46616ce82780e71504848511cc
+      initial: 45622
+      peak: 46956
+      added: 1334
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

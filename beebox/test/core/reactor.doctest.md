@@ -19,12 +19,18 @@ import * as path from "node:path";
 
 ## buildReactorSystemPrompt
 
-### Includes working directory and key instructions
+### Key instructions, and no absolute filesystem paths
+
+The system prompt must never embed the box's absolute path — agent-visible
+text stays box-relative (`docs/implemented-plans/one-root-box-layout.md`, criterion 4).
 
 ```ts
-const prompt = buildReactorSystemPrompt("/test/box");
-prompt.includes("WORKING DIRECTORY: /test/box")
+const prompt = buildReactorSystemPrompt();
+prompt.includes("working directory is the box root")
 => true
+
+/\/(Users|home|tmp|private)\//.test(prompt)
+=> false
 
 prompt.includes("processing jobs in a Bee Box")
 => true
@@ -42,9 +48,9 @@ prompt.includes("do not need to re-read")
 
 ```ts
 const prompt = buildReactorUserPrompt(
-  ["box/jobs/task1.job.card", "box/jobs/task2.job.card"],
-  { jobDescriptions: ["### box/jobs/task1.job.card\n```\ndo thing 1\n```",
-   "### box/jobs/task2.job.card\n```\ndo thing 2\n```"] },
+  ["_bookkeeping/jobs/task1.job.card", "_bookkeeping/jobs/task2.job.card"],
+  { jobDescriptions: ["### _bookkeeping/jobs/task1.job.card\n```\ndo thing 1\n```",
+   "### _bookkeeping/jobs/task2.job.card\n```\ndo thing 2\n```"] },
 );
 prompt.includes("2 job(s)")
 => true
@@ -63,8 +69,8 @@ prompt.includes("bbx finish")
 
 ```ts
 const prompt = buildReactorUserPrompt(
-  ["box/jobs/only.job.card"],
-  { jobDescriptions: ["### box/jobs/only.job.card\n```\nsolo task\n```"] },
+  ["_bookkeeping/jobs/only.job.card"],
+  { jobDescriptions: ["### _bookkeeping/jobs/only.job.card\n```\nsolo task\n```"] },
 );
 prompt.includes("1 job(s)")
 => true
@@ -77,9 +83,9 @@ prompt.includes("solo task")
 
 ```ts
 const promptWithAmbient = buildReactorUserPrompt(
-  ["box/jobs/only.job.card"],
+  ["_bookkeeping/jobs/only.job.card"],
   {
-    jobDescriptions: ["### box/jobs/only.job.card\n```\nsolo task\n```"],
+    jobDescriptions: ["### _bookkeeping/jobs/only.job.card\n```\nsolo task\n```"],
     ambientLine: "3 open todos on the plate (1 escalated) — `bbx todos`",
   },
 );
@@ -91,8 +97,8 @@ promptWithAmbient.startsWith("3 open todos on the plate (1 escalated)")
 
 ```ts
 const promptNoAmbient = buildReactorUserPrompt(
-  ["box/jobs/only.job.card"],
-  { jobDescriptions: ["### box/jobs/only.job.card\n```\nsolo task\n```"], ambientLine: null },
+  ["_bookkeeping/jobs/only.job.card"],
+  { jobDescriptions: ["### _bookkeeping/jobs/only.job.card\n```\nsolo task\n```"], ambientLine: null },
 );
 promptNoAmbient.startsWith("Please process")
 => true
@@ -104,10 +110,10 @@ promptNoAmbient.startsWith("Please process")
 
 ```ts
 const box = await makeTmpBox({ git: true });
-const jobsDir = path.join(box.root, "box/jobs");
-await box.write("box/jobs/task-a.job.card", `---\npriority: low\n---\nLow A`);
-await box.write("box/jobs/task-b.job.card", `---\npriority: normal\n---\nNormal B`);
-await box.write("box/jobs/task-c.job.card", `---\npriority: low\n---\nLow C`);
+const jobsDir = path.join(box.root, "_bookkeeping/jobs");
+await box.write("_bookkeeping/jobs/task-a.job.card", `---\npriority: low\n---\nLow A`);
+await box.write("_bookkeeping/jobs/task-b.job.card", `---\npriority: normal\n---\nNormal B`);
+await box.write("_bookkeeping/jobs/task-c.job.card", `---\npriority: low\n---\nLow C`);
 
 const cards = await findJobCards(jobsDir);
 cards.length
@@ -136,11 +142,11 @@ date is rejected rather than normalized — `Date.UTC` would happily roll month
 
 ```ts
 const box = await makeTmpBox({ git: true });
-const jobsDir = path.join(box.root, "box/jobs");
-await box.write("box/jobs/2026-08-18T09-30-00-gmail.intake.job.card", `---\n---\nStamped to the second`);
-await box.write("box/jobs/2026-08-18T09-30.contains-backfill.job.card", `---\n---\nStamped to the minute`);
-await box.write("box/jobs/2026-99-99T99-99-bad.intake.job.card", `---\n---\nNot a date`);
-await box.write("box/jobs/handwritten.job.card", `---\n---\nNo stamp at all`);
+const jobsDir = path.join(box.root, "_bookkeeping/jobs");
+await box.write("_bookkeeping/jobs/2026-08-18T09-30-00-gmail.intake.job.card", `---\n---\nStamped to the second`);
+await box.write("_bookkeeping/jobs/2026-08-18T09-30.contains-backfill.job.card", `---\n---\nStamped to the minute`);
+await box.write("_bookkeeping/jobs/2026-99-99T99-99-bad.intake.job.card", `---\n---\nNot a date`);
+await box.write("_bookkeeping/jobs/handwritten.job.card", `---\n---\nNo stamp at all`);
 
 const byFile = new Map((await findJobCards(jobsDir)).map((c) => [c.file, c.createdAt]));
 byFile.get("2026-08-18T09-30-00-gmail.intake.job.card")?.toISOString()
@@ -165,9 +171,9 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-const jobsDir = path.join(box.root, "box/jobs");
-await box.write("box/jobs/msg1.chat.job.card", `---\nsource: telegram\n---\nChat`);
-await box.write("box/jobs/sweep.intake.job.card", `---\nsource: gmail\n---\nIntake`);
+const jobsDir = path.join(box.root, "_bookkeeping/jobs");
+await box.write("_bookkeeping/jobs/msg1.chat.job.card", `---\nsource: telegram\n---\nChat`);
+await box.write("_bookkeeping/jobs/sweep.intake.job.card", `---\nsource: gmail\n---\nIntake`);
 
 const chatOnly = await findJobCards(jobsDir, { typeFilter: "chat" });
 chatOnly.length
@@ -187,10 +193,10 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-const jobsDir = path.join(box.root, "box/jobs");
-await box.write("box/jobs/email.intake.job.card", `---\nsource: gmail\n---\nEmail triage`);
-await box.write("box/jobs/chat.chat.job.card", `---\nsource: telegram\n---\nChat`);
-await box.write("box/jobs/rss.intake.job.card", `---\nsource: rss\n---\nRSS triage`);
+const jobsDir = path.join(box.root, "_bookkeeping/jobs");
+await box.write("_bookkeeping/jobs/email.intake.job.card", `---\nsource: gmail\n---\nEmail triage`);
+await box.write("_bookkeeping/jobs/chat.chat.job.card", `---\nsource: telegram\n---\nChat`);
+await box.write("_bookkeeping/jobs/rss.intake.job.card", `---\nsource: rss\n---\nRSS triage`);
 
 const gmailOnly = await findJobCards(jobsDir, { sourceFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))
@@ -217,9 +223,9 @@ from source-filtered runs):
 
 ```ts
 const box = await makeTmpBox({ git: true });
-const jobsDir = path.join(box.root, "box/jobs");
-await box.write("box/jobs/y1.intake.job.card", "---\nstatus: pending\ncreated: 2026-06-09T00:00:00Z\nsource: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: box/inbox/a.memo.card\n---\n");
-await box.write("box/jobs/y2.intake.job.card", "---\nstatus: pending\ncreated: 2026-06-09T00:00:00Z\nsource: telegram\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
+const jobsDir = path.join(box.root, "_bookkeeping/jobs");
+await box.write("_bookkeeping/jobs/y1.intake.job.card", "---\nstatus: pending\ncreated: 2026-06-09T00:00:00Z\nsource: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: _content/inbox/a.memo.card\n---\n");
+await box.write("_bookkeeping/jobs/y2.intake.job.card", "---\nstatus: pending\ncreated: 2026-06-09T00:00:00Z\nsource: telegram\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
 
 const gmailOnly = await findJobCards(jobsDir, { sourceFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))
@@ -235,8 +241,8 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await fs.mkdir(path.join(box.root, "box/jobs"), { recursive: true });
-const cards = await findJobCards(path.join(box.root, "box/jobs"));
+await fs.mkdir(path.join(box.root, "_bookkeeping/jobs"), { recursive: true });
+const cards = await findJobCards(path.join(box.root, "_bookkeeping/jobs"));
 cards.length
 => 0
 
@@ -259,7 +265,7 @@ cards.length
 const desc = await buildJobDescription(
   {
     card: { file: "task.intake.job.card", priority: "low" },
-    relPath: "box/jobs/task.intake.job.card",
+    relPath: "_bookkeeping/jobs/task.intake.job.card",
     content: createIntakeJobTemplate({
       created: "2026-07-01T00:00:00Z",
       source: "rss",
@@ -294,7 +300,7 @@ await box.write("store/inbox/item1.card", `---\nstatus: new\n---\nHello from ite
 const desc = await buildJobDescription(
   {
     card: { file: "x.intake.job.card", priority: "normal" },
-    relPath: "box/jobs/x.intake.job.card",
+    relPath: "_bookkeeping/jobs/x.intake.job.card",
     content: createIntakeJobTemplate({
       created: "2026-07-01T00:00:00Z",
       source: "rss",
@@ -331,7 +337,7 @@ await box.write("store/threads/t1.chat-thread.card", `---\nstatus: new\ncreated:
 const desc = await buildJobDescription(
   {
     card: { file: "reply.chat.job.card", priority: "normal" },
-    relPath: "box/jobs/reply.chat.job.card",
+    relPath: "_bookkeeping/jobs/reply.chat.job.card",
     content: createChatJobTemplate({
       created: "2026-07-01T00:00:00Z",
       source: "telegram",
@@ -360,7 +366,7 @@ await box.cleanup();
 const desc = await buildJobDescription(
   {
     card: { file: "task.intake.job.card", priority: "normal" },
-    relPath: "box/jobs/task.intake.job.card",
+    relPath: "_bookkeeping/jobs/task.intake.job.card",
     content: createIntakeJobTemplate({
       created: "2026-07-01T00:00:00Z",
       source: "rss",
@@ -388,7 +394,7 @@ surfaced with its raw content and a warning rather than crashing the batch.
 const desc = await buildJobDescription(
   {
     card: { file: "legacy.job.card", priority: "normal" },
-    relPath: "box/jobs/legacy.job.card",
+    relPath: "_bookkeeping/jobs/legacy.job.card",
     content: `<job><description>Old XML job</description></job>`,
   },
   "/tmp/fake-box",

@@ -1,7 +1,7 @@
 /**
  * Scan-Import command — turn a scanned PDF, OCR'd document PDF, or batch of
  * scanned JPEGs into a session whose card lands at
- * `box/inbox/scan-<date>-<id>.capture-session.card`. Child cards and files
+ * `_content/inbox/scan-<date>-<id>.capture-session.card`. Child cards and files
  * live in the session's attach scope (`scan-….attach/`).
  *
  * Internal dispatch (the PDF branch probes for a text layer — `pdf-probe.ts`):
@@ -17,19 +17,19 @@
  *   box/questions/<session-slug>-photo-NNN.review.question.card (optional)
  *   box/questions/<session-slug>-orphan-back-NNN.question.card
  *   box/questions/<session-slug>-unsure-NNN.question.card
- *   box/inbox/<name>.capture-session.card  (at inbox level)
+ *   _content/inbox/<name>.capture-session.card  (at inbox level)
  *   <sessionAttach>/source.file.card + source.attach/source.pdf
  *     (when imported from a PDF source)
  *
- * Question cards live in `box/questions/`, not the attach scope, so the
+ * Question cards live in `_bookkeeping/questions/`, not the attach scope, so the
  * system's pending/notification/aging machinery (which only scans
- * `box/questions/`) sees them; each carries a `context:` ref back into the
+ * `_bookkeeping/questions/`) sees them; each carries a `context:` ref back into the
  * attach scope for the item it's about.
  *
  * Pdf flow output:
  *   <sessionAttach>/source.pdf.card
  *     + source.attach/{source.pdf, docling.json.gz, page-NNN.avif, figure-NNN.avif}
- *   box/inbox/<name>.capture-session.card  (no image refs)
+ *   _content/inbox/<name>.capture-session.card  (no image refs)
  *
  * Internal implementation is split across siblings: `scan-import-session.ts`
  * (layout + input classification + vision-backend selection),
@@ -80,6 +80,11 @@ const ScanImportArgsSchema = z.object({
    *  promote worker passes `scan-upload/<token-name>`; the shape is a
    *  convention, not a validated format. */
   source: z.string().optional(),
+  /** Override the material this run is treated as. A single PDF is a document
+   *  by default; `photos` sends it through the photo flow instead, which is
+   *  how a scanned photo album gets front/back pairing. Absent means the
+   *  default route for the inputs. */
+  mode: z.enum(["document", "photos"]).optional(),
 });
 export type ScanImportArgs = z.infer<typeof ScanImportArgsSchema>;
 
@@ -87,7 +92,7 @@ async function executeScanImport(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const { inputs, context: extraContext, source } = parseCommandArgs(args, ScanImportArgsSchema);
+  const { inputs, context: extraContext, source, mode } = parseCommandArgs(args, ScanImportArgsSchema);
 
   if (!inputs || inputs.length === 0) {
     return { success: false, error: "inputs argument is required (at least one file)" };
@@ -97,16 +102,30 @@ async function executeScanImport(
   if ("error" in resolved) return { success: false, error: resolved.error };
 
   if (resolved.kind === "pdf") {
-    // The dispatch split: a PDF that already carries text is a pdf card (its
-    // text layer is the whole point); a PDF without one is a photo batch that
-    // happens to be wrapped in a PDF, and belongs in the photo flow where
-    // front/back pairing lives.
-    const probe = await probePdf(resolved.pdfPath);
-    if (probe.hasTextLayer) {
-      ctx.writeLine(`PDF has a text layer (${probe.textLayerSource}) → pdf mode`);
+    // A PDF is a document unless the caller says otherwise.
+    //
+    // This used to branch on whether the PDF carried a text layer, sending
+    // textless ones to the photo flow on the assumption that they were photo
+    // batches wrapped in a PDF. That made a scanner's OCR checkbox decide
+    // which pipeline a document took: the same paperwork scanned with
+    // "searchable PDF" off became photo pages, each raising a `photo |
+    // back-of-photo | trash` question no answer fit — and one document was
+    // trashed unfiled because triage had only that question to work from.
+    // Whether a text layer exists says how to GET the text, not what the
+    // material IS; pdf mode now OCRs when there is no layer to read.
+    if (mode !== "photos") {
+      if (mode === "document") ctx.writeLine("Mode: document → pdf mode");
+      else {
+        const probe = await probePdf(resolved.pdfPath);
+        ctx.writeLine(
+          probe.hasTextLayer
+            ? `PDF has a text layer (${probe.textLayerSource}) → pdf mode`
+            : "PDF has no text layer → pdf mode with OCR",
+        );
+      }
       return runPdfMode(ctx, { pdfPath: resolved.pdfPath, source });
     }
-    ctx.writeLine("PDF has no text layer → rendering pages for photo analysis");
+    ctx.writeLine("Mode: photos → rendering pages for photo analysis");
     return runPhotoModeFromPdf(ctx, { pdfPath: resolved.pdfPath, extraContext, source });
   }
 
@@ -327,13 +346,21 @@ async function runPhotoMode(
 
 registerCommand({
   name: "scan-import",
-  description: "Import an image batch as photo image cards, or a PDF as a pdf card, into box/inbox/scan-…/",
+  description: "Import an image batch as photo image cards, or a PDF as a pdf card, into _content/inbox/scan-…/",
   args: [
     {
       name: "inputs",
       description: "PDF (one) or image files (many) — absolute or relative to box root",
       required: true,
       type: "string[]",
+    },
+    {
+      name: "mode",
+      description:
+        "document (default for a PDF) or photos — use photos for a scanned photo album, " +
+        "where front/back pairing applies",
+      required: false,
+      type: "string",
     },
     {
       name: "context",

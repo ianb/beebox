@@ -104,7 +104,7 @@
  * ## Scope
  *
  * Single machine. The state directories that consume this primitive
- * (`config/schedules/.state/`, `.bbx-lock`, `.bbx-reactor.lock`, the device
+ * (`_config/schedules/.state/`, `.bbx-lock`, `.bbx-reactor.lock`, the device
  * store's `.lock`) are gitignored, so cross-machine contention is out of
  * scope. The hostname field is recorded for inspectability only.
  *

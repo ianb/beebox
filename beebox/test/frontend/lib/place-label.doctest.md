@@ -13,16 +13,18 @@ subdirectory. A non-null `dir` is what gets handed to `landmarks.forDir`.
 import { placeLabel } from "../../../src/frontend/src/lib/place-label.js";
 ```
 
-## The box root is the chat landing
+## The box root is Home; a literal `/chat` route is still Chat
 
-`/` redirects to `/chat` (Track A), so the bare box path names the same place.
+`/` redirects to `/chat` (Track A) and both render the same page, but the pill
+names the bare box root "Home" (docs/glossary.md) while a literal `/chat`
+route keeps "Chat".
 
 ```ts
 JSON.stringify(placeLabel({ pathname: "/test1", boxSlug: "test1" }))
-=> {"label":"Chat","dir":null}
+=> {"label":"Home","dir":null}
 
 JSON.stringify(placeLabel({ pathname: "/test1/", boxSlug: "test1" }))
-=> {"label":"Chat","dir":null}
+=> {"label":"Home","dir":null}
 
 JSON.stringify(placeLabel({ pathname: "/test1/chat", boxSlug: "test1" }))
 => {"label":"Chat","dir":null}
@@ -54,19 +56,29 @@ labelOf("/test1/history/a1b2c3")
 
 ## Browse names the path, and carries the dir
 
-A directory path is itself the dir.
+A directory path is itself the dir. The label uses the boxholder display
+form — a `_content` path shows bare, no leading area prefix
+(`display-path.ts`).
 
 ```ts
-JSON.stringify(placeLabel({ pathname: "/test1/browse/store/recipes", boxSlug: "test1" }))
-=> {"label":"Browse: store/recipes","dir":"store/recipes"}
+JSON.stringify(placeLabel({ pathname: "/test1/browse/_content/recipes", boxSlug: "test1" }))
+=> {"label":"Browse: recipes","dir":"_content/recipes"}
 ```
 
 A trailing segment with a `.` reads as a file, so the dir is its parent — the
 landmark lookup wants the enclosing directory, not the card.
 
 ```ts
-JSON.stringify(placeLabel({ pathname: "/test1/browse/store/recipes/Bread.card", boxSlug: "test1" }))
-=> {"label":"Browse: store/recipes/Bread.card","dir":"store/recipes"}
+JSON.stringify(placeLabel({ pathname: "/test1/browse/_content/recipes/Bread.card", boxSlug: "test1" }))
+=> {"label":"Browse: recipes/Bread.card","dir":"_content/recipes"}
+```
+
+A machinery-area path shows the area's friendly label instead of the
+underscore name.
+
+```ts
+JSON.stringify(placeLabel({ pathname: "/test1/browse/_bookkeeping/jobs", boxSlug: "test1" }))
+=> {"label":"Browse: Bookkeeping:jobs","dir":"_bookkeeping/jobs"}
 ```
 
 Browsing the box root has no path portion, and its dir is the root (`""`, not
@@ -83,11 +95,11 @@ Both `/card/$` and `/views/$` render one card; the card's own title is the page
 heading, so the pill names the kind and spends its dir on the landmark lookup.
 
 ```ts
-JSON.stringify(placeLabel({ pathname: "/test1/card/store/recipes/Bread.card", boxSlug: "test1" }))
-=> {"label":"Card","dir":"store/recipes"}
+JSON.stringify(placeLabel({ pathname: "/test1/card/_content/recipes/Bread.card", boxSlug: "test1" }))
+=> {"label":"Card","dir":"_content/recipes"}
 
-JSON.stringify(placeLabel({ pathname: "/test1/views/store/plate.todo-view.card", boxSlug: "test1" }))
-=> {"label":"Card","dir":"store"}
+JSON.stringify(placeLabel({ pathname: "/test1/views/_content/plate.todo-view.card", boxSlug: "test1" }))
+=> {"label":"Card","dir":"_content"}
 ```
 
 ## Anything unmapped falls back to the landing

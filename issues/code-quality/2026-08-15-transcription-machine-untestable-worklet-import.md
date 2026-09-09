@@ -6,6 +6,7 @@ labels: [transcription, voice, testing]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-transcript-confidence — adding words-with-confidence to the machine (Track 2)
+priority: important
 ---
 
 No doctest can import `realtimeTranscriptionMachine`, `transcription-actor.ts`,

@@ -70,7 +70,7 @@ export function MountFolderForm() {
           value={dir}
           onChange={setDir}
           required
-          helper="e.g. store/drive/recipes"
+          helper="e.g. _content/drive/recipes"
           className="flex-1 min-w-64"
         />
         <Button
@@ -136,7 +136,7 @@ export function AddPointerForm() {
           value={path}
           onChange={setPath}
           required
-          helper="e.g. store/tax/Receipt_2026"
+          helper="e.g. _content/tax/Receipt_2026"
           className="flex-1 min-w-64"
         />
         <Button

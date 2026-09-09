@@ -8,9 +8,10 @@ deployment (`box.example.com`) rather than something every hub needs.
 
 ## The pieces
 
-- **The box itself** is a v2 (package-layout) box: a small Node package with
-  a `content/` directory inside it — see [`docs/box-layout.md`](box-layout.md)
-  for the full shape. `bbx init <path>` scaffolds a new one from scratch.
+- **The box itself** is a one-root box: a small Node package whose root
+  directory is also the operational box — see
+  [`docs/box-layout.md`](box-layout.md) for the full shape. `bbx init <path>`
+  scaffolds a new one from scratch.
 - **`hub.json`** is the routing table a `bbx hub` process reads: a map of URL
   slug → box path, plus optional `port`/`host`/`lazy`/`idleMs`/`keepRecent`.
   See `src/hub/hub-config.ts` for the schema. The hub does **not** hot-reload
@@ -35,7 +36,7 @@ pnpm dlx --package=<beebox tarball> bbx init .
 pnpm install
 ```
 
-Fill in the seed `content/briefing.briefing.card` with the box's purpose, key
+Fill in the seed `_content/briefing.briefing.card` with the box's purpose, key
 people, and critical context — `bbx wakeup` (or the next scheduler tick)
 compiles it into the agent's generated docs.
 
@@ -48,7 +49,7 @@ Use `bbx hub add-box`, which writes the entry to the hub's `hub.json` (default
 `~/.config/beebox/hub.json`, or wherever `bbx hub --config <path>` points):
 
 ```bash
-bbx hub add-box <slug> /path/to/<name>     # package root or content/ — the hub resolves either
+bbx hub add-box <slug> /path/to/<name>     # the box root — one root, nothing else to resolve
 bbx hub add-box <slug> /path/to/<name> --dry-run   # print the change, write nothing
 ```
 
@@ -87,7 +88,7 @@ systemctl restart beebox-hub   # example deployment: adjust to how you run bbx h
 
 ## 3. Access control
 
-Per-box access lives in the box's own `config/box.json`, checked by
+Per-box access lives in the box's own `_config/box.json`, checked by
 `src/webapp/box-access.ts`:
 
 ```json
@@ -126,10 +127,11 @@ from its admin page.
 Without a granted key the affected connector emits a health warning but the box
 still runs; `bbx secrets status` names exactly which grant is missing.
 
-Legacy `config/connectors/*.secret.json` files still work as a deprecated
-fallback during the transition, and `bbx health` flags any it finds. Don't
-create new ones — move a machine's existing files into the store once with
-`bbx secrets migrate` (`--dry-run` prints the plan first).
+Legacy `_config/connectors/*.secret.json` files no longer work as a fallback —
+the machine secret store is the only source a connector reads from — but
+`bbx health` still flags any stray file it finds. Don't create new ones — move
+a machine's existing files into the store once with `bbx secrets migrate`
+(`--dry-run` prints the plan first), then delete the originals.
 
 ## Example deployment: box.example.com
 

@@ -29,12 +29,12 @@ process.env.BBX_PUSH_STORE_DIR = pushStoreDir;
 const NOW = new Date("2026-06-09T12:00:00Z");
 
 async function seedFailingTask(box) {
-  await box.seed("config/schedules/sync-notes.scheduled-script.card", `---
+  await box.seed("_config/schedules/sync-notes.scheduled-script.card", `---
 cron: "0 * * * *"
 runs: bbx wakeup --connector notes
 ---
 `);
-  await box.seed("config/schedules/.state/sync-notes.json", JSON.stringify({
+  await box.seed("_config/schedules/.state/sync-notes.json", JSON.stringify({
     lastRun: "2026-06-09T11:00:00Z",
     lastResult: "failure",
     lastError: "Command failed with exit code 1\nstderr:\nAgent invocation failed: Model gpt-retired is not supported",
@@ -67,10 +67,10 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 await seedFailingTask(box);
-await box.seed("config/box.json", JSON.stringify({
+await box.seed("_config/box.json", JSON.stringify({
   healthAlerts: { telegramChat: "777" },
 }));
-await box.seed("config/connectors/telegram.secret.json", JSON.stringify({
+await box.seed("_config/connectors/telegram.secret.json", JSON.stringify({
   botToken: "fake:token", webhookSecret: "s",
 }));
 box.commitAll("seed");

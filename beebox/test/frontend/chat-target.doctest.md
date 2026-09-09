@@ -116,8 +116,8 @@ add milk to the list
 ## planRestore: attachments/selections always re-added regardless of composer text
 
 ```ts continue
-const sel = [{ id: 1, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body" }];
-const e2 = createTypedEmission({ text: "note: [selection1]", images: [], files: [{ id: 1, path: "tmp/report.pdf" }], selections: sel });
+const sel = [{ id: 1, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body" }];
+const e2 = createTypedEmission({ text: "note: [selection1]", images: [], files: [{ id: 1, path: "_tmp/report.pdf" }], selections: sel });
 const plan3 = planRestore(typedOverDraft, e2);
 plan3.files.length
 => 1
@@ -142,7 +142,7 @@ const failed = createTypedEmission({
     { id: 1, mimeType: "image/png", dataBase64: "aGk=" },
     { id: 2, mimeType: "image/png", dataBase64: "aG8=" },
   ],
-  files: [{ id: 1, path: "tmp/report.pdf" }],
+  files: [{ id: 1, path: "_tmp/report.pdf" }],
   selections: [{ id: 3, ref: "/x.card", text: "t", position: "body", anchor: null, spokenWords: null }],
 });
 applyRestorePlan(store.editor, planRestore(store.get(), failed));

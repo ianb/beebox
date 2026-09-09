@@ -7,6 +7,7 @@ labels: [ios, layout]
 filed-by: agent
 discovered-by: Ian
 discovered-in: "main session — presumably mostly figuring out the layouts, and I have to actually test things"
+priority: normal
 ---
 
 The app ships with `TARGETED_DEVICE_FAMILY = "1,2"` (all six build configs) —

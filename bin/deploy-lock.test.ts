@@ -29,9 +29,11 @@ function fixture() {
   const fakeBin = join(root, "fake-bin");
   mkdirSync(deployDir, { recursive: true });
   mkdirSync(fakeBin);
-  copyFileSync(join(ROOT, "beebox", "deploy", "deploy.sh"), join(deployDir, "deploy.sh"));
-  chmodSync(join(deployDir, "deploy.sh"), 0o755);
-  writeFileSync(join(deployDir, "server-ip"), "192.0.2.1\n");
+  for (const name of ["deploy.sh", "deploy-target.sh"]) {
+    copyFileSync(join(ROOT, "beebox", "deploy", name), join(deployDir, name));
+    chmodSync(join(deployDir, name), 0o755);
+  }
+  writeFileSync(join(deployDir, "target.env"), "BBX_DEPLOY_HOST=192.0.2.1\n");
   writeFileSync(join(deployDir, ".last-deploy.log"), "");
   execFileSync("git", ["init", "-q", root]);
   execFileSync("git", ["-C", root, "config", "user.email", "test@example.invalid"]);
@@ -51,9 +53,23 @@ function fakeCommand(path: string, body: string): void {
   chmodSync(path, 0o755);
 }
 
+/**
+ * Where deploy.sh takes its latest-wins lock: a directory named by the shared
+ * git dir's root, holding the owning pid.
+ */
+function lockDir(root: string): string {
+  return join(root, ".deploy-checkout.lock");
+}
+
+/** Simulate another deploy holding the lock. Defaults to an owner really alive. */
+function holdLock(root: string, ownerPid?: number): void {
+  mkdirSync(lockDir(root), { recursive: true });
+  writeFileSync(join(lockDir(root), "pid"), `${String(ownerPid ?? process.pid)}\n`);
+}
+
 test("a lock loser reports an explicit superseded terminal state", () => {
   const f = fixture();
-  fakeCommand(join(f.fakeBin, "shlock"), "exit 1");
+  holdLock(f.root);
   const result = spawnSync(join(f.deployDir, "deploy.sh"), ["--ref", f.first], {
     encoding: "utf8",
     env: { ...process.env, PATH: `${f.fakeBin}:${process.env.PATH}` },
@@ -63,9 +79,39 @@ test("a lock loser reports an explicit superseded terminal state", () => {
   assert.ok(result.stdout.includes(`Deploy superseded: ${f.first} queued`), result.stdout);
 });
 
+test("a lock left by a dead deploy is broken, not waited on forever", () => {
+  const f = fixture();
+  // A pid that cannot be running: the deploy that owned this lock was killed
+  // outright (OOM, closed terminal) and never released it. shlock used to
+  // handle this; the portable lock has to as well, or one dead deploy wedges
+  // every future one.
+  holdLock(f.root, 0x7f_ff_ff_ff);
+  fakeCommand(join(f.fakeBin, "ssh"), "exit 23");
+  const result = spawnSync(join(f.deployDir, "deploy.sh"), ["--ref", f.first], {
+    encoding: "utf8",
+    env: { ...process.env, PATH: `${f.fakeBin}:${process.env.PATH}` },
+  });
+
+  assert.match(result.stdout, /Breaking a stale deploy lock/);
+  assert.ok(result.stdout.includes(`Deploying ref '${f.first}'`), result.stdout);
+});
+
+test("a lock directory with no owner recorded is stale, not a permanent block", () => {
+  const f = fixture();
+  // The creator died between mkdir and writing its pid.
+  mkdirSync(lockDir(f.root), { recursive: true });
+  fakeCommand(join(f.fakeBin, "ssh"), "exit 23");
+  const result = spawnSync(join(f.deployDir, "deploy.sh"), ["--ref", f.first], {
+    encoding: "utf8",
+    env: { ...process.env, PATH: `${f.fakeBin}:${process.env.PATH}` },
+  });
+
+  assert.match(result.stdout, /Breaking a stale deploy lock/);
+  assert.ok(result.stdout.includes(`Deploying ref '${f.first}'`), result.stdout);
+});
+
 test("a failed lock holder chains to a newer request", () => {
   const f = fixture();
-  fakeCommand(join(f.fakeBin, "shlock"), "exit 0");
   fakeCommand(
     join(f.fakeBin, "ssh"),
     'if [ -e "$SSH_COUNTER" ]; then exit 24; fi\n' +
@@ -96,7 +142,6 @@ test("a failed lock holder chains to a newer request", () => {
 
 test("a signal-style failure does not start a chained deploy", () => {
   const f = fixture();
-  fakeCommand(join(f.fakeBin, "shlock"), "exit 0");
   fakeCommand(
     join(f.fakeBin, "ssh"),
     'printf "%s\\n" "$NEW_SHA" > "$REQUESTED_FILE_FOR_TEST"\nexit 130',
@@ -130,7 +175,7 @@ test("deploy hooks persist intent before starting a detached child", () => {
 
 test("a hook-recorded request cannot be overwritten by a delayed child", () => {
   const f = fixture();
-  fakeCommand(join(f.fakeBin, "shlock"), "exit 1");
+  holdLock(f.root);
   writeFileSync(join(f.root, ".deploy-requested"), `${f.second}\n`);
   const result = spawnSync(
     join(f.deployDir, "deploy.sh"),

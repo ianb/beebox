@@ -6,6 +6,10 @@ A migration is a one-shot transformation of card data on disk — schema renames
 
 **Box configuration counts too.** `annex-config-2026-08` re-applies `annex.largefiles` and `.git/info/attributes` from the current renderings; it transforms no cards and leaves the working tree untouched. Config written once at `bbx init` goes stale whenever the code's idea of it changes, and a migration is the one mechanism that records per box whether the convergence happened. The catch is in the name: a manifest key runs once, so **the next rendering change needs a new dated entry** — forgetting to add one is silent. Whether something should re-apply box configuration without being asked is open (`issues/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md`).
 
+`gitignore-2026-09` is the second configuration migration: it rewrites the box's `.gitignore` from the current rendering (`writeBoxGitignore`, the function `bbx init` uses) and untracks the state directory, box-root locks, and pid file that the pre-rename ignore file had let autocommit sweep in. It leaves `.beebox/box.json` tracked. See `scripts/migrate/box-gitignore.ts` for why the untrack list is an explicit allowlist rather than "everything now ignored".
+
+`hooks-2026-09` reinstalls the managed git hooks and the package-root Claude settings through `installValidationHooks`, the same call `bbx init` makes: the hooks bake in the CLI path and name, and boxes that predate the rename were still looking for the former CLI at a checkout that no longer exists.
+
 ## `bbx migrate` is the entry point
 
 Each box has `config/migrations.jsonl` — append-only JSONL, one `{name, applied-at}` per line — recording which migrations it's seen. `bbx migrate` compares against the canonical ordered list in `src/core/migrations.ts` and runs anything missing in order, appending an entry after each success.
@@ -65,13 +69,17 @@ deploy log scrolls away.
 ### `bbx docs refresh` — the generated-docs half
 
 Migrating a box's cards is only half of converging it. Its `.claude/rules/card-*.md`,
-`.claude/skills/`, and `docs/generated/` are regenerated from the schema registry
-by `generateDocs`, which is cache-gated on the running engine's version — so it
-regenerates the first time it runs after a deploy, but only when *something runs
-it*, and its triggers are all activity (a chat session start, a `bbx wakeup`
-reactor cycle, `bbx init`). A box nobody talks to kept the previous engine's
-guidance indefinitely: the 2026-08-24 `document`→`pdf` rename left 3 of 6 prod
-boxes teaching a card type that no longer existed until a manual `bbx init` pass.
+`.claude/skills/`, and the box-compiled docs under `_content/docs/generated/` are
+regenerated from the schema registry by `generateDocs`, which is cache-gated on
+the running engine's version — so it regenerates the first time it runs after a
+deploy, but only when *something runs it*, and its triggers are all activity (a
+chat session start, a `bbx wakeup` reactor cycle, `bbx init`). A box nobody talks
+to kept the previous engine's guidance indefinitely: the 2026-08-24 `document`→`pdf`
+rename left 3 of 6 prod boxes teaching a card type that no longer existed until a
+manual `bbx init` pass. (The engine reference docs at `node_modules/beebox/box-docs/`
+aren't part of this gap — `generateDocs` rewrites them unconditionally on every run
+from the currently installed engine, so they can't lag behind the version already
+on disk.)
 
 `bbx docs refresh` closes that gap and takes the sweep's shape deliberately — the
 normal cache (silent no-op on a box that already regenerated), a dirty box
@@ -147,18 +155,18 @@ hand.
 
 6. **Test it.** Run dry-run against a real box you can reset; then `--apply` and validate with `bbx validate`. Confirm the manifest got an entry. If you have a noisy-mode warning, decide explicitly whether to handle it or accept the loss — and document the call.
 
-   **A type/schema migration also has to converge each box's generated docs — the deploy now does this for you, so verify rather than plan it.** `.claude/rules/card-*.md`, `.claude/skills/`, and `docs/generated/` are regenerated from the schema registry, and until 2026-08-24 that happened only on `bbx init`, a chat-session start, or a `bbx wakeup` reactor cycle — so boxes with no such activity kept rules teaching the retired type (the `document`→`pdf` rename left 3 of 6 prod boxes on stale `card-document.md` until a manual `bbx init` pass). `deploy.sh` now runs `bbx docs refresh` per box right after the migration sweep, which regenerates and commits them. What is left for you is the check: a box that was **dirty** at deploy time is skipped and retried next deploy, so after a rollout `grep -rl` the old type name across each box (generated docs included) rather than assuming either half finished the job.
+   **A type/schema migration also has to converge each box's generated docs — the deploy now does this for you, so verify rather than plan it.** `.claude/rules/card-*.md`, `.claude/skills/`, and the box-compiled docs under `_content/docs/generated/` are regenerated from the schema registry, and until 2026-08-24 that happened only on `bbx init`, a chat-session start, or a `bbx wakeup` reactor cycle — so boxes with no such activity kept rules teaching the retired type (the `document`→`pdf` rename left 3 of 6 prod boxes on stale `card-document.md` until a manual `bbx init` pass). `deploy.sh` now runs `bbx docs refresh` per box right after the migration sweep, which regenerates and commits them. What is left for you is the check: a box that was **dirty** at deploy time is skipped and retried next deploy, so after a rollout `grep -rl` the old type name across each box (`.claude/rules/`, `.claude/skills/`, and `_content/docs/generated/`) rather than assuming either half finished the job. The engine reference docs at `node_modules/beebox/box-docs/` need no such check — every `generateDocs` run rewrites them from whatever engine version is currently installed, so they update themselves on the next `bbx` activity with no per-box step.
 
-7. **File an issue to remove the legacy support.** A migration almost always leaves code behind that exists only to tolerate the *old* shape — a fallback branch, a lenient parse, a compatibility field, a "both spellings accepted" reader. That code should not live forever, and **you are the last person who can name it precisely**: months later nobody can tell which branches are legacy tolerance and which are load-bearing. Write the issue now, while you can list them.
+7. **Defer removal of the legacy support.** A migration almost always leaves code behind that exists only to tolerate the *old* shape — a fallback branch, a lenient parse, a compatibility field, a "both spellings accepted" reader. That code should survive a short, explicit settling period, not live forever, and **you are the last person who can name it precisely**: months later nobody can tell which branches are legacy tolerance and which are load-bearing. Write the cleanup issue when the migration ships, while you can list those paths, but keep it out of the active queue until its removal date.
 
-   File it under `issues/code-quality/` (it is tech debt, not an upstream `watch/` item — the trigger is internal). It should name:
+   File it under `issues/deferred/` with an `activate-on` date after the intended settling period and `category: code-quality`. This is a known-date cleanup, not an upstream `watch/` item. The `deferred-issues` schedule will activate it into `issues/code-quality/` when due. It should name:
 
    - **The exact code that exists only for the old shape** — `file:line` for each fallback, not "legacy handling in the loader."
    - **The migration's manifest name**, since that is how the trigger gets checked.
    - **What makes it safe to remove** — normally "every box that matters has this migration in its `config/migrations.jsonl`." Include the boxes that aren't yours to migrate on demand: prod boxes and any box a developer hasn't run `bbx migrate` on yet lag behind, so a green local sweep is not the signal.
    - **What breaks if it's removed too early** — usually an un-migrated box failing to load rather than anything loud, which is why the trigger has to be checked rather than assumed.
 
-   Don't set `priority:` (that is the developer's call), and don't wait for the removal to be scheduled — the issue exists so the debt is *recorded* at the moment it is created, not so it gets done next.
+   Don't set `priority:` (that is the developer's call). Choose the activation date deliberately: long enough for the deploy sweep and any skipped dirty boxes to converge, but no longer than the compatibility window actually needs. The issue exists so the debt is *recorded* at the moment it is created without competing in the active queue before it is actionable.
 
 Migrations are written for cards that already exist on disk; you almost never need to think about schema-level migrations (the schema files in `src/schemas/` evolve freely as long as old data still parses, or has a migrator to bring it forward).
 
@@ -386,6 +394,43 @@ post-dates the XML→frontmatter migration), so it's a pure rename + ref
 rewrite, same shape as `gsheet-rename`. See
 `scripts/migrate/document-to-pdf.ts`. Idempotent: a box with no
 `*.document.card` is a clean no-op.
+
+### `one-root` (shape migration — v2 two-root → v3 one-root layout)
+
+Registered at the end of `MIGRATIONS`, but unlike every migrator above it,
+`one-root` runs against a box that ISN'T v3 yet — the v3 engine refuses v2
+boxes outright (`getBoxShape`), so `bbx migrate` has a bootstrap path
+(`src/cli/commands/migrate-bootstrap.ts`) that probes for a v2 box
+(`src/core/migrations/one-root-v2-probe.ts`, tolerant of the pre-v3 marker)
+and hands it straight to `src/core/migrations/one-root-run.ts`'s
+`runOneRootMigration`, entirely outside the normal manifest-driven `pending`
+loop (a v2 box has no `_config/migrations.jsonl` yet — the migration MOVES
+that file into existence as part of converting `content/config/` →
+`_config/`). See `docs/implemented-plans/one-root-box-layout.md` Track E for the full
+design. In order: preflight (clean tree, no running-process lock files, the
+v2 package root's own closed-vocabulary check); `git mv` every `content/`
+file per `src/core/migrations/one-root-mapping.ts`'s table (exhaustive,
+`assertNever`-terminated over the frozen v2 layout); `content/CLAUDE.md`
+merges into the root `CLAUDE.md` instead of moving; `.beebox/` moves by
+filesystem rename (gitignored runtime state, not git); marker bumped to
+`shapeVersion: 3`; `.gitignore`/`.gitattributes` regenerated (reuses
+`initBox`); every card/doc's refs rewritten to canonical `/`-form
+(`one-root-ref-rewrite.ts`, YAML-aware — unlike `bbx mv`'s rewriter it DOES
+handle inline-map `refs:` forms, since a migration commit reorders
+frontmatter keys everywhere anyway); a hard link gate
+(`one-root-link-gate.ts`) refuses to commit if the rewrite left any
+reference dangling; the full `bbx init` tail regenerates rules/guides/docs/
+search index; `hub.json`/`boxes.json` entries pointing at the old
+`<root>/content` path are corrected. Everything lands in exactly ONE commit
+(`migrate: one-root`) — a `git reset --soft` to the pre-migration SHA folds
+in `bbx init`'s own incidental provisioning commit before the final commit,
+so the plan's "one migration, one commit" holds even though the reused
+init tail commits on its own. Rollback on ANY failure: rename `.beebox`
+back under `content/`, `git reset --hard` + clean to the pre-migration SHA
+— nothing commits until the very end, so this always fully undoes the
+attempt. The bootstrap path (everything v2-shape-aware) is scheduled for
+removal once the fleet has converged — see
+`issues/deferred/2026-09-04-remove-one-root-v2-bootstrap.md`.
 
 ## See also
 

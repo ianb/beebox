@@ -1,10 +1,11 @@
 # boxSlug
 
-A box's URL slug, derived from where it lives on disk. Every box is
-shapeVersion 2, so its `boxRoot` is the package's `content/` directory — which
-makes `path.basename(boxRoot)` the literal string `"content"` for *every* box.
-`boxSlug` reads the shape and takes the PACKAGE root's basename instead.
-See `src/lib/box-slug.ts`.
+A box's URL slug, derived from where it lives on disk. shapeVersion 3 has one
+root, so `path.basename(boxRoot)` is simply the box's own directory name —
+no "content dir" collision to work around (that was the v2 trap: `boxRoot`
+was a `content/` directory nested inside a package, so its basename was the
+literal string `"content"` for every box). `boxSlug` reads the shape and
+returns `path.basename(shape.boxRoot)`. See `src/lib/box-slug.ts`.
 
 ```ts setup
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
@@ -14,25 +15,21 @@ import { tmpdir } from "node:os";
 import { boxSlug, boxSlugFromShape } from "../../src/lib/box-slug.js";
 import { getBoxShape } from "../../src/lib/box-shape.js";
 
-/** A minimal shapeVersion-2 box named `name` under a fresh temp parent. */
+/** A minimal shapeVersion-3 box named `name` under a fresh temp parent. */
 async function makeBox(parent: string, name: string): Promise<string> {
-  const packageRoot = join(parent, name);
-  const boxRoot = join(packageRoot, "content");
+  const boxRoot = join(parent, name);
   await mkdir(boxRoot, { recursive: true });
   await writeFile(
-    join(packageRoot, "package.json"),
+    join(boxRoot, "package.json"),
     JSON.stringify({ name, dependencies: { "beebox": "*" } }),
   );
   await mkdir(join(boxRoot, ".beebox"), { recursive: true });
-  await writeFile(join(boxRoot, ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
+  await writeFile(join(boxRoot, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
   return boxRoot;
 }
 ```
 
-Two different boxes get two different slugs. This is the regression the helper
-exists for: both box roots are named `content`, so the naive
-`basename(boxRoot)` collides them into one key — which is exactly how two
-boxes ended up sharing a slug-keyed push-subscription store.
+Two different boxes get two different slugs — their root directory names:
 
 ```ts
 const parent = await mkdtemp(join(tmpdir(), "bbx-box-slug-"));
@@ -40,7 +37,7 @@ const alpha = await makeBox(parent, "alpha");
 const beta = await makeBox(parent, "beta");
 
 [basename(alpha), basename(beta)].join(",")
-=> content,content
+=> alpha,beta
 
 [await boxSlug(alpha), await boxSlug(beta)].join(",")
 => alpha,beta

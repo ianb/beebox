@@ -31,8 +31,8 @@ function markdownConfig(boxRoot: string): Record<string, unknown> {
  * True if `filePath` is a markdown file we lint. Thin wrapper over the shared
  * builtin predicate (`isBuiltinLintableMarkdown`) so the staged/hook collectors
  * and the box-wide scan agree on the skip set (CLAUDE.md, dependency/VCS dirs,
- * and bbx's own `docs/generated/` output at any depth). The box-specific
- * `config/bbx-validate.ignore` file is layered on separately by the callers that
+ * and bbx's own `_content/docs/generated/` output at any depth). The box-specific
+ * `_config/bbx-validate.ignore` file is layered on separately by the callers that
  * have a box root loaded — this predicate is the always-on builtin floor.
  */
 export function isLintableMarkdown(filePath: string): boolean {
@@ -82,16 +82,28 @@ export async function lintMarkdownFiles(
 }
 
 /**
+ * The structured half of the box-wide broken-link scan: link rules only (no
+ * style rules). Split out of {@link boxWideLinkWarnings} so a caller that
+ * needs to FILTER findings before formatting them (the one-root migration's
+ * hard link gate, distinguishing a pre-existing broken ref from one the
+ * migration itself broke) can work with `MarkdownLintSummary`'s structured
+ * `errors` map instead of re-parsing a formatted report string.
+ */
+export async function boxWideLinkFindings(boxRoot: string): Promise<MarkdownLintSummary> {
+  const ignore = await loadValidationIgnore(boxRoot);
+  const mdFiles = (await listBoxMarkdownFiles(boxRoot)).filter((f) => !ignore.isIgnored(f));
+  if (mdFiles.length === 0) return { filesChecked: 0, filesWithErrors: 0, totalErrors: 0, errors: {} };
+  return runMarkdownlint(mdFiles, { default: false, ...linkRuleConfig(boxRoot) });
+}
+
+/**
  * Box-wide broken-link scan for the commit-time WARNING pass: link rules only
  * (no style rules), and the caller treats it as non-fatal. Catches a move that
  * breaks links in an *unstaged* referrer — which `--staged` can never see —
  * without blocking the commit. Returns formatted findings, or null if clean.
  */
 export async function boxWideLinkWarnings(boxRoot: string): Promise<string | null> {
-  const ignore = await loadValidationIgnore(boxRoot);
-  const mdFiles = (await listBoxMarkdownFiles(boxRoot)).filter((f) => !ignore.isIgnored(f));
-  if (mdFiles.length === 0) return null;
-  const summary = await runMarkdownlint(mdFiles, { default: false, ...linkRuleConfig(boxRoot) });
+  const summary = await boxWideLinkFindings(boxRoot);
   if (summary.totalErrors === 0) return null;
   const fileWord = summary.filesWithErrors === 1 ? "file" : "files";
   return (

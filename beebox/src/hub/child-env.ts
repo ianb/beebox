@@ -18,17 +18,13 @@
  * list only by adding a new named entry with a reasoned comment -- never by
  * reverting to a spread.
  *
- * `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` are listed below
- * deliberately, not withheld like the session secret: they're the app's
- * connector identity (registered with Google), not a per-box or per-hub
- * secret, and every box's calendar/gmail/drive connectors read them
- * directly (`getGoogleClientCreds()` in `src/connectors/google-auth.ts`) to
- * run and refresh their own per-box tokens. Under the current architecture
- * connector OAuth stays per-box -- the box owns its tokens -- so the client
- * creds are shared on purpose. Splitting them so each box holds distinct
- * client creds (or a hub-mediated OAuth proxy) is the OS-user hardening
- * subplan's concern (`docs/unimplemented-plans/box-user-account-spec.md`),
- * not this allowlist's.
+ * Connector credentials are NOT listed. A box's connectors resolve them from
+ * the machine secret store (`docs/implemented-plans/secret-custody.md`), so a
+ * child inherits the store's PATH (`BBX_SECRETS_FILE`) and its grants decide
+ * what it can read -- a much narrower thing to hand a child than the keys
+ * themselves. `GOOGLE_OAUTH_CLIENT_ID`/`_SECRET` are out for a second reason
+ * too: they configure the LOGIN surface, and a hub-spawned child is in hub
+ * mode, where `/auth/*` is a 404 and login lives at the hub.
  *
  * Built from evidence: every `process.env.X` read under `src/webapp/`,
  * `src/core/`, and `src/connectors/` as of this writing (a hub-spawned
@@ -62,17 +58,11 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "BBX_DIAG_API_KEY", // src/webapp/auth.ts verifyDiagBearerKey -- shared read-only diag bearer key.
   "BBX_GOOGLE_TOKENS_FILE", // src/connectors/google-auth.ts, requirements.ts -- a path, not a credential.
   "BBX_SECRETS_FILE", // src/core/secrets/store.ts -- the machine secret store's path, not a credential. A child that missed it would read the DEFAULT store while the hub read the override, so every grant would silently vanish for served boxes.
-  "GOOGLE_OAUTH_CLIENT_ID", // src/connectors/google-auth.ts getGoogleClientCreds() -- app identity, shared per-box by design (see block comment above).
-  "GOOGLE_OAUTH_CLIENT_SECRET", // ditto -- connector OAuth stays per-box; the box owns its tokens.
   "BBX_LOG_PROMPTS", // src/core/agent-run.ts -- debug flag.
   "BBX_STRICT_FETCH", // src/cli/bootstrap.ts -- test/scenario harness flag.
   "BBX_STUBS_FILE", // src/cli/lib/fetch.ts -- scenario fixture path.
   "BBX_SCENARIO_START_TIME", // src/cli/lib/fetch.ts -- scenario harness.
   "BBX_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
-  "THINKING_OPENAI_API_KEY", // src/webapp/routes/chat-audio-routes.ts -- box's own transcription key.
-  "BBX_MISTRAL_API_KEY", // src/core/mistral-key.ts -- box's own transcription key fallback.
-  "GEMINI_KEY", // src/core/audio-question.ts, services/scan-vision.ts, chat-audio.ts, webapp/trpc/routers/health.ts -- box's own image/audio description key.
-  "SKE_GEMINI_API_KEY", // same call sites as GEMINI_KEY -- documented fallback read alongside it (checked first in src/core/audio-question.ts etc.).
   "BBX_SCAN_VISION", // src/services/scan-vision.ts -- scan-import photo-analysis backend selection (claude default, gemini opt-in).
 
   // --- Claude Agent SDK config knobs (not credentials) ---
@@ -82,21 +72,11 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "DO_NOT_TRACK",
 ];
 
-/**
- * Env var PREFIXES a hub-spawned box child may inherit -- for families with
- * more than one suffix, so adding a suffix later doesn't require touching
- * this file again. `BBX_DEEPGRAM_` covers `BBX_DEEPGRAM_API_KEY`
- * + `BBX_DEEPGRAM_PROJECT` (src/core/deepgram-key.ts), the box's own
- * transcription credential fallback when no `config/connectors/deepgram.secret.json`
- * exists -- same "box-legitimate config a `bbx serve` child reads directly"
- * category as the exact-name entries above.
- */
-const CHILD_ENV_PREFIX_ALLOWLIST: readonly string[] = ["BBX_DEEPGRAM_"];
 
 /**
- * Build a hub-spawned child's env: only `CHILD_ENV_ALLOWLIST`/
- * `CHILD_ENV_PREFIX_ALLOWLIST` entries from `sourceEnv` (normally the hub's
- * own `process.env`), plus `hubExtras` (currently just `BBX_HUB_SECRET`)
+ * Build a hub-spawned child's env: only `CHILD_ENV_ALLOWLIST` entries from
+ * `sourceEnv` (normally the hub's own `process.env`), plus `hubExtras`
+ * (currently just `BBX_HUB_SECRET`)
  * layered on top. Pure and exported so it can be pinning-tested directly
  * without spawning anything real -- see `test/hub/supervisor.doctest.md`.
  */
@@ -109,12 +89,6 @@ export function buildChildEnv(params: {
   for (const key of CHILD_ENV_ALLOWLIST) {
     const value = sourceEnv[key];
     if (value !== undefined) env[key] = value;
-  }
-  for (const [key, value] of Object.entries(sourceEnv)) {
-    if (value === undefined) continue;
-    if (CHILD_ENV_PREFIX_ALLOWLIST.some((prefix) => key.startsWith(prefix))) {
-      env[key] = value;
-    }
   }
   return { ...env, ...hubExtras };
 }

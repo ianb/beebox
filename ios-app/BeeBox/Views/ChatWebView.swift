@@ -4,6 +4,8 @@ import UIKit
 import WebKit
 
 struct NativeChatEmission: Equatable, Identifiable {
+    var binding: NativeSendBinding? = nil
+    var bindingRevision: Int? = nil
     typealias Origin = NativeEmissionV2.Origin
 
     var id = UUID()
@@ -27,6 +29,7 @@ struct NativeEmissionReceipt: Equatable {
     var emissionID: NativeChatEmission.ID
     var disposition: Disposition
     var reason: String?
+    var definitive: Bool?
 }
 
 struct NativeLocationShareRequest: Equatable, Identifiable {
@@ -59,17 +62,6 @@ struct NativeScreenshotRequest: Equatable, Identifiable {
     var id = UUID()
 }
 
-/// One press of the shell's back control. The webview's own
-/// `allowsBackForwardNavigationGestures` swipe is invisible and competes with
-/// horizontal gestures inside the page, so it cannot be the only way out of a
-/// card or the browse view — see
-/// `issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md`. Identified so a
-/// SwiftUI update that re-sends the same request does not walk the history
-/// twice.
-struct NativeBackRequest: Equatable, Identifiable {
-    var id = UUID()
-}
-
 struct NativeScreenshotResult: Equatable {
     var requestID: NativeScreenshotRequest.ID
     var data: Data?
@@ -93,9 +85,9 @@ struct ChatWebView: UIViewRepresentable {
     var locationShareRequest: NativeLocationShareRequest?
     var screenshotRequest: NativeScreenshotRequest?
     var speechStopRequest: NativeSpeechStopRequest?
-    var backRequest: NativeBackRequest?
     var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement]
     var composerCommandResults: [NativeComposerCommandResult]
+    var onComposerBinding: (NativeComposerBinding?) -> Void
     var onSessionChange: (String?) -> Void
     var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
     var onEmissionReceipt: (NativeEmissionReceipt) -> Void
@@ -111,7 +103,6 @@ struct ChatWebView: UIViewRepresentable {
     var onComposerCommandResultDelivered: (String) -> Void
     var onLastAudioRequest: (NativeLastAudioRequest) -> Void
     var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
-    var onCanGoBackChange: (Bool) -> Void
 
     init(
         box: PairedBox,
@@ -120,9 +111,9 @@ struct ChatWebView: UIViewRepresentable {
         locationShareRequest: NativeLocationShareRequest? = nil,
         screenshotRequest: NativeScreenshotRequest? = nil,
         speechStopRequest: NativeSpeechStopRequest? = nil,
-        backRequest: NativeBackRequest? = nil,
         composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = [],
         composerCommandResults: [NativeComposerCommandResult] = [],
+        onComposerBinding: @escaping (NativeComposerBinding?) -> Void = { _ in },
         onSessionChange: @escaping (String?) -> Void = { _ in },
         onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void = { _ in },
         onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void = { _ in },
@@ -137,8 +128,7 @@ struct ChatWebView: UIViewRepresentable {
         onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in },
         onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in },
         onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
-        onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
-        onCanGoBackChange: @escaping (Bool) -> Void = { _ in }
+        onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
@@ -148,6 +138,7 @@ struct ChatWebView: UIViewRepresentable {
         self.speechStopRequest = speechStopRequest
         self.composerCommandAcknowledgements = composerCommandAcknowledgements
         self.composerCommandResults = composerCommandResults
+        self.onComposerBinding = onComposerBinding
         self.onSessionChange = onSessionChange
         self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         self.onEmissionReceipt = onEmissionReceipt
@@ -163,12 +154,11 @@ struct ChatWebView: UIViewRepresentable {
         self.onComposerCommandResultDelivered = onComposerCommandResultDelivered
         self.onLastAudioRequest = onLastAudioRequest
         self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
-        self.backRequest = backRequest
-        self.onCanGoBackChange = onCanGoBackChange
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = Self.makeConfiguration()
+        configuration.userContentController.add(context.coordinator, name: "beeboxComposerBinding")
         configuration.userContentController.add(context.coordinator, name: "beeboxSession")
         configuration.userContentController.add(context.coordinator, name: "beeboxEmissionReceipt")
         configuration.userContentController.add(context.coordinator, name: "beeboxLocationResult")
@@ -187,7 +177,6 @@ struct ChatWebView: UIViewRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
-        context.coordinator.observeCanGoBack(webView)
         webView.load(request())
         return webView
     }
@@ -200,6 +189,7 @@ struct ChatWebView: UIViewRepresentable {
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
+        context.coordinator.onComposerBinding = onComposerBinding
         context.coordinator.onSessionChange = onSessionChange
         context.coordinator.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
         context.coordinator.onEmissionReceipt = onEmissionReceipt
@@ -222,7 +212,6 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.locationShareRequest = locationShareRequest
         context.coordinator.screenshotRequest = screenshotRequest
         context.coordinator.speechStopRequest = speechStopRequest
-        context.coordinator.backRequest = backRequest
         context.coordinator.composerCommandAcknowledgements = composerCommandAcknowledgements
         context.coordinator.composerCommandResults = composerCommandResults
         if webView.url == nil {
@@ -235,13 +224,13 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.deliverComposerCommandAcknowledgements(to: webView)
         context.coordinator.deliverComposerCommandResults(to: webView)
         context.coordinator.deliverSpeechStopRequest(to: webView)
-        context.coordinator.goBackIfRequested(webView)
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
             boxID: box.id,
             allowedOrigin: Self.origin(from: box.baseURL),
+            onComposerBinding: onComposerBinding,
             onSessionChange: onSessionChange,
             onEmissionDeliveryAttempt: onEmissionDeliveryAttempt,
             onEmissionReceipt: onEmissionReceipt,
@@ -256,15 +245,15 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered,
             onComposerCommandResultDelivered: onComposerCommandResultDelivered,
             onLastAudioRequest: onLastAudioRequest,
-            onSpeechStopRequestSettled: onSpeechStopRequestSettled,
-            onCanGoBackChange: onCanGoBackChange
+            onSpeechStopRequestSettled: onSpeechStopRequestSettled
         )
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate {
         var boxID: PairedBox.ID
         var allowedOrigin: String?
-        var onSessionChange: (String?) -> Void
+        var onComposerBinding: (NativeComposerBinding?) -> Void
+    var onSessionChange: (String?) -> Void
         var onEmissionDeliveryAttempt: (NativeChatEmission.ID) -> Void
         var onEmissionReceipt: (NativeEmissionReceipt) -> Void
         var onLocationShareResult: (NativeLocationShareResult) -> Void
@@ -279,13 +268,11 @@ struct ChatWebView: UIViewRepresentable {
         var onComposerCommandResultDelivered: (String) -> Void
         var onLastAudioRequest: (NativeLastAudioRequest) -> Void
         var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
-        var onCanGoBackChange: (Bool) -> Void
         var pendingEmissions: [NativeChatEmission] = []
         var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
         var locationShareRequest: NativeLocationShareRequest?
         var screenshotRequest: NativeScreenshotRequest?
         var speechStopRequest: NativeSpeechStopRequest?
-        var backRequest: NativeBackRequest?
         var composerCommandAcknowledgements: [NativeComposerCommandAcknowledgement] = []
         var composerCommandResults: [NativeComposerCommandResult] = []
         /// The delivery attempt currently in flight for each emission ID, keyed
@@ -297,16 +284,12 @@ struct ChatWebView: UIViewRepresentable {
         /// Monotonic across every emission; only equality against the stored
         /// generation is ever asked, so one counter is enough.
         private var lastEmissionGeneration = 0
+        var composerBindingNegotiated = false
         private var handledRedeliveryRequestID: NativeEmissionRedeliveryRequest.ID?
         private var inflightLocationRequestID: NativeLocationShareRequest.ID?
         private var locationRequestTimeout: DispatchWorkItem?
         private var inflightScreenshotRequestID: NativeScreenshotRequest.ID?
         private var inflightSpeechStopRequestID: NativeSpeechStopRequest.ID?
-        private var handledBackRequestID: NativeBackRequest.ID?
-        /// KVO rather than the navigation delegate: the web client routes
-        /// client-side, and a `pushState` grows the back-forward list without
-        /// firing `didFinish`. Held so it can be torn down with the coordinator.
-        private var canGoBackObservation: NSKeyValueObservation?
         private var inflightComposerCommandAcknowledgementIDs = Set<String>()
         private var inflightComposerCommandResultIDs = Set<String>()
         private var pageLoaded: Bool
@@ -323,7 +306,8 @@ struct ChatWebView: UIViewRepresentable {
         init(
             boxID: PairedBox.ID,
             allowedOrigin: String?,
-            onSessionChange: @escaping (String?) -> Void,
+            onComposerBinding: @escaping (NativeComposerBinding?) -> Void = { _ in },
+        onSessionChange: @escaping (String?) -> Void,
             onEmissionDeliveryAttempt: @escaping (NativeChatEmission.ID) -> Void,
             onEmissionReceipt: @escaping (NativeEmissionReceipt) -> Void,
             onLocationShareResult: @escaping (NativeLocationShareResult) -> Void,
@@ -338,7 +322,6 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in },
             onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
             onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
-            onCanGoBackChange: @escaping (Bool) -> Void = { _ in },
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -348,7 +331,8 @@ struct ChatWebView: UIViewRepresentable {
         ) {
             self.boxID = boxID
             self.allowedOrigin = allowedOrigin
-            self.onSessionChange = onSessionChange
+            self.onComposerBinding = onComposerBinding
+        self.onSessionChange = onSessionChange
             self.onEmissionDeliveryAttempt = onEmissionDeliveryAttempt
             self.onEmissionReceipt = onEmissionReceipt
             self.onLocationShareResult = onLocationShareResult
@@ -363,7 +347,6 @@ struct ChatWebView: UIViewRepresentable {
             self.onComposerCommandResultDelivered = onComposerCommandResultDelivered
             self.onLastAudioRequest = onLastAudioRequest
             self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
-            self.onCanGoBackChange = onCanGoBackChange
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -385,6 +368,8 @@ struct ChatWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             pageLoaded = false
+            composerBindingNegotiated = false
+            onComposerBinding(nil)
             if navigationStartLogged == false {
                 navigationStartLogged = true
                 BoxLog.info("chat navigation started", category: .webview, targetBoxID: boxID)
@@ -452,6 +437,8 @@ struct ChatWebView: UIViewRepresentable {
                 category: .webview
             )
             pageLoaded = false
+            composerBindingNegotiated = false
+            onComposerBinding(nil)
             inflightEmissionGenerations.removeAll()
             webView.reload()
         }
@@ -500,6 +487,19 @@ struct ChatWebView: UIViewRepresentable {
         }
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "beeboxComposerBinding" {
+                guard message.frameInfo.isMainFrame,
+                      let frameURL = message.frameInfo.request.url,
+                      ChatWebView.origin(from: frameURL) == allowedOrigin,
+                      let payload = ChatWebView.dictionaryPayload(from: message.body),
+                      let data = try? JSONSerialization.data(withJSONObject: payload),
+                      let binding = try? JSONDecoder().decode(NativeComposerBinding.self, from: data),
+                      binding.isValid else { return }
+                composerBindingNegotiated = true
+                onComposerBinding(binding)
+                message.webView?.evaluateJavaScript("window.beeboxComposerBindingVersion=1; window.dispatchEvent(new Event('beebox:composer-binding-ready'));")
+                return
+            }
             if message.name == "beeboxEmissionReceipt" {
                 receiveEmissionReceipt(message.body)
                 return
@@ -570,6 +570,7 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             for emission in emissions where inflightEmissionGenerations[emission.id] == nil {
+                guard emission.binding == nil || composerBindingNegotiated else { continue }
                 guard let detail = Self.javascriptDetail(for: emission) else {
                     continue
                 }
@@ -634,7 +635,8 @@ struct ChatWebView: UIViewRepresentable {
             onEmissionReceipt(NativeEmissionReceipt(
                 emissionID: emissionID,
                 disposition: disposition,
-                reason: payload["reason"] as? String
+                reason: payload["reason"] as? String,
+                definitive: payload["definitive"] as? Bool
             ))
         }
 
@@ -891,37 +893,6 @@ struct ChatWebView: UIViewRepresentable {
             }
         }
 
-        /// Report whether there is anywhere to go back to, so the shell can show
-        /// its back control only when it would do something. Fires on the
-        /// initial value too: a webview restored mid-history must not wait for
-        /// the next navigation before the control appears.
-        func observeCanGoBack(_ webView: WKWebView) {
-            canGoBackObservation = webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] observed, _ in
-                // The property read happens inside the hop, not before it: KVO
-                // makes no thread promise, and `canGoBack` is a WebKit property
-                // that must be read on the main thread. (`change.newValue` is
-                // not a substitute — it is nil for the `.initial` callback.)
-                DispatchQueue.main.async {
-                    self?.onCanGoBackChange(observed.canGoBack)
-                }
-            }
-        }
-
-        /// Walk one entry back, once per press. A request that arrives when
-        /// there is nowhere to go is dropped rather than queued — the control
-        /// is hidden in that state, so this is the race where the last entry
-        /// was consumed between render and tap.
-        func goBackIfRequested(_ webView: WKWebView) {
-            guard let request = backRequest, request.id != handledBackRequestID else {
-                return
-            }
-            handledBackRequestID = request.id
-            guard webView.canGoBack else {
-                return
-            }
-            webView.goBack()
-        }
-
         func captureScreenshot(from webView: WKWebView) {
             guard
                 pageLoaded,
@@ -945,7 +916,7 @@ struct ChatWebView: UIViewRepresentable {
         }
 
         private static func javascriptDetail(for emission: NativeChatEmission) -> String? {
-            let payload = NativeEmissionV2(emission: emission)
+            let payload = NativeEmissionV3(emission: emission)
             guard let data = try? JSONEncoder().encode(payload) else {
                 return nil
             }

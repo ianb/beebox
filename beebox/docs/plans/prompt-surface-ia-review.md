@@ -248,7 +248,7 @@ reconciled against *current* main, cited inline.
     section renders a grouped, described catalogue (registry order is now
     presentational — everyday recording types first, the course family together,
     then synced and system) instead of 39 identical name-plus-see-docs bullets,
-    and states the `docs/generated/card-<type>.md` pattern once. Doctest rewritten
+    and states the `_content/docs/generated/card-<type>.md` pattern once. Doctest rewritten
     to the grouped shape.
   - **Guide identity + orphan cleanup** — added a 3-line identity preamble under
     the guide H1 (who reads it, what a box is, keep the record true); deleted the

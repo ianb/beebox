@@ -8,9 +8,10 @@
  * attached to a card.
  */
 
-import { useMemo } from "react";
-import { useParams, useLocation } from "@tanstack/react-router";
-import { parseViewUrl } from "../lib/view-url";
+import { useCallback, useMemo } from "react";
+import { useParams, useLocation, useNavigate } from "@tanstack/react-router";
+import { parseViewUrl, viewStateSearchValue, type ViewState } from "../lib/view-url";
+import { href, toSearch } from "../lib/routing";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { FileView } from "../components/FileView";
 import { Text } from "../components/ui/Text";
@@ -19,6 +20,7 @@ export function ViewPage() {
   const { _splat: splat } = useParams({ strict: false });
   const location = useLocation();
   const handleNavigate = useViewNavigate();
+  const navigate = useNavigate();
 
   // Key on the query string too: navigating `?view=A` -> `?view=B` at the same
   // path must recompute the viewer/params, not reuse a splat-only memo.
@@ -27,6 +29,26 @@ export function ViewPage() {
     const qs = location.searchStr;
     return parseViewUrl(qs ? `${splat}${qs}` : splat);
   }, [splat, location.searchStr]);
+
+  const updateViewState = useCallback((next: ViewState, method: "push" | "replace") => {
+    if (target === null) return;
+    void navigate({
+      to: href(location.pathname),
+      search: toSearch({ ...target.params, ...(target.viewer ? { view: target.viewer } : {}), viewState: viewStateSearchValue(next) }),
+      replace: method === "replace",
+    });
+  }, [location.pathname, navigate, target]);
+
+  const selectRenderer = useCallback((name: string | null) => {
+    if (target === null) return;
+    void navigate({
+      to: href(location.pathname),
+      search: toSearch(name === null
+        ? target.params
+        : { ...target.params, view: name, viewState: viewStateSearchValue(target.viewState) }),
+      replace: true,
+    });
+  }, [location.pathname, navigate, target]);
 
   if (!target) {
     return <Text as="div" tone="muted" className="p-8">No view specified.</Text>;
@@ -39,6 +61,10 @@ export function ViewPage() {
         mode="page"
         rendererName={target.viewer}
         params={target.params}
+        viewState={target.viewState}
+        canPushViewState
+        onViewStateChange={updateViewState}
+        onSelectRenderer={selectRenderer}
         onNavigate={handleNavigate}
       />
     </div>

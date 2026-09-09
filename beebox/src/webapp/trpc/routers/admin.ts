@@ -15,9 +15,10 @@ import { resetCodexAuthCache } from "../../../core/agent/auth-preflight.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
+import { backupAdminProcedures } from "./admin-backup.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { createRealTailscaleDeps, deriveTailscaleBaseUrl, parseServeConfig } from "../../../services/tailscale.js";
-import { normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
+import { CONFIG_RELATIVE_PATH, normalizeAllowedEmails, updateBoxConfigFields } from "../../box-config-write.js";
 import { modelTier } from "../../../shared/agent-models.js";
 import { normalizeModelId } from "../../../shared/model-ids.js";
 import { canonicalizeEmail, getLocalUser } from "../../local-users.js";
@@ -25,10 +26,10 @@ import { gmailAdminProcedures } from "./admin-gmail.js";
 import { inviteAdminProcedures } from "./admin-invites.js";
 import { passwordResetAdminProcedures } from "./admin-password-resets.js";
 import { describeAllowedUsers } from "./admin-user-details.js";
-import { getGoogleClientCreds } from "../../../connectors/google-auth.js";
+import { getLoginGoogleClientCreds } from "../../../connectors/google-auth.js";
 
 /**
- * Shape of `config/box.json`, validated on read (config is untrusted input).
+ * Shape of `_config/box.json`, validated on read (config is untrusted input).
  * `.default()` on every field lets a missing file or missing key read as the
  * documented default rather than casting an untyped `JSON.parse` result.
  */
@@ -66,7 +67,7 @@ export const adminRouter = router({
    * unscopable, all-powerful credential to the admin frontend on every page
    * load. Telegram has no derived-credential primitive at all (no scoping, no
    * TTL, revoke-only via BotFather), so the token must terminate in the server
-   * process (`docs/plans/secret-custody.md`, "Broker escalations"). Callers
+   * process (`docs/implemented-plans/secret-custody.md`, "Broker escalations"). Callers
    * that want to identify the bot use `botUsername`.
    */
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
@@ -175,8 +176,9 @@ export const adminRouter = router({
     const secretSlug = await boxSlug(ctx.boxRoot);
     await forgetBoxSecret({ name: telegramSecretName(secretSlug), slug: secretSlug });
 
-    // The legacy in-tree file is still deleted, for a box that was configured
-    // before the migration and never reconnected.
+    // The retired in-tree file is no longer read, but it is still deleted:
+    // a box configured before the store must not be left holding a stray
+    // credential file after disconnect.
     const configPath = telegramLegacySecretPath(ctx.boxRoot);
     try {
       await fs.unlink(configPath);
@@ -190,7 +192,7 @@ export const adminRouter = router({
   }),
 
   boxConfig: ownerProcedure.query(async ({ ctx }) => {
-    const configPath = path.join(ctx.boxRoot, "config/box.json");
+    const configPath = path.join(ctx.boxRoot, CONFIG_RELATIVE_PATH);
     let config: z.infer<typeof boxConfigSchema>;
     try {
       config = boxConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
@@ -219,7 +221,7 @@ export const adminRouter = router({
         .map((user) => user.email),
       publicUrl: config.publicUrl,
       ownerEmail: userDetails.ownerEmail,
-      googleLoginConfigured: (await getGoogleClientCreds(ctx.boxRoot)) !== null,
+      googleLoginConfigured: getLoginGoogleClientCreds() !== null,
       googleServices: config.googleServices,
       agentEngine: config.agentEngine,
       agentModel: config.agentModel ?? null,
@@ -288,6 +290,7 @@ export const adminRouter = router({
     }),
 
   ...googleAdminProcedures,
+  ...backupAdminProcedures,
 
   claudeStatus: ownerProcedure.query(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();

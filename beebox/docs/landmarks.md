@@ -4,7 +4,7 @@ A navigation surface for the box: a hand-curated, short list of widgets pointing
 
 ## The problem
 
-`store/` and `box/` accumulate directories at different levels of importance. Some are well-trod (recipes, todos, calendar); others are housekeeping (trash, usage). The Browse page shows everything with equal weight — a flat file tree, no editorial layer. There's no way to say "these few directories are the main pathways into the system; the rest are just files." Landmarks are that editorial layer.
+`_content/` and `_bookkeeping/` accumulate directories at different levels of importance. Some are well-trod (recipes, todos, calendar); others are housekeeping (trash, usage). The Browse page shows everything with equal weight — a flat file tree, no editorial layer. There's no way to say "these few directories are the main pathways into the system; the rest are just files." Landmarks are that editorial layer.
 
 ## What a Landmark is
 
@@ -15,7 +15,8 @@ Key properties:
 - **Singular per directory.** One `*.landmark.card` per opted-in directory. Directories without one are invisible to the navigation surface — that's the point.
 - **Thing-first, container-secondary.** The card itself is the widget. It can point at nearby cards, but it doesn't *contain* them — it references them.
 - **Evergreen.** Content describes what the spot is and what's notable, long-term. Not "this week's top three." Permanence is implied by the metaphor.
-- **Hand-curated and ordered.** No auto-discovery. An `expand` entry provides templated fan-out for "list everything matching X" cases, but it's still an explicit editorial choice to include it.
+- **Derived first, curated for the rest.** The list is mostly the cards under the directory that carry `prominence: entry-point` or `prominence: primary` (see "Derived links" below); `links:` is the curated exception for what a card cannot say about itself, and an `expand` entry is templated fan-out for "list everything matching X". Ordering is by tier, then by name; a fixed order is what `links:` is for.
+- **A place marker, not a visitable file.** The landmark card is `background` by type: Browse folds it and draws the directory's identity from it. The place's entry point, if it has one, is a visitable card inside the directory. See `docs/implemented-plans/card-prominence.md`.
 
 ### Distinct from `briefing`
 
@@ -38,8 +39,8 @@ navigation:
   label: Recipes
   symbol: 🍳
   links:
-    - { ref: /store/recipes/Bread.recipe.card, label: the bread }
-    - { ref: /store/recipes/techniques/Knife_Skills.doc.card }
+    - { ref: /_content/recipes/Bread.recipe.card, label: the bread }
+    - { ref: /_content/recipes/techniques/Knife_Skills.doc.card }
   expand:
     - query: "*.recipe.card"
       order: modified-desc
@@ -58,7 +59,7 @@ All of these live under `navigation`.
 
 ```yaml
 symbol: 🍳                          # emoji or short text
-symbol: { src: /store/recipes/images/portrait.webp }   # image
+symbol: { src: /_content/recipes/images/portrait.webp }   # image
 ```
 
 For character-driven scenarios where the face is the bookmark, the image form makes the Landmarks page look like a real launcher rather than an emoji grid. Image `src` is a box path — write it with a leading `/`, from the box root (a path relative to the landmark's directory still resolves). It is validated: a `src` pointing at nothing is a broken-ref warning at `bbx validate`. The symbol carries most of the "iconic and unique expression" weight — pick well.
@@ -111,6 +112,21 @@ Both surfaces — the Landmarks page grid and the chat-header landmark menu — 
 ### Dedup
 
 A card appearing both in a hand-listed `links` entry and in an unnamed `expand` result shows once: hand-listed links come first and win. This lets a landmark hoist a few items to the top with custom labels and let the rest fill in via expand below, without doubling. Named `group` expands are independent — they dedup within themselves only, not against the flat list or each other.
+
+## Derived links
+
+A landmark's flat list is assembled in tiers (`src/core/landmark/resolve.ts`, `derived-links.ts`):
+
+1. hand-listed `links:` (first, and winning dedup, with their labels);
+2. derived `entry-point` cards, then derived `primary` cards, from the landmark's **pruned subtree**: its directory and every descendant directory that has no landmark of its own, never entering an owned `.attach/` scope unless that scope holds its own landmark;
+3. nested landmarks, one entry each (label, symbol), except those written `prominence: background`;
+4. unnamed `expand` results.
+
+Within a derived tier the order is by box path. A card's level is its written `prominence`, else its type's default (`defaultProminence` on the schema: `background` for `category: "system"` types and for landmarks, `ordinary` otherwise). The walk is fresh on every call and parses are cached per file by identity (`prominence-index.ts`, `prominence-cache.ts`), the same shape as `card-cache.ts`; `landmarks.identity` serves the mount-path callers (place pill, tab title) with no resolution at all, and `landmarks.forDir` resolves on demand.
+
+A landmark written `prominence: background` is a housekeeping place: off the Landmarks page and the switch menu (`cascade.ts`, `isListedLandmark`), and every card under it is background for folding and derivation, whatever the card says. `bbx validate` warns on `entry-point`/`primary` written on a landmark, on a prominent card under a background place, and on too many entry points or primary cards in one directory (`lint-prominence.ts`).
+
+Existing boxes were migrated by `landmark-links-prominence`: every in-subtree `links:` target got `prominence: primary`; no link was removed.
 
 ## Rendering
 

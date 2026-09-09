@@ -1,5 +1,5 @@
 /**
- * Soft format hints for secret entry (`docs/plans/secret-custody.md`, "Guided
+ * Soft format hints for secret entry (`docs/implemented-plans/secret-custody.md`, "Guided
  * entry + validation").
  *
  * WARN, NEVER BLOCK. Provider key formats drift — a prefix change at the

@@ -4,6 +4,7 @@ workstream: unknown
 area: beebox
 needs: [decision, design]
 labels: [schemas, provenance]
+priority: important
 ---
 
 A card that came from somewhere should say where, in a shape anything can read

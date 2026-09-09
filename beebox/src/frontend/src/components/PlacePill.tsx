@@ -13,14 +13,18 @@
  *    no landmark there is no curated "here" to open, so the pill is just its
  *    left half.
  *
- * Two lazinesses matter. The landmark lookup (`landmarks.forDir`) runs
- * per-place, cheap and scoped to one directory. The switch menu's
- * `chat.placeMenu` — which globs every landmark — does NOT: it's gated behind
- * the first dropdown open (`enabled`), then cached, with every later open
- * invalidating in the background so the cached rows paint instantly and
- * refresh behind them. A bar that mounts on every page must not carry that at
- * rest (the rationale AppNav already states for `status.navStatus`). The same
- * applies to the `nav.card` section's query.
+ * Three lazinesses matter. The FACE's landmark lookup (`landmarks.identity`)
+ * runs per-place on mount — cheap, one glob and one cached parse, no link/
+ * expand resolution and no pruned-subtree walk (`docs/implemented-plans/card-prominence.md`,
+ * "Split identity from resolution"). The switch menu's `chat.placeMenu` —
+ * which globs every landmark — and the here menu's `landmarks.forDir` — which
+ * resolves this landmark's full link list, including its derived children —
+ * do NOT run on mount: each is gated behind its own dropdown's first open
+ * (`enabled`), then cached, with every later open invalidating in the
+ * background so the cached rows paint instantly and refresh behind them. A
+ * bar that mounts on every page must not carry either at rest (the rationale
+ * AppNav already states for `status.navStatus`). The same applies to the
+ * `nav.card` section's query.
  *
  * The gate stays; what changed is that the cache is no longer empty when the
  * user reaches for it. ChatPage warms `chat.placeMenu` from idle time once its
@@ -39,11 +43,12 @@
 import { useEffect, useState } from "react";
 import { Dropdown } from "./ui/Dropdown";
 import { trpc } from "../lib/trpc";
-import { apiFileUrl } from "../lib/view-url";
 import type { Place } from "../lib/place-label";
 import { useOpenLandmarkChat } from "../hooks/useOpenLandmarkChat";
 import { useNavMenuEntries } from "../hooks/useNavMenuEntries";
+import { useLazyMenuOpen } from "../hooks/useLazyMenuOpen";
 import { SwitchMenuBody, type SwitchLandmark, type SwitchPanel } from "./PlacePill-panels";
+import { CardMark } from "./ui/CardMark";
 import { HereMenuBody } from "./PlacePill-here";
 import { AppBarHereSlot, useAppBarHereMenuClaimed, useAppBarRecentFilesClaimed } from "./app-bar-chrome";
 import { isNativeShell } from "./chat/native-post";
@@ -65,25 +70,6 @@ function CaretIcon() {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
     </svg>
   );
-}
-
-/** The resolved landmark's symbol on the pill's face; nothing when unresolved. */
-function FaceSymbol({
-  symbol,
-  symbolSrc,
-  boxSlug,
-}: {
-  symbol: string;
-  symbolSrc: string | null;
-  boxSlug: string;
-}) {
-  if (symbolSrc !== null) {
-    return (
-      <img src={apiFileUrl(boxSlug, symbolSrc)} alt="" className="w-4 h-4 rounded-full object-cover shrink-0" />
-    );
-  }
-  if (symbol === "") return null;
-  return <span className="shrink-0 leading-none" aria-hidden>{symbol}</span>;
 }
 
 /** Last segment of a box path; the root reads as "/". */
@@ -108,23 +94,37 @@ export function PlacePill({
   place: Place;
 }) {
   const [switchPanel, setSwitchPanel] = useState<SwitchPanel>("root");
-  // First-open latch for the switch menu's data (see the file header). Once
-  // true it stays true, so re-opens render from react-query's cache while
-  // `openSwitchMenu` refreshes it in the background.
-  const [switchOpened, setSwitchOpened] = useState(false);
   const utils = trpc.useUtils();
   const openLandmarkChat = useOpenLandmarkChat(boxSlug);
   const hereClaimed = useAppBarHereMenuClaimed();
   const recentFilesClaimed = useAppBarRecentFilesClaimed();
   const boxSwitchingAvailable = webBoxSwitchingAvailable(isNativeShell());
 
-  const hereQuery = trpc.landmarks.forDir.useQuery(
+  // Mount-path: identity only (label, symbol, dir) — no link/expand
+  // resolution. Runs on every place, so it stays cheap (see file header).
+  const identityQuery = trpc.landmarks.identity.useQuery(
     { dir: place.dir ?? "" },
     { enabled: place.dir !== null },
   );
-  const landmark = place.dir === null ? null : hereQuery.data?.landmark ?? null;
+  const landmark = place.dir === null ? null : identityQuery.data?.identity ?? null;
 
-  const switchQuery = trpc.chat.placeMenu.useQuery(undefined, { enabled: switchOpened });
+  // Open-path latches (see file header + `useLazyMenuOpen`'s doc comment):
+  // the here menu's full link list (listed + derived + expand) and the
+  // switch menu's `chat.placeMenu` each fetch only once their own dropdown
+  // is opened, with a background refresh on every later open.
+  const hereMenu = useLazyMenuOpen(() => { void utils.landmarks.forDir.invalidate(); });
+  const hereQuery = trpc.landmarks.forDir.useQuery(
+    { dir: place.dir ?? "" },
+    { enabled: hereMenu.opened && place.dir !== null },
+  );
+  const hereLinks = hereQuery.data?.landmark?.links ?? [];
+  const hereGroups = hereQuery.data?.landmark?.groups ?? [];
+
+  const switchMenu = useLazyMenuOpen(() => {
+    void utils.chat.placeMenu.invalidate();
+    void utils.nav.get.invalidate();
+  });
+  const switchQuery = trpc.chat.placeMenu.useQuery(undefined, { enabled: switchMenu.opened });
   const switchData = switchQuery.data;
   // A failed load is shown in the menu as a retry row, and logged: without
   // both, the menu sat on "Loading…" forever with nothing anywhere saying why.
@@ -137,25 +137,7 @@ export function PlacePill({
   // The box's own nav.card section — same first-open laziness as the
   // landmark list, and it keeps the card's live-invalidation subscription
   // that the retired link row used to own (Track C3).
-  const navEntries = useNavMenuEntries({ base: `/${boxSlug}`, enabled: switchOpened });
-
-  /**
-   * Open the switch menu: latch the lazy queries on, and on every LATER open
-   * ask for a background refresh. Without this the menu would show whatever it
-   * fetched the first time forever — the bar's old 60-second `byLandmark` poll
-   * came out with the fresh badge, so nothing else refreshes fresh counts, new
-   * landmarks, parse problems, or an edited `nav.card` in a long-lived tab.
-   * `invalidate` (not `refetch`) keeps the cached data on screen while the
-   * refetch runs, which is the plan's "cached data renders immediately".
-   */
-  function openSwitchMenu(): void {
-    if (switchOpened) {
-      void utils.chat.placeMenu.invalidate();
-      void utils.nav.get.invalidate();
-      return;
-    }
-    setSwitchOpened(true);
-  }
+  const navEntries = useNavMenuEntries({ base: `/${boxSlug}`, enabled: switchMenu.opened });
 
   // `|| place.label`: an empty landmark label must not blank the face (the
   // backend falls back to the card's filename, but this face must render
@@ -172,7 +154,7 @@ export function PlacePill({
     if (switchData === undefined) return null;
     if (switchData.landmarks.some((lm) => lm.dir === "")) return switchData.landmarks;
     const root: SwitchLandmark = {
-      path: "", dir: "", label: "Box root", symbol: "🏠", symbolSrc: null,
+      path: "", dir: "", label: "Box root", symbol: { glyph: "🏠" },
       freshCount: switchData.rootFreshCount,
     };
     return [root, ...switchData.landmarks];
@@ -195,15 +177,15 @@ export function PlacePill({
           <button
             type="button"
             id="bbx-nav-place"
-            onClick={(e) => { if (!open) openSwitchMenu(); toggle(e); }}
+            onClick={(e) => { if (!open) switchMenu.open(); toggle(e); }}
             className="min-h-[40px] w-full min-w-0 pl-3 pr-2 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             title={title}
-            aria-label={`Place: ${faceLabel}`}
+            aria-label={`Where you are: ${faceLabel}`}
             {...ariaProps}
           >
             <span className="hidden sm:inline shrink-0 opacity-65">{boxName} ▸</span>
             {landmark !== null ? (
-              <FaceSymbol symbol={landmark.symbol} symbolSrc={landmark.symbolSrc} boxSlug={boxSlug} />
+              <CardMark symbol={landmark.symbol} size="xs" boxSlug={boxSlug} />
             ) : place.dir === "" ? (
               // The box root is a place like any other — with no root landmark
               // card it still gets a symbol, matching its switch-menu row.
@@ -240,12 +222,12 @@ export function PlacePill({
             align="left"
             width="w-[20rem]"
             className="shrink-0 flex"
-            trigger={({ toggle, ariaProps }) => (
+            trigger={({ open, toggle, ariaProps }) => (
               <button
                 type="button"
                 id="bbx-nav-here"
                 data-bbx-does="opens the here menu — open the current folder, plus its landmark's bookmarks"
-                onClick={toggle}
+                onClick={(e) => { if (!open) hereMenu.open(); toggle(e); }}
                 className="min-h-[40px] px-2.5 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                 title={`Here: ${landmark.dir === "" ? "/" : `${landmark.dir}/`}`}
                 aria-label={`Here: ${dirBasename(landmark.dir)}`}
@@ -273,8 +255,8 @@ export function PlacePill({
               <HereMenuBody
                 dir={landmark.dir}
                 boxSlug={boxSlug}
-                links={landmark.links}
-                groups={landmark.groups}
+                links={hereLinks}
+                groups={hereGroups}
               />
             )}
           </Dropdown>

@@ -1,8 +1,9 @@
-# Dev infrastructure: router, workstreams, process lifecycle
+# Dev infrastructure: launchers, workstreams, process lifecycle
 
-Detail for the tooling in this directory (`router.ts`, `workstreams`,
-`process-cleanup.ts`, `browse`, `box-entry.ts`, `path-leak-check.ts`). The
-always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
+Detail for the tooling in this directory (`workstreams`, `process-cleanup.ts`,
+`browse`, `path-leak-check.ts`) and the router it launches from
+`workstreams-app/src/router/`. The always-relevant summary lives in the root
+CLAUDE.md; this file is the mechanism.
 
 ## Tests for `bin/` tooling
 
@@ -14,6 +15,9 @@ separate integration tier. Existing `bin/*.test.ts` files predate this rule and
 are not precedent. Add a traditional test only when using a doctest would be
 circular (for example, testing the doctest harness itself), and document that
 exception in the file.
+
+Router unit tests live under `workstreams-app/test/router/`
+and run as part of that package's test suite.
 
 ## Home-directory leak guard (`path-leak-check.ts`)
 
@@ -116,7 +120,7 @@ merge that updates main (fast-forward or not), so deploy is unaffected; see
 
 ## Router architecture
 
-One router (`router.ts`, port 3210) serves the main checkout and every
+One router (`workstreams-app/src/router/router.ts`, port 3210) serves the main checkout and every
 worktree, routing by URL path prefix (`/main/...`, `/<worktree>/...`).
 Each worktree gets its own Vite + `bbx hub` pair, spawned as direct
 children of the router (no Overmind, no tmux — flat process tree). The
@@ -141,7 +145,7 @@ opt into this dev behavior. A standalone foreground `bbx serve`/scheduler has no
 safe owner to replace it and exits or remains visible rather than self-spawning
 an overlapping successor.
 
-`router.ts` is the composition root: it wires the two gated servers and runs
+`workstreams-app/src/router/router.ts` is the composition root: it wires the two gated servers and runs
 the boot + signal-handler sequence, and holds nothing else (2026-08-28 size
 split). The machinery lives in `router-*.ts` siblings it imports — the worktree
 lifecycle in `router-core.ts` + `router-worktree-start.ts` +
@@ -212,7 +216,7 @@ runs in prod. Full design and rationale:
 Each checkout's `beebox/.env` (gitignored) is parsed with Node's own
 `util.parseEnv` and merged into the environment of the children the router
 spawns for that worktree — Vite, `bbx hub`, and every `bbx serve` below it
-(`bin/router-effects.ts` `readEnvFile`). A real exported variable wins over the
+(`workstreams-app/src/router/router-effects.ts` `readEnvFile`). A real exported variable wins over the
 file, so `FOO=x pnpm dev` still overrides. **It is a real env file now, not just
 the `BOXES=` line the router greps out of it** — a stray `PATH=` or
 `NODE_OPTIONS=` in there reaches every dev process.

@@ -21,26 +21,21 @@
  *                     with renderer toggle.
  */
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { ThemedFileCard } from "./themes/ThemedFileCard";
+import { useConversationCard, selectionReceiver } from "./chat/everywhere/card-context";
+import { useState, useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { trpc } from "../lib/trpc";
 import { displayName } from "../lib/display-name";
-import { ATTACH_SUFFIX } from "@shared/attach-path";
-import { apiRawFileUrl, getApiBase, withBase } from "../api";
-import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
-import { useDeferredResync } from "../hooks/useDeferredResync";
+import { useFileData, isCardPath, isMissingCardFailure } from "./file-view-data";
+import type { LoadFailure } from "../lib/file-load-state";
+import { withBase } from "../api";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
-import type { NavigateHint, ViewTarget } from "../lib/view-url";
-import type { ActivityKind } from "@core/chat/card-activity.js";
-import { isBinaryPath, pathExt } from "../lib/binary-files";
-import { boxRelativePath } from "@shared/box-path";
-import { RequestError } from "../lib/errors";
-import { busEventData } from "../lib/bus-events";
+import { rendererDisplayLabel } from "../lib/renderer-display-label";
+import { toDisplayPath } from "@shared/display-path";
 import { SelectionCapture } from "./SelectionCapture";
-import type { AddSelectionInput } from "../lib/selection/position";
 import { Pre } from "./ui/Pre";
-import { AgentViewRenderer } from "./AgentViewRenderer";
+import { Button } from "./ui/Button";
+import { ActiveFileRenderer, AuthoredRendererMarker } from "./ActiveFileRenderer";
 import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { OpenInPanelButton } from "./ui/OpenInPanelButton";
@@ -48,192 +43,10 @@ import { StatusBadge } from "./ui/StatusBadge";
 import { CardActions } from "./card-actions/CardActions";
 import { usePageTitle } from "./DocumentTitle";
 import { MissingCardState } from "./card-actions/MissingCardState";
+import { FileStaleNotice } from "./FileStaleNotice";
+import type { FileViewProps } from "./file-view-types";
 
-export type FileViewMode = "page" | "chat" | "companion" | "embed";
-
-interface FileViewProps {
-  path: string;
-  mode?: FileViewMode;
-  /** Force a specific renderer by name (e.g. from a `?view=X` param). */
-  rendererName?: string | null;
-  /**
-   * Optional. When provided, the renderer toggle reports the chosen name here
-   * instead of keeping it in local state — the host owns the choice and is
-   * expected to feed it back as `rendererName`. Browse passes this so the
-   * active renderer lives in the URL (`?view=`) and survives back/forward and
-   * a shared link. Absent elsewhere, where the toggle stays view-local.
-   */
-  onSelectRenderer?: (name: string) => void;
-  /**
-   * Required. Called when a link inside this view wants to open a different
-   * file. The surrounding context decides what that means — pushing a URL,
-   * replacing a sidebar pane, etc.
-   */
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  /**
-   * Optional. When provided, text selections in the rendered document
-   * surface a floating "+" that hands the selection to this callback (used
-   * in the chat companion pane). Absent everywhere else — no affordance
-   * without a composer to receive it.
-   */
-  onAddSelection?: (selection: AddSelectionInput) => void;
-  /**
-   * Optional. Report user activity on this card to the chat's companion-pane
-   * accumulator. Threaded into agent-generated views (writes → `"modified"`,
-   * `reportActivity("explored")` opt-in). Absent outside the companion pane.
-   */
-  reportActivity?: (kind: ActivityKind, detail?: string) => void;
-  /**
-   * Optional. When provided (chat-embedded cards only), the chat header shows
-   * an "open in sidebar" button beside open-in-new-tab that escalates this
-   * card into the companion pane. Absent where no companion pane exists.
-   */
-  onOpenInPanel?: () => void;
-  /**
-   * Optional. Embed query params, forwarded to the active renderer's `params`.
-   * Set on the embed path; absent elsewhere.
-   */
-  params?: Record<string, string>;
-  /**
-   * Optional. The `![caption](path)` caption, forwarded to a media renderer so
-   * an embedded image/figure card shows it like a normal captioned image.
-   */
-  caption?: string;
-  onClose?: () => void;
-}
-
-/* ---------- path classification ---------- */
-
-function isCardPath(path: string): boolean {
-  return path.endsWith(".card");
-}
-
-function isDirectoryPath(path: string): boolean {
-  // An extension is a good proxy for "this is a file" except for the one
-  // directory convention that carries a suffix: every card's attachments live in
-  // a sibling `<basename>.attach/`. Classifying those as files sent the shell to
-  // fetch a directory's body as text, so every attachment directory in every box
-  // rendered "Failed to load: 404" on the card page while listing fine in Browse.
-  // Only a path ENDING in the suffix is the directory itself; `foo.attach/photo.jpg`
-  // is a file inside it and is classified by its own extension below.
-  if (path.endsWith(ATTACH_SUFFIX)) return true;
-  return pathExt(path) === "";
-}
-
-/**
- * JSON is fetched by its own renderer (renderers/json.tsx), which gates on
- * file size before pulling a potentially-huge body — so, like binary files,
- * the shell must not prefetch it as text.
- */
-function isJsonPath(path: string): boolean {
-  return pathExt(path) === ".json";
-}
-
-/* ---------- data loading ---------- */
-
-interface LoadResult {
-  data: FileData | null;
-  loading: boolean;
-  error: string | null;
-}
-
-function useFileData(path: string): LoadResult {
-  const isCard = isCardPath(path);
-  const isDir = isDirectoryPath(path);
-  const isBinary = isBinaryPath(path);
-  const isJson = isJsonPath(path);
-  // JSON, like binary files, is loaded by its own renderer, so the shell
-  // passes the path through without prefetching the body.
-  const fetchText = !isCard && !isDir && !isBinary && !isJson;
-  const apiBase = getApiBase();
-
-  // Card data via tRPC
-  const { data: card, isLoading: cardLoading, error: cardError } = trpc.card.get.useQuery(
-    { path },
-    { enabled: isCard },
-  );
-
-  // Text content via /api/files/* (managed by React Query)
-  const textQuery = useQuery({
-    queryKey: ["file-text", path],
-    enabled: fetchText,
-    queryFn: async ({ signal }) => {
-      const resp = await fetch(apiRawFileUrl(apiBase, path), { signal });
-      if (!resp.ok) {
-        const message = `Failed to load: ${resp.status} ${resp.statusText}`;
-        throw new RequestError(message);
-      }
-      return resp.text();
-    },
-  });
-
-  // Live reload via the box event stream. Resync this file's data on a matching
-  // `file-change`, and also on a *re*connect: file-change events are transient
-  // and not replayed, so a change that landed while the socket was dropped would
-  // otherwise leave the view stale until a manual reload.
-  const utils = trpc.useUtils();
-  const resync = useCallback(() => {
-    // Fire-and-forget: both are react-query refresh triggers whose failure
-    // surfaces through the query's own error/isError state, not here.
-    if (isCard) {
-      void utils.card.get.invalidate({ path });
-    } else if (fetchText) {
-      void textQuery.refetch();
-    }
-  }, [path, isCard, fetchText, utils, textQuery]);
-  // Skip the very first connect — the queries already load on mount, so a resync
-  // there is a redundant refetch (and FileView is mounted many-at-once in chat).
-  const connectedOnceRef = useRef(false);
-  // Reconnect-driven resync is per-instance (one per mounted FileView, i.e.
-  // per path), coalesced same-tick and deferred while the tab is hidden — a
-  // chat with many embedded files all reconnecting at once shouldn't each
-  // fire their own refetch, and a backgrounded tab shouldn't fetch at all.
-  const triggerResync = useDeferredResync(resync);
-  useBusSubscription({
-    onEvent: useCallback((event: RealtimeEvent) => {
-      const fileChange = busEventData(event, "file-change");
-      if (!fileChange) return;
-      // Tolerant compare: normalize both sides so a stray leading slash on this
-      // view's path can't silently drop the event (the original refresh bug).
-      if (boxRelativePath(fileChange.path) !== boxRelativePath(path)) return;
-      resync();
-    }, [path, resync]),
-    onConnect: useCallback(() => {
-      if (!connectedOnceRef.current) {
-        connectedOnceRef.current = true;
-        return;
-      }
-      triggerResync();
-    }, [triggerResync]),
-  });
-
-  return useMemo<LoadResult>(() => {
-    if (isCard) {
-      if (cardLoading) return { data: null, loading: true, error: null };
-      if (cardError) return { data: null, loading: false, error: cardError.message };
-      if (!card) return { data: null, loading: false, error: null };
-      return {
-        data: {
-          path: card.path,
-          kind: card.kind,
-          type: card.type,
-          frontmatter: card.frontmatter,
-          body: card.body,
-        },
-        loading: false,
-        error: null,
-      };
-    }
-    if (isDir || isBinary || isJson) {
-      return { data: { path }, loading: false, error: null };
-    }
-    // fetchText
-    if (textQuery.isLoading) return { data: null, loading: true, error: null };
-    if (textQuery.error) return { data: null, loading: false, error: textQuery.error.message };
-    if (textQuery.data === undefined) return { data: null, loading: true, error: null };
-    return { data: { path, content: textQuery.data }, loading: false, error: null };
-  }, [isCard, isDir, isBinary, isJson, path, card, cardLoading, cardError, textQuery.data, textQuery.isLoading, textQuery.error]);
-}
+export type { FileViewMode } from "./file-view-types";
 
 /* ---------- chrome helpers ---------- */
 
@@ -243,15 +56,16 @@ function cardTitle(data: FileData): string | null {
   return typeof title === "string" && title.trim() !== "" ? title : null;
 }
 
-function RendererToggle({
-  renderers, active, onSelect, compact,
-}: {
+function RendererToggle({ renderers, active, onSelect, compact, path }: {
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
   compact?: boolean;
+  path: string;
 }) {
   if (renderers.length < 2) return null;
+  // Sorted by descending priority (getRenderers): "Card" (30) leads only when no type-specific (100) renderer is registered.
+  const hasTypeSpecificRenderer = renderers[0]?.name !== "Card";
   return (
     <div className={`flex gap-1 bg-warm-100 rounded-lg ${compact ? "p-0.5" : "p-1"}`}>
       {renderers.map(r => (
@@ -262,7 +76,7 @@ function RendererToggle({
             r === active ? "bg-white shadow text-warm-900" : "text-warm-700 hover:text-warm-900"
           }`}
         >
-          {r.name}
+          {rendererDisplayLabel({ registeredName: r.name, filePath: path, hasTypeSpecificRenderer })}
         </button>
       ))}
     </div>
@@ -287,9 +101,9 @@ function ChatHeader({
     <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{title ?? displayName(path)}</div>
-        <div className="text-xs text-warm-500 truncate" title={path}>{path}</div>
+        <div className="text-xs text-warm-500 truncate" title={toDisplayPath(path)}>{toDisplayPath(path)}</div>
       </div>
-      <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact />
+      <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact path={path} />
       <CardActions path={path} onTrashed={onTrashed} />
       {onOpenInPanel ? (
         <OpenInPanelButton onClick={onOpenInPanel} label="Open in sidebar" size="sm" />
@@ -317,25 +131,51 @@ function PageHeader({
     <div className="p-4 pb-0">
       <div className="flex items-center justify-between mb-2 gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-warm-900 truncate" title={data.path}>
+          <h1 className="text-lg font-bold text-warm-900 truncate" title={toDisplayPath(data.path)}>
             {cardTitle(data) ?? displayName(data.path)}
           </h1>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-warm-500 truncate" title={data.path}>{data.path}</span>
+            <span className="text-xs text-warm-500 truncate" title={toDisplayPath(data.path)}>{toDisplayPath(data.path)}</span>
             {status ? <StatusBadge status={status} /> : null}
           </div>
         </div>
-        <div className="flex items-center gap-1"><RendererToggle renderers={renderers} active={active} onSelect={onSelect} />{isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onTrashed} /> : null}</div>
+        <div className="flex items-center gap-1"><RendererToggle renderers={renderers} active={active} onSelect={onSelect} path={data.path} />{isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onTrashed} /> : null}</div>
       </div>
     </div>
   );
 }
 
+/**
+ * The hard-failure state: nothing loaded, and the failure is not a missing
+ * card. It offers the same Try again the stale marker does — a card opened
+ * while the box is restarting has no previous body to fall back on, and
+ * reloading the whole page should not be the only way forward.
+ */
+function FileErrorState({ path, failure, onRetry }: { path: string; failure: LoadFailure; onRetry: () => void }) {
+  return (
+    <div className="p-4 text-danger-dark">
+      <p className="font-medium">{failure.headline}</p>
+      <p className="text-sm mt-1">Could not load {toDisplayPath(path)}.</p>
+      <div className="mt-1"><Pre size="sm" error>{failure.detail}</Pre></div>
+      <div className="mt-2"><Button intent="secondary" size="sm" onClick={onRetry}>Try again</Button></div>
+    </div>
+  );
+}
+
+function selectedRenderer({ path, userSelection, rendererName }: {
+  path: string; userSelection: { path: string; name: string | null } | null; rendererName?: string | null;
+}) { return userSelection?.path === path ? userSelection.name : rendererName; }
+
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption, onClose }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
   const mode = modeProp ?? "page";
-  const { data, loading, error } = useFileData(path);
+  const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
+  const cardContext = useConversationCard({ path, mode, rendererName: selectedRenderer({ path, userSelection, rendererName }), params, viewState: ownedViewState });
+  const onAddSelection = selectionReceiver(suppliedAddSelection, cardContext.capture);
+  const handleCardFocus = cardContext.handleFocus;
+  const handleRendererFocus = cardContext.handleRendererFocus;
+  const { data, loading, error, stale, refresh } = useFileData(path);
 
   const handleCapture = useCallback((selection: { text: string; position: string }) => {
     if (onAddSelection === undefined) return;
@@ -343,50 +183,33 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     onAddSelection({ ref, text: selection.text, position: selection.position });
   }, [onAddSelection, path]);
 
-  const [userSelection, setUserSelection] = useState<{ path: string; name: string } | null>(null);
-  const selectForPath = useCallback((name: string) => {
+  const selectForPath = useCallback((name: string | null) => {
     // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
     // "explored" action. No-op outside the companion pane (reportActivity unset).
-    reportActivity?.("explored", `viewing as ${name}`);
+    reportActivity?.("explored", name === null ? "using preferred view" : `viewing as ${name}`);
+    handleRendererFocus(name);
     if (onSelectRenderer) {
       onSelectRenderer(name);
       return;
     }
     setUserSelection({ path, name });
-  }, [onSelectRenderer, path, reportActivity]);
+  }, [onSelectRenderer, path, reportActivity, handleRendererFocus]);
 
   const binding = useCardViewBinding(data?.type);
   const renderers: FileRenderer[] = useMemo(() => {
     const base = data ? getRenderers(path, data) : [];
     if (binding === null || !data) return base;
-    const Bound = () => (
-      <AgentViewRenderer
-        slug={binding.slug}
-        mode={mode === "chat" ? "chat" : "page"}
-        // Link/embed query params (e.g. `?view=…&k=v`) reach the view; `path`
-        // is the card's own path and is authoritative (can't be clobbered).
-        params={{ ...params, path }}
-        {...(reportActivity !== undefined ? { reportActivity } : {})}
-        onNavigate={onNavigate}
-        renderInline={(cardPath) => <FileView path={cardPath} mode="embed" onNavigate={onNavigate} />}
-      />
-    );
-    return [{ name: binding.name, Component: Bound, priority: 100 }, ...base];
-  }, [path, data, binding, mode, reportActivity, onNavigate, params]);
+    return [{ name: binding.name, Component: AuthoredRendererMarker, priority: 100 }, ...base];
+  }, [path, data, binding]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
-  if (error && !(isCardPath(path) && error.startsWith("Card not found:"))) {
-    return (
-      <div className="p-4 text-danger-dark">
-        <p className="font-medium">Error loading {path}</p>
-        <div className="mt-1"><Pre size="sm" error>{error}</Pre></div>
-      </div>
-    );
-  }
-  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {path}</div>;
+  // A missing card is not an error state: it falls through to MissingCardState,
+  // which offers to create or close it.
+  if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} onRetry={refresh} />;
+  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {toDisplayPath(path)}</div>;
 
-  const userName = userSelection && userSelection.path === path ? userSelection.name : null;
-  const requested = userName ?? rendererName ?? null;
+  const hasUserSelection = userSelection?.path === path;
+  const requested = hasUserSelection ? userSelection.name : rendererName ?? null;
   // renderers can be empty (no renderer matches this file); the frontend
   // tsconfig lacks noUncheckedIndexedAccess, so `renderers[0]` would type
   // `active` as always-defined. `.at(0)` is typed `T | undefined` regardless
@@ -397,15 +220,50 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     return <div className="p-4 text-warm-600">No renderer available for this file.</div>;
   }
 
-  const rendered = <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption} />;
-  const body = onAddSelection === undefined
+  const rendered = (
+    <ActiveFileRenderer
+      active={active} binding={binding} data={data} path={path} mode={mode}
+      params={params} viewState={ownedViewState} canPushViewState={canPushArg}
+      {...(ownedStateChange !== undefined ? { onViewStateChange: ownedStateChange } : {})}
+      {...(reportActivity !== undefined ? { reportActivity } : {})}
+      onNavigate={onNavigate} caption={caption}
+      renderInline={(target) => (
+        <FileView
+          path={target.path}
+          mode="embed"
+          rendererName={target.viewer}
+          params={target.params}
+          viewState={target.viewState}
+          onNavigate={onNavigate}
+        />
+      )}
+    />
+  );
+  const captured = onAddSelection === undefined
     ? rendered
     : <SelectionCapture onCapture={handleCapture}>{rendered}</SelectionCapture>;
+  // The marker rides with the body rather than with each mode's chrome, so a
+  // card reports the same state wherever it renders — in chat, in the sidecar,
+  // and on its own page.
+  const body = stale === null ? captured : (
+    <>
+      <FileStaleNotice failure={stale} onRefresh={refresh} />
+      {captured}
+    </>
+  );
 
   if (mode === "embed") {
     // Frameless: just the renderer output, no header/toggle/border. For figures
-    // and other media embedded inline in a card body via `![](view:…)`.
-    return body;
+    // and other media embedded inline in a card body via `![](view:…)`. No
+    // stale marker either — an embed has no chrome to carry one, and the card
+    // that hosts it reports its own staleness.
+    return captured;
+  }
+
+  if (isCardPath(path)) {
+    return <ThemedFileCard key={path} data={data} mode={mode} renderers={renderers}
+      active={active} hasExplicitView={requested !== null} onSelect={selectForPath} onNavigate={onNavigate} onFocus={handleCardFocus}
+      onClose={onClose} onOpenInPanel={onOpenInPanel}>{body}</ThemedFileCard>;
   }
 
   if (mode === "chat") {
@@ -424,10 +282,10 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     // (the PDF frame) can take the leftover height, while a taller renderer
     // still grows past it and scrolls in the pane's own overflow-auto.
     return (
-      <div className="flex flex-col min-h-full">
+      <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus} className="flex flex-col min-h-full">
         {renderers.length > 1 || isCardPath(data.path) ? (
           <div className="flex-shrink-0 flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
-            <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact />
+            <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact path={data.path} />
             {isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onClose} /> : null}
           </div>
         ) : null}
@@ -437,7 +295,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   }
 
   return (
-    <div>
+    <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus}>
       <PageHeader data={data} renderers={renderers} active={active} onSelect={selectForPath} onTrashed={onClose} />
       {body}
     </div>

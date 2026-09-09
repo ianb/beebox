@@ -205,7 +205,7 @@ const content = createIntakeJobTemplate({
   created: "2026-06-09T00:00:00Z",
   source: "gmail",
   description: "Triage 1 inbox item",
-  items: ["box/inbox/a.memo.card"],
+  items: ["_content/inbox/a.memo.card"],
 });
 const loaded = await loadCardFromText({ content, source: "2026-06-09-gmail.intake.job.card", ctx: registryCtx });
 loaded.kind

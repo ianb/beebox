@@ -1,11 +1,12 @@
 ---
 title: "Retro, first day under change-based selection: eleven incidents, five improvements — keep the speed"
-workstream: unattached
+workstream: full-suite-verdicts
 area: monorepo
 labels: [tests, schedules, codex]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "look through what went on and how we can improve; I don't want to revert"
+priority: important
 ---
 
 Boxholder's framing (2026-08-26): the new speed is great; improve, don't revert.

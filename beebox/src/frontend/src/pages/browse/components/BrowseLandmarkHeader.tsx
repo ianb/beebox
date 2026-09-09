@@ -7,6 +7,7 @@ import {
 } from "../../../components/landmarks/LandmarkSection";
 import { Stack } from "../../../components/ui/Stack";
 import { Text } from "../../../components/ui/Text";
+import { toDisplayPath } from "@shared/display-path";
 
 type Landmark = NonNullable<RouterOutput["landmarks"]["forDir"]["landmark"]>;
 
@@ -19,19 +20,20 @@ export function BrowseLandmarkHeader({
   boxSlug: string;
   onNavigate: (target: ViewTarget) => void;
 }) {
+  const labelText = landmark.label || toDisplayPath(landmark.path);
   return (
-    <section aria-label={`${landmark.label || landmark.path} landmark`} className="border-b border-warm-200 p-4">
+    <section aria-label={`${labelText} landmark`} className="border-b border-warm-200 p-4">
       <Stack gap="sm">
         <div className="flex items-center gap-2">
           <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} compact />
           <Text as="h2" size="sm" weight="bold">
             <button
               type="button"
-              onClick={() => onNavigate({ path: landmark.path, viewer: null, params: {} })}
-              aria-label={`Open ${landmark.label || landmark.path} landmark details`}
+              onClick={() => onNavigate({ path: landmark.path, viewer: null, params: {}, viewState: null })}
+              aria-label={`Open ${labelText} landmark details`}
               className="text-left hover:underline"
             >
-              {landmark.label || landmark.path}
+              {labelText}
             </button>
           </Text>
         </div>

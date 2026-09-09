@@ -1,11 +1,11 @@
 /**
  * A box's URL slug, derived from where it lives on disk.
  *
- * A box's `boxRoot` is the package's `content/` directory (see "The box
- * repository" in `docs/implemented-plans/boxes-as-packages-v2.md`), so
- * `path.basename(boxRoot)` is the literal string "content" for EVERY box —
- * the trap this module exists to close. The meaningful name is the PACKAGE
- * root's basename.
+ * shapeVersion 3 has one root, so `path.basename(shape.boxRoot)` is simply
+ * the box's directory name — no "content dir" trap to work around (the v2
+ * layout's `boxRoot` was a `content/` directory, so its basename was the
+ * literal string "content" for EVERY box; that trap is gone with the
+ * two-root layout — see `docs/implemented-plans/one-root-box-layout.md`).
  *
  * Prefer the authoritative slug when you have one: a served box carries
  * `box.slug` (honouring `bbx serve --slug`) through `BoxSpec` and the tRPC
@@ -20,7 +20,7 @@ import { getBoxShapeIfPresent, type BoxShape } from "./box-shape.js";
 
 /** The slug of a box whose shape is already resolved. */
 export function boxSlugFromShape(shape: BoxShape): string {
-  return path.basename(shape.packageRoot);
+  return path.basename(shape.boxRoot);
 }
 
 /**

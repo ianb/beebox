@@ -79,10 +79,10 @@ The card's body is the email body. Markdown subset only:
 
 - **Reply drafts** go inside the existing thread's \`.attach/\` next to
   the source message, e.g.
-  \`box/inbox/email/thread-X.attach/draft-001.email-outbound.card\`. This
+  \`_content/inbox/email/thread-X.attach/draft-001.email-outbound.card\`. This
   keeps the conversation co-located.
 - **New emails (no thread)** go in a fresh directory under
-  \`box/inbox/email/\`.
+  \`_content/inbox/email/\`.
 
 ## Lifecycle
 

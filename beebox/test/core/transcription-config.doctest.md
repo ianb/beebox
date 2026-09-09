@@ -3,7 +3,7 @@
 `src/core/transcription/index.ts` owns the per-box transcription config. Two
 independent settings: `service` (realtime/batch — voxtral/deepgram/whisper)
 and `hqService` (narration-mode checkpoint HQ pass — whisper/voxtral).
-Stored at `config/transcription.json`.
+Stored at `_config/transcription.json`.
 
 ```ts setup
 import {
@@ -71,7 +71,7 @@ new `hqService` field is optional and defaults to `whisper`.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("config/transcription.json", '{"service":"deepgram"}\n');
+await box.write("_config/transcription.json", '{"service":"deepgram"}\n');
 JSON.stringify(await loadTranscriptionConfig(box.root))
 => {"service":"deepgram","hqService":"whisper"}
 ```

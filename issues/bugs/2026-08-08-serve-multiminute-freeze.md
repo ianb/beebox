@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-integration-tests — field-test operator prototype (Priya, activity 2)
 labels: [field-test-findings, code-error]
+priority: backlog
 ---
+
+> `reconfirm?` checked 2026-09-05: still live. Nothing since the 2026-08-18 checkpoint touched `bulk-upload.ts`, `bulk-upload/worker.ts`, `git.ts`, or `git-lock.ts`. The remaining suspects (git-index contention vs. a tab hang) need what the checkpoint already named: a credentialed identity driving bulk upload concurrently with a chat turn under `node --cpu-prof` plus a heartbeat curl.
 
 > **Checked 2026-08-18 — still live, and today's git-lock work argues *against*
 > this issue's leading hypothesis.** Tagged `reconfirm`; removed.

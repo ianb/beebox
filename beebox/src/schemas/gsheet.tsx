@@ -6,9 +6,9 @@
  * at one tab file.
  *
  * Example file layout:
- *   store/drive/Budget.gsheet.card
- *   store/drive/Budget.attach/Summary.json
- *   store/drive/Budget.attach/Expenses.json
+ *   _content/drive/Budget.gsheet.card
+ *   _content/drive/Budget.attach/Summary.json
+ *   _content/drive/Budget.attach/Expenses.json
  */
 
 import { stringify as stringifyYaml } from "yaml";
@@ -36,7 +36,7 @@ export const GsheetSchema = cardSchema("gsheet", {
   },
   instructions: `# Gsheet Cards
 
-**Location:** Anywhere in the box, commonly \`store/drive/\`.
+**Location:** Anywhere in the box, commonly \`_content/drive/\`.
 
 Each synced Google Spreadsheet has a \`.gsheet.card\` metadata file plus
 an attach scope (\`{basename}.attach/\`) containing one JSON file per

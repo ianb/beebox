@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-dev-comments — aligning the document-comments schema with the box's
 labels: [vocabulary]
+priority: important
 ---
 
 The box describes "how did this text arrive" in two places, with two field names

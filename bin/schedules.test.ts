@@ -295,4 +295,8 @@ test("tick that cannot write the store exits non-zero and notifies", async () =>
   assert.equal(result.exitCode, 1);
   assert.ok(result.heartbeatError !== null);
   assert.equal(fake.notifications.length, 1);
+  assert.equal(fake.notifications[0]?.title, "beebox schedules");
+  assert.match(fake.notifications[0]?.message ?? "", /^cannot write the schedule store:/);
+  assert.equal(fake.notifications[0]?.group, "schedule-store-failure");
+  assert.equal(fake.notifications[0]?.destination, "http://localhost:3210/workstreams/streams");
 });

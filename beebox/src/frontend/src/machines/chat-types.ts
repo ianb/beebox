@@ -1,3 +1,4 @@
+import type { SendBinding } from "@shared/chat-composer-binding.js";
 /**
  * Shared types, constants, and logging for the chat machine and its actors.
  * Kept in a leaf module so `chatMachine.ts` and `chat-actors.ts` can both
@@ -16,7 +17,7 @@ import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js
 // -- Events --
 
 export type ChatEvent =
-  | { type: "SEND"; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }
+  | { type: "SEND"; binding?: SendBinding; startup?: boolean; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }
   | { type: "INTERRUPT" }
   | { type: "DISMISS_ERROR" }
   | { type: "STREAM_TEXT"; text: string }
@@ -91,7 +92,7 @@ export interface ChatContext {
    * Why the machine is (or last was) in `refreshing`. `"turn"` is set on every
    * `streaming → refreshing` edge — the agent just worked; `"resync"` by the
    * global REFRESH (WS (re)connect, idle-chat `chat-complete`, status poll).
-   * The status strip shows "Agent is working…" through a `turn` refresh only
+   * The status strip shows "Thinking…" through a `turn` refresh only
    * (`components/chat/processing-status-display.ts`). Meaningful only while
    * in `refreshing`.
    */

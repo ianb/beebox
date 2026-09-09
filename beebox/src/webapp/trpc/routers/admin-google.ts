@@ -9,16 +9,17 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure } from "../trpc.js";
-import { getGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES } from "../../../connectors/google-auth.js";
+import { getBoxGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES } from "../../../connectors/google-auth.js";
 import { loadGoogleTokens } from "../../../connectors/google-token-store.js";
 import { createGoogleOAuthState } from "../../../connectors/google-oauth-state.js";
 import { loadBoxConfig } from "../../../core/box/config.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
+import { getBoxDir } from "../../../lib/paths.js";
 
 export const googleAdminProcedures = {
   googleStatus: ownerProcedure.query(async ({ ctx }) => {
-    const creds = await getGoogleClientCreds(ctx.boxRoot);
+    const creds = await getBoxGoogleClientCreds(ctx.boxRoot);
     if (!creds) {
       const enabledServices: Record<string, boolean> = {};
       return {
@@ -49,12 +50,12 @@ export const googleAdminProcedures = {
   googleSetup: ownerProcedure
     .input(z.object({ returnPath: z.string().optional(), origin: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
-      const creds = await getGoogleClientCreds(ctx.boxRoot);
+      const creds = await getBoxGoogleClientCreds(ctx.boxRoot);
       if (!creds) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
-            'Google OAuth not configured. Grant the "google-oauth-client-id" and "google-oauth-client-secret" secrets to this box, or set GOOGLE_OAUTH_CLIENT_ID/SECRET.',
+            'Google OAuth not configured. Grant the "google-oauth-client-id" and "google-oauth-client-secret" secrets to this box.',
         });
       }
       // Prefer the browser origin; fall back to box.json publicUrl, then env.
@@ -93,7 +94,7 @@ export const googleAdminProcedures = {
     }
     // Also clean up a legacy per-box token file if present.
     try {
-      await fs.unlink(path.join(ctx.boxRoot, "config/connectors/google.secret.json"));
+      await fs.unlink(path.join(getBoxDir(ctx.boxRoot, "connectors"), "google.secret.json"));
     } catch (_e) {
       // Already gone.
     }

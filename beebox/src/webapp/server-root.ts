@@ -25,6 +25,7 @@ import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
 import { verifyMobileRequest } from "../core/mobile/request-auth.js";
 import { verifyBrowseKey } from "../core/browse-key.js";
+import type { CardSymbolData } from "../shared/card-symbol.js";
 
 /** Body of `POST /api/push/resubscribe` — validated at the HTTP boundary. */
 const resubscribeBodySchema = z.object({
@@ -128,9 +129,8 @@ export interface BoxListing {
   slug: string;
   name: string;
   /** Symbol text (emoji); empty when the box uses an image or has no mark. */
-  symbol: string;
-  /** Box-relative path to the symbol image, or null for a text symbol. */
-  symbolSrc: string | null;
+  /** The mark, `src` resolved to a box-relative path; null when there is none. */
+  symbol: CardSymbolData | null;
 }
 
 /**
@@ -157,8 +157,8 @@ export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Prom
 export async function describeBoxes(boxes: BoxSpec[]): Promise<BoxListing[]> {
   return Promise.all(
     boxes.map(async (b) => {
-      const { name, symbol, symbolSrc } = await readBoxIdentity({ boxRoot: b.boxRoot, slug: b.slug });
-      return { slug: b.slug, name, symbol, symbolSrc };
+      const { name, symbol } = await readBoxIdentity({ boxRoot: b.boxRoot, slug: b.slug });
+      return { slug: b.slug, name, symbol };
     }),
   );
 }

@@ -45,6 +45,7 @@ import {
   type ViewTarget,
 } from "../lib/view-url";
 import { parseMarkdown } from "../lib/markdoc-parse";
+import { transformedResolvedImageUrl } from "../lib/image-transform-url";
 import type { ReactNode } from "react";
 
 // Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
@@ -60,10 +61,17 @@ export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; a
       return <VideoEmbed embedUrl={video.embedUrl} title={alt ?? ""} className="mx-auto" />;
     }
     const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug: ctx.boxSlug, basePath: ctx.basePath }) : "";
+    const displaySrc = transformedResolvedImageUrl(resolved, {
+      width: 960,
+      fit: "scale-down",
+      quality: 85,
+      format: "auto",
+    }) ?? resolved;
     const proxyFallbackSrc = externalImageProxyUrl(resolved, ctx.boxSlug);
     return (
       <Image
-        src={resolved}
+        src={displaySrc}
+        lightboxSrc={resolved}
         alt={alt ?? ""}
         size="chat"
         lightbox
@@ -129,11 +137,12 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const config: Config = {
     ...markdocConfig,
     nodes: {
-      ...(markdocConfig.nodes ?? {}),
+      ...markdocConfig.nodes,
       document: { render: "Fragment" },
       // Fresh per render config so the duplicate-slug set is scoped to this pass.
       heading: makeHeadingNode(),
       paragraph: { render: "Para", children: ["inline"] },
+      blockquote: { render: "Blockquote", children: ["paragraph", "tag", "blockquote", "list", "heading", "fence"] },
       link: {
         render: "Link",
         children: ["strong", "em", "s", "code", "text", "tag"],
@@ -189,7 +198,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
       <button
         type="button"
         onClick={() => {
-          const target: ViewTarget = { path, viewer: null, params: {} };
+          const target: ViewTarget = { path, viewer: null, params: {}, viewState: null };
           linkCtx.onNavigate(target, label === "" ? undefined : { label });
         }}
         className="mx-0.5 rounded bg-warm-100 px-1.5 py-0.5 align-middle text-xs text-warm-700 hover:bg-warm-200"
@@ -215,6 +224,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const components: Record<string, React.ComponentType<Record<string, unknown>>> = {
     Fragment: cast(Fragment),
     Para: cast(Para),
+    Blockquote: cast(({ children }: { children?: ReactNode }) => <blockquote className="bbx-blockquote">{children}</blockquote>),
     Link: cast(Link),
     Img: cast(Img),
     QuoteInline: cast(QuoteInline),
@@ -294,10 +304,10 @@ export function Markdown({
   });
 
   if (prose === "block") {
-    return <div className="prose prose-sm max-w-none text-warm-700">{rendered}</div>;
+    return <div className="prose prose-sm max-w-none bbx-theme-prose">{rendered}</div>;
   }
   if (prose === "inline") {
-    return <span className="prose prose-sm inline max-w-none">{rendered}</span>;
+    return <span className="prose prose-sm inline max-w-none bbx-theme-prose">{rendered}</span>;
   }
   return rendered;
 }

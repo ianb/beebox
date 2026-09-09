@@ -2,7 +2,7 @@
  * Procedure run card schema (Phase-2 frontmatter, no body).
  *
  * Tracks the execution state of a procedure run. Created in
- * procedure/runs/<name>_<timestamp>/run.procedure-run.card
+ * _bookkeeping/procedure/runs/<name>_<timestamp>/run.procedure-run.card
  */
 
 import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
@@ -83,7 +83,7 @@ Step statuses: pending → running → completed/skipped/failed. Look at a step'
 
 The \`expires\` field (stamped by the engine at completion) is when \`bbx procedure gc\` may delete this run's directory. Run dirs are a recent cache — git history is the archive. To retain a specific run, set \`expires: never\` or push the date out.
 
-The \`procedure\` field names the procedure definition this run belongs to. The run card lives in \`procedure/runs/<name>_<timestamp>/\`.`,
+The \`procedure\` field names the procedure definition this run belongs to. The run card lives in \`_bookkeeping/procedure/runs/<name>_<timestamp>/\`.`,
 });
 
 const ProcedureRunObject = z.object(procedureRunFields);

@@ -12,6 +12,7 @@ import { simpleGit } from "simple-git";
 import { describeAbsentContent, parseAnnexPointer } from "../../lib/annex-pointer.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
+import { isInBoxNamespace } from "../../lib/box-namespace.js";
 
 /**
  * Register history API routes.
@@ -31,11 +32,29 @@ export async function registerHistoryRoutes(
     Params: { hash: string; "*": string };
   }>("/api/history/blob/:hash/*", async (request, reply) => {
     const { hash } = request.params;
-    const filePath = request.params["*"];
+    const rawFilePath = request.params["*"];
 
-    if (!/^[\da-f]{6,40}\^?$/i.test(hash) || !filePath) {
+    if (!/^[\da-f]{6,40}\^?$/i.test(hash) || !rawFilePath) {
       return reply.status(400).send({ error: "Invalid hash or path" });
     }
+
+    // Box namespace fence, checked on the NORMALIZED path (there is no
+    // filesystem resolve step here — `git show` treats the path as relative
+    // to the repo root, i.e. `boxRoot` — so `path.posix.normalize` plays the
+    // role `path.resolve` plays for the fs-backed routes): a traversal form
+    // like `_content/../package.json` must not read `package.json` just
+    // because the raw string starts with an underscore area
+    // (`docs/implemented-plans/one-root-box-layout.md` Track B). This is a
+    // CURRENT-vocabulary check on the REQUESTED path — a historical file
+    // that lived at a pre-migration v2 path (e.g. `content/inbox/x`) becomes
+    // unreachable via this route once its old path no longer parses as an
+    // underscore area; that's acceptable (history for a since-migrated box
+    // is browsed at its current, post-migration paths).
+    const normalized = path.posix.normalize(rawFilePath);
+    if (normalized.startsWith("../") || normalized === ".." || !isInBoxNamespace(normalized)) {
+      return reply.status(403).send({ error: "Access denied" });
+    }
+    const filePath = normalized;
 
     try {
       const git = simpleGit(boxRoot);

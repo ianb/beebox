@@ -4,6 +4,7 @@ workstream: box-slug-helper
 filed-by: agent
 discovered-in: worktree-box-slug-helper — while fixing the basename(boxRoot) slug bug
 area: beebox
+priority: normal
 ---
 
 `src/lib/box-slug.ts` made every disk-derived slug correct (see

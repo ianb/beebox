@@ -18,6 +18,7 @@
  */
 
 import type { ReactNode } from "react";
+import type { QuoteTreatment } from "@shared/quote-treatment";
 import { isPersonRef, speakerDisplay } from "../lib/selection/quote-extract";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
@@ -38,30 +39,36 @@ function Attribution({
       <button
         type="button"
         onClick={() => {
-          const target: ViewTarget = { path: from, viewer: null, params: {} };
+          const target: ViewTarget = { path: from, viewer: null, params: {}, viewState: null };
           linkCtx.onNavigate(target, { label: displayName });
         }}
-        className="not-italic text-warm-600 hover:text-warm-800 underline-offset-2 hover:underline cursor-pointer"
+        className="bbx-theme-link"
       >
         {displayName}
       </button>
     );
   }
-  return <span className="not-italic text-warm-600">{from}</span>;
+  return <span>{from}</span>;
+}
+
+interface QuoteProps {
+  from?: string;
+  treatment?: QuoteTreatment;
+  children?: ReactNode;
 }
 
 export function makeQuoteComponents(linkCtx: QuoteLinkContext): {
-  QuoteInline: (props: { from?: string; children?: ReactNode }) => ReactNode;
-  QuoteBlock: (props: { from?: string; children?: ReactNode }) => ReactNode;
+  QuoteInline: (props: QuoteProps) => ReactNode;
+  QuoteBlock: (props: QuoteProps) => ReactNode;
 } {
-  function QuoteInline({ from, children }: { from?: string; children?: ReactNode }) {
+  function QuoteInline({ from, treatment, children }: QuoteProps) {
     return (
-      <span className="text-primary-dark italic font-serif" data-from={from}>
-        <span className="text-primary/60 not-italic font-sans">{"“"}</span>
+      <span className="bbx-quote bbx-quote-inline" data-from={from} data-treatment={treatment}>
+        <span className="bbx-quote-mark">{"“"}</span>
         {children}
-        <span className="text-primary/60 not-italic font-sans">{"”"}</span>
+        <span className="bbx-quote-mark">{"”"}</span>
         {from !== undefined && from !== "" ? (
-          <span className="not-italic font-sans text-warm-500 text-xs ml-1">
+          <span className="bbx-quote-attribution">
             {" — "}
             <Attribution from={from} linkCtx={linkCtx} />
           </span>
@@ -70,17 +77,12 @@ export function makeQuoteComponents(linkCtx: QuoteLinkContext): {
     );
   }
 
-  function QuoteBlock({ from, children }: { from?: string; children?: ReactNode }) {
+  function QuoteBlock({ from, treatment, children }: QuoteProps) {
     return (
-      <figure
-        className="my-3 border-l-4 border-primary/40 bg-primary/5 pl-4 pr-3 py-2 rounded-r"
-        data-from={from}
-      >
-        <blockquote className="text-primary-dark italic font-serif [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
-          {children}
-        </blockquote>
+      <figure className="bbx-quote bbx-quote-block" data-from={from} data-treatment={treatment}>
+        <blockquote className="bbx-quote-body">{children}</blockquote>
         {from !== undefined && from !== "" ? (
-          <figcaption className="text-xs font-sans text-warm-600 mt-1 not-italic">
+          <figcaption className="bbx-quote-attribution">
             {"— "}
             <Attribution from={from} linkCtx={linkCtx} />
           </figcaption>

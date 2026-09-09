@@ -7,6 +7,21 @@ discovered-in: main session — boxholder report
 resolution: implemented
 ---
 
+> Closed again 2026-09-07: `hooks/use-image-recovery.ts` — while an in-box image is errored, a `HEAD` probe on a bounded schedule (2 s, 5 s, 10 s, 20 s, 30 s, then once a minute for four minutes) asks whether the file serves; on the first OK the URL leaves the failed set and the image loads once under a fresh `v=` stamp. No timed re-load of the `<img>` (the reflow the chat-scroll work removed): one reflow, when the image is real. Verified live in a test box: placeholder before the file existed, loaded on its own within nine seconds of the file landing. Doctested in `test/frontend/hooks/image-recovery.doctest.md`. The watcher ceiling that made this necessary is `2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md`.
+
+> **Reopened 2026-09-07 — regressed.** The bounded retry `e209e50a` added was
+> removed by `7e68eadd5` ("Remove timed image retries", the chat-scroll
+> workstream, 2026-09-06), which kept only the `file-change` refresh
+> (`lib/file-version.ts`: a change event busts the URL). That refresh cannot
+> fire where the box file watcher has hit its 1,024-directory ceiling — the
+> reported box has 5,948 directories, 5,564 of them `.attach` scopes — so an
+> image the agent posts before the file exists 404s once, lands in
+> `failedImageUrls`, and stays the placeholder until a reload
+> (`2026-09-07-box-watcher-ceiling-leaves-attach-scopes-unwatched.md`). The
+> fix this time re-checks the file's existence on a bounded schedule and only
+> swaps the image in once it is there — one reflow, when real — rather than
+> re-loading the `<img>` on a timer.
+
 Closed by `e209e50a` (`Retry chat images that appear after rendering`). Chat-embedded
 in-box images now retry on a bounded leaf-local backoff, while external proxy
 fallbacks retain their existing behavior.

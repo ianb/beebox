@@ -56,14 +56,14 @@ input:
     - { id: _other, label: "None of these — write a directive" }
 learning:                    # optional
   sink: guide                 # guide | briefing | personality
-  ref: config/finance.guide.card   # optional; for sink briefing MUST be the
-                                    # root briefing (only it compiles into
-                                    # the box CLAUDE.md — see below)
+  ref: /_config/finance.guide.card   # optional; for sink briefing MUST be the
+                                      # root briefing (only it compiles into
+                                      # the box CLAUDE.md — see below)
   proposal: >
-    Receipts photographed at intake belong in finance/receipts/.
-directive: "Move the held file into finance/receipts/."
+    Receipts photographed at intake belong in _content/finance/receipts/.
+directive: "Move the held file into _content/finance/receipts/."
 context:
-  - { ref: inbox/triaged/_unsure/receipt.pdf }
+  - { ref: /_content/inbox/triaged/_unsure/receipt.pdf }
 asked-at: 2026-07-10T09:00:00-07:00   # set by the creating template
 expires-after: P30D          # optional ISO-8601 duration override
 ---
@@ -100,16 +100,16 @@ part of the transition.
 
 ## Where questions live
 
-**All question cards live in `box/questions/`.** This is the only place the
+**All question cards live in `_bookkeeping/questions/`.** This is the only place the
 system looks for questions: `getSystemState` (`src/core/state.ts`) globs
-`box/questions/**/*.question.card` to build the pending-question list that
+`_bookkeeping/questions/**/*.question.card` to build the pending-question list that
 feeds the header badge, the questions page, and the aging sweep. A question
 card written anywhere else (e.g. inside a capture session's `.attach/`
 scope, which scan-import used to do) is invisible to all of that — no page,
 no badge, no notification, no aging. If a question needs to reference
 material that lives elsewhere (an attach-scope file, a held inbox item),
 that's what `context: [{ref, text?}]` is for — the card itself stays in
-`box/questions/`.
+`_bookkeeping/questions/`.
 
 ## Lifecycle
 
@@ -132,10 +132,10 @@ pending ──answer──> answered
   un-dismissal is the boxholder's prerogative.
 - **`expired`** — aged out of the active view by the aging sweep without an
   answer. Expiry **demotes visibility, it does not close the question** —
-  the card stays in `box/questions/` and remains answerable. Only a
+  the card stays in `_bookkeeping/questions/` and remains answerable. Only a
   `pending` question can expire (this is the sweep's own transition).
 
-Before asking something new, agents are expected to check `box/questions/`
+Before asking something new, agents are expected to check `_bookkeeping/questions/`
 including `answered`/`dismissed`/`expired` cards, not just `pending` ones —
 see "The decision rule for agents" below.
 
@@ -302,7 +302,7 @@ agent-guide context:
   destination is known — not a fallback for having failed. If the situation
   blocks on ambiguity it can't resolve, the agent finishes by asking rather
   than guessing past it.
-- **Before asking, check `box/questions/`** — including `answered`,
+- **Before asking, check `_bookkeeping/questions/`** — including `answered`,
   `dismissed`, and `expired` cards, not just `pending` ones. An existing
   answer is a `user-stated` fact; don't re-ask it. A dismissal or expiry is
   itself a signal ("the boxholder didn't care to answer that") that raises
@@ -317,7 +317,7 @@ agent-guide context:
 - **In-chat interactive questions.** Rejected, not deferred
   (`issues/closed/2026-06-09-in-chat-interactive-questions.md`): synchronous
   chat is a different situation from the async queue — the agent just asks
-  in prose, and retrospectives convert chat into learning. `box/questions/`
+  in prose, and retrospectives convert chat into learning. `_bookkeeping/questions/`
   is the only structured-question primitive.
 - **Telegram inline-button answering.** The deep-link + header work is
   channel-agnostic groundwork; the `callback_query` inbound branch isn't

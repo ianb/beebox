@@ -10,7 +10,7 @@ export const examplesSection = `## Examples
 \`\`\`tsx
 export const name = "Recent Memos";
 export const description = "Every processed memo, newest first";
-export const dependencies = ["store/**/*.memo.card"];
+export const dependencies = ["_content/**/*.memo.card"];
 export const modes = ["page", "chat"];
 
 export default function RecentMemos({ cards }) {
@@ -34,7 +34,7 @@ export default function RecentMemos({ cards }) {
 \`\`\`tsx
 export const name = "Inbox Dashboard";
 export const description = "Overview of pending inbox items";
-export const dependencies = ["box/inbox/**/*.card"];
+export const dependencies = ["_content/inbox/**/*.card"];
 export const modes = ["page"];
 
 export default function InboxDashboard({ cards }) {

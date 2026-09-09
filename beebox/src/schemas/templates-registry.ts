@@ -132,6 +132,34 @@ export function getAllTemplates(): TemplateDefinition[] {
 }
 
 /**
+ * The templates the engine itself registered — never a box's. For docs that
+ * describe the package rather than a box (the package docs directory), where
+ * ambient registry state would leak one box's templates into every box's docs.
+ */
+export function getBuiltinTemplates(): TemplateDefinition[] {
+  const out: TemplateDefinition[] = [];
+  for (const list of registrations.values()) {
+    const builtin = list.find((r) => r.owner === BUILTIN_OWNER);
+    if (builtin) out.push(builtin.def);
+  }
+  return out;
+}
+
+/**
+ * The templates a box registered (its box-local `src/schemas/*.ts` `template`
+ * exports), including any that shadow a built-in. For that box's own agent
+ * guide, which lists them beside the package's built-in reference.
+ */
+export function getTemplatesOwnedBy(owner: string): TemplateDefinition[] {
+  const out: TemplateDefinition[] = [];
+  for (const list of registrations.values()) {
+    const own = list.find((r) => r.owner === owner);
+    if (own) out.push(own.def);
+  }
+  return out;
+}
+
+/**
  * Find templates that can create a given card type.
  */
 export function getTemplatesForCardType(cardType: string): TemplateDefinition[] {

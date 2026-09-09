@@ -1,6 +1,6 @@
-# Validation ignore: config/bbx-validate.ignore + color gating
+# Validation ignore: _config/bbx-validate.ignore + color gating
 
-`loadValidationIgnore` reads the box's operator-owned `config/bbx-validate.ignore`
+`loadValidationIgnore` reads the box's operator-owned `_config/bbx-validate.ignore`
 (a gitignore-style file — the `.gitignore` analogue for `bbx validate`) and
 returns a matcher. When the file is absent the matcher allows everything, so the
 common case (no file) costs nothing.
@@ -18,7 +18,7 @@ No ignore file → allow-all (nothing is ignored):
 ```ts
 const box = await makeTmpBox();
 const ig = await loadValidationIgnore(box.root);
-[ig.isIgnored("store/anything.md"), ig.isIgnored(join(box.root, "vendor/x.md"))]
+[ig.isIgnored("_content/anything.md"), ig.isIgnored(join(box.root, "vendor/x.md"))]
 => [
   false,
   false
@@ -34,14 +34,14 @@ and absolute paths resolve against the box root:
 
 ```ts
 const box = await makeTmpBox();
-await mkdir(join(box.root, "config"), { recursive: true });
-await writeFile(join(box.root, "config/bbx-validate.ignore"), "# a comment\nvendor/**\nstore/imported/**/*.md\n");
+await mkdir(join(box.root, "_config"), { recursive: true });
+await writeFile(join(box.root, "_config/bbx-validate.ignore"), "# a comment\nvendor/**\n_content/imported/**/*.md\n");
 const ig = await loadValidationIgnore(box.root);
 [
   ig.isIgnored("vendor/docs/readme.md"),
   ig.isIgnored(join(box.root, "vendor/docs/readme.md")),
-  ig.isIgnored("store/imported/data/notes.md"),
-  ig.isIgnored("store/real/note.md"),
+  ig.isIgnored("_content/imported/data/notes.md"),
+  ig.isIgnored("_content/real/note.md"),
 ]
 => [
   true,

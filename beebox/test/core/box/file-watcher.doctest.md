@@ -76,6 +76,34 @@ async function seedTree(root: string, dirs: number, perDir: number): Promise<voi
     }
   }
 }
+
+/**
+ * Every directory `bbx init` scaffolds up front — present in any fresh v3
+ * box regardless of what a test itself creates (the underscore areas, plus
+ * the `src/` code tree the watcher also covers). Assertions below filter
+ * these out so the expected list reads as "what did *this test* add,"
+ * matching each test's own scenario rather than the full box skeleton.
+ */
+const SKELETON_DIRS = new Set([
+  "_bookkeeping", "_bookkeeping/archive", "_bookkeeping/archive/done",
+  "_bookkeeping/archive/failed", "_bookkeeping/archive/processed",
+  "_bookkeeping/connectors", "_bookkeeping/jobs", "_bookkeeping/output",
+  "_bookkeeping/questions", "_bookkeeping/resources", "_bookkeeping/usage",
+  "_config", "_config/connectors", "_config/procedures", "_config/schedules",
+  "_config/schemas", "_content", "_content/calendar", "_content/chat",
+  "_content/drive", "_content/inbox", "_content/inbox/intake",
+  "_content/inbox/staged", "_content/inbox/triaged",
+  "_content/inbox/triaged/_unsure", "_content/inbox/unhandled",
+  "_content/people", "_content/places", "_content/recipes",
+  "_content/reviews", "_content/reviews/retro", "_content/todos",
+  "_publish", "_tmp", "src", "src/schemas", "src/tricks", "src/tricks/lib",
+  "src/tricks/scripts", "src/views",
+]);
+
+/** `watcher.watchedDirs()`, with the scaffolded skeleton filtered out. */
+function testDirs(watcher: { watchedDirs(): string[] }): string {
+  return watcher.watchedDirs().filter((d) => !SKELETON_DIRS.has(d)).join(" ");
+}
 ```
 
 ## One watch per directory — never one per file
@@ -92,12 +120,52 @@ await seedTree(box.root, 4, 100);
 const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
-watcher.watchedDirs().join(" ")
-=> . store store/dir0 store/dir1 store/dir2 store/dir3
+testDirs(watcher)
+=> . _bookkeeping/procedure store store/dir0 store/dir1 store/dir2 store/dir3
 ```
 
 ```ts cleanup
 await closeBoxWatcher(box.root);
+bus.close();
+await box.cleanup();
+```
+
+## An authored-code root outside the content box emits its package path
+
+Package-layout boxes serve cards from `content/`, but their authored views live
+beside it in `src/views/`. The same watcher covers that small external tree and
+reports the path vocabulary the frontend uses.
+
+```ts
+const box = await makeTmpBox();
+const contentRoot = join(box.root, "content");
+const sourceDir = join(box.root, "src");
+const viewsDir = join(box.root, "src", "views");
+await mkdir(contentRoot, { recursive: true });
+await mkdir(viewsDir, { recursive: true });
+const bus = createEventBus(contentRoot, { pollInterval: 60_000 });
+const seen: string[] = [];
+const subscription = bus.subscribe({
+  listener: (event) => {
+    if (event.event === "file-change") seen.push(event.data.path);
+  },
+});
+const watcher = ensureBoxWatcher(contentRoot, {
+  eventBus: bus,
+  additionalRoots: [{ path: sourceDir, eventPathPrefix: "src" }],
+});
+await watcher.ready;
+await waitForWatch(box.root, bus, join("src", "views"));
+
+await writeFile(join(viewsDir, "catalog.tsx"), "export default function Catalog() { return null; }");
+await waitFor(() => seen.includes("src/views/catalog.tsx"), 5000, "package view change");
+seen.includes("src/views/catalog.tsx")
+=> true
+```
+
+```ts cleanup
+subscription.unsubscribe();
+await closeBoxWatcher(contentRoot);
 bus.close();
 await box.cleanup();
 ```
@@ -209,8 +277,8 @@ await rename(join(box.root, "store", "Staging"), join(box.root, "store", "Trip.a
 await waitFor(() => watcher.watchedDirs().includes("store/Trip.attach/fresh"), 5000, "the replacement subtree watches");
 await watcher.settled();
 
-watcher.watchedDirs().join(" ")
-=> . store store/Trip.attach store/Trip.attach/fresh
+testDirs(watcher)
+=> . _bookkeeping/procedure store store/Trip.attach store/Trip.attach/fresh
 ```
 
 ```ts cleanup
@@ -266,14 +334,14 @@ pull an arbitrary outside tree into the watch set and bypass the exclusions.
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
 await mkdir(join(box.root, "store"), { recursive: true });
-await mkdir(join(box.root, "procedure", "runs", "noisy"), { recursive: true });
+await mkdir(join(box.root, "junk", "sub", "noisy"), { recursive: true });
 
 const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 await waitForWatch(box.root, bus, "store");
 
 const { symlink } = await import("node:fs/promises");
-await symlink(join(box.root, "procedure", "runs"), join(box.root, "store", "link"));
+await symlink(join(box.root, "junk", "sub"), join(box.root, "store", "link"));
 // Create a real directory after the link and wait for *it*. Asserting an
 // absence is only meaningful once we know the notifications arrived — a bare
 // sleep would pass vacuously whenever delivery was merely slow.
@@ -281,8 +349,8 @@ await mkdir(join(box.root, "store", "real"), { recursive: true });
 await waitFor(() => watcher.watchedDirs().includes("store/real"), 5000, "the real directory watch");
 await watcher.settled();
 
-watcher.watchedDirs().join(" ")
-=> . procedure store store/real
+testDirs(watcher)
+=> . _bookkeeping/procedure junk junk/sub junk/sub/noisy store store/real
 ```
 
 ```ts cleanup
@@ -346,7 +414,7 @@ await box.cleanup();
 
 ## High-churn trees stay excluded
 
-`procedure/runs` and `store/trash` are never live-rendered and churn constantly;
+`_bookkeeping/procedure/runs` and `_bookkeeping/trash` are never live-rendered and churn constantly;
 watching them exhausted the server's inotify limit on 2026-06-11. Dotfile trees
 (`.git`, `.beebox`) are excluded for the same reason. Ordinary content
 trees receive no path-specific treatment: the generic watch budget is their
@@ -355,16 +423,16 @@ safety boundary.
 ```ts
 const box = await makeTmpBox();
 const bus = createEventBus(box.root, { pollInterval: 60_000 });
-await mkdir(join(box.root, "procedure", "runs", "r1"), { recursive: true });
-await mkdir(join(box.root, "store", "trash", "old"), { recursive: true });
-await mkdir(join(box.root, "box", "inbox", "email", "thread.attach"), { recursive: true });
+await mkdir(join(box.root, "_bookkeeping", "procedure", "runs", "r1"), { recursive: true });
+await mkdir(join(box.root, "_bookkeeping", "trash", "old"), { recursive: true });
+await mkdir(join(box.root, "_content", "inbox", "email", "thread.attach"), { recursive: true });
 await mkdir(join(box.root, "store", "keep"), { recursive: true });
 
 const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
 await watcher.ready;
 
-watcher.watchedDirs().join(" ")
-=> . box box/inbox box/inbox/email box/inbox/email/thread.attach procedure store store/keep
+testDirs(watcher)
+=> . _bookkeeping/procedure _content/inbox/email _content/inbox/email/thread.attach store store/keep
 ```
 
 ```ts cleanup

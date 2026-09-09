@@ -4,7 +4,7 @@
  *
  * Two forms of the same publication:
  *  - {@link PublicationManifest} — the box-side full manifest, git-committed at
- *    `box/publish/<pub-id>/manifest.json`. Carries provenance and per-tier
+ *    `_publish/<pub-id>/manifest.json`. Carries provenance and per-tier
  *    fields.
  *  - {@link EdgeManifest} — the minimal subset the Cloudflare Worker needs to
  *    serve and gate a publication, stored in R2. It deliberately drops
@@ -143,7 +143,7 @@ const anyAccountManifestSchema = z
   .object({ tier: z.literal("any-account"), submit: optionalSubmit, ...commonManifestFields })
   .strict();
 
-/** The box-side full publication manifest (`box/publish/<pub-id>/manifest.json`). */
+/** The box-side full publication manifest (`_publish/<pub-id>/manifest.json`). */
 export const publicationManifestSchema = z.discriminatedUnion("tier", [
   publicManifestSchema,
   secretManifestSchema,

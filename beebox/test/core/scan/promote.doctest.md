@@ -1,6 +1,6 @@
 # The scan promote worker
 
-One pass drains everything `tmp/scan-quarantine/` owes the box: pending entries
+One pass drains everything `_tmp/scan-quarantine/` owes the box: pending entries
 through `bbx upload --as scan`, rejections into question cards, the owed
 `bbx wakeup`, and the GC that keeps the directory from growing forever.
 
@@ -123,18 +123,18 @@ JSON.stringify(upload.calls)
 => [{"source":"scan-upload/laptop-scansnap","files":["Scan_001.pdf","Scan_002.pdf"]}]
 
 JSON.stringify({ imported: result.imported, failed: result.failed, wakeup: result.wakeup, wakeups: wakeup.runs })
-=> {"imported":2,"failed":0,"wakeup":"ran","wakeups":1}
+=> {"imported":2,"failed":0,"wakeup":{"kind":"ran"},"wakeups":1}
 ```
 
 Imported entries are swept in the same pass — file and sidecar both — and the
 staging copies go with them. Nothing else cleans this directory: the generic
-`tmp/` sweep skips directories entirely.
+`_tmp/` sweep skips directories entirely.
 
 ```ts continue
 JSON.stringify({
   entries: await readAllQuarantineEntries(box.root),
   file: await exists(quarantineFilePath(box.root, `${HASH_A}.pdf`)),
-  staging: await exists(box.path("tmp/scan-staging")),
+  staging: await exists(box.path("_tmp/scan-staging")),
   removed: result.importedRemoved,
 })
 => {"entries":[],"file":false,"staging":false,"removed":2}
@@ -208,8 +208,8 @@ content hash — which is exactly why the recovery can be this blunt.
 const box = await makeTmpBox({ git: true, annex: true });
 await quarantine(box, HASH_A, { state: "promoting", originalFilename: "Halfway.pdf" });
 // The dead process's staging dir is still lying around.
-await fs.mkdir(box.path("tmp/scan-staging/dead-run"), { recursive: true });
-await fs.writeFile(box.path("tmp/scan-staging/dead-run/Halfway.pdf"), "leftover");
+await fs.mkdir(box.path("_tmp/scan-staging/dead-run"), { recursive: true });
+await fs.writeFile(box.path("_tmp/scan-staging/dead-run/Halfway.pdf"), "leftover");
 const upload = fakeUpload();
 
 const result = await runScanPromotePass({
@@ -219,7 +219,7 @@ const result = await runScanPromotePass({
 JSON.stringify({ imported: result.imported, files: upload.calls[0].files })
 => {"imported":1,"files":["Halfway.pdf"]}
 
-await exists(box.path("tmp/scan-staging/dead-run"))
+await exists(box.path("_tmp/scan-staging/dead-run"))
 => false
 ```
 
@@ -241,7 +241,7 @@ const result = await runScanPromotePass({
   deps: { runUpload: fakeUpload({ fail: true }).runner, runWakeup: fakeWakeup().runner },
 });
 JSON.stringify({ imported: result.imported, failed: result.failed, wakeup: result.wakeup })
-=> {"imported":0,"failed":1,"wakeup":"ran"}
+=> {"imported":0,"failed":1,"wakeup":{"kind":"ran"}}
 
 (await readQuarantineEntry(box.root, HASH_A)).state
 => promoting
@@ -255,7 +255,9 @@ await box.cleanup();
 
 Connector-scoped scheduled wakeups never drain a `source: scan` job, so a lost
 wakeup is indefinite rather than late. The marker is written before the run and
-survives a restart; every later pass retries it.
+survives a restart; every later pass retries it — but only a bounded number of
+times, and the outcome carries how long the caller should wait before the next
+attempt (`core/scan/wakeup-retry.doctest.md` pins the budget itself).
 
 ```ts
 const box = await makeTmpBox({ git: true, annex: true });
@@ -267,7 +269,7 @@ const first = await runScanPromotePass({
   deps: { runUpload: fakeUpload().runner, runWakeup: failing.runner },
 });
 JSON.stringify({ imported: first.imported, wakeup: first.wakeup, marker: await exists(wakeupMarkerPath(box.root)) })
-=> {"imported":1,"wakeup":"failed","marker":true}
+=> {"imported":1,"wakeup":{"kind":"failed","retryDelayMs":120000},"marker":true}
 ```
 
 The retry needs no new files — an empty pass still owes the wakeup:
@@ -279,7 +281,7 @@ const second = await runScanPromotePass({
   deps: { runUpload: fakeUpload().runner, runWakeup: recovered.runner },
 });
 JSON.stringify({ imported: second.imported, wakeup: second.wakeup, runs: recovered.runs, marker: await exists(wakeupMarkerPath(box.root)) })
-=> {"imported":0,"wakeup":"ran","runs":1,"marker":false}
+=> {"imported":0,"wakeup":{"kind":"ran"},"runs":1,"marker":false}
 ```
 
 ```ts cleanup
@@ -306,7 +308,7 @@ const first = await runScanPromotePass({
 });
 const entry = await readQuarantineEntry(box.root, HASH_A);
 JSON.stringify({ questions: first.questions, ref: entry.questionRef })
-=> {"questions":1,"ref":"box/questions/scan-rejected-aaaaaaaaaaaa.question.card"}
+=> {"questions":1,"ref":"_bookkeeping/questions/scan-rejected-aaaaaaaaaaaa.question.card"}
 
 const card = await box.read(entry.questionRef);
 JSON.stringify([card.includes("Contract.pdf"), card.includes("magic bytes say text/html"), card.includes("status: pending")])
@@ -320,9 +322,9 @@ const second = await runScanPromotePass({
   boxRoot: box.root,
   deps: { runUpload: fakeUpload().runner, runWakeup: fakeWakeup().runner },
 });
-JSON.stringify({ questions: second.questions, dir: await box.list("box/questions") })
+JSON.stringify({ questions: second.questions, dir: await box.list("_bookkeeping/questions") })
 =>
-{"questions":0,"dir":"box/questions/scan-rejected-aaaaaaaaaaaa.question.card"}
+{"questions":0,"dir":"_bookkeeping/questions/.gitkeep\n_bookkeeping/questions/scan-rejected-aaaaaaaaaaaa.question.card"}
 ```
 
 ```ts cleanup
@@ -412,7 +414,7 @@ await recordQuarantineEntry(box.root, { ...stale, state: "pending", reason: unde
 
 const gc = await collectQuarantine({
   boxRoot: box.root,
-  entries: [{ ...stale, questionRef: "box/questions/gone.question.card" }],
+  entries: [{ ...stale, questionRef: "_bookkeeping/questions/gone.question.card" }],
 });
 JSON.stringify({
   gc,

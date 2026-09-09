@@ -20,7 +20,7 @@ prose stays intact.
 const sent = [
   "Here's the recipe [file#1] from my files.",
   "<attachments>",
-  "[file#1]: tmp/1723200000_lemon-chicken.txt",
+  "[file#1]: _tmp/1723200000_lemon-chicken.txt",
   "</attachments>",
 ].join("\n");
 JSON.stringify(stripUserDisplayTags(sent).trim())
@@ -34,7 +34,7 @@ The same message in the pre-rename form — every transcript written before
 const legacy = [
   "Here's the recipe [file1] from my files.",
   "<attachments>",
-  "[file1]: tmp/1723200000_lemon-chicken.txt",
+  "[file1]: _tmp/1723200000_lemon-chicken.txt",
   "</attachments>",
 ].join("\n");
 JSON.stringify(stripUserDisplayTags(legacy).trim())
@@ -55,7 +55,7 @@ Declared and undeclared tokens in one message: only the declared one goes.
 const mixed = [
   "Compare [file2] with [file9].",
   "<attachments>",
-  "[file2]: tmp/1723200000_report.pdf",
+  "[file2]: _tmp/1723200000_report.pdf",
   "</attachments>",
 ].join("\n");
 JSON.stringify(stripUserDisplayTags(mixed).trim())

@@ -9,17 +9,17 @@ import { createOrAppendIntakeJob } from "../../src/connectors/intake-utils.js";
 
 ## Creating a new job
 
-When no matching job exists, a new `.intake.job.card` file is created under `box/jobs/`:
+When no matching job exists, a new `.intake.job.card` file is created under `_bookkeeping/jobs/`:
 
 ```ts
 const box = await makeTmpBox();
 const path = await createOrAppendIntakeJob({
   boxRoot: box.root,
   source: "test-connector",
-  items: ["box/inbox/item1.memo.card"],
+  items: ["_content/inbox/item1.memo.card"],
   description: "Triage 1 item",
 });
-path.startsWith("box/jobs/") && path.endsWith(".intake.job.card")
+path.startsWith("_bookkeeping/jobs/") && path.endsWith(".intake.job.card")
 => true
 ```
 
@@ -32,7 +32,7 @@ source: test-connector
 priority: normal
 description: Triage 1 item
 items:
-  - ref: box/inbox/item1.memo.card
+  - ref: _content/inbox/item1.memo.card
 ---
 ```
 
@@ -49,13 +49,13 @@ const box = await makeTmpBox();
 const path1 = await createOrAppendIntakeJob({
   boxRoot: box.root,
   source: "test-connector",
-  items: ["box/inbox/item1.memo.card"],
+  items: ["_content/inbox/item1.memo.card"],
   description: "Triage 1 item",
 });
 const path2 = await createOrAppendIntakeJob({
   boxRoot: box.root,
   source: "test-connector",
-  items: ["box/inbox/item2.memo.card"],
+  items: ["_content/inbox/item2.memo.card"],
   description: "Triage 2 items",
 });
 path1 === path2
@@ -73,8 +73,8 @@ source: test-connector
 priority: normal
 description: Triage 2 items
 items:
-  - ref: box/inbox/item1.memo.card
-  - ref: box/inbox/item2.memo.card
+  - ref: _content/inbox/item1.memo.card
+  - ref: _content/inbox/item2.memo.card
 ---
 ```
 
@@ -91,13 +91,13 @@ const box = await makeTmpBox();
 const pathA = await createOrAppendIntakeJob({
   boxRoot: box.root,
   source: "connector-a",
-  items: ["box/inbox/a.memo.card"],
+  items: ["_content/inbox/a.memo.card"],
   description: "From A",
 });
 const pathB = await createOrAppendIntakeJob({
   boxRoot: box.root,
   source: "connector-b",
-  items: ["box/inbox/b.memo.card"],
+  items: ["_content/inbox/b.memo.card"],
   description: "From B",
 });
 pathA !== pathB
@@ -105,7 +105,7 @@ pathA !== pathB
 ```
 
 ```ts continue
-(await box.list("box/jobs")).split("\n").filter(f => f.endsWith(".intake.job.card")).length
+(await box.list("_bookkeeping/jobs")).split("\n").filter(f => f.endsWith(".intake.job.card")).length
 => 2
 ```
 
@@ -128,7 +128,7 @@ const paths = await Promise.all(
     createOrAppendIntakeJob({
       boxRoot: box.root,
       source: "scan",
-      items: [`box/inbox/scan-${String(i)}.capture-session.card`],
+      items: [`_content/inbox/scan-${String(i)}.capture-session.card`],
       description: "Concurrent scan batch",
     })
   )
@@ -153,13 +153,13 @@ parallel and neither lands in the other's job card.
 ```ts
 const box = await makeTmpBox();
 const [scanJob, gmailJob] = await Promise.all([
-  createOrAppendIntakeJob({ boxRoot: box.root, source: "scan", items: ["box/inbox/a.memo.card"], description: "Scan" }),
-  createOrAppendIntakeJob({ boxRoot: box.root, source: "gmail", items: ["box/inbox/b.memo.card"], description: "Mail" }),
+  createOrAppendIntakeJob({ boxRoot: box.root, source: "scan", items: ["_content/inbox/a.memo.card"], description: "Scan" }),
+  createOrAppendIntakeJob({ boxRoot: box.root, source: "gmail", items: ["_content/inbox/b.memo.card"], description: "Mail" }),
 ]);
 JSON.stringify({
   distinct: scanJob !== gmailJob,
-  scan: (await box.read(scanJob)).includes("ref: box/inbox/a.memo.card"),
-  gmail: (await box.read(gmailJob)).includes("ref: box/inbox/b.memo.card"),
+  scan: (await box.read(scanJob)).includes("ref: _content/inbox/a.memo.card"),
+  gmail: (await box.read(gmailJob)).includes("ref: _content/inbox/b.memo.card"),
 })
 => {"distinct":true,"scan":true,"gmail":true}
 ```

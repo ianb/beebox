@@ -31,7 +31,8 @@
 
 import { memo, useState, type ReactNode } from "react";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
-import { withBase } from "../../api";
+import { href } from "../../lib/routing";
+import { toDisplayPath } from "@shared/display-path";
 import { LandmarkLinksPanel } from "./LandmarkLinksPanel";
 import { RecentFilesPanel } from "./RecentFilesPanel";
 import type { SessionEntry } from "../../api";
@@ -50,17 +51,19 @@ type RecentFilesPanelFileHandler = Parameters<typeof RecentFilesPanel>[0]["onPan
 
 /**
  * "Open <dir>/" browse link — only rendered when there's a context dir (root
- * included). `MenuItem`'s `href` variant already closes the dropdown on
- * click. The root dir (`""`) gets its own href without a trailing slash —
+ * included). `MenuItem`'s `to` variant keeps this an in-app navigation and
+ * closes the dropdown on click. The root dir (`""`) gets its own path without
+ * a trailing slash —
  * `BrowsePageWrapper` (`app-shell.tsx`) itself omits the trailing slash for
  * an empty path, and a splat route shouldn't rely on trailing-slash
  * equivalence to reach the same page.
  */
 function OpenDirLink({ dir, boxSlug }: { dir: string; boxSlug: string }) {
-  const href = dir === "" ? withBase(`/${boxSlug}/browse`) : withBase(`/${boxSlug}/browse/${dir}`);
+  const path = dir === "" ? `/${boxSlug}/browse` : `/${boxSlug}/browse/${dir}`;
+  const display = toDisplayPath(dir);
   return (
-    <MenuItem id="bbx-here-open-dir" href={href}>
-      Open {dir}/
+    <MenuItem id="bbx-here-open-dir" to={href(path)}>
+      Open {display === "/" ? display : `${display}/`}
     </MenuItem>
   );
 }
@@ -125,13 +128,13 @@ export const ContextMenuBody = memo(function ContextMenuBody(props: ContextMenuB
 
   const onLandmarkPanel = (link: ResolvedLink) => {
     onZoomView({
-      target: { path: link.ref, viewer: null, params: {} },
+      target: { path: link.ref, viewer: null, params: {}, viewState: null },
       label: link.label ?? link.title,
     });
   };
   const onFilePanel: RecentFilesPanelFileHandler = (summary) => {
     onZoomView({
-      target: { path: summary.path, viewer: null, params: {} },
+      target: { path: summary.path, viewer: null, params: {}, viewState: null },
       label: summary.title,
     });
   };
@@ -170,7 +173,7 @@ export const RecentFilesMenuBody = memo(function RecentFilesMenuBody({
 }): ReactNode {
   const onFilePanel: RecentFilesPanelFileHandler = (summary) => {
     onZoomView({
-      target: { path: summary.path, viewer: null, params: {} },
+      target: { path: summary.path, viewer: null, params: {}, viewState: null },
       label: summary.title,
     });
   };

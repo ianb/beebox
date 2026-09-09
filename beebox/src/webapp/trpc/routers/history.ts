@@ -16,6 +16,7 @@ import { loadSessionHistory } from "../../../core/chat/session/load-history.js";
 import { resolveChatEngine } from "../../../core/chat/session/engine.js";
 import { codexSessionExists } from "../../../core/chat/session/codex-transcript.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
+import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import * as path from "node:path";
 
 /** Escape values so they can be interpolated into a git --grep ERE pattern. */
@@ -74,7 +75,7 @@ type HistoryFilter = z.infer<typeof filterSchema>;
  *
  * Strips a leading segment equal to the box root's own directory name when doing so names a real
  * file and the original does not. The as-is form always wins when it exists, so a box that
- * genuinely contains a `content/` directory of its own is unaffected.
+ * genuinely contains a directory of that name is unaffected.
  */
 export function normalizeHistoryPath(candidate: string, boxRoot: string): string {
   if (fs.existsSync(path.join(boxRoot, candidate))) return candidate;
@@ -98,9 +99,21 @@ export const historyRouter = router({
       const greps = input.filter ? buildGreps(input.filter) : [];
       let historyPath: string | undefined;
       if (input.filter?.path !== undefined) {
+        // Display-form leak (docs/plans/display-path-guard.subplan.md): a
+        // boxholder display-form path (`Config:box.json`) has no history
+        // under that spelling, and would otherwise just silently filter to
+        // an empty result — checked before the tolerant-form normalization
+        // below, which is a different problem (git-root vs box-root form).
+        const displayForm = detectDisplayFormPath(input.filter.path);
+        if (displayForm !== null) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: displayFormPathMessage(input.filter.path, displayForm),
+          });
+        }
         // Tolerate the form the UI displays. A box's git root is the directory ABOVE its box root,
-        // so `git log --name-status` reports `content/config/foo.json` while every internal path
-        // boundary in the app uses the box-relative `config/foo.json`. Copying a path out of the
+        // so `git log --name-status` can report `content/config/foo.json` (pre-migration commits) while every internal path
+        // boundary in the app uses the box-relative `_config/foo.json`. Copying a path out of the
         // diff panel into this filter therefore returned an empty result that read as "this file
         // has no history". Accept either form here, per box-path.ts's consume-boundary rule.
         const candidate = normalizeHistoryPath(boxRelativePath(input.filter.path), ctx.boxRoot);

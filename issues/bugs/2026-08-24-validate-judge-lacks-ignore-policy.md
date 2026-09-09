@@ -4,6 +4,7 @@ workstream: refresh-maps-throughput
 filed-by: agent
 discovered-in: refresh-maps throughput measurement (worktree-refresh-maps-throughput)
 area: beebox
+priority: normal
 ---
 
 `SKELETON_HIDDEN_PATHS` in `precheck-ignore.ts` hides whole subtrees from maps —

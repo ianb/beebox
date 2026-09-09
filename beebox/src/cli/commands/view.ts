@@ -87,8 +87,21 @@ function buildProps(opts: {
     cards,
     files,
     params,
+    viewHistory: {
+      state: {},
+      canPush: false,
+      pushState: () => "replaced",
+      replaceState: () => {},
+    },
     boxSlug,
     fileUrl: (filePath: string) => `/api/files/${filePath}`,
+    imageUrl: (filePath: string, options) => {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(options)) {
+        if (value !== undefined) query.set(key, String(value));
+      }
+      return `/api/images/${filePath}?${query.toString()}`;
+    },
     navigate: () => {},
     reportActivity: () => {},
     readFile: throwDuringRender("readFile"),

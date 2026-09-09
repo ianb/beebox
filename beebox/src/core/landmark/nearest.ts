@@ -15,6 +15,9 @@
 
 import * as path from "node:path";
 import { glob } from "glob";
+import { z } from "zod";
+import { normalizeLandmarkDir } from "./root-dir.js";
+import { detectDisplayFormPath, displayFormPathMessage } from "../../shared/display-path.js";
 
 /**
  * Whether a card path is safe to treat as box-relative — no leading `/` and no
@@ -26,6 +29,32 @@ import { glob } from "glob";
 export function isBoxRelativeCardPath(cardPath: string): boolean {
   return !cardPath.startsWith("/") && !cardPath.split("/").includes("..");
 }
+
+/**
+ * The single string-level shape check for a box-relative directory/card path
+ * input — no leading `/`, no `..` segment. Every tRPC procedure that takes a
+ * `contextDir`/`dir`/card-path string and joins it onto `boxRoot` needs this
+ * (a string-level check alone is not containment — a call site whose result
+ * feeds a filesystem read still MUST verify with `containWithinBox` /
+ * `realpathContained` from `lib/box-containment.ts`; this only rejects the
+ * textually obvious escape at the input boundary, cheaply and uniformly).
+ * `.optional()` / `.nullable()` on top as each procedure's input shape needs.
+ */
+export const boxRelativePathSchema = z
+  .string()
+  .refine(isBoxRelativeCardPath, "must be box-relative and contain no '..' segments")
+  // Display-form leak (docs/plans/display-path-guard.subplan.md): a
+  // boxholder display-form path (`Config:box.json`) is a string-shape
+  // rejection like the one above, not a filesystem containment check — zod
+  // input validation fails as BAD_REQUEST automatically, carrying this
+  // message (tRPC never sanitizes a validation-input error the way
+  // `trpc.ts`'s errorFormatter sanitizes an INTERNAL_SERVER_ERROR).
+  .superRefine((value, ctx) => {
+    const displayForm = detectDisplayFormPath(value);
+    if (displayForm !== null) {
+      ctx.addIssue({ code: "custom", message: displayFormPathMessage(value, displayForm) });
+    }
+  });
 
 /** Box-relative dir of a path, normalized so a box-root file yields `""`. */
 function dirOf(boxRelPath: string): string {
@@ -60,8 +89,11 @@ export async function nearestLandmarkDir(
   const matches = await glob("**/*.landmark.card", {
     cwd: boxRoot,
     nodir: true,
-    ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+    ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
   });
-  const dirs = matches.map(dirOf);
+  // A landmark whose card dirname is exactly the content area (the ROOT
+  // landmark's real parent since the one-root migration — see root-dir.ts)
+  // is the box-root scope `""`, not a real subdirectory named `_content`.
+  const dirs = matches.map((relPath) => normalizeLandmarkDir(dirOf(relPath)));
   return nearestDirFromDirs(cardPath, dirs);
 }

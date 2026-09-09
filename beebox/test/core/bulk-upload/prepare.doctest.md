@@ -62,7 +62,7 @@ rather than bytes is what `prepare-annex.doctest.md` covers — this tier runs o
 a plain git box and cannot tell the two apart.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const id = await stageBulk(box.root, {
   expectedItems: [
     { id: "a", name: "report.pdf", size: 6, mimetype: "application/pdf" },
@@ -148,7 +148,7 @@ A registered item whose bytes never arrived is `missing`; an item the caller
 reports failing is `failed` (with its reason); the rest are `received`.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 // Register the first item up front, then append the rest (as the picker would
 // stream them in) via registerBulkItems.
 const id = await stageBulk(box.root, {
@@ -191,7 +191,7 @@ Two uploads with the same original name land as distinct files; the manifest
 records both, and the card's received list carries both stored names.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const id = await stageBulk(box.root, {
   expectedItems: [{ id: "a", name: "IMG_1234.jpg" }, { id: "b", name: "IMG_1234.jpg" }],
   files: [
@@ -224,7 +224,7 @@ An unsafe original name is sanitized (path parts stripped, spaces/odd chars
 collapsed), keeping the extension:
 
 ```ts continue
-const box2 = await makeTmpBox({ git: true });
+const box2 = await makeTmpBox({ git: true, annex: true });
 const id2 = await stageBulk(box2.root, {
   expectedItems: [{ id: "a", name: "../../etc/My Report (final).pdf" }],
   files: [{ filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "../../etc/My Report (final).pdf", mimeType: "application/pdf", itemId: "a", content: "X" }],
@@ -245,7 +245,7 @@ the same slug (derived from the stable session `createdAt` + id), skips the
 copy/rewrite, and commits nothing new.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const id = await stageBulk(box.root, {
   expectedItems: [{ id: "a", name: "doc.pdf" }],
   files: [{ filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "doc.pdf", mimeType: "application/pdf", itemId: "a", content: "DOC" }],
@@ -282,7 +282,7 @@ enumerators skip bulk sessions. A fresh capture session defaults `kind` to
 `"capture"`; a legacy manifest with no `kind` reads back the same way.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const capture = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
 const bulk = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk", expectedItems: [] });
 
@@ -346,7 +346,7 @@ batch is introduced, so it files against the note instead of asking what the
 files are.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const id = await stageBulk(box.root, {
   expectedItems: [{ id: "a", name: "IMG_0001.jpg", size: 4, mimetype: "image/jpeg" }],
   files: [
@@ -414,7 +414,7 @@ Two picks are both called `image.png`. Item `a` is reported failed; item `b`
 never arrives. `b` must still show up as missing.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeTmpBox({ git: true, annex: true });
 const id = await stageBulk(box.root, {
   expectedItems: [
     { id: "a", name: "image.png", size: 4, mimetype: "image/png" },

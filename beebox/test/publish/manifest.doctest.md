@@ -19,7 +19,7 @@ const pubId = pubIdSchema.parse("abcdefghijklmnop2345672345");
 const provenance = {
   boxSlug: "atlas",
   renderedAt: "2026-07-14T12:00:00Z",
-  sourceRefs: ["box/docs/build-journal.md"],
+  sourceRefs: ["docs/build-journal.md"],
   renderer: "docs",
   softwareVersion: "1.2.3",
 };

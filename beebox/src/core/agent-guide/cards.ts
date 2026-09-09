@@ -8,10 +8,13 @@
  * sections used to re-teach; they should cross-reference it instead.
  */
 
+import { BOX_PACKAGE_DOCS, DOCS_DIR } from "../docs-gen/shared.js";
+import type { TemplateDefinition } from "../../schemas/templates.js";
 import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
 import { SECTION, xref } from "./sections.js";
 import { REF_PATH_RULE } from "./source.js";
+import { PROMINENCE_FIELD_BULLET } from "./prominence.js";
 
 export function aboutCardsSection(): string {
   const createExamples = getAllTemplates().map(
@@ -59,13 +62,27 @@ next), but a few belong to every card:
   sentence still holds, \`bbx contains update <card> --text "..."\` clears the
   staleness flag; \`bbx contains list --missing\` / \`--stale\` shows which cards
   still need one written or refreshed.
+- **\`symbol:\`** — the small mark that stands for the card in a tab strip, a
+  listing, or a tile: \`symbol: { glyph: 🍞 }\`, optionally with
+  \`foreground:\`/\`background:\` colours (\`#rgb\`, \`#rrggbb\`, \`hsl()\`,
+  \`hsla()\`, \`rgb()\`, \`rgba()\` — nothing else), or \`symbol: { src: <box ref
+  to an image> }\` for a picture. The glyph is an emoji or a letter or two, not
+  a word. **Most cards should have none.** Mark the handful someone returns to
+  often; a box where everything is marked has nothing marked, so do not add one
+  by reflex when you create a card.
+${PROMINENCE_FIELD_BULLET}
+- **\`theme:\`** — an optional visual choice, \`{ name: "paper", stock: "cream" }\`.
+  It is independent of the preferred view. Use card Properties to inspect the
+  effective theme or choose a catalogued override; see the card-themes guide
+  for available names, stocks, and the **Use default** action. Do not invent
+  theme IDs or stocks.
 - **refs** — not a fixed field but a pattern: wherever frontmatter or a body tag
   points at another card (a \`ref:\` value, \`key-people[].ref\`, a \`{% source %}\`
   anchor), the path works the same way. ${REF_PATH_RULE}
   The same goes for a markdown link — in a card body, a plain \`.md\` dossier, or
   a response you hand back to whoever invoked you. When you name another card or
   file, link it with a human title rather than writing a bare filename:
-  \`the dates are in [the beta launch plan](/store/notes/Beta_Launch.doc.card)\`.
+  \`the dates are in [the beta launch plan](/_content/notes/Beta_Launch.doc.card)\`.
   The full \`ref\`/\`href\` semantics (tracking, \`bbx mv\` rewriting, external \`href\`)
   live in ${xref(SECTION.PROVENANCE)}.
 - **Link-shaped fields use one vocabulary.** Internal targets use \`ref\`; external
@@ -94,8 +111,8 @@ Files a card references — images, PDFs, sidecars — live in a sibling
 prefix:
 
 \`\`\`
-store/notes/Trip_Report.doc.card
-store/notes/Trip_Report.attach/photo.jpg
+_content/notes/Trip_Report.doc.card
+_content/notes/Trip_Report.attach/photo.jpg
 \`\`\`
 
 Then in the body: \`![the view from the cabin](attach/photo.jpg)\`. Create the
@@ -132,8 +149,8 @@ warnings you'll see:
   link points at a card that doesn't exist (common after a hand-move — use
   \`bbx mv\`, which rewrites refs).
 - **retired \`view:\` scheme** — drop the prefix and reference the plain box path:
-  \`[the trip report](/store/notes/Trip_Report.doc.card)\` to link, \`![the trip
-  report](/store/notes/Trip_Report.doc.card)\` to embed.
+  \`[the trip report](/_content/notes/Trip_Report.doc.card)\` to link, \`![the trip
+  report](/_content/notes/Trip_Report.doc.card)\` to embed.
 - **duplicate basename** — two cards in one directory share a name; rename one.
 - **\`contains:\` too long** — keep it under 200 characters.
 
@@ -159,25 +176,63 @@ const CARD_CATEGORY_GROUPS = [
   },
 ] as const;
 
-export function cardTypesSection(allCardSchemas: CardSchema[]): string {
+export interface CardTypesInput {
+  /** Every schema the box sees: built-in plus box-local. A box-local schema
+   *  that shares a built-in's type shadows it (last write wins, as in
+   *  `createCardSchemaMap`), so the list is deduplicated by type with the
+   *  box-local entry kept. */
+  allCardSchemas: CardSchema[];
+  /** The box-local subset. Their docs are compiled into the box; every other
+   *  type's doc is in the package. */
+  boxCardSchemas?: CardSchema[];
+  /** Templates this box's own schemas registered. The package's
+   *  `bbx-commands.md` lists only built-in templates, so these are listed
+   *  here — the one place the agent learns they exist. */
+  boxTemplates?: TemplateDefinition[];
+}
+
+/** Where a type's `card-<type>.md` lives: the package for built-ins, the box for box-local. */
+function cardDocPath(type: string, boxTypes: Set<string>): string {
+  return `${boxTypes.has(type) ? DOCS_DIR : BOX_PACKAGE_DOCS}/card-${type}.md`;
+}
+
+/** Deduplicate by type, keeping the LAST schema with that type (box-local shadows built-in). */
+function effectiveSchemas(allCardSchemas: CardSchema[]): CardSchema[] {
+  const byType = new Map<string, CardSchema>();
+  for (const s of allCardSchemas) byType.set(s.type, s);
+  return [...byType.values()];
+}
+
+export function cardTypesSection({ allCardSchemas, boxCardSchemas, boxTemplates }: CardTypesInput): string {
+  const boxTypes = new Set((boxCardSchemas ?? []).map((s) => s.type));
   const lines: string[] = [
     `## ${SECTION.CARD_TYPES}`,
     "",
-    "Each type with handling instructions has a full reference at `docs/generated/card-<type>.md` — read it before working with a card of that type.",
+    `Each type with handling instructions has a full reference doc, linked below — read it before working with a card of that type. Built-in types are documented in the package (\`${BOX_PACKAGE_DOCS}/\`); a box-local type's doc is compiled into this box (\`${DOCS_DIR}/\`).`,
     "",
   ];
+  const effective = effectiveSchemas(allCardSchemas);
   for (const group of CARD_CATEGORY_GROUPS) {
-    const schemas = allCardSchemas.filter((s) => s.category === group.category);
+    const schemas = effective.filter((s) => s.category === group.category);
     if (schemas.length === 0) continue;
     lines.push(group.heading);
     lines.push("");
     for (const schema of schemas) {
       const desc = schema.description === undefined ? "" : ` — ${schema.description}`;
-      lines.push(`- **${schema.type}**${desc}`);
+      const doc = schema.instructions === undefined ? "" : ` → \`${cardDocPath(schema.type, boxTypes)}\``;
+      lines.push(`- **${schema.type}**${desc}${doc}`);
     }
     lines.push("");
   }
-  lines.push("When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types can be defined in `src/schemas/` at the box's package root using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `src/schemas/CLAUDE.md` for how. Note this is the package root, beside `content/`, NOT `config/schemas/` inside the box — a schema left there is invisible to the loader. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `bbx init` after adding a schema to generate rules and docs.");
+  if (boxTemplates !== undefined && boxTemplates.length > 0) {
+    lines.push("**Box-local templates** — registered by this box's own schemas, so they are not in the package's `bbx-commands.md`. Use with `bbx create <path> -t <name>`:");
+    lines.push("");
+    for (const t of boxTemplates) {
+      lines.push(`- **${t.name}** — ${t.description} (card types: ${t.cardTypes.join(", ")})`);
+    }
+    lines.push("");
+  }
+  lines.push("A new kind of thing to keep track of is a conversation before it is a file: when the user shows interest in tracking something (plants, games, bills), first find out what they want out of it and how they'd use it — that decides the shape — and only then build; don't create the first card or type in the same breath as the offer. When the user wants a collection of repeated items with distinct typed fields or validation, define a new card type instead of using generic memos or records. New card types can be defined in `src/schemas/` at the box root using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `src/schemas/CLAUDE.md` for how. NOT `_config/schemas/` — a schema left there is invisible to the loader. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `bbx init` after adding a schema to generate rules and docs.");
   return lines.join("\n");
 }
 
@@ -201,7 +256,7 @@ something as fact rather than guess. Where you are decides the mechanism:
   job hits ambiguity it can't resolve, finish by asking — don't guess past
   it.
 
-Before asking, check \`box/questions/\` — including \`answered\`, \`dismissed\`,
+Before asking, check \`_bookkeeping/questions/\` — including \`answered\`, \`dismissed\`,
 and \`expired\` cards, not just \`pending\` ones. An existing answer is a
 \`user-stated\` fact; don't re-ask it. A dismissal or expiry means the
 boxholder didn't care to answer that — raise the bar before asking again, but
@@ -211,5 +266,5 @@ demotes visibility from the active view; it's not a rejection).
 Always set \`directive:\` — what to do with the answer; the system creates a
 follow-up job carrying it once the user answers. Set \`expires-after:\` for a
 time-sensitive question that should age out sooner than the default. See
-\`docs/generated/card-question.md\` for templates and field reference.`;
+\`${BOX_PACKAGE_DOCS}/card-question.md\` for templates and field reference.`;
 }

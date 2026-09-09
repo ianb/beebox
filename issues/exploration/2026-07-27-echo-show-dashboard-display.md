@@ -4,6 +4,7 @@ workstream: unknown
 area: beebox
 filed-by: agent
 discovered-in: main session — boxholder asked to research
+priority: backlog
 ---
 
 > **Outcome:** the boxholder chose path 1 (web page + muted-audio keepalive). The

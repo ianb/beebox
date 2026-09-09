@@ -3,6 +3,7 @@ title: "Backlinks surface (\"what links here?\")"
 workstream: unknown
 needs: [design]
 area: beebox
+priority: backlog
 ---
 
 Cardworks already exposes the ref graph — `findIncomingRefs(targetPath)` and `findOutgoingRefs(sourcePath)` in `cardworks/src/loader/loader.ts`. The data exists; no read surface does. Obsidian's Backlinks pane is widely considered its most-used navigation surface, and we have a richer (typed, versioned, fragment-addressable) reference model — closing the UI gap is mostly plumbing.

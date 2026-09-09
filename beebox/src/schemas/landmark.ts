@@ -2,23 +2,24 @@
  * Landmark card schema — a hand-curated bookmark for a directory.
  *
  * One landmark per directory; the file lives inside the directory it
- * describes (e.g. `store/recipes/Recipes.landmark.card`). A landmark is
+ * describes (e.g. `_content/recipes/Recipes.landmark.card`). A landmark is
  * pure structured metadata (YAML frontmatter, no body) carrying one or
  * more *roles*:
  *
  *   ---
+ *   symbol:                          # the card's mark
+ *     glyph: 🍳
  *   navigation:                      # human-facing surface
  *     label: Recipes
- *     symbol: 🍳
  *     links:
- *       - { ref: /store/recipes/Bread.recipe.card, label: the bread }
+ *       - { ref: /_content/recipes/Bread.recipe.card, label: the bread }
  *     expand:
  *       - { query: "*.recipe.card", order: modified-desc }
  *   destinations:                    # filing targets
  *     - for: [triage]
  *       rules: "Recipes — anything describing how to cook a dish."
  *       procedure:
- *         ref: /config/procedures/archive-recipe.procedure.card
+ *         ref: /_config/procedures/archive-recipe.procedure.card
  *   ---
  *
  * At least one role should be present; a landmark with neither is inert.
@@ -28,6 +29,8 @@
 import { splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import { CardSymbol } from "../shared/card-symbol.js";
+import { Prominence } from "../shared/prominence.js";
 
 /** Sort order for `expand` fan-out results. */
 export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
@@ -127,30 +130,51 @@ const landmarkFields = {
  * Standalone object schema for the landmark frontmatter, used by
  * lightweight readers (the landmarks router, triage-instructions, etc.)
  * that parse a landmark file directly rather than through the card
- * loader. Unknown keys (global card fields, a stray `type:`) are stripped.
+ * loader. Unknown keys (most global card fields, a stray `type:`) are stripped.
+ *
+ * `symbol` is the exception, admitted explicitly: it is a global field
+ * (`GLOBAL_CARD_FIELDS`) that these readers must see, because a landmark's mark
+ * now lives there rather than under `navigation`. Stripping it is what would
+ * make a migrated landmark render as no symbol at all.
+ *
+ * `prominence` is admitted the same way: a written value describes the
+ * *place*, not the file (the file itself is background by type — see
+ * `LandmarkSchema`'s `prominence: "background"` below), and these readers
+ * must see it to apply the `background` cascade.
  */
-const LandmarkObject = z.object(landmarkFields);
+const LandmarkObject = z.object({
+  ...landmarkFields,
+  symbol: CardSymbol.optional(),
+  prominence: Prominence.optional(),
+});
 export type LandmarkFields = z.infer<typeof LandmarkObject>;
 
 export const LandmarkSchema: CardSchema = cardSchema("landmark", {
   description: "Marks its directory as a notable spot — a curated navigation bookmark and/or a triage filing destination; one per directory",
   category: "authored",
+  // A landmark is a place marker, not a visitable file: it never lists in a
+  // fold, and the directory's identity is drawn from it instead
+  // (docs/implemented-plans/card-prominence.md, "Type defaults"). A written `prominence`
+  // still means something — see LandmarkObject above — but it describes the
+  // place, not this file.
+  prominence: "background",
   fields: landmarkFields,
   searchable: false,
   instructions: `# Landmark Cards
 
-A landmark marks a directory as a notable spot in the box — a hand-curated bookmark that can also be a triage destination. One per directory; the file lives inside the directory it describes, e.g. \`store/recipes/Recipes.landmark.card\`. Directories without a landmark are invisible to the Landmarks page and to triage.
+A landmark marks a directory as a notable spot in the box — a hand-curated bookmark that can also be a triage destination. One per directory; the file lives inside the directory it describes, e.g. \`_content/recipes/Recipes.landmark.card\`. Directories without a landmark are invisible to the Landmarks page and to triage.
 
 A landmark is pure YAML frontmatter (no body) with one or more roles. At least one role should be present.
 
 ## \`navigation\` (human-facing surface)
 
 \`\`\`yaml
+symbol:                     # the card's mark — every card may carry one
+  glyph: 🍳                 # emoji or a letter or two; OR src: /_content/recipes/images/portrait.webp for an image
 navigation:
   label: Recipes            # short bookmark name; treat like a tab name, not a sentence
-  symbol: 🍳                # emoji/short text, OR { src: /store/recipes/images/portrait.webp } for an image
   links:                    # optional curated links to other cards
-    - ref: /store/recipes/Bread.recipe.card  # box path (leading /); validated
+    - ref: /_content/recipes/Bread.recipe.card  # box path (leading /); validated
       label: the bread        # optional; falls back to the target's filename title
   expand:                   # optional templated fan-out
     - query: "*.recipe.card"  # glob, like bbx ls
@@ -161,6 +185,8 @@ navigation:
     narration: "on"
     prose: "off"
 \`\`\`
+
+An older landmark may carry its mark nested as \`navigation.symbol\` (a bare string, or \`{ src }\`) — the shape before the mark became a field every card can have. That form is still read, so a card written that way is not a mistake and does not need fixing by hand; the \`landmark-symbol\` migration moves it. Write new marks at the top level, as above.
 
 \`ref\` and \`symbol.src\` are **box paths — write them with a leading \`/\`, from the box root**. A path relative to the landmark's directory still resolves (older landmarks are written that way), but new ones use the box path. \`expand\` \`query\` globs are the exception: they are queries, not refs, and always run relative to the landmark's directory.
 
@@ -177,14 +203,20 @@ destinations:
   - for: [triage]           # kinds: triage, commentary, and/or share
     rules: "Recipes — anything describing how to cook a dish."  # read by the triage agent
     procedure:                # handler run at the handle stage; a card ref ({ ref: <box path> })
-      ref: /config/procedures/archive-recipe.procedure.card
+      ref: /_config/procedures/archive-recipe.procedure.card
   - for: [commentary]       # a commentary-only spot needs neither rules nor procedure
   - for: [share]            # appears under "Save in" in the native iOS share sheet
 \`\`\`
 
 A pure routing target (an archive humans don't browse) can have only \`destinations\`; a pure bookmark can have only \`navigation\`.
 
-**Dedup**: a card appearing in both a hand-listed \`links\` entry and an \`expand\` result shows once — hand-listed links come first.`,
+**Dedup**: a card appearing in both a hand-listed \`links\` entry and an \`expand\` result shows once — hand-listed links come first.
+
+## Derived links, and \`prominence\`
+
+Most of a landmark's list is **derived**, not listed: every card under its directory carrying \`prominence: entry-point\` or \`prominence: primary\` appears automatically (entry points first, then primary cards, then nested landmarks, then \`expand\` results), and the walk stops at any subdirectory with its own landmark. So the way to surface a card in its own place is to mark the card, not to edit the landmark. \`links:\` is for what a card cannot say about itself: a target outside this directory, a contextual label, or a fixed position. A \`links:\` entry that duplicates a marked in-directory card is harmless (it shows once, listed first) and \`bbx validate\` notes it as a trim candidate.
+
+A landmark card is a place marker, not a visitable file — it is \`background\` by type and never needs \`prominence\` written to be on the Landmarks page. The one value that means something on a landmark is \`prominence: background\`: the place is housekeeping (logs, imports, machinery), it leaves the Landmarks page and the place menu, and everything under it folds in Browse. \`entry-point\` or \`primary\` on a landmark is a lint warning; the place's entry point is a visitable card inside it.`,
 });
 
 export type Landmark = LandmarkFields;
@@ -211,11 +243,15 @@ export function parseLandmarkFields(content: string): LandmarkFields | null {
 }
 
 /**
- * Template for `bbx create` — produces a starter landmark with a
- * `navigation` role containing label + symbol.
+ * Template for `bbx create` — produces a starter landmark with a `navigation`
+ * role for the label and the card's own `symbol` group for the mark.
  *
- * Pass `symbol` for an emoji/text symbol, or `symbolSrc` for an image box
- * path (leading `/`; a landmark-dir-relative path also resolves).
+ * A new landmark is never born in the legacy shape: `navigation.symbol` is
+ * read for boxes that predate the `landmark-symbol` migration, and written by
+ * nothing (docs/plans/card-symbol.md).
+ *
+ * Pass `symbol` for an emoji/text mark, or `symbolSrc` for an image box path
+ * (leading `/`; a landmark-dir-relative path also resolves).
  */
 export function createLandmarkTemplate(options: {
   label: string;
@@ -223,10 +259,11 @@ export function createLandmarkTemplate(options: {
   symbolSrc?: string;
 }): string {
   const navigation: Record<string, unknown> = { label: options.label };
+  const fields: Record<string, unknown> = { navigation };
   if (typeof options.symbolSrc === "string" && options.symbolSrc !== "") {
-    navigation.symbol = { src: options.symbolSrc };
+    fields["symbol"] = { src: options.symbolSrc };
   } else if (typeof options.symbol === "string" && options.symbol !== "") {
-    navigation.symbol = options.symbol;
+    fields["symbol"] = { glyph: options.symbol };
   }
-  return renderFrontmatterBlock({ navigation });
+  return renderFrontmatterBlock(fields);
 }

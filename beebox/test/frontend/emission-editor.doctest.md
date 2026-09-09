@@ -99,7 +99,7 @@ JSON.stringify(store.get().images.map((i) => i.id))
 const store = createEmissionStore();
 store.editor.setText("see [file#1] please");
 const fid = store.editor.nextFileId();
-store.editor.addFile({ id: fid, path: "tmp/report.pdf", originalName: "report.pdf", size: 10, mimetype: "application/pdf" });
+store.editor.addFile({ id: fid, path: "_tmp/report.pdf", originalName: "report.pdf", size: 10, mimetype: "application/pdf" });
 store.get().files.length
 => 1
 
@@ -117,7 +117,7 @@ store.get().files.length
 const store = createEmissionStore();
 store.editor.setText("compare [selection#1] with the doc");
 const sid = store.editor.nextSelectionId();
-store.editor.addSelection({ id: sid, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body" });
+store.editor.addSelection({ id: sid, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body" });
 store.get().selections.length
 => 1
 
@@ -144,7 +144,7 @@ store.editor.addImage({ id: a, mimeType: "image/png", dataBase64: "x", objectUrl
 const b = store.editor.nextImageId();
 store.editor.addImage({ id: b, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:b", byteLength: 1 });
 const f = store.editor.nextFileId();
-store.editor.addFile({ id: f, path: "tmp/x.txt", originalName: "x.txt", size: 1, mimetype: "text/plain" });
+store.editor.addFile({ id: f, path: "_tmp/x.txt", originalName: "x.txt", size: 1, mimetype: "text/plain" });
 
 const result = store.editor.reset("attachments");
 JSON.stringify(result.removedImageObjectUrls)

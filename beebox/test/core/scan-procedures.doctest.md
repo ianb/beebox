@@ -1,6 +1,6 @@
 # scanProcedures — procedure index for the agent guide
 
-`scanProcedures` reads `config/procedures/*.procedure.card` and returns the
+`scanProcedures` reads `_config/procedures/*.procedure.card` and returns the
 `name` + a one-line `description` for the procedures index in the generated
 agent docs.
 
@@ -18,11 +18,11 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "config/procedures/process-news.procedure.card",
+  "_config/procedures/process-news.procedure.card",
   "---\nname: process-news\ndescription: Process news items from RSS feeds into a curated brief.\nsteps: []\n---\n",
 );
 await box.write(
-  "config/procedures/triage.procedure.card",
+  "_config/procedures/triage.procedure.card",
   "---\nname: triage-inbox\ndescription: |-\n  Sort inbox items into destinations.\n  Second line is dropped from the compact index.\nsteps: []\n---\n",
 );
 
@@ -36,7 +36,7 @@ JSON.stringify(out)
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "config/procedures/orphan.procedure.card",
+  "_config/procedures/orphan.procedure.card",
   "---\nsteps: []\n---\n",
 );
 
@@ -49,7 +49,7 @@ JSON.stringify(out)
 
 ```ts
 const box = await makeTmpBox();
-await box.write("config/procedures/bad.procedure.card", "not a frontmatter card\n");
+await box.write("_config/procedures/bad.procedure.card", "not a frontmatter card\n");
 
 const out = await scanProcedures(box.root);
 JSON.stringify(out)

@@ -18,11 +18,14 @@
 
 export {
   apiRawFileUrl,
+  apiRawImageUrl,
+  apiTransformedImageUrl,
   getApiBase,
   getWebSocketUrl,
   joinBaseAndPath,
   withBase,
 } from "./api-core";
+export type { ImageTransformUrlOptions } from "./api-core";
 
 export type {
   ChatImageAttachment,

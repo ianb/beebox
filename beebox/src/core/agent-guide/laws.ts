@@ -59,7 +59,7 @@ A citation composes the two tags — \`{% source %}\` marks where the words came
 from, \`{% quote %}\` marks that they are exact:
 
 \`\`\`
-{% source ref="/box/inbox/Voice.memo.card" usage="verbatim" %}
+{% source ref="/_content/inbox/Voice.memo.card" usage="verbatim" %}
 {% quote %}I keep going back and forth on the kitchen.{% /quote %}
 {% /source %}
 \`\`\`

@@ -6,7 +6,7 @@
  * SCENARIOS by chat-scroll-scenarios.ts.
  */
 
-import type { Scenario } from "./chat-scroll-scenarios";
+import type { Scenario } from "./chat-scroll-steps";
 
 export const OPEN_THREAD_SCENARIOS: Scenario[] = [
   {

@@ -74,7 +74,7 @@ function RootPanel({
 }) {
   return (
     <>
-      <MenuItem id="bbx-session-new" onClick={onNewSession}>New session</MenuItem>
+      <MenuItem id="bbx-session-new" onClick={onNewSession}>New chat</MenuItem>
       <MenuItem id="bbx-session-recent" onClick={onOpenSessions} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Recent chats</span>
@@ -244,7 +244,7 @@ export const SessionChip = memo(function SessionChip(props: SessionChipProps) {
   // The mark is decoration; the meaning is in the name, so a screen reader
   // hears "below the box default" rather than a triangle.
   const driftPhrase = drift === null ? "" : ` — ${drift === "above" ? "above" : "below"} the box default`;
-  const accessibleName = `${titled ? `Session: ${label}` : "Session menu"} · ${currentModelLabel}${driftPhrase}`;
+  const accessibleName = `${titled ? `Chat: ${label}` : "Chat menu"} · ${currentModelLabel}${driftPhrase}`;
 
   return (
     <>

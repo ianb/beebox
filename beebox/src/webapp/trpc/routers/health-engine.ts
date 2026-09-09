@@ -22,9 +22,9 @@ import type { HealthCheck } from "./health.js";
 const MAX_FAILURES_SHOWN = 3;
 
 /**
- * `engine-link` (v2 boxes): the box's `node_modules/beebox` must
- * resolve to a readable engine, and — for a box that isn't itself a worktree
- * clone — shouldn't point into a transient worktree checkout.
+ * `engine-link`: the box's `node_modules/beebox` must resolve to a readable
+ * engine, and — for a box that isn't itself a worktree clone — shouldn't
+ * point into a transient worktree checkout.
  * `box-schemas` (all boxes): every declared box-local schema file loaded.
  */
 export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
@@ -32,7 +32,7 @@ export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]
   const shape = await getBoxShape(boxRoot);
 
   {
-    const linkPath = path.join(shape.packageRoot, "node_modules", "beebox");
+    const linkPath = path.join(shape.boxRoot, "node_modules", "beebox");
     let target: string | null = null;
     try {
       target = await fs.readlink(linkPath);
@@ -59,7 +59,7 @@ export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]
         target !== null
         && ["beebox-worktrees", "callback-worktrees"]
           .some((dir) => target.includes(`${path.sep}${dir}${path.sep}`))
-        && !shape.packageRoot.includes(`${path.sep}box-worktrees${path.sep}`);
+        && !shape.boxRoot.includes(`${path.sep}box-worktrees${path.sep}`);
       checks.push({
         name: "engine-link",
         ok: !worktreePinned,

@@ -21,25 +21,25 @@ function hasAnnex(): boolean {
     return false;
   }
 }
-await fs.mkdir(box.path("people"), { recursive: true });
-await fs.writeFile(box.path("people/Alice.image.card"), "card");
-await fs.mkdir(box.path("people/Alice.attach"));
-await fs.writeFile(box.path("people/Alice.attach/photo.webp"), "123456");
-await fs.writeFile(box.path("people/Alice.attach/nested.doc.card"), "nested");
-await fs.mkdir(box.path("people/Alice.attach/nested.attach"));
-await fs.writeFile(box.path("people/Alice.attach/nested.attach/page.bin"), "page");
-await fs.writeFile(box.path("people/notes.md"), [
-  "[Alice](/people/Alice.image.card)",
-  "[Bob attachment](/people/Bob.attach/shared.bin)",
+await fs.mkdir(box.path("_content/people"), { recursive: true });
+await fs.writeFile(box.path("_content/people/Alice.image.card"), "card");
+await fs.mkdir(box.path("_content/people/Alice.attach"));
+await fs.writeFile(box.path("_content/people/Alice.attach/photo.webp"), "123456");
+await fs.writeFile(box.path("_content/people/Alice.attach/nested.doc.card"), "nested");
+await fs.mkdir(box.path("_content/people/Alice.attach/nested.attach"));
+await fs.writeFile(box.path("_content/people/Alice.attach/nested.attach/page.bin"), "page");
+await fs.writeFile(box.path("_content/people/notes.md"), [
+  "[Alice](/_content/people/Alice.image.card)",
+  "[Bob attachment](/_content/people/Bob.attach/shared.bin)",
 ].join("\n"));
-await fs.mkdir(box.path("people/Gone.attach"));
-await fs.writeFile(box.path("people/Gone.attach/lost.bin"), "lost");
-await fs.mkdir(box.path("people/Empty.attach"));
-await fs.writeFile(box.path("people/Bob.image.card"), "one");
-await fs.writeFile(box.path("people/Bob.doc.card"), "two");
-await fs.mkdir(box.path("people/Bob.attach"));
-await fs.writeFile(box.path("people/Bob.attach/shared.bin"), "three");
-await fs.writeFile(box.path("people/Charlie.memo.card"), "solo");
+await fs.mkdir(box.path("_content/people/Gone.attach"));
+await fs.writeFile(box.path("_content/people/Gone.attach/lost.bin"), "lost");
+await fs.mkdir(box.path("_content/people/Empty.attach"));
+await fs.writeFile(box.path("_content/people/Bob.image.card"), "one");
+await fs.writeFile(box.path("_content/people/Bob.doc.card"), "two");
+await fs.mkdir(box.path("_content/people/Bob.attach"));
+await fs.writeFile(box.path("_content/people/Bob.attach/shared.bin"), "three");
+await fs.writeFile(box.path("_content/people/Charlie.memo.card"), "solo");
 await fs.mkdir(box.path("node_modules/pkg"), { recursive: true });
 await fs.writeFile(box.path("node_modules/pkg/index.js"), "ignored");
 ```
@@ -73,7 +73,7 @@ print(JSON.stringify({
   hasJavaScript: direct[".js"] !== undefined,
 }));
 =>
-{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[1,81]},"grouped":{"card":[1,20],"markdown":[1,81],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"repository":{"hasCheckoutSize":true,"gitSize":0,"annexed":false,"allRegularFiles":10,"linkedRegularFiles":7,"unlinkedRegularFiles":1},"orphanDirectories":2,"hasJavaScript":false}
+{"direct":{"card":[2,7],"nestedCard":[2,9],"webp":[1,6],"markdown":[4,9770]},"grouped":{"card":[1,20],"markdown":[4,9770],"orphan":[2,4]},"ambiguous":[1,11],"linked":{"grouped":[1,20],"ambiguous":[1,11],"card":[2,7],"nestedCard":[2,9],"attachment":[1,6]},"unlinked":[1,4],"repository":{"hasCheckoutSize":true,"gitSize":0,"annexed":false,"allRegularFiles":55,"linkedRegularFiles":7,"unlinkedRegularFiles":1},"orphanDirectories":2,"hasJavaScript":false}
 ```
 
 A disappearing or unreadable subtree produces labeled lower-bound totals instead
@@ -100,10 +100,10 @@ let annexBox: Awaited<ReturnType<typeof makeTmpBox>> | undefined;
 let annexResult = '{"enabled":true,"available":true,"all":{"files":1,"bytes":11},"linked":{"files":1,"bytes":11},"regular":0}';
 if (hasAnnex()) {
   annexBox = await makeTmpBox({ git: true });
-  const repo = path.dirname(annexBox.root);
+  const repo = annexBox.root;
   await fs.writeFile(annexBox.path("sample.bin"), "annex bytes");
   execFileSync("git", ["annex", "init", "-q", "inventory-test"], { cwd: repo });
-  execFileSync("git", ["annex", "add", "--force", "content/sample.bin"], { cwd: repo });
+  execFileSync("git", ["annex", "add", "--force", "sample.bin"], { cwd: repo });
   const stats = await scanBoxRepositoryStats(annexBox.root, [
     { relativePath: "sample.bin", bytes: 11, linkStatus: "linked" },
   ]);
@@ -119,7 +119,7 @@ annexResult
 
 ```ts cleanup
 if (annexBox !== undefined) {
-  execFileSync("chmod", ["-R", "u+w", path.dirname(annexBox.root)], { stdio: "pipe" });
+  execFileSync("chmod", ["-R", "u+w", annexBox.root], { stdio: "pipe" });
 }
 await annexBox?.cleanup();
 await box.cleanup();

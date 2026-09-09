@@ -7,6 +7,7 @@ labels: [voice, transcription, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — boxholder dissatisfied with the sign-off keyword
+priority: important
 ---
 
 When the boxholder finishes dictating and wants to hand the turn over — phone

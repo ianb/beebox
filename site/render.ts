@@ -1,5 +1,5 @@
 // The site's own small Markdoc pipeline. Deliberately NOT imported from
-// bin/router-docs.ts: that module drags in router/runtime dependencies that do
+// workstreams-app/src/router/router-docs.ts: that module drags in router/runtime dependencies that do
 // not belong in the static-site build. This package declares @markdoc/markdoc
 // explicitly and renders through it here.
 //
@@ -10,12 +10,13 @@ import Markdoc from "@markdoc/markdoc";
 import type { RenderableTreeNode } from "@markdoc/markdoc";
 import YAML from "yaml";
 import { z } from "zod";
+import { FISHEYE_CSS, FISHEYE_SCRIPT, fisheyeTags } from "./fisheye.js";
 import { classifyHref, resolveInternalHref } from "./links.js";
 
 // @markdoc/markdoc is CommonJS: at runtime the ESM named exports don't exist,
 // only the default namespace, so its parts are destructured off the default here.
 // eslint-disable-next-line import-x/no-named-as-default-member -- CJS interop: only the default namespace carries these at runtime
-const { parse: markdocParse, transform: markdocTransform, renderers, Tag } = Markdoc;
+const { parse: markdocParse, transform: markdocTransform, validate: markdocValidate, renderers, Tag } = Markdoc;
 
 const FRONTMATTER_RE = /^---\r?\n([\S\s]*?)\r?\n---\r?\n?/;
 
@@ -23,6 +24,14 @@ export const pageFrontmatterSchema = z
   .object({
     title: z.string().min(1),
     summary: z.string().min(1),
+    /** Unlisted pages build and serve but stay out of llms.txt (prototypes). */
+    unlisted: z.boolean().optional(),
+    /**
+     * Tolerated, never published: every card type in a box carries `contains`
+     * as the agent-written retrieval summary, so a page card transferred out of
+     * a box arrives with one. Accepting it keeps the strict schema honest.
+     */
+    contains: z.string().optional(),
   })
   .strict();
 
@@ -40,8 +49,17 @@ interface ParsedSource {
   body: string;
 }
 
-/** Split and strictly validate frontmatter. `file` is used only for error messages. */
-export function parseSource(src: string, file: string): ParsedSource {
+/**
+ * Split and strictly validate a frontmatter block against `schema`. The single
+ * frontmatter parse for the whole generator (pages and nuggets alike), so every
+ * publish-boundary error reads the same: one line, naming file and line number,
+ * no stack noise. `file` is used only for those messages.
+ */
+export function parseFrontmatter<T>(src: string, params: { file: string; schema: z.ZodType<T> }): {
+  frontmatter: T;
+  body: string;
+} {
+  const { file, schema } = params;
   const match = FRONTMATTER_RE.exec(src);
   if (!match) {
     throw new FrontmatterError(`${file}:1 missing frontmatter block (expected a leading "---" fence)`);
@@ -56,13 +74,26 @@ export function parseSource(src: string, file: string): ParsedSource {
     // +1: frontmatter body starts on the line after the opening fence.
     throw new FrontmatterError(`${file}:${line + 1} invalid frontmatter YAML: ${detail}`);
   }
-  const parsed = pageFrontmatterSchema.safeParse(data);
+  const parsed = schema.safeParse(data);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     const field = issue?.path.join(".") || "(root)";
     throw new FrontmatterError(`${file}:1 frontmatter field "${field}": ${issue?.message ?? "invalid"}`);
   }
   return { frontmatter: parsed.data, body: src.slice(match[0].length) };
+}
+
+/** Split and strictly validate a `site-page` card's frontmatter. */
+export function parseSource(src: string, file: string): ParsedSource {
+  return parseFrontmatter(src, { file, schema: pageFrontmatterSchema });
+}
+
+/** A body whose Markdoc markup is malformed — a publish-boundary hard failure. */
+export class MarkupError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MarkupError";
+  }
 }
 
 interface RewriteContext {
@@ -96,16 +127,61 @@ export interface RenderedPage {
   linkTargets: string[];
 }
 
-/** Render a markdown body to HTML, rewriting/collecting internal links. */
-export function renderBody(body: string, params: { pageSitePath: string; base: string }): RenderedPage {
-  const ast = markdocParse(body);
-  const content = markdocTransform(ast);
-  const targets: string[] = [];
-  rewriteLinks(content, { pageSitePath: params.pageSitePath, base: params.base, targets });
-  return { html: renderers.html(content), linkTargets: targets };
+export interface RenderParams {
+  /** Path used in error messages (site/-relative for cards, repo-relative for nuggets). */
+  file: string;
+  pageSitePath: string;
+  base: string;
 }
 
-function escapeHtml(s: string): string {
+export interface TransformedBody {
+  content: RenderableTreeNode;
+  linkTargets: string[];
+}
+
+/**
+ * Parse + validate + transform a markdown body, rewriting/collecting internal
+ * links. Returns the renderable tree so callers that need to re-wrap it (the
+ * aside substitution) share this exact pipeline instead of a second one.
+ *
+ * The validation pass is load-bearing, not hygiene: Markdoc's transform never
+ * throws on a malformed tag — it silently drops the whole block. A mistyped
+ * `{% aside ref … %}` would then vanish from the page with nothing to see. Any
+ * error- or critical-level diagnostic fails the build instead.
+ */
+export function transformBody(body: string, params: RenderParams): TransformedBody {
+  const ast = markdocParse(body);
+  const first = markdocValidate(ast, { tags: fisheyeTags }).find(
+    (entry) => entry.error.level === "error" || entry.error.level === "critical",
+  );
+  if (first) {
+    // `lines` is 0-based and may be empty on a parse error at the very top.
+    const line = (first.lines[0] ?? 0) + 1;
+    throw new MarkupError(`${params.file}:${line} malformed markup: ${first.error.message}`);
+  }
+  const content = markdocTransform(ast, { tags: fisheyeTags });
+  const targets: string[] = [];
+  rewriteLinks(content, { pageSitePath: params.pageSitePath, base: params.base, targets });
+  return { content, linkTargets: targets };
+}
+
+/** Render a markdown body to HTML, rewriting/collecting internal links. */
+export function renderBody(body: string, params: RenderParams): RenderedPage {
+  const { content, linkTargets } = transformBody(body, params);
+  return { html: renderers.html(content), linkTargets };
+}
+
+/** Render an already-transformed node to HTML (the one renderer, shared). */
+export function renderNode(node: RenderableTreeNode): string {
+  return renderers.html(node);
+}
+
+/** The block children of a transformed body, with its `<article>` wrapper dropped. */
+export function bodyChildren(content: RenderableTreeNode): RenderableTreeNode[] {
+  return Tag.isTag(content) ? content.children : [content];
+}
+
+export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
@@ -198,14 +274,16 @@ export function pageShell(params: { title: string; bodyHtml: string; base: strin
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(params.title)}</title>
-<style>${SHELL_CSS}</style>
+<style>${SHELL_CSS}
+${FISHEYE_CSS}</style>
 </head>
 <body>
 ${headerHtml(params.base)}
 <main>
 ${params.bodyHtml}
 </main>
-<script>${COPY_SCRIPT}</script>
+<script>${COPY_SCRIPT}
+${FISHEYE_SCRIPT}</script>
 </body>
 </html>
 `;

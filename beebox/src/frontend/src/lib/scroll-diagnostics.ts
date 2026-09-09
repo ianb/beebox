@@ -17,9 +17,14 @@
  * by a user action or a resize compensation).
  */
 
+import { startScrollObservation } from "./scroll-observation";
+
 const MAX_EVENTS = 600;
 const FLUSH_INTERVAL_MS = 2000;
 const MAX_PAYLOAD_CHARS = 3600;
+// Ephemeral module identity separates simultaneous tabs and HMR generations
+// in the shared box log; it is unrelated to any user, device, or conversation.
+const traceId = Math.random().toString(36).slice(2, 10);
 
 type TraceValue = string | number | boolean;
 
@@ -52,10 +57,11 @@ let subscriber: TraceSubscriber | null = null;
 let events: Record<string, TraceValue>[] = [];
 let dropped = 0;
 let timer: number | null = null;
+let stopObservation: (() => void) | null = null;
 
 function flush(): void {
   if (dropped > 0) {
-    events.push({ t: Math.round(performance.now()), k: "dropped", n: dropped });
+    events.push({ t: Math.round(performance.now()), traceId, k: "dropped", n: dropped });
     dropped = 0;
   }
   while (events.length > 0) {
@@ -73,24 +79,43 @@ function flush(): void {
 
 /** Toggle the trace; returns the new state. Disabling flushes the remainder. */
 export function scrollTraceToggle(): boolean {
-  return setScrollTrace(!enabled);
+  return setScrollTrace(!enabled, { observe: import.meta.env.DEV === true });
 }
 
-function setScrollTrace(on: boolean): boolean {
+function configureObservation(on: boolean): void {
+  if (on && stopObservation === null) stopObservation = startScrollObservation(recordScrollTrace);
+  if (!on) {
+    stopObservation?.();
+    stopObservation = null;
+  }
+}
+
+function setScrollTrace(on: boolean, opts?: { observe: boolean }): boolean {
+  if (enabled === on) {
+    configureObservation(on && opts?.observe === true);
+    return enabled;
+  }
   enabled = on;
   writePersisted(on);
   if (enabled) {
     events = [];
     dropped = 0;
-    console.warn(`[scroll-trace] enabled at ${Math.round(performance.now())}ms`);
+    console.warn(`[scroll-trace] enabled id=${traceId} at ${Math.round(performance.now())}ms`);
     timer = window.setInterval(flush, FLUSH_INTERVAL_MS);
+    configureObservation(opts?.observe === true);
   } else {
+    configureObservation(false);
     if (timer !== null) window.clearInterval(timer);
     timer = null;
     flush();
-    console.warn("[scroll-trace] disabled");
+    console.warn(`[scroll-trace] disabled id=${traceId}`);
   }
   return enabled;
+}
+
+/** Avoid dev diagnostic work unless either trace consumer is listening. */
+export function shouldRecordScrollTrace(): boolean {
+  return enabled || subscriber !== null;
 }
 
 /**
@@ -105,7 +130,7 @@ export function scrollTraceSubscribe(fn: TraceSubscriber | null): void {
 
 /** Record one trace event; near-free no-op while the trace is off. */
 export function recordScrollTrace(k: string, detail: Record<string, TraceValue>): void {
-  if (subscriber) subscriber({ t: Math.round(performance.now()), k, ...detail });
+  if (subscriber) subscriber({ t: Math.round(performance.now()), traceId, k, ...detail });
   if (!enabled) return;
   if (events.length >= MAX_EVENTS) {
     // Between flushes the buffer is bounded; count what fell off instead of
@@ -113,7 +138,28 @@ export function recordScrollTrace(k: string, detail: Record<string, TraceValue>)
     dropped++;
     return;
   }
-  events.push({ t: Math.round(performance.now()), k, ...detail });
+  events.push({ t: Math.round(performance.now()), traceId, k, ...detail });
 }
 
-if (readPersisted()) setScrollTrace(true);
+if (readPersisted()) setScrollTrace(true, { observe: import.meta.env.DEV === true });
+
+// Use the live module instance: importing a bare Vite URL from browser eval
+// after HMR can create a second singleton with no controller events.
+declare global {
+  interface Window {
+    __bbxScrollTrace?: {
+      enable: (on: boolean) => boolean;
+      subscribe: typeof scrollTraceSubscribe;
+    };
+  }
+}
+if (typeof window !== "undefined" && import.meta.env.DEV) {
+  window.__bbxScrollTrace = { enable: (on) => setScrollTrace(on, { observe: true }), subscribe: scrollTraceSubscribe };
+}
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    stopObservation?.();
+    if (timer !== null) window.clearInterval(timer);
+    flush();
+  });
+}

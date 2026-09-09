@@ -74,10 +74,26 @@ JSON.stringify(fields, null, 2)
 }
 ```
 
+`prominence` is admitted the same way `symbol` is (`landmark.ts`): a written
+value describes the place, not the file, so a reader must still see it.
+
+```ts continue
+const withProminence = parseLandmarkFields(`---
+navigation:
+  label: Logs
+prominence: background
+---
+`);
+withProminence.prominence
+=> background
+```
+
 ## Template
 
-`createLandmarkTemplate` produces a starter card with a `navigation`
-role holding the label and a text symbol:
+`createLandmarkTemplate` produces a starter card with a `navigation` role for
+the label and the card's own `symbol` group for the mark. A new landmark is
+never written in the legacy `navigation.symbol` shape — that is read for boxes
+that predate the `landmark-symbol` migration and written by nothing.
 
 ```ts
 createLandmarkTemplate({ label: "Recipes", symbol: "🍳" })
@@ -85,11 +101,12 @@ createLandmarkTemplate({ label: "Recipes", symbol: "🍳" })
 ---
 navigation:
   label: Recipes
-  symbol: 🍳
+symbol:
+  glyph: 🍳
 ---
 ```
 
-An image symbol becomes a `{ src }` mapping:
+An image symbol becomes a `{ src }` mapping under the same key:
 
 ```ts
 createLandmarkTemplate({ label: "Character", symbolSrc: "images/portrait.webp" })
@@ -97,8 +114,8 @@ createLandmarkTemplate({ label: "Character", symbolSrc: "images/portrait.webp" }
 ---
 navigation:
   label: Character
-  symbol:
-    src: images/portrait.webp
+symbol:
+  src: images/portrait.webp
 ---
 ```
 
@@ -109,8 +126,8 @@ per-landmark label; `ref` is normalized to a box-relative path.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("store/recipes/Pasta.recipe.card", "---\ntitle: Pasta\n---\n");
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("_content/recipes/Pasta.recipe.card", "---\ntitle: Pasta\n---\n");
 
 const navigation = {
   label: "Recipes",
@@ -121,8 +138,8 @@ const navigation = {
   ],
 };
 const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -130,12 +147,12 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
 =>
 [
   {
-    "ref": "store/recipes/Bread.recipe.card",
+    "ref": "_content/recipes/Bread.recipe.card",
     "label": "the bread",
     "exists": true
   },
   {
-    "ref": "store/recipes/Pasta.recipe.card",
+    "ref": "_content/recipes/Pasta.recipe.card",
     "label": null,
     "exists": true
   }
@@ -152,7 +169,7 @@ A link to a file that doesn't exist still appears, with `exists: false`:
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
 
 const navigation = {
   label: "Recipes",
@@ -162,8 +179,8 @@ const navigation = {
   ],
 };
 const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -171,11 +188,11 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, exists: l.exists })), null, 2)
 =>
 [
   {
-    "ref": "store/recipes/Bread.recipe.card",
+    "ref": "_content/recipes/Bread.recipe.card",
     "exists": true
   },
   {
-    "ref": "store/recipes/Vanished.recipe.card",
+    "ref": "_content/recipes/Vanished.recipe.card",
     "exists": false
   }
 ]
@@ -192,22 +209,68 @@ alphabetically by default.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/Apple.recipe.card", "---\ntitle: Apple\n---\n");
-await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("store/recipes/Carrot.recipe.card", "---\ntitle: Carrot\n---\n");
+await box.write("_content/recipes/Apple.recipe.card", "---\ntitle: Apple\n---\n");
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("_content/recipes/Carrot.recipe.card", "---\ntitle: Carrot\n---\n");
 
 const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card" }] };
 const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
 links.map((l) => l.ref).join("\n")
 =>
-store/recipes/Apple.recipe.card
-store/recipes/Bread.recipe.card
-store/recipes/Carrot.recipe.card
+_content/recipes/Apple.recipe.card
+_content/recipes/Bread.recipe.card
+_content/recipes/Carrot.recipe.card
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Expand: an escaping query yields no rows
+
+An `expand` `query` glob is evaluated with the landmark's own directory as
+cwd — a pattern that climbs out of the box namespace (e.g. into `src/`,
+outside every underscore area) must never be read or reported, since its
+frontmatter (title, template fields) would otherwise leak into the rendered
+label. The match is silently dropped, not surfaced as a broken link.
+
+```ts
+const box = await makeTmpBox();
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("src/private.memo.card", "---\ntitle: Secret Memo\n---\n");
+
+const navigation = {
+  label: "Recipes",
+  expand: [{ query: "../../src/private.memo.card", "template-label": "${title}" }],
+};
+const { links } = await resolveLandmark(navigation, {
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
+  boxRoot: box.root,
+});
+
+links.length
+=> 0
+```
+
+Normal in-namespace expansion still works alongside it:
+
+```ts continue
+const navigation2 = { label: "Recipes", expand: [{ query: "*.recipe.card" }] };
+const { links: links2 } = await resolveLandmark(navigation2, {
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
+  boxRoot: box.root,
+});
+
+links2.map((l) => l.ref).join("\n")
+=>
+_content/recipes/Bread.recipe.card
 ```
 
 ```ts cleanup
@@ -225,13 +288,13 @@ refs). An authored `template-ref` keeps `${path}` dir-relative.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/attach/Filed.recipe.card", "---\ntitle: Filed\n---\n");
-await box.write("store/recipes/Recipes.attach/Trap.recipe.card", "---\ntitle: Trap\n---\n");
+await box.write("_content/recipes/attach/Filed.recipe.card", "---\ntitle: Filed\n---\n");
+await box.write("_content/recipes/Recipes.attach/Trap.recipe.card", "---\ntitle: Trap\n---\n");
 
 const navigation = { label: "Recipes", expand: [{ query: "attach/*.recipe.card" }] };
 const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -239,7 +302,7 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, exists: l.exists })), null, 2)
 =>
 [
   {
-    "ref": "store/recipes/attach/Filed.recipe.card",
+    "ref": "_content/recipes/attach/Filed.recipe.card",
     "exists": true
   }
 ]
@@ -258,16 +321,16 @@ XPath-over-XML evaluation).
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Crusty Bread\n---\n");
-await box.write("store/recipes/Pasta.recipe.card", "---\ntitle: Cacio e Pepe\n---\n");
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Crusty Bread\n---\n");
+await box.write("_content/recipes/Pasta.recipe.card", "---\ntitle: Cacio e Pepe\n---\n");
 
 const navigation = {
   label: "Recipes",
   expand: [{ query: "*.recipe.card", "template-ref": "${path}", "template-label": "${title}" }],
 };
 const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -275,11 +338,11 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label })), null, 2)
 =>
 [
   {
-    "ref": "store/recipes/Bread.recipe.card",
+    "ref": "_content/recipes/Bread.recipe.card",
     "label": "Crusty Bread"
   },
   {
-    "ref": "store/recipes/Pasta.recipe.card",
+    "ref": "_content/recipes/Pasta.recipe.card",
     "label": "Cacio e Pepe"
   }
 ]
@@ -296,8 +359,8 @@ once — hand-listed links come first and keep their label.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("store/recipes/Pasta.recipe.card", "---\ntitle: Pasta\n---\n");
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("_content/recipes/Pasta.recipe.card", "---\ntitle: Pasta\n---\n");
 
 const navigation = {
   label: "Recipes",
@@ -305,8 +368,8 @@ const navigation = {
   expand: [{ query: "*.recipe.card" }],
 };
 const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -314,11 +377,11 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label })), null, 2)
 =>
 [
   {
-    "ref": "store/recipes/Bread.recipe.card",
+    "ref": "_content/recipes/Bread.recipe.card",
     "label": "the bread"
   },
   {
-    "ref": "store/recipes/Pasta.recipe.card",
+    "ref": "_content/recipes/Pasta.recipe.card",
     "label": null
   }
 ]
@@ -336,9 +399,9 @@ into the flat `links`. The group reports a `count` and resolved
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("store/recipes/images/A.image.card", "---\ntitle: A\n---\n");
-await box.write("store/recipes/images/B.image.card", "---\ntitle: B\n---\n");
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("_content/recipes/images/A.image.card", "---\ntitle: A\n---\n");
+await box.write("_content/recipes/images/B.image.card", "---\ntitle: B\n---\n");
 
 const navigation = {
   label: "Recipes",
@@ -346,8 +409,8 @@ const navigation = {
   expand: [{ query: "images/*.image.card", group: "Images" }],
 };
 const resolved = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -362,15 +425,15 @@ JSON.stringify({
 =>
 {
   "links": [
-    "store/recipes/Bread.recipe.card"
+    "_content/recipes/Bread.recipe.card"
   ],
   "groups": [
     {
       "label": "Images",
       "count": 2,
       "children": [
-        "store/recipes/images/A.image.card",
-        "store/recipes/images/B.image.card"
+        "_content/recipes/images/A.image.card",
+        "_content/recipes/images/B.image.card"
       ]
     }
   ]
@@ -387,24 +450,24 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/A.recipe.card", "---\ntitle: A\n---\n");
+await box.write("_content/recipes/A.recipe.card", "---\ntitle: A\n---\n");
 // Backdate A so B is newer.
-const aPath = box.path("store/recipes/A.recipe.card");
+const aPath = box.path("_content/recipes/A.recipe.card");
 const { utimes } = await import("node:fs/promises");
 await utimes(aPath, new Date(2020, 0, 1), new Date(2020, 0, 1));
-await box.write("store/recipes/B.recipe.card", "---\ntitle: B\n---\n");
+await box.write("_content/recipes/B.recipe.card", "---\ntitle: B\n---\n");
 
 const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card", order: "modified-desc" }] };
 const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
 links.map((l) => l.ref).join("\n")
 =>
-store/recipes/B.recipe.card
-store/recipes/A.recipe.card
+_content/recipes/B.recipe.card
+_content/recipes/A.recipe.card
 ```
 
 ```ts cleanup
@@ -418,19 +481,19 @@ normalized to box-relative.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("docs/About.doc.card", "---\ntitle: About\n---\n");
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("_content/docs/About.doc.card", "---\ntitle: About\n---\n");
 
 const navigation = {
   label: "Recipes",
   links: [
     { ref: "Bread.recipe.card" },
-    { ref: "../../docs/About.doc.card", label: "about" },
+    { ref: "../docs/About.doc.card", label: "about" },
   ],
 };
 const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -438,12 +501,12 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
 =>
 [
   {
-    "ref": "store/recipes/Bread.recipe.card",
+    "ref": "_content/recipes/Bread.recipe.card",
     "label": null,
     "exists": true
   },
   {
-    "ref": "docs/About.doc.card",
+    "ref": "_content/docs/About.doc.card",
     "label": "about",
     "exists": true
   }
@@ -463,20 +526,20 @@ to nothing and is reported `exists: false`, never clamped to some other file.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
-await box.write("docs/About.doc.card", "---\ntitle: About\n---\n");
+await box.write("_content/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("_content/docs/About.doc.card", "---\ntitle: About\n---\n");
 
 const navigation = {
   label: "Recipes",
   links: [
-    { ref: "/docs/About.doc.card", label: "about" },
-    { ref: "/store/recipes/Gone.recipe.card" },
+    { ref: "/_content/docs/About.doc.card", label: "about" },
+    { ref: "/_content/recipes/Gone.recipe.card" },
     { ref: "../../../../etc/hosts", label: "escape" },
   ],
 };
 const { links } = await resolveLandmark(navigation, {
-  landmarkDir: box.path("store/recipes"),
-  landmarkPath: "store/recipes/Recipes.landmark.card",
+  landmarkDir: box.path("_content/recipes"),
+  landmarkPath: "_content/recipes/Recipes.landmark.card",
   boxRoot: box.root,
 });
 
@@ -484,12 +547,12 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
 =>
 [
   {
-    "ref": "docs/About.doc.card",
+    "ref": "_content/docs/About.doc.card",
     "label": "about",
     "exists": true
   },
   {
-    "ref": "store/recipes/Gone.recipe.card",
+    "ref": "_content/recipes/Gone.recipe.card",
     "label": null,
     "exists": false
   },

@@ -5,6 +5,7 @@ import { splitCardContent } from "../../cards/frontmatter.js";
 import { writeFileAtomic } from "../../lib/atomic-write.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
+import { landmarkScanDir, landmarkRelPath } from "./root-dir.js";
 
 export type LandmarkHqPreference = "inherit" | "on" | "off";
 
@@ -40,10 +41,10 @@ export async function setLandmarkHqPreference(options: {
   contextDir: string;
   value: LandmarkHqPreference;
 }): Promise<{ path: string; commitWarning: string | null }> {
-  const entries = await fs.readdir(path.join(options.boxRoot, options.contextDir));
+  const entries = await fs.readdir(landmarkScanDir(options.boxRoot, options.contextDir));
   const landmarkName = entries.filter((name) => name.endsWith(".landmark.card")).toSorted()[0];
   if (landmarkName === undefined) throw new LandmarkMissingError();
-  const relativePath = options.contextDir === "" ? landmarkName : `${options.contextDir}/${landmarkName}`;
+  const relativePath = landmarkRelPath(options.contextDir, landmarkName);
   const absolutePath = path.join(options.boxRoot, relativePath);
 
   await withCardLock(absolutePath, async () => {

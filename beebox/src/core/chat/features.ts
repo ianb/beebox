@@ -11,6 +11,7 @@
  * `model="opus"` slot in by adding a registry entry, no shape change.
  */
 
+import type { AttentionSnapshot } from "../../shared/chat-composer-binding.js";
 import type { AgentChatChannel } from "../../shared/chat-channel.js";
 
 export type FeatureValue = string;
@@ -148,6 +149,8 @@ const READ_ONLY_ATTRS = new Set([
   "health",
   "todos",
   "open-card",
+  "surface",
+  "transcript",
 ]);
 
 /**
@@ -170,6 +173,7 @@ export function composeChatAppSnapshot(input: {
   health?: string;
   todos?: string;
   openCard?: string;
+  viewContext?: AttentionSnapshot;
   /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
   activityChildren?: string;
 }): string {
@@ -189,6 +193,8 @@ export function composeChatAppSnapshot(input: {
     ["health", input.health],
     ["todos", input.todos],
     ["open-card", input.openCard],
+    ["surface", input.viewContext?.surface],
+    ["transcript", input.viewContext?.transcript],
   ];
   for (const [name, value] of contextAttrs) {
     if (value !== undefined) attrs.push(`${name}="${escapeAttr(value)}"`);

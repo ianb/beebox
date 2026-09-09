@@ -5,7 +5,10 @@ area: beebox
 labels: [lint, security, openclaw-borrow]
 filed-by: agent
 discovered-in: worktree-openclaw-security-lints — surveying openclaw's .pre-commit-config.yaml
+priority: backlog
 ---
+
+> `invalid?` checked 2026-09-05: not invalid, partly done. `bin/precommit-security.ts` (`6deee0f14`) covers private keys, merge conflicts, and shellcheck. `.gitleaks.toml` exists (`21b4eea7c`) but is wired into no hook or workflow, and `pnpm audit` runs nowhere. The two decisions in the body are still open.
 
 openclaw runs a battery of off-the-shelf hooks via the `pre-commit`/`prek`
 framework. We use husky, so adopting these means adding husky-hook lines + a CI

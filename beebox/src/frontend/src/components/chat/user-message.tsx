@@ -164,7 +164,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
 
   const isPending = entries.every((e) => e.pending === true);
   const pendingClass = isPending ? " opacity-60" : "";
-  const pendingTitle = isPending ? "Queued — waiting for agent" : undefined;
+  const pendingTitle = isPending ? "Queued — sends when the current reply finishes" : undefined;
 
   if (isOtherUser) {
     // Other user's message: left-aligned with name label. Fix (2026-08,

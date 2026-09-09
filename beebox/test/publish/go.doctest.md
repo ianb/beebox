@@ -73,7 +73,7 @@ committed exactly once:
 JSON.parse(new TextDecoder().decode(store.objects.get(`pubs/${pubId}/manifest.json`))).status
 => live
 
-JSON.parse(await box.read(`box/publish/${pubId}/manifest.json`)).status
+JSON.parse(await box.read(`_publish/${pubId}/manifest.json`)).status
 => live
 
 JSON.stringify(committed) === JSON.stringify([pubId])
@@ -103,7 +103,7 @@ result.reason
 store.puts.length
 => 0
 
-JSON.parse(await box.read(`box/publish/${pubId}/manifest.json`)).status
+JSON.parse(await box.read(`_publish/${pubId}/manifest.json`)).status
 => draft
 
 await box.cleanup();

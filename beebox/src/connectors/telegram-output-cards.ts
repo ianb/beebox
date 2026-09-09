@@ -1,5 +1,5 @@
 /**
- * box/output/ telegram-message card delivery — the documented contract
+ * _bookkeeping/output/ telegram-message card delivery — the documented contract
  * in src/schemas/telegram-message.ts: agents (and the scheduler's
  * health alerter) drop a card with `status: pending`; the telegram
  * connector sends it during sync, deletes it on success, and stamps it
@@ -21,7 +21,7 @@ interface OutputCardsContext {
 }
 
 /**
- * Send all pending telegram-message cards in box/output/. Returns the
+ * Send all pending telegram-message cards in _bookkeeping/output/. Returns the
  * relative paths of cards that were sent (and deleted). One card's
  * failure doesn't stop the rest.
  */

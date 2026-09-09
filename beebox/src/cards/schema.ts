@@ -2,6 +2,9 @@ import { z, type ZodType } from "zod";
 import type { LintIssue } from "./lint-format.js";
 import { isRecord } from "../lib/is-record.js";
 import { TodosFieldSchema, type TodoEntry } from "../shared/todo-model.js";
+import { CardSymbol, type CardSymbolData } from "../shared/card-symbol.js";
+import { Prominence, type ProminenceLevel, type EffectiveLevel } from "../shared/prominence.js";
+import { ThemeChoiceSchema, validateThemeChoice, type ThemeChoice } from "../shared/card-theme.js";
 
 /**
  * Card schemas describe a card file's full shape: most fields live in the
@@ -80,6 +83,16 @@ export type FieldDecl = ZodType | BodyField;
  * - `todos` — a list of todo entries for intentions that don't belong to any
  *   particular sentence of the body (see `src/shared/todo-model.ts`, the
  *   frontmatter counterpart to the `{% todo %}` Markdoc tag).
+ * - `symbol` — the small mark that stands for this card in a tab strip, a
+ *   listing, or a tile: `{ glyph, src, foreground, background }`. Most cards
+ *   have none; a box where everything is marked has nothing marked. See
+ *   `src/shared/card-symbol.ts`.
+ * - `prominence` — who a card is for, and whether the box should surface it
+ *   to a reader looking around: `entry-point`, `primary`, or `background`.
+ *   Absent (most cards) means the card type's default level — see
+ *   `defaultProminence` below. See `src/shared/prominence.ts`.
+ * - `theme` — an optional presentation choice. Catalog membership is checked
+ *   by the host because a self-contained Zod schema cannot read box settings.
  *
  * Adding/removing a field here? Update the enumerations in
  * `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/adding-schemas.md`.
@@ -89,6 +102,9 @@ export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   contains: z.string().optional(),
   "contains-evidence": z.string().optional(),
   todos: TodosFieldSchema,
+  symbol: CardSymbol.optional(),
+  prominence: Prominence.optional(),
+  theme: ThemeChoiceSchema.optional(),
 };
 
 /**
@@ -163,6 +179,16 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
   description?: string;
   /** Who creates cards of this type (see {@link CardCategory}). Defaults to "authored". */
   category?: CardCategory;
+  /**
+   * This type's default `prominence` level, applied when a card of this type
+   * leaves the field absent. Omit for the ordinary default; `category:
+   * "system"` implies `"background"` unless this is set to something else.
+   * A card's own `prominence:` always wins over the type default — see
+   * `effectiveLevel()` in `src/shared/prominence.ts`.
+   */
+  prominence?: ProminenceLevel;
+  /** This card type's preferred presentation when no card/rule/type override wins. */
+  theme?: ThemeChoice;
   /** Handling instructions for agents working with this card type. */
   instructions?: string;
   /**
@@ -220,6 +246,15 @@ export interface CardSchema<
   readonly description?: string;
   /** Who creates cards of this type. Defaults to "authored". */
   readonly category: CardCategory;
+  /**
+   * This type's default `prominence` level for a card that leaves the field
+   * absent (see {@link CardSchemaConfig.prominence}). Resolved at
+   * declaration time: an explicit `prominence` option wins, otherwise
+   * `category: "system"` yields `"background"`, otherwise `"ordinary"`.
+   */
+  readonly defaultProminence: EffectiveLevel;
+  /** This type's optional theme preference; an explicit card choice still wins. */
+  readonly defaultTheme?: ThemeChoice;
   /** Name of the single body field, or null if the card is frontmatter-only. */
   readonly bodyFieldName: string | null;
   /** Resolved body field (kind + schema), or null. */
@@ -295,6 +330,9 @@ export type InferCardFields<S extends CardSchema> = S extends CardSchema<
         contains?: string;
         "contains-evidence"?: string;
         todos?: TodoEntry[];
+        symbol?: CardSymbolData;
+        prominence?: ProminenceLevel;
+        theme?: ThemeChoice;
       },
       keyof TFields
     >
@@ -312,6 +350,12 @@ export function cardSchema<
   TTag extends string,
   TFields extends Record<string, FieldDecl>,
 >(type: TTag, config: CardSchemaConfig<TFields>): CardSchema<TTag, TFields> {
+  if (config.theme !== undefined) {
+    const checkedTheme = validateThemeChoice(config.theme, `cardSchema(${type}) theme`);
+    if (checkedTheme.problem !== null) {
+      throw new CardSchemaDeclarationError(type, checkedTheme.problem.message);
+    }
+  }
   let bodyFieldName: string | null = null;
   let bodyField: BodyField | null = null;
   const frontmatterShape: Record<string, ZodType> = {
@@ -359,6 +403,13 @@ export function cardSchema<
     config.superRefine !== undefined
       ? baseFrontmatter.superRefine(config.superRefine)
       : baseFrontmatter;
+  const category: CardCategory = config.category === undefined ? "authored" : config.category;
+  // A card the box writes for its own use is background by type — nothing to
+  // declare per schema, the category is the declaration. An explicit
+  // `prominence` option always wins (e.g. a system schema that wants to stay
+  // ordinary would set it, though none currently do).
+  const defaultProminence: EffectiveLevel =
+    config.prominence ?? (category === "system" ? "background" : "ordinary");
   const schema: CardSchema<TTag, TFields> = {
     type,
     fields: config.fields,
@@ -367,13 +418,17 @@ export function cardSchema<
     frontmatterSchema,
     globalFieldNames,
     searchable: config.searchable === undefined ? true : config.searchable,
-    category: config.category === undefined ? "authored" : config.category,
+    category,
+    defaultProminence,
   };
   // Optional members are spread in only when present so a schema that declares
   // neither still produces the same object shape (exactOptionalPropertyTypes).
   let resolved: CardSchema<TTag, TFields> = schema;
   if (config.description !== undefined) {
     resolved = { ...resolved, description: config.description };
+  }
+  if (config.theme !== undefined) {
+    resolved = { ...resolved, defaultTheme: config.theme };
   }
   if (config.instructions !== undefined) {
     resolved = { ...resolved, instructions: config.instructions };

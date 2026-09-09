@@ -1,9 +1,12 @@
 /**
- * The layout predicate: given a box root, resolve where its package root
- * lives. Every box is shapeVersion 2 (the package layout): the box root is a
- * `content/` directory nested inside a package, and the package root is its
- * parent. A marker without `shapeVersion >= 2` predates that layout and is a
- * hard error (see `docs/box-layout.md`).
+ * The layout predicate: given a box root, resolve its shape. shapeVersion 3
+ * (the one-root layout — `docs/implemented-plans/one-root-box-layout.md`) collapses the
+ * old two-root package layout (package root + nested `content/` operational
+ * root) into ONE root: `.beebox/box.json`, `package.json`, `src/`, and every
+ * underscore-prefixed operational area (`_content/`, `_config/`, …) all live
+ * at the same directory. A marker whose `shapeVersion` predates 3 (or is
+ * absent) is a v2 box and gets a migration-pointing hard error — see
+ * `docs/box-layout.md`.
  *
  * This is the single layout resolver described in
  * `docs/implemented-plans/boxes-as-packages-v2.md` ("The box repository"): every other
@@ -16,30 +19,32 @@ import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "./error-guards.js";
 import { LEGACY_PACKAGE_NAME, migrateBoxState } from "./state-migration.js";
+import {
+  BoxShapeError,
+  V2PackageRootError,
+  PreV3ShapeError,
+  NewerShapeRequiredError,
+  NotABoxError,
+  UnreadablePackageJsonError,
+  MissingBeeBoxDependencyError,
+} from "./box-shape-errors.js";
+
+export { BoxShapeError } from "./box-shape-errors.js";
 
 const BOX_MARKER = ".beebox/box.json";
 
 /** The lowest shape version this build of beebox understands. */
-const MIN_KNOWN_SHAPE_VERSION = 2;
+const MIN_KNOWN_SHAPE_VERSION = 3;
 
 /** The highest shape version this build of beebox understands. */
-const MAX_KNOWN_SHAPE_VERSION = 2;
-
-export class BoxShapeError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = "BoxShapeError";
-  }
-}
+const MAX_KNOWN_SHAPE_VERSION = 3;
 
 export interface BoxShape {
-  /** The shape version declared by the box's `.beebox/box.json` marker (always >= 2). */
+  /** The shape version declared by the box's `.beebox/box.json` marker (always >= 3). */
   shapeVersion: number;
-  /** The operational root — where `.beebox/box.json`, `box/`, `config/`, etc. live. */
+  /** The box root — the ONE root; `.beebox/box.json`, `package.json`, `src/`,
+   * and every `_`-prefixed operational area all live here. */
   boxRoot: string;
-  /** The package root — where `package.json`/`node_modules`/`src/` live. The
-   * parent of `boxRoot` (which is the package's `content/` directory). */
-  packageRoot: string;
 }
 
 const boxMarkerSchema = z.object({ shapeVersion: z.number().optional() });
@@ -54,48 +59,52 @@ type PackageJsonShape = z.infer<typeof packageJsonShapeSchema>;
 /**
  * Determine a box's physical layout.
  *
- * Reads the `.beebox/box.json` marker at `boxRoot`. Every box is shapeVersion 2 (the
- * package layout): the box root is a `content/` directory nested inside a
- * package, so the package root is `boxRoot`'s parent. This is validated
- * fail-closed — the parent must declare a `beebox` dependency, or
- * box-owned code could silently resolve against the wrong `node_modules`. A
- * marker whose `shapeVersion` is absent or `< 2` predates this layout and is
- * a hard error (see `docs/box-layout.md`).
+ * Reads the `.beebox/box.json` marker at `boxRoot` (the one root: package.json,
+ * src/, and every operational `_`-area). A marker whose `shapeVersion` is
+ * absent or `< 3` predates the one-root layout — including the common case
+ * of a v2 PACKAGE root (no marker of its own, but one at `<boxRoot>/content`)
+ * or a v2 CONTENT root (basename `content`, marker `shapeVersion: 2`) — and
+ * gets a `bbx migrate`-pointing hard error.
  *
  * @param boxRoot - The box root directory (contains `.beebox/box.json`)
- * @throws BoxShapeError if the marker predates the v2 package layout
- *   (`shapeVersion` absent or `< 2`), if the box's parent doesn't declare
- *   `beebox`, or if the marker declares a shape version newer than this
- *   build understands
+ * @throws BoxShapeError if the marker predates the one-root layout
+ *   (`shapeVersion` absent or `< 3`), if the box doesn't declare a `beebox`
+ *   dependency in its own `package.json`, or if the marker declares a shape
+ *   version newer than this build understands
  */
 export async function getBoxShape(boxRoot: string): Promise<BoxShape> {
   const resolvedRoot = path.resolve(boxRoot);
   await migrateBoxState(resolvedRoot);
-  const marker = await readBoxMarker(resolvedRoot);
-  const { shapeVersion } = marker;
 
+  let marker: BoxMarker;
+  try {
+    marker = await readBoxMarker(resolvedRoot);
+  } catch (e) {
+    if (errnoCode(e) !== "ENOENT") throw e;
+    // No marker at this path. A v2 PACKAGE root has its marker one level
+    // down, at `<resolvedRoot>/content` — worth naming specifically rather
+    // than reporting "not a box." Genuine "nothing box-like here" (neither
+    // marker present) is re-thrown as-is; `getBoxShapeIfPresent` recognizes
+    // the ENOENT and reports "not found" rather than surfacing it.
+    const nestedMarker = await readBoxMarkerTolerant(path.join(resolvedRoot, "content"));
+    if (nestedMarker !== null) throw new V2PackageRootError(resolvedRoot);
+    throw e;
+  }
+
+  const { shapeVersion } = marker;
   if (shapeVersion === undefined || shapeVersion < MIN_KNOWN_SHAPE_VERSION) {
-    throw new BoxShapeError(
-      `Box at ${resolvedRoot} ${
-        shapeVersion === undefined
-          ? "has a .beebox/box.json marker with no shapeVersion field"
-          : `declares shapeVersion ${shapeVersion}`
-      }, which predates the v2 package layout (minimum: ${MIN_KNOWN_SHAPE_VERSION}). ` +
-        "See docs/box-layout.md."
-    );
+    throw new PreV3ShapeError(resolvedRoot, shapeVersion);
   }
 
   if (shapeVersion > MAX_KNOWN_SHAPE_VERSION) {
-    throw new BoxShapeError(
-      `Box at ${resolvedRoot} declares shapeVersion ${shapeVersion}, which this ` +
-        `build of beebox doesn't understand (max known: ${MAX_KNOWN_SHAPE_VERSION}). ` +
-        "The box requires a newer beebox."
-    );
+    throw new NewerShapeRequiredError(resolvedRoot, {
+      shapeVersion,
+      maxKnownShapeVersion: MAX_KNOWN_SHAPE_VERSION,
+    });
   }
 
-  const packageRoot = path.dirname(resolvedRoot);
-  await requireBeeBoxDependency(packageRoot, resolvedRoot);
-  return { shapeVersion, boxRoot: resolvedRoot, packageRoot };
+  await requireBeeBoxDependency(resolvedRoot);
+  return { shapeVersion, boxRoot: resolvedRoot };
 }
 
 /** The result of a tolerant shape lookup: a resolved shape, or "no box here." */
@@ -105,43 +114,76 @@ export type BoxShapeLookup =
 
 /**
  * Like `getBoxShape`, but returns a discriminated result instead of throwing
- * when the path has no `.beebox/box.json` marker (ENOENT). For the genuinely
+ * when the path has no `.beebox/box.json` marker at all (ENOENT, and no v2
+ * marker one level down at `content/` either). For the genuinely
  * arbitrary-path callers (the dev CSP tools that walk every subdir of
  * `~/src/boxes`, the audit box guard, box-schema rebuild) that must tolerate
  * "not a box" and only need the `boxRoot` they passed. It NEVER fabricates a
- * `BoxShape`: a marker that predates v2, a malformed marker (`SyntaxError`
- * from `JSON.parse`), an unreadable one (`EACCES`), a v2 box with a broken
- * parent `package.json`, and any other IO failure are real problems and still
- * throw.
+ * `BoxShape`: a marker that predates v3 (a real BoxShapeError, migration
+ * pointer included), a malformed marker (`SyntaxError` from `JSON.parse`),
+ * an unreadable one (`EACCES`), a box with a broken `package.json`, and any
+ * other IO failure are real problems and still throw.
  */
 export async function getBoxShapeIfPresent(boxRoot: string): Promise<BoxShapeLookup> {
   const resolvedRoot = path.resolve(boxRoot);
   try {
     return { found: true, shape: await getBoxShape(resolvedRoot) };
   } catch (e) {
-    // Only a missing `.beebox/box.json` marker (ENOENT from readBoxMarker's readFile)
-    // means "not a box"; everything else — a v2-predating/malformed marker
-    // (BoxShapeError), EACCES, other IO — is a real error we must surface.
-    if (errnoCode(e) === "ENOENT") return { found: false, boxRoot: resolvedRoot };
+    // Only "no marker here, and no v2 marker at content/ either" means "not
+    // a box" — that case reaches here as the raw ENOENT from `readBoxMarker`
+    // (re-thrown as-is by `getBoxShape`, not wrapped). Everything else (a
+    // v2-predating marker, a malformed marker, EACCES, other IO) is a real
+    // error — a `BoxShapeError` (migration pointer included) or anything
+    // else — that we must surface.
+    if (errnoCode(e) === "ENOENT") {
+      return { found: false, boxRoot: resolvedRoot };
+    }
     throw e;
   }
 }
 
 /**
- * Resolve a path that may be a v2 box's PACKAGE root OR its operational
- * (`content/`) root to the operational root — where box data and the
- * `.beebox/` dir live. Dev tools that scan `~/src/boxes/*` are handed
- * package roots, whose `.beebox/box.json` marker lives one level down in `content/`.
- * Returns the resolved input unchanged when neither the path nor its `content/`
- * child is a box. Malformed/unreadable markers still throw (via
- * `getBoxShapeIfPresent`).
+ * Resolve a path that should be a v3 box root. Returns the resolved root
+ * when its marker checks out; throws the migration-pointing `BoxShapeError`
+ * when the path (or its `content/` child) is a v2 shape; returns the
+ * resolved input unchanged when nothing box-like is present at all — the
+ * same tolerant contract the dev-tool callers (`csp-digest.ts`,
+ * `csp-report.ts`, `audit-box.ts`, `secrets/migrate.ts`) relied on from the
+ * old `resolveOperationalRoot`.
  */
-export async function resolveOperationalRoot(inputPath: string): Promise<string> {
-  const direct = await getBoxShapeIfPresent(inputPath);
+export async function resolveBoxRoot(inputPath: string): Promise<string> {
+  const resolved = path.resolve(inputPath);
+  const direct = await getBoxShapeIfPresent(resolved);
   if (direct.found) return direct.shape.boxRoot;
-  const nested = await getBoxShapeIfPresent(path.join(path.resolve(inputPath), "content"));
-  if (nested.found) return nested.shape.boxRoot;
-  return path.resolve(inputPath);
+  // getBoxShapeIfPresent already re-threw a v2-shape error above if this
+  // path itself carries a v2 marker or a nested content/ marker; reaching
+  // here means truly nothing box-like is at `resolved`.
+  return resolved;
+}
+
+/**
+ * Strict counterpart to `resolveBoxRoot`: throws `BoxShapeError` when the
+ * resolved path has no v3 marker, instead of passing the path through
+ * unchanged. For callers (the hub, `bbx serve`) where a configured box path
+ * that resolves to "not a box" must fail loudly, not silently continue with
+ * a directory that turns out not to be one.
+ */
+export async function requireBoxRoot(inputPath: string): Promise<string> {
+  const resolved = path.resolve(inputPath);
+  const lookup = await getBoxShapeIfPresent(resolved);
+  if (lookup.found) return lookup.shape.boxRoot;
+  throw new NotABoxError(resolved);
+}
+
+/** Read the marker at `boxRoot`, tolerating ENOENT as "no marker" (null). A
+ * malformed marker still throws. */
+async function readBoxMarkerTolerant(boxRoot: string): Promise<BoxMarker | null> {
+  try {
+    return await readBoxMarker(boxRoot);
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT") return null;
+    throw e;
+  }
 }
 
 async function readBoxMarker(boxRoot: string): Promise<BoxMarker> {
@@ -149,7 +191,7 @@ async function readBoxMarker(boxRoot: string): Promise<BoxMarker> {
   const raw = await fs.readFile(markerPath, "utf-8");
   if (raw.trim() === "") {
     // An empty marker file has no fields; the caller treats a missing
-    // `shapeVersion` as a hard error (predates the v2 package layout).
+    // `shapeVersion` as a hard error (predates the one-root layout).
     return {};
   }
   const parsed = boxMarkerSchema.safeParse(JSON.parse(raw));
@@ -162,18 +204,14 @@ async function readBoxMarker(boxRoot: string): Promise<BoxMarker> {
   return parsed.data;
 }
 
-async function requireBeeBoxDependency(packageRoot: string, boxRoot: string): Promise<void> {
-  const packageJsonPath = path.join(packageRoot, "package.json");
+async function requireBeeBoxDependency(boxRoot: string): Promise<void> {
+  const packageJsonPath = path.join(boxRoot, "package.json");
   let pkg: PackageJsonShape;
   try {
     const raw = await fs.readFile(packageJsonPath, "utf-8");
     pkg = packageJsonShapeSchema.parse(JSON.parse(raw));
   } catch (e) {
-    throw new BoxShapeError(
-      `Box at ${boxRoot} declares shapeVersion 2+ (package layout), but its parent ` +
-        `${packageRoot} has no readable package.json. Expected a package.json there ` +
-        `declaring a "beebox" dependency. (${describeError(e)})`
-    );
+    throw new UnreadablePackageJsonError(boxRoot, { packageJsonPath, cause: e });
   }
 
   // Existing boxes can reach this boundary before their package manifest is
@@ -185,15 +223,8 @@ async function requireBeeBoxDependency(packageRoot: string, boxRoot: string): Pr
     LEGACY_PACKAGE_NAME in (pkg.dependencies ?? {}) ||
     LEGACY_PACKAGE_NAME in (pkg.devDependencies ?? {});
   if (!declaresBeeBox) {
-    throw new BoxShapeError(
-      `Box at ${boxRoot} declares shapeVersion 2+ (package layout), but ${packageJsonPath} ` +
-        'doesn\'t declare a "beebox" dependency (checked dependencies and devDependencies).'
-    );
+    throw new MissingBeeBoxDependencyError(boxRoot, packageJsonPath);
   }
-}
-
-function describeError(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }
 
 /** The three code directories a box's engine-facing loaders read: schemas, views, tricks. */
@@ -204,29 +235,22 @@ export interface BoxCodePaths {
 }
 
 /**
- * Resolve a box's code directories from its shape. A box keeps code at the
- * package root's `src/` (see "The box repository" in
- * `docs/implemented-plans/boxes-as-packages-v2.md`) — everything left in
- * `boxRoot` (the operational `content/` root) is operational data.
- */
-/**
- * For a v2 box, `config/schemas/` inside the operational root (`boxRoot`) is
- * a legacy location — schemas now live in `src/schemas/` at the package
- * root (`boxCodePaths`' `schemasDir`). A stray `*.ts` file left there is
- * invisible to the schema loader (which only reads the v2 path) and to the
- * PostToolUse validate hook (`config/schemas/*.ts` isn't a card path, so the
- * hook exits 0 silently) — without this check a misplaced schema never
- * loads and nothing says why. Returns the misplaced file names (empty when
- * nothing is misplaced).
+ * For a box, `_config/schemas/` is a legacy location — schemas now live in
+ * `src/schemas/` at the box root (`boxCodePaths`' `schemasDir`). A stray
+ * `*.ts` file left there is invisible to the schema loader (which only reads
+ * the current path) and to the PostToolUse validate hook (`_config/schemas/*.ts`
+ * isn't a card path, so the hook exits 0 silently) — without this check a
+ * misplaced schema never loads and nothing says why. Returns the misplaced
+ * file names (empty when nothing is misplaced).
  */
 export async function findLegacySchemaFiles(shape: BoxShape): Promise<string[]> {
-  const legacyDir = path.join(shape.boxRoot, "config/schemas");
+  const legacyDir = path.join(shape.boxRoot, "_config/schemas");
   let entries: string[];
   try {
     entries = await fs.readdir(legacyDir);
   } catch (_e) {
     // Missing (or unreadable) legacy dir is the expected, common case for a
-    // v2 box that never had one — nothing actionable to log.
+    // box that never had one — nothing actionable to log.
     return [];
   }
   return entries.filter((f) => f.endsWith(".ts") && !f.startsWith(".")).toSorted();
@@ -237,19 +261,18 @@ export async function findLegacySchemaFiles(shape: BoxShape): Promise<string[]> 
  * validate` and `bbx status` so the two surfaces say exactly the same thing.
  */
 export function describeLegacySchemaFiles(shape: BoxShape, files: string[]): string {
-  const list = files.map((f) => `config/schemas/${f}`).join(", ");
+  const list = files.map((f) => `_config/schemas/${f}`).join(", ");
   return (
     `Found ${String(files.length)} schema file(s) in the legacy location: ${list}. ` +
-    "This box uses the package layout — schemas live in src/schemas/ at the " +
-    `package root now (${shape.packageRoot}). Move them there.`
+    `Schemas live in src/schemas/ at the box root now (${shape.boxRoot}). Move them there.`
   );
 }
 
 export function boxCodePaths(shape: BoxShape): BoxCodePaths {
   return {
-    schemasDir: path.join(shape.packageRoot, "src/schemas"),
-    viewsDir: path.join(shape.packageRoot, "src/views"),
-    tricksDir: path.join(shape.packageRoot, "src/tricks"),
+    schemasDir: path.join(shape.boxRoot, "src/schemas"),
+    viewsDir: path.join(shape.boxRoot, "src/views"),
+    tricksDir: path.join(shape.boxRoot, "src/tricks"),
   };
 }
 
@@ -257,8 +280,9 @@ export function boxCodePaths(shape: BoxShape): BoxCodePaths {
  * `boxCodePaths`, expressed as POSIX-style relative paths from `shape.boxRoot`
  * — the operating agent's cwd. Agent-facing prose (the generated agent guide)
  * needs "how do I reach this from where I'm sitting," not an absolute path
- * that embeds this machine's temp/home directory — the `../src/...` climb out
- * of `content/` into the package root.
+ * that embeds this machine's temp/home directory. In shapeVersion 3 this is
+ * just `src/schemas` etc. — no `../` climb, since code and content share one
+ * root.
  */
 export function boxCodePathsRelativeToBoxRoot(shape: BoxShape): BoxCodePaths {
   const paths = boxCodePaths(shape);

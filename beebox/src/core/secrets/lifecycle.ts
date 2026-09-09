@@ -1,6 +1,6 @@
 /**
  * Store lifecycle operations — set, remove, declare, grant, revoke, list,
- * status (`docs/plans/secret-custody.md`, Track 2).
+ * status (`docs/implemented-plans/secret-custody.md`, Track 2).
  *
  * These are the writes behind `bbx secrets`, and later behind the admin page's
  * Secrets section and the chat capture widget: one implementation, three

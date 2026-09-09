@@ -1,13 +1,14 @@
 /**
- * Generator for the `bbx` command reference doc (docs/generated/bbx-commands.md).
+ * Generator for the `bbx` command reference doc (bbx-commands.md in the package docs).
  *
  * Pure function: the static command prose is assembled here, with the
  * auto-generated "Available Templates" listing interleaved. Split out of
  * generate-docs-content.ts to keep each file under the line limit.
  */
 
+import { BOX_PACKAGE_DOCS } from "./shared.js";
 import { z } from "zod";
-import { getAllTemplates } from "../../schemas/templates.js";
+import { getBuiltinTemplates } from "../../schemas/templates.js";
 import { bbxCommandsScheduling } from "./bbx-commands-scheduling.js";
 
 /**
@@ -41,14 +42,14 @@ function bbxCommandsIntro(): string[] {
     "**Examples:**",
     "```bash",
     "# Create a memo",
-    'bbx create box/inbox/my-note.memo.card content="Remember to check the logs"',
+    'bbx create _content/inbox/my-note.memo.card content="Remember to check the logs"',
     "",
     "# Create a yes/no question",
-    "bbx create box/questions/confirm.question.card -t question-confirm \\",
+    "bbx create _bookkeeping/questions/confirm.question.card -t question-confirm \\",
     '  memo="The capture session is ready to archive" prompt="Archive it?"',
     "",
     "# Create a scheduled script",
-    'bbx create config/schedules/check.scheduled-script.card runs="bbx wakeup" cron="0 6 * * *"',
+    'bbx create _config/schedules/check.scheduled-script.card runs="bbx wakeup" cron="0 6 * * *"',
     "```",
     "",
     "### Available Templates",
@@ -61,7 +62,9 @@ function bbxCommandsIntro(): string[] {
  */
 function bbxCommandsTemplates(): string[] {
   const lines: string[] = [];
-  for (const t of getAllTemplates()) {
+  // Built-in only: this doc ships in the package, so a box's own templates
+  // must not leak into it (they are listed in that box's agent guide).
+  for (const t of getBuiltinTemplates()) {
     lines.push(`#### ${t.name}`);
     lines.push("");
     lines.push(t.description);
@@ -106,15 +109,15 @@ function bbxCommandsCore(): string[] {
     "**Examples:**",
     "```bash",
     "# File an inbox item into its permanent home",
-    "bbx mv box/inbox/Recipe.recipe.card store/recipes/Recipe.recipe.card",
+    "bbx mv _content/inbox/Recipe.recipe.card _content/recipes/Recipe.recipe.card",
     "",
     "# Archive a processed item",
-    "bbx mv store/notes/Old_Note.doc.card store/archive/done/Old_Note.doc.card",
+    "bbx mv _content/notes/Old_Note.doc.card _bookkeeping/archive/done/Old_Note.doc.card",
     "```",
     "",
     "## bbx rm",
     "",
-    "Soft-delete a card by moving it to `store/trash/`.",
+    "Soft-delete a card by moving it to `_bookkeeping/trash/`.",
     "",
     "```",
     "bbx rm <path>",
@@ -141,7 +144,7 @@ function bbxCommandsCore(): string[] {
     "Compiles the view, loads the real cards its `dependencies` select, renders it once, and",
     "prints the HTML — or, on failure, the error with a stack mapped to your `.tsx` source.",
     "Use it to check a view after writing it. It's a synchronous render (no effects/async",
-    "helpers); see `docs/generated/views.md` for what it does and doesn't cover.",
+    `helpers); see \`${BOX_PACKAGE_DOCS}/views.md\` for what it does and doesn't cover.`,
     "",
     "## bbx answer",
     "",
@@ -164,13 +167,13 @@ function bbxCommandsCore(): string[] {
     "",
     "## bbx reactor",
     "",
-    "Process all pending jobs in `box/jobs/`.",
+    "Process all pending jobs in `_bookkeeping/jobs/`.",
     "",
     "```",
     "bbx reactor [--dry-run]",
     "```",
     "",
-    "The reactor finds all `*.job.card` files in `box/jobs/`, spawns an agent session,",
+    "The reactor finds all `*.job.card` files in `_bookkeeping/jobs/`, spawns an agent session,",
     "and processes them according to each job type's instructions (from `.claude/rules/`).",
     "The agent calls `bbx finish` for each completed job.",
     "",

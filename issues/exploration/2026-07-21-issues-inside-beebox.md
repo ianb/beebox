@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-open-source-readiness — launch-readiness conversation with the boxholder
 labels: [soft-launch]
+priority: backlog
 ---
+
+> `fixed?` checked 2026-09-05: nothing built — no issue schema under `schemas/` and no pack mechanism. Tag removed; still an open exploration.
 
 Boxholder (2026-07-21): "Moving the issue system inside beebox
 would also be pretty reasonable. In some ways this is the todo system I

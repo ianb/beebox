@@ -1,5 +1,5 @@
 /**
- * BrowsePage - File browser for store/ and other directories.
+ * BrowsePage - File browser for _content/ and other box directories.
  *
  * Sidebar with directory listing + card detail panel.
  */
@@ -10,7 +10,7 @@ import { apiRawFileUrl, getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { busEventData } from "../../lib/bus-events";
 import { isRecord } from "@shared/is-record";
-import { type ViewTarget } from "../../lib/view-url";
+import { viewStateSearchValue, type ViewState, type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
@@ -24,6 +24,7 @@ import { usePageTitle } from "../../components/DocumentTitle";
 import { useUrlView } from "../../hooks/useUrlView";
 import { RequestError } from "../../lib/errors";
 import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
+import { toDisplayPath } from "@shared/display-path";
 import { useAppBarPlace } from "../../components/app-bar-chrome";
 
 /**
@@ -46,13 +47,13 @@ function basenameTitle(filename: string): string {
 
 export interface BrowseNavigateOptions {
   /** Query params for the target URL. Omitted/empty clears the current ones. */
-  search?: Record<string, string>;
+  search?: Record<string, unknown>;
   /** Replace the current history entry instead of pushing a new one. */
   replace?: boolean;
 }
 
 interface BrowsePageProps {
-  /** Current path from URL splat (e.g., "store/recipes" or "store/recipes/Foo.recipe.card") */
+  /** Current path from URL splat (e.g., "_content/recipes" or "_content/recipes/Foo.recipe.card") */
   currentPath?: string;
   /**
    * Called for every navigating action — opening a directory, selecting a
@@ -126,7 +127,7 @@ function useBrowseListLiveRefresh(dirPath: string): void {
 function useBrowsePlace({ dirPath, currentPath }: { dirPath: string; currentPath: string }): void {
   useAppBarPlace({
     dir: dirPath,
-    label: currentPath === "" ? "Browse" : `Browse: ${currentPath}`,
+    label: currentPath === "" ? "Browse" : `Browse: ${toDisplayPath(currentPath)}`,
   });
 }
 
@@ -136,7 +137,7 @@ function useBrowsePlace({ dirPath, currentPath }: { dirPath: string; currentPath
  * A selected file is named by its card title, a directory by its landmark —
  * the directory's own name for itself, and the one the app bar and the tab's
  * mark already use. Preferring it keeps a tab from naming a place differently
- * from the icon sitting beside it, which is what `store/recipes` titled
+ * from the icon sitting beside it, which is what `_content/recipes` titled
  * "recipes" next to a 🍳 did.
  */
 function useBrowseTitle({
@@ -172,7 +173,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
-  const { viewer, params: urlParams } = useUrlView();
+  const { viewer, params: urlParams, viewState } = useUrlView();
 
   const pathIsFile = isFilePath(currentPath);
   const dirPath = pathIsFile ? currentPath.split("/").slice(0, -1).join("/") : currentPath;
@@ -180,8 +181,11 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   // selection state to diverge from the route, so every file click is a
   // history entry the back button can walk.
   const selectedFilePath = pathIsFile ? currentPath : null;
-  // Same query key as the place pill's and the title mark's, so the browse
-  // header reuses their cache entry rather than adding a request.
+  // `forDir`, not `identity`: the sidebar header renders the landmark's full
+  // resolved link list (listed + derived + expand), which only `forDir`
+  // carries. The place pill and title mark need just label/symbol, so they
+  // read `identity` instead and this query no longer shares their cache
+  // entry (`docs/implemented-plans/card-prominence.md`, "Split identity from resolution").
   const landmarkQuery = trpc.landmarks.forDir.useQuery({ dir: dirPath }, { enabled: !selectedFilePath });
   const landmark = landmarkQuery.data?.landmark ?? null;
 
@@ -189,7 +193,8 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     (target: ViewTarget) => {
       // A link stays in the browse layout — navigating swaps the detail panel
       // and updates the URL, carrying the link's `?view=`/params along.
-      const search = { ...target.params, ...(target.viewer ? { view: target.viewer } : {}) };
+      const encodedState = viewStateSearchValue(target.viewState);
+      const search = { ...target.params, ...(target.viewer ? { view: target.viewer } : {}), ...(encodedState ? { viewState: encodedState } : {}) };
       // Re-rendering the file already open (a pure ?view=/param change) isn't a
       // new place: replace, so back leaves the file instead of undoing a toggle.
       onNavigate(target.path, { search, replace: target.path === currentPath });
@@ -197,16 +202,21 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     [currentPath, onNavigate],
   );
 
+  const handleViewStateChange = useBrowseViewStateNavigation({ currentPath, onNavigate, params: urlParams, viewer });
+
   const handleSelectRenderer = useCallback(
-    (name: string) => {
+    (name: string | null) => {
       // The renderer toggle is a view switch, so it belongs in the URL like
       // every other one — otherwise the choice sits in FileView's local state
       // where it outranks `?view=`, survives a same-path navigation, and can't
       // be shared or restored by back/forward. Replace: looking at the same
       // card a different way is not a new place.
-      onNavigate(currentPath, { search: { ...urlParams, view: name }, replace: true });
+      const search = name === null
+        ? urlParams
+        : { ...urlParams, view: name, ...(viewState ? { viewState: viewStateSearchValue(viewState) } : {}) };
+      onNavigate(currentPath, { search, replace: true });
     },
-    [currentPath, onNavigate, urlParams],
+    [currentPath, onNavigate, urlParams, viewState],
   );
 
   const { data, isLoading: loading, isError, error: browseError, refetch } = trpc.status.browse.useQuery({ path: dirPath });
@@ -325,8 +335,10 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
             onDelete={handleDelete}
             onNavigate={handleLinkNavigate}
             onSelectRenderer={handleSelectRenderer}
+            onViewStateChange={handleViewStateChange}
             params={urlParams}
             rendererName={viewer}
+            viewState={viewState}
             selectedCard={selectedCard}
             selectedFilePath={selectedFilePath}
             selectedRawFile={selectedRawFile}
@@ -348,4 +360,18 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
       ) : null}
     </Row>
   );
+}
+
+function useBrowseViewStateNavigation(opts: {
+  currentPath: string;
+  onNavigate: BrowsePageProps["onNavigate"];
+  params: Record<string, string>;
+  viewer: string | null;
+}) {
+  const { currentPath, onNavigate, params, viewer } = opts;
+  return useCallback((next: ViewState, method: "push" | "replace") => {
+    const encodedState = viewStateSearchValue(next);
+    const search = { ...params, ...(viewer ? { view: viewer } : {}), ...(encodedState ? { viewState: encodedState } : {}) };
+    onNavigate(currentPath, { search, replace: method === "replace" });
+  }, [currentPath, onNavigate, params, viewer]);
 }

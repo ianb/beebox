@@ -152,7 +152,7 @@ await authServer.cleanup();
 machine-wide browse key arrives as a `user` and clears `ownerProcedure`. The one
 owner surface it must NOT clear is the machine-level secret store: its grants are
 shared across every box on the machine, so one test box's opt-in cannot unlock
-them (`docs/plans/secret-custody.md`) — `authenticatedOwnerProcedure` excludes
+them (`docs/implemented-plans/secret-custody.md`) — `authenticatedOwnerProcedure` excludes
 `source: "browse"`.
 
 ```ts
@@ -166,7 +166,7 @@ process.env.BBX_AUTH_FILE = join(authDir, "no-such-auth.json");
 const browseHeaders = { authorization: `Bearer ${BROWSE_KEY}` };
 
 const optedIn = await makeTestServer({ openAccess: false });
-await optedIn.seed("config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
+await optedIn.seed("_config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
 
 const asOwner = await optedIn.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: browseHeaders });
 const atSecrets = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });

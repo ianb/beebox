@@ -18,3 +18,5 @@ test/core/box/file-watcher.doctest.md
 test/hub/hub-e2e.doctest.md
 # 5 / 189, all 5 unimplicated — contends for a real git lock with its neighbours.
 test/lib/git-lock.doctest.md
+# its waitForSessionState helper polls with no deadline, so any server-side finalize failure presents as a whole-file SIGALRM timeout instead of a readable assertion failure (cost: three 10-30min triage runs on 2026-09-05 to find a one-line stale fixture path). If it times out again, suspect the batch never sealing and read the server stderr in the tap output before rerunning.
+test/webapp/routes/bulk-upload-routes.doctest.md

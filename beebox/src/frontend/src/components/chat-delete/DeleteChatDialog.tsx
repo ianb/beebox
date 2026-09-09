@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useBoxConversation } from "../chat/everywhere/conversation-context";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Button } from "../ui/Button";
 import { ArchiveChatSection } from "./ArchiveChatSection";
@@ -18,6 +19,7 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
   const { open, sessionId, label, huskPath, onClose, onResult } = props;
   const [result, setResult] = useState<DeleteResult | null>(null);
   const utils = trpc.useUtils();
+  const conversation = useBoxConversation();
   const mutation = trpc.chat.deleteSession.useMutation();
   const pendingRef = useRef(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -53,9 +55,12 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
         ? "The transcript is gone, but the chat card could not be fully moved to Trash. Retry cleanup to finish the card move."
         : cleanup?.storage === "present"
           ? "The transcript remains on this machine because deletion did not complete. Retry cleanup to try again."
-          : "The transcript was only partly removed. Retry cleanup to remove the remaining local session data.";
+          : "The transcript was only partly removed. Retry cleanup to remove the remaining local chat data.";
 
   const remove = async (): Promise<void> => {
+    // Clear the same receipt owner used by selection before deleting server
+    // history, so a later restart cannot reinterpret this id as an empty chat.
+    conversation?.forgetReservation(sessionId);
     const next = await mutation.mutateAsync({ sessionId });
     setResult(next);
     await Promise.all([
@@ -94,7 +99,7 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
         <section className="mt-4 text-sm text-warm-700">
           <h3 className="font-semibold text-warm-900">Removed</h3>
           <ul className="mt-1 list-disc space-y-1 pl-5">
-            <li>The transcript and its subagent/session sidecars on this machine.</li>
+            <li>The transcript and its working files on this machine.</li>
             <li>The active chat listing; its card moves to box Trash and remains git-recoverable.</li>
             <li>Pending reminders linked to this conversation.</li>
           </ul>

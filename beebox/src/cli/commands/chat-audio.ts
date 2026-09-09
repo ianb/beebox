@@ -24,6 +24,7 @@ import * as path from "node:path";
 import { Command } from "commander";
 import { askAudioQuestion } from "../../core/audio-question.js";
 import { getGeminiApiKey } from "../../core/gemini-key.js";
+import { routeVia } from "../../core/openrouter.js";
 import {
   transcribeAudioHq,
   HQ_TRANSCRIPTION_SERVICES,
@@ -110,13 +111,18 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
     }
     // Fail before bothering the browser when the model isn't reachable anyway.
     const questionBoxRoot = await findBoxRoot(process.cwd());
-    const apiKey = await getGeminiApiKey(questionBoxRoot ?? undefined, {
+    const route = await routeVia({
+      boxRoot: questionBoxRoot ?? undefined,
       purpose: "gemini-audio-question",
+      directKey: await getGeminiApiKey(questionBoxRoot ?? undefined, {
+        purpose: "gemini-audio-question",
+        observe: true,
+      }),
       observe: true,
     });
-    if (!apiKey) {
+    if (route === null) {
       console.error(
-        `${label}: no Gemini key — the audio model is not configured. Ask the boxholder to grant the "gemini" secret to this box, or set GEMINI_KEY`,
+        `${label}: no key reaches the audio model. Ask the boxholder to grant the "gemini" or "openrouter" secret to this box`,
       );
       process.exit(1);
     }
@@ -162,7 +168,7 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
     }
 
     try {
-      const { answer, model } = await askAudioQuestion(apiKey, {
+      const { answer, model } = await askAudioQuestion(route, {
         audio,
         mimeType,
         question,

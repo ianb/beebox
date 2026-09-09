@@ -6,6 +6,7 @@ labels: [tooling-eval, agent-instructions, docs]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — link passed along for evaluation
+priority: backlog
 ---
 
 [coherence](https://github.com/daniloc/coherence) (Danilo Campos, MIT,

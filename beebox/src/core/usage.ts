@@ -2,7 +2,7 @@
  * Usage tracking — aggregate token usage from Claude Code sessions into SQLite.
  *
  * Data flow:
- *   1. createAgent() appends to store/usage/session-manifest.jsonl (task attribution)
+ *   1. createAgent() appends to _bookkeeping/usage/session-manifest.jsonl (task attribution)
  *   2. Claude Code writes session logs to ~/.claude/projects/<encoded-path>/<sessionId>.jsonl
  *   3. syncUsage() reads both, aggregates per (session, date, model), writes to SQLite
  *
@@ -17,9 +17,10 @@ import * as readline from "node:readline";
 import { errnoCode } from "../lib/error-guards.js";
 import { listSessions } from "../cli/lib/session.js";
 import { CODEX_USAGE_REL_PATH, readCodexTurnUsage } from "./codex-usage.js";
+import { BOX_DIRS } from "../lib/paths.js";
 
 const DB_REL_PATH = ".beebox/usage.db";
-const MANIFEST_REL_PATH = "store/usage/session-manifest.jsonl";
+const MANIFEST_REL_PATH = `${BOX_DIRS.usage}/session-manifest.jsonl`;
 
 export const USAGE_SCHEMA_DESCRIPTION = `
 Tables:

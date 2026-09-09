@@ -43,7 +43,7 @@ export async function getServingEngineVersion(): Promise<string | null> {
  */
 export async function getInstalledEngineVersion(boxRoot: string): Promise<string | null> {
   const shape = await getBoxShape(boxRoot);
-  return readVersionField(path.join(shape.packageRoot, "node_modules/beebox/package.json"));
+  return readVersionField(path.join(shape.boxRoot, "node_modules/beebox/package.json"));
 }
 
 export interface EngineVersionReport {

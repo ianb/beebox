@@ -18,7 +18,7 @@ with a fake agent that simulates agent behavior.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/agent-test.procedure.card", `---
+await box.write("_config/procedures/agent-test.procedure.card", `---
 name: agent-test
 description: Test agent injection
 steps:
@@ -35,7 +35,7 @@ steps:
           prompt: Process the items listed in the precheck output.
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add agent-test procedure");
 
 // Fake agent: captures what it receives, writes a file, commits
@@ -44,7 +44,7 @@ const mockCreateAgent = (opts) => {
   fakeAgent = createFakeAgent({
     name: opts.name,
     act: async ({ boxRoot }) => {
-      await box.write("box/output/agent-result.txt", "processed 3 items");
+      await box.write("_bookkeeping/output/agent-result.txt", "processed 3 items");
       box.commitAll("Agent: process items");
       return { success: true, output: "Done" };
     },
@@ -73,7 +73,7 @@ print(`has agent instructions: ${systemPrompt.includes("Process the items")}`);
 print(`model: ${fakeAgent.invocations[0].options.model}`);
 
 // Agent's file was preserved
-const agentFile = await box.read("box/output/agent-result.txt");
+const agentFile = await box.read("_bookkeeping/output/agent-result.txt");
 print(`agent wrote: ${agentFile.trim()}`);
 =>
 success: true
@@ -97,8 +97,8 @@ only an isolated mapping helper.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/box.json", JSON.stringify({ agentEngine: "codex" }));
-await box.write("config/procedures/codex-tier.procedure.card", `---
+await box.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
+await box.write("_config/procedures/codex-tier.procedure.card", `---
 name: codex-tier
 steps:
   - id: work
@@ -143,7 +143,7 @@ then gates before validation and records the exact agent error.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/rejected.procedure.card", `---
+await box.write("_config/procedures/rejected.procedure.card", `---
 name: rejected
 steps:
   - id: work
@@ -152,14 +152,14 @@ steps:
         - model: balanced
           prompt: Do work.
       shells:
-        - echo finalized > box/output/finalized.txt
+        - echo finalized > _bookkeeping/output/finalized.txt
     validate:
       severity: warn
       shells:
-        - echo validated > box/output/validated.txt
+        - echo validated > _bookkeeping/output/validated.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add rejected procedure");
 
 const createAgent = (opts) => createFakeAgent({
@@ -176,10 +176,10 @@ const result = await startProcedure({
   procedureNameOrPath: "rejected",
   options: { createAgent },
 });
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find((file) => file.includes("rejected_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-const outputFiles = await box.list("box/output");
+const outputFiles = await box.list("_bookkeeping/output");
 print(`success: ${result.ok}`);
 print(`error returned: ${result.ok ? "" : result.error.message}`);
 print(`step: ${run.steps[0].status}`);
@@ -207,7 +207,7 @@ engine cause in both the validate record and the CLI result.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/judge-rejected.procedure.card", `---
+await box.write("_config/procedures/judge-rejected.procedure.card", `---
 name: judge-rejected
 steps:
   - id: work
@@ -236,7 +236,7 @@ const result = await startProcedure({
   procedureNameOrPath: "judge-rejected",
   options: { createAgent },
 });
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find((file) => file.includes("judge-rejected_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`success: ${result.ok}`);
@@ -260,7 +260,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/directed.procedure.card", `---
+await box.write("_config/procedures/directed.procedure.card", `---
 name: directed
 description: Directive test
 steps:
@@ -308,7 +308,7 @@ fallback commit to keep git clean between steps.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/messy.procedure.card", `---
+await box.write("_config/procedures/messy.procedure.card", `---
 name: messy
 description: Agent forgets to commit
 steps:
@@ -325,7 +325,7 @@ box.commitAll("Add messy procedure");
 const mockCreateAgent = (opts) => createFakeAgent({
   name: opts.name,
   act: async ({ boxRoot }) => {
-    await box.write("box/output/uncommitted.txt", "forgot to commit this");
+    await box.write("_bookkeeping/output/uncommitted.txt", "forgot to commit this");
     // Deliberately NOT committing
     return { success: true };
   },
@@ -340,7 +340,7 @@ const result = await startProcedure({
 print(`success: ${result.ok}`);
 
 // The file is there — engine made a fallback commit
-const content = await box.read("box/output/uncommitted.txt");
+const content = await box.read("_bookkeeping/output/uncommitted.txt");
 print(`file preserved: ${content.trim() === "forgot to commit this"}`);
 
 // Git log shows a fallback commit
@@ -364,7 +364,7 @@ into `runRunAgents` + `runRunShells`.
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/mixed.procedure.card", `---
+await box.write("_config/procedures/mixed.procedure.card", `---
 name: mixed
 description: Agent and shell in one run phase
 steps:
@@ -375,10 +375,10 @@ steps:
         - prompt: Write the base file.
       shells:
         - |
-          echo "shell-ran" > box/output/shell.txt
+          echo "shell-ran" > _bookkeeping/output/shell.txt
 ---
 `);
-await box.write("box/output/.gitkeep", "");
+await box.write("_bookkeeping/output/.gitkeep", "");
 box.commitAll("Add mixed procedure");
 
 let agentRan;
@@ -386,7 +386,7 @@ const createAgent = (opts) => createFakeAgent({
   name: opts.name,
   act: async () => {
     agentRan = true;
-    await box.write("box/output/agent.txt", "agent-ran");
+    await box.write("_bookkeeping/output/agent.txt", "agent-ran");
     box.commitAll("Agent: base file");
     return { success: true };
   },
@@ -401,7 +401,7 @@ const result = await startProcedure({
 print(`success: ${result.ok}`);
 print(`agent ran: ${agentRan}`);
 
-const files = await box.list("box/output");
+const files = await box.list("_bookkeeping/output");
 print(`agent.txt: ${files.includes("agent.txt")}`);
 print(`shell.txt: ${files.includes("shell.txt")}`);
 =>

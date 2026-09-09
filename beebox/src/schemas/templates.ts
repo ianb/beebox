@@ -25,8 +25,10 @@ export {
   getTemplate,
   getTemplateNames,
   getAllTemplates,
+  getBuiltinTemplates,
+  getTemplatesOwnedBy,
   getTemplatesForCardType,
   getDefaultTemplate,
 } from "./templates-registry.js";
 
-export { describeTemplateArgs } from "./templates-describe.js";
+export { describeTemplateArgs, describeTemplate } from "./templates-describe.js";

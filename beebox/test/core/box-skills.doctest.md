@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 // `.claude/` lives at the package root for a v2 box, not under `content/`.
 function skillFile(box, rel) {
-  return join(box.packageRoot, ".claude/skills", rel);
+  return join(box.root, ".claude/skills", rel);
 }
 ```
 
@@ -30,7 +30,8 @@ written
   "location",
   "schedules",
   "tricks",
-  "views"
+  "views",
+  "what-can-you-do"
 ]
 ```
 

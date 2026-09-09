@@ -6,6 +6,7 @@ needs: [decision]
 filed-by: agent
 discovered-by: agent
 discovered-in: "worktree-beads-vs-issues — comparing Beads' typed dependency edges against our frontmatter"
+priority: normal
 ---
 
 The issue schema is closed and has no machine-readable relationships between

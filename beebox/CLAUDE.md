@@ -90,7 +90,7 @@ plugins/          Claude Code plugins (card-validator hook)
 
 There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-doctest/` package (the loader/runner) plus this project's `test/helpers/` (test-server, fake-agent, fixture-replay, etc.).
 
-**Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md); `~/src/boxes/test1/` is the primary test box. Boxes are packages (`shapeVersion: 2`, the only shape) — the operational box is the `content/` subdirectory, and box code imports only the public `beebox/{cards,schema,view-widgets}` specifiers, never engine internals. Full on-disk shape: `docs/box-layout.md`.
+**Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md); `~/src/boxes/test1/` is the primary test box. Boxes are packages (`shapeVersion: 3`, the only shape) — one root is both the npm package and the operational box (underscore-prefixed areas: `_content/`, `_config/`, `_bookkeeping/`, `_publish/`, `_tmp/`), and box code imports only the public `beebox/{cards,schema,view-widgets}` specifiers, never engine internals. Full on-disk shape: `docs/box-layout.md`.
 
 ## Key Concepts
 
@@ -170,6 +170,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Content-Security-Policy | `docs/content-security-policy.md` |
 | Periodic maintenance | `docs/maintenance.md` |
 | Knowledge audits | `docs/knowledge-audits.md` |
+| Docs shipped to box agents (`box-docs/`) | `docs/box/` (prose sources) + `src/core/docs-gen/package-docs.ts` (generated reference) |
 | Calendar integration | `docs/calendar.md` |
 | PDF intake design | `docs/plans/pdf-intake-design.md` |
 | Source editor plan | `docs/plans/source-editor.md` |

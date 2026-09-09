@@ -165,12 +165,12 @@ Suggested order — smallest blast radius first:
 5. **`bbx calendar` → `bbx calendar list ...`**.
 6. **`bbx scan-import` / `bbx upload` → `bbx intake ...`**.
 
-After each pass: regenerate `docs/generated/bbx-commands.md` in test1 and verify the agent-facing surface still tells a coherent story.
+After each pass: regenerate `_content/docs/generated/bbx-commands.md` in test1 and verify the agent-facing surface still tells a coherent story.
 
 ## Two parallel agent-command sources of truth
 
-`src/core/agent-guide/commands.ts` (a 13-bullet list injected into agent context) and `generateCbCommands()` in `src/core/docs-gen/index.ts` (a fuller reference written to `docs/generated/bbx-commands.md` in each box) currently overlap inconsistently. Pick one as canonical and have the other reference it, or — better — auto-generate the table from Commander metadata and hand-write only the example sections. Worth doing as part of this restructure since every rename touches both files.
+`src/core/agent-guide/commands.ts` (a 13-bullet list injected into agent context) and `generateCbCommands()` in `src/core/docs-gen/index.ts` (a fuller reference written to `_content/docs/generated/bbx-commands.md` in each box) currently overlap inconsistently. Pick one as canonical and have the other reference it, or — better — auto-generate the table from Commander metadata and hand-write only the example sections. Worth doing as part of this restructure since every rename touches both files.
 
 ## Delete this doc when done
 
-Once the migration is complete, delete this file (the review `CLAUDE-MD-REVIEW.md` that used to gate this has since been deleted). The state of the CLI is then the README + `docs/generated/bbx-commands.md` + `bbx --help`.
+Once the migration is complete, delete this file (the review `CLAUDE-MD-REVIEW.md` that used to gate this has since been deleted). The state of the CLI is then the README + `_content/docs/generated/bbx-commands.md` + `bbx --help`.

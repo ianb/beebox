@@ -79,7 +79,7 @@ const drive = createFakeGoogleDrive({
   })]]),
 });
 
-await box.seed("store/drive/Project_Notes.gdoc.card", createGdocTemplate({
+await box.seed("_content/drive/Project_Notes.gdoc.card", createGdocTemplate({
   driveId: "doc-1",
   title: "Project Notes",
   modified: "2026-04-26T10:00:00Z",
@@ -96,14 +96,14 @@ const result = await connector.sync();
 result.success
 => true
 
-JSON.stringify(await box.read("store/drive/Project_Notes.attach/Project_Notes.md"))
+JSON.stringify(await box.read("_content/drive/Project_Notes.attach/Project_Notes.md"))
 => "# Notes\n\nFirst paragraph.\n"
 ```
 
 The card now has status synced and the upstream revision recorded:
 
 ```ts continue
-const card = await box.read("store/drive/Project_Notes.gdoc.card");
+const card = await box.read("_content/drive/Project_Notes.gdoc.card");
 card.includes("drive-id: doc-1")
 => true
 
@@ -120,7 +120,7 @@ changes nothing else doesn't rewrite the card:
 
 ```ts continue
 await box.write(
-  "store/drive/Project_Notes.gdoc.card",
+  "_content/drive/Project_Notes.gdoc.card",
   card.replace("drive-id: doc-1", "contains: Planning notes for the project kickoff.\ndrive-id: doc-1")
 );
 box.commitAll("agent adds contains");
@@ -128,7 +128,7 @@ const resync = await connector.sync();
 resync.success
 => true
 
-const resynced = await box.read("store/drive/Project_Notes.gdoc.card");
+const resynced = await box.read("_content/drive/Project_Notes.gdoc.card");
 resynced.includes("contains: Planning notes for the project kickoff.")
 => true
 ```
@@ -163,7 +163,7 @@ const drive2 = createFakeGoogleDrive({
   })]]),
 });
 
-await box2.seed("store/drive/Reviewed_Doc.gdoc.card", createGdocTemplate({
+await box2.seed("_content/drive/Reviewed_Doc.gdoc.card", createGdocTemplate({
   driveId: "doc-2",
   title: "Reviewed Doc",
   modified: "2026-04-26T10:00:00Z",
@@ -177,7 +177,7 @@ box2.commitAll("add reviewed doc");
 
 await createGoogleDriveConnector(box2.root, drive2).sync();
 
-const card2 = await box2.read("store/drive/Reviewed_Doc.gdoc.card");
+const card2 = await box2.read("_content/drive/Reviewed_Doc.gdoc.card");
 card2.includes("type: comments")
 => false
 
@@ -194,7 +194,7 @@ The comments are written to a sidecar and referenced from the card:
 card2.includes("comments:") && card2.includes("ref: attach/Reviewed_Doc.comments.json")
 => true
 
-const sidecar2 = JSON.parse(await box2.read("store/drive/Reviewed_Doc.attach/Reviewed_Doc.comments.json"));
+const sidecar2 = JSON.parse(await box2.read("_content/drive/Reviewed_Doc.attach/Reviewed_Doc.comments.json"));
 sidecar2.length
 => 3
 
@@ -228,7 +228,7 @@ const drive3 = createFakeGoogleDrive({
   })]]),
 });
 
-await box3.seed("store/drive/Editable.gdoc.card", createGdocTemplate({
+await box3.seed("_content/drive/Editable.gdoc.card", createGdocTemplate({
   driveId: "doc-3",
   title: "Editable",
   modified: "2026-04-26T10:00:00Z",
@@ -244,7 +244,7 @@ const conn3 = createGoogleDriveConnector(box3.root, drive3);
 await conn3.sync();
 
 // Edit locally — the .md lives inside the doc's attach scope.
-await box3.seed("store/drive/Editable.attach/Editable.md", "Edited body.\n");
+await box3.seed("_content/drive/Editable.attach/Editable.md", "Edited body.\n");
 box3.commitAll("local edit");
 
 await conn3.sync();
@@ -286,7 +286,7 @@ const drive4 = createFakeGoogleDrive({
   documents: new Map([["doc-4", driveDoc]]),
 });
 
-await box4.seed("store/drive/Contended.gdoc.card", createGdocTemplate({
+await box4.seed("_content/drive/Contended.gdoc.card", createGdocTemplate({
   driveId: "doc-4",
   title: "Contended",
   modified: "2026-04-26T10:00:00Z",
@@ -302,7 +302,7 @@ const conn4 = createGoogleDriveConnector(box4.root, drive4);
 await conn4.sync();
 
 // Local edit.
-await box4.seed("store/drive/Contended.attach/Contended.md", "Local edit.\n");
+await box4.seed("_content/drive/Contended.attach/Contended.md", "Local edit.\n");
 box4.commitAll("local edit");
 
 // Remote edit (simulated by changing the doc's revision and exported markdown
@@ -315,11 +315,11 @@ if (remoteFile) remoteFile.modifiedTime = "2026-04-26T12:00:00Z";
 await conn4.sync();
 
 // Local file is unchanged — push refused.
-await box4.read("store/drive/Contended.attach/Contended.md")
+await box4.read("_content/drive/Contended.attach/Contended.md")
 => Local edit.
 
 // .remote.md was written with the upstream content.
-await box4.read("store/drive/Contended.attach/Contended.remote.md")
+await box4.read("_content/drive/Contended.attach/Contended.remote.md")
 => Remote edit.
 
 // No content was uploaded (push aborted).
@@ -327,7 +327,7 @@ drive4.contentUpdateLog.length
 => 0
 
 // Card flipped to conflict status.
-const card4 = await box4.read("store/drive/Contended.gdoc.card");
+const card4 = await box4.read("_content/drive/Contended.gdoc.card");
 card4.includes("status: conflict")
 => true
 ```
@@ -343,8 +343,8 @@ drive4.contentUpdateLog.length
 => 0
 
 // User resolves: writes the merged version, deletes .remote.md, commits.
-await box4.seed("store/drive/Contended.attach/Contended.md", "Merged.\n");
-await unlink(join(box4.root, "store/drive/Contended.attach/Contended.remote.md"));
+await box4.seed("_content/drive/Contended.attach/Contended.md", "Merged.\n");
+await unlink(join(box4.root, "_content/drive/Contended.attach/Contended.remote.md"));
 box4.commitAll("resolve conflict");
 
 await conn4.sync();
@@ -389,7 +389,7 @@ drive5.getDocument = async () => {
   throw new Error("HTTPError: 403 Insufficient Permission");
 };
 
-await box5.seed("store/drive/Degraded.gdoc.card", createGdocTemplate({
+await box5.seed("_content/drive/Degraded.gdoc.card", createGdocTemplate({
   driveId: "doc-5",
   title: "Degraded",
   modified: "2026-04-26T10:00:00Z",
@@ -406,11 +406,11 @@ result5.success
 => true
 
 // Markdown still pulled.
-await box5.read("store/drive/Degraded.attach/Degraded.md")
+await box5.read("_content/drive/Degraded.attach/Degraded.md")
 => Body.
 
 // Card still written, falls back to Drive metadata title.
-const card5 = await box5.read("store/drive/Degraded.gdoc.card");
+const card5 = await box5.read("_content/drive/Degraded.gdoc.card");
 card5.includes("title: Degraded")
 => true
 
@@ -421,7 +421,7 @@ card5.includes("type: images")
 card5.includes("ref: attach/Degraded.comments.json")
 => true
 
-JSON.parse(await box5.read("store/drive/Degraded.attach/Degraded.comments.json")).length
+JSON.parse(await box5.read("_content/drive/Degraded.attach/Degraded.comments.json")).length
 => 2
 ```
 
@@ -479,7 +479,7 @@ const drive6 = createFakeGoogleDrive({
   documents: new Map([["doc-6", richDoc]]),
 });
 
-await box6.seed("store/drive/Feedback.gdoc.card", createGdocTemplate({
+await box6.seed("_content/drive/Feedback.gdoc.card", createGdocTemplate({
   driveId: "doc-6",
   title: "Feedback",
   modified: "2026-04-26T10:00:00Z",
@@ -494,7 +494,7 @@ box6.commitAll("add feedback doc");
 const conn6 = createGoogleDriveConnector(box6.root, drive6);
 await conn6.sync();
 
-const sidecar6 = JSON.parse(await box6.read("store/drive/Feedback.attach/Feedback.comments.json"));
+const sidecar6 = JSON.parse(await box6.read("_content/drive/Feedback.attach/Feedback.comments.json"));
 sidecar6[0]?.author?.displayName
 => Jane Doe
 
@@ -519,10 +519,10 @@ if (f6) f6.modifiedTime = "2026-04-26T12:00:00Z";
 
 await conn6.sync();
 
-await access(join(box6.root, "store/drive/Feedback.attach/Feedback.comments.json")).then(() => "exists", () => "gone")
+await access(join(box6.root, "_content/drive/Feedback.attach/Feedback.comments.json")).then(() => "exists", () => "gone")
 => gone
 
-(await box6.read("store/drive/Feedback.gdoc.card")).includes("comments:")
+(await box6.read("_content/drive/Feedback.gdoc.card")).includes("comments:")
 => false
 
 // The sidecar deletion was staged and committed — no stray deletion left

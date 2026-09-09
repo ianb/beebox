@@ -29,15 +29,15 @@ async function fileExists(p: string): Promise<boolean> {
 
 ```ts
 const box = await makeTmpBox();
-await box.write("box/inbox/scan-1.attach/photo-001.jpg", "abc");
-await box.write("box/inbox/scan-1.attach/photo-001.image.attach/photo-001.jpg", "def");
+await box.write("_content/inbox/scan-1.attach/photo-001.jpg", "abc");
+await box.write("_content/inbox/scan-1.attach/photo-001.image.attach/photo-001.jpg", "def");
 await box.write("store/old/voice.attach/audio.webm", "ghi");
 await box.write("notes/random.txt", "irrelevant");
 const scopes = await findAttachScopes(box.root);
 scopes.map(s => s.relPath).toSorted().join("\n")
 =>
-box/inbox/scan-1.attach
-box/inbox/scan-1.attach/photo-001.image.attach
+_content/inbox/scan-1.attach
+_content/inbox/scan-1.attach/photo-001.image.attach
 store/old/voice.attach
 ```
 
@@ -285,8 +285,8 @@ Combined "find scopes + scan each" — what the pre-commit hook calls.
 
 ```ts
 const box10 = await makeTmpBox();
-await box10.write("box/inbox/scan-1.attach/photo-001.jpg", "abc");
-await box10.write("box/inbox/scan-2.attach/photo-001.jpg", "def");
+await box10.write("_content/inbox/scan-1.attach/photo-001.jpg", "abc");
+await box10.write("_content/inbox/scan-2.attach/photo-001.jpg", "def");
 const summary = await scanBoxAttachments(box10.root);
 print(`scope count: ${summary.scopes.length}`);
 print(`total claimed: ${summary.scopes.reduce((n, s) => n + s.claimed.length, 0)}`);

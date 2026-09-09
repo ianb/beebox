@@ -13,6 +13,7 @@
  * prompt must stay time-invariant.
  */
 
+import type { AttentionSnapshot } from "../shared/chat-composer-binding.js";
 import { getBoxTime } from "../lib/time.js";
 import { loadBoxTimezone } from "./box/config.js";
 import { getMostActiveSavedAt } from "./chat/session/history.js";
@@ -195,11 +196,12 @@ export function admitHealth(
  */
 export async function composeSendSnapshot(
   boxRoot: string,
-  { features, sessionStart, channel, openCard, activityChildren, healthGate, lastActivityAt }: {
+  { features, sessionStart, channel, openCard, viewContext, activityChildren, healthGate, lastActivityAt }: {
     features?: FeatureMap;
     sessionStart: boolean;
     channel?: AgentChatChannel;
     openCard?: string;
+    viewContext?: AttentionSnapshot;
     activityChildren?: string;
     healthGate?: HealthGate;
     lastActivityAt?: Date | null;
@@ -222,6 +224,7 @@ export async function composeSendSnapshot(
     ...context,
     ...(channel !== undefined ? { channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
+    ...(viewContext !== undefined ? { viewContext } : {}),
     ...(activityChildren !== undefined ? { activityChildren } : {}),
   });
 }

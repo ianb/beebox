@@ -369,11 +369,11 @@ export function getOwnerEmail(): string | null {
  * sessions `gen`-revocation exists to kill).
  *
  * `"browse"` is the box-scoped rung `webapp/box-identity.ts` adds on top of this
- * resolver: the machine-wide browse key, on a box whose `config/box.json` says
+ * resolver: the machine-wide browse key, on a box whose `_config/box.json` says
  * `agentBrowsing: "owner"`. It carries the owner's email, so it is a person for
  * box-scoped purposes — but it is still a machine credential, so a gate over the
  * MACHINE-level secret store must exclude it explicitly (see
- * `docs/plans/secret-custody.md`). `resolveRequestIdentity` itself never returns
+ * `docs/implemented-plans/secret-custody.md`). `resolveRequestIdentity` itself never returns
  * it.
  */
 export type IdentitySource = "hub" | "cookie" | "open" | "unavailable" | "browse" | null;

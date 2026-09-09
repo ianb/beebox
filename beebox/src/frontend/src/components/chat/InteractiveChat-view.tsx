@@ -7,6 +7,7 @@
  */
 
 import { useCallback } from "react";
+import { useMobileChatViewport } from "./everywhere/use-mobile-card-navigation";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { MessageList } from "./InteractiveChat-messages";
@@ -26,6 +27,7 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import type { ChatAgentEngine } from "@shared/chat-models.js";
+import { ChatRenderProfiler } from "./ChatRenderProfiler";
 
 
 /**
@@ -90,6 +92,7 @@ function BarChromeRegion(props: ChatBodyProps) {
   }, [sessionId, agentEngine, handleChooseStart, handleSelectModel]);
   return (
     <ChatBarChrome
+      transcriptVisible={props.transcriptVisible ?? true}
       contextDir={effectiveContextDir}
       boxSlug={boxSlug}
       sessionLabel={sessionLabel}
@@ -139,7 +142,8 @@ function MessageListRegion(props: ChatBodyProps) {
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
   const { handleLoadOlder } = actions;
   return (
-    <MessageList
+    <ChatRenderProfiler id="message-list">
+      <MessageList
       messages={messages}
       groups={groups}
       modelMarkers={modelMarkers}
@@ -167,7 +171,8 @@ function MessageListRegion(props: ChatBodyProps) {
       audioOverlayStore={audioOverlayStore}
       openers={openers}
       onSendOpener={actions.handleSendOpener}
-    />
+      />
+    </ChatRenderProfiler>
   );
 }
 
@@ -177,7 +182,7 @@ function ComposerRegion(props: ChatBodyProps) {
     typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled, captureDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
-  const { fileInputRef, removeAttachment, removeFileAttachment, handleAddFiles, handleFileInputChange, addFiles } = attach;
+  const { fileInputRef, removeAttachment, removeFileAttachment, retryFileUpload, handleAddFiles, handleFileInputChange, addFiles } = attach;
   // Subscribed here, not at the InteractiveChat root — a paste/upload must
   // only re-render this composer region, not the companion view pane
   // (see InteractiveChat-attachments.ts module doc).
@@ -186,7 +191,8 @@ function ComposerRegion(props: ChatBodyProps) {
   const { handleSend, handleKeyDown, handlePaste, handleDrop } = actions;
   const targetBusy = chatTargetStatus({ isStreaming, processBusy }).state === "busy";
   return (
-    <ChatComposerSection
+    <ChatRenderProfiler id="composer">
+      <ChatComposerSection
       attachments={attachments}
       pendingImageCount={pendingImageCount}
       fileAttachments={fileAttachments}
@@ -194,6 +200,7 @@ function ComposerRegion(props: ChatBodyProps) {
       onRemoveSelection={removeSelection}
       onRemoveAttachment={removeAttachment}
       onRemoveFileAttachment={removeFileAttachment}
+      onRetryFileAttachment={retryFileUpload}
       fileInputRef={fileInputRef}
       onFileInputChange={handleFileInputChange}
       typingMode={typingMode}
@@ -210,6 +217,7 @@ function ComposerRegion(props: ChatBodyProps) {
           isTranscribing={isTranscribing}
           transcription={transcription}
           targetBusy={targetBusy}
+          sendDisabledReason={props.sendDisabledReason}
           handleKeyDown={handleKeyDown}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
@@ -235,6 +243,7 @@ function ComposerRegion(props: ChatBodyProps) {
           isTranscribing={isTranscribing}
           transcription={transcription}
           targetBusy={targetBusy}
+          sendDisabledReason={props.sendDisabledReason}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
           clearDraft={clearDraft}
@@ -244,13 +253,15 @@ function ComposerRegion(props: ChatBodyProps) {
           onDrop={handleDrop}
         />
       }
-    />
+      />
+    </ChatRenderProfiler>
   );
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
   const { tabs, voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
-  const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
+  const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onTogglePin, onClosePanel } = tabs;
+  const mobile = useMobileChatViewport();
   const {
     handleAddSelection,
     nativeCommandError,
@@ -268,9 +279,22 @@ export function InteractiveChatBody(props: ChatBodyProps) {
     },
     [reportCardActivity, onZoomView],
   );
+  const handleCompanionTargetUpdate = useCallback(
+    (target: ViewTarget, hint?: NavigateHint) => {
+      onZoomView({ target, label: hint?.label ?? target.path });
+    },
+    [onZoomView],
+  );
   return (
-    <ChatView
-      hasCompanion={Boolean(activeView)}
+    <ChatRenderProfiler id="chat-root">
+      <ChatView
+      hasCompanion={!mobile && Boolean(activeView) && props.routeContent === undefined}
+      onOpenStoredCard={mobile && activeView && props.routeContent === undefined ? () => onZoomView(activeView) : undefined}
+      transcriptVisible={props.transcriptVisible} routeContent={props.routeContent}
+      onShowConversation={props.onShowConversation}
+      onHideConversation={props.onHideConversation}
+      ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice}
+      failedRegion={props.failedRegion}
       companionPanel={
         activeView ? (
           <CompanionViewPanel
@@ -278,15 +302,17 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             activePath={activeView.target.path}
             onSelectTab={onSelectTab}
             onCloseTab={onCloseTab}
+            onTogglePin={onTogglePin}
             onClosePanel={onClosePanel}
             onNavigate={handleCompanionNavigate}
+            onUpdateTarget={handleCompanionTargetUpdate}
             onAddSelection={handleAddSelection}
             reportActivity={reportCardActivity}
           />
         ) : null
       }
       barChrome={embedded ? null : <BarChromeRegion {...props} />}
-      messageList={<MessageListRegion {...props} />}
+      messageList={<MessageListRegion key={props.conversationKey} {...props} />}
       statusBanners={
         <>
           <BackgroundTasks tasks={props.backgroundTasks} />
@@ -316,7 +342,8 @@ export function InteractiveChatBody(props: ChatBodyProps) {
         </>
       }
       composerSection={embedded || nativeComposer ? null : <ComposerRegion {...props} />}
-      debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
-    />
+        debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
+      />
+    </ChatRenderProfiler>
   );
 }

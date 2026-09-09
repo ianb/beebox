@@ -29,9 +29,10 @@ async function runScreenshotCapture(addFiles: AddFiles): Promise<void> {
   switch (outcome.kind) {
     case "image": {
       const file = new File([outcome.blob], screenshotFilename(), { type: "image/png" });
-      // A failed encode is surfaced by `addFiles` itself now, and a `batch`
-      // outcome is a success (the grab went to the bulk-upload overlay), so
-      // there is nothing left for this caller to check.
+      // A failed encode is surfaced by `addFiles` itself (a toast), so there
+      // is nothing left for this caller to check. A screenshot is a PNG, so it
+      // inlines unless the composer's photos are already at the limit — in
+      // which case it uploads and is referenced, which is equally a success.
       await addFiles([file]);
       break;
     }

@@ -19,7 +19,7 @@ export const agentContextCommand = new Command("agent-context")
     // Codex worktree session (2026-08-29) once the plugin was registered.
     const boxRoot = opts.hook === true ? await findBoxRoot(process.cwd()) : await requireBoxRoot();
     if (boxRoot === null) return;
-    const { packageRoot } = await getBoxShape(boxRoot);
-    const context = await expandClaudeIncludes({ claudePath: join(boxRoot, "CLAUDE.md"), packageRoot });
+    await getBoxShape(boxRoot);
+    const context = await expandClaudeIncludes({ claudePath: join(boxRoot, "CLAUDE.md"), boxRoot });
     if (context !== "") process.stdout.write(`${context}\n`);
   });

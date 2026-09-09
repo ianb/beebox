@@ -1,10 +1,8 @@
 # Knowledge-audit box resolution
 
-`knowledge-audit run --box <path>` may be handed either a v2 package root or its
-nested operational (`content/`) root. `resolveAuditBox` normalizes both to the
-operational root (so doc-regen and test runs hit the box, not the package
-wrapper — the ENOENT-on-`.beebox/box.json` crash this fixes) and derives a stable ledger
-identity from the package-root basename.
+`knowledge-audit run --box <path>` names a box's one root. `resolveAuditBox`
+resolves it and derives a stable ledger identity from the box root's
+basename.
 
 ```ts setup
 import * as path from "node:path";
@@ -12,32 +10,14 @@ import { resolveAuditBox } from "../../../src/dev/lib/audit-box.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 
-`makeTmpBox` builds a real shape-2 box: `box.root` is the operational
-(`content/`) root, `box.packageRoot` its parent package.
-
-Passing the **package root** resolves to the operational root, and names the box
-after the package (not the useless "content"):
-
 ```ts
 const box = await makeTmpBox();
-const fromPackage = await resolveAuditBox(box.packageRoot);
+const resolved = await resolveAuditBox(box.root);
 JSON.stringify({
-  operational: fromPackage.operationalRoot === box.root,
-  boxName: fromPackage.boxName === path.basename(box.packageRoot),
+  operational: resolved.operationalRoot === box.root,
+  boxName: resolved.boxName === path.basename(box.root),
 })
 => {"operational":true,"boxName":true}
-```
-
-Passing the **operational (`content/`) root** gives the same identity — both
-forms are the same box:
-
-```ts continue
-const fromContent = await resolveAuditBox(box.root);
-JSON.stringify({
-  sameRoot: fromContent.operationalRoot === fromPackage.operationalRoot,
-  sameName: fromContent.boxName === fromPackage.boxName,
-})
-=> {"sameRoot":true,"sameName":true}
 ```
 
 ```ts cleanup

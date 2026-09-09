@@ -22,8 +22,11 @@ const NOW = new Date("2026-06-29T12:00:00Z");
 const SUB = { endpoint: "https://push.example/d1", keys: { p256dh: "p", auth: "a" } };
 
 async function outputCards(box) {
-  const files = await fs.readdir(path.join(box.root, "box/output")).catch(() => []);
-  return files.map((f) => f.replace(/^notify-[^.]+\./, "")).toSorted();
+  const files = await fs.readdir(path.join(box.root, "_bookkeeping/output")).catch(() => []);
+  return files
+    .filter((f) => f !== ".gitkeep")
+    .map((f) => f.replace(/^notify-[^.]+\./, ""))
+    .toSorted();
 }
 
 const INPUT = { title: "Hi", body: "something happened", url: "/box/", now: NOW };
@@ -46,7 +49,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.seed("config/box.json", JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
+await box.seed("_config/box.json", JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
 box.commitAll("seed");
 
 const r = await notifyBoxholder(box.root, INPUT);
@@ -77,7 +80,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.seed("config/box.json", JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
+await box.seed("_config/box.json", JSON.stringify({ healthAlerts: { telegramChat: "777" } }));
 box.commitAll("seed");
 await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: NOW });
 

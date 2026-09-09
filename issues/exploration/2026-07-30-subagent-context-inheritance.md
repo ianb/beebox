@@ -4,6 +4,7 @@ workstream: elixir-skills-review
 area: docs
 filed-by: agent
 discovered-in: worktree-elixir-skills-review — reviewing claude-elixir-phoenix
+priority: normal
 ---
 
 The reviewed project injects a condensed restatement of all 26 of its

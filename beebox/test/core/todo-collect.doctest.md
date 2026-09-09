@@ -24,7 +24,7 @@ const box = await makeTmpBox();
 // America/Chicago is UTC-5 in July (CDT) — the frozen time above is
 // 2026-07-28T07:00 local, still July 28th locally, which is what the
 // plate-state doctests below assume.
-await box.write("config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
+await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
 ```
 
 ## Both capture forms are collected
@@ -234,7 +234,7 @@ scoped.todos.map((t) => t.id).join(", ")
 
 The box-wide plate ships `glob: "**"` and project plates use bare directory
 globs (`store/projects/foo/**`) — patterns that match every file under their
-scope, not just cards. Non-card files (`config/box.json`, a stray `.md`) are
+scope, not just cards. Non-card files (`_config/box.json`, a stray `.md`) are
 not todo candidates and must not surface as read failures: before
 `listTodoCardPaths` scoped every pattern to `.card` files centrally, a
 box-wide plate rendered every non-card file in the box as a
@@ -243,7 +243,7 @@ box-wide plate rendered every non-card file in the box as a
 ```ts continue
 await box.write("store/notes.md", "Not a card at all.\n");
 const wideOpen = await collectTodos(box.root, { glob: "**" });
-wideOpen.issues.filter((i) => i.path === "store/notes.md" || i.path === "config/box.json")
+wideOpen.issues.filter((i) => i.path === "store/notes.md" || i.path === "_config/box.json")
 => []
 
 wideOpen.todos.length > 0
@@ -252,7 +252,7 @@ wideOpen.todos.length > 0
 
 ## A malformed box timezone degrades instead of crashing the whole collector
 
-`config/box.json`'s `timezone` is hand-editable; a typo'd IANA zone (e.g.
+`_config/box.json`'s `timezone` is hand-editable; a typo'd IANA zone (e.g.
 `"America/Chciago"`) used to make `Intl.DateTimeFormat` throw a bare
 `RangeError` the moment plate-state derivation ran for ANY todo — taking
 down `collectTodos` (and everything built on it: `bbx todos`, `todos.list`,
@@ -262,7 +262,7 @@ timezone with a warning instead of throwing.
 
 ```ts continue
 const badTzBox = await makeTmpBox();
-await badTzBox.write("config/box.json", JSON.stringify({ timezone: "America/Chciago" }));
+await badTzBox.write("_config/box.json", JSON.stringify({ timezone: "America/Chciago" }));
 await badTzBox.write(
   "store/x.memo.card",
   memo("", '{% todo id="survives" %}Should still collect{% /todo %}\n')

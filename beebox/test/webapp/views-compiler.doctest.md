@@ -23,7 +23,7 @@ await mkdir(viewsDir, { recursive: true });
 const source = `
 export const name = "Test View";
 export const description = "A simple test";
-export const dependencies = ["box/**/*.card", "store/**/*.card"];
+export const dependencies = ["_content/**/*.card", "_content/**/*.card"];
 export const modes = ["page", "chat"];
 export const rendersCardTypes = ["sandbox"];
 export default function Test() {
@@ -45,7 +45,7 @@ meta.description
 => A simple test
 
 JSON.stringify(meta.dependencies)
-=> ["box/**/*.card","store/**/*.card"]
+=> ["_content/**/*.card","_content/**/*.card"]
 
 JSON.stringify(meta.rendersCardTypes)
 => ["sandbox"]
@@ -237,8 +237,8 @@ errorJs.includes("export default")
 ## Listing views
 
 `listViews` resolves the views directory from the box's shape (via
-`getBoxShape`/`boxCodePaths`), so it needs a real v2 box — its views
-directory is `<packageRoot>/src/views`:
+`getBoxShape`/`boxCodePaths`), so it needs a real box — its views
+directory is `<boxRoot>/src/views`:
 
 ```ts
 const box3 = await makeTmpBox({ deps: true });
@@ -251,13 +251,13 @@ empty.length
 ```
 
 ```ts continue
-const viewsDir3 = join(box3.packageRoot, "src/views");
+const viewsDir3 = join(box3.root, "src/views");
 await mkdir(viewsDir3, { recursive: true });
 
 await writeFile(join(viewsDir3, "dashboard.tsx"), `
 export const name = "Dashboard";
 export const description = "Overview dashboard";
-export const dependencies = ["box/**/*.card"];
+export const dependencies = ["_content/**/*.card"];
 export const modes = ["page"];
 export default function Dashboard() {
   return window.__bbxReact.createElement("div", null, "dash");

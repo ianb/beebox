@@ -15,7 +15,9 @@ export const ROOT = PACKAGE_ROOT;
 // so extracting references from them would falsely inflate incoming counts.
 const EMITTER_OUTPUTS = new Set(["docs/doc-graph.md", "docs/doc-graph.html", "docs/prompts.md"]);
 
-const EXCLUDE_DIRS = ["node_modules", ".tap", ".thinking", ".claude", "dist", "src/dev/reports"];
+// `box-docs` is the engine's generated reference docs for boxes (gitignored;
+// src/core/docs-gen/package-docs.ts), full of illustrative example links.
+const EXCLUDE_DIRS = ["node_modules", ".tap", ".thinking", ".claude", "dist", "src/dev/reports", "box-docs"];
 // AGENTS.md files are gitignored, generated mirrors of the sibling CLAUDE.md
 // (bin/generate-agents-md.ts, for Codex sessions) — not documents; scanning
 // them would flag every mirror as an orphan and double-count CLAUDE.md refs.

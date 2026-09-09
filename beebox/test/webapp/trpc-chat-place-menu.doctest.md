@@ -48,7 +48,7 @@ async function seedSession(box, args) {
   await utimes(logPath, when, when);
   const binding = contextDir === "" ? "" : `context-dir: ${contextDir}\n`;
   await box.write(
-    `store/chat/web/2026-07-28_${sessionId}.chat.card`,
+    `_content/chat/web/2026-07-28_${sessionId}.chat.card`,
     `---\nsession: ${sessionId}\n${binding}---\n\n`,
   );
 }
@@ -64,16 +64,16 @@ true one.
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-await box.write("store/recipes/Recipes.landmark.card",
+await box.write("_content/recipes/Recipes.landmark.card",
   "---\nnavigation:\n  label: Recipes\n  symbol: \"🍳\"\n---\n\n");
 
-await seedSession(box, { sessionId: "recipe01", contextDir: "store/recipes", daysAgo: 1 });
-await seedSession(box, { sessionId: "recipe02", contextDir: "store/recipes", daysAgo: 2 });
-await seedSession(box, { sessionId: "recipe03", contextDir: "store/recipes", daysAgo: 30 });
+await seedSession(box, { sessionId: "recipe01", contextDir: "_content/recipes", daysAgo: 1 });
+await seedSession(box, { sessionId: "recipe02", contextDir: "_content/recipes", daysAgo: 2 });
+await seedSession(box, { sessionId: "recipe03", contextDir: "_content/recipes", daysAgo: 30 });
 
 const menu = await caller(box.root).chat.placeMenu();
 JSON.stringify(menu.landmarks)
-=> [{"path":"store/recipes/Recipes.landmark.card","dir":"store/recipes","label":"Recipes","symbol":"🍳","symbolSrc":null,"freshCount":2}]
+=> [{"path":"_content/recipes/Recipes.landmark.card","dir":"_content/recipes","label":"Recipes","symbol":{"glyph":"🍳"},"freshCount":2}]
 ```
 
 Nothing session-shaped rides along — that's the whole point of the split.
@@ -96,7 +96,7 @@ client synthesizes a "Box root" row, and this is the count it shows.
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-await box.write("store/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n\n");
+await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n\n");
 await seedSession(box, { sessionId: "rootone1", contextDir: "", daysAgo: 1 });
 await seedSession(box, { sessionId: "roottwo2", contextDir: "", daysAgo: 2 });
 await seedSession(box, { sessionId: "rootold3", contextDir: "", daysAgo: 30 });
@@ -133,13 +133,13 @@ const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
 await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
-await box.write("store/fresh/Fresh.landmark.card", "---\nnavigation:\n  label: Fresh\n---\n\n");
-await box.write("store/stale/Stale.landmark.card", "---\nnavigation:\n  label: Stale\n---\n\n");
-await box.write("store/never/Never.landmark.card", "---\nnavigation:\n  label: Never\n---\n\n");
-await box.write("store/absent/Absent.landmark.card", "---\nnavigation:\n  label: Absent\n---\n\n");
+await box.write("_content/fresh/Fresh.landmark.card", "---\nnavigation:\n  label: Fresh\n---\n\n");
+await box.write("_content/stale/Stale.landmark.card", "---\nnavigation:\n  label: Stale\n---\n\n");
+await box.write("_content/never/Never.landmark.card", "---\nnavigation:\n  label: Never\n---\n\n");
+await box.write("_content/absent/Absent.landmark.card", "---\nnavigation:\n  label: Absent\n---\n\n");
 
-await seedSession(box, { sessionId: "freshone", contextDir: "store/fresh", daysAgo: 1 });
-await seedSession(box, { sessionId: "staleone", contextDir: "store/stale", daysAgo: 30 });
+await seedSession(box, { sessionId: "freshone", contextDir: "_content/fresh", daysAgo: 1 });
+await seedSession(box, { sessionId: "staleone", contextDir: "_content/stale", daysAgo: 30 });
 
 const menu = await caller(box.root).chat.placeMenu();
 menu.landmarks.map((l) => `${l.label}:${l.freshCount}`).join(" > ")
@@ -169,12 +169,12 @@ there.
 const box = await makeTmpBox();
 process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-await box.write("store/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n\n");
-await box.write("store/trips/Trips.landmark.card", "no frontmatter here at all\n");
+await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n\n");
+await box.write("_content/trips/Trips.landmark.card", "no frontmatter here at all\n");
 
 const broken = await caller(box.root).chat.placeMenu();
 `${broken.landmarks.map((l) => l.label).join(",")} | ${broken.problems.map((p) => p.path).join(",")}`
-=> Recipes | store/trips/Trips.landmark.card
+=> Recipes | _content/trips/Trips.landmark.card
 ```
 
 ```ts cleanup

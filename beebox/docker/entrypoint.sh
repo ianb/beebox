@@ -9,9 +9,9 @@
 #         docker compose run --rm box claude auth login
 #   * NO arguments   → readiness check, then serve the box.
 #
-# The box lives at /data/box (a package; the operational box is
-# /data/box/content). Both are bind-mounted from the host and owned by the
-# runtime user.
+# The box lives at /data/box — the one root (shapeVersion 3): npm package
+# and operational areas (_content/, _config/, …) in the same directory.
+# Bind-mounted from the host and owned by the runtime user.
 set -euo pipefail
 
 BOX_ROOT=/data/box
@@ -38,12 +38,12 @@ fi
 
 # ── No arguments: readiness check, then serve ────────────────────────────
 #
-# A v2 box is ready only when all three hold. Checking just the marker would
+# A box is ready only when all three hold. Checking just the marker would
 # accept a partial init (bbx init writes the marker early but commits at the
 # end — a crash between the two leaves a box that looks initialized but has no
 # HEAD commit).
 ready=1
-[[ -f "$BOX_ROOT/content/.beebox/box.json" ]] || ready=0
+[[ -f "$BOX_ROOT/.beebox/box.json" ]] || ready=0
 [[ -f "$BOX_ROOT/package.json" ]] || ready=0
 git -C "$BOX_ROOT" rev-parse HEAD >/dev/null 2>&1 || ready=0
 
@@ -82,6 +82,49 @@ if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
       --allow-build=@googleworkspace/cli )
 fi
 
-# Serve the operational box (content/) on all interfaces inside the container;
-# the host-side port mapping (compose) decides who can reach it.
-exec bbx serve "$BOX_ROOT/content" --host 0.0.0.0 --port 3210
+# ── Converge the box onto the engine that is about to serve it ───────────
+#
+# An update here is `git pull && docker compose build && up -d`: new engine
+# code, the same box on disk. Without this step that box keeps its old card
+# shape and its old generated guidance indefinitely, because nothing else in
+# the container path runs migrations — `bbx serve` does not migrate on boot.
+# The server deploy has always done this (deploy/deploy.sh's convergence pass);
+# a container install needs it for the same reason and gets it at start.
+#
+# Two steps, in the order deploy.sh uses: `bbx migrate --sweep` (card data)
+# then `bbx docs refresh` (agent docs, card rules, managed skills). Both are
+# built for running unattended — the sweep skips a dirty box for next time and
+# commits what it does apply — and both own their own policy; see
+# src/core/migration-sweep.ts and src/core/docs-refresh.ts.
+#
+# Neither can stop the box from serving. A box that needs a human (dirty tree,
+# an agent-driven migration, a hard failure) is a box to look at, not a reason
+# to leave the operator with no server. On a freshly `bbx init`ed box both are
+# no-ops: init seeds the manifest as fully applied.
+#
+# BBX_SKIP_CONVERGE=1 turns this off, for an operator who would rather run
+# `docker compose run --rm box bbx migrate --sweep` themselves and watch it.
+# Each step is bounded, for the same reason deploy.sh bounds its own: "cannot
+# stop the box from serving" is only true if it cannot hang either, and a
+# migrator that never returns would leave the operator staring at a container
+# that starts and never listens. 600s matches the server deploy.
+converge() {  # $1 = human name, rest = the bbx command
+  local what="$1"; shift
+  local code=0
+  ( cd "$BOX_ROOT" && timeout 600 "$@" ) || code=$?
+  if [[ "$code" -eq 124 ]]; then
+    echo "beebox: $what timed out after 600s — serving anyway; run it yourself to see why." >&2
+  elif [[ "$code" -ne 0 ]]; then
+    echo "beebox: $what reported a problem (see above) — serving anyway." >&2
+  fi
+}
+
+if [[ "${BBX_SKIP_CONVERGE:-}" != "1" ]]; then
+  echo "beebox: converging the box onto this engine..." >&2
+  converge "the migration sweep" bbx migrate --sweep
+  converge "the docs refresh" bbx docs refresh
+fi
+
+# Serve the box on all interfaces inside the container; the host-side port
+# mapping (compose) decides who can reach it.
+exec bbx serve "$BOX_ROOT" --host 0.0.0.0 --port 3210

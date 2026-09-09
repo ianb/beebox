@@ -16,22 +16,24 @@ export const MODEL_ID = {
   haiku: "claude-haiku-4-5-20251001",
   sonnet: "claude-sonnet-5",
   opus: "claude-opus-5",
-  fable: "claude-fable-5",
+  fable: "claude-fable-5-1",
   luna: "gpt-5.6-luna",
   terra: "gpt-5.6-terra",
   sol: "gpt-5.6-sol",
+  astra: "gpt-6-astra",
 } as const;
 
 /**
  * Retired model IDs that older persisted chat selections or box procedure cards
  * may still carry, mapped to their current replacement. Opus 4.8 (and its `[1m]`
- * variant) fold into Opus 5; the Fable `[1m]` variant folds into plain Fable 5
+ * variant) fold into Opus 5; Fable 5 and its `[1m]` variant fold into Fable 5.1
  * (1M context is native to the 5-tier — the `[1m]` suffix was a Claude Code
  * convention that no longer exists).
  */
 const RETIRED_MODEL_IDS: Record<string, string> = {
   "claude-opus-4-8": MODEL_ID.opus,
   "claude-opus-4-8[1m]": MODEL_ID.opus,
+  "claude-fable-5": MODEL_ID.fable,
   "claude-fable-5[1m]": MODEL_ID.fable,
 };
 

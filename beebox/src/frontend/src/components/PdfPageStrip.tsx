@@ -50,7 +50,7 @@ export function PdfPageStrip({ pages, activePage }: PdfPageStripProps) {
             page === activePage ? "ring-2 ring-accent" : "",
           )}
         >
-          <Image src={src} alt={`Page ${page}`} size="sm" bordered lightbox loading="lazy" />
+          <Image src={src} lightboxSrc={src} alt={`Page ${page}`} size="sm" bordered lightbox loading="lazy" />
           <figcaption>
             <Text size="xs" tone="muted">Page {page}</Text>
           </figcaption>

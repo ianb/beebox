@@ -17,7 +17,7 @@
  *
  * Credentials (`docs/implemented-plans/pub-setup-wrangler.md` credential model): the
  * connector reads its ingestion-bucket-scoped token from the per-box secret
- * file `config/connectors/publish.secret.json`; the laptop CLI rides the
+ * file `_config/connectors/publish.secret.json`; the laptop CLI rides the
  * wrangler-OAuth login. The `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`/
  * `CLOUDFLARE_R2_BUCKET` env triple stays as an explicit override
  * ({@link r2ConfigFromEnv}). No credential resolves ⇒ unconfigured, no-op.

@@ -18,11 +18,11 @@ import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
-import { getGeminiApiKey } from "../../../core/gemini-key.js";
 import { getOpenAiThinkingKey } from "../../../core/openai-thinking-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
+import { getBoxDir } from "../../../lib/paths.js";
 import { engineHealthChecks } from "./health-engine.js";
 import { googleAuthHealthChecks } from "./health-google.js";
 import { getBoxTime } from "../../../lib/time.js";
@@ -32,11 +32,13 @@ import { boxGrowthHealthCheck } from "../../../core/box-growth/health.js";
 import { acknowledgeBoxGrowthProcedure, expectBoxGrowthRatesProcedure } from "./health-box-growth.js";
 import { isWritable, writability } from "./health-writability.js";
 import { legacySecretFilesCheck } from "./health-secrets.js";
+import { geminiKeyCheck, modelRoutesCheck } from "./health-model-routes.js";
 import { pendingMigrationsCheck } from "./health-migrations.js";
 import { annexHealthChecks } from "./health-annex.js";
 import { unfiledCapturesCheck, stalledJobsCheck } from "./health-stale.js";
 import { staleIndexLockCheck } from "./health-git-lock.js";
 import { templateUpdatesCheck } from "./health-templates.js";
+import { packageDocsCheck } from "./health-package-docs.js";
 
 export interface HealthCheck {
   name: string;
@@ -104,9 +106,11 @@ export async function readVersionInfo(): Promise<VersionInfo> {
  */
 async function sweepLegacyHealthCheckFiles(boxRoot: string): Promise<void> {
   const dirs = [
-    path.join(boxRoot, "box/inbox"),
-    path.join(boxRoot, "config/connectors"),
-    path.join(boxRoot, "store/archive"),
+    getBoxDir(boxRoot, "inbox"),
+    getBoxDir(boxRoot, "connectors"),
+    // `_bookkeeping/archive` itself (the writability probe's target below,
+    // not one of its done/failed/processed children).
+    path.dirname(getBoxDir(boxRoot, "archiveDone")),
   ];
   for (const dir of dirs) {
     try {
@@ -138,28 +142,6 @@ export interface RunHealthChecksOptions {
 }
 
 
-/**
- * Gemini key check — the key is optional: it powers audio questions
- * (ask-about-audio) and scan-import's opt-in Gemini backend
- * (`BBX_SCAN_VISION=gemini`); scan-import defaults to the Claude backend,
- * which needs no extra key.
- */
-async function geminiKeyCheck(boxRoot: string): Promise<HealthCheck> {
-  const geminiKey = await getGeminiApiKey(boxRoot, { purpose: "health-check", observe: false });
-  const geminiSelected = process.env["BBX_SCAN_VISION"] === "gemini";
-  const message =
-    geminiKey !== null
-      ? "Gemini API key configured"
-      : geminiSelected
-        ? 'BBX_SCAN_VISION=gemini but no Gemini API key — scan-import will fail. Grant the "gemini" secret to this box, or set GEMINI_KEY'
-        : "Gemini API key not found (optional) — audio questions will not work; scan-import uses the Claude backend by default";
-  return {
-    name: "gemini-api-key",
-    ok: geminiKey !== null || !geminiSelected,
-    message,
-    severity: "warning",
-  };
-}
 
 /**
  * Claude Code auth, for agent operations (chat, reactor, procedures).
@@ -201,8 +183,8 @@ async function claudeAuthCheck(injected?: ClaudeCliService): Promise<HealthCheck
     name: "claude-credentials",
     ok: false,
     message:
-      "Claude Code is not logged in — agent operations (chat, reactor, procedures) will " +
-      "not work. Run `claude auth login` on this machine",
+      "The assistant engine (Claude Code) isn't signed in on this server — chat and " +
+      "background processing (reactor, procedures) will not work. Run `claude auth login` on this machine",
     severity: "error",
   };
 }
@@ -219,24 +201,21 @@ export async function runHealthChecks(
 
   // --- Permission checks ---
 
-  // box/inbox/ writable (capture finalize writes here)
-  const inboxDir = path.join(boxRoot, "box/inbox");
+  // _content/inbox/ writable (capture finalize writes here)
+  const inboxDir = getBoxDir(boxRoot, "inbox");
   const inboxWritable = await isWritable(inboxDir);
   checks.push({
     name: "inbox-writable",
     ok: inboxWritable,
     message: inboxWritable
-      ? "box/inbox/ is writable"
-      : "box/inbox/ is not writable — captures and connector imports will fail",
+      ? "_content/inbox/ is writable"
+      : "_content/inbox/ is not writable — captures and connector imports will fail",
     severity: "error",
   });
 
-  // .git/objects writable (git add/commit needs this). For a legacy box the
-  // git repo (and its .git) lives at boxRoot; for a v2 box the git repo is
-  // the PACKAGE root one level up — content/ is a plain subdirectory with no
-  // .git of its own (see "One git repository at the repo root" in
-  // docs/implemented-plans/boxes-as-packages-v2.md).
-  const { packageRoot: gitRoot } = await getBoxShape(boxRoot);
+  // .git/objects writable (git add/commit needs this). Under the one-root
+  // layout the git repo (and its .git) lives at boxRoot itself.
+  const { boxRoot: gitRoot } = await getBoxShape(boxRoot);
   const gitObjectsDir = path.join(gitRoot, ".git/objects");
   const gitWritability = await writability(gitObjectsDir);
   const gitWritable = gitWritability === "writable";
@@ -253,27 +232,27 @@ export async function runHealthChecks(
     severity: "error",
   });
 
-  // config/connectors/ writable (secrets are stored here)
-  const connectorsDir = path.join(boxRoot, "config/connectors");
+  // _config/connectors/ writable (secrets are stored here)
+  const connectorsDir = getBoxDir(boxRoot, "connectors");
   const connectorsWritable = await isWritable(connectorsDir);
   checks.push({
     name: "connectors-writable",
     ok: connectorsWritable,
     message: connectorsWritable
-      ? "config/connectors/ is writable"
-      : "config/connectors/ is not writable",
+      ? "_config/connectors/ is writable"
+      : "_config/connectors/ is not writable",
     severity: "warning",
   });
 
-  // store/archive/ writable (inbox processing archives here)
-  const archiveDir = path.join(boxRoot, "store/archive");
+  // _bookkeeping/archive/ writable (inbox processing archives here)
+  const archiveDir = path.dirname(getBoxDir(boxRoot, "archiveDone"));
   const archiveWritable = await isWritable(archiveDir);
   checks.push({
     name: "archive-writable",
     ok: archiveWritable,
     message: archiveWritable
-      ? "store/archive/ is writable"
-      : "store/archive/ is not writable — inbox processing will fail",
+      ? "_bookkeeping/archive/ is writable"
+      : "_bookkeeping/archive/ is not writable — inbox processing will fail",
     severity: "error",
   });
 
@@ -282,6 +261,7 @@ export async function runHealthChecks(
   checks.push(await pendingMigrationsCheck(boxRoot));
   const scheduleHealth = options?.scheduleHealth ?? (await loadScheduleHealth(boxRoot, getBoxTime(boxRoot)));
   checks.push(await templateUpdatesCheck(boxRoot, scheduleHealth));
+  checks.push(await packageDocsCheck(boxRoot));
   checks.push(await unfiledCapturesCheck(boxRoot));
   checks.push(await stalledJobsCheck(boxRoot));
   const now = getBoxTime(boxRoot);
@@ -327,7 +307,7 @@ export async function runHealthChecks(
       ok: mistralKey !== null,
       message: mistralKey !== null
         ? "Mistral API key configured (Voxtral)"
-        : "Mistral API key not found — voice transcription will not work. Add config/connectors/mistral.secret.json or set BBX_MISTRAL_API_KEY",
+        : 'Mistral API key not found — voice transcription will not work. Grant the "mistral" secret to this box',
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "deepgram") {
@@ -337,7 +317,7 @@ export async function runHealthChecks(
       ok: deepgramCreds !== null,
       message: deepgramCreds !== null
         ? "Deepgram credentials configured"
-        : "Deepgram credentials not found — voice transcription will not work. Add config/connectors/deepgram.secret.json (apiKey + projectId) or set BBX_DEEPGRAM_API_KEY + BBX_DEEPGRAM_PROJECT",
+        : 'Deepgram credentials not found — voice transcription will not work. Grant the "deepgram" secret to this box',
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "openai-realtime") {
@@ -347,7 +327,7 @@ export async function runHealthChecks(
       ok: hasKey,
       message: hasKey
         ? "OpenAI API key configured (gpt-realtime-whisper)"
-        : 'No OpenAI key — realtime transcription will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY.',
+        : 'No OpenAI key — realtime transcription will not work. Grant the "openai-thinking" secret to this box.',
       severity: "warning",
     });
   }
@@ -361,12 +341,13 @@ export async function runHealthChecks(
     message: openaiKey !== null
       ? 'OpenAI API key configured ("openai-thinking")'
       : openaiRequired
-        ? 'OpenAI API key not found — Whisper transcription and TTS will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY'
-        : 'OpenAI API key not found — TTS will not work. Grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY',
+        ? 'OpenAI API key not found — Whisper transcription and TTS will not work. Grant the "openai-thinking" secret to this box'
+        : 'OpenAI API key not found — TTS will not work. Grant the "openai-thinking" secret to this box',
     severity: "warning",
   });
 
   checks.push(await geminiKeyCheck(boxRoot));
+  checks.push(...(await modelRoutesCheck(boxRoot)));
   checks.push(await legacySecretFilesCheck(boxRoot));
 
   // Claude Code auth (needed for agent operations — chat, reactor, procedures).

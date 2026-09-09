@@ -21,7 +21,7 @@ import { chatSendReasonKind, recordChatSendEvent } from "../../lib/chat-send-dia
 export type Receipt =
   | { disposition: "sent"; emissionId: string; deduplicated: boolean }
   | { disposition: "queued"; emissionId: string }
-  | { disposition: "rejected"; emissionId: string; reason: string };
+  | { disposition: "rejected"; emissionId: string; reason: string; definitive?: boolean };
 
 interface PendingReceipt {
   resolves: Set<(receipt: Receipt) => void>;

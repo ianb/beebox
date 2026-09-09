@@ -3,6 +3,7 @@ title: "`bbx serve` isn't a box command — extract the server out of the `bbx` 
 workstream: unknown
 area: beebox
 labels: [cli, packaging, boxes]
+priority: backlog
 ---
 
 `bbx` is the box-agent-facing command surface. `bbx serve` is an operator/dev

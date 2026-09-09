@@ -13,10 +13,11 @@
 import { type ReactNode } from "react";
 import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
 import { href } from "../lib/routing";
-import { apiFileUrl } from "../lib/view-url";
 import { withBase } from "../api";
 import { AppBarRecentFilesSlot } from "./app-bar-chrome";
 import type { NavMenuEntry } from "../lib/nav-menu-entries";
+import type { CardSymbolData } from "@shared/card-symbol";
+import { CardMark } from "./ui/CardMark";
 
 /** Panel-swap depth for the switch menu (see `Dropdown`'s `panelIndex`). */
 export type SwitchPanel = "root" | "box" | "recent-files";
@@ -28,28 +29,9 @@ export interface SwitchLandmark {
   /** Box-relative dir; `""` for the root landmark. */
   dir: string;
   label: string;
-  symbol: string;
-  symbolSrc: string | null;
+  symbol: CardSymbolData | null;
   /** Sessions touched inside the fresh window — rendered as a badge when > 0. */
   freshCount: number;
-}
-
-/** Landmark symbol: an image when the card names one, else its text glyph. */
-function LandmarkSymbol({ landmark, boxSlug }: { landmark: SwitchLandmark; boxSlug: string }) {
-  if (landmark.symbolSrc !== null) {
-    return (
-      <img
-        src={apiFileUrl(boxSlug, landmark.symbolSrc)}
-        alt=""
-        className="w-5 h-5 rounded-full object-cover shrink-0"
-      />
-    );
-  }
-  return (
-    <span className="text-base leading-none shrink-0 w-5 text-center" aria-hidden>
-      {landmark.symbol || "📍"}
-    </span>
-  );
 }
 
 /** Count of fresh chats in a landmark's bucket. Absent when zero. */
@@ -91,7 +73,7 @@ function LandmarkRows({
             active={current}
           >
             <span className="flex items-center gap-2 w-full">
-              <LandmarkSymbol landmark={landmark} boxSlug={boxSlug} />
+              <CardMark symbol={landmark.symbol} size="sm" boxSlug={boxSlug} fallback="📍" />
               <span className={`min-w-0 truncate${current ? " font-semibold" : ""}`}>
                 {landmark.label}
               </span>
@@ -280,9 +262,11 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
           </MenuItem>
           <MenuDivider />
           <MenuItem id="bbx-box-menu-dashboard" to={href(`/${boxSlug}/dashboard`)}>Dashboard</MenuItem>
-          <MenuItem id="bbx-box-menu-browse" to={href(`/${boxSlug}/browse`)}>Browse</MenuItem>
+          {/* Default entry lands in _content — the boxholder's natural home;
+              the box root (underscore areas) stays reachable by going up. */}
+          <MenuItem id="bbx-box-menu-browse" to={href(`/${boxSlug}/browse/_content`)}>Browse</MenuItem>
           <MenuItem id="bbx-box-menu-history" to={href(`/${boxSlug}/history`)}>History</MenuItem>
-          <MenuItem id="bbx-box-menu-inventory" to={href(`/${boxSlug}/inventory`)}>Inventory summary</MenuItem>
+          <MenuItem id="bbx-box-menu-inventory" to={href(`/${boxSlug}/inventory`)}>Storage summary</MenuItem>
           {boxSwitchingAvailable ? (
             <>
               <MenuDivider />

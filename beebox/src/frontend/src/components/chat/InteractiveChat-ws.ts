@@ -12,6 +12,7 @@ import { useEffect, useCallback, useRef } from "react";
 import { z } from "zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { useBoxConversation } from "./everywhere/conversation-context";
 import { useDeferredResync } from "../../hooks/useDeferredResync";
 import { busEventData } from "../../lib/bus-events";
 import { createReconnectRefreshGate, type ReconnectRefreshGate } from "./reconnect-refresh-gate";
@@ -40,6 +41,9 @@ import { recordChatSendEnvironmentEvent } from "../../lib/chat-send-diagnostics"
 const voiceConfigSchema = z.object({
   model: z.string().optional(),
   instructions: z.array(z.string()),
+  // Kept a plain string for the same reason as `model`: the client only needs
+  // it as a cache-key component, so it needn't import the backend enum.
+  backend: z.string().optional(),
 });
 
 // An agent (or anything) wrote a box file. Stamp a fresh cache-buster for that
@@ -96,7 +100,7 @@ interface SecondaryEventDeps {
  * main dispatcher to keep each handler's branching legible.
  */
 function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
-  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore } = deps;
+  const { sessionId, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore } = deps;
   const capture = busEventData(event, "capture-status");
   if (capture) {
     // `sessionId` on the event is null until delivery, so we don't filter by
@@ -166,21 +170,11 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     applyFeaturesChange({ data: features, currentSessionId: sessionId, setFeatures: setChatFeatures });
     return;
   }
-  const assigned = busEventData(event, "chat-session-assigned");
-  if (assigned) {
-    // The authoritative, per-tab assignment is the in-stream `system/init`
-    // delivered over this tab's own turnStream — it always corrects the id.
-    // This bus broadcast is a backup (restart recovery), and it carries no
-    // client correlation, so only adopt it when this tab actually has a turn in
-    // flight. Otherwise a second, idle "new" tab would bind to another tab's
-    // session. URL navigation is the useEffect below.
-    if (sessionInput === "new" && !sessionId && isStreaming) {
-      send({ type: "SESSION_ASSIGNED", sessionId: assigned.sessionId });
-    }
-  }
+
 }
 
 export function useChatWs(opts: {
+  shellManaged?: boolean;
   sessionId: string | null;
   sessionInput: string;
   boxSlug: string | undefined;
@@ -199,6 +193,7 @@ export function useChatWs(opts: {
   audioOverlayStore: AudioOverlayStore;
 }) {
   const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, onSessionAssignment, audioOverlayStore } = opts;
+  const ensureReservation = useBoxConversation()?.ensureReservation;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
   // Rate-gates reconnect-driven REFRESHes: a connect within PROMPT_SUBSCRIPTION_MS
@@ -226,8 +221,13 @@ export function useChatWs(opts: {
   // again — and fires once on becoming visible, no matter how many reconnects
   // (gate-eligible or not) accumulated in the meantime.
   const triggerRefresh = useDeferredResync(useCallback(() => {
-    send({ type: "REFRESH" });
-  }, [send]));
+    async function refresh() {
+      try { if (sessionId) await ensureReservation?.(sessionId); }
+      catch (error) { console.warn("Conversation reservation could not be refreshed", error); }
+      send({ type: "REFRESH" });
+    }
+    void refresh();
+  }, [send, sessionId, ensureReservation]));
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
   // chat-history, chat-complete, chat-user-message, chat-session-assigned.
@@ -304,6 +304,7 @@ export function useChatWs(opts: {
   // can't strand the chat on `?session=new`. `replace: true` so reload lands
   // on the right session.
   useEffect(() => {
+    if (opts.shellManaged === true) return;
     if (sessionInput !== "new") return;
     if (!sessionId) return;
     onSessionAssignment?.(sessionId);
@@ -317,7 +318,7 @@ export function useChatWs(opts: {
       search: toSearch({ ...search, session: sessionId }),
       replace: true,
     });
-  }, [sessionInput, sessionId, navigate, boxSlug, search, onSessionAssignment]);
+  }, [sessionInput, sessionId, navigate, boxSlug, search, onSessionAssignment, opts.shellManaged]);
 
   // Load voice config from personality on mount
   useEffect(() => {
@@ -336,6 +337,11 @@ export function useChatWs(opts: {
         }
         if (config.instructions.length > 0) {
           tts.setVoiceConfig({ baseInstructions: config.instructions.join(" ") });
+        }
+        // Part of the audio cache key: without it, switching backend replays
+        // the previous engine's voice from cache until a reload.
+        if (config.backend !== undefined) {
+          tts.setVoiceConfig({ backend: config.backend });
         }
       })
       .catch((e) => {

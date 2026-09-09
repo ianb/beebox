@@ -79,14 +79,14 @@ updating features doesn't disturb it, and vice versa.
 
 ```ts
 const box = await makeTmpBox();
-await appendHistory(box.root, { sessionId: "sess-1", contextDir: "store/recipes" });
+await appendHistory(box.root, { sessionId: "sess-1", contextDir: "_content/recipes" });
 await updateFeaturesForSession(box.root, {
   sessionId: "sess-1",
   updates: { narration: "on" },
 });
 const entries = await loadHistoryEntries(box.root);
 JSON.stringify(entries[0])
-=> {"id":"sess-1","engine":"claude","contextDir":"store/recipes","features":{"narration":"on"}}
+=> {"id":"sess-1","engine":"claude","contextDir":"_content/recipes","features":{"narration":"on"}}
 ```
 
 ```ts cleanup

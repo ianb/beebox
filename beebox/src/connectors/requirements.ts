@@ -4,33 +4,44 @@
  * Different connectors hold credentials differently:
  *   - The machine secret store: a grant to this box's slug, with a value
  *     (`docs/secrets.md`) — where every migrated connector now lives.
- *   - Legacy: config/connectors/<name>.secret.json — the transition-window
- *     fallback, still authoritative for a box that has not migrated.
- *   - Google OAuth: shared BBX_GOOGLE_TOKENS_FILE + per-box googleServices policy
- *     (gmail, calendar, drive).
+ *   - Google OAuth: three things at once — the shared BBX_GOOGLE_TOKENS_FILE
+ *     record, the per-box `googleServices` policy, and a box grant for the
+ *     OAuth app's client credentials (gmail, calendar, drive).
  *
  * This module dispatches the "is this connector configured for this box?" check
- * by name. Names with no special entry are satisfied by EITHER a granted store
- * entry or a legacy file — checking only the file would have made a fully
- * migrated box report its connectors as missing and skip every scheduled script
- * that requires one.
+ * by name. Names with no special entry need a granted store entry. A retired
+ * `<name>.secret.json` in the box tree does NOT count: nothing reads those
+ * files any more, so treating one as configuration would start a scheduled
+ * script that then fails for want of a credential.
  */
 import { existsSync } from "node:fs";
-import { access } from "node:fs/promises";
 import * as path from "node:path";
 import {
   isGoogleServiceAllowed,
   type GoogleServiceName,
 } from "../core/box/config.js";
+import { getBoxGoogleClientCreds } from "./google-auth.js";
 import { loadSecretStore } from "../core/secrets/store.js";
 import { boxSlug } from "../lib/box-slug.js";
+import { getBoxDir } from "../lib/paths.js";
 import type { ScheduleRequirements } from "../schemas/scheduled-script.js";
 
 type Predicate = (boxRoot: string) => Promise<boolean>;
 
+/**
+ * A Google connector needs all three of: an authorization record, permission
+ * from this box's policy, and a grant for the OAuth app's client credentials.
+ *
+ * The client-credential grant is the one that is easy to forget, and skipping
+ * the check here is worse than a missing credential: `getGoogleAuth` returns
+ * null without it, so Calendar and Gmail silently no-op and Drive reports a
+ * sync failure — a script that ran and did nothing, rather than one the
+ * scheduler skipped cleanly with a named reason.
+ */
 function googleServicePredicate(service: GoogleServiceName): Predicate {
   return async (boxRoot) => {
     if (!hasGoogleTokens(boxRoot)) return false;
+    if ((await getBoxGoogleClientCreds(boxRoot)) === null) return false;
     return isGoogleServiceAllowed(boxRoot, service);
   };
 }
@@ -38,7 +49,7 @@ function googleServicePredicate(service: GoogleServiceName): Predicate {
 function hasGoogleTokens(boxRoot: string): boolean {
   const central = process.env.BBX_GOOGLE_TOKENS_FILE;
   if (central && existsSync(central)) return true;
-  const legacy = path.join(boxRoot, "config/connectors/google.secret.json");
+  const legacy = path.join(getBoxDir(boxRoot, "connectors"), "google.secret.json");
   return existsSync(legacy);
 }
 
@@ -49,18 +60,6 @@ const registry: Record<string, Predicate> = {
   // Older cards used "google" as the connector name for calendar.
   google: googleServicePredicate("calendar"),
 };
-
-async function legacySecretPresent(boxRoot: string, name: string): Promise<boolean> {
-  try {
-    await access(path.join(boxRoot, "config/connectors", `${name}.secret.json`));
-    return true;
-  } catch (_e) {
-    // access() failing here means the secret file isn't present/readable, which
-    // is exactly the "not configured" answer this probe returns. The error
-    // carries no information beyond that boolean.
-    return false;
-  }
-}
 
 /**
  * Store names that do not match their connector name. `telegram-bot/<slug>`
@@ -112,7 +111,7 @@ export async function checkMissingConnectors(
     const predicate = registry[name];
     const ok = predicate
       ? await predicate(boxRoot)
-      : (await storeSecretPresent(boxRoot, name)) || (await legacySecretPresent(boxRoot, name));
+      : await storeSecretPresent(boxRoot, name);
     if (!ok) missing.push(name);
   }
   return missing;

@@ -15,20 +15,20 @@ import { applySelections } from "../../../src/frontend/src/lib/selection/seriali
 
 ```ts
 JSON.stringify(applySelections("Compare [selection1] with the intro", { selections: [
-  { id: 1, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body; heading: Proofing (#proofing)" },
+  { id: 1, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body; heading: Proofing (#proofing)" },
 ] }))
 =>
-"Compare <user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection> with the intro"
+"Compare <user-selection ref=\"/_content/notes/Bread.doc.card\" pos=\"body; heading: Proofing (#proofing)\">let it rise</user-selection> with the intro"
 ```
 
 ## No token in the body — appended (spoken message)
 
 ```ts
 JSON.stringify(applySelections("look at what I selected", { selections: [
-  { id: 1, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body" },
+  { id: 1, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body" },
 ] }))
 =>
-"look at what I selected\n<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection>"
+"look at what I selected\n<user-selection ref=\"/_content/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection>"
 ```
 
 ## Mixed: one referenced inline, one orphan appended; empty position omits the attribute

@@ -12,7 +12,7 @@ import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { boxTmpDir } from "../lib/box-tmp.js";
 
 /**
- * Sweep transient chat-upload files from <boxRoot>/tmp/.
+ * Sweep transient chat-upload files from <boxRoot>/_tmp/.
  *
  * The chat composer uploads files here before referencing them in messages.
  * Once the agent has read them, they linger — this removes anything older
@@ -31,7 +31,7 @@ export async function cleanupOldTmpUploads(
   try {
     entries = await fs.readdir(tmpDir);
   } catch (e) {
-    // tmp/ may not exist yet (no uploads ever made) — nothing to clean.
+    // _tmp/ may not exist yet (no uploads ever made) — nothing to clean.
     if (errnoCode(e) !== "ENOENT") {
       console.debug(`cleanupOldTmpUploads: cannot read ${tmpDir}, skipping:`, e);
     }
@@ -59,14 +59,14 @@ export async function cleanupOldTmpUploads(
       await fs.unlink(fullPath);
       removed++;
       const ageDays = Math.floor((now - stat.mtimeMs) / (24 * 60 * 60 * 1000));
-      onLog?.(`  Removed: tmp/${entry} (${ageDays} days old)`);
+      onLog?.(`  Removed: _tmp/${entry} (${ageDays} days old)`);
     } catch (err) {
-      onLog?.(`  Warning: could not remove tmp/${entry}: ${errorMessage(err)}`);
+      onLog?.(`  Warning: could not remove _tmp/${entry}: ${errorMessage(err)}`);
     }
   }
 
   if (removed > 0) {
-    onLog?.(`  Removed ${removed} stale upload(s) from tmp/`);
+    onLog?.(`  Removed ${removed} stale upload(s) from _tmp/`);
   }
   return removed;
 }

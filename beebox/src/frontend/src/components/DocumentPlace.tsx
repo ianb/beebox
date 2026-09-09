@@ -16,9 +16,11 @@
  * route. Without that, the longest-lived tabs in the app — chats — never got
  * a mark at all.
  *
- * The lookup is the same `landmarks.forDir` query the app bar's place pill
- * runs for the same directory, so this is that query's cache entry, not a
- * second request.
+ * The lookup is the same `landmarks.identity` query the app bar's place pill
+ * runs for the same directory (both need only label/symbol, not the full
+ * resolved link list `forDir` carries — `docs/implemented-plans/card-prominence.md`,
+ * "Split identity from resolution"), so this is that query's cache entry,
+ * not a second request.
  *
  * Only a text symbol can go in a title. A landmark with an image symbol
  * publishes nothing rather than a placeholder — the image already shows in the
@@ -50,13 +52,13 @@ export function DocumentPlace() {
   // it, so there is nothing for the title to add.
   const wanted = dir === null || dir === "" ? null : dir;
 
-  const hereQuery = trpc.landmarks.forDir.useQuery(
+  const hereQuery = trpc.landmarks.identity.useQuery(
     { dir: wanted ?? "" },
     { enabled: boxSlug !== undefined && wanted !== null },
   );
 
-  const here = wanted === null ? null : hereQuery.data?.landmark ?? null;
-  usePlaceMark(here === null || here.symbolSrc !== null ? null : here.symbol);
+  const here = wanted === null ? null : hereQuery.data?.identity ?? null;
+  usePlaceMark(here?.symbol?.src === undefined ? here?.symbol?.glyph ?? null : null);
 
   return null;
 }

@@ -419,65 +419,6 @@ export function renderIssue(input: {
   return [...frontmatter, ...body].join("\n");
 }
 
-/** The alert body for a red batch — one message covering every culprit. */
-export function renderRedAlert(input: {
-  testedCommit: string;
-  baseCommit: string | null;
-  landings: Landing[];
-  culprits: Culprit[];
-  flakes: string[];
-  unattributed: string[];
-  /** Why those files were not bisected — the budget, or no range to search. */
-  unattributedReason?: string;
-}): string {
-  const lines: string[] = [
-    `Full suite red on main at \`${input.testedCommit.slice(0, 8)}\`, over ${String(input.landings.length)} landing(s)` +
-      `${input.baseCommit === null ? "" : ` since \`${input.baseCommit.slice(0, 8)}\``}.`,
-    "",
-  ];
-  if (input.culprits.length > 0) {
-    lines.push("Bisected to:", "");
-    for (const culprit of input.culprits) {
-      lines.push(
-        `- \`${culprit.landing.commit.slice(0, 8)}\` (${workstreamOf(culprit.landing.subject) ?? "no workstream"}):` +
-          ` ${culprit.files.join(", ")}`,
-      );
-    }
-    lines.push("");
-  }
-  if (input.unattributed.length > 0) {
-    const reason = input.unattributedReason ?? `over the ${String(BISECT_MAX_FILES)}-file budget`;
-    lines.push(`Not bisected (${reason}): ${input.unattributed.join(", ")}`, "");
-  }
-  if (input.flakes.length > 0) {
-    lines.push(`Recorded as flakes, no issue filed: ${input.flakes.join(", ")}`, "");
-  }
-  return lines.join("\n");
-}
-
-/** The alert body for a run that failed too broadly to be about the code. */
-export function renderEnvironmentAlert(input: {
-  testedCommit: string;
-  failures: string[];
-  cluster?: { directory: string; files: string[]; error: string } | null;
-}): string {
-  const cluster = input.cluster ?? null;
-  const why =
-    cluster === null
-      ? `over the ${String(ENVIRONMENT_FAILURE_FILES)}-file bar`
-      : `${String(cluster.files.length)} files under \`${cluster.directory}\` all failed with the same first error`;
-  return [
-    `${String(input.failures.length)} test files failed in the batched full-suite run at` +
-      ` \`${input.testedCommit.slice(0, 8)}\` — ${why}, so this is`,
-    "read as a broken environment rather than a set of bugs. Nothing was bisected and no",
-    "issue was filed; the run log has the output.",
-    "",
-    ...(cluster === null ? [] : [`Shared error: ${cluster.error}`, ""]),
-    `First files: ${input.failures.slice(0, 10).join(", ")}`,
-    "",
-  ].join("\n");
-}
-
 /**
  * The TAP block for one failing file: its `not ok` line plus the YAML
  * diagnostics under it, up to the next top-level result.

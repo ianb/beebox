@@ -5,7 +5,7 @@
  * - {@link getPublicUrl} — the env-only cascade (`BBX_PUBLIC_URL` → `PUBLIC_URL`
  *   → caller fallback), for callers that have no box config in hand.
  * - {@link resolveBoxPublicUrl} — the full cascade a box admin flow wants:
- *   `config/box.json#publicUrl` first (a box that pins its own URL wins), then
+ *   `_config/box.json#publicUrl` first (a box that pins its own URL wins), then
  *   the env cascade, then an optional caller fallback.
  *
  * `resolveBoxPublicUrl` replaces four copy-pasted `box.json ?? PUBLIC_URL`
@@ -18,6 +18,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "./error-guards.js";
+import { getBoxDir } from "./paths.js";
 
 /**
  * Resolve the public base URL from the environment, falling back to a
@@ -28,10 +29,10 @@ export function getPublicUrl(fallback: string): string {
   return process.env.BBX_PUBLIC_URL || process.env.PUBLIC_URL || fallback;
 }
 
-/** Read `config/box.json#publicUrl`, or undefined when absent/unreadable. */
+/** Read `_config/box.json#publicUrl`, or undefined when absent/unreadable. */
 async function readBoxJsonPublicUrl(boxRoot: string): Promise<string | undefined> {
   try {
-    const boxJson = JSON.parse(await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8"));
+    const boxJson = JSON.parse(await fs.readFile(path.join(getBoxDir(boxRoot, "config"), "box.json"), "utf-8"));
     if (typeof boxJson.publicUrl === "string" && boxJson.publicUrl) return boxJson.publicUrl;
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
@@ -42,7 +43,7 @@ async function readBoxJsonPublicUrl(boxRoot: string): Promise<string | undefined
 }
 
 /**
- * Resolve a box's public base URL: `config/box.json#publicUrl` if set, else
+ * Resolve a box's public base URL: `_config/box.json#publicUrl` if set, else
  * the env cascade ({@link getPublicUrl}), else `opts.fallback`. Returns
  * undefined only when none of those yield a value.
  */

@@ -21,9 +21,9 @@ const landmark = {
   depth: 0,
   features: {},
   links: [
-    { ref: "store/Welcome.memo.card", label: "Welcome", title: "Welcome", exists: true },
+    { ref: "_content/Welcome.memo.card", label: "Welcome", title: "Welcome", exists: true },
     { ref: "https://example.com/guide", label: "Guide", title: "Guide", exists: false },
-    { ref: "store/Missing.memo.card", label: null, title: "Missing", exists: false },
+    { ref: "_content/Missing.memo.card", label: null, title: "Missing", exists: false },
   ],
   groups: [],
 };
@@ -53,16 +53,41 @@ is visibly unavailable.
 => true true true true true true true true
 ```
 
+When a landmark has no label, the header falls back to the boxholder display
+form of its path — bare for a `_content` path, `<AreaLabel>:...` for a
+machinery area (`display-path.ts`).
+
+```ts continue
+const unlabeledContentHeader = renderToStaticMarkup(React.createElement(BrowseLandmarkHeader, {
+  landmark: { ...landmark, label: "", path: "_content/recipes/Box.landmark.card" },
+  boxSlug: "test1",
+  onNavigate: () => {},
+}));
+
+const unlabeledMachineryHeader = renderToStaticMarkup(React.createElement(BrowseLandmarkHeader, {
+  landmark: { ...landmark, label: "", path: "_bookkeeping/jobs/Box.landmark.card" },
+  boxSlug: "test1",
+  onNavigate: () => {},
+}));
+
+[
+  unlabeledContentHeader.includes(">recipes/Box.landmark.card<"),
+  unlabeledMachineryHeader.includes(">Bookkeeping:jobs/Box.landmark.card<"),
+].join(" ")
+=> true true
+```
+
 The landmark card itself is not repeated in the raw listing once the header
 represents it. Other cards and files remain present.
 
 ```ts
 const listing = renderToStaticMarkup(React.createElement(BrowseSidebarList, {
   data: {
+    background: false,
     dirs: [],
     cards: [
-      { relativePath: "Box.landmark.card", name: "Box", type: "landmark", hasAttachments: false },
-      { relativePath: "briefing.memo.card", name: "briefing", type: "memo", hasAttachments: false },
+      { relativePath: "Box.landmark.card", name: "Box", type: "landmark", hasAttachments: false, prominence: "background" },
+      { relativePath: "briefing.memo.card", name: "briefing", type: "memo", hasAttachments: false, prominence: "ordinary" },
     ],
     files: [{ relativePath: "MAP.md", name: "MAP.md" }],
   },
@@ -72,6 +97,7 @@ const listing = renderToStaticMarkup(React.createElement(BrowseSidebarList, {
   selectedFilePath: null,
   onFileContextMenu: () => {},
   omitCardPath: landmark.path,
+  mode: "raw",
 }));
 [
   listing.includes("Box.landmark.card"),

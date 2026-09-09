@@ -45,7 +45,7 @@ ordinary entry after it is still created.
 const box = await makeTmpBox();
 const { errors } = await runChain(box, [
   { path: "../outside/Evil.memo.card", args: { content: "escaped" } },
-  { path: "store/notes/Daily.memo.card", args: { content: "ok" } },
+  { path: "_content/notes/Daily.memo.card", args: { content: "ok" } },
 ]);
 JSON.stringify(errors, null, 2)
 => [
@@ -53,52 +53,50 @@ JSON.stringify(errors, null, 2)
 ]
 ```
 
-Nothing was written above the box root (the box's content dir sits inside its
-package root, so `../outside` would have landed in the package):
+Nothing was written above the box root:
 
 ```ts continue
-existsSync(join(box.packageRoot, "outside"))
+existsSync(join(box.root, "outside"))
 => false
 ```
 
 The normal entry created its card from the `memo` default template:
 
 ```ts continue
-await box.list("store")
+await box.list("_content/notes")
 =>
-store/notes
-store/notes/Daily.memo.card
+_content/notes/Daily.memo.card
 
-(await box.read("store/notes/Daily.memo.card")).includes("ok")
+(await box.read("_content/notes/Daily.memo.card")).includes("ok")
 => true
 ```
 
 ## A leading `/` addresses the box root, not the OS root
 
-`/store/kept/Weekly.memo.card` is the canonical box-root form, so it lands
+`/_content/kept/Weekly.memo.card` is the canonical box-root form, so it lands
 inside the box like any other in-box path.
 
 ```ts continue
 const second = await runChain(box, [
-  { path: "/store/kept/Weekly.memo.card", args: { content: "weekly" } },
+  { path: "/_content/kept/Weekly.memo.card", args: { content: "weekly" } },
 ]);
 second.errors.length
 => 0
 
-await box.list("store/kept")
+await box.list("_content/kept")
 =>
-store/kept/Weekly.memo.card
+_content/kept/Weekly.memo.card
 ```
 
 Re-running the same chain is idempotent — an existing target is left alone:
 
 ```ts continue
 const third = await runChain(box, [
-  { path: "/store/kept/Weekly.memo.card", args: { content: "changed" } },
+  { path: "/_content/kept/Weekly.memo.card", args: { content: "changed" } },
 ]);
 JSON.stringify(third.logs, null, 2)
 => [
-  "  Chain: /store/kept/Weekly.memo.card already exists, skipping"
+  "  Chain: /_content/kept/Weekly.memo.card already exists, skipping"
 ]
 ```
 

@@ -38,6 +38,7 @@ import type { OnZoomView } from "./ChatMessages";
 import type { ChatAgentEngine } from "@shared/chat-models.js";
 
 export interface ChatBarChromeProps {
+  transcriptVisible?: boolean;
   /** The session's bound directory: `""` for box root, null for no context. */
   contextDir: string | null;
   boxSlug: string | undefined;
@@ -89,31 +90,35 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   } = props;
 
   // The same landmark lookup the retired ContextChip made — react-query
-  // dedupes it with the pill's own `forDir` call for the same dir.
-  const { data: landmarkData } = trpc.landmarks.forDir.useQuery(
+  // dedupes it with the pill's own `identity` call for the same dir. Only
+  // the label is needed here, so `identity` (not `forDir`'s full resolved
+  // link list) is the right query — `docs/implemented-plans/card-prominence.md`, "Split
+  // identity from resolution".
+  const { data: landmarkData } = trpc.landmarks.identity.useQuery(
     { dir: contextDir ?? "" },
     { enabled: contextDir !== null },
   );
-  const landmarkLabel = landmarkData?.landmark?.label ?? null;
+  const landmarkLabel = landmarkData?.identity?.label ?? null;
   // `contextChipLabel`'s chain (landmark → dir basename → "Box root"), except
   // that a chat with no context at all is a "Chat", not "Files" — the pill
   // names a place, and the place is the chat itself.
   const label = contextDir === null ? "Chat" : contextChipLabel({ landmarkLabel, dir: contextDir });
-  useAppBarPlace({ dir: contextDir, label });
+  const transcriptVisible = props.transcriptVisible ?? true;
+  useAppBarPlace(transcriptVisible ? { dir: contextDir, label } : null);
   // Leave a way back. Every other page reads this to decide whether to offer
   // the bar's return chip — the chat itself is the only thing that knows which
   // session the user is actually in. Primitive deps, so a streamed turn does
   // not touch storage; `rememberLastChat` is a no-op for an unchanged value
   // anyway (see `lib/last-chat.ts`).
   useEffect(() => {
-    if (boxSlug === undefined || sessionId === null) return;
+    if (!transcriptVisible || boxSlug === undefined || sessionId === null) return;
     rememberLastChat(boxSlug, { sessionId, label: sessionLabel });
-  }, [boxSlug, sessionId, sessionLabel]);
-  useAppBarHereMenuClaim(true);
+  }, [boxSlug, sessionId, sessionLabel, transcriptVisible]);
+  useAppBarHereMenuClaim(transcriptVisible);
   // The switch menu's "Recent files ›" row — the session's files, reachable
   // from the box-title menu even when the chat has no landmark (and so no
   // here half at all).
-  useAppBarRecentFilesClaim(true);
+  useAppBarRecentFilesClaim(transcriptVisible);
 
   const { chipSlot, hereSlot, recentSlot } = useAppBarSlots();
 
@@ -169,7 +174,7 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   return (
     <>
       {chipSlot === null ? null : createPortal(chips, chipSlot)}
-      {hereSlot === null ? null : createPortal(
+      {hereSlot === null || !transcriptVisible ? null : createPortal(
         <PortaledMenuScope close={hereSlot.close}>
           <ContextMenuBody
             dir={contextDir}

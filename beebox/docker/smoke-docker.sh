@@ -84,8 +84,8 @@ echo "smoke: ok — empty volume refused with init instructions (exit $empty_cod
 if ! dc run --rm box bbx init /data/box > "$LOG_DIR/init.log" 2>&1; then
   fail "bbx init /data/box" "$LOG_DIR/init.log"
 fi
-if [[ ! -f "$WORK_DIR/data/box/content/.beebox/box.json" ]]; then
-  fail "bbx init did not create content/.beebox/box.json" "$LOG_DIR/init.log"
+if [[ ! -f "$WORK_DIR/data/box/.beebox/box.json" ]]; then
+  fail "bbx init did not create .beebox/box.json" "$LOG_DIR/init.log"
 fi
 echo "smoke: ok — bbx init scaffolded a v2 box"
 

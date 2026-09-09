@@ -71,7 +71,7 @@ JSON.stringify(result)
 ```
 
 ```ts continue
-// Persisted to config/connectors/telegram.state.json, not just returned.
+// Persisted to _bookkeeping/connectors/telegram.state.json, not just returned.
 const onDisk = await loadTransientState({
   boxRoot: box.root,
   connectorName: "telegram",
@@ -85,7 +85,7 @@ JSON.stringify(onDisk)
 // State lives at the connector's .state.json; the cross-process lock uses a
 // SIBLING .lock path (never the state file itself — acquireLock would
 // unlink/overwrite malformed lock content and destroy real state).
-transientStatePath(box.root, "telegram").endsWith("config/connectors/telegram.state.json")
+transientStatePath(box.root, "telegram").endsWith("_bookkeeping/connectors/telegram.state.json")
 => true
 ```
 

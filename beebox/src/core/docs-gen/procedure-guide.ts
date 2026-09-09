@@ -14,7 +14,7 @@ Procedures are multi-step processes defined as YAML-frontmatter cards. The proce
 
 \`\`\`bash
 bbx procedure run process-pages                   # Run by name
-bbx procedure run config/procedures/my.procedure.card  # Run by path
+bbx procedure run _config/procedures/my.procedure.card  # Run by path
 bbx procedure run process-pages --step intake     # Run one step only
 bbx procedure run process-pages --dry-run         # Preview steps
 bbx procedure run process-pages --directive "prefer the reading list over trashing"  # Pass directive
@@ -23,7 +23,7 @@ bbx procedure status                                 # Show latest run status
 bbx procedure gc                                     # Delete expired run dirs
 \`\`\`
 
-Procedure definitions live in \`config/procedures/\`. Each run creates a tracking card in \`procedure/runs/<name>_<timestamp>/\`. Run dirs are a recent cache, not an archive: a run where every step skips is removed at completion, and finished runs get an \`expires\` stamp (30d completed / 90d failed, or the procedure card's \`run-expiry\`/\`failed-run-expiry\` override) that \`bbx procedure gc\` enforces daily. Git history retains every committed run. To pin a specific run, set \`expires: never\` on its run card.
+Procedure definitions live in \`_config/procedures/\`. Each run creates a tracking card in \`_bookkeeping/procedure/runs/<name>_<timestamp>/\`. Run dirs are a recent cache, not an archive: a run where every step skips is removed at completion, and finished runs get an \`expires\` stamp (30d completed / 90d failed, or the procedure card's \`run-expiry\`/\`failed-run-expiry\` override) that \`bbx procedure gc\` enforces daily. Git history retains every committed run. To pin a specific run, set \`expires: never\` on its run card.
 
 ## Directives
 
@@ -58,7 +58,7 @@ steps:
       shells:
         - |
           # Exit 0 to proceed, exit $CHECK_SKIP to skip
-          count=$(ls box/inbox/*.card 2>/dev/null | wc -l)
+          count=$(ls _content/inbox/*.card 2>/dev/null | wc -l)
           if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
           echo "Found $count items"
       whys:
@@ -75,7 +75,7 @@ steps:
       shells:
         - |
           # Exit 0 = pass, non-zero = fail (objective gate).
-          remaining=$(ls box/inbox/*.card 2>/dev/null | wc -l)
+          remaining=$(ls _content/inbox/*.card 2>/dev/null | wc -l)
           echo "Remaining: $remaining"
           [ "$remaining" -eq 0 ]
       instructions:
@@ -162,10 +162,10 @@ A started agent turn that ends after partial assistant activity is logged withou
 
 When a step has the agent work through several items and you want an auditable trail, use a **checklist** — a convention, not an engine feature:
 
-- Have the agent maintain a working file (e.g. \`config/migration-runs/<name>.checklist.md\`) of markdown checkboxes (\`- [ ]\`), flipping to \`- [x]\` only when an item is genuinely done, with a one-line grounded note (cite the file changed).
+- Have the agent maintain a working file (e.g. \`_config/migration-runs/<name>.checklist.md\`) of markdown checkboxes (\`- [ ]\`), flipping to \`- [x]\` only when an item is genuinely done, with a one-line grounded note (cite the file changed).
 - Gate it in \`validate.shells\` with a completeness check so the step can't pass with unfinished items:
   \`\`\`bash
-  f="config/migration-runs/my.checklist.md"
+  f="_config/migration-runs/my.checklist.md"
   test -f "$f" && grep -q '\\[x\\]' "$f" && ! grep -q '\\[ \\]' "$f"
   \`\`\`
 - This also gives safe partial failure: an agent that runs out of \`max-turns\` leaves \`[ ]\` boxes, the gate blocks completion, and re-running resumes. The checklist forces decomposition and records the path; the **objective** \`shells\` check (does the thing actually work) is still what proves correctness.
@@ -179,7 +179,7 @@ When a step has the agent work through several items and you want an auditable t
 
 ## Writing a New Procedure
 
-1. Create \`config/procedures/my-procedure.procedure.card\`
+1. Create \`_config/procedures/my-procedure.procedure.card\`
 2. Define steps with prechecks that skip gracefully when there's nothing to do
 3. Use \`bbx procedure run my-procedure --dry-run\` to verify the structure
 4. Test step-by-step with \`--step <id>\`
@@ -205,20 +205,20 @@ Agent prompts in procedures should:
 
 ## System Procedures and Migration
 
-Procedure cards in \`config/procedures/\` are installed by \`bbx init\` from built-in templates. If you edit a system procedure, your changes are preserved:
+Procedure cards in \`_config/procedures/\` are installed by \`bbx init\` from built-in templates. If you edit a system procedure, your changes are preserved:
 
 - **\`bbx init\` on a fresh box**: Templates are copied directly.
 - **\`bbx init\` on an existing box (unchanged procedures)**: Templates are updated in place.
-- **\`bbx init\` on an existing box (modified procedures)**: The new template is parked under \`config/_template-updates/procedures/<name>.procedure.card\` so you can diff and merge manually. The active file at \`config/procedures/<name>.procedure.card\` is left untouched.
+- **\`bbx init\` on an existing box (modified procedures)**: The new template is parked under \`_config/_template-updates/procedures/<name>.procedure.card\` so you can diff and merge manually. The active file at \`_config/procedures/<name>.procedure.card\` is left untouched.
 
 To check for updates:
 \`\`\`bash
-ls config/_template-updates/procedures/
+ls _config/_template-updates/procedures/
 # If any exist, compare with the main version and merge changes
-diff config/procedures/process-pages.procedure.card config/_template-updates/procedures/process-pages.procedure.card
+diff _config/procedures/process-pages.procedure.card _config/_template-updates/procedures/process-pages.procedure.card
 \`\`\`
 
-After merging, delete the file under \`config/_template-updates/procedures/\`. The next \`bbx init\` will see your merged version as the current copy.
+After merging, delete the file under \`_config/_template-updates/procedures/\`. The next \`bbx init\` will see your merged version as the current copy.
 
 ## Git History
 

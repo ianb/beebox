@@ -56,12 +56,12 @@ so we read the raw payload:
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("box/inbox/Demo.figure.card", "");
-await ctx.seed("box/inbox/Demo.figure.attach/sketch.ts", P5_SKETCH);
+await ctx.seed("_content/inbox/Demo.figure.card", "");
+await ctx.seed("_content/inbox/Demo.attach/sketch.ts", P5_SKETCH);
 
 const res = await ctx.rawRequest({
   method: "GET",
-  url: "/api/figure/module.js?path=box/inbox/Demo.figure.attach/sketch.ts",
+  url: "/api/figure/module.js?path=_content/inbox/Demo.attach/sketch.ts",
 });
 res.statusCode
 => 200
@@ -94,12 +94,12 @@ canvas-loop specifier:
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("box/inbox/Orbit.figure.card", "");
-await ctx.seed("box/inbox/Orbit.figure.attach/sketch.ts", CANVAS_LOOP_SKETCH);
+await ctx.seed("_content/inbox/Orbit.figure.card", "");
+await ctx.seed("_content/inbox/Orbit.attach/sketch.ts", CANVAS_LOOP_SKETCH);
 
 const res = await ctx.rawRequest({
   method: "GET",
-  url: "/api/figure/module.js?path=box/inbox/Orbit.figure.attach/sketch.ts",
+  url: "/api/figure/module.js?path=_content/inbox/Orbit.attach/sketch.ts",
 });
 res.statusCode
 => 200
@@ -132,12 +132,12 @@ names the module:
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("box/inbox/Wrong.figure.card", "");
-await ctx.seed("box/inbox/Wrong.figure.attach/sketch.ts", VALUE_IMPORT_SKETCH);
+await ctx.seed("_content/inbox/Wrong.figure.card", "");
+await ctx.seed("_content/inbox/Wrong.attach/sketch.ts", VALUE_IMPORT_SKETCH);
 
 const res = await ctx.rawRequest({
   method: "GET",
-  url: "/api/figure/module.js?path=box/inbox/Wrong.figure.attach/sketch.ts",
+  url: "/api/figure/module.js?path=_content/inbox/Wrong.attach/sketch.ts",
 });
 res.statusCode
 => 200
@@ -165,12 +165,12 @@ the harness checks before treating `default` as the sketch factory:
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("box/inbox/Broken.figure.card", "");
-await ctx.seed("box/inbox/Broken.figure.attach/sketch.ts", "export default function( {");
+await ctx.seed("_content/inbox/Broken.figure.card", "");
+await ctx.seed("_content/inbox/Broken.attach/sketch.ts", "export default function( {");
 
 const res = await ctx.rawRequest({
   method: "GET",
-  url: "/api/figure/module.js?path=box/inbox/Broken.figure.attach/sketch.ts",
+  url: "/api/figure/module.js?path=_content/inbox/Broken.attach/sketch.ts",
 });
 res.statusCode
 => 200
@@ -195,12 +195,12 @@ serve the stale prior output — and prove the route still returns the new modul
 
 ```ts
 const ctx = await makeTestServer();
-const rel = "box/inbox/Cache.figure.attach/sketch.ts";
+const rel = "_content/inbox/Cache.attach/sketch.ts";
 const abs = join(ctx.boxRoot, rel);
 const pinned = new Date(1577836800000); // fixed instant: identical mtimeMs on both writes
 // The distinguishing marker lives in a string LITERAL, not a comment — esbuild
 // strips comments, so a comment marker would never survive into the output.
-await ctx.seed("box/inbox/Cache.figure.card", "");
+await ctx.seed("_content/inbox/Cache.figure.card", "");
 await ctx.seed(rel, "export default function (p5, mount, figure) { const marker = \"AAA\"; return () => marker; }");
 await utimes(abs, pinned, pinned);
 
@@ -246,12 +246,12 @@ const ctx = await makeTestServer();
 const secretPath = join(ctx.boxRoot, "..", "OUTSIDE_SECRET.txt");
 await writeFile(secretPath, "TOPSECRET-DO-NOT-LEAK");
 // Seed a real sketch to create the attach dir, then plant an escaping symlink in it.
-await ctx.seed("box/inbox/Evil.figure.attach/real.ts", "export default () => {};");
-await symlink(secretPath, join(ctx.boxRoot, "box/inbox/Evil.figure.attach/escape.ts"));
+await ctx.seed("_content/inbox/Evil.attach/real.ts", "export default () => {};");
+await symlink(secretPath, join(ctx.boxRoot, "_content/inbox/Evil.attach/escape.ts"));
 
 const res = await ctx.rawRequest({
   method: "GET",
-  url: "/api/figure/module.js?path=box/inbox/Evil.figure.attach/escape.ts",
+  url: "/api/figure/module.js?path=_content/inbox/Evil.attach/escape.ts",
 });
 res.statusCode
 => 400
@@ -277,15 +277,15 @@ A dangling symlink (target absent) is a clean 404, not a 500:
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("box/inbox/Dangle.figure.attach/keep.ts", "export default () => {};");
+await ctx.seed("_content/inbox/Dangle.attach/keep.ts", "export default () => {};");
 await symlink(
-  join(ctx.boxRoot, "box/inbox/Dangle.figure.attach/nonexistent-target.ts"),
-  join(ctx.boxRoot, "box/inbox/Dangle.figure.attach/broken.ts"),
+  join(ctx.boxRoot, "_content/inbox/Dangle.attach/nonexistent-target.ts"),
+  join(ctx.boxRoot, "_content/inbox/Dangle.attach/broken.ts"),
 );
 
 const res = await ctx.rawRequest({
   method: "GET",
-  url: "/api/figure/module.js?path=box/inbox/Dangle.figure.attach/broken.ts",
+  url: "/api/figure/module.js?path=_content/inbox/Dangle.attach/broken.ts",
 });
 res.statusCode
 => 404
@@ -332,10 +332,10 @@ not a general code server for loose box files:
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("store/notes/loose.ts", "export default () => {};");
+await ctx.seed("_content/notes/loose.ts", "export default () => {};");
 const res = await ctx.request({
   method: "GET",
-  url: "/api/figure/module.js?path=store/notes/loose.ts",
+  url: "/api/figure/module.js?path=_content/notes/loose.ts",
 });
 res.statusCode
 => 400
@@ -352,10 +352,52 @@ compile error:
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "GET",
-  url: "/api/figure/module.js?path=box/inbox/Ghost.figure.attach/missing.ts",
+  url: "/api/figure/module.js?path=_content/inbox/Ghost.attach/missing.ts",
 });
 res.statusCode
 => 404
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## The owning card is found by basename, not by filename
+
+A card filename carries its type — `Cube.figure.card` — while its attach scope
+drops it: `Cube.attach/`. So the owner of an attach scope is the card whose
+*basename* matches, and looking for a literal `Cube.card` finds nothing. That
+was the bug: every figure in every box was refused with "Attach scope has no
+owning card" while its card sat right beside the directory
+(`issues/closed/bugs/2026-09-05-figure-module-attach-scope-has-no-owning-card.md`).
+
+```ts
+const ctx = await makeTestServer();
+await ctx.seed("_content/figures/Cube.figure.card", "");
+await ctx.seed("_content/figures/Cube.attach/sketch.ts", "export default () => () => {};");
+const res = await ctx.rawRequest({
+  method: "GET",
+  url: "/api/figure/module.js?path=_content/figures/Cube.attach/sketch.ts",
+});
+res.statusCode
+=> 200
+
+res.headers["content-type"]
+=> application/javascript
+```
+
+A positional card — a bare `<type>.card`, "the ‹type› of this directory" — owns
+`<type>.attach/` by the same rule.
+
+```ts continue
+await ctx.seed("_content/figures/gallery.card", "");
+await ctx.seed("_content/figures/gallery.attach/sketch.ts", "export default () => () => {};");
+const positional = await ctx.rawRequest({
+  method: "GET",
+  url: "/api/figure/module.js?path=_content/figures/gallery.attach/sketch.ts",
+});
+positional.statusCode
+=> 200
 ```
 
 ```ts cleanup
@@ -368,10 +410,10 @@ modules merely by being placed under a `*.attach` directory:
 
 ```ts
 const ctx = await makeTestServer();
-await ctx.seed("box/inbox/Loose.figure.attach/sketch.ts", "export default () => {};");
+await ctx.seed("_content/inbox/Loose.attach/sketch.ts", "export default () => {};");
 const res = await ctx.rawRequest({
   method: "GET",
-  url: "/api/figure/module.js?path=box/inbox/Loose.figure.attach/sketch.ts",
+  url: "/api/figure/module.js?path=_content/inbox/Loose.attach/sketch.ts",
 });
 res.statusCode
 => 400

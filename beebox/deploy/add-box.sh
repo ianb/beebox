@@ -32,7 +32,7 @@ set -euo pipefail
 #                    <your-gh-login>/<box-name>).
 #   --allow EMAIL    grant an extra user access (repeatable). The owner
 #                    always has access; this is only for ADDITIONAL users.
-#                    Written to config/box.json, new boxes only — never
+#                    Written to _config/box.json, new boxes only — never
 #                    clobbers an existing config.
 #   --secrets-from BOX  give the new box the same secret GRANTS another box
 #                    holds (e.g. the shared Mistral key), via
@@ -42,9 +42,8 @@ set -euo pipefail
 #                    machine store and this adds a grant to it, so rotation
 #                    still touches one place (docs/secrets.md). Secrets that
 #                    bind to one box (a Telegram bot token) are skipped and
-#                    named. If the source box predates the store — it still
-#                    has *.secret.json files and no grants — the old file
-#                    copy runs instead, with a deprecation warning.
+#                    named. A source box with no grants at all copies nothing:
+#                    grant it the secrets it should have first.
 #   --dry-run        run the preflight checks against the live server and
 #                    print what would change. Nothing is cloned, written, or
 #                    restarted. Read-only on the server.
@@ -143,6 +142,32 @@ fi
 [[ -n "$BOX_NAME" ]] || BOX_NAME=$(basename "$REPO" .git)
 BOX_PATH="$BOXES_DIR/$BOX_NAME"
 
+# ── Push credential naming ──────────────────────────────────────────
+# A GitHub deploy key attaches to exactly ONE repo, so every box needs its own,
+# reached through a per-box ssh host alias (`IdentitiesOnly yes` in the stanza
+# keeps ssh from offering all of them and tripping GitHub's max-auth-attempts
+# limit). Key filenames take underscores because that is the existing
+# convention on the server; the host alias keeps the box's own hyphens.
+SSH_ALIAS="github.com-box-$BOX_NAME"
+KEY_PATH="$BBX_HOME/.ssh/id_ed25519_box_${BOX_NAME//-/_}"
+
+# Only a GitHub remote gets this treatment: the alias trick exists to select
+# among per-repo deploy keys, which is a GitHub concept. Rewriting a GitLab or
+# self-hosted remote into an alias form would just break it, so those keep
+# whatever credential the operator already arranged.
+PUSH_REMOTE=""
+if [[ "$REPO" =~ ^git@github\.com:(.+)$ ]]; then
+  PUSH_REMOTE="git@$SSH_ALIAS:${BASH_REMATCH[1]}"
+elif [[ "$REPO" =~ ^ssh://git@github\.com/(.+)$ ]]; then
+  PUSH_REMOTE="git@$SSH_ALIAS:${BASH_REMATCH[1]}"
+elif [[ "$REPO" =~ ^https://github\.com/(.+)$ ]]; then
+  # The usage line accepts an https GitHub URL and it clones fine — but a deploy
+  # key is an SSH credential, so leaving origin on https would provision a box
+  # that cannot push: the very bug this section exists to prevent, reachable
+  # through a documented input.
+  PUSH_REMOTE="git@$SSH_ALIAS:${BASH_REMATCH[1]%.git}.git"
+fi
+
 # The box name is also its URL slug, so it must satisfy the hub's slug rule
 # (SLUG_PATTERN in src/hub/hub-config.ts). Checked locally so a repo whose
 # basename isn't slug-shaped fails before we open an SSH connection; the
@@ -183,19 +208,15 @@ if [[ ${#ALLOW_EMAILS[@]} -gt 0 ]]; then
   ALLOW_CSV=$(IFS=,; echo "${ALLOW_EMAILS[*]}")
 fi
 
-# ── Get server IP ───────────────────────────────────────────────────
-if [[ -f "$SCRIPT_DIR/server-ip" ]]; then
-  SERVER_IP=$(cat "$SCRIPT_DIR/server-ip")
-else
-  SERVER_IP=$(hcloud server ip beebox 2>/dev/null)
-fi
+# ── Resolve the deploy target ───────────────────────────────────────
+# Same opt-in config the deploy uses, so a box is added to the server this
+# checkout actually ships to — never to whatever `hcloud` happens to name.
+# shellcheck source=beebox/deploy/deploy-target.sh
+. "$SCRIPT_DIR/deploy-target.sh"
+require_deploy_target "$SCRIPT_DIR"
+SSH_TARGET="$BBX_DEPLOY_SSH_TARGET"
 
-if [[ -z "$SERVER_IP" ]]; then
-  echo "Error: No server IP found. Run create-server.sh first."
-  exit 1
-fi
-
-SSH_OPTS="-A -o StrictHostKeyChecking=no"
+SSH_OPTS=(-A -o StrictHostKeyChecking=no)
 
 # ── Preflight (read-only on the server) ─────────────────────────────
 # `bbx hub add-box --dry-run` validates the slug against the LIVE hub.json:
@@ -206,7 +227,7 @@ SSH_OPTS="-A -o StrictHostKeyChecking=no"
 # unsure how much had landed.
 echo "Preflight: validating slug '$BOX_NAME' against the live hub config..."
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "root@$SERVER_IP" \
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" \
   "su - $BBX_USER -c \"bbx hub add-box '$BOX_NAME' '$BOX_PATH' --dry-run\""
 
 # ── Preflight for --create (local + GitHub, still no mutation) ──────
@@ -247,7 +268,7 @@ if [[ -n "$DRY_RUN" ]]; then
   echo "  - clone $REPO to $BOX_PATH (or pull, if it exists)"
   echo "  - run 'bbx init' in it as $BBX_USER"
   if [[ -n "$ALLOW_CSV" ]]; then
-    echo "  - write config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
+    echo "  - write _config/box.json with allowedEmails: $ALLOW_CSV (new boxes only)"
   fi
   if [[ -n "$SECRETS_FROM" ]]; then
     echo "  - copy box '$SECRETS_FROM's secret grants (bbx secrets copy-grants; no files move)"
@@ -256,6 +277,21 @@ if [[ -n "$DRY_RUN" ]]; then
   echo "  - register with the scheduler manifest (bbx boxes add)"
   echo "  - systemctl restart beebox-hub beebox-scheduler"
   echo "  - verify with the hub's canary for this box"
+  if [[ -z "$PUSH_REMOTE" ]]; then
+    echo "  - NOT set up a push credential ($REPO is not a GitHub remote)"
+  else
+    echo "  - create $KEY_PATH if absent, add an ssh stanza for $SSH_ALIAS,"
+    echo "    and point origin at $PUSH_REMOTE"
+    if [[ -n "$CREATE" ]]; then
+      # A step that grants WRITE access to a repo does not belong only in the
+      # run itself — the dry-run is where an operator decides whether to let it
+      # happen.
+      echo "  - register that key on $CREATE_REPO as a deploy key WITH WRITE ACCESS"
+      echo "    (skipped if this box's key is already registered there)"
+    else
+      echo "  - print the public key for you to register by hand (write access)"
+    fi
+  fi
   echo ""
   echo "[dry-run] Nothing was changed."
   exit 0
@@ -297,7 +333,10 @@ echo "Adding box '$BOX_NAME' from $REPO..."
 # ...) expand here before sending. Keep it free of backticks and bare
 # $(...) (they'd run locally); use \$ for anything the remote evaluates.
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "root@$SERVER_IP" bash -s <<REMOTE
+# The heredoc is deliberately unquoted: the local box name, paths and user are
+# interpolated here, on purpose, before the script is sent.
+# shellcheck disable=SC2087
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s <<REMOTE
 set -euo pipefail
 
 # Clone/pull as root (su drops the SSH agent socket, breaking agent
@@ -345,12 +384,12 @@ fi
 # Access config: only write for a brand-new box, never clobber an
 # existing one (re-deploys keep their hand-tuned access).
 if [[ -n "$ALLOW_CSV" ]]; then
-  if [[ -f "\$CONTENT_DIR/config/box.json" ]]; then
+  if [[ -f "\$CONTENT_DIR/_config/box.json" ]]; then
     echo "Access: box.json exists — leaving it unchanged (add by hand: $ALLOW_CSV)"
   else
-    mkdir -p "\$CONTENT_DIR/config"
-    python3 -c "import json,sys; json.dump({'allowedEmails': '$ALLOW_CSV'.split(',')}, open(sys.argv[1],'w'), indent=2)" "\$CONTENT_DIR/config/box.json"
-    echo "Access: wrote config/box.json (allowedEmails: $ALLOW_CSV)"
+    mkdir -p "\$CONTENT_DIR/_config"
+    python3 -c "import json,sys; json.dump({'allowedEmails': '$ALLOW_CSV'.split(',')}, open(sys.argv[1],'w'), indent=2)" "\$CONTENT_DIR/_config/box.json"
+    echo "Access: wrote _config/box.json (allowedEmails: $ALLOW_CSV)"
   fi
 fi
 
@@ -364,9 +403,9 @@ fi
 # structurally to one box (a Telegram bot token routes to one webhook URL) are
 # skipped by the command and named in its output.
 #
-# `--agent-confirmed` is correct here and not a rubber stamp: the operator
+# '--agent-confirmed' is correct here and not a rubber stamp: the operator
 # explicitly passed --secrets-from. Without it the command would refuse, since
-# stdin over `ssh`/`su -c` is not a TTY and therefore reads as an agent session.
+# stdin over 'ssh'/'su -c' is not a TTY and therefore reads as an agent session.
 if [[ -n "$SECRETS_FROM" ]]; then
   # A failure here is fatal on purpose: an unreadable store, a missing bbx, or a
   # crash would otherwise register a box with NO credentials and restart the
@@ -378,37 +417,6 @@ if [[ -n "$SECRETS_FROM" ]]; then
     exit 1
   fi
   echo "\$COPY_OUT"
-
-  # Legacy path, for a machine that has not run \`bbx secrets migrate\` yet: the
-  # source box has NO GRANTS AT ALL but still holds in-tree secret files. Copy
-  # them so provisioning still works, and say plainly that this is deprecated.
-  #
-  # The phrase below is the one copy-grants prints only for that case — a source
-  # whose grants are all single-box copies nothing either, and must NOT land
-  # here: falling back would hand this box the very Telegram token the command
-  # just refused to share.
-  SRC_DIR="$BOXES_DIR/$SECRETS_FROM/content/config/connectors"
-  [[ -d "\$SRC_DIR" ]] || SRC_DIR="$BOXES_DIR/$SECRETS_FROM/config/connectors"
-  if echo "\$COPY_OUT" | grep -q "has no grants at all" && compgen -G "\$SRC_DIR/*.secret.json" >/dev/null; then
-    echo "Secrets: '$SECRETS_FROM' has no grants but still has in-tree secret files — falling back to the OLD file copy."
-    echo "         DEPRECATED: run 'bbx secrets migrate' on this server (with the boxholder) to move them into the"
-    echo "         machine store, then re-run this with --secrets-from to grant instead of copy."
-    mkdir -p "\$CONTENT_DIR/config/connectors"
-    for secret_file in "\$SRC_DIR"/*.secret.json; do
-      # Same rule as the grant path, applied to files: a Telegram bot token
-      # routes to ONE webhook URL and a publish token is scoped to one bucket,
-      # so copying either would break the box already using it. (The old
-      # version of this script copied them, which was the bug.)
-      case "\$(basename "\$secret_file")" in
-        telegram.secret.json|publish.secret.json|google.secret.json|gmail.secret.json)
-          echo "Secrets: NOT copying \$(basename "\$secret_file") — it belongs to '$SECRETS_FROM' alone."
-          continue ;;
-      esac
-      cp "\$secret_file" "\$CONTENT_DIR/config/connectors/"
-      chmod 600 "\$CONTENT_DIR/config/connectors/\$(basename "\$secret_file")"
-      echo "Secrets: copied \$(basename "\$secret_file") from '$SECRETS_FROM'"
-    done
-  fi
 fi
 
 # Re-chown everything (bbx init / the writes above ran as root in places).
@@ -425,7 +433,7 @@ chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
 #                             that is where .beebox/box.json lives and what every
 #                             existing entry holds. See
 #                             src/core/box/boxes-config.ts.
-# Passing the package root to `bbx boxes add` fails its .beebox/box.json check, so use
+# Passing the package root to 'bbx boxes add' fails its .beebox/box.json check, so use
 # the content dir resolved above. Neither file is hot-reloaded, hence the
 # restart below.
 #
@@ -441,6 +449,77 @@ systemctl restart beebox-hub beebox-scheduler
 echo "Registered and restarted (beebox-hub, beebox-scheduler)."
 REMOTE
 
+# ── Push credential ─────────────────────────────────────────────────
+# Without this a box works in every visible way and simply never reaches its
+# remote: it serves, agents run, commits land locally, and nothing says the
+# history is going nowhere. That is how a box reached hundreds of unpushed
+# commits with no offsite copy. Three of the four steps can be done here; the
+# fourth (registering the public key on GitHub) needs the operator's account
+# and is printed as the closing instruction.
+PUBKEY=""
+if [[ -z "$PUSH_REMOTE" ]]; then
+  echo "Push credential: skipped — '$REPO' is not a GitHub remote, so its"
+  echo "  per-repo deploy key convention does not apply. Make sure the box can"
+  echo "  push by whatever means that host uses."
+else
+  echo "Setting up the box's push credential..."
+  # Deliberately unquoted: the key path, alias and remote are interpolated from
+  # local values before the script is sent.
+  # shellcheck disable=SC2087
+  PUBKEY=$(ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s <<REMOTE
+set -euo pipefail
+
+# Everything here belongs to the service account, which is what actually pushes.
+su - $BBX_USER -s /bin/bash <<'INNER'
+set -euo pipefail
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+
+# NEVER regenerate an existing key. Re-running this script is otherwise safe,
+# but a fresh keypair silently orphans whichever public key is already
+# registered on GitHub — turning a working box into an unpushable one with no
+# error anywhere. Absent is the only case we create.
+if [[ ! -e "$KEY_PATH" ]]; then
+  ssh-keygen -t ed25519 -N "" -f "$KEY_PATH" -C "$SSH_ALIAS deploy key" >/dev/null
+  echo "  generated $KEY_PATH" >&2
+else
+  echo "  key already exists, keeping it (regenerating would orphan the registered one)" >&2
+fi
+
+# The stanza and the remote below ARE safe to re-apply, so they are written
+# whenever they are missing rather than only on first run.
+touch ~/.ssh/config && chmod 600 ~/.ssh/config
+# Fixed-string, whole-line match. A regex would treat the dots in
+# 'github.com-box-…' as wildcards and could match a different alias.
+if ! grep -qxF "Host $SSH_ALIAS" ~/.ssh/config; then
+  printf '\nHost %s\n  HostName github.com\n  User git\n  IdentityFile %s\n  IdentitiesOnly yes\n' \
+    "$SSH_ALIAS" "$KEY_PATH" >> ~/.ssh/config
+  echo "  added ssh config stanza for $SSH_ALIAS" >&2
+fi
+
+# Presence of a Host line is not the same as it being CORRECT. A stanza left by
+# an earlier setup can name a different IdentityFile, and origin is about to
+# point at this alias regardless — so ask ssh what the alias actually resolves
+# to rather than trusting the grep.
+RESOLVED=$(ssh -G "$SSH_ALIAS" 2>/dev/null | awk '$1 == "identityfile" { print $2 }' | head -1)
+RESOLVED="${RESOLVED/#\~/$HOME}"
+if [[ "$RESOLVED" != "$KEY_PATH" ]]; then
+  echo "ERROR: ssh resolves $SSH_ALIAS to identity '$RESOLVED', not '$KEY_PATH'." >&2
+  echo "  An existing ssh config stanza is claiming this alias. Fix it by hand:" >&2
+  echo "  pointing the box's origin at an alias that uses another key would fail" >&2
+  echo "  to push in a way nothing reports." >&2
+  exit 1
+fi
+
+cat "$KEY_PATH.pub"
+INNER
+
+# The remote lives in the box repo, which the service account owns.
+su - $BBX_USER -c "git -C '$BOX_PATH' remote set-url origin '$PUSH_REMOTE'"
+echo "  origin -> $PUSH_REMOTE" >&2
+REMOTE
+  )
+fi
+
 # ── Verify the box actually serves ──────────────────────────────────
 # The hub's canary cold-starts THIS box and requires the box's own /healthz to
 # answer 200 — the same check the deploy runs, targeted at the new slug. The
@@ -449,7 +528,9 @@ REMOTE
 # proves nothing.
 echo "Verifying the new box serves..."
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "root@$SERVER_IP" bash -s <<VERIFY
+# Unquoted for the same reason as the REMOTE heredoc above.
+# shellcheck disable=SC2087
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s <<VERIFY
 set -euo pipefail
 KEY=\$(grep -E '^BBX_DIAG_API_KEY=' $BBX_HOME/.env 2>/dev/null | cut -d= -f2- || true)
 if [ -z "\$KEY" ]; then
@@ -502,3 +583,101 @@ VERIFY
 # own health endpoint through the hub — is this a success.
 echo ""
 echo "Box '$BOX_NAME' added at $BOX_PATH."
+
+# Last, and deliberately after the success line: this is the one step that
+# cannot be done from here, and a box whose key is unregistered looks entirely
+# healthy — it just never pushes. Ending on the ask is the same reason this
+# script ends on a canary rather than assuming the box serves.
+# On --create the operator has already delegated repo creation to `gh`, which
+# is authenticated right here — so the key can be registered without a detour
+# through the browser, and that path never produces an unpushable box.
+#
+# STICKY, and changes are explicit. Registration happens once, at creation:
+# a re-run finds the title already present and does nothing. Rotating or
+# replacing the credential is deliberately not something this script will do
+# on its own — a silent re-register would be indistinguishable from the
+# orphaned-key failure this whole section exists to prevent. Removing the old
+# key on GitHub and re-running is the explicit path.
+REGISTERED=""
+if [[ -n "$CREATE" && -n "$PUBKEY" ]]; then
+  KEY_TITLE="$SSH_ALIAS"
+  # Match on the KEY MATERIAL, not the title. The question is "is this box's key
+  # registered", and an operator who added it by hand may well have titled it
+  # something else entirely — a title check would then miss it and add a
+  # duplicate. The base64 blob is the key's identity; the comment after it is
+  # not part of it and GitHub does not always keep it.
+  KEY_BLOB=$(printf '%s\n' "$PUBKEY" | awk '{print $2}')
+  # Matching the key is not enough: a deploy key registered READ-ONLY fetches
+  # fine and never pushes, which is the failure being fixed wearing a disguise.
+  # So the check is "this key, with write access". (The API field is
+  # `read_only`; gh's --json accepts `readOnly` but returns snake_case, so
+  # reading `.readOnly` silently yields null and every key looks writable.)
+  EXISTING=$(gh api "repos/$CREATE_REPO/keys" \
+    --jq ".[] | select((.key | split(\" \")[1]) == \"$KEY_BLOB\") | .read_only" 2>/dev/null || true)
+  if [[ "$EXISTING" == "false" ]]; then
+    echo "This box's deploy key is already registered on $CREATE_REPO with write access — leaving it alone."
+    REGISTERED=1
+  elif [[ "$EXISTING" == "true" ]]; then
+    # Not auto-upgraded: GitHub has no in-place permission change, so "fixing"
+    # it means deleting someone's existing key and adding a new one. That is a
+    # decision for the operator, not a side effect of re-running a script.
+    echo "WARNING: this box's deploy key is registered on $CREATE_REPO as READ-ONLY." >&2
+    echo "  It will fetch and never push. Remove it on GitHub and re-run, or tick" >&2
+    echo "  'Allow write access' on it by hand." >&2
+  else
+    PUBKEY_FILE=$(mktemp)
+    printf '%s\n' "$PUBKEY" > "$PUBKEY_FILE"
+    if gh repo deploy-key add "$PUBKEY_FILE" --repo "$CREATE_REPO" --title "$KEY_TITLE" --allow-write; then
+      echo "Registered deploy key '$KEY_TITLE' on $CREATE_REPO with write access."
+      # gh's own caveat, worth repeating because the failure it describes is
+      # silent and looks exactly like the problem this section exists to solve:
+      # a key added through gh is tied to gh's auth token, and de-authorizing
+      # that token removes the key. The box would then quietly stop pushing.
+      echo "  NOTE: a key added via gh is tied to gh's auth token — de-authorizing"
+      echo "        the GitHub CLI later removes it, and the box stops pushing"
+      echo "        silently. Re-add it by hand if that ever happens."
+      REGISTERED=1
+    else
+      # Not fatal: the box is built and serving. The closing instruction below
+      # then carries the manual path, which is where a non-create run lives
+      # anyway.
+      echo "WARNING: could not register the deploy key automatically — falling back to the manual step." >&2
+    fi
+    rm -f "$PUBKEY_FILE"
+  fi
+fi
+
+if [[ -n "$REGISTERED" ]]; then
+  echo ""
+  echo "Push credential is set up and registered. Confirm with:"
+  echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+elif [[ -n "$PUBKEY" && -n "$CREATE" ]]; then
+  # --create promises a box that can push. If registration did not happen, the
+  # box is built and serving but cannot reach its remote, and exiting 0 here
+  # would report the exact silent-success this script was changed to prevent.
+  echo ""
+  echo "The box is added and serving, but it CANNOT PUSH yet — registering its"
+  echo "deploy key did not happen (see the warning above)."
+  echo ""
+  echo "Register this key on $CREATE_REPO (Settings -> Deploy keys -> Add deploy"
+  echo "key), TICKING 'Allow write access':"
+  echo ""
+  echo "     $PUBKEY"
+  echo ""
+  echo "Then confirm with:"
+  echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+  exit 1
+elif [[ -n "$PUBKEY" ]]; then
+  echo ""
+  echo "ONE STEP LEFT — the box cannot push until you do this:"
+  echo "  1. Open the repo's Settings -> Deploy keys -> Add deploy key"
+  echo "  2. Paste:"
+  echo ""
+  echo "     $PUBKEY"
+  echo ""
+  echo "  3. TICK 'Allow write access'. Without it the box can fetch but never"
+  echo "     push, which looks identical to everything working."
+  echo ""
+  echo "Then confirm with:"
+  echo "  deploy/prod-ssh \"sudo -u $BBX_USER -H git -C '$BOX_PATH' push origin main\""
+fi

@@ -14,7 +14,7 @@ import { Button } from "../ui/Button";
 type GmailConfig = RouterOutput["admin"]["gmailConfig"];
 type GmailAction = NonNullable<GmailConfig["action"]>;
 
-const PROCEDURE_REF_PATTERN = /^config\/procedures\/(?!.*\.\.)[^/]+\.procedure\.card$/;
+const PROCEDURE_REF_PATTERN = /^_config\/procedures\/(?!.*\.\.)[^/]+\.procedure\.card$/;
 
 const ACTION_OPTIONS = [
   { value: "", label: "Choose what happens…", disabled: true },
@@ -54,7 +54,7 @@ export function GmailFiltersSection() {
         <p className="text-sm text-warm-700">
           This box uses named, bounded Gmail rules. Edit them in{" "}
           <code className="text-xs bg-warm-100 px-1 rounded">
-            config/connectors/gmail.json
+            _config/connectors/gmail.json
           </code>
           . This simpler form is disabled so it cannot overwrite them.
         </p>
@@ -192,10 +192,10 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
             label="Procedure"
             value={procedureRef}
             onChange={setProcedureRef}
-            placeholder="config/procedures/triage-mail.procedure.card"
+            placeholder="_config/procedures/triage-mail.procedure.card"
             error={
               procedureRef.trim() !== "" && !PROCEDURE_REF_PATTERN.test(procedureRef.trim())
-                ? "Must be a path under config/procedures/ ending in .procedure.card"
+                ? "Must be a path under _config/procedures/ ending in .procedure.card"
                 : undefined
             }
             helper="Runs when new mail matches. Inspect matches with: bbx connector gmail pending"

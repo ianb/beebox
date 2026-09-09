@@ -1,15 +1,16 @@
 # API adapters — authenticated provider pass-through for the frontend
 
 `/api/adapters/:adapter/<path>` forwards to the provider with the box's
-API key injected server-side (the machine secret store's entry of the same
-name, falling back to the legacy
-`config/connectors/<adapter>.secret.json`). Views call providers that
+API key injected server-side, from the machine secret store's entry of the
+same name. Views call providers that
 refuse CORS, and the key never reaches the browser. An adapter
 declaration is a couple of lines (base URL + auth header shape).
 
 ```ts setup
 import Fastify from "fastify";
 import { makeTestServer } from "../../helpers/doctest-server.js";
+import { grantSecret, setSecret } from "../../../src/core/secrets/lifecycle.js";
+import { boxSlug } from "../../../src/lib/box-slug.js";
 
 // A fake upstream standing in for api.replicate.com.
 const upstream = Fastify();
@@ -44,7 +45,8 @@ res.body.error
 ## With a key: forwarded with auth injected, cookies stripped
 
 ```ts continue
-await ctx.seed("config/connectors/replicate.secret.json", '{"apiKey": "r8_test_key"}');
+await setSecret({ name: "replicate", value: "r8_test_key" });
+await grantSecret({ slug: await boxSlug(ctx.boxRoot), name: "replicate", access: "server" });
 const ok = await ctx.request({
   method: "POST",
   url: "/api/adapters/replicate/v1/models/meta/llama/predictions",
@@ -72,7 +74,7 @@ nope.statusCode
 => 404
 
 nope.body.error
-=> Unknown adapter "nope" — available: replicate, mistral, anthropic, openai
+=> Unknown adapter "nope" — available: replicate, mistral, anthropic, openai, openrouter
 ```
 
 ```ts cleanup

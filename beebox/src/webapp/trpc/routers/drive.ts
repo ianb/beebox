@@ -133,7 +133,7 @@ export const driveRouter = router({
     }),
 
   /**
-   * Stop mirroring. The mount card goes to `store/trash/`; every child stays
+   * Stop mirroring. The mount card goes to `_bookkeeping/trash/`; every child stays
    * where it is, so this needs no Drive service at all.
    */
   unmount: publicProcedure

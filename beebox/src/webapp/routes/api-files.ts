@@ -21,6 +21,7 @@ import { extensionToMimetype } from "../../lib/mimetype.js";
 import { dangerousRenderableDisposition } from "../serving-security.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { probePointer } from "../../lib/asset-content.js";
+import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 
 // Injected into frozen pages at serve time so a hot-linked image that fails
 // (hot-link blockers, auth, dead origin) retries once through the box image
@@ -87,14 +88,19 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
     async (request, reply) => {
       const reqPath = boxRelativePath(request.params["*"] || "");
 
-      // Security: resolve and ensure within boxRoot. Compare against `root +
-      // sep` (not a bare prefix) so a sibling dir like `<box>-secrets` can't
-      // satisfy the check.
-      const resolved = path.resolve(path.join(boxRoot, reqPath));
-      const root = path.resolve(boxRoot);
-      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+      // Box containment + namespace fence, checked on the RESOLVED path: only
+      // underscore-area paths are servable — not `src/`, `node_modules/`,
+      // `.git/`, or any other root entry, and a traversal form like
+      // `_content/../package.json` can't hide behind its raw-string prefix
+      // (`docs/implemented-plans/one-root-box-layout.md` Track B).
+      const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "read" });
+      if (!ns.ok) {
+        if (ns.reason === "display-form") {
+          return reply.status(400).send({ error: ns.message });
+        }
         return reply.status(403).send({ error: "Access denied" });
       }
+      const { resolved, relativePath } = ns;
 
       // Don't serve dotfiles through this endpoint. Cards (.card) are plain
       // text and served like any other file — the Source view fetches them
@@ -122,7 +128,7 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
             key: pointer.key,
             size: pointer.size,
             sha256: pointer.sha256,
-            hint: `Fetch it with \`git annex get ${reqPath}\``,
+            hint: `Fetch it with \`git annex get ${relativePath}\``,
           });
         }
 
@@ -254,14 +260,22 @@ async function deleteBoxFile({
   eventBus: EventBus;
 }): Promise<unknown> {
   const reqPath = boxRelativePath(request.params["*"] || "");
-  const resolved = path.resolve(path.join(boxRoot, reqPath));
-  const root = path.resolve(boxRoot);
-
-  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
-    return reply.status(403).send({ error: "Access denied" });
+  if (reqPath === "") {
+    return reply.status(400).send({ error: "File path required" });
   }
 
-  if (reqPath === "" || path.basename(resolved).startsWith(".")) {
+  // Box containment + namespace fence, checked on the RESOLVED path — see
+  // `docs/implemented-plans/one-root-box-layout.md` Track B.
+  const ns = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: reqPath, mode: "write" });
+  if (!ns.ok) {
+    if (ns.reason === "display-form") {
+      return reply.status(400).send({ error: ns.message });
+    }
+    return reply.status(403).send({ error: "Access denied" });
+  }
+  const { resolved, relativePath } = ns;
+
+  if (path.basename(resolved).startsWith(".")) {
     return reply.status(400).send({ error: "File path required" });
   }
 
@@ -281,30 +295,30 @@ async function deleteBoxFile({
     return reply.status(404).send({ error: "Not found" });
   }
 
-  if (await pathsHaveChanges(boxRoot, [reqPath])) {
-    await stageFiles(boxRoot, [reqPath]);
+  if (await pathsHaveChanges(boxRoot, [relativePath])) {
+    await stageFiles(boxRoot, [relativePath]);
     await commitPaths(boxRoot, {
-      paths: [reqPath],
-      message: `Saved before user delete: ${reqPath}`,
+      paths: [relativePath],
+      message: `Saved before user delete: ${relativePath}`,
     });
   }
 
   await fs.unlink(resolved);
-  await stageFiles(boxRoot, [reqPath]);
+  await stageFiles(boxRoot, [relativePath]);
   const commitHash = await commitPaths(boxRoot, {
-    paths: [reqPath],
-    message: `Deleted by user: ${reqPath}`,
+    paths: [relativePath],
+    message: `Deleted by user: ${relativePath}`,
   });
 
   eventBus.emitTransient("file-change", {
     event: "unlink",
-    path: reqPath,
+    path: relativePath,
     timestamp: new Date().toISOString(),
   });
 
   return {
     ok: true,
-    path: reqPath,
+    path: relativePath,
     commit: commitHash,
   };
 }

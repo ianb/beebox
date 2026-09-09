@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-dev-comments — designing document comments
 labels: [workstreams-app, exhibits]
+priority: important
 ---
 
 > **Job to be done:** *When I have built something specifically for the boxholder

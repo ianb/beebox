@@ -13,7 +13,7 @@
  *   chat  — no live chat session is mid-turn (`chat.statusAll`, over HTTP with
  *           the run's diagnostic key: chat sessions live in the SERVER process,
  *           so this is the one component the harness cannot read off disk)
- *   jobs  — no `*.job.card` is pending under `box/jobs/`, background
+ *   jobs  — no `*.job.card` is pending under `_bookkeeping/jobs/`, background
  *           maintenance aside (see `BACKGROUND_JOB_TYPES`)
  *   bulk  — no bulk-upload batch is between sealed and delivered
  *
@@ -22,7 +22,6 @@
  * start from scratch.
  */
 
-import * as path from "node:path";
 import { z } from "zod";
 import { findJobCards } from "../core/reactor/job-discovery.js";
 import { listStagingSessions } from "../core/capture/staging-store.js";
@@ -30,6 +29,7 @@ import { isBulkSession } from "../core/capture/staging-schema.js";
 import { startAwakeTimeout } from "../lib/awake-timeout.js";
 import { sleep } from "../lib/sleep.js";
 import { errorMessage } from "../lib/error-guards.js";
+import { getBoxDir } from "../lib/paths.js";
 
 /** Bulk-upload states that mean the box still owes the batch work. `open` is
  *  deliberately excluded: an open batch is waiting on the *uploader*, and an
@@ -109,9 +109,9 @@ function isBackgroundJob(file: string): boolean {
   return BACKGROUND_JOB_TYPES.some((type) => file.endsWith(`.${type}.job.card`));
 }
 
-/** Pending reactor job cards under `box/jobs/`, background maintenance aside. */
+/** Pending reactor job cards under `_bookkeeping/jobs/`, background maintenance aside. */
 function jobsProbe(boxRoot: string): QuiescenceProbe {
-  const jobsDir = path.join(boxRoot, "box/jobs");
+  const jobsDir = getBoxDir(boxRoot, "jobs");
   return {
     name: "jobs",
     async read(): Promise<ProbeReading> {

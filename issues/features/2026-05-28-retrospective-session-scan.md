@@ -3,6 +3,7 @@ title: "retrospective session scan"
 workstream: unknown
 needs: [design]
 area: monorepo
+priority: normal
 ---
 
 Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user had to correct, what Claude had to ask, what kept going wrong*. The current setup is reactive — `CLAUDE.md` says "when you get corrected, update CLAUDE.md," but that depends on the agent noticing in the moment and on the user remembering to push back. A weekly retrospective sweep would catch the patterns that slip through.

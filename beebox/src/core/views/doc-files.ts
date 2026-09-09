@@ -13,11 +13,11 @@ The \`dependencies\` array controls two things:
 2. **When to re-render** — the view refreshes automatically when matching files change
 
 Use glob patterns relative to the box root:
-- \`"box/inbox/**/*.card"\` — all cards in the inbox
-- \`"store/archive/**/*.record.card"\` — all record cards in the archive
-- \`"store/todos/**/*.card"\` — all todo cards
-- \`"box/**/*.card"\` — everything in box/
-- \`"store/playground/Playground.attach/**/*.jsonl"\` — a card's attachment files
+- \`"_content/inbox/**/*.card"\` — all cards in the inbox
+- \`"_bookkeeping/archive/**/*.record.card"\` — all record cards in the archive
+- \`"_content/todos/**/*.card"\` — all todo cards
+- \`"_content/**/*.card"\` — everything under _content/
+- \`"_content/playground/Playground.attach/**/*.jsonl"\` — a card's attachment files
 
 ### Reading a card's attachments
 
@@ -29,8 +29,8 @@ to show "recent entries" from an append-only log:
 
 \`\`\`tsx
 export const dependencies = [
-  "store/playground/*.card",
-  "store/playground/Playground.attach/**/*.jsonl",
+  "_content/playground/*.card",
+  "_content/playground/Playground.attach/**/*.jsonl",
 ];
 
 export default function PlaygroundHistory({ files, readFile }) {
@@ -51,7 +51,18 @@ export default function PlaygroundHistory({ files, readFile }) {
 \`\`\`
 
 \`mtimeMs\` in the effect deps makes the view re-fetch when the log grows.
-For images and audio, don't fetch — render \`<img src={fileUrl(f.path)} />\`.
+For images and audio, don't fetch. Render a bounded image with
+\`<img src={imageUrl(f.path, { width: 960, format: "auto" })} />\`; use
+\`fileUrl(f.path)\` for audio and for a link to the full-resolution image. Image
+variants are generated on demand and cached, so do not make a small display
+download the original.
+
+\`imageUrl\` requires \`width\` or \`height\`. It uses \`fit: "scale-down"\` and
+\`quality: 85\` by default; \`format: "auto"\` negotiates AVIF/WebP/JPEG. Other
+fits are \`contain\`, \`cover\`, \`crop\`, and \`pad\`. \`quality\` is 1–100 and \`dpr\` is
+at most 2. If adapting to \`window.devicePixelRatio\`, clamp it with
+\`Math.min(window.devicePixelRatio, 2)\`. Invalid options fail clearly instead of
+falling back to the original.
 
 ### Writing files from a view
 
@@ -100,13 +111,13 @@ CORS so API keys never live in pages. Views go through the box's **API
 adapters** instead — \`adapterFetch(adapter, {path, ...init})\` hits
 \`/api/adapters/<adapter>/<path>\`, where the server injects the key it
 resolves from the machine-level secret store under the adapter's own name.
-Adapters: \`replicate\`, \`mistral\`, \`anthropic\`, \`openai\`.
+Adapters: \`replicate\`, \`mistral\`, \`anthropic\`, \`openai\`, \`openrouter\`.
 
 A key is never a file you write: the boxholder grants the adapter's secret
 to this box (\`bbx secrets status <this box>\` shows what is granted and what is
 missing; \`bbx secrets declare\` names one you need). An in-tree
-\`config/connectors/<adapter>.secret.json\` is a deprecated fallback that is
-being retired — do not create one.
+\`_config/connectors/<adapter>.secret.json\` is not read by anything — do not
+create one.
 
 \`\`\`tsx
 const resp = await adapterFetch("replicate", {
@@ -145,7 +156,7 @@ export default function MyView({ cards, params }) {
 }
 \`\`\`
 
-Any extra query params on the link/embed — \`![x](/store/Foo.dash.card?tab=costs&range=90d)\` — arrive alongside \`path\` in \`params\` for filtering, sorting, selecting a tab, etc.
+Any extra query params on the link/embed — \`![x](/_content/Foo.dash.card?tab=costs&range=90d)\` — arrive alongside \`path\` in \`params\` for filtering, sorting, selecting a tab, etc.
 
 ## React
 
@@ -164,14 +175,14 @@ import { CardLink, CardRef } from "beebox/view-widgets";
 **\`<CardLink cardRef="…">\`** — a lightly-styled inline link. Clicking opens the card in the current surface. The link text falls back to the card's title when you omit children:
 
 \`\`\`tsx
-<CardLink cardRef="/store/notes/Plan.memo.card">the plan</CardLink>
-<CardLink cardRef="/store/notes/Plan.memo.card" />
+<CardLink cardRef="/_content/notes/Plan.memo.card">the plan</CardLink>
+<CardLink cardRef="/_content/notes/Plan.memo.card" />
 \`\`\`
 
 **\`<CardRef cardRef="…">\`** — a styled reference chip with two controls: **Open** (same as CardLink) and **Expand** (renders the card inline, in place). Use it when a card is worth showing, not just linking:
 
 \`\`\`tsx
-<CardRef cardRef="/store/recipes/Pasta.recipe.card" />
+<CardRef cardRef="/_content/recipes/Pasta.recipe.card" />
 \`\`\`
 
-The reference attribute is \`cardRef\`, **not** \`ref\` (React reserves \`ref\` on components). Write box-absolute refs (\`/store/…\`). A \`cardRef\` is tracked like any card ref, so \`bbx validate\` flags a broken one and \`bbx mv\` rewrites it when the target moves.`;
+The reference attribute is \`cardRef\`, **not** \`ref\` (React reserves \`ref\` on components). Write box-absolute refs (\`/_content/…\`). A \`cardRef\` is tracked like any card ref, so \`bbx validate\` flags a broken one and \`bbx mv\` rewrites it when the target moves.`;

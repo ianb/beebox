@@ -15,6 +15,7 @@ import {
   LockHeldError,
 } from "../../lib/file-lock.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { getBoxDir } from "../../lib/paths.js";
 
 class ScriptAlreadyRunningError extends Error {
   constructor(scriptName: string, pid: number) {
@@ -120,7 +121,7 @@ export function normalizeScriptState(raw: ScriptStatePartial): ScriptState {
 }
 
 function stateDir(boxRoot: string): string {
-  return path.join(boxRoot, "config/schedules/.state");
+  return path.join(getBoxDir(boxRoot, "schedules"), ".state");
 }
 
 function stateFile(boxRoot: string, scriptName: string): string {
@@ -372,17 +373,20 @@ const STALE_RUN_CARD_AGE_MS = 60 * 60 * 1000;
  * to gate housekeeping/tick activity so the system can be "fully at rest"
  * before scheduled work fires.
  *
- * Reads `procedure/runs/<runDir>/run.procedure-run.card` and matches the
- * top-level `status:` frontmatter field via regex — full parsing is
- * overkill here and would couple this helper to the schemas package. Stale
+ * Reads `_bookkeeping/procedure/runs/<runDir>/run.procedure-run.card` and
+ * matches the top-level `status:` frontmatter field via regex — full parsing
+ * is overkill here and would couple this helper to the schemas package. Stale
  * cards (older than STALE_RUN_CARD_AGE_MS) are skipped so an orphaned card
  * from a long-dead procedure doesn't permanently block the at-rest gate.
  */
 export async function loadRunningProcedures(boxRoot: string): Promise<string[]> {
-  const runsDir = path.join(boxRoot, "procedure/runs");
+  const runsDir = getBoxDir(boxRoot, "procedureRuns");
   let entries: string[];
   try {
-    entries = await fs.readdir(runsDir);
+    // Excludes the init-seeded `.gitkeep` (and any other stray file) — only
+    // an actual run directory can hold a run card.
+    const dirents = await fs.readdir(runsDir, { withFileTypes: true });
+    entries = dirents.filter((e) => e.isDirectory()).map((e) => e.name);
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read procedure runs directory ${runsDir}:`, e);

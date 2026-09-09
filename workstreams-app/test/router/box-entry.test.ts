@@ -1,0 +1,133 @@
+// Unit test for box-entry.ts's pure entry->{contentDir, slug} resolution.
+// No server spawn, no router — just fixture directories on disk. Run with:
+//   node --import tsx --test workstreams-app/test/router/box-entry.test.ts
+// (or `pnpm --dir workstreams-app test`, which runs the router tests with the package suite).
+
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
+import { resolveBoxEntry, boxEntryToArg, BoxMarkerError } from "../../src/router/box-entry.js";
+
+async function makeFixtureDir(): Promise<string> {
+  return fs.mkdtemp(path.join(os.tmpdir(), "box-entry-test-"));
+}
+
+test("legacy box dir: contentDir and slug are the entry itself", async () => {
+  const dir = await makeFixtureDir();
+  try {
+    const boxDir = path.join(dir, "test1");
+    await fs.mkdir(boxDir);
+    await fs.writeFile(path.join(boxDir, ".cb-box"), JSON.stringify({ version: "1.0.0" }));
+    const resolved = await resolveBoxEntry(boxDir);
+    assert.equal(resolved.contentDir, boxDir);
+    assert.equal(resolved.slug, "test1");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("v3 one-root box: the entry is the box and carries its own name", async () => {
+  const dir = await makeFixtureDir();
+  try {
+    const boxRoot = path.join(dir, "test1");
+    await fs.mkdir(path.join(boxRoot, ".beebox"), { recursive: true });
+    await fs.writeFile(path.join(boxRoot, ".beebox", "box.json"), JSON.stringify({ shapeVersion: 3 }));
+    const resolved = await resolveBoxEntry(boxRoot);
+    assert.equal(resolved.contentDir, boxRoot);
+    // Regression: the v2-era parent-basename rule named every migrated box
+    // "boxes" (the shared parent dir) and same-slug entries overwrote each
+    // other in the generated hub config.
+    assert.equal(resolved.slug, "test1");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("v2 content dir passed directly: slug comes from the package root basename", async () => {
+  const dir = await makeFixtureDir();
+  try {
+    const pkgRoot = path.join(dir, "test1");
+    const contentDir = path.join(pkgRoot, "content");
+    await fs.mkdir(contentDir, { recursive: true });
+    await fs.mkdir(path.join(contentDir, ".beebox"));
+    await fs.writeFile(path.join(contentDir, ".beebox", "box.json"), JSON.stringify({ shapeVersion: 2 }));
+    const resolved = await resolveBoxEntry(contentDir);
+    assert.equal(resolved.contentDir, contentDir);
+    assert.equal(resolved.slug, "test1");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("v2 package root passed directly: contentDir is <entry>/content, slug is entry's basename", async () => {
+  const dir = await makeFixtureDir();
+  try {
+    const pkgRoot = path.join(dir, "test1");
+    const contentDir = path.join(pkgRoot, "content");
+    await fs.mkdir(contentDir, { recursive: true });
+    await fs.mkdir(path.join(contentDir, ".beebox"));
+    await fs.writeFile(path.join(contentDir, ".beebox", "box.json"), JSON.stringify({ shapeVersion: 2 }));
+    const resolved = await resolveBoxEntry(pkgRoot);
+    assert.equal(resolved.contentDir, contentDir);
+    assert.equal(resolved.slug, "test1");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("nonexistent path: tolerated as a legacy fallback (basename slug, entry as contentDir)", async () => {
+  const resolved = await resolveBoxEntry("/nonexistent/somewhere/test1");
+  assert.equal(resolved.contentDir, "/nonexistent/somewhere/test1");
+  assert.equal(resolved.slug, "test1");
+});
+
+test("boxEntryToArg formats the server-main.ts argv entry", async () => {
+  const dir = await makeFixtureDir();
+  try {
+    const boxDir = path.join(dir, "test1");
+    await fs.mkdir(boxDir);
+    await fs.writeFile(path.join(boxDir, ".cb-box"), "");
+    const resolved = await resolveBoxEntry(boxDir);
+    assert.equal(boxEntryToArg(resolved), `test1=${boxDir}`);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("resolveBoxEntry: a present but malformed canonical marker fails closed", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "box-entry-"));
+  try {
+    const contentDir = path.join(dir, "pkg", "content");
+    await fs.mkdir(contentDir, { recursive: true });
+    await fs.mkdir(path.join(contentDir, ".beebox"));
+    const marker = path.join(contentDir, ".beebox", "box.json");
+    await fs.writeFile(marker, JSON.stringify({ shapeVersion: "2" }));
+    await assert.rejects(resolveBoxEntry(contentDir), BoxMarkerError);
+    await fs.writeFile(marker, "{not json");
+    await assert.rejects(resolveBoxEntry(contentDir), BoxMarkerError);
+    // The empty marker is the pre-JSON convention and still means legacy.
+    await fs.writeFile(marker, "");
+    assert.equal((await resolveBoxEntry(contentDir)).slug, "content");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("legacy state resolves a v2 package root without migrating it", async () => {
+  const dir = await makeFixtureDir();
+  try {
+    const packageRoot = path.join(dir, "test1");
+    const contentDir = path.join(packageRoot, "content");
+    const legacyState = path.join(contentDir, ".callback-box");
+    await fs.mkdir(legacyState, { recursive: true });
+    await fs.writeFile(path.join(legacyState, "state.json"), "old\n");
+
+    assert.deepEqual(await resolveBoxEntry(packageRoot), { contentDir, slug: "test1" });
+    await fs.access(legacyState);
+    await assert.rejects(fs.access(path.join(contentDir, ".beebox")));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

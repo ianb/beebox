@@ -18,7 +18,7 @@ don't block** (PARTIAL/UNMET surfaces in the report and sets the plan's
 implemented-vs-partial status via step 6, but does not refuse the merge, since a
 plan often outruns its branch on purpose); requirements **extracted from prose**.
 The checkbox-based hardening (coupled to
-[plans-as-execution-state](../../decisions/2026-07-30-plans-as-execution-state.md))
+[plans-as-execution-state](../decisions/2026-07-30-plans-as-execution-state.md))
 is deferred as a future iteration.
 
 `.claude/agents/finish.md` reconciles planning docs with reality (step 6) and
@@ -54,7 +54,7 @@ the obvious failure mode for a self-assessment step.
   finding has to resolve to a BLOCKED result naming what's missing — which fits
   its existing contract but adds a new class of block.
 - **What counts as the requirement source.** Our plans have no checkboxes (see
-  [plans-as-execution-state](../../decisions/2026-07-30-plans-as-execution-state.md)),
+  [plans-as-execution-state](../decisions/2026-07-30-plans-as-execution-state.md)),
   so there's no crisp list to check against — the verifier would have to extract
   requirements from prose, which is exactly where fabrication risk lives. That
   decision item and this one are coupled: if plans grow checkboxes, this gets a

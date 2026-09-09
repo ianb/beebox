@@ -100,7 +100,7 @@ await seedSession(box.root, { sessionId: "chat-live", age: 5 * 60 * 1000, entrie
   typedEntry("Still talking…", "2026-06-09T11:55:00Z"),
 ] });
 await box.write(".beebox/chat-thread-sessions.json", JSON.stringify({
-  "store/chat/telegram/Ian/thread.chat-thread.card": { sessionId: "chat-telegram" },
+  "_content/chat/telegram/Ian/thread.chat-thread.card": { sessionId: "chat-telegram" },
 }));
 
 const state = emptyRetroState();
@@ -112,7 +112,7 @@ await seedSession(box.root, { sessionId: "chat-done-before", age: 9 * HOUR, entr
 const result = await discoverSessions(box.root, { now: NOW, quiescenceMs: QUIET, state });
 result.qualified.map((s) => `${s.sessionId} (${s.userMessages} msg, thread: ${s.threadRef})`).join("\n")
 => chat-old (1 msg, thread: null)
-chat-telegram (1 msg, thread: store/chat/telegram/Ian/thread.chat-thread.card)
+chat-telegram (1 msg, thread: _content/chat/telegram/Ian/thread.chat-thread.card)
 
 [result.nonChat, result.alreadyProcessed, result.missingTranscripts].join(",")
 => 1,1,0
@@ -156,7 +156,7 @@ await seedSession(box.root, { sessionId: "chat-tools", age: 4 * HOUR, entries: [
     timestamp: "2026-06-09T08:00:05Z",
     message: { role: "assistant", content: [
       { type: "text", text: "Adding it now." },
-      { type: "tool_use", id: "t1", name: "Edit", input: { file_path: "store/todos/shopping.doc.card" } },
+      { type: "tool_use", id: "t1", name: "Edit", input: { file_path: "_content/todos/shopping.doc.card" } },
     ] },
   },
 ] });
@@ -168,7 +168,7 @@ Add milk to the shopping list
 «blankline»
 **Agent** (2026-06-09T08:00:05Z)
 Adding it now.
-→ Edit: store/todos/shopping.doc.card
+→ Edit: _content/todos/shopping.doc.card
 ```
 
 ## Run report skeleton
@@ -182,7 +182,7 @@ renderRunReport({
   generatedAt: "2026-06-09T12:00:00Z",
   examined: [
     { sessionId: "chat-old", threadRef: null, userMessages: 1, mtime: "2026-06-09T07:00:10Z" },
-    { sessionId: "chat-telegram", threadRef: "store/chat/telegram/Ian/thread.chat-thread.card", userMessages: 1, mtime: "2026-06-09T09:00:05Z" },
+    { sessionId: "chat-telegram", threadRef: "_content/chat/telegram/Ian/thread.chat-thread.card", userMessages: 1, mtime: "2026-06-09T09:00:05Z" },
   ],
   deferredActive: ["chat-live"],
   alreadyProcessed: 1,
@@ -205,7 +205,7 @@ _Nothing new this run._
 ## Sessions examined
 «blankline»
 - `chat-old` (2026-06-09T07:00:10Z, 1 user message)
-- `chat-telegram` (2026-06-09T09:00:05Z, 1 user message) — store/chat/telegram/Ian/thread.chat-thread.card
+- `chat-telegram` (2026-06-09T09:00:05Z, 1 user message) — _content/chat/telegram/Ian/thread.chat-thread.card
 «blankline»
 Skipped: 1 already processed; 1 non-chat (wakeup/job/procedure runs); 1 deferred (active within the quiescence window); 2 beyond the per-run cap (next run picks them up).
 «blankline»

@@ -41,7 +41,7 @@ export const MyThingSchema: CardSchema = cardSchema("my-thing", {
   instructions: `# My Thing Cards
 
 Instructions for agents on how to handle this card type.
-This becomes docs/generated/card-my-thing.md in boxes.
+This becomes card-my-thing.md in the package docs (`node_modules/beebox/box-docs/` from a box; `beebox/box-docs/` in this checkout).
 
 Include:
 - What each frontmatter field means
@@ -69,7 +69,8 @@ export function createMyThingTemplate(options: { title: string }): string {
 
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
-- Every schema automatically gets four optional frontmatter fields — `title`, `contains`, `contains-evidence`, and `todos` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query.ts`). The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
+- Every schema automatically gets seven optional frontmatter fields — `title`, `contains`, `contains-evidence`, `todos`, `symbol`, `prominence`, and `theme` (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`; the docblock there describes each) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query.ts`). `prominence` (`entry-point` | `primary` | `background`) is who a card is for — absent means the type's default level, which you can set with `cardSchema`'s own `prominence` option (`src/shared/prominence.ts`; `category: "system"` implies `background` unless you say otherwise). `theme: { name, stock? }` selects presentation independently of the card's view; a type can prefer one with `cardSchema`'s `theme` option. The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
+- Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-in theme IDs and stocks; see [`docs/box/card-themes.md`](box/card-themes.md) before adding a type preference with `cardSchema`'s `theme` option. Theme is a presentation override, not a new view or a replacement for the card's type fields.
 - `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
 - The `type` field in YAML is the discriminator — the loader uses it to look up the schema. Templates must emit it.
 - Refs live in the YAML as either `{ref: "..."}` objects or strings in obvious places (e.g. `participants: [{ref: "people/..."}]`). The validator's ref-walker finds them by walking for `ref:` keys.
@@ -129,7 +130,7 @@ templates, so they don't need this.
 
 The default sync rule is strict: when an upstream template changes, a box gets
 the new version only if its copy is unmodified stock; if the box edited the
-card **at all**, the update is parked in `config/_template-updates/` for review
+card **at all**, the update is parked in `_config/_template-updates/` for review
 rather than clobbering the edit. That's usually right — but some fields are
 per-box **state**, not part of the definition, and a change to one shouldn't
 freeze the box on old content. The canonical case is a schedule's `enabled`: a
@@ -165,7 +166,7 @@ is then already sitting on disk unread. See
 It is deliberately a **field list, not a `merge(box, upstream)` callback**. The
 judgement that matters — "is this box on unmodified old stock, or did the
 boxholder edit the definition?" — needs the last-shipped hash, which lives in
-the version tracker (`config/template-versions.json`), not in the two card
+the version tracker (`_config/template-versions.json`), not in the two card
 texts. A free callback couldn't see that and would have to either clobber real
 edits or freeze old stock. Naming which keys are *state* lets the tracker keep
 making that call correctly. (Implementation: `boxOwnedFields` on
@@ -232,7 +233,7 @@ If the card type has its own storage location, add it to `BOX_DIRS` in `src/lib/
 ```ts
 export const BOX_DIRS = {
   // ...
-  mythings: "store/mythings",
+  mythings: "_content/mythings",
 };
 ```
 
@@ -267,10 +268,10 @@ For typed reads, use `parseCardText({content, source, schemas: createCardSchemaM
 
 1. `bbx init` or `bbx wakeup` calls `generateDocs(boxRoot)`
 2. `generateDocs()` reads both `schemas` (XML) and `cardSchemas` (frontmatter) from `registry.ts`
-3. For each schema with an `instructions` string, it writes `docs/generated/card-<type>.md`
+3. For each schema with an `instructions` string, it writes `card-<type>.md` — to `node_modules/beebox/box-docs/` for a built-in schema, to `_content/docs/generated/` for a box-local one
 4. The agent guide (`.beebox/agent-guide.md`) lists all card types and links to their docs
 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
-6. Agents read `docs/generated/card-<type>.md` on demand for detailed instructions
+6. Agents read `card-<type>.md` on demand for detailed instructions, from whichever of those two locations holds it
 
 ## Verification Checklist
 
@@ -281,5 +282,5 @@ After implementing:
 3. `bbx init <box>` — creates storage directory (if added), generates docs
 4. `bbx create <box>/path/Name.my-thing.card -t my-thing title="..."` — template emits valid YAML
 5. `bbx validate <box>/path/Name.my-thing.card` — validates
-6. Check `<box>/docs/generated/card-my-thing.md` exists and has your instructions
+6. Check `<box>/node_modules/beebox/box-docs/card-my-thing.md` exists and has your instructions
 7. Check `<box>/.beebox/agent-guide.md` lists the new type

@@ -51,13 +51,13 @@ JSON.stringify(emptyLedger())
 ```ts
 const l = emptyLedger();
 addEntry(l, entry("aaa"));
-addEntry(l, entry("bbb", { sessionRelDir: "box/inbox/scan-x" }));
+addEntry(l, entry("bbb", { sessionRelDir: "_content/inbox/scan-x" }));
 print(`count=${l.entries.length}`);
 print(`found bbb session: ${findEntry(l, "bbb")!.sessionRelDir}`);
 print(`found ccc: ${findEntry(l, "ccc") === undefined}`)
 =>
 count=2
-found bbb session: box/inbox/scan-x
+found bbb session: _content/inbox/scan-x
 found ccc: true
 ```
 
@@ -86,7 +86,7 @@ await box.cleanup();
 ```ts
 const box2 = await makeTmpBox();
 const l2 = emptyLedger();
-addEntry(l2, entry("deadbeef", { kind: "scan", sessionRelDir: "box/inbox/scan-y" }));
+addEntry(l2, entry("deadbeef", { kind: "scan", sessionRelDir: "_content/inbox/scan-y" }));
 await saveLedger(box2.root, l2);
 const reloaded = await loadLedger(box2.root);
 print(`entries=${reloaded.entries.length}`);
@@ -95,7 +95,7 @@ print(`session=${reloaded.entries[0].sessionRelDir}`)
 =>
 entries=1
 hash=deadbeef
-session=box/inbox/scan-y
+session=_content/inbox/scan-y
 ```
 
 ```ts cleanup

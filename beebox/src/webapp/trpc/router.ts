@@ -13,6 +13,7 @@ import { healthRouter } from "./routers/health.js";
 import { driveRouter } from "./routers/drive.js";
 import { filesRouter } from "./routers/files.js";
 import { transcriptionRouter } from "./routers/transcription.js";
+import { ttsRouter } from "./routers/tts.js";
 import { landmarksRouter } from "./routers/landmarks.js";
 import { navRouter } from "./routers/nav.js";
 import { chatRouter } from "./routers/chat.js";
@@ -27,6 +28,7 @@ import { scanTokensRouter } from "./routers/scan-tokens.js";
 import { shareRouter } from "./routers/share.js";
 import { inventoryRouter } from "./routers/inventory.js";
 import { secretsRouter } from "./routers/secrets.js";
+import { presentationRouter } from "./routers/presentation.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -43,6 +45,7 @@ export const appRouter = router({
   drive: driveRouter,
   files: filesRouter,
   transcription: transcriptionRouter,
+  tts: ttsRouter,
   landmarks: landmarksRouter,
   nav: navRouter,
   chat: chatRouter,
@@ -57,6 +60,7 @@ export const appRouter = router({
   share: shareRouter,
   inventory: inventoryRouter,
   secrets: secretsRouter,
+  presentation: presentationRouter,
 });
 
 export type AppRouter = typeof appRouter;

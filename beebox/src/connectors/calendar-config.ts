@@ -1,13 +1,14 @@
 /**
  * Calendar configuration — shared between CLI and webapp.
  *
- * Reads/writes config/connectors/google-calendar.json and
+ * Reads/writes _config/connectors/google-calendar.json and
  * fetches available calendars from the Google Calendar API.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
+import { getBoxDir } from "../lib/paths.js";
 import type { GoogleCalendarService } from "../services/google-calendar.js";
 
 export interface CalendarConfig {
@@ -30,7 +31,7 @@ export interface AvailableCalendar {
 }
 
 function configPath(boxRoot: string): string {
-  return path.join(boxRoot, "config/connectors/google-calendar.json");
+  return path.join(getBoxDir(boxRoot, "connectors"), "google-calendar.json");
 }
 
 export async function loadCalendarConfig(

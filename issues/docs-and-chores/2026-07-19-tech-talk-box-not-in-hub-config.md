@@ -1,6 +1,7 @@
 ---
 title: tech-talk box exists on the prod server but isn't in hub.json
 workstream: unknown
+priority: important
 ---
 
 Noticed while verifying the fleet for the healthz-aggregation work

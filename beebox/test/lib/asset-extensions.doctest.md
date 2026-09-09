@@ -32,7 +32,7 @@ assetLargefilesExpression().split(" or ").length === ASSET_EXTENSIONS.length
 The expression is an extension allowlist, **unscoped** — it matches a binary
 anywhere, not only inside `.attach/`. That is deliberate: git-annex replaces Git
 LFS, which was itself unscoped, and anchoring to `.attach/` would strand LFS's
-content (legacy captures under `box/inbox/`) with no mechanism at all.
+content (legacy captures under `_content/inbox/`) with no mechanism at all.
 
 ```ts
 assetLargefilesExpression().startsWith("include=*.[jJ][pP][gG] or include=*.[jJ][pP][eE][gG]")

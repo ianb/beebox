@@ -44,7 +44,7 @@ async function main(): Promise<number> {
   const boxRoot = path.resolve(target);
   const shape = await getBoxShape(boxRoot);
   const result = await runAnnexDoctor(createGitAnnexService(), {
-    repoRoot: shape.packageRoot,
+    repoRoot: shape.boxRoot,
     boxRoot,
   });
 

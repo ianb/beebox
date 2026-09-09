@@ -109,7 +109,7 @@ bbx init . --docid-debug
 
 This persists a marker file at `.beebox/docid-debug`. Once set, all subsequent doc generation (including `bbx wakeup` and plain `bbx init .`) will include the markers automatically. Disable with `bbx init . --no-docid-debug`.
 
-Each generated doc gets an HTML comment like `<!-- DOCID:.beebox/agent-guide.md -->` at the top, using the file's path relative to the box root. These are easy to find in prompt logs:
+Each doc the box itself writes gets an HTML comment like `<!-- DOCID:.beebox/agent-guide.md -->` at the top, using the file's path relative to the box root. These are easy to find in prompt logs. (Engine reference docs under `node_modules/beebox/box-docs/` carry no DOCID marker — an agent reads one via a file tool whose call already names the path, so there's nothing to confirm by grepping the prompt.)
 
 ```bash
 # Run an agent with logging
@@ -129,9 +129,7 @@ If a DOCID is missing, that doc wasn't included in the agent's context.
 
 Available markers:
 - `DOCID:.beebox/agent-guide.md` — the always-loaded agent guide (@-included in CLAUDE.md)
-- `DOCID:docs/generated/bbx-commands.md` — bbx command reference
-- `DOCID:docs/generated/connectors.md` — connector capabilities
-- `DOCID:docs/generated/card-memo.md`, `DOCID:docs/generated/card-question.md`, etc. — per-card-type docs
+- `DOCID:_content/docs/generated/intake-guide.md`, `DOCID:_content/docs/generated/card-<type>.md` (for box-local schemas), etc. — compiled from the box's own content
 
 ### Find the latest log
 

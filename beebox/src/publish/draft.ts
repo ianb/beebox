@@ -2,7 +2,7 @@
  * `bbx pub draft` core (Track E of `docs/plans/publish-pages.md`).
  *
  * Renders a docs source into a publication bundle, writes the draft to
- * `box/publish/<pub-id>/` (manifest + bundle tree), runs the {@link scanBundle}
+ * `_publish/<pub-id>/` (manifest + bundle tree), runs the {@link scanBundle}
  * leak scan, and decides whether the draft may be committed. This is the
  * CF-independent first half of the publish flow — no upload, no Cloudflare, no
  * flip-to-live. Anyone (agent or human) may draft; drafting has no external

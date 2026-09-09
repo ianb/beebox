@@ -1,14 +1,14 @@
 # `bbx hub` end-to-end: real child process, `/healthz`, clean teardown (Track D, chunk D1)
 
 The seam tests (`hub-router.doctest.md`, `hub-config.doctest.md`) carry the
-real coverage — this one is deliberately lean: build one real v2 fixture
-box (the same symlink trick `scaffoldPackageRoot`/`test/cli/lib/init-v2.doctest.md`
-use to make a fixture box loadable without a real `pnpm install`, plus a
-`node_modules/.bin/bbx` symlink so the supervisor's own "spawn the box's own
-installed `bbx`" path has something to spawn), start the hub against it for
-real, wait for `/healthz` to report the box running, fetch through the hub,
-then SIGTERM the hub and assert the child actually died (no orphans — this
-repo cares about that specifically, see `bin/router.ts`'s orphan-resistance
+real coverage — this one is deliberately lean: build one real fixture box
+(the same symlink trick `scaffoldPackageRoot` uses to make a fixture box
+loadable without a real `pnpm install`, plus a `node_modules/.bin/bbx`
+symlink so the supervisor's own "spawn the box's own installed `bbx`" path
+has something to spawn), start the hub against it for real, wait for
+`/healthz` to report the box running, fetch through the hub, then SIGTERM
+the hub and assert the child actually died (no orphans — this repo cares
+about that specifically, see `workstreams-app/src/router/router.ts`'s orphan-resistance
 doc).
 
 Spawns a real `bbx hub` subprocess and a real `bbx serve` grandchild, so this
@@ -102,27 +102,26 @@ async function pickFreePort() {
   });
 }
 
-/** Same fixture recipe as test/cli/lib/init-v2.doctest.md's `fullInit`,
- *  trimmed to what a served box actually needs (skips validation hooks and
+/** Trimmed to what a served box actually needs (skips validation hooks and
  *  git -- irrelevant to HTTP serving), plus the `node_modules/.bin/bbx`
  *  symlink the supervisor looks for (a real `pnpm install` would populate
  *  this; scaffoldPackageRoot only symlinks `node_modules/beebox`
  *  itself, matching the plan's F1 "no real install yet" note). */
-async function makeV2Fixture() {
+async function makeFixtureBox() {
   const target = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-hub-e2e-"));
-  const { boxRoot, packageRoot } = await detectBoxTarget(target);
-  await scaffoldPackageRoot(packageRoot);
+  const { boxRoot } = await detectBoxTarget(target);
+  await scaffoldPackageRoot(boxRoot);
   await initBox(boxRoot, { skipGit: true, branch: "main" });
   await installProcedures(boxRoot);
   await installGuides(boxRoot);
   await installSchedules(boxRoot);
   await installPersonality(boxRoot);
 
-  const binDir = path.join(packageRoot, "node_modules", ".bin");
+  const binDir = path.join(boxRoot, "node_modules", ".bin");
   await fs.mkdir(binDir, { recursive: true });
   await fs.symlink(path.join(PACKAGE_ROOT, "bin", "bbx"), path.join(binDir, "bbx"));
 
-  return { target, boxRoot, packageRoot };
+  return { target, boxRoot };
 }
 ```
 
@@ -154,12 +153,12 @@ if (!frontendBuilt) {
 ## The hub starts the box, `/healthz` reports it running, and traffic reaches it
 
 ```ts continue
-const fixture = await makeV2Fixture();
+const fixture = await makeFixtureBox();
 const hubConfigPath = path.join(fixture.target, "..", `hub-e2e-config-${path.basename(fixture.target)}.json`);
 const requestedPort = await pickFreePort();
 await fs.writeFile(
   hubConfigPath,
-  JSON.stringify({ port: requestedPort, boxes: { fixture: { path: fixture.packageRoot } } }, null, 2)
+  JSON.stringify({ port: requestedPort, boxes: { fixture: { path: fixture.boxRoot } } }, null, 2)
 );
 
 const hubBin = path.join(PACKAGE_ROOT, "bin", "bbx");

@@ -11,7 +11,7 @@
  *   4. Deploy `pub-worker/` via wrangler with the version stamp + Access vars.
  *   5. ENFORCE workers.dev serving on and version-preview URLs OFF, verified
  *      by read-back (old Worker versions are a leak surface).
- *   6. Persist the non-secret Access values (`config/publish.json`) so a later
+ *   6. Persist the non-secret Access values (`_config/publish.json`) so a later
  *      plain rerun redeploys them instead of erasing them (amendment 3).
  *
  * Auth: the interactive `wrangler login` (OAuth) drives everything except the
@@ -55,7 +55,7 @@ export interface SetupOptions {
 }
 
 export interface SetupDeps {
-  /** The box whose `config/publish.json` persists the non-secret Access values. */
+  /** The box whose `_config/publish.json` persists the non-secret Access values. */
   boxRoot: string;
   /** Machine-level env (defaults to `process.env`) — the optional `CLOUDFLARE_R2_BUCKET` override check. */
   env?: NodeJS.ProcessEnv | undefined;

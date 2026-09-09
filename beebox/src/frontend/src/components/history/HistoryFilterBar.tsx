@@ -102,13 +102,13 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
       {filter.session ? (
         <div className="mt-2">
           <Badge tone="accent" size="sm">
-            <span className="font-mono">Session {filter.session.slice(0, 8)}</span>
+            <span className="font-mono">Chat {filter.session.slice(0, 8)}</span>
             <button
               id="bbx-history-filter-clear-session"
               type="button"
               onClick={() => onChange({ ...filter, session: null })}
               className="ml-1 text-primary-dark hover:text-danger"
-              aria-label="Clear session filter"
+              aria-label="Clear chat filter"
             >
               ×
             </button>

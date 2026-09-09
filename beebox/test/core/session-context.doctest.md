@@ -92,7 +92,7 @@ the extras are omitted, never empty strings.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("config/box.json", JSON.stringify({ timezone: "UTC" }));
+await box.write("_config/box.json", JSON.stringify({ timezone: "UTC" }));
 const sendNow = new Date("2026-06-09T10:00:00Z");
 
 JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false }))
@@ -122,12 +122,12 @@ The `health` extra speaks only when a scheduled task is unhealthy —
 a healthy box (like everything above) omits it entirely.
 
 ```ts continue
-await box.write("config/schedules/sync-notes.scheduled-script.card", `---
+await box.write("_config/schedules/sync-notes.scheduled-script.card", `---
 cron: "0 * * * *"
 runs: bbx wakeup --connector notes
 ---
 `);
-await box.write("config/schedules/.state/sync-notes.json", JSON.stringify({
+await box.write("_config/schedules/.state/sync-notes.json", JSON.stringify({
   lastRun: "2026-06-09T09:00:00Z",
   lastResult: "failure",
   lastError: "ENETUNREACH",
@@ -210,7 +210,7 @@ said Wednesday.
 
 ```ts
 const tzBox = await makeTmpBox();
-await tzBox.write("config/box.json", JSON.stringify({ timezone: "UTC" }));
+await tzBox.write("_config/box.json", JSON.stringify({ timezone: "UTC" }));
 process.env.BBX_TIME = "2026-08-12T08:40:00Z";
 const snapshot = await composeSendSnapshot(tzBox.root, { features: {}, sessionStart: false });
 delete process.env.BBX_TIME;

@@ -41,16 +41,15 @@ bin/tour --all        # run every tour
 Needs the shared dev router (`pnpm dev` at the monorepo root) reachable;
 the worktree is auto-detected from `$PWD`, box defaults to `test1`
 (`BROWSE_BOX` overrides). The box must be one built for agent browsing —
-`"agentBrowsing": "owner"` in its `config/box.json`, which `test1` and its
+`"agentBrowsing": "owner"` in its `_config/box.json`, which `test1` and its
 clones carry — or every owner-gated surface walks as a 401/403 page
 (`docs/plans/agent-browsing-owner.md`). A healthy tour takes tens of seconds — both
 viewport passes included.
 
-**Caveat: tours share the one Chrome window with interactive
-`bin/browse` use** (the per-worktree daemon holds Chrome's profile
-lock, so no second instance). Don't run a tour while driving the
-browser by hand — each corrupts the other's state, and the daemon can
-return `os error 35` flakes under combined load.
+Tours use named per-session Chrome profiles, so a tour can run alongside an
+interactive `bin/browse` session in the same worktree. Keep a tour's own
+session name stable when debugging its walk; different sessions have separate
+cookies and tabs.
 
 ## Artifacts
 

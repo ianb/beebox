@@ -1,7 +1,7 @@
 /**
  * `bbx hub`'s HTTP/WS router (Track D: chunk D1 shaped the routing seam,
  * chunk D2 adds the auth split, chunk D3 the box picker). Adapted from the
- * monorepo dev router's proxy layer (`../../../bin/router.ts`'s
+ * monorepo dev router's proxy layer (`../../../workstreams-app/src/router/router.ts`'s
  * `proxy`/`upgrade` handling), but simplified relative to that router: no
  * Vite/worktree concepts. Lazy-start/idle-shutdown IS supported, opt-in per
  * hub via `hub.json`'s `lazy` flag (`Supervisor`, in `./supervisor.ts`,
@@ -523,7 +523,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
 
     // A lazy hub's box may be "stopped" (idle-collected or never yet
     // requested) — ensureRunning cold-starts it and waits for readiness,
-    // same as bin/router.ts's ensureRunning does for a whole worktree, AND
+    // same as workstreams-app/src/router/router.ts's ensureRunning does for a whole worktree, AND
     // (unlike a plain get()) refreshes the idle timer when the box is
     // already running -- see resolveEndpoint's doc comment for why this
     // must be the ONLY resolve path every HTTP route uses. A non-lazy
@@ -574,7 +574,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const endpoint = slug ? endpoints.get(slug) : undefined;
     if (!endpoint) {
       // WebSocket upgrades never cold-start a lazy hub's box — same
-      // rationale as bin/router.ts's WS handler: ws clients (tRPC's
+      // rationale as workstreams-app/src/router/router.ts's WS handler: ws clients (tRPC's
       // wsLink, in particular) auto-reconnect on timers, so honoring an
       // upgrade as "activity" would let an abandoned background tab
       // resurrect an idle-collected box forever. A KNOWN slug that just

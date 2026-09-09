@@ -1,7 +1,7 @@
-# Web Push output cards (box/output/)
+# Web Push output cards (_bookkeeping/output/)
 
 `sendOutputPushCards` implements the web-push card lifecycle: pending cards in
-`box/output/` are delivered to the box's subscribed devices and deleted; cards
+`_bookkeeping/output/` are delivered to the box's subscribed devices and deleted; cards
 that reach no device are stamped `failed` and left in place (a durable, inspectable
 artifact — never a silent drop). Endpoints reported gone are pruned.
 
@@ -37,7 +37,7 @@ const slug = await boxSlug(box.root);
 await addSubscription({ boxSlug: slug, subscription: SUB, now: NOW });
 
 await box.seed(
-  "box/output/health.web-push.card",
+  "_bookkeeping/output/health.web-push.card",
   createWebPushTemplate({ title: "Health", body: "task overdue", url: `/${slug}/health` }),
 );
 box.commitAll("seed push outbox");
@@ -45,12 +45,12 @@ box.commitAll("seed push outbox");
 const push = createFakePush();
 const sent = await sendOutputPushCards({ boxRoot: box.root, triggeredBy: "doctest", push });
 JSON.stringify(sent)
-=> ["box/output/health.web-push.card"]
+=> ["_bookkeeping/output/health.web-push.card"]
 ```
 
 ```ts continue
-JSON.stringify(await fs.readdir(path.join(box.root, "box/output")))
-=> []
+JSON.stringify(await fs.readdir(path.join(box.root, "_bookkeeping/output")))
+=> [".gitkeep"]
 ```
 
 ```ts continue
@@ -70,7 +70,7 @@ const slug = await boxSlug(box.root);
 await addSubscription({ boxSlug: slug, subscription: GONE, now: NOW });
 
 await box.seed(
-  "box/output/alert.web-push.card",
+  "_bookkeeping/output/alert.web-push.card",
   createWebPushTemplate({ title: "Alert", body: "hello", url: `/${slug}/` }),
 );
 box.commitAll("seed push outbox");
@@ -83,7 +83,7 @@ JSON.stringify(sent)
 ```
 
 ```ts continue
-const card = await fs.readFile(path.join(box.root, "box/output/alert.web-push.card"), "utf-8");
+const card = await fs.readFile(path.join(box.root, "_bookkeeping/output/alert.web-push.card"), "utf-8");
 card.includes("status: failed") && card.includes("no devices received the push")
 => true
 ```

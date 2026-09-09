@@ -13,8 +13,7 @@ import {
 
 ## Native mappings
 
-Claude has four distinct tiers. Codex currently has three, so both high-end
-policies select Sol.
+Each engine has four distinct tiers; Codex's `strongest` is Astra.
 
 ```ts
 JSON.stringify([
@@ -27,7 +26,7 @@ JSON.stringify([
   resolveProcedureModel("codex", "strong"),
   resolveProcedureModel("codex", "strongest"),
 ])
-=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-5.6-sol"]
+=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5-1","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-6-astra"]
 ```
 
 ## Legacy aliases
@@ -43,7 +42,7 @@ JSON.stringify([
   resolveProcedureModel("codex", "opus"),
   resolveProcedureModel("codex", "fable"),
 ])
-=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-5.6-sol"]
+=> ["claude-haiku-4-5-20251001","claude-sonnet-5","claude-opus-5","claude-fable-5-1","gpt-5.6-luna","gpt-5.6-terra","gpt-5.6-sol","gpt-6-astra"]
 ```
 
 The schema vocabulary contains both sets exactly once.

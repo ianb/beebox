@@ -15,37 +15,8 @@ import { rewriteViewRefs } from "../../src/core/rewrite-card-refs.js";
 import { listBoxViewFiles } from "../../src/core/list-cards.js";
 import { loadValidationIgnore } from "../../src/core/validation-ignore.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-
-/**
- * A v2 (package-layout) box fixture: `<root>/package.json` declares a
- * `beebox` dependency (all `getBoxShape` needs here — this module
- * never imports through `node_modules`), and `<root>/content/.beebox/box.json` marks
- * the operational root, one level below the package root, where views live
- * at `src/views/` instead of `views/`.
- */
-async function makeV2ViewsBox() {
-  const root = await mkdtemp(join(tmpdir(), "bbx-doctest-v2-views-"));
-  await writeFile(
-    join(root, "package.json"),
-    JSON.stringify({ name: "my-box", private: true, dependencies: { "beebox": "0.1.0" } }),
-  );
-  const boxRoot = join(root, "content");
-  await mkdir(boxRoot, { recursive: true });
-  await mkdir(join(boxRoot, ".beebox"), { recursive: true });
-  await writeFile(join(boxRoot, ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
-  await mkdir(join(root, "src/views"), { recursive: true });
-  await writeFile(join(root, "src/views/dashboard.tsx"), "export default function Dashboard() { return null; }");
-  return {
-    root,
-    boxRoot,
-    async cleanup() {
-      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-    },
-  };
-}
 ```
 
 ## extractViewRefs finds literal `cardRef` attributes
@@ -54,7 +25,7 @@ The ref value and a `view:<line>:<index>` path are returned.
 
 ```ts
 JSON.stringify(
-  extractViewRefs('<CardLink cardRef="/store/Foo.memo.card">Foo</CardLink>'),
+  extractViewRefs('<CardLink cardRef="/_content/Foo.memo.card">Foo</CardLink>'),
   null,
   2,
 )
@@ -62,7 +33,7 @@ JSON.stringify(
 [
   {
     "path": "view:1:0",
-    "ref": "/store/Foo.memo.card"
+    "ref": "/_content/Foo.memo.card"
   }
 ]
 ```
@@ -70,7 +41,7 @@ JSON.stringify(
 Single quotes work too.
 
 ```ts
-extractViewRefs("<CardRef cardRef='/store/Bar.card' />").length
+extractViewRefs("<CardRef cardRef='/_content/Bar.card' />").length
 => 1
 ```
 
@@ -82,19 +53,19 @@ Lines are 1-indexed; the index increments per match.
 const src = [
   'import { CardLink, CardRef } from "beebox/view-widgets";',
   "",
-  '<CardLink cardRef="/store/a.memo.card" />',
-  '<CardRef cardRef="/store/b.record.card" />',
+  '<CardLink cardRef="/_content/a.memo.card" />',
+  '<CardRef cardRef="/_content/b.record.card" />',
 ].join("\n");
 JSON.stringify(extractViewRefs(src), null, 2)
 =>
 [
   {
     "path": "view:3:0",
-    "ref": "/store/a.memo.card"
+    "ref": "/_content/a.memo.card"
   },
   {
     "path": "view:4:1",
-    "ref": "/store/b.record.card"
+    "ref": "/_content/b.record.card"
   }
 ]
 ```
@@ -120,68 +91,65 @@ extractViewRefs("plain source, no widgets").length
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/Real.memo.card", "---\ntype: memo\n---\nhi");
+await box.write("_content/Real.memo.card", "---\ntype: memo\n---\nhi");
 await box.write(
   "views/v.tsx",
-  '<CardLink cardRef="/store/Real.memo.card" /><CardRef cardRef="/store/Missing.memo.card" />',
+  '<CardLink cardRef="/_content/Real.memo.card" /><CardRef cardRef="/_content/Missing.memo.card" />',
 );
 const warnings = await lintViewRefs(`${box.root}/views/v.tsx`, box.root);
 warnings.join("\n")
-=> Broken reference at view:1:1: /store/Missing.memo.card does not exist
+=> Broken reference at view:1:1: /_content/Missing.memo.card does not exist
 ```
 
-## listBoxViewFiles resolves views per box shape
+## listBoxViewFiles resolves a box's views under `src/views/`
 
-A v2 (package-layout) box's views live at `packageRoot/src/views/` —
-`bbx validate`'s view-ref check and `bbx mv`'s ref-rewrite pass (both call
-`listBoxViewFiles`) need to find them there, not at the (nonexistent)
-`boxRoot/views/`:
+shapeVersion 3 has one root — `boxCodePaths`' `viewsDir` is always
+`<boxRoot>/src/views/`, so `bbx validate`'s view-ref check and `bbx mv`'s
+ref-rewrite pass (both call `listBoxViewFiles`) find views there directly,
+with no package/content split to resolve:
 
 ```ts
-const v2box = await makeV2ViewsBox();
-const found = await listBoxViewFiles(v2box.boxRoot);
+const viewsBox = await makeTmpBox();
+await mkdir(join(viewsBox.root, "src/views"), { recursive: true });
+await writeFile(join(viewsBox.root, "src/views/dashboard.tsx"), "export default function Dashboard() { return null; }");
+const found = await listBoxViewFiles(viewsBox.root);
 found.map((p) => p.endsWith("src/views/dashboard.tsx"))
 => [
   true
 ]
 
-await mkdir(join(v2box.boxRoot, "people"), { recursive: true });
-await writeFile(join(v2box.boxRoot, "people/alice.person.card"), "---\ntype: person\n---\nAlice\n");
-const v2view = join(v2box.root, "src/views/dashboard.tsx");
+await writeFile(join(viewsBox.root, "_content/people/alice.person.card"), "---\ntype: person\n---\nAlice\n");
+const view = join(viewsBox.root, "src/views/dashboard.tsx");
 await writeFile(
-  v2view,
-  '<CardLink cardRef="/people/alice.person.card" /><CardRef cardRef="/people/missing.person.card" />',
+  view,
+  '<CardLink cardRef="/_content/people/alice.person.card" /><CardRef cardRef="/_content/people/missing.person.card" />',
 );
-const v2Warnings = await lintViewRefs(v2view, v2box.boxRoot);
-v2Warnings.join("\n")
-=> Broken reference at view:1:1: /people/missing.person.card does not exist
+const viewWarnings = await lintViewRefs(view, viewsBox.root);
+viewWarnings.join("\n")
+=> Broken reference at view:1:1: /_content/people/missing.person.card does not exist
 
-await writeFile(v2view, '<CardLink cardRef="people/alice.person.card" />');
-const canonicalWarnings = await collectViewCanonicalWarnings([v2view], v2box.boxRoot);
+await writeFile(view, '<CardLink cardRef="_content/people/alice.person.card" />');
+const canonicalWarnings = await collectViewCanonicalWarnings([view], viewsBox.root);
 canonicalWarnings.join("\n")
-=> ../src/views/dashboard.tsx: Non-canonical ref at view:1:0: people/alice.person.card → /people/alice.person.card
+=> src/views/dashboard.tsx: Non-canonical ref at view:1:0: _content/people/alice.person.card → /_content/people/alice.person.card
 
-const fixed = await canonicalizeBox(v2box.boxRoot, {
-  ignore: await loadValidationIgnore(v2box.boxRoot),
+const fixed = await canonicalizeBox(viewsBox.root, {
+  ignore: await loadValidationIgnore(viewsBox.root),
 });
-JSON.stringify({ refs: fixed.refsRewritten, files: fixed.filesChanged, view: await readFile(v2view, "utf-8") })
-=> {"refs":1,"files":1,"view":"<CardLink cardRef=\"/people/alice.person.card\" />"}
+JSON.stringify({ refs: fixed.refsRewritten, files: fixed.filesChanged, view: await readFile(view, "utf-8") })
+=> {"refs":1,"files":1,"view":"<CardLink cardRef=\"/_content/people/alice.person.card\" />"}
 
 const moved = rewriteViewRefs({
-  boxRoot: v2box.boxRoot,
-  viewAbsPath: v2view,
-  text: '<CardLink cardRef="/people/alice.person.card" /><CardRef cardRef="people/alice.person.card" />',
+  boxRoot: viewsBox.root,
+  viewAbsPath: view,
+  text: '<CardLink cardRef="/_content/people/alice.person.card" /><CardRef cardRef="_content/people/alice.person.card" />',
   remap: (abs) =>
-    abs === join(v2box.boxRoot, "people/alice.person.card")
-      ? join(v2box.boxRoot, "people/alicia.person.card")
+    abs === join(viewsBox.root, "_content/people/alice.person.card")
+      ? join(viewsBox.root, "_content/people/alicia.person.card")
       : null,
 });
 JSON.stringify(moved)
-=> {"text":"<CardLink cardRef=\"/people/alicia.person.card\" /><CardRef cardRef=\"people/alicia.person.card\" />","count":2}
-```
-
-```ts cleanup
-await v2box.cleanup();
+=> {"text":"<CardLink cardRef=\"/_content/people/alicia.person.card\" /><CardRef cardRef=\"_content/people/alicia.person.card\" />","count":2}
 ```
 
 ## rewriteViewRefs rewrites a moved target, leaves others alone
@@ -191,14 +159,14 @@ await v2box.cleanup();
 
 ```ts
 const boxRoot = "/box";
-const text = '<CardLink cardRef="/store/Foo.memo.card" /><CardRef cardRef="/store/Stay.card" />';
+const text = '<CardLink cardRef="/_content/Foo.memo.card" /><CardRef cardRef="/_content/Stay.card" />';
 const remap = (abs: string) =>
-  abs === "/box/store/Foo.memo.card" ? "/box/store/archive/Foo.memo.card" : null;
+  abs === "/box/_content/Foo.memo.card" ? "/box/_bookkeeping/archive/Foo.memo.card" : null;
 const result = rewriteViewRefs({ boxRoot, viewAbsPath: "/box/views/v.tsx", text, remap });
 JSON.stringify({ count: result.count, text: result.text }, null, 2)
 =>
 {
   "count": 1,
-  "text": "<CardLink cardRef=\"/store/archive/Foo.memo.card\" /><CardRef cardRef=\"/store/Stay.card\" />"
+  "text": "<CardLink cardRef=\"/_bookkeeping/archive/Foo.memo.card\" /><CardRef cardRef=\"/_content/Stay.card\" />"
 }
 ```

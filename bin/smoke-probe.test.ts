@@ -14,7 +14,7 @@ import {
 } from "./smoke-probe.js";
 import { SmokeFailureError } from "./smoke-errors.js";
 
-/** The shape bin/router.ts's renderFailedPage produces, trimmed to what we parse. */
+/** The shape workstreams-app/src/router/router.ts's renderFailedPage produces, trimmed to what we parse. */
 const FAILED_PAGE = `<!doctype html>
 <html lang="en">
 <head><title>Worktree smoke-tier — failed to start</title></head>

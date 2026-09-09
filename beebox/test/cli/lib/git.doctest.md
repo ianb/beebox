@@ -339,12 +339,11 @@ console.warn = _warn;
 
 const status = await getStatus(box.root);
 // small.txt is staged (added); big.bin is NOT staged (left as untracked).
-// getStatus reports repo-root-relative paths; the repo root is the package
-// root, so the content-dir file shows up as `content/small.txt`.
-status.staged.includes("content/small.txt")
+// getStatus reports repo-root-relative paths; the box root IS the repo root.
+status.staged.includes("small.txt")
 => true
 
-status.staged.includes("content/big.bin")
+status.staged.includes("big.bin")
 => false
 ```
 
@@ -377,12 +376,12 @@ console.warn = _warn2;
 
 const dstatus = await getStatus(dbox.root);
 // The deletion staged normally...
-dstatus.staged.includes("content/doomed.txt")
+dstatus.staged.includes("doomed.txt")
 => true
 
 // ...and the oversized file was still caught, which is what would break if a
 // missing blob aborted the check.
-dstatus.staged.includes("content/huge.bin")
+dstatus.staged.includes("huge.bin")
 => false
 ```
 
@@ -445,7 +444,7 @@ print(`scoped in commit: ${committed.includes("scoped.card")}`);
 print(`other in commit: ${committed.includes("other.card")}`);
 const status = await getStatus(box.root);
 // getStatus paths are repo-root-relative (repo root = package root).
-print(`other still staged: ${status.staged.includes("content/other.card")}`);
+print(`other still staged: ${status.staged.includes("other.card")}`);
 =>
 scoped in commit: true
 other in commit: false

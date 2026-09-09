@@ -1,0 +1,19 @@
+{
+  "input": {
+    "version": 1,
+    "kind": "selection",
+    "boxSlug": "test1",
+    "revision": 4,
+    "selection": {
+      "kind": "resolving",
+      "requestId": "lookup",
+      "contextDir": "garden"
+    },
+    "attention": {
+      "surface": "card",
+      "focusedRef": "/_content/house/report.md",
+      "transcript": "hidden"
+    }
+  },
+  "expectedValid": true
+}

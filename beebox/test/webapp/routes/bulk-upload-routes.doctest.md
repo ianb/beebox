@@ -47,6 +47,16 @@ async function uploadItem(ctx, opts) {
     },
   });
 }
+
+async function waitForSessionState(ctx, sessionId, targetState) {
+  for (let i = 0; i < 80; i++) {
+    const session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+    if (session?.state === targetState) return;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  const finalState = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+  throw new Error(`timed out waiting for session ${sessionId} to reach ${String(targetState)}, last state was ${String(finalState?.state)}`);
+}
 ```
 
 ## Create requires a target chat, then registers the initial item set
@@ -66,7 +76,7 @@ its upload capabilities. The batch's context dir is NOT taken from the request â
 it's derived server-side from the target chat's recorded binding:
 
 ```ts continue
-await bindSession(ctx, "chat-abc", "store/photos");
+await bindSession(ctx, "chat-abc", "_content/photos");
 const created = await createBatch(ctx, {
   targetSessionId: "chat-abc",
   items: [
@@ -87,14 +97,14 @@ The staging manifest is a `kind: "bulk"` session carrying the registry + the
 server-derived target context dir:
 
 ```ts continue
-const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
 JSON.stringify({
   kind: manifest.kind,
   target: manifest.targetSessionId,
   contextDir: manifest.contextDir,
   registered: manifest.expectedItems.map((i) => i.id),
 })
-=> {"kind":"bulk","target":"chat-abc","contextDir":"store/photos","registered":["a","b"]}
+=> {"kind":"bulk","target":"chat-abc","contextDir":"_content/photos","registered":["a","b"]}
 ```
 
 A client-supplied `contextDir` in the body is ignored (path-traversal defense):
@@ -107,7 +117,7 @@ const sneaky = await createBatch(ctx, {
   contextDir: "../../../etc",
   items: [{ id: "a", name: "x.pdf" }],
 });
-const sneakyManifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sneaky.body.sessionId}/session.json`));
+const sneakyManifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sneaky.body.sessionId}/session.json`));
 JSON.stringify({ status: sneaky.statusCode, contextDir: sneakyManifest.contextDir })
 => {"status":200,"contextDir":""}
 ```
@@ -188,7 +198,7 @@ The staged file entry on the manifest carries the same server-computed values
 and links back to the registry item, and `totalBytes` accumulates:
 
 ```ts continue
-const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
 JSON.stringify({
   file: manifest.files.map((f) => ({ name: f.originalName, itemId: f.itemId, size: f.size, hashLen: f.sha256.length })),
   totalBytes: manifest.totalBytes,
@@ -269,7 +279,7 @@ JSON.stringify(codes)
 The manifest is untouched â€” the upload never overwrote it:
 
 ```ts continue
-const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
 JSON.stringify({ kind: manifest.kind, files: manifest.files.length })
 => {"kind":"bulk","files":0}
 ```
@@ -460,10 +470,12 @@ to remove, so a post-seal cancel is refused rather than raced.
 
 ```ts
 const ctx = await makeTestServer();
+await bindSession(ctx, "chat-cancel", "_content/photos");
 const created = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "a", name: "a.jpg" }] });
 const sessionId = created.body.sessionId;
 await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
 await ctx.request({ method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`, payload: {} });
+await waitForSessionState(ctx, sessionId, "sealed");
 
 const late = await ctx.request({ method: "DELETE", url: `/api/bulk/sessions/${sessionId}` });
 late.statusCode

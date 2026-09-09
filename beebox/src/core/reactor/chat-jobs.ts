@@ -70,7 +70,7 @@ export async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean
       continue;
     }
 
-    const systemPrompt = buildReactorSystemPrompt(boxRoot);
+    const systemPrompt = buildReactorSystemPrompt();
     const agent = opts.createAgent({
       name: "reactor-chat",
       sessionId,

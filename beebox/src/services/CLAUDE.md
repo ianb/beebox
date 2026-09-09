@@ -80,7 +80,7 @@ Routes and connectors both accept optional services from their caller. When the 
 interface ChatRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
-  openaiAudio?: OpenAIAudioService | undefined;
+  openaiAudio?: TtsService | undefined;
 }
 
 // Connector factory parameter
@@ -114,8 +114,8 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `google-auth.ts` | `GoogleAuthService` | `createGoogleAuthService(client, { boxRoot? })` | `createFakeGoogleAuth({ accessToken? })` |
 | `google-calendar.ts` | `GoogleCalendarService` | `createGoogleCalendarService(auth)` | `createFakeGoogleCalendar({ calendars?, events? })` |
 | `google-gmail.ts` (fake in `google-gmail-fake.ts`) | `GoogleGmailService` | `createGoogleGmailService(auth)` | `createFakeGoogleGmail({ messages?, labels?, attachments?, historyId?, oldestValidHistoryId?, historyRecords? })` |
-| `openai-audio.ts` | `OpenAIAudioService` | `createOpenAIAudioService(apiKey)` | `createFakeOpenAIAudio({ transcriptionText? })` |
-| `openai-embeddings.ts` | `EmbeddingsService` | `createOpenAIEmbeddingsService(apiKey)` | `createFakeEmbeddings({ failTimes? })` |
+| `tts.ts` | `TtsService` | `createTtsService({ backend, route })` | `createFakeTts({ backend?, stylable?, emptyResponse? })` |
+| `openai-embeddings.ts` | `EmbeddingsService` | `createEmbeddingsService(route)` | `createFakeEmbeddings({ failTimes? })` |
 | `google-drive.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
 | `claude-chat.ts` | `ChatBackend` | `createChatBackend()` | `createFakeChatBackend()` |
 | `call-log.ts` | — | — | `withCallLog(service)`, `printCalls(log)` |

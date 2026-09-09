@@ -1,0 +1,24 @@
+---
+status: new
+title: Card themes tour
+created: "2026-09-07T12:00:00+00:00"
+prominence: entry-point
+---
+Start with the same ordinary field note in four cards. The words stay fixed;
+only the card theme changes, so the paper, Post-it, and plain treatments can be
+compared directly.
+
+- [Theme comparison](./comparison.memo.card)
+- [Paper / cream](./comparison-paper.memo.card)
+- [Paper / manila](./comparison-manila.memo.card)
+- [Post-it / yellow](./comparison-post-it.memo.card)
+- [Plain / neutral](./comparison-plain.memo.card)
+- [Quotes and attribution](./quotes.memo.card)
+- [Structured sample](./structured.record.card)
+- [Long content](./long-form.memo.card)
+- [Stack experiment](./stack-experiment.memo.card)
+- [Mixed stocks](./mixed-stocks.memo.card)
+
+The comparison cards are deliberately ordinary fictional material. Their
+theme choices belong to the card-theme engine, so this seed stays useful while
+that engine evolves.

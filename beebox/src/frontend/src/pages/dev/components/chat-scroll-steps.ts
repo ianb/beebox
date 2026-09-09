@@ -21,6 +21,16 @@ export type Step =
   | { k: "chromeResize"; px: number }
   /** An existing message grows in place (an image finishing decode). */
   | { k: "imageDecode"; msgIndex: number; px: number }
+  /** Mount a real lazy img without a source. Its intrinsic size is unknown. */
+  | { k: "mountImage"; msgIndex: number; heightPx: number }
+  /** Assign that img a deterministic data-SVG source and await its load. This
+   *  exercises browser image layout, but not network-driven lazy deferral. */
+  | {
+    k: "completeImage";
+    msgIndex: number;
+    expectedPlacement: "above" | "below" | "visible";
+    expectedHeightPx: number;
+  }
   /** Grow the last message by `px` on each of `frames` consecutive animation
    *  frames — cached images laying out one per frame, each frame's growth
    *  landing after the previous write's scroll event. */
@@ -70,4 +80,13 @@ export interface Expectation {
   writesAtMost?: number;
   /** Backwards jumps in scrollTop observed during a fling — a yank. */
   flingReversalsAtMost?: number;
+}
+
+/** A named script plus the outcome it asserts. The scripts live in
+ *  chat-scroll-scenarios.ts (and chat-scroll-scenarios-open.ts). */
+export interface Scenario {
+  name: string;
+  description: string;
+  steps: Step[];
+  expect: Expectation;
 }

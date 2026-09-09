@@ -1,17 +1,15 @@
-import { useEffect, useReducer, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useReducer, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
-import { useImageRetry } from "../../hooks/use-image-retry";
+import { imageUrlKey } from "../../lib/image-url-key";
+import { useImageRecovery, withVersionStamp } from "../../hooks/use-image-recovery";
 
 const SIZE_CLASSES = {
   thumb: "w-16 h-16 object-cover",
   sm: "max-w-xs max-h-64",
   md: "max-w-full max-h-96",
-  // Chat's ordinary image presentation is deliberately a stable media frame:
-  // reserve the same viewport-relative height before bytes decode, then
-  // letterbox unusual aspect ratios inside it. `max-h` alone collapses until
-  // intrinsic dimensions arrive and makes the transcript jump.
-  chat: "w-full h-[70vh] object-contain",
+  // Preserve intrinsic proportions; the scroll controller compensates decode-time reflow.
+  chat: "max-w-full max-h-[70vh]",
   lg: "max-w-full max-h-[32rem]",
 } as const;
 
@@ -26,34 +24,25 @@ export type ImageRotation = 0 | 90 | 180 | 270;
 // instead of re-running the error sequence and re-fetching the dead URL.
 const failedImageUrls = new Set<string>();
 
-function shouldRetryPrimary({ src, fallbackSrc, retryOnError }: {
-  src: string;
-  fallbackSrc: string | undefined;
-  retryOnError: boolean;
-}): boolean {
-  return retryOnError && fallbackSrc === undefined && src !== "";
-}
-
 interface LoadStateOpts {
   src: string;
   fallbackSrc: string | undefined;
-  retryEnabled: boolean;
-  retryFailed: boolean;
-  retrySrc: string;
+  locallyFailed: boolean;
 }
 
-function getLoadState({ src, fallbackSrc, retryEnabled, retryFailed, retrySrc }: LoadStateOpts) {
-  const primaryFailed = retryEnabled ? retryFailed : failedImageUrls.has(src);
-  const fallbackFailed = fallbackSrc !== undefined && failedImageUrls.has(fallbackSrc);
+function getLoadState({ src, fallbackSrc, locallyFailed }: LoadStateOpts) {
+  const primaryFailed = locallyFailed || failedImageUrls.has(imageUrlKey(src));
+  const fallbackFailed = fallbackSrc !== undefined && failedImageUrls.has(imageUrlKey(fallbackSrc));
   const usingFallback = primaryFailed && fallbackSrc !== undefined && !fallbackFailed;
   return {
-    displaySrc: usingFallback ? fallbackSrc : retryEnabled ? retrySrc : src,
+    displaySrc: usingFallback ? fallbackSrc : src,
     errored: primaryFailed && (fallbackSrc === undefined || fallbackFailed),
   };
 }
 
 interface BaseImageProps {
   src: string;
+  srcSet?: string | undefined; sizes?: string | undefined;
   alt: string;
   size?: ImageSize;
   caption?: ReactNode;
@@ -69,11 +58,6 @@ interface BaseImageProps {
    */
   proxyFallbackSrc?: string;
   /**
-   * Retry `src` on a short, bounded backoff before showing the placeholder.
-   * Intended for in-box chat images that may be referenced before they exist.
-   */
-  retryOnError?: boolean;
-  /**
    * Outer-layout classes (margin, padding, flex item, sizing, position),
    * applied to whichever element ends up being outermost (figure when
    * `caption` is set, the overlay wrapper when `overlay` is set, otherwise
@@ -88,10 +72,9 @@ interface BaseImageProps {
   loading?: "lazy" | "eager";
 }
 
-export type ImageProps = BaseImageProps & (
-  | { lightbox: true; onClick?: never }
-  | { lightbox?: false; onClick?: () => void }
-);
+export type ImageProps =
+  | (BaseImageProps & { lightbox: true; lightboxSrc: string; onClick?: never })
+  | (BaseImageProps & { lightbox?: false; lightboxSrc?: never; onClick?: () => void });
 
 function BrokenImageIcon() {
   return (
@@ -111,10 +94,7 @@ function BrokenImageIcon() {
 }
 
 function errorSizeClass(size: ImageSize): string {
-  // A failed media request should not turn into a viewport-tall empty slab.
-  // The successful chat image reserves that much room because it has visual
-  // content to show; the compact failure state communicates the error without
-  // multiplying dead space through the transcript.
+  // Keep the failure state compact regardless of the successful image cap.
   return size === "chat" ? SIZE_CLASSES.md : SIZE_CLASSES[size];
 }
 
@@ -139,22 +119,26 @@ function ErrorPlaceholder({ alt, size, bordered, extraClass }: { alt: string; si
 
 interface ImgElementProps {
   src: string;
+  srcSet: string | undefined; sizes: string | undefined;
   alt: string;
   size: ImageSize;
   bordered: boolean;
   rotationStyle: CSSProperties | undefined;
   title: string | undefined;
   onActivate: ((element: HTMLImageElement) => void) | null;
-  onError: () => void;
-  onLoad: () => void;
+  onError: (failedSrc: string) => void;
+  onLoad: (element: HTMLImageElement) => void;
+  /** Widen the wrapping button to its container — see `stretch` in `Image`. */
+  stretch: boolean;
   lightbox: boolean;
+  lightboxSrc: string | undefined;
   lightboxCaption: string | undefined;
   imgRef: React.RefObject<HTMLImageElement>;
   extraClass?: string;
   loading: "lazy" | "eager" | undefined;
 }
 
-function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, lightbox, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
+function ImgElement({ src, srcSet, sizes, alt, size, bordered, rotationStyle, title, onActivate, onError, onLoad, stretch, lightbox, lightboxSrc, lightboxCaption, imgRef, extraClass, loading }: ImgElementProps) {
   const interactive = onActivate !== null;
   const handleClick = () => {
     if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
@@ -170,6 +154,8 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
     <img
       ref={imgRef}
       src={src}
+      srcSet={srcSet}
+      sizes={sizes}
       alt={alt}
       loading={loading}
       // In the interactive case the button is the outermost element, so
@@ -180,10 +166,10 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
       // carries the caller's spacing classes (extraClass) instead.
       className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", interactive ? "m-0" : extraClass)}
       style={rotationStyle}
-      onError={onError}
-      onLoad={onLoad}
+      onError={(event) => onError(event.currentTarget.currentSrc || src)}
+      onLoad={(event) => onLoad(event.currentTarget)}
       title={title}
-      data-image-src={lightbox ? src : undefined}
+      data-image-src={lightbox ? lightboxSrc ?? src : undefined}
       data-image-alt={lightbox ? alt : undefined}
       data-image-caption={lightbox && lightboxCaption !== undefined ? lightboxCaption : undefined}
     />
@@ -200,7 +186,7 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
       aria-label={lightbox ? `${alt} (click to zoom)` : undefined}
       className={cn(
         "block border-0 bg-transparent p-0",
-        size === "chat" ? "w-full" : "",
+        stretch ? "w-full" : "",
         lightbox ? "cursor-zoom-in" : "cursor-pointer",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         extraClass,
@@ -219,18 +205,18 @@ function wrapOrthogonal({ node, extraClass }: { node: ReactNode; extraClass?: st
   );
 }
 
-function wrapWithOverlay({ node, overlay, extraClass }: { node: ReactNode; overlay: ReactNode; extraClass?: string }): ReactNode {
+function wrapWithOverlay({ node, overlay, stretch, extraClass }: { node: ReactNode; overlay: ReactNode; stretch: boolean; extraClass?: string }): ReactNode {
   return (
-    <div className={cn("relative inline-block", extraClass)}>
+    <div className={cn("relative inline-block", stretch ? "w-full" : "", extraClass)}>
       {node}
       {overlay}
     </div>
   );
 }
 
-function wrapInFigure({ node, caption, extraClass, fullWidth }: { node: ReactNode; caption: ReactNode; extraClass?: string; fullWidth: boolean }): ReactNode {
+function wrapInFigure({ node, caption, stretch, extraClass }: { node: ReactNode; caption: ReactNode; stretch: boolean; extraClass?: string }): ReactNode {
   return (
-    <figure className={cn("inline-flex flex-col items-center", fullWidth ? "w-full" : "", extraClass)}>
+    <figure className={cn("inline-flex flex-col items-center", stretch ? "w-full" : "", extraClass)}>
       {node}
       <figcaption className="mt-1 max-w-full text-xs text-warm-600 italic text-center">
         {caption}
@@ -247,21 +233,21 @@ interface AssembleOpts {
   overlay: ReactNode;
   errored: boolean;
   isOrthogonal: boolean;
+  stretch: boolean;
   outerLayer: OuterLayer;
   className: string | undefined;
-  fullWidth: boolean;
 }
 
-function assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className, fullWidth }: AssembleOpts): ReactNode {
+function assembleImage({ base, caption, overlay, errored, isOrthogonal, stretch, outerLayer, className }: AssembleOpts): ReactNode {
   let node: ReactNode = base;
   if (isOrthogonal && !errored) {
     node = wrapOrthogonal({ node, extraClass: outerLayer === "orthogonal" ? className : undefined });
   }
   if (overlay !== undefined && !errored) {
-    node = wrapWithOverlay({ node, overlay, extraClass: outerLayer === "overlay" ? className : undefined });
+    node = wrapWithOverlay({ node, overlay, stretch, extraClass: outerLayer === "overlay" ? className : undefined });
   }
   if (caption !== undefined) {
-    node = wrapInFigure({ node, caption, extraClass: className, fullWidth });
+    node = wrapInFigure({ node, caption, stretch, extraClass: className });
   }
   return node;
 }
@@ -283,6 +269,8 @@ function pickOuterLayer({ caption, overlay, errored, isOrthogonal }: OuterLayerO
 export function Image(props: ImageProps) {
   const {
     src,
+    srcSet,
+    sizes,
     alt,
     size = "md",
     caption,
@@ -291,12 +279,10 @@ export function Image(props: ImageProps) {
     bordered = false,
     title,
     proxyFallbackSrc,
-    retryOnError = false,
     className,
     loading,
   } = props;
-  const lightbox = props.lightbox === true;
-  const externalOnClick = lightbox ? undefined : props.onClick;
+  const lightbox = props.lightbox === true; const lightboxSrc = lightbox ? props.lightboxSrc : undefined; const externalOnClick = lightbox ? undefined : props.onClick;
 
   const lightboxCtx = useLightbox();
   const imgRef = useRef<HTMLImageElement>(null);
@@ -305,22 +291,47 @@ export function Image(props: ImageProps) {
   // remount doesn't replay the sequence; `bumpAfterError` only forces a
   // re-render after we record a fresh failure (the set isn't reactive itself).
   const [, bumpAfterError] = useReducer((n: number) => n + 1, 0);
+  const [locallyFailedSrc, setLocallyFailedSrc] = useState<string | null>(null);
+  // An image with no intrinsic width — an SVG with only a `viewBox` — sizes
+  // itself to its containing block. The lightbox <button> (and the figure /
+  // overlay wrappers) are shrink-to-fit, so the two sizes depend on each other
+  // and the browser resolves both to 0: the image loads, and nothing shows.
+  // Detected from the DOM after load (loaded pixels, laid out at 0 wide, in a
+  // container that has width) rather than guessed from the file extension;
+  // the wrappers then take the container's width, and the image follows.
+  const [stretch, setStretch] = useState(false);
+  const noteLayout = (el: HTMLImageElement) => {
+    if (stretch || !el.complete || el.naturalWidth === 0 || el.clientWidth > 0) return;
+    const container = el.parentElement?.parentElement;
+    if (container !== undefined && container !== null && container.clientWidth > 0) setStretch(true);
+  };
   const fallbackSrc = proxyFallbackSrc !== undefined && proxyFallbackSrc !== src ? proxyFallbackSrc : undefined;
-  const retryEnabled = shouldRetryPrimary({ src, fallbackSrc, retryOnError });
-  const retry = useImageRetry(src, retryEnabled);
+  // An in-box image that failed because its file did not exist yet: once a
+  // probe says it serves, forget the failure and load it under a fresh URL so
+  // neither the failed set nor the browser cache sees the old one. The stamp
+  // rides in `v=`, the cache-buster the file and image routes already accept
+  // (`lib/file-version.ts`); the image-transform route rejects any other
+  // query key with a 400. See `hooks/use-image-recovery.ts` for why this is
+  // a probe, not a timed re-load.
+  const [recoveredStamp, setRecoveredStamp] = useState<string | null>(null);
+  const loadSrc = recoveredStamp === null ? src : withVersionStamp(src, recoveredStamp);
   const { displaySrc, errored } = getLoadState({
-    src,
+    src: loadSrc,
     fallbackSrc,
-    retryEnabled,
-    retryFailed: retry.failed,
-    retrySrc: retry.displaySrc,
+    locallyFailed: locallyFailedSrc === loadSrc,
   });
-  const handleError = () => {
-    if (retryEnabled) {
-      retry.handleError();
-      return;
-    }
-    failedImageUrls.add(displaySrc);
+  useImageRecovery({
+    src: loadSrc,
+    errored,
+    onRecovered: (stamp) => {
+      failedImageUrls.delete(imageUrlKey(loadSrc));
+      setLocallyFailedSrc(null);
+      setRecoveredStamp(stamp);
+    },
+  });
+  const handleError = (failedSrc?: string) => {
+    failedImageUrls.add(imageUrlKey(failedSrc ?? displaySrc));
+    setLocallyFailedSrc(loadSrc);
     bumpAfterError();
   };
 
@@ -338,18 +349,18 @@ export function Image(props: ImageProps) {
     const el = imgRef.current;
     if (el === null || errored) return;
     if (el.complete && el.naturalWidth === 0 && el.getAttribute("src") !== null) {
-      handleError();
+      handleError(el.currentSrc || displaySrc);
     }
+    // The same race for `load`: a cached image is complete before the handler
+    // attaches, so the collapsed-layout check runs here too.
+    noteLayout(el);
     // `displaySrc` so a changed source is re-checked; `errored` so a placeholder
     // already showing does not re-enter.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleError is redefined every render; depending on it would re-run this on every render rather than on a source change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleError and noteLayout are redefined every render; depending on them would re-run this on every render rather than on a source change.
   }, [displaySrc, errored]);
 
-  const rotationStyle: CSSProperties | undefined =
-    rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
+  const rotationStyle: CSSProperties | undefined = rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
   const isOrthogonal = rotation === 90 || rotation === 270;
-
-  const lightboxCaption = typeof caption === "string" ? caption : undefined;
 
   const activate: ((element: HTMLImageElement) => void) | null = errored
     ? null
@@ -358,8 +369,6 @@ export function Image(props: ImageProps) {
       : externalOnClick !== undefined
         ? () => externalOnClick()
         : null;
-
-  const effectiveTitle = title;
 
   // Determine which layer is the outermost wrapper so the caller's
   // className lands there. Layer order, inside-out: img → orthogonal
@@ -372,21 +381,24 @@ export function Image(props: ImageProps) {
   ) : (
     <ImgElement
       src={displaySrc}
+      srcSet={srcSet} sizes={sizes}
       alt={alt}
       size={size}
       bordered={bordered}
       rotationStyle={rotationStyle}
-      title={effectiveTitle}
+      title={title}
       onActivate={activate}
       onError={handleError}
-      onLoad={retry.handleLoad}
+      onLoad={noteLayout}
+      stretch={stretch}
       lightbox={lightbox}
-      lightboxCaption={lightboxCaption}
+      lightboxSrc={lightboxSrc}
+      lightboxCaption={typeof caption === "string" ? caption : undefined}
       imgRef={imgRef}
       extraClass={imgExtra}
       loading={loading}
     />
   );
 
-  return assembleImage({ base, caption, overlay, errored, isOrthogonal, outerLayer, className, fullWidth: size === "chat" });
+  return assembleImage({ base, caption, overlay, errored, isOrthogonal, stretch, outerLayer, className });
 }

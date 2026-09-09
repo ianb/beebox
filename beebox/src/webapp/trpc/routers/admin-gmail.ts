@@ -1,5 +1,5 @@
 /**
- * Admin procedures for `config/connectors/gmail.json` — the `query`/`labels`
+ * Admin procedures for `_config/connectors/gmail.json` — the `query`/`labels`
  * shorthand only. Named `rules` are hand-edited; the mutation refuses to touch
  * a config that uses them rather than flattening them away.
  */
@@ -15,9 +15,10 @@ import {
 import { withCardLock } from "../../../lib/card-lock.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { stageAndCommitPaths } from "../../../lib/git.js";
+import { getBoxDir, BOX_DIRS } from "../../../lib/paths.js";
 import { ownerProcedure } from "../trpc.js";
 
-/** Shape of `config/connectors/gmail.json`, validated on read. */
+/** Shape of `_config/connectors/gmail.json`, validated on read. */
 const gmailConfigSchema = z.object({
   query: z.string().default(""),
   labels: z.array(z.string()).default([]),
@@ -43,9 +44,7 @@ async function readGmailConfigFile(configPath: string): Promise<GmailConfigFile>
 
 export const gmailAdminProcedures = {
   gmailConfig: ownerProcedure.query(async ({ ctx }) => {
-    const config = await readGmailConfigFile(
-      path.join(ctx.boxRoot, "config/connectors/gmail.json"),
-    );
+    const config = await readGmailConfigFile(path.join(getBoxDir(ctx.boxRoot, "connectors"), "gmail.json"));
     return {
       query: config.query,
       labels: config.labels,
@@ -66,13 +65,13 @@ export const gmailAdminProcedures = {
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
+      const configPath = path.join(getBoxDir(ctx.boxRoot, "connectors"), "gmail.json");
       return withCardLock(configPath, async () => {
         const existing = await readGmailConfigFile(configPath);
         if (existing.rules !== undefined) {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "Named Gmail rules must be edited in config/connectors/gmail.json",
+            message: "Named Gmail rules must be edited in _config/connectors/gmail.json",
           });
         }
         const next: Record<string, unknown> = {};
@@ -101,7 +100,7 @@ export const gmailAdminProcedures = {
         await fs.mkdir(path.dirname(configPath), { recursive: true });
         await fs.writeFile(configPath, JSON.stringify(next, null, 2) + "\n");
         await stageAndCommitPaths(ctx.boxRoot, {
-          paths: ["config/connectors/gmail.json"],
+          paths: [path.join(BOX_DIRS.connectors, "gmail.json")],
           message: "Update Gmail filter config",
         });
         return {

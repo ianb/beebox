@@ -255,7 +255,7 @@ JSON.stringify({
 
 ## The plan — a connector-made tombstone is re-created when Drive lists it again
 
-A tombstone in `store/trash/` claims its Drive ID, which is what stops a mirror
+A tombstone in `_bookkeeping/trash/` claims its Drive ID, which is what stops a mirror
 re-creating a card someone deleted. But the connector makes tombstones too, when
 Drive says a child was trashed — and if that file is restored on Drive the card
 must come back. `restorable` is the set of IDs whose only claim is one of the
@@ -323,16 +323,16 @@ never its own child.
 
 ```ts continue
 const liveCards = [
-  { driveId: "folder-1", kind: "folder" as const, absPath: "/box/recipes/Recipes.gfolder.card", relPath: "", content: "" },
-  { driveId: "sheet-1", kind: "file" as const, absPath: "/box/recipes/Budget.gsheet.card", relPath: "", content: "" },
-  { driveId: "folder-2", kind: "folder" as const, absPath: "/box/recipes/Desserts/Desserts.gfolder.card", relPath: "", content: "" },
-  { driveId: "sheet-2", kind: "file" as const, absPath: "/box/recipes/Desserts/Cookies.gsheet.card", relPath: "", content: "" },
-  { driveId: "sheet-3", kind: "file" as const, absPath: "/box/elsewhere/Other.gsheet.card", relPath: "", content: "" },
+  { driveId: "folder-1", kind: "folder" as const, absPath: "/_content/recipes/Recipes.gfolder.card", relPath: "", content: "" },
+  { driveId: "sheet-1", kind: "file" as const, absPath: "/_content/recipes/Budget.gsheet.card", relPath: "", content: "" },
+  { driveId: "folder-2", kind: "folder" as const, absPath: "/_content/recipes/Desserts/Desserts.gfolder.card", relPath: "", content: "" },
+  { driveId: "sheet-2", kind: "file" as const, absPath: "/_content/recipes/Desserts/Cookies.gsheet.card", relPath: "", content: "" },
+  { driveId: "sheet-3", kind: "file" as const, absPath: "/_content/elsewhere/Other.gsheet.card", relPath: "", content: "" },
 ];
 JSON.stringify(mountEntries({
   liveCards,
-  mountDir: "/box/recipes",
-  folderCardPath: "/box/recipes/Recipes.gfolder.card",
+  mountDir: "/_content/recipes",
+  folderCardPath: "/_content/recipes/Recipes.gfolder.card",
 }))
 => [{"driveId":"sheet-1","kind":"file","cardPath":"Budget.gsheet.card"},{"driveId":"folder-2","kind":"folder","cardPath":"Desserts/Desserts.gfolder.card"}]
 ```
@@ -359,7 +359,7 @@ extractDriveFileId("https://docs.google.com/document/d/doc-abc123/edit")
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/recipes/Recipes.gfolder.card",
+  "_content/drive/recipes/Recipes.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 box.commitAll("mount the Recipes folder");
@@ -380,8 +380,8 @@ const result = await connector.sync();
 JSON.stringify({ success: result.success, error: result.error ?? null })
 => {"success":true,"error":null}
 
-JSON.stringify(cardsIn(await box.list(), "store/drive/recipes/"))
-=> ["store/drive/recipes/Bake_Times.gsheet.card","store/drive/recipes/Recipes.gfolder.card","store/drive/recipes/Scan_2024pdf.glink.card","store/drive/recipes/Sourdough.gdoc.card"]
+JSON.stringify(cardsIn(await box.list(), "_content/drive/recipes/"))
+=> ["_content/drive/recipes/Bake_Times.gsheet.card","_content/drive/recipes/Recipes.gfolder.card","_content/drive/recipes/Scan_2024pdf.glink.card","_content/drive/recipes/Sourdough.gdoc.card"]
 ```
 
 The pointer carries what the item is and where — and an empty body, because
@@ -389,7 +389,7 @@ the purpose notes are the boxholder's to write. (The card name comes from
 `safeFilename`, which drops the dot in `Scan 2024.pdf`.)
 
 ```ts continue
-await box.read("store/drive/recipes/Scan_2024pdf.glink.card")
+await box.read("_content/drive/recipes/Scan_2024pdf.glink.card")
 => ---
 drive-id: pdf-1
 link: https://drive.google.com/file/d/pdf-1/view
@@ -402,7 +402,7 @@ origin: mirror
 The folder card is re-stamped with the Drive name, link, and the last outcome.
 
 ```ts continue
-const folderCard = await box.read("store/drive/recipes/Recipes.gfolder.card");
+const folderCard = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 folderCard.replace(/last-sync: .*/, "last-sync: «stamped»")
 => ---
 drive-id: folder-1
@@ -431,7 +431,7 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/recipes/Recipes.gfolder.card",
+  "_content/drive/recipes/Recipes.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 box.commitAll("mount the Recipes folder");
@@ -450,15 +450,15 @@ const result = await connector.sync();
 JSON.stringify({ success: result.success, error: result.error ?? null })
 => {"success":true,"error":null}
 
-JSON.stringify(cardsIn(await box.list(), "store/drive/recipes/"))
-=> ["store/drive/recipes/Desserts/Cookies.gsheet.card","store/drive/recipes/Desserts/Desserts.gfolder.card","store/drive/recipes/Recipes.gfolder.card"]
+JSON.stringify(cardsIn(await box.list(), "_content/drive/recipes/"))
+=> ["_content/drive/recipes/Desserts/Cookies.gsheet.card","_content/drive/recipes/Desserts/Desserts.gfolder.card","_content/drive/recipes/Recipes.gfolder.card"]
 ```
 
 The subfolder's own card is a mount in its own right — it can be moved,
 unmounted, or given a status of its own.
 
 ```ts continue
-(await box.read("store/drive/recipes/Desserts/Desserts.gfolder.card")).split("\n")[1]
+(await box.read("_content/drive/recipes/Desserts/Desserts.gfolder.card")).split("\n")[1]
 => drive-id: folder-2
 ```
 
@@ -475,7 +475,7 @@ is the target's while its name is the one shown in the folder.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/recipes/Recipes.gfolder.card",
+  "_content/drive/recipes/Recipes.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 box.commitAll("mount the Recipes folder");
@@ -497,7 +497,7 @@ const drive = createFakeGoogleDrive({
 
 const connector = createGoogleDriveConnector(box.root, drive);
 const result = await connector.sync();
-const card = await box.read("store/drive/recipes/Shared_Bake_Times.gsheet.card");
+const card = await box.read("_content/drive/recipes/Shared_Bake_Times.gsheet.card");
 JSON.stringify({
   success: result.success,
   driveId: /drive-id: (\S+)/.exec(card)?.[1],
@@ -523,7 +523,7 @@ const warnings = await captureWarnings(async () => {
 JSON.stringify({
   success: cycled?.success,
   cycleNoted: warnings.some((line) => line.includes("cycle, not descended")),
-  status: /status: (\S+)/.exec(await box.read("store/drive/recipes/Recipes.gfolder.card"))?.[1],
+  status: /status: (\S+)/.exec(await box.read("_content/drive/recipes/Recipes.gfolder.card"))?.[1],
 })
 => {"success":true,"cycleNoted":true,"status":"ok"}
 ```
@@ -540,7 +540,7 @@ Only a `getFile` that says `trashed` justifies trashing the box card.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/recipes/Recipes.gfolder.card",
+  "_content/drive/recipes/Recipes.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 box.commitAll("mount the Recipes folder");
@@ -559,8 +559,8 @@ const drive = createFakeGoogleDrive({
 
 const connector = createGoogleDriveConnector(box.root, drive);
 await connector.sync();
-JSON.stringify(cardsIn(await box.list(), "store/drive/recipes/"))
-=> ["store/drive/recipes/Doomed.gsheet.card","store/drive/recipes/Recipes.gfolder.card","store/drive/recipes/Wanderer.gsheet.card"]
+JSON.stringify(cardsIn(await box.list(), "_content/drive/recipes/"))
+=> ["_content/drive/recipes/Doomed.gsheet.card","_content/drive/recipes/Recipes.gfolder.card","_content/drive/recipes/Wanderer.gsheet.card"]
 ```
 
 Now trash one on Drive and move the other into a different folder. Both drop
@@ -576,12 +576,12 @@ const warnings = await captureWarnings(async () => {
   await connector.sync();
 });
 JSON.stringify({
-  cards: cardsIn(await box.list(), "store/drive/recipes/"),
-  trashed: (await box.list()).includes("store/trash/Doomed.gsheet.card"),
-  trashNote: warnings.some((l) => l.includes("trashed: store/drive/recipes/Doomed.gsheet.card")),
-  movedNote: warnings.some((l) => l.includes("not-in-folder: store/drive/recipes/Wanderer.gsheet.card")),
+  cards: cardsIn(await box.list(), "_content/drive/recipes/"),
+  trashed: (await box.list()).includes("_bookkeeping/trash/Doomed.gsheet.card"),
+  trashNote: warnings.some((l) => l.includes("trashed: _content/drive/recipes/Doomed.gsheet.card")),
+  movedNote: warnings.some((l) => l.includes("not-in-folder: _content/drive/recipes/Wanderer.gsheet.card")),
 })
-=> {"cards":["store/drive/recipes/Recipes.gfolder.card","store/drive/recipes/Wanderer.gsheet.card"],"trashed":true,"trashNote":true,"movedNote":true}
+=> {"cards":["_content/drive/recipes/Recipes.gfolder.card","_content/drive/recipes/Wanderer.gsheet.card"],"trashed":true,"trashNote":true,"movedNote":true}
 ```
 
 The mount card carries the count, so a child the mirror no longer accounts for
@@ -589,7 +589,7 @@ is visible on the mount itself rather than only in a console warning. `trashed`
 needs no count — that card is gone.
 
 ```ts continue
-const stamped = await box.read("store/drive/recipes/Recipes.gfolder.card");
+const stamped = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 JSON.stringify({
   notInFolder: /not-in-folder: (\d+)/.exec(stamped)?.[1],
   unknown: /^unknown: (\d+)/m.exec(stamped)?.[1],
@@ -607,9 +607,9 @@ const failing = await captureWarnings(async () => {
   await connector.sync();
 });
 JSON.stringify({
-  stillThere: (await box.list()).includes("store/drive/recipes/Wanderer.gsheet.card"),
-  inTrash: (await box.list()).includes("store/trash/Wanderer.gsheet.card"),
-  unknownNote: failing.some((l) => l.includes("unknown: store/drive/recipes/Wanderer.gsheet.card")),
+  stillThere: (await box.list()).includes("_content/drive/recipes/Wanderer.gsheet.card"),
+  inTrash: (await box.list()).includes("_bookkeeping/trash/Wanderer.gsheet.card"),
+  unknownNote: failing.some((l) => l.includes("unknown: _content/drive/recipes/Wanderer.gsheet.card")),
 })
 => {"stillThere":true,"inTrash":false,"unknownNote":true}
 ```
@@ -619,7 +619,7 @@ The stamp follows the pass: the child is now `unknown` rather than
 stale number is worse than none.
 
 ```ts continue
-const restamped = await box.read("store/drive/recipes/Recipes.gfolder.card");
+const restamped = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 JSON.stringify({
   notInFolder: /not-in-folder: (\d+)/.exec(restamped)?.[1],
   unknown: /^unknown: (\d+)/m.exec(restamped)?.[1],
@@ -641,7 +641,7 @@ silently overwriting or silently skipping.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/recipes/Recipes.gfolder.card",
+  "_content/drive/recipes/Recipes.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 box.commitAll("mount the Recipes folder");
@@ -659,9 +659,9 @@ const result = await connector.sync();
 JSON.stringify({
   success: result.success,
   error: result.error,
-  cards: cardsIn(await box.list(), "store/drive/recipes/"),
+  cards: cardsIn(await box.list(), "_content/drive/recipes/"),
 })
-=> {"success":false,"error":"Drive file pdf-2 (\"Report.pdf\") maps to store/drive/recipes/Reportpdf.glink.card, already claimed by drive-id pdf-1","cards":["store/drive/recipes/Recipes.gfolder.card","store/drive/recipes/Reportpdf.glink.card"]}
+=> {"success":false,"error":"Drive file pdf-2 (\"Report.pdf\") maps to _content/drive/recipes/Reportpdf.glink.card, already claimed by drive-id pdf-1","cards":["_content/drive/recipes/Recipes.gfolder.card","_content/drive/recipes/Reportpdf.glink.card"]}
 ```
 
 The folder card still reads `ok`: the *mount* is healthy — it listed fine and
@@ -669,7 +669,7 @@ mirrored everything it could. The collision is a sync-report failure about one
 child, not a broken mount, and `success: false` is what carries it.
 
 ```ts continue
-/status: (\S+)/.exec(await box.read("store/drive/recipes/Recipes.gfolder.card"))?.[1]
+/status: (\S+)/.exec(await box.read("_content/drive/recipes/Recipes.gfolder.card"))?.[1]
 => ok
 ```
 
@@ -687,7 +687,7 @@ card.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/recipes/Recipes.gfolder.card",
+  "_content/drive/recipes/Recipes.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 box.commitAll("mount the Recipes folder");
@@ -710,10 +710,10 @@ const trashOnDrive = (id: string, trashed: boolean) => {
 trashOnDrive("sheet-1", true);
 await captureWarnings(async () => { await connector.sync(); });
 JSON.stringify({
-  gone: cardsIn(await box.list(), "store/drive/recipes/"),
-  tombstone: (await box.list()).includes("store/trash/Bake_Times.gsheet.card"),
+  gone: cardsIn(await box.list(), "_content/drive/recipes/"),
+  tombstone: (await box.list()).includes("_bookkeeping/trash/Bake_Times.gsheet.card"),
 })
-=> {"gone":["store/drive/recipes/Recipes.gfolder.card"],"tombstone":true}
+=> {"gone":["_content/drive/recipes/Recipes.gfolder.card"],"tombstone":true}
 ```
 
 Restored on Drive, the next sync lists it again and re-creates the card — the
@@ -724,9 +724,9 @@ trashOnDrive("sheet-1", false);
 const back = await connector.sync();
 JSON.stringify({
   success: back.success,
-  cards: cardsIn(await box.list(), "store/drive/recipes/"),
+  cards: cardsIn(await box.list(), "_content/drive/recipes/"),
 })
-=> {"success":true,"cards":["store/drive/recipes/Bake_Times.gsheet.card","store/drive/recipes/Recipes.gfolder.card"]}
+=> {"success":true,"cards":["_content/drive/recipes/Bake_Times.gsheet.card","_content/drive/recipes/Recipes.gfolder.card"]}
 ```
 
 ```ts cleanup
@@ -743,7 +743,7 @@ lists that child, and the card stays gone.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/recipes/Recipes.gfolder.card",
+  "_content/drive/recipes/Recipes.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 box.commitAll("mount the Recipes folder");
@@ -761,15 +761,15 @@ await connector.sync();
 
 const receipt = await moveCardsToTrash(
   { boxRoot: box.root, write: () => {}, writeLine: () => {} },
-  ["store/drive/recipes/Bake_Times.gsheet.card"],
+  ["_content/drive/recipes/Bake_Times.gsheet.card"],
 );
 box.commitAll("bbx rm the synced child");
-JSON.stringify({ moved: receipt.moves.length, cards: cardsIn(await box.list(), "store/drive/recipes/") })
-=> {"moved":1,"cards":["store/drive/recipes/Recipes.gfolder.card"]}
+JSON.stringify({ moved: receipt.moves.length, cards: cardsIn(await box.list(), "_content/drive/recipes/") })
+=> {"moved":1,"cards":["_content/drive/recipes/Recipes.gfolder.card"]}
 
 const after = await connector.sync();
-JSON.stringify({ success: after.success, cards: cardsIn(await box.list(), "store/drive/recipes/") })
-=> {"success":true,"cards":["store/drive/recipes/Recipes.gfolder.card"]}
+JSON.stringify({ success: after.success, cards: cardsIn(await box.list(), "_content/drive/recipes/") })
+=> {"success":true,"cards":["_content/drive/recipes/Recipes.gfolder.card"]}
 ```
 
 ```ts cleanup
@@ -786,7 +786,7 @@ are left alone.
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed(
-  "store/drive/recipes/Recipes.gfolder.card",
+  "_content/drive/recipes/Recipes.gfolder.card",
   createGfolderTemplate({ driveId: "folder-1" }),
 );
 box.commitAll("mount the Recipes folder");
@@ -806,17 +806,17 @@ const folder = drive.files.find((f) => f.id === "folder-1");
 if (folder) folder.trashed = true;
 const warnings = await captureWarnings(async () => { await connector.sync(); });
 JSON.stringify({
-  cards: cardsIn(await box.list(), "store/drive/recipes/"),
+  cards: cardsIn(await box.list(), "_content/drive/recipes/"),
   noted: warnings.some((l) => l.includes("folder is in Drive trash")),
 })
-=> {"cards":["store/drive/recipes/Bake_Times.gsheet.card","store/drive/recipes/Recipes.gfolder.card"],"noted":true}
+=> {"cards":["_content/drive/recipes/Bake_Times.gsheet.card","_content/drive/recipes/Recipes.gfolder.card"],"noted":true}
 ```
 
 The card itself carries the reason, so the mount reads as broken rather than as
 an empty folder that mirrored fine.
 
 ```ts continue
-const card = await box.read("store/drive/recipes/Recipes.gfolder.card");
+const card = await box.read("_content/drive/recipes/Recipes.gfolder.card");
 JSON.stringify({
   status: /status: (\S+)/.exec(card)?.[1],
   error: /error: (.*)/.exec(card)?.[1],
@@ -829,7 +829,7 @@ Untrashed on Drive, the very next pass is ordinary again.
 ```ts continue
 if (folder) folder.trashed = false;
 await connector.sync();
-/status: (\S+)/.exec(await box.read("store/drive/recipes/Recipes.gfolder.card"))?.[1]
+/status: (\S+)/.exec(await box.read("_content/drive/recipes/Recipes.gfolder.card"))?.[1]
 => ok
 ```
 

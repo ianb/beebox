@@ -124,7 +124,11 @@ export async function createServer(options?: InternalServerOptions): Promise<Fas
   // eslint-disable-next-line max-params -- Fastify's setErrorHandler callback signature is (error, request, reply)
   server.setErrorHandler<FastifyError>((error, request, reply) => {
     const statusCode = error.statusCode ?? 500;
-    console.error(`[http] ${request.method} ${request.url} failed (${statusCode}): ${error.message}`);
+    // A fetch that never got a response says only "fetch failed"; the reason
+    // (ENOTFOUND, ECONNRESET, a certificate) rides in `cause`, and a log line
+    // without it cannot be acted on (a TTS 500 on 2026-09-08 read that way).
+    const cause = error.cause instanceof Error ? ` — cause: ${error.cause.message}` : "";
+    console.error(`[http] ${request.method} ${request.url} failed (${statusCode}): ${error.message}${cause}`);
     reply.status(statusCode).send({
       error: statusCode < 500 ? error.message : "Internal server error",
     });
@@ -364,7 +368,7 @@ export async function startServer(options?: InternalServerOptions): Promise<void
     await server.listen({ port, host });
     // Register live public URLs for each served box so subprocess spawns
     // pick up BBX_BOX_NAME / BBX_SERVER_URL via buildScriptEnv without
-    // requiring publicUrl to be set in config/box.json.
+    // requiring publicUrl to be set in _config/box.json.
     for (const box of boxes) {
       registerBoxPublicUrl(box.boxRoot, `http://${host}:${port}/${box.slug}`);
     }

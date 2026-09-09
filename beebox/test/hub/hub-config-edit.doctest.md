@@ -101,14 +101,15 @@ describeAddBoxPlan(again).includes("Already registered")
 => true
 ```
 
-A package root and that box's own `content/` directory are the same box, so
-registering one when the other is already registered is also unchanged rather
-than a second engine against one `events.db`.
+A stale v2-manifest path — the box's old `content/` subdirectory — is NOT
+silently unified with the box root anymore (shapeVersion 3 has one root and
+no `content/` dir). Registering it under the same slug is a conflict the
+operator must fix, not a no-op:
 
 ```ts continue
 const viaContent = await tryPlan(configPath, "hearth", path.join(tmp.root, "boxes/hearth/content"));
-viaContent.action
-=> unchanged
+viaContent instanceof HubConfigEditError
+=> true
 ```
 
 ## A reserved slug fails before anything is written

@@ -6,10 +6,10 @@
  */
 
 import { useEffect, useRef, useCallback } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch, useLocation } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
-import { ACTIVITY_KINDS } from "@shared/card-activity-kinds";
+import { CardActivityStore } from "./conversation/card-activity-store";
 import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "./ChatMessages";
@@ -38,33 +38,53 @@ function useCardUrlPersistence(opts: {
 }) {
   const { initialCard, activeView, onZoomView, boxSlug } = opts;
   const navigate = useNavigate();
+  const onChatPage = useLocation().pathname.endsWith("/chat");
   const search = useSearch({ strict: false });
   const liveCard = typeof search.card === "string" ? search.card : undefined;
 
-  const restoredRef = useRef(false);
+  const observedInput = useRef<string | undefined>(undefined);
+  const projectedCard = useRef<string | undefined>(undefined);
+  const restorePending = useRef<string | null>(null);
   useEffect(() => {
-    if (restoredRef.current) return;
-    restoredRef.current = true;
-    if (initialCard === undefined || initialCard === "") return;
+    if (!onChatPage || initialCard === observedInput.current) return;
+    observedInput.current = initialCard;
+    if (!initialCard || initialCard === projectedCard.current) return;
+    restorePending.current = initialCard;
     const target = parseViewUrl(initialCard);
     onZoomView({ target, label: target.path });
-  }, [initialCard, onZoomView]);
+  }, [initialCard, onZoomView, onChatPage]);
 
   const currentCard = activeView ? serializeViewUrl(activeView.target) : undefined;
   useEffect(() => {
     // Don't write before the restore has had its chance — otherwise the first
     // render (activeView still null) would strip a card from the URL before we
     // ever open it. Navigate only on a real change (serialize∘parse is stable,
-    // so this can't loop); spread the previous search so other params survive;
-    // `replace: true` keeps reload on the same card and doesn't spam history.
-    // toSearch() is the sanctioned router-boundary escape hatch (see routing.ts).
-    if (!restoredRef.current) return;
+    // so this can't loop); `replace: true` keeps reload on the same card and
+    // doesn't spam history. toSearch() is the sanctioned router-boundary escape
+    // hatch (see routing.ts).
+    //
+    // A FUNCTIONAL updater, not a spread of the captured `search`: the
+    // companion deep-link hook strips `?companion=` in the same commit, and a
+    // write built from a snapshot taken before that put the param back — so a
+    // reload re-fired the one-shot deep link and reopened a card that had been
+    // closed, which is the exact bug useCompanionDeepLink's own comment warns
+    // about.
+    if (!onChatPage) return;
+    if (restorePending.current !== null && restorePending.current !== currentCard) return;
+    restorePending.current = null;
     if (liveCard === currentCard) return;
-    const next = { ...search };
-    if (currentCard === undefined) delete next.card;
-    else next.card = currentCard;
-    void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch(next), replace: true });
-  }, [currentCard, liveCard, search, navigate, boxSlug]);
+    projectedCard.current = currentCard;
+    void navigate({
+      to: href(`/${boxSlug}/chat`),
+      search: toSearch((prev: Record<string, unknown>) => {
+        const next = { ...prev };
+        if (currentCard === undefined) delete next["card"];
+        else next["card"] = currentCard;
+        return next;
+      }),
+      replace: true,
+    });
+  }, [currentCard, liveCard, navigate, boxSlug, onChatPage]);
 }
 
 /** What `useCardSend` carries on a SEND event: open card + activity since the
@@ -80,65 +100,21 @@ export interface CardSend {
    *  the query typed). The detail overwrites any prior detail for the same kind
    *  — typing `b`,`bo`,`boat` collapses to the final state. */
   report: (kind: ActivityKind, detail?: string) => void;
-  /** Capture the card fields for a SEND event, clearing the live state. */
+  /** Capture without discarding activity; rejection/cancellation leaves it intact. */
   capture: () => CardSendFields;
+  /** Consume only the accepted snapshot, preserving later activity per source. */
+  accepted: (fields: CardSendFields) => void;
 }
 
-/**
- * Own the per-turn companion-card activity accumulator and the capture/clear
- * lifecycle for the `open-card`/`card-activity`/`card-state` snapshot fields.
- *
- * The accumulator is a per-kind map: `report(kind, detail)` records the kind
- * and overwrites its detail (so per-keystroke reporting collapses to the latest
- * state, no debounce needed). Lifecycle (review #3): `capture` snapshots the
- * kinds + details for a SEND event and optimistically clears the live map (so
- * activity *after* the send accumulates fresh); if that send errors, the effect
- * below re-arms the snapshot so it isn't silently lost.
- */
-function useCardSend(opts: {
-  activeView: PanelTab | null;
-  error: string | null;
-}): CardSend {
-  const { activeView, error } = opts;
-  const kindsRef = useRef<Map<ActivityKind, string | undefined>>(new Map());
-  const lastSentRef = useRef<Map<ActivityKind, string | undefined>>(new Map());
-
+/** Activity follows its content source, independently of the selected conversation. */
+function useCardSend(source: string | undefined): CardSend {
+  const store = useRef(new CardActivityStore()).current;
   const report = useCallback((kind: ActivityKind, detail?: string) => {
-    kindsRef.current.set(kind, detail);
-  }, []);
-
-  const capture = useCallback((): CardSendFields => {
-    const kinds = ACTIVITY_KINDS.filter((k) => kindsRef.current.has(k));
-    const cardState: CardStateDetails = {};
-    for (const k of kinds) {
-      const detail = kindsRef.current.get(k);
-      if (typeof detail === "string" && detail !== "") cardState[k] = detail;
-    }
-    lastSentRef.current = new Map(kindsRef.current);
-    kindsRef.current.clear();
-    const openCard = activeView ? activeView.target.path : undefined;
-    return {
-      ...(openCard !== undefined ? { openCard } : {}),
-      ...(kinds.length > 0 ? { cardActivity: kinds } : {}),
-      ...(Object.keys(cardState).length > 0 ? { cardState } : {}),
-    };
-  }, [activeView]);
-
-  // `error` flips null→set only on STREAM_FAILED/STREAM_ERROR; track the edge so
-  // a failed send's activity (kinds + details) is re-armed exactly once, without
-  // clobbering anything reported since.
-  const prevErrorRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (error && !prevErrorRef.current) {
-      for (const [k, detail] of lastSentRef.current) {
-        if (!kindsRef.current.has(k)) kindsRef.current.set(k, detail);
-      }
-      lastSentRef.current.clear();
-    }
-    prevErrorRef.current = error;
-  }, [error]);
-
-  return { report, capture };
+    store.report(source, { kind, ...(detail === undefined ? {} : { detail }) });
+  }, [source, store]);
+  const capture = useCallback(() => store.capture(source), [source, store]);
+  const accepted = useCallback((fields: CardSendFields) => { store.accepted(fields); }, [store]);
+  return { report, capture, accepted };
 }
 
 /**
@@ -153,8 +129,9 @@ export function useCompanionCard(opts: {
   onZoomView: OnZoomView;
   boxSlug: string | undefined;
   error: string | null;
+  focusedRef?: string;
 }): CardSend {
-  const { initialCard, activeView, onZoomView, boxSlug, error } = opts;
+  const { initialCard, activeView, onZoomView, boxSlug, focusedRef } = opts;
   useCardUrlPersistence({ initialCard, activeView, onZoomView, boxSlug });
-  return useCardSend({ activeView, error });
+  return useCardSend(focusedRef ?? (activeView === null ? undefined : serializeViewUrl(activeView.target)));
 }

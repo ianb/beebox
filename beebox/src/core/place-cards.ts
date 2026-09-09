@@ -24,7 +24,7 @@ export async function loadPlaces(boxRoot: string): Promise<PlaceCircle[]> {
   const matches = await glob("**/*.place.card", {
     cwd: boxRoot,
     nodir: true,
-    ignore: ["node_modules/**", ".git/**", "tmp/**", ".beebox/**"],
+    ignore: ["node_modules/**", ".git/**", "_tmp/**", ".beebox/**"],
   });
 
   const schemas = await createCardSchemaMap();

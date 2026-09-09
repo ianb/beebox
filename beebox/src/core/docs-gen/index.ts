@@ -1,27 +1,28 @@
 /**
  * Generate agent documentation for a Bee Box.
  *
- * Produces two categories of docs:
+ * Produces two categories of docs in the box:
  * 1. `.beebox/agent-guide.md` — compact, always-loaded via @-include in CLAUDE.md
- * 2. `docs/generated/*.md` — detailed reference docs, read on demand by agents
+ * 2. `_content/docs/generated/*.md` — docs compiled from THIS box's content
+ *    (guides, personality, box-local card types), read on demand by agents
+ *
+ * The reference docs about beebox itself (card types, `bbx` commands,
+ * connectors, views, …) are NOT written into the box: they live in the
+ * installed package (`package-docs.ts`, `ensurePackageDocs`), which this
+ * module keeps current on every run.
  *
  * Called by `bbx init` and at the start of `bbx reactor`.
  */
 
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { fileExists } from "../../lib/file-exists.js";
 import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, unlink, stat } from "node:fs/promises";
 import { z } from "zod";
 import { cardSchemas, loadBoxSchemas } from "../../schemas/registry.js";
-import { generateViewsDoc } from "../views/doc.js";
-import { generateChatVoiceDoc } from "../chat/voice-doc.js";
-import { generateNarrationModeDoc } from "../narration-mode-doc.js";
-import { generateReducingClaudeMdDoc } from "../reducing-claude-md-doc.js";
-import { generatePythonToolsDoc } from "../python-tools-doc.js";
 import { generateAgentGuide } from "../agent-guide/index.js";
-import { CONTAINS_DOC_APPENDIX } from "../agent-guide/search.js";
 import {
   installProcedures,
   installGuides,
@@ -35,12 +36,11 @@ import { generateRules } from "../init-rules.js";
 import { generateSkills } from "../box/skills.js";
 import { installValidationHooks } from "../install-validation-hooks.js";
 import { getBoxShape, type BoxShape } from "../../lib/box-shape.js";
+import { getBoxDir } from "../../lib/paths.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths, withBoxGitLock } from "../../lib/git.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./shared.js";
-import { generateBbxCommands } from "./bbx-commands.js";
-import { generateCardDoc, generateConnectorsDocs } from "./content.js";
-import { generateProcedureGuide } from "./procedure-guide.js";
-import { generateTriageGuide } from "./triage.js";
+import { getTemplatesOwnedBy, type TemplateDefinition } from "../../schemas/templates.js";
+import { ensureEngineDocs, writeBoxCardDocs } from "./box-docs.js";
 import {
   scanProcedures,
   compileBriefings,
@@ -197,16 +197,16 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
   };
 
   // Config-level inputs
-  await checkDir(join(boxRoot, "config"), /\.(guide|personality)\.card$/);
-  await checkDir(join(boxRoot, "config/procedures"), /\.procedure\.card$/);
-  await checkDir(join(boxRoot, "config/schemas"), /\.ts$/);
+  await checkDir(getBoxDir(boxRoot, "config"), /\.(guide|personality)\.card$/);
+  await checkDir(getBoxDir(boxRoot, "procedures"), /\.procedure\.card$/);
+  await checkDir(getBoxDir(boxRoot, "schemas"), /\.ts$/);
 
   // Briefing cards (root + any subdirectory)
-  await check(join(boxRoot, "briefing.briefing.card"));
+  await check(join(boxRoot, "_content", "briefing.briefing.card"));
 
   // Person cards — a `boxholder: true` flag feeds the compiled personality's
   // boxholder identity line, so editing one must invalidate the doc cache.
-  await checkDir(join(boxRoot, "people"), /\.person\.card$/);
+  await checkDir(getBoxDir(boxRoot, "people"), /\.person\.card$/);
 
   // Per-chat guide cards
   await checkChatGuideMtimes(boxRoot, check);
@@ -221,12 +221,12 @@ async function checkChatGuideMtimes(
   boxRoot: string,
   check: (filePath: string) => Promise<void>
 ): Promise<void> {
-  const chatRoot = join(boxRoot, "store/chat");
+  const chatRoot = getBoxDir(boxRoot, "chat");
   let connectors: string[];
   try {
     connectors = await readdir(chatRoot);
   } catch (_e) {
-    // No store/chat directory — box has no chats yet. Expected; nothing to report.
+    // No _content/chat directory — box has no chats yet. Expected; nothing to report.
     return;
   }
 
@@ -289,75 +289,34 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
 }
 
 /**
- * Normalize a path as `getStatus` reports it (relative to `packageRoot`,
- * since `commitTemplateSyncChanges` runs git there — see its doc comment)
- * into the box-root-relative convention `isTemplateManagedPath` matches
- * against (`install-template-file.ts`'s `relPath`: normally relative to
- * `boxRoot`, with a `../...` prefix for the handful of templates a v2 box
- * owns at the package root, e.g. `src/schemas/CLAUDE.md`).
- *
- * For a legacy box `packageRoot === boxRoot`, so `contentPrefix` is empty
- * and every path passes through unchanged — v1 behavior is bit-for-bit the
- * same as before this function existed. For a v2 box, strip the box's
- * content-dir prefix (`content/`, but read from the shape rather than
- * hardcoded) from paths inside it, and rewrite paths outside it — which can
- * only be one level up, at the package root itself, per the "v2
- * (package-layout) boxes" note in `install-template-file.ts` — as `../...`.
- * Without this, every v2 git-status path retained its `content/` (or
- * `../src/...`) prefix, `isTemplateManagedPath` matched nothing, and the
- * selective sync commit silently committed nothing.
- */
-function toBoxRelativePath(gitPath: string, shape: { packageRoot: string; boxRoot: string }): string {
-  const contentPrefix = relative(shape.packageRoot, shape.boxRoot);
-  if (contentPrefix === "") return gitPath;
-  const prefix = `${contentPrefix}/`;
-  if (gitPath.startsWith(prefix)) return gitPath.slice(prefix.length);
-  return `../${gitPath}`;
-}
-
-/**
  * Commit any template-managed paths the install/generateRules helpers
  * dirtied, leaving user work in progress (in other paths) alone.
  *
- * Runs at the REPO ROOT, not `boxRoot`. `getStatus`/`stageFiles`/`commitPaths`
- * all shell out to `git`, which reports and accepts pathspecs relative to
- * wherever it's invoked from — for a v2 box `boxRoot` (`content/`) is nested
- * one level under the actual repo root (the package root), so a path like
- * `.claude/settings.json` (which git status reports relative to the repo
- * root it found) would resolve to the wrong file (or nothing) if staged with
- * cwd=`boxRoot`. Legacy boxes are unaffected — their repo root IS `boxRoot`.
- * Found via `bbx upgrade`'s end-to-end smoke run: the `.claude/settings.json`
- * hook install landed here, staging fatally errored with "pathspec did not
- * match any files" before this fix.
+ * shapeVersion 3 has one root, so `boxRoot` IS the repo root and every
+ * git-status path `getStatus`/`stageFiles`/`commitPaths` report or accept is
+ * already box-root-relative — no prefix normalization needed.
  *
  * Exported (rather than only reachable through `generateDocs`) so doctests
- * can exercise the git-status normalization directly against a minimal
- * fixture, without also going through `installValidationHooks` + a real,
- * executable `.git/hooks/pre-commit` that shells out to a `bbx` binary — an
- * unrelated hazard in a repo-in-a-repo dev/test environment.
+ * can exercise the sync commit directly against a minimal fixture, without
+ * also going through `installValidationHooks` + a real, executable
+ * `.git/hooks/pre-commit` that shells out to a `bbx` binary — an unrelated
+ * hazard in a repo-in-a-repo dev/test environment.
  */
 export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
   const shape = await getBoxShape(boxRoot);
-  const { packageRoot } = shape;
-  if (!(await isRepo(packageRoot))) return;
-  if (!(await hasCommits(packageRoot))) return;
+  const { boxRoot: repoRoot } = shape;
+  if (!(await isRepo(repoRoot))) return;
+  if (!(await hasCommits(repoRoot))) return;
 
-  // Locked from the status read through the commit. Note the lock is taken on
-  // `packageRoot` while every other writer takes it on `boxRoot` (`content/`) —
-  // both resolve to the same git directory, so they are the same lock.
-  await withBoxGitLock(packageRoot, async () => {
-    const status = await getStatus(packageRoot);
+  await withBoxGitLock(repoRoot, async () => {
+    const status = await getStatus(repoRoot);
     const candidates = [...status.staged, ...status.modified, ...status.untracked];
-    // Filter against the box-root-relative form (what isTemplateManagedPath's
-    // patterns are written against), but keep the original git-reported paths
-    // in `toCommit` — stageFiles/commitPaths run with cwd=packageRoot, so they
-    // need the packageRoot-relative form git itself understands.
-    const toCommit = candidates.filter((p) => isTemplateManagedPath(toBoxRelativePath(p, shape)));
+    const toCommit = candidates.filter((p) => isTemplateManagedPath(p));
     if (toCommit.length === 0) return;
 
     // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
-    await stageFiles(packageRoot, toCommit);
-    await commitPaths(packageRoot, {
+    await stageFiles(repoRoot, toCommit);
+    await commitPaths(repoRoot, {
       paths: toCommit,
       message: "Sync templates from upstream",
       trailers: { "Triggered-By": "generateDocs" },
@@ -397,75 +356,29 @@ interface DocWritePlan {
   debug: boolean;
   procedures: ProcedureSummary[];
   allCardSchemas: typeof cardSchemas;
+  boxCardSchemas: typeof cardSchemas;
+  boxTemplates: TemplateDefinition[];
+  engineSourcePresent: boolean;
   personalitySection: string | undefined;
   shape: BoxShape;
 }
 
 /**
- * Write the agent guide plus all static reference docs (bbx commands,
- * connectors, views, voice, per-card-type, etc.) in parallel.
+ * Write the agent guide and the box-local card docs (which first clear out any
+ * engine docs an older engine left in the box's docs dir — they live in the
+ * package now, `package-docs.ts`).
  */
 async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
-  const { boxRoot, debug, procedures, allCardSchemas, personalitySection, shape } = plan;
+  const { boxRoot, debug, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape } = plan;
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, shape }), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "bbx-commands.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/bbx-commands.md`, content: generateBbxCommands(), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/connectors.md`, content: generateConnectorsDocs(), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "views.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/views.md`, content: generateViewsDoc(), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "chat-voice.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/chat-voice.md`, content: generateChatVoiceDoc(), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "narration-mode.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/narration-mode.md`, content: generateNarrationModeDoc(), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "reducing-claude-md.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/reducing-claude-md.md`, content: generateReducingClaudeMdDoc(), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "triage.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/triage.md`, content: generateTriageGuide(), debug })),
-    writeFile(join(boxRoot, DOCS_DIR, "python-tools.md"),
-      withDocId({ relativePath: `${DOCS_DIR}/python-tools.md`, content: generatePythonToolsDoc(), debug })),
-    // Per-schema generated docs: each frontmatter schema with an optional
-    // `instructions` field gets a `card-<type>.md` doc.
-    writeCardDocs({ boxRoot, debug, allCardSchemas }),
+      withDocId({
+        relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`,
+        content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape }),
+        debug,
+      })),
+    writeBoxCardDocs({ boxRoot, debug, boxCardSchemas, boxTemplates }),
   ]);
-}
-
-/**
- * Build the per-schema card-doc writes for every frontmatter schema that
- * supplies `instructions`.
- */
-async function writeCardDocs(params: {
-  boxRoot: string;
-  debug: boolean;
-  allCardSchemas: typeof cardSchemas;
-}): Promise<void> {
-  const { boxRoot, debug, allCardSchemas } = params;
-  const currentCardDocs = allCardSchemas
-    .map((s) => ({
-      name: s.type,
-      // Searchable types get the canonical contains: writing rule appended.
-      instructions: s.instructions !== undefined && s.searchable ?
-        `${s.instructions}\n\n${CONTAINS_DOC_APPENDIX}` : s.instructions,
-    }))
-    .filter((s): s is { name: string; instructions: string } => s.instructions !== undefined);
-
-  await Promise.all(currentCardDocs.map((s) => {
-    const filename = `card-${s.name}.md`;
-    return writeFile(join(boxRoot, DOCS_DIR, filename),
-      withDocId({ relativePath: `${DOCS_DIR}/${filename}`, content: generateCardDoc(s.name, s.instructions), debug }));
-  }));
-
-  // Prune card-<type>.md docs for schemas that no longer exist, mirroring
-  // init-rules.ts's cleanup of stale .claude/rules/card-<type>.md files.
-  const currentTypes = new Set(currentCardDocs.map((s) => s.name));
-  const isStale = (file: string): boolean =>
-    file.startsWith("card-") && file.endsWith(".md") && !currentTypes.has(file.slice(5, -3));
-  const stale = (await readdir(join(boxRoot, DOCS_DIR))).filter(isStale);
-  await Promise.all(stale.map((file) => unlink(join(boxRoot, DOCS_DIR, file))));
 }
 
 /**
@@ -474,12 +387,17 @@ async function writeCardDocs(params: {
 export async function generateDocs(boxRoot: string, options?: GenerateDocsOptions): Promise<void> {
   options = options ?? {};
   // TEMPORARY — diagnose unexpected writes to the beebox source repo
-  // (`.beebox/` and `docs/generated/` showing up here as untracked).
+  // (`.beebox/` and `_content/docs/generated/` showing up here as untracked).
   // Remove once the caller is identified.
   if (boxRoot.endsWith("/callback/beebox") || boxRoot.endsWith("/src/callback/beebox")) {
     console.warn(`[generateDocs:DIAG] called with boxRoot=${boxRoot}`);
     console.warn(new GenerateDocsAgainstSourceError().stack);
   }
+
+  // The package's own reference docs come first and are not behind the box
+  // cache: they depend on the engine alone, and a deleted or never-written
+  // directory must heal on any activity, not only when this box's inputs move.
+  await ensureEngineDocs();
 
   // Fast path: skip if no input files changed and source code unchanged.
   // Skipped entirely when force is set — see GenerateDocsOptions.force for why.
@@ -505,7 +423,11 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   // Load box-local frontmatter schemas alongside built-in ones.
   const boxSchemas = await loadBoxSchemas(boxRoot);
-  const allCardSchemas = [...cardSchemas, ...boxSchemas.cardSchemas];
+  const boxCardSchemas = boxSchemas.cardSchemas;
+  const allCardSchemas = [...cardSchemas, ...boxCardSchemas];
+  // loadBoxSchemas registered this box's `template` exports under its root.
+  const boxTemplates = getTemplatesOwnedBy(boxRoot);
+  const engineSourcePresent = await fileExists(join(PACKAGE_ROOT, "src", "cli", "index.ts"));
 
   // Determines whether the agent guide teaches the package-layout code
   // location rules — see "boxCodeLocationSection" in agent-guide/box-shape.ts.
@@ -514,7 +436,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // Compile personality first so we can include it in the agent guide
   const personalitySection = await compilePersonalities(boxRoot, debug);
 
-  await writeStaticDocs({ boxRoot, debug, procedures, allCardSchemas, personalitySection, shape });
+  await writeStaticDocs({ boxRoot, debug, procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, shape });
 
   // Compile guides and generate job-type rules
   const guides = await compileGuides(boxRoot, debug);
@@ -524,7 +446,11 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   // Rewrite agent guide now that we have guide summaries
   await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, guides, shape }), debug }));
+    withDocId({
+      relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`,
+      content: generateAgentGuide({ procedures, allCardSchemas, boxCardSchemas, boxTemplates, engineSourcePresent, personalitySection, guides, shape }),
+      debug,
+    }));
 
   // Compile briefing cards to .md files
   const briefingPaths = await compileBriefings(boxRoot, debug);

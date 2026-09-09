@@ -21,12 +21,14 @@ import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
 import type { FastifyInstance } from "fastify";
-import { scaffoldV2Box } from "../../src/core/box/package.js";
+import { scaffoldBoxRoot } from "../../src/core/box/package.js";
 import { createServer } from "../../src/webapp/server.js";
 import type { ChatBackend } from "../../src/services/claude-chat-types.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
 import type { Services } from "../../src/services/index.js";
 import { makeBoxAnnexShaped } from "./annex-box.js";
+import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
+import { signSession, type SessionUser } from "../../src/webapp/auth.js";
 
 export const TEST_SLUG = "test";
 
@@ -122,15 +124,15 @@ let templateDir: string | null = null;
 function getTemplateBox(): Promise<string> {
   if (templatePromise === null) {
     templatePromise = (async () => {
-      // Build a real v2 box: package half at `dir`, operational box at
-      // `dir/content`. Git lives at the package root (`dir`). `deps` symlinks
-      // `node_modules/beebox` so box-local schema/view resolution works
-      // in route tests that need it. `getTemplateBox` returns the PACKAGE
-      // root; `createTestServer` points the server at `<clone>/content`.
+      // Build a real v3 box (one root: package half + operational half both
+      // at `dir`). `deps` symlinks `node_modules/beebox` so box-local
+      // schema/view resolution works in route tests that need it.
+      // `getTemplateBox` returns that root; `createTestServer` points the
+      // server at the clone directly.
       const dir = await mkdtemp(join(tmpdir(), "bbx-route-tmpl-"));
-      await scaffoldV2Box(dir, { deps: true });
+      await scaffoldBoxRoot(dir, { deps: true });
       // A real box resolves react/react-dom from its OWN node_modules (view
-      // metadata import + node-target render). `scaffoldV2Box({deps})` only
+      // metadata import + node-target render). `scaffoldBoxRoot({deps})` only
       // symlinks beebox, so simulate the box's react dependency by
       // symlinking the engine's copy beside it — the same trick `bbx view test`
       // and the view doctests use. Without this, view-metadata import fails to
@@ -139,7 +141,7 @@ function getTemplateBox(): Promise<string> {
       for (const mod of ["react", "react-dom"]) {
         await symlink(join(reactNodeModules, mod), join(dir, "node_modules", mod), "dir");
       }
-      execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
+      execSync("git init -q -b main && git add -A && git commit --allow-empty -m init -q", {
         cwd: dir,
         stdio: "pipe",
       });
@@ -163,21 +165,34 @@ process.on("exit", () => {
   }
 });
 
-export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
+/**
+ * Clone the shared template box (package files + `content/` + git repo) into
+ * a fresh temp directory, optionally converting it to git-annex shape. The
+ * one place both `createTestServer` (one box) and `createTwoBoxTestServer`
+ * (two independent boxes on one server) get their box(es) from, so the clone
+ * + annex-conversion steps live in exactly one place.
+ */
+async function cloneTemplateBox(opts?: { annexBox?: boolean }): Promise<{ tmpDir: string; boxRoot: string }> {
   const template = await getTemplateBox();
   const tmpDir = await mkdtemp(join(tmpdir(), "bbx-route-test-"));
 
-  // Clone the prebuilt v2 package (package files + content/ + git repo) into
-  // the fresh dir — no per-boot git subprocess. See getTemplateBox above. The
-  // operational box root is `content/` inside the clone.
+  // Clone the prebuilt v3 box (package files + operational areas + git repo)
+  // into the fresh dir — no per-boot git subprocess. See getTemplateBox
+  // above. The clone IS the box root — one root, no nesting.
   await cp(template, tmpDir, { recursive: true });
-  const boxRoot = join(tmpDir, "content");
+  const boxRoot = tmpDir;
 
   // Before the server boots: registration-time probes read this shape, so
   // converting after `createServer` would be too late.
   if (opts?.annexBox === true) {
-    await makeBoxAnnexShaped({ packageRoot: tmpDir, boxRoot });
+    await makeBoxAnnexShaped(boxRoot);
   }
+
+  return { tmpDir, boxRoot };
+}
+
+export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
+  const { tmpDir, boxRoot } = await cloneTemplateBox({ annexBox: opts?.annexBox === true });
 
   // Build the box's event bus here and inject it so the test holds the SAME
   // instance the routes emit on (transient events never leave the process).
@@ -205,6 +220,120 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
       // writes (chat-history backfill, scheduler tick) finish just as we walk.
       // Remove the whole package clone (tmpDir), not just content/.
       await rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    },
+  };
+}
+
+/**
+ * One box's handle within a `createTwoBoxTestServer` fixture: the same
+ * `{ slug, boxRoot, eventBus }` shape route doctests already know, plus
+ * small credential-minting helpers so a cross-box auth test doesn't have to
+ * re-derive them. Named generally (not "leak"/"probe") because this fixture
+ * is meant to carry more than one kind of cross-box test.
+ */
+export interface TwoBoxFixtureBox {
+  slug: string;
+  boxRoot: string;
+  eventBus: EventBus;
+  /**
+   * This box's per-box agent loopback token (`.beebox/agent-token`), as a
+   * ready-to-send `Authorization` header value. Minted (and persisted) on
+   * first call via `getOrCreateAgentToken` — see `src/core/agent/token.ts`.
+   * The per-box auth wall (`server-box-scope.ts`) accepts this bearer as
+   * box-scoped authentication for THIS box only, so box B's handle never
+   * satisfies box A's wall.
+   */
+  agentBearerHeader(): string;
+  /**
+   * A signed `bbx_session` cookie VALUE (not the `name=value` pair) for the
+   * given identity, via `signSession` (`src/webapp/auth.ts`). Session
+   * identity is not box-scoped — `canAccessBox` decides per box from the
+   * server's single `BBX_OWNER_EMAIL`/local-user store plus each box's own
+   * `allowedEmails` — so a caller that needs a cookie to actually clear a
+   * box's wall must also set up that box's access config; this only signs
+   * the cookie.
+   */
+  sessionCookie(user?: SessionUser): string;
+}
+
+export interface TwoBoxTestServerOptions {
+  services?: Services;
+  devSurfaces?: boolean | undefined;
+  /**
+   * Serve behind the real auth wall. Defaults to `false` (unlike
+   * `createTestServer`, which defaults open) — this fixture exists to
+   * exercise cross-box auth, so real auth is the useful default; pass
+   * `true` to boot it open instead.
+   */
+  openAccess?: boolean | undefined;
+  chatBackend?: ChatBackend | undefined;
+}
+
+export interface TwoBoxTestServerContext {
+  server: FastifyInstance;
+  a: TwoBoxFixtureBox;
+  b: TwoBoxFixtureBox;
+  cleanup: () => Promise<void>;
+}
+
+const TWO_BOX_SLUG_A = "alpha";
+const TWO_BOX_SLUG_B = "beta";
+
+/**
+ * Boot ONE server serving TWO independent boxes — each its own template
+ * clone (own git repo, own `.beebox/agent-token`), each its own event bus —
+ * for tests that need to prove one box's credentials/data can't reach the
+ * other's scope. Reuses `cloneTemplateBox`, the same clone logic
+ * `createTestServer` uses, so the two fixtures can't drift.
+ */
+export async function createTwoBoxTestServer(opts?: TwoBoxTestServerOptions): Promise<TwoBoxTestServerContext> {
+  const [cloneA, cloneB] = await Promise.all([cloneTemplateBox(), cloneTemplateBox()]);
+  const eventBusA = createEventBus(cloneA.boxRoot, { pollInterval: 1000 });
+  const eventBusB = createEventBus(cloneB.boxRoot, { pollInterval: 1000 });
+
+  const server = await createServer({
+    boxes: [
+      { slug: TWO_BOX_SLUG_A, boxRoot: cloneA.boxRoot, eventBus: eventBusA },
+      { slug: TWO_BOX_SLUG_B, boxRoot: cloneB.boxRoot, eventBus: eventBusB },
+    ],
+    services: opts?.services,
+    openAccess: opts?.openAccess ?? false,
+    devSurfaces: opts?.devSurfaces === true,
+    frontendPath: TEST_FRONTEND_PATH,
+    ...(opts?.chatBackend !== undefined ? { chatBackend: opts.chatBackend } : {}),
+  });
+
+  function makeFixtureBox({
+    slug,
+    boxRoot,
+    eventBus,
+  }: {
+    slug: string;
+    boxRoot: string;
+    eventBus: EventBus;
+  }): TwoBoxFixtureBox {
+    return {
+      slug,
+      boxRoot,
+      eventBus,
+      agentBearerHeader: () => `Bearer ${getOrCreateAgentToken(boxRoot)}`,
+      sessionCookie: (user?: SessionUser) =>
+        signSession(user ?? { email: `${slug}-owner@example.com`, name: `${slug} owner` }),
+    };
+  }
+
+  return {
+    server,
+    a: makeFixtureBox({ slug: TWO_BOX_SLUG_A, boxRoot: cloneA.boxRoot, eventBus: eventBusA }),
+    b: makeFixtureBox({ slug: TWO_BOX_SLUG_B, boxRoot: cloneB.boxRoot, eventBus: eventBusB }),
+    cleanup: async () => {
+      await server.close();
+      eventBusA.close();
+      eventBusB.close();
+      await Promise.all([
+        rm(cloneA.tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }),
+        rm(cloneB.tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 }),
+      ]);
     },
   };
 }

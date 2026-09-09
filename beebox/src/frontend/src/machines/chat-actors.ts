@@ -1,3 +1,6 @@
+import { ChatSendRejectedError } from "../api-chat";
+import type { SendBinding } from "@shared/chat-composer-binding.js";
+import { boundTurnFields } from "./chat-bound-turn.js";
 /**
  * XState actors (and their internal helpers) for the chat machine.
  *
@@ -223,7 +226,7 @@ export const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; engine?: string; model?: string; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
+    input: { binding?: SendBinding; startup?: boolean; sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; engine?: string; model?: string; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
   }) => {
     let terminalFired = false;
     let msgCount = 0;
@@ -271,6 +274,8 @@ export const streamActor = fromCallback(
       ...(input.openCard !== undefined ? { openCard: input.openCard } : {}),
       ...(input.cardActivity && input.cardActivity.length > 0 ? { cardActivity: input.cardActivity } : {}),
       ...(input.cardState && Object.keys(input.cardState).length > 0 ? { cardState: input.cardState } : {}),
+      ...boundTurnFields(input.binding),
+      startup: input.startup,
     })
       .then((result) => {
         // Settle the receipt (acceptance-level, BEFORE the stream runs for a
@@ -343,7 +348,7 @@ export const streamActor = fromCallback(
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : "Send failed";
-        if (!settleRejectedTurnStart({ messageId: input.messageId, reason: msg, actorCancelled: cancelled })) return;
+        if (!settleRejectedTurnStart({ messageId: input.messageId, reason: msg, definitive: err instanceof ChatSendRejectedError, actorCancelled: cancelled })) return;
         console.error(`[chat] send failed: ${msg}`);
         logFsm("stream-throw", { msg, msgCount });
         sendBack({ type: "STREAM_FAILED", error: msg, accepted: false });
@@ -377,7 +382,7 @@ export function rollupStreamToEntry(
  * the receipt registry so the dispatcher's `Promise<Receipt>` settles for a
  * mid-turn queued send, same as the idle-path send in `streamActor`.
  */
-export function queueMessageToBackend(opts: { session: string; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }): void {
+export function queueMessageToBackend(opts: { binding?: SendBinding; startup?: boolean; session: string; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }): void {
   const { session, message, messageId, images, openCard, cardActivity, cardState } = opts;
   startChatTurn({
     session,
@@ -387,10 +392,12 @@ export function queueMessageToBackend(opts: { session: string; message: string; 
     ...(openCard !== undefined ? { openCard } : {}),
     ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
     ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
+    ...boundTurnFields(opts.binding),
+    startup: opts.startup,
   })
     .then((result) => settleFromTurnStart({ messageId, result }))
     .catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : "Send failed";
-      settleRejectedTurnStart({ messageId, reason: msg });
+      settleRejectedTurnStart({ messageId, reason: msg, definitive: err instanceof ChatSendRejectedError });
     });
 }

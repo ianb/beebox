@@ -5,7 +5,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
-import { requireBoxRoot } from "../../lib/paths.js";
+import { requireBoxRoot, getBoxDir } from "../../lib/paths.js";
 import { getBoxTime } from "../../lib/time.js";
 import {
   parseScheduledScript,
@@ -55,7 +55,7 @@ export interface TickResult {
 }
 
 export async function runTick(boxRoot: string, options: TickOptions): Promise<TickResult> {
-  const schedulesDir = path.join(boxRoot, "config/schedules");
+  const schedulesDir = getBoxDir(boxRoot, "schedules");
   const now = getBoxTime(boxRoot);
 
   const readFiles = await readScheduleFiles(schedulesDir, options);

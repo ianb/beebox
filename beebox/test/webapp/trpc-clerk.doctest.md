@@ -39,7 +39,7 @@ const res = await caller(box.root).clerk.commentary({
 print(`created: ${res.created.length}`);
 print(`webpage: ${res.created.some((p) => p.endsWith(".webpage.card"))}`);
 print(`commentary: ${res.created.some((p) => p.endsWith(".commentary.card"))}`);
-print(`filed in inbox: ${res.created[0].startsWith("box/inbox/")}`);
+print(`filed in inbox: ${res.created[0].startsWith("_content/inbox/")}`);
 print(`open startsWith chat: ${res.open.startsWith("chat?session=new")}`);
 =>
 created: 2
@@ -68,7 +68,7 @@ const err = await caller(box.root).clerk.commentary({
   url: "https://example.com/x",
   title: "X",
   readableMarkdown: "body",
-  destinationDir: "box/does-not-exist",
+  destinationDir: "_content/does-not-exist",
 }).then(() => "no-error", (e) => e.code);
 print(err);
 =>
@@ -105,7 +105,7 @@ const first = await caller(box.root).clerk.tabArrangement(arrangement);
 const retry = await caller(box.root).clerk.tabArrangement(arrangement);
 const saved = await readFile(path.join(box.root, first.card), "utf-8");
 print(`same card: ${first.card === retry.card}`);
-print(`in inbox: ${first.card.startsWith("box/inbox/")}`);
+print(`in inbox: ${first.card.startsWith("_content/inbox/")}`);
 print(`opens organizer: ${first.open.includes("companion=")}`);
 print(`draft: ${saved.includes("status: draft")}`);
 =>
@@ -140,7 +140,7 @@ async function seedLandmark(dir, cardBody) {
   await mkdir(path.join(dbox.root, dir), { recursive: true });
   await writeFile(path.join(dbox.root, dir, `${path.basename(dir)}.landmark.card`), cardBody, "utf-8");
 }
-await seedLandmark("store/reading", `---
+await seedLandmark("_content/reading", `---
 navigation:
   label: Reading
   symbol: 📚
@@ -149,7 +149,7 @@ destinations:
     rules: Reading list.
 ---
 `);
-await seedLandmark("store/notes", `---
+await seedLandmark("_content/notes", `---
 navigation:
   label: Notes
 destinations:
@@ -163,12 +163,12 @@ print(JSON.stringify(dest, null, 2));
 {
   "destinations": [
     {
-      "dir": "store/notes",
+      "dir": "_content/notes",
       "label": "Notes",
       "symbol": null
     },
     {
-      "dir": "store/reading",
+      "dir": "_content/reading",
       "label": "Reading",
       "symbol": "📚"
     }

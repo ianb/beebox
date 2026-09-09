@@ -18,7 +18,7 @@
  * commentary's Markdoc check or extfile's `file:`-URL refinement) is NOT here:
  * it lives on each schema as a `validate` hook, invoked generically below. The
  * one rule that cannot be self-contained — a chat husk's `session` must be
- * unique across `store/chat/**` — is dispatched from here against a per-run
+ * unique across `_content/chat/**` — is dispatched from here against a per-run
  * index (`lint-chat-duplicates.ts`).
  * The ref-existence walk stays here because it is box-aware (resolves refs
  * against the box root), which the self-contained hook deliberately lacks.
@@ -42,7 +42,11 @@ import {
 } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "./card-io.js";
+import { symbolIssues } from "./lint-symbol.js";
 import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
+import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
+import { isAttachRef } from "../shared/attach-path.js";
+import { parseRef, formatRefSuffix } from "../shared/ref-path.js";
 import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
 import { resolveRefExists } from "./ref-exists.js";
 import {
@@ -52,10 +56,12 @@ import {
   planCanonicalRef,
 } from "./canonical-refs.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
-import { lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
+import { lintCardSymbolSrc, lintFigureEntry, lintLandmarkSymbolSrc } from "./lint-path-fields.js";
 import { lintDuplicateChatSession } from "./lint-chat-duplicates.js";
+import { findAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
 import { errorMessage } from "../lib/error-guards.js";
+import { validateThemeChoice } from "../shared/card-theme.js";
 
 export interface LintDispatchOptions {
   /**
@@ -178,17 +184,44 @@ async function lintFrontmatterCard(input: {
   const bodyLinks = typeof bodyField === "string" ? extractBodyLinks(bodyField) : [];
   const warnings: LintIssue[] = [];
   const allRefs = [...frontmatterRefs, ...bodyRefs, ...bodyLinks];
+  // Relative-ref deprecation (Track B, `docs/implemented-plans/one-root-box-layout.md`):
+  // a document-relative ref in the card BODY is on by default, warning-only —
+  // it's the form most likely to be hand-typed or copied between cards, where
+  // relativity silently changes what it means. Frontmatter refs stay behind
+  // `--canonical` (a box can carry them by the hundred; see canonical-refs.ts).
+  warnings.push(
+    ...(await canonicalWarnings({ path, refs: [...bodyRefs, ...bodyLinks], boxRoot: options.boxRoot }))
+  );
   if (options.canonical === true) {
-    warnings.push(...(await canonicalWarnings({ path, refs: allRefs, boxRoot: options.boxRoot })));
+    warnings.push(...(await canonicalWarnings({ path, refs: frontmatterRefs, boxRoot: options.boxRoot })));
   }
+  // Display-form leak (docs/plans/display-path-guard.subplan.md): a ref
+  // written as `Config:box.json` (the boxholder's CONVERSATION vocabulary,
+  // never a canonical path) is a lint ERROR naming the canonical form —
+  // checked before the existence walk below, which would otherwise either
+  // misclassify it as a broken ref (frontmatter/body-tag refs, never
+  // filtered as external) or never see it at all (inline links / reference
+  // definitions, which `body-refs.ts` no longer discards as "external").
+  const displayPathErrors: LintIssue[] = [];
   for (const { path: refPath, ref } of allRefs) {
+    const displayForm = detectDisplayFormPath(ref);
+    if (displayForm !== null) {
+      displayPathErrors.push({
+        type: "display-path",
+        severity: "error",
+        message: `Display-form path at ${refPath}: ${displayFormPathMessage(ref, displayForm)}`,
+      });
+      continue;
+    }
     try {
       const exists = await resolveRefExists({ ref, fromPath: path, boxRoot: options.boxRoot });
       if (!exists) {
+        const suggestion = await suggestContentFormRef(ref, options.boxRoot);
+        const suffix = suggestion === null ? "" : ` — did you mean \`${suggestion}\`?`;
         warnings.push({
           type: "reference",
           severity: "warning",
-          message: `Broken reference at ${refPath}: ${ref} does not exist`,
+          message: `Broken reference at ${refPath}: ${ref} does not exist${suffix}`,
         });
       }
     } catch (e) {
@@ -201,6 +234,14 @@ async function lintFrontmatterCard(input: {
   }
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
+  const symbolFindings = symbolIssues(parsed.fields);
+  const themeFinding = parsed.fields["theme"] === undefined
+    ? null
+    : validateThemeChoice(parsed.fields["theme"], "theme").problem;
+  // Every card may carry an image mark, so this one is not type-gated like the
+  // per-type path fields below.
+  warnings.push(...(await lintCardSymbolSrc({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
+  warnings.push(...symbolFindings.filter((issue) => issue.severity === "warning"));
   warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
   // Universal Markdoc body validation (docs/implemented-plans/todo-annotation.md, Track 1
   // chunk 2): every card with a markdown body gets Markdoc parse+validate,
@@ -232,12 +273,32 @@ async function lintFrontmatterCard(input: {
   // the schema as its `validate` hook — see the commentary/extfile schema
   // modules. The generic ref-existence walk above stays here because it needs
   // the loader (box-aware), which the self-contained hook deliberately lacks.
-  const errors: LintIssue[] = parsed.schema.validate ? [...parsed.schema.validate({ fields: parsed.fields })] : [];
+  const errors: LintIssue[] = [
+    ...displayPathErrors,
+    ...symbolFindings.filter((issue) => issue.severity === "error"),
+    ...(parsed.schema.validate ? parsed.schema.validate({ fields: parsed.fields }) : []),
+    ...(themeFinding === null ? [] : [{
+      type: "validation" as const,
+      severity: "error" as const,
+      message: themeFinding.message,
+    }]),
+  ];
   // The one cross-file rule: a chat husk's `session` is its identity, so two
   // husks carrying the same one is an error, not a warning — see
   // lint-chat-duplicates.ts for why it can't be a schema `validate` hook.
   if (type === "chat") {
     errors.push(...(await lintDuplicateChatSession({ path, fields: parsed.fields, boxRoot: options.boxRoot, run: options })));
+  }
+  // No absolute machine paths (Track B, `docs/implemented-plans/one-root-box-layout.md`):
+  // a real developer home directory embedded in card content is a leak, not
+  // a legitimate ref — error, unlike the ref/canonical checks above, which
+  // stay warnings because broken/relative refs are routine data drift.
+  for (const leaked of findAbsoluteMachinePaths(content)) {
+    errors.push({
+      type: "absolute-path",
+      severity: "error",
+      message: `Absolute machine path in card content: ${leaked} — use a box ref (leading \`/\`) or a repo-relative form, never a real machine path`,
+    });
   }
   return { path, errors, warnings };
 }
@@ -321,6 +382,30 @@ function lintContainsLength(fields: Record<string, unknown>): LintIssue | null {
   };
 }
 
+/**
+ * "Did you mean `/_content/<path>`?" — suggestion-on-failure for the
+ * boxholder's BARE display-form vocabulary (`docs/plans/display-path-guard.subplan.md`).
+ * A bare content path (`recipes/Soup.recipe.card`, no leading `/`, no
+ * `<Label>:` prefix — that colon form is already a hard ERROR above) reads
+ * to a boxholder as box-root-relative, but a REF's bare form is
+ * document-relative instead — so a ref hand-typed in the display
+ * vocabulary silently means something else and breaks. Only offered when
+ * the ordinary resolution already failed (this diagnostic boundary already
+ * has the box root in hand and is about to report broken anyway; probing
+ * `/_content/<path>` here adds one more filesystem check, not a new one).
+ * `attach/…` is excluded — a legitimate, different relative form, not the
+ * display vocabulary. Suffix-preserving: a `?query`/`#fragment` on the
+ * original ref survives onto the suggestion untouched.
+ */
+async function suggestContentFormRef(ref: string, boxRoot: string): Promise<string | null> {
+  if (ref.startsWith("/") || isAttachRef(ref)) return null;
+  const parsed = parseRef(ref);
+  if (parsed.path === "") return null;
+  const candidate = `/_content/${parsed.path}${formatRefSuffix(parsed)}`;
+  const exists = await resolveRefExists({ ref: candidate, fromPath: "", boxRoot });
+  return exists ? candidate : null;
+}
+
 function errorResult(path: string, message: string): LintResult {
   // The cardworks formatter prints the file path as a header above each
   // result's issues, so strip any leading "<path>: " prefix the underlying
@@ -334,4 +419,3 @@ function errorResult(path: string, message: string): LintResult {
   };
   return { path, errors: [issue], warnings: [] };
 }
-

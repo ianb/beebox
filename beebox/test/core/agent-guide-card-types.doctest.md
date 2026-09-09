@@ -30,12 +30,13 @@ const system: CardSchema = cardSchema("chat-job", {
   fields: { status: z.string() },
 });
 
-const text = cardTypesSection([authored, system]);
+const text = cardTypesSection({ allCardSchemas: [authored, system] });
 const lines = text.split("\n");
 lines.includes("## CARD_TYPES")
 => true
 
-lines.includes("- **memo** — a captured note")
+// A built-in type with instructions links its doc in the package
+lines.includes("- **memo** — a captured note → `node_modules/beebox/box-docs/card-memo.md`")
 => true
 
 lines.includes("- **chat-job** — reactor bookkeeping")
@@ -45,9 +46,45 @@ lines.includes("- **chat-job** — reactor bookkeeping")
 lines.findIndex((l) => l.startsWith("**Types you create")) < lines.findIndex((l) => l.startsWith("**System bookkeeping"))
 => true
 
-// The per-type doc location is stated once up front, not per line
-lines.filter((l) => l.includes("docs/generated/card-")).length
-=> 1
+// A type without instructions has no doc to link
+lines.find((l) => l.startsWith("- **chat-job**"))?.includes("→")
+=> false
+```
+
+## A box-local schema's doc is in the box, and a box-local type shadows a built-in
+
+Box-local schemas live in the box's `src/schemas/` and their docs are compiled
+into the box (`_content/docs/generated/`), not the package. When a box-local
+schema reuses a built-in's type it shadows it (last write wins, as in
+`createCardSchemaMap`), so the list carries one entry pointing at the box doc.
+
+```ts
+const builtinMemo: CardSchema = cardSchema("memo", {
+  description: "a captured note",
+  category: "authored",
+  fields: { status: z.string() },
+  instructions: "How to memo.",
+});
+const boxMemo: CardSchema = cardSchema("memo", {
+  description: "this box's memo",
+  category: "authored",
+  fields: { status: z.string(), mood: z.string() },
+  instructions: "How THIS box memos.",
+});
+const boxOnly: CardSchema = cardSchema("widget", {
+  description: "a box-local type",
+  category: "authored",
+  fields: { size: z.string() },
+  instructions: "How to widget.",
+});
+
+const text = cardTypesSection({ allCardSchemas: [builtinMemo, boxMemo, boxOnly], boxCardSchemas: [boxMemo, boxOnly] });
+const lines = text.split("\n");
+lines.filter((l) => l.startsWith("- **memo**")).join(" | ")
+=> - **memo** — this box's memo → `_content/docs/generated/card-memo.md`
+
+lines.includes("- **widget** — a box-local type → `_content/docs/generated/card-widget.md`")
+=> true
 ```
 
 ## A description-less schema (e.g. box-local) still lists, defaulting to authored
@@ -55,7 +92,7 @@ lines.filter((l) => l.includes("docs/generated/card-")).length
 ```ts
 const bare: CardSchema = cardSchema("widget", { fields: { size: z.string() } });
 
-const text = cardTypesSection([bare]);
+const text = cardTypesSection({ allCardSchemas: [bare] });
 const lines = text.split("\n");
 lines.includes("- **widget**")
 => true
@@ -67,7 +104,7 @@ lines.some((l) => l.startsWith("**Types you create"))
 ## An empty schema list still renders the header (no crash)
 
 ```ts
-const text = cardTypesSection([]);
+const text = cardTypesSection({ allCardSchemas: [] });
 const lines = text.split("\n");
 lines[0]
 => ## CARD_TYPES

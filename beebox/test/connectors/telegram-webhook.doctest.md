@@ -13,22 +13,30 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box/index.js";
 import { createFakeTelegram } from "../../src/services/telegram.js";
 import { createTelegramConnector, processWebhookUpdate } from "../../src/connectors/telegram.js";
+import { telegramSecretName } from "../../src/connectors/telegram-helpers.js";
+import { grantSecret, setSecret } from "../../src/core/secrets/lifecycle.js";
+import { boxSlug } from "../../src/lib/box-slug.js";
+
+/** Configure Telegram the only way it is configurable: a granted store entry. */
+async function grantTelegram(box) {
+  const slug = await boxSlug(box.root);
+  const name = telegramSecretName(slug);
+  await setSecret({ name, value: JSON.stringify({ botToken: "fake:token", webhookSecret: "secret" }) });
+  await grantSecret({ slug, name, access: "server" });
+}
 
 async function seededBox() {
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
-  await box.seed(
-    "config/connectors/telegram.secret.json",
-    JSON.stringify({ botToken: "fake:token", webhookSecret: "secret" }),
-  );
-  await box.seed("config/box.json", JSON.stringify({ publicUrl: "https://example.com" }));
+  await box.seed("_config/box.json", JSON.stringify({ publicUrl: "https://example.com" }));
   box.commitAll("add config");
+  await grantTelegram(box);
   return box;
 }
 
 async function readState(box) {
-  return JSON.parse(await box.read("config/connectors/telegram.state.json"));
+  return JSON.parse(await box.read("_bookkeeping/connectors/telegram.state.json"));
 }
 
 function msgUpdate(opts) {
@@ -54,7 +62,7 @@ state, the older update leaves the offset untouched:
 ```ts
 const box = await seededBox();
 await box.seed(
-  "config/connectors/telegram.state.json",
+  "_bookkeeping/connectors/telegram.state.json",
   JSON.stringify({ lastUpdateId: 500 }),
 );
 await processWebhookUpdate({ boxRoot: box.root, update: msgUpdate({ updateId: 100, chatId: 42, name: "Late", text: "late" }), skipJob: true });
@@ -82,12 +90,12 @@ the webhook's ingest and its offset advance survives:
 ```ts
 const box = await seededBox();
 await box.seed(
-  "config/connectors/telegram.state.json",
-  JSON.stringify({ callbacks: { "store/chat/telegram/Zoe/thread.chat-thread.card": { at: "2999-01-01T00:00:00Z" } } }),
+  "_bookkeeping/connectors/telegram.state.json",
+  JSON.stringify({ callbacks: { "_content/chat/telegram/Zoe/thread.chat-thread.card": { at: "2999-01-01T00:00:00Z" } } }),
 );
 await processWebhookUpdate({ boxRoot: box.root, update: msgUpdate({ updateId: 10, chatId: 42, name: "Ann", text: "hi" }), skipJob: true });
 const state = await readState(box);
-JSON.stringify({ lastUpdateId: state.lastUpdateId, keptTimer: Boolean(state.callbacks?.["store/chat/telegram/Zoe/thread.chat-thread.card"]) })
+JSON.stringify({ lastUpdateId: state.lastUpdateId, keptTimer: Boolean(state.callbacks?.["_content/chat/telegram/Zoe/thread.chat-thread.card"]) })
 => {"lastUpdateId":10,"keptTimer":true}
 ```
 

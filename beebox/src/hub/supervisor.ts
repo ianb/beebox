@@ -1,7 +1,7 @@
 /**
  * Per-box process supervision for `bbx hub` (Track D, chunk D1 in
  * `docs/implemented-plans/boxes-as-packages-v2.md`). Adapted from the monorepo dev
- * router's spawn/readiness/teardown mechanics (`../../../bin/router.ts`,
+ * router's spawn/readiness/teardown mechanics (`../../../workstreams-app/src/router/router.ts`,
  * `startWorktree`/`onChildExit`/`stopWorktree`), productized as engine code:
  * no lazy-start or idle-shutdown (hub children are resident — schedulers and
  * webhooks want them up), no worktree/Vite concept, and it adds crash-loop
@@ -16,7 +16,7 @@
 
 import * as path from "node:path";
 import getPorts from "get-port";
-import { getBoxShape } from "../lib/box-shape.js";
+import { getBoxShape, requireBoxRoot } from "../lib/box-shape.js";
 import type { HubConfig, BoxEntry } from "./hub-config.js";
 import { HubState } from "./hub-state.js";
 import { invariant } from "../lib/invariant.js";
@@ -27,13 +27,13 @@ import { forwardChildOutput } from "./child-output-log.js";
 import { boxHasPendingSchedules } from "./pending-schedules.js";
 import { MAX_CONSECUTIVE_FAILURES, BASE_BACKOFF_MS, backoffDelayMs } from "./crash-backoff.js";
 // prettier-ignore
-import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, resolveBoxRoot, resolveBbxBinary } from "./child-spawn.js";
+import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, resolveBbxBinary } from "./child-spawn.js";
 
-// `buildChildEnv` (env allowlist) and the child-spawn/box-resolution
-// primitives moved to sibling files to keep this one under the 300-line cap;
-// `buildChildEnv` is re-exported here so existing importers
-// (`test/hub/supervisor.doctest.md`) don't need to change their import path.
-// `resolveBoxRoot` importers point at `./child-spawn.js` directly.
+// `buildChildEnv` (env allowlist) and the child-spawn primitives moved to
+// sibling files to keep this one under the 300-line cap; `buildChildEnv` is
+// re-exported here so existing importers (`test/hub/supervisor.doctest.md`)
+// don't need to change their import path. Box-path resolution is
+// `requireBoxRoot` (`../lib/box-shape.js`) — the one resolver.
 export { buildChildEnv };
 
 export type BoxRunStatus = "starting" | "running" | "unhealthy" | "stopped";
@@ -83,7 +83,7 @@ interface ManagedBox {
   /** Lazy mode only. Set while a cold-start is in flight, so concurrent
    *  requests for the same slug (`ensureRunning`) await the SAME launch
    *  instead of each spawning their own child -- the exact "atomic
-   *  register-then-await" hazard `bin/router.ts`'s `ensureRunning` comment
+   *  register-then-await" hazard `workstreams-app/src/router/router.ts`'s `ensureRunning` comment
    *  documents for worktrees. Cleared once the launch settles. */
   startPromise: Promise<void> | undefined;
   /** Lazy mode only. Last time an HTTP request touched this box (WS
@@ -174,7 +174,7 @@ export class Supervisor implements EndpointProvider {
    * case nothing is spawned here at all: every box starts "stopped" and
    * `ensureRunning()` spawns it on the first HTTP request (boxholder
    * directive, 2026-07-04 -- the same lazy-per-worktree semantics
-   * `bin/router.ts` already has, now available to a production hub for
+   * `workstreams-app/src/router/router.ts` already has, now available to a production hub for
    * memory-constrained hosts). Never rejects -- a box that fails to come up
    * is reported via `getStatuses()`, not thrown.
    */
@@ -235,7 +235,7 @@ export class Supervisor implements EndpointProvider {
   /**
    * Lazy mode only: ensure `slug`'s box is running, spawning it on first
    * request and waiting for readiness if it's currently "stopped" --
-   * mirrors `bin/router.ts`'s `ensureRunning` for worktrees. Concurrent
+   * mirrors `workstreams-app/src/router/router.ts`'s `ensureRunning` for worktrees. Concurrent
    * callers for the same cold slug all await the one in-flight
    * `startPromise` rather than each spawning their own child. Returns the
    * endpoint once ready, or `undefined` if the slug isn't configured or the
@@ -430,7 +430,7 @@ export class Supervisor implements EndpointProvider {
     box.status = "starting";
     const generation = ++box.generation;
     try {
-      const boxRoot = await resolveBoxRoot(box.entry.path);
+      const boxRoot = await requireBoxRoot(box.entry.path);
       const shape = await getBoxShape(boxRoot);
       const bbxBinary = await resolveBbxBinary(shape);
       const port = await getPorts();
@@ -440,7 +440,7 @@ export class Supervisor implements EndpointProvider {
       const child = this.spawnChild({
         bbxBinary,
         args: ["serve", boxRoot, "--slug", box.slug, "--port", String(port)],
-        cwd: shape.packageRoot,
+        cwd: shape.boxRoot,
         env,
       });
       // Swallow the execa promise rejection here (not just via .on("exit")) --

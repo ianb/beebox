@@ -14,6 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 import { tickPath } from "./lib/schedules-launchd.js";
+import { errnoCode } from "../beebox/src/lib/error-guards.js";
 import {
   acquireLock,
   ensureStoreRoot,
@@ -244,7 +245,18 @@ test("a timeout kills the whole process group, not just the run script", async (
   // not even return until it exits on its own — the run after this one starts
   // late AND overlaps a process still writing the checkout.
   assert.ok(elapsedMs < 15_000, `the runner waited ${String(elapsedMs)}ms on a grandchild it should have killed`);
-  const pid = Number((await fs.readFile(path.join(fake.deps.storeRoot, "grandchildjob", "grandchild.pid"), "utf8")).trim());
+  const pidFile = path.join(fake.deps.storeRoot, "grandchildjob", "grandchild.pid");
+  let pidText: string | null = null;
+  for (let attempt = 0; attempt < 80 && pidText === null; attempt += 1) {
+    try {
+      pidText = await fs.readFile(pidFile, "utf8");
+    } catch (error) {
+      if (errnoCode(error) !== "ENOENT") throw error;
+      await new Promise<void>((resolve) => { setTimeout(resolve, 50); });
+    }
+  }
+  assert.ok(pidText !== null, `expected ${pidFile} to appear while sealing the process group`);
+  const pid = Number(pidText.trim());
   assert.ok(Number.isInteger(pid) && pid > 1, "the run script should have recorded a grandchild pid");
   let alive = true;
   for (let attempt = 0; attempt < 40 && alive; attempt += 1) {

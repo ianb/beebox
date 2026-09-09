@@ -24,6 +24,7 @@
  * layer performs (drop dead ones with a visible note).
  */
 
+import { uploadedPath } from "./emission-store";
 import type { EmissionDraft, ImageItem, FileItem } from "./emission-store";
 import type { SelectionItem } from "../lib/selection/serialize";
 // Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
@@ -78,6 +79,13 @@ export function serializePersistedEmission(
     version: 1,
     text: draft.text,
     images: [...draft.images],
+    // Unfinished uploads are persisted too, even though they can never be
+    // resumed (the `File` handle dies with the page). Filtering them out here
+    // would leave their `[file#N]` tokens in the saved TEXT with no entry to
+    // explain them: no chip, no expired-attachment note, and an id
+    // `reserveIds` never covers — so the next attachment could mint that id and
+    // adopt the orphan token. Keeping them lets `partitionFiles` find them
+    // pathless, class them dead, and strip their tokens on the way back in.
     files: [...draft.files],
     selections: [...draft.selections],
     updatedAt: opts.updatedAt,
@@ -256,7 +264,11 @@ export function partitionFiles(
   const live: FileItem[] = [];
   const dead: FileItem[] = [];
   for (const f of files) {
-    (existingPaths.has(f.path) ? live : dead).push(f);
+    // A file that never finished uploading has no path to check and no way to
+    // resume — the `File` handle it would need died with the page. It is dead
+    // on restore, and reported as such rather than silently dropped.
+    const path = uploadedPath(f);
+    (path !== null && existingPaths.has(path) ? live : dead).push(f);
   }
   return { live, dead };
 }

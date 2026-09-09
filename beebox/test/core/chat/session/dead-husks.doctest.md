@@ -25,7 +25,7 @@ async function writeHusk(box, opts) {
   if (opts.title !== undefined) lines.push(`title: ${opts.title}`);
   if (opts.origin !== undefined) lines.push(`origin: ${opts.origin}`);
   if (opts.originName !== undefined) lines.push(`origin-name: ${opts.originName}`);
-  await writeFile(box.path(`store/chat/web/${opts.name}.chat.card`), `---\n${lines.join("\n")}\n---\n`);
+  await writeFile(box.path(`_content/chat/web/${opts.name}.chat.card`), `---\n${lines.join("\n")}\n---\n`);
 }
 
 async function writeTranscript(box, sessionId) {
@@ -42,7 +42,7 @@ reports, and the only one `loadDeadHusks` leaves out.
 
 ```ts
 const box = await makeTmpBox();
-await mkdir(box.path("store/chat/web"), { recursive: true });
+await mkdir(box.path("_content/chat/web"), { recursive: true });
 const here = await localOrigin();
 
 await writeTranscript(box, LIVE);
@@ -62,16 +62,16 @@ husk filenames lead with the chat's date, and there is no mtime left to sort on.
 
 ```ts continue
 JSON.stringify(await loadDeadHusks(box.root))
-=> [{"sessionId":"22222222-2222-4222-8222-222222222222","huskPath":"store/chat/web/2026-08-19_22222222.chat.card","title":"Trip planning","transcript":{"state":"expired"}},{"sessionId":"33333333-3333-4333-8333-333333333333","huskPath":"store/chat/web/2026-08-18_33333333.chat.card","transcript":{"state":"elsewhere","originName":"prod"}},{"sessionId":"44444444-4444-4444-8444-444444444444","huskPath":"store/chat/web/2026-08-17_44444444.chat.card","transcript":{"state":"unknown"}}]
+=> [{"sessionId":"22222222-2222-4222-8222-222222222222","huskPath":"_content/chat/web/2026-08-19_22222222.chat.card","title":"Trip planning","transcript":{"state":"expired"}},{"sessionId":"33333333-3333-4333-8333-333333333333","huskPath":"_content/chat/web/2026-08-18_33333333.chat.card","transcript":{"state":"elsewhere","originName":"prod"}},{"sessionId":"44444444-4444-4444-8444-444444444444","huskPath":"_content/chat/web/2026-08-17_44444444.chat.card","transcript":{"state":"unknown"}}]
 ```
 
 A dead husk keeps its binding, so the lists can still say where the chat lived.
 
 ```ts continue
 await writeHusk(box, { name: "2026-08-16_55555555", session: "55555555-5555-4555-8555-555555555555", origin: here.id });
-await writeFile(box.path("store/chat/web/2026-08-16_55555555.chat.card"), `---\nsession: 55555555-5555-4555-8555-555555555555\ncontext-dir: store/projects\norigin: ${here.id}\n---\n`);
+await writeFile(box.path("_content/chat/web/2026-08-16_55555555.chat.card"), `---\nsession: 55555555-5555-4555-8555-555555555555\ncontext-dir: _content/projects\norigin: ${here.id}\n---\n`);
 (await loadDeadHusks(box.root)).map((h) => `${h.sessionId.slice(0, 8)} ${h.contextDir ?? "(unbound)"} ${h.transcript.state}`).join(", ")
-=> 22222222 (unbound) expired, 33333333 (unbound) elsewhere, 44444444 (unbound) unknown, 55555555 store/projects expired
+=> 22222222 (unbound) expired, 33333333 (unbound) elsewhere, 44444444 (unbound) unknown, 55555555 _content/projects expired
 ```
 
 ```ts continue cleanup

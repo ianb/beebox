@@ -20,7 +20,7 @@ import { AGENT_INSTRUCTION_FILES } from "../agent-instruction-files.js";
  *   - "name"           basename match (any depth). E.g. "node_modules"
  *   - "path/to/dir"    exact relative-path match
  *   - "path/STAR"      direct-child match (any single segment under path).
- *                      STAR is one asterisk. E.g. "store/catalogs/STAR".
+ *                      STAR is one asterisk. E.g. "_content/catalogs/STAR".
  *   - "path/STARSTAR"  any descendant of path (path itself stays mappable).
  *                      STARSTAR is two asterisks.
  *   - "STARSTAR/X"     basename match where X may contain "STAR" wildcards.
@@ -33,7 +33,7 @@ export const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
   ".beebox",
   "node_modules",
   ".tap",
-  "tmp",
+  "_tmp",
   // Card attach scopes are an implementation detail of the card layout —
   // skip them when generating maps; the card itself stands for its scope.
   "**/*.attach",
@@ -44,7 +44,7 @@ export const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
  * either high-churn machinery (inbox stages, procedure runs), mirrors of
  * external state (drive sync, calendar sync), or structural config that
  * varies little across boxes and is already documented globally
- * (`config/connectors/`, `config/schemas/`). Per-box MAPs add nothing
+ * (`_config/connectors/`, `_config/schemas/`). Per-box MAPs add nothing
  * here, so we hide the whole subtree: the dir itself is excluded from its
  * parent's listing AND no MAP is generated inside it.
  *
@@ -53,31 +53,31 @@ export const DEFAULT_IGNORE_PATTERNS: readonly string[] = [
  * rules. Functionally they extend the ignore set the same way.
  */
 export const SKELETON_HIDDEN_PATHS: readonly string[] = [
-  "box/inbox/**",
-  "box/jobs/**",
-  "box/output/**",
-  "box/questions/**",
-  "box/resources/**",
+  "_content/inbox/**",
+  "_bookkeeping/jobs/**",
+  "_bookkeeping/output/**",
+  "_bookkeeping/questions/**",
+  "_bookkeeping/resources/**",
   "box/commands/**",
   "box/briefs/**",
-  "procedure/**",
-  "store/archive/**",
-  "store/trash/**",
-  "store/calendar/**",
-  "store/drive/**",
-  "store/chat/**",
-  "config/_template-updates/**",
-  "config/connectors/**",
-  "config/schemas/**",
+  "_bookkeeping/procedure/runs/**",
+  "_bookkeeping/archive/**",
+  "_bookkeeping/trash/**",
+  "_content/calendar/**",
+  "_content/drive/**",
+  "_content/chat/**",
+  "_config/_template-updates/**",
+  "_config/connectors/**",
+  "_config/schemas/**",
   // Machine-owned box config: the admin UI and the invite-accept path rewrite
   // it behind the agent's back, and its fields are documented in
   // docs/box-layout.md. A per-box MAP bullet would only go stale.
-  "config/box.json",
-  "config/procedures/**",
-  "config/schedules/**",
-  "docs/generated/**",
-  "tricks/lib/**",
-  "tricks/scripts/**",
+  "_config/box.json",
+  "_config/procedures/**",
+  "_config/schedules/**",
+  "_content/docs/generated/**",
+  "src/tricks/lib/**",
+  "src/tricks/scripts/**",
 ];
 
 const IGNORE_FILE = ".bbx-maps-ignore";

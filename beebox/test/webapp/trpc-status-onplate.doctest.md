@@ -16,7 +16,7 @@ function contextFor(box) {
   return statusRouter.createCaller(ctx);
 }
 
-const MARKER = JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
+const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
 
 function memo(body) {
   return `---\nstatus: new\ncreated: 2026-07-01T10:00:00Z\n---\n${body}`;
@@ -31,7 +31,7 @@ process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 const box = await makeTmpBox({ git: true });
 await box.seed(".beebox/box.json", MARKER);
 await box.write(
-  "store/a.memo.card",
+  "_content/a.memo.card",
   memo(
     '{% todo due="2026-07-01" %}Overdue thing{% /todo %}\n\n' +      // escalated
     '{% todo %}Undated thing{% /todo %}\n\n' +                       // on-plate
@@ -49,7 +49,7 @@ counts.onPlateTodos
 ## Zero when there are none
 
 ```ts continue
-await box.write("store/a.memo.card", memo("No todos here.\n"));
+await box.write("_content/a.memo.card", memo("No todos here.\n"));
 box.commitAll("clear");
 
 const after = await contextFor(box).status();

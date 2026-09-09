@@ -6,6 +6,25 @@ issues: []
 ---
 # Chat photo batch upload
 
+> **Superseded on the web (2026-09-06).** Track 2's routing sent every non-image
+> — and every over-threshold photo selection — to the full-screen
+> `BulkUploadOverlay`, which seals and sends a message of its own. That made it
+> impossible to attach a couple of documents to the message you were writing
+> (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
+> The web composer now decides a *representation* instead of a destination: a
+> few photos inline, everything else uploads and is referenced by `[file#N]` in
+> the user's own message. The web overlay and its client
+> (`components/bulk-upload/`, `lib/bulk-upload-api.ts`,
+> `chat/use-bulk-upload-launch.ts`, `chat/composer-fold.ts`) were deleted with
+> that change, so the file references below no longer resolve.
+>
+> **The bulk pipeline itself is untouched and live**: the routes, the worker,
+> the `upload-batch` card, the `<upload>` message and its chat rendering all
+> remain, and the native iOS composer still uses them for a camera roll
+> (Track 3). Only the web's *entry point* into them is gone. The current
+> cross-platform rule is stated in `docs/mobile-contract.md` §8.
+
+
 Submitting many photos to a box's chat fails today: the composer base64-inlines
 every photo into one `/chat/send` request, and at camera-roll scale that payload
 is too large to send. This plan routes a photo selection above a small threshold
@@ -399,7 +418,7 @@ inside the CAS seal respectively.
   both; changing caps is a separate question.
 - **Android.** No shell exists; the contract rows keep it implementable.
 - **Share-sheet intake.** Separately tracked
-  ([`issues/features/2026-03-05-share-to-box-images-files.md`](../../../issues/features/2026-03-05-share-to-box-images-files.md)).
+  ([`issues/features/2026-03-05-share-to-box-images-files.md`](../../../issues/closed/features/2026-03-05-share-to-box-images-files.md)).
 - **Touching capture's uploader.** Already fixed on main by
   `worktree-fixup-capture` (`ac4e12b9`, `d477aa24`); re-doing it here would
   collide.

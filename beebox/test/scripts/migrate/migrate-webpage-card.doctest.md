@@ -8,16 +8,15 @@ harness drives; this doctest exercises it directly on fixture boxes.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { scaffoldV2Box } from "../../../src/core/box/package.js";
+import { scaffoldBoxRoot } from "../../../src/core/box/package.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";
 import { loadCardFromText } from "../../../src/core/card-io.js";
 import { convertFile } from "../../../scripts/migrate/webpage-card.js";
 
-// Returns the operational box root (`content/`) of a fresh v2 box; cards go
-// under it exactly as before.
+// Returns the box root of a fresh v3 box; cards go under it exactly as before.
 async function makeTmpBox() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-webpagemig-"));
-  const { boxRoot } = await scaffoldV2Box(dir);
+  const { boxRoot } = await scaffoldBoxRoot(dir);
   return boxRoot;
 }
 

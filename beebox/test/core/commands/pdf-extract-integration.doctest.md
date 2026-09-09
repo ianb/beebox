@@ -11,10 +11,15 @@ that forbids subprocesses. A skip is a normal outcome on a developer machine;
 what would not be normal is this file silently passing while testing nothing,
 so the assertion below names which of the two happened.
 
-Warm (uv environment and model weights cached) this takes a few seconds; the
-very first run on a machine also downloads ~100 MB of model weights, which is
-why the probe below requires the environment to already exist rather than
-building it inside a test.
+Warm (uv environment and model weights cached) this takes a few seconds. The
+probe below runs `uvx --offline`, so an environment that is not already built
+is a fast skip, never a build: building it downloads a multi-hundred-MB torch
+environment and makes macOS Gatekeeper verify every dylib, which is not a
+thing a test run should do on its own. Warm it once by hand with
+`uvx --from docling==<DOCLING_VERSION> docling convert --help`.
+
+The suite shares the developer's uv cache (`test/helpers/isolate-user-home.ts`),
+so a warmed environment stays warm under the isolated test HOME.
 
 ```ts setup
 import { createDoclingService, doclingArgs } from "../../../src/services/docling.js";
@@ -25,11 +30,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execa } from "execa";
 
-// Probe: can Docling run here at all? `--help` on an already-cached uv
-// environment answers in seconds; on a machine without uv (or without the
-// environment built) it fails or times out, and we skip.
+// Probe: can Docling run here at all? `--offline` answers from the uv cache
+// only — an already-built environment says yes in about a second, an absent
+// one fails in under a second instead of building itself — and no uv at all
+// throws. Either failure is a skip.
 async function doclingRunnable() {
-  const probe = await execa("uvx", ["--from", `docling==${DOCLING_VERSION}`, "docling", "convert", "--help"], {
+  const probe = await execa("uvx", ["--offline", "--from", `docling==${DOCLING_VERSION}`, "docling", "convert", "--help"], {
     timeout: 60_000,
     reject: false,
   }).catch((e) => ({ exitCode: 1, message: e.message }));
@@ -47,16 +53,24 @@ This part runs everywhere — it is a pure function, and it is the thing most
 likely to rot when Docling changes its CLI.
 
 ```ts
-doclingArgs("/scan/source.pdf", { workDir: "/work", forceOcr: false, languages: null }).join(" ")
-=> --from docling==«*» docling convert /scan/source.pdf --to md --to json --image-export-mode referenced --table-mode fast --device cpu --document-timeout 600 --output /work -q --no-ocr
+doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "off", languages: null }).join(" ")
+=> --from docling==«*» --with onnxruntime --with rapidocr docling convert /scan/source.pdf --to md --to json --image-export-mode referenced --table-mode fast --device cpu --document-timeout 600 --output /work -q --no-ocr
 ```
 
-`--force-ocr` is deprecated upstream; the supported spelling for
-"replace the text layer wholesale" is `--ocr-mode full_page`:
+`--force-ocr` is deprecated upstream; `--ocr-mode` is the supported spelling.
+A junk text layer must be replaced wholesale, so it gets `full_page`:
 
 ```ts continue
-doclingArgs("/scan/source.pdf", { workDir: "/work", forceOcr: true, languages: ["en", "de"] }).slice(-5).join(" ")
-=> --ocr --ocr-mode full_page --ocr-lang en,de
+doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "replace", languages: ["en", "de"] }).slice(-7).join(" ")
+=> --ocr --ocr-mode full_page --ocr-engine rapidocr --ocr-lang en,de
+```
+
+A PDF with no text layer instead gets `layout_regions`, which measured better
+on dense scanned forms:
+
+```ts continue
+doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "regions", languages: null }).slice(-5).join(" ")
+=> --ocr --ocr-mode layout_regions --ocr-engine rapidocr
 ```
 
 ## A real extraction over a real PDF
@@ -70,7 +84,7 @@ await import("node:fs/promises").then((fs) => fs.mkdir(workDir, { recursive: tru
 
 const result = skipReason
   ? { skipped: true }
-  : await createDoclingService().extract(pdfPath, { workDir, forceOcr: false, languages: null });
+  : await createDoclingService().extract(pdfPath, { workDir, ocr: "off", languages: null });
 
 // One line, whichever path ran — so a skip is visible rather than a silent pass.
 skipReason ? "SKIPPED" : (result.ok ? "EXTRACTED" : `FAILED: ${result.error}`)

@@ -50,7 +50,7 @@ const box = await makeTmpBox();
 const registry = makeRegistry(box, createFakeChatBackend());
 
 const first = await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
-const again = await registry.reserve({ sessionId: COINED, contextDir: "store/recipes", seedFeatures: {} });
+const again = await registry.reserve({ sessionId: COINED, contextDir: "_content/recipes", seedFeatures: {} });
 
 JSON.stringify([first, again])
 => [{"kind":"reserved","sessionId":"11111111-2222-4333-8444-555555555555"},{"kind":"reserved","sessionId":"11111111-2222-4333-8444-555555555555"}]
@@ -273,11 +273,11 @@ just left.
 ```ts
 const box = await makeTmpBox();
 const registry = makeRegistry(box, createFakeChatBackend());
-await registry.reserve({ sessionId: COINED, contextDir: "store/recipes", seedFeatures: {} });
+await registry.reserve({ sessionId: COINED, contextDir: "_content/recipes", seedFeatures: {} });
 
 JSON.stringify({
-  here: registry.reservationForDirectory("store/recipes"),
-  elsewhere: registry.reservationForDirectory("store/courses"),
+  here: registry.reservationForDirectory("_content/recipes"),
+  elsewhere: registry.reservationForDirectory("_content/courses"),
 })
 => {"here":"11111111-2222-4333-8444-555555555555","elsewhere":null}
 ```
@@ -293,7 +293,7 @@ JSON.stringify({
   root: registry.reservationForDirectory(""),
   unbound: registry.getReservation(COINED).contextDir,
 })
-=> {"root":"99999999-8888-4777-8666-555555555555","unbound":"store/recipes"}
+=> {"root":"99999999-8888-4777-8666-555555555555","unbound":"_content/recipes"}
 ```
 
 ```ts continue cleanup
@@ -312,7 +312,7 @@ and nothing could say which.
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const registry = makeRegistry(box, backend);
-await registry.reserve({ sessionId: COINED, contextDir: "store/recipes", seedFeatures: {} });
+await registry.reserve({ sessionId: COINED, contextDir: "_content/recipes", seedFeatures: {} });
 
 const session = registry.getOrCreate(COINED);
 await session.send("hello");
@@ -320,10 +320,10 @@ await tick();
 await waitForSessionRecorded(box, COINED);
 
 JSON.stringify({
-  reservation: registry.reservationForDirectory("store/recipes"),
+  reservation: registry.reservationForDirectory("_content/recipes"),
   history: (await loadHistoryEntries(box.root)).map((e) => e.contextDir),
 })
-=> {"reservation":null,"history":["store/recipes"]}
+=> {"reservation":null,"history":["_content/recipes"]}
 ```
 
 ```ts continue cleanup
@@ -337,11 +337,11 @@ await box.cleanup();
 const box = await makeTmpBox();
 let clock = 1_000;
 const registry = makeRegistry(box, createFakeChatBackend(), { now: () => clock });
-await registry.reserve({ sessionId: COINED, contextDir: "store/recipes", seedFeatures: {} });
+await registry.reserve({ sessionId: COINED, contextDir: "_content/recipes", seedFeatures: {} });
 
 clock += 7 * 60 * 60 * 1000;
 
-registry.reservationForDirectory("store/recipes")
+registry.reservationForDirectory("_content/recipes")
 => null
 ```
 

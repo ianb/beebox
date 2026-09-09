@@ -32,7 +32,7 @@ const UNAVAILABILITY = {
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/quota.procedure.card", `---
+await box.write("_config/procedures/quota.procedure.card", `---
 name: quota
 description: Engine dies of quota exhaustion
 steps:
@@ -77,7 +77,7 @@ print(`validate calls: ${validateCalls}`);
 const boxFiles = await box.list("box");
 print(`shell ran: ${boxFiles.includes("shell-ran.txt")}`);
 
-const runs = await box.list("procedure/runs");
+const runs = await box.list("_bookkeeping/procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("quota_"));
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`step status: ${run.steps[0].status}`);

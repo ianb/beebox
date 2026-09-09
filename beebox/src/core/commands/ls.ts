@@ -16,8 +16,9 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { isCardFile, boxPath } from "../../lib/paths.js";
+import { isCardFile } from "../../lib/paths.js";
 import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
+import { resolveCliTargetPath } from "../../cli/lib/cli-target-path.js";
 
 /**
  * Arguments for the ls command. `paths` is optional here because the command
@@ -48,12 +49,15 @@ async function expandPath(
   pattern: string,
   boxRoot: string
 ): Promise<string[]> {
-  const absolute = path.isAbsolute(pattern)
-    ? pattern
-    : boxPath(boxRoot, pattern);
+  const absolute = resolveCliTargetPath({ boxRoot, raw: pattern, relativeTo: boxRoot });
 
   if (hasGlobChars(pattern)) {
-    const matches = await glob(pattern, { cwd: boxRoot, nodir: true });
+    // Glob the NORMALIZED pattern, not the raw one: a canonical leading-/
+    // box path (`/_config/*.card`) would otherwise be passed to glob as an
+    // OS-absolute pattern and silently match nothing (round-2 review
+    // finding, 2026-09-05).
+    const normalizedPattern = path.relative(boxRoot, absolute).split(path.sep).join("/");
+    const matches = await glob(normalizedPattern, { cwd: boxRoot, nodir: true });
     return matches
       .map((m) => (path.isAbsolute(m) ? m : path.join(boxRoot, m)))
       .filter((m) => isCardFile(m))

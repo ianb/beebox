@@ -5,7 +5,10 @@ needs: [manual-testing]
 area: beebox
 filed-by: agent
 discovered-in: main session — boxholder; got much worse recently
+priority: normal
 ---
+
+> `reconfirm?` checked 2026-09-05: the code side holds — `reconcilePendingWithDiagnostics` (chatMachine.ts) keeps a pending message until its own durable echo (`4ceb0de6`), and `test/frontend/reconcile-pending.doctest.md` passes 18/18. The manual-testing gate stays; the one step that settles it: send a message while a long turn is running and watch it through the next history refresh.
 
 > **⏳ Awaiting manual testing** — fix landed in `4ceb0de6`; send typed, capture,
 > and voice messages during a long turn and confirm each message stays visible

@@ -1,6 +1,6 @@
 # Google Drive transient-state delta merge
 
-`config/connectors/google-drive.state.json` is written by TWO processes — the
+`_bookkeeping/connectors/google-drive.state.json` is written by TWO processes — the
 server `sync()` and the CLI `bbx drive add`. Neither holds the cross-process lock
 for its whole run; each loads state, threads it by reference, and at the save
 point delta-merges its per-file changes into FRESHLY-loaded state via

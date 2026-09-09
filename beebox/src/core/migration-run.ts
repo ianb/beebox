@@ -26,6 +26,37 @@ class ManifestReadError extends Error {
   }
 }
 
+/**
+ * Round-8 hardening finding 1: `appendManifestEntry` used to call
+ * `fs.appendFile` straight through whatever `_config/migrations.jsonl`
+ * resolves to — a symlinked leaf (e.g. left behind by a migration that
+ * relocated the file without checking it) would append the migration's
+ * record through it, into wherever the link points, with no record in the
+ * box's own git history. `lstat` first and refuse — engine-general, not
+ * one-root-specific, so every caller of `appendManifestEntry` gets it, not
+ * just the migration that first found the gap.
+ */
+export class SymlinkedManifestError extends Error {
+  readonly manifestPath: string;
+  constructor(manifestPath: string) {
+    super(
+      `${manifestPath} is a symlink — refusing to append the migration manifest entry through it (this would ` +
+        "land the record at wherever the link points, outside the box's own git history). Reconcile by hand " +
+        "(replace the symlink with a real file, or move its contents in), then re-run.",
+    );
+    this.name = "SymlinkedManifestError";
+    this.manifestPath = manifestPath;
+  }
+}
+
+async function assertManifestNotSymlink(abs: string): Promise<void> {
+  const lst = await fs.lstat(abs).catch((e: unknown) => {
+    if (errnoCode(e) === "ENOENT") return null;
+    throw e;
+  });
+  if (lst !== null && lst.isSymbolicLink()) throw new SymlinkedManifestError(abs);
+}
+
 /** A manifest line is a valid {@link ManifestEntry} with string `name` + `applied-at`. */
 function isManifestEntry(value: unknown): value is ManifestEntry {
   return isRecord(value) && typeof value["name"] === "string" && typeof value["applied-at"] === "string";
@@ -80,6 +111,7 @@ export async function restoreManifest(boxRoot: string, snapshot: string | null):
 export async function appendManifestEntry(boxRoot: string, entry: ManifestEntry): Promise<void> {
   const abs = path.join(boxRoot, MANIFEST_PATH);
   await fs.mkdir(path.dirname(abs), { recursive: true });
+  await assertManifestNotSymlink(abs);
   await fs.appendFile(abs, `${JSON.stringify(entry)}\n`);
 }
 

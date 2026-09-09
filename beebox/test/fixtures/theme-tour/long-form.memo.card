@@ -1,0 +1,30 @@
+---
+status: new
+title: Long content and dense edges
+created: "2026-09-07T12:03:00+00:00"
+theme:
+  name: paper
+  stock: manila
+---
+This deliberately long card catches clipping, line length, spacing, and the
+relationship between decoration and selection.
+
+## A small table
+
+| Stock | Surface | Feeling |
+| --- | --- | --- |
+| Paper | fibrous | settled |
+| Post-it | bright | immediate |
+| Plain | quiet | dependable |
+
+## A code sample
+
+```ts
+const stock = theme.choose({ card: "long-form", fallback: "plain" });
+renderCard({ stock, preserveSelection: true });
+```
+
+The end of the card is intentionally far from its beginning. A theme should
+make the whole sheet comfortable to read on a narrow screen too.
+
+![A simple geometric test image](./theme-tour-mark.svg)

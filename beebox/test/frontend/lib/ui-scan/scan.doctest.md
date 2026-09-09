@@ -120,12 +120,12 @@ a11y plumbing, not promises, so they report no address:
 lines(scan(`
   <button id="trash-card-title" title="Delete"><svg viewBox="0 0 24 24"></svg></button>
   <button id="bbx-Composer-Send" title="Send"><svg viewBox="0 0 24 24"></svg></button>
-  <button id="bbx-nav-place" title="Place: test1"><svg viewBox="0 0 24 24"></svg></button>
+  <button id="bbx-nav-place" title="Where you are: test1"><svg viewBox="0 0 24 24"></svg></button>
 `))
 =>
 - / button "Delete" (no address)
 - / button "Send" (no address)
-- / button "Place: test1" bbx-nav-place
+- / button "Where you are: test1" bbx-nav-place
 ```
 
 ## Visibility

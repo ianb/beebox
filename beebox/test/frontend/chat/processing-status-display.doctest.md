@@ -64,7 +64,7 @@ shouldShowAgentWorking({ phase: "refreshing-resync", processBusy: true, confirma
 ## The stream watchdog recovers a wedged stream, and only a wedged one
 
 The machine's `streaming` state is exited only by frames on the per-turn WS
-subscription; if the socket dies and never reconnects, "Agent is working…"
+subscription; if the socket dies and never reconnects, "Thinking…"
 persists forever while the server has long been idle (seen in a field test:
 20+ minutes, twice). `streamWatchdogAdvance` is the pure policy behind the
 5s watchdog poll: recover only after `STREAM_WATCHDOG_IDLE_POLLS` consecutive

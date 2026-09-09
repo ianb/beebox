@@ -103,11 +103,11 @@ program
     const boxRoot = options.box ?? path.join(process.env.HOME ?? "~", "src/boxes/test1");
     const engine = options.engine;
 
-    // `--box` may name either a v2 package root or its nested operational
-    // (`content/`) root; resolve to the operational root (where `.beebox/box.json`, cards,
-    // and CLAUDE.md live) so generateDocs/runTest target the box itself, and
-    // derive a stable ledger identity. See resolveAuditBox. assertStandaloneBox
-    // accepts either form and still verifies the git repo is the package root.
+    // `--box` names a path at or below the box's one root; resolve to that
+    // root (where `.beebox/box.json`, cards, and CLAUDE.md live) so
+    // generateDocs/runTest target the box itself, and derive a stable ledger
+    // identity. See resolveAuditBox. assertStandaloneBox verifies the git
+    // repo is that same root.
     const { operationalRoot: resolvedBox, boxName } = await resolveAuditBox(boxRoot);
 
     // Refuse a box that isn't its own git repo BEFORE generating docs into it.

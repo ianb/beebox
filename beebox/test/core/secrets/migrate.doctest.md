@@ -1,8 +1,8 @@
 # Migrating per-box secret files into the store
 
 `bbx secrets migrate` is the one-time move from every box's
-`config/connectors/*.secret.json` into the machine store
-(`docs/plans/secret-custody.md`, "Rollout shape"). Three boxes below stand in
+`_config/connectors/*.secret.json` into the machine store
+(`docs/implemented-plans/secret-custody.md`, "Rollout shape"). Three boxes below stand in
 for a real machine: two that share one Mistral key, one that has a *different*
 one, a Deepgram file (multi-field), a Telegram file (structurally per-box), an
 OAuth *token* file that must not be migrated at all, and a malformed file.
@@ -19,15 +19,15 @@ import { runCopyGrants, runMigrateSecrets } from "../../../src/cli/commands/secr
 import { listSecrets, setSecret } from "../../../src/core/secrets/lifecycle.js";
 import { loadSecretStore } from "../../../src/core/secrets/store.js";
 
-/** A minimal v2 box whose slug is its package directory name. */
+/** A minimal shapeVersion-3 box whose slug is its (one) root directory name. */
 async function makeBox(root, slug, files) {
-  const packageRoot = join(root, slug);
-  await mkdir(join(packageRoot, "content", "config", "connectors"), { recursive: true });
-  await mkdir(join(packageRoot, "content", ".beebox"), { recursive: true });
-  await writeFile(join(packageRoot, "package.json"), JSON.stringify({ name: slug, dependencies: { "beebox": "*" } }));
-  await writeFile(join(packageRoot, "content", ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
+  const boxRoot = join(root, slug);
+  await mkdir(join(boxRoot, "_config", "connectors"), { recursive: true });
+  await mkdir(join(boxRoot, ".beebox"), { recursive: true });
+  await writeFile(join(boxRoot, "package.json"), JSON.stringify({ name: slug, dependencies: { "beebox": "*" } }));
+  await writeFile(join(boxRoot, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
   for (const [name, content] of Object.entries(files)) {
-    await writeFile(join(packageRoot, "content", "config", "connectors", name), content);
+    await writeFile(join(boxRoot, "_config", "connectors", name), content);
   }
 }
 
@@ -102,8 +102,8 @@ Boxes examined: alpha, beta, gamma
   telegram-bot/alpha — new entry, single-box; grants: alpha
   CONFLICT: "gamma" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/gamma".
             Readers ask for "mistral" and "gamma" holds no grant for it, so that connector reads as NOT CONFIGURED — a name that exists in the store no longer falls back to a legacy file. Decide which key the box should use, then grant it.
-  skipped <boxes>/gamma/content/config/connectors/google.secret.json — no store name is defined for "google" — left in place
-  skipped <boxes>/gamma/content/config/connectors/openai.secret.json — unreadable or not valid JSON («*»)
+  skipped <boxes>/gamma/_config/connectors/google.secret.json — no store name is defined for "google" — left in place
+  skipped <boxes>/gamma/_config/connectors/openai.secret.json — unreadable or not valid JSON («*»)
 Dry run — nothing was written.
 ```
 

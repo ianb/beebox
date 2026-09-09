@@ -54,6 +54,26 @@
 # Soft dependency: without an initialized private repo it logs one line and
 # does nothing. Never blocks worktree creation (|| true) — a broken private
 # mount means the session runs without private issues, not no session.
+# A box's config directory for its layout: one-root v3 `_config/`, v2
+# `content/config/`, legacy `config/`.
+wt_create_box_config_dir() {
+  local root="$1"
+  if [ -d "$root/_config" ]; then echo "$root/_config"
+  elif [ -d "$root/content/config" ]; then echo "$root/content/config"
+  else echo "$root/config"
+  fi
+}
+
+# A box's gitignored state directory for its layout: v3 and legacy `.beebox/`
+# at the root, v2 `content/.beebox/`.
+wt_create_box_state_dir() {
+  local root="$1"
+  if [ -d "$root/_config" ]; then echo "$root/.beebox"
+  elif [ -d "$root/content" ]; then echo "$root/content/.beebox"
+  else echo "$root/.beebox"
+  fi
+}
+
 wt_create_mount_private_issues() {
   local pi="$1/bin/private-issues"
   [ -x "$pi" ] || pi="$WT_MONO/bin/private-issues"
@@ -267,7 +287,7 @@ wt_create_locked() {
   # BOX_DEST is either a legacy box (content lives at its root) or a v2
   # package (content lives at BOX_DEST/content — see "The box repository" in
   # docs/implemented-plans/boxes-as-packages-v2.md). Either way its basename stays
-  # "test1", so the URL slug matches across worktrees (bin/box-entry.ts
+  # "test1", so the URL slug matches across worktrees (workstreams-app/src/router/box-entry.ts
   # derives the v2 slug from the PACKAGE root's basename for exactly this
   # reason — confirmed against this clone layout).
   mkdir -p "$(dirname "$BOX_DEST")"
@@ -277,27 +297,42 @@ wt_create_locked() {
       git clone --quiet "$BOX_SRC" "$BOX_DEST"
       wt_create_restore_box_ref "$BOX_DEST" "$box_ref"
 
-      local box_content_dir="$BOX_DEST"
-      [ -d "$BOX_DEST/content" ] && box_content_dir="$BOX_DEST/content"
+      # Where a box keeps its config and its state directory depends on its
+      # layout: one-root v3 (`_config/`, `.beebox/` at the root), v2
+      # (`content/config/`, `content/.beebox/`), legacy (`config/`, `.beebox/`).
+      local box_src_config box_dest_config box_src_state box_dest_state
+      box_src_config=$(wt_create_box_config_dir "$BOX_SRC")
+      box_dest_config=$(wt_create_box_config_dir "$BOX_DEST")
+      box_src_state=$(wt_create_box_state_dir "$BOX_SRC")
+      box_dest_state=$(wt_create_box_state_dir "$BOX_DEST")
 
       # Carry over gitignored connector secrets (deepgram, gmail, google,
-      # dropbox, etc.). The source box gitignores config/connectors/*.secret.*
-      # so git clone leaves them behind, breaking transcription and external
-      # syncs in the worktree until the user manually copies them. config/
-      # lives under content/ for a v2 box, at the root for legacy.
-      local box_src_content_dir="$BOX_SRC"
-      [ -d "$BOX_SRC/content" ] && box_src_content_dir="$BOX_SRC/content"
-      if [ -d "$box_src_content_dir/config/connectors" ]; then
-        mkdir -p "$box_content_dir/config/connectors"
+      # dropbox, etc.). The source box gitignores connectors/*.secret.* so git
+      # clone leaves them behind, breaking transcription and external syncs in
+      # the worktree until the user manually copies them.
+      if [ -d "$box_src_config/connectors" ]; then
+        mkdir -p "$box_dest_config/connectors"
         local copied=0 f
-        for f in "$box_src_content_dir"/config/connectors/*.secret.*; do
+        for f in "$box_src_config"/connectors/*.secret.*; do
           [ -e "$f" ] || continue
-          cp "$f" "$box_content_dir/config/connectors/"
+          cp "$f" "$box_dest_config/connectors/"
           copied=$((copied + 1))
         done
         if [ "$copied" -gt 0 ]; then
           echo "[worktree-create] copied $copied connector secret(s) from source box" >&2
         fi
+      fi
+
+      # Carry over the box marker. Since the 2026-08-30 rename it lives in the
+      # gitignored state directory (`.beebox/box.json`), so a clone has none —
+      # and without it `bbx init` below sees "a directory with a package.json"
+      # and refuses instead of refreshing hooks (broke every worktree launch on
+      # 2026-09-05; the marker question itself is
+      # issues/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md).
+      if [ -f "$box_src_state/box.json" ] && [ ! -f "$box_dest_state/box.json" ]; then
+        mkdir -p "$box_dest_state"
+        cp "$box_src_state/box.json" "$box_dest_state/box.json"
+        echo "[worktree-create] copied the box marker from source box" >&2
       fi
 
       # Fetch asset content from the source box via git-annex.
@@ -364,7 +399,7 @@ wt_create_locked() {
   # 2.5. Copy the main checkout's beebox/.env, if it has one.
   #
   # `.env` is gitignored, so a fresh worktree gets none — and the router loads
-  # each checkout's OWN .env into the dev processes it spawns (bin/router-core.ts),
+  # each checkout's OWN .env into the dev processes it spawns (workstreams-app/src/router/router-core.ts),
   # so without this copy a worktree runs with none of the local dev config the
   # main checkout has (BBX_BROWSE_API_KEY, a BOXES override). Copying keeps the
   # rule uniform — every checkout reads its own file, nothing reaches across
@@ -376,7 +411,7 @@ wt_create_locked() {
   # worktree that inherited it would silently serve those instead of the
   # isolated clone made above, which is the whole point of a worktree. Omitting
   # the line makes the router fall back to WT_BOX_ROOT/<name>/test1
-  # (bin/router.ts `boxes ?? [...]`), which is exactly right. Add a BOXES line to
+  # (workstreams-app/src/router/router.ts `boxes ?? [...]`), which is exactly right. Add a BOXES line to
   # the worktree's own .env to override.
   local main_env="$WT_MONO/beebox/.env"
   if [ -f "$main_env" ]; then

@@ -19,7 +19,7 @@ Assertions are on shape — files present, counts — never on what the agent
 decided to do with the mail.
 
 ```ts setup
-import { mkdtemp, mkdir, rm, writeFile, readdir } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createFieldBox } from "../../src/field-test/run-box.js";
@@ -82,12 +82,13 @@ operator exists.
 const box = await createFieldBox(join(runDir, "run"));
 await seedFieldBox({ box, scenario });
 
-await fileExists(join(box.boxRoot, "config/connectors/gmail.json"))
+await fileExists(join(box.boxRoot, "_config/connectors/gmail.json"))
 => true
 
-// The pinned chat model is gitignored runtime state, not part of the
-// committed baseline a `reset` rewinds to.
-await fileExists(join(box.boxRoot, ".beebox/chat-model.json"))
+// The scenario's chat model is pinned as the box's model policy
+// (`agentModel` in `config/box.json`), which `seedFieldBox` writes and commits
+// as part of the baseline (`src/field-test/run-seed.ts`).
+JSON.parse(await readFile(join(box.boxRoot, "config/box.json"), "utf8")).agentModel === scenario.models.chat
 => true
 ```
 
@@ -100,7 +101,7 @@ never arrives — which reads in a report as "the box ignored my email".
 const statePath = join(runDir, "fake-gmail.json");
 await baselineGmailSync({
   statePath,
-  packageRoot: box.packageRoot,
+  boxRoot: box.boxRoot,
   env: { BBX_TIME: scenario.startTime },
 });
 
@@ -117,7 +118,7 @@ const messageId = await injectEmail({
   emailsDir: scenario.emailsDir,
   fixture: "hello",
   statePath,
-  packageRoot: box.packageRoot,
+  boxRoot: box.boxRoot,
   env: { BBX_TIME: scenario.startTime },
   now: new Date(scenario.startTime),
 });

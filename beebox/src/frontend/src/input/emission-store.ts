@@ -43,14 +43,38 @@ export interface ImageItem {
   byteLength: number;
 }
 
+/**
+ * Where a file attachment is in its trip to the box.
+ *
+ * A file's token goes into the text the moment it is picked, so the user can
+ * keep writing around it while the bytes are still moving — which means the
+ * composer holds files that have no path yet, and some that never will. The
+ * path exists only in `uploaded`, so a caller cannot read one off a file that
+ * hasn't got there. Mirrors the native composer's `DraftTransferState`
+ * (`ios-app/BeeBox/Models/ComposerDraft.swift`).
+ */
+export type FileTransferState =
+  | { status: "uploading"; /** 0–1, or 0 while the total is unknown. */ progress: number }
+  | { status: "uploaded"; /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */ path: string }
+  | { status: "failed"; message: string };
+
+/**
+ * The box-relative path a file landed at, or `null` while it is still moving or
+ * has failed. The one way to read a path off a {@link FileItem} — everything
+ * that needs a path (the send payload, draft persistence) is by definition only
+ * interested in files that finished.
+ */
+export function uploadedPath(file: FileItem): string | null {
+  return file.state.status === "uploaded" ? file.state.path : null;
+}
+
 /** A non-image file attachment (today: `FileAttachmentItem`). */
 export interface FileItem {
   id: number;
-  /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */
-  path: string;
   originalName: string;
   size: number;
   mimetype: string;
+  state: FileTransferState;
 }
 
 /**
@@ -99,6 +123,13 @@ export interface EmissionEditor {
    */
   restoreImages(items: readonly ImageItem[]): void;
   addFile(item: FileItem): void;
+  /**
+   * Advance a file's transfer state (progress, the path it landed at, or a
+   * failure). No-op for an id that is no longer in the draft — a user may
+   * remove a chip while its upload is in flight, and the late result must not
+   * resurrect it.
+   */
+  setFileState(opts: { id: number; state: FileTransferState }): void;
   addSelection(item: SelectionItem): void;
   /** Removes the image and strips its `[imageN]` token (plus a bounding whitespace char) from the text. */
   removeImage(id: number): void;
@@ -192,6 +223,10 @@ export function createEmissionStore(): EmissionStore {
     },
     addFile(item) {
       patch({ files: [...draft.files, item] });
+    },
+    setFileState({ id, state }) {
+      if (!draft.files.some((file) => file.id === id)) return;
+      patch({ files: draft.files.map((file) => (file.id === id ? { ...file, state } : file)) });
     },
     addSelection(item) {
       patch({ selections: [...draft.selections, item] });

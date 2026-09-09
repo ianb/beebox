@@ -8,14 +8,22 @@
 
 import type { ListProps } from "../../file-types/registry";
 import type { ImageAttrs } from "@schemas/image";
-import { apiRawFileUrl, getApiBase } from "../../api";
+import { apiRawFileUrl, apiTransformedImageUrl, getApiBase } from "../../api";
 import { resolveRelativePath } from "../../lib/view-url";
+import { isTransformablePhotoPath } from "../../lib/image-transform-url";
 
 function imageSrc(cardPath: string, filenameRef: string): string {
   const resolved = resolveRelativePath(cardPath, filenameRef);
   // Escaping ref → empty src: the thumbnail shows broken rather than pulling in
   // whatever a clamped-to-root path resolved to.
-  return resolved === null ? "" : apiRawFileUrl(getApiBase(), resolved);
+  if (resolved === null) return "";
+  const apiBase = getApiBase();
+  if (!isTransformablePhotoPath(filenameRef)) return apiRawFileUrl(apiBase, resolved);
+  return apiTransformedImageUrl({
+    apiBase,
+    path: resolved,
+    options: { width: 48, height: 48, fit: "cover", quality: 80, format: "auto" },
+  });
 }
 
 export function ImageCardListEntry({ data, compact }: ListProps<ImageAttrs>) {

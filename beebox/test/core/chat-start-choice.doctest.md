@@ -23,8 +23,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 async function configure(boxRoot: string, config: Record<string, unknown>): Promise<void> {
-  await fs.mkdir(path.join(boxRoot, "config"), { recursive: true });
-  await fs.writeFile(path.join(boxRoot, "config/box.json"), JSON.stringify(config));
+  await fs.mkdir(path.join(boxRoot, "_config"), { recursive: true });
+  await fs.writeFile(path.join(boxRoot, "_config/box.json"), JSON.stringify(config));
   clearBoxConfigCache(boxRoot);
 }
 ```
@@ -88,11 +88,11 @@ const reserved = await reserveChatSession({
   sessionId: coined,
   contextDir: null,
   seedFeatures: {},
-  model: "claude-fable-5",
+  model: "claude-fable-5-1",
 });
 
 JSON.stringify([reserved.kind, store.get(coined)?.model, store.get(coined)?.engine])
-=> ["reserved","claude-fable-5","claude"]
+=> ["reserved","claude-fable-5-1","claude"]
 
 const codexReserved = await reserveChatSession({
   boxRoot: box.root,

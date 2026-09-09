@@ -25,7 +25,7 @@ Every agent's context is a stack; each layer has a loading class:
 1. **Identity prompt** (always) — per situation: chat, chat-thread, reactor, procedure. Says what the agent *is* and covers only that situation's surface.
 2. **Box knowledge** (always) — box CLAUDE.md → compiled briefing + the agent guide. Loaded by every agent; the scarcest budget.
 3. **Situational** — schema `instructions` for the card types in play, `.claude/rules/` path globs, the per-turn `<chat-app>` snapshot.
-4. **On-demand** — skill bodies, `docs/generated/*`, guide cards the agent is pointed at.
+4. **On-demand** — skill bodies, the package docs (`node_modules/beebox/box-docs/*`) and box-compiled docs (`_content/docs/generated/*`), guide cards the agent is pointed at.
 
 **Skills are two things at once:** the `description` is always-loaded (it's the trigger) and must be pure routing — no mechanics; the body is on-demand and owns its domain's mechanics. A guide mention of a skill's domain is usually the first overlap — the description *is* the pointer.
 

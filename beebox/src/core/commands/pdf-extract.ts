@@ -16,7 +16,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { gzip } from "node:zlib";
 import { promisify } from "node:util";
-import { checkExtractionBounds, type DoclingImage, type DoclingService } from "../../services/docling.js";
+import {
+  checkExtractionBounds,
+  type DoclingImage,
+  type DoclingOcr,
+  type DoclingService,
+} from "../../services/docling.js";
 import { extractPdfText } from "./pdf-probe.js";
 import { err, ok, type Result } from "../../lib/result.js";
 
@@ -62,7 +67,7 @@ export interface ExtractPdfOptions {
   attachAbsDir: string;
   /** Scratch directory for Docling's raw output. Caller creates and removes it. */
   workDir: string;
-  forceOcr: boolean;
+  ocr: DoclingOcr;
   languages: string[] | null;
 }
 
@@ -114,7 +119,7 @@ function rewriteImageRefs(markdown: string, refs: Map<string, string>): string {
 export async function extractPdf(options: ExtractPdfOptions): Promise<Result<PdfExtraction>> {
   const extraction = await options.docling.extract(options.sourcePath, {
     workDir: options.workDir,
-    forceOcr: options.forceOcr,
+    ocr: options.ocr,
     languages: options.languages,
   });
   if (!extraction.ok) return err(extraction.error);

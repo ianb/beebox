@@ -18,7 +18,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { z } from "zod";
-import { resolveBoxRoot } from "./child-spawn.js";
+import { requireBoxRoot } from "../lib/box-shape.js";
 import { invariant } from "../lib/invariant.js";
 
 /**
@@ -49,8 +49,7 @@ const slugSchema = z
 
 const boxEntrySchema = z.strictObject({
   /** Absolute or relative (resolved against the config file's own directory)
-   *  path to the box — either a v2 package root or a legacy/v2 content dir.
-   *  `src/hub/supervisor.ts` resolves which. */
+   *  path to the box root — one root (shapeVersion 3). */
   path: z.string().min(1),
 });
 
@@ -63,7 +62,7 @@ const hubConfigFileSchema = z.strictObject({
    * boot. The first HTTP request (never a WS upgrade — see
    * `hub-server.ts`'s WS-refusal comment) for a slug spawns it on demand,
    * the same semantics the monorepo dev router already has for whole
-   * worktrees (`bin/router.ts`'s `ensureRunning`). Idle boxes (only HTTP
+   * worktrees (`workstreams-app/src/router/router.ts`'s `ensureRunning`). Idle boxes (only HTTP
    * request traffic counts as activity) get SIGTERM'd back to "stopped"
    * after `idleMs`. Defaults to `false` — production hubs stay resident
    * (schedulers/webhooks want the process up) unless a config opts in.
@@ -137,12 +136,10 @@ export function defaultHubConfigPath(): string {
 /**
  * Canonicalize a resolved `hub.json` entry path for the duplicate-box check
  * below: resolve it to the box's actual root the same way the supervisor
- * does (`resolveBoxRoot` -- handles the v2 package-root-vs-`content/`-dir
- * bilingual layout) and `fs.realpath` it (catches a symlinked alias to the
- * same box). Without this, `/boxes/a` (package root) and `/boxes/a/content`
- * (the same box's content dir) compare as different strings and both pass
- * the check, letting two `bbx serve` processes start against one box's
- * `events.db`.
+ * does (`requireBoxRoot`) and `fs.realpath` it (catches a symlinked alias to
+ * the same box). Without this, two differently-spelled paths to the same box
+ * (e.g. a symlink) compare as different strings and both pass the check,
+ * letting two `bbx serve` processes start against one box's `events.db`.
  *
  * Resolution failures (e.g. a misconfigured entry with no `.beebox/box.json`
  * anywhere) do NOT throw here -- `loadHubConfig` stays a load-time
@@ -156,7 +153,7 @@ export function defaultHubConfigPath(): string {
  */
 export async function canonicalBoxKey(resolvedPath: string): Promise<string> {
   try {
-    const boxRoot = await resolveBoxRoot(resolvedPath);
+    const boxRoot = await requireBoxRoot(resolvedPath);
     return await fs.realpath(boxRoot);
   } catch (_e) {
     try {

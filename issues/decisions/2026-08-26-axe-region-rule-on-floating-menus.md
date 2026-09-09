@@ -7,6 +7,7 @@ labels: [a11y, tours]
 filed-by: agent
 discovered-by: agent
 discovered-in: tour-health — new-chat tour, add-menu checkpoint, both viewports
+priority: normal
 ---
 
 The `new-chat` tour's `add-menu` checkpoint reports one axe violation at

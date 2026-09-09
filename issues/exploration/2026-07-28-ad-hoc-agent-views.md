@@ -4,6 +4,7 @@ workstream: todo-annotation
 area: beebox
 filed-by: agent
 discovered-in: worktree-todo-annotation — designing the todo-view card surface
+priority: backlog
 ---
 
 While settling that the collected-todos surface is a **card** (a `todo-view`

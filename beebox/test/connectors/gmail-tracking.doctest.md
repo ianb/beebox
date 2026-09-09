@@ -75,25 +75,25 @@ function gmailMessage(opts: {
 
 ```ts
 const box = await makeTmpBox();
-await writeThread(box.root, "box/inbox/email/First.email-thread.card", "thread-1");
+await writeThread(box.root, "_content/inbox/email/First.email-thread.card", "thread-1");
 
 const first = await findTrackedGmailThreads(box.root);
 JSON.stringify([...first].map(([id, entry]) => [id, entry.relPath]))
-=> [["thread-1","box/inbox/email/First.email-thread.card"]]
+=> [["thread-1","_content/inbox/email/First.email-thread.card"]]
 
-await mkdir(join(box.root, "store/archive/done"), { recursive: true });
+await mkdir(join(box.root, "_bookkeeping/archive/done"), { recursive: true });
 await rename(
-  join(box.root, "box/inbox/email/First.email-thread.card"),
-  join(box.root, "store/archive/done/First.email-thread.card"),
+  join(box.root, "_content/inbox/email/First.email-thread.card"),
+  join(box.root, "_bookkeeping/archive/done/First.email-thread.card"),
 );
 const moved = await findTrackedGmailThreads(box.root);
 moved.get("thread-1")?.relPath
-=> store/archive/done/First.email-thread.card
+=> _bookkeeping/archive/done/First.email-thread.card
 
-await mkdir(join(box.root, "store/trash"), { recursive: true });
+await mkdir(join(box.root, "_bookkeeping/trash"), { recursive: true });
 await rename(
-  join(box.root, "store/archive/done/First.email-thread.card"),
-  join(box.root, "store/trash/First.email-thread.card"),
+  join(box.root, "_bookkeeping/archive/done/First.email-thread.card"),
+  join(box.root, "_bookkeeping/trash/First.email-thread.card"),
 );
 (await findTrackedGmailThreads(box.root)).size
 => 0
@@ -108,9 +108,9 @@ scope is not itself tracking state.
 
 ```ts
 const box = await makeTmpBox();
-await writeThread(box.root, "box/inbox/email/Delete.email-thread.card", "thread-delete");
-await mkdir(join(box.root, "box/inbox/email/Delete.attach"), { recursive: true });
-await rm(join(box.root, "box/inbox/email/Delete.email-thread.card"));
+await writeThread(box.root, "_content/inbox/email/Delete.email-thread.card", "thread-delete");
+await mkdir(join(box.root, "_content/inbox/email/Delete.attach"), { recursive: true });
+await rm(join(box.root, "_content/inbox/email/Delete.email-thread.card"));
 (await findTrackedGmailThreads(box.root)).size
 => 0
 ```
@@ -124,7 +124,7 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox();
 await box.seed(
-  "box/inbox/email/Broken.email-thread.card",
+  "_content/inbox/email/Broken.email-thread.card",
   "---\nsubject: Missing identity\nparticipants: []\ndate-range:\n  start: 2026-08-01T10:00:00.000Z\n  end: 2026-08-01T10:00:00.000Z\nmessages: []\n---\n",
 );
 let broken = "";
@@ -139,8 +139,8 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox();
-await writeThread(box.root, "box/inbox/email/One.email-thread.card", "same-thread");
-await writeThread(box.root, "store/archive/done/Two.email-thread.card", "same-thread");
+await writeThread(box.root, "_content/inbox/email/One.email-thread.card", "same-thread");
+await writeThread(box.root, "_bookkeeping/archive/done/Two.email-thread.card", "same-thread");
 let duplicate = "";
 await findTrackedGmailThreads(box.root).catch((error: Error) => { duplicate = error.message; });
 duplicate.includes("same-thread") && duplicate.includes("One.email-thread.card") && duplicate.includes("Two.email-thread.card")
@@ -204,12 +204,12 @@ const config = parseGmailConnectorConfig({
     {
       name: "review-inbox",
       query: "label:inbox is:unread",
-      action: { type: "procedure", ref: "config/procedures/review-email.procedure.card" },
+      action: { type: "procedure", ref: "_config/procedures/review-email.procedure.card" },
     },
   ],
 });
 JSON.stringify(config.rules)
-=> [{"name":"send-to-agent","query":"label:beebox","action":{"type":"track","budget":{"threads":10,"windowMs":1209600000}}},{"name":"review-inbox","query":"label:inbox is:unread","action":{"type":"procedure","ref":"config/procedures/review-email.procedure.card"}}]
+=> [{"name":"send-to-agent","query":"label:beebox","action":{"type":"track","budget":{"threads":10,"windowMs":1209600000}}},{"name":"review-inbox","query":"label:inbox is:unread","action":{"type":"procedure","ref":"_config/procedures/review-email.procedure.card"}}]
 ```
 
 The `labels`/`query` shorthand expands to one rule carrying its own action, and
@@ -246,10 +246,10 @@ The shorthand can route to a procedure instead, which creates no cards.
 ```ts
 const routed = parseGmailConnectorConfig({
   query: "label:inbox is:unread",
-  action: { type: "procedure", ref: "config/procedures/review-email.procedure.card" },
+  action: { type: "procedure", ref: "_config/procedures/review-email.procedure.card" },
 });
 JSON.stringify(routed.rules)
-=> [{"name":"shorthand","query":"label:inbox is:unread","action":{"type":"procedure","ref":"config/procedures/review-email.procedure.card"}}]
+=> [{"name":"shorthand","query":"label:inbox is:unread","action":{"type":"procedure","ref":"_config/procedures/review-email.procedure.card"}}]
 ```
 
 The action is required, never implied. A shorthand without one is an error
@@ -463,7 +463,7 @@ const procedureConfig = parseGmailConnectorConfig({
   rules: [{
     name: "review-mail",
     query: "label:callback",
-    action: { type: "procedure", ref: "config/procedures/review-mail.procedure.card" },
+    action: { type: "procedure", ref: "_config/procedures/review-mail.procedure.card" },
   }],
 });
 const nonMatchingSameThread = {
@@ -480,7 +480,7 @@ const procedureResult = await evaluateGmailRules({
   now: new Date("2026-08-05T13:00:00.000Z"),
 });
 JSON.stringify(procedureResult.procedures)
-=> [{"procedureRef":"config/procedures/review-mail.procedure.card","directive":"Gmail rule review-mail has new matching mail. Inspect with: bbx connector gmail pending review-mail"}]
+=> [{"procedureRef":"_config/procedures/review-mail.procedure.card","directive":"Gmail rule review-mail has new matching mail. Inspect with: bbx connector gmail pending review-mail"}]
 
 procedureResult.state.rules?.["review-mail"]?.pending?.length
 => 1

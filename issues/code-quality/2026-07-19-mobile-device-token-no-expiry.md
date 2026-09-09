@@ -4,6 +4,7 @@ workstream: mobile-token-handshake
 area: beebox
 filed-by: agent
 discovered-in: worktree-mobile-token-handshake — deferred from the bbx_mobile cookie work
+priority: backlog
 ---
 
 `MobileDevice` (`beebox/src/core/mobile/pairing.ts`) tracks `revokedAt` but no

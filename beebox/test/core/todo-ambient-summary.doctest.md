@@ -19,7 +19,7 @@ process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 
 async function seedBox() {
   const box = await makeTmpBox();
-  await box.write("config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
+  await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
   return box;
 }
 ```

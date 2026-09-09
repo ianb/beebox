@@ -1,11 +1,12 @@
 ---
 title: "Close the secret-store transition window: remove legacy file/env fallbacks"
-workstream: secret-custody
+workstream: transition-cleanup
 area: beebox
 labels: [security, secrets]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-secret-custody — after running the data migration on dev + prod
+priority: important
 ---
 
 The secret store shipped 2026-08-17

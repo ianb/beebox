@@ -1,7 +1,7 @@
 # Gmail draft uploads
 
 The Gmail connector picks up agent-authored `email-outbound` cards under
-`box/inbox/email/` and uploads them to Gmail as drafts. After upload, each
+`_content/inbox/email/` and uploads them to Gmail as drafts. After upload, each
 card is stamped with `gmail-draft-id` and `gmail-draft-url` so the user can
 open the draft in Gmail.
 
@@ -19,12 +19,12 @@ import { createGmailConnector } from "../../src/connectors/gmail.js";
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("_config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
-await mkdir(join(box.root, "box/inbox/email/draft-2026-04-28-hello"), { recursive: true });
+await mkdir(join(box.root, "_content/inbox/email/draft-2026-04-28-hello"), { recursive: true });
 await box.seed(
-  "box/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card",
+  "_content/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card",
   "---\ntype: email-outbound\nstatus: draft\nto: alice@example.com\nsubject: Hello\n---\nHi there.\n",
 );
 box.commitAll("agent writes draft");
@@ -42,7 +42,7 @@ gmail.drafts.length
 The card is stamped with the returned draft id and URL:
 
 ```ts continue
-const stampedPath = "box/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card";
+const stampedPath = "_content/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card";
 const stamped = await readFile(join(box.root, stampedPath), "utf-8");
 stamped.includes("gmail-draft-id: r-fake-1")
 => true
@@ -76,16 +76,16 @@ Gmail thread.
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("_config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
-await mkdir(join(box.root, "box/inbox/email/thread-Test-abc12345"), { recursive: true });
+await mkdir(join(box.root, "_content/inbox/email/thread-Test-abc12345"), { recursive: true });
 await box.seed(
-  "box/inbox/email/thread-Test-abc12345/msg-001.email-message.card",
+  "_content/inbox/email/thread-Test-abc12345/msg-001.email-message.card",
   "---\ntype: email-message\nmessage-id: orig-msg-id-123\nthread-id: thread-abc12345\nfrom: alice@example.com\nto: me@example.com\ndate: 2026-02-15T10:00:00Z\nsubject: Test\nbody-file:\n  ref: msg-001.body.txt\n---\n",
 );
 await box.seed(
-  "box/inbox/email/thread-Test-abc12345/draft-001.email-outbound.card",
+  "_content/inbox/email/thread-Test-abc12345/draft-001.email-outbound.card",
   "---\ntype: email-outbound\nstatus: draft\nto: alice@example.com\nsubject: \"Re: Test\"\nin-reply-to:\n  ref: msg-001.email-message.card\n---\nThanks for the note.\n",
 );
 box.commitAll("agent writes reply draft");
@@ -122,18 +122,18 @@ resolve to the same source card:
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("_config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
-await mkdir(join(box.root, "box/inbox/email/thread-Test-zzz99999"), { recursive: true });
+await mkdir(join(box.root, "_content/inbox/email/thread-Test-zzz99999"), { recursive: true });
 await box.seed(
-  "box/inbox/email/thread-Test-zzz99999/msg-001.email-message.card",
+  "_content/inbox/email/thread-Test-zzz99999/msg-001.email-message.card",
   "---\ntype: email-message\nmessage-id: abs-msg-id\nthread-id: thread-zzz99999\nfrom: a@b.com\nto: me@x.com\ndate: 2026-02-15T10:00:00Z\nsubject: X\nbody-file:\n  ref: msg-001.body.txt\n---\n",
 );
 // Box-anchored absolute path (leading slash, relative to box root)
 await box.seed(
-  "box/inbox/email/thread-Test-zzz99999/draft-001.email-outbound.card",
-  "---\ntype: email-outbound\nstatus: draft\nto: a@b.com\nsubject: \"Re: X\"\nin-reply-to:\n  ref: /box/inbox/email/thread-Test-zzz99999/msg-001.email-message.card\n---\nReply 1.\n",
+  "_content/inbox/email/thread-Test-zzz99999/draft-001.email-outbound.card",
+  "---\ntype: email-outbound\nstatus: draft\nto: a@b.com\nsubject: \"Re: X\"\nin-reply-to:\n  ref: /_content/inbox/email/thread-Test-zzz99999/msg-001.email-message.card\n---\nReply 1.\n",
 );
 box.commitAll("setup");
 
@@ -157,12 +157,12 @@ the user only notices is wrong after opening Gmail:
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("_config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
-await mkdir(join(box.root, "box/inbox/email/thread-Bad-aaa00000"), { recursive: true });
+await mkdir(join(box.root, "_content/inbox/email/thread-Bad-aaa00000"), { recursive: true });
 await box.seed(
-  "box/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card",
+  "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card",
   "---\ntype: email-outbound\nstatus: draft\nto: x@y.com\nsubject: \"Re: missing\"\nin-reply-to:\n  ref: does-not-exist.email-message.card\n---\n...\n",
 );
 box.commitAll("setup");
@@ -179,7 +179,7 @@ result.success
 => true
 
 // Card stays unstamped so the user can fix the ref and retry on next sync
-const stamped = await readFile(join(box.root, "box/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card"), "utf-8");
+const stamped = await readFile(join(box.root, "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card"), "utf-8");
 stamped.includes("gmail-draft-id")
 => false
 ```
@@ -192,12 +192,12 @@ connector leaves it alone:
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("_config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
-await mkdir(join(box.root, "box/inbox/email/draft-2026-04-28-already"), { recursive: true });
+await mkdir(join(box.root, "_content/inbox/email/draft-2026-04-28-already"), { recursive: true });
 await box.seed(
-  "box/inbox/email/draft-2026-04-28-already/draft-001.email-outbound.card",
+  "_content/inbox/email/draft-2026-04-28-already/draft-001.email-outbound.card",
   "---\ntype: email-outbound\nstatus: draft\nto: bob@example.com\nsubject: Already done\ngmail-draft-id: r-existing\ngmail-draft-url: https://mail.google.com/mail/u/0/#drafts/m-existing\n---\nTest.\n",
 );
 box.commitAll("setup");
@@ -212,18 +212,18 @@ gmail.drafts.length
 
 ## Received email-message cards are not picked up as outbound
 
-A normal received `email-message` card under `box/inbox/email/` is left
+A normal received `email-message` card under `_content/inbox/email/` is left
 alone — the connector only uploads `email-outbound` cards:
 
 ```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
-await box.seed("config/connectors/gmail.json", "{}\n");
+await box.seed("_config/connectors/gmail.json", "{}\n");
 box.commitAll("init box");
 
-await mkdir(join(box.root, "box/inbox/email/thread-Hello-xyz12345"), { recursive: true });
+await mkdir(join(box.root, "_content/inbox/email/thread-Hello-xyz12345"), { recursive: true });
 await box.seed(
-  "box/inbox/email/thread-Hello-xyz12345/msg-001.email-message.card",
+  "_content/inbox/email/thread-Hello-xyz12345/msg-001.email-message.card",
   "---\ntype: email-message\nmessage-id: m1-at-example.com\nthread-id: thread-xyz12345\nfrom: alice@example.com\nto: me@example.com\ndate: 2026-02-15T10:00:00Z\nsubject: Hello\nbody-file:\n  ref: msg-001.body.txt\n---\n",
 );
 box.commitAll("setup");

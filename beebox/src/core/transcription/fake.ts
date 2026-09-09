@@ -1,8 +1,8 @@
 /**
  * Scripted transcription service for tests and dev boxes.
  *
- * Selected when `config/transcription.json` sets `"service": "fake"`. Reads a
- * box-local script at `config/fake-transcription.json` and returns the entry
+ * Selected when `_config/transcription.json` sets `"service": "fake"`. Reads a
+ * box-local script at `_config/fake-transcription.json` and returns the entry
  * keyed by the clip filename (falling back to `"*"`), so doctests and a dev box
  * can produce deterministic transcripts + word timings with no API key. Word
  * timestamps are relative seconds from the clip start — the same shape a real
@@ -38,7 +38,7 @@ const fakeTranscriptionEntrySchema = z.object({
 });
 
 /**
- * `config/fake-transcription.json` shape. Keys are the audio filename passed to
+ * `_config/fake-transcription.json` shape. Keys are the audio filename passed to
  * `transcribeAudio` (e.g. `"audio-001.webm"`), or `"*"` as a catch-all:
  *
  *   { "*": { "text": "hello world", "duration": 2,
@@ -51,7 +51,7 @@ class FakeTranscriptionNoBoxError extends Error implements TranscriptionError {
   readonly permanent = true;
   readonly code = "fake_script_missing";
   constructor() {
-    super("Fake transcription requires a boxRoot to locate config/fake-transcription.json");
+    super("Fake transcription requires a boxRoot to locate _config/fake-transcription.json");
     this.name = "FakeTranscriptionNoBoxError";
   }
 }
@@ -79,7 +79,7 @@ export async function transcribeAudioFake(
 ): Promise<DetailedTranscriptionResult> {
   const { boxRoot, filename } = params;
   if (!boxRoot) throw new FakeTranscriptionNoBoxError();
-  const configPath = path.join(boxRoot, "config/fake-transcription.json");
+  const configPath = path.join(boxRoot, "_config/fake-transcription.json");
   let script: z.infer<typeof fakeTranscriptionScriptSchema>;
   try {
     script = fakeTranscriptionScriptSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));

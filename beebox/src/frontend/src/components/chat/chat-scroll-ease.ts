@@ -4,13 +4,8 @@
  */
 
 import type { MutableRefObject } from "react";
-import type { Anchor } from "./chat-scroll.js";
-
-/** The anchor's live offset from the scroller's top edge, or null if it is gone. */
-export function anchorOffset(anchor: Anchor | null, scroller: HTMLDivElement): number | null {
-  if (!anchor || !anchor.el.isConnected) return null;
-  return anchor.el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
-}
+import { recordScrollTrace } from "../../lib/scroll-diagnostics";
+import { prefersReducedMotion } from "../../lib/reduced-motion";
 
 /**
  * Quick eased scroll that brings `target`'s top to the scroller's top.
@@ -27,29 +22,40 @@ function animateAnchorToTop(opts: {
   el: HTMLDivElement;
   target: Element;
   onDone: () => void;
+  onCancel: () => void;
   cancelRef: MutableRefObject<(() => void) | null>;
 }): void {
-  const { el, target, onDone, cancelRef } = opts;
+  const { el, target, onDone, onCancel, cancelRef } = opts;
+  recordScrollTrace("write", { top: -1, b: "anchor-ease" });
   const deadline = performance.now() + 400;
   let lastWritten = el.scrollTop;
   let frame = 0;
   const stop = (finish: boolean): void => {
+    recordScrollTrace("ease-stop", { finish, top: el.scrollTop });
     cancelAnimationFrame(frame);
     if (cancelRef.current === cancel) cancelRef.current = null;
     if (finish) onDone();
+    else onCancel();
   };
   const cancel = (): void => { stop(false); };
   cancelRef.current?.();
   cancelRef.current = cancel;
   const step = (): void => {
-    if (Math.abs(el.scrollTop - lastWritten) > 4) { stop(false); return; }
+    if (!target.isConnected || Math.abs(el.scrollTop - Math.min(lastWritten, Math.max(0, el.scrollHeight - el.clientHeight))) > 4) {
+      recordScrollTrace("ease-interrupted", { expected: lastWritten, actual: el.scrollTop });
+      stop(false); return;
+    }
     const remaining = target.getBoundingClientRect().top - el.getBoundingClientRect().top;
     if (Math.abs(remaining) < 1 || performance.now() > deadline) {
+      const from = el.scrollTop;
       el.scrollTop += remaining;
+      recordScrollTrace("ease-write", { from, want: from + remaining, to: el.scrollTop, max: el.scrollHeight - el.clientHeight, final: true });
       stop(true);
       return;
     }
+    const from = el.scrollTop;
     el.scrollTop += remaining * 0.35;
+    recordScrollTrace("ease-write", { from, want: from + remaining * 0.35, to: el.scrollTop, max: el.scrollHeight - el.clientHeight, final: false });
     lastWritten = el.scrollTop;
     frame = requestAnimationFrame(step);
   };
@@ -66,14 +72,15 @@ export function easeOrSnapToTop(opts: {
   target: Element;
   writeInstant: (top: number) => void;
   onDone: () => void;
+  onCancel: () => void;
   cancelRef: MutableRefObject<(() => void) | null>;
 }): void {
-  const { el, target, writeInstant, onDone, cancelRef } = opts;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const { el, target, writeInstant, onDone, onCancel, cancelRef } = opts;
+  if (prefersReducedMotion()) {
     const offset = target.getBoundingClientRect().top - el.getBoundingClientRect().top;
     writeInstant(el.scrollTop + offset);
     onDone();
     return;
   }
-  animateAnchorToTop({ el, target, onDone, cancelRef });
+  animateAnchorToTop({ el, target, onDone, onCancel, cancelRef });
 }

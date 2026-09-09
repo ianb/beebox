@@ -35,10 +35,10 @@ renderer runs it every time the card is opened.
 ## Fields
 
 - \`glob:\` — which cards to scan, relative to the box root (e.g.
-  \`"store/projects/kitchen-remodel/**"\`). **Omit it** to scope the view to
+  \`"_content/projects/kitchen-remodel/**"\`). **Omit it** to scope the view to
   this card's own directory subtree — that's the common case for a
   project-local plate. The box-wide instance
-  (\`store/plate.todo-view.card\`) sets \`glob: "**"\` explicitly.
+  (\`_content/plate.todo-view.card\`) sets \`glob: "**"\` explicitly.
 - \`status:\` — restrict to specific statuses (\`open\`, \`done\`, \`dropped\`,
   \`parked\`). **Omit** to see \`open\` + \`parked\` — every plate-state group
   (escalated / on-plate / quiet / parked); \`done\`/\`dropped\` stay out of
@@ -54,7 +54,7 @@ subtree-scoped by the omitted-\`glob\` rule above. Link to it like any other
 card (a plain card ref — chat, another card's body, a landmark). Tend these
 freely: create one when a directory's todos deserve their own surface,
 rename/move it with the directory, delete it when the project's done. There
-is exactly one box-wide instance (the stock \`store/plate.todo-view.card\`,
+is exactly one box-wide instance (the stock \`_content/plate.todo-view.card\`,
 "The plate") — everything else is as many project-local instances as are
 useful.
 

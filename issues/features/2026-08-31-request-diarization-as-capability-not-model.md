@@ -7,6 +7,7 @@ labels: [voice, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — correcting diarization's place in transcription settings
+priority: backlog
 ---
 
 Diarization is currently presented as an HQ transcription model choice:

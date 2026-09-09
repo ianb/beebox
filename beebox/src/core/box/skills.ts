@@ -23,6 +23,7 @@ import {
   TRICKS_SKILL,
   VIEWS_SKILL,
 } from "./skills-content.js";
+import { WHAT_CAN_YOU_DO_SKILL } from "./skills-content-what-can-you-do.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 
 interface BoxSkill {
@@ -54,11 +55,12 @@ function buildBoxSkills(): BoxSkill[] {
     { name: "schedules", content: SCHEDULES_SKILL },
     { name: "tricks", content: TRICKS_SKILL },
     { name: "views", content: VIEWS_SKILL },
+    { name: "what-can-you-do", content: WHAT_CAN_YOU_DO_SKILL },
   ];
 }
 
 /**
- * Write each managed box skill to `<packageRoot>/.claude/skills/<name>/SKILL.md`
+ * Write each managed box skill to `<boxRoot>/.claude/skills/<name>/SKILL.md`
  * (`.claude/` lives at the box's package root, which equals `boxRoot` for a
  * legacy box — see "Where Claude Code runs" in
  * `docs/implemented-plans/boxes-as-packages-v2.md`). Idempotent overwrite — any
@@ -67,10 +69,10 @@ function buildBoxSkills(): BoxSkill[] {
  * untouched.
  */
 export async function generateSkills(boxRoot: string): Promise<string[]> {
-  const { packageRoot } = await getBoxShape(boxRoot);
+  const { boxRoot: shapeBoxRoot } = await getBoxShape(boxRoot);
   const written: string[] = [];
   for (const skill of buildBoxSkills()) {
-    const dir = join(packageRoot, ".claude", "skills", skill.name);
+    const dir = join(shapeBoxRoot, ".claude", "skills", skill.name);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "SKILL.md"), skill.content);
     for (const file of skill.files ?? []) {

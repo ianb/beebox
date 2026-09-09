@@ -492,3 +492,109 @@ struct NativeSpeechCommand: Codable, Equatable {
 
     static let stop = NativeSpeechCommand(action: .stop)
 }
+
+/// Routing metadata is independent of the card visible in the webview.
+struct NativeConversationTarget: Codable, Equatable, Sendable {
+    enum Kind: String, Codable, Sendable { case session, start }
+    enum Engine: String, Codable, Sendable { case claude, codex }
+    var kind: Kind
+    var sessionId: String?
+    var clientConversationId: String?
+    var contextDir: String
+    var engine: Engine?
+    var model: String?
+    var seedFeatures: [String: String]?
+
+    var logicalID: String { sessionId ?? clientConversationId ?? "" }
+    var isValid: Bool {
+        switch kind {
+        case .session: return sessionId?.isEmpty == false && sessionId != "new"
+        case .start: return clientConversationId?.isEmpty == false && engine != nil
+        }
+    }
+}
+
+struct NativeAttentionSnapshot: Codable, Equatable, Sendable {
+    enum Surface: String, Codable, Sendable { case card, browse, dashboard, landmarks, chat, other }
+    enum Transcript: String, Codable, Sendable { case visible, hidden }
+    var surface: Surface
+    var focusedRef: String?
+    var transcript: Transcript
+}
+
+struct NativeSendBinding: Codable, Equatable, Sendable {
+    var boxSlug: String
+    var target: NativeConversationTarget
+    var attention: NativeAttentionSnapshot
+}
+
+struct NativeConversationSelection: Codable, Equatable, Sendable {
+    enum Kind: String, Codable, Sendable { case ready, resolving, unavailable }
+    var kind: Kind
+    var target: NativeConversationTarget?
+    var label: String?
+    var requestId: String?
+    var contextDir: String?
+    var reason: String?
+}
+
+struct NativeComposerBinding: Codable, Equatable, Sendable {
+    enum Kind: String, Codable, Sendable { case selection, assigned }
+    var version: Int
+    var kind: Kind
+    var boxSlug: String
+    var revision: Int?
+    var selection: NativeConversationSelection?
+    var attention: NativeAttentionSnapshot?
+    var clientConversationId: String?
+    var sessionId: String?
+    var contextDir: String?
+
+    var isValid: Bool {
+        guard version == 1, !boxSlug.isEmpty else { return false }
+        switch kind {
+        case .assigned:
+            return clientConversationId?.isEmpty == false && sessionId?.isEmpty == false
+                && sessionId != "new" && contextDir != nil
+        case .selection:
+            guard let revision, revision >= 0, let selection, let attention else { return false }
+            if let ref = attention.focusedRef {
+                guard !ref.contains(":"), !ref.hasPrefix("//"),
+                      !ref.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
+                      attention.surface != .other else { return false }
+            }
+            switch selection.kind {
+            case .ready: return selection.target?.isValid == true && selection.label?.isEmpty == false
+            case .resolving: return selection.requestId?.isEmpty == false && selection.contextDir != nil
+            case .unavailable: return selection.reason?.isEmpty == false && selection.contextDir != nil
+            }
+        }
+    }
+
+    var sendBinding: NativeSendBinding? {
+        guard kind == .selection, isValid, selection?.kind == .ready,
+              let target = selection?.target, let attention else { return nil }
+        return NativeSendBinding(boxSlug: boxSlug, target: target, attention: attention)
+    }
+}
+
+struct NativeEmissionV3: Encodable {
+    var emission: NativeChatEmission
+    func encode(to encoder: Encoder) throws {
+        try NativeEmissionV2(emission: emission).encode(to: encoder)
+        var values = encoder.container(keyedBy: Keys.self)
+        try values.encode(3, forKey: .version)
+        try values.encode(emission.binding, forKey: .binding)
+        try values.encode(emission.bindingRevision, forKey: .bindingRevision)
+    }
+    private enum Keys: String, CodingKey { case version, binding, bindingRevision }
+}
+
+struct NativeConversationStartup: Codable, Equatable, Sendable {
+    enum State: String, Codable, Sendable { case prepared, attempted, accepted, assigned }
+    var clientConversationId: String
+    var firstEmissionId: UUID
+    var target: NativeConversationTarget
+    var state: State
+    var sessionId: String?
+}

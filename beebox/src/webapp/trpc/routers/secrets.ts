@@ -1,6 +1,6 @@
 /**
  * The boxholder's management surface for the machine secret store
- * (`docs/plans/secret-custody.md`, Track 2's management-surface bullet).
+ * (`docs/implemented-plans/secret-custody.md`, Track 2's management-surface bullet).
  *
  * Gated by `authenticatedOwnerProcedure`, not the ordinary `ownerProcedure`:
  * `ctx.isOwner` also passes an OPEN-ACCESS box, and every other owner surface is

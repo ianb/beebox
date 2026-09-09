@@ -213,9 +213,9 @@ transcript snippet, so the chip and the pickers can't disagree about what a chat
 is called.
 
 ```ts continue
-await mkdir(join(server.boxRoot, "store/chat/web"), { recursive: true });
+await mkdir(join(server.boxRoot, "_content/chat/web"), { recursive: true });
 await writeFile(
-  join(server.boxRoot, "store/chat/web/2026-01-01_sess-exp.chat.card"),
+  join(server.boxRoot, "_content/chat/web/2026-01-01_sess-exp.chat.card"),
   "---\nsession: sess-explicit\ntitle: Chasing down a duplicate charge\n---\n\n",
 );
 
@@ -231,7 +231,7 @@ only a fast path for finding it.
 
 ```ts continue
 await writeFile(
-  join(server.boxRoot, "store/chat/web/Duplicate_charge_followup.chat.card"),
+  join(server.boxRoot, "_content/chat/web/Duplicate_charge_followup.chat.card"),
   "---\nsession: sess-renamed\ntitle: Renamed husk still names its chat\n---\n\n",
 );
 

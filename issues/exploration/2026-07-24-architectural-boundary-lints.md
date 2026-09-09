@@ -6,6 +6,7 @@ labels: [lint, openclaw-borrow]
 filed-by: agent
 discovered-in: worktree-openclaw-security-lints — surveying openclaw's custom lint walkers
 needs: [design]
+priority: normal
 ---
 
 openclaw enforces architectural boundaries with a standalone TS-AST walker

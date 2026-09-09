@@ -4,6 +4,8 @@
  * file under the line limit; assembled there by generateBbxCommands().
  */
 
+import { BOX_PACKAGE_DOCS } from "./shared.js";
+
 /**
  * Hand-written command sections: procedure, tick, scheduled, scheduler, finalize,
  * scenario.
@@ -12,7 +14,7 @@ export function bbxCommandsScheduling(): string[] {
   return [
     "## bbx procedure",
     "",
-    "Run and manage declarative procedures. See `docs/generated/procedures.md` for details.",
+    `Run and manage declarative procedures. See \`${BOX_PACKAGE_DOCS}/procedures.md\` for details.`,
     "",
     "```bash",
     "bbx procedure run <name-or-path>          # Run a procedure",
@@ -23,7 +25,7 @@ export function bbxCommandsScheduling(): string[] {
     "bbx procedure status [run-dir]            # Show status of latest/specific run",
     "```",
     "",
-    "The `<name-or-path>` argument can be a bare name (resolves to `config/procedures/<name>.procedure.card`)",
+    "The `<name-or-path>` argument can be a bare name (resolves to `_config/procedures/<name>.procedure.card`)",
     "or a direct path to any `.procedure.card` file.",
     "",
     "The `--directive` flag passes an opaque string that appears as `<directive>...</directive>` in every agent's",
@@ -37,7 +39,7 @@ export function bbxCommandsScheduling(): string[] {
     "bbx tick [--dry-run] [--script <name>] [--force] [--box <path>]",
     "```",
     "",
-    "Checks all `config/schedules/*.scheduled-script.card` files against their cron/at/rrule schedules.",
+    "Checks all `_config/schedules/*.scheduled-script.card` files against their cron/at/rrule schedules.",
     "Runs due scripts, updates last-run timestamps, and deletes one-shot (`once`) scripts after execution.",
     "",
     "**Options:**",
@@ -103,7 +105,7 @@ export function bbxCommandsScheduling(): string[] {
     "bbx finalize [-c, --connector <name>]",
     "```",
     "",
-    "Symmetric counterpart to `bbx wakeup`. Sends any pending cards in `box/output/`",
+    "Symmetric counterpart to `bbx wakeup`. Sends any pending cards in `_bookkeeping/output/`",
     "(e.g. telegram messages). Called automatically by the reactor after job processing,",
     "or run manually to flush output.",
     "",

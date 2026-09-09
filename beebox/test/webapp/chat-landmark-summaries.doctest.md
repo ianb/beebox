@@ -31,7 +31,7 @@ await box.write(
 
 const { summaries, problems } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"Box.landmark.card","dir":"","label":"Home","symbol":"🏠","symbolSrc":null},{"path":"recipes/Recipes.landmark.card","dir":"recipes","label":"Recipes","symbol":"🍳","symbolSrc":null}]
+=> [{"path":"Box.landmark.card","dir":"","label":"Home","symbol":{"glyph":"🏠"},"prominence":null},{"path":"recipes/Recipes.landmark.card","dir":"recipes","label":"Recipes","symbol":{"glyph":"🍳"},"prominence":null}]
 
 JSON.stringify(problems)
 => []
@@ -43,12 +43,12 @@ JSON.stringify(problems)
 const box = await makeTmpBox();
 await box.write(
   "trips/Trips.landmark.card",
-  "---\nnavigation:\n  label: Trips\n  symbol:\n    src: Trips.attach/pin.png\n---\n",
+  "---\nnavigation:\n  label: Trips\n  symbol:\n    src: /_content/trips/Trips.attach/pin.png\n---\n",
 );
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":"","symbolSrc":"trips/Trips.attach/pin.png"}]
+=> [{"path":"trips/Trips.landmark.card","dir":"trips","label":"Trips","symbol":{"src":"_content/trips/Trips.attach/pin.png"},"prominence":null}]
 ```
 
 ## A box-root `symbol.src` (leading `/`) resolves against the box, not the card
@@ -65,12 +65,12 @@ absolute path win, so a leading-`/` src silently escaped the box
 const box = await makeTmpBox();
 await box.write(
   "archive/people/marlowe/Marlowe.landmark.card",
-  "---\nnavigation:\n  label: Marlowe\n  symbol:\n    src: /archive/people/marlowe/images/priya-portrait.webp\n---\n",
+  "---\nnavigation:\n  label: Marlowe\n  symbol:\n    src: /_content/archive/people/marlowe/images/priya-portrait.webp\n---\n",
 );
 
 const { summaries } = await loadLandmarkSummaries(box.root);
-summaries[0].symbolSrc
-=> archive/people/marlowe/images/priya-portrait.webp
+summaries[0].symbol?.src
+=> _content/archive/people/marlowe/images/priya-portrait.webp
 ```
 
 ## Missing label falls back to the filename, missing navigation is tolerated
@@ -87,7 +87,7 @@ await box.write(
 
 const { summaries } = await loadLandmarkSummaries(box.root);
 JSON.stringify(summaries)
-=> [{"path":"archive/Old_Mail.landmark.card","dir":"archive","label":"Old_Mail","symbol":"","symbolSrc":null}]
+=> [{"path":"archive/Old_Mail.landmark.card","dir":"archive","label":"Old_Mail","symbol":null,"prominence":null}]
 ```
 
 ## A card whose frontmatter doesn't parse is reported, not silently skipped
@@ -108,5 +108,5 @@ JSON.stringify(summaries.map((s) => s.label))
 => ["Good"]
 
 JSON.stringify(problems)
-=> [{"path":"Bad.landmark.card"},{"path":"deep/Broken.landmark.card"}]
+=> [{"kind":"landmark-parse","path":"Bad.landmark.card"},{"kind":"landmark-parse","path":"deep/Broken.landmark.card"}]
 ```

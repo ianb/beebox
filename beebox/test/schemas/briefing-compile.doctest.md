@@ -142,6 +142,6 @@ JSON.stringify(compileBriefing({ type: "briefing", body: "" }))
 ## A directory label changes the header
 
 ```ts
-JSON.stringify(compileBriefing({ type: "briefing", body: "" }, "store/archive/financial"))
-=> "## Briefing: store/archive/financial\n"
+JSON.stringify(compileBriefing({ type: "briefing", body: "" }, "_bookkeeping/archive/financial"))
+=> "## Briefing: _bookkeeping/archive/financial\n"
 ```

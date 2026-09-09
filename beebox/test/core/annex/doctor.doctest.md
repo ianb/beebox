@@ -28,10 +28,10 @@ function healthyFake() {
   });
 }
 
-async function installSmudgeHooks(box: { packageRoot: string }): Promise<void> {
+async function installSmudgeHooks(box: { root: string }): Promise<void> {
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
-  const dir = path.join(box.packageRoot, ".git", "hooks");
+  const dir = path.join(box.root, ".git", "hooks");
   await fs.mkdir(dir, { recursive: true });
   const hook = `#!/bin/sh\n${ANNEX_SMUDGE_LINE}\n`;
   await Promise.all([
@@ -45,10 +45,10 @@ async function installSmudgeHooks(box: { packageRoot: string }): Promise<void> {
 }
 
 /** Write the annex hooks so hook checks pass. */
-async function installHooks(box: { packageRoot: string }): Promise<void> {
+async function installHooks(box: { root: string }): Promise<void> {
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
-  const dir = path.join(box.packageRoot, ".git", "hooks");
+  const dir = path.join(box.root, ".git", "hooks");
   await installSmudgeHooks(box);
   await fs.writeFile(path.join(dir, "pre-commit"), `#!/bin/bash\n${ANNEX_PRECOMMIT_LINE}\n`);
 }
@@ -64,9 +64,9 @@ nothing:
 ```ts
 const box = await makeTmpBox({ annex: true });
 await installHooks(box);
-await writeAnnexInfoAttributes(box.packageRoot);
+await writeAnnexInfoAttributes(box.root);
 const annex = healthyFake();
-const result = await runAnnexDoctor(annex, { repoRoot: box.packageRoot, boxRoot: box.root });
+const result = await runAnnexDoctor(annex, { repoRoot: box.root, boxRoot: box.root });
 statuses(result)
 => binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=ok annexed-coverage=ok attributes=ok content-present=ok journal=ok smudge-hooks=ok hook=ok
 
@@ -90,13 +90,13 @@ annex objects, so an in-place edit still corrupts the object and `fsck` does
 not notice.
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ annex: true });
 await installHooks(box);
 const annex = createFakeGitAnnex({
   gitConfig: { "annex.thin": "true" },
   annexConfig: { "annex.largefiles": assetLargefilesExpression() },
 });
-const result = await runAnnexDoctor(annex, { repoRoot: box.packageRoot, boxRoot: box.root });
+const result = await runAnnexDoctor(annex, { repoRoot: box.root, boxRoot: box.root });
 annex.calls.join(" then ")
 => setGitConfig:annex.thin=false then fix
 ```
@@ -116,7 +116,7 @@ Under `check: true` nothing is touched and the failure names both commands:
 ```ts continue
 const annex2 = createFakeGitAnnex({ gitConfig: { "annex.thin": "true" } });
 const readOnly = await runAnnexDoctor(annex2, {
-  repoRoot: box.packageRoot, boxRoot: box.root, options: { check: true },
+  repoRoot: box.root, boxRoot: box.root, options: { check: true },
 });
 annex2.calls.length
 => 0
@@ -143,7 +143,7 @@ const box = await makeTmpBox();
 await box.write(".gitignore", GITIGNORE_BLOCK);
 const annex = createFakeGitAnnex({ initialized: false });
 const result = await runAnnexDoctor(annex, {
-  repoRoot: box.packageRoot, boxRoot: box.root, options: { description: "testbox" },
+  repoRoot: box.root, boxRoot: box.root, options: { description: "testbox" },
 });
 statuses(result)
 => binary=ok initialized=ok
@@ -172,10 +172,10 @@ half-state and name the existing repair:
 ```ts
 const box = await makeTmpBox({ annex: true });
 await installHooks(box);
-await writeAnnexInfoAttributes(box.packageRoot);
+await writeAnnexInfoAttributes(box.root);
 await box.write(".gitignore", GITIGNORE_BLOCK);
 const halfMigrated = await runAnnexDoctor(healthyFake(), {
-  repoRoot: box.packageRoot, boxRoot: box.root, options: { check: true },
+  repoRoot: box.root, boxRoot: box.root, options: { check: true },
 });
 halfMigrated.checks.find((c) => c.id === "gitignore-assets")?.status
 => failed
@@ -195,7 +195,7 @@ the migration's load-bearing configuration sequence:
 
 ```ts continue
 const repairMode = await runAnnexDoctor(healthyFake(), {
-  repoRoot: box.packageRoot, boxRoot: box.root,
+  repoRoot: box.root, boxRoot: box.root,
 });
 repairMode.checks.find((c) => c.id === "gitignore-assets")?.status
 => failed
@@ -209,7 +209,7 @@ Once the box has the post-annex unignore block, the same check passes:
 ```ts continue
 await box.write(".gitignore", UNIGNORE_BLOCK);
 const converted = await runAnnexDoctor(healthyFake(), {
-  repoRoot: box.packageRoot, boxRoot: box.root, options: { check: true },
+  repoRoot: box.root, boxRoot: box.root, options: { check: true },
 });
 converted.checks.find((c) => c.id === "gitignore-assets")?.status
 => ok
@@ -227,7 +227,7 @@ await box.cleanup();
 On a box that IS annexed:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ annex: true });
 await installHooks(box);
 const annex = createFakeGitAnnex({
   gitConfig: { "annex.thin": "false" },
@@ -235,7 +235,7 @@ const annex = createFakeGitAnnex({
   unflushedJournal: true,
 });
 const result = await runAnnexDoctor(annex, {
-  repoRoot: box.packageRoot, boxRoot: box.root, options: { description: "testbox" },
+  repoRoot: box.root, boxRoot: box.root, options: { description: "testbox" },
 });
 statuses(result)
 => binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=repaired annexed-coverage=ok attributes=repaired content-present=ok journal=repaired smudge-hooks=ok hook=ok
@@ -249,7 +249,7 @@ committed cards — silently keeping it would be worse than having none.
 result.checks.find((c) => c.id === "largefiles")?.message
 => refreshed a stale annex.largefiles
 
-await annex.getAnnexConfig(box.packageRoot, "annex.largefiles") === assetLargefilesExpression()
+await annex.getAnnexConfig(box.root, "annex.largefiles") === assetLargefilesExpression()
 => true
 ```
 
@@ -270,10 +270,10 @@ const box = await makeTmpBox();
 await installHooks(box);
 const fs = await import("node:fs/promises");
 const path = await import("node:path");
-const attrPath = path.join(box.packageRoot, ".git", "info", "attributes");
+const attrPath = path.join(box.root, ".git", "info", "attributes");
 await fs.mkdir(path.dirname(attrPath), { recursive: true });
 await fs.writeFile(attrPath, "\n* filter=annex\n");
-const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
 result.checks.find((c) => c.id === "attributes")?.message
 => rescoped .git/info/attributes to the asset extensions
 
@@ -285,7 +285,7 @@ A second run is a no-op — the repair is idempotent, which matters because
 `bbx init` runs the doctor every time:
 
 ```ts continue
-const again = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+const again = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
 again.checks.find((c) => c.id === "attributes")?.status
 => ok
 ```
@@ -295,7 +295,7 @@ Under `check: true` nothing is written and the message names both remedies:
 ```ts continue
 await fs.writeFile(attrPath, "\n* filter=annex\n");
 const readOnly = await runAnnexDoctor(healthyFake(), {
-  repoRoot: box.packageRoot, boxRoot: box.root, options: { check: true },
+  repoRoot: box.root, boxRoot: box.root, options: { check: true },
 });
 readOnly.checks.find((c) => c.id === "attributes")?.status
 => failed
@@ -329,7 +329,7 @@ const annex = createFakeGitAnnex({
   annexConfig: { "annex.largefiles": assetLargefilesExpression() },
   annexedFiles: ["content/trip.attach/photo.jpg", "content/scan.attach/page.psd"],
 });
-const result = await runAnnexDoctor(annex, { repoRoot: box.packageRoot, boxRoot: box.root });
+const result = await runAnnexDoctor(annex, { repoRoot: box.root, boxRoot: box.root });
 result.checks.find((c) => c.id === "annexed-coverage")?.message
 => 1 annexed path(s) have an extension outside ASSET_EXTENSIONS: content/scan.attach/page.psd. They would read back as pointer text once the annex filter is scoped. Add the extension(s) to ASSET_EXTENSIONS (src/lib/asset-extensions.ts).
 
@@ -345,7 +345,7 @@ result.checks.find((c) => c.id === "attributes")?.status
 
 const fs2 = await import("node:fs/promises");
 const path2 = await import("node:path");
-await fs2.readFile(path2.join(box.packageRoot, ".git", "info", "attributes"), "utf-8").catch(() => "(absent)")
+await fs2.readFile(path2.join(box.root, ".git", "info", "attributes"), "utf-8").catch(() => "(absent)")
 => (absent)
 ```
 
@@ -358,7 +358,7 @@ const ios = createFakeGitAnnex({
   annexConfig: { "annex.largefiles": assetLargefilesExpression() },
   annexedFiles: ["content/trip.attach/IMG_0001.HEIC"],
 });
-const iosResult = await runAnnexDoctor(ios, { repoRoot: box.packageRoot, boxRoot: box.root });
+const iosResult = await runAnnexDoctor(ios, { repoRoot: box.root, boxRoot: box.root });
 iosResult.checks.find((c) => c.id === "annexed-coverage")?.status
 => ok
 ```
@@ -375,7 +375,7 @@ failures that all have one cause.
 ```ts
 const box = await makeTmpBox();
 const annex = createFakeGitAnnex({ version: null });
-const result = await runAnnexDoctor(annex, { repoRoot: box.packageRoot, boxRoot: box.root });
+const result = await runAnnexDoctor(annex, { repoRoot: box.root, boxRoot: box.root });
 statuses(result)
 => binary=failed
 
@@ -397,7 +397,7 @@ await box.write(
   "notes.attach/photo.jpg",
   "/annex/objects/SHA256E-s300000--" + "a".repeat(64) + ".jpg\n",
 );
-const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
 result.checks.find((c) => c.id === "content-present")?.status
 => failed
 
@@ -423,7 +423,7 @@ await box.write(
   "mail.attach/attachments/inline.png",
   "/annex/objects/SHA256E-s900--" + "b".repeat(64) + ".png\n",
 );
-const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
 result.checks.find((c) => c.id === "content-present")?.message.includes("mail.attach/attachments/inline.png")
 => true
 ```
@@ -443,7 +443,7 @@ const box = await makeTmpBox({ annex: true });
 await installHooks(box);
 const fs = await import("node:fs/promises");
 const path = await import("node:path");
-const hooksDir = path.join(box.packageRoot, ".git", "hooks");
+const hooksDir = path.join(box.root, ".git", "hooks");
 const postCheckoutPath = path.join(hooksDir, "post-checkout");
 const postMergePath = path.join(hooksDir, "post-merge");
 const postCommitPath = path.join(hooksDir, "post-commit");
@@ -460,7 +460,7 @@ await fs.writeFile(postCheckoutPath, foreignCheckout);
 await fs.unlink(postMergePath);
 await fs.writeFile(postCommitPath, compositePostCommit);
 const readOnly = await runAnnexDoctor(healthyFake(), {
-  repoRoot: box.packageRoot,
+  repoRoot: box.root,
   boxRoot: box.root,
   options: { check: true },
 });
@@ -480,7 +480,7 @@ byte-for-byte untouched:
 
 ```ts continue
 const repaired = await runAnnexDoctor(healthyFake(), {
-  repoRoot: box.packageRoot,
+  repoRoot: box.root,
   boxRoot: box.root,
 });
 repaired.checks.find((c) => c.id === "smudge-hooks")?.status
@@ -499,7 +499,7 @@ await fs.readFile(postCommitPath, "utf-8") === compositePostCommit
 => true
 
 const healthy = await runAnnexDoctor(healthyFake(), {
-  repoRoot: box.packageRoot,
+  repoRoot: box.root,
   boxRoot: box.root,
 });
 healthy.checks.find((c) => c.id === "smudge-hooks")?.status
@@ -512,7 +512,7 @@ it:
 ```ts continue
 await fs.writeFile(postCheckoutPath, `#!/bin/sh\n# ${ANNEX_SMUDGE_LINE}\n`);
 const commentedSmudge = await runAnnexDoctor(healthyFake(), {
-  repoRoot: box.packageRoot,
+  repoRoot: box.root,
   boxRoot: box.root,
   options: { check: true },
 });
@@ -532,13 +532,13 @@ cannot be inferred from either having run. A hook that does not invoke annex is
 reported:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeTmpBox({ annex: true });
 const fs = await import("node:fs/promises");
 const path = await import("node:path");
-await fs.mkdir(path.join(box.packageRoot, ".git", "hooks"), { recursive: true });
+await fs.mkdir(path.join(box.root, ".git", "hooks"), { recursive: true });
 await installSmudgeHooks(box);
-await fs.writeFile(path.join(box.packageRoot, ".git", "hooks", "pre-commit"), "#!/bin/bash\necho hi\n");
-const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+await fs.writeFile(path.join(box.root, ".git", "hooks", "pre-commit"), "#!/bin/bash\necho hi\n");
+const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
 result.checks.find((c) => c.id === "hook")?.status
 => failed
 
@@ -553,10 +553,10 @@ the whole thing this check exists to catch:
 
 ```ts continue
 await fs.writeFile(
-  path.join(box.packageRoot, ".git", "hooks", "pre-commit"),
+  path.join(box.root, ".git", "hooks", "pre-commit"),
   "#!/bin/bash\n# TODO: add git annex pre-commit\n",
 );
-const commented = await runAnnexDoctor(healthyFake(), { repoRoot: box.packageRoot, boxRoot: box.root });
+const commented = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
 commented.checks.find((c) => c.id === "hook")?.status
 => failed
 ```

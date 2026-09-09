@@ -31,6 +31,8 @@ import {
 } from "../../core/annex/staged-unlisted.js";
 import { listStagedCards, listStagedRelPaths } from "../../lib/staged-files.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
+import { checkBoxRoot } from "../../lib/box-root-check.js";
+import { checkReservedSegmentErrors } from "./validate-box-checks.js";
 import {
   boxWideLinkWarnings,
   formatMarkdownResults,
@@ -94,7 +96,7 @@ export async function runPreCommitChecks(
     sections.push(describeStagedUnlistedBinaries(unlisted));
   }
 
-  // Misplaced legacy `config/schemas/*.ts` blocks here just as it does in every
+  // Misplaced legacy `_config/schemas/*.ts` blocks here just as it does in every
   // other validate scope (see `checkLegacySchemaPath` in `validate.ts`) — the
   // hook is the surface most likely to catch it before anything else loads the
   // box. One readdir; negligible on the commit path.
@@ -103,6 +105,25 @@ export async function runPreCommitChecks(
   if (legacySchemaFiles.length > 0) {
     errorCount += legacySchemaFiles.length;
     sections.push(describeLegacySchemaFiles(shape, legacySchemaFiles));
+  }
+
+  // The closed-vocabulary root check (Track C): a stray root entry (the
+  // recreated-two-root shape the test1 incident documents) blocks the
+  // commit here, not just warns in `bbx status` — this is the check meant
+  // to catch it AT commit time. One readdir; negligible on the commit path.
+  const strays = await checkBoxRoot(boxRoot);
+  if (strays.length > 0) {
+    errorCount += strays.length;
+    sections.push(strays.map((s) => `Box root: ${s.message}`).join("\n"));
+  }
+
+  // Below-root reserved area names block the commit too — the pre-commit
+  // walk is the declared net for out-of-band writes (a plain `mkdir` from an
+  // agent shell) that the CLI/HTTP guards never saw.
+  const reservedSegmentErrors = await checkReservedSegmentErrors(boxRoot);
+  if (reservedSegmentErrors.length > 0) {
+    errorCount += reservedSegmentErrors.length;
+    sections.push(reservedSegmentErrors.join("\n"));
   }
 
   const removals = await listStagedRelPaths(boxRoot, { diffFilter: "DR" });

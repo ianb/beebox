@@ -107,7 +107,7 @@ export async function runEmbedPass(
     if (!(e instanceof EmbeddingsError)) throw e;
     state.warnings.push(
       `embeddings unavailable (${e.message}) — semantic ranking degraded; ` +
-        "check config/connectors/openai.secret.json or BBX_OPENAI_API_KEY"
+        'ask the boxholder to grant the "openai" secret to this box'
     );
     return { dirtyIndex: false, ready: false };
   }

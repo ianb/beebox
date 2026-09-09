@@ -1,19 +1,23 @@
 /**
  * Per-box configuration loader.
  *
- * Reads config/box.json from each box root. Caches results.
+ * Reads _config/box.json from each box root. Caches results.
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { errnoCode } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
+import { getBoxDir } from "../../lib/paths.js";
 import { AGENT_ENGINES, modelTier, type AgentEngine } from "../../shared/agent-models.js";
 import { normalizeModelId } from "../../shared/model-ids.js";
+import type { PresentationConfig } from "../../shared/card-theme.js";
 
 export type { AgentEngine } from "../../shared/agent-models.js";
 
 export interface BoxConfig {
+  /** Card and chrome presentation choices. Validated separately by the theme host. */
+  presentation?: PresentationConfig;
   /** Box-wide default for HQ dictation in newly created chats. Missing means off. */
   hqDictation?: "on" | "off";
   /** Native agent harness used for new box jobs and chats. Missing means Claude. */
@@ -94,7 +98,12 @@ class InvalidAgentEngineError extends Error {
 
 export type GoogleServiceName = "calendar" | "gmail" | "drive";
 
-const cache = new Map<string, { config: BoxConfig; mtime: number }>();
+export type BoxConfigLoadResult =
+  | { status: "absent" }
+  | { status: "valid"; config: BoxConfig }
+  | { status: "invalid"; error: string };
+
+const cache = new Map<string, { result: BoxConfigLoadResult; mtime: number }>();
 
 /** Config paths already complained about, so a bad file warns once, not per read. */
 const warnedConfigPaths = new Set<string>();
@@ -242,25 +251,37 @@ export async function buildTimezoneContext(boxRoot: string): Promise<string> {
 }
 
 /**
- * Load box config from config/box.json, with simple mtime-based caching.
+ * Load box config from _config/box.json, with simple mtime-based caching.
  */
 export async function loadBoxConfig(boxRoot: string): Promise<BoxConfig> {
-  const configPath = path.join(boxRoot, "config", "box.json");
+  const result = await loadBoxConfigResult(boxRoot);
+  return result.status === "valid" ? result.config : {};
+}
+
+/**
+ * Read the shared box config once while preserving absence and read/parse
+ * failure for consumers that must make configuration errors visible.
+ */
+export async function loadBoxConfigResult(boxRoot: string): Promise<BoxConfigLoadResult> {
+  const configPath = path.join(getBoxDir(boxRoot, "config"), "box.json");
 
   let mtime: number;
   try {
     const stat = await fs.promises.stat(configPath);
     mtime = stat.mtimeMs;
   } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`No box config at ${configPath}, using defaults:`, e);
-    }
-    return {};
+    if (errnoCode(e) === "ENOENT") return { status: "absent" };
+    const code = errnoCode(e);
+    const error = code === undefined
+      ? "Could not inspect box config"
+      : `Could not inspect box config (${code})`;
+    console.warn(`No box config at ${configPath}, using defaults:`, e);
+    return { status: "invalid", error };
   }
 
   const cached = cache.get(boxRoot);
   if (cached && cached.mtime === mtime) {
-    return cached.config;
+    return cached.result;
   }
 
   try {
@@ -271,16 +292,29 @@ export async function loadBoxConfig(boxRoot: string): Promise<BoxConfig> {
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed)) {
       warnOnce(configPath, `Box config at ${configPath} is not a JSON object, using defaults.`);
-      return {};
+      const result: BoxConfigLoadResult = {
+        status: "invalid",
+        error: "Box config must be a JSON object",
+      };
+      cache.set(boxRoot, { result, mtime });
+      return result;
     }
     // eslint-disable-next-line no-restricted-syntax -- parse boundary: the guard above confirmed an object; each field is validated where it is read.
     const config = parsed as BoxConfig;
-    cache.set(boxRoot, { config, mtime });
-    return config;
+    const result: BoxConfigLoadResult = { status: "valid", config };
+    cache.set(boxRoot, { result, mtime });
+    return result;
   } catch (e) {
+    const error = e instanceof SyntaxError
+      ? `Could not parse box config: ${e.message}`
+      : "Could not read box config";
     if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read or parse box config at ${configPath}, using defaults:`, e);
     }
-    return {};
+    const result: BoxConfigLoadResult = errnoCode(e) === "ENOENT"
+      ? { status: "absent" }
+      : { status: "invalid", error };
+    cache.set(boxRoot, { result, mtime });
+    return result;
   }
 }

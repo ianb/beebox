@@ -222,7 +222,13 @@ async function commitChanges(repoRoot: string, message: string): Promise<void> {
   const changed = await changedMarkdown(repoRoot);
   if (changed.length === 0) return;
   await execa("git", ["add", "-A", "--", ...changed], { cwd: repoRoot });
-  await execa("git", ["commit", "-m", message], { cwd: repoRoot, stdout: "inherit", stderr: "inherit" });
+  // The commit's stdout goes to OUR stderr, never inherited: this runs under
+  // `bin/issues activate-due --json`, whose stdout is the JSON a schedule
+  // parses, and the pre-commit hook's `> beebox@0.1.0 doc-check` banner on an
+  // inherited stdout broke that parse the first time an activation fired
+  // (2026-09-07). Hook output stays visible, on the stream for diagnostics.
+  const commit = await execa("git", ["commit", "-m", message], { cwd: repoRoot, stderr: "inherit" });
+  if (commit.stdout !== "") process.stderr.write(`${commit.stdout}\n`);
 }
 
 async function repairPrivateLinks(privateRoot: string): Promise<void> {
@@ -270,9 +276,14 @@ export async function activateDueRepositories(options: {
       // doc-check's basename lookup is index-backed. Stage the rename first so
       // the destination is the issue's current location during link repair.
       await execa("git", ["add", "-A", "--", "issues"], { cwd: options.repoRoot });
-      await execa("pnpm", ["--dir", "beebox", "doc-check", "--fix"], {
-        cwd: options.repoRoot, stdout: "inherit", stderr: "inherit",
+      // Same rule as the commit below: never inherit stdout here — this runs
+      // under `bin/issues activate-due --json`, and pnpm's script banner on
+      // stdout broke the JSON the schedule parses (2026-09-08, second time;
+      // the first fix covered only the commit).
+      const repair = await execa("pnpm", ["--silent", "--dir", "beebox", "doc-check", "--fix"], {
+        cwd: options.repoRoot, stderr: "inherit",
       });
+      if (repair.stdout !== "") process.stderr.write(`${repair.stdout}\n`);
       await commitChanges(options.repoRoot, "Activate deferred issues");
     });
   }

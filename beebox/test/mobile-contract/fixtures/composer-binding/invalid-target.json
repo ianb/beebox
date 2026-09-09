@@ -1,0 +1,23 @@
+{
+  "input": {
+    "version": 1,
+    "kind": "selection",
+    "boxSlug": "test1",
+    "revision": 4,
+    "selection": {
+      "kind": "ready",
+      "label": "Bad",
+      "target": {
+        "kind": "session",
+        "sessionId": "new",
+        "contextDir": ""
+      }
+    },
+    "attention": {
+      "surface": "card",
+      "focusedRef": "/_content/house/report.md",
+      "transcript": "hidden"
+    }
+  },
+  "expectedValid": false
+}

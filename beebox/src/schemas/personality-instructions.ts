@@ -10,7 +10,7 @@ A personality card defines the agent's **voice and manner** — how it
 communicates, not what the box is about.
 
 There is one personality card per box at
-\`config/main.personality.card\`.
+\`_config/main.personality.card\`.
 
 **This card is about communication style ONLY.** Do NOT put situational
 context here. The box's purpose, key people, and essential facts belong

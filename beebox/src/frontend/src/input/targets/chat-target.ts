@@ -1,3 +1,4 @@
+import type { SendBinding } from "@shared/chat-composer-binding.js";
 /**
  * ChatTarget — status + accept (docs/implemented-plans/input-extraction.md, chunk 3).
  * Wraps today's machine/backend state into `TargetStatus`, and turns a
@@ -55,6 +56,7 @@ export function chatTargetStatus(input: { isStreaming: boolean; processBusy: boo
 export function acceptEmission(
   emission: Emission,
   opts: {
+    binding?: SendBinding;
     witness: ChatWitness;
     cardFields: CardFields;
     send: (event: ChatEvent) => void;
@@ -65,9 +67,9 @@ export function acceptEmission(
   beginChatSendDiagnostic({ emissionId: messageId, origin: emission.origin, textLength: emission.text.length,
     imageCount: emission.images.length, fileCount: emission.files.length, selectionCount: emission.selections.length });
   if (images.length > 0) {
-    opts.send({ type: "SEND", message, messageId, images: [...images], ...opts.cardFields });
+    opts.send({ type: "SEND", message, messageId, images: [...images], binding: opts.binding, ...opts.cardFields });
   } else {
-    opts.send({ type: "SEND", message, messageId, ...opts.cardFields });
+    opts.send({ type: "SEND", message, messageId, binding: opts.binding, ...opts.cardFields });
   }
   return receipt;
 }
@@ -144,12 +146,14 @@ export function applyRestorePlan(editor: EmissionEditor, plan: RestorePlan): voi
     editor.addImage(item);
   }
   for (const file of plan.files) {
+    // A file arriving on an emission has already been uploaded by whoever built
+    // it (the native composer, a restored draft) — the path IS its identity.
     const item: FileItem = {
       id: file.id,
-      path: file.path,
       originalName: pathBasename(file.path),
       size: 0,
       mimetype: "application/octet-stream",
+      state: { status: "uploaded", path: file.path },
     };
     editor.addFile(item);
   }

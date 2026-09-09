@@ -61,16 +61,20 @@ export function DocumentIcon() {
   // the title carries the place (`lib/document-title.ts`). Landmark-first
   // icons were the other way round and cost exactly this: two boxes' tabs
   // could wear the same mark while neither said which box it was.
-  const boxQuery = trpc.landmarks.forDir.useQuery(
+  const boxQuery = trpc.landmarks.identity.useQuery(
     { dir: "" },
     { enabled: boxSlug !== undefined },
   );
 
-  const mark = boxQuery.data?.landmark ?? null;
+  const mark = boxQuery.data?.identity ?? null;
   let href: string | null = null;
   if (mark !== null && boxSlug !== undefined) {
-    if (mark.symbolSrc !== null) href = apiFileUrl(boxSlug, mark.symbolSrc);
-    else if (mark.symbol !== "") href = emojiFaviconUri(mark.symbol);
+    const src = mark.symbol?.src;
+    const glyph = mark.symbol?.glyph;
+    // A title bar takes a character, never an SVG — which is why the mark's
+    // text form is the one that survives into a favicon, colours dropped.
+    if (src !== undefined) href = apiFileUrl(boxSlug, src);
+    else if (glyph !== undefined && glyph !== "") href = emojiFaviconUri(glyph);
   }
 
   useEffect(() => {

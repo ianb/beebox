@@ -20,6 +20,7 @@ struct NativeComposerView: View {
     /// Ask the page to stop speaking (contract §4.9). Defaulted so the preview
     /// and fixture screens need not supply a webview.
     var onInterruptSpeech: () -> Void = {}
+    var requiresConversationBinding = false
     var automaticallyResumeVoicePreparations = true
     var voiceStateOverride: VoiceCompositionState?
     var initiallyFocused = false
@@ -257,6 +258,11 @@ struct NativeComposerView: View {
                 .scrollBounceBehavior(.basedOnSize)
             }
 
+            if requiresConversationBinding {
+                Text(composerDestinationText)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("bbx-composer-destination")
+            }
             HStack(alignment: .bottom, spacing: 10) {
                 composerButton(
                     systemImage: "plus",
@@ -281,6 +287,15 @@ struct NativeComposerView: View {
         }
     }
 
+    private var composerDestinationText: String {
+        if let contextDir = pendingStore.composerBinding?.sendBinding?.target.contextDir {
+            return contextDir.isEmpty ? "Send to: / (box root)" : "Send to: \(contextDir)"
+        }
+        return pendingStore.composerBinding?.selection?.label
+            ?? pendingStore.composerBinding?.selection?.reason
+            ?? "Waiting for conversation. Sending requires an updated host."
+    }
+
     private var composerContext: some View {
         VStack(alignment: .leading, spacing: 0) {
             if pendingStore.pending.isEmpty == false || pendingStore.voicePreparations.isEmpty == false {
@@ -289,6 +304,12 @@ struct NativeComposerView: View {
                     voicePreparations: pendingStore.voicePreparations,
                     referenceDate: pendingReferenceDate,
                     canRestore: draftIsEmpty,
+                    onBindVoice: { preparation in
+                        Task {
+                            await pendingStore.bindLegacyVoice(id: preparation.id)
+                            resumeVoicePreparations(pendingStore.voicePreparations)
+                        }
+                    },
                     onRetry: retryPendingEmission,
                     onRestore: restorePendingEmission,
                     onDiscard: discardPendingEmission
@@ -600,6 +621,12 @@ struct NativeComposerView: View {
             )
             return
         }
+        if intent.action.commitsKeywordSubstitution && requiresConversationBinding
+            && pendingStore.composerBinding?.sendBinding == nil {
+            dictation.discardKeywordSubstitution()
+            statusText = "Choose a conversation before sending."
+            return
+        }
         // Accepting the command is not permission to leave its control tag in
         // the composer. Only an action that hands the draft off as a message
         // commits the held substitution; the rest keep the pre-keyword
@@ -626,16 +653,28 @@ struct NativeComposerView: View {
             statusText = "Microphone off."
         case .erase:
             selectedPhotoItems = []
+            // Detach the old draft before the active voice turn restarts.
+            // `startIfNeeded` snapshots the composer's current text as its seed;
+            // letting the asynchronous discard run later can therefore seed the
+            // new recognizer with the very message this command just erased.
+            let discardedDraft = draftStore.detachCurrentDraftForDiscard()
             dictation.resetDictationState()
             applyVoiceTurn(.draftErased)
             statusText = "Message erased."
-            Task {
-                await draftStore.discardCurrentDraft()
+            if let discardedDraft {
+                Task {
+                    await draftStore.finishDiscarding(discardedDraft)
+                }
             }
         }
     }
 
     private func sendKeywordIntent(_ intent: SpeechKeywordResult) {
+        guard !requiresConversationBinding || pendingStore.composerBinding?.sendBinding != nil else {
+            dictation.discardKeywordSubstitution()
+            statusText = "Choose a conversation before sending."
+            return
+        }
         applyEarcon(.voiceMessageSent(responseAlreadyActive: responseActive))
         if intent.action == .sendClose {
             applyVoiceTurn(.voiceMessageSent(closeMicrophone: true))
@@ -684,6 +723,12 @@ struct NativeComposerView: View {
         audioURL: URL?,
         closeMicrophone: Bool
     ) {
+        let capturedBinding = pendingStore.composerBinding
+        let replacesFirstEmissionID = pendingStore.replacementFirstEmissionID(for: capturedBinding?.sendBinding)
+        guard !requiresConversationBinding || capturedBinding?.sendBinding != nil else {
+            statusText = "Choose a conversation before sending."
+            return
+        }
         let snapshot = draftStore.draft
         let sendingBox = box
         isPreparingSend = true
@@ -698,7 +743,9 @@ struct NativeComposerView: View {
                     matchedPhrase: matchedPhrase,
                     appendsKeywordTag: appendsKeywordTag,
                     audioURL: audioURL,
-                    boxID: sendingBox.id
+                    boxID: sendingBox.id,
+                    binding: capturedBinding?.sendBinding, bindingRevision: capturedBinding?.revision,
+                    replacesFirstEmissionID: replacesFirstEmissionID
                 )
                 // Same swap as the live path: the temp recording is retained
                 // rather than deleted. `stageVoicePreparation` has already
@@ -743,6 +790,10 @@ struct NativeComposerView: View {
     }
 
     private func resumeVoicePreparation(_ preparation: VoicePreparation, box: PairedBox) {
+        guard !requiresConversationBinding || preparation.binding != nil else {
+            statusText = "Saved voice message needs a conversation. Restore it before sending."
+            return
+        }
         guard activeVoicePreparationIDs.insert(preparation.id).inserted else {
             return
         }
@@ -805,6 +856,12 @@ struct NativeComposerView: View {
         voiceKeywordAction: SpeechKeywordAction? = nil,
         retainingAudioAt audioURL: URL? = nil
     ) {
+        let capturedBinding = pendingStore.composerBinding
+        let replacesFirstEmissionID = pendingStore.replacementFirstEmissionID(for: capturedBinding?.sendBinding)
+        guard !requiresConversationBinding || capturedBinding?.sendBinding != nil else {
+            statusText = "Choose a conversation before sending."
+            return
+        }
         let snapshot = draftStore.draft
         let sendingBoxID = box.id
         let sendingSessionID = box.sessionID
@@ -817,7 +874,9 @@ struct NativeComposerView: View {
                     text: text,
                     origin: origin,
                     diarized: diarized,
-                    boxID: sendingBoxID
+                    boxID: sendingBoxID,
+                    binding: capturedBinding?.sendBinding, bindingRevision: capturedBinding?.revision,
+                    replacesFirstEmissionID: replacesFirstEmissionID
                 )
                 if let audioURL {
                     await VoiceAudioRetentionStore.shared.retain(
@@ -1028,7 +1087,8 @@ struct NativeComposerView: View {
     }
 
     private var sendDisabled: Bool {
-        isSending || hasIncompleteImages || hasIncompleteFiles || hasSendableContent == false
+        (requiresConversationBinding && pendingStore.composerBinding?.sendBinding == nil)
+            || isSending || hasIncompleteImages || hasIncompleteFiles || hasSendableContent == false
     }
 
     private var hasIncompleteImages: Bool {
@@ -1791,16 +1851,19 @@ private struct PendingEmissionList: View {
     /// Wall clock the pending rows age against; the owner refreshes it.
     var referenceDate: Date
     var canRestore: Bool
+    var onBindVoice: (VoicePreparation) -> Void
     var onRetry: (PendingEmission) -> Void
     var onRestore: (PendingEmission) -> Void
     var onDiscard: (PendingEmission) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(voicePreparations) { _ in
+            ForEach(voicePreparations) { preparation in
                 HStack(spacing: 8) {
-                    ProgressView()
-                    Text("Improving voice transcription…")
+                    if preparation.binding == nil {
+                        Button("Send saved voice message to this conversation") { onBindVoice(preparation) }
+                    } else { ProgressView() }
+                    Text(preparation.binding == nil ? "Choose a conversation first." : "Improving voice transcription…")
                         .font(.caption)
                         .lineLimit(1)
                 }
@@ -1845,7 +1908,7 @@ private struct PendingEmissionList: View {
                             .font(.caption)
                             .foregroundStyle(.red)
                         HStack(spacing: 12) {
-                            Button("Retry") { onRetry(emission) }
+                            Button(emission.binding == nil ? "Send to this conversation" : "Retry") { onRetry(emission) }
                                 .frame(minHeight: 44)
                             Button("Restore") { onRestore(emission) }
                                 .disabled(canRestore == false)

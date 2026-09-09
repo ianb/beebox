@@ -9,6 +9,8 @@
  */
 
 import {
+  ConversationChangedWhileBrowsingError,
+  ConversationDidNotSwitchError,
   PlaceMenuCollapsedError,
   PlaceMenuErroredError,
   PlaceMenuMissingFixedRowsError,
@@ -17,6 +19,8 @@ import {
   PlaceSwitchDidNotTakeError,
   type SmokeFailureError,
 } from "./smoke-errors.js";
+import { LANDMARK_CONTENT_DIR } from "../beebox/src/core/landmark/root-dir.js";
+import { areaDisplayLabel } from "../beebox/src/shared/display-path.js";
 
 /**
  * A `[ref=eN]` for a role + accessible name in an agent-browser snapshot.
@@ -196,14 +200,45 @@ export function placeMenuFailure(reading: PlaceMenuReading, snapshot: string): S
 /**
  * The landmark the place pill currently names, or null if it is not rendered.
  *
- * The pill's accessible name is `Place: <label>` (PlacePill.tsx), and that
- * label is the user-visible answer to "where am I" — which makes it the thing
- * to assert a switch against.
+ * The pill's accessible name is `Where you are: <label>` (PlacePill.tsx), and
+ * that label is the user-visible answer to "where am I" — which makes it the
+ * thing to assert a switch against.
  */
 export function currentPlaceLabel(snapshot: string): string | null {
   const line = snapshot.split("\n").find((candidate) => candidate.includes("id=bbx-nav-place"));
   if (line === undefined) return null;
-  return /"Place:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
+  return /"Where you are:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
+}
+
+/** The persistent composer's user-visible `Send to:` destination. */
+export function composerDestination(snapshot: string): string | null {
+  for (const line of snapshot.split("\n")) {
+    const destination = /StaticText\s+"Send to:\s*([^"]+)"/.exec(line)?.[1]?.trim();
+    if (destination !== undefined) return destination;
+  }
+  return null;
+}
+
+/** Verify an explicit switch changed the persistent composer's recipient. */
+export function conversationSwitchFailure(
+  before: string | null,
+  snapshot: string,
+): SmokeFailureError | null {
+  const after = composerDestination(snapshot);
+  return after === null || after === before
+    ? new ConversationDidNotSwitchError({ before, after, snapshot })
+    : null;
+}
+
+/** Verify ordinary content navigation preserved the selected recipient. */
+export function conversationPreservationFailure(
+  expected: string,
+  snapshot: string,
+): SmokeFailureError | null {
+  const actual = composerDestination(snapshot);
+  return actual === expected
+    ? null
+    : new ConversationChangedWhileBrowsingError({ expected, actual, snapshot });
 }
 
 /**
@@ -282,6 +317,18 @@ export function hasDomId(snapshot: string, domId: string): boolean {
   return snapshot.includes(`id=${domId}`);
 }
 
+/** The accessibility ref on the element carrying a stable DOM id. */
+export function refForDomId(snapshot: string, domId: string): string | null {
+  for (const line of snapshot.split("\n")) {
+    if (!line.includes(`id=${domId}`)) continue;
+    for (const part of line.split("[", 2).at(1)?.split("]", 1).at(0)?.split(",") ?? []) {
+      const ref = REF_ATTR.exec(part.trimStart())?.[1];
+      if (ref !== undefined) return ref;
+    }
+  }
+  return null;
+}
+
 /**
  * Directory rows in the browse sidebar, which the box's real content produces
  * (`button "store directory, 46 items"`). Counting them is how this tier
@@ -308,4 +355,28 @@ export function firstCardRow(snapshot: string): { role: "button"; name: string }
   const match = /\bbutton\s+"([^"]* card)"\s+\[/.exec(snapshot);
   const name = match?.[1];
   return name === undefined ? null : { role: "button", name };
+}
+
+/**
+ * The box's content-area directory row (`_content`, displayed as "Content" —
+ * `shared/display-path.ts` — one-root's only open-vocabulary area at the box
+ * root — `core/landmark/root-dir.ts`). The browse root deliberately lists the
+ * underscore areas rather than the box's real content (`one-root-box-layout.md`),
+ * so a freshly migrated box's root listing carries no card row at all; this is
+ * how the card-open step finds where the actual content lives instead of
+ * misreading that as a broken box.
+ */
+export function contentAreaRow(snapshot: string): { role: "button"; name: string } | null {
+  // The sidebar shows the area's DISPLAY label ("Content"), not its raw
+  // underscore name — `display-path.ts`, "Display-path vocabulary".
+  const prefix = `button "${areaDisplayLabel(LANDMARK_CONTENT_DIR)} directory`;
+  for (const line of snapshot.split("\n")) {
+    const at = line.indexOf(prefix);
+    if (at === -1) continue;
+    const rest = line.slice(at + "button \"".length);
+    const end = rest.indexOf('"');
+    if (end === -1) continue;
+    return { role: "button", name: rest.slice(0, end) };
+  }
+  return null;
 }

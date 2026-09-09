@@ -300,9 +300,9 @@ const { clearBoxConfigCache } = await import("../../src/core/box/config.js");
 const { randomUUID } = await import("node:crypto");
 
 const codexBox = await makeTmpBox();
-await fs.mkdir(path.join(codexBox.root, "config"), { recursive: true });
+await fs.mkdir(path.join(codexBox.root, "_config"), { recursive: true });
 await fs.writeFile(
-  path.join(codexBox.root, "config/box.json"),
+  path.join(codexBox.root, "_config/box.json"),
   JSON.stringify({ agentEngine: "codex", engines: { claude: true, codex: true } }),
 );
 clearBoxConfigCache(codexBox.root);

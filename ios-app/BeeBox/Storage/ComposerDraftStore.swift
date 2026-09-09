@@ -7,6 +7,11 @@ final class ComposerDraftStore: ObservableObject {
         case incompleteFile
         case incompleteImage
     }
+
+    struct DiscardedDraft {
+        fileprivate var snapshot: ComposerDraft
+        fileprivate var boxID: UUID
+    }
     @Published private(set) var draft = ComposerDraft.empty
     @Published private(set) var isReady = false
     @Published private(set) var restoreNotice: String?
@@ -511,6 +516,27 @@ final class ComposerDraftStore: ObservableObject {
     func discard(_ snapshot: ComposerDraft, boxID: UUID) async {
         await repository.removePayloads(for: snapshot.images, boxID: boxID)
         await repository.removePayloads(for: snapshot.files, boxID: boxID)
+    }
+
+    /// Detach the current draft synchronously so a command can begin its next
+    /// input generation from the reset composer. Persistence and payload
+    /// cleanup may finish later, but they retain ownership of only this
+    /// returned snapshot and can never clear text entered after the command.
+    func detachCurrentDraftForDiscard() -> DiscardedDraft? {
+        guard let activeBoxID else {
+            return nil
+        }
+        let discarded = DiscardedDraft(snapshot: draft, boxID: activeBoxID)
+        ComposerDraftReducer.reduce(&draft, .reset)
+        saveTask?.cancel()
+        saveTask = Task { [weak self] in
+            await self?.flush()
+        }
+        return discarded
+    }
+
+    func finishDiscarding(_ discarded: DiscardedDraft) async {
+        await discard(discarded.snapshot, boxID: discarded.boxID)
     }
 
     func discardCurrentDraft() async {

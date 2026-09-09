@@ -6,9 +6,11 @@
 
 import { Link } from "@tanstack/react-router";
 import { cardTypeFromName } from "@shared/card-name";
-import { href } from "../../../lib/routing";
+import { toDisplayPath } from "@shared/display-path";
+import { href, toSearch } from "../../../lib/routing";
+import { viewStateSearchValue } from "../../../lib/view-url";
 import { displayName } from "../../../lib/display-name";
-import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
+import type { NavigateHint, ViewState, ViewTarget } from "../../../lib/view-url";
 import { FileView } from "../../../components/FileView";
 import { useCardViewBinding } from "../../../lib/view-bindings";
 import { MobileBackButton } from "../../../components/ui/MobileBackButton";
@@ -25,7 +27,9 @@ interface BrowseDetailPanelProps {
   /** Renderer override from the URL's `?view=`. */
   rendererName?: string | null;
   /** Renderer-toggle choice, written back to the URL by the page. */
-  onSelectRenderer: (name: string) => void;
+  onSelectRenderer: (name: string | null) => void;
+  viewState?: ViewState | null;
+  onViewStateChange: (next: ViewState, method: "push" | "replace") => void;
   selectedCard: { relativePath: string } | null;
   selectedFilePath: string;
   selectedRawFile: string | null;
@@ -44,8 +48,10 @@ export function BrowseDetailPanel({
   onDelete,
   onNavigate,
   onSelectRenderer,
+  onViewStateChange,
   params,
   rendererName,
+  viewState,
   selectedCard,
   selectedFilePath,
   selectedRawFile,
@@ -70,14 +76,14 @@ export function BrowseDetailPanel({
           {deleteError}
         </div>
       ) : null}
-      <div className="bg-white rounded-lg shadow print:bg-transparent print:rounded-none print:shadow-none">
+      <div className={selectedCard ? "min-w-0" : "bg-white rounded-lg shadow print:bg-transparent print:rounded-none print:shadow-none"}>
         <div className="flex items-start justify-between gap-4 border-b border-warm-200 px-4 py-3 print:hidden">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-bold text-warm-900" title={selectedFilePath}>
+            <h2 className="truncate text-lg font-bold text-warm-900" title={toDisplayPath(selectedFilePath)}>
               {displayName(selectedFilePath)}
             </h2>
-            <div className="truncate text-sm text-warm-500" title={selectedFilePath}>
-              {selectedFilePath}
+            <div className="truncate text-sm text-warm-500" title={toDisplayPath(selectedFilePath)}>
+              {toDisplayPath(selectedFilePath)}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -85,6 +91,11 @@ export function BrowseDetailPanel({
               <Link
                 id="bbx-browse-open-card"
                 to={href(`/${boxSlug}/card/${selectedCard.relativePath}`)}
+                search={toSearch({
+                  ...params,
+                  ...(rendererName ? { view: rendererName } : {}),
+                  ...(viewState ? { viewState: viewStateSearchValue(viewState) } : {}),
+                })}
                 className="text-primary hover:text-primary-dark text-sm"
               >
                 Open full view &rarr;
@@ -114,6 +125,9 @@ export function BrowseDetailPanel({
           onSelectRenderer={onSelectRenderer}
           params={params}
           rendererName={rendererName}
+          viewState={viewState}
+          canPushViewState
+          onViewStateChange={onViewStateChange}
           onClose={onBack}
         />
       </div>

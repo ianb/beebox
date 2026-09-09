@@ -18,7 +18,16 @@ export interface Location {
 
 /** A lint issue (error or warning). */
 export interface LintIssue {
-  type: "parse" | "validation" | "reference" | "id" | "schema" | "contains" | "canonical";
+  type:
+    | "parse"
+    | "validation"
+    | "reference"
+    | "id"
+    | "schema"
+    | "contains"
+    | "canonical"
+    | "absolute-path"
+    | "display-path";
   severity: "error" | "warning";
   message: string;
   location?: Location;

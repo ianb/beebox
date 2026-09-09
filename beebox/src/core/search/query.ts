@@ -8,8 +8,9 @@ import { search, type TypedDocument } from "@orama/orama";
 import { getSearchableTypes } from "../../schemas/registry.js";
 import { invariant } from "../../lib/invariant.js";
 import { getOpenAiEmbeddingsKey } from "./embeddings-key.js";
+import { routeVia } from "../openrouter.js";
 import {
-  createOpenAIEmbeddingsService,
+  createEmbeddingsService,
   EmbeddingsError,
   type EmbeddingsService,
 } from "../../services/openai-embeddings.js";
@@ -103,7 +104,7 @@ export interface SearchBoxOptions {
   /**
    * Injected embeddings service (doctests pass the fake). When absent,
    * searchBox resolves the box's key itself and builds the real service when
-   * one is configured; a malformed secret file throws `EmbeddingsKeyError`.
+   * one is configured.
    */
   embeddings?: EmbeddingsService | undefined;
   /**
@@ -130,15 +131,17 @@ export async function searchBox(
   }
 
   // Resolve the embeddings service: the injected one, or one built from the
-  // box's configured key. A malformed secret file throws EmbeddingsKeyError
-  // (loud, typed) rather than degrading — a config error the user must see.
-  // `--mode text` skips ALL of this: no key resolution, no service into the
-  // refresh — text mode is offline and deterministic (never a paid call, and
-  // it must keep working with a broken secret file).
+  // box's configured key. `--mode text` skips ALL of this: no key resolution,
+  // no service into the refresh — text mode is offline and deterministic, so
+  // it never makes a paid call and keeps working with no key configured.
   let service = mode === "text" ? undefined : options.embeddings;
   if (service === undefined && mode !== "text") {
-    const key = await getOpenAiEmbeddingsKey(boxRoot);
-    if (key !== null) service = createOpenAIEmbeddingsService(key);
+    const route = await routeVia({
+      boxRoot,
+      purpose: "embeddings",
+      directKey: await getOpenAiEmbeddingsKey(boxRoot),
+    });
+    if (route !== null) service = createEmbeddingsService(route);
   }
 
   const openOpts: OpenSearchIndexOptions = {};
@@ -248,8 +251,8 @@ async function resolveRanking({
   if (mode === "hybrid") {
     if (service === undefined) {
       const noKeyDetail =
-        "no embeddings key configured — set config/connectors/openai.secret.json " +
-        "or BBX_OPENAI_API_KEY, or search with --mode text";
+        'no embeddings key configured — ask the boxholder to grant the "openai" ' +
+        "secret to this box, or search with --mode text";
       throw new HybridUnavailableError(noKeyDetail);
     }
     if (!embeddingsReady) {

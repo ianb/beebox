@@ -7,30 +7,29 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { installProcedures, installGuides, installSchedules, installPersonality } from "../../../src/core/box/index.js";
-import { scaffoldV2Box } from "../../../src/core/box/package.js";
+import { scaffoldBoxRoot } from "../../../src/core/box/package.js";
 import { stageAll, commit, getLog, getStatus, isRepo, initRepo } from "../../../src/lib/git.js";
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "bbx-init-test-"));
 }
 
-// Simulate what `bbx init` does on a fresh path: scaffold the v2 package +
-// operational box, run the card installers on the box root, then git init +
-// single commit at the PACKAGE root (the git root for a v2 box). Returns both
-// roots — content-level files live under `boxRoot`, git lives at `packageRoot`.
+// Simulate what `bbx init` does on a fresh path: scaffold the box (npm-package
+// half + operational half, both at the one root), run the card installers,
+// then git init + single commit at that same root.
 async function fullInit(target) {
-  const { packageRoot, boxRoot } = await scaffoldV2Box(target);
+  const { boxRoot } = await scaffoldBoxRoot(target);
   await installProcedures(boxRoot);
   await installGuides(boxRoot);
   await installSchedules(boxRoot);
   await installPersonality(boxRoot);
-  await initRepo(packageRoot, "main");
-  await stageAll(packageRoot);
-  await commit(packageRoot, {
+  await initRepo(boxRoot, "main");
+  await stageAll(boxRoot);
+  await commit(boxRoot, {
     message: "Initialize Bee Box",
     trailers: { "Created-By": "bbx init" },
   });
-  return { packageRoot, boxRoot };
+  return { boxRoot };
 }
 
 async function listFiles(root, subdir) {
@@ -50,9 +49,9 @@ After a fresh init, schedule files should be committed (not just on disk):
 
 ```ts
 const tmp = await makeTmpDir();
-const { packageRoot, boxRoot } = await fullInit(tmp);
+const { boxRoot } = await fullInit(tmp);
 
-await listFiles(boxRoot, "config/schedules")
+await listFiles(boxRoot, "_config/schedules")
 =>
 chat-review.scheduled-script.card
 check-calendar.scheduled-script.card
@@ -65,7 +64,7 @@ refresh-maps.scheduled-script.card
 The working tree is clean — everything is committed, nothing left untracked:
 
 ```ts continue
-const status = await getStatus(packageRoot);
+const status = await getStatus(boxRoot);
 status.clean
 => true
 ```
@@ -73,7 +72,7 @@ status.clean
 There's exactly one commit with the right subject:
 
 ```ts continue
-const log = await getLog(packageRoot, 5);
+const log = await getLog(boxRoot, 5);
 log.length
 => 1
 
@@ -89,9 +88,9 @@ await fs.rm(tmp, { recursive: true, force: true });
 
 ```ts
 const tmp = await makeTmpDir();
-const { packageRoot, boxRoot } = await fullInit(tmp);
+const { boxRoot } = await fullInit(tmp);
 
-await listFiles(boxRoot, "config/procedures")
+await listFiles(boxRoot, "_config/procedures")
 =>
 process-pages.procedure.card
 process-retrospective.procedure.card
@@ -104,14 +103,14 @@ ships a provider-specific model pin:
 
 ```ts continue
 const refreshMaps = await fs.readFile(
-  path.join(boxRoot, "config/procedures/refresh-maps.procedure.card"),
+  path.join(boxRoot, "_config/procedures/refresh-maps.procedure.card"),
   "utf8",
 );
 const processPages = await fs.readFile(
-  path.join(boxRoot, "config/procedures/process-pages.procedure.card"),
+  path.join(boxRoot, "_config/procedures/process-pages.procedure.card"),
   "utf8",
 );
-const procedureDir = path.join(boxRoot, "config/procedures");
+const procedureDir = path.join(boxRoot, "_config/procedures");
 const stockProcedures = await Promise.all(
   (await fs.readdir(procedureDir))
     .filter((name) => name.endsWith(".procedure.card"))
@@ -127,7 +126,7 @@ provider pins: false
 ```
 
 ```ts continue
-await listFiles(boxRoot, "config")
+await listFiles(boxRoot, "_config")
 =>
 calendar.guide.card
 connectors
@@ -142,7 +141,7 @@ transcription.json
 ```
 
 ```ts continue
-const status = await getStatus(packageRoot);
+const status = await getStatus(boxRoot);
 status.clean
 => true
 ```
@@ -155,9 +154,9 @@ await fs.rm(tmp, { recursive: true, force: true });
 
 ```ts
 const tmp = await makeTmpDir();
-const { packageRoot } = await fullInit(tmp);
+const { boxRoot } = await fullInit(tmp);
 
-await isRepo(packageRoot)
+await isRepo(boxRoot)
 => true
 ```
 

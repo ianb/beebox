@@ -1,9 +1,11 @@
 /**
- * Child-process spawn, readiness, and box-path resolution primitives for the
- * hub supervisor. Split out of `supervisor.ts` to keep that file under the
- * 300-line cap (the same reason `child-env.ts`/`child-output-log.ts` were
- * extracted). The supervisor owns the lifecycle *state machine*; this file
- * owns the injectable I/O seams it drives.
+ * Child-process spawn and readiness primitives for the hub supervisor. Split
+ * out of `supervisor.ts` to keep that file under the 300-line cap (the same
+ * reason `child-env.ts`/`child-output-log.ts` were extracted). The
+ * supervisor owns the lifecycle *state machine*; this file owns the
+ * injectable I/O seams it drives. Box-path resolution is `resolveBoxRoot`/
+ * `requireBoxRoot` in `../lib/box-shape.ts` — the one resolver, not
+ * duplicated here.
  */
 
 import * as path from "node:path";
@@ -12,12 +14,6 @@ import { type BoxShape } from "../lib/box-shape.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { fileExists } from "../lib/file-exists.js";
 import { waitForHttp } from "./child-process-utils.js";
-
-const CANONICAL_MARKER = path.join(".beebox", "box.json");
-// Compatibility inputs only. `getBoxShape()` owns the one-shot migration
-// after this resolver identifies the operational root.
-const LEGACY_MARKER = ".cb-box";
-const LEGACY_STATE_DIR = ".callback-box";
 
 export type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
 
@@ -60,44 +56,10 @@ export function defaultCheckReady(params: { port: number; label: string }): Prom
   return waitForHttp({ port: params.port, reqPath: "/healthz", timeoutMs: READY_TIMEOUT_MS, label: params.label });
 }
 
-class BoxResolutionError extends Error {
-  constructor(entryPath: string) {
-    super(
-      "Configured box path " + entryPath + " has no .beebox/box.json marker or legacy state at itself or at its " +
-        "content/ subdirectory -- not a Bee Box (checked both the v2 package-root " +
-        "and legacy/v2 content-dir shapes)."
-    );
-    this.name = "BoxResolutionError";
-  }
-}
-
-/**
- * Resolve a `hub.json` entry's `path` (may be a v2 PACKAGE root or a
- * content dir -- the plan's bilingual layout, resolved downward here the
- * way `findBoxRoot` resolves upward from a cwd) to the actual box
- * (content) root that `getBoxShape` expects.
- */
-export async function resolveBoxRoot(entryPath: string): Promise<string> {
-  if (await hasBoxIdentity(entryPath)) return entryPath;
-  const nested = path.join(entryPath, "content");
-  if (await hasBoxIdentity(nested)) return nested;
-  throw new BoxResolutionError(entryPath);
-}
-
-async function hasBoxIdentity(boxRoot: string): Promise<boolean> {
-  return (
-    (await fileExists(path.join(boxRoot, CANONICAL_MARKER))) ||
-    (await fileExists(path.join(boxRoot, LEGACY_MARKER))) ||
-    (await fileExists(path.join(boxRoot, LEGACY_STATE_DIR)))
-  );
-}
-
-/** The box's own installed `bbx` when present (v2, installed), else the
- *  running engine's own `bbx` (legacy boxes, or a v2 box mid-transition
- *  that hasn't been `pnpm install`ed yet -- same fallback the plan
- *  specifies for the transition window). */
+/** The box's own installed `bbx` when present, else the running engine's own
+ *  `bbx` (a box that hasn't been `pnpm install`ed yet). */
 export async function resolveBbxBinary(shape: BoxShape): Promise<string> {
-  const ownBin = path.join(shape.packageRoot, "node_modules", ".bin", "bbx");
+  const ownBin = path.join(shape.boxRoot, "node_modules", ".bin", "bbx");
   if (await fileExists(ownBin)) return ownBin;
   return path.join(PACKAGE_ROOT, "bin", "bbx");
 }

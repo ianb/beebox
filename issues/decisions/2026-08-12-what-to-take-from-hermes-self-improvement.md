@@ -7,6 +7,7 @@ labels: [agents, research]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — bbx feedback triage
+priority: normal
 ---
 
 Hermes' self-improvement work is well spoken of, and Ian wants to look at it

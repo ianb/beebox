@@ -1,6 +1,6 @@
 # Router concurrency protocol
 
-The dev router (`bin/router.ts` and its `bin/router-*.ts` siblings) supervises
+The dev router (`workstreams-app/src/router/router.ts` and its `workstreams-app/src/router/router-*.ts` siblings) supervises
 a lazily-spawned vite+fastify pair per worktree, racing HTTP requests, idle
 timers, child-process exits, and explicit stop/retry actions against each other
 over a single in-memory `worktrees` map. Six of its last twenty commits (as of the 2026-07 architectural review)
@@ -16,15 +16,15 @@ The lifecycle state model these invariants operate over was formalized (Phase 2,
 2026-07-11): the worktree state machine — a stable per-generation
 `WorktreeHandle` shell, an immutable `WorktreeLifecycle` discriminated union
 (`starting`/`ready`/`stopping`/`failed`), a `LEGAL_TRANSITIONS` table, and the
-guarded `transitionLifecycle` setter — lives in `bin/router-lifecycle.ts`
+guarded `transitionLifecycle` setter — lives in `workstreams-app/src/router/router-lifecycle.ts`
 (pure, zero-I/O, unit-testable). The engine that drives the transitions is
-`bin/router-core.ts` (the `worktrees` map, `ensureRunning`, assembly) plus
-`bin/router-worktree-start.ts` (cold start) and
-`bin/router-worktree-teardown.ts` (exit/stop/shutdown), all reaching the world
-through the injected effects surface declared in `bin/router-effects.ts` and
-implemented in `bin/router-real-effects.ts`; `router.ts` constructs those real
+`workstreams-app/src/router/router-core.ts` (the `worktrees` map, `ensureRunning`, assembly) plus
+`workstreams-app/src/router/router-worktree-start.ts` (cold start) and
+`workstreams-app/src/router/router-worktree-teardown.ts` (exit/stop/shutdown), all reaching the world
+through the injected effects surface declared in `workstreams-app/src/router/router-effects.ts` and
+implemented in `workstreams-app/src/router/router-real-effects.ts`; `router.ts` constructs those real
 effects and runs boot. The pidfile store (invariant #6) lives in
-`bin/router-pidfile.ts`. `worktrees.get(name) === handle` is the single
+`workstreams-app/src/router/router-pidfile.ts`. `worktrees.get(name) === handle` is the single
 cross-generation guard, and
 because the handle is never replaced through its lifecycle it now works
 uniformly *during* startup, not only after ready.
@@ -37,7 +37,7 @@ shapes: read this first.
 
 ## 1. The pidfile is single-slot — never delete a newer generation's
 
-**Where:** `createPidStore` in `bin/router-pidfile.ts`.
+**Where:** `createPidStore` in `workstreams-app/src/router/router-pidfile.ts`.
 
 Each worktree's pidfile (`~/.cache/beebox/pids/<name>.json`) holds only
 the *current* generation's PIDs — there's no history. A teardown racing a
@@ -60,7 +60,7 @@ it is itself TOCTOU. The store now enforces both together.
 
 ## 2. Registering a worktree's start must be atomic — no `await` between check and set
 
-**Where:** `ensureRunning` in `bin/router-core.ts` (moved here from `router.ts`
+**Where:** `ensureRunning` in `workstreams-app/src/router/router-core.ts` (moved here from `router.ts`
 in Phase B, 2026-07-11).
 
 `ensureRunning` checks the `worktrees` map, and if the worktree isn't already
@@ -79,7 +79,7 @@ lookup/404 check that used to happen — and `await` — before registration.
 
 ## 3. Swallow the execa child-process promise immediately at spawn time
 
-**Where:** `startWorktree`'s spawn sites in `bin/router-worktree-start.ts`
+**Where:** `startWorktree`'s spawn sites in `workstreams-app/src/router/router-worktree-start.ts`
 (moved to `router-core.ts` from `router.ts` in Phase B, 2026-07-11, then here in
 the 2026-08-28 size split), on both the `fastify` and `vite` `execa()` results.
 
@@ -100,7 +100,7 @@ promise.
 
 ## 4. A teardown must verify the exiting child still belongs to the map's current entry
 
-**Where:** `onChildExit` in `bin/router-worktree-teardown.ts` (moved to
+**Where:** `onChildExit` in `workstreams-app/src/router/router-worktree-teardown.ts` (moved to
 `router-core.ts` from `router.ts` in Phase B, 2026-07-11, then here in the
 2026-08-28 size split).
 
@@ -123,7 +123,7 @@ comment).
 
 ## 5. A completed startup must re-check it's still the current generation before publishing
 
-**Where:** `startWorktree`'s terminal sites in `bin/router-worktree-start.ts` —
+**Where:** `startWorktree`'s terminal sites in `workstreams-app/src/router/router-worktree-start.ts` —
 `publishGeneration` (the `ready` transition) and `failStart` (the `failed`
 transition) — guarded by `worktrees.get(name) === handle`. (Moved to
 `router-core.ts` from `router.ts` in Phase B, 2026-07-11, then here in the
@@ -168,7 +168,7 @@ re-establishing intent, not the superseded start resurrecting itself.)
 
 ## 6. Pidfile write/remove must be serialized per name
 
-**Where:** `createPidStore` in `bin/router-pidfile.ts`.
+**Where:** `createPidStore` in `workstreams-app/src/router/router-pidfile.ts`.
 
 Invariant #1's generation guard (`remove` reads the record, compares PIDs, then
 unlinks) is itself TOCTOU across its own awaits: generation N+1's `write` can
@@ -188,7 +188,7 @@ boot, before the server listens, so no worktree op can race it.
 ## Fifth candidate that stays OUT of the state machine: proxy-retry body replay
 
 **Where:** `proxyWithRetry` / `proxyOnce` / `replayableBodyLength` in
-`bin/router-proxy.ts` (moved here from `router.ts` in the 2026-08-28 size
+`workstreams-app/src/router/router-proxy.ts` (moved here from `router.ts` in the 2026-08-28 size
 split).
 
 Proxying consumes the request's body stream, so a naive retry after a transient
@@ -213,7 +213,7 @@ handshake every request already performs.
 Two more mechanisms guard against leaked processes but aren't part of the
 same race-condition family above — they clean up *after* a crash rather than
 preventing a race during normal operation: `sweepStaleChildren` in
-`bin/router-real-effects.ts` (kills PIDs recorded in stale pidfiles at router
+`workstreams-app/src/router/router-real-effects.ts` (kills PIDs recorded in stale pidfiles at router
 startup) and `reclaimOrphans` in `bin/process-cleanup.ts` (pattern-matches
 vite/fastify/agent-browser processes pidfiles can't see, e.g. from an older
 router generation). See the comments at their call sites in the boot sequence at
@@ -222,16 +222,16 @@ the bottom of `router.ts`.
 ## Status: state machine formalized + effects-injected + tested (2026-07-11)
 
 Phase 1 (2026-07-09) was the conservative doc-browser extraction
-(`bin/router-docs.ts`) plus the first write-up of invariants #1–#4 — pure code
+(`workstreams-app/src/router/router-docs.ts`) plus the first write-up of invariants #1–#4 — pure code
 motion, no state-machine change. Phase 2 (2026-07-11,
 `beebox/docs/implemented-plans/router-state-formalization.md`) then did the fuller
 option from `issues/decisions/2026-07-06-architectural-review-open-decisions.md`
 (item 1), in three sub-phases:
 
-- **A** — the formal lifecycle (`bin/router-lifecycle.ts`) and the two live-race
+- **A** — the formal lifecycle (`workstreams-app/src/router/router-lifecycle.ts`) and the two live-race
   fixes it uncovered: invariant #5 (guarded publication) and #6 (pidfile
   serialization), which the earlier four-invariant framing didn't cover.
-- **B** — the lifecycle engine moved into `bin/router-core.ts`
+- **B** — the lifecycle engine moved into `workstreams-app/src/router/router-core.ts`
   (`createRouterCore(effects, config)`), driven by an injected `RouterEffects`
   surface (spawn / killGroup / waitForHttp / timers / clock / pidfile store /
   hub-config / getPort / resolution); `router.ts` builds the real effects and
@@ -245,24 +245,24 @@ option from `issues/decisions/2026-07-06-architectural-review-open-decisions.md`
 **Each invariant now has a test** (proven non-vacuous by neutering):
 
 - #1/#6 (single-slot + per-name serialization) →
-  `bin/router-core-teardown.test.ts` "pidfile serialization…" (barrier-gated fs
+  `workstreams-app/test/router/router-core-teardown.test.ts` "pidfile serialization…" (barrier-gated fs
   backend on `createPidStore`).
-- #2 (atomic registration / dedupe) → `bin/router-core.test.ts` "dedupe…" and
+- #2 (atomic registration / dedupe) → `workstreams-app/test/router/router-core.test.ts` "dedupe…" and
   "404 corollary…".
-- #3 (swallow at spawn time) → `bin/router-core.test.ts` "rejection discipline…".
-- #4 (identity-checked teardown) → `bin/router-core-teardown.test.ts` "stale
+- #3 (swallow at spawn time) → `workstreams-app/test/router/router-core.test.ts` "rejection discipline…".
+- #4 (identity-checked teardown) → `workstreams-app/test/router/router-core-teardown.test.ts` "stale
   exit…". NOTE: in the stable-shell
   model this safety is *doubly* enforced — `onChildExit` operates on the passed
   handle and checks both identity AND phase — so the identity `if` alone is not
   solely load-bearing; the test guards the historically dangerous regression
   (name-based teardown, the 2026-06-09 storm), which is the load-bearing failure.
-- #5 (guarded publication) → `bin/router-core-teardown.test.ts`
+- #5 (guarded publication) → `workstreams-app/test/router/router-core-teardown.test.ts`
   "stop-during-start…" and "stale failure…". NOTE:
   the failure-path clobber-prevention is now *structural* (the terminal
   transitions the detached handle in place and never re-sets the map); the
   runtime guard's uniquely-observable job is routing a superseded failure to
   `stopping` (self-clean) vs `failed`, which the #5b test asserts.
-- transition table + stable-shell identity → `bin/router-lifecycle.test.ts`.
+- transition table + stable-shell identity → `workstreams-app/test/router/router-lifecycle.test.ts`.
 
 **Cross-phase review fixes (2026-07-11):** the phased reviews each looked at
 one sub-phase in isolation; a follow-up whole-composition pass found two gaps
@@ -270,7 +270,7 @@ only visible across all three:
 
 - Invariant #5's guarded-publication catch didn't cover the whole cold-start
   region — see the Correction under invariant #5 above. Covered by
-  "pidStore.write failure…" in `bin/router-core-teardown.test.ts`.
+  "pidStore.write failure…" in `workstreams-app/test/router/router-core-teardown.test.ts`.
 - `stopAllChildren()` (full-router shutdown) killed only `ready`/`stopping`
   generations' children; an in-flight `starting` generation has no PIDs on its
   handle yet, so it was neither unlinked nor awaited and could finish spawning
@@ -280,7 +280,7 @@ only visible across all three:
   `router.ts`'s `shutdown()` also now closes the HTTP server *before* draining
   children, so no new request can trigger a fresh `ensureRunning()` during the
   drain. Covered by "shutdown supersedes an in-flight start…" in
-  `bin/router-core-teardown.test.ts`.
+  `workstreams-app/test/router/router-core-teardown.test.ts`.
 
 Deliberate non-goals recorded at close-out: status accuracy for the in-flight
 `stopping` phase (handles are unlinked before the transition, so it's never

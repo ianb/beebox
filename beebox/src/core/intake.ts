@@ -3,20 +3,20 @@
  *
  * Responsibilities:
  *
- *   1. Route fresh top-level `box/inbox/*` cards into `box/inbox/intake/`.
+ *   1. Route fresh top-level `_content/inbox/*` cards into `_content/inbox/intake/`.
  *      Connectors and `bbx scan-import` drop items at the top of
- *      `box/inbox/`; the router pulls them into the pipeline. (Composer
+ *      `_content/inbox/`; the router pulls them into the pipeline. (Composer
  *      captures don't land here — they deliver to chat via
  *      `src/core/capture/`.) Anything in
  *      a reserved subdirectory (intake/, staged/, triaged/, unhandled/,
  *      etc.) stays put.
  *
- *   2. Scan `box/inbox/intake/` and apply each intake step whose
+ *   2. Scan `_content/inbox/intake/` and apply each intake step whose
  *      precondition matches. Preconditions are fast even when the work
  *      they gate is heavy. The loop repeats until no step changed
  *      anything (quiescent).
  *
- *   3. Move every remaining item into `box/inbox/staged/` — they're
+ *   3. Move every remaining item into `_content/inbox/staged/` — they're
  *      intake-complete and ready for the triage stage.
  *
  * See `docs/triage.md` for the surrounding design.
@@ -55,8 +55,8 @@ export interface IntakeStep {
 }
 
 /**
- * Top-level `box/inbox/` subdirectories the arrival router must NOT
- * pull from. Anything else at the top of `box/inbox/` is treated as a
+ * Top-level `_content/inbox/` subdirectories the arrival router must NOT
+ * pull from. Anything else at the top of `_content/inbox/` is treated as a
  * fresh arrival.
  */
 const INBOX_RESERVED_SUBDIRS = new Set([
@@ -121,7 +121,7 @@ async function listFiles(dir: string): Promise<string[]> {
 }
 
 /**
- * Move top-level `box/inbox/*` cards into `box/inbox/intake/`. Reserved
+ * Move top-level `_content/inbox/*` cards into `_content/inbox/intake/`. Reserved
  * subdirectories are skipped; dotfiles are skipped; directories are
  * never moved.
  */
@@ -142,7 +142,7 @@ async function routeArrivals(opts: { boxRoot: string }): Promise<string[]> {
     }
     if (entry.name.startsWith(".")) continue;
     // Only route card files. Non-card top-level files (CLAUDE.md, MAP.md,
-    // README, etc.) are agent-facing context for `box/inbox/` and stay put.
+    // README, etc.) are agent-facing context for `_content/inbox/` and stay put.
     if (!isCardFile(entry.name)) continue;
     const src = path.join(inboxDir, entry.name);
     const dst = path.join(intakeDir, entry.name);

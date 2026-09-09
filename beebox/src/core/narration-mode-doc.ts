@@ -1,7 +1,7 @@
 /**
  * Generate the narration-mode reference documentation for agents.
  *
- * Called by generate-docs.ts to produce docs/generated/narration-mode.md.
+ * Emitted into the package docs as narration-mode.md (docs-gen/package-docs.ts).
  * The chat system prompt has a tight 1-line pointer to this doc. Full
  * behavioral rules live here so the base prompt stays compact and the
  * agent only consults this when narration is on.

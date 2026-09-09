@@ -3,8 +3,8 @@
  * after each box's tick (scheduler.ts).
  *
  * Explicit opt-in: a box must have a reachable channel — `healthAlerts.telegramChat`
- * in config/box.json and/or a subscribed Web Push device. The alert fans out via
- * notifyBoxholder to durable per-channel cards in box/output/ (the documented
+ * in _config/box.json and/or a subscribed Web Push device. The alert fans out via
+ * notifyBoxholder to durable per-channel cards in _bookkeeping/output/ (the documented
  * outbound contract), flushed immediately so it doesn't wait for the next finalize.
  *
  * One alert per unhealthy episode: alerting stamps each task's latch

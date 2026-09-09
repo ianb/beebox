@@ -1,16 +1,18 @@
 /**
  * Generate the chat-voice reference documentation for agents.
  *
- * Called by generate-docs.ts to produce docs/generated/chat-voice.md.
+ * Emitted into the package docs as chat-voice.md (docs-gen/package-docs.ts).
  * Covers per-message TTS overrides in the chat frontend. The voice list
  * and base configuration live in the personality card rule
- * (docs/generated/card-personality.md).
+ * (card-personality.md in the package docs).
  */
+
+import { BOX_PACKAGE_DOCS } from "../docs-gen/shared.js";
 
 export function generateChatVoiceDoc(): string {
   return `# Chat Voice: Per-Message TTS Overrides
 
-Chat responses are spoken aloud when wrapped in \`<speech>\` tags. The base voice and delivery style come from the personality card's \`<speaking-voice>\` element — see \`docs/generated/card-personality.md\` for the available voices and style-instruction guidance.
+Chat responses are spoken aloud when wrapped in \`<speech>\` tags. The base voice and delivery style come from the personality card's \`<speaking-voice>\` element — see \`${BOX_PACKAGE_DOCS}/card-personality.md\` for the available voices and style-instruction guidance.
 
 This doc covers **per-message overrides** — changing the voice or instructions for a single spoken segment.
 

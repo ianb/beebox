@@ -5,6 +5,7 @@ area: docs
 filed-by: agent
 discovered-in: worktree-github-pages-site — boxholder asked what Alan Watts might say about the project
 labels: [soft-launch]
+priority: backlog
 ---
 
 Alan Watts's temperament taxonomy: **prickly** people want rigor, particles,

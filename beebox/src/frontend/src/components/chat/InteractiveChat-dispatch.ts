@@ -1,3 +1,8 @@
+import { buildVoiceSubmitEmission } from "../../input/voice-intent";
+import { captureVoiceSend } from "./conversation/capture-voice-send";
+import { useBoundEmission } from "./conversation/use-bound-emission";
+import type { ConversationControllerPool } from "./conversation/controller-pool";
+import type { ConversationTarget, ConversationSelection, AttentionSnapshot } from "@shared/chat-composer-binding.js";
 /**
  * The one user-send funnel (docs/implemented-plans/input-extraction.md chunk 1): every
  * send site builds an Emission and lands in `dispatchEmission`, which
@@ -7,26 +12,29 @@
  */
 
 import { useCallback } from "react";
+import { toastError } from "../ui/toast-store";
 import type { SessionEntry } from "../../api";
 import { serializeViewUrl } from "../../lib/view-url";
 import { refreshLocationIfStale } from "../../lib/location-share";
-import { createVoiceEmission, draftAttachments, type Emission } from "../../input/emission";
-import { resolveEmissionWords } from "../../input/unsure-words";
+import { createVoiceEmission, type Emission } from "../../input/emission";
 import { markVoiceAudioAbsent } from "../../lib/audio/last-audio";
 import type { ChatWitness } from "../../input/targets/chat-assemble";
-import { acceptEmission, planRestore, applyRestorePlan } from "../../input/targets/chat-target";
 import type { Receipt } from "../../input/targets/receipts";
 import type { EmissionStore } from "../../input/emission-store";
 import type { SelectionItem } from "../../lib/selection/serialize";
-import { localTime, formatTimePassed, type VoiceSegmentMeta } from "./InteractiveChat-helpers";
+import { localTime, formatTimePassed, joinTranscript, type VoiceSegmentMeta } from "./InteractiveChat-helpers";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { CardSendFields } from "./InteractiveChat-card-hooks";
 import type { ViewTarget } from "../../lib/view-url";
-import { chatSendReasonKind, observeChatSendReceipt } from "../../lib/chat-send-diagnostics";
 
 export function useEmissionDispatch(opts: {
+  pool: ConversationControllerPool;
+  target: ConversationTarget;
+  selection?: ConversationSelection;
+  attention?: AttentionSnapshot;
   send: (event: ChatEvent) => void;
   captureCardSend: () => CardSendFields;
+  acceptCardSend?: (fields: CardSendFields) => void;
   boxSlug: string | undefined;
   activeView: { target: ViewTarget } | null;
   messages: SessionEntry[];
@@ -36,12 +44,14 @@ export function useEmissionDispatch(opts: {
   resetSelections: () => void;
   /** Clears pending images/files after a stop-and-send sweeps them (revokes object URLs too). */
   resetAttachments: () => void;
+  /** Resolves once no file attachment is still uploading; a send waits on it. */
+  awaitPendingUploads: () => Promise<void>;
   /** Every user send goes through here — the scroll controller's send anchor
    *  (rule 2, chat-scroll.ts) hangs off this, not off the composer button, so a
    *  voice segment, a stop-and-send and a native send anchor the same way. */
   onSent: () => void;
 }) {
-  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore, selections, resetSelections, resetAttachments, onSent } = opts;
+  const { captureCardSend, boxSlug, activeView, messages, emissionStore, resetSelections, resetAttachments, onSent, awaitPendingUploads } = opts;
 
   // Frame state at the moment of sending, as plain values — consumed by the
   // chat-target assembler (input/targets/chat-assemble.ts).
@@ -66,34 +76,14 @@ export function useEmissionDispatch(opts: {
   // `rejected` disposition is a normal value, not a thrown error). Every
   // Most call sites are fire-and-forget. The native bridge awaits the receipt
   // so iOS can keep its draft pending until the backend accepts the send.
-  const dispatchWithRestorePolicy = useCallback(
-    (emission: Emission, restoreRejected: boolean): Promise<Receipt> => {
-      void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
-      const cardFields = captureCardSend();
-      onSent();
-      return acceptEmission(emission, { witness: getWitness(), cardFields, send }).then((receipt) => {
-        observeChatSendReceipt({ emissionId: receipt.emissionId, disposition: receipt.disposition,
-          ...(receipt.disposition === "rejected" ? { reasonKind: chatSendReasonKind(receipt.reason) } : {}) });
-        if (receipt.disposition === "rejected" && restoreRejected) {
-          // The composer was cleared optimistically at dispatch — put the
-          // emission back rather than losing it to the error banner.
-          const plan = planRestore(emissionStore.get(), emission);
-          applyRestorePlan(emissionStore.editor, plan);
-          console.warn(`[chat] send rejected, restored emission into composer: ${receipt.reason}`);
-        }
-        return receipt;
-      });
-    },
-    [send, captureCardSend, boxSlug, getWitness, emissionStore, onSent]
-  );
-  const dispatchEmission = useCallback(
-    (emission: Emission): Promise<Receipt> => dispatchWithRestorePolicy(emission, true),
-    [dispatchWithRestorePolicy]
-  );
-  const dispatchNativeEmission = useCallback(
-    (emission: Emission): Promise<Receipt> => dispatchWithRestorePolicy(emission, false),
-    [dispatchWithRestorePolicy]
-  );
+  const { captureEmissionDispatch, dispatchNativeEmission, failedRegion } = useBoundEmission({
+    pool: opts.pool, target: opts.target, selection: opts.selection, attention: opts.attention,
+    emissionStore, captureCardSend, acceptCardSend: opts.acceptCardSend, getWitness, onSent,
+  });
+  const dispatchEmission = useCallback((emission: Emission): Promise<Receipt> => {
+    void refreshLocationIfStale(boxSlug);
+    return captureEmissionDispatch()(emission);
+  }, [captureEmissionDispatch, boxSlug]);
 
   // Recovered dictation: a segment that survived a page drop (screen sleep,
   // tab eviction, reload) with no live composer state around it to fold in —
@@ -121,26 +111,53 @@ export function useEmissionDispatch(opts: {
   // input-extraction.md). Pending images/files sweep in the same way (a file
   // attached mid-dictation used to be silently dropped). Selections and
   // attachments reset after send, same as runKeywordSend's freeze-and-clear.
-  const sendStopSend = useCallback(
-    (text: string, voice: VoiceSegmentMeta) => {
-      const { images, files } = draftAttachments(emissionStore.get());
-      const emission = createVoiceEmission({
-        text, images, files, selections, diarized: false,
+  const runStopSend = useCallback(
+    async (text: string, voice: VoiceSegmentMeta): Promise<void> => {
+      // Same rule as every other send: never ship a `[file#N]` whose bytes
+      // aren't on the box. `draftAttachments` carries only files that landed,
+      // and `resetAttachments` below destroys the rest — so without this wait a
+      // tap-send during an upload commits the token and deletes the file.
+      // Resolves immediately when nothing is in flight.
+      const captured = await captureVoiceSend({
+        capture: captureEmissionDispatch, awaitUploads: awaitPendingUploads, readDraft: emissionStore.get,
+        preserve: () => emissionStore.editor.setText(joinTranscript(emissionStore.get().text, text)),
+        refused: (error) => toastError("Voice text remains in the draft", { cause: error }),
+      });
+      if (captured === null) return;
+      const dispatchCaptured = captured.dispatch;
+      const { images, files } = captured.attachments;
+      const emission = buildVoiceSubmitEmission({
+        priorInput: captured.draft.text, finalText: text, imagesSnapshot: images, filesSnapshot: files, selectionsSnapshot: captured.draft.selections, diarized: false,
         // Fix D (docs/plans/transcript-confidence.md): the tap-send path
         // now carries the hook's realtime words too, same as a keyword
         // send — the interim tail (if any) simply has no words, which the
         // aligner tolerates (fail-open per word).
-        words: resolveEmissionWords(voice.words),
-        spokenStart: voice.spokenStart,
+        words: voice.words,
       });
       // Same tombstone as sendVoiceSegment: this path carries no recording.
       markVoiceAudioAbsent(emission.id);
-      void dispatchEmission(emission);
+      try { void dispatchCaptured(emission).catch((error: unknown) => toastError("Voice message kept for recovery", { cause: error })); }
+      catch (error) {
+        dispatchCaptured.release();
+        emissionStore.editor.setText(joinTranscript(emissionStore.get().text, text));
+        toastError("Voice text remains in the draft", { cause: error });
+        return;
+      }
+      emissionStore.editor.setText("");
       resetSelections();
       resetAttachments();
     },
-    [dispatchEmission, emissionStore, selections, resetSelections, resetAttachments]
+    [captureEmissionDispatch, emissionStore, resetSelections, resetAttachments, awaitPendingUploads]
+  );
+  /**
+   * Void-returning for the composer prop. The send now waits on in-flight
+   * uploads, but a button has nothing to resume on and `runStopSend` reports
+   * its own outcomes through the emission receipt.
+   */
+  const sendStopSend = useCallback(
+    (text: string, voice: VoiceSegmentMeta): void => { void runStopSend(text, voice).catch((error: unknown) => toastError("Voice message remains in the draft", { cause: error })); },
+    [runStopSend]
   );
 
-  return { dispatchEmission, dispatchNativeEmission, sendVoiceSegment, sendStopSend };
+  return { dispatchEmission, captureEmissionDispatch, dispatchNativeEmission, sendVoiceSegment, sendStopSend, failedRegion };
 }

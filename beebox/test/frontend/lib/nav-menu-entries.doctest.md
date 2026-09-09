@@ -21,10 +21,10 @@ same `/browse/<path>` the link row used.
 
 ```ts
 rows([
-  { kind: "ref", target: "store/Reading_List.memo.card", label: "Reading list" },
+  { kind: "ref", target: "_content/Reading_List.memo.card", label: "Reading list" },
   { kind: "ref", target: "recipes/index.memo.card", label: "Recipes" },
 ])
-=> Reading list → /test1/browse/store/Reading_List.memo.card
+=> Reading list → /test1/browse/_content/Reading_List.memo.card
 Recipes → /test1/browse/recipes/index.memo.card
 ```
 

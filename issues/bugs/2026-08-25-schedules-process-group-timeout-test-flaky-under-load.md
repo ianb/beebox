@@ -1,6 +1,7 @@
 ---
 title: "schedules.test.ts 'a timeout kills the whole process group' flakes under load (grandchild.pid not yet written)"
 workstream: unattached
+priority: important
 ---
 `bin/schedules.test.ts` → "a timeout kills the whole process group, not just the
 run script" fails with `ENOENT … grandchildjob/grandchild.pid` when the machine

@@ -6,64 +6,109 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useLocation } from "@tanstack/react-router";
 import { getChatHistory, getChatStatus, type SessionEntry } from "../../api";
 import { trpcClient } from "../../lib/trpc";
 import { chatTailSlice } from "../../machines/chatMachine.js";
-import type { PanelTab } from "./InteractiveChat-controls";
+import { EMPTY_SIDECAR, sidecarReducer, type SidecarAction } from "./sidecar-tabs";
+import { loadSidecarState, persistSidecarTransition, saveSidecarState, selectSidecarSession, sidecarTabsKey } from "./sidecar-tabs-storage";
+import { usePersistScheduler, PERSIST_DEBOUNCE_MS } from "../../hooks/usePersistScheduler";
 import type { OnZoomView } from "./ChatMessages";
 import { href, toSearch } from "../../lib/routing";
-import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
+import { parseViewUrl } from "../../lib/view-url";
 import { toastError } from "../ui/toast-store";
 import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { ChatEvent } from "../../machines/chat-types";
 
 /**
- * Companion-view tab state: opening a view activates an existing tab (keyed
- * by path) or appends a new one; closing falls back to the neighboring tab.
+ * Companion-view tab state: opening a view activates an existing tab (keyed by
+ * path) or appends a new one; closing falls back to the neighboring tab.
+ *
+ * The decisions live in `sidecarReducer` (`sidecar-tabs.ts`) — ordering,
+ * pinning, eviction — so they are testable apart from React. This hook owns
+ * only the wiring: the clock the reducer needs, and the sessionStorage slot
+ * that lets the strip survive a reload.
  */
-export function useChatTabs() {
-  const [panel, setPanel] = useState<{ tabs: PanelTab[]; activePath: string | null }>({ tabs: [], activePath: null });
+export function useChatTabs(opts: {
+  boxSlug: string | undefined; sessionInput: string; logicalKey?: string;
+}) {
+  const { boxSlug, sessionInput } = opts;
+  const logicalKey = opts.logicalKey ?? sessionInput;
+  const storageKey = sidecarTabsKey({ boxSlug, sessionInput });
+  // Restored during the initializer, not in an effect: a strip that appeared a
+  // frame after the first paint would fight `?card=`'s restore for the active
+  // tab, and would flash an empty pane on every reload.
+  const [stored, setStored] = useState(() => ({
+    storageKey, logicalKey, panel: loadSidecarState(storageKey) ?? EMPTY_SIDECAR,
+  }));
+  // Select the destination's strip during render, before card URL restoration
+  // can mistake the previous conversation's active card for the new one.
+  const current = selectSidecarSession(stored, { storageKey, logicalKey });
+  if (current !== stored) setStored(current);
+  const panel = current.panel;
   const activeView = panel.activePath
     ? panel.tabs.find((t) => t.target.path === panel.activePath) ?? null
     : null;
 
-  const onZoomView = useCallback<OnZoomView>((view) => {
-    setPanel((p) => {
-      // One tab per card path. Re-opening the same card with a different
-      // viewer/params refreshes the existing tab's target in place (so
-      // `?view=` actually switches) rather than colliding silently.
-      const idx = p.tabs.findIndex((t) => t.target.path === view.target.path);
-      const existing = idx === -1 ? undefined : p.tabs[idx];
-      const key = serializeViewUrl(view.target);
-      const tabs =
-        existing === undefined
-          ? [...p.tabs, view]
-          : serializeViewUrl(existing.target) === key
-          ? p.tabs
-          : p.tabs.map((t, i) => (i === idx ? view : t));
-      return { tabs, activePath: view.target.path };
-    });
-  }, []);
-  const onSelectTab = useCallback((path: string) => {
-    setPanel((p) => ({ ...p, activePath: path }));
-  }, []);
-  const onCloseTab = useCallback((path: string) => {
-    setPanel((p) => {
-      const idx = p.tabs.findIndex((t) => t.target.path === path);
-      if (idx === -1) return p;
-      const tabs = p.tabs.filter((_, i) => i !== idx);
-      const activePath = p.activePath === path
-        ? (tabs.length === 0 ? null : (tabs[Math.min(idx, tabs.length - 1)]?.target.path ?? null))
-        : p.activePath;
-      return { tabs, activePath };
-    });
-  }, []);
-  const onClosePanel = useCallback(() => {
-    setPanel({ tabs: [], activePath: null });
+  const dispatch = useCallback((action: SidecarAction) => {
+    setStored((state) => ({ ...state, panel: sidecarReducer(state.panel, action) }));
   }, []);
 
-  return { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel };
+  const onZoomView = useCallback<OnZoomView>((view) => {
+    dispatch({ type: "open", target: view.target, label: view.label, at: Date.now() });
+  }, [dispatch]);
+  const onSelectTab = useCallback((path: string) => {
+    dispatch({ type: "select", path, at: Date.now() });
+  }, [dispatch]);
+  const onCloseTab = useCallback((path: string) => {
+    dispatch({ type: "close", path });
+  }, [dispatch]);
+  const onTogglePin = useCallback((path: string) => {
+    dispatch({ type: "togglePin", path, at: Date.now() });
+  }, [dispatch]);
+  const onClosePanel = useCallback(() => {
+    dispatch({ type: "closeAll" });
+  }, [dispatch]);
+
+  // Mirrors of the current panel and key for the flush callbacks, which run
+  // outside render (a visibility change, an unmount) and must not close over a
+  // stale one. Updated in the persist effect below, never during render.
+  const panelRef = useRef(panel);
+  const keyRef = useRef(storageKey);
+  const logicalRef = useRef(logicalKey);
+
+  // Debounced through the shared scheduler (400ms), and flushed when the tab
+  // hides — the moment a session is most likely to end.
+  const { schedule, flush } = usePersistScheduler({
+    debounceMs: PERSIST_DEBOUNCE_MS,
+    onHide: useCallback((cancel: () => void) => {
+      cancel();
+      saveSidecarState(keyRef.current, panelRef.current);
+    }, []),
+  });
+
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    const previous = keyRef.current;
+    if (previous !== storageKey) {
+      // Flush under the previous key before replacing either mirror. Only a
+      // provisional-to-assigned identity change carries the strip forward.
+      flush();
+      persistSidecarTransition({ storageKey: previous, logicalKey: logicalRef.current, panel: panelRef.current },
+        { storageKey, logicalKey });
+      keyRef.current = storageKey;
+      logicalRef.current = logicalKey;
+      panelRef.current = panel;
+      return;
+    }
+    panelRef.current = panel;
+    if (!restoredRef.current) { restoredRef.current = true; return; }
+    // Capture the panel, not the mutable mirror: a later session switch must
+    // never flush another conversation's strip into this key.
+    schedule(() => saveSidecarState(storageKey, panel));
+  }, [panel, storageKey, logicalKey, schedule, flush]);
+
+  return { panel, activeView, onZoomView, onSelectTab, onCloseTab, onTogglePin, onClosePanel };
 }
 
 /**
@@ -86,11 +131,13 @@ export function useCompanionDeepLink(opts: {
 }) {
   const { companion, onZoomView, boxSlug } = opts;
   const navigate = useNavigate();
-  const openedRef = useRef(false);
+  const navigationKey = useLocation({ select: (location) => location.state.__TSR_key });
+  const openedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (openedRef.current) return;
-    if (companion === undefined || companion === "") return;
-    openedRef.current = true;
+    if (companion === undefined || companion === "") { openedRef.current = null; return; }
+    const intent = `${navigationKey ?? ""}:${companion}`;
+    if (openedRef.current === intent) return;
+    openedRef.current = intent;
     const target = parseViewUrl(companion);
     onZoomView({ target, label: target.path });
     void navigate({
@@ -102,7 +149,7 @@ export function useCompanionDeepLink(opts: {
       }),
       replace: true,
     });
-  }, [companion, onZoomView, navigate, boxSlug]);
+  }, [companion, onZoomView, navigate, boxSlug, navigationKey]);
 }
 
 interface ChatSendFn {

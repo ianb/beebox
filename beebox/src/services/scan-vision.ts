@@ -5,8 +5,10 @@
  * The default backend is Claude Sonnet via the Claude Agent SDK
  * (`scan-vision-claude.ts`) — zero extra setup beyond the Claude auth the
  * reactor already requires. Gemini Flash stays available as an opt-in
- * (`BBX_SCAN_VISION=gemini` + `GEMINI_KEY`) for deployments that hold the
- * key; it wraps the existing engine in `scan-import-gemini.ts` unchanged.
+ * (`BBX_SCAN_VISION=gemini`) for deployments that hold a key that reaches it —
+ * a granted `gemini` secret, or an `openrouter` one standing in for it
+ * (`core/openrouter.ts`). It wraps the engines in `scan-import-gemini.ts` and
+ * `scan-import-openrouter.ts` unchanged.
  * Design + measured evidence: `docs/plans/scan-vision-claude.md`.
  *
  * Both implementations enforce the batch-alignment post-condition
@@ -14,13 +16,17 @@
  * response can never misattach analyses to the wrong pages downstream.
  */
 
+import { HTTPError } from "ky";
 import {
   analyzeScanBatchWithGemini,
   ScanBatchMisalignedError,
   type BatchUsage,
   type RawScanAnalysis,
 } from "../core/commands/scan-import-gemini.js";
+import { analyzeScanBatchWithOpenRouter } from "../core/commands/scan-import-openrouter.js";
 import { GeminiEmptyResponseError } from "../core/commands/describe-images-helpers.js";
+import { isAuthRejection } from "../core/secrets/probe-registry.js";
+import type { ModelRoute } from "../core/openrouter.js";
 import { err, ok, type Result } from "../lib/result.js";
 import { errorMessage } from "../lib/error-guards.js";
 
@@ -85,32 +91,36 @@ export interface ScanVisionService {
 
 // ─── Backend selection ───────────────────────────────────────────────────────
 
-export type ScanVisionSelection = { backend: "claude" } | { backend: "gemini"; apiKey: string };
+export type ScanVisionSelection = { backend: "claude" } | { backend: "gemini"; route: ModelRoute };
 
 /**
  * Resolve which backend `bbx scan-import` should use. `env` selects the backend;
- * `geminiKey` is the ALREADY-RESOLVED key from `core/gemini-key.ts` (store,
- * then `GEMINI_KEY`/`SKE_GEMINI_API_KEY`) — this function no longer reads a
- * credential out of the environment itself, so there is exactly one Gemini
- * resolution order in the codebase (`docs/plans/secret-custody.md`, Track 3).
+ * `route` is the ALREADY-RESOLVED credential and path from `core/openrouter.ts`
+ * — the box's own Gemini key (`core/gemini-key.ts`, the machine secret store)
+ * when it has one, OpenRouter otherwise. This function never reads a credential
+ * out of the environment itself, so there is exactly one place a Gemini key is
+ * resolved (`docs/implemented-plans/secret-custody.md`).
  *
- * Fail-closed: an explicit `BBX_SCAN_VISION=gemini` without a key is an error,
- * never a silent fallback to Claude; so is an unknown value.
+ * The `gemini` backend name stays the backend's name because it names the
+ * MODEL, which is the same either way; `route.via` says how it is reached.
+ *
+ * Fail-closed: an explicit `BBX_SCAN_VISION=gemini` with no route at all is an
+ * error, never a silent fallback to Claude; so is an unknown value.
  */
 export function selectScanVisionBackend(
   env: NodeJS.ProcessEnv,
-  geminiKey: string | null,
+  route: ModelRoute | null,
 ): Result<ScanVisionSelection> {
   // TODO(env-migration): long-tail feature-gate var, direct read per src/lib/env.ts.
   const selected = env["BBX_SCAN_VISION"] ?? "claude";
   if (selected === "claude") return ok({ backend: "claude" });
   if (selected === "gemini") {
-    if (geminiKey === null || geminiKey === "") {
+    if (route === null || route.apiKey === "") {
       return err(
-    'BBX_SCAN_VISION=gemini but no Gemini key is available — grant the "gemini" secret to this box, or set GEMINI_KEY (or SKE_GEMINI_API_KEY)',
+    'BBX_SCAN_VISION=gemini but no key can reach the model — grant the "gemini" or "openrouter" secret to this box',
       );
     }
-    return ok({ backend: "gemini", apiKey: geminiKey });
+    return ok({ backend: "gemini", route });
   }
   return err(`BBX_SCAN_VISION=${selected} is not a valid backend (valid: claude, gemini)`);
 }
@@ -142,8 +152,24 @@ function isFatalGeminiError(e: Error): boolean {
   );
 }
 
+/**
+ * The OpenRouter arm fails with an HTTP status rather than Gemini's embedded
+ * `"code":NNN` prose, so the status is read off the thrown response first and
+ * the string matching below stays the direct arm's business. Same three
+ * verdicts, same meanings — a 429/503 is worth another try, a 401/403 is not.
+ */
+function classifyHttpStatus(status: number): ScanVisionRetry | null {
+  if (status === 429 || status === 503) return "transient";
+  if (isAuthRejection(status)) return "fatal";
+  return null;
+}
+
 function classifyGeminiError(e: unknown): ScanVisionRetry {
   if (!(e instanceof Error)) return "batch";
+  if (e instanceof HTTPError) {
+    const verdict = classifyHttpStatus(e.response.status);
+    if (verdict !== null) return verdict;
+  }
   if (isTransientGeminiError(e)) return "transient";
   if (isFatalGeminiError(e)) return "fatal";
   if (
@@ -156,13 +182,14 @@ function classifyGeminiError(e: unknown): ScanVisionRetry {
   return "batch";
 }
 
-export function createGeminiScanVision({ apiKey }: { apiKey: string }): ScanVisionService {
+export function createGeminiScanVision({ route }: { route: ModelRoute }): ScanVisionService {
+  const analyze = route.via === "openrouter" ? analyzeScanBatchWithOpenRouter : analyzeScanBatchWithGemini;
   return {
     backend: "gemini",
     batchSize: 8,
     async analyzeBatch(args): Promise<ScanVisionResult> {
       try {
-        const result = await analyzeScanBatchWithGemini(apiKey, {
+        const result = await analyze(route.apiKey, {
           imagePaths: args.imagePaths,
           boxholderContext: args.boxholderContext,
           // Last-ditch singleton retry runs with thinking disabled — the

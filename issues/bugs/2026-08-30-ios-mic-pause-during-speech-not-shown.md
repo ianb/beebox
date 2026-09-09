@@ -6,6 +6,7 @@ labels: [ios, voice, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "iOS pauses input while there is speech, but doesn't show it"
+priority: important
 ---
 
 On iOS, when the box's speech playback starts mid-voice-turn, dictation input

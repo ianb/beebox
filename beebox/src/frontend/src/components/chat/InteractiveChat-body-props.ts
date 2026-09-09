@@ -21,6 +21,15 @@ import type { CaptureBubbleModel, CaptureVerbs } from "./capture-bubble";
 import type { AudioOverlayStore } from "./audio-overlay-store";
 
 export interface ChatBodyProps {
+  conversationKey?: string;
+  transcriptVisible?: boolean;
+  sendDisabledReason?: string;
+  routeContent?: ReactNode;
+  onShowConversation?: () => void;
+  onHideConversation?: () => void;
+  ambientRegion?: ReactNode;
+  selectionNotice?: ReactNode;
+  failedRegion?: ReactNode;
   tabs: ReturnType<typeof useChatTabs>;
   model: ReturnType<typeof useChatModelFeatures>;
   mute: ReturnType<typeof useChatMute>;

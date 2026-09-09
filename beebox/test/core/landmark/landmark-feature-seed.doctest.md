@@ -47,10 +47,10 @@ JSON.stringify(readLandmarkFeatures(navigation))
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/dump/Daily.landmark.card",
+  "_content/store/dump/Daily.landmark.card",
   "---\nnavigation:\n  label: Daily dump\n  symbol: 🎙️\n  chat-app:\n    narration: on\n---\n",
 );
-JSON.stringify(await readLandmarkFeaturesForDir(box.root, "store/dump"))
+JSON.stringify(await readLandmarkFeaturesForDir(box.root, "_content/store/dump"))
 => {"narration":"on"}
 ```
 
@@ -91,9 +91,9 @@ silently skipped by one creation path.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("config/box.json", JSON.stringify({ hqDictation: "on" }));
+await box.write("_config/box.json", JSON.stringify({ hqDictation: "on" }));
 await box.write(
-  "Home.landmark.card",
+  "_content/Home.landmark.card",
   "---\nnavigation:\n  label: Home\n  chat-app:\n    hq-dictation: off\n---\n",
 );
 JSON.stringify(await seedFeaturesForNewChat({ boxRoot: box.root, contextDir: null }))
@@ -118,8 +118,8 @@ A directory with no landmark card returns null.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("store/empty/Notes.md", "no landmark here\n");
-await readLandmarkFeaturesForDir(box.root, "store/empty")
+await box.write("_content/store/empty/Notes.md", "no landmark here\n");
+await readLandmarkFeaturesForDir(box.root, "_content/store/empty")
 => null
 ```
 
@@ -133,10 +133,31 @@ landmark look the same to callers.
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/plain/Plain.landmark.card",
+  "_content/store/plain/Plain.landmark.card",
   "---\nnavigation:\n  label: Plain\n  symbol: 📁\n---\n",
 );
-await readLandmarkFeaturesForDir(box.root, "store/plain")
+await readLandmarkFeaturesForDir(box.root, "_content/store/plain")
+=> null
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+A `contextDir` that would resolve outside the box fails closed: same `null`
+as a missing directory, not a read of whatever the path escapes to. This is
+the box-containment floor for a value that arrives from the tRPC layer
+already string-shape-checked (`boxRelativePathSchema` in
+`core/landmark/nearest.ts`) — this check is the defense-in-depth layer for
+any other caller.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "../outside-marker.landmark.card",
+  "---\nnavigation:\n  label: Outside\n  chat-app:\n    narration: on\n---\n",
+);
+await readLandmarkFeaturesForDir(box.root, "../")
 => null
 ```
 

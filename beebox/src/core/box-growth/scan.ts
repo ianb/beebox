@@ -5,11 +5,13 @@ import { execa } from "execa";
 import { errorMessage } from "../../lib/error-guards.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import type { GrowthHistory, GrowthMeasurement, SubtreeCounts } from "./model.js";
+import { BOX_DIRS } from "../../lib/paths.js";
 
 const MAX_SUBTREES = 20;
 const MAX_PREFIX_SEGMENTS = 3;
 const MAX_FIND_ERROR_BYTES = 8_192;
-const CONNECTOR_ROOTS: readonly string[] = ["box/inbox/email", "store/calendar", "store/drive"];
+const INBOX_EMAIL_DIR = `${BOX_DIRS.inbox}/email`;
+const CONNECTOR_ROOTS: readonly string[] = [INBOX_EMAIL_DIR, BOX_DIRS.calendar, BOX_DIRS.drive];
 
 interface MutableSubtree {
   directories: number;
@@ -53,22 +55,22 @@ class FindIncompleteEntryError extends Error {
 }
 
 function sourceForPath(relativePath: string): Pick<SubtreeCounts, "source" | "sourceLabel"> {
-  if (relativePath === "box/inbox/email" || relativePath.startsWith("box/inbox/email/")) {
+  if (relativePath === INBOX_EMAIL_DIR || relativePath.startsWith(`${INBOX_EMAIL_DIR}/`)) {
     return { source: "connector", sourceLabel: "Gmail" };
   }
-  if (relativePath === "store/calendar" || relativePath.startsWith("store/calendar/")) {
+  if (relativePath === BOX_DIRS.calendar || relativePath.startsWith(`${BOX_DIRS.calendar}/`)) {
     return { source: "connector", sourceLabel: "Google Calendar" };
   }
-  if (relativePath === "store/drive" || relativePath.startsWith("store/drive/")) {
+  if (relativePath === BOX_DIRS.drive || relativePath.startsWith(`${BOX_DIRS.drive}/`)) {
     return { source: "connector", sourceLabel: "Google Drive" };
   }
-  if (relativePath.startsWith("store/chat/")) return { source: "chat", sourceLabel: null };
+  if (relativePath.startsWith(`${BOX_DIRS.chat}/`)) return { source: "chat", sourceLabel: null };
   if (["tmp-capture", "tmp-upload", "captures"].some((name) => relativePath === name || relativePath.startsWith(`${name}/`))) {
     return { source: "user-input", sourceLabel: null };
   }
   if (
-    relativePath === "procedure/runs" ||
-    relativePath.startsWith("procedure/runs/") ||
+    relativePath === BOX_DIRS.procedureRuns ||
+    relativePath.startsWith(`${BOX_DIRS.procedureRuns}/`) ||
     relativePath === "generated" ||
     relativePath.startsWith("generated/") ||
     relativePath === "runtime" ||
@@ -234,12 +236,12 @@ function numericOutput(output: string, command: string): number {
 async function measureHistory(boxRoot: string, deadline: number): Promise<GrowthHistory> {
   try {
     checkDeadline(deadline);
-    const { packageRoot } = await getBoxShape(boxRoot);
+    const { boxRoot: repoRoot } = await getBoxShape(boxRoot);
     const timeout = Math.max(1, deadline - Date.now());
     const [head, commits, objects] = await Promise.all([
-      execa("git", ["rev-parse", "HEAD"], { cwd: packageRoot, timeout }),
-      execa("git", ["rev-list", "--count", "HEAD"], { cwd: packageRoot, timeout }),
-      execa("git", ["count-objects", "-v"], { cwd: packageRoot, timeout }),
+      execa("git", ["rev-parse", "HEAD"], { cwd: repoRoot, timeout }),
+      execa("git", ["rev-list", "--count", "HEAD"], { cwd: repoRoot, timeout }),
+      execa("git", ["count-objects", "-v"], { cwd: repoRoot, timeout }),
     ]);
     const looseObjects = numericField(objects.stdout, "count");
     const packedObjects = numericField(objects.stdout, "in-pack");

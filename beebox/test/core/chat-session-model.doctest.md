@@ -20,8 +20,8 @@ import * as path from "node:path";
 const run = promisify(execFile);
 
 async function pin(boxRoot: string, config: Record<string, unknown>): Promise<void> {
-  await fs.mkdir(path.join(boxRoot, "config"), { recursive: true });
-  await fs.writeFile(path.join(boxRoot, "config/box.json"), JSON.stringify(config));
+  await fs.mkdir(path.join(boxRoot, "_config"), { recursive: true });
+  await fs.writeFile(path.join(boxRoot, "_config/box.json"), JSON.stringify(config));
   clearBoxConfigCache(boxRoot);
 }
 
@@ -39,8 +39,8 @@ await pin(box.root, { agentModel: "claude-sonnet-5" });
 JSON.stringify(await resolveSessionModel(box.root, FOLLOW))
 => {"model":"claude-sonnet-5","source":"default"}
 
-JSON.stringify(await resolveSessionModel(box.root, { engine: "claude", explicit: "claude-fable-5" }))
-=> {"model":"claude-fable-5","source":"explicit"}
+JSON.stringify(await resolveSessionModel(box.root, { engine: "claude", explicit: "claude-fable-5-1" }))
+=> {"model":"claude-fable-5-1","source":"explicit"}
 ```
 
 Changing the pin changes what a follower resolves next time — the reason a

@@ -92,15 +92,17 @@ async function freshSeedFeatures(
   return Object.keys(seedFeatures).length > 0 ? { seedFeatures } : {};
 }
 
-async function assertExactSessionTarget(ctx: ChatRoutesContext, sessionId: string): Promise<void> {
+/** Exact sends admit committed live sessions before engine history catches up. */
+export async function assertExactSessionTarget(ctx: Pick<ChatRoutesContext, "registry" | "boxRoot">, sessionId: string): Promise<void> {
   if (sessionId === "new") {
     throw new ExactSessionTargetError(400, "exactSession requires an existing session id");
   }
-  // `isResumableSession` answers from the session list, which requires a husk
-  // AND a transcript — neither of which a reserved chat has until its first
-  // turn. The exact-session path bypasses `resolveSessionAvailability`, so the
-  // reservation has to be admitted here too.
-  if (ctx.registry.getReservation(sessionId) !== null) return;
+  // Deletion always wins, even while the assigned entry is still live.
+  if (ctx.registry.deletion.isBlocked(sessionId)) throw new UnavailableChatSessionError();
+  // An engine can assign an id before its transcript becomes enumerable.
+  // Only the committed registry entry (or an existing reservation) admits
+  // that window; a pending session's early init frame is not commitment.
+  if (ctx.registry.isKnownSession(sessionId)) return;
   if (!(await isResumableSession(ctx.boxRoot, sessionId))) {
     throw new ExactSessionTargetError(404, `Chat session is no longer available: ${sessionId}`);
   }

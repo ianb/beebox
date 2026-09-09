@@ -41,7 +41,7 @@ export interface StatusDeps {
   pubWorkerDir?: string | undefined;
 }
 
-/** Local publication counts by status (from `box/publish/` manifests; no Cloudflare). */
+/** Local publication counts by status (from `_publish/` manifests; no Cloudflare). */
 export interface LocalPubCounts {
   draft: number;
   live: number;
@@ -88,7 +88,7 @@ async function countLocalPubs(boxRoot: string): Promise<LocalPubCounts> {
 }
 
 /**
- * Diff the deployed Access vars against the persisted `config/publish.json`.
+ * Diff the deployed Access vars against the persisted `_config/publish.json`.
  * Any asymmetry is a problem: drift redeploys wrong values, a deployed-but-
  * unpersisted pair would be ERASED by the next plain setup, and a persisted-
  * but-undeployed pair means the account tiers are 404ing for no reason.
@@ -98,14 +98,14 @@ async function accessDriftProblems(boxRoot: string, deployed: { teamDomain: stri
   const accessConfigured = teamDomain !== null && teamDomain.length > 0 && aud !== null && aud.length > 0;
   const persisted = await readPublishConfig(boxRoot);
   if (persisted === null && accessConfigured) {
-    return [`Access vars are deployed but config/publish.json is missing — the next plain \`bbx pub setup\` would ERASE them; persist them: {"accessTeamDomain":"${teamDomain}","accessAud":"${aud}"}`];
+    return [`Access vars are deployed but _config/publish.json is missing — the next plain \`bbx pub setup\` would ERASE them; persist them: {"accessTeamDomain":"${teamDomain}","accessAud":"${aud}"}`];
   }
   if (persisted === null) return [];
   if (!accessConfigured) {
-    return ["config/publish.json has Access values but the deployed Worker lacks them — re-run `bbx pub setup` to redeploy"];
+    return ["_config/publish.json has Access values but the deployed Worker lacks them — re-run `bbx pub setup` to redeploy"];
   }
   if (teamDomain !== persisted.accessTeamDomain || aud !== persisted.accessAud) {
-    return ["deployed Access vars DIFFER from config/publish.json — re-run `bbx pub setup` to redeploy the persisted values (or update the file)"];
+    return ["deployed Access vars DIFFER from _config/publish.json — re-run `bbx pub setup` to redeploy the persisted values (or update the file)"];
   }
   return [];
 }
@@ -145,7 +145,7 @@ export async function statusPublishing({ boxRoot }: { boxRoot: string }, deps: S
   if (!ingestExists) report.problems.push(`R2 ingestion bucket '${config.ingestBucketName}' does not exist — run \`bbx pub setup\``);
 
   // Deployed script: PUB_STORE binding + Access vars (diffed against the
-  // persisted `config/publish.json` — a mismatch means the next plain setup
+  // persisted `_config/publish.json` — a mismatch means the next plain setup
   // would deploy something other than what's live).
   const settings = await client.getScriptSettings(config.workerName);
   if (settings === null) {

@@ -165,7 +165,7 @@ async function answerWithCapture(
           return null;
         case "toast":
           URL.revokeObjectURL(processed.objectUrl);
-          toastError("The screenshot couldn't be shared with the agent.");
+          toastError("The screenshot couldn't be added to the chat.");
           return null;
         case "quiet":
           URL.revokeObjectURL(processed.objectUrl);

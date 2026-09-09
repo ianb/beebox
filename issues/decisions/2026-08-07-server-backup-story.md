@@ -4,6 +4,7 @@ workstream: security-report
 area: beebox
 filed-by: agent
 discovered-in: worktree-security-report — operational inventory for the security report
+priority: normal
 ---
 
 The deployed server has no first-class backup mechanism.

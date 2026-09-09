@@ -6,6 +6,7 @@ import {
   loadTranscriptionConfig,
   updateTranscriptionConfig,
 } from "../../../core/transcription/index.js";
+import { HQ_TRANSCRIPTION_SERVICES, TRANSCRIPTION_SERVICES } from "../../../shared/transcription-services.js";
 import { DEEPGRAM_SECRET_NAME, getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { getOpenAiThinkingKey, OPENAI_THINKING_SECRET_NAME } from "../../../core/openai-thinking-key.js";
 import { recordSecretMint } from "../../../core/secrets/access-log.js";
@@ -13,8 +14,11 @@ import { errorMessage } from "../../../lib/error-guards.js";
 
 const TEMP_KEY_TTL_SECONDS = 20 * 60; // 20 minutes
 
-const serviceSchema = z.enum(["voxtral", "deepgram", "whisper", "openai-realtime"]);
-const hqServiceSchema = z.enum(["whisper", "whisper-llm", "whisper-llm-mini", "voxtral", "voxtral-diarized"]);
+// Derived, never re-typed: a hand-copied list here silently rejected a service
+// the engine had already accepted (`shared/transcription-services.ts`). `fake`
+// is excluded deliberately — it is a test backend, not something the UI offers.
+const serviceSchema = z.enum(TRANSCRIPTION_SERVICES).exclude(["fake"]);
+const hqServiceSchema = z.enum(HQ_TRANSCRIPTION_SERVICES);
 
 export const transcriptionRouter = router({
   config: publicProcedure.query(async ({ ctx }) => {
@@ -48,7 +52,7 @@ export const transcriptionRouter = router({
    * Mint a TTL'd, usage-scoped Deepgram key for the browser. This SPENDS the
    * box's stored management key without disclosing it — the derived-credential
    * pattern — so it is logged to the secrets access log as a `mint` event
-   * (`docs/plans/secret-custody.md`, "operation surface"). Deliberately
+   * (`docs/implemented-plans/secret-custody.md`, "operation surface"). Deliberately
    * uncapped (Decision 7): logged-and-visible, not throttled.
    */
   deepgramTempKey: publicProcedure.mutation(async ({ ctx }) => {
@@ -57,7 +61,7 @@ export const transcriptionRouter = router({
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
         message:
-          'Deepgram not configured — ask the boxholder to grant the "deepgram" secret to this box, or set BBX_DEEPGRAM_API_KEY + BBX_DEEPGRAM_PROJECT',
+          'Deepgram not configured — ask the boxholder to grant the "deepgram" secret to this box',
       });
     }
     await recordSecretMint({
@@ -113,7 +117,7 @@ export const transcriptionRouter = router({
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
         message:
-          'OpenAI not configured — ask the boxholder to grant the "openai-thinking" secret to this box, or set THINKING_OPENAI_API_KEY',
+          'OpenAI not configured — ask the boxholder to grant the "openai-thinking" secret to this box',
       });
     }
     await recordSecretMint({

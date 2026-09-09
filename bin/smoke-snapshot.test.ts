@@ -4,10 +4,15 @@ import type { SmokeFailureError } from "./smoke-errors.js";
 import {
   MENU_ERROR_TEXT,
   cardViewRendered,
+  composerDestination,
+  conversationPreservationFailure,
+  conversationSwitchFailure,
+  contentAreaRow,
   currentPlaceLabel,
   directoryRowCount,
   expandedState,
   firstCardRow,
+  refForDomId,
   hasDomId,
   menuItemNames,
   placeMenuFailure,
@@ -20,7 +25,7 @@ import {
 } from "./smoke-snapshot.js";
 
 const MENU_SNAPSHOT = `- navigation "Primary" [ref=e1]
-  - button "Place: Chat" [expanded=true, ref=e12, id=bbx-nav-place]
+  - button "Where you are: Chat" [expanded=true, ref=e12, id=bbx-nav-place]
 - menuitem "Box: test1 ›" [ref=e2, id=bbx-switch-menu-box]
 - menuitem "All landmarks →" [ref=e3, id=bbx-switch-menu-landmarks]
 - menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]
@@ -73,19 +78,36 @@ test("expandedState: absent element is null, not false", () => {
 test("refFor: resolves role + name, and tolerates regex metacharacters in the name", () => {
   assert.equal(refFor(MENU_SNAPSHOT, { role: "menuitem", name: "Box" }), "e5");
   assert.equal(refFor(MENU_SNAPSHOT, { role: "menuitem", name: "Acids & Bases" }), "e6");
-  assert.equal(refFor(MENU_SNAPSHOT, { role: "button", name: "Place: Chat" }), "e12");
+  assert.equal(refFor(MENU_SNAPSHOT, { role: "button", name: "Where you are: Chat" }), "e12");
   assert.equal(refFor(MENU_SNAPSHOT, { role: "menuitem", name: "Box (nope)" }), null);
 });
 
 // ── selecting a landmark ────────────────────────────────────────────────────
 
-test("currentPlaceLabel: reads the pill's `Place: <label>` accessible name", () => {
+test("currentPlaceLabel: reads the pill's `Where you are: <label>` accessible name", () => {
   assert.equal(currentPlaceLabel(MENU_SNAPSHOT), "Chat");
   assert.equal(
-    currentPlaceLabel('- button "Place: Acids & Bases" [expanded=false, ref=e5, id=bbx-nav-place]'),
+    currentPlaceLabel('- button "Where you are: Acids & Bases" [expanded=false, ref=e5, id=bbx-nav-place]'),
     "Acids & Bases",
   );
   assert.equal(currentPlaceLabel('- button "User" [ref=e8, id=bbx-nav-profile]'), null);
+});
+
+test("composerDestination: reads the persistent composer's visible recipient", () => {
+  assert.equal(
+    composerDestination('- generic\n  - StaticText "Send to: _content/courses/Acids_Bases.attach"'),
+    "_content/courses/Acids_Bases.attach",
+  );
+  assert.equal(composerDestination('- textbox "Type a message..."'), null);
+});
+
+test("conversation destination checks distinguish switching from browsing", () => {
+  const root = '- StaticText "Send to: / (box root)"';
+  const acids = '- StaticText "Send to: _content/courses/Acids_Bases.attach"';
+  assert.equal(conversationSwitchFailure("/ (box root)", acids), null);
+  assert.match(conversationSwitchFailure("/ (box root)", root)?.message ?? "", /did not switch/);
+  assert.equal(conversationPreservationFailure("_content/courses/Acids_Bases.attach", acids), null);
+  assert.match(conversationPreservationFailure("_content/courses/Acids_Bases.attach", root)?.message ?? "", /changed/);
 });
 
 test("switchTarget: never the place we are already in", () => {
@@ -162,7 +184,7 @@ test("readPlaceMenu: nav-card rows above 'Switch to' are not landmarks", () => {
   // A box with nav entries renders them as plain menuitems before the section
   // header (PlacePill-panels.tsx, NavCardRows). Counting those as landmarks
   // let the walk try to switch to a route.
-  const snapshot = `- button "Place: Chat" [expanded=true, ref=e1, id=bbx-nav-place]
+  const snapshot = `- button "Where you are: Chat" [expanded=true, ref=e1, id=bbx-nav-place]
 - menuitem "Box: test1 ›" [ref=e2, id=bbx-switch-menu-box]
 - menuitem "All landmarks →" [ref=e3, id=bbx-switch-menu-landmarks]
 - menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]
@@ -178,7 +200,7 @@ test("readPlaceMenu: nav-card rows above 'Switch to' are not landmarks", () => {
 test("readPlaceMenu: a menu with no 'Switch to' section lists no landmarks", () => {
   // Fails closed. Silently treating every menuitem as a landmark is how the
   // nav-card rows got in.
-  const snapshot = `- button "Place: Chat" [expanded=true, ref=e1, id=bbx-nav-place]
+  const snapshot = `- button "Where you are: Chat" [expanded=true, ref=e1, id=bbx-nav-place]
 - menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]`;
   assert.deepEqual(readPlaceMenu(snapshot).landmarks, []);
 });
@@ -197,7 +219,7 @@ test("stripRowDecorations: the menu's additions are not part of the label", () =
 });
 
 test("readPlaceMenu: the current row is marked, not just named", () => {
-  const snapshot = `- button "Place: Box" [expanded=true, ref=e1, id=bbx-nav-place]
+  const snapshot = `- button "Where you are: Box" [expanded=true, ref=e1, id=bbx-nav-place]
 - menuitem "Box: test1 ›" [ref=e2, id=bbx-switch-menu-box]
 - menuitem "All landmarks →" [ref=e3, id=bbx-switch-menu-landmarks]
 - menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]
@@ -252,7 +274,7 @@ test("readPlaceMenu: an interactive-only snapshot yields nothing, and says so", 
   // The section header is StaticText, which `snapshot -i` omits. Feeding it one
   // finds no landmarks at all rather than silently treating nav rows as
   // landmarks — the walk fails loudly instead of switching to a route.
-  const interactiveOnly = `- button "Place: Chat" [expanded=true, ref=e1, id=bbx-nav-place]
+  const interactiveOnly = `- button "Where you are: Chat" [expanded=true, ref=e1, id=bbx-nav-place]
 - menuitem "Box: test1 ›" [ref=e2, id=bbx-switch-menu-box]
 - menuitem "All landmarks →" [ref=e3, id=bbx-switch-menu-landmarks]
 - menuitem "Recent files ›" [ref=e4, id=bbx-switch-menu-recent-files]
@@ -287,4 +309,25 @@ test("directoryRowCount / firstCardRow: counted rows come from real box content"
   assert.deepEqual(firstCardRow(BROWSE_SNAPSHOT), { role: "button", name: "Box, landmark card" });
   assert.equal(directoryRowCount("- button \"/\" [ref=e1]"), 0);
   assert.equal(firstCardRow("- button \"AGENTS.md\" [ref=e1]"), null);
+});
+
+test("refForDomId: finds a stable control without depending on its accessible copy", () => {
+  const listing = '- switch "Showing compact listing — switch to raw" [checked=false, ref=e14, id=bbx-browse-listing-mode]';
+  assert.equal(refForDomId(listing, "bbx-browse-listing-mode"), "e14");
+  assert.equal(refForDomId(listing, "missing"), null);
+});
+
+test("contentAreaRow: finds the one-root content area when a listing has no card row", () => {
+  const oneRootRoot = `- button "/" [ref=e16, id=bbx-browse-crumb-root]
+- button "Bookkeeping directory, 659 items" [ref=e11]
+- button "Config directory, 28 items" [ref=e12]
+- button "Content directory, 184 items" [ref=e13]
+- button "Publish directory" [ref=e14]
+- button "Tmp directory" [ref=e15]`;
+  assert.deepEqual(contentAreaRow(oneRootRoot), {
+    role: "button",
+    name: "Content directory, 184 items",
+  });
+  // A pre-one-root box's listing carries no `Content` row at all.
+  assert.equal(contentAreaRow(BROWSE_SNAPSHOT), null);
 });
