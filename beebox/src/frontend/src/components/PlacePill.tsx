@@ -26,11 +26,11 @@
  * AppNav already states for `status.navStatus`). The same applies to the
  * `nav.card` section's query.
  *
- * The gate stays; what changed is that the cache is no longer empty when the
- * user reaches for it. ChatPage warms `chat.placeMenu` from idle time once its
- * own bootstrap has settled (`useIdlePrefetch`), so the first open paints rows
- * instead of "Loading…". This query owns none of that — it still just reads
- * whatever cache exists — and a page that doesn't prefetch still opens cold.
+ * The gate stays. Nothing warms this cache today: the idle prefetch lived on
+ * ChatPage, which the persistent box conversation shell replaced, so the first
+ * open paints "Loading…". This query owns none of that either way — it just
+ * reads whatever cache exists — so restoring a warm-up is a change at the
+ * prefetching page, not here.
  *
  * This menu used to read `chat.byLandmark`, the full picker payload: every chat
  * in the box, bucketed and *named*. It drew none of that but the counts, and

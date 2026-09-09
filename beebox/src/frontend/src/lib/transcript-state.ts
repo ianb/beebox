@@ -25,22 +25,6 @@ export function transcriptStateLabel(transcript: TranscriptState): string {
   }
 }
 
-/** Long form — the one sentence a dead chat's page owes the reader. */
-export function transcriptStateSentence(transcript: TranscriptState): string {
-  switch (transcript.state) {
-    case "present":
-      return "Its transcript is on this machine.";
-    case "expired":
-      return "It ran on this machine and its transcript has since expired, so beebox will not try to resume it.";
-    case "elsewhere":
-      return `It ran on ${transcript.originName}, so its transcript was never on this machine and beebox will not try to resume it.`;
-    case "unknown":
-      return "Its local transcript is missing and the chat card records no origin machine, so beebox will not try to resume it.";
-    default:
-      return assertNever(transcript);
-  }
-}
-
 /** Dead chats under one heading — every row in it reads the same way. */
 export interface TranscriptGroup<T> {
   label: string;
