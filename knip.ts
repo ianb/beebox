@@ -67,6 +67,7 @@ const config: KnipConfig = {
         // Frontend deps, reached from test/frontend/*.doctest.md.
         "xstate",
         "@ianbicking/canvas-loop",
+        "@tanstack/react-query",
       ],
       // Two doctests dynamic-import a module from inside a template literal
       // that a spawned subprocess evaluates, so the specifier is relative to

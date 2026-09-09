@@ -13,7 +13,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { createOpenAIAudioService } from "../src/services/openai-audio.js";
+import { createTtsService } from "../src/services/tts.js";
 
 const OUT_DIR = join(import.meta.dirname, "..", "src", "webapp", "test-fixtures", "tts");
 
@@ -30,7 +30,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const audio = createOpenAIAudioService(apiKey);
+  const audio = createTtsService({ backend: "openai", apiKey });
   mkdirSync(OUT_DIR, { recursive: true });
 
   for (const clip of CLIPS) {
