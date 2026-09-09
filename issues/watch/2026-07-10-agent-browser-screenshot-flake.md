@@ -4,6 +4,7 @@ workstream: unknown
 area: bin
 filed-by: agent
 priority: backlog
+next-action: discuss
 ---
 
 > **Watch (moved to watch/ 2026-08-06).** Root-caused UPSTREAM in
@@ -72,3 +73,31 @@ out; agent-browser exited -1"), then `get title`, `close`, and re-`open` all
 hung past 30–60s timeouts, and the hang **survived `pkill -f agent-browser`**
 plus a fresh daemon start. Not screenshot-specific in this mode; the whole
 per-worktree daemon channel was unusable and never recovered in-session.
+
+## Re-encountered 2026-09-09
+
+Seen during interface-as-cards UI verification; priority may be stale.
+With agent-browser 0.27.0, `bin/browse screenshot` stalled for minutes and
+ended with `agent-browser exited -1` and no output. Navigation, DOM eval,
+and accessibility snapshots still worked. Both the default session and a
+fresh `--session interface-evidence` reproduced it.
+
+One capture returned a stale-looking 500×844 image showing the generic
+“Choosing conversation” state while current DOM probes showed Browse and
+the composer at 1280×800. Its sidecar named the current URL, but
+`browse/src/screenshot.ts` reads URL/title after capture, so that metadata
+does not prove the pixels represent the same state.
+
+Skipping the wrapper ready wait, restarting the worktree browser, launching
+with `AGENT_BROWSER_ARGS='--disable-gpu'`, and selecting current tab `t1`
+did not restore reliable screenshots. No mechanism was established for this
+occurrence. Upstream capture uses native CDP `Page.captureScreenshot`; this
+is not a Playwright font-readiness wait. Do not assume the older socket
+timeout diagnosis explains the stale pixels.
+
+The [closed ready-wait/profile issue](../closed/bugs/2026-08-15-browse-screenshot-hangs.md)
+has its fixes in place and describes different mechanisms; it was not reopened.
+This recurrence blocks screenshot exhibits despite usable DOM verification.
+The developer decision is whether to schedule a focused capture-tooling
+diagnostic now rather than wait for another upstream release. No tooling
+change was made in the interface-as-cards workstream.
