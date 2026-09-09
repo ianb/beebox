@@ -53,4 +53,3 @@ without an override inherits the box theme.
   the same mechanism later?
 
 ## Research (incomplete)
-
