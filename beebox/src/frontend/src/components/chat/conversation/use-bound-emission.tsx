@@ -11,6 +11,7 @@ import { createPendingSendsStore } from "./pending-sends";
 import { PendingSendStorageRecovery } from "./PendingSendStorageRecovery";
 import { FailedConversationSends } from "./FailedConversationSends";
 import type { ConversationControllerPool } from "./controller-pool";
+import { useBoxConversation } from "../everywhere/conversation-context";
 import { trpc } from "../../../lib/trpc";
 
 export interface EmissionDispatch {
@@ -47,9 +48,10 @@ export function useBoundEmission(opts: {
   getWitness: () => ChatWitness;
   onSent: () => void;
 }) {
+  const conversation = useBoxConversation();
   const { pool, target, selection, attention, emissionStore, captureCardSend, acceptCardSend, getWitness, onSent } = opts;
   const [pending, setPending] = useState(() => {
-    try { return createPendingSendsStore(sessionStorage, pool.boxSlug); }
+    try { return createPendingSendsStore(sessionStorage, { boxSlug: pool.boxSlug, storageScope: pool.storageScope }); }
     catch (_cause) {
       // Null drives the visible recovery alert below and disables web sends.
       return null;
@@ -99,7 +101,12 @@ export function useBoundEmission(opts: {
     };
     const dispatch = (emission: Emission): Promise<Receipt> => {
       // Synchronous durable stage: callers clear only after this returns.
-      try { if (!native) pending?.stage(emission, binding); }
+      try {
+        // Once sending is attempted, missing history is no longer proof of an
+        // unused reservation. Never recreate a used (possibly deleted) chat.
+        if (binding.target.kind === "session") conversation?.forgetReservation(binding.target.sessionId);
+        if (!native) pending?.stage(emission, binding);
+      }
       catch (cause) { setError(failureReason(cause)); release(); throw cause; }
       setError(null);
       dispatched = true;
@@ -152,7 +159,7 @@ export function useBoundEmission(opts: {
   };
   const failedRegion = <>
     {error !== null && <p role="alert" className="text-sm text-danger">{error}</p>}
-    <PendingSendStorageRecovery boxSlug={pool.boxSlug} blocked={pending === null}
+    <PendingSendStorageRecovery boxSlug={pool.boxSlug} storageScope={pool.storageScope} blocked={pending === null}
       onRecovered={(store) => { setPending(store); setError(null); }} />
     {pending !== null && <FailedConversationSends store={pending}
       onRetry={async (row) => { await capture(row.binding)(row.emission); }}

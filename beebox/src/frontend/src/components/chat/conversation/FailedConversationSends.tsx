@@ -22,7 +22,8 @@ function defaultTargetLabel(binding: SendBinding): string {
 
 /** Durable recovery entries never silently merge into the current draft. */
 export function FailedConversationSends({ store, onRetry, onRestore, targetLabel }: Props) {
-  const rows = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  const saved = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  const rows = saved.filter((row) => row.status === "rejected" || row.status === "recovered");
   const [acting, setActing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function act(row: PendingConversationSend, kind: "retry" | "restore"): Promise<void> {
@@ -43,13 +44,13 @@ export function FailedConversationSends({ store, onRetry, onRestore, targetLabel
         <Card padding="sm" background="warm">
           <Stack gap="xs">
             <Text as="div" size="sm" weight="semibold">{(targetLabel ?? defaultTargetLabel)(row.binding)}</Text>
-            <Text as="div" size="sm">{row.status === "preparing" ? "Preparing message…" : row.status === "pending" ? "Waiting to send…" : row.reason ?? "Message needs review"}</Text>
+            <Text as="div" size="sm">{row.reason ?? "Message needs review"}</Text>
             <p className="line-clamp-3 whitespace-pre-wrap text-sm text-warm-700">{row.emission.text || "Attachments"}</p>
             <Text as="div" size="xs" tone="muted">{row.emission.images.length} images · {row.emission.files.length} files · {row.emission.selections.length} selections</Text>
-            {(row.status === "rejected" || row.status === "recovered") && <div className="flex gap-2">
+            <div className="flex gap-2">
               <Button size="sm" disabled={acting} intent="secondary" onClick={() => act(row, "retry")}>Retry original conversation</Button>
               <Button size="sm" disabled={acting} intent="ghost" onClick={() => act(row, "restore")}>Restore to draft</Button>
-            </div>}
+            </div>
           </Stack>
         </Card>
       </div>)}

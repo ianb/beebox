@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useBoxConversation } from "../chat/everywhere/conversation-context";
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { Button } from "../ui/Button";
 import { ArchiveChatSection } from "./ArchiveChatSection";
@@ -18,6 +19,7 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
   const { open, sessionId, label, huskPath, onClose, onResult } = props;
   const [result, setResult] = useState<DeleteResult | null>(null);
   const utils = trpc.useUtils();
+  const conversation = useBoxConversation();
   const mutation = trpc.chat.deleteSession.useMutation();
   const pendingRef = useRef(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -56,6 +58,9 @@ export function DeleteChatDialog(props: DeleteChatDialogProps) {
           : "The transcript was only partly removed. Retry cleanup to remove the remaining local chat data.";
 
   const remove = async (): Promise<void> => {
+    // Clear the same receipt owner used by selection before deleting server
+    // history, so a later restart cannot reinterpret this id as an empty chat.
+    conversation?.forgetReservation(sessionId);
     const next = await mutation.mutateAsync({ sessionId });
     setResult(next);
     await Promise.all([

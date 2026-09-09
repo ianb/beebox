@@ -24,6 +24,7 @@ interface RouteIntentInput {
   search: { session?: string; contextDir?: string; engine?: string; model?: string };
   selection: ConversationSelection;
   remembered: ConversationSelection | null;
+  stored?: ConversationSelection | null;
   cardPath: string | null;
   browseDir: string | null;
 }
@@ -40,7 +41,7 @@ function explicitChatRequest(input: RouteIntentInput): ConversationRequest | nul
 }
 
 export function routeConversationRequest(input: RouteIntentInput): ConversationRequest | null {
-  const { first, chatPage, search, selection, remembered, cardPath, browseDir } = input;
+  const { first, chatPage, search, selection, remembered, stored, cardPath, browseDir } = input;
   const target = selection.kind === "ready" ? selection.target : null;
   if (chatPage && search.session) return explicitChatRequest(input);
   if (remembered?.kind === "ready" && remembered.target.kind === "session") {
@@ -49,6 +50,9 @@ export function routeConversationRequest(input: RouteIntentInput): ConversationR
   }
   if (remembered?.kind === "ready" && remembered.target.kind === "start") return { kind: "restore", target: remembered.target, label: remembered.label };
   if (!first) return null;
+  if (stored?.kind === "ready" && stored.target.kind === "session") {
+    return { kind: "session", sessionId: stored.target.sessionId, contextDir: stored.target.contextDir };
+  }
   if (target?.kind === "session") return { kind: "session", sessionId: target.sessionId };
   if (target) return null;
   if (chatPage) return { kind: "default" };

@@ -29,8 +29,10 @@ export function BoxConversationShell({ children }: { children: ReactNode }) {
   return <WorkspaceProvider target={conversation.rendered?.target}><ConversationRuntime conversation={conversation}>{children}</ConversationRuntime></WorkspaceProvider>;
 }
 function ConversationRuntime({ conversation, children }: { conversation: NonNullable<ReturnType<typeof useBoxConversation>>; children: ReactNode }) {
+  const { storageScope } = conversation;
   const { boxSlug = "" } = useParams({ strict: false });
-  const search = shellSearch.parse(useSearch({ strict: false }));
+  const routeSearch = useSearch({ strict: false });
+  const search = shellSearch.parse(routeSearch);
   const route = useConversationRoute(conversation);
   const workspace = useWorkspace();
   invariant(workspace, "ConversationRuntime requires workspace");
@@ -57,14 +59,23 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     void conversation.select({ kind: "session", sessionId: id, named: true });
     route.showConversation();
   }
-  const [sessions, setSessions] = useState<AmbientSession[]>(() => readTrackedSessions(boxSlug));
+  function handleNewConversation() {
+    const contextDir = conversation.selection.kind === "ready" ? conversation.selection.target.contextDir : conversation.selection.contextDir;
+    if (route.chatPage) {
+      void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ ...routeSearch, session: "new", contextDir }),
+        state: (old) => ({ ...old, bbxConversation: undefined }) });
+      return;
+    }
+    void conversation.select({ kind: "new", contextDir });
+  }
+  const [sessions, setSessions] = useState<AmbientSession[]>(() => readTrackedSessions(storageScope));
   const publicationRevision = useRef(0);
   usePageTitle(route.chatPage ? sessionLabel : null);
   useEffect(() => {
     if (!sessionId) return;
     setSessions((old) => [...old.filter((session) => session.sessionId !== sessionId), { sessionId, label: sessionLabel }]);
   }, [sessionId, sessionLabel]);
-  useEffect(() => { writeTrackedSessions(boxSlug, sessions); }, [boxSlug, sessions]);
+  useEffect(() => { writeTrackedSessions(storageScope, sessions); }, [storageScope, sessions]);
   useEffect(() => {
     if (!workspace.ready && conversation.selection.kind === "ready") return;
     const publication = { version: 1, kind: "selection", revision: ++publicationRevision.current, boxSlug, selection: conversation.selection, attention };
@@ -74,14 +85,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   const handleAssignment: typeof conversation.assigned = (id, assignment) => { workspace.adopt(id); conversation.assigned(id, assignment); };
   const handleShowConversation = () => workspace.participating ? workspace.dispatch({ type: "showChat", pane: workspace.state.lastCardPane, viewport: workspace.mobile ? "mobile" : "desktop" }) : route.showConversation();
   const handleHideConversation = route.hideConversation;
-  // The reset for a dead chat the user did ask for: a fresh conversation in
-  // the same place, forgetting the one that cannot be resumed.
-  const handleStartNew = () => {
-    const current = conversation.selection;
-    const contextDir = current.kind === "ready" ? current.target.contextDir : current.contextDir;
-    return conversation.select({ kind: "new", contextDir });
-  };
-  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onStartNew={handleStartNew} nativeComposer={usesNativeComposer} />;
+  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onNewConversation={handleNewConversation} nativeComposer={usesNativeComposer} />;
   return <InteractiveChat
     sessionInput={sessionId ?? "new"}
     initial={conversation.initial}
@@ -101,13 +105,14 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     onShowConversation={handleShowConversation}
     onHideConversation={handleHideConversation}
     selectionNotice={<>{notice}{workspace.notice ? <Text as="div" size="sm" tone="muted">{workspace.notice}</Text> : null}</>}
-    ambientRegion={<AmbientReplies boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}
+    // Keep reply observation alive, but show its panels only away from the transcript.
+    ambientRegion={<div hidden={transcriptVisible}><AmbientReplies storageScope={storageScope} boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}
       transcriptVisible={canAcknowledgeAmbientReply(transcriptVisible, conversation.selection.kind)} onInspectCard={inspect}
-      onOpenConversation={handleOpenConversation} />}
+      onOpenConversation={handleOpenConversation} /></div>}
   />;
 }
 
-function ConversationNotice({ selection, onRetry, onStartNew, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; onStartNew: () => Promise<void>; nativeComposer: boolean }) {
+function ConversationNotice({ selection, onRetry, onNewConversation, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; onNewConversation: () => void; nativeComposer: boolean }) {
   if (selection.kind === "ready") {
     if (nativeComposer) return null;
     const place = selection.target.contextDir || "/ (box root)";
@@ -119,7 +124,7 @@ function ConversationNotice({ selection, onRetry, onStartNew, nativeComposer }: 
     </Text>
     {selection.kind === "unavailable" ? <>
       <Button id="bbx-conversation-retry" size="sm" onClick={onRetry}>Retry</Button>
-      <Button id="bbx-conversation-start-new" size="sm" onClick={onStartNew}>Start new conversation</Button>
+      <Button id="bbx-conversation-new" size="sm" onClick={onNewConversation}>Start new conversation</Button>
     </> : null}
   </div>;
 }

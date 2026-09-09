@@ -45,6 +45,10 @@ import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../DocumentTitle";
 import { Text } from "../ui/Text";
 
+function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
+  return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Choosing conversation…" : selection.reason;
+}
+
 /**
  * Everything the chat derives from the directory it is bound to.
  *
@@ -284,7 +288,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     addFiles: (files) => { void attach.addFiles(files); }, awaitPendingUploads: attach.awaitPendingUploads,
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
-    captureEmissionDispatch,
+    captureEmissionDispatch, sendDisabledReason: sendDisabledReasonFor(conversationSelection),
   });
 
   // Loading changes the transcript, never the input service owner.
@@ -293,7 +297,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
     <InputStoreProvider value={inputStore}>
       <InteractiveChatBody
       conversationKey={logicalConversation}
-      sendDisabledReason={conversationSelection === undefined || conversationSelection.kind === "ready" ? undefined : conversationSelection.kind === "resolving" ? "Choosing conversation…" : conversationSelection.reason}
+      sendDisabledReason={sendDisabledReasonFor(conversationSelection)}
       transcriptVisible={transcriptVisible} routeContent={routeContent}
       onShowConversation={onShowConversation} onHideConversation={onHideConversation}
       ambientRegion={ambientRegion} selectionNotice={<>{selectionNotice}{recoveryNotice !== null && <div role="alert"><Text size="sm" tone="danger">{recoveryNotice}</Text></div>}</>} failedRegion={failedRegion}

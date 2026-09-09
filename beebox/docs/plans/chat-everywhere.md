@@ -427,6 +427,12 @@ add a second paging consumer for this feature.
 **Vocabulary lock-ins:** reply attention is separate from send receipt.
 A notice is session-labeled; inspect and open-conversation are separate actions.
 
+**Device feedback correction (2026-09-08):** Ambient reply panels are unnecessary
+when the transcript is already visible, including panels from other conversations.
+Hide the whole ambient region in dedicated/split chat and when the transcript is
+foregrounded over a page. Keep observation mounted so returning to browsing does
+not reset reply tracking. Panels remain available while away from the transcript.
+
 **First implementation chunk:** Implement/test recent-history projection,
 background attribution, ordinary-prose fallback, incomplete-group fallback,
 and persistent attention flag; then attach the box observer. No new agent
@@ -795,3 +801,93 @@ beyond the original sent-to/left-running set; active history subscriptions are
 still pruned. This plan remains partial until those product calls and the phone
 checks are accepted. Landing this branch does not itself verify deployment or a
 physical device.
+
+### 2026-09-08: isolate remembered conversations across development worktrees
+
+A card page in a second development worktree restored the first worktree's
+`test1` selection and displayed `missing-local-transcript`. Directory discovery
+already skips missing transcripts; the tab's box-slug-only storage key was the
+cause. Conversation selection, startup records, pending-send recovery, and
+ambient metadata now use the box API path as their storage scope, including
+the worktree prefix. Production keys retain their existing shape. Ambiguous
+legacy development records remain untouched and are not automatically imported
+into a clone. Explicit missing session requests remain unavailable.
+
+Browser replay retained a foreign legacy selection, reloaded this worktree,
+and confirmed its own conversation restored without the unavailable banner.
+The separate development checkout needs this change incorporated before its
+page benefits. This does not close the remaining physical-device checks above.
+
+For this correction, all 58 affected assertions, four TypeScript checks, and
+changed-file lint passed. Cross-model review found no defect in the scoped
+conversation stores. It identified the separate, pre-existing
+[draft storage collision](../../../issues/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md),
+which remains outside this correction.
+
+### 2026-09-08: recover a fresh Claude reservation after server restart
+
+A separate follow-up reproduced the same unavailable banner for an ID that
+this box itself had reserved before its first message. A development reload
+then discarded the server's in-memory reservation. Namespace isolation cannot
+repair that lifecycle: the session in the URL is correct, but not yet backed
+by a transcript.
+
+Keep Claude reservations because full camera capture and bulk upload can need
+an addressable target before the first message. A tab records the context,
+engine, and model of each successful reservation under its box-instance storage
+scope. A matching receipt permits restoring that exact reservation before
+bootstrap or reconnect history refresh. This must precede history lookup: after
+a restart, raw history refresh for an empty Claude chat on a Codex-default
+box otherwise queries the wrong engine, bypassing bootstrap's unavailable answer.
+The server still refuses IDs already present in committed history/transcripts.
+Explicitly requested unknown IDs, foreign-scope receipts, and still-unavailable
+results do not become new chats automatically. An implicitly selected old chat
+with a missing local transcript starts fresh, as established by the main-branch
+resolver correction. Receipts are metadata, not user-message storage; they
+last for the tab and are removed before a send or deletion attempt, when a
+user-message event is observed, or when bootstrap observes a real transcript.
+
+Already-lost IDs from before this change have no receipt. The unavailable
+notice offers an explicit Start new conversation action that retains the card
+query and unsent draft. Enter respects the same disabled-recipient condition
+as the send button, before capturing any emission; it no longer produces the
+misleading Message kept for recovery toast for that blocked gesture.
+
+This recovery is same-tab only. A copied old empty-session URL without its
+receipt still requires an explicit new conversation. Re-reservation preserves
+the stored context/engine/model; feature defaults are recomputed by the existing
+reservation endpoint, so feature edits that existed only in the lost server
+reservation are not recovered by this correction.
+
+Verification: the exact reported unavailable/Enter-toast combination reproduced
+in the development browser. With the correction, Enter left the draft intact
+without a toast, and Start new conversation retained both draft and card query.
+A real stop/restart of this isolated worktree followed by reload re-reserved the
+same empty Claude ID and restored the same directory/card. The 64 affected
+assertions and 30 reservation/bootstrap backend assertions passed, as did the
+frontend typecheck and changed-file lint. No physical-device check is claimed.
+
+Review and browser replay required fresh bootstrap and directory lookups after
+re-reservation (the cache could otherwise return unavailable or the wrong root
+directory), recovery
+from malformed metadata, and receipt retirement when a chat is used or deleted.
+Those corrections are in place. The cache regression uses a real QueryClient with stale bootstrap and root-directory entries;
+the final affected run passed 71 assertions. In the browser, the delete action
+removed the test reservation receipt, and a subsequent server restart left that
+ID unavailable instead of recreating it. A fresh receipt still recovered its
+exact ID through a separate restart. These checks do not establish cross-tab
+recovery or durable deletion knowledge across other clients.
+
+Mounted-page correction (2026-09-08): transcript reconnect and ambient refresh
+now await the same receipt-backed reservation recovery before reading history.
+Concurrent consumers share the in-flight recovery; retired or absent receipts
+never authorize it. Ambient Retry follows the same path. A real server
+stop/wake with the browser left mounted restored the same empty Claude ID and
+directory without a page reload. The wrong-engine case is also covered by a
+backend regression with a Claude reservation on a Codex-default box.
+
+The follow-up review moved ambient recovery into the history query function,
+covering initial load, focus refetch, invalidation, and Retry with one ordering
+guarantee. Observed nonempty history retires its receipt. A receipt-backed
+selection that cannot recover stays unavailable even during passive browsing;
+it cannot silently fall back to the box's default engine.

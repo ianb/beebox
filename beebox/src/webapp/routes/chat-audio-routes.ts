@@ -28,6 +28,7 @@ import {
   type CompiledSpeakingVoice,
 } from "../../schemas/personality.js";
 import { errnoCode } from "../../lib/error-guards.js";
+import { HTTPError } from "ky";
 import { serveMockTts } from "../tts-mock.js";
 import { resolveTtsService, TtsNotConfiguredError } from "../../core/tts/resolve.js";
 import { loadTtsConfig } from "../../core/tts/config.js";
@@ -66,6 +67,21 @@ function handleMockTts(options: {
   }
   const { text, fixture, delayMs, chunkMs, chunkSize, failText } = body;
   return serveMockTts(reply, { text, fixture, delayMs, chunkMs, chunkSize, failText });
+}
+
+/**
+ * A speech backend's failure in one line, or null when the error is not the
+ * backend's (a bug here should still be a 500). ky's `HTTPError` carries the
+ * provider's status; a `TypeError` from `fetch` means no response at all, with
+ * the network reason in `cause`.
+ */
+function describeBackendFailure(e: unknown): string | null {
+  if (e instanceof HTTPError) return `TTS backend answered ${String(e.response.status)} ${e.response.statusText}`.trim();
+  if (e instanceof TypeError) {
+    const reason = e.cause instanceof Error ? e.cause.message : e.message;
+    return `TTS backend unreachable: ${reason}`;
+  }
+  return null;
 }
 
 export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
@@ -169,6 +185,15 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
         // indistinguishable from broken speakers (principle 4).
         console.error(`[chat-tts] ${e.message}`);
         return reply.status(502).send({ error: e.message });
+      }
+      // The backend answered with an error, or never answered at all. Both
+      // are the backend's failure, not ours: a 502 that names it, not a bare
+      // 500 "Internal server error" with the reason lost (2026-09-08: a
+      // "fetch failed" on this route reached the boxholder as exactly that).
+      const failure = describeBackendFailure(e);
+      if (failure !== null) {
+        console.error(`[chat-tts] ${failure}`);
+        return reply.status(502).send({ error: failure });
       }
       throw e;
     }
