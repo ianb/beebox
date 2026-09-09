@@ -66,3 +66,34 @@ name should be one click, not a guess.
   scan-vision descriptions, the Whisper HQ pass, MAI-Transcribe-2, Gemini TTS,
   and the view adapter. That belongs on the page — it is the argument for
   pasting the key at all.
+
+## The grant step is the worst of it (2026-09-09)
+
+Adding the key and granting it are two separate acts, and nothing on the page
+says so. The boxholder added an OpenRouter key, got **"Saved. The provider
+accepted this credential."**, and reasonably read that as done. It wasn't — the
+secret existed machine-wide and was granted to no box. The store confirmed it:
+an `openrouter` entry with `verified: ok`, and no `openrouter` in any box's
+grants.
+
+That mistake then cost a second debugging session. The box's HQ transcription
+was configured for a service that needs the key, every pass failed with
+`MissingOpenRouterKeyError`, and it read as "the feature just doesn't work"
+(see [HQ transcription fails silently](../bugs/2026-09-09-hq-transcription-fails-silently.md)).
+The same wrong belief — *the key is installed* — was formed twice, because the
+success message never mentions that the box still can't see the secret.
+
+Boxholder: "It's all pretty bad."
+
+So the grant is not a detail to document better. Either:
+
+- **Grant on add, by default.** Adding a secret from a box's Admin page means
+  "and use it here." Put the Access select in the add form and do both in one
+  submit; a machine-wide-only secret becomes the deliberate, less common case
+  (the Machine-wide scope tab already exists for it).
+- **Or make the incomplete state loud.** If the two acts stay separate, saving
+  must say what remains — "Saved and verified. Not yet granted to this box."
+  with the grant one click away — and a machine secret granted to no box should
+  read as unfinished wherever it is listed, not as a normal entry.
+
+The first is the honest fix; the second is the floor.

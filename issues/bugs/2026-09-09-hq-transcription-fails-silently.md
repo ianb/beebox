@@ -48,3 +48,29 @@ browser console.
 - **Consider refusing the setting at write time.** Selecting an HQ service the
   box has no credential for could warn in the picker — the check is the same
   one `health-model-routes.ts` already performs.
+
+## Selecting an unreachable service is the deeper bug (2026-09-09)
+
+Boxholder: "Even being able to select the model without the key is wrong."
+
+The silent fallback is one failure; offering a choice that cannot work is the
+one before it. A picker that lists `mai` / `mai-diarized` on a box with no
+`openrouter` grant is inviting a setting whose only possible outcome is a 500
+on every pass. Nothing about the credential state is hidden or expensive to
+check — `health-model-routes.ts` already resolves exactly this, and the secret
+store answers "is `openrouter` granted to this box" directly.
+
+So the fix has three parts, in order of importance:
+
+1. **Don't offer what can't run.** In the HQ service picker, a service whose
+   credential the box lacks is disabled, with the reason attached and a link to
+   the grant — not silently absent, because "where did MAI go?" is its own
+   confusion. This is the same shape as the secrets-UI problem: the system
+   knows, and doesn't say (see
+   [secrets add form hides the names that work](../features/2026-09-09-secrets-add-form-hides-the-names-that-work.md)).
+2. **Refuse to save an unusable setting**, or save it with an explicit warning
+   the boxholder has to see. A config file naming a service the box cannot
+   reach should never be written quietly.
+3. **Then** make the runtime failure visible, per the section above — because
+   a credential can be revoked after the setting was valid, so the runtime path
+   still needs an honest error even once the picker is fixed.
