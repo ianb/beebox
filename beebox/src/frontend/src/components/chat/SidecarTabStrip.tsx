@@ -7,7 +7,7 @@
  * (`tab-identity.ts`).
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/cn";
 import { prefersReducedMotion } from "../../lib/reduced-motion";
 import { displayName } from "../../lib/display-name";
@@ -39,6 +39,45 @@ function nextTabIndex(key: string, position: { index: number; length: number }):
   return key === "End" ? length - 1 : null;
 }
 
+function revealTab({ activePath, tabRefs, setOverflow }: { activePath: string; tabRefs: { current: Map<string, HTMLElement> }; setOverflow: (value: { left: boolean; right: boolean }) => void }) {
+  const el = tabRefs.current.get(activePath);
+  const scroller = el?.parentElement;
+  if (scroller === null || scroller === undefined || el === undefined) return;
+  const left = el.offsetLeft;
+  const right = left + el.offsetWidth;
+  if (left < scroller.scrollLeft) {
+    scroller.scrollTo({ left, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  } else if (right > scroller.scrollLeft + scroller.clientWidth) {
+    scroller.scrollTo({ left: right - scroller.clientWidth, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  }
+  setOverflow({ left: scroller.scrollLeft > 1, right: scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1 });
+}
+
+function useTabStripReveal({ activePath, tabRefs, tabCount, pinnedCount }: { activePath: string; tabRefs: { current: Map<string, HTMLElement> }; tabCount: number; pinnedCount: number }) {
+  const [overflow, setOverflow] = useState({ left: false, right: false });
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      revealTab({ activePath, tabRefs, setOverflow });
+      requestAnimationFrame(() => revealTab({ activePath, tabRefs, setOverflow }));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activePath, tabCount, pinnedCount, tabRefs]);
+  useEffect(() => {
+    const scroller = tabRefs.current.get(activePath)?.parentElement;
+    if (scroller === undefined || scroller === null) return;
+    const update = () => setOverflow({ left: scroller.scrollLeft > 1, right: scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1 });
+    const observer = new ResizeObserver(() => revealTab({ activePath, tabRefs, setOverflow }));
+    observer.observe(scroller);
+    scroller.addEventListener("scroll", update, { passive: true });
+    update();
+    return () => {
+      observer.disconnect();
+      scroller.removeEventListener("scroll", update);
+    };
+  }, [activePath, tabCount, pinnedCount, tabRefs]);
+  return overflow;
+}
+
 export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onSelectTab, onCloseTab, onTogglePin }: {
   id: string;
   tabs: PanelTab[];
@@ -60,40 +99,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
   const loose = tabs.filter((t) => !t.pinned);
   // Scoped to the pinned tabs on purpose — see `tab-identity.ts`.
   const ambiguous = ambiguousMarks(pinned.map((t) => ({ symbol: identities.get(t.target.path)?.symbol ?? null })));
-
-  const revealActive = useCallback(() => {
-    const el = tabRefs.current.get(activePath);
-    if (el === undefined) return;
-    const scroller = el.parentElement;
-    if (scroller !== null) {
-      const strip = scroller.getBoundingClientRect();
-      const tab = el.getBoundingClientRect();
-      // Already visible: leave it alone. Re-scrolling a visible tab is the
-      // churn that makes a strip feel like it is fighting you.
-      if (tab.left >= strip.left - 1 && tab.right <= strip.right + 1) return;
-    }
-    // `inline: "nearest"` scrolls the minimum needed; `block: "nearest"` keeps
-    // this from scrolling any ancestor, since scrollIntoView walks every
-    // scrollable ancestor and the chat shell is fixed.
-    el.scrollIntoView({ inline: "nearest", block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  }, [activePath]);
-
-  useEffect(() => {
-    revealActive();
-  }, [revealActive, tabs.length, pinned.length]);
-
-  // The strip's width is not settled when a restored strip first renders — the
-  // pane is still laying out, so every tab measures as visible and nothing
-  // scrolls. Watching the scroller catches that, and a window resize with it.
-  // Whichever scroller holds the active tab is the one to watch: pinned tabs
-  // have their own, and it overflows too once several are pinned.
-  useEffect(() => {
-    const scroller = tabRefs.current.get(activePath)?.parentElement;
-    if (scroller === undefined || scroller === null) return;
-    const observer = new ResizeObserver(() => revealActive());
-    observer.observe(scroller);
-    return () => observer.disconnect();
-  }, [revealActive, activePath]);
+  const overflow = useTabStripReveal({ activePath, tabRefs, tabCount: tabs.length, pinnedCount: pinned.length });
 
   function renderTab(tab: PanelTab) {
     const isActive = tab.target.path === activePath;
@@ -120,10 +126,10 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
           else tabRefs.current.set(tab.target.path, el);
         }}
         className={cn(
-          "bbx-card-theme bbx-interface-tab group flex-shrink-0 flex items-center",
+          "bbx-card-theme bbx-interface-tab group flex items-center",
           // A pinned tab is compact, the way a browser's is: it is there to hold
           // its place, not to be read. The full path is still in its title.
-          tab.pinned ? "max-w-[7rem]" : "max-w-[14rem]",
+          tab.pinned ? "flex-shrink-0 max-w-[7rem]" : "w-56 min-w-[9rem] max-w-[14rem] shrink",
         )}
         data-active={isActive || undefined}
         data-card-theme={theme.name}
@@ -217,11 +223,11 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
   return <div id={id} className="bbx-interface-tabstrip flex-1 min-w-0 flex">
       <div role="tablist" aria-label="Open files" className="absolute" aria-owns={tabs.map((tab) => `bbx-workspace-tab-${encodeURIComponent(tab.target.path)}`).join(" ")} />
       {pinned.length > 0 ? (
-        <div role="none" className="flex-shrink-0 max-w-[50%] flex overflow-x-auto border-r-2 border-warm-400 bg-warm-100">
+        <div role="none" data-overflow-left={overflow.left || undefined} data-overflow-right={overflow.right || undefined} className="flex-shrink-0 max-w-[50%] flex overflow-x-auto overflow-y-hidden overscroll-x-contain overscroll-y-none border-r-2 border-warm-400 bg-warm-100">
           {pinned.map(renderTab)}
         </div>
       ) : null}
-      <div role="none" className="flex-1 min-w-0 flex overflow-x-auto">
+      <div role="none" data-overflow-left={overflow.left || undefined} data-overflow-right={overflow.right || undefined} className="flex-1 min-w-0 flex overflow-x-auto overflow-y-hidden overscroll-x-contain overscroll-y-none">
         {loose.map(renderTab)}
       </div>
     </div>;
