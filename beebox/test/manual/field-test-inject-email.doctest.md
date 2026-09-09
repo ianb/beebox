@@ -86,9 +86,9 @@ await fileExists(join(box.boxRoot, "_config/connectors/gmail.json"))
 => true
 
 // The scenario's chat model is pinned as the box's model policy
-// (`agentModel` in `config/box.json`), which `seedFieldBox` writes and commits
+// (`agentModel` in `_config/box.json`), which `seedFieldBox` writes and commits
 // as part of the baseline (`src/field-test/run-seed.ts`).
-JSON.parse(await readFile(join(box.boxRoot, "config/box.json"), "utf8")).agentModel === scenario.models.chat
+JSON.parse(await readFile(join(box.boxRoot, "_config/box.json"), "utf8")).agentModel === scenario.models.chat
 => true
 ```
 
