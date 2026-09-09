@@ -12,6 +12,8 @@ import { cn } from "../../lib/cn";
 import { prefersReducedMotion } from "../../lib/reduced-motion";
 import { displayName } from "../../lib/display-name";
 import { CardMark } from "../ui/CardMark";
+import { useBoxPresentation } from "../themes/BoxPresentationProvider";
+import { resolveCardTheme, type ResolvedThemeChoice } from "@shared/card-theme";
 import type { CardIdentity } from "../../hooks/useCardIdentities";
 import { ambiguousMarks, pinnedFace } from "./tab-identity";
 import type { PanelTab } from "./InteractiveChat-controls";
@@ -29,7 +31,16 @@ function PinIcon({ filled }: { filled: boolean }) {
   );
 }
 
-export function SidecarTabStrip({ tabs, activePath, identities, boxSlug, onSelectTab, onCloseTab, onTogglePin }: {
+function nextTabIndex(key: string, position: { index: number; length: number }): number | null {
+  const { index, length } = position;
+  if (key === "ArrowRight") return (index + 1) % length;
+  if (key === "ArrowLeft") return (index + length - 1) % length;
+  if (key === "Home") return 0;
+  return key === "End" ? length - 1 : null;
+}
+
+export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onSelectTab, onCloseTab, onTogglePin }: {
+  id: string;
   tabs: PanelTab[];
   activePath: string;
   /** Live title + mark per path — see `useCardIdentities`. */
@@ -39,6 +50,7 @@ export function SidecarTabStrip({ tabs, activePath, identities, boxSlug, onSelec
   onCloseTab: (path: string) => void;
   onTogglePin: (path: string) => void;
 }) {
+  const presentation = useBoxPresentation();
   // Tab elements by path, so the active one can be scrolled into view. With
   // more open documents than the strip can show, a newly opened tab landed
   // outside the visible range and the open read as a no-op — the highlight
@@ -90,6 +102,15 @@ export function SidecarTabStrip({ tabs, activePath, identities, boxSlug, onSelec
     // stand-in until the card's own title arrives, never the final word.
     const title = identity?.title ?? displayName(tab.target.path);
     const face = pinnedFace({ symbol: identity?.symbol ?? null, title, ambiguous });
+    const theme: ResolvedThemeChoice = identity?.type === undefined || presentation?.data === undefined
+      ? { name: "plain", stock: "neutral" }
+      : resolveCardTheme({
+        path: tab.target.path.replace(/^\//, ""),
+        type: identity.type,
+        cardChoice: identity.cardTheme,
+        typeDefault: presentation.data.typeDefaults[identity.type],
+        presentation: presentation.data.presentation,
+      }).choice;
     return (
       <div
         key={tab.target.path}
@@ -99,36 +120,49 @@ export function SidecarTabStrip({ tabs, activePath, identities, boxSlug, onSelec
           else tabRefs.current.set(tab.target.path, el);
         }}
         className={cn(
-          "group flex-shrink-0 flex items-center border-r border-warm-300 border-b-2",
+          "bbx-card-theme bbx-interface-tab group flex-shrink-0 flex items-center",
           // A pinned tab is compact, the way a browser's is: it is there to hold
           // its place, not to be read. The full path is still in its title.
           tab.pinned ? "max-w-[7rem]" : "max-w-[14rem]",
-          isActive ? "bg-white border-b-primary" : "border-b-transparent hover:bg-warm-100",
         )}
+        data-active={isActive || undefined}
+        data-card-theme={theme.name}
+        data-card-stock={theme.stock}
       >
         <button
           type="button"
           role="tab"
+          id={`bbx-workspace-tab-${encodeURIComponent(tab.target.path)}`}
+          aria-controls={isActive ? `bbx-workspace-panel-${encodeURIComponent(tab.target.path)}` : undefined}
+          tabIndex={isActive ? 0 : -1}
+          onKeyDown={(event) => {
+            const index = tabs.findIndex((item) => item.target.path === tab.target.path);
+            const next = nextTabIndex(event.key, { index, length: tabs.length });
+            if (next === null) return;
+            event.preventDefault();
+            const target = tabs[next];
+            if (target) onSelectTab(target.target.path);
+          }}
           aria-selected={isActive}
           onClick={() => onSelectTab(tab.target.path)}
           // The full title and path stay reachable on hover, which is where a
           // mark-only tab's identity lives.
           title={`${title}\n${tab.target.path}`}
           className={cn(
-            "flex-1 min-w-0 flex items-center gap-1 truncate text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            "flex-1 min-w-0 flex items-center gap-1 overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
             tab.pinned ? "text-xs pl-2 pr-0.5 py-1.5 justify-center" : "text-sm pl-2 pr-1 py-1.5",
-            isActive ? "text-warm-900 font-medium" : "text-warm-600",
+            isActive ? "font-medium" : "",
           )}
         >
           {tab.pinned ? (
             <>
               <CardMark symbol={face.mark} size="xs" boxSlug={boxSlug} />
-              {face.abbreviation === null ? null : <span className="truncate">{face.abbreviation}</span>}
+              {face.abbreviation === null ? null : <span className="min-w-0 flex-1 truncate">{face.abbreviation}</span>}
             </>
           ) : (
             <>
               <CardMark symbol={identity?.symbol ?? null} size="xs" boxSlug={boxSlug} />
-              <span className="truncate">{title}</span>
+              <span className="min-w-0 flex-1 truncate">{title}</span>
             </>
           )}
         </button>
@@ -142,11 +176,11 @@ export function SidecarTabStrip({ tabs, activePath, identities, boxSlug, onSelec
           aria-pressed={tab.pinned}
           title={tab.pinned ? "Unpin tab" : "Pin tab"}
           className={cn(
-            "flex-shrink-0 p-0.5 rounded hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            "bbx-interface-tab-action flex-shrink-0 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
             // Pinned: always shown, because it is the only thing that says the
             // tab is pinned. Unpinned: revealed on hover or keyboard focus, so
             // a row of tabs is not a row of icons.
-            tab.pinned ? "text-primary" : "text-warm-500 opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+            tab.pinned ? "bbx-interface-tab-pin" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
           )}
         >
           <PinIcon filled={tab.pinned} />
@@ -160,7 +194,7 @@ export function SidecarTabStrip({ tabs, activePath, identities, boxSlug, onSelec
           aria-label={`Close ${tab.label}`}
           title="Close tab"
           className={cn(
-            "flex-shrink-0 mr-1 p-0.5 rounded text-warm-500 hover:text-warm-800 hover:bg-warm-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+            "bbx-interface-tab-action flex-shrink-0 mr-1 p-0.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
             // On a pinned tab the close button is the thing you did not ask
             // for; it stays out of the way until you reach for it.
             tab.pinned ? "opacity-0 group-hover:opacity-100 focus-visible:opacity-100" : "",
@@ -178,9 +212,10 @@ export function SidecarTabStrip({ tabs, activePath, identities, boxSlug, onSelec
   // scrolls under it, and `scrollIntoView` cannot see occlusion — it would call
   // a tab parked behind the pins visible and never scroll to it. Separate
   // scrollers make "pinned tabs stay put" true by construction. The inner
-  // wrappers carry `role="none"` so the tablist still owns the tabs themselves.
-  return (
-    <div id="bbx-panel-tabs" role="tablist" aria-label="Open files" className="flex-1 min-w-0 flex">
+  // ARIA ownership groups only selection buttons as tabs. Their adjacent pin
+  // and close buttons remain independent controls, outside the tablist.
+  return <div id={id} className="bbx-interface-tabstrip flex-1 min-w-0 flex">
+      <div role="tablist" aria-label="Open files" className="absolute" aria-owns={tabs.map((tab) => `bbx-workspace-tab-${encodeURIComponent(tab.target.path)}`).join(" ")} />
       {pinned.length > 0 ? (
         <div role="none" className="flex-shrink-0 max-w-[50%] flex overflow-x-auto border-r-2 border-warm-400 bg-warm-100">
           {pinned.map(renderTab)}
@@ -189,6 +224,5 @@ export function SidecarTabStrip({ tabs, activePath, identities, boxSlug, onSelec
       <div role="none" className="flex-1 min-w-0 flex overflow-x-auto">
         {loose.map(renderTab)}
       </div>
-    </div>
-  );
+    </div>;
 }

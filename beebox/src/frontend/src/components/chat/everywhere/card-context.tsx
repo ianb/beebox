@@ -3,6 +3,11 @@ import { createCardContextStore } from "./card-context-store";
 import { serializeViewUrl, type ViewState } from "../../../lib/view-url";
 import type { AddSelectionInput } from "../../../lib/selection/position";
 
+const CardVisibility = createContext(true);
+export function CardVisibilityProvider({ visible, children }: { visible: boolean; children: ReactNode }) {
+  return <CardVisibility.Provider value={visible}>{children}</CardVisibility.Provider>;
+}
+
 const CardContext = createContext<ReturnType<typeof createCardContextStore> | null>(null);
 export function ConversationCardProvider({ children }: { children: ReactNode }) {
   const store = useMemo(() => createCardContextStore(), []);
@@ -20,7 +25,8 @@ export function useConversationSelectionSink(sink: (selection: AddSelectionInput
 }
 /** Embedded/inline cards do not claim attention merely by being rendered. */
 export function useConversationCard({ path, mode, rendererName, params, viewState }: { path: string; mode: string; rendererName?: string | null; params?: Record<string, string>; viewState?: ViewState | null }) {
-  const enabled = mode === "page" || mode === "companion";
+  const visible = useContext(CardVisibility);
+  const enabled = visible && (mode === "page" || mode === "companion");
   const store = useContext(CardContext);
   const owner = useMemo(() => ({}), []);
   const target = { path: path.startsWith("/") ? path : `/${path}`, viewer: rendererName ?? null, params: params ?? {}, viewState: viewState ?? null };

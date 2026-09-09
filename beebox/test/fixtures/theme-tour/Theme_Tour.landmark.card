@@ -1,0 +1,12 @@
+---
+navigation:
+  label: Theme tour
+  links:
+    - ref: /_content/theme-tour/Theme_Tour.memo.card
+      label: Card and system themes
+    - ref: /_content/Box.landmark.card
+      label: Inspect the box landmark
+system-theme:
+  name: paper
+  stock: blue
+---

@@ -62,10 +62,17 @@ export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelPr
   const landmark = data?.landmark ?? null;
   const links = landmark?.links ?? [];
   const groups = landmark?.groups ?? [];
-  if (links.length === 0 && groups.length === 0) return null;
+  if (landmark === null) return null;
+  const landmarkCard: ResolvedLink = {
+    ref: landmark.path,
+    label: "Landmark card",
+    title: "Landmark card",
+    exists: true,
+  };
 
   return (
     <div className="py-1">
+      <MenuLink id="bbx-chat-here-menu-landmark-card" link={landmarkCard} onPanel={onPanel} />
       {links.map((link) => (
         <MenuLink key={link.ref} link={link} onPanel={onPanel} />
       ))}
@@ -76,11 +83,12 @@ export function LandmarkLinksPanel({ contextDir, onPanel }: LandmarkLinksPanelPr
   );
 }
 
-function MenuLink({ link, onPanel }: { link: ResolvedLink; onPanel: (link: ResolvedLink) => void }) {
+function MenuLink({ id, link, onPanel }: { id?: string; link: ResolvedLink; onPanel: (link: ResolvedLink) => void }) {
   const close = useDropdownClose();
   return (
     <button
       type="button"
+      id={id}
       role="menuitem"
       onClick={() => { close(); onPanel(link); }}
       className="w-full text-left px-3 py-3.5 hover:bg-warm-100 flex items-center gap-2 text-warm-800"

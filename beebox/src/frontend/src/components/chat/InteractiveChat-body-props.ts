@@ -1,3 +1,4 @@
+import type { useWorkspace } from "./workspace/WorkspaceProvider";
 /**
  * The props interface shared by `InteractiveChatBody` and its region
  * sub-components in `InteractiveChat-view.tsx` — pulled into its own module
@@ -10,7 +11,7 @@ import type { LiveTask } from "./background-tasks";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import type { MessageGroup } from "./ChatMessages";
 import type { ModelMarker, VoiceSegmentSend } from "./InteractiveChat-helpers";
-import type { useChatTabs, useChatMute, useChatSchedules } from "./InteractiveChat-hooks";
+import type { useChatMute, useChatSchedules } from "./InteractiveChat-hooks";
 import type { useChatModelFeatures } from "./use-chat-model";
 import type { useChatVoice } from "./InteractiveChat-voice";
 import type { useChatAttachments } from "./InteractiveChat-attachments";
@@ -30,7 +31,7 @@ export interface ChatBodyProps {
   ambientRegion?: ReactNode;
   selectionNotice?: ReactNode;
   failedRegion?: ReactNode;
-  tabs: ReturnType<typeof useChatTabs>;
+  tabs: NonNullable<ReturnType<typeof useWorkspace>>;
   model: ReturnType<typeof useChatModelFeatures>;
   mute: ReturnType<typeof useChatMute>;
   voice: ReturnType<typeof useChatVoice>;

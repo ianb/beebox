@@ -1,3 +1,4 @@
+import { useSpeechRestoreSlot } from "./workspace/TranscriptFloatingControls";
 /**
  * Shared message rendering components for chat UI.
  */
@@ -10,7 +11,7 @@ import { SpeechMenu } from "./SpeechMenu";
 import { SpeechChunk } from "./SpeechChunk";
 import { parseCallouts } from "../../lib/structured-output-parsing";
 import { CalloutStack } from "./CalloutBlock";
-import { ActivityGroup, ThinkingCornerMark } from "./activity-rendering";
+import { ActivityGroup } from "./activity-rendering";
 import { MarkdownContent, type OnZoomView } from "./markdown-rendering";
 import { countSpeech, groupIntoParts, type SelfNoteInfo } from "./message-parsing";
 import type { SpeechSegmentState } from "../../machines/speechPlaybackMachine";
@@ -103,13 +104,11 @@ export function AssistantMessage({
   const allText = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   ).join("\n");
+  const restoreSlot = useSpeechRestoreSlot();
   const hasSpeech = hasAssistantSpeech(allText);
   const isPlaying = speechPlaying === true;
   const segments = useMemo(() => (hasSpeech ? parseAllSpeechTags(allText) : []), [hasSpeech, allText]);
   const messageId = entries[0]?.uuid ?? "";
-  const hasSilentThinking = entries.some((e) =>
-    e.content.some((b) => b.type === "thinking" && !b.text?.trim()),
-  );
   // Pulled out of the message body so prose rendering doesn't show raw XML;
   // rendered in their own surfaces below/after the markdown groups. Acks
   // are rendered as badges on the preceding user message — see InteractiveChat.
@@ -142,12 +141,10 @@ export function AssistantMessage({
           would stick within that short non-scrolling box, not the message
           list. pointer-events-none keeps the empty bar from blocking text
           selection; the icon itself re-enables pointer events. */}
-      {!debugView && (hasSpeech || hasSilentThinking) ? (
-        <div className="sticky top-2 z-10 h-0 flex justify-end items-start pointer-events-none">
+      {!debugView && hasSpeech ? (
+        <div className="sticky top-2 z-10 h-0 flex justify-end items-start pointer-events-none" style={{ paddingRight: restoreSlot ? "3rem" : undefined }}>
           <div className="flex items-center gap-2 pointer-events-auto">
-            {hasSilentThinking ? <ThinkingCornerMark /> : null}
-            {hasSpeech ? (
-              <SpeechMenu
+            <SpeechMenu
                 segments={segments}
                 playing={isPlaying}
                 anyPlaying={anySpeechPlaying === true}
@@ -156,7 +153,6 @@ export function AssistantMessage({
                 onSkip={() => onSkipSpeech?.()}
                 onReplay={(fromIndex) => onReplaySpeech?.({ messageId, segments, fromIndex })}
               />
-            ) : null}
           </div>
         </div>
       ) : null}

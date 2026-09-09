@@ -222,7 +222,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
           <TranscriptionProvenanceBadge provenance={transcriptionProvenance} />
         </span>
         <div
-          className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
+          className={"bbx-chat-user-paper rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
           title={pendingTitle}
         >
           {entries.map((entry) => (
@@ -243,6 +243,6 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
 
 function PendingIndicator() {
   return (
-    <div className="text-xs text-white/70 mt-1 italic">queued — waiting</div>
+    <div className="bbx-chat-user-status text-xs text-white/70 mt-1 italic">queued — waiting</div>
   );
 }

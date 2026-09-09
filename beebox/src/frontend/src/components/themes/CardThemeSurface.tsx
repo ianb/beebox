@@ -41,6 +41,7 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
       data-card-theme={theme.choice.name}
       data-card-stock={theme.choice.stock}
       data-card-turn={turn ?? undefined}
+      data-card-side={back ? "back" : "front"}
       data-default-quote-treatment={descriptor?.quoteTreatment}
       data-default-blockquote-treatment={descriptor?.blockquoteTreatment}
       aria-label={title}
@@ -59,14 +60,17 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
         id={`bbx-card-properties-${id}`}
         type="button"
         className="bbx-card-properties print:hidden"
-        aria-label={back ? "Return to card" : "Properties"}
-        title={back ? "Return to card" : "Properties: appearance and alternate views"}
+        aria-label={back ? "Back to card" : "Properties"}
+        title={back ? "Back to card" : "Properties: appearance and alternate views"}
         aria-expanded={back}
         aria-busy={turn !== null}
         aria-controls={backId}
         onClick={flip}
       >
-        <span className="sr-only">{back ? "Return to card" : "Properties"}</span>
+        <span className="bbx-card-properties-label" aria-hidden="true">
+          {back ? "← Back to card" : "Properties"}
+        </span>
+        <span className="sr-only">{back ? "Back to card" : "Properties"}</span>
       </button>
       <header className="bbx-card-heading">
         {mode === "page" ? <h1>{title}</h1> : <h2>{title}</h2>}

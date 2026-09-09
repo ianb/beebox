@@ -10,6 +10,7 @@
 
 import { type FileLoader, type FileSummary, type LoaderInput, titleFromFilename } from "./file-summary.js";
 import { readCardSymbol } from "./card-symbol.js";
+import { validateThemeChoice } from "../shared/card-theme.js";
 
 interface TypeRegistration {
   kind: "type";
@@ -103,6 +104,15 @@ export function summarize(input: LoaderInput): FileSummary<unknown> {
   // `title`, `contains` and `symbol` are global card fields — surface them
   // uniformly rather than teaching every loader about them.
   let out = summary;
+  if (out.type === undefined && input.type !== undefined) {
+    out = { ...out, type: input.type };
+  }
+  const authoredTheme = input.fields?.["theme"];
+  if (authoredTheme !== undefined) {
+    // Preserve an explicit but malformed choice as the resolver's plain
+    // fallback: it must block lower-precedence defaults just like a full card.
+    out = { ...out, cardTheme: validateThemeChoice(authoredTheme, "card theme").choice };
+  }
   // A card's own `title:` beats the FALLBACK loader's filename-derived title,
   // and never beats a title a real loader computed on purpose — a memo's title
   // IS its text (`schemas/memo.ts`). Asking the resolver which one ran, rather

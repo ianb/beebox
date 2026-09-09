@@ -79,6 +79,24 @@ routeConversationRequest({ ...base, first: true, chatPage: true, search: { sessi
 => new
 ```
 
+Workspace card projection changes the URL after the first route evaluation. A
+matching remembered startup still owns that route, so projection must not coin
+a replacement conversation. Explicit startup changes remain new requests.
+
+```ts continue
+routeConversationRequest({ ...base, first: false, chatPage: true, search: { session: "new" }, selection: start, remembered: start })
+=> null
+
+routeConversationRequest({ ...base, first: false, chatPage: true, search: { session: "new", contextDir: "garden" }, selection: start, remembered: start })?.kind
+=> new
+
+routeConversationRequest({ ...base, first: false, chatPage: true, search: { session: "new", engine: "claude" }, selection: start, remembered: start })?.kind
+=> new
+
+routeConversationRequest({ ...base, first: false, chatPage: true, search: { session: "new", model: "different" }, selection: start, remembered: start })?.kind
+=> new
+```
+
 A restored existing target is revalidated, and Back can restore the precise
 unassigned start without coining a replacement.
 

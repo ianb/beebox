@@ -1,7 +1,9 @@
+import { useWorkspace } from "../components/chat/workspace/WorkspaceProvider";
 /**
  * Standard "navigate to a view URL" handler for {@link Markdown} / {@link FileView}.
  *
- * Context-less call sites (commit detail, card tree, directory entries, links
+ * Workspace and directory links open retained card tabs. Other context-less
+ * call sites (commit detail, card tree, links
  * inside a card/view) open the target *in place* via the global
  * {@link useViewOverlay} — a dismissible sheet over the current context — so
  * following a file/media link never strands you on a full page with no way back
@@ -15,17 +17,20 @@
  */
 
 import { useCallback } from "react";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../lib/view-url";
 import { useViewOverlay } from "../components/ViewOverlay";
 
 export function useViewNavigate(): (target: ViewTarget, hint?: NavigateHint) => void {
   const overlay = useViewOverlay();
+  const workspace = useWorkspace();
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();
+  const location = useLocation();
   return useCallback(
     (target: ViewTarget, hint?: NavigateHint) => {
+      if (workspace && (workspace.participating || location.pathname.includes("/browse"))) { workspace.open(target, hint); return; }
       if (overlay) {
         overlay.open(target, hint);
         return;
@@ -35,6 +40,6 @@ export function useViewNavigate(): (target: ViewTarget, hint?: NavigateHint) => 
       // navigation (not a user-facing failure) -- fire-and-forget.
       void navigate({ to: href(`/${boxSlug}/views/${serializeViewUrl(target)}`) });
     },
-    [overlay, boxSlug, navigate],
+    [overlay, boxSlug, navigate, workspace, location.pathname],
   );
 }

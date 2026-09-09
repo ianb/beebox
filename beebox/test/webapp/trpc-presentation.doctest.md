@@ -30,7 +30,7 @@ An absent config is ordinary and exposes the stable built-in catalog.
 const box = await makeTmpBox();
 const first = await caller(box.root).presentation.get({ boxKey: "test" });
 JSON.stringify([first.catalog.map((theme) => theme.name), first.presentation, first.chrome, first.configProblems])
-=> [["plain","paper","post-it"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
+=> [["plain","spectrum","paper","post-it"],{"status":"absent"},{"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null},[]]
 
 JSON.stringify([
   first.canEditCardThemes,
@@ -66,6 +66,23 @@ clearBoxConfigCache(box.root);
 const recovered = await caller(box.root).presentation.get({ boxKey: "test" });
 JSON.stringify([recovered.presentation.status, recovered.chrome.choice, recovered.configProblems])
 => ["valid",{"name":"paper","stock":"manila"},[]]
+
+await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\nsystem-theme:\n  name: plain\n  stock: neutral\n---\n");
+const landmarkTheme = await caller(box.root).presentation.get({ boxKey: "test", contextDir: "_content/recipes/dinner" });
+JSON.stringify([landmarkTheme.chrome, landmarkTheme.systemTheme.landmark])
+=> [{"choice":{"name":"plain","stock":"neutral"},"origin":"landmark","problem":null},{"path":"_content/recipes/Recipes.landmark.card","dir":"_content/recipes","label":"Recipes","explicitTheme":{"name":"plain","stock":"neutral"},"hasOverride":true}]
+
+const inheritedTheme = await caller(box.root).presentation.get({ boxKey: "test", contextDir: "_content/elsewhere" });
+JSON.stringify([inheritedTheme.chrome.choice, inheritedTheme.systemTheme.landmark])
+=> [{"name":"paper","stock":"manila"},null]
+
+await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\nsystem-theme:\n  name: post-it\n---\n");
+const invalidLandmarkTheme = await caller(box.root).presentation.get({ boxKey: "invalid-landmark", contextDir: "_content/recipes" });
+JSON.stringify([invalidLandmarkTheme.chrome.origin, invalidLandmarkTheme.chrome.choice, invalidLandmarkTheme.chrome.problem?.message.includes("does not provide app chrome")])
+=> ["landmark",{"name":"plain","stock":"neutral"},true]
+
+JSON.stringify([invalidLandmarkTheme.systemTheme.boxHasOverride, invalidLandmarkTheme.systemTheme.landmark?.hasOverride, invalidLandmarkTheme.systemTheme.landmark?.explicitTheme])
+=> [true,true,null]
 ```
 
 A structurally valid box file with an invalid presentation subtree leaves the
@@ -101,6 +118,40 @@ comments, and the body. Clearing the choice restores inheritance.
 const cardBox = await makeTmpBox({ git: true });
 const cardPath = "_content/notes/Keep.memo.card";
 await cardBox.write(cardPath, "---\n# keep this comment\ntitle: Keep\nfuture-field: still here\n---\nBody stays here.\n");
+const landmarkPath = "_content/notes/Notes.landmark.card";
+await cardBox.write(landmarkPath, "---\n# landmark comment\nnavigation:\n  label: Notes\nfuture-field: retained\n---\n");
+
+await caller(cardBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "paper", stock: "manila" } });
+clearBoxConfigCache(cardBox.root);
+JSON.stringify((await caller(cardBox.root).presentation.get({ boxKey: "box-theme" })).chrome.choice)
+=> {"name":"paper","stock":"manila"}
+
+await caller(cardBox.root).presentation.setSystemTheme({ scope: "landmark", path: landmarkPath, theme: { name: "plain" } });
+const landmarkAfterSet = await cardBox.read(landmarkPath);
+JSON.stringify([
+  landmarkAfterSet.includes("# landmark comment"),
+  landmarkAfterSet.includes("future-field: retained"),
+  (await caller(cardBox.root).presentation.get({ boxKey: "landmark-theme", contextDir: "_content/notes" })).chrome.origin,
+])
+=> [true,true,"landmark"]
+
+await caller(cardBox.root).presentation.setSystemTheme({ scope: "landmark", path: landmarkPath, theme: { name: "post-it" } })
+  .then(() => "accepted", (error) => error.code)
+=> BAD_REQUEST
+
+await caller(cardBox.root, { isOwner: false }).presentation.setSystemTheme({ scope: "box", theme: null })
+  .then(() => "accepted", (error) => error.code)
+=> FORBIDDEN
+
+await caller(cardBox.root).presentation.setSystemTheme({ scope: "landmark", path: landmarkPath, theme: null });
+clearBoxConfigCache(cardBox.root);
+(await caller(cardBox.root).presentation.get({ boxKey: "landmark-inherits", contextDir: "_content/notes" })).chrome.origin
+=> box-chrome
+
+await caller(cardBox.root).presentation.setSystemTheme({ scope: "box", theme: null });
+clearBoxConfigCache(cardBox.root);
+JSON.stringify((await caller(cardBox.root).presentation.get({ boxKey: "box-cleared" })).chrome)
+=> {"choice":{"name":"plain","stock":"neutral"},"origin":"engine","problem":null}
 
 const set = await caller(cardBox.root).card.setTheme({
   path: cardPath,

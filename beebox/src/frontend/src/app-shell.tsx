@@ -115,9 +115,9 @@ export function AppLayout() {
 
 /** Providers retain their children identity when a chat publishes chrome. */
 function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
-  return <BoxPresentationProvider boxSlug={boxSlug}><BoxConversationProvider boxSlug={boxSlug}>
+  return <BoxConversationProvider boxSlug={boxSlug}><BoxPresentationProvider boxSlug={boxSlug}>
     <AppBarChromeProvider><ConversationCardProvider><ViewOverlayProvider>{children}</ViewOverlayProvider></ConversationCardProvider></AppBarChromeProvider>
-  </BoxConversationProvider></BoxPresentationProvider>;
+  </BoxPresentationProvider></BoxConversationProvider>;
 }
 
 /**
