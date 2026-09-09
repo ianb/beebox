@@ -26,10 +26,10 @@ import { ensureQuarantineDir, quarantineDir } from "./quarantine.js";
 
 /** First retry waits this long; each subsequent one doubles. Matches the
  * batch-settle window, which is the natural pace of this worker. */
-export const WAKEUP_RETRY_BASE_MS = 2 * 60 * 1000;
+const WAKEUP_RETRY_BASE_MS = 2 * 60 * 1000;
 
 /** Doubling stops here, so a long tail stays a fixed slow poll. */
-export const WAKEUP_RETRY_CAP_MS = 15 * 60 * 1000;
+const WAKEUP_RETRY_CAP_MS = 15 * 60 * 1000;
 
 /**
  * Failures allowed before the wakeup is abandoned. With the base and cap
