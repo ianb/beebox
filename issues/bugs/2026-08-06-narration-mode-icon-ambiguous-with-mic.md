@@ -53,3 +53,17 @@ and a separate, unmistakable indicator for "narration mode engaged."
 - [chat output vocabulary ia pass](../docs-and-chores/2026-06-02-chat-output-vocabulary-ia-pass.md)
   — adjacent narration/chat-surface work, but that's about output tags, not the
   mode indicator.
+
+## Re-encountered 2026-09-08
+
+Boxholder, from the main session: "I definitely need a better icon indicator
+for navigation in the toolbar. It's a mic which makes no sense."
+
+Where the glyph actually lives: `ChatBarChrome` portals the `SessionChip` and
+`VoiceChip` into the app bar's chip slot, so the mic is the only pictorial
+control in the top bar on a chat page. It is being read as the bar's navigation
+affordance, not as a voice control at all — a stronger failure than the
+narration-vs-mic ambiguity above. Whatever replaces it needs to read as
+"voice/audio settings" at a glance, and the bar may need a distinct, obvious
+navigation entry point next to it (see `AppNav`/place pill, which use caret,
+folder, and back glyphs).
