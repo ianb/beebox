@@ -23,6 +23,8 @@ function browserStorage(): WorkspaceStorage | null {
     if (!("sessionStorage" in globalThis)) return null;
     return globalThis.sessionStorage;
   } catch (error) {
+    // The null storage path publishes a visible persistence notice while the
+    // in-memory workspace remains usable.
     void error;
     return null;
   }

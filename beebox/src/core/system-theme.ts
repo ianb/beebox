@@ -51,6 +51,8 @@ export async function resolveSystemTheme(input: {
     const untrusted: unknown = split.hasFrontmatter ? parseYaml(split.frontmatterText) : null;
     rawFields = isRecord(untrusted) ? untrusted : null;
   } catch (error) {
+    // Card loading owns malformed-frontmatter diagnostics. Theme lookup stays
+    // non-blocking and uses the box fallback when this landmark cannot parse.
     void error;
   }
   const requestedTheme = rawFields?.["system-theme"];
