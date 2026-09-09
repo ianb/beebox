@@ -16,6 +16,7 @@
 // Side-effect import: registers all built-in templates into the registry.
 import "./templates-builtins.js";
 import "./templates-courseware.js";
+import "./system-card-templates.js";
 
 export {
   type TemplateDefinition,

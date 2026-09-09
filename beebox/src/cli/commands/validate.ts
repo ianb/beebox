@@ -1,6 +1,10 @@
 /**
  * bbx validate - Validate cards and markdown against schemas/rules
  */
+import { typeFromFilename } from "../../core/card-io.js";
+import { isSystemCardType } from "../../shared/system-card-paths.js";
+import { checkSystemCards, checkStagedSystemCards } from "../../core/system-cards.js";
+
 
 import { Command } from "commander";
 import { formatLintResults, countBrokenRefs, type LintSummary } from "../../cards/index.js";
@@ -37,9 +41,7 @@ import { errorMessage } from "../../lib/error-guards.js";
  * where escape codes are noise. So: color only for a real terminal, and never
  * when NO_COLOR is set. No flag — the environment decides.
  */
-export function useColor(): boolean {
-  return process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
-}
+export const useColor = (): boolean => process.stdout.isTTY === true && process.env.NO_COLOR === undefined;
 
 interface CollectedResults {
   cardSummary: LintSummary | null;
@@ -81,6 +83,7 @@ interface ValidationResults extends CollectedResults {
   reservedSegmentErrors: string[];
   /** Invalid card/chrome presentation configuration from `_config/box.json`. */
   presentationErrors: string[];
+  systemCardErrors: string[];
   /** Whether `--canonical` asked for the canonical-form report. */
   canonical: boolean;
 }
@@ -169,12 +172,9 @@ async function collectResults(
 }
 
 /** Validate the union of git-staged cards/markdown and any explicit paths given. */
-async function collectStagedResults({ boxRoot, ctx, resolved, json, ignore }: CollectArgs): Promise<CollectedResults> {
-  const cards = [...(await listStagedCards(boxRoot)).filter((p) => !ignore.isIgnored(p)), ...resolved.filter(isCardFile)];
+async function collectStagedResults({ boxRoot, ctx, resolved, ignore }: CollectArgs): Promise<CollectedResults> {
+  const cards = [...(await listStagedCards(boxRoot)).filter((p) => !ignore.isIgnored(p) && !isSystemCardType(typeFromFilename(p) ?? "")), ...resolved.filter(isCardFile)];
   const mdFiles = [...(await listStagedMarkdown(boxRoot)).filter((p) => !ignore.isIgnored(p)), ...resolved.filter(isMarkdownFile)];
-  if (cards.length === 0 && mdFiles.length === 0 && !json) {
-    console.log("No staged cards or markdown to validate.");
-  }
   const cardSummary = cards.length > 0 ? await lintCardsDispatch(cards, { boxRoot, ctx }) : null;
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const viewWarnings = await collectViewRefWarnings(resolved.filter(isViewFile), boxRoot);
@@ -262,7 +262,7 @@ function printTextResults(results: ValidationResults): void {
   if (viewWarnings.length > 0) {
     console.log(`\n${viewWarnings.join("\n")}`);
   }
-  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors, ...reservedSegmentErrors, ...presentationErrors];
+  const boxWideErrors = [...legacySchemaErrors, ...rootStrayErrors, ...reservedSegmentErrors, ...presentationErrors, ...results.systemCardErrors];
   if (boxWideErrors.length > 0) console.log(`\n${boxWideErrors.join("\n")}`);
   if (results.canonical) {
     console.log(`\n${formatCanonicalReport(canonicalBuckets(results), { colors })}`);
@@ -288,7 +288,7 @@ async function checkCommitted(boxRoot: string, { json }: { json: boolean }): Pro
   }
 }
 
-function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors }: ValidationResults): number {
+function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, systemCardErrors }: ValidationResults): number {
   return (
     (cardSummary !== null ? cardSummary.totalErrors : 0) +
     (mdSummary !== null ? mdSummary.totalErrors : 0) +
@@ -296,7 +296,7 @@ function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaEr
     legacySchemaErrors.length +
     rootStrayErrors.length +
     reservedSegmentErrors.length +
-    presentationErrors.length
+    presentationErrors.length + systemCardErrors.length
   );
 }
 
@@ -362,7 +362,8 @@ export const validateCommand = new Command("validate")
         const rootStrayErrors = await checkRootStrayErrors(boxRoot);
         const reservedSegmentErrors = await checkReservedSegmentErrors(boxRoot);
         const presentationErrors = await checkPresentationErrors(boxRoot);
-        const results: ValidationResults = { ...collected, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, canonical };
+        const systemCardErrors = options.staged ? await checkStagedSystemCards(boxRoot) : await checkSystemCards(boxRoot);
+        const results: ValidationResults = { ...collected, systemCardErrors, legacySchemaErrors, rootStrayErrors, reservedSegmentErrors, presentationErrors, canonical };
 
         if (json) {
           const counts = canonicalCounts(canonicalBuckets(results));
@@ -381,6 +382,7 @@ export const validateCommand = new Command("validate")
             rootStrays: results.rootStrayErrors,
             reservedSegments: results.reservedSegmentErrors,
             presentation: results.presentationErrors,
+            systemCards: results.systemCardErrors,
             // The `--canonical` buckets, top-level and separate for the same
             // reason `brokenRefs` is: a relative-but-resolving ref is a
             // different signal from a broken one. Zeroed when --canonical

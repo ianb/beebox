@@ -31,7 +31,8 @@ current truth.
   installed package's `box-docs/` beside the generated reference docs
   (`src/core/docs-gen/package-docs.ts`). Each has a `read-when:` frontmatter
   line that becomes its row in the `box-docs/README.md` index. Currently
-  [what you could do with your box](box/what-you-could-do.md).
+  [what you could do with your box](box/what-you-could-do.md) and
+  [interface cards](box/interface-cards.md).
 - **`docs/architecture/`** — the onboarding narrative series: longform,
   human-facing "what is this thing" writing. Not required reading, not a
   design-rationale reference (that's `docs/design/`).

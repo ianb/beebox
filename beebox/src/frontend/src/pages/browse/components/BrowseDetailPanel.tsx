@@ -1,3 +1,4 @@
+import type { AddSelectionInput } from "../../../lib/selection/position";
 /**
  * Detail panel for the browse page — header with filename + path, optional
  * "open full view" link for cards, optional delete button for raw files,
@@ -30,6 +31,7 @@ interface BrowseDetailPanelProps {
   onSelectRenderer: (name: string | null) => void;
   viewState?: ViewState | null;
   onViewStateChange: (next: ViewState, method: "push" | "replace") => void;
+  onAddSelection?: (selection: AddSelectionInput) => void;
   selectedCard: { relativePath: string } | null;
   selectedFilePath: string;
   selectedRawFile: string | null;
@@ -49,6 +51,7 @@ export function BrowseDetailPanel({
   onNavigate,
   onSelectRenderer,
   onViewStateChange,
+  onAddSelection,
   params,
   rendererName,
   viewState,
@@ -75,6 +78,7 @@ export function BrowseDetailPanel({
       viewState={viewState}
       canPushViewState
       onViewStateChange={onViewStateChange}
+      onAddSelection={onAddSelection}
       onClose={onBack}
     />
   );
@@ -84,7 +88,7 @@ export function BrowseDetailPanel({
   // sideways on narrow viewports instead of the child scaling down.
   return (
     <div className={`${wide ? "max-w-7xl" : "max-w-4xl"} w-full mx-auto py-4 sm:py-8 print:max-w-none print:mx-0 print:py-0`}>
-      <h1 className="sr-only md:hidden">Browse</h1>
+      <h2 className="sr-only md:hidden">Browse</h2>
       <MobileBackButton id="bbx-browse-back" label="Back" onClick={onBack} className="mb-4 mx-4 print:hidden" />
       {deleteError ? (
         <div className="mb-4 mx-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-dark print:hidden">

@@ -131,6 +131,7 @@ await listFiles(boxRoot, "_config")
 calendar.guide.card
 connectors
 intake.guide.card
+interface
 main.personality.card
 migrations.jsonl
 procedures

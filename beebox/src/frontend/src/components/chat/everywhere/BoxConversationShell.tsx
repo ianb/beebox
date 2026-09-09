@@ -1,5 +1,5 @@
+import { systemCardAttentionRef } from "../../../lib/system-card-navigation";
 import { WorkspaceProvider, useWorkspace } from "../workspace/WorkspaceProvider";
-import { serializeViewUrl } from "../../../lib/view-url";
 import { canAcknowledgeAmbientReply } from "../ambient/projection";
 /** The single composer/runtime owner, kept mounted while the routed card changes. */
 import { useEffect, useRef, useState, useMemo, type ReactNode } from "react";
@@ -37,7 +37,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   const workspace = useWorkspace();
   invariant(workspace, "ConversationRuntime requires workspace");
   const routeFocusedRef = useFocusedConversationCard();
-  const focusedRef = workspace.participating ? (workspace.activeView ? serializeViewUrl(workspace.activeView.target) : null) : routeFocusedRef;
+  const focusedRef = workspace.participating ? (workspace.activeView ? systemCardAttentionRef(workspace.activeView.target) : null) : routeFocusedRef;
   const transcriptVisible = workspace.participating ? workspace.transcriptVisible : route.transcriptVisible;
   const viewOverlayVisible = useViewOverlayVisible();
   // Native publication is an imperative consumer: stable identity prevents redundant bridge messages.

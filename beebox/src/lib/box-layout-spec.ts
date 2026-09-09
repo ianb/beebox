@@ -261,6 +261,11 @@ export const BOX_LAYOUT = [
     agentDescription: "Box configuration",
   },
   {
+    path: "_config/interface",
+    area: "config",
+    description: "Canonical dashboard.card, settings.card, and browse.card interface instruments. Keep their paths; the body holds source notes, not live UI state.",
+  },
+  {
     boxDirsKey: "connectors",
     path: "_config/connectors",
     area: "config",

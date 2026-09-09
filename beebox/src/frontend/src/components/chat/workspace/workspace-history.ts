@@ -106,7 +106,10 @@ export function decideWorkspaceNavigation(input: {
   scope: string;
   identity: string;
   freshCard: string | null;
+  /** Canonical card routes are open intents; only /chat projects saved arrangements. */
+  cardEntry?: boolean;
 }): WorkspaceNavigationDecision {
+  if (input.cardEntry && input.freshCard) return { kind: "open-url", card: input.freshCard };
   const parsed = parseScopedWorkspaceHistory(input.history, input);
   if (parsed.kind === "snapshot") return { kind: "restore-snapshot", entry: parsed.entry, state: parsed.state };
   if (input.freshCard !== null && input.freshCard !== "") return { kind: "open-url", card: input.freshCard };

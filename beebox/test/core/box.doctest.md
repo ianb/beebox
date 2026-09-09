@@ -66,6 +66,7 @@ _bookkeeping/trash
 _bookkeeping/usage
 _config
 _config/connectors
+_config/interface
 _config/procedures
 _config/schedules
 _config/schemas
