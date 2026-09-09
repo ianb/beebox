@@ -68,7 +68,7 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
         onClick={flip}
       >
         <span className="bbx-card-properties-label" aria-hidden="true">
-          {back ? "Back to card" : "Properties"}
+          {back ? "← Back to card" : "Properties"}
         </span>
         <span className="sr-only">{back ? "Back to card" : "Properties"}</span>
       </button>

@@ -41,7 +41,7 @@ function MessageSelectionPill({ text, sourceRef, position, placement }: { text: 
   if (placement !== "") titleParts.push(placement);
   return (
     <span
-      className="inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium align-baseline"
+      className="bbx-chat-user-token inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium align-baseline"
       title={titleParts.join(" — ")}
     >
       <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
@@ -128,13 +128,13 @@ export function UserMessageText({ text, attachedFileIds }: { text: string; attac
           // opacity-based "muted" convention already used in this file
           // (the pills' bg-white/20, PendingIndicator's text-white/70).
           return (
-            <span key={i} className="underline decoration-dotted decoration-white/40 underline-offset-2">
+            <span key={i} className="bbx-chat-user-unsure underline decoration-dotted decoration-white/40 underline-offset-2">
               {p.word}
             </span>
           );
         }
         return (
-          <span key={i} className="inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium">
+          <span key={i} className="bbx-chat-user-token inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
             </svg>

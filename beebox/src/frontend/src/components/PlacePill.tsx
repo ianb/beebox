@@ -254,6 +254,7 @@ export function PlacePill({
             ) : (
               <HereMenuBody
                 dir={landmark.dir}
+                landmarkPath={landmark.path}
                 boxSlug={boxSlug}
                 links={hereLinks}
                 groups={hereGroups}

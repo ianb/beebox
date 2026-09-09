@@ -777,12 +777,12 @@ checks, and diff whitespace checks pass.
 ### Fold cues and saturated app chrome
 
 The front fold now carries a quiet Properties label that strengthens on hover
-or keyboard focus. Its reverse becomes a wider Back to card control; the
-heading reserves room for it. The control retains its identity and focus
+or keyboard focus. On the reverse, a visible ← Back to card label sits beside the unchanged
+fold; the heading reserves room below it. The control retains its identity and focus
 through the turn.
 
 The existing box chrome selector now exposes its stock to the frontend. Paper
-chrome uses saturated teal, rust, or ink blue with grain and a contrasting
+chrome uses saturated slate blue, rust, or ink blue with grain and a contrasting
 lower paper edge, while plain retains the existing bar. Card choices remain
 independent. The place pill and other bar controls retain their capsule or circular
 outlines, with raised rims and contact shadows. The bar is one textured surface; stacked sheets belong to cards, not navigation. Portaled menus remain unclipped and keep their own colors.
@@ -793,3 +793,20 @@ visible/accessibility label mismatch, which was fixed. Its suggested title
 collision did not reproduce: at phone width the cue starts at x=357 while the
 front heading content ends at x=310, inside the existing reserved gutter.
 Frontend typecheck, focused lint, and documentation checks pass.
+
+### Chat shares the chrome background
+
+Chrome now defines one desk background used by chat, companion card gutters,
+and Browse card desks. Chat does not add another sheet beneath the transcript.
+Paper chrome gives local user messages a dark, borderless surface with white text attached to the
+right edge, with stock-derived ink and attachment/status treatments. Assistant
+and other-user rendering retain their existing structure; no message lifecycle,
+scrolling, or entrance animations change. The default paper bar uses slate blue
+and finer, lighter texture rather than green mottling. The Properties return
+label is smaller and normal weight beside the unchanged fold.
+
+Verification: frontend typecheck and lint pass. Desktop computed styles confirm
+the same background color on chat, companion, and card desk; the phone
+transcript has no horizontal overflow. An independent review identified that
+attachment/status selectors could affect other users' darker bubbles. Those
+selectors are now scoped beneath the local user's paper surface.

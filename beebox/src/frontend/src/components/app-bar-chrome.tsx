@@ -23,7 +23,7 @@
  *  3. **Publications happen in effects with primitive deps** (`dir`, `label`
  *     strings), never per render, and every portaled component is
  *     `React.memo`'d with referentially stable props (the
- *     `CompanionViewPanel` discipline — `components/chat/CLAUDE.md`).
+ *     workspace card rendering discipline — `components/chat/CLAUDE.md`).
  *
  * Ownership tokens: each `useAppBarPlace` instance carries an identity, and
  * cleanup clears the published place ONLY if it still owns it. Without that,

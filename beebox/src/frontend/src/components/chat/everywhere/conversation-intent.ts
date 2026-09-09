@@ -3,8 +3,20 @@ import { parseChatAgentEngine } from "@shared/chat-models";
 import type { ConversationSelection, ConversationTarget } from "@shared/chat-composer-binding";
 import type { ConversationRequest } from "./resolve-conversation";
 
-function samePendingStartup(target: ConversationTarget | null, remembered: ConversationSelection | null): boolean {
-  return target?.kind === "start" && remembered?.kind === "ready" && remembered.target.kind === "start" && remembered.target.clientConversationId === target.clientConversationId;
+function samePendingStartup({
+  target,
+  remembered,
+  search,
+}: {
+  target: ConversationTarget | null;
+  remembered: ConversationSelection | null;
+  search: RouteIntentInput["search"];
+}): boolean {
+  if (target?.kind !== "start" || remembered?.kind !== "ready" || remembered.target.kind !== "start") return false;
+  if (remembered.target.clientConversationId !== target.clientConversationId) return false;
+  if (search.contextDir !== undefined && search.contextDir !== target.contextDir) return false;
+  if (search.engine !== undefined && parseChatAgentEngine(search.engine) !== target.engine) return false;
+  return search.model === undefined || search.model === target.model;
 }
 
 interface RouteIntentInput {
@@ -20,7 +32,7 @@ function explicitChatRequest(input: RouteIntentInput): ConversationRequest | nul
   const { first, search, selection, remembered } = input;
   const target = selection.kind === "ready" ? selection.target : null;
   if (!first && target?.kind === "session" && target.sessionId === search.session) return null;
-  if (first && search.session === "new" && samePendingStartup(target, remembered)) return null;
+  if (search.session === "new" && samePendingStartup({ target, remembered, search })) return null;
   // The one request that names a chat on the user's behalf: `?session=` in
   // the URL. A remembered or previously-rendered selection is not that.
   return { kind: search.session === "new" ? "new" : "session", sessionId: search.session, named: true,

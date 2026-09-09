@@ -23,21 +23,19 @@
 .bbx-card-surface[data-card-side="front"] .bbx-card-properties:focus-visible .bbx-card-properties-label {
   opacity: 0.78;
 }
-.bbx-card-surface[data-card-side="back"] .bbx-card-properties {
-  width: 7.5rem;
-  border-radius: 0 8px 0 6px;
-  background: var(--bbx-underlay);
-  box-shadow: -2px 2px 5px #493c2835;
-}
 .bbx-card-surface[data-card-side="back"] .bbx-card-properties-label {
-  inset: 0;
-  display: grid;
-  place-items: center;
+  right: calc(100% + 0.75rem);
+  top: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
   color: var(--bbx-ink);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  font-weight: 400;
 }
 .bbx-card-surface[data-card-side="back"] > .bbx-card-heading {
-  padding-right: 8.5rem;
+  padding-top: 3.75rem;
 }
 .bbx-card-properties:hover,
 .bbx-card-properties:focus-visible { transform: scale(1.12); }

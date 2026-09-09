@@ -1,3 +1,5 @@
+import { WorkspaceProvider, useWorkspace } from "../workspace/WorkspaceProvider";
+import { serializeViewUrl } from "../../../lib/view-url";
 import { canAcknowledgeAmbientReply } from "../ambient/projection";
 /** The single composer/runtime owner, kept mounted while the routed card changes. */
 import { useEffect, useRef, useState, useMemo, type ReactNode } from "react";
@@ -20,20 +22,24 @@ import { invariant } from "@shared/invariant";
 import type { ConversationSelection } from "@shared/chat-composer-binding";
 import { z } from "zod";
 
-const shellSearch = z.object({ companion: z.string().optional(), card: z.string().optional(), nativeComposer: z.coerce.string().optional(), capture: z.coerce.string().optional() });
+const shellSearch = z.object({ nativeComposer: z.coerce.string().optional(), capture: z.coerce.string().optional() });
 export function BoxConversationShell({ children }: { children: ReactNode }) {
   const conversation = useBoxConversation();
   invariant(conversation, "BoxConversationShell requires BoxConversationProvider");
-  return <ConversationRuntime conversation={conversation}>{children}</ConversationRuntime>;
+  return <WorkspaceProvider target={conversation.rendered?.target}><ConversationRuntime conversation={conversation}>{children}</ConversationRuntime></WorkspaceProvider>;
 }
 function ConversationRuntime({ conversation, children }: { conversation: NonNullable<ReturnType<typeof useBoxConversation>>; children: ReactNode }) {
   const { boxSlug = "" } = useParams({ strict: false });
   const search = shellSearch.parse(useSearch({ strict: false }));
   const route = useConversationRoute(conversation);
-  const focusedRef = useFocusedConversationCard();
+  const workspace = useWorkspace();
+  invariant(workspace, "ConversationRuntime requires workspace");
+  const routeFocusedRef = useFocusedConversationCard();
+  const focusedRef = workspace.participating ? (workspace.activeView ? serializeViewUrl(workspace.activeView.target) : null) : routeFocusedRef;
+  const transcriptVisible = workspace.participating ? workspace.transcriptVisible : route.transcriptVisible;
   const viewOverlayVisible = useViewOverlayVisible();
   // Native publication is an imperative consumer: stable identity prevents redundant bridge messages.
-  const attention = useMemo(() => ({ ...route.attention, ...(focusedRef ? { surface: "card" as const, focusedRef } : {}), ...(viewOverlayVisible ? { transcript: "hidden" as const } : {}) }), [focusedRef, route.attention, viewOverlayVisible]);
+  const attention = useMemo(() => ({ ...route.attention, transcript: transcriptVisible ? "visible" as const : "hidden" as const, ...(workspace.participating && !focusedRef ? { surface: "chat" as const, focusedRef: undefined } : {}), ...(focusedRef ? { surface: "card" as const, focusedRef } : {}), ...(viewOverlayVisible ? { transcript: "hidden" as const } : {}) }), [focusedRef, route.attention, viewOverlayVisible, transcriptVisible, workspace.participating]);
   const emissionStore = useEmissionStoreInstance(boxSlug);
   const target = conversation.rendered?.target;
   const usesNativeComposer = search.nativeComposer === "1" || isNativeShell();
@@ -45,7 +51,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   function handleOpenConversation(id: string) {
     overlay?.close();
     if (route.chatPage) {
-      void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: id }) });
+      void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: id }), state: { bbxConversationOverlay: true } });
       return;
     }
     void conversation.select({ kind: "session", sessionId: id, named: true });
@@ -60,12 +66,13 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   }, [sessionId, sessionLabel]);
   useEffect(() => { writeTrackedSessions(boxSlug, sessions); }, [boxSlug, sessions]);
   useEffect(() => {
+    if (!workspace.ready && conversation.selection.kind === "ready") return;
     const publication = { version: 1, kind: "selection", revision: ++publicationRevision.current, boxSlug, selection: conversation.selection, attention };
     postNativeMessage(window, { channel: "beeboxComposerBinding", payload: publication });
-  }, [boxSlug, conversation.selection, attention]);
+  }, [boxSlug, conversation.selection, attention, workspace.ready]);
   const handleRetry = conversation.retry;
-  const handleAssignment = conversation.assigned;
-  const handleShowConversation = route.showConversation;
+  const handleAssignment: typeof conversation.assigned = (id, assignment) => { workspace.adopt(id); conversation.assigned(id, assignment); };
+  const handleShowConversation = () => workspace.participating ? workspace.dispatch({ type: "showChat", pane: workspace.state.lastCardPane, viewport: workspace.mobile ? "mobile" : "desktop" }) : route.showConversation();
   const handleHideConversation = route.hideConversation;
   // The reset for a dead chat the user did ask for: a fresh conversation in
   // the same place, forgetting the one that cannot be resumed.
@@ -84,20 +91,18 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     conversationTarget={target}
     conversationSelection={conversation.selection}
     attention={attention}
-    companion={route.chatPage ? search.companion : undefined}
-    card={route.chatPage ? search.card : undefined}
     emissionStore={emissionStore}
     sessionLabel={sessionLabel}
     onSessionAssignment={handleAssignment}
     nativeComposer={usesNativeComposer}
     openCaptureOnMount={search.capture === "1"}
-    transcriptVisible={route.transcriptVisible}
-    routeContent={route.chatPage ? undefined : children}
+    transcriptVisible={transcriptVisible}
+    routeContent={workspace.participating ? undefined : children}
     onShowConversation={handleShowConversation}
     onHideConversation={handleHideConversation}
-    selectionNotice={notice}
+    selectionNotice={<>{notice}{workspace.notice ? <Text as="div" size="sm" tone="muted">{workspace.notice}</Text> : null}</>}
     ambientRegion={<AmbientReplies boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}
-      transcriptVisible={canAcknowledgeAmbientReply(route.transcriptVisible, conversation.selection.kind)} onInspectCard={inspect}
+      transcriptVisible={canAcknowledgeAmbientReply(transcriptVisible, conversation.selection.kind)} onInspectCard={inspect}
       onOpenConversation={handleOpenConversation} />}
   />;
 }

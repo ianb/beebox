@@ -1,0 +1,57 @@
+/* User-authored chat turns become paper slips only when the box chrome uses
+   paper. The existing row keeps ownership of alignment, width, and scrolling. */
+.bbx-box-presentation[data-chrome-theme="paper"] {
+  --bbx-chat-user-paper: var(--bbx-bar-paper);
+  --bbx-chat-user-ink: #ffffff;
+}
+
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 13px 0 0 13px;
+  background-color: var(--bbx-chat-user-paper);
+  color: var(--bbx-chat-user-ink);
+  box-shadow: -2px 3px 5px #353b4226, -8px 9px 15px -12px #252b3347;
+}
+
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='fiber'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='2' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23fiber)' opacity='.13'/%3E%3C/svg%3E"),
+    linear-gradient(174deg, #ffffff18, transparent 58%, #00000016);
+  background-size: 180px 180px, auto;
+  background-blend-mode: soft-light;
+  opacity: .48;
+}
+
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper .bbx-chat-user-token,
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper .bbx-chat-user-attachment,
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper .bbx-chat-user-attachment-badge {
+  background-color: rgb(255 255 255 / 13%);
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper .bbx-chat-user-attachment:hover {
+  background-color: rgb(255 255 255 / 20%);
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper :is(
+  .bbx-chat-user-status, .bbx-chat-user-attachment-summary
+) { color: color-mix(in srgb, var(--bbx-chat-user-ink) 85%, transparent); }
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-user-paper .bbx-chat-user-unsure {
+  text-decoration-color: color-mix(in srgb, var(--bbx-chat-user-ink) 45%, transparent);
+}
+
+
+/* Callouts remain foreground sheets in the transcript and ambient replies. */
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-chat-callout {
+  border: 0;
+  border-radius: 5px 8px 7px 4px;
+  background-color: #faf3dd;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.065'/%3E%3C/svg%3E");
+  box-shadow: 0 1px 1px #3c2d1920, 1px 4px 9px #3c2d1924, inset 0 1px 0 #ffffffb0;
+  color: #39372f;
+}

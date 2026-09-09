@@ -2,7 +2,7 @@
    reading surface: browse detail, sidecar panels, and their tabs. */
 .bbx-interface-card-desk[data-card-content="card"],
 .bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
-  background: #e4e0d9;
+  background: var(--bbx-desk-background, #e4e0d9);
   padding: 20px;
 }
 
@@ -13,7 +13,7 @@
 
 .bbx-interface-browse-panel[data-card-content="card"] {
   border-radius: 12px;
-  background: #e4e0d9;
+  background: var(--bbx-desk-background, #e4e0d9);
 }
 
 .bbx-interface-browse-panel > .bbx-interface-card-desk {
@@ -97,7 +97,7 @@
    the whole tab-and-card assembly rather than cutting between its parts. */
 .bbx-companion-desk[data-active-card] {
   --bbx-desk-gutter: 20px;
-  background: #e4e0d9;
+  background: var(--bbx-desk-background, #e4e0d9);
 }
 .bbx-companion-desk[data-active-card] > .bbx-companion-tabs {
   margin: var(--bbx-desk-gutter) var(--bbx-desk-gutter) 0;
@@ -122,12 +122,18 @@
 }
 .bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"] {
   margin-top: 0;
+  margin-bottom: -2px;
   padding-top: 4px;
+  z-index: 2;
 }
 .bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"] [role="tab"] {
   font-weight: 600;
 }
-.bbx-companion-desk[data-active-card]:has(.bbx-interface-tabstrip > [role="none"]:first-child > .bbx-interface-tab:first-child[data-active="true"]) .bbx-interface-card-desk[aria-hidden="false"] > .bbx-card-surface {
+.bbx-companion-desk[data-active-card] .bbx-interface-card-desk > .bbx-card-surface {
+  position: relative;
+  z-index: 1;
+}
+.bbx-companion-desk[data-active-card]:has(.bbx-interface-tabstrip > [role="none"] > .bbx-interface-tab:first-child) .bbx-interface-card-desk[aria-hidden="false"] > .bbx-card-surface {
   border-top-left-radius: 0;
 }
 @media (max-width: 640px) {

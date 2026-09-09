@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useRef, useMemo, useCallback, typ
 import { trpc, type RouterOutput } from "../../lib/trpc";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { isRecord } from "@shared/is-record";
+import { useLocation, useParams } from "@tanstack/react-router";
+import { useBoxConversation } from "../chat/everywhere/conversation-context";
 
 interface PresentationState {
   data: RouterOutput["presentation"]["get"] | undefined;
@@ -11,19 +13,29 @@ interface PresentationState {
 
 const PresentationContext = createContext<PresentationState | null>(null);
 
-/** One box-scoped query, shared by chrome and every independently surfaced card. */
+/** System appearance follows the workspace's place, never its inspected card. */
 export function BoxPresentationProvider({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
-  const query = trpc.presentation.get.useQuery({ boxKey: boxSlug }, { staleTime: Infinity });
+  const { pathname } = useLocation();
+  const { _splat } = useParams({ strict: false });
+  const conversation = useBoxConversation();
+  const workspaceRoute = pathname.endsWith("/chat") || pathname.includes("/views/");
+  const contextDir = workspaceRoute ? conversation?.rendered?.target.contextDir
+    : pathname.includes("/browse") ? _splat ?? "" : undefined;
+  // A pending workspace place is not a request for the box default.
+  const placeReady = !workspaceRoute || conversation?.selection.kind !== "resolving";
+  const query = trpc.presentation.get.useQuery({ boxKey: boxSlug, contextDir }, {
+    enabled: placeReady, staleTime: Infinity, placeholderData: (previous) => previous,
+  });
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refetch = query.refetch;
-  const retry = useCallback(() => { void refetch(); }, [refetch]);
+  const retry = useCallback(() => { if (placeReady) void refetch(); }, [placeReady, refetch]);
   useEffect(() => () => { if (pending.current !== null) clearTimeout(pending.current); }, []);
   useBusSubscription({
     onConnect: retry,
     onEvent: ({ event, data }) => {
       if (event !== "file-change" || !isRecord(data) || typeof data.path !== "string") return;
       const path = data.path.replace(/^\//, "");
-      if (path !== "_config/box.json" && !path.startsWith("src/schemas/")) return;
+      if (path !== "_config/box.json" && !path.startsWith("src/schemas/") && !path.endsWith(".landmark.card")) return;
       if (pending.current !== null) return;
       pending.current = setTimeout(() => { pending.current = null; retry(); }, 150);
     },

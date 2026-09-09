@@ -16,6 +16,7 @@ import { OpenInPanelButton } from "../ui/OpenInPanelButton";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { CardFacts, CardMentions } from "./CardProperties";
 import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
+import { LandmarkSystemThemePicker } from "./SystemThemePicker";
 
 interface ThemedFileCardProps {
   data: FileData;
@@ -32,6 +33,7 @@ interface ThemedFileCardProps {
 }
 
 export function ThemedFileCard({ data, mode, renderers, active, hasExplicitView, onSelect, onNavigate, onFocus, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
+  const { boxSlug } = useParams({ strict: false });
   const presentation = useBoxPresentation();
   if (presentation !== null && !presentation.data && presentation.error === null) {
     return <div className="p-6" aria-busy="true"><div className="h-6 w-2/3 bg-warm-100 rounded" /><div className="h-32 mt-4 bg-warm-50 rounded" /><span className="sr-only">Loading card appearance</span></div>;
@@ -57,6 +59,8 @@ export function ThemedFileCard({ data, mode, renderers, active, hasExplicitView,
       </dl>
       <CardFacts data={data} />
       <ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} />
+      {data.type === "landmark" ? <LandmarkSystemThemePicker boxKey={boxSlug ?? ""} path={data.path}
+        contextDir={data.path.replace(/^\//, "").split("/").slice(0, -1).join("/")} /> : null}
       <div className="mt-6">
         <h3 className="text-sm font-semibold mb-2">View</h3>
         <div className="flex flex-wrap gap-2">

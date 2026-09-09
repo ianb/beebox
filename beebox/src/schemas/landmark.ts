@@ -31,6 +31,7 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { CardSymbol } from "../shared/card-symbol.js";
 import { Prominence } from "../shared/prominence.js";
+import { SystemThemeChoiceSchema } from "../shared/card-theme.js";
 
 /** Sort order for `expand` fan-out results. */
 export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
@@ -124,6 +125,7 @@ export type LandmarkDestinationData = z.infer<typeof LandmarkDestination>;
 const landmarkFields = {
   navigation: LandmarkNavigation.optional(),
   destinations: z.array(LandmarkDestination).optional(),
+  "system-theme": SystemThemeChoiceSchema.optional(),
 };
 
 /**
@@ -147,6 +149,7 @@ const LandmarkObject = z.object({
   symbol: CardSymbol.optional(),
   prominence: Prominence.optional(),
 });
+const LightweightLandmarkObject = LandmarkObject.extend({ "system-theme": z.unknown().optional() });
 export type LandmarkFields = z.infer<typeof LandmarkObject>;
 
 export const LandmarkSchema: CardSchema = cardSchema("landmark", {
@@ -165,6 +168,8 @@ export const LandmarkSchema: CardSchema = cardSchema("landmark", {
 A landmark marks a directory as a notable spot in the box — a hand-curated bookmark that can also be a triage destination. One per directory; the file lives inside the directory it describes, e.g. \`_content/recipes/Recipes.landmark.card\`. Directories without a landmark are invisible to the Landmarks page and to triage.
 
 A landmark is pure YAML frontmatter (no body) with one or more roles. At least one role should be present.
+
+An optional top-level \`system-theme\` selects the app chrome while this landmark is active. Use only the theme and stock identifiers documented in \`node_modules/beebox/box-docs/card-themes.md\`.
 
 ## \`navigation\` (human-facing surface)
 
@@ -237,9 +242,12 @@ export function parseLandmarkFields(content: string): LandmarkFields | null {
   } catch (_e) {
     return null;
   }
-  const parsed = LandmarkObject.safeParse(fm ?? {});
+  const parsed = LightweightLandmarkObject.safeParse(fm ?? {});
   if (!parsed.success) return null;
-  return parsed.data;
+  const theme = SystemThemeChoiceSchema.safeParse(parsed.data["system-theme"]);
+  const { "system-theme": _untrustedTheme, ...roles } = parsed.data;
+  void _untrustedTheme;
+  return theme.success ? { ...roles, "system-theme": theme.data } : roles;
 }
 
 /**

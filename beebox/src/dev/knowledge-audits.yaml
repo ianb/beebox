@@ -4049,6 +4049,23 @@ tests:
     correct_contains_any: ["Use default", "default"]
     tags: [cards, themes]
 
+  # System-theme extension (2026-09-08): landmark-system-theme passed with Claude;
+  # 2 reads and 2 searches identified system-theme vs card theme and inheritance.
+  - id: landmark-system-theme
+    prompt: >
+      I want this landmark's surrounding interface to use the terracotta Paper
+      system theme, while the landmark card itself stays plain. What fields
+      should I write, where can I select them in the UI, and what happens if I
+      remove the landmark's system override or inspect a card from elsewhere?
+    expected_level: knows_about
+    watch_for: >
+      Uses system-theme name paper stock manila for the landmark and theme name
+      plain stock neutral for the card. Identifies landmark Properties and box
+      Settings as the two system-theme scopes, removing the override falls back
+      to the box, and inspecting another card does not change the current place.
+    correct_contains: ["system-theme", "paper", "manila", "plain", "Properties", "box"]
+    tags: [cards, themes, landmarks, system-theme]
+
   - id: card-theme-selection
     prompt: >
       A card has no explicit theme, but the box has both a matching path rule

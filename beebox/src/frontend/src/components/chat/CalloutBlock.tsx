@@ -32,7 +32,7 @@ function CalloutBlock({
   return (
     <div
       className={cn(
-        "my-3 border-l-4 border-accent rounded-r",
+        "bbx-chat-callout my-3 border-l-4 border-accent rounded-r",
         "bg-accent-50 px-4 py-3",
         className,
       )}

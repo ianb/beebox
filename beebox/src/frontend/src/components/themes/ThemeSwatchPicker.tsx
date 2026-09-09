@@ -17,7 +17,7 @@ export function ThemeSwatchPicker({ path, choice, hasOverride }: { path: string;
     <section className="mt-6" aria-label="Choose card appearance">
       <h3 className="text-sm font-semibold mb-2">Appearance</h3>
       <div className="bbx-theme-swatches" aria-busy={mutation.isPending}>
-        {THEME_CATALOG.flatMap((theme) => theme.stocks.map((stock) => (
+        {THEME_CATALOG.filter((theme) => theme.systemOnly !== true).flatMap((theme) => theme.stocks.map((stock) => (
           <button
             key={`${theme.name}/${stock}`}
             type="button"

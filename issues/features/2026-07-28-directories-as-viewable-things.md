@@ -32,3 +32,20 @@ both deferred because they're a big thing on their own:
 Interim answer shipped by the todo plan: drop a `todo-view` card *in* the
 directory (subtree-scoped by default) — a durable card stands in for the
 directory lens. This issue is about not needing the stand-in.
+
+## Follow-up (2026-09-08): directory tabs
+
+When browsing a directory while comparing cards or reading chat, the developer
+wants the directory to open as a workspace tab, without navigating away from the
+workspace. The directory should remain available while its children open in
+other tabs or the other pane. This does not require a review queue first.
+
+The [workspace pane plan](../../beebox/docs/plans/workspace-pane-controls.md)
+defers this implementation. Pane operations should accept tab identities
+without depending on every target being a card file. A later directory target
+needs canonical identity, retained listing/filter/scroll state, deep links, and
+browser Back behavior. Directory navigation inside a tab also needs an explicit
+replacement-versus-new-tab rule. Opening a directory from elsewhere should open
+or select its tab, never replace the workspace with a routed listing.
+
+Related: [Dashboard as a workspace tab](2026-09-08-dashboard-workspace-tab.md).
