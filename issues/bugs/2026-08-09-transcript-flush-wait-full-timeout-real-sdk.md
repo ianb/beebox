@@ -74,3 +74,13 @@ Third consecutive weekly run, same shape: warning on both turns of
 `1a8b1b44-d384-4b56-9be0-fa42c49d0c30`. Three-for-three across three weeks
 confirms this is a standing condition, not noise — still unconfirmed which
 of the two candidate explanations above applies.
+
+## 2026-09-01 recurrence
+
+Same warning fired again on both turns of `chat-queue-real.doctest.md`
+(itself still passing, exit 0). Run: commit `9550f5b68` on `main`, log
+`~/src/schedule-runs/manual-tests/runs/20260901-192800.log`.
+Session `59226045-43e6-470a-b59a-72aaf19f95ea`, entries
+`47f8e82a-bbd8-473b-827f-74017ced05e9` and
+`e77e9251-a8f4-4739-addf-f965c238a3db`. Still a standing condition; still
+unconfirmed which of the two candidate explanations above applies.
