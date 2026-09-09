@@ -1,6 +1,6 @@
 ---
 title: System theme selection and landmark overrides
-status: active
+status: implemented
 workstream: paper-cards
 issues: []
 ---

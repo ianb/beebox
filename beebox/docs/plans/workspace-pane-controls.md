@@ -1,6 +1,6 @@
 ---
 title: "Workspace panes, focus, and conversation"
-status: active
+status: partial
 workstream: paper-cards
 issues: []
 ---
@@ -574,4 +574,5 @@ iOS WebView acceptance. Card → transcript → card with the native keyboard,
 voice composer, device Back, and an in-flight send remains outstanding before
 the implementation meets this plan's full done criteria.
 
-System-theme selection continues in the [system-theme subplan](system-theme-selection.subplan.md).
+System-theme selection is documented in the
+[implemented system-theme subplan](../implemented-plans/system-theme-selection.subplan.md).

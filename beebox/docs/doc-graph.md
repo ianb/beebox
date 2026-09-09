@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-09-08T05:16:18Z
-Total documents: 336
+Generated: 2026-09-09T00:30:57Z
+Total documents: 339
 
 ## Issues
 
@@ -53,6 +53,7 @@ These documents are not referenced by any other document.
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines)
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines)
 - **docs/plans/sticky-hq-ios-parity.md** — "Sticky HQ dictation on iOS" (100 lines)
+- **docs/plans/workspace-pane-controls.review.md** — "Plan Engineering Review — workspace pane controls" (233 lines)
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
@@ -494,7 +495,7 @@ References:
 
 #### frontend.md
 
-Title: "Frontend Conventions" | 190 lines
+Title: "Frontend Conventions" | 191 lines
 
 Referenced by:
 - CLAUDE.md:66 (mention) — src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see frontend.md
@@ -1244,6 +1245,7 @@ Referenced by:
 - docs/plans/scan-vision-claude.md:25 (mention) — - `beebox/docs/engineering-principles.md` — especially
 - docs/plans/scanner-ingest.md:23 (mention) — - `docs/engineering-principles.md` — findings trace to: **#3
 - docs/plans/tts-backend-selection.md:31 (mention) — - **Principle 4, resilient AND never silent** (`docs/engineering-principles.md:49`):
+- docs/plans/workspace-pane-controls.md:46 (link) — applications. [Engineering principles](../engineering-principles.md) supply the
 - docs/plans/workstream-exhibits.md:92 (mention) — - Principle 3, **validate at boundaries** (`docs/engineering-principles.md:37`):
 - docs/plans/workstreams-app.md:44 (mention) — (`docs/engineering-principles.md:37-47`): validate every app API input and
 - docs/plans/worktree-control-surface.md:111 (mention) — - `beebox/docs/engineering-principles.md` §7 *Hierarchy is a
@@ -1609,7 +1611,7 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1367 lines
+Title: "Cross-Platform Mobile Contract" | 1372 lines
 
 Referenced by:
 - CLAUDE.md:145 (mention) — | Cross-platform mobile contract (iOS/Android ↔ box) | `docs/mobile-contract.md` |
@@ -1623,7 +1625,7 @@ Referenced by:
 - docs/plans/agent-points-at-ui.md:75 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
 - docs/plans/android-companion-app.md:14 (mention) — implements **exactly** the contract in `docs/mobile-contract.md`; it adds no new
 - docs/plans/capture-fast-landing.md:293 (mention) — (`docs/mobile-contract.md` unaffected).
-- docs/plans/chat-everywhere.md:569 (mention) — `mobile-contract.md`, and parity docs together. Audit other wrapper consumers
+- docs/plans/chat-everywhere.md:575 (mention) — `mobile-contract.md`, and parity docs together. Audit other wrapper consumers
 - docs/plans/chat-photo-batch-upload.md:25 (mention) — > cross-platform rule is stated in `docs/mobile-contract.md` §8.
 - docs/plans/chat-photo-batch-upload.md:84 (link) — [`docs/mobile-contract.md`](../mobile-contract.md):479 §5.6, which already
 - docs/plans/document-comments.md:270 (mention) — `lib/chat-send-diagnostics.ts:150`, and on the wire at `docs/mobile-contract.md:262`
@@ -1631,6 +1633,7 @@ Referenced by:
 - docs/plans/ios-input-plane-parity.md:95 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
 - docs/plans/ios-share-extension-capture.md:52 (mention) — - Swift already demonstrates direct non-batched tRPC calls. `ios-app/BeeBox/Services/LogForwarder.swift:283` posts to `t
 - docs/plans/sticky-hq-ios-parity.md:16 (mention) — The boxholder requires the setting to work on iOS. The existing mobile contract requires web/native wire changes to upda
+- docs/plans/workspace-pane-controls.md:84 (mention) — | `docs/mobile-contract.md:285-290`: attention carries “focusedRef, and visible/hidden transcript”; “ordinary route move
 - ../.claude/skills/bbx-ios-overlap/SKILL.md:17 (mention) — **The canonical reference is `beebox/docs/mobile-contract.md`**
 - ../CLAUDE.md:11 (mention) — - **ios-app/** — Native SwiftUI companion app; a thin shell around the web chat (`WKWebView`) plus native pairing, compo
 - ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:39 (mention) — This is deliberate and documented — `beebox/docs/mobile-contract.md` §4.5:
@@ -1703,7 +1706,7 @@ Referenced by:
 - CLAUDE.md:168 (mention) — | Which model a box thinks with | `docs/model-policy.md` |
 - docs/box-layout.md:202 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
 - docs/implemented-plans/model-engine-policy.md:45 (mention) — passes. The reference doc is `docs/model-policy.md`.
-- docs/mobile-contract.md:847 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/mobile-contract.md:852 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 
 References:
 - → docs/implemented-plans/model-engine-policy.md (mention)
@@ -2100,6 +2103,7 @@ Referenced by:
 - docs/plans/publish-pages.md:270 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
 - docs/plans/scan-retry-and-document-route.md:417 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
 - docs/plans/tts-backend-selection.md:517 (mention) — Tests named while designing, per `docs/testing.md`:
+- docs/plans/workspace-pane-controls.md:478 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
 - docs/tours.md:29 (link) — ([testing.md](testing.md)); "does the app boot at all" is the smoke tier
 - ../.claude/skills/bbx-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/bbx-guide-testing/SKILL.md:3 (mention) — description: Explains beebox's testing system — the test tiers, what each is for, and how to choose. Use when deciding h
@@ -2298,7 +2302,7 @@ References:
 
 #### docs/box/card-themes.md
 
-Title: "Card themes" | 98 lines
+Title: "Card themes" | 150 lines
 
 Referenced by:
 - docs/adding-schemas.md:73 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
@@ -2768,7 +2772,7 @@ Title: "Bulk file upload" | 461 lines
 
 Referenced by:
 - docs/box-layout.md:130 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:877 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/mobile-contract.md:882 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:34 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
@@ -2863,7 +2867,7 @@ References:
 
 #### docs/implemented-plans/card-themes.md
 
-Title: "Card themes: paper, Post-it, and plain" | 727 lines
+Title: "Card themes: paper, Post-it, and plain" | 813 lines
 
 Referenced by:
 - docs/implemented-plans/card-themes.review.md:3 (link) — Review target: [Card themes](card-themes.md). This review concerns a draft plan,
@@ -3451,7 +3455,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines
 
 Referenced by:
-- docs/mobile-contract.md:647 (mention) — `docs/plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:652 (mention) — `docs/plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../beebox/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../beebox/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -3647,7 +3651,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 510 lines
 
 Referenced by:
-- docs/mobile-contract.md:1244 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1249 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:40 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -4270,6 +4274,13 @@ Title: "Sticky HQ transcription preference" | 108 lines
 References:
 - → ../issues/features/2026-08-26-sticky-hq-transcription-preference.md (frontmatter)
 
+#### docs/implemented-plans/system-theme-selection.subplan.md
+
+Title: "System theme selection and landmark overrides" | 147 lines
+
+Referenced by:
+- docs/plans/workspace-pane-controls.md:578 (link) — [implemented system-theme subplan](../implemented-plans/system-theme-selection.subplan.md).
+
 #### docs/implemented-plans/tailscale-expose-and-protect.md
 
 Title: "Tailscale expose-and-protect" | 590 lines
@@ -4539,7 +4550,7 @@ References:
 Title: "The agent sees the interface and points at controls in it" | 1306 lines
 
 Referenced by:
-- docs/mobile-contract.md:531 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
+- docs/mobile-contract.md:536 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
 - ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:10 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:25 (link) — [agent-points-at-ui](../../../beebox/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:5 (frontmatter) — design: ../../../beebox/docs/plans/agent-points-at-ui.md
@@ -4674,12 +4685,13 @@ References:
 
 #### docs/plans/chat-everywhere.md
 
-Title: "Chat everywhere: one input, explicit conversational focus" | 798 lines
+Title: "Chat everywhere: one input, explicit conversational focus" | 894 lines
 
 Referenced by:
 - docs/implemented-plans/card-themes.md:19 (link) — [chat everywhere](../plans/chat-everywhere.md), and
 - docs/mobile-parity.md:25 (link) — | Conversation-bound input across box pages | done in [chat-everywhere](plans/chat-everywhere.md) worktree — V3 destinat
 - docs/plans/chat-everywhere.review.md:3 (link) — Review of [Chat everywhere](chat-everywhere.md), 2026-09-07. The independent
+- docs/plans/workspace-pane-controls.md:50 (link) — The existing [chat-everywhere plan](chat-everywhere.md) is the recipient/attention
 - ../issues/features/2026-08-30-chat-input-everywhere.md:17 (link) — Planning is in [Chat everywhere](../../beebox/docs/plans/chat-everywhere.md)
 
 References:
@@ -4699,13 +4711,14 @@ References:
 - → ../issues/closed/bugs/2026-08-30-chat-card-panel-missing-landmark-context.md (link)
 - → docs/mobile-contract.md (mention)
 - → docs/plans/chat-everywhere.review.md (link)
+- → ../issues/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md (link)
 
 #### docs/plans/chat-everywhere.review.md
 
 Title: "Plan Engineering Review — Chat everywhere" | 299 lines
 
 Referenced by:
-- docs/plans/chat-everywhere.md:756 (link) — Plan validation record: documentation checks passed; the [engineering review](chat-everywhere.review.md) records cross-m
+- docs/plans/chat-everywhere.md:762 (link) — Plan validation record: documentation checks passed; the [engineering review](chat-everywhere.review.md) records cross-m
 
 References:
 - → docs/plans/chat-everywhere.md (link)
@@ -4725,7 +4738,7 @@ Referenced by:
 Title: "Chat photo batch upload" | 513 lines
 
 Referenced by:
-- docs/mobile-contract.md:876 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:881 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/closed/bugs/2026-07-30-capture-teardown-race.md:15 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
@@ -5198,7 +5211,7 @@ References:
 Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines
 
 Referenced by:
-- docs/mobile-contract.md:1238 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/mobile-contract.md:1243 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
 - docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
 - docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -5651,6 +5664,41 @@ Referenced by:
 References:
 - → user-stories/catalog/2026-08-21.md (link)
 
+#### docs/plans/workspace-pane-controls.md
+
+Title: "Workspace panes, focus, and conversation" | 579 lines
+
+Referenced by:
+- docs/plans/workspace-pane-controls.review.md:4 (link) — against source and revised [the plan](workspace-pane-controls.md). The reviewer
+- ../issues/features/2026-07-28-directories-as-viewable-things.md:43 (link) — The [workspace pane plan](../../beebox/docs/plans/workspace-pane-controls.md)
+- ../issues/features/2026-09-08-dashboard-workspace-tab.md:20 (link) — This is deferred from the [workspace pane plan](../../beebox/docs/plans/workspace-pane-controls.md).
+
+References:
+- → ../issues/features/2026-07-23-mobile-modal-not-split-pane.md (link)
+- → ../issues/features/2026-08-30-chat-input-everywhere.md (link)
+- → ../issues/closed/bugs/2026-09-08-new-chat-card-navigation-resets-start.md (link)
+- → docs/engineering-principles.md (link)
+- → docs/plans/chat-everywhere.md (link)
+- → docs/mobile-contract.md (mention)
+- → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
+- → ../issues/features/2026-09-08-dashboard-workspace-tab.md (link)
+- → ../issues/features/2026-09-08-landmark-scoped-pinned-card-baseline.md (link)
+- → ../issues/features/2026-09-08-review-queue-hierarchical-progress.md (link)
+- → ../issues/features/2026-09-08-saved-card-sets-cross-landmark.md (link)
+- → ../issues/features/2026-09-08-agent-show-card-action.md (link)
+- → ../issues/features/2026-09-08-card-links-show-open-state.md (link)
+- → ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md (link)
+- → docs/testing.md (mention)
+- → docs/implemented-plans/system-theme-selection.subplan.md (link)
+
+#### docs/plans/workspace-pane-controls.review.md **[ORPHAN]**
+
+Title: "Plan Engineering Review — workspace pane controls" | 233 lines
+
+References:
+- → docs/plans/workspace-pane-controls.md (link)
+- → ../issues/bugs/2026-09-08-view-test-invalid-card-diagnostic-missing-under-load.md (link)
+
 #### docs/plans/workstream-exhibits.md
 
 Title: "Workstream exhibits" | 754 lines
@@ -5981,7 +6029,7 @@ No references in or out.
 
 #### src/frontend/src/components/chat/CLAUDE.md
 
-Title: "Chat UI" | 171 lines
+Title: "Chat UI" | 159 lines
 
 Referenced by:
 - docs/implemented-plans/chat-stream-finalize-unify.md:344 (mention) — `CLAUDE.md` (`src/frontend/src/components/chat/CLAUDE.md`, shipped with the scroll
