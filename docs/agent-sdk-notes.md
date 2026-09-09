@@ -32,23 +32,24 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.260`, Codex `0.153.4` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.263`, Codex `0.153.4` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.263` (SDK), `2.1.263` (Claude Code), `0.153.4` (Codex)
+- **Latest reviewed upstream version:** `0.3.266` (SDK), `2.1.266` (Claude Code), `0.153.4` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.260` was taken this turn as the newest
-  settled SDK version, which matters more than a routine step: it is the release
-  that fixes *"intermittent `task output swap refused` errors when many sessions
-  share a project directory"* — the failure mode flagged on 2026-09-03 as the
-  one to watch in a busy box, since the project directory is keyed on cwd and
-  every chat thread in a box shares one. Pending SDK: `0.3.261` (~35h) and
-  `0.3.263` (~3h), neither act-now. No Codex release since `0.153.4`, which the
-  boxholder pinned on 2026-09-05.
+- **Current recommendation:** `0.3.263` was taken this turn as the newest
+  settled version — an opaque parity release with nothing to assess, so this is a
+  currency step rather than a fix. The pending pair is the one that matters:
+  `0.3.265` (~19h) changes agent shell behavior — a `cd` now persists across
+  turns — and `0.3.266` (~15h) exists only to repair a gateway regression
+  `0.3.265` introduced. Take `0.3.265` and `0.3.266` **together**, never
+  `0.3.265` alone, and land
+  `issues/bugs/2026-09-09-agent-shell-cwd-now-persists-across-turns.md` before
+  the pin crosses. No Codex release since `0.153.4`.
 
 ## Codex 0.153.4 — applied 2026-09-05 (boxholder asked for it now)
 
@@ -64,7 +65,81 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.263 / Claude Code 2.1.263 — pending, nothing to assess (published 2026-09-06T02:09Z, ~3h at this turn)
+### 0.3.266 / Claude Code 2.1.266 — pending (published 2026-09-08T23:32Z, ~15h at this turn)
+
+- **Upstream:** A single fix, and it is a repair of the release directly below
+  it. `2.1.265` started honoring the undocumented `CLAUDE_CODE_USE_GATEWAY`
+  environment variable on its own, where it had previously been ignored unless
+  `ANTHROPIC_BASE_URL` **and** `ANTHROPIC_AUTH_TOKEN` were both set. Setups that
+  had it alongside an API key, an `apiKeyHelper`, or custom auth headers failed
+  **every request** with "Not signed in to the Cloud gateway". `2.1.266` makes
+  the variable inert again; no configuration change needed.
+- **Beebox applicability:** Not exposed, but worth knowing why rather than
+  assuming. `CLAUDE_CODE_USE_GATEWAY` appears nowhere in this repo, and it is not
+  in `script-env-allowlist.ts`, so a box agent could not inherit it from the
+  boxholder's shell even if it were set there. beebox *does* set
+  `ANTHROPIC_BASE_URL` on one path — `BBX_LOG_PROMPTS=1` points agent runs at the
+  local prompt-logger proxy (`src/core/agent/prompt-logger.ts`) — which is the
+  same family of configuration the regression hit, so this is the shape to
+  remember if gateway env ever enters the picture.
+- **Action:** Settled path. **Pair it with `0.3.265`:** they are one change and
+  its repair, published four and a half hours apart. `0.3.265` settles first by
+  the clock, and taking it alone would pin the broken half.
+- **Sources:** [Claude Code 2.1.266](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21266)
+
+### 0.3.265 / Claude Code 2.1.265 — pending (published 2026-09-08T19:05Z, ~19h at this turn)
+
+- **The item that changes beebox's behavior:** *"Fixed non-interactive sessions
+  (`-p` with stream-json input, Agent SDK, cloud sessions) resetting the shell
+  working directory at each new user message; a `cd` now persists across turns."*
+  Every beebox agent and chat thread is a multi-turn SDK session started with
+  `cwd: boxRoot`, so until now the agent's shell returned to the box root at
+  every message and from `0.3.265` it does not.
+  The landing spot is `ensureAgentCommitted` (`src/core/agent/commit.ts`), whose
+  two halves stop agreeing about where they are: it checks the tree with
+  `getStatus(boxRoot)` — a child process handed the box root explicitly — but
+  **resumes the agent session** to do the committing, through a shell that may be
+  parked in a subdirectory from an earlier turn. A pathspec-scoped `git add`
+  there stages one subtree, `getStatus(boxRoot)` still sees changes, and the
+  fallback commit fires; a shell parked outside the box points `git` at another
+  repository entirely. Filed as
+  `issues/bugs/2026-09-09-agent-shell-cwd-now-persists-across-turns.md`, to be
+  fixed **before** the pin crosses rather than after — the pin is `0.3.263`
+  today, so nothing is reachable yet.
+  Note what does *not* break: chat links and embeds, because
+  `src/core/chat/session/prompts.ts:92` already tells agents they resolve from
+  the box root "never from your working directory". The assumption this release
+  invalidates was already documented here as not holding.
+- **Other runtime-relevant fixes:** resume after the previous process died
+  mid-tool no longer rewrites the last prompt and now keeps the interrupted tool
+  call marked as interrupted (beebox resumes chat threads after box-child
+  restarts, so this is the shape it hits); SDK sessions no longer occasionally
+  require re-login when a session is closed while its token refreshes — worth
+  naming because a spurious re-login is exactly the symptom that invites
+  credential-fiddling; and tool results saved to disk are now capped at 1 GB with
+  the truncation stated in the preview, the fifth release in the output-volume
+  family.
+- **Harness:** *"Fixed Claude Code's own git status and diff probes running clean
+  filters configured by a nested repository inside the working tree."* This
+  checkout has exactly that shape — `private-issues` is a separate repository
+  symlink-mounted inside it. Also a plugin-path containment fix (a backslash in a
+  plugin path bypassed the symlink check on macOS and Linux); beebox's local
+  plugin path has no backslash.
+- **Additive:** `user_message_uuid` / `user_message_uuids` now also appear on
+  synthetic turns, on turns Claude Code starts itself such as a resume, and on
+  results for turns that sent no API request; the field is now set on the first
+  reply after each change of the message being answered rather than once per
+  turn. beebox still consumes neither.
+- **Action:** Settled path, and take it **with `0.3.266`** — see above.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03265), [Claude Code 2.1.265](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21265)
+
+### 0.3.264 / Claude Code 2.1.264 — never published
+
+`0.3.264` has a parity section in the SDK changelog; npm has no such version and
+Claude Code has no `2.1.264` section. The fifth such gap in under three weeks
+(`0.3.244`, `0.3.249`, `0.3.253`–`0.3.256`, `0.3.262`).
+
+### 0.3.263 / Claude Code 2.1.263 — APPLIED 2026-09-09, nothing to assess (published 2026-09-06T02:09Z)
 
 - **Upstream:** The SDK entry is parity-only, and 2.1.263 says only "Bug fixes
   and reliability improvements". Checked the tagged `v2.1.263` changelog as well
@@ -76,7 +151,18 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   `2.1.262` section nor a tag. The fourth such gap in two weeks
   (`0.3.244`, `0.3.249`, `0.3.253`–`0.3.256`).
 - **Beebox applicability:** Nothing assessable on either channel.
-- **Action:** Settled path; takeable 2026-09-08.
+- **Action:** Applied 2026-09-09 on the settled path (~84h old), the newest
+  settled version. An opaque release carries no reviewed benefit, but staying
+  current is the point of the lane — and the alternative was holding at
+  `0.3.260` while two more releases stacked up behind it.
+  `pnpm -C beebox test`: **9,672 pass, 2 fail**, both in
+  `test/frontend/lib/ui-scan/annotations.doctest.md`, which reproduces in
+  isolation and fails identically at the previous `0.3.260` pin — a `main`-side
+  red, filed as
+  `issues/bugs/2026-09-09-ui-scan-annotations-table-lists-two-absent-ids.md`
+  because the latest `full-suite` run classified itself as an environment
+  failure and filed nothing. `sdk-steering-probe`: all four steering behaviors
+  pass.
 - **Sources:** [Claude Code 2.1.263](https://github.com/anthropics/claude-code/blob/v2.1.263/CHANGELOG.md#21263)
 
 ### Codex 0.153.1 – 0.153.4 — APPLIED 2026-09-05 by the boxholder; the first Codex releases this ledger reviewed
