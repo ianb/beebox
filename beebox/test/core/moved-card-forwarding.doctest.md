@@ -51,6 +51,30 @@ JSON.stringify(await resolveMovedCardPath({ boxRoot: box.root, missingPath: "_co
 await box.cleanup();
 ```
 
+The recovery relationship belongs to box files, not only typed `.card` files.
+An unstaged Markdown move is detected through the same scratch index.
+
+```ts
+const markdown = await makeTmpBox({ git: true });
+await markdown.seed("_content/documents/legal/status.md", "A sufficiently distinctive legal status document.\n");
+markdown.commitAll("seed markdown document");
+await markdown.seed("_content/archive/.keep", "");
+await rename(
+  markdown.path("_content/documents/legal/status.md"),
+  markdown.path("_content/archive/legal-status.md"),
+);
+
+JSON.stringify(await resolveMovedCardPath({
+  boxRoot: markdown.root,
+  missingPath: "_content/documents/legal/status.md",
+}))
+=> {"kind":"moved","path":"_content/archive/legal-status.md"}
+```
+
+```ts cleanup
+await markdown.cleanup();
+```
+
 ## Committed and chained moves
 
 A committed rename is read from the latest commit that touched the old path.
@@ -143,8 +167,8 @@ warnings.length
 await plain.cleanup();
 ```
 
-A committed rename whose destination was later deleted, changed to a non-card,
-or replaced by a symlink outside the box stays an ordinary miss.
+A committed rename whose destination was later deleted or replaced by a
+symlink outside the box stays an ordinary miss.
 
 ```ts
 const deleted = await makeTmpBox({ git: true });
@@ -162,17 +186,17 @@ await deleted.cleanup();
 ```
 
 ```ts
-const nonCard = await makeTmpBox({ git: true });
-await nonCard.seed("_content/Old.memo.card", CARD);
-nonCard.commitAll("seed non-card destination");
-await rename(nonCard.path("_content/Old.memo.card"), nonCard.path("_content/New.md"));
-nonCard.commitAll("move to markdown");
-JSON.stringify(await resolveMovedCardPath({ boxRoot: nonCard.root, missingPath: "_content/Old.memo.card" }))
-=> {"kind":"not-moved"}
+const otherFile = await makeTmpBox({ git: true });
+await otherFile.seed("_content/Old.txt", "A plain file whose identity survives its move.\n");
+otherFile.commitAll("seed plain file");
+await rename(otherFile.path("_content/Old.txt"), otherFile.path("_content/New.data"));
+otherFile.commitAll("move plain file");
+JSON.stringify(await resolveMovedCardPath({ boxRoot: otherFile.root, missingPath: "_content/Old.txt" }))
+=> {"kind":"moved","path":"_content/New.data"}
 ```
 
 ```ts cleanup
-await nonCard.cleanup();
+await otherFile.cleanup();
 ```
 
 ```ts

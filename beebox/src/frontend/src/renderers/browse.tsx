@@ -4,7 +4,7 @@ import { registerFileType, type RendererProps } from "./index";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
 import { BrowseBody } from "../pages/browse/BrowsePage";
 import { BrowseLocationError } from "../pages/browse/components/BrowseLocationError";
-import { browseParent, browseStateToViewState, isCardBrowseDetail, legacyBrowseTarget, parseBrowseState, type BrowseState } from "../lib/browse-card-state";
+import { browseParent, browseStateToViewState, legacyBrowseTarget, parseBrowseState, type BrowseState } from "../lib/browse-card-state";
 import { trpc } from "../lib/trpc";
 import { parseViewUrl, type ViewState, type ViewTarget } from "../lib/view-url";
 import { BrowseLoading } from "../pages/browse/components/BrowseLoading";
@@ -12,27 +12,24 @@ import { useAppBarPlace } from "../components/app-bar-chrome";
 import { useCardVisible, useFocusedConversationCard } from "../components/chat/everywhere/card-context";
 
 function browseLocationValid({
-  cardDetail,
   directoryKind,
   hasDetail,
   detailKind,
 }: {
-  cardDetail: boolean;
   directoryKind: "directory" | "file" | "missing" | undefined;
   hasDetail: boolean;
   detailKind: "directory" | "file" | "missing" | undefined;
 }): boolean {
-  if (cardDetail) return true;
-  if (directoryKind !== "directory") return false;
-  return !hasDetail || detailKind === "file";
+  if (hasDetail) return detailKind === "file" || detailKind === "missing";
+  return directoryKind === "directory";
 }
 
-function browseLocationLoading({ cardDetail, directoryLoading, detailLoading }: {
-  cardDetail: boolean;
+function browseLocationLoading({ hasDetail, directoryLoading, detailLoading }: {
+  hasDetail: boolean;
   directoryLoading: boolean;
   detailLoading: boolean;
 }): boolean {
-  return !cardDetail && (directoryLoading || detailLoading);
+  return hasDetail ? detailLoading : directoryLoading;
 }
 
 function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (next: ViewState, method: "push" | "replace") => void }) {
@@ -43,11 +40,9 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
   const navigationVersion = useRef(0);
   const stateKey = JSON.stringify(state);
   const [navigationError, setNavigationError] = useState<string | null>(null);
-  const cardDetail = state.detail !== undefined && isCardBrowseDetail(state.detail.path);
   const directory = trpc.files.kind.useQuery({ path: state.directory });
-  const detail = trpc.files.kind.useQuery({ path: state.detail?.path ?? "" }, { enabled: Boolean(state.detail) && !cardDetail });
+  const detail = trpc.files.kind.useQuery({ path: state.detail?.path ?? "" }, { enabled: Boolean(state.detail) });
   const valid = browseLocationValid({
-    cardDetail,
     directoryKind: directory.data?.kind,
     hasDetail: state.detail !== undefined,
     detailKind: detail.data?.kind,
@@ -71,7 +66,7 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
   }
   const reset = () => { navigationVersion.current += 1; onChange({ directory: "" }, "replace"); };
   if (browseLocationLoading({
-    cardDetail,
+    hasDetail: state.detail !== undefined,
     directoryLoading: directory.isLoading,
     detailLoading: state.detail !== undefined && detail.isLoading,
   })) return <BrowseLoading />;

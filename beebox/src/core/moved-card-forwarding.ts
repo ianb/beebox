@@ -11,7 +11,7 @@ import type { MovedCardRecovery } from "./moved-card-recovery.js";
 export type { MovedCardRecovery } from "./moved-card-recovery.js";
 
 const MAX_MOVE_HOPS = 16;
-const CARD_PATHSPEC = ":(glob)**/*.card";
+const BOX_PATHSPEC = ".";
 
 export type MovedCardResolution =
   | MovedCardRecovery
@@ -77,7 +77,7 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
       GIT_ALTERNATE_OBJECT_DIRECTORIES: realObjectsPath,
     }));
     await git.raw(["read-tree", "HEAD"]);
-    await git.raw(["add", "-A", "--", CARD_PATHSPEC]);
+    await git.raw(["add", "-A", "--", BOX_PATHSPEC]);
     const raw = await git.raw([
       "diff",
       "--cached",
@@ -87,7 +87,7 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
       "--relative",
       "HEAD",
       "--",
-      CARD_PATHSPEC,
+      BOX_PATHSPEC,
     ]);
     const records = parseGitRenameRecords(raw);
     if (records === null) throw new GitRenameOutputError();
@@ -115,8 +115,7 @@ async function committedRename(boxRoot: string, source: string): Promise<string 
   return uniqueRenameDestination(records, source);
 }
 
-async function existingSafeCard(boxRoot: string, candidate: string): Promise<string | null> {
-  if (!candidate.endsWith(".card")) return null;
+async function existingSafeFile(boxRoot: string, candidate: string): Promise<string | null> {
   const resolved = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: candidate, mode: "read" });
   if (!resolved.ok) return null;
   try {
@@ -144,7 +143,7 @@ export async function resolveMovedCardPath({
   const reportWarning = warn ?? console.warn;
   let warningReported = false;
   try {
-    if (await existingSafeCard(boxRoot, missingPath)) return { kind: "not-moved" };
+    if (await existingSafeFile(boxRoot, missingPath)) return { kind: "not-moved" };
     let uncommittedRenames: RenameRecord[] = [];
     try {
       uncommittedRenames = await workingTreeRenames(boxRoot);
@@ -163,11 +162,11 @@ export async function resolveMovedCardPath({
         ?? await committedRename(boxRoot, candidate);
       if (next === null || next === candidate) return { kind: "not-moved" };
 
-      const existing = await existingSafeCard(boxRoot, next);
+      const existing = await existingSafeFile(boxRoot, next);
       if (existing !== null) {
-        // The source may have been recreated while Git was running. A real card
+        // The source may have been recreated while Git was running. A real file
         // at the requested path always wins over historical recovery.
-        if (await existingSafeCard(boxRoot, missingPath)) return { kind: "not-moved" };
+        if (await existingSafeFile(boxRoot, missingPath)) return { kind: "not-moved" };
         return { kind: "moved", path: existing };
       }
       candidate = next;

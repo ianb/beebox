@@ -98,8 +98,23 @@ parseBrowseState(parseViewUrl(serializeViewUrl(converted)))
   "directory": "_content/Photo.attach"
 }
 
-await legacyBrowseTarget({ ...file, path: "_content/gone" }, async () => "missing")
-=> throws BrowseLocationError: Browse location does not exist: _content/gone
+(await legacyBrowseTarget({ ...file, path: "_content/gone" }, async () => "missing")).viewState
+=> {
+  "directory": "_content",
+  "detail": {
+    "path": "_content/gone",
+    "viewer": "Source",
+    "params": {
+      "zoom": "2"
+    },
+    "viewState": {
+      "selected": [
+        1,
+        2
+      ]
+    }
+  }
+}
 
 (await legacyBrowseTarget({ ...file, path: "_content/Old.memo.card" }, async () => "missing")).viewState
 => {
