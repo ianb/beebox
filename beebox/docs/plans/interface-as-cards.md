@@ -3,7 +3,7 @@ title: "Interface as cards — canonical Dashboard, Settings, and Browse"
 status: partial
 workstream: interface-as-cards
 issues:
-  - ../../../issues/features/2026-09-08-dashboard-workspace-tab.md
+  - ../../../issues/closed/features/2026-09-08-dashboard-workspace-tab.md
 ---
 # Interface as cards — canonical Dashboard, Settings, and Browse
 
@@ -11,7 +11,7 @@ Open Dashboard, Settings, and Browse alongside other cards without leaving the
 workspace. Give each a real, canonical card address, type-inferred rendering,
 and a notes margin; keep the existing pane controls and conversation ownership.
 
-**Issues addressed:** [Dashboard tab](../../../issues/features/2026-09-08-dashboard-workspace-tab.md)
+**Issues addressed:** [Dashboard tab](../../../issues/closed/features/2026-09-08-dashboard-workspace-tab.md)
 is resolved by this plan. Its older “Do not require a synthetic on-disk card”
 proposal is superseded by the boxholder's explicit choice of real canonical cards.
 [Directory views](../../../issues/features/2026-07-28-directories-as-viewable-things.md)
@@ -116,8 +116,8 @@ or window manager is needed.
 inventing a privileged card namespace. Exact locations prevent accidental
 second instruments (direct preferences; principles 1, 7, 11).
 
-**Direction:** Introduce a small shared constant table, proposed
-`src/shared/system-card-paths.ts`, with exactly these entries:
+**Implemented:** The shared table in `src/shared/system-card-paths.ts` defines
+exactly these entries:
 
 | Type | Canonical box-root-relative path |
 |---|---|
@@ -125,7 +125,7 @@ second instruments (direct preferences; principles 1, 7, 11).
 | `settings` | `_config/interface/settings.card` |
 | `browse` | `_config/interface/browse.card` |
 
-The directory choice is this plan's proposed default. Use the table for renderer
+The boxholder approved this directory. Use the table for renderer
 checks, host validation, initial seed content, and navigation links. It is not a
 box-writable registry, binding cascade, plugin API, or new generic schema policy.
 The types have the existing global title fields and a markdown body for notes;
@@ -155,7 +155,7 @@ decision helper, and location validation tests. No pane or transport changes.
 Protection must evaluate the resulting box state, with a bounded transition for
 upgrades (direct request; principles 3, 4, 11).
 
-**Direction:** Add one host-level invariant checking that required canonical
+**Implemented:** The host-level invariant checks that required canonical
 paths exist with the expected types and valid minimal contents. Full validation
 checks the working tree. Pre-commit checks the candidate Git index, even on a
 deletion-only commit, including staged renames and parent-directory removal.
@@ -227,8 +227,8 @@ rollback; then wire host validation and missing-only seeding to them.
 **What / why:** Their menus currently leave the workspace. Render the existing
 instruments at their card addresses (direct preference; principles 8, 10).
 
-**Direction:** Extract route-independent bodies from DashboardPage and
-SettingsPage and register renderers for their types. Keep current behavior,
+**Implemented:** Type renderers wrap the existing route-independent
+DashboardPage and SettingsPage bodies. Keep current behavior,
 queries, mutations, error states, and controls. Menu entries use the existing
 open-card path with canonical targets. Where a menu is outside the workspace
 provider, use the canonical card href handled by that path; do not move provider
@@ -281,8 +281,8 @@ same path with safe-context checks.
 **What / why:** A directory is the browser's current location, not the identity
 of another Browse card (direct preference; principles 1, 8, 9).
 
-**Direction:** The canonical tab target always remains `browse.card`. Proposed
-Browse view-state shape, parsed at its renderer boundary:
+**Implemented:** The canonical tab target always remains `browse.card`. Its
+view-state shape is parsed at the renderer boundary:
 
 ```ts
 type BrowseState = {
@@ -356,8 +356,8 @@ adapter regressions, including same-tab reuse and Back; then adapt the body.
 parallel routed implementations would preserve the original inconsistency
 (principles 7, 8, 12).
 
-**Direction:** Teach the three types, locations, notes, deletion protection,
-Browse state, and migration repair in generated schema guidance and box docs.
+**Implemented:** Generated schema guidance and box docs teach the three types,
+locations, notes, deletion protection, Browse state, and migration repair.
 Keep system category usage descriptive; it does not mean all system-category
 cards are singletons. Update source/profile navigation to canonical targets.
 Remove the replaced page implementations and obsolete pathname inference
@@ -491,7 +491,7 @@ instances remain outside this plan.
 
 ## Knowledge audits
 
-Add `knows_directly` cases for canonical interface-card paths/type inference,
+The audit suite includes `knows_directly` cases for canonical interface-card paths/type inference,
 notes versus live state, one Browse card with directory state, and restoring a
 required card versus running a declared migration. Run the relevant audits against
 the isolated test box after implementation and generated-doc refresh; record
@@ -553,7 +553,7 @@ all final cards, not merely a successful script exit. Missing/dirty/conflicting
 boxes remain visibly pending; do not mark convergence from one local run.
 Deployment refreshes generated docs after migration, with per-box completion
 and retained notes verified. Local verification seeded the isolated worktree test box only. Production
-convergence has not been exercised; this work has not been merged or deployed.
+convergence remains a deployment follow-up; local evidence does not establish it.
 
 ## Implementation evidence — September 9
 
@@ -592,5 +592,25 @@ convergence has not been exercised; this work has not been merged or deployed.
   was excluded. Reproduction is recorded in the existing
   [screenshot flake](../../../issues/bugs/2026-07-10-agent-browser-screenshot-flake.md).
   **Partial status reflects pending trustworthy visual/device signoff**, not
-  an outstanding implementation or automated-test failure. No merge or deploy
-  has occurred.
+  an outstanding implementation or automated-test failure. Landing verification
+  is recorded separately from production convergence.
+
+## Finish scope assessment — September 9
+
+All five implementation tracks are MET in the code. Visual/device acceptance and
+production convergence remain PARTIAL, so this plan stays active as `partial`.
+The requirements above describe the implemented contract; their imperative
+wording is retained as acceptance criteria, not an unstarted implementation list.
+
+| Requirement group | Status | Evidence |
+|---|---|---|
+| A: canonical identity, inferred type, notes, path rejection | MET | `src/shared/system-card-paths.ts:4`, `src/schemas/dashboard.ts:9`, `src/frontend/src/components/system-cards/SystemCardBoundary.tsx:11` and sibling schemas/renderers |
+| B: index/HEAD protection, old-box transition, missing-only bootstrap and completion guard | MET | `src/core/system-cards.ts:83`, `src/core/system-cards.ts:96`, `src/core/migration-run.ts:114`, `test/core/migrations/canonical-interface-cards.doctest.md` |
+| C: ordinary Dashboard/Settings targets, compatibility entry, recipient and safe context | MET | `src/frontend/src/renderers/system-cards.tsx:12`, `src/frontend/src/router.tsx:106`, `src/frontend/src/lib/system-card-navigation.ts:26` |
+| D: one Browse target, nested state, history and visible attention | MET | `src/frontend/src/lib/browse-card-state.ts:47`, `src/frontend/src/renderers/browse.tsx:14`, `src/frontend/src/components/chat/workspace/WorkspaceProvider.tsx:128`, `src/frontend/src/components/chat/workspace/WorkspaceCanvas.tsx:50` |
+| E: guidance/audits and removal of replaced routed adapters | MET | `docs/box/interface-cards.md`, `src/dev/knowledge-audits.yaml:9`, `src/frontend/src/router.tsx:153`; BrowsePageWrapper removed from `src/frontend/src/app-shell.tsx` |
+| IC1–IC7 visual/device acceptance and production rollout | PARTIAL | DOM/history and automated evidence above; trustworthy screenshots, physical-device replay, and per-production-box convergence still unverified |
+
+Future relocation policy is a constraint on a future migration, not an absent
+implementation requirement of this bootstrap. General directory-card identity,
+route consolidation, and mobile pane redesign remain explicitly out of scope.
