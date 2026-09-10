@@ -18,7 +18,6 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { EventBus } from "../../core/event-bus.js";
 import {
-  createStagingSession,
   readStagingSession,
   sealStagingSession,
   listStagingSessions,
@@ -36,6 +35,7 @@ import { sweepAbandonedCaptures } from "../../core/capture/sweep.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js";
 import { getChatRuntime, type ChatRuntime } from "../chat-runtime.js";
 import { handleCaptureUpload } from "./capture-upload.js";
+import { handleCreateCaptureSession } from "./capture-create.js";
 
 /** How much awake time between abandonment sweeps (Track 5). */
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
@@ -101,10 +101,6 @@ interface RegisterCaptureRoutesOptions {
   eventBus: EventBus;
 }
 
-const CAPTURE_CAPABILITIES = {
-  acceptedAudioFormats: ["webm-opus", "m4a-aac"],
-  acceptedUploadEncodings: ["raw-body-v1"],
-} as const;
 const ResumableQuerySchema = z.object({
   targetSessionId: z.string().nullable().optional(),
   clientSessionId: z.string().nullable().optional(),
@@ -121,30 +117,10 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     );
   }
 
-  // POST /api/capture/sessions — create a new staging session.
-  server.post<{ Body: { targetSessionId?: string | null } | undefined }>(
+  // POST /api/capture/sessions — create a new staging session (capture or voice).
+  server.post<{ Body: unknown }>(
     "/api/capture/sessions",
-    async (request, reply) => {
-      const owner = await resolveCaptureRequestOwner({ boxRoot, request });
-      if (owner.status === "ownerless-mobile") {
-        return reply.status(403).send({
-          error: "This paired device predates mobile identity. Re-pair it before using Capture.",
-        });
-      }
-      if (owner.status === "unauthenticated") {
-        return reply.status(401).send({ error: "Not authenticated" });
-      }
-      if (owner.status === "auth-store-unavailable") {
-        return reply.status(503).send({ error: "Authentication temporarily unavailable" });
-      }
-      const targetSessionId = request.body?.targetSessionId ?? null;
-      const session = await createStagingSession({ boxRoot, targetSessionId, createdBy: owner.email });
-      return {
-        sessionId: session.id,
-        startedAt: session.createdAt,
-        capabilities: CAPTURE_CAPABILITIES,
-      };
-    },
+    async (request, reply) => handleCreateCaptureSession({ boxRoot, request, reply }),
   );
 
   server.get<{

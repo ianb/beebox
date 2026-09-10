@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const CaptureAudioFormatSchema = z.enum(["webm-opus", "m4a-aac"]);
+export const CaptureAudioFormatSchema = z.enum(["webm-opus", "m4a-aac", "pcm-s16le-16k"]);
 export type CaptureAudioFormat = z.infer<typeof CaptureAudioFormatSchema>;
 
 export class StagingAudioFormatMismatchError extends Error {

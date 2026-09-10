@@ -518,3 +518,182 @@ again.statusCode
 ```ts cleanup
 await ctx.cleanup();
 ```
+
+## Voice sessions: idempotent client-generated create, and a fenced-off owner/kind
+
+A voice recording (`docs/plans/resilient-voice-recording.md`) creates its
+staging session with a client-generated UUID v4, so the browser can start
+staging before the box confirms the session exists. A repeat of the same id,
+kind and owner is a no-op that returns the existing session:
+
+```ts
+const ctx = await makeTestServer();
+const recordingId = "6a6e6b1e-2f8a-4c9a-8b1a-1a2b3c4d5e6f";
+const created = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+});
+JSON.stringify({ status: created.statusCode, sessionId: created.body.sessionId })
+=> {"status":200,"sessionId":"6a6e6b1e-2f8a-4c9a-8b1a-1a2b3c4d5e6f"}
+```
+
+```ts continue
+const repeat = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+});
+JSON.stringify({ status: repeat.statusCode, sessionId: repeat.body.sessionId })
+=> {"status":200,"sessionId":"6a6e6b1e-2f8a-4c9a-8b1a-1a2b3c4d5e6f"}
+```
+
+The manifest carries the `voice` object with `hq: none` and `handoff: open`,
+and was created only once (one directory, not two):
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${recordingId}/session.json`));
+JSON.stringify({ kind: manifest.kind, voice: manifest.voice })
+=> {"kind":"voice","voice":{"targetSessionId":"chat-voice","startedAt":"«*»","hq":{"state":"none"},"handoff":{"mode":"open"}}}
+```
+
+A non-UUID-v4 id is rejected before any session is created:
+
+```ts continue
+const badId = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: "not-a-uuid" },
+});
+badId.statusCode
+=> 400
+```
+
+A `targetSessionId` is required for a voice session:
+
+```ts continue
+const noTarget = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice" },
+});
+noTarget.statusCode
+=> 400
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+A different mobile-pairing owner reusing the same recording id is a conflict,
+not a silent takeover:
+
+```ts
+const ctx = await makeTestServer();
+const ticket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "owner@example.com" });
+const paired = await redeemMobilePairingTicket(ctx.boxRoot, { pairingToken: ticket.token, deviceLabel: "Owner's phone" });
+if (!paired) throw new Error("pairing failed");
+const ownerAuth = { authorization: `Bearer ${paired.deviceToken}` };
+
+const otherTicket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "other@example.com" });
+const otherPaired = await redeemMobilePairingTicket(ctx.boxRoot, { pairingToken: otherTicket.token, deviceLabel: "Other phone" });
+if (!otherPaired) throw new Error("second pairing failed");
+const otherAuth = { authorization: `Bearer ${otherPaired.deviceToken}` };
+
+const recordingId = "7b7f7c2f-3f9b-4d0b-9c2b-2b3c4d5e6f70";
+const created = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+  headers: ownerAuth,
+});
+created.statusCode
+=> 200
+```
+
+```ts continue
+const stolen = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+  headers: otherAuth,
+});
+JSON.stringify({ status: stolen.statusCode, error: stolen.body.error })
+=> {"status":409,"error":"Session id already used by a different recording"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice sessions stage `pcm-s16le-16k` chunks; capture sessions cannot
+
+The upload route accepts one segment of raw PCM chunks per voice recording,
+its id the recording's own id, filenames `pcm-000001.raw` in sequence — the
+same idempotent-replay mechanism as every other capture upload:
+
+```ts
+const ctx = await makeTestServer();
+const recordingId = "8c8f8d3f-4f0c-4e1c-8d3c-3c4d5e6f7081";
+await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+});
+
+const chunk1 = await uploadRaw(ctx, {
+  sessionId: recordingId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": recordingId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const chunk2 = await uploadRaw(ctx, {
+  sessionId: recordingId, filename: "pcm-000002.raw", kind: "audio", data: Buffer.from("PCM2"),
+  headers: { "x-capture-segment-id": recordingId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+JSON.stringify([chunk1.statusCode, chunk2.statusCode])
+=> [200,200]
+```
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${recordingId}/session.json`));
+JSON.stringify({
+  segments: manifest.segments.map((s) => ({ id: s.id, format: s.format, chunks: s.chunks })),
+})
+=> {"segments":[{"id":"8c8f8d3f-4f0c-4e1c-8d3c-3c4d5e6f7081","format":"pcm-s16le-16k","chunks":["pcm-000001.raw","pcm-000002.raw"]}]}
+```
+
+An exact-bytes replay of the first chunk is idempotent, as any other capture
+upload's is:
+
+```ts continue
+const replay = await uploadRaw(ctx, {
+  sessionId: recordingId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": recordingId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+replay.statusCode
+=> 200
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+A `pcm-s16le-16k` chunk aimed at an ordinary capture session is refused —
+capture's finalize path never learned to concatenate or convert raw PCM:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { targetSessionId: "chat-abc" },
+});
+const sessionId = created.body.sessionId;
+const res = await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM"),
+  headers: { "x-capture-segment-id": "seg-a", "x-capture-audio-format": "pcm-s16le-16k" },
+});
+JSON.stringify({ status: res.statusCode, error: res.body.error })
+=> {"status":400,"error":"pcm-s16le-16k audio is only accepted for voice sessions"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```

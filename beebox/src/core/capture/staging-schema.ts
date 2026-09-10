@@ -11,6 +11,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { boxTmpDir } from "../../lib/box-tmp.js";
 import { assertNever } from "../../lib/invariant.js";
+import { HQ_TRANSCRIPTION_SERVICES } from "../../shared/transcription-services.js";
 import { CaptureAudioFormatSchema } from "./audio-format.js";
 
 /**
@@ -63,12 +64,116 @@ export type StagingFile = z.infer<typeof StagingFileSchema>;
 
 /**
  * Which pipeline owns a staging session. `capture` (default) is the recorded
- * photo/voice batch that becomes a capture-session card; `bulk` is a bulk
+ * photo/voice-memo batch that becomes a capture-session card; `bulk` is a bulk
  * file-upload batch (`docs/implemented-plans/bulk-file-upload.md`) that becomes an
- * `upload-batch` card. Old manifests predate the field and parse as `capture`.
+ * `upload-batch` card; `voice` is a chat voice recording
+ * (`docs/plans/resilient-voice-recording.md`) staged as raw PCM chunks and
+ * transcribed by the HQ job. Old manifests predate the field and parse as
+ * `capture`.
  */
-const StagingSessionKindSchema = z.enum(["capture", "bulk"]);
+const StagingSessionKindSchema = z.enum(["capture", "bulk", "voice"]);
 export type StagingSessionKind = z.infer<typeof StagingSessionKindSchema>;
+
+/**
+ * A terminal or in-progress classification of one HQ attempt's failure.
+ * `transient`/`permanent` come from `classifyHqError`; `exhausted` is the job's
+ * own verdict once the 24 h retry bound (`HQ_RETRY_BOUND_MS`) elapses. Carried
+ * on both the `retrying` and `failed` HQ states so a resumed job and the client
+ * badge can show the same reason without re-deriving it.
+ */
+const HqFailureSchema = z.object({
+  kind: z.enum(["transient", "permanent", "exhausted"]),
+  code: z.string(),
+  message: z.string(),
+  upstreamStatus: z.number().optional(),
+  /** Truncated to ≤500 chars by the caller before it reaches here. */
+  upstreamBody: z.string().optional(),
+});
+export type HqFailure = z.infer<typeof HqFailureSchema>;
+
+/** The finished HQ transcript, once every piece has succeeded. */
+const VoiceHqResultSchema = z.object({
+  text: z.string(),
+  diarized: z.boolean(),
+  service: z.string(),
+  pieces: z.number(),
+});
+export type VoiceHqResult = z.infer<typeof VoiceHqResultSchema>;
+
+/**
+ * The HQ job's progress for one voice recording. `none` until a finalize
+ * requests HQ; `ready`/`failed` are the two terminal outcomes a client or the
+ * late-delivery path can act on.
+ */
+const VoiceHqStateSchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("none") }),
+  z.object({ state: z.literal("queued") }),
+  z.object({
+    state: z.literal("transcribing"),
+    piece: z.number(),
+    pieces: z.number(),
+    attempt: z.number(),
+    pieceSeconds: z.number(),
+  }),
+  z.object({
+    state: z.literal("retrying"),
+    attempt: z.number(),
+    nextAttemptAt: z.string(),
+    failure: HqFailureSchema,
+    pieceSeconds: z.number(),
+  }),
+  z.object({ state: z.literal("ready"), result: VoiceHqResultSchema }),
+  /** Terminal: no further retry. */
+  z.object({ state: z.literal("failed"), failure: HqFailureSchema }),
+]);
+export type VoiceHqState = z.infer<typeof VoiceHqStateSchema>;
+
+/**
+ * Who has claimed the recording's realtime-vs-HQ text, and how the correction
+ * (if any) is progressing. `open` until the client's submit flow decides;
+ * `claimed` means the client sent HQ text itself; `late` means the client sent
+ * realtime text and the server will correct it once HQ is ready;
+ * `delivering`/`delivered` track that correction's own at-most-once send.
+ */
+const VoiceHandoffSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("open") }),
+  z.object({ mode: z.literal("claimed"), emissionId: z.string() }),
+  z.object({ mode: z.literal("late"), emissionId: z.string() }),
+  z.object({ mode: z.literal("delivering"), emissionId: z.string() }),
+  z.object({ mode: z.literal("delivered"), emissionId: z.string(), messageId: z.string() }),
+]);
+export type VoiceHandoff = z.infer<typeof VoiceHandoffSchema>;
+
+/**
+ * Written once by the finalize that requests HQ. Survives every `hq` state
+ * transition (including a server restart's resume), so a resumed job still
+ * knows its 24 h retry deadline (`requestedAt`) and where to deliver a late
+ * correction (`sessionId`).
+ */
+const VoiceHqRequestSchema = z.object({
+  requestedAt: z.string(),
+  service: z.enum(HQ_TRANSCRIPTION_SERVICES),
+  emissionId: z.string(),
+  sessionId: z.string(),
+});
+
+/**
+ * The `voice`-kind manifest object. Present if and only if `kind === "voice"`
+ * (enforced by {@link StagingSessionSchema}'s refinement) — every other kind
+ * never carries one, so a dispatch site can trust `session.voice` exists
+ * exactly when `isVoiceSession(session)` is true.
+ */
+const StagingVoiceSchema = z.object({
+  /** Chat session the recording belongs to. */
+  targetSessionId: z.string(),
+  /** ISO, client clock. */
+  startedAt: z.string(),
+  sealedAt: z.string().optional(),
+  hqRequest: VoiceHqRequestSchema.optional(),
+  hq: VoiceHqStateSchema,
+  handoff: VoiceHandoffSchema,
+});
+export type StagingVoice = z.infer<typeof StagingVoiceSchema>;
 
 /**
  * A predeclared bulk-upload item: a stable client-generated `id` plus the
@@ -116,7 +221,7 @@ export type StagingBulkFailedItem = z.infer<typeof StagingBulkFailedItemSchema>;
  * deliberate "Submit now" or normal "Done" finalize leaves this unset
  * (partial: false).
  */
-export const StagingSessionSchema = z.object({
+const StagingSessionBaseSchema = z.object({
   id: z.string(), createdAt: z.string(), lastActivityAt: z.string(),
   targetSessionId: z.string().nullable(), createdBy: z.string().nullable().default(null),
   kind: StagingSessionKindSchema.default("capture"),
@@ -148,8 +253,26 @@ export const StagingSessionSchema = z.object({
    */
   strandedNotifiedAt: z.string().optional(),
   totalBytes: z.number().optional(), partial: z.boolean().optional(),
+  /** The voice-recording manifest object. Voice sessions only — see {@link StagingVoiceSchema}. */
+  voice: StagingVoiceSchema.optional(),
 });
-export type StagingSession = z.infer<typeof StagingSessionSchema>;
+
+/**
+ * `voice` is present if and only if `kind === "voice"` — checked once here so
+ * every reader can trust the invariant rather than re-verifying it. A manifest
+ * that violates this (hand-edited, or a future bug) fails to parse rather than
+ * silently exposing a `voice` object on a capture/bulk session or an
+ * `undefined` one on a voice session.
+ */
+export const StagingSessionSchema = StagingSessionBaseSchema.superRefine((session, ctx) => {
+  if (session.kind === "voice" && session.voice === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "voice session is missing its voice object", path: ["voice"] });
+  }
+  if (session.kind !== "voice" && session.voice !== undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${session.kind} session must not carry a voice object`, path: ["voice"] });
+  }
+});
+export type StagingSession = z.infer<typeof StagingSessionBaseSchema>;
 
 /**
  * True for a capture-pipeline session. Written as an exhaustive switch so
@@ -163,17 +286,40 @@ export function isCaptureSession(session: StagingSession): boolean {
       return true;
     case "bulk":
       return false;
+    case "voice":
+      return false;
     default:
       return assertNever(session.kind);
   }
 }
 
-/** True for a bulk-upload-pipeline session (the complement of {@link isCaptureSession}). */
+/** True for a bulk-upload-pipeline session (the complement of {@link isCaptureSession} and {@link isVoiceSession}). */
 export function isBulkSession(session: StagingSession): boolean {
   switch (session.kind) {
     case "capture":
       return false;
     case "bulk":
+      return true;
+    case "voice":
+      return false;
+    default:
+      return assertNever(session.kind);
+  }
+}
+
+/**
+ * True for a voice-recording-pipeline session (`docs/plans/resilient-voice-recording.md`).
+ * Written as an exhaustive switch for the same reason as {@link isCaptureSession}
+ * — a future fourth kind must fail to compile here until this decides how it
+ * is filtered.
+ */
+export function isVoiceSession(session: StagingSession): boolean {
+  switch (session.kind) {
+    case "capture":
+      return false;
+    case "bulk":
+      return false;
+    case "voice":
       return true;
     default:
       return assertNever(session.kind);
