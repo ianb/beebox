@@ -4,7 +4,7 @@ import { registerFileType, type RendererProps } from "./index";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
 import { BrowseBody } from "../pages/browse/BrowsePage";
 import { BrowseLocationError } from "../pages/browse/components/BrowseLocationError";
-import { browseParent, browseStateToViewState, legacyBrowseTarget, parseBrowseState, type BrowseState } from "../lib/browse-card-state";
+import { browseParent, browseStateToViewState, legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
 import { trpc } from "../lib/trpc";
 import { parseViewUrl, type ViewState, type ViewTarget } from "../lib/view-url";
 import { BrowseLoading } from "../pages/browse/components/BrowseLoading";
@@ -52,11 +52,18 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
     setNavigationError(null);
     return () => { navigationVersion.current += 1; };
   }, [stateKey]);
-  async function navigate(target: ViewTarget, method: "push" | "replace") {
+  async function navigate({ target, method, missingKind }: {
+    target: ViewTarget;
+    method: "push" | "replace";
+    missingKind: BrowseMissingKind;
+  }) {
     const version = ++navigationVersion.current;
     setNavigationError(null);
     try {
-      const next = await legacyBrowseTarget(target, async (path) => (await utils.files.kind.fetch({ path })).kind);
+      const next = await legacyBrowseTarget(target, {
+        lookupKind: async (path) => (await utils.files.kind.fetch({ path })).kind,
+        missingKind,
+      });
       if (version !== navigationVersion.current) return;
       if (next.viewState) onChange(next.viewState, method);
     } catch (error) {
@@ -73,10 +80,14 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
   if (!valid) return <BrowseLocationError error={`Cannot browse ${state.detail?.path ?? (state.directory || "/")}: ${directory.error?.message ?? detail.error?.message ?? "expected an existing directory and a file detail"}`} onRoot={reset} onRetry={() => { void directory.refetch(); if (state.detail) void detail.refetch(); }} />;
   return <>
     {navigationError ? <BrowseLocationError error={navigationError} onRoot={reset} /> : null}
-    <BrowseBody state={state} onNavigate={(path, options) => { void navigate({ path, viewer: null, params: {}, viewState: null }, options?.replace ? "replace" : "push"); }}
+    <BrowseBody state={state} onNavigate={(path, options) => { void navigate({
+      target: { path, viewer: null, params: {}, viewState: null },
+      method: options.replace ? "replace" : "push",
+      missingKind: options.kind,
+    }); }}
       onDetailNavigate={(target, method) => {
         if (state.detail?.path === target.path && browseParent(target.path) === state.directory) { navigationVersion.current += 1; onChange(browseStateToViewState({ ...state, detail: target }), method); }
-        else void navigate(target, method);
+        else void navigate({ target, method, missingKind: "file" });
       }} />
   </>;
 }

@@ -16,8 +16,9 @@ When an open card is renamed or moved, recover its current Git path only after t
 - Routed viewers opt into recovery, and `card.get` invokes
   `resolveMovedCardPath` only from its existing `ENOENT` branch. Successful
   reads and non-navigable missing-card embeds do no Git recovery work.
-- The resolver uses an ephemeral index and object directory for unstaged
-  renames, then committed Git rename records for history and chains. It accepts
+- The resolver uses an ephemeral Git directory for unstaged renames, then
+  committed Git rename records for history and chains. The sandbox includes
+  filter state such as git-annex, so recovery does not mutate the real repository. It accepts
   only an existing regular file inside the box namespace and lets a reused source path
   win through the ordinary read. The scratch Git process inherits the safe
   ambient settings needed for Git discovery, and a scratch failure still falls
@@ -80,11 +81,11 @@ type MovedCardResolution =
 `card.get` `ENOENT` branch. It:
 
 1. Confirm that the missing source still does not exist. This makes a path reused by a new card win over any historical rename.
-2. Inspect uncommitted box-file changes through an ephemeral Git index and object directory. Populate only the scratch index for the box subtree, then read its NUL-terminated rename diff. This is necessary because a normal diff omits an unstaged move's untracked destination; the scratch state is removed after the lookup and neither the working tree nor the real index changes. Match only an `R<score>` record whose old path exactly equals the current candidate.
+2. Inspect uncommitted box-file changes through an ephemeral Git directory, using the real object store only as a read-only alternate. Populate the scratch index for the box subtree, then read its NUL-terminated rename diff. This is necessary because a normal diff omits an unstaged move's untracked destination; the scratch state is removed after the lookup and neither the working tree nor any real Git or git-annex state changes. Match only an `R<score>` record whose old path exactly equals the current candidate.
 3. If the working tree has no match, ask Git for the newest commit touching the candidate, with `--full-diff --name-status -z --find-renames`, and find the exact old-path rename in that full commit. This covers ordinary committed moves.
 4. Request `--relative` Git output. A rename outside the box appears as a deletion rather than a destination, and the final namespace resolver independently rejects any unsafe candidate.
 5. Follow a chain at most 16 hops. Stop on repetition, ambiguity, an unrecognized Git record, or no rename.
-6. Accept only an existing regular-file destination that passes `resolveBoxNamespacePathOnDisk({ mode: "read" })`. Otherwise return `not-moved`. The Git relationship and box boundary are the protection; an extension allowlist would incorrectly discard plain Markdown and other files the routed viewer can represent.
+6. Accept only an existing non-symlink regular-file destination that passes `resolveBoxNamespacePathOnDisk({ mode: "read" })`. Otherwise return `not-moved`. The Git relationship and box boundary are the protection; an extension allowlist would incorrectly discard plain Markdown and other files the routed viewer can represent.
 
 Git command or parse failure is recovery failure, not request failure: log one warning with the canonical requested path and return `not-moved`. Never include Git stderr or an absolute path in the response. Do not infer a move from unrelated `D` and `A` records; only Git's `R` record is strong enough to forward.
 
@@ -152,7 +153,7 @@ No critical gap remains in the planned behavior. Deliberate heuristic misses pre
 | The card changed too much for Git's rename threshold | Resolver's `R`-only contract | No `R` record means no forwarding | Clear: ordinary missing-card UI |
 | Git is unavailable, the box is not a repository, or output is malformed | Real-Git and parser doctests | Warn once and return `not-moved` | Clear to server log and ordinary UI |
 | A rename chain loops or exceeds 16 hops | Bounded resolver loop | Stop and return `not-moved` | Clear: ordinary missing-card UI |
-| The destination was deleted, escapes the box, is not a regular file, or is a disallowed symlink | Real-Git doctest | Validate the final path through the namespace resolver | Clear: ordinary missing-card UI |
+| The destination was deleted, escapes the box, is not a regular file, or is any symlink | Real-Git doctest | Validate the final path through the namespace resolver, then reject symlink leaves | Clear: ordinary missing-card UI |
 | A directory rename emits only the ancestor path | Event-predicate doctest and browser check | Ancestor `rename` triggers the existing refetch | Clear: URL follows the card |
 | A live refetch fails while React Query retains the old card | Frontend doctest | Recovery is extracted separately from visible/stale data | Clear: route replaces while old card stays visible |
 | Routed surfaces interpret the recovery differently | Browser matrix for Card, canonicalized Views/chat workspace, and Browse | Each owner preserves its route state and uses replace | Clear: address bar shows canonical destination |
@@ -189,7 +190,7 @@ Skip. This is browser/server recovery infrastructure and introduces no box-agent
 
 ## What holds this
 
-- `test/core/moved-card-forwarding.doctest.md` creates actual temporary Git repositories instead of mocking rename output. It covers working-tree and committed renames across typed cards, Markdown, and other files, plus chains, path reuse, unusual filenames, missing/unsafe destinations, and graceful Git failure. This keeps the risky interpretation of Git behavior executable at the doctest tier.
+- `test/core/moved-card-forwarding.doctest.md` creates actual temporary Git repositories instead of mocking rename output. It covers working-tree and committed renames across typed cards, Markdown, filtered paths, and other files, plus chains, path reuse, unusual filenames, missing/unsafe/symlink destinations, filter-state isolation, and graceful Git failure. This keeps the risky interpretation of Git behavior executable at the doctest tier.
 - The existing tRPC error-shape doctest asserts the serialized recovery union and the no-path-leak boundary.
 - Focused frontend doctests keep recovery extraction and ancestor-rename relevance as pure functions. They specifically cover React Query's cached-data plus refetch-error state and atomic workspace-tab retargeting.
 - Browser verification exercises an uncommitted move in the isolated workstream test box across Card, Browse, and the chat workspace that `/views/$` canonicalizes into, including exact query/view-state preservation.

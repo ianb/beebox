@@ -8,8 +8,10 @@ changing the real Git index.
 import { mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { simpleGit } from "simple-git";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { parseGitRenameRecords, resolveMovedCardPath } from "../../src/core/moved-card-forwarding.js";
+import { fileExists } from "../../src/lib/file-exists.js";
 
 const CARD = `---
 type: memo
@@ -33,7 +35,7 @@ JSON.stringify(await resolveMovedCardPath({ boxRoot: box.root, missingPath: "_co
 The scratch lookup did not stage either end in the real index.
 
 ```ts continue
-const status = (await import("simple-git")).simpleGit(box.root);
+const status = simpleGit(box.root);
 const realIndex = await status.diff(["--cached", "--name-status"]);
 realIndex
 =>
@@ -73,6 +75,38 @@ JSON.stringify(await resolveMovedCardPath({
 
 ```ts cleanup
 await markdown.cleanup();
+```
+
+The scratch lookup isolates Git filter state as well as the ordinary index and
+object store. A clean filter that writes beneath `GIT_DIR` leaves no marker in
+the real repository when recovery scans the whole box.
+
+```ts
+const filtered = await makeTmpBox({ git: true });
+await filtered.seed("filter.mjs", `
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+writeFileSync(join(process.env.GIT_DIR ?? ".git", "filter-ran"), "ran");
+process.stdin.pipe(process.stdout);
+`);
+await writeFile(filtered.path(".git/info/attributes"), "*.probe filter=probe\n");
+const filteredGit = simpleGit({ baseDir: filtered.root, unsafe: { allowUnsafeFilter: true } });
+await filteredGit.raw(["config", "filter.probe.clean", "node filter.mjs"]);
+await filteredGit.raw(["config", "filter.probe.required", "true"]);
+await filtered.seed("_content/Old.probe", "Filtered content that Git can recognize after a move.\n");
+filtered.commitAll("seed filtered file");
+await rm(filtered.path(".git/filter-ran"));
+await rename(filtered.path("_content/Old.probe"), filtered.path("_content/New.probe"));
+
+JSON.stringify({
+  resolution: await resolveMovedCardPath({ boxRoot: filtered.root, missingPath: "_content/Old.probe" }),
+  realFilterMarker: await fileExists(filtered.path(".git/filter-ran")),
+})
+=> {"resolution":{"kind":"moved","path":"_content/New.probe"},"realFilterMarker":false}
+```
+
+```ts cleanup
+await filtered.cleanup();
 ```
 
 ## Committed and chained moves
@@ -167,8 +201,8 @@ warnings.length
 await plain.cleanup();
 ```
 
-A committed rename whose destination was later deleted or replaced by a
-symlink outside the box stays an ordinary miss.
+A committed rename whose destination was later deleted or replaced by any
+symlink stays an ordinary miss.
 
 ```ts
 const deleted = await makeTmpBox({ git: true });
@@ -217,6 +251,23 @@ JSON.stringify(await resolveMovedCardPath({ boxRoot: unsafe.root, missingPath: "
 ```ts cleanup
 await unsafe.cleanup();
 await rm(outsideRoot, { recursive: true, force: true });
+```
+
+```ts
+const insideSymlink = await makeTmpBox({ git: true });
+await insideSymlink.seed("_content/Old.md", "A document that later becomes an in-box symlink.\n");
+await insideSymlink.seed("_content/Other.md", "A different in-box document.\n");
+insideSymlink.commitAll("seed in-box symlink case");
+await rename(insideSymlink.path("_content/Old.md"), insideSymlink.path("_content/New.md"));
+insideSymlink.commitAll("move before in-box symlink replacement");
+await rm(insideSymlink.path("_content/New.md"));
+await symlink("Other.md", insideSymlink.path("_content/New.md"));
+JSON.stringify(await resolveMovedCardPath({ boxRoot: insideSymlink.root, missingPath: "_content/Old.md" }))
+=> {"kind":"not-moved"}
+```
+
+```ts cleanup
+await insideSymlink.cleanup();
 ```
 
 The NUL parser preserves unusual filenames and rejects truncated records.

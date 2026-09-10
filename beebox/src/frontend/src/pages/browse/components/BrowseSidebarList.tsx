@@ -20,6 +20,7 @@ import { areaDisplayLabel } from "@shared/display-path";
 import { encodePathForUrl } from "../../../lib/view-url";
 import { foldListing, type FoldEntry } from "@shared/browse-fold";
 import type { BrowseListingMode } from "../useBrowseListingMode";
+import type { BrowseMissingKind } from "../../../lib/browse-card-state";
 
 type BrowseData = RouterOutput["status"]["browse"];
 type BrowseDirData = BrowseData["dirs"][number];
@@ -50,7 +51,7 @@ function DirRow({
   dirPath: string;
   dimmed: boolean;
   showLandmark: boolean;
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string, kind: BrowseMissingKind) => void;
 }) {
   const target = dirPath ? `${dirPath}/${dir.name}` : dir.name;
   const landmark = showLandmark ? dir.landmark : undefined;
@@ -58,7 +59,7 @@ function DirRow({
   return (
     <button
       {...bbxSource("dir", target)}
-      onClick={() => onNavigate(target)}
+      onClick={() => onNavigate(target, "directory")}
       aria-label={dir.fileCount > 0 ? `${label} directory, ${dir.fileCount} item${dir.fileCount === 1 ? "" : "s"}` : `${label} directory`}
       className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors flex items-center gap-2 border-b border-warm-200 ${dimmed ? "opacity-60" : ""}`}
     >
@@ -86,7 +87,7 @@ function CardRow({
   card: BrowseCardData;
   dimmed: boolean;
   selected: boolean;
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string, kind: BrowseMissingKind) => void;
 }) {
   // A card with an `.attach/` scope behaves like a directory: the row still
   // opens the card in the detail panel, but a trailing chevron navigates
@@ -96,7 +97,7 @@ function CardRow({
   return (
     <div className={`flex items-stretch border-b border-warm-200 ${selected ? "bg-info-50" : ""} ${dimmed ? "opacity-60" : ""}`}>
       <button
-        onClick={() => onNavigate(card.relativePath)}
+        onClick={() => onNavigate(card.relativePath, "file")}
         {...bbxSource("card", card.relativePath)}
         {...(card.type === "image" ? {
           "data-image-src": `${getApiBase()}/image/${encodePathForUrl(card.relativePath)}`,
@@ -117,7 +118,7 @@ function CardRow({
       </button>
       {attachPath ? (
         <button
-          onClick={() => onNavigate(attachPath)}
+          onClick={() => onNavigate(attachPath, "directory")}
           aria-label={`Open ${card.name} attachments`}
           title="Open attachments"
           className="flex-shrink-0 flex items-center px-3 text-primary hover:bg-warm-50 transition-colors border-l border-warm-200"
@@ -141,12 +142,12 @@ function FileRow({
   file: BrowseFileData;
   dimmed: boolean;
   selected: boolean;
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string, kind: BrowseMissingKind) => void;
   onFileContextMenu: (event: React.MouseEvent<HTMLButtonElement>, path: string) => void;
 }) {
   return (
     <button
-      onClick={() => onNavigate(file.relativePath)}
+      onClick={() => onNavigate(file.relativePath, "file")}
       onContextMenu={(event) => onFileContextMenu(event, file.relativePath)}
       {...(imageDataAttrs(file.relativePath, file.name) ?? {})}
       className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${selected ? "bg-info-50" : ""} ${dimmed ? "opacity-60" : ""}`}
@@ -168,7 +169,7 @@ function FoldRow({
   dirPath: string;
   selectedFilePath: string | null;
   showLandmark: boolean;
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string, kind: BrowseMissingKind) => void;
   onFileContextMenu: (event: React.MouseEvent<HTMLButtonElement>, path: string) => void;
 }) {
   if (entry.kind === "dir") {
@@ -195,7 +196,7 @@ interface BrowseSidebarListProps {
    * opening one is a real navigation (and a back-button step), not a
    * selection the URL doesn't know about.
    */
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string, kind: BrowseMissingKind) => void;
   selectedFilePath: string | null;
   onFileContextMenu: (event: React.MouseEvent<HTMLButtonElement>, path: string) => void;
   omitCardPath?: string;

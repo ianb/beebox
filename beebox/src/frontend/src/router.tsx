@@ -151,8 +151,12 @@ const browseRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
   path: "/browse/$",
   beforeLoad: async ({ params, location }) => {
-    const target = await legacyBrowseTarget(withoutShellParams(parseViewUrl(`${params._splat ?? ""}${location.searchStr}`)),
-      async (path) => (await trpcClient.files.kind.query({ path })).kind);
+    const target = await legacyBrowseTarget(withoutShellParams(parseViewUrl(`${params._splat ?? ""}${location.searchStr}`)), {
+      lookupKind: async (path) => (await trpcClient.files.kind.query({ path })).kind,
+      // A bare legacy URL is ambiguous after the path disappears. Treat it as
+      // a file so the moved-path recovery requested by that URL can run.
+      missingKind: "file",
+    });
     throw redirect({ to: href(`/${params.boxSlug}/views/${target.path}`),
       search: toSearch({ ...systemCardShellSearch(location.search), viewState: viewStateSearchValue(target.viewState) }),
       state: location.state, replace: true });

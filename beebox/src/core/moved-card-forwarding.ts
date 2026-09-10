@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { copyFile, lstat, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { simpleGit } from "simple-git";
@@ -61,22 +61,39 @@ function uniqueRenameDestination(records: RenameRecord[], source: string): strin
 
 async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
   const normalGit = simpleGit(boxRoot);
+  const repoRoot = (await normalGit.revparse(["--show-toplevel"])).trim();
+  const head = (await normalGit.revparse(["HEAD"])).trim();
   const rawObjectsPath = (await normalGit.revparse(["--git-path", "objects"])).trim();
-  const realObjectsPath = isAbsolute(rawObjectsPath) ? rawObjectsPath : resolve(boxRoot, rawObjectsPath);
+  const realObjectsPath = isAbsolute(rawObjectsPath) ? rawObjectsPath : resolve(repoRoot, rawObjectsPath);
+  const rawConfigPath = (await normalGit.revparse(["--git-path", "config"])).trim();
+  const realConfigPath = isAbsolute(rawConfigPath) ? rawConfigPath : resolve(repoRoot, rawConfigPath);
+  const rawAttributesPath = (await normalGit.revparse(["--git-path", "info/attributes"])).trim();
+  const realAttributesPath = isAbsolute(rawAttributesPath) ? rawAttributesPath : resolve(repoRoot, rawAttributesPath);
   const scratchRoot = await mkdtemp(join(tmpdir(), "bbx-move-index-"));
-  const scratchObjects = join(scratchRoot, "objects");
-  await mkdir(scratchObjects);
+  const scratchGitDir = join(scratchRoot, "git");
 
   try {
-    // A separate index lets Git see unstaged filesystem renames without
-    // touching the person's real index. A separate object directory also
-    // keeps blobs written by `git add` ephemeral.
+    await simpleGit().raw(["init", "--bare", "--quiet", scratchGitDir]);
+    await copyFile(realConfigPath, join(scratchGitDir, "config"));
+    await mkdir(join(scratchGitDir, "info"), { recursive: true });
+    try {
+      await copyFile(realAttributesPath, join(scratchGitDir, "info", "attributes"));
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? error.code : null;
+      if (code !== "ENOENT") throw error;
+    }
+
+    // A separate Git directory lets Git see unstaged filesystem renames
+    // without touching the person's real index, object store, or filter state
+    // (notably `.git/annex`). It reads committed objects through an alternate.
     const git = simpleGit(boxRoot).env(childProcessEnv({
-      GIT_INDEX_FILE: join(scratchRoot, "index"),
-      GIT_OBJECT_DIRECTORY: scratchObjects,
+      GIT_DIR: scratchGitDir,
+      GIT_WORK_TREE: repoRoot,
       GIT_ALTERNATE_OBJECT_DIRECTORIES: realObjectsPath,
     }));
-    await git.raw(["read-tree", "HEAD"]);
+    await git.raw(["config", "core.bare", "false"]);
+    await git.raw(["config", "core.worktree", repoRoot]);
+    await git.raw(["read-tree", head]);
     await git.raw(["add", "-A", "--", BOX_PATHSPEC]);
     const raw = await git.raw([
       "diff",
@@ -85,7 +102,7 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
       "-z",
       "--find-renames",
       "--relative",
-      "HEAD",
+      head,
       "--",
       BOX_PATHSPEC,
     ]);
@@ -119,7 +136,7 @@ async function existingSafeFile(boxRoot: string, candidate: string): Promise<str
   const resolved = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: candidate, mode: "read" });
   if (!resolved.ok) return null;
   try {
-    return (await stat(resolved.resolved)).isFile() ? resolved.relativePath : null;
+    return (await lstat(resolved.resolved)).isFile() ? resolved.relativePath : null;
   } catch (error) {
     const code = typeof error === "object" && error !== null && "code" in error ? error.code : null;
     if (code === "ENOENT") return null;
