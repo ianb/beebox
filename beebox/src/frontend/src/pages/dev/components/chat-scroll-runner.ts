@@ -24,6 +24,7 @@ import { assertNever } from "@shared/invariant";
 import type { HarnessContent, HarnessMessage } from "./chat-scroll-model";
 import { makeRandom } from "./chat-scroll-model";
 import { isImageStep, runImageStep } from "./chat-scroll-images";
+import { isWidthStep, resizeHarnessWidth } from "./chat-scroll-width";
 import type { Scenario, Step } from "./chat-scroll-scenarios";
 import { Sampler, fromBottomOf, type RunContext } from "./chat-scroll-sampler";
 
@@ -93,6 +94,7 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
     await runImageStep(step, { ctx, el, imageLanded: deps.imageLanded });
     return;
   }
+  if (isWidthStep(step)) { resizeHarnessWidth(step, ctx.apply); await settle(); return; }
   switch (step.k) {
     case "wait":
       await delay(step.ms);
@@ -204,6 +206,7 @@ async function runStep(step: Step, deps: StepDeps): Promise<void> {
       sampler.markIntent();
       el.scrollTop = step.toTop;
       await settle();
+      if (step.observeReadingPosition) sampler.observeReadingPosition();
       return;
     case "keyboardClamp":
       ctx.apply((prev) => ({ ...prev, viewportShrinkPx: step.px }));
