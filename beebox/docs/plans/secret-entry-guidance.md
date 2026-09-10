@@ -115,16 +115,20 @@ text that flow would show too, but the flow itself is not built.
 
 ## Tracks / scope
 
-### Track 1 — grant on add, and a success message that says so
+### Track 1 — paste means "use it here"; granting becomes the advanced case
 
-**What.** From the "This box" tab, saving a new secret grants it to this box in
-the same submit, at `server` access, and the message says exactly what state
-the key is in.
+**What.** From the "This box" tab, saving a new secret makes it this box's in
+the same submit, and the message says what is now switched on. The word
+"grant" leaves the primary path entirely.
 
-**Why.** This is the issue's "honest fix" and the failure the boxholder hit
-twice: a verified key granted to nothing, reported as success. From a box's
-Admin page, "add" means "and use it here" — the machine-wide-only case is the
-deliberate exception and already has its own tab.
+**Why.** The boxholder's framing, 2026-09-10: *"The whole grant thing is
+confusing. Like it's an advanced case: multiple boxes, going to a secondary
+box and borrowing a token from another box. Granting should be treated as
+secondary."* That is the right model. A grant is real machinery — one store,
+many boxes — but for the box the boxholder is looking at, pasting a key and
+having it work is the whole job, and the machinery should be invisible until
+a second box exists. This is also the issue's "honest fix": a verified key
+granted to nothing, reported as success, was the failure hit twice.
 
 **Direction.** Extend `setValue` (`secrets.ts:132`) with an optional
 `grant?: { box: string; access: SecretAccessLevel }`; when present, run
@@ -132,20 +136,34 @@ deliberate exception and already has its own tab.
 `granted: { box, access } | null` alongside `warnings` and `verified`. One
 write path, not two mutations the client must sequence.
 
-The add form gains the Access select the grant form already has
-(`SecretValueForm` on the "This box" tab only), defaulting to `server`. The
-Machine-wide tab's add form sends no `grant`. The post-save line becomes one of:
+The add form does **not** gain an Access select. The grant is made at
+`server`, which `docs/secrets.md:52` calls the default that *"all built-in
+connectors need only"*; raising a key to `agent` for a box-authored view is
+the existing Raise-access button on the row, and it stays there. The
+Machine-wide tab's add form sends no `grant`.
 
-- *Saved and verified, and granted to test1 at server access.*
-- *Saved and verified. Machine-wide only — not yet granted to any box.*
-- *Saved, but the provider rejected it: … Granted to test1 anyway; fix the
-  value with Rotate.*
+The post-save line speaks in terms of what the key now does, which is the
+truth the boxholder is waiting for (principle 13), and uses `uses.ts` for the
+list rather than restating it:
 
-Reorder the "This box" tab so the add form precedes the grant-existing form,
-and retitle the latter *"Grant a secret another box already holds"* — the
-name says what it is for, so it stops reading as the add form.
+- *Saved and verified. This box now uses it for: embeddings for semantic and
+  hybrid card search; the Whisper high-quality transcription pass; …*
+- *Saved, but the provider rejected it: … This box will use it once the value
+  is fixed — Rotate to replace it.*
+- Machine-wide tab only: *Saved and verified. No box uses it yet.*
 
-**Vocabulary lock-ins.** `setValue.input.grant`, the response field `granted`.
+The grant-existing form becomes the advanced case in fact, not just in order:
+collapsed under a disclosure at the bottom of the "This box" tab, labelled
+*"Use a key another box already has"*, and rendered only when the machine
+holds at least one secret this box does not — on a one-box install it does
+not appear at all. Its access select stays inside the disclosure. The "Used
+for (optional)" free-text field moves into the same disclosure: for a
+registered name the uses are already known, and asking for them again on the
+primary path is noise.
+
+**Vocabulary lock-ins.** `setValue.input.grant`, the response field `granted`
+(the machinery keeps its name at the API; only the boxholder-facing copy drops
+it), the disclosure id `bbx-admin-secrets-advanced`.
 
 **First implementation chunk.** The mutation extension plus its route doctest
 (grant present → grant exists; absent → not), then the form change. No
@@ -261,9 +279,9 @@ order-dependent).
 
 ## Could this be simpler?
 
-**Simplest version:** Track 1 alone — grant on add, honest message. Thirty
-lines. It fixes the failure that actually cost the boxholder two debugging
-sessions.
+**Simplest version:** Track 1 alone — paste-means-use-it-here, an honest
+message, the grant form folded away. Under fifty lines. It fixes the failure
+that actually cost the boxholder two debugging sessions.
 
 **What it leaves broken, specifically:** the boxholder still cannot find where
 the key goes or what to call it. The issue's own account is that the wrong
@@ -330,7 +348,10 @@ No critical gap: the one silent row is an external link going stale.
 - **Merging Telegram's bespoke section into the secrets UI**: the precedent is
   right and the duplication is real, but folding it in is a connector-setup
   redesign.
-- **Machine-wide tab changes** beyond keeping its add form grant-free.
+- **Machine-wide tab changes** beyond keeping its add form grant-free. It is
+  the multi-box view and therefore also "advanced", but it is a separate tab
+  the primary path never enters, so it is left as is; if it still reads as
+  confusing after this ships, that is its own item.
 - **Retiring `GrantExistingForm`**: it still serves the multi-box case; demoted
   and retitled, not removed.
 - **Edit-distance suggestions** — see Could this be simpler.
@@ -341,9 +362,10 @@ No critical gap: the one silent row is an external link going stale.
   Lean: one sentence of why ("one key and one bill instead of four") then the
   list of what it turns on. The list is the argument; a paragraph would be
   marketing on an admin page.
-- **Access select in the add form, or fixed at `server`?** Lean: show it,
-  defaulted to `server`, because raising it later is a different button and a
-  boxholder adding a key for a view knows they need `agent` at paste time.
+- ~~**Access select in the add form, or fixed at `server`?**~~ **Settled
+  2026-09-10 by the boxholder's framing** (granting is the advanced case):
+  fixed at `server`, no select on the primary path; Raise access stays on the
+  row.
 
 ## Knowledge audits
 
