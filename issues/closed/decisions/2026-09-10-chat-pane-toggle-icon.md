@@ -1,13 +1,17 @@
 ---
 title: "Choose a clear icon for the chat pane toggle"
-workstream: unattached
-needs: [decision]
+workstream: paper-cards
 area: beebox
-next-action: discuss
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-paper-cards — while refining workspace pane behavior
+resolution: implemented
 ---
+
+> Closed: implemented by `3ecb6f9c4`. The card-pane control keeps its existing
+> position and uses a minus icon with the label/tooltip “Minimize cards.” The
+> floating restore control also stays in place, keeps the raised-stack icon,
+> and uses “Restore cards (N).” No animation or behavior changed.
 
 The current show-or-hide chat icon is confusing. The same control changes a pane between its card and the conversation, so a familiar generic chat icon does not explain both directions well.
 
