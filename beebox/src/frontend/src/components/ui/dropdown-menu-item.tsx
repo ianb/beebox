@@ -30,7 +30,7 @@ interface MenuItemBase {
 export type MenuItemProps = MenuItemBase & (
   | { onClick: () => void | Promise<void>; to?: never; href?: never }
   | { to: string; onClick?: never; href?: never }
-  | { href: string; onClick?: never; to?: never }
+  | { href: string; target?: "_blank"; download?: string; onClick?: never; to?: never }
 );
 
 interface RowClassOpts {
@@ -88,7 +88,7 @@ export function MenuItem(props: MenuItemProps) {
       return <span id={id} role="menuitem" aria-disabled="true" className={className}>{content}</span>;
     }
     return (
-      <a id={id} role="menuitem" href={props.href} onClick={close} className={className}>
+      <a id={id} role="menuitem" href={props.href} target={props.target} rel={props.target ? "noopener noreferrer" : undefined} download={props.download} onClick={close} className={className}>
         {content}
       </a>
     );

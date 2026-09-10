@@ -7,6 +7,8 @@ export type FileViewMode = "page" | "chat" | "companion" | "embed";
 export interface FileViewProps {
   path: string;
   mode?: FileViewMode;
+  /** The workspace supplies PDF file actions and a bounded pane height. */
+  workspacePdf?: boolean;
   /** Force a renderer by name, usually from the surface's `?view=` value. */
   rendererName?: string | null;
   /** Let the surface own renderer choice instead of keeping it locally. */

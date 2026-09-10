@@ -11,6 +11,7 @@ interface ActiveFileRendererProps {
   data: FileData;
   path: string;
   mode: FileViewMode;
+  workspacePdf?: boolean;
   params?: Record<string, string>;
   viewState?: ViewState | null;
   canPushViewState?: boolean;
@@ -46,7 +47,7 @@ export function ActiveFileRenderer(props: ActiveFileRendererProps) {
       />
     );
   }
-  return <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption}
+  return <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption} workspacePdf={props.workspacePdf}
     viewState={builtinState} canPushViewState={canPushViewState} onViewStateChange={handleBuiltinState} />;
 }
 

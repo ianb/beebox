@@ -27,6 +27,8 @@ export interface PdfFrameProps {
   downloadName: string;
   /** The surface this frame sits in; decides how it takes height. */
   mode?: PdfFrameMode;
+  /** File actions live beside the workspace tabs; fill its bounded height. */
+  workspacePdf?: boolean;
 }
 
 /**
@@ -64,17 +66,17 @@ function PdfActions({ src, downloadName }: { src: string; downloadName: string }
   );
 }
 
-export function PdfFrame({ src, title, downloadName, mode }: PdfFrameProps) {
+export function PdfFrame({ src, title, downloadName, mode, workspacePdf }: PdfFrameProps) {
   const surface = mode ?? "page";
   return (
-    <div className={OUTER_CLASSES[surface]}>
-      <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-200 bg-warm-50">
+    <div className={workspacePdf ? "flex flex-col h-full min-h-0" : OUTER_CLASSES[surface]}>
+      {workspacePdf ? null : <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-200 bg-warm-50">
         <Text size="sm" tone="emphasis" truncate className="flex-1 min-w-0" title={title}>
           {title}
         </Text>
         <PdfActions src={src} downloadName={downloadName} />
-      </div>
-      <object data={src} type="application/pdf" title={title} className={FRAME_CLASSES[surface]}>
+      </div>}
+      <object data={src} type="application/pdf" title={title} className={workspacePdf ? "w-full h-full flex-1 min-h-0" : FRAME_CLASSES[surface]}>
         {/* Shown by the browser only when it can't display the PDF inline. */}
         <div className="p-4 flex flex-col items-start gap-3 bg-warm-50">
           <Text as="p" size="sm" tone="subtle">
