@@ -590,7 +590,7 @@ convergence has not been exercised; this work has not been merged or deployed.
   scenario evidence. Screenshot capture stalled in normal and fresh browser
   sessions; the one returned image did not match the observed DOM/viewport and
   was excluded. Reproduction is recorded in the existing
-  [screenshot flake](../../../issues/watch/2026-07-10-agent-browser-screenshot-flake.md).
+  [screenshot flake](../../../issues/bugs/2026-07-10-agent-browser-screenshot-flake.md).
   **Partial status reflects pending trustworthy visual/device signoff**, not
   an outstanding implementation or automated-test failure. No merge or deploy
   has occurred.

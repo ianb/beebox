@@ -3,20 +3,19 @@ title: "agent-browser screenshot op flakes with os error 35"
 workstream: unknown
 area: bin
 filed-by: agent
-priority: backlog
+priority: important
 next-action: discuss
 ---
 
-> **Watch (moved to watch/ 2026-08-06).** Root-caused UPSTREAM in
-> `vercel-labs/agent-browser` (`connection.rs:1032` — `is_transient_error`
-> string-matches `(os error 35)`, which also matches an expired `SO_RCVTIMEO`
-> read), which ships as a precompiled binary we can't patch. Dormant lately (tours
-> / screenshots not run heavily) — NOT fixed. **Re-check trigger:** a new
-> `agent-browser` release (does its retry logic now distinguish EAGAIN from an
-> expired read-timeout?), or the next time it bites during a tour/screenshot run.
-> If it resurfaces before upstream fixes it, the local stopgap is an outer retry
-> with a longer budget in `browse/src/cli.ts` (papers over the wait failure; can't
-> prevent the post-failure indefinite hang the research also saw).
+> **Trigger fired 2026-09-09 — no longer a flake, and no longer dormant.**
+> `screenshot` now fails **every time** in the `tour-check` worktree, on a fresh
+> daemon, including against a trivial static `file://` page with no beebox app
+> involved. Every tour aborts at its first checkpoint, so the weekly tour check
+> produced no artifacts at all. Moved out of `watch/`: this blocks a scheduled
+> job today and the next step is ours to take. Details in "2026-09-09" below.
+> Still root-caused UPSTREAM in `vercel-labs/agent-browser` (`connection.rs:1032`
+> — `is_transient_error` string-matches `(os error 35)`, which also matches an
+> expired `SO_RCVTIMEO` read), shipping as a precompiled binary we can't patch.
 
 `bin/browse screenshot` (and therefore every tour checkpoint)
 intermittently fails with `Failed to read: Resource temporarily
@@ -76,7 +75,7 @@ per-worktree daemon channel was unusable and never recovered in-session.
 
 ## Re-encountered 2026-09-09
 
-Seen during interface-as-cards UI verification; priority may be stale.
+Seen during interface-as-cards UI verification.
 With agent-browser 0.27.0, `bin/browse screenshot` stalled for minutes and
 ended with `agent-browser exited -1` and no output. Navigation, DOM eval,
 and accessibility snapshots still worked. Both the default session and a
@@ -101,3 +100,43 @@ This recurrence blocks screenshot exhibits despite usable DOM verification.
 The developer decision is whether to schedule a focused capture-tooling
 diagnostic now rather than wait for another upstream release. No tooling
 change was made in the interface-as-cards workstream.
+## 2026-09-09: deterministic, and it blocks the weekly tour check
+
+The weekly `tour-check` run (`20260909-184538`) produced **zero checkpoints
+across every tour**. Each tour aborted both viewport passes on its first
+`bin/browse screenshot`, each burning ~320s (5 × ~30s retries) before failing:
+
+```
+❌ camera-off [desktop] — pass aborted: bin/browse --session tour-capture-desktop
+   screenshot …/camera-off.desktop.png exited 1: browse: agent-browser exited 1:
+   ✗ Failed to read: Resource temporarily unavailable (os error 35)
+     (after 5 retries - daemon may be busy or unresponsive)
+```
+
+Isolation done in that run, narrowing from "tours are broken" to "the tool's
+screenshot path is broken":
+
+- **Not contention, not a wedged daemon.** Killed the worktree's `agent-browser`
+  daemon and its Chrome processes, re-ran a single tour on the fresh daemon:
+  identical failure, identical timing.
+- **Not the tours.** `bin/browse --session diag screenshot` fails the same way
+  standalone.
+- **Not the app, and not the dev router.** The router answers in ~7ms, and
+  `open` succeeds and returns the right page title (`✓ Dashboard — test1`) —
+  navigation, snapshot and eval all keep working. Only `screenshot` fails.
+- **Not beebox at all.** Calling upstream `agent-browser` directly (bypassing
+  `bin/browse`) on `file:///tmp/diagpage.html`, a one-line static HTML file,
+  reproduces it: `open` returns in 1.4s, `screenshot` fails after 2m32s.
+
+That last one is the reproduction against upstream this issue asked for, and it
+rules out the earlier payload-size and animating-canvas hypotheses — an `<h1>hi</h1>`
+page has neither. `agent-browser` is still 0.27.0; nothing bumped it, so the
+change is environmental rather than a new release.
+
+The consequence is what makes this actionable now: **tours and any other
+screenshot consumer are dead**, not degraded. `bin/smoke` shares the browser
+library, so it is worth checking whether the merge gate is affected the same way.
+
+The stopgap this issue previously sketched — an outer retry with a longer budget
+in `browse/src/cli.ts` — does not help this mode. The read is not losing a race;
+five consecutive 30s attempts each expire, so a longer budget just fails slower.
