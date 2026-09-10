@@ -41,6 +41,11 @@ export function fromBottomOf(el: HTMLDivElement): number {
 /** The topmost child still visible, with its offset below the scroller's top edge. */
 function topVisible(scroller: HTMLDivElement, content: HTMLDivElement): { el: Element; top: number } | null {
   const scTop = scroller.getBoundingClientRect().top;
+  const scBottom = scroller.getBoundingClientRect().bottom;
+  for (const token of content.querySelectorAll("[data-harness-token]")) {
+    const r = token.getBoundingClientRect();
+    if (r.bottom > scTop + 1 && r.top < scBottom) return { el: token, top: r.top - scTop };
+  }
   for (const child of content.children) {
     const r = child.getBoundingClientRect();
     if (r.bottom > scTop + 1) return { el: child, top: r.top - scTop };
@@ -81,6 +86,13 @@ export class Sampler {
   markIntent(durationMs?: number): void {
     this.intentUntil = performance.now() + (durationMs ?? INTENT_WINDOW_MS);
     this.anchor = null;
+  }
+
+  observeReadingPosition(): void {
+    this.intentUntil = -Infinity;
+    const el = this.ctx.scroller();
+    const content = this.ctx.content();
+    this.anchor = el && content ? topVisible(el, content) : null;
   }
 
   private sample(): void {

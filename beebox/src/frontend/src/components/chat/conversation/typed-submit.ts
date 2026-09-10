@@ -3,7 +3,7 @@ import type { EmissionStore, EmissionDraft } from "../../../input/emission-store
 import type { EmissionDispatch } from "./use-bound-emission";
 import type { Receipt } from "../../../input/targets/receipts";
 
-export class UnfinishedChatUploadError extends Error {
+class UnfinishedChatUploadError extends Error {
   constructor(names: string[]) {
     super(`Not sent — ${names.join(", ")} did not upload. Retry or remove the attachment, then send.`);
     this.name = "UnfinishedChatUploadError";

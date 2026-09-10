@@ -105,7 +105,6 @@ export interface TranscribeAudioParams {
 export {
   HQ_TRANSCRIPTION_SERVICES,
   isMaiHqService,
-  TRANSCRIPTION_SERVICES,
   type HqTranscriptionService,
   type MaiHqService,
   type TranscriptionService,

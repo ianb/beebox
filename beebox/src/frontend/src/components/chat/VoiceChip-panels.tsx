@@ -76,12 +76,6 @@ export function hqTranscriptionServiceLabel(service: string | null): string {
   return optionLabel(HQ_TRANSCRIPTION_OPTIONS, service);
 }
 
-/** Speaking-voice counterpart, for the root-panel summary line. */
-export function ttsBackendLabel(backend: string | null): string {
-  if (backend === null) return "…";
-  return TTS_BACKEND_OPTIONS.find((o) => o.backend === backend)?.label ?? backend;
-}
-
 /** "Voice settings" sub-panel: live + HQ transcription service pickers. */
 export function VoicePanel({
   onBack,

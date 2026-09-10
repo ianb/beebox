@@ -36,9 +36,6 @@ importers:
       '@ianbicking/personal-vibe-check':
         specifier: workspace:*
         version: link:personal-vibe-check
-      '@markdoc/markdoc':
-        specifier: ^0.5.7
-        version: 0.5.7(@types/react@18.3.29)(react@18.3.1)
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.3

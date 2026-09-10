@@ -56,7 +56,7 @@ import {
 import { isServing } from "./router-lifecycle.js";
 import { createRouterCore, listenLoopback, type RouterCore } from "./router-core.js";
 import { errMessage, errnoCode, readEnvFile } from "./router-effects.js";
-import { createRealEffects, pidAlive, resolveWorktree, sweepStaleChildren } from "./router-real-effects.js";
+import { createRealEffects, pidAlive, pruneRouterHubConfigs, resolveWorktree, sweepStaleChildren } from "./router-real-effects.js";
 import { isBenignSocketError } from "./router-proxy.js";
 import { dispatchRouterRequest, type DispatchContext } from "./router-dispatch.js";
 import { handleRouterUpgrade, type UpgradeState } from "./router-upgrade.js";
@@ -454,6 +454,15 @@ async function main(): Promise<void> {
     }
   } catch (err) {
     log(`startup reclaim failed (continuing): ${errMessage(err)}`);
+  }
+  // Hub configs are written when a worktree starts and were never removed when
+  // it was culled, so the router kept a config (and its allocated port) for
+  // every workstream that ever ran. Housekeeping, so failures are logged only.
+  try {
+    const pruned = await pruneRouterHubConfigs();
+    if (pruned.length > 0) log(`pruned ${pruned.length} hub config(s) with no checkout: ${pruned.join(", ")}`);
+  } catch (err) {
+    log(`hub-config prune failed (continuing): ${errMessage(err)}`);
   }
   if (workstreamsApp) {
     // Startup is intentionally not awaited: the authenticated fallback must be

@@ -7,12 +7,16 @@ export type FileViewMode = "chat" | "companion" | "embed";
 export interface FileViewProps {
   path: string;
   mode?: FileViewMode;
+  /** The workspace supplies PDF file actions and a bounded pane height. */
+  workspacePdf?: boolean;
   /** Force a renderer by name, usually from the surface's `?view=` value. */
   rendererName?: string | null;
   /** Let the surface own renderer choice instead of keeping it locally. */
   onSelectRenderer?: (name: string | null) => void;
   /** Open a link according to the surrounding surface's navigation semantics. */
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  /** Replace a route-owned old path after card.get reports a validated move. */
+  onMoved?: (path: string) => void;
   /** Surface selected text to a surrounding chat composer. */
   onAddSelection?: (selection: AddSelectionInput) => void;
   /** Report companion-pane activity; absent elsewhere. */

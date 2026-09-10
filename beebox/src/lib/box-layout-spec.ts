@@ -332,6 +332,3 @@ export type BoxDirsEntry = Extract<BoxLayoutEntryType, { boxDirsKey: string }>;
 /** The type of `BOX_DIRS` (paths.ts), derived from this spec's keyed entries. */
 export type BoxDirs = { [E in BoxDirsEntry as E["boxDirsKey"]]: E["path"] };
 
-/** The closed box-root vocabulary — see `box-root-vocabulary.ts`. Re-exported
- * here so callers of the layout spec have one import for both. */
-export { BOX_ROOT_VOCABULARY } from "./box-root-vocabulary.js";

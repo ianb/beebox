@@ -202,6 +202,75 @@ JSON.stringify(state.tabs.a.target)
 => {"path":"a","viewer":"canvas","params":{"mode":"detail"},"viewState":{"frame":4}}
 ```
 
+## A moved card retargets the existing tab
+
+The move keeps the pane, renderer parameters, pin, and active-card identity. It
+does not open a second tab at the destination path.
+
+```ts
+let state = reduceWorkspace(createEmptyWorkspaceState(), {
+  type: "openCard",
+  target: { path: "old", viewer: "canvas", params: { page: "2" }, viewState: null },
+  label: "Moved card", at: 1, viewport: "desktop",
+}).state;
+const retargeted = reduceWorkspace(state, {
+  type: "retargetCard",
+  fromPath: "old",
+  target: { ...state.tabs.old.target, path: "archive/new" },
+});
+state = retargeted.state;
+JSON.stringify({
+  paths: Object.keys(state.tabs),
+  pane: state.panes.left,
+  target: state.tabs["archive/new"].target,
+  interaction: state.lastInteraction,
+  effect: retargeted.effect,
+})
+=> {"paths":["archive/new"],"pane":{"paths":["archive/new"],"activePath":"archive/new","display":"cards"},"target":{"path":"archive/new","viewer":"canvas","params":{"page":"2"},"viewState":null},"interaction":{"kind":"card","path":"archive/new"},"effect":{"kind":"none"}}
+
+let pathLabeled = reduceWorkspace(createEmptyWorkspaceState(), {
+  type: "openCard",
+  target: { path: "old", viewer: null, params: {}, viewState: null },
+  label: "old", at: 1, viewport: "desktop",
+}).state;
+pathLabeled = reduceWorkspace(pathLabeled, {
+  type: "retargetCard",
+  fromPath: "old",
+  target: { ...pathLabeled.tabs.old.target, path: "archive/new" },
+}).state;
+pathLabeled.tabs["archive/new"].label
+=> archive/new
+```
+
+When the destination is already open, its richer tab state wins and the stale
+source tab is removed without moving or focusing the destination.
+
+```ts
+let converging = reduceWorkspace(createEmptyWorkspaceState(), {
+  type: "openCard",
+  target: { path: "archive/new", viewer: "canvas", params: { page: "9" }, viewState: { frame: 4 } },
+  label: "Existing destination", at: 1, viewport: "desktop",
+}).state;
+converging = reduceWorkspace(converging, { type: "togglePin", path: "archive/new", at: 2 }).state;
+converging = reduceWorkspace(converging, {
+  type: "openCard",
+  target: { path: "old", viewer: "Source", params: {}, viewState: null },
+  label: "old", at: 3, viewport: "desktop",
+}).state;
+const converged = reduceWorkspace(converging, {
+  type: "retargetCard",
+  fromPath: "old",
+  target: { ...converging.tabs.old.target, path: "archive/new" },
+});
+JSON.stringify({
+  paths: Object.keys(converged.state.tabs),
+  destination: converged.state.tabs["archive/new"],
+  active: converged.state.panes.left.activePath ?? converged.state.panes.right.activePath,
+  effect: converged.effect,
+})
+=> {"paths":["archive/new"],"destination":{"target":{"path":"archive/new","viewer":"canvas","params":{"page":"9"},"viewState":{"frame":4}},"label":"Existing destination","pinned":true,"lastActiveAt":2},"active":"archive/new","effect":{"kind":"none"}}
+```
+
 ## Move and focus are explicit card interactions
 
 ```ts

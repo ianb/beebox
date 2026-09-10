@@ -15,7 +15,7 @@
  */
 
 /** Names that are NOT a personal-machine-path leak — placeholders only. */
-export const ALLOWED_ABSOLUTE_PATH_NAMES = new Set(["me", "you", "user", "x"]);
+const ALLOWED_ABSOLUTE_PATH_NAMES = new Set(["me", "you", "user", "x"]);
 
 /** A real home path: `/Users/<name>/` or `/home/<name>/`, capturing the name. */
 const HOME_PATH = /\/(?:Users|home)\/([\dA-Za-z][\w.-]*)\//g;

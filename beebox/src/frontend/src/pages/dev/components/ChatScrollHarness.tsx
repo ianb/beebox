@@ -38,6 +38,13 @@ import { HarnessReadout, HarnessLog, HarnessToolbar, HarnessStatusRow, type LogE
 /** Fixed frame height — identical layout on every run, every machine. */
 const FRAME_PX = 460;
 const MAX_LOG = 4000;
+const WRAPPING_MESSAGE = "A stable reading point should remain visible while the transcript changes width and every paragraph wraps onto different lines. ";
+
+function WrappingMessage({ messageId, repeats }: { messageId: number; repeats: number }) {
+  return WRAPPING_MESSAGE.repeat(repeats).trim().split(" ").map((word, index) => (
+    <span key={`${messageId}-${index}`} data-harness-token={`${messageId}-${index}`}>{word} </span>
+  ));
+}
 /**
  * Let a reset's own resize cycle land before a scenario's first step. Without
  * it the reset's pending "follow-bottom" reconcile arrives mid-scenario and
@@ -297,7 +304,7 @@ function ScrollFrame({ content, attachScroller, attachContent, attachLiveContent
   return (
     <div
       className="flex flex-col border border-warm-300 rounded overflow-hidden"
-      style={{ height: FRAME_PX - content.viewportShrinkPx }}
+      style={{ height: FRAME_PX - content.viewportShrinkPx, width: content.frameWidthPx, maxWidth: "100%" }}
       data-testid="harness-frame"
     >
       <div
@@ -318,9 +325,17 @@ function ScrollFrame({ content, attachScroller, attachContent, attachLiveContent
               <div
                 ref={content.lastTurnSpacer && m.id === lastId ? attachLiveContent : undefined}
                 data-chat-live-turn-content={content.lastTurnSpacer && m.id === lastId ? "" : undefined}
-                style={{ height: m.image ? undefined : m.px, minHeight: m.image ? m.px : undefined }}
+                style={m.image
+                  ? { minHeight: m.px }
+                  : content.wrappingMessages
+                    ? { minHeight: m.px, padding: 8 }
+                    : { height: m.px }}
               >
-                {m.image ? <ControlledHarnessImage image={m.image} messageIndex={messageIndex} /> : null}
+                {m.image
+                  ? <ControlledHarnessImage image={m.image} messageIndex={messageIndex} />
+                  : content.wrappingMessages
+                    ? <WrappingMessage messageId={m.id} repeats={m.role === "assistant" ? 3 : 1} />
+                    : null}
               </div>
             </div>
           ))}

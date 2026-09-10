@@ -23,6 +23,7 @@ interface BrowseDetailPanelProps {
   onBack: () => void;
   onDelete: (path: string) => void | Promise<void>;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  onMoved: (path: string) => void;
   /** URL query params, forwarded to the renderer (view-card runtime overrides). */
   params?: Record<string, string>;
   /** Renderer override from the URL's `?view=`. */
@@ -49,6 +50,7 @@ export function BrowseDetailPanel({
   onBack,
   onDelete,
   onNavigate,
+  onMoved,
   onSelectRenderer,
   onViewStateChange,
   onAddSelection,
@@ -72,6 +74,7 @@ export function BrowseDetailPanel({
       path={selectedFilePath}
       mode="companion"
       onNavigate={onNavigate}
+      onMoved={onMoved}
       onSelectRenderer={onSelectRenderer}
       params={params}
       rendererName={rendererName}

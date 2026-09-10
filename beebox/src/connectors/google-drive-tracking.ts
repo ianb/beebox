@@ -37,7 +37,7 @@ export const GFOLDER_CARD_TYPE = "gfolder";
 export const GLINK_CARD_TYPE = "glink";
 
 /** Which kind a Drive card is, read off its card type. */
-export function driveCardKindOf(cardPath: string): DriveCardKind {
+function driveCardKindOf(cardPath: string): DriveCardKind {
   const basename = path.basename(cardPath);
   if (basename.endsWith(`.${GFOLDER_CARD_TYPE}.card`)) return "folder";
   if (basename.endsWith(`.${GLINK_CARD_TYPE}.card`)) return "link";

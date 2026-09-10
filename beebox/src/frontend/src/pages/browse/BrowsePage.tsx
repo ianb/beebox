@@ -21,12 +21,12 @@ import { Column } from "../../components/ui/Column";
 import { Text } from "../../components/ui/Text";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody";
 import { RequestError } from "../../lib/errors";
-import type { BrowseState } from "../../lib/browse-card-state";
+import type { BrowseMissingKind, BrowseState } from "../../lib/browse-card-state";
 import { CardVisibilityProvider, useVisibleCardSelectionSink } from "../../components/chat/everywhere/card-context";
 
 interface BrowseBodyProps {
   state: BrowseState;
-  onNavigate: (path: string, options?: { replace?: boolean }) => void;
+  onNavigate: (path: string, options: { kind: BrowseMissingKind; replace?: boolean }) => void;
   onDetailNavigate: (target: ViewTarget, method: "push" | "replace") => void;
 }
 
@@ -94,6 +94,10 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
     if (state.detail) onDetailNavigate({ ...state.detail, viewer: name }, "replace");
   };
 
+  const followMovedCard = useCallback((path: string) => {
+    if (state.detail) onDetailNavigate({ ...state.detail, path }, "replace");
+  }, [onDetailNavigate, state.detail]);
+
   const { data, isLoading: loading, isError, error: browseError, refetch } = trpc.status.browse.useQuery({ path: dirPath });
   useBrowseListLiveRefresh(dirPath);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -155,7 +159,7 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
       if (selectedFilePath === path) {
         // The file is gone — leaving its URL in history would let back walk
         // onto a 404, so replace the entry rather than push.
-        onNavigate(dirPath, { replace: true });
+        onNavigate(dirPath, { kind: "directory", replace: true });
       }
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : "Delete failed");
@@ -173,7 +177,7 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
     <Row gap="none" align="stretch" className="h-full">
       <Sidebar title="Browse" headingLevel="h2" subtitle={dirPath || "/"} detailSelected={hasDetail} idPrefix="bbx-browse-sidebar">
         <Column>
-          <BrowseBreadcrumbs dirPath={dirPath} onNavigate={onNavigate} />
+          <BrowseBreadcrumbs dirPath={dirPath} onNavigate={(path) => onNavigate(path, { kind: "directory" })} />
           <BrowseSidebarBody
             data={data}
             loading={loading}
@@ -182,7 +186,7 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
             onRetry={() => { void refetch(); }}
             dirPath={dirPath}
             selectedFilePath={selectedFilePath}
-            onNavigate={onNavigate}
+            onNavigate={(path, kind) => onNavigate(path, { kind })}
             onFileContextMenu={handleFileContextMenu}
             landmark={landmark}
             boxSlug={boxSlug ?? ""}
@@ -202,10 +206,11 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
             onBack={() => {
               // Replace, not push: this button closes the file, so a browser
               // back right after it must not reopen the file it just closed.
-              onNavigate(dirPath, { replace: true });
+              onNavigate(dirPath, { kind: "directory", replace: true });
             }}
             onDelete={handleDelete}
             onNavigate={handleLinkNavigate}
+            onMoved={followMovedCard}
             onSelectRenderer={handleSelectRenderer}
             onViewStateChange={handleViewStateChange}
             onAddSelection={onAddSelection}

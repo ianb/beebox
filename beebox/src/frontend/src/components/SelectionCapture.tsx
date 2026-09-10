@@ -24,9 +24,10 @@ interface FloatingButton {
 interface SelectionCaptureProps {
   onCapture: (selection: { text: string; position: string }) => void;
   children: ReactNode;
+  className?: string;
 }
 
-export function SelectionCapture({ onCapture, children }: SelectionCaptureProps) {
+export function SelectionCapture({ onCapture, children, className }: SelectionCaptureProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [button, setButton] = useState<FloatingButton | null>(null);
 
@@ -79,6 +80,7 @@ export function SelectionCapture({ onCapture, children }: SelectionCaptureProps)
   return (
     <div
       ref={containerRef}
+      className={className}
       // This wrapper carries no semantics of its own — it's instrumentation
       // over arbitrary `children` content, not a widget — so `role="none"`
       // is accurate, not a workaround: it has no accessible role to strip.

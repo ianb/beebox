@@ -18,6 +18,16 @@ import type { CardIdentity } from "../../hooks/useCardIdentities";
 import { ambiguousMarks, pinnedFace } from "./tab-identity";
 import type { PanelTab } from "./InteractiveChat-controls";
 
+function themeForTab({ path, identity, presentation }: { path: string; identity: CardIdentity | null; presentation: ReturnType<typeof useBoxPresentation> }): ResolvedThemeChoice {
+  if ((identity?.type === undefined && !path.endsWith(".md")) || presentation?.data === undefined) {
+    return { name: "plain", stock: "neutral" };
+  }
+  const type = identity?.type ?? "";
+  return resolveCardTheme({ path: path.replace(/^\//, ""), type, cardChoice: identity?.cardTheme,
+    typeDefault: identity?.type === undefined ? undefined : presentation.data.typeDefaults[type],
+    presentation: presentation.data.presentation }).choice;
+}
+
 /**
  * The pin. Filled when the tab is pinned, outline when the control is only
  * offering — the state and the offer must not look the same (principle 13).
@@ -108,15 +118,7 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
     // stand-in until the card's own title arrives, never the final word.
     const title = identity?.title ?? displayName(tab.target.path);
     const face = pinnedFace({ symbol: identity?.symbol ?? null, title, ambiguous });
-    const theme: ResolvedThemeChoice = identity?.type === undefined || presentation?.data === undefined
-      ? { name: "plain", stock: "neutral" }
-      : resolveCardTheme({
-        path: tab.target.path.replace(/^\//, ""),
-        type: identity.type,
-        cardChoice: identity.cardTheme,
-        typeDefault: presentation.data.typeDefaults[identity.type],
-        presentation: presentation.data.presentation,
-      }).choice;
+    const theme = themeForTab({ path: tab.target.path, identity, presentation });
     return (
       <div
         key={tab.target.path}
