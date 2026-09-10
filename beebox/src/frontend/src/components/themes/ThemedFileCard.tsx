@@ -76,7 +76,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
         {first ? <div className="mt-2"><Button size="sm" intent="ghost" disabled={!hasExplicitView} onClick={() => onSelect(null)}>Use preferred view</Button></div> : null}
       </div>
       <CardMentions path={data.path} onNavigate={onNavigate} />
-      <div className="mt-6"><CardActions target={target} onTrashed={onClose} /></div>
+      <div className="mt-6"><CardActions target={target} onTrashed={onClose} vertical="above" /></div>
     </>
   );
   return <CardThemeSurface

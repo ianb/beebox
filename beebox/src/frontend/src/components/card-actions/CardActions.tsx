@@ -4,8 +4,9 @@ import { trpc } from "../../lib/trpc";
 import { href, toSearch } from "../../lib/routing";
 import { cardChatSearch } from "../../lib/system-card-navigation";
 import type { ViewTarget } from "../../lib/view-url";
+import { explicitConversationHistoryState } from "../chat/workspace/workspace-history";
 import { Button } from "../ui/Button";
-import { Dropdown } from "../ui/Dropdown";
+import { Dropdown, type DropdownVertical } from "../ui/Dropdown";
 import { MenuItem } from "../ui/dropdown-menu-item";
 import { Text } from "../ui/Text";
 
@@ -13,7 +14,11 @@ function MoreIcon() {
   return <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>;
 }
 
-export function CardActions({ target, onTrashed }: { target: ViewTarget; onTrashed?: (() => void) | undefined }) {
+export function CardActions({ target, onTrashed, vertical }: {
+  target: ViewTarget;
+  onTrashed?: (() => void) | undefined;
+  vertical?: DropdownVertical;
+}) {
   const { path } = target;
   const { boxSlug } = useParams({ strict: false });
   const search = useSearch({ strict: false });
@@ -39,6 +44,7 @@ export function CardActions({ target, onTrashed }: { target: ViewTarget; onTrash
           ...result,
           ...(search.nativeComposer === "1" || search.nativeComposer === 1 ? { nativeComposer: "1" as const } : {}),
         })),
+        state: explicitConversationHistoryState,
       });
     } catch (error) {
       setChatError(error instanceof Error ? error.message : "Could not open chat");
@@ -72,6 +78,7 @@ export function CardActions({ target, onTrashed }: { target: ViewTarget; onTrash
   return (
     <>
       <Dropdown
+        vertical={vertical}
         trigger={({ toggle, ariaProps }) => (
           <Button icon={<MoreIcon />} label="Card actions" intent="ghost" size="sm" onClick={toggle} {...ariaProps} />
         )}
