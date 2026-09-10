@@ -33,6 +33,11 @@ container through ordinary open-card operations.
 
 [Engineering review and dispositions](interface-as-cards.review.md) record the design review.
 
+The follow-on [workspace consolidation plan](interface-cards-consolidation.md)
+proposes the remaining canonical instruments, retirement of parallel page/chat
+presentation, and a measured removal report. It is a separate draft, not a claim
+that this plan's outstanding acceptance has been completed.
+
 ## Stated preferences this plan trades against
 
 Direct boxholder decisions, September 9, 2026:
