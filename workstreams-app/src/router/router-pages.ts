@@ -20,24 +20,49 @@ interface DiscoveredWorktree {
   handle?: WorktreeHandle;
 }
 
-async function discoverWorktrees(core: RouterCore): Promise<DiscoveredWorktree[]> {
+/**
+ * Merge the checkouts found on disk with the router's in-memory handles.
+ *
+ * A handle outlives its checkout: the router keeps its record after a worktree
+ * is culled, so a removed workstream kept appearing in the index forever,
+ * permanently `failed` because there is nothing left to start. Only merge a
+ * core entry the disk scan also saw.
+ *
+ * `scanned` is false when the disk read itself failed — then there is no disk
+ * truth to filter against, so every handle is shown rather than rendering an
+ * empty router.
+ */
+export function mergeDiscovered(params: {
+  diskNames: string[];
+  coreEntries: [string, WorktreeHandle][];
+  /** False when the disk read failed — see above. */
+  scanned: boolean;
+}): DiscoveredWorktree[] {
+  const { diskNames, coreEntries, scanned } = params;
   const all = new Map<string, DiscoveredWorktree>();
   all.set("main", { name: "main", running: false });
-  try {
-    const entries = await fs.readdir(WORKTREES_ROOT, { withFileTypes: true });
-    for (const e of entries) {
-      if (e.isDirectory()) all.set(e.name, { name: e.name, running: false });
-    }
-  } catch (_e) {
-    // No worktrees dir yet — fine.
-  }
-  for (const [name, handle] of core.entries()) {
-    const existing = all.get(name) ?? { name, running: false };
-    all.set(name, { ...existing, running: isServing(handle), handle });
+  for (const name of diskNames) all.set(name, { name, running: false });
+  for (const [name, handle] of coreEntries) {
+    const existing = all.get(name);
+    if (existing === undefined && scanned) continue;
+    all.set(name, { ...(existing ?? { name, running: false }), running: isServing(handle), handle });
   }
   return Array.from(all.values()).toSorted((a, b) =>
     a.name === "main" ? -1 : b.name === "main" ? 1 : a.name.localeCompare(b.name),
   );
+}
+
+async function discoverWorktrees(core: RouterCore): Promise<DiscoveredWorktree[]> {
+  let diskNames: string[] = [];
+  let scanned = false;
+  try {
+    const entries = await fs.readdir(WORKTREES_ROOT, { withFileTypes: true });
+    diskNames = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    scanned = true;
+  } catch (_e) {
+    // No worktrees dir yet — fine.
+  }
+  return mergeDiscovered({ diskNames, coreEntries: core.entries(), scanned });
 }
 
 // Best-effort "+ins −del vs main" for the worktree list. Uses the merge-base so
