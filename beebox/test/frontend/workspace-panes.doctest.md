@@ -202,6 +202,31 @@ JSON.stringify(state.tabs.a.target)
 => {"path":"a","viewer":"canvas","params":{"mode":"detail"},"viewState":{"frame":4}}
 ```
 
+## A moved card retargets the existing tab
+
+The move keeps the pane, renderer parameters, pin, and active-card identity. It
+does not open a second tab at the destination path.
+
+```ts
+let state = reduceWorkspace(createEmptyWorkspaceState(), {
+  type: "openCard",
+  target: { path: "old", viewer: "canvas", params: { page: "2" }, viewState: null },
+  label: "Moved card", at: 1, viewport: "desktop",
+}).state;
+state = reduceWorkspace(state, {
+  type: "retargetCard",
+  fromPath: "old",
+  target: { ...state.tabs.old.target, path: "archive/new" },
+}).state;
+JSON.stringify({
+  paths: Object.keys(state.tabs),
+  pane: state.panes.left,
+  target: state.tabs["archive/new"].target,
+  interaction: state.lastInteraction,
+})
+=> {"paths":["archive/new"],"pane":{"paths":["archive/new"],"activePath":"archive/new","display":"cards"},"target":{"path":"archive/new","viewer":"canvas","params":{"page":"2"},"viewState":null},"interaction":{"kind":"card","path":"archive/new"}}
+```
+
 ## Move and focus are explicit card interactions
 
 ```ts

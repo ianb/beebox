@@ -1,5 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { TrpcContext } from "./context.js";
+import { movedCardRecoveryFromCause } from "../../core/moved-card-recovery.js";
 
 // Client responses never need server frames or raw internal error messages,
 // either of which can contain absolute filesystem paths. Keep diagnosis in the
@@ -11,6 +12,10 @@ const t = initTRPC.context<TrpcContext>().create({
     return {
       ...shape,
       message: error.code === "INTERNAL_SERVER_ERROR" ? "Internal server error" : shape.message,
+      data: {
+        ...shape.data,
+        recovery: movedCardRecoveryFromCause(error.cause),
+      },
     };
   },
 });

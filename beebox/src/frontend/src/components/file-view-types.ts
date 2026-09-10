@@ -13,6 +13,8 @@ export interface FileViewProps {
   onSelectRenderer?: (name: string | null) => void;
   /** Open a link according to the surrounding surface's navigation semantics. */
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  /** Replace a route-owned old path after card.get reports a validated move. */
+  onMoved?: (path: string) => void;
   /** Surface selected text to a surrounding chat composer. */
   onAddSelection?: (selection: AddSelectionInput) => void;
   /** Report companion-pane activity; absent elsewhere. */

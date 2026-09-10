@@ -19,6 +19,8 @@ import { ThemeChoiceSchema, validateThemeChoice } from "../../../shared/card-the
 import { withCardLock } from "../../../lib/card-lock.js";
 import { writeFileAtomic } from "../../../lib/atomic-write.js";
 import { stageAndCommitPaths } from "../../../lib/git.js";
+import { MovedCardRecoveryCauseError } from "../../../core/moved-card-recovery.js";
+import { resolveMovedCardPath } from "../../../core/moved-card-forwarding.js";
 
 /**
  * Box containment + namespace fence, checked on the RESOLVED path (both
@@ -161,7 +163,12 @@ export const cardRouter = router({
           // display-form path never reaches this point at all; it's refused
           // earlier by `resolveCardPath` (with the "did you mean" suggestion
           // attached there instead — see its doc comment).
-          throw new TRPCError({ code: "NOT_FOUND", message: `Card not found: ${relPath}` });
+          const moved = await resolveMovedCardPath({ boxRoot: ctx.boxRoot, missingPath: relPath });
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Card not found: ${relPath}`,
+            cause: moved.kind === "moved" ? new MovedCardRecoveryCauseError(moved.path) : undefined,
+          });
         }
         throw new TRPCError({ code: "BAD_REQUEST", message: msg });
       }

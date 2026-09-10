@@ -1,6 +1,6 @@
 ---
 title: "A card moved while it's open 404s in the browser instead of following the move"
-workstream: unattached
+workstream: moved-card-forwarding
 area: beebox
 priority: normal
 labels: [browse, cards, move]

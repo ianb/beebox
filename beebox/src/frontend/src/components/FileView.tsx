@@ -23,7 +23,7 @@
 
 import { ThemedFileCard } from "./themes/ThemedFileCard";
 import { useConversationCard, selectionReceiver } from "./chat/everywhere/card-context";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
 import { displayName } from "../lib/display-name";
 import { useFileData, isCardPath, isMissingCardFailure } from "./file-view-data";
@@ -166,16 +166,51 @@ function selectedRenderer({ path, userSelection, rendererName }: {
   path: string; userSelection: { path: string; name: string | null } | null; rendererName?: string | null;
 }) { return userSelection?.path === path ? userSelection.name : rendererName; }
 
+function useMovedCardRecovery({
+  path,
+  recovery,
+  onMoved,
+  hasData,
+}: {
+  path: string;
+  recovery: { path: string } | null;
+  onMoved: ((path: string) => void) | undefined;
+  hasData: boolean;
+}): boolean {
+  const handledMoveRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (recovery === null || onMoved === undefined) return;
+    const moveKey = `${path}\0${recovery.path}`;
+    if (handledMoveRef.current === moveKey) return;
+    handledMoveRef.current = moveKey;
+    onMoved(recovery.path);
+  }, [onMoved, path, recovery]);
+  return recovery !== null && onMoved !== undefined && !hasData;
+}
+
+function pendingFileViewLabel({
+  loading,
+  followingMove,
+}: {
+  loading: boolean;
+  followingMove: boolean;
+}): string | null {
+  if (loading) return "Loading...";
+  if (followingMove) return "Following moved card...";
+  return null;
+}
+
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
   const mode = modeProp ?? "page";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const cardContext = useConversationCard({ path, mode, rendererName: selectedRenderer({ path, userSelection, rendererName }), params, viewState: ownedViewState });
   const onAddSelection = selectionReceiver(suppliedAddSelection, cardContext.capture);
   const handleCardFocus = cardContext.handleFocus;
   const handleRendererFocus = cardContext.handleRendererFocus;
-  const { data, loading, error, stale, refresh } = useFileData(path);
+  const { data, loading, error, stale, recovery, refresh } = useFileData(path);
+  const followingMove = useMovedCardRecovery({ path, recovery, onMoved, hasData: data !== null });
 
   const handleCapture = useCallback((selection: { text: string; position: string }) => {
     if (onAddSelection === undefined) return;
@@ -202,7 +237,8 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     return [{ name: binding.name, Component: AuthoredRendererMarker, priority: 100 }, ...base];
   }, [path, data, binding]);
 
-  if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
+  const pendingLabel = pendingFileViewLabel({ loading, followingMove });
+  if (pendingLabel !== null) return <div className="p-4 text-warm-600">{pendingLabel}</div>;
   // A missing card is not an error state: it falls through to MissingCardState,
   // which offers to create or close it.
   if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} onRetry={refresh} />;

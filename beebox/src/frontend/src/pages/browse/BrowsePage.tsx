@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useLocation, useParams } from "@tanstack/react-router";
 import { apiRawFileUrl, getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { busEventData } from "../../lib/bus-events";
@@ -26,6 +26,7 @@ import { RequestError } from "../../lib/errors";
 import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
 import { toDisplayPath } from "@shared/display-path";
 import { useAppBarPlace } from "../../components/app-bar-chrome";
+import { useMovedCardNavigation } from "./moved-card-navigation";
 
 /**
  * Strip a trailing extension and convert underscores to spaces.
@@ -172,6 +173,7 @@ function useBrowseTitle({
 export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePageProps) {
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
+  const location = useLocation();
   const utils = trpc.useUtils();
   const { viewer, params: urlParams, viewState } = useUrlView();
 
@@ -219,6 +221,8 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     [currentPath, onNavigate, urlParams, viewState],
   );
 
+  const followMovedCard = useMovedCardNavigation({ onNavigate, search: location.search });
+
   const { data, isLoading: loading, isError, error: browseError, refetch } = trpc.status.browse.useQuery({ path: dirPath });
   useBrowseListLiveRefresh(dirPath);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -254,10 +258,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     };
   }, [contextMenu]);
 
-  const selectedCard = selectedFilePath && data
-    ? data.cards.find((c) => c.relativePath === selectedFilePath) || null
-    : null;
-  const selectedRawFile = selectedFilePath && isRawFilePath(selectedFilePath) ? selectedFilePath : null;
+  const { selectedCard, selectedRawFile } = selectedBrowseFile({ selectedFilePath, data });
 
   const hasDetail = Boolean(selectedFilePath);
 
@@ -334,6 +335,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
             }}
             onDelete={handleDelete}
             onNavigate={handleLinkNavigate}
+            onMoved={followMovedCard}
             onSelectRenderer={handleSelectRenderer}
             onViewStateChange={handleViewStateChange}
             params={urlParams}
@@ -360,6 +362,23 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
       ) : null}
     </Row>
   );
+}
+
+function selectedBrowseFile({
+  selectedFilePath,
+  data,
+}: {
+  selectedFilePath: string | null;
+  data: RouterOutput["status"]["browse"] | undefined;
+}): {
+  selectedCard: RouterOutput["status"]["browse"]["cards"][number] | null;
+  selectedRawFile: string | null;
+} {
+  const selectedCard = selectedFilePath && data
+    ? data.cards.find(card => card.relativePath === selectedFilePath) ?? null
+    : null;
+  const selectedRawFile = selectedFilePath && isRawFilePath(selectedFilePath) ? selectedFilePath : null;
+  return { selectedCard, selectedRawFile };
 }
 
 function useBrowseViewStateNavigation(opts: {
