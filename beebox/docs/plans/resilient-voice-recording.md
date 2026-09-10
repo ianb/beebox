@@ -180,9 +180,12 @@ fallback." The composer's `hq` region (`composerMachine.ts:205-211`) has
   through their own path".
 - *Sweep.* The abandonment sweep filters `isCaptureSession`
   (`sweep.ts:92`), so it will not touch voice sessions.
-- *Delivery.* A resolve-target → busy? enqueue : send shape (`deliver.ts:5-10`)
-  with an at-most-once landed-message probe on resume (`prepare.ts`, the
-  `priorState === "delivering"` branch).
+- *Delivery.* `deliverUserMessage` (`core/chat/session/deliver-user-message.ts`)
+  is "The generic resolve→emit `chat-user-message`→busy?enqueue:send core
+  shared by capture delivery … and bulk-upload delivery". The at-most-once
+  probe `userMessageAlreadyLanded` matches a unique `docPath` substring in the
+  transcript (`:55-70`). A busy session gets an in-memory enqueue
+  (`:182-186`), which capture counts as delivered.
 
 Reuse all of it. What capture lacks for this job (research findings):
 - the web client queue is in-memory with manual Retry only
@@ -338,8 +341,17 @@ provider error ends the attempt.
   recording id, chunk filenames `pcm-000001.raw` in sequence. The format enum
   gains `pcm-s16le-16k`.
 - Seal: `POST /api/capture/sessions/:id/finalize` dispatches by kind.
-  - A voice seal carries `{ hq: null | { emissionId, sessionId } }`, and
-    finalize is idempotent: a repeat returns the current state.
+  - A voice seal carries `{ chunkCount, hq: null | { emissionId, sessionId } }`,
+    and finalize is idempotent: a repeat returns the current state.
+  - **Finalize verifies contiguity.** Uploads are refused once a session is
+    not `open` (`capture-upload.ts:51-55`), so a chunk that arrives after the
+    seal is lost for good. Finalize therefore checks that the manifest holds
+    exactly `pcm-000001 … pcm-<chunkCount>`. On a gap it answers 409
+    `missing-chunks` and does not seal.
+  - The client queue is strictly ordered, so a gap means an evicted or lost
+    op. The client treats it as terminal: the recording fails visibly as
+    "audio incomplete", and the send falls back with `hq="failed"`.
+  - `chunkCount` is a request parameter, not new manifest state.
   - With `hq` set, the state becomes `queued` and `handoff` records the
     emission id as `open`. The HQ service is resolved once at request time and
     recorded.
@@ -370,21 +382,33 @@ provider error ends the attempt.
     - On piece-too-long it halves `pieceSeconds` and restarts from piece 1,
       down to a floor of **150 s**, then `failed/permanent`.
     - On permanent it goes straight to `failed`.
-    - Diarized pieces are joined with a part marker (below). Speaker letters
-      advance per piece through the existing `nextSpeakerLetter`, so piece 2's
-      speakers read `1B`, `2B`. The part marker says numbering restarts
-      (`prompts.ts:58` already teaches "cannot be assumed to be the same
-      person").
+    - Diarized pieces are joined in order. How speakers are labeled across
+      pieces of one recording is Open design question 2. Today's guidance
+      (`prompts.ts:58`) ties a letter to a *recording*, so neither option is
+      a free reuse.
     - It emits `voice-recording-status` on the event bus after every
       transition.
   - `deliver-late.ts`: when `handoff.mode === "late"` and the result is ready,
     deliver `<speech stt="hq" stt-service="…" [diarized="1"] message-id="<recordingId>"
     corrects="<emissionId>">…</speech>` to `targetSessionId`.
-    - It uses the capture delivery core (`deliver.ts`), extracted into a
-      shared `deliverUserMessage({ boxRoot, sessionId, text, landedProbe })`
-      that both capture and voice call (#8).
-    - At-most-once: a `delivering` marker plus a landed probe on
-      `corrects="<emissionId>"`, the same shape as capture.
+    - It calls the existing shared `deliverUserMessage`
+      (`core/chat/session/deliver-user-message.ts`, already used by capture and
+      bulk upload) directly. Nothing is extracted.
+    - **A busy session is not "delivered".** `deliverUserMessage` enqueues in
+      memory when the agent is busy and returns `{ queued: true }` (`:182-186`).
+      Capture accepts losing that on a crash (`prepare.ts`: "the queue is
+      in-memory only, so a crash before drain loses the notification
+      (accepted …)"). A correction may not be lost.
+    - So the handoff moves `late → delivering` before the call, and to
+      `delivered` only when the landed probe finds the message in the
+      transcript. The probe runs on startup resume and on each voice-sweep
+      tick; if the message has not landed and the session is idle, it
+      re-delivers.
+    - The landed probe: `userMessageAlreadyLanded` today takes a `docPath`
+      and matches it as a bare substring (`:55-70`). Its parameter is
+      generalized to `marker: string`, and capture/bulk pass their `docPath`
+      unchanged. Voice passes the recording id, a UUID that appears in the
+      transcript only in the correction's `message-id`.
 - Resume: `resumeStagingSessions` switches on kind. Voice sessions in
   `queued | transcribing | retrying` resume the job. Voice sessions with a
   ready result and `handoff.mode === "late"` resume late delivery.
@@ -430,8 +454,10 @@ sessions. No open questions.
 ### Track 2 — Client: a durable upload queue for voice staging
 
 **What.** A module-level queue that persists staging operations for voice
-recordings in IndexedDB and drains them to the box with bounded retries. It
-outlives the transcription actor, a reload and a closed tab.
+recordings in IndexedDB and drains them to the box with bounded retries. Its
+*uploads* outlive the transcription actor, a reload and a closed tab. The
+*send* handoff does not: the pending row lives in per-tab `sessionStorage`.
+What completes a message whose tab is gone is Open design question 1.
 
 **Why this needs to change.** Capture's web queue is in-memory with manual
 retry (`useCaptureUploads.ts:223-233`). A voice recording made during a deploy
@@ -545,6 +571,20 @@ Network-caused ends stop ending the segment.
     gets a gap, which HQ covers.
 - The recording-start earcon plays on `MIC_LIVE`, not on socket open. The
   recording is truly live at that point (#13).
+- **The hook, not only the machine.** `useRealtimeTranscription` special-cases
+  segment states by name:
+  - the state mapping (`:297-306`)
+  - keyword spotting (`:145`, `:153`)
+  - the earcon effect (`:398`)
+  - `stop()` (`:422`)
+  - `submitSegment` (`:460`)
+  - the mic-tab-lock eviction (`:483`)
+  - `isTranscribing` in `InteractiveChat-voice.ts:202-206`
+  Every one of these checks moves to one exported predicate,
+  `segmentCapturing(state)`, which is true for `recording | reconnecting |
+  recordingLocal`. `TranscriptionState` gains `"recordingLocal"`. The
+  predicate and the state mapping get doctests. Keyword spotting stays gated on
+  `recording`, since no live text exists in `recordingLocal`.
 - The voice chip shows "Recording · live text paused" in `recordingLocal`, and
   says that spoken commands are unavailable. The manual send and stop buttons
   work.
@@ -610,9 +650,12 @@ text the kept text (`api-chat.ts:171-174`, `voice-intent.ts:131-136`).
     rows parse unchanged).
 - Pending sends:
   - A `preparing` row gains `recordingId?`.
-  - On reload, a `preparing` row with a `recordingId` stays `preparing`, and
-    the chat layer resumes `awaitHq` with the remaining budget recomputed from
-    `stagedAt`. Rows without one keep today's `recovered` path.
+  - The store's rule stays: "No load path sends anything"
+    (`pending-sends.ts:1-4`).
+  - On reload, a `preparing` row with a `recordingId` becomes a visible
+    pending-HQ item. It shows the server's status and never sends on its
+    own. What completes it is Open design question 1.
+  - Rows without a `recordingId` keep today's `recovered` path.
 - Ordering: voice dispatches are FIFO per conversation.
   - A module-level `voiceSendSequencer` chains each send's dispatch behind the
     previous voice send's dispatch-or-fallback.
@@ -669,6 +712,12 @@ recordings and old web tabs.
 tab that sent it, capacity 5, gone on reload (`last-audio.ts:10-12,42-43`). The
 recovery material the issue names depends on the tab staying open.
 
+This track is also forced by Track 3, so it is not optional scope. Track 3
+replaces the whole-segment in-memory PCM with a 30 s ring buffer, so no
+whole-recording blob exists for `retainVoiceAudio` to hold. Keeping web
+retention would mean keeping 115 MB/hour in memory, which is what Track 3
+removes. Without Track 5, `get-last-audio` would break for web recordings.
+
 **Direction.**
 - The server's last-audio resolution first checks staging with the same
   message-id verification the relay uses.
@@ -695,10 +744,21 @@ never retried.
 **Direction.**
 - `SpeechDictation` adds an `AVAudioConverter` tap output at 16 kHz s16 mono
   and writes 15 s chunk files beside the existing WAV.
-- A `VoiceStagingCoordinator` reuses `CaptureUploadCoordinator`'s background
-  session, `CaptureStore` persistence and its retryable/terminal
-  classification. It creates, uploads and finalizes with the same headers and
-  body as the web.
+- A **new native voice-staging model**, `VoiceStagingStore` +
+  `VoiceStagingCoordinator`. It shares only the lower layers of capture: the
+  background `URLSession` configuration (`CaptureAPI.swift`) and the
+  retryable/terminal HTTP classification.
+  - It does not reuse `CaptureStore`. That store validates audio as
+    `.m4aAAC` only (`CaptureStore.swift:499-501`). `CaptureAudioFormat` has
+    no PCM case (`CaptureModels.swift:61-64`). Filenames are fixed to `.m4a`
+    (`CaptureModels.swift:229-231`). Retry stops at
+    `maximumUploadAttempts = 4` (`CaptureStore.swift:15`).
+  - Changing those semantics would alter native capture, which is out of
+    scope.
+  - The voice store's retry bound matches the web queue: 7 days, steady
+    cadence after the backoff table.
+  - It creates, uploads and finalizes with the same headers and bodies as the
+    web, including `chunkCount`.
 - `prepareVoiceMessage` replaces `ChatAPI.transcribeAudio` with a wait on
   `voiceRecording.status`, then claim or fall back. It carries the same
   budget, calls `voiceRecording.*` over HTTP, and stamps `hqFallback` into
@@ -757,10 +817,15 @@ design questions with its contingency.
 > voice GC and voice resume, a sealed voice recording would never resume after
 > a restart and would never be collected. Both are in Track 1's direction.
 
-> **Accepted risk:** a tab closed (not reloaded) while `awaitHq` is waiting
-> loses the `sessionStorage` pending row, so the message is never sent. This is
-> today's behavior. The recording and its HQ result stay on the server for 7
-> days, but no UI lists them (NOT in scope; filed as a follow-up issue).
+> **Open, pending a decision:** a tab closed (not reloaded) while `awaitHq` is
+> waiting loses the `sessionStorage` pending row, so the message is never sent.
+> This is today's behavior too, and it contradicts the job story "a closed tab
+> … does not throw away the recording". Open design question 1 settles it.
+
+> **Critical gap (resolved in plan):** a late correction delivered while the
+> agent is busy sits in an in-memory queue, and a crash before drain would
+> lose it silently. Track 1 now keeps the handoff in `delivering` until the
+> landed probe confirms it.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
@@ -777,7 +842,10 @@ design questions with its contingency.
 | Provider down for a day | Job doctest (injected clock) | `failed/exhausted` at 24 h | Clear: badge "HQ failed" |
 | Server restarts mid-job | Resume doctest (filesystem) | Resume scan by kind; piece work is idempotent | Clear |
 | Client budget expires as the result lands | `state` doctest (race) | CAS: `fallBack` returns the result if `ready` | Clear |
-| Late delivery crashes after send | Deliver doctest | `delivering` marker + landed probe on `corrects` | Clear |
+| Late delivery crashes after send | Deliver doctest | `delivering` marker + landed probe on the recording id | Clear |
+| Late delivery while the agent is busy, then a crash | Deliver doctest (busy fake session) | Stays `delivering`; resume/sweep re-probes and re-delivers | Clear |
+| Finalize before every chunk landed | Route doctest (`chunkCount` gap) | 409 `missing-chunks`; no seal | Clear: "audio incomplete" |
+| Hook check misses `recordingLocal` | `segmentCapturing` doctest | One predicate for every hook check | Clear |
 | Segment 2's HQ beats segment 1's | Sequencer doctest | FIFO dispatch | Clear |
 | A consumer forgets to seal | Type (`PendingRecording`) + hook-unmount seal | Unsealed → sealed `hq: null` on unmount; GC at 7 days | Clear |
 | Reload during the HQ wait | pending-sends doctest | Row stays `preparing`; `awaitHq` resumes | Clear |
@@ -847,6 +915,34 @@ design questions with its contingency.
 
 ## Open design questions
 
+1. **Who completes a voice message whose tab is gone (closed, or reloaded
+   mid-wait)?**
+   - The client may not auto-send on load (`pending-sends.ts:1-4`).
+   - Lean: **a server backstop.** A recording with an HQ request that is
+     neither claimed nor fallen back within `HQ_WAIT_BUDGET_MS` + 10 minutes
+     of reaching `ready` (or terminal `failed`) is delivered by the box itself:
+     `<speech stt="hq" message-id="<emissionId>">` with the HQ text, or
+     `hq="failed"` with no text if HQ failed. It goes through the same durable
+     `delivering` path as a late correction.
+   - What is lost: that message's selections and attachments. The server
+     never had them.
+   - A tab that comes back later and calls `claim` is told
+     "delivered by the box" and drops its row.
+   - Alternative: keep today's behavior (nothing is sent) and add a
+     "recordings" recovery list. That list is new UI.
+   - A reloaded tab shows the item as pending either way.
+   - Human decision: may the box send a message on the user's behalf when
+     the tab is gone?
+2. **Speaker labels across pieces of one diarized recording.** Piece 2's
+   speaker 1 may or may not be piece 1's speaker 1.
+   - Option A (lean): a fresh letter per piece (`1A`, `2A` … then `1B`,
+     `2B`), a marker line `— part 2 of 3 —` between pieces, and one prompt
+     sentence: parts of one recording carry fresh letters, and the same
+     people may recur under a new letter. It never asserts a false identity.
+   - Option B: one letter per recording with part-local numbering. That
+     reuses the letter's current meaning, but `1A` in part 1 and part 2 can
+     then be different people.
+   - Human decision: transcript vocabulary.
 - **Does a 600 s WAV piece via multipart succeed on `mai-diarized` within
   OpenRouter's 60 s upstream timeout?**
   - Lean: yes. The incident's 6-minute recordings succeeded via JSON, and
@@ -912,8 +1008,9 @@ status comments recorded.
    approval). Set `HQ_PIECE_SECONDS`.
 4. Track 1: `hq-job.ts`, finalize dispatch, resume by kind, voice GC, bus
    event. Filesystem doctests.
-5. Track 1: `voiceRecording` tRPC router; `deliverUserMessage` extraction from
-   capture (capture doctests stay green); `deliver-late.ts`.
+5. Track 1: `voiceRecording` tRPC router; `userMessageAlreadyLanded`
+   `docPath` → `marker` (capture and bulk doctests stay green);
+   `deliver-late.ts` with the durable `delivering` state.
 6. Track 2: drainer core + IndexedDB shell; `transient.ts` idempotent-mutation
    meta.
 7. Track 3: machine states; actor reorder; `VoiceStager`; `PendingRecording`;
