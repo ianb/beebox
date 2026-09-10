@@ -1,3 +1,4 @@
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 /**
  * The `PlacePill`'s switch menu — the app bar's activity switcher
  * (docs/plans/top-nav-ia.md Track C1). Split out of PlacePill.tsx to keep
@@ -261,10 +262,9 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
             <span className="text-warm-500">‹ Box: {boxName}</span>
           </MenuItem>
           <MenuDivider />
-          <MenuItem id="bbx-box-menu-dashboard" to={href(`/${boxSlug}/dashboard`)}>Dashboard</MenuItem>
-          {/* Default entry lands in _content — the boxholder's natural home;
-              the box root (underscore areas) stays reachable by going up. */}
-          <MenuItem id="bbx-box-menu-browse" to={href(`/${boxSlug}/browse/_content`)}>Browse</MenuItem>
+          <MenuItem id="bbx-box-menu-dashboard" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.dashboard}`)}>Dashboard</MenuItem>
+          {/* A bare open resumes Browse; a new tab starts at the box root. */}
+          <MenuItem id="bbx-box-menu-browse" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.browse}`)}>Browse</MenuItem>
           <MenuItem id="bbx-box-menu-history" to={href(`/${boxSlug}/history`)}>History</MenuItem>
           <MenuItem id="bbx-box-menu-inventory" to={href(`/${boxSlug}/inventory`)}>Storage summary</MenuItem>
           {boxSwitchingAvailable ? (

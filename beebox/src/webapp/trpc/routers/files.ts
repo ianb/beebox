@@ -7,6 +7,7 @@
  * the wire just to render one-line entries.
  */
 
+import { getFileKind } from "./file-kind.js";
 import { z } from "zod";
 import * as fs from "node:fs/promises";
 import { router, publicProcedure } from "../trpc.js";
@@ -68,6 +69,7 @@ async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSu
 }
 
 export const filesRouter = router({
+  kind: publicProcedure.input(z.object({ path: z.string() })).query(({ ctx, input }) => getFileKind(ctx.boxRoot, input.path)),
   summarize: publicProcedure
     .input(z.object({ paths: z.array(z.string().min(1)).max(200) }))
     .query(async ({ input, ctx }) => {

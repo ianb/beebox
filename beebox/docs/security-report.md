@@ -1,9 +1,9 @@
 ---
 generated-by: .claude/skills/security-report/SKILL.md
 generated-at-rev: 67f4d34ea59c91840d6444b907dc31ed937f8e21
-date: 2026-09-03
-model: claude-fable-5-1
-reviewed-by: Ian
+date: 2026-09-09
+model: gpt-6-astra
+reviewed-by: DRAFT — unreviewed
 ---
 
 # Security report — structured version
@@ -12,7 +12,18 @@ The exhaustive accounting behind [security-overview.md](security-overview.md). A
 is the primary consumer; updates are adjudicated against
 `generated-at-rev` per the rubric in
 [`.claude/skills/security-report/SKILL.md`](https://github.com/ianb/beebox/blob/main/.claude/skills/security-report/SKILL.md)
-(repo root). Item vocabulary:
+(repo root).
+
+**Scoped amendment (2026-09-09):** Added only the `files.kind` accounting below,
+against `35a480fd64e738fe4457608d5745362a89d1f381` plus its uncommitted
+interface-as-cards changes. This is a targeted addition, not a full report
+refresh. The existing `generated-at-rev` remains the full-inventory anchor;
+other changes since that anchor and the private security tier were not reviewed
+in this pass. The broader report was reviewed by Ian on 2026-09-03; this
+amendment is unreviewed. The readable overview is unchanged because the new
+query uses the existing authenticated file-read boundary.
+
+Item vocabulary:
 
 - **State**: `ok` (as intended) / `mitigated` (real risk, named control) /
   `accepted` (known weakness, deliberate decision, rationale linked) /
@@ -98,6 +109,7 @@ Notable abilities, and the items that are more than routine:
 | Surface | Abilities | State | Sev | Reach | Notes |
 |---|---|---|---|---|---|
 | `api-files.ts`, `api-files-write.ts`, `api-browse.ts`, `api-image.ts`, `history.ts` | Read/write/delete/commit raw box files; read any historical git blob | ok | — | authed | Path containment via `ref-path.ts` + route guards |
+| tRPC `files.kind` (`src/webapp/trpc/routers/files.ts:72`) | Classify a box path as file, directory, or missing; no file contents or writes | ok | low | authed | `publicProcedure` relies on the existing transport wall (`server-box-scope.ts:68,172`), not procedure-local auth. `file-kind.ts:9-17` uses `resolveBoxNamespacePathOnDisk` in read mode before `stat`; the shared guard checks namespace containment and symlink targets. Empty/root path returns directory without disk access. `test/webapp/files-kind.doctest.md` covers classification, lexical traversal, and a symlink into package internals; its direct caller does not test transport authentication. |
 | tRPC `share.destinations` / `share.saveTextual` | Write a new card (inbox or a landmark dir) from shared URL/text content; used by the iOS share extension | ok | — | authed | Card-schema-validated before write, `withCardLock`-serialized, `share-id`-deduped against replay; same auth tier as the file-write surface above |
 | `POST /api/chat/*`, `transcribe-ws` | Drive chat, transcribe (consumes box's provider keys) | ok | — | authed | `mock: true` TTS is rejected unless explicit development surfaces are enabled; it cannot silently fall through to a paid provider call |
 | `POST /api/chat/screenshot/request` (`chat-screenshot-routes.ts:208`) | Pull on-screen state from a connected browser | mitigated | med | authed | Extra gate: requires the agent bearer specifically; a plain session 403s |

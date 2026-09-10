@@ -74,7 +74,7 @@ JSON.stringify({
   ignoresState: ignore.includes("\n.beebox/\n"),
   ignoresLocks: ignore.includes("\n.bbx-*.lock\n") && ignore.includes("\n.bbx-serve.pid\n"),
 })
-=> {"trackedBefore":51,"dryRunLeavesTracked":"checked-after","dryRunMentions":true,"appliedSays":"[box-gitignore] .gitignore rewritten; untracked 4 state file(s) (still on disk).","stillTrackedState":[".beebox/box.json"],"storeFileStillTracked":true,"onDisk":"123","ignoreHeader":"# Bee Box .gitignore","ignoresState":true,"ignoresLocks":true}
+=> {"trackedBefore":54,"dryRunLeavesTracked":"checked-after","dryRunMentions":true,"appliedSays":"[box-gitignore] .gitignore rewritten; untracked 4 state file(s) (still on disk).","stillTrackedState":[".beebox/box.json"],"storeFileStillTracked":true,"onDisk":"123","ignoreHeader":"# Bee Box .gitignore","ignoresState":true,"ignoresLocks":true}
 ```
 
 Running it again is a no-op apart from rewriting the same file.

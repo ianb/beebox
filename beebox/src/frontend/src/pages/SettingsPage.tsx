@@ -1,3 +1,4 @@
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 /**
  * Settings page with calendar and Drive configuration.
  */
@@ -21,11 +22,11 @@ export function SettingsPage() {
   return (
     <Column overflow="auto" focusable className="h-full">
       <Stack gap="lg" className="max-w-2xl mx-auto py-8 px-4 w-full">
-        <TextLink id="bbx-settings-back" to={href(`/${boxSlug}/dashboard`)}>
+        <TextLink id="bbx-settings-back" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.dashboard}`)}>
           <Text size="sm">&larr; Back to Dashboard</Text>
         </TextLink>
 
-        <Text as="h1" size="2xl" weight="bold">Settings</Text>
+        <Text as="h2" size="2xl" weight="bold">Settings</Text>
 
         <BoxSystemThemePicker boxKey={boxSlug ?? ""} />
 

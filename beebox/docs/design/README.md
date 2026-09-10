@@ -15,6 +15,8 @@ code doesn't fill yet — don't read it as description.
 
 ## Files
 
+- [Interface-as-cards background](interface-as-cards-background.md) — earlier exploration preserved for context; the linked current plan governs implementation.
+
 - [`representation.md`](representation.md) — the anchor principle: the representation mirrors the shape of the idea (Engelbart); strict validation with deliberate, scarce escape valves; cards that aren't domain ideas (husks, landmarks) are still ideas.
 - [`identity.md`](identity.md) — what this is: OS as the ambition, shared boxes (one sharing granularity each), web UI as the privileged surface, documents as the record, runs on a full computer only (local or remote), never serverless.
 - [`interaction-model.md`](interaction-model.md) — idle-by-default background engine AND definitely also a chatbot; proactivity as active ambition; connectors as the external-service boundary; sync-as-event.

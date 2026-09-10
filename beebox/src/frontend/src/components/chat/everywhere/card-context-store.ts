@@ -27,3 +27,8 @@ export function createCardContextStore() {
     },
   };
 }
+
+/** Selection delivery is independent of attention, but hidden material has no sink. */
+export function visibleCardSelectionSink(visible: boolean, store: ReturnType<typeof createCardContextStore> | null) {
+  return visible ? store?.capture : undefined;
+}
