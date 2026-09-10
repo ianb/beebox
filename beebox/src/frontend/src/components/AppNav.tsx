@@ -1,3 +1,5 @@
+import { workspaceRouteTarget } from "../lib/system-card-navigation";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 /**
  * The unified app bar (docs/plans/top-nav-ia.md Track C) — one gradient row,
  * every page, every width.
@@ -45,7 +47,7 @@ import { placeLabel } from "../lib/place-label";
 function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { user: CurrentUser | null; boxSlug: string; onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
   const location = useRouterState({ select: (s) => s.location });
   const base = `/${boxSlug}`;
-  const isOnSettings = location.pathname.startsWith(`${base}/settings`);
+  const isOnSettings = location.pathname.startsWith(`${base}/views/${SYSTEM_CARD_PATHS.settings}`) || workspaceRouteTarget({ pathname: location.pathname, searchStr: location.searchStr, search: location.search })?.path === SYSTEM_CARD_PATHS.settings;
   const isOnAdmin = location.pathname === `${base}/admin`;
 
   return (
@@ -77,7 +79,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
           <div className="text-xs text-warm-500 truncate">{user.email}</div>
         </div>
       ) : null}
-      <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/settings`)} active={isOnSettings}>Settings</MenuItem>
+      <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
       <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/admin`)} active={isOnAdmin}>Admin</MenuItem>
       <MenuDivider />
       <MenuItem id="bbx-profile-menu-source-view" onClick={onToggleSourceView}>Source View</MenuItem>

@@ -293,6 +293,14 @@ the contract.
   Desktop panes can show two cards with ambient chat. Hidden mounted cards do not
   publish focusedRef; when no card is visible it is absent. Move/focus/restore
   actions change attention, never the selected recipient or a captured send binding.
+- **Canonical interface cards:** Dashboard, Settings, and Browse use the existing
+  card attention representation (`surface: "card"`) and their canonical refs
+  under `_config/interface/`. Browse's represented directory comes from its
+  parsed view state, not the anchor card's parent directory. The existing
+  attention enum still accepts legacy `dashboard` and `browse` values. Opening
+  these cards does not change the binding version, bridge channels, native
+  draft/recording lifetime, or captured send destination; no native protocol
+  migration is required.
 - **Assignment-only publication:** the same channel accepts
   `{version:1, kind:"assigned", boxSlug, clientConversationId, sessionId, contextDir}`.
   Native saves this alias without selecting it. Its atomic per-box startup ledger

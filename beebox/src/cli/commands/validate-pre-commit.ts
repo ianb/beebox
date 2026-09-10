@@ -20,6 +20,10 @@
  * - **Unlisted binaries** are read from the index rather than the tree
  *   (`core/annex/staged-unlisted.ts`).
  */
+import { typeFromFilename } from "../../core/card-io.js";
+import { isSystemCardType } from "../../shared/system-card-paths.js";
+import { checkStagedSystemCards } from "../../core/system-cards.js";
+
 
 import { formatLintResults } from "../../cards/index.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
@@ -62,11 +66,13 @@ export async function runPreCommitChecks(
   { colors }: { colors: boolean }
 ): Promise<PreCommitOutcome> {
   const ignore = await loadValidationIgnore(boxRoot);
-  const cards = (await listStagedCards(boxRoot)).filter((p) => !ignore.isIgnored(p));
+  const cards = (await listStagedCards(boxRoot)).filter((p) => !ignore.isIgnored(p) && !isSystemCardType(typeFromFilename(p) ?? ""));
   const mdFiles = (await listStagedMarkdown(boxRoot)).filter((p) => !ignore.isIgnored(p));
 
   const sections: string[] = [];
-  let errorCount = 0;
+  const systemCardErrors = await checkStagedSystemCards(boxRoot);
+  let errorCount = systemCardErrors.length;
+  if (systemCardErrors.length > 0) sections.push(systemCardErrors.join("\n"));
 
   if (cards.length > 0) {
     // Built only when there are staged cards — loading every schema is the

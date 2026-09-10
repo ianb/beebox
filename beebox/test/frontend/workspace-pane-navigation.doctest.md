@@ -157,3 +157,18 @@ shouldRestoreMobileWithBack(returnEntry, 14)
 shouldRestoreMobileWithBack(entry, 13)
 => false
 ```
+
+## Canonical card entry beats an inherited arrangement
+
+A compatibility redirect can preserve the previous Dashboard snapshot while
+its URL asks to open Settings. Only projected chat entries restore snapshots;
+a canonical card entry must execute its new open intent. Back to a projected
+entry continues restoring the exact arrangement.
+
+```ts
+JSON.stringify(decideWorkspaceNavigation({ history: entry, scope: entry.scope, identity: entry.identity, freshCard: "_config/interface/settings.card", cardEntry: true }))
+=> {"kind":"open-url","card":"_config/interface/settings.card"}
+
+decideWorkspaceNavigation({ history: entry, scope: entry.scope, identity: entry.identity, freshCard: "_config/interface/settings.card", cardEntry: false }).kind
+=> restore-snapshot
+```

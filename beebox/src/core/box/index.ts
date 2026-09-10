@@ -3,6 +3,8 @@
  *
  * Creates and manages the standard directory layout for a Bee Box.
  */
+import { seedSystemCards, assertSystemCardsComplete } from "../system-cards.js";
+
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -111,6 +113,15 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // pre-v3 marker throws here, before any of those mutations land — so a bad
   // init can't leave a half-written box behind.
   const shape = await getBoxShape(resolvedRoot);
+  if (!isUpdate) {
+    try {
+      await seedSystemCards(resolvedRoot);
+    } catch (error) {
+      // This invocation created the marker; a failed bootstrap must remain a fresh-init retry.
+      await fs.rm(markerPath);
+      throw error;
+    }
+  }
 
   // Which asset-tracking scheme is this box on? Every box starts on the
   // manifest scheme (gitignored asset bytes) and `bbx attachments to-annex`
@@ -138,6 +149,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // run `bbx migrate --mark-all-applied` (or --init) to decide its starting
   // state. See `src/cli/commands/migrate.ts`.
   if (!isUpdate) {
+    await assertSystemCardsComplete(resolvedRoot);
     const manifestPath = path.join(resolvedRoot, "_config/migrations.jsonl");
     await fs.mkdir(path.dirname(manifestPath), { recursive: true });
     try {

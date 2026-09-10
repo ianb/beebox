@@ -441,7 +441,7 @@ named planned assertion; existing handling is not mistaken for complete coverage
 
 ## NOT in scope
 
-- [Directory tabs](../../../issues/features/2026-07-28-directories-as-viewable-things.md) and [Dashboard tabs](../../../issues/features/2026-09-08-dashboard-workspace-tab.md): the intended behavior is opening tabs instead of navigating away. Preserve an extension boundary now; implement these target types later.
+- [Directory tabs](../../../issues/features/2026-07-28-directories-as-viewable-things.md) and [Dashboard tabs](../../../issues/closed/features/2026-09-08-dashboard-workspace-tab.md): the intended behavior is opening tabs instead of navigating away. Preserve an extension boundary now; implement these target types later.
 
 - [Landmark-scoped pinned baseline](../../../issues/features/2026-09-08-landmark-scoped-pinned-card-baseline.md): save/reset/return semantics need a separate decision. Preserve current conversation scope now.
 - [Review queue and hierarchical progress](../../../issues/features/2026-09-08-review-queue-hierarchical-progress.md): reviewed/done is not equivalent to closing a tab.

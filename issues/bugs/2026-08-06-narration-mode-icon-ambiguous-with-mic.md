@@ -53,3 +53,15 @@ and a separate, unmistakable indicator for "narration mode engaged."
 - [chat output vocabulary ia pass](../docs-and-chores/2026-06-02-chat-output-vocabulary-ia-pass.md)
   — adjacent narration/chat-surface work, but that's about output tags, not the
   mode indicator.
+
+## Re-encountered 2026-09-08
+
+Boxholder, from the main session: "I definitely need a better icon indicator
+for narration mode in the toolbar. It's a mic which makes no sense."
+
+Same complaint as the original filing, now raised unprompted while using the
+app — the mic reads as microphone/input, and there is no glyph in the bar that
+says "the assistant is speaking to you." Where it lives: `ChatBarChrome`
+portals `SessionChip` and `VoiceChip` into the app bar's chip slot, so
+`VoiceChipFace` is the only pictorial control up there on a chat page and is
+carrying both the input and the narration meanings at once.

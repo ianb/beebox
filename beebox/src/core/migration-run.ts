@@ -12,6 +12,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
+import { assertSystemCardsComplete } from "./system-cards.js";
+import { SYSTEM_CARD_MIGRATION } from "../shared/system-card-paths.js";
 import { isRecord } from "../lib/is-record.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { errnoCode } from "../lib/error-guards.js";
@@ -109,6 +111,7 @@ export async function restoreManifest(boxRoot: string, snapshot: string | null):
 }
 
 export async function appendManifestEntry(boxRoot: string, entry: ManifestEntry): Promise<void> {
+  if (entry.name === SYSTEM_CARD_MIGRATION) await assertSystemCardsComplete(boxRoot);
   const abs = path.join(boxRoot, MANIFEST_PATH);
   await fs.mkdir(path.dirname(abs), { recursive: true });
   await assertManifestNotSymlink(abs);
@@ -116,6 +119,7 @@ export async function appendManifestEntry(boxRoot: string, entry: ManifestEntry)
 }
 
 export async function writeManifest(boxRoot: string, entries: ManifestEntry[]): Promise<void> {
+  if (entries.some((entry) => entry.name === SYSTEM_CARD_MIGRATION)) await assertSystemCardsComplete(boxRoot);
   const abs = path.join(boxRoot, MANIFEST_PATH);
   await fs.mkdir(path.dirname(abs), { recursive: true });
   const text = entries.map((e) => JSON.stringify(e)).join("\n") + (entries.length > 0 ? "\n" : "");
@@ -141,8 +145,8 @@ export function runMigrationScript(args: { script: string; boxRoot: string }): P
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(PACKAGE_ROOT, args.script);
     const child = spawn(
-      "npx",
-      ["tsx", scriptPath, args.boxRoot, "--apply"],
+      process.execPath,
+      ["--import", "tsx", scriptPath, args.boxRoot, "--apply"],
       { cwd: PACKAGE_ROOT, stdio: "inherit" }
     );
     child.on("error", reject);

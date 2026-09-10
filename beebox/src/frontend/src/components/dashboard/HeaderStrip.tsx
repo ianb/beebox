@@ -69,12 +69,12 @@ export function HeaderStrip({ status, connected }: HeaderStripProps) {
         <div className="min-w-0">
           {/* The box root stays reachable on hover; the machine's directory layout is not
               dashboard content, and printing it under the heading crowded out the box's name. */}
-          <h1
+          <h2
             className="text-base sm:text-lg font-semibold text-warm-900 truncate"
             title={boxRoot === undefined ? undefined : boxRoot}
           >
             {boxName}
-          </h1>
+          </h2>
         </div>
         <span
           className={`w-2 h-2 rounded-full flex-shrink-0 ${connected ? "bg-success" : "bg-danger-light"}`}

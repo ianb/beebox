@@ -30,6 +30,9 @@
  * severity via its own `validate` hook; running it again here would
  * double-report the same violation).
  */
+import { relative } from "node:path";
+import { isSystemCardType, systemCardLocationError } from "../shared/system-card-paths.js";
+
 
 import { readFile } from "node:fs/promises";
 import {
@@ -119,6 +122,11 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
     return errorResult(path, errorMessage(e));
   }
 
+  const fileType = typeFromFilename(path);
+  if (fileType !== undefined && isSystemCardType(fileType)) {
+    const locationError = systemCardLocationError(fileType, relative(options.boxRoot, path));
+    if (locationError !== null) return errorResult(path, locationError);
+  }
   const split = splitCardContent(content);
   if (split.hasFrontmatter) {
     const type = typeFromFilename(path);

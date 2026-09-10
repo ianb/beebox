@@ -46,7 +46,7 @@ Why this fits agent cognition (assessment from the agent side, same date):
   image tokens; full-app screenshots are mostly wasted pixels. Being able to
   request a crop/zoom of a region is the visual analog of `--selector`.
 - Determinism is the big win over `bin/browse`: no flake, no waits, goldens are
-  possible (cf. [agent-browser-screenshot-flake](../../watch/2026-07-10-agent-browser-screenshot-flake.md)).
+  possible (cf. [agent-browser-screenshot-flake](../../bugs/2026-07-10-agent-browser-screenshot-flake.md)).
 - Honest scope limit: this covers canvas-drawn programs (p5.js/Processing-style
   creative coding, sims, visualizations) — a new programming surface for boxes.
   It does not replace browse for the real DOM/CSS app UI. Related tension about

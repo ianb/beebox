@@ -4,15 +4,15 @@
  * Sidebar with directory listing + card detail panel.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { apiRawFileUrl, getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { busEventData } from "../../lib/bus-events";
 import { isRecord } from "@shared/is-record";
-import { viewStateSearchValue, type ViewState, type ViewTarget } from "../../lib/view-url";
+import { type ViewState, type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
-import { trpc, type RouterOutput } from "../../lib/trpc";
+import { trpc } from "../../lib/trpc";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
 import { BrowseDetailPanel } from "./components/BrowseDetailPanel";
 import { BrowseContextMenu } from "./components/BrowseContextMenu";
@@ -20,63 +20,14 @@ import { Row } from "../../components/ui/Row";
 import { Column } from "../../components/ui/Column";
 import { Text } from "../../components/ui/Text";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody";
-import { usePageTitle } from "../../components/DocumentTitle";
-import { useUrlView } from "../../hooks/useUrlView";
 import { RequestError } from "../../lib/errors";
-import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
-import { toDisplayPath } from "@shared/display-path";
-import { useAppBarPlace } from "../../components/app-bar-chrome";
+import type { BrowseState } from "../../lib/browse-card-state";
+import { CardVisibilityProvider, useVisibleCardSelectionSink } from "../../components/chat/everywhere/card-context";
 
-/**
- * Strip a trailing extension and convert underscores to spaces.
- * `UGMA_Transfer_Letter.md` → `UGMA Transfer Letter`.
- * Card files have two extensions (`Foo.memo.card`); strip both.
- */
-function basenameTitle(filename: string): string {
-  let stem = filename;
-  if (stem.endsWith(".card")) {
-    stem = stem.slice(0, -".card".length);
-    const dot = stem.lastIndexOf(".");
-    if (dot > 0) stem = stem.slice(0, dot);
-  } else {
-    const dot = stem.lastIndexOf(".");
-    if (dot > 0) stem = stem.slice(0, dot);
-  }
-  return stem.replace(/_/g, " ");
-}
-
-export interface BrowseNavigateOptions {
-  /** Query params for the target URL. Omitted/empty clears the current ones. */
-  search?: Record<string, unknown>;
-  /** Replace the current history entry instead of pushing a new one. */
-  replace?: boolean;
-}
-
-interface BrowsePageProps {
-  /** Current path from URL splat (e.g., "_content/recipes" or "_content/recipes/Foo.recipe.card") */
-  currentPath?: string;
-  /**
-   * Called for every navigating action — opening a directory, selecting a
-   * file, following a link, going back to the parent. The URL is the single
-   * source of truth for what browse shows, so nothing changes the view
-   * without going through here.
-   */
-  onNavigate: (path: string, options?: BrowseNavigateOptions) => void;
-}
-
-/** Detect whether a path refers to a file (has an extension on the last segment). */
-function isFilePath(p: string): boolean {
-  if (!p) return false;
-  const base = p.split("/").pop() ?? "";
-  // `<basename>.attach` is a card's attach scope — a directory we browse into,
-  // not a file — despite carrying a dotted suffix.
-  if (isAttachDirName(base)) return false;
-  const dot = base.lastIndexOf(".");
-  return dot > 0 && dot < base.length - 1;
-}
-
-function isRawFilePath(p: string): boolean {
-  return isFilePath(p) && !p.endsWith(".card");
+interface BrowseBodyProps {
+  state: BrowseState;
+  onNavigate: (path: string, options?: { replace?: boolean }) => void;
+  onDetailNavigate: (target: ViewTarget, method: "push" | "replace") => void;
 }
 
 interface ContextMenuState {
@@ -115,72 +66,16 @@ function useBrowseListLiveRefresh(dirPath: string): void {
   });
 }
 
-/**
- * Publish browse's place to the app bar (docs/plans/top-nav-ia.md Track C2).
- *
- * The bar's own fallback (`lib/place-label.ts`) can only guess a route's
- * directory from the path, and any dotted last segment reads as a file there —
- * so `Foo.attach/`, a directory browse walks into, resolved no landmark and the
- * pill lost its "here" half. Browse has already classified the path, so it
- * hands the bar its answer rather than letting the heuristic disagree.
- */
-function useBrowsePlace({ dirPath, currentPath }: { dirPath: string; currentPath: string }): void {
-  useAppBarPlace({
-    dir: dirPath,
-    label: currentPath === "" ? "Browse" : `Browse: ${toDisplayPath(currentPath)}`,
-  });
-}
-
-/**
- * What this page calls itself in the browser tab.
- *
- * A selected file is named by its card title, a directory by its landmark —
- * the directory's own name for itself, and the one the app bar and the tab's
- * mark already use. Preferring it keeps a tab from naming a place differently
- * from the icon sitting beside it, which is what `_content/recipes` titled
- * "recipes" next to a 🍳 did.
- */
-function useBrowseTitle({
-  dirPath,
-  selectedFilePath,
-  selectedCard,
-  landmark,
-}: {
-  dirPath: string;
-  selectedFilePath: string | null;
-  selectedCard: { title?: string | null } | null;
-  landmark: RouterOutput["landmarks"]["forDir"]["landmark"];
-}): string {
-  return useMemo(() => {
-    if (selectedFilePath !== null && selectedFilePath !== "") {
-      const cardTitle = selectedCard?.title?.trim();
-      if (cardTitle) return cardTitle;
-      const filename = selectedFilePath.split("/").pop() ?? selectedFilePath;
-      return basenameTitle(filename);
-    }
-    if (dirPath) {
-      const landmarkLabel = landmark?.label.trim();
-      if (landmarkLabel) return landmarkLabel;
-      const last = dirPath.split("/").pop() ?? dirPath;
-      // Inside a card's attach scope, title by the owning card, not `Foo.attach`.
-      return (attachDirOwnerBasename(last) ?? last).replace(/_/g, " ");
-    }
-    return "Browse";
-  }, [selectedFilePath, selectedCard, dirPath, landmark]);
-}
-
-export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePageProps) {
-  const currentPath = currentPathArg ?? "";
+/** Listing and retained detail body, independent of the outer route. */
+export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyProps) {
+  const onAddSelection = useVisibleCardSelectionSink();
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
-  const { viewer, params: urlParams, viewState } = useUrlView();
-
-  const pathIsFile = isFilePath(currentPath);
-  const dirPath = pathIsFile ? currentPath.split("/").slice(0, -1).join("/") : currentPath;
-  // What's open in the detail panel IS what the URL points at — no local
-  // selection state to diverge from the route, so every file click is a
-  // history entry the back button can walk.
-  const selectedFilePath = pathIsFile ? currentPath : null;
+  const dirPath = state.directory;
+  const selectedFilePath = state.detail?.path ?? null;
+  const viewer = state.detail?.viewer ?? null;
+  const urlParams = state.detail?.params ?? {};
+  const viewState = state.detail?.viewState ?? null;
   // `forDir`, not `identity`: the sidebar header renders the landmark's full
   // resolved link list (listed + derived + expand), which only `forDir`
   // carries. The place pill and title mark need just label/symbol, so they
@@ -189,35 +84,15 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   const landmarkQuery = trpc.landmarks.forDir.useQuery({ dir: dirPath }, { enabled: !selectedFilePath });
   const landmark = landmarkQuery.data?.landmark ?? null;
 
-  const handleLinkNavigate = useCallback(
-    (target: ViewTarget) => {
-      // A link stays in the browse layout — navigating swaps the detail panel
-      // and updates the URL, carrying the link's `?view=`/params along.
-      const encodedState = viewStateSearchValue(target.viewState);
-      const search = { ...target.params, ...(target.viewer ? { view: target.viewer } : {}), ...(encodedState ? { viewState: encodedState } : {}) };
-      // Re-rendering the file already open (a pure ?view=/param change) isn't a
-      // new place: replace, so back leaves the file instead of undoing a toggle.
-      onNavigate(target.path, { search, replace: target.path === currentPath });
-    },
-    [currentPath, onNavigate],
-  );
-
-  const handleViewStateChange = useBrowseViewStateNavigation({ currentPath, onNavigate, params: urlParams, viewer });
-
-  const handleSelectRenderer = useCallback(
-    (name: string | null) => {
-      // The renderer toggle is a view switch, so it belongs in the URL like
-      // every other one — otherwise the choice sits in FileView's local state
-      // where it outranks `?view=`, survives a same-path navigation, and can't
-      // be shared or restored by back/forward. Replace: looking at the same
-      // card a different way is not a new place.
-      const search = name === null
-        ? urlParams
-        : { ...urlParams, view: name, ...(viewState ? { viewState: viewStateSearchValue(viewState) } : {}) };
-      onNavigate(currentPath, { search, replace: true });
-    },
-    [currentPath, onNavigate, urlParams, viewState],
-  );
+  const handleLinkNavigate = (target: ViewTarget) => {
+    onDetailNavigate(target, target.path === selectedFilePath ? "replace" : "push");
+  };
+  const handleViewStateChange = (next: ViewState, method: "push" | "replace") => {
+    if (state.detail) onDetailNavigate({ ...state.detail, viewState: next }, method);
+  };
+  const handleSelectRenderer = (name: string | null) => {
+    if (state.detail) onDetailNavigate({ ...state.detail, viewer: name }, "replace");
+  };
 
   const { data, isLoading: loading, isError, error: browseError, refetch } = trpc.status.browse.useQuery({ path: dirPath });
   useBrowseListLiveRefresh(dirPath);
@@ -257,12 +132,9 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   const selectedCard = selectedFilePath && data
     ? data.cards.find((c) => c.relativePath === selectedFilePath) || null
     : null;
-  const selectedRawFile = selectedFilePath && isRawFilePath(selectedFilePath) ? selectedFilePath : null;
+  const selectedRawFile = selectedFilePath && data?.files.some((file) => file.relativePath === selectedFilePath) ? selectedFilePath : null;
 
   const hasDetail = Boolean(selectedFilePath);
-
-  usePageTitle(useBrowseTitle({ dirPath, selectedFilePath, selectedCard, landmark }));
-  useBrowsePlace({ dirPath, currentPath });
 
   const handleDelete = useCallback(async (path: string) => {
     if (deletingPath !== null) return;
@@ -299,7 +171,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
 
   return (
     <Row gap="none" align="stretch" className="h-full">
-      <Sidebar title="Browse" subtitle={dirPath || "/"} detailSelected={hasDetail} idPrefix="bbx-browse-sidebar">
+      <Sidebar title="Browse" headingLevel="h2" subtitle={dirPath || "/"} detailSelected={hasDetail} idPrefix="bbx-browse-sidebar">
         <Column>
           <BrowseBreadcrumbs dirPath={dirPath} onNavigate={onNavigate} />
           <BrowseSidebarBody
@@ -323,7 +195,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
 
       <Column overflow="auto" focusable hideOnMobile={!hasDetail} className="flex-1">
         {selectedFilePath ? (
-          <BrowseDetailPanel
+          <CardVisibilityProvider visible={false}><BrowseDetailPanel
             boxSlug={boxSlug}
             deleteError={deleteError}
             deletingPath={deletingPath}
@@ -336,13 +208,14 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
             onNavigate={handleLinkNavigate}
             onSelectRenderer={handleSelectRenderer}
             onViewStateChange={handleViewStateChange}
+            onAddSelection={onAddSelection}
             params={urlParams}
             rendererName={viewer}
             viewState={viewState}
             selectedCard={selectedCard}
             selectedFilePath={selectedFilePath}
             selectedRawFile={selectedRawFile}
-          />
+          /></CardVisibilityProvider>
         ) : (
           <Row justify="center" align="center" className="h-full">
             <Text tone="muted">Select a file to view details</Text>
@@ -360,18 +233,4 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
       ) : null}
     </Row>
   );
-}
-
-function useBrowseViewStateNavigation(opts: {
-  currentPath: string;
-  onNavigate: BrowsePageProps["onNavigate"];
-  params: Record<string, string>;
-  viewer: string | null;
-}) {
-  const { currentPath, onNavigate, params, viewer } = opts;
-  return useCallback((next: ViewState, method: "push" | "replace") => {
-    const encodedState = viewStateSearchValue(next);
-    const search = { ...params, ...(viewer ? { view: viewer } : {}), ...(encodedState ? { viewState: encodedState } : {}) };
-    onNavigate(currentPath, { search, replace: method === "replace" });
-  }, [currentPath, onNavigate, params, viewer]);
 }
