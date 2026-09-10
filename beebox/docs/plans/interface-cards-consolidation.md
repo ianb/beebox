@@ -36,6 +36,10 @@ record the independent review and the resulting corrections.
 - September 10 direct request: “bbx-plan the entire set as a multi-stage
   process” and “a report of how much was removed in the process.” This is the
   planning phase; the report distinguishes measured removal from estimates.
+- September 10 Admin decision: “I think it should be a card, yes. I'd rather
+  work through it than around it.” Admin uses `_config/interface/admin.card`
+  in the existing workspace, preserving the live conversation. Keep backend
+  permissions and visibly distinguish box-specific from host-wide operations.
 - Prior direct choices: type infers rendering; designated instruments have a
   single canonical location; Browse is one card with directory state; use the
   existing open-card primitive without changing panes. These constrain all new
@@ -145,8 +149,9 @@ Existing `*.view.card` instances remain plural, including saved History filters;
 there is one canonical History entrance, not a ban on authored filtered views.
 The earlier background design kept Admin as a shell permission boundary
 (`docs/design/interface-as-cards-background.md:299`: `Permission boundary`).
-This draft proposes changing that presentation decision, not the permission
-model, to preserve the single open-card operation and live conversation. Admin
+The boxholder superseded that presentation decision on September 10 by choosing
+an Admin card. Preserve the permission model, single open-card operation, and
+live conversation. Admin
 includes host-wide operations: its renderer must label that scope as the existing
 controls do; a per-box anchor does not make those operations box-local.
 The card is an address, not authorization. Admin's API checks (`src/webapp/trpc/routers/admin.ts:194`: `boxConfig: ownerProcedure.query`) and secret storage
@@ -285,7 +290,7 @@ the production overlay merely to accommodate a harness. The current route invent
 | `/<box>/dashboard`, `/settings`, `/browse/$` | Existing canonical redirects |
 | `/<box>/questions`, `/landmarks`, `/chats` | Canonical redirects (C); Chats targets Landmarks |
 | `/<box>/history`, `/history/$hash` | Canonical History plus parsed state (D) |
-| `/<box>/inventory`, `/admin` | Canonical redirects (E; Admin choice pending) |
+| `/<box>/inventory`, `/admin` | Canonical redirects (E) |
 | `/<box>/capture` | Composer-action redirect (E) |
 | `/<box>/dev/speech`, `/dev/composer-states`, `/dev/capture-mode`, `/dev/chat-scroll` | Explicit developer fixture layout outside the product conversation shell |
 
@@ -462,11 +467,9 @@ capture actual current behavior, including known differences the plan changes:
 
 ## Open design questions
 
-No unresolved question blocks the first chunk. Admin card versus a separate admin
-shell is pending the boxholder's answer; it does not block A, but it blocks final
-approval of B/E/F. This draft provisionally proposes all five new
-anchors, including Admin, so final cleanup has a defined endpoint rather than a
-future decision hidden in its last stage. Approval should cover that finite set.
+No unresolved design question blocks implementation. The boxholder chose the
+Admin card on September 10; all five new anchors have a defined destination.
+Admin remains within the workspace rather than introducing a separate admin shell.
 The compatibility lifetime of already-open browser history is not bounded by box
 migration completion; retain the small read adapter until a later explicit client
 compatibility decision. It is reported as a surviving adapter, not a failed deletion.

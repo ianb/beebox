@@ -2,8 +2,8 @@
 
 Claude Opus reviewed the draft against repository source on September 10, 2026.
 The author checked and incorporated the findings below. This is a design review;
-no browser reproduction or implementation verification is claimed. Admin's
-presentation remains a pending boxholder decision.
+no browser reproduction or implementation verification is claimed. The boxholder subsequently chose Admin as a canonical workspace card on
+September 10; its existing permission model remains unchanged.
 
 ## What already exists
 
@@ -24,7 +24,8 @@ existing repository mechanisms rather than assuming a new framework capability.
 The review confirmed type inference, finite canonical singletons, plural authored
 History views, the existing pane model, and recipient/attention separation. The
 historical Admin shell exclusion is a precedent, not a new human veto. The author
-asked the boxholder to choose between an Admin card and separate shell.
+asked the boxholder to choose between an Admin card and separate shell. The
+boxholder chose the card: “I'd rather work through it than around it.”
 
 ## Could this be simpler? (verified)
 
@@ -65,7 +66,7 @@ renderers keep their existing query semantics.
 
 ### Admin redirect loses OAuth feedback and reconnect inputs
 
-**Location in plan:** Track E, conditional on Admin becoming a card.
+**Location in plan:** Track E; Admin becoming a card is now confirmed.
 **Citation:** `src/webapp/routes/admin.ts:75` builds `returnUrl`;
 `src/frontend/src/components/admin/useGoogleServices.ts:74` reads
 `params.get("google")`; `GoogleServicesSection.tsx:38` reads `reconnect`.
