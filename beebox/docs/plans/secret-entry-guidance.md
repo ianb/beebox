@@ -489,8 +489,25 @@ eight files, typecheck and lint clean):
   `warning` on `setHqService` / `setBackend` when the choice is unusable now.
 - Track 6 — `/api/chat/transcribe-audio` returns `{ error, code, permanent }`.
 
-**Not yet:** the frontend for Tracks 1, 3 and 6 (in progress), the driven
-walkthrough (needs an owner login — see What will hold this), and the exhibit.
+**Frontend for Tracks 1, 3 and 6 is built** (commit `4f88150b2`): the
+"Connect a service" row, guide panel, grant-on-add copy, near-miss suggestion,
+the advanced disclosure for borrowing another box's key, and the persistent
+voice-chip notice for a permanent HQ failure.
+
+**The walkthrough no longer needs an owner login.** The plan's "What will hold
+this" assumed the browse identity could never reach the Secrets panel; the
+boxholder called that a bug in a test environment. A worktree box now gets its
+own secret store (`BBX_SECRETS_FILE`, set by the dev router under its state
+dir — `router-worktree-start.ts`), and `isAuthenticatedOwner` admits the browse
+identity only when that override is in force (`server-box-scope.ts`). Main
+keeps the real store and still refuses browse there. The walkthrough was
+driven on an isolated router (`ROUTER_PORT=3299` with its own `BBX_STATE_DIR`)
+from an empty store: near-miss on `openrouter.ai`, provider button, paste,
+"Saved and verified. This box now uses it for: …", grant recorded at `server`,
+key verified `ok` against the live provider.
+
+**Not yet:** the picker half of Track 5 (disabled options + the save warning
+shown; in progress), the HQ-picker end of the walkthrough, and the exhibit.
 
 ## Rollout shape
 
