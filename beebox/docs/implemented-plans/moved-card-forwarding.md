@@ -26,7 +26,7 @@ When an open card is renamed or moved, recover its current Git path only after t
   exposing Git diagnostics or absolute paths.
 - Card, Views, the canonical chat workspace, and Browse replace their current
   location with the recovered path while retaining their renderer parameters,
-  view state, conversation, pane placement, and keyboard focus. Browse lets a
+  view state, conversation, and pane placement. Browse lets a
   missing `.card` reach `card.get` so reloads and stale legacy links recover too.
 - Real-Git doctests cover unstaged and committed moves, chains, directory
   moves, source reuse, unusual names, deleted and non-card destinations,
@@ -36,7 +36,7 @@ When an open card is renamed or moved, recover its current Git path only after t
 
 ## Stated preferences this plan trades against
 
-- The normal read path must remain exactly as direct as it is now. `card.get` reads the resolved path immediately (`src/webapp/trpc/routers/card.ts:147-156`: `const { relPath, fullPath } = await resolveCardPath(...)` followed by `raw = await fs.readFile(fullPath, "utf-8");`). Git recovery begins only inside the existing `ENOENT` branch. A found card causes no new Git command, file stat, cache lookup, or indirection.
+- The normal read path must remain exactly as direct as it is now. `card.get` reads the resolved path immediately (`src/webapp/trpc/routers/card.ts:149-158`: `const { relPath, fullPath } = await resolveCardPath(...)` followed by `raw = await fs.readFile(fullPath, "utf-8");`). Git recovery begins only inside the existing `ENOENT` branch. A found card causes no new Git command, file stat, cache lookup, or indirection.
 - This is a rare recovery, so it must not create durable bookkeeping. The issue names a move ledger and Git history as alternatives (`../../../issues/closed/bugs/2026-09-08-moved-card-open-in-browser-404s.md:33-37`); this plan chooses Git's existing rename information and accepts best-effort coverage.
 - The server and client exchange a discriminated recovery value, not a message convention. This follows engineering principle 1: “If the compiler cannot distinguish two concepts, the design has not finished distinguishing them” (`docs/engineering-principles.md:12-21`).
 - Recovery must fail visibly to the server but safely to the person. The existing tRPC formatter prevents server frames and absolute paths from reaching clients (`src/webapp/trpc/trpc.ts:4-14`). Unexpected Git failures are logged, while the response remains the ordinary card not-found response, following principle 3 (“Resilient, never silent”) (`docs/engineering-principles.md:49-62`).
@@ -45,13 +45,13 @@ When an open card is renamed or moved, recover its current Git path only after t
 ## What already exists
 
 - `bbx move` already performs the filesystem rename and reference rewrites. The issue records that referrer refs, outbound refs, view refs, and Phase-2 card files are covered (`../../../issues/closed/bugs/2026-09-08-moved-card-open-in-browser-404s.md:19-26`). Reuse this behavior; do not change the move command.
-- `card.get` already has the exact miss-only insertion point (`src/webapp/trpc/routers/card.ts:155-166`): after `fs.readFile` reports `ENOENT`, it throws `TRPCError({ code: "NOT_FOUND", message: ... })`. Add recovery there and nowhere before the read.
+- `card.get` has the exact miss-only insertion point (`src/webapp/trpc/routers/card.ts:158-173`): after `fs.readFile` reports `ENOENT`, an opted-in request resolves recovery before throwing `TRPCError({ code: "NOT_FOUND", message: ... })`. Recovery runs there and nowhere before the read.
 - The shared tRPC formatter is the safe place to add response metadata (`src/webapp/trpc/trpc.ts:8-15`). Extend its error data with a typed recovery union while retaining the current internal-error sanitization.
 - Internal paths already have one canonical form (`src/shared/box-path.ts:11-25`): box-relative, forward-slash paths without a leading slash. Use that form in Git matching, the response hint, and route navigation.
 - `resolveBoxNamespacePathOnDisk` is the common lexical and on-disk security boundary (`src/lib/box-namespace-resolve.ts:309-330`: “What every consuming route should call.”). Reuse it to validate the recovered destination instead of hand-rolling containment checks.
-- Git readers are deliberately not locked (`src/lib/git.ts:19-24`), and `gitBoxPrefix` already translates between repository-relative output and a box nested under a package repository (`src/lib/git.ts:124-137`). Reuse both conventions.
+- Git readers are deliberately not locked (`src/lib/git.ts:19-24`). The recovery reader likewise avoids the mutation lock and requests `--relative` output so paths use the box root as their comparison boundary.
 - The file watcher already treats a rename as possibly replacing a whole subtree (`src/core/box/file-watcher.ts:338-342`) and emits one canonical `file-change.path` (`src/core/box/file-watcher.ts:423-427`). Reuse the event; broaden only the frontend's relevance check for an ancestor rename.
-- `useFileData` already invalidates `card.get` after a matching file event (`src/frontend/src/components/file-view-data.ts:118-157`) and preserves cached card data when a refetch fails (`src/frontend/src/components/file-view-data.ts:167-188`). Recovery metadata must remain observable in that cached-data case.
+- `useFileData` invalidates `card.get` after a matching file event (`src/frontend/src/components/file-view-data.ts:115-157`) and preserves cached card data when a refetch fails (`src/frontend/src/components/file-view-data.ts:159-182`). Recovery metadata remains observable in that cached-data case.
 - The frontend currently identifies ordinary missing cards by parsing `Card not found:` (`src/frontend/src/components/file-view-data.ts:60-67`). Keep that compatibility behavior for ordinary missing cards, but do not use message parsing for move recovery.
 - `/card/$` and `/views/$` are separate routes (`src/frontend/src/router.tsx:201-213`). The filed route-consolidation issue confirms both remain live (`../../../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md:10-27`). The current workspace then canonicalizes a `/views/$` card into the chat route (`src/frontend/src/components/chat/workspace/WorkspaceProvider.tsx:34-73`), so both the route wrapper and the routed workspace need move handling.
 
@@ -82,7 +82,7 @@ type MovedCardResolution =
 1. Confirm that the missing source still does not exist. This makes a path reused by a new card win over any historical rename.
 2. Inspect uncommitted card changes through an ephemeral Git index and object directory. Populate only the scratch index, then read its NUL-terminated rename diff. This is necessary because a normal diff omits an unstaged move's untracked destination; the scratch state is removed after the lookup and neither the working tree nor the real index changes. Match only an `R<score>` record whose old path exactly equals the current candidate.
 3. If the working tree has no match, ask Git for the newest commit touching the candidate, with `--full-diff --name-status -z --find-renames`, and find the exact old-path rename in that full commit. This covers ordinary committed moves.
-4. Translate repository-relative paths through `gitBoxPrefix`; reject destinations outside the current box prefix.
+4. Request `--relative` Git output. A rename outside the box appears as a deletion rather than a destination, and the final namespace resolver independently rejects any unsafe candidate.
 5. Follow a chain at most 16 hops. Stop on repetition, ambiguity, an unrecognized Git record, or no rename.
 6. Accept only an existing `.card` destination that passes `resolveBoxNamespacePathOnDisk({ mode: "read" })`. Otherwise return `not-moved`.
 
@@ -90,7 +90,7 @@ Git command or parse failure is recovery failure, not request failure: log one w
 
 **Vocabulary lock-ins.** “Moved” means an exact Git rename record from this box, ending at an existing safe card. `MovedCardResolution` is internal. The client-facing value is `recovery: null | { kind: "moved"; path: string }`, where `path` is canonical box-relative form.
 
-**First implementation chunk.** Add the helper and a real temporary-Git-repository doctest covering working-tree rename, committed rename, a chain, path reuse, a missing destination, unusual path characters, and a non-repository/Git failure. Then call it exclusively in `card.get` after `ENOENT` and attach a typed cause to the existing `NOT_FOUND` error.
+**First implementation chunk.** Add the helper and a real temporary-Git-repository doctest covering working-tree rename, committed rename, a chain, path reuse, a missing destination, unusual path characters, and a non-repository/Git failure. Then let routed viewers opt into it exclusively in `card.get` after `ENOENT` and attach a typed cause to the existing `NOT_FOUND` error.
 
 ### Track 2: Typed not-found recovery response
 

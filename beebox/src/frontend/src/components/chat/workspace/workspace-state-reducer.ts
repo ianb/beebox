@@ -61,6 +61,30 @@ function retargetCard(state: WorkspaceState, action: Action<"retargetCard">): Wo
   const tab = state.tabs[action.fromPath];
   const owner = paneForPath(state, action.fromPath);
   if (tab === undefined || owner === null) return { state, effect: NO_WORKSPACE_FOCUS };
+  const destinationOwner = paneForPath(state, action.target.path);
+  if (destinationOwner !== null) {
+    const withoutSource = removeWorkspacePath(state, action.fromPath);
+    const destinationPane = withoutSource.panes[destinationOwner];
+    const mobileView = state.mobileView.kind === "card" && state.mobileView.path === action.fromPath
+      ? { kind: "card" as const, path: action.target.path }
+      : state.mobileView.kind === "chat" && state.mobileView.returnPath === action.fromPath
+        ? { kind: "chat" as const, returnPath: action.target.path }
+        : state.mobileView;
+    const lastInteraction = state.lastInteraction.kind === "card" && state.lastInteraction.path === action.fromPath
+      ? { kind: "card" as const, path: action.target.path }
+      : state.lastInteraction;
+    const next = normalizeWorkspaceState({
+      ...withoutSource,
+      panes: {
+        ...withoutSource.panes,
+        [destinationOwner]: { ...destinationPane, activePath: action.target.path, display: "cards" },
+      },
+      mobileView,
+      lastInteraction,
+      lastCardPane: destinationOwner,
+    });
+    return { state: next, effect: NO_WORKSPACE_FOCUS };
+  }
   const tabs = { ...state.tabs };
   delete tabs[action.fromPath];
   tabs[action.target.path] = {

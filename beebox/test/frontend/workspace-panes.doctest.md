@@ -242,6 +242,35 @@ pathLabeled.tabs["archive/new"].label
 => archive/new
 ```
 
+When the destination is already open, its richer tab state wins and the stale
+source tab is removed without moving or focusing the destination.
+
+```ts
+let converging = reduceWorkspace(createEmptyWorkspaceState(), {
+  type: "openCard",
+  target: { path: "archive/new", viewer: "canvas", params: { page: "9" }, viewState: { frame: 4 } },
+  label: "Existing destination", at: 1, viewport: "desktop",
+}).state;
+converging = reduceWorkspace(converging, { type: "togglePin", path: "archive/new", at: 2 }).state;
+converging = reduceWorkspace(converging, {
+  type: "openCard",
+  target: { path: "old", viewer: "Source", params: {}, viewState: null },
+  label: "old", at: 3, viewport: "desktop",
+}).state;
+const converged = reduceWorkspace(converging, {
+  type: "retargetCard",
+  fromPath: "old",
+  target: { ...converging.tabs.old.target, path: "archive/new" },
+});
+JSON.stringify({
+  paths: Object.keys(converged.state.tabs),
+  destination: converged.state.tabs["archive/new"],
+  active: converged.state.panes.left.activePath ?? converged.state.panes.right.activePath,
+  effect: converged.effect,
+})
+=> {"paths":["archive/new"],"destination":{"target":{"path":"archive/new","viewer":"canvas","params":{"page":"9"},"viewState":{"frame":4}},"label":"Existing destination","pinned":true,"lastActiveAt":2},"active":"archive/new","effect":{"kind":"none"}}
+```
+
 ## Move and focus are explicit card interactions
 
 ```ts

@@ -86,7 +86,8 @@ export function useFileData(path: string, options?: { recoverMoved?: boolean }):
 
   // Card data via tRPC. A restarting box is retried by the tRPC link itself
   // (`lib/trpc/transient.ts`), so this query needs no retry of its own.
-  const cardQuery = trpc.card.get.useQuery({ path, recoverMoved }, { enabled: isCard });
+  const cardInput = recoverMoved ? { path, recoverMoved: true } : { path };
+  const cardQuery = trpc.card.get.useQuery(cardInput, { enabled: isCard });
 
   // Text content via /api/files/* (managed by React Query). This fetch is not
   // tRPC, so the link's retry does not reach it; it classifies the same way and
