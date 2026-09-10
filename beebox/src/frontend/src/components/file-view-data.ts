@@ -18,17 +18,10 @@ import { useDeferredResync } from "../hooks/useDeferredResync";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { boxRelativePath } from "@shared/box-path";
 import { RequestError } from "../lib/errors";
-import { resolveLoadState, isTransientQueryError, type LoadFailure } from "../lib/file-load-state";
+import { resolveLoadState, type LoadFailure } from "../lib/file-load-state";
+import { fetchFromBox, MAX_RETRIES, retryDelayMs, unreachableCause } from "../lib/trpc/transient";
 import { busEventData } from "../lib/bus-events";
 import type { FileData } from "../renderers";
-
-/**
- * How many times a transient failure is retried before the view settles into
- * its stale state. Three attempts with react-query's default backoff cover
- * roughly the first seven seconds of an outage; past that the person is told,
- * and nothing retries on a timer (`feedback: nothing retries forever`).
- */
-const MAX_LOAD_RETRIES = 3;
 
 /* ---------- path classification ---------- */
 
@@ -89,30 +82,26 @@ export function useFileData(path: string): LoadResult {
   const fetchText = !isCard && !isDir && !isBinary && !isJson;
   const apiBase = getApiBase();
 
-  // Card data via tRPC. `retry` is set here rather than on the QueryClient
-  // (`lib/trpc/provider.tsx` defaults every query to `retry: false`) because a
-  // file view is the one surface where a brief outage should heal itself: the
-  // box restarts, three backoff attempts cover the window, and the person keeps
-  // reading. A terminal answer — a missing card, a rejected request — is not
-  // retried, so the correct state is not delayed by several seconds.
-  const cardQuery = trpc.card.get.useQuery(
-    { path },
-    { enabled: isCard, retry: (count, error) => count < MAX_LOAD_RETRIES && isTransientQueryError(error) },
-  );
+  // Card data via tRPC. A restarting box is retried by the tRPC link itself
+  // (`lib/trpc/transient.ts`), so this query needs no retry of its own.
+  const cardQuery = trpc.card.get.useQuery({ path }, { enabled: isCard });
 
-  // Text content via /api/files/* (managed by React Query)
+  // Text content via /api/files/* (managed by React Query). This fetch is not
+  // tRPC, so the link's retry does not reach it; it classifies the same way and
+  // retries on the same schedule here instead. React Query's count is 0-based.
   const textQuery = useQuery({
     queryKey: ["file-text", path],
     enabled: fetchText,
     queryFn: async ({ signal }) => {
-      const resp = await fetch(apiRawFileUrl(apiBase, path), { signal });
+      const resp = await fetchFromBox(apiRawFileUrl(apiBase, path), { signal });
       if (!resp.ok) {
         const message = `Failed to load: ${resp.status} ${resp.statusText}`;
         throw new RequestError(message);
       }
       return resp.text();
     },
-    retry: (count, error) => count < MAX_LOAD_RETRIES && isTransientQueryError(error),
+    retry: (count, error) => count < MAX_RETRIES && unreachableCause(error) !== null,
+    retryDelay: (count) => retryDelayMs(count + 1),
   });
 
   // Live reload via the box event stream. Resync this file's data on a matching
