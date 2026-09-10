@@ -1,6 +1,8 @@
 import { copyFile, lstat, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { promisify } from "node:util";
 import { simpleGit } from "simple-git";
 
 import { resolveBoxNamespacePathOnDisk } from "../lib/box-namespace-resolve.js";
@@ -12,6 +14,7 @@ export type { MovedCardRecovery } from "./moved-card-recovery.js";
 
 const MAX_MOVE_HOPS = 16;
 const BOX_PATHSPEC = ".";
+const execFileAsync = promisify(execFile);
 
 export type MovedCardResolution =
   | MovedCardRecovery
@@ -63,8 +66,15 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
   const normalGit = simpleGit(boxRoot);
   const repoRoot = (await normalGit.revparse(["--show-toplevel"])).trim();
   const head = (await normalGit.revparse(["HEAD"])).trim();
+  const annexBranch = (await normalGit.raw([
+    "for-each-ref",
+    "--format=%(objectname)",
+    "refs/heads/git-annex",
+  ])).trim();
   const rawObjectsPath = (await normalGit.revparse(["--git-path", "objects"])).trim();
   const realObjectsPath = isAbsolute(rawObjectsPath) ? rawObjectsPath : resolve(repoRoot, rawObjectsPath);
+  const rawIndexPath = (await normalGit.revparse(["--git-path", "index"])).trim();
+  const realIndexPath = isAbsolute(rawIndexPath) ? rawIndexPath : resolve(repoRoot, rawIndexPath);
   const rawConfigPath = (await normalGit.revparse(["--git-path", "config"])).trim();
   const realConfigPath = isAbsolute(rawConfigPath) ? rawConfigPath : resolve(repoRoot, rawConfigPath);
   const rawAttributesPath = (await normalGit.revparse(["--git-path", "info/attributes"])).trim();
@@ -75,6 +85,7 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
   try {
     await simpleGit().raw(["init", "--bare", "--quiet", scratchGitDir]);
     await copyFile(realConfigPath, join(scratchGitDir, "config"));
+    await copyFile(realIndexPath, join(scratchGitDir, "index"));
     await mkdir(join(scratchGitDir, "info"), { recursive: true });
     try {
       await copyFile(realAttributesPath, join(scratchGitDir, "info", "attributes"));
@@ -93,7 +104,7 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
     }));
     await git.raw(["config", "core.bare", "false"]);
     await git.raw(["config", "core.worktree", repoRoot]);
-    await git.raw(["read-tree", head]);
+    if (annexBranch !== "") await git.raw(["update-ref", "refs/heads/git-annex", annexBranch]);
     await git.raw(["add", "-A", "--", BOX_PATHSPEC]);
     const raw = await git.raw([
       "diff",
@@ -110,6 +121,11 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
     if (records === null) throw new GitRenameOutputError();
     return records;
   } finally {
+    try {
+      await execFileAsync("chmod", ["-R", "u+w", scratchRoot]);
+    } catch (_e) {
+      /* ignore: best-effort; rm reports anything that actually prevents cleanup */
+    }
     await rm(scratchRoot, { recursive: true, force: true });
   }
 }

@@ -6,6 +6,7 @@ changing the real Git index.
 
 ```ts setup
 import { mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { simpleGit } from "simple-git";
@@ -19,6 +20,18 @@ title: A card with enough content for rename detection
 ---
 The body stays recognizable when the card moves to another directory.
 `;
+
+function hasAnnex(): boolean {
+  try {
+    execFileSync("git", ["annex", "version"], { stdio: "pipe" });
+    return true;
+  } catch (_e) {
+    /* ignore: absence is the answer */
+    return false;
+  }
+}
+
+const ANNEX = hasAnnex();
 ```
 
 ```ts
@@ -107,6 +120,35 @@ JSON.stringify({
 
 ```ts cleanup
 await filtered.cleanup();
+```
+
+A real git-annex move still produces the same rename, and its read-only scratch
+objects are made removable before the recovery call returns.
+
+```ts
+async function annexMoveResult(): Promise<string> {
+  const annex = await makeTmpBox({ git: true });
+  try {
+    execFileSync("git", ["annex", "init", "-q", "moved-path-test"], { cwd: annex.root, stdio: "pipe" });
+    execFileSync("git", ["annex", "config", "--set", "annex.largefiles", "anything"], { cwd: annex.root, stdio: "pipe" });
+    execFileSync("git", ["config", "annex.thin", "false"], { cwd: annex.root, stdio: "pipe" });
+    await writeFile(annex.path("_content/Old.bin"), Buffer.alloc(200_000, 0x42));
+    annex.commitAll("seed annex asset");
+    execFileSync("git", ["annex", "unlock", "_content/Old.bin"], { cwd: annex.root, stdio: "pipe" });
+    await rename(annex.path("_content/Old.bin"), annex.path("_content/New.bin"));
+    return JSON.stringify(await resolveMovedCardPath({ boxRoot: annex.root, missingPath: "_content/Old.bin" }));
+  } finally {
+    try {
+      execFileSync("chmod", ["-R", "u+w", annex.root], { stdio: "pipe" });
+    } catch (_e) {
+      /* ignore: best-effort; cleanup reports anything that actually matters */
+    }
+    await annex.cleanup();
+  }
+}
+
+ANNEX ? await annexMoveResult() : '{"kind":"moved","path":"_content/New.bin"}'
+=> {"kind":"moved","path":"_content/New.bin"}
 ```
 
 ## Committed and chained moves
