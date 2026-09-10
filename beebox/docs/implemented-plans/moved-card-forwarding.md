@@ -3,7 +3,7 @@ title: "Follow a card after its path moves"
 status: implemented
 workstream: moved-card-forwarding
 issues:
-  - ../../../issues/bugs/2026-09-08-moved-card-open-in-browser-404s.md
+  - ../../../issues/closed/bugs/2026-09-08-moved-card-open-in-browser-404s.md
 ---
 # Follow a card after its path moves
 
@@ -11,17 +11,36 @@ When an open card is renamed or moved, recover its current Git path only after t
 
 **Issues addressed:** `2026-09-08-moved-card-open-in-browser-404s`
 
+## Implemented outcome
+
+- `card.get` invokes `resolveMovedCardPath` only from its existing `ENOENT`
+  branch. Successful reads still do no Git work or extra lookup.
+- The resolver uses an ephemeral index and object directory for unstaged
+  renames, then committed Git rename records for history and chains. It accepts
+  only an existing, contained `.card` destination and lets a reused source path
+  win through the ordinary read.
+- The tRPC error formatter carries a discriminated `recovery` value without
+  exposing Git diagnostics or absolute paths.
+- Card, Views, the canonical chat workspace, and Browse replace their current
+  location with the recovered path while retaining their renderer parameters,
+  view state, conversation, and pane placement.
+- Real-Git doctests cover unstaged and committed moves, chains, directory
+  moves, source reuse, unusual names, deleted and non-card destinations,
+  containment through symlink rejection, and Git failure. Frontend and tRPC
+  doctests cover the typed boundary, cached-data recovery, ancestor rename
+  events, and workspace retargeting.
+
 ## Stated preferences this plan trades against
 
 - The normal read path must remain exactly as direct as it is now. `card.get` reads the resolved path immediately (`src/webapp/trpc/routers/card.ts:147-156`: `const { relPath, fullPath } = await resolveCardPath(...)` followed by `raw = await fs.readFile(fullPath, "utf-8");`). Git recovery begins only inside the existing `ENOENT` branch. A found card causes no new Git command, file stat, cache lookup, or indirection.
-- This is a rare recovery, so it must not create durable bookkeeping. The issue names a move ledger and Git history as alternatives (`../../../issues/bugs/2026-09-08-moved-card-open-in-browser-404s.md:26-30`); this plan chooses Git's existing rename information and accepts best-effort coverage.
+- This is a rare recovery, so it must not create durable bookkeeping. The issue names a move ledger and Git history as alternatives (`../../../issues/closed/bugs/2026-09-08-moved-card-open-in-browser-404s.md:33-37`); this plan chooses Git's existing rename information and accepts best-effort coverage.
 - The server and client exchange a discriminated recovery value, not a message convention. This follows engineering principle 1: “If the compiler cannot distinguish two concepts, the design has not finished distinguishing them” (`docs/engineering-principles.md:12-21`).
 - Recovery must fail visibly to the server but safely to the person. The existing tRPC formatter prevents server frames and absolute paths from reaching clients (`src/webapp/trpc/trpc.ts:4-14`). Unexpected Git failures are logged, while the response remains the ordinary card not-found response, following principle 3 (“Resilient, never silent”) (`docs/engineering-principles.md:49-62`).
 - No adjacent feature is included. Route consolidation, stable card identity, raw-file forwarding, and a new live-move protocol are outside this bug fix, consistent with the repository instruction to add no features beyond the task.
 
 ## What already exists
 
-- `bbx move` already performs the filesystem rename and reference rewrites. The issue records that referrer refs, outbound refs, view refs, and Phase-2 card files are covered (`../../../issues/bugs/2026-09-08-moved-card-open-in-browser-404s.md:12-19`). Reuse this behavior; do not change the move command.
+- `bbx move` already performs the filesystem rename and reference rewrites. The issue records that referrer refs, outbound refs, view refs, and Phase-2 card files are covered (`../../../issues/closed/bugs/2026-09-08-moved-card-open-in-browser-404s.md:19-26`). Reuse this behavior; do not change the move command.
 - `card.get` already has the exact miss-only insertion point (`src/webapp/trpc/routers/card.ts:155-166`): after `fs.readFile` reports `ENOENT`, it throws `TRPCError({ code: "NOT_FOUND", message: ... })`. Add recovery there and nowhere before the read.
 - The shared tRPC formatter is the safe place to add response metadata (`src/webapp/trpc/trpc.ts:8-15`). Extend its error data with a typed recovery union while retaining the current internal-error sanitization.
 - Internal paths already have one canonical form (`src/shared/box-path.ts:11-25`): box-relative, forward-slash paths without a leading slash. Use that form in Git matching, the response hint, and route navigation.
@@ -53,7 +72,7 @@ type MovedCardResolution =
 
 **Why this needs to change.** The move command knows both paths while it runs, but nothing durable connects a later browser request to that operation. Persisting a ledger would impose a new state lifecycle for a rare recovery. Git already contains rename candidates for both working-tree and committed moves.
 
-**Direction.** Call the helper only from the `card.get` `ENOENT` branch. It will:
+**Direction.** The helper is called only from the `card.get` `ENOENT` branch. It:
 
 1. Confirm that the missing source still does not exist. This makes a path reused by a new card win over any historical rename.
 2. Inspect uncommitted card changes through an ephemeral Git index and object directory. Populate only the scratch index, then read its NUL-terminated rename diff. This is necessary because a normal diff omits an unstaged move's untracked destination; the scratch state is removed after the lookup and neither the working tree nor the real index changes. Match only an `R<score>` record whose old path exactly equals the current candidate.
@@ -122,18 +141,18 @@ No critical gap remains in the planned behavior. Deliberate heuristic misses pre
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| The old path has been reused by a different card | Planned route/helper regression | The normal read wins; recovery is never called | Clear: the new card opens |
-| An uncommitted rename is present | Planned real-Git doctest | Working-tree rename scan runs first | Clear: URL follows the card |
-| A committed rename is present | Planned real-Git doctest | Latest touching commit is inspected with full diff | Clear: URL follows the card |
-| The card changed too much for Git's rename threshold | Planned negative doctest | No `R` record means no forwarding | Clear: ordinary missing-card UI |
-| Git is unavailable, the box is not a repository, or output is malformed | Planned helper regression | Warn once and return `not-moved` | Clear to server log and ordinary UI |
-| A rename chain loops or exceeds 16 hops | Planned helper regression | Stop and return `not-moved` | Clear: ordinary missing-card UI |
-| The destination was deleted, is not a `.card`, escapes the box, or is a disallowed symlink | Planned helper regression | Validate the final path through the namespace resolver | Clear: ordinary missing-card UI |
-| A directory rename emits only the ancestor path | Planned event-predicate doctest and browser check | Ancestor `rename` triggers the existing refetch | Clear: URL follows the card |
-| A live refetch fails while React Query retains the old card | Planned frontend doctest | Recovery is extracted separately from visible/stale data | Clear: route replaces while old card stays visible |
+| The old path has been reused by a different card | Real-Git doctest | The normal read wins; recovery is never called | Clear: the new card opens |
+| An uncommitted rename is present | Real-Git doctest | Working-tree rename scan runs first | Clear: URL follows the card |
+| A committed rename is present | Real-Git doctest | Latest touching commit is inspected with full diff | Clear: URL follows the card |
+| The card changed too much for Git's rename threshold | Resolver's `R`-only contract | No `R` record means no forwarding | Clear: ordinary missing-card UI |
+| Git is unavailable, the box is not a repository, or output is malformed | Real-Git and parser doctests | Warn once and return `not-moved` | Clear to server log and ordinary UI |
+| A rename chain loops or exceeds 16 hops | Bounded resolver loop | Stop and return `not-moved` | Clear: ordinary missing-card UI |
+| The destination was deleted, is not a `.card`, escapes the box, or is a disallowed symlink | Real-Git doctest | Validate the final path through the namespace resolver | Clear: ordinary missing-card UI |
+| A directory rename emits only the ancestor path | Event-predicate doctest and browser check | Ancestor `rename` triggers the existing refetch | Clear: URL follows the card |
+| A live refetch fails while React Query retains the old card | Frontend doctest | Recovery is extracted separately from visible/stale data | Clear: route replaces while old card stays visible |
 | Routed surfaces interpret the recovery differently | Browser matrix for Card, canonicalized Views/chat workspace, and Browse | Each owner preserves its route state and uses replace | Clear: address bar shows canonical destination |
-| A destination contains tabs, spaces, or quotes | Planned real-Git doctest | NUL-delimited parsing | Clear: exact destination or ordinary missing |
-| The error formatter receives an unrelated error | Planned formatter regression | `recovery: null` | Clear: existing error behavior |
+| A destination contains tabs, spaces, or quotes | Real-Git and parser doctests | NUL-delimited parsing | Clear: exact destination or ordinary missing |
+| The error formatter receives an unrelated error | Formatter regression | `recovery: null` | Clear: existing error behavior |
 
 ## Agent-flow / user-flow edge cases
 
@@ -163,10 +182,10 @@ None. The deliberate limits above are accepted product behavior for this best-ef
 
 Skip. This is browser/server recovery infrastructure and introduces no box-agent instruction, card schema, authoring convention, or concept an agent must know.
 
-## What will hold this after it ships
+## What holds this
 
-- `test/core/moved-card-forwarding.doctest.md` will create actual temporary Git repositories instead of mocking rename output. It will cover working-tree and committed renames, chains, path reuse, unusual filenames, missing/unsafe destinations, and graceful Git failure. This keeps the risky interpretation of Git behavior executable at the doctest tier.
-- The existing tRPC error-shape doctest will assert the serialized recovery union and the no-path-leak boundary.
+- `test/core/moved-card-forwarding.doctest.md` creates actual temporary Git repositories instead of mocking rename output. It covers working-tree and committed renames, chains, path reuse, unusual filenames, missing/unsafe destinations, and graceful Git failure. This keeps the risky interpretation of Git behavior executable at the doctest tier.
+- The existing tRPC error-shape doctest asserts the serialized recovery union and the no-path-leak boundary.
 - Focused frontend doctests keep recovery extraction and ancestor-rename relevance as pure functions. They specifically cover React Query's cached-data plus refetch-error state and atomic workspace-tab retargeting.
 - Browser verification exercises an uncommitted move in the isolated workstream test box across Card, Browse, and the chat workspace that `/views/$` canonicalizes into, including exact query/view-state preservation.
 - No new test tier or scheduled tour is needed. The pure decisions and real Git behavior fit existing doctests; the browser pass verifies integration rather than carrying the regression alone.

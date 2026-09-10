@@ -5,7 +5,9 @@ reported `ENOENT`, the helper can recover an unstaged filesystem move without
 changing the real Git index.
 
 ```ts setup
-import { rename } from "node:fs/promises";
+import { mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { parseGitRenameRecords, resolveMovedCardPath } from "../../src/core/moved-card-forwarding.js";
 
@@ -34,7 +36,7 @@ The scratch lookup did not stage either end in the real index.
 const status = (await import("simple-git")).simpleGit(box.root);
 const realIndex = await status.diff(["--cached", "--name-status"]);
 realIndex
-=> 
+=>
 ```
 
 If a new card reuses the old path, that card wins before historical recovery.
@@ -92,6 +94,30 @@ JSON.stringify(await resolveMovedCardPath({
 await directory.cleanup();
 ```
 
+## Unusual paths survive the full Git lookup
+
+The NUL-delimited parser is exercised through Git as well as directly.
+
+```ts
+const unusual = await makeTmpBox({ git: true });
+await unusual.seed("_content/Old name.memo.card", CARD);
+unusual.commitAll("seed unusual path");
+await rename(
+  unusual.path("_content/Old name.memo.card"),
+  unusual.path("_content/New\tname.memo.card"),
+);
+
+JSON.stringify(await resolveMovedCardPath({
+  boxRoot: unusual.root,
+  missingPath: "_content/Old name.memo.card",
+}))
+=> {"kind":"moved","path":"_content/New\tname.memo.card"}
+```
+
+```ts cleanup
+await unusual.cleanup();
+```
+
 ## Failing closed
 
 An incomplete or unsafe record is not enough to navigate. A box without Git
@@ -115,6 +141,58 @@ warnings.length
 
 ```ts cleanup
 await plain.cleanup();
+```
+
+A committed rename whose destination was later deleted, changed to a non-card,
+or replaced by a symlink outside the box stays an ordinary miss.
+
+```ts
+const deleted = await makeTmpBox({ git: true });
+await deleted.seed("_content/Old.memo.card", CARD);
+deleted.commitAll("seed deleted destination");
+await rename(deleted.path("_content/Old.memo.card"), deleted.path("_content/Gone.memo.card"));
+deleted.commitAll("move before delete");
+await rm(deleted.path("_content/Gone.memo.card"));
+JSON.stringify(await resolveMovedCardPath({ boxRoot: deleted.root, missingPath: "_content/Old.memo.card" }))
+=> {"kind":"not-moved"}
+```
+
+```ts cleanup
+await deleted.cleanup();
+```
+
+```ts
+const nonCard = await makeTmpBox({ git: true });
+await nonCard.seed("_content/Old.memo.card", CARD);
+nonCard.commitAll("seed non-card destination");
+await rename(nonCard.path("_content/Old.memo.card"), nonCard.path("_content/New.md"));
+nonCard.commitAll("move to markdown");
+JSON.stringify(await resolveMovedCardPath({ boxRoot: nonCard.root, missingPath: "_content/Old.memo.card" }))
+=> {"kind":"not-moved"}
+```
+
+```ts cleanup
+await nonCard.cleanup();
+```
+
+```ts
+const unsafe = await makeTmpBox({ git: true });
+await unsafe.seed("_content/Old.memo.card", CARD);
+unsafe.commitAll("seed unsafe destination");
+await rename(unsafe.path("_content/Old.memo.card"), unsafe.path("_content/New.memo.card"));
+unsafe.commitAll("move before symlink replacement");
+const outsideRoot = await mkdtemp(join(tmpdir(), "bbx-move-outside-"));
+const outsideCard = join(outsideRoot, "Outside.memo.card");
+await writeFile(outsideCard, CARD);
+await rm(unsafe.path("_content/New.memo.card"));
+await symlink(outsideCard, unsafe.path("_content/New.memo.card"));
+JSON.stringify(await resolveMovedCardPath({ boxRoot: unsafe.root, missingPath: "_content/Old.memo.card" }))
+=> {"kind":"not-moved"}
+```
+
+```ts cleanup
+await unsafe.cleanup();
+await rm(outsideRoot, { recursive: true, force: true });
 ```
 
 The NUL parser preserves unusual filenames and rejects truncated records.
