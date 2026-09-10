@@ -26,7 +26,8 @@ preview and a last-resort fallback, never a silent substitute.
   reading and I can trust the transcript I keep.
 - When I finish a long recording on my phone and lock the screen, I want the
   audio to reach the box anyway, so a closed tab or an app suspension does not
-  throw away the recording.
+  throw away the recording. The box keeps it; sending the message still
+  needs the tab.
 
 **Issues addressed:**
 
@@ -382,10 +383,12 @@ provider error ends the attempt.
     - On piece-too-long it halves `pieceSeconds` and restarts from piece 1,
       down to a floor of **150 s**, then `failed/permanent`.
     - On permanent it goes straight to `failed`.
-    - Diarized pieces are joined in order. How speakers are labeled across
-      pieces of one recording is Open design question 2. Today's guidance
-      (`prompts.ts:58`) ties a letter to a *recording*, so neither option is
-      a free reuse.
+    - Diarized pieces are joined in order (boxholder decision 2). Each piece
+      is relabeled with the next letter from `nextSpeakerLetter`: piece 1
+      gets the letter after the session's last one, piece 2 the one after
+      that. A line `— part N of M —` precedes each piece when M > 1.
+      Today's guidance (`prompts.ts:58`) ties a letter to a *recording*;
+      Track 4 extends it to parts.
     - It emits `voice-recording-status` on the event bus after every
       transition.
   - `deliver-late.ts`: when `handoff.mode === "late"` and the result is ready,
@@ -456,8 +459,9 @@ sessions. No open questions.
 **What.** A module-level queue that persists staging operations for voice
 recordings in IndexedDB and drains them to the box with bounded retries. Its
 *uploads* outlive the transcription actor, a reload and a closed tab. The
-*send* handoff does not: the pending row lives in per-tab `sessionStorage`.
-What completes a message whose tab is gone is Open design question 1.
+*send* handoff does not: the pending row lives in per-tab `sessionStorage`. By
+boxholder decision (Open design questions, decision 1), a message whose tab
+is closed is never sent. Its recording stays on the box for 7 days.
 
 **Why this needs to change.** Capture's web queue is in-memory with manual
 retry (`useCaptureUploads.ts:223-233`). A voice recording made during a deploy
@@ -654,7 +658,13 @@ text the kept text (`api-chat.ts:171-174`, `voice-intent.ts:131-136`).
     (`pending-sends.ts:1-4`).
   - On reload, a `preparing` row with a `recordingId` becomes a visible
     pending-HQ item. It shows the server's status and never sends on its
-    own. What completes it is Open design question 1.
+    own (boxholder decision 1). It offers two actions:
+    - "Send HQ transcript", enabled once the status is `ready`, calls
+      `claim`.
+    - "Send live text" calls `fallBack`, which returns the HQ result instead
+      if it is ready.
+    Both then dispatch through the normal path. Dismissing the item leaves
+    the recording on the box for 7 days.
   - Rows without a `recordingId` keep today's `recovered` path.
 - Ordering: voice dispatches are FIFO per conversation.
   - A module-level `voiceSendSequencer` chains each send's dispatch behind the
@@ -691,6 +701,10 @@ text the kept text (`api-chat.ts:171-174`, `voice-intent.ts:131-136`).
   - `corrects="<id>"`: this is the authoritative text of message `<id>`. Revise
     what you understood only where it changes the meaning; do not answer the
     earlier message again.
+  - `— part N of M —` in a diarized message: one long recording transcribed
+    in parts. Each part has a fresh letter, and the same people may recur
+    under a new letter, so `1A` and `1B` may or may not be one person.
+    This extends the existing letter sentence at `prompts.ts:58`.
 
 **Vocabulary lock-ins.** `hq="pending" | "failed"`, `corrects`;
 `Emission.hqFallback`; `HQ_WAIT_BUDGET_MS = 5 min`; composer events above;
@@ -817,10 +831,10 @@ design questions with its contingency.
 > voice GC and voice resume, a sealed voice recording would never resume after
 > a restart and would never be collected. Both are in Track 1's direction.
 
-> **Open, pending a decision:** a tab closed (not reloaded) while `awaitHq` is
-> waiting loses the `sessionStorage` pending row, so the message is never sent.
-> This is today's behavior too, and it contradicts the job story "a closed tab
-> … does not throw away the recording". Open design question 1 settles it.
+> **Accepted risk (boxholder decision 1):** a tab closed (not reloaded) while
+> `awaitHq` is waiting loses the `sessionStorage` pending row, so the message
+> is never sent, as today. The recording and HQ result stay on the box for
+> 7 days. No UI lists them yet (NOT in scope; filed at /finish).
 
 > **Critical gap (resolved in plan):** a late correction delivered while the
 > agent is busy sits in an in-memory queue, and a crash before drain would
@@ -915,34 +929,23 @@ design questions with its contingency.
 
 ## Open design questions
 
-1. **Who completes a voice message whose tab is gone (closed, or reloaded
-   mid-wait)?**
-   - The client may not auto-send on load (`pending-sends.ts:1-4`).
-   - Lean: **a server backstop.** A recording with an HQ request that is
-     neither claimed nor fallen back within `HQ_WAIT_BUDGET_MS` + 10 minutes
-     of reaching `ready` (or terminal `failed`) is delivered by the box itself:
-     `<speech stt="hq" message-id="<emissionId>">` with the HQ text, or
-     `hq="failed"` with no text if HQ failed. It goes through the same durable
-     `delivering` path as a late correction.
-   - What is lost: that message's selections and attachments. The server
-     never had them.
-   - A tab that comes back later and calls `claim` is told
-     "delivered by the box" and drops its row.
-   - Alternative: keep today's behavior (nothing is sent) and add a
-     "recordings" recovery list. That list is new UI.
-   - A reloaded tab shows the item as pending either way.
-   - Human decision: may the box send a message on the user's behalf when
-     the tab is gone?
-2. **Speaker labels across pieces of one diarized recording.** Piece 2's
-   speaker 1 may or may not be piece 1's speaker 1.
-   - Option A (lean): a fresh letter per piece (`1A`, `2A` … then `1B`,
-     `2B`), a marker line `— part 2 of 3 —` between pieces, and one prompt
-     sentence: parts of one recording carry fresh letters, and the same
-     people may recur under a new letter. It never asserts a false identity.
-   - Option B: one letter per recording with part-local numbering. That
-     reuses the letter's current meaning, but `1A` in part 1 and part 2 can
-     then be different people.
-   - Human decision: transcript vocabulary.
+Decided by the boxholder, 2026-09-10 (recorded here, applied in the tracks):
+
+1. **A voice message whose tab is gone is never sent by the box.** A closed
+   tab's message stays unsent, as today. The recording and any HQ result stay
+   on the box for 7 days. A reloaded tab shows the pending item with explicit
+   actions (Track 4). The rejected alternative was a server backstop that
+   delivers the HQ text itself after the wait budget; it would drop the
+   message's selections and attachments and send on the user's behalf. A
+   recovery list for unsent recordings is NOT in scope.
+2. **Diarized parts get fresh letters.** Each piece of one recording takes the
+   next speaker letter (`1A`, `2A`, then `1B`, `2B`). A marker line `— part 2
+   of 3 —` separates pieces. The prompt gains one sentence (Track 4). It never
+   asserts a false identity. The rejected option kept one letter with
+   part-local numbers, where `1A` could name different people in different
+   parts.
+
+Still open:
 - **Does a 600 s WAV piece via multipart succeed on `mai-diarized` within
   OpenRouter's 60 s upstream timeout?**
   - Lean: yes. The incident's 6-minute recordings succeeded via JSON, and
@@ -967,6 +970,9 @@ New agent-facing vocabulary: `hq="pending"`, `hq="failed"`, `corrects`. Add to
 - `voice-corrects-supersedes` (knows_directly): given a `<speech corrects="X">`
   that changes a date in X, the agent updates the date and does not re-answer
   X from scratch.
+- `voice-diarized-parts` (knows_directly): given a diarized message with
+  `— part 2 of 2 —` and speakers `1A`/`1B`, the agent does not assert that
+  they are the same person or different people.
 
 Both run against test1 before the plan is done
 (`pnpm knowledge-audit run --box <abs test1 path> --filter voice-`), with the

@@ -95,7 +95,15 @@ before relying on client waits, reload behavior, or capture delivery reuse."
 Findings 2 and 8 cover delivery durability, which is fixed. Findings 1 and 3
 cover the handoff when no tab remains, which awaits Open design question 1.
 
+## Boxholder decisions (2026-09-10)
+
+- Finding 1 / Open design question 1: **keep unsent.** The box never sends a
+  message on the user's behalf. A reloaded tab shows the pending item with
+  explicit "Send HQ transcript" / "Send live text" actions.
+- Finding 7 / Open design question 2: **fresh letter per part**, a
+  `— part N of M —` marker, and one prompt sentence.
+- The piece-length measurement against OpenRouter was approved.
+
 ## Round 2
 
-Pending: verification of the fixes after the boxholder answers Open design
-questions 1 and 2.
+Pending: verification of the round-1 fixes and the two decisions.
