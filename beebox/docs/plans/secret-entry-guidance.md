@@ -25,8 +25,9 @@ verdict on 2026-09-09, filed verbatim: *"It's all pretty bad."*
 [secrets-add-form-hides-the-names-that-work](../../../issues/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md)
 in full, and the picker half of
 [hq-transcription-fails-silently](../../../issues/bugs/2026-09-09-hq-transcription-fails-silently.md)
-(its "offering a choice that cannot work" bug; the silent-500 notice is a
-different surface and stays open — see NOT in scope). `bin/issues similar`
+(both halves: the picker that offers a choice that cannot work, Track 5, and
+the silent 500, Track 6 — the issue says all three of its fixes get done, and
+this plan does them). `bin/issues similar`
 also surfaced
 [write-only-secret-capture-in-chat](../../../issues/features/2026-07-19-write-only-secret-capture-in-chat.md),
 which is the chat-side entry path; the guidance registry built here is the
@@ -131,10 +132,18 @@ a second box exists. This is also the issue's "honest fix": a verified key
 granted to nothing, reported as success, was the failure hit twice.
 
 **Direction.** Extend `setValue` (`secrets.ts:132`) with an optional
-`grant?: { box: string; access: SecretAccessLevel }`; when present, run
-`grantSecret` after `setSecret` under the same `lifecycle` wrapper, and return
-`granted: { box, access } | null` alongside `warnings` and `verified`. One
-write path, not two mutations the client must sequence.
+`grant?: { box: string; access: SecretAccessLevel }`; when present, the
+mutation calls **`setAndGrantSecret`** (`lifecycle.ts:194-235`), which already
+exists and does both writes under one store lock — *"there is no window in
+which the value exists ungranted"* — rather than `setSecret` then
+`grantSecret`. (An earlier draft of this plan claimed the router's `lifecycle()`
+wrapper serialised the two; it does not — `secrets.ts:53-62` only maps
+`SecretLifecycleError` to a `TRPCError`. Cross-model review caught it.)
+`setAndGrantSecret` gains the `uses` and `formatHint` fields `setSecret`
+takes, and the router awaits `probeSecret` after it as `setValue` does today
+instead of the background probe the lifecycle op fires. The response carries
+`granted: { box, access } | null` **from the committed write**, alongside
+`warnings` and `verified`.
 
 The add form does **not** gain an Access select. The grant is made at
 `server`, which `docs/secrets.md:52` calls the default that *"all built-in
@@ -197,9 +206,12 @@ export function listSecretGuides(): Array<{ key: string; guide: SecretGuide }>;
 ```
 
 Served by a new `secrets.guides` query (read-only, `authenticatedOwnerProcedure`
-like its siblings). **"What it is used for" is not a field here** — the UI
-joins `builtinSecretUses(name)` from `uses.ts` at render time, so a new
-call-site's use appears without touching the guide. Entries for every name in
+like its siblings) that returns, per name, the guide **together with**
+`builtinSecretUses(name)` — the join happens on the server, because `uses.ts`
+imports `mutateSecretStore` (`uses.ts:41`) and cannot be pulled into the client
+bundle. **"What it is used for" is still not a guide field**: it is read from
+`uses.ts` at query time, so a new call site's use appears without touching the
+guide. Entries for every name in
 `uses.ts` that a boxholder would paste (the provider keys and the Google OAuth
 pair); `telegram-bot/` and `publish/` are provisioned by their own flows and
 get a guide that says so and points there.
@@ -222,14 +234,20 @@ above the Value field; a near-miss is caught before save.
 
 **Direction.**
 
-- Name: a `<datalist>`-backed text input (native, keyboard-friendly, free
-  text preserved). Each option shows `name — title`. Placeholder becomes
-  *"Pick a name the box recognises, or type your own"*.
-- When the typed name resolves through `secretGuideFor`: a panel in the
-  Telegram section's shape — title, `what`, "Used for:" (from `uses`),
-  numbered `obtainSteps` with `obtainUrl` as a link, and the format hint moved
-  up from the Value field's helper. Value placeholder derives from the format
-  entry (*"sk-or-v1-…"*).
+- **The registered names are the first thing on the tab**, as a row of
+  buttons the box does not yet hold a key for — *OpenRouter*, *OpenAI*,
+  *Gemini*, … — plus *Something else*. That is the Telegram section's shape
+  generalised: one affordance per thing you can connect. Choosing one opens
+  the add form with the name fixed and the guide panel above the Value field:
+  title, `what`, "Used for:" (from `uses`), numbered `obtainSteps` with
+  `obtainUrl` as a link, and the format hint moved up from the Value field's
+  helper. Value placeholder derives from the format entry (*"sk-or-v1-…"*).
+  (An earlier draft used a `<datalist>`; review pointed out that a datalist's
+  option labels are browser-dependent and a free-text path still lets
+  `OpenRouter` save as an ignored name if the warning is missed. For the
+  primary path the name should not be typeable at all.)
+- *Something else* opens the same form with a free-text Name, which is where
+  the near-miss check applies.
 - Near-miss: a pure `suggestSecretName(typed, knownNames)` — normalise both
   sides (lower-case, strip everything but `[a-z0-9]`), return the registered
   name on a normalised match that is not an exact match. The form shows
@@ -262,20 +280,65 @@ make all that stuff active": after Track 1 the grant exists; this track is what
 makes the pickers reflect it.
 
 **Direction.** A per-name `secrets.boxHas` is the wrong seam — the question is
-per service, not per name. Instead `transcription.config` and `tts.config`
-each gain an `available: Record<ServiceName, boolean>` computed server-side by
-the same resolution `health-model-routes.ts` performs (which key each service
-needs, whether this box holds it). The pickers render unavailable options
-disabled with *"needs the `openrouter` secret — Admin → Secrets"*. Selecting an
-unavailable value is refused client-side; the server keeps accepting it (a
-grant may arrive later, and refusing at write time would make the setting
-order-dependent).
+per service, not per name. A new `core/model-capabilities.ts` answers it:
+`serviceCapabilities(boxRoot)` returns, for every HQ transcription service and
+every TTS backend, `{ usable: boolean; needs: SecretName[] }`, derived from the
+same key-per-service facts the dispatchers use (`transcription/index.ts`
+`dispatchHqTranscription`, `tts/resolve.ts` `credentialFor`). It is **not**
+built on `health-model-routes.ts`, whose `modelRoutesCheck` returns nothing at
+all when the box has no OpenRouter key (`:31-34`) and so cannot describe an
+unavailable state — review caught that reuse claim as false.
 
-**Vocabulary lock-ins.** `available` on both config queries.
+It is served by a new **`ownerProcedure`** query, `voice.capabilities`, not
+folded into `transcription.config` / `tts.config`: those are `publicProcedure`
+(`transcription.ts:24`, `tts.ts:21`) because the chat shows the selected
+service to everyone, and whether this box can resolve a provider credential is
+not public metadata. `ownerProcedure` (box owner, `trpc.ts:39`) is the right
+tier — it is box-scoped grant metadata, not the store.
 
-**First implementation chunk.** The server-side `available` map on
-`transcription.config`, with a doctest against a tmp box with and without an
-`openrouter` grant.
+The pickers render unavailable options disabled with *"needs the `openrouter`
+secret — Admin → Secrets"*. The server keeps accepting an unusable value (a
+grant may arrive later, and refusing would make the setting order-dependent)
+**but the `setHqService` / `setBackend` mutations return `{ warning }` when the
+chosen service is not usable right now, and the client shows it** — the
+issue's stated floor (*"save it with a warning the boxholder has to
+acknowledge"*, `hq-transcription-fails-silently.md:88-90`), so a stale client
+or a script cannot persist an impossible setting silently.
+
+**Vocabulary lock-ins.** `serviceCapabilities`, `voice.capabilities`, the
+`warning` field on the two set mutations.
+
+**First implementation chunk.** `serviceCapabilities` with a doctest against a
+tmp box with and without an `openrouter` grant.
+
+### Track 6 — a permanent HQ failure is shown, once
+
+**What.** When the HQ pass fails with a permanent error, the boxholder sees it
+— once, on the voice chip — instead of silently getting realtime-quality text.
+
+**Why.** This was NOT in the first draft, and review was right to flag that
+leaving it out contradicted the issue's own priority — the boxholder's words:
+*"The silent failure is the more serious of the two."* It also directly
+undermines the requirement this plan exists for: if the key is pasted, the
+service selected, and the pass still fails silently, nothing has become
+"active" in any way the boxholder can see.
+
+**Direction.** `POST /api/chat/transcribe-audio` already returns the error's
+message as a 500; it additionally returns `{ error, code, permanent }` from the
+`TranscriptionError` it caught (`chat-audio-routes.ts`, the `transcribeAudioHq`
+catch). `postAudioForHqTranscription` (`api-chat.ts:160-173`) keeps returning
+`null` — the fallback is correct — but first surfaces a permanent failure
+through a small `hqFailure` store the voice chip reads, showing the server's
+message with a link to Admin → Secrets. Shown once per distinct `code` per
+session; a transient failure (network, 5xx without `permanent`) stays a
+console warning as today.
+
+**Vocabulary lock-ins.** The `{ error, code, permanent }` body shape on that
+route; `hqFailure`.
+
+**First implementation chunk.** The route body change with its route doctest
+(a `MissingOpenRouterKeyError` yields `permanent: true` and the code), then
+the client surface.
 
 ## Could this be simpler?
 
@@ -290,11 +353,11 @@ form" and "what name" — so Track 1 alone fixes the second trap and leaves the
 first two. Tracks 2–3 are the ask as stated ("what it is, where to get it,
 what it is used for"). Track 4 is one line.
 
-**Track 5 is the cuttable one.** It is a different surface (the voice menu)
-and a different issue's bug. Recommend keeping it, because it is the visible
-proof that pasting the key worked — without it the boxholder pastes, sees
-"granted", opens the picker, and sees the same list as before. If cut, the
-issue's picker bug stays open and says so.
+**Tracks 5 and 6 are the cuttable ones** — a different surface (the voice
+menu and chip) and a different issue. Recommend keeping both, because they are
+the visible proof that pasting the key worked: without 5 the boxholder pastes,
+opens the picker, and sees the same list as before; without 6 a wrong setting
+fails forever in silence. If cut, that issue stays open and says so.
 
 **One over-build avoided:** a semantic "did you mean" (edit distance) would
 match `openai` ↔ `openrouter`; normalisation catches the errors that were
@@ -309,7 +372,8 @@ the three existing registries'.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Value saved but grant fails (store write race, box slug gone) | to write (route doctest) | `lifecycle` already surfaces store errors; response must not say "granted" if it did not | clear once the response carries `granted` from the actual write, not the request |
+| Value saved but grant fails | to write (route doctest) | cannot happen: `setAndGrantSecret` does both in one locked write, and a refused write (e.g. another box owns the name) throws before either lands | clear |
+| HQ pass fails permanently after the setting was saved | to write (Track 6 route doctest) | Track 6: `{ code, permanent }` through the body, chip notice once | clear once built; **silent today** |
 | Near-miss suggests the wrong name (`openai` for `openaikey`) | to write (pure doctest) | warn-only; the typed name still saves | clear — a suggestion, not a rewrite |
 | Registered name typed with no guide entry (registry drift) | to write: doctest asserts `uses.ts` ⊆ guides | form degrades to today's plain fields | clear-enough: nothing hidden, just less help |
 | Provider moves its key page; `obtainUrl` 404s | none possible | — | silent to us, visible to the boxholder as a dead link — **accepted**; static text, provider-owned URL |
@@ -322,9 +386,10 @@ No critical gap: the one silent row is an external link going stale.
 
 - **Wrong field / wrong name** — ADDRESSED (Track 3 near-miss; datalist).
 - **Stale ref** — not applicable; no card refs.
-- **Two writers** — ADDRESSED: `setValue` and `grant` both go through
-  `lifecycle` (`secrets.ts:149`), which serialises store mutations; combining
-  them in one call narrows the window further.
+- **Two writers** — ADDRESSED by `setAndGrantSecret`'s single
+  `mutateSecretStore` (`lifecycle.ts:203`): value and grant land in one locked
+  write, so a concurrent resolve sees the old state or the new one, never a
+  value with no grant.
 - **Hand-edit drift** — n/a; the store is written only through the CLI and UI.
 - **Fabricated free-form value** — ADDRESSED for names (warn on near-miss,
   free text kept); the value is opaque by design.
@@ -341,8 +406,6 @@ No critical gap: the one silent row is an external link going stale.
 
 ## NOT in scope
 
-- **The silent HQ-500 notice** (the hq-transcription issue's items 1–2): the
-  voice-chip surface, a different bug; stays open with its own fix.
 - **Chat-side write-only capture** (07-19 issue): the guide registry is the
   text it would show; the flow is its own work.
 - **Merging Telegram's bespoke section into the secrets UI**: the precedent is
@@ -383,9 +446,18 @@ agent-facing secrets surface (`bbx secrets declare/describe`, the
   `test/core/secrets-key-readers.doctest.md` uses).
 - `available` maps → filesystem doctest with `makeTmpBox` + `grantSecret`.
 - The form itself has no unit tier (no frontend component tests); it is
-  verified by driving it with `bin/browse` on test1 — the before/after
-  screenshots go in one exhibit with `ask: react`, since how the guide *reads*
-  is the boxholder's judgement.
+  verified by driving it on test1. **The browse key cannot do this**: the
+  Secrets panel is `authenticatedOwnerProcedure`, which deliberately excludes
+  `source: "browse"` even on a box that opts agent browsing in as owner
+  (`server-box-scope.ts:263-269`; `test/webapp/auth-required.doctest.md:150-178`
+  proves the 403). The driven walkthrough therefore needs a real owner login
+  (`bin/browse auth save owner …` with a credential the boxholder supplies —
+  never one an agent invents or resets), or the boxholder drives it. Review
+  caught this; the first draft assumed the key would do. The voice-menu
+  pickers (Track 5) *are* reachable with the key, since they sit behind plain
+  `ownerProcedure`.
+- The before/after screenshots go in one exhibit with `ask: react`, since how
+  the guide *reads* is the boxholder's judgement.
 
 ## Implementation order
 
@@ -393,9 +465,10 @@ agent-facing secrets surface (`bbx secrets declare/describe`, the
 2. Track 1: mutation extension + doctest, then the form and its message.
 3. Track 3: `suggestSecretName` + doctest, then the picker and guide panel.
 4. Track 5: `available` on both config queries + doctest, then the pickers.
-5. Drive the whole path on test1 with `bin/browse`: add an OpenRouter key
-   from a fresh state, confirm the grant, confirm the HQ picker now offers
-   `mai-diarized` enabled. Exhibit.
+5. Track 6: route body + doctest, then the chip surface.
+6. Drive the whole path on test1 — with an owner login, see above: add an
+   OpenRouter key from a fresh state, confirm the box uses it, confirm the HQ
+   picker now offers `mai-diarized` enabled. Exhibit.
 
 ## Rollout shape
 
