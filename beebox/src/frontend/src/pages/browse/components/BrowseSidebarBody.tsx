@@ -16,6 +16,7 @@ import { BrowseLandmarkHeader } from "./BrowseLandmarkHeader";
 import { useBrowseListingMode } from "../useBrowseListingMode";
 import type { RouterOutput } from "../../../lib/trpc";
 import type { ViewTarget } from "../../../lib/view-url";
+import type { BrowseMissingKind } from "../../../lib/browse-card-state";
 
 type BrowseData = Parameters<typeof BrowseSidebarList>[0]["data"];
 
@@ -27,7 +28,7 @@ interface Props {
   onRetry: () => void;
   dirPath: string;
   selectedFilePath: string | null;
-  onNavigate: (path: string) => void;
+  onNavigate: (path: string, kind: BrowseMissingKind) => void;
   onFileContextMenu: Parameters<typeof BrowseSidebarList>[0]["onFileContextMenu"];
   landmark: RouterOutput["landmarks"]["forDir"]["landmark"];
   boxSlug: string;
