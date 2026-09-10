@@ -15,7 +15,7 @@
  * swallowed (engineering principles 4 and 13).
  */
 
-import { isRecord } from "@shared/is-record";
+import { unreachableCause } from "./trpc/transient";
 
 /** The parts of a React Query result this decision reads. */
 export interface QuerySnapshot<T> {
@@ -48,75 +48,18 @@ export interface LoadState<T> {
   stale: LoadFailure | null;
 }
 
-/** HTTP statuses worth trying again: the server-side and the two "come back later" codes. */
-function isTransientStatus(status: number): boolean {
-  return status >= 500 || status === 408 || status === 429;
-}
-
 /**
- * tRPC error codes that describe the request rather than the moment. Retrying
- * these is pure delay: the answer will not change.
- */
-const TERMINAL_TRPC_CODES = new Set([
-  "NOT_FOUND",
-  "BAD_REQUEST",
-  "UNAUTHORIZED",
-  "FORBIDDEN",
-  "CONFLICT",
-  "PAYLOAD_TOO_LARGE",
-  "METHOD_NOT_SUPPORTED",
-  "UNPROCESSABLE_CONTENT",
-]);
-
-/**
- * Message shapes that mean "the box did not answer", in the three forms this
- * app can see them:
- *  - our own text-file loader, which throws `Failed to load: <status> <text>`;
- *  - a browser fetch that never reached a server;
- *  - a gateway that answered a non-JSON body (nginx's `Bad Gateway` page) to a
- *    request `httpBatchStreamLink` then tried to parse as JSON. That last one
- *    is why the reported bug showed the person a JSON syntax error instead of
- *    an outage: the parse failure is downstream of the 502, and is the only
- *    trace of it that reaches the client.
- */
-function isTransientMessage(message: string): boolean {
-  const status = /Failed to load: (\d{3})/.exec(message);
-  if (status !== null) return isTransientStatus(Number(status[1]));
-  if (/failed to fetch|networkerror|load failed|network error|err_connection/.test(message.toLowerCase())) return true;
-  // Deliberately not a bare "Unexpected token": that also describes a genuinely
-  // malformed answer from our own API, which is a bug to see rather than an
-  // outage to retry. These two shapes are what a proxy's HTML/text body
-  // produces inside the batch link.
-  return /is not valid JSON|Failed to execute 'json'/.test(message);
-}
-
-/**
- * Whether an error is worth retrying. Takes `unknown` because React Query's
- * `retry` callback hands the error through untyped.
- */
-export function isTransientQueryError(error: unknown): boolean {
-  if (!isRecord(error)) return false;
-  const data = error["data"];
-  if (isRecord(data)) {
-    const code = data["code"];
-    if (typeof code === "string" && TERMINAL_TRPC_CODES.has(code)) return false;
-    const httpStatus = data["httpStatus"];
-    if (typeof httpStatus === "number") return isTransientStatus(httpStatus);
-  }
-  const message = error["message"];
-  return typeof message === "string" && isTransientMessage(message);
-}
-
-/**
- * Turn a failure into something worth reading. A transient failure gets our
- * sentence, because the underlying message names the wrong problem; anything
- * else keeps its own message as the headline, because it is usually specific
- * and true (`Card not found: …`).
+ * Turn a failure into something worth reading. An unreachable box gets our
+ * sentence, with the transport fact (`HTTP 502 from the gateway`) as detail;
+ * anything else keeps its own message as the headline, because it is usually
+ * specific and true (`Card not found: …`). By the time this runs, the
+ * unreachable case has already been retried (`lib/trpc/transient.ts`).
  */
 export function describeQueryFailure(error: { message: string } | null): LoadFailure {
   if (error === null) return { headline: "The box did not answer.", detail: "" };
-  if (isTransientQueryError(error)) {
-    return { headline: "The box did not answer — it may be restarting.", detail: error.message };
+  const unreachable = unreachableCause(error);
+  if (unreachable !== null) {
+    return { headline: "The box did not answer — it may be restarting.", detail: unreachable.detail };
   }
   return { headline: error.message, detail: error.message };
 }

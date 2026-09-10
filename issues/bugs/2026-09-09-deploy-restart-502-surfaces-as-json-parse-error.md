@@ -1,6 +1,6 @@
 ---
 title: "A 502 during a deploy restart reaches the UI as \"Unexpected token '<', \\\"<!DOCTYPE\\\"... is not valid JSON\""
-workstream: unattached
+workstream: trpc-retry-transients
 area: beebox
 priority: normal
 labels: [deploy, frontend, error-reporting]
