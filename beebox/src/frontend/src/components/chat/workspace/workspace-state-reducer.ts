@@ -6,7 +6,7 @@ import {
   openWorkspaceDestination, oppositePane, orderedWorkspacePaths, paneForPath,
   PANE_IDS, projectWorkspace, removeWorkspacePath, retainedRestorePane,
 } from "./workspace-state-model.js";
-import type { WorkspaceAction, WorkspaceState, WorkspaceTransition } from "./workspace-state-types.js";
+import type { Pane, WorkspaceAction, WorkspaceState, WorkspaceTransition } from "./workspace-state-types.js";
 
 type Action<Type extends WorkspaceAction["type"]> = Extract<WorkspaceAction, { type: Type }>;
 
@@ -42,6 +42,71 @@ function selectTab(state: WorkspaceState, action: Action<"selectTab">): Workspac
   let next = activateWorkspacePath(state, { path: action.path, at: action.at });
   if (action.viewport === "mobile") next = { ...next, mobileView: { kind: "card", path: action.path } };
   return { state: next, effect: { kind: "tab", pane: owner, path: action.path } };
+}
+
+interface PathReplacement {
+  from: string;
+  to: string;
+}
+
+function retargetPane(pane: Pane, replacement: PathReplacement): Pane {
+  return {
+    ...pane,
+    paths: [...new Set(pane.paths.map(path => path === replacement.from ? replacement.to : path))],
+    activePath: pane.activePath === replacement.from ? replacement.to : pane.activePath,
+  };
+}
+
+function retargetCard(state: WorkspaceState, action: Action<"retargetCard">): WorkspaceTransition {
+  const tab = state.tabs[action.fromPath];
+  const owner = paneForPath(state, action.fromPath);
+  if (tab === undefined || owner === null) return { state, effect: NO_WORKSPACE_FOCUS };
+  const destinationOwner = paneForPath(state, action.target.path);
+  if (destinationOwner !== null) {
+    const withoutSource = removeWorkspacePath(state, action.fromPath);
+    const destinationPane = withoutSource.panes[destinationOwner];
+    const mobileView = state.mobileView.kind === "card" && state.mobileView.path === action.fromPath
+      ? { kind: "card" as const, path: action.target.path }
+      : state.mobileView.kind === "chat" && state.mobileView.returnPath === action.fromPath
+        ? { kind: "chat" as const, returnPath: action.target.path }
+        : state.mobileView;
+    const lastInteraction = state.lastInteraction.kind === "card" && state.lastInteraction.path === action.fromPath
+      ? { kind: "card" as const, path: action.target.path }
+      : state.lastInteraction;
+    const next = normalizeWorkspaceState({
+      ...withoutSource,
+      panes: {
+        ...withoutSource.panes,
+        [destinationOwner]: { ...destinationPane, activePath: action.target.path, display: "cards" },
+      },
+      mobileView,
+      lastInteraction,
+      lastCardPane: destinationOwner,
+    });
+    return { state: next, effect: NO_WORKSPACE_FOCUS };
+  }
+  const tabs = { ...state.tabs };
+  delete tabs[action.fromPath];
+  tabs[action.target.path] = {
+    ...tab,
+    target: action.target,
+    label: tab.label === action.fromPath ? action.target.path : tab.label,
+  };
+  const replacement = { from: action.fromPath, to: action.target.path };
+  const panes = {
+    left: retargetPane(state.panes.left, replacement),
+    right: retargetPane(state.panes.right, replacement),
+  };
+  const mobileView = state.mobileView.kind === "card" && state.mobileView.path === action.fromPath
+    ? { kind: "card" as const, path: action.target.path }
+    : state.mobileView.kind === "chat" && state.mobileView.returnPath === action.fromPath
+      ? { kind: "chat" as const, returnPath: action.target.path }
+      : state.mobileView;
+  const lastInteraction = state.lastInteraction.kind === "card" && state.lastInteraction.path === action.fromPath
+    ? { kind: "card" as const, path: action.target.path }
+    : state.lastInteraction;
+  const next = normalizeWorkspaceState({ ...state, tabs, panes, mobileView, lastInteraction });
+  return { state: next, effect: NO_WORKSPACE_FOCUS };
 }
 
 function closeTab(state: WorkspaceState, action: Action<"closeTab">): WorkspaceTransition {
@@ -121,6 +186,7 @@ function restoreSnapshot(action: Action<"restoreSnapshot">): WorkspaceTransition
 export function reduceWorkspace(state: WorkspaceState, action: WorkspaceAction): WorkspaceTransition {
   switch (action.type) {
     case "openCard": return openCard(state, action);
+    case "retargetCard": return retargetCard(state, action);
     case "selectTab": return selectTab(state, action);
     case "closeTab": return closeTab(state, action);
     case "togglePin": return togglePin(state, action);

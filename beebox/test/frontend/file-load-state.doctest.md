@@ -8,7 +8,8 @@ background refetch that failed replaced an already-rendered card with an error
 message and never came back.
 
 ```ts setup
-import { resolveLoadState, isTransientQueryError, describeQueryFailure } from "../../src/frontend/src/lib/file-load-state.js";
+import { resolveLoadState, describeQueryFailure } from "../../src/frontend/src/lib/file-load-state.js";
+import { BoxUnreachableError } from "../../src/frontend/src/lib/trpc/transient.js";
 
 /** A query result with everything quiet; each example overrides what it cares about. */
 function query(over: Partial<Parameters<typeof resolveLoadState<string>>[0]>) {
@@ -19,10 +20,11 @@ function query(over: Partial<Parameters<typeof resolveLoadState<string>>[0]>) {
 ## A refresh that fails keeps the body, and says it is out of date
 
 The reported bug, in one example: the card loaded, the box restarted, the
-refetch got a 502. `data` is still in the cache — it must still be on screen.
+refetch got 502s until its retries ran out. `data` is still in the cache — it
+must still be on screen.
 
 ```ts
-const gateway = { message: "Failed to load: 502 Bad Gateway" };
+const gateway = new BoxUnreachableError({ status: 502 });
 const state = resolveLoadState(query({ data: "the card body", isRefetchError: true, error: gateway }));
 
 state.value
@@ -35,12 +37,11 @@ state.stale?.headline
 => The box did not answer — it may be restarting.
 ```
 
-The underlying message is kept as supporting detail rather than shown as the
-headline, because the headline the transport produces names the wrong problem.
+The transport fact is kept as supporting detail under the headline.
 
 ```ts continue
 state.stale?.detail
-=> Failed to load: 502 Bad Gateway
+=> HTTP 502 from the gateway
 ```
 
 ## A first load that fails is still an error
@@ -91,63 +92,30 @@ JSON.stringify(resolveLoadState(query({})))
 => {"value":null,"loading":false,"error":null,"stale":null}
 ```
 
-## Which failures are worth retrying
-
-A 5xx, a request that never reached a server, and the JSON parse error a
-gateway's plain-text body produces inside `httpBatchStreamLink` all mean "try
-again shortly". That last shape is the one the reported outage actually
-delivered to the client.
-
-```ts
-isTransientQueryError({ message: "Failed to load: 502 Bad Gateway" })
-=> true
-
-isTransientQueryError({ message: "Failed to fetch" })
-=> true
-
-isTransientQueryError({ message: `Failed to execute 'json' on 'Response': Unexpected token 'B', "Bad Gateway" is not valid JSON` })
-=> true
-
-isTransientQueryError({ data: { httpStatus: 503 }, message: "Service Unavailable" })
-=> true
-```
-
-A missing card, a rejected request, and an expired session are answers, not
-outages: retrying them delays the correct state by several seconds and changes
-nothing. Nor is a bare parse complaint enough on its own — a malformed answer
-from our own API is a bug to look at, not an outage to wait out.
-
-```ts
-isTransientQueryError({ data: { code: "NOT_FOUND", httpStatus: 404 }, message: "Card not found: Foo.card" })
-=> false
-
-isTransientQueryError({ data: { code: "UNAUTHORIZED", httpStatus: 401 }, message: "Not signed in" })
-=> false
-
-isTransientQueryError({ message: "Failed to load: 404 Not Found" })
-=> false
-
-isTransientQueryError({ message: `Unexpected token 'x' at position 4` })
-=> false
-
-isTransientQueryError(null)
-=> false
-```
-
-A tRPC code wins over the status beside it, because the code is the server's
-own classification.
-
-```ts
-isTransientQueryError({ data: { code: "NOT_FOUND", httpStatus: 500 } })
-=> false
-```
-
 ## Describing a failure
 
-```ts
-describeQueryFailure({ message: "Failed to fetch" }).headline
-=> The box did not answer — it may be restarting.
+Which failures are retried, and for how long, is decided in the transport
+(`trpc-transient.doctest.md`); by the time a failure reaches this function the
+retries are over. It recognizes the unreachable box by its class, whether it
+arrives bare (the text loader) or as the `cause` of a tRPC client error. A
+network failure reports that nothing answered at all.
 
+```ts
+JSON.stringify(describeQueryFailure(new BoxUnreachableError({ status: null, cause: new TypeError("Failed to fetch") })))
+=> {"headline":"The box did not answer — it may be restarting.","detail":"Failed to fetch"}
+
+describeQueryFailure({ message: "wrapped by the link", cause: new BoxUnreachableError({ status: 503 }) }).detail
+=> HTTP 503 from the gateway
+```
+
+Every other failure is an answer from the box, and keeps its own message. That
+includes a parse complaint: once gateways are classified by status, a malformed
+body can only come from our own API, and is a bug to look at.
+
+```ts
 describeQueryFailure({ message: "Card not found: Foo.card" }).headline
 => Card not found: Foo.card
+
+describeQueryFailure({ message: `Unexpected token 'x' at position 4` }).headline
+=> Unexpected token 'x' at position 4
 ```

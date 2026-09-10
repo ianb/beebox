@@ -94,6 +94,10 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
     if (state.detail) onDetailNavigate({ ...state.detail, viewer: name }, "replace");
   };
 
+  const followMovedCard = useCallback((path: string) => {
+    if (state.detail) onDetailNavigate({ ...state.detail, path }, "replace");
+  }, [onDetailNavigate, state.detail]);
+
   const { data, isLoading: loading, isError, error: browseError, refetch } = trpc.status.browse.useQuery({ path: dirPath });
   useBrowseListLiveRefresh(dirPath);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -206,6 +210,7 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
             }}
             onDelete={handleDelete}
             onNavigate={handleLinkNavigate}
+            onMoved={followMovedCard}
             onSelectRenderer={handleSelectRenderer}
             onViewStateChange={handleViewStateChange}
             onAddSelection={onAddSelection}

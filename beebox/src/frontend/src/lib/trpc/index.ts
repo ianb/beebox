@@ -1,10 +1,11 @@
 import { createTRPCReact } from "@trpc/react-query";
-import { createTRPCClient, createWSClient, httpBatchStreamLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
+import { createTRPCClient, createWSClient, httpBatchStreamLink, retryLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
 import { getApiBase, getWebSocketUrl, withBase } from "../../api.js";
 import { getMobileAuthToken, isMobileAuthenticated, refreshMobileSession, withMobileAuth } from "../mobile-auth";
 import { toastError } from "../../components/ui/toast-store";
+import { fetchFromBox, retryDelayMs, shouldRetryOperation } from "./transient";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -49,7 +50,9 @@ function reportSessionEnded(): void {
 
 /**
  * Shared custom fetch for every link: rewrites the URL so it always reflects
- * the current box slug, and reports a 401 rather than ejecting the page.
+ * the current box slug, reports a 401 rather than ejecting the page, and turns
+ * an unreachable box into a `BoxUnreachableError` (`./transient.ts`) that the
+ * retry link below can recognize.
  */
 async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
   const reqUrl = typeof url === "string" ? url : url.toString();
@@ -57,7 +60,7 @@ async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise
   const fixedUrl = trpcPath !== -1
     ? `${getApiBase()}/trpc${reqUrl.slice(trpcPath + "/api/trpc".length)}`
     : reqUrl;
-  const response = await fetch(fixedUrl, withMobileAuth(options));
+  const response = await fetchFromBox(fixedUrl, withMobileAuth(options));
   if (response.status === 401) {
     if (isMobileAuthenticated()) {
       // A mobile 401 usually means the short-lived bbx_mobile cookie lapsed
@@ -66,7 +69,7 @@ async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise
       // and retry once. One retry only — a second 401 means the device token
       // itself is revoked, and retrying would spin.
       if (await refreshMobileSession(getApiBase())) {
-        return fetch(fixedUrl, withMobileAuth(options));
+        return fetchFromBox(fixedUrl, withMobileAuth(options));
       }
       return response;
     }
@@ -148,16 +151,29 @@ function getWsClient(): ReturnType<typeof createWSClient> {
  * untouched. A proxy that buffers the response degrades this to the old
  * all-at-once behavior rather than breaking it (hence `proxy_buffering off` in
  * deploy/setup-server.sh).
+ *
+ * The HTTP branch retries a query whose box did not answer (`./transient.ts`),
+ * with backoff sized to a deploy restart. Retrying here rather than in React
+ * Query reaches every caller — the vanilla `trpcClient.x.query()` sites and
+ * XState actors as well as the hooks — which is why the QueryClient keeps
+ * `retry: false`: two layers would multiply. Subscriptions are not in this
+ * branch; `wsLink` reconnects on its own.
  */
 function buildTrpcLink(): TRPCLink<AppRouter> {
   return splitLink({
     condition: (op) => op.type === "subscription",
     true: wsLink({ client: getWsClient() }),
-    false: splitLink({
-      condition: (op) => op.path === "files.summarize",
-      true: httpBatchStreamLink({ url: "/api/trpc", methodOverride: "POST", fetch: trpcFetch }),
-      false: httpBatchStreamLink({ url: "/api/trpc", maxURLLength: 2000, fetch: trpcFetch }),
-    }),
+    false: [
+      retryLink({
+        retry: ({ op, attempts, error }) => shouldRetryOperation({ type: op.type, attempts, error }),
+        retryDelayMs,
+      }),
+      splitLink({
+        condition: (op) => op.path === "files.summarize",
+        true: httpBatchStreamLink({ url: "/api/trpc", methodOverride: "POST", fetch: trpcFetch }),
+        false: httpBatchStreamLink({ url: "/api/trpc", maxURLLength: 2000, fetch: trpcFetch }),
+      }),
+    ],
   });
 }
 
