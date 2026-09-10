@@ -102,7 +102,14 @@ cover the handoff when no tab remains, which awaits Open design question 1.
   explicit "Send HQ transcript" / "Send live text" actions.
 - Finding 7 / Open design question 2: **fresh letter per part**, a
   `— part N of M —` marker, and one prompt sentence.
-- The piece-length measurement against OpenRouter was approved.
+- The piece-length measurement against OpenRouter was approved and run. It
+  used synthetic two-voice audio posted to the incident box's
+  `transcribe-audio` route through the production JSON path:
+  - 600 s: 400 after 4.0 s.
+  - 660 s: 400 after 3.4 s.
+
+  The plan now uses 300 s pieces over JSON. The multipart switch was dropped
+  as unmeasured.
 
 ## Round 2
 

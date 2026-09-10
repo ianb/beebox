@@ -66,6 +66,18 @@ box's `client-debug.log` and `hub-child.log` and the chat transcript
   `stt` attribute. The segment ran about 11 minutes: about 21 MB of 16 kHz
   WAV, about 28 MB after base64.
 
+**Measured the same day.** Two synthetic two-voice recordings (macOS TTS,
+16 kHz mono WAV) were posted to the same box's `transcribe-audio` route, i.e.
+the production JSON path to `mai-diarized`:
+- 600 s (19.2 MB WAV, ~25.6 MB JSON): 400 from OpenRouter after 4.0 s.
+- 660 s (21.1 MB WAV, ~28.2 MB JSON): 400 from OpenRouter after 3.4 s.
+
+The rejection comes back in seconds, before any transcription, which points
+to a request-size limit rather than the 60 s processing timeout. The
+incident's ~6-minute recordings (~15 MB JSON) succeed, so the cutoff lies
+between ~15 MB and ~25.6 MB of JSON body. The upstream reason is still not
+visible, because our error drops the body (Track 1 fixes that).
+
 The HQ pass did not fail because of the live socket. It ran and the provider
 rejected it. The upstream reason is lost: our error carries only the status
 line. The likely cause is size. The OpenRouter STT guide says a 16 kHz mono WAV
@@ -160,8 +172,8 @@ fallback." The composer's `hq` region (`composerMachine.ts:205-211`) has
 - The OpenRouter arm (`transcription/openrouter.ts:140-156`) sends JSON with
   base64 audio. Its header says (`:32-34`): "the multipart one caps at 25 MB
   where the JSON one does not — a recording long enough to hit that is the
-  ordinary case here, so JSON it is." The incident contradicts the premise
-  (unverified).
+  ordinary case here, so JSON it is." The 2026-09-10 measurement contradicts
+  the premise: JSON bodies of 25.6 MB and 28.2 MB were rejected with 400.
 - Its error is ky's default `HTTPError` message, without the response body.
 
 **Capture staging — reuse.** Capture mode already has the durable server half:
@@ -374,9 +386,14 @@ provider error ends the attempt.
     claim/fall-back race.
   - `hq-job.ts`: the IO shell.
     - It concatenates chunks, cuts pieces of at most `pieceSeconds` (default
-      **600**, the MAI diarization ceiling "about 15 minutes" minus margin),
-      wraps each in a WAV header, and calls `transcribeAudioHq` piece by piece
-      in order.
+      **300**), wraps each in a WAV header, and calls `transcribeAudioHq`
+      piece by piece in order.
+      - The default comes from the 2026-09-10 measurement (incident
+        section): a 600 s WAV sent as JSON is rejected. A 300 s piece is
+        9.6 MB of WAV, ~12.8 MB as JSON, below the ~6-minute recordings that
+        succeeded.
+      - It is also well under MAI's documented diarization ceiling of "about
+        15 minutes".
     - On a transient failure it backs off with the shared `jitteredBackoff`
       (moved to `src/shared/backoff.ts`; base 5 s, cap 5 min) until
       **24 hours** after `requestedAt`, then `failed/exhausted`.
@@ -432,10 +449,12 @@ provider error ends the attempt.
 - Upstream detail:
   - The OpenRouter arm reads the error response body into a typed
     `TranscriptionError` with `upstreamStatus` and a 500-char `upstreamBody`.
-  - It switches from JSON/base64 to multipart, the documented 25 MB path. A
-    600 s piece is 19.2 MB of WAV, under the documented cap. As JSON it would
-    be ~25.6 MB, over the size that just failed.
-  - The header comment `:32-34` is rewritten with the incident as evidence.
+  - The transport stays JSON/base64. Multipart would allow longer pieces
+    under its documented 25 MB cap, but it is unmeasured here, including
+    whether the Azure diarization passthrough survives a multipart body. NOT
+    in scope.
+  - The header comment `:32-34` is rewritten with the measurement as
+    evidence: JSON bodies of 25.6 MB and 28.2 MB were rejected with 400.
 - `POST /api/chat/transcribe-audio` is unchanged. iOS builds in the field
   still call it until Track 6 ships (see Rollout).
 
@@ -443,7 +462,7 @@ provider error ends the attempt.
 `VoiceHqState` / `VoiceHandoff` / `HqFailure` shapes above; tRPC
 `voiceRecording.{status,statusByMessage,claim,fallBack}`; bus event
 `voice-recording-status { recordingId, sessionId, hq, handoff }`; `<speech
-corrects="<message-id>">`; constants `HQ_PIECE_SECONDS = 600`,
+corrects="<message-id>">`; constants `HQ_PIECE_SECONDS = 300`,
 `HQ_PIECE_FLOOR_SECONDS = 150`, `HQ_RETRY_BOUND_MS = 24h`,
 `VOICE_STAGING_RETENTION_MS = 7d`.
 
@@ -792,7 +811,7 @@ format).
 The simplest version that could work runs entirely in the client:
 1. retry `postAudioForHqTranscription` with backoff
 2. hand the blob of every segment end to HQ
-3. cut long blobs into WAV pieces of ≤10 minutes in the browser
+3. cut long blobs into WAV pieces of ≤5 minutes in the browser
 4. show failures
 
 It fails on these cases:
@@ -821,8 +840,8 @@ Choices made to stay small:
 ## Subplans
 
 None. The piece length and transport are settled in Track 1, backed by the
-provider documentation above. The one remaining measurement is listed in Open
-design questions with its contingency.
+provider documentation above and the 2026-09-10 measurement (incident
+section).
 
 ## Failure modes
 
@@ -850,7 +869,7 @@ design questions with its contingency.
 | Queue op older than 7 days | Track 2 doctest | Terminal; notice; op deleted | Clear |
 | iOS/Safari evicts IndexedDB before upload | None (platform) | Ops drain within minutes normally | Silent: accepted; the queue is a buffer, not an archive |
 | Two tabs drain the same op | Route doctest (idempotent replay) | Filename+bytes replay; idempotent create/finalize | Clear (no effect) |
-| Provider 400 on size | `classify` doctest | Pieces ≤600 s; multipart | Clear: `upstreamBody` logged |
+| Provider 400 on size | `classify` doctest | Pieces ≤300 s (measured: 600 s is rejected) | Clear: `upstreamBody` logged |
 | MAI diarized 408 / 503 `diarization_unavailable` | `classify` + job doctest (fake service) | Halve piece, floor 150 s | Clear: status "retrying" |
 | Missing OpenRouter key (permanent) | Job doctest | `failed/permanent` → `hq="failed"`; chip notice | Clear |
 | Provider down for a day | Job doctest (injected clock) | `failed/exhausted` at 24 h | Clear: badge "HQ failed" |
@@ -864,7 +883,7 @@ design questions with its contingency.
 | A consumer forgets to seal | Type (`PendingRecording`) + hook-unmount seal | Unsealed → sealed `hq: null` on unmount; GC at 7 days | Clear |
 | Reload during the HQ wait | pending-sends doctest | Row stays `preparing`; `awaitHq` resumes | Clear |
 | Speaker letters out of order for late delivery | None needed | Letter computed at delivery from the log tail; each piece gets a fresh letter | Clear (letters name recordings, not order) |
-| Words cut at a piece boundary | None | Accepted | Silent: accepted; one word per 10 minutes |
+| Words cut at a piece boundary | None | Accepted | Silent: accepted; at most one word per 5-minute boundary |
 | `recordingLocal` hides the silence timeout during a real silence | Machine doctest | `MAX_DURATION` still bounds it | Clear |
 | Disk: 115 MB/hour staged | None | 7-day GC; prod has ~32 GB free (2026-08-04) | Clear via disk alerts |
 | iOS build without Track 6 calls `transcribe-audio` | Existing route tests | Route kept unchanged | Clear |
@@ -946,15 +965,6 @@ Decided by the boxholder, 2026-09-10 (recorded here, applied in the tracks):
    parts.
 
 Still open:
-- **Does a 600 s WAV piece via multipart succeed on `mai-diarized` within
-  OpenRouter's 60 s upstream timeout?**
-  - Lean: yes. The incident's 6-minute recordings succeeded via JSON, and
-    multipart removes the base64 overhead.
-  - Measure it in Track 1 before the job lands: send a 10-minute synthetic WAV.
-    This needs the boxholder's approval to spend on the OpenRouter key; it
-    costs cents.
-  - If it fails, set `HQ_PIECE_SECONDS = 300`. The halving logic then
-    becomes a safety net rather than the normal path.
 - **`HQ_WAIT_BUDGET_MS` = 5 minutes.**
   - Lean: keep it. The boxholder prefers retry, and the "Send live text now"
     control covers impatience.
@@ -1010,8 +1020,9 @@ status comments recorded.
    format, predicate switches. Route doctests.
 2. Track 1: `src/shared/wav.ts`, `src/shared/backoff.ts` moves; `pieces.ts`,
    `classify.ts`, `state.ts` with doctests.
-3. Track 1: OpenRouter multipart + upstream body. **Measurement** (with
-   approval). Set `HQ_PIECE_SECONDS`.
+3. Track 1: the OpenRouter arm keeps the upstream error body
+   (`upstreamStatus`, `upstreamBody`); the header comment records the
+   measurement.
 4. Track 1: `hq-job.ts`, finalize dispatch, resume by kind, voice GC, bus
    event. Filesystem doctests.
 5. Track 1: `voiceRecording` tRPC router; `userMessageAlreadyLanded`
