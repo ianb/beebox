@@ -10,6 +10,7 @@ import { CardVisibilityProvider } from "../everywhere/card-context";
 import { useWorkspace } from "./WorkspaceProvider";
 import { WorkspaceControls, RestoreCardsControl } from "./WorkspaceControls";
 import { TranscriptFloatingControls } from "./TranscriptFloatingControls";
+import { isMarkdownPath } from "../../file-view-data";
 import type { SidecarTab } from "../sidecar-tabs";
 import type { PaneId } from "./workspace-state";
 import type { AddSelectionInput } from "../../../lib/selection/position";
@@ -28,7 +29,8 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
   if (!workspace) return null;
   const { onSelectTab: handleSelectTab, onCloseTab: handleCloseTab, onTogglePin: handleTogglePin } = workspace;
   const handleAddSelection = callbacks.onAddSelection;
-  return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={cardTypeFromName(tab.target.path) !== undefined || undefined}
+  const themedSurface = cardTypeFromName(tab.target.path) !== undefined || isMarkdownPath(tab.target.path);
+  return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined}
     style={{ gridColumn: workspace.mobile || workspace.state.layout.kind === "focus" ? "1 / -1" : pane === "left" ? "1" : "2", gridRow: 1 }}
     className={visible ? "bbx-companion-desk flex flex-col min-w-0 min-h-0" : "hidden"}>
     {visible ? <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
@@ -37,7 +39,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
       <WorkspaceControls pane={pane} />
     </div> : null}
     <div role="tabpanel" id={`bbx-workspace-panel-${encodeURIComponent(tab.target.path)}`} aria-labelledby={visible ? `bbx-workspace-tab-${encodeURIComponent(tab.target.path)}` : undefined} tabIndex={0} aria-hidden={!visible} data-bbx-scan="exclude"
-      data-card-content={cardTypeFromName(tab.target.path) === undefined ? "neutral" : "card"}
+      data-card-content={themedSurface ? "card" : "neutral"}
       className="bbx-interface-card-desk flex-1 min-h-0 overflow-auto"
       onFocus={() => workspace.activate(tab.target.path)}
       onScroll={(event) => {
