@@ -2,11 +2,23 @@
 title: "Full-suite red: test/core/box/file-watcher.doctest.md"
 workstream: interface-as-cards
 area: beebox
+resolution: implemented
 priority: important
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-interface-as-cards — the hourly full-suite run on main
 ---
+
+Resolved 2026-09-10: the watcher correctly includes the newly seeded
+`_config/interface` directory. The doctest's `SKELETON_DIRS` omitted that
+standard directory, making four exact directory-list assertions fail. Added
+it to the fixture baseline; production watcher behavior and the exact scenario
+assertions are unchanged. Reproduced the four failures before the fix; both
+an isolated serial run and `pnpm test:changed` pass all 14 assertions afterward.
+The test is in the careful tier, so it was excluded from the earlier ordinary
+change-selected run. This resolution does not claim a new full-suite run.
+
+Original report follows.
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `0cb160c0`. Bisecting the landings since the last tested
