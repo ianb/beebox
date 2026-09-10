@@ -1,11 +1,11 @@
 /**
- * Retry timing helpers shared by the transcription actor's two recovery paths:
- * the initial connect-with-retry (a fresh socket that fails to open) and the
- * mid-recording reconnect loop. Deepgram's streaming guidance recommends
- * backoff with jitter so many clients don't re-storm the API in lockstep after
- * a shared outage; the actor's recovery windows are short (single-digit
- * seconds), so the caps here stay small rather than the 30s a long-lived
- * server reconnect would use.
+ * Retry timing helpers shared by every recovery loop that needs bounded,
+ * de-correlated retry delays. Originally the realtime transcription actor's
+ * two recovery paths (initial connect-with-retry and the mid-recording
+ * reconnect loop); moved to `shared/` (from `frontend/src/machines/`) so the
+ * server's HQ job (`core/voice-recording/hq-job.ts`, a later chunk of
+ * `docs/plans/resilient-voice-recording.md`) can reuse the same helper
+ * instead of a second backoff idiom (#8).
  */
 
 export function delay(ms: number): Promise<void> {

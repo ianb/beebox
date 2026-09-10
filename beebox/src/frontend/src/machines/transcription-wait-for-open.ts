@@ -1,4 +1,4 @@
-import { delay, jitteredBackoff } from "./transcription-backoff";
+import { delay, jitteredBackoff } from "@shared/backoff.js";
 import type { ConnectionHandle } from "./transcription-connections";
 
 /**
