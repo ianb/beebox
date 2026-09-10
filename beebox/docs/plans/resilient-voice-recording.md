@@ -469,8 +469,9 @@ provider error ends the attempt.
     in scope.
   - The header comment `:32-34` is rewritten with the measurement as
     evidence: JSON bodies of 25.6 MB and 28.2 MB were rejected with 400.
-- `POST /api/chat/transcribe-audio` is unchanged. iOS builds in the field
-  still call it until Track 6 ships (see Rollout).
+- `POST /api/chat/transcribe-audio` stays until Track 7 deletes it. That
+  happens once the web (Track 4) and native (Track 6) paths no longer call
+  it (boxholder decision, 2026-09-10).
 
 **Vocabulary lock-ins.** Staging kind `voice`; audio format `pcm-s16le-16k`;
 `VoiceHqState` / `VoiceHandoff` / `HqFailure` shapes above; tRPC
@@ -597,9 +598,15 @@ Network-caused ends stop ending the segment.
   - `recordingLocal` handles `STOP` → `finalizing`, `CANCEL` → idle, and
     `CONNECTION_RESTORED` → `recording`. It has no `SILENCE_TIMEOUT`: no live
     text arrives to reset it.
-  - `reconnecting`'s `RECONNECT_WINDOW` expiry goes to `recordingLocal` when
-    `dropCause === "network"`, and stays `finalizing` for `"microphone"`
-    (no audio is flowing).
+  - A network drop (`CONNECTION_DEGRADED` with cause `"network"`) goes
+    straight from `recording` to `recordingLocal`. The audio keeps flowing to
+    staging, so there is nothing for a window to bound.
+  - `reconnecting` becomes **microphone recovery only**. `RECONNECT_WINDOW`
+    now bounds only a mic loss: no audio is flowing, and expiry still goes to
+    `finalizing`.
+  - The actor has **one** connect loop, used for both the first connect and a
+    mid-recording drop. `CONNECT_MAX_ATTEMPTS` and the separate bounded
+    initial `openWithRetry` call are removed (see Deletions).
   - A non-retryable close (`1003`/`1008`) in `recording` goes to
     `recordingLocal` and stops the reconnect loop.
   - The actor's reconnect loop runs until `stop`/`cleanup`, with backoff
@@ -752,8 +759,8 @@ source (pure outcome decision extracted). No open questions.
 
 **What.** `bbx chat get-last-audio` / `retranscribe --message <id>` first look
 for a voice staging session whose `handoff.emissionId` (or recording id) is
-`<id>`, and serve its audio as a WAV. The tab relay remains only for iOS native
-recordings and old web tabs.
+`<id>`, and serve its audio as a WAV. The tab relay stays only until Track 7,
+which deletes it once the native app also stages its recordings.
 
 **Why this needs to change.** Today the audio for a message lives only in the
 tab that sent it, capacity 5, gone on reload (`last-audio.ts:10-12,42-43`). The
@@ -770,7 +777,7 @@ removes. Without Track 5, `get-last-audio` would break for web recordings.
   message-id verification the relay uses.
 - The web `retainVoiceAudio`/`markVoiceAudioAbsent` calls and the retention
   singleton are removed (#8: the server holds the recording). The native relay
-  in `fulfillLastAudioRequest` stays.
+  in `fulfillLastAudioRequest` stays until Track 7.
 - A recording whose chunks are still in a client queue answers
   `none: "still uploading"`.
 
@@ -819,6 +826,26 @@ over sample-accurate 15 s chunking of a synthetic buffer. No open questions.
 The HTTP shape of the `voiceRecording` tRPC calls from Swift is settled in
 Track 1 (tRPC over HTTP: GET query / POST mutation, the documented tRPC wire
 format).
+
+## Deletions (what this plan removes)
+
+Superseded code is deleted in the track that supersedes it, not left for a
+later sweep (#8). Callers were verified by grep on 2026-09-10. A track is not
+done while its row still has live code.
+
+| Track | Removed | Why it is dead |
+|---|---|---|
+| 3 | `wantAudioBlob` option and `dispatchKeyword`'s fast path (CANCEL + fire with `audioBlob: null`) | Already dead: the only caller passes `wantAudioBlob: () => true` (`InteractiveChat-voice.ts:151`) |
+| 3 | Whole-segment `audioChunks` buffering, `takeAudioBlob`, `REPLAY_PAD_CHUNKS` | Replaced by staging plus the 30 s replay ring buffer |
+| 3 | `encodePcmChunksAsWav`, `lib/audio/wav-encode.ts`, `test/frontend/lib/wav-encode.doctest.md` | No browser-side WAV remains; the server wraps pieces with `shared/wav.ts` |
+| 3 | `audioBlob` on `TRANSCRIPTION_DONE`, in machine context, on `VoiceIntent.submit`, in the hook | Replaced by `PendingRecording` |
+| 3 | Network-cause `RECONNECT_WINDOW` ending, the network branch of `setDropEnded` ("Recording stopped — network lost"), `CONNECT_MAX_ATTEMPTS` and the bounded initial connect | A network drop no longer ends a segment; one connect loop remains |
+| 4 | `postAudioForHqTranscription`, the web `HqTranscriptionResult`, their `api.ts` re-exports | HQ comes from the server job |
+| 4 | `prepareVoiceSubmitEmission`'s `transcribe` parameter and its swallow-all catch; the `[hq-transcribe] unavailable — falling back` and "HQ requested but no audioBlob" branches in `voice-keyword-send.ts` | Replaced by the `awaitHq` outcome union |
+| 4 | Composer `pendingHqText` single slot | Replaced by the `pendingHq` list |
+| 5 | Web `input/retention.ts` + `test/frontend/lib/retention.doctest.md`, `retainVoiceAudio`, `markVoiceAudioAbsent` (incl. `InteractiveChat-dispatch.ts`), and the web-answer half of `fulfillLastAudioRequest` | The server holds the recording |
+| 6 | Native `ChatAPI.transcribeAudio` + its tests; the full-format WAV recording file in `SpeechDictation`; `VoiceAudioRetentionStore` and the native last-audio answer | The native app stages PCM, and the server answers `get-last-audio` |
+| 7 (legacy) | `POST /api/chat/transcribe-audio` (`chat-audio-routes.ts`) and its client callers; the whole `get-last-audio` tab relay: the request/answer routes (`webapp/routes/chat-last-audio-routes.ts`), `core/last-audio-pending.ts`, the `chat-last-audio-request` bus event (`core/event-bus-schemas.ts`), the handler in `InteractiveChat-ws.ts`, `lib/audio/last-audio.ts`, `components/chat/native-last-audio-request.ts`, and their doctests (`test/core/last-audio.doctest.md`, `test/frontend/native-last-audio-relay.doctest.md`, relay cases in `event-bus`/`agent-token`/`fixtures` doctests); `mobile-contract.md` §5.2 and §4.9 | After Tracks 4–6 nothing records only in a client, so `bbx chat get-last-audio` (`cli/commands/chat-audio-fetch.ts`, kept) reads staged recordings directly. `core/pending-browser-request.ts` stays: the screenshot and UI routes share it. The only iOS install is updated before /finish (boxholder, 2026-09-10) |
 
 ## Could this be simpler?
 
@@ -902,7 +929,7 @@ section).
 | Words cut at a piece boundary | None | Accepted | Silent: accepted; at most one word per 5-minute boundary |
 | `recordingLocal` hides the silence timeout during a real silence | Machine doctest | `MAX_DURATION` still bounds it | Clear |
 | Disk: 115 MB/hour staged | None | 7-day GC; prod has ~32 GB free (2026-08-04) | Clear via disk alerts |
-| iOS build without Track 6 calls `transcribe-audio` | Existing route tests | Route kept unchanged | Clear |
+| An iOS build from before Track 6 calls the deleted `transcribe-audio` | None (the route is gone) | The old build's own one-shot fallback sends live dictation with its "HQ transcription failed" status | Clear: accepted, the boxholder installs the new build before /finish |
 
 ## Agent-flow / user-flow edge cases
 
@@ -927,8 +954,11 @@ section).
 - **Partial migration / transition state.**
   - A web tab loaded before the deploy keeps the old one-shot path until
     reload. It never touches voice staging.
-  - iOS builds keep `transcribe-audio`.
-  - Servers without Track 5 fall back to the relay.
+  - iOS builds from before Track 6 lose `transcribe-audio` at Track 7 and fall
+    back to live dictation visibly.
+  - Recordings made in a tab before the deploy are not on the server, so
+    `get-last-audio` cannot serve them after Track 7. Accepted: tab retention
+    only ever held the last five, in memory.
   - ADDRESSED in Rollout.
 - **Hands-free conversation while live text is paused.** Spoken "send" is
   undetectable in `recordingLocal`. DEFERRED: the chip says so; the manual
@@ -959,8 +989,6 @@ section).
   unnecessary for correctness.
 - **Server-driven delivery of an unclaimed HQ result with its attachments.**
   It would duplicate client assembly.
-- **Retiring `POST /api/chat/transcribe-audio`.** Only after the iOS build with
-  Track 6 has rolled out. File as a follow-up issue.
 
 ## Open design questions
 
@@ -1053,8 +1081,12 @@ status comments recorded.
    prompt sentences; knowledge audits run.
 9. Track 5: server last-audio lookup; remove web retention.
 10. Track 6: iOS converter, coordinator, preparation, contract doc and
-    fixtures.
-11. Cross-model review of the diff; manual-testing section on the issue.
+    fixtures; delete the native rows of the Deletions table.
+11. Track 7 (legacy removal): delete `POST /api/chat/transcribe-audio`, the
+    whole `get-last-audio` tab relay, and their contract sections (the
+    Deletions table's Legacy row). `get-last-audio` then reads only staged
+    recordings.
+12. Cross-model review of the diff; manual-testing section on the issue.
 
 ## Rollout shape
 
@@ -1074,9 +1106,10 @@ status comments recorded.
 - **Transition.**
   - Server and web ship together in one bundle.
   - Web tabs loaded before the deploy keep the old path until they reload.
-  - `transcribe-audio` stays for iOS.
-  - The iOS track ships in the same plan but reaches devices on the next app
-    build. Retiring the old route is a follow-up issue.
+  - Track 7 deletes `transcribe-audio` and the tab relay in the same plan.
+    The boxholder installs the new iOS build (Track 6) before /finish
+    deploys. An older build on another device then falls back to live
+    dictation visibly (its own one-shot failure path).
 - **Manual testing** (set on the issue after code lands):
   - A diarized conversation of at least 20 minutes on the phone.
   - Block the network for 2 minutes in the middle.
