@@ -23,7 +23,7 @@
 
 import { ThemedFileCard } from "./themes/ThemedFileCard";
 import { useConversationCard, selectionReceiver } from "./chat/everywhere/card-context";
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
 import { displayName } from "../lib/display-name";
 import { useFileData, isCardPath, isMarkdownPath, isMissingCardFailure } from "./file-view-data";
@@ -206,7 +206,14 @@ function pendingFileViewLabel({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
+function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
+  enabled: boolean; onCapture: (selection: { text: string; position: string }) => void;
+  rendered: ReactNode; workspacePdf: boolean | undefined;
+}) {
+  return enabled ? <SelectionCapture onCapture={onCapture} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
+}
+
+export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
   const mode = modeProp ?? "page";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const cardContext = useConversationCard({ path, mode, rendererName: selectedRenderer({ path, userSelection, rendererName }), params, viewState: ownedViewState });
@@ -262,7 +269,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
 
   const rendered = (
     <ActiveFileRenderer
-      active={active} binding={binding} data={data} path={path} mode={mode}
+      active={active} binding={binding} data={data} path={path} mode={mode} workspacePdf={workspacePdf}
       params={params} viewState={ownedViewState} canPushViewState={canPushArg}
       {...(ownedStateChange !== undefined ? { onViewStateChange: ownedStateChange } : {})}
       {...(reportActivity !== undefined ? { reportActivity } : {})}
@@ -279,9 +286,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
       )}
     />
   );
-  const captured = onAddSelection === undefined
-    ? rendered
-    : <SelectionCapture onCapture={handleCapture}>{rendered}</SelectionCapture>;
+  const captured = captureFileContent({ enabled: onAddSelection !== undefined, onCapture: handleCapture, rendered, workspacePdf });
   // The marker rides with the body rather than with each mode's chrome, so a
   // card reports the same state wherever it renders — in chat, in the sidecar,
   // and on its own page.
@@ -316,6 +321,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   }
 
   if (mode === "companion") {
+    if (workspacePdf) return <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus} className="h-full min-h-0">{body}</div>;
     // The surrounding panel provides the path+open-link header. Just show a
     // compact toggle row if there are alternates.
     // Column flex with `min-h-full` so a renderer that wants to fill the pane

@@ -9,6 +9,7 @@ import { cardTypeFromName } from "@shared/card-name";
 import { CardVisibilityProvider } from "../everywhere/card-context";
 import { useWorkspace } from "./WorkspaceProvider";
 import { WorkspaceControls, RestoreCardsControl } from "./WorkspaceControls";
+import { isWorkspacePdf } from "./pdf-pane-view";
 import { TranscriptFloatingControls } from "./TranscriptFloatingControls";
 import { isMarkdownPath } from "../../file-view-data";
 import type { SidecarTab } from "../sidecar-tabs";
@@ -29,6 +30,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
   if (!workspace) return null;
   const { onSelectTab: handleSelectTab, onCloseTab: handleCloseTab, onTogglePin: handleTogglePin } = workspace;
   const handleAddSelection = callbacks.onAddSelection;
+  const workspacePdf = isWorkspacePdf(tab.target.path, tab.target.viewer);
   const themedSurface = cardTypeFromName(tab.target.path) !== undefined || isMarkdownPath(tab.target.path);
   return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined}
     style={{ gridColumn: workspace.mobile || workspace.state.layout.kind === "focus" ? "1 / -1" : pane === "left" ? "1" : "2", gridRow: 1 }}
@@ -36,7 +38,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
     {visible ? <div className="bbx-companion-tabs flex shrink-0 items-stretch min-w-0">
       <SidecarTabStrip id={workspace.mobile ? "bbx-panel-tabs-mobile" : pane === "left" ? "bbx-panel-tabs" : "bbx-panel-tabs-right"} tabs={tabs} activePath={tab.target.path} identities={identities} boxSlug={boxSlug}
         onSelectTab={handleSelectTab} onCloseTab={handleCloseTab} onTogglePin={handleTogglePin} />
-      <WorkspaceControls pane={pane} />
+      <WorkspaceControls pane={pane} pdfPath={workspacePdf ? tab.target.path : undefined} />
     </div> : null}
     <div role="tabpanel" id={`bbx-workspace-panel-${encodeURIComponent(tab.target.path)}`} aria-labelledby={visible ? `bbx-workspace-tab-${encodeURIComponent(tab.target.path)}` : undefined} tabIndex={0} aria-hidden={!visible} data-bbx-scan="exclude"
       data-card-content={themedSurface ? "card" : "neutral"}
@@ -48,7 +50,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
         callbacks.reportActivity("scrolled", (node.scrollHeight > node.clientHeight ? Math.round(node.scrollTop / (node.scrollHeight - node.clientHeight) * 10) / 10 : 0).toFixed(1));
       }}>
       <CardVisibilityProvider visible={visible}>
-        <FileView path={tab.target.path} mode="companion" rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState}
+        <FileView path={tab.target.path} mode="companion" workspacePdf={workspacePdf} rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState}
           canPushViewState={visible}
           onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
           onSelectRenderer={(viewer) => workspace.updateTarget({ ...tab.target, viewer, viewState: null })}

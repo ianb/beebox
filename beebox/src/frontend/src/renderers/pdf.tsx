@@ -11,10 +11,10 @@ import { registerFileType } from "./index";
 
 const PDF_EXT = /\.pdf$/i;
 
-function PdfRenderer({ data, mode }: RendererProps) {
+function PdfRenderer({ data, mode, workspacePdf }: RendererProps) {
   const basename = data.path.split("/").pop() || data.path;
   const src = apiRawFileUrl(getApiBase(), data.path);
-  return <PdfFrame src={src} title={basename} downloadName={basename} mode={mode ?? "page"} />;
+  return <PdfFrame src={src} title={basename} downloadName={basename} mode={mode ?? "page"} workspacePdf={workspacePdf} />;
 }
 
 registerFileType(
