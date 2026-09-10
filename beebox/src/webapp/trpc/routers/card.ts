@@ -141,7 +141,7 @@ function loadFrontmatterCard(input: {
 
 export const cardRouter = router({
   get: publicProcedure
-    .input(z.object({ path: z.string().min(1) }))
+    .input(z.object({ path: z.string().min(1), recoverMoved: z.boolean().optional() }))
     .query(async ({ input, ctx }) => {
       // Accept either ref form (a leading-slash ref or the canonical box-relative
       // path) but normalize to canonical so the security check, the read, and the
@@ -163,7 +163,9 @@ export const cardRouter = router({
           // display-form path never reaches this point at all; it's refused
           // earlier by `resolveCardPath` (with the "did you mean" suggestion
           // attached there instead — see its doc comment).
-          const moved = await resolveMovedCardPath({ boxRoot: ctx.boxRoot, missingPath: relPath });
+          const moved = input.recoverMoved === true
+            ? await resolveMovedCardPath({ boxRoot: ctx.boxRoot, missingPath: relPath })
+            : { kind: "not-moved" as const };
           throw new TRPCError({
             code: "NOT_FOUND",
             message: `Card not found: ${relPath}`,

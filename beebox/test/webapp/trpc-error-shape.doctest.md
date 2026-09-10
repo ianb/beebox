@@ -131,19 +131,28 @@ await rename(
   join(cardServer.boxRoot, "_content/Old.memo.card"),
   join(cardServer.boxRoot, "_content/New.memo.card"),
 );
-const input = encodeURIComponent(JSON.stringify({ path: "_content/Old.memo.card" }));
+const ordinaryInput = encodeURIComponent(JSON.stringify({ path: "_content/Old.memo.card" }));
+const recoveringInput = encodeURIComponent(JSON.stringify({ path: "_content/Old.memo.card", recoverMoved: true }));
 const originalCardError = console.error;
 console.error = () => {};
-const cardResponse = await (async () => {
+const responses = await (async () => {
   try {
-    return await cardServer.request({ method: "GET", url: `/api/trpc/card.get?input=${input}` });
+    return await Promise.all([
+      cardServer.request({ method: "GET", url: `/api/trpc/card.get?input=${ordinaryInput}` }),
+      cardServer.request({ method: "GET", url: `/api/trpc/card.get?input=${recoveringInput}` }),
+    ]);
   } finally {
     console.error = originalCardError;
   }
 })();
+const [ordinaryResponse, cardResponse] = responses;
+const ordinaryBody = ordinaryResponse.body as { error: { data: { recovery: unknown } } };
 const cardBody = cardResponse.body as { error: { data: { recovery: unknown } } };
-JSON.stringify({ status: cardResponse.statusCode, recovery: cardBody.error.data.recovery })
-=> {"status":404,"recovery":{"kind":"moved","path":"_content/New.memo.card"}}
+JSON.stringify({
+  ordinary: ordinaryBody.error.data.recovery,
+  optedIn: { status: cardResponse.statusCode, recovery: cardBody.error.data.recovery },
+})
+=> {"ordinary":null,"optedIn":{"status":404,"recovery":{"kind":"moved","path":"_content/New.memo.card"}}}
 ```
 
 ```ts cleanup

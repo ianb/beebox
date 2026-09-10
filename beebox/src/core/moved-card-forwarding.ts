@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { simpleGit } from "simple-git";
 
 import { resolveBoxNamespacePathOnDisk } from "../lib/box-namespace-resolve.js";
+import { childProcessEnv } from "../lib/env.js";
 import { errorMessage } from "../lib/error-guards.js";
 import type { MovedCardRecovery } from "./moved-card-recovery.js";
 
@@ -70,10 +71,11 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
     // A separate index lets Git see unstaged filesystem renames without
     // touching the person's real index. A separate object directory also
     // keeps blobs written by `git add` ephemeral.
-    const git = simpleGit(boxRoot)
-      .env("GIT_INDEX_FILE", join(scratchRoot, "index"))
-      .env("GIT_OBJECT_DIRECTORY", scratchObjects)
-      .env("GIT_ALTERNATE_OBJECT_DIRECTORIES", realObjectsPath);
+    const git = simpleGit(boxRoot).env(childProcessEnv({
+      GIT_INDEX_FILE: join(scratchRoot, "index"),
+      GIT_OBJECT_DIRECTORY: scratchObjects,
+      GIT_ALTERNATE_OBJECT_DIRECTORIES: realObjectsPath,
+    }));
     await git.raw(["read-tree", "HEAD"]);
     await git.raw(["add", "-A", "--", CARD_PATHSPEC]);
     const raw = await git.raw([
@@ -140,9 +142,16 @@ export async function resolveMovedCardPath({
   warn?: ((message: string) => void) | undefined;
 }): Promise<MovedCardResolution> {
   const reportWarning = warn ?? console.warn;
+  let warningReported = false;
   try {
     if (await existingSafeCard(boxRoot, missingPath)) return { kind: "not-moved" };
-    const uncommittedRenames = await workingTreeRenames(boxRoot);
+    let uncommittedRenames: RenameRecord[] = [];
+    try {
+      uncommittedRenames = await workingTreeRenames(boxRoot);
+    } catch (error) {
+      reportWarning(`Could not inspect uncommitted moved cards for ${missingPath}: ${errorMessage(error)}`);
+      warningReported = true;
+    }
     const visited = new Set<string>();
     let candidate = missingPath;
 
@@ -166,7 +175,7 @@ export async function resolveMovedCardPath({
 
     return { kind: "not-moved" };
   } catch (error) {
-    reportWarning(`Could not resolve moved card ${missingPath}: ${errorMessage(error)}`);
+    if (!warningReported) reportWarning(`Could not resolve moved card ${missingPath}: ${errorMessage(error)}`);
     return { kind: "not-moved" };
   }
 }

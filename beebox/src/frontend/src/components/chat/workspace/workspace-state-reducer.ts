@@ -63,7 +63,11 @@ function retargetCard(state: WorkspaceState, action: Action<"retargetCard">): Wo
   if (tab === undefined || owner === null) return { state, effect: NO_WORKSPACE_FOCUS };
   const tabs = { ...state.tabs };
   delete tabs[action.fromPath];
-  tabs[action.target.path] = { ...tab, target: action.target };
+  tabs[action.target.path] = {
+    ...tab,
+    target: action.target,
+    label: tab.label === action.fromPath ? action.target.path : tab.label,
+  };
   const replacement = { from: action.fromPath, to: action.target.path };
   const panes = {
     left: retargetPane(state.panes.left, replacement),
@@ -78,7 +82,7 @@ function retargetCard(state: WorkspaceState, action: Action<"retargetCard">): Wo
     ? { kind: "card" as const, path: action.target.path }
     : state.lastInteraction;
   const next = normalizeWorkspaceState({ ...state, tabs, panes, mobileView, lastInteraction });
-  return { state: next, effect: { kind: "card-panel", pane: owner, path: action.target.path } };
+  return { state: next, effect: NO_WORKSPACE_FOCUS };
 }
 
 function closeTab(state: WorkspaceState, action: Action<"closeTab">): WorkspaceTransition {

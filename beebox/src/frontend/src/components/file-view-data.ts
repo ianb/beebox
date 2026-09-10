@@ -73,7 +73,8 @@ export interface LoadResult {
   refresh: () => void;
 }
 
-export function useFileData(path: string): LoadResult {
+export function useFileData(path: string, options?: { recoverMoved?: boolean }): LoadResult {
+  const recoverMoved = options?.recoverMoved === true;
   const isCard = isCardPath(path);
   const isDir = isDirectoryPath(path);
   const isBinary = isBinaryPath(path);
@@ -85,7 +86,7 @@ export function useFileData(path: string): LoadResult {
 
   // Card data via tRPC. A restarting box is retried by the tRPC link itself
   // (`lib/trpc/transient.ts`), so this query needs no retry of its own.
-  const cardQuery = trpc.card.get.useQuery({ path }, { enabled: isCard });
+  const cardQuery = trpc.card.get.useQuery({ path, recoverMoved }, { enabled: isCard });
 
   // Text content via /api/files/* (managed by React Query). This fetch is not
   // tRPC, so the link's retry does not reach it; it classifies the same way and

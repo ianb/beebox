@@ -209,7 +209,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   const onAddSelection = selectionReceiver(suppliedAddSelection, cardContext.capture);
   const handleCardFocus = cardContext.handleFocus;
   const handleRendererFocus = cardContext.handleRendererFocus;
-  const { data, loading, error, stale, recovery, refresh } = useFileData(path);
+  const { data, loading, error, stale, recovery, refresh } = useFileData(path, { recoverMoved: onMoved !== undefined });
   const followingMove = useMovedCardRecovery({ path, recovery, onMoved, hasData: data !== null });
 
   const handleCapture = useCallback((selection: { text: string; position: string }) => {

@@ -31,6 +31,10 @@ export function browseParent(path: string): string {
   return path.slice(0, Math.max(0, path.lastIndexOf("/")));
 }
 
+export function isCardBrowseDetail(path: string): boolean {
+  return path.endsWith(".card");
+}
+
 function parseDetail(value: unknown): ViewTarget | null {
   if (!isRecord(value)) return null;
   const path = canonicalPath(value["path"]);
@@ -77,6 +81,6 @@ export async function legacyBrowseTarget(target: ViewTarget, lookupKind: (path: 
   const path = canonicalPath(target.path);
   if (path === null) throw new BrowseLocationError(target.path, false);
   const kind = path === "" ? "directory" : await lookupKind(path);
-  if (kind === "missing") throw new BrowseLocationError(path, true);
+  if (kind === "missing" && !isCardBrowseDetail(path)) throw new BrowseLocationError(path, true);
   return browseCardTarget(kind === "directory" ? { directory: path } : { directory: browseParent(path), detail: { ...target, path } });
 }

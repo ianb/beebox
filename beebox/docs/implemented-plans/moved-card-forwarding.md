@@ -13,17 +13,21 @@ When an open card is renamed or moved, recover its current Git path only after t
 
 ## Implemented outcome
 
-- `card.get` invokes `resolveMovedCardPath` only from its existing `ENOENT`
-  branch. Successful reads still do no Git work or extra lookup.
+- Routed viewers opt into recovery, and `card.get` invokes
+  `resolveMovedCardPath` only from its existing `ENOENT` branch. Successful
+  reads and non-navigable missing-card embeds do no Git recovery work.
 - The resolver uses an ephemeral index and object directory for unstaged
   renames, then committed Git rename records for history and chains. It accepts
   only an existing, contained `.card` destination and lets a reused source path
-  win through the ordinary read.
+  win through the ordinary read. The scratch Git process inherits the safe
+  ambient settings needed for Git discovery, and a scratch failure still falls
+  through to committed history recovery.
 - The tRPC error formatter carries a discriminated `recovery` value without
   exposing Git diagnostics or absolute paths.
 - Card, Views, the canonical chat workspace, and Browse replace their current
   location with the recovered path while retaining their renderer parameters,
-  view state, conversation, and pane placement.
+  view state, conversation, pane placement, and keyboard focus. Browse lets a
+  missing `.card` reach `card.get` so reloads and stale legacy links recover too.
 - Real-Git doctests cover unstaged and committed moves, chains, directory
   moves, source reuse, unusual names, deleted and non-card destinations,
   containment through symlink rejection, and Git failure. Frontend and tRPC
@@ -72,7 +76,8 @@ type MovedCardResolution =
 
 **Why this needs to change.** The move command knows both paths while it runs, but nothing durable connects a later browser request to that operation. Persisting a ledger would impose a new state lifecycle for a rare recovery. Git already contains rename candidates for both working-tree and committed moves.
 
-**Direction.** The helper is called only from the `card.get` `ENOENT` branch. It:
+**Direction.** Routed viewers opt into the helper, which is called only from the
+`card.get` `ENOENT` branch. It:
 
 1. Confirm that the missing source still does not exist. This makes a path reused by a new card win over any historical rename.
 2. Inspect uncommitted card changes through an ephemeral Git index and object directory. Populate only the scratch index, then read its NUL-terminated rename diff. This is necessary because a normal diff omits an unstaged move's untracked destination; the scratch state is removed after the lookup and neither the working tree nor the real index changes. Match only an `R<score>` record whose old path exactly equals the current candidate.

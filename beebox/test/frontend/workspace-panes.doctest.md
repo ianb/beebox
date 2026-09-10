@@ -213,18 +213,33 @@ let state = reduceWorkspace(createEmptyWorkspaceState(), {
   target: { path: "old", viewer: "canvas", params: { page: "2" }, viewState: null },
   label: "Moved card", at: 1, viewport: "desktop",
 }).state;
-state = reduceWorkspace(state, {
+const retargeted = reduceWorkspace(state, {
   type: "retargetCard",
   fromPath: "old",
   target: { ...state.tabs.old.target, path: "archive/new" },
-}).state;
+});
+state = retargeted.state;
 JSON.stringify({
   paths: Object.keys(state.tabs),
   pane: state.panes.left,
   target: state.tabs["archive/new"].target,
   interaction: state.lastInteraction,
+  effect: retargeted.effect,
 })
-=> {"paths":["archive/new"],"pane":{"paths":["archive/new"],"activePath":"archive/new","display":"cards"},"target":{"path":"archive/new","viewer":"canvas","params":{"page":"2"},"viewState":null},"interaction":{"kind":"card","path":"archive/new"}}
+=> {"paths":["archive/new"],"pane":{"paths":["archive/new"],"activePath":"archive/new","display":"cards"},"target":{"path":"archive/new","viewer":"canvas","params":{"page":"2"},"viewState":null},"interaction":{"kind":"card","path":"archive/new"},"effect":{"kind":"none"}}
+
+let pathLabeled = reduceWorkspace(createEmptyWorkspaceState(), {
+  type: "openCard",
+  target: { path: "old", viewer: null, params: {}, viewState: null },
+  label: "old", at: 1, viewport: "desktop",
+}).state;
+pathLabeled = reduceWorkspace(pathLabeled, {
+  type: "retargetCard",
+  fromPath: "old",
+  target: { ...pathLabeled.tabs.old.target, path: "archive/new" },
+}).state;
+pathLabeled.tabs["archive/new"].label
+=> archive/new
 ```
 
 ## Move and focus are explicit card interactions
