@@ -4,15 +4,16 @@ workstream: trpc-retry-transients
 area: beebox
 priority: normal
 labels: [deploy, frontend, error-reporting]
-needs: [manual-testing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — the Google Services admin panel showed the parse error after clicking Re-authorize
+resolution: implemented
 ---
 
-> **⏳ Awaiting manual testing** — fix landed in `b49c2cae7`; during a deploy
-> restart, open the place-switch menu and expect it to load after a pause, not
-> fail. Only the developer clears this.
+Closed 2026-09-10: fixed in `b49c2cae7` and `e16eed581` (landed as
+`c9a180b82`). The developer closed it without the manual deploy-restart check
+and will reopen it if the failure recurs. The manual-testing steps below are
+kept for that case.
 
 Clicking **Re-authorize** in Google Services on a box produced
 `Unexpected token '<', "<!DOCTYPE "... is not valid JSON` in the panel's error
@@ -37,7 +38,7 @@ raw, which reads like a client bug and tells the boxholder nothing actionable.
   restarting or unreachable, try again in a moment.
 - **Turn query retries back on.** See the section below — this is the primary
   fix, not a consideration.
-- **Related**: [stale web bundle detection](../features/2026-08-12-stale-web-bundle-detection.md)
+- **Related**: [stale web bundle detection](../../features/2026-08-12-stale-web-bundle-detection.md)
   — the other half of "the deploy moved under the open page."
 
 
@@ -79,7 +80,7 @@ bug; the raw parse-error text is how it looks, not why it happens.
   the mobile-token refresh-and-retry-once). Re-enabling retries blindly would
   regress that.
 - **Bounded, with backoff.** A deploy window is ~60s (see
-  [hub shutdown](2026-09-09-hub-shutdown-hits-the-sigterm-timeout.md)), so a
+  [hub shutdown](../../bugs/2026-09-09-hub-shutdown-hits-the-sigterm-timeout.md)), so a
   few attempts over that span is the target, not indefinite spinning.
 - **The honest message becomes the fallback** for when retries are exhausted,
   rather than the first thing the boxholder sees.
