@@ -1,6 +1,7 @@
 ---
 title: "ui-scan annotations doctest is red: `bbx-panel-tabs` and `bbx-panel-close` are documented but appear nowhere in source"
-workstream: unattached
+workstream: interface-as-cards
+resolution: implemented
 area: beebox
 priority: normal
 filed-by: agent
@@ -31,3 +32,16 @@ annotations — has the same symptom and the opposite fix.
 Filed from the `sdk-update` schedule because the mechanism that would normally
 catch and bisect this did not: the most recent `full-suite` run classified
 itself as "25 files failed (environment)" and filed nothing.
+
+## Resolution
+
+Resolved by `ed2787dcc`. The workspace redesign removed the companion-wide close control, so its old
+`bbx-panel-close` contract entry has been removed. `bbx-panel-tabs` still exists
+in `WorkspaceCanvas.tsx`, selected conditionally alongside distinct mobile and
+right-pane IDs. The source check now parses JSX ID attributes with TypeScript
+and includes their literal alternatives instead of only matching `id="..."`.
+The table points to the current component; uniqueness and kebab-case checks
+remain in place.
+
+Reproduced the reported two failures in isolation, then verified all eight
+assertions pass after the fix. This is a focused rerun, not a full-suite result.
