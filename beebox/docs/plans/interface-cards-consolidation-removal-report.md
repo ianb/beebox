@@ -26,12 +26,12 @@ A negative net removal means growth. Moved behavior counts at its destination.
 
 ## Stage results
 
-Results will be recorded with each implementation commit. No deletion total is
-claimed yet.
+Results below describe completed implementation stages; browser and final
+acceptance remain separately tracked.
 
 | Stage | Commit range | Frontend added / deleted / net removed | Other production added / deleted / net removed | Tests added / deleted | Docs/other added / deleted |
 |---|---|---|---|---|---|
-| A: single-card entry | Pending | — | — | — | — |
+| A: single-card entry | `e72487d1d..2eb9189e5` | 117 / 371 / **254** | 0 / 0 / 0 | 34 / 3 | 64 / 9 |
 | B: canonical seeds/cohorts | Pending | — | — | — | — |
 | C: Questions/Landmarks | Pending | — | — | — | — |
 | D: History | Pending | — | — | — | — |
@@ -40,14 +40,19 @@ claimed yet.
 
 ## Retired UI and surviving behavior
 
-Record actual deleted wrappers, controls, presentation branches, and state fields
-here as they are retired. Keep source/media/capture dialogs, recipient history,
+**A:** deleted CardViewPage, ViewPage, OpenChatControl and the orphaned useUrlView
+hook. Removed the FileView page-only mode/header and its card-theme branches.
+Retired the separate Back to Dashboard and page Chat/New buttons; explicit chat
+actions survive inside CardActions with full target state and native-composer
+mode preserved. Four files deleted; shared behavior moved is counted as additions. Keep source/media/capture dialogs, recipient history,
 the draft/emission runtime, native bindings, and ambient replies. Legacy URL and
 old-history read adapters are reported as retained, not hidden from the count.
 
 ## Verification and limits
 
-Stage tests, browser walkthroughs IC-1 through IC-9, knowledge audits, independent
-review, and any manual or deployment checks still outstanding will be listed with
-the final totals. No bundle-size, speed, device, or production claim follows from
+**A:** affected doctests passed (3 files, 27 assertions), exact changed-file ESLint
+and all commit typecheck/doc gates passed. A live legacy card link entered the
+workspace; its projected URL retained nativeComposer. Desktop before image and
+DOM snapshots are retained for the final exhibit. Full IC-1 through IC-9, knowledge
+audits, implementation review and remaining stages are still outstanding. No bundle-size, speed, device, or production claim follows from
 a line-count reduction.

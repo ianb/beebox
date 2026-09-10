@@ -4,6 +4,7 @@
  * Creates and manages the standard directory layout for a Bee Box.
  */
 import { seedSystemCards, assertSystemCardsComplete } from "../system-cards.js";
+import { REMAINING_SYSTEM_CARD_MIGRATION } from "../../shared/system-card-paths.js";
 
 
 import * as fs from "node:fs/promises";
@@ -115,7 +116,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   const shape = await getBoxShape(resolvedRoot);
   if (!isUpdate) {
     try {
-      await seedSystemCards(resolvedRoot);
+      await seedSystemCards(resolvedRoot, REMAINING_SYSTEM_CARD_MIGRATION);
     } catch (error) {
       // This invocation created the marker; a failed bootstrap must remain a fresh-init retry.
       await fs.rm(markerPath);
@@ -149,7 +150,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // run `bbx migrate --mark-all-applied` (or --init) to decide its starting
   // state. See `src/cli/commands/migrate.ts`.
   if (!isUpdate) {
-    await assertSystemCardsComplete(resolvedRoot);
+    await assertSystemCardsComplete(resolvedRoot, REMAINING_SYSTEM_CARD_MIGRATION);
     const manifestPath = path.join(resolvedRoot, "_config/migrations.jsonl");
     await fs.mkdir(path.dirname(manifestPath), { recursive: true });
     try {
