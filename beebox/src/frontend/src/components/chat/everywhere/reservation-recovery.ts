@@ -2,7 +2,7 @@ import type { ReservationReceipt, ReservationReceipts } from "./reservation-rece
 
 type Reserve = (receipt: ReservationReceipt) => Promise<{ kind: "reserved" | "taken" | "unsupported" }>;
 
-export class ReservationRecoveryUnsupportedError extends Error {
+class ReservationRecoveryUnsupportedError extends Error {
   constructor() {
     super("This conversation's reservation could not be restored.");
     this.name = "ReservationRecoveryUnsupportedError";

@@ -110,7 +110,7 @@ import { mergeClaudeMdText } from "./one-root-claude-md.js";
 import { rollbackMoveAndCommit, V2_PACKAGE_ROOT_VOCABULARY } from "./one-root-rollback.js";
 import { assertWriteTargetNotSymlink, assertNoSymlinkedCalleeWriteTargets } from "./one-root-write-guard.js";
 
-export { OneRootPreflightError, OneRootLinkGateError, OneRootGitignoreRegressionError, OneRootRollbackError } from "./one-root-errors.js";
+export { OneRootPreflightError, OneRootLinkGateError, OneRootGitignoreRegressionError } from "./one-root-errors.js";
 
 const execFileAsync = promisify(execFile);
 

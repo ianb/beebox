@@ -34,7 +34,7 @@ export interface RenamedProjectDir {
   newDir: string;
 }
 
-export class ClaudeTranscriptConflictError extends Error {
+class ClaudeTranscriptConflictError extends Error {
   constructor(params: { from: string; to: string }) {
     super(
       `Claude transcript conflict: ${params.from} and ${params.to} both exist with different content — reconcile by hand.`,
@@ -62,7 +62,7 @@ async function pathExists(p: string): Promise<boolean> {
  * discovery, not the box's own data, so callers log and continue rather than
  * fail the migration over it.
  */
-export async function renameClaudeProjectDir(params: CwdRemap): Promise<RenamedProjectDir | null> {
+async function renameClaudeProjectDir(params: CwdRemap): Promise<RenamedProjectDir | null> {
   const root = claudeProjectsRoot();
   const oldDir = path.join(root, encodeProjectDir(params.oldCwd));
   const newDir = path.join(root, encodeProjectDir(params.newCwd));

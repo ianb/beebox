@@ -19,7 +19,7 @@ interface ResolveSendArgs {
 }
 
 /** A `"new"` send naming an engine the box does not offer, or a model that engine cannot run. */
-export class UnavailableChatChoiceError extends Error {
+class UnavailableChatChoiceError extends Error {
   constructor(readonly engine: AgentEngine, readonly model: string | null) {
     super("The engine or model chosen for this chat is unavailable");
     this.name = "UnavailableChatChoiceError";
