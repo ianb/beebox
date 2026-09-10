@@ -70,8 +70,9 @@ export type AcceptedMessage = SessionEntry & { reconcileKnownUuids: string[] };
  * inside whatever conversation happened to be open.
  *
  * The id-less case is narrow in practice: the web client coins a session id and
- * reserves it before the first send (`pages/chat-coin-session.ts`), so the URL
- * carries a real id by then. It remains for boxes that cannot coin.
+ * reserves it before the first send (the frontend's
+ * `components/chat/everywhere/resolve-conversation.ts`), so the URL carries a
+ * real id by then. It remains for boxes that cannot coin.
  */
 function matchesSession(eventSessionId: string | null, sessionId: string | null): boolean {
   if (eventSessionId === null) return sessionId === null;

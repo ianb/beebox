@@ -85,7 +85,7 @@ export async function raiseAlert(deps: RunnerDeps, input: AlertInput): Promise<A
   return alert;
 }
 
-export function scheduleAlertUrl(alert: Pick<Alert, "id" | "workstream">): string {
+function scheduleAlertUrl(alert: Pick<Alert, "id" | "workstream">): string {
   return `http://localhost:3210/workstreams/alerts/${encodeURIComponent(alert.workstream)}?alert=${encodeURIComponent(alert.id)}`;
 }
 

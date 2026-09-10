@@ -1,7 +1,7 @@
 import { statfsSync } from "node:fs";
 
-export const DISK_FREE_PERCENT_THRESHOLD = 10;
-export const DISK_FREE_FLOOR_BYTES = 2 * 1024 ** 3;
+const DISK_FREE_PERCENT_THRESHOLD = 10;
+const DISK_FREE_FLOOR_BYTES = 2 * 1024 ** 3;
 
 export interface DiskHealth {
   freeBytes: number;

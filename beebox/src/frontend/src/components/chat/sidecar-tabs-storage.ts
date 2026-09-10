@@ -129,7 +129,7 @@ export function saveSidecarState(key: string, state: SidecarState): void {
  * session id once the first turn lands, and the documents opened while
  * composing that message belong to the conversation it started.
  */
-export function moveSidecarState({ from, to }: { from: string; to: string }): void {
+function moveSidecarState({ from, to }: { from: string; to: string }): void {
   const store = sessionStore();
   if (store === null || from === to) return;
   try {

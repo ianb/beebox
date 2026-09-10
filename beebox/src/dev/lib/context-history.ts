@@ -52,7 +52,7 @@ export type ContextHistory = z.infer<typeof contextHistorySchema>;
  * incident, where a merge conflict resolution silently dropped an entry's
  * `added`/`turns` lines) must not block every other audit id from recording.
  */
-export function parseContextHistory(raw: unknown): ContextHistory {
+function parseContextHistory(raw: unknown): ContextHistory {
   const shaped = rawContextHistorySchema.parse(raw);
   const result: ContextHistory = {};
   for (const [box, audits] of Object.entries(shaped)) {

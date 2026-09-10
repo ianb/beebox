@@ -170,26 +170,6 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
 }
 
 /**
- * The filename extension for an encoded image's MIME type.
- *
- * Named for the type the bytes actually are, which matters because the encoder
- * PREFERS WebP (`canvas-encode.ts` — it is the smallest format the Anthropic
- * Messages API accepts), so `image/webp` is the common case for a re-encoded
- * photo, not an exotic one. Naming those bytes `.jpg` — which is what the
- * bulk-upload fold used to do for anything that was not PNG — hands the box a
- * file whose extension contradicts its content.
- *
- * `jpg` is the fallback rather than an error: every caller already holds bytes
- * this module produced, and the cascade only ever emits WebP, PNG, or JPEG.
- */
-export function extensionForImageType(mimeType: string): string {
-  if (mimeType === "image/png") return "png";
-  if (mimeType === "image/webp") return "webp";
-  if (mimeType === "image/gif") return "gif";
-  return "jpg";
-}
-
-/**
  * Decode a raw base64 payload (no `data:` prefix) back into a Blob, without a
  * network round-trip. Inverse of the {@link ProcessedImage.dataBase64} this
  * module produces — used to reconstruct the upload Blob after downscaling

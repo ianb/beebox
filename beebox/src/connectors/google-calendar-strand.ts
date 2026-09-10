@@ -37,10 +37,10 @@ import { invariant } from "../lib/invariant.js";
  * enough to ride out an outage, a revoked-then-restored grant, or a laptop that
  * was closed for a week, and short enough that nothing retries forever.
  */
-export const STRANDED_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+const STRANDED_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Subdirectory of the calendar store that holds stranded `.ics` files. */
-export const STRANDED_DIR = "stranded";
+const STRANDED_DIR = "stranded";
 
 /** What the notes and failures a strand produces are collected into. */
 export interface StrandAccumulator {
@@ -82,7 +82,7 @@ function parsedPendingSince(pendingSince: string | undefined): number | undefine
  * {@link markPushPending} rewrites it, so the window restarts rather than
  * never elapsing.
  */
-export function classifyPushFailure(opts: {
+function classifyPushFailure(opts: {
   failure: CalendarSyncFailure;
   pendingSince: string | undefined;
   now: Date;
@@ -107,13 +107,13 @@ export function classifyPushFailure(opts: {
  * The first failure stamps it; later failures leave the stamp alone, which is
  * what makes the window measure the edit's age rather than this run's.
  */
-export function markPushPending(entry: EventFileEntry, now: Date): void {
+function markPushPending(entry: EventFileEntry, now: Date): void {
   if (parsedPendingSince(entry.pendingSince) !== undefined) return;
   entry.pendingSince = now.toISOString();
 }
 
 /** SUMMARY straight out of the file, for a note about content we can't push. */
-export function icsSummary(content: string, fallback: string): string {
+function icsSummary(content: string, fallback: string): string {
   const match = content.match(/^summary[:;](.*)$/im);
   return match?.[1]?.trim() || fallback;
 }

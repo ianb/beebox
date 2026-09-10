@@ -61,7 +61,7 @@ export function devServerEnvironment(
  * v3 box — this turns that into the CLI's usual print-and-exit instead of an
  * uncaught stack trace at startup. Exported for its doctest.
  */
-export async function resolveServableBoxRoot(dir: string): Promise<string> {
+async function resolveServableBoxRoot(dir: string): Promise<string> {
   try {
     return await requireBoxRoot(dir);
   } catch (e) {
