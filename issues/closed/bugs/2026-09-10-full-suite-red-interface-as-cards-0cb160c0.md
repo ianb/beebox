@@ -9,7 +9,7 @@ discovered-by: agent
 discovered-in: worktree-interface-as-cards — the hourly full-suite run on main
 ---
 
-Resolved 2026-09-10: the watcher correctly includes the newly seeded
+Resolved by `41f5c4448` on 2026-09-10: the watcher correctly includes the newly seeded
 `_config/interface` directory. The doctest's `SKELETON_DIRS` omitted that
 standard directory, making four exact directory-list assertions fail. Added
 it to the fixture baseline; production watcher behavior and the exact scenario

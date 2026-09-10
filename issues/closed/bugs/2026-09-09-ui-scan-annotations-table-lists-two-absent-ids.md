@@ -35,7 +35,7 @@ itself as "25 files failed (environment)" and filed nothing.
 
 ## Resolution
 
-The workspace redesign removed the companion-wide close control, so its old
+Resolved by `ed2787dcc`. The workspace redesign removed the companion-wide close control, so its old
 `bbx-panel-close` contract entry has been removed. `bbx-panel-tabs` still exists
 in `WorkspaceCanvas.tsx`, selected conditionally alongside distinct mobile and
 right-pane IDs. The source check now parses JSX ID attributes with TypeScript
