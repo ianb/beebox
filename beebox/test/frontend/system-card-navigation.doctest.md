@@ -5,7 +5,7 @@ workspace. Shell flags do not become instrument parameters. Canonical tools
 resolve their semantic place on cold entry, while warm selection wins.
 
 ```ts setup
-import { cardChatSearch, legacyCardRedirect, legacySystemCardRedirect, workspaceRouteTarget, systemCardEntryContext, systemCardAttentionRef, withoutShellParams, workspaceProjectionSearch } from "../../src/frontend/src/lib/system-card-navigation.js";
+import { cardChatSearch, legacyAdminRedirect, legacyCaptureRedirect, legacyCardRedirect, legacySystemCardRedirect, workspaceRouteTarget, systemCardEntryContext, systemCardAttentionRef, withoutShellParams, workspaceProjectionSearch } from "../../src/frontend/src/lib/system-card-navigation.js";
 import { routeConversationRequest } from "../../src/frontend/src/components/chat/everywhere/conversation-intent.js";
 import { SYSTEM_CARD_PATHS } from "../../src/shared/system-card-paths.js";
 import { serializeViewUrl } from "../../src/frontend/src/lib/view-url.js";
@@ -36,6 +36,18 @@ JSON.stringify([
   legacySystemCardRedirect({ boxSlug: "test", type: "landmarks", search: { capture: "1" }, state: redirectState }),
 ])
 => [{"to":"/test/views/_config/interface/questions.card","search":{"nativeComposer":"1","session":"chosen"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true},{"to":"/test/views/_config/interface/landmarks.card","search":{"contextDir":"garden"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true},{"to":"/test/views/_config/interface/landmarks.card","search":{"capture":"1"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}]
+```
+
+Admin projects only validated one-shot arrival fields into card state. Capture
+keeps shell and history state while forcing capture intent.
+
+```ts
+const redirectState = { bbxWorkspace: { revision: 7 }, inherited: "sentinel" };
+JSON.stringify(legacyAdminRedirect({ boxSlug: "test", search: { google: "error", message: "Denied", reconnect: "google", code: "secret", session: "chosen", nativeComposer: "1" }, state: redirectState }))
+=> {"to":"/test/views/_config/interface/admin.card","search":{"nativeComposer":"1","session":"chosen","viewState":{"google":"error","message":"Denied","reconnect":"google"}},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}
+
+JSON.stringify(legacyCaptureRedirect({ boxSlug: "test", search: { session: "chosen", nativeComposer: "1", capture: "0", opaque: "drop" }, state: redirectState }))
+=> {"to":"/test/chat","search":{"nativeComposer":"1","session":"chosen","capture":"1"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}
 ```
 
 ## Chat-about actions preserve the selected card target

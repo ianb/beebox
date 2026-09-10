@@ -12,7 +12,7 @@ import { invariant } from "@shared/invariant";
  * replaces the transcript without discarding the draft or microphone.
  */
 
-import { useState, useRef, useCallback, useMemo, type ReactNode } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from "react";
 import { createAudioOverlayStore } from "./audio-overlay-store";
 // search params read via window.location — avoids coupling to route definition
 import { useConversationMachine } from "./conversation/use-conversation-machine";
@@ -40,6 +40,7 @@ import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
 import { useCaptureBubbles } from "./useCaptureBubbles";
 import { CaptureOverlay } from "../capture/CaptureOverlay";
+import { captureModeForRequest } from "../../lib/capture-intent";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../DocumentTitle";
@@ -113,9 +114,8 @@ interface InteractiveChatProps {
   /** Preserve web chrome while suppressing input for a native shell. */
   nativeComposer?: boolean;
   /**
-   * Open capture mode immediately on mount — the `/capture` deep link
-   * (`?capture=1`) redirects here. Consumed once via initial state; the mode is
-   * a normal user toggle afterward.
+   * Open capture mode for each `/capture` deep-link request. The shell consumes
+   * `?capture=1`; a later request must still work while this runtime is retained.
    */
   openCaptureOnMount?: boolean;
   /**
@@ -168,6 +168,9 @@ function useChatFrameState(openCaptureOnMount: boolean | undefined) {
   // it lives in root state; the overlay's recording-timer ticks stay in its own
   // subtree. Seeded from the `?capture=1` deep link, consumed once.
   const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
+  useEffect(() => {
+    if (openCaptureOnMount === true) setCaptureMode((current) => captureModeForRequest(current, true));
+  }, [openCaptureOnMount]);
   return { loadingOlder, setLoadingOlder, sendSignal, bumpSendSignal, debugView, setDebugView, showDebugLog, setShowDebugLog, typingMode, setTypingMode,
     typingLocked, setTypingLocked, captureMode, setCaptureMode };
 }

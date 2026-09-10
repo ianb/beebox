@@ -35,7 +35,7 @@ acceptance remain separately tracked.
 | B: canonical seeds/cohorts | `2eb9189e5..bdb8798d9` | 0 / 0 / 0 | 208 / 45 / **−163** | 125 / 12 | 13 / 8 |
 | A follow-up: explicit chat reveal | `bdb8798d9..4ffacb515` | 92 / 19 / **−73** | 0 / 0 / 0 | 67 / 1 | 0 / 0 |
 | C: Questions/Landmarks | `4ffacb515..b899d0b16` | 45 / 71 / **26** | 0 / 0 / 0 | 45 / 1 | 26 / 2 |
-| D: History | Pending | — | — | — | — |
+| D: History | `b899d0b16..2a6c82854` | 267 / 297 / **30** | 0 / 0 / 0 | 135 / 1 | 34 / 3 |
 | E: Storage/Admin/utilities | Pending | — | — | — | — |
 | F: alternate presentation removal | Pending | — | — | — | — |
 
@@ -57,6 +57,16 @@ This stage grows production code by 163 lines; it is not UI removal.
 **C:** deleted QuestionsPage, LandmarksPage and the component-based ChatsPage
 redirect. The list bodies and authored view-card support remain. Existing
 navigation entrances now open the canonical cards; three files deleted.
+
+**D:** deleted HistoryPage and the saved-view "Open in History" escape. Both
+canonical and authored History cards use the full filter/detail body with
+card-owned state. One source file deleted; new state parsing, route readiness,
+and selection code are counted as additions. Legacy History URLs remain adapters.
+
+**E:** retired CapturePage and Admin/Storage page navigation chrome. The existing
+management bodies now render as cards; Storage display state and Admin arrival
+state are explicit card adapters. Developer harnesses use a separate utility
+layout, and box validation precedes the product runtime. One source file deleted.
 
 ## Verification and limits
 
@@ -105,3 +115,19 @@ left the other's selected commit and state intact. At mobile width, a missing
 commit showed its error; an injected request failure showed a reachable Retry,
 which recovered after the injection was removed. Screenshots are retained for
 the final exhibit; these are browser checks, not native-device acceptance.
+
+**E browser checks:** Storage retained direct/bytes/unlinked choices across reload,
+with the same recipient and unsent draft. Admin error arrivals through both the
+legacy URL and canonical target displayed their notice, scrolled once, and removed
+temporary arrival state. The callback adapter dropped the synthetic authorization
+code. No OAuth grant was performed. Capture opened on fresh entry and reopened
+from a retained conversation after dismissal; native-composer entry suppressed
+the web capture UI. Composer and speech developer harnesses rendered outside the
+product navigation. An unknown-box request reached the existing authentication
+wall, so the actual unknown-box error UI remains unverified in this browser.
+These checks made no recording, sent no message, and changed no credentials.
+
+**E automated gates:** all 422 affected test files passed (5,604 assertions),
+with frontend/root typechecks, exact changed-source lint, and focused card-state
+regressions passing. The root Knip scan still reports its recorded baseline
+findings; no new E helper/file finding was introduced.

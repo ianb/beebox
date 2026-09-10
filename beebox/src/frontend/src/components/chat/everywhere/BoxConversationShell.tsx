@@ -100,7 +100,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     sessionLabel={sessionLabel}
     onSessionAssignment={handleAssignment}
     nativeComposer={usesNativeComposer}
-    openCaptureOnMount={search.capture === "1"}
+    openCaptureOnMount={search.capture === "1" && !usesNativeComposer}
     transcriptVisible={transcriptVisible}
     routeContent={workspace.participating ? undefined : children}
     onShowConversation={handleShowConversation}

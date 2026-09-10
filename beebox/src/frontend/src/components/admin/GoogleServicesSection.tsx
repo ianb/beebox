@@ -9,7 +9,9 @@
  * than on the top of a long admin page.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { adminArrivalKey, shouldAcknowledgeAdminArrival, shouldConsumeAdminArrival, type AdminArrivalState } from "../../lib/admin-card-state";
+import { useCardVisible } from "../chat/everywhere/card-context";
 import { CheckboxField } from "../ui/fields";
 import { Button } from "../ui/Button";
 import { useGoogleServices } from "./useGoogleServices";
@@ -20,39 +22,53 @@ const GOOGLE_SERVICE_LABELS: Record<string, string> = {
   drive: "Drive",
 };
 
-export function GoogleServicesSection() {
+export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsumed }: { arrival: AdminArrivalState; arrivalReceipt: string; onArrivalConsumed: () => void }) {
   const {
     status,
     loading,
     error,
-    successMessage,
     connecting,
     disconnecting,
     savingServices,
     handleAuthorize,
     handleDisconnect,
     handleServiceToggle,
+    refreshStatus,
   } = useGoogleServices();
 
   const sectionRef = useRef<HTMLDivElement>(null);
-  const arrivedToReconnect = new URLSearchParams(window.location.search).get("reconnect") === "google";
+  const visible = useCardVisible();
+  const processedArrival = useRef<string | null>(null);
+  const [arrivalNotice, setArrivalNotice] = useState<AdminArrivalState>({});
+  const arrivalKey = adminArrivalKey(arrival);
 
   useEffect(() => {
-    if (!arrivedToReconnect || loading) return;
-    sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [arrivedToReconnect, loading]);
+    if (arrivalKey === null || !shouldAcknowledgeAdminArrival({ arrival, visible, loading })) return;
+    if (!shouldConsumeAdminArrival({ arrival, visible, loading, alreadyProcessed: processedArrival.current === arrivalReceipt })) {
+      onArrivalConsumed();
+      return;
+    }
+    processedArrival.current = arrivalReceipt;
+    setArrivalNotice(arrival);
+    if (arrival.google === "connected") void refreshStatus();
+    if (arrival.reconnect === "google") sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    onArrivalConsumed();
+  }, [arrival, arrivalKey, arrivalReceipt, loading, onArrivalConsumed, refreshStatus, visible]);
+
+  const notice = Object.keys(arrival).length === 0 ? arrivalNotice : arrival;
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div ref={sectionRef} className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-warm-800 mb-4">Google Services</h2>
+        <ArrivalNotice arrival={notice} />
         <p className="text-sm text-warm-600">Checking status...</p>
       </div>
     );
   }
 
   if (status && !status.available) {
-    return null;
+    return <div ref={sectionRef} className="bg-white rounded-lg shadow p-6"><h2 className="text-lg font-semibold text-warm-800 mb-4">Google Services</h2><ArrivalNotice arrival={notice} /><p className="text-sm text-warm-600">Google OAuth is not configured on this host.</p></div>;
   }
 
   return (
@@ -65,11 +81,7 @@ export function GoogleServicesSection() {
         Google account connection is shared across all boxes. Enable specific services per box below.
       </p>
 
-      {successMessage ? (
-        <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm text-success-dark">
-          {successMessage}
-        </div>
-      ) : null}
+      <ArrivalNotice arrival={notice} />
 
       {status && status.hasTokens ? (
         <>
@@ -143,4 +155,10 @@ export function GoogleServicesSection() {
       ) : null}
     </div>
   );
+}
+
+function ArrivalNotice({ arrival }: { arrival: AdminArrivalState }) {
+  if (arrival.google === "connected") return <div className="mb-4 p-3 bg-success-50 border border-success-100 rounded text-sm text-success-dark">{arrival.message || "Google services connected successfully."}</div>;
+  if (arrival.google === "error") return <div className="mb-4 p-3 bg-danger-50 border border-danger-100 rounded text-sm text-danger-dark">{arrival.message || "Authorization failed"}</div>;
+  return null;
 }

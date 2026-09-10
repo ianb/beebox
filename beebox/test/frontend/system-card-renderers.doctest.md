@@ -21,4 +21,10 @@ JSON.stringify(rendererNames("landmarks"))
 
 JSON.stringify(rendererNames("history"))
 => ["History"]
+
+JSON.stringify(rendererNames("inventory"))
+=> ["Inventory"]
+
+JSON.stringify(rendererNames("admin"))
+=> ["Admin"]
 ```

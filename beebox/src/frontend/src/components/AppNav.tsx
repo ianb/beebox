@@ -48,7 +48,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
   const location = useRouterState({ select: (s) => s.location });
   const base = `/${boxSlug}`;
   const isOnSettings = location.pathname.startsWith(`${base}/views/${SYSTEM_CARD_PATHS.settings}`) || workspaceRouteTarget({ pathname: location.pathname, searchStr: location.searchStr, search: location.search })?.path === SYSTEM_CARD_PATHS.settings;
-  const isOnAdmin = location.pathname === `${base}/admin`;
+  const isOnAdmin = location.pathname.startsWith(`${base}/views/${SYSTEM_CARD_PATHS.admin}`) || workspaceRouteTarget({ pathname: location.pathname, searchStr: location.searchStr, search: location.search })?.path === SYSTEM_CARD_PATHS.admin;
 
   return (
     <Dropdown
@@ -80,7 +80,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
         </div>
       ) : null}
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
-      <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/admin`)} active={isOnAdmin}>Admin</MenuItem>
+      <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/views/${SYSTEM_CARD_PATHS.admin}`)} active={isOnAdmin}>Admin</MenuItem>
       <MenuDivider />
       <MenuItem id="bbx-profile-menu-source-view" onClick={onToggleSourceView}>Source View</MenuItem>
       <MenuItem id="bbx-profile-menu-debug-log" onClick={onToggleDebugLog}>Debug Log</MenuItem>

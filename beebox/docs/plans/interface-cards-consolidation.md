@@ -22,7 +22,7 @@ admin/inventory cards, and card-route duplication found those overlaps but no
 separate issue requiring canonical Admin or Storage cards.
 
 This follows [canonical interface cards](interface-as-cards.md). It supersedes
-that plan's restriction to three surfaces only when this draft is approved.
+that plan's restriction to three surfaces, as approved on September 10.
 It preserves the pane mechanisms in [workspace controls](workspace-pane-controls.md)
 and the conversation lifecycle in [chat everywhere](chat-everywhere.md).
 Implementation stages are commit boundaries. The complete plan ships together,
@@ -34,8 +34,8 @@ record the independent review and the resulting corrections.
 ## Stated preferences this plan trades against
 
 - September 10 direct request: “bbx-plan the entire set as a multi-stage
-  process” and “a report of how much was removed in the process.” This is the
-  planning phase; the report distinguishes measured removal from estimates.
+  process” and “a report of how much was removed in the process.” The subsequent
+  “Go ahead and implement” authorized execution; the report records measured removal.
 - September 10 Admin decision: “I think it should be a card, yes. I'd rather
   work through it than around it.” Admin uses `_config/interface/admin.card`
   in the existing workspace, preserving the live conversation. Keep backend
@@ -339,6 +339,11 @@ translate that legacy presentation hint once into the existing workspace showCha
 state while preserving `bbxConversation` and each history entry's Back semantics;
 new writes omit the old field. Keep only this read adapter until the supported
 browser-session horizon is explicitly settled, not the old overlay renderer.
+Open the incoming card before applying the hint. Old entries have no recorded
+workspace return revision/index, so their Show cards action restores in place;
+never invent proof that the preceding entry is safe to navigate to. Browser Back
+still traverses the original entries because conversion replaces only the current
+entry. Test that distinction with a genuine two-entry legacy history stack.
 
 Update the two live plans' ownership/dispositions, box interface-card guidance,
 frontend guidance, tours and smoke adapters, and knowledge audits. The old plan's
