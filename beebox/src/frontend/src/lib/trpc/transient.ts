@@ -46,21 +46,55 @@ export class BoxUnreachableError extends Error {
 }
 
 /**
- * `fetch`, with an unreachable box turned into a `BoxUnreachableError`. A
- * `TypeError` is how `fetch` reports a request that never got a response; an
- * abort is a `DOMException` and passes through, because a cancelled query is
- * not an outage.
+ * A `TypeError` is how `fetch` reports a connection that failed — before the
+ * response, or partway through its body. An abort is a `DOMException` and
+ * passes through, because a cancelled query is not an outage.
  */
+function asUnreachable(error: unknown): BoxUnreachableError | null {
+  return error instanceof TypeError ? new BoxUnreachableError({ status: null, cause: error }) : null;
+}
+
+/**
+ * The body, with a connection that breaks off partway turned into a
+ * `BoxUnreachableError`. A batch streams each result as it resolves, so the
+ * status can be a healthy 200 and the connection can still die before a slow
+ * member's line arrives — a deploy kills the hub mid-flight. The batch link
+ * rejects that member with the read error itself, so classifying it here is
+ * enough for the retry link to see it. Members already delivered keep their
+ * result; only the unfinished ones fail.
+ */
+function classifyBodyFailures(body: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const reader = body.getReader();
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = await reader.read();
+      } catch (e) {
+        controller.error(asUnreachable(e) ?? e);
+        return;
+      }
+      if (chunk.done) controller.close();
+      else controller.enqueue(chunk.value);
+    },
+    cancel: (reason) => reader.cancel(reason),
+  });
+}
+
+/** `fetch`, with an unreachable box turned into a `BoxUnreachableError`. */
 export async function fetchFromBox(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   let response: Response;
   try {
     response = await fetch(input, init);
   } catch (e) {
-    if (e instanceof TypeError) throw new BoxUnreachableError({ status: null, cause: e });
+    const unreachable = asUnreachable(e);
+    if (unreachable !== null) throw unreachable;
     throw e;
   }
   if (GATEWAY_STATUSES.has(response.status)) throw new BoxUnreachableError({ status: response.status });
-  return response;
+  if (response.body === null) return response;
+  const { status, statusText, headers } = response;
+  return new Response(classifyBodyFailures(response.body), { status, statusText, headers });
 }
 
 /**

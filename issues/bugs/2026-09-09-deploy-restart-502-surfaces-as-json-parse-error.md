@@ -4,10 +4,15 @@ workstream: trpc-retry-transients
 area: beebox
 priority: normal
 labels: [deploy, frontend, error-reporting]
+needs: [manual-testing]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — the Google Services admin panel showed the parse error after clicking Re-authorize
 ---
+
+> **⏳ Awaiting manual testing** — fix landed in `b49c2cae7`; during a deploy
+> restart, open the place-switch menu and expect it to load after a pause, not
+> fail. Only the developer clears this.
 
 Clicking **Re-authorize** in Google Services on a box produced
 `Unexpected token '<', "<!DOCTYPE "... is not valid JSON` in the panel's error
@@ -78,3 +83,49 @@ bug; the raw parse-error text is how it looks, not why it happens.
   few attempts over that span is the target, not indefinite spinning.
 - **The honest message becomes the fallback** for when retries are exhausted,
   rather than the first thing the boxholder sees.
+
+## Fix (2026-09-10)
+
+`b49c2cae7`. The transport classifies once, by HTTP status.
+`fetchFromBox` (`beebox/src/frontend/src/lib/trpc/transient.ts`) is used by
+`trpcFetch` and by the file view's raw-text loader. It turns a 502/503/504, or
+a request that got no response, into a `BoxUnreachableError`. The error message
+is the sentence to show: "The box did not answer — it may be restarting. Try
+again in a moment." Status is used, not content-type, because the hub's own 502
+(box child down) has a JSON body. A batch streams its results after a 200, so
+the connection can also break partway through the body when a deploy kills the
+hub. `fetchFromBox` wraps the body so that a failed read is also a
+`BoxUnreachableError`. The members that were already delivered keep their
+results. Only the unfinished members fail and are retried.
+
+A `retryLink` on the HTTP branch of `buildTrpcLink` retries **queries** that
+failed that way. The schedule is 1, 2, 4, 8, 16, 30, 30 s (about 91 s). The
+link reaches every caller: the 69 `useQuery` hooks and the 20 vanilla
+`trpcClient.x.query()` sites, including XState actors and the Google panel's
+status fetch. The QueryClient keeps `retry: false` so that two schedules do not
+multiply. Mutations are never retried; they fail at once with the same message.
+A 401 is never retried, and its handling in `trpcFetch` is unchanged.
+
+The message-matching predicate in `file-load-state.ts` is removed. It also
+retried procedure-level 500s, which are bugs, not outages.
+
+Known limit: during the retries a query stays pending. A menu shows "Loading…"
+for up to about 90 s, with no "restarting" indicator.
+
+Tests: `beebox/test/frontend/lib/trpc-transient.doctest.md` runs the real
+`httpBatchStreamLink` + `retryLink` against a tRPC server behind a stand-in
+nginx 502. With plain `fetch` in place of `fetchFromBox`, it reproduces the
+reported `Unexpected token '<', "<!DOCTYPE "...` message and fails.
+
+## Manual testing
+
+Needs a real deploy restart (merge to `main`), because only prod has nginx in
+front of the hub.
+
+1. Open a box in the browser. Merge something that deploys, or restart the hub.
+2. Within the ~60 s window, open the app bar's place-switch menu. Expected: it
+   shows "Loading…" and then the menu, not "Couldn't load this menu".
+3. In the same window, click **Re-authorize** in Admin → Google Services.
+   Expected: the error box says "The box did not answer — it may be
+   restarting. Try again in a moment." and no JSON parse error. Clicking
+   again after the restart works.

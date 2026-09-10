@@ -28,9 +28,19 @@ const NGINX_502 = "<!DOCTYPE html>\n<html><head><title>502 Bad Gateway</title></
  */
 async function boxBehindGateway(outage: number) {
   const t = initTRPC.create();
-  const reached = { ping: 0, send: 0, broken: 0 };
+  const reached = { ping: 0, send: 0, broken: 0, slow: 0 };
   const router = t.router({
     ping: t.procedure.query(() => { reached.ping++; return "pong"; }),
+    // The first call is still running when every connection is cut, the way a
+    // deploy kills the hub mid-stream; the retry finds the box serving again.
+    slow: t.procedure.query(async () => {
+      reached.slow++;
+      if (reached.slow === 1) {
+        setTimeout(() => { server.closeAllConnections(); }, 50);
+        await new Promise((resolve) => { setTimeout(resolve, 200); });
+      }
+      return "slow answer";
+    }),
     send: t.procedure.mutation(() => { reached.send++; return "sent"; }),
     broken: t.procedure.query(() => {
       reached.broken++;
@@ -87,6 +97,26 @@ await box.client.ping.query()
 
 JSON.stringify({ refused: box.refused(), reached: box.reached.ping })
 => {"refused":3,"reached":1}
+```
+
+```ts cleanup
+await box.close();
+```
+
+## A connection cut partway through a batch
+
+A batch answers 200 and streams each result as it resolves, so the status
+cannot reveal an outage that starts mid-stream. Here `ping` is delivered, then
+the connection dies while `slow` is still running. `ping` keeps its answer; only
+`slow` is retried, and the caller sees both answers.
+
+```ts
+const box = await boxBehindGateway(0);
+JSON.stringify(await Promise.all([box.client.ping.query(), box.client.slow.query()]))
+=> ["pong","slow answer"]
+
+box.reached.slow
+=> 2
 ```
 
 ```ts cleanup
