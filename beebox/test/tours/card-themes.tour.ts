@@ -20,6 +20,30 @@ tour(
     await t.expect.heading("Card themes tour", { level: 1 });
     await t.expect.noPageErrors();
 
+    await t.go("/views/_content/theme-tour/markdown-note.md");
+    await t.checkpoint("markdown-file");
+    await t.expect.heading("A Markdown file", { level: 1 });
+    await t.expect.custom("Markdown file uses the themed document surface", (snapshot) =>
+      snapshot.includes("Properties") && snapshot.includes("ordinary Markdown document"));
+    await t.expect.noPageErrors();
+
+    await t.go("/chat?session=new&engine=codex&card=_content%2Ftheme-tour%2Fmarkdown-note.md");
+    await t.expect.heading("A Markdown file", { level: 2 });
+    await t.checkpoint("markdown-workspace");
+    const joined = await t.eval(`(() => {
+      const pane = document.querySelector('[data-workspace-card="_content/theme-tour/markdown-note.md"]');
+      const desk = pane?.querySelector('.bbx-interface-card-desk[aria-hidden="false"]');
+      const surface = desk?.querySelector(':scope > .bbx-card-surface');
+      const tab = pane?.querySelector('.bbx-interface-tab[data-active="true"]');
+      if (!pane || !desk || !surface || !tab) return false;
+      const deskStyle = getComputedStyle(desk);
+      return pane.hasAttribute("data-active-card") && desk.dataset.cardContent === "card" &&
+        parseFloat(deskStyle.paddingLeft) >= 12 &&
+        getComputedStyle(pane).getPropertyValue("--bbx-material-width").trim() !== "";
+    })()`);
+    await t.expect.custom("Markdown tab joins the themed sheet with workspace gutters", () => joined.trim() === "true");
+    await t.expect.noPageErrors();
+
     for (const [name, heading, stock] of [
       ["comparison-paper.memo.card", "One note, three stocks", "cream"],
       ["comparison-post-it.memo.card", "One note, three stocks", "yellow"],

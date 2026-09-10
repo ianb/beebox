@@ -26,7 +26,7 @@ import { useConversationCard, selectionReceiver } from "./chat/everywhere/card-c
 import { useState, useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { displayName } from "../lib/display-name";
-import { useFileData, isCardPath, isMissingCardFailure } from "./file-view-data";
+import { useFileData, isCardPath, isMarkdownPath, isMissingCardFailure } from "./file-view-data";
 import type { LoadFailure } from "../lib/file-load-state";
 import { withBase } from "../api";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
@@ -166,6 +166,10 @@ function selectedRenderer({ path, userSelection, rendererName }: {
   path: string; userSelection: { path: string; name: string | null } | null; rendererName?: string | null;
 }) { return userSelection?.path === path ? userSelection.name : rendererName; }
 
+function usesThemeSurface(path: string): boolean {
+  return isCardPath(path) || isMarkdownPath(path);
+}
+
 /* ---------- main component ---------- */
 
 export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
@@ -260,7 +264,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
     return captured;
   }
 
-  if (isCardPath(path)) {
+  if (usesThemeSurface(path)) {
     return <ThemedFileCard key={path} data={data} mode={mode} renderers={renderers}
       active={active} hasExplicitView={requested !== null} onSelect={selectForPath} onNavigate={onNavigate} onFocus={handleCardFocus}
       onClose={onClose} onOpenInPanel={onOpenInPanel}>{body}</ThemedFileCard>;

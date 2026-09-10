@@ -4,19 +4,16 @@
 
 import { Markdown } from "../components/Markdown";
 import { Text } from "../components/ui/Text";
+import { CardThemeContent } from "../components/themes/CardThemeContent";
 import { registerFileType, type RendererProps } from "./index";
 
-function MarkdownRenderer({ data, onNavigate }: RendererProps) {
+function MarkdownRenderer({ data, onNavigate, mode }: RendererProps) {
   if (data.content === undefined) {
     return <Text as="div" tone="subtle" className="p-4">No content</Text>;
   }
-  return (
-    <div className="p-4">
-      <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>
-        {data.content}
-      </Markdown>
-    </div>
-  );
+  const content = <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{data.content}</Markdown>;
+  if (mode !== "embed") return <CardThemeContent>{content}</CardThemeContent>;
+  return <div className="p-4">{content}</div>;
 }
 
 registerFileType(

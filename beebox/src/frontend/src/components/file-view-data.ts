@@ -36,6 +36,10 @@ export function isCardPath(path: string): boolean {
   return path.endsWith(".card");
 }
 
+export function isMarkdownPath(path: string): boolean {
+  return path.endsWith(".md");
+}
+
 function isDirectoryPath(path: string): boolean {
   // An extension is a good proxy for "this is a file" except for the one
   // directory convention that carries a suffix: every card's attachments live in
