@@ -732,7 +732,7 @@ Authored ids, chosen so web and native agree (Track 5 uses the same strings):
 | `bbx-composer-stop-dictation` | — (web has no separate control) | `NativeComposerView.swift:354` "Stop continuous dictation" |
 | `bbx-chat-stop-agent` | `TargetStrip.tsx:53` "Stop agent" | — |
 | `bbx-chat-stop-speech` | `TargetStrip.tsx:43` "Stop speaking" | — |
-| `bbx-panel-tabs` / `bbx-panel-close` | `InteractiveChat-controls.tsx:163,209` | — |
+| `bbx-panel-tabs` | `workspace/WorkspaceCanvas.tsx` (left pane; mobile and right pane have distinct IDs) | — |
 
 An id means the same control on both platforms or it is not shared. An earlier
 draft mapped one `bbx-composer-stop` onto web `TargetStrip.tsx:53` (*"Stop agent"*,
