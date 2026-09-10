@@ -111,6 +111,28 @@ cover the handoff when no tab remains, which awaits Open design question 1.
   The plan now uses 300 s pieces over JSON. The multipart switch was dropped
   as unmeasured.
 
-## Round 2
+## Round 2 (verification, Codex `gpt-5.5`)
 
-Pending: verification of the round-1 fixes and the two decisions.
+**Round-1 fixes.** Findings 1, 3, 4, 5, 6 and 8 hold. Two did not:
+
+- **2 did not hold.** The prose added a `delivering` step, but the
+  `VoiceHandoff` union lacked it. Fixed: the union gains
+  `{ mode: "delivering"; emissionId }`.
+- **7 did not hold.** One failure-table row still said "letters name
+  recordings". Fixed wording.
+
+**Fresh findings.**
+
+- **The fallback marks `late` before the realtime message lands.** A crash or
+  a failed send in that gap would get a correction delivered for a message
+  that was never sent. Accepted and fixed: late delivery first probes for the
+  original `message-id` and stays `late` until it appears. This adds no new
+  state and is consistent with decision 1. The reviewer's "human decision
+  required" label was declined for that reason.
+- **The retry bound is lost on resume.** `requestedAt` lived only on `queued`.
+  Accepted and fixed: `hqRequest { requestedAt, service, emissionId,
+  sessionId }` moves to the voice object. This changes the plan's own draft
+  schema only; no data exists yet, so no human decision was needed.
+- **Stale speaker wording.** Duplicate of 7.
+
+Review loop closed after round 2. Any further pass is verification-only.

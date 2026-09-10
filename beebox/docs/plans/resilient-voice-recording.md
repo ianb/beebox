@@ -323,21 +323,26 @@ provider error ends the attempt.
     voice: {
       targetSessionId: string;           // chat session the recording belongs to
       startedAt: string;                 // ISO, client clock
+      sealedAt?: string;
+      // Written once by a finalize that requests HQ; survives every hq state,
+      // so a resumed job still knows its retry deadline and its target.
+      hqRequest?: { requestedAt: string; service: HqTranscriptionService;
+                    emissionId: string; sessionId: string };
       hq: VoiceHqState;                  // see union below
       handoff: VoiceHandoff;
-      sealedAt?: string;
     }
     type VoiceHqState =
       | { state: "none" }                                   // HQ not requested (yet)
-      | { state: "queued"; requestedAt: string; service: HqTranscriptionService }
-      | { state: "transcribing"; piece: number; pieces: number; attempt: number }
+      | { state: "queued" }
+      | { state: "transcribing"; piece: number; pieces: number; attempt: number; pieceSeconds: number }
       | { state: "retrying"; attempt: number; nextAttemptAt: string; failure: HqFailure; pieceSeconds: number }
       | { state: "ready"; result: VoiceHqResult }
       | { state: "failed"; failure: HqFailure };            // terminal
     type VoiceHandoff =
       | { mode: "open" }
       | { mode: "claimed"; emissionId: string }             // client sent HQ text itself
-      | { mode: "late"; emissionId: string }                // client sent realtime; server delivers HQ
+      | { mode: "late"; emissionId: string }                // client chose realtime; server will deliver HQ
+      | { mode: "delivering"; emissionId: string }          // correction sent or enqueued, not yet seen in the transcript
       | { mode: "delivered"; emissionId: string; messageId: string };
     interface HqFailure { kind: "transient" | "permanent" | "exhausted"; code: string;
       message: string; upstreamStatus?: number; upstreamBody?: string /* ≤500 chars */ }
@@ -365,9 +370,9 @@ provider error ends the attempt.
     op. The client treats it as terminal: the recording fails visibly as
     "audio incomplete", and the send falls back with `hq="failed"`.
   - `chunkCount` is a request parameter, not new manifest state.
-  - With `hq` set, the state becomes `queued` and `handoff` records the
-    emission id as `open`. The HQ service is resolved once at request time and
-    recorded.
+  - With `hq` set, finalize writes `hqRequest` (the time, the HQ service
+    resolved once now, the emission id and the session id), the state becomes
+    `queued`, and `handoff` stays `open`.
 - `src/core/voice-recording/` (new):
   - `pieces.ts` (pure):
     - `planPieces(totalBytes, pieceSeconds)` returns byte ranges on sample
@@ -396,7 +401,7 @@ provider error ends the attempt.
         15 minutes".
     - On a transient failure it backs off with the shared `jitteredBackoff`
       (moved to `src/shared/backoff.ts`; base 5 s, cap 5 min) until
-      **24 hours** after `requestedAt`, then `failed/exhausted`.
+      **24 hours** after `hqRequest.requestedAt`, then `failed/exhausted`.
     - On piece-too-long it halves `pieceSeconds` and restarts from piece 1,
       down to a floor of **150 s**, then `failed/permanent`.
     - On permanent it goes straight to `failed`.
@@ -414,6 +419,16 @@ provider error ends the attempt.
     - It calls the existing shared `deliverUserMessage`
       (`core/chat/session/deliver-user-message.ts`, already used by capture and
       bulk upload) directly. Nothing is extracted.
+    - **The original must have landed first.** `fallBack` records `late`
+      before the client's realtime send completes, and that send can still
+      fail, or the tab can die in between. So late delivery first runs the
+      landed probe with the emission id as the marker: the realtime message
+      carries `message-id="<emissionId>"`.
+      - If it is absent, the handoff stays `late` and is re-probed on each
+        voice-sweep tick until the 7-day retention ends. Nothing is
+        delivered.
+      - A correction is never sent for a message that never arrived
+        (boxholder decision 1).
     - **A busy session is not "delivered".** `deliverUserMessage` enqueues in
       memory when the agent is busy and returns `{ queued: true }` (`:182-186`).
       Capture accepts losing that on a crash (`prepare.ts`: "the queue is
@@ -882,7 +897,9 @@ section).
 | Segment 2's HQ beats segment 1's | Sequencer doctest | FIFO dispatch | Clear |
 | A consumer forgets to seal | Type (`PendingRecording`) + hook-unmount seal | Unsealed → sealed `hq: null` on unmount; GC at 7 days | Clear |
 | Reload during the HQ wait | pending-sends doctest | Row stays `preparing`; `awaitHq` resumes | Clear |
-| Speaker letters out of order for late delivery | None needed | Letter computed at delivery from the log tail; each piece gets a fresh letter | Clear (letters name recordings, not order) |
+| Speaker letters out of order for late delivery | None needed | Letter computed at delivery from the log tail; each piece gets a fresh letter | Clear (letters mark parts and never assert identity; order does not matter) |
+| `fallBack` recorded, but the realtime send never lands (send fails, tab dies) | Deliver doctest (no original in transcript) | Late delivery probes for the original's `message-id` first; stays `late` until it appears | Clear: no orphan correction |
+| Server restarts while a job is `transcribing`/`retrying` | Resume doctest | `hqRequest.requestedAt` survives every state, so the 24 h bound holds after resume | Clear |
 | Words cut at a piece boundary | None | Accepted | Silent: accepted; at most one word per 5-minute boundary |
 | `recordingLocal` hides the silence timeout during a real silence | Machine doctest | `MAX_DURATION` still bounds it | Clear |
 | Disk: 115 MB/hour staged | None | 7-day GC; prod has ~32 GB free (2026-08-04) | Clear via disk alerts |
