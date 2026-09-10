@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { FileData, FileRenderer } from "../renderers";
 import type { NavigateHint, ViewState, ViewTarget } from "../lib/view-url";
@@ -11,6 +11,7 @@ interface ActiveFileRendererProps {
   data: FileData;
   path: string;
   mode: FileViewMode;
+  workspacePdf?: boolean;
   params?: Record<string, string>;
   viewState?: ViewState | null;
   canPushViewState?: boolean;
@@ -23,6 +24,13 @@ interface ActiveFileRendererProps {
 
 export function ActiveFileRenderer(props: ActiveFileRendererProps) {
   const { active, binding, data, path, mode, params, viewState, canPushViewState, onViewStateChange, reportActivity, onNavigate, renderInline, caption } = props;
+  const stateKey = JSON.stringify(viewState ?? null);
+  const [local, setLocal] = useState<{ path: string; stateKey: string; state: ViewState } | null>(null);
+  const builtinState = local?.path === path && local.stateKey === stateKey ? local.state : viewState;
+  function handleBuiltinState(next: ViewState, method: "push" | "replace") {
+    if (onViewStateChange) onViewStateChange(next, canPushViewState === true ? method : "replace");
+    else setLocal({ path, stateKey, state: next });
+  }
   if (binding !== null && active.name === binding.name) {
     return (
       <BoundAgentViewRenderer
@@ -39,7 +47,8 @@ export function ActiveFileRenderer(props: ActiveFileRendererProps) {
       />
     );
   }
-  return <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption} />;
+  return <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption} workspacePdf={props.workspacePdf}
+    viewState={builtinState} canPushViewState={canPushViewState} onViewStateChange={handleBuiltinState} />;
 }
 
 /** Registry marker; FileView renders the stable bound renderer directly. */

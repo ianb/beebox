@@ -19,7 +19,6 @@ import { type SelectionItem } from "../../lib/selection/serialize";
 import { getTTSClient } from "../../lib/audio/tts-client";
 import { alarm } from "../../lib/audio/earcons";
 import { SchedulePill } from "./InteractiveChat-controls";
-import { VisuallyHidden } from "../ui/VisuallyHidden";
 import { ChatInputArea } from "./InteractiveChat-composer";
 import { MobileTextareaRow } from "./InteractiveChat-mobile-row";
 import type { ChatSchedule } from "@core/chat/schedules.js";
@@ -217,22 +216,18 @@ export function ChatView(props: {
   ambientRegion?: ReactNode;
   selectionNotice?: ReactNode;
   failedRegion?: ReactNode;
-  onOpenStoredCard?: () => void;
-  hasCompanion: boolean;
-  companionPanel: ReactNode;
+  workspace: ReactNode;
   /** The chat's app-bar publications (`ChatBarChrome`) — portals, no visible DOM here. */
   barChrome: ReactNode;
-  messageList: ReactNode;
   statusBanners: ReactNode;
   composerSection: ReactNode;
   debugLog: ReactNode;
 }) {
-  const { hasCompanion, companionPanel, barChrome, messageList, statusBanners, composerSection, debugLog } = props;
+  const { workspace, barChrome, statusBanners, composerSection, debugLog } = props;
   const visible = props.transcriptVisible ?? true;
   const overlayVisible = useViewOverlayVisible();
   const hasRoute = props.routeContent !== undefined;
   const { onHideConversation } = props;
-  const transcript = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const node = composer.current;
@@ -244,12 +239,6 @@ export function ChatView(props: {
     return () => { observer.disconnect(); document.documentElement.style.removeProperty("--bbx-composer-height"); };
   }, []);
   useEffect(() => {
-    if (!visible || !hasRoute) return;
-    const previous = document.activeElement;
-    transcript.current?.focus();
-    return () => { if (previous instanceof HTMLElement && previous.isConnected) previous.focus(); };
-  }, [visible, hasRoute]);
-  useEffect(() => {
     if (!visible || !hasRoute || overlayVisible) return;
     function escape(event: KeyboardEvent) { if (event.key === "Escape") onHideConversation?.(); }
     document.addEventListener("keydown", escape);
@@ -259,18 +248,9 @@ export function ChatView(props: {
     <>
       <div className="bbx-conversation-desk h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden">
         {barChrome}
-        <div className={`flex flex-1 min-h-0 min-w-0 ${hasCompanion ? "flex-col md:flex-row" : ""}`}>
-          {hasRoute ? <div className={visible ? "hidden md:block flex-1 min-w-0 overflow-auto" : "flex-1 min-w-0 overflow-auto"}>{props.routeContent}</div> : null}
-          {hasCompanion ? companionPanel : null}
-          <div ref={transcript} tabIndex={-1} hidden={!visible} className={visible ? "flex flex-col flex-1 min-h-0 min-w-0" : "hidden"}>
-            {hasRoute ? <div className="px-3 py-1"><Button id="bbx-chat-return-to-card" intent="ghost" size="sm" onClick={props.onHideConversation}>Return to page</Button></div> : null}
-            {props.onOpenStoredCard ? <div className="px-3 py-1"><Button id="bbx-chat-open-stored-card" intent="ghost" size="sm" onClick={props.onOpenStoredCard}>Open card</Button></div> : null}
-            <VisuallyHidden as={hasRoute ? "h2" : "h1"}>Chat</VisuallyHidden>
-            {messageList}
-          </div>
-        </div>
+        {workspace}
         <div ref={composer} className="bbx-composer-material flex flex-col w-full max-w-5xl mx-auto min-w-0">
-          {!visible ? <div className="px-3 py-1"><Button id="bbx-chat-show-conversation" size="sm" intent="ghost" onClick={props.onShowConversation}>Open conversation</Button></div> : null}
+          {!visible && hasRoute ? <div className="px-3 py-1"><Button id="bbx-chat-show-conversation" size="sm" intent="ghost" onClick={props.onShowConversation}>Open conversation</Button></div> : null}
           {props.selectionNotice}
           {props.ambientRegion}
           {props.failedRegion}

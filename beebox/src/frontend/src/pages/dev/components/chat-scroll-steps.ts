@@ -19,6 +19,10 @@ export type Step =
   | { k: "prepend"; count: number }
   /** Set the below-list chrome height — clientHeight moves, content doesn't. */
   | { k: "chromeResize"; px: number }
+  /** Enter the narrow, wrapping transcript used to reproduce a side pane. */
+  | { k: "wrapWidth"; px: number }
+  /** Resize that wrapping transcript as a pane is shown or hidden. */
+  | { k: "resizeWidth"; px: number }
   /** An existing message grows in place (an image finishing decode). */
   | { k: "imageDecode"; msgIndex: number; px: number }
   /** Mount a real lazy img without a source. Its intrinsic size is unknown. */
@@ -42,7 +46,7 @@ export type Step =
   /** A real wheel: dispatch the event AND move scrollTop, as a browser does. */
   | { k: "userWheel"; deltaY: number }
   /** A scrollbar-thumb drag: scrollTop write with no input event at all. */
-  | { k: "userDrag"; toTop: number }
+  | { k: "userDrag"; toTop: number; observeReadingPosition?: boolean }
   /** Momentum: a run of scroll events with NO input events (the iOS fling the
    *  old controller had to guess about). Reversals are counted. */
   | { k: "fling"; steps: number; stepPx: number; intervalMs: number }

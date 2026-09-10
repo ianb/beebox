@@ -24,9 +24,10 @@ interface FloatingButton {
 interface SelectionCaptureProps {
   onCapture: (selection: { text: string; position: string }) => void;
   children: ReactNode;
+  className?: string;
 }
 
-export function SelectionCapture({ onCapture, children }: SelectionCaptureProps) {
+export function SelectionCapture({ onCapture, children, className }: SelectionCaptureProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [button, setButton] = useState<FloatingButton | null>(null);
 
@@ -79,6 +80,7 @@ export function SelectionCapture({ onCapture, children }: SelectionCaptureProps)
   return (
     <div
       ref={containerRef}
+      className={className}
       // This wrapper carries no semantics of its own — it's instrumentation
       // over arbitrary `children` content, not a widget — so `role="none"`
       // is accurate, not a workaround: it has no accessible role to strip.
@@ -106,7 +108,7 @@ export function SelectionCapture({ onCapture, children }: SelectionCaptureProps)
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onMouseUp={(e) => e.stopPropagation()}
           onClick={handleClick}
-          className="flex items-center justify-center w-7 h-7 rounded-full bg-accent text-white shadow-md hover:bg-accent-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-accent z-50"
+          className="bbx-system-control flex items-center justify-center w-7 h-7 rounded-full bg-accent text-white shadow-md hover:bg-accent-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-accent z-50"
           style={{ position: "fixed", left: button.left + 6, top: button.top - 6 }}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

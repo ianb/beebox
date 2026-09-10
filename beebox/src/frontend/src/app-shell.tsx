@@ -7,9 +7,8 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Outlet, useParams, useNavigate } from "@tanstack/react-router";
+import { Outlet, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { BrowsePage, type BrowseNavigateOptions } from "./pages/browse/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { ViewOverlayProvider } from "./components/ViewOverlay";
@@ -32,7 +31,6 @@ import { DocumentIcon } from "./components/DocumentIcon";
 import { DocumentPlace } from "./components/DocumentPlace";
 import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
 
-import { href, toSearch } from "./lib/routing";
 
 // Re-exported for the route tree
 export { BoxRedirect } from "./pages/BoxSelection";
@@ -115,9 +113,9 @@ export function AppLayout() {
 
 /** Providers retain their children identity when a chat publishes chrome. */
 function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
-  return <BoxPresentationProvider boxSlug={boxSlug}><BoxConversationProvider boxSlug={boxSlug}>
+  return <BoxConversationProvider boxSlug={boxSlug}><BoxPresentationProvider boxSlug={boxSlug}>
     <AppBarChromeProvider><ConversationCardProvider><ViewOverlayProvider>{children}</ViewOverlayProvider></ConversationCardProvider></AppBarChromeProvider>
-  </BoxConversationProvider></BoxPresentationProvider>;
+  </BoxPresentationProvider></BoxConversationProvider>;
 }
 
 /**
@@ -191,32 +189,3 @@ function BoxNotFound({ slug, boxes }: { slug: string; boxes: KnownBox[] }) {
     </Stack>
   );
 }
-
-/**
- * Browse page wrapper with route parameters.
- */
-export function BrowsePageWrapper() {
-  const navigate = useNavigate();
-  const { boxSlug, _splat: browsePath } = useParams({ strict: false });
-
-  return (
-    <BrowsePage
-      currentPath={browsePath}
-      onNavigate={(path: string, options?: BrowseNavigateOptions) => {
-        // navigate()'s promise only rejects on a superseded/redirected
-        // navigation (not a user-facing failure) -- fire-and-forget.
-        // Search is set wholesale, not merged: one file's `?view=`/params
-        // don't belong on the next one.
-        void navigate({
-          to: href(path ? `/${boxSlug}/browse/${path}` : `/${boxSlug}/browse`),
-          search: toSearch(options?.search ?? {}),
-          replace: options?.replace ?? false,
-        });
-      }}
-    />
-  );
-}
-
-/**
- * Card viewer page wrapper.
- */

@@ -6,7 +6,7 @@ import { useViewOverlay } from "../../ViewOverlay";
 import { z } from "zod";
 import { conversationSelectionSchema, type ConversationSelection, type AttentionSnapshot } from "@shared/chat-composer-binding";
 import { routeConversationRequest } from "./conversation-intent";
-import { parseViewUrl } from "../../../lib/view-url";
+import { workspaceRouteTarget, systemCardEntryContext } from "../../../lib/system-card-navigation";
 import { href, toSearch } from "../../../lib/routing";
 import type { ConversationContextValue } from "./conversation-context";
 
@@ -44,14 +44,15 @@ export function useConversationRoute(conversation: ConversationContextValue) {
     if (previousUrl.current === routeKey) return;
     const first = previousUrl.current === null;
     previousUrl.current = routeKey;
+    const entry = systemCardEntryContext(workspaceRouteTarget({ pathname: location.pathname, splat: _splat, searchStr: location.searchStr, search: location.search }));
     const saved = conversationSelectionSchema.safeParse(location.state.bbxConversation);
     const request = routeConversationRequest({ first, chatPage, search: chatSearch.parse(location.search), selection: first && conversation.rendered ? conversation.rendered : selection,
       stored: first ? conversation.restored : null,
       remembered: saved.success ? saved.data : null,
-      cardPath: location.pathname.includes("/views/") && _splat ? parseViewUrl(_splat).path : null,
-      browseDir: location.pathname.includes("/browse/") ? (_splat ?? "") : null });
+      cardPath: entry.cardPath,
+      browseDir: location.pathname.includes("/browse/") ? (_splat ?? "") : entry.browseDir });
     if (request) choose(request);
-  }, [routeKey, chatPage, location.search, location.state.bbxConversation, location.pathname, select, selection, _splat, conversation.rendered, conversation.restored]);
+  }, [routeKey, chatPage, location.searchStr, location.search, location.state.bbxConversation, location.pathname, select, selection, _splat, conversation.rendered, conversation.restored]);
   // Every app history entry keeps the focus it inherited. Back can restore it;
   // a normal link into another landmark never derives a new focus from its path.
   useEffect(() => {

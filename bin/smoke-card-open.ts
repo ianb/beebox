@@ -9,23 +9,30 @@
  * that file's step list under the line budget.
  */
 
+import { browseListingModeRef } from "./smoke-browse.js";
 import type { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { CardRefUnresolvedError, NoCardToOpenError } from "./smoke-errors.js";
-import { contentAreaRow, firstCardRow, refFor, refForDomId } from "./smoke-snapshot.js";
+import { contentAreaRow, firstCardRow, refFor } from "./smoke-snapshot.js";
+
+/** Scope excludes workspace buttons such as "Focus card" and other mounted tabs. */
+async function browseListingSnapshot(session: BrowseSession): Promise<string> {
+  const { stdout } = await session.run(["snapshot", "-i", "-s", '[role="region"][aria-label="Browse"]']);
+  return stdout;
+}
 
 async function revealFoldedRows(session: BrowseSession, listing: string): Promise<string> {
   if (firstCardRow(listing) !== null) return listing;
-  const modeRef = refForDomId(listing, "bbx-browse-listing-mode");
+  const modeRef = browseListingModeRef(listing);
   if (modeRef === null) return listing;
   await session.clickRef(modeRef);
-  return session.snapshot({ interactiveOnly: true });
+  await session.waitForReady();
+  return browseListingSnapshot(session);
 }
 
 export async function findCardRow(
   session: BrowseSession,
-  listing: string,
 ): Promise<{ listing: string; row: { role: "button"; name: string } }> {
-  listing = await revealFoldedRows(session, listing);
+  const listing = await revealFoldedRows(session, await browseListingSnapshot(session));
   const row = firstCardRow(listing);
   if (row !== null) return { listing, row };
   const contentRow = contentAreaRow(listing);
@@ -43,9 +50,11 @@ export async function findCardRow(
   // auto-scrolling.
   await session.run(["scrollintoview", `@${contentRef}`]);
   await session.clickRef(contentRef);
+  await session.run(["wait", "--fn", "(() => { const card = new URL(location.href).searchParams.get('card'); if (!card) return false; const state = new URL(card, location.origin).searchParams.get('viewState'); return state !== null && JSON.parse(state).directory === '_content'; })()"]);
+  await session.waitForReady();
   const drilled = await revealFoldedRows(
     session,
-    await session.snapshot({ interactiveOnly: true }),
+    await browseListingSnapshot(session),
   );
   const drilledRow = firstCardRow(drilled);
   if (drilledRow === null) {

@@ -14,7 +14,7 @@
  * `InteractiveChat` root, which reads the chat machine's snapshot. A portal
  * relocates DOM but does NOT isolate renders, so the bar would tick per token
  * unless every portaled child is `React.memo`'d with referentially stable
- * props. That is the same discipline `CompanionViewPanel` follows
+ * props. That is the same discipline workspace card rendering follows
  * (`components/chat/CLAUDE.md`), and it's why the props below are all either
  * primitives or `useCallback`s from the chat hooks — an inline arrow or a
  * fresh object literal here silently re-enables per-token bar renders.

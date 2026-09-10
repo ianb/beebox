@@ -135,6 +135,23 @@ export async function updateBoxConfigFields(options: {
   });
 }
 
+export async function updateBoxSystemTheme(options: {
+  boxRoot: string;
+  theme: { name: string; stock?: string | undefined } | null;
+}): Promise<BoxConfigMutationResult> {
+  return mutateConfig({
+    boxRoot: options.boxRoot,
+    message: options.theme === null ? "Clear box system theme" : "Set box system theme",
+    mutate(config) {
+      const presentation = isRecord(config.presentation) ? { ...config.presentation } : {};
+      if (options.theme === null) delete presentation.chrome;
+      else presentation.chrome = options.theme;
+      if (Object.keys(presentation).length === 0) delete config.presentation;
+      else config.presentation = presentation;
+    },
+  });
+}
+
 export async function grantBoxAccess(options: {
   boxRoot: string;
   email: string;

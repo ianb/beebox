@@ -24,7 +24,7 @@ runs weekly or on demand, never as a CI gate.
     family box becomes a later scenario's seed.
   - `issues/features/2026-07-20-first-run-experience.md` — the onboarding
     scenario is precisely the probe that will exercise (and likely flag) this.
-  - `issues/watch/2026-07-10-agent-browser-screenshot-flake.md` — a known flake
+  - `issues/bugs/2026-07-10-agent-browser-screenshot-flake.md` — a known flake
     the harness must tolerate (retry a failed screenshot once before reporting).
   - `issues/docs-and-chores/2026-08-08-maintenance-cadence-framework.md` — the
     weekly cadence should eventually register there.

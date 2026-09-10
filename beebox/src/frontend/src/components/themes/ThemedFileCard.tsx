@@ -16,6 +16,8 @@ import { OpenInPanelButton } from "../ui/OpenInPanelButton";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { CardFacts, CardMentions } from "./CardProperties";
 import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
+import { LandmarkSystemThemePicker } from "./SystemThemePicker";
+import { isCardPath } from "../file-view-data";
 
 interface ThemedFileCardProps {
   data: FileData;
@@ -31,16 +33,38 @@ interface ThemedFileCardProps {
   children: ReactNode;
 }
 
+function FileSpecificProperties({ data, theme, isCard }: { data: FileData; theme: ReturnType<typeof resolveCardTheme>; isCard: boolean }) {
+  if (isCard) return <><CardFacts data={data} /><ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} /></>;
+  return <dl className="mt-4"><dt>Filed at</dt><dd>{data.path}</dd><dt>File type</dt><dd>Markdown</dd></dl>;
+}
+
+function RelatedFileProperties({ data, boxSlug, onNavigate, onClose }: {
+  data: FileData; boxSlug: string | undefined;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  onClose?: (() => void) | undefined;
+}) {
+  if (!isCardPath(data.path)) return <CardMentions path={data.path} onNavigate={onNavigate} />;
+  return <>
+    {data.type === "landmark" ? <LandmarkSystemThemePicker boxKey={boxSlug ?? ""} path={data.path}
+      contextDir={data.path.replace(/^\//, "").split("/").slice(0, -1).join("/")} /> : null}
+    <CardMentions path={data.path} onNavigate={onNavigate} />
+    <div className="mt-6"><CardActions path={data.path} onTrashed={onClose} /></div>
+  </>;
+}
+
 export function ThemedFileCard({ data, mode, renderers, active, hasExplicitView, onSelect, onNavigate, onFocus, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
+  const { boxSlug } = useParams({ strict: false });
   const presentation = useBoxPresentation();
+  const isCard = isCardPath(data.path);
+  const presentationType = data.type ?? "";
   if (presentation !== null && !presentation.data && presentation.error === null) {
     return <div className="p-6" aria-busy="true"><div className="h-6 w-2/3 bg-warm-100 rounded" /><div className="h-32 mt-4 bg-warm-50 rounded" /><span className="sr-only">Loading card appearance</span></div>;
   }
   const theme = resolveCardTheme({
     path: data.path.replace(/^\//, ""),
-    type: data.type ?? "",
-    cardChoice: data.frontmatter?.theme,
-    typeDefault: presentation?.data?.typeDefaults[data.type ?? ""],
+    type: presentationType,
+    cardChoice: isCard ? data.frontmatter?.theme : undefined,
+    typeDefault: presentation?.data?.typeDefaults[presentationType],
     presentation: presentation?.data?.presentation ?? { status: "absent" },
   });
   const title = typeof data.frontmatter?.title === "string" ? data.frontmatter.title : displayName(data.path);
@@ -55,8 +79,7 @@ export function ThemedFileCard({ data, mode, renderers, active, hasExplicitView,
         <dt>Stock</dt><dd>{theme.choice.stock}</dd>
         <dt>Chosen by</dt><dd>{themeOriginLabel(theme.origin)}</dd>
       </dl>
-      <CardFacts data={data} />
-      <ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} />
+      <FileSpecificProperties data={data} theme={theme} isCard={isCard} />
       <div className="mt-6">
         <h3 className="text-sm font-semibold mb-2">View</h3>
         <div className="flex flex-wrap gap-2">
@@ -70,8 +93,7 @@ export function ThemedFileCard({ data, mode, renderers, active, hasExplicitView,
         </div>
         {first ? <div className="mt-2"><Button size="sm" intent="ghost" disabled={!hasExplicitView} onClick={() => onSelect(null)}>Use preferred view</Button></div> : null}
       </div>
-      <CardMentions path={data.path} onNavigate={onNavigate} />
-      <div className="mt-6"><CardActions path={data.path} onTrashed={onClose} /></div>
+      <RelatedFileProperties data={data} boxSlug={boxSlug} onNavigate={onNavigate} onClose={onClose} />
     </>
   );
   return <CardThemeSurface

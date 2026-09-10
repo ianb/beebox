@@ -6,12 +6,23 @@ export { themePatternMatches, validateThemePattern } from "./theme-pattern.js";
 export const THEME_CATALOG = [
   {
     name: "plain",
-    label: "Plain",
+    label: "Flat",
     stocks: ["neutral"],
     defaultStock: "neutral",
     quoteTreatment: "plain",
     blockquoteTreatment: "plain",
     chrome: true,
+    systemOnly: false,
+  },
+  {
+    name: "spectrum",
+    label: "Spectrum",
+    stocks: ["gradient"],
+    defaultStock: "gradient",
+    quoteTreatment: "plain",
+    blockquoteTreatment: "plain",
+    chrome: true,
+    systemOnly: true,
   },
   {
     name: "paper",
@@ -21,6 +32,7 @@ export const THEME_CATALOG = [
     quoteTreatment: "layered",
     blockquoteTreatment: "layered",
     chrome: true,
+    systemOnly: false,
   },
   {
     name: "post-it",
@@ -30,6 +42,7 @@ export const THEME_CATALOG = [
     quoteTreatment: "layered",
     blockquoteTreatment: "layered",
     chrome: false,
+    systemOnly: false,
   },
 ] as const;
 
@@ -44,6 +57,26 @@ export const ThemeChoiceSchema = z.object({
 }).strict();
 
 export type ThemeChoice = z.infer<typeof ThemeChoiceSchema>;
+
+export function validateSystemThemeChoice(choice: unknown): ReturnType<typeof validateThemeChoice> {
+  const resolved = validateThemeChoice(choice, "system theme");
+  if (resolved.problem !== null) return resolved;
+  const theme = descriptor(resolved.choice.name);
+  if (theme?.chrome === true) return resolved;
+  return {
+    choice: PLAIN,
+    problem: {
+      location: "system theme",
+      message: `Theme ${JSON.stringify(resolved.choice.name)} does not provide app chrome`,
+      requested: choice,
+    },
+  };
+}
+
+export const SystemThemeChoiceSchema = ThemeChoiceSchema.superRefine((choice, ctx) => {
+  const checked = validateSystemThemeChoice(choice);
+  if (checked.problem !== null) ctx.addIssue({ code: "custom", message: checked.problem.message });
+});
 
 export interface ResolvedThemeChoice {
   name: ThemeName;
@@ -87,7 +120,7 @@ export interface ResolvedCardTheme {
   problem: ThemeProblem | null;
 }
 
-export type ChromeOrigin = "box-chrome" | "box-default" | "engine";
+export type ChromeOrigin = "landmark" | "box-chrome" | "box-default" | "engine";
 
 export interface ResolvedChromeTheme {
   choice: ResolvedThemeChoice;

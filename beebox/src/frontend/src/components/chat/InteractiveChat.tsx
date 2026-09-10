@@ -1,4 +1,5 @@
-import { useMobileCardNavigation } from "./everywhere/use-mobile-card-navigation";
+import { useWorkspace } from "./workspace/WorkspaceProvider";
+import { invariant } from "@shared/invariant";
 /**
  * InteractiveChat - the live chat UI for the box's conversational assistant.
  *
@@ -15,7 +16,6 @@ import { useState, useRef, useCallback, useMemo, type ReactNode } from "react";
 import { createAudioOverlayStore } from "./audio-overlay-store";
 // search params read via window.location — avoids coupling to route definition
 import { useConversationMachine } from "./conversation/use-conversation-machine";
-import { conversationKey } from "./conversation/controller-pool";
 import type { ConversationTarget, ConversationSelection, AttentionSnapshot } from "@shared/chat-composer-binding.js";
 import type { ChatInitialLoad } from "../../machines/chat-types";
 import { groupMessages } from "./ChatMessages";
@@ -25,7 +25,7 @@ import { trpc } from "../../lib/trpc";
 import { useEmissionDispatch } from "./InteractiveChat-dispatch";
 import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
 import { useRecoveryWidgets } from "./InteractiveChat-recovery";
-import { useChatMute, useChatSchedules, usePendingMessagePoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
+import { useChatMute, useChatSchedules, usePendingMessagePoll, useChatStallRecovery } from "./InteractiveChat-hooks";
 import { useChatModelFeatures } from "./use-chat-model";
 import { useProcessingStatusPoll } from "./processing-status-display";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
@@ -98,17 +98,6 @@ interface InteractiveChatProps {
   /** Engine and model chosen before this chat exists (fresh chats only). */
   startEngine?: string;
   startModel?: string;
-  /**
-   * A `view:` URL to open in the companion pane once, on mount — set by
-   * deep-links such as the clerk extension's "comment on this page" flow.
-   */
-  companion?: string;
-  /**
-   * The card live-open in the companion pane, persisted in `?card=` (a
-   * serialized view URL, no `view:` prefix). Restored on mount and kept in
-   * sync as the active card changes. Distinct from `companion` (one-shot).
-   */
-  card?: string;
   /**
    * The lifted emission store: created once in `ChatPage`, above this
    * component's `key={keyState.epoch}` remount boundary, so the in-progress
@@ -183,16 +172,7 @@ function useChatFrameState(openCaptureOnMount: boolean | undefined) {
     typingLocked, setTypingLocked, captureMode, setCaptureMode };
 }
 
-/** Sidecar navigation shares identity across assignment and foregrounds cards on phones. */
-function useConversationTabs({ boxSlug, sessionId, target, logicalKey }: {
-  boxSlug: string | undefined; sessionId: string | null; target: ConversationTarget; logicalKey: string;
-}) {
-  const rawTabs = useChatTabs({ boxSlug, sessionInput: sessionId ?? conversationKey(target), logicalKey });
-  const onZoomView = useMobileCardNavigation(rawTabs.onZoomView);
-  return { ...rawTabs, onZoomView };
-}
-
-export function InteractiveChat({ sessionInput, contextDir, startEngine, startModel, companion, card, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, routeContent, onShowConversation, onHideConversation, ambientRegion, selectionNotice }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, startEngine, startModel, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, routeContent, onShowConversation, onHideConversation, ambientRegion, selectionNotice }: InteractiveChatProps) {
   const usesNativeComposer = nativeComposer === true; const usesNativeShell = embedded === true || usesNativeComposer;
   const { boxSlug } = useParams({ strict: false });
   const { snapshot, send, pool, target, recoveryNotice } = useConversationMachine({
@@ -228,10 +208,10 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
   const logicalConversation = pool.conversationIdentity(target);
   const model = useChatModelFeatures({ conversationKey: logicalConversation, sessionId, contextDir: effectiveContextDir, groupCount: groups.length, send, startEngine, startModel });
   const mute = useChatMute();
-  const tabs = useConversationTabs({ boxSlug, sessionId, target, logicalKey: logicalConversation });
+  const tabs = useWorkspace();
+  invariant(tabs, "InteractiveChat requires WorkspaceProvider");
   const { activeView } = tabs;
-  useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView, boxSlug });
-  const cardSend = useCompanionCard({ initialCard: card, focusedRef: attention?.focusedRef, activeView, onZoomView: tabs.onZoomView, boxSlug, error });
+  const cardSend = useCompanionCard({ focusedRef: attention?.focusedRef, activeView });
   const schedules = useChatSchedules({ messages, loaded: !snapshot.matches("loading"), isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.filter((entry) => entry.pending === true).length, sessionId, send });
   const showAgentWorking = useProcessingStatusPoll({ processBusy: Boolean(processBusy), snapshot, sessionId, send });

@@ -88,6 +88,20 @@ withProminence.prominence
 => background
 ```
 
+Presentation metadata is validated by the presentation reader. A malformed
+system theme must not erase the landmark roles used by navigation, chat startup,
+and root installation.
+
+```ts
+const badPrimitiveTheme = parseLandmarkFields("---\nnavigation:\n  label: Still here\ndestinations:\n  - for: [triage]\nsystem-theme: bogus\n---\n");
+JSON.stringify([badPrimitiveTheme?.navigation?.label, badPrimitiveTheme?.destinations?.[0]?.for, badPrimitiveTheme?.["system-theme"]])
+=> ["Still here",["triage"],null]
+
+const badStockTheme = parseLandmarkFields("---\nnavigation:\n  label: Also here\nsystem-theme:\n  name: paper\n  stock: purple\n---\n");
+JSON.stringify([badStockTheme?.navigation?.label, badStockTheme?.["system-theme"]])
+=> ["Also here",null]
+```
+
 ## Template
 
 `createLandmarkTemplate` produces a starter card with a `navigation` role for

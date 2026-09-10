@@ -17,7 +17,7 @@
  */
 
 import type { FileSummary } from "@core/file-summary";
-import type { NavigateHint, ViewTarget } from "./lib/view-url";
+import type { NavigateHint, ViewState, ViewTarget } from "./lib/view-url";
 import { GenericIcon, type FileIcon } from "./file-types/icons";
 
 /** Data for rendering a file. */
@@ -51,8 +51,13 @@ export interface RendererProps {
    * don't take parameters ignore it.
    */
   params?: Record<string, string>;
+  viewState?: ViewState | null;
+  canPushViewState?: boolean;
+  onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
   /** The surface this renderer is shown in, so it can adapt its own chrome. */
   mode?: "page" | "chat" | "companion" | "embed";
+  /** PDF file actions are hosted by the surrounding workspace pane. */
+  workspacePdf?: boolean;
   /**
    * The caption from an `![caption](path)` embed. A "media" renderer (image,
    * figure) shows it beneath the content so an embedded card reads exactly like

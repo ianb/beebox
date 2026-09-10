@@ -1,4 +1,63 @@
 tests:
+  # === Canonical Interface Cards ===
+  # Status (2026-09-09, Claude): 3/3 pass on a disposable standalone box clone.
+  # Browse and deletion-pressure pass in the filtered run; addresses passed
+  # after accepting the generated type docs as an equivalent reference source.
+  # All content checks passed on that first valid addresses run too. These are
+  # on-demand knowledge checks (2-7 reads), not zero-read recall assertions.
+
+  - id: interface-cards-addresses
+    prompt: >
+      What cards should I link to for Dashboard, Settings, and Browse? Explain
+      how their renderers are selected and whether I should create extra copies.
+      Consult the installed reference if needed; do not edit files.
+    watch_for: "Reads interface-card guidance and explains identity and lifecycle without changing files"
+    expected_level: knows_about
+    # Type docs and the combined reference are equivalent for this question.
+    should_read_any:
+      - "node_modules/beebox/box-docs/interface-cards.md"
+      - "node_modules/beebox/box-docs/card-dashboard.md"
+    correct_contains:
+      - "_config/interface/dashboard.card"
+      - "_config/interface/settings.card"
+      - "_config/interface/browse.card"
+    correct_matches:
+      - '(?:type|filename)[\s\S]{0,120}(?:render|select)|(?:render|select)[\s\S]{0,120}(?:type|filename)'
+      - '(?:not|no|reject|invalid|cannot|single|one canonical)[\s\S]{0,120}(?:cop|duplic|instance)|(?:cop|duplic)[\s\S]{0,120}(?:not|invalid|reject)'
+    tags: [interface-cards]
+
+  - id: interface-cards-browse-state
+    prompt: >
+      I want to browse _content/recipes and then a child directory. Should you
+      create a Browse card per directory or save the current directory in its
+      frontmatter? Explain the target, state, and Back behavior. Consult the
+      installed reference if needed; do not edit files.
+    watch_for: "Reads interface-card guidance and explains identity and lifecycle without changing files"
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/interface-cards.md"]
+    correct_contains: ["_config/interface/browse.card", "state", "Back"]
+    correct_matches:
+      - '(?:not|never|no|without|neither)[\s\S]{0,100}(?:frontmatter|edit|writ)|frontmatter[\s\S]{0,100}(?:not|never)'
+      - '(?:same|one|single|canonical)[\s\S]{0,80}(?:card|tab|Browse)'
+    tags: [interface-cards]
+
+  - id: interface-cards-deletion-pressure
+    prompt: >
+      A cleanup staged deletion of _config/interface/dashboard.card. I left an
+      unstaged copy on disk, so can I commit? If validation complains, could I
+      remove the bootstrap completion record or mark the migration applied to
+      bypass it? Explain the correct repair and how an older box missing these
+      cards is different. Consult the installed reference; do not change files.
+    watch_for: "Reads interface-card guidance and explains identity and lifecycle without changing files"
+    expected_level: knows_about
+    should_read: ["node_modules/beebox/box-docs/interface-cards.md"]
+    correct_contains: ["canonical-interface-cards"]
+    correct_matches:
+      - '(?:index|staged|candidate)'
+      - '(?:restore|recover)'
+      - '(?:not|no|cannot|never|reject|invalid)[\s\S]{0,100}(?:bypass|remov|mark|fake)|(?:bypass|remov|mark|fake)[\s\S]{0,100}(?:not|cannot|never|reject|invalid)'
+    tags: [interface-cards]
+
   # === Box Structure and Navigation ===
   #
   # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The
@@ -4048,6 +4107,23 @@ tests:
     correct_contains: ["theme", "paper", "cream", "Properties"]
     correct_contains_any: ["Use default", "default"]
     tags: [cards, themes]
+
+  # System-theme extension (2026-09-08): landmark-system-theme passed with Claude;
+  # 2 reads and 2 searches identified system-theme vs card theme and inheritance.
+  - id: landmark-system-theme
+    prompt: >
+      I want this landmark's surrounding interface to use the terracotta Paper
+      system theme, while the landmark card itself stays plain. What fields
+      should I write, where can I select them in the UI, and what happens if I
+      remove the landmark's system override or inspect a card from elsewhere?
+    expected_level: knows_about
+    watch_for: >
+      Uses system-theme name paper stock manila for the landmark and theme name
+      plain stock neutral for the card. Identifies landmark Properties and box
+      Settings as the two system-theme scopes, removing the override falls back
+      to the box, and inspecting another card does not change the current place.
+    correct_contains: ["system-theme", "paper", "manila", "plain", "Properties", "box"]
+    tags: [cards, themes, landmarks, system-theme]
 
   - id: card-theme-selection
     prompt: >

@@ -13,6 +13,7 @@
 import { useState } from "react";
 import { MenuItem, MenuDivider } from "./ui/dropdown-menu-item";
 import { href } from "../lib/routing";
+import { useViewNavigate } from "../hooks/useViewNavigate";
 
 export interface HereLink {
   ref: string;
@@ -104,21 +105,27 @@ function HereGroupRows({ group, boxSlug }: { group: HereGroup; boxSlug: string }
  */
 export function HereMenuBody({
   dir,
+  landmarkPath,
   boxSlug,
   links,
   groups,
 }: {
   dir: string;
+  landmarkPath: string;
   boxSlug: string;
   links: HereLink[];
   groups: HereGroup[];
 }) {
+  const openView = useViewNavigate();
   const hasBookmarks = links.length > 0 || groups.length > 0;
   return (
     <>
       <MenuItem id="bbx-here-menu-open-dir" to={href(dir === "" ? `/${boxSlug}/browse` : `/${boxSlug}/browse/${dir}`)}>
         Open {dir === "" ? "/" : `${dir}/`}
       </MenuItem>
+      <MenuItem id="bbx-here-menu-landmark-card" onClick={() => openView({
+        path: landmarkPath, viewer: null, params: {}, viewState: null,
+      }, { label: "Landmark card" })}>Landmark card</MenuItem>
       {hasBookmarks ? <MenuDivider /> : null}
       {links.map((link) => (
         <HereLinkRow key={link.ref} link={link} boxSlug={boxSlug} />

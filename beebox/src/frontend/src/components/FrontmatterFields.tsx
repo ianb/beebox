@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo } from "react";
 import { resolveRelativePath } from "../lib/view-url";
 import { isRecord } from "@shared/is-record";
+import { toDisplayPath } from "@shared/display-path";
 import type { ReactNode } from "react";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
@@ -30,16 +31,17 @@ function RefLink({ refPath }: { refPath: string }): ReactNode {
   const nav = useContext(FieldsNavContext);
   const noFrag = refPath.split("#")[0] ?? refPath;
   const resolved = nav === null ? null : resolveRelativePath(nav.basePath, noFrag);
+  const displayPath = toDisplayPath(refPath);
   if (nav === null || resolved === null) {
-    return <span className="whitespace-pre-wrap break-words">{refPath}</span>;
+    return <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{displayPath}</span>;
   }
   return (
     <button
       type="button"
       onClick={() => nav.onNavigate({ path: resolved, viewer: null, params: {}, viewState: null }, { label: refPath })}
-      className="bbx-theme-link cursor-pointer break-words text-left"
+      className="bbx-theme-link max-w-full cursor-pointer whitespace-pre-wrap text-left [overflow-wrap:anywhere]"
     >
-      {refPath}
+      {displayPath}
     </button>
   );
 }
@@ -57,26 +59,26 @@ function ValueView({ value }: { value: unknown }): ReactNode {
         href={value}
         target="_blank"
         rel="noreferrer"
-        className="bbx-theme-link break-all"
+      className="bbx-theme-link [overflow-wrap:anywhere]"
       >
         {value}
       </a>
     );
   }
   if (isScalar(value)) {
-    return <span className="whitespace-pre-wrap break-words">{formatScalar(value)}</span>;
+    return <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{formatScalar(value)}</span>;
   }
   if (Array.isArray(value)) {
     if (value.length === 0) return <span className="text-warm-500 italic">empty</span>;
     if (value.every(isScalar)) {
       return (
-        <ul className="list-disc list-outside ml-5 space-y-0.5 marker:text-warm-400">
-          {value.map((item, index) => <li key={index}>{formatScalar(item)}</li>)}
+        <ul className="min-w-0 list-disc list-outside ml-5 space-y-0.5 marker:text-warm-400">
+          {value.map((item, index) => <li key={index} className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">{formatScalar(item)}</li>)}
         </ul>
       );
     }
     return (
-      <ol className="list-decimal list-outside ml-5 marker:text-warm-400 divide-y divide-warm-400 [&>li]:py-2 [&>li:first-child]:pt-0 [&>li:last-child]:pb-0">
+      <ol className="min-w-0 list-decimal list-outside ml-5 marker:text-warm-400 divide-y divide-warm-400 [&>li]:min-w-0 [&>li]:py-2 [&>li:first-child]:pt-0 [&>li:last-child]:pb-0">
         {value.map((item, index) => <li key={index}><ValueView value={item} /></li>)}
       </ol>
     );
@@ -90,11 +92,11 @@ function FieldsTable({ fields }: { fields: Record<string, unknown> }): ReactNode
   const entries = Object.entries(fields);
   if (entries.length === 0) return null;
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm text-warm-800 bbx-card-fields">
+    <dl className="min-w-0 max-w-full grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm text-warm-800 bbx-card-fields">
       {entries.map(([name, value]) => (
         <div key={name} className="contents">
-          <dt className="text-warm-500 text-right whitespace-nowrap bbx-card-field-label">{name}:</dt>
-          <dd className="min-w-0">
+          <dt className="min-w-0 max-w-32 text-warm-500 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">{name}:</dt>
+          <dd className="min-w-0 max-w-full">
             {name === "ref" && typeof value === "string" ? <RefLink refPath={value} /> : <ValueView value={value} />}
           </dd>
         </div>

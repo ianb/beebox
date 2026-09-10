@@ -1,0 +1,214 @@
+/* Shared framing for cards where the surrounding interface is part of the
+   reading surface: browse detail, sidecar panels, and their tabs. */
+.bbx-interface-card-desk[data-card-content="card"],
+.bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
+  background: var(--bbx-desk-background, #e4e0d9);
+  padding: 20px;
+}
+
+.bbx-interface-card-desk[data-card-content="card"] > .bbx-card-surface,
+.bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk > .bbx-card-surface {
+  min-height: 0;
+}
+
+.bbx-interface-browse-panel[data-card-content="card"] {
+  border-radius: 12px;
+  background: var(--bbx-desk-background, #e4e0d9);
+}
+
+.bbx-interface-browse-panel > .bbx-interface-card-desk {
+  border-radius: 0 0 12px 12px;
+}
+
+.bbx-interface-card-toolbar {
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid #d2ccc2;
+  background: #f5f2ec;
+}
+
+.bbx-interface-tabstrip > [role="none"] {
+  align-items: stretch;
+  gap: 3px;
+  padding: 6px 3px 0;
+}
+
+.bbx-interface-tab {
+  min-height: 34px;
+  border-radius: 6px 6px 0 0;
+  border-top: 1px solid var(--bbx-edge);
+  border-left: 1px solid var(--bbx-edge);
+  color: var(--bbx-ink);
+  background-color: color-mix(in srgb, var(--bbx-paper) 88%, #e8e3da);
+  border-right: 1px solid color-mix(in srgb, var(--bbx-edge) 75%, #cbc4b9);
+  border-bottom: 3px solid transparent;
+}
+
+.bbx-interface-tab[data-card-theme="paper"],
+.bbx-interface-tab[data-card-theme="post-it"] {
+  background-image: var(--bbx-interface-tab-grain);
+}
+
+.bbx-interface-tab[data-card-theme="paper"] {
+  --bbx-interface-tab-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.08'/%3E%3C/svg%3E");
+}
+
+.bbx-interface-tab[data-card-theme="post-it"] {
+  --bbx-interface-tab-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.05'/%3E%3C/svg%3E");
+}
+
+.bbx-interface-tab:hover {
+  background-color: color-mix(in srgb, var(--bbx-paper) 78%, white);
+}
+
+.bbx-interface-tab[data-active="true"] {
+  border-bottom-color: var(--bbx-pen);
+  background-color: var(--bbx-paper);
+}
+
+.bbx-interface-tab-action {
+  color: var(--bbx-ink-soft);
+}
+
+.bbx-interface-tab-action:hover {
+  color: var(--bbx-ink);
+  background: color-mix(in srgb, var(--bbx-ink) 10%, transparent);
+}
+
+.bbx-interface-tab-pin {
+  color: var(--bbx-pen);
+}
+
+@media (max-width: 640px) {
+  .bbx-interface-card-desk[data-card-content="card"],
+  .bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
+    padding: 12px;
+  }
+}
+
+@media print {
+  .bbx-interface-card-desk[data-card-content="card"],
+  .bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
+    padding: 0;
+    background: transparent;
+  }
+}
+
+/* A selected card's tab grows from the sheet's top edge. The desk surrounds
+   the whole tab-and-card assembly rather than cutting between its parts. */
+.bbx-companion-desk[data-active-card] {
+  --bbx-desk-gutter: 20px;
+  background: var(--bbx-desk-background, #e4e0d9);
+}
+.bbx-companion-desk[data-active-card] > .bbx-companion-tabs {
+  margin: var(--bbx-desk-gutter) var(--bbx-desk-gutter) 0;
+  background: transparent;
+  border-bottom: 0;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-card-desk[data-card-content="card"] {
+  padding-top: 0;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tabstrip > [role="none"] {
+  position: relative;
+  padding: 0;
+  /* Leave a sliver of breathing room after the final tab. Without it the
+     scroller clips the tab's outer edge exactly where the controls begin. */
+  padding-right: 2px;
+  background: transparent;
+  border-right: 0;
+  gap: 4px;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tabstrip > [role="none"]::before,
+.bbx-companion-desk[data-active-card] .bbx-interface-tabstrip > [role="none"]::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tabstrip > [role="none"]::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bbx-desk-background, #e4e0d9), transparent);
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tabstrip > [role="none"]::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bbx-desk-background, #e4e0d9), transparent);
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tabstrip > [role="none"][data-overflow-left]::before,
+.bbx-companion-desk[data-active-card] .bbx-interface-tabstrip > [role="none"][data-overflow-right]::after {
+  opacity: 0.9;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tabstrip > [role="none"] + [role="none"] {
+  margin-left: 4px;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tab {
+  margin-top: 4px;
+  border-bottom-width: 0;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"] {
+  margin-top: 0;
+  margin-bottom: -2px;
+  padding-top: 4px;
+  z-index: 2;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"] [role="tab"] {
+  font-weight: 600;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-card-desk > .bbx-card-surface {
+  position: relative;
+  z-index: 1;
+}
+.bbx-companion-desk[data-active-card]:has(.bbx-interface-tabstrip > [role="none"] > .bbx-interface-tab:first-child) .bbx-interface-card-desk[aria-hidden="false"] > .bbx-card-surface {
+  border-top-left-radius: 0;
+}
+@media (max-width: 640px) {
+  .bbx-companion-desk[data-active-card] { --bbx-desk-gutter: 12px; }
+}
+
+/* Paint the selected tab with the sheet's actual stock texture (the shared
+   ::before rules), rather than a separate approximation of that material. */
+.bbx-interface-tab[data-active="true"] {
+  position: relative;
+  isolation: isolate;
+  background-image: none;
+}
+.bbx-interface-tab[data-active="true"] > button {
+  position: relative;
+  z-index: 1;
+}
+/* Tab and sheet sample one material canvas: the sheet keeps its full
+   vignette, edge lighting, and raised shadow. Only the sampling origin differs. */
+.bbx-companion-desk[data-active-card] .bbx-interface-card-desk > .bbx-card-surface::after,
+.bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"]::after {
+  background-size: var(--bbx-material-width, 100%) var(--bbx-material-height, 100%);
+  background-repeat: no-repeat;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-card-desk > .bbx-card-surface::before,
+.bbx-companion-desk[data-active-card] .bbx-interface-card-desk > .bbx-card-surface::after {
+  background-position: 0 calc(-1 * var(--bbx-material-tab-height, 0px));
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"]::before,
+.bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"]::after {
+  background-position: calc(-1 * var(--bbx-material-tab-x, 0px)) 0;
+}
+/* Continue the bright rim around the outline, not across the tab joint.
+   Keep highlights on the surface: the vignette layer uses multiply blending. */
+.bbx-companion-desk[data-active-card] .bbx-interface-tab[data-active="true"][data-card-theme="paper"] {
+  box-shadow: inset 0 1px 0 #ffffff80;
+  outline: 1px solid var(--bbx-edge);
+  outline-offset: -1px;
+}
+.bbx-companion-desk[data-active-card] .bbx-interface-card-desk > .bbx-card-surface[data-card-theme="paper"] {
+  background-image: linear-gradient(to right,
+    #ffffff80 0px var(--bbx-material-tab-x, 0px),
+    transparent var(--bbx-material-tab-x, 0px) var(--bbx-material-tab-right, 0px),
+    #ffffff80 var(--bbx-material-tab-right, 0px) 100%);
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  box-shadow: 0 1px 1px #3c2d191a, 0 4px 10px #3c2d1924,
+    0 14px 28px #3c2d1924, inset 0 0 22px #785f3c12,
+    inset 1px 0 0 #ffffff80, inset -1px 0 0 #ffffff80, inset 0 -1px 0 #ffffff80;
+}

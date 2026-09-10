@@ -7,9 +7,7 @@
  */
 
 import { useCallback } from "react";
-import { useMobileChatViewport } from "./everywhere/use-mobile-card-navigation";
-import { CompanionViewPanel } from "./InteractiveChat-controls";
-import type { NavigateHint, ViewTarget } from "../../lib/view-url";
+import { WorkspaceCanvas } from "./workspace/WorkspaceCanvas";
 import { MessageList } from "./InteractiveChat-messages";
 import {
   ChatView, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
@@ -259,60 +257,18 @@ function ComposerRegion(props: ChatBodyProps) {
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
-  const { tabs, voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
-  const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onTogglePin, onClosePanel } = tabs;
-  const mobile = useMobileChatViewport();
-  const {
-    handleAddSelection,
-    nativeCommandError,
-    dismissNativeCommandError,
-  } = useCompanionSelection({ nativeComposer, selections, voice });
-  // Stable across a submit so the memoized companion pane doesn't re-render
-  // when the chat machine's snapshot churns (see CompanionViewPanel's memo).
-  const { reportCardActivity } = props;
-  const handleCompanionNavigate = useCallback(
-    (target: ViewTarget, hint?: NavigateHint) => {
-      // A link followed within the pane is active consumption; the detail is
-      // where they navigated to.
-      reportCardActivity("navigated", target.path);
-      onZoomView({ target, label: hint && hint.label ? hint.label : target.path });
-    },
-    [reportCardActivity, onZoomView],
-  );
-  const handleCompanionTargetUpdate = useCallback(
-    (target: ViewTarget, hint?: NavigateHint) => {
-      onZoomView({ target, label: hint?.label ?? target.path });
-    },
-    [onZoomView],
-  );
+  const { voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
+  const { handleAddSelection, nativeCommandError, dismissNativeCommandError } = useCompanionSelection({ nativeComposer, selections, voice });
   return (
     <ChatRenderProfiler id="chat-root">
       <ChatView
-      hasCompanion={!mobile && Boolean(activeView) && props.routeContent === undefined}
-      onOpenStoredCard={mobile && activeView && props.routeContent === undefined ? () => onZoomView(activeView) : undefined}
       transcriptVisible={props.transcriptVisible} routeContent={props.routeContent}
-      onShowConversation={props.onShowConversation}
-      onHideConversation={props.onHideConversation}
-      ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice}
-      failedRegion={props.failedRegion}
-      companionPanel={
-        activeView ? (
-          <CompanionViewPanel
-            tabs={panel.tabs}
-            activePath={activeView.target.path}
-            onSelectTab={onSelectTab}
-            onCloseTab={onCloseTab}
-            onTogglePin={onTogglePin}
-            onClosePanel={onClosePanel}
-            onNavigate={handleCompanionNavigate}
-            onUpdateTarget={handleCompanionTargetUpdate}
-            onAddSelection={handleAddSelection}
-            reportActivity={reportCardActivity}
-          />
-        ) : null
-      }
+      onShowConversation={props.onShowConversation} onHideConversation={props.onHideConversation}
+      ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice} failedRegion={props.failedRegion}
       barChrome={embedded ? null : <BarChromeRegion {...props} />}
-      messageList={<MessageListRegion key={props.conversationKey} {...props} />}
+      workspace={<WorkspaceCanvas routeContent={props.routeContent} onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
+        <MessageListRegion key={props.conversationKey} {...props} />
+      </WorkspaceCanvas>}
       statusBanners={
         <>
           <BackgroundTasks tasks={props.backgroundTasks} />

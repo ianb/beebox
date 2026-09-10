@@ -89,7 +89,7 @@ const SKELETON_DIRS = new Set([
   "_bookkeeping/archive/failed", "_bookkeeping/archive/processed",
   "_bookkeeping/connectors", "_bookkeeping/jobs", "_bookkeeping/output",
   "_bookkeeping/questions", "_bookkeeping/resources", "_bookkeeping/usage",
-  "_config", "_config/connectors", "_config/procedures", "_config/schedules",
+  "_config", "_config/connectors", "_config/interface", "_config/procedures", "_config/schedules",
   "_config/schemas", "_content", "_content/calendar", "_content/chat",
   "_content/drive", "_content/inbox", "_content/inbox/intake",
   "_content/inbox/staged", "_content/inbox/triaged",

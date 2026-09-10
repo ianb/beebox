@@ -8,6 +8,7 @@
  * "All history →" stays: it is a section affordance, not a page launcher.
  */
 
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { Link, useParams } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import { Card } from "../ui/Card";
@@ -22,7 +23,7 @@ export function OpsLinks() {
       <nav aria-label="Box tools" className="flex items-center gap-3">
         <Link
           id="bbx-dashboard-browse"
-          to={href(`/${boxSlug}/browse/_content`)}
+          to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.browse}`)}
           className="text-sm text-primary hover:text-primary-dark"
         >
           Browse &rarr;

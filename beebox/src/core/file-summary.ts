@@ -11,12 +11,15 @@
  */
 
 import type { CardSymbolData } from "../shared/card-symbol.js";
+import type { ThemeChoice } from "../shared/card-theme.js";
 
 export interface FileSummary<T = unknown> {
   /** Box-relative path to the file */
   path: string;
   /** Card type (from the filename); undefined for non-card files */
   type?: string;
+  /** Authored choice, normalized to plain when an explicit selection is invalid. */
+  cardTheme?: ThemeChoice;
   /** Always-present human-readable title. Loader computes; fallback is filename */
   title: string;
   /** The card's agent-written contains: sentence, when present. */

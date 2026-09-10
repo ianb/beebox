@@ -10,14 +10,18 @@ import { createRouter, createRoute, createRootRoute, redirect } from "@tanstack/
 import { z } from "zod";
 
 // --- Page imports ---
-import { DashboardPage } from "./pages/DashboardPage";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { href, toSearch } from "./lib/routing";
+import { parseViewUrl, viewStateSearchValue } from "./lib/view-url";
+import { legacyBrowseTarget } from "./lib/browse-card-state";
+import { systemCardShellSearch, withoutShellParams } from "./lib/system-card-navigation";
+import { trpcClient } from "./lib/trpc";
 import { ChatPage } from "./pages/ChatPage";
 import { QuestionsPage } from "./pages/QuestionsPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { CapturePage } from "./pages/capture/CapturePage";
-import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
-import { AppLayout, BoxRedirect, BrowsePageWrapper, RootLayout } from "./app-shell";
+import { AppLayout, BoxRedirect, RootLayout } from "./app-shell";
 import { RouteError } from "./components/RouteError";
 import { LoginPage } from "./pages/login/LoginPage";
 import { SetupPage } from "./pages/login/SetupPage";
@@ -99,7 +103,9 @@ const dashboardRoute = createRoute({
   staticData: { title: "Dashboard" },
   getParentRoute: () => boxLayoutRoute,
   path: "/dashboard",
-  component: DashboardPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect({ to: href(`/${params.boxSlug}/views/${SYSTEM_CARD_PATHS.dashboard}`), search: toSearch(systemCardShellSearch(location.search)), state: location.state, replace: true });
+  },
 });
 
 const inventoryRoute = createRoute({
@@ -144,7 +150,13 @@ const browseRoute = createRoute({
   staticData: { title: "Browse" },
   getParentRoute: () => boxLayoutRoute,
   path: "/browse/$",
-  component: BrowsePageWrapper,
+  beforeLoad: async ({ params, location }) => {
+    const target = await legacyBrowseTarget(withoutShellParams(parseViewUrl(`${params._splat ?? ""}${location.searchStr}`)),
+      async (path) => (await trpcClient.files.kind.query({ path })).kind);
+    throw redirect({ to: href(`/${params.boxSlug}/views/${target.path}`),
+      search: toSearch({ ...systemCardShellSearch(location.search), viewState: viewStateSearchValue(target.viewState) }),
+      state: location.state, replace: true });
+  },
 });
 
 const historySearchSchema = z.object({
@@ -183,7 +195,9 @@ const settingsRoute = createRoute({
   staticData: { title: "Settings" },
   getParentRoute: () => boxLayoutRoute,
   path: "/settings",
-  component: SettingsPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect({ to: href(`/${params.boxSlug}/views/${SYSTEM_CARD_PATHS.settings}`), search: toSearch(systemCardShellSearch(location.search)), state: location.state, replace: true });
+  },
 });
 
 const adminRoute = createRoute({

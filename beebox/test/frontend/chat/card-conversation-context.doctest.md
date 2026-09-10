@@ -5,7 +5,7 @@ restores the underlying card, without touching the conversational recipient.
 Text selections keep their source even after the user moves elsewhere.
 
 ```ts setup
-import { createCardContextStore } from "../../../src/frontend/src/components/chat/everywhere/card-context-store.js";
+import { createCardContextStore, visibleCardSelectionSink } from "../../../src/frontend/src/components/chat/everywhere/card-context-store.js";
 ```
 
 ```ts
@@ -41,4 +41,35 @@ Route fallback follows the same query parsing as the mounted ViewPage.
 const { routeCardAttentionRef } = await import("../../../src/frontend/src/components/chat/everywhere/route-attention.js");
 routeCardAttentionRef("notes.doc.card", "?view=raw")
 => /notes.doc.card?view=raw
+```
+
+## Browse detail selects text without claiming attention
+
+The enclosing Browse card supplies its visibility-scoped sink explicitly to
+its detail FileView. Detail focus stays suppressed, while FileView attaches the
+selected file's ref to its captured text. Hidden Browse supplies no receiver.
+
+```ts
+const browseContext = createCardContextStore();
+const browseOwner = {};
+browseContext.focus(browseOwner, "/_config/interface/browse.card");
+const selections: unknown[] = [];
+const unregister = browseContext.registerSelection((selection) => selections.push(selection));
+const visibleDetail = visibleCardSelectionSink(true, browseContext);
+visibleDetail?.({ ref: "/_content/recipes/Soup.recipe.card", text: "Two carrots", position: "paragraph 3" });
+browseContext.get()
+=> /_config/interface/browse.card
+
+JSON.stringify(selections)
+=> [{"ref":"/_content/recipes/Soup.recipe.card","text":"Two carrots","position":"paragraph 3"}]
+
+const hiddenDetail = visibleCardSelectionSink(false, browseContext);
+hiddenDetail?.({ ref: "/_content/recipes/Soup.recipe.card", text: "Hidden text", position: "paragraph 4" });
+selections.length
+=> 1
+
+hiddenDetail === undefined
+=> true
+
+unregister();
 ```
