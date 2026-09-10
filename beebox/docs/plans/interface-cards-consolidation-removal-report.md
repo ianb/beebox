@@ -34,7 +34,7 @@ acceptance remain separately tracked.
 | A: single-card entry | `e72487d1d..2eb9189e5` | 117 / 371 / **254** | 0 / 0 / 0 | 34 / 3 | 64 / 9 |
 | B: canonical seeds/cohorts | `2eb9189e5..bdb8798d9` | 0 / 0 / 0 | 208 / 45 / **−163** | 125 / 12 | 13 / 8 |
 | A follow-up: explicit chat reveal | `bdb8798d9..4ffacb515` | 92 / 19 / **−73** | 0 / 0 / 0 | 67 / 1 | 0 / 0 |
-| C: Questions/Landmarks | Pending | — | — | — | — |
+| C: Questions/Landmarks | `4ffacb515..b899d0b16` | 45 / 71 / **26** | 0 / 0 / 0 | 45 / 1 | 26 / 2 |
 | D: History | Pending | — | — | — | — |
 | E: Storage/Admin/utilities | Pending | — | — | — | — |
 | F: alternate presentation removal | Pending | — | — | — | — |
@@ -53,6 +53,10 @@ old-history read adapters are reported as retained, not hidden from the count.
 migration still seeds and validates only its original three cards. New enrollment
 requires all eight, preserving existing notes and protecting staged deletions.
 This stage grows production code by 163 lines; it is not UI removal.
+
+**C:** deleted QuestionsPage, LandmarksPage and the component-based ChatsPage
+redirect. The list bodies and authored view-card support remain. Existing
+navigation entrances now open the canonical cards; three files deleted.
 
 ## Verification and limits
 
@@ -80,3 +84,24 @@ cleared. An empty native transcript has no composer controls; their absence is
 not evidence that chat is hidden. Browser animation frames stopped advancing in
 this session, so the walkthrough used reduced-motion mode and reloaded after
 viewport changes; animation behavior is not verified by it.
+
+**C:** all 420 affected test files passed (5,571 assertions), alongside focused
+renderer/navigation checks and frontend typecheck/lint. Browser navigation from
+Questions to Landmarks and back retained the exact recipient, unsent composer
+draft, and unsent question note. No answer or chat message was submitted.
+
+**D:** all 421 affected test files passed (5,582 assertions), with frontend
+typecheck, focused lint, and state/renderer regressions passing. Three small UI
+follow-ups added scoped retry IDs, summary wrapping, and mobile error visibility;
+their typecheck/lint passed, and browser checks verified the resulting behavior.
+A deliberately held authored-card
+lookup left the recipient, workspace snapshot, and unsent draft unchanged. Once
+released, the normalized History target combined the saved workflow default
+with the session filter, without selecting that filter as a chat recipient.
+Reset restored the saved defaults; Back restored the prior filter. Commit A → B
+→ Back A reused the same mounted detail element. Canonical and authored History
+cards displayed together with no duplicate DOM IDs; changing one card's filter
+left the other's selected commit and state intact. At mobile width, a missing
+commit showed its error; an injected request failure showed a reachable Retry,
+which recovered after the injection was removed. Screenshots are retained for
+the final exhibit; these are browser checks, not native-device acceptance.

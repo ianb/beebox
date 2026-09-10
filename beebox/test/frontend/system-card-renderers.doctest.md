@@ -1,6 +1,6 @@
 # Canonical list renderers
 
-Questions and Landmarks have dedicated canonical renderers.
+Canonical interface cards have dedicated renderers.
 
 ```ts setup
 import "../../src/frontend/src/renderers/system-cards.js";
@@ -18,4 +18,7 @@ JSON.stringify(rendererNames("questions"))
 
 JSON.stringify(rendererNames("landmarks"))
 => ["Landmarks"]
+
+JSON.stringify(rendererNames("history"))
+=> ["History"]
 ```

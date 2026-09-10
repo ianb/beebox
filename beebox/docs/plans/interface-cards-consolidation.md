@@ -209,7 +209,9 @@ and can mutate the outer chat URL (§8, §3).
 Expose the full filter bar and commit detail within the card. Keep authored
 frontmatter as defaults, explicit link/query filters as input overrides, and
 interactive filter/commit changes as validated card viewState. State contains
-`filter` (the existing HistoryFilterState shape) and optional `commit` hash. A
+`filter` (the existing HistoryFilterState shape) and optional `commit` hash.
+An absent commit selects the newest item; explicit `null` returns to the timeline
+without immediately selecting it again, including after reload or Back. A
 missing state filter falls through to supplied defaults; an explicitly empty
 filter means no filtering. Reset clears overrides back to that card's defaults.
 Pass renderer-owned onViewStateChange to the body; never call the outer router
@@ -237,7 +239,11 @@ nativeComposer pass from these History inputs. An outer `/chat?session=...`
 continues to select a recipient; a session inside its serialized History `card`
 target is a filter. Inherited recipient comes from conversation/history state.
 Tests cover both meanings simultaneously, a cold legacy History link, and an
-authored history view-card link, with unrelated renderers unchanged.
+authored history view-card link, with unrelated renderers unchanged. Mounted
+conversation and workspace effects must wait for that route's identity lookup
+and redirect to settle before consuming its search. The browser regression holds
+the actual card lookup pending and checks that neither recipient selection nor
+workspace projection consumes the unclassified input.
 
 Remove HistoryPage and “Open in History.” Existing view: history cards forward
 state/callbacks through ViewCard instead of a separate URL-only adapter. Embed

@@ -265,7 +265,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
           <MenuItem id="bbx-box-menu-dashboard" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.dashboard}`)}>Dashboard</MenuItem>
           {/* A bare open resumes Browse; a new tab starts at the box root. */}
           <MenuItem id="bbx-box-menu-browse" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.browse}`)}>Browse</MenuItem>
-          <MenuItem id="bbx-box-menu-history" to={href(`/${boxSlug}/history`)}>History</MenuItem>
+          <MenuItem id="bbx-box-menu-history" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.history}`)}>History</MenuItem>
           <MenuItem id="bbx-box-menu-inventory" to={href(`/${boxSlug}/inventory`)}>Storage summary</MenuItem>
           {boxSwitchingAvailable ? (
             <>

@@ -2,7 +2,7 @@ import { workspaceRouteTarget, workspaceProjectionSearch } from "../../../lib/sy
 import { normalizeBrowseTarget } from "../../../lib/browse-card-state";
 import { decideWorkspaceNavigation, revealConversationActions, workspaceDisplayReady, workspaceHistoryTarget, workspaceOpenShouldReplace, workspaceRouteBound, shouldRestoreMobileWithBack, type WorkspaceHistoryEntry } from "./workspace-history";
 import { createContext, useContext, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, type ReactNode } from "react";
-import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
+import { useLocation, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { getApiBase } from "../../../api";
 import { href, toSearch } from "../../../lib/routing";
 import { parseViewUrl, serializeViewUrl, type ViewTarget, type NavigateHint } from "../../../lib/view-url";
@@ -41,6 +41,7 @@ export function WorkspaceProvider({ target, children }: { target: ConversationTa
 function useWorkspaceController(conversationTarget: ConversationTarget | undefined) {
   const { boxSlug = "", _splat } = useParams({ strict: false });
   const location = useLocation();
+  const routeReady = useRouterState({ select: state => !state.isLoading && state.resolvedLocation?.href === state.location.href });
   const navigate = useNavigate();
   const mobile = useMobileChatViewport();
   const viewport = mobile ? "mobile" : "desktop";
@@ -66,6 +67,7 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
 
   // Router writes are imperative; stable callback prevents a restore/write feedback loop.
   const projectHistory = useCallback((replace: boolean, options?: { returnRevision?: number; retainedTarget?: ViewTarget }) => {
+    if (!routeReady) return;
     const snapshot = store.get();
     const search = workspaceProjectionSearch({ pathname: location.pathname, search: location.search,
       target: workspaceHistoryTarget({ state: snapshot, viewport, retainedTarget: options?.retainedTarget }) });
@@ -74,9 +76,9 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
       ...(options?.returnRevision === undefined ? {} : { returnRevision: options.returnRevision, returnIndex: location.state.__TSR_index }) };
     void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch(search), replace,
       state: (old) => ({ ...old, bbxWorkspace: saved, bbxConversationOverlay: false, bbxWorkspaceRevealConversation: undefined }) });
-  }, [store, viewport, location.pathname, location.search, scope, navigate, boxSlug, location.state.__TSR_index]);
+  }, [routeReady, store, viewport, location.pathname, location.search, scope, navigate, boxSlug, location.state.__TSR_index]);
   useEffect(() => {
-    if (!routeBound || !participating) return;
+    if (!routeReady || !routeBound || !participating) return;
     const revealConversation = location.state.bbxWorkspaceRevealConversation === true;
     const routeStamp = `${identity}:${location.state.__TSR_index}:${location.pathname}:${location.searchStr}:${location.state.bbxWorkspace?.revision ?? ""}:${location.state.bbxConversationOverlay === true}:${revealConversation}`;
     if (observed.current === routeStamp) return;
@@ -114,14 +116,14 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
       revealStoredConversation({ store, incoming: target, viewport, openIncoming: false, enabled: revealConversation });
     }
     projectHistory(true, revealConversation ? { retainedTarget: incoming ?? undefined } : undefined);
-  }, [identity, routeBound, participating, location, _splat, scope, store, viewport, projectHistory, pendingAdoption]);
+  }, [routeReady, identity, routeBound, participating, location, _splat, scope, store, viewport, projectHistory, pendingAdoption]);
 
   useEffect(() => {
-    if (previousMobile.current === mobile) return;
+    if (!routeReady || previousMobile.current === mobile) return;
     previousMobile.current = mobile;
     store.dispatch({ type: "setViewport", viewport });
     if (participating && ready) projectHistory(true);
-  }, [mobile, viewport, store, participating, ready, projectHistory]);
+  }, [routeReady, mobile, viewport, store, participating, ready, projectHistory]);
 
   function dispatch(action: WorkspaceAction, replace?: boolean) {
     const returning = mobile && action.type === "showChat" ? location.state.bbxWorkspace?.revision : undefined;

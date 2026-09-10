@@ -30,7 +30,7 @@ export function OpsLinks() {
         </Link>
         <Link
           id="bbx-dashboard-history"
-          to={href(`/${boxSlug}/history`)}
+          to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.history}`)}
           className="text-sm text-primary hover:text-primary-dark"
         >
           History &rarr;

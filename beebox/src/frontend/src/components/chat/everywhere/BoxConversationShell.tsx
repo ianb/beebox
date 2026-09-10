@@ -3,7 +3,7 @@ import { WorkspaceProvider, useWorkspace } from "../workspace/WorkspaceProvider"
 import { canAcknowledgeAmbientReply } from "../ambient/projection";
 /** The single composer/runtime owner, kept mounted while the routed card changes. */
 import { useEffect, useRef, useState, useMemo, type ReactNode } from "react";
-import { useParams, useSearch, useNavigate } from "@tanstack/react-router";
+import { useParams, useSearch, useNavigate, useRouterState } from "@tanstack/react-router";
 import { InteractiveChat } from "../InteractiveChat";
 import { useEmissionStoreInstance } from "../input-store";
 import { isNativeShell, postNativeMessage } from "../native-post";
@@ -32,6 +32,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   const { storageScope } = conversation;
   const { boxSlug = "" } = useParams({ strict: false });
   const routeSearch = useSearch({ strict: false });
+  const routeReady = useRouterState({ select: state => !state.isLoading && state.resolvedLocation?.href === state.location.href });
   const search = shellSearch.parse(routeSearch);
   const route = useConversationRoute(conversation);
   const workspace = useWorkspace();
@@ -77,10 +78,10 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   }, [sessionId, sessionLabel]);
   useEffect(() => { writeTrackedSessions(storageScope, sessions); }, [storageScope, sessions]);
   useEffect(() => {
-    if (!workspace.ready && conversation.selection.kind === "ready") return;
+    if (!routeReady || (!workspace.ready && conversation.selection.kind === "ready")) return;
     const publication = { version: 1, kind: "selection", revision: ++publicationRevision.current, boxSlug, selection: conversation.selection, attention };
     postNativeMessage(window, { channel: "beeboxComposerBinding", payload: publication });
-  }, [boxSlug, conversation.selection, attention, workspace.ready]);
+  }, [routeReady, boxSlug, conversation.selection, attention, workspace.ready]);
   const handleRetry = conversation.retry;
   const handleAssignment: typeof conversation.assigned = (id, assignment) => { workspace.adopt(id); conversation.assigned(id, assignment); };
   const handleShowConversation = () => workspace.participating ? workspace.dispatch({ type: "showChat", pane: workspace.state.lastCardPane, viewport: workspace.mobile ? "mobile" : "desktop" }) : route.showConversation();

@@ -27,7 +27,8 @@ import { registerFileType, type RendererProps } from "./index";
  * bbx validate; each view re-parses defensively) overlaid per-key by URL
  * query params via the view's codec. Views never read the URL themselves.
  */
-const VIEW_COMPONENTS: Record<string, React.ComponentType<{ params?: ResolvedViewParams }>> = {
+type NamedViewRendererProps = Omit<RendererProps, "params"> & { params?: ResolvedViewParams; legacyParams?: Record<string, string> };
+const VIEW_COMPONENTS: Record<string, React.ComponentType<NamedViewRendererProps>> = {
   landmarks: LandmarksList,
   "chat-picker": ChatsPicker,
   questions: QuestionsList,
@@ -39,7 +40,8 @@ function readCardParams(frontmatter: Record<string, unknown> | undefined): Recor
   return isRecord(params) ? params : undefined;
 }
 
-function ViewCard({ data, params }: RendererProps) {
+function ViewCard(props: RendererProps) {
+  const { data, params } = props;
   const name = typeof data.frontmatter?.["view"] === "string" ? data.frontmatter["view"] : "";
   // An unrecognized `name` is the expected error path this component exists
   // to render (see file doc comment) — genuinely absent, not just a typing
@@ -62,7 +64,8 @@ function ViewCard({ data, params }: RendererProps) {
     query: params,
     codec: namedViewFor(name)?.query,
   });
-  return <Component params={resolved} />;
+  const { params: _queryParams, ...rendererProps } = props;
+  return <Component {...rendererProps} params={resolved} legacyParams={params} />;
 }
 
 registerFileType({ type: "view" }, {

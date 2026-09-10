@@ -1,7 +1,7 @@
 import { routeCardAttentionRef } from "./route-attention";
 /** Route navigation supplies attention; only explicit chat URLs select a recipient. */
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
+import { useLocation, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { useViewOverlay } from "../../ViewOverlay";
 import { z } from "zod";
 import { conversationSelectionSchema, type ConversationSelection, type AttentionSnapshot } from "@shared/chat-composer-binding";
@@ -19,6 +19,7 @@ declare module "@tanstack/history" {
 const chatSearch = z.object({ session: z.string().optional(), contextDir: z.string().optional(), engine: z.string().optional(), model: z.string().optional() });
 export function useConversationRoute(conversation: ConversationContextValue) {
   const location = useLocation();
+  const routeReady = useRouterState({ select: state => !state.isLoading && state.resolvedLocation?.href === state.location.href });
   const navigate = useNavigate();
   const viewOverlay = useViewOverlay();
   const { _splat } = useParams({ strict: false });
@@ -41,7 +42,7 @@ export function useConversationRoute(conversation: ConversationContextValue) {
         setRouteRevision((old) => old + 1);
       });
     }
-    if (previousUrl.current === routeKey) return;
+    if (!routeReady || previousUrl.current === routeKey) return;
     const first = previousUrl.current === null;
     previousUrl.current = routeKey;
     const entry = systemCardEntryContext(workspaceRouteTarget({ pathname: location.pathname, splat: _splat, searchStr: location.searchStr, search: location.search }));
@@ -52,11 +53,11 @@ export function useConversationRoute(conversation: ConversationContextValue) {
       cardPath: entry.cardPath,
       browseDir: location.pathname.includes("/browse/") ? (_splat ?? "") : entry.browseDir });
     if (request) choose(request);
-  }, [routeKey, chatPage, location.searchStr, location.search, location.state.bbxConversation, location.pathname, select, selection, _splat, conversation.rendered, conversation.restored]);
+  }, [routeReady, routeKey, chatPage, location.searchStr, location.search, location.state.bbxConversation, location.pathname, select, selection, _splat, conversation.rendered, conversation.restored]);
   // Every app history entry keeps the focus it inherited. Back can restore it;
   // a normal link into another landmark never derives a new focus from its path.
   useEffect(() => {
-    if (resolvingRoute.current || selection.kind !== "ready") return;
+    if (!routeReady || resolvingRoute.current || selection.kind !== "ready") return;
     const search = chatSearch.parse(location.search);
     const canonicalSession = chatPage && selection.target.kind === "session" && search.session !== selection.target.sessionId ? selection.target.sessionId : null;
     const consumeCapture = chatPage && "capture" in location.search;
@@ -66,7 +67,7 @@ export function useConversationRoute(conversation: ConversationContextValue) {
     if (consumeCapture) delete nextSearch.capture;
     void navigate({ to: href(location.pathname), search: toSearch(nextSearch), replace: true,
       state: (old) => ({ ...old, bbxConversation: selection }) });
-  }, [selection, location.state.bbxConversation, location.pathname, location.search, navigate, routeRevision, chatPage]);
+  }, [routeReady, selection, location.state.bbxConversation, location.pathname, location.search, navigate, routeRevision, chatPage]);
   function showConversation() {
     viewOverlay?.close();
     if (transcriptVisible) return;

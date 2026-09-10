@@ -9,6 +9,9 @@ import { Button } from "../ui/Button";
 import { Dropdown, type DropdownVertical } from "../ui/Dropdown";
 import { MenuItem } from "../ui/dropdown-menu-item";
 import { Text } from "../ui/Text";
+import { useViewNavigate } from "../../hooks/useViewNavigate";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { legacyHistoryState } from "../history/history-card-state";
 
 function MoreIcon() {
   return <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>;
@@ -23,6 +26,7 @@ export function CardActions({ target, onTrashed, vertical }: {
   const { boxSlug } = useParams({ strict: false });
   const search = useSearch({ strict: false });
   const navigate = useNavigate();
+  const openView = useViewNavigate();
   const instanceId = useId().replaceAll(":", "");
   const [confirming, setConfirming] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
@@ -85,7 +89,7 @@ export function CardActions({ target, onTrashed, vertical }: {
       >
         <MenuItem id={`bbx-card-open-chat-${instanceId}`} onClick={() => openChat("recent")}>Chat about this card</MenuItem>
         <MenuItem id={`bbx-card-open-chat-new-${instanceId}`} onClick={() => openChat("new")}>Start a new chat</MenuItem>
-        <MenuItem to={`${href(`/${boxSlug}/history`)}?path=${encodeURIComponent(path)}`}>View history</MenuItem>
+        <MenuItem onClick={() => openView({ path: SYSTEM_CARD_PATHS.history, viewer: null, params: {}, viewState: legacyHistoryState({ path }) }, { label: "History" })}>View history</MenuItem>
         <MenuItem danger onClick={() => setConfirming(true)}>Move to Trash…</MenuItem>
       </Dropdown>
       {chatError !== null ? <Text as="span" size="xs" tone="danger">{chatError}</Text> : null}

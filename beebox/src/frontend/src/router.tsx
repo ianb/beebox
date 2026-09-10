@@ -17,7 +17,6 @@ import { legacyBrowseTarget } from "./lib/browse-card-state";
 import { legacyCardRedirect, legacySystemCardRedirect, systemCardShellSearch, withoutShellParams } from "./lib/system-card-navigation";
 import { trpcClient } from "./lib/trpc";
 import { ChatPage } from "./pages/ChatPage";
-import { HistoryPage } from "./pages/HistoryPage";
 import { CapturePage } from "./pages/capture/CapturePage";
 import { AdminPage } from "./pages/AdminPage";
 import { AppLayout, BoxRedirect, RootLayout } from "./app-shell";
@@ -29,6 +28,7 @@ import { ComposerStatesPage } from "./pages/dev/ComposerStatesPage";
 import { CaptureModePage } from "./pages/dev/CaptureModeHarness";
 import { ChatScrollPage } from "./pages/dev/ChatScrollHarness";
 import { InventoryPage } from "./pages/inventory/InventoryPage";
+import { historyViewRedirectSearch, legacyHistoryState, normalizeHistoryViewRouteTarget } from "./components/history/history-card-state";
 
 // --- Root route ---
 
@@ -156,29 +156,22 @@ const browseRoute = createRoute({
   },
 });
 
-const historySearchSchema = z.object({
-  connector: z.array(z.string()).optional(),
-  workflow: z.array(z.string()).optional(),
-  touchpoint: z.boolean().optional(),
-  feedback: z.boolean().optional(),
-  session: z.string().optional(),
-  path: z.string().optional(),
-});
-
 const historyRoute = createRoute({
   staticData: { title: "History" },
   getParentRoute: () => boxLayoutRoute,
   path: "/history",
-  component: HistoryPage,
-  validateSearch: historySearchSchema,
+  beforeLoad: ({ params, location }) => {
+    throw redirect({ to: href(`/${params.boxSlug}/views/${SYSTEM_CARD_PATHS.history}`), search: toSearch({ nativeComposer: nativeComposerFrom(location.search), viewState: legacyHistoryState(location.search) }), state: location.state, replace: true });
+  },
 });
 
 const historyDetailRoute = createRoute({
   staticData: { title: "History" },
   getParentRoute: () => boxLayoutRoute,
   path: "/history/$hash",
-  component: HistoryPage,
-  validateSearch: historySearchSchema,
+  beforeLoad: ({ params, location }) => {
+    throw redirect({ to: href(`/${params.boxSlug}/views/${SYSTEM_CARD_PATHS.history}`), search: toSearch({ nativeComposer: nativeComposerFrom(location.search), viewState: legacyHistoryState(location.search, { commit: params.hash }) }), state: location.state, replace: true });
+  },
 });
 
 const captureRoute = createRoute({
@@ -227,6 +220,14 @@ const viewRoute = createRoute({
   staticData: { title: "Card" },
   getParentRoute: () => boxLayoutRoute,
   path: "/views/$",
+  beforeLoad: async ({ params, location }) => {
+    const target = parseViewUrl(`${params._splat ?? ""}${location.searchStr}`);
+    let normalized;
+    try { normalized = await normalizeHistoryViewRouteTarget(target, path => trpcClient.card.get.query({ path })); }
+    catch (_error) { return; }
+    if (normalized === null) return;
+    throw redirect({ to: href(`/${params.boxSlug}/views/${normalized.path}`), search: toSearch(historyViewRedirectSearch(normalized, location.search)), state: location.state, replace: true });
+  },
 });
 
 const landmarksRoute = createRoute({
@@ -362,4 +363,7 @@ declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
     title: string | null;
   }
+}
+function nativeComposerFrom(search: object): unknown {
+  return "nativeComposer" in search ? search.nativeComposer : undefined;
 }
