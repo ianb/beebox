@@ -614,3 +614,11 @@ wording is retained as acceptance criteria, not an unstarted implementation list
 Future relocation policy is a constraint on a future migration, not an absent
 implementation requirement of this bootstrap. General directory-card identity,
 route consolidation, and mobile pane redesign remain explicitly out of scope.
+
+Finish smoke caught obsolete test assumptions introduced by this conversion: the
+privacy scan omits controls inside rendered cards, Browse no longer uses a
+`/browse/<file>` URL, and the workspace's “Focus card” button matched the old
+global card-row search. The walk now scopes listing and detail snapshots, checks
+the canonical Browse target, and starts an explicit root draft before asserting
+a real recipient switch. All smoke steps passed locally, including a rendered
+file detail and no uncaught browser errors; no screenshot capture is implied.

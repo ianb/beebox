@@ -42,6 +42,7 @@
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
 import { invariant } from "../beebox/src/lib/invariant.js";
+import { isBrowseCardUrl } from "./smoke-browse.js";
 import { findCardRow } from "./smoke-card-open.js";
 import {
   BrowseListEmptyError,
@@ -157,7 +158,9 @@ function buildSteps(input: {
       await session.open("about:blank", { noWait: true });
       await session.setViewport(desktopViewport.width, desktopViewport.height);
 
-      await session.open(`${baseUrl}/chat`);
+      // A retained Browse tab may show Box while its recipient remains elsewhere.
+      // Start an explicit root draft so the landmark switch is a real destination change.
+      await session.open(`${baseUrl}/chat?session=new&contextDir=`);
       const snapshot = await session.snapshot({ interactiveOnly: true });
       if (!hasDomId(snapshot, "bbx-composer-input") || !hasDomId(snapshot, "bbx-nav-place")) {
         throw new ChatShellMissingError(snapshot);
@@ -240,7 +243,7 @@ function buildSteps(input: {
     run: async () => {
       await session.open(`${baseUrl}/browse`);
       const snapshot = await session.snapshot();
-      if (!hasDomId(snapshot, "bbx-browse-crumb-root") || directoryRowCount(snapshot) === 0) {
+      if (refFor(snapshot, { role: "region", name: "Browse" }) === null || directoryRowCount(snapshot) === 0) {
         throw new BrowseListEmptyError(snapshot);
       }
       const destinationFailure = selectedDestination === undefined
@@ -253,8 +256,7 @@ function buildSteps(input: {
     id: "card-open",
     name: "a card opens and renders",
     run: async () => {
-      const initial = await session.snapshot({ interactiveOnly: true });
-      const { listing, row } = await findCardRow(session, initial);
+      const { listing, row } = await findCardRow(session);
       const ref = refFor(listing, row);
       if (ref === null) {
         throw new CardRefUnresolvedError({ role: row.role, name: row.name, listing });
@@ -266,10 +268,12 @@ function buildSteps(input: {
       await session.clickRef(ref);
       const snapshot = await session.snapshot();
       const url = await session.getUrl();
-      if (!url.includes("/browse/") || !hasDomId(snapshot, "bbx-browse-open-card")) {
+      if (!isBrowseCardUrl(url) || refFor(snapshot, { role: "link", name: "Open full view →" }) === null) {
         throw new CardViewMissingError({ name: row.name, url, snapshot });
       }
-      if (!cardViewRendered(snapshot)) {
+      // Browse itself now has a card title; only the selected detail proves a file loaded.
+      const { stdout: detail } = await session.run(["snapshot", "-s", '[data-card-content="card"]:has(#bbx-browse-open-card)']);
+      if (!cardViewRendered(detail)) {
         throw new CardContentMissingError({ name: row.name, snapshot });
       }
       const destinationFailure = selectedDestination === undefined
