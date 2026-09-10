@@ -36,7 +36,7 @@ import type { TranscriptState } from "@core/chat/session/availability.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
 import { currentChatChannel } from "./lib/chat-channel";
 import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
-import { publishHqFailure } from "./lib/hq-failure";
+import { hqSucceeded, publishHqFailure } from "./lib/hq-failure";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -204,6 +204,7 @@ export async function postAudioForHqTranscription(blob: Blob, params: { sessionI
     const service = "service" in body && typeof body.service === "string" && /^[\da-z-]+$/.test(body.service)
       ? body.service
       : undefined;
+    hqSucceeded();
     return { text: body.text, diarized, ...(service ? { service } : {}) };
   } catch (e) {
     console.warn(`[hq-transcribe] request failed: ${e instanceof Error ? e.message : String(e)}`);

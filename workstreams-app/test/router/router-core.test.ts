@@ -44,6 +44,7 @@ test("a worktree's hub gets its own secret store; main keeps the real one", asyn
     const file = fastify?.options.env?.BBX_SECRETS_FILE;
     assert.ok(file !== undefined, "worktree hub is pointed at an isolated store");
     assert.match(file, /[/\\]secrets[/\\]wt\.json$/, "per-worktree file beside the browse dirs, not under them");
+    assert.equal(fastify?.options.env?.BBX_SECRETS_STORE_ISOLATED, "1", "the router asserts the worktree store is throwaway");
     assert.equal(isolatedSecretsFileFor("/tmp/state/browse", "main"), undefined, "main is the real deployment surface and keeps the default store");
   } finally {
     await h.cleanup();

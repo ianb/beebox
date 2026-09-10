@@ -44,6 +44,16 @@ export function clearHqFailure(): void {
   notify();
 }
 
+/**
+ * An HQ pass succeeded: whatever was wrong is fixed (the key was added, the
+ * service switched), so the notice goes and the codes are forgotten — a
+ * later recurrence is news again, not a repeat.
+ */
+export function hqSucceeded(): void {
+  seenCodes.clear();
+  clearHqFailure();
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

@@ -472,11 +472,16 @@ store-writing test can never mutate the developer's real
 ## Worktree boxes have their own store
 
 The dev router points every worktree's box at
-`~/.cache/beebox/secrets/<worktree>.json` (`BBX_SECRETS_FILE`; `main` keeps
-the default path). A test box therefore never reads or writes the boxholder's
-real keys, starts empty, and — because the store is isolated — its Secrets
-panel is reachable by agent browsing on a box that opts in as owner, so the
-add-a-key flow can be driven and verified rather than only read about.
+`~/.cache/beebox/secrets/<worktree>.json` (`BBX_SECRETS_FILE`, with
+`BBX_SECRETS_STORE_ISOLATED=1` asserting it is throwaway; `main` keeps the
+default path and never carries the assertion). A test box therefore never
+reads or writes the boxholder's real keys, starts empty, and — because the
+router asserted the store is isolated — its Secrets panel is reachable by
+agent browsing on a box that opts in as owner, so the add-a-key flow can be
+driven and verified rather than only read about. The override path alone
+does not open the panel: `main` inherits `BBX_SECRETS_FILE` from the shell
+or `.env` like any other variable, and an operator's override is still the
+real store.
 
 ## Adding a key from a box's own page
 

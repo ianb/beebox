@@ -141,7 +141,9 @@ key on a box that did *not* opt in — and keeps
 one test box's opt-in must not unlock it (`docs/plans/secret-custody.md`).
 *Amended 2026-09-10:* that exclusion now applies to the **shared** store only.
 The dev router gives every worktree's box its own store
-(`~/.cache/beebox/secrets/<worktree>.json`), and on an isolated store the
+(`~/.cache/beebox/secrets/<worktree>.json`) and asserts it is throwaway
+(`BBX_SECRETS_STORE_ISOLATED=1` — the override path alone does not count,
+since `main` inherits it), and on such a store the
 browse-owner reaches the Secrets panel like any other owner surface — there is
 nothing of the boxholder's there, and an owner surface an agent could never
 drive was a testing gap the boxholder called a bug.

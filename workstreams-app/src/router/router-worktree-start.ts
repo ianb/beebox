@@ -109,8 +109,12 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
     // its test keys are its own, its Secrets panel is drivable by an agent,
     // and a bug there cannot cost a real credential. `main` IS the real
     // deployment surface on this machine and keeps the default store.
-    ...(isolatedSecretsFile !== undefined && { BBX_SECRETS_FILE: isolatedSecretsFile }),
+    ...(isolatedSecretsFile !== undefined && { BBX_SECRETS_FILE: isolatedSecretsFile, BBX_SECRETS_STORE_ISOLATED: "1" }),
   };
+  // `main` may inherit an override path from the shell or `.env` — that is
+  // its operator's store to use, but never a throwaway one: the isolation
+  // assertion is the router's to make, and it makes it only for worktrees.
+  if (isolatedSecretsFile === undefined) delete childEnv.BBX_SECRETS_STORE_ISOLATED;
   const browseEnv: NodeJS.ProcessEnv = {
     ...process.env,
     AGENT_BROWSER_SOCKET_DIR: socketDir,

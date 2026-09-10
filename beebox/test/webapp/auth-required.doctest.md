@@ -183,19 +183,26 @@ ownerProcedure: 200
 authenticatedOwnerProcedure: 403 FORBIDDEN
 ```
 
-On an ISOLATED store — what every worktree box under the dev router runs on,
-and every doctest — there is nothing of the boxholder's to protect, and refusing
-browse there only made the Secrets panel the one owner surface an agent could
-never exercise. The same key, the same box, an override store: the panel opens.
+On an ISOLATED store — what every worktree box under the dev router runs on —
+there is nothing of the boxholder's to protect, and refusing browse there only
+made the Secrets panel the one owner surface an agent could never exercise.
+Isolation is asserted, not inferred: an override path alone (which `main`
+inherits from any shell or `.env`) still refuses; the router's
+`BBX_SECRETS_STORE_ISOLATED=1` beside a non-default path opens the panel.
 
 ```ts continue
 const isolatedStore = await mkdtemp(join(tmpdir(), "bbx-isolated-secrets-"));
 process.env.BBX_SECRETS_FILE = join(isolatedStore, "secrets.json");
+const overrideOnly = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
+process.env.BBX_SECRETS_STORE_ISOLATED = "1";
 const atIsolatedSecrets = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
+delete process.env.BBX_SECRETS_STORE_ISOLATED;
 if (PRIOR_STORE === undefined) delete process.env.BBX_SECRETS_FILE; else process.env.BBX_SECRETS_FILE = PRIOR_STORE;
-print(`authenticatedOwnerProcedure, isolated store: ${atIsolatedSecrets.statusCode}`);
+print(`authenticatedOwnerProcedure, override path only: ${overrideOnly.statusCode}`);
+print(`authenticatedOwnerProcedure, asserted isolated store: ${atIsolatedSecrets.statusCode}`);
 =>
-authenticatedOwnerProcedure, isolated store: 200
+authenticatedOwnerProcedure, override path only: 403
+authenticatedOwnerProcedure, asserted isolated store: 200
 ```
 
 On a box that never opted in, the key means what it always did: it clears the

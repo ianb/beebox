@@ -70,7 +70,11 @@ export function ConnectServiceSection({
         </Button>
       </Row>
       {target === null ? null : (
+        // Keyed by target: after one accepted save the form shows its result
+        // in place of the fields, and choosing another service must mount a
+        // fresh form rather than reuse that finished one.
         <SecretValueForm
+          key={target.key ?? "other"}
           fixedName={target.key}
           hints={hints}
           guides={guides}
