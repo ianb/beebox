@@ -117,3 +117,4 @@ beebox/docker/tailscale.env
 # records absolute home paths and the next `git add -A` trips path-leak-check.
 # The root is not a tap project, so this is litter wherever it appears.
 .tap/
+agentic-coding-presentation
