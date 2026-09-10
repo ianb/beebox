@@ -36,6 +36,7 @@ import type { TranscriptState } from "@core/chat/session/availability.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
 import { currentChatChannel } from "./lib/chat-channel";
 import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
+import { publishHqFailure } from "./lib/hq-failure";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -157,6 +158,26 @@ export interface HqTranscriptionResult {
   service?: string;
 }
 
+/**
+ * `transcribe-audio`'s failure body ({@link postAudioForHqTranscription})
+ * parsed just enough to tell a permanent failure from a transient one — never
+ * thrown, since an unparseable body is itself a transient-failure signal
+ * (stays a console warning, per the plan).
+ */
+function surfacePermanentHqFailure(bodyText: string): void {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch (_e) {
+    return;
+  }
+  if (parsed === null || typeof parsed !== "object") return;
+  if (!("permanent" in parsed) || parsed.permanent !== true) return;
+  if (!("error" in parsed) || typeof parsed.error !== "string") return;
+  const code = "code" in parsed && typeof parsed.code === "string" ? parsed.code : "unknown";
+  publishHqFailure({ code, message: parsed.error });
+}
+
 export async function postAudioForHqTranscription(blob: Blob, params: { sessionId: string | null }): Promise<HqTranscriptionResult | null> {
   const form = new FormData();
   const ext = blob.type.includes("wav") ? "wav" : "webm";
@@ -169,7 +190,9 @@ export async function postAudioForHqTranscription(blob: Blob, params: { sessionI
       body: form,
     });
     if (!res.ok) {
-      console.warn(`[hq-transcribe] HTTP ${res.status}: ${await res.text()}`);
+      const bodyText = await res.text();
+      console.warn(`[hq-transcribe] HTTP ${res.status}: ${bodyText}`);
+      surfacePermanentHqFailure(bodyText);
       return null;
     }
     const body: unknown = await res.json();

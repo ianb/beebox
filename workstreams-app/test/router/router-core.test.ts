@@ -17,6 +17,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { FakeChildExitError, makeHarness, startReady, ticks } from "./router-core-harness.js";
 import { readyLifecycle } from "../../src/router/router-lifecycle.js";
+import { isolatedSecretsFileFor } from "../../src/router/router-worktree-teardown.js";
 
 // --- group 2: TOCTOU dedupe (invariant #2) ------------------------------------
 
@@ -30,6 +31,20 @@ test("dedupe: two concurrent ensureRunning(name) share ONE start and one handle"
     assert.equal(h.spawner.lifecycleCalls().length, 2, "one lifecycle pair, not two");
     const fastify = h.spawner.lifecycleCalls()[0];
     assert.equal(fastify?.options.env?.BBX_DEV_SURFACES, "1", "hub backend explicitly enables dev surfaces");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("a worktree's hub gets its own secret store; main keeps the real one", async () => {
+  const h = await makeHarness();
+  try {
+    await startReady(h, "wt");
+    const fastify = h.spawner.lifecycleCalls()[0];
+    const file = fastify?.options.env?.BBX_SECRETS_FILE;
+    assert.ok(file !== undefined, "worktree hub is pointed at an isolated store");
+    assert.match(file, /[/\\]secrets[/\\]wt\.json$/, "per-worktree file beside the browse dirs, not under them");
+    assert.equal(isolatedSecretsFileFor("/tmp/state/browse", "main"), undefined, "main is the real deployment surface and keeps the default store");
   } finally {
     await h.cleanup();
   }

@@ -102,6 +102,16 @@ export interface SecretUses {
   observed: string[];
 }
 
+/**
+ * Every name the engine has a built-in reason for — the closed list the guide
+ * registry must cover, and the one the add form offers. Family prefixes
+ * (`telegram-bot/`) are included; callers that want typeable names filter on
+ * the trailing slash.
+ */
+export function builtinSecretNames(): string[] {
+  return Object.keys(builtinUses);
+}
+
 /** The built-in reasons for a name, or an empty list. */
 export function builtinSecretUses(name: string): string[] {
   return lookupByName(builtinUses, name)?.entry ?? [];

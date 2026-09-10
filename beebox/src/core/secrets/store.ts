@@ -97,6 +97,20 @@ export function secretsFilePath(): string {
   return path.join(os.homedir(), ".config", "beebox", "secrets.json");
 }
 
+/**
+ * Whether this process reads a store that is NOT the machine's shared one.
+ * The dev router points every worktree's box at its own file
+ * (`~/.cache/beebox/secrets/<worktree>.json`), and doctests at a tmp path;
+ * only the default location holds the boxholder's real keys. The one thing
+ * this decides is whether agent browsing may act as the owner on the Secrets
+ * panel (`server-box-scope.ts`) — a test box on its own store can, a box on
+ * the real store cannot.
+ */
+export function secretsStoreIsIsolated(): boolean {
+  const override = process.env.BBX_SECRETS_FILE;
+  return override !== undefined && override !== "";
+}
+
 /** The access log's directory: a `secrets-log/` sibling of the store file. */
 export function secretsLogDir(): string {
   const file = secretsFilePath();

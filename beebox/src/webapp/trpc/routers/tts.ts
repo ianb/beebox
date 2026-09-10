@@ -12,6 +12,7 @@ import { z } from "zod";
 import { router, ownerProcedure, publicProcedure } from "../trpc.js";
 import { loadTtsConfig, updateTtsConfig } from "../../../core/tts/config.js";
 import { TTS_BACKENDS } from "../../../shared/tts-backends.js";
+import { serviceCapabilities, unusableWarning } from "../../../core/model-capabilities.js";
 
 // Derived, never re-typed — a hand-copied list is how the transcription
 // vocabulary drifted out of sync with the engine.
@@ -23,10 +24,12 @@ export const ttsRouter = router({
     return { backend: cfg.backend };
   }),
 
+  /** Saved even when unusable now (a key may be granted later), but warned — see `transcription.setHqService`. */
   setBackend: ownerProcedure
     .input(z.object({ backend: backendSchema }))
     .mutation(async ({ ctx, input }) => {
       const cfg = await updateTtsConfig(ctx.boxRoot, { backend: input.backend });
-      return { backend: cfg.backend };
+      const capability = (await serviceCapabilities(ctx.boxRoot)).tts[input.backend];
+      return { backend: cfg.backend, warning: unusableWarning(input.backend, capability) };
     }),
 });

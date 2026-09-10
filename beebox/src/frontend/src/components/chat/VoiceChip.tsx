@@ -25,6 +25,12 @@ import {
   type TranscriptionServiceOption, type HqTranscriptionOption, type TtsBackendOption,
 } from "./VoiceChip-panels";
 import { HqPreferenceRow, type HqDefaultsState } from "./HqPreferenceRow";
+import { CloseButton } from "../ui/CloseButton";
+import { Row } from "../ui/Row";
+import { Stack } from "../ui/Stack";
+import { Text } from "../ui/Text";
+import { TextLink } from "../ui/TextLink";
+import { clearHqFailure, useHqFailure, type HqFailure } from "../../lib/hq-failure";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
@@ -101,8 +107,31 @@ export function VoiceChipFace({ muted, narrationEnabled, hqInFlight }: VoiceChip
   );
 }
 
+/**
+ * A permanent HQ transcription failure (Track 6,
+ * `docs/plans/secret-entry-guidance.md`): the server's own message, a link to
+ * where the missing credential is fixed, and a dismiss. Rendered in the root
+ * panel so opening the voice menu is enough to see it — the realtime
+ * fallback means the chat otherwise looks fine.
+ */
+function HqFailureNotice({ failure, onDismiss }: { failure: HqFailure; onDismiss: () => void }) {
+  return (
+    <div role="alert" className="px-3 py-2">
+      <Stack gap="xs">
+        <Row gap="sm" align="start" justify="between">
+          <Text size="sm" tone="danger">{failure.message}</Text>
+          <CloseButton size="sm" label="Dismiss" onClick={onDismiss} />
+        </Row>
+        <TextLink to="/admin" tone="subtle">Admin → Secrets</TextLink>
+      </Stack>
+    </div>
+  );
+}
+
 interface VoiceChipBodyProps {
   panel: VoiceChipPanel;
+  hqFailure: HqFailure | null;
+  onDismissHqFailure: () => void;
   muted: boolean;
   onToggleMute: () => void;
   narrationEnabled: boolean;
@@ -132,11 +161,18 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
     hqDictationEnabled, onToggleHqDictation, hqDefaults, onOpenVoice,
     onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService, currentTtsBackend, onSelectTtsBackend,
+    hqFailure, onDismissHqFailure,
   } = props;
   switch (panel) {
     case "root":
       return (
         <>
+          {hqFailure === null ? null : (
+            <>
+              <HqFailureNotice failure={hqFailure} onDismiss={onDismissHqFailure} />
+              <MenuDivider />
+            </>
+          )}
           <MenuItem id="bbx-voice-mute" onClick={onToggleMute} icon={<SpeakerIcon muted={muted} />}>
             {muted ? "✓ " : ""}Mute
           </MenuItem>
@@ -288,6 +324,7 @@ export const VoiceChip = memo(function VoiceChip({
 
   const [panel, setPanel] = useState<VoiceChipPanel>("root");
   const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight });
+  const hqFailure = useHqFailure();
 
   return (
     <Dropdown
@@ -330,6 +367,8 @@ export const VoiceChip = memo(function VoiceChip({
         onSelectHqTranscriptionService={onSelectHqTranscriptionService}
         currentTtsBackend={currentTtsBackend}
         onSelectTtsBackend={onSelectTtsBackend}
+        hqFailure={hqFailure}
+        onDismissHqFailure={clearHqFailure}
       />
     </Dropdown>
   );

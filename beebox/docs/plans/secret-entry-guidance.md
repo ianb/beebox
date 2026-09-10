@@ -1,6 +1,6 @@
 ---
 title: "Secret entry that explains itself: guided names, grant on add, and a paste that activates"
-status: draft
+status: partial
 workstream: openrouter-services
 issues:
   - ../../../issues/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md
@@ -469,6 +469,28 @@ agent-facing secrets surface (`bbx secrets declare/describe`, the
 6. Drive the whole path on test1 — with an owner login, see above: add an
    OpenRouter key from a fresh state, confirm the box uses it, confirm the HQ
    picker now offers `mai-diarized` enabled. Exhibit.
+
+## Progress
+
+**Backend of every track is built and green** (2026-09-10; 69 doctests across
+eight files, typecheck and lint clean):
+
+- Track 4 — `openrouter` format entry.
+- Track 2 — `core/secrets/guide-registry.ts` (all 12 names), `secrets.guides`
+  joining `uses.ts` server-side, and the completeness doctest.
+- Track 1 — `setAndGrantSecret` carries `uses`/`formatHint`; `setValue` takes
+  `grant` and returns `granted` from the committed write; the name schema now
+  trims (a pasted `" openrouter "` was silently a secret nothing reads).
+- Track 3 — `shared/secret-name-suggest.ts`. The cross-model-derived cases
+  `openrouter.ai` / `openrouter-key` needed a short decoration list stripped
+  once from the end; still normalise-then-compare, still never edit distance.
+- Track 5 — `core/model-capabilities.ts` (truth table mirrors the dispatchers,
+  verified by inspection), `voice.capabilities` (`ownerProcedure`), and a
+  `warning` on `setHqService` / `setBackend` when the choice is unusable now.
+- Track 6 — `/api/chat/transcribe-audio` returns `{ error, code, permanent }`.
+
+**Not yet:** the frontend for Tracks 1, 3 and 6 (in progress), the driven
+walkthrough (needs an owner login — see What will hold this), and the exhibit.
 
 ## Rollout shape
 

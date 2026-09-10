@@ -6,29 +6,36 @@
  * on) and offers the machine-wide table behind a toggle, since the store is one
  * file per machine but an admin page belongs to one box.
  *
- * Nothing here can read a value back. Adding a secret and granting it are
- * separate acts: a value saved here exists machine-wide and is available to no
- * box until granted.
+ * The "This box" tab leads with "Connect a service" — paste a key and it is
+ * this box's in the same submit — per the boxholder's framing (2026-09-10):
+ * granting is the advanced, multi-box case, not the primary one
+ * (`docs/plans/secret-entry-guidance.md`, Track 1). Granting a name another
+ * box already holds is a disclosure at the bottom.
+ *
+ * Nothing here can read a value back. A value saved through "Connect a
+ * service" is granted to this box in the same write; a value saved from the
+ * Machine-wide tab is not granted to any box.
  */
 
 import { useState } from "react";
 import { trpc } from "../../lib/trpc";
-import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { Button } from "../ui/Button";
 import { BoxSecretsView } from "./SecretsSection-box";
-import { GrantExistingForm, SecretValueForm } from "./SecretsSection-forms";
+import { ConnectServiceSection } from "./SecretsSection-connect";
+import { GrantExistingForm, grantableSecrets } from "./SecretsSection-grant";
 import { MachineSecretsView } from "./SecretsSection-machine";
 
 export function SecretsSection() {
   const [machineWide, setMachineWide] = useState(false);
-  const [adding, setAdding] = useState(false);
   const utils = trpc.useUtils();
   const status = trpc.secrets.boxStatus.useQuery();
   const machine = trpc.secrets.machineView.useQuery();
   const hints = trpc.secrets.formatHints.useQuery();
+  const guides = trpc.secrets.guides.useQuery();
 
   const refresh = () => {
     void utils.secrets.boxStatus.invalidate();
@@ -42,6 +49,9 @@ export function SecretsSection() {
       </Card>
     );
   }
+
+  const grantedNames = status.data?.granted.map((secret) => secret.name) ?? [];
+  const grantable = machine.data ? grantableSecrets(machine.data, grantedNames) : [];
 
   return (
     <Card as="section" aria-labelledby="secrets-heading" shadow>
@@ -63,30 +73,23 @@ export function SecretsSection() {
 
         {machineWide ? (
           machine.data ? <MachineSecretsView machine={machine.data} refresh={refresh} /> : null
-        ) : status.data ? (
-          <BoxSecretsView status={status.data} hints={hints.data} refresh={refresh} />
-        ) : null}
-
-        {machineWide ? null : (
-          <Stack gap="sm">
-            {machine.data && status.data ? (
-              <GrantExistingForm
-                machine={machine.data}
-                grantedNames={status.data.granted.map((secret) => secret.name)}
-                onGranted={refresh}
-              />
-            ) : null}
-            <Row gap="sm" wrap>
-              <Button id="bbx-admin-secrets-add-toggle" intent="secondary" onClick={() => setAdding(!adding)}>
-                {adding ? "Close" : "Add a new secret"}
-              </Button>
-            </Row>
-            {adding ? (
-              // The form stays open after a save: it is where the verification
-              // verdict ("the provider rejected this credential") is shown, and
-              // closing it on success would hide exactly the answer the
-              // boxholder was waiting for.
-              <SecretValueForm fixedName={null} hints={hints.data} onSaved={refresh} />
+        ) : (
+          <Stack gap="md">
+            <ConnectServiceSection
+              guides={guides.data}
+              grantedNames={grantedNames}
+              boxSlug={status.data?.slug ?? ""}
+              hints={hints.data}
+              onSaved={refresh}
+            />
+            {status.data ? <BoxSecretsView status={status.data} hints={hints.data} refresh={refresh} /> : null}
+            {machine.data && grantable.length > 0 ? (
+              <details id="bbx-admin-secrets-advanced">
+                <summary><Text as="span" size="sm" weight="medium">Use a key another box already has</Text></summary>
+                <div className="pt-3">
+                  <GrantExistingForm machine={machine.data} grantedNames={grantedNames} onGranted={refresh} />
+                </div>
+              </details>
             ) : null}
           </Stack>
         )}
