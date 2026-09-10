@@ -17,7 +17,7 @@ export function WorkspaceControls({ pane }: { pane: PaneId }) {
           <Button id={`bbx-pane-${pane}-move`} intent="ghost" size="sm" label={`Move ${pane === "left" ? "right" : "left"}`} icon={<ControlIcon path={pane === "left" ? "M4 12h16m-6-6 6 6-6 6" : "M20 12H4m6-6-6 6 6 6"} />} onClick={() => dispatch({ type: "moveActive", pane })} />
           <Button id={`bbx-pane-${pane}-focus`} intent="ghost" size="sm" label="Focus card" icon={<ControlIcon path="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />} onClick={() => dispatch({ type: "focusPane", pane })} />
         </> : null}
-        <Button id={`bbx-pane-${pane}-chat`} intent="ghost" size="sm" label="Show conversation" icon={<ControlIcon path="M4 4h16v12H9l-5 4z" />} onClick={() => dispatch({ type: "showChat", pane, viewport })} />
+        <Button id={`bbx-pane-${pane}-chat`} intent="ghost" size="sm" label="Minimize cards" icon={<ControlIcon path="M5 12h14" />} onClick={() => dispatch({ type: "showChat", pane, viewport })} />
       </>}
   </div>;
 }
@@ -25,5 +25,5 @@ export function RestoreCardsControl() {
   const workspace = useWorkspace();
   if (!workspace?.projection.restorePane) return null;
   const pane = workspace.projection.restorePane;
-  return <Button id="bbx-workspace-show-cards" intent="secondary" shape="circle" size="sm" label={`Show cards (${workspace.state.panes[pane].paths.length})`} icon={<ControlIcon path="M7 3h13v15H7zM4 7H2v15h13v-2" />} onClick={() => workspace.restoreCards(pane)} />;
+  return <Button id="bbx-workspace-show-cards" intent="secondary" shape="circle" size="sm" label={`Restore cards (${workspace.state.panes[pane].paths.length})`} icon={<ControlIcon path="M7 3h13v15H7zM4 7H2v15h13v-2" />} onClick={() => workspace.restoreCards(pane)} />;
 }

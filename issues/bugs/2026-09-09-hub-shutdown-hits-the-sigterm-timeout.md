@@ -2,7 +2,7 @@
 title: "The hub never exits on SIGTERM — every deploy takes the full 60s stop timeout and ends in SIGKILL"
 workstream: unattached
 area: beebox
-priority: normal
+priority: important
 labels: [deploy, hub, lifecycle]
 filed-by: agent
 discovered-in: main session — found in the journal while explaining a 502 during a deploy
@@ -38,3 +38,16 @@ and any running agent session dies uncleanly rather than being drained.
   new turns and finishing in-flight ones within the stop timeout.
 - **Whether the restart can be made overlapping** so there's no 502 window at
   all — a bigger change, and worth deciding only after the hang is fixed.
+
+
+## Second occurrence, 2026-09-10
+
+Same shape, one day later: SIGTERM 16:26:05, still alive at the 60s stop
+timeout, SIGKILL of the control group at 16:27:05 — this time taking two
+`claude` processes and an `esbuild` with it. The visible consequence was the
+app bar's place-switch menu failing for the boxholder mid-session.
+
+Raised to `important`: two user-visible failures in two days, plus agent
+sessions killed mid-turn on every deploy. The frontend retry work in
+[deploy-restart 502s](2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md)
+hides the symptom; it does not stop the outage or the killed children.

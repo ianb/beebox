@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useSyncExternalStore, type ReactNode } from "react";
-import { createCardContextStore } from "./card-context-store";
+import { createCardContextStore, visibleCardSelectionSink } from "./card-context-store";
 import { serializeViewUrl, type ViewState } from "../../../lib/view-url";
 import type { AddSelectionInput } from "../../../lib/selection/position";
 
 const CardVisibility = createContext(true);
+export function useCardVisible(): boolean { return useContext(CardVisibility); }
 export function CardVisibilityProvider({ visible, children }: { visible: boolean; children: ReactNode }) {
   return <CardVisibility.Provider value={visible}>{children}</CardVisibility.Provider>;
 }
@@ -22,6 +23,12 @@ export function useFocusedConversationCard(): string | null {
 export function useConversationSelectionSink(sink: (selection: AddSelectionInput) => void): void {
   const store = useContext(CardContext);
   useEffect(() => store?.registerSelection(sink), [store, sink]);
+}
+/** Read the enclosing card's selection sink without claiming its attention. */
+export function useVisibleCardSelectionSink() {
+  const visible = useCardVisible();
+  const store = useContext(CardContext);
+  return visibleCardSelectionSink(visible, store);
 }
 /** Embedded/inline cards do not claim attention merely by being rendered. */
 export function useConversationCard({ path, mode, rendererName, params, viewState }: { path: string; mode: string; rendererName?: string | null; params?: Record<string, string>; viewState?: ViewState | null }) {

@@ -259,3 +259,19 @@ Generated and managed by beebox itself; not hand-edited. Most contents are gitig
 - `bbx status` summarises the current pipeline contents.
 - `bbx validate` validates every card against its schema.
 - `git status` shows uncommitted state — useful when something feels off after a partial wakeup.
+
+## Canonical interface cards
+
+`_config/interface/dashboard.card`, `_config/interface/settings.card`, and
+`_config/interface/browse.card` are the required interface anchors. Their bare
+filenames infer their types. Frontmatter title and markdown notes are editable;
+live instrument state is not stored in the cards. Browse keeps its directory
+and selected detail in view state.
+
+Fresh initialization seeds these files before recording migrations. Existing
+boxes run `canonical-interface-cards`; it creates only missing cards and refuses
+conflicting content or extra instances. After completion, full validation checks
+the working tree and commit validation checks the Git index. Before completion,
+missing anchors are allowed, but a commit cannot remove an anchor already in
+HEAD. Restore accidental removals from Git; administrative migration enrollment
+requires the complete valid set and never creates files.

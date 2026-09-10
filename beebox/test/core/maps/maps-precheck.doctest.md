@@ -13,12 +13,12 @@ import { join } from "node:path";
 import { DEFAULT_IGNORE_PATTERNS, SKELETON_HIDDEN_PATHS } from "../../../src/core/maps/precheck-ignore.js";
 
 /**
- * A fresh shapeVersion-3 box already has `_bookkeeping/`, `_content/`, and
+ * A fresh shapeVersion-3 box already has `_bookkeeping/`, `_config/`, `_content/`, and
  * `src/` scaffolded with enough visible (non-skeleton-hidden) children —
  * `_bookkeeping/usage`, `_bookkeeping/connectors`, `_content/recipes`,
  * `_content/todos`, etc. — to qualify for their own MAP.md under the
  * container + useful-content rules. None of these tests are about that
- * always-present baseline, so this seeds and records MAP.md for all three
+ * always-present baseline, so this seeds and records MAP.md for all four
  * up front — they never change afterward (tests only write into their own
  * custom top-level dirs), so recording them once at the seed commit keeps
  * them permanently quiet (the diff, not an exact HEAD match, decides
@@ -27,13 +27,14 @@ import { DEFAULT_IGNORE_PATTERNS, SKELETON_HIDDEN_PATHS } from "../../../src/cor
  * replaces the whole file, it doesn't merge).
  */
 async function seedSkeletonMaps(box) {
-  for (const dir of ["_bookkeeping", "_content", "src"]) {
+  for (const dir of ["_bookkeeping", "_config", "_content", "src"]) {
     await box.write(`${dir}/MAP.md`, "");
   }
   box.commitAll("seed skeleton maps");
   const head = await getHead(box.root);
   const entries = {
     "_bookkeeping": { asOf: head, generatedAt: "t" },
+    "_config": { asOf: head, generatedAt: "t" },
     "_content": { asOf: head, generatedAt: "t" },
     "src": { asOf: head, generatedAt: "t" },
   };
@@ -406,7 +407,7 @@ print(`store: ${children("store")}`);
 print(`_config: ${children("_config")}`);
 =>
 store: notes/, refs/
-_config: a/, b/, migrations.jsonl, template-versions.json, transcription.json
+_config: a/, b/, interface/, migrations.jsonl, template-versions.json, transcription.json
 ```
 
 The git-side listing agrees. This half has to be set up so the mirror appears

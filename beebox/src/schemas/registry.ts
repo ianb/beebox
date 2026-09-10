@@ -16,6 +16,9 @@ import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
 import { type CardSchema } from "../cards/index.js";
 import { setSchemaLoadFailures, type SchemaLoadFailure } from "./schema-load-status.js";
+import { DashboardSchema } from "./dashboard.js";
+import { SettingsSchema } from "./settings.js";
+import { BrowseSchema } from "./browse.js";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { FeedbackSchema } from "./feedback.js";
@@ -78,6 +81,9 @@ import { registerBoxTemplate, unregisterBoxTemplates, type TemplateDefinition } 
  * the everyday, most-reached-for types come first.
  */
 export const cardSchemas: CardSchema[] = [
+  DashboardSchema,
+  SettingsSchema,
+  BrowseSchema,
   // authored — everyday recording types first
   DocSchema,
   RecordSchema,

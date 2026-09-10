@@ -7,8 +7,7 @@ page, because these are claims about the code:
 - every `data-bbx-reveal` sits on an element that also presents disclosure
   semantics (`aria-expanded` / `aria-haspopup` / `role="tab"`);
 - every id in the plan's Track 4 table exists in the source exactly once;
-- every `bbx-` id is kebab-case, and no `bbx-` id exists that the table doesn't
-  name.
+- every literal `bbx-` id is kebab-case and authored only once.
 
 Document-level id *uniqueness* is axe's job in `bin/tour --all`
 (`duplicate-id`, `duplicate-id-active`, `duplicate-id-aria`) — this file checks
@@ -18,6 +17,7 @@ component rendered twice on one page is invisible here and obvious there.
 ```ts setup
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import ts from "typescript";
 import { PACKAGE_ROOT } from "../../../../src/lib/package-root.js";
 
 const FRONTEND_SRC = join(PACKAGE_ROOT, "src/frontend/src");
@@ -55,12 +55,33 @@ function planWebIds(plan: string): string[] {
 
 const TABLE_IDS = planWebIds(await readFile(PLAN, "utf8"));
 
-function countInSource(id: string): number {
-  return SOURCES.reduce((n, f) => n + f.text.split(`id="${id}"`).length - 1, 0);
+/** Literal IDs, including the alternatives in a conditional JSX attribute. */
+function sourceIds(file: SourceFile): string[] {
+  const source = ts.createSourceFile(file.path, file.text, ts.ScriptTarget.Latest, true,
+    file.path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const ids: string[] = [];
+  function collect(node: ts.Node): void {
+    if (ts.isStringLiteral(node) && node.text.startsWith("bbx-")) ids.push(node.text);
+    ts.forEachChild(node, collect);
+  }
+  function visit(node: ts.Node): void {
+    if (ts.isJsxAttribute(node) && node.name.getText(source) === "id" && node.initializer) {
+      collect(node.initializer);
+    } else {
+      ts.forEachChild(node, visit);
+    }
+  }
+  visit(source);
+  return ids;
 }
 
-/** Every distinct `bbx-` id literal the frontend source carries. */
-const SOURCE_IDS = [...new Set(SOURCES.flatMap((f) => [...f.text.matchAll(/id="(bbx-[^"]*)"/g)].map((m) => m[1])))];
+const ALL_SOURCE_IDS = SOURCES.flatMap(sourceIds);
+function countInSource(id: string): number {
+  return ALL_SOURCE_IDS.filter((candidate) => candidate === id).length;
+}
+
+/** Dynamic path-based template IDs remain the rendered-page check's job. */
+const SOURCE_IDS = [...new Set(ALL_SOURCE_IDS)];
 
 /**
  * The text of every JSX opening tag in a file, innermost tags included.
@@ -180,7 +201,6 @@ bbx-composer-capture
 bbx-chat-stop-agent
 bbx-chat-stop-speech
 bbx-panel-tabs
-bbx-panel-close
 ```
 
 ```ts continue

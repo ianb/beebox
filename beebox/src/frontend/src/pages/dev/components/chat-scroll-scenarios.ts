@@ -238,6 +238,20 @@ const SCENARIOS_MAIN: Scenario[] = [
     },
   },
   {
+    name: "pane-close-preserves-reading-anchor",
+    description: "A reader partway through a narrow transcript hides the adjacent card pane. The transcript widens and rewraps, but the visible reading point must stay on screen.",
+    steps: [
+      { k: "wrapWidth", px: 460 },
+      { k: "userDrag", toTop: 900, observeReadingPosition: true },
+      { k: "resizeWidth", px: 900 },
+      { k: "wait", ms: 300 },
+    ],
+    expect: {
+      finalAtBottom: false,
+      driftWhileAwayAtMost: 8,
+    },
+  },
+  {
     name: "finalize-shrinks",
     description: "A streamed reply is replaced by a shorter finalized one. The reader is below the fold and reading; the shrink must not move their page.",
     steps: [

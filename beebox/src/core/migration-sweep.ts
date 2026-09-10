@@ -29,6 +29,7 @@ import { commit, getStatus, stageAll } from "../lib/git.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { errorMessage } from "../lib/error-guards.js";
+import { SystemCardInvariantError } from "./system-cards.js";
 import { isProcedureMigration } from "./migrations.js";
 import {
   appendManifestEntry,
@@ -118,7 +119,13 @@ async function sweepUnderLock(boxRoot: string): Promise<SweepResult> {
     // would otherwise leave a manifest claiming a migration that never landed,
     // and the next sweep would read it and report the box current forever.
     const snapshot = await snapshotManifest(boxRoot);
-    await appendManifestEntry(boxRoot, { name: migration.name, "applied-at": getBoxTimeISO(boxRoot) });
+    try {
+      await appendManifestEntry(boxRoot, { name: migration.name, "applied-at": getBoxTimeISO(boxRoot) });
+    } catch (error) {
+      if (!(error instanceof SystemCardInvariantError)) throw error;
+      console.error(error.message);
+      return { status: "failed", failed: migration.name, exitCode: 1, applied };
+    }
     try {
       await stageAll(boxRoot);
       await commit(boxRoot, {

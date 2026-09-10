@@ -39,17 +39,18 @@ Codex entries here are labeled as such; they carry their own pin.
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.266` (SDK), `2.1.266` (Claude Code), `0.153.4` (Codex)
+- **Latest reviewed upstream version:** `0.3.267` (SDK), `2.1.267` (Claude Code), `0.154.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** `0.3.263` was taken this turn as the newest
-  settled version — an opaque parity release with nothing to assess, so this is a
-  currency step rather than a fix. The pending pair is the one that matters:
-  `0.3.265` (~19h) changes agent shell behavior — a `cd` now persists across
-  turns — and `0.3.266` (~15h) exists only to repair a gateway regression
-  `0.3.265` introduced. Take `0.3.265` and `0.3.266` **together**, never
-  `0.3.265` alone, and land
-  `issues/bugs/2026-09-09-agent-shell-cwd-now-persists-across-turns.md` before
-  the pin crosses. No Codex release since `0.153.4`.
+- **Current recommendation:** **No bump was due on either channel** — nothing
+  has settled since `0.3.263` (`0.3.265` ~43h, `0.3.266` ~39h, `0.3.267` ~20h)
+  or since Codex `0.153.4` (`0.154.0` ~15h). Two things decide the next SDK
+  bump: `0.3.265` and `0.3.266` still go together and never `0.3.265` alone,
+  and `0.3.267` changes system-prompt recording in a way that — verified this
+  turn — fixes a live bug on the current pin: resumed chat threads and resumed
+  agents run **without** beebox's appended system prompt.
+  `issues/bugs/2026-09-10-resumed-sessions-drop-appended-system-prompt.md`
+  carries a beebox-side fix that works on any pin; land it rather than waiting
+  for the settled path to reach `0.3.267` on 2026-09-12.
 
 ## Codex 0.153.4 — applied 2026-09-05 (boxholder asked for it now)
 
@@ -65,7 +66,101 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.266 / Claude Code 2.1.266 — pending (published 2026-09-08T23:32Z, ~15h at this turn)
+### Codex 0.154.0 — pending (published 2026-09-09T22:40Z, ~15h at this turn)
+
+The first minor-version Codex release since the pin; `@openai/codex-sdk`
+published `0.154.0` in lockstep.
+
+- **The one removal, checked clear:** *"The deprecated `codex mcp-server` entry
+  point is no longer available."* Nothing in `bin/`, `beebox/src`,
+  `beebox/plugins`, `beebox/deploy`, `schedules/` or `.claude/` invokes it.
+- **Beebox's plugin install path survives:** `ensure-codex-plugin.ts` drives
+  `codex plugin list / marketplace list / add / remove --json`; 0.154.0 changes
+  when an existing session *picks up* plugin tools, skills and hooks after an
+  out-of-process upgrade (now it does), not the subcommands. The deploy gate's
+  `codex plugin --help` will confirm at bump time.
+- **Consistent with the default-model decision:** *"fresh sessions and forks
+  respect server model defaults unless explicitly overridden"* — beebox leaves
+  the model unset on an unconfigured box and inherits, as decided on 2026-09-05.
+  The model behind `codex-default` in the usage rows can now move with the
+  server as well as with the pin, which strengthens
+  `issues/code-quality/2026-09-05-codex-usage-records-sentinel-not-model.md`.
+- **Security, relevant to a box cwd:** startup no longer runs workspace-controlled
+  helpers before trust is established. beebox runs Codex with the box as the
+  working directory, and box content is partly not authored by the boxholder.
+- Also: experimental `--worktree` / `/worktree` (Codex worker sessions here get
+  their worktrees from `bin/workstreams create`, not Codex), inline answers to
+  questions mid-work, and Windows background-server sharing.
+- **Action:** Settled path; takeable 2026-09-11, with the deploy gate.
+- **Sources:** [Codex rust-v0.154.0](https://github.com/openai/codex/releases/tag/rust-v0.154.0)
+
+### 0.3.267 / Claude Code 2.1.267 — pending (published 2026-09-09T18:28Z, ~20h at this turn)
+
+- **The item that matters, tested rather than read:** *"Changed `systemPrompt`
+  recording to default on for custom prompts and appends (a mid-session prompt
+  change takes effect at the next compaction); pass `snapshot: false` to keep
+  per-request rendering."* "Default on" implies it was off, and beebox has two
+  paths that build their append only for a fresh session and send nothing on
+  resume — `ChatThreadSession` (`thread.ts:145`) and `runAgent` (`run.ts:264`,
+  which carries reactor sessions, procedure review retries and the commit-nudge
+  retry). A two-turn probe settled it: an append naming a codename on turn 1,
+  a resumed turn 2 asking for the codename.
+
+  | SDK | resume passes | turn-2 answer |
+  |---|---|---|
+  | `0.3.263` (pinned) | no `systemPrompt` option | `NONE` |
+  | `0.3.263` (pinned) | `append: ""` — chat threads' exact shape | `NONE` |
+  | `0.3.267` | no `systemPrompt` option | `ZEBRA-7` |
+
+  So **on the current pin, every resumed chat thread runs without
+  `CHAT_THREAD_MODE`** — the `<chat-response>` contract, "keep each response
+  SHORT", "Do NOT use Markdown", "Do NOT edit the thread file" — and without
+  timezone context; only the one-line reminder at `thread.ts:331` survives, and
+  its comment blames compaction for a loss that is actually the resume. Resumed
+  agents lose their first-invoke prompt the same way. The **main web chat is not
+  affected**: `start.ts`'s `buildBackendStartOptions` passes its full prompt on
+  every start. Filed as
+  `issues/bugs/2026-09-10-resumed-sessions-drop-appended-system-prompt.md`
+  (important).
+
+  This is a long-standing beebox bug that `0.3.267` happens to paper over, not a
+  regression, and it is why the release is **not act-now**: the fix that works on
+  every pin is beebox passing the prompt on resume, as `start.ts` already does.
+  Taking `0.3.267` early would also pull in the unsettled `0.3.265` cwd change
+  before its own issue is fixed. And `0.3.267` changes the web chat for the
+  worse in one respect — its re-passed prompt legitimately varies (timezone,
+  landmark note), and under recording those changes wait for a compaction —
+  which is why the issue proposes deciding `snapshot` once the pin gets there.
+- **Harness, same change on the CLI side:** *"subagents and sessions started with
+  `--system-prompt` or `--append-system-prompt` now record the system prompt and
+  tool definitions once instead of re-rendering them"*, with
+  `--system-prompt-snapshot off` to opt out. The schedule runner passes
+  `--append-system-prompt-file schedules/<name>/prompt.md`
+  (`bin/lib/launch-headless.sh:67`) on every run, and exactly one schedule —
+  this one — is `session: persistent`, resumed daily. Once the installed CLI
+  reaches 2.1.267 (it is on 2.1.265 at this turn), **an edit to
+  `schedules/sdk-update/prompt.md` will not reach this monitor until its session
+  compacts**. Low-frequency, but silent; passing
+  `--system-prompt-snapshot off` for persistent sessions would restore it.
+  Recorded here rather than filed.
+- **Other 2.1.267 items in scope:** resuming a transcript over 5 MB no longer
+  drops parallel tool calls and their hook output (this monitor's own session is
+  far past 5 MB, and beebox resumes long chat threads); `-p --resume` after a
+  slash command no longer inserts a spurious "Continue from where you left off."
+  turn (the runner's persistent-session shape); `effort:` frontmatter on
+  commands, skills and subagents is honored on pinned-effort models; managed
+  `allowedHttpHookUrls` and friends now fail closed when unreadable; a
+  backslashed marketplace path could bypass containment (the plugin-path fix's
+  sibling); and a long run of prompt-cache fixes around tool lists changing
+  between a session and its resume.
+- **Additive (SDK):** browser-SDK SSE transport helpers
+  (`getCcrEvent`, `getSseLastSequenceNum`, catch-up options) — beebox does not
+  use the browser SDK.
+- **Action:** Settled path; takeable 2026-09-12, **after** the
+  `0.3.265` cwd issue lands, since `0.3.267` includes it.
+- **Sources:** [Agent SDK changelog](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03267), [Claude Code 2.1.267](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21267)
+
+### 0.3.266 / Claude Code 2.1.266 — pending (published 2026-09-08T23:32Z, ~39h at 2026-09-10; still unsettled)
 
 - **Upstream:** A single fix, and it is a repair of the release directly below
   it. `2.1.265` started honoring the undocumented `CLAUDE_CODE_USE_GATEWAY`
@@ -87,7 +182,7 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   the clock, and taking it alone would pin the broken half.
 - **Sources:** [Claude Code 2.1.266](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21266)
 
-### 0.3.265 / Claude Code 2.1.265 — pending (published 2026-09-08T19:05Z, ~19h at this turn)
+### 0.3.265 / Claude Code 2.1.265 — pending (published 2026-09-08T19:05Z, ~43h at 2026-09-10; still unsettled, and its cwd issue still open)
 
 - **The item that changes beebox's behavior:** *"Fixed non-interactive sessions
   (`-p` with stream-json input, Agent SDK, cloud sessions) resetting the shell

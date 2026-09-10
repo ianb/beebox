@@ -29,3 +29,6 @@ import "./view";
 import "./chat-husk";
 import "./question";
 import "./tab-arrangement";
+
+import "./system-cards";
+import "./browse";

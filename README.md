@@ -1,4 +1,6 @@
-# beebox
+# Bee Box
+
+**Bee Box is not yet "public" (I'm not widely telling people about it), but you are welcome to check it out...**
 
 A personal assistant built on a coding agent — Claude Code and Codex (ChatGPT) are supported today. Feed it inputs (voice memos, emails, web clippings); agents process them and take actions or ask questions. The filesystem is state, git is history, the `bbx` CLI is the interface.
 
@@ -22,6 +24,8 @@ Four projects in one repo:
 - **browse/** — worktree-aware wrapper around the `agent-browser` CLI.
 
 ## Dev
+
+The development process is an opinionated agent flow and built into this monorepo.
 
 ```
 pnpm install     # from the repo root; wires up git hooks

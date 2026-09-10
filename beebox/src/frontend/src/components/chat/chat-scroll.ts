@@ -274,12 +274,11 @@ export function useChatScroll(): ChatScroll {
   const scrollerElRef = useRef<HTMLDivElement | null>(null);
   const contentElRef = useRef<HTMLDivElement | null>(null);
   const liveContentElRef = useRef<HTMLDivElement | null>(null);
-
   const { ref: atBottomRef, value: atBottom, set: setAtBottomFlag } = useMirroredFlag(true);
   const { value: hasUnseenContent, set: setUnseen } = useMirroredFlag(false);
 
   const prevScrollHeightRef = useRef(0);
-  const prevClientHeightRef = useRef(0);
+  const prevClientWidthRef = useRef(0), prevClientHeightRef = useRef(0);
   const prevFromBottomRef = useRef(0);
   const prevScrollTopRef = useRef(0);
   const prependGapRef = useRef<number | null>(null);
@@ -301,6 +300,7 @@ export function useChatScroll(): ChatScroll {
     if (el.scrollHeight > prevScrollHeightRef.current + GROWTH_EPSILON) openHoldRef.current.touch();
     prevFromBottomRef.current = fromBottom;
     prevScrollHeightRef.current = el.scrollHeight;
+    prevClientWidthRef.current = el.clientWidth;
     prevClientHeightRef.current = el.clientHeight;
     const at = fromBottom <= AT_BOTTOM_PX;
     setAtBottomFlag(at);
@@ -375,10 +375,14 @@ export function useChatScroll(): ChatScroll {
     // Leave the pre-resize snapshot intact until reconciliation; a browser
     // clamp may dispatch scroll before ResizeObserver. Content coordinates
     // already exclude ordinary scrolling, so never rebase the anchor here.
-    const fromBottom = el.clientHeight === prevClientHeightRef.current
+    const boxResized = el.clientWidth !== prevClientWidthRef.current || el.clientHeight !== prevClientHeightRef.current;
+    const fromBottom = !boxResized
       ? measure(el) : prevFromBottomRef.current;
     if (openHoldRef.current.active && movedUp(el, prevScrollTopRef) && fromBottom > AT_BOTTOM_PX) endOpenPhase("scrolled-up");
     recordScrollTrace("scroll", { top: Math.round(el.scrollTop), fb: Math.round(fromBottom), at: atBottomRef.current, open: openHoldRef.current.active });
+    // Capture a reader-controlled position now; the delayed pass follows
+    // momentum. A box resize retains its pre-resize anchor through the clamp.
+    if (!boxResized) anchorRef.current = anchorChild(el, contentElRef.current);
     scheduleAnchorRecapture();
   }, [measure, atBottomRef, endOpenPhase, scheduleAnchorRecapture]);
 
@@ -421,6 +425,7 @@ export function useChatScroll(): ChatScroll {
     scrollerElRef.current = el;
     if (el) {
       prevScrollHeightRef.current = el.scrollHeight;
+      prevClientWidthRef.current = el.clientWidth;
       prevClientHeightRef.current = el.clientHeight;
       prevFromBottomRef.current = currentBottomTop(el, liveContentElRef.current) - el.scrollTop;
         el.addEventListener("scroll", handleScroll, { passive: true });

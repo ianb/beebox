@@ -42,6 +42,7 @@
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
 import { invariant } from "../beebox/src/lib/invariant.js";
+import { browseDetailMatches } from "./smoke-browse.js";
 import { findCardRow } from "./smoke-card-open.js";
 import {
   BrowseListEmptyError,
@@ -157,7 +158,9 @@ function buildSteps(input: {
       await session.open("about:blank", { noWait: true });
       await session.setViewport(desktopViewport.width, desktopViewport.height);
 
-      await session.open(`${baseUrl}/chat`);
+      // A retained Browse tab may show Box while its recipient remains elsewhere.
+      // Start an explicit root draft so the landmark switch is a real destination change.
+      await session.open(`${baseUrl}/chat?session=new&contextDir=`);
       const snapshot = await session.snapshot({ interactiveOnly: true });
       if (!hasDomId(snapshot, "bbx-composer-input") || !hasDomId(snapshot, "bbx-nav-place")) {
         throw new ChatShellMissingError(snapshot);
@@ -240,7 +243,7 @@ function buildSteps(input: {
     run: async () => {
       await session.open(`${baseUrl}/browse`);
       const snapshot = await session.snapshot();
-      if (!hasDomId(snapshot, "bbx-browse-crumb-root") || directoryRowCount(snapshot) === 0) {
+      if (refFor(snapshot, { role: "region", name: "Browse" }) === null || directoryRowCount(snapshot) === 0) {
         throw new BrowseListEmptyError(snapshot);
       }
       const destinationFailure = selectedDestination === undefined
@@ -253,8 +256,7 @@ function buildSteps(input: {
     id: "card-open",
     name: "a card opens and renders",
     run: async () => {
-      const initial = await session.snapshot({ interactiveOnly: true });
-      const { listing, row } = await findCardRow(session, initial);
+      const { listing, row } = await findCardRow(session);
       const ref = refFor(listing, row);
       if (ref === null) {
         throw new CardRefUnresolvedError({ role: row.role, name: row.name, listing });
@@ -263,13 +265,20 @@ function buildSteps(input: {
       // check, so a row below the fold (routine in a directory with many
       // siblings) fails outright rather than auto-scrolling.
       await session.run(["scrollintoview", `@${ref}`]);
+      const { stdout: source } = await session.run(["get", "attr", `@${ref}`, "data-bbx-source"]);
+      invariant(source.trim().startsWith("card:"), "selected Browse row lacks card provenance");
+      const expectedPath = source.trim().slice("card:".length);
       await session.clickRef(ref);
+      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('#bbx-browse-open-card')).some(a => decodeURI(new URL(a.href).pathname).endsWith('/card/' + ${JSON.stringify(expectedPath)}))`]);
+      await session.waitForReady();
       const snapshot = await session.snapshot();
       const url = await session.getUrl();
-      if (!url.includes("/browse/") || !hasDomId(snapshot, "bbx-browse-open-card")) {
+      if (!browseDetailMatches(url, expectedPath) || refFor(snapshot, { role: "link", name: "Open full view →" }) === null) {
         throw new CardViewMissingError({ name: row.name, url, snapshot });
       }
-      if (!cardViewRendered(snapshot)) {
+      // Browse itself now has a card title; only the selected detail proves a file loaded.
+      const { stdout: detail } = await session.run(["snapshot", "-s", ".bbx-interface-browse-panel > .bbx-interface-card-desk"]);
+      if (!cardViewRendered(detail)) {
         throw new CardContentMissingError({ name: row.name, snapshot });
       }
       const destinationFailure = selectedDestination === undefined
@@ -299,7 +308,8 @@ export async function main(argv: string[]): Promise<number> {
   const baseUrl = `http://localhost:${routerPort()}/${worktree}/${options.box}`;
   const key = browseKey();
   const budget = new Budget(BUDGET_MS);
-  const session = new BrowseSession("smoke");
+  // Each run starts with no retained per-conversation panes or attention.
+  const session = new BrowseSession(`smoke-${String(Date.now())}`);
   const startedAt = Date.now();
 
   // Last resort. `race` above fails the step, but a spawned `bin/browse` that

@@ -48,4 +48,4 @@ browser Back behavior. Directory navigation inside a tab also needs an explicit
 replacement-versus-new-tab rule. Opening a directory from elsewhere should open
 or select its tab, never replace the workspace with a routed listing.
 
-Related: [Dashboard as a workspace tab](2026-09-08-dashboard-workspace-tab.md).
+Related: [Dashboard as a workspace tab](../closed/features/2026-09-08-dashboard-workspace-tab.md).

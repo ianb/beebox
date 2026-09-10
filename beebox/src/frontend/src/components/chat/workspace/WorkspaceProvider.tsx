@@ -1,3 +1,5 @@
+import { workspaceRouteTarget, workspaceProjectionSearch } from "../../../lib/system-card-navigation";
+import { normalizeBrowseTarget } from "../../../lib/browse-card-state";
 import { decideWorkspaceNavigation, workspaceDisplayReady, workspaceOpenShouldReplace, workspaceRouteBound, shouldRestoreMobileWithBack, type WorkspaceHistoryEntry } from "./workspace-history";
 import { createContext, useContext, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
@@ -48,14 +50,12 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
     const snapshot = store.get();
     const foreground = projectWorkspace(snapshot, viewport).foregroundPath;
     const tab = foreground ? snapshot.tabs[foreground] : undefined;
-    const search: Record<string, unknown> = { ...location.search };
-    delete search.companion;
-    if (tab) search.card = serializeViewUrl(tab.target); else delete search.card;
+    const search = workspaceProjectionSearch({ pathname: location.pathname, search: location.search, target: tab?.target ?? null });
     const currentIdentity = store.getIdentity();
     const saved: WorkspaceHistoryEntry = { scope, identity: currentIdentity, snapshot: serializeWorkspaceState(snapshot), viewport, revision: ++revision.current, ...(returnRevision === undefined ? {} : { returnRevision, returnIndex: location.state.__TSR_index }) };
     void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch(search), replace,
       state: (old) => ({ ...old, bbxWorkspace: saved, bbxConversationOverlay: false }) });
-  }, [store, viewport, location.search, scope, navigate, boxSlug, location.state.__TSR_index]);
+  }, [store, viewport, location.pathname, location.search, scope, navigate, boxSlug, location.state.__TSR_index]);
   useEffect(() => {
     if (!routeBound || !participating) return;
     const routeStamp = `${identity}:${location.state.__TSR_index}:${location.pathname}:${location.searchStr}:${location.state.bbxWorkspace?.revision ?? ""}:${location.state.bbxConversationOverlay === true}`;
@@ -66,15 +66,16 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
       store.clearAdoption();
       return;
     }
-    if (location.state.bbxConversationOverlay === true) {
+    if (location.state.bbxConversationOverlay === true && !location.pathname.includes("/views/")) {
       const current = store.get();
       if (current.layout.kind === "focus") store.dispatch({ type: "backToSplit", pane: current.layout.pane });
       store.dispatch({ type: "showChat", pane: current.lastCardPane, viewport });
       projectHistory(true);
       return;
     }
-    const card = location.pathname.includes("/views/") ? _splat : typeof location.search.card === "string" ? location.search.card : typeof location.search.companion === "string" ? location.search.companion.replace(/^view:/, "") : undefined;
-    const decision = decideWorkspaceNavigation({ history: location.state.bbxWorkspace, scope, identity, freshCard: card ?? null });
+    const incoming = workspaceRouteTarget({ pathname: location.pathname, splat: _splat, searchStr: location.searchStr, search: location.search });
+    const card = incoming ? serializeViewUrl(incoming) : null;
+    const decision = decideWorkspaceNavigation({ history: location.state.bbxWorkspace, scope, identity, freshCard: card ?? null, cardEntry: location.pathname.includes("/views/") });
     if (decision.kind === "restore-snapshot") {
       if (decision.entry.snapshot !== serializeWorkspaceState(store.get())) store.replace(decision.state);
       revision.current = Math.max(revision.current, decision.entry.revision);
@@ -112,7 +113,8 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
       }
     });
   }
-  function open(target: ViewTarget, hint?: NavigateHint & { originatingPane?: PaneId }) {
+  function open(incoming: ViewTarget, hint?: NavigateHint & { originatingPane?: PaneId }) {
+    const target = normalizeBrowseTarget(incoming);
     const action: WorkspaceAction = { type: "openCard", target, label: hint?.label ?? target.path,
       at: Date.now(), viewport, originatingPane: hint?.originatingPane };
     const before = store.get();
@@ -123,12 +125,13 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
     if (mobile && shouldRestoreMobileWithBack(location.state.bbxWorkspace, location.state.__TSR_index)) { window.history.back(); return; }
     dispatch({ type: "restoreCards", pane, viewport });
   }
-  function updateTarget(target: ViewTarget) {
+  function updateTarget(incoming: ViewTarget, method?: "push" | "replace") {
+    const target = normalizeBrowseTarget(incoming);
     const current = store.get();
     const existing = current.tabs[target.path];
     if (!existing) return;
     store.replace({ ...current, tabs: { ...current.tabs, [target.path]: { ...existing, target } } });
-    projectHistory(true);
+    projectHistory(method !== "push");
   }
   function retargetCard(fromPath: string, path: string) {
     const current = store.get();

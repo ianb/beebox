@@ -47,7 +47,8 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
       }}>
       <CardVisibilityProvider visible={visible}>
         <FileView path={tab.target.path} mode="companion" rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState}
-          onViewStateChange={(viewState) => workspace.updateTarget({ ...tab.target, viewState })}
+          canPushViewState={visible}
+          onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
           onSelectRenderer={(viewer) => workspace.updateTarget({ ...tab.target, viewer, viewState: null })}
           onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
           onNavigate={(target, hint) => { callbacks.reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
