@@ -185,3 +185,10 @@ A scoped Claude review of the smoke adaptation found three acceptance gaps:
 
 The content privacy scan remains unchanged. No annotated control ids inside
 card content are required, and no smoke step has been waived.
+
+Repeated smoke runs also demonstrated the retained-workspace distinction: a
+landmark selection can correctly change the recipient while restoring a Browse
+location whose attention names another place. Each smoke run now starts in its
+own browser profile so its clean-start place assertion remains meaningful.
+The warm-state behavior is covered separately in the implementation walkthroughs;
+no production state is cleared to make this test pass.

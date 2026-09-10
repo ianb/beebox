@@ -308,7 +308,8 @@ export async function main(argv: string[]): Promise<number> {
   const baseUrl = `http://localhost:${routerPort()}/${worktree}/${options.box}`;
   const key = browseKey();
   const budget = new Budget(BUDGET_MS);
-  const session = new BrowseSession("smoke");
+  // Each run starts with no retained per-conversation panes or attention.
+  const session = new BrowseSession(`smoke-${String(Date.now())}`);
   const startedAt = Date.now();
 
   // Last resort. `race` above fails the step, but a spawned `bin/browse` that
