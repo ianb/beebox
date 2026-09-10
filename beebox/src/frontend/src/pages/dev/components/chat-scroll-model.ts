@@ -25,6 +25,10 @@ export interface HarnessImage {
 
 export interface HarnessContent {
   messages: HarnessMessage[];
+  /** Width of the transcript frame. Width changes reproduce pane show/hide. */
+  frameWidthPx: number;
+  /** Render real wrapping text instead of fixed-height blank blocks. */
+  wrappingMessages: boolean;
   /** Height of the composer stand-in below the list (changes clientHeight only). */
   chromePx: number;
   /** Temporary shrink of the whole frame — the mobile-keyboard clamp. */
@@ -67,6 +71,8 @@ export function initialContent(): HarnessContent {
   const messages = seedMessages(INITIAL_MESSAGE_COUNT, INITIAL_SEED);
   return {
     messages,
+    frameWidthPx: 900,
+    wrappingMessages: false,
     chromePx: INITIAL_CHROME_PX,
     viewportShrinkPx: 0,
     lastTurnSpacer: false,
