@@ -24,7 +24,7 @@ The hub logs that it received the signal and then never exits, so systemd waits
 the full stop timeout and SIGKILLs the whole control group — including agent
 children mid-turn. Every deploy therefore has a guaranteed ~60s window where
 the site returns 502 (see
-[deploy-restart 502s](2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md)),
+[deploy-restart 502s](../closed/bugs/2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md)),
 and any running agent session dies uncleanly rather than being drained.
 
 ## What to find out
@@ -49,5 +49,5 @@ app bar's place-switch menu failing for the boxholder mid-session.
 
 Raised to `important`: two user-visible failures in two days, plus agent
 sessions killed mid-turn on every deploy. The frontend retry work in
-[deploy-restart 502s](2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md)
+[deploy-restart 502s](../closed/bugs/2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md)
 hides the symptom; it does not stop the outage or the killed children.
