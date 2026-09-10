@@ -25,6 +25,7 @@ async function revealFoldedRows(session: BrowseSession, listing: string): Promis
   const modeRef = browseListingModeRef(listing);
   if (modeRef === null) return listing;
   await session.clickRef(modeRef);
+  await session.waitForReady();
   return browseListingSnapshot(session);
 }
 
@@ -49,6 +50,8 @@ export async function findCardRow(
   // auto-scrolling.
   await session.run(["scrollintoview", `@${contentRef}`]);
   await session.clickRef(contentRef);
+  await session.run(["wait", "--fn", "(() => { const card = new URL(location.href).searchParams.get('card'); if (!card) return false; const state = new URL(card, location.origin).searchParams.get('viewState'); return state !== null && JSON.parse(state).directory === '_content'; })()"]);
+  await session.waitForReady();
   const drilled = await revealFoldedRows(
     session,
     await browseListingSnapshot(session),

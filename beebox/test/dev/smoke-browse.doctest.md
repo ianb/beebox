@@ -1,7 +1,7 @@
 # Smoke recognizes Browse as a card without weakening content checks
 
 ```javascript
-const { isBrowseCardUrl, browseListingModeRef } = await import("../../../bin/smoke-browse.ts");
+const { isBrowseCardUrl, browseListingModeRef, browseDetailMatches } = await import("../../../bin/smoke-browse.ts");
 const { cardViewRendered, directoryRowCount } = await import("../../../bin/smoke-snapshot.ts");
 const cardUrl = new URL("http://localhost:3210/work/test1/chat");
 cardUrl.searchParams.set("card", '_config/interface/browse.card?viewState={"directory":"_content"}');
@@ -28,6 +28,16 @@ directoryRowCount('- region "Browse" [ref=e26]\n- button "Content directory, 197
 
 directoryRowCount('- region "Browse" [ref=e26]')
 => 0
+
+cardUrl.searchParams.set("card", '_config/interface/browse.card?viewState=' + encodeURIComponent(JSON.stringify({directory: "_content", detail: {path: "_content/a.memo.card"}})));
+browseDetailMatches(cardUrl.href, "_content/a.memo.card")
+=> true
+
+browseDetailMatches(cardUrl.href, "_content/b.memo.card")
+=> false
+
+browseDetailMatches("http://localhost/chat?card=_config/interface/browse.card", "_content/a.memo.card")
+=> false
 
 // The smoke caller scopes this snapshot to the selected file's panel, excluding
 // the outer Browse title and sidebar landmark headings.

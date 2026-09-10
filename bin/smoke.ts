@@ -42,7 +42,7 @@
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
 import { invariant } from "../beebox/src/lib/invariant.js";
-import { isBrowseCardUrl } from "./smoke-browse.js";
+import { browseDetailMatches } from "./smoke-browse.js";
 import { findCardRow } from "./smoke-card-open.js";
 import {
   BrowseListEmptyError,
@@ -265,14 +265,19 @@ function buildSteps(input: {
       // check, so a row below the fold (routine in a directory with many
       // siblings) fails outright rather than auto-scrolling.
       await session.run(["scrollintoview", `@${ref}`]);
+      const { stdout: source } = await session.run(["get", "attr", `@${ref}`, "data-bbx-source"]);
+      invariant(source.trim().startsWith("card:"), "selected Browse row lacks card provenance");
+      const expectedPath = source.trim().slice("card:".length);
       await session.clickRef(ref);
+      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('#bbx-browse-open-card')).some(a => decodeURI(new URL(a.href).pathname).endsWith('/card/' + ${JSON.stringify(expectedPath)}))`]);
+      await session.waitForReady();
       const snapshot = await session.snapshot();
       const url = await session.getUrl();
-      if (!isBrowseCardUrl(url) || refFor(snapshot, { role: "link", name: "Open full view →" }) === null) {
+      if (!browseDetailMatches(url, expectedPath) || refFor(snapshot, { role: "link", name: "Open full view →" }) === null) {
         throw new CardViewMissingError({ name: row.name, url, snapshot });
       }
       // Browse itself now has a card title; only the selected detail proves a file loaded.
-      const { stdout: detail } = await session.run(["snapshot", "-s", '[data-card-content="card"]:has(#bbx-browse-open-card)']);
+      const { stdout: detail } = await session.run(["snapshot", "-s", ".bbx-interface-browse-panel > .bbx-interface-card-desk"]);
       if (!cardViewRendered(detail)) {
         throw new CardContentMissingError({ name: row.name, snapshot });
       }

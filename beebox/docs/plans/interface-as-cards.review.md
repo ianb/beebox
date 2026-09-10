@@ -169,3 +169,19 @@ The UI walkthrough also found two defects before review: shell providers lack
 leaf route params, and projecting a canonical target initially duplicated its
 renderer query at the top level of `/chat`. Pathname fallback, fresh-entry
 precedence, and single-consumption projection have regression coverage.
+
+## Finish smoke review — September 9
+
+A scoped Claude review of the smoke adaptation found three acceptance gaps:
+
+- **Fixed:** the detail selector could include the ancestor workspace panel and
+  accept Browse's own heading. The scope is now the inner file-renderer body.
+- **Fixed:** clicking directories/files now awaits classification and listing
+  queries. The walk waits for the expected directory/file consequence, then
+  for React Query readiness before checking rendered content.
+- **Fixed:** canonical Browse identity alone cannot prove which file opened.
+  The walk reads the clicked row's card provenance and compares it with the
+  nested `detail.path` in the projected URL.
+
+The content privacy scan remains unchanged. No annotated control ids inside
+card content are required, and no smoke step has been waived.
