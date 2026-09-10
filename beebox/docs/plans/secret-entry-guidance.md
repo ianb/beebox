@@ -506,8 +506,23 @@ from an empty store: near-miss on `openrouter.ai`, provider button, paste,
 "Saved and verified. This box now uses it for: …", grant recorded at `server`,
 key verified `ok` against the live provider.
 
-**Not yet:** the picker half of Track 5 (disabled options + the save warning
-shown; in progress), the HQ-picker end of the walkthrough, and the exhibit.
+**Track 5's picker half is built** (`3b51e8f3c`): unusable services render
+disabled with the reason, the selected one stays visible, and a save of an
+unusable service shows the server's warning. The walkthrough's last step
+held: with the OpenRouter key granted, MAI + diarization is selectable and
+Voxtral says it needs `mistral`. Exhibit
+`adding-an-openrouter-key-from-admin-secrets` (ask: react) holds the
+before/after captures.
+
+**Cross-model review (Codex, 2026-09-10) — three findings, all fixed in
+`5c955fc85`:** the override path alone must not count as isolation (main
+inherits it; the router now asserts `BBX_SECRETS_STORE_ISOLATED=1` for
+worktrees only); the add form is keyed by chosen service so a second key can
+follow a first; a successful HQ pass retires the failure notice. Checked and
+found clean: grant-on-add atomicity, the capability truth table against the
+dispatchers, access-level semantics, registry key agreement.
+
+Every track is built and verified. Ships as one piece on `/finish`.
 
 ## Rollout shape
 
