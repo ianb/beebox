@@ -1,6 +1,7 @@
 ---
 title: "Network trouble in live transcription takes the HQ pass down with it — the local recording should not depend on the live channel"
-workstream: unattached
+workstream: hq-recording-resilience
+design: ../../beebox/docs/plans/resilient-voice-recording.md
 area: beebox
 priority: important
 labels: [transcription, diarization, resilience, chat]
@@ -42,6 +43,33 @@ text is the degraded artifact, and it silently becomes the kept one.
 I have not reproduced the failure, so which of these fired — or whether the
 recording was lost earlier, in the recorder or the machine's teardown — is
 unestablished. That is the first thing to find out.
+
+## What the logs show (2026-09-10)
+
+The failure was traced in the box's client and server logs. The HQ pass was
+not skipped. It ran and the provider rejected it:
+
+- A deploy restarted the hub (SIGTERM 18:55:03, serving again 18:56:06 UTC).
+  The realtime service was `voxtral`, which is proxied through the box
+  server, so the live socket died with it.
+- 18:56:20 — the server logged `HQ transcription failed: Request failed with
+  status code 400 Bad Request: POST https://openrouter.ai/api/v1/audio/transcriptions`
+  (HQ service `mai-diarized`). The client logged `falling back to realtime`.
+- 18:56:31 — the message arrived as 1288 words of realtime text. The segment
+  was about 11 minutes: ~21 MB of 16 kHz WAV, ~28 MB after base64. The
+  6-minute diarized recordings before and after it succeeded.
+- The upstream reason is lost: the error keeps only the status line. Size is
+  the likely cause, but unverified.
+
+The code also shows real paths where the live channel does lose the
+recording, which did not fire this time: reconnect-window expiry (8 s),
+connect failure at segment start, the 15-minute cap, and errors that bubble to
+the machine's `active` level. Each ends the segment with text only. The plan
+lists them with citations.
+
+The chat voice recording is not a `MediaRecorder` blob, as the text above
+assumed. It is PCM held inside the transcription actor
+(`transcription-actor.ts`). `MediaRecorder` is capture mode's recorder.
 
 ## What a fix needs to establish
 
