@@ -59,7 +59,7 @@ The demo `Orbit.figure.card` (in the test box at
 `~/src/box-worktrees/…/test1/content/store/figures/`) was verified at the DOM
 level only — canvas mounted at declared size, generated controls present, no
 error state — because the browse screenshot op flaked
-([agent-browser-screenshot-flake](../watch/2026-07-10-agent-browser-screenshot-flake.md),
+([agent-browser-screenshot-flake](2026-07-10-agent-browser-screenshot-flake.md),
 [browse-daemon-wedges-on-animated-canvas](2026-07-14-browse-daemon-wedges-on-animated-canvas.md)).
 Its rendered frames were checked separately via the headless CLI. **To close:**
 open the card in a real browser and eyeball it — sun + 3 planets animate, the
