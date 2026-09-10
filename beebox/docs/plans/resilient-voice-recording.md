@@ -79,11 +79,10 @@ between ~15 MB and ~25.6 MB of JSON body. The upstream reason is still not
 visible, because our error drops the body (Track 1 fixes that).
 
 The HQ pass did not fail because of the live socket. It ran and the provider
-rejected it. The upstream reason is lost: our error carries only the status
-line. The likely cause is size. The OpenRouter STT guide says a 16 kHz mono WAV
-fits its 25 MB multipart cap for "about 13 minutes", and base64 adds ~33%
-(see Prior art). This is **unverified**: no provider page confirms which limit
-the JSON path enforces.
+rejected it. The measurement above ties the rejection to request size. That
+agrees with the OpenRouter STT guide: a 16 kHz mono WAV fits its 25 MB
+multipart cap for "about 13 minutes", and base64 adds ~33% (see Prior art).
+The exact JSON-path limit is not documented.
 
 Separately, on 2026-09-08 the iOS app logged `transcribe-audio transport failed
 bytes=27134031 urlError=-1001: The request timed out.` That is the same failure
