@@ -2,8 +2,8 @@
  * The questions surface: pending questions as answerable forms, everything
  * else as a muted archive below. Self-sufficient (fetches its own data,
  * live-refreshes on question/card events), so it serves both the
- * /questions page and `view: questions` cards — a straight port of the
- * page body; the query-card form (group-by, generic list renderer) is
+ * canonical Questions card and authored `view: questions` cards. The
+ * query-card form (group-by, generic list renderer) is
  * future design (docs/plans/interface-as-cards.md).
  *
  * The archive is not a dead end: `answered` shows the recorded answer;

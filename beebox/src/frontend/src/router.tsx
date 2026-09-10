@@ -14,10 +14,9 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { href, toSearch } from "./lib/routing";
 import { parseViewUrl, viewStateSearchValue } from "./lib/view-url";
 import { legacyBrowseTarget } from "./lib/browse-card-state";
-import { legacyCardRedirect, systemCardShellSearch, withoutShellParams } from "./lib/system-card-navigation";
+import { legacyCardRedirect, legacySystemCardRedirect, systemCardShellSearch, withoutShellParams } from "./lib/system-card-navigation";
 import { trpcClient } from "./lib/trpc";
 import { ChatPage } from "./pages/ChatPage";
-import { QuestionsPage } from "./pages/QuestionsPage";
 import { HistoryPage } from "./pages/HistoryPage";
 import { CapturePage } from "./pages/capture/CapturePage";
 import { AdminPage } from "./pages/AdminPage";
@@ -25,8 +24,6 @@ import { AppLayout, BoxRedirect, RootLayout } from "./app-shell";
 import { RouteError } from "./components/RouteError";
 import { LoginPage } from "./pages/login/LoginPage";
 import { SetupPage } from "./pages/login/SetupPage";
-import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
-import { ChatsPage } from "./pages/chats/ChatsPage";
 import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
 import { ComposerStatesPage } from "./pages/dev/ComposerStatesPage";
 import { CaptureModePage } from "./pages/dev/CaptureModeHarness";
@@ -141,7 +138,9 @@ const questionsRoute = createRoute({
   staticData: { title: "Questions" },
   getParentRoute: () => boxLayoutRoute,
   path: "/questions",
-  component: QuestionsPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect(legacySystemCardRedirect({ boxSlug: params.boxSlug, type: "questions", search: location.search, state: location.state }));
+  },
 });
 
 const browseRoute = createRoute({
@@ -234,14 +233,18 @@ const landmarksRoute = createRoute({
   staticData: { title: "Landmarks" },
   getParentRoute: () => boxLayoutRoute,
   path: "/landmarks",
-  component: LandmarksPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect(legacySystemCardRedirect({ boxSlug: params.boxSlug, type: "landmarks", search: location.search, state: location.state }));
+  },
 });
 
 const chatsRoute = createRoute({
   staticData: { title: null },
   getParentRoute: () => boxLayoutRoute,
   path: "/chats",
-  component: ChatsPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect(legacySystemCardRedirect({ boxSlug: params.boxSlug, type: "landmarks", search: location.search, state: location.state }));
+  },
 });
 
 // Dev-only test harness for the speech replay menu (see SpeechTestHarness).

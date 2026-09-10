@@ -1,7 +1,9 @@
 /** Canonical instruments use ordinary card routes, with semantic cold-entry places. */
-import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { SYSTEM_CARD_PATHS, type SystemCardType } from "@shared/system-card-paths";
 import { parseViewUrl, serializeViewUrl, type ViewTarget } from "./view-url";
 import { normalizeBrowseTarget, parseBrowseState } from "./browse-card-state";
+
+const SYSTEM_CARD_PATH_SET: ReadonlySet<string> = new Set(Object.values(SYSTEM_CARD_PATHS));
 
 /** Preserve a legacy `/card` entry exactly while adopting the workspace route. */
 export function legacyCardRedirect<TState>(input: {
@@ -13,6 +15,21 @@ export function legacyCardRedirect<TState>(input: {
   return {
     to: `/${input.boxSlug}/views/${input.cardPath}`,
     search: input.search,
+    state: input.state,
+    replace: true as const,
+  };
+}
+
+/** Preserve shell state while a legacy instrument URL adopts its canonical card target. */
+export function legacySystemCardRedirect<TState>(input: {
+  boxSlug: string;
+  type: SystemCardType;
+  search: Record<string, unknown>;
+  state: TState;
+}) {
+  return {
+    to: `/${input.boxSlug}/views/${SYSTEM_CARD_PATHS[input.type]}`,
+    search: systemCardShellSearch(input.search),
     state: input.state,
     replace: true as const,
   };
@@ -66,6 +83,7 @@ export function systemCardEntryContext(target: ViewTarget | null): { cardPath: s
     // Invalid locations remain visible in Browse's error surface, not a guessed directory.
     return { cardPath: null, browseDir: parsed.ok ? parsed.state.directory : null };
   }
+  if (SYSTEM_CARD_PATH_SET.has(target.path)) return { cardPath: null, browseDir: "" };
   return { cardPath: target.path, browseDir: null };
 }
 

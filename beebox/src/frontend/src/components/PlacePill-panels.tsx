@@ -152,7 +152,7 @@ function ProblemRow({ count, boxSlug }: { count: number; boxSlug: string }) {
   return (
     <>
       <MenuDivider />
-      <MenuItem id="bbx-switch-menu-problems" to={href(`/${boxSlug}/landmarks`)} danger>
+      <MenuItem id="bbx-switch-menu-problems" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.landmarks}`)} danger>
         ⚠ {count} landmark card{count === 1 ? "" : "s"} didn&rsquo;t parse
       </MenuItem>
     </>
@@ -232,7 +232,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
               <span className="text-warm-500">›</span>
             </span>
           </MenuItem>
-          <MenuItem id="bbx-switch-menu-landmarks" to={href(`/${boxSlug}/landmarks`)}>All landmarks →</MenuItem>
+          <MenuItem id="bbx-switch-menu-landmarks" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.landmarks}`)}>All landmarks →</MenuItem>
           {recentFilesClaimed ? (
             <MenuItem id="bbx-switch-menu-recent-files" onClick={onOpenRecentFiles} keepOpen>
               <span className="flex justify-between gap-2 w-full">
