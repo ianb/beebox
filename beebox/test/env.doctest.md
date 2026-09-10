@@ -12,6 +12,7 @@ import {
   serverEnvSchema,
   hubEnvSchema,
   cliEnvSchema,
+  childProcessEnv,
   SECRET_ENV_NAMES,
   EnvValidationError,
 } from "../src/lib/env.js";
@@ -20,6 +21,21 @@ import {
 function loadErr(schema: z.ZodType, source: NodeJS.ProcessEnv): EnvValidationError | null {
   try { loadEnv(schema, source); return null; } catch (e) { return e instanceof EnvValidationError ? e : null; }
 }
+```
+
+## Safe child-process inheritance
+
+Local Git children retain basic process discovery and locale settings without
+receiving ambient Git/editor overrides that subprocess guards reject.
+
+```ts
+const previousEditor = process.env.EDITOR;
+process.env.EDITOR = "unsafe-editor";
+const gitEnv = childProcessEnv({ GIT_INDEX_FILE: "/scratch/index" });
+if (previousEditor === undefined) delete process.env.EDITOR;
+else process.env.EDITOR = previousEditor;
+JSON.stringify({ editor: "EDITOR" in gitEnv, index: gitEnv.GIT_INDEX_FILE, path: typeof gitEnv.PATH === "string" })
+=> {"editor":false,"index":"/scratch/index","path":true}
 ```
 
 ## Coercion and empty-string-as-unset

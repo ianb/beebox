@@ -17,7 +17,7 @@ import { FileView } from "../components/FileView";
 import { Text } from "../components/ui/Text";
 
 export function ViewPage() {
-  const { _splat: splat } = useParams({ strict: false });
+  const { boxSlug, _splat: splat } = useParams({ strict: false });
   const location = useLocation();
   const handleNavigate = useViewNavigate();
   const navigate = useNavigate();
@@ -50,6 +50,15 @@ export function ViewPage() {
     });
   }, [location.pathname, navigate, target]);
 
+  const followMovedCard = useCallback((path: string) => {
+    if (target === null) return;
+    void navigate({
+      to: href(`/${boxSlug}/views/${path}`),
+      search: toSearch(location.search),
+      replace: true,
+    });
+  }, [boxSlug, location.search, navigate, target]);
+
   if (!target) {
     return <Text as="div" tone="muted" className="p-8">No view specified.</Text>;
   }
@@ -66,6 +75,7 @@ export function ViewPage() {
         onViewStateChange={updateViewState}
         onSelectRenderer={selectRenderer}
         onNavigate={handleNavigate}
+        onMoved={followMovedCard}
       />
     </div>
   );

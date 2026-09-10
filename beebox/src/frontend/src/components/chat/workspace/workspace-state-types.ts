@@ -33,6 +33,7 @@ export type WorkspaceFocusEffect =
 
 export type WorkspaceAction =
   | { type: "openCard"; target: SidecarTab["target"]; label: string; at: number; viewport: Viewport; originatingPane?: PaneId }
+  | { type: "retargetCard"; fromPath: string; target: SidecarTab["target"] }
   | { type: "selectTab"; path: string; at: number; viewport: Viewport }
   | { type: "closeTab"; path: string; viewport: Viewport }
   | { type: "togglePin"; path: string; at: number }

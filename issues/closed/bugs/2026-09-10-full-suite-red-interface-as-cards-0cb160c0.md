@@ -62,7 +62,7 @@ not ok 1 - test/core/box/file-watcher.doctest.md # time=2441.37ms
         ok 1 - (unnamed test)
         1..1
     ok 1 - lifecycle.doctest.md:26 — const port = await allocateFreePort(); # time=5.502ms
-    
+
     # Subtest: lifecycle.doctest.md:38 — const runDir = await mkdtemp(join(tmpdir(), "bbx-field-run-"));
         ok 1 - (unnamed test)
         ok 2 - (unnamed test)

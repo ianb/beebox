@@ -50,6 +50,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
           canPushViewState={visible}
           onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
           onSelectRenderer={(viewer) => workspace.updateTarget({ ...tab.target, viewer, viewState: null })}
+          onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
           onNavigate={(target, hint) => { callbacks.reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
           onAddSelection={handleAddSelection} reportActivity={callbacks.reportActivity} />
       </CardVisibilityProvider>
