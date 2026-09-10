@@ -4,7 +4,7 @@ import { tour } from "./tour-lib/index.js";
 tour(
   { name: "card-theme-previews", description: "Inspect complete cards on the preview desk, including long content." },
   async (t) => {
-    await t.go("/card/_content/theme-tour/Theme_Tour.memo.card");
+    await t.go("/views/_content/theme-tour/Theme_Tour.memo.card");
     await t.expect.heading("Card themes tour", { level: 1 });
     for (const name of ["Paper / cream", "Paper / manila", "Post-it / yellow", "Plain / neutral", "Long content"]) {
       await t.eval(`(() => {

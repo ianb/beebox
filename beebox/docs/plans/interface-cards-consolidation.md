@@ -1,6 +1,6 @@
 ---
 title: "One workspace for interface cards — retire parallel page UI"
-status: draft
+status: active
 workstream: interface-as-cards
 issues:
   - ../../../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md
@@ -81,9 +81,10 @@ Evidence checked on September 10 at baseline
 
 Schema filename search found no existing `questions`, `landmarks`, `history`,
 `inventory`, or `admin` schema files. Recheck before implementation if main moves.
-The initial code-health tools are not deletion authority: this checkout has no
-`lint:knip` script or Knip configuration; raw Knip misclassifies many entrypoints.
-Direct import/caller and route tracing supplies the removal inventory.
+The initial code-health scan ran from the wrong package: `lint:knip` and `knip.ts`
+live at the monorepo root (`package.json:20`: `"lint:knip": "knip"`). Run the
+configured root scan for final cleanup. Direct import/caller and route tracing
+supplies the removal inventory; raw unconfigured Knip output is not evidence.
 
 ## Prior art (external)
 
@@ -348,8 +349,8 @@ regressions, then remove each alternate branch with its obsolete tests and style
 **What / why:** The boxholder asked how much was removed. Code moved or replaced
 with comparable machinery must not be reported as eliminated complexity.
 
-**Direction:** Create `interface-cards-consolidation-removal-report.md` alongside
-this plan during implementation. Record stage start/end commit hashes, exact
+**Direction:** Maintain the [removal report](interface-cards-consolidation-removal-report.md)
+alongside this plan during implementation. Record stage start/end commit hashes, exact
 path scope, commands, and results. Preserve this planning baseline:
 
 - Baseline commit: `2fe4d4d897d3a7bb97da505989eab74c3a280878`.

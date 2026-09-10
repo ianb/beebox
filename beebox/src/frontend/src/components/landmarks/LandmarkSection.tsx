@@ -283,7 +283,7 @@ function LinkTile({
   }
 
   return (
-    <Link to={href(`/${boxSlug}/card/${link.ref}`)} className="block">
+    <Link to={href(`/${boxSlug}/views/${link.ref}`)} className="block">
       <Card padding="sm" border="subtle" className="hover:border-info-400 transition-colors">
         <Text as="div" size="sm" weight="medium">{display}</Text>
         <Text as="div" size="xs" tone="muted" truncate>{refDisplay}</Text>

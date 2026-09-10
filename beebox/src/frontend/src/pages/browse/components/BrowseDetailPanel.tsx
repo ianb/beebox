@@ -112,7 +112,7 @@ export function BrowseDetailPanel({
             {selectedCard ? (
               <Link
                 id="bbx-browse-open-card"
-                to={href(`/${boxSlug}/card/${selectedCard.relativePath}`)}
+                to={href(`/${boxSlug}/views/${selectedCard.relativePath}`)}
                 search={toSearch({
                   ...params,
                   ...(rendererName ? { view: rendererName } : {}),

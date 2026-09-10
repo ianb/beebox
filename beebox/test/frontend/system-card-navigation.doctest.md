@@ -5,11 +5,42 @@ workspace. Shell flags do not become instrument parameters. Canonical tools
 resolve their semantic place on cold entry, while warm selection wins.
 
 ```ts setup
-import { workspaceRouteTarget, systemCardEntryContext, systemCardAttentionRef, withoutShellParams, workspaceProjectionSearch } from "../../src/frontend/src/lib/system-card-navigation.js";
+import { cardChatSearch, legacyCardRedirect, workspaceRouteTarget, systemCardEntryContext, systemCardAttentionRef, withoutShellParams, workspaceProjectionSearch } from "../../src/frontend/src/lib/system-card-navigation.js";
 import { routeConversationRequest } from "../../src/frontend/src/components/chat/everywhere/conversation-intent.js";
 import { SYSTEM_CARD_PATHS } from "../../src/shared/system-card-paths.js";
 import { serializeViewUrl } from "../../src/frontend/src/lib/view-url.js";
 const browse = { path: SYSTEM_CARD_PATHS.browse, viewer: null, params: {}, viewState: { directory: "_content/recipes", detail: { path: "_content/recipes/a.memo.card", viewer: "Source", params: {}, viewState: null } } };
+```
+
+## Legacy card entry preserves the complete target and shell state
+
+The compatibility route changes only the pathname. Renderer choice, opaque
+renderer parameters, authored view state, shell parameters, and router history
+state all continue into the canonical workspace entry.
+
+```ts
+const legacyState = { bbxWorkspace: { revision: 7 }, inherited: "sentinel" };
+JSON.stringify(legacyCardRedirect({ boxSlug: "test", cardPath: "_content/Meeting Notes.memo.card", search: { view: "Source", page: "2", viewState: { cursor: 4 }, nativeComposer: "1", session: "chosen" }, state: legacyState }))
+=> {"to":"/test/views/_content/Meeting Notes.memo.card","search":{"view":"Source","page":"2","viewState":{"cursor":4},"nativeComposer":"1","session":"chosen"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}
+```
+
+## Chat-about actions preserve the selected card target
+
+Only the explicit action supplies a recipient. Recent chat resumes the resolved
+session when one exists; New always requests a fresh conversation in the
+resolved landmark directory. Both carry renderer parameters and view state in
+the serialized card target.
+
+```ts
+const selectedCard = { path: "_content/Meeting Notes.memo.card", viewer: "Source", params: { page: "2" }, viewState: { cursor: 4 } };
+JSON.stringify(cardChatSearch({ mode: "recent", target: selectedCard, contextDir: "_content", sessionId: "session-7", nativeComposer: "1" }))
+=> {"session":"session-7","card":"_content/Meeting Notes.memo.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2","nativeComposer":"1"}
+
+JSON.stringify(cardChatSearch({ mode: "recent", target: selectedCard, contextDir: "_content", sessionId: null }))
+=> {"session":"new","contextDir":"_content","card":"_content/Meeting Notes.memo.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2"}
+
+JSON.stringify(cardChatSearch({ mode: "new", target: selectedCard, contextDir: "_content", sessionId: "session-7" }))
+=> {"session":"new","contextDir":"_content","card":"_content/Meeting Notes.memo.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2"}
 ```
 
 ```ts

@@ -3,6 +3,40 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { parseViewUrl, serializeViewUrl, type ViewTarget } from "./view-url";
 import { normalizeBrowseTarget, parseBrowseState } from "./browse-card-state";
 
+/** Preserve a legacy `/card` entry exactly while adopting the workspace route. */
+export function legacyCardRedirect<TState>(input: {
+  boxSlug: string;
+  cardPath: string;
+  search: Record<string, unknown>;
+  state: TState;
+}) {
+  return {
+    to: `/${input.boxSlug}/views/${input.cardPath}`,
+    search: input.search,
+    state: input.state,
+    replace: true as const,
+  };
+}
+
+/** Search written only by an explicit recent/new chat-about-card action. */
+export function cardChatSearch(input: {
+  mode: "recent" | "new";
+  target: ViewTarget;
+  contextDir: string;
+  sessionId: string | null;
+  nativeComposer?: "1";
+}): Record<string, string> {
+  const card = serializeViewUrl(input.target);
+  if (input.mode === "recent" && input.sessionId) {
+    return input.nativeComposer === undefined
+      ? { session: input.sessionId, card }
+      : { session: input.sessionId, card, nativeComposer: input.nativeComposer };
+  }
+  return input.nativeComposer === undefined
+    ? { session: "new", contextDir: input.contextDir, card }
+    : { session: "new", contextDir: input.contextDir, card, nativeComposer: input.nativeComposer };
+}
+
 export function workspaceRouteTarget(input: {
   pathname: string; splat?: string; searchStr: string; search: Record<string, unknown>;
 }): ViewTarget | null {

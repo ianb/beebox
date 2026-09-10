@@ -17,8 +17,6 @@
  *                     max-height, scrollable, bordered.
  *     - "companion" — no extra chrome (the surrounding companion pane
  *                     provides its own header).
- *     - "page"      — full-page metadata header (path, status, version)
- *                     with renderer toggle.
  */
 
 import { ThemedFileCard } from "./themes/ThemedFileCard";
@@ -39,12 +37,11 @@ import { ActiveFileRenderer, AuthoredRendererMarker } from "./ActiveFileRenderer
 import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { OpenInPanelButton } from "./ui/OpenInPanelButton";
-import { StatusBadge } from "./ui/StatusBadge";
 import { CardActions } from "./card-actions/CardActions";
-import { usePageTitle } from "./DocumentTitle";
 import { MissingCardState } from "./card-actions/MissingCardState";
 import { FileStaleNotice } from "./FileStaleNotice";
 import type { FileViewProps } from "./file-view-types";
+import type { ViewTarget } from "../lib/view-url";
 
 export type { FileViewMode } from "./file-view-types";
 
@@ -85,9 +82,9 @@ function RendererToggle({ renderers, active, onSelect, compact, path }: {
 
 /** Chat-mode header: name + full path (truncated, hover for full), open-in-sidebar + open-in-browse icons. */
 function ChatHeader({
-  path, title, renderers, active, onSelect, onOpenInPanel, onTrashed,
+  target, title, renderers, active, onSelect, onOpenInPanel, onTrashed,
 }: {
-  path: string;
+  target: ViewTarget;
   /** The card's frontmatter title, when it has one — wins over the filename. */
   title: string | null;
   renderers: FileRenderer[];
@@ -95,6 +92,7 @@ function ChatHeader({
   onSelect: (name: string) => void;
   onOpenInPanel?: () => void; onTrashed?: (() => void) | undefined;
 }) {
+  const { path } = target;
   const { boxSlug } = useParams({ strict: false });
   const browseHref = withBase(`/${boxSlug}/browse/${path}`);
   return (
@@ -104,43 +102,11 @@ function ChatHeader({
         <div className="text-xs text-warm-500 truncate" title={toDisplayPath(path)}>{toDisplayPath(path)}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact path={path} />
-      <CardActions path={path} onTrashed={onTrashed} />
+      <CardActions target={target} onTrashed={onTrashed} />
       {onOpenInPanel ? (
         <OpenInPanelButton onClick={onOpenInPanel} label="Open in sidebar" size="sm" />
       ) : null}
       <ExternalIconLink href={browseHref} label="Open in browse view (new tab)" size="sm" />
-    </div>
-  );
-}
-
-function PageHeader({
-  data, renderers, active, onSelect, onTrashed,
-}: {
-  data: FileData;
-  renderers: FileRenderer[];
-  active: FileRenderer;
-  onSelect: (name: string) => void;
-  onTrashed?: (() => void) | undefined;
-}) {
-  const status = typeof data.frontmatter?.status === "string" ? data.frontmatter.status : null;
-  // The heading and the tab say the same thing. PageHeader renders only in
-  // `page` mode -- the /card and /views routes -- so no embedded, companion,
-  // or overlaid card can reach this and retitle the tab.
-  usePageTitle(cardTitle(data) ?? displayName(data.path));
-  return (
-    <div className="p-4 pb-0">
-      <div className="flex items-center justify-between mb-2 gap-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-warm-900 truncate" title={toDisplayPath(data.path)}>
-            {cardTitle(data) ?? displayName(data.path)}
-          </h1>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-warm-500 truncate" title={toDisplayPath(data.path)}>{toDisplayPath(data.path)}</span>
-            {status ? <StatusBadge status={status} /> : null}
-          </div>
-        </div>
-        <div className="flex items-center gap-1"><RendererToggle renderers={renderers} active={active} onSelect={onSelect} path={data.path} />{isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onTrashed} /> : null}</div>
-      </div>
     </div>
   );
 }
@@ -166,10 +132,19 @@ function selectedRenderer({ path, userSelection, rendererName }: {
   path: string; userSelection: { path: string; name: string | null } | null; rendererName?: string | null;
 }) { return userSelection?.path === path ? userSelection.name : rendererName; }
 
+function selectedTarget({ path, viewer, params, viewState }: {
+  path: string;
+  viewer: string | null;
+  params?: Record<string, string>;
+  viewState?: ViewTarget["viewState"];
+}): ViewTarget {
+  return { path, viewer, params: params ?? {}, viewState: viewState ?? null };
+}
+
 /* ---------- main component ---------- */
 
 export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer, onNavigate, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
-  const mode = modeProp ?? "page";
+  const mode = modeProp ?? "companion";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const cardContext = useConversationCard({ path, mode, rendererName: selectedRenderer({ path, userSelection, rendererName }), params, viewState: ownedViewState });
   const onAddSelection = selectionReceiver(suppliedAddSelection, cardContext.capture);
@@ -219,6 +194,7 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
   if (!active) {
     return <div className="p-4 text-warm-600">No renderer available for this file.</div>;
   }
+  const target = selectedTarget({ path, viewer: requested, params, viewState: ownedViewState });
 
   const rendered = (
     <ActiveFileRenderer
@@ -227,13 +203,13 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
       {...(ownedStateChange !== undefined ? { onViewStateChange: ownedStateChange } : {})}
       {...(reportActivity !== undefined ? { reportActivity } : {})}
       onNavigate={onNavigate} caption={caption}
-      renderInline={(target) => (
+      renderInline={(inlineTarget) => (
         <FileView
-          path={target.path}
+          path={inlineTarget.path}
           mode="embed"
-          rendererName={target.viewer}
-          params={target.params}
-          viewState={target.viewState}
+          rendererName={inlineTarget.viewer}
+          params={inlineTarget.params}
+          viewState={inlineTarget.viewState}
           onNavigate={onNavigate}
         />
       )}
@@ -262,42 +238,29 @@ export function FileView({ path, mode: modeProp, rendererName, onSelectRenderer,
 
   if (isCardPath(path)) {
     return <ThemedFileCard key={path} data={data} mode={mode} renderers={renderers}
-      active={active} hasExplicitView={requested !== null} onSelect={selectForPath} onNavigate={onNavigate} onFocus={handleCardFocus}
+      active={active} target={target} hasExplicitView={requested !== null} onSelect={selectForPath} onNavigate={onNavigate} onFocus={handleCardFocus}
       onClose={onClose} onOpenInPanel={onOpenInPanel}>{body}</ThemedFileCard>;
   }
 
   if (mode === "chat") {
     return (
       <div className="border rounded-lg overflow-hidden bg-white">
-        <ChatHeader path={path} title={cardTitle(data)} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} onTrashed={onClose} />
+        <ChatHeader target={target} title={cardTitle(data)} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} onTrashed={onClose} />
         <div className="max-h-96 overflow-auto">{body}</div>
       </div>
     );
   }
 
-  if (mode === "companion") {
-    // The surrounding panel provides the path+open-link header. Just show a
-    // compact toggle row if there are alternates.
-    // Column flex with `min-h-full` so a renderer that wants to fill the pane
-    // (the PDF frame) can take the leftover height, while a taller renderer
-    // still grows past it and scrolls in the pane's own overflow-auto.
-    return (
-      <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus} className="flex flex-col min-h-full">
-        {renderers.length > 1 || isCardPath(data.path) ? (
-          <div className="flex-shrink-0 flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
-            <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact path={data.path} />
-            {isCardPath(data.path) ? <CardActions path={data.path} onTrashed={onClose} /> : null}
-          </div>
-        ) : null}
-        <div className="flex-1 min-h-0">{body}</div>
-      </div>
-    );
-  }
-
+  // The surrounding companion panel provides the path+open-link header. A
+  // non-card file needs only a compact renderer toggle when alternates exist.
   return (
-    <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus}>
-      <PageHeader data={data} renderers={renderers} active={active} onSelect={selectForPath} onTrashed={onClose} />
-      {body}
+    <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus} className="flex flex-col min-h-full">
+      {renderers.length > 1 ? (
+        <div className="flex-shrink-0 flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
+          <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact path={data.path} />
+        </div>
+      ) : null}
+      <div className="flex-1 min-h-0">{body}</div>
     </div>
   );
 }

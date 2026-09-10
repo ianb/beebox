@@ -47,7 +47,7 @@ function HereLinkRow({ link, boxSlug }: { link: HereLink; boxSlug: string }) {
     );
   }
   return (
-    <MenuItem to={href(`/${boxSlug}/card/${link.ref}`)}>
+    <MenuItem to={href(`/${boxSlug}/views/${link.ref}`)}>
       <span className="block min-w-0 truncate">{linkText(link)}</span>
     </MenuItem>
   );

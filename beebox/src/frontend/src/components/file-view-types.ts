@@ -2,7 +2,7 @@ import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { AddSelectionInput } from "../lib/selection/position";
 import type { NavigateHint, ViewState, ViewTarget } from "../lib/view-url";
 
-export type FileViewMode = "page" | "chat" | "companion" | "embed";
+export type FileViewMode = "chat" | "companion" | "embed";
 
 export interface FileViewProps {
   path: string;

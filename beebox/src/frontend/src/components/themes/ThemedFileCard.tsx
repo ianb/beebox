@@ -23,6 +23,7 @@ interface ThemedFileCardProps {
   mode: Exclude<FileViewMode, "embed">;
   renderers: FileRenderer[];
   active: FileRenderer;
+  target: ViewTarget;
   hasExplicitView: boolean;
   onSelect: (name: string | null) => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -32,7 +33,7 @@ interface ThemedFileCardProps {
   children: ReactNode;
 }
 
-export function ThemedFileCard({ data, mode, renderers, active, hasExplicitView, onSelect, onNavigate, onFocus, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
+export function ThemedFileCard({ data, mode, renderers, active, target, hasExplicitView, onSelect, onNavigate, onFocus, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
   const { boxSlug } = useParams({ strict: false });
   const presentation = useBoxPresentation();
   if (presentation !== null && !presentation.data && presentation.error === null) {
@@ -75,7 +76,7 @@ export function ThemedFileCard({ data, mode, renderers, active, hasExplicitView,
         {first ? <div className="mt-2"><Button size="sm" intent="ghost" disabled={!hasExplicitView} onClick={() => onSelect(null)}>Use preferred view</Button></div> : null}
       </div>
       <CardMentions path={data.path} onNavigate={onNavigate} />
-      <div className="mt-6"><CardActions path={data.path} onTrashed={onClose} /></div>
+      <div className="mt-6"><CardActions target={target} onTrashed={onClose} /></div>
     </>
   );
   return <CardThemeSurface

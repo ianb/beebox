@@ -129,9 +129,10 @@ The surviving recipient runtime is not counted as removable presentation code.
 ## Things I checked and found clean
 
 The reviewer confirmed all template sections, track-level directions and first
-chunks, linked issue existence, candidate file line counts, Knip configuration
-absence, filter-push/commit-replace behavior, index-or-HEAD protection, fresh-init
+chunks, linked issue existence, candidate file line counts, filter-push/commit-replace behavior, index-or-HEAD protection, fresh-init
 ordering, ViewOverlay callers, and recipient-versus-presentation portions of
 useConversationRoute. The planner independently measured the full frontend
-baseline; the reviewer did not run shell counts. Doc-check and diff-check cover
+baseline; the reviewer did not run shell counts. Implementation follow-up corrected the Knip finding: its script/configuration
+exist at the monorepo root, not the beebox package where the initial scan ran.
+Doc-check and diff-check cover
 the documentation artifact; they are not implementation tests.

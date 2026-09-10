@@ -14,7 +14,7 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { href, toSearch } from "./lib/routing";
 import { parseViewUrl, viewStateSearchValue } from "./lib/view-url";
 import { legacyBrowseTarget } from "./lib/browse-card-state";
-import { systemCardShellSearch, withoutShellParams } from "./lib/system-card-navigation";
+import { legacyCardRedirect, systemCardShellSearch, withoutShellParams } from "./lib/system-card-navigation";
 import { trpcClient } from "./lib/trpc";
 import { ChatPage } from "./pages/ChatPage";
 import { QuestionsPage } from "./pages/QuestionsPage";
@@ -25,8 +25,6 @@ import { AppLayout, BoxRedirect, RootLayout } from "./app-shell";
 import { RouteError } from "./components/RouteError";
 import { LoginPage } from "./pages/login/LoginPage";
 import { SetupPage } from "./pages/login/SetupPage";
-import { CardViewPage } from "./pages/card/CardViewPage";
-import { ViewPage } from "./pages/ViewPage";
 import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
 import { ChatsPage } from "./pages/chats/ChatsPage";
 import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
@@ -213,17 +211,23 @@ const adminRoute = createRoute({
 });
 
 const cardRoute = createRoute({
-  staticData: { title: "Card" },
+  staticData: { title: null },
   getParentRoute: () => boxLayoutRoute,
   path: "/card/$",
-  component: CardViewPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect(legacyCardRedirect({
+      boxSlug: params.boxSlug,
+      cardPath: params._splat ?? "",
+      search: location.search,
+      state: location.state,
+    }));
+  },
 });
 
 const viewRoute = createRoute({
   staticData: { title: "Card" },
   getParentRoute: () => boxLayoutRoute,
   path: "/views/$",
-  component: ViewPage,
 });
 
 const landmarksRoute = createRoute({

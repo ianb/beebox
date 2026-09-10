@@ -7,7 +7,7 @@
 
 import { tour, type TourContext } from "./tour-lib/index.js";
 
-const CARD = "/card/_content/theme-tour/";
+const CARD = "/views/_content/theme-tour/";
 
 tour(
   { name: "card-themes", description: "Walk the persistent card-theme gallery across short, dense, quoted, and structured cards." },
