@@ -21,10 +21,26 @@ const { parse: markdocParse, transform: markdocTransform, validate: markdocValid
 
 const FRONTMATTER_RE = /^---\r?\n([\S\s]*?)\r?\n---\r?\n?/;
 
+const contributionSchema = z.string().trim().min(1);
+
+export const authorshipSchema = z.object({
+  people: z.array(z.object({
+    name: z.string().trim().min(1),
+    role: z.string().trim().min(1),
+    contribution: z.string().trim().min(1),
+  }).strict()).min(1),
+  ai: z.object({
+    transcription: contributionSchema,
+    drafting: contributionSchema,
+    editing: contributionSchema,
+  }).catchall(contributionSchema),
+}).strict();
+
 export const pageFrontmatterSchema = z
   .object({
     title: z.string().min(1),
     summary: z.string().min(1),
+    authorship: authorshipSchema,
     /** Unlisted pages build and serve but stay out of llms.txt (prototypes). */
     unlisted: z.boolean().optional(),
     theme: z.enum(["plain", "paper", "post-it"]).optional(),

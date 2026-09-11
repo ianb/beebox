@@ -1,6 +1,15 @@
 ---
 title: A note on confidence
 summary: "Editorial scaffold: the walkthrough's explanation of routing confidence."
+authorship:
+  people:
+    - name: Ian Bicking
+      role: director
+      contribution: Directed the use of an attached aside as supplementary context within the walkthrough.
+  ai:
+    transcription: none
+    drafting: Drafted this explanation from the walkthrough's repository-backed example.
+    editing: Separated the explanation from the walkthrough into an attached card.
 unlisted: true
 theme: post-it
 stock: yellow
@@ -13,11 +22,10 @@ next:
 ---
 # A note on confidence
 
-> **[EDITORIAL PLACEHOLDER — generated explanation from the walkthrough,
-> not the boxholder's words. To be reviewed before replacing this marker.]**
-
-The agent labels every routing decision *confident*, *probable*, or *guess*.
+Confidence is the line between acting and asking. This walkthrough compresses
+that idea into three labels: *confident*, *probable*, and *guess*.
 Confident items move to their folder. Probable items move too, but keep a
 review marker so you can spot-check. A guess doesn't move at all — it stays
 put and becomes a question instead. The threshold between acting and asking
-is the whole design.
+is the whole design. These labels explain the example; they are not a promise
+that every Bee Box procedure uses the same names.
