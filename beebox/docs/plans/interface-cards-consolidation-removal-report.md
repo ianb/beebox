@@ -299,3 +299,11 @@ ending at `43f948450`. Track O found no new containment, card-write, unsafe-cast
 or silent-failure defect: History lookup failure routes to the visible card error
 surface; bootstrap remains exclusive-create rather than read/modify/write; Admin
 arrival fields are independent optional query values rather than lifecycle states.
+
+The final main recheck then found the transcript-selection landing `4ce238009`.
+Merge `1ca6cd895` preserves its transcript selection capture and nullable source
+refs alongside the renamed selection-only context store and the existing
+visible-card sink. Native selection encode/decode and contract fixtures remain
+upstream's new shape; consolidation adds no further protocol change. This merge
+is also excluded from source-removal totals. Finish verification reruns against
+the combined tree rather than relying on the earlier green result.
