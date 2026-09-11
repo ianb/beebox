@@ -1,0 +1,15 @@
+---
+title: A small collection
+theme: paper
+stock: manila
+next:
+  - card: Reading.doc.card
+    label: Start reading
+---
+[Prototype content]
+
+A document and two notes. That is the whole collection.
+
+[Reading, with room beside it](Reading.doc.card)
+
+Start with the document. Its notes are there when you need them.

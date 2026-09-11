@@ -1,0 +1,23 @@
+---
+title: A note on confidence
+summary: "Editorial scaffold: the walkthrough's explanation of routing confidence."
+unlisted: true
+theme: post-it
+stock: yellow
+kind: generated
+status: ready
+next:
+  - card: /walkthrough.site-page.card
+    at: it-asks-instead-of-guessing
+    label: Continue with the question
+---
+# A note on confidence
+
+> **[EDITORIAL PLACEHOLDER — generated explanation from the walkthrough,
+> not the boxholder's words. To be reviewed before replacing this marker.]**
+
+The agent labels every routing decision *confident*, *probable*, or *guess*.
+Confident items move to their folder. Probable items move too, but keep a
+review marker so you can spot-check. A guess doesn't move at all — it stays
+put and becomes a question instead. The threshold between acting and asking
+is the whole design.

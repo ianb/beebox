@@ -1,6 +1,6 @@
 ---
 title: "Give beebox.run a paper-based visual system"
-workstream: unattached
+workstream: public-site
 area: docs
 needs: [design]
 filed-by: agent
@@ -37,5 +37,18 @@ publishing decisions.
 - Can the site use the same design tokens or theme catalog without coupling its
   build to the application frontend?
 - Which parts need responsive equivalents for a narrow, single-column view?
+
+## Checkpoint (2026-09-10)
+
+Commit `3777331df` implements the visual/navigation baseline in the real static
+site: local app CSS snapshots, independently selected card/system themes,
+authored Menu, recursive attached document addresses, desktop parent/aside
+and mobile single-card layouts, plus optional history/scroll restoration.
+The authoring guide at `site/card-authoring.md` records the current contract.
+The four-card navigation prototype remains as design evidence.
+
+This issue stays open. Public prefix naming, tabs, and contextual deep-link
+policy remain design questions. The broader site's content is still marked
+editorial drafts. Unlisted is indexing behavior, not a privacy boundary.
 
 ## Research (incomplete)

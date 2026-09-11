@@ -1,0 +1,16 @@
+---
+title: A margin note
+theme: post-it
+stock: yellow
+next:
+  - card: Reading.doc.card
+    at: keeping-your-bearings
+    label: Continue the main document
+---
+[Prototype content]
+
+A small thought beside a longer one.
+
+The main document stays nearby while you read this. On a narrow screen, its name gives you a way back.
+
+That is the whole note. Continue where the main document picks up the thought.

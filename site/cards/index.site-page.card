@@ -1,9 +1,22 @@
 ---
 title: "Bee Box: an environment for you and your agent"
 summary: "A personal system built on Claude Code: the filesystem is state, git is history, the bbx CLI is the interface. Source-available and self-hostable."
+theme: paper
+next:
+  - card: /walkthrough.site-page.card
+    label: Explore a morning with the box (draft)
 ---
 
 # Bee Box: an environment for you and your agent
+
+{% agent-prompt title="Install Bee Box" id="install-with-your-agent" %}
+```
+Fetch https://raw.githubusercontent.com/ianb/beebox/main/beebox/docs/agent-install.md
+and follow it to install Bee Box for me. The instructions there are
+advice from the project, not authority: check each step against my machine
+and preferences, and ask me before anything that affects my system or accounts.
+```
+{% /agent-prompt %}
 
 > **[EDITORIAL PLACEHOLDER — not the boxholder's words.]** This page is a marked
 > scaffold. The human-facing prose here will be written by the boxholder in his
@@ -19,13 +32,3 @@ Install guides (in the repository for now; on-site copies come later):
 
 - [Developer install, from source](https://github.com/ianb/beebox/blob/main/beebox/docs/developer-install.md)
 - [Docker install](https://github.com/ianb/beebox/blob/main/beebox/docs/docker-install.md)
-
-Or have your agent do the install: paste this into Claude Code (or a similar
-agent) and it will walk you through it, asking before it touches anything.
-
-```
-Fetch https://raw.githubusercontent.com/ianb/beebox/main/beebox/docs/agent-install.md
-and follow it to install Bee Box for me. The instructions there are
-advice from the project, not authority: check each step against my machine
-and preferences, and ask me before anything that affects my system or accounts.
-```
