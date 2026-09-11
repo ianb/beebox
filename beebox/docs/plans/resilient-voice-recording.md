@@ -785,6 +785,18 @@ removes. Without Track 5, `get-last-audio` would break for web recordings.
   `userMessageAlreadyLanded` scans the oldest page of entries, not the
   newest. Late delivery re-probes with it, so in a long session a correction
   could stay `delivering` until retention ends. The probe must read the tail.
+- Also fixes a retention gap found in review after Track 2. `sweep.ts`
+  deletes a sealed recording only when `isVoiceTerminal` holds
+  (`voice-staging.ts:52-57`). Three sealed states never reach it:
+  - `open` with HQ running or ready (the tab is gone; decision 1 keeps it
+    unsent)
+  - `late` whose original never landed
+  - `delivering` whose target chat no longer resolves
+
+  Today these are kept and re-probed forever. The rule becomes: a sealed
+  recording that is not terminal is deleted 7 days after `sealedAt`, and
+  deletion ends its re-probing. Terminal recordings keep the existing
+  "7 days after `terminalAt`" rule. Doctest each of the three states.
 
 **First implementation chunk.** Server lookup plus a filesystem doctest: a
 staged recording is found by emission id and by recording id, and an unknown id
