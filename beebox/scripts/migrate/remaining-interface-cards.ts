@@ -11,7 +11,7 @@ try {
   else {
     const errors = await checkSystemCards(boxRoot, REMAINING_SYSTEM_CARD_MIGRATION);
     if (errors.length > 0) throw new SystemCardInvariantError(errors, REMAINING_SYSTEM_CARD_MIGRATION);
-    console.log("Dry run: create missing canonical Questions, Landmarks, History, Storage, and Admin cards; preserve existing cards.");
+    console.log("Dry run: create any missing canonical interface cards (all eight); preserve existing cards.");
   }
 } catch (error) {
   console.error(errorMessage(error));

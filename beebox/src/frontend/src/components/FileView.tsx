@@ -20,7 +20,7 @@
  */
 
 import { ThemedFileCard } from "./themes/ThemedFileCard";
-import { useConversationCard, selectionReceiver } from "./chat/everywhere/card-context";
+import { useVisibleCardSelectionSink, selectionReceiver } from "./chat/everywhere/card-context";
 import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
 import { displayName } from "../lib/display-name";
@@ -128,10 +128,6 @@ function FileErrorState({ path, failure, onRetry }: { path: string; failure: Loa
   );
 }
 
-function selectedRenderer({ path, userSelection, rendererName }: {
-  path: string; userSelection: { path: string; name: string | null } | null; rendererName?: string | null;
-}) { return userSelection?.path === path ? userSelection.name : rendererName; }
-
 function selectedTarget({ path, viewer, params, viewState }: {
   path: string;
   viewer: string | null;
@@ -177,10 +173,8 @@ function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
 export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
   const mode = modeProp ?? "companion";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
-  const cardContext = useConversationCard({ path, mode, rendererName: selectedRenderer({ path, userSelection, rendererName }), params, viewState: ownedViewState });
-  const onAddSelection = selectionReceiver(suppliedAddSelection, cardContext.capture);
-  const handleCardFocus = cardContext.handleFocus;
-  const handleRendererFocus = cardContext.handleRendererFocus;
+  const visibleSelectionSink = useVisibleCardSelectionSink();
+  const onAddSelection = selectionReceiver(suppliedAddSelection, mode === "embed" ? undefined : visibleSelectionSink);
   const { data, loading, error, stale, recovery, refresh } = useFileData(path, { recoverMoved: onMoved !== undefined });
   const followingMove = useMovedCardRecovery({ path, recovery, onMoved, hasData: data !== null });
 
@@ -194,13 +188,12 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
     // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
     // "explored" action. No-op outside the companion pane (reportActivity unset).
     reportActivity?.("explored", name === null ? "using preferred view" : `viewing as ${name}`);
-    handleRendererFocus(name);
     if (onSelectRenderer) {
       onSelectRenderer(name);
       return;
     }
     setUserSelection({ path, name });
-  }, [onSelectRenderer, path, reportActivity, handleRendererFocus]);
+  }, [onSelectRenderer, path, reportActivity]);
 
   const binding = useCardViewBinding(data?.type);
   const renderers: FileRenderer[] = useMemo(() => {
@@ -269,7 +262,7 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
 
   if (usesThemeSurface(path)) {
     return <ThemedFileCard key={path} data={data} mode={mode} renderers={renderers}
-      active={active} target={target} hasExplicitView={requested !== null} onSelect={selectForPath} onNavigate={onNavigate} onFocus={handleCardFocus}
+      active={active} target={target} hasExplicitView={requested !== null} onSelect={selectForPath} onNavigate={onNavigate}
       onClose={onClose} onOpenInPanel={onOpenInPanel}>{body}</ThemedFileCard>;
   }
 
@@ -283,11 +276,11 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
   }
 
 
-  if (workspacePdf) return <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus} className="h-full min-h-0">{body}</div>;
+  if (workspacePdf) return <div className="h-full min-h-0">{body}</div>;
   // The surrounding companion panel provides the path header. Column flex
   // lets a PDF fill the pane while taller renderers scroll in the pane.
   return (
-    <div onPointerDownCapture={handleCardFocus} onFocusCapture={handleCardFocus} className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full">
       {renderers.length > 1 || isCardPath(data.path) ? (
         <div className="flex-shrink-0 flex items-center justify-end gap-1 px-3 py-2 border-b border-warm-200 print:hidden">
           <RendererToggle renderers={renderers} active={active} onSelect={selectForPath} compact path={data.path} />

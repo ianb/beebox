@@ -11,10 +11,11 @@ import { Outlet, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
-import { ViewOverlayProvider } from "./components/ViewOverlay";
 import { ConversationCardProvider } from "./components/chat/everywhere/card-context";
-import { BoxConversationProvider } from "./components/chat/everywhere/conversation-context";
+import { BoxConversationProvider, useBoxConversation } from "./components/chat/everywhere/conversation-context";
 import { BoxConversationShell } from "./components/chat/everywhere/BoxConversationShell";
+import { WorkspaceProvider } from "./components/chat/workspace/WorkspaceProvider";
+import { invariant } from "@shared/invariant";
 import { BoxPresentationProvider, PresentationNotice } from "./components/themes/BoxPresentationProvider";
 import { AppNav } from "./components/AppNav";
 import { AppBarChromeProvider } from "./components/app-bar-chrome";
@@ -105,7 +106,7 @@ export function ProductLayout() {
           />
           <PresentationNotice />
           <main className="flex-1 min-h-0">
-            <BoxConversationShell><Outlet /></BoxConversationShell>
+            <BoxConversationShell /><Outlet />
           </main>
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
           <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
@@ -122,8 +123,14 @@ export function DevHarnessLayout() {
 /** Providers retain their children identity when a chat publishes chrome. */
 function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
   return <BoxConversationProvider boxSlug={boxSlug}><BoxPresentationProvider boxSlug={boxSlug}>
-    <AppBarChromeProvider><ConversationCardProvider><ViewOverlayProvider>{children}</ViewOverlayProvider></ConversationCardProvider></AppBarChromeProvider>
+    <WorkspaceShellProvider><AppBarChromeProvider><ConversationCardProvider>{children}</ConversationCardProvider></AppBarChromeProvider></WorkspaceShellProvider>
   </BoxPresentationProvider></BoxConversationProvider>;
+}
+
+function WorkspaceShellProvider({ children }: { children: ReactNode }) {
+  const conversation = useBoxConversation();
+  invariant(conversation, "WorkspaceShellProvider requires BoxConversationProvider");
+  return <WorkspaceProvider target={conversation.rendered?.target}>{children}</WorkspaceProvider>;
 }
 
 /**

@@ -11,7 +11,7 @@ import {
   workspaceDisplayReady,
   workspaceRouteBound,
   workspaceOpenShouldReplace,
-  explicitConversationHistoryState,
+  explicitConversationHistoryState, legacyOverlayActions,
   revealConversationActions,
   workspaceHistoryTarget,
 } from "../../src/frontend/src/components/chat/workspace/workspace-history.js";
@@ -20,6 +20,23 @@ import { serializeWorkspaceState } from "../../src/frontend/src/components/chat/
 
 const snapshot = serializeWorkspaceState(createEmptyWorkspaceState());
 const entry = { scope: "paper-cards/test1", identity: "session-1", snapshot, revision: 8 };
+```
+
+Legacy overlay conversion opens the incoming card before revealing chat. It
+does not invent return metadata, so Show cards restores in place while browser
+Back remains available for a genuine preceding legacy entry.
+
+```ts
+const legacyCard = { path: "_content/legacy.memo.card", viewer: "Source", params: { page: "2" }, viewState: { cursor: 4 } };
+const legacyActions = legacyOverlayActions({ state: createEmptyWorkspaceState(), incoming: legacyCard, viewport: "mobile", at: 9 });
+legacyActions.map(action => action.type)
+=> [
+  "openCard",
+  "showChat"
+]
+
+shouldRestoreMobileWithBack(undefined, 12)
+=> false
 ```
 
 ## Explicit chat-about intent reveals the conversation once
@@ -70,6 +87,9 @@ JSON.stringify(projectWorkspace(desktopRevealed, "desktop"))
 const mobileCard = reduceWorkspace(twoCards, {
   type: "openCard", target: { ...detailed, path: "notes.card" }, label: "Notes", at: 3, viewport: "mobile",
 }).state;
+decideWorkspaceNavigation({ history: undefined, scope: entry.scope, identity: entry.identity, freshCard: null, cardEntry: true }).kind
+=> keep-current
+
 const mobileActions = revealConversationActions({ state: mobileCard, cardPath: "notes.card", viewport: "mobile" });
 const mobileRevealed = mobileActions.reduce((state, action) => reduceWorkspace(state, action).state, mobileCard);
 JSON.stringify(projectWorkspace(mobileRevealed, "mobile"))

@@ -12,3 +12,13 @@ export function resolveHistorySelection<T extends { hash: string }>(commits: T[]
   const commit = commits.find(candidate => candidate.hash.startsWith(selectedHash));
   return commit === undefined ? { kind: "pending" } : { kind: "selected", commit };
 }
+
+export function historySelectionMissing(input: {
+  selection: HistorySelection<unknown>;
+  selectedHash: string | null | undefined;
+  loading: boolean;
+  hasNextPage: boolean;
+}): boolean {
+  return input.selection.kind === "pending" && typeof input.selectedHash === "string"
+    && !input.loading && !input.hasNextPage;
+}

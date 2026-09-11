@@ -11,8 +11,6 @@
  */
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { Button } from "../ui/Button";
-import { useViewOverlayVisible } from "../ViewOverlay";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { SelectionPanel } from "./ChatSelections";
 import { type SelectionItem } from "../../lib/selection/serialize";
@@ -209,10 +207,6 @@ export { ChatInputArea, MobileTextareaRow };
  * ownership of the data wiring.
  */
 export function ChatView(props: {
-  transcriptVisible?: boolean;
-  routeContent?: ReactNode;
-  onShowConversation?: () => void;
-  onHideConversation?: () => void;
   ambientRegion?: ReactNode;
   selectionNotice?: ReactNode;
   failedRegion?: ReactNode;
@@ -224,10 +218,6 @@ export function ChatView(props: {
   debugLog: ReactNode;
 }) {
   const { workspace, barChrome, statusBanners, composerSection, debugLog } = props;
-  const visible = props.transcriptVisible ?? true;
-  const overlayVisible = useViewOverlayVisible();
-  const hasRoute = props.routeContent !== undefined;
-  const { onHideConversation } = props;
   const composer = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const node = composer.current;
@@ -238,19 +228,12 @@ export function ChatView(props: {
     measure();
     return () => { observer.disconnect(); document.documentElement.style.removeProperty("--bbx-composer-height"); };
   }, []);
-  useEffect(() => {
-    if (!visible || !hasRoute || overlayVisible) return;
-    function escape(event: KeyboardEvent) { if (event.key === "Escape") onHideConversation?.(); }
-    document.addEventListener("keydown", escape);
-    return () => document.removeEventListener("keydown", escape);
-  }, [visible, hasRoute, onHideConversation, overlayVisible]);
   return (
     <>
       <div className="bbx-conversation-desk h-full flex flex-col bg-gradient-to-b from-warm-50 to-warm-200 overflow-hidden">
         {barChrome}
         {workspace}
         <div ref={composer} className="bbx-composer-material flex flex-col w-full max-w-5xl mx-auto min-w-0">
-          {!visible && hasRoute ? <div className="px-3 py-1"><Button id="bbx-chat-show-conversation" size="sm" intent="ghost" onClick={props.onShowConversation}>Open conversation</Button></div> : null}
           {props.selectionNotice}
           {props.ambientRegion}
           {props.failedRegion}

@@ -51,7 +51,7 @@ unestablished. That is the first thing to find out.
   submit flow stops being conditional on realtime success, is a design call.
 - **Retry the HQ upload.** A transient network failure on `POST
   /api/chat/transcribe-audio` should not be terminal. Same reasoning as
-  [transient 502s aren't retried](2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md);
+  [transient 502s aren't retried](../closed/bugs/2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md);
   this is a mutation, so it needs its own deliberate policy rather than the
   query retry that issue installs.
 - **Don't discard the audio on failure.** The blob is already retained

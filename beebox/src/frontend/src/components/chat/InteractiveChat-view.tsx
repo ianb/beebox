@@ -257,16 +257,14 @@ function ComposerRegion(props: ChatBodyProps) {
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
-  const { voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, embedded, nativeComposer } = props;
+  const { voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, nativeComposer } = props;
   const { handleAddSelection, nativeCommandError, dismissNativeCommandError } = useCompanionSelection({ nativeComposer, selections, voice });
   return (
     <ChatRenderProfiler id="chat-root">
       <ChatView
-      transcriptVisible={props.transcriptVisible} routeContent={props.routeContent}
-      onShowConversation={props.onShowConversation} onHideConversation={props.onHideConversation}
       ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice} failedRegion={props.failedRegion}
-      barChrome={embedded ? null : <BarChromeRegion {...props} />}
-      workspace={<WorkspaceCanvas routeContent={props.routeContent} onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
+      barChrome={nativeComposer ? null : <BarChromeRegion {...props} />}
+      workspace={<WorkspaceCanvas onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
         <MessageListRegion key={props.conversationKey} {...props} />
       </WorkspaceCanvas>}
       statusBanners={
@@ -297,7 +295,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           />
         </>
       }
-      composerSection={embedded || nativeComposer ? null : <ComposerRegion {...props} />}
+      composerSection={nativeComposer ? null : <ComposerRegion {...props} />}
         debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
       />
     </ChatRenderProfiler>

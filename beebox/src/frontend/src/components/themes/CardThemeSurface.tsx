@@ -10,11 +10,10 @@ export interface CardThemeSurfaceProps {
   properties: ReactNode;
   actions?: ReactNode;
   problem?: ReactNode;
-  onFocus: () => void;
 }
 
 /** Front stays mounted while turned over, retaining authored view state. */
-export function CardThemeSurface({ theme, title, mode, children, properties, actions, problem, onFocus }: CardThemeSurfaceProps) {
+export function CardThemeSurface({ theme, title, mode, children, properties, actions, problem }: CardThemeSurfaceProps) {
   const [back, setBack] = useState(false);
   const [turn, setTurn] = useState<"out" | "in" | null>(null);
   const id = useId();
@@ -43,8 +42,6 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
       data-default-quote-treatment={descriptor?.quoteTreatment}
       data-default-blockquote-treatment={descriptor?.blockquoteTreatment}
       aria-label={title}
-      onPointerDownCapture={onFocus}
-      onFocusCapture={onFocus}
       onAnimationEnd={(event) => {
         if (event.target !== event.currentTarget) return;
         if (turn === "out") {

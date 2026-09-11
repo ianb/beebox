@@ -6,10 +6,11 @@ import { BrowseBody } from "../pages/browse/BrowsePage";
 import { BrowseLocationError } from "../pages/browse/components/BrowseLocationError";
 import { browseParent, browseStateToViewState, legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
 import { trpc } from "../lib/trpc";
-import { parseViewUrl, type ViewState, type ViewTarget } from "../lib/view-url";
+import { type ViewState, type ViewTarget } from "../lib/view-url";
 import { BrowseLoading } from "../pages/browse/components/BrowseLoading";
 import { useAppBarPlace } from "../components/app-bar-chrome";
-import { useCardVisible, useFocusedConversationCard } from "../components/chat/everywhere/card-context";
+import { useCardVisible } from "../components/chat/everywhere/card-context";
+import { useWorkspace } from "../components/chat/workspace/WorkspaceProvider";
 
 function browseLocationValid({
   directoryKind,
@@ -34,8 +35,8 @@ function browseLocationLoading({ hasDetail, directoryLoading, detailLoading }: {
 
 function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (next: ViewState, method: "push" | "replace") => void }) {
   const visible = useCardVisible();
-  const focusedCard = useFocusedConversationCard();
-  const focused = focusedCard !== null && parseViewUrl(focusedCard).path === SYSTEM_CARD_PATHS.browse;
+  const workspace = useWorkspace();
+  const focused = workspace?.activeView?.target.path === SYSTEM_CARD_PATHS.browse;
   const utils = trpc.useUtils();
   const navigationVersion = useRef(0);
   const stateKey = JSON.stringify(state);

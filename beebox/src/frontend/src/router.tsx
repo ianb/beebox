@@ -25,7 +25,7 @@ import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
 import { ComposerStatesPage } from "./pages/dev/ComposerStatesPage";
 import { CaptureModePage } from "./pages/dev/CaptureModeHarness";
 import { ChatScrollPage } from "./pages/dev/ChatScrollHarness";
-import { historyViewRedirectSearch, legacyHistoryState, normalizeHistoryViewRouteTarget } from "./components/history/history-card-state";
+import { historyLookupFailureSearch, historyViewRedirectSearch, legacyHistoryState, normalizeHistoryViewRouteTarget } from "./components/history/history-card-state";
 import { DEV_HARNESS_PATHS } from "./lib/box-route-layout";
 
 // --- Root route ---
@@ -223,7 +223,6 @@ const adminRoute = createRoute({
     google: z.string().optional(),
     message: z.string().optional(),
     reconnect: z.string().optional(),
-    code: z.string().optional(),
   }),
 });
 
@@ -249,7 +248,9 @@ const viewRoute = createRoute({
     const target = parseViewUrl(`${params._splat ?? ""}${location.searchStr}`);
     let normalized;
     try { normalized = await normalizeHistoryViewRouteTarget(target, path => trpcClient.card.get.query({ path })); }
-    catch (_error) { return; }
+    catch (_error) {
+      throw redirect({ to: href(`/${params.boxSlug}/chat`), search: toSearch(historyLookupFailureSearch(target, location.search)), state: location.state, replace: true });
+    }
     if (normalized === null) return;
     throw redirect({ to: href(`/${params.boxSlug}/views/${normalized.path}`), search: toSearch(historyViewRedirectSearch(normalized, location.search)), state: location.state, replace: true });
   },

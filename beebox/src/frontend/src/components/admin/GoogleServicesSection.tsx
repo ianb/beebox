@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { adminArrivalKey, shouldAcknowledgeAdminArrival, shouldConsumeAdminArrival, type AdminArrivalState } from "../../lib/admin-card-state";
 import { useCardVisible } from "../chat/everywhere/card-context";
 import { CheckboxField } from "../ui/fields";
@@ -39,10 +40,18 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
   const sectionRef = useRef<HTMLDivElement>(null);
   const visible = useCardVisible();
   const processedArrival = useRef<string | null>(null);
+  const historyIndex = useRouterState({ select: state => state.location.state.__TSR_index });
+  const observedIndex = useRef(historyIndex);
   const [arrivalNotice, setArrivalNotice] = useState<AdminArrivalState>({});
   const arrivalKey = adminArrivalKey(arrival);
 
   useEffect(() => {
+    // A Back traversal ends the receipt lifetime, even while this card is hidden.
+    // Redirect/acknowledgement replacements keep the index and must not replay.
+    if (observedIndex.current !== historyIndex) {
+      observedIndex.current = historyIndex;
+      processedArrival.current = null;
+    }
     if (arrivalKey === null || !shouldAcknowledgeAdminArrival({ arrival, visible, loading })) return;
     if (!shouldConsumeAdminArrival({ arrival, visible, loading, alreadyProcessed: processedArrival.current === arrivalReceipt })) {
       onArrivalConsumed();
@@ -53,7 +62,7 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
     if (arrival.google === "connected") void refreshStatus();
     if (arrival.reconnect === "google") sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     onArrivalConsumed();
-  }, [arrival, arrivalKey, arrivalReceipt, loading, onArrivalConsumed, refreshStatus, visible]);
+  }, [arrival, arrivalKey, arrivalReceipt, historyIndex, loading, onArrivalConsumed, refreshStatus, visible]);
 
   const notice = Object.keys(arrival).length === 0 ? arrivalNotice : arrival;
 

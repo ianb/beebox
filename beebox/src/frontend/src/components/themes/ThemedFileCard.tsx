@@ -28,7 +28,6 @@ interface ThemedFileCardProps {
   hasExplicitView: boolean;
   onSelect: (name: string | null) => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  onFocus: () => void;
   onClose?: (() => void) | undefined;
   onOpenInPanel?: (() => void) | undefined;
   children: ReactNode;
@@ -54,7 +53,7 @@ function RelatedFileProperties({ data, target, boxSlug, onNavigate, onClose }: {
   </>;
 }
 
-export function ThemedFileCard({ data, mode, renderers, active, target, hasExplicitView, onSelect, onNavigate, onFocus, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
+export function ThemedFileCard({ data, mode, renderers, active, target, hasExplicitView, onSelect, onNavigate, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
 
   const { boxSlug } = useParams({ strict: false });
   const presentation = useBoxPresentation();
@@ -100,7 +99,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
     </>
   );
   return <CardThemeSurface
-    theme={theme} title={title} mode={mode} onFocus={onFocus}
+    theme={theme} title={title} mode={mode}
     properties={properties}
     actions={mode === "chat" || onOpenInPanel ? <CardSurfaceActions mode={mode} path={data.path} onOpenInPanel={onOpenInPanel} /> : null}
     problem={error ? <div className="bbx-card-problem" role="status">Appearance could not be applied: {error}{presentation ? <Button size="sm" intent="ghost" onClick={handlePresentationRetry}>Retry</Button> : null}</div> : null}

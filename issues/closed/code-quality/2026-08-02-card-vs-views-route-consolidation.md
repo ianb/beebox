@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
 priority: normal
+resolution: implemented
 ---
+
+> Closed by the [interface-card consolidation](../../../beebox/docs/plans/interface-cards-consolidation.md), starting at `2eb9189e5`. Both routes are compatibility adapters into one workspace card path; their separate rendering components are removed. This records local implementation, not deployment.
 
 > `reconfirm?` checked 2026-09-05: still live. `router.tsx` still defines both `/card/$` (`CardViewPage`) and `/views/$` (`ViewPage`); no consolidation landed. The direction stands: views attach to cards (`?view=`), standalone view routes go.
 

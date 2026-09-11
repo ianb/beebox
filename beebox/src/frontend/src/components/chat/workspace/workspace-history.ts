@@ -59,6 +59,25 @@ export function revealConversationActions({ state, cardPath, viewport }: {
   return actions;
 }
 
+/** Convert one pre-workspace overlay entry without fabricating Back provenance. */
+export function legacyOverlayActions({ state, incoming, viewport, at }: {
+  state: WorkspaceState;
+  incoming: ViewTarget | null;
+  viewport: Viewport;
+  at: number;
+}): WorkspaceAction[] {
+  const actions: WorkspaceAction[] = [];
+  let next = state;
+  if (incoming !== null) {
+    const open: WorkspaceAction = { type: "openCard", target: incoming, label: incoming.path, at, viewport };
+    actions.push(open);
+    next = reduceWorkspace(next, open).state;
+  }
+  const cardPath = incoming?.path ?? projectWorkspace(next, viewport).foregroundPath;
+  if (cardPath !== null) actions.push(...revealConversationActions({ state: next, cardPath, viewport }));
+  return actions;
+}
+
 /** Keep an explicitly retained card in the URL while mobile shows only chat. */
 export function workspaceHistoryTarget({ state, viewport, retainedTarget }: {
   state: WorkspaceState;

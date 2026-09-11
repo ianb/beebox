@@ -4,7 +4,7 @@
  * containing view card can persist them in its ViewState.
  */
 
-import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
+import { useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import type { HistoryCommit } from "../../api";
 import { trpc } from "../../lib/trpc";
 import { Sidebar } from "../Sidebar";
@@ -14,7 +14,7 @@ import { Row } from "../ui/Row";
 import { Column } from "../ui/Column";
 import { Text } from "../ui/Text";
 import { EMPTY_FILTER } from "./history-filter";
-import { resolveHistorySelection } from "./history-selection";
+import { historySelectionMissing, resolveHistorySelection } from "./history-selection";
 
 const CommitDetail = lazy(async () => {
   const module = await import("./CommitDetail");
@@ -29,9 +29,9 @@ interface HistoryBrowserProps {
   onFilterChange: (next: HistoryFilterState) => void;
   /** Show the interactive filter bar. */
   filterBar: boolean;
-  /** Commit-hash prefix to auto-select on first load (the page's /history/$hash). */
+  /** Controlled commit-hash prefix; undefined selects newest, null keeps the timeline clear. */
   selectedHash?: string | null;
-  /** Selection sync (the page reflects it into the URL); omit for local-only selection. */
+  /** Persists timeline/detail selection in the containing card's view state. */
   onSelectedHashChange?: (hash: string | null) => void;
   idPrefix: string;
 }
@@ -63,8 +63,6 @@ export function HistoryBrowser({
     };
   }, [filter]);
 
-  const [selectedCommit, setSelectedCommit] = useState<HistoryCommit | null>(null);
-  const filterKey = JSON.stringify(filter);
 
   const { data, isLoading, isError, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
     trpc.history.list.useInfiniteQuery(
@@ -82,19 +80,9 @@ export function HistoryBrowser({
   // A deep link names one commit. Until it is found, nothing else may be selected in its place:
   // falling back to the newest commit made `/history/<old-hash>` render a DIFFERENT commit with no
   // error, so a shared link read as though it had resolved.
-  const [deepLinkPending, setDeepLinkPending] = useState(typeof selectedHash === "string");
-
-  // Auto-select when the first page arrives. Re-runs when filter changes
-  // because TanStack issues a fresh query (new first page identity).
-  useEffect(() => {
-    setSelectedCommit(null);
-    setDeepLinkPending(typeof selectedHash === "string");
-  }, [selectedHash, filterKey]);
-  useEffect(() => {
-    const result = resolveHistorySelection(commits, selectedHash);
-    if (result.kind === "selected") { setSelectedCommit(result.commit); setDeepLinkPending(false); }
-    else if (result.kind === "cleared") setSelectedCommit(null);
-  }, [selectedHash, commits]);
+  const selection = resolveHistorySelection(commits, selectedHash);
+  const selectedCommit = selection.kind === "selected" ? selection.commit : null;
+  const deepLinkPending = selection.kind === "pending" && typeof selectedHash === "string";
 
   // Keep paging until the deep-linked commit turns up or the history runs out. Without this the
   // hash simply never resolves for anything past the first page.
@@ -105,12 +93,13 @@ export function HistoryBrowser({
   }, [deepLinkPending, selectedHash, commits, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Ran out of history without finding it: say so rather than showing some other commit.
-  const deepLinkMissing = !isError && deepLinkPending && typeof selectedHash === "string" && !isLoading && !hasNextPage && !isFetchingNextPage;
+  const deepLinkMissing = !isError && historySelectionMissing({
+    selection, selectedHash, loading: isLoading || isFetchingNextPage, hasNextPage,
+  });
 
   const loading = isLoading || isFetchingNextPage;
 
   const handleSelect = (commit: HistoryCommit) => {
-    setSelectedCommit(commit);
     onSelectedHashChange?.(commit.hash);
   };
 
@@ -147,7 +136,7 @@ export function HistoryBrowser({
 
   return (
     <Row gap="none" align="stretch" className="h-full">
-      <Sidebar title="Commits" subtitle={`${commits.length} loaded`} detailSelected={hasDetail} idPrefix={`${idPrefix}-sidebar`}>
+      <Sidebar title="Commits" headingLevel="h2" subtitle={`${commits.length} loaded`} detailSelected={hasDetail} idPrefix={`${idPrefix}-sidebar`}>
         {filterBar && facetsQuery.isError ? <div className="px-3 py-2"><Text size="sm" tone="danger">History filters could not be loaded. <button id={`${idPrefix}-facets-retry`} type="button" className="underline" onClick={() => void facetsQuery.refetch()}>Retry</button></Text></div> : null}
         {filterBar ? (
           <HistoryFilterBar
@@ -174,7 +163,7 @@ export function HistoryBrowser({
         {selectedCommit ? (
           <Suspense fallback={<Row justify="center" align="center" className="h-full"><Text tone="muted">Loading commit…</Text></Row>}><CommitDetail
             commit={selectedCommit}
-            onBack={() => { setSelectedCommit(null); onSelectedHashChange?.(null); }}
+            onBack={() => onSelectedHashChange?.(null)}
             onFilterSession={handleFilterSession}
             onFilterConnector={handleFilterConnector}
             onFilterWorkflow={handleFilterWorkflow}
