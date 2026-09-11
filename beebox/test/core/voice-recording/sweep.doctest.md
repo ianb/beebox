@@ -2,7 +2,8 @@
 
 `sweepVoiceSessions` (`docs/plans/resilient-voice-recording.md`, Track 1)
 deletes a voice session's staging directory 7 days after creation if it was
-never sealed, or 7 days after it reaches a terminal handoff/HQ state.
+never sealed, 7 days after it reaches a terminal handoff/HQ state, or 7 days
+after sealing if it never becomes terminal.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -120,3 +121,44 @@ JSON.stringify({
 await box.cleanup();
 ```
 
+## A sealed recording that never becomes terminal is GC'd 7 days after sealing
+
+The tab closed during the HQ wait: HQ finished (`ready`) but no client ever
+claimed or fell back, so the handoff stays `open` and `terminalAt` is never
+set. Retention counts from `sealedAt` instead — not before 7 days:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await configureBox(box);
+
+async function sealedReadyUnclaimed(sealedAt) {
+  const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
+  await sealVoiceSession({
+    boxRoot: box.root, id: session.id,
+    hq: { emissionId: `e-${session.id}`, sessionId: "chat-1", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
+  });
+  await applyVoiceEvent({
+    boxRoot: box.root, id: session.id,
+    event: { type: "allPiecesDone", result: { text: "hi", diarized: false, service: "whisper", pieces: 1 } },
+  });
+  await backdate(box, session.id, { voice: { sealedAt } });
+  return session;
+}
+const stale = await sealedReadyUnclaimed(EIGHT_DAYS_AGO);
+const fresh = await sealedReadyUnclaimed(SIX_DAYS_AGO);
+
+const staleVoice = (await readStagingSession({ boxRoot: box.root, id: stale.id })).voice;
+JSON.stringify({ handoff: staleVoice.handoff.mode, hq: staleVoice.hq.state, terminalAt: staleVoice.terminalAt ?? null })
+=> {"handoff":"open","hq":"ready","terminalAt":null}
+
+const result = await sweepVoiceSessions({ boxRoot: box.root });
+JSON.stringify({
+  deletedOnlyStale: result.deleted.length === 1 && result.deleted[0] === stale.id,
+  freshStillThere: (await readStagingSession({ boxRoot: box.root, id: fresh.id })) !== null,
+})
+=> {"deletedOnlyStale":true,"freshStillThere":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```

@@ -8,7 +8,10 @@
  * - `VOICE_STAGING_RETENTION_MS` after creation, if it was never sealed
  *   (abandoned recording — closed tab, cancelled before finalize); or
  * - `VOICE_STAGING_RETENTION_MS` after `voice.terminalAt` — see
- *   {@link isVoiceTerminal} for what counts as terminal.
+ *   {@link isVoiceTerminal} for what counts as terminal; or
+ * - `VOICE_STAGING_RETENTION_MS` after `voice.sealedAt`, if it was sealed but
+ *   never became terminal (the tab closed during the HQ wait, so the handoff
+ *   stays `open` for good).
  */
 
 import { getBoxTime } from "../../lib/time.js";
@@ -16,7 +19,7 @@ import { listStagingSessions, isVoiceSession, type StagingSession } from "../cap
 import { cleanupStagingSession } from "../capture/staging-teardown.js";
 import { isVoiceTerminal } from "./voice-staging.js";
 
-/** How long a voice recording's staging directory survives past "never sealed" or "terminal". */
+/** How long a voice recording's staging directory survives past creation, sealing, or becoming terminal. */
 export const VOICE_STAGING_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export interface VoiceSweepResult {
@@ -35,7 +38,7 @@ function retentionStart(session: StagingSession): string | null {
   if (voice === undefined) return null; // schema invariant guards this in practice
   if (session.state === "open") return session.createdAt;
   if (isVoiceTerminal(voice)) return voice.terminalAt ?? session.lastActivityAt;
-  return null;
+  return voice.sealedAt ?? session.lastActivityAt;
 }
 
 /** Sweep one box's voice staging sessions once. Idempotent and safe to double-fire. */
