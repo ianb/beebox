@@ -10,6 +10,7 @@ import type { CardSendFields } from "../InteractiveChat-card-hooks";
 import { createPendingSendsStore } from "./pending-sends";
 import { PendingSendStorageRecovery } from "./PendingSendStorageRecovery";
 import { FailedConversationSends } from "./FailedConversationSends";
+import { PendingHqSends } from "./PendingHqSends";
 import type { ConversationControllerPool } from "./controller-pool";
 import { useBoxConversation } from "../everywhere/conversation-context";
 import { trpc } from "../../../lib/trpc";
@@ -201,6 +202,7 @@ export function useBoundEmission(opts: {
     {error !== null && <p role="alert" className="text-sm text-danger">{error}</p>}
     <PendingSendStorageRecovery boxSlug={pool.boxSlug} storageScope={pool.storageScope} blocked={pending === null}
       onRecovered={(store) => { setPending(store); setError(null); }} />
+    {pending !== null && <PendingHqSends store={pending} capture={(binding) => capture(binding)} />}
     {pending !== null && <FailedConversationSends store={pending}
       onRetry={async (row) => { await capture(row.binding)(row.emission); }}
       onRestore={(row) => { applyRestorePlan(emissionStore.editor, planRestore(emissionStore.get(), row.emission)); }} />}

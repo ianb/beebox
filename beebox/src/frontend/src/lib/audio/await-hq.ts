@@ -38,6 +38,9 @@ const realDeps: HqWaitDeps = {
   sleep: delay,
 };
 
+/** The handoff mutations alone, for resolving a wait a reload interrupted. */
+export const voiceHandoffCalls = { claim: realDeps.claim, fallBack: realDeps.fallBack };
+
 let waiter: HqWaiter | null = null;
 function realWaiter(): HqWaiter {
   waiter ??= createHqWaiter(realDeps);
