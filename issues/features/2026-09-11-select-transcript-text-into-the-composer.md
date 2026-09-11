@@ -1,6 +1,6 @@
 ---
 title: "Selecting text in the transcript should offer the same \"+\" that document selections get"
-workstream: unattached
+workstream: transcript-selection
 area: beebox
 priority: normal
 labels: [chat, selection, composer]
@@ -50,3 +50,15 @@ work.
 - **Interaction with speech.** `ChatMessages.tsx` already carries a sticky
   speech bar with `pointer-events-none` precisely so it does not block text
   selection. A new floating control in the same region needs the same care.
+
+## Resolution (transcript-selection workstream)
+
+Built. `TranscriptSelection` wraps the message list in `SelectionCapture` and
+feeds the existing conversation selection sink. Both speakers' messages are
+selectable. A transcript selection has `ref: null`; its `pos` names the source
+and speaker (`chat transcript; assistant message`), and the chat prompt tells
+the agent a ref-less selection quotes the conversation itself. The native
+bridge and the iOS draft/emission types accept a missing ref; an iOS build that
+predates this cannot decode a null `ref`, so it answers a transcript selection
+with its malformed-command rejection (visible in the web composer) while
+document selections keep working.

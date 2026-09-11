@@ -136,3 +136,16 @@ JSON.stringify(applySelections("alpha beta gamma delta epsilon", { selections: [
 =>
 "alpha beta <user-selection ref=\"/a.card\">A</user-selection> gamma delta <user-selection ref=\"/b.card\" placement=\"estimated, ~80% through the message\">B</user-selection> epsilon"
 ```
+
+## A chat-transcript selection has no `ref`
+
+Text quoted from the chat itself has no file behind it; the tag drops `ref`
+and `pos` says where it came from.
+
+```ts
+JSON.stringify(applySelections("Why [selection1]?", { selections: [
+  { id: 1, ref: null, text: "Proof it overnight", position: "chat transcript; assistant message" },
+] }))
+=>
+"Why <user-selection pos=\"chat transcript; assistant message\">Proof it overnight</user-selection>?"
+```

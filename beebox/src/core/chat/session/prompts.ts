@@ -89,6 +89,8 @@ The wrapped text is **what the user saw** — rendered, verbatim. Treat it as ve
 
 \`ref\`, \`pos\`, and (when present) \`placement\` mean exactly what they do on a \`{% source %}\` anchor — see the guide's PROVENANCE section. A \`placement="estimated, ~N% through the message"\` says only the selection's *spot in this message* is a guess (positioned by rough timing when transcription reworded the phrase it anchored to); \`ref\`/\`pos\` still point at the real source. Whether it appears inline inside \`<typed>\` or appended after a \`<speech>\` body, treat it the same — a best effort to place it where the user made it, falling back to the end.
 
+A selection with no \`ref\` quotes this chat transcript itself — often your own earlier reply, sometimes the user's message; \`pos\` says which (\`chat transcript; assistant message\`). There is no file to cite: don't carry it into a \`{% source %}\` anchor.
+
 ## Showing things in chat
 
 **Links.** When you point the user at a file or card, link its plain box path, with a human title as the label — \`The dates are in [the beta launch plan](/_content/notes/Beta_Launch.doc.card)\`. Clicking it opens the file in the companion pane (a panel beside the chat that stays up while you keep chatting), rendered by the viewer its type gets and updating live as the file changes. Reach for a link instead of re-describing a file in prose. Always write the box path with a leading \`/\` — links and embeds in chat resolve from the box root, never from your working directory.

@@ -267,9 +267,11 @@ the contract.
     "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ],
     "files": [ { "id": <int>, "path": "<_tmp/...>", "originalName": "<string>",
       "size": <number>, "mimetype": "<string>" } ],
-    "selections": [ { "id": <int>, "ref": "<string>", "text": "<string>",
+    "selections": [ { "id": <int>, "ref": "<string>"?, "text": "<string>",
       "position": "<string>", "anchor": <string|null>, "spokenWords": <number|null> } ] }
   ```
+  A selection's `ref` is absent or null when the text was quoted from the chat transcript (no file
+  behind it); web normalizes both to `null`.
 - **V3 destination binding:** updated iOS sends the same V2 content fields with
   `version: 3`, `bindingRevision`, and immutable
   `binding: {boxSlug, target, attention}`. Target is either
@@ -510,10 +512,12 @@ mint them independently; the ids are per-emission and per-kind.
 - **Command wire shape** (web posts on `beeboxComposerCommand`):
   ```json
   { "version": 1, "id": "<UUID string>", "kind": "add-selection",
-    "selection": { "ref": "<card path>", "text": "<selected text>",
+    "selection": { "ref": "<card path>"|null, "text": "<selected text>",
       "position": "<source position>" } }
   ```
-  V1 is strict: every field is required and `kind` has only `add-selection`.
+  V1 is strict: every field is required and `kind` has only `add-selection`. `ref` is `null` for
+  text quoted from the chat transcript; `position` then names it (`chat transcript; assistant
+  message`). An iOS build that predates the null `ref` rejects such a command visibly.
 - **Acknowledgement wire shape** (native → web): accepted is
   `{ "version":1, "id":"<same id>", "accepted":true }`; rejected is
   `{ "version":1, "id":"<same id>", "accepted":false, "reason":"<user-visible reason>" }`.
