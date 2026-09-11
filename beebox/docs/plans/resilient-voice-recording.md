@@ -780,6 +780,11 @@ removes. Without Track 5, `get-last-audio` would break for web recordings.
   in `fulfillLastAudioRequest` stays until Track 7.
 - A recording whose chunks are still in a client queue answers
   `none: "still uploading"`.
+- Also fixes `issues/bugs/2026-09-11-codex-landed-probe-scans-oldest-page.md`,
+  filed by this workstream during Track 1c. For codex-engine sessions,
+  `userMessageAlreadyLanded` scans the oldest page of entries, not the
+  newest. Late delivery re-probes with it, so in a long session a correction
+  could stay `delivering` until retention ends. The probe must read the tail.
 
 **First implementation chunk.** Server lookup plus a filesystem doctest: a
 staged recording is found by emission id and by recording id, and an unknown id
@@ -813,6 +818,20 @@ never retried.
     cadence after the backoff table.
   - It creates, uploads and finalizes with the same headers and bodies as the
     web, including `chunkCount`.
+- Carried forward from implementation (Track 6a, commit `c8e0f3450`, and
+  Track 1c, commit `2eaf6fc17`); Track 6b must close both:
+  - **Finalize must be a persisted, ordered op.** 6a finalizes with an inline
+    loop of at most 5 attempts. That ends in seconds, before a ~60 s deploy
+    restart is over, so the recording would never be sealed and HQ never
+    requested. In `VoiceStagingStore`, finalize becomes an op that runs after
+    the last chunk is acknowledged and retries under the same 7-day bound as
+    chunk uploads.
+  - **tRPC identity for native calls.** The `voiceRecording` router
+    authorizes against `ctx.user`, which today is cookie-only. The native app
+    authenticates with a mobile bearer token, as the capture routes accept.
+    The mobile bearer identity is threaded into the tRPC context first, with
+    a doctest, so `status`/`claim`/`fallBack` from the app pass the owner
+    check.
 - `prepareVoiceMessage` replaces `ChatAPI.transcribeAudio` with a wait on
   `voiceRecording.status`, then claim or fall back. It carries the same
   budget, calls `voiceRecording.*` over HTTP, and stamps `hqFallback` into

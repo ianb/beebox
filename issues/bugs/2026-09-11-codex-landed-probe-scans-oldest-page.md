@@ -2,11 +2,10 @@
 title: "userMessageAlreadyLanded's Codex-engine branch scans the oldest page of a long thread, so a recent message can read as not-landed"
 workstream: hq-recording-resilience
 area: beebox
-priority: normal
 labels: [chat, codex-engine, transcription]
 filed-by: agent
 discovered-by: agent
-discovered-in: cross-model review of docs/plans/resilient-voice-recording.md, implementation-order step 5
+discovered-in: worktree-hq-recording-resilience — cross-model review of the voice-recording plan's step 5 (late HQ delivery re-probes this function)
 ---
 
 `userMessageAlreadyLanded` (`src/core/chat/session/deliver-user-message.ts`)
