@@ -75,9 +75,12 @@ export async function userMessageAlreadyLanded(opts: {
   if (sessionId === null) return false;
   if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
     try {
+      // The message being probed was sent just before a crash, so it sits at
+      // the end of the thread: read the newest entries, not the oldest page
+      // (a thread longer than MAX_SESSION_ENTRIES would otherwise hide it).
       const { entries } = await loadSessionHistory(boxRoot, {
         sessionId,
-        slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
+        slice: { mode: "tail", tail: MAX_SESSION_ENTRIES },
       });
       return entries.some((entry) => entry.content.some(
         (block) => block.type === "text" && block.text?.includes(marker) === true,
