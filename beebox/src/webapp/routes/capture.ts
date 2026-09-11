@@ -36,6 +36,8 @@ import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js
 import { getChatRuntime, type ChatRuntime } from "../chat-runtime.js";
 import { handleCaptureUpload } from "./capture-upload.js";
 import { handleCreateCaptureSession } from "./capture-create.js";
+import { handleVoiceFinalize } from "./capture-finalize-voice.js";
+import { scheduleVoiceSweep } from "./voice-lifecycle.js";
 
 /** How much awake time between abandonment sweeps (Track 5). */
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
@@ -200,6 +202,10 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
   // the background preparation worker (Track 3), returning immediately. The
   // worker writes + commits the capture document under the target chat's
   // `tmp-capture/`, then delivers a `<capture>` message.
+  //
+  // A voice session (`docs/plans/resilient-voice-recording.md`) branches to
+  // `handleVoiceFinalize` instead: contiguity check, seal, and (if `hq` was
+  // requested) fire the HQ job rather than capture preparation.
   server.post<{ Params: { id: string } }>(
     "/api/capture/sessions/:id/finalize",
     async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
@@ -212,6 +218,10 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
       });
       if (authorization.status === "rejected") {
         return reply.status(authorization.statusCode).send({ error: authorization.error });
+      }
+
+      if (session.kind === "voice") {
+        return handleVoiceFinalize({ boxRoot, session, request, reply, eventBus });
       }
 
       const runtime = getChatRuntime(boxRoot);
@@ -257,8 +267,10 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     });
 
     const cancelSweep = scheduleAbandonmentSweep({ boxRoot, eventBus, runtime });
+    const cancelVoiceSweep = scheduleVoiceSweep({ boxRoot });
     server.addHook("onClose", async () => {
       cancelSweep();
+      cancelVoiceSweep();
     });
   } else {
     console.warn("[capture] Chat runtime not ready; skipping staging resume scan + sweep");

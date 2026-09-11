@@ -22,6 +22,7 @@
  */
 
 import { z } from "zod";
+import { VoiceHqStateSchema, VoiceHandoffSchema } from "./capture/staging-schema.js";
 
 /**
  * A background-task lifecycle event — mirrors `TaskEvent`
@@ -236,6 +237,21 @@ export const eventSchemas = {
     command: z.literal("ask-about-audio"),
     /** The question the agent asked about the recording — shown in the badge popover. */
     question: z.string().min(1),
+  }),
+  /**
+   * A voice recording's HQ pass or handoff moved
+   * (`docs/plans/resilient-voice-recording.md`, Track 1). Emitted by the HQ
+   * job (`core/voice-recording/hq-job.ts`) after every persisted transition.
+   * `sessionId` is the chat session the recording belongs to
+   * (`voice.targetSessionId`) — a connected tab filters this stream on it the
+   * same way `capture-status`/`chat-retranscription` consumers already do;
+   * the bus itself carries every box's voice events undifferentiated.
+   */
+  "voice-recording-status": z.object({
+    recordingId: z.string().min(1),
+    sessionId: z.string().min(1),
+    hq: VoiceHqStateSchema,
+    handoff: VoiceHandoffSchema,
   }),
 } satisfies Record<string, z.ZodType>;
 

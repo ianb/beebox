@@ -40,6 +40,19 @@ async function upload(ctx, opts) {
 }
 
 // Stage one raw body exactly as URLSessionUploadTask does from a file URL.
+// Wait for a voice session's (fire-and-forget) HQ job to settle before a
+// test's cleanup closes the event bus — a still-running job emitting into a
+// torn-down bus would throw asynchronously into the NEXT test.
+async function waitForHqDone(ctx, id, timeoutMs = 2000) {
+  const start = Date.now();
+  for (;;) {
+    const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${id}/session.json`));
+    if (manifest.voice.hq.state === "failed" || manifest.voice.hq.state === "ready") return manifest;
+    if (Date.now() - start > timeoutMs) return manifest;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
 async function uploadRaw(ctx, opts) {
   return ctx.request({
     method: "POST",
@@ -692,6 +705,158 @@ const res = await uploadRaw(ctx, {
 });
 JSON.stringify({ status: res.statusCode, error: res.body.error })
 => {"status":400,"error":"pcm-s16le-16k audio is only accepted for voice sessions"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice finalize verifies contiguity before sealing
+
+Uploads are refused once a session isn't `open`, so a chunk missing at
+finalize time is gone for good — finalize checks the manifest holds exactly
+`pcm-000001.raw … pcm-<chunkCount>.raw` and refuses to seal on a gap:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+// Only chunk 2 uploaded — chunk 1 never arrived.
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000002.raw", kind: "audio", data: Buffer.from("PCM2"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const finalize = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 2, hq: null },
+});
+JSON.stringify({ status: finalize.statusCode, code: finalize.body.code })
+=> {"status":409,"code":"missing-chunks"}
+```
+
+The session was NOT sealed — it's still `open`, so the missing chunk could
+still be uploaded and finalize retried:
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+manifest.state
+=> open
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice finalize is idempotent; a conflicting repeat is refused
+
+A finalize with no HQ requested seals the session and leaves `hq: none`,
+`handoff: open`:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const finalize = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 1, hq: null },
+});
+JSON.stringify({ status: finalize.statusCode, hq: finalize.body.hq, handoff: finalize.body.handoff })
+=> {"status":200,"hq":{"state":"none"},"handoff":{"mode":"open"}}
+```
+
+A repeat with the SAME body is a no-op that returns the current state, not a
+second seal:
+
+```ts continue
+const repeat = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 1, hq: null },
+});
+JSON.stringify({ status: repeat.statusCode, hq: repeat.body.hq, handoff: repeat.body.handoff })
+=> {"status":200,"hq":{"state":"none"},"handoff":{"mode":"open"}}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+A repeat that asks for HQ under a DIFFERENT emission than what already sealed
+the recording is refused, not silently accepted — it does not overwrite the
+recorded `hqRequest`:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, hq: { emissionId: "e1", sessionId: "chat-voice" } },
+});
+const conflicting = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, hq: { emissionId: "e-other", sessionId: "chat-voice" } },
+});
+conflicting.statusCode
+=> 409
+```
+
+```ts continue
+// Wait for the (fire-and-forget, credential-less) HQ job's fast permanent
+// failure to settle before this test's cleanup closes the event bus, so it
+// can't emit into a torn-down bus mid-flight.
+const settled = await waitForHqDone(ctx, sessionId);
+settled.voice.hqRequest.emissionId
+=> e1
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice finalize with `hq` set writes the request and queues the job
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const finalize = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, hq: { emissionId: "e1", sessionId: "chat-voice" } },
+});
+JSON.stringify({ status: finalize.statusCode, hq: finalize.body.hq })
+=> {"status":200,"hq":{"state":"queued"}}
+```
+
+The manifest's `hqRequest` records the resolved service and the emission it's
+tied to — the job (fired fire-and-forget, and left to fail in the background
+here since this test box holds no HQ credentials) reads it back on resume:
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+JSON.stringify({ emissionId: manifest.voice.hqRequest.emissionId, sessionId: manifest.voice.hqRequest.sessionId, service: manifest.voice.hqRequest.service })
+=> {"emissionId":"e1","sessionId":"chat-voice","service":"whisper"}
+```
+
+```ts continue
+// Let the credential-less job settle before cleanup closes the event bus.
+await waitForHqDone(ctx, sessionId);
 ```
 
 ```ts cleanup

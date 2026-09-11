@@ -81,7 +81,7 @@ export type StagingSessionKind = z.infer<typeof StagingSessionKindSchema>;
  * on both the `retrying` and `failed` HQ states so a resumed job and the client
  * badge can show the same reason without re-deriving it.
  */
-const HqFailureSchema = z.object({
+export const HqFailureSchema = z.object({
   kind: z.enum(["transient", "permanent", "exhausted"]),
   code: z.string(),
   message: z.string(),
@@ -92,7 +92,7 @@ const HqFailureSchema = z.object({
 export type HqFailure = z.infer<typeof HqFailureSchema>;
 
 /** The finished HQ transcript, once every piece has succeeded. */
-const VoiceHqResultSchema = z.object({
+export const VoiceHqResultSchema = z.object({
   text: z.string(),
   diarized: z.boolean(),
   service: z.string(),
@@ -105,7 +105,7 @@ export type VoiceHqResult = z.infer<typeof VoiceHqResultSchema>;
  * requests HQ; `ready`/`failed` are the two terminal outcomes a client or the
  * late-delivery path can act on.
  */
-const VoiceHqStateSchema = z.discriminatedUnion("state", [
+export const VoiceHqStateSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("none") }),
   z.object({ state: z.literal("queued") }),
   z.object({
@@ -135,7 +135,7 @@ export type VoiceHqState = z.infer<typeof VoiceHqStateSchema>;
  * realtime text and the server will correct it once HQ is ready;
  * `delivering`/`delivered` track that correction's own at-most-once send.
  */
-const VoiceHandoffSchema = z.discriminatedUnion("mode", [
+export const VoiceHandoffSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("open") }),
   z.object({ mode: z.literal("claimed"), emissionId: z.string() }),
   z.object({ mode: z.literal("late"), emissionId: z.string() }),
@@ -172,6 +172,15 @@ const StagingVoiceSchema = z.object({
   hqRequest: VoiceHqRequestSchema.optional(),
   hq: VoiceHqStateSchema,
   handoff: VoiceHandoffSchema,
+  /**
+   * Set (server clock) the moment the recording first reaches a
+   * GC-eligible terminal condition — `handoff.mode` becoming `claimed` or
+   * `delivered`, or `hq.state` becoming `failed`/staying `none` on a sealed
+   * session whose handoff isn't `late`/`delivering`. The voice sweep deletes
+   * the session {@link VOICE_STAGING_RETENTION_MS} after this timestamp.
+   * Written once; a later transition that is still terminal does not move it.
+   */
+  terminalAt: z.string().optional(),
 });
 export type StagingVoice = z.infer<typeof StagingVoiceSchema>;
 

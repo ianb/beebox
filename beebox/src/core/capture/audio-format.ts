@@ -22,3 +22,14 @@ export function isCaptureAudioFormatError(
 ): error is StagingAudioFormatMismatchError | M4ASegmentFileCountError {
   return error instanceof StagingAudioFormatMismatchError || error instanceof M4ASegmentFileCountError;
 }
+
+/**
+ * `pcm-000001.raw`, `pcm-000002.raw`, … — the voice-recording chunk filename
+ * (`docs/plans/resilient-voice-recording.md`, Track 1). 1-indexed, 6-digit
+ * zero-padded, matching the finalize contiguity check
+ * (`webapp/routes/capture-finalize-voice.ts`), which rebuilds this exact list
+ * for `1..chunkCount` and compares it against the manifest's staged chunks.
+ */
+export function pcmChunkFilename(oneIndexedChunkNumber: number): string {
+  return `pcm-${String(oneIndexedChunkNumber).padStart(6, "0")}.raw`;
+}
