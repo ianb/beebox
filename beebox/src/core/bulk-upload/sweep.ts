@@ -275,7 +275,7 @@ async function deliveredMessageLanded(opts: {
     id: session.id,
     contextDir: session.contextDir ?? "",
   });
-  return userMessageAlreadyLanded({ boxRoot, sessionId: session.targetSessionId, docPath: cardRelPath, logPrefix: "bulk" });
+  return userMessageAlreadyLanded({ boxRoot, sessionId: session.targetSessionId, marker: cardRelPath, logPrefix: "bulk" });
 }
 
 /**

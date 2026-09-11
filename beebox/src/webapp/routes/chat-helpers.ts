@@ -6,7 +6,6 @@
  * Fastify server, the session registry, or the event bus.
  */
 
-import * as fs from "node:fs/promises";
 import type { IncomingHttpHeaders } from "node:http";
 import { z } from "zod";
 import { attentionSnapshotSchema } from "../../shared/chat-composer-binding.js";
@@ -14,16 +13,12 @@ import { parseRef } from "../../shared/ref-path.js";
 import { AGENT_ENGINES } from "../../shared/agent-models.js";
 import { localUserName, type SessionUser } from "../auth.js";
 import { resolveMobileRequestAuth } from "../../core/mobile/request-auth.js";
-import { resolveSessionLogPath } from "../../core/chat/session/history.js";
-import { resolveChatEngine } from "../../core/chat/session/engine.js";
-import { loadSessionHistory } from "../../core/chat/session/load-history.js";
 import {
   SUPPORTED_IMAGE_MEDIA_TYPES,
   isSupportedImageMediaType,
 } from "../../services/claude-chat-content.js";
 import { isActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
 import type { ChatSendInput } from "../../core/chat/session/index.js";
-import { errnoCode } from "../../lib/error-guards.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../shared/image-orientation.js";
 import { CHAT_CHANNELS, type ChatChannel } from "../../shared/chat-channel.js";
 import { boxRelativePathSchema } from "../../core/landmark/nearest.js";
@@ -316,42 +311,3 @@ export function validateImages(
   return null;
 }
 
-/**
- * Read the tail of a session's JSONL log as raw text. Used to scan for
- * the most recent speaker-letter tag in a diarized transcription
- * relabel. Cap at 128KB — `Speaker N<L>` patterns are dense in any
- * recent diarized message, so we don't need full history. Returns ""
- * when the log doesn't exist yet or any read step fails.
- */
-const LOG_TAIL_BYTES = 128 * 1024;
-export async function readSessionLogTail(
-  boxRoot: string,
-  sessionId: string,
-): Promise<string> {
-  try {
-    if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
-      const { entries } = await loadSessionHistory(boxRoot, {
-        sessionId,
-        slice: { mode: "tail", tail: 100 },
-      });
-      return JSON.stringify(entries);
-    }
-    const logPath = await resolveSessionLogPath(boxRoot, sessionId);
-    const handle = await fs.open(logPath, "r");
-    try {
-      const stat = await handle.stat();
-      const start = Math.max(0, stat.size - LOG_TAIL_BYTES);
-      const length = stat.size - start;
-      const buf = Buffer.alloc(length);
-      await handle.read(buf, 0, length, start);
-      return buf.toString("utf8");
-    } finally {
-      await handle.close();
-    }
-  } catch (e) {
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn("[chat] failed to read session log tail, starting speaker letters at A:", e);
-    }
-    return "";
-  }
-}

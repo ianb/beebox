@@ -222,3 +222,49 @@ result2.refired.length
 await box.cleanup();
 delete process.env.BBX_TIME;
 ```
+
+## Voice sessions are invisible to the capture sweep
+
+A voice recording (`docs/plans/resilient-voice-recording.md`) is a different
+staging pipeline (`kind: "voice"`) with its own resume/GC path (a later chunk).
+Whether it sits `open` and long-idle, or already `sealed`, the capture sweep
+must never touch it — sealing it would fire `prepareCaptureSession` against a
+manifest shape it doesn't understand.
+
+```ts
+process.env.BBX_TIME = EARLY;
+const box = await makeTmpBox({ git: true });
+
+const idleVoice = await createStagingSession({
+  boxRoot: box.root, targetSessionId: "chat-voice", createdBy: null, kind: "voice",
+});
+const sealedVoice = await createStagingSession({
+  boxRoot: box.root, targetSessionId: "chat-voice-2", createdBy: null, kind: "voice",
+});
+await setStagingState({ boxRoot: box.root, id: sealedVoice.id, state: "sealed" });
+
+process.env.BBX_TIME = LATE;
+const fired = [];
+const result = await sweepAbandonedCaptures({
+  boxRoot: box.root,
+  firePreparation: (id) => { fired.push(id); },
+});
+
+JSON.stringify({ sealed: result.sealed, discarded: result.discarded, refired: result.refired, fired })
+=> {"sealed":[],"discarded":[],"refired":[],"fired":[]}
+```
+
+Both voice sessions survive untouched — the idle one still `open`, the other
+still `sealed`:
+
+```ts continue
+const idleAfter = await readStagingSession({ boxRoot: box.root, id: idleVoice.id });
+const sealedAfter = await readStagingSession({ boxRoot: box.root, id: sealedVoice.id });
+JSON.stringify({ idle: idleAfter.state, sealed: sealedAfter.state })
+=> {"idle":"open","sealed":"sealed"}
+```
+
+```ts cleanup
+await box.cleanup();
+delete process.env.BBX_TIME;
+```

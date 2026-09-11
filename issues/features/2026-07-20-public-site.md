@@ -30,6 +30,19 @@ An earlier incidental mention of a homepage lives in
 [writing-skill](2026-07-05-writing-skill.md) (explicitly not that issue's
 driver). Not a launch gate.
 
+## Checkpoint (2026-09-10)
+
+Commit `3777331df` adds the real static site's paper-card presentation,
+authored navigation, attached document routes, optional history/scroll
+restoration, and first-class agent prompts. The existing install prompt is
+near the top of home. See the authoring guide at `site/card-authoring.md`
+and [plan checkpoint](../../beebox/docs/plans/public-site.md).
+
+This issue remains open: final human-authored content, broader publishing and
+extraction work, and navigation design decisions are not completed by this
+checkpoint. No new learning prompt was authored. A local preview or merge is
+not evidence of a completed Cloudflare deployment.
+
 ## Principles (settled in discussion, 2026-07-21)
 
 Boxholder's words quoted; the rest is agent structure.

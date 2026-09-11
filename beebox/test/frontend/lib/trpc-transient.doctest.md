@@ -18,7 +18,7 @@ import assert from "node:assert";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import { createTRPCClient, httpBatchStreamLink, retryLink } from "@trpc/client";
-import { fetchFromBox, unreachableCause, shouldRetryOperation, retryDelayMs, MAX_RETRIES } from "../../../src/frontend/src/lib/trpc/transient.js";
+import { fetchFromBox, unreachableCause, shouldRetryOperation, isBoxUnreachable, retryDelayMs, MAX_RETRIES, BoxUnreachableError } from "../../../src/frontend/src/lib/trpc/transient.js";
 
 const NGINX_502 = "<!DOCTYPE html>\n<html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center></body></html>";
 
@@ -64,7 +64,11 @@ async function boxBehindGateway(outage: number) {
   const url = `http://127.0.0.1:${address.port}`;
   const client = createTRPCClient<typeof router>({
     links: [
-      retryLink({ retry: ({ op, attempts, error }) => shouldRetryOperation({ type: op.type, attempts, error }), retryDelayMs: () => 0 }),
+      retryLink({
+        retry: ({ op, attempts, error }) =>
+          shouldRetryOperation({ type: op.type, attempts, error, idempotent: op.context["idempotent"] === true }),
+        retryDelayMs: () => 0,
+      }),
       httpBatchStreamLink({ url, fetch: fetchFromBox }),
     ],
   });
@@ -167,6 +171,52 @@ await box.client.send.mutate()
 
 ```ts cleanup
 await box.close();
+```
+
+## A mutation opted in as idempotent IS replayed
+
+`voiceRecording.claim`/`.fallBack` pass `{ context: { idempotent: true } }` per
+call (`lib/trpc/index.ts` reads it off `op.context`), since the server has no
+way to mark a procedure idempotent that a client link can see. With that flag
+set, a 502 is retried exactly like a query.
+
+```ts
+const box = await boxBehindGateway(1);
+messageOf(await box.client.send.mutate(undefined, { context: { idempotent: true } }))
+=> sent
+
+JSON.stringify({ refused: box.refused(), reached: box.reached.send })
+=> {"refused":1,"reached":1}
+```
+
+```ts cleanup
+await box.close();
+```
+
+## `shouldRetryOperation` itself: query vs. plain mutation vs. opted-in mutation
+
+`isBoxUnreachable` is the same test the retry link applies, exported for the
+voice-staging queue (`lib/audio/voice-staging-queue.ts`) to reuse rather than
+re-derive.
+
+```ts
+const unreachable = new BoxUnreachableError({ status: 502 });
+const notUnreachable = new Error("a bug in the procedure");
+
+shouldRetryOperation({ type: "query", attempts: 1, error: unreachable, idempotent: false })
+=> true
+
+shouldRetryOperation({ type: "mutation", attempts: 1, error: unreachable, idempotent: false })
+=> false
+
+shouldRetryOperation({ type: "mutation", attempts: 1, error: unreachable, idempotent: true })
+=> true
+
+shouldRetryOperation({ type: "mutation", attempts: 1, error: notUnreachable, idempotent: true })
+=> false
+
+isBoxUnreachable(notUnreachable)
+=> false
 ```
 
 ## A procedure's own failure is an answer, not an outage

@@ -79,7 +79,7 @@ function ConversationRuntime({ conversation }: { conversation: NonNullable<Retur
   }, [routeReady, boxSlug, conversation.selection, attention, workspace.ready]);
   const handleRetry = conversation.retry;
   const handleAssignment: typeof conversation.assigned = (id, assignment) => { workspace.adopt(id); conversation.assigned(id, assignment); };
-  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onNewConversation={handleNewConversation} nativeComposer={usesNativeComposer} />;
+  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onNewConversation={handleNewConversation} />;
   return <InteractiveChat
     sessionInput={sessionId ?? "new"}
     initial={conversation.initial}
@@ -103,12 +103,8 @@ function ConversationRuntime({ conversation }: { conversation: NonNullable<Retur
   />;
 }
 
-function ConversationNotice({ selection, onRetry, onNewConversation, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; onNewConversation: () => void; nativeComposer: boolean }) {
-  if (selection.kind === "ready") {
-    if (nativeComposer) return null;
-    const place = selection.target.contextDir || "/ (box root)";
-    return <Text as="div" size="xs" tone="muted" className="px-3 py-1">Send to: {place}</Text>;
-  }
+function ConversationNotice({ selection, onRetry, onNewConversation }: { selection: ConversationSelection; onRetry: () => Promise<void>; onNewConversation: () => void }) {
+  if (selection.kind === "ready") return null;
   return <div className="px-3 py-2" role="status">
     <Text size="sm" tone={selection.kind === "unavailable" ? "danger" : "muted"}>
       {selection.kind === "unavailable" ? selection.reason : "Choosing conversation…"}

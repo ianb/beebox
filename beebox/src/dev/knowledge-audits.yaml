@@ -5613,3 +5613,34 @@ tests:
       Gives the corrected value in a self-contained callout without changing
       narration or prose features.
     tags: [chat-everywhere, chat-attention]
+
+  # Resilient voice recording (docs/plans/resilient-voice-recording.md):
+  # long diarized recordings are transcribed in parts with fresh speaker
+  # letters per part.
+  - id: voice-diarized-parts
+    prompt: |
+      <chat-app narration="off" prose="on" time="2026-09-10T18:20:00Z"/>
+      <speech stt="hq" stt-service="mai-diarized" diarized="1" message-id="rec-kitchen-1" user="Priya Marlowe">— part 1 of 2 —
+      Speaker 1A: I think we should repaint the kitchen before the holidays.
+      Speaker 2A: Fine, but not green again.
+
+      — part 2 of 2 —
+      Speaker 1B: So we agree on the repaint. I'll pick up paint samples on Thursday.
+      Speaker 2B: Great, thanks.</speech>
+      <typed user="Priya Marlowe">Was the person picking up the samples the same one who suggested repainting?</typed>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Knows each part of a long diarized recording gets fresh speaker letters:
+      1A (part 1) and 1B (part 2) may or may not be the same person. Does not
+      assert that they are the same person, nor that they are different.
+    correct_matches:
+      - "may or may not|might or might not|can'?t (tell|be (sure|certain)|say|confirm|know)|cannot (tell|be (sure|certain)|say|confirm|know)|no way to (tell|know)|not (possible|able) to (tell|say|confirm)|(don'?t|do not) know|unclear|not clear|could be"
+    tags: [chat, voice, hq]
+
+  # Status (2026-09-10, resilient-voice-recording Track 4), first run after
+  # adding the parts sentence to the chat prompt, 1/1:
+  # - voice-diarized-parts passes: 0 reads, 54k ctx. Said it can't tell and
+  #   that the letters don't carry across parts; it also tried
+  #   `ask-about-audio` on the recording first, which is a reasonable check
+  #   rather than a violation.

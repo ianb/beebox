@@ -3,6 +3,7 @@ title: "Agent SDK 0.3.265 makes the agent's shell `cd` persist across turns, and
 workstream: sdk-update
 area: beebox
 priority: normal
+resolution: wontfix
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Agent SDK 0.3.265
@@ -52,3 +53,32 @@ that navigates and stays put is the more useful default, and beebox's own chat
 prompt already tells agents that links resolve from the box root "never from your
 working directory" (`src/core/chat/session/prompts.ts:92`) — the assumption is
 already documented as *not* holding.
+
+## Disproven 2026-09-11 — closing, nothing to fix
+
+The premise was tested once `0.3.266` could be installed, and it does not hold.
+Probe: a scratch working directory `work/`, the agent told to `cd` into a
+subdirectory `work/sub`, then asked for `pwd` — (A) in a **resumed session in a
+new process**, which is how `ensureAgentCommitted` runs the nudge (a separate
+`invoke()`, so a separate `query()`), and (B) as a **second user message in the
+same process**, which is a warm chat run.
+
+| SDK | A: resume, new process | B: same process |
+|---|---|---|
+| `0.3.263` | `work` (reset) | `work` (reset) |
+| `0.3.266` | `work` (reset) | `work/sub` (persisted) |
+
+So persistence is per process. The commit-nudge retry starts a fresh process at
+`boxRoot` and is **not affected**. The "shell parked outside the box" case is not
+reachable on either version either: an earlier run of the same probe that
+`cd`'d *outside* the working directory came back reset every time, because
+Claude Code resets a shell that leaves the working directory.
+
+What the release does change is a warm multi-message run, where a `cd` into a box
+subdirectory now survives to the next user message. That is benign here: chat
+links resolve from the box root by the chat prompt's own rule, `bbx` finds the box
+root by walking up, and `git` operates repo-wide from a subdirectory. The model
+also sees its own earlier `cd` in context.
+
+`wontfix` because there is nothing to fix. This issue gated the `0.3.265`/`0.3.266`
+bump; that gate is lifted, and the pin moved to `0.3.266` on 2026-09-11.

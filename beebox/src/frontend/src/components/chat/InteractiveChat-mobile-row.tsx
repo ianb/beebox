@@ -10,6 +10,7 @@ import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
 import { ComposerSendButton, type TranscriptionHandle } from "./InteractiveChat-composer";
+import { segmentCapturing } from "../../machines/transcription-events";
 
 /**
  * Mobile-only textarea row shown below the button bar when typing or transcribing.
@@ -118,7 +119,8 @@ export function MobileTextareaRow({
             },
           });
         }}
-        disabled={sendDisabledReason !== undefined || !(isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim()}
+        // A live segment can always be sent (live text may be paused; HQ supplies the words).
+        disabled={sendDisabledReason !== undefined || !(segmentCapturing(transcription.state) || (isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim())}
         title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
       />
     </div>

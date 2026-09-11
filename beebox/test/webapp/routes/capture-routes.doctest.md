@@ -40,6 +40,19 @@ async function upload(ctx, opts) {
 }
 
 // Stage one raw body exactly as URLSessionUploadTask does from a file URL.
+// Wait for a voice session's (fire-and-forget) HQ job to settle before a
+// test's cleanup closes the event bus — a still-running job emitting into a
+// torn-down bus would throw asynchronously into the NEXT test.
+async function waitForHqDone(ctx, id, timeoutMs = 2000) {
+  const start = Date.now();
+  for (;;) {
+    const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${id}/session.json`));
+    if (manifest.voice.hq.state === "failed" || manifest.voice.hq.state === "ready") return manifest;
+    if (Date.now() - start > timeoutMs) return manifest;
+    await new Promise((r) => setTimeout(r, 10));
+  }
+}
+
 async function uploadRaw(ctx, opts) {
   return ctx.request({
     method: "POST",
@@ -513,6 +526,429 @@ session to authorize the caller against.
 const again = await ctx.request({ method: "DELETE", url: `/api/capture/sessions/${busyId}` });
 again.statusCode
 => 404
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice sessions: idempotent client-generated create, and a fenced-off owner/kind
+
+A voice recording (`docs/plans/resilient-voice-recording.md`) creates its
+staging session with a client-generated UUID v4, so the browser can start
+staging before the box confirms the session exists. A repeat of the same id,
+kind and owner is a no-op that returns the existing session:
+
+```ts
+const ctx = await makeTestServer();
+const recordingId = "6a6e6b1e-2f8a-4c9a-8b1a-1a2b3c4d5e6f";
+const created = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+});
+JSON.stringify({ status: created.statusCode, sessionId: created.body.sessionId })
+=> {"status":200,"sessionId":"6a6e6b1e-2f8a-4c9a-8b1a-1a2b3c4d5e6f"}
+```
+
+```ts continue
+const repeat = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+});
+JSON.stringify({ status: repeat.statusCode, sessionId: repeat.body.sessionId })
+=> {"status":200,"sessionId":"6a6e6b1e-2f8a-4c9a-8b1a-1a2b3c4d5e6f"}
+```
+
+The manifest carries the `voice` object with `hq: none` and `handoff: open`,
+and was created only once (one directory, not two):
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${recordingId}/session.json`));
+JSON.stringify({ kind: manifest.kind, voice: manifest.voice })
+=> {"kind":"voice","voice":{"targetSessionId":"chat-voice","startedAt":"«*»","hq":{"state":"none"},"handoff":{"mode":"open"}}}
+```
+
+A non-UUID-v4 id is rejected before any session is created:
+
+```ts continue
+const badId = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: "not-a-uuid" },
+});
+badId.statusCode
+=> 400
+```
+
+A voice session may start without a `targetSessionId`: the mic can open in a
+brand-new chat before it has a session. The manifest records `null`; the HQ
+job and late delivery read the session from finalize's `hq.sessionId` instead.
+
+```ts continue
+const unboundId = "8c8d8e3f-4a0b-4e1c-8d3c-3c4d5e6f7081";
+const noTarget = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", id: unboundId },
+});
+noTarget.statusCode
+=> 200
+
+const unbound = JSON.parse(await ctx.read(`_tmp/capture-staging/${unboundId}/session.json`));
+unbound.voice.targetSessionId
+=> null
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+A different mobile-pairing owner reusing the same recording id is a conflict,
+not a silent takeover:
+
+```ts
+const ctx = await makeTestServer();
+const ticket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "owner@example.com" });
+const paired = await redeemMobilePairingTicket(ctx.boxRoot, { pairingToken: ticket.token, deviceLabel: "Owner's phone" });
+if (!paired) throw new Error("pairing failed");
+const ownerAuth = { authorization: `Bearer ${paired.deviceToken}` };
+
+const otherTicket = createMobilePairingTicket(ctx.boxRoot, { createdBy: "other@example.com" });
+const otherPaired = await redeemMobilePairingTicket(ctx.boxRoot, { pairingToken: otherTicket.token, deviceLabel: "Other phone" });
+if (!otherPaired) throw new Error("second pairing failed");
+const otherAuth = { authorization: `Bearer ${otherPaired.deviceToken}` };
+
+const recordingId = "7b7f7c2f-3f9b-4d0b-9c2b-2b3c4d5e6f70";
+const created = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+  headers: ownerAuth,
+});
+created.statusCode
+=> 200
+```
+
+```ts continue
+const stolen = await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+  headers: otherAuth,
+});
+JSON.stringify({ status: stolen.statusCode, error: stolen.body.error })
+=> {"status":409,"error":"Session id already used by a different recording"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice sessions stage `pcm-s16le-16k` chunks; capture sessions cannot
+
+The upload route accepts one segment of raw PCM chunks per voice recording,
+its id the recording's own id, filenames `pcm-000001.raw` in sequence — the
+same idempotent-replay mechanism as every other capture upload:
+
+```ts
+const ctx = await makeTestServer();
+const recordingId = "8c8f8d3f-4f0c-4e1c-8d3c-3c4d5e6f7081";
+await ctx.request({
+  method: "POST",
+  url: "/api/capture/sessions",
+  payload: { kind: "voice", targetSessionId: "chat-voice", id: recordingId },
+});
+
+const chunk1 = await uploadRaw(ctx, {
+  sessionId: recordingId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": recordingId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const chunk2 = await uploadRaw(ctx, {
+  sessionId: recordingId, filename: "pcm-000002.raw", kind: "audio", data: Buffer.from("PCM2"),
+  headers: { "x-capture-segment-id": recordingId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+JSON.stringify([chunk1.statusCode, chunk2.statusCode])
+=> [200,200]
+```
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${recordingId}/session.json`));
+JSON.stringify({
+  segments: manifest.segments.map((s) => ({ id: s.id, format: s.format, chunks: s.chunks })),
+})
+=> {"segments":[{"id":"8c8f8d3f-4f0c-4e1c-8d3c-3c4d5e6f7081","format":"pcm-s16le-16k","chunks":["pcm-000001.raw","pcm-000002.raw"]}]}
+```
+
+An exact-bytes replay of the first chunk is idempotent, as any other capture
+upload's is:
+
+```ts continue
+const replay = await uploadRaw(ctx, {
+  sessionId: recordingId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": recordingId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+replay.statusCode
+=> 200
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+A `pcm-s16le-16k` chunk aimed at an ordinary capture session is refused —
+capture's finalize path never learned to concatenate or convert raw PCM:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { targetSessionId: "chat-abc" },
+});
+const sessionId = created.body.sessionId;
+const res = await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM"),
+  headers: { "x-capture-segment-id": "seg-a", "x-capture-audio-format": "pcm-s16le-16k" },
+});
+JSON.stringify({ status: res.statusCode, error: res.body.error })
+=> {"status":400,"error":"pcm-s16le-16k audio is only accepted for voice sessions"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice finalize verifies contiguity before sealing
+
+Uploads are refused once a session isn't `open`, so a chunk missing at
+finalize time is gone for good — finalize checks the manifest holds exactly
+`pcm-000001.raw … pcm-<chunkCount>.raw` and refuses to seal on a gap:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+// Only chunk 2 uploaded — chunk 1 never arrived.
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000002.raw", kind: "audio", data: Buffer.from("PCM2"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const finalize = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 2, emissionId: null, hq: null },
+});
+JSON.stringify({ status: finalize.statusCode, code: finalize.body.code })
+=> {"status":409,"code":"missing-chunks"}
+```
+
+The session was NOT sealed — it's still `open`, so the missing chunk could
+still be uploaded and finalize retried:
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+manifest.state
+=> open
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice finalize is idempotent; a conflicting repeat is refused
+
+A finalize with no HQ requested seals the session and leaves `hq: none`,
+`handoff: open`:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const finalize = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 1, emissionId: "em-idem", hq: null },
+});
+JSON.stringify({ status: finalize.statusCode, hq: finalize.body.hq, handoff: finalize.body.handoff })
+=> {"status":200,"hq":{"state":"none"},"handoff":{"mode":"open"}}
+```
+
+A repeat with the SAME body is a no-op that returns the current state, not a
+second seal:
+
+```ts continue
+const repeat = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 1, emissionId: "em-idem", hq: null },
+});
+JSON.stringify({ status: repeat.statusCode, hq: repeat.body.hq, handoff: repeat.body.handoff })
+=> {"status":200,"hq":{"state":"none"},"handoff":{"mode":"open"}}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+Finalize records `voice.emissionId` even with no HQ requested, so a non-HQ
+send is still findable by its message id (`get-last-audio`):
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, emissionId: "em-non-hq", hq: null },
+});
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+manifest.voice.emissionId
+=> em-non-hq
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+Finalize refuses when `hq.emissionId` disagrees with the top-level
+`emissionId` — the two must name the same message:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const mismatch = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, emissionId: "em-top", hq: { emissionId: "em-different", sessionId: "chat-voice" } },
+});
+JSON.stringify({ status: mismatch.statusCode, code: mismatch.body.code })
+=> {"status":409,"code":"emission-mismatch"}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+A repeat that asks for HQ under a DIFFERENT emission than what already sealed
+the recording is refused, not silently accepted — it does not overwrite the
+recorded `hqRequest`:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, emissionId: "e1", hq: { emissionId: "e1", sessionId: "chat-voice" } },
+});
+const conflicting = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, emissionId: "e-other", hq: { emissionId: "e-other", sessionId: "chat-voice" } },
+});
+conflicting.statusCode
+=> 409
+```
+
+```ts continue
+// Wait for the (fire-and-forget, credential-less) HQ job's fast permanent
+// failure to settle before this test's cleanup closes the event bus, so it
+// can't emit into a torn-down bus mid-flight.
+const settled = await waitForHqDone(ctx, sessionId);
+settled.voice.hqRequest.emissionId
+=> e1
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice finalize with `hq` set writes the request and queues the job
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const finalize = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, emissionId: "e1", hq: { emissionId: "e1", sessionId: "chat-voice" } },
+});
+JSON.stringify({ status: finalize.statusCode, hq: finalize.body.hq })
+=> {"status":200,"hq":{"state":"queued"}}
+```
+
+The manifest's `hqRequest` records the resolved service and the emission it's
+tied to — the job (fired fire-and-forget, and left to fail in the background
+here since this test box holds no HQ credentials) reads it back on resume:
+
+```ts continue
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+JSON.stringify({ emissionId: manifest.voice.hqRequest.emissionId, sessionId: manifest.voice.hqRequest.sessionId, service: manifest.voice.hqRequest.service })
+=> {"emissionId":"e1","sessionId":"chat-voice","service":"whisper"}
+```
+
+```ts continue
+// Let the credential-less job settle before cleanup closes the event bus.
+await waitForHqDone(ctx, sessionId);
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Voice finalize may request HQ before the chat has a session
+
+The first voice message of a new chat is finalized before the box assigns a
+session, so `hq.sessionId` is null. The request is still recorded (and the
+job queued); `voiceRecording.fallBack` names the session later.
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({ method: "POST", url: "/api/capture/sessions", payload: { kind: "voice" } });
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const finalize = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, emissionId: "e-new", hq: { emissionId: "e-new", sessionId: null } },
+});
+JSON.stringify({ status: finalize.statusCode, hq: finalize.body.hq })
+=> {"status":200,"hq":{"state":"queued"}}
+
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+JSON.stringify({ emissionId: manifest.voice.hqRequest.emissionId, sessionId: manifest.voice.hqRequest.sessionId })
+=> {"emissionId":"e-new","sessionId":null}
+```
+
+```ts continue
+await waitForHqDone(ctx, sessionId);
 ```
 
 ```ts cleanup

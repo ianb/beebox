@@ -9,6 +9,25 @@ import { createLastAudioPending } from "../../src/core/last-audio-pending.js";
 import { AUDIO_QUESTION_MODEL, buildAudioQuestionPrompt } from "../../src/core/audio-question.js";
 import { audioMimeType, missingMessageIdError } from "../../src/cli/commands/chat-audio.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
+import { createStagingSession, addAudioChunk } from "../../src/core/capture/staging-store.js";
+import { sealVoiceSession } from "../../src/core/voice-recording/voice-staging.js";
+
+// A sealed web voice recording with two PCM chunks ("AAAA" then "BBBB",
+// ASCII so the injected response's string payload stays comparable).
+async function stageSealedRecording(boxRoot, { emissionId, sessionId }) {
+  const session = await createStagingSession({ boxRoot, targetSessionId: sessionId, createdBy: null, kind: "voice" });
+  for (const [filename, text] of [["pcm-000001.raw", "AAAA"], ["pcm-000002.raw", "BBBB"]]) {
+    await addAudioChunk({
+      boxRoot, id: session.id, segmentId: session.id, segmentStartedAt: "2026-09-10T18:00:00.000Z",
+      filename, buffer: Buffer.from(text), audioFormat: "pcm-s16le-16k",
+    });
+  }
+  await sealVoiceSession({
+    boxRoot, id: session.id, emissionId,
+    hq: { emissionId, sessionId, service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
+  });
+  return session;
+}
 ```
 
 ## Registry: an audio answer resolves the request
@@ -217,6 +236,96 @@ print(`error: ${res.body.error}`);
 =>
 status: 504
 error: no-client
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Route: a staged web recording is answered from disk, without the tab relay
+
+A web voice send's recording is staged on the box, and its finalize names
+the message's emission id. The server serves those chunks as one WAV and
+never broadcasts a relay request:
+
+```ts
+const ctx = await makeTestServer();
+await stageSealedRecording(ctx.boxRoot, { emissionId: "em-staged-1", sessionId: "sess-7" });
+let relayed = false;
+ctx.eventBus.subscribe({ listener: (e) => { if (e.event === "chat-last-audio-request") relayed = true; } });
+const res = await ctx.rawRequest({
+  method: "POST",
+  url: "/api/chat/last-audio/request",
+  payload: { timeoutMs: 100, messageId: "em-staged-1" },
+});
+print(`status: ${res.statusCode}`);
+print(`content-type: ${res.headers["content-type"]}`);
+print(`riff: ${res.payload.startsWith("RIFF")}`);
+print(`pcm in order: ${res.payload.endsWith("AAAABBBB")}`);
+print(`message-id: ${decodeURIComponent(res.headers["x-message-id"])}`);
+print(`session-id: ${decodeURIComponent(res.headers["x-session-id"])}`);
+print(`relayed: ${relayed}`);
+=>
+status: 200
+content-type: audio/wav
+riff: true
+pcm in order: true
+message-id: em-staged-1
+session-id: sess-7
+relayed: false
+```
+
+A message id no staging session names falls through to the tab relay (here
+nobody answers, so the short wait ends in the relay's 504):
+
+```ts continue
+const gotRelay = new Promise((resolve) => {
+  ctx.eventBus.subscribe({ listener: (e) => {
+    if (e.event === "chat-last-audio-request") resolve(e.data.messageId);
+  }});
+});
+const miss = await ctx.request({
+  method: "POST",
+  url: "/api/chat/last-audio/request",
+  payload: { timeoutMs: 1, messageId: "em-unknown" },
+});
+print(`relayed for: ${await gotRelay}`);
+print(`status: ${miss.statusCode}`);
+=>
+relayed for: em-unknown
+status: 504
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Route: a non-HQ send is found by its finalize `emissionId` too
+
+A voice send with HQ dictation off still names the message it sealed for —
+`voice.emissionId`, written by finalize independent of `hq` — so
+`get-last-audio` finds it without an `hqRequest`:
+
+```ts
+const ctx = await makeTestServer();
+const session = await createStagingSession({ boxRoot: ctx.boxRoot, targetSessionId: "sess-9", createdBy: null, kind: "voice" });
+await addAudioChunk({
+  boxRoot: ctx.boxRoot, id: session.id, segmentId: session.id, segmentStartedAt: "2026-09-10T18:00:00.000Z",
+  filename: "pcm-000001.raw", buffer: Buffer.from("CCCC"), audioFormat: "pcm-s16le-16k",
+});
+await sealVoiceSession({ boxRoot: ctx.boxRoot, id: session.id, emissionId: "em-no-hq-1", hq: null });
+const res = await ctx.rawRequest({
+  method: "POST",
+  url: "/api/chat/last-audio/request",
+  payload: { timeoutMs: 100, messageId: "em-no-hq-1" },
+});
+print(`status: ${res.statusCode}`);
+print(`riff: ${res.payload.startsWith("RIFF")}`);
+print(`pcm: ${res.payload.endsWith("CCCC")}`);
+=>
+status: 200
+riff: true
+pcm: true
 ```
 
 ```ts cleanup

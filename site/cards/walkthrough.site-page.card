@@ -1,7 +1,23 @@
 ---
-title: Walkthrough prototype
+title: A morning with the box (draft)
 summary: "Unlisted round-3 prototype: a morning with the box told through real user stories, with categorized asides in three voices."
+authorship:
+  people:
+    - name: Ian Bicking
+      role: creator and editor
+      contribution: Set the direction to tell a morning through real, provenance-carrying user stories.
+  ai:
+    transcription: none
+    drafting: Drafted the marked prototype narration and explanatory asides.
+    editing: Reworked the prototype into a parent card with an attached confidence note.
+    source-preparation: Selected and embedded verified repository excerpts from the user-story catalog.
 unlisted: true
+theme: paper
+next:
+  - card: /walkthrough.attach/confidence.doc.card
+    label: A note on confidence
+  - card: /index.site-page.card
+    label: Return to Bee Box
 ---
 # A morning with the box
 
@@ -32,13 +48,7 @@ a human. The box files what it recognizes and holds what it doesn't.
 
 {% nugget slug="story-triage-confidence" /%}
 
-{% aside kind="generated" label="what “confidence” means here" %}
-The agent labels every routing decision *confident*, *probable*, or *guess*.
-Confident items move to their folder. Probable items move too, but keep a
-review marker so you can spot-check. A guess doesn't move at all — it stays
-put and becomes a question instead. The threshold between acting and asking
-is the whole design.
-{% /aside %}
+[A note on what “confidence” means here](walkthrough.attach/confidence.doc.card)
 
 ## It asks instead of guessing
 

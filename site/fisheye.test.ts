@@ -92,3 +92,12 @@ test("aside tag: kind class, marker, content, and provenance footer", () => {
 test("aside tag: unknown kind fails the build", () => {
   assert.throws(() => renderBody("{% aside kind=\"narrator\" label=\"x\" %}\ny\n{% /aside %}", RENDER), /unknown kind "narrator"/);
 });
+
+test("nugget links on attached documents are collected relative to the source card", () => {
+  const linkTargets: string[] = [];
+  embedNuggets('<x-nugget slug="n1"></x-nugget>', {
+    nuggets: [nugget({ status: "reinterpreted", body: "[Sibling](sibling.md)" })],
+    base: "/site/", pageSitePath: "Parent.attach/Aside.doc.card", linkTargets,
+  });
+  assert.deepEqual(linkTargets, ["Parent.attach/sibling.html"]);
+});

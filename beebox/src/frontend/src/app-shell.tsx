@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Outlet, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
+import { startVoiceStagingDrainer } from "./lib/audio/voice-staging-queue";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { ConversationCardProvider } from "./components/chat/everywhere/card-context";
 import { BoxConversationProvider, useBoxConversation } from "./components/chat/everywhere/conversation-context";
@@ -39,6 +40,11 @@ export { BoxRedirect } from "./pages/BoxSelection";
 
 // Start capturing console errors immediately so we never miss early failures
 enableDebugLogCapture();
+
+// Drain any voice-recording ops left over from a reload or a prior visit
+// (docs/plans/resilient-voice-recording.md, Track 2) even before any
+// recording feature has been touched in this tab.
+startVoiceStagingDrainer();
 
 /**
  * Root-level layout, above the route tree's `Outlet`. The place for global,

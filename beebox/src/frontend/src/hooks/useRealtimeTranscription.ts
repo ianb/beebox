@@ -1,27 +1,31 @@
 /**
  * Hook for realtime speech-to-text via XState machine.
  *
- * Captures mic audio via AudioWorklet (PCM 16kHz mono) and routes it to
- * either the Voxtral WS proxy or directly to Deepgram (with a temp key),
- * depending on box config. See realtimeTranscriptionMachine.ts.
+ * Captures mic audio via AudioWorklet (PCM 16kHz mono), stages every frame
+ * to the box, and routes it to the box's live transcription service when a
+ * socket is up. See realtimeTranscriptionMachine.ts and transcription-actor.ts.
  *
  * The machine tracks finalTranscript and interimTranscript separately:
  *   - `transcript` (combined) is what the UI shows.
  *   - `finalTranscript` alone is what we run keyword detection against
  *     (interim revisions would otherwise misfire commands repeatedly).
+ *
+ * Each ended segment leaves a `PendingRecording` in machine context. The hook
+ * hands it to exactly one place: a "submit" intent (which then owes the seal),
+ * or — for every other end — a seal with `hq: null` here.
  */
 
 import { useCallback, useEffect, useRef } from "react";
 import { useMachine } from "@xstate/react";
-import {
-  realtimeTranscriptionMachine,
-  type TranscriptionState,
-  type FinalWord,
-} from "../machines/realtimeTranscriptionMachine";
-import { detectKeyword, type KeywordResult } from "../lib/audio/speech-keywords";
+import type { Actor } from "xstate";
+import { transcriptionStateOf } from "../machines/realtimeTranscriptionMachine";
+import { liveTranscriptionMachine } from "../machines/realtime-transcription-live";
+import { segmentCapturing, type FinalWord, type TranscriptionEvent, type TranscriptionState } from "../machines/transcription-events";
+import type { PendingRecording } from "../lib/audio/voice-stager";
 import { stillListening, recordingStart } from "../lib/audio/earcons";
 import { claimMicAcrossTabs } from "../lib/audio/mic-tab-lock";
 import type { VoiceIntent } from "../input/voice-intent";
+import { dispatchKeyword, useKeywordSpotting, type PendingSend } from "./transcription-keywords";
 
 const STILL_LISTENING_DELAY_MS = 10000;
 
@@ -29,32 +33,26 @@ export type { TranscriptionState };
 
 export interface UseRealtimeTranscriptionOptions {
   /**
+   * The chat session a new segment's recording belongs to, read when each
+   * segment starts; null while the chat has no session yet.
+   */
+  targetSessionId: () => string | null;
+  /**
    * The four spoken commands the keyword spotter recognizes, as one
-   * `VoiceIntent` stream (docs/implemented-plans/input-extraction.md, chunk 5) instead
-   * of four separate callbacks. `submit`'s `text` is the processed
-   * transcript, `matchedPhrase` the trigger phrase the realtime pass
-   * matched (so a later transcription pass that drops it can re-inject),
-   * and `audioBlob` — when `wantAudioBlob` returned true and the segment
-   * captured any audio — a WAV blob the caller can use for narration
-   * mode's HQ pass.
+   * `VoiceIntent` stream (docs/implemented-plans/input-extraction.md, chunk 5).
+   * `submit`'s `text` is the processed transcript, `matchedPhrase` the
+   * trigger phrase the realtime pass matched (so a later transcription pass
+   * that drops it can re-inject), and `recording` the segment's staged
+   * recording, which the handler must seal or discard.
    */
   onVoiceIntent?: (intent: VoiceIntent) => void;
   /**
    * Called when a segment ends with transcript text nobody took: no stop()
-   * promise was awaiting it and no send keyword fired — a mid-recording
-   * transport/mic failure, an expired reconnect window, or a silence /
-   * max-duration auto-stop. Without a handler the words silently disappear
-   * from the composer the moment `isTranscribing` flips false.
+   * promise was awaiting it and no send keyword fired — a mic loss that
+   * outlasted its window, or a silence auto-stop. Without a handler the
+   * words silently disappear from the composer when `isTranscribing` flips.
    */
   onUnconsumedTranscript?: (transcript: string) => void;
-  /**
-   * Predicate checked at keyword-fire time. When it returns false, the
-   * machine is canceled immediately (fast path) and `onKeywordSend` fires
-   * synchronously with `audioBlob = null`. When true, the machine is
-   * stopped and the callback fires after the WS finalizes with the
-   * recorded segment's WAV blob in hand. Default: false.
-   */
-  wantAudioBlob?: () => boolean;
 }
 
 export interface UseRealtimeTranscriptionResult {
@@ -66,10 +64,7 @@ export interface UseRealtimeTranscriptionResult {
   /**
    * Words backing `finalTranscript`, with confidence when the service
    * reports one. `null` means no confidence data has been captured for
-   * this segment (Voxtral/OpenAI realtime, or nothing finalized yet) —
-   * only Deepgram ever produces an array. Stays aligned with
-   * `finalTranscript` across reconnects; see realtimeTranscriptionMachine's
-   * `finalWords` context field.
+   * this segment (Voxtral/OpenAI realtime, or nothing finalized yet).
    */
   finalWords: FinalWord[] | null;
   /** Live, unconfirmed text. May change as the recognizer revises. */
@@ -77,30 +72,24 @@ export interface UseRealtimeTranscriptionResult {
   error: string | null;
   /**
    * Begin a recording segment. Pass `{ earcon: true }` to play the
-   * recording-start cue — but only once capture is *truly* live (the machine
-   * reaches `recording`, i.e. getUserMedia resolved and the socket opened),
-   * never before the mic-permission dialog settles. Auto-disarmed if the
-   * attempt errors out (e.g. permission denied) before recording begins.
+   * recording-start cue once capture is truly live (the mic started and
+   * audio is staging — not the socket), never before the mic-permission
+   * dialog settles. Auto-disarmed if the attempt errors out first.
    */
   start: (opts?: { earcon?: boolean }) => void;
   /**
-   * Stop recording and wait for the final transcript. Resolves with the
-   * words backing that text too (Fix D, docs/plans/
-   * transcript-confidence.md) — read inside the hook at the same idle
-   * transition that finalizes them, never from a caller's possibly-stale
-   * closure over the returned handle.
+   * Stop recording and wait for the final transcript and its words (Fix D,
+   * docs/plans/transcript-confidence.md). The segment's recording is sealed
+   * with `hq: null`: this path hands over text only.
    */
   stop: () => Promise<{ text: string; words: FinalWord[] | null }>;
   /**
-   * End the segment and treat it as a submit — the same finalize→blob path a
-   * spoken send keyword takes, but triggered from a manual UI control (the
-   * composer's stop-and-send buttons) rather than keyword detection
-   * (docs/implemented-plans/hq-dictation-switch.md, chunk 2). Parks the current combined
-   * transcript with an empty `matchedPhrase` (nothing was spoken to match)
-   * and STOPs the machine; the same idle-transition effect that fires a
-   * keyword-detected "submit" VoiceIntent fires this one too, so callers get
-   * identical HQ / audio-blob / fallback handling for free instead of
-   * duplicating it. No-op when nothing is recording.
+   * End the segment and treat it as a submit — the same path a spoken send
+   * keyword takes, triggered from a manual UI control
+   * (docs/implemented-plans/hq-dictation-switch.md, chunk 2). Parks the
+   * current combined transcript with an empty `matchedPhrase` and STOPs the
+   * machine; the idle-transition effect fires the "submit" intent with the
+   * segment's recording. Returns false when nothing is recording.
    */
   submitSegment: (opts: { closeMic: boolean }) => boolean;
   cancel: () => void;
@@ -114,240 +103,144 @@ function combine(finalText: string, interimText: string): string {
 }
 
 /**
- * Keyword detection over the live transcripts: finals match anywhere (so
- * phrases spanning segments are caught); interims only at the start, deduped
- * by action+phrase so successive interim revisions containing the same match
- * don't re-fire. Returns reset(), called at segment start/cancel so dedup
- * state doesn't leak across segments.
+ * Everything that happens when a segment ends: the parked send fires with the
+ * segment's recording, a stop() promise resolves, an untaken recording is
+ * sealed without HQ, unconsumed text is handed back, and MAX_DURATION parks a
+ * submit. Declaration order matters: the consumption marks set by the first
+ * two effects are read by the third in the same idle-transition commit.
  */
-function useKeywordSpotting(opts: {
+function useSegmentEnd(opts: {
   state: TranscriptionState;
-  finalTranscript: string;
-  interimTranscript: string;
-  fireKeyword: (keyword: KeywordResult) => void;
-}): { reset: () => void } {
-  const { state, finalTranscript, interimTranscript, fireKeyword } = opts;
-  const prevFinalRef = useRef("");
-  /**
-   * Identifier of the most recent keyword fired against an *interim*
-   * transcript ("<action>:<matchedPhrase>"). Cleared whenever the final
-   * transcript changes (so a finalized keyword can re-fire later) or when
-   * the interim has no match.
-   */
-  const lastInterimFireKeyRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (finalTranscript === prevFinalRef.current) return;
-    prevFinalRef.current = finalTranscript;
-    // Final has advanced; allow the same keyword to fire again from interim.
-    lastInterimFireKeyRef.current = null;
-
-    if (!finalTranscript || state !== "recording") return;
-
-    const keyword = detectKeyword(finalTranscript);
-    if (!keyword) return;
-    fireKeyword(keyword);
-  }, [finalTranscript, state, fireKeyword]);
-
-  useEffect(() => {
-    if (state !== "recording" || !interimTranscript) {
-      lastInterimFireKeyRef.current = null;
-      return;
-    }
-    const keyword = detectKeyword(interimTranscript, { atStart: true });
-    if (!keyword) {
-      lastInterimFireKeyRef.current = null;
-      return;
-    }
-    const fireKey = `${keyword.action}:${keyword.matchedPhrase}`;
-    if (lastInterimFireKeyRef.current === fireKey) return;
-    lastInterimFireKeyRef.current = fireKey;
-    // The match was found against just the interim text, so its
-    // processedTranscript only covers that segment. Prepend the existing
-    // final text so commands like "send message" don't drop everything
-    // the user said before the keyword.
-    const combinedProcessed = finalTranscript
-      ? `${finalTranscript} ${keyword.processedTranscript}`.trim()
-      : keyword.processedTranscript;
-    fireKeyword({ ...keyword, processedTranscript: combinedProcessed });
-  }, [interimTranscript, finalTranscript, state, fireKeyword]);
-
-  const reset = useCallback(() => {
-    prevFinalRef.current = "";
-    lastInterimFireKeyRef.current = null;
-  }, []);
-  return { reset };
-}
-
-/**
- * Turn a spotted keyword into the right machine event(s) plus a
- * `VoiceIntent`. Module-level (not a hook body closure) so
- * `useRealtimeTranscription`'s own body stays under the per-function line
- * budget; takes the machine's `send`, the live-options ref, and the
- * slow-path parking ref as explicit context instead of closing over hook
- * internals.
- */
-function dispatchKeyword(
-  keyword: KeywordResult,
-  ctx: {
-    send: (event: { type: "STOP" | "CANCEL" | "START" }) => void;
-    optionsRef: React.MutableRefObject<UseRealtimeTranscriptionOptions | undefined>;
-    pendingSendRef: React.MutableRefObject<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean; hq: boolean } | null>;
-    /**
-     * Live-synced snapshot of `finalWords`, read at the same moment the
-     * fast path commits its text (docs/plans/transcript-confidence.md,
-     * Track 3) — a plain state variable would go stale inside this
-     * module-level function, which isn't itself a hook.
-     */
-    finalWordsRef: React.MutableRefObject<FinalWord[] | null>;
-  }
-): void {
-  const { send, optionsRef, pendingSendRef, finalWordsRef } = ctx;
-  switch (keyword.action) {
-    case "send":
-    case "sendHq":
-    case "sendClose": {
-      // All send variants use one path. `closeMic` controls re-arming, while
-      // `hq` asks the chat layer to run HQ even when narration mode is off.
-      const closeMic = keyword.action === "sendClose";
-      const hq = keyword.action === "sendHq";
-      const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
-      if (wantBlob) {
-        // Slow path: park the text and STOP so the machine finalizes and
-        // emits the segment's audio blob. The idle-transition effect fires the
-        // "submit" intent with both text and blob once the machine settles.
-        // Used by narration mode to get the HQ-quality transcript.
-        pendingSendRef.current = {
-          processedTranscript: keyword.processedTranscript,
-          matchedPhrase: keyword.matchedPhrase,
-          closeMic,
-          hq,
-        };
-        send({ type: "STOP" });
-      } else {
-        // Fast path: drop the in-flight stream and fire immediately so the
-        // message commits with the realtime text — no waiting on WS
-        // finalization (which adds 1-2s of dead air).
-        send({ type: "CANCEL" });
-        optionsRef.current?.onVoiceIntent?.({
-          kind: "submit",
-          text: keyword.processedTranscript,
-          matchedPhrase: keyword.matchedPhrase,
-          audioBlob: null,
-          closeMic,
-          hq,
-          words: finalWordsRef.current,
-        });
-      }
-      break;
-    }
-    case "micOff":
-      send({ type: "CANCEL" });
-      optionsRef.current?.onVoiceIntent?.({ kind: "mic-off" });
-      break;
-    case "cancel":
-      optionsRef.current?.onVoiceIntent?.({ kind: "cancel" });
-      break;
-    case "erase":
-      send({ type: "CANCEL" });
-      send({ type: "START" });
-      // Notify the consumer: the machine restart only clears the live
-      // segment; the chat layer holds the rest of the in-progress message
-      // (composer input, persisted draft) and must erase it too.
-      optionsRef.current?.onVoiceIntent?.({ kind: "erase" });
-      break;
-  }
-}
-
-export function useRealtimeTranscription(
-  options?: UseRealtimeTranscriptionOptions
-): UseRealtimeTranscriptionResult {
-  const [snapshot, send] = useMachine(realtimeTranscriptionMachine);
-  const optionsRef = useRef(options);
-  useEffect(() => {
-    optionsRef.current = options;
-  });
-  const doneResolveRef = useRef<((result: { text: string; words: FinalWord[] | null }) => void) | null>(null);
-  /**
-   * When a send-keyword fires, we send STOP to the machine and wait for it
-   * to transition to idle so the audio blob lands in context. The pending
-   * text + matched phrase are parked here in the meantime; the
-   * idle-transition effect picks them up and fires onKeywordSend.
-   */
-  const pendingSendRef = useRef<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean; hq: boolean } | null>(null);
-  /**
-   * Set by `start({ earcon: true })`. The recording-start earcon plays only
-   * when the machine actually reaches `recording` — so the "you're recording
-   * now" cue never precedes the mic-permission dialog or lies about a segment
-   * that hasn't gone live. Cleared on play, or on a return to idle without
-   * recording (error / cancel / permission denied).
-   */
-  const playStartEarconRef = useRef(false);
-  const prevEarconStateRef = useRef<TranscriptionState>("idle");
+  transcript: string;
+  context: { finalWords: FinalWord[] | null; recording: PendingRecording | null };
+  actorRef: Actor<typeof liveTranscriptionMachine>;
+  optionsRef: React.MutableRefObject<UseRealtimeTranscriptionOptions>;
+  pendingSendRef: React.MutableRefObject<PendingSend | null>;
+  doneResolveRef: React.MutableRefObject<((result: { text: string; words: FinalWord[] | null }) => void) | null>;
+}): void {
+  const { state, transcript, context, actorRef, optionsRef, pendingSendRef, doneResolveRef } = opts;
+  const { finalWords, recording } = context;
   /**
    * Set when this segment's text was handed to a consumer (stop() promise
-   * resolution or a keyword send); checked by the unconsumed-transcript
-   * effect below, which must be declared after both so it observes their
-   * same-commit writes, and which resets the mark after every read. Nothing
-   * else may reset it — see the note in start().
+   * resolution or a send); read and reset by the idle-transition effect.
+   * Nothing else may reset it: a send calls start() synchronously from inside
+   * the consuming effect, before the idle-transition effect has read the mark.
    */
   const consumedRef = useRef(false);
-  const prevSegmentStateRef = useRef<TranscriptionState>("idle");
-
-  // Map machine state to TranscriptionState (nested under "active" parent)
-  const state: TranscriptionState = snapshot.matches({ active: "recording" })
-    ? "recording"
-    : snapshot.matches({ active: "reconnecting" })
-      ? "reconnecting"
-      : snapshot.matches({ active: "finalizing" })
-        ? "finalizing"
-        : snapshot.matches({ active: "connecting" })
-          ? "connecting"
-          : "idle";
-
-  const { finalTranscript, finalWords, interimTranscript, error } = snapshot.context;
-  const transcript = combine(finalTranscript, interimTranscript);
-
-  // Live-synced snapshot of finalWords, read by the fast keyword-send path
-  // (dispatchKeyword, a module function outside the render closure) at the
-  // same moment it commits the text (Track 3, docs/plans/
-  // transcript-confidence.md). Declared here — before fireKeyword/keyword
-  // spotting below — so the sync effect runs first within a commit.
-  const finalWordsRef = useRef<FinalWord[] | null>(finalWords);
+  const prevStateRef = useRef<TranscriptionState>("idle");
+  /** The recording last handed to a submit; the submit owes its seal. */
+  const handedOffRef = useRef<PendingRecording | null>(null);
+  const transcriptRef = useRef(transcript);
+  const recordingRef = useRef(recording);
   useEffect(() => {
-    finalWordsRef.current = finalWords;
+    transcriptRef.current = transcript;
+    recordingRef.current = recording;
   });
 
-  // Wake-lock used to live here, tied to mic state. It now lives in the
-  // chat layer where the broader "voice conversation in progress" signal
-  // is available — mic-active alone doesn't capture the TTS-playback
-  // window where the mic is intentionally paused.
+  // MAX_DURATION submits the segment (and the send re-arms the mic): park the
+  // send before the machine's own STOP brings TRANSCRIPTION_DONE.
+  useEffect(() => {
+    const sub = actorRef.on("maxDurationReached", () => {
+      if (pendingSendRef.current !== null) return;
+      pendingSendRef.current = { processedTranscript: transcriptRef.current, matchedPhrase: "", closeMic: false, hq: false };
+    });
+    return () => sub.unsubscribe();
+  }, [actorRef, pendingSendRef]);
 
-  const fireKeyword = useCallback(
-    (keyword: KeywordResult) => dispatchKeyword(keyword, { send, optionsRef, pendingSendRef, finalWordsRef }),
-    [send]
-  );
-
-  // Slow-path completion: fire the "submit" intent after the machine has
-  // finalized and the audio blob is in context. Triggered by the state
-  // transition back to idle. No-op when the fast path was taken (ref is null).
+  // A parked send fires once the machine is idle and the recording is in context.
   useEffect(() => {
     if (state !== "idle" || pendingSendRef.current === null) return;
     const pending = pendingSendRef.current;
     pendingSendRef.current = null;
+    const onVoiceIntent = optionsRef.current.onVoiceIntent;
+    if (!onVoiceIntent) return;
     consumedRef.current = true;
-    optionsRef.current?.onVoiceIntent?.({
+    handedOffRef.current = recording;
+    onVoiceIntent({
       kind: "submit",
       text: pending.processedTranscript,
       matchedPhrase: pending.matchedPhrase,
       closeMic: pending.closeMic,
       hq: pending.hq,
-      audioBlob: snapshot.context.audioBlob,
-      // Read alongside the parked text at the same idle transition, so the
-      // words are the ones the machine finalized for it (Track 3).
-      words: snapshot.context.finalWords,
+      recording,
+      // The words the machine finalized for the parked text, at the same transition.
+      words: finalWords,
     });
-  }, [state, snapshot.context.audioBlob, snapshot.context.finalWords]);
+  }, [state, recording, finalWords, optionsRef, pendingSendRef]);
+
+  // Resolve stop() when the machine returns to idle — words from context at
+  // this same transition (Fix D), not from a caller's stale closure.
+  useEffect(() => {
+    if (state === "idle" && doneResolveRef.current) {
+      doneResolveRef.current({ text: transcript, words: finalWords });
+      doneResolveRef.current = null;
+      consumedRef.current = true;
+    }
+  }, [state, transcript, finalWords, doneResolveRef]);
+
+  // Segment ended: keep an untaken recording on the box without HQ, and hand
+  // back text nobody took (see onUnconsumedTranscript).
+  useEffect(() => {
+    const prev = prevStateRef.current;
+    prevStateRef.current = state;
+    if (state !== "idle" || prev === "idle") return;
+    if (recording !== null && recording !== handedOffRef.current) recording.seal({ emissionId: null, hq: null });
+    const consumed = consumedRef.current;
+    consumedRef.current = false;
+    if (consumed || !transcript) return;
+    optionsRef.current.onUnconsumedTranscript?.(transcript);
+  }, [state, transcript, recording, optionsRef]);
+
+  // Unmount between TRANSCRIPTION_DONE and the effects above: nothing will
+  // take the recording now. (A segment still recording is sealed by the actor.)
+  useEffect(() => () => {
+    const latest = recordingRef.current;
+    if (latest !== null && latest !== handedOffRef.current) latest.seal({ emissionId: null, hq: null });
+  }, []);
+}
+
+export function useRealtimeTranscription(
+  options: UseRealtimeTranscriptionOptions
+): UseRealtimeTranscriptionResult {
+  const [snapshot, send, actorRef] = useMachine(liveTranscriptionMachine);
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  });
+  const doneResolveRef = useRef<((result: { text: string; words: FinalWord[] | null }) => void) | null>(null);
+  const pendingSendRef = useRef<PendingSend | null>(null);
+  /**
+   * Set by `start({ earcon: true })`. The recording-start earcon plays when
+   * the machine first reaches a capturing state (normally `recordingLocal`,
+   * on MIC_LIVE) — never before the mic-permission dialog settles. Cleared on
+   * play, or on a return to idle without capturing (error / cancel / denied).
+   */
+  const playStartEarconRef = useRef(false);
+  const prevEarconStateRef = useRef<TranscriptionState>("idle");
+
+  const state = transcriptionStateOf(snapshot);
+  const { finalTranscript, finalWords, interimTranscript, error, recording } = snapshot.context;
+  const transcript = combine(finalTranscript, interimTranscript);
+
+  const startEvent = useCallback(
+    (): TranscriptionEvent => ({ type: "START", targetSessionId: optionsRef.current.targetSessionId() }),
+    [],
+  );
+
+  const fireKeyword = useCallback(
+    (keyword: Parameters<typeof dispatchKeyword>[0]) =>
+      dispatchKeyword(keyword, {
+        send,
+        pendingSendRef,
+        emitIntent: (intent) => optionsRef.current.onVoiceIntent?.(intent),
+        startEvent,
+      }),
+    [send, startEvent]
+  );
+
+  useSegmentEnd({
+    state, transcript, context: { finalWords, recording }, actorRef, optionsRef, pendingSendRef, doneResolveRef,
+  });
 
   const keywordSpotting = useKeywordSpotting({ state, finalTranscript, interimTranscript, fireKeyword });
 
@@ -361,41 +254,14 @@ export function useRealtimeTranscription(
     return () => clearInterval(interval);
   }, [state, transcript]);
 
-  // Resolve stop() promise when machine returns to idle — words come from
-  // context at this same idle transition (Fix D), not from a caller's
-  // possibly-stale closure over the returned handle.
-  useEffect(() => {
-    if (state === "idle" && doneResolveRef.current) {
-      doneResolveRef.current({ text: transcript, words: snapshot.context.finalWords });
-      doneResolveRef.current = null;
-      consumedRef.current = true;
-    }
-  }, [state, transcript, snapshot.context.finalWords]);
-
-  // Segment ended with text nobody took (see onUnconsumedTranscript docs).
-  // Declared after the keyword-send and stop()-resolve effects so their
-  // consumption marks land first within the same idle-transition commit.
-  useEffect(() => {
-    const prev = prevSegmentStateRef.current;
-    prevSegmentStateRef.current = state;
-    if (state !== "idle" || prev === "idle") return;
-    const consumed = consumedRef.current;
-    consumedRef.current = false;
-    if (consumed || !transcript) return;
-    optionsRef.current?.onUnconsumedTranscript?.(transcript);
-  }, [state, transcript]);
-
-  // Recording-start earcon: fire the moment capture goes live (entering
-  // `recording`), and only when armed by start({ earcon: true }). This is the
-  // fix for "earcon plays before recording starts" — getUserMedia resolves
-  // inside the machine's `connecting` state, so anything that played the cue
-  // before start() ran would precede the permission dialog and lie about
-  // being live. Disarm on a return to idle without recording (denied/error).
+  // Recording-start earcon: fire when capture goes live, armed only by
+  // start({ earcon: true }). getUserMedia resolves inside `connecting`, so a
+  // cue played before that would precede the permission dialog.
   useEffect(() => {
     const prev = prevEarconStateRef.current;
     prevEarconStateRef.current = state;
     if (!playStartEarconRef.current) return;
-    if (state === "recording" && prev !== "recording") {
+    if (segmentCapturing(state) && !segmentCapturing(prev)) {
       playStartEarconRef.current = false;
       recordingStart.play();
     } else if (state === "idle") {
@@ -405,21 +271,14 @@ export function useRealtimeTranscription(
 
   const start = useCallback((opts?: { earcon?: boolean }) => {
     keywordSpotting.reset();
-    // Deliberately do NOT touch consumedRef here: a keyword send calls
-    // start() synchronously from inside the consuming effect, BEFORE the
-    // unconsumed-transcript effect below has read the mark. Resetting it
-    // here made every narration send re-fold its own just-sent text into
-    // the composer. The unconsumed effect resets the mark after each read,
-    // so it can't go stale across segments.
     if (opts?.earcon === true) playStartEarconRef.current = true;
-    send({ type: "START" });
-  }, [send, keywordSpotting]);
+    send(startEvent());
+  }, [send, keywordSpotting, startEvent]);
 
   const stop = useCallback((): Promise<{ text: string; words: FinalWord[] | null }> => {
-    // A stop during a reconnect blip still ends the segment properly —
-    // resolving immediately would leave the machine reconnecting and the
-    // expired window would later re-surface the same text as unconsumed.
-    if (state !== "recording" && state !== "reconnecting") {
+    // A stop while the live text is paused or the mic is recovering still
+    // ends the segment properly; resolving immediately would leave it running.
+    if (!segmentCapturing(state)) {
       return Promise.resolve({ text: transcript, words: finalWords });
     }
     send({ type: "STOP" });
@@ -435,42 +294,27 @@ export function useRealtimeTranscription(
 
   const submitSegment = useCallback((opts: { closeMic: boolean }): boolean => {
     // A send is already parked (a spoken keyword fired moments before the
-    // tap) — the segment is on its way with the keyword's own bookkeeping
-    // (matchedPhrase restoration, explicit "send HQ"); clobbering it here
-    // would silently drop both. Treat the tap as handled.
+    // tap) — clobbering it would drop its matchedPhrase and "send HQ" choice.
     if (pendingSendRef.current !== null) return true;
-    if (state === "idle") {
-      // Segment fully settled (unconsumed-transcript fold already ran, or
-      // nothing was ever recording) — nothing to park; the caller falls
-      // back to its direct-send path.
-      return false;
-    }
-    // Mirrors dispatchKeyword's "send" case (wantBlob branch) — this app
-    // always wants the blob, so that branch is the only one manual
-    // stop-and-send needs to reach.
+    // Segment fully settled: the caller falls back to its direct-send path.
+    if (state === "idle") return false;
     pendingSendRef.current = {
       processedTranscript: transcript,
       matchedPhrase: "",
       closeMic: opts.closeMic,
       hq: false,
     };
-    // `connecting`/`finalizing`: a stop is already in flight or nothing has
-    // started — the idle-transition effect fires the parked send either way;
-    // only a live segment needs the STOP.
-    if (state === "recording" || state === "reconnecting") {
-      send({ type: "STOP" });
-    }
+    // `connecting`/`finalizing`: nothing to stop yet, or a stop is already in
+    // flight — the idle-transition effect fires the parked send either way.
+    if (segmentCapturing(state)) send({ type: "STOP" });
     return true;
   }, [state, transcript, send]);
 
-  // Cross-tab mic mutex: while a recording session is active, claim the mic
-  // (yielding it in any other same-origin tab that holds it) and yield it back
-  // if another tab later claims. Eviction ends the segment the same way an OS
-  // mic-grab does — STOP, not CANCEL — so the captured transcript survives into
-  // the composer via onUnconsumedTranscript instead of vanishing. During
-  // `connecting` there's nothing captured yet and STOP isn't handled, so cancel
-  // to tear down cleanly. The callback fires whenever another tab claims, long
-  // after this effect ran, so it must read the live state from a ref.
+  // Cross-tab mic mutex: while a session is active, claim the mic (yielding
+  // it in any other same-origin tab) and yield it back if another tab later
+  // claims. Eviction ends a live segment with STOP, so its text and recording
+  // survive; during `connecting` nothing is captured yet, so cancel. The
+  // callback fires long after this effect ran, so it reads state from a ref.
   const active = state !== "idle";
   const stateRef = useRef(state);
   useEffect(() => {
@@ -479,12 +323,7 @@ export function useRealtimeTranscription(
   useEffect(() => {
     if (!active) return;
     return claimMicAcrossTabs(() => {
-      const current = stateRef.current;
-      if (current === "recording" || current === "reconnecting") {
-        send({ type: "STOP" });
-      } else {
-        send({ type: "CANCEL" });
-      }
+      send(segmentCapturing(stateRef.current) ? { type: "STOP" } : { type: "CANCEL" });
     });
   }, [active, send]);
 

@@ -1,0 +1,159 @@
+/* Card preview framing and optional box-scoped chrome. */
+/* A card preview rests on a desk; its own heading belongs to the paper. */
+.bbx-card-overlay {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  width: 100%;
+  max-width: 56rem;
+  max-height: calc(100% - 32px);
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #e7e5e1;
+  box-shadow: 0 16px 64px #17120d45;
+}
+.bbx-card-overlay:has(> .bbx-card-overlay-desk > .bbx-card-surface[data-card-theme="paper"]),
+.bbx-card-overlay:has(> .bbx-card-overlay-desk > .bbx-card-surface[data-card-theme="post-it"]) {
+  background: #d8d0c2;
+}
+.bbx-card-overlay-dismiss {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  padding: 6px 8px 0;
+}
+.bbx-card-overlay-dismiss button { min-width: 44px; min-height: 44px; color: #655744; }
+.bbx-card-overlay-desk {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 40px 48px;
+  scrollbar-gutter: stable both-edges;
+}
+.bbx-card-overlay-desk .bbx-card-surface[data-card-mode="companion"] { min-height: 0; }
+@media (max-width: 640px) {
+  .bbx-card-overlay { max-height: calc(100% - 16px); width: calc(100% - 16px); border-radius: 10px; }
+  .bbx-card-overlay-desk { padding: 8px 16px 32px; scrollbar-gutter: auto; }
+}
+/* Chrome owns the common desk and its saturated material palette. */
+.bbx-box-presentation {
+  --bbx-desk-background: #e4e0d9;
+  background: var(--bbx-desk-background);
+}
+.bbx-box-presentation[data-chrome-theme="paper"] {
+  --bbx-desk-background: #e4e0d9;
+  --bbx-bar-paper: #43536e;
+  --bbx-bar-edge: #2d394d;
+}
+.bbx-box-presentation[data-chrome-theme="paper"][data-chrome-stock="manila"] {
+  --bbx-bar-paper: #8b3f2c;
+  --bbx-bar-edge: #602819;
+}
+.bbx-box-presentation[data-chrome-theme="paper"][data-chrome-stock="blue"] {
+  --bbx-bar-paper: #304c79;
+  --bbx-bar-edge: #1d3355;
+}
+/* Flat is deliberately quiet: one solid ink surface and no raised/paper
+   treatment. The old default gradient remains available as Spectrum. */
+.bbx-box-presentation[data-chrome-theme="plain"] {
+  --bbx-desk-background: #e4e1db;
+  --bbx-flat-bar: #27364d;
+}
+.bbx-box-presentation[data-chrome-theme="plain"] .bbx-app-nav {
+  background: var(--bbx-flat-bar);
+  background-image: none;
+}
+.bbx-box-presentation[data-chrome-theme="plain"] .bbx-composer-material {
+  background: #ece8e0;
+  border-color: #d5cec3;
+  box-shadow: none;
+}
+/* Spectrum keeps the familiar colorful bar, but gives it an explicit theme
+   identity so Flat can remain genuinely flat. */
+.bbx-box-presentation[data-chrome-theme="spectrum"] .bbx-app-nav {
+  background-image: linear-gradient(to right, #5e5490, #9b6ba6, #d4845a);
+}
+/* One textured bar surface, with raised controls on top. */
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-system-control {
+  background: linear-gradient(165deg, #ffffff20, #00000012), var(--bbx-bar-paper);
+  color: #fff8ec;
+  border: 1px solid #ffffff70;
+  box-shadow: inset 0 1px 0 #ffffff70, inset 0 -1px 0 #00000030,
+    0 2px 1px var(--bbx-bar-edge), 0 4px 6px #182c2840;
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-system-control:active {
+  box-shadow: inset 0 1px 2px #00000025, 0 1px 0 var(--bbx-bar-edge);
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-app-nav {
+  position: relative;
+  /* Keep the lower shadow above both static cards and positioned chat panes. */
+  z-index: 1;
+  isolation: isolate;
+  background: transparent;
+  color: #fff8ec;
+  box-shadow: none;
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-app-nav > div {
+  position: relative;
+  isolation: isolate;
+  background: var(--bbx-bar-paper);
+  border-radius: 0 0 12px 3px;
+  box-shadow: inset 0 1px 0 #ffffff50, inset 0 -1px 0 #ffffff45,
+    inset 0 -7px 12px -9px #000, 0 3px 5px #182c2855;
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-app-nav > div::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='140'%3E%3Cfilter id='pulp'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.025 .07' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23pulp)'/%3E%3C/svg%3E");
+  background-size: 240px 240px, 600px 140px;
+  background-blend-mode: soft-light;
+  mix-blend-mode: soft-light;
+  opacity: .3;
+}
+/* Keep the familiar capsule/circle outlines. A bright rim and contact shadow
+   lift each control off the sheet without affecting its portaled menu. */
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-app-nav :is(
+  .bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
+  #bbx-nav-todo, #bbx-nav-back-to-chat
+) {
+  border-radius: 9999px;
+  background-color: color-mix(in srgb, var(--bbx-bar-paper) 85%, white);
+  box-shadow: inset 0 1px 0 #ffffff70, inset 0 -1px 0 #00000030,
+    0 2px 0 var(--bbx-bar-edge), 0 4px 5px #00000035;
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-place-pill {
+  border-color: #ffffff60;
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-app-nav :is(
+  #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-back-to-chat
+):active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 2px #00000025, 0 1px 0 var(--bbx-bar-edge);
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-app-nav :is(
+  #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-back-to-chat
+):focus-visible {
+  outline: 2px solid #fff8ec;
+  outline-offset: 3px;
+}
+.bbx-box-presentation .bbx-conversation-desk {
+  background: var(--bbx-desk-background);
+}
+.bbx-box-presentation[data-chrome-theme="paper"] .bbx-composer-material {
+  background: #f7f1e6;
+  border: 1px solid #dbcfb9;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -3px 12px #56482c12;
+}
+@media print {
+  .bbx-box-presentation[data-chrome-theme] .bbx-conversation-desk { background: #fff; }
+  .bbx-composer-material { display: none; }
+}

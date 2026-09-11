@@ -25,6 +25,7 @@ import {
   type TranscriptionServiceOption, type HqTranscriptionOption, type TtsBackendOption,
 } from "./VoiceChip-panels";
 import { HqPreferenceRow, type HqDefaultsState } from "./HqPreferenceRow";
+import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
@@ -72,6 +73,8 @@ export interface VoiceChipFaceState {
   muted: boolean;
   narrationEnabled: boolean;
   hqInFlight: boolean;
+  /** A voice notice is waiting in the menu (see `VoiceNotices.tsx`). */
+  alert?: boolean;
 }
 
 /**
@@ -84,7 +87,7 @@ export interface VoiceChipFaceState {
  * directly. The whole pill is one tap target (wired up by the caller); the
  * two icons are not separately actionable.
  */
-export function VoiceChipFace({ muted, narrationEnabled, hqInFlight }: VoiceChipFaceState) {
+export function VoiceChipFace({ muted, narrationEnabled, hqInFlight, alert }: VoiceChipFaceState) {
   return (
     <span
       className="inline-flex items-center gap-1.5"
@@ -97,6 +100,7 @@ export function VoiceChipFace({ muted, narrationEnabled, hqInFlight }: VoiceChip
       <span aria-hidden="true" className="w-px h-4 bg-white/20" />
       <SpeakerIcon muted={muted} />
       {hqInFlight ? <span className="text-xs opacity-80">transcribing…</span> : null}
+      {alert === true ? <span aria-hidden="true" className="w-2 h-2 rounded-full bg-warning" /> : null}
     </span>
   );
 }
@@ -137,6 +141,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
     case "root":
       return (
         <>
+          <VoiceNoticeList />
           <MenuItem id="bbx-voice-mute" onClick={onToggleMute} icon={<SpeakerIcon muted={muted} />}>
             {muted ? "✓ " : ""}Mute
           </MenuItem>
@@ -287,7 +292,8 @@ export const VoiceChip = memo(function VoiceChip({
   };
 
   const [panel, setPanel] = useState<VoiceChipPanel>("root");
-  const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight });
+  const alert = useVoiceNotices().length > 0;
+  const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight }) + (alert ? " — voice notice" : "");
 
   return (
     <Dropdown
@@ -309,7 +315,7 @@ export const VoiceChip = memo(function VoiceChip({
           aria-label={label}
           {...ariaProps}
         >
-          <VoiceChipFace muted={muted} narrationEnabled={narrationEnabled} hqInFlight={hqInFlight} />
+          <VoiceChipFace muted={muted} narrationEnabled={narrationEnabled} hqInFlight={hqInFlight} alert={alert} />
         </button>
       )}
     >

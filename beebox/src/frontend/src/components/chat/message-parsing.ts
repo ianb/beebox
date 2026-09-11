@@ -109,6 +109,25 @@ const MESSAGE_ID_WRAPPER_RE = /^\s*<speech\b[^>]*\bmessage-id="([^"]*)"/;
 const SPEECH_WRAPPER_RE = /^\s*<speech\b([^>]*)>/;
 const STT_ATTR_RE = /\bstt="([^"]*)"/;
 const STT_SERVICE_ATTR_RE = /\bstt-service="([^"]*)"/;
+// `pending` is matched too: a legacy transcript from before late correction
+// was removed may still carry it, and it renders the same static fallback
+// label as `failed` now that there is no correction to distinguish it from.
+const HQ_ATTR_RE = /\bhq="(?:pending|failed)"/;
+
+/** The attributes of the message's opening `<speech …>` wrapper, if it has one. */
+function speechWrapperAttrs(entry: SessionEntry): string | undefined {
+  const firstText = entry.content.find((b) => b.type === "text")?.text ?? "";
+  return stripChatAppTags(firstText).match(SPEECH_WRAPPER_RE)?.[1];
+}
+
+/**
+ * `hq="failed"` on a voice message: realtime text sent in place of a
+ * requested HQ pass (docs/plans/resilient-voice-recording.md, Track 4). The
+ * HQ result stays on the box, reachable only through `bbx chat retranscribe`.
+ */
+export function isHqFallbackMessage(entry: SessionEntry): boolean {
+  return HQ_ATTR_RE.test(speechWrapperAttrs(entry) ?? "");
+}
 
 export interface TranscriptionProvenance {
   kind: "hq" | "realtime";
