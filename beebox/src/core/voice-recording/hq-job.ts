@@ -199,7 +199,12 @@ async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
     if (remainingMs > 0) await clock.wait(remainingMs);
   }
 
-  let attempt = 0;
+  // Seed the attempt counter from the resumed state so a restart mid-backoff
+  // continues the same jitteredBackoff curve instead of re-warming from
+  // attempt 1 (which would retry faster than intended right after a
+  // restart, still-transient failures aside).
+  let attempt =
+    session.voice.hq.state === "transcribing" || session.voice.hq.state === "retrying" ? session.voice.hq.attempt : 0;
   for (;;) {
     const elapsedMs = clock.now().getTime() - new Date(hqRequest.requestedAt).getTime();
     if (elapsedMs >= HQ_RETRY_BOUND_MS) {

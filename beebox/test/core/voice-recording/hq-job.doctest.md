@@ -11,7 +11,7 @@ a real backoff or reach a real HQ service.
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus.js";
 import { createStagingSession, addAudioChunk, readStagingSession } from "../../../src/core/capture/staging-store.js";
-import { sealVoiceSession } from "../../../src/core/voice-recording/voice-staging.js";
+import { sealVoiceSession, applyVoiceEvent } from "../../../src/core/voice-recording/voice-staging.js";
 import { runHqJob } from "../../../src/core/voice-recording/hq-job.js";
 
 const GITIGNORE = ["_tmp/", ".beebox/"].join("\n") + "\n";
@@ -220,6 +220,49 @@ await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribeP
 const after = await readStagingSession({ boxRoot: box.root, id: session.id });
 JSON.stringify(after.voice.hq)
 => {"state":"ready","result":{"text":"— part 1 of 3 —\nSpeaker 1A: hi\n\n— part 2 of 3 —\nSpeaker 1B: there\n\n— part 3 of 3 —\nSpeaker 1C: bye","diarized":true,"service":"mai-diarized","pieces":3}}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A resumed job continues the attempt counter, not just the piece length
+
+If a process restart interrupts a `retrying` job, `runHqJob`'s backoff must
+pick up where the attempt counter left off — re-warming from attempt 1 after
+every restart would retry faster than `jitteredBackoff`'s exponential curve
+intends. Drive the manifest straight to `retrying` at attempt 5 (as if four
+prior attempts already failed), then resume it:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await configureBox(box);
+const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes: 1000 });
+await requestHq(box, session);
+await applyVoiceEvent({
+  boxRoot: box.root, id: session.id,
+  event: { type: "pieceStarted", piece: 1, pieces: 1, attempt: 5, pieceSeconds: 300 },
+});
+await applyVoiceEvent({
+  boxRoot: box.root, id: session.id,
+  event: {
+    type: "pieceFailed", classification: "transient", pieceSeconds: 300, attempt: 5,
+    nextAttemptAt: "2026-09-10T18:00:00.000Z", // already past — the resumed job needn't wait
+    failure: { code: "network_error", message: "blip" },
+  },
+});
+
+const eventBus = createEventBus(box.root);
+const events = [];
+eventBus.subscribe({ listener: (e) => { if (e.event === "voice-recording-status") events.push(e.data); } });
+
+const transcribePiece = scriptedTranscribe([{ text: "resumed" }]);
+const clock = fakeClock("2026-09-10T18:05:00.000Z"); // well past nextAttemptAt
+await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribePiece });
+
+// The resumed attempt should be 6 (continuing from the persisted 5), not 1.
+JSON.stringify({ resumedAttempt: events[0].hq.state === "transcribing" ? events[0].hq.attempt : null })
+=> {"resumedAttempt":6}
 ```
 
 ```ts cleanup
