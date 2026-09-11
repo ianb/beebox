@@ -5543,3 +5543,74 @@ tests:
       Gives the corrected value in a self-contained callout without changing
       narration or prose features.
     tags: [chat-everywhere, chat-attention]
+
+  # Resilient voice recording (docs/plans/resilient-voice-recording.md,
+  # Track 4): a voice message may be sent as live text before its HQ
+  # transcript is ready (`hq="pending"`), and the box delivers the HQ text
+  # later as `<speech corrects="<message-id>">`. Long diarized recordings are
+  # transcribed in parts with fresh speaker letters per part.
+  - id: voice-hq-pending-defers
+    prompt: |
+      <chat-app narration="off" prose="on" time="2026-09-10T18:00:00Z"/>
+      <speech hq="pending" message-id="em-pending-1" user="Priya Marlowe">Remind me to call oh debt Marlowe about the photo albums on Saturday.</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Notices the name looks misheard ("oh debt") and does NOT run
+      `bbx chat retranscribe` on this message: `hq="pending"` means the better
+      transcript is already coming as a separate message. Says so briefly
+      (the corrected transcript is on its way) rather than asking the user to
+      repeat or re-transcribing.
+    correct_matches:
+      - "(correct|better|hq|high.quality|updated).{0,80}(transcri|version|text)|transcri.{0,80}(coming|on (its|the) way|follow|arriv)"
+    response_not_contains: ["bbx chat retranscribe"]
+    tags: [chat, voice, hq]
+
+  - id: voice-corrects-supersedes
+    prompt: |
+      <chat-app narration="off" prose="on" time="2026-09-10T18:10:00Z"/>
+      <speech hq="pending" message-id="em-dent-1" user="Priya Marlowe">Juni's dentist appointment is on September 13th at 3pm, just so you know.</speech>
+      <speech stt="hq" stt-service="mai" message-id="rec-dent-1" corrects="em-dent-1" user="Priya Marlowe">Juni's dentist appointment is on September 15th at 3pm, just so you know.</speech>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Treats the second message as the authoritative text of the first
+      (`corrects="em-dent-1"`): the date is the 15th, not the 13th. Takes
+      the appointment once — not as two separate appointments or two
+      requests — and does not answer the earlier message again from scratch.
+    correct_contains_any: ["15"]
+    tags: [chat, voice, hq]
+
+  - id: voice-diarized-parts
+    prompt: |
+      <chat-app narration="off" prose="on" time="2026-09-10T18:20:00Z"/>
+      <speech stt="hq" stt-service="mai-diarized" diarized="1" message-id="rec-kitchen-1" user="Priya Marlowe">— part 1 of 2 —
+      Speaker 1A: I think we should repaint the kitchen before the holidays.
+      Speaker 2A: Fine, but not green again.
+
+      — part 2 of 2 —
+      Speaker 1B: So we agree on the repaint. I'll pick up paint samples on Thursday.
+      Speaker 2B: Great, thanks.</speech>
+      <typed user="Priya Marlowe">Was the person picking up the samples the same one who suggested repainting?</typed>
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Knows each part of a long diarized recording gets fresh speaker letters:
+      1A (part 1) and 1B (part 2) may or may not be the same person. Does not
+      assert that they are the same person, nor that they are different.
+    correct_matches:
+      - "may or may not|might or might not|can'?t (tell|be (sure|certain)|say|confirm|know)|cannot (tell|be (sure|certain)|say|confirm|know)|no way to (tell|know)|not (possible|able) to (tell|say|confirm)|(don'?t|do not) know|unclear|not clear|could be"
+    tags: [chat, voice, hq]
+
+  # Status (2026-09-10, resilient-voice-recording Track 4), first run after
+  # adding the hq/corrects/parts sentences to the chat prompt, 1/1 each:
+  # - voice-hq-pending-defers passes: 0 reads, 54k ctx. Scheduled the reminder
+  #   with the first name marked unclear, said "the corrected transcript is on
+  #   its way and I'll fix it then", did not retranscribe.
+  # - voice-corrects-supersedes passes: 0 reads (the one "file" is its own
+  #   calendar write), 54k ctx. Wrote one event for September 15th, none for
+  #   the 13th, and did not answer the first message separately.
+  # - voice-diarized-parts passes: 0 reads, 54k ctx. Said it can't tell and
+  #   that the letters don't carry across parts; it also tried
+  #   `ask-about-audio` on the recording first, which is a reasonable check
+  #   rather than a violation.

@@ -2099,6 +2099,13 @@ test1:
       peak: 46151
       added: 0
       turns: 1
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 54129
+      peak: 55717
+      added: 1588
+      turns: 4
   chat-voice-hard-override:
     - date: 2026-07-03T11:26:09.904Z
       boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
@@ -2113,6 +2120,13 @@ test1:
       initial: 43863
       peak: 45489
       added: 1626
+      turns: 4
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 45998
+      peak: 47633
+      added: 1635
       turns: 4
   chat-user-selection-tag:
     - date: 2026-07-03T11:26:09.904Z
@@ -2192,6 +2206,13 @@ test1:
       repoCommit: db3b3c0cba0981e17aed95d8404d7c4e55c287f8
       initial: 46518
       peak: 46518
+      added: 0
+      turns: 1
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 54125
+      peak: 54125
       added: 0
       turns: 1
   narration-callout-on-real-question:
@@ -4351,6 +4372,30 @@ test1:
       peak: 48705
       added: 2926
       turns: 5
+  voice-hq-pending-defers:
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 54167
+      peak: 54167
+      added: 0
+      turns: 2
+  voice-corrects-supersedes:
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 53637
+      peak: 57169
+      added: 3532
+      turns: 6
+  voice-diarized-parts:
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 54318
+      peak: 54824
+      added: 506
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
