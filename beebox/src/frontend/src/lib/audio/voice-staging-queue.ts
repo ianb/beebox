@@ -174,6 +174,11 @@ export const voiceStagingStatus = {
   subscribe: (listener: Listener) => getSingleton().subscribeStatus(listener),
   getSnapshot: () => getSingleton().getStatusSnapshot(),
 };
+/** False once staging fell back to memory: a reload before upload loses recordings. Changes notify `voiceStagingStatus`. */
+export function voiceStagingIsPersistent(): boolean {
+  return getSingleton().isPersistent();
+}
+
 export const voiceStagingFailures = {
   subscribe: (listener: Listener) => getSingleton().subscribeFailures(listener),
   getSnapshot: () => getSingleton().getFailuresSnapshot(),

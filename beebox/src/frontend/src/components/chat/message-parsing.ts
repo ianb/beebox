@@ -109,6 +109,28 @@ const MESSAGE_ID_WRAPPER_RE = /^\s*<speech\b[^>]*\bmessage-id="([^"]*)"/;
 const SPEECH_WRAPPER_RE = /^\s*<speech\b([^>]*)>/;
 const STT_ATTR_RE = /\bstt="([^"]*)"/;
 const STT_SERVICE_ATTR_RE = /\bstt-service="([^"]*)"/;
+const HQ_ATTR_RE = /\bhq="(pending|failed)"/;
+const CORRECTS_ATTR_RE = /\bcorrects="([^"]+)"/;
+
+/** The attributes of the message's opening `<speech …>` wrapper, if it has one. */
+function speechWrapperAttrs(entry: SessionEntry): string | undefined {
+  const firstText = entry.content.find((b) => b.type === "text")?.text ?? "";
+  return stripChatAppTags(firstText).match(SPEECH_WRAPPER_RE)?.[1];
+}
+
+/**
+ * `hq="pending" | "failed"` on a voice message: realtime text sent in place of
+ * a requested HQ pass (docs/plans/resilient-voice-recording.md, Track 4).
+ */
+export function resolveHqFallbackMark(entry: SessionEntry): "pending" | "failed" | null {
+  const mark = speechWrapperAttrs(entry)?.match(HQ_ATTR_RE)?.[1];
+  return mark === "pending" || mark === "failed" ? mark : null;
+}
+
+/** `corrects="<id>"`: this message is the late HQ transcript of message `<id>`. */
+export function resolveCorrectedMessageId(entry: SessionEntry): string | null {
+  return speechWrapperAttrs(entry)?.match(CORRECTS_ATTR_RE)?.[1] ?? null;
+}
 
 export interface TranscriptionProvenance {
   kind: "hq" | "realtime";
