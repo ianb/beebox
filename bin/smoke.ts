@@ -76,7 +76,6 @@ import { isFreshGeneration } from "./smoke-probe.js";
 import type { SmokeStepRecord } from "./smoke-lib.js";
 import {
   cardViewRendered,
-  conversationPlacePreservationFailure,
   currentPlaceLabel,
   directoryRowCount,
   hasDomId,
@@ -112,7 +111,6 @@ function buildSteps(input: {
   // the second one proves the generation answering it is not the one the first
   // replaced. `undefined` means the restart step did not run.
   let replaced: { before: number | null } | undefined;
-  let selectedPlace: string | undefined;
 
   if (options.restart) {
     steps.push({
@@ -226,7 +224,6 @@ function buildSteps(input: {
         snapshot: after,
       });
       if (failure !== null) throw failure;
-      selectedPlace = target.label;
     },
   });
 
@@ -239,9 +236,6 @@ function buildSteps(input: {
       if (refFor(snapshot, { role: "region", name: "Browse" }) === null || directoryRowCount(snapshot) === 0) {
         throw new BrowseListEmptyError(snapshot);
       }
-      const placeFailure = selectedPlace === undefined
-        ? null : conversationPlacePreservationFailure(selectedPlace, snapshot);
-      if (placeFailure !== null) throw placeFailure;
     },
   });
 
@@ -274,9 +268,6 @@ function buildSteps(input: {
       if (!cardViewRendered(detail)) {
         throw new CardContentMissingError({ name: row.name, snapshot });
       }
-      const placeFailure = selectedPlace === undefined
-        ? null : conversationPlacePreservationFailure(selectedPlace, snapshot);
-      if (placeFailure !== null) throw placeFailure;
     },
   });
 

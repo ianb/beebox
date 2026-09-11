@@ -169,18 +169,6 @@ export class LandmarkRefUnresolvedError extends SmokeFailureError {
   }
 }
 
-/** Ordinary content navigation silently changed the selected conversation's place. */
-export class ConversationChangedWhileBrowsingError extends SmokeFailureError {
-  constructor(input: { expected: string; actual: string | null; snapshot: string }) {
-    super(
-      "browsing content changed the conversation's selected place" +
-        ` (expected: ${input.expected}; actual: ${input.actual ?? "missing"})`,
-      input.snapshot,
-    );
-    this.name = "ConversationChangedWhileBrowsingError";
-  }
-}
-
 // ── the harness (bin/smoke-harness.ts) ──────────────────────────────────────
 
 export class MissingBoxSlugError extends Error {

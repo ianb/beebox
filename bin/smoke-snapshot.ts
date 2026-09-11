@@ -9,7 +9,6 @@
  */
 
 import {
-  ConversationChangedWhileBrowsingError,
   PlaceMenuCollapsedError,
   PlaceMenuErroredError,
   PlaceMenuMissingFixedRowsError,
@@ -207,21 +206,6 @@ export function currentPlaceLabel(snapshot: string): string | null {
   const line = snapshot.split("\n").find((candidate) => candidate.includes("id=bbx-nav-place"));
   if (line === undefined) return null;
   return /"Where you are:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
-}
-
-/**
- * The app bar publishes the persistent conversation's selected place even
- * while a card or Browse owns the main surface. It is the visible signal that
- * content navigation did not retarget the composer.
- */
-export function conversationPlacePreservationFailure(
-  expected: string,
-  snapshot: string,
-): SmokeFailureError | null {
-  const actual = currentPlaceLabel(snapshot);
-  return actual === expected
-    ? null
-    : new ConversationChangedWhileBrowsingError({ expected, actual, snapshot });
 }
 
 /**

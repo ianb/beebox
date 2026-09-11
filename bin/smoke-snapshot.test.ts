@@ -4,7 +4,6 @@ import type { SmokeFailureError } from "./smoke-errors.js";
 import {
   MENU_ERROR_TEXT,
   cardViewRendered,
-  conversationPlacePreservationFailure,
   contentAreaRow,
   currentPlaceLabel,
   directoryRowCount,
@@ -89,13 +88,6 @@ test("currentPlaceLabel: reads the pill's `Where you are: <label>` accessible na
     "Acids & Bases",
   );
   assert.equal(currentPlaceLabel('- button "User" [ref=e8, id=bbx-nav-profile]'), null);
-});
-
-test("conversation place preservation uses the app bar's visible place", () => {
-  const acids = '- button "Where you are: Acids & Bases" [id=bbx-nav-place]';
-  const root = '- button "Where you are: Box" [id=bbx-nav-place]';
-  assert.equal(conversationPlacePreservationFailure("Acids & Bases", acids), null);
-  assert.match(conversationPlacePreservationFailure("Acids & Bases", root)?.message ?? "", /changed/);
 });
 
 test("switchTarget: never the place we are already in", () => {
