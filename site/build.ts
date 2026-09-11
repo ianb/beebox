@@ -15,10 +15,15 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { embedAsides, flatAside, loadAsides, renderAside, type AsideCard } from "./asides.js";
 import { listCardFiles } from "./cards.js";
-import { baseFromBranch, normalizeBase } from "./links.js";
+import { baseFromBranch, normalizeBase, resolveInternalHref } from "./links.js";
 import { embedNuggets, isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
-import { parseSource, renderBody, pageShell, type PageFrontmatter } from "./render.js";
+import { parseSource, renderBody, type PageFrontmatter } from "./render.js";
 import { writeManifest } from "./sources.js";
+import { NAVIGATION_SCRIPT } from "./navigation-script.js";
+import { headingIds, prepareWorkspace, type SitePage } from "./workspace-model.js";
+import { workspaceShell } from "./workspace.js";
+import { twinCardLinks } from "./twin-links.js";
+import { publishedPageBody } from "./page-publication.js";
 
 const SITE_DIR = import.meta.dirname;
 const CARDS_DIR = path.join(SITE_DIR, "cards");
@@ -148,6 +153,7 @@ async function main(): Promise<void> {
 
   const emitted = new Set<string>();
   const built: BuiltPage[] = [];
+  const pages: SitePage[] = [];
   const nuggets = await loadNuggets({ nuggetsDir: NUGGETS_DIR, repoRoot: REPO_ROOT });
   const asides = await loadAsides(cards.asides);
   // Render every aside once up front, referenced or not: an empty ready aside
@@ -157,17 +163,22 @@ async function main(): Promise<void> {
 
   for (const card of cards.pages) {
     const src = await fs.readFile(card.abs, "utf8");
-    const { frontmatter, body } = parseSource(src, card.file);
-    const pageSitePath = `${card.slug}.html`;
-    const rendered = renderBody(body, { file: card.file, pageSitePath, base });
-    const withAsides = embedAsides(rendered.html, { asides, base, pageSitePath });
-    const html = embedNuggets(withAsides.html, { nuggets, base, pageSitePath });
-    const linkTargets = [...rendered.linkTargets, ...withAsides.linkTargets];
+    const { frontmatter, body: authoredBody } = parseSource(src, card.file);
+    const id = card.file.slice("cards/".length);
+    const body = publishedPageBody({ id, frontmatter, body: authoredBody });
+    const route = resolveInternalHref({ href: `/${id}`, pageSitePath: id, base });
+    const pageSitePath = route.target;
+    const rendered = renderBody(body, { file: card.file, pageSitePath: id, base });
+    const withAsides = embedAsides(rendered.html, { asides, base, pageSitePath: id });
+    const nuggetTargets: string[] = [];
+    const html = embedNuggets(withAsides.html, { nuggets, base, pageSitePath: id, linkTargets: nuggetTargets });
+    const linkTargets = [...rendered.linkTargets, ...withAsides.linkTargets, ...nuggetTargets];
 
-    const htmlOut = path.join(DIST_DIR, pageSitePath);
     const twinOut = path.join(DIST_DIR, `${card.slug}.md`);
-    await fs.writeFile(htmlOut, pageShell({ title: frontmatter.title, bodyHtml: html, base }), "utf8");
-    await fs.writeFile(twinOut, twinMarkdown(body, { nuggets, asides }), "utf8");
+    if (built.some((page) => page.stem === card.slug)) throw new BuildError(`${card.file}: duplicate Markdown twin ${card.slug}.md`);
+    await fs.mkdir(path.dirname(twinOut), { recursive: true });
+    pages.push({ id, output: route.target, href: route.href, html: headingIds(html), frontmatter });
+    await fs.writeFile(twinOut, twinCardLinks(twinMarkdown(body, { nuggets, asides }), { id, base }), "utf8");
 
     emitted.add(pageSitePath);
     built.push({
@@ -176,6 +187,15 @@ async function main(): Promise<void> {
       linkTargets: linkTargets.map((target) => ({ target, href: target })),
     });
   }
+
+  const workspace = prepareWorkspace({ pages, base });
+  for (const page of pages) {
+    const output = path.join(DIST_DIR, page.output);
+    await fs.mkdir(path.dirname(output), { recursive: true });
+    await fs.writeFile(output, workspaceShell(workspace, page), "utf8");
+  }
+  await fs.cp(path.join(SITE_DIR, "assets"), path.join(DIST_DIR, "assets"), { recursive: true });
+  await fs.writeFile(path.join(DIST_DIR, "assets/navigation.js"), NAVIGATION_SCRIPT, "utf8");
 
   // Link-check: every internal link target must correspond to an emitted page.
   const broken: string[] = [];

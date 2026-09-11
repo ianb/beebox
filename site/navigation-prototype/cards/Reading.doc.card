@@ -1,0 +1,31 @@
+---
+title: Reading, with room beside it
+theme: paper
+stock: cream
+next:
+  - card: Reading.attach/Margin.doc.card
+    label: Read the margin note
+  - card: Reading.attach/Context.doc.card
+    label: Explore why a note keeps its parent
+  - card: Menu.doc.card
+    label: Return to the collection
+---
+[Prototype content]
+
+This is the main document. It has a beginning, a couple of places to wander, and an end.
+
+## A little room for a detour
+
+Some thoughts belong beside the thing you are reading. Open [a margin note](Reading.attach/Margin.doc.card) and this document will make room for it.
+
+The note has its own address. You can follow it, share it, or come back here.
+
+## Keeping your bearings
+
+An aside can carry its context with it. [Why keep the parent?](Reading.attach/Context.doc.card) explores that second idea.
+
+You do not need to read either note to finish this document.
+
+## The end
+
+That is all. Return to [the collection](Menu.doc.card), or revisit either note.

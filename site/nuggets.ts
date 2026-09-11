@@ -200,23 +200,24 @@ const NUGGET_PLACEHOLDER_RE = /<x-nugget slug="([^"]*)"><\/x-nugget>/g;
  */
 export function embedNuggets(
   html: string,
-  params: { nuggets: readonly Nugget[]; base: string; pageSitePath: string },
+  params: { nuggets: readonly Nugget[]; base: string; pageSitePath: string; linkTargets?: string[] },
 ): string {
   return html.replace(NUGGET_PLACEHOLDER_RE, (_match, slug: string) => {
     const nugget = params.nuggets.find((n) => n.slug === slug);
     if (!nugget) {
       throw new NuggetError(`${params.pageSitePath} embeds unknown nugget slug "${slug}" (no nuggets/${slug}.md)`);
     }
-    return renderNugget(nugget, { base: params.base, pageSitePath: params.pageSitePath });
+    return renderNugget(nugget, params);
   });
 }
 
-export function renderNugget(nugget: Nugget, params: { base: string; pageSitePath: string }): string {
+export function renderNugget(nugget: Nugget, params: { base: string; pageSitePath: string; linkTargets?: string[] }): string {
   if (!isRenderable(nugget)) {
     throw new NuggetError(`nugget "${nugget.slug}" has status "proposed" and must not be rendered`);
   }
   const text = nugget.body === "" ? nugget.span : nugget.body;
-  const { html } = renderBody(text, { file: nugget.file, pageSitePath: params.pageSitePath, base: params.base });
+  const { html, linkTargets } = renderBody(text, { file: nugget.file, pageSitePath: params.pageSitePath, base: params.base });
+  params.linkTargets?.push(...linkTargets);
   // A nugget body embedding another nugget would ship an inert <x-nugget>
   // that bypassed the unknown-slug check. Refuse until nesting is a designed
   // feature rather than an accident.

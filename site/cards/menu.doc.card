@@ -1,0 +1,21 @@
+---
+title: Around Bee Box
+summary: Navigation through the public site.
+navigation: true
+unlisted: true
+theme: paper
+stock: manila
+chrome:
+  theme: paper
+  stock: cream
+---
+# Around Bee Box
+
+- [Bee Box](/index.site-page.card)
+- [Install with your agent](/index.site-page.card#install-with-your-agent)
+- [A morning with the box (draft)](/walkthrough.site-page.card)
+
+## Elsewhere
+
+- [Source on GitHub](https://github.com/ianb/beebox)
+- [Community on Discord](https://discord.gg/FQYn6zyv)

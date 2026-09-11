@@ -1,0 +1,123 @@
+/* Every surfaced card defines a complete material. Nested cards reset these
+   variables; frameless embeds intentionally inherit their enclosing material. */
+.bbx-card-theme {
+  --bbx-paper: #fff;
+  --bbx-ink: #302f2d;
+  --bbx-ink-soft: #625e58;
+  --bbx-pen: #455f87;
+  --bbx-edge: #dedbd6;
+  --bbx-underlay: #efede9;
+  --bbx-font: ui-sans-serif, system-ui, sans-serif;
+  --bbx-link-decoration: underline;
+  --bbx-link-image: none;
+  --bbx-quote-paper: transparent;
+  --bbx-quote-layer-paper: #fff;
+  --bbx-quote-sheet-display: none;
+  --bbx-blockquote-sheet-display: none;
+  --bbx-slip-angle: -0.25deg;
+  --bbx-slip-grain: initial;
+  --bbx-sheet-radius: 8px;
+  --bbx-slip-overhang: 0px;
+  --bbx-quote-shadow: none;
+  --bbx-quote-edge: 0px;
+  --bbx-quote-radius: 0 4px 4px 0;
+  --bbx-quote-offset: 0px;
+  --bbx-quote-padding-left: 0;
+  --bbx-blockquote-paper: transparent;
+  --bbx-blockquote-shadow: none;
+  --bbx-blockquote-edge: 0px;
+  --bbx-blockquote-padding: 0.5em 0;
+  --bbx-content-padding: clamp(1rem, 3vw, 2rem);
+  color: var(--bbx-ink);
+  font-family: var(--bbx-font);
+}
+
+.bbx-card-theme[data-card-theme="paper"] {
+  --bbx-sheet-radius: 12px;
+  --bbx-slip-overhang: calc(var(--bbx-content-padding) + 0.625rem);
+  --bbx-paper: #f5efe2;
+  --bbx-ink: #332e27;
+  --bbx-ink-soft: #4f4439;
+  --bbx-pen: #2b4264;
+  --bbx-edge: #d6c8af;
+  --bbx-underlay: #e4dac9;
+  --bbx-font: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --bbx-quote-paper: #fcf8ee;
+  --bbx-quote-layer-paper: #fcf8ee;
+  --bbx-blockquote-paper: #ffffff45;
+  --bbx-link-decoration: none;
+  --bbx-link-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='6' viewBox='0 0 128 6'%3E%3Cpath d='M0 4 Q19 2 39 3.7 T80 3.8 T128 3' stroke='%232b4264' stroke-width='1.25' fill='none'/%3E%3C/svg%3E");
+}
+
+.bbx-card-theme[data-card-theme="paper"][data-card-stock="manila"] {
+  --bbx-pen: #263b59;
+  --bbx-paper: #ecdbb1;
+  --bbx-ink: #3d3221;
+  --bbx-ink-soft: #473a29;
+  --bbx-edge: #c9b58b;
+  --bbx-quote-paper: #f8eacb;
+  --bbx-quote-layer-paper: #f8eacb;
+}
+.bbx-card-theme[data-card-theme="paper"][data-card-stock="blue"] {
+  --bbx-paper: #e0e9ee;
+  --bbx-ink: #263a44;
+  --bbx-ink-soft: #34444e;
+  --bbx-edge: #b6cbd5;
+  --bbx-quote-paper: #f0f5f6;
+  --bbx-quote-layer-paper: #f0f5f6;
+}
+
+.bbx-card-theme[data-card-theme="post-it"] {
+  --bbx-sheet-radius: 2px 3px 9px 2px;
+  --bbx-slip-overhang: calc(var(--bbx-content-padding) + 0.625rem);
+  --bbx-paper: #faee9f;
+  --bbx-ink: #36321b;
+  --bbx-ink-soft: #625a30;
+  --bbx-pen: #3c5169;
+  --bbx-edge: #dacb73;
+  --bbx-underlay: #e9dfa9;
+  --bbx-font: "Avenir Next", Avenir, ui-sans-serif, system-ui, sans-serif;
+  --bbx-quote-paper: #fff8cf;
+  --bbx-quote-layer-paper: #fff8cf;
+  --bbx-slip-angle: 0.3deg;
+  --bbx-blockquote-paper: #ffffff30;
+}
+.bbx-card-theme[data-card-theme="post-it"][data-card-stock="rose"] {
+  --bbx-paper: #f6d1d0;
+  --bbx-ink: #452d35;
+  --bbx-ink-soft: #70505a;
+  --bbx-edge: #d4a6ad;
+  --bbx-quote-paper: #ffebea;
+  --bbx-quote-layer-paper: #ffebea;
+}
+.bbx-card-theme[data-card-theme="post-it"][data-card-stock="mint"] {
+  --bbx-paper: #d7ebcd;
+  --bbx-ink: #2c3d29;
+  --bbx-ink-soft: #50654b;
+  --bbx-edge: #adc4a4;
+  --bbx-quote-paper: #edf6e7;
+  --bbx-quote-layer-paper: #edf6e7;
+}
+
+/* Catalog-selected defaults set shape; the stock supplies the material. */
+.bbx-card-theme[data-default-quote-treatment="inset"] {
+  --bbx-quote-edge: 2px;
+  --bbx-quote-radius: 0;
+  --bbx-quote-padding-left: 1.1em;
+}
+.bbx-card-theme[data-default-quote-treatment="layered"] {
+  --bbx-quote-sheet-display: block;
+  --bbx-quote-paper: transparent;
+  --bbx-quote-radius: 3px;
+  --bbx-quote-offset: 3px;
+  --bbx-quote-padding-left: 1.1em;
+}
+.bbx-card-theme[data-default-blockquote-treatment="inset"] {
+  --bbx-blockquote-edge: 2px;
+  --bbx-blockquote-padding: 0.5em 1em;
+}
+.bbx-card-theme[data-default-blockquote-treatment="layered"] {
+  --bbx-blockquote-sheet-display: block;
+  --bbx-blockquote-paper: transparent;
+  --bbx-blockquote-padding: 0.9em 1.1em;
+}

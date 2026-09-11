@@ -56,6 +56,10 @@ const ASIDE_KINDS = {
 
 export type AsideKind = keyof typeof ASIDE_KINDS;
 
+export function asideProvenance(kind: AsideKind): string {
+  return ASIDE_KINDS[kind].provenance;
+}
+
 export function isAsideKind(kind: string): kind is AsideKind {
   return kind in ASIDE_KINDS;
 }
