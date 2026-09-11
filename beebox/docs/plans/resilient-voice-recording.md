@@ -29,6 +29,32 @@ preview and a last-resort fallback, never a silent substitute.
   throw away the recording. The box keeps it; sending the message still
   needs the tab.
 
+## Scope reduction (2026-09-10) — read this first
+
+Implementation reached Track 4 and grew to ~12k lines in 24 commits. The
+boxholder stopped it, and a scope-focused cross-model review found it
+far larger than the incident needed. What ships is the core only:
+- the durable web recording (staging, the upload queue, `recordingLocal`)
+- the server HQ job over pieces of 5 minutes or less, with retries
+- a bounded wait with a visible fallback
+
+Cut by boxholder decision:
+- **Late correction is removed.** That covers `corrects` delivery, the
+  `late`/`delivering`/`delivered` handoff states, `statusByMessage`, the
+  correction bubble, the badges, and the two prompt sentences and knowledge
+  audits for them. A fallback sends live text stamped `hq="failed"`. The HQ
+  result stays on the box, where `get-last-audio` / `bbx chat retranscribe`
+  can use it.
+- **Track 6 (iOS) is reverted.** The native app keeps its one-shot path.
+- **Track 7 (legacy removal) is dropped.** `POST /api/chat/transcribe-audio`
+  and the `get-last-audio` tab relay stay.
+- **Track 5 shrinks** to the server-side `get-last-audio` lookup of staged
+  recordings, deleting the now-callerless `retainVoiceAudio`, and the
+  retention fix for sealed non-terminal recordings.
+
+Sections below that describe the cut pieces are kept as design history, not
+as work to do.
+
 **Issues addressed:**
 
 - `issues/bugs/2026-09-10-live-transcription-failure-loses-the-hq-pass.md` —
