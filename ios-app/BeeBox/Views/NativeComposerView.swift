@@ -568,44 +568,6 @@ struct NativeComposerView: View {
         )
     }
 
-    /// What a dictation turn needs to stage its recording
-    /// (`docs/plans/resilient-voice-recording.md`, Track 6) — `nil` until a
-    /// conversation is bound, matching the server's requirement that a voice
-    /// session always name its target chat session.
-    private var voiceStagingContext: VoiceStagingContext? {
-        guard let targetSessionID = box.sessionID else {
-            return nil
-        }
-        return VoiceStagingContext(boxID: box.id, targetSessionID: targetSessionID)
-    }
-
-    /// Seal a just-finished recording with `hq: nil` — the non-HQ path commits
-    /// the realtime transcript as the message, so there is no HQ pass to wait
-    /// for. Only the (fast, local) handoff is awaited here, before the caller
-    /// moves on to `resetDictationState()`, which drops the staging handle;
-    /// the network finalize call itself — which can retry for a while — runs
-    /// in its own detached task so it never delays completing the send.
-    private func finalizeVoiceStagingForNonHqSend() async {
-        guard let handle = await dictation.consumeVoiceStagingHandle() else {
-            return
-        }
-        Task {
-            let outcome = await VoiceStagingRuntime.shared.finalize(
-                boxID: handle.boxID,
-                recordingID: handle.recordingID,
-                chunkCount: handle.chunkCount,
-                hq: nil
-            )
-            if case .terminal(let message) = outcome {
-                BoxLog.warn(
-                    "voice staging finalize (non-HQ send) failed recording=\(handle.recordingID.rawValue): \(message)",
-                    category: .voice,
-                    targetBoxID: handle.boxID
-                )
-            }
-        }
-    }
-
     private func send() {
         let message = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard sendDisabled == false else {
@@ -932,13 +894,6 @@ struct NativeComposerView: View {
                     )
                 }
                 await draftStore.clearForSending(boxID: sendingBoxID)
-                if origin == .voice {
-                    // Sealed with `hq: nil`: this is the non-HQ send path, so
-                    // the realtime transcript above IS the message — there is
-                    // no HQ pass to wait for. Must run before
-                    // `resetDictationState()`, which drops the staging handle.
-                    await finalizeVoiceStagingForNonHqSend()
-                }
                 dictation.resetDictationState()
                 selectedPhotoItems = []
                 focused = false
@@ -1066,13 +1021,13 @@ struct NativeComposerView: View {
         case .none:
             break
         case .startDictation:
-            dictation.startIfNeeded(currentText: text, voiceStaging: voiceStagingContext)
+            dictation.startIfNeeded(currentText: text)
         case .startDictationInterruptingSpeech:
             // The microphone opens now, not after the box finishes its sentence
             // — a person who starts talking over you expects to be heard. The
             // page owns the speech, so ask it to stop; nothing waits on that
             // answer, because a lost command must not cost the user their turn.
-            dictation.startIfNeeded(currentText: text, voiceStaging: voiceStagingContext)
+            dictation.startIfNeeded(currentText: text)
             onInterruptSpeech()
         case .stopDictation:
             dictation.stop()

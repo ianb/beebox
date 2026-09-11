@@ -18,11 +18,6 @@ struct BeeBoxApp: App {
                     Task {
                         try? await runtime.start()
                     }
-                    let voiceStagingRuntime = VoiceStagingRuntime.shared
-                    voiceStagingRuntime.updateBoxes(boxes)
-                    Task {
-                        try? await voiceStagingRuntime.start()
-                    }
                     // Launch flush: entries persisted by a suspended, killed, or
                     // offline run land server-side here.
                     let selectedBoxID = store.selectedBoxID ?? boxes.first?.id

@@ -23,9 +23,7 @@ final class BeeBoxAppDelegate: NSObject, UIApplicationDelegate {
         handleEventsForBackgroundURLSession identifier: String,
         completionHandler: @escaping () -> Void
     ) {
-        guard
-            identifier == CaptureBackgroundSession.identifier || identifier == VoiceStagingBackgroundSession.identifier
-        else {
+        guard identifier == CaptureBackgroundSession.identifier else {
             completionHandler()
             return
         }
