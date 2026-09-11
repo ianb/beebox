@@ -292,7 +292,7 @@ reason. Payloads without `version` retain the documented legacy leniency.
 
 ```ts
 runFamily("emission", validateEmission)
-=> {"family":"emission","cases":9,"pass":9}
+=> {"family":"emission","cases":10,"pass":10}
 ```
 
 ## composer-command
@@ -301,7 +301,7 @@ The web-to-native selection command uses one versioned, strict shape.
 
 ```ts
 runFamily("composer-command", validateComposerCommand)
-=> {"family":"composer-command","cases":8,"pass":8}
+=> {"family":"composer-command","cases":9,"pass":9}
 ```
 
 V2 adds `kind`-discriminated payloads without disturbing V1, which installed iOS

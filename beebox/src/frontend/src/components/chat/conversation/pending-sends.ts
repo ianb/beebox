@@ -53,7 +53,8 @@ const emissionSchema = z.object({
     size: z.number().optional(), mimetype: z.string().optional(),
   })),
   selections: z.array(z.object({
-    id: z.number(), ref: z.string(), text: z.string(), position: z.string(),
+    // ref is null for text quoted from the chat transcript.
+    id: z.number(), ref: z.string().nullable(), text: z.string(), position: z.string(),
     anchor: z.string().nullable().optional(), spokenWords: z.number().nullable().optional(),
   })),
   words: z.array(z.object({ word: z.string(), confidence: z.number().optional() })).optional(),

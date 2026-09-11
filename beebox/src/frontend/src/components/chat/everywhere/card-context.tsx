@@ -17,6 +17,10 @@ export function useConversationSelectionSink(sink: (selection: AddSelectionInput
   const store = useContext(CardContext);
   useEffect(() => store?.registerSelection(sink), [store, sink]);
 }
+/** The conversation's selection capture, for the chat transcript (never a hidden card). */
+export function useConversationSelectionCapture() {
+  return useContext(CardContext)?.capture;
+}
 /** Read the enclosing card's selection sink without claiming its attention. */
 export function useVisibleCardSelectionSink() {
   const visible = useCardVisible();

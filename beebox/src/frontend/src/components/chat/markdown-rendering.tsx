@@ -16,6 +16,7 @@ import { useBustedImageSrc } from "../../lib/file-version";
 import { transformedResolvedImageUrl } from "../../lib/image-transform-url";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 import { isImagePath, stripSpeechTags } from "./message-parsing";
+import { useConversationSelectionCapture } from "./everywhere/card-context";
 
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 
@@ -139,6 +140,9 @@ function makeChatMarkdownComponents(
   // lightbox); any other in-box path embeds that card/file inline (frameless)
   // via its own viewer.
   function ChatImg({ src, alt }: { src?: string; alt?: string }) {
+    // An embedded card is a document: a selection inside it attaches with the
+    // card's own ref, not as chat-transcript text (SelectionCapture nesting).
+    const captureSelection = useConversationSelectionCapture();
     const video = src ? detectVideoEmbed(src) : null;
     if (video !== null) {
       return <VideoEmbed embedUrl={video.embedUrl} title={alt || ""} className="mx-auto" />;
@@ -157,6 +161,7 @@ function makeChatMarkdownComponents(
           rendererName={target.viewer}
           viewState={target.viewState}
           onNavigate={onNavigate}
+          onAddSelection={captureSelection}
           params={target.params}
           {...(alt !== undefined && alt !== "" ? { caption: alt } : {})}
         />

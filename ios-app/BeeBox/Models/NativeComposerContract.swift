@@ -10,7 +10,8 @@ struct NativeEmissionFile: Codable, Equatable, Identifiable {
 
 struct NativeEmissionSelection: Codable, Equatable, Identifiable {
     var id: Int
-    var ref: String
+    /// Box path of the source document; nil for text quoted from the chat transcript.
+    var ref: String?
     var text: String
     var position: String
     var anchor: String?
@@ -112,7 +113,8 @@ struct NativeComposerCommand: Codable, Equatable, Identifiable {
     }
 
     struct Selection: Codable, Equatable {
-        var ref: String
+        /// Box path of the source document; nil (JSON null) for chat-transcript text.
+        var ref: String?
         var text: String
         var position: String
     }

@@ -183,20 +183,23 @@ function parseNativeSelection(value: unknown): NativeEmissionV2["selections"][nu
   if (!isRecord(value)) return null;
   if (
     typeof value.id !== "number"
-    || typeof value.ref !== "string"
+    // Swift's synthesized encoder omits a nil Optional, so `ref` (null for
+    // chat-transcript text), `anchor` and `spokenWords` (null for a typed
+    // selection) may each be absent or null. Both normalize to null.
+    || (value.ref !== undefined && value.ref !== null && typeof value.ref !== "string")
     || typeof value.text !== "string"
     || typeof value.position !== "string"
-    || (value.anchor !== null && typeof value.anchor !== "string")
-    || (value.spokenWords !== null && typeof value.spokenWords !== "number")
+    || (value.anchor !== undefined && value.anchor !== null && typeof value.anchor !== "string")
+    || (value.spokenWords !== undefined && value.spokenWords !== null && typeof value.spokenWords !== "number")
   ) {
     return null;
   }
   return {
     id: value.id,
-    ref: value.ref,
+    ref: typeof value.ref === "string" ? value.ref : null,
     text: value.text,
     position: value.position,
-    anchor: value.anchor,
-    spokenWords: value.spokenWords,
+    anchor: typeof value.anchor === "string" ? value.anchor : null,
+    spokenWords: typeof value.spokenWords === "number" ? value.spokenWords : null,
   };
 }
