@@ -118,13 +118,18 @@ export function assembleChatMessage(
     const sttServiceAttr = emission.hqText === true && emission.hqService
       ? ` stt-service="${emission.hqService}"`
       : "";
+    // `hq` marks a realtime send that stands in for an HQ pass
+    // (docs/plans/resilient-voice-recording.md, Track 4): `pending` — the box
+    // delivers the HQ text later as a `corrects` message; `failed` — the
+    // realtime text is all there is. Never together with `stt="hq"`.
+    const hqAttr = emission.hqFallback === undefined ? "" : ` hq="${emission.hqFallback}"`;
     // `message-id` (retranscription-in-chat plan, Vocabulary lock-ins) is the
     // emission id — the same value returned as `messageId` below and the key
     // the audio retention store uses — stamped on every voice send so the
     // message stays addressable after the pending→authoritative uuid swap.
     // Typed sends carry no recording to point back at, so they don't get it.
     const messageIdAttr = ` message-id="${emission.id}"`;
-    wrapped = `<speech${sttAttr}${sttServiceAttr}${diarizedAttr}${messageIdAttr}${attrs}>${body}</speech>`;
+    wrapped = `<speech${sttAttr}${sttServiceAttr}${hqAttr}${diarizedAttr}${messageIdAttr}${attrs}>${body}</speech>`;
   }
 
   // File attachments emit a sibling <attachments> block of markdown-style

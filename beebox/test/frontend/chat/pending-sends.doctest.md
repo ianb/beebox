@@ -96,7 +96,7 @@ Preparing HQ is the only phase allowed to replace content under an existing ID.
 After final dispatch, that ID's content cannot drift on retry.
 
 ```ts continue
-store.prepare({ ...emission, id: "hq-work" }, binding);
+store.prepare({ ...emission, id: "hq-work" }, { binding });
 store.getSnapshot()[0]?.status
 => preparing
 
@@ -108,6 +108,59 @@ store.stage({ ...emission, id: "hq-work", text: "different" }, binding)
 => throws PendingSendChangedError: A saved message cannot change its destination or content
 
 store.accepted("hq-work");
+```
+
+## A voice send waiting on HQ survives a reload as a visible, unsent item
+
+`prepare` with a `recordingId` marks a voice send that is waiting for its HQ
+transcript (`docs/plans/resilient-voice-recording.md`, Track 4). A reload
+keeps it as `awaitingHq` rather than `recovered`: the recording and its HQ job
+are on the box, and the user chooses which text to send. Loading never sends
+it. A `preparing` row without a recording keeps the old recovered path.
+
+```ts
+const data = new Map<string, string>();
+const storage = {
+  getItem: (key: string) => data.get(key) ?? null,
+  setItem: (key: string, value: string) => { data.set(key, value); },
+  removeItem: (key: string) => { data.delete(key); },
+};
+const binding: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "chat", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
+const voice = (id: string): Emission => ({ id, origin: "voice", text: "live words", images: [], files: [], selections: [], diarized: false, spokenStart: 0 });
+const live = createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" });
+live.prepare(voice("waiting"), { binding, recordingId: "rec-1" });
+live.prepare(voice("plain"), { binding });
+const reloaded = createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" });
+reloaded.getSnapshot().map((row) => `${row.emission.id}:${row.status}:${row.recordingId ?? "-"}`).join(" ")
+=> waiting:awaitingHq:rec-1 plain:recovered:-
+```
+
+The user's choice may still replace the realtime snapshot once — here with the
+fallback marked `hq="pending"` — and the fallback marker survives storage:
+
+```ts continue
+reloaded.stage({ ...voice("waiting"), hqFallback: "pending" }, binding);
+createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot()
+  .find((row) => row.emission.id === "waiting")?.emission.hqFallback
+=> pending
+```
+
+Dismissing an `awaitingHq` item removes it; its recording stays on the box:
+
+```ts
+const data = new Map<string, string>();
+const storage = {
+  getItem: (key: string) => data.get(key) ?? null,
+  setItem: (key: string, value: string) => { data.set(key, value); },
+  removeItem: (key: string) => { data.delete(key); },
+};
+const binding: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "chat", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
+createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" }).prepare(
+  { id: "gone", origin: "voice", text: "x", images: [], files: [], selections: [], diarized: false }, { binding, recordingId: "rec-2" });
+const reloaded = createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" });
+reloaded.dismissed("gone");
+reloaded.getSnapshot().length
+=> 0
 ```
 
 ## Pending recovery is isolated by API base when worktrees share a box slug

@@ -49,7 +49,7 @@ const actor = createActor(
 );
 actor.start();
 const seen = [transcriptionStateOf(actor.getSnapshot())];
-const note = () => seen.push(transcriptionStateOf(actor.getSnapshot()));
+const note = () => { seen.push(transcriptionStateOf(actor.getSnapshot())); };
 actor.send({ type: "START", targetSessionId: null });
 note();
 toMachine({ type: "MIC_LIVE" });
