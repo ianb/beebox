@@ -63,8 +63,10 @@ function useAmbientSessionReply(props: Props) {
 }
 
 export function AmbientSessionReply(props: Props) {
-  const { session, reply, error, label, loading, history, acknowledge, retry, hidden } = useAmbientSessionReply(props);
-  if (hidden) return null;
+  const { session, reply, selected, error, label, loading, history, acknowledge, retry, hidden } = useAmbientSessionReply(props);
+  // The selected conversation already has its own transcript and composer.
+  // Ambient panels are only for other conversations while the user works elsewhere.
+  if (selected || hidden) return null;
   return (
     <section aria-label={`${session.label} conversation activity`} {...bbxSource("session", session.sessionId)} className="p-2">
       <Accordion title={<Text size="sm">{session.label} · {label}</Text>}>
