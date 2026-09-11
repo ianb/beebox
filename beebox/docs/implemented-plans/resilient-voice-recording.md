@@ -1,6 +1,6 @@
 ---
 title: "Resilient voice recording and HQ transcription"
-status: active
+status: implemented
 workstream: hq-recording-resilience
 issues:
   - ../../../issues/bugs/2026-09-10-live-transcription-failure-loses-the-hq-pass.md
