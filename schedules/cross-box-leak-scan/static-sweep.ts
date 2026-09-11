@@ -50,6 +50,8 @@ const CONTAINMENT_HELPERS = [
   "resolveContainedRef",
   "realpathContained",
   "resolveCardPath",
+  "resolveBoxNamespacePathOnDisk",
+  "resolveBoxImage",
   "resolveRefPath",
   "toRelativePath",
   "normalizePath",
@@ -67,13 +69,12 @@ const CONTAINMENT_HELPERS = [
 const CONTAINMENT_HELPER_RE = new RegExp(String.raw`\b(${CONTAINMENT_HELPERS.join("|")})\s*\(`);
 const TASK_OUTPUT_HELPER_RE = /TaskOutput\w*\(/;
 
-/** The inline containment idiom two routes (`api-browse.ts`, `figure.ts`) use
- *  today instead of calling a named helper: `path.resolve(...)` a candidate,
- *  then compare it with `.startsWith(root + path.sep)` (or the template-
- *  literal spelling) rather than a bare prefix check. Counts as "contained"
- *  the same as a helper call — once these two are consolidated onto
- *  `containWithinBox`, the helper-name match above covers them and this
- *  becomes dead weight, which is fine to delete then. */
+/** The inline containment idiom: `path.resolve(...)` a candidate, then
+ *  compare it with `.startsWith(root + path.sep)` (or the template-literal
+ *  spelling) rather than a bare prefix check. Counts as "contained" the same
+ *  as a helper call. `api-browse.ts` and `figure.ts` used it until they moved
+ *  onto `resolveBoxNamespacePathOnDisk` (2026-09); `box-image.ts`'s re-fence
+ *  of a card-derived image path still spells it inline. */
 const INLINE_RESOLVE_RE = /path\.resolve\(/;
 const INLINE_STARTSWITH_PATH_SEP_RE = /\.startsWith\([^()]*path\.sep[^()]*\)/;
 
