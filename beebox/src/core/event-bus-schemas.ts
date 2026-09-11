@@ -243,13 +243,13 @@ export const eventSchemas = {
    * (`docs/plans/resilient-voice-recording.md`, Track 1). Emitted by the HQ
    * job (`core/voice-recording/hq-job.ts`) after every persisted transition.
    * `sessionId` is the chat session the HQ result is for
-   * (`voice.hqRequest.sessionId`) — a connected tab filters this stream on it the
-   * same way `capture-status`/`chat-retranscription` consumers already do;
-   * the bus itself carries every box's voice events undifferentiated.
+   * (`voice.hqRequest.sessionId`), or null for the first message of a new
+   * chat before `fallBack` names it — so a connected tab matches this stream
+   * by `recordingId` (the recording it is waiting on), not by session.
    */
   "voice-recording-status": z.object({
     recordingId: z.string().min(1),
-    sessionId: z.string().min(1),
+    sessionId: z.string().min(1).nullable(),
     hq: VoiceHqStateSchema,
     handoff: VoiceHandoffSchema,
   }),

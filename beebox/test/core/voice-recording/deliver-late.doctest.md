@@ -35,7 +35,7 @@ async function stageLateRecording(box, { targetSessionId, emissionId, result }) 
     boxRoot: box.root, id: session.id,
     hq: { emissionId, sessionId: targetSessionId, service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
   });
-  await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId } });
+  await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId, sessionId: targetSessionId } });
   await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "allPiecesDone", result: result ?? RESULT } });
   return session;
 }
@@ -281,7 +281,7 @@ await sealVoiceSession({
   boxRoot: box.root, id: session.id,
   hq: { emissionId: "em-1", sessionId: "chat-1", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
 });
-await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "em-1" } });
+await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "em-1", sessionId: "chat-1" } });
 await applyVoiceEvent({
   boxRoot: box.root, id: session.id,
   event: {

@@ -869,3 +869,37 @@ await waitForHqDone(ctx, sessionId);
 ```ts cleanup
 await ctx.cleanup();
 ```
+
+## Voice finalize may request HQ before the chat has a session
+
+The first voice message of a new chat is finalized before the box assigns a
+session, so `hq.sessionId` is null. The request is still recorded (and the
+job queued); `voiceRecording.fallBack` names the session later.
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({ method: "POST", url: "/api/capture/sessions", payload: { kind: "voice" } });
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const finalize = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, hq: { emissionId: "e-new", sessionId: null } },
+});
+JSON.stringify({ status: finalize.statusCode, hq: finalize.body.hq })
+=> {"status":200,"hq":{"state":"queued"}}
+
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+JSON.stringify({ emissionId: manifest.voice.hqRequest.emissionId, sessionId: manifest.voice.hqRequest.sessionId })
+=> {"emissionId":"e-new","sessionId":null}
+```
+
+```ts continue
+await waitForHqDone(ctx, sessionId);
+```
+
+```ts cleanup
+await ctx.cleanup();
+```

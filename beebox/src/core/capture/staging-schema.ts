@@ -148,13 +148,16 @@ export type VoiceHandoff = z.infer<typeof VoiceHandoffSchema>;
  * Written once by the finalize that requests HQ. Survives every `hq` state
  * transition (including a server restart's resume), so a resumed job still
  * knows its 24 h retry deadline (`requestedAt`) and where to deliver a late
- * correction (`sessionId`).
+ * correction (`sessionId`). `sessionId` is null when the message was the
+ * first in a new chat (no session existed at finalize); `fallBack` fills it
+ * in with the session the realtime message was sent to, which late delivery
+ * requires.
  */
 const VoiceHqRequestSchema = z.object({
   requestedAt: z.string(),
   service: z.enum(HQ_TRANSCRIPTION_SERVICES),
   emissionId: z.string(),
-  sessionId: z.string(),
+  sessionId: z.string().nullable(),
 });
 
 /**

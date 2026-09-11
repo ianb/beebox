@@ -167,8 +167,13 @@ export const voiceRecordingRouter = router({
       return outcome;
     }),
 
+  /**
+   * `sessionId` is the chat the realtime message was sent to. It fills in a
+   * null `hqRequest.sessionId` (the first message of a new chat), which late
+   * delivery needs; a different non-null session is a CONFLICT.
+   */
   fallBack: authedProcedure
-    .input(z.object({ recordingId: z.string().min(1), emissionId: z.string().min(1) }))
+    .input(z.object({ recordingId: z.string().min(1), emissionId: z.string().min(1), sessionId: z.string().min(1) }))
     .mutation(async ({ ctx, input }): Promise<FallBackOutcome> => {
       const session = await loadOwnedVoiceSession({ ctx, recordingId: input.recordingId });
       if (session === null) {
@@ -179,7 +184,7 @@ export const voiceRecordingRouter = router({
         voice = await applyVoiceEvent({
           boxRoot: ctx.boxRoot,
           id: input.recordingId,
-          event: { type: "fallBackRequested", emissionId: input.emissionId },
+          event: { type: "fallBackRequested", emissionId: input.emissionId, sessionId: input.sessionId },
         });
       } catch (error) {
         throwRefusalAsConflict(error);

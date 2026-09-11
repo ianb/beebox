@@ -77,7 +77,7 @@ export interface VoiceSealResult {
 export async function sealVoiceSession(opts: {
   boxRoot: string;
   id: string;
-  hq: { emissionId: string; sessionId: string; service: HqTranscriptionService; requestedAt: string } | null;
+  hq: { emissionId: string; sessionId: string | null; service: HqTranscriptionService; requestedAt: string } | null;
 }): Promise<VoiceSealResult> {
   const { boxRoot, id, hq } = opts;
   return withStagingLock(id, async () => {

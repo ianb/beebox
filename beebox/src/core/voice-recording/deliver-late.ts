@@ -190,18 +190,21 @@ async function attemptLateDeliveryInner(deps: AttemptLateDeliveryDeps): Promise<
   if (initial === null || !isVoiceStagingSession(initial)) return;
   const { hqRequest } = initial.voice;
   if (hqRequest === undefined || initial.voice.hq.state !== "ready") return;
+  if (initial.voice.handoff.mode !== "late" && initial.voice.handoff.mode !== "delivering") return;
+  // Late delivery starts only from `fallBack`, which always writes the session
+  // the realtime message was sent to (`state.ts`, applyFallBackRequested).
+  const { sessionId } = hqRequest;
+  invariant(sessionId !== null, `late delivery for ${id} has no target session`);
 
   if (initial.voice.handoff.mode === "late") {
     const originalLanded = await userMessageAlreadyLanded({
       boxRoot,
-      sessionId: hqRequest.sessionId,
+      sessionId: sessionId,
       marker: hqRequest.emissionId,
       logPrefix: "voice-recording",
     });
     await applyVoiceEvent({ boxRoot, id, event: { type: "lateDeliveryStarted", originalLanded } });
     if (!originalLanded) return; // stays `late`; the next sweep tick / resume re-probes
-  } else if (initial.voice.handoff.mode !== "delivering") {
-    return; // claimed/delivered/open — nothing for late delivery to do
   }
 
   // Re-read: the transition above (or a concurrent caller, guarded out by the
@@ -211,7 +214,7 @@ async function attemptLateDeliveryInner(deps: AttemptLateDeliveryDeps): Promise<
 
   const correctionLanded = await userMessageAlreadyLanded({
     boxRoot,
-    sessionId: hqRequest.sessionId,
+    sessionId: sessionId,
     marker: id,
     logPrefix: "voice-recording",
   });
@@ -220,18 +223,18 @@ async function attemptLateDeliveryInner(deps: AttemptLateDeliveryDeps): Promise<
     return;
   }
 
-  const targetSession = registry.get(hqRequest.sessionId);
+  const targetSession = registry.get(sessionId);
   if (targetSession !== null && targetSession.isBusy()) {
     return; // stays `delivering`; the next tick re-checks once the agent frees up
   }
-  if (!(await targetSessionExists({ boxRoot, sessionId: hqRequest.sessionId, registry }))) {
-    console.error(`[voice-recording] Late-delivery target ${hqRequest.sessionId} for ${id} no longer resolves; staying delivering`);
+  if (!(await targetSessionExists({ boxRoot, sessionId: sessionId, registry }))) {
+    console.error(`[voice-recording] Late-delivery target ${sessionId} for ${id} no longer resolves; staying delivering`);
     return;
   }
 
   invariant(current.voice.hq.state === "ready", "delivering requires a ready HQ result (state.ts enforces this)");
   const { result } = current.voice.hq;
-  const user = await resolveOriginalAttribution({ boxRoot, sessionId: hqRequest.sessionId, emissionId: hqRequest.emissionId });
+  const user = await resolveOriginalAttribution({ boxRoot, sessionId: sessionId, emissionId: hqRequest.emissionId });
   const wrapper = buildCorrectionWrapper({
     recordingId: id,
     emissionId: hqRequest.emissionId,
@@ -247,7 +250,7 @@ async function attemptLateDeliveryInner(deps: AttemptLateDeliveryDeps): Promise<
       registry,
       eventBus,
       wireSession,
-      target: { sessionId: hqRequest.sessionId, contextDir: null },
+      target: { sessionId: sessionId, contextDir: null },
       message: wrapper,
       logPrefix: "voice-recording",
     });
@@ -258,7 +261,7 @@ async function attemptLateDeliveryInner(deps: AttemptLateDeliveryDeps): Promise<
 
   const landedNow = await userMessageAlreadyLanded({
     boxRoot,
-    sessionId: hqRequest.sessionId,
+    sessionId: sessionId,
     marker: id,
     logPrefix: "voice-recording",
   });

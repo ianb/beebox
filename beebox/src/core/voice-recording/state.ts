@@ -16,8 +16,11 @@ import type { HqFailure, StagingVoice, VoiceHqResult } from "../capture/staging-
 import type { HqErrorClassification } from "./classify.js";
 
 export type VoiceEvent =
-  /** A finalize that asks for HQ. Only fires the request once per recording. */
-  | { type: "requested"; requestedAt: string; service: HqTranscriptionService; emissionId: string; sessionId: string }
+  /**
+   * A finalize that asks for HQ. Only fires the request once per recording.
+   * `sessionId` is null for the first message of a new chat.
+   */
+  | { type: "requested"; requestedAt: string; service: HqTranscriptionService; emissionId: string; sessionId: string | null }
   /** The job started transcribing one piece. */
   | { type: "pieceStarted"; piece: number; pieces: number; attempt: number; pieceSeconds: number }
   /**
@@ -42,15 +45,19 @@ export type VoiceEvent =
   | { type: "expired" }
   /** The client wants to send the HQ text. */
   | { type: "claimRequested"; emissionId: string }
-  /** The client is sending realtime text instead (budget expired, or by choice). */
-  | { type: "fallBackRequested"; emissionId: string }
+  /**
+   * The client is sending realtime text instead (budget expired, or by
+   * choice). `sessionId` is the chat the realtime message went to; it fills
+   * in an `hqRequest.sessionId` that finalize could not know.
+   */
+  | { type: "fallBackRequested"; emissionId: string; sessionId: string }
   /** The server is attempting (or re-attempting) the late correction delivery. */
   | { type: "lateDeliveryStarted"; originalLanded: boolean }
   /** The correction message was confirmed present in the transcript. */
   | { type: "landedConfirmed"; messageId: string };
 
 export interface VoiceTransitionRefusal {
-  code: "emission-mismatch" | "invalid-handoff-state" | "invalid-hq-state";
+  code: "emission-mismatch" | "session-mismatch" | "invalid-handoff-state" | "invalid-hq-state";
   message: string;
 }
 
@@ -211,14 +218,21 @@ function applyFallBackRequested(
     }
     return err({ code: "invalid-handoff-state", message: `cannot fall back from handoff mode ${voice.handoff.mode}` });
   }
-  if (voice.hqRequest?.emissionId !== event.emissionId) {
+  const { hqRequest } = voice;
+  if (hqRequest?.emissionId !== event.emissionId) {
     return err({ code: "emission-mismatch", message: "fallback emissionId does not match the recording's HQ request" });
   }
+  if (hqRequest.sessionId !== null && hqRequest.sessionId !== event.sessionId) {
+    return err({ code: "session-mismatch", message: "fallback sessionId does not match the recording's HQ request" });
+  }
+  // The first message of a new chat had no session at finalize; the realtime
+  // send has one now, and late delivery needs it.
+  const withSession = { ...voice, hqRequest: { ...hqRequest, sessionId: event.sessionId } };
   if (voice.hq.state === "ready") {
     // HQ beat the fallback: the client uses HQ text after all.
-    return ok({ ...voice, handoff: { mode: "claimed", emissionId: event.emissionId } });
+    return ok({ ...withSession, handoff: { mode: "claimed", emissionId: event.emissionId } });
   }
-  return ok({ ...voice, handoff: { mode: "late", emissionId: event.emissionId } });
+  return ok({ ...withSession, handoff: { mode: "late", emissionId: event.emissionId } });
 }
 
 function applyLateDeliveryStarted(

@@ -4,7 +4,9 @@
  * `capture.ts` to keep its route-registration function under the line budget,
  * mirroring `capture-create.ts`.
  *
- * A voice finalize body is `{ chunkCount, hq: null | { emissionId, sessionId } }`.
+ * A voice finalize body is `{ chunkCount, hq: null | { emissionId, sessionId } }`;
+ * `sessionId` is null for the first message of a new chat (the session is
+ * assigned after the send), and `voiceRecording.fallBack` supplies it later.
  * Before sealing, it verifies the manifest's staged chunks are EXACTLY
  * `pcm-000001.raw … pcm-<chunkCount>.raw` — uploads are refused once the
  * session isn't `open`, so a chunk that arrives after the seal is lost for
@@ -28,7 +30,7 @@ import { runHqJob } from "../../core/voice-recording/hq-job.js";
 
 const VoiceFinalizeBodySchema = z.object({
   chunkCount: z.number().int().nonnegative(),
-  hq: z.object({ emissionId: z.string().min(1), sessionId: z.string().min(1) }).nullable(),
+  hq: z.object({ emissionId: z.string().min(1), sessionId: z.string().min(1).nullable() }).nullable(),
 });
 
 /** The manifest's staged filenames for this recording's one segment, in upload order. */

@@ -104,7 +104,7 @@ await sealVoiceSession({
   boxRoot: box.root, id: session.id,
   hq: { emissionId: "e1", sessionId: "chat-1", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
 });
-await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "e1" } });
+await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "e1", sessionId: "chat-1" } });
 await applyVoiceEvent({
   boxRoot: box.root, id: session.id,
   event: {
@@ -140,7 +140,7 @@ await sealVoiceSession({
 // Fall back BEFORE the HQ result is ready, so the handoff lands on `late`
 // (not `claimed` — that only happens when `fallBackRequested` finds an
 // already-`ready` result, per `nextVoiceState`'s claim/fallback race).
-await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "e1" } });
+await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "e1", sessionId: "chat-1" } });
 await applyVoiceEvent({
   boxRoot: box.root, id: session.id,
   event: { type: "allPiecesDone", result: { text: "hi", diarized: false, service: "whisper", pieces: 1 } },

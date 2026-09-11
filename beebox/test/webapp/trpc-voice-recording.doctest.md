@@ -11,7 +11,7 @@ write, and both mutations are idempotent by `(recordingId, emissionId)`.
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createEventBus } from "../../src/core/event-bus.js";
-import { createStagingSession } from "../../src/core/capture/staging-store.js";
+import { createStagingSession, readStagingSession } from "../../src/core/capture/staging-store.js";
 import { sealVoiceSession, applyVoiceEvent } from "../../src/core/voice-recording/voice-staging.js";
 
 function caller(box, opts) {
@@ -84,7 +84,7 @@ const late = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
 await requestHq(box, late, { emissionId: "em-late" });
 const c = caller(box);
 
-JSON.stringify(await c.voiceRecording.fallBack({ recordingId: late.id, emissionId: "em-late" }))
+JSON.stringify(await c.voiceRecording.fallBack({ recordingId: late.id, emissionId: "em-late", sessionId: "chat-1" }))
 => {"outcome":"late"}
 ```
 
@@ -96,8 +96,35 @@ await applyVoiceEvent({
   event: { type: "allPiecesDone", result: READY_RESULT },
 });
 
-JSON.stringify(await c.voiceRecording.fallBack({ recordingId: wonByHq.id, emissionId: "em-won" }))
+JSON.stringify(await c.voiceRecording.fallBack({ recordingId: wonByHq.id, emissionId: "em-won", sessionId: "chat-1" }))
 => {"outcome":"claimed","result":{"text":"hello world","diarized":false,"service":"whisper","pieces":1}}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## fallBack names the session for the first message of a new chat
+
+A recording started in a chat with no session is finalized with
+`hq.sessionId: null`. `fallBack` carries the session the realtime message
+was sent to and writes it into `hqRequest`, where late delivery reads it; a
+later fallBack naming another session is a CONFLICT.
+
+```ts
+const box = await makeTmpBox();
+const session = await stageVoiceRecording(box, { targetSessionId: null });
+await requestHq(box, session, { emissionId: "em-new" });
+const c = caller(box);
+
+JSON.stringify(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-new", sessionId: "chat-new" }))
+=> {"outcome":"late"}
+
+(await readStagingSession({ boxRoot: box.root, id: session.id })).voice.hqRequest.sessionId
+=> chat-new
+
+await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-other", sessionId: "chat-else" }).then(() => "no error", (e) => e.code)
+=> CONFLICT
 ```
 
 ```ts cleanup
@@ -120,7 +147,7 @@ await applyVoiceEvent({
 });
 const c = caller(box);
 
-JSON.stringify(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-1" }))
+JSON.stringify(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-1", sessionId: "chat-1" }))
 => {"outcome":"failed","failure":{"kind":"permanent","code":"http_401","message":"missing key"}}
 ```
 
@@ -140,7 +167,7 @@ const session = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
 await requestHq(box, session, { emissionId: "em-1" });
 const c = caller(box);
 
-JSON.stringify(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-1" }))
+JSON.stringify(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-1", sessionId: "chat-1" }))
 => {"outcome":"late"}
 ```
 
@@ -154,7 +181,7 @@ await applyVoiceEvent({
   event: { type: "lateDeliveryStarted", originalLanded: true },
 });
 
-JSON.stringify(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-1" }))
+JSON.stringify(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-1", sessionId: "chat-1" }))
 => {"outcome":"late"}
 ```
 
@@ -164,7 +191,7 @@ await applyVoiceEvent({
   event: { type: "landedConfirmed", messageId: session.id },
 });
 
-JSON.stringify(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-1" }))
+JSON.stringify(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-1", sessionId: "chat-1" }))
 => {"outcome":"late"}
 ```
 

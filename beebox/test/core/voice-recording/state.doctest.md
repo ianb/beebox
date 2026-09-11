@@ -189,7 +189,7 @@ JSON.stringify(apply(claimed, { type: "claimRequested", emissionId: "some-other-
 Falling back before HQ is ready moves to `late`:
 
 ```ts continue
-const late = apply(started, { type: "fallBackRequested", emissionId: "emission-1" });
+const late = apply(started, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" });
 JSON.stringify(late.handoff)
 => {"mode":"late","emissionId":"emission-1"}
 ```
@@ -197,7 +197,7 @@ JSON.stringify(late.handoff)
 A repeat fallback by the same emission is idempotent:
 
 ```ts continue
-const lateAgain = nextVoiceState(late, { type: "fallBackRequested", emissionId: "emission-1" });
+const lateAgain = nextVoiceState(late, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" });
 JSON.stringify({ ok: lateAgain.ok, unchanged: lateAgain.ok && lateAgain.value === late })
 => {"ok":true,"unchanged":true}
 ```
@@ -207,7 +207,7 @@ call lands, fallback answers `claimed` with the result instead of `late` — the
 client sends HQ text after all:
 
 ```ts continue
-const wonByHq = apply(ready, { type: "fallBackRequested", emissionId: "emission-1" });
+const wonByHq = apply(ready, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" });
 JSON.stringify({ handoff: wonByHq.handoff, hq: wonByHq.hq })
 => {"handoff":{"mode":"claimed","emissionId":"emission-1"},"hq":{"state":"ready","result":{"text":"hello world","diarized":true,"service":"mai-diarized","pieces":2}}}
 ```
@@ -219,6 +219,36 @@ switching horses — the client already sent realtime text:
 ```ts continue
 JSON.stringify(apply(late, { type: "claimRequested", emissionId: "emission-1" }))
 => {"refused":"invalid-handoff-state"}
+```
+
+## The first message of a new chat: `fallBackRequested` names the session
+
+A recording finalized before its chat had a session carries
+`hqRequest.sessionId: null`. The fallback names the session the realtime
+message went to, and writes it into `hqRequest` — late delivery needs it:
+
+```ts continue
+const unbound = apply(NONE_OPEN, {
+  type: "requested", requestedAt: "2026-09-10T18:05:00.000Z", service: "whisper",
+  emissionId: "emission-new", sessionId: null,
+});
+unbound.hqRequest.sessionId
+=> null
+
+const named = apply(unbound, { type: "fallBackRequested", emissionId: "emission-new", sessionId: "chat-new" });
+JSON.stringify({ handoff: named.handoff, sessionId: named.hqRequest.sessionId })
+=> {"handoff":{"mode":"late","emissionId":"emission-new"},"sessionId":"chat-new"}
+```
+
+A fallback naming a DIFFERENT session than one already recorded is refused:
+
+```ts continue
+const bound = apply(NONE_OPEN, {
+  type: "requested", requestedAt: "2026-09-10T18:05:00.000Z", service: "whisper",
+  emissionId: "emission-1", sessionId: "chat-1",
+});
+JSON.stringify(apply(bound, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-other" }))
+=> {"refused":"session-mismatch"}
 ```
 
 ## `lateDeliveryStarted` and `landedConfirmed`: the correction's own at-most-once send
@@ -266,14 +296,14 @@ still asking the same question ("what happened to my fallback?"):
 
 ```ts continue
 JSON.stringify({
-  ok: nextVoiceState(startedDelivery, { type: "fallBackRequested", emissionId: "emission-1" }).ok,
-  unchanged: nextVoiceState(startedDelivery, { type: "fallBackRequested", emissionId: "emission-1" }).value === startedDelivery,
+  ok: nextVoiceState(startedDelivery, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" }).ok,
+  unchanged: nextVoiceState(startedDelivery, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" }).value === startedDelivery,
 })
 => {"ok":true,"unchanged":true}
 
 JSON.stringify({
-  ok: nextVoiceState(delivered, { type: "fallBackRequested", emissionId: "emission-1" }).ok,
-  unchanged: nextVoiceState(delivered, { type: "fallBackRequested", emissionId: "emission-1" }).value === delivered,
+  ok: nextVoiceState(delivered, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" }).ok,
+  unchanged: nextVoiceState(delivered, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" }).value === delivered,
 })
 => {"ok":true,"unchanged":true}
 ```

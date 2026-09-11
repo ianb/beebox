@@ -126,8 +126,8 @@ function emitStatus(opts: { eventBus: EventBus; session: StagingSession }): void
   const { eventBus, session } = opts;
   invariant(session.voice !== undefined, "emitStatus requires a voice session");
   // The job only runs for a recording sealed with an HQ request, and that
-  // request names the session the result is for (`voice.targetSessionId` may
-  // be null: the mic can start before a new chat has a session).
+  // request names the session the result is for — null for the first message
+  // of a new chat, so clients match this event by `recordingId`.
   const { hqRequest } = session.voice;
   invariant(hqRequest !== undefined, "emitStatus requires an HQ request");
   eventBus.emit("voice-recording-status", {
@@ -165,12 +165,14 @@ function buildFailure(opts: { error: unknown; input: { status?: number; body?: s
  * uses elsewhere). Diarized pieces each get the NEXT speaker letter — seeded
  * from the target session's log tail, exactly as the narration-mode HQ route
  * does for a single recording (boxholder decision 2) — and, when there is
- * more than one piece, a `— part N of M —` marker precedes each.
+ * more than one piece, a `— part N of M —` marker precedes each. With no
+ * session yet (the first message of a new chat) there is no prior letter,
+ * so lettering starts fresh.
  */
 async function joinPieceResults(opts: {
   pieces: PieceTranscription[];
   boxRoot: string;
-  targetSessionId: string;
+  targetSessionId: string | null;
   service: string;
 }): Promise<VoiceHqResult> {
   const { pieces, boxRoot, targetSessionId, service } = opts;
@@ -178,7 +180,7 @@ async function joinPieceResults(opts: {
   if (!diarized) {
     return { text: pieces.map((p) => p.text).join("\n\n"), diarized: false, service, pieces: pieces.length };
   }
-  const priorText = await readSessionLogTail(boxRoot, targetSessionId);
+  const priorText = targetSessionId === null ? "" : await readSessionLogTail(boxRoot, targetSessionId);
   let letter = nextSpeakerLetter(findLastSpeakerLetter(priorText));
   const parts: string[] = [];
   for (const [index, piece] of pieces.entries()) {
