@@ -16,18 +16,15 @@ import { useAudioOverlayEntry, type AudioOverlayStore } from "./audio-overlay-st
 import {
   extractFileAttachments,
   getUserName,
+  isHqFallbackMessage,
   parseTaskNotification,
-  resolveCorrectedMessageId,
   resolveEntryMessageId,
-  resolveHqFallbackMark,
   resolveTranscriptionProvenance,
   stripUserDisplayTags,
   type TaskNotification,
 } from "./message-parsing";
 import { UserEntryContent, originalDisplayText } from "./user-entry-content";
 import { isOtherChatUser } from "./chat-message-sender";
-import { HqFallbackStatus } from "./HqFallbackStatus";
-import { HqCorrectionMessage } from "./HqCorrectionMessage";
 
 /**
  * Map a settled task's status to its dot color and an optional label. The SDK's
@@ -111,7 +108,7 @@ function TaskNotificationMessage({ notification }: { notification: TaskNotificat
  * Render a user message bubble.
  * When currentUserEmail is provided, messages from other users are styled differently.
  */
-export function UserMessage({ entries, debugView, currentUserEmail, currentUserName, acks, onZoomView, audioOverlayStore, correctsTime }: {
+export function UserMessage({ entries, debugView, currentUserEmail, currentUserName, acks, onZoomView, audioOverlayStore }: {
   entries: SessionEntry[];
   debugView?: boolean;
   currentUserEmail?: string;
@@ -120,8 +117,6 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
   onZoomView?: OnZoomView;
   /** Overlay store for retranscription/consulted badges (Track 3); undefined where no chat is wired to one (e.g. the dev harness). */
   audioOverlayStore?: AudioOverlayStore;
-  /** For a late HQ correction (`corrects="X"`): X's time, or null when X is not loaded. */
-  correctsTime?: string | null;
 }) {
   // A hook, so it must run unconditionally — before the early returns below.
   // `entries` is never empty in practice (see the invariant further down),
@@ -168,12 +163,12 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
     currentUserName,
   });
 
-  // A late HQ transcript renders as its own compact bubble (Track 4).
-  if (resolveCorrectedMessageId(firstEntry) !== null && debugView !== true) {
-    return <HqCorrectionMessage text={originalDisplayText(firstEntry)} originalTime={correctsTime ?? null} own={!isOtherUser} />;
-  }
-  const hqMark = resolveHqFallbackMark(firstEntry);
-  const hqStatus = hqMark !== null && audioResolvedKey !== null ? <HqFallbackStatus messageId={audioResolvedKey} mark={hqMark} /> : null;
+  // A realtime send that stands in for a requested HQ pass gets a static
+  // label — the HQ result itself stays on the box, reachable only through
+  // `bbx chat retranscribe` (late correction removed).
+  const hqStatus = isHqFallbackMessage(firstEntry)
+    ? <div role="status" className="bbx-chat-user-status text-xs text-white/70 mt-1 italic">Live text — HQ transcript unavailable</div>
+    : null;
 
   const isPending = entries.every((e) => e.pending === true);
   const pendingClass = isPending ? " opacity-60" : "";

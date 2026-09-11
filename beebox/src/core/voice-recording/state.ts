@@ -4,7 +4,7 @@
  * takes the manifest's current `voice` object plus one event and returns
  * either the next `voice` object (unchanged, for an idempotent no-op) or a
  * typed refusal for an event that doesn't apply from the current state. All
- * IO — persisting the result, deciding retry timing, reading a landed probe —
+ * IO — persisting the result, deciding retry timing —
  * belongs to the job/route layer (later chunks); this module only decides
  * what the next state IS.
  */
@@ -46,18 +46,14 @@ export type VoiceEvent =
   /** The client wants to send the HQ text. */
   | { type: "claimRequested"; emissionId: string }
   /**
-   * The client is sending realtime text instead (budget expired, or by
-   * choice). `sessionId` is the chat the realtime message went to; it fills
-   * in an `hqRequest.sessionId` that finalize could not know.
+   * The client is sending realtime text instead (budget expired, by choice,
+   * or HQ failed). Terminal for the handoff: the HQ result, if it comes,
+   * stays on the box for `get-last-audio` / `bbx chat retranscribe`.
    */
-  | { type: "fallBackRequested"; emissionId: string; sessionId: string }
-  /** The server is attempting (or re-attempting) the late correction delivery. */
-  | { type: "lateDeliveryStarted"; originalLanded: boolean }
-  /** The correction message was confirmed present in the transcript. */
-  | { type: "landedConfirmed"; messageId: string };
+  | { type: "fallBackRequested"; emissionId: string };
 
 export interface VoiceTransitionRefusal {
-  code: "emission-mismatch" | "session-mismatch" | "invalid-handoff-state" | "invalid-hq-state";
+  code: "emission-mismatch" | "invalid-handoff-state" | "invalid-hq-state";
   message: string;
 }
 
@@ -84,10 +80,6 @@ export function nextVoiceState(voice: StagingVoice, event: VoiceEvent): VoiceTra
       return applyClaimRequested(voice, event);
     case "fallBackRequested":
       return applyFallBackRequested(voice, event);
-    case "lateDeliveryStarted":
-      return applyLateDeliveryStarted(voice, event);
-    case "landedConfirmed":
-      return applyLandedConfirmed(voice, event);
     default:
       return assertNever(event);
   }
@@ -204,63 +196,20 @@ function applyFallBackRequested(
   voice: StagingVoice,
   event: Extract<VoiceEvent, { type: "fallBackRequested" }>,
 ): VoiceTransitionOutcome {
-  // A fallback names the chat its realtime text went to; once one is known,
-  // any other chat is refused, repeat or not.
-  const knownSession = voice.hqRequest?.sessionId ?? null;
-  if (knownSession !== null && knownSession !== event.sessionId) {
-    return err({ code: "session-mismatch", message: "fallback sessionId does not match the recording's HQ request" });
-  }
   if (voice.handoff.mode !== "open") {
-    // `delivering`/`delivered` are reachable here too: a client's `fallBack`
-    // response can be lost in transit after it already recorded `late`, and
-    // late delivery can advance all the way to `delivered` before the retry
-    // arrives. Every non-open mode answers the SAME question the client asked
-    // ("what happened to my fallback?") for the SAME emission, so a repeat is
-    // idempotent from any of them, not just `late` — the mode itself no
-    // longer needs checking here (`voice.handoff.mode !== "open"` above
-    // already narrows to the remaining four).
+    // A client's `fallBack` response can be lost in transit and retried; a
+    // repeat for the same emission answers from whichever mode it reached.
     if (voice.handoff.emissionId === event.emissionId) {
       return ok(voice); // idempotent repeat
     }
     return err({ code: "invalid-handoff-state", message: `cannot fall back from handoff mode ${voice.handoff.mode}` });
   }
-  const { hqRequest } = voice;
-  if (hqRequest?.emissionId !== event.emissionId) {
+  if (voice.hqRequest?.emissionId !== event.emissionId) {
     return err({ code: "emission-mismatch", message: "fallback emissionId does not match the recording's HQ request" });
   }
-  // The first message of a new chat had no session at finalize; the realtime
-  // send has one now, and late delivery needs it.
-  const withSession = { ...voice, hqRequest: { ...hqRequest, sessionId: event.sessionId } };
   if (voice.hq.state === "ready") {
     // HQ beat the fallback: the client uses HQ text after all.
-    return ok({ ...withSession, handoff: { mode: "claimed", emissionId: event.emissionId } });
+    return ok({ ...voice, handoff: { mode: "claimed", emissionId: event.emissionId } });
   }
-  return ok({ ...withSession, handoff: { mode: "late", emissionId: event.emissionId } });
-}
-
-function applyLateDeliveryStarted(
-  voice: StagingVoice,
-  event: Extract<VoiceEvent, { type: "lateDeliveryStarted" }>,
-): VoiceTransitionOutcome {
-  if (voice.handoff.mode !== "late") {
-    return err({ code: "invalid-handoff-state", message: "late delivery can only start from handoff late" });
-  }
-  // A failed hq with a late handoff never delivers — enforced by requiring ready here.
-  if (voice.hq.state !== "ready") {
-    return err({ code: "invalid-hq-state", message: "late delivery requires a ready HQ result" });
-  }
-  if (!event.originalLanded) {
-    return ok(voice); // the original message hasn't landed yet — stay late, re-probe later
-  }
-  return ok({ ...voice, handoff: { mode: "delivering", emissionId: voice.handoff.emissionId } });
-}
-
-function applyLandedConfirmed(
-  voice: StagingVoice,
-  event: Extract<VoiceEvent, { type: "landedConfirmed" }>,
-): VoiceTransitionOutcome {
-  if (voice.handoff.mode !== "delivering") {
-    return err({ code: "invalid-handoff-state", message: "landedConfirmed requires handoff delivering" });
-  }
-  return ok({ ...voice, handoff: { mode: "delivered", emissionId: voice.handoff.emissionId, messageId: event.messageId } });
+  return ok({ ...voice, handoff: { mode: "fellBack", emissionId: event.emissionId } });
 }

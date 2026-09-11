@@ -26,7 +26,7 @@ function fakeBox(replies: { claim?: unknown; fallBack?: unknown }) {
     calls,
     box: {
       claim: async () => { calls.push("claim"); return replies.claim; },
-      fallBack: async (input: { sessionId: string }) => { calls.push(`fallBack ${input.sessionId}`); return replies.fallBack; },
+      fallBack: async () => { calls.push("fallBack"); return replies.fallBack; },
     },
   };
 }
@@ -40,8 +40,8 @@ gets the same tag back.
 ```ts
 const { box, calls } = fakeBox({ claim: { outcome: "claimed", result: READY } });
 const r = await resolveAwaitingHq({ row: row(inSession, "rough wordz <send-message phrase=\"send message\" />"), recordingId: "rec-1", choice: "hq", box });
-JSON.stringify({ kind: r.kind, text: r.emission.text, hqText: r.emission.hqText, id: r.emission.id, recordLate: r.recordLate, calls })
-=> {"kind":"send","text":"clean words <send-message phrase=\"send message\" />","hqText":true,"id":"em-1","recordLate":false,"calls":["claim"]}
+JSON.stringify({ kind: r.kind, text: r.emission.text, hqText: r.emission.hqText, id: r.emission.id, calls })
+=> {"kind":"send","text":"clean words <send-message phrase=\"send message\" />","hqText":true,"id":"em-1","calls":["claim"]}
 ```
 
 If the result is not ready after all, nothing is sent:
@@ -55,22 +55,22 @@ const { box } = fakeBox({ claim: { outcome: "pending", hq: { state: "transcribin
 ## "Send live text" falls back; HQ that is already ready wins
 
 ```ts
-const { box, calls } = fakeBox({ fallBack: { outcome: "late" } });
+const { box, calls } = fakeBox({ fallBack: { outcome: "fellBack" } });
 const r = await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box });
-JSON.stringify({ text: r.emission.text, hqFallback: r.emission.hqFallback, recordLate: r.recordLate, calls })
-=> {"text":"rough words","hqFallback":"pending","recordLate":false,"calls":["fallBack chat-1"]}
+JSON.stringify({ text: r.emission.text, hqFallback: r.emission.hqFallback, calls })
+=> {"text":"rough words","hqFallback":true,"calls":["fallBack"]}
 
 const won = fakeBox({ fallBack: { outcome: "claimed", result: READY } });
 (await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box: won.box })).emission.text
 => clean words
 ```
 
-A new chat had no session when the row was saved: the live text goes out
-first and the fallback is recorded after the send (`recordLate`).
+A new chat (no session bound to the row) falls back the same way — there is
+no session to name in the mutation, so it never mattered:
 
 ```ts
-const { box, calls } = fakeBox({});
+const { box, calls } = fakeBox({ fallBack: { outcome: "fellBack" } });
 const r = await resolveAwaitingHq({ row: row(newChat, "rough words"), recordingId: "rec-1", choice: "live", box });
-JSON.stringify({ hqFallback: r.emission.hqFallback, recordLate: r.recordLate, calls })
-=> {"hqFallback":"pending","recordLate":true,"calls":[]}
+JSON.stringify({ hqFallback: r.emission.hqFallback, calls })
+=> {"hqFallback":true,"calls":["fallBack"]}
 ```

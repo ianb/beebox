@@ -32,10 +32,10 @@ function fakeBox(opts?: { claim?: unknown; fallBack?: unknown; fallBackFails?: n
       calls.push("claim");
       return opts?.claim ?? { outcome: "claimed", result: READY };
     },
-    fallBack: async (input: { sessionId: string }) => {
-      calls.push(`fallBack ${input.sessionId}`);
+    fallBack: async () => {
+      calls.push("fallBack");
       if (fallBackFailures > 0) { fallBackFailures -= 1; throw new Error("502"); }
-      return opts?.fallBack ?? { outcome: "late" };
+      return opts?.fallBack ?? { outcome: "fellBack" };
     },
     subscribe: (h: { onStatus: (e: unknown) => void; onConnect: () => void }) => {
       handlers = h;
@@ -57,7 +57,7 @@ function fakeBox(opts?: { claim?: unknown; fallBack?: unknown; fallBackFails?: n
   };
 }
 
-function request(box: ReturnType<typeof fakeBox>, opts?: { sessionId?: string | null; sendLive?: Promise<void> }) {
+function request(box: ReturnType<typeof fakeBox>, opts?: { sendLive?: Promise<void> }) {
   const progress: string[] = [];
   return {
     progress,
@@ -65,7 +65,6 @@ function request(box: ReturnType<typeof fakeBox>, opts?: { sessionId?: string | 
       recordingId: "rec",
       emissionId: "em",
       budgetMs: 300_000,
-      sessionId: () => (opts?.sessionId === undefined ? "chat-1" : opts.sessionId),
       sendLive: opts?.sendLive ?? new Promise<void>(() => {}),
       onProgress: (p: { kind: string; hq?: { state: string } }) => { progress.push(p.kind === "status" ? p.hq?.state ?? "" : p.kind); },
     },
@@ -141,7 +140,7 @@ box.calls.filter((c) => c === "status").length
 => 2
 ```
 
-## The budget runs out: fall back, recorded as `late`
+## The budget runs out: fall back
 
 ```ts
 const box = fakeBox();
@@ -150,9 +149,9 @@ const outcome = createHqWaiter(box.deps).wait(req);
 await flush();
 box.expire();
 JSON.stringify(await outcome)
-=> {"kind":"fallback","reason":"budget","recorded":true,"service":"mai"}
+=> {"kind":"fallback","reason":"budget","service":"mai"}
 
-box.calls.includes("fallBack chat-1")
+box.calls.includes("fallBack")
 => true
 ```
 
@@ -169,35 +168,35 @@ box.expire();
 => hq
 ```
 
-## "Send live text now" in a new chat: the fallback waits for the send
-
-A new chat has no session to name in `fallBack` until its first message is
-sent, so the wait ends without calling it (`recorded: false`); the caller
-records the fallback after the send.
+## "Send live text now" falls back the same way
 
 ```ts
 let tap = () => {};
 const sendLive = new Promise<void>((resolve) => { tap = resolve; });
 const box = fakeBox();
-const { req } = request(box, { sessionId: null, sendLive });
+const { req } = request(box, { sendLive });
 const outcome = createHqWaiter(box.deps).wait(req);
 await flush();
 tap();
 JSON.stringify(await outcome)
-=> {"kind":"fallback","reason":"user","recorded":false,"service":"mai"}
+=> {"kind":"fallback","reason":"user","service":"mai"}
 
-box.calls.some((c) => c.startsWith("fallBack"))
-=> false
+box.calls.includes("fallBack")
+=> true
 ```
 
-`recordLate` then records it once the chat has a session, retrying a box that
-is still restarting:
+A box that is unreachable when the fallback is requested still ends the wait
+with the live text — there is nothing left to retry after the send, since a
+sealed recording is GC'd from the box on its own schedule regardless:
 
 ```ts continue
-const retrying = fakeBox({ fallBackFails: 2 });
-await createHqWaiter(retrying.deps).recordLate({ recordingId: "rec", emissionId: "em", sessionId: Promise.resolve("chat-new") });
-retrying.calls.join(",")
-=> fallBack chat-new,fallBack chat-new,fallBack chat-new
+const unreachable = fakeBox({ fallBackFails: 1 });
+const { req: req2 } = request(unreachable);
+const outcome2 = createHqWaiter(unreachable.deps).wait(req2);
+await flush();
+unreachable.expire();
+JSON.stringify(await outcome2)
+=> {"kind":"fallback","reason":"budget","service":"mai"}
 ```
 
 ## A permanent failure ends the wait with the reason
@@ -209,5 +208,5 @@ const outcome = createHqWaiter(box.deps).wait(req);
 await flush();
 box.event({ state: "failed", failure: { kind: "permanent", code: "missing_openrouter_key", message: "No OpenRouter key is configured" } });
 JSON.stringify(await outcome)
-=> {"kind":"fallback","reason":{"kind":"permanent","code":"missing_openrouter_key","message":"No OpenRouter key is configured"},"recorded":true,"service":"mai"}
+=> {"kind":"fallback","reason":{"kind":"permanent","code":"missing_openrouter_key","message":"No OpenRouter key is configured"},"service":"mai"}
 ```

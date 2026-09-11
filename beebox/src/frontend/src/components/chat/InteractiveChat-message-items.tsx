@@ -19,7 +19,6 @@ import { invariant } from "@shared/invariant";
 import type { SpeechSegmentState } from "../../machines/speechPlaybackMachine";
 import type { AudioOverlayStore } from "./audio-overlay-store";
 import type { PendingHq } from "../../machines/composerMachine";
-import { resolveCorrectedMessageId, resolveEntryMessageId } from "./message-parsing";
 import { Button } from "../ui/Button";
 
 /**
@@ -77,8 +76,7 @@ function PendingHqMessage({ pending, onSendLive }: { pending: PendingHq; onSendL
 }
 
 export type DataItem =
-  /** `correctsTime`: set on a late HQ correction — the corrected message's time, or null when it is not loaded. */
-  | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[]; correctsTime?: string | null }
+  | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[] }
   | { kind: "marker"; marker: ModelMarker }
   | { kind: "pendingHq"; pending: PendingHq }
   | { kind: "captureBubble"; model: CaptureBubbleModel };
@@ -88,19 +86,6 @@ function assistantGroupText(group: MessageGroup): string {
   return group.entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   ).join("\n");
-}
-
-/**
- * Record a user message's time under its `message-id`; for a late HQ
- * correction (`corrects="X"`), return X's time — null when X is not in the
- * loaded window. Undefined for any other message.
- */
-function correctionAnchorTime(group: MessageGroup, times: Map<string, string>): string | null | undefined {
-  const first = group.entries[0];
-  if (first === undefined) return undefined;
-  times.set(resolveEntryMessageId(first), first.timestamp);
-  const corrected = resolveCorrectedMessageId(first);
-  return corrected === null ? undefined : times.get(corrected) ?? null;
 }
 
 export function dataItemKey(d: DataItem): string {
@@ -148,7 +133,6 @@ export function buildDataItems(opts: {
 }): DataItem[] {
   const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView } = opts;
   const items: DataItem[] = [];
-  const voiceMessageTimes = new Map<string, string>();
   for (const m of modelMarkers) {
     if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
   }
@@ -176,8 +160,7 @@ export function buildDataItems(opts: {
         continue;
       }
     }
-    const correctsTime = group.type === "user" ? correctionAnchorTime(group, voiceMessageTimes) : undefined;
-    items.push({ kind: "group", group, groupIndex: i, ...(correctsTime === undefined ? {} : { correctsTime }) });
+    items.push({ kind: "group", group, groupIndex: i });
     for (const m of modelMarkers) {
       if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
     }
@@ -225,12 +208,11 @@ export interface RenderItemContext {
  * assistant), wrapped in an error boundary keyed by group identity.
  */
 function GroupItem({
-  group, groupIndex, acks, correctsTime, ctx,
+  group, groupIndex, acks, ctx,
 }: {
   group: MessageGroup;
   groupIndex: number;
   acks?: AckIndication[];
-  correctsTime?: string | null;
   ctx: RenderItemContext;
 }) {
   const { debugView, currentUserEmail, currentUserName, speechPlayback, lastAssistantGroupIndex, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled, audioOverlayStore } = ctx;
@@ -249,7 +231,7 @@ function GroupItem({
       </div>
     );
   } else if (group.type === "user") {
-    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} currentUserName={currentUserName} acks={acks} onZoomView={onZoomView} audioOverlayStore={audioOverlayStore} correctsTime={correctsTime} /></div>;
+    body = <div className="py-0.5"><UserMessage entries={group.entries} debugView={debugView} currentUserEmail={currentUserEmail} currentUserName={currentUserName} acks={acks} onZoomView={onZoomView} audioOverlayStore={audioOverlayStore} /></div>;
   } else {
     // "This message is playing" matches either an explicit replay
     // (playingMessageId is this group's uuid) or auto-played speech
@@ -308,5 +290,5 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
     const { retry: handleCaptureRetry, discard: handleCaptureDiscard } = ctx.captureVerbs;
     return <CaptureBubbleView model={item.model} onRetry={handleCaptureRetry} onDiscard={handleCaptureDiscard} />;
   }
-  return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} correctsTime={item.correctsTime} ctx={ctx} />;
+  return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} ctx={ctx} />;
 }

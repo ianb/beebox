@@ -211,24 +211,24 @@ no `words` (and no `stt="deepgram"`/`<unsure>` marks at assemble time).
 
 ## A fallback sends the realtime message, marked
 
-The budget ran out (or the user chose the live text): the realtime text goes
-out marked `hq="pending"`, and its realtime words ride along. A permanent HQ
-failure marks it `hq="failed"`.
+The budget ran out (or the user chose the live text, or HQ failed outright):
+the realtime text goes out marked `hq="failed"`, and its realtime words ride
+along.
 
 ```ts continue
-const late = prepareVoiceSubmitEmission({ realtime, outcome: { kind: "fallback", reason: "budget", recorded: true, service: null }, keyword: null });
+const late = prepareVoiceSubmitEmission({ realtime, outcome: { kind: "fallback", reason: "budget", service: null }, keyword: null });
 late.text
 => frozen draft rough words <send-message phrase="clean up and send" />
 
 JSON.stringify({ hqFallback: late.hqFallback, words: late.words?.length, hqText: late.hqText ?? null })
-=> {"hqFallback":"pending","words":1,"hqText":null}
+=> {"hqFallback":true,"words":1,"hqText":null}
 
 prepareVoiceSubmitEmission({
   realtime,
-  outcome: { kind: "fallback", reason: { kind: "permanent", code: "missing_key", message: "No OpenRouter key" }, recorded: true, service: "mai" },
+  outcome: { kind: "fallback", reason: { kind: "permanent", code: "missing_key", message: "No OpenRouter key" }, service: "mai" },
   keyword: null,
 }).hqFallback
-=> failed
+=> true
 ```
 
 ## A segment with no live text still becomes a message
@@ -239,9 +239,9 @@ when HQ does not arrive, a placeholder body keeps the message (and its
 
 ```ts
 const silent = buildVoiceSubmitEmission({ priorInput: "typed first", finalText: "", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
-const placeholder = prepareVoiceSubmitEmission({ realtime: silent, outcome: { kind: "fallback", reason: "budget", recorded: false, service: null }, keyword: null });
+const placeholder = prepareVoiceSubmitEmission({ realtime: silent, outcome: { kind: "fallback", reason: "budget", service: null }, keyword: null });
 JSON.stringify({ text: placeholder.text, hqFallback: placeholder.hqFallback })
-=> {"text":"typed first [recording not transcribed]","hqFallback":"pending"}
+=> {"text":"typed first [recording not transcribed]","hqFallback":true}
 ```
 
 ## Manual stop-and-send HQ routing (empty `matchedPhrase`)

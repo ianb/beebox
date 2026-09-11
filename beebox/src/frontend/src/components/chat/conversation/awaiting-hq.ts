@@ -17,12 +17,8 @@ import type { PendingConversationSend } from "./pending-sends";
 export type AwaitingHqChoice = "hq" | "live";
 
 export type AwaitingHqResolution =
-  /**
-   * `recordLate`: the fallback could not be recorded yet (a new chat has no
-   * session) — record it after the send. `outcome` lets the caller raise a
-   * permanent failure's notice.
-   */
-  | { kind: "send"; emission: Emission; recordLate: boolean; outcome: HqWaitOutcome }
+  /** `outcome` lets the caller raise a permanent failure's notice. */
+  | { kind: "send"; emission: Emission; outcome: HqWaitOutcome }
   /** "Send HQ transcript" raced a status change: the result is not ready. */
   | { kind: "not-ready" };
 
@@ -40,12 +36,8 @@ export async function resolveAwaitingHq(opts: {
     if (claimed === null) return { kind: "not-ready" };
     outcome = claimed;
   } else {
-    const sessionId = row.binding.target.kind === "session" ? row.binding.target.sessionId : null;
-    outcome = sessionId === null
-      ? { kind: "fallback", reason: "user", recorded: false, service: null }
-      : outcomeOfFallBack(await box.fallBack({ recordingId, emissionId, sessionId }), { reason: "user", service: null });
+    outcome = outcomeOfFallBack(await box.fallBack({ recordingId, emissionId }), { reason: "user", service: null });
   }
   const emission = prepareVoiceSubmitEmission({ realtime: row.emission, outcome, keyword: sendKeywordIn(row.emission.text) });
-  const recordLate = outcome.kind === "fallback" && typeof outcome.reason === "string" && !outcome.recorded;
-  return { kind: "send", emission, recordLate, outcome };
+  return { kind: "send", emission, outcome };
 }

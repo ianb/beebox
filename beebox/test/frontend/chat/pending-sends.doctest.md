@@ -136,13 +136,26 @@ reloaded.getSnapshot().map((row) => `${row.emission.id}:${row.status}:${row.reco
 ```
 
 The user's choice may still replace the realtime snapshot once — here with the
-fallback marked `hq="pending"` — and the fallback marker survives storage:
+fallback marked `hq="failed"` — and the fallback marker survives storage:
 
 ```ts continue
-reloaded.stage({ ...voice("waiting"), hqFallback: "pending" }, binding);
+reloaded.stage({ ...voice("waiting"), hqFallback: true }, binding);
 createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot()
   .find((row) => row.emission.id === "waiting")?.emission.hqFallback
-=> pending
+=> true
+```
+
+A row saved before late correction was removed may still hold the legacy
+`"pending"`/`"failed"` marker on disk; loading normalizes it to `true`:
+
+```ts continue
+data.set("bbx-pending-web-sends:test", JSON.stringify({
+  version: 1,
+  rows: [{ emission: { ...voice("legacy"), hqFallback: "pending" }, binding, status: "pending" }],
+}));
+createPendingSendsStore(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot()
+  .find((row) => row.emission.id === "legacy")?.emission.hqFallback
+=> true
 ```
 
 Dismissing an `awaitingHq` item removes it; its recording stays on the box:

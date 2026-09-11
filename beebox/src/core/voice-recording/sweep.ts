@@ -8,14 +8,7 @@
  * - `VOICE_STAGING_RETENTION_MS` after creation, if it was never sealed
  *   (abandoned recording — closed tab, cancelled before finalize); or
  * - `VOICE_STAGING_RETENTION_MS` after `voice.terminalAt` — see
- *   {@link isVoiceTerminal} for what counts as terminal (a `late` handoff
- *   whose HQ pass is terminally `failed` counts too: no correction is ever
- *   coming, so it is not left to loop through `lateDeliveryPending` forever).
- *
- * `lateDeliveryPending` collects the sessions still genuinely progressing
- * (`late` with HQ not yet failed, or `delivering`) so `deliver-late.ts`'s
- * `attemptLateDelivery` can re-probe them on this same tick instead of a
- * second timer.
+ *   {@link isVoiceTerminal} for what counts as terminal.
  */
 
 import { getBoxTime } from "../../lib/time.js";
@@ -29,12 +22,6 @@ export const VOICE_STAGING_RETENTION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export interface VoiceSweepResult {
   /** Session ids whose staging directory was deleted this pass. */
   deleted: string[];
-  /**
-   * Session ids sealed with a ready HQ result and a `late`/`delivering`
-   * handoff — not yet terminal, and not acted on by this chunk. Named hook
-   * point: the late-delivery chunk re-probes these on this same tick.
-   */
-  lateDeliveryPending: string[];
 }
 
 function isPastRetention(opts: { sinceIso: string; now: number }): boolean {
@@ -42,33 +29,13 @@ function isPastRetention(opts: { sinceIso: string; now: number }): boolean {
   return now - new Date(sinceIso).getTime() >= VOICE_STAGING_RETENTION_MS;
 }
 
-async function sweepOneVoiceSession(opts: { boxRoot: string; session: StagingSession; now: number }): Promise<{
-  deleted: boolean;
-  lateDeliveryPending: boolean;
-}> {
-  const { boxRoot, session, now } = opts;
+/** The timestamp a session's retention counts from, or null while it is kept regardless of age. */
+function retentionStart(session: StagingSession): string | null {
   const { voice } = session;
-  if (voice === undefined) return { deleted: false, lateDeliveryPending: false }; // schema invariant guards this in practice
-
-  if (session.state === "open") {
-    if (isPastRetention({ sinceIso: session.createdAt, now })) {
-      await cleanupStagingSession({ boxRoot, id: session.id });
-      return { deleted: true, lateDeliveryPending: false };
-    }
-    return { deleted: false, lateDeliveryPending: false };
-  }
-
-  if (isVoiceTerminal(voice)) {
-    const terminalSince = voice.terminalAt ?? session.lastActivityAt;
-    if (isPastRetention({ sinceIso: terminalSince, now })) {
-      await cleanupStagingSession({ boxRoot, id: session.id });
-      return { deleted: true, lateDeliveryPending: false };
-    }
-    return { deleted: false, lateDeliveryPending: false };
-  }
-
-  const pendingLateDelivery = voice.handoff.mode === "late" || voice.handoff.mode === "delivering";
-  return { deleted: false, lateDeliveryPending: pendingLateDelivery };
+  if (voice === undefined) return null; // schema invariant guards this in practice
+  if (session.state === "open") return session.createdAt;
+  if (isVoiceTerminal(voice)) return voice.terminalAt ?? session.lastActivityAt;
+  return null;
 }
 
 /** Sweep one box's voice staging sessions once. Idempotent and safe to double-fire. */
@@ -76,11 +43,12 @@ export async function sweepVoiceSessions(opts: { boxRoot: string }): Promise<Voi
   const { boxRoot } = opts;
   const now = getBoxTime(boxRoot).getTime();
   const sessions = (await listStagingSessions({ boxRoot })).filter(isVoiceSession);
-  const result: VoiceSweepResult = { deleted: [], lateDeliveryPending: [] };
+  const result: VoiceSweepResult = { deleted: [] };
   for (const session of sessions) {
-    const outcome = await sweepOneVoiceSession({ boxRoot, session, now });
-    if (outcome.deleted) result.deleted.push(session.id);
-    if (outcome.lateDeliveryPending) result.lateDeliveryPending.push(session.id);
+    const since = retentionStart(session);
+    if (since === null || !isPastRetention({ sinceIso: since, now })) continue;
+    await cleanupStagingSession({ boxRoot, id: session.id });
+    result.deleted.push(session.id);
   }
   return result;
 }

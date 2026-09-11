@@ -102,8 +102,8 @@ export type VoiceHqResult = z.infer<typeof VoiceHqResultSchema>;
 
 /**
  * The HQ job's progress for one voice recording. `none` until a finalize
- * requests HQ; `ready`/`failed` are the two terminal outcomes a client or the
- * late-delivery path can act on.
+ * requests HQ; `ready`/`failed` are the two terminal outcomes a client can
+ * act on.
  */
 export const VoiceHqStateSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("none") }),
@@ -129,29 +129,24 @@ export const VoiceHqStateSchema = z.discriminatedUnion("state", [
 export type VoiceHqState = z.infer<typeof VoiceHqStateSchema>;
 
 /**
- * Who has claimed the recording's realtime-vs-HQ text, and how the correction
- * (if any) is progressing. `open` until the client's submit flow decides;
- * `claimed` means the client sent HQ text itself; `late` means the client sent
- * realtime text and the server will correct it once HQ is ready;
- * `delivering`/`delivered` track that correction's own at-most-once send.
+ * Which text the client sent for the recording. `open` until the client's
+ * submit flow decides; `claimed` means the client sent the HQ text;
+ * `fellBack` means it sent realtime text. Both decided modes are terminal —
+ * a later HQ result stays on the box and is never delivered as a message.
  */
 export const VoiceHandoffSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("open") }),
   z.object({ mode: z.literal("claimed"), emissionId: z.string() }),
-  z.object({ mode: z.literal("late"), emissionId: z.string() }),
-  z.object({ mode: z.literal("delivering"), emissionId: z.string() }),
-  z.object({ mode: z.literal("delivered"), emissionId: z.string(), messageId: z.string() }),
+  z.object({ mode: z.literal("fellBack"), emissionId: z.string() }),
 ]);
 export type VoiceHandoff = z.infer<typeof VoiceHandoffSchema>;
 
 /**
  * Written once by the finalize that requests HQ. Survives every `hq` state
  * transition (including a server restart's resume), so a resumed job still
- * knows its 24 h retry deadline (`requestedAt`) and where to deliver a late
- * correction (`sessionId`). `sessionId` is null when the message was the
- * first in a new chat (no session existed at finalize); `fallBack` fills it
- * in with the session the realtime message was sent to, which late delivery
- * requires.
+ * knows its 24 h retry deadline (`requestedAt`). `sessionId` seeds diarized
+ * speaker letters from the session's log tail; it is null when the message
+ * was the first in a new chat (no session existed at finalize).
  */
 const VoiceHqRequestSchema = z.object({
   requestedAt: z.string(),
@@ -170,7 +165,7 @@ const StagingVoiceSchema = z.object({
   /**
    * Chat session the recording was started in, or `null` when the mic
    * started in a chat that had no session yet. Informational only: the HQ
-   * job, its status events and late delivery all use `hqRequest.sessionId`.
+   * job and its status events use `hqRequest.sessionId`.
    */
   targetSessionId: z.string().nullable(),
   /** ISO, client clock. */
@@ -182,9 +177,9 @@ const StagingVoiceSchema = z.object({
   /**
    * Set (server clock) the moment the recording first reaches a
    * GC-eligible terminal condition — `handoff.mode` becoming `claimed` or
-   * `delivered`, or `hq.state` becoming `failed`/staying `none` on a sealed
-   * session whose handoff isn't `late`/`delivering`. The voice sweep deletes
-   * the session {@link VOICE_STAGING_RETENTION_MS} after this timestamp.
+   * `fellBack`, or `hq.state` becoming `failed`/staying `none` on a sealed
+   * session. The voice sweep deletes the session
+   * {@link VOICE_STAGING_RETENTION_MS} after this timestamp.
    * Written once; a later transition that is still terminal does not move it.
    */
   terminalAt: z.string().optional(),

@@ -3,7 +3,7 @@ import type { EmissionDispatch } from "./conversation/use-bound-emission";
 import type { ComposerEvent } from "../../machines/composerMachine";
 import { markVoiceAudioAbsent } from "../../lib/audio/last-audio";
 import { sendSound, tick } from "../../lib/audio/earcons";
-import { awaitHq, recordLateFallBack } from "../../lib/audio/await-hq";
+import { awaitHq } from "../../lib/audio/await-hq";
 import { HQ_WAIT_BUDGET_MS, hqStatusLine, type HqWaitOutcome } from "../../lib/audio/hq-wait";
 import { recordHqFailureNotice } from "../../lib/audio/hq-failure-notices";
 import { pendingChunkCount } from "../../lib/audio/voice-staging-queue";
@@ -49,8 +49,8 @@ export interface RunKeywordSendOpts {
  * send"), the recording is sealed with an HQ request and the send waits for
  * the box's HQ job (docs/plans/resilient-voice-recording.md, Track 4): the HQ
  * text if it arrives within the budget, otherwise the live text marked
- * `hq="pending"` (the box corrects it later) or `hq="failed"`. The mic re-arms
- * at once; waits run concurrently and dispatch in segment order.
+ * `hq="failed"`. The mic re-arms at once; waits run concurrently and dispatch
+ * in segment order.
  */
 export async function runKeywordSend(opts: RunKeywordSendOpts): Promise<void> {
   // Reserved before the first await, so dispatch order is segment-end order.
@@ -128,26 +128,24 @@ async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): 
   hqRecording.seal({ emissionId: prepared.id, sessionId: dispatchCaptured.currentSessionId() });
   composerSend({ type: "START_HQ", id: prepared.id, text: prepared.text || "Recording without live text" });
   settleMic();
-  const outcome = await waitForHq({ recording: hqRecording, emission: prepared, dispatchCaptured, composerSend });
+  const outcome = await waitForHq({ recording: hqRecording, emission: prepared, composerSend });
   const final = prepareVoiceSubmitEmission({ realtime: prepared, outcome, keyword: sendKeywordOf(intent) });
   await slot.turn();
   composerSend({ type: "HQ_DONE", id: prepared.id });
   dispatchVoice(dispatchCaptured, final);
-  followUpOutcome({ outcome, recordingId: hqRecording.recordingId, emissionId: prepared.id, dispatchCaptured });
+  followUpOutcome(outcome);
 }
 
 function waitForHq(opts: {
   recording: PendingRecording;
   emission: Emission;
-  dispatchCaptured: EmissionDispatch;
   composerSend: (event: ComposerEvent) => void;
 }): Promise<HqWaitOutcome> {
-  const { recording, emission, dispatchCaptured, composerSend } = opts;
+  const { recording, emission, composerSend } = opts;
   return awaitHq({
     recordingId: recording.recordingId,
     emissionId: emission.id,
     budgetMs: HQ_WAIT_BUDGET_MS,
-    sessionId: () => dispatchCaptured.currentSessionId(),
     onProgress: (progress) => composerSend({
       type: "HQ_STATUS",
       id: emission.id,
@@ -167,25 +165,8 @@ function dispatchVoice(dispatch: EmissionDispatch, emission: Emission): void {
   markVoiceAudioAbsent(emission.id);
 }
 
-/**
- * After the send: a permanent failure shows its notice; a fallback the wait
- * could not record (a new chat had no session yet, or the box was
- * unreachable) is recorded now, so the box delivers the HQ correction.
- */
-function followUpOutcome(opts: {
-  outcome: HqWaitOutcome;
-  recordingId: string;
-  emissionId: string;
-  dispatchCaptured: EmissionDispatch;
-}): void {
-  const { outcome, recordingId, emissionId, dispatchCaptured } = opts;
-  if (outcome.kind !== "fallback") return;
-  if (typeof outcome.reason !== "string") {
-    if (outcome.reason.kind === "permanent") recordHqFailureNotice({ service: outcome.service, failure: outcome.reason });
-    return;
-  }
-  if (outcome.recorded) return;
-  recordLateFallBack({ recordingId, emissionId, sessionId: dispatchCaptured.assignedSessionId() }).catch((error: unknown) => {
-    console.error(`[voice-send] ${recordingId}: the HQ fallback was never recorded; no correction will follow:`, error);
-  });
+/** After the send: a permanent HQ failure shows its persistent notice. */
+function followUpOutcome(outcome: HqWaitOutcome): void {
+  if (outcome.kind !== "fallback" || typeof outcome.reason === "string") return;
+  if (outcome.reason.kind === "permanent") recordHqFailureNotice({ service: outcome.service, failure: outcome.reason });
 }

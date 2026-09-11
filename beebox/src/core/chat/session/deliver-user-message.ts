@@ -58,9 +58,7 @@ export interface DeliverUserMessageResult {
  * message whose `send()` resolved before the `delivered` marker was persisted.
  * `marker` is any bare, unique substring of the message a caller already knows
  * is in the transcript — capture/bulk pass their card's doc path (unique per
- * batch/capture: it carries the staging id + timestamp); voice late-delivery
- * (`core/voice-recording/deliver-late.ts`) passes an emission or recording id
- * instead, since it has no doc path to point at. A bare substring match on the
+ * batch/capture: it carries the staging id + timestamp). A bare substring match on the
  * JSONL is a reliable landed-signal — bare, not `attr="…"`, because the
  * transcript stores the message as a JSON string where the wrapper's quotes are
  * backslash-escaped. A `null` session (a fresh session that never got an id

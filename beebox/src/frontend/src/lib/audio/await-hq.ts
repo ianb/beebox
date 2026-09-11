@@ -67,7 +67,3 @@ export function awaitHq(request: Omit<HqWaitRequest, "sendLive">): Promise<HqWai
     sendLiveRequests.delete(request.emissionId);
   });
 }
-
-export function recordLateFallBack(input: { recordingId: string; emissionId: string; sessionId: Promise<string> }): Promise<void> {
-  return realWaiter().recordLate(input);
-}

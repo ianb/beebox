@@ -1,8 +1,8 @@
 /**
  * tRPC router for the client half of the voice-recording handoff
  * (`docs/plans/resilient-voice-recording.md`, Track 1's `voiceRecording`
- * router). `status`/`statusByMessage` are the pending-bubble/badge's
- * server-derived ground truth; `claim`/`fallBack` are the two ways a client
+ * router). `status` is the pending bubble's server-derived ground truth;
+ * `claim`/`fallBack` are the two ways a client
  * resolves a sealed recording's handoff. Both mutations apply one
  * {@link VoiceEvent} through {@link applyVoiceEvent} (already idempotent by
  * `(recordingId, emissionId)` — see `state.ts`), so a retried call is a safe
@@ -24,7 +24,6 @@ import { router, authedProcedure } from "../trpc.js";
 import {
   readStagingSession,
   isVoiceSession,
-  listStagingSessions,
   type StagingSession,
   type StagingVoice,
   type VoiceHqState,
@@ -36,7 +35,7 @@ import { applyVoiceEvent, VoiceTransitionRefusedError } from "../../../core/voic
 import { toError } from "../../../lib/error-guards.js";
 import type { TrpcContext } from "../context.js";
 
-/** The DTO both `status` and `statusByMessage` return. */
+/** The DTO `status` returns. */
 interface VoiceStatusDto {
   recordingId: string;
   hq: VoiceHqState;
@@ -87,27 +86,21 @@ type ClaimOutcome =
 
 type FallBackOutcome =
   | { outcome: "claimed"; result: VoiceHqResult }
-  | { outcome: "late" }
+  | { outcome: "fellBack" }
   | { outcome: "failed"; failure: HqFailure };
 
 /**
  * After a claim/fallBack event applies, classify the resulting voice object
- * into the outcome shape both mutations share. `delivering`/`delivered` are
- * reachable ONLY from a `fallBack` repeat whose earlier `late` outcome
- * already reached the client, or whose response was lost and late delivery
- * advanced before the retry arrived (`state.ts`'s `applyFallBackRequested`
- * treats all four non-open modes as an idempotent repeat) — from the
- * caller's perspective both mean the same thing "late" did: realtime text
- * stands, and a correction is (or already was) delivered separately.
+ * into the outcome shape both mutations share. `fellBack` is reachable only
+ * from `fallBack` (`applyClaimRequested` never produces it), `pending` only
+ * from `claim` (a fallback always decides the handoff).
  */
 function classifyHandoffOutcome(voice: StagingVoice): ClaimOutcome | FallBackOutcome {
   if (voice.hq.state === "failed") return { outcome: "failed", failure: voice.hq.failure };
   if (voice.handoff.mode === "claimed" && voice.hq.state === "ready") {
     return { outcome: "claimed", result: voice.hq.result };
   }
-  if (voice.handoff.mode === "late" || voice.handoff.mode === "delivering" || voice.handoff.mode === "delivered") {
-    return { outcome: "late" };
-  }
+  if (voice.handoff.mode === "fellBack") return { outcome: "fellBack" };
   return { outcome: "pending", hq: voice.hq };
 }
 
@@ -129,20 +122,6 @@ export const voiceRecordingRouter = router({
       return toDto(session);
     }),
 
-  statusByMessage: authedProcedure
-    .input(z.object({ messageId: z.string().min(1) }))
-    .query(async ({ ctx, input }): Promise<VoiceStatusDto | null> => {
-      const sessions = (await listStagingSessions({ boxRoot: ctx.boxRoot })).filter(isVoiceStagingSession);
-      const match = sessions.find((session) => {
-        if (!isOwnedByCaller(session, ctx)) return false;
-        if (session.id === input.messageId) return true;
-        const { hqRequest, handoff } = session.voice;
-        if (hqRequest?.emissionId === input.messageId) return true;
-        return "emissionId" in handoff && handoff.emissionId === input.messageId;
-      });
-      return match === undefined ? null : toDto(match);
-    }),
-
   claim: authedProcedure
     .input(z.object({ recordingId: z.string().min(1), emissionId: z.string().min(1) }))
     .mutation(async ({ ctx, input }): Promise<ClaimOutcome> => {
@@ -162,21 +141,20 @@ export const voiceRecordingRouter = router({
       }
       const outcome = classifyHandoffOutcome(voice);
       // `classifyHandoffOutcome` is shared with fallBack, whose union includes
-      // "late" — claim's transition function (`applyClaimRequested`) never
-      // produces a `late` handoff, so this branch is unreachable from here.
-      if (outcome.outcome === "late") {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "claim produced an unexpected late handoff" });
+      // "fellBack" — `applyClaimRequested` never produces that handoff.
+      if (outcome.outcome === "fellBack") {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "claim produced an unexpected fellBack handoff" });
       }
       return outcome;
     }),
 
   /**
-   * `sessionId` is the chat the realtime message was sent to. It fills in a
-   * null `hqRequest.sessionId` (the first message of a new chat), which late
-   * delivery needs; a different non-null session is a CONFLICT.
+   * The client sends realtime text instead of HQ. Answers `claimed` when HQ
+   * was ready after all (the client sends the HQ text), `failed` when the HQ
+   * pass failed for good, else `fellBack`.
    */
   fallBack: authedProcedure
-    .input(z.object({ recordingId: z.string().min(1), emissionId: z.string().min(1), sessionId: z.string().min(1) }))
+    .input(z.object({ recordingId: z.string().min(1), emissionId: z.string().min(1) }))
     .mutation(async ({ ctx, input }): Promise<FallBackOutcome> => {
       const session = await loadOwnedVoiceSession({ ctx, recordingId: input.recordingId });
       if (session === null) {
@@ -187,7 +165,7 @@ export const voiceRecordingRouter = router({
         voice = await applyVoiceEvent({
           boxRoot: ctx.boxRoot,
           id: input.recordingId,
-          event: { type: "fallBackRequested", emissionId: input.emissionId, sessionId: input.sessionId },
+          event: { type: "fallBackRequested", emissionId: input.emissionId },
         });
       } catch (error) {
         throwRefusalAsConflict(error);
@@ -195,7 +173,7 @@ export const voiceRecordingRouter = router({
       const outcome = classifyHandoffOutcome(voice);
       if (outcome.outcome === "pending") {
         // `applyFallBackRequested` never leaves a `pending`-shaped handoff — it
-        // only produces `claimed` (HQ beat the fallback) or `late`.
+        // only produces `claimed` (HQ beat the fallback) or `fellBack`.
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "fallBack produced an unexpected pending state" });
       }
       return outcome;

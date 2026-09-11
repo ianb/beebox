@@ -7,7 +7,7 @@ import { Text } from "../../../components/ui/Text";
 import { bbxSource } from "../../../lib/source-tag";
 import { trpc } from "../../../lib/trpc";
 import { hqStatusLine } from "../../../lib/audio/hq-wait";
-import { recordLateFallBack, voiceHandoffCalls } from "../../../lib/audio/await-hq";
+import { voiceHandoffCalls } from "../../../lib/audio/await-hq";
 import { recordHqFailureNotice } from "../../../lib/audio/hq-failure-notices";
 import { resolveAwaitingHq, type AwaitingHqChoice } from "./awaiting-hq";
 import type { EmissionDispatch } from "./use-bound-emission";
@@ -73,10 +73,6 @@ function PendingHqRow({ row, recordingId, store, capture }: {
       const { outcome } = resolution;
       if (outcome.kind === "fallback" && typeof outcome.reason !== "string" && outcome.reason.kind === "permanent") {
         recordHqFailureNotice({ service: status.data?.service ?? null, failure: outcome.reason });
-      }
-      if (resolution.recordLate) {
-        recordLateFallBack({ recordingId, emissionId: resolution.emission.id, sessionId: dispatch.assignedSessionId() })
-          .catch((cause: unknown) => console.error(`[voice-send] ${recordingId}: the HQ fallback was never recorded:`, cause));
       }
       await receipt;
     } catch (cause) {

@@ -6,10 +6,12 @@
  *
  * - the result is ready → `claim` it → send the HQ text;
  * - the budget runs out, or the user taps "Send live text now" → `fallBack`
- *   → send the realtime text marked `hq="pending"` (the box delivers the HQ
- *   text later as a `corrects` message) — unless `fallBack` answers that HQ
- *   won the race, which sends the HQ text after all;
+ *   → send the realtime text marked `hq="failed"` — unless `fallBack`
+ *   answers that HQ won the race, which sends the HQ text after all;
  * - the HQ job failed for good → send the realtime text marked `hq="failed"`.
+ *
+ * After a fallback the HQ result stays on the box, reachable through
+ * `bbx chat retranscribe`; it is never delivered as a later message.
  *
  * This module is the decision logic plus a waiter over injected IO, so the
  * doctest drives it with a fake status source; `await-hq.ts` wires the real
@@ -28,17 +30,12 @@ export type HqFailure = Extract<FallBackOutcome, { outcome: "failed" }>["failure
 /** How long a send waits for HQ before sending the realtime text (plan: 5 minutes). */
 export const HQ_WAIT_BUDGET_MS = 5 * 60 * 1000;
 
-/** Attempts to record a fallback after the send (bounded; ~8 minutes in all). */
-const RECORD_LATE_ATTEMPTS = 10;
-
 export type HqWaitOutcome =
   | { kind: "hq"; result: VoiceHqResult }
   | {
       kind: "fallback";
       /** Why: the budget ran out, the user chose, or the HQ job failed for good. */
       reason: "budget" | "user" | HqFailure;
-      /** True once the box knows the realtime text stands (`late`, or a failure). */
-      recorded: boolean;
       /** The HQ service, when a status reply named it (for the failure notice). */
       service: string | null;
     };
@@ -67,7 +64,7 @@ export function outcomeOfClaim(claim: ClaimOutcome, service: string | null): HqW
     case "claimed":
       return { kind: "hq", result: claim.result };
     case "failed":
-      return { kind: "fallback", reason: claim.failure, recorded: true, service };
+      return { kind: "fallback", reason: claim.failure, service };
     case "pending":
       return null;
   }
@@ -80,10 +77,10 @@ export function outcomeOfFallBack(
   switch (reply.outcome) {
     case "claimed":
       return { kind: "hq", result: reply.result };
-    case "late":
-      return { kind: "fallback", reason: opts.reason, recorded: true, service: opts.service };
+    case "fellBack":
+      return { kind: "fallback", reason: opts.reason, service: opts.service };
     case "failed":
-      return { kind: "fallback", reason: reply.failure, recorded: true, service: opts.service };
+      return { kind: "fallback", reason: reply.failure, service: opts.service };
   }
 }
 
@@ -111,7 +108,7 @@ export function hqStatusLine(progress: HqProgress, opts: { uploading: boolean; n
 export interface HqWaitDeps {
   status: (recordingId: string) => Promise<VoiceStatus>;
   claim: (input: { recordingId: string; emissionId: string }) => Promise<ClaimOutcome>;
-  fallBack: (input: { recordingId: string; emissionId: string; sessionId: string }) => Promise<FallBackOutcome>;
+  fallBack: (input: { recordingId: string; emissionId: string }) => Promise<FallBackOutcome>;
   /** Status events for every recording; `onConnect` fires on each (re)subscribe. */
   subscribe: (handlers: {
     onStatus: (event: { recordingId: string; hq: VoiceHqState }) => void;
@@ -125,8 +122,6 @@ export interface HqWaitRequest {
   recordingId: string;
   emissionId: string;
   budgetMs: number;
-  /** The destination's session now; null for a new chat, whose fallback is recorded after the send. */
-  sessionId: () => string | null;
   /** Resolves when the user asks to send the live text now. */
   sendLive: Promise<void>;
   onProgress: (progress: HqProgress) => void;
@@ -134,32 +129,11 @@ export interface HqWaitRequest {
 
 export interface HqWaiter {
   wait: (request: HqWaitRequest) => Promise<HqWaitOutcome>;
-  /**
-   * Record a fallback the wait could not (a new chat had no session yet, or
-   * the box was unreachable): after the realtime send, with bounded retries.
-   */
-  recordLate: (input: { recordingId: string; emissionId: string; sessionId: Promise<string> }) => Promise<void>;
 }
 
 export function createHqWaiter(deps: HqWaitDeps): HqWaiter {
   return {
     wait: (request) => new Promise((resolve) => runWait({ deps, request, resolve })),
-    recordLate: async ({ recordingId, emissionId, sessionId }) => {
-      const session = await sessionId;
-      for (let attempt = 1; attempt <= RECORD_LATE_ATTEMPTS; attempt++) {
-        try {
-          const reply = await deps.fallBack({ recordingId, emissionId, sessionId: session });
-          if (reply.outcome === "claimed") {
-            console.warn(`[hq-wait] ${recordingId}: HQ finished before the fallback was recorded; the live text stands`);
-          }
-          return;
-        } catch (e) {
-          console.warn(`[hq-wait] ${recordingId}: recording the fallback failed (attempt ${String(attempt)}):`, e);
-          await deps.sleep(Math.min(60_000, 2_000 * 2 ** (attempt - 1)));
-        }
-      }
-      console.error(`[hq-wait] ${recordingId}: could not record the fallback; no HQ correction will be delivered`);
-    },
   };
 }
 
@@ -184,14 +158,14 @@ function runWait(opts: { deps: HqWaitDeps; request: HqWaitRequest; resolve: (out
     resolve(outcome);
   };
   const fallBackNow = async (reason: "budget" | "user"): Promise<HqWaitOutcome> => {
-    const sessionId = request.sessionId();
-    if (sessionId === null) return { kind: "fallback", reason, recorded: false, service };
     try {
-      return outcomeOfFallBack(await deps.fallBack({ recordingId, emissionId, sessionId }), { reason, service });
+      return outcomeOfFallBack(await deps.fallBack({ recordingId, emissionId }), { reason, service });
     } catch (e) {
-      // The box is unreachable: send the live text anyway; the fallback is recorded after the send.
+      // The box is unreachable: send the live text anyway. Recording the
+      // fallback stops mattering once late correction is gone — the box GCs
+      // a sealed non-terminal recording 7 days after sealing regardless.
       console.warn(`[hq-wait] ${recordingId}: fallBack failed; sending live text now:`, e);
-      return { kind: "fallback", reason, recorded: false, service };
+      return { kind: "fallback", reason, service };
     }
   };
   // One box call at a time; a fallback asked for meanwhile runs right after.
@@ -217,7 +191,7 @@ function runWait(opts: { deps: HqWaitDeps; request: HqWaitRequest; resolve: (out
     if (decision.kind === "claim") {
       void act(async () => outcomeOfClaim(await deps.claim({ recordingId, emissionId }), service));
     } else if (decision.kind === "failed") {
-      finish({ kind: "fallback", reason: decision.failure, recorded: true, service });
+      finish({ kind: "fallback", reason: decision.failure, service });
     }
   };
   const refresh = (): void => {

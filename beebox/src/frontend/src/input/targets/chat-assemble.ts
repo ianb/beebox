@@ -118,11 +118,11 @@ export function assembleChatMessage(
     const sttServiceAttr = emission.hqText === true && emission.hqService
       ? ` stt-service="${emission.hqService}"`
       : "";
-    // `hq` marks a realtime send that stands in for an HQ pass
-    // (docs/plans/resilient-voice-recording.md, Track 4): `pending` — the box
-    // delivers the HQ text later as a `corrects` message; `failed` — the
-    // realtime text is all there is. Never together with `stt="hq"`.
-    const hqAttr = emission.hqFallback === undefined ? "" : ` hq="${emission.hqFallback}"`;
+    // `hq="failed"` marks a realtime send that stands in for a requested HQ
+    // pass — budget expiry, "Send live text", or HQ failing outright
+    // (docs/plans/resilient-voice-recording.md, Track 4). Never together
+    // with `stt="hq"`.
+    const hqAttr = emission.hqFallback === true ? " hq=\"failed\"" : "";
     // `message-id` (retranscription-in-chat plan, Vocabulary lock-ins) is the
     // emission id — the same value returned as `messageId` below and the key
     // the audio retention store uses — stamped on every voice send so the

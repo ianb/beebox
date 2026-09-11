@@ -39,20 +39,12 @@ function asVoiceSession(session: StagingSession, id: string): asserts session is
 
 /**
  * True once a recording has reached a condition the voice sweep may GC after
- * {@link VOICE_STAGING_RETENTION_MS} (defined in `./sweep.ts`) — the client has
- * claimed or received the correction (`claimed`/`delivered`), the HQ pass is
- * terminally `failed` while the client fell back to realtime (`late`: no
- * correction will EVER arrive — `lateDeliveryStarted` requires `hq.state ===
- * "ready"`, so a `failed` HQ paired with `late` is a stable dead end, not a
- * transient one `deliver-late.ts` will advance past), or the HQ pass is done
- * trying (`failed`) or was never requested (`none`) on a session that is
- * sealed and isn't mid-late-delivery. A `delivering` handoff is never
- * terminal here — `deliver-late.ts` owns confirming it into `delivered`.
+ * {@link VOICE_STAGING_RETENTION_MS} (defined in `./sweep.ts`) — the client
+ * decided which text to send (`claimed`/`fellBack`), or the HQ pass is done
+ * trying (`failed`) or was never requested (`none`) on a sealed session.
  */
 export function isVoiceTerminal(voice: StagingVoice): boolean {
-  if (voice.handoff.mode === "claimed" || voice.handoff.mode === "delivered") return true;
-  if (voice.handoff.mode === "late") return voice.hq.state === "failed";
-  if (voice.handoff.mode === "delivering") return false;
+  if (voice.handoff.mode === "claimed" || voice.handoff.mode === "fellBack") return true;
   return voice.sealedAt !== undefined && (voice.hq.state === "failed" || voice.hq.state === "none");
 }
 

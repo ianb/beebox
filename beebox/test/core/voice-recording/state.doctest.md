@@ -184,145 +184,51 @@ JSON.stringify(apply(claimed, { type: "claimRequested", emissionId: "some-other-
 => {"refused":"invalid-handoff-state"}
 ```
 
-## `fallBackRequested`: late if not ready, claimed+result if the race is already won
+## `fallBackRequested`: fellBack if not ready, claimed+result if the race is already won
 
-Falling back before HQ is ready moves to `late`:
+Falling back before HQ is ready moves to `fellBack`, which is terminal — a
+later HQ result stays on the box and is never delivered as a message:
 
 ```ts continue
-const late = apply(started, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" });
-JSON.stringify(late.handoff)
-=> {"mode":"late","emissionId":"emission-1"}
+const fellBack = apply(started, { type: "fallBackRequested", emissionId: "emission-1" });
+JSON.stringify(fellBack.handoff)
+=> {"mode":"fellBack","emissionId":"emission-1"}
 ```
 
-A repeat fallback by the same emission is idempotent:
+A repeat fallback by the same emission is idempotent (a lost response and a
+retry), and the HQ job finishing afterwards leaves the handoff alone:
 
 ```ts continue
-const lateAgain = nextVoiceState(late, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" });
-JSON.stringify({ ok: lateAgain.ok, unchanged: lateAgain.ok && lateAgain.value === late })
+const fellBackAgain = nextVoiceState(fellBack, { type: "fallBackRequested", emissionId: "emission-1" });
+JSON.stringify({ ok: fellBackAgain.ok, unchanged: fellBackAgain.ok && fellBackAgain.value === fellBack })
 => {"ok":true,"unchanged":true}
+
+JSON.stringify(apply(fellBack, { type: "allPiecesDone", result: ready.hq.result }).handoff)
+=> {"mode":"fellBack","emissionId":"emission-1"}
 ```
 
 The claim/fall-back race: if HQ becomes ready before the client's fallback
-call lands, fallback answers `claimed` with the result instead of `late` — the
-client sends HQ text after all:
+call lands, fallback answers `claimed` with the result instead — the client
+sends HQ text after all:
 
 ```ts continue
-const wonByHq = apply(ready, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" });
+const wonByHq = apply(ready, { type: "fallBackRequested", emissionId: "emission-1" });
 JSON.stringify({ handoff: wonByHq.handoff, hq: wonByHq.hq })
 => {"handoff":{"mode":"claimed","emissionId":"emission-1"},"hq":{"state":"ready","result":{"text":"hello world","diarized":true,"service":"mai-diarized","pieces":2}}}
 ```
 
-The other direction of the race: once the client has already chosen `late`,
-a subsequent claim for the same emission is refused rather than silently
-switching horses — the client already sent realtime text:
+The other direction of the race: once the client has fallen back, a claim
+for the same emission is refused rather than silently switching horses — the
+client already sent realtime text:
 
 ```ts continue
-JSON.stringify(apply(late, { type: "claimRequested", emissionId: "emission-1" }))
+JSON.stringify(apply(fellBack, { type: "claimRequested", emissionId: "emission-1" }))
 => {"refused":"invalid-handoff-state"}
 ```
 
-## The first message of a new chat: `fallBackRequested` names the session
-
-A recording finalized before its chat had a session carries
-`hqRequest.sessionId: null`. The fallback names the session the realtime
-message went to, and writes it into `hqRequest` — late delivery needs it:
+A fallback for a different emission than the HQ request's is refused:
 
 ```ts continue
-const unbound = apply(NONE_OPEN, {
-  type: "requested", requestedAt: "2026-09-10T18:05:00.000Z", service: "whisper",
-  emissionId: "emission-new", sessionId: null,
-});
-unbound.hqRequest.sessionId
-=> null
-
-const named = apply(unbound, { type: "fallBackRequested", emissionId: "emission-new", sessionId: "chat-new" });
-JSON.stringify({ handoff: named.handoff, sessionId: named.hqRequest.sessionId })
-=> {"handoff":{"mode":"late","emissionId":"emission-new"},"sessionId":"chat-new"}
-```
-
-A fallback naming a DIFFERENT session than one already recorded is refused:
-
-```ts continue
-const bound = apply(NONE_OPEN, {
-  type: "requested", requestedAt: "2026-09-10T18:05:00.000Z", service: "whisper",
-  emissionId: "emission-1", sessionId: "chat-1",
-});
-JSON.stringify(apply(bound, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-other" }))
-=> {"refused":"session-mismatch"}
-```
-
-A repeat for the same emission is idempotent only from the same chat: after
-`late` is recorded for `chat-new`, a stale client naming another chat is
-refused rather than told its realtime text will be corrected there.
-
-```ts continue
-JSON.stringify(apply(named, { type: "fallBackRequested", emissionId: "emission-new", sessionId: "chat-else" }))
-=> {"refused":"session-mismatch"}
-
-nextVoiceState(named, { type: "fallBackRequested", emissionId: "emission-new", sessionId: "chat-new" }).value === named
-=> true
-```
-
-## `lateDeliveryStarted` and `landedConfirmed`: the correction's own at-most-once send
-
-Late delivery only starts once HQ is ready. Given a `late` handoff whose HQ
-result has arrived:
-
-```ts continue
-const lateReady = { ...late, hq: ready.hq };
-const startedDelivery = apply(lateReady, { type: "lateDeliveryStarted", originalLanded: true });
-JSON.stringify(startedDelivery.handoff)
-=> {"mode":"delivering","emissionId":"emission-1"}
-```
-
-If the original realtime message hasn't landed in the transcript yet, delivery
-stays `late` (no send) rather than risk an orphan correction:
-
-```ts continue
-const notLandedYet = nextVoiceState(lateReady, { type: "lateDeliveryStarted", originalLanded: false });
-JSON.stringify({ ok: notLandedYet.ok, unchanged: notLandedYet.ok && notLandedYet.value === lateReady })
-=> {"ok":true,"unchanged":true}
-```
-
-A failed HQ result with a `late` handoff never delivers — `lateDeliveryStarted`
-requires `hq.state === "ready"`:
-
-```ts continue
-const lateFailed = { ...late, hq: { state: "failed", failure: { kind: "permanent", code: "x", message: "x" } } };
-JSON.stringify(apply(lateFailed, { type: "lateDeliveryStarted", originalLanded: true }))
-=> {"refused":"invalid-hq-state"}
-```
-
-Once delivering, `landedConfirmed` finishes the handoff:
-
-```ts continue
-const delivered = apply(startedDelivery, { type: "landedConfirmed", messageId: "msg-42" });
-JSON.stringify(delivered.handoff)
-=> {"mode":"delivered","emissionId":"emission-1","messageId":"msg-42"}
-```
-
-A `fallBack` repeat for the same emission stays idempotent even once late
-delivery has moved past `late` — a lost HTTP response and a retry can land
-after the correction reached `delivering` or `delivered`, and the client is
-still asking the same question ("what happened to my fallback?"):
-
-```ts continue
-JSON.stringify({
-  ok: nextVoiceState(startedDelivery, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" }).ok,
-  unchanged: nextVoiceState(startedDelivery, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" }).value === startedDelivery,
-})
-=> {"ok":true,"unchanged":true}
-
-JSON.stringify({
-  ok: nextVoiceState(delivered, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" }).ok,
-  unchanged: nextVoiceState(delivered, { type: "fallBackRequested", emissionId: "emission-1", sessionId: "chat-1" }).value === delivered,
-})
-=> {"ok":true,"unchanged":true}
-```
-
-`landedConfirmed` outside `delivering` is refused (nothing to confirm):
-
-```ts continue
-JSON.stringify(apply(lateReady, { type: "landedConfirmed", messageId: "msg-42" }))
-=> {"refused":"invalid-handoff-state"}
+JSON.stringify(apply(started, { type: "fallBackRequested", emissionId: "emission-other" }))
+=> {"refused":"emission-mismatch"}
 ```

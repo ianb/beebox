@@ -2,9 +2,7 @@
 
 `sweepVoiceSessions` (`docs/plans/resilient-voice-recording.md`, Track 1)
 deletes a voice session's staging directory 7 days after creation if it was
-never sealed, or 7 days after it reaches a terminal handoff/HQ state. A
-session mid-late-delivery (`late`/`delivering`) is never terminal here — it's
-collected in `lateDeliveryPending` instead, a hook for a later chunk.
+never sealed, or 7 days after it reaches a terminal handoff/HQ state.
 
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
@@ -89,11 +87,10 @@ JSON.stringify({
 await box.cleanup();
 ```
 
-## A `late` handoff paired with a terminally failed HQ pass IS terminal — GC'd, not flagged forever
+## A fallback is terminal, whatever the HQ pass does afterwards
 
-No correction is ever coming once HQ is terminally `failed` while the client
-already fell back to realtime, so this must not loop through
-`lateDeliveryPending` on every sweep tick until the box runs out of disk:
+The client sent realtime text (`fellBack`); an HQ result that arrives later
+stays on the box until retention, and does not reset `terminalAt`:
 
 ```ts
 const box = await makeTmpBox({ git: true });
@@ -104,63 +101,22 @@ await sealVoiceSession({
   boxRoot: box.root, id: session.id,
   hq: { emissionId: "e1", sessionId: "chat-1", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
 });
-await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "e1", sessionId: "chat-1" } });
-await applyVoiceEvent({
-  boxRoot: box.root, id: session.id,
-  event: {
-    type: "pieceFailed", classification: "permanent", pieceSeconds: 300, attempt: 1,
-    nextAttemptAt: "2026-09-10T18:00:00.000Z", failure: { code: "http_401", message: "no api key" },
-  },
-});
+await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "e1" } });
 await backdate(box, session.id, { voice: { terminalAt: EIGHT_DAYS_AGO } });
-
-const result = await sweepVoiceSessions({ boxRoot: box.root });
-JSON.stringify({
-  deletedThisOne: result.deleted[0] === session.id && result.deleted.length === 1,
-  notFlagged: result.lateDeliveryPending.length === 0,
-})
-=> {"deletedThisOne":true,"notFlagged":true}
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## A `late` handoff is never GC'd by the terminal path — it's flagged for re-probe instead
-
-```ts
-const box = await makeTmpBox({ git: true });
-await configureBox(box);
-
-const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
-await sealVoiceSession({
-  boxRoot: box.root, id: session.id,
-  hq: { emissionId: "e1", sessionId: "chat-1", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
-});
-// Fall back BEFORE the HQ result is ready, so the handoff lands on `late`
-// (not `claimed` — that only happens when `fallBackRequested` finds an
-// already-`ready` result, per `nextVoiceState`'s claim/fallback race).
-await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "e1", sessionId: "chat-1" } });
 await applyVoiceEvent({
   boxRoot: box.root, id: session.id,
   event: { type: "allPiecesDone", result: { text: "hi", diarized: false, service: "whisper", pieces: 1 } },
 });
-await backdate(box, session.id, { session: { lastActivityAt: EIGHT_DAYS_AGO } });
 
 const result = await sweepVoiceSessions({ boxRoot: box.root });
 JSON.stringify({
-  deleted: result.deleted,
-  flaggedThisOne: result.lateDeliveryPending[0] === session.id && result.lateDeliveryPending.length === 1,
+  deletedThisOne: result.deleted[0] === session.id && result.deleted.length === 1,
+  gone: (await readStagingSession({ boxRoot: box.root, id: session.id })) === null,
 })
-=> {"deleted":[],"flaggedThisOne":true}
-```
-
-```ts continue
-const stillThere = await readStagingSession({ boxRoot: box.root, id: session.id });
-stillThere !== null
-=> true
+=> {"deletedThisOne":true,"gone":true}
 ```
 
 ```ts cleanup
 await box.cleanup();
 ```
+

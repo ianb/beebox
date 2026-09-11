@@ -83,13 +83,13 @@ export interface Emission {
   /** Server-resolved HQ backend; present only with `hqText`. */
   readonly hqService?: string;
   /**
-   * Set when this realtime text was sent in place of a requested HQ pass
-   * (docs/plans/resilient-voice-recording.md, Track 4). `pending`: the HQ
-   * text follows later as a `corrects` message; `failed`: the realtime text
-   * is all there is. The assembler stamps `hq="…"`. Mutually exclusive with
+   * Set when this realtime text was sent in place of a requested HQ pass —
+   * budget expiry, the user's "Send live text", or HQ failing outright
+   * (docs/plans/resilient-voice-recording.md, Track 4; late correction
+   * removed). The assembler stamps `hq="failed"`. Mutually exclusive with
    * `hqText` (enforced in `createVoiceEmission`).
    */
-  readonly hqFallback?: "pending" | "failed";
+  readonly hqFallback?: true;
 }
 
 /**
@@ -151,7 +151,7 @@ interface VoiceEmissionInput {
   /** See `Emission.hqService`. */
   hqService?: string;
   /** See `Emission.hqFallback`. */
-  hqFallback?: "pending" | "failed";
+  hqFallback?: true;
 }
 
 /**

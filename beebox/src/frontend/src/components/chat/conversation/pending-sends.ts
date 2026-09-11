@@ -58,7 +58,10 @@ const emissionSchema = z.object({
   })),
   words: z.array(z.object({ word: z.string(), confidence: z.number().optional() })).optional(),
   spokenStart: z.number().optional(), hqText: z.literal(true).optional(), hqService: z.string().optional(),
-  hqFallback: z.enum(["pending", "failed"]).optional(),
+  // Legacy rows from before late correction was removed stored "pending" or
+  // "failed" (which message follows); both now collapse to the one-value
+  // provenance bit.
+  hqFallback: z.union([z.literal(true), z.enum(["pending", "failed"]).transform((): true => true)]).optional(),
 });
 // PendingConversationSend is also the live store API; bind its storage schema
 // to that domain type so either side fails typecheck if their fields drift.

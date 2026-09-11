@@ -6,7 +6,7 @@
  *
  * A voice finalize body is `{ chunkCount, hq: null | { emissionId, sessionId } }`;
  * `sessionId` is null for the first message of a new chat (the session is
- * assigned after the send), and `voiceRecording.fallBack` supplies it later.
+ * assigned after the send).
  * Before sealing, it verifies the manifest's staged chunks are EXACTLY
  * `pcm-000001.raw … pcm-<chunkCount>.raw` — uploads are refused once the
  * session isn't `open`, so a chunk that arrives after the seal is lost for
@@ -19,8 +19,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { EventBus } from "../../core/event-bus.js";
-import type { ChatSession } from "../../core/chat/session/index.js";
-import type { ChatSessionRegistry } from "../../core/chat/session/registry.js";
 import { pcmChunkFilename } from "../../core/capture/audio-format.js";
 import { loadTranscriptionConfig } from "../../core/transcription/index.js";
 import { getBoxTimeISO } from "../../lib/time.js";
@@ -53,16 +51,8 @@ export async function handleVoiceFinalize(opts: {
   request: FastifyRequest;
   reply: FastifyReply;
   eventBus: EventBus;
-  /**
-   * The live chat runtime, when the box has one ready. Threaded through to
-   * `runHqJob` so a job that finishes into an already-`late` handoff can kick
-   * off late delivery immediately (`deliver-late.ts`) instead of waiting for
-   * the next voice-sweep tick. Omitted only if `getChatRuntime` raced startup.
-   */
-  registry?: ChatSessionRegistry | undefined;
-  wireSession?: ((session: ChatSession) => void) | undefined;
 }): Promise<unknown> {
-  const { boxRoot, session, request, reply, eventBus, registry, wireSession } = opts;
+  const { boxRoot, session, request, reply, eventBus } = opts;
   const parsedBody = VoiceFinalizeBodySchema.safeParse(request.body ?? {});
   if (!parsedBody.success) {
     return reply.status(400).send({ error: "Invalid voice finalize request" });
@@ -101,7 +91,7 @@ export async function handleVoiceFinalize(opts: {
   }
 
   if (seal.sealed && hqRequest !== null) {
-    void runHqJob({ boxRoot, id: session.id, eventBus, registry, wireSession }).catch((error: unknown) => {
+    void runHqJob({ boxRoot, id: session.id, eventBus }).catch((error: unknown) => {
       console.error(`[voice-recording] HQ job for ${session.id} failed:`, error);
     });
   }

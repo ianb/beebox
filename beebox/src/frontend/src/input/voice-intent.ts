@@ -134,10 +134,10 @@ export function sendKeywordOf(intent: Extract<VoiceIntent, { kind: "submit" }>):
  * - `hq`: the HQ text replaces the spoken part, with the send keyword
  *   restored when the HQ pass did not reproduce it. The realtime words are
  *   dropped — they describe replaced text (Track 3 HQ-drop rule).
- * - `fallback`: the realtime text, marked `hq="pending"` (budget or the
- *   user's choice; the box corrects it later) or `hq="failed"`. A segment
- *   with no live text at all sends {@link UNTRANSCRIBED_PLACEHOLDER}, so the
- *   message exists and its kept recording stays retranscribable.
+ * - `fallback`: the realtime text, marked `hq="failed"` — the budget ran
+ *   out, the user chose to send it, or the HQ pass failed outright. A
+ *   segment with no live text at all sends {@link UNTRANSCRIBED_PLACEHOLDER},
+ *   so the message exists and its kept recording stays retranscribable.
  */
 export function prepareVoiceSubmitEmission(opts: {
   realtime: Emission;
@@ -159,7 +159,7 @@ export function prepareVoiceSubmitEmission(opts: {
     });
     return { ...hq, id: realtime.id };
   }
-  const hqFallback = typeof outcome.reason === "string" ? "pending" : "failed";
+  const hqFallback = true;
   if (realtime.text.slice(spokenStart).trim() !== "") return { ...realtime, hqFallback };
   return { ...realtime, text: joinTranscript(priorInput, UNTRANSCRIBED_PLACEHOLDER), words: undefined, hqFallback };
 }
