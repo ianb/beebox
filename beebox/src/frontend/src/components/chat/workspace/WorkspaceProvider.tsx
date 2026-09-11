@@ -133,6 +133,12 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
     store.replace({ ...current, tabs: { ...current.tabs, [target.path]: { ...existing, target } } });
     projectHistory(method !== "push");
   }
+  function retargetCard(fromPath: string, path: string) {
+    const current = store.get();
+    const tab = current.tabs[fromPath];
+    if (tab === undefined) return;
+    dispatch({ type: "retargetCard", fromPath, target: { ...tab.target, path } });
+  }
   function adopt(sessionId: string) {
     store.adopt(sessionId);
   }
@@ -147,7 +153,7 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
     const paths = workspaceTabPaths(state, { viewport, pane });
     return paths.flatMap((path) => state.tabs[path] ? [state.tabs[path]] : []);
   }
-  return { state, store, mobile, participating, projection, transcriptVisible, ready, displayReady, dispatch, open, restoreCards, updateTarget, adopt, activate, tabsForPane,
+  return { state, store, mobile, participating, projection, transcriptVisible, ready, displayReady, dispatch, open, restoreCards, updateTarget, retargetCard, adopt, activate, tabsForPane,
     notice,
     activeView: projection.foregroundPath ? state.tabs[projection.foregroundPath] ?? null : null,
     onZoomView: (view: { target: ViewTarget; label: string }) => open(view.target, { label: view.label }),

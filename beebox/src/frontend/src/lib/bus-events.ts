@@ -23,6 +23,18 @@ import type { RealtimeEvent } from "../hooks/useBusSubscription";
 // frontend's alias contract can't reach `core/*` directly.
 import type { EventMap, BusEventName } from "@backend/trpc/routers/events.js";
 
+/**
+ * tRPC delivers `tracked()` events as a raw `{ id, data }` envelope and plain
+ * (transient) events as the payload directly, so a subscriber's onData sees a
+ * union. The id is internal (wsLink tracks it for resume).
+ */
+export type WireBusEvent = RealtimeEvent | { id: string; data: RealtimeEvent };
+
+/** Unwrap an `events.subscribe` delivery to its `{ event, data }` payload either way. */
+export function unwrapBusEvent(wire: WireBusEvent): RealtimeEvent {
+  return "event" in wire ? wire : wire.data;
+}
+
 export function busEventData<K extends BusEventName>(
   event: RealtimeEvent,
   name: K,

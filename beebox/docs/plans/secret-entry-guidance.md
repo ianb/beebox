@@ -522,6 +522,15 @@ follow a first; a successful HQ pass retires the failure notice. Checked and
 found clean: grant-on-add atomicity, the capability truth table against the
 dispatchers, access-level semantics, registry key agreement.
 
+**Track 6's client half was superseded on merge** (2026-09-11): `main` landed
+`resilient-voice-recording` Track 4 in the meantime, which moved the HQ pass
+box-side and added its own once-per-(service, code) voice-chip notices
+(`lib/audio/hq-failure-notices.ts`, `VoiceNotices.tsx`) with dismissal that
+survives reloads. This plan's browser-side notice (`lib/hq-failure.ts`) and
+the `postAudioForHqTranscription` hook were dropped in the merge in favour of
+main's. The server half stays: `/api/chat/transcribe-audio` still carries
+`permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
+
 Every track is built and verified. Ships as one piece on `/finish`.
 
 ## Rollout shape

@@ -4,7 +4,7 @@
  * off to FileView inside a Card shell.
  */
 
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { href, toSearch } from "../../lib/routing";
 import { useUrlView } from "../../hooks/useUrlView";
@@ -22,11 +22,19 @@ export function CardViewPage() {
   const { boxSlug, _splat: cardPath } = useParams({ strict: false });
   const handleNavigate = useViewNavigate();
   const navigate = useNavigate();
+  const location = useLocation();
   // The URL's query is the renderer's, exactly as it is in browse: `?view=`
   // picks the renderer and everything else is forwarded to it. Without this,
   // `/card/...?page=2` — a link the page strip and the box agent both hand out
   // — silently did nothing here while working in `/browse/...`.
   const { viewer, params, viewState } = useUrlView();
+  const followMovedCard = useCallback((path: string) => {
+    void navigate({
+      to: href(`/${boxSlug}/card/${path}`),
+      search: toSearch(location.search),
+      replace: true,
+    });
+  }, [boxSlug, location.search, navigate]);
   const selectRenderer = (name: string | null) => {
     // Looking at the same card a different way is not a new place: replace, so
     // back leaves the card rather than undoing a toggle (as browse does).
@@ -93,6 +101,7 @@ export function CardViewPage() {
           onViewStateChange={updateViewState}
           onSelectRenderer={selectRenderer}
           onNavigate={handleNavigate}
+          onMoved={followMovedCard}
           onClose={() =>
             void navigate({ to: href(`/${boxSlug}/dashboard`), replace: true })
           }

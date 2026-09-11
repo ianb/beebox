@@ -16,24 +16,21 @@ import { apiRawFileUrl, getApiBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { useDeferredResync } from "../hooks/useDeferredResync";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
-import { boxRelativePath } from "@shared/box-path";
 import { RequestError } from "../lib/errors";
-import { resolveLoadState, isTransientQueryError, type LoadFailure } from "../lib/file-load-state";
+import { resolveLoadState, type LoadFailure } from "../lib/file-load-state";
+import { fetchFromBox, MAX_RETRIES, retryDelayMs, unreachableCause } from "../lib/trpc/transient";
 import { busEventData } from "../lib/bus-events";
 import type { FileData } from "../renderers";
-
-/**
- * How many times a transient failure is retried before the view settles into
- * its stale state. Three attempts with react-query's default backoff cover
- * roughly the first seven seconds of an outage; past that the person is told,
- * and nothing retries on a timer (`feedback: nothing retries forever`).
- */
-const MAX_LOAD_RETRIES = 3;
+import { cardLoadRecovery, fileChangeAffectsPath, type CardLoadRecovery } from "../lib/moved-card-recovery";
 
 /* ---------- path classification ---------- */
 
 export function isCardPath(path: string): boolean {
   return path.endsWith(".card");
+}
+
+export function isMarkdownPath(path: string): boolean {
+  return path.endsWith(".md");
 }
 
 function isDirectoryPath(path: string): boolean {
@@ -75,11 +72,13 @@ export interface LoadResult {
   error: LoadFailure | null;
   /** Set when `data` is a previous load and the newest refresh failed. */
   stale: LoadFailure | null;
+  recovery: CardLoadRecovery | null;
   /** Refetch now: what the stale marker's Refresh action calls. */
   refresh: () => void;
 }
 
-export function useFileData(path: string): LoadResult {
+export function useFileData(path: string, options?: { recoverMoved?: boolean }): LoadResult {
+  const recoverMoved = options?.recoverMoved === true;
   const isCard = isCardPath(path);
   const isDir = isDirectoryPath(path);
   const isBinary = isBinaryPath(path);
@@ -89,30 +88,27 @@ export function useFileData(path: string): LoadResult {
   const fetchText = !isCard && !isDir && !isBinary && !isJson;
   const apiBase = getApiBase();
 
-  // Card data via tRPC. `retry` is set here rather than on the QueryClient
-  // (`lib/trpc/provider.tsx` defaults every query to `retry: false`) because a
-  // file view is the one surface where a brief outage should heal itself: the
-  // box restarts, three backoff attempts cover the window, and the person keeps
-  // reading. A terminal answer — a missing card, a rejected request — is not
-  // retried, so the correct state is not delayed by several seconds.
-  const cardQuery = trpc.card.get.useQuery(
-    { path },
-    { enabled: isCard, retry: (count, error) => count < MAX_LOAD_RETRIES && isTransientQueryError(error) },
-  );
+  // Card data via tRPC. A restarting box is retried by the tRPC link itself
+  // (`lib/trpc/transient.ts`), so this query needs no retry of its own.
+  const cardInput = recoverMoved ? { path, recoverMoved: true } : { path };
+  const cardQuery = trpc.card.get.useQuery(cardInput, { enabled: isCard });
 
-  // Text content via /api/files/* (managed by React Query)
+  // Text content via /api/files/* (managed by React Query). This fetch is not
+  // tRPC, so the link's retry does not reach it; it classifies the same way and
+  // retries on the same schedule here instead. React Query's count is 0-based.
   const textQuery = useQuery({
     queryKey: ["file-text", path],
     enabled: fetchText,
     queryFn: async ({ signal }) => {
-      const resp = await fetch(apiRawFileUrl(apiBase, path), { signal });
+      const resp = await fetchFromBox(apiRawFileUrl(apiBase, path), { signal });
       if (!resp.ok) {
         const message = `Failed to load: ${resp.status} ${resp.statusText}`;
         throw new RequestError(message);
       }
       return resp.text();
     },
-    retry: (count, error) => count < MAX_LOAD_RETRIES && isTransientQueryError(error),
+    retry: (count, error) => count < MAX_RETRIES && unreachableCause(error) !== null,
+    retryDelay: (count) => retryDelayMs(count + 1),
   });
 
   // Live reload via the box event stream. Resync this file's data on a matching
@@ -152,7 +148,7 @@ export function useFileData(path: string): LoadResult {
       if (!fileChange) return;
       // Tolerant compare: normalize both sides so a stray leading slash on this
       // view's path can't silently drop the event (the original refresh bug).
-      if (boxRelativePath(fileChange.path) !== boxRelativePath(path)) return;
+      if (!fileChangeAffectsPath(fileChange, path)) return;
       resync();
     }, [path, resync]),
     onConnect: useCallback(() => {
@@ -166,12 +162,13 @@ export function useFileData(path: string): LoadResult {
 
   const cardState = resolveLoadState(cardQuery);
   const textState = resolveLoadState(textQuery);
+  const recovery = cardLoadRecovery(cardQuery.error);
 
   return useMemo<LoadResult>(() => {
     if (isCard) {
       const card = cardState.value;
       if (card === null) {
-        return { data: null, loading: cardState.loading, error: cardState.error, stale: null, refresh };
+        return { data: null, loading: cardState.loading, error: cardState.error, stale: null, recovery, refresh };
       }
       return {
         data: {
@@ -184,18 +181,19 @@ export function useFileData(path: string): LoadResult {
         loading: false,
         error: null,
         stale: cardState.stale,
+        recovery,
         refresh,
       };
     }
     if (isDir || isBinary || isJson) {
-      return { data: { path }, loading: false, error: null, stale: null, refresh };
+      return { data: { path }, loading: false, error: null, stale: null, recovery: null, refresh };
     }
     // fetchText. A query with neither value nor failure has not answered yet —
     // the enabled-but-unstarted state the previous code also read as loading.
     if (textState.value === null) {
       const loading = textState.error === null;
-      return { data: null, loading, error: textState.error, stale: null, refresh };
+      return { data: null, loading, error: textState.error, stale: null, recovery: null, refresh };
     }
-    return { data: { path, content: textState.value }, loading: false, error: null, stale: textState.stale, refresh };
-  }, [isCard, isDir, isBinary, isJson, path, cardState, textState, refresh]);
+    return { data: { path, content: textState.value }, loading: false, error: null, stale: textState.stale, recovery: null, refresh };
+  }, [isCard, isDir, isBinary, isJson, path, cardState, textState, recovery, refresh]);
 }

@@ -12,8 +12,6 @@ import type { AttentionSnapshot } from "@shared/chat-composer-binding.js";
  *   the live per-box `ChatSessionRegistry`, and its result is delivered out
  *   of band over the `events.turnStream` tRPC *subscription*, not the HTTP
  *   response — a request/response procedure can't model that split.
- * - `postAudioForHqTranscription` — POST /api/chat/transcribe-audio,
- *   multipart audio upload. tRPC doesn't carry `multipart/form-data` bodies.
  *
  * Already-tRPC, kept as thin wrappers (NOT REST — no fetch(), no HTTP route):
  * `getChatStatus`, `setChatModel`, `getChatFeatures`,
@@ -36,7 +34,6 @@ import type { TranscriptState } from "@core/chat/session/availability.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
 import { currentChatChannel } from "./lib/chat-channel";
 import { parseChatAgentEngine, type ChatAgentEngine } from "@shared/chat-models.js";
-import { hqSucceeded, publishHqFailure } from "./lib/hq-failure";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -143,73 +140,6 @@ export async function getNewChatFeatures(params: { contextDir: string | null }):
 
 export async function setChatFeature(params: { sessionId: string; feature: string; value: string }): Promise<{ ok: boolean; features: Record<string, string> }> {
   return trpcClient.chat.setFeature.mutate({ session: params.sessionId, feature: params.feature, value: params.value });
-}
-
-/**
- * Send a recorded audio blob to the HQ transcription pass used by narration
- * mode. Returns the transcribed text, or null on failure — the caller falls
- * back to the realtime transcript in that case.
- */
-export interface HqTranscriptionResult {
-  text: string;
-  /** True when the recording was diarized and speaker labels were applied. */
-  diarized: boolean;
-  /** Server-resolved backend that produced the transcript. */
-  service?: string;
-}
-
-/**
- * `transcribe-audio`'s failure body ({@link postAudioForHqTranscription})
- * parsed just enough to tell a permanent failure from a transient one — never
- * thrown, since an unparseable body is itself a transient-failure signal
- * (stays a console warning, per the plan).
- */
-function surfacePermanentHqFailure(bodyText: string): void {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(bodyText);
-  } catch (_e) {
-    return;
-  }
-  if (parsed === null || typeof parsed !== "object") return;
-  if (!("permanent" in parsed) || parsed.permanent !== true) return;
-  if (!("error" in parsed) || typeof parsed.error !== "string") return;
-  const code = "code" in parsed && typeof parsed.code === "string" ? parsed.code : "unknown";
-  publishHqFailure({ code, message: parsed.error });
-}
-
-export async function postAudioForHqTranscription(blob: Blob, params: { sessionId: string | null }): Promise<HqTranscriptionResult | null> {
-  const form = new FormData();
-  const ext = blob.type.includes("wav") ? "wav" : "webm";
-  form.append("file", blob, `segment.${ext}`);
-  if (params.sessionId !== null) form.append("session", params.sessionId);
-  try {
-    const res = await fetch(`${getApiBase()}/chat/transcribe-audio`, {
-      method: "POST",
-      headers: mobileAuthHeaders(),
-      body: form,
-    });
-    if (!res.ok) {
-      const bodyText = await res.text();
-      console.warn(`[hq-transcribe] HTTP ${res.status}: ${bodyText}`);
-      surfacePermanentHqFailure(bodyText);
-      return null;
-    }
-    const body: unknown = await res.json();
-    if (body === null || typeof body !== "object" || !("text" in body) || typeof body.text !== "string") {
-      console.warn(`[hq-transcribe] response missing text field: ${JSON.stringify(body)}`);
-      return null;
-    }
-    const diarized = "diarized" in body && body.diarized === true;
-    const service = "service" in body && typeof body.service === "string" && /^[\da-z-]+$/.test(body.service)
-      ? body.service
-      : undefined;
-    hqSucceeded();
-    return { text: body.text, diarized, ...(service ? { service } : {}) };
-  } catch (e) {
-    console.warn(`[hq-transcribe] request failed: ${e instanceof Error ? e.message : String(e)}`);
-    return null;
-  }
 }
 
 /**

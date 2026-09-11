@@ -65,6 +65,19 @@ JSON.stringify(adaptCodexThreadHistory(response, { mode: "page", offset: 1, limi
 => ["command-1","file-1"]
 ```
 
+A tail slice returns the newest entries, a page from offset 0 the oldest. The
+at-most-once delivery probe (`userMessageAlreadyLanded`) looks for a message
+sent just before a crash, so it reads the tail: on a thread longer than its
+cap, a page from 0 would never reach that message.
+
+```ts
+JSON.stringify(adaptCodexThreadHistory(response, { mode: "tail", tail: 2 }).entries.map((entry) => entry.uuid))
+=> ["compact-1","agent-2"]
+
+JSON.stringify(adaptCodexThreadHistory(response, { mode: "page", offset: 0, limit: 2 }).entries.map((entry) => entry.uuid))
+=> ["user-1","command-1"]
+```
+
 The same provider adapter feeds live chat. It gives every supported Codex
 activity a stable tool name and keeps large file diffs and search results out of
 the UI payload:

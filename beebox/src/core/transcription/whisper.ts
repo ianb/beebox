@@ -20,6 +20,7 @@ import type {
   TranscriptionError,
   TranscriptionResult,
 } from "./index.js";
+import { truncateUpstreamBody } from "./index.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -47,6 +48,8 @@ class WhisperNetworkError extends Error implements TranscriptionError {
 class WhisperApiError extends Error implements TranscriptionError {
   readonly permanent: boolean;
   readonly code: string;
+  readonly status: number;
+  readonly body: string;
   constructor(
     { status, statusText, details }: { status: number; statusText: string; details: string },
     meta: { permanent: boolean; code: string },
@@ -55,6 +58,8 @@ class WhisperApiError extends Error implements TranscriptionError {
     this.name = "WhisperApiError";
     this.permanent = meta.permanent;
     this.code = meta.code;
+    this.status = status;
+    this.body = truncateUpstreamBody(details);
   }
 }
 

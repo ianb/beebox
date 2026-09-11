@@ -175,6 +175,16 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type HubEnv = z.infer<typeof hubEnvSchema>;
 export type CliEnv = z.infer<typeof cliEnvSchema>;
 
+/** Copy the safe ambient process settings a local Git child relies on. */
+export function childProcessEnv(overrides: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const inherited: NodeJS.ProcessEnv = {};
+  for (const name of ["HOME", "PATH", "XDG_CONFIG_HOME", "LANG", "LC_ALL", "TMPDIR", "TMP", "TEMP"]) {
+    const value = process.env[name];
+    if (value !== undefined) inherited[name] = value;
+  }
+  return { ...inherited, ...overrides };
+}
+
 /**
  * The raw value a failing var held, redacted if the var is a secret. Used
  * only to build the error message — never returned to a caller.

@@ -127,7 +127,8 @@ export async function captureMessageAlreadyLanded(opts: {
   sessionId: string | null;
   docPath: string;
 }): Promise<boolean> {
-  return userMessageAlreadyLanded({ ...opts, logPrefix: "capture" });
+  const { boxRoot, sessionId, docPath } = opts;
+  return userMessageAlreadyLanded({ boxRoot, sessionId, marker: docPath, logPrefix: "capture" });
 }
 
 export interface DeliverCaptureResult {

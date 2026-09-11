@@ -8,7 +8,7 @@ import { isRecord } from "../lib/is-record.js";
 import { isInBoxNamespace } from "../lib/box-namespace.js";
 import { resolveBoxNamespacePathOnDisk, verifyBoxNamespaceOnDisk } from "../lib/box-namespace-resolve.js";
 
-export const BOX_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".svg"]);
+const BOX_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".svg"]);
 
 export class BoxImageError extends Error {
   readonly statusCode: number;

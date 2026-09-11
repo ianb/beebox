@@ -315,7 +315,8 @@ and excluded from accessibility; retain their local state and scroll. A single
 transcript root similarly changes placement/width; its scroll anchor follows
 existing chat-scroll rules. Do not mount a transcript per pane or a composer per
 surface. Apply material geometry per visible pane so tab grain still joins the
-correct sheet. Raw files use the same pane routing without gaining paper styling.
+correct sheet. Markdown documents use the themed document surface; other raw
+files use the same pane routing without gaining paper styling.
 
 Pane controls are native buttons outside tablists. Arrow/tab keyboard behavior
 stays in the tabstrip primitive. After move focus follows the active tab; after

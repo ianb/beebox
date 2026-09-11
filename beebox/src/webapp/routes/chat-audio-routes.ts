@@ -36,7 +36,7 @@ import { loadTtsConfig } from "../../core/tts/config.js";
 import { EmptyTtsResponseError, type TtsService } from "../../services/tts.js";
 import { DEFAULT_VOICE, type TtsBackend } from "../../shared/tts-backends.js";
 import type { ChatRoutesContext } from "./chat-context.js";
-import { readSessionLogTail } from "./chat-helpers.js";
+import { readSessionLogTail } from "../../core/chat/session/session-log-tail.js";
 
 /** Voice model names as a string set, for validating an untrusted `voice` param. */
 const VOICE_MODEL_SET = new Set<string>(VOICE_MODELS);

@@ -13,6 +13,7 @@ import path from "node:path";
 
 export const PAGE_SUFFIX = ".site-page.card";
 export const ASIDE_SUFFIX = ".site-aside.card";
+export const DOC_SUFFIX = ".doc.card";
 
 /** A card file that failed the directory's fail-closed enumeration rules. */
 export class CardError extends Error {
@@ -53,19 +54,23 @@ function cardFile(params: { dir: string; name: string; suffix: string; siteDir: 
  */
 export async function listCardFiles(params: { cardsDir: string; siteDir: string }): Promise<CardFiles> {
   const { cardsDir, siteDir } = params;
-  const entries = await fs.readdir(cardsDir, { withFileTypes: true });
+  const entries = await fs.readdir(cardsDir, { recursive: true, withFileTypes: true });
   const out: CardFiles = { pages: [], asides: [] };
   for (const entry of entries.toSorted((a, b) => a.name.localeCompare(b.name))) {
     if (entry.name.startsWith(".")) continue;
-    const rel = `cards/${entry.name}`;
-    if (!entry.isFile()) throw new CardError(`${rel} is not a file — cards/ holds card files only`);
-    if (entry.name.endsWith(PAGE_SUFFIX)) {
-      out.pages.push(cardFile({ dir: cardsDir, name: entry.name, suffix: PAGE_SUFFIX, siteDir }));
+    const name = path.relative(cardsDir, path.join(entry.parentPath, entry.name)).split(path.sep).join("/");
+    if (name.split("/").some((part) => part.startsWith("."))) continue;
+    const rel = `cards/${name}`;
+    if (entry.isDirectory() && entry.name.endsWith(".attach")) continue;
+    if (!entry.isFile()) throw new CardError(`${rel} is not a card or an attachment directory`);
+    if (entry.name.endsWith(PAGE_SUFFIX) || entry.name.endsWith(DOC_SUFFIX)) {
+      const suffix = entry.name.endsWith(DOC_SUFFIX) ? DOC_SUFFIX : PAGE_SUFFIX;
+      out.pages.push(cardFile({ dir: cardsDir, name, suffix, siteDir }));
     } else if (entry.name.endsWith(ASIDE_SUFFIX)) {
-      out.asides.push(cardFile({ dir: cardsDir, name: entry.name, suffix: ASIDE_SUFFIX, siteDir }));
+      out.asides.push(cardFile({ dir: cardsDir, name, suffix: ASIDE_SUFFIX, siteDir }));
     } else {
       throw new CardError(
-        `${rel} is not a card type the site builds (expected *${PAGE_SUFFIX} or *${ASIDE_SUFFIX})`,
+        `${rel} is not a card type the site builds (expected *${PAGE_SUFFIX}, *${DOC_SUFFIX} or *${ASIDE_SUFFIX})`,
       );
     }
   }

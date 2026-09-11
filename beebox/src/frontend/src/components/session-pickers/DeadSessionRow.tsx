@@ -16,7 +16,7 @@ import type { RouterOutput } from "../../lib/trpc";
 /** A dead chat as `chat.byLandmark` reports it under a landmark. */
 export type DeadSessionRowItem = RouterOutput["chat"]["byLandmark"]["landmarks"][number]["dead"][number];
 
-export function DeadSessionRow({ session, boxSlug }: { session: DeadSessionRowItem; boxSlug: string }) {
+function DeadSessionRow({ session, boxSlug }: { session: DeadSessionRowItem; boxSlug: string }) {
   return (
     <Link
       to={href(`/${boxSlug}/browse/${session.huskPath}`)}

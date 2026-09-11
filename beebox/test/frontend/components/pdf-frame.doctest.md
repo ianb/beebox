@@ -15,6 +15,9 @@ show them.
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PdfFrame } from "../../../src/frontend/src/components/PdfFrame.js";
+import "../../../src/frontend/src/renderers/pdf.js";
+import "../../../src/frontend/src/renderers/binary.js";
+import { isWorkspacePdf } from "../../../src/frontend/src/components/chat/workspace/pdf-pane-view.js";
 
 globalThis.React = React;
 
@@ -83,4 +86,40 @@ An omitted `mode` behaves like `page`, the surface a bare PDF path lands on:
 ```ts
 render(base) === render({ ...base, mode: "page" })
 => true
+```
+
+## Workspace supplies the file actions
+
+The tab already names the file and its menu supplies Open/Download. The frame
+uses the pane's available height without adding another toolbar or a viewport
+height floor. Unsupported viewers still receive the fallback links.
+
+```ts
+const pane = render({ ...base, mode: "companion", workspacePdf: true });
+const beforeObject = pane.split("<object")[0];
+beforeObject.includes("Handbook")
+=> false
+
+pane.split('download="source.pdf"').length - 1
+=> 1
+
+pane.includes("min-h-[70vh]")
+=> false
+
+pane.includes("w-full h-full flex-1 min-h-0")
+=> true
+
+pane.includes("This PDF can’t be displayed here.") && pane.includes('aria-label="Open source.pdf in a new tab"')
+=> true
+```
+
+Old view names fall back to the preferred renderer, just as in FileView. An
+explicit Download view retains its selector so the PDF remains reachable.
+
+```ts
+JSON.stringify([null, "PDF", "pdf", "retired-view", "Download"].map((viewer) => isWorkspacePdf("_content/guide.pdf", viewer)))
+=> [true,true,true,true,false]
+
+isWorkspacePdf("_content/guide.pdf.card", null)
+=> false
 ```

@@ -58,12 +58,16 @@ const config: KnipConfig = {
         "@googleworkspace/cli",
         "@parcel/markdown-ansi",
         "ansi-to-html",
+        // lib/twemoji.ts does require_.resolve("@twemoji/svg/package.json")
+        // to find the asset directory; there is no import of the package.
+        "@twemoji/svg",
         // Its config block lives in beebox/package.json, but the runner
         // is the monorepo-root .husky/pre-commit — knip sees neither end.
         "lint-staged",
         // Frontend deps, reached from test/frontend/*.doctest.md.
         "xstate",
         "@ianbicking/canvas-loop",
+        "@tanstack/react-query",
       ],
       // Two doctests dynamic-import a module from inside a template literal
       // that a spawned subprocess evaluates, so the specifier is relative to
@@ -120,6 +124,13 @@ const config: KnipConfig = {
     "bbx",
     // A tracked executable in this repo, run by the root `dev` script.
     "bin/workstreams",
+    // beebox package scripts, invoked across the workspace boundary:
+    // bin/deferred-issues.ts and bin/lib/manual-testing.sh run
+    // `pnpm --dir beebox doc-check`, and the root postinstall runs
+    // `pnpm --dir beebox exec tap build`. Knip reads the command word as a
+    // binary this workspace must declare; the declaring package is beebox.
+    "doc-check",
+    "tap",
     // `pnpm --dir site build` and a GitHub Actions job named `build`; neither
     // is a binary, knip's script and workflow parsers just read them as one.
     "build",

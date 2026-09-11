@@ -88,3 +88,13 @@ So all three of these get fixed:
 3. **Refuse to save an unusable setting**, or save it with a warning the
    boxholder has to acknowledge. A config naming a service the box cannot reach
    should never be written quietly.
+
+## Partial fix (2026-09-10, `hq-recording-resilience`)
+
+Item 1 only. A permanent HQ failure now surfaces visibly: the voice chip shows
+a failure notice, and a chat voice send that falls back to realtime text is
+stamped `hq="failed"` rather than looking indistinguishable from a normal HQ
+send (`beebox/src/frontend/src/lib/audio/hq-failure-notices.ts`,
+`beebox/src/frontend/src/input/emission.ts`). Items 2 and 3 — disabling an
+unusable service in the picker, and refusing to save one — are untouched.
+Left open for them.

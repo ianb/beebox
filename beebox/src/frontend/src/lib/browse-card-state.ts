@@ -11,6 +11,7 @@ export interface BrowseState {
 }
 export type BrowseStateResult = { ok: true; state: BrowseState } | { ok: false; error: string };
 export type BrowsePathKind = "directory" | "file" | "missing";
+export type BrowseMissingKind = Exclude<BrowsePathKind, "missing">;
 
 export class BrowseLocationError extends Error {
   constructor(path: string, missing: boolean) {
@@ -73,10 +74,16 @@ export function normalizeBrowseTarget(target: ViewTarget): ViewTarget {
 }
 
 /** Legacy path classification uses filesystem results, including extensionless files and .attach directories. */
-export async function legacyBrowseTarget(target: ViewTarget, lookupKind: (path: string) => Promise<BrowsePathKind>): Promise<ViewTarget> {
+export async function legacyBrowseTarget(target: ViewTarget, {
+  lookupKind,
+  missingKind,
+}: {
+  lookupKind: (path: string) => Promise<BrowsePathKind>;
+  missingKind: BrowseMissingKind;
+}): Promise<ViewTarget> {
   const path = canonicalPath(target.path);
   if (path === null) throw new BrowseLocationError(target.path, false);
   const kind = path === "" ? "directory" : await lookupKind(path);
-  if (kind === "missing") throw new BrowseLocationError(path, true);
+  if (kind === "missing" && missingKind === "directory") throw new BrowseLocationError(path, true);
   return browseCardTarget(kind === "directory" ? { directory: path } : { directory: browseParent(path), detail: { ...target, path } });
 }

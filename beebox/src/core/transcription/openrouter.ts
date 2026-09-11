@@ -29,9 +29,20 @@
  * a quality regression nobody would see, so the batch path stays direct and
  * this one warns if a prompt ever reaches it.
  *
- * **The request is JSON, not multipart.** Both forms exist upstream, and the
- * multipart one caps at 25 MB where the JSON one does not — a recording long
- * enough to hit that is the ordinary case here, so JSON it is.
+ * **The request is JSON, not multipart — but JSON is not size-unbounded.**
+ * Measured 2026-09-10 against this same route: two synthetic two-voice WAVs
+ * sent as JSON were rejected with 400 in 3–4 s, before any transcription —
+ * 19.2 MB WAV (~25.6 MB as base64 JSON) and 21.1 MB WAV (~28.2 MB JSON). A
+ * ~6-minute recording (~15 MB JSON) succeeds. So the JSON path has a size
+ * ceiling somewhere between those, not "no cap" — the earlier claim that only
+ * the documented 25 MB multipart cap applied was wrong (the incident this
+ * measurement traces to: `docs/plans/resilient-voice-recording.md`, "The
+ * incident this plan answers"). The HQ job (`core/voice-recording/hq-job.ts`)
+ * keeps every piece it sends at or under `HQ_PIECE_SECONDS` (300 s, ~9.6 MB
+ * WAV / ~12.8 MB JSON) specifically to stay under this ceiling. Multipart
+ * would allow a longer piece under its documented 25 MB cap, but that's
+ * unmeasured here (including whether the Azure diarization passthrough
+ * survives a multipart body) — NOT in scope.
  *
  * **The provider is not pinned, and does not need to be.** Unlike embeddings
  * and chat, OpenRouter's transcription request takes no `only`/`data_collection`
@@ -41,10 +52,12 @@
  * second provider ever appears for one of them, that assumption is what breaks.
  */
 
-import ky from "ky";
+import ky, { isHTTPError, type HTTPError } from "ky";
 import { isRecord } from "../../lib/is-record.js";
+import { errorMessage } from "../../lib/error-guards.js";
 import { OPENROUTER_BASE_URL } from "../openrouter.js";
 import { buildDiarizedText, joinSegmentTexts, repairMissingSentenceSpaces } from "./voxtral-text.js";
+import { truncateUpstreamBody } from "./index.js";
 import type {
   DetailedTranscriptionResult,
   TranscribeAudioParams,
@@ -67,6 +80,64 @@ class OpenRouterTranscriptionShapeError extends Error implements TranscriptionEr
     super(`OpenRouter transcription response is unusable: expected ${missing}`);
     this.name = "OpenRouterTranscriptionShapeError";
   }
+}
+
+/**
+ * OpenRouter rejected the request with an HTTP error. Carries `status` and a
+ * truncated `body` so the HQ job's `classifyHqError`
+ * (`core/voice-recording/classify.ts`) can tell a size-rejection 400 apart
+ * from a rate limit, and a permanent 4xx apart from a transient 5xx, without
+ * re-reading the (already-consumed) response stream. `cause` keeps the
+ * original `HTTPError` reachable for anyone inspecting the stack.
+ */
+class OpenRouterApiError extends Error implements TranscriptionError {
+  readonly permanent: boolean;
+  readonly code: string;
+  readonly status: number;
+  readonly body: string;
+  constructor(
+    { status, statusText, details }: { status: number; statusText: string; details: string },
+    { permanent, code, cause }: { permanent: boolean; code: string; cause: unknown },
+  ) {
+    super(`OpenRouter transcription error: ${status} ${statusText} - ${details}`, { cause });
+    this.name = "OpenRouterApiError";
+    this.permanent = permanent;
+    this.code = code;
+    this.status = status;
+    this.body = truncateUpstreamBody(details);
+  }
+}
+
+/** Network error/timeout that never reached a response — always worth retrying. */
+class OpenRouterNetworkError extends Error implements TranscriptionError {
+  readonly permanent = false;
+  readonly code = "network_error";
+  constructor(cause: string) {
+    super(`Network error: ${cause}`);
+    this.name = "OpenRouterNetworkError";
+  }
+}
+
+/** 4xx (except 429) is permanent; 5xx and 429 are worth retrying. Mirrors whisper.ts/voxtral-errors.ts. */
+function isPermanentOpenRouterError(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 429;
+}
+
+async function parseOpenRouterErrorResponse(error: HTTPError): Promise<OpenRouterApiError> {
+  const { response } = error;
+  let details: string;
+  try {
+    const raw: unknown = await response.json();
+    details = JSON.stringify(raw);
+  } catch (e) {
+    console.warn("[transcription/openrouter] error response was not JSON, falling back to text body:", e);
+    details = await response.text();
+  }
+  const permanent = isPermanentOpenRouterError(response.status);
+  return new OpenRouterApiError(
+    { status: response.status, statusText: response.statusText, details },
+    { permanent, code: `http_${response.status}`, cause: error },
+  );
 }
 
 /** What one HQ service needs from OpenRouter's transcription endpoint. */
@@ -137,23 +208,29 @@ export async function transcribeAudioOpenRouter(
   }
 
 
-  const body = await ky
-    .post("audio/transcriptions", {
-      prefixUrl: OPENROUTER_BASE_URL,
-      headers: { Authorization: `Bearer ${apiKey}` },
-      retry: 2,
-      timeout: 120_000,
-      json: {
-        model,
-        input_audio: { data: params.audioBuffer.toString("base64"), format: audioFormatToken(params.filename) },
-        response_format: verbose ? "verbose_json" : "json",
-        // MAI returns segments — and so speaker labels — only when word
-        // granularity is asked for, so diarization implies it.
-        ...(verbose && (wordTimestamps || diarization) && { timestamp_granularities: ["word"] }),
-        ...(diarize !== undefined && { provider: { options: diarize } }),
-      },
-    })
-    .json<unknown>();
+  let body: unknown;
+  try {
+    body = await ky
+      .post("audio/transcriptions", {
+        prefixUrl: OPENROUTER_BASE_URL,
+        headers: { Authorization: `Bearer ${apiKey}` },
+        retry: 2,
+        timeout: 120_000,
+        json: {
+          model,
+          input_audio: { data: params.audioBuffer.toString("base64"), format: audioFormatToken(params.filename) },
+          response_format: verbose ? "verbose_json" : "json",
+          // MAI returns segments — and so speaker labels — only when word
+          // granularity is asked for, so diarization implies it.
+          ...(verbose && (wordTimestamps || diarization) && { timestamp_granularities: ["word"] }),
+          ...(diarize !== undefined && { provider: { options: diarize } }),
+        },
+      })
+      .json<unknown>();
+  } catch (error) {
+    if (isHTTPError(error)) throw await parseOpenRouterErrorResponse(error);
+    throw new OpenRouterNetworkError(errorMessage(error));
+  }
 
   const result = shapeOpenRouterResult(body, { diarization, wordTimestamps });
   // A provider-option passthrough the provider ignores fails silently by

@@ -42,7 +42,7 @@ export type LandmarkOrderType = z.infer<typeof LandmarkOrder>;
  * image (`{ src }`, a box path with a leading `/`; a path relative to the
  * landmark's directory still resolves).
  */
-export const LandmarkSymbol = z.union([z.string(), z.object({ src: z.string() })]);
+const LandmarkSymbol = z.union([z.string(), z.object({ src: z.string() })]);
 export type LandmarkSymbolData = z.infer<typeof LandmarkSymbol>;
 
 /**

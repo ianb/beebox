@@ -6,6 +6,7 @@ import {
   addPhoto,
   readStagingSession,
   resolveStagedFile,
+  type StagingSession,
 } from "../../core/capture/staging-store.js";
 import {
   StagingPathError,
@@ -34,6 +35,45 @@ async function readUploadBuffer(request: FastifyRequest): Promise<Buffer | null>
     if (file) return file.toBuffer();
   }
   return request.body instanceof Buffer ? request.body : null;
+}
+
+/** Either the stage succeeded, or the route should answer with this status/error. */
+type StageAudioResult = { ok: true } | { ok: false; status: number; error: string };
+
+/**
+ * The `audio` upload-kind branch, split out to keep `handleCaptureUpload`'s
+ * complexity in budget. `pcm-s16le-16k` is the voice-recording format
+ * (`docs/plans/resilient-voice-recording.md`) — a capture session staging it
+ * would hand a capture card's write path raw PCM it never learned to
+ * concatenate/convert, so it is refused on any session that isn't `voice`.
+ */
+async function stageAudioUpload(opts: {
+  boxRoot: string;
+  session: StagingSession;
+  segmentId: string | undefined;
+  audioFormatHeader: string | undefined;
+  segmentStartedAtHeader: string | undefined;
+  startedAt: string;
+  filename: string;
+  buffer: Buffer;
+}): Promise<StageAudioResult> {
+  const { boxRoot, session, segmentId, audioFormatHeader, segmentStartedAtHeader, startedAt, filename, buffer } = opts;
+  if (!segmentId) return { ok: false, status: 400, error: "X-Capture-Segment-Id required for audio" };
+  const formatResult = CaptureAudioFormatSchema.safeParse(audioFormatHeader ?? "webm-opus");
+  if (!formatResult.success) return { ok: false, status: 400, error: "Unsupported X-Capture-Audio-Format" };
+  if (formatResult.data === "pcm-s16le-16k" && session.kind !== "voice") {
+    return { ok: false, status: 400, error: "pcm-s16le-16k audio is only accepted for voice sessions" };
+  }
+  await addAudioChunk({
+    boxRoot,
+    id: session.id,
+    segmentId,
+    segmentStartedAt: segmentStartedAtHeader ?? startedAt,
+    filename,
+    buffer,
+    audioFormat: formatResult.data,
+  });
+  return { ok: true };
 }
 
 export async function handleCaptureUpload(opts: {
@@ -83,25 +123,17 @@ export async function handleCaptureUpload(opts: {
 
   try {
     if (kind === "audio") {
-      const segmentId = header("x-capture-segment-id");
-      if (!segmentId) {
-        return reply.status(400).send({ error: "X-Capture-Segment-Id required for audio" });
-      }
-      const formatResult = CaptureAudioFormatSchema.safeParse(
-        header("x-capture-audio-format") ?? "webm-opus",
-      );
-      if (!formatResult.success) {
-        return reply.status(400).send({ error: "Unsupported X-Capture-Audio-Format" });
-      }
-      await addAudioChunk({
+      const result = await stageAudioUpload({
         boxRoot,
-        id: session.id,
-        segmentId,
-        segmentStartedAt: header("x-capture-segment-started-at") ?? startedAt,
+        session,
+        segmentId: header("x-capture-segment-id"),
+        audioFormatHeader: header("x-capture-audio-format"),
+        segmentStartedAtHeader: header("x-capture-segment-started-at"),
+        startedAt,
         filename,
         buffer,
-        audioFormat: formatResult.data,
       });
+      if (!result.ok) return reply.status(result.status).send({ error: result.error });
     } else if (kind === "photo") {
       await addPhoto({
         boxRoot,

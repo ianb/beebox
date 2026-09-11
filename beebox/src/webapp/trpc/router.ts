@@ -30,6 +30,7 @@ import { shareRouter } from "./routers/share.js";
 import { inventoryRouter } from "./routers/inventory.js";
 import { secretsRouter } from "./routers/secrets.js";
 import { presentationRouter } from "./routers/presentation.js";
+import { voiceRecordingRouter } from "./routers/voice-recording.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -63,6 +64,7 @@ export const appRouter = router({
   inventory: inventoryRouter,
   secrets: secretsRouter,
   presentation: presentationRouter,
+  voiceRecording: voiceRecordingRouter,
 });
 
 export type AppRouter = typeof appRouter;

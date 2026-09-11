@@ -69,9 +69,14 @@ export function resolveInternalHref(params: { href: string; pageSitePath: string
     ? path.posix.normalize(rawPath.slice(1))
     : path.posix.normalize(path.posix.join(pageDir === "." ? "" : pageDir, rawPath));
 
-  const target = resolvedFromRoot.endsWith(".md")
-    ? `${resolvedFromRoot.slice(0, -".md".length)}.html`
-    : resolvedFromRoot;
-
-  return { target, href: `${base}${target}${anchor}` };
+  if (resolvedFromRoot === ".." || resolvedFromRoot.startsWith("../")) {
+    throw new BasePathError(`link escapes the site root: ${href}`);
+  }
+  let target = resolvedFromRoot;
+  if (target.endsWith(".site-page.card")) target = `${target.slice(0, -".site-page.card".length)}.html`;
+  else if (target.endsWith(".md")) target = `${target.slice(0, -3)}.html`;
+  else if (target.endsWith(".doc.card")) target += "/index.html";
+  else if (target.endsWith("/")) target += "index.html";
+  const publicPath = target.endsWith(".doc.card/index.html") ? target.slice(0, -10) : target;
+  return { target, href: `${base}${publicPath}${anchor}` };
 }

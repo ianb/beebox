@@ -6,8 +6,8 @@ issues: []
 ---
 # Public site — orientation & re-entry map
 
-*(This deploys to GitHub Pages, but that's just the target. The thing is
-the project's public site.)*
+*(The static deployment target is Cloudflare Pages. The thing is the
+project's public site.)*
 
 **Read this first when picking the work back up.** A snapshot of where the
 effort is and the open fork, so a fresh session (and the boxholder) can
@@ -17,7 +17,7 @@ re-enter without replaying the whole history. Links the two design docs:
 
 ## What this is
 
-A public site for beebox on GitHub Pages. Settled principles
+A public site for Bee Box on Cloudflare Pages. Settled principles
 (in [the issue](../../../issues/features/2026-07-20-public-site.md)):
 spare, not slick — "cool in a different way," discovered by iterating, not a
 hero page; **the boxholder's own words carry the human-facing prose** (AI
@@ -26,12 +26,28 @@ structure ok, AI words not); a visibly separate machine layer for agents
 repo content**; telescopic/"fisheye" (expand-in-place) presentation as the
 design exploration; **outcomes tracked in git, the working process not**.
 
-## What actually got built (the feeder, not the site)
+## Current checkpoint (2026-09-10)
 
-The site as a *site* does not exist yet. What exists is the machinery meant to
-feed it — a **story-extraction pipeline** that mines the repo for "story
-nuggets" (verbatim spans + why-they-matter), which the boxholder triages
-keep/drop, destined to become his-voice content on the page:
+The static site exists. Commit `3777331df` adds app-matched paper/card/system
+themes through local CSS snapshots, an authored navigation card, recursive
+attached documents, desktop parent/aside and mobile single-card layouts, and
+optional in-page navigation with history and saved offsets through reload.
+Agent-prompt blocks have exact-text copy and selectable-text fallback. The
+existing install prompt is near the top of home; learning-prompt authoring is
+supported, but no learning prompt has been written.
+
+See the [card authoring guide](../../../site/card-authoring.md) for current
+behavior and the [site plan](public-site.md) for checkpoint evidence. Content
+remains editorial drafts. Public prefix naming, tabs, contextual deep-link
+policy, box authoring/export, and the broader extraction/content plan remain
+open. Landing this checkpoint does not establish deployment completion.
+
+## Existing story-extraction feeder
+
+The **story-extraction pipeline** mines the repo for "story nuggets" (verbatim
+spans + why-they-matter), which the boxholder triages keep/drop, destined to
+become his-voice content on the page. The following records earlier work;
+this checkpoint does not independently re-verify the extraction pipeline:
 
 - **Rubric + 2 prompt variants** (`site/story/prompts/`), sharpened twice from
   boxholder triage: size budgets, cross-cutting accumulators, and the

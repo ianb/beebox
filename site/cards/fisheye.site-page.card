@@ -1,6 +1,16 @@
 ---
 title: "Fisheye prototype"
 summary: "Unlisted prototype of the expand-in-place (telescopic) presentation — Track F's taste checkpoint, linked from nowhere."
+authorship:
+  people:
+    - name: Ian Bicking
+      role: director
+      contribution: Defined the expand-in-place idea and the questions this prototype explores.
+  ai:
+    transcription: none
+    drafting: Wrote the marked demonstration text and interaction prompts.
+    editing: Revised the prototype across its documented design rounds.
+    source-preparation: Embedded a verified repository excerpt as a provenance-carrying nugget.
 unlisted: true
 ---
 

@@ -6,7 +6,13 @@
  * POST /api/chat/last-audio/:requestId — a browser tab's answer: multipart
  *                                        audio upload, or JSON `{none:true}`
  *
- * Flow: the request route parks the CLI call in {@link createLastAudioPending}
+ * Staged recordings first: a web voice send's recording is staged on the box
+ * (`core/voice-recording/staged-audio.ts`), so a request whose `messageId`
+ * names a staged recording is answered from disk as WAV without asking any
+ * tab. Only when no staging session names the message does the relay below
+ * run (the native app's recordings still live on the device).
+ *
+ * Relay flow: the request route parks the CLI call in {@link createLastAudioPending}
  * with the requested `messageId` and broadcasts a transient
  * `chat-last-audio-request` bus event carrying it; every connected chat tab
  * answers (its recording retained under that exact emission id, or "none");
@@ -25,12 +31,14 @@
  * detail).
  */
 
+import type { FastifyReply } from "fastify";
 import { z } from "zod";
 import {
   createLastAudioPending,
   type LastAudioFulfillment,
 } from "../../core/last-audio-pending.js";
 import { assertNever } from "../../lib/invariant.js";
+import { findStagedVoiceAudio } from "../../core/voice-recording/staged-audio.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -69,8 +77,24 @@ function multipartField(
   return null;
 }
 
+/** Send one recording as the long-poll's body, with its metadata headers. */
+function sendAudio(reply: FastifyReply, fulfillment: LastAudioFulfillment): FastifyReply {
+  const { audio, contentType, recordedAt, text, messageId, sessionId } = fulfillment;
+  reply.header("Content-Type", contentType);
+  if (recordedAt !== null) reply.header("X-Recorded-At", recordedAt);
+  if (text !== null) {
+    reply.header("X-Message-Text", encodeURIComponent(text.slice(0, MAX_TEXT_HEADER_CHARS)));
+  }
+  // A delivered fulfillment's messageId always matches the request's
+  // target (echo-and-verify) — non-null by construction, but the field
+  // is still nullable on the shared type, so guard rather than assert.
+  if (messageId !== null) reply.header("X-Message-Id", encodeURIComponent(messageId));
+  if (sessionId !== null) reply.header("X-Session-Id", encodeURIComponent(sessionId));
+  return reply.send(audio);
+}
+
 export function registerChatLastAudioRoutes(ctx: ChatRoutesContext): void {
-  const { server, eventBus } = ctx;
+  const { server, eventBus, boxRoot } = ctx;
   const pendingRequests = createLastAudioPending();
 
   server.post<{ Body: unknown }>(
@@ -84,6 +108,17 @@ export function registerChatLastAudioRoutes(ctx: ChatRoutesContext): void {
         });
       }
       const { messageId, timeoutMs: requestedTimeout } = parsed.data;
+      const staged = await findStagedVoiceAudio({ boxRoot, messageId });
+      if (staged !== null) {
+        return sendAudio(reply, {
+          audio: staged.wav,
+          contentType: "audio/wav",
+          recordedAt: staged.recordedAt,
+          text: staged.text,
+          messageId,
+          sessionId: staged.sessionId,
+        });
+      }
       const timeoutMs = Math.min(Math.max(requestedTimeout ?? DEFAULT_TIMEOUT_MS, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS);
       const { requestId, outcome } = pendingRequests.create({ timeoutMs, messageId });
       eventBus.emitTransient("chat-last-audio-request", { requestId, messageId });
@@ -108,18 +143,7 @@ export function registerChatLastAudioRoutes(ctx: ChatRoutesContext): void {
             "No recording is cached for this message — it was typed, or its audio predates the chat tab's current load. This is about this one message, not the box: other messages in this conversation may still have audio, so try again on a later one rather than giving up.",
         });
       }
-      const { audio, contentType, recordedAt, text, messageId: answeredMessageId, sessionId } = result.fulfillment;
-      reply.header("Content-Type", contentType);
-      if (recordedAt !== null) reply.header("X-Recorded-At", recordedAt);
-      if (text !== null) {
-        reply.header("X-Message-Text", encodeURIComponent(text.slice(0, MAX_TEXT_HEADER_CHARS)));
-      }
-      // A delivered fulfillment's messageId always matches the request's
-      // target (echo-and-verify) — non-null by construction, but the field
-      // is still nullable on the shared type, so guard rather than assert.
-      if (answeredMessageId !== null) reply.header("X-Message-Id", encodeURIComponent(answeredMessageId));
-      if (sessionId !== null) reply.header("X-Session-Id", encodeURIComponent(sessionId));
-      return reply.send(audio);
+      return sendAudio(reply, result.fulfillment);
     }
   );
 

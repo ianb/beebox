@@ -45,7 +45,20 @@ type DeviceCommand =
   | { type: "cancelMic" } // pause/tear down the current segment without finalizing
   | { type: "stopSpeech" } // stop TTS playback immediately
   | { type: "playSpeech"; messageId: string; segments: SpeechSegment[]; baseIndex: number }
-  | { type: "markPlayed"; messageId: string }; // mark queued speech played without playing it
+  | { type: "markPlayed"; messageId: string } // mark queued speech played without playing it
+  | { type: "sendHqLive"; id: string }; // stop a pending voice message's HQ wait and send its live text
+
+/**
+ * A voice message waiting for its HQ transcript
+ * (docs/plans/resilient-voice-recording.md, Track 4): rendered as a pending
+ * bubble with a status line and a "Send live text now" control. Several can
+ * wait at once; they dispatch in segment order.
+ */
+export interface PendingHq {
+  id: string;
+  text: string;
+  status: string;
+}
 
 interface ComposerContext {
   /** Narration mode (HQ transcription on send, silent responses). Mirrored from the model hook. */
@@ -58,8 +71,8 @@ interface ComposerContext {
   recording: boolean;
   /** Whether the live transcript currently has text. Suppresses TTS while the user is mid-utterance. */
   transcriptNonEmpty: boolean;
-  /** Realtime text awaiting its HQ pass (narration). Rendered as a pending bubble; null when none. */
-  pendingHqText: string | null;
+  /** Voice messages awaiting their HQ pass, oldest first. Rendered as pending bubbles. */
+  pendingHq: PendingHq[];
 }
 
 export type ComposerEvent =
@@ -76,9 +89,12 @@ export type ComposerEvent =
   /** Playback the machine didn't queue (manual replay): reflect that speech is now playing without re-playing it. */
   | { type: "SPEECH_EXTERNAL" }
   | { type: "SPEECH_DONE" }
-  // --- the narration HQ round-trip ---
-  | { type: "START_HQ"; text: string }
-  | { type: "HQ_DONE" }
+  // --- the HQ wait of each voice send ---
+  | { type: "START_HQ"; id: string; text: string }
+  | { type: "HQ_STATUS"; id: string; status: string }
+  | { type: "HQ_DONE"; id: string }
+  /** The user control: stop waiting for HQ and send the live text now. */
+  | { type: "HQ_SEND_LIVE"; id: string }
   // --- mirrored settings + send ---
   | { type: "SET_NARRATION"; value: boolean }
   | { type: "SET_MUTE"; value: boolean }
@@ -102,6 +118,8 @@ export const composerMachine = setup({
     /** The user has spoken text pending — suppress TTS so we don't talk over them. */
     transcriptNonEmpty: ({ context }) => context.transcriptNonEmpty,
     turnTaking: ({ context }) => context.turnTaking,
+    /** The HQ_DONE is for the last pending voice message. */
+    lastPendingHq: ({ context, event }) => event.type === "HQ_DONE" && context.pendingHq.every((p) => p.id === event.id),
   },
   actions: {
     // Pure context assigns live here; side-effecting device commands are
@@ -112,8 +130,20 @@ export const composerMachine = setup({
     setNarration: assign(({ event }) => ({ narration: event.type === "SET_NARRATION" ? event.value : false })),
     setMute: assign(({ event }) => ({ muted: event.type === "SET_MUTE" ? event.value : false })),
     setTranscript: assign(({ event }) => ({ transcriptNonEmpty: event.type === "TRANSCRIPT" ? event.nonEmpty : false })),
-    setPendingHq: assign(({ event }) => ({ pendingHqText: event.type === "START_HQ" ? event.text : null })),
-    clearPendingHq: assign({ pendingHqText: null }),
+    addPendingHq: assign(({ context, event }) => ({
+      pendingHq: event.type === "START_HQ"
+        ? [...context.pendingHq, { id: event.id, text: event.text, status: "Uploading audio…" }]
+        : context.pendingHq,
+    })),
+    setPendingHqStatus: assign(({ context, event }) => ({
+      pendingHq: context.pendingHq.map((p) => (event.type === "HQ_STATUS" && p.id === event.id ? { ...p, status: event.status } : p)),
+    })),
+    markSendingLive: assign(({ context, event }) => ({
+      pendingHq: context.pendingHq.map((p) => (event.type === "HQ_SEND_LIVE" && p.id === event.id ? { ...p, status: "Sending live text…" } : p)),
+    })),
+    removePendingHq: assign(({ context, event }) => ({
+      pendingHq: context.pendingHq.filter((p) => !(event.type === "HQ_DONE" && p.id === event.id)),
+    })),
 
     // --- device commands: emitted for the wiring layer to execute ---
     startMic: emit({ type: "command", command: { type: "startMic" } }),
@@ -131,6 +161,10 @@ export const composerMachine = setup({
       type: "command",
       command: { type: "markPlayed", messageId: event.type === "SPEECH_QUEUED" ? event.messageId : "" },
     })),
+    sendHqLive: emit(({ event }) => ({
+      type: "command",
+      command: { type: "sendHqLive", id: event.type === "HQ_SEND_LIVE" ? event.id : "" },
+    })),
   },
 }).createMachine({
   id: "composer",
@@ -141,7 +175,7 @@ export const composerMachine = setup({
     turnTaking: false,
     recording: false,
     transcriptNonEmpty: false,
-    pendingHqText: null,
+    pendingHq: [],
   }),
   // Internal (target-less) root handlers mirror device/settings state. None
   // exit a region.
@@ -205,8 +239,18 @@ export const composerMachine = setup({
     hq: {
       initial: "idle",
       states: {
-        idle: { on: { START_HQ: { target: "inFlight", actions: "setPendingHq" } } },
-        inFlight: { on: { HQ_DONE: { target: "idle", actions: "clearPendingHq" } } },
+        idle: { on: { START_HQ: { target: "inFlight", actions: "addPendingHq" } } },
+        inFlight: {
+          on: {
+            START_HQ: { actions: "addPendingHq" },
+            HQ_STATUS: { actions: "setPendingHqStatus" },
+            HQ_SEND_LIVE: { actions: ["markSendingLive", "sendHqLive"] },
+            HQ_DONE: [
+              { guard: "lastPendingHq", target: "idle", actions: "removePendingHq" },
+              { actions: "removePendingHq" },
+            ],
+          },
+        },
       },
     },
     keyboard: {

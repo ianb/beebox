@@ -44,7 +44,7 @@ export async function listSourceRelPaths(siteDir: string): Promise<string[]> {
   for (const entry of top) {
     if (entry.isFile() && entry.name.endsWith(".ts")) rels.push(entry.name);
   }
-  for (const dir of ["cards", "nuggets"]) {
+  for (const dir of ["cards", "nuggets", "assets"]) {
     for (const entry of await readdirDirents(path.join(siteDir, dir))) {
       if (!entry.isFile() || entry.name.startsWith(".")) continue;
       const rel = path.relative(siteDir, path.join(entry.parentPath, entry.name));

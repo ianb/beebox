@@ -9,21 +9,21 @@ import { landmarkScanDir, landmarkRelPath } from "./root-dir.js";
 
 export type LandmarkHqPreference = "inherit" | "on" | "off";
 
-export class LandmarkMissingError extends Error {
+class LandmarkMissingError extends Error {
   constructor() {
     super("This chat has no landmark.");
     this.name = "LandmarkMissingError";
   }
 }
 
-export class LandmarkFrontmatterMissingError extends Error {
+class LandmarkFrontmatterMissingError extends Error {
   constructor() {
     super("The landmark has no readable frontmatter.");
     this.name = "LandmarkFrontmatterMissingError";
   }
 }
 
-export class LandmarkFrontmatterMalformedError extends Error {
+class LandmarkFrontmatterMalformedError extends Error {
   constructor() {
     super("The landmark frontmatter is malformed.");
     this.name = "LandmarkFrontmatterMalformedError";

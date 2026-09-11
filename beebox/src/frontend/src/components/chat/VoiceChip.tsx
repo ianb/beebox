@@ -27,12 +27,7 @@ import {
 } from "./VoiceChip-panels";
 import { useVoiceCapabilities } from "./VoiceChip-capabilities";
 import { HqPreferenceRow, type HqDefaultsState } from "./HqPreferenceRow";
-import { CloseButton } from "../ui/CloseButton";
-import { Row } from "../ui/Row";
-import { Stack } from "../ui/Stack";
-import { Text } from "../ui/Text";
-import { TextLink } from "../ui/TextLink";
-import { clearHqFailure, useHqFailure, type HqFailure } from "../../lib/hq-failure";
+import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
 import { SpeakerIcon, MicIcon, HqIcon } from "./VoiceChip-icons";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
@@ -44,6 +39,8 @@ export interface VoiceChipFaceState {
   muted: boolean;
   narrationEnabled: boolean;
   hqInFlight: boolean;
+  /** A voice notice is waiting in the menu (see `VoiceNotices.tsx`). */
+  alert?: boolean;
 }
 
 /**
@@ -56,7 +53,7 @@ export interface VoiceChipFaceState {
  * directly. The whole pill is one tap target (wired up by the caller); the
  * two icons are not separately actionable.
  */
-export function VoiceChipFace({ muted, narrationEnabled, hqInFlight }: VoiceChipFaceState) {
+export function VoiceChipFace({ muted, narrationEnabled, hqInFlight, alert }: VoiceChipFaceState) {
   return (
     <span
       className="inline-flex items-center gap-1.5"
@@ -69,35 +66,13 @@ export function VoiceChipFace({ muted, narrationEnabled, hqInFlight }: VoiceChip
       <span aria-hidden="true" className="w-px h-4 bg-white/20" />
       <SpeakerIcon muted={muted} />
       {hqInFlight ? <span className="text-xs opacity-80">transcribing…</span> : null}
+      {alert === true ? <span aria-hidden="true" className="w-2 h-2 rounded-full bg-warning" /> : null}
     </span>
-  );
-}
-
-/**
- * A permanent HQ transcription failure (Track 6,
- * `docs/plans/secret-entry-guidance.md`): the server's own message, a link to
- * where the missing credential is fixed, and a dismiss. Rendered in the root
- * panel so opening the voice menu is enough to see it — the realtime
- * fallback means the chat otherwise looks fine.
- */
-function HqFailureNotice({ failure, onDismiss }: { failure: HqFailure; onDismiss: () => void }) {
-  return (
-    <div role="alert" className="px-3 py-2">
-      <Stack gap="xs">
-        <Row gap="sm" align="start" justify="between">
-          <Text size="sm" tone="danger">{failure.message}</Text>
-          <CloseButton size="sm" label="Dismiss" onClick={onDismiss} />
-        </Row>
-        <TextLink to="/admin" tone="subtle">Admin → Secrets</TextLink>
-      </Stack>
-    </div>
   );
 }
 
 interface VoiceChipBodyProps {
   panel: VoiceChipPanel;
-  hqFailure: HqFailure | null;
-  onDismissHqFailure: () => void;
   muted: boolean;
   onToggleMute: () => void;
   narrationEnabled: boolean;
@@ -128,18 +103,13 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
     hqDictationEnabled, onToggleHqDictation, hqDefaults, onOpenVoice,
     onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService, currentTtsBackend, onSelectTtsBackend,
-    hqFailure, onDismissHqFailure, capabilities,
+    capabilities,
   } = props;
   switch (panel) {
     case "root":
       return (
         <>
-          {hqFailure === null ? null : (
-            <>
-              <HqFailureNotice failure={hqFailure} onDismiss={onDismissHqFailure} />
-              <MenuDivider />
-            </>
-          )}
+          <VoiceNoticeList />
           <MenuItem id="bbx-voice-mute" onClick={onToggleMute} icon={<SpeakerIcon muted={muted} />}>
             {muted ? "✓ " : ""}Mute
           </MenuItem>
@@ -298,8 +268,8 @@ export const VoiceChip = memo(function VoiceChip({
   };
 
   const [panel, setPanel] = useState<VoiceChipPanel>("root");
-  const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight });
-  const hqFailure = useHqFailure();
+  const alert = useVoiceNotices().length > 0;
+  const label = voiceChipLabel({ muted, narrationEnabled, hqInFlight }) + (alert ? " — voice notice" : "");
 
   return (
     <Dropdown
@@ -321,7 +291,7 @@ export const VoiceChip = memo(function VoiceChip({
           aria-label={label}
           {...ariaProps}
         >
-          <VoiceChipFace muted={muted} narrationEnabled={narrationEnabled} hqInFlight={hqInFlight} />
+          <VoiceChipFace muted={muted} narrationEnabled={narrationEnabled} hqInFlight={hqInFlight} alert={alert} />
         </button>
       )}
     >
@@ -342,8 +312,6 @@ export const VoiceChip = memo(function VoiceChip({
         onSelectHqTranscriptionService={onSelectHqTranscriptionService}
         currentTtsBackend={currentTtsBackend}
         onSelectTtsBackend={onSelectTtsBackend}
-        hqFailure={hqFailure}
-        onDismissHqFailure={clearHqFailure}
         capabilities={capabilities.data}
       />
     </Dropdown>

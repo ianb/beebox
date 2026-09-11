@@ -4,6 +4,11 @@
  * `bbx chat get-last-audio`; the server relays the request over the event
  * bus; this tab uploads a cached recording in response).
  *
+ * Web voice recordings are staged on the box, and the server answers for
+ * those itself (`core/voice-recording/staged-audio.ts`) without relaying. What
+ * this tab still holds are tombstones: a voice send with no recording marks
+ * its emission absent, so the relay answers "none" for it.
+ *
  * Replaces the old single-slot cache (docs/implemented-plans/input-extraction.md,
  * chunk 5): recordings are now retained per emission id in a
  * `RetentionStore` (`input/retention.ts`), so a send never has to clear
@@ -49,11 +54,6 @@ const RETENTION_CAPACITY = 5;
 // (codex chunk-5 finding; matches the old single-slot cache's clear-on-
 // voice-send behavior). Typed sends still never touch retention.
 const retention = createRetentionStore<VoiceAudioPayload | null>({ capacity: RETENTION_CAPACITY });
-
-/** Retain a committed voice segment's recording, keyed by its emission id. */
-export function retainVoiceAudio(emissionId: string, opts: { blob: Blob; text: string }): void {
-  retention.retain(emissionId, { blob: opts.blob, text: opts.text, recordedAt: new Date().toISOString() });
-}
 
 /** Mark a voice emission that has no recording (see the tombstone note above). */
 export function markVoiceAudioAbsent(emissionId: string): void {

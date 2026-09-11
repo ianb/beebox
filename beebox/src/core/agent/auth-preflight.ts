@@ -40,7 +40,7 @@ export class ClaudeAuthError extends Error {
 export const CODEX_NOT_LOGGED_IN_MESSAGE =
   "Codex is not logged in — run `codex login --device-auth` as the Bee Box service user";
 
-export class CodexReadinessError extends Error {
+class CodexReadinessError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = "CodexReadinessError";
@@ -54,7 +54,7 @@ export class CodexAuthError extends CodexReadinessError {
   }
 }
 
-export class CodexCliUnavailableError extends CodexReadinessError {
+class CodexCliUnavailableError extends CodexReadinessError {
   readonly detail: string;
 
   constructor(detail: string) {

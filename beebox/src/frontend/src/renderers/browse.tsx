@@ -4,12 +4,33 @@ import { registerFileType, type RendererProps } from "./index";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
 import { BrowseBody } from "../pages/browse/BrowsePage";
 import { BrowseLocationError } from "../pages/browse/components/BrowseLocationError";
-import { browseParent, browseStateToViewState, legacyBrowseTarget, parseBrowseState, type BrowseState } from "../lib/browse-card-state";
+import { browseParent, browseStateToViewState, legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
 import { trpc } from "../lib/trpc";
 import { parseViewUrl, type ViewState, type ViewTarget } from "../lib/view-url";
 import { BrowseLoading } from "../pages/browse/components/BrowseLoading";
 import { useAppBarPlace } from "../components/app-bar-chrome";
 import { useCardVisible, useFocusedConversationCard } from "../components/chat/everywhere/card-context";
+
+function browseLocationValid({
+  directoryKind,
+  hasDetail,
+  detailKind,
+}: {
+  directoryKind: "directory" | "file" | "missing" | undefined;
+  hasDetail: boolean;
+  detailKind: "directory" | "file" | "missing" | undefined;
+}): boolean {
+  if (hasDetail) return detailKind === "file" || detailKind === "missing";
+  return directoryKind === "directory";
+}
+
+function browseLocationLoading({ hasDetail, directoryLoading, detailLoading }: {
+  hasDetail: boolean;
+  directoryLoading: boolean;
+  detailLoading: boolean;
+}): boolean {
+  return hasDetail ? detailLoading : directoryLoading;
+}
 
 function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (next: ViewState, method: "push" | "replace") => void }) {
   const visible = useCardVisible();
@@ -21,17 +42,28 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const directory = trpc.files.kind.useQuery({ path: state.directory });
   const detail = trpc.files.kind.useQuery({ path: state.detail?.path ?? "" }, { enabled: Boolean(state.detail) });
-  const valid = directory.data?.kind === "directory" && (!state.detail || detail.data?.kind === "file");
+  const valid = browseLocationValid({
+    directoryKind: directory.data?.kind,
+    hasDetail: state.detail !== undefined,
+    detailKind: detail.data?.kind,
+  });
   useAppBarPlace(visible && focused && valid ? { dir: state.directory, label: state.directory ? `Browse: ${state.directory}` : "Browse" } : null);
   useEffect(() => {
     setNavigationError(null);
     return () => { navigationVersion.current += 1; };
   }, [stateKey]);
-  async function navigate(target: ViewTarget, method: "push" | "replace") {
+  async function navigate({ target, method, missingKind }: {
+    target: ViewTarget;
+    method: "push" | "replace";
+    missingKind: BrowseMissingKind;
+  }) {
     const version = ++navigationVersion.current;
     setNavigationError(null);
     try {
-      const next = await legacyBrowseTarget(target, async (path) => (await utils.files.kind.fetch({ path })).kind);
+      const next = await legacyBrowseTarget(target, {
+        lookupKind: async (path) => (await utils.files.kind.fetch({ path })).kind,
+        missingKind,
+      });
       if (version !== navigationVersion.current) return;
       if (next.viewState) onChange(next.viewState, method);
     } catch (error) {
@@ -40,14 +72,22 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
     }
   }
   const reset = () => { navigationVersion.current += 1; onChange({ directory: "" }, "replace"); };
-  if (directory.isLoading || (state.detail && detail.isLoading)) return <BrowseLoading />;
+  if (browseLocationLoading({
+    hasDetail: state.detail !== undefined,
+    directoryLoading: directory.isLoading,
+    detailLoading: state.detail !== undefined && detail.isLoading,
+  })) return <BrowseLoading />;
   if (!valid) return <BrowseLocationError error={`Cannot browse ${state.detail?.path ?? (state.directory || "/")}: ${directory.error?.message ?? detail.error?.message ?? "expected an existing directory and a file detail"}`} onRoot={reset} onRetry={() => { void directory.refetch(); if (state.detail) void detail.refetch(); }} />;
   return <>
     {navigationError ? <BrowseLocationError error={navigationError} onRoot={reset} /> : null}
-    <BrowseBody state={state} onNavigate={(path, options) => { void navigate({ path, viewer: null, params: {}, viewState: null }, options?.replace ? "replace" : "push"); }}
+    <BrowseBody state={state} onNavigate={(path, options) => { void navigate({
+      target: { path, viewer: null, params: {}, viewState: null },
+      method: options.replace ? "replace" : "push",
+      missingKind: options.kind,
+    }); }}
       onDetailNavigate={(target, method) => {
         if (state.detail?.path === target.path && browseParent(target.path) === state.directory) { navigationVersion.current += 1; onChange(browseStateToViewState({ ...state, detail: target }), method); }
-        else void navigate(target, method);
+        else void navigate({ target, method, missingKind: "file" });
       }} />
   </>;
 }

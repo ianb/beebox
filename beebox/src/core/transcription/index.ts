@@ -86,6 +86,51 @@ export interface TranscriptionOptions {
 export interface TranscriptionError extends Error {
   permanent: boolean; // If true, don't retry
   code?: string;
+  /**
+   * The HTTP status the provider responded with, when the failure reached a
+   * response at all (absent for a network error/timeout, or an error thrown
+   * before any request — e.g. a missing key). Read by the HQ job
+   * (`core/voice-recording/hq-job.ts`) to classify a piece failure via
+   * {@link extractHqErrorInput}.
+   */
+  status?: number;
+  /**
+   * The response body, already read (and truncated to ≤500 chars) by the arm
+   * that threw this. Lets the HQ job tell MAI's 503
+   * `diarization_unavailable` apart from any other 503 without re-reading a
+   * consumed response stream.
+   */
+  body?: string;
+}
+
+/** `≤500` chars — enough to see the provider's reason without logging megabytes. */
+const UPSTREAM_BODY_MAX_CHARS = 500;
+
+/** Truncate an upstream error body to the length the manifest/job are willing to carry. */
+export function truncateUpstreamBody(body: string): string {
+  return body.length > UPSTREAM_BODY_MAX_CHARS ? body.slice(0, UPSTREAM_BODY_MAX_CHARS) : body;
+}
+
+/**
+ * Pull the `{status, body, permanent}` triple the HQ job's `classifyHqError`
+ * needs out of any HQ arm's thrown error. Every arm (whisper, voxtral,
+ * OpenRouter) now populates `status`/`body` on its own `TranscriptionError`
+ * subclasses at throw time, so this is a synchronous field read — no arm
+ * needs a second, job-side response-body read. An error that isn't a
+ * `TranscriptionError` at all (a bug, not an HQ failure) yields `{}`, which
+ * `classifyHqError` treats as transient.
+ */
+export function extractHqErrorInput(error: unknown): { status?: number; body?: string; permanent?: boolean } {
+  if (!isTranscriptionErrorShape(error)) return {};
+  return {
+    ...(error.status !== undefined && { status: error.status }),
+    ...(error.body !== undefined && { body: error.body }),
+    permanent: error.permanent,
+  };
+}
+
+function isTranscriptionErrorShape(error: unknown): error is TranscriptionError {
+  return error instanceof Error && "permanent" in error;
 }
 
 /**
@@ -105,7 +150,6 @@ export interface TranscribeAudioParams {
 export {
   HQ_TRANSCRIPTION_SERVICES,
   isMaiHqService,
-  TRANSCRIPTION_SERVICES,
   type HqTranscriptionService,
   type MaiHqService,
   type TranscriptionService,

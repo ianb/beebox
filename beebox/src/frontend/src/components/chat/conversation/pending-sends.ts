@@ -11,20 +11,32 @@ import type { Emission } from "../../../input/emission";
 export interface PendingConversationSend {
   readonly emission: Emission;
   readonly binding: SendBinding;
-  readonly status: "preparing" | "pending" | "rejected" | "recovered" | "accepted" | "restored";
+  /**
+   * `awaitingHq`: a `preparing` voice row whose tab reloaded while it waited
+   * for its HQ transcript. It stays visible with explicit actions and is
+   * never sent by a load (docs/plans/resilient-voice-recording.md, Track 4).
+   */
+  readonly status: "preparing" | "awaitingHq" | "pending" | "rejected" | "recovered" | "accepted" | "restored";
   readonly reason?: string;
+  /** The staged voice recording this send is waiting on (voice sends with HQ only). */
+  readonly recordingId?: string;
 }
 export interface PendingSendsStore {
   getSnapshot(): readonly PendingConversationSend[];
   subscribe(listener: () => void): () => void;
   /** Synchronous, durable before publication. Throws before the caller clears. */
   stage(emission: Emission, binding: SendBinding): void;
-  /** Durable realtime snapshot before HQ replaces its text under the same ID. */
-  prepare(emission: Emission, binding: SendBinding): void;
+  /**
+   * Durable realtime snapshot before HQ replaces its text under the same ID.
+   * `recordingId` names the staged recording the HQ wait is for.
+   */
+  prepare(emission: Emission, opts: { binding: SendBinding; recordingId?: string }): void;
   accepted(id: string): void;
   rejected(id: string, reason: string): void;
   /** Remove only after the explicit restore callback succeeded. */
   restored(id: string): void;
+  /** The user dismissed an `awaitingHq` row; its recording stays on the box. */
+  dismissed(id: string): void;
 }
 export type PendingSendsStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 interface PendingSendsLocation { boxSlug: string; storageScope: string }
@@ -46,22 +58,27 @@ const emissionSchema = z.object({
   })),
   words: z.array(z.object({ word: z.string(), confidence: z.number().optional() })).optional(),
   spokenStart: z.number().optional(), hqText: z.literal(true).optional(), hqService: z.string().optional(),
+  // Legacy rows from before late correction was removed stored "pending" or
+  // "failed" (which message follows); both now collapse to the one-value
+  // provenance bit.
+  hqFallback: z.union([z.literal(true), z.enum(["pending", "failed"]).transform((): true => true)]).optional(),
 });
 // PendingConversationSend is also the live store API; bind its storage schema
 // to that domain type so either side fails typecheck if their fields drift.
 const savedRowSchema: z.ZodType<PendingConversationSend> = z.object({
   emission: emissionSchema, binding: sendBindingSchema,
-  status: z.enum(["preparing", "pending", "rejected", "recovered", "accepted", "restored"]), reason: z.string().optional(),
+  status: z.enum(["preparing", "awaitingHq", "pending", "rejected", "recovered", "accepted", "restored"]), reason: z.string().optional(),
+  recordingId: z.string().optional(),
 });
 const savedRowsSchema = z.object({ version: z.literal(1), rows: z.array(savedRowSchema) });
 
-export class PendingSendBoxError extends Error {
+class PendingSendBoxError extends Error {
   constructor() {
     super("Saved message belongs to a different box");
     this.name = "PendingSendBoxError";
   }
 }
-export class PendingSendChangedError extends Error {
+class PendingSendChangedError extends Error {
   constructor() {
     super("A saved message cannot change its destination or content");
     this.name = "PendingSendChangedError";
@@ -81,10 +98,17 @@ function parseRows(raw: string, boxSlug: string): PendingConversationSend[] {
   if (saved.rows.some((row) => row.binding.boxSlug !== boxSlug)) {
     throw new PendingSendBoxError();
   }
-  return saved.rows.map((row) => ({ ...row,
-    status: (row.status === "pending" || row.status === "preparing") ? "recovered" : row.status,
-    ...((row.status === "pending" || row.status === "preparing") ? { reason: "Delivery was interrupted. Review before retrying." } : {}),
-  }));
+  return saved.rows.map((row): PendingConversationSend => {
+    // A voice send interrupted while it waited for HQ keeps waiting visibly:
+    // its recording and HQ job live on the box, and the user picks the text.
+    if ((row.status === "preparing" || row.status === "awaitingHq") && row.recordingId !== undefined) {
+      return { ...row, status: "awaitingHq", reason: "Waiting for the HQ transcript. Nothing is sent until you choose." };
+    }
+    if (row.status === "pending" || row.status === "preparing" || row.status === "awaitingHq") {
+      return { ...row, status: "recovered", reason: "Delivery was interrupted. Review before retrying." };
+    }
+    return row;
+  });
 }
 
 export interface PendingSendRecoveryCopy { key: string; raw: string }
@@ -101,7 +125,7 @@ export function pendingSendRecoveryCopies(storage: PendingSendsStorage, storageS
   }
 }
 
-export class PendingSendPreservationError extends Error {
+class PendingSendPreservationError extends Error {
   constructor() {
     super("The unreadable saved messages could not be preserved. Your draft and the original saved copy have been kept.");
     this.name = "PendingSendPreservationError";
@@ -158,21 +182,26 @@ export function createPendingSendsStore(storage: PendingSendsStorage, { boxSlug,
       // Delivery/restore already happened. Failed recovery cleanup cannot
       // expose it as another send or merge operation in this live page.
       const reason = status === "accepted" ? "Sent. The saved recovery copy could not be cleared."
-        : "Restored to draft. The saved recovery copy could not be cleared.";
+        : "Removed. The saved recovery copy could not be cleared.";
       const finished = rows.map((row): PendingConversationSend => row.emission.id === id
         ? { ...row, status, reason } : row);
       try { commit(finished); } catch (_writeCause) { publish(finished); }
     }
   }
-  function stage(emission: Emission, { binding, status }: { binding: SendBinding; status: "preparing" | "pending" }): void {
+  function stage(emission: Emission, opts: { binding: SendBinding; status: "preparing" | "pending"; recordingId?: string }): void {
+      const { binding, status } = opts;
       if (binding.boxSlug !== boxSlug) throw new PendingSendBoxError();
-      const normalized = savedRowSchema.parse(JSON.parse(JSON.stringify({ emission, binding, status })));
+      const recordingId = opts.recordingId === undefined ? {} : { recordingId: opts.recordingId };
+      const normalized = savedRowSchema.parse(JSON.parse(JSON.stringify({ emission, binding, status, ...recordingId })));
       const existing = rows.find((row) => row.emission.id === emission.id);
       if (existing?.status === "accepted" || existing?.status === "restored") throw new PendingSendChangedError();
       if (existing !== undefined) {
-        if (status === "preparing" && existing.status !== "preparing") throw new PendingSendChangedError();
+        // A row still waiting on HQ may change its text once (HQ or fallback
+        // replaces the realtime snapshot under the same ID); nothing else may.
+        const replaceable = existing.status === "preparing" || existing.status === "awaitingHq";
+        if (status === "preparing" && !replaceable) throw new PendingSendChangedError();
         // A retry's ID always retains the original content and destination.
-        if ((existing.status !== "preparing" && JSON.stringify(existing.emission) !== JSON.stringify(normalized.emission))
+        if ((!replaceable && JSON.stringify(existing.emission) !== JSON.stringify(normalized.emission))
           || JSON.stringify(existing.binding) !== JSON.stringify(normalized.binding)) {
           throw new PendingSendChangedError();
         }
@@ -187,9 +216,10 @@ export function createPendingSendsStore(storage: PendingSendsStorage, { boxSlug,
     getSnapshot: () => rows,
     subscribe: (listener) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
     stage: (emission, binding) => { stage(emission, { binding, status: "pending" }); },
-    prepare: (emission, binding) => { stage(emission, { binding, status: "preparing" }); },
+    prepare: (emission, opts) => { stage(emission, { ...opts, status: "preparing" }); },
     accepted: (id) => { finish(id, "accepted"); },
     restored: (id) => { finish(id, "restored"); },
+    dismissed: (id) => { finish(id, "restored"); },
     rejected: (id, reason) => {
       if (!rows.some((row) => row.emission.id === id)) return;
       const rejected = rows.map((row): PendingConversationSend => row.emission.id === id && row.status !== "accepted" && row.status !== "restored"

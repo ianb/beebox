@@ -10,14 +10,20 @@ import type { CardSendFields } from "../InteractiveChat-card-hooks";
 import { createPendingSendsStore } from "./pending-sends";
 import { PendingSendStorageRecovery } from "./PendingSendStorageRecovery";
 import { FailedConversationSends } from "./FailedConversationSends";
+import { PendingHqSends } from "./PendingHqSends";
 import type { ConversationControllerPool } from "./controller-pool";
 import { useBoxConversation } from "../everywhere/conversation-context";
 import { trpc } from "../../../lib/trpc";
 
 export interface EmissionDispatch {
   (emission: Emission): Promise<Receipt>;
-  stage(emission: Emission): void;
+  /** Durable snapshot before the send; `recordingId` marks a voice send waiting on HQ. */
+  stage(emission: Emission, opts?: { recordingId?: string }): void;
   release(): void;
+  /** The destination's chat session, or null while a new chat has none yet. */
+  currentSessionId(): string | null;
+  /** Resolves once the destination has a chat session (at once for an existing chat). */
+  assignedSessionId(): Promise<string>;
 }
 class ConversationNotReadyError extends Error {
   constructor(reason: string) { super(reason); this.name = "ConversationNotReadyError"; }
@@ -35,6 +41,34 @@ class WrongConversationBoxError extends Error {
   }
 }
 const preparationInterrupted = "Message preparation was interrupted. Review before retrying.";
+/** How long to wait for a new chat's session after its first send, before giving up. */
+const SESSION_ASSIGNMENT_BOUND_MS = 2 * 60 * 1000;
+
+class SessionAssignmentTimeoutError extends Error {
+  constructor() { super("The new conversation was not assigned a session in time"); this.name = "SessionAssignmentTimeoutError"; }
+}
+
+/** Resolve with the session id once `current()` has one, re-checking on each controller change. */
+function waitForSessionAssignment(opts: {
+  current: () => string | null;
+  subscribe: (listener: () => void) => { unsubscribe: () => void };
+}): Promise<string> {
+  const now = opts.current();
+  if (now !== null) return Promise.resolve(now);
+  return new Promise((resolve, reject) => {
+    const finish = (): void => {
+      clearTimeout(timer);
+      sub.unsubscribe();
+    };
+    const timer = setTimeout(() => { finish(); reject(new SessionAssignmentTimeoutError()); }, SESSION_ASSIGNMENT_BOUND_MS);
+    const sub = opts.subscribe(() => {
+      const id = opts.current();
+      if (id === null) return;
+      finish();
+      resolve(id);
+    });
+  });
+}
 const failureReason = (error: unknown) => error instanceof Error ? error.message : "Conversation delivery failed";
 
 export function useBoundEmission(opts: {
@@ -92,9 +126,9 @@ export function useBoundEmission(opts: {
       if (!native && !dispatched && preparedId !== undefined) pending?.rejected(preparedId, preparationInterrupted);
       handle.release();
     };
-    const prepare = (emission: Emission) => {
+    const prepare = (emission: Emission, prepareOpts?: { recordingId?: string }) => {
       try {
-        if (!native) pending?.prepare(emission, binding);
+        if (!native) pending?.prepare(emission, { binding, ...prepareOpts });
         preparedId = emission.id;
         setError(null);
       } catch (cause) { setError(failureReason(cause)); release(); throw cause; }
@@ -136,7 +170,14 @@ export function useBoundEmission(opts: {
           return settled;
         });
     };
-    return Object.assign(dispatch, { stage: prepare, release });
+    const currentSessionId = (): string | null => binding.target.kind === "session"
+      ? binding.target.sessionId
+      : pool.controller(binding.target).getSnapshot().context.sessionId;
+    const assignedSessionId = (): Promise<string> => waitForSessionAssignment({
+      current: currentSessionId,
+      subscribe: (listener) => pool.controller(binding.target).subscribe(listener),
+    });
+    return Object.assign(dispatch, { stage: prepare, release, currentSessionId, assignedSessionId });
   };
   const dispatchNativeEmission = async (emission: Emission, binding?: SendBinding): Promise<Receipt> => {
     let dispatch: EmissionDispatch | undefined;
@@ -161,6 +202,7 @@ export function useBoundEmission(opts: {
     {error !== null && <p role="alert" className="text-sm text-danger">{error}</p>}
     <PendingSendStorageRecovery boxSlug={pool.boxSlug} storageScope={pool.storageScope} blocked={pending === null}
       onRecovered={(store) => { setPending(store); setError(null); }} />
+    {pending !== null && <PendingHqSends store={pending} capture={(binding) => capture(binding)} />}
     {pending !== null && <FailedConversationSends store={pending}
       onRetry={async (row) => { await capture(row.binding)(row.emission); }}
       onRestore={(row) => { applyRestorePlan(emissionStore.editor, planRestore(emissionStore.get(), row.emission)); }} />}
