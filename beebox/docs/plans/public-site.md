@@ -179,6 +179,35 @@ scenarios), never mocked.
 
 ## Tracks / scope
 
+### Checkpoint evidence (2026-09-10)
+
+Commit `3777331df` implements the public site's paper-card presentation and
+navigation baseline. The current authoring contract is
+[site/card-authoring.md](../../../site/card-authoring.md). This is a checkpoint;
+the tracks below retain the wider publishing and editorial scope.
+
+| Track | Checkpoint classification | Evidence and remaining work |
+|---|---|---|
+| A: generator | MET for this checkpoint | `site/build.ts` emits complete card documents, Markdown twins and local assets; `site/workspace-model.ts` validates themes, destinations and attachment parents. |
+| B: dev router | UNCLEAR from this diff | Router code is unchanged. The browser preview used a standalone static server; the router URL reached owner sign-in. |
+| C: content | PARTIAL | `site/cards/index.site-page.card` places the existing install prompt near the top. `site/agent-prompt.ts` provides exact-text prompt surfaces. Human-facing content remains marked editorial drafts; no learning prompt was authored. |
+| D: deployment | UNCLEAR from this diff | This checkpoint does not change deployment configuration or establish a completed Cloudflare production build. |
+| E: nuggets | PARTIAL | `site/nuggets.ts` now collects embedded link targets, and `site/page-publication.ts` applies the existing author-publication boundary to attached documents. Extraction, promotion and elicitation remain separate work. |
+| F: nonlinear presentation | PARTIAL | `site/workspace.ts` renders desktop parent/aside and mobile single-card layouts; `site/navigation-script.ts` adds history and persisted offsets. Existing folds remain supported. Final editorial integration and broader navigation policy remain open. |
+
+The paper-system issue remains open for public prefix naming, tabs, and
+contextual deep-link policy. The broader public-site issue, box-CMS exploration,
+orientation plan and extraction subplan are not completed by this checkpoint.
+The earlier four-card experiment remains in `site/navigation-prototype/` as
+design evidence, separate from the production generator.
+
+Verification: 83 site tests passed, both build bases passed, and commit hooks
+passed lint/typecheck. Desktop/mobile static previews exercised navigation,
+reload/history offsets, folds and clipboard fallback with a mocked clipboard.
+Two independent cross-model reviews were completed before finish. No physical
+device, actual installation, OS clipboard, or literal JavaScript-disabled
+browser check is claimed. Unlisted pages are omitted from indexing, not private.
+
 Ordered by implementation dependency, then surface size.
 
 ### Track A — generator skeleton (`site/`)

@@ -78,6 +78,7 @@ export const NAVIGATION_SCRIPT = `
     let target = document.querySelector('#reading-card h1') || document.querySelector('#reading-card');
     if ((!params.pop || !snapshot) && location.hash) {
       let id;
+      // A malformed shared fragment has no target; keep the readable card and heading focus.
       try { id = decodeURIComponent(location.hash.slice(1)); } catch { id = ''; }
       const anchor = document.getElementById(id);
       if (anchor) { anchor.scrollIntoView({ block: 'start' }); target = anchor; }
@@ -128,6 +129,7 @@ export const NAVIGATION_SCRIPT = `
         if (activeTransition === transition) activeTransition = null;
       } else update();
     } catch {
+      // Static documents remain the recovery path when fetching or enhancement fails.
       if (request === requestId) location.assign(url.href);
     }
   }
