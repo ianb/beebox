@@ -27,7 +27,9 @@ checks that targets exist. Native links in Markdown twins point to `.md` twins.
 
 ## Frontmatter
 
-All page cards require `title` and `summary`. Unknown fields fail the build.
+All page cards require `title`, `summary`, and `authorship`. Unknown fields fail the build,
+except inside `authorship.ai`, where new contribution categories are deliberately
+allowed so the vocabulary can grow from real use.
 `contains` remains accepted but unpublished. `unlisted: true` excludes a page
 from `llms.txt`; it does not make it private or prohibit authored links to it.
 
@@ -35,6 +37,16 @@ from `llms.txt`; it does not make it private or prohibit authored links to it.
 ---
 title: A note
 summary: A short description.
+authorship:
+  people:
+    - name: Ian Bicking
+      role: author
+      contribution: Wrote the card from working notes and shaped it for publication.
+  ai:
+    transcription: Prepared a transcript from the original recording.
+    drafting: none
+    editing: none
+    source-preparation: Compared the transcript with the recording.
 unlisted: true
 theme: post-it
 stock: yellow
@@ -46,6 +58,22 @@ next:
     label: Continue the main document
 ---
 ```
+
+`authorship.people` is person-centered, not a literal revision log. Each entry
+names a person, their role, and a concise account of what they contributed.
+Routine spelling, punctuation, formatting, and transcription corrections do
+not need their own entry.
+
+`authorship.ai` always declares `transcription`, `drafting`, and `editing`.
+Each value is either the literal `none` or a plain-language description. Add
+other properties such as `source-preparation`, `research`, or `visual-layout`
+when they describe the work more accurately. The renderer lists known and new
+properties alike. Silence is not interpreted as evidence that AI was absent.
+
+The fold on each card opens an **On the back** account containing this metadata
+and the native card path. It is supplementary provenance, never primary
+navigation; landmarks, parent links, in-body links, and `next` stay on the
+front. Without JavaScript, the front remains the complete reading surface.
 
 Themes are `plain`, `paper` (default), and `post-it`. Paper stocks are `cream`,
 `manila`, `blue`; Post-it stocks are `yellow`, `rose`, `mint`. The build rejects
@@ -97,10 +125,11 @@ The app CSS snapshots and their provenance are documented in
 [assets/README.md](assets/README.md). Asset edits participate in the router's
 source manifest, so they trigger a rebuild just like cards and renderer code.
 
-Human prose still belongs to the boxholder. Keep agent-written demonstration
-text explicitly marked. The current home and walkthrough are scaffolds, not
-newly authored final copy. Nugget validation, pending author-aside suppression,
-and excerpt provenance still run through the existing publishing pipeline.
+Do not present agent-written prose as the boxholder's voice. Agent-drafted
+informational copy may publish when `authorship.ai.drafting` describes that
+contribution; marked demonstrations remain marked until they become real copy.
+Pending author-aside suppression, nugget validation, and excerpt provenance
+still run through the existing publishing pipeline.
 
 ## Prompts for an agent
 

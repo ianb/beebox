@@ -5,11 +5,16 @@ import { resolveInternalHref } from "./links.js";
 import { workspaceShell } from "./workspace.js";
 import { twinCardLinks } from "./twin-links.js";
 
+const authorship = {
+  people: [{ name: "Ian Bicking", role: "author", contribution: "Directed the card." }],
+  ai: { transcription: "none", drafting: "none", editing: "none", "source-preparation": "Prepared the source." },
+};
+
 function fixture(): SitePage[] {
   return [
-    { id: "menu.doc.card", output: "menu.doc.card/index.html", href: "/x/menu.doc.card/", html: "<h1>Menu</h1>", frontmatter: { title: "Menu", summary: "Menu", navigation: true } },
-    { id: "Parent.doc.card", output: "Parent.doc.card/index.html", href: "/x/Parent.doc.card/", html: headingIds("<h1>Parent</h1><h2>Continue here</h2><p>Parent text</p>"), frontmatter: { title: "Parent", summary: "Main", next: [{ card: "/Parent.attach/Aside.doc.card", label: "Read the note" }] } },
-    { id: "Parent.attach/Aside.doc.card", output: "Parent.attach/Aside.doc.card/index.html", href: "/x/Parent.attach/Aside.doc.card/", html: "<h1>Aside</h1><p>Aside text</p>", frontmatter: { title: "Aside", summary: "Note", theme: "post-it", next: [{ card: "/Parent.doc.card", at: "continue-here", label: "Continue" }] } },
+    { id: "menu.doc.card", output: "menu.doc.card/index.html", href: "/x/menu.doc.card/", html: "<h1>Menu</h1>", frontmatter: { title: "Menu", summary: "Menu", authorship, navigation: true } },
+    { id: "Parent.doc.card", output: "Parent.doc.card/index.html", href: "/x/Parent.doc.card/", html: headingIds("<h1>Parent</h1><h2>Continue here</h2><p>Parent text</p>"), frontmatter: { title: "Parent", summary: "Main", authorship, next: [{ card: "/Parent.attach/Aside.doc.card", label: "Read the note" }] } },
+    { id: "Parent.attach/Aside.doc.card", output: "Parent.attach/Aside.doc.card/index.html", href: "/x/Parent.attach/Aside.doc.card/", html: "<h1>Aside</h1><p>Aside text</p>", frontmatter: { title: "Aside", summary: "Note", authorship, theme: "post-it", next: [{ card: "/Parent.doc.card", at: "continue-here", label: "Continue" }] } },
   ];
 }
 
@@ -35,6 +40,10 @@ test("a deep aside statically contains its canonical parent and authored continu
   assert.match(html, /id="context-continue-here"/);
   assert.match(html, /data-card-theme="post-it"/);
   assert.match(html, /data-place="\/x\/Parent.doc.card\/"/);
+  assert.match(html, /On the back/);
+  assert.match(html, /Ian Bicking/);
+  assert.match(html, /Source preparation<\/dt><dd>Prepared the source/);
+  assert.match(html, /bbx-card-back[^]*Parent\.attach\/Aside\.doc\.card/);
 });
 
 test("bad next destinations and missing sections fail before publication", () => {

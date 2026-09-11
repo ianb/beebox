@@ -1,0 +1,61 @@
+/* Snapshot of the app's card-turn.css. The fold lifts on hover; clicking
+   turns the whole sheet at its midpoint while keyboard focus stays put. */
+.bbx-card-properties {
+  transform-origin: top right;
+  transition: transform 160ms ease-out;
+}
+.bbx-card-properties-label {
+  position: absolute;
+  pointer-events: none;
+  font: 600 0.68rem/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.bbx-card-surface[data-card-side="front"] .bbx-card-properties-label {
+  top: calc(100% + 0.35rem);
+  right: 0.25rem;
+  opacity: 0.28;
+  transform: rotate(-90deg) translateY(-100%);
+  transform-origin: top right;
+  transition: opacity 160ms ease-out;
+}
+.bbx-card-surface[data-card-side="front"] .bbx-card-properties:hover .bbx-card-properties-label,
+.bbx-card-surface[data-card-side="front"] .bbx-card-properties:focus-visible .bbx-card-properties-label {
+  opacity: 0.78;
+}
+.bbx-card-surface[data-card-side="back"] .bbx-card-properties-label {
+  right: calc(100% + 0.75rem);
+  top: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+  color: var(--bbx-ink);
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+.bbx-card-properties:hover,
+.bbx-card-properties:focus-visible { transform: scale(1.12); }
+.bbx-card-properties[aria-busy="true"] { transform: scale(1.2); }
+.bbx-card-surface[data-card-turn] {
+  transform-origin: center;
+  backface-visibility: hidden;
+}
+.bbx-card-surface[data-card-turn="out"] { animation: bbx-card-turn-out 140ms ease-in both; }
+.bbx-card-surface[data-card-turn="in"] { animation: bbx-card-turn-in 180ms ease-out both; }
+@keyframes bbx-card-turn-out {
+  from { transform: perspective(2000px) rotateY(0deg) scale(1); }
+  to { transform: perspective(2000px) rotateY(-90deg) scale(.94); }
+}
+@keyframes bbx-card-turn-in {
+  from { transform: perspective(2000px) rotateY(90deg) scale(.94); }
+  to { transform: perspective(2000px) rotateY(0deg) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bbx-card-properties, .bbx-card-properties-label { transition: none; }
+  .bbx-card-properties:hover,
+  .bbx-card-properties:focus-visible,
+  .bbx-card-properties[aria-busy="true"] { transform: none; }
+  .bbx-card-surface[data-card-turn] { animation-duration: 1ms; }
+}
+@media print { .bbx-card-surface[data-card-turn] { animation: none; transform: none; } }

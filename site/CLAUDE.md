@@ -28,13 +28,13 @@ external requests at view time** (fonts inlined via a system stack, no CDNs, no
 remote assets — the page is CSP-clean and viewable offline). The output in
 `dist/` is the whole product; the router and Pages both just serve those bytes.
 
-## Human prose is the boxholder's words only
+## Authorship is explicit
 
-Agents never fill in his voice. Any human-facing prose an agent writes is a
-**marked placeholder** (a visible bracketed editorial note, impossible to
-mistake for him) that his real words replace later. Structure/scaffolding by
-agent is fine; words are not. This is enforced by keeping placeholders marked,
-not hoped for.
+Never present agent-written prose as the boxholder's voice. Every published
+page card carries a person-centered `authorship` account and explicit AI
+contribution categories. Agent-drafted informational prose may publish when
+that contribution is described there; prose intended to become Ian's own words
+stays a visible bracketed placeholder until he replaces it.
 
 ## Deployment
 

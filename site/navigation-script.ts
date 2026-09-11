@@ -33,6 +33,44 @@ export const NAVIGATION_SCRIPT = `
 
   function initializeContent() {
     ${FISHEYE_SCRIPT}
+    for (const surface of document.querySelectorAll('.bbx-card-surface')) {
+      const button = surface.querySelector('[data-card-properties]');
+      const front = surface.querySelector('.bbx-card-front');
+      const back = surface.querySelector('.bbx-card-back');
+      if (!button || !front || !back) continue;
+      button.hidden = false;
+      const showBack = value => {
+        front.hidden = value;
+        front.toggleAttribute('inert', value);
+        front.setAttribute('aria-hidden', String(value));
+        back.hidden = !value;
+        back.setAttribute('aria-hidden', String(!value));
+        surface.dataset.cardSide = value ? 'back' : 'front';
+        button.setAttribute('aria-expanded', String(value));
+        button.setAttribute('aria-label', value ? 'Back to card' : 'On the back');
+        button.title = value ? 'Back to card' : 'On the back: authorship and provenance';
+        button.querySelector('.bbx-card-properties-label').textContent = value ? '\u2190 Back to card' : 'On the back';
+      };
+      button.addEventListener('click', () => {
+        if (surface.dataset.cardTurn) return;
+        const next = surface.dataset.cardSide !== 'back';
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches) { showBack(next); return; }
+        button.setAttribute('aria-busy', 'true');
+        surface.dataset.cardTurn = 'out';
+        const finishTurn = event => {
+          if (event.target !== surface) return;
+          if (surface.dataset.cardTurn === 'out') {
+            showBack(next);
+            surface.dataset.cardTurn = 'in';
+          } else {
+            delete surface.dataset.cardTurn;
+            button.removeAttribute('aria-busy');
+            surface.removeEventListener('animationend', finishTurn);
+          }
+        };
+        surface.addEventListener('animationend', finishTurn);
+      });
+    }
     for (const prompt of document.querySelectorAll('.agent-prompt')) {
       const button = prompt.querySelector('.prompt-copy');
       const status = prompt.querySelector('.prompt-status');

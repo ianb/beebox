@@ -1,6 +1,6 @@
 # Site presentation assets
 
-`materials.css`, `card-themes.css`, and `chrome.css` are a deliberate snapshot
+`materials.css`, `card-themes.css`, `card-turn.css`, and `chrome.css` are a deliberate snapshot
 of the same-named files in `beebox/src/frontend/src/themes/`, taken for the
 public-site integration on 2026-09-10. Preserve the app's surfaces, fonts,
 stock colors and system controls. Update these together when reconciling the

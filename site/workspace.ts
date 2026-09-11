@@ -3,6 +3,34 @@ import { FISHEYE_CSS } from "./fisheye.js";
 import { escapeHtml } from "./render.js";
 import { nextDestination, type SitePage, type SiteWorkspace } from "./workspace-model.js";
 
+const CORE_AI_CONTRIBUTIONS = ["transcription", "drafting", "editing"];
+
+function contributionLabel(key: string): string {
+  const words = key.replace(/[_-]+/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function authorshipBack(page: SitePage, backId: string): string {
+  const people = page.frontmatter.authorship.people.map((person) => `<section class="card-author">
+<h3>${escapeHtml(person.name)}</h3>
+<p class="card-author-role">${escapeHtml(person.role)}</p>
+<p>${escapeHtml(person.contribution)}</p>
+</section>`).join("");
+  const aiEntries = Object.entries(page.frontmatter.authorship.ai).toSorted(([a], [b]) => {
+    const aIndex = CORE_AI_CONTRIBUTIONS.indexOf(a);
+    const bIndex = CORE_AI_CONTRIBUTIONS.indexOf(b);
+    if (aIndex !== -1 || bIndex !== -1) return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex);
+    return a.localeCompare(b);
+  }).map(([kind, contribution]) => `<dt>${escapeHtml(contributionLabel(kind))}</dt><dd>${escapeHtml(contribution === "none" ? "None" : contribution)}</dd>`).join("");
+  return `<section id="${backId}" class="bbx-card-back" hidden aria-hidden="true" aria-label="Authorship and provenance">
+<p class="card-back-kicker">Authorship and provenance</p>
+<h2>On the back</h2>
+<div class="card-authorship-people">${people}</div>
+<section class="card-ai-contribution"><h3>AI contribution</h3><dl>${aiEntries}</dl></section>
+<dl class="card-provenance"><dt>Card</dt><dd><code>${escapeHtml(page.id)}</code></dd></dl>
+</section>`;
+}
+
 function nextLinks(workspace: SiteWorkspace, page: SitePage): string {
   const links = (page.frontmatter.next ?? []).map((next, index) => {
     const target = nextDestination(workspace, { page, card: next.card });
@@ -32,13 +60,17 @@ function pane(workspace: SiteWorkspace, params: { page: SitePage; context: boole
     ? `<a href="${escapeHtml(parent.href)}" data-parent>Back to ${escapeHtml(parent.frontmatter.title)}</a>`
     : page.frontmatter.navigation ? "Collection" : "Reading";
   const transition = `card-${workspace.pages.indexOf(page)}`;
+  const cardKey = `${context ? "context" : "reading"}-${workspace.pages.indexOf(page)}`;
+  const frontId = `card-front-${cardKey}`;
+  const backId = `card-back-${cardKey}`;
   return `<section class="pane${context ? " context" : ""}" data-card="${escapeHtml(page.id)}" aria-label="${escapeHtml(page.frontmatter.title)}">
 <div class="pane-label">${label}<span>${parent ? "Aside" : "Document"}</span></div>
-<article class="bbx-card-theme bbx-card-surface" data-card-theme="${theme}" data-card-stock="${stock}" style="view-transition-name:${transition}">
-<span class="card-fold" aria-hidden="true"></span><div class="bbx-card-front"><div class="bbx-card-content bbx-theme-prose">
+<article class="bbx-card-theme bbx-card-surface" data-card-theme="${theme}" data-card-stock="${stock}" data-card-side="front" style="view-transition-name:${transition}">
+<span class="card-fold" aria-hidden="true"></span><button type="button" class="bbx-card-properties" data-card-properties hidden aria-label="On the back" title="On the back: authorship and provenance" aria-expanded="false" aria-controls="${backId}"><span class="bbx-card-properties-label" aria-hidden="true">On the back</span></button>
+<div id="${frontId}" class="bbx-card-front" aria-hidden="false"><div class="bbx-card-content bbx-theme-prose">
 ${context ? contextBody(page) : page.html}
 ${context ? "" : nextLinks(workspace, page)}
-</div></div></article></section>`;
+</div></div>${authorshipBack(page, backId)}</article></section>`;
 }
 
 function menuHtml(workspace: SiteWorkspace): string {
@@ -53,7 +85,7 @@ export function workspaceShell(workspace: SiteWorkspace, page: SitePage): string
   const context = page.id === workspace.navigation.id ? undefined
     : workspace.pages.find((candidate) => candidate.id === page.parentId) ?? workspace.navigation;
   const chrome = workspace.navigation.frontmatter.chrome ?? { theme: "paper", stock: "cream" };
-  const styles = ["materials", "card-themes", "chrome", "site"].map((name) => `<link rel="stylesheet" href="${escapeHtml(workspace.base)}assets/${name}.css">`).join("\n");
+  const styles = ["materials", "card-themes", "card-turn", "chrome", "site"].map((name) => `<link rel="stylesheet" href="${escapeHtml(workspace.base)}assets/${name}.css">`).join("\n");
   const description = escapeHtml(page.frontmatter.summary);
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

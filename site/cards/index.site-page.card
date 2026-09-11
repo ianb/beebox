@@ -1,6 +1,16 @@
 ---
 title: "Bee Box: an environment for you and your agent"
 summary: "A personal system built on Claude Code: the filesystem is state, git is history, the bbx CLI is the interface. Source-available and self-hostable."
+authorship:
+  people:
+    - name: Ian Bicking
+      role: creator
+      contribution: Set the direction for Bee Box and supplied the installation prompt.
+  ai:
+    transcription: none
+    drafting: Drafted the explanatory copy from the project's README and installation guide.
+    editing: Arranged the card around the installation prompt and source links.
+    source-preparation: Compared the public description with the repository README and agent installation guide.
 theme: paper
 next:
   - card: /walkthrough.site-page.card
@@ -18,12 +28,27 @@ and preferences, and ask me before anything that affects my system or accounts.
 ```
 {% /agent-prompt %}
 
-> **[EDITORIAL PLACEHOLDER — not the boxholder's words.]** This page is a marked
-> scaffold. The human-facing prose here will be written by the boxholder in his
-> own voice and will replace this note. Nothing in this block is his writing;
-> do not read it as such.
+Bee Box is a personal assistant that a coding agent operates with you. Give it
+voice memos, email, web clippings, or chat; it turns those inputs into cards,
+takes actions it understands, and asks when it does not.
 
-Until then, the plain links:
+## A box is a directory
+
+Cards are Markdown files with structured frontmatter. The filesystem is the
+state of the box, Git is its history, and the `bbx` command is the common
+interface. The box can be read, searched, corrected, and versioned with tools
+that already work on ordinary files.
+
+## You teach it by using it
+
+Rules, answers, and corrections become part of the box. The engine and your
+data stay separate: Bee Box can be upgraded while the cards and history in your
+box remain yours.
+
+Bee Box is early, source-available, and self-hosted. Claude Code and Codex are
+the supported coding agents today.
+
+Project links:
 
 - [Source on GitHub](https://github.com/ianb/beebox)
 - [Community server (Discord)](https://discord.gg/FQYn6zyv)

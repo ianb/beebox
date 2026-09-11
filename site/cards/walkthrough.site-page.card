@@ -1,6 +1,16 @@
 ---
 title: A morning with the box (draft)
 summary: "Unlisted round-3 prototype: a morning with the box told through real user stories, with categorized asides in three voices."
+authorship:
+  people:
+    - name: Ian Bicking
+      role: creator and editor
+      contribution: Set the direction to tell a morning through real, provenance-carrying user stories.
+  ai:
+    transcription: none
+    drafting: Drafted the marked prototype narration and explanatory asides.
+    editing: Reworked the prototype into a parent card with an attached confidence note.
+    source-preparation: Selected and embedded verified repository excerpts from the user-story catalog.
 unlisted: true
 theme: paper
 next:
