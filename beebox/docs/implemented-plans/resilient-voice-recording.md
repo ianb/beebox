@@ -4,7 +4,7 @@ status: implemented
 workstream: hq-recording-resilience
 issues:
   - ../../../issues/bugs/2026-09-10-live-transcription-failure-loses-the-hq-pass.md
-  - ../../../issues/bugs/2026-09-09-hq-transcription-fails-silently.md
+  - ../../../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md
 ---
 # Resilient voice recording and HQ transcription
 

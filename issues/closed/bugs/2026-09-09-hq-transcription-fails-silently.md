@@ -1,6 +1,7 @@
 ---
 title: "A failing HQ transcription pass is silent — the client logs a console warning and falls back, so a misconfigured HQ service looks like a feature that does nothing"
-workstream: unattached
+workstream: openrouter-services
+resolution: implemented
 area: beebox
 priority: important
 labels: [transcription, error-reporting, chat]
@@ -8,6 +9,16 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "I tried it with Voxtral, then switched it to the MAI transcriber… It just doesn't do the hq transcription at all...?"
 ---
+
+> **Closed 2026-09-11.** All three items are done. Item 1 (visible, persistent
+> failure notice) shipped in `hq-recording-resilience` and, after a merge
+> conflict, now lives entirely in `main`'s `resilient-voice-recording` Track 4
+> (`lib/audio/hq-failure-notices.ts`, `VoiceNotices.tsx`) rather than this
+> branch's superseded client half. Items 2 and 3 (disable an unreachable
+> service in the picker with its reason; save an unusable choice only with a
+> warning) ship in `secret-entry-guidance` (commit `3b51e8f3c`,
+> `core/model-capabilities.ts`, `voice.capabilities`, `unusableWarning` on
+> `setHqService`/`setBackend`). See `beebox/docs/secrets.md#picking-a-service-the-box-cannot-reach-yet`.
 
 A box was set to `hqService: "mai-diarized"` without the `openrouter` secret
 granted to it. Every checkpoint HQ pass then failed, and the boxholder saw no

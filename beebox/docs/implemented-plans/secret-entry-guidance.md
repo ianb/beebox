@@ -1,10 +1,10 @@
 ---
 title: "Secret entry that explains itself: guided names, grant on add, and a paste that activates"
-status: partial
+status: implemented
 workstream: openrouter-services
 issues:
-  - ../../../issues/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md
-  - ../../../issues/bugs/2026-09-09-hq-transcription-fails-silently.md
+  - ../../../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md
+  - ../../../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md
 ---
 # Secret entry that explains itself
 
@@ -22,9 +22,9 @@ service that needs the key fails every pass in silence. The boxholder's
 verdict on 2026-09-09, filed verbatim: *"It's all pretty bad."*
 
 **Issues addressed:**
-[secrets-add-form-hides-the-names-that-work](../../../issues/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md)
+[secrets-add-form-hides-the-names-that-work](../../../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md)
 in full, and the picker half of
-[hq-transcription-fails-silently](../../../issues/bugs/2026-09-09-hq-transcription-fails-silently.md)
+[hq-transcription-fails-silently](../../../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md)
 (both halves: the picker that offers a choice that cannot work, Track 5, and
 the silent 500, Track 6 — the issue says all three of its fixes get done, and
 this plan does them). `bin/issues similar`

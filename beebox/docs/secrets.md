@@ -529,3 +529,16 @@ diarize, so `hqService: voxtral` or `voxtral-diarized` still needs a `mistral`
 key. A box that wants any of these needs `openai-thinking`, `mistral`, or
 `deepgram` as before. `bbx health` prints a
 `model-routes` line naming what each service is currently using.
+
+## Picking a service the box cannot reach yet
+
+`core/model-capabilities.ts` mirrors the dispatch logic above into a truth
+table (`serviceCapabilities`): for every HQ transcription service and TTS
+backend, whether the box currently holds a credential that reaches it, and
+which secret(s) would fix it if not. The voice-menu pickers read this through
+the owner-only `voice.capabilities` query and render an unreachable choice
+disabled with its reason, rather than letting the boxholder select something
+that will fail on every pass. Saving is never blocked on this, though — a key
+may be granted later — so `setHqService` and `setBackend` still accept an
+unusable choice and return a `warning` string (`unusableWarning`) alongside
+the committed config, which the client surfaces instead of a bare success.
