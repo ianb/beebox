@@ -33,6 +33,7 @@ import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import { rendererDisplayLabel } from "../lib/renderer-display-label";
 import { toDisplayPath } from "@shared/display-path";
 import { SelectionCapture } from "./SelectionCapture";
+import { extractSelection } from "../lib/selection/position";
 import { Pre } from "./ui/Pre";
 import { Button } from "./ui/Button";
 import { ActiveFileRenderer, AuthoredRendererMarker } from "./ActiveFileRenderer";
@@ -210,7 +211,7 @@ function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
   enabled: boolean; onCapture: (selection: { text: string; position: string }) => void;
   rendered: ReactNode; workspacePdf: boolean | undefined;
 }) {
-  return enabled ? <SelectionCapture onCapture={onCapture} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
+  return enabled ? <SelectionCapture onCapture={onCapture} extract={extractSelection} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
 }
 
 export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {

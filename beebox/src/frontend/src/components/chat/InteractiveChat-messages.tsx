@@ -25,6 +25,7 @@ import {
   type SpeechPlaybackState,
 } from "./InteractiveChat-message-items";
 import { MAX_RETAINED_MESSAGES } from "../../machines/chat-types";
+import { TranscriptSelection } from "./TranscriptSelection";
 import type { CaptureBubbleModel, CaptureVerbs } from "./capture-bubble";
 import type { AudioOverlayStore } from "./audio-overlay-store";
 import type { PendingHq } from "../../machines/composerMachine";
@@ -294,7 +295,7 @@ function MessageListInner({
               not the app's chrome. The load-older header and the
               scroll-to-bottom button sit outside this wrapper and stay
               scannable. */}
-          <div data-bbx-scan="exclude">
+          <TranscriptSelection>
             {data.map((item, index) => {
               // The live turn's group keeps one key across the streamed→finalized
               // transition so React reconciles it in place — no remount/flash.
@@ -316,7 +317,7 @@ function MessageListInner({
                 </div>
               );
             })}
-          </div>
+          </TranscriptSelection>
         </div>
       </div>
       {!atBottom ? (

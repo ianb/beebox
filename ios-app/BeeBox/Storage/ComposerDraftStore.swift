@@ -172,7 +172,8 @@ final class ComposerDraftStore: ObservableObject {
             return .rejected(id: command.id, reason: "That command does not carry a selection.")
         }
         guard
-            source.ref.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
+            // No ref is legitimate (chat-transcript text); a present one must name something.
+            source.ref.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }) ?? true,
             source.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
             source.position.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         else {

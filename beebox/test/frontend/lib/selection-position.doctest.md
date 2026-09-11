@@ -9,7 +9,31 @@ The DOM-walking half (`extractSelection`) is verified in the browser, since
 it depends on the live rendered document; this covers the pure formatter.
 
 ```ts setup
-import { formatPosition } from "../../../src/frontend/src/lib/selection/position.js";
+import { formatPosition, formatTranscriptPosition } from "../../../src/frontend/src/lib/selection/position.js";
+```
+
+## Chat transcript selections name the chat and the speaker
+
+A selection from the chat transcript has no document behind it.
+`formatTranscriptPosition(startRole, endRole)` takes the `data-role` of the
+message holding each end of the selection.
+
+```ts
+[
+  formatTranscriptPosition("assistant", "assistant"),
+  formatTranscriptPosition("user", "user"),
+  formatTranscriptPosition("user", "assistant"),
+  formatTranscriptPosition("capture", "capture"),
+  formatTranscriptPosition(null, null),
+]
+=>
+[
+  "chat transcript; assistant message",
+  "chat transcript; user message",
+  "chat transcript; spans several messages",
+  "chat transcript",
+  "chat transcript"
+]
 ```
 
 ## All parts present

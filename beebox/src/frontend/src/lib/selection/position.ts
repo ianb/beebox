@@ -34,8 +34,12 @@ export interface ExtractedSelection {
 
 /** A captured selection ready to attach to a message: source ref + the extracted pieces. */
 export interface AddSelectionInput {
-  /** Box-relative path of the source document, absolute (leading "/"). */
-  ref: string;
+  /**
+   * Box-relative path of the source document, absolute (leading "/"), or null
+   * for text quoted from the chat transcript itself — there is no file behind
+   * it, and `position` says so in words.
+   */
+  ref: string | null;
   text: string;
   position: string;
 }
@@ -75,6 +79,40 @@ function nodeFollows(ref: Element, node: Node): boolean {
   }
   const rel = ref.compareDocumentPosition(node);
   return (rel & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+}
+
+const TRANSCRIPT_SPEAKERS: Record<string, string> = { user: "user message", assistant: "assistant message" };
+
+/**
+ * The `position` for text quoted from the chat transcript: says it came from
+ * the chat, and whose message when the selection sits inside one. `startRole`
+ * and `endRole` are the `data-role` of the transcript items holding each end.
+ */
+export function formatTranscriptPosition(startRole: string | null, endRole: string | null): string {
+  if (startRole !== endRole) return "chat transcript; spans several messages";
+  const speaker = startRole === null ? undefined : TRANSCRIPT_SPEAKERS[startRole];
+  return speaker === undefined ? "chat transcript" : `chat transcript; ${speaker}`;
+}
+
+function transcriptRole(node: Node, container: Element): string | null {
+  const item = nodeToElement(node)?.closest("[data-role]");
+  if (item === null || item === undefined || !container.contains(item)) return null;
+  return item.getAttribute("data-role");
+}
+
+/**
+ * `extractSelection` for the chat transcript (container = the message list).
+ * Headings and paragraphs mean nothing across a transcript, so the position
+ * only names the source and speaker.
+ */
+export function extractTranscriptSelection(selection: Selection, container: Element): ExtractedSelection | null {
+  const text = selection.toString().trim();
+  if (text === "" || selection.rangeCount === 0) {
+    return null;
+  }
+  const range = selection.getRangeAt(0);
+  const position = formatTranscriptPosition(transcriptRole(range.startContainer, container), transcriptRole(range.endContainer, container));
+  return { text, position };
 }
 
 /**
