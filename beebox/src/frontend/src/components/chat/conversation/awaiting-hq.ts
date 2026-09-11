@@ -17,8 +17,12 @@ import type { PendingConversationSend } from "./pending-sends";
 export type AwaitingHqChoice = "hq" | "live";
 
 export type AwaitingHqResolution =
-  /** `recordLate`: the fallback could not be recorded yet (a new chat has no session) — record it after the send. */
-  | { kind: "send"; emission: Emission; recordLate: boolean }
+  /**
+   * `recordLate`: the fallback could not be recorded yet (a new chat has no
+   * session) — record it after the send. `outcome` lets the caller raise a
+   * permanent failure's notice.
+   */
+  | { kind: "send"; emission: Emission; recordLate: boolean; outcome: HqWaitOutcome }
   /** "Send HQ transcript" raced a status change: the result is not ready. */
   | { kind: "not-ready" };
 
@@ -43,5 +47,5 @@ export async function resolveAwaitingHq(opts: {
   }
   const emission = prepareVoiceSubmitEmission({ realtime: row.emission, outcome, keyword: sendKeywordIn(row.emission.text) });
   const recordLate = outcome.kind === "fallback" && typeof outcome.reason === "string" && !outcome.recorded;
-  return { kind: "send", emission, recordLate };
+  return { kind: "send", emission, recordLate, outcome };
 }

@@ -204,6 +204,12 @@ function applyFallBackRequested(
   voice: StagingVoice,
   event: Extract<VoiceEvent, { type: "fallBackRequested" }>,
 ): VoiceTransitionOutcome {
+  // A fallback names the chat its realtime text went to; once one is known,
+  // any other chat is refused, repeat or not.
+  const knownSession = voice.hqRequest?.sessionId ?? null;
+  if (knownSession !== null && knownSession !== event.sessionId) {
+    return err({ code: "session-mismatch", message: "fallback sessionId does not match the recording's HQ request" });
+  }
   if (voice.handoff.mode !== "open") {
     // `delivering`/`delivered` are reachable here too: a client's `fallBack`
     // response can be lost in transit after it already recorded `late`, and
@@ -221,9 +227,6 @@ function applyFallBackRequested(
   const { hqRequest } = voice;
   if (hqRequest?.emissionId !== event.emissionId) {
     return err({ code: "emission-mismatch", message: "fallback emissionId does not match the recording's HQ request" });
-  }
-  if (hqRequest.sessionId !== null && hqRequest.sessionId !== event.sessionId) {
-    return err({ code: "session-mismatch", message: "fallback sessionId does not match the recording's HQ request" });
   }
   // The first message of a new chat had no session at finalize; the realtime
   // send has one now, and late delivery needs it.

@@ -251,6 +251,18 @@ JSON.stringify(apply(bound, { type: "fallBackRequested", emissionId: "emission-1
 => {"refused":"session-mismatch"}
 ```
 
+A repeat for the same emission is idempotent only from the same chat: after
+`late` is recorded for `chat-new`, a stale client naming another chat is
+refused rather than told its realtime text will be corrected there.
+
+```ts continue
+JSON.stringify(apply(named, { type: "fallBackRequested", emissionId: "emission-new", sessionId: "chat-else" }))
+=> {"refused":"session-mismatch"}
+
+nextVoiceState(named, { type: "fallBackRequested", emissionId: "emission-new", sessionId: "chat-new" }).value === named
+=> true
+```
+
 ## `lateDeliveryStarted` and `landedConfirmed`: the correction's own at-most-once send
 
 Late delivery only starts once HQ is ready. Given a `late` handoff whose HQ
