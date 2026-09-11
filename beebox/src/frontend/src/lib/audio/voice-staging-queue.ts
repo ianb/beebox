@@ -62,8 +62,21 @@ export interface VoiceStagingQueue {
   wake: () => void;
 }
 
+/**
+ * `finalize`/`discard` seal a recording; a `create`/`chunk` enqueued for an
+ * already-sealed recording is a caller bug (Track 3/4 are meant to finalize
+ * or discard exactly once, after every chunk) — refuse it loudly rather than
+ * silently corrupting the chunk count `enqueueFinalize` already sent.
+ */
 function enqueue(ctx: Ctx, opts: { recordingId: string; payload: VoiceOpPayload }): void {
   const { recordingId, payload } = opts;
+  if ((payload.kind === "create" || payload.kind === "chunk") && ctx.state.sealedRecordings.has(recordingId)) {
+    console.error(`[voice-staging] Refusing to enqueue ${payload.kind} for already-sealed recording ${recordingId}`);
+    return;
+  }
+  if (payload.kind === "finalize" || payload.kind === "discard") {
+    ctx.state.sealedRecordings.add(recordingId);
+  }
   const c = countersFor(ctx, recordingId);
   const seq = c.nextSeq;
   c.nextSeq += 1;
@@ -124,14 +137,20 @@ let singleton: VoiceStagingQueue | null = null;
  * browsing, blocked site data, plain Node under a doctest). Opening the
  * database is itself lazy (`voice-staging-storage.ts`), so choosing this
  * synchronously costs nothing; the state layer's `downgradeToInMemory` covers
- * the case where the first real use throws.
+ * the case where the first real use throws. `persistent` reflects the choice
+ * made here, not just later failures — `indexedDB` being absent from the
+ * start is exactly the case `isPersistent()` exists to report.
  */
-function chooseRealStorage(): VoiceStagingStorage {
-  return typeof indexedDB === "undefined" ? createInMemoryVoiceStagingStorage() : createIndexedDbVoiceStagingStorage();
+function chooseRealStorage(): { storage: VoiceStagingStorage; persistent: boolean } {
+  if (typeof indexedDB === "undefined") return { storage: createInMemoryVoiceStagingStorage(), persistent: false };
+  return { storage: createIndexedDbVoiceStagingStorage(), persistent: true };
 }
 
 function getSingleton(): VoiceStagingQueue {
-  singleton ??= createVoiceStagingQueue({ storage: chooseRealStorage(), send: sendVoiceOp, apiBase: getApiBase, now: () => Date.now() });
+  if (singleton === null) {
+    const { storage, persistent } = chooseRealStorage();
+    singleton = createVoiceStagingQueue({ storage, persistent, send: sendVoiceOp, apiBase: getApiBase, now: () => Date.now() });
+  }
   return singleton;
 }
 

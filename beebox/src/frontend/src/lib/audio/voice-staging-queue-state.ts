@@ -30,6 +30,8 @@ export type Listener = () => void;
 
 export interface VoiceStagingQueueDeps {
   storage: VoiceStagingStorage;
+  /** Whether `storage` is durable (IndexedDB) as opposed to a from-the-start in-memory fallback. */
+  persistent: boolean;
   send: (op: StoredVoiceOp) => Promise<OpOutcome>;
   apiBase: () => string;
   now: () => number;
@@ -40,12 +42,15 @@ export interface QueueState {
   storage: VoiceStagingStorage;
   persistent: boolean;
   ops: StoredVoiceOp[];
-  lastOutcome: LastOutcome | null;
+  /** Keyed by `recordingId` — see `NextDrainStepOptions.lastOutcomes` for why not a single scalar. */
+  lastOutcomes: Map<string, LastOutcome>;
   draining: boolean;
   drainTimer: ReturnType<typeof setTimeout> | null;
   warnedStorageFailure: boolean;
   counters: Map<string, { nextSeq: number; nextChunkIndex: number }>;
   recordingNotes: Map<string, { lastError?: string; terminal?: boolean }>;
+  /** Recordings that have received a `finalize`/`discard` — further `create`/`chunk` enqueues for them are refused. */
+  sealedRecordings: Set<string>;
   statusListeners: Set<Listener>;
   failureListeners: Set<Listener>;
   status: ReadonlyMap<string, VoiceStagingStatus>;
@@ -61,14 +66,15 @@ export interface Ctx {
 export function createQueueState(deps: VoiceStagingQueueDeps): QueueState {
   return {
     storage: deps.storage,
-    persistent: true,
+    persistent: deps.persistent,
     ops: [],
-    lastOutcome: null,
+    lastOutcomes: new Map(),
     draining: false,
     drainTimer: null,
     warnedStorageFailure: false,
     counters: new Map(),
     recordingNotes: new Map(),
+    sealedRecordings: new Set(),
     statusListeners: new Set(),
     failureListeners: new Set(),
     status: new Map(),
@@ -126,6 +132,23 @@ export function countersFor(ctx: Ctx, recordingId: string): { nextSeq: number; n
   return c;
 }
 
+/**
+ * Bring `counters` up to date with whatever ops are actually in `ctx.state.ops`
+ * — needed after `loadPersisted` merges ops a prior tab/session already
+ * assigned `seq`/chunk indices for, so a later enqueue for the same recording
+ * (a resumed drainer plus a still-live recorder in another tab) can't reuse a
+ * `seq` or chunk filename that already exists.
+ */
+export function reconcileCounters(ctx: Ctx): void {
+  for (const op of ctx.state.ops) {
+    const c = countersFor(ctx, op.recordingId);
+    if (op.seq >= c.nextSeq) c.nextSeq = op.seq + 1;
+    if (op.payload.kind === "chunk" && op.payload.chunkIndex >= c.nextChunkIndex) {
+      c.nextChunkIndex = op.payload.chunkIndex + 1;
+    }
+  }
+}
+
 export async function removeOp(ctx: Ctx, op: StoredVoiceOp): Promise<void> {
   ctx.state.ops = ctx.state.ops.filter((o) => !(o.recordingId === op.recordingId && o.seq === op.seq));
   refreshStatus(ctx);
@@ -140,6 +163,7 @@ export async function dropRecording(ctx: Ctx, opts: { recordingId: string; messa
   const { recordingId, message } = opts;
   const toRemove = ctx.state.ops.filter((o) => o.recordingId === recordingId);
   ctx.state.ops = ctx.state.ops.filter((o) => o.recordingId !== recordingId);
+  ctx.state.lastOutcomes.delete(recordingId);
   ctx.state.recordingNotes.set(recordingId, { terminal: true, lastError: message });
   ctx.state.failures = [...ctx.state.failures, { recordingId, message, at: ctx.deps.now() }];
   refreshStatus(ctx);

@@ -10,7 +10,7 @@ import { assertNever } from "@shared/invariant";
 import { isRecord } from "@shared/is-record";
 import { withMobileAuth, mobileAuthHeaders } from "../mobile-auth";
 import { fetchFromBox, isBoxUnreachable } from "../trpc/transient";
-import { uploadBinary, UploadStalledError, UploadNetworkError } from "../binary-upload";
+import { uploadBinary, UploadStalledError, UploadNetworkError, UploadResponseError } from "../binary-upload";
 import type { StoredVoiceOp } from "./voice-staging-storage";
 import type { OpOutcome, VoiceCreateOp, VoiceChunkOp, VoiceFinalizeOp } from "./voice-staging-queue-core";
 
@@ -54,15 +54,24 @@ async function classifyResponse(response: Response): Promise<OpOutcome> {
   return { kind: "terminal", error: new VoiceStagingResponseError({ status: response.status, detail }) };
 }
 
+/** The same 502/503/504 set `transient.ts`'s `fetchFromBox` treats as an outage. */
+const GATEWAY_STATUSES = new Set([502, 503, 504]);
+
 /**
  * A thrown error, classified the way the plan specifies: `isBoxUnreachable`
  * covers `fetchFromBox`'s gateway/network failures, and the two `XHR`-specific
- * classes cover `uploadBinary`'s. Everything else — including a plain 4xx/5xx
- * status, which arrives as a resolved (not thrown) `Response` and is
- * classified by `classifyResponse` instead — is terminal.
+ * classes cover `uploadBinary`'s stall/network failures. `uploadBinary` uses
+ * `XMLHttpRequest`, not `fetch`, so a deploy-restart 502 on a chunk upload
+ * never reaches `fetchFromBox`'s classification at all — it resolves as an
+ * `UploadResponseError` instead, which is why that one status range gets its
+ * own check here rather than being terminal like every other response status
+ * (classified by `classifyResponse`, for `create`/`finalize`/`discard`).
  */
 function classifyThrown(error: unknown): OpOutcome {
   if (isBoxUnreachable(error) || error instanceof UploadStalledError || error instanceof UploadNetworkError) {
+    return { kind: "transient", error };
+  }
+  if (error instanceof UploadResponseError && GATEWAY_STATUSES.has(error.status)) {
     return { kind: "transient", error };
   }
   return { kind: "terminal", error };

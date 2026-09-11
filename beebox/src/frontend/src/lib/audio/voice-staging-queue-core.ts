@@ -85,7 +85,17 @@ export type DrainStep<T extends VoiceOp = VoiceOp> =
 
 export interface NextDrainStepOptions {
   now: number;
-  lastOutcome: LastOutcome | null;
+  /**
+   * The shell's memory of each recording's most recent send attempt, keyed by
+   * `recordingId` — one entry per recording, since only its earliest
+   * surviving op is ever in flight. Keyed by recording rather than a single
+   * scalar: two recordings can each be mid-backoff at once (one waiting out a
+   * transient failure while an older-but-just-loaded recording's op is sent
+   * first), and a single shared slot would let one recording's outcome
+   * clobber another's — an unrelated success would wipe a still-active
+   * backoff and cause an early resend before its wait elapsed.
+   */
+  lastOutcomes: ReadonlyMap<string, LastOutcome>;
   /** `VOICE_QUEUE_BOUND_MS` — an op this old fails terminally regardless of what it is. */
   boundMs: number;
 }
@@ -123,13 +133,12 @@ function nextOp<T extends VoiceOp>(ops: readonly T[]): T | null {
 
 /**
  * The next thing the drainer should do: send an op, wait, report a recording
- * as terminally failed, or sit idle. `lastOutcome` is the shell's memory of
- * the most recent send attempt (not persisted — a reload naturally retries
- * immediately, which is fine since nothing here promises a fixed wall-clock
- * schedule across a reload).
+ * as terminally failed, or sit idle. `lastOutcomes` is not persisted — a
+ * reload naturally retries immediately, which is fine since nothing here
+ * promises a fixed wall-clock schedule across a reload.
  */
 export function nextDrainStep<T extends VoiceOp>(ops: readonly T[], options: NextDrainStepOptions): DrainStep<T> {
-  const { now, lastOutcome, boundMs } = options;
+  const { now, lastOutcomes, boundMs } = options;
   const op = nextOp(ops);
   if (op === null) return { type: "idle" };
 
@@ -137,10 +146,8 @@ export function nextDrainStep<T extends VoiceOp>(ops: readonly T[], options: Nex
     return { type: "terminal", recordingId: op.recordingId, op, reason: "expired" };
   }
 
-  const outcomeForThisOp =
-    lastOutcome !== null && lastOutcome.recordingId === op.recordingId && lastOutcome.seq === op.seq
-      ? lastOutcome
-      : null;
+  const recordingOutcome = lastOutcomes.get(op.recordingId);
+  const outcomeForThisOp = recordingOutcome !== undefined && recordingOutcome.seq === op.seq ? recordingOutcome : null;
   if (outcomeForThisOp !== null) {
     if (outcomeForThisOp.kind === "terminal") {
       return { type: "terminal", recordingId: op.recordingId, op, reason: "rejected" };

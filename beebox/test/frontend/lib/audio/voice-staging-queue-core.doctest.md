@@ -23,7 +23,9 @@ function op(overrides: Partial<VoiceOp> & Pick<VoiceOp, "recordingId" | "seq">):
 }
 
 function step(ops: VoiceOp[], opts: { now: number; lastOutcome?: LastOutcome | null }) {
-  return nextDrainStep(ops, { now: opts.now, lastOutcome: opts.lastOutcome ?? null, boundMs: BOUND_MS });
+  const lastOutcomes = new Map<string, LastOutcome>();
+  if (opts.lastOutcome) lastOutcomes.set(opts.lastOutcome.recordingId, opts.lastOutcome);
+  return nextDrainStep(ops, { now: opts.now, lastOutcomes, boundMs: BOUND_MS });
 }
 ```
 
@@ -192,4 +194,38 @@ const next = op({ recordingId: "r1", seq: 1, createdAt: 100 });
 const staleOutcome: LastOutcome = { recordingId: "r1", seq: 0, at: 5000, kind: "terminal" };
 step([next], { now: 5001, lastOutcome: staleOutcome }).type
 => send
+```
+
+## Two recordings backing off at once don't clobber each other's wait
+
+`lastOutcomes` is keyed by `recordingId` precisely so one recording's outcome
+can't wipe another's still-active backoff. `older` is mid-retry-wait; `newer`
+(which only exists because ops from a second tab were just merged in) has no
+outcome yet and sends immediately — and `older`'s wait is unaffected by that.
+
+```ts
+const olderOp = op({ recordingId: "older", seq: 0, createdAt: 0, attempts: 1 });
+const newerOp = op({ recordingId: "newer", seq: 0, createdAt: 50 });
+const lastOutcomes = new Map<string, LastOutcome>([
+  ["older", { recordingId: "older", seq: 0, at: 5000, kind: "transient" }],
+]);
+
+nextDrainStep([olderOp, newerOp], { now: 5100, lastOutcomes, boundMs: BOUND_MS })
+=> {
+  "type": "wait",
+  "ms": 900
+}
+```
+
+Once `older`'s op is removed from the array (the shell only calls
+`nextDrainStep` again after handling the previous result — a "wait" step is
+never followed by sending a different recording out of turn), `newer` is
+next, with `older`'s backoff entry left untouched in the map:
+
+```ts continue
+nextDrainStep([newerOp], { now: 5100, lastOutcomes, boundMs: BOUND_MS }).op.recordingId
+=> newer
+
+lastOutcomes.get("older")?.at
+=> 5000
 ```

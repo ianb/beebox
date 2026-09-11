@@ -9,7 +9,15 @@
 
 import { errorMessage } from "@shared/error-guards";
 import { nextDrainStep, VOICE_QUEUE_BOUND_MS } from "./voice-staging-queue-core";
-import { refreshStatus, removeOp, dropRecording, persistPut, type Ctx } from "./voice-staging-queue-state";
+import {
+  refreshStatus,
+  removeOp,
+  dropRecording,
+  persistPut,
+  reconcileCounters,
+  downgradeToInMemory,
+  type Ctx,
+} from "./voice-staging-queue-state";
 import type { StoredVoiceOp } from "./voice-staging-storage";
 
 async function bumpAttempts(ctx: Ctx, op: StoredVoiceOp): Promise<void> {
@@ -38,7 +46,7 @@ export async function runDrain(ctx: Ctx): Promise<void> {
     for (;;) {
       const step = nextDrainStep(ctx.state.ops, {
         now: ctx.deps.now(),
-        lastOutcome: ctx.state.lastOutcome,
+        lastOutcomes: ctx.state.lastOutcomes,
         boundMs: VOICE_QUEUE_BOUND_MS,
       });
       if (step.type === "idle") return;
@@ -47,20 +55,19 @@ export async function runDrain(ctx: Ctx): Promise<void> {
         return;
       }
       if (step.type === "terminal") {
+        // dropRecording clears this recording's lastOutcomes entry itself.
         await dropRecording(ctx, { recordingId: step.recordingId, message: describeTerminal(step.reason, step.op) });
-        ctx.state.lastOutcome = null;
         continue;
       }
       const outcome = await ctx.deps.send(step.op);
       if (outcome.kind === "success") {
         await removeOp(ctx, step.op);
-        ctx.state.lastOutcome = null;
+        ctx.state.lastOutcomes.delete(step.op.recordingId);
       } else if (outcome.kind === "terminal") {
         await dropRecording(ctx, { recordingId: step.op.recordingId, message: errorMessage(outcome.error) });
-        ctx.state.lastOutcome = null;
       } else {
         await bumpAttempts(ctx, step.op);
-        ctx.state.lastOutcome = { recordingId: step.op.recordingId, seq: step.op.seq, at: ctx.deps.now(), kind: "transient" };
+        ctx.state.lastOutcomes.set(step.op.recordingId, { recordingId: step.op.recordingId, seq: step.op.seq, at: ctx.deps.now(), kind: "transient" });
       }
     }
   } finally {
@@ -77,7 +84,13 @@ export function wake(ctx: Ctx): void {
   runDrain(ctx).catch((e: unknown) => console.error("[voice-staging] Drain loop failed:", e));
 }
 
-/** Merge whatever the storage already held (a prior tab, a reload) into the live op list, then wake. */
+/**
+ * Merge whatever the storage already held (a prior tab, a reload) into the
+ * live op list, then wake. Reconciles `counters` against the merged ops so a
+ * later enqueue for one of these recordings (a still-live recorder in
+ * another tab) can't reissue a `seq` or chunk filename the merged ops already
+ * used.
+ */
 export async function loadPersisted(ctx: Ctx): Promise<void> {
   try {
     const loaded = await ctx.state.storage.loadAll();
@@ -85,11 +98,10 @@ export async function loadPersisted(ctx: Ctx): Promise<void> {
     const merged = loaded.filter((o) => !known.has(`${o.recordingId} ${String(o.seq)}`));
     if (merged.length === 0) return;
     ctx.state.ops = [...ctx.state.ops, ...merged];
+    reconcileCounters(ctx);
     refreshStatus(ctx);
     wake(ctx);
   } catch (e) {
-    // `downgradeToInMemory` would need re-importing just for this one call site;
-    // loadAll's own storage failure just means starting from an empty queue.
-    console.warn("[voice-staging] Failed to load persisted ops (starting empty):", e);
+    downgradeToInMemory(ctx, e);
   }
 }

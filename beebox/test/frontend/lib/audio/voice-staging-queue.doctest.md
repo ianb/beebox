@@ -39,6 +39,7 @@ let now = 1000;
 const transport = fakeTransport({});
 const queue = createVoiceStagingQueue({
   storage: createInMemoryVoiceStagingStorage(),
+  persistent: true,
   send: transport.send,
   apiBase: () => "http://box.example/api",
   now: () => now,
@@ -75,6 +76,7 @@ transport.calls.join(",")
 const transport2 = fakeTransport({ "r2#0": ["transient", "success"] });
 const queue2 = createVoiceStagingQueue({
   storage: createInMemoryVoiceStagingStorage(),
+  persistent: true,
   send: transport2.send,
   apiBase: () => "http://box.example/api",
   now: () => now,
@@ -107,6 +109,7 @@ transport2.calls.join(",")
 const transport3 = fakeTransport({ "r3#1": ["terminal"] });
 const queue3 = createVoiceStagingQueue({
   storage: createInMemoryVoiceStagingStorage(),
+  persistent: true,
   send: transport3.send,
   apiBase: () => "http://box.example/api",
   now: () => now,
@@ -147,6 +150,7 @@ discard for a session the box already forgot resolves silently.
 const transport4 = fakeTransport({});
 const queue4 = createVoiceStagingQueue({
   storage: createInMemoryVoiceStagingStorage(),
+  persistent: true,
   send: transport4.send,
   apiBase: () => "http://box.example/api",
   now: () => now,
@@ -164,6 +168,7 @@ JSON.stringify({ pending: queue4.getStatusSnapshot().has("r4"), failures: queue4
 const transport5 = fakeTransport({});
 const queue5 = createVoiceStagingQueue({
   storage: createInMemoryVoiceStagingStorage(),
+  persistent: true,
   send: transport5.send,
   apiBase: () => "http://box.example/api",
   now: () => now,
@@ -183,6 +188,7 @@ transport5.calls.join(",")
 const transport6 = fakeTransport({});
 const queue6 = createVoiceStagingQueue({
   storage: createInMemoryVoiceStagingStorage(),
+  persistent: true,
   send: transport6.send,
   apiBase: () => "http://box.example/api",
   now: () => now,
@@ -194,4 +200,107 @@ notified > 0
 => true
 
 unsubscribe();
+```
+
+## A chunk enqueued after finalize is refused, not silently mis-sequenced
+
+`enqueueFinalize` snapshots the chunk count it assigned so far. A caller that
+(by mistake) enqueues one more chunk afterward would otherwise corrupt that
+count; the queue refuses the late chunk instead.
+
+```ts
+const transport7 = fakeTransport({});
+const queue7 = createVoiceStagingQueue({
+  storage: createInMemoryVoiceStagingStorage(),
+  persistent: true,
+  send: transport7.send,
+  apiBase: () => "http://box.example/api",
+  now: () => now,
+});
+queue7.enqueueCreate("r7", { targetSessionId: "s1" });
+queue7.enqueueChunk("r7", new ArrayBuffer(4));
+queue7.enqueueFinalize("r7", { hq: null });
+queue7.pendingChunkCount("r7")
+=> 1
+
+queue7.enqueueChunk("r7", new ArrayBuffer(4));
+queue7.pendingChunkCount("r7")
+=> 1
+```
+
+```ts continue
+await flushMicrotasks();
+transport7.calls.join(",")
+=> r7#0:create,r7#1:chunk,r7#2:finalize
+```
+
+## A stuck recording's backoff survives another recording succeeding
+
+Two recordings can each be mid-drain at once across a merge from storage
+(two tabs, or a resumed drainer). An older recording's transient failure
+must keep its own wait even after a different, older-still recording's op is
+merged in and succeeds in between — a single shared "last outcome" would let
+that unrelated success wipe `stuck`'s backoff and cause an immediate,
+un-backed-off resend. `urgent` is planted directly in storage (simulating an
+op a second tab already had queued, older than anything this queue has
+enqueued itself) so it merges in via `loadPersisted` — the reachable path for
+this race, since strict oldest-first ordering otherwise never lets a merely
+*newer* recording jump ahead of one already mid-backoff.
+
+```ts
+const storage8 = createInMemoryVoiceStagingStorage();
+storage8.put({
+  apiBase: "http://box.example/api",
+  recordingId: "urgent",
+  seq: 0,
+  payload: { kind: "create", targetSessionId: "s1" },
+  createdAt: 0,
+  attempts: 0,
+});
+const transport8 = fakeTransport({ "stuck#0": ["transient", "success"] });
+const queue8 = createVoiceStagingQueue({
+  storage: storage8,
+  persistent: true,
+  send: transport8.send,
+  apiBase: () => "http://box.example/api",
+  now: () => now,
+});
+queue8.enqueueCreate("stuck", { targetSessionId: "s1" });
+await flushMicrotasks();
+```
+
+`stuck` failed once and is backing off; `urgent` (older than `stuck`, merged
+in mid-drain) was sent and succeeded in between — and `stuck`'s backoff is
+untouched:
+
+```ts continue
+transport8.calls.join(",")
+=> stuck#0:create,urgent#0:create
+
+queue8.getStatusSnapshot().get("stuck").queuedOps
+=> 1
+```
+
+Waking the drainer again immediately still finds `stuck` too soon to retry —
+`urgent`'s success did not clear its wait:
+
+```ts continue
+queue8.wake();
+await flushMicrotasks();
+transport8.calls.join(",")
+=> stuck#0:create,urgent#0:create
+```
+
+Only once real backoff time has passed does `stuck` retry and succeed:
+
+```ts continue
+now += 5000;
+queue8.wake();
+await flushMicrotasks();
+
+queue8.getStatusSnapshot().has("stuck")
+=> false
+
+transport8.calls.join(",")
+=> stuck#0:create,urgent#0:create,stuck#0:create
 ```
