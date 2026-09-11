@@ -10,7 +10,6 @@
 
 import {
   ConversationChangedWhileBrowsingError,
-  ConversationDidNotSwitchError,
   PlaceMenuCollapsedError,
   PlaceMenuErroredError,
   PlaceMenuMissingFixedRowsError,
@@ -210,32 +209,16 @@ export function currentPlaceLabel(snapshot: string): string | null {
   return /"Where you are:\s*([^"]*)"/.exec(line)?.[1]?.trim() ?? null;
 }
 
-/** The persistent composer's user-visible `Send to:` destination. */
-export function composerDestination(snapshot: string): string | null {
-  for (const line of snapshot.split("\n")) {
-    const destination = /StaticText\s+"Send to:\s*([^"]+)"/.exec(line)?.[1]?.trim();
-    if (destination !== undefined) return destination;
-  }
-  return null;
-}
-
-/** Verify an explicit switch changed the persistent composer's recipient. */
-export function conversationSwitchFailure(
-  before: string | null,
-  snapshot: string,
-): SmokeFailureError | null {
-  const after = composerDestination(snapshot);
-  return after === null || after === before
-    ? new ConversationDidNotSwitchError({ before, after, snapshot })
-    : null;
-}
-
-/** Verify ordinary content navigation preserved the selected recipient. */
-export function conversationPreservationFailure(
+/**
+ * The app bar publishes the persistent conversation's selected place even
+ * while a card or Browse owns the main surface. It is the visible signal that
+ * content navigation did not retarget the composer.
+ */
+export function conversationPlacePreservationFailure(
   expected: string,
   snapshot: string,
 ): SmokeFailureError | null {
-  const actual = composerDestination(snapshot);
+  const actual = currentPlaceLabel(snapshot);
   return actual === expected
     ? null
     : new ConversationChangedWhileBrowsingError({ expected, actual, snapshot });

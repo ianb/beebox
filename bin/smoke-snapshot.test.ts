@@ -4,9 +4,7 @@ import type { SmokeFailureError } from "./smoke-errors.js";
 import {
   MENU_ERROR_TEXT,
   cardViewRendered,
-  composerDestination,
-  conversationPreservationFailure,
-  conversationSwitchFailure,
+  conversationPlacePreservationFailure,
   contentAreaRow,
   currentPlaceLabel,
   directoryRowCount,
@@ -93,21 +91,11 @@ test("currentPlaceLabel: reads the pill's `Where you are: <label>` accessible na
   assert.equal(currentPlaceLabel('- button "User" [ref=e8, id=bbx-nav-profile]'), null);
 });
 
-test("composerDestination: reads the persistent composer's visible recipient", () => {
-  assert.equal(
-    composerDestination('- generic\n  - StaticText "Send to: _content/courses/Acids_Bases.attach"'),
-    "_content/courses/Acids_Bases.attach",
-  );
-  assert.equal(composerDestination('- textbox "Type a message..."'), null);
-});
-
-test("conversation destination checks distinguish switching from browsing", () => {
-  const root = '- StaticText "Send to: / (box root)"';
-  const acids = '- StaticText "Send to: _content/courses/Acids_Bases.attach"';
-  assert.equal(conversationSwitchFailure("/ (box root)", acids), null);
-  assert.match(conversationSwitchFailure("/ (box root)", root)?.message ?? "", /did not switch/);
-  assert.equal(conversationPreservationFailure("_content/courses/Acids_Bases.attach", acids), null);
-  assert.match(conversationPreservationFailure("_content/courses/Acids_Bases.attach", root)?.message ?? "", /changed/);
+test("conversation place preservation uses the app bar's visible place", () => {
+  const acids = '- button "Where you are: Acids & Bases" [id=bbx-nav-place]';
+  const root = '- button "Where you are: Box" [id=bbx-nav-place]';
+  assert.equal(conversationPlacePreservationFailure("Acids & Bases", acids), null);
+  assert.match(conversationPlacePreservationFailure("Acids & Bases", root)?.message ?? "", /changed/);
 });
 
 test("switchTarget: never the place we are already in", () => {

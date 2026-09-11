@@ -169,23 +169,11 @@ export class LandmarkRefUnresolvedError extends SmokeFailureError {
   }
 }
 
-/** Explicit landmark selection left the composer bound to its old recipient. */
-export class ConversationDidNotSwitchError extends SmokeFailureError {
-  constructor(input: { before: string | null; after: string | null; snapshot: string }) {
-    super(
-      "selecting a landmark moved the page but did not switch the conversation recipient" +
-        ` (before: ${input.before ?? "missing"}; after: ${input.after ?? "missing"})`,
-      input.snapshot,
-    );
-    this.name = "ConversationDidNotSwitchError";
-  }
-}
-
-/** Ordinary content navigation silently retargeted the persistent composer. */
+/** Ordinary content navigation silently changed the selected conversation's place. */
 export class ConversationChangedWhileBrowsingError extends SmokeFailureError {
   constructor(input: { expected: string; actual: string | null; snapshot: string }) {
     super(
-      "browsing content changed the conversation recipient" +
+      "browsing content changed the conversation's selected place" +
         ` (expected: ${input.expected}; actual: ${input.actual ?? "missing"})`,
       input.snapshot,
     );
