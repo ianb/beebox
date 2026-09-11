@@ -6,7 +6,15 @@ labels: [chat, codex-engine, transcription]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-hq-recording-resilience — cross-model review of the voice-recording plan's step 5 (late HQ delivery re-probes this function)
+resolution: implemented
 ---
+
+**Closed by commit `9b7ef4982`** ("Probe the newest Codex entries for an
+already-landed message"): the Codex-engine branch now loads `{ mode: "tail",
+tail: MAX_SESSION_ENTRIES }` instead of `{ mode: "page", offset: 0, limit:
+MAX_SESSION_ENTRIES }`, so a message landed near the tail of a thread longer
+than 5000 entries is found. `test/core/codex-transcript.doctest.md` pins the
+tail-vs-page slicing. No divergence from the issue's proposed fix.
 
 `userMessageAlreadyLanded` (`src/core/chat/session/deliver-user-message.ts`)
 has two branches. The default (Claude) branch streams the session's raw JSONL
