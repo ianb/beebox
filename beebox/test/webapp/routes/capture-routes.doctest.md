@@ -582,16 +582,23 @@ badId.statusCode
 => 400
 ```
 
-A `targetSessionId` is required for a voice session:
+A voice session may start without a `targetSessionId`: the mic can open in a
+brand-new chat before it has a session. The manifest records `null`; the HQ
+job and late delivery read the session from finalize's `hq.sessionId` instead.
 
 ```ts continue
+const unboundId = "8c8d8e3f-4a0b-4e1c-8d3c-3c4d5e6f7081";
 const noTarget = await ctx.request({
   method: "POST",
   url: "/api/capture/sessions",
-  payload: { kind: "voice" },
+  payload: { kind: "voice", id: unboundId },
 });
 noTarget.statusCode
-=> 400
+=> 200
+
+const unbound = JSON.parse(await ctx.read(`_tmp/capture-staging/${unboundId}/session.json`));
+unbound.voice.targetSessionId
+=> null
 ```
 
 ```ts cleanup

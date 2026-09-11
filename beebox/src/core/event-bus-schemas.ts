@@ -242,8 +242,8 @@ export const eventSchemas = {
    * A voice recording's HQ pass or handoff moved
    * (`docs/plans/resilient-voice-recording.md`, Track 1). Emitted by the HQ
    * job (`core/voice-recording/hq-job.ts`) after every persisted transition.
-   * `sessionId` is the chat session the recording belongs to
-   * (`voice.targetSessionId`) — a connected tab filters this stream on it the
+   * `sessionId` is the chat session the HQ result is for
+   * (`voice.hqRequest.sessionId`) — a connected tab filters this stream on it the
    * same way `capture-status`/`chat-retranscription` consumers already do;
    * the bus itself carries every box's voice events undifferentiated.
    */

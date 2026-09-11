@@ -164,8 +164,12 @@ const VoiceHqRequestSchema = z.object({
  * exactly when `isVoiceSession(session)` is true.
  */
 const StagingVoiceSchema = z.object({
-  /** Chat session the recording belongs to. */
-  targetSessionId: z.string(),
+  /**
+   * Chat session the recording was started in, or `null` when the mic
+   * started in a chat that had no session yet. Informational only: the HQ
+   * job, its status events and late delivery all use `hqRequest.sessionId`.
+   */
+  targetSessionId: z.string().nullable(),
   /** ISO, client clock. */
   startedAt: z.string(),
   sealedAt: z.string().optional(),

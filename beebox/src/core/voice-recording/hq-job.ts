@@ -125,9 +125,14 @@ export async function runHqJob(deps: RunHqJobDeps): Promise<void> {
 function emitStatus(opts: { eventBus: EventBus; session: StagingSession }): void {
   const { eventBus, session } = opts;
   invariant(session.voice !== undefined, "emitStatus requires a voice session");
+  // The job only runs for a recording sealed with an HQ request, and that
+  // request names the session the result is for (`voice.targetSessionId` may
+  // be null: the mic can start before a new chat has a session).
+  const { hqRequest } = session.voice;
+  invariant(hqRequest !== undefined, "emitStatus requires an HQ request");
   eventBus.emit("voice-recording-status", {
     recordingId: session.id,
-    sessionId: session.voice.targetSessionId,
+    sessionId: hqRequest.sessionId,
     hq: session.voice.hq,
     handoff: session.voice.handoff,
   });
@@ -336,7 +341,7 @@ async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
     const result = await joinPieceResults({
       pieces: results,
       boxRoot,
-      targetSessionId: session.voice.targetSessionId,
+      targetSessionId: hqRequest.sessionId,
       service: hqRequest.service,
     });
     const done = await applyVoiceEvent({ boxRoot, id, event: { type: "allPiecesDone", result } });

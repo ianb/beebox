@@ -15,7 +15,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { invariant } from "../../lib/invariant.js";
 import { enforceStagingLimits } from "./staging-limits.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { handleStagingUploadReplay } from "./upload-replay.js";
@@ -114,7 +113,6 @@ export async function createStagingSession(opts: {
     if (opts.contextDir !== undefined) session.contextDir = opts.contextDir;
   }
   if (kind === "voice") {
-    invariant(targetSessionId !== null, "voice session requires a targetSessionId");
     session.voice = {
       targetSessionId,
       startedAt: now,

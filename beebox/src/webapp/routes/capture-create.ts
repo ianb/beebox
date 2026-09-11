@@ -75,9 +75,11 @@ async function handleCreateVoiceSession(opts: {
   createdBy: string | null;
 }): Promise<unknown> {
   const { boxRoot, reply, body, createdBy } = opts;
-  if (!body.targetSessionId) {
-    return reply.status(400).send({ error: "targetSessionId is required for a voice session" });
-  }
+  // `targetSessionId` may be null: a brand-new chat has no session id yet when
+  // the mic starts. Nothing reads it for delivery — the HQ job, its status
+  // events and late delivery all use `hqRequest.sessionId`, which finalize
+  // supplies once the message has a session.
+  const targetSessionId = body.targetSessionId ?? null;
   if (body.id !== undefined && !VoiceSessionIdSchema.safeParse(body.id).success) {
     return reply.status(400).send({ error: "id must be a UUID v4" });
   }
@@ -92,7 +94,7 @@ async function handleCreateVoiceSession(opts: {
   }
   const session = await createStagingSession({
     boxRoot,
-    targetSessionId: body.targetSessionId,
+    targetSessionId,
     createdBy,
     kind: "voice",
     ...(body.id !== undefined && { id: body.id }),
