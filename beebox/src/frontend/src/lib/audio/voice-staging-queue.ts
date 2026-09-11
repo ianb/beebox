@@ -49,7 +49,7 @@ export type { VoiceStagingStatus, VoiceStagingFailure };
 export interface VoiceStagingQueue {
   enqueueCreate: (recordingId: string, opts: { targetSessionId: string | null }) => void;
   enqueueChunk: (recordingId: string, bytes: ArrayBuffer) => void;
-  enqueueFinalize: (recordingId: string, opts: { hq: { emissionId: string; sessionId: string } | null }) => void;
+  enqueueFinalize: (recordingId: string, opts: { hq: { emissionId: string; sessionId: string | null } | null }) => void;
   enqueueDiscard: (recordingId: string) => void;
   pendingChunkCount: (recordingId: string) => number;
   subscribeStatus: (listener: Listener) => () => void;
@@ -160,7 +160,7 @@ export function enqueueCreate(recordingId: string, opts: { targetSessionId: stri
 export function enqueueChunk(recordingId: string, bytes: ArrayBuffer): void {
   getSingleton().enqueueChunk(recordingId, bytes);
 }
-export function enqueueFinalize(recordingId: string, opts: { hq: { emissionId: string; sessionId: string } | null }): void {
+export function enqueueFinalize(recordingId: string, opts: { hq: { emissionId: string; sessionId: string | null } | null }): void {
   getSingleton().enqueueFinalize(recordingId, opts);
 }
 export function enqueueDiscard(recordingId: string): void {

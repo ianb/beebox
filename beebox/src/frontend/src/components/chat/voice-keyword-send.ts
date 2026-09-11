@@ -3,35 +3,26 @@ import type { EmissionDispatch } from "./conversation/use-bound-emission";
 import type { ComposerEvent } from "../../machines/composerMachine";
 import { markVoiceAudioAbsent } from "../../lib/audio/last-audio";
 import { sendSound, tick } from "../../lib/audio/earcons";
+import { awaitHq, recordLateFallBack } from "../../lib/audio/await-hq";
+import { HQ_WAIT_BUDGET_MS, hqStatusLine, type HqWaitOutcome } from "../../lib/audio/hq-wait";
+import { recordHqFailureNotice } from "../../lib/audio/hq-failure-notices";
+import { pendingChunkCount } from "../../lib/audio/voice-staging-queue";
+import { voiceSendSequencer, type VoiceSendSlot } from "../../lib/audio/voice-send-sequencer";
+import type { PendingRecording } from "../../lib/audio/voice-stager";
 import { joinTranscript } from "./InteractiveChat-helpers";
+import type { Emission } from "../../input/emission";
 import type { EmissionStore } from "../../input/emission-store";
-import { buildVoiceSubmitEmission, type VoiceIntent } from "../../input/voice-intent";
+import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission, sendKeywordOf, type VoiceIntent } from "../../input/voice-intent";
 import type { SelectionItem } from "../../lib/selection/serialize";
 import type { InputStore } from "./input-store";
 import { toastError } from "../ui/toast-store";
 
-/**
- * Run the realtime-transcription "submit" flow: commit the utterance and
- * either restart the mic so the user can keep talking (plain `send`) or close it
- * and leave it closed (`closeMic`, the "send and close" sign-off). The intent
- * carries the segment's staged recording; every exit below seals it exactly
- * once.
- *
- * TEMPORARY BRIDGE (docs/plans/resilient-voice-recording.md, Track 3 → 4):
- * the message always sends the realtime text. When HQ is wanted (narration
- * mode, the HQ dictation switch, or "clean up and send"), the recording is
- * sealed with an HQ request for this message, so the box runs the HQ job —
- * but nothing waits for or applies its result yet. Track 4 adds the bounded
- * wait, the visible fallback and the late correction.
- * Module-level so the hook body stays under the per-function line budget.
- */
-export async function runKeywordSend(opts: {
+export interface RunKeywordSendOpts {
   /** The realtime keyword spotter's "submit" intent (docs/implemented-plans/input-extraction.md, chunk 5). */
   intent: Extract<VoiceIntent, { kind: "submit" }>;
   transcription: { start: () => void };
   stopTickRef: React.MutableRefObject<(() => void) | null>;
   composerSend: (event: ComposerEvent) => void;
-  sessionId: string | null;
   narrationEnabledRef: React.MutableRefObject<boolean>;
   /** docs/implemented-plans/hq-dictation-switch.md, chunk 1 — read at fire time, same pattern as narrationEnabledRef. */
   hqDictationEnabledRef: React.MutableRefObject<boolean>;
@@ -46,8 +37,33 @@ export async function runKeywordSend(opts: {
   inputStore: InputStore;
   /** Resolves once no file attachment is still uploading — see the freeze below. */
   awaitPendingUploads: () => Promise<void>;
-}): Promise<void> {
-  const { intent, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, hqDictationEnabledRef, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, awaitPendingUploads } = opts;
+}
+
+/**
+ * Run the realtime-transcription "submit" flow: commit the utterance and
+ * either restart the mic so the user can keep talking (plain `send`) or close
+ * it (`closeMic`, the "send and close" sign-off). The intent carries the
+ * segment's staged recording; every exit below seals it exactly once.
+ *
+ * With HQ wanted (narration mode, the HQ dictation switch, or "clean up and
+ * send"), the recording is sealed with an HQ request and the send waits for
+ * the box's HQ job (docs/plans/resilient-voice-recording.md, Track 4): the HQ
+ * text if it arrives within the budget, otherwise the live text marked
+ * `hq="pending"` (the box corrects it later) or `hq="failed"`. The mic re-arms
+ * at once; waits run concurrently and dispatch in segment order.
+ */
+export async function runKeywordSend(opts: RunKeywordSendOpts): Promise<void> {
+  // Reserved before the first await, so dispatch order is segment-end order.
+  const slot = voiceSendSequencer.reserve();
+  try {
+    await sendVoiceSegment(opts, slot);
+  } finally {
+    slot.release();
+  }
+}
+
+async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): Promise<void> {
+  const { intent, transcription, stopTickRef, composerSend, narrationEnabledRef, hqDictationEnabledRef, resetSelections, emissionStore, resetAttachments, clearDraftRef, inputStore, awaitPendingUploads } = opts;
   const { text, recording, closeMic } = intent;
   // Restart the mic for a continuous conversation, or — for "send and close" —
   // end dictation (STOP_DICTATION clears turnTaking, suppressing the
@@ -56,12 +72,14 @@ export async function runKeywordSend(opts: {
     if (closeMic) composerSend({ type: "STOP_DICTATION" });
     else transcription.start();
   };
+  const wantsHq = hqDictationEnabledRef.current || narrationEnabledRef.current || intent.hq;
+  // A segment recorded while live text was paused has no text of its own;
+  // with HQ wanted it still becomes a message (its text comes from HQ).
+  const hqRecording = wantsHq ? recording : null;
   // Any text already in the composer (a prior stopped segment, or typing)
   // continues into this utterance rather than being discarded.
   let priorInput = inputStore.get().trim();
-  if (!priorInput && !text.trim()) {
-    // Nothing to send (e.g. a send while live text was paused). The audio
-    // stays on the box without HQ; turning it into text is Track 4's wait.
+  if (!priorInput && !text.trim() && hqRecording === null) {
     recording?.seal(null);
     settleMic();
     return;
@@ -79,11 +97,10 @@ export async function runKeywordSend(opts: {
   }
   const dispatchCaptured = captured.dispatch;
   priorInput = captured.draft.text.trim();
-  const selectionsSnapshot = captured.draft.selections;
   const { images: imagesSnapshot, files: filesSnapshot } = captured.attachments;
-  const prepared = buildVoiceSubmitEmission({ priorInput, finalText: text,
-    selectionsSnapshot, imagesSnapshot, filesSnapshot, diarized: false, words: intent.words });
-  try { dispatchCaptured.stage(prepared); }
+  const prepared = buildVoiceSubmitEmission({ priorInput, finalText: text, selectionsSnapshot: captured.draft.selections,
+    imagesSnapshot, filesSnapshot, diarized: false, words: intent.words });
+  try { dispatchCaptured.stage(prepared, hqRecording === null ? {} : { recordingId: hqRecording.recordingId }); }
   catch (error) {
     dispatchCaptured.release();
     inputStore.set(prepared.text);
@@ -94,27 +111,81 @@ export async function runKeywordSend(opts: {
   }
   inputStore.set("");
   resetSelections();
-  if (imagesSnapshot.length > 0 || filesSnapshot.length > 0) {
-    resetAttachments();
-  }
+  if (imagesSnapshot.length > 0 || filesSnapshot.length > 0) resetAttachments();
   sendSound.play();
   stopTickRef.current = tick.repeatPlay(1000, 30000);
-  const wantsHq = hqDictationEnabledRef.current || narrationEnabledRef.current || intent.hq;
-  if (wantsHq && sessionId === null) {
-    // A brand-new chat has no session id to name in the HQ request yet.
-    console.warn("[voice-send] HQ wanted, but this chat has no session yet — recording kept without HQ");
-  }
-  recording?.seal(wantsHq && sessionId !== null ? { emissionId: prepared.id, sessionId } : null);
-  void dispatchCaptured(prepared).catch((error: unknown) => {
-    dispatchCaptured.release();
-    toastError("Voice message kept for recovery", { cause: error });
-  });
-  // The recording lives on the box now, not in this tab. Until
-  // `get-last-audio` reads staged recordings (Track 5), answer "none" for this
-  // message rather than an older message's audio.
-  markVoiceAudioAbsent(prepared.id);
   // The segment is committed — drop any persisted draft so the recovery
   // widget doesn't resurface the text we just sent.
   clearDraftRef.current();
+
+  if (hqRecording === null) {
+    recording?.seal(null);
+    settleMic();
+    await slot.turn();
+    dispatchVoice(dispatchCaptured, prepared);
+    return;
+  }
+  hqRecording.seal({ emissionId: prepared.id, sessionId: dispatchCaptured.currentSessionId() });
+  composerSend({ type: "START_HQ", id: prepared.id, text: prepared.text || "Recording without live text" });
   settleMic();
+  const outcome = await waitForHq({ recording: hqRecording, emission: prepared, dispatchCaptured, composerSend });
+  const final = prepareVoiceSubmitEmission({ realtime: prepared, outcome, keyword: sendKeywordOf(intent) });
+  await slot.turn();
+  composerSend({ type: "HQ_DONE", id: prepared.id });
+  dispatchVoice(dispatchCaptured, final);
+  followUpOutcome({ outcome, recordingId: hqRecording.recordingId, emissionId: prepared.id, dispatchCaptured });
+}
+
+function waitForHq(opts: {
+  recording: PendingRecording;
+  emission: Emission;
+  dispatchCaptured: EmissionDispatch;
+  composerSend: (event: ComposerEvent) => void;
+}): Promise<HqWaitOutcome> {
+  const { recording, emission, dispatchCaptured, composerSend } = opts;
+  return awaitHq({
+    recordingId: recording.recordingId,
+    emissionId: emission.id,
+    budgetMs: HQ_WAIT_BUDGET_MS,
+    sessionId: () => dispatchCaptured.currentSessionId(),
+    onProgress: (progress) => composerSend({
+      type: "HQ_STATUS",
+      id: emission.id,
+      status: hqStatusLine(progress, { uploading: pendingChunkCount(recording.recordingId) > 0, now: Date.now() }),
+    }),
+  });
+}
+
+function dispatchVoice(dispatch: EmissionDispatch, emission: Emission): void {
+  void dispatch(emission).catch((error: unknown) => {
+    dispatch.release();
+    toastError("Voice message kept for recovery", { cause: error });
+  });
+  // The recording lives on the box now, not in this tab. Until
+  // `get-last-audio` reads staged recordings (Track 5), answer "none" for
+  // this message rather than an older message's audio.
+  markVoiceAudioAbsent(emission.id);
+}
+
+/**
+ * After the send: a permanent failure shows its notice; a fallback the wait
+ * could not record (a new chat had no session yet, or the box was
+ * unreachable) is recorded now, so the box delivers the HQ correction.
+ */
+function followUpOutcome(opts: {
+  outcome: HqWaitOutcome;
+  recordingId: string;
+  emissionId: string;
+  dispatchCaptured: EmissionDispatch;
+}): void {
+  const { outcome, recordingId, emissionId, dispatchCaptured } = opts;
+  if (outcome.kind !== "fallback") return;
+  if (typeof outcome.reason !== "string") {
+    if (outcome.reason.kind === "permanent") recordHqFailureNotice({ service: outcome.service, failure: outcome.reason });
+    return;
+  }
+  if (outcome.recorded) return;
+  recordLateFallBack({ recordingId, emissionId, sessionId: dispatchCaptured.assignedSessionId() }).catch((error: unknown) => {
+    console.error(`[voice-send] ${recordingId}: the HQ fallback was never recorded; no correction will follow:`, error);
+  });
 }

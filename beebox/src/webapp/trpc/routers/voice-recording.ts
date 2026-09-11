@@ -42,6 +42,8 @@ interface VoiceStatusDto {
   hq: VoiceHqState;
   handoff: VoiceHandoff;
   sealed: boolean;
+  /** The HQ service the request resolved to, once HQ was requested (names a failure notice). */
+  service: string | null;
 }
 
 /** A staging session known to be voice-kind — narrows `voice` off its optional declaration. */
@@ -59,6 +61,7 @@ function toDto(session: VoiceStagingSession): VoiceStatusDto {
     hq: session.voice.hq,
     handoff: session.voice.handoff,
     sealed: session.voice.sealedAt !== undefined,
+    service: session.voice.hqRequest?.service ?? null,
   };
 }
 

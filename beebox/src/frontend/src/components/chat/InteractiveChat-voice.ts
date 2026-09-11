@@ -24,6 +24,7 @@ import { recordingStop } from "../../lib/audio/earcons";
 import { joinTranscript } from "./InteractiveChat-helpers";
 import type { EmissionStore } from "../../input/emission-store";
 import { runKeywordSend } from "./voice-keyword-send";
+import { requestHqSendLive } from "../../lib/audio/await-hq";
 import { useSpeechDispatch } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection/serialize";
 import type { SpeechSegment } from "../../lib/audio/speech-parsing";
@@ -122,6 +123,7 @@ export function useChatVoice(opts: {
         case "stopSpeech": d.speechPlayback?.stop(); break;
         case "playSpeech": d.speechPlayback?.playSegments({ messageId: command.messageId, segments: command.segments, baseIndex: command.baseIndex }); break;
         case "markPlayed": d.speechPlayback?.markAsPlayed(command.messageId); break;
+        case "sendHqLive": requestHqSendLive(command.id); break;
       }
     });
     return () => sub.unsubscribe();
@@ -158,7 +160,7 @@ export function useChatVoice(opts: {
           // Fire-and-forget: it only awaits in-flight uploads, and reports
           // its own outcomes through the composer machine.
           void runKeywordSend({
-            intent, transcription, stopTickRef, composerSend, sessionId,
+            intent, transcription, stopTickRef, composerSend,
             narrationEnabledRef, hqDictationEnabledRef, selectionsRef, resetSelections, emissionStore, resetAttachments,
             captureEmissionDispatch: opts.captureEmissionDispatch, clearDraftRef, inputStore, awaitPendingUploads,
           }).catch((error: unknown) => toastError("Voice message kept for recovery", { cause: error }));
@@ -294,7 +296,8 @@ export function useChatVoice(opts: {
     isTranscribing,
     voicePaused,
     hqInFlight: composerSnapshot.matches({ hq: "inFlight" }),
-    pendingHqDraft: composerSnapshot.context.pendingHqText,
+    pendingHq: composerSnapshot.context.pendingHq,
+    sendHqLive: (id: string) => composerSend({ type: "HQ_SEND_LIVE", id }),
     clearDraft,
     handleStopSpeech,
     handleSkipSpeech,

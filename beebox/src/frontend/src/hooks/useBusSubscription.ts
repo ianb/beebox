@@ -14,6 +14,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { trpc } from "../lib/trpc";
+import { unwrapBusEvent, type WireBusEvent } from "../lib/bus-events";
 
 /** A real-time event delivered to subscribers. */
 export interface RealtimeEvent {
@@ -21,16 +22,6 @@ export interface RealtimeEvent {
   data?: unknown;
 }
 
-/**
- * tRPC delivers `tracked()` events as a raw `{ id, data }` envelope and plain
- * (transient) events as the payload directly, so onData sees a union. Unwrap to
- * the payload either way; the id is internal (wsLink tracks it for resume).
- */
-type WireEvent = RealtimeEvent | { id: string; data: RealtimeEvent };
-
-function unwrap(wire: WireEvent): RealtimeEvent {
-  return "event" in wire ? wire : wire.data;
-}
 
 export interface UseBusSubscriptionOptions {
   onEvent: (event: RealtimeEvent) => void;
@@ -48,8 +39,8 @@ export function useBusSubscription(options: UseBusSubscriptionOptions): { connec
     onStarted: useCallback(() => {
       optionsRef.current.onConnect?.();
     }, []),
-    onData: useCallback((data: WireEvent) => {
-      optionsRef.current.onEvent(unwrap(data));
+    onData: useCallback((data: WireBusEvent) => {
+      optionsRef.current.onEvent(unwrapBusEvent(data));
     }, []),
     onError: useCallback((err: { message: string }) => {
       optionsRef.current.onError?.();

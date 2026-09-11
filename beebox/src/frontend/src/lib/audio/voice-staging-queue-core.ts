@@ -36,7 +36,7 @@ export interface VoiceChunkOp {
 export interface VoiceFinalizeOp {
   kind: "finalize";
   chunkCount: number;
-  hq: { emissionId: string; sessionId: string } | null;
+  hq: { emissionId: string; sessionId: string | null } | null;
 }
 
 /** Cancels an unsealed recording. A 404 on send means it is already gone — success. */

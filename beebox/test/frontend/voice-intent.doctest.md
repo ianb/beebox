@@ -10,7 +10,7 @@ never appears here — it belongs to the next message instead.
 
 ```ts setup
 import { routeComposerSend } from "../../src/frontend/src/components/chat/InteractiveChat-helpers.js";
-import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission } from "../../src/frontend/src/input/voice-intent.js";
+import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission, sendKeywordOf } from "../../src/frontend/src/input/voice-intent.js";
 ```
 
 ## A live manual send always finalizes audio
@@ -171,11 +171,13 @@ buildVoiceSubmitEmission({
 => 2
 ```
 
-## Cleanup-send holds this frozen message for HQ
+## The HQ outcome replaces the spoken part of the frozen message
 
-The async HQ result is applied to the composer context captured when the
-keyword fired. Text that appears in the live composer while HQ is pending is
-not part of this emission.
+`prepareVoiceSubmitEmission` builds the dispatched emission from the realtime
+emission staged when the segment ended and the HQ wait's outcome
+(`docs/plans/resilient-voice-recording.md`, Track 4). The id and the frozen
+composer context never change: text typed into the composer during the wait
+belongs to the next message.
 
 ```ts
 const hqIntent = {
@@ -187,83 +189,59 @@ const hqIntent = {
   hq: true,
   words: [{ word: "rough", confidence: 0.4 }],
 };
-let finishHq: () => void = () => {};
-const hqGate = new Promise<void>((resolve) => { finishHq = resolve; });
-const pending = prepareVoiceSubmitEmission({
-  intent: hqIntent,
-  priorInput: "frozen draft",
-  selectionsSnapshot: [],
-  imagesSnapshot: [],
-  filesSnapshot: [],
-  runHq: true,
-  transcribe: async () => {
-    await hqGate;
-    return { text: "clean words", diarized: true, service: "voxtral" };
-  },
+const realtime = buildVoiceSubmitEmission({ priorInput: "frozen draft", finalText: hqIntent.text,
+  selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false, words: hqIntent.words });
+const hq = prepareVoiceSubmitEmission({
+  realtime,
+  outcome: { kind: "hq", result: { text: "clean words", diarized: true, service: "voxtral", pieces: 1 } },
+  keyword: sendKeywordOf(hqIntent),
 });
-const nextComposerText = "belongs to the next message";
-finishHq();
-const prepared = await pending;
-prepared.emission.text
+hq.text
 => frozen draft clean words <send-message phrase="clean up and send" />
 
-prepared.emission.text.includes(nextComposerText)
-=> false
-
-prepared.emission.diarized
+hq.id === realtime.id
 => true
 
-prepared.emission.words
-=> undefined
-
-prepared.emission.hqText
-=> true
-
-prepared.emission.hqService
-=> voxtral
+JSON.stringify({ diarized: hq.diarized, words: hq.words ?? null, hqText: hq.hqText, hqService: hq.hqService, hqFallback: hq.hqFallback ?? null })
+=> {"diarized":true,"words":null,"hqText":true,"hqService":"voxtral","hqFallback":null}
 ```
 
-The HQ pass used `hqIntent`'s words to describe text that got replaced —
-`usedHq` is true, so Track 3's HQ-drop rule applies: no `words` (and no
-`stt`/`<unsure>` marks at assemble time) regardless of what the realtime
-pass captured.
+The HQ text replaced the realtime words, so Track 3's HQ-drop rule applies:
+no `words` (and no `stt="deepgram"`/`<unsure>` marks at assemble time).
 
-## Cleanup-send falls back to the realtime message on HQ failure
+## A fallback sends the realtime message, marked
+
+The budget ran out (or the user chose the live text): the realtime text goes
+out marked `hq="pending"`, and its realtime words ride along. A permanent HQ
+failure marks it `hq="failed"`.
 
 ```ts continue
-const fallback = await prepareVoiceSubmitEmission({
-  intent: hqIntent,
-  priorInput: "frozen draft",
-  selectionsSnapshot: [],
-  imagesSnapshot: [],
-  filesSnapshot: [],
-  runHq: true,
-  transcribe: async () => { throw new Error("offline"); },
-});
-fallback.usedHq
-=> false
-
-fallback.emission.text
+const late = prepareVoiceSubmitEmission({ realtime, outcome: { kind: "fallback", reason: "budget", recorded: true, service: null }, keyword: null });
+late.text
 => frozen draft rough words <send-message phrase="clean up and send" />
+
+JSON.stringify({ hqFallback: late.hqFallback, words: late.words?.length, hqText: late.hqText ?? null })
+=> {"hqFallback":"pending","words":1,"hqText":null}
+
+prepareVoiceSubmitEmission({
+  realtime,
+  outcome: { kind: "fallback", reason: { kind: "permanent", code: "missing_key", message: "No OpenRouter key" }, recorded: true, service: "mai" },
+  keyword: null,
+}).hqFallback
+=> failed
 ```
 
-The fallback used the realtime text, so `hqIntent.words` rides straight
-through onto the emission unchanged — `usedHq` is false, so the HQ-drop
-rule doesn't apply:
+## A segment with no live text still becomes a message
 
-```ts continue
-fallback.emission.words?.length
-=> 1
+Recorded wholly while live text was paused, a segment has no realtime text;
+when HQ does not arrive, a placeholder body keeps the message (and its
+`message-id`, which the kept recording answers to):
 
-fallback.emission.words?.[0]?.word
-=> rough
-```
-
-No `hqText` bit either — the fallback never touched the HQ pass:
-
-```ts continue
-fallback.emission.hqText
-=> undefined
+```ts
+const silent = buildVoiceSubmitEmission({ priorInput: "typed first", finalText: "", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
+const placeholder = prepareVoiceSubmitEmission({ realtime: silent, outcome: { kind: "fallback", reason: "budget", recorded: false, service: null }, keyword: null });
+JSON.stringify({ text: placeholder.text, hqFallback: placeholder.hqFallback })
+=> {"text":"typed first [recording not transcribed]","hqFallback":"pending"}
 ```
 
 ## Manual stop-and-send HQ routing (empty `matchedPhrase`)
@@ -286,24 +264,19 @@ const manualIntent = {
   hq: false,
   words: null,
 };
-const manualPrepared = await prepareVoiceSubmitEmission({
-  intent: manualIntent,
-  priorInput: "",
-  selectionsSnapshot: [],
-  imagesSnapshot: [],
-  filesSnapshot: [],
-  runHq: true,
-  transcribe: async () => ({ text: "quick thought before I go, corrected", diarized: false, service: "whisper-llm" }),
-});
-manualPrepared.usedHq
-=> true
+sendKeywordOf(manualIntent)
+=> null
 
-manualPrepared.emission.text
+const manualRealtime = buildVoiceSubmitEmission({ priorInput: "", finalText: manualIntent.text,
+  selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
+const manualPrepared = prepareVoiceSubmitEmission({
+  realtime: manualRealtime,
+  outcome: { kind: "hq", result: { text: "quick thought before I go, corrected", diarized: false, service: "whisper-llm", pieces: 1 } },
+  keyword: sendKeywordOf(manualIntent),
+});
+manualPrepared.text
 => quick thought before I go, corrected
 
-manualPrepared.emission.hqText
-=> true
-
-manualPrepared.emission.hqService
-=> whisper-llm
+JSON.stringify({ hqText: manualPrepared.hqText, hqService: manualPrepared.hqService })
+=> {"hqText":true,"hqService":"whisper-llm"}
 ```

@@ -137,7 +137,7 @@ function MessageListRegion(props: ChatBodyProps) {
     captureBubbles, captureVerbs, audioOverlayStore, openers,
   } = props;
   const { onZoomView } = tabs;
-  const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
+  const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHq, sendHqLive } = voice;
   const { handleLoadOlder } = actions;
   return (
     <ChatRenderProfiler id="message-list">
@@ -163,7 +163,8 @@ function MessageListRegion(props: ChatBodyProps) {
       sendSignal={sendSignal}
       liveTurnId={liveTurnId}
       proseEnabled={model.chatFeatures.prose !== "off"}
-      pendingHqDraft={pendingHqDraft}
+      pendingHq={pendingHq}
+      onHqSendLive={sendHqLive}
       captureBubbles={captureBubbles}
       captureVerbs={captureVerbs}
       audioOverlayStore={audioOverlayStore}
