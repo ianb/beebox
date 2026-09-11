@@ -34,7 +34,7 @@ async function stageVoiceRecording(box, { targetSessionId, createdBy }) {
 
 async function requestHq(box, session, { emissionId, service, requestedAt }) {
   return sealVoiceSession({
-    boxRoot: box.root, id: session.id,
+    boxRoot: box.root, id: session.id, emissionId,
     hq: {
       emissionId, sessionId: session.voice.targetSessionId,
       service: service ?? "whisper", requestedAt: requestedAt ?? "2026-09-10T18:00:00.000Z",

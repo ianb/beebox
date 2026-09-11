@@ -4,10 +4,12 @@
  * chunks, so the server answers `bbx chat get-last-audio` / `retranscribe`
  * for it directly, before relaying to chat tabs (`chat-last-audio-routes.ts`).
  *
- * A recording is found by the message's emission id: `hqRequest.emissionId`
- * (written by the finalize that sealed it) or `handoff.emissionId` (written
- * by claim/fallBack). Both are written only once the recording is sealed,
- * so a match always has every chunk.
+ * A recording is found by the message's emission id: `voice.emissionId`
+ * (written by every finalize that seals a message, HQ or not),
+ * `hqRequest.emissionId` (written by the finalize that requested HQ — a
+ * fallback for a manifest sealed before `voice.emissionId` existed), or
+ * `handoff.emissionId` (written by claim/fallBack). All are written only
+ * once the recording is sealed, so a match always has every chunk.
  */
 
 import { buildWavHeader } from "../../shared/wav.js";
@@ -28,6 +30,7 @@ export interface StagedVoiceAudio {
 function matchesMessage(session: StagingSession, messageId: string): boolean {
   const { voice } = session;
   if (voice === undefined) return false;
+  if (voice.emissionId === messageId) return true;
   if (voice.hqRequest?.emissionId === messageId) return true;
   return voice.handoff.mode !== "open" && voice.handoff.emissionId === messageId;
 }

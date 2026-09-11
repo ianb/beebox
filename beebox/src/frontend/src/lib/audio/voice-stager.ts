@@ -37,10 +37,15 @@ export interface VoiceHqRequest {
  * partial batch and finalizes (with an HQ request, or `null` for none);
  * `discard` deletes the recording. Both are idempotent, and the first
  * terminal call wins — a later call of the other kind is logged and ignored.
+ *
+ * `emissionId` names the message the segment sealed for, independent of
+ * `hq` — pass the message's id on every send path, and `null` only when the
+ * segment produced no message (unconsumed/cancel/unmount seals), so a non-HQ
+ * send is still findable by `get-last-audio`.
  */
 export interface PendingRecording {
   readonly recordingId: string;
-  seal: (hq: VoiceHqRequest | null) => void;
+  seal: (opts: { emissionId: string | null; hq: VoiceHqRequest | null }) => void;
   discard: () => void;
 }
 
@@ -48,7 +53,7 @@ export interface PendingRecording {
 export interface VoiceStagingSink {
   enqueueCreate: (recordingId: string, opts: { targetSessionId: string | null }) => void;
   enqueueChunk: (recordingId: string, bytes: ArrayBuffer) => void;
-  enqueueFinalize: (recordingId: string, opts: { hq: VoiceHqRequest | null }) => void;
+  enqueueFinalize: (recordingId: string, opts: { emissionId: string | null; hq: VoiceHqRequest | null }) => void;
   enqueueDiscard: (recordingId: string) => void;
 }
 
@@ -134,14 +139,14 @@ export function startStagedRecording(opts: {
       if (settled === "open") stager.push(frame);
     },
     hasAudio: () => stager.bytesSeen() > 0,
-    seal: (hq) => {
+    seal: ({ emissionId, hq }) => {
       if (settled !== "open") {
         refuse("seal");
         return;
       }
       settled = "sealed";
       stager.flush();
-      sink.enqueueFinalize(recordingId, { hq });
+      sink.enqueueFinalize(recordingId, { emissionId, hq });
     },
     discard: () => {
       if (settled !== "open") {

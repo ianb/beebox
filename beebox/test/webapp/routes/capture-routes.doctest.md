@@ -736,7 +736,7 @@ await uploadRaw(ctx, {
   headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
 });
 const finalize = await ctx.request({
-  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 2, hq: null },
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 2, emissionId: null, hq: null },
 });
 JSON.stringify({ status: finalize.statusCode, code: finalize.body.code })
 => {"status":409,"code":"missing-chunks"}
@@ -771,7 +771,7 @@ await uploadRaw(ctx, {
   headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
 });
 const finalize = await ctx.request({
-  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 1, hq: null },
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 1, emissionId: "em-idem", hq: null },
 });
 JSON.stringify({ status: finalize.statusCode, hq: finalize.body.hq, handoff: finalize.body.handoff })
 => {"status":200,"hq":{"state":"none"},"handoff":{"mode":"open"}}
@@ -782,10 +782,61 @@ second seal:
 
 ```ts continue
 const repeat = await ctx.request({
-  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 1, hq: null },
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`, payload: { chunkCount: 1, emissionId: "em-idem", hq: null },
 });
 JSON.stringify({ status: repeat.statusCode, hq: repeat.body.hq, handoff: repeat.body.handoff })
 => {"status":200,"hq":{"state":"none"},"handoff":{"mode":"open"}}
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+Finalize records `voice.emissionId` even with no HQ requested, so a non-HQ
+send is still findable by its message id (`get-last-audio`):
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, emissionId: "em-non-hq", hq: null },
+});
+const manifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionId}/session.json`));
+manifest.voice.emissionId
+=> em-non-hq
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+Finalize refuses when `hq.emissionId` disagrees with the top-level
+`emissionId` — the two must name the same message:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { kind: "voice", targetSessionId: "chat-voice" },
+});
+const sessionId = created.body.sessionId;
+await uploadRaw(ctx, {
+  sessionId, filename: "pcm-000001.raw", kind: "audio", data: Buffer.from("PCM1"),
+  headers: { "x-capture-segment-id": sessionId, "x-capture-audio-format": "pcm-s16le-16k" },
+});
+const mismatch = await ctx.request({
+  method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
+  payload: { chunkCount: 1, emissionId: "em-top", hq: { emissionId: "em-different", sessionId: "chat-voice" } },
+});
+JSON.stringify({ status: mismatch.statusCode, code: mismatch.body.code })
+=> {"status":409,"code":"emission-mismatch"}
 ```
 
 ```ts cleanup
@@ -808,11 +859,11 @@ await uploadRaw(ctx, {
 });
 await ctx.request({
   method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
-  payload: { chunkCount: 1, hq: { emissionId: "e1", sessionId: "chat-voice" } },
+  payload: { chunkCount: 1, emissionId: "e1", hq: { emissionId: "e1", sessionId: "chat-voice" } },
 });
 const conflicting = await ctx.request({
   method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
-  payload: { chunkCount: 1, hq: { emissionId: "e-other", sessionId: "chat-voice" } },
+  payload: { chunkCount: 1, emissionId: "e-other", hq: { emissionId: "e-other", sessionId: "chat-voice" } },
 });
 conflicting.statusCode
 => 409
@@ -845,7 +896,7 @@ await uploadRaw(ctx, {
 });
 const finalize = await ctx.request({
   method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
-  payload: { chunkCount: 1, hq: { emissionId: "e1", sessionId: "chat-voice" } },
+  payload: { chunkCount: 1, emissionId: "e1", hq: { emissionId: "e1", sessionId: "chat-voice" } },
 });
 JSON.stringify({ status: finalize.statusCode, hq: finalize.body.hq })
 => {"status":200,"hq":{"state":"queued"}}
@@ -886,7 +937,7 @@ await uploadRaw(ctx, {
 });
 const finalize = await ctx.request({
   method: "POST", url: `/api/capture/sessions/${sessionId}/finalize`,
-  payload: { chunkCount: 1, hq: { emissionId: "e-new", sessionId: null } },
+  payload: { chunkCount: 1, emissionId: "e-new", hq: { emissionId: "e-new", sessionId: null } },
 });
 JSON.stringify({ status: finalize.statusCode, hq: finalize.body.hq })
 => {"status":200,"hq":{"state":"queued"}}

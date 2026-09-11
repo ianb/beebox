@@ -43,7 +43,7 @@ function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean })
   const log: string[] = [];
   const recording = {
     recordingId: "rec-1",
-    seal: (hq: { emissionId: string } | null) => log.push(`seal ${hq === null ? "null" : hq.emissionId}`),
+    seal: (opts: { emissionId: string | null; hq: { emissionId: string } | null }) => log.push(`seal ${opts.hq === null ? "null" : opts.hq.emissionId}`),
     discard: () => log.push("discard"),
   };
   let toMachine = (_event: unknown) => {};

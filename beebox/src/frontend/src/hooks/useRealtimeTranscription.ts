@@ -184,7 +184,7 @@ function useSegmentEnd(opts: {
     const prev = prevStateRef.current;
     prevStateRef.current = state;
     if (state !== "idle" || prev === "idle") return;
-    if (recording !== null && recording !== handedOffRef.current) recording.seal(null);
+    if (recording !== null && recording !== handedOffRef.current) recording.seal({ emissionId: null, hq: null });
     const consumed = consumedRef.current;
     consumedRef.current = false;
     if (consumed || !transcript) return;
@@ -195,7 +195,7 @@ function useSegmentEnd(opts: {
   // take the recording now. (A segment still recording is sealed by the actor.)
   useEffect(() => () => {
     const latest = recordingRef.current;
-    if (latest !== null && latest !== handedOffRef.current) latest.seal(null);
+    if (latest !== null && latest !== handedOffRef.current) latest.seal({ emissionId: null, hq: null });
   }, []);
 }
 

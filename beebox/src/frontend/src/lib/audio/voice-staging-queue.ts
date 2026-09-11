@@ -49,7 +49,7 @@ export type { VoiceStagingStatus, VoiceStagingFailure };
 export interface VoiceStagingQueue {
   enqueueCreate: (recordingId: string, opts: { targetSessionId: string | null }) => void;
   enqueueChunk: (recordingId: string, bytes: ArrayBuffer) => void;
-  enqueueFinalize: (recordingId: string, opts: { hq: { emissionId: string; sessionId: string | null } | null }) => void;
+  enqueueFinalize: (recordingId: string, opts: { emissionId: string | null; hq: { emissionId: string; sessionId: string | null } | null }) => void;
   enqueueDiscard: (recordingId: string) => void;
   pendingChunkCount: (recordingId: string) => number;
   subscribeStatus: (listener: Listener) => () => void;
@@ -109,7 +109,7 @@ export function createVoiceStagingQueue(deps: VoiceStagingQueueDeps): VoiceStagi
       enqueue(ctx, { recordingId, payload: { kind: "chunk", chunkIndex, bytes } });
     },
     enqueueFinalize: (recordingId, opts) =>
-      enqueue(ctx, { recordingId, payload: { kind: "finalize", chunkCount: countersFor(ctx, recordingId).nextChunkIndex - 1, hq: opts.hq } }),
+      enqueue(ctx, { recordingId, payload: { kind: "finalize", chunkCount: countersFor(ctx, recordingId).nextChunkIndex - 1, emissionId: opts.emissionId, hq: opts.hq } }),
     enqueueDiscard: (recordingId) => enqueue(ctx, { recordingId, payload: { kind: "discard" } }),
     pendingChunkCount: (recordingId) =>
       ctx.state.ops.filter((o) => o.recordingId === recordingId && o.payload.kind === "chunk").length,
@@ -160,7 +160,7 @@ export function enqueueCreate(recordingId: string, opts: { targetSessionId: stri
 export function enqueueChunk(recordingId: string, bytes: ArrayBuffer): void {
   getSingleton().enqueueChunk(recordingId, bytes);
 }
-export function enqueueFinalize(recordingId: string, opts: { hq: { emissionId: string; sessionId: string | null } | null }): void {
+export function enqueueFinalize(recordingId: string, opts: { emissionId: string | null; hq: { emissionId: string; sessionId: string | null } | null }): void {
   getSingleton().enqueueFinalize(recordingId, opts);
 }
 export function enqueueDiscard(recordingId: string): void {

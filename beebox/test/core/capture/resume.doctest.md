@@ -114,7 +114,7 @@ await addAudioChunk({
   filename: "pcm-000001.raw", buffer: Buffer.from("PCM1"), audioFormat: "pcm-s16le-16k",
 });
 await sealVoiceSession({
-  boxRoot: box.root, id: voice.id,
+  boxRoot: box.root, id: voice.id, emissionId: "e1",
   hq: { emissionId: "e1", sessionId: "chat-voice", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
 });
 

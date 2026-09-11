@@ -58,20 +58,24 @@ export interface VoiceSealResult {
 }
 
 /**
- * Compare-and-swap a voice session `open → sealed`, stamping `voice.sealedAt`,
- * and — when `hq` is given — apply the `requested` transition in the SAME
- * atomic write (so a resume never observes "sealed" without also knowing its
- * HQ request). A repeat call when already sealed returns the current state
- * without re-sealing; if `hq` disagrees with an existing `hqRequest` (a
- * different `emissionId`), the mismatch surfaces as
+ * Compare-and-swap a voice session `open → sealed`, stamping `voice.sealedAt`
+ * and `voice.emissionId`, and — when `hq` is given — apply the `requested`
+ * transition in the SAME atomic write (so a resume never observes "sealed"
+ * without also knowing its HQ request). `emissionId` is recorded independent
+ * of `hq` so a non-HQ send is still findable by its message id
+ * (`staged-audio.ts`); it is null only when the segment produced no message
+ * (unconsumed/cancel/unmount seals). A repeat call when already sealed
+ * returns the current state without re-sealing; if `hq` disagrees with an
+ * existing `hqRequest` (a different `emissionId`), the mismatch surfaces as
  * {@link VoiceTransitionRefusedError} (mapped to 409 by the route).
  */
 export async function sealVoiceSession(opts: {
   boxRoot: string;
   id: string;
+  emissionId: string | null;
   hq: { emissionId: string; sessionId: string | null; service: HqTranscriptionService; requestedAt: string } | null;
 }): Promise<VoiceSealResult> {
-  const { boxRoot, id, hq } = opts;
+  const { boxRoot, id, emissionId, hq } = opts;
   return withStagingLock(id, async () => {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
@@ -89,6 +93,7 @@ export async function sealVoiceSession(opts: {
 
     session.state = "sealed";
     session.voice.sealedAt = getBoxTimeISO(boxRoot);
+    session.voice.emissionId = emissionId ?? undefined;
     if (hq !== null) {
       const outcome = nextVoiceState(session.voice, {
         type: "requested",

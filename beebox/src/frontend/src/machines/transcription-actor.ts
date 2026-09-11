@@ -397,7 +397,7 @@ class TranscriptionSession {
   private settleRecording() {
     if (this.handedOff) return;
     if (this.cancelled || !this.recording.hasAudio()) this.recording.discard();
-    else this.recording.seal(null);
+    else this.recording.seal({ emissionId: null, hq: null });
   }
 
   cleanup() {

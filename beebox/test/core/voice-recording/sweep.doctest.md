@@ -67,7 +67,7 @@ const box = await makeTmpBox({ git: true });
 await configureBox(box);
 
 const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
-await sealVoiceSession({ boxRoot: box.root, id: session.id, hq: null });
+await sealVoiceSession({ boxRoot: box.root, id: session.id, emissionId: null, hq: null });
 
 const sealed = await readStagingSession({ boxRoot: box.root, id: session.id });
 JSON.stringify({ sealedAt: sealed.voice.sealedAt === sealed.voice.terminalAt, terminalAtSet: sealed.voice.terminalAt !== undefined })
@@ -99,7 +99,7 @@ await configureBox(box);
 
 const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
 await sealVoiceSession({
-  boxRoot: box.root, id: session.id,
+  boxRoot: box.root, id: session.id, emissionId: "e1",
   hq: { emissionId: "e1", sessionId: "chat-1", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
 });
 await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "e1" } });
@@ -134,7 +134,7 @@ await configureBox(box);
 async function sealedReadyUnclaimed(sealedAt) {
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
   await sealVoiceSession({
-    boxRoot: box.root, id: session.id,
+    boxRoot: box.root, id: session.id, emissionId: `e-${session.id}`,
     hq: { emissionId: `e-${session.id}`, sessionId: "chat-1", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
   });
   await applyVoiceEvent({

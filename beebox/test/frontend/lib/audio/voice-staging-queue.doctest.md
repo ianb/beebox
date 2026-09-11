@@ -60,7 +60,7 @@ sent successfully is gone and the finalize op knows the chunk count the queue
 assigned on its own:
 
 ```ts continue
-queue.enqueueFinalize("r1", { hq: null });
+queue.enqueueFinalize("r1", { emissionId: null, hq: null });
 await flushMicrotasks();
 
 queue.getStatusSnapshot().has("r1")
@@ -117,7 +117,7 @@ const queue3 = createVoiceStagingQueue({
 
 queue3.enqueueCreate("r3", { targetSessionId: "s1" });
 queue3.enqueueChunk("r3", new ArrayBuffer(4));
-queue3.enqueueFinalize("r3", { hq: null });
+queue3.enqueueFinalize("r3", { emissionId: null, hq: null });
 await flushMicrotasks();
 ```
 
@@ -219,7 +219,7 @@ const queue7 = createVoiceStagingQueue({
 });
 queue7.enqueueCreate("r7", { targetSessionId: "s1" });
 queue7.enqueueChunk("r7", new ArrayBuffer(4));
-queue7.enqueueFinalize("r7", { hq: null });
+queue7.enqueueFinalize("r7", { emissionId: null, hq: null });
 queue7.pendingChunkCount("r7")
 => 1
 

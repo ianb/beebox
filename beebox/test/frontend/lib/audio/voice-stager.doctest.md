@@ -32,8 +32,8 @@ function recordingSink() {
       chunks.push(new Uint8Array(bytes));
       ops.push(`chunk ${id} ${String(bytes.byteLength)}`);
     },
-    enqueueFinalize: (id: string, opts: { hq: { emissionId: string; sessionId: string } | null }) =>
-      ops.push(`finalize ${id} hq=${opts.hq === null ? "null" : opts.hq.emissionId}`),
+    enqueueFinalize: (id: string, opts: { emissionId: string | null; hq: { emissionId: string; sessionId: string } | null }) =>
+      ops.push(`finalize ${id} emission=${String(opts.emissionId)} hq=${opts.hq === null ? "null" : opts.hq.emissionId}`),
     enqueueDiscard: (id: string) => ops.push(`discard ${id}`),
   };
   return { sink, ops, chunks };
@@ -118,14 +118,14 @@ for (let i = 0; i < 51; i++) rec.push(frame(3));
 rec.hasAudio()
 => true
 
-rec.seal({ emissionId: "e1", sessionId: "s1" });
-rec.seal(null);
+rec.seal({ emissionId: "e1", hq: { emissionId: "e1", sessionId: "s1" } });
+rec.seal({ emissionId: null, hq: null });
 ops.join("\n")
 =>
 create r1 target=null
 chunk r1 480000
 chunk r1 9600
-finalize r1 hq=e1
+finalize r1 emission=e1 hq=e1
 
 chunks.every((c) => c.every((v) => v === 3))
 => true
@@ -151,7 +151,7 @@ rec.hasAudio()
 
 rec.discard();
 rec.discard();
-rec.seal(null);
+rec.seal({ emissionId: null, hq: null });
 ops.join("\n")
 =>
 create r2 target=chat-1

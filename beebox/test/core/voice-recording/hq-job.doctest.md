@@ -69,7 +69,7 @@ async function stageVoiceRecording(box, { targetSessionId, bytes }) {
 async function requestHq(box, session, opts) {
   const { requestedAt, service } = opts || {};
   const seal = await sealVoiceSession({
-    boxRoot: box.root, id: session.id,
+    boxRoot: box.root, id: session.id, emissionId: "emission-1",
     hq: { emissionId: "emission-1", sessionId: session.voice.targetSessionId, service: service ?? "whisper", requestedAt: requestedAt ?? "2026-09-10T18:00:00.000Z" },
   });
   return seal;

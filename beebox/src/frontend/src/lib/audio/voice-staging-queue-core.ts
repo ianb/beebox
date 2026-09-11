@@ -32,10 +32,17 @@ export interface VoiceChunkOp {
   bytes: ArrayBuffer;
 }
 
-/** Seals the recording. `chunkCount` is the queue's own count of chunks it assigned. */
+/**
+ * Seals the recording. `chunkCount` is the queue's own count of chunks it
+ * assigned. `emissionId` names the message this recording sealed for,
+ * independent of `hq` — null only when the segment produced no message
+ * (unconsumed/cancel/unmount seals) — so a non-HQ send is still findable by
+ * `get-last-audio`.
+ */
 export interface VoiceFinalizeOp {
   kind: "finalize";
   chunkCount: number;
+  emissionId: string | null;
   hq: { emissionId: string; sessionId: string | null } | null;
 }
 

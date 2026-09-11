@@ -4,9 +4,15 @@
  * `capture.ts` to keep its route-registration function under the line budget,
  * mirroring `capture-create.ts`.
  *
- * A voice finalize body is `{ chunkCount, hq: null | { emissionId, sessionId } }`;
- * `sessionId` is null for the first message of a new chat (the session is
- * assigned after the send).
+ * A voice finalize body is
+ * `{ chunkCount, emissionId: string | null, hq: null | { emissionId, sessionId } }`.
+ * `emissionId` names the message this recording sealed for, independent of
+ * whether HQ was requested — it is null only when the segment produced no
+ * message (unconsumed/cancel/unmount seals) — so `get-last-audio`
+ * (`staged-audio.ts`) can find a non-HQ send's recording too. When `hq` is
+ * given its `emissionId` must equal the top-level one; a mismatch is refused
+ * (409) before anything is sealed. `hq.sessionId` is null for the first
+ * message of a new chat (the session is assigned after the send).
  * Before sealing, it verifies the manifest's staged chunks are EXACTLY
  * `pcm-000001.raw … pcm-<chunkCount>.raw` — uploads are refused once the
  * session isn't `open`, so a chunk that arrives after the seal is lost for
@@ -26,8 +32,10 @@ import type { StagingSession } from "../../core/capture/staging-store.js";
 import { sealVoiceSession, VoiceTransitionRefusedError } from "../../core/voice-recording/voice-staging.js";
 import { runHqJob } from "../../core/voice-recording/hq-job.js";
 
-const VoiceFinalizeBodySchema = z.object({
+/** Exported so a contract test can parse the client's real request-body builder with it. */
+export const VoiceFinalizeBodySchema = z.object({
   chunkCount: z.number().int().nonnegative(),
+  emissionId: z.string().min(1).nullable(),
   hq: z.object({ emissionId: z.string().min(1), sessionId: z.string().min(1).nullable() }).nullable(),
 });
 
@@ -57,7 +65,14 @@ export async function handleVoiceFinalize(opts: {
   if (!parsedBody.success) {
     return reply.status(400).send({ error: "Invalid voice finalize request" });
   }
-  const { chunkCount, hq } = parsedBody.data;
+  const { chunkCount, emissionId, hq } = parsedBody.data;
+
+  if (hq !== null && hq.emissionId !== emissionId) {
+    return reply.status(409).send({
+      error: "hq.emissionId does not match the finalize's emissionId",
+      code: "emission-mismatch",
+    });
+  }
 
   if (session.state === "open") {
     const expected = expectedChunkFilenames(chunkCount);
@@ -82,7 +97,7 @@ export async function handleVoiceFinalize(opts: {
 
   let seal;
   try {
-    seal = await sealVoiceSession({ boxRoot, id: session.id, hq: hqRequest });
+    seal = await sealVoiceSession({ boxRoot, id: session.id, emissionId, hq: hqRequest });
   } catch (error) {
     if (error instanceof VoiceTransitionRefusedError) {
       return reply.status(409).send({ error: error.message, code: error.refusal.code });

@@ -23,7 +23,7 @@ async function stageSealedRecording(boxRoot, { emissionId, sessionId }) {
     });
   }
   await sealVoiceSession({
-    boxRoot, id: session.id,
+    boxRoot, id: session.id, emissionId,
     hq: { emissionId, sessionId, service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
   });
   return session;
@@ -294,6 +294,38 @@ print(`status: ${miss.statusCode}`);
 =>
 relayed for: em-unknown
 status: 504
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Route: a non-HQ send is found by its finalize `emissionId` too
+
+A voice send with HQ dictation off still names the message it sealed for —
+`voice.emissionId`, written by finalize independent of `hq` — so
+`get-last-audio` finds it without an `hqRequest`:
+
+```ts
+const ctx = await makeTestServer();
+const session = await createStagingSession({ boxRoot: ctx.boxRoot, targetSessionId: "sess-9", createdBy: null, kind: "voice" });
+await addAudioChunk({
+  boxRoot: ctx.boxRoot, id: session.id, segmentId: session.id, segmentStartedAt: "2026-09-10T18:00:00.000Z",
+  filename: "pcm-000001.raw", buffer: Buffer.from("CCCC"), audioFormat: "pcm-s16le-16k",
+});
+await sealVoiceSession({ boxRoot: ctx.boxRoot, id: session.id, emissionId: "em-no-hq-1", hq: null });
+const res = await ctx.rawRequest({
+  method: "POST",
+  url: "/api/chat/last-audio/request",
+  payload: { timeoutMs: 100, messageId: "em-no-hq-1" },
+});
+print(`status: ${res.statusCode}`);
+print(`riff: ${res.payload.startsWith("RIFF")}`);
+print(`pcm: ${res.payload.endsWith("CCCC")}`);
+=>
+status: 200
+riff: true
+pcm: true
 ```
 
 ```ts cleanup

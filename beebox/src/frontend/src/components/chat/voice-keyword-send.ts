@@ -80,7 +80,7 @@ async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): 
   // continues into this utterance rather than being discarded.
   let priorInput = inputStore.get().trim();
   if (!priorInput && !text.trim() && hqRecording === null) {
-    recording?.seal(null);
+    recording?.seal({ emissionId: null, hq: null });
     settleMic();
     return;
   }
@@ -92,7 +92,7 @@ async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): 
   });
   if (captured === null) {
     // The text went back to the draft; there is no message to run HQ for.
-    recording?.seal(null);
+    recording?.seal({ emissionId: null, hq: null });
     return;
   }
   const dispatchCaptured = captured.dispatch;
@@ -104,7 +104,7 @@ async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): 
   catch (error) {
     dispatchCaptured.release();
     inputStore.set(prepared.text);
-    recording?.seal(null);
+    recording?.seal({ emissionId: null, hq: null });
     settleMic();
     toastError("Voice message remains in the draft", { cause: error });
     return;
@@ -119,13 +119,16 @@ async function sendVoiceSegment(opts: RunKeywordSendOpts, slot: VoiceSendSlot): 
   clearDraftRef.current();
 
   if (hqRecording === null) {
-    recording?.seal(null);
+    // A message WAS produced (`prepared`, dispatched below) even without HQ,
+    // so the emission id is recorded — it's how a non-HQ send's recording is
+    // still found by `get-last-audio`.
+    recording?.seal({ emissionId: prepared.id, hq: null });
     settleMic();
     await slot.turn();
     dispatchVoice(dispatchCaptured, prepared);
     return;
   }
-  hqRecording.seal({ emissionId: prepared.id, sessionId: dispatchCaptured.currentSessionId() });
+  hqRecording.seal({ emissionId: prepared.id, hq: { emissionId: prepared.id, sessionId: dispatchCaptured.currentSessionId() } });
   composerSend({ type: "START_HQ", id: prepared.id, text: prepared.text || "Recording without live text" });
   settleMic();
   const outcome = await waitForHq({ recording: hqRecording, emission: prepared, composerSend });

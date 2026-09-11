@@ -172,6 +172,14 @@ const StagingVoiceSchema = z.object({
   startedAt: z.string(),
   sealedAt: z.string().optional(),
   hqRequest: VoiceHqRequestSchema.optional(),
+  /**
+   * The emission id of the message this recording sealed for, independent of
+   * whether HQ was requested (`hqRequest` is `hq`-only). Absent when the
+   * segment produced no message (unconsumed/cancel/unmount seals) or on a
+   * legacy manifest sealed before this field existed. When `hqRequest` is
+   * also present the two are required to agree — see `sealVoiceSession`.
+   */
+  emissionId: z.string().optional(),
   hq: VoiceHqStateSchema,
   handoff: VoiceHandoffSchema,
   /**

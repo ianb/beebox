@@ -113,6 +113,16 @@ async function sendChunk(op: StoredVoiceOp, payload: VoiceChunkOp): Promise<OpOu
   }
 }
 
+/**
+ * The wire body of a voice finalize request, isolated from the op shape so a
+ * contract test can build it with the real client code and parse it with the
+ * server's own `VoiceFinalizeBodySchema` (`capture-finalize-voice.ts`) —
+ * `test/webapp/routes/capture-finalize-voice-contract.doctest.md`.
+ */
+export function buildVoiceFinalizeBody(payload: VoiceFinalizeOp): { chunkCount: number; emissionId: string | null; hq: { emissionId: string; sessionId: string | null } | null } {
+  return { chunkCount: payload.chunkCount, emissionId: payload.emissionId, hq: payload.hq };
+}
+
 async function sendFinalize(op: StoredVoiceOp, payload: VoiceFinalizeOp): Promise<OpOutcome> {
   try {
     const response = await fetchFromBox(
@@ -120,7 +130,7 @@ async function sendFinalize(op: StoredVoiceOp, payload: VoiceFinalizeOp): Promis
       withMobileAuth({
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chunkCount: payload.chunkCount, hq: payload.hq }),
+        body: JSON.stringify(buildVoiceFinalizeBody(payload)),
       }),
     );
     return await classifyResponse(response);
