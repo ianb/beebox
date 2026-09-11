@@ -1939,13 +1939,13 @@ private struct SelectionAttachmentList: View {
                         Button {
                             onOpen(selection)
                         } label: {
-                            Label(selection.ref, systemImage: "text.quote")
+                            Label(selection.sourceLabel, systemImage: "text.quote")
                                 .font(.caption)
                                 .lineLimit(1)
                         }
                         .buttonStyle(.plain)
                         .frame(minHeight: 44)
-                        .accessibilityLabel("Show selection from \(selection.ref)")
+                        .accessibilityLabel("Show selection from \(selection.sourceLabel)")
                         Button {
                             onRemove(selection)
                         } label: {
@@ -1953,7 +1953,7 @@ private struct SelectionAttachmentList: View {
                         }
                         .buttonStyle(.plain)
                         .frame(width: 44, height: 44)
-                        .accessibilityLabel("Remove selection from \(selection.ref)")
+                        .accessibilityLabel("Remove selection from \(selection.sourceLabel)")
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
@@ -1972,7 +1972,7 @@ private struct SelectionDetailView: View {
         NavigationStack {
             List {
                 Section("Source") {
-                    Text(selection.ref)
+                    Text(selection.sourceLabel)
                     Text(selection.position)
                         .foregroundStyle(.secondary)
                 }

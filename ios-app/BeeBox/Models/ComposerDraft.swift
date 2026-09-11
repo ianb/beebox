@@ -54,11 +54,15 @@ struct DraftFile: Codable, Equatable, Identifiable, Sendable {
 
 struct DraftSelection: Codable, Equatable, Identifiable, Sendable {
     var id: Int
-    var ref: String
+    /// Box path of the source document; nil for text quoted from the chat transcript.
+    var ref: String?
     var text: String
     var position: String
     var anchor: String?
     var spokenWords: Int?
+
+    /// What the pill names as the selection's source.
+    var sourceLabel: String { ref ?? "Chat" }
 }
 
 struct ComposerDraft: Codable, Equatable, Sendable {
