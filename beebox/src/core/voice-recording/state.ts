@@ -198,10 +198,15 @@ function applyFallBackRequested(
   event: Extract<VoiceEvent, { type: "fallBackRequested" }>,
 ): VoiceTransitionOutcome {
   if (voice.handoff.mode !== "open") {
-    if (
-      (voice.handoff.mode === "claimed" || voice.handoff.mode === "late")
-      && voice.handoff.emissionId === event.emissionId
-    ) {
+    // `delivering`/`delivered` are reachable here too: a client's `fallBack`
+    // response can be lost in transit after it already recorded `late`, and
+    // late delivery can advance all the way to `delivered` before the retry
+    // arrives. Every non-open mode answers the SAME question the client asked
+    // ("what happened to my fallback?") for the SAME emission, so a repeat is
+    // idempotent from any of them, not just `late` — the mode itself no
+    // longer needs checking here (`voice.handoff.mode !== "open"` above
+    // already narrows to the remaining four).
+    if (voice.handoff.emissionId === event.emissionId) {
       return ok(voice); // idempotent repeat
     }
     return err({ code: "invalid-handoff-state", message: `cannot fall back from handoff mode ${voice.handoff.mode}` });

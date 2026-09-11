@@ -18,10 +18,13 @@ import { assertNever } from "../../lib/invariant.js";
 import { stagingBaseDir, readStagingSession } from "./staging-store.js";
 import { prepareCaptureSession, markCapturePreparationFailed } from "./prepare.js";
 import { runHqJob } from "../voice-recording/hq-job.js";
+import { attemptLateDelivery } from "../voice-recording/deliver-late.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
 /** Voice `hq.state`s a resume should re-fire the job for — mid-flight, not yet terminal. */
 const RESUMABLE_HQ_STATES = new Set(["queued", "transcribing", "retrying"]);
+/** Voice `handoff.mode`s a resume should re-probe late delivery for — see `deliver-late.ts`. */
+const RESUMABLE_LATE_DELIVERY_HANDOFFS = new Set(["late", "delivering"]);
 
 export async function resumeStagingSessions(deps: {
   boxRoot: string;
@@ -59,11 +62,18 @@ export async function resumeStagingSessions(deps: {
         // Bulk-upload sessions resume through their own path (`resumeBulkSessions`).
         continue;
       case "voice":
-        if (session.voice === undefined || !RESUMABLE_HQ_STATES.has(session.voice.hq.state)) continue;
-        console.warn(`[voice-recording] Resuming HQ job for ${id} (hq.state=${session.voice.hq.state})`);
-        void runHqJob({ boxRoot, id, eventBus }).catch((err: unknown) => {
-          console.error(`[voice-recording] Resume of HQ job ${id} failed:`, err);
-        });
+        if (session.voice === undefined) continue;
+        if (RESUMABLE_HQ_STATES.has(session.voice.hq.state)) {
+          console.warn(`[voice-recording] Resuming HQ job for ${id} (hq.state=${session.voice.hq.state})`);
+          void runHqJob({ boxRoot, id, eventBus, registry, wireSession }).catch((err: unknown) => {
+            console.error(`[voice-recording] Resume of HQ job ${id} failed:`, err);
+          });
+        } else if (RESUMABLE_LATE_DELIVERY_HANDOFFS.has(session.voice.handoff.mode)) {
+          console.warn(`[voice-recording] Resuming late delivery for ${id} (handoff=${session.voice.handoff.mode})`);
+          void attemptLateDelivery({ boxRoot, id, eventBus, registry, wireSession }).catch((err: unknown) => {
+            console.error(`[voice-recording] Resume of late delivery ${id} failed:`, err);
+          });
+        }
         continue;
       default:
         assertNever(session.kind);

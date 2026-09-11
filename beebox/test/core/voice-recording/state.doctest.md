@@ -259,6 +259,25 @@ JSON.stringify(delivered.handoff)
 => {"mode":"delivered","emissionId":"emission-1","messageId":"msg-42"}
 ```
 
+A `fallBack` repeat for the same emission stays idempotent even once late
+delivery has moved past `late` — a lost HTTP response and a retry can land
+after the correction reached `delivering` or `delivered`, and the client is
+still asking the same question ("what happened to my fallback?"):
+
+```ts continue
+JSON.stringify({
+  ok: nextVoiceState(startedDelivery, { type: "fallBackRequested", emissionId: "emission-1" }).ok,
+  unchanged: nextVoiceState(startedDelivery, { type: "fallBackRequested", emissionId: "emission-1" }).value === startedDelivery,
+})
+=> {"ok":true,"unchanged":true}
+
+JSON.stringify({
+  ok: nextVoiceState(delivered, { type: "fallBackRequested", emissionId: "emission-1" }).ok,
+  unchanged: nextVoiceState(delivered, { type: "fallBackRequested", emissionId: "emission-1" }).value === delivered,
+})
+=> {"ok":true,"unchanged":true}
+```
+
 `landedConfirmed` outside `delivering` is refused (nothing to confirm):
 
 ```ts continue

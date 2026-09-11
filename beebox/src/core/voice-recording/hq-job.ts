@@ -22,12 +22,15 @@ import { startAwakeTimeout } from "../../lib/awake-timeout.js";
 import { jitteredBackoff } from "../../shared/backoff.js";
 import { buildWavHeader } from "../../shared/wav.js";
 import type { EventBus } from "../event-bus.js";
+import type { ChatSession } from "../chat/session/index.js";
+import type { ChatSessionRegistry } from "../chat/session/registry.js";
 import {
   findLastSpeakerLetter,
   nextSpeakerLetter,
   relabelDiarizedSpeakers,
 } from "../transcription/voxtral.js";
 import { readSessionLogTail } from "../chat/session/session-log-tail.js";
+import { attemptLateDelivery } from "./deliver-late.js";
 import { transcribeAudioHq, extractHqErrorInput } from "../transcription/index.js";
 import type { HqTranscriptionService } from "../../shared/transcription-services.js";
 import {
@@ -35,7 +38,7 @@ import {
   resolveStagedFile,
   type StagingSession,
 } from "../capture/staging-store.js";
-import type { HqFailure, VoiceHqResult } from "../capture/staging-schema.js";
+import type { HqFailure, VoiceHandoff, VoiceHqResult } from "../capture/staging-schema.js";
 import { applyVoiceEvent } from "./voice-staging.js";
 import { planPieces, nextPieceSeconds, HQ_PIECE_SECONDS } from "./pieces.js";
 import { classifyHqError } from "./classify.js";
@@ -86,6 +89,15 @@ export interface RunHqJobDeps {
   eventBus: EventBus;
   clock?: HqJobClock;
   transcribePiece?: TranscribePieceFn;
+  /**
+   * When given, a job that finishes into an already-`late` handoff kicks off
+   * late delivery immediately instead of waiting for the next voice-sweep
+   * tick (`deliver-late.ts`'s `attemptLateDelivery`). Omitted by a caller with
+   * no chat runtime yet (e.g. a resume path that races startup) — the sweep
+   * still covers it within `VOICE_SWEEP_INTERVAL_MS`.
+   */
+  registry?: ChatSessionRegistry | undefined;
+  wireSession?: ((session: ChatSession) => void) | undefined;
 }
 
 /** Recording ids with a job running in THIS process right now. */
@@ -173,7 +185,7 @@ async function joinPieceResults(opts: {
 }
 
 async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
-  const { boxRoot, id, eventBus } = deps;
+  const { boxRoot, id, eventBus, registry, wireSession } = deps;
   const clock: HqJobClock = deps.clock ?? { now: () => getBoxTime(boxRoot), wait: realWait };
   const transcribePiece = deps.transcribePiece ?? realTranscribePiece;
 
@@ -329,6 +341,28 @@ async function runHqJobInner(deps: RunHqJobDeps): Promise<void> {
     });
     const done = await applyVoiceEvent({ boxRoot, id, event: { type: "allPiecesDone", result } });
     emitStatus({ eventBus, session: { ...session, voice: done } });
+    kickOffLateDeliveryIfLate({ boxRoot, id, eventBus, registry, wireSession, handoff: done.handoff });
     return;
   }
+}
+
+/**
+ * A job that finishes into an already-`late` handoff (the client fell back to
+ * realtime before HQ was ready) kicks off late delivery immediately instead of
+ * waiting for the next voice-sweep tick. Fire-and-forget: a failure here just
+ * means the sweep (`VOICE_SWEEP_INTERVAL_MS`) picks it up instead.
+ */
+function kickOffLateDeliveryIfLate(opts: {
+  boxRoot: string;
+  id: string;
+  eventBus: EventBus;
+  registry: ChatSessionRegistry | undefined;
+  wireSession: ((session: ChatSession) => void) | undefined;
+  handoff: VoiceHandoff;
+}): void {
+  const { boxRoot, id, eventBus, registry, wireSession, handoff } = opts;
+  if (handoff.mode !== "late" || registry === undefined) return;
+  void attemptLateDelivery({ boxRoot, id, eventBus, registry, wireSession }).catch((error: unknown) => {
+    console.error(`[voice-recording] Late delivery kick-off for ${id} failed; the sweep will retry:`, error);
+  });
 }

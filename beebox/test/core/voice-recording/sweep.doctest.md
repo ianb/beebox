@@ -89,6 +89,43 @@ JSON.stringify({
 await box.cleanup();
 ```
 
+## A `late` handoff paired with a terminally failed HQ pass IS terminal — GC'd, not flagged forever
+
+No correction is ever coming once HQ is terminally `failed` while the client
+already fell back to realtime, so this must not loop through
+`lateDeliveryPending` on every sweep tick until the box runs out of disk:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await configureBox(box);
+
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
+await sealVoiceSession({
+  boxRoot: box.root, id: session.id,
+  hq: { emissionId: "e1", sessionId: "chat-1", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
+});
+await applyVoiceEvent({ boxRoot: box.root, id: session.id, event: { type: "fallBackRequested", emissionId: "e1" } });
+await applyVoiceEvent({
+  boxRoot: box.root, id: session.id,
+  event: {
+    type: "pieceFailed", classification: "permanent", pieceSeconds: 300, attempt: 1,
+    nextAttemptAt: "2026-09-10T18:00:00.000Z", failure: { code: "http_401", message: "no api key" },
+  },
+});
+await backdate(box, session.id, { voice: { terminalAt: EIGHT_DAYS_AGO } });
+
+const result = await sweepVoiceSessions({ boxRoot: box.root });
+JSON.stringify({
+  deletedThisOne: result.deleted[0] === session.id && result.deleted.length === 1,
+  notFlagged: result.lateDeliveryPending.length === 0,
+})
+=> {"deletedThisOne":true,"notFlagged":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## A `late` handoff is never GC'd by the terminal path — it's flagged for re-probe instead
 
 ```ts

@@ -8,12 +8,14 @@
  * - `VOICE_STAGING_RETENTION_MS` after creation, if it was never sealed
  *   (abandoned recording — closed tab, cancelled before finalize); or
  * - `VOICE_STAGING_RETENTION_MS` after `voice.terminalAt` — see
- *   {@link isVoiceTerminal} for what counts as terminal.
+ *   {@link isVoiceTerminal} for what counts as terminal (a `late` handoff
+ *   whose HQ pass is terminally `failed` counts too: no correction is ever
+ *   coming, so it is not left to loop through `lateDeliveryPending` forever).
  *
- * `lateDeliveryPending` is a named hook for the next chunk: sessions whose
- * handoff is `late`/`delivering` (so `isVoiceTerminal` never fires for them)
- * are collected here rather than acted on — Track 1's late-delivery chunk
- * re-probes them on this same tick instead of adding a second timer.
+ * `lateDeliveryPending` collects the sessions still genuinely progressing
+ * (`late` with HQ not yet failed, or `delivering`) so `deliver-late.ts`'s
+ * `attemptLateDelivery` can re-probe them on this same tick instead of a
+ * second timer.
  */
 
 import { getBoxTime } from "../../lib/time.js";

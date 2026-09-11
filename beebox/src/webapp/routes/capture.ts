@@ -221,7 +221,16 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
       }
 
       if (session.kind === "voice") {
-        return handleVoiceFinalize({ boxRoot, session, request, reply, eventBus });
+        const voiceRuntime = getChatRuntime(boxRoot);
+        return handleVoiceFinalize({
+          boxRoot,
+          session,
+          request,
+          reply,
+          eventBus,
+          registry: voiceRuntime?.registry,
+          wireSession: voiceRuntime?.wireSession,
+        });
       }
 
       const runtime = getChatRuntime(boxRoot);
@@ -267,7 +276,12 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     });
 
     const cancelSweep = scheduleAbandonmentSweep({ boxRoot, eventBus, runtime });
-    const cancelVoiceSweep = scheduleVoiceSweep({ boxRoot });
+    const cancelVoiceSweep = scheduleVoiceSweep({
+      boxRoot,
+      eventBus,
+      registry: runtime.registry,
+      wireSession: runtime.wireSession,
+    });
     server.addHook("onClose", async () => {
       cancelSweep();
       cancelVoiceSweep();
