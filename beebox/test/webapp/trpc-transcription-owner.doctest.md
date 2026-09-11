@@ -59,7 +59,7 @@ print(JSON.stringify(await caller(boxRoot, { isOwner: true }).setHqService({ hqS
 print((await readFile(join(boxRoot, "_config/transcription.json"), "utf-8")).trim());
 =>
 {"service":"deepgram"}
-{"hqService":"voxtral-diarized"}
+{"hqService":"voxtral-diarized","warning":"This box has no key for voxtral-diarized yet; grant mistral in Admin → Secrets or it will fail on every pass."}
 {
   "service": "deepgram",
   "hqService": "voxtral-diarized"

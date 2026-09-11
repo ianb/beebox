@@ -58,6 +58,7 @@ const secretFormats: Record<string, SecretFormat> = {
   },
   anthropic: { hint: "An Anthropic API key, starting with `sk-ant-`.", prefix: "sk-ant-", minLength: 20, maxLength: 300 },
   gemini: { hint: "A Google AI Studio key, usually starting with `AIza`.", prefix: "AIza", minLength: 20, maxLength: 200 },
+  openrouter: { hint: "An OpenRouter API key, starting with `sk-or-v1-`.", prefix: "sk-or-v1-", minLength: 40, maxLength: 200 },
   deepgram: {
     hint: 'JSON with the management key and project: {"apiKey": "…", "projectId": "…"}.',
     pattern: /^{/,

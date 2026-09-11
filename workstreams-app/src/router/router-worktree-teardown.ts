@@ -47,6 +47,19 @@ export function browseDirsFor(state: CoreState, name: string): { socketDir: stri
   return { socketDir: path.join(base, "socket"), profileDir: path.join(base, "profile") };
 }
 
+/**
+ * The secret store a worktree's box reads — its own, beside the browse dirs
+ * (`<state>/secrets/<name>.json`), so a test box never touches the
+ * boxholder's real `~/.config/beebox/secrets.json`. Undefined for `main`,
+ * which is the real deployment surface and keeps the default store. Not under
+ * the browse dir: those are torn down with the worktree's browser, and a
+ * worktree's test keys should survive a router restart.
+ */
+export function isolatedSecretsFileFor(browseDir: string, name: string): string | undefined {
+  if (name === "main") return undefined;
+  return path.join(path.dirname(browseDir), "secrets", `${name}.json`);
+}
+
 // SIGTERM→SIGKILL escalation for one generation's children — shared by the
 // failure path, the superseded-start self-clean (invariant #5), onChildExit,
 // and stopWorktree. Returns the escalation TimerHandle so the caller can store

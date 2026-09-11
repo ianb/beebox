@@ -1,6 +1,7 @@
 ---
 title: "Adding a provider key means guessing its name — the Admin secrets UI never says which names the system recognizes"
-workstream: unattached
+workstream: openrouter-services
+resolution: implemented
 area: beebox
 priority: important
 labels: [admin, secrets, onboarding]
@@ -8,6 +9,14 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "Huh, I can't see where I'd put in the openrouter api key...?" / "Why does it have a dropdown with just these two values? Then I have to put in a name too?"
 ---
+
+> **Closed 2026-09-11.** Implemented in full by the `secret-entry-guidance`
+> plan (commit `4f88150b2`, workstream `openrouter-services`): the Secrets
+> page now leads with a "Connect a service" row of named provider buttons,
+> each with a guide (what it is, where to get one), grant-on-add in one
+> locked write, and a near-miss suggestion for a typo'd name. See
+> `beebox/docs/secrets.md` and
+> `beebox/docs/implemented-plans/secret-entry-guidance.md`.
 
 Trying to add an OpenRouter key from Admin → Secrets, the boxholder found no
 place to put it. The section shows **"Grant an existing secret to this box"**

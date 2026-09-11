@@ -94,7 +94,33 @@ function emptySecretStore(): SecretStoreData {
 export function secretsFilePath(): string {
   const override = process.env.BBX_SECRETS_FILE;
   if (override !== undefined && override !== "") return override;
+  return defaultSecretsFilePath();
+}
+
+/** The store's location when nothing overrides it: the boxholder's real keys. */
+function defaultSecretsFilePath(): string {
   return path.join(os.homedir(), ".config", "beebox", "secrets.json");
+}
+
+/**
+ * Whether this process reads a store that is NOT the machine's shared one.
+ * The one thing this decides is whether agent browsing may act as the owner
+ * on the Secrets panel (`server-box-scope.ts`) — a test box on its own store
+ * can, a box on the real store cannot.
+ *
+ * `BBX_SECRETS_FILE` alone is not the signal: it is an override anyone may
+ * set, and `main`'s box inherits the shell and `.env`, so an operator who
+ * pointed it at the real file would otherwise have opened that file to the
+ * browse identity. Isolation is asserted by whoever built the environment —
+ * the dev router for a worktree box (`router-worktree-start.ts`), a doctest
+ * for its tmp store — with `BBX_SECRETS_STORE_ISOLATED=1`, and even then only
+ * counts when the override really is a different file from the default.
+ */
+export function secretsStoreIsIsolated(): boolean {
+  if (process.env.BBX_SECRETS_STORE_ISOLATED !== "1") return false;
+  const override = process.env.BBX_SECRETS_FILE;
+  if (override === undefined || override === "") return false;
+  return path.resolve(override) !== defaultSecretsFilePath();
 }
 
 /** The access log's directory: a `secrets-log/` sibling of the store file. */

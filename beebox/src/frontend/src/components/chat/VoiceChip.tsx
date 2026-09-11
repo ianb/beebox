@@ -23,51 +23,17 @@ import { voiceChipLabel } from "./voice-chip-label";
 import {
   VoicePanel, transcriptionServiceLabel, hqTranscriptionServiceLabel,
   type TranscriptionServiceOption, type HqTranscriptionOption, type TtsBackendOption,
+  type ServiceCapabilities,
 } from "./VoiceChip-panels";
+import { useVoiceCapabilities } from "./VoiceChip-capabilities";
 import { HqPreferenceRow, type HqDefaultsState } from "./HqPreferenceRow";
 import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
+import { SpeakerIcon, MicIcon, HqIcon } from "./VoiceChip-icons";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
 // when the dropdown closes.
 type VoiceChipPanel = "root" | "voice";
-
-/**
- * Speaker icon reflecting mute state — the same shapes `MuteButton` used
- * (now retired).
- */
-function SpeakerIcon({ muted }: { muted: boolean }) {
-  if (muted) {
-    return (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM17 9l4 6m0-6-4 6" />
-      </svg>
-    );
-  }
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M18.36 5.64a9 9 0 0 1 0 12.72" />
-    </svg>
-  );
-}
-
-/** Mic icon representing narration (input) mode. */
-function MicIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zM19 11a7 7 0 0 1-14 0M12 19v3" />
-    </svg>
-  );
-}
-
-/** Sparkle icon representing HQ (high-quality) dictation mode. */
-function HqIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8L12 3zM5 15l.8 2.2L8 18l-2.2.8L5 21l-.8-2.2L2 18l2.2-.8L5 15zM19 14l.9 2.4L22 17.3l-2.1.9L19 20.6l-.9-2.4L16 17.3l2.1-.9L19 14z" />
-    </svg>
-  );
-}
 
 export interface VoiceChipFaceState {
   muted: boolean;
@@ -122,6 +88,7 @@ interface VoiceChipBodyProps {
   onSelectHqTranscriptionService: (hqService: HqTranscriptionOption) => void;
   currentTtsBackend: string | null;
   onSelectTtsBackend: (backend: TtsBackendOption) => void;
+  capabilities: ServiceCapabilities | undefined;
 }
 
 /**
@@ -136,6 +103,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
     hqDictationEnabled, onToggleHqDictation, hqDefaults, onOpenVoice,
     onBackToRoot, currentService, onSelectTranscriptionService, currentHqService,
     onSelectHqTranscriptionService, currentTtsBackend, onSelectTtsBackend,
+    capabilities,
   } = props;
   switch (panel) {
     case "root":
@@ -189,6 +157,7 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
           onSelectHqTranscriptionService={onSelectHqTranscriptionService}
           currentTtsBackend={currentTtsBackend}
           onSelectTtsBackend={onSelectTtsBackend}
+          capabilities={capabilities}
         />
       );
   }
@@ -235,14 +204,21 @@ export const VoiceChip = memo(function VoiceChip({
     onError: (e) => { toastError("Failed to switch the live transcription service", { cause: e }); },
   });
   const setHqTranscriptionService = trpc.transcription.setHqService.useMutation({
-    onSuccess: () => { void utils.transcription.config.invalidate(); },
+    onSuccess: (result) => {
+      void utils.transcription.config.invalidate();
+      if (result.warning !== null) toastError(result.warning);
+    },
     onError: (e) => { toastError("Failed to switch the HQ transcription service", { cause: e }); },
   });
   const ttsConfigQuery = trpc.tts.config.useQuery();
   const setTtsBackend = trpc.tts.setBackend.useMutation({
-    onSuccess: () => { void utils.tts.config.invalidate(); },
+    onSuccess: (result) => {
+      void utils.tts.config.invalidate();
+      if (result.warning !== null) toastError(result.warning);
+    },
     onError: (e) => { toastError("Failed to switch the speaking-voice backend", { cause: e }); },
   });
+  const capabilities = useVoiceCapabilities(canManageDefaults);
   const currentService = transcriptionConfigQuery.data?.service ?? null;
   const currentHqService = transcriptionConfigQuery.data?.hqService ?? null;
   const currentTtsBackend = ttsConfigQuery.data?.backend ?? null;
@@ -328,7 +304,7 @@ export const VoiceChip = memo(function VoiceChip({
         hqDictationEnabled={hqDictationEnabled}
         onToggleHqDictation={onToggleHqDictation}
         hqDefaults={hqDefaults}
-        onOpenVoice={() => setPanel("voice")}
+        onOpenVoice={() => { setPanel("voice"); capabilities.refetch(); }}
         onBackToRoot={() => setPanel("root")}
         currentService={currentService}
         onSelectTranscriptionService={onSelectTranscriptionService}
@@ -336,6 +312,7 @@ export const VoiceChip = memo(function VoiceChip({
         onSelectHqTranscriptionService={onSelectHqTranscriptionService}
         currentTtsBackend={currentTtsBackend}
         onSelectTtsBackend={onSelectTtsBackend}
+        capabilities={capabilities.data}
       />
     </Dropdown>
   );

@@ -41,7 +41,7 @@ never offered to the HQ endpoint at all.
 There is a second, quieter path to the same outcome:
 `postAudioForHqTranscription` returns `null` on any non-OK response, and `null`
 means "fall back to the realtime transcript" — filed separately as
-[HQ transcription fails silently](2026-09-09-hq-transcription-fails-silently.md).
+[HQ transcription fails silently](../closed/bugs/2026-09-09-hq-transcription-fails-silently.md).
 During a network-flaky stretch that fallback is exactly wrong: the realtime
 text is the degraded artifact, and it silently becomes the kept one.
 
