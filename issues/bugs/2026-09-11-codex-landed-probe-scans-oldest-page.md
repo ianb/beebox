@@ -28,23 +28,17 @@ landed near the tail is invisible to this probe: it reads as "not landed" even
 though it is genuinely there.
 
 This is pre-existing (not introduced by the `docPath` → `marker` rename in
-implementation-order step 5 of `docs/plans/resilient-voice-recording.md`), but
-that step's `deliver-late.ts` is the first caller to depend on this probe
-returning an accurate answer REPEATEDLY over time for the same marker
-(late-delivery's `correctionLanded` re-probe on every sweep tick and on
-resume). A false negative there does not corrupt state — `attemptLateDelivery`
-just re-attempts the send behind an idempotent per-recording in-flight guard —
-but on a long-running Codex-engine box it could mean the correction is sent
-more than once before the probe ever reports "landed", each landing as its own
-message in the transcript.
+`docs/plans/resilient-voice-recording.md`). It was found while designing that
+plan's late HQ correction, which would have re-probed repeatedly. That feature
+was removed on 2026-09-10 in the plan's scope reduction, so no voice code
+depends on the probe now.
 
 **Where this is reachable today:** `capture` and `bulk` deliveries call the
-same probe once, as a crash-resume check; a stale false-negative there just
-means a resumed capture/bulk delivery is retried (idempotent by construction:
-filename+bytes replay, a CAS session state), not a second user-visible
-message. Voice late-delivery is the first caller where a false negative can
-plausibly produce more than one delivered chat message for the box user to
-see.
+probe once, as a crash-resume check. On a Codex-engine thread longer than
+5000 entries, a false "not landed" makes a resumed capture or bulk delivery
+send its message a second time. The user would see a duplicate `<capture>` or
+`<upload>` message. This happens only after a crash between send and the
+`delivered` marker, so it is rare.
 
 **Possible fix:** change the Codex-engine branch to page from the tail (mirror
 `chatHistorySlice`'s `{ mode: "tail", tail: N }`) or add a purpose-built
