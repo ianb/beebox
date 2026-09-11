@@ -15,7 +15,7 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 ```ts
 JSON.stringify(chatModelOptions("claude").map((option) => option.label))
-=> ["Default (Opus)","Haiku 4.5","Sonnet 5","Opus 5","Fable 5.1"]
+=> ["Default (Opus)","Fable 5.1","Opus 5","Sonnet 5","Haiku 4.5"]
 
 JSON.stringify(chatModelOptions("codex"))
 => [{"label":"Default (Codex)","model":null},{"label":"Astra","model":"gpt-6-astra"},{"label":"Sol","model":"gpt-5.6-sol"},{"label":"Terra","model":"gpt-5.6-terra"},{"label":"Luna","model":"gpt-5.6-luna"}]

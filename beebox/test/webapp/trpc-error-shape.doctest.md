@@ -116,23 +116,20 @@ await movedApp.close();
 
 ## `card.get` adds recovery only after its normal read misses
 
-This uses the real card route and an unstaged filesystem rename. The requested
-old path remains a 404, with the validated destination carried separately.
+This uses the real card route and an unstaged Markdown rename. Recovery applies
+to safe box files, not only typed `.card` files. The requested old path remains
+a 404, with the validated destination carried separately.
 
 ```ts
 const cardServer = await makeTestServer();
-await cardServer.seed("_content/Old.memo.card", `---
-type: memo
----
-Enough unchanged body text for Git to identify the rename.
-`);
+await cardServer.seed("_content/documents/legal/status.md", "Enough unchanged body text for Git to identify the Markdown rename.\n");
 cardServer.commitAll("seed moved card");
 await rename(
-  join(cardServer.boxRoot, "_content/Old.memo.card"),
-  join(cardServer.boxRoot, "_content/New.memo.card"),
+  join(cardServer.boxRoot, "_content/documents/legal/status.md"),
+  join(cardServer.boxRoot, "_content/documents/legal/archive-status.md"),
 );
-const ordinaryInput = encodeURIComponent(JSON.stringify({ path: "_content/Old.memo.card" }));
-const recoveringInput = encodeURIComponent(JSON.stringify({ path: "_content/Old.memo.card", recoverMoved: true }));
+const ordinaryInput = encodeURIComponent(JSON.stringify({ path: "_content/documents/legal/status.md" }));
+const recoveringInput = encodeURIComponent(JSON.stringify({ path: "_content/documents/legal/status.md", recoverMoved: true }));
 const originalCardError = console.error;
 console.error = () => {};
 const responses = await (async () => {
@@ -152,7 +149,7 @@ JSON.stringify({
   ordinary: ordinaryBody.error.data.recovery,
   optedIn: { status: cardResponse.statusCode, recovery: cardBody.error.data.recovery },
 })
-=> {"ordinary":null,"optedIn":{"status":404,"recovery":{"kind":"moved","path":"_content/New.memo.card"}}}
+=> {"ordinary":null,"optedIn":{"status":404,"recovery":{"kind":"moved","path":"_content/documents/legal/archive-status.md"}}}
 ```
 
 ```ts cleanup

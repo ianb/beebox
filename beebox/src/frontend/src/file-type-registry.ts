@@ -56,6 +56,8 @@ export interface RendererProps {
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
   /** The surface this renderer is shown in, so it can adapt its own chrome. */
   mode?: "page" | "chat" | "companion" | "embed";
+  /** PDF file actions are hosted by the surrounding workspace pane. */
+  workspacePdf?: boolean;
   /**
    * The caption from an `![caption](path)` embed. A "media" renderer (image,
    * figure) shows it beneath the content so an embedded card reads exactly like

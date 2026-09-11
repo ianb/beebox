@@ -19,7 +19,7 @@
 import * as path from "node:path";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
 
-export class UnsafeTrashDestinationError extends Error {
+class UnsafeTrashDestinationError extends Error {
   readonly destPath: string;
   constructor(destPath: string) {
     super(`Trash destination escapes the box's data namespace: ${destPath}`);

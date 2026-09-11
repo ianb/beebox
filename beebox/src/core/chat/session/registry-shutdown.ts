@@ -2,7 +2,7 @@
 
 import { startAwakeTimeout } from "../../../lib/awake-timeout.js";
 
-export const CHAT_SHUTDOWN_GRACE_MS = 10_000;
+const CHAT_SHUTDOWN_GRACE_MS = 10_000;
 
 export interface ShutdownChatSession {
   getSessionId(): string | null;

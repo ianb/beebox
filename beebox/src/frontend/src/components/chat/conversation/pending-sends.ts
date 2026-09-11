@@ -72,13 +72,13 @@ const savedRowSchema: z.ZodType<PendingConversationSend> = z.object({
 });
 const savedRowsSchema = z.object({ version: z.literal(1), rows: z.array(savedRowSchema) });
 
-export class PendingSendBoxError extends Error {
+class PendingSendBoxError extends Error {
   constructor() {
     super("Saved message belongs to a different box");
     this.name = "PendingSendBoxError";
   }
 }
-export class PendingSendChangedError extends Error {
+class PendingSendChangedError extends Error {
   constructor() {
     super("A saved message cannot change its destination or content");
     this.name = "PendingSendChangedError";
@@ -125,7 +125,7 @@ export function pendingSendRecoveryCopies(storage: PendingSendsStorage, storageS
   }
 }
 
-export class PendingSendPreservationError extends Error {
+class PendingSendPreservationError extends Error {
   constructor() {
     super("The unreadable saved messages could not be preserved. Your draft and the original saved copy have been kept.");
     this.name = "PendingSendPreservationError";

@@ -82,6 +82,55 @@ async function readBoxes(envPath: string): Promise<string[] | null> {
  * that unchanged. `lazy: true` + `idleMs: IDLE_TIMEOUT_MS` give each BOX the
  * same lazy-start/idle-collect semantics this router gives each WORKTREE.
  */
+/**
+ * Delete hub configs whose checkout is gone. The config is written when a
+ * worktree starts and nothing removed it when the worktree was culled, so they
+ * accumulated — 21 stale files against 17 live checkouts when this was found.
+ * Each one names a port that was allocated for a worktree that no longer
+ * exists. `main` has no directory under the worktrees root and is never pruned.
+ *
+ * Best-effort by construction: a config that cannot be read or removed is left
+ * alone rather than failing router startup over housekeeping.
+ *
+ * The two directories are parameters so this is testable against fixtures
+ * instead of the developer's real state dir; {@link pruneRouterHubConfigs}
+ * supplies the real ones.
+ */
+export async function pruneOrphanHubConfigs(params: {
+  configDir: string;
+  worktreesRoot: string;
+}): Promise<string[]> {
+  const { configDir, worktreesRoot } = params;
+  let entries: string[];
+  try {
+    entries = await fs.readdir(configDir);
+  } catch (_e) {
+    return []; // No configs yet — nothing to prune.
+  }
+  const pruned: string[] = [];
+  for (const entry of entries) {
+    if (!entry.endsWith(".json")) continue;
+    const name = entry.slice(0, -".json".length);
+    if (name === "main") continue;
+    try {
+      await fs.stat(path.join(worktreesRoot, name));
+    } catch (_e) {
+      try {
+        await fs.rm(path.join(configDir, entry));
+        pruned.push(name);
+      } catch (_rmErr) {
+        // Leave it; a config we cannot delete is not worth a startup failure.
+      }
+    }
+  }
+  return pruned;
+}
+
+/** {@link pruneOrphanHubConfigs} against this router's real directories. */
+export async function pruneRouterHubConfigs(): Promise<string[]> {
+  return pruneOrphanHubConfigs({ configDir: HUB_CONFIG_DIR, worktreesRoot: WORKTREES_ROOT });
+}
+
 async function writeWorktreeHubConfig(params: {
   name: string;
   backendPort: number;

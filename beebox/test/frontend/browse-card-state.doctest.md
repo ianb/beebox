@@ -71,7 +71,7 @@ attachment directories. Nested state roundtrips without an embedded URL.
 
 ```ts
 const file = { path: "_content/README", viewer: "Source", params: { zoom: "2" }, viewState: { selected: [1, 2] } };
-const converted = await legacyBrowseTarget(file, async () => "file");
+const converted = await legacyBrowseTarget(file, { lookupKind: async () => "file", missingKind: "file" });
 parseBrowseState(parseViewUrl(serializeViewUrl(converted)))
 => {
   "ok": true,
@@ -93,15 +93,30 @@ parseBrowseState(parseViewUrl(serializeViewUrl(converted)))
   }
 }
 
-(await legacyBrowseTarget({ ...file, path: "_content/Photo.attach" }, async () => "directory")).viewState
+(await legacyBrowseTarget({ ...file, path: "_content/Photo.attach" }, { lookupKind: async () => "directory", missingKind: "directory" })).viewState
 => {
   "directory": "_content/Photo.attach"
 }
 
-await legacyBrowseTarget({ ...file, path: "_content/gone" }, async () => "missing")
-=> throws BrowseLocationError: Browse location does not exist: _content/gone
+(await legacyBrowseTarget({ ...file, path: "_content/gone" }, { lookupKind: async () => "missing", missingKind: "file" })).viewState
+=> {
+  "directory": "_content",
+  "detail": {
+    "path": "_content/gone",
+    "viewer": "Source",
+    "params": {
+      "zoom": "2"
+    },
+    "viewState": {
+      "selected": [
+        1,
+        2
+      ]
+    }
+  }
+}
 
-(await legacyBrowseTarget({ ...file, path: "_content/Old.memo.card" }, async () => "missing")).viewState
+(await legacyBrowseTarget({ ...file, path: "_content/Old.memo.card" }, { lookupKind: async () => "missing", missingKind: "file" })).viewState
 => {
   "directory": "_content",
   "detail": {
@@ -118,4 +133,15 @@ await legacyBrowseTarget({ ...file, path: "_content/gone" }, async () => "missin
     }
   }
 }
+```
+
+Known directory navigation retains its directory-not-found error instead of
+opening a missing file detail.
+
+```ts continue
+await legacyBrowseTarget(
+  { ...file, path: "_content/gone-directory" },
+  { lookupKind: async () => "missing", missingKind: "directory" },
+)
+=> throws BrowseLocationError: Browse location does not exist: _content/gone-directory
 ```

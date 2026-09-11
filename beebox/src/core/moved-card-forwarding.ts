@@ -1,6 +1,8 @@
-import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { copyFile, lstat, mkdir, mkdtemp, rm } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { promisify } from "node:util";
 import { simpleGit } from "simple-git";
 
 import { resolveBoxNamespacePathOnDisk } from "../lib/box-namespace-resolve.js";
@@ -11,7 +13,8 @@ import type { MovedCardRecovery } from "./moved-card-recovery.js";
 export type { MovedCardRecovery } from "./moved-card-recovery.js";
 
 const MAX_MOVE_HOPS = 16;
-const CARD_PATHSPEC = ":(glob)**/*.card";
+const BOX_PATHSPEC = ".";
+const execFileAsync = promisify(execFile);
 
 export type MovedCardResolution =
   | MovedCardRecovery
@@ -61,23 +64,48 @@ function uniqueRenameDestination(records: RenameRecord[], source: string): strin
 
 async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
   const normalGit = simpleGit(boxRoot);
+  const repoRoot = (await normalGit.revparse(["--show-toplevel"])).trim();
+  const head = (await normalGit.revparse(["HEAD"])).trim();
+  const annexBranch = (await normalGit.raw([
+    "for-each-ref",
+    "--format=%(objectname)",
+    "refs/heads/git-annex",
+  ])).trim();
   const rawObjectsPath = (await normalGit.revparse(["--git-path", "objects"])).trim();
-  const realObjectsPath = isAbsolute(rawObjectsPath) ? rawObjectsPath : resolve(boxRoot, rawObjectsPath);
+  const realObjectsPath = isAbsolute(rawObjectsPath) ? rawObjectsPath : resolve(repoRoot, rawObjectsPath);
+  const rawIndexPath = (await normalGit.revparse(["--git-path", "index"])).trim();
+  const realIndexPath = isAbsolute(rawIndexPath) ? rawIndexPath : resolve(repoRoot, rawIndexPath);
+  const rawConfigPath = (await normalGit.revparse(["--git-path", "config"])).trim();
+  const realConfigPath = isAbsolute(rawConfigPath) ? rawConfigPath : resolve(repoRoot, rawConfigPath);
+  const rawAttributesPath = (await normalGit.revparse(["--git-path", "info/attributes"])).trim();
+  const realAttributesPath = isAbsolute(rawAttributesPath) ? rawAttributesPath : resolve(repoRoot, rawAttributesPath);
   const scratchRoot = await mkdtemp(join(tmpdir(), "bbx-move-index-"));
-  const scratchObjects = join(scratchRoot, "objects");
-  await mkdir(scratchObjects);
+  const scratchGitDir = join(scratchRoot, "git");
 
   try {
-    // A separate index lets Git see unstaged filesystem renames without
-    // touching the person's real index. A separate object directory also
-    // keeps blobs written by `git add` ephemeral.
+    await simpleGit().raw(["init", "--bare", "--quiet", scratchGitDir]);
+    await copyFile(realConfigPath, join(scratchGitDir, "config"));
+    await copyFile(realIndexPath, join(scratchGitDir, "index"));
+    await mkdir(join(scratchGitDir, "info"), { recursive: true });
+    try {
+      await copyFile(realAttributesPath, join(scratchGitDir, "info", "attributes"));
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? error.code : null;
+      if (code !== "ENOENT") throw error;
+    }
+
+    // A separate Git directory lets Git see unstaged filesystem renames
+    // without touching the person's real index, object store, or filter state
+    // (notably `.git/annex`). It reads committed objects through an alternate.
     const git = simpleGit(boxRoot).env(childProcessEnv({
-      GIT_INDEX_FILE: join(scratchRoot, "index"),
-      GIT_OBJECT_DIRECTORY: scratchObjects,
+      GIT_DIR: scratchGitDir,
+      GIT_WORK_TREE: repoRoot,
       GIT_ALTERNATE_OBJECT_DIRECTORIES: realObjectsPath,
     }));
-    await git.raw(["read-tree", "HEAD"]);
-    await git.raw(["add", "-A", "--", CARD_PATHSPEC]);
+    await git.raw(["config", "core.bare", "false"]);
+    await git.raw(["config", "core.worktree", repoRoot]);
+    if (annexBranch !== "") await git.raw(["update-ref", "refs/heads/git-annex", annexBranch]);
+    await git.raw(["add", "-A", "--", BOX_PATHSPEC]);
     const raw = await git.raw([
       "diff",
       "--cached",
@@ -85,14 +113,19 @@ async function workingTreeRenames(boxRoot: string): Promise<RenameRecord[]> {
       "-z",
       "--find-renames",
       "--relative",
-      "HEAD",
+      head,
       "--",
-      CARD_PATHSPEC,
+      BOX_PATHSPEC,
     ]);
     const records = parseGitRenameRecords(raw);
     if (records === null) throw new GitRenameOutputError();
     return records;
   } finally {
+    try {
+      await execFileAsync("chmod", ["-R", "u+w", scratchRoot]);
+    } catch (_e) {
+      /* ignore: best-effort; rm reports anything that actually prevents cleanup */
+    }
     await rm(scratchRoot, { recursive: true, force: true });
   }
 }
@@ -115,12 +148,11 @@ async function committedRename(boxRoot: string, source: string): Promise<string 
   return uniqueRenameDestination(records, source);
 }
 
-async function existingSafeCard(boxRoot: string, candidate: string): Promise<string | null> {
-  if (!candidate.endsWith(".card")) return null;
+async function existingSafeFile(boxRoot: string, candidate: string): Promise<string | null> {
   const resolved = await resolveBoxNamespacePathOnDisk({ boxRoot, rawPath: candidate, mode: "read" });
   if (!resolved.ok) return null;
   try {
-    return (await stat(resolved.resolved)).isFile() ? resolved.relativePath : null;
+    return (await lstat(resolved.resolved)).isFile() ? resolved.relativePath : null;
   } catch (error) {
     const code = typeof error === "object" && error !== null && "code" in error ? error.code : null;
     if (code === "ENOENT") return null;
@@ -144,7 +176,7 @@ export async function resolveMovedCardPath({
   const reportWarning = warn ?? console.warn;
   let warningReported = false;
   try {
-    if (await existingSafeCard(boxRoot, missingPath)) return { kind: "not-moved" };
+    if (await existingSafeFile(boxRoot, missingPath)) return { kind: "not-moved" };
     let uncommittedRenames: RenameRecord[] = [];
     try {
       uncommittedRenames = await workingTreeRenames(boxRoot);
@@ -163,11 +195,11 @@ export async function resolveMovedCardPath({
         ?? await committedRename(boxRoot, candidate);
       if (next === null || next === candidate) return { kind: "not-moved" };
 
-      const existing = await existingSafeCard(boxRoot, next);
+      const existing = await existingSafeFile(boxRoot, next);
       if (existing !== null) {
-        // The source may have been recreated while Git was running. A real card
+        // The source may have been recreated while Git was running. A real file
         // at the requested path always wins over historical recovery.
-        if (await existingSafeCard(boxRoot, missingPath)) return { kind: "not-moved" };
+        if (await existingSafeFile(boxRoot, missingPath)) return { kind: "not-moved" };
         return { kind: "moved", path: existing };
       }
       candidate = next;
