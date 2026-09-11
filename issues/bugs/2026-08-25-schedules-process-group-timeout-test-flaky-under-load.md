@@ -13,3 +13,20 @@ The test presumably reads the grandchild's pid file on a fixed delay that the
 grandchild hasn't reached yet under contention. Wait for the file (poll with a
 bound) rather than assume a delay. Also a data point for the test-economics
 workstream: load-induced flakes are indistinguishable from real failures.
+
+## Found fixed in code, 2026-09-11 (survey note, not closed)
+
+The fixed delay this issue blames is gone. `bin/schedules-hardening.test.ts:249-257`
+polls for `grandchild.pid` — up to 80 attempts at 50ms — which is exactly the
+remedy this issue asked for.
+
+Behavioral evidence the same day: this test was the sole failure in a batched
+full-suite run on a heavily loaded machine, then passed 12/12 in three
+consecutive isolated runs. Consistent with the remaining failure being a
+host-load SIGKILL of the whole run (see the 31-file environment alert of
+2026-09-11), not the race described here.
+
+Left open rather than closed: the tracked-flake protocol wants a clean run under
+the conditions that used to produce it, and the machine has not been quiet
+since. Whoever picks this up should confirm, then close as implemented naming
+the commit that introduced the polling loop.
