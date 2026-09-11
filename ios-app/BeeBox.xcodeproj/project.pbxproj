@@ -53,6 +53,14 @@
 		5A10002C2C3C000100000001 /* CaptureAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10002F2C3C000100000001 /* CaptureAPI.swift */; };
 		5A10002D2C3C000100000001 /* CaptureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000332C3C000100000001 /* CaptureStore.swift */; };
 		5A1000342C3C000100000001 /* CaptureUploadCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */; };
+		F5A005DA846A32C3BB81E3C2 /* VoiceStagingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A030877432D1026706D7E8 /* VoiceStagingModels.swift */; };
+		F5A0575EC87A171AC826A6FC /* VoicePCMChunkWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A09B62179273C8EB5BB682 /* VoicePCMChunkWriter.swift */; };
+		F5A0CE8038A39D5E0853964B /* VoiceStagingAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A0E48478DCB74F21345D2C /* VoiceStagingAPI.swift */; };
+		F5A0D669CBEE3772A0770217 /* VoiceStagingCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A050AF03B971722F244F58 /* VoiceStagingCoordinator.swift */; };
+		F5A0E131CA3766E4D58E72E3 /* VoiceStagingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A021A278F64F7FD633DBDD /* VoiceStagingStore.swift */; };
+		F5A0469611A11F5125227C37 /* VoicePCMChunkWriterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A010275DFF6C15C0C8E9DF /* VoicePCMChunkWriterTests.swift */; };
+		F5A084B27B95E90934833489 /* VoiceStagingStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A012DA86A78C49EA20E326 /* VoiceStagingStoreTests.swift */; };
+		F5A0241B4D419B1B673BD475 /* VoiceStagingCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A06A68F812D810A485ED03 /* VoiceStagingCoordinatorTests.swift */; };
 		5A1000362C3C000100000001 /* CaptureAcquisition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003A2C3C000100000001 /* CaptureAcquisition.swift */; };
 		5A1000372C3C000100000001 /* NativeCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003B2C3C000100000001 /* NativeCaptureView.swift */; };
 		5A1000382C3C000100000001 /* NativeCaptureController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10003C2C3C000100000001 /* NativeCaptureController.swift */; };
@@ -172,6 +180,14 @@
 		5A10002F2C3C000100000001 /* CaptureAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAPI.swift; sourceTree = "<group>"; };
 		5A1000332C3C000100000001 /* CaptureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureStore.swift; sourceTree = "<group>"; };
 		5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureUploadCoordinator.swift; sourceTree = "<group>"; };
+		F5A030877432D1026706D7E8 /* VoiceStagingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceStagingModels.swift; sourceTree = "<group>"; };
+		F5A09B62179273C8EB5BB682 /* VoicePCMChunkWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoicePCMChunkWriter.swift; sourceTree = "<group>"; };
+		F5A0E48478DCB74F21345D2C /* VoiceStagingAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceStagingAPI.swift; sourceTree = "<group>"; };
+		F5A050AF03B971722F244F58 /* VoiceStagingCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceStagingCoordinator.swift; sourceTree = "<group>"; };
+		F5A021A278F64F7FD633DBDD /* VoiceStagingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceStagingStore.swift; sourceTree = "<group>"; };
+		F5A010275DFF6C15C0C8E9DF /* VoicePCMChunkWriterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoicePCMChunkWriterTests.swift; sourceTree = "<group>"; };
+		F5A012DA86A78C49EA20E326 /* VoiceStagingStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceStagingStoreTests.swift; sourceTree = "<group>"; };
+		F5A06A68F812D810A485ED03 /* VoiceStagingCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceStagingCoordinatorTests.swift; sourceTree = "<group>"; };
 		5A10003A2C3C000100000001 /* CaptureAcquisition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureAcquisition.swift; sourceTree = "<group>"; };
 		5A10003B2C3C000100000001 /* NativeCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureView.swift; sourceTree = "<group>"; };
 		5A10003C2C3C000100000001 /* NativeCaptureController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeCaptureController.swift; sourceTree = "<group>"; };
@@ -280,6 +296,7 @@
 				B72000122C3C000100000001 /* ComposerDraft.swift */,
 				B7200AA22C3C000100000001 /* ComposerToken.swift */,
 				5A10002E2C3C000100000001 /* CaptureModels.swift */,
+				F5A030877432D1026706D7E8 /* VoiceStagingModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -295,6 +312,7 @@
 				B72000162C3C000100000001 /* ComposerDraftStore.swift */,
 				B720001E2C3C000100000001 /* PendingEmissionStore.swift */,
 				B72000C22C3C000100000001 /* VoiceAudioRetentionStore.swift */,
+				F5A021A278F64F7FD633DBDD /* VoiceStagingStore.swift */,
 			);
 			path = Storage;
 			sourceTree = "<group>";
@@ -338,6 +356,9 @@
 				5A1000352C3C000100000001 /* CaptureUploadCoordinator.swift */,
 				5A10003A2C3C000100000001 /* CaptureAcquisition.swift */,
 				D94000112C3C000100000001 /* NativeEarcons.swift */,
+				F5A09B62179273C8EB5BB682 /* VoicePCMChunkWriter.swift */,
+				F5A0E48478DCB74F21345D2C /* VoiceStagingAPI.swift */,
+				F5A050AF03B971722F244F58 /* VoiceStagingCoordinator.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -364,6 +385,9 @@
 				E1A000072C3C000100000001 /* LogForwarderTests.swift */,
 				B720001C2C3C000100000001 /* ChatAPITests.swift */,
 				E2A000162D7B000100000001 /* ShareExtensionAPITests.swift */,
+				F5A010275DFF6C15C0C8E9DF /* VoicePCMChunkWriterTests.swift */,
+				F5A012DA86A78C49EA20E326 /* VoiceStagingStoreTests.swift */,
+				F5A06A68F812D810A485ED03 /* VoiceStagingCoordinatorTests.swift */,
 			);
 			path = BeeBoxTests;
 			sourceTree = "<group>";
@@ -596,6 +620,11 @@
 				5A1000372C3C000100000001 /* NativeCaptureView.swift in Sources */,
 				5A1000382C3C000100000001 /* NativeCaptureController.swift in Sources */,
 				E2A000072D7B000100000001 /* ShareExtensionAPI.swift in Sources */,
+				F5A005DA846A32C3BB81E3C2 /* VoiceStagingModels.swift in Sources */,
+				F5A0575EC87A171AC826A6FC /* VoicePCMChunkWriter.swift in Sources */,
+				F5A0CE8038A39D5E0853964B /* VoiceStagingAPI.swift in Sources */,
+				F5A0D669CBEE3772A0770217 /* VoiceStagingCoordinator.swift in Sources */,
+				F5A0E131CA3766E4D58E72E3 /* VoiceStagingStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -622,6 +651,9 @@
 				B720001B2C3C000100000001 /* ChatAPITests.swift in Sources */,
 				C83000032C3C000100000001 /* BoxLockTests.swift in Sources */,
 				E2A000082D7B000100000001 /* ShareExtensionAPITests.swift in Sources */,
+				F5A0469611A11F5125227C37 /* VoicePCMChunkWriterTests.swift in Sources */,
+				F5A084B27B95E90934833489 /* VoiceStagingStoreTests.swift in Sources */,
+				F5A0241B4D419B1B673BD475 /* VoiceStagingCoordinatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

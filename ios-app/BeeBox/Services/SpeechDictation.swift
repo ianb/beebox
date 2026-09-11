@@ -98,6 +98,16 @@ struct NativeVoiceTurnState: Equatable {
     }
 }
 
+/// What a dictation turn needs to start voice staging
+/// (`docs/plans/resilient-voice-recording.md`, Track 6) alongside speech
+/// recognition. Absent (`nil` passed to `startIfNeeded`/`toggle`) when no
+/// chat session is bound yet — staging is best-effort and dictation still
+/// works without it; the recording simply doesn't get durably staged.
+struct VoiceStagingContext: Equatable, Sendable {
+    var boxID: UUID
+    var targetSessionID: String
+}
+
 enum VoiceCompositionState: Equatable {
     case idle
     case requestingPermission
@@ -170,6 +180,10 @@ final class SpeechDictation: ObservableObject {
     private var tapInstalled = false
     private var holdsAudioSession = false
     private var configurationChangeObserver: NSObjectProtocol?
+    private var voiceChunkWriter: VoicePCMChunkWriter?
+    private var voiceChunkFinishTask: Task<Int, Never>?
+    private var stagingBoxID: UUID?
+    private(set) var currentVoiceRecordingID: VoiceRecordingID?
 
     init(
         permissionRequester: (@MainActor () async -> Bool)? = nil,
@@ -231,15 +245,15 @@ final class SpeechDictation: ObservableObject {
         state == .requestingPermission || hasPendingStart
     }
 
-    func toggle(currentText: String) {
+    func toggle(currentText: String, voiceStaging: VoiceStagingContext? = nil) {
         if isRecording {
             stop()
             return
         }
-        startIfNeeded(currentText: currentText)
+        startIfNeeded(currentText: currentText, voiceStaging: voiceStaging)
     }
 
-    func startIfNeeded(currentText: String) {
+    func startIfNeeded(currentText: String, voiceStaging: VoiceStagingContext? = nil) {
         guard isRecording == false else {
             return
         }
@@ -249,8 +263,26 @@ final class SpeechDictation: ObservableObject {
         let generation = UUID()
         startupGeneration = generation
         startTask = Task {
-            await start(currentText: currentText, generation: generation)
+            await start(currentText: currentText, generation: generation, voiceStaging: voiceStaging)
         }
+    }
+
+    /// Hand the composer the just-ended turn's staging id and its final chunk
+    /// count, once the chunk writer has flushed its last partial chunk. `nil`
+    /// when this turn never started staging (no target session was known at
+    /// start) or produced no audio at all. The composer uses this to call
+    /// `VoiceStagingRuntime.shared.finalize(boxID:recordingID:chunkCount:hq:)`
+    /// — the narrow API that seals the recording (Track 6b supplies a real
+    /// `hq` payload; the non-HQ send path always passes `nil`).
+    func consumeVoiceStagingHandle() async -> (boxID: UUID, recordingID: VoiceRecordingID, chunkCount: Int)? {
+        guard let recordingID = currentVoiceRecordingID, let boxID = stagingBoxID else {
+            return nil
+        }
+        currentVoiceRecordingID = nil
+        stagingBoxID = nil
+        let chunkCount = await voiceChunkFinishTask?.value ?? 0
+        voiceChunkFinishTask = nil
+        return (boxID, recordingID, chunkCount)
     }
 
     func stop() {
@@ -274,6 +306,17 @@ final class SpeechDictation: ObservableObject {
         if tapInstalled {
             audioEngine.inputNode.removeTap(onBus: 0)
             tapInstalled = false
+        }
+        // Flush whatever the writer has buffered as a final chunk right when
+        // the recording ends — including an interruption or route-change
+        // teardown, not only an explicit stop — so a turn that never reaches
+        // `consumeVoiceStagingHandle()` still gets its audio staged.
+        if let writer = voiceChunkWriter {
+            voiceChunkWriter = nil
+            voiceChunkFinishTask = Task {
+                writer.finish()
+                return writer.chunksWritten
+            }
         }
         if currentRecordingURL != nil {
             recordedAudioURL = currentRecordingURL
@@ -314,6 +357,13 @@ final class SpeechDictation: ObservableObject {
         recognitionGeneration = nil
         analyzerSession?.cancel()
         analyzerSession = nil
+        // A cancelled/erased turn abandons its staged recording rather than
+        // finalizing it — the box's own abandonment sweep reclaims it. Drop
+        // the handle here so it can't bleed into a later, unrelated turn.
+        currentVoiceRecordingID = nil
+        stagingBoxID = nil
+        voiceChunkFinishTask?.cancel()
+        voiceChunkFinishTask = nil
         hasDictatedText = false
         errorMessage = nil
         preparationMessage = nil
@@ -392,7 +442,7 @@ final class SpeechDictation: ObservableObject {
         return value
     }
 
-    private func start(currentText: String, generation startupID: UUID) async {
+    private func start(currentText: String, generation startupID: UUID, voiceStaging: VoiceStagingContext?) async {
         defer {
             if startupGeneration == startupID {
                 startTask = nil
@@ -478,11 +528,16 @@ final class SpeechDictation: ObservableObject {
             let audioFile = try AVAudioFile(forWriting: recordingURL, settings: format.settings)
             currentRecordingURL = recordingURL
             recordingFile = audioFile
+
+            let chunkWriter = await makeVoiceChunkWriter(voiceStaging: voiceStaging)
+            voiceChunkWriter = chunkWriter
+
             tapInstalled = true
             inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
                 modernSession?.append(buffer)
                 legacyRequest?.append(buffer)
                 try? audioFile.write(from: buffer)
+                chunkWriter?.append(buffer)
             }
 
             audioEngine.prepare()
@@ -537,6 +592,40 @@ final class SpeechDictation: ObservableObject {
         }
         transcript = currentTranscript
         hasDictatedText = transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
+    /// Begin voice staging for this turn and build the chunk writer that will
+    /// feed it, or `nil` when `voiceStaging` is absent (no chat session bound
+    /// yet). `beginRecording` persists the recording locally and starts the
+    /// session-create call before this returns — the writer may produce
+    /// chunks before that call resolves, and they queue until it does.
+    private func makeVoiceChunkWriter(voiceStaging: VoiceStagingContext?) async -> VoicePCMChunkWriter? {
+        guard let voiceStaging else {
+            return nil
+        }
+        let recordingID = VoiceStagingRuntime.shared.beginRecording(
+            boxID: voiceStaging.boxID,
+            targetSessionID: voiceStaging.targetSessionID
+        )
+        currentVoiceRecordingID = recordingID
+        stagingBoxID = voiceStaging.boxID
+        let directory = await VoiceStagingRuntime.shared.store.directoryURL(
+            boxID: voiceStaging.boxID,
+            recordingID: recordingID
+        )
+        let boxID = voiceStaging.boxID
+        return VoicePCMChunkWriter(
+            directory: directory,
+            onChunk: { chunk in
+                VoiceStagingRuntime.shared.chunkProduced(boxID: boxID, recordingID: recordingID, chunk: chunk)
+            },
+            onWriteFailure: { error in
+                BoxLog.error(
+                    "voice staging chunk write failed recording=\(recordingID.rawValue): \(error.localizedDescription)",
+                    category: .voice
+                )
+            }
+        )
     }
 
     private func makeAnalyzerSession(
