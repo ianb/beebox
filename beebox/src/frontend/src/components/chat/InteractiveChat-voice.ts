@@ -16,6 +16,7 @@ import type { EmissionDispatch } from "./conversation/use-bound-emission";
 
 import { useEffect, useRef, useCallback } from "react";
 import { useRealtimeTranscription } from "../../hooks/useRealtimeTranscription";
+import { segmentCapturing } from "../../machines/transcription-events";
 import { useDebouncedWakeLock } from "../../hooks/useWakeLock";
 import { useMachine } from "@xstate/react";
 import { composerMachine, type ComposerEvent } from "../../machines/composerMachine";
@@ -141,14 +142,14 @@ export function useChatVoice(opts: {
   useEffect(() => { hqDictationEnabledRef.current = hqDictationEnabled; });
   const selectionsRef = useRef(selections);
   useEffect(() => { selectionsRef.current = selections; });
+  // Read when a segment starts: the chat its staged recording belongs to.
+  const sessionIdRef = useRef(sessionId);
+  useEffect(() => { sessionIdRef.current = sessionId; });
   // The composer text store is read directly at keyword-fire time (store.get()),
   // so no ref-sync is needed — and the store doesn't re-render this hook.
 
   const transcription = useRealtimeTranscription({
-    // Always capture the segment's audio: narration's HQ pass uses it when
-    // enabled, and every voice send caches it for `bbx chat get-last-audio`.
-    // No latency cost — the actor finalizes the blob synchronously on STOP.
-    wantAudioBlob: () => true,
+    targetSessionId: () => sessionIdRef.current,
     // One handler for the whole VoiceIntent stream (docs/plans/
     // input-extraction.md, chunk 5) instead of four separate callbacks.
     onVoiceIntent: (intent) => {
@@ -185,8 +186,8 @@ export function useChatVoice(opts: {
       }
     },
     onUnconsumedTranscript: (text) => {
-      // Recording ended without a send or a manual stop (transport death, mic
-      // taken away, reconnect window expired, silence/max-duration auto-stop).
+      // Recording ended without a send or a manual stop (mic taken away past
+      // its recovery window, silence auto-stop).
       // Fold the words into the composer so they stay visible and editable
       // instead of vanishing when isTranscribing flips false.
       inputStore.set((existing) => joinTranscript(existing, text));
@@ -199,16 +200,16 @@ export function useChatVoice(opts: {
   useEffect(() => {
     devicesRef.current.transcription = transcription;
   });
-  const isTranscribing =
-    transcription.state === "connecting" ||
-    transcription.state === "recording" ||
-    transcription.state === "reconnecting" ||
-    transcription.state === "finalizing";
+  const isTranscribing = transcription.state === "connecting" || segmentCapturing(transcription.state) || transcription.state === "finalizing";
 
   useComposerMirrors({
     composerSend,
+    // `recording` gates pausing the mic for speech (a CANCEL, which discards
+    // the segment's audio); only live text makes that decision safe.
     recording: transcription.state === "recording",
-    transcriptNonEmpty: transcription.transcript.trim().length > 0,
+    // With live text paused, the user may be mid-sentence with nothing on
+    // screen: treat it as talking so the box doesn't speak over them.
+    transcriptNonEmpty: transcription.transcript.trim().length > 0 || transcription.state === "recordingLocal",
     narrationEnabled, muted,
   });
 

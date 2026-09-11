@@ -4,9 +4,8 @@
  * One header layout, shared by every WAV byte this codebase writes (#8,
  * `docs/plans/resilient-voice-recording.md`): the server's HQ piece cutter
  * (`core/voice-recording/pieces.ts`, which wraps each ≤300 s piece of a voice
- * recording before sending it to the transcription provider) and the
- * frontend's whole-segment encoder (`frontend/src/lib/audio/wav-encode.ts`,
- * the narration-mode checkpoint upload). Isomorphic — no Node/DOM-only APIs —
+ * recording before sending it to the transcription provider). The browser
+ * stages raw PCM and never builds a WAV. Isomorphic — no Node/DOM-only APIs —
  * so it lives in `shared/` rather than `core/`.
  */
 

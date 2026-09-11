@@ -47,7 +47,7 @@ export { VOICE_UPLOAD_BATCH_SECONDS, VOICE_QUEUE_BOUND_MS };
 export type { VoiceStagingStatus, VoiceStagingFailure };
 
 export interface VoiceStagingQueue {
-  enqueueCreate: (recordingId: string, opts: { targetSessionId: string }) => void;
+  enqueueCreate: (recordingId: string, opts: { targetSessionId: string | null }) => void;
   enqueueChunk: (recordingId: string, bytes: ArrayBuffer) => void;
   enqueueFinalize: (recordingId: string, opts: { hq: { emissionId: string; sessionId: string } | null }) => void;
   enqueueDiscard: (recordingId: string) => void;
@@ -154,7 +154,7 @@ function getSingleton(): VoiceStagingQueue {
   return singleton;
 }
 
-export function enqueueCreate(recordingId: string, opts: { targetSessionId: string }): void {
+export function enqueueCreate(recordingId: string, opts: { targetSessionId: string | null }): void {
   getSingleton().enqueueCreate(recordingId, opts);
 }
 export function enqueueChunk(recordingId: string, bytes: ArrayBuffer): void {

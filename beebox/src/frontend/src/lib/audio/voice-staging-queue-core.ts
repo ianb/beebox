@@ -16,10 +16,13 @@ export const VOICE_UPLOAD_BATCH_SECONDS = 15;
 /** An op older than this fails terminally regardless of what it is — nothing retries forever. */
 export const VOICE_QUEUE_BOUND_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** `create` seeds a voice recording; the client mints `recordingId` itself. */
+/**
+ * `create` seeds a voice recording; the client mints `recordingId` itself.
+ * `targetSessionId` is null when the mic starts in a chat with no session yet.
+ */
 export interface VoiceCreateOp {
   kind: "create";
-  targetSessionId: string;
+  targetSessionId: string | null;
 }
 
 /** One ~15s batch of raw PCM, numbered by the queue at enqueue time (1-based). */

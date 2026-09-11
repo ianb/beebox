@@ -159,8 +159,8 @@ function DesktopComposerRow({
         onClick={() => {
           routeComposerSend({
             isTranscribing,
-            // Finalization produces the retained audio Blob. HQ mode is an
-            // independent later choice inside runKeywordSend.
+            // Finalization hands the segment's staged recording to the send,
+            // which seals it; HQ is a choice made inside runKeywordSend.
             submitSegment: () => transcription.submitSegment({ closeMic: true }),
             sendTyped: handleSend,
             sendSettledVoice: () => {
@@ -239,6 +239,7 @@ export function ChatInputArea({
           <MicOverlay
             hasText={joinTranscript(input, transcription.transcript).trim().length > 0}
             degraded={transcription.state === "reconnecting"}
+            livePaused={transcription.state === "recordingLocal"}
           />
         ) : null}
         {/* Add menu: capture mode, add files, screenshot, share location. */}

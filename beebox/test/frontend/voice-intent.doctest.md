@@ -17,8 +17,8 @@ import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission } from "../../src/
 
 The desktop and mobile Send buttons share this decision. A live voice segment
 must enter `submitSegment` whether HQ dictation is enabled or not: finalization
-is what produces the audio blob retained for `bbx chat get-last-audio`; HQ is a
-later, independent decision about whether to re-transcribe that blob. The
+is what hands the segment's staged recording to the send, which seals it; HQ
+is a later, independent decision about what that seal asks the box for. The
 settled fallback exists only for the narrow race where the segment became idle
 before the click handler ran.
 
@@ -182,7 +182,7 @@ const hqIntent = {
   kind: "submit" as const,
   text: "rough words <send-message phrase=\"clean up and send\" />",
   matchedPhrase: "clean up and send",
-  audioBlob: new Blob(["audio"], { type: "audio/wav" }),
+  recording: { recordingId: "rec-hq", seal: () => {}, discard: () => {} },
   closeMic: false,
   hq: true,
   words: [{ word: "rough", confidence: 0.4 }],
@@ -281,7 +281,7 @@ const manualIntent = {
   kind: "submit" as const,
   text: "quick thought before I go",
   matchedPhrase: "",
-  audioBlob: new Blob(["audio"], { type: "audio/wav" }),
+  recording: { recordingId: "rec-manual", seal: () => {}, discard: () => {} },
   closeMic: true,
   hq: false,
   words: null,

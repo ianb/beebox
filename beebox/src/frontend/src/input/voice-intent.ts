@@ -9,14 +9,14 @@
  * as they always were (cancel/mic-off/erase never built a payload).
  *
  * Serializable-boundary rule (input/ convention): no React or DOM types,
- * with one narrow exception — `submit.audioBlob` carries the recorded
- * segment's `Blob` by reference, the same way `RetentionStore`'s payload
- * (`retention.ts`) and `EmissionFile`'s `path` carry their cargo by
- * reference rather than by value. Audio never serializes across this
- * boundary either way.
+ * with one narrow exception — `submit.recording` carries the segment's
+ * staged recording as a live handle (`PendingRecording`: its id plus the
+ * seal/discard obligation), by reference. The audio itself is on the box
+ * (`docs/plans/resilient-voice-recording.md`), never in this shape.
  */
 
 import type { ChatImageAttachment } from "../api-chat";
+import type { PendingRecording } from "../lib/audio/voice-stager";
 import type { SelectionItem } from "../lib/selection/serialize";
 import type { FinalWord } from "../machines/transcription-events";
 import { joinTranscript, spokenTextStart } from "../components/chat/InteractiveChat-helpers";
@@ -31,17 +31,22 @@ export type VoiceIntent =
       text: string;
       /** Trigger phrase the realtime pass matched (e.g. "send message"). */
       matchedPhrase: string;
-      /** The segment's recording, when captured (see `wantAudioBlob`). */
-      audioBlob: Blob | null;
+      /**
+       * The segment's staged recording, or null when no segment went live
+       * (a send tapped before the mic started). The receiver owes it exactly
+       * one `seal` — with an HQ request when this message wants HQ — or
+       * `discard`; an unsealed recording is never transcribed and waits on
+       * the box for garbage collection.
+       */
+      recording: PendingRecording | null;
       /** "Send and close": after commit, leave the mic closed (no re-arm). */
       closeMic: boolean;
       /** This keyword explicitly requests HQ cleanup, independently of narration mode. */
       hq: boolean;
       /**
        * Realtime words backing `text` at commit time (Track 3, docs/plans/
-       * transcript-confidence.md) — fast path: snapshotted at CANCEL; slow
-       * path: the machine's `finalWords` read at its idle transition, which
-       * lands alongside the parked text. `null` means the service captured
+       * transcript-confidence.md) — the machine's `finalWords` read at its
+       * idle transition, which lands alongside the parked text. `null` means the service captured
        * no confidence data (Voxtral/OpenAI realtime, or nothing finalized —
        * Fix A); the HQ-drop decision (words describe discarded text) is the
        * consumer's job, not this shape's.
@@ -117,7 +122,8 @@ export async function prepareVoiceSubmitEmission(opts: {
   imagesSnapshot: readonly ChatImageAttachment[];
   filesSnapshot: readonly EmissionFile[];
   runHq: boolean;
-  transcribe: (audio: Blob) => Promise<HqTranscript | null>;
+  /** The HQ pass for `intent.recording` (Track 4 replaces this with the box's HQ job). */
+  transcribe: () => Promise<HqTranscript | null>;
 }): Promise<{ emission: Emission; usedHq: boolean }> {
   const {
     intent, priorInput, selectionsSnapshot, imagesSnapshot, filesSnapshot, runHq, transcribe,
@@ -127,10 +133,10 @@ export async function prepareVoiceSubmitEmission(opts: {
   let usedHq = false;
   let hqService: string | undefined;
 
-  if (runHq && intent.audioBlob !== null) {
+  if (runHq && intent.recording !== null) {
     let hqResult: HqTranscript | null = null;
     try {
-      hqResult = await transcribe(intent.audioBlob);
+      hqResult = await transcribe();
     } catch (_e) {
       // The realtime transcript below is the durable failure fallback.
     }
