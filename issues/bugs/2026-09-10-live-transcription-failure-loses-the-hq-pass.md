@@ -1,13 +1,19 @@
 ---
 title: "Network trouble in live transcription takes the HQ pass down with it — the local recording should not depend on the live channel"
-workstream: unattached
+workstream: hq-recording-resilience
+design: ../../beebox/docs/implemented-plans/resilient-voice-recording.md
 area: beebox
 priority: important
 labels: [transcription, diarization, resilience, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "I was using diarization to record a conversation, and there were several network failures and issues. These were probably in the live transcription, but the hq transcription didn't go through as a result."
+needs: [manual-testing]
 ---
+
+> **⏳ Awaiting manual testing** — the fix landed on `worktree-hq-recording-resilience`
+> (merged to `main`; see the merge commit for the exact hash). Code fix is in;
+> the real-world verification below still needs the boxholder.
 
 Recording a conversation with diarization on, the boxholder hit several network
 failures. His read is that they were in the **live** transcription — the
@@ -43,6 +49,33 @@ I have not reproduced the failure, so which of these fired — or whether the
 recording was lost earlier, in the recorder or the machine's teardown — is
 unestablished. That is the first thing to find out.
 
+## What the logs show (2026-09-10)
+
+The failure was traced in the box's client and server logs. The HQ pass was
+not skipped. It ran and the provider rejected it:
+
+- A deploy restarted the hub (SIGTERM 18:55:03, serving again 18:56:06 UTC).
+  The realtime service was `voxtral`, which is proxied through the box
+  server, so the live socket died with it.
+- 18:56:20 — the server logged `HQ transcription failed: Request failed with
+  status code 400 Bad Request: POST https://openrouter.ai/api/v1/audio/transcriptions`
+  (HQ service `mai-diarized`). The client logged `falling back to realtime`.
+- 18:56:31 — the message arrived as 1288 words of realtime text. The segment
+  was about 11 minutes: ~21 MB of 16 kHz WAV, ~28 MB after base64. The
+  6-minute diarized recordings before and after it succeeded.
+- The upstream reason is lost: the error keeps only the status line. Size is
+  the likely cause, but unverified.
+
+The code also shows real paths where the live channel does lose the
+recording, which did not fire this time: reconnect-window expiry (8 s),
+connect failure at segment start, the 15-minute cap, and errors that bubble to
+the machine's `active` level. Each ends the segment with text only. The plan
+lists them with citations.
+
+The chat voice recording is not a `MediaRecorder` blob, as the text above
+assumed. It is PCM held inside the transcription actor
+(`transcription-actor.ts`). `MediaRecorder` is capture mode's recorder.
+
 ## What a fix needs to establish
 
 - **Decouple the HQ pass from the live channel's health.** A completed local
@@ -51,7 +84,7 @@ unestablished. That is the first thing to find out.
   submit flow stops being conditional on realtime success, is a design call.
 - **Retry the HQ upload.** A transient network failure on `POST
   /api/chat/transcribe-audio` should not be terminal. Same reasoning as
-  [transient 502s aren't retried](2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md);
+  [transient 502s aren't retried](../closed/bugs/2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md);
   this is a mutation, so it needs its own deliberate policy rather than the
   query retry that issue installs.
 - **Don't discard the audio on failure.** The blob is already retained
@@ -64,3 +97,20 @@ unestablished. That is the first thing to find out.
   socket to drop, a bigger blob to upload, and more lost if it goes. Whatever
   is built should be evaluated against that shape, not against a ten-second
   dictation.
+
+## Manual testing
+
+On the web app, turn on HQ dictation (diarized HQ service). Record a real
+multi-speaker conversation of 10+ minutes, and partway through switch the
+network off for about 2 minutes (or let a deploy restart happen underneath
+it).
+
+Expected:
+- The recording never stops — the mic overlay shows "Recording · live text
+  paused" during the outage.
+- The message arrives with HQ text (`stt="hq"`, diarized parts marked
+  `— part N of M —`), OR — if HQ cannot finish within the 5-minute wait or
+  fails outright — arrives as live text visibly marked "Live text — HQ
+  transcript unavailable".
+- `bbx chat get-last-audio --message <id>` returns the full recording
+  regardless of which path the message took.

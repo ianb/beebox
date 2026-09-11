@@ -16,6 +16,7 @@ import { useAudioOverlayEntry, type AudioOverlayStore } from "./audio-overlay-st
 import {
   extractFileAttachments,
   getUserName,
+  isHqFallbackMessage,
   parseTaskNotification,
   resolveEntryMessageId,
   resolveTranscriptionProvenance,
@@ -162,6 +163,13 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
     currentUserName,
   });
 
+  // A realtime send that stands in for a requested HQ pass gets a static
+  // label — the HQ result itself stays on the box, reachable only through
+  // `bbx chat retranscribe` (late correction removed).
+  const hqStatus = isHqFallbackMessage(firstEntry)
+    ? <div role="status" className="bbx-chat-user-status text-xs text-white/70 mt-1 italic">Live text — HQ transcript unavailable</div>
+    : null;
+
   const isPending = entries.every((e) => e.pending === true);
   const pendingClass = isPending ? " opacity-60" : "";
   const pendingTitle = isPending ? "Queued — sends when the current reply finishes" : undefined;
@@ -198,6 +206,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
                 matchesOverlay={entry.uuid === firstEntry.uuid}
               />
             ))}
+            {hqStatus}
             {isPending ? <PendingIndicator /> : null}
           </div>
         </div>
@@ -234,6 +243,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
               matchesOverlay={entry.uuid === firstEntry.uuid}
             />
           ))}
+          {hqStatus}
           {isPending ? <PendingIndicator /> : null}
         </div>
       </div>

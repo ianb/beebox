@@ -14,9 +14,14 @@ import * as fs from "node:fs/promises";
 import type { EventBus } from "../event-bus.js";
 import type { ChatSession } from "../chat/session/index.js";
 import type { ChatSessionRegistry } from "../chat/session/registry.js";
-import { stagingBaseDir, readStagingSession, isCaptureSession } from "./staging-store.js";
+import { assertNever } from "../../lib/invariant.js";
+import { stagingBaseDir, readStagingSession } from "./staging-store.js";
 import { prepareCaptureSession, markCapturePreparationFailed } from "./prepare.js";
+import { runHqJob } from "../voice-recording/hq-job.js";
 import { errnoCode } from "../../lib/error-guards.js";
+
+/** Voice `hq.state`s a resume should re-fire the job for — mid-flight, not yet terminal. */
+const RESUMABLE_HQ_STATES = new Set(["queued", "transcribing", "retrying"]);
 
 export async function resumeStagingSessions(deps: {
   boxRoot: string;
@@ -38,14 +43,32 @@ export async function resumeStagingSessions(deps: {
   for (const id of ids) {
     const session = await readStagingSession({ boxRoot, id });
     if (session === null) continue;
-    // Capture-only resume: bulk-upload sessions resume through their own path.
-    if (!isCaptureSession(session)) continue;
-    if (session.state !== "sealed" && session.state !== "preparing" && session.state !== "delivering") continue;
 
-    console.warn(`[capture] Resuming staged capture ${id} (state=${session.state})`);
-    void prepareCaptureSession({ boxRoot, id, eventBus, registry, wireSession }).catch((err: unknown) => {
-      console.error(`[capture] Resume of staged capture ${id} failed:`, err);
-      void markCapturePreparationFailed({ boxRoot, id, eventBus });
-    });
+    // Exhaustive over `kind` so a future fourth kind fails to compile here
+    // until this decides how it resumes.
+    switch (session.kind) {
+      case "capture":
+        if (session.state !== "sealed" && session.state !== "preparing" && session.state !== "delivering") continue;
+        console.warn(`[capture] Resuming staged capture ${id} (state=${session.state})`);
+        void prepareCaptureSession({ boxRoot, id, eventBus, registry, wireSession }).catch((err: unknown) => {
+          console.error(`[capture] Resume of staged capture ${id} failed:`, err);
+          void markCapturePreparationFailed({ boxRoot, id, eventBus });
+        });
+        continue;
+      case "bulk":
+        // Bulk-upload sessions resume through their own path (`resumeBulkSessions`).
+        continue;
+      case "voice":
+        if (session.voice === undefined) continue;
+        if (RESUMABLE_HQ_STATES.has(session.voice.hq.state)) {
+          console.warn(`[voice-recording] Resuming HQ job for ${id} (hq.state=${session.voice.hq.state})`);
+          void runHqJob({ boxRoot, id, eventBus }).catch((err: unknown) => {
+            console.error(`[voice-recording] Resume of HQ job ${id} failed:`, err);
+          });
+        }
+        continue;
+      default:
+        assertNever(session.kind);
+    }
   }
 }

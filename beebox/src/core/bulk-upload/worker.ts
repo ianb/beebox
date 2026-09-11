@@ -128,7 +128,7 @@ async function runBulkPreparation(deps: PrepareBulkDeps): Promise<void> {
     const landed = await userMessageAlreadyLanded({
       boxRoot,
       sessionId: target.sessionId,
-      docPath: cardRelPath,
+      marker: cardRelPath,
       logPrefix: "bulk",
     });
     if (landed) {

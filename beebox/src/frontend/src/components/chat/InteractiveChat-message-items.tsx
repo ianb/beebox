@@ -18,6 +18,8 @@ import { CaptureBubbleView, type CaptureBubbleModel, type CaptureVerbs } from ".
 import { invariant } from "@shared/invariant";
 import type { SpeechSegmentState } from "../../machines/speechPlaybackMachine";
 import type { AudioOverlayStore } from "./audio-overlay-store";
+import type { PendingHq } from "../../machines/composerMachine";
+import { Button } from "../ui/Button";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a
@@ -46,27 +48,28 @@ function chunkOnParagraphs(text: string): string {
 }
 
 /**
- * In-flight user message during narration's HQ transcription pass. Shows
- * the realtime transcript as a faded user bubble with a "finalizing
- * transcript…" caption, so the user sees that the system is working on
- * their message rather than nothing happening.
+ * A voice message waiting for its HQ transcript
+ * (docs/plans/resilient-voice-recording.md, Track 4): the realtime text as a
+ * faded user bubble, the HQ job's status line, and a control to stop waiting
+ * and send the live text now (the HQ text then follows as a correction).
  */
-function PendingHqMessage({ text }: { text: string }) {
+function PendingHqMessage({ pending, onSendLive }: { pending: PendingHq; onSendLive: (id: string) => void }) {
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
       <div className="flex flex-col items-end gap-1">
         <div
           className="rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words opacity-60"
-          title="Finalizing high-quality transcription…"
+          title="Waiting for the HQ transcript…"
         >
           <div className="text-sm whitespace-pre-wrap">
-            <UserMessageText text={text} />
+            <UserMessageText text={pending.text} />
           </div>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-warm-500 pr-2">
+        <div role="status" className="flex items-center gap-1.5 text-xs text-warm-500 pr-2">
           <span className="inline-block w-2 h-2 rounded-full bg-accent animate-pulse" />
-          finalizing transcript…
+          {pending.status}
         </div>
+        <Button size="sm" intent="secondary" onClick={() => onSendLive(pending.id)}>Send live text now</Button>
       </div>
     </div>
   );
@@ -75,7 +78,7 @@ function PendingHqMessage({ text }: { text: string }) {
 export type DataItem =
   | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[] }
   | { kind: "marker"; marker: ModelMarker }
-  | { kind: "pendingHq"; text: string }
+  | { kind: "pendingHq"; pending: PendingHq }
   | { kind: "captureBubble"; model: CaptureBubbleModel };
 
 function assistantGroupText(group: MessageGroup): string {
@@ -88,7 +91,7 @@ function assistantGroupText(group: MessageGroup): string {
 export function dataItemKey(d: DataItem): string {
   switch (d.kind) {
     case "marker": return `marker-${d.marker.id}`;
-    case "pendingHq": return "pendingHq";
+    case "pendingHq": return `pendingHq-${d.pending.id}`;
     case "captureBubble": return `capture-${d.model.id}`;
     case "group": {
       const first = d.group.entries[0];
@@ -124,11 +127,11 @@ export function buildDataItems(opts: {
   streamText: string;
   streamTools: SessionContentBlock[];
   liveTurnId: string | null;
-  pendingHqDraft: string | null;
+  pendingHq: readonly PendingHq[];
   captureBubbles: CaptureBubbleModel[];
   debugView: boolean;
 }): DataItem[] {
-  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView } = opts;
+  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView } = opts;
   const items: DataItem[] = [];
   for (const m of modelMarkers) {
     if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
@@ -162,7 +165,7 @@ export function buildDataItems(opts: {
       if (m.afterGroupCount === i + 1) items.push({ kind: "marker", marker: m });
     }
   }
-  if (pendingHqDraft !== null) items.push({ kind: "pendingHq", text: pendingHqDraft });
+  for (const pending of pendingHq) items.push({ kind: "pendingHq", pending });
   for (const model of captureBubbles) items.push({ kind: "captureBubble", model });
   if (streamingShown) {
     // The live turn renders as a *provisional* assistant group through the same
@@ -196,6 +199,8 @@ export interface RenderItemContext {
   captureVerbs: CaptureVerbs;
   /** Written by the two audio-review events; read by `UserMessage`'s badges. */
   audioOverlayStore: AudioOverlayStore;
+  /** A pending voice message's "Send live text now" control. */
+  onHqSendLive: (id: string) => void;
 }
 
 /**
@@ -278,7 +283,8 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
     );
   }
   if (item.kind === "pendingHq") {
-    return <PendingHqMessage text={item.text} />;
+    const { onHqSendLive: handleHqSendLive } = ctx;
+    return <PendingHqMessage pending={item.pending} onSendLive={handleHqSendLive} />;
   }
   if (item.kind === "captureBubble") {
     const { retry: handleCaptureRetry, discard: handleCaptureDiscard } = ctx.captureVerbs;

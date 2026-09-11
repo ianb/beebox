@@ -53,22 +53,24 @@ export interface DeliverUserMessageResult {
 }
 
 /**
- * At-most-once probe: has a message pointing at `docPath` already landed in the
+ * At-most-once probe: has a message pointing at `marker` already landed in the
  * target chat's transcript? Used on a mid-delivery resume to avoid re-sending a
  * message whose `send()` resolved before the `delivered` marker was persisted.
- * The `doc` path is unique per batch/capture (it carries the staging id +
- * timestamp), so a bare substring match on the JSONL is a reliable
- * landed-signal — bare, not `doc="…"`, because the transcript stores the message
- * as a JSON string where the wrapper's quotes are backslash-escaped. A `null`
- * session (a fresh session that never got an id persisted) can't be probed → false.
+ * `marker` is any bare, unique substring of the message a caller already knows
+ * is in the transcript — capture/bulk pass their card's doc path (unique per
+ * batch/capture: it carries the staging id + timestamp). A bare substring match on the
+ * JSONL is a reliable landed-signal — bare, not `attr="…"`, because the
+ * transcript stores the message as a JSON string where the wrapper's quotes are
+ * backslash-escaped. A `null` session (a fresh session that never got an id
+ * persisted) can't be probed → false.
  */
 export async function userMessageAlreadyLanded(opts: {
   boxRoot: string;
   sessionId: string | null;
-  docPath: string;
+  marker: string;
   logPrefix?: string;
 }): Promise<boolean> {
-  const { boxRoot, sessionId, docPath } = opts;
+  const { boxRoot, sessionId, marker } = opts;
   const logPrefix = opts.logPrefix ?? "chat";
   if (sessionId === null) return false;
   if (await resolveChatEngine(boxRoot, { sessionId }) === "codex") {
@@ -78,7 +80,7 @@ export async function userMessageAlreadyLanded(opts: {
         slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES },
       });
       return entries.some((entry) => entry.content.some(
-        (block) => block.type === "text" && block.text?.includes(docPath) === true,
+        (block) => block.type === "text" && block.text?.includes(marker) === true,
       ));
     } catch (error) {
       console.warn(`[${logPrefix}] Could not read Codex transcript for at-most-once probe:`, error);
@@ -90,13 +92,13 @@ export async function userMessageAlreadyLanded(opts: {
     // Stream line by line with an early return — the target chat is the
     // most-active session by construction, i.e. the biggest transcript on the
     // box, and reading it whole is the allocation class that OOM'd prod
-    // (2026-08-01). `docPath` sits inside a single JSONL line, so a per-line
+    // (2026-08-01). `marker` sits inside a single JSONL line, so a per-line
     // match is equivalent to a whole-file match.
     const fileStream = createReadStream(logPath, { encoding: "utf-8" });
     const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
     try {
       for await (const line of rl) {
-        if (line.includes(docPath)) return true;
+        if (line.includes(marker)) return true;
       }
     } finally {
       rl.close();

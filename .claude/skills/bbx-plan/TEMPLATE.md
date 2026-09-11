@@ -17,6 +17,20 @@ duplicate ones you found by grepping the queue (slug, keyword, symptom). /finish
 reads the frontmatter `issues:` list to close them; one left off is forgotten.
 "none" if not tied to a filed issue. -->
 
+## Smallest fix and budget
+
+<!-- The circuit breaker's baseline (bbx-plan skill, "Circuit breaker").
+     1. The smallest change that fixes the problem as reported — often cruder
+        and incident-sized — with its rough size in lines.
+     2. This plan's budget: tracks, subprojects touched, estimated lines of
+        source and of tests.
+     Some budgets exceed ~3× the smallest fix; others add a subproject,
+     protocol, or vocabulary the request did not ask for. Either kind: stop,
+     and let the boxholder choose between the two before you write further.
+     Implementation stops and re-plans when the diff passes 1.5× this budget.
+     *Could this be simpler?* below justifies whatever the budget adds over
+     the smallest fix. -->
+
 ## Stated preferences this plan trades against
 
 <!-- Which of these apply, and the specific principles findings will trace to:

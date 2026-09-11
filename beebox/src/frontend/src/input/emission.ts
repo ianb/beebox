@@ -21,6 +21,8 @@ import { uploadedPath } from "./emission-store";
 import type { ImageItem, FileItem } from "./emission-store";
 import type { FinalWord } from "../machines/transcription-events";
 import { newMessageId } from "../components/chat/InteractiveChat-helpers";
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports -- Pure emission module runs in tap/tsx doctests outside Vite, where @shared cannot resolve.
+import { invariant } from "../../../shared/invariant.js";
 
 /**
  * A file attachment as the emission carries it: the upload already
@@ -80,6 +82,14 @@ export interface Emission {
   readonly hqText?: true;
   /** Server-resolved HQ backend; present only with `hqText`. */
   readonly hqService?: string;
+  /**
+   * Set when this realtime text was sent in place of a requested HQ pass —
+   * budget expiry, the user's "Send live text", or HQ failing outright
+   * (docs/plans/resilient-voice-recording.md, Track 4; late correction
+   * removed). The assembler stamps `hq="failed"`. Mutually exclusive with
+   * `hqText` (enforced in `createVoiceEmission`).
+   */
+  readonly hqFallback?: true;
 }
 
 /**
@@ -140,6 +150,8 @@ interface VoiceEmissionInput {
   hqText?: true;
   /** See `Emission.hqService`. */
   hqService?: string;
+  /** See `Emission.hqFallback`. */
+  hqFallback?: true;
 }
 
 /**
@@ -149,6 +161,7 @@ interface VoiceEmissionInput {
  * composer state exists in that case.
  */
 export function createVoiceEmission(input: VoiceEmissionInput): Emission {
+  invariant(!(input.hqText === true && input.hqFallback !== undefined), "a voice emission is either HQ text or an HQ fallback, not both");
   return {
     id: newMessageId(),
     origin: "voice",
@@ -161,5 +174,6 @@ export function createVoiceEmission(input: VoiceEmissionInput): Emission {
     spokenStart: input.spokenStart,
     hqText: input.hqText,
     hqService: input.hqService,
+    hqFallback: input.hqFallback,
   };
 }
