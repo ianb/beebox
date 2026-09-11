@@ -469,6 +469,39 @@ Tests get an isolated store automatically: `makeTmpBox()` points
 store-writing test can never mutate the developer's real
 `~/.config/beebox/secrets.json`.
 
+## Worktree boxes have their own store
+
+The dev router points every worktree's box at
+`~/.cache/beebox/secrets/<worktree>.json` (`BBX_SECRETS_FILE`, with
+`BBX_SECRETS_STORE_ISOLATED=1` asserting it is throwaway; `main` keeps the
+default path and never carries the assertion). A test box therefore never
+reads or writes the boxholder's real keys, starts empty, and — because the
+router asserted the store is isolated — its Secrets panel is reachable by
+agent browsing on a box that opts in as owner, so the add-a-key flow can be
+driven and verified rather than only read about. The override path alone
+does not open the panel: `main` inherits `BBX_SECRETS_FILE` from the shell
+or `.env` like any other variable, and an operator's override is still the
+real store.
+
+## Adding a key from a box's own page
+
+From Admin → Secrets on a box, adding a key means "and use it here": the value
+is stored and this box is granted it at `server` access in one locked write
+(`setAndGrantSecret`), and the page says what the key now does. Granting is
+the advanced case — one store, many boxes, a second box borrowing what the
+first holds — and lives under *"Use a key another box already has"* at the
+bottom of the tab, shown only when there is something to borrow. The
+Machine-wide tab's add form stores without granting, for that deliberate case.
+
+The names the engine recognises are offered as buttons, each with a
+**guide** (`core/secrets/guide-registry.ts`): what the credential is, where a
+person gets one, and what it looks like. What it is *used for* is not in the
+guide — it is joined from `uses.ts`, so a new consumer of a key shows up on the
+page without anyone editing prose twice. The registry is server-owned for the
+same reason the probe registry is: it carries a URL the boxholder will click.
+A name typed by hand that normalises to a known one (`OpenRouter`,
+`openrouter.ai`) gets a suggestion, never a rewrite (`shared/secret-name-suggest.ts`).
+
 ## One key that stands in for several
 
 `openrouter` is the only name here that is not a service's own credential. It
@@ -496,3 +529,16 @@ diarize, so `hqService: voxtral` or `voxtral-diarized` still needs a `mistral`
 key. A box that wants any of these needs `openai-thinking`, `mistral`, or
 `deepgram` as before. `bbx health` prints a
 `model-routes` line naming what each service is currently using.
+
+## Picking a service the box cannot reach yet
+
+`core/model-capabilities.ts` mirrors the dispatch logic above into a truth
+table (`serviceCapabilities`): for every HQ transcription service and TTS
+backend, whether the box currently holds a credential that reaches it, and
+which secret(s) would fix it if not. The voice-menu pickers read this through
+the owner-only `voice.capabilities` query and render an unreachable choice
+disabled with its reason, rather than letting the boxholder select something
+that will fail on every pass. Saving is never blocked on this, though — a key
+may be granted later — so `setHqService` and `setBackend` still accept an
+unusable choice and return a `warning` string (`unusableWarning`) alongside
+the committed config, which the client surfaces instead of a bare success.

@@ -12,16 +12,18 @@
  */
 
 import { useState, type FormEvent } from "react";
-import { trpc, type RouterOutput } from "../../lib/trpc";
+import { suggestSecretName } from "@shared/secret-name-suggest.js";
+import { trpc, type RouterInput, type RouterOutput } from "../../lib/trpc";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { InlineAction } from "../ui/InlineAction";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
-import { SelectField, TextField } from "../ui/fields";
+import { TextField } from "../ui/fields";
+import { GuidePanel, postSaveMessage, type SecretGuideEntry } from "./SecretsSection-guide";
 
 type FormatHints = RouterOutput["secrets"]["formatHints"];
-type MachineView = RouterOutput["secrets"]["machineView"];
 
 /** The registry entry for a name: exact match, else the `family/` prefix. */
 function formatHintFor(hints: FormatHints | undefined, name: string): FormatHints[number] | null {
@@ -67,18 +69,123 @@ function WarningList({ warnings }: { warnings: string[] }) {
   );
 }
 
+/** Stable ids for the one primary (non-repeated) instance of this form — the "Connect a service" / "Something else" add flow. */
+export interface SecretValueFormIds {
+  name: string;
+  value: string;
+  note: string;
+  submit: string;
+}
+
 /**
- * Set or rotate one secret's value. `name` fixed means "rotate this one";
- * `name` editable means "add a new one", which creates the machine-level entry
- * — granting it to a box is the separate act below.
+ * The free-text Name field ("Something else"), with the near-miss suggestion
+ * inline underneath — advisory, never blocking (`suggestSecretName`, warn on
+ * a normalised match rather than rewriting or refusing the typed name).
+ */
+function NameFieldWithSuggestion({
+  id,
+  name,
+  onNameChange,
+  knownNames,
+}: {
+  id: string | undefined;
+  name: string;
+  onNameChange: (name: string) => void;
+  knownNames: string[];
+}) {
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  const suggestion = suggestionDismissed ? null : suggestSecretName(name, knownNames);
+  return (
+    <Stack gap="xs">
+      <TextField
+        id={id}
+        label="Name"
+        value={name}
+        onChange={(next) => { onNameChange(next); setSuggestionDismissed(false); }}
+        placeholder="e.g. weatherapi"
+        required
+      />
+      {suggestion === null ? null : (
+        <Text size="sm" tone="emphasis">
+          Did you mean <Text mono size="sm">{suggestion}</Text>? Nothing reads a secret named <Text mono size="sm">{name}</Text>.{" "}
+          <InlineAction onClick={() => { onNameChange(suggestion); setSuggestionDismissed(true); }} intent="emphatic">
+            Use {suggestion}
+          </InlineAction>
+        </Text>
+      )}
+    </Stack>
+  );
+}
+
+/** The secret value: the format entry lends its prefix as the placeholder and its hint as the helper. */
+function ValueField({ id, entry, value, onChange }: { id?: string; entry: FormatHints[number] | null; value: string; onChange: (value: string) => void }) {
+  return (
+    <TextField
+      id={id}
+      label="Value"
+      type="password"
+      value={value}
+      onChange={onChange}
+      autoComplete="off"
+      required
+      placeholder={entry === null || entry.prefix === undefined ? undefined : `${entry.prefix}…`}
+      helper={entry === null ? "Stored in the machine secret store; never shown again." : entry.hint}
+    />
+  );
+}
+
+type SetValueResult = RouterOutput["secrets"]["setValue"];
+type SetValueInput = RouterInput["secrets"]["setValue"];
+
+/** The mutation input: blank optional fields are omitted, and a target box turns into a grant. */
+function setValueInput(fields: { name: string; value: string; note: string; use: string; grantBox: string | null | undefined }): SetValueInput {
+  const { name, value, note, use, grantBox } = fields;
+  return {
+    name: name.trim(),
+    value,
+    ...(note.trim() === "" ? {} : { note: note.trim() }),
+    ...(use.trim() === "" ? {} : { uses: [use.trim()] }),
+    ...(grantBox === null || grantBox === undefined ? {} : { grant: { box: grantBox, access: "server" } }),
+  };
+}
+
+/** The line after a save — a rejected value reads as danger, everything else as the plain result. */
+function SavedStatus({ saved, uses }: { saved: SetValueResult; uses: string[] }) {
+  return (
+    <div role="status">
+      <Stack gap="xs">
+        <WarningList warnings={saved.warnings} />
+        <Text as="p" size="sm" tone={saved.verified.status === "failed" ? "danger" : undefined}>
+          {postSaveMessage({ granted: saved.granted, verified: saved.verified, uses })}
+        </Text>
+      </Stack>
+    </div>
+  );
+}
+
+/**
+ * Set or rotate one secret's value. `name` fixed means "use this name" —
+ * rotating an already-granted secret, filling a declared slot, or adding a
+ * new one via a guide button; `name` editable means free-text entry
+ * ("Something else"). `grantBox`, when set, makes the value this box's in the
+ * same submit (Track 1) — omitted for a rotate/declared-slot save, which is
+ * already granted, and for the Machine-wide tab's add form.
  */
 export function SecretValueForm({
   fixedName,
   hints,
+  guides,
+  grantBox,
+  ids,
+  showUsesField,
   onSaved,
 }: {
   fixedName: string | null;
   hints: FormatHints | undefined;
+  guides?: SecretGuideEntry[];
+  grantBox?: string | null;
+  ids?: SecretValueFormIds;
+  showUsesField?: boolean;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(fixedName ?? "");
@@ -88,19 +195,17 @@ export function SecretValueForm({
   // the key was granted, and further reasons accumulate as callers appear.
   const [use, setUse] = useState("");
   const setValueMutation = trpc.secrets.setValue.useMutation();
-  const entry = formatHintFor(hints, name);
+  const effectiveName = fixedName ?? name.trim();
+  const entry = formatHintFor(hints, effectiveName);
   const warnings = liveWarnings(entry, value);
+  const guide = guides?.find((candidate) => candidate.key === effectiveName) ?? null;
+  const uses = guide === null ? [] : guide.uses;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (name.trim() === "" || value === "") return;
     try {
-      await setValueMutation.mutateAsync({
-        name: name.trim(),
-        value,
-        ...(note.trim() === "" ? {} : { note: note.trim() }),
-        ...(use.trim() === "" ? {} : { uses: [use.trim()] }),
-      });
+      await setValueMutation.mutateAsync(setValueInput({ name, value, note, use, grantBox }));
       setValue("");
       setUse("");
       onSaved();
@@ -109,128 +214,58 @@ export function SecretValueForm({
     }
   };
 
-  const verified = setValueMutation.data?.verified;
+  const saved = setValueMutation.data;
+  // A save the provider accepted (or could not check) is finished: the empty
+  // form and its guide would only suggest something remains to do. A rejected
+  // value keeps the form so the corrected key can be pasted straight away.
+  if (saved !== undefined && saved.verified.status !== "failed") {
+    return (
+      <Card background="warm" border="subtle" padding="sm">
+        <SavedStatus saved={saved} uses={uses} />
+      </Card>
+    );
+  }
   return (
     <Card background="warm" border="subtle" padding="sm">
       <form onSubmit={(event) => void submit(event)}>
         <Stack gap="sm">
+          {guide === null ? null : <GuidePanel guide={guide} />}
           {fixedName === null ? (
-            <TextField label="Name" value={name} onChange={setName} placeholder="e.g. weatherapi" required />
+            <NameFieldWithSuggestion
+              id={ids?.name}
+              name={name}
+              onNameChange={setName}
+              knownNames={(guides ?? []).map((candidate) => candidate.key)}
+            />
           ) : (
-            <Text size="sm" tone="muted">Rotating <Text mono>{fixedName}</Text></Text>
+            <Text size="sm" tone="muted">For <Text mono>{fixedName}</Text></Text>
           )}
-          <TextField
-            label="Value"
-            type="password"
-            value={value}
-            onChange={setValue}
-            autoComplete="off"
-            required
-            helper={entry?.hint ?? "Stored in the machine secret store; never shown again."}
-          />
+          <ValueField id={ids?.value} entry={entry} value={value} onChange={setValue} />
           {fixedName === null ? (
-            <TextField label="Note (optional)" value={note} onChange={setNote} placeholder="What it is for" />
+            <TextField id={ids?.note} label="Note (optional)" value={note} onChange={setNote} placeholder="What it is for" />
           ) : null}
-          <TextField
-            label="Used for (optional)"
-            value={use}
-            onChange={setUse}
-            placeholder="e.g. weather forecasts in the morning brief"
-            helper="Why this secret exists. Added to the reasons it already lists, never replacing them."
-          />
+          {showUsesField === false ? null : (
+            <TextField
+              label="Used for (optional)"
+              value={use}
+              onChange={setUse}
+              placeholder="e.g. weather forecasts in the morning brief"
+              helper="Why this secret exists. Added to the reasons it already lists, never replacing them."
+            />
+          )}
 
           <WarningList warnings={warnings} />
           <Row gap="sm" wrap>
-            <Button type="submit" intent="primary" loading={setValueMutation.isPending} loadingLabel="Saving…">
+            <Button id={ids?.submit} type="submit" intent="primary" loading={setValueMutation.isPending} loadingLabel="Saving…">
               Save and verify
             </Button>
           </Row>
-          {setValueMutation.data ? (
-            <div role="status">
-              <Stack gap="xs">
-                <WarningList warnings={setValueMutation.data.warnings} />
-                <Text size="sm" tone={verified?.status === "failed" ? "danger" : "muted"}>
-                  {verified?.status === "ok"
-                    ? "Saved. The provider accepted this credential."
-                    : `Saved. ${verified?.reason ?? "Not verified."}`}
-                </Text>
-              </Stack>
-            </div>
-          ) : null}
+          {saved ? <SavedStatus saved={saved} uses={uses} /> : null}
           {setValueMutation.error ? (
             <div role="alert"><Text size="sm" tone="danger">{setValueMutation.error.message}</Text></div>
           ) : null}
         </Stack>
       </form>
     </Card>
-  );
-}
-
-/**
- * Grant an existing machine-level name to this box. The picker hides names
- * another box owns exclusively (`shareable: false`) — a Telegram token routes
- * to one webhook URL, so offering it here would only produce a refusal.
- */
-export function GrantExistingForm({
-  machine,
-  grantedNames,
-  onGranted,
-}: {
-  machine: MachineView;
-  grantedNames: string[];
-  onGranted: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [access, setAccess] = useState("server");
-  const grant = trpc.secrets.grant.useMutation();
-
-  const grantable = machine.secrets.filter(
-    (secret) =>
-      !grantedNames.includes(secret.name) &&
-      (secret.shareable !== false || secret.owningBox === machine.thisBox),
-  );
-  if (grantable.length === 0) {
-    return <Text size="sm" tone="muted">Every secret on this machine is already granted to this box.</Text>;
-  }
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    const chosen = name === "" ? grantable[0]?.name : name;
-    if (chosen === undefined) return;
-    try {
-      await grant.mutateAsync({ box: machine.thisBox, name: chosen, access: access === "agent" ? "agent" : "server" });
-      setName("");
-      onGranted();
-    } catch (_error) {
-      // The mutation's error state renders below the button.
-    }
-  };
-
-  return (
-    <form onSubmit={(event) => void submit(event)}>
-      <Stack gap="sm">
-        <SelectField
-          id="bbx-admin-secrets-grant-name"
-          label="Grant an existing secret to this box"
-          value={name === "" ? (grantable[0]?.name ?? "") : name}
-          onChange={setName}
-          options={grantable.map((secret) => ({ value: secret.name, label: secret.name }))}
-        />
-        <SelectField
-          id="bbx-admin-secrets-grant-access"
-          label="Access"
-          value={access}
-          onChange={setAccess}
-          options={[
-            { value: "server", label: "server — connectors only, never disclosed to the agent" },
-            { value: "agent", label: "agent — box code may resolve the value at call time" },
-          ]}
-        />
-        <Row gap="sm" wrap>
-          <Button id="bbx-admin-secrets-grant-submit" type="submit" intent="primary" loading={grant.isPending} loadingLabel="Granting…">Grant</Button>
-        </Row>
-        {grant.error ? <div role="alert"><Text size="sm" tone="danger">{grant.error.message}</Text></div> : null}
-      </Stack>
-    </form>
   );
 }

@@ -94,7 +94,7 @@ function GrantedRow({
 export function BoxSecretsView({ status, hints, refresh }: { status: BoxStatus; hints: FormatHints | undefined; refresh: () => void }) {
   return (
     <Stack gap="md">
-      <Text size="sm" tone="muted">
+      <Text as="p" size="sm" tone="muted">
         Box <Text mono>{status.slug}</Text> can resolve {status.granted.length} secret
         {status.granted.length === 1 ? "" : "s"}.
       </Text>

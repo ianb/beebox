@@ -242,6 +242,53 @@ await box.cleanup();
 await rm(dir, { recursive: true, force: true });
 ```
 
+## Adding from a box's own page makes it that box's in the same write
+
+The boxholder's failure on 2026-09-09 was a verified key granted to nothing,
+reported as saved. From a box's admin page, adding means "and use it here", so
+`setValue` takes an optional `grant` and does both under one store lock
+(`setAndGrantSecret`) — there is no moment in which the value exists ungranted,
+and the response's `granted` comes from the committed write. Its own store, so
+the enumerations above stay exact.
+
+```ts
+const dir2 = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
+process.env.BBX_SECRETS_FILE = join(dir2, "secrets.json");
+const box2 = await makeTmpBox();
+const owner2 = caller(box2.root);
+const slug2 = await boxSlug(box2.root);
+
+const addInput = { name: "openrouter", value: "sk-or-v1-placeholder-placeholder-placeholder-placeholder-key", grant: { box: slug2, access: "server" } };
+const added = await owner2.secrets.setValue(addInput);
+print(`granted to this box: ${added.granted?.box === slug2} at ${added.granted?.access}`);
+print(`warnings: ${JSON.stringify(added.warnings)}`);
+const nowGranted = (await owner2.secrets.boxStatus()).granted.map((g) => `${g.name}:${g.access}`);
+print(`granted here: ${nowGranted.join(", ")}`);
+print(`response carries no value: ${!JSON.stringify(added).includes("placeholder-key")}`);
+=>
+granted to this box: true at server
+warnings: []
+granted here: openrouter:server
+response carries no value: true
+```
+
+Without `grant` — the machine-wide view — nothing changes about who may use
+it, and the response says so plainly.
+
+```ts continue
+const machineOnly = await owner2.secrets.setValue({ name: "replicate", value: "placeholder-replicate-token" });
+print(`granted: ${JSON.stringify(machineOnly.granted)}`);
+print(`still not here: ${!(await owner2.secrets.boxStatus()).granted.some((g) => g.name === "replicate")}`);
+=>
+granted: null
+still not here: true
+```
+
+```ts cleanup
+await box2.cleanup();
+await rm(dir2, { recursive: true, force: true });
+```
+
 ## Open access is not an owner here
 
 Every other owner surface in the app treats an open-access box — one whose

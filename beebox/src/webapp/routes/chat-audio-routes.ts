@@ -16,6 +16,7 @@ import * as path from "node:path";
 import type { FastifyReply } from "fastify";
 import { WebSocket as WsWebSocket } from "ws";
 import { transcribeAudioHq } from "../../core/transcription/index.js";
+import { isTranscriptionError } from "../../core/transcription/voxtral-errors.js";
 import {
   findLastSpeakerLetter,
   nextSpeakerLetter,
@@ -123,7 +124,13 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[transcribe-audio] HQ transcription failed:", msg);
-      return reply.status(500).send({ error: msg });
+      // A transcription error already knows whether retrying could help
+      // (`permanent`) and carries a stable `code`. Both go to the client, so a
+      // misconfiguration — no key for the configured service — can be shown
+      // once and named, instead of being indistinguishable from a bad network
+      // moment that the realtime fallback rightly absorbs.
+      const detail = isTranscriptionError(e) ? { code: e.code, permanent: e.permanent } : { permanent: false };
+      return reply.status(500).send({ error: msg, ...detail });
     }
   });
 

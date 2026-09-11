@@ -139,6 +139,14 @@ key on a box that did *not* opt in — and keeps
 `isAuthenticatedOwner: user !== null && source !== "browse" && email === owner`
 — the machine-level secret store is shared across every box on the machine, so
 one test box's opt-in must not unlock it (`docs/plans/secret-custody.md`).
+*Amended 2026-09-10:* that exclusion now applies to the **shared** store only.
+The dev router gives every worktree's box its own store
+(`~/.cache/beebox/secrets/<worktree>.json`) and asserts it is throwaway
+(`BBX_SECRETS_STORE_ISOLATED=1` — the override path alone does not count,
+since `main` inherits it), and on such a store the
+browse-owner reaches the Secrets panel like any other owner surface — there is
+nothing of the boxholder's there, and an owner surface an agent could never
+drive was a testing gap the boxholder called a bug.
 
 `auth-password-change.ts:34` (`source === "cookie"` only) is unchanged.
 
@@ -224,7 +232,7 @@ none
 | `agentBrowsing: "yes"` (bad value) | plan: doctest | treated as absent, warned once | clear |
 | Auth store `unavailable` while key present | plan: doctest | rung never runs; 503 stands | clear |
 | A caller keeps using `resolveRequestIdentity` for a box-scoped decision | no | `switch` exhaustiveness catches only callers that switch on `source` | silent for `.email` readers — mitigated by Track 2 grepping every reader (the inventory above lists them) |
-| Secrets panel reachable through browse-owner | plan: doctest on `isAuthenticatedOwner` | excluded by source | clear |
+| Secrets panel reachable through browse-owner | doctest on `isAuthenticatedOwner`, both stores | excluded by source on the shared store; allowed on an isolated one (2026-09-10) | clear |
 | Chat send attributed to the owner on a box that did NOT opt in | plan: doctest | resolver yields no user there (as today) | clear |
 
 No critical gap: the one silent row is a deliberate human act on their own box.
