@@ -7,7 +7,11 @@ labels: [chat, selection, composer]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "we had a regression where selecting text in the chat doesn't allow you to add it to the context"
+resolution: implemented
 ---
+
+Closed by commit bae3a4977 ("feat(chat): select transcript text into the
+composer"). See "Resolution" section below for what shipped.
 
 Selecting text in a chat message produces nothing. The boxholder expected the
 floating **"+"** that document selections get, and reasonably read its absence
