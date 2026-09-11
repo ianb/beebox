@@ -167,6 +167,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // entries above; the rename rewrote everything but the boxes' own `runs:`.
   { name: "schedule-runs-bbx-2026-09", script: "scripts/migrate/schedule-runs-bbx.ts" },
   { name: "canonical-interface-cards", script: "scripts/migrate/canonical-interface-cards.ts" },
+  { name: "remaining-interface-cards", script: "scripts/migrate/remaining-interface-cards.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

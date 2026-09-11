@@ -5,11 +5,68 @@ workspace. Shell flags do not become instrument parameters. Canonical tools
 resolve their semantic place on cold entry, while warm selection wins.
 
 ```ts setup
-import { workspaceRouteTarget, systemCardEntryContext, systemCardAttentionRef, withoutShellParams, workspaceProjectionSearch } from "../../src/frontend/src/lib/system-card-navigation.js";
+import { cardChatSearch, legacyAdminRedirect, legacyCaptureRedirect, legacyCardRedirect, legacySystemCardRedirect, workspaceRouteTarget, systemCardEntryContext, systemCardAttentionRef, withoutShellParams, workspaceProjectionSearch } from "../../src/frontend/src/lib/system-card-navigation.js";
 import { routeConversationRequest } from "../../src/frontend/src/components/chat/everywhere/conversation-intent.js";
 import { SYSTEM_CARD_PATHS } from "../../src/shared/system-card-paths.js";
 import { serializeViewUrl } from "../../src/frontend/src/lib/view-url.js";
 const browse = { path: SYSTEM_CARD_PATHS.browse, viewer: null, params: {}, viewState: { directory: "_content/recipes", detail: { path: "_content/recipes/a.memo.card", viewer: "Source", params: {}, viewState: null } } };
+```
+
+## Legacy card entry preserves the complete target and shell state
+
+The compatibility route changes only the pathname. Renderer choice, opaque
+renderer parameters, authored view state, shell parameters, and router history
+state all continue into the canonical workspace entry.
+
+```ts
+const legacyState = { bbxWorkspace: { revision: 7 }, inherited: "sentinel" };
+JSON.stringify(legacyCardRedirect({ boxSlug: "test", cardPath: "_content/Meeting Notes.memo.card", search: { view: "Source", page: "2", viewState: { cursor: 4 }, nativeComposer: "1", session: "chosen" }, state: legacyState }))
+=> {"to":"/test/views/_content/Meeting Notes.memo.card","search":{"view":"Source","page":"2","viewState":{"cursor":4},"nativeComposer":"1","session":"chosen"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}
+```
+
+Questions, Landmarks, and the Chats alias use the same pure redirect adapter.
+It preserves only shell search and router history state; renderer state does not
+leak out of the canonical card target.
+
+```ts
+const redirectState = { bbxWorkspace: { revision: 7 }, inherited: "sentinel" };
+JSON.stringify([
+  legacySystemCardRedirect({ boxSlug: "test", type: "questions", search: { session: "chosen", nativeComposer: "1", viewState: { leak: true } }, state: redirectState }),
+  legacySystemCardRedirect({ boxSlug: "test", type: "landmarks", search: { contextDir: "garden", opaque: "drop" }, state: redirectState }),
+  legacySystemCardRedirect({ boxSlug: "test", type: "landmarks", search: { capture: "1" }, state: redirectState }),
+])
+=> [{"to":"/test/views/_config/interface/questions.card","search":{"nativeComposer":"1","session":"chosen"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true},{"to":"/test/views/_config/interface/landmarks.card","search":{"contextDir":"garden"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true},{"to":"/test/views/_config/interface/landmarks.card","search":{"capture":"1"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}]
+```
+
+Admin projects only validated one-shot arrival fields into card state. Capture
+keeps shell and history state while forcing capture intent.
+
+```ts
+const redirectState = { bbxWorkspace: { revision: 7 }, inherited: "sentinel" };
+JSON.stringify(legacyAdminRedirect({ boxSlug: "test", search: { google: "error", message: "Denied", reconnect: "google", code: "secret", session: "chosen", nativeComposer: "1" }, state: redirectState }))
+=> {"to":"/test/views/_config/interface/admin.card","search":{"nativeComposer":"1","session":"chosen","viewState":{"google":"error","message":"Denied","reconnect":"google"}},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}
+
+JSON.stringify(legacyCaptureRedirect({ boxSlug: "test", search: { session: "chosen", nativeComposer: "1", capture: "0", opaque: "drop" }, state: redirectState }))
+=> {"to":"/test/chat","search":{"nativeComposer":"1","session":"chosen","capture":"1"},"state":{"bbxWorkspace":{"revision":7},"inherited":"sentinel"},"replace":true}
+```
+
+## Chat-about actions preserve the selected card target
+
+Only the explicit action supplies a recipient. Recent chat resumes the resolved
+session when one exists; New always requests a fresh conversation in the
+resolved landmark directory. Both carry renderer parameters and view state in
+the serialized card target.
+
+```ts
+const selectedCard = { path: "_content/Meeting Notes.memo.card", viewer: "Source", params: { page: "2" }, viewState: { cursor: 4 } };
+JSON.stringify(cardChatSearch({ mode: "recent", target: selectedCard, contextDir: "_content", sessionId: "session-7", nativeComposer: "1" }))
+=> {"session":"session-7","card":"_content/Meeting Notes.memo.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2","nativeComposer":"1"}
+
+JSON.stringify(cardChatSearch({ mode: "recent", target: selectedCard, contextDir: "_content", sessionId: null }))
+=> {"session":"new","contextDir":"_content","card":"_content/Meeting Notes.memo.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2"}
+
+JSON.stringify(cardChatSearch({ mode: "new", target: selectedCard, contextDir: "_content", sessionId: "session-7" }))
+=> {"session":"new","contextDir":"_content","card":"_content/Meeting Notes.memo.card?view=Source&viewState=%7B%22cursor%22%3A4%7D&page=2"}
 ```
 
 ```ts
@@ -23,6 +80,9 @@ JSON.stringify(systemCardEntryContext(target))
 
 JSON.stringify(systemCardEntryContext({ ...browse, path: SYSTEM_CARD_PATHS.dashboard }))
 => {"cardPath":null,"browseDir":""}
+
+JSON.stringify([SYSTEM_CARD_PATHS.dashboard, SYSTEM_CARD_PATHS.settings, SYSTEM_CARD_PATHS.questions, SYSTEM_CARD_PATHS.landmarks, SYSTEM_CARD_PATHS.history, SYSTEM_CARD_PATHS.inventory, SYSTEM_CARD_PATHS.admin].map((path) => systemCardEntryContext({ ...browse, path })))
+=> [{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""},{"cardPath":null,"browseDir":""}]
 ```
 
 ```ts
@@ -32,6 +92,12 @@ JSON.stringify(routeConversationRequest(input))
 
 const chosen = { kind: "ready", target: { kind: "session", sessionId: "chosen", contextDir: "_content/work" }, label: "Work" };
 routeConversationRequest({ ...input, first: false, selection: chosen })
+=> null
+
+JSON.stringify(routeConversationRequest({ ...input, first: true, selection: { kind: "resolving", contextDir: "", requestId: "questions-cold" }, ...systemCardEntryContext({ ...browse, path: SYSTEM_CARD_PATHS.questions }) }))
+=> {"kind":"landmark","contextDir":""}
+
+routeConversationRequest({ ...input, first: false, selection: chosen, ...systemCardEntryContext({ ...browse, path: SYSTEM_CARD_PATHS.landmarks }) })
 => null
 ```
 

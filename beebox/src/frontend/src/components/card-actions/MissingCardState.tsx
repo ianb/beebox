@@ -1,13 +1,13 @@
-import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
-import { href } from "../../lib/routing";
 import { Button } from "../ui/Button";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
-import { TextLink } from "../ui/TextLink";
+import { useViewNavigate } from "../../hooks/useViewNavigate";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { legacyHistoryState } from "../history/history-card-state";
 
 export function MissingCardState({ path, onClose }: { path: string; onClose?: (() => void) | undefined }) {
-  const { boxSlug } = useParams({ strict: false });
+  const openView = useViewNavigate();
   const history = trpc.history.list.useQuery({ count: 1, filter: { path } });
   const existed = (history.data?.commits.length ?? 0) > 0;
   return (
@@ -23,7 +23,7 @@ export function MissingCardState({ path, onClose }: { path: string; onClose?: ((
       <Text as="p" size="sm" mono breakAll tone="muted">{path}</Text>
       {history.error ? <Text as="p" size="sm" tone="danger">History could not be checked: {history.error.message}</Text> : null}
       <div className="flex flex-wrap items-center gap-3 mt-2">
-        {existed ? <TextLink to={`${href(`/${boxSlug}/history`)}?path=${encodeURIComponent(path)}`}>See history for this path</TextLink> : null}
+        {existed ? <Button intent="secondary" onClick={() => openView({ path: SYSTEM_CARD_PATHS.history, viewer: null, params: {}, viewState: legacyHistoryState({ path }) }, { label: "History" })}>See history for this path</Button> : null}
         {onClose ? <Button intent="secondary" onClick={onClose}>Close this view</Button> : null}
       </div>
     </Stack>

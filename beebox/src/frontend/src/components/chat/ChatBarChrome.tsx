@@ -23,13 +23,12 @@
  * happen per render at all.
  */
 
-import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
+import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "../../lib/trpc";
 import { PortaledMenuScope } from "../ui/Dropdown";
 import { useAppBarHereMenuClaim, useAppBarPlace, useAppBarRecentFilesClaim, useAppBarSlots } from "../app-bar-chrome";
 import { contextChipLabel } from "./context-chip-label";
-import { rememberLastChat } from "../../lib/last-chat";
 import { ContextMenuBody, RecentFilesMenuBody } from "./ContextMenuBody";
 import { SessionChip } from "./SessionChip";
 import { VoiceChip } from "./VoiceChip";
@@ -105,15 +104,6 @@ export function ChatBarChrome(props: ChatBarChromeProps) {
   const label = contextDir === null ? "Chat" : contextChipLabel({ landmarkLabel, dir: contextDir });
   const transcriptVisible = props.transcriptVisible ?? true;
   useAppBarPlace(transcriptVisible ? { dir: contextDir, label } : null);
-  // Leave a way back. Every other page reads this to decide whether to offer
-  // the bar's return chip — the chat itself is the only thing that knows which
-  // session the user is actually in. Primitive deps, so a streamed turn does
-  // not touch storage; `rememberLastChat` is a no-op for an unchanged value
-  // anyway (see `lib/last-chat.ts`).
-  useEffect(() => {
-    if (!transcriptVisible || boxSlug === undefined || sessionId === null) return;
-    rememberLastChat(boxSlug, { sessionId, label: sessionLabel });
-  }, [boxSlug, sessionId, sessionLabel, transcriptVisible]);
   useAppBarHereMenuClaim(transcriptVisible);
   // The switch menu's "Recent files ›" row — the session's files, reachable
   // from the box-title menu even when the chat has no landmark (and so no

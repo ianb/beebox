@@ -12,16 +12,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { startVoiceStagingDrainer } from "./lib/audio/voice-staging-queue";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
-import { ViewOverlayProvider } from "./components/ViewOverlay";
 import { ConversationCardProvider } from "./components/chat/everywhere/card-context";
-import { BoxConversationProvider } from "./components/chat/everywhere/conversation-context";
+import { BoxConversationProvider, useBoxConversation } from "./components/chat/everywhere/conversation-context";
 import { BoxConversationShell } from "./components/chat/everywhere/BoxConversationShell";
+import { WorkspaceProvider } from "./components/chat/workspace/WorkspaceProvider";
+import { invariant } from "@shared/invariant";
 import { BoxPresentationProvider, PresentationNotice } from "./components/themes/BoxPresentationProvider";
 import { AppNav } from "./components/AppNav";
 import { AppBarChromeProvider } from "./components/app-bar-chrome";
 import { Column } from "./components/ui/Column";
 import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
+import { Button } from "./components/ui/Button";
 import { BoxActionsTile } from "./components/BoxSelectionTiles";
 import { useBoxes } from "./hooks/useBoxes";
 import type { KnownBox } from "./lib/boxes";
@@ -65,15 +67,10 @@ export function RootLayout() {
 /**
  * Layout wrapper with navigation.
  */
-export function AppLayout() {
+export function BoxValidationLayout() {
   useDevWorktreeKeepalive();
   useVisualViewportHeight();
-  const [showDebugLog, setShowDebugLog] = useState(false);
-  const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
-
-  const handleToggleSourceView = sourceView.toggle;
-  const handleCloseSourceView = sourceView.toggle;
 
   // Validate that the box in the URL actually exists. An unknown slug
   // (typical after copying a URL across worktrees) used to fall through
@@ -81,19 +78,30 @@ export function AppLayout() {
   // list is its own state (not "still checking", which would render the box
   // as existing forever) — `useBoxes` reports it, and logs it once.
   const boxesState = useBoxes();
-  const boxExists =
-    !boxesState.loaded || boxesState.error || boxesState.boxes.some((b) => b.slug === boxSlug);
+  const boxExists = boxesState.boxes.some((b) => b.slug === boxSlug);
 
   // Advertise the validated box to the beebox-clerk extension.
   useBoxIdentityMeta(boxesState.boxes.find((b) => b.slug === boxSlug) ?? null);
 
   useDropBoxScopedCache(boxSlug);
 
+  if (!boxesState.loaded) return <Text as="div" tone="subtle" className="p-8">Loading box...</Text>;
+  if (boxesState.error) return <BoxValidationError />;
+  return boxExists ? <Outlet /> : <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />;
+}
+
+function BoxValidationError() {
+  return <Stack gap="sm" className="max-w-md mx-auto mt-12 p-4"><Text as="h1" size="xl" weight="bold" tone="danger">Could not load boxes</Text><Text as="p" tone="subtle">The box list could not be checked.</Text><Button id="bbx-box-validation-reload" intent="primary" onClick={() => window.location.reload()}>Try again</Button></Stack>;
+}
+
+/** Product chrome and runtime, mounted only after the box is validated. */
+export function ProductLayout() {
+  const [showDebugLog, setShowDebugLog] = useState(false);
+  const sourceView = useSourceView();
+  const { boxSlug } = useParams({ strict: false });
+  const handleToggleSourceView = sourceView.toggle;
+  const handleCloseSourceView = sourceView.toggle;
   return (
-    // AppBarChromeProvider is OUTSIDE Column so the shell below it is a stable
-    // `children` element: a page publishing its place / a chip slot mounting
-    // re-renders the provider, and React then skips the whole Outlet subtree
-    // (only the bar's context consumers re-render). See app-bar-chrome.tsx.
     <BoxShellProviders key={boxSlug} boxSlug={boxSlug ?? ""}>
         <DocumentIcon />
         <DocumentPlace />
@@ -104,11 +112,7 @@ export function AppLayout() {
           />
           <PresentationNotice />
           <main className="flex-1 min-h-0">
-            {boxExists ? (
-              <BoxConversationShell><Outlet /></BoxConversationShell>
-            ) : (
-              <BoxNotFound slug={boxSlug ?? ""} boxes={boxesState.boxes} />
-            )}
+            <BoxConversationShell /><Outlet />
           </main>
           {showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
           <SourceViewOverlay active={sourceView.active} onClose={handleCloseSourceView} />
@@ -117,11 +121,22 @@ export function AppLayout() {
   );
 }
 
+/** Dev fixtures deliberately run without product navigation or conversation runtime. */
+export function DevHarnessLayout() {
+  return <Column className="h-app"><main className="flex-1 min-h-0"><Column overflow="auto" className="h-full"><Outlet /></Column></main></Column>;
+}
+
 /** Providers retain their children identity when a chat publishes chrome. */
 function BoxShellProviders({ boxSlug, children }: { boxSlug: string; children: ReactNode }) {
   return <BoxConversationProvider boxSlug={boxSlug}><BoxPresentationProvider boxSlug={boxSlug}>
-    <AppBarChromeProvider><ConversationCardProvider><ViewOverlayProvider>{children}</ViewOverlayProvider></ConversationCardProvider></AppBarChromeProvider>
+    <WorkspaceShellProvider><AppBarChromeProvider><ConversationCardProvider>{children}</ConversationCardProvider></AppBarChromeProvider></WorkspaceShellProvider>
   </BoxPresentationProvider></BoxConversationProvider>;
+}
+
+function WorkspaceShellProvider({ children }: { children: ReactNode }) {
+  const conversation = useBoxConversation();
+  invariant(conversation, "WorkspaceShellProvider requires BoxConversationProvider");
+  return <WorkspaceProvider target={conversation.rendered?.target}>{children}</WorkspaceProvider>;
 }
 
 /**

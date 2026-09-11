@@ -1,9 +1,4 @@
-/**
- * History filter plumbing shared by the History page (filter state in URL
- * search params) and `view: history` cards (filter state in frontmatter
- * params). One mapping in each direction keeps the two spellings of the
- * same filter from drifting.
- */
+/** Saved History defaults and their human-readable filter summary. */
 
 import type { HistoryViewParams } from "@shared/named-views";
 import type { HistoryFilterState } from "./HistoryFilterBar";
@@ -16,38 +11,6 @@ export const EMPTY_FILTER: HistoryFilterState = {
   session: null,
   path: null,
 };
-
-/** The History page's URL search-param shape. */
-export interface HistorySearch {
-  connector?: string[];
-  workflow?: string[];
-  touchpoint?: boolean;
-  feedback?: boolean;
-  session?: string;
-  path?: string;
-}
-
-export function searchToFilter(search: HistorySearch): HistoryFilterState {
-  return {
-    connectors: search.connector ?? [],
-    workflows: search.workflow ?? [],
-    touchpoint: search.touchpoint ?? false,
-    feedback: search.feedback ?? false,
-    session: search.session ?? null,
-    path: search.path ?? null,
-  };
-}
-
-export function filterToSearch(filter: HistoryFilterState): HistorySearch {
-  const search: HistorySearch = {};
-  if (filter.connectors.length > 0) search.connector = filter.connectors;
-  if (filter.workflows.length > 0) search.workflow = filter.workflows;
-  if (filter.touchpoint) search.touchpoint = true;
-  if (filter.feedback) search.feedback = true;
-  if (filter.session !== null) search.session = filter.session;
-  if (filter.path !== null) search.path = filter.path;
-  return search;
-}
 
 /** A `view: history` card's frontmatter params as a filter state. */
 export function paramsToFilter(params: HistoryViewParams): HistoryFilterState {

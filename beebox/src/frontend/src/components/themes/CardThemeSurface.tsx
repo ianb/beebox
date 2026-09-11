@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme";
-import { usePageTitle } from "../DocumentTitle";
 import type { FileViewMode } from "../file-view-types";
 
 export interface CardThemeSurfaceProps {
@@ -11,11 +10,10 @@ export interface CardThemeSurfaceProps {
   properties: ReactNode;
   actions?: ReactNode;
   problem?: ReactNode;
-  onFocus: () => void;
 }
 
 /** Front stays mounted while turned over, retaining authored view state. */
-export function CardThemeSurface({ theme, title, mode, children, properties, actions, problem, onFocus }: CardThemeSurfaceProps) {
+export function CardThemeSurface({ theme, title, mode, children, properties, actions, problem }: CardThemeSurfaceProps) {
   const [back, setBack] = useState(false);
   const [turn, setTurn] = useState<"out" | "in" | null>(null);
   const id = useId();
@@ -24,7 +22,6 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
   const frontId = `bbx-card-front-${id}`;
   const backId = `bbx-card-back-${id}`;
   const descriptor = THEME_CATALOG.find((item) => item.name === theme.choice.name);
-  usePageTitle(mode === "page" ? title : null);
   useEffect(() => {
     front.current?.toggleAttribute("inert", back);
   }, [back]);
@@ -45,8 +42,6 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
       data-default-quote-treatment={descriptor?.quoteTreatment}
       data-default-blockquote-treatment={descriptor?.blockquoteTreatment}
       aria-label={title}
-      onPointerDownCapture={onFocus}
-      onFocusCapture={onFocus}
       onAnimationEnd={(event) => {
         if (event.target !== event.currentTarget) return;
         if (turn === "out") {
@@ -73,7 +68,7 @@ export function CardThemeSurface({ theme, title, mode, children, properties, act
         <span className="sr-only">{back ? "Back to card" : "Properties"}</span>
       </button>
       <header className="bbx-card-heading">
-        {mode === "page" ? <h1>{title}</h1> : <h2>{title}</h2>}
+        <h2>{title}</h2>
         {actions ? <div className="flex gap-2 mt-2 print:hidden">{actions}</div> : null}
       </header>
       {problem}

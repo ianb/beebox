@@ -29,9 +29,10 @@ interface HistoryFilterBarProps {
   filter: HistoryFilterState;
   facets: HistoryFilterFacets | undefined;
   onChange: (next: HistoryFilterState) => void;
+  idPrefix: string;
 }
 
-export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarProps) {
+export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: HistoryFilterBarProps) {
   const activeCount =
     filter.connectors.length +
     filter.workflows.length +
@@ -63,34 +64,34 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
     <section aria-label="History filters" className="px-3 py-2 border-b border-warm-200 bg-warm-50/60">
       <div className="flex flex-wrap items-center gap-2">
         <MultiSelectPopover
-          id="bbx-history-filter-connector"
+          id={`${idPrefix}-connector`}
           label="Connector"
           options={facets?.connectors ?? []}
           selected={filter.connectors}
           onToggle={(v) => toggleValue("connectors", v)}
         />
         <MultiSelectPopover
-          id="bbx-history-filter-workflow"
+          id={`${idPrefix}-workflow`}
           label="Workflow"
           options={facets?.workflows ?? []}
           selected={filter.workflows}
           onToggle={(v) => toggleValue("workflows", v)}
         />
         <ToggleChip
-          id="bbx-history-filter-touchpoint"
+          id={`${idPrefix}-touchpoint`}
           label="Touchpoint"
           checked={filter.touchpoint}
           onChange={(v) => onChange({ ...filter, touchpoint: v })}
         />
         <ToggleChip
-          id="bbx-history-filter-feedback"
+          id={`${idPrefix}-feedback`}
           label="Feedback"
           checked={filter.feedback}
           onChange={(v) => onChange({ ...filter, feedback: v })}
         />
         {activeCount > 0 ? (
           <button
-            id="bbx-history-filter-clear"
+            id={`${idPrefix}-clear`}
             type="button"
             onClick={clearAll}
             className="text-[11px] text-warm-500 hover:text-warm-700 underline ml-auto"
@@ -104,7 +105,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
           <Badge tone="accent" size="sm">
             <span className="font-mono">Chat {filter.session.slice(0, 8)}</span>
             <button
-              id="bbx-history-filter-clear-session"
+              id={`${idPrefix}-clear-session`}
               type="button"
               onClick={() => onChange({ ...filter, session: null })}
               className="ml-1 text-primary-dark hover:text-danger"
@@ -119,7 +120,7 @@ export function HistoryFilterBar({ filter, facets, onChange }: HistoryFilterBarP
         <div className="mt-2">
           <Badge tone="accent" size="sm">
             <span className="font-mono">Path {filter.path}</span>
-            <button id="bbx-history-filter-clear-path" type="button" onClick={() => onChange({ ...filter, path: null })} className="ml-1 text-primary-dark hover:text-danger" aria-label="Clear path filter">×</button>
+            <button id={`${idPrefix}-clear-path`} type="button" onClick={() => onChange({ ...filter, path: null })} className="ml-1 text-primary-dark hover:text-danger" aria-label="Clear path filter">×</button>
           </Badge>
         </div>
       ) : null}

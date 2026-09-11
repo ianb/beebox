@@ -1,7 +1,8 @@
 import { isRecord } from "@shared/is-record";
 import { conversationSelectionSchema } from "@shared/chat-composer-binding";
 import { serializeViewUrl } from "../../../lib/view-url.js";
-import { projectWorkspace, type Viewport, type WorkspaceState } from "./workspace-state.js";
+import type { ViewTarget } from "../../../lib/view-url.js";
+import { oppositePane, paneForPath, projectWorkspace, reduceWorkspace, type Viewport, type WorkspaceAction, type WorkspaceState } from "./workspace-state.js";
 import { parseWorkspaceState } from "./workspace-storage.js";
 
 export interface WorkspaceHistoryEntry {
@@ -26,6 +27,65 @@ export type WorkspaceNavigationDecision =
 export interface WorkspaceAdoption {
   from: string;
   to: string;
+}
+
+export function explicitConversationHistoryState<T extends object>(state: T): T & {
+  bbxConversation: undefined;
+  bbxWorkspaceRevealConversation: true;
+} {
+  return { ...state, bbxConversation: undefined, bbxWorkspaceRevealConversation: true };
+}
+
+/** Existing workspace actions needed to reveal chat while retaining a card. */
+export function revealConversationActions({ state, cardPath, viewport }: {
+  state: WorkspaceState;
+  cardPath: string;
+  viewport: Viewport;
+}): WorkspaceAction[] {
+  if (viewport === "mobile") {
+    return [{ type: "showChat", pane: paneForPath(state, cardPath) ?? state.lastCardPane, viewport }];
+  }
+  const actions: WorkspaceAction[] = [];
+  let next = state;
+  if (next.layout.kind === "focus") {
+    const action: WorkspaceAction = { type: "backToSplit", pane: next.layout.pane };
+    actions.push(action);
+    next = reduceWorkspace(next, action).state;
+  }
+  if (projectWorkspace(next, "desktop").transcript === null) {
+    const owner = paneForPath(next, cardPath) ?? next.lastCardPane;
+    actions.push({ type: "showChat", pane: oppositePane(owner), viewport });
+  }
+  return actions;
+}
+
+/** Convert one pre-workspace overlay entry without fabricating Back provenance. */
+export function legacyOverlayActions({ state, incoming, viewport, at }: {
+  state: WorkspaceState;
+  incoming: ViewTarget | null;
+  viewport: Viewport;
+  at: number;
+}): WorkspaceAction[] {
+  const actions: WorkspaceAction[] = [];
+  let next = state;
+  if (incoming !== null) {
+    const open: WorkspaceAction = { type: "openCard", target: incoming, label: incoming.path, at, viewport };
+    actions.push(open);
+    next = reduceWorkspace(next, open).state;
+  }
+  const cardPath = incoming?.path ?? projectWorkspace(next, viewport).foregroundPath;
+  if (cardPath !== null) actions.push(...revealConversationActions({ state: next, cardPath, viewport }));
+  return actions;
+}
+
+/** Keep an explicitly retained card in the URL while mobile shows only chat. */
+export function workspaceHistoryTarget({ state, viewport, retainedTarget }: {
+  state: WorkspaceState;
+  viewport: Viewport;
+  retainedTarget?: ViewTarget;
+}): ViewTarget | null {
+  const foreground = projectWorkspace(state, viewport).foregroundPath;
+  return (foreground === null ? undefined : state.tabs[foreground]?.target) ?? retainedTarget ?? null;
 }
 
 /** Keep content visible only for the exact identity handoff being adopted. */
