@@ -307,3 +307,11 @@ visible-card sink. Native selection encode/decode and contract fixtures remain
 upstream's new shape; consolidation adds no further protocol change. This merge
 is also excluded from source-removal totals. Finish verification reruns against
 the combined tree rather than relying on the earlier green result.
+
+A subsequent recheck found local main `4003f6e57` (OpenRouter services and secret
+entry guidance), still containing fetched origin/main `f41d7982f`. Merge
+`a32b83560` keeps the updated Secrets section inside the canonical Admin card,
+VoiceChip capability checks and warnings inside the retained composer, and
+shared-versus-isolated secret-store authorization. These upstream changes are
+also excluded from removal totals. The full finish decision sheet is rerun
+against this combined tree, including browser smoke.
