@@ -283,3 +283,19 @@ A later reload also stalled, so the full reload/link-retention tour is not claim
 as passing. Earlier route/reload probes and automated retention/navigation tests
 remain the evidence for those behaviors. No application assertion failed in the
 bounded workspace replay.
+
+## Finish integration — September 11
+
+After fetching origin, local main `bb5117e34` included origin/main `f41d7982f`
+and the related chat-everywhere changes. Merge `b0c39c368` retains main's removal
+of the redundant ready-state destination notice, suppression of ambient replies
+for the selected conversation, and updated smoke expectations. It also retains
+consolidation's route-readiness/native-publication guard and deletion of the old
+show/hide presentation callbacks. Incoming resilient voice-recording changes
+remain at their upstream implementations and keep the native wire shape.
+
+This integration and finish-only documentation are excluded from the A–F counts
+ending at `43f948450`. Track O found no new containment, card-write, unsafe-cast,
+or silent-failure defect: History lookup failure routes to the visible card error
+surface; bootstrap remains exclusive-create rather than read/modify/write; Admin
+arrival fields are independent optional query values rather than lifecycle states.

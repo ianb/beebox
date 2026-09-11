@@ -570,3 +570,28 @@ rollout/manual gates are closed; no deployment is claimed.
 | IC-7 | Automated authorization tests and synthetic Admin arrivals pass, including Back/index reuse. Real non-owner login and OAuth begun before deployment remain manual. |
 | IC-8 | Capture fresh/repeated entry and utility harnesses checked. Unknown-box UI behind the authentication wall remains unverified. |
 | IC-9 | Synthetic background reply, passive card link, explicit chat reveal and native web attention payload checked. Physical bridge delivery remains manual. |
+
+## Finish scope assessment — September 11
+
+The tracks above state the implemented acceptance contract. A–G are delivered
+locally; their imperative wording does not describe unstarted code. This plan
+and its report remain `partial` because the explicit device, authentication,
+visual-tour, and production-convergence checks are not all complete.
+
+| Requirement | Status | Code/artifact evidence |
+|---|---|---|
+| A: one card entry, legacy URLs, explicit chat actions | MET | `src/frontend/src/lib/system-card-navigation.ts:10`, `src/frontend/src/components/card-actions/CardActions.tsx:20`; CardViewPage/ViewPage/OpenChatControl deleted |
+| B: eight anchors, original/new cohorts, retry and index protection | MET | `src/shared/system-card-paths.ts`, `src/core/system-cards.ts:88`, `src/core/system-cards.ts:106`, `src/core/system-cards.ts:122` |
+| C: Questions/Landmarks rendered as ordinary cards | MET | `src/frontend/src/renderers/system-cards.tsx:22`, `src/frontend/src/renderers/system-cards.tsx:25`; routed wrappers deleted |
+| D: full canonical and authored History, independent state | MET | `src/frontend/src/components/history/HistoryViewCard.tsx:11`, `src/frontend/src/components/history/history-card-state.ts:24`, `src/frontend/src/renderers/system-cards.tsx:28` |
+| E: Admin/Storage adapters and validation before product runtime | MET | `src/frontend/src/renderers/system-cards.tsx:35`, `src/frontend/src/renderers/system-cards.tsx:39`, `src/frontend/src/app-shell.tsx:70`, `src/frontend/src/app-shell.tsx:125` |
+| F: alternate presentation removed, lifecycle and old-history reads retained | MET | `src/frontend/src/components/chat/workspace/WorkspaceProvider.tsx`, `src/frontend/src/components/chat/workspace/workspace-history.ts`; ViewOverlay/BackToChatChip/last-chat/route-attention deleted |
+| G: attributed stage and cumulative removal accounting | MET | [Removal report](interface-cards-consolidation-removal-report.md), A–F ranges ending at `43f948450` |
+| Full rollout and manual acceptance | PARTIAL | Physical native/recording, real non-owner/OAuth, unknown-box UI auth wall, complete visual tours, and production migration/guidance convergence remain open |
+
+The finish merge preserves main's ready-state ConversationNotice removal and
+this work's deleted presentation callbacks. It is integration work, excluded
+from the report's source-removal totals. The existing
+[return-to-chat manual issue](../../../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md)
+now describes the current Minimize/Restore controls rather than the deleted chip;
+its manual-testing gate remains open.
