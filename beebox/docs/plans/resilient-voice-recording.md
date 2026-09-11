@@ -686,6 +686,29 @@ text the kept text (`api-chat.ts:171-174`, `voice-intent.ts:131-136`).
     "user" | HqFailure }`.
 - `prepareVoiceSubmitEmission` takes that outcome in place of `transcribe`.
   Its swallow-all catch goes away.
+- Decided during implementation (Track 3 review, 2026-09-10):
+  - **A segment with no live text still sends when HQ is wanted.** This
+    covers a segment recorded wholly while live text was paused, or the
+    60-minute submit.
+    - Send stays enabled while `segmentCapturing(state)`, and
+      `runKeywordSend` does not return early on empty text when the segment
+      has a recording.
+    - If the wait ends with HQ failed, or the user taps "Send live text" with
+      no live text, the body is the placeholder `[recording not
+      transcribed]` stamped `hq="failed"`. On budget expiry it is stamped
+      `hq="pending"` and a correction follows.
+    - The message then exists with a `message-id`, so the kept recording stays
+      retranscribable.
+    - With HQ not wanted and no live text, nothing is sent, as today.
+  - **First voice message in a new chat.** The chat session id exists only
+    after the send, so `hq.sessionId` at finalize is `string | null`.
+    - The claim path never needs it.
+    - `voiceRecording.fallBack` gains `sessionId` (the session the realtime
+      message went to) and fills a null `hqRequest.sessionId`; a conflicting
+      non-null value is refused.
+    - Late delivery requires a non-null session id, which exists by then.
+    - The speaker-letter seed with no session starts fresh, as the old route
+      did without one.
 - Emission fields:
   - Add `hqFallback?: "pending" | "failed"`, mutually exclusive with `hqText`.
     `createVoiceEmission` asserts the exclusion with `invariant`.
