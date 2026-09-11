@@ -1,12 +1,14 @@
 ---
 title: "Interface card consolidation — removal report"
-status: active
+status: partial
 workstream: interface-as-cards
 issues: []
 ---
 # Interface card consolidation — removal report
 
-Implementation is in progress under the [consolidation plan](interface-cards-consolidation.md).
+The [consolidation plan](interface-cards-consolidation.md) replaces separate page and
+preview presentation with the existing card workspace. Rollout and manual
+acceptance remain open; this report measures local implementation.
 Counts are physical lines including comments and blanks, not performance claims.
 A negative net removal means growth. Moved behavior counts at its destination.
 
@@ -24,6 +26,11 @@ A negative net removal means growth. Moved behavior counts at its destination.
   implementation start. Unrelated main changes are excluded by commit attribution.
   No stage is counted as complete before its required checks pass.
 
+Main integration `8c793909d..bf96522d1` merges main `2208c738c`. Its changes
+(including moved-card recovery and PDF support) are excluded from workstream
+removal totals. Integration checks passed 94 focused assertions, frontend
+typecheck/lint, and all commit hooks. Stage F starts at `bf96522d1`.
+
 ## Stage results
 
 Results below describe completed implementation stages; browser and final
@@ -36,8 +43,8 @@ acceptance remain separately tracked.
 | A follow-up: explicit chat reveal | `bdb8798d9..4ffacb515` | 92 / 19 / **−73** | 0 / 0 / 0 | 67 / 1 | 0 / 0 |
 | C: Questions/Landmarks | `4ffacb515..b899d0b16` | 45 / 71 / **26** | 0 / 0 / 0 | 45 / 1 | 26 / 2 |
 | D: History | `b899d0b16..2a6c82854` | 267 / 297 / **30** | 0 / 0 / 0 | 135 / 1 | 34 / 3 |
-| E: Storage/Admin/utilities | Pending | — | — | — | — |
-| F: alternate presentation removal | Pending | — | — | — | — |
+| E: Storage/Admin/utilities | `2a6c82854..8c793909d` | 333 / 166 / **−167** | 0 / 0 / 0 | 105 / 1 | 35 / 4 |
+| F: alternate presentation removal | `bf96522d1..43f948450` | 172 / 670 / **498** | 14 / 7 / **−7** | 171 / 190 | 332 / 94 (includes generated 106 / 0) |
 
 ## Retired UI and surviving behavior
 
@@ -68,6 +75,45 @@ management bodies now render as cards; Storage display state and Admin arrival
 state are explicit card adapters. Developer harnesses use a separate utility
 layout, and box validation precedes the product runtime. One source file deleted.
 
+**F:** removed ViewOverlay, BackToChatChip, last-chat, and route-attention.
+Renamed the remaining card-context store to selection-context-store; this is a
+rename with deletions, not a fifth removed file. Removed page/overlay visibility
+and navigation forks, obsolete History query converters, and Settings page
+chrome. A single workspace now owns card opening and attention. Source/media,
+task and capture dialogs remain, as do recipient binding, drafts, native
+publication, and ambient replies. Legacy URL/history reads remain adapters.
+
+## Cumulative removal
+
+Across A–F, frontend production changed by **1,026 additions / 1,594 deletions**:
+**568 net lines removed**. Other production and tooling grew by **170 lines**
+(222 additions / 52 deletions), primarily migration safety and card seeding.
+The combined production reduction is therefore **398 lines**. These totals
+include replacement code, not just the deleted wrappers.
+
+**13 production files were deleted**, plus one obsolete test file. One source
+store was renamed and reduced. Tests, documentation, and generated guidance are
+reported separately and are not included in production removal. Stage G is the
+report/acceptance record, not an additional production reduction.
+
+| Category, A–F | Added | Deleted | Net removed |
+|---|---:|---:|---:|
+| Frontend production | 1,026 | 1,594 | **568** |
+| Other production/tooling | 222 | 52 | −170 |
+| All production | 1,248 | 1,646 | **398** |
+| Tests | 682 | 209 | −473 |
+| Authored documentation/other | 398 | 120 | −278 |
+| Generated audit ledger | 106 | 0 | −106 |
+
+The gross totals sum adjacent stage ranges, excluding the main integration.
+A direct baseline-to-final diff can have smaller gross totals because edits to
+the same lines cancel; its net, minus the excluded integration net, must agree.
+The net cross-check is 517 − (−51) = **568** frontend lines and
+−516 − (−346) = **−170** other-production lines.
+The `context-history.yaml` audit ledger is generated evidence (+106 / −0 in F),
+not authored guidance and not source reduction. No bundle, speed, or memory-use
+improvement is inferred from these counts.
+
 ## Verification and limits
 
 **A:** affected doctests passed (3 files, 27 assertions), exact changed-file ESLint
@@ -75,8 +121,7 @@ and all commit typecheck/doc gates passed. A live legacy card link entered the
 workspace; its projected URL retained nativeComposer. Review found that explicit
 chat actions lacked an intent to reveal chat from a focused workspace. The
 follow-up uses existing pane actions after the recipient binds. Desktop before image and
-DOM snapshots are retained for the final exhibit. Full IC-1 through IC-9, knowledge
-audits, implementation review and remaining stages are still outstanding. No bundle-size, speed, device, or production claim follows from
+DOM snapshots are retained for the final exhibit. Later-stage evidence, knowledge audits, and implementation review are recorded below. No bundle-size, speed, device, or production claim follows from
 a line-count reduction.
 
 **B:** focused migration/cohort checks passed 64 assertions; related schema,
@@ -131,3 +176,110 @@ These checks made no recording, sent no message, and changed no credentials.
 with frontend/root typechecks, exact changed-source lint, and focused card-state
 regressions passing. The root Knip scan still reports its recorded baseline
 findings; no new E helper/file finding was introduced.
+
+## Acceptance boundaries
+
+The checks above are local worktree evidence. They do not establish deployment
+or per-box migration convergence.
+
+- Canonical presence, migration cohort postconditions, partial seeding, notes
+  preservation, and staged-deletion protection have automated coverage. The live
+  worktree fixture was seeded for browser checks; its dirty/pending migration
+  state was not marked complete.
+- The existing Admin authorization procedures remain in place. Automated auth
+  tests cover denial, and browser controls exposed the existing authenticated
+  owner requirement. A real non-owner login and an OAuth grant begun before
+  deployment remain manual acceptance checks.
+- Browser mobile widths and native-composer query mode do not prove physical
+  device behavior, recording continuity, or the native attention bridge.
+- Production migration enrollment and regenerated agent guidance must be checked
+  at rollout. This workstream has not changed production boxes.
+
+## Final-stage verification
+
+The independent implementation review identified three regressions, all addressed:
+failed authored-History classification now retains its unclassified filters inside
+the card target without selecting the filter session as chat recipient; filter
+changes and Reset drop an excluded commit; embed mode no longer receives an
+implicit selection sink. Follow-up review verified these fixes and identified an
+unnecessary lookup for non-History instruments/explicit renderers; those now skip
+classification, with a throwing-loader regression.
+
+Browser probes also verified the following:
+
+- A failed metadata lookup preserved the exact conversation and unsent draft,
+  retaining the History session filter in the nested target.
+- A two-entry legacy overlay history stack retained Settings. Restore cards
+  replaced the current entry; Browser Back reached the genuine prior entry.
+  New writes omitted the old overlay field.
+- A synthetic reply appeared while chat was hidden. Its card link opened
+  Dashboard without changing the recipient or draft; explicit Open conversation
+  revealed chat with Dashboard as its return card. A missing reveal on the
+  keep-current path was corrected and replayed successfully. Fetch injection
+  was removed; no message was sent.
+- Browser-side native publication switched attention between Dashboard and saved
+  History while retaining the recipient. This is web-payload evidence, not a
+  physical-device claim.
+- Admin processed one reconnect per arrival, including Back followed by a new
+  arrival reusing the history index. Temporary arrival state cleared.
+- Changing a filter after selecting a commit removed the old commit state,
+  without a false missing-commit message.
+- Selecting text in Browse's detail initially exposed two selection buttons.
+  Nested capture now stops the gesture at its own boundary. The replay showed
+  one button and one selection identifying the detail card; the test selection
+  was removed from the unsent draft. A Browse tour regression covers this case.
+
+All six affected Claude knowledge audits passed against the disposable
+`cards-audit` fixture. Three wording-sensitive assertions were corrected and
+rerun after substantive answers were inspected; these audit reference lookup,
+not zero-read recall. The fixture's missing ignored metadata marker was repaired
+locally, and the harness left its working tree clean with all eight anchors.
+Production generated guidance is not covered by that result.
+
+The final affected-suite run passed **426 files / 5,703 assertions**. The later
+History classifier regression also passed its focused 16 assertions. Full backend, frontend, user-story and tooling typechecks passed. Changed-file
+lint and all repository commit gates passed. The navigation tour recorded 11
+checkpoints with zero axe violations: mobile completed; desktop timed out opening
+Admin after Settings. This is not reported as an entirely green tour. Earlier
+focused Admin and Capture browser checks provide the missing surface evidence.
+
+
+To reproduce the source totals, use `git diff --numstat --find-renames START END`
+for every range in the stage table. Frontend means `.ts`, `.tsx` and `.css`
+under `beebox/src/frontend/`; other production/tooling means remaining `.ts`,
+`.tsx`, `.js`, `.css` and `.sh` files. Classify `/test/` paths and `.doctest.md`
+files as tests first. Remaining files are documentation/other, with generated
+`beebox/src/dev/context-history.yaml` separated above. Count deleted paths with
+`git diff --name-status --find-renames START END`; a rename is not a deletion.
+
+
+The counted implementation ends at `43f948450`. Stage G changes only this report
+and the plan acceptance record; its self-documenting edits are excluded from the
+A–F documentation totals above. The commit includes one incidental broken issue
+link repaired by the required doc-check pass; it changes no issue disposition.
+
+
+The final theme probe verified 20px desktop and 12px mobile side gutters, the
+intentional zero-gap join below tabs, authored paper/cream styling, two quote
+forms, and the 44px Properties control. The theme tour's old top-gap and literal
+tab-title assumptions were corrected; its full five-card sweep did not complete
+under the browser contention, so no full-sweep pass is claimed.
+
+The Browse interface tour passed its desktop assertions, including the new
+nested-selection regression; its mobile navigation timed out. A fresh mobile
+DOM replay at 390px then verified one detail heading, no page overflow, exactly
+one selection button, and the unchanged unsent draft. The temporary selection
+was cleared. Screenshot artifacts from the earlier stages and final mobile
+checks are packaged in the workstream exhibit, `interface-cards-consolidated-workspace`.
+
+
+The workspace tour's initial three axe findings came from the static boot screen
+after a readiness timeout, not the mounted workspace. Its serial retry passed
+navigation and the card heading, then stalled during screenshot capture. The
+stalled test/browser was stopped. A focused replay without screenshots verified
+Minimize cards → no visible cards plus transcript and Restore control; Restore →
+exactly one retained card, with canonical `card=` URL and no captured page errors.
+A later reload also stalled, so the full reload/link-retention tour is not claimed
+as passing. Earlier route/reload probes and automated retention/navigation tests
+remain the evidence for those behaviors. No application assertion failed in the
+bounded workspace replay.

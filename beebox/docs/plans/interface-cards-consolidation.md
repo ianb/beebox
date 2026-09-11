@@ -1,9 +1,9 @@
 ---
 title: "One workspace for interface cards — retire parallel page UI"
-status: active
+status: partial
 workstream: interface-as-cards
 issues:
-  - ../../../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md
+  - ../../../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md
 ---
 # One workspace for interface cards — retire parallel page UI
 
@@ -12,7 +12,7 @@ workspace or resetting the conversation. Replace the remaining parallel page
 implementations with card targets, then remove their separate chat and preview
 presentation machinery. Report the actual deletions at each stage and overall.
 
-**Issues addressed:** [Parallel card routes](../../../issues/code-quality/2026-08-02-card-vs-views-route-consolidation.md)
+**Issues addressed:** [Parallel card routes](../../../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md)
 is the closure target. [Chat everywhere](../../../issues/features/2026-08-30-chat-input-everywhere.md)
 and [mobile presentation](../../../issues/features/2026-07-23-mobile-modal-not-split-pane.md)
 are related, not automatic closures. Both existing plans claim parts of mobile
@@ -549,3 +549,24 @@ pending with reasons. Keep legacy URL adapters across deployment. No production
 completion or full-plan completion claim while a required rollout/manual gate is
 unresolved. Publish counts and verification boundaries together with the final
 handoff; only land/push when the boxholder asks.
+
+
+## Local implementation record
+
+Stages A–F and main integration are committed locally, ending at `43f948450`.
+F removes the alternate presentation paths; G records the measured result. See the
+[removal report](interface-cards-consolidation-removal-report.md) for exact ranges,
+review fixes, and verification evidence. This plan remains partial until the
+rollout/manual gates are closed; no deployment is claimed.
+
+| Acceptance | Local evidence and remaining boundary |
+|---|---|
+| IC-1 | Legacy-route/navigation regressions, native target projection and reload probes; legacy two-entry Back replay. |
+| IC-2 | Canonical surfaces opened with retained recipient and unsent draft; explicit new/recent chat reveal checked. |
+| IC-3 | Canonical/authored History defaults, filters, commit A/B/Back, Reset, and failed lookup/error recovery checked. |
+| IC-4 | Two History cards retain separate state and scoped IDs; workspace state/navigation tests cover move/focus. Browser tour outcome is in the report. |
+| IC-5 | Mobile card/chat return and old-overlay Back checked. Physical-device/native recording continuity remains manual. |
+| IC-6 | Automated cohort, partial-seed, retry, note-preservation and staged-deletion checks pass. Production convergence remains a rollout gate. |
+| IC-7 | Automated authorization tests and synthetic Admin arrivals pass, including Back/index reuse. Real non-owner login and OAuth begun before deployment remain manual. |
+| IC-8 | Capture fresh/repeated entry and utility harnesses checked. Unknown-box UI behind the authentication wall remains unverified. |
+| IC-9 | Synthetic background reply, passive card link, explicit chat reveal and native web attention payload checked. Physical bridge delivery remains manual. |
