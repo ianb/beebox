@@ -108,6 +108,16 @@ export function unreachableCause(error: unknown): BoxUnreachableError | null {
 }
 
 /**
+ * Whether an error is this transport's "the box did not answer" classification
+ * — reused by the voice-staging queue (`lib/audio/voice-staging-queue.ts`) to
+ * decide whether an upload op is worth retrying, the same test the retry link
+ * applies to a query.
+ */
+export function isBoxUnreachable(error: unknown): boolean {
+  return unreachableCause(error) !== null;
+}
+
+/**
  * The wait before each retry, in order. A deploy restart has measured ~60 s
  * from SIGTERM to serving, and a request can land at its very start, so the
  * schedule spans ~91 s before giving up. Past that the person sees the message
@@ -124,11 +134,22 @@ export function retryDelayMs(retry: number): number {
 }
 
 /**
- * Whether the retry link tries an operation again. Queries only: a query is a
- * GET and idempotent by contract, while a mutation that hit a 502 *probably*
- * never reached the app — not a basis for replaying a send. Mutations fail
- * with the same message and leave the retry to the person.
+ * Whether the retry link tries an operation again.
+ *
+ * A query is a GET and idempotent by contract, so it always qualifies. A
+ * mutation that hit a 502 *probably* never reached the app, but "probably" is
+ * not a basis for replaying a send that mutates state — unless the caller has
+ * said, per call, that THIS mutation is safe to replay: `voiceRecording.claim`
+ * and `.fallBack` (`lib/trpc/index.ts`'s `idempotent: op.context["idempotent"]
+ * === true`) apply one idempotent transition keyed by `(recordingId,
+ * emissionId)`, so a retried call after an unanswered first attempt repeats
+ * nothing — it either lands once or confirms the first attempt already did.
+ * Every other mutation still fails with the same message and leaves the retry
+ * to the person.
  */
-export function shouldRetryOperation({ type, attempts, error }: { type: string; attempts: number; error: unknown }): boolean {
-  return type === "query" && attempts <= MAX_RETRIES && unreachableCause(error) !== null;
+export function shouldRetryOperation(
+  { type, attempts, error, idempotent }: { type: string; attempts: number; error: unknown; idempotent: boolean },
+): boolean {
+  const retryable = type === "query" || (type === "mutation" && idempotent);
+  return retryable && attempts <= MAX_RETRIES && unreachableCause(error) !== null;
 }

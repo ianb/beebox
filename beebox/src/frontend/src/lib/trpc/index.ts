@@ -165,7 +165,11 @@ function buildTrpcLink(): TRPCLink<AppRouter> {
     true: wsLink({ client: getWsClient() }),
     false: [
       retryLink({
-        retry: ({ op, attempts, error }) => shouldRetryOperation({ type: op.type, attempts, error }),
+        // `op.context` is untyped at the link boundary (`Record<string, unknown>`
+        // with `unknown` values) — a bracket read plus an `=== true` check is
+        // the safe way to pull the caller's opt-in flag off it (`./transient.ts`).
+        retry: ({ op, attempts, error }) =>
+          shouldRetryOperation({ type: op.type, attempts, error, idempotent: op.context["idempotent"] === true }),
         retryDelayMs,
       }),
       splitLink({
