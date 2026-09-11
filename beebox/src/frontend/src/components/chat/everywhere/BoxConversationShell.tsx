@@ -85,7 +85,7 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   const handleAssignment: typeof conversation.assigned = (id, assignment) => { workspace.adopt(id); conversation.assigned(id, assignment); };
   const handleShowConversation = () => workspace.participating ? workspace.dispatch({ type: "showChat", pane: workspace.state.lastCardPane, viewport: workspace.mobile ? "mobile" : "desktop" }) : route.showConversation();
   const handleHideConversation = route.hideConversation;
-  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onNewConversation={handleNewConversation} nativeComposer={usesNativeComposer} />;
+  const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onNewConversation={handleNewConversation} />;
   return <InteractiveChat
     sessionInput={sessionId ?? "new"}
     initial={conversation.initial}
@@ -112,12 +112,8 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   />;
 }
 
-function ConversationNotice({ selection, onRetry, onNewConversation, nativeComposer }: { selection: ConversationSelection; onRetry: () => Promise<void>; onNewConversation: () => void; nativeComposer: boolean }) {
-  if (selection.kind === "ready") {
-    if (nativeComposer) return null;
-    const place = selection.target.contextDir || "/ (box root)";
-    return <Text as="div" size="xs" tone="muted" className="px-3 py-1">Send to: {place}</Text>;
-  }
+function ConversationNotice({ selection, onRetry, onNewConversation }: { selection: ConversationSelection; onRetry: () => Promise<void>; onNewConversation: () => void }) {
+  if (selection.kind === "ready") return null;
   return <div className="px-3 py-2" role="status">
     <Text size="sm" tone={selection.kind === "unavailable" ? "danger" : "muted"}>
       {selection.kind === "unavailable" ? selection.reason : "Choosing conversation…"}

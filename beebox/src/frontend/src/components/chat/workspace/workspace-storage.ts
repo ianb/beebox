@@ -17,7 +17,6 @@ export type WorkspaceStorageNoticeCode =
   | "invalid-v2"
   | "repaired-v2"
   | "invalid-legacy"
-  | "ambiguous-legacy"
   | "storage-unavailable";
 
 export interface WorkspaceStorageNotice {
@@ -25,7 +24,7 @@ export interface WorkspaceStorageNotice {
   message: string;
 }
 
-export type WorkspaceRestoreSource = "v2" | "current-strip" | "legacy" | "empty";
+export type WorkspaceRestoreSource = "v2" | "legacy" | "empty";
 
 export interface WorkspaceRestoreResult {
   state: WorkspaceState;
@@ -201,28 +200,16 @@ export function importTrustedLegacyWorkspace(raw: string | null): WorkspaceResto
 
 export function restoreWorkspaceState({
   v2Raw,
-  currentStrip,
   trustedLegacyRaw,
-  skippedPopulatedLegacy,
 }: {
   v2Raw: string | null;
-  currentStrip?: SidecarState | null;
   trustedLegacyRaw?: string | null;
-  skippedPopulatedLegacy?: boolean;
 }): WorkspaceRestoreResult {
   const v2 = parseWorkspaceState(v2Raw);
   if (v2.source === "v2") return v2;
-  if (currentStrip !== undefined && currentStrip !== null && currentStrip.tabs.length > 0) {
-    return { state: workspaceFromStrip(currentStrip), source: "current-strip", notices: v2.notices };
-  }
   const legacy = importTrustedLegacyWorkspace(trustedLegacyRaw ?? null);
   if (legacy.source === "legacy") return { ...legacy, notices: [...v2.notices, ...legacy.notices] };
-  const notices = [...v2.notices, ...legacy.notices];
-  if (skippedPopulatedLegacy === true) notices.push({
-    code: "ambiguous-legacy",
-    message: "Saved card tabs from another development workspace were left untouched and were not restored.",
-  });
-  return { state: createEmptyWorkspaceState(), source: "empty", notices };
+  return { state: createEmptyWorkspaceState(), source: "empty", notices: [...v2.notices, ...legacy.notices] };
 }
 
 export function storageUnavailableNotice(error: unknown): WorkspaceStorageNotice {
