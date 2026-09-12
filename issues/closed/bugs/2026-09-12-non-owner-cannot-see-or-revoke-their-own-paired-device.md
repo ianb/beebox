@@ -1,11 +1,10 @@
 ---
 title: "A non-owner cannot see or revoke their own paired device, and the panel says so as a raw permission string"
-workstream: unattached
+workstream: ios-pairing-papercuts
 area: beebox
-needs: [decision]
-next-action: discuss
 labels: [ios, pairing]
 filed-by: agent
+resolution: implemented
 discovered-by: Ian
 discovered-in: worktree-ios-pairing-papercuts — pairing a phone as a non-owner, then opening Settings in its webview
 ---
@@ -21,7 +20,12 @@ person can neither see it nor kill it. Only the owner can. A member who loses
 a phone has to ask the owner to revoke it, and has no way to confirm which
 devices are theirs.
 
-Two things are tangled here, and only the first is settled:
+The boxholder's call, 2026-09-12: "certainly if you can pair you should be able
+to unpair". Both halves below are now implemented — `devices` and `revokeDevice`
+are `authedProcedure` scoped by `mayManageMobileDevice`, and the panel names the
+list it got instead of printing a permission string.
+
+Two things were tangled here, and only the first was settled when this was filed:
 
 **The message is wrong either way.** `CompanionPairingSection.tsx` renders
 `devicesQuery.error.message` verbatim, so a non-owner reads "Owner access
