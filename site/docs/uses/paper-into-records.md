@@ -42,6 +42,7 @@ upside down.
 - **Capture sessions** ([phone capture](../capabilities/phone-capture.md)): one session is grouped into one timeline, which is how the agent knows which words describe which photograph.
 - **Typed cards with validated fields** ([cards](../concepts/cards.md)): a count written into a sentence cannot be summed or sorted; a checked field can.
 - **Triage** ([triage](../capabilities/triage.md)): categories are learned from where you file things, so a tray of unlike objects needs no taxonomy first.
+- **Room for what does not fit yet** ([dump it in now, shape it later](../capabilities/shape-it-later.md)): facts that have no field yet stay on the card in your words, so the structure can be decided after the pile is in, and reshaped later without losing anything.
 
 **Read next.** [Triage](../concepts/triage.md),
 [capture-session](../reference/cards/capture-session.md),

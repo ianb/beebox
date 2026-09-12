@@ -38,6 +38,7 @@ shared by everyone in it, so it cannot hold two people's preferences separately.
 - **Guides and personality** ([making it yours](../13-making-it-yours.md)): a guide is a living document, a theory of you to be refined rather than a static config, which is what makes this teaching instead of configuring.
 - **The questions loop** ([questions](../capabilities/questions.md)): every answer is precedent; the placement is the small part and the rule you just taught is the valuable part.
 - **The history** ([durability and provenance](../design/durability-and-provenance.md)): committing is what makes a change durable here, so what the box came to believe about you has a trail you can read.
+- **Provenance** ([where a fact came from](../capabilities/provenance.md)): your exact words are kept as a quote and a fact points at its origin, so what the agent inferred is always distinguishable from what you said.
 
 **Read next.** [How the box is taught](../design/teaching.md),
 [how an action earns autonomy](../design/trust.md),

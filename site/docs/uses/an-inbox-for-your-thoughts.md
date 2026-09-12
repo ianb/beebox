@@ -42,6 +42,7 @@ own that a thought you left needs acting on.
 - **Capture sessions** ([phone capture](../capabilities/phone-capture.md)): one recording is kept as a single readable timeline, silences and photos in place.
 - **Triage** ([triage](../capabilities/triage.md)): anything arriving unsorted is classified and filed with a confidence level, so you never have to pick a destination.
 - **The questions loop** ([questions](../capabilities/questions.md)): it asks and waits rather than guessing, and never synthesizes an answer on your behalf.
+- **Room for what does not fit yet** ([dump it in now, shape it later](../capabilities/shape-it-later.md)): facts that have no field yet stay on the card in your words, so the structure can be decided after the pile is in, and reshaped later without losing anything.
 
 **Read next.** [Questions](../capabilities/questions.md),
 [memo](../reference/cards/memo.md), [audio](../reference/cards/audio.md),

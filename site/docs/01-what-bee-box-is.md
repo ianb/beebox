@@ -36,6 +36,8 @@ substance underneath; the application is how you use it. See
 
 - Chat in the web interface, typed or spoken, with the reply read aloud if you want.
 - An iPhone app, and a capture page that works in any phone browser: voice memos, photos, scans of paper, dictation.
+- Long-form voice: talk for as long as you like, a stream of thoughts rather than a chat, and the box transcribes and files it without talking back until you are done.
+- Mixed media in one session: walk through a room photographing things while saying what each one is, and the photos and your words arrive as one timeline the agent turns into records.
 - A browser extension that saves the page you are reading, with your remarks.
 - Telegram, so a group chat can be the way a household talks to it.
 - Connectors that sync Gmail threads, Google Calendar, and Google Drive files into cards.
@@ -43,7 +45,11 @@ substance underneath; the application is how you use it. See
 
 **What comes out.** A place that accumulates. Email threads you asked it to
 watch become cards. A voice memo becomes a transcript and then a todo or a
-record. Scanned paper becomes records you can search. Corrections you make
+record. Scanned paper becomes records you can search. You do not have to
+decide the structure first: what has no place yet stays on the card in your
+words, and the shape can be fixed up later without losing anything. Your
+exact words are kept as quotes, and a fact points at where it came from.
+Corrections you make
 become rules the agent reads next time. It asks a question when it is unsure
 and waits for your answer.
 
