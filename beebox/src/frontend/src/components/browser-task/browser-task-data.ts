@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import { apiRawFileUrl, getApiBase, withBase } from "../../api";
+import { apiRawFileUrl, getApiBase } from "../../api";
 import { withMobileAuth } from "../../lib/mobile-auth";
 import { attachDirFor } from "@shared/attach-path";
 import { COVERAGE_REASONS } from "@shared/browser-task-batch";
@@ -51,7 +51,7 @@ export async function fetchBoxText(path: string): Promise<string | null> {
 
 /** List the subdirectories one level under a box directory; [] when it does not exist. */
 export async function fetchSubdirs(path: string): Promise<string[]> {
-  const res = await fetch(withBase(`/api/browse/${path}`), withMobileAuth({ cache: "no-store" }));
+  const res = await fetch(`${getApiBase()}/browse/${path}`, withMobileAuth({ cache: "no-store" }));
   if (res.status === 404) return [];
   if (!res.ok) throw new BrowserTaskFetchError(path, res.status);
   const parsed = browseSchema.safeParse(await res.json());

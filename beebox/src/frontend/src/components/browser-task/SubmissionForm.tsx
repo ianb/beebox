@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import { withBase } from "../../api";
+import { getApiBase } from "../../api";
 import { withMobileAuth } from "../../lib/mobile-auth";
 import { isRecord } from "@shared/is-record";
 import { Button } from "../ui/Button";
@@ -198,7 +198,7 @@ function formatBytes(n: number): string {
 function postSubmission(form: FormData, onProgress: (percent: number) => void): Promise<UploadState> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", withBase("/api/cards/submit"));
+    xhr.open("POST", `${getApiBase()}/cards/submit`);
     const init = withMobileAuth();
     const headers = init.headers;
     if (isRecord(headers)) {

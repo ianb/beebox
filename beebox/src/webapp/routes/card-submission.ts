@@ -37,13 +37,19 @@ interface RegisterCardSubmissionRoutesOptions {
 }
 
 /** A multipart field/file part's value as text, whichever form busboy handed us. */
-async function partText(part: { type: "field" | "file"; value?: unknown; toBuffer?: () => Promise<Buffer> }): Promise<string> {
+async function partText(part: { type: "field" | "file"; value?: unknown; file?: AsyncIterable<Buffer | string> }): Promise<string> {
   if (part.type === "field") {
     return typeof part.value === "string" ? part.value : String(part.value);
   }
-  const toBuffer = part.toBuffer;
-  if (toBuffer === undefined) return "";
-  return (await toBuffer()).toString("utf8");
+  // A file part is read off its stream directly. `part.toBuffer()` is not
+  // used: under `request.parts()` it reaches for an internal buffer that
+  // only exists on attached-field parsing and throws on `_buf`.
+  if (part.file === undefined) return "";
+  const chunks: Buffer[] = [];
+  for await (const chunk of part.file) {
+    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 /** True when a submitted part's filename is a bare basename — no traversal, no dotfile. */
