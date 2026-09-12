@@ -4,7 +4,7 @@ description: "Checklist of what Bee Box needs: a machine that stays on, a coding
 # What it requires
 
 Bee Box runs on your own machine, not as a hosted service. A **box** is your
-data directory; **`bbx`** is the command that operates it.
+data directory, and **the agent** is the coding agent that operates it.
 
 **A machine that stays on.** A Mac or Linux computer at home, or a small
 VPS. The documentation says a $5/month VPS is enough for the container path.

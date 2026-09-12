@@ -30,8 +30,7 @@ one-time setup, shared with the Calendar and Drive connectors. See the install d
 **How it works, briefly**
 
 Gmail sync produces `email-thread` and `email-message` cards, created and
-refreshed automatically or on demand (the underlying command is `bbx wakeup
---connector gmail`). Tracking a thread is explicit (by thread ID or a
+refreshed automatically or on demand. Tracking a thread is explicit (by thread ID or a
 matching mail rule); the box does not silently mirror your entire inbox. An
 agent-composed reply becomes an `email-outbound` card that is uploaded as a
 Gmail draft for you to review and send: the agent does not send mail.
@@ -40,7 +39,7 @@ Gmail draft for you to review and send: the agent does not send mail.
 
 Email does not automatically become git content; only tracked threads do.
 The documentation does not say Gmail sync runs on a fixed schedule by
-default beyond `bbx wakeup`.
+default; it runs as part of the box's regular sync pass.
 
 **Go deeper**
 

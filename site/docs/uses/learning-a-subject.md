@@ -21,10 +21,7 @@ how to present this subject to you with its approaches rated, a lesson-plan
 card giving the ordered flow with each segment marked live-in-chat or
 pre-made, the material cards, and a progress card per learner. Progress is
 evidence-backed against the ideas in the concept map, so what you understood
-is recorded against specific concepts rather than as a percentage. Being
-separate cards, the map of ideas, the approach, the order, and your
-understanding can each be revised on their own, and the concept map can be
-browsed as a diagram of how the ideas connect.
+is recorded against specific concepts rather than as a percentage. The concept map can be browsed as a diagram of how the ideas connect.
 
 **What it needs.** Nothing beyond the box itself.
 [Courses](../capabilities/courses.md), [chat](../capabilities/chat.md),
@@ -36,6 +33,12 @@ the diagram view are confirmed; the quality of the teaching itself has not been 
 the way the mechanics have. Course work happens in chat rather than on a
 schedule, so nothing nudges you to continue unless you ask. Progress is the
 agent's judgement recorded with its evidence, not a test score.
+
+**What makes it possible**
+
+- **Typed cards with validated fields** ([cards](../concepts/cards.md)): the map of ideas, the approach, the order, and your progress are separate checked cards, so each can be revised without rewriting the others.
+- **Views** ([views](../capabilities/views.md)): a display built for a kind of card, which is what lets the concept map be browsed as a diagram instead of read as a list.
+- **The chat-thread card** ([chat](../capabilities/chat.md)): a conversation is a durable card in the box, so a lesson taught in chat stays material you can reopen.
 
 **Read next.** [Course](../reference/cards/course.md),
 [concept-map](../reference/cards/concept-map.md),

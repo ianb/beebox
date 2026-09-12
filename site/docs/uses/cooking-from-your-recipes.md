@@ -37,5 +37,11 @@ those would be a view or a procedure someone asked for. A photographed recipe
 page goes through the same image handling as any photo, which currently renders
 some rotated photos upside down.
 
+**What makes it possible**
+
+- **Typed cards with validated fields** ([cards](../concepts/cards.md)): the yield, the amounts, and the steps are marked up with shared tags, so the quantities are data rather than sentences.
+- **Views** ([views](../capabilities/views.md)): a display built for one kind of card, which is what lets a recipe rescale and be read off a propped-up phone.
+- **Landmarks** ([landmarks](../concepts/landmarks.md)): a landmark over the recipe directory marks it as a notable spot, so the collection is something to browse.
+
 **Read next.** [Phone capture](../capabilities/phone-capture.md),
 [recipe](../reference/cards/recipe.md).

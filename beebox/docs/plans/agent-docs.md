@@ -510,3 +510,21 @@ fitting use pages, translated the jargon it met, and stated the sharing
 limits correctly. A jargon pass removed framework and format names from the
 spine, uses, capabilities, and compared pages.
 
+Later the same day: a `capabilities/web-interface.md` page and a "What you
+see" section on the first page and preamble, after a "what is it" answer
+described only files and an agent; each use page gained "What makes it
+possible" (the distinctive features it leans on, with the design rationale
+where a design doc gives one), and the uses overview gained the reverse
+index, feature to uses, so reading backwards shows why each feature exists.
+`bbx` is named only on the how-it-works page, as the agent's own tool.
+
+Three more capability pages at the boxholder's prompting: `shape-it-later`
+(put things in before deciding their structure; the honest finding is that
+an unknown header key is dropped on load and flagged, so the room for extra
+information is the card body), `provenance` (the quote and source tags: what
+they carry, and that speaker attribution has never been exercised live), and
+a specific `voice` page (spoken controls, narration mode, audio cards,
+capture sessions mixing photos and speech, agent-chosen delivery, earcons,
+on-device recognition, the named vendors). Wired into the first page, the
+chatbot appraisal, the capability list, the use pages, and the reverse index.
+

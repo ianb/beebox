@@ -37,7 +37,7 @@ for a kind of card, is doctrine the agent is expected to follow, not
 something the code checks. Letta has no scheduler or timer of any kind, so
 anything like
 "check my email every morning" needs an external caller; Bee Box's schedule
-cards and `bbx tick` are built in. Letta is infrastructure for building an
+cards and background scheduler are built in. Letta is infrastructure for building an
 agent product; it has no connectors, channels, or install path aimed at an
 end user the way Bee Box does.
 

@@ -9,9 +9,9 @@ holding the cards the system works with.
 
 **The container path is the primary one.** Docker with Compose v2 plus a
 clone of the repository, since no image is published yet. The sequence is
-four steps: `bbx init` to create the box in a directory you choose,
-`claude auth login` to authenticate the coding agent, `docker compose up -d`,
-then open the printed local URL. By default the box listens only on your own
+four steps: create the box in a directory you choose, sign in to the coding
+agent, start the container, then open the printed local URL (the guide gives
+the exact commands). By default the box listens only on your own
 machine, so nothing else on your network can reach it until you decide
 otherwise.
 Details: [install/docker.md](install/docker.md). That guide documents the

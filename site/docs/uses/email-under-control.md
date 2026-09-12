@@ -19,13 +19,10 @@ named rule either tracks newly matching threads or hands them to a procedure,
 under a rolling budget (25 threads in seven days by default) so a broad rule
 cannot flood the box; a staged rule watches without acting. A reply becomes an
 email-outbound card uploaded to Gmail as a draft for you to send, and the box
-does not send mail itself. Triage files what arrives with a confidence level,
-raising a question card when unsure, and your correction becomes a written rule
-at the destination.
+does not send mail itself. Triage files what arrives, raising a question card when unsure.
 
-**What it needs.** Signing in with your Google account and a one-time setup
-you complete yourself, which the documentation calls the hardest part of
-installing today.
+**What it needs.** Signing in with your Google account and a one-time setup you complete
+yourself, called the hardest part of installing today.
 [Gmail](../capabilities/gmail.md), [triage](../capabilities/triage.md),
 [Google setup](../install/google.md), [Gmail setup](../install/gmail.md),
 [what it requires](../08-what-it-requires.md).
@@ -36,6 +33,12 @@ Sync happens on a wakeup rather than on a schedule, and on a fresh box scheduled
 runs are off until you turn them on. Category rules do not rewrite themselves
 from one answer. The whole Gmail path is verified in the code and has not been
 watched working against a live Google account in the project's own checks.
+
+**What makes it possible**
+
+- **Triage** ([triage](../capabilities/triage.md)): each item is filed with a confidence level, and your answer is kept as a rule to apply next time rather than a one-off placement.
+- **The questions loop** ([questions](../capabilities/questions.md)): when the rules do not cover a thread it asks instead of filing it wrong, and treats the rule you taught as the valuable half of your answer.
+- **Procedures** ([procedures](../capabilities/procedures.md)): a rule can hand matching threads to a named process whose steps are prechecked, validated, and saved one at a time.
 
 **Read next.** [Triage](../concepts/triage.md),
 [questions](../concepts/questions.md),
