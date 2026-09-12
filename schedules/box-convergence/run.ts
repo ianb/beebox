@@ -33,6 +33,9 @@ import { getStatus } from "../../beebox/src/lib/git.js";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..");
 const dryRun = process.env["SCHEDULE_DRY_RUN"] === "1";
+// `bin/schedules alert` needs the run it belongs to. Outside a tick there is no
+// run to attach to, so a hand-invocation prints the report rather than failing.
+const scheduled = (process.env["SCHEDULE_RUN_ID"] ?? "") !== "";
 
 /** Expand a leading `~` — `BOXES=` is written the way a person types a path. */
 function expandHome(entry: string): string {
@@ -96,8 +99,8 @@ const message = [
   ]),
 ].join("\n");
 
-if (dryRun) {
-  process.stdout.write(`[box-convergence] would report ${String(drifted.length)} drifted box(es)\n${message}\n`);
+if (dryRun || !scheduled) {
+  process.stdout.write(`[box-convergence] ${dryRun ? "would report" : "report"} ${String(drifted.length)} drifted box(es)\n${message}\n`);
 } else {
   await execa(path.join(REPO_ROOT, "bin", "schedules"), [
     "alert", "--priority", "normal", "--title", `${String(drifted.length)} local box(es) behind on migrations`, "--message", message,
