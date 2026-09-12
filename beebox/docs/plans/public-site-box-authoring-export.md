@@ -1,6 +1,6 @@
 ---
 title: "Author public-site cards in a box and export them to the repository"
-status: draft
+status: partial
 workstream: public-site
 issues:
   - ../../../issues/exploration/2026-08-19-site-authored-in-a-box.md
@@ -90,6 +90,10 @@ existing public-site card contract and the committed-artifact model in
 
 ### Track A — box-local public-site card schema and guidance
 
+**Status: reported done in the companion authoring box, not verifiable from
+this repository's diff.** The box-side schema and generated guidance live in
+that box's own repository, outside this monorepo; nothing here confirms them.
+
 **What:** Add a `site-page` schema to the authoring box's `src/schemas/site-page.ts` and
 make the box's generated instructions teach the public-site authoring shape.
 The schema accepts the page body plus the fields already consumed by the site:
@@ -127,6 +131,9 @@ export code in this chunk.
 
 ### Track B — bootstrap the working projection
 
+**Status: reported done in the companion authoring box, not verifiable from
+this repository's diff** — same boundary as Track A.
+
 **What:** Bootstrap the current public card graph into
 the authoring box's `_publish/public-site/` as a one-time, reviewed working projection.
 Copy card files only, preserving relative card paths and card bytes. Do not
@@ -152,6 +159,13 @@ public document card suffixes to `site-doc` in the box projection. Record the
 mapping in the workbench README. Do not copy binary attachments.
 
 ### Track C — export selected cards back to the repository
+
+**Status: implemented.** `buildSite()` in `site/build.ts` is the parameterized
+core; `site/box-export.ts` (`exportBoxCards`, `pnpm --dir site box-export
+--box <path> [--apply]`) reads only `_publish/public-site/`, maps
+`*.site-doc.card` to `*.doc.card`, validates through a temporary `buildSite()`
+run, and defaults to dry-run. It never deletes repository cards. Coverage:
+`site/box-export.test.ts`.
 
 **What:** Add an explicit box-to-repository export operation. It reads only
 `<box>/_publish/public-site/`, maps `*.site-doc.card` back to public
@@ -189,6 +203,12 @@ temporary-build validation, suffix mapping, and an apply mode that produces
 only the expected `site/cards/` diff. No automatic commit or deployment.
 
 ### Track D — round-trip content workflow and agent-facing documentation
+
+**Status: partial.** The repository-side authoring guide is done —
+`site/card-authoring.md`'s "Authoring in a box workbench" section and
+`site/CLAUDE.md` document the bootstrap/export loop and the `box-export`
+report shape. The box-side `CLAUDE.md` guidance is reported done in the
+companion authoring box, not verifiable from this repository's diff.
 
 **What:** Document the bootstrap/edit/export loop in the public-site authoring
 guide and the authoring box's `CLAUDE.md`. Add a short export report that names the box,
