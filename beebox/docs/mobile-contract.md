@@ -57,7 +57,7 @@ composer not suppressed, wrong attribution — with no error surfaced).
   `BeeBoxApp.onReceive`) can fire for one URL, producing two redeem POSTs; the second fails on
   the single-use token and is swallowed. Carried as an open risk (§9).
 
-### 1.2 Pairing-ticket mint (owner-gated)
+### 1.2 Pairing-ticket mint (any box access)
 
 - **Direction:** box web UI (Settings) → box server. **Not called by native code.**
 - **Wire shape:** output `PairingTicket { token: string; expiresAt: string /* ISO */ }`. Token is
@@ -66,8 +66,13 @@ composer not suppressed, wrong attribution — with no error surfaced).
 - **Anchors:**
   | side | anchor |
   |---|---|
-  | box endpoint | `src/webapp/trpc/routers/pairing.ts` — `pairing.createTicket` (`ownerProcedure`) |
+  | box endpoint | `src/webapp/trpc/routers/pairing.ts` — `pairing.createTicket` (`authedProcedure`) |
   | box impl | `src/core/mobile/pairing.ts` — `createMobilePairingTicket(boxRoot, { createdBy })`, `pendingPairings`, `DEFAULT_PAIRING_TTL_MS`, `pruneExpiredPairings` |
+- **Who may mint:** anyone with access to the box, not the owner alone — you pair your OWN
+  device (changed 2026-09-12; it was `ownerProcedure`). The ticket records `createdBy`, and the
+  device then acts as that person, so a non-owner's phone gets exactly that person's access.
+  `pairing.devices` and `pairing.revokeDevice` remain `ownerProcedure`: they span every device on
+  the box, including other people's.
 - **Drift:** LOUD (tRPC error surfaces in Settings).
 
 ### 1.3 `POST /api/pairing/redeem`
@@ -169,12 +174,17 @@ cookie** minted from that token.
 | `src/webapp/server-box-scope.ts` — `createContext` | tRPC context: `mobileOk` → `authed:true` |
 | `src/webapp/server-root.ts` — `listMobileAuthorizedBoxes` / `isMobileAuthorizedForBox` | real verify for `/api/boxes` box list |
 
-### 2.3 Identity NOT unified (structural)
+### 2.3 Identity: a device acts as whoever paired it
 
-A pure mobile request sets `authed: true` but leaves `user: null` and `isOwner: false` in the tRPC
-context (`server-box-scope.ts` — `createContext`). Native chat sends therefore attribute to nobody.
-This is a known open risk (§9), not an incidental bug — a platform implementer must expect
-authenticated-but-unattributed behavior.
+A mobile request resolves to the person recorded in the device's `createdBy`
+(`server-box-scope.ts` — `createContext` reads `resolveMobileRequestAuth`, not just its
+truthiness). So `user` is that person and `isOwner` is true only when that person is the owner.
+A session identity on the same request still wins; the device credential fills in when there is
+no session.
+
+Changed 2026-09-12. Previously a pure mobile request set `authed: true` but left `user: null` and
+`isOwner: false`, so native chat sends attributed to nobody and a paired phone could never be its
+owner — nor correctly fail to be, when a non-owner paired it.
 
 ### 2.4 Failure semantics
 
@@ -1276,10 +1286,11 @@ reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.
   `test/core/mobile/pairing-store-concurrency.doctest.md`.
 - **Token in plaintext, not Keychain (OPEN, iOS I6).** `PairedBoxStore` writes `authToken` as
   plaintext JSON in Application Support.
-- **Identity not fully unified.** Mobile requests are `authed` but the tRPC context still carries
-  `user=null`/`isOwner=false`. Chat sends no longer attribute to nobody, though: `POST /api/chat/send`
-  now falls back to `resolveMobileSender`, resolving the paired device's `createdBy` identity
-  (`test/webapp/routes/chat-mobile-sender.doctest.md`). Unifying the tRPC context itself remains open.
+- **Identity unified (CLOSED 2026-09-12).** The tRPC context now resolves a mobile request to the
+  device's `createdBy` identity, so `user` is that person and `isOwner` is true only when they are
+  the owner (§2.3). `POST /api/chat/send` had already closed the attribution half via
+  `resolveMobileSender` (`test/webapp/routes/chat-mobile-sender.doctest.md`); the context was the
+  remaining piece.
 - **Duplicate deep-link handling.** `onOpenURL` + `PairingURLInbox` both redeem one URL → the second
   redeem 401s on the single-use token (§1.1).
 - **Token-lifecycle gaps.** Device tokens never expire (`MobileDevice` has no `expiresAt`); pending

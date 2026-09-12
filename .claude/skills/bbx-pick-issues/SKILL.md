@@ -1,6 +1,6 @@
 ---
 name: bbx-pick-issues
-description: Choose what to work on from the issue queue — survey it, find clusters, check what's stale or already shipped, and propose (or, when told to, launch) work with the right kind of session. Use when the human says "what should we work on", "look at the queue", "find a cluster", "pick an issue", "what's related to X", "is there a body of work around Y", or asks for a proposal from the backlog. Upstream of bbx-issue-actions (which works `next-action:` tags) and of the issues skill (filing). Tooling: bin/issues.
+description: "Use to choose work from the issue queue: survey related clusters, check staleness or shipped work, and propose next work or launch it when requested. bbx-issue-actions handles next-action dispositions; issues handles filing."
 ---
 
 # Picking issues

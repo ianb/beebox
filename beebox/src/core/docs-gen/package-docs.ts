@@ -144,13 +144,28 @@ function indexDoc(entries: { filename: string; readWhen: string }[]): string {
   return lines.join("\n");
 }
 
-/** Every engine doc, computed from the running source (and `docs/box/`). */
-export function engineDocs(options?: { packageRoot?: string }): EngineDoc[] {
+export interface EngineDocEntry {
+  doc: EngineDoc;
+  /** One line for an index: when an agent should open this doc. */
+  readWhen: string;
+}
+
+/**
+ * Every engine doc except the index, each with its index row. The public
+ * agent-docs corpus (`site/`) consumes this through `scripts/export-box-docs.ts`
+ * and builds its own index; the package writer adds `README.md` via `engineDocs`.
+ */
+export function engineDocEntries(options?: { packageRoot?: string }): EngineDocEntry[] {
   const packageRoot = options?.packageRoot ?? PACKAGE_ROOT;
   const statics = STATIC_DOCS.map((d) => ({ doc: { filename: d.filename, content: d.generate() }, readWhen: d.readWhen }));
   const prose = proseDocs(packageRoot);
   const cards = builtinCardDocs();
-  const all = [...statics, ...prose, ...cards];
+  return [...statics, ...prose, ...cards];
+}
+
+/** Every engine doc, computed from the running source (and `docs/box/`). */
+export function engineDocs(options?: { packageRoot?: string }): EngineDoc[] {
+  const all = engineDocEntries(options);
   const index: EngineDoc = {
     filename: INDEX_FILE,
     content: indexDoc(all.map((e) => ({ filename: e.doc.filename, readWhen: e.readWhen }))),
@@ -167,7 +182,7 @@ export function engineDocFilenames(): string[] {
   return engineDocs().map((d) => d.filename);
 }
 
-function docsFingerprint(docs: EngineDoc[]): string {
+export function docsFingerprint(docs: EngineDoc[]): string {
   return contentHash(docs.map((d) => `${d.filename}\n${d.content}`).join("\0"));
 }
 

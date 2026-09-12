@@ -1,6 +1,6 @@
 ---
 name: bbx-guide-api
-description: Explains how HTTP endpoints are added in beebox and the tRPC-vs-raw-Fastify decision. Use when adding an endpoint, procedure, subscription, or route, or wiring the frontend to the backend. Triggers include "add an endpoint", "new API", "add a route", "call this from the frontend", "add a subscription". Instructional (a bbx-guide-* skill) — full checklist in docs/adding-api-endpoints.md.
+description: Use when adding beebox HTTP endpoints, tRPC procedures or subscriptions, raw Fastify routes, or wiring frontend calls to the backend.
 ---
 
 # Adding API endpoints: the decision, then the checklist

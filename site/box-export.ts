@@ -188,7 +188,7 @@ async function validateCards(cards: readonly ExportCard[]): Promise<number> {
       await fs.mkdir(path.dirname(destination), { recursive: true });
       await fs.writeFile(destination, card.contents);
     }
-    const result = await buildSite({ cardsDir, distDir, base: "/", writeSourceManifest: false });
+    const result = await buildSite({ cardsDir, distDir, base: "/", writeSourceManifest: false, buildAgentDocs: false });
     return result.pageCount;
   } catch (error) {
     throw new BoxExportError(`staged public-site graph is invalid: ${errorMessage(error)}`);

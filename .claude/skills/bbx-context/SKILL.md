@@ -1,6 +1,6 @@
 ---
 name: bbx-context
-description: Use when engineering what a box agent knows — writing or curating a box's CLAUDE.md, a nested CLAUDE.md, a `.claude/rules/` glob, a card schema's `instructions`, or a box doc; deciding where a durable instruction should live; or when a box agent keeps ignoring a rule you wrote down. Triggers include "where should this instruction go", "the agent ignores this rule", "trim this CLAUDE.md", "add box guidance", "the box doesn't know X". Not for the dev-repo's own CLAUDE.md.
+description: Design or troubleshoot durable guidance loaded by box agents, including box CLAUDE.md files, path rules, schema instructions, and box docs. Use to place, trim, or repair box-agent context; not for the dev repo's own CLAUDE.md.
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 
