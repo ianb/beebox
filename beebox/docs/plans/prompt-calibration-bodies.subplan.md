@@ -6,7 +6,7 @@ issues: []
 ---
 # Skill bodies and operational guidance
 
-Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. This continues [prompt calibration](prompt-calibration.md) after the description and root changes. The cross-model restructuring is applied locally; launch, bin, issues, and security-report remain proposals.
+Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. This continues [prompt calibration](prompt-calibration.md) after the description and root changes. Cross-model and bin restructuring are applied; launch, issues, and security-report remain proposals. The follow-on sections record additional coding-guidance changes.
 
 **Recommendation:** split only the two alternative runners in `cross-model`; keep launch decisions together with one optional briefing example reference; reorganize the bin manual around distinct operations; retain issues as one contract and security-report as one audit rubric. Smaller entrypoints should expose the right material, not make every task read more files.
 
@@ -97,7 +97,7 @@ The compact completion rule is: "Report the stream, agent/model, Terminal destin
 
 **Purpose:** guide changes to root tooling and shared operational infrastructure. Needed: yes, but its 910 lines conflate contributor rules, live contracts, CLI help, and incident history. Preserve pre-action hazards in the entrypoint; put distinct mechanisms in maintained topic docs. Do not use an implemented plan as the new canonical operating manual merely because it contains similar prose.
 
-Proposed new destinations, only when their extraction is approved: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lifecycle.md`, and `bin/docs/schedules.md`. Existing `bin/docs/router-protocol.md` remains the concurrency-invariant reference, not a dumping ground for unrelated operations.
+Approved destinations, now applied: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lifecycle.md`, and `bin/docs/schedules.md`. Existing `bin/docs/router-protocol.md` remains the concurrency-invariant reference, not a dumping ground for unrelated operations.
 
 | Current section / line | Purpose / needed? | Compact entrypoint form | Detail destination / removal |
 |---|---|---|---|
@@ -215,7 +215,7 @@ For actual skill rewrites, a bounded independent read-only exercise can check no
 4. Reorder/compact issues without changing its field/state/privacy contract.
 5. Trim security-report conservatively, preserving the rubric and correcting only the stale rationale.
 
-Each chunk gets doc-check, whitespace validation, source/links review, and the applicable cross-model review. Test scripts only if scripts change. Only the cross-model editorial chunk has been undertaken; the remaining operating documents are unchanged.
+Each chunk gets doc-check, whitespace validation, source/links review, and the applicable cross-model review. Test scripts only if scripts change. Cross-model and bin editorial chunks are applied; launch, issues, and security-report remain unimplemented.
 
 ## Assessment review and validation
 
@@ -231,7 +231,7 @@ Doc-check and whitespace checks pass for this planning artifact. At the assessme
 
 Applied the shared contract plus conditional [Codex runner](../../../.claude/skills/cross-model/references/codex-runner.md) and [Claude runner](../../../.claude/skills/cross-model/references/claude-runner.md). The [entrypoint](../../../.claude/skills/cross-model/SKILL.md) retains authority, completion, mode selection, delegated prompt scaffolding, bounded review rounds, and material-result handoff. Runner selection follows the driving family for all four intended models; reviewer defaults are preserved. Historical quota observations are labeled as dated, not current guarantees.
 
-The Claude runner now explicitly distinguishes committed branch diffs from working-tree/new-file review targets. Supporting references resolve through the existing Codex skill directory symlink; no mirror generator change is needed. Other four proposed rewrites remain unimplemented.
+The Claude runner now explicitly distinguishes committed branch diffs from working-tree/new-file review targets. Supporting references resolve through the existing Codex skill directory symlink; no mirror generator change is needed. At that checkpoint, the other four rewrites remained unimplemented; bin is now applied in the six-follow-up pass below.
 
 Validation: doc-check, whitespace, unchanged skill frontmatter, and all source/mirrored reference links pass. An independent Claude review traced plan/diff routing and stalled-run recovery across the four driving models. It prompted explicit moved-template references, restoration of the foreground-run consequence and delegated prompt clause, and removal of a newly added challenge-default sentence. Its proposed target-based model policy was not adopted: the original default and explicit plan-mode override remain. The literal diff-review prompt and authority block remain intact. These are static review traces, not empirical runs of all four models or an activation evaluation.
 
@@ -251,8 +251,8 @@ landed. These edits are applied locally:
 | Teach doctest syntax when needed | The path rule becomes a pointer to the consolidated [syntax reference](../../../agent-doctest/docs/syntax.md), also linked from the doctest skill and beebox guidance. The generator stays unchanged. |
 
 This is dev-repo guidance and a documentation-map label, not a change to
-box-agent prompts or the audit harness. It does not require box knowledge-audit runs. The four larger editorial
-proposals above remain future work; this pass does not change their scope.
+box-agent prompts or the audit harness. It does not require box knowledge-audit runs. At that checkpoint, the four larger editorial proposals remained future work;
+bin is addressed by the next pass below.
 
 Static validation: regenerated 18 AGENTS mirrors and verified the root source
 and shortened doctest rule are reflected. The rule's body fell from 512 to 29
@@ -267,3 +267,49 @@ inbound issue-slug searches, repoint older syntax references, and distinguish
 the Bee Box fence-label convention from the shared runner's accepted syntax.
 The documentation-map label passes focused ESLint; `pnpm test:changed` selected
 zero tests because none import that changed source path. No full suite was run.
+
+## Six further coding-guidance changes
+
+The human approved these six follow-ups after the seven-item work-cost pass
+landed. The bin split uses the section-by-section assessment above; the other
+changes follow the same purpose, necessity, compact form, and loading hierarchy.
+
+| Surface / purpose | Applied form and retained boundary |
+|---|---|
+| `beebox/CLAUDE.md`: routine package orientation | Compact everyday contracts and conditional links to current package guides; credential, privacy, test, path/ref, time, lock, and commit safeguards remain. |
+| `bin/CLAUDE.md`: operate/change shared tooling | Short contributor router plus commit-guards, router-operations, worktree-lifecycle, and schedules references. Mandatory pre-action/read-before-edit hazards stay in the entrypoint. |
+| `bbx-codehealth`: investigate architectural friction | Choose a named area or package-wide audit, reuse current results, run applicable tools with complete graphs where required, and triage in scope. No baseline-free trend judgments or mandatory second exploration pass. |
+| `bbx-frontend`: verify changed UI | Full applicable state/keyboard/responsive pass for new views; affected behavior and reachable states for narrow edits. Browser evidence and visible-failure reporting remain required. |
+| `bbx-plan`: catch scope growth | Keep size and unplanned-scope gates; revision/review counts prompt reassessment rather than an automatic stop. Compare budgeted categories consistently and reuse applicable scope-review evidence. |
+| `browse`: drive and diagnose the browser | Compact normal-use skill routes to authentication, timing/recovery, or command references. Core cues expose transient-state and privilege traps before the risky action. |
+
+The circuit breaker originated in `a18921628`, prompted by a plan growing to
+roughly 12,000 lines. That evidence supports keeping the 3× smallest-fix and
+1.5× budget gates, not deleting scope control. A third plan edit can simply
+correct documentation; a second review can verify an ordinary fix. Those counts
+alone no longer force a stop. Unplanned scope, an invalidated approach, or a
+size-gate breach still does, and the debugging three-failed-fix limit remains.
+
+No new reviewer model policy or runtime mechanism is introduced. References
+stay under their canonical skill/bin directories; generated mirrors and skill
+links expose the same sources to Codex. The launch, issue-contract, and security
+report rewrites remain separate proposals.
+
+Skill review corrections preserve the upstream false-success click hazard and
+the router auth enforcement pointer. Reassessment now has a concrete trigger
+(the next correction to a mechanism after implementation findings). A suggested
+mandatory counter report and a blanket rerun of health tools were not adopted:
+current applicable evidence or source/caller traces remain sufficient.
+
+Manual review restored the on-demand [guide index](../guides.md), the atomic-write
+helper pointer, useful design-background links, and the managed-vs-native
+worktree concurrency boundary. It also aligned the root liveness description
+with all four states and restored the literal `enabled: false` schedule action.
+
+Validation: doc-check, whitespace, skill frontmatter, all changed Markdown
+links/anchors, and regenerated source-to-mirror comparisons pass. All original
+manual headings still resolve. Normal-use entrypoints are roughly 1,000 words
+for bin, 1,100 for beebox, and 540 for browse; their conditional references hold
+the moved facts. Two independent review subsets covered the manuals and skills.
+No runtime source, model policy, or test harness changed; no application test
+suite or empirical all-model activation run was needed or claimed.

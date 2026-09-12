@@ -261,4 +261,4 @@ The second cross-model pass found no material root implementation defects and co
 
 ## Follow-on assessment
 
-[Skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) applies the same purpose/necessity/compact-form/grouping/hierarchy method to cross-model, launch, bin, issues, and security-report. It incorporates OpenAI skill-creator and prompting advice. The cross-model split is applied locally; the other four operating documents remain unchanged pending their editorial chunks.
+[Skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) applies the same purpose/necessity/compact-form/grouping/hierarchy method to cross-model, launch, bin, issues, and security-report. It incorporates OpenAI skill-creator and prompting advice. Cross-model and bin splits are applied, along with the follow-on coding-guidance changes recorded there. Launch, issues, and security-report remain pending.

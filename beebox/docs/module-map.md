@@ -10,6 +10,8 @@ by vibe.
   the lowest layer; everything may import it and it imports nothing upward
   (enforced by keeping it a leaf — verify with `pnpm lint:circular`). Examples:
   `content-hash`, `mimetype`, `file-exists`, `public-url`, `sleep`,
+  `atomic-write` (`writeFileAtomic`, crash-safe whole-file replacement for small
+  state and credential stores),
   `awake-timeout`, `git*`/`paths`/`box-shape` (promoted from `cli/lib` in the
   Track G reorg), `time` (`getBoxTime`), `format` (chalk), `box-config`. **Check
   here before writing your own** — a hand-rolled copy of something already in
