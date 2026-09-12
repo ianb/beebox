@@ -297,9 +297,12 @@ the contract.
   unavailable (contextDir/reason). Attention carries surface, optional in-box
   focusedRef, and visible/hidden transcript. Native acknowledges valid publication
   through `window.beeboxComposerBindingVersion = 1` and the
-  `beebox:composer-binding-ready` event. Until then updated iOS retains its draft
-  and explains that sending requires an updated host. URL-derived session state
-  is only the pre-negotiation fallback; ordinary route movement never retargets.
+  `beebox:composer-binding-ready` event. Until a binding is ready iOS retains its
+  draft and names the state it is actually in — no publication yet, resolving, or
+  unavailable-with-reason — rather than blaming host version skew: the web side
+  always publishes, and its first publication on every load is `resolving`.
+  URL-derived session state is only the pre-negotiation fallback; ordinary route
+  movement never retargets.
 - **Workspace attention:** phone layouts display one card or the transcript.
   Showing the transcript preserves cards and browser Back returns to the card.
   Desktop panes can show two cards with ambient chat. Hidden mounted cards do not

@@ -287,11 +287,34 @@ struct NativeComposerView: View {
         }
     }
 
+    /// What to say while there is no send binding — one line per state, because
+    /// they are not the same state.
+    ///
+    /// This used to collapse all of them into "Sending requires an updated
+    /// host", written when the web side might not publish a binding at all.
+    /// It does now, and its FIRST publication on every cold load is
+    /// `resolving` (`use-conversation-selection.ts` seeds
+    /// `{kind:"resolving", requestId:"initial"}`), so the common path — a page
+    /// still picking the conversation — accused the host of being out of date.
+    /// Version skew is not what the boxholder is watching for here; say what is
+    /// happening instead of guessing at why.
     private var composerBindingStatusText: String? {
         guard pendingStore.composerBinding?.sendBinding == nil else { return nil }
-        return pendingStore.composerBinding?.selection?.label
-            ?? pendingStore.composerBinding?.selection?.reason
-            ?? "Waiting for conversation. Sending requires an updated host."
+        guard let selection = pendingStore.composerBinding?.selection else {
+            // No publication has arrived. Ordinarily the page is still loading.
+            return "Waiting for the conversation."
+        }
+        switch selection.kind {
+        case .ready:
+            // `sendBinding` is nil despite a ready selection, so the
+            // publication failed validation. The label is still the most
+            // informative thing on hand.
+            return selection.label ?? "Waiting for the conversation."
+        case .resolving:
+            return "Finding the conversation..."
+        case .unavailable:
+            return selection.reason ?? "No conversation to send to."
+        }
     }
 
     private var composerContext: some View {
@@ -1073,14 +1096,32 @@ struct NativeComposerView: View {
 
     private func requestMicrophone() {
         applyEarcon(.microphoneRequested)
-        // Put the keyboard away, the way opening capture does. The transcript
-        // OWNS the text field for the length of the turn (every update replaces
-        // the whole text and forces the caret to the end — see
-        // `setDictationTranscript`), so a keyboard left standing over a field
-        // nobody can usefully type into is both a confusing state and a way to
-        // lose characters. `isTextEntryLocked` keeps it down for the turn.
+        // Put the keyboard away. The transcript OWNS the text field for the
+        // length of the turn (every update replaces the whole text and forces
+        // the caret to the end — see `setDictationTranscript`), so a keyboard
+        // left standing over a field nobody can usefully type into is both a
+        // confusing state and a way to lose characters. `isTextEntryLocked`
+        // keeps it down for the turn.
+        //
+        // Both halves are needed, as the simulator showed: clearing `focused`
+        // alone makes `ComposerTextView` resign — the caret goes — but the
+        // keyboard STAYS ON SCREEN. Asking the window to resign whatever holds
+        // it is what actually dismisses it (the same selector `RootView` uses
+        // for the per-box lock).
         focused = false
+        dismissKeyboard()
         applyVoiceTurn(.microphoneStarted)
+    }
+
+    /// Dismiss the keyboard whoever owns it. `focused = false` resigns the
+    /// composer's own text view, which is not sufficient on its own.
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     private func stopMicrophoneWithEarcon() {
@@ -1995,8 +2036,12 @@ private struct SelectionDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    // Same confirm affordance as the app's other sheets.
+                    Button {
                         dismiss()
+                    } label: {
+                        Label("Done", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
                     }
                 }
             }
