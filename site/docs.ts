@@ -9,8 +9,9 @@ import { loadAuthoredDocs, DocsAuthoredError } from "./docs-authored.js";
 import { renderComparedCaveat } from "./docs-compared.js";
 import { loadGeneratedDocs } from "./docs-generated.js";
 import { renderDirectoryIndex, type DirectoryPurpose } from "./docs-index.js";
-import { validateAuthoredLinks } from "./docs-links.js";
+import { rewriteAuthoredLinks } from "./docs-links.js";
 import { loadManifestEntries, loadPromotedDocs } from "./docs-manifest.js";
+import { docsOrigin } from "./docs-origin.js";
 import type { PublishedDoc } from "./docs-types.js";
 
 export { renderAgentLlmsTxt, renderDevLlmsTxt, type DevLlmsTxtParams, type SitePageSummary } from "./docs-index.js";
@@ -55,12 +56,13 @@ function directoryOf(publishPath: string): string {
   return dir === "." ? "" : dir;
 }
 
-/** `Bee Box documentation · directory: … · index: … · root: …`, base-prefixed. */
+/** `Bee Box documentation · directory: … · index: … · root: …`, absolute-URL-prefixed. */
 function headerLine(publishPath: string, base: string): string {
+  const origin = docsOrigin(base);
   const dir = directoryOf(publishPath);
-  const directoryPath = dir === "" ? `${base}docs/` : `${base}docs/${dir}/`;
-  const indexPath = dir === "" ? `${base}llms.txt` : `${base}docs/${dir}/index.md`;
-  return `Bee Box documentation · directory: ${directoryPath} · index: ${indexPath} · root: ${base}llms.txt`;
+  const directoryPath = dir === "" ? `${origin}${base}docs/` : `${origin}${base}docs/${dir}/`;
+  const indexPath = dir === "" ? `${origin}${base}llms.txt` : `${origin}${base}docs/${dir}/index.md`;
+  return `Bee Box documentation · directory: ${directoryPath} · index: ${indexPath} · root: ${origin}${base}llms.txt`;
 }
 
 async function writeDoc(params: { distDir: string; doc: PublishedDoc; base: string }): Promise<void> {
@@ -80,8 +82,8 @@ export async function buildDocsCorpus(options: DocsBuildOptions): Promise<DocsBu
   const manifestPath = path.join(siteDir, "docs-manifest.yaml");
 
   const manifestEntries = loadManifestEntries(manifestPath);
-  const promoted = loadPromotedDocs({ entries: manifestEntries, repoRoot });
-  const generated = loadGeneratedDocs({ beeboxDir, repoRoot });
+  const promoted = loadPromotedDocs({ entries: manifestEntries, repoRoot, base });
+  const generated = loadGeneratedDocs({ beeboxDir, repoRoot, base });
   const authored = await loadAuthoredDocs({ docsDir, repoRoot });
 
   const allDocs: PublishedDoc[] = [...authored.docs, ...promoted, ...generated.docs];
@@ -117,7 +119,31 @@ export async function buildDocsCorpus(options: DocsBuildOptions): Promise<DocsBu
   for (const dir of byDir.keys()) publishedPaths.add(`${dir}/index.md`);
 
   for (const doc of authored.docs) {
-    validateAuthoredLinks(doc.body, { publishPath: doc.publishPath, sourceLabel: doc.sourceLabel, publishedPaths });
+    doc.body = rewriteAuthoredLinks(doc.body, { publishPath: doc.publishPath, sourceLabel: doc.sourceLabel, publishedPaths, base });
+  }
+
+  // README preambles (root + per-directory) carry the same published-relative
+  // links as any authored page — resolved against their own directory — but
+  // they never flow through `authored.docs`, so they need their own pass.
+  authored.readme = {
+    summary: authored.readme.summary,
+    preamble: rewriteAuthoredLinks(authored.readme.preamble, {
+      publishPath: "README.md",
+      sourceLabel: "site/docs/README.md",
+      publishedPaths,
+      base,
+    }),
+  };
+  for (const [dir, dirReadme] of authored.dirReadmes) {
+    authored.dirReadmes.set(dir, {
+      ...dirReadme,
+      preamble: rewriteAuthoredLinks(dirReadme.preamble, {
+        publishPath: `${dir}/README.md`,
+        sourceLabel: `site/docs/${dir}/README.md`,
+        publishedPaths,
+        base,
+      }),
+    });
   }
 
   for (const doc of allDocs) await writeDoc({ distDir, doc, base });
@@ -127,7 +153,7 @@ export async function buildDocsCorpus(options: DocsBuildOptions): Promise<DocsBu
     if (purpose === undefined) continue; // unreachable: already thrown above
     const out = path.join(distDir, "docs", dir, "index.md");
     await fs.mkdir(path.dirname(out), { recursive: true });
-    await fs.writeFile(out, renderDirectoryIndex({ dir, purpose, docs }), "utf8");
+    await fs.writeFile(out, renderDirectoryIndex({ dir, purpose, docs, base }), "utf8");
   }
 
   const spine = allDocs
@@ -152,14 +178,19 @@ export async function buildDocsCorpus(options: DocsBuildOptions): Promise<DocsBu
     };
   }
 
+  const summaryLine =
+    `docs: ${allDocs.length} doc(s) → dist/docs/ ` +
+    `(${promoted.length} promoted, ${generated.docs.length} generated, ${authored.docs.length} authored)` +
+    (generated.unresolvedLinks > 0
+      ? `\ndocs: ${generated.unresolvedLinks} generated-doc link(s) point at a filename outside the generated set (left as-is)`
+      : "");
+
   return {
     docCount: allDocs.length,
     readme: authored.readme,
     spine,
     directories,
     dev,
-    summaryLine:
-      `docs: ${allDocs.length} doc(s) → dist/docs/ ` +
-      `(${promoted.length} promoted, ${generated.docs.length} generated, ${authored.docs.length} authored)`,
+    summaryLine,
   };
 }

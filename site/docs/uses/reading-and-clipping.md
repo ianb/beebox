@@ -43,6 +43,7 @@ capture date.
 - **Landmarks** ([landmarks](../concepts/landmarks.md)): a flat tree weights every directory equally; a landmark is the editorial layer, and marks where a clipping may be filed.
 - **Triage** ([triage](../capabilities/triage.md)): a new category is promoted by dropping a landmark rather than by defining a taxonomy first.
 - **Provenance** ([where a fact came from](../capabilities/provenance.md)): your exact words are kept as a quote and a fact points at its origin, so what the agent inferred is always distinguishable from what you said.
+- **Integrity** ([it keeps itself coherent](../capabilities/integrity.md)): links between cards are checked and rewritten when a card moves, so a collection that grows for years stays navigable rather than accumulating dead references.
 
 **Read next.** [Webpage](../reference/cards/webpage.md),
 [commentary](../reference/cards/commentary.md),

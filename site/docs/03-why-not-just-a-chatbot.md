@@ -31,6 +31,11 @@ text. **The agent** is the coding agent that operates the box
   quote, and a fact drawn from an email or a page points back at it, so the
   agent's summary and your own words never blur together. See
   [provenance](capabilities/provenance.md).
+- **It stays coherent as it grows.** Links between cards are parsed and
+  checked, references are rewritten when a card moves, and every card is
+  validated at several points before a change is kept, so years of
+  accumulation stay a navigable hypertext rather than a pile of files
+  ([integrity](capabilities/integrity.md)).
 - **It asks instead of guessing.** Lacking confidence or authority, the agent
   writes a question card and waits for your answer
   ([capabilities/questions.md](capabilities/questions.md)).

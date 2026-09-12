@@ -24,6 +24,7 @@ import { NAVIGATION_SCRIPT } from "./navigation-script.js";
 import { headingIds, prepareWorkspace, type SitePage } from "./workspace-model.js";
 import { workspaceShell } from "./workspace.js";
 import { twinCardLinks } from "./twin-links.js";
+import { writeStaticFiles } from "./docs-static.js";
 import { publishedPageBody } from "./page-publication.js";
 
 const SITE_DIR = import.meta.dirname;
@@ -265,6 +266,10 @@ export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteRes
       );
     }
   }
+
+  // Cloudflare Pages control files: plain-text content type for every
+  // machine-facing file, a real 404, a permissive robots.txt (docs-static.ts).
+  await writeStaticFiles({ distDir, base, twinStems: built.map((page) => page.stem) });
 
   // Input manifest LAST, once all output exists: the dev router compares it
   // against the current sources to decide whether to auto-rebuild. A partial

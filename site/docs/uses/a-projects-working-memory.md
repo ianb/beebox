@@ -43,6 +43,7 @@ outstanding todos are not badged in the navigation, so you find them by looking.
 - **Briefings** ([briefing](../reference/cards/briefing.md)): the primary place for what every agent working here needs to know, so a chat opened there starts informed.
 - **Views** ([views](../capabilities/views.md)): a display built for a kind of card, which is what makes the todo list assembled rather than maintained.
 - **Triage** ([triage](../capabilities/triage.md)): once the directory is a destination, new material files itself there instead of waiting in an inbox.
+- **Integrity** ([it keeps itself coherent](../capabilities/integrity.md)): links between cards are checked and rewritten when a card moves, so a collection that grows for years stays navigable rather than accumulating dead references.
 
 **Read next.** [Triage](../concepts/triage.md),
 [landmark](../reference/cards/landmark.md),
