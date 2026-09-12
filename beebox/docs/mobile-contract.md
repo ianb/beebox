@@ -267,9 +267,11 @@ the contract.
     "images": [ { "id": <int>, "mimeType": "<string>", "dataBase64": "<base64>" } ],
     "files": [ { "id": <int>, "path": "<_tmp/...>", "originalName": "<string>",
       "size": <number>, "mimetype": "<string>" } ],
-    "selections": [ { "id": <int>, "ref": "<string>", "text": "<string>",
+    "selections": [ { "id": <int>, "ref": "<string>"?, "text": "<string>",
       "position": "<string>", "anchor": <string|null>, "spokenWords": <number|null> } ] }
   ```
+  A selection's `ref` is absent or null when the text was quoted from the chat transcript (no file
+  behind it); web normalizes both to `null`.
 - **V3 destination binding:** updated iOS sends the same V2 content fields with
   `version: 3`, `bindingRevision`, and immutable
   `binding: {boxSlug, target, attention}`. Target is either
@@ -510,10 +512,12 @@ mint them independently; the ids are per-emission and per-kind.
 - **Command wire shape** (web posts on `beeboxComposerCommand`):
   ```json
   { "version": 1, "id": "<UUID string>", "kind": "add-selection",
-    "selection": { "ref": "<card path>", "text": "<selected text>",
+    "selection": { "ref": "<card path>"|null, "text": "<selected text>",
       "position": "<source position>" } }
   ```
-  V1 is strict: every field is required and `kind` has only `add-selection`.
+  V1 is strict: every field is required and `kind` has only `add-selection`. `ref` is `null` for
+  text quoted from the chat transcript; `position` then names it (`chat transcript; assistant
+  message`). An iOS build that predates the null `ref` rejects such a command visibly.
 - **Acknowledgement wire shape** (native → web): accepted is
   `{ "version":1, "id":"<same id>", "accepted":true }`; rejected is
   `{ "version":1, "id":"<same id>", "accepted":false, "reason":"<user-visible reason>" }`.
@@ -815,8 +819,12 @@ See §1.3 (full request/response/errors).
 - **Response 200:** `{ text: string, diarized: boolean, service?: string }`, where
   `service` is the backend resolved by the box (not the client's requested intent).
   Clients accept its absence for compatibility with older boxes.
-- **Errors:** 400 `{ error: "No audio uploaded" }`; 500 `{ error: <msg> }` → iOS
-  `ChatAPIError.server(...)` (surfaces in composer status).
+- **Errors:** 400 `{ error: "No audio uploaded" }`; 500 `{ error: <msg>, permanent: boolean,
+  code?: string }` → iOS `ChatAPIError.server(...)` (surfaces in composer status). `permanent:
+  true` with a `code` (e.g. `missing_openrouter_key`) means the configured HQ service cannot
+  run on this box until its configuration changes — every later segment fails the same way, so
+  a client should say so once rather than retry per segment. The web client shows it on the
+  voice chip; iOS reads only `error` today (additive fields, ignored).
 - **Anchors:**
   | side | anchor |
   |---|---|
@@ -1104,7 +1112,7 @@ symbol; drift is LOUD or SILENT (§Drift legend).
 | B12 | Command envelope V2 | web→native | `{version:2,id,kind,payload?}`, kinds `add-selection`|`scan-controls`, via `beeboxComposerCommand` | `Models/NativeComposerContract.swift` · `NativeComposerCommand.Payload`; `Views/RootView.swift` · `handleComposerCommand` | `native-composer-command.ts` · `nativeComposerCommandFromDetail`; `native-control-scan.ts` | LOUD |
 | B13 | Command result | native→web | `{version:2,id,kind,ok:true,controls[]}` or `{…,ok:false,reason}` via `beeboxNativeCommandResult`, queue + `beebox:native-command-result` event | `Models/NativeComposerContract.swift` · `NativeComposerCommandResult`; `Models/NativeControlRegistry.swift` · `controlAnchor`; `Views/ChatWebView.swift` · `deliverComposerCommandResults` | `native-composer-command.ts` · `nativeCommandResultFromDetail`; `native-control-scan.ts` · `requestNativeControls` | LOUD in the dump |
 | R1 | Screen awake (device idle timer) | native-only, no wire | — (a responsibility split, §4.11): held for a voice turn, page speech playing, or capture recording; released by re-derivation incl. `scenePhase` | `Services/ScreenAwake.swift` · `ScreenAwakeHold`; `Views/NativeComposerView.swift` · `screenAwakeReasons`; `Views/NativeCaptureController.swift` · `applyScreenAwake`; `Services/SpeechDictation.swift` · `NativeVoiceTurnEvent.dictationFailed` | `components/chat/InteractiveChat-voice.ts` · `useDebouncedWakeLock` (suppressed under `nativeComposer`); `hooks/useWakeLock.ts` | SILENT both ways |
-| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized,service?}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
+| H1 | `POST /api/chat/transcribe-audio` | native→box | multipart `session` + `file`(segment.wav, audio/wav); res `{text,diarized,service?}`; 500 `{error,permanent,code?}` | `Services/ChatAPI.swift` · `transcribeAudio` | `routes/chat-audio-routes.ts` | LOUD on rejection / SILENT on HTTP 200 with unusable text; Float32 WAV verified — **I8** |
 | H6 | `POST /api/chat/last-audio/:requestId` | native→box | multipart `file`(last-message.wav, audio/wav) + `recordedAt`,`text`,`messageId`,`sessionId?`; or JSON `{"none":true}`; res `{ok}` / `404` when already settled | `Services/ChatAPI.swift` · `answerLastAudio`; `Storage/VoiceAudioRetentionStore.swift` | `routes/chat-last-audio-routes.ts`; `core/last-audio-pending.ts` · `fulfill`/`reportNone` | QUIET — a missing echo is IGNORED, not rejected |
 | H2 | `GET /api/chat/default` | native→box | res `{sessionId?}` | `Services/ChatAPI.swift` · `resolvedSession` | `routes/chat.ts` · default-session route | SILENT (→ `"new"`) |
 | H3 | `POST /api/chat/send` (web layer) | web→box | `{session,message,messageId,images?,channel?,…}`; res `{turnId?}\|{queued}\|{deduplicated}` | `api-chat.ts` | `routes/chat-send-routes.ts`; `routes/chat-helpers.ts` · `sendBodySchema` | LOUD / SILENT dedup |

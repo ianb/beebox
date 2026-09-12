@@ -256,30 +256,46 @@ JSON.stringify(calls)
 => []
 ```
 
-## Narration HQ round-trip
+## Voice sends waiting for HQ
 
-`START_HQ` parks the realtime text and lights the in-flight region; `HQ_DONE`
-clears it.
+Each voice send that waits for its HQ transcript is a pending bubble
+(`docs/plans/resilient-voice-recording.md`, Track 4). `START_HQ` adds one and
+lights the in-flight region; several can wait at once. `HQ_STATUS` updates
+one bubble's status line.
 
 ```ts
-const { actor } = mk();
-actor.send({ type: "START_HQ", text: "draft text" });
+const { actor, calls } = mk();
+actor.send({ type: "START_HQ", id: "m1", text: "first draft" });
+actor.send({ type: "START_HQ", id: "m2", text: "second draft" });
+actor.send({ type: "HQ_STATUS", id: "m1", status: "Transcribing part 2 of 3" });
 const s = actor.getSnapshot();
 s.matches({ hq: "inFlight" })
 => true
 
-s.context.pendingHqText
-=> draft text
+JSON.stringify(s.context.pendingHq)
+=> [{"id":"m1","text":"first draft","status":"Transcribing part 2 of 3"},{"id":"m2","text":"second draft","status":"Uploading audio…"}]
 ```
 
-```ts continue
-actor.send({ type: "HQ_DONE" });
-const s2 = actor.getSnapshot();
-s2.matches({ hq: "idle" })
-=> true
+`HQ_SEND_LIVE` is the bubble's "Send live text now" control: it marks the
+bubble and emits the command the wiring routes to that send's HQ wait.
 
-JSON.stringify(s2.context.pendingHqText)
-=> null
+```ts continue
+actor.send({ type: "HQ_SEND_LIVE", id: "m2" });
+JSON.stringify({ calls, status: actor.getSnapshot().context.pendingHq[1]?.status })
+=> {"calls":["sendHqLive"],"status":"Sending live text…"}
+```
+
+`HQ_DONE` removes one bubble; the region goes idle only with the last.
+
+```ts continue
+actor.send({ type: "HQ_DONE", id: "m1" });
+const s2 = actor.getSnapshot();
+JSON.stringify({ inFlight: s2.matches({ hq: "inFlight" }), ids: s2.context.pendingHq.map((p) => p.id) })
+=> {"inFlight":true,"ids":["m2"]}
+
+actor.send({ type: "HQ_DONE", id: "m2" });
+actor.getSnapshot().matches({ hq: "idle" })
+=> true
 ```
 
 ## Mobile keyboard region

@@ -22,7 +22,7 @@
  */
 
 import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
-import { delay, jitteredBackoff } from "./transcription-backoff";
+import { delay, jitteredBackoff } from "@shared/backoff.js";
 import { setMicLevelSource, clearMicLevelSource } from "../lib/audio/mic-level";
 import { getMicStream } from "../lib/audio/fake-mic";
 

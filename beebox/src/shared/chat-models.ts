@@ -14,12 +14,15 @@ export function parseChatAgentEngine(value: unknown): ChatAgentEngine | null {
 }
 
 const OPTIONS: Record<ChatAgentEngine, readonly ChatModelOption[]> = {
+  // Strongest first, under the default — the same order the codex list already
+  // used. The claude list used to run weakest-first, so the two engines' menus
+  // disagreed and Haiku sat at the top of one of them.
   claude: [
     { label: "Default (Opus)", model: null },
-    { label: "Haiku 4.5", model: MODEL_ID.haiku },
-    { label: "Sonnet 5", model: MODEL_ID.sonnet },
-    { label: "Opus 5", model: MODEL_ID.opus },
     { label: "Fable 5.1", model: MODEL_ID.fable },
+    { label: "Opus 5", model: MODEL_ID.opus },
+    { label: "Sonnet 5", model: MODEL_ID.sonnet },
+    { label: "Haiku 4.5", model: MODEL_ID.haiku },
   ],
   codex: [
     { label: "Default (Codex)", model: null },

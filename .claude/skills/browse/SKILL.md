@@ -184,9 +184,12 @@ The browse key clears the auth wall. What it *means* inside a box is the box's
 call: a box whose `config/box.json` has `"agentBrowsing": "owner"` treats the key
 as the box owner — capture, device pairing, Settings, anything behind
 `ownerProcedure`, and chat sends attributed to the owner. `test1` sets it, so
-every worktree clone and journey box built from it does too. The one exception
-is the Secrets panel (`authenticatedOwnerProcedure`): the secret store is
-machine-level, so no box's opt-in reaches it.
+every worktree clone and journey box built from it does too. That includes the
+Secrets panel (`authenticatedOwnerProcedure`) **on a worktree**, because the
+dev router gives each worktree's box its own secret store
+(`~/.cache/beebox/secrets/<worktree>.json`); on `main`, whose box is on the
+real machine-level store, the panel still refuses the browse identity — no
+test box's opt-in reaches the boxholder's real keys.
 
 On a box **without** the field — `personal-test`, any box a person uses — the
 key is nobody: you get **403 "Owner access required"** on owner surfaces and

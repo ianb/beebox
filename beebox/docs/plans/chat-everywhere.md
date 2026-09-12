@@ -23,7 +23,7 @@ The issue queue was searched with `bin/issues similar --all --docs` and for `eve
 - [Back to chat](../../../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md): preserve the shipped return path; its existing device-check gate is separate.
 - [Listening/note mode](../../../issues/features/2026-08-29-listening-note-mode.md): diarized ambient listening is a different input policy; do not enable it implicitly.
 - [Chat feedback](../../../issues/features/2026-08-06-capture-feedback-from-chat.md) and [draft ahead](../../../issues/features/2026-07-08-draft-ahead-surface-native-pattern.md): preserve addressable results; do not implement either workflow.
-- [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), and [interface as cards](interface-as-cards.md): foundations and design context, not additional completion obligations.
+- [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [interface as cards](interface-as-cards.md), and [interface-card consolidation](interface-cards-consolidation.md): foundations and follow-on ownership, not additional completion obligations.
 
 The boxholder authorized planning on 2026-09-07, after reviewing seven
 storyboards. Implementation was authorized later in the same conversation. The
@@ -147,7 +147,7 @@ have a request generation; an older lookup cannot take over a newer choice.
 | No selection on fresh direct card entry | Resolve from the card once | Stay on the card; show the resolved recipient before enabling Send. |
 | No selection on fresh dashboard/list/tool entry | Resolve root `""` once | Stay on that surface. |
 | Reopen the same browser tab | Restore validated per-tab selected ID before cold-entry inference | Unavailable restored targets require explicit recovery, not silent fallback. |
-| Inspect a background result card | Preserve selected conversation | Open it through the existing card/overlay path. |
+| Inspect a background result card | Preserve selected conversation | Open it through the workspace card path. |
 | Explicit Open conversation on background notice | Select the notice's session | Show that transcript. |
 
 Persist only selected ID/directory and return-presentation metadata per tab and
@@ -891,3 +891,23 @@ covering initial load, focus refetch, invalidation, and Retry with one ordering
 guarantee. Observed nonempty history retires its receipt. A receipt-backed
 selection that cannot recover stays unavailable even during passive browsing;
 it cannot silently fall back to the box's default engine.
+
+### 2026-09-10: interface-card presentation ownership moved to the workspace
+
+The follow-on [interface-card consolidation plan](interface-cards-consolidation.md)
+now owns ordinary card and interface-instrument presentation. Dashboard,
+Settings, Browse, Questions, Landmarks, History, Storage, and Admin are canonical
+workspace card targets. Its implementation retired the production page-content
+fork and generic card preview/conversation overlay described earlier in this
+plan. Those passages remain the historical design baseline, not current route
+or presentation dispositions.
+
+Chat-everywhere continues to own the singleton conversation runtime, recipient
+selection, drafts and send binding, ambient replies and callouts, native
+publication, and the rule that passive attention never changes the recipient.
+The workspace's Show conversation and Show cards controls provide the retained
+mobile presentation. Task-specific source, image, and capture dialogs remain.
+The small read adapter for old `bbxConversationOverlay` browser-history entries
+belongs to consolidation compatibility; new history entries do not write that
+field. None of this closes the physical-phone and product-reconfirmation gates
+above or establishes production deployment.

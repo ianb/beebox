@@ -22,16 +22,18 @@ import { StagingPathError, StagingSessionGoneError, StagingSessionNotOpenError }
 import { M4ASegmentFileCountError, StagingAudioFormatMismatchError, type CaptureAudioFormat } from "./audio-format.js";
 import { readStagingSession, writeStagingSession } from "./staging-manifest-io.js";
 import {
-  stagingBaseDir, stagingSessionDir, isCaptureSession, isBulkSession,
+  stagingBaseDir, stagingSessionDir, isCaptureSession, isBulkSession, isVoiceSession,
   type StagingSession, type StagingSessionState, type StagingSessionKind, type StagingSegment,
   type StagingPhoto, type StagingFile, type StagingBulkItem, type StagingBulkFailedItem,
+  type StagingVoice, type VoiceHqState, type VoiceHandoff, type HqFailure, type VoiceHqResult,
 } from "./staging-schema.js";
 
 export {
   readStagingSession, writeStagingSession, stagingBaseDir, stagingSessionDir,
-  isCaptureSession, isBulkSession,
+  isCaptureSession, isBulkSession, isVoiceSession,
   type StagingSession, type StagingSessionState, type StagingSessionKind, type StagingSegment,
   type StagingPhoto, type StagingFile, type StagingBulkItem, type StagingBulkFailedItem,
+  type StagingVoice, type VoiceHqState, type VoiceHandoff, type HqFailure, type VoiceHqResult,
 };
 
 /**
@@ -67,23 +69,30 @@ export function resolveStagedFile(opts: { boxRoot: string; id: string; filename:
 
 /**
  * Create a staging session. `kind` defaults to `"capture"` (the recorded
- * photo/voice batch); pass `kind: "bulk"` plus an initial `expectedItems`
+ * photo/voice-memo batch); pass `kind: "bulk"` plus an initial `expectedItems`
  * registry for a bulk file-upload batch (`docs/implemented-plans/bulk-file-upload.md`),
  * whose finalize path reads `files` + `expectedItems` rather than the capture
- * media arrays.
+ * media arrays; pass `kind: "voice"` plus `targetSessionId` for a chat voice
+ * recording (`docs/plans/resilient-voice-recording.md`).
+ *
+ * `id` lets a caller supply the session id up front — the voice route's
+ * idempotent client-generated id (a resumed browser must be able to name the
+ * recording it already started before the box confirms it exists). Capture and
+ * bulk sessions keep server-assigned ids and never pass this.
  */
 export async function createStagingSession(opts: {
   boxRoot: string;
   targetSessionId: string | null;
   createdBy: string | null;
   kind?: StagingSessionKind;
+  id?: string;
   expectedItems?: StagingBulkItem[];
   /** Box-relative target-chat context dir (bulk sessions only). */
   contextDir?: string;
 }): Promise<StagingSession> {
   const { boxRoot, targetSessionId, createdBy } = opts;
   const kind = opts.kind ?? "capture";
-  const id = crypto.randomUUID();
+  const id = opts.id ?? crypto.randomUUID();
   await fs.mkdir(stagingSessionDir(boxRoot, id), { recursive: true });
   const now = getBoxTimeISO(boxRoot);
   const session: StagingSession = {
@@ -102,6 +111,14 @@ export async function createStagingSession(opts: {
   if (kind === "bulk") {
     session.expectedItems = opts.expectedItems ?? [];
     if (opts.contextDir !== undefined) session.contextDir = opts.contextDir;
+  }
+  if (kind === "voice") {
+    session.voice = {
+      targetSessionId,
+      startedAt: now,
+      hq: { state: "none" },
+      handoff: { mode: "open" },
+    };
   }
   await writeStagingSession({ boxRoot, session });
   return session;

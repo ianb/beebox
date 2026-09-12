@@ -2,7 +2,8 @@
  * Wraps a rendered document and surfaces a floating "+" near a text
  * selection; clicking it hands the selection (verbatim text + a rough
  * position locator) to `onCapture`. Used in the chat companion pane so the
- * user can attach document text to a chat message.
+ * user can attach document text to a chat message, and over the chat
+ * transcript so they can quote a message back.
  *
  * Geometry (where the "+" sits) lives here and nowhere else: it reads the
  * selection's bounding rect and positions the button with `fixed` so it
@@ -12,7 +13,21 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { extractSelection } from "../lib/selection/position";
+import type { ExtractedSelection } from "../lib/selection/position";
+
+// Mounted capture roots. Captures nest — a card embedded in a chat message
+// sits inside the transcript's capture — and the innermost root containing
+// the selection owns it, so exactly one "+" appears, carrying that source.
+const captureRoots = new WeakSet<Element>();
+
+function ownsSelection(container: Element, node: Node): boolean {
+  let el: Element | null = node instanceof Element ? node : node.parentElement;
+  while (el !== null && el !== container) {
+    if (captureRoots.has(el)) return false;
+    el = el.parentElement;
+  }
+  return el === container;
+}
 
 interface FloatingButton {
   left: number;
@@ -23,13 +38,24 @@ interface FloatingButton {
 
 interface SelectionCaptureProps {
   onCapture: (selection: { text: string; position: string }) => void;
+  /** Computes text + locator: `extractSelection` for documents, `extractTranscriptSelection` for the chat. */
+  extract: (selection: Selection, container: Element) => ExtractedSelection | null;
   children: ReactNode;
   className?: string;
+  /** Forwarded to the wrapper, so the wrapper itself can be the `bbx chat ui` scan boundary. */
+  "data-bbx-scan"?: "exclude";
 }
 
-export function SelectionCapture({ onCapture, children, className }: SelectionCaptureProps) {
+export function SelectionCapture({ onCapture, extract, children, className, "data-bbx-scan": scan }: SelectionCaptureProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [button, setButton] = useState<FloatingButton | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container === null) return;
+    captureRoots.add(container);
+    return () => { captureRoots.delete(container); };
+  }, []);
 
   const refresh = useCallback(() => {
     const container = containerRef.current;
@@ -43,11 +69,11 @@ export function SelectionCapture({ onCapture, children, className }: SelectionCa
       return;
     }
     const range = selection.getRangeAt(0);
-    if (!container.contains(range.commonAncestorContainer)) {
+    if (!ownsSelection(container, range.commonAncestorContainer)) {
       setButton(null);
       return;
     }
-    const extracted = extractSelection(selection, container);
+    const extracted = extract(selection, container);
     if (extracted === null) {
       setButton(null);
       return;
@@ -58,7 +84,7 @@ export function SelectionCapture({ onCapture, children, className }: SelectionCa
       return;
     }
     setButton({ left: rect.right, top: rect.top, text: extracted.text, position: extracted.position });
-  }, []);
+  }, [extract]);
 
   useEffect(() => {
     let frame = 0;
@@ -102,17 +128,18 @@ export function SelectionCapture({ onCapture, children, className }: SelectionCa
     <div
       ref={containerRef}
       className={className}
+      data-bbx-scan={scan}
       // This wrapper carries no semantics of its own — it's instrumentation
       // over arbitrary `children` content, not a widget — so `role="none"`
       // is accurate, not a workaround: it has no accessible role to strip.
       role="none"
-      onMouseUp={scheduleRefresh}
+      onMouseUp={(event) => { event.stopPropagation(); scheduleRefresh(); }}
       onMouseDown={() => setButton(null)}
       // Keyboard equivalents of the mouse handlers above — a keyboard user
       // extending a text selection (Shift+Arrow) fires keyup on the focused
       // descendant, which bubbles here, so this genuinely detects
       // keyboard-driven selections rather than just satisfying the linter.
-      onKeyUp={scheduleRefresh}
+      onKeyUp={(event) => { event.stopPropagation(); scheduleRefresh(); }}
       onKeyDown={() => setButton(null)}
     >
       {children}

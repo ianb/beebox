@@ -3,8 +3,7 @@
  * Shows Claude Code auth status, allowed-user list, Google services, and Telegram.
  */
 
-import { useParams } from "@tanstack/react-router";
-import { href } from "../lib/routing";
+import type { AdminArrivalState } from "../lib/admin-card-state";
 import { ClaudeCodeSection } from "../components/admin/ClaudeCodeSection";
 import { CodexSection } from "../components/admin/CodexSection";
 import { AgentEngineSection } from "../components/admin/AgentEngineSection";
@@ -20,35 +19,32 @@ import { InviteSection } from "../components/admin/InviteSection";
 import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
-import { TextLink } from "../components/ui/TextLink";
 
-export function AdminPage() {
-  const { boxSlug } = useParams({ strict: false });
-
+export function AdminCardBody({ arrival, arrivalReceipt, onArrivalConsumed }: { arrival: AdminArrivalState; arrivalReceipt: string; onArrivalConsumed: () => void }) {
   return (
     <Column overflow="auto" focusable className="h-full">
       <Stack gap="lg" className="max-w-2xl mx-auto py-8 px-4 w-full">
-        <TextLink id="bbx-admin-back" to={href(`/${boxSlug}/dashboard`)}>
-          <Text size="sm">&larr; Back</Text>
-        </TextLink>
-
-        <Text as="h1" size="2xl" weight="bold">Admin</Text>
-
         <Stack gap="lg">
+          <ScopeHeading title="This box" description="Configuration and services whose behavior belongs to the current box." />
           <AgentEngineSection />
+          <GmailFiltersSection />
+          <TelegramSection />
+          <BackupSection />
+          <NotificationsSection />
+          <ScopeHeading title="Host and shared access" description="Accounts, credentials, and network services available from this Bee Box host. Individual controls identify any box-specific setting." />
           <ClaudeCodeSection />
           <CodexSection />
           <AllowedEmailsSection />
           <InviteSection />
-          <GoogleServicesSection />
-          <GmailFiltersSection />
-          <TelegramSection />
+          <GoogleServicesSection arrival={arrival} arrivalReceipt={arrivalReceipt} onArrivalConsumed={onArrivalConsumed} />
           <SecretsSection />
-          <BackupSection />
-          <NotificationsSection />
           <TailscaleSection />
         </Stack>
       </Stack>
     </Column>
   );
+}
+
+function ScopeHeading({ title, description }: { title: string; description: string }) {
+  return <Stack gap="xs"><Text as="h2" size="xl" weight="bold">{title}</Text><Text as="p" tone="muted" size="sm">{description}</Text></Stack>;
 }

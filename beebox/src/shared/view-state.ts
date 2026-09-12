@@ -8,7 +8,7 @@ export type ViewStateValue =
 
 export type ViewState = Record<string, ViewStateValue>;
 
-export class InvalidViewStateError extends TypeError {
+class InvalidViewStateError extends TypeError {
   constructor() {
     super("Authored view state must be a JSON-safe object");
     this.name = "InvalidViewStateError";

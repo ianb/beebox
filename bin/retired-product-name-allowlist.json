@@ -170,7 +170,7 @@
   {
     "path": "site/CLAUDE.md",
     "occurrenceClass": "kebab-name",
-    "expectedCount": 2,
+    "expectedCount": 1,
     "reason": "The site authoring guidance names the former repository only to describe source provenance."
   },
   {

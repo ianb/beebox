@@ -24,22 +24,23 @@ interface ThemedFileCardProps {
   mode: Exclude<FileViewMode, "embed">;
   renderers: FileRenderer[];
   active: FileRenderer;
+  target: ViewTarget;
   hasExplicitView: boolean;
   onSelect: (name: string | null) => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  onFocus: () => void;
   onClose?: (() => void) | undefined;
   onOpenInPanel?: (() => void) | undefined;
   children: ReactNode;
 }
+
 
 function FileSpecificProperties({ data, theme, isCard }: { data: FileData; theme: ReturnType<typeof resolveCardTheme>; isCard: boolean }) {
   if (isCard) return <><CardFacts data={data} /><ThemeSwatchPicker path={data.path} choice={theme.choice} hasOverride={data.frontmatter?.theme !== undefined} /></>;
   return <dl className="mt-4"><dt>Filed at</dt><dd>{data.path}</dd><dt>File type</dt><dd>Markdown</dd></dl>;
 }
 
-function RelatedFileProperties({ data, boxSlug, onNavigate, onClose }: {
-  data: FileData; boxSlug: string | undefined;
+function RelatedFileProperties({ data, target, boxSlug, onNavigate, onClose }: {
+  data: FileData; target: ViewTarget; boxSlug: string | undefined;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   onClose?: (() => void) | undefined;
 }) {
@@ -48,11 +49,12 @@ function RelatedFileProperties({ data, boxSlug, onNavigate, onClose }: {
     {data.type === "landmark" ? <LandmarkSystemThemePicker boxKey={boxSlug ?? ""} path={data.path}
       contextDir={data.path.replace(/^\//, "").split("/").slice(0, -1).join("/")} /> : null}
     <CardMentions path={data.path} onNavigate={onNavigate} />
-    <div className="mt-6"><CardActions path={data.path} onTrashed={onClose} /></div>
+    <div className="mt-6"><CardActions target={target} onTrashed={onClose} vertical="above" /></div>
   </>;
 }
 
-export function ThemedFileCard({ data, mode, renderers, active, hasExplicitView, onSelect, onNavigate, onFocus, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
+export function ThemedFileCard({ data, mode, renderers, active, target, hasExplicitView, onSelect, onNavigate, onClose, onOpenInPanel, children }: ThemedFileCardProps) {
+
   const { boxSlug } = useParams({ strict: false });
   const presentation = useBoxPresentation();
   const isCard = isCardPath(data.path);
@@ -93,11 +95,11 @@ export function ThemedFileCard({ data, mode, renderers, active, hasExplicitView,
         </div>
         {first ? <div className="mt-2"><Button size="sm" intent="ghost" disabled={!hasExplicitView} onClick={() => onSelect(null)}>Use preferred view</Button></div> : null}
       </div>
-      <RelatedFileProperties data={data} boxSlug={boxSlug} onNavigate={onNavigate} onClose={onClose} />
+      <RelatedFileProperties data={data} target={target} boxSlug={boxSlug} onNavigate={onNavigate} onClose={onClose} />
     </>
   );
   return <CardThemeSurface
-    theme={theme} title={title} mode={mode} onFocus={onFocus}
+    theme={theme} title={title} mode={mode}
     properties={properties}
     actions={mode === "chat" || onOpenInPanel ? <CardSurfaceActions mode={mode} path={data.path} onOpenInPanel={onOpenInPanel} /> : null}
     problem={error ? <div className="bbx-card-problem" role="status">Appearance could not be applied: {error}{presentation ? <Button size="sm" intent="ghost" onClick={handlePresentationRetry}>Retry</Button> : null}</div> : null}

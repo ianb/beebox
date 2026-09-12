@@ -2099,6 +2099,13 @@ test1:
       peak: 46151
       added: 0
       turns: 1
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 54129
+      peak: 55717
+      added: 1588
+      turns: 4
   chat-voice-hard-override:
     - date: 2026-07-03T11:26:09.904Z
       boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
@@ -2113,6 +2120,13 @@ test1:
       initial: 43863
       peak: 45489
       added: 1626
+      turns: 4
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 45998
+      peak: 47633
+      added: 1635
       turns: 4
   chat-user-selection-tag:
     - date: 2026-07-03T11:26:09.904Z
@@ -2192,6 +2206,13 @@ test1:
       repoCommit: db3b3c0cba0981e17aed95d8404d7c4e55c287f8
       initial: 46518
       peak: 46518
+      added: 0
+      turns: 1
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 54125
+      peak: 54125
       added: 0
       turns: 1
   narration-callout-on-real-question:
@@ -4351,6 +4372,14 @@ test1:
       peak: 48705
       added: 2926
       turns: 5
+  voice-diarized-parts:
+    - date: 2026-09-11T03:03:17.539Z
+      boxCommit: 68b699d1be3d26476d915c055be161e1d34c49ff
+      repoCommit: b2158c71eb7431fbc0995096ea4fae2a752777c6
+      initial: 54318
+      peak: 54824
+      added: 506
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
@@ -4489,4 +4518,110 @@ interface-cards-audit-_y4mr7vt:
       initial: 45207
       peak: 51777
       added: 6570
+      turns: 13
+cards-audit:
+  interface-cards-addresses:
+    - date: 2026-09-10T23:49:03.027Z
+      boxCommit: 506c91ae909a2e8faa3cf0b1b15297b545a241d7
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46637
+      peak: 50376
+      added: 3739
+      turns: 5
+    - date: 2026-09-10T23:53:35.063Z
+      boxCommit: 617d471f7694fa3e33b7f67f031291c97d665bc8
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46626
+      peak: 50248
+      added: 3622
+      turns: 5
+  interface-cards-browse-state:
+    - date: 2026-09-10T23:49:03.027Z
+      boxCommit: 506c91ae909a2e8faa3cf0b1b15297b545a241d7
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46415
+      peak: 47071
+      added: 656
+      turns: 4
+    - date: 2026-09-10T23:53:35.063Z
+      boxCommit: 617d471f7694fa3e33b7f67f031291c97d665bc8
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46404
+      peak: 52962
+      added: 6558
+      turns: 8
+  interface-cards-history-state:
+    - date: 2026-09-10T23:49:03.027Z
+      boxCommit: 506c91ae909a2e8faa3cf0b1b15297b545a241d7
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46467
+      peak: 55943
+      added: 9476
+      turns: 12
+  interface-cards-attention-recipient:
+    - date: 2026-09-10T23:49:03.027Z
+      boxCommit: 506c91ae909a2e8faa3cf0b1b15297b545a241d7
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46411
+      peak: 50262
+      added: 3851
+      turns: 5
+    - date: 2026-09-10T23:53:35.063Z
+      boxCommit: 617d471f7694fa3e33b7f67f031291c97d665bc8
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46400
+      peak: 52473
+      added: 6073
+      turns: 5
+    - date: 2026-09-10T23:56:33.112Z
+      boxCommit: fdcdddac617eace0af89b00f737977c6e4e8fd0c
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46603
+      peak: 50885
+      added: 4282
+      turns: 5
+  interface-cards-deletion-pressure:
+    - date: 2026-09-10T23:49:03.027Z
+      boxCommit: 506c91ae909a2e8faa3cf0b1b15297b545a241d7
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46440
+      peak: 66603
+      added: 20163
+      turns: 18
+    - date: 2026-09-10T23:53:35.063Z
+      boxCommit: 617d471f7694fa3e33b7f67f031291c97d665bc8
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46429
+      peak: 59469
+      added: 13040
+      turns: 13
+  interface-cards-history-target:
+    - date: 2026-09-10T23:53:35.063Z
+      boxCommit: 617d471f7694fa3e33b7f67f031291c97d665bc8
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46413
+      peak: 49233
+      added: 2820
+      turns: 6
+    - date: 2026-09-10T23:54:54.362Z
+      boxCommit: fdcdddac617eace0af89b00f737977c6e4e8fd0c
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46616
+      peak: 54840
+      added: 8224
+      turns: 10
+  interface-cards-history-defaults:
+    - date: 2026-09-10T23:53:35.063Z
+      boxCommit: 617d471f7694fa3e33b7f67f031291c97d665bc8
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46414
+      peak: 60451
+      added: 14037
+      turns: 10
+    - date: 2026-09-10T23:56:06.789Z
+      boxCommit: fdcdddac617eace0af89b00f737977c6e4e8fd0c
+      repoCommit: bf96522d1c57e0d46aadd8df99ee6cc7495e3140
+      initial: 46617
+      peak: 63565
+      added: 16948
       turns: 13

@@ -27,6 +27,11 @@ export { ChatJobSchema } from "./chat-job.js";
 export { TodoViewSchema } from "./todo-view.js";
 export { GsheetSchema } from "./gsheet.js";
 export { LandmarkSchema } from "./landmark.js";
+export { QuestionsSchema } from "./questions.js";
+export { LandmarksSchema } from "./landmarks.js";
+export { HistorySchema } from "./history.js";
+export { InventorySchema } from "./inventory.js";
+export { AdminSchema } from "./admin.js";
 
 // Re-export individual schema types
 export type { MemoFields, MemoStatusType } from "./memo.js";

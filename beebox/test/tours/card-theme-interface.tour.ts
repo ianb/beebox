@@ -17,6 +17,22 @@ tour(
         document.querySelectorAll(".bbx-interface-browse-panel h2").length === 1;
     })()`);
     await t.expect.custom("card has visible desk, one heading, and no horizontal page overflow", () => framed.trim() === "true");
+    await t.eval(`(() => {
+      const paragraph = document.querySelector(".bbx-interface-browse-panel .bbx-paragraph");
+      if (!paragraph) throw new Error("Browse detail paragraph is missing");
+      paragraph.scrollIntoView({ block: "center", behavior: "instant" });
+      paragraph.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      const range = document.createRange();
+      range.selectNodeContents(paragraph);
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      paragraph.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    })()`);
+    await t.expect.button("Add selection to message");
+    const selectionButtons = await t.eval('document.querySelectorAll("#bbx-selection-add").length');
+    await t.expect.custom("nested Browse detail owns one selection button", () => selectionButtons.trim() === "1");
+    await t.eval("getSelection()?.removeAllRanges()");
     await t.expect.noPageErrors();
   },
 );

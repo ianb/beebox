@@ -6,6 +6,7 @@
  * Split out of server.ts to keep that file under its line budget.
  */
 
+import { secretsStoreIsIsolated } from "../core/secrets/store.js";
 import type { FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { fastifyTRPCPlugin, type CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
@@ -260,13 +261,20 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
         // identity like any other.
         authed: identityIsOpen || user !== null || bearerOk || mobileOk || browseOk,
         isOwner: identityIsOpen || (user !== null && user.email === getOwnerEmail()),
-        // Deliberately NOT folding in open access, and deliberately excluding
-        // `source: "browse"`: the machine-level secret store is shared across
-        // every box on the machine, so neither "this box opted out of the auth
-        // wall" nor "this box lets agent browsing act as its owner" may read as
-        // "the boxholder is here" (`docs/implemented-plans/secret-custody.md`).
+        // Deliberately NOT folding in open access, and excluding
+        // `source: "browse"` ON THE SHARED STORE: the machine-level secret
+        // store holds every box's real keys, so neither "this box opted out of
+        // the auth wall" nor "this box lets agent browsing act as its owner"
+        // may read as "the boxholder is here" there
+        // (`docs/implemented-plans/secret-custody.md`). A box on an ISOLATED
+        // store — every worktree box under the dev router, every doctest — has
+        // nothing of the boxholder's to expose, and refusing browse there only
+        // made the Secrets panel the one owner surface an agent could never
+        // exercise (boxholder, 2026-09-10: "it's a bug if you can't").
         isAuthenticatedOwner:
-          user !== null && identity.source !== "browse" && user.email === getOwnerEmail(),
+          user !== null
+          && (identity.source !== "browse" || secretsStoreIsIsolated())
+          && user.email === getOwnerEmail(),
       };
     },
   };

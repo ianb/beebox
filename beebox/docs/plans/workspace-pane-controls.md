@@ -235,31 +235,28 @@ pushes one entry. Mobile showChat pushes a snapshot with an explicit return
 revision so device Back restores the card. restoreCards consumes that entry with
 Back only when its matching return entry is still current; otherwise it replaces
 the snapshot with the retained card projection. Desktop pane toggles replace.
-Nonparticipating route overlays retain their existing push/Back contract. Back restores the recorded arrangement and existing conversation
-binding. Ignore stale effect completions using snapshot revisions.
+Back restores the recorded arrangement and existing conversation binding.
+Ignore stale effect completions using snapshot revisions. Old browser entries
+with the retired conversation-overlay hint are translated once into workspace
+show-chat state; new entries omit that field.
 
-Participating surfaces: chat, full card/file view routes, and Browse selection
-links. A routed card becomes the workspace's foreground target instead of also
-rendering a duplicate route outlet beside the workspace. As an interim boundary, Browse's directory/list
-keeps its current route: opening a child adopts it into the workspace, while
-browser Back returns to Browse. The intended follow-up is that directories and
-Dashboard open or select tabs, never navigate away from the workspace. Their
-implementation is deferred, not dependent on review queues. Keep pane actions
-based on tab identity and isolate card-path parsing/rendering in the target
-adapter, so directory and Dashboard target kinds can be added without replacing
-the pane state machine. Do not invent synthetic card files or implement a
-general target registry in this change. Comparison of two cards is included;
-a directory or Dashboard tab is not yet included. Non-card Settings/Admin routes retain chat-everywhere's
-existing overlay presentation and do not become workspace panes.
+Current participating surfaces include chat, ordinary cards/files, and all eight
+canonical interface instruments. A routed compatibility entrance becomes the
+workspace's foreground target instead of rendering a duplicate route outlet.
+Dashboard, Settings, Browse, Questions, Landmarks, History, Storage, and Admin
+open or select their canonical cards; Browse keeps directory/detail navigation
+in its card state. Settings and Admin no longer retain a separate page overlay.
+These follow-on dispositions are owned by the
+[interface-card consolidation plan](interface-cards-consolidation.md); the
+earlier interim exclusions in this plan are historical.
 
 **First implementation chunk:** storage parser/migration tests and one adapter
 that restores a workspace without changing the singleton conversation binding.
 Then consolidate link/route/mobile opens through the same `openCard` decision.
-Replace the chat-page-only useCardUrlPersistence owner with the shell workspace
-history adapter. Route useViewNavigate/ViewOverlay card opens, including ambient
-callouts and in-card links, through openCard on participating surfaces. Preserve
-overlays on excluded Settings/Admin routes. Remove competing visibility and URL
-mutation effects as each adapter is replaced.
+The shell workspace history adapter replaced the chat-page-only card URL owner.
+Card opens from ambient callouts and in-card links now use the workspace open
+operation. Consolidation removed the generic ViewOverlay and the excluded
+Settings/Admin presentation while preserving task-specific dialogs.
 
 **Vocabulary lock-ins:** bbxWorkspace is browser history presentation state;
 storage v2 retains existing logical conversation ownership.
@@ -568,7 +565,10 @@ imports require proven local scope; invalid stored data produces a notice.
 The persistent `workspace-panes` tour uses the existing theme-tour content.
 Run it with `bin/tour workspace-panes`; it covers desktop and mobile. State,
 storage, and navigation doctests cover the decision boundaries separately.
-Directory and Dashboard tab implementations remain deferred as requested.
+The follow-on interface-card work added the canonical Dashboard and Browse
+targets, then added Questions, Landmarks, History, Storage, and Admin and removed
+the alternate production page presentation. The pane reducer and retained-root
+model remain the implementation owned by this plan.
 
 Automated checks and the browser tour do not complete the required physical
 iOS WebView acceptance. Card → transcript → card with the native keyboard,

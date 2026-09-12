@@ -1,0 +1,35 @@
+---
+title: Around Bee Box
+summary: Navigation through the public site.
+authorship:
+  people:
+    - name: Ian Bicking
+      role: creator
+      contribution: Chose landmarks as the public site's primary menu and directed its reading sequence.
+  ai:
+    transcription: none
+    drafting: Drafted the current menu labels.
+    editing: Organized the links into the site and elsewhere groups.
+navigation: true
+unlisted: true
+theme: paper
+stock: manila
+chrome:
+  theme: paper
+  stock: cream
+---
+# Around Bee Box
+
+## Start
+
+- [Bee Box](/index.site-page.card)
+- [Install with your agent](/index.site-page.card#install-with-your-agent)
+
+## See it work
+
+- [A morning with the box (draft)](/walkthrough.site-page.card)
+
+## Elsewhere
+
+- [Source on GitHub](https://github.com/ianb/beebox)
+- [Community on Discord](https://discord.gg/FQYn6zyv)

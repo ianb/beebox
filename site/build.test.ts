@@ -8,6 +8,17 @@ import { test } from "node:test";
 import { baseFromBranch, normalizeBase, classifyHref, resolveInternalHref, BasePathError } from "./links.js";
 import { parseSource, renderBody, FrontmatterError } from "./render.js";
 
+const AUTHORSHIP = `authorship:
+  people:
+    - name: Ian Bicking
+      role: author
+      contribution: Directed the card.
+  ai:
+    transcription: none
+    drafting: none
+    editing: none
+`;
+
 // --- base derivation ----------------------------------------------------------
 
 test("baseFromBranch: worktree branch strips prefix; main stays main", () => {
@@ -55,7 +66,7 @@ test("resolveInternalHref: anchors are preserved", () => {
 // --- strict frontmatter (errors name file+line) -------------------------------
 
 test("parseSource: valid frontmatter parses; body follows the fence", () => {
-  const { frontmatter, body } = parseSource("---\ntitle: \"T\"\nsummary: \"S\"\n---\nhello", "content/index.md");
+  const { frontmatter, body } = parseSource(`---\ntitle: "T"\nsummary: "S"\n${AUTHORSHIP}---\nhello`, "content/index.md");
   assert.equal(frontmatter.title, "T");
   assert.equal(frontmatter.summary, "S");
   assert.equal(body, "hello");
@@ -79,7 +90,7 @@ test("parseSource: malformed YAML fails with a line number", () => {
 });
 
 test("parseSource: unknown field is rejected (strict) and named", () => {
-  const src = "---\ntitle: \"T\"\nsummary: \"S\"\nextra: nope\n---\nbody";
+  const src = `---\ntitle: "T"\nsummary: "S"\n${AUTHORSHIP}extra: nope\n---\nbody`;
   assert.throws(() => parseSource(src, "content/x.md"), (e: unknown) => {
     assert.ok(e instanceof FrontmatterError);
     assert.match(e.message, /frontmatter field/);
@@ -88,11 +99,19 @@ test("parseSource: unknown field is rejected (strict) and named", () => {
 });
 
 test("parseSource: missing required field is named", () => {
-  assert.throws(() => parseSource("---\nsummary: \"S\"\n---\nbody", "content/x.md"), (e: unknown) => {
+  assert.throws(() => parseSource(`---\nsummary: "S"\n${AUTHORSHIP}---\nbody`, "content/x.md"), (e: unknown) => {
     assert.ok(e instanceof FrontmatterError);
     assert.match(e.message, /"title"/);
     return true;
   });
+});
+
+test("parseSource: authorship requires people and core AI categories but accepts new AI work", () => {
+  const src = `---\ntitle: "T"\nsummary: "S"\n${AUTHORSHIP}    source-preparation: Prepared source excerpts.\n---\nbody`;
+  const { frontmatter } = parseSource(src, "content/x.md");
+  assert.equal(frontmatter.authorship.ai["source-preparation"], "Prepared source excerpts.");
+  const missingEditing = src.replace("    editing: none\n", "");
+  assert.throws(() => parseSource(missingEditing, "content/x.md"), /authorship\.ai\.editing/);
 });
 
 // --- render: link rewrite + collect (base-path link integrity) ----------------

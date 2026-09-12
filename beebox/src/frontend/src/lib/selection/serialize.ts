@@ -28,8 +28,8 @@
 
 export interface SelectionItem {
   id: number;
-  /** Box-relative source path, absolute (leading "/"). */
-  ref: string;
+  /** Box-relative source path, absolute (leading "/"); null for chat-transcript text. */
+  ref: string | null;
   /** Verbatim rendered text of the selection. */
   text: string;
   /** Freeform locator (see selection-position.ts); may be "". */
@@ -68,9 +68,10 @@ function escapeText(value: string): string {
 }
 
 function renderSelection(selection: SelectionItem, opts: { placement: string | null }): string {
+  const refAttr = selection.ref === null ? "" : ` ref="${escapeAttr(selection.ref)}"`;
   const positionAttr = selection.position === "" ? "" : ` pos="${escapeAttr(selection.position)}"`;
   const placementAttr = opts.placement === null ? "" : ` placement="${escapeAttr(opts.placement)}"`;
-  return `<user-selection ref="${escapeAttr(selection.ref)}"${positionAttr}${placementAttr}>${escapeText(selection.text)}</user-selection>`;
+  return `<user-selection${refAttr}${positionAttr}${placementAttr}>${escapeText(selection.text)}</user-selection>`;
 }
 
 function normalizeWord(word: string): string {

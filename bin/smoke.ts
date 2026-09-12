@@ -76,9 +76,6 @@ import { isFreshGeneration } from "./smoke-probe.js";
 import type { SmokeStepRecord } from "./smoke-lib.js";
 import {
   cardViewRendered,
-  composerDestination,
-  conversationPreservationFailure,
-  conversationSwitchFailure,
   currentPlaceLabel,
   directoryRowCount,
   hasDomId,
@@ -114,7 +111,6 @@ function buildSteps(input: {
   // the second one proves the generation answering it is not the one the first
   // replaced. `undefined` means the restart step did not run.
   let replaced: { before: number | null } | undefined;
-  let selectedDestination: string | undefined;
 
   if (options.restart) {
     steps.push({
@@ -189,9 +185,9 @@ function buildSteps(input: {
   steps.push({
     id: "place-switch",
     name: "selecting a landmark switches the conversation",
-    // The menu listing landmarks is the affordance; changing the selected
-    // conversation is what the affordance is FOR. Keep checking the existing
-    // chat navigation consequence as well as the persistent composer's target.
+    // The menu listing landmarks is the affordance; selecting one changes the
+    // persistent conversation's place. The app bar is its single visible
+    // location signal now that the composer no longer repeats `Send to:`.
     run: async () => {
       // Re-read rather than reuse the previous step's snapshot: the menu starts
       // its landmark and recent-file queries when it opens, and a row arriving
@@ -207,7 +203,6 @@ function buildSteps(input: {
       if (refFor(before, { role: "menuitem", name: target.rawName }) === null) {
         throw new LandmarkRefUnresolvedError({ name: target.rawName, snapshot: before });
       }
-      const destinationBefore = composerDestination(before);
       const urlBefore = await session.getUrl();
       // Click the exact visible label. The menuitem's centre is its full-width
       // child span, which current agent-browser correctly reports as covering
@@ -229,11 +224,6 @@ function buildSteps(input: {
         snapshot: after,
       });
       if (failure !== null) throw failure;
-      const destinationAfter = composerDestination(after);
-      const switchFailure = conversationSwitchFailure(destinationBefore, after);
-      if (switchFailure !== null) throw switchFailure;
-      invariant(destinationAfter !== null, "conversationSwitchFailure accepted a missing destination");
-      selectedDestination = destinationAfter;
     },
   });
 
@@ -246,9 +236,6 @@ function buildSteps(input: {
       if (refFor(snapshot, { role: "region", name: "Browse" }) === null || directoryRowCount(snapshot) === 0) {
         throw new BrowseListEmptyError(snapshot);
       }
-      const destinationFailure = selectedDestination === undefined
-        ? null : conversationPreservationFailure(selectedDestination, snapshot);
-      if (destinationFailure !== null) throw destinationFailure;
     },
   });
 
@@ -269,7 +256,7 @@ function buildSteps(input: {
       invariant(source.trim().startsWith("card:"), "selected Browse row lacks card provenance");
       const expectedPath = source.trim().slice("card:".length);
       await session.clickRef(ref);
-      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('#bbx-browse-open-card')).some(a => decodeURI(new URL(a.href).pathname).endsWith('/card/' + ${JSON.stringify(expectedPath)}))`]);
+      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('#bbx-browse-open-card')).some(a => decodeURI(new URL(a.href).pathname).endsWith('/views/' + ${JSON.stringify(expectedPath)}))`]);
       await session.waitForReady();
       const snapshot = await session.snapshot();
       const url = await session.getUrl();
@@ -281,9 +268,6 @@ function buildSteps(input: {
       if (!cardViewRendered(detail)) {
         throw new CardContentMissingError({ name: row.name, snapshot });
       }
-      const destinationFailure = selectedDestination === undefined
-        ? null : conversationPreservationFailure(selectedDestination, snapshot);
-      if (destinationFailure !== null) throw destinationFailure;
     },
   });
 

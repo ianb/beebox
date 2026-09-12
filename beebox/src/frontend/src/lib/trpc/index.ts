@@ -1,6 +1,6 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { createTRPCClient, createWSClient, httpBatchStreamLink, retryLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
-import type { inferRouterOutputs } from "@trpc/server";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
 import { getApiBase, getWebSocketUrl, withBase } from "../../api.js";
 import { getMobileAuthToken, isMobileAuthenticated, refreshMobileSession, withMobileAuth } from "../mobile-auth";
@@ -11,6 +11,7 @@ export const trpc = createTRPCReact<AppRouter>();
 
 /** Inferred output types from the tRPC router */
 export type RouterOutput = inferRouterOutputs<AppRouter>;
+export type RouterInput = inferRouterInputs<AppRouter>;
 
 /**
  * What a 401 means here, and why it no longer takes the page away.
@@ -165,7 +166,11 @@ function buildTrpcLink(): TRPCLink<AppRouter> {
     true: wsLink({ client: getWsClient() }),
     false: [
       retryLink({
-        retry: ({ op, attempts, error }) => shouldRetryOperation({ type: op.type, attempts, error }),
+        // `op.context` is untyped at the link boundary (`Record<string, unknown>`
+        // with `unknown` values) — a bracket read plus an `=== true` check is
+        // the safe way to pull the caller's opt-in flag off it (`./transient.ts`).
+        retry: ({ op, attempts, error }) =>
+          shouldRetryOperation({ type: op.type, attempts, error, idempotent: op.context["idempotent"] === true }),
         retryDelayMs,
       }),
       splitLink({

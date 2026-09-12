@@ -18,7 +18,6 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { EventBus } from "../../core/event-bus.js";
 import {
-  createStagingSession,
   readStagingSession,
   sealStagingSession,
   listStagingSessions,
@@ -36,6 +35,9 @@ import { sweepAbandonedCaptures } from "../../core/capture/sweep.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js";
 import { getChatRuntime, type ChatRuntime } from "../chat-runtime.js";
 import { handleCaptureUpload } from "./capture-upload.js";
+import { handleCreateCaptureSession } from "./capture-create.js";
+import { handleVoiceFinalize } from "./capture-finalize-voice.js";
+import { scheduleVoiceSweep } from "./voice-lifecycle.js";
 
 /** How much awake time between abandonment sweeps (Track 5). */
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
@@ -101,10 +103,6 @@ interface RegisterCaptureRoutesOptions {
   eventBus: EventBus;
 }
 
-const CAPTURE_CAPABILITIES = {
-  acceptedAudioFormats: ["webm-opus", "m4a-aac"],
-  acceptedUploadEncodings: ["raw-body-v1"],
-} as const;
 const ResumableQuerySchema = z.object({
   targetSessionId: z.string().nullable().optional(),
   clientSessionId: z.string().nullable().optional(),
@@ -121,30 +119,10 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     );
   }
 
-  // POST /api/capture/sessions — create a new staging session.
-  server.post<{ Body: { targetSessionId?: string | null } | undefined }>(
+  // POST /api/capture/sessions — create a new staging session (capture or voice).
+  server.post<{ Body: unknown }>(
     "/api/capture/sessions",
-    async (request, reply) => {
-      const owner = await resolveCaptureRequestOwner({ boxRoot, request });
-      if (owner.status === "ownerless-mobile") {
-        return reply.status(403).send({
-          error: "This paired device predates mobile identity. Re-pair it before using Capture.",
-        });
-      }
-      if (owner.status === "unauthenticated") {
-        return reply.status(401).send({ error: "Not authenticated" });
-      }
-      if (owner.status === "auth-store-unavailable") {
-        return reply.status(503).send({ error: "Authentication temporarily unavailable" });
-      }
-      const targetSessionId = request.body?.targetSessionId ?? null;
-      const session = await createStagingSession({ boxRoot, targetSessionId, createdBy: owner.email });
-      return {
-        sessionId: session.id,
-        startedAt: session.createdAt,
-        capabilities: CAPTURE_CAPABILITIES,
-      };
-    },
+    async (request, reply) => handleCreateCaptureSession({ boxRoot, request, reply }),
   );
 
   server.get<{
@@ -224,6 +202,10 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
   // the background preparation worker (Track 3), returning immediately. The
   // worker writes + commits the capture document under the target chat's
   // `tmp-capture/`, then delivers a `<capture>` message.
+  //
+  // A voice session (`docs/plans/resilient-voice-recording.md`) branches to
+  // `handleVoiceFinalize` instead: contiguity check, seal, and (if `hq` was
+  // requested) fire the HQ job rather than capture preparation.
   server.post<{ Params: { id: string } }>(
     "/api/capture/sessions/:id/finalize",
     async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
@@ -236,6 +218,10 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
       });
       if (authorization.status === "rejected") {
         return reply.status(authorization.statusCode).send({ error: authorization.error });
+      }
+
+      if (session.kind === "voice") {
+        return handleVoiceFinalize({ boxRoot, session, request, reply, eventBus });
       }
 
       const runtime = getChatRuntime(boxRoot);
@@ -281,8 +267,10 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     });
 
     const cancelSweep = scheduleAbandonmentSweep({ boxRoot, eventBus, runtime });
+    const cancelVoiceSweep = scheduleVoiceSweep({ boxRoot });
     server.addHook("onClose", async () => {
       cancelSweep();
+      cancelVoiceSweep();
     });
   } else {
     console.warn("[capture] Chat runtime not ready; skipping staging resume scan + sweep");

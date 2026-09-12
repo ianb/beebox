@@ -1,16 +1,21 @@
 # site/
 
-The generated public front-door site for beebox. A spare static site
-built from `site/cards/*.card` to gitignored `site/dist/`, deployed to GitHub
-Pages and viewable on the dev router at `/<worktree>/site/`.
+The generated public front-door site for Bee Box. A static site built from
+`site/cards/` to gitignored `site/dist/`, viewable on the dev router at
+`/<worktree>/site/`. Its paper cards and system chrome follow the app.
 
-**Cards are the native source format.** A page is a callback-box card
+Card paths, attachment parents, theme metadata, authored continuations and
+the static navigation contract are documented in [card-authoring.md](card-authoring.md).
+That document describes the current implementation; the earlier fisheye
+experiments below remain supported inside card bodies.
+
+**Cards are the native source format.** A page is a Bee Box card
 (`<slug>.site-page.card` — YAML frontmatter + markdown body, type carried by
-the filename) in exactly the shape a box authors it, so a page moves box → repo
-as a verbatim file copy. There is no importer and no conversion step; the box →
-repo transfer is a plain file copy today, and *where* these cards should live
-long-term (repo, box export, something else) is an open question — see the
-"Direction shift (2026-08-19)" section of the plan.
+the filename). The repository is canonical; a local box may hold private
+editorial work and expose only selected cards under `_publish/public-site/`.
+`box-export.ts` validates that selected graph and copies it into `site/cards/`,
+mapping the box-only `site-doc` suffix to the public `doc` suffix. See the
+workbench workflow in [card-authoring.md](card-authoring.md).
 
 - Principles (settled with the boxholder): `issues/features/2026-07-20-public-site.md`
 - Full plan / tracks: `../beebox/docs/plans/public-site.md`
@@ -23,27 +28,28 @@ external requests at view time** (fonts inlined via a system stack, no CDNs, no
 remote assets — the page is CSP-clean and viewable offline). The output in
 `dist/` is the whole product; the router and Pages both just serve those bytes.
 
-## Human prose is the boxholder's words only
+## Authorship is explicit
 
-Agents never fill in his voice. Any human-facing prose an agent writes is a
-**marked placeholder** (a visible bracketed editorial note, impossible to
-mistake for him) that his real words replace later. Structure/scaffolding by
-agent is fine; words are not. This is enforced by keeping placeholders marked,
-not hoped for.
+Never present agent-written prose as the boxholder's voice. Every published
+page card carries a person-centered `authorship` account and explicit AI
+contribution categories. Agent-drafted informational prose may publish when
+that contribution is described there; prose intended to become Ian's own words
+stays a visible bracketed placeholder until he replaces it.
 
-## Repo is private today
+## Deployment
 
-Pages cannot publish until the repo is public AND Settings → Pages → Source is
-switched to "GitHub Actions" — a manual boxholder step tracked in
-`../issues/docs-and-chores/2026-07-21-pages-site-go-live.md`. Until then the dev
-router route is the only live view. The Pages workflow
-(`../.github/workflows/pages.yml`) is landed but inert.
+The public site's deployment was configured separately. A local build or
+worktree preview does not publish it; do not conflate browser verification,
+committing, landing, and deployment. This package produces static artifacts
+and needs no box or application server to serve them.
 
 ## Commands
 
 ```bash
 pnpm --dir site build                    # base derived from the git branch (router view)
 pnpm --dir site build --base /beebox/   # what the Pages workflow runs
+pnpm --dir site box-export --box <path> # dry-run selected workbench cards
+pnpm --dir site box-export --box <path> --apply
 pnpm --dir site lint                     # eslint (roots: ["."] — sources at package root)
 pnpm --dir site typecheck                # tsc --noEmit
 pnpm --dir site test                     # node --test over *.test.ts
@@ -65,15 +71,21 @@ writes the input manifest last (so a partial build never masks staleness).
 ## Layout
 
 - `build.ts` — CLI entry: reads the page cards, writes HTML + `.md` twins +
-  `llms.txt`, link-checks, resolves the base path.
+  `llms.txt`, link-checks, resolves the base path. Its parameterized
+  `buildSite()` core also validates temporary workbench exports.
+- `box-export.ts` — fail-closed box-workbench export. Reads only
+  `<box>/_publish/public-site/`; dry-runs by default; maps `site-doc` to `doc`;
+  validates with `buildSite()`; `--apply` writes additions and updates but
+  never deletes, commits, pushes, or deploys.
 - `render.ts` — the local Markdoc pipeline + strict (zod) frontmatter parse +
-  the HTML shell. Deliberately does NOT import `workstreams-app/src/router/router-docs.ts`, whose
+  markdown rendering. `workspace.ts` supplies the card shell and
+  `navigation-script.ts` its optional browser navigation. Deliberately does NOT import `workstreams-app/src/router/router-docs.ts`, whose
   router/runtime dependencies do not belong in the static-site build; this
   package declares `@markdoc/markdoc` itself. Every body goes through Markdoc's
   `validate` before transform: a malformed tag is otherwise dropped *silently*,
   so this pass is what makes a mistyped `{% aside ref … %}` a build failure
   instead of a paragraph that quietly disappeared.
-- `cards.ts` — enumerates `cards/`, split by type. Fail-closed: a `.card` of a
+- `cards.ts` — enumerates `cards/` and `.attach/` directories, split by type. Fail-closed: a `.card` of a
   type the site doesn't build, or a stray non-card file, is a named error, never
   a silently unpublished page.
 - `asides.ts` — the `site-aside` registry, the `{% aside ref="slug" /%}`

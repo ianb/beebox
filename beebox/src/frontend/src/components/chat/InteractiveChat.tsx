@@ -12,7 +12,7 @@ import { invariant } from "@shared/invariant";
  * replaces the transcript without discarding the draft or microphone.
  */
 
-import { useState, useRef, useCallback, useMemo, type ReactNode } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, type ReactNode } from "react";
 import { createAudioOverlayStore } from "./audio-overlay-store";
 // search params read via window.location — avoids coupling to route definition
 import { useConversationMachine } from "./conversation/use-conversation-machine";
@@ -40,6 +40,7 @@ import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
 import { useCaptureBubbles } from "./useCaptureBubbles";
 import { CaptureOverlay } from "../capture/CaptureOverlay";
+import { captureModeForRequest } from "../../lib/capture-intent";
 import { useScreenshotRequests } from "./screenshot-request-handler";
 import { useNativeBridges } from "./use-native-bridge";
 import { useWorking } from "../DocumentTitle";
@@ -81,9 +82,6 @@ interface InteractiveChatProps {
   conversationSelection?: ConversationSelection;
   attention?: AttentionSnapshot;
   transcriptVisible?: boolean;
-  routeContent?: ReactNode;
-  onShowConversation?: () => void;
-  onHideConversation?: () => void;
   ambientRegion?: ReactNode;
   selectionNotice?: ReactNode;
   /** Either an existing session id or `"new"` for a fresh conversation. */
@@ -109,13 +107,11 @@ interface InteractiveChatProps {
    * Conversation-only mode for native shells. The page remains a full chat
    * event client, but the web composer and mic controls are suppressed.
    */
-  embedded?: boolean;
   /** Preserve web chrome while suppressing input for a native shell. */
   nativeComposer?: boolean;
   /**
-   * Open capture mode immediately on mount — the `/capture` deep link
-   * (`?capture=1`) redirects here. Consumed once via initial state; the mode is
-   * a normal user toggle afterward.
+   * Open capture mode for each `/capture` deep-link request. The shell consumes
+   * `?capture=1`; a later request must still work while this runtime is retained.
    */
   openCaptureOnMount?: boolean;
   /**
@@ -168,12 +164,15 @@ function useChatFrameState(openCaptureOnMount: boolean | undefined) {
   // it lives in root state; the overlay's recording-timer ticks stay in its own
   // subtree. Seeded from the `?capture=1` deep link, consumed once.
   const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
+  useEffect(() => {
+    if (openCaptureOnMount === true) setCaptureMode((current) => captureModeForRequest(current, true));
+  }, [openCaptureOnMount]);
   return { loadingOlder, setLoadingOlder, sendSignal, bumpSendSignal, debugView, setDebugView, showDebugLog, setShowDebugLog, typingMode, setTypingMode,
     typingLocked, setTypingLocked, captureMode, setCaptureMode };
 }
 
-export function InteractiveChat({ sessionInput, contextDir, startEngine, startModel, emissionStore, embedded, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, routeContent, onShowConversation, onHideConversation, ambientRegion, selectionNotice }: InteractiveChatProps) {
-  const usesNativeComposer = nativeComposer === true; const usesNativeShell = embedded === true || usesNativeComposer;
+export function InteractiveChat({ sessionInput, contextDir, startEngine, startModel, emissionStore, nativeComposer, openCaptureOnMount, initial, sessionLabel, onSessionAssignment, conversationTarget, conversationSelection, attention, transcriptVisible, ambientRegion, selectionNotice }: InteractiveChatProps) {
+  const usesNativeComposer = nativeComposer === true; const usesNativeShell = usesNativeComposer;
   const { boxSlug } = useParams({ strict: false });
   const { snapshot, send, pool, target, recoveryNotice } = useConversationMachine({
     boxSlug: boxSlug ?? "default", target: conversationTarget,
@@ -298,8 +297,7 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
       <InteractiveChatBody
       conversationKey={logicalConversation}
       sendDisabledReason={sendDisabledReasonFor(conversationSelection)}
-      transcriptVisible={transcriptVisible} routeContent={routeContent}
-      onShowConversation={onShowConversation} onHideConversation={onHideConversation}
+      transcriptVisible={transcriptVisible}
       ambientRegion={ambientRegion} selectionNotice={<>{selectionNotice}{recoveryNotice !== null && <div role="alert"><Text size="sm" tone="danger">{recoveryNotice}</Text></div>}</>} failedRegion={failedRegion}
       tabs={tabs}
       model={model}
@@ -342,7 +340,6 @@ export function InteractiveChat({ sessionInput, contextDir, startEngine, startMo
       onVoiceSegmentSend={sendStopSend}
       send={send}
       reportCardActivity={cardSend.report}
-      embedded={embedded === true}
       nativeComposer={usesNativeComposer}
       captureBubbles={captureBubbleList} captureVerbs={captureVerbs}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}

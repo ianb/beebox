@@ -13,7 +13,6 @@
  * identity that depends on what else is on screen.
  */
 
-import { countGraphemes } from "@shared/graphemes";
 import type { CardSymbolData } from "@shared/card-symbol";
 
 /**
@@ -52,7 +51,7 @@ function firstGraphemes(value: string, count: number): string {
  * and an author who wrote two of them meant them to differ. Image marks are
  * keyed too — `src` is only a path, so two cards can name the same picture.
  */
-export function markKey(symbol: CardSymbolData | null): string | null {
+function markKey(symbol: CardSymbolData | null): string | null {
   const src = symbol?.src?.trim();
   if (src !== undefined && src !== "") return `src:${src}`;
   const glyph = symbol?.glyph?.trim();
@@ -88,9 +87,4 @@ export function pinnedFace(input: {
   if (key === null) return { mark: null, abbreviation: abbreviateTitle(title) };
   if (!ambiguous.has(key)) return { mark: symbol, abbreviation: null };
   return { mark: symbol, abbreviation: abbreviateTitle(title) };
-}
-
-/** Whether a glyph is short enough to sit beside an abbreviation without crowding it. */
-export function isCompactGlyph(glyph: string): boolean {
-  return countGraphemes(glyph) <= 2;
 }

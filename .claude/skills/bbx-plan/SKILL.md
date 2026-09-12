@@ -38,8 +38,9 @@ the artifact, and exploratory spikes (spike first; plan if it survives).
 **Where the work happens.** Big plans run in a worktree; commit freely there.
 The plan completes, then it ships as one piece — and **only when the boxholder
 says so**. Committing chunks is normal; merging a partial plan because "the
-first part feels done" is the violation. Long multi-track plans are fine and
-often right; execute them serially in dependency order, don't compress them.
+first part feels done" is the violation. Long multi-track plans are fine when
+their budget says so (see *Circuit breaker*); execute them serially in
+dependency order, don't compress them.
 
 ## The discipline
 
@@ -66,6 +67,41 @@ writing and when reviewing.
   the code: "searched for X, found nothing" is information; write it down.
 - **Open questions live outside the first chunk.** A question inside the first
   implementation chunk is a missing decision — settle it in Direction.
+
+## Circuit breaker
+
+A plan is sized against the problem that prompted it, and work stops when it
+outgrows that size. Stopping, stepping back to a smaller fix, or reverting are
+normal outcomes, not failures.
+
+**Set the budget while writing.** The template's *Smallest fix and budget*
+section names the smallest change that fixes the problem as reported, and
+this plan's budget: tracks, subprojects, and estimated lines of source and of
+tests. Some plans exceed ~3× the smallest fix. Others add a subproject,
+protocol, or vocabulary that the request did not ask for. Either kind goes to
+the boxholder as a choice between the two before you write the rest.
+
+**During implementation it trips when any of these holds:**
+- the diff passes 1.5× the budgeted lines, or reaches a subproject or track
+  the budget did not list;
+- a state, protocol, or subsystem appears that the plan did not name;
+- the same mechanism takes a second fix-and-review round;
+- the plan is edited a third time to carry implementation findings forward;
+- the boxholder asks why it is so big.
+
+**When it trips:**
+1. Stop launching work and stop committing.
+2. Write a short breaker report in the plan: what was asked, what is built,
+   size against budget, what drove the growth.
+3. Run a scope review with the other model family (`cross-model`, challenge
+   mode). It classifies each built piece against the boxholder's own words as
+   required, justified-but-optional, or scope creep, and names the smallest
+   version that still meets the request.
+4. Give the boxholder the options: stop and revert, step back to the smallest
+   fix, salvage the required core, or continue under a new budget. Say what
+   each option keeps and what it loses.
+
+Resume only on their choice, and record the new budget in the plan.
 
 ## Reviewing an existing plan
 

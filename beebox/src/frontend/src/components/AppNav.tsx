@@ -35,7 +35,6 @@ import { Avatar } from "./ui/Avatar";
 import { href } from "../lib/routing";
 import { withBase } from "../api";
 import { PlacePill } from "./PlacePill";
-import { BackToChatChip } from "./BackToChatChip";
 import { AppBarChipSlot, useAppBarPublishedPlace } from "./app-bar-chrome";
 import { placeLabel } from "../lib/place-label";
 
@@ -47,8 +46,9 @@ import { placeLabel } from "../lib/place-label";
 function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { user: CurrentUser | null; boxSlug: string; onToggleDebugLog: () => void; onToggleSourceView: () => void }) {
   const location = useRouterState({ select: (s) => s.location });
   const base = `/${boxSlug}`;
-  const isOnSettings = location.pathname.startsWith(`${base}/views/${SYSTEM_CARD_PATHS.settings}`) || workspaceRouteTarget({ pathname: location.pathname, searchStr: location.searchStr, search: location.search })?.path === SYSTEM_CARD_PATHS.settings;
-  const isOnAdmin = location.pathname === `${base}/admin`;
+  const activePath = workspaceRouteTarget({ pathname: location.pathname, searchStr: location.searchStr, search: location.search })?.path;
+  const isOnSettings = activePath === SYSTEM_CARD_PATHS.settings;
+  const isOnAdmin = activePath === SYSTEM_CARD_PATHS.admin;
 
   return (
     <Dropdown
@@ -80,7 +80,7 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
         </div>
       ) : null}
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
-      <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/admin`)} active={isOnAdmin}>Admin</MenuItem>
+      <MenuItem id="bbx-profile-menu-admin" to={href(`${base}/views/${SYSTEM_CARD_PATHS.admin}`)} active={isOnAdmin}>Admin</MenuItem>
       <MenuDivider />
       <MenuItem id="bbx-profile-menu-source-view" onClick={onToggleSourceView}>Source View</MenuItem>
       <MenuItem id="bbx-profile-menu-debug-log" onClick={onToggleDebugLog}>Debug Log</MenuItem>
@@ -139,7 +139,6 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
     <nav aria-label="Primary" className="bbx-app-nav bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
       <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 text-sm">
         <PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} place={place} />
-        <BackToChatChip boxSlug={boxSlug ?? ""} onChatPage={location.pathname === `${base}/chat`} />
         <div className="ml-auto flex items-center gap-2 shrink-0">
           {/* Chat's session + voice chips portal in here (Track C2). */}
           <AppBarChipSlot />

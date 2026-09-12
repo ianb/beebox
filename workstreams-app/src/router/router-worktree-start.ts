@@ -24,6 +24,7 @@ import {
 } from "./router-effects.js";
 import {
   browseDirsFor,
+  isolatedSecretsFileFor,
   killChildren,
   stopDashboardCmd,
   touch,
@@ -78,9 +79,11 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
     effects.getPort(),
   ]);
   const { socketDir, profileDir } = browseDirsFor(state, name);
+  const isolatedSecretsFile = isolatedSecretsFileFor(state.config.browseDir, name);
   await Promise.all([
     fs.mkdir(socketDir, { recursive: true }),
     fs.mkdir(profileDir, { recursive: true }),
+    ...(isolatedSecretsFile === undefined ? [] : [fs.mkdir(path.dirname(isolatedSecretsFile), { recursive: true })]),
   ]);
 
   const baseUrl = `/${name}/`;
@@ -102,7 +105,16 @@ async function prepareStart(state: CoreState, handle: WorktreeHandle): Promise<S
     PORT: String(backendPort),
     BBX_DEV_SURFACES: "1",
     NODE_OPTIONS: nodeOptions,
+    // A worktree's box must never touch the boxholder's real secret store:
+    // its test keys are its own, its Secrets panel is drivable by an agent,
+    // and a bug there cannot cost a real credential. `main` IS the real
+    // deployment surface on this machine and keeps the default store.
+    ...(isolatedSecretsFile !== undefined && { BBX_SECRETS_FILE: isolatedSecretsFile, BBX_SECRETS_STORE_ISOLATED: "1" }),
   };
+  // `main` may inherit an override path from the shell or `.env` — that is
+  // its operator's store to use, but never a throwaway one: the isolation
+  // assertion is the router's to make, and it makes it only for worktrees.
+  if (isolatedSecretsFile === undefined) delete childEnv.BBX_SECRETS_STORE_ISOLATED;
   const browseEnv: NodeJS.ProcessEnv = {
     ...process.env,
     AGENT_BROWSER_SOCKET_DIR: socketDir,

@@ -14,26 +14,19 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { href, toSearch } from "./lib/routing";
 import { parseViewUrl, viewStateSearchValue } from "./lib/view-url";
 import { legacyBrowseTarget } from "./lib/browse-card-state";
-import { systemCardShellSearch, withoutShellParams } from "./lib/system-card-navigation";
+import { legacyAdminRedirect, legacyCaptureRedirect, legacyCardRedirect, legacySystemCardRedirect, systemCardShellSearch, withoutShellParams } from "./lib/system-card-navigation";
 import { trpcClient } from "./lib/trpc";
 import { ChatPage } from "./pages/ChatPage";
-import { QuestionsPage } from "./pages/QuestionsPage";
-import { HistoryPage } from "./pages/HistoryPage";
-import { CapturePage } from "./pages/capture/CapturePage";
-import { AdminPage } from "./pages/AdminPage";
-import { AppLayout, BoxRedirect, RootLayout } from "./app-shell";
+import { BoxRedirect, BoxValidationLayout, DevHarnessLayout, ProductLayout, RootLayout } from "./app-shell";
 import { RouteError } from "./components/RouteError";
 import { LoginPage } from "./pages/login/LoginPage";
 import { SetupPage } from "./pages/login/SetupPage";
-import { CardViewPage } from "./pages/card/CardViewPage";
-import { ViewPage } from "./pages/ViewPage";
-import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
-import { ChatsPage } from "./pages/chats/ChatsPage";
 import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
 import { ComposerStatesPage } from "./pages/dev/ComposerStatesPage";
 import { CaptureModePage } from "./pages/dev/CaptureModeHarness";
 import { ChatScrollPage } from "./pages/dev/ChatScrollHarness";
-import { InventoryPage } from "./pages/inventory/InventoryPage";
+import { historyLookupFailureSearch, historyViewRedirectSearch, legacyHistoryState, normalizeHistoryViewRouteTarget } from "./components/history/history-card-state";
+import { DEV_HARNESS_PATHS } from "./lib/box-route-layout";
 
 // --- Root route ---
 
@@ -80,7 +73,21 @@ const boxLayoutRoute = createRoute({
   staticData: { title: null },
   getParentRoute: () => rootRoute,
   path: "/$boxSlug",
-  component: AppLayout,
+  component: BoxValidationLayout,
+});
+
+const productLayoutRoute = createRoute({
+  staticData: { title: null },
+  getParentRoute: () => boxLayoutRoute,
+  id: "product",
+  component: ProductLayout,
+});
+
+const devHarnessLayoutRoute = createRoute({
+  staticData: { title: null },
+  getParentRoute: () => boxLayoutRoute,
+  id: "dev-harness",
+  component: DevHarnessLayout,
 });
 
 // --- Box child routes ---
@@ -92,7 +99,7 @@ const boxLayoutRoute = createRoute({
 // navigate away from itself.
 const boxIndexRoute = createRoute({
   staticData: { title: null },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/",
   beforeLoad: ({ params }) => {
     throw redirect({ to: "/$boxSlug/chat", params: { boxSlug: params.boxSlug } });
@@ -101,7 +108,7 @@ const boxIndexRoute = createRoute({
 
 const dashboardRoute = createRoute({
   staticData: { title: "Dashboard" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/dashboard",
   beforeLoad: ({ params, location }) => {
     throw redirect({ to: href(`/${params.boxSlug}/views/${SYSTEM_CARD_PATHS.dashboard}`), search: toSearch(systemCardShellSearch(location.search)), state: location.state, replace: true });
@@ -110,14 +117,16 @@ const dashboardRoute = createRoute({
 
 const inventoryRoute = createRoute({
   staticData: { title: "Storage" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/inventory",
-  component: InventoryPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect(legacySystemCardRedirect({ boxSlug: params.boxSlug, type: "inventory", search: location.search, state: location.state }));
+  },
 });
 
 const chatRoute = createRoute({
   staticData: { title: "Chat" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/chat",
   component: ChatPage,
   validateSearch: z.object({
@@ -141,59 +150,61 @@ const chatRoute = createRoute({
 
 const questionsRoute = createRoute({
   staticData: { title: "Questions" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/questions",
-  component: QuestionsPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect(legacySystemCardRedirect({ boxSlug: params.boxSlug, type: "questions", search: location.search, state: location.state }));
+  },
 });
 
 const browseRoute = createRoute({
   staticData: { title: "Browse" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/browse/$",
   beforeLoad: async ({ params, location }) => {
-    const target = await legacyBrowseTarget(withoutShellParams(parseViewUrl(`${params._splat ?? ""}${location.searchStr}`)),
-      async (path) => (await trpcClient.files.kind.query({ path })).kind);
+    const target = await legacyBrowseTarget(withoutShellParams(parseViewUrl(`${params._splat ?? ""}${location.searchStr}`)), {
+      lookupKind: async (path) => (await trpcClient.files.kind.query({ path })).kind,
+      // A bare legacy URL is ambiguous after the path disappears. Treat it as
+      // a file so the moved-path recovery requested by that URL can run.
+      missingKind: "file",
+    });
     throw redirect({ to: href(`/${params.boxSlug}/views/${target.path}`),
       search: toSearch({ ...systemCardShellSearch(location.search), viewState: viewStateSearchValue(target.viewState) }),
       state: location.state, replace: true });
   },
 });
 
-const historySearchSchema = z.object({
-  connector: z.array(z.string()).optional(),
-  workflow: z.array(z.string()).optional(),
-  touchpoint: z.boolean().optional(),
-  feedback: z.boolean().optional(),
-  session: z.string().optional(),
-  path: z.string().optional(),
-});
-
 const historyRoute = createRoute({
   staticData: { title: "History" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/history",
-  component: HistoryPage,
-  validateSearch: historySearchSchema,
+  beforeLoad: ({ params, location }) => {
+    throw redirect({ to: href(`/${params.boxSlug}/views/${SYSTEM_CARD_PATHS.history}`), search: toSearch({ nativeComposer: nativeComposerFrom(location.search), viewState: legacyHistoryState(location.search) }), state: location.state, replace: true });
+  },
 });
 
 const historyDetailRoute = createRoute({
   staticData: { title: "History" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/history/$hash",
-  component: HistoryPage,
-  validateSearch: historySearchSchema,
+  beforeLoad: ({ params, location }) => {
+    throw redirect({ to: href(`/${params.boxSlug}/views/${SYSTEM_CARD_PATHS.history}`), search: toSearch({ nativeComposer: nativeComposerFrom(location.search), viewState: legacyHistoryState(location.search, { commit: params.hash }) }), state: location.state, replace: true });
+  },
 });
 
 const captureRoute = createRoute({
   staticData: { title: "Capture" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/capture",
-  component: CapturePage,
+  beforeLoad: ({ params, location }) => {
+    const target = legacyCaptureRedirect({ boxSlug: params.boxSlug, search: location.search, state: location.state });
+    throw redirect({ ...target, to: href(`/${params.boxSlug}/chat`), search: toSearch(target.search) });
+  },
 });
 
 const settingsRoute = createRoute({
   staticData: { title: "Settings" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/settings",
   beforeLoad: ({ params, location }) => {
     throw redirect({ to: href(`/${params.boxSlug}/views/${SYSTEM_CARD_PATHS.settings}`), search: toSearch(systemCardShellSearch(location.search)), state: location.state, replace: true });
@@ -202,80 +213,103 @@ const settingsRoute = createRoute({
 
 const adminRoute = createRoute({
   staticData: { title: "Admin" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/admin",
-  component: AdminPage,
+  beforeLoad: ({ params, location }) => {
+    const target = legacyAdminRedirect({ boxSlug: params.boxSlug, search: location.search, state: location.state });
+    throw redirect({ ...target, to: href(`/${params.boxSlug}/views/${SYSTEM_CARD_PATHS.admin}`), search: toSearch(target.search) });
+  },
   validateSearch: z.object({
     google: z.string().optional(),
     message: z.string().optional(),
-    code: z.string().optional(),
+    reconnect: z.string().optional(),
   }),
 });
 
 const cardRoute = createRoute({
-  staticData: { title: "Card" },
-  getParentRoute: () => boxLayoutRoute,
+  staticData: { title: null },
+  getParentRoute: () => productLayoutRoute,
   path: "/card/$",
-  component: CardViewPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect(legacyCardRedirect({
+      boxSlug: params.boxSlug,
+      cardPath: params._splat ?? "",
+      search: location.search,
+      state: location.state,
+    }));
+  },
 });
 
 const viewRoute = createRoute({
   staticData: { title: "Card" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/views/$",
-  component: ViewPage,
+  beforeLoad: async ({ params, location }) => {
+    const target = parseViewUrl(`${params._splat ?? ""}${location.searchStr}`);
+    let normalized;
+    try { normalized = await normalizeHistoryViewRouteTarget(target, path => trpcClient.card.get.query({ path })); }
+    catch (_error) {
+      throw redirect({ to: href(`/${params.boxSlug}/chat`), search: toSearch(historyLookupFailureSearch(target, location.search)), state: location.state, replace: true });
+    }
+    if (normalized === null) return;
+    throw redirect({ to: href(`/${params.boxSlug}/views/${normalized.path}`), search: toSearch(historyViewRedirectSearch(normalized, location.search)), state: location.state, replace: true });
+  },
 });
 
 const landmarksRoute = createRoute({
   staticData: { title: "Landmarks" },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/landmarks",
-  component: LandmarksPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect(legacySystemCardRedirect({ boxSlug: params.boxSlug, type: "landmarks", search: location.search, state: location.state }));
+  },
 });
 
 const chatsRoute = createRoute({
   staticData: { title: null },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/chats",
-  component: ChatsPage,
+  beforeLoad: ({ params, location }) => {
+    throw redirect(legacySystemCardRedirect({ boxSlug: params.boxSlug, type: "landmarks", search: location.search, state: location.state }));
+  },
 });
 
 // Dev-only test harness for the speech replay menu (see SpeechTestHarness).
 const devSpeechRoute = createRoute({
   staticData: { title: "Speech test" },
-  getParentRoute: () => boxLayoutRoute,
-  path: "/dev/speech",
+  getParentRoute: () => devHarnessLayoutRoute,
+  path: DEV_HARNESS_PATHS.speech,
   component: SpeechTestPage,
 });
 
 // Dev-only gallery of composer visual states (see ComposerStatesHarness).
 const devComposerStatesRoute = createRoute({
   staticData: { title: "Composer states" },
-  getParentRoute: () => boxLayoutRoute,
-  path: "/dev/composer-states",
+  getParentRoute: () => devHarnessLayoutRoute,
+  path: DEV_HARNESS_PATHS.composerStates,
   component: ComposerStatesPage,
 });
 
 // Dev-only harness for capture mode (overlay + pending bubble + chip).
 const devCaptureModeRoute = createRoute({
   staticData: { title: "Capture mode" },
-  getParentRoute: () => boxLayoutRoute,
-  path: "/dev/capture-mode",
+  getParentRoute: () => devHarnessLayoutRoute,
+  path: DEV_HARNESS_PATHS.captureMode,
   component: CaptureModePage,
 });
 
 // Dev-only harness for the chat scroll controller (isolated, scripted).
 const devChatScrollRoute = createRoute({
   staticData: { title: "Chat scroll" },
-  getParentRoute: () => boxLayoutRoute,
-  path: "/dev/chat-scroll",
+  getParentRoute: () => devHarnessLayoutRoute,
+  path: DEV_HARNESS_PATHS.chatScroll,
   component: ChatScrollPage,
 });
 
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
   staticData: { title: null },
-  getParentRoute: () => boxLayoutRoute,
+  getParentRoute: () => productLayoutRoute,
   path: "/$",
   beforeLoad: ({ params }) => {
     throw redirect({ to: "/$boxSlug", params: { boxSlug: params.boxSlug } });
@@ -289,6 +323,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
   boxLayoutRoute.addChildren([
+    productLayoutRoute.addChildren([
     boxIndexRoute,
     dashboardRoute,
     inventoryRoute,
@@ -304,6 +339,9 @@ const routeTree = rootRoute.addChildren([
     viewRoute,
     landmarksRoute,
     chatsRoute,
+    boxCatchAllRoute,
+    ]),
+    devHarnessLayoutRoute.addChildren([
     // Dev-only routes are omitted from production builds entirely. The undefined
     // guard keeps the literal `import.meta.env.DEV` intact for Vite's build-time
     // dead-code elimination, while short-circuiting under the SSR loader / plain-
@@ -314,7 +352,7 @@ const routeTree = rootRoute.addChildren([
     // static DCE, ruling out the honest-cast pattern `lib/view-url.ts` uses instead.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see comment above
     ...((import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute, devChatScrollRoute] : []),
-    boxCatchAllRoute,
+    ]),
   ]),
 ]);
 
@@ -355,4 +393,7 @@ declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
     title: string | null;
   }
+}
+function nativeComposerFrom(search: object): unknown {
+  return "nativeComposer" in search ? search.nativeComposer : undefined;
 }

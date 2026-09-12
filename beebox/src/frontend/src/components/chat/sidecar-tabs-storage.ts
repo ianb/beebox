@@ -1,9 +1,8 @@
 /**
  * Remembering the sidecar's open documents across a reload.
  *
- * `sessionStorage`, per browser tab, per box, per conversation — the same
- * reasoning as `lib/last-chat.ts`: the strip is a property of this tab's trip
- * through the app, not of the box. Two conversations open in two browser tabs
+ * `sessionStorage`, per browser tab, per box, per conversation: the strip is a
+ * property of this tab's trip through the app, not of the box. Two conversations open in two browser tabs
  * each keep their own; nothing follows you to another device, and closing the
  * tab ends it.
  *
@@ -129,7 +128,7 @@ export function saveSidecarState(key: string, state: SidecarState): void {
  * session id once the first turn lands, and the documents opened while
  * composing that message belong to the conversation it started.
  */
-export function moveSidecarState({ from, to }: { from: string; to: string }): void {
+function moveSidecarState({ from, to }: { from: string; to: string }): void {
   const store = sessionStore();
   if (store === null || from === to) return;
   try {

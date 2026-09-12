@@ -17,6 +17,7 @@ import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextS
 import { useInputValue, useInputStore } from "./input-store";
 import type { AddFiles } from "./InteractiveChat-attachments";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
+import { segmentCapturing } from "../../machines/transcription-events";
 import type { FinalWord } from "../../machines/transcription-events";
 
 export interface TranscriptionHandle {
@@ -159,8 +160,8 @@ function DesktopComposerRow({
         onClick={() => {
           routeComposerSend({
             isTranscribing,
-            // Finalization produces the retained audio Blob. HQ mode is an
-            // independent later choice inside runKeywordSend.
+            // Finalization hands the segment's staged recording to the send,
+            // which seals it; HQ is a choice made inside runKeywordSend.
             submitSegment: () => transcription.submitSegment({ closeMic: true }),
             sendTyped: handleSend,
             sendSettledVoice: () => {
@@ -173,7 +174,9 @@ function DesktopComposerRow({
             },
           });
         }}
-        disabled={sendDisabledReason !== undefined || !(isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim()}
+        // A live segment can always be sent: with live text paused its words
+        // arrive only from the HQ pass (docs/plans/resilient-voice-recording.md).
+        disabled={sendDisabledReason !== undefined || !(segmentCapturing(transcription.state) || (isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim())}
         title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
       />
     </div>
@@ -239,6 +242,7 @@ export function ChatInputArea({
           <MicOverlay
             hasText={joinTranscript(input, transcription.transcript).trim().length > 0}
             degraded={transcription.state === "reconnecting"}
+            livePaused={transcription.state === "recordingLocal"}
           />
         ) : null}
         {/* Add menu: capture mode, add files, screenshot, share location. */}

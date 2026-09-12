@@ -16,6 +16,6 @@ final class ShareExtensionAPITests: XCTestCase {
         XCTAssertEqual(decoded.chats.map(\.sessionId), ["session-reading"])
         XCTAssertEqual(decoded.saves.map(\.destination.kind), ["inbox", "landmark"])
         XCTAssertNil(decoded.saves.first?.destination.dir)
-        XCTAssertEqual(decoded.saves.last?.destination.dir, "store/reading")
+        XCTAssertEqual(decoded.saves.last?.destination.dir, "_content/reading")
     }
 }

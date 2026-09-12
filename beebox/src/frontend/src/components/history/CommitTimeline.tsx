@@ -20,6 +20,7 @@ interface CommitTimelineProps {
   onFilterSession?: (sessionId: string) => void;
   /** Currently active session filter; used to suppress the filter affordance when already scoped. */
   activeSession?: string | null;
+  idPrefix: string;
 }
 
 /**
@@ -207,6 +208,7 @@ export function CommitTimeline({
   loading,
   onFilterSession,
   activeSession,
+  idPrefix,
 }: CommitTimelineProps) {
   const groups = groupBySession(commits);
 
@@ -277,7 +279,7 @@ export function CommitTimeline({
       {loading ? <div className="p-3 text-sm text-warm-500 text-center">Loading...</div> : null}
 
       {hasMore && !loading ? <button
-          id="bbx-history-load-more"
+          id={`${idPrefix}-load-more`}
           onClick={onLoadMore}
           className="w-full p-2 text-sm text-primary hover:bg-info-50"
         >

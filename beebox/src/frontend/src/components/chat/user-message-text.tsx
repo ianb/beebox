@@ -24,6 +24,8 @@ function readAttr(attrs: string, re: RegExp): string {
 }
 
 function docBasename(ref: string): string {
+  // A selection quoted from the chat transcript has no ref.
+  if (ref === "") return "chat";
   const base = ref.split("/").pop();
   if (base === undefined || base === "") return ref;
   return base.endsWith(".card") ? base.slice(0, -5) : base;

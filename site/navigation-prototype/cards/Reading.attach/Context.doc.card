@@ -1,0 +1,16 @@
+---
+title: Why keep the parent?
+theme: paper
+stock: blue
+next:
+  - card: Reading.doc.card
+    at: the-end
+    label: Return to the end of the document
+---
+[Prototype content]
+
+A note can have a home even when you arrive from somewhere else.
+
+Open this address in a new tab. The main document comes with it, without needing to retrace the steps that brought you here.
+
+The main document has just a little more to say.

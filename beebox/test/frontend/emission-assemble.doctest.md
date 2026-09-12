@@ -628,6 +628,36 @@ assembleChatMessage(eHqDiarized, W).message.replace(eHqDiarized.id, "ID")
 => <speech stt="hq" diarized="1" message-id="ID" local-time="14:23">two people talking</speech>
 ```
 
+## `hq="failed"` — realtime text sent in place of HQ
+
+When a requested HQ pass does not finish (budget expiry, "Send live text", or
+the HQ pass failing outright — `docs/plans/resilient-voice-recording.md`,
+Track 4; late correction removed), the realtime text is sent marked
+`hq="failed"`. Realtime words still stamp `stt="deepgram"`; `hq` follows the
+`stt` attributes. The three provenance shapes a voice send can take:
+
+```ts
+const provenance = (extra: Record<string, unknown>) => {
+  const e = createVoiceEmission({ text: "hello", selections: [], diarized: false, ...extra });
+  return assembleChatMessage(e, W).message.replace(e.id, "ID");
+};
+provenance({})
+=> <speech message-id="ID" local-time="14:23">hello</speech>
+
+provenance({ hqText: true, hqService: "mai" })
+=> <speech stt="hq" stt-service="mai" message-id="ID" local-time="14:23">hello</speech>
+
+provenance({ hqFallback: true, words: [{ word: "hello", confidence: 0.99 }] })
+=> <speech stt="deepgram" hq="failed" message-id="ID" local-time="14:23">hello</speech>
+```
+
+HQ text and an HQ fallback cannot both describe one message:
+
+```ts
+createVoiceEmission({ text: "x", selections: [], diarized: false, hqText: true, hqFallback: true })
+=> throws InvariantError
+```
+
 ## Emission ids are distinct per creation (the dedup key)
 
 ```ts

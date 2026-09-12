@@ -30,14 +30,14 @@ export function OpsLinks() {
         </Link>
         <Link
           id="bbx-dashboard-history"
-          to={href(`/${boxSlug}/history`)}
+          to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.history}`)}
           className="text-sm text-primary hover:text-primary-dark"
         >
           History &rarr;
         </Link>
       </nav>
       <Card background="info" padding="sm" as="section" aria-label="Storage summary">
-        <TextLink id="bbx-dashboard-inventory" to={href(`/${boxSlug}/inventory`)} underline={false}>Open storage summary &rarr;</TextLink>
+        <TextLink id="bbx-dashboard-inventory" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.inventory}`)} underline={false}>Open storage summary &rarr;</TextLink>
         <Text as="p" size="sm" tone="muted" className="mt-1">See repository size, Git and annex storage, file types, and linked versus unlinked content.</Text>
       </Card>
     </Stack>

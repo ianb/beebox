@@ -25,8 +25,10 @@ import {
   type SpeechPlaybackState,
 } from "./InteractiveChat-message-items";
 import { MAX_RETAINED_MESSAGES } from "../../machines/chat-types";
+import { TranscriptSelection } from "./TranscriptSelection";
 import type { CaptureBubbleModel, CaptureVerbs } from "./capture-bubble";
 import type { AudioOverlayStore } from "./audio-overlay-store";
+import type { PendingHq } from "../../machines/composerMachine";
 
 interface LiveTurnState { turnId: string | null; uuid: string | null }
 
@@ -112,7 +114,7 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
-  totalEntries, onLoadOlder, loadingOlder, sendSignal, liveTurnId, proseEnabled, pendingHqDraft,
+  totalEntries, onLoadOlder, loadingOlder, sendSignal, liveTurnId, proseEnabled, pendingHq, onHqSendLive,
   captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener,
 }: {
   messages: SessionEntry[];
@@ -137,7 +139,9 @@ function MessageListInner({
   sendSignal: number;
   liveTurnId: string | null;
   proseEnabled: boolean;
-  pendingHqDraft: string | null;
+  /** Voice messages waiting for their HQ transcript (pending bubbles). */
+  pendingHq: readonly PendingHq[];
+  onHqSendLive: (id: string) => void;
   captureBubbles: CaptureBubbleModel[];
   captureVerbs: CaptureVerbs;
   audioOverlayStore: AudioOverlayStore;
@@ -166,8 +170,8 @@ function MessageListInner({
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView }),
-    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHqDraft, captureBubbles, debugView],
+    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView }),
+    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, pendingHq, captureBubbles, debugView],
   );
 
   const { scrollerRef, contentRef, liveContentRef, atBottom, hasUnseenContent, scrollToBottom, anchorToTop, captureForPrepend, openThread, settleOpen } = useChatScroll();
@@ -255,8 +259,8 @@ function MessageListInner({
     proseEnabled,
     lastAssistantGroupIndex,
     captureVerbs,
-    audioOverlayStore,
-  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, captureVerbs, audioOverlayStore]);
+    audioOverlayStore, onHqSendLive,
+  }), [streamText, streamTools, debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, captureVerbs, audioOverlayStore, onHqSendLive]);
 
   if (messages.length === 0 && !isStreaming) {
     return (
@@ -291,7 +295,7 @@ function MessageListInner({
               not the app's chrome. The load-older header and the
               scroll-to-bottom button sit outside this wrapper and stay
               scannable. */}
-          <div data-bbx-scan="exclude">
+          <TranscriptSelection>
             {data.map((item, index) => {
               // The live turn's group keeps one key across the streamed→finalized
               // transition so React reconciles it in place — no remount/flash.
@@ -313,7 +317,7 @@ function MessageListInner({
                 </div>
               );
             })}
-          </div>
+          </TranscriptSelection>
         </div>
       </div>
       {!atBottom ? (

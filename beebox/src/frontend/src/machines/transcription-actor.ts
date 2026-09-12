@@ -1,59 +1,52 @@
 /**
- * Callback actor for the realtime transcription machine: owns the WebSocket,
- * AudioContext, MediaStream, and AudioWorklet for one recording segment.
+ * Callback actor for the realtime transcription machine: owns the mic
+ * (AudioContext + worklet), the segment's staged recording, and the live
+ * transcription socket for one recording segment.
  *
- * It queries the configured transcription service, opens the matching
- * connection (see `transcription-connections.ts`), pumps PCM frames from the
- * worklet to the service, and translates service callbacks + socket lifecycle
- * into machine events. Captured PCM is WAV-wrapped on done for narration's HQ
- * pass.
+ * ## The recording outlives the socket
  *
- * ## Network resilience
+ * (`docs/plans/resilient-voice-recording.md`, Track 3.) The segment starts in
+ * this order: mint a recording id and enqueue its staging `create` (the
+ * durable upload queue does not wait for the box); start the mic and send
+ * MIC_LIVE; only then look up the live service and open a socket. Every PCM
+ * frame goes to the {@link StagedRecording} whether or not a socket exists,
+ * so a box that is down at segment start — or a socket that drops for a
+ * minute during a deploy — costs live text, never audio. The segment end
+ * hands the recording to the machine in TRANSCRIPTION_DONE as a sealing
+ * obligation; CANCEL discards it; a teardown that nobody claimed seals any
+ * captured audio with `hq: null`.
  *
- * Three recovery paths, all reusing the same connection loop:
+ * ## One connect loop
  *
- *   1. Connect-retry — the *initial* socket failing to open (the symptom we
- *      saw: a fresh segment whose WebSocket errored at connect, before any
- *      onopen) is retried a few times with jittered backoff before we surface a
- *      start failure. Lives in {@link start}.
- *   2. Mid-recording reconnect — an established socket that errors/closes
- *      mid-segment routes through {@link beginReconnect} (not straight to idle),
- *      preserving captured audio and replaying it onto a fresh socket. The
- *      close code decides: transient transport drops (1006/1011) reconnect;
- *      format errors (1008/1003) don't. Lives in {@link attachActorHandlers}.
- *   3. Stalled-transport watchdog — see below.
+ * The first connect and every mid-recording drop run the same loop
+ * ({@link connectLoop}): full-jitter backoff capped at 30 s, unbounded until
+ * stop/cleanup. On a (re)connect it replays at most the last ~30 s of frames
+ * (`ReplayRing`) — the frames since the socket went away plus a short pad
+ * for the drop's detection latency. A longer gap leaves a hole in the live
+ * text, which the HQ pass covers. A close the server would repeat for any
+ * fresh socket (1003/1008) or a service error ends live text for the segment
+ * and stops the loop; the recording continues.
  *
- * A stalled-but-not-closed transport (the classic "phone clings to a dying
- * wifi signal" case) keeps `ws.readyState === OPEN` while no bytes actually
- * leave the device — `ws.send()` silently piles into `ws.bufferedAmount` and
- * neither `onerror` nor `onclose` fires until TCP eventually times out
- * (minutes). To catch this we run a liveness watchdog: while recording, any
- * live socket drains `bufferedAmount` to 0 between our ~300ms PCM frames, so a
- * `bufferedAmount` that stays above 0 for longer than {@link STALL_TIMEOUT_MS}
- * means the socket is dead. On that (or a `window 'offline'` event) we emit
- * CONNECTION_DEGRADED and attempt a transparent reconnect: tear down the dead
- * socket, re-open the same service, and replay the PCM captured during the gap
- * (we already keep every frame for narration). The mic/worklet/AudioContext
- * stay alive throughout, so capture is continuous. On success we emit
- * CONNECTION_RESTORED; the machine bounds the whole window and finalizes on the
- * captured audio if no attempt succeeds.
+ * A stalled-but-not-closed transport (a phone clinging to dying wifi) keeps
+ * `ws.readyState === OPEN` while `ws.send()` piles into `bufferedAmount`; the
+ * liveness watchdog treats a `bufferedAmount` stuck above 0 for
+ * {@link STALL_TIMEOUT_MS} (or a `window 'offline'` event) as a drop.
  *
  * ## Mic resilience
  *
- * The *input* side can die independently of the network — the OS takes the
- * microphone for a phone call/Siri/app switch and the socket stays healthy.
- * MicCapture (transcription-mic.ts) owns that detection + re-acquisition;
- * the session adds a no-PCM-frames check to the watchdog as a catch-all and
- * arbitrates so CONNECTION_RESTORED only fires when both sides are live.
- *
- * The per-segment state and lifecycle live in {@link TranscriptionSession};
- * the actor wrapper just bridges it to XState's sendBack/receive/dispose.
+ * The input side can die independently — the OS takes the mic for a call,
+ * Siri, an app switch. MicCapture (transcription-mic.ts) detects and
+ * re-acquires it; the watchdog adds a no-PCM-frames catch-all. When the mic
+ * comes back the session reports CONNECTION_RESTORED if a socket is live, or
+ * MIC_LIVE if only the recording is.
  */
 
 import { fromCallback } from "xstate";
-import { trpcClient } from "../lib/trpc";
+import { delay, jitteredBackoff } from "@shared/backoff.js";
+import { enqueueChunk, enqueueCreate, enqueueDiscard, enqueueFinalize } from "../lib/audio/voice-staging-queue";
+import { startStagedRecording, type StagedRecording } from "../lib/audio/voice-stager";
+import { TranscriptionServiceResolver } from "../lib/audio/transcription-config-cache";
 import { MicCapture } from "./transcription-mic";
-import { encodePcmChunksAsWav } from "../lib/audio/wav-encode";
 import {
   type ConnectionHandle,
   type ServiceCallbacks,
@@ -63,126 +56,112 @@ import {
   startOpenAIRealtimeConnection,
   startVoxtralConnection,
 } from "./transcription-connections";
-import { mergeFinalText, mergeFinalWords } from "./transcription-merge";
-import { openWithRetry } from "./transcription-wait-for-open";
-import type { TranscriptionService } from "@core/transcription/index.js";
-import type { FinalWord, TranscriptionEvent } from "./transcription-events";
-
-interface TranscriptionActorInput {
-  dummy?: never;
-}
+import { openOnce } from "./transcription-wait-for-open";
+import { ReplayRing } from "./transcription-replay-ring";
+import { SegmentTranscript } from "./transcription-segment-text";
+import type { TranscriptionService } from "@shared/transcription-services.js";
+import type { TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent } from "./transcription-events";
 
 type SendBack = (event: TranscriptionEvent) => void;
+
+const VOICE_STAGING_SINK = { enqueueCreate, enqueueChunk, enqueueFinalize, enqueueDiscard };
 
 /** Poll interval for the liveness watchdog. */
 const WATCHDOG_INTERVAL_MS = 500;
 /**
  * How long `ws.bufferedAmount` may stay above 0 before we judge the socket
- * stalled. A healthy socket drains our ~300ms PCM frames near-instantly, so a
- * few seconds of no drain is decisive. Kept comfortably above one frame's
- * worth of jitter.
+ * stalled. A healthy socket drains our ~300ms PCM frames near-instantly.
  */
 const STALL_TIMEOUT_MS = 2500;
-/** Per-attempt cap on waiting for any socket (initial or reconnect) to open. */
+/** Per-attempt cap on waiting for a socket to open. */
 const OPEN_TIMEOUT_MS = 2500;
 /**
- * Worklet PCM frames to replay *before* the detected drop, to cover the
- * detection latency (frames the dying socket buffered-but-never-delivered in
- * the seconds before the watchdog tripped). Frames are ~300ms each
- * (CHUNK_DURATION_MS in pcm-processor.worklet.js), so ~10 frames ≈ 3s.
+ * Replay ring: the last 100 worklet frames (~300 ms each, ≈30 s) — the most a
+ * (re)connected socket is ever sent. Older audio exists only in staging.
+ */
+const REPLAY_CAP_CHUNKS = 100;
+/**
+ * Frames to replay from *before* a detected drop, covering its detection
+ * latency (frames the dying socket buffered but never delivered before the
+ * watchdog tripped). ~10 frames ≈ 3 s. Replaying the whole ring instead would
+ * re-transcribe up to 30 s the live text already holds.
  */
 const REPLAY_PAD_CHUNKS = 10;
-/** Connect-retry: total attempts to open the *initial* socket before failing. */
-const CONNECT_MAX_ATTEMPTS = 3;
 /**
- * How long the worklet may deliver no PCM frames mid-recording before we
- * judge the capture pipeline dead. Frames normally arrive every ~300ms
- * (CHUNK_DURATION_MS); none for several seconds means the track ended or the
- * AudioContext was suspended without an event we caught. Catch-all behind
- * MicCapture's explicit track `ended`/`mute` handlers.
+ * How long the worklet may deliver no PCM frames before we judge the capture
+ * pipeline dead (catch-all behind MicCapture's track `ended`/`mute` handlers).
  */
 const MIC_SILENT_TIMEOUT_MS = 4000;
-/** Full-jitter backoff bounds between failed connect/reconnect attempts. */
-const RETRY_BACKOFF = { baseMs: 400, capMs: 2000 } as const;
+/** Full-jitter backoff between failed connect attempts; the loop never gives up on its own. */
+const RETRY_BACKOFF = { baseMs: 400, capMs: 30_000 } as const;
 /**
- * WebSocket close codes we must not blind-retry: 1008/DATA-0000 means the audio
- * payload couldn't be decoded (wrong format/codec), so a fresh socket with the
- * same encoding would just fail the same way. 1003 (unsupported data) is the
- * same class. Everything else mid-recording (1006 abnormal, 1011 NET timeouts)
- * is a transient transport drop worth a transparent reconnect.
+ * Close codes a fresh socket would repeat: 1008/DATA-0000 means the audio
+ * payload couldn't be decoded, 1003 is unsupported data. Everything else
+ * (1006 abnormal, 1011 timeouts, 1012 restart) is a transient drop.
  */
 const NON_RETRYABLE_CLOSE_CODES: ReadonlySet<number> = new Set([1003, 1008]);
 
 class TranscriptionSession {
   private readonly sendBack: SendBack;
+  private readonly recording: StagedRecording;
+  private readonly services = new TranscriptionServiceResolver();
+  private readonly replay = new ReplayRing({ capacity: REPLAY_CAP_CHUNKS });
+  private readonly text = new SegmentTranscript();
+  /** TRANSCRIPTION_DONE carried the recording out; it is no longer ours. */
+  private handedOff = false;
+  private cancelled = false;
   private connection: ConnectionHandle | null = null;
   private mic: MicCapture | null = null;
   private disposed = false;
   /**
-   * Opaque read of `disposed` for checks after an `await` in {@link start}.
-   * A raw `this.disposed` read there gets flagged as an always-false dead
-   * check — TS's control-flow narrowing (wrongly) treats the field as still
-   * `false` from an earlier same-tick check, even though `stop()`/`cleanup()`
-   * can genuinely land between the await and this line (a CANCEL event
-   * arriving mid-`start()`). Routing through a method call is opaque to CFA,
-   * so the check stays live for its real purpose.
+   * Opaque read of `disposed` for checks after an `await`: TS narrowing
+   * wrongly carries an earlier same-tick `false` across the await, though
+   * stop()/cleanup() can land in between.
    */
   private isDisposed(): boolean {
     return this.disposed;
   }
   private connectedFired = false;
-  private service: TranscriptionService = "voxtral";
-  private callbacks: ServiceCallbacks | null = null;
-  /** Gates live worklet→socket forwarding; false during a reconnect replay. */
-  private forwardLive = true;
-  /** True while a reconnect attempt loop is in flight. */
-  private reconnecting = false;
+  /** True while the connect loop is wanted (no live socket, still trying). */
+  private linking = false;
+  /** Live text was abandoned for this segment (a close/error a retry can't fix). */
+  private liveAbandoned = false;
   /** Last time the worklet delivered a PCM frame (mic liveness watchdog). */
   private lastPcmAt = 0;
-  /**
-   * Set once we've initiated an intentional stop (user/silence/max-duration).
-   * Distinguishes the normal end-of-stream close (finalize) from an unexpected
-   * mid-recording drop (reconnect) in {@link attachActorHandlers}'s onclose.
-   */
+  /** An intentional stop is in progress: a close now is the end of stream. */
   private stopping = false;
-  /**
-   * Text confirmed by *previous* connections this segment. Each transport
-   * emits its session's full accumulated transcript as `finalText` (replace,
-   * not append) and a reconnect opens a fresh, empty-start session — so without
-   * a prefix the first post-reconnect update would wipe everything said before
-   * the drop. Folded in on reconnect, prepended to all the new session emits.
-   */
-  private committedPrefix = "";
-  /** Most recent `finalText` from the *current* connection (sans prefix). */
-  private lastConnectionFinal = "";
-  /**
-   * Word-list counterpart to {@link committedPrefix} (see
-   * transcription-merge.ts). `null` means no service has attached word data
-   * to this segment yet (Voxtral/OpenAI, or nothing committed) — stays
-   * `null` rather than becoming a falsely-"captured" `[]` (Fix A).
-   */
-  private committedWords: FinalWord[] | null = null;
-  /** Most recent `finalWords` from the *current* connection (sans committed). */
-  private lastConnectionWords: FinalWord[] | null = null;
   private watchdogId: ReturnType<typeof setInterval> | null = null;
-  /** Last time `bufferedAmount` was observed at 0 (i.e. fully drained). */
   private lastDrainedAt = 0;
-  /**
-   * PCM s16le chunks captured for this segment. Concatenated and WAV-wrapped
-   * on TRANSCRIPTION_DONE so narration mode can re-send to the HQ pass. Also
-   * the replay source for transparent reconnects.
-   */
-  private readonly audioChunks: ArrayBuffer[] = [];
+  private readonly callbacks: ServiceCallbacks = {
+    onTextUpdate: ({ finalText, interimText, finalWords }) => {
+      if (this.disposed) return;
+      // Only Deepgram sets `finalWords`; `undefined` must stay "no data".
+      const merged = this.text.update({ finalText, finalWords: finalWords ?? null });
+      this.sendBack({ type: "TEXT_UPDATE", finalText: merged.text, interimText, finalWords: merged.words });
+    },
+    onDone: (text) => {
+      if (this.disposed || this.handedOff) return;
+      this.sendBack({ type: "TRANSCRIPTION_DONE", text: this.text.textWith(text ?? ""), recording: this.handOff() });
+    },
+    onServerError: (message) => {
+      if (this.disposed || !this.connection) return;
+      console.error(`[realtime-transcription] service error — live text off for this segment: ${message}`);
+      this.abandonLive({ type: "SERVER_ERROR", message });
+    },
+  };
 
-  constructor(sendBack: SendBack) {
-    this.sendBack = sendBack;
+  constructor(opts: { sendBack: SendBack; targetSessionId: string | null }) {
+    this.sendBack = opts.sendBack;
+    this.recording = startStagedRecording({
+      recordingId: crypto.randomUUID(),
+      targetSessionId: opts.targetSessionId,
+      sink: VOICE_STAGING_SINK,
+    });
   }
 
-  private takeAudioBlob(): Blob | undefined {
-    if (this.audioChunks.length === 0) return undefined;
-    const blob = encodePcmChunksAsWav(this.audioChunks);
-    this.audioChunks.length = 0;
-    return blob;
+  private handOff(): StagedRecording {
+    this.handedOff = true;
+    return this.recording;
   }
 
   private stopWatchdog() {
@@ -192,64 +171,44 @@ class TranscriptionSession {
     }
   }
 
-  private startConnection(cbs: ServiceCallbacks): Promise<ConnectionHandle> {
-    if (this.service === "deepgram") return startDeepgramConnection(cbs);
-    if (this.service === "openai-realtime") return startOpenAIRealtimeConnection(cbs);
+  private startConnection(service: TranscriptionService): Promise<ConnectionHandle> {
+    if (service === "deepgram") return startDeepgramConnection(this.callbacks);
+    if (service === "openai-realtime") return startOpenAIRealtimeConnection(this.callbacks);
     // Default: voxtral (whisper has no realtime path; treat like voxtral)
-    return Promise.resolve(startVoxtralConnection(cbs));
+    return Promise.resolve(startVoxtralConnection(this.callbacks));
   }
 
-  /**
-   * Wire the socket-lifecycle handlers the actor owns (onopen/onerror/onclose).
-   * `onmessage` is set by the per-service connection helper. Used for both the
-   * initial socket and reconnected ones.
-   */
+  /** Lifecycle handlers for an adopted (open) socket; `onmessage` is the service helper's. */
   private attachActorHandlers(ws: WebSocket) {
-    ws.onopen = () => this.markConnected();
-    // onerror carries no close code and an errored socket always then fires
-    // onclose (which does) — so just log here and let onclose route the outcome.
+    // onerror carries no close code and is always followed by onclose.
     ws.onerror = () => console.error("[realtime-transcription] WebSocket error");
     ws.onclose = (event) => {
-      if (this.disposed || this.reconnecting) return;
-      // Intentional stop, or a not-yet-open socket: finalize as before.
-      if (this.stopping || !this.connectedFired) {
+      if (this.disposed || this.connection?.ws !== ws) return;
+      if (this.stopping) {
         this.finalizeFromHandle(ws);
         return;
       }
-      // Unexpected close mid-recording. Transient transport drops reconnect
-      // transparently; format errors (which a fresh socket can't fix) surface.
       if (NON_RETRYABLE_CLOSE_CODES.has(event.code)) {
-        console.error(`[realtime-transcription] non-retryable close (code=${event.code} reason="${event.reason}")`);
-        this.sendBack({ type: "WS_ERROR", message: `Transcription closed (code ${event.code})` });
+        console.error(`[realtime-transcription] non-retryable close (code=${event.code} reason="${event.reason}") — recording continues without live text`);
+        this.abandonLive({ type: "WS_ERROR", message: `Live transcription unavailable (code ${event.code}) — still recording` });
         return;
       }
       console.warn(`[realtime-transcription] socket dropped mid-recording (code=${event.code} reason="${event.reason}") — reconnecting`);
-      this.beginReconnect();
+      this.dropLink();
     };
   }
 
-  /** Mark the socket open: fire WS_CONNECTED once (idempotent across paths). */
-  private markConnected() {
-    if (this.disposed || this.connectedFired) return;
-    this.connectedFired = true;
-    this.sendBack({ type: "WS_CONNECTED" });
-  }
-
-  /**
-   * Finalize the segment from a closing socket. For Deepgram/OpenAI the final
-   * transcript lives on the handle, so emit TRANSCRIPTION_DONE; otherwise the
-   * machine just needs to know the socket closed.
-   */
+  /** A closing socket after stop(): Deepgram/OpenAI keep the final transcript on the handle. */
   private finalizeFromHandle(ws: WebSocket) {
+    if (this.handedOff) return; // stop() already ended the segment
     const finalFn = socketFinalText(ws);
-    if (finalFn) {
-      const audioBlob = this.takeAudioBlob();
-      const wordsFn = socketFinalWords(ws);
-      const words = mergeFinalWords(this.committedWords, wordsFn ? wordsFn() : null);
-      this.sendBack({ type: "TRANSCRIPTION_DONE", text: mergeFinalText(this.committedPrefix, finalFn()), audioBlob, words });
-    } else {
+    if (!finalFn) {
       this.sendBack({ type: "WS_CLOSED" });
+      return;
     }
+    const wordsFn = socketFinalWords(ws);
+    const words = this.text.wordsWith(wordsFn ? wordsFn() : null);
+    this.sendBack({ type: "TRANSCRIPTION_DONE", text: this.text.textWith(finalFn()), words, recording: this.handOff() });
   }
 
   private startWatchdog() {
@@ -257,23 +216,18 @@ class TranscriptionSession {
     this.lastDrainedAt = performance.now();
     this.lastPcmAt = performance.now();
     this.watchdogId = setInterval(() => {
-      if (this.disposed || this.reconnecting) return;
-      // Mic liveness: no PCM frames for too long means the capture side died
-      // without an event MicCapture caught (e.g. a suspended AudioContext).
+      if (this.disposed || this.stopping) return;
       // beginRecovery self-guards, so re-triggering while recovering is a no-op.
-      if (!this.stopping && this.mic && performance.now() - this.lastPcmAt > MIC_SILENT_TIMEOUT_MS) {
+      if (this.mic && performance.now() - this.lastPcmAt > MIC_SILENT_TIMEOUT_MS) {
         void this.mic.beginRecovery();
         return;
       }
-      if (!this.connection) return;
-      const ws = this.connection.ws;
-      if (ws.readyState !== WebSocket.OPEN) return; // onclose/onerror owns real closes
+      const ws = this.connection?.ws;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return; // onclose owns real closes
       if (ws.bufferedAmount === 0) {
         this.lastDrainedAt = performance.now();
-        return;
-      }
-      if (performance.now() - this.lastDrainedAt > STALL_TIMEOUT_MS) {
-        this.beginReconnect();
+      } else if (performance.now() - this.lastDrainedAt > STALL_TIMEOUT_MS) {
+        this.dropLink();
       }
     }, WATCHDOG_INTERVAL_MS);
   }
@@ -291,82 +245,100 @@ class TranscriptionSession {
     }
   }
 
-  private beginReconnect() {
-    if (this.reconnecting || this.disposed || !this.callbacks) return;
-    this.reconnecting = true;
-    this.forwardLive = false;
-    // Fold the dying session's text into the prefix so the fresh session's
-    // (empty-start) accumulator appends to it rather than replacing it.
-    if (this.lastConnectionFinal) {
-      this.committedPrefix = mergeFinalText(this.committedPrefix, this.lastConnectionFinal);
-      this.lastConnectionFinal = "";
-    }
-    this.committedWords = mergeFinalWords(this.committedWords, this.lastConnectionWords);
-    this.lastConnectionWords = null;
-    this.sendBack({ type: "CONNECTION_DEGRADED", cause: "network" });
-    // Replay from before the drop to cover detection latency.
-    const replayFrom = Math.max(0, this.audioChunks.length - REPLAY_PAD_CHUNKS);
+  /** A live socket went away: keep recording, and reconnect. */
+  private dropLink() {
+    if (!this.connection || this.disposed || this.stopping) return;
+    this.text.fold();
     this.discardSocket(this.connection);
     this.connection = null;
-    void this.attemptReconnect(replayFrom);
+    this.replay.markGap({ padFrames: REPLAY_PAD_CHUNKS });
+    this.sendBack({ type: "CONNECTION_DEGRADED", cause: "network" });
+    this.beginLinking();
   }
 
-  private async attemptReconnect(replayFrom: number) {
-    const callbacks = this.callbacks;
-    if (!callbacks) return;
-    // Retries are bounded not by a count but by the machine's RECONNECT_WINDOW:
-    // on expiry it stops the actor, which clears `reconnecting` and aborts us.
-    const next = await openWithRetry(() => this.startConnection(callbacks), {
-      attempts: Number.MAX_SAFE_INTEGER,
-      attemptTimeoutMs: OPEN_TIMEOUT_MS,
-      backoff: RETRY_BACKOFF,
-      isAborted: () => this.disposed || !this.reconnecting,
-      discard: (handle) => this.discardSocket(handle),
+  /** Give up on live text for this segment; the recording continues. */
+  private abandonLive(event: { type: "WS_ERROR" | "SERVER_ERROR"; message: string }) {
+    this.liveAbandoned = true;
+    this.linking = false;
+    this.text.fold();
+    this.discardSocket(this.connection);
+    this.connection = null;
+    this.sendBack(event);
+  }
+
+  private linkWanted(): boolean {
+    return this.linking && !this.disposed && !this.stopping && !this.liveAbandoned;
+  }
+
+  private beginLinking() {
+    if (this.linking || this.disposed || this.stopping || this.liveAbandoned) return;
+    this.linking = true;
+    this.connectLoop().catch((e: unknown) => {
+      console.error("[realtime-transcription] connect loop failed; recording continues without live text:", e);
+      this.linking = false;
     });
-    // A socket can open just as the window expires; honor the abort.
-    if (!next) return;
-    if (this.disposed || !this.reconnecting) {
-      this.discardSocket(next);
-      return;
+  }
+
+  /** The one connect loop: first connect and every reconnect. Runs until a socket is adopted or linking stops. */
+  private async connectLoop(): Promise<void> {
+    for (let attempt = 1; this.linkWanted(); attempt++) {
+      const handle = await this.connectOnce();
+      if (handle !== null) {
+        if (this.linkWanted()) this.adopt(handle);
+        else this.discardSocket(handle);
+        return;
+      }
+      if (!this.linkWanted()) return;
+      const waitMs = jitteredBackoff(attempt, RETRY_BACKOFF);
+      console.warn(`[realtime-transcription] connect attempt ${String(attempt)} failed; retrying in ${String(waitMs)}ms (still recording)`);
+      await delay(waitMs);
     }
-    // Synchronous from here: no await means no worklet message can interleave,
-    // so the replay can't race live forwarding.
+  }
+
+  private async connectOnce(): Promise<ConnectionHandle | null> {
+    const service = await this.services.resolve();
+    if (service === null || !this.linkWanted()) return null;
+    try {
+      return await openOnce(() => this.startConnection(service), {
+        attemptTimeoutMs: OPEN_TIMEOUT_MS,
+        discard: (handle) => this.discardSocket(handle),
+      });
+    } catch (e) {
+      // e.g. minting a Deepgram/OpenAI key while the box is restarting.
+      console.warn("[realtime-transcription] could not start a transcription connection:", e);
+      return null;
+    }
+  }
+
+  /** Make an open socket the live one. Synchronous, so no frame interleaves the replay. */
+  private adopt(next: ConnectionHandle) {
+    this.linking = false;
     this.connection = next;
     this.attachActorHandlers(next.ws);
-    for (const chunk of this.audioChunks.slice(replayFrom)) {
-      next.sendPcm(chunk);
-    }
-    this.forwardLive = true;
-    this.reconnecting = false;
+    for (const frame of this.replay.sinceGap()) next.sendPcm(frame);
     this.lastDrainedAt = performance.now();
-    // If the mic died during the network blip, its recovery owns "restored".
-    if (!this.mic || !this.mic.isRecovering()) {
-      this.sendBack({ type: "CONNECTION_RESTORED" });
-    }
+    const first = !this.connectedFired;
+    this.connectedFired = true;
+    // A mic mid-recovery owns the next event (see onMicRestored).
+    if (this.mic?.isRecovering() === true) return;
+    this.sendBack(first ? { type: "WS_CONNECTED" } : { type: "CONNECTION_RESTORED" });
   }
 
-  /** Clean interface loss / DevTools "Offline" toggle — fast-path reconnect. */
+  /** Clean interface loss / DevTools "Offline" — react before the watchdog does. */
   private readonly onOffline = () => {
-    // The stalled-wifi case keeps navigator.onLine true, so the bufferedAmount
-    // watchdog is the real workhorse; this just reacts sooner when it can.
-    if (this.disposed || this.reconnecting || !this.connection) return;
-    this.beginReconnect();
+    if (this.disposed || !this.connection) return;
+    this.dropLink();
   };
 
-  async start() {
+  async start(): Promise<void> {
     try {
-      const config = await trpcClient.transcription.config.query();
-      if (this.disposed) { this.cleanup(); return; }
-      this.service = config.service;
-
       this.mic = new MicCapture({
         onPcm: (samples) => {
-          // Keep a copy for the HQ pass (narration mode) and for replay on
-          // reconnect. Clone before forwarding because the worklet transfers
-          // ownership of the ArrayBuffer to the main thread.
           this.lastPcmAt = performance.now();
-          this.audioChunks.push(samples.slice(0));
-          if (this.connection && this.forwardLive) this.connection.sendPcm(samples);
+          // The stager and the ring copy the frame; forwarding may transfer it.
+          if (!this.handedOff) this.recording.push(samples);
+          this.replay.push(samples.slice(0));
+          if (this.connection) this.connection.sendPcm(samples);
         },
         onMicLost: () => {
           if (this.disposed || this.stopping) return;
@@ -375,56 +347,14 @@ class TranscriptionSession {
         onMicRestored: () => {
           if (this.disposed || this.stopping) return;
           this.lastPcmAt = performance.now();
-          // "Restored" means the whole pipeline is live again — if the socket
-          // is still mid-reconnect, its own success will send the event.
-          if (!this.reconnecting) this.sendBack({ type: "CONNECTION_RESTORED" });
+          this.sendBack(this.connection ? { type: "CONNECTION_RESTORED" } : { type: "MIC_LIVE" });
         },
       });
       await this.mic.start();
-      if (this.isDisposed()) { this.cleanup(); return; }
-
-      this.callbacks = {
-        onTextUpdate: ({ finalText, interimText, finalWords }) => {
-          if (this.disposed) return;
-          this.lastConnectionFinal = finalText;
-          // Only Deepgram's TextUpdate ever sets `finalWords`; Voxtral/OpenAI
-          // leave it `undefined`, which must stay "no data" (`null`), not
-          // become a falsely-"captured" `[]` (Fix A).
-          this.lastConnectionWords = finalWords ?? null;
-          const mergedText = mergeFinalText(this.committedPrefix, finalText);
-          const mergedWords = mergeFinalWords(this.committedWords, this.lastConnectionWords);
-          this.sendBack({ type: "TEXT_UPDATE", finalText: mergedText, interimText, finalWords: mergedWords });
-        },
-        onDone: (text) => {
-          if (this.disposed) return;
-          const audioBlob = this.takeAudioBlob();
-          this.sendBack({ type: "TRANSCRIPTION_DONE", text: mergeFinalText(this.committedPrefix, text ?? ""), audioBlob });
-        },
-        onServerError: (message) => {
-          if (this.disposed || this.reconnecting) return;
-          this.sendBack({ type: "SERVER_ERROR", message });
-        },
-      };
-
-      const callbacks = this.callbacks;
-      const opened = await openWithRetry(() => this.startConnection(callbacks), {
-        attempts: CONNECT_MAX_ATTEMPTS,
-        attemptTimeoutMs: OPEN_TIMEOUT_MS,
-        backoff: RETRY_BACKOFF,
-        isAborted: () => this.disposed,
-        discard: (handle) => this.discardSocket(handle),
-      });
-      if (this.isDisposed()) { this.cleanup(); return; }
-      if (!opened) {
-        this.sendBack({ type: "WS_ERROR", message: "Couldn't connect to transcription service" });
+      if (this.isDisposed()) {
         this.cleanup();
         return;
       }
-      this.connection = opened;
-      this.attachActorHandlers(opened.ws);
-      this.markConnected();
-      this.startWatchdog();
-      window.addEventListener("offline", this.onOffline);
     } catch (err) {
       if (!this.disposed) {
         const msg = err instanceof Error ? err.message : "Failed to start recording";
@@ -432,64 +362,69 @@ class TranscriptionSession {
         this.sendBack({ type: "SETUP_ERROR", message: msg });
       }
       this.cleanup();
+      return;
     }
+    this.sendBack({ type: "MIC_LIVE" });
+    this.startWatchdog();
+    window.addEventListener("offline", this.onOffline);
+    this.beginLinking();
   }
 
   stop() {
-    // A stop can land mid-reconnect (window expiry, or a voice keyword the
-    // user spoke during the blip) — abort the retry loop first. `stopping` tells
-    // the close handler this is an intentional end (finalize, not reconnect).
+    if (this.stopping || this.disposed) return;
+    // `stopping` makes a close from here on the end of stream, and ends the loop.
     this.stopping = true;
-    this.reconnecting = false;
+    this.linking = false;
     this.stopWatchdog();
     if (this.mic) this.mic.stopCapture();
-    if (this.connection) {
-      this.connection.endStream();
-    }
-    // Finalize the segment immediately rather than waiting on the WS to send
-    // transcription.done — that often takes seconds or never arrives
-    // (FINALIZE_TIMEOUT fallback). The realtime transcript in machine context
-    // is what we have; if a better text arrives later from the WS, the machine
-    // is already in idle and the event is ignored. The audio blob is the thing
-    // we actually need for narration's HQ pass.
-    const audioBlob = this.takeAudioBlob();
-    this.sendBack({ type: "TRANSCRIPTION_DONE", audioBlob });
+    if (this.connection) this.connection.endStream();
+    // Finalize now rather than waiting on the socket's transcription.done
+    // (seconds, or never): the machine already holds the realtime text, and
+    // the recording is what carries the words.
+    this.sendBack({ type: "TRANSCRIPTION_DONE", recording: this.handOff() });
+  }
+
+  cancel() {
+    this.cancelled = true;
+    this.cleanup();
+  }
+
+  /**
+   * A recording nobody received: CANCEL or an empty one is discarded; one with
+   * audio (the chat unmounted mid-segment) is kept, sealed without HQ.
+   * Idempotent — cleanup can run twice when a stop races start().
+   */
+  private settleRecording() {
+    if (this.handedOff) return;
+    if (this.cancelled || !this.recording.hasAudio()) this.recording.discard();
+    else this.recording.seal({ emissionId: null, hq: null });
   }
 
   cleanup() {
     this.disposed = true;
-    this.reconnecting = false;
+    this.linking = false;
+    this.settleRecording();
     this.stopWatchdog();
     window.removeEventListener("offline", this.onOffline);
     if (this.mic) {
       this.mic.dispose();
       this.mic = null;
     }
-    if (this.connection) {
-      const ws = this.connection.ws;
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.close();
-      }
-      this.connection = null;
-    }
+    this.discardSocket(this.connection);
+    this.connection = null;
   }
 }
 
-export const transcriptionActor = fromCallback<
-  { type: "STOP" } | { type: "CANCEL" },
-  TranscriptionActorInput,
-  TranscriptionEvent
->(({ sendBack, receive }) => {
-  const session = new TranscriptionSession(sendBack);
-  void session.start();
+export const transcriptionActor = fromCallback<TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent>(
+  ({ sendBack, receive, input }) => {
+    const session = new TranscriptionSession({ sendBack, targetSessionId: input.targetSessionId });
+    void session.start();
 
-  receive((event) => {
-    if (event.type === "STOP") {
-      session.stop();
-    } else {
-      session.cleanup();
-    }
-  });
+    receive((event) => {
+      if (event.type === "STOP") session.stop();
+      else session.cancel();
+    });
 
-  return () => session.cleanup();
-});
+    return () => session.cleanup();
+  },
+);

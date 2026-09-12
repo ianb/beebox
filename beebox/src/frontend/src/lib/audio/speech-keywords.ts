@@ -117,6 +117,19 @@ export function appendSendKeywordTag(
   return `${transcript.trim()} ${keywordTag(action, matchedPhrase)}`.trim();
 }
 
+/**
+ * The send-keyword tag a transcript already carries — the inverse of
+ * {@link appendSendKeywordTag} — so a voice send restored after a reload can
+ * put the same tag on its HQ text. Null when the transcript has none.
+ */
+export function sendKeywordIn(transcript: string): { action: "send" | "sendClose"; matchedPhrase: string } | null {
+  const match = /<(send-message|send-close-message) phrase="([^"]*)" \/>/.exec(transcript);
+  if (!match) return null;
+  const [, tag, escaped] = match;
+  const matchedPhrase = (escaped ?? "").replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
+  return { action: tag === "send-close-message" ? "sendClose" : "send", matchedPhrase };
+}
+
 export function detectKeyword(
   transcript: string,
   options?: DetectKeywordOptions

@@ -9,14 +9,15 @@
  * as they always were (cancel/mic-off/erase never built a payload).
  *
  * Serializable-boundary rule (input/ convention): no React or DOM types,
- * with one narrow exception — `submit.audioBlob` carries the recorded
- * segment's `Blob` by reference, the same way `RetentionStore`'s payload
- * (`retention.ts`) and `EmissionFile`'s `path` carry their cargo by
- * reference rather than by value. Audio never serializes across this
- * boundary either way.
+ * with one narrow exception — `submit.recording` carries the segment's
+ * staged recording as a live handle (`PendingRecording`: its id plus the
+ * seal/discard obligation), by reference. The audio itself is on the box
+ * (`docs/plans/resilient-voice-recording.md`), never in this shape.
  */
 
 import type { ChatImageAttachment } from "../api-chat";
+import type { PendingRecording } from "../lib/audio/voice-stager";
+import type { HqWaitOutcome } from "../lib/audio/hq-wait";
 import type { SelectionItem } from "../lib/selection/serialize";
 import type { FinalWord } from "../machines/transcription-events";
 import { joinTranscript, spokenTextStart } from "../components/chat/InteractiveChat-helpers";
@@ -31,17 +32,22 @@ export type VoiceIntent =
       text: string;
       /** Trigger phrase the realtime pass matched (e.g. "send message"). */
       matchedPhrase: string;
-      /** The segment's recording, when captured (see `wantAudioBlob`). */
-      audioBlob: Blob | null;
+      /**
+       * The segment's staged recording, or null when no segment went live
+       * (a send tapped before the mic started). The receiver owes it exactly
+       * one `seal` — with an HQ request when this message wants HQ — or
+       * `discard`; an unsealed recording is never transcribed and waits on
+       * the box for garbage collection.
+       */
+      recording: PendingRecording | null;
       /** "Send and close": after commit, leave the mic closed (no re-arm). */
       closeMic: boolean;
       /** This keyword explicitly requests HQ cleanup, independently of narration mode. */
       hq: boolean;
       /**
        * Realtime words backing `text` at commit time (Track 3, docs/plans/
-       * transcript-confidence.md) — fast path: snapshotted at CANCEL; slow
-       * path: the machine's `finalWords` read at its idle transition, which
-       * lands alongside the parked text. `null` means the service captured
+       * transcript-confidence.md) — the machine's `finalWords` read at its
+       * idle transition, which lands alongside the parked text. `null` means the service captured
        * no confidence data (Voxtral/OpenAI realtime, or nothing finalized —
        * Fix A); the HQ-drop decision (words describe discarded text) is the
        * consumer's job, not this shape's.
@@ -98,76 +104,62 @@ export function buildVoiceSubmitEmission(opts: {
   });
 }
 
-interface HqTranscript {
-  text: string;
-  diarized: boolean;
-  service?: string;
+/** Body of a voice message whose recording produced neither live text nor an HQ transcript. */
+export const UNTRANSCRIBED_PLACEHOLDER = "[recording not transcribed]";
+
+/** The send keyword a voice message ended with, re-applied to its HQ text. */
+export interface VoiceSendKeyword {
+  action: "send" | "sendClose";
+  matchedPhrase: string;
 }
 
 /**
- * Resolve an optional HQ pass against one frozen keyword-send snapshot. The
- * caller may keep accepting composer input while this awaits: only the values
- * passed here can reach the returned emission. A missing or rejected HQ result
- * deliberately falls back to the realtime text rather than losing the send.
+ * The keyword to restore on a submit's HQ text. A manual stop-and-send
+ * synthesizes the intent with an empty `matchedPhrase`
+ * (docs/implemented-plans/hq-dictation-switch.md, chunk 2): nothing was
+ * spoken to match, so there is no trigger phrase to restore.
  */
-export async function prepareVoiceSubmitEmission(opts: {
-  intent: Extract<VoiceIntent, { kind: "submit" }>;
-  priorInput: string;
-  selectionsSnapshot: readonly SelectionItem[];
-  imagesSnapshot: readonly ChatImageAttachment[];
-  filesSnapshot: readonly EmissionFile[];
-  runHq: boolean;
-  transcribe: (audio: Blob) => Promise<HqTranscript | null>;
-}): Promise<{ emission: Emission; usedHq: boolean }> {
-  const {
-    intent, priorInput, selectionsSnapshot, imagesSnapshot, filesSnapshot, runHq, transcribe,
-  } = opts;
-  let finalText = intent.text;
-  let diarized = false;
-  let usedHq = false;
-  let hqService: string | undefined;
+export function sendKeywordOf(intent: Extract<VoiceIntent, { kind: "submit" }>): VoiceSendKeyword | null {
+  if (intent.matchedPhrase === "") return null;
+  return { action: intent.closeMic ? "sendClose" : "send", matchedPhrase: intent.matchedPhrase };
+}
 
-  if (runHq && intent.audioBlob !== null) {
-    let hqResult: HqTranscript | null = null;
-    try {
-      hqResult = await transcribe(intent.audioBlob);
-    } catch (_e) {
-      // The realtime transcript below is the durable failure fallback.
-    }
-    if (hqResult !== null) {
-      const keyword = detectKeyword(hqResult.text);
-      // A manual stop-and-send synthesizes this intent with an empty
-      // matchedPhrase (docs/implemented-plans/hq-dictation-switch.md, chunk 2) — nothing
-      // was spoken to match, so there's no trigger phrase to restore as a
-      // tag if the HQ pass doesn't literally reproduce it. Only a real
-      // keyword-fire (non-empty matchedPhrase) gets the fallback tag.
-      finalText = keyword
-        ? keyword.processedTranscript
-        : intent.matchedPhrase === ""
-          ? hqResult.text
-          : appendSendKeywordTag(hqResult.text, {
-            action: intent.closeMic ? "sendClose" : "send",
-            matchedPhrase: intent.matchedPhrase,
-          });
-      diarized = hqResult.diarized;
-      hqService = hqResult.service;
-      usedHq = true;
-    }
+/**
+ * The emission a voice send finally dispatches, from the realtime emission
+ * staged when its segment ended and the outcome of its HQ wait
+ * (docs/plans/resilient-voice-recording.md, Track 4). The id and the frozen
+ * composer context (typed prefix, selections, attachments) never change;
+ * composer input added during the wait belongs to the next message.
+ *
+ * - `hq`: the HQ text replaces the spoken part, with the send keyword
+ *   restored when the HQ pass did not reproduce it. The realtime words are
+ *   dropped — they describe replaced text (Track 3 HQ-drop rule).
+ * - `fallback`: the realtime text, marked `hq="failed"` — the budget ran
+ *   out, the user chose to send it, or the HQ pass failed outright. A
+ *   segment with no live text at all sends {@link UNTRANSCRIBED_PLACEHOLDER},
+ *   so the message exists and its kept recording stays retranscribable.
+ */
+export function prepareVoiceSubmitEmission(opts: {
+  realtime: Emission;
+  outcome: HqWaitOutcome;
+  keyword: VoiceSendKeyword | null;
+}): Emission {
+  const { realtime, outcome, keyword } = opts;
+  const spokenStart = realtime.spokenStart ?? 0;
+  const priorInput = realtime.text.slice(0, spokenStart).trim();
+  if (outcome.kind === "hq") {
+    const { result } = outcome;
+    const detected = detectKeyword(result.text);
+    const finalText = detected
+      ? detected.processedTranscript
+      : keyword === null ? result.text : appendSendKeywordTag(result.text, keyword);
+    const hq = buildVoiceSubmitEmission({
+      priorInput, finalText, selectionsSnapshot: realtime.selections, imagesSnapshot: realtime.images,
+      filesSnapshot: realtime.files, diarized: result.diarized, hqText: true, hqService: result.service,
+    });
+    return { ...hq, id: realtime.id };
   }
-
-  return {
-    emission: buildVoiceSubmitEmission({
-      priorInput, finalText, selectionsSnapshot, imagesSnapshot, filesSnapshot, diarized,
-      // The HQ pass replaced the realtime text: those words describe
-      // discarded audio content, so drop the entries and `stt` entirely
-      // (Track 3 HQ-drop rule). A fallback to realtime text (!usedHq)
-      // attaches the intent's words like any other realtime send.
-      words: usedHq ? undefined : intent.words,
-      // `stt="hq"` (docs/implemented-plans/hq-dictation-switch.md) stamps only when the
-      // HQ pass actually ran and produced text — never on a fallback.
-      hqText: usedHq ? true : undefined,
-      hqService: usedHq ? hqService : undefined,
-    }),
-    usedHq,
-  };
+  const hqFallback = true;
+  if (realtime.text.slice(spokenStart).trim() !== "") return { ...realtime, hqFallback };
+  return { ...realtime, text: joinTranscript(priorInput, UNTRANSCRIBED_PLACEHOLDER), words: undefined, hqFallback };
 }

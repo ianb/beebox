@@ -38,7 +38,7 @@ export function AttentionCards({ questions, inboxCount }: AttentionCardsProps) {
             {pendingQuestions.slice(0, 5).map((q) => (
               <li key={q.path} className="text-sm" {...bbxSource("card", q.relativePath)}>
                 <Link
-                  to={href(`/${boxSlug}/card/${q.relativePath}`)}
+                  to={href(`/${boxSlug}/views/${q.relativePath}`)}
                   className="text-primary hover:text-primary-dark hover:underline"
                 >
                   {q.prompt || q.name}

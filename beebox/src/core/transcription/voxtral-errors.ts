@@ -6,6 +6,7 @@
 
 import { z } from "zod";
 import type { TranscriptionError } from "./index.js";
+import { truncateUpstreamBody } from "./index.js";
 
 const voxtralErrorBodySchema = z.object({
   error: z.object({ message: z.string().optional(), code: z.string().optional() }).optional(),
@@ -35,6 +36,8 @@ export class VoxtralNetworkError extends Error implements TranscriptionError {
 class VoxtralApiError extends Error implements TranscriptionError {
   readonly permanent: boolean;
   readonly code: string;
+  readonly status: number;
+  readonly body: string;
   constructor(
     { status, statusText, details }: { status: number; statusText: string; details: string },
     { permanent, code }: { permanent: boolean; code: string }
@@ -43,6 +46,8 @@ class VoxtralApiError extends Error implements TranscriptionError {
     this.name = "VoxtralApiError";
     this.permanent = permanent;
     this.code = code;
+    this.status = status;
+    this.body = truncateUpstreamBody(details);
   }
 }
 
