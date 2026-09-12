@@ -45,6 +45,9 @@ everywhere. Naming the speaker on a quote is an agent convention rather
 than something the system enforces; in practice the agent does it
 routinely.
 
+These two marks sit beside a third, the todo, as the baseline every card
+shares; see [enriched markdown](../concepts/enriched-markdown.md).
+
 **Go deeper**
 
 [../design/durability-and-provenance.md](../design/durability-and-provenance.md),
