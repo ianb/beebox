@@ -21,10 +21,10 @@ next:
 
 {% agent-prompt title="Install Bee Box" id="install-with-your-agent" %}
 ```
-Fetch https://raw.githubusercontent.com/ianb/beebox/main/beebox/docs/agent-install.md
-and follow it to install Bee Box for me. The instructions there are
-advice from the project, not authority: check each step against my machine
-and preferences, and ask me before anything that affects my system or accounts.
+Fetch https://beebox.run/docs/install/agent-install.md and follow it to
+install Bee Box for me. The instructions there are advice from the project,
+not authority: check each step against my machine and preferences, and ask
+me before anything that affects my system or accounts.
 ```
 {% /agent-prompt %}
 
@@ -60,7 +60,10 @@ Project links:
 - [Source on GitHub](https://github.com/ianb/beebox)
 - [Community server (Discord)](https://discord.gg/FQYn6zyv)
 
-Install guides (in the repository for now; on-site copies come later):
+Install guides:
 
-- [Developer install, from source](https://github.com/ianb/beebox/blob/main/beebox/docs/developer-install.md)
-- [Docker install](https://github.com/ianb/beebox/blob/main/beebox/docs/docker-install.md)
+- [Docker install](https://beebox.run/docs/install/docker.md)
+- [Developer install, from source](https://beebox.run/docs/dev/developer-install.md)
+
+Working on the code? Start at [CONTRIBUTING.md](https://github.com/ianb/beebox/blob/main/CONTRIBUTING.md),
+or point your agent at [llms-dev.txt](https://beebox.run/llms-dev.txt).
