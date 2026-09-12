@@ -315,3 +315,35 @@ VoiceChip capability checks and warnings inside the retained composer, and
 shared-versus-isolated secret-store authorization. These upstream changes are
 also excluded from removal totals. The full finish decision sheet is rerun
 against this combined tree, including browser smoke.
+
+## Browse workspace follow-up — September 12
+
+Measured from `6342c7b58` to the commit containing this entry, the Browse follow-up
+adds 82 and deletes 252 frontend production lines: **170 more net lines removed**,
+with one production file deleted (`BrowseDetailPanel.tsx`). No other production
+code changes. Tests, guidance, this report, and the generated knowledge-audit
+ledger are excluded from that count. The historical A–F totals above remain
+unchanged; adding this follow-up gives **738 net frontend lines removed**, **568
+net production lines removed**, and **14 production files deleted** across the
+attributed work, excluding intervening main integrations.
+
+Browse now opens normal files through the workspace's right-side tabs on desktop,
+including relocating a file already retained on the left. Directory navigation
+stays in the singleton Browse card; mobile uses the existing single-card behavior.
+Old Browse detail URLs hand off to ordinary cards while retaining viewer and
+parameter state. The nested file renderer and its duplicate selection plumbing
+are removed.
+
+Validation: the affected test run passed 124 assertions across four suites;
+the final placement corrections passed all 38 workspace assertions. Typechecks,
+changed-file lint, and the focused box-agent knowledge audit passed. Browser
+replays covered desktop placement, existing-left-tab relocation, mobile width,
+directory Back, legacy detail targets, retained drafts, and cancellation of a
+delayed directory lookup after a newer file click. Before/after and mobile images
+are in the workstream exhibit `browse-opens-workspace-tabs`.
+
+Independent review identified explicit-destination precedence and non-hinted
+focus behavior regressions; both were corrected and covered by assertions.
+Its internal-scroll concern was traced to the preexisting natural-height themed
+card container: long Browse lists continue to scroll in the workspace tabpanel.
+This follow-up does not introduce a separate renderer sizing contract.

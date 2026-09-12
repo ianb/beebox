@@ -37,15 +37,17 @@ History filters but do not replace or duplicate the canonical History entrance.
 ## Browsing without editing the card
 
 Browse is one instrument, not one card per directory. Its target stays
-`_config/interface/browse.card` while its view state holds the current directory
-and optional selected file. A directory parameter can seed an opening, for
+`_config/interface/browse.card` while its view state holds the current directory.
+Older links may also contain a selected file; opening one transfers that file
+to an ordinary workspace tab and clears the legacy selection from Browse. A directory parameter can seed an opening, for
 example `/_config/interface/browse.card?dir=_content/recipes`.
 
 Clicking directories and breadcrumbs changes view state in the same Browse tab.
-Selecting a file shows detail inside Browse. Back and Forward restore that
-navigation. A bare open reuses Browse's current location; an explicit directory
-or view state changes it. An explicit open-in-workspace action opens the file
-separately and leaves Browse's location intact.
+Selecting a file opens it in the right workspace pane on desktop, leaving Browse
+visible when it occupies the left pane. If Browse is already in the right pane,
+the file joins that pane's tab strip. Mobile uses the workspace's single-card
+view. A bare open reuses Browse's current location; an explicit directory or
+view state changes it.
 
 Do not write the current directory, selected file, or navigation history into
 the card's frontmatter or body. Do not create a second Browse card to visit a

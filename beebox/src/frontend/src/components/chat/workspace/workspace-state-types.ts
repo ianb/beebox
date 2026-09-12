@@ -32,7 +32,7 @@ export type WorkspaceFocusEffect =
   | { kind: "pane-control"; pane: PaneId };
 
 export type WorkspaceAction =
-  | { type: "openCard"; target: SidecarTab["target"]; label: string; at: number; viewport: Viewport; originatingPane?: PaneId }
+  | { type: "openCard"; target: SidecarTab["target"]; label: string; at: number; viewport: Viewport; originatingPane?: PaneId; destinationPane?: PaneId }
   | { type: "retargetCard"; fromPath: string; target: SidecarTab["target"] }
   | { type: "selectTab"; path: string; at: number; viewport: Viewport }
   | { type: "closeTab"; path: string; viewport: Viewport }

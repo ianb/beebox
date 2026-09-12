@@ -1,8 +1,8 @@
-/** Card edges stay visible when the card is part of the full Browse interface. */
+/** Card edges stay visible when a file opens beside the full-width Browse listing. */
 import { tour } from "./tour-lib/index.js";
 
 tour(
-  { name: "card-theme-interface", description: "Inspect the card desk within Browse at desktop and phone widths." },
+  { name: "card-theme-interface", description: "Inspect a card opened from Browse at desktop and phone widths." },
   async (t) => {
     await t.go("/browse/_content/theme-tour/comparison-paper.memo.card");
     await t.expect.heading("One note, three stocks", { level: 2 });
@@ -14,12 +14,12 @@ tour(
       const d = desk.getBoundingClientRect(), c = card.getBoundingClientRect();
       return c.left - d.left >= 12 && d.right - c.right >= 12 &&
         document.documentElement.scrollWidth <= innerWidth &&
-        document.querySelectorAll(".bbx-interface-browse-panel h2").length === 1;
+        document.querySelectorAll('[data-workspace-card="_config/interface/browse.card"]').length === 1;
     })()`);
     await t.expect.custom("card has visible desk, one heading, and no horizontal page overflow", () => framed.trim() === "true");
     await t.eval(`(() => {
-      const paragraph = document.querySelector(".bbx-interface-browse-panel .bbx-paragraph");
-      if (!paragraph) throw new Error("Browse detail paragraph is missing");
+      const paragraph = document.querySelector('[data-workspace-card="_content/theme-tour/comparison-paper.memo.card"] .bbx-paragraph');
+      if (!paragraph) throw new Error("Workspace card paragraph is missing");
       paragraph.scrollIntoView({ block: "center", behavior: "instant" });
       paragraph.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
       const range = document.createRange();
@@ -31,7 +31,7 @@ tour(
     })()`);
     await t.expect.button("Add selection to message");
     const selectionButtons = await t.eval('document.querySelectorAll("#bbx-selection-add").length');
-    await t.expect.custom("nested Browse detail owns one selection button", () => selectionButtons.trim() === "1");
+    await t.expect.custom("workspace card owns one selection button", () => selectionButtons.trim() === "1");
     await t.eval("getSelection()?.removeAllRanges()");
     await t.expect.noPageErrors();
   },

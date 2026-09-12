@@ -1,7 +1,7 @@
 /**
  * BrowsePage - File browser for _content/ and other box directories.
  *
- * Sidebar with directory listing + card detail panel.
+ * Full-width directory listing for the canonical Browse card.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -10,24 +10,22 @@ import { apiRawFileUrl, getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { busEventData } from "../../lib/bus-events";
 import { isRecord } from "@shared/is-record";
-import { type ViewState, type ViewTarget } from "../../lib/view-url";
+import { type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
 import { trpc } from "../../lib/trpc";
 import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
-import { BrowseDetailPanel } from "./components/BrowseDetailPanel";
 import { BrowseContextMenu } from "./components/BrowseContextMenu";
-import { Row } from "../../components/ui/Row";
 import { Column } from "../../components/ui/Column";
 import { Text } from "../../components/ui/Text";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody";
 import { RequestError } from "../../lib/errors";
 import type { BrowseMissingKind, BrowseState } from "../../lib/browse-card-state";
-import { CardVisibilityProvider, useVisibleCardSelectionSink } from "../../components/chat/everywhere/card-context";
 
 interface BrowseBodyProps {
   state: BrowseState;
   onNavigate: (path: string, options: { kind: BrowseMissingKind; replace?: boolean }) => void;
-  onDetailNavigate: (target: ViewTarget, method: "push" | "replace") => void;
+  onFileNavigate: (target: ViewTarget) => void;
+  onLinkNavigate: (target: ViewTarget) => void;
 }
 
 interface ContextMenuState {
@@ -67,51 +65,23 @@ function useBrowseListLiveRefresh(dirPath: string): void {
 }
 
 /** Listing and retained detail body, independent of the outer route. */
-export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyProps) {
-  const onAddSelection = useVisibleCardSelectionSink();
+export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }: BrowseBodyProps) {
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
   const dirPath = state.directory;
-  const selectedFilePath = state.detail?.path ?? null;
-  const viewer = state.detail?.viewer ?? null;
-  const urlParams = state.detail?.params ?? {};
-  const viewState = state.detail?.viewState ?? null;
   // `forDir`, not `identity`: the sidebar header renders the landmark's full
   // resolved link list (listed + derived + expand), which only `forDir`
   // carries. The place pill and title mark need just label/symbol, so they
   // read `identity` instead and this query no longer shares their cache
   // entry (`docs/implemented-plans/card-prominence.md`, "Split identity from resolution").
-  const landmarkQuery = trpc.landmarks.forDir.useQuery({ dir: dirPath }, { enabled: !selectedFilePath });
+  const landmarkQuery = trpc.landmarks.forDir.useQuery({ dir: dirPath });
   const landmark = landmarkQuery.data?.landmark ?? null;
-
-  const handleLinkNavigate = (target: ViewTarget) => {
-    onDetailNavigate(target, target.path === selectedFilePath ? "replace" : "push");
-  };
-  const handleViewStateChange = (next: ViewState, method: "push" | "replace") => {
-    if (state.detail) onDetailNavigate({ ...state.detail, viewState: next }, method);
-  };
-  const handleSelectRenderer = (name: string | null) => {
-    if (state.detail) onDetailNavigate({ ...state.detail, viewer: name }, "replace");
-  };
-
-  const followMovedCard = useCallback((path: string) => {
-    if (state.detail) onDetailNavigate({ ...state.detail, path }, "replace");
-  }, [onDetailNavigate, state.detail]);
 
   const { data, isLoading: loading, isError, error: browseError, refetch } = trpc.status.browse.useQuery({ path: dirPath });
   useBrowseListLiveRefresh(dirPath);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
-
-  // Clear transient errors when navigation changes the file. An "external
-  // signal → local state" sync: contextMenu / deleteError live independently
-  // of the route until it moves, so they can't be derived in render.
-  useEffect(() => {
-    setDeleteError(null);
-    setContextMenu(null);
-  }, [selectedFilePath]);
-
 
   useEffect(() => {
     if (contextMenu === null) return;
@@ -133,13 +103,6 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
     };
   }, [contextMenu]);
 
-  const selectedCard = selectedFilePath && data
-    ? data.cards.find((c) => c.relativePath === selectedFilePath) || null
-    : null;
-  const selectedRawFile = selectedFilePath && data?.files.some((file) => file.relativePath === selectedFilePath) ? selectedFilePath : null;
-
-  const hasDetail = Boolean(selectedFilePath);
-
   const handleDelete = useCallback(async (path: string) => {
     if (deletingPath !== null) return;
 
@@ -156,17 +119,12 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
         throw new RequestError(errText || `Delete failed (${response.status})`);
       }
       await utils.status.browse.invalidate({ path: dirPath });
-      if (selectedFilePath === path) {
-        // The file is gone — leaving its URL in history would let back walk
-        // onto a 404, so replace the entry rather than push.
-        onNavigate(dirPath, { kind: "directory", replace: true });
-      }
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : "Delete failed");
     } finally {
       setDeletingPath(null);
     }
-  }, [deletingPath, dirPath, onNavigate, selectedFilePath, utils.status.browse]);
+  }, [deletingPath, dirPath, utils.status.browse]);
 
   const handleFileContextMenu = useCallback((event: React.MouseEvent<HTMLButtonElement>, path: string) => {
     event.preventDefault();
@@ -174,8 +132,9 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
   }, []);
 
   return (
-    <Row gap="none" align="stretch" className="h-full">
-      <Sidebar title="Browse" headingLevel="h2" subtitle={dirPath || "/"} detailSelected={hasDetail} idPrefix="bbx-browse-sidebar">
+    <Column className="h-full">
+      {deleteError ? <Text as="div" size="sm" tone="danger" className="p-3">{deleteError}</Text> : null}
+      <Sidebar title="Browse" headingLevel="h2" subtitle={dirPath || "/"} fill idPrefix="bbx-browse-sidebar">
         <Column>
           <BrowseBreadcrumbs dirPath={dirPath} onNavigate={(path) => onNavigate(path, { kind: "directory" })} />
           <BrowseSidebarBody
@@ -185,48 +144,18 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
             error={browseError}
             onRetry={() => { void refetch(); }}
             dirPath={dirPath}
-            selectedFilePath={selectedFilePath}
-            onNavigate={(path, kind) => onNavigate(path, { kind })}
+            selectedFilePath={null}
+            onNavigate={(path, kind) => kind === "directory" ? onNavigate(path, { kind }) : onFileNavigate({ path, viewer: null, params: {}, viewState: null })}
             onFileContextMenu={handleFileContextMenu}
             landmark={landmark}
             boxSlug={boxSlug ?? ""}
-            onLinkNavigate={handleLinkNavigate}
+            onLinkNavigate={onLinkNavigate}
             landmarkError={landmarkQuery.error}
             onLandmarkRetry={() => { void landmarkQuery.refetch(); }}
           />
         </Column>
       </Sidebar>
 
-      <Column overflow="auto" focusable hideOnMobile={!hasDetail} className="flex-1">
-        {selectedFilePath ? (
-          <CardVisibilityProvider visible={false}><BrowseDetailPanel
-            boxSlug={boxSlug}
-            deleteError={deleteError}
-            deletingPath={deletingPath}
-            onBack={() => {
-              // Replace, not push: this button closes the file, so a browser
-              // back right after it must not reopen the file it just closed.
-              onNavigate(dirPath, { kind: "directory", replace: true });
-            }}
-            onDelete={handleDelete}
-            onNavigate={handleLinkNavigate}
-            onMoved={followMovedCard}
-            onSelectRenderer={handleSelectRenderer}
-            onViewStateChange={handleViewStateChange}
-            onAddSelection={onAddSelection}
-            params={urlParams}
-            rendererName={viewer}
-            viewState={viewState}
-            selectedCard={selectedCard}
-            selectedFilePath={selectedFilePath}
-            selectedRawFile={selectedRawFile}
-          /></CardVisibilityProvider>
-        ) : (
-          <Row justify="center" align="center" className="h-full">
-            <Text tone="muted">Select a file to view details</Text>
-          </Row>
-        )}
-      </Column>
       {contextMenu !== null ? (
         <BrowseContextMenu
           x={contextMenu.x}
@@ -236,6 +165,6 @@ export function BrowseBody({ state, onNavigate, onDetailNavigate }: BrowseBodyPr
           onDelete={handleDelete}
         />
       ) : null}
-    </Row>
+    </Column>
   );
 }
