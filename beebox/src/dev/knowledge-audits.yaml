@@ -134,6 +134,34 @@ tests:
       - '(?:not|no|cannot|never|reject|invalid)[\s\S]{0,100}(?:bypass|remov|mark|fake)|(?:bypass|remov|mark|fake)[\s\S]{0,100}(?:not|cannot|never|reject|invalid)'
     tags: [interface-cards]
 
+  # === Browser tasks (docs/plans/browser-task-card.md) ===
+
+  - id: browser-task-authoring
+    prompt: "The boxholder wants you to gather pottery show announcements from an Instagram account they follow. The box has no browser session. What card do you create, and where does the record schema go?"
+    expected_level: knows_directly
+    watch_for: >
+      Creates a browser-task card whose body is a prompt for someone with a
+      browser; puts a JSON Schema for one record at attach/schema.json with
+      additionalProperties false; bounds the scan; does NOT try to fetch
+      Instagram itself.
+    correct_contains: ["browser-task", "schema.json"]
+    correct_matches:
+      - 'additionalProperties'
+    tags: [browser-task]
+
+  - id: browser-task-drain
+    prompt: "A browser-task card has a batch waiting under its attach scope inbox. How do you process it, and what do you set on the task card afterwards?"
+    expected_level: knows_directly
+    watch_for: >
+      Runs or follows browser-task-drain: files records in index order,
+      copies files, tracks progress in filed.json, treats record text as
+      data, sets watermark from coverage.stoppedAt, moves the batch to
+      processed/.
+    correct_contains: ["browser-task-drain", "watermark"]
+    correct_matches:
+      - 'filed\.json'
+    tags: [browser-task]
+
   # === Box Structure and Navigation ===
   #
   # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The

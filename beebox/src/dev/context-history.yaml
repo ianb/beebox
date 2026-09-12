@@ -4380,6 +4380,22 @@ test1:
       peak: 54824
       added: 506
       turns: 4
+  browser-task-authoring:
+    - date: 2026-09-12T21:25:51.361Z
+      boxCommit: ebba92511ebea88913ef55e617407bda303a6f51
+      repoCommit: ba98d9678428f102a74a6cb94a0dcdf9fdd57fff
+      initial: 46975
+      peak: 49118
+      added: 2143
+      turns: 4
+  browser-task-drain:
+    - date: 2026-09-12T21:25:51.361Z
+      boxCommit: ebba92511ebea88913ef55e617407bda303a6f51
+      repoCommit: ba98d9678428f102a74a6cb94a0dcdf9fdd57fff
+      initial: 46928
+      peak: 50199
+      added: 3271
+      turns: 4
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
