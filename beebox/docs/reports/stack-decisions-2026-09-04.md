@@ -1,5 +1,7 @@
 # Stack Decisions
 
+> Historical. Frozen as of 2026-09-04 and moved out of the live reference area: it records why the stack was chosen, not how the system works now. Current rationale lives in [`../design/`](../design/README.md).
+
 Technology choices for Bee Box. Each decision includes reasoning and alternatives considered. The status table below tracks what's actually implemented vs. planned.
 
 ## Status Summary
