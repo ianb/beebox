@@ -3,10 +3,10 @@ description: "Sorts everything that arrives in the box into the right category a
 ---
 # Triage
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. Triage is the pipeline that decides where a
-newly arrived item belongs.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. Triage is the pipeline that decides where a newly arrived item belongs.
 
 **What it does for you**
 
@@ -28,12 +28,13 @@ capture paths you already use.
 
 **How it works, briefly**
 
-The pipeline has three stages: intake (clean up the item, e.g. transcribe or
-OCR it, without deciding where it goes), triage (pick a category and move
-the item to that category's holding spot), and handle (run the category's
-procedure to reach the item's final resting place). Each stage is a real
-step recorded in the box, so a partially triaged item is visible, not stuck
-invisibly mid-pipeline. Triage runs during `bbx wakeup` and other automated
+The process has three stages: intake (clean up the item, for example
+transcribing speech or pulling text out of a scanned image, without deciding
+where it goes), triage (pick a category and move the item to that category's
+holding spot), and handle (run the category's procedure to reach the item's
+final resting place). Each stage is a real step recorded in the box, so a
+partially triaged item is visible, not stuck invisibly partway through.
+Triage runs automatically during regular check-ins and other automated
 passes, not only when you ask.
 
 **Limits**

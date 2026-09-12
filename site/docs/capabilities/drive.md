@@ -3,10 +3,11 @@ description: "Two-way syncs Google Docs and Sheets into the box, mirrors Drive f
 ---
 # Google Drive
 
-A box is a directory of your data kept in git; a card is a markdown file with
-structured frontmatter; the agent is the coding agent (Claude Code or Codex)
-that operates the box. The Drive connector brings Google Drive content into
-the box in three different ways, each a different kind of card.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. The Drive connector brings Google Drive content into the box in three
+different ways, each a different kind of card.
 
 **What it does for you**
 
@@ -21,17 +22,18 @@ the box in three different ways, each a different kind of card.
 
 **What it needs**
 
-A Google account and its OAuth consent, shared with Gmail and Calendar, plus
-the Drive service turned on for the box. See the install directory:
+A Google account, connected by signing in with your Google account and a
+one-time setup, shared with Gmail and Calendar, plus the Drive service turned
+on for the box. See the install directory:
 [../install/index.md](../install/index.md).
 
 **How it works, briefly**
 
 A synced Doc becomes a `gdoc` card, a synced Sheet a `gsheet` card, a
 mirrored folder a `gfolder` card, and a pointer-only item a `glink` card.
-Sync runs on `bbx wakeup --connector drive` or on demand; a Doc or Sheet push
-back to Drive detects when the remote changed first and reports a conflict
-rather than overwriting silently.
+Sync runs automatically or on demand (the underlying command is `bbx wakeup
+--connector drive`); a Doc or Sheet push back to Drive detects when the
+remote changed first and reports a conflict rather than overwriting silently.
 
 **Limits**
 

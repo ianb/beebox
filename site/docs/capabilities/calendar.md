@@ -3,10 +3,11 @@ description: "Mirrors your Google Calendar into plain .ics files in the box, and
 ---
 # Calendar
 
-A box is a directory of your data kept in git; a card is a markdown file with
-structured frontmatter; the agent is the coding agent (Claude Code or Codex)
-that operates the box. The calendar connector syncs Google Calendar into the
-box as plain calendar files.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. The calendar connector syncs Google Calendar into the box as plain
+calendar files.
 
 **What it does for you**
 
@@ -21,17 +22,18 @@ box as plain calendar files.
 
 **What it needs**
 
-A Google account and its OAuth consent, shared with the Gmail and Drive
-connectors. See the install directory: [../install/index.md](../install/index.md).
+A Google account, connected by signing in with your Google account and a
+one-time setup, shared with the Gmail and Drive connectors. See the install directory: [../install/index.md](../install/index.md).
 
 **How it works, briefly**
 
-Events live in `_content/calendar/` as `.ics` files. Pull is the
-well-exercised direction: sync brings Google's events into the box. Local
-edits, locally-created events, and deletions are pushed back to Google during
-sync, but this push path and automatic scheduled sync are both less
-exercised than the pull side. There is no calendar-month view built in;
-queries are driven from the command line.
+Events are stored in the box as individual `.ics` files (kept in
+`_content/calendar/`, for the curious). Pull is the well-exercised direction:
+sync brings Google's events into the box. Local edits, locally-created
+events, and deletions are pushed back to Google during sync, but this push
+path and automatic scheduled sync are both less exercised than the pull
+side. There is no calendar-month view built in; you look up events by asking
+the agent rather than browsing a calendar page.
 
 **Limits**
 

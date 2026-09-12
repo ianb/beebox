@@ -3,10 +3,11 @@ description: "Lets you message your box on Telegram from your phone and get the 
 ---
 # Telegram
 
-A box is a directory of your data kept in git; a card is a markdown file with
-structured frontmatter; the agent is the coding agent (Claude Code or Codex)
-that operates the box. Telegram is a way to reach the box that does not
-require opening a browser.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. Telegram is a way to reach the box that does not require opening a
+browser.
 
 **What it does for you**
 
@@ -30,9 +31,9 @@ directory: [../install/index.md](../install/index.md).
 Incoming messages accumulate on a `chat-thread` card, one per Telegram chat,
 and each new message creates a job for the agent to process. Outbound
 messages are written as a `telegram-message` card and sent, then deleted,
-the next time the connector runs. Delivery happens on `bbx wakeup
---connector telegram`, both to poll for missed messages and to flush
-anything queued to send.
+the next time the connector runs (the underlying command is `bbx wakeup
+--connector telegram`), both to check for missed messages and to send
+anything queued.
 
 **Limits**
 

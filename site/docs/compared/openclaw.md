@@ -10,11 +10,12 @@ compared:
 # Bee Box compared with OpenClaw
 
 OpenClaw is a self-hosted personal-assistant gateway: one always-on process
-routes messages from around thirty chat platforms (WhatsApp, Telegram,
-Discord, and more) to one or more AI agents, each with its own persona files
-and memory. Bee Box is a personal assistant built around a **box**: one
-directory, also a git repository, holding **cards** (files with YAML
-frontmatter and a markdown body) that a coding agent reads and writes.
+routes messages from around thirty chat platforms (WhatsApp, Telegram, Discord,
+and more) to one or more AI agents, each with its own persona files and memory.
+Bee Box is a personal assistant built around a **box**: one directory, kept
+under version control with a full history of changes (using git), holding
+**cards** (files with a structured header and a markdown body) that a coding
+agent reads and writes.
 
 **Where they are similar.** Both are built for a single trusted operator
 rather than a multi-tenant product. Both load a small always-resident
@@ -36,7 +37,7 @@ model; as of the comparison date Bee Box had neither, relying on
 trusted-operator filesystem scoping. Bee Box has since published a
 [security overview](../security/overview.md); it still has no sandbox.
 OpenClaw has a plugin marketplace and an agent-writable persona file; Bee Box
-extends only through box-local schemas and procedures.
+extends only through box-local card types and procedures.
 
 **What Bee Box borrowed or decided not to.** The maintainers rejected
 OpenClaw's one-shot, agent-authored identity ritual as a model for onboarding

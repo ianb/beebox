@@ -3,9 +3,10 @@ description: "A conversational interface to your box, in the browser or on Teleg
 ---
 # Chat
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. Chat is the everyday way you talk to it.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. Chat is the everyday way you talk to it.
 
 **What it does for you**
 

@@ -12,25 +12,26 @@ compared:
 Khoj bills itself as "your AI second brain": a chat assistant that answers
 questions over your own notes and documents, retrieved by embedding search,
 with both a hosted cloud product and a self-hostable core. Bee Box is a
-personal assistant built around a **box**: one directory, also a git
-repository, holding **cards** (files with YAML frontmatter and a markdown
-body), where the record itself, not a chat about it, is the primary object.
+personal assistant built around a **box**: one directory, kept under version
+control with a full history of changes (using git), holding **cards** (files
+with a structured header and a markdown body), where the record itself, not a
+chat about it, is the primary object.
 
 **Where they are similar.** Both connect to a personal store of documents and
 both run scheduled automations that reuse the same processing path a live
-turn would use: Khoj's cron jobs call back into its own chat endpoint, much
-as a Bee Box schedule feeds the same reactor a live wakeup does.
+turn would use: Khoj's scheduled jobs call back into its own chat system,
+much as a Bee Box schedule feeds the same process a live wakeup does.
 
 **Where they differ.** Khoj's center of gravity is chat over a corpus of
 notes, PDFs, and email retrieved by vector embeddings; Bee Box centers on
-typed cards with their own fields, validated against a schema, that a person
-or agent can open directly. Khoj's Obsidian plugin can write back into your
+typed cards with their own fields, checked against the rules for that kind of
+card, that a person or agent can open directly. Khoj's Obsidian plugin can write back into your
 notes under an explicit permission toggle, with a confirm-or-cancel step
 before applying an edit; Bee Box has no comparable mechanism for editing a
 person's existing external documents. Khoj's memory is a per-turn
 extract-and-save pass over free-text facts, aged by recency and similarity;
-Bee Box routes durable memory through schema-validated cards, updated only
-through a slower, evidence-checked review pass. Khoj is a multi-tenant
+Bee Box routes durable memory through structured cards with checked fields,
+updated only through a slower, evidence-checked review pass. Khoj is a multi-tenant
 product with subscription billing across many users; a Bee Box box is built
 for one person and one agent.
 

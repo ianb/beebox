@@ -3,10 +3,11 @@ description: "A Chrome extension for saving a web page, a comment on it, or your
 ---
 # Web clipping
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. Web clipping is a Chrome extension, called
-Bee Box Clerk, that sends things from your browser into your box.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. Web clipping is a Chrome extension, called Bee Box Clerk, that sends
+things from your browser into your box.
 
 **What it does for you**
 
@@ -28,12 +29,12 @@ The Chrome extension installed and pointed at a reachable box. See
 
 **How it works, briefly**
 
-The extension talks to the box over a small API exposed for it. A saved page
-becomes a `webpage` card, with any comment attached as a `commentary` card. A
-sent tab arrangement becomes a `tab-arrangement` card the box can propose
-edits to; applying or undoing it relays back to the extension in your
-browser. Nothing here runs on a schedule — it acts when you use the
-extension.
+The extension talks to the box over a small set of connections built just
+for it. A saved page becomes a `webpage` card, with any comment attached as
+a `commentary` card. A sent tab arrangement becomes a `tab-arrangement` card
+the box can propose edits to; applying or undoing it relays back to the
+extension in your browser. Nothing here runs on a schedule: it acts when you
+use the extension.
 
 **Limits**
 
