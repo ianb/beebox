@@ -79,6 +79,16 @@ struct ChatWebView: UIViewRepresentable {
         case browser
     }
 
+    /// A navigation that failed, for the view to render. Before this the only
+    /// record was `BoxLog.warn`, which `LogForwarder` sends TO THE BOX — the
+    /// one place unreachable in exactly this failure — so an unreachable box
+    /// showed a blank `WKWebView` and nothing else.
+    struct NavigationFailure: Equatable {
+        /// The `URLError` code, when the failure was one. -1 otherwise.
+        var urlErrorCode: Int
+        var localizedDescription: String
+    }
+
     var box: PairedBox
     var pendingEmissions: [NativeChatEmission]
     var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
@@ -103,6 +113,7 @@ struct ChatWebView: UIViewRepresentable {
     var onComposerCommandResultDelivered: (String) -> Void
     var onLastAudioRequest: (NativeLastAudioRequest) -> Void
     var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
+    var onNavigationFailure: (NavigationFailure?) -> Void
 
     init(
         box: PairedBox,
@@ -128,7 +139,8 @@ struct ChatWebView: UIViewRepresentable {
         onComposerCommandAcknowledgementDelivered: @escaping (String) -> Void = { _ in },
         onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in },
         onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
-        onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in }
+        onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
+        onNavigationFailure: @escaping (NavigationFailure?) -> Void = { _ in }
     ) {
         self.box = box
         self.pendingEmissions = pendingEmissions
@@ -154,6 +166,7 @@ struct ChatWebView: UIViewRepresentable {
         self.onComposerCommandResultDelivered = onComposerCommandResultDelivered
         self.onLastAudioRequest = onLastAudioRequest
         self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
+        self.onNavigationFailure = onNavigationFailure
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -205,6 +218,7 @@ struct ChatWebView: UIViewRepresentable {
         context.coordinator.onComposerCommandResultDelivered = onComposerCommandResultDelivered
         context.coordinator.onLastAudioRequest = onLastAudioRequest
         context.coordinator.onSpeechStopRequestSettled = onSpeechStopRequestSettled
+        context.coordinator.onNavigationFailure = onNavigationFailure
         context.coordinator.boxID = box.id
         context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         context.coordinator.pendingEmissions = pendingEmissions
@@ -245,7 +259,8 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommandAcknowledgementDelivered: onComposerCommandAcknowledgementDelivered,
             onComposerCommandResultDelivered: onComposerCommandResultDelivered,
             onLastAudioRequest: onLastAudioRequest,
-            onSpeechStopRequestSettled: onSpeechStopRequestSettled
+            onSpeechStopRequestSettled: onSpeechStopRequestSettled,
+            onNavigationFailure: onNavigationFailure
         )
     }
 
@@ -268,6 +283,7 @@ struct ChatWebView: UIViewRepresentable {
         var onComposerCommandResultDelivered: (String) -> Void
         var onLastAudioRequest: (NativeLastAudioRequest) -> Void
         var onSpeechStopRequestSettled: (NativeSpeechStopRequest.ID) -> Void
+        var onNavigationFailure: (NavigationFailure?) -> Void
         var pendingEmissions: [NativeChatEmission] = []
         var emissionRedeliveryRequest: NativeEmissionRedeliveryRequest?
         var locationShareRequest: NativeLocationShareRequest?
@@ -322,6 +338,7 @@ struct ChatWebView: UIViewRepresentable {
             onComposerCommandResultDelivered: @escaping (String) -> Void = { _ in },
             onLastAudioRequest: @escaping (NativeLastAudioRequest) -> Void = { _ in },
             onSpeechStopRequestSettled: @escaping (NativeSpeechStopRequest.ID) -> Void = { _ in },
+            onNavigationFailure: @escaping (NavigationFailure?) -> Void = { _ in },
             pageLoaded: Bool = false,
             evaluateEmission: ((String, @escaping (Error?) -> Void) -> Void)? = nil,
             openExternalURL: @escaping (URL) -> Void = { UIApplication.shared.open($0) },
@@ -347,6 +364,7 @@ struct ChatWebView: UIViewRepresentable {
             self.onComposerCommandResultDelivered = onComposerCommandResultDelivered
             self.onLastAudioRequest = onLastAudioRequest
             self.onSpeechStopRequestSettled = onSpeechStopRequestSettled
+            self.onNavigationFailure = onNavigationFailure
             self.pageLoaded = pageLoaded
             self.evaluateEmission = evaluateEmission
             self.openExternalURL = openExternalURL
@@ -356,6 +374,7 @@ struct ChatWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             pageLoaded = true
             navigationFailureLogged = false
+            onNavigationFailure(nil)
             navigationStartLogged = false
             BoxLog.info("chat navigation finished", category: .webview, targetBoxID: boxID)
             onSessionChange(ChatWebView.visibleSessionID(from: webView.url))
@@ -420,6 +439,12 @@ struct ChatWebView: UIViewRepresentable {
                 return
             }
             navigationFailureLogged = true
+            // Tell the VIEW, not only the box: `BoxLog` is forwarded over the
+            // network, so in the failure this exists for it goes nowhere.
+            onNavigationFailure(NavigationFailure(
+                urlErrorCode: (error as? URLError)?.code.rawValue ?? -1,
+                localizedDescription: error.localizedDescription
+            ))
             BoxLog.warn(
                 "chat navigation failed stage=\(stage)"
                     + " urlError=\((error as? URLError)?.code.rawValue ?? -1): \(error.localizedDescription)",

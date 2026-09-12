@@ -64,3 +64,33 @@ tell them apart from a blank screen:
   reach; re-pair it."
 - **Keep a local record.** A failure whose whole nature is "the box is
   unreachable" cannot rely on `LogForwarder` to report itself.
+
+
+## Fixed 2026-09-12 (network half)
+
+`ChatWebView` gained a `NavigationFailure` value and an `onNavigationFailure`
+callback. `noteNavigationFailure` now reports to the VIEW as well as to
+`BoxLog` — the point being that `BoxLog` goes to the box, which is what is
+unreachable — and `didFinish` clears it, so a recovered load removes the
+overlay on its own.
+
+`RootView` holds the failure in state and overlays `UnreachableBoxView` on the
+webview. That view distinguishes the two cases the boxholder could not tell
+apart from a blank screen:
+
+- **Transport failure** (this report's case — Tailscale was down): names the
+  host that could not be reached and says it may be asleep, off the network, or
+  behind a VPN that is not connected.
+- **Paired to loopback**: when the stored `baseURL` host is `localhost`,
+  `127.0.0.1` or `::1`, the advice is to re-pair rather than retry, because no
+  network fix reaches an address that means the phone itself.
+
+The underlying `error.localizedDescription` renders quietly beneath, since it
+is what separates "offline" from "host not found" when someone reports this.
+
+Verified with `swiftc -typecheck` against the iphoneos SDK over the whole
+target — exit 0. NOT verified on a device or simulator: the overlay's
+appearance and the loopback copy want a real look. `UnreachableBoxView` lives
+in `RootView.swift` rather than its own file because the Xcode project uses
+explicit `project.pbxproj` references and a new file needs registering in three
+places by hand.
