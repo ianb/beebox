@@ -27,6 +27,10 @@ text. **The agent** is the coding agent that operates the box
 - **Corrections become rules.** Fix a filing decision or answer a question,
   and the correction is written where the agent reads it next time
   ([design/teaching.md](design/teaching.md)).
+- **It keeps your words and their origin.** What you said is stored as a
+  quote, and a fact drawn from an email or a page points back at it, so the
+  agent's summary and your own words never blur together. See
+  [provenance](capabilities/provenance.md).
 - **It asks instead of guessing.** Lacking confidence or authority, the agent
   writes a question card and waits for your answer
   ([capabilities/questions.md](capabilities/questions.md)).

@@ -36,6 +36,11 @@ exist: no path in the software renders a page carrying a form, so a reader canno
 currently encounter one. A form could not go on a fully public page in any case,
 to stop it being flooded.
 
+**What makes it possible**
+
+- **Publishing with an explicit go-live and takedown** ([publishing](../capabilities/publishing.md)): going live and revoking are separate commands, so nothing reaches the public web as a side effect of editing a card.
+- **Typed cards with validated fields** ([cards](../concepts/cards.md)): a reply arrives as a pub-submission card, validated as it lands and handled as outside text that can become a note or a question but never authorize an action.
+
 **Read next.** [Your data and safety](../10-your-data-and-safety.md),
 [pub-submission](../reference/cards/pub-submission.md),
 [doc](../reference/cards/doc.md).

@@ -3,6 +3,7 @@ title: "Full-suite red: test/cli/commands/validate-box-checks.doctest.md, test/c
 workstream: unattached
 area: beebox
 priority: important
+resolution: implemented
 filed-by: agent
 discovered-by: agent
 ---
@@ -190,3 +191,26 @@ Reproduce at the blamed landing:
 git log -1 f859fbd7
 pnpm --dir beebox exec tap test/cli/commands/validate-box-checks.doctest.md test/core/landmark/landmark-schema.doctest.md test/core/loader-registry.doctest.md test/webapp/trpc-presentation.doctest.md
 ```
+
+## Fixed 2026-09-12 — three stale expectations, one already green
+
+The blame was right and the production change was right: `f859fbd7` made theme
+names and stocks an **open set**, so three of these four files were asserting
+the old catalog-allowlist behaviour.
+
+- `test/core/landmark/landmark-schema.doctest.md` — `system-theme: {name: paper,
+  stock: purple}` was expected to be dropped as malformed. An unknown stock is
+  not malformed any more; only the wrong SHAPE is. Split the section so it says
+  which is which.
+- `test/core/loader-registry.doctest.md` — a card theme of `{name: velvet}` was
+  expected to resolve to plain. It now carries through as authored, which is the
+  point: dropping it would let a box or schema default silently beat something
+  the author wrote.
+- `test/cli/commands/validate-box-checks.doctest.md` — the box-config validator
+  no longer emits an "unknown stock" error, so only the path-pattern error
+  remains. The prose claimed the validator checks catalog membership; it does
+  not.
+- `test/webapp/trpc-presentation.doctest.md` — green on re-run before any of
+  these edits, so it was fixed between the report and now.
+
+Full suite re-run green afterwards.

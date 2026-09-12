@@ -33,7 +33,7 @@ this scale, the same bet Bee Box makes with its cards. nanobot checks in a
 script that measures how many lines of its own code are "core" versus
 "everything else," as a recurring discipline; Bee Box has no equivalent
 measurement. nanobot's scheduler is a hand-rolled poll loop with no external
-dependency; Bee Box's schedule cards and `bbx tick` serve the same role at
+dependency; Bee Box's schedule cards and background scheduler serve the same role at
 larger scope, including procedures and connector-driven jobs nanobot has no
 counterpart for.
 

@@ -30,8 +30,7 @@ schedules. See [../install/index.md](../install/index.md).
 **How it works, briefly**
 
 Schedules are `scheduled-script` cards (kept under `_config/schedules/`),
-checked every 60 seconds by a background process (the underlying command is
-`bbx tick`) that runs whatever is due. One box's schedule failing does not
+checked every 60 seconds by a background process that runs whatever is due. One box's schedule failing does not
 affect another box on the same machine. When the underlying model engine is
 out of quota, a due script skips cleanly and is marked "waiting," not
 "failing," and you're told once per episode.

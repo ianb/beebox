@@ -39,9 +39,14 @@ for each new item, have the agent work through those jobs, then save the
 changes to your remote copy of the git history if you set one up. Between
 passes the engine is idle; it does not check continuously.
 
-**`bbx` is the interface underneath.** Every operation in a box is a `bbx`
-command or a direct file edit. The web interface and chat sit on top of the
-same box.
+**The agent's own tool.** Underneath the web interface and chat is a command
+called `bbx` that the agent uses, and that you will rarely see. It is how the
+engine guides the agent: creating a card from a template with the right
+fields, checking a card before it is saved, running a sync or a procedure,
+asking a question the right way. Everything the agent does is one of those
+commands or a direct file edit, so its work is inspectable and repeatable.
+The commands are listed in [reference/bbx-commands.md](reference/bbx-commands.md)
+for the technically inclined.
 
 Why it is built this way: [design/identity.md](design/identity.md), the rest
 of [design/index.md](design/index.md), and the narrative in

@@ -13,6 +13,7 @@ its type; a **box** is the directory of them. One page per capability is in
 - [Calendar](capabilities/calendar.md): two-way Google Calendar sync.
 - [Drive](capabilities/drive.md): mirror Google Docs, Sheets, and folders both ways.
 - [Telegram](capabilities/telegram.md): chat with the box from a messaging app.
+- [The web interface](capabilities/web-interface.md): dashboard, browser, questions, map, history, settings, and a display for each kind of card, on desktop and phone.
 - [Chat](capabilities/chat.md): the central web conversation, with resumable threads.
 - [Voice](capabilities/voice.md): dictation, transcription, and spoken replies.
 - [Phone capture](capabilities/phone-capture.md): record, photograph, and upload from a phone.
@@ -20,6 +21,8 @@ its type; a **box** is the directory of them. One page per capability is in
 - [Questions](capabilities/questions.md): the agent asks instead of guessing.
 - [Schedules](capabilities/schedules.md): recurring runs and agent-set timers.
 - [Procedures](capabilities/procedures.md): declarative multi-step workflows.
+- [Dump it in now, shape it later](capabilities/shape-it-later.md): put things in before deciding their structure; what does not fit stays in your words and can be reshaped later.
+- [Provenance](capabilities/provenance.md): your exact words kept as quotes, and facts that point back at their source.
 - [Views](capabilities/views.md): pages and displays the agent builds for a kind of card, so a collection becomes something to browse.
 - [Courses](capabilities/courses.md): structured teaching material and per-learner progress.
 - [Recipes](capabilities/recipes.md): scaling-aware cooking cards.

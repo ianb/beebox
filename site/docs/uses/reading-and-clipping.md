@@ -37,6 +37,13 @@ browser checks, so saving a page and arranging tabs are verified in the code and
 not in use; in a checked box, neither saved page carried a frozen snapshot or a
 capture date.
 
+**What makes it possible**
+
+- **Typed cards with validated fields** ([cards](../concepts/cards.md)): a page and a remark on it are two checked types, so a clipping carries its passage anchor and its readable copy.
+- **Landmarks** ([landmarks](../concepts/landmarks.md)): a flat tree weights every directory equally; a landmark is the editorial layer, and marks where a clipping may be filed.
+- **Triage** ([triage](../capabilities/triage.md)): a new category is promoted by dropping a landmark rather than by defining a taxonomy first.
+- **Provenance** ([where a fact came from](../capabilities/provenance.md)): your exact words are kept as a quote and a fact points at its origin, so what the agent inferred is always distinguishable from what you said.
+
 **Read next.** [Webpage](../reference/cards/webpage.md),
 [commentary](../reference/cards/commentary.md),
 [extfile](../reference/cards/extfile.md),

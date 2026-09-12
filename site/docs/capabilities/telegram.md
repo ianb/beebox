@@ -31,8 +31,7 @@ directory: [../install/index.md](../install/index.md).
 Incoming messages accumulate on a `chat-thread` card, one per Telegram chat,
 and each new message creates a job for the agent to process. Outbound
 messages are written as a `telegram-message` card and sent, then deleted,
-the next time the connector runs (the underlying command is `bbx wakeup
---connector telegram`), both to check for missed messages and to send
+the next time the connector runs, both to check for missed messages and to send
 anything queued.
 
 **Limits**
