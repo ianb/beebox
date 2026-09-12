@@ -86,7 +86,31 @@ async function unpairAsMember(deviceId: string) {
 => somebody else's: NOT_FOUND, their own: ok
 ```
 
+## A caller with no person behind it cannot pair at all
+
+A machine credential — an agent's loopback bearer, or the browse key on a box
+that did not opt into treating it as the owner — clears the auth wall as nobody.
+Left alone it could mint a device recorded against nobody, which is owner-only
+forever: it could pair a phone it could never unpair. `createTicket` refuses
+instead, so the rule holds in both directions.
+
+```ts continue
+process.env.BBX_BROWSE_API_KEY = "browse-key-for-pairing-scope-doctest";
+const plain = await makeTestServer({ openAccess: false });
+const asMachine = await plain.request({
+  method: "POST",
+  url: "/api/trpc/pairing.createTicket",
+  headers: { authorization: "Bearer browse-key-for-pairing-scope-doctest" },
+  payload: {},
+});
+delete process.env.BBX_BROWSE_API_KEY;
+
+`${asMachine.statusCode} ${asMachine.body.error.data.code}`
+=> 403 FORBIDDEN
+```
+
 ```ts cleanup
+await plain.cleanup();
 await ctx.cleanup();
 if (ORIGINAL_AUTH === undefined) delete process.env.BBX_AUTH_FILE; else process.env.BBX_AUTH_FILE = ORIGINAL_AUTH;
 if (ORIGINAL_OWNER === undefined) delete process.env.BBX_OWNER_EMAIL; else process.env.BBX_OWNER_EMAIL = ORIGINAL_OWNER;

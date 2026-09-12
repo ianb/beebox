@@ -20,7 +20,22 @@ export const pairingRouter = router({
   // device then acts as that person (see `webapp/server-box-scope.ts`), so a
   // non-owner's phone gets exactly the access its person has and no more.
   createTicket: authedProcedure.mutation(({ ctx }) => {
-    return createMobilePairingTicket(ctx.boxRoot, { createdBy: ctx.user?.email ?? null });
+    const createdBy = ctx.user?.email ?? null;
+    // A caller with no person behind it — an agent's loopback bearer, the browse
+    // key on a box that did not opt in — would mint a device recorded against
+    // nobody, and a device recorded against nobody is owner-only forever. That
+    // breaks the rule this whole surface rests on: whoever can pair a phone can
+    // unpair it. Refuse rather than create something the creator cannot manage.
+    // The owner is exempt because the owner reaches every device anyway, which
+    // covers an open-access box, where there is no identity to record and no
+    // gate to enforce.
+    if (createdBy === null && !ctx.isOwner) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Pairing records who paired the device, so it needs a signed-in person.",
+      });
+    }
+    return createMobilePairingTicket(ctx.boxRoot, { createdBy });
   }),
 
   // Listing and revoking follow minting: if you can pair your phone you can see
