@@ -20,7 +20,7 @@ import { fileTypeFromFile } from "file-type";
 import { withCardLock } from "../../lib/card-lock.js";
 import { errnoCode } from "../../lib/error-guards.js";
 import { isRecord } from "../../lib/is-record.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths, unstageFiles } from "../../lib/git.js";
 import type { EventBus } from "../event-bus.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk } from "../../lib/box-namespace-resolve.js";
@@ -198,6 +198,11 @@ export async function acceptSubmission(input: AcceptSubmissionInput): Promise<Ac
         trailers: { "Created-By": "card-submission" },
       });
     } catch (e: unknown) {
+      // The commit helper stages before it commits, so a failure can leave
+      // both paths in the index; put the index, the card, and the tree back.
+      await unstageFiles(boxRoot, [cardRel, batchDirRel]).catch((resetErr: unknown) => {
+        console.error(`[card-submission] could not unstage after a failed commit for ${cardRel}:`, resetErr);
+      });
       await fs.writeFile(absCardPath, cardText, "utf8");
       await fs.rm(targetDir, { recursive: true, force: true });
       const message = e instanceof Error ? e.message : String(e);
