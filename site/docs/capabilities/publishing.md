@@ -30,7 +30,7 @@ Cloudflare account, set up through a single command). See
 
 **How it works, briefly**
 
-Drafting a page (the underlying command is `bbx pub draft`) renders a box
+Drafting a page renders a box
 document into one self-contained page and scans it for secrets or references
 that would leak outside the box before it can be saved. Going live and
 revoking are separate, explicit steps. A page with a reply form holds

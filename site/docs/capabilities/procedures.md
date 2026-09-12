@@ -33,9 +33,8 @@ so the box's state after a partial run is always a clean, inspectable
 snapshot. Steps can run a command, an agent turn, or both. A run is tracked
 as a `procedure-run` card while it is recent; the box's history keeps every
 finished run afterward. Procedures run when you invoke one, when another
-automation triggers it, or as a triage "handle" step (the underlying command
-is `bbx procedure run`; the reference page below covers the full command
-list).
+automation triggers it, or as a triage "handle" step (the reference page
+below covers the details).
 
 **Limits**
 

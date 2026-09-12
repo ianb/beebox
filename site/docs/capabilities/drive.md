@@ -31,8 +31,7 @@ on for the box. See the install directory:
 
 A synced Doc becomes a `gdoc` card, a synced Sheet a `gsheet` card, a
 mirrored folder a `gfolder` card, and a pointer-only item a `glink` card.
-Sync runs automatically or on demand (the underlying command is `bbx wakeup
---connector drive`); a Doc or Sheet push back to Drive detects when the
+Sync runs automatically or on demand; a Doc or Sheet push back to Drive detects when the
 remote changed first and reports a conflict rather than overwriting silently.
 
 **Limits**

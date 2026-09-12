@@ -15,9 +15,7 @@ git. It holds the cards, the configuration, and the state. A **card** is a
 single file: a structured header that the system checks against the card's
 type, plus optional text (the type is part of the filename, for the curious). The files on disk are the
 state of the system. Git is the history, so every change the agent makes is a
-commit you can read. The web interface and chat are built over a box; there is
-also a command you can type directly (**`bbx`**), for the technically
-inclined.
+commit you can read. The web interface and chat are built over a box.
 
 The engine and the box are separate. The engine is the software the project
 publishes; the box is your data. You can update the engine without touching

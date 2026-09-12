@@ -15,8 +15,7 @@ kept as files under version control. A box is the data: one directory on
 disk, kept under version control with git, holding the cards, the
 configuration, and the state. A card is one file: a structured header the
 system checks against the card's type, plus optional text. The files on disk
-are the state, git is the history, and the `bbx` command operates a box
-underneath the web interface and chat.
+are the state and git is the history; the web interface and chat sit on top.
 
 It fits someone who already runs a coding agent, has a machine that stays on,
 is comfortable with files and git, and wants an assistant whose memory is
