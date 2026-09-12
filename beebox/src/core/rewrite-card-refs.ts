@@ -191,8 +191,8 @@ interface BodyScanOptions {
   skipFencedCode: boolean;
 }
 
-/** The one-line scan for ref-bearing body syntax: `[…](path)` and `ref="…"`. */
-function scanBodyLine(line: string, wrap: RefTransform): string {
+/** The scan for ref-bearing body syntax: `[…](path)` and `ref="…"`. */
+function scanBodyText(line: string, wrap: RefTransform): string {
   // Inline markdown links and images: [text](path) / ![alt](path). The pattern
   // is shared with validate's `extractBodyLinks` so mv rewrites exactly the set
   // of links validate checks.
@@ -235,23 +235,43 @@ function scanBody(text: string, { wrap, skipFencedCode }: { wrap: RefTransform }
   const lines = text.split("\n");
   const bodyStart = bodyStartLine(lines);
   let fence = ""; // the open fence's marker run, or "" outside a fence
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line === undefined) continue;
+  // Scannable lines are scanned as contiguous RUNS, joined by "\n" — not one
+  // line at a time. A markdown link's label may wrap (`[one note, three\nstocks](./x.card)`),
+  // and `inlineLinkPattern`'s label class matches newlines, so validate — which
+  // runs it over the whole body — reports those links. A per-line scan here did
+  // not see them, which made `bbx mv` leave them dangling and made
+  // `--canonical --fix` report refs it could never rewrite.
+  let run: number[] = [];
+  const flushRun = (): void => {
+    if (run.length === 0) return;
+    const scanned = scanBodyText(run.map((i) => lines[i] ?? "").join("\n"), wrap).split("\n");
+    invariant(
+      scanned.length === run.length,
+      "a ref transform substitutes inside matched spans only, so it cannot change the line count",
+    );
+    for (const [k, lineIndex] of run.entries()) {
+      lines[lineIndex] = scanned[k] ?? "";
+    }
+    run = [];
+  };
+  for (const [i, line] of lines.entries()) {
     if (skipFencedCode && i >= bodyStart) {
       const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
       if (fence === "") {
         if (marker !== undefined) {
           fence = marker[0] ?? "";
+          flushRun();
           continue;
         }
       } else {
         if (marker !== undefined && marker[0] === fence) fence = "";
+        flushRun();
         continue;
       }
     }
-    lines[i] = scanBodyLine(line, wrap);
+    run.push(i);
   }
+  flushRun();
   return lines.join("\n");
 }
 
