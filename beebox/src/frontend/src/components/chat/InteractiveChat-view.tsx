@@ -264,7 +264,8 @@ export function InteractiveChatBody(props: ChatBodyProps) {
     <ChatRenderProfiler id="chat-root">
       <ChatView
       ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice} failedRegion={props.failedRegion}
-      barChrome={nativeComposer ? null : <BarChromeRegion {...props} />}
+      // Native input replaces only the composer; landmark and settings menus remain web-owned.
+      barChrome={<BarChromeRegion {...props} />}
       workspace={<WorkspaceCanvas onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
         <MessageListRegion key={props.conversationKey} {...props} />
       </WorkspaceCanvas>}
