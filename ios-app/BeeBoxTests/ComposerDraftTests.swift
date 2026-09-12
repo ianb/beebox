@@ -98,6 +98,42 @@ final class NativeVoiceTurnTests: XCTestCase {
         XCTAssertTrue(turn.isActive)
     }
 
+    /// A recognizer can stop without saying why — an audio session that never
+    /// associates, a route change, the microphone taken by another app. The
+    /// turn must end there. It used to stay active, so the composer showed a
+    /// stop control for a recording that was not happening and held the screen
+    /// awake for it.
+    func testATurnEndsWhenDictationGoesIdleWithoutReportingFailure() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+
+        XCTAssertEqual(turn.handle(.dictationWentIdle), .none)
+        XCTAssertFalse(turn.isActive)
+    }
+
+    /// The pause while the box speaks IS idle, deliberately, and must survive:
+    /// closing the turn there would drop the mic the turn owes the user when
+    /// the speech ends.
+    func testATurnPausedForSpeechSurvivesIdleAndStillResumes() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: true)), .stopDictation)
+
+        XCTAssertEqual(turn.handle(.dictationWentIdle), .none)
+        XCTAssertTrue(turn.isActive)
+        XCTAssertEqual(turn.handle(.speechPlaybackChanged(playing: false)), .startDictation)
+    }
+
+    /// Idle arriving after the turn is already closed is not a second ending.
+    func testIdleAfterTheTurnClosedChangesNothing() {
+        var turn = NativeVoiceTurnState()
+        _ = turn.handle(.microphoneStarted)
+        _ = turn.handle(.microphoneStopped)
+
+        XCTAssertEqual(turn.handle(.dictationWentIdle), .none)
+        XCTAssertFalse(turn.isActive)
+    }
+
     /// The `playing:false` a barge-in causes must not restart the dictation the
     /// press already started: only a mic that was deferred *for* the speech
     /// resumes when it ends.
