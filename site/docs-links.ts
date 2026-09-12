@@ -14,6 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { classifyHref } from "./links.js";
+import { docsOrigin } from "./docs-origin.js";
 
 export class DocsLinkError extends Error {
   constructor(message: string) {
@@ -44,13 +45,6 @@ function isExcludedRoot(repoPath: string): boolean {
   return repoPath.split("/").some((segment) => EXCLUDED_ROOTS.has(segment));
 }
 
-/** Relative href from one published doc to another, in the published tree. */
-function relativePublishHref(fromPublishPath: string, toPublishPath: string): string {
-  const fromDir = path.posix.dirname(fromPublishPath);
-  const rel = path.posix.relative(fromDir === "." ? "" : fromDir, toPublishPath);
-  return rel === "" ? path.posix.basename(toPublishPath) : rel;
-}
-
 interface FoundLink {
   match: string;
   linkText: string;
@@ -63,10 +57,12 @@ interface FoundLink {
  * callback arity the codebase's `max-params` rule disallows).
  */
 function mapNonImageLinks(text: string, fn: (link: FoundLink) => string): string {
+  // Fenced blocks and inline code spans are literal content: a `[label](path)`
+  // shown as an example of link syntax is not a link to rewrite or count.
   return text
-    .split(/(```[\S\s]*?```)/g)
+    .split(/(```[\S\s]*?```|`[^\n`]*`)/g)
     .map((part, i) => {
-      if (i % 2 === 1) return part; // inside a code fence: literal content
+      if (i % 2 === 1) return part; // inside code: literal content
       let out = "";
       let last = 0;
       for (const m of part.matchAll(LINK_RE)) {
@@ -89,19 +85,21 @@ export interface PromotedLinkContext {
   repoDocPath: string;
   /** repo-relative posix source path -> published path, for every promoted doc. */
   manifestByRepoPath: ReadonlyMap<string, string>;
-  publishPath: string;
+  /** The build's base path, for the absolute origin the emitted link is prefixed with. */
+  base: string;
 }
 
 /** Rewrite every internal link in a promoted doc's body per the four link cases. */
 export function rewritePromotedLinks(body: string, ctx: PromotedLinkContext): string {
   const repoDir = path.posix.dirname(ctx.repoDocPath);
+  const origin = docsOrigin(ctx.base);
   return mapNonImageLinks(body, ({ match, linkText, href }) => {
     if (classifyHref(href) !== "internal") return match;
     const { target, anchor } = splitAnchor(href);
     const resolved = path.posix.normalize(path.posix.join(repoDir, target));
     const publish = ctx.manifestByRepoPath.get(resolved);
     if (publish !== undefined) {
-      return `[${linkText}](${relativePublishHref(ctx.publishPath, publish)}${anchor})`;
+      return `[${linkText}](${origin}${ctx.base}docs/${publish}${anchor})`;
     }
     if (isExcludedRoot(resolved)) return linkText;
     if (!fs.existsSync(path.join(ctx.repoRoot, resolved))) {
@@ -138,19 +136,53 @@ export function rewritePromotedImages(body: string, ctx: { repoRoot: string; rep
   return out + body.slice(last);
 }
 
-/** Validate every internal link in an authored doc resolves within the published set. */
-export function validateAuthoredLinks(
+/**
+ * Validate every internal link in an authored doc resolves within the
+ * published set, then rewrite it to an absolute URL. Authors write
+ * published-relative links (`../concepts/cards.md`); this is the only place
+ * they turn into `origin + base + docs/<resolved path>`. External links and
+ * pure anchors pass through untouched.
+ */
+export function rewriteAuthoredLinks(
   body: string,
-  ctx: { publishPath: string; sourceLabel: string; publishedPaths: ReadonlySet<string> },
-): void {
+  ctx: { publishPath: string; sourceLabel: string; publishedPaths: ReadonlySet<string>; base: string },
+): string {
   const dir = path.posix.dirname(ctx.publishPath);
-  mapNonImageLinks(body, ({ match, href }) => {
+  const origin = docsOrigin(ctx.base);
+  return mapNonImageLinks(body, ({ match, linkText, href }) => {
     if (classifyHref(href) !== "internal") return match;
-    const { target } = splitAnchor(href);
+    const { target, anchor } = splitAnchor(href);
     const resolved = path.posix.normalize(path.posix.join(dir === "." ? "" : dir, target));
     if (!ctx.publishedPaths.has(resolved)) {
       throw new DocsLinkError(`${ctx.sourceLabel} links to "${href}", which is not in the published doc set`);
     }
-    return match;
+    return `[${linkText}](${origin}${ctx.base}docs/${resolved}${anchor})`;
   });
+}
+
+/**
+ * Rewrite links between generated engine docs to absolute URLs. Generated
+ * docs link each other by bare filename in the flat export namespace (e.g.
+ * `card-recipe.md`); a filename found in `publishPathByFilename` resolves to
+ * its published path, everything else (external links, and any href that
+ * isn't a known generated filename — the engine docs are not ours to edit
+ * here) is left untouched and counted so the build can report it.
+ */
+export function rewriteGeneratedLinks(
+  body: string,
+  ctx: { publishPathByFilename: ReadonlyMap<string, string>; base: string },
+): { body: string; unresolvedCount: number } {
+  const origin = docsOrigin(ctx.base);
+  let unresolvedCount = 0;
+  const out = mapNonImageLinks(body, ({ match, linkText, href }) => {
+    if (classifyHref(href) !== "internal") return match;
+    const { target, anchor } = splitAnchor(href);
+    const publish = ctx.publishPathByFilename.get(target);
+    if (publish === undefined) {
+      unresolvedCount += 1;
+      return match;
+    }
+    return `[${linkText}](${origin}${ctx.base}docs/${publish}${anchor})`;
+  });
+  return { body: out, unresolvedCount };
 }

@@ -49,6 +49,7 @@ lean on it.
 - **The history** ([durability and provenance](design/durability-and-provenance.md)): [teaching it](uses/teaching-it-your-preferences.md), [routines](uses/routines-that-run-without-you.md).
 - **Room for what does not fit yet** ([dump it in now, shape it later](capabilities/shape-it-later.md)): [paper into records](uses/paper-into-records.md), [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md).
 - **Enriched markdown, with quote, source, and todo as the baseline marks** ([enriched markdown](concepts/enriched-markdown.md)): [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md), [a project's working memory](uses/a-projects-working-memory.md), [teaching it](uses/teaching-it-your-preferences.md).
+- **Integrity: links checked, references rewritten on a move, validation at several layers** ([it keeps itself coherent](capabilities/integrity.md)): [a project's working memory](uses/a-projects-working-memory.md), [paper into records](uses/paper-into-records.md), [reading and clipping](uses/reading-and-clipping.md).
 - **Provenance** ([where a fact came from](capabilities/provenance.md)): [teaching it](uses/teaching-it-your-preferences.md), [reading and clipping](uses/reading-and-clipping.md).
 - **Engine and box kept separate** ([how it works](07-how-it-works.md)): [a household in one chat](uses/a-household-in-one-chat.md).
 
