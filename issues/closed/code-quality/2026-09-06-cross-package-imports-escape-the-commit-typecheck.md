@@ -4,6 +4,7 @@ workstream: unattached
 area: workstreams-app
 priority: important
 labels: [tooling, hooks]
+resolution: implemented
 filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "There were just a bunch of deferred issue reports?"
@@ -32,3 +33,25 @@ Fix directions, pick one:
 
 Either way, `bin/issues` breaking should fail loudly once, not as an hourly
 "run failed" alert with a stack trace the reader has to decode.
+
+
+## Fixed 2026-09-12
+
+Took the first fix direction — typecheck the importers when the imported
+package's source is staged — in `.husky/pre-commit`. A commit touching
+`beebox/src/` now also runs `workstreams-app`'s typecheck (skipped when the
+workstreams-app branch above already ran it) and the ROOT typecheck.
+
+The root one turned out to be necessary rather than belt-and-braces: `bin/` is
+not a workspace package, so only the root tsconfig covers it, and the existing
+`bin/` branch lints without typechecking. `bin/issues` was one of the things
+that broke in the original incident.
+
+Verified by reproducing the failure: renaming `createEmbeddingsService` in
+`beebox/src/services/openai-embeddings.ts` leaves **beebox's own typecheck
+green (rc=0)** while `workstreams-app` and the root both fail (rc=2) with
+`TS2724: has no exported member named 'createEmbeddingsService'`. That is
+exactly the 2026-09-06 sequence, now caught at commit instead of by an hourly
+alert.
+
+Both added checks run in ~2.7s and only on a `beebox/src/` commit.

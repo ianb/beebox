@@ -120,13 +120,13 @@
     "reason": "The router regression proves a renamed product can continue using its existing physical main-checkout directory."
   },
   {
-    "path": "issues/bugs/2026-08-19-box-local-schemas-silently-skip-without-zod.md",
+    "path": "issues/closed/bugs/2026-08-19-box-local-schemas-silently-skip-without-zod.md",
     "occurrenceClass": "kebab-name",
     "expectedCount": 2,
     "reason": "The issue records the former package name while describing migration of box-local schemas."
   },
   {
-    "path": "issues/bugs/2026-08-19-box-local-schemas-silently-skip-without-zod.md",
+    "path": "issues/closed/bugs/2026-08-19-box-local-schemas-silently-skip-without-zod.md",
     "occurrenceClass": "standalone-cli-token",
     "expectedCount": 2,
     "reason": "The issue records the former command in historical examples."

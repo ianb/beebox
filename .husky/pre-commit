@@ -147,6 +147,30 @@ fi
 if echo "$staged" | grep -q '^workstreams-app/'; then
   run_in workstreams-app pnpm lint
   run_in workstreams-app pnpm typecheck
+  ws_app_typechecked=1
+fi
+
+# Cross-package imports escape the per-subproject gating above. `workstreams-app`
+# imports beebox SOURCE directly — the router takes `webapp/auth.ts`,
+# `webapp/box-access.ts`, `core/mobile/request-auth.ts` and `webapp/base-prefix.ts`;
+# the issue index takes `services/openai-embeddings.ts` — so a beebox-only commit
+# that renames an export passes beebox's own typecheck, lands, and breaks
+# workstreams-app silently. That happened on 2026-09-06: the OpenRouter landing
+# renamed `createOpenAIEmbeddingsService`, and `bin/issues` plus the hourly
+# deferred-issues schedule were down until someone decoded the alert.
+#
+# So typecheck the importers whenever the imported package's source is staged.
+# `bin/` imports beebox source too (`deferred-issues.ts`, `commit-provenance.ts`,
+# `base-prefix-injection.test.ts`) and is NOT a workspace package, so only the
+# root tsconfig covers it — the bin/ branch below lints but does not typecheck.
+# Both run in ~2.7s and only on a beebox/src commit.
+if echo "$staged" | grep -q '^beebox/src/'; then
+  if [ -z "${ws_app_typechecked:-}" ]; then
+    echo "[pre-commit] workstreams-app: typecheck (imports beebox source)"
+    run_in workstreams-app pnpm typecheck
+  fi
+  echo "[pre-commit] .: pnpm typecheck (bin/ imports beebox source)"
+  (cd "$REPO_DIR" && pnpm --silent typecheck)
 fi
 
 # bin/ is not a workspace package, so none of the branches above reach it — and

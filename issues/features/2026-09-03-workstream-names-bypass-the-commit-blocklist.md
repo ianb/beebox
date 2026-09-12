@@ -35,3 +35,29 @@ Two gaps, distinct:
 
 The name check is the smaller and more valuable piece: it stops the term at the
 source rather than at each of the places it fans out to.
+
+
+## The name gap — fixed 2026-09-12
+
+`bin/commit-blocklist-check.ts` gained a `--check-text <string>` mode that runs
+one string through the same matcher (`findBlocked`, the same allow/ignore
+rules), and `bin/workstreams create` now calls it on the name before creating
+anything — so `launch-worktree-session`, the WorktreeCreate hook and every
+other caller inherit it, since they all go through `create`.
+
+Behavior: exits 2 on a match with a pointer to the blocklist line and NOT the
+matched value (printing it would re-leak), 0 when clean, and 0 when there is no
+blocklist — the same opt-out the commit check has. Verified end to end: a
+blocked name makes `workstreams create` exit 1 with no worktree and no branch
+created; a clean name passes.
+
+Loading the blocklist moved into a shared `loadBlocklist()` so both modes fail
+closed identically on an unreadable or malformed list.
+
+## The audit gap — still open
+
+The second half of this issue is untouched: adding a blocklist entry still does
+not audit what is already tracked, and `git grep -il <term>` remains the manual
+answer. A `--audit` mode running every entry against the tracked tree would
+make it one command. Left deliberately — the name check was the piece that
+stops the term at the source.
