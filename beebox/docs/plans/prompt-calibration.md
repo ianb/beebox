@@ -1,6 +1,6 @@
 ---
 title: "Calibrate skill discovery and the root agent instructions"
-status: active
+status: partial
 workstream: prompt-calibration
 issues:
   - ../../../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md
