@@ -15,6 +15,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { embedAsides, flatAside, loadAsides, renderAside, type AsideCard } from "./asides.js";
 import { listCardFiles } from "./cards.js";
+import { buildDocsCorpus, renderAgentLlmsTxt, type SitePageSummary } from "./docs.js";
 import { baseFromBranch, normalizeBase, resolveInternalHref } from "./links.js";
 import { embedNuggets, isRenderable, loadNuggets, renderNugget, type Nugget } from "./nuggets.js";
 import { parseSource, renderBody, type PageFrontmatter } from "./render.js";
@@ -29,6 +30,7 @@ const SITE_DIR = import.meta.dirname;
 const CARDS_DIR = path.join(SITE_DIR, "cards");
 const NUGGETS_DIR = path.join(SITE_DIR, "nuggets");
 const REPO_ROOT = path.resolve(SITE_DIR, "..");
+const BEEBOX_DIR = path.join(REPO_ROOT, "beebox");
 const DIST_DIR = path.join(SITE_DIR, "dist");
 
 class BuildError extends Error {
@@ -47,6 +49,8 @@ export interface BuildSiteOptions {
   distDir: string;
   base: string;
   writeSourceManifest?: boolean;
+  /** The agent-docs corpus (dist/docs/, llms.txt sections). Off for box-export dry-runs. */
+  buildAgentDocs?: boolean;
 }
 
 export interface BuildSiteResult {
@@ -121,12 +125,13 @@ export function twinMarkdown(
   return `${flat.trimStart().trimEnd()}\n`;
 }
 
-function renderLlmsTxt(params: { home: PageFrontmatter; pages: BuiltPage[]; base: string }): string {
-  const lines = [`# ${params.home.title}`, "", `> ${params.home.summary}`, "", "## Pages", ""];
-  for (const page of params.pages.filter((p) => p.frontmatter.unlisted !== true)) {
-    lines.push(`- [${page.frontmatter.title}](${params.base}${page.stem}.md): ${page.frontmatter.summary}`);
-  }
-  return `${lines.join("\n")}\n`;
+function sitePageSummaries(pages: BuiltPage[]): SitePageSummary[] {
+  return pages.map((p) => ({
+    title: p.frontmatter.title,
+    stem: p.stem,
+    summary: p.frontmatter.summary,
+    unlisted: p.frontmatter.unlisted === true,
+  }));
 }
 
 // Nugget enforcement at build: `proposed` nuggets are refused (never rendered,
@@ -226,18 +231,33 @@ export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteRes
 
   const home = built.find((p) => p.stem === "index");
   if (!home) throw new BuildError("no cards/index.site-page.card — the site needs a home page");
-  await fs.writeFile(
-    path.join(distDir, "llms.txt"),
-    renderLlmsTxt({ home: home.frontmatter, pages: built, base }),
-    "utf8",
-  );
+
+  // Agent-docs corpus (site/docs.ts): dist/docs/ plus the inputs for llms.txt's
+  // spine and directory sections. Off for box-export dry-runs, which validate
+  // a temporary workbench card export and have no bearing on the docs corpus.
+  const docsSummary: string[] = [];
+  if (options.buildAgentDocs !== false) {
+    const docsResult = await buildDocsCorpus({ repoRoot: REPO_ROOT, siteDir: SITE_DIR, beeboxDir: BEEBOX_DIR, distDir, base });
+    docsSummary.push(docsResult.summaryLine);
+    await fs.writeFile(
+      path.join(distDir, "llms.txt"),
+      renderAgentLlmsTxt({
+        base,
+        readme: docsResult.readme,
+        spine: docsResult.spine,
+        directories: docsResult.directories,
+        sitePages: sitePageSummaries(built),
+      }),
+      "utf8",
+    );
+  }
 
   // Input manifest LAST, once all output exists: the dev router compares it
   // against the current sources to decide whether to auto-rebuild. A partial
   // build never leaves a manifest that could mask staleness.
   if (options.writeSourceManifest !== false) await writeManifest(SITE_DIR, distDir);
 
-  return { pageCount: built.length, nuggetSummary };
+  return { pageCount: built.length, nuggetSummary: [...nuggetSummary, ...docsSummary] };
 }
 
 async function main(): Promise<void> {

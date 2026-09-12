@@ -138,3 +138,60 @@ writes the input manifest last (so a partial build never masks staleness).
   `story/coverage.json` — which docs were scanned, in which runs/variants, and
   whether the scanned content still matches disk (`--check` reports drift,
   nonzero exit if any). The ledger is the only committed record of the runs.
+
+## Agent docs (`/docs/`, `llms.txt`)
+
+A second, machine-facing corpus at `/docs/` plus a replaced `llms.txt`, for a
+general chatbot fetching on behalf of someone deciding whether to use Bee Box.
+Full design: `../beebox/docs/plans/agent-docs.md`; content conventions for
+authors: `docs-authoring.md`. Built by `docs.ts` (`buildDocsCorpus`, split
+across `docs-types.ts`, `docs-scrub.ts`, `docs-links.ts`, `docs-manifest.ts`,
+`docs-generated.ts`, `docs-authored.ts`, `docs-compared.ts`, `docs-index.ts`),
+called once from `build.ts` and skipped for box-export dry-runs
+(`buildAgentDocs: false`).
+
+**Three source kinds, one published set.** Authored (`docs/**/*.md`, mirroring
+the published tree, frontmatter `description:` and — under `compared/` only —
+a `compared:` block); promoted (`docs-manifest.yaml`, one line per admitted
+repo file — the loader hard-codes both the admissible source prefixes and the
+admissible publish directories, so a manifest entry outside either fails the
+build regardless); generated (`beebox/scripts/export-box-docs.ts`, run via
+`pnpm --dir beebox exec tsx` on every build — no filesystem side effect, ~1s —
+producing `reference/` and `reference/cards/`).
+
+**The scrub gate** (`docs-scrub.ts`) runs on every doc kind before it reaches
+`dist/docs/`: a real home path (reusing `bin/path-leak-check.ts`'s `HOME_PATH`
+and `ALLOWED_NAMES`), `private-issues`, or a named box under a boxes directory
+(`~/src/boxes/<name>`, `/home/<user>/boxes/<name>`; `test1`, tooling folders,
+the `example-names.md` roster, and placeholders pass) fails the build naming
+file:line. Authored docs are additionally scanned against the developer's
+gitignored `.commit-blocklist` (found the way the commit hook finds it: the
+worktree's copy, else the main checkout's; `!` allows and `file:` ignores
+honored). Promoted and generated docs are not: their text passed the hook's
+staged-addition scan when it entered the repo, and a whole-file rescan trips
+on English words that collide with a personal regex. The gate is mechanical —
+paths and names, not tone — so a hit in a generated doc means the
+*generator's* wording needs to lose the literal, not that the gate should be
+loosened. Cloudflare has no blocklist, so that half of the gate is local-only.
+
+**Links** (`docs-links.ts`): a promoted doc's relative link into the published
+set rewrites to a relative published URL; into an excluded root (`plans/`,
+`issues/`, `research/`, …) flattens to its link text; any other tracked repo
+file rewrites to a GitHub blob URL; a nonexistent target fails the build. An
+authored doc's links are already published-relative — the build only
+validates they resolve within the published set (including the generated
+per-directory `index.md` files).
+
+**Adding a doc:** authored — add the `.md` under `docs/` mirroring where it
+should publish, with `description:` frontmatter (and `compared:` if it's under
+`compared/`); a new directory needs a `docs/<dir>/index.md` stub too (frontmatter
+`description:` only — the *published* index.md is always generated, never
+authored). Promoted — add a line to `docs-manifest.yaml`; that line is the
+vetting act. Generated — nothing to do; it tracks the engine.
+
+**Dev-router staleness.** The Cloudflare build always runs the export script,
+so it's never stale. The dev router rebuilds from the input manifest without
+running the export, so its `reference/` set can lag an engine edit until the
+next explicit `pnpm --dir site build` or a `generateDocs` run refreshes
+`beebox/box-docs/.hash` (which `sources.ts` folds into the manifest, tolerating
+its absence). Accepted as dev-only staleness.

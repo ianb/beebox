@@ -1,0 +1,169 @@
+# Promoted agent-docs: repo files admitted into the public /docs/ corpus.
+# Adding a line here IS the vetting act — see beebox/docs/plans/agent-docs.md
+# ("The scrub gate") and site/CLAUDE.md's "Agent docs" section. The loader
+# hard-codes the admissible source prefixes and publish directories; an entry
+# outside either fails the build regardless of what's written here.
+
+- source: beebox/docs/glossary.md
+  publish: concepts/glossary.md
+  description: "Bee Box terms, one line each."
+
+- source: beebox/docs/cards-as-markdown.md
+  publish: concepts/cards.md
+  description: "The card format: YAML frontmatter plus a markdown body."
+
+- source: beebox/docs/agent-install.md
+  publish: install/agent-install.md
+  description: "Install guide written for a user's AI assistant to follow."
+
+- source: beebox/docs/docker-install.md
+  publish: install/docker.md
+  description: "Docker install, local and VPS."
+
+- source: beebox/docs/security-overview.md
+  publish: security/overview.md
+  description: "What the agent can do, what leaves the machine, and where data lives."
+
+- source: beebox/docs/design/identity.md
+  publish: design/identity.md
+  description: "Why a box has one identity and how sharing works today."
+
+
+- source: beebox/docs/mobile-contract.md
+  publish: contracts/mobile-contract.md
+  description: "The HTTP/bridge contract the iOS companion app shares with a box."
+
+# --- concepts ---------------------------------------------------------------
+
+- source: beebox/docs/connectors.md
+  publish: concepts/connectors.md
+  description: "What a connector is: the sync boundary between an external service and the box filesystem."
+
+- source: beebox/docs/triage.md
+  publish: concepts/triage.md
+  description: "The intake pipeline: how an inbox item is classified, filed, or turned into a question."
+
+- source: beebox/docs/questions.md
+  publish: concepts/questions.md
+  description: "The questions subsystem: how the agent asks, where answers go, and what they change."
+
+- source: beebox/docs/landmarks.md
+  publish: concepts/landmarks.md
+  description: "Landmarks: the short curated navigation surface over a box."
+
+- source: beebox/docs/procedure-implementation.md
+  publish: concepts/procedures.md
+  description: "Procedures: multi-step workflows expressed as cards and run by the engine."
+
+- source: beebox/docs/model-policy.md
+  publish: concepts/model-policy.md
+  description: "Which engine (Claude Code or Codex) and which model tier a box thinks with."
+
+- source: beebox/docs/chat-schedules.md
+  publish: concepts/chat-schedules.md
+  description: "Timers the agent sets from chat that fire later."
+
+
+# --- install ----------------------------------------------------------------
+
+- source: beebox/docs/developer-install.md
+  publish: install/developer.md
+  description: "From-source install for contributors."
+
+- source: beebox/docs/google-setup.md
+  publish: install/google.md
+  description: "Creating the Google OAuth credentials shared by Gmail, Calendar, and Drive."
+
+- source: beebox/docs/gmail-setup.md
+  publish: install/gmail.md
+  description: "Configuring the Gmail connector and its tracked working set."
+
+- source: beebox/docs/google-drive.md
+  publish: install/drive.md
+  description: "The three kinds of Drive card and how the Drive connector syncs them."
+
+- source: beebox/docs/telegram-setup.md
+  publish: install/telegram.md
+  description: "Connecting a Telegram chat to a box."
+
+- source: beebox/docs/calendar.md
+  publish: install/calendar.md
+  description: "Google Calendar sync to and from .ics files in the box."
+
+- source: beebox/docs/adding-a-box.md
+  publish: install/adding-a-box.md
+  description: "Provisioning another box behind one hub process on a server."
+
+# --- security ---------------------------------------------------------------
+
+- source: beebox/docs/secrets.md
+  publish: security/secrets.md
+  description: "The machine-level credential store and how a box is granted a secret."
+
+- source: beebox/docs/content-security-policy.md
+  publish: security/content-security-policy.md
+  description: "The CSP the web app serves and what it forbids."
+
+# --- design -----------------------------------------------------------------
+
+- source: beebox/docs/design/representation.md
+  publish: design/representation.md
+  description: "The anchor principle: the representation mirrors the shape of the idea."
+
+- source: beebox/docs/design/interaction-model.md
+  publish: design/interaction-model.md
+  description: "Idle-by-default background engine and also a chatbot; connectors as the external boundary."
+
+- source: beebox/docs/design/processing.md
+  publish: design/processing.md
+  description: "What a wakeup actually does, verified against the code."
+
+- source: beebox/docs/design/durability-and-provenance.md
+  publish: design/durability-and-provenance.md
+  description: "Committing makes it real; the filesystem is the index; provenance as aspiration."
+
+- source: beebox/docs/design/trust.md
+  publish: design/trust.md
+  description: "Question, then confirmation, then automatic: how an action earns autonomy."
+
+- source: beebox/docs/design/teaching.md
+  publish: design/teaching.md
+  description: "How the user teaches the box: rules, guides, corrections."
+
+- source: beebox/docs/design/extensibility.md
+  publish: design/extensibility.md
+  description: "Understanding over plugin architecture: how a box is extended."
+
+# --- contracts --------------------------------------------------------------
+
+- source: beebox/docs/box-layout.md
+  publish: contracts/box-layout.md
+  description: "The on-disk shape of a box, directory by directory."
+
+- source: beebox/docs/scan-upload-contract.md
+  publish: contracts/scan-upload.md
+  description: "The HTTP contract a scanner uploader uses to send documents into a box."
+
+- source: beebox/docs/adding-schemas.md
+  publish: contracts/adding-a-card-type.md
+  description: "How a new card type is defined, worked example included."
+
+- source: beebox/docs/card-validation.md
+  publish: contracts/card-validation.md
+  description: "How card validation reaches agents and blocks bad commits."
+
+- source: beebox/docs/migrations.md
+  publish: contracts/migrations.md
+  description: "How box data migrations are applied and written."
+
+- source: beebox/docs/scheduler.md
+  publish: contracts/scheduler.md
+  description: "The background daemon that wakes boxes on a schedule."
+
+- source: beebox/docs/health-checks.md
+  publish: contracts/health-checks.md
+  description: "Runbooks for checking a deployed server's health."
+
+- source: beebox/docs/assets.md
+  publish: contracts/assets.md
+  description: "How media stays tracked by git without its bytes (git-annex)."
