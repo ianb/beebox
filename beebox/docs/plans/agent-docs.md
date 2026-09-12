@@ -88,7 +88,6 @@ section is too large to list inline in `llms.txt`.
 /docs/operating/<name>.md         running a box: secrets, model policy, security overview, health, scheduler
 /docs/contracts/<name>.md         mobile contract, scan-upload contract, CSP
 /<page>.md                        the human site pages' twins (unchanged)
-/llms-full.txt                    optional: the whole corpus concatenated, listed under "Optional"
 ```
 
 `llms.txt` follows the llms.txt convention (H1, blockquote summary, H2
@@ -98,26 +97,36 @@ It links orientation and install leaves directly (one hop) and links the
 ~4 KB; the card index ~8 KB. Every leaf carries a one-line header naming its
 section and index so a model that lands on a leaf directly can climb.
 
-`llms-full.txt` is the one deliberate concession to flat: some fetchers take
-one large document better than many small ones. It is generated, listed as
-optional, and never the only form. **Veto point for the boxholder.**
+No `llms-full.txt` in the first cut. The corpus is tens of thousands of
+lines; a concatenation would truncate in most fetchers and is the flat dump
+the framing rules out. Revisit only with evidence a fetcher needs it.
 
 ## Sources: three kinds, one manifest
 
 | Kind | Source | How it gets in | Drift |
 |---|---|---|---|
-| Generated | `beebox/box-docs/` | site build runs `scripts/build-box-docs.ts`, copies the set | none: pure function of engine |
+| Generated | engine doc set (`engineDocs()`) | site build runs `scripts/export-box-docs.ts`, writes the set | none: pure function of engine |
 | Promoted | allowlisted files under `beebox/docs/` | listed in `site/docs-manifest.yaml` | content-hash rebuild; scrub gate |
 | Authored | `site/cards/*.site-page.card` twins; a few new orientation pages | existing site pipeline | existing authorship rules |
 
-**Generated.** The site build shells out to
-`pnpm --dir beebox exec tsx scripts/build-box-docs.ts` (site/ stays free of
-beebox imports, as `site/CLAUDE.md` requires), then reads `beebox/box-docs/`
-and rewrites the set into `dist/docs/reference/`. The README becomes
+**Generated.** A new export-only script, `beebox/scripts/export-box-docs.ts`,
+prints the engine doc set (`engineDocs()` from `package-docs.ts`) as JSON on
+stdout with no filesystem side effect. The site build shells out to it
+(site/ stays free of beebox imports, as `site/CLAUDE.md` requires) and
+rewrites the set into `dist/docs/reference/`. The README becomes
 `reference/index.md`; the 55 `card-*.md` rows are split into
-`reference/cards/index.md`. The manifest in `sources.ts` gains the generator's
-inputs (`src/schemas/`, `src/core/docs-gen/`, `docs/box/`) so the router
-rebuilds when the engine changes. Cost: one tsx invocation per build.
+`reference/cards/index.md`. Cost: one tsx invocation per build.
+
+Staleness contract: the generator's inputs are transitive (view, chat, and
+python doc generators live outside `docs-gen/`; templates register by
+side-effect import), so enumerating them in `site/sources.ts` would drift.
+Instead the site build always runs the export, and the input manifest folds
+in the export's own content fingerprint. The Cloudflare build is therefore
+always current. The dev router decides whether to rebuild from the manifest
+without running the export, so it can serve a reference set that lags an
+engine edit until the next explicit `pnpm --dir site build` or any
+`generateDocs` run refreshes `beebox/box-docs/.hash` (which the manifest
+also folds in). Accepted as dev-only staleness; noted in `site/CLAUDE.md`.
 
 **Promoted.** A single reviewable list, `site/docs-manifest.yaml`, one entry
 per published doc: repo path, published path, section, one-line description
@@ -145,12 +154,14 @@ the boxholder's voice.
 Every promoted and generated file passes through one scan before it is
 written to `dist/`. A hit fails the build naming file and line:
 
-- real home paths, reusing `bin/path-leak-check.ts`'s `HOME_PATH` pattern and
-  its `/Users/me` · `/Users/you` allowance;
+- real home paths: `bin/path-leak-check.ts`'s `HOME_PATH` pattern and its
+  `/Users/me` · `/Users/you` allowance, exported from that file (today it is
+  a module-local const);
 - `private-issues`, `~/src/boxes/`, `~/src/box-worktrees/`;
-- the developer's gitignored `.commit-blocklist` patterns, when present (the
-  existing per-person opt-in guard; a real box name belongs there);
-- relative links that leave the published set (see below).
+- the developer's gitignored `.commit-blocklist` patterns, when present.
+  `bin/commit-blocklist-check.ts` scans staged additions only, so the site
+  reuses its pattern-file parser, not the tool;
+- relative links into an excluded root (see below).
 
 The gate is mechanical. It catches paths and names, not a paragraph that was
 written for us rather than for a stranger. The defense against that is the
@@ -165,11 +176,20 @@ Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
 At build, each internal link is resolved:
 
 - target is in the published set: rewrite to its public URL;
-- target is a tracked repo file outside the set: rewrite to the GitHub blob
-  URL on `main`, so the model can follow into the source-available repo
-  instead of hitting a dead link;
-- target does not exist: build failure (the same contract `site/build.ts`
-  applies to page cards).
+- target is under an excluded root (`plans/`, `implemented-plans/`,
+  `unimplemented-plans/`, `reports/`, `issues/`, `research/`,
+  `private-issues/`): the link is flattened to its text. Those files are
+  readable on GitHub already, but the corpus must not lead a model into
+  them; `security-overview.md` and `scheduler.md` both carry such links
+  today, so this case is common, not hypothetical;
+- target is any other tracked repo file (source, a held-back reference doc):
+  rewrite to the GitHub blob URL on `main`;
+- target does not exist: build failure.
+
+This is a new pipeline, not reuse: the existing site link check compares
+collected links against emitted HTML pages and rewrites `.md` to `.html`.
+Agent docs are raw markdown with relative links, so `site/docs.ts` owns its
+own resolver with parser-level tests for each of the four cases.
 
 Images under `docs/architecture/images/` are copied alongside their pages
 (they are tracked, small, fictional).
@@ -200,7 +220,10 @@ work, which owns the install story; this plan only makes the URL exist.
 
 - **orientation**: `glossary.md`, `cards-as-markdown.md`, `box-layout.md`,
   `connectors.md`, `triage.md`, `questions.md`, `landmarks.md`,
-  `procedure-implementation.md`, `design/*.md` (10), `architecture/*.md`.
+  `procedure-implementation.md`, the ten `design/` files, and from
+  `architecture/` only `01-what-is-this.md` and `02-cards-and-memory.md`
+  (its `CLAUDE.md` marks the rest as steering docs, not user-facing). The
+  manifest lists files, never globs.
 - **install**: `agent-install.md`, `docker-install.md`,
   `developer-install.md`, `google-setup.md`, `gmail-setup.md`,
   `google-drive.md`, `telegram-setup.md`, `calendar.md`, `adding-a-box.md`.
@@ -214,9 +237,9 @@ work, which owns the install story; this plan only makes the URL exist.
   `stack-decisions.md`, `security-report.md`, `prompt-*.md`,
   `chat-scroll-testing.md`, `composer-*.md`, `doc-graph.md`, `reports/`.
 
-`docs/architecture/` is human narrative with images; it is the best "what is
-this" text we have and a model can filter it. **Decision for the boxholder:**
-in or out of the first cut.
+The two architecture chapters are human narrative with images; they are the
+best "what is this" text we have and a model can filter them. **Decision for
+the boxholder:** in or out of the first cut.
 
 ## Not in scope
 
@@ -248,10 +271,12 @@ the shared pieces is additive; public-site is told before it lands, and the
 3. **Index** — `llms.txt` sections, leaf headers, `llms-full.txt` (if kept).
 4. **Content** — first-cut manifest, the two orientation pages, the
    `scheduler.md` example fix, the learn prompt on the home card.
-5. **Verification** — a knowledge audit in spirit: hand `llms.txt` to a
-   non-Claude model with fetch (Codex via the cross-model skill) and ask it
-   ten questions a new user would ask; record which fetches it made and what
-   it got wrong. That, not a link check, is the acceptance test.
+5. **Verification** — the acceptance test is the user's flow, not a link
+   check: a model with URL fetch and no repo or workspace access is given
+   the pasted prompt and ten questions a new user would ask; record which
+   fetches it made and what it got wrong. Run against a preview URL with a
+   non-Claude model, then once by the boxholder in a real ChatGPT session
+   before the prompt is called good.
 
 ## Failure modes
 
@@ -269,8 +294,18 @@ the shared pieces is additive; public-site is told before it lands, and the
 
 ## Open questions for the boxholder
 
-1. `llms-full.txt`: generate it (listed as optional) or not.
-2. `docs/architecture/` narrative: in the first cut or held.
-3. Held-back list above: anything that should be in (stack-decisions is the
+1. The two `docs/architecture/` chapters: in the first cut or held.
+2. Held-back list above: anything that should be in (stack-decisions is the
    likeliest).
-4. The learn prompt wording.
+3. The learn prompt wording.
+4. Links into excluded roots: flatten to text (proposed) or fail the build
+   and edit the docs.
+
+## Cross-model review (2026-09-12)
+
+Codex reviewed the first draft. Adopted: no GitHub fallback for links into
+excluded roots; explicit file list instead of `architecture/*.md`; export-only
+generator script instead of shelling to the writer; fingerprint-based
+staleness instead of enumerating transitive generator inputs; `HOME_PATH`
+export and blocklist parser reuse spelled out; `llms-full.txt` cut; the
+acceptance test made fetch-only. Nothing rejected.
