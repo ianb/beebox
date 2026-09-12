@@ -85,9 +85,10 @@ export function useComposerFileUploads(editor: EmissionStore["editor"]): Compose
 
   const awaitPendingUploads = useCallback(async (): Promise<void> => {
     // A retry started while we wait registers a new promise, so loop until the
-    // map is genuinely empty rather than snapshotting it once.
+    // map is genuinely empty rather than snapshotting it once. `Promise.all`
+    // drains the iterator synchronously, so the live view is safe to pass.
     while (uploadsInFlightRef.current.size > 0) {
-      await Promise.all([...uploadsInFlightRef.current.values()]);
+      await Promise.all(uploadsInFlightRef.current.values());
     }
   }, []);
 
