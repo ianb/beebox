@@ -49,3 +49,10 @@ test("loadManifestEntries: malformed manifest (missing required field) fails the
   const file = writeManifest("- source: beebox/docs/glossary.md\n  publish: concepts/glossary.md\n");
   assert.throws(() => loadManifestEntries(file), DocsManifestError);
 });
+
+test("loadManifestEntries: traversal in a source or publish path is refused before the prefix check", () => {
+  const source = writeManifest("- source: beebox/docs/design/../../../issues/features/x.md\n  publish: design/x.md\n  description: x\n");
+  assert.throws(() => loadManifestEntries(source), DocsManifestError);
+  const publish = writeManifest("- source: beebox/docs/glossary.md\n  publish: contracts/../../llms.txt\n  description: x\n");
+  assert.throws(() => loadManifestEntries(publish), DocsManifestError);
+});
