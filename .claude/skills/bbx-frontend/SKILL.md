@@ -1,6 +1,6 @@
 ---
 name: bbx-frontend
-description: Use when building or changing any user-facing UI in src/frontend/ — a new page or component, a layout, a state/data-fetching decision, or fixing a visual/UX issue. Triggers include "add a page/component", "build this UI", "make this responsive", "wire this to the backend", "this looks off", "the empty/error state is missing". Not needed for a one-line copy or className tweak.
+description: Build or change user-facing UI in `src/frontend/`, including components, layout, data states, responsiveness, backend wiring, and visual or UX fixes. Not needed for a one-line copy or className tweak.
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 

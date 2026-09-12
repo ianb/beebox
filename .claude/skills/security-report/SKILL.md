@@ -1,6 +1,6 @@
 ---
 name: security-report
-description: Generate or update beebox's security report — the structured accounting in beebox/docs/security-report.md and the readable beebox/docs/security-overview.md derived from it. Use when the boxholder asks to regenerate, update, or audit the security report, or after changes to security-relevant surfaces (routes, auth, credentials, egress, publishing). Triggers include "update the security report", "regenerate the security overview", "security report pass", "/security-report". The body of this skill IS the committed rubric — the auditable process the report claims to follow.
+description: Generate, update, or audit beebox's structured security report and derived overview. Use when requested and after changes to security-relevant routes, authentication, credentials, egress, or publishing; the skill body is the report's committed rubric.
 ---
 
 # Security report: the committed rubric

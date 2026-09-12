@@ -1,6 +1,6 @@
 ---
 name: bbx-codehealth
-description: Use for a deliberate codebase-health pass — when cruft has accumulated, an area feels tangled or hard to test, you're about to make a big change in a messy area, or bbx-debug's circuit-breaker flagged the architecture. Surfaces deepening opportunities and dead code; not every-refactor cleanup. Triggers include "codebase health", "health check/checkup on the code", "health pass", "audit the codebase", "find dead code", "tech debt pass", "this feels crufty/tangled", "reduce cruft", "is this architecture okay", "de-cruft X", "what should we clean up".
+description: Run a deliberate codebase-health pass to find cruft, dead code, shallow modules, and hard-to-test seams. Use for accumulated architectural friction, before large changes in messy areas, or when bbx-debug flags the architecture; not for routine refactoring.
 allowed-tools: Bash, Read, Grep, Glob, Agent
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: canvas-loop-sketch
-description: Use when writing or testing a visual or interactive sketch/figure you need to SEE — a canvas drawing, simulation, data-visualization, or generative/creative-coding piece — through canvas-loop's deterministic browser-less render→transcript loop instead of a live browser. Triggers include "I need to see what this draws", "build/test a sketch or figure", "visualize this", scripting input events to test an interaction, embedding a <SketchFigure>, or adding/re-exercising a canvas-loop gallery exercise. Not for real DOM/CSS app UI (use the browse skill).
+description: Build or test canvas sketches, simulations, data visualizations, generative figures, scripted interactions, `SketchFigure` embeds, and gallery exercises through canvas-loop's deterministic render transcript. Use browse for real DOM or CSS app UI.
 allowed-tools: Bash(pnpm --dir canvas-loop run cli:*), Bash(pnpm --dir canvas-loop run gallery:check:*)
 ---
 <!-- Source of truth: canvas-loop/claude-plugin/skills/canvas-loop-sketch/SKILL.md.

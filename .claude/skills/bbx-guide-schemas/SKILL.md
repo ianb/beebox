@@ -1,6 +1,6 @@
 ---
 name: bbx-guide-schemas
-description: Explains adding or changing card types (schemas) in beebox — what a schema is, the automatic fields, and the boundary where a change needs a migration. Use when creating a card type, adding/renaming/removing card fields, or writing schema instructions. Triggers include "new card type", "add a schema", "add a field to X cards", "change the card format". Instructional (a bbx-guide-* skill) — worked example in docs/adding-schemas.md; shape changes to existing cards are bbx-migration's territory.
+description: Use when creating or changing beebox card types, schema fields, or schema instructions. Changes to existing cards may also need bbx-migration.
 ---
 
 # Card schemas: the model, then the checklist

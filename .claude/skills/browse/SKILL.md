@@ -1,6 +1,6 @@
 ---
 name: browse
-description: Use when you need to drive a real browser — navigating pages, snapshotting the a11y tree, clicking, filling forms, taking screenshots, or checking responsive behavior, on the local dev app or any other site.
+description: Drive a real browser to navigate, inspect accessibility state, interact, capture screenshots, or verify responsive behavior in the local dev app or another site.
 allowed-tools: Bash(bin/browse:*), Bash(pnpm verify-help:*), Bash(pnpm --filter browse verify-help:*)
 ---
 
