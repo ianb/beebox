@@ -104,6 +104,34 @@ export function listMobileDevices(boxRoot: string): Array<Omit<MobileDevice, "to
   return deviceStore.read(boxRoot).map(({ tokenHash: _tokenHash, ...device }) => device);
 }
 
+/** Who is asking about devices. `email` is null for a caller that authenticated
+ *  as a machine rather than a person (an agent bearer, the browse key on a box
+ *  that did not opt in). */
+export interface DeviceViewer {
+  isOwner: boolean;
+  email: string | null;
+}
+
+/**
+ * May this viewer see and revoke this device?
+ *
+ * You pair your own phone, so you manage your own phone: a person reaches the
+ * devices they paired, and the owner reaches every device on the box. Anything
+ * else is somebody else's device and does not exist as far as the caller is
+ * concerned.
+ *
+ * A device with `createdBy: null` belongs to nobody — it was paired before the
+ * pairer was recorded — so it stays owner-only. Matching a null `createdBy`
+ * against a null `email` would hand every such device to any machine caller.
+ */
+export function mayManageMobileDevice(
+  device: Pick<MobileDevice, "createdBy">,
+  viewer: DeviceViewer,
+): boolean {
+  if (viewer.isOwner) return true;
+  return viewer.email !== null && device.createdBy === viewer.email;
+}
+
 export async function redeemMobilePairingTicket(
   boxRoot: string,
   opts: { pairingToken: string; deviceLabel: string },

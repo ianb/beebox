@@ -71,8 +71,8 @@ composer not suppressed, wrong attribution — with no error surfaced).
 - **Who may mint:** anyone with access to the box, not the owner alone — you pair your OWN
   device (changed 2026-09-12; it was `ownerProcedure`). The ticket records `createdBy`, and the
   device then acts as that person, so a non-owner's phone gets exactly that person's access.
-  `pairing.devices` and `pairing.revokeDevice` remain `ownerProcedure`: they span every device on
-  the box, including other people's.
+  `pairing.devices` and `pairing.revokeDevice` follow the same rule (§1.4): if you can pair a
+  phone you can see it and unpair it.
 - **Drift:** LOUD (tRPC error surfaces in Settings).
 
 ### 1.3 `POST /api/pairing/redeem`
@@ -110,8 +110,16 @@ composer not suppressed, wrong attribution — with no error surfaced).
 ### 1.4 Device listing / revocation (box UI only, not native)
 
 - `pairing.devices` (query) → `listMobileDevices`; `pairing.revokeDevice` (mutation) →
-  `revokeMobileDevice`. Both `ownerProcedure`. UI in `CompanionPairingSection.tsx`. No native
-  participation.
+  `revokeMobileDevice`. Both `authedProcedure`, scoped by `mayManageMobileDevice` (changed
+  2026-09-12; both were `ownerProcedure`, which left a member unable to unpair their own lost
+  phone). UI in `CompanionPairingSection.tsx`. No native participation.
+- **Scope:** the owner reaches every device on the box; anyone else reaches the devices they
+  paired (`createdBy === ctx.user.email`). A device with `createdBy: null` — paired before the
+  pairer was recorded — belongs to nobody and stays owner-only; the rule requires a real address
+  on both sides, so a machine credential that cleared the auth wall as nobody reaches nothing.
+  `devices` returns `{ scope: "box" | "own", devices }` so the UI names the list it got rather
+  than implying a short one is the whole box. `revokeDevice` answers NOT_FOUND, not FORBIDDEN,
+  for somebody else's device: a distinct refusal would confirm the id exists on this box.
 
 ---
 
