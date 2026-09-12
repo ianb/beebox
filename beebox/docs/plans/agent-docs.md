@@ -77,6 +77,48 @@ Design constraints, from the boxholder's framing (2026-09-12):
   ([go-live issue](../../../issues/docs-and-chores/2026-07-21-pages-site-go-live.md)).
   So the site build has the whole monorepo and its dependencies available.
 
+## Who is asking (personas, proposed 2026-09-12)
+
+Each is a person with some agent in hand, from free ChatGPT to Claude Code
+pointed at the URL. The agent fetches; the person decides.
+
+- **The Claude Code regular.** Runs Claude Code or Codex daily for code and
+  has heard "personal assistant built on Claude Code". Asks: what does this
+  add over my own CLAUDE.md and scripts, is it a framework or a product, how
+  opinionated is it, can I read the code. Reaches the internals by their
+  third question.
+- **The person who wants their life organized.** Light or no development
+  background, probably on free ChatGPT. Wants email read, lists kept, things
+  remembered. Asks: how hard is it to set up, what does it cost a month, is
+  my email safe, does it work on my phone. Two or three fetches per answer at
+  most, zero tolerance for jargon. The requirements (a machine that stays on,
+  an agent subscription) may end the evaluation, and the docs should let that
+  happen early and honestly.
+- **The self-hoster.** Runs a homelab, already tried one or two agent
+  frameworks (OpenClaw, Hermes, Letta, Khoj). Asks: what leaves the machine,
+  which models must I use and can I bring my own, Docker or not, license,
+  bus factor, how it compares to what I have.
+- **The evaluator for a household.** Technical enough to run it, assessing
+  for a partner or family. Asks: can several people share one box, how does
+  a non-technical person interact (Telegram, chat), what admin burden lands
+  on me. Shared boxes are a design ruling (`design/identity.md`); what
+  multi-user use actually looks like today is checked before this page
+  claims it.
+- **The builder.** Makes agent systems and reads Bee Box as a design. Asks
+  why, not whether: the rationale, the architecture, the decisions, what to
+  borrow. Design and architecture are for them, off to the side.
+
+What follows from the personas:
+
+- `llms.txt` itself answers questions 1, 2, and 6 in ~300 words before the
+  listing, so a one-fetch reader (free ChatGPT) gets the dealbreakers from
+  the entry point alone.
+- Question 6 states model dependency plainly: Claude Code or Codex today,
+  what each supports, no local models.
+- Question 2 includes the household case; question 4 gets a sharing page
+  if the checked facts support one.
+- Comparisons get their own directory (below).
+
 ## The evaluator's questions (the model the corpus answers)
 
 An interested potential user, in roughly the order they ask:
@@ -109,7 +151,7 @@ An interested potential user, in roughly the order they ask:
    work.
 10. **How does it compare?** Against the chat-first agent products and the
     memory frameworks: cards-first vs chat-first, rules enforced in code vs
-    doctrine in prompts.
+    doctrine in prompts. Answered with dated, caveated comparison pages.
 11. **Can I make it mine?** Rules, guides, personality, box-local card types,
     views, procedures, Python tools, skills.
 12. **Why is it built this way?** The design rationale and the narrative
@@ -142,6 +184,7 @@ answers.
 /docs/09-status-and-maturity.md        question 9
 /docs/10-compared-to-alternatives.md   question 10
 /docs/11-making-it-yours.md            question 11
+/docs/compared/<system>.md             one page per compared system, each opening with a caveat block
 /docs/capabilities/<name>.md           one page per capability: gmail, calendar, drive, telegram,
                                        chat, voice, triage, procedures, schedules, views, courses,
                                        recipes, publishing, phone-capture, questions
@@ -281,6 +324,25 @@ to `https://beebox.run/docs/install/agent-install.md` belongs to the
 [container-first](../../../issues/features/2026-09-06-container-install-is-the-primary-path.md)
 work; this plan only makes the URL exist.
 
+## Comparisons
+
+`docs/10-compared-to-alternatives.md` summarizes; `docs/compared/<system>.md`
+holds one page per system (OpenClaw, Hermes, Letta, Khoj, Goose, agent-zero,
+nanobot, PAI, gstack are what `research/` covers today). Each page is authored
+from the internal research, never a copy of it, and opens with a caveat block
+the build generates from the manifest entry rather than trusting prose:
+
+```
+Compared: 2026-07-14 (OpenClaw v0.9, Bee Box at commit …)
+Looked for: memory model, channels, scheduling, security posture, skills
+Not looked for: pricing, hosted offerings, community size
+Since then: both projects have changed; treat as a snapshot
+```
+
+`research/` stays excluded from the corpus; the compared pages cite it by
+name only. A comparison older than a set age (proposed: six months) gets a
+build-time "stale" line prepended rather than being dropped.
+
 ## First-cut content (proposed; the boxholder edits)
 
 **Spine (authored, new, eleven short files).** Drafted from sources that
@@ -374,9 +436,8 @@ the shared pieces is additive; public-site is told before it lands, and the
 
 ## Open questions for the boxholder
 
-1. The evaluator model above: missing or wrongly ordered questions.
-2. Question 10 (comparison): publish an authored comparison page drawn from
-   `research/`, or leave comparison to the model's own knowledge.
+1. The personas and the evaluator questions: missing or wrongly ordered.
+2. Comparisons: the caveat block fields, and the stale age.
 3. Held-back list: anything to admit (stack-decisions is the likeliest).
 4. Links into excluded roots: flatten to text (proposed) or fail the build
    and edit the docs.
