@@ -88,17 +88,21 @@ JSON.stringify([invalidLandmarkTheme.systemTheme.boxHasOverride, invalidLandmark
 A structurally valid box file with an invalid presentation subtree leaves the
 unrelated settings readable while the route reports presentation failure.
 
+Theme names and stocks are an open set now (any box may author its own), so
+an unrecognized stock like `purple` is no longer a validation failure — only a
+malformed shape (a `name` that isn't a string) still counts as invalid.
+
 ```ts continue
 await fs.writeFile(configPath, JSON.stringify({
   timezone: "America/Chicago",
-  presentation: { default: { name: "paper", stock: "purple" } },
+  presentation: { default: { name: 42 } },
 }));
 clearBoxConfigCache(box.root);
 const invalidPresentation = await caller(box.root).presentation.get({ boxKey: "test-v2" });
 JSON.stringify([
   (await loadBoxConfig(box.root)).timezone,
   invalidPresentation.presentation.status,
-  invalidPresentation.configProblems[0].includes("available stocks"),
+  invalidPresentation.configProblems[0].includes("expected string"),
   invalidPresentation.chrome.choice,
 ])
 => ["America/Chicago","invalid",true,{"name":"plain","stock":"neutral"}]
@@ -169,16 +173,17 @@ JSON.stringify([
 => [{"name":"paper","stock":"blue"},true,true,true,true,true]
 ```
 
-An unknown stock is refused and leaves the prior choice in place.
+An unrecognized stock is a box-authored choice, not an error — it is accepted
+and written as given.
 
 ```ts continue
 await caller(cardBox.root).card.setTheme({
   path: cardPath,
   theme: { name: "paper", stock: "purple" },
 }).then(() => "accepted", (error) => error.code)
-=> BAD_REQUEST
+=> accepted
 
-(await cardBox.read(cardPath)).includes("stock: blue")
+(await cardBox.read(cardPath)).includes("stock: purple")
 => true
 ```
 
