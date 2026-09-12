@@ -7,24 +7,29 @@ issues:
 ---
 # Agent documentation
 
-A public, browsable, plain-markdown corpus about Bee Box, built for a
-general chatbot rather than for Claude Code. A person pastes one prompt into
-ChatGPT (or any model that can fetch URLs), the model fetches
-`https://beebox.run/llms.txt`, and from there fetches what it needs to answer
-questions about the project. This is not the human site
+A public, browsable, plain-markdown corpus about Bee Box, read by a general
+chatbot on behalf of a person who is **not using Bee Box and is deciding
+whether to**. They paste one short prompt into ChatGPT (or any model that can
+fetch URLs); the model fetches `https://beebox.run/llms.txt` and from there
+whatever it needs to answer their questions. The headline is evaluation: what
+the system is like, what it is for, what it offers, what it asks of you. The
+internals are there too, deep enough down, and at the bottom the corpus
+bridges into the reference a box agent uses. This is not the human site
 ([public-site.md](public-site.md)); it is the machine layer that site's
-principles already call for ("two audiences, visibly separated"), grown from a
-seven-line index into a real corpus.
+principles already call for ("two audiences, visibly separated").
 
-Design constraints, from the boxholder's framing:
+Design constraints, from the boxholder's framing (2026-09-12):
 
-- **Consumer is a general chatbot.** Public stable URLs, plain markdown, an
-  entry point small enough for one fetch, enough structure to choose the next
-  fetch. No Claude Code assumptions.
+- **The reader is a model that knows nothing.** `bbx` means nothing to it.
+  Every page stands on its own vocabulary or links the page that defines it.
+- **The person behind the model is an evaluator**, not an operator. The spine
+  answers an evaluator's questions; operator material sits below it.
+- **Structure can be explicit and mechanical.** This is only for LLMs, so
+  indexes are file listings with one-line descriptions, and filenames carry
+  the structure: numbered where order matters, descriptive everywhere.
 - **Completeness beats curation.** The site is spare on purpose; this is not.
-- **Hierarchy is a requirement.** The failure modes are a flat dump and a tree
-  so deep the model gives up before substance. Target: everything within two
-  hops of `llms.txt`.
+- **Hierarchy is a requirement.** Not a flat dump; not a tree so deep the
+  model gives up. Target: any leaf within two hops of `llms.txt`.
 - **Vetting is an explicit act.** Nothing from a real box reaches a public file
   without a scrub; the boundary is enforced in the build, not re-judged per
   file.
@@ -72,34 +77,95 @@ Design constraints, from the boxholder's framing:
   ([go-live issue](../../../issues/docs-and-chores/2026-07-21-pages-site-go-live.md)).
   So the site build has the whole monorepo and its dependencies available.
 
+## The evaluator's questions (the model the corpus answers)
+
+An interested potential user, in roughly the order they ask:
+
+1. **What is it, in a paragraph?** Category, one-sentence mechanism, what
+   you give it and what you get back.
+2. **Is it for me?** Who it fits (already uses Claude Code or Codex, lives in
+   files and git, wants an assistant that accumulates and that they own) and
+   who it does not (wants an app, phone-only, wants a chat product).
+3. **What does using it look like?** A day with it: a morning briefing, email
+   triage, a voice memo becoming a todo, a clipping becoming notes, the
+   questions it asks, the chat.
+4. **What can it do?** The capability list: connectors (Gmail, Drive,
+   Calendar, Telegram), chat and voice, triage, procedures, schedules, views
+   and dashboards, courses, recipes, publishing, phone capture. Concretely:
+   the kinds of things it holds (the card types).
+5. **How does it work?** Box is a directory; cards are markdown with
+   frontmatter; git is history; engine and box are separate; the agent runs
+   with real capabilities; the wakeup cycle; the CLI as the interface.
+6. **What does it require and cost?** A machine that stays on (local or a
+   VPS), a Claude Code or Codex subscription or API key, Docker; model usage
+   is the running cost; time to set up.
+7. **How do I try it?** The install paths, container first; the agent-driven
+   install; time to first value.
+8. **Is my data safe?** Where data lives, what leaves the machine, what the
+   agent may do and when it asks first, secrets handling, the security
+   overview.
+9. **How mature is it, and who is behind it?** Early, source-available, one
+   maintainer, changing fast; license; the community server; how updates
+   work.
+10. **How does it compare?** Against the chat-first agent products and the
+    memory frameworks: cards-first vs chat-first, rules enforced in code vs
+    doctrine in prompts.
+11. **Can I make it mine?** Rules, guides, personality, box-local card types,
+    views, procedures, Python tools, skills.
+12. **Why is it built this way?** The design rationale and the narrative
+    chapters. Off to the side, still important.
+13. **Show me the internals.** The generated reference (every command, every
+    card type, connectors, procedures), the contracts, the on-disk layout.
+    This is where the corpus becomes the box agent's documentation.
+
+Questions 1 to 11 are the spine: one numbered file each, short, authored,
+each linking down into the directory that holds the depth. Questions 12 and
+13 are directories the spine points at.
+
 ## The hierarchy
 
-Two hops from the entry point to any leaf. Section indexes exist only where a
-section is too large to list inline in `llms.txt`.
+Filenames are the structure. Every directory has an `index.md` that is a
+file listing with one line per file, and `llms.txt` is the same thing for
+the root. Numbers order the spine; everything else is named for what it
+answers.
 
 ```
-/llms.txt                         entry: what this is, how to use it, sections
-/docs/orientation/<name>.md       what Bee Box is; vocabulary; the why
-/docs/install/<name>.md           agent-install, docker, developer, connector setup
-/docs/reference/index.md          generated: the box-docs README "read it when" table
-/docs/reference/<name>.md         generated: bbx-commands, procedures, triage, views, connectors, ...
-/docs/reference/cards/index.md    generated: card-type catalogue (55 rows, split out for size)
-/docs/reference/cards/<type>.md   generated: one per built-in card type
-/docs/operating/<name>.md         running a box: secrets, model policy, security overview, health, scheduler
-/docs/contracts/<name>.md         mobile contract, scan-upload contract, CSP
-/<page>.md                        the human site pages' twins (unchanged)
+/llms.txt                              root index: the spine, then the directories
+/docs/01-what-bee-box-is.md            question 1
+/docs/02-who-it-is-for.md              question 2
+/docs/03-a-day-with-the-box.md         question 3
+/docs/04-what-it-can-do.md             question 4; links capabilities/ and reference/cards/
+/docs/05-how-it-works.md               question 5; links concepts/, architecture/, design/
+/docs/06-what-it-requires.md           question 6
+/docs/07-trying-it.md                  question 7; links install/
+/docs/08-your-data-and-safety.md       question 8; links security/
+/docs/09-status-and-maturity.md        question 9
+/docs/10-compared-to-alternatives.md   question 10
+/docs/11-making-it-yours.md            question 11
+/docs/capabilities/<name>.md           one page per capability: gmail, calendar, drive, telegram,
+                                       chat, voice, triage, procedures, schedules, views, courses,
+                                       recipes, publishing, phone-capture, questions
+/docs/concepts/<name>.md               glossary, cards, box, engine-and-box, wakeup, landmarks, trust
+/docs/install/<name>.md                docker, developer, agent-install, google, gmail, telegram
+/docs/security/<name>.md               overview, secrets, what-the-agent-can-do
+/docs/architecture/<nn>-<name>.md      the narrative chapters (two today)
+/docs/design/<name>.md                 the ten why-docs
+/docs/reference/index.md               generated: when to read each doc
+/docs/reference/<name>.md              generated: bbx-commands, procedures, triage, views, connectors, ...
+/docs/reference/cards/index.md         generated: every card type, one line each
+/docs/reference/cards/<type>.md        generated: one per built-in card type
+/docs/contracts/<name>.md              mobile, scan-upload, csp, box-layout
+/<page>.md                             the human site pages' twins (unchanged)
 ```
 
-`llms.txt` follows the llms.txt convention (H1, blockquote summary, H2
-sections of `- [title](url): description` lines, an `## Optional` section).
-It links orientation and install leaves directly (one hop) and links the
-`reference/` and `cards/` indexes (two hops to a leaf). Estimated size
-~4 KB; the card index ~8 KB. Every leaf carries a one-line header naming its
-section and index so a model that lands on a leaf directly can climb.
+`llms.txt` lists the eleven spine files with their questions, then each
+directory with its one-line purpose and its `index.md`. Estimated ~3 KB. A
+directory `index.md` is generated from the manifest, never hand-written.
+Every leaf opens with one line naming its directory and index so a model that
+lands cold can climb.
 
-No `llms-full.txt` in the first cut. The corpus is tens of thousands of
-lines; a concatenation would truncate in most fetchers and is the flat dump
-the framing rules out. Revisit only with evidence a fetcher needs it.
+No `llms-full.txt`. The corpus is tens of thousands of lines; a concatenation
+would truncate in most fetchers and is the flat dump the framing rules out.
 
 ## Sources: three kinds, one manifest
 
@@ -197,49 +263,61 @@ Images under `docs/architecture/images/` are copied alongside their pages
 ## The pasted prompt
 
 Lives on the home card beside the install prompt, as a second
-`{% agent-prompt %}` with id `learn-with-your-agent`:
+`{% agent-prompt %}` with id `learn-with-your-agent`. It assumes the model
+knows nothing and says only what it must:
 
 ```
-Fetch https://beebox.run/llms.txt. It indexes Bee Box's documentation for
-agents: an orientation, install guides, a generated reference (every bbx
-command, every card type, connectors, procedures), and operating notes.
-Fetch the pages you need before answering, tell me which page you drew on,
-and say when something isn't covered rather than guessing. I'll ask you
-questions about Bee Box.
+Read https://beebox.run/llms.txt and follow its links as needed. I'm
+deciding whether to use Bee Box; answer my questions from those pages.
 ```
+
+Everything else (what the sections are, cite the page, say when something is
+not covered) belongs in `llms.txt`'s opening lines, where every fetch reads
+it, rather than in the prompt a person has to paste.
 
 Shared surface with the install prompt: both fetch from `beebox.run/docs/`
-once it exists. The install prompt currently fetches
-`raw.githubusercontent.com/.../agent-install.md`; repointing it to
-`https://beebox.run/docs/install/agent-install.md` gives a stable URL that
-survives a repo move and is the same file. That repoint belongs to the
+once it exists. Repointing the install prompt from `raw.githubusercontent.com`
+to `https://beebox.run/docs/install/agent-install.md` belongs to the
 [container-first](../../../issues/features/2026-09-06-container-install-is-the-primary-path.md)
-work, which owns the install story; this plan only makes the URL exist.
+work; this plan only makes the URL exist.
 
-## First-cut manifest (proposed; the boxholder edits)
+## First-cut content (proposed; the boxholder edits)
 
-- **orientation**: `glossary.md`, `cards-as-markdown.md`, `box-layout.md`,
-  `connectors.md`, `triage.md`, `questions.md`, `landmarks.md`,
-  `procedure-implementation.md`, the ten `design/` files, and from
-  `architecture/` only `01-what-is-this.md` and `02-cards-and-memory.md`
-  (its `CLAUDE.md` marks the rest as steering docs, not user-facing). The
-  manifest lists files, never globs.
-- **install**: `agent-install.md`, `docker-install.md`,
-  `developer-install.md`, `google-setup.md`, `gmail-setup.md`,
-  `google-drive.md`, `telegram-setup.md`, `calendar.md`, `adding-a-box.md`.
-- **operating**: `secrets.md`, `model-policy.md`, `security-overview.md`,
-  `health-checks.md`, `scheduler.md` (after its example loses the real box
-  name), `migrations.md`, `assets.md`, `chat-schedules.md`.
-- **contracts**: `mobile-contract.md`, `scan-upload-contract.md`,
-  `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`.
-- **held back** (dev process or internal record, revisit later):
-  `testing.md`, `tours.md`, `maintenance.md`, `server-operations.md`,
-  `stack-decisions.md`, `security-report.md`, `prompt-*.md`,
-  `chat-scroll-testing.md`, `composer-*.md`, `doc-graph.md`, `reports/`.
+**Spine (authored, new, eleven short files).** Drafted from sources that
+already say these things: root `README.md`, `agent-install.md`'s "What
+you're installing", `design/identity.md`, `security-overview.md`, the
+soft-launch posture decision, the walkthrough card. Question 10 draws on the
+`research/` syntheses without publishing them. Agent-drafted, labeled as
+such in the manifest; not the boxholder's voice.
 
-The two architecture chapters are human narrative with images; they are the
-best "what is this" text we have and a model can filter them. **Decision for
-the boxholder:** in or out of the first cut.
+**Capabilities (authored short pages, one per capability).** Each says what
+it does for the person, what it needs (a connector credential, a phone),
+and links its concept and reference pages. Source: `beebox/user-stories/`'s
+verified capability catalog (649 confirmed statements, 2026-08-21), which is
+too raw and too stale-flagged to publish itself but is the checked substrate
+to write from.
+
+**Promoted (repo docs, listed by file).**
+- concepts: `glossary.md`, `cards-as-markdown.md`, `connectors.md`,
+  `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
+  `model-policy.md`, `chat-schedules.md`.
+- install: `agent-install.md`, `docker-install.md`, `developer-install.md`,
+  `google-setup.md`, `gmail-setup.md`, `google-drive.md`,
+  `telegram-setup.md`, `calendar.md`.
+- security: `security-overview.md`, `secrets.md`.
+- architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
+  directory's `CLAUDE.md` marks the rest as steering docs).
+- design: the ten files.
+- contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
+  `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
+  `migrations.md`, `scheduler.md` (after its example loses the real box
+  name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
+- held back (dev process or internal record): `testing.md`, `tours.md`,
+  `maintenance.md`, `server-operations.md`, `stack-decisions.md`,
+  `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
+  `composer-*.md`, `doc-graph.md`, `reports/`.
+
+**Generated.** The engine doc set, as `reference/`.
 
 ## Not in scope
 
@@ -269,11 +347,13 @@ the shared pieces is additive; public-site is told before it lands, and the
 2. **Generator hookup** — build runs `build-box-docs`, splits the card index,
    `sources.ts` inputs; router auto-rebuild verified.
 3. **Index** — `llms.txt` sections, leaf headers, `llms-full.txt` (if kept).
-4. **Content** — first-cut manifest, the two orientation pages, the
-   `scheduler.md` example fix, the learn prompt on the home card.
+4. **Content** — the eleven spine files, the capability pages, the
+   promoted list, the `scheduler.md` example fix, the learn prompt on the
+   home card. The spine is written last, after the directories exist, so
+   every link in it resolves.
 5. **Verification** — the acceptance test is the user's flow, not a link
    check: a model with URL fetch and no repo or workspace access is given
-   the pasted prompt and ten questions a new user would ask; record which
+   the pasted prompt and the thirteen evaluator questions above; record which
    fetches it made and what it got wrong. Run against a preview URL with a
    non-Claude model, then once by the boxholder in a real ChatGPT session
    before the prompt is called good.
@@ -294,16 +374,16 @@ the shared pieces is additive; public-site is told before it lands, and the
 
 ## Open questions for the boxholder
 
-1. The two `docs/architecture/` chapters: in the first cut or held.
-2. Held-back list above: anything that should be in (stack-decisions is the
-   likeliest).
-3. The learn prompt wording.
+1. The evaluator model above: missing or wrongly ordered questions.
+2. Question 10 (comparison): publish an authored comparison page drawn from
+   `research/`, or leave comparison to the model's own knowledge.
+3. Held-back list: anything to admit (stack-decisions is the likeliest).
 4. Links into excluded roots: flatten to text (proposed) or fail the build
    and edit the docs.
 
 ## Cross-model review (2026-09-12)
 
-Codex reviewed the first draft. Adopted: no GitHub fallback for links into
+Codex reviewed the first draft (before the evaluator reframing). Adopted: no GitHub fallback for links into
 excluded roots; explicit file list instead of `architecture/*.md`; export-only
 generator script instead of shelling to the writer; fingerprint-based
 staleness instead of enumerating transitive generator inputs; `HOME_PATH`
