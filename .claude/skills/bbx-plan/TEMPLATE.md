@@ -27,7 +27,10 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
      Some budgets exceed ~3× the smallest fix; others add a subproject,
      protocol, or vocabulary the request did not ask for. Either kind: stop,
      and let the boxholder choose between the two before you write further.
-     Implementation stops and re-plans when the diff passes 1.5× this budget.
+     Implementation stops and re-plans when the diff passes 1.5× this budget,
+     measured over the same source/test categories. Report docs/generated output
+     separately unless budgeted. Revision/review counts alone are not stop gates;
+     unplanned scope, an invalidated approach, or a size-gate breach still is.
      *Could this be simpler?* below justifies whatever the budget adds over
      the smallest fix. -->
 

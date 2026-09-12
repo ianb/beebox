@@ -42,8 +42,8 @@ verify in a real browser before calling it done.
   one primary for the whole screen. Two equal primaries *within one area* means
   that area's hierarchy isn't decided yet.
 - **Separate data from presentation.** A container does the fetching and owns
-  the three states; a pure presentational child takes already-loaded props and
-  just renders. This is what makes the empty/error/loading states impossible to
+  the reachable data states; a pure presentational child takes already-loaded
+  props and just renders. This is what makes the empty/error/loading states impossible to
   forget — they live in the container, in one place.
 - **Components own their own a11y landmarks.** A component that *is* a nav, a
   region, or a list renders its own `<nav>` / `<section>` / `role="list"` — you
@@ -73,8 +73,11 @@ or lift to context, don't thread the prop.
 
 ## The three states are not optional
 
-Every view that loads data ships **loading, empty, and error** — a blank screen
-while data resolves is a bug, not a default.
+A new data-loading view or changed data lifecycle must handle every reachable
+**loading, empty, and error** state. A blank screen while data resolves is a bug.
+For a narrow change, preserve the container's existing state handling; do not add
+unreachable states or duplicate handling already owned by a parent. Verify any
+state whose behavior, layout, or accessibility the change can affect.
 
 - **Loading:** a skeleton that mirrors the real layout, not a centered spinner;
   mark it `aria-busy`. Consider an optimistic update for actions that should
@@ -176,16 +179,26 @@ measurement and bisect; logs lie about performance.
 
 ## Verify in a real browser before you're done
 
-Built UI is unverified until you've *looked* at it. Use the `browse` skill
-(`bin/browse open /<path>`, `snapshot -i`, `screenshot`):
+Use the `browse` skill to look at the changed UI in a real browser. Choose the
+checks by impact:
 
-- [ ] Renders with **no console errors** (check the snapshot / `client-debug.log`).
-- [ ] Keyboard-Tab reaches every interactive element.
-- [ ] Loading, empty, **and** error states each actually render.
-- [ ] Responsive: check a narrow viewport (`set viewport 375 800`) — we have a
-      real two-pane mobile layout (`Column hideOnMobile`, `<MobileBackButton>`).
-- [ ] If a screenshot shows "Failed to load" or broken UI, **report the URL** —
-      don't dismiss a visible error as out of scope.
+- **New view or changed fetching/state lifecycle:** exercise all reachable
+  loading, empty, error, and populated states. Use the browse skill's transient
+  state guidance so a waiting snapshot does not hide loading.
+- **Changed controls or focus behavior:** verify keyboard reachability,
+  operation, accessible names, and focus transitions for affected controls.
+- **Changed layout or shared styling:** check affected viewports, including
+  narrow/mobile (`set viewport 375 800`) when the change can affect the real
+  two-pane layout (`Column hideOnMobile`, `<MobileBackButton>`).
+- **Narrow change within an existing view:** check that behavior and any states,
+  interactions, or layout it can affect; do not repeat the entire view matrix.
+- Check for console errors during those interactions (`client-debug.log`). If
+  visible UI is broken or says "Failed to load", report its URL; do not dismiss
+  an observed failure as out of scope.
+
+A new view needs the full applicable state, keyboard, and responsive pass. If a
+required state cannot be exercised, say what remains unverified; do not claim
+that successful populated-state rendering covers it.
 
 When screenshots are evidence for the completed UI—before/after, several
 states, or desktop/mobile—turn the useful set into one exhibit with labels and
@@ -202,7 +215,7 @@ incidental one-off debug capture with nothing useful to review.
 | "I'll just write the className inline." | If it's appearance, a primitive already owns it and lint will reject it outside `components/`. Reach for the primitive (frontend.md). |
 | "`bg-red-500` is close enough." | Raw Tailwind colors aren't the brand palette. Use the semantic role; if none fits, propose a new role — don't one-off it. |
 | "Accessibility later." | A `<div onClick>` and an unlabeled icon button are bugs now, not polish. Use the real element; the typed primitives already enforce labels. |
-| "Empty/error states later." | They reveal layout problems real data hides, and a blank screen is a shipped bug. Build the three states with the container. |
+| "Empty/error states later." | New or changed data flows need all reachable states, owned by the container. |
 | "It renders, I'm done." | Rendering isn't verifying. Open it in `bin/browse`, Tab through it, check the console — *then* done. |
 | "I'll add a new primitive for this." | Not on the first use. Extend a prop, or keep it local in `pages/<x>/components/`. Abstract at 3+ (frontend.md). |
 | "Responsive is a separate pass." | Retrofitting responsive is far harder than building it in. We already have a two-pane mobile layout to honor. |
