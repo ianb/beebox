@@ -16,11 +16,29 @@ import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 const RecordStatusSchema = z.enum(["draft", "reviewed", "archived"]);
 export type RecordStatus = z.infer<typeof RecordStatusSchema>;
 
-const SourceEntry = z.object({
-  ref: z.string(),
-  time: z.string().optional(),
-  note: z.string().optional(),
-});
+/**
+ * Where a record's claim came from. A source is either an in-box card
+ * (`ref:`) or a page on the web (`href:`) — the same exclusive pair the
+ * `{% source %}` tag takes, so the two vocabularies agree. Before `href`
+ * existed, a web source was written as a URL in `ref:`, which the ref walk
+ * then reported as a missing file.
+ */
+const SourceEntry = z
+  .object({
+    ref: z.string().optional(),
+    href: z.string().optional(),
+    time: z.string().optional(),
+    note: z.string().optional(),
+  })
+  .superRefine((entry, ctx) => {
+    const hasRef = entry.ref !== undefined && entry.ref !== "";
+    const hasHref = entry.href !== undefined && entry.href !== "";
+    if (hasRef && hasHref) {
+      ctx.addIssue({ code: "custom", message: "a `sources` entry takes exactly one of `ref` or `href`, not both" });
+    } else if (!hasRef && !hasHref) {
+      ctx.addIssue({ code: "custom", message: "a `sources` entry requires exactly one of `ref` or `href`" });
+    }
+  });
 
 const DateEntry = z.object({
   value: z.string(),
@@ -78,7 +96,7 @@ identifiable thing.
 - \`description:\` — About the thing — context, what it is, its
   condition, why it matters. This describes the record; it doesn't
   contain the content itself.
-- \`sources:\` — Array of \`{ref, time?, note?}\` pointing at where this
+- \`sources:\` — Array of \`{ref | href, time?, note?}\` pointing at where this
   record was extracted from — usually a capture-session card elsewhere
   in the box, so a box-root-absolute \`ref\` (leading \`/\`) reads clearest
   here. The optional \`time\` pinpoints a moment in a transcript; the

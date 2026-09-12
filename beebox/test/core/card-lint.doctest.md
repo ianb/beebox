@@ -166,6 +166,46 @@ result.results[0]!.warnings[0]!.message
 => Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist
 ```
 
+## A URL in a ref field is named as a URL, not as a missing file
+
+A `ref` names a path inside the box. Probing a URL as a file produced the least
+useful sentence the linter can say — "https://… does not exist" sends the reader
+looking for a file nobody meant to write.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "_content/inbox/email/thread-y/thread.email-thread.card",
+  "---\ntype: email-thread\nthread-id: t2\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: https://example.com/thread/1\n---\n",
+);
+const urlRef = await lintCardsDispatch(
+  [box.path("_content/inbox/email/thread-y/thread.email-thread.card")],
+  { boxRoot: box.root, ctx },
+);
+urlRef.results[0]!.warnings[0]!.message
+=> External URL at messages[0].ref: https://example.com/thread/1 — a ref names an in-box path; a URL belongs in an `href` field
+```
+
+A bare `#anchor` and an empty ref are NOT swept in with it: both name something
+in-box (or missing), and the existence walk already describes them correctly.
+
+```ts continue
+await box.write(
+  "_content/inbox/email/thread-z/thread.email-thread.card",
+  "---\ntype: email-thread\nthread-id: t3\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: \"#exp4\"\n---\n",
+);
+const anchorRef = await lintCardsDispatch(
+  [box.path("_content/inbox/email/thread-z/thread.email-thread.card")],
+  { boxRoot: box.root, ctx },
+);
+anchorRef.results[0]!.warnings.map((w) => w.type).join(",")
+=> reference
+```
+
+```ts continue
+await box.cleanup();
+```
+
 ## A display-form path in a frontmatter ref is a lint ERROR naming the canonical form
 
 `Config:box.json` (the boxholder's CONVERSATION vocabulary — never a
