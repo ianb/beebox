@@ -1,6 +1,6 @@
 ---
 name: bbx-issue-actions
-description: Work the issue queue's `next-action:` tags — discussion flags, provisional agent tasks, confirmed fixes, and released manual-testing gates (discuss, reconfirm, duplicate, invalid, fixed, manually-confirmed, verify-without-me). Use when the human says "work the next actions", "go through the reconfirms", "check the issues tagged fixed", "triage the queue", or when you want to find issues that need a disposition. Includes extraction scripts. Conventions in issues/CLAUDE.md.
+description: Use to triage or resolve issue next-action tags (discuss, reconfirm, duplicate, invalid, fixed, manually-confirmed, verify-without-me), including released manual-testing gates. Use bbx-pick-issues to choose new work.
 ---
 
 # Working `next-action:` tags

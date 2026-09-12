@@ -1,6 +1,6 @@
 ---
 name: bbx-debug
-description: Use when a bug is hard — you can't reliably reproduce it, it spans multiple components (frontend ↔ backend ↔ Agent SDK, the router/worktrees, SSE/WebSocket, connectors), a previous fix or two didn't hold, it's flaky/intermittent, or it's a performance regression. Triggers include "debug this", "why is X broken", "this is flaky", "I tried X and it still fails", "this is slow". Not needed for an obvious one-line bug.
+description: "Use for hard bugs: unreliable reproduction, cross-component failures, failed prior fixes, flakiness, or performance regressions. Not needed for an obvious one-line bug."
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob, WebSearch, WebFetch
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: doctest
-description: Directs writing, running, and triaging beebox's `.doctest.md` tests — when a doctest is the right tier, how to author and run one, and the flake-triage discipline (never call a flaky test "fixed" without re-running it). Use when writing a new doctest, debugging a failing/flaky one, or deciding whether a suite failure is a real regression. Triggers include "write a doctest", "this doctest is flaky", "is this a real test failure", "add a test for X" (once the tier is decided).
+description: Write, run, and triage beebox `.doctest.md` tests, including distinguishing flakes from regressions and rerunning before claiming a fix. Use after choosing doctest as the test tier or when a doctest fails.
 ---
 
 # Doctests: author, run, triage

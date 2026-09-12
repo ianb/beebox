@@ -1,6 +1,6 @@
 ---
 name: finish
-description: Use when the human says they're done with a worktree and wants its work landed in main — whether that's a final wrap-up or a mid-stream checkpoint, the flow is identical. Triggers include "finish", "wrap this up", "ship it", "merge this back", "checkpoint this", "/finish".
+description: Land a worktree's changes in main when the human asks to finish, ship, merge, wrap up, or checkpoint the work.
 ---
 
 # /finish

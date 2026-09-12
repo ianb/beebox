@@ -1,6 +1,6 @@
 ---
 name: launch-worktree-session
-description: Use when the human wants to spin off a separate Claude session in a new worktree to pursue an idea or piece of work that's distinct from the current conversation. Triggers include "spin this off", "do this in another worktree", "start a worktree on this", "launch a session for X", "kick off X separately". The new session gets the briefing we wrote together as context — not as a plan to execute, but as the shared understanding to start from.
+description: Start a separate session in a new worktree when the human explicitly asks to spin off distinct work. Seed it with the conversation's shared understanding as a briefing, not an implementation plan.
 allowed-tools: Bash
 ---
 
