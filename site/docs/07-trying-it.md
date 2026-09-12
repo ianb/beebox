@@ -13,13 +13,14 @@ four steps: `bbx init` to create the box in a directory you choose,
 `claude auth login` to authenticate the coding agent, `docker compose up -d`,
 then open the printed local URL. The port binds to loopback only by default,
 so nothing outside the host can reach the box until you decide otherwise.
-Details: [install/docker.md](install/docker.md).
+Details: [install/docker.md](install/docker.md). That guide documents the
+Claude login; the documentation does not describe logging Codex in inside
+the container.
 
 **The from-source path is for modifying the engine.** It needs Node 24,
 pnpm, and several system binaries, and it ends with a `doctor` command that
-checks every prerequisite and prints a remedy for anything missing. The
-guide lives in the repository at
-[github.com/ianb/beebox](https://github.com/ianb/beebox).
+checks every prerequisite and prints a remedy for anything missing.
+Details: [install/developer.md](install/developer.md).
 
 **The agent-driven install.** The project publishes an install guide written
 for your own coding agent, so you can ask Claude Code or Codex to do the

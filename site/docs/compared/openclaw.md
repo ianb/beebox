@@ -32,7 +32,9 @@ route one gateway to several distinct agent personas; a Bee Box box holds one
 agent. OpenClaw ships an ambient "anything to report?" heartbeat and can
 infer open follow-ups from a conversation; Bee Box only acts on explicit
 schedules. OpenClaw offers opt-in Docker sandboxing and publishes a threat
-model; Bee Box has neither, relying on trusted-operator filesystem scoping.
+model; as of the comparison date Bee Box had neither, relying on
+trusted-operator filesystem scoping. Bee Box has since published a
+[security overview](../security/overview.md); it still has no sandbox.
 OpenClaw has a plugin marketplace and an agent-writable persona file; Bee Box
 extends only through box-local schemas and procedures.
 

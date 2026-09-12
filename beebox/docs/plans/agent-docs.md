@@ -450,3 +450,22 @@ generator script instead of shelling to the writer; fingerprint-based
 staleness instead of enumerating transitive generator inputs; `HOME_PATH`
 export and blocklist parser reuse spelled out; `llms-full.txt` cut; the
 acceptance test made fetch-only. Nothing rejected.
+
+Round 2 (the implementation, 2026-09-12): five findings. Adopted: manifest
+source and publish paths are normalized and refuse traversal before the
+prefix check. Rejected with reasons: `hearth` is the fictional roster slug
+from `example-names.md`, not a real box; bare (non-link) mentions of
+`plans/…` paths in promoted prose and GitHub links into `.claude/` are
+references to files already public in the repo and are not navigable into
+the corpus, so they stay; the generated reference is the box agent's
+material by design (question 13 is where the corpus bridges into it).
+Residual accepted: internal path names appear as text in some promoted docs.
+
+Fetch-only acceptance run (Codex with `curl` only, no repo access, served
+build): all thirteen evaluator questions answered from the pages in 19
+fetches, three honestly reported as not covered (monthly cost, maintainer
+name, OpenClaw pricing). Two flagged contradictions fixed (the OpenClaw page's
+"no threat model" claim now dated; the trying-it page says the Docker guide
+covers only the Claude login). One remains for public-site: the home card
+still says install guides live "in the repository for now".
+

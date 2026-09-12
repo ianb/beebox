@@ -43,7 +43,16 @@ const ADMISSIBLE_PUBLISH_DIRS = [
   "contracts/",
 ] as const;
 
+// A repo-relative posix path with no traversal: the prefix checks below run on
+// the literal string, so `beebox/docs/design/../../issues/x.md` must be refused
+// here rather than pass as "under design/" and then read an internal file.
+function isPlainRelativePath(p: string): boolean {
+  if (p === "" || p.startsWith("/") || p.includes("\\")) return false;
+  return p.split("/").every((seg) => seg !== "" && seg !== "." && seg !== "..");
+}
+
 function isAdmissibleSource(source: string): boolean {
+  if (!isPlainRelativePath(source)) return false;
   if (source === "README.md") return true;
   if (source.startsWith("beebox/docs/design/")) return true;
   if (source.startsWith("beebox/docs/architecture/")) return true;
@@ -51,6 +60,7 @@ function isAdmissibleSource(source: string): boolean {
 }
 
 function isAdmissiblePublish(publish: string): boolean {
+  if (!isPlainRelativePath(publish) || !publish.endsWith(".md")) return false;
   return ADMISSIBLE_PUBLISH_DIRS.some((dir) => publish.startsWith(dir));
 }
 
