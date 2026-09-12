@@ -13,10 +13,38 @@
  */
 
 import { homedir } from "node:os";
-import type { LedgerRecord } from "../../bin/test-ledger-lib.js";
+import { MEMORY_PRESSURE_CRITICAL } from "../../bin/host-pressure.js";
+import { parseTapFiles, type LedgerRecord } from "../../bin/test-ledger-lib.js";
 
 /** The `--source` value this schedule stamps on every record it produces. */
 export const LEDGER_SOURCE = "full-suite";
+
+/**
+ * A tier that exited non-zero but printed no TAP results at all is not a
+ * green run — the wrapper failed before tap started (its load gate refusing,
+ * a loader error, a missing binary). `failingFiles` parses zero failures from
+ * that output, so without this check such a failure reads exactly like a
+ * clean pass and clears known-red/pending. Found in the 2026-09-11 review of
+ * the load gate; the schedule sets BBX_TEST_IGNORE_LOAD so the gate itself
+ * never trips here, and this guard covers whatever else can. A tier that
+ * exited 0 is trusted regardless — that is the ordinary green case.
+ */
+export function tierProducedResults(run: { exitCode: number | null; output: string }): boolean {
+  if (run.exitCode === 0) return true;
+  return parseTapFiles(run.output).length > 0;
+}
+
+/**
+ * Quiet enough to start the suite: load1 at or under the per-core bar AND not
+ * under critical memory pressure. A swapping host can read quiet on load
+ * alone (2026-09-11: load1 8 at pressure level 2 on a calm afternoon), which
+ * is why pressure is checked separately rather than folded into the bar.
+ * `level: null` (no signal, e.g. non-Darwin) never blocks — there is nothing
+ * better to go on.
+ */
+export function isHostQuiet(input: { load1: number; bar: number; level: number | null }): boolean {
+  return input.load1 <= input.bar && (input.level === null || input.level < MEMORY_PRESSURE_CRITICAL);
+}
 
 /**
  * More failing files than this and the run is not reporting bugs, it is

@@ -1,6 +1,6 @@
 ---
 title: "Fixed timeout budgets make load indistinguishable from red; consolidated from three filings"
-workstream: flaky-tests
+workstream: test-overload
 area: beebox
 labels: [testing, flake, timeout, load]
 filed-by: agent
@@ -44,15 +44,38 @@ measured rather than assumed:
 So no test is deleted and no budget is inflated: the tests stay strict, and
 the harness only consults them when their premise holds.
 
+## 2026-09-11: memory pressure, not load average
+
+The 09-09 and 09-11 environment reds (25 and 31 files SIGKILLed at tap's 300s
+budget) happened AFTER the quiet-host wait passed: the 09-11 log shows load1
+falling under the bar after 8 minutes while 18 GB of 19 GB swap was in use.
+Load average measures runnable processes; a swapping host is slow at load 8.
+Built in workstream test-overload (design in the session's proposal, reviewed
+by Codex):
+
+- `bin/host-pressure.ts` reads `kern.memorystatus_vm_pressure_level` (1
+  normal, 2 warn, 4 critical) and `vm_stat` pageouts; null on any failure.
+- The schedule's quiet wait requires load under the bar AND pressure below
+  critical, logs level and pageouts every poll, and after the 40-minute
+  budget defers to the next tick (one fyi alert, repeat-suppressed) instead
+  of running anyway. A tier that exits non-zero with no TAP output is refused
+  rather than read as green.
+- `bin/test-ledger.ts` refuses a `--mode full` run under critical pressure
+  (`BBX_TEST_IGNORE_LOAD=1` overrides) and prints a one-line warning under
+  warn; selected runs never refuse.
+
+Critical rather than warn as the threshold because level 2 reads on a calm
+afternoon here. Whether the incidents reach critical is unknown; the per-poll
+log line answers that after a week. If they only reach warn plus a pageout
+burst, the clause moves to a pageout delta between polls.
+
 ## What stays open here
 
-`/finish`-style full-suite runs in worktrees have no load gate — a developer
-or agent running `pnpm test` on a loaded machine still sees these timeouts and
-has to recognize them (isolated re-run on a quieter host, or check `uptime`).
-If that keeps costing triage time, the same slowdown measurement the schedule
-uses could be surfaced by the ledger wrapper as a "this run was ~N× slow"
-banner on the summary. Per-test budget scaling was considered and rejected as
-gold-plating. Related per-test items:
+The post-run "this run was ~N× slow" banner for ad-hoc runs is not built: it
+needs a source-parameterized `durationHistories` and parsed durations plumbed
+out of the wrapper (~50 lines). Build it only if mid-run pressure onset keeps
+showing up after the gates above. Per-test budget scaling was considered and
+rejected as gold-plating. Related per-test items:
 [process-group timeout](2026-08-25-schedules-process-group-timeout-test-flaky-under-load.md),
 [router shutdown](2026-08-24-router-core-shutdown-test-flakes-under-load.md),
 [awake timeout](2026-08-20-awake-timeout-doctest-flakes-on-a-cold-run.md).
