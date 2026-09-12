@@ -1,6 +1,6 @@
 ---
 title: "Agent documentation"
-status: draft
+status: active
 workstream: agent-docs
 issues:
   - ../../../issues/features/2026-09-12-agent-documentation.md
