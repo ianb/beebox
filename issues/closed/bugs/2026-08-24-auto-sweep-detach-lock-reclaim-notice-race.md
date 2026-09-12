@@ -7,6 +7,7 @@ discovered-by: agent
 discovered-in: worktree-user-stories-refresh — /finish full-suite re-run
 labels: [testing, flake]
 priority: important
+resolution: implemented
 ---
 
 `test/dev/auto-sweep-detach.doctest.md:72` (`await fakeSweep(2);`), assertion
@@ -42,3 +43,30 @@ average 23+, a deploy running alongside). Failed once at 25s, passed 6/6 in
 isolation immediately after. The branch touched only session-transcript readers,
 nothing under `bin/`, `dev/`, or auto-sweep — consistent with the load-race
 diagnosis above rather than any regression.
+
+
+## Fixed 2026-09-12
+
+The issue guessed a flush race in `until()`'s log polling. It was not that —
+`auto-sweep.sh:78` writes the "reclaiming stale lock" notice BEFORE running the
+sweep, so any log containing `END` must already contain the notice. A late
+flush could not produce `noticed:false` alongside `ranAnyway:true`.
+
+What could: the block began with `await until((s) => s.includes("END"))` to let
+the previous sweep finish, but **an END in the log is not proof the process
+that wrote it has exited.** With the previous sweep still holding the lock, the
+new run takes the `kill -0 $holder` branch and logs `SKIPPED (sweep N already
+running)` — it never reclaims. Then the stale `END` satisfies `ranAnyway`, and
+`noticed` is false forever, exactly as reported.
+
+Two changes:
+
+- Wait for the lock to be **released** (`until(() => !existsSync(lock))`), not
+  merely for an END to appear, so the stale lock planted next is the only one
+  present.
+- Wait on **one predicate** for both strings rather than two sequential
+  `until()`s, so a stale END can no longer satisfy the first wait while the
+  notice is still absent.
+
+Verified under the conditions in the report — several things running at once:
+4 concurrent copies green, 6/6 assertions each, plus solo runs.
