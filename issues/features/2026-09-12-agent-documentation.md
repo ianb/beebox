@@ -48,6 +48,9 @@ lands there); the public-site home card's sentence about install guides being
 container-first (`2026-09-06-container-install-is-the-primary-path.md`) lands.
 Plan stays `status: active`.
 
+Landed absolute URLs, text/plain headers, 404.html, robots.txt, and the
+integrity page; awaiting a ChatGPT retry against beebox.run.
+
 The root README now has an "Ask your agent" section pointing at the learn
 and install prompts and at `CONTRIBUTING.md`/`llms-dev.txt` for
 contributors; the home card's install prompt and install links now point at

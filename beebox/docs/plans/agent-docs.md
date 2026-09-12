@@ -534,3 +534,20 @@ card extends and a body with a baseline of cross-cutting marks, quote,
 source, and todo, that the whole system agrees on; linked from the first
 page, how-it-works, provenance, and the reverse index.
 
+## Fetchability (2026-09-12, after the boxholder's ChatGPT trial)
+
+A chat agent given `llms.txt` invented URLs instead of following links. Three
+causes found on the deployed host and fixed in the build: links were
+site-relative or page-relative, and chat fetchers do not resolve them (every
+link in the corpus is now absolute, `https://beebox.run/...` on the
+canonical build, `http://localhost:3210/...` on the router); every `.md` was
+served as `text/markdown`, which ChatGPT and Gemini fetchers report as empty
+(a `_headers` file serves the docs tree, both entry files, and the page
+twins as `text/plain`); and unknown paths returned the home page with a 200
+(a `404.html` now makes a guessed URL a real miss; a `robots.txt` allows
+all). If a chat agent still cannot follow the corpus after this deploys, the
+next step is linking spartan HTML renderings of the same files, which
+fetchers read natively; the llms.txt proposal prefers markdown but does not
+require it. Also added: `capabilities/integrity.md` (links parsed and
+checked, references rewritten on a move, validation at several layers).
+

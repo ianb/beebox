@@ -3,6 +3,7 @@
 // existing human-site pages. Both are generated, never hand-written.
 
 import path from "node:path";
+import { docsOrigin } from "./docs-origin.js";
 import type { PublishedDoc } from "./docs-types.js";
 
 export class DocsIndexError extends Error {
@@ -18,15 +19,21 @@ function humanizeDir(dir: string): string {
 }
 
 /** `/docs/<dir>/index.md`: H1, one purpose line, then one row per file sorted by filename. */
-export function renderDirectoryIndex(params: { dir: string; purpose: string; docs: readonly PublishedDoc[] }): string {
-  const { dir, purpose, docs } = params;
+export function renderDirectoryIndex(params: {
+  dir: string;
+  purpose: string;
+  docs: readonly PublishedDoc[];
+  base: string;
+}): string {
+  const { dir, purpose, docs, base } = params;
+  const origin = docsOrigin(base);
   const lines = [`# ${humanizeDir(dir)}`, "", purpose, ""];
   const sorted = [...docs].toSorted((a, b) =>
     path.posix.basename(a.publishPath).localeCompare(path.posix.basename(b.publishPath)),
   );
   for (const doc of sorted) {
     const filename = path.posix.basename(doc.publishPath);
-    lines.push(`- [${filename}](${filename}): ${doc.description}`);
+    lines.push(`- [${filename}](${origin}${base}docs/${dir}/${filename}): ${doc.description}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -67,27 +74,28 @@ export interface LlmsTxtParams {
  */
 export function renderAgentLlmsTxt(params: LlmsTxtParams): string {
   const { base, readme, spine, directories, sitePages, hasDevEntry } = params;
+  const origin = docsOrigin(base);
   const lines = ["# Bee Box", "", `> ${readme.summary}`, "", readme.preamble, "", "## Start here", ""];
   for (const doc of spine) {
     const title = extractTitle(doc.body, path.posix.basename(doc.publishPath));
-    lines.push(`- [${title}](${base}docs/${doc.publishPath}): ${doc.description}`);
+    lines.push(`- [${title}](${origin}${base}docs/${doc.publishPath}): ${doc.description}`);
   }
   lines.push("", "## Directories", "");
   for (const dir of directories) {
-    lines.push(`- [${dir.dir}/](${base}docs/${dir.dir}/index.md): ${dir.purpose}`);
+    lines.push(`- [${dir.dir}/](${origin}${base}docs/${dir.dir}/index.md): ${dir.purpose}`);
   }
   if (hasDevEntry) {
     lines.push(
       "",
       "## Contributing",
       "",
-      `- [llms-dev.txt](${base}llms-dev.txt): the contributor entry point: repo layout, running it, tests, how a change lands.`,
-      `- [dev/](${base}docs/dev/index.md): development process docs.`,
+      `- [llms-dev.txt](${origin}${base}llms-dev.txt): the contributor entry point: repo layout, running it, tests, how a change lands.`,
+      `- [dev/](${origin}${base}docs/dev/index.md): development process docs.`,
     );
   }
   lines.push("", "## Site pages", "");
   for (const page of sitePages.filter((p) => !p.unlisted)) {
-    lines.push(`- [${page.title}](${base}${page.stem}.md): ${page.summary}`);
+    lines.push(`- [${page.title}](${origin}${base}${page.stem}.md): ${page.summary}`);
   }
   return `${lines.join("\n")}\n`;
 }
@@ -104,7 +112,7 @@ export interface DevLlmsTxtParams {
 
 function fileRow(base: string, doc: PublishedDoc): string {
   const filename = path.posix.basename(doc.publishPath);
-  return `- [${filename}](${base}docs/dev/${filename}): ${doc.description}`;
+  return `- [${filename}](${docsOrigin(base)}${base}docs/dev/${filename}): ${doc.description}`;
 }
 
 /**
@@ -139,8 +147,9 @@ export function renderDevLlmsTxt(params: DevLlmsTxtParams): string {
   for (const doc of rest) lines.push(fileRow(base, doc));
 
   lines.push("", "## Also", "");
-  for (const dir of also) lines.push(`- [${dir.dir}/](${base}docs/${dir.dir}/index.md): ${dir.purpose}`);
-  lines.push(`- [llms.txt](${base}llms.txt): the evaluator-facing index; what Bee Box is and whether to use it.`);
+  const origin = docsOrigin(base);
+  for (const dir of also) lines.push(`- [${dir.dir}/](${origin}${base}docs/${dir.dir}/index.md): ${dir.purpose}`);
+  lines.push(`- [llms.txt](${origin}${base}llms.txt): the evaluator-facing index; what Bee Box is and whether to use it.`);
 
   return `${lines.join("\n")}\n`;
 }

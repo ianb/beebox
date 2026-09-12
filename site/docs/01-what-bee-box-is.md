@@ -53,7 +53,10 @@ decide the structure first: what has no place yet stays on the card in your
 words, and the shape can be fixed up later without losing anything. Your
 exact words are kept as quotes, and a fact points at where it came from.
 Corrections you make
-become rules the agent reads next time. It asks a question when it is unsure
+become rules the agent reads next time. And the box keeps itself coherent
+as it grows: every link is found and checked, moving a card rewrites what
+pointed at it, and a broken card cannot slip into the history (see
+[it keeps itself coherent](capabilities/integrity.md)). It asks a question when it is unsure
 and waits for your answer.
 
 **It builds inside the box.** The agent has real tools, so it can make things

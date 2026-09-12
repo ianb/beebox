@@ -22,6 +22,7 @@ its type; a **box** is the directory of them. One page per capability is in
 - [Schedules](capabilities/schedules.md): recurring runs and agent-set timers.
 - [Procedures](capabilities/procedures.md): declarative multi-step workflows.
 - [Dump it in now, shape it later](capabilities/shape-it-later.md): put things in before deciding their structure; what does not fit stays in your words and can be reshaped later.
+- [It keeps itself coherent](capabilities/integrity.md): links parsed and checked, references rewritten on a move, cards validated at several layers, so the box stays navigable as it grows.
 - [Provenance](capabilities/provenance.md): your exact words kept as quotes, and facts that point back at their source.
 - [Views](capabilities/views.md): pages and displays the agent builds for a kind of card, so a collection becomes something to browse.
 - [Courses](capabilities/courses.md): structured teaching material and per-learner progress.
