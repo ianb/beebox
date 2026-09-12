@@ -7,7 +7,49 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-secret-custody — after running the data migration on dev + prod
 priority: important
+resolution: implemented
 ---
+
+Closed: the code pass landed in `7d8494901` ("Close the secret-store
+transition window", 2026-09-05) — every reader's file/env fallback, the
+connector entries in both env allowlists, and `add-box.sh`'s legacy copy
+branch. That commit carried this issue's trailer but the file was never
+moved. This commit closes it after finishing the per-machine data pass the
+issue also asks for.
+
+**Dev machine.** Removed three migrated stray files from the local test
+boxes (two `deepgram.secret.json`, one `replicate.secret.json`) and the
+`GEMINI_KEY` / `THINKING_OPENAI_API_KEY` exports from the shell profile. Left alone, as the issue directs: the box-local
+`capture`/`dropbox`/`raindrop`/`kie` files and the google/gmail token files.
+`~/.beebox-publish.env` was already gone.
+
+**Prod.** Verified first that the deployed build actually lacks the
+fallbacks (`refusalAllowsLegacyFallback` survives only in docs there; `dist`
+rebuilt 2026-09-11) — deleting a file a live fallback still read would have
+broken a connector, since nothing fails over any more. Then, with a backup
+kept on the server: removed 11 migrated stray files (`mistral` ×6,
+`telegram` ×3, `openai`, `replicate`) across six boxes, stripped
+`THINKING_OPENAI_API_KEY`, `GEMINI_KEY` and `BBX_DEEPGRAM_API_KEY`/`_PROJECT`
+from `/home/beebox/.env`, and restarted both units. `GOOGLE_OAUTH_CLIENT_ID`
+/`_SECRET` stay: they are the fleet login surface's own configuration, not a
+fallback (see `getLoginGoogleClientCreds`). Remaining stray files are the
+box-local `omdb`/`tmdb` ones the migrator deliberately skipped. After the
+restart both units are active, the journal shows no secret errors, and
+`mistral`, `openai-thinking`, `openrouter` and `google-oauth-*` all resolve
+from the store.
+
+Three residuals, none blocking, all fail-closed:
+
+- Prod logs 49 `not-granted` refusals for `openai` and a few for `openrouter`
+  in September — some box asks for a credential it was never granted. That
+  predates this pass (no fallback has existed since 2026-09-05); granting is
+  the boxholder's call, so it is left as-is.
+- Two boxes' `publish/<slug>` entries refuse as `unknown-secret`: those
+  publish credentials were never migrated into the store.
+- The dev shell profile still exports a Mistral key under the retired
+  product prefix — a pre-rename name no reader looks for — and the store
+  backups from 2026-08-17/08-19 are still in `~/.config/beebox/backups/`;
+  the issue says those can be pruned once this pass is verified.
 
 The secret store shipped 2026-08-17
 (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -75,7 +117,7 @@ in normal operation.
   box-tree readers in `src/` outside the health flagger).
 
 Related still-open items this does NOT cover: the chat capture widget
-([write-only-secret-capture-in-chat](../features/2026-07-19-write-only-secret-capture-in-chat.md)),
+([write-only-secret-capture-in-chat](../../features/2026-07-19-write-only-secret-capture-in-chat.md)),
 the box-local connectors above (candidates for `agent`-access grants
 eventually), and the replicate `api_token`-vs-`apiKey` mismatch (adapter
 was never configured; enable deliberately via `bbx secrets set replicate`

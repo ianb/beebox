@@ -119,3 +119,21 @@ it, so the manifest is its only record in that window. Deleting
 readers in `annex/to-annex.ts` and `commands/attachments-gitignore.ts` retired
 with them. Bulk upload's writer is now redundant on every box and can go once
 capture is settled.
+
+## A NEW box is not annex-shaped (2026-09-11)
+
+Checked while surveying this issue for deletion, and it changes the "redundant
+on every box" claim above: redundancy holds for the boxes that exist, not for
+the ones `bbx init` creates. `writeBoxGitignore` picks its block from
+`isAnnexInitialized` (`core/box/index.ts:135`, used at `:281`), so a box
+created in a repo without annex gets `GITIGNORE_BLOCK` — assets ignored — and
+nothing in the creation path runs `git annex init` (the only `annex.init()`
+caller is `annex/to-annex.ts`, i.e. an explicit conversion). On such a box the
+bulk-upload manifest is again the only record of an uploaded blob, exactly as
+it was on the last un-converted box.
+
+So removing bulk upload's writer needs the same `isAnnexBox` gate the section
+above proposes for the manifest-shaped case — which keeps the manifest code
+alive either way, for little gain while capture is unsettled. The honest
+sequence is: settle capture, or make new boxes annex-shaped at creation, and
+only then delete. Issue stays open.

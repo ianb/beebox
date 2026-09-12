@@ -1,15 +1,32 @@
 ---
 title: "The /dev/docs browser now redirects, leaving ~540 lines of unreachable rendering code"
-workstream: dev-comments
+workstream: finish-migrations
 area: monorepo
 filed-by: agent
 discovered-in: worktree-dev-comments — retiring the doc browser into the general browser
 labels: [cleanup, router]
 priority: important
+resolution: implemented
+---
+
+Closed by this commit (worktree-finish-migrations): deleted
+`router-doc-browser.ts` and `router-doc-browser-ui.ts` (415 lines) plus
+`findClosedIssueLinkHrefs`/`appendClosedIssuePills` and their test case in
+`router-markdown.ts`/`router-docs.test.ts` — all confirmed unreachable, the
+301 in `serveDev` being the successor. Reworded stale comments elsewhere that
+pointed at the removed files (`QuickOpen.tsx`, `CodeBlock.tsx`, `recency.ts`,
+`file-index.ts`, `router-docs.ts`'s own header).
+
+The closed-issue "closed" chip (`appendClosedIssuePills`) was **not** ported to
+the general browser — the boxholder decided to let that feature go rather than
+rebuild it there. `workstreams-app/typecheck`, the router/backend/frontend
+eslint configs, and the router test suite (`router-docs.test.ts`,
+`router-auth-classify.test.ts`) all pass after the deletion.
+
 ---
 
 `/<worktree>/dev/docs/…` now 301s to `/workstreams/browse?file=…&workstream=…`
-([general-browser](../../beebox/docs/plans/general-browser.md), Track 5),
+([general-browser](../../../beebox/docs/plans/general-browser.md), Track 5),
 so everything that rendered that surface is unreachable:
 
 - `serveDocBrowser`, `renderDocSidebar`, `renderDocQuickOpen`, `DOC_BROWSER_CSS`
@@ -42,5 +59,5 @@ feature.
 
 `bin/router.ts:70-73` rewrites `/<worktree>/dev/issues[/…]` to
 `/workstreams/issues…`, and is already slated for removal in
-[remove-legacy-issue-deep-link-routes](../closed/code-quality/2026-08-22-remove-legacy-issue-deep-link-routes.md).
+[remove-legacy-issue-deep-link-routes](2026-08-22-remove-legacy-issue-deep-link-routes.md).
 Both touch the same file and could go together.
