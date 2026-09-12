@@ -59,3 +59,5 @@ deploy verification still pending.
 Landed the use-case pages (docs/uses/), the chatbot appraisal, and the jargon pass; spine is now thirteen files.
 
 Landed the web-interface page and the use-to-feature mapping.
+
+Landed shape-it-later, provenance, and the specific voice page.
