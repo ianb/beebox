@@ -87,6 +87,6 @@ whichever landing happened to be first in the window.
 
 Verified stale (note above): the failure was host contention, and the blamed
 landing cannot reach the failing file. An instance of
-[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+[fixed-timeout-budgets-fail-under-host-load](../../deferred/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
 the mis-attribution itself is fixed by the full-suite-verdicts workstream
 (slowdown-gated verdicts + import-cone attribution in schedules/full-suite/).

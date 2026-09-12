@@ -7,6 +7,8 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-full-suite-verdicts — consolidating the 08-24/08-25 load-flake filings
 priority: important
+activate-on: 2026-09-18
+category: bugs
 ---
 
 Three filings (2026-08-24 ×2, 2026-08-25, now closed as superseded by this one)
@@ -76,6 +78,36 @@ needs a source-parameterized `durationHistories` and parsed durations plumbed
 out of the wrapper (~50 lines). Build it only if mid-run pressure onset keeps
 showing up after the gates above. Per-test budget scaling was considered and
 rejected as gold-plating. Related per-test items:
-[process-group timeout](2026-08-25-schedules-process-group-timeout-test-flaky-under-load.md),
-[router shutdown](2026-08-24-router-core-shutdown-test-flakes-under-load.md),
-[awake timeout](2026-08-20-awake-timeout-doctest-flakes-on-a-cold-run.md).
+[process-group timeout](../bugs/2026-08-25-schedules-process-group-timeout-test-flaky-under-load.md),
+[router shutdown](../bugs/2026-08-24-router-core-shutdown-test-flakes-under-load.md),
+[awake timeout](../bugs/2026-08-20-awake-timeout-doctest-flakes-on-a-cold-run.md).
+
+## Check-in on 2026-09-18
+
+Grep every full-suite run log kept since this deferral, plus the deferred fyi
+alert:
+
+```sh
+grep -H 'full-suite:.*pressure' ~/src/schedule-runs/full-suite/runs/*.log
+grep -lE 'withholding verdicts|deferred to the next tick' ~/src/schedule-runs/full-suite/runs/*.log
+bin/schedules alerts --json --workstream full-suite | jq 'map(select(.kind == "deferred"))'
+```
+
+Answer from that output:
+
+1. **Did any run defer (gate fired)?** If `deferred to the next tick` never
+   appears, the critical-pressure gate never fired in a week of real ticks —
+   keep it as designed, nothing to change.
+2. **Did any run that withheld verdicts (load-slowdown untrusted) show
+   pressure below 4 at start or end?** If so, the incidents are real but stay
+   under the critical threshold — the gate is too loose for what actually
+   happens; move the clause to a pageout-delta between polls instead of the
+   bare level-4 threshold.
+3. **Did any deferred or refused run happen while the surrounding runs' logged
+   pressure would have allowed a good run (i.e. a spurious spike, not a
+   sustained one)?** If so, the gate is too tight — require pressure to stay
+   at or above critical across two consecutive polls before deferring, rather
+   than any single poll.
+
+If none of 1–3 turns up evidence either way (no full-suite runs logged this
+week), re-defer one more cycle rather than closing on no data.

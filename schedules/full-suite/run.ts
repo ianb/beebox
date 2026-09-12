@@ -80,7 +80,12 @@ async function waitForQuietHost(): Promise<boolean> {
     const load = os.loadavg()[0] ?? 0;
     const { level, pageouts } = readMemoryPressure();
     if (isHostQuiet({ load1: load, bar, level })) {
-      if (waited > 0) process.stdout.write(`full-suite: host quiet after ${String(Math.round(waited / 60000))}m.\n`);
+      const detail = `load1 ${load.toFixed(1)}, pressure ${String(level)}, pageouts ${String(pageouts)}`;
+      process.stdout.write(
+        waited > 0
+          ? `full-suite: host quiet after ${String(Math.round(waited / 60000))}m (${detail}).\n`
+          : `full-suite: host quiet (${detail}).\n`,
+      );
       return true;
     }
     if (waited >= QUIET_WAIT_BUDGET_MS) {
@@ -190,6 +195,12 @@ async function main(): Promise<void> {
     // deferred, and green neither clears known-red/pending nor resets alert
     // suppression — a pass at 5× usual speed is as unmeasured as a failure.
     const slowdown = batchSlowdown({ current: currentDurations(runs), histories });
+    const endPressure = readMemoryPressure();
+    const factorLabel = slowdown.factor === null ? "n/a" : `${slowdown.factor.toFixed(1)}×`;
+    process.stdout.write(
+      `full-suite: end of run (pressure ${String(endPressure.level)}, pageouts ${String(endPressure.pageouts)}); ` +
+        `slowdown factor ${factorLabel} over ${String(slowdown.samples)} files.\n`,
+    );
     if (runIsUntrusted(slowdown) && slowdown.factor !== null) {
       process.stdout.write(
         `full-suite: ran at ${slowdown.factor.toFixed(1)}× usual durations (${String(slowdown.samples)} files); withholding verdicts.\n`,
