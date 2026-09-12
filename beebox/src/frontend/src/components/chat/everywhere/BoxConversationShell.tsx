@@ -1,19 +1,18 @@
 import { systemCardAttentionRef } from "../../../lib/system-card-navigation";
-import { WorkspaceProvider, useWorkspace } from "../workspace/WorkspaceProvider";
+import { useWorkspace } from "../workspace/WorkspaceProvider";
+import { explicitConversationHistoryState } from "../workspace/workspace-history";
 import { canAcknowledgeAmbientReply } from "../ambient/projection";
 /** The single composer/runtime owner, kept mounted while the routed card changes. */
-import { useEffect, useRef, useState, useMemo, type ReactNode } from "react";
-import { useParams, useSearch, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { useParams, useSearch, useNavigate, useRouterState } from "@tanstack/react-router";
 import { InteractiveChat } from "../InteractiveChat";
 import { useEmissionStoreInstance } from "../input-store";
 import { isNativeShell, postNativeMessage } from "../native-post";
-import { useFocusedConversationCard } from "./card-context";
 import { useBoxConversation } from "./conversation-context";
 import { useConversationRoute } from "./use-conversation-route";
 import { readTrackedSessions, writeTrackedSessions } from "../ambient/tracked-sessions";
 import { AmbientReplies, type AmbientSession } from "../ambient/AmbientReplies";
 import { useViewNavigate } from "../../../hooks/useViewNavigate";
-import { useViewOverlay, useViewOverlayVisible } from "../../ViewOverlay";
 import { href, toSearch } from "../../../lib/routing";
 import { Button } from "../../ui/Button";
 import { Text } from "../../ui/Text";
@@ -23,25 +22,24 @@ import type { ConversationSelection } from "@shared/chat-composer-binding";
 import { z } from "zod";
 
 const shellSearch = z.object({ nativeComposer: z.coerce.string().optional(), capture: z.coerce.string().optional() });
-export function BoxConversationShell({ children }: { children: ReactNode }) {
+export function BoxConversationShell() {
   const conversation = useBoxConversation();
   invariant(conversation, "BoxConversationShell requires BoxConversationProvider");
-  return <WorkspaceProvider target={conversation.rendered?.target}><ConversationRuntime conversation={conversation}>{children}</ConversationRuntime></WorkspaceProvider>;
+  return <ConversationRuntime conversation={conversation} />;
 }
-function ConversationRuntime({ conversation, children }: { conversation: NonNullable<ReturnType<typeof useBoxConversation>>; children: ReactNode }) {
+function ConversationRuntime({ conversation }: { conversation: NonNullable<ReturnType<typeof useBoxConversation>> }) {
   const { storageScope } = conversation;
   const { boxSlug = "" } = useParams({ strict: false });
   const routeSearch = useSearch({ strict: false });
+  const routeReady = useRouterState({ select: state => !state.isLoading && state.resolvedLocation?.href === state.location.href });
   const search = shellSearch.parse(routeSearch);
   const route = useConversationRoute(conversation);
   const workspace = useWorkspace();
   invariant(workspace, "ConversationRuntime requires workspace");
-  const routeFocusedRef = useFocusedConversationCard();
-  const focusedRef = workspace.participating ? (workspace.activeView ? systemCardAttentionRef(workspace.activeView.target) : null) : routeFocusedRef;
-  const transcriptVisible = workspace.participating ? workspace.transcriptVisible : route.transcriptVisible;
-  const viewOverlayVisible = useViewOverlayVisible();
+  const focusedRef = workspace.activeView ? systemCardAttentionRef(workspace.activeView.target) : null;
+  const transcriptVisible = workspace.transcriptVisible;
   // Native publication is an imperative consumer: stable identity prevents redundant bridge messages.
-  const attention = useMemo(() => ({ ...route.attention, transcript: transcriptVisible ? "visible" as const : "hidden" as const, ...(workspace.participating && !focusedRef ? { surface: "chat" as const, focusedRef: undefined } : {}), ...(focusedRef ? { surface: "card" as const, focusedRef } : {}), ...(viewOverlayVisible ? { transcript: "hidden" as const } : {}) }), [focusedRef, route.attention, viewOverlayVisible, transcriptVisible, workspace.participating]);
+  const attention = useMemo(() => ({ ...route.attention, transcript: transcriptVisible ? "visible" as const : "hidden" as const, ...(!focusedRef ? { surface: "chat" as const, focusedRef: undefined } : { surface: "card" as const, focusedRef }) }), [focusedRef, route.attention, transcriptVisible]);
   const emissionStore = useEmissionStoreInstance(boxSlug);
   const target = conversation.rendered?.target;
   const usesNativeComposer = search.nativeComposer === "1" || isNativeShell();
@@ -49,15 +47,13 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   const sessionLabel = conversation.rendered?.label ?? "Conversation";
   const inspect = useViewNavigate();
   const navigate = useNavigate();
-  const overlay = useViewOverlay();
   function handleOpenConversation(id: string) {
-    overlay?.close();
     if (route.chatPage) {
-      void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: id }), state: { bbxConversationOverlay: true } });
+      void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: id }), state: explicitConversationHistoryState({}) });
       return;
     }
     void conversation.select({ kind: "session", sessionId: id, named: true });
-    route.showConversation();
+    if (workspace) workspace.dispatch({ type: "showChat", pane: workspace.state.lastCardPane, viewport: workspace.mobile ? "mobile" : "desktop" });
   }
   function handleNewConversation() {
     const contextDir = conversation.selection.kind === "ready" ? conversation.selection.target.contextDir : conversation.selection.contextDir;
@@ -77,14 +73,12 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
   }, [sessionId, sessionLabel]);
   useEffect(() => { writeTrackedSessions(storageScope, sessions); }, [storageScope, sessions]);
   useEffect(() => {
-    if (!workspace.ready && conversation.selection.kind === "ready") return;
+    if (!routeReady || (!workspace.ready && conversation.selection.kind === "ready")) return;
     const publication = { version: 1, kind: "selection", revision: ++publicationRevision.current, boxSlug, selection: conversation.selection, attention };
     postNativeMessage(window, { channel: "beeboxComposerBinding", payload: publication });
-  }, [boxSlug, conversation.selection, attention, workspace.ready]);
+  }, [routeReady, boxSlug, conversation.selection, attention, workspace.ready]);
   const handleRetry = conversation.retry;
   const handleAssignment: typeof conversation.assigned = (id, assignment) => { workspace.adopt(id); conversation.assigned(id, assignment); };
-  const handleShowConversation = () => workspace.participating ? workspace.dispatch({ type: "showChat", pane: workspace.state.lastCardPane, viewport: workspace.mobile ? "mobile" : "desktop" }) : route.showConversation();
-  const handleHideConversation = route.hideConversation;
   const notice = <ConversationNotice selection={conversation.selection} onRetry={handleRetry} onNewConversation={handleNewConversation} />;
   return <InteractiveChat
     sessionInput={sessionId ?? "new"}
@@ -99,11 +93,8 @@ function ConversationRuntime({ conversation, children }: { conversation: NonNull
     sessionLabel={sessionLabel}
     onSessionAssignment={handleAssignment}
     nativeComposer={usesNativeComposer}
-    openCaptureOnMount={search.capture === "1"}
+    openCaptureOnMount={search.capture === "1" && !usesNativeComposer}
     transcriptVisible={transcriptVisible}
-    routeContent={workspace.participating ? undefined : children}
-    onShowConversation={handleShowConversation}
-    onHideConversation={handleHideConversation}
     selectionNotice={<>{notice}{workspace.notice ? <Text as="div" size="sm" tone="muted">{workspace.notice}</Text> : null}</>}
     // Keep reply observation alive, but show its panels only away from the transcript.
     ambientRegion={<div hidden={transcriptVisible}><AmbientReplies storageScope={storageScope} boxSlug={boxSlug} sessions={sessions} selectedSessionId={sessionId}

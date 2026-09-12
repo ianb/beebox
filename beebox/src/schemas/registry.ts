@@ -19,6 +19,11 @@ import { setSchemaLoadFailures, type SchemaLoadFailure } from "./schema-load-sta
 import { DashboardSchema } from "./dashboard.js";
 import { SettingsSchema } from "./settings.js";
 import { BrowseSchema } from "./browse.js";
+import { QuestionsSchema } from "./questions.js";
+import { LandmarksSchema } from "./landmarks.js";
+import { HistorySchema } from "./history.js";
+import { InventorySchema } from "./inventory.js";
+import { AdminSchema } from "./admin.js";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { FeedbackSchema } from "./feedback.js";
@@ -84,6 +89,11 @@ export const cardSchemas: CardSchema[] = [
   DashboardSchema,
   SettingsSchema,
   BrowseSchema,
+  QuestionsSchema,
+  LandmarksSchema,
+  HistorySchema,
+  InventorySchema,
+  AdminSchema,
   // authored — everyday recording types first
   DocSchema,
   RecordSchema,

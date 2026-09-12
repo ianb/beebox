@@ -112,13 +112,13 @@ export function SelectionCapture({ onCapture, extract, children, className, "dat
       // over arbitrary `children` content, not a widget — so `role="none"`
       // is accurate, not a workaround: it has no accessible role to strip.
       role="none"
-      onMouseUp={scheduleRefresh}
+      onMouseUp={(event) => { event.stopPropagation(); scheduleRefresh(); }}
       onMouseDown={() => setButton(null)}
       // Keyboard equivalents of the mouse handlers above — a keyboard user
       // extending a text selection (Shift+Arrow) fires keyup on the focused
       // descendant, which bubbles here, so this genuinely detects
       // keyboard-driven selections rather than just satisfying the linter.
-      onKeyUp={scheduleRefresh}
+      onKeyUp={(event) => { event.stopPropagation(); scheduleRefresh(); }}
       onKeyDown={() => setButton(null)}
     >
       {children}

@@ -1,24 +1,20 @@
 import { useState } from "react";
 import { errorMessage } from "@shared/error-guards";
-import { useParams } from "@tanstack/react-router";
 import { trpc, trpcClient } from "../../lib/trpc";
+import { DEFAULT_INVENTORY_CARD_STATE, inventoryCardViewState, parseInventoryCardState, type InventoryCardState } from "../../lib/inventory-card-state";
+import type { ViewState } from "@shared/view-state";
 import { Column } from "../../components/ui/Column";
 import { Stack } from "../../components/ui/Stack";
 import { Text } from "../../components/ui/Text";
+import { Button } from "../../components/ui/Button";
 import { InventoryContent } from "./components/InventoryContent";
 import { InventoryError } from "./components/InventoryError";
 import { InventoryHeader } from "./components/InventoryHeader";
 import { InventoryLoading } from "./components/InventoryLoading";
 
-type Projection = "grouped" | "direct";
-type Metric = "count" | "bytes";
-type LinkStatus = "all" | "linked" | "unlinked";
-
-export function InventoryPage() {
-  const { boxSlug } = useParams({ strict: false });
-  const [projection, setProjection] = useState<Projection>("grouped");
-  const [metric, setMetric] = useState<Metric>("count");
-  const [linkStatus, setLinkStatus] = useState<LinkStatus>("all");
+export function InventoryCardBody({ viewState, onViewStateChange }: { viewState: ViewState | null; onViewStateChange: (state: ViewState, mode?: "push" | "replace") => void }) {
+  const parsed = parseInventoryCardState(viewState);
+  const state = parsed.ok ? parsed.state : DEFAULT_INVENTORY_CARD_STATE;
   const inventory = trpc.inventory.summary.useQuery(undefined, { staleTime: 15 * 60 * 1000 });
   const utils = trpc.useUtils();
   const [refreshing, setRefreshing] = useState(false);
@@ -41,7 +37,8 @@ export function InventoryPage() {
   return (
     <Column overflow="auto" className="h-full">
       <Stack gap="lg" className="w-full max-w-5xl mx-auto py-6 px-4">
-        <InventoryHeader boxSlug={boxSlug} refreshing={refreshing} refresh={refresh} refreshError={refreshError} />
+        <InventoryHeader refreshing={refreshing} refresh={refresh} refreshError={refreshError} />
+        {parsed.ok ? null : <Stack gap="xs"><Text as="p" tone="danger">{parsed.error}</Text><Button intent="secondary" size="sm" onClick={() => onViewStateChange(inventoryCardViewState(DEFAULT_INVENTORY_CARD_STATE), "replace")}>Reset controls</Button></Stack>}
         {inventory.isLoading ? (
           <InventoryLoading />
         ) : inventory.error !== null ? (
@@ -51,15 +48,19 @@ export function InventoryPage() {
         ) : (
           <InventoryContent
             data={data}
-            metric={metric}
-            linkStatus={linkStatus}
-            projection={projection}
-            setMetric={setMetric}
-            setLinkStatus={setLinkStatus}
-            setProjection={setProjection}
+            metric={state.metric}
+            linkStatus={state.linkStatus}
+            projection={state.projection}
+            setMetric={(metric) => updateState({ ...state, metric })}
+            setLinkStatus={(linkStatus) => updateState({ ...state, linkStatus })}
+            setProjection={(projection) => updateState({ ...state, projection })}
           />
         )}
       </Stack>
     </Column>
   );
+
+  function updateState(next: InventoryCardState): void {
+    onViewStateChange(inventoryCardViewState(next), "replace");
+  }
 }

@@ -92,6 +92,16 @@ Components reach for **semantic color roles**, not brand names. Defined in `src/
 
 When a color role doesn't feel right for a use case, that's usually a sign that a new semantic role is warranted — discuss before inventing a one-off color.
 
+## Workspace presentation
+
+Ordinary cards and built-in interface instruments render in the workspace. Open
+them through the workspace target rather than adding a parallel page, generic
+preview overlay, or page-level conversation shell. Passive navigation changes
+the visible attention target while preserving the conversation recipient, draft,
+and send destination; only an explicit conversation action selects a recipient.
+Source editing, image lightboxes, capture, and other task-specific dialogs remain
+appropriate overlays for their distinct interactions.
+
 ## Frontend UI Primitives
 
 Reach for a primitive from `src/frontend/src/components/ui/` before writing appearance classes inline. The primitives own appearance (colors, borders, shadows); callers own outer layout (margin, padding, flex-self, sizing, position) via a `className` prop.

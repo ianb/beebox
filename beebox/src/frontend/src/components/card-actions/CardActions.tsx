@@ -1,24 +1,59 @@
-import { useEffect, useRef, useState } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useEffect, useId, useRef, useState } from "react";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
+import { cardChatSearch } from "../../lib/system-card-navigation";
+import type { ViewTarget } from "../../lib/view-url";
+import { explicitConversationHistoryState } from "../chat/workspace/workspace-history";
 import { Button } from "../ui/Button";
-import { Dropdown } from "../ui/Dropdown";
+import { Dropdown, type DropdownVertical } from "../ui/Dropdown";
 import { MenuItem } from "../ui/dropdown-menu-item";
 import { Text } from "../ui/Text";
+import { useViewNavigate } from "../../hooks/useViewNavigate";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { legacyHistoryState } from "../history/history-card-state";
 
 function MoreIcon() {
   return <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>;
 }
 
-export function CardActions({ path, onTrashed }: { path: string; onTrashed?: (() => void) | undefined }) {
+export function CardActions({ target, onTrashed, vertical }: {
+  target: ViewTarget;
+  onTrashed?: (() => void) | undefined;
+  vertical?: DropdownVertical;
+}) {
+  const { path } = target;
   const { boxSlug } = useParams({ strict: false });
+  const search = useSearch({ strict: false });
+  const navigate = useNavigate();
+  const openView = useViewNavigate();
+  const instanceId = useId().replaceAll(":", "");
   const [confirming, setConfirming] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const refs = trpc.card.inboundRefs.useQuery({ path }, { enabled: confirming });
   const trash = trpc.card.trash.useMutation();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const priorFocusRef = useRef<HTMLElement | null>(null);
   const utils = trpc.useUtils();
+
+  const openChat = async (mode: "recent" | "new") => {
+    setChatError(null);
+    try {
+      const result = await utils.chat.openForCard.fetch({ cardPath: path });
+      void navigate({
+        to: href(`/${boxSlug}/chat`),
+        search: toSearch(cardChatSearch({
+          mode,
+          target,
+          ...result,
+          ...(search.nativeComposer === "1" || search.nativeComposer === 1 ? { nativeComposer: "1" as const } : {}),
+        })),
+        state: explicitConversationHistoryState,
+      });
+    } catch (error) {
+      setChatError(error instanceof Error ? error.message : "Could not open chat");
+    }
+  };
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -47,13 +82,17 @@ export function CardActions({ path, onTrashed }: { path: string; onTrashed?: (()
   return (
     <>
       <Dropdown
+        vertical={vertical}
         trigger={({ toggle, ariaProps }) => (
           <Button icon={<MoreIcon />} label="Card actions" intent="ghost" size="sm" onClick={toggle} {...ariaProps} />
         )}
       >
-        <MenuItem to={`${href(`/${boxSlug}/history`)}?path=${encodeURIComponent(path)}`}>View history</MenuItem>
+        <MenuItem id={`bbx-card-open-chat-${instanceId}`} onClick={() => openChat("recent")}>Chat about this card</MenuItem>
+        <MenuItem id={`bbx-card-open-chat-new-${instanceId}`} onClick={() => openChat("new")}>Start a new chat</MenuItem>
+        <MenuItem onClick={() => openView({ path: SYSTEM_CARD_PATHS.history, viewer: null, params: {}, viewState: legacyHistoryState({ path }) }, { label: "History" })}>View history</MenuItem>
         <MenuItem danger onClick={() => setConfirming(true)}>Move to Trash…</MenuItem>
       </Dropdown>
+      {chatError !== null ? <Text as="span" size="xs" tone="danger">{chatError}</Text> : null}
       {confirming ? (
         <dialog
           ref={dialogRef}

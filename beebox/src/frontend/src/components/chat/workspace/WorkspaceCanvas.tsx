@@ -62,7 +62,7 @@ function WorkspaceCard({ tab, pane, visible, ...callbacks }: CardCallbacks & { t
   </div>;
 }
 /** Card roots and the singleton transcript never change React parents on move. */
-export function WorkspaceCanvas({ children, routeContent, ...callbacks }: CardCallbacks & { children: ReactNode; routeContent?: ReactNode }) {
+export function WorkspaceCanvas({ children, ...callbacks }: CardCallbacks & { children: ReactNode }) {
   const workspace = useWorkspace();
   const visiblePaths = Object.values(workspace?.projection.visiblePaths ?? {});
   const [visited, setVisited] = useState<Set<string>>(() => new Set(visiblePaths));
@@ -70,20 +70,19 @@ export function WorkspaceCanvas({ children, routeContent, ...callbacks }: CardCa
     setVisited((old) => visiblePaths.every((path) => old.has(path)) ? old : new Set([...old, ...visiblePaths]));
   }, [visiblePaths]);
   if (!workspace) return children;
-  const { projection, participating, mobile } = workspace;
-  const transcript = participating ? projection.transcript : "full";
-  const split = participating && !mobile && workspace.state.layout.kind === "split" && transcript !== "full";
+  const { projection, mobile } = workspace;
+  const transcript = projection.transcript;
+  const split = !mobile && workspace.state.layout.kind === "split" && transcript !== "full";
   return <><VisuallyHidden as="h1">Workspace</VisuallyHidden><div className="grid flex-1 min-h-0 min-w-0" style={{ gridTemplateColumns: split ? "minmax(0, 1fr) minmax(0, 1fr)" : "minmax(0, 1fr)", gridTemplateRows: "minmax(0, 1fr)" }}>
-    {!participating && routeContent !== undefined ? <div hidden={workspace.transcriptVisible} className={workspace.transcriptVisible ? "hidden" : "min-w-0 min-h-0 overflow-auto"} style={{ gridArea: "1 / 1" }}>{routeContent}</div> : null}
     {Object.values(workspace.state.tabs).map((tab) => {
       const path = tab.target.path;
       if (!visited.has(path) && !visiblePaths.includes(path)) return null;
       const pane = workspace.state.panes.left.paths.includes(path) ? "left" : "right";
-      return <WorkspaceCard key={path} tab={tab} pane={pane} visible={workspace.displayReady === true && participating === true && visiblePaths.includes(path)} {...callbacks} />;
+      return <WorkspaceCard key={path} tab={tab} pane={pane} visible={workspace.displayReady === true && visiblePaths.includes(path)} {...callbacks} />;
     })}
     <div hidden={!workspace.transcriptVisible} {...(!workspace.transcriptVisible ? { inert: "" } : {})} className={workspace.transcriptVisible ? "flex flex-col min-h-0 min-w-0 relative" : "hidden"}
       style={{ gridRow: 1, gridColumn: transcript === "right" ? "2" : transcript === "left" ? "1" : "1 / -1", background: "var(--bbx-desk-background)" }}>
-      <TranscriptFloatingControls restore={participating && projection.restorePane ? <RestoreCardsControl /> : null}>{children}</TranscriptFloatingControls>
+      <TranscriptFloatingControls restore={projection.restorePane ? <RestoreCardsControl /> : null}>{children}</TranscriptFloatingControls>
     </div>
   </div></>;
 }

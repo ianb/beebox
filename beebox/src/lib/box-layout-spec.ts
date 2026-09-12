@@ -263,7 +263,7 @@ export const BOX_LAYOUT = [
   {
     path: "_config/interface",
     area: "config",
-    description: "Canonical dashboard.card, settings.card, and browse.card interface instruments. Keep their paths; the body holds source notes, not live UI state.",
+    description: "Canonical dashboard.card, settings.card, browse.card, questions.card, landmarks.card, history.card, inventory.card, and admin.card interface instruments. Keep their paths; the body holds source notes, not live UI state.",
   },
   {
     boxDirsKey: "connectors",

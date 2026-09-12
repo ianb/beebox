@@ -48,7 +48,7 @@ address, and nothing currently carries the old address forward.
 
 ## Related
 
-- [card vs views route consolidation](../../code-quality/2026-08-02-card-vs-views-route-consolidation.md)
+- [card vs views route consolidation](../code-quality/2026-08-02-card-vs-views-route-consolidation.md)
   — two parallel single-card routes means a redirect has to be taught twice
   unless they're consolidated first.
 - [addressable URIs for cards](../../features/2026-05-11-addressable-uris-for-cards.md)

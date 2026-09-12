@@ -7,6 +7,7 @@
   "description": "Generated public front-door site for beebox. Static output to site/dist/, deployed to GitHub Pages and viewable on the dev router. See site/CLAUDE.md.",
   "scripts": {
     "build": "tsx build.ts",
+    "box-export": "tsx box-export.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node --import tsx --test *.test.ts story/*.test.ts",

@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { checkSystemCards, checkStagedSystemCards, seedSystemCards } from "../../../src/core/system-cards.js";
-import { SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION } from "../../../src/shared/system-card-paths.js";
+import { SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION } from "../../../src/shared/system-card-paths.js";
 import { MANIFEST_PATH } from "../../../src/core/migrations.js";
 import { runPreCommitChecks } from "../../../src/cli/commands/validate-pre-commit.js";
 import { markMigrationApplied } from "../../../src/cli/commands/migrate.js";
@@ -41,7 +41,7 @@ await checkStagedSystemCards(box.root)
 => []
 
 git(box, "restore", SYSTEM_CARD_PATHS.dashboard);
-await seedSystemCards(box.root);
+await seedSystemCards(box.root, REMAINING_SYSTEM_CARD_MIGRATION);
 (await box.read(SYSTEM_CARD_PATHS.dashboard)).includes("Keep my notes.")
 => true
 
@@ -75,8 +75,8 @@ git(box, "add", SYSTEM_CARD_PATHS.browse);
 git(box, "reset", "--hard", "HEAD");
 await rm(box.path("_config/interface"), { recursive: true });
 git(box, "add", "-A");
-(await checkStagedSystemCards(box.root)).length
-=> 3
+(await checkStagedSystemCards(box.root)).length === Object.keys(SYSTEM_CARD_PATHS).length
+=> true
 
 (await checkSystemCards(box.root)).length
 => 3
@@ -119,7 +119,7 @@ await checkSystemCards(trashBox.root)
 await checkStagedSystemCards(trashBox.root)
 => []
 
-await seedSystemCards(trashBox.root);
+await seedSystemCards(trashBox.root, REMAINING_SYSTEM_CARD_MIGRATION);
 await trashBox.commitAll("discard stray copy");
 git(trashBox, "mv", SYSTEM_CARD_PATHS.browse, "_bookkeeping/trash/browse.card");
 const missingWorking = await checkSystemCards(trashBox.root);
@@ -136,6 +136,13 @@ await checkSystemCards(trashBox.root)
 
 await checkStagedSystemCards(trashBox.root)
 => []
+
+git(trashBox, "mv", SYSTEM_CARD_PATHS.admin, "_bookkeeping/trash/admin.card");
+const missingLaterIndex = await checkStagedSystemCards(trashBox.root);
+missingLaterIndex.length === 1 && missingLaterIndex[0].includes(REMAINING_SYSTEM_CARD_MIGRATION)
+=> true
+
+git(trashBox, "restore", "--source=HEAD", "--staged", "--worktree", SYSTEM_CARD_PATHS.admin);
 ```
 
 ```ts cleanup
