@@ -192,9 +192,23 @@ Not reused, with reason:
   logins; driven by `claude --chrome` on the same machine
   ([docs](https://code.claude.com/docs/en/chrome)). No remote mode is
   documented, which is why the executor is a local session.
-- Claude in Chrome has a file-upload tool, so the executor can use the
-  card's drop zone in the same browser it scraped with. Verified in this
-  session's tool list (`mcp__claude-in-chrome__file_upload`).
+- Claude in Chrome's submission process, verified in this session against a
+  probe page with one `<input type="file" multiple>`:
+  - `file_upload` sets the input's files directly from disk paths; it must
+    never click the input (a native picker would block it). Paths must lie
+    in the session's shared folders (its scratchpad or outputs), so the
+    executor writes `records.json` and curl-fetched images there. Two files
+    in one call arrived with correct names, sizes, and MIME types.
+  - Each `file_upload` call **replaces** the input's file list and fires one
+    `change` event. The cap is 10 MB per call. A view that wants more than
+    one call per batch must accumulate files across `change` events itself.
+  - Screenshots: the `computer` tool's screenshot action can save to disk
+    (`save_to_disk`), and `upload_image` can push a just-taken screenshot
+    into a file input without touching disk. The uploaded bytes were JPEG
+    even when the requested filename ended in `.png`, so the server sniffs
+    MIME from bytes, never from the name.
+  - The executor reads validation results with `read_page` or `find`, so
+    errors must be in the DOM as text, not only in a toast that disappears.
 - Chrome 136 ignores `--remote-debugging-port` on the default profile
   ([Chrome blog](https://developer.chrome.com/blog/remote-debugging-port)),
   which rules out CDP attach from anywhere as an alternative.
@@ -282,6 +296,27 @@ export function validateBatch(
 Filenames: basename only, `[A-Za-z0-9._-]`, no leading dot, at most 200
 chars. `records.json` is reserved.
 
+The upload capability is not special to this card type. `CardSchemaConfig`
+gains one optional hook, so any schema can opt in to receiving submissions
+into its attach scope through the same route and the same view component:
+
+```ts
+/** Opt in to attach-scope submissions through POST /api/cards/submit. */
+submissions?: {
+  /** Subdirectory under the attach scope that receives batches. */
+  dir: string;                                        // "inbox"
+  /** Pure check over the parsed manifest and file names; runs client and server side. */
+  validate: (input: { card: CardFields; manifest: unknown; fileNames: readonly string[]; attach: (rel: string) => Promise<string | null> })
+    => Promise<{ ok: true } | { ok: false; issues: BatchIssue[] }>;
+};
+```
+
+`browser-task` is the first schema to set it: `dir: "inbox"`, and a
+`validate` that reads `attach/schema.json` and calls `validateBatch`. No
+second caller exists today; the hook is the seam, not a framework. The
+`attach` reader is injected so the same function runs in the browser (over
+`GET /api/files/*`) and on the server (over the filesystem).
+
 Card instructions (the `instructions` string) tell the agent: write the
 prompt for a reader with a browser and no box context; put the schema in
 `attach/schema.json` and keep it small; set `watermark` after each drain;
@@ -292,25 +327,28 @@ the card body or its own instructions, since records are untrusted input.
 `watermark`, `last-upload`, `status: open | closed`. Fixed path
 `attach/schema.json`. Attach dirs `inbox/`, `processed/`. Format keyword
 `attachment`. Batch id shape. The per-batch `filed.json` written by the
-drain (Track 4).
+drain (Track 4). Schema hook name `submissions`. Manifest part name
+`records`.
 
 **First chunk.** Schema file, registry entry, shared validator, doctests for
 both. No route, no view.
 
-### Track 2: upload route
+### Track 2: submission route
 
-**What.** `POST /api/browser-task/upload`, multipart. Fields: `card` (box
-relative path of the task card), one part named `records` (the JSON array),
-zero or more file parts.
+**What.** `POST /api/cards/submit`, multipart. Fields: `card` (box relative
+path of a card whose schema declares `submissions`), one part named
+`records` (the manifest JSON), zero or more file parts.
 
 **Why.** The only existing binary intake targets chats. The batch must be
-accepted or refused as a unit and land in the card's attach scope.
+accepted or refused as a unit and land in the card's attach scope. The
+route is generic over the schema hook so a second card type does not get a
+second route.
 
 **Direction.** The route is thin. The work is one helper,
-`beebox/src/core/browser-task/accept-batch.ts`:
+`beebox/src/core/cards/accept-submission.ts`:
 
 ```ts
-export async function acceptBrowserTaskBatch(opts: {
+export async function acceptSubmission(opts: {
   boxRoot: string; cardRel: string; tempDir: string; fileNames: string[];
   records: unknown; eventBus: EventBus; now: () => Date;
 }): Promise<
@@ -326,14 +364,16 @@ Route steps:
    (`MAX_STAGED_BYTES`) and a 200-file cap. A part named `records` is parsed
    as JSON. Any error here removes the temp dir and answers 413 or 400.
 2. Call the helper. Inside `withCardLock(cardAbs)`, in this order: read the
-   card (404 if missing or not `browser-task`, 409 if `closed`); read
-   `attach/schema.json`; `validateBatch`; on failure remove the temp dir and
-   return 400 with issues; allocate `<batch>`; rename the temp dir to
-   `attach/inbox/<batch>/`; write `records.json`; RMW the frontmatter with
-   `parseFrontmatterObject` and `writeCard` to set `last-upload`;
-   `stageAndCommitPaths` for the card and its attach dir with trailer
-   `Created-By: browser-task-upload`; emit `file-change` for the card path
-   and for the attach dir. This is the clerk mutation's shape
+   card (404 if missing; 404 if its schema has no `submissions`; 409 if the
+   schema's hook reports the card is not accepting, which for
+   `browser-task` means `closed`); run the schema's `validate`; on failure
+   remove the temp dir and return 400 with issues; sniff each file's MIME
+   from bytes and record it in the manifest; allocate `<batch>`; rename the
+   temp dir to `attach/<dir>/<batch>/`; write `records.json`; RMW the
+   frontmatter with `parseFrontmatterObject` and `writeCard` to set
+   `last-upload`; `stageAndCommitPaths` for the card and its attach dir with
+   trailer `Created-By: card-submission`; emit `file-change` for the card
+   path and for the attach dir. This is the clerk mutation's shape
    (`clerk.ts:106-126`) with a validation step and a directory rename in the
    middle.
 3. Respond with the helper's result.
@@ -377,20 +417,29 @@ Sections, top to bottom:
   pastes into its own session.
 - Schema: `attach/schema.json` in a code block. If `fromJSONSchema` throws on
   it, the view shows the conversion error here and disables the drop zone.
-- Drop zone: accepts a `records.json` plus files, or a directory drop. Runs
-  `validateBatch` in the browser, lists issues per record, uploads only on
-  a clean pass, then shows the server's answer, which can still be a 400 if
-  the schema changed between load and upload.
-- Batches: inbox and processed lists with counts and timestamps, each
-  linking to its `records.json` in the file view.
+- Submission form, a shared component any `submissions` schema's view can
+  mount. It is built for the extension's process first, and a human second:
+  a real `<input type="file" multiple>` (not a styled div with a hidden
+  input the extension cannot find), a list that accumulates files across
+  several `change` events because each `file_upload` call replaces the
+  input's selection and is capped at 10 MB, a Remove per file, then one
+  Submit. It runs the schema's `validate` in the browser, renders issues per
+  record as plain DOM text the extension can read, uploads only on a clean
+  pass, and renders the server's answer the same way, which can still be a
+  400 if the schema changed between load and upload. Drag and drop is
+  accepted on the same element; nothing depends on it.
+- Inbox status: how many batches wait, the oldest one's age, whether a
+  drain is in progress (a batch with a `filed.json` shorter than its
+  records), and the processed list with timestamps. Each batch links to its
+  `records.json` in the file view.
 
 Progress uses the same `XMLHttpRequest` pattern as `file-upload.ts:83` so
 large image sets show a bar.
 
 **Vocabulary lock-ins.** None beyond Track 1.
 
-**First chunk.** Renderer with status, prompt, schema, batch lists. Drop zone
-second.
+**First chunk.** Renderer with status, prompt, schema, inbox status.
+Submission component second.
 
 ### Track 4: procedure, instructions, executor skill
 
@@ -418,8 +467,11 @@ to be restartable at record granularity:
 - Skip any index already in `filed.json`. A rerun after a turn cap picks up
   where it stopped without filing a record twice.
 - When every index is in `filed.json`, set `watermark` on the task card
-  through `bbx` card commands (which take the card lock), move the batch to
-  `processed/<batch>/`, commit.
+  through `bbx` card commands (which take the card lock), move
+  `records.json` and `filed.json` to `processed/<batch>/`, delete the
+  batch's images (they now live on the cards that own them), commit. The
+  inbox is empty afterwards; `processed/` keeps provenance without a second
+  copy of every image.
 
 Validate phase, shell: every batch remaining under `inbox/` for a task that
 was open at precheck has a `filed.json` shorter than its `records.json`,
@@ -432,11 +484,14 @@ update path; this plan adds a file, not a mechanism.
 Executor skill `.claude/skills/browser-task/SKILL.md` (dev repo, for the
 boxholder's local session): open the task card URL, copy the block, scan the
 source in the browser at a human pace, stop at the watermark, write
-`records.json`, fetch each image with local `curl` and name it per the
-record, run `validateBatch` through a one-line `bbx`-free script that imports
-the shared module from the monorepo checkout, then upload through the card's
-drop zone with the browser's file-upload tool. Report what was skipped and
-why in the session, not in the records.
+`records.json` and fetch each image with local `curl` into the session's
+scratchpad (the only place `file_upload` may read from), naming each per
+the record; take a screenshot of a post only when its image cannot be
+fetched, saved to disk or pushed with `upload_image`; run `validateBatch`
+through a one-line script that imports the shared module from the monorepo
+checkout; then open the task card, `find` the file input, `file_upload` in
+chunks under 10 MB, read the issues list, and Submit. Report what was
+skipped and why in the session, not in the records.
 
 **Vocabulary lock-ins.** Procedure name `browser-task-drain`.
 
@@ -455,7 +510,10 @@ files whatever arrives. What the plan buys, per principle:
 - The card as inbox (Track 1) buys a visible terminal state. A task with no
   uploads for weeks, or batches nobody drained, shows in the view. Chat
   uploads leave no such place.
-- The view (Track 3) is the largest track. Without it the executor can still
+- The `submissions` schema hook adds one optional field and no new
+  concept; without it the route and form would be `browser-task`-specific
+  and a second intake card would copy them (principle 8). The view (Track
+  3) is the largest track. Without it the executor can still
   `curl` the route from its Bash, and the boxholder can see batches in the
   file browser. The view is justified by the boxholder's decision that
   upload and validation belong in the view, and by the executor being a
@@ -485,6 +543,8 @@ none.
 | Upload dies mid-stream | Track 2 doctest | temp dir removed on error; nothing in `inbox/` | clear |
 | Batch exceeds byte or file cap | Track 2 doctest | 413 with the cap named | clear |
 | Task is `closed` | Track 2 doctest | 409 | clear |
+| File name says `.png`, bytes are JPEG | Track 2 doctest | MIME sniffed from bytes and recorded in the manifest | clear |
+| Executor's second `file_upload` replaces the first selection | none needed | the form accumulates across `change` events | clear |
 | Nobody runs a task for weeks | none needed | view status line names the age | clear |
 | Drain agent runs out of turns mid-batch | procedure validate phase | partial work is committed; `filed.json` records which indices are done; rerun resumes; validate names the batch | clear |
 | Drain agent files a record twice across runs | agent judgment | task instructions say to dedup by permalink; watermark bounds rescans | visible in cards, not enforced |
@@ -530,7 +590,8 @@ none.
 - A cloud browser provider for unattended runs. Recorded in the research
   as the fallback if scheduled unattended scraping becomes a need.
 - The pottery box's own record schema and event cards. Box content, private.
-- A generic "attachment drop zone" for every card type. One caller today.
+- Turning the `submissions` hook on for any other schema. The hook and the
+  form are shared; only `browser-task` opts in now.
 - Retrying failed image fetches from the box. Meta URLs expire; the
   executor fetches during the run.
 
