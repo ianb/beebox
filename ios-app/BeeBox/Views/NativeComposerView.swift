@@ -1096,14 +1096,32 @@ struct NativeComposerView: View {
 
     private func requestMicrophone() {
         applyEarcon(.microphoneRequested)
-        // Put the keyboard away, the way opening capture does. The transcript
-        // OWNS the text field for the length of the turn (every update replaces
-        // the whole text and forces the caret to the end — see
-        // `setDictationTranscript`), so a keyboard left standing over a field
-        // nobody can usefully type into is both a confusing state and a way to
-        // lose characters. `isTextEntryLocked` keeps it down for the turn.
+        // Put the keyboard away. The transcript OWNS the text field for the
+        // length of the turn (every update replaces the whole text and forces
+        // the caret to the end — see `setDictationTranscript`), so a keyboard
+        // left standing over a field nobody can usefully type into is both a
+        // confusing state and a way to lose characters. `isTextEntryLocked`
+        // keeps it down for the turn.
+        //
+        // Both halves are needed, as the simulator showed: clearing `focused`
+        // alone makes `ComposerTextView` resign — the caret goes — but the
+        // keyboard STAYS ON SCREEN. Asking the window to resign whatever holds
+        // it is what actually dismisses it (the same selector `RootView` uses
+        // for the per-box lock).
         focused = false
+        dismissKeyboard()
         applyVoiceTurn(.microphoneStarted)
+    }
+
+    /// Dismiss the keyboard whoever owns it. `focused = false` resigns the
+    /// composer's own text view, which is not sufficient on its own.
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     private func stopMicrophoneWithEarcon() {
