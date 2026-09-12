@@ -62,6 +62,6 @@ tests from concurrent-load runs.
 ## 2026-09-02 — closed: superseded
 
 Consolidated with the other load-timeout filings into
-[fixed-timeout-budgets-fail-under-host-load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
+[fixed-timeout-budgets-fail-under-host-load](../../deferred/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md);
 the harness-side fix (quiet-host wait, slowdown-gated verdicts, import-cone
 attribution) landed from the full-suite-verdicts workstream.
