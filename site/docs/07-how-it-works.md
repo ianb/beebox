@@ -16,7 +16,9 @@ whatever directories you want.
 **Cards are files with a structured header.** A **card** is a file named
 `Title.type.card`. The type segment in the filename tells the system which
 set of fields to check it against. The file starts with a structured header
-and, for card types that allow it, some text below. Attachments live
+and, for card types that allow it, some text below: markdown with a small
+baseline of marks any card can use, a quote, a source, a todo (see
+[enriched markdown](concepts/enriched-markdown.md)). Attachments live
 alongside it in a matching folder. Cards are checked when they're created and
 checked again automatically before every change is saved. See
 [concepts/cards.md](concepts/cards.md).
