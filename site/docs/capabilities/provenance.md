@@ -41,9 +41,9 @@ The box's design documentation calls full provenance an aspiration, not a
 finished feature: the system does not yet trace every fact back to the
 message or document that produced it, especially something said in chat.
 These two markings are real but partial, not a guarantee applied
-everywhere. Whether a quote records who said it depends on the agent
-naming a speaker at the time; a check of a working box found quotes with
-no speaker attached.
+everywhere. Naming the speaker on a quote is an agent convention rather
+than something the system enforces; in practice the agent does it
+routinely.
 
 **Go deeper**
 

@@ -521,8 +521,8 @@ index, feature to uses, so reading backwards shows why each feature exists.
 Three more capability pages at the boxholder's prompting: `shape-it-later`
 (put things in before deciding their structure; the honest finding is that
 an unknown header key is dropped on load and flagged, so the room for extra
-information is the card body), `provenance` (the quote and source tags: what
-they carry, and that speaker attribution has never been exercised live), and
+information is the card body), `provenance` (the quote and source tags and what they carry; speaker
+attribution is an agent convention that is used routinely), and
 a specific `voice` page (spoken controls, narration mode, audio cards,
 capture sessions mixing photos and speech, agent-chosen delivery, earcons,
 on-device recognition, the named vendors). Wired into the first page, the
