@@ -7,6 +7,7 @@
 
 import { execFileSync } from "node:child_process";
 import { z } from "zod";
+import { rewriteGeneratedLinks } from "./docs-links.js";
 import { scrubText } from "./docs-scrub.js";
 import type { PublishedDoc } from "./docs-types.js";
 
@@ -31,6 +32,8 @@ const generatedOutputSchema = z.object({
 export interface GeneratedCorpus {
   fingerprint: string;
   docs: PublishedDoc[];
+  /** Links between generated docs by a filename outside the generated set — left as-is, not a build failure. */
+  unresolvedLinks: number;
 }
 
 const CARD_DOC_RE = /^card-(.+)\.md$/;
@@ -41,8 +44,8 @@ function publishPathFor(filename: string): string {
 }
 
 /** Run the export script and turn its output into scrub-gated published docs. */
-export function loadGeneratedDocs(params: { beeboxDir: string; repoRoot: string }): GeneratedCorpus {
-  const { beeboxDir, repoRoot } = params;
+export function loadGeneratedDocs(params: { beeboxDir: string; repoRoot: string; base: string }): GeneratedCorpus {
+  const { beeboxDir, repoRoot, base } = params;
   let raw: string;
   try {
     raw = execFileSync("pnpm", ["--dir", beeboxDir, "exec", "tsx", "scripts/export-box-docs.ts"], {
@@ -64,10 +67,14 @@ export function loadGeneratedDocs(params: { beeboxDir: string; repoRoot: string 
   if (!parsed.success) {
     throw new DocsGeneratedError(`export-box-docs.ts produced unexpected output: ${parsed.error.message}`);
   }
+  const publishPathByFilename = new Map(parsed.data.docs.map((d) => [d.filename, publishPathFor(d.filename)]));
+  let unresolvedLinks = 0;
   const docs: PublishedDoc[] = parsed.data.docs.map((d) => {
     const sourceLabel = `beebox/box-docs/${d.filename}`;
     scrubText(d.content, { sourceLabel, repoRoot, blocklist: false });
-    return { publishPath: publishPathFor(d.filename), kind: "generated", description: d.readWhen, body: d.content, sourceLabel };
+    const { body, unresolvedCount } = rewriteGeneratedLinks(d.content, { publishPathByFilename, base });
+    unresolvedLinks += unresolvedCount;
+    return { publishPath: publishPathFor(d.filename), kind: "generated", description: d.readWhen, body, sourceLabel };
   });
-  return { fingerprint: parsed.data.fingerprint, docs };
+  return { fingerprint: parsed.data.fingerprint, docs, unresolvedLinks };
 }

@@ -9,7 +9,8 @@ import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
 
-type MobileDevice = RouterOutput["pairing"]["devices"][number];
+type MobileDevice = RouterOutput["pairing"]["devices"]["devices"][number];
+type DeviceScope = RouterOutput["pairing"]["devices"]["scope"];
 
 interface PairingTicket {
   deepLink: string;
@@ -44,6 +45,12 @@ function qrSvg(value: string): string {
   return qr.createSvgTag({ cellSize: 5, margin: 3 });
 }
 
+/** The list is scoped to what the caller may reach, so the heading says which
+ *  list this is rather than implying a short one is the whole box. */
+function deviceHeading(scope: DeviceScope | undefined): string {
+  return scope === "own" ? "Your paired devices" : "Paired devices";
+}
+
 function formatDate(value: string): string {
   return new Date(value).toLocaleString(undefined, {
     month: "short",
@@ -67,7 +74,7 @@ function DeviceRow({ device }: { device: MobileDevice }) {
         <Text size="xs" tone="muted" className="ml-1">
           Paired {formatDate(device.createdAt)}
           {device.lastUsedAt ? ` - last used ${formatDate(device.lastUsedAt)}` : ""}
-          {device.revokedAt ? ` - revoked ${formatDate(device.revokedAt)}` : ""}
+          {device.revokedAt ? ` - unpaired ${formatDate(device.revokedAt)}` : ""}
         </Text>
       </Text>
       {!device.revokedAt ? (
@@ -77,7 +84,7 @@ function DeviceRow({ device }: { device: MobileDevice }) {
           loading={revokeMutation.isPending}
           onClick={() => revokeMutation.mutate({ deviceId: device.id })}
         >
-          Revoke
+          Unpair
         </Button>
       ) : null}
     </Row>
@@ -155,19 +162,30 @@ export function CompanionPairingSection() {
         ) : null}
 
         <Stack gap="xs">
-          <Text as="h3" size="sm" weight="semibold">Paired devices</Text>
+          <Text as="h3" size="sm" weight="semibold">{deviceHeading(devicesQuery.data?.scope)}</Text>
           {devicesQuery.isLoading ? (
             <Text size="sm" tone="muted">Loading devices...</Text>
           ) : devicesQuery.error ? (
-            <Text size="sm" tone="danger">{devicesQuery.error.message}</Text>
-          ) : devicesQuery.data && devicesQuery.data.length > 0 ? (
-            <div className="divide-y divide-warm-100">
-              {devicesQuery.data.map((device) => (
-                <DeviceRow key={device.id} device={device} />
-              ))}
-            </div>
+            <Text size="sm" tone="danger">Devices could not be loaded. {devicesQuery.error.message}</Text>
+          ) : devicesQuery.data && devicesQuery.data.devices.length > 0 ? (
+            <>
+              <div className="divide-y divide-warm-100">
+                {devicesQuery.data.devices.map((device) => (
+                  <DeviceRow key={device.id} device={device} />
+                ))}
+              </div>
+              {devicesQuery.data.scope === "own" ? (
+                <Text size="xs" tone="muted">
+                  Devices you paired. Only the box owner sees every device on this box.
+                </Text>
+              ) : null}
+            </>
           ) : (
-            <Text size="sm" tone="muted">No devices paired yet.</Text>
+            <Text size="sm" tone="muted">
+              {devicesQuery.data?.scope === "own"
+                ? "You have not paired a device with this box."
+                : "No devices paired yet."}
+            </Text>
           )}
         </Stack>
       </Stack>

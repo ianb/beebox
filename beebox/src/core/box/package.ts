@@ -104,6 +104,8 @@ interface EngineVersions {
   /** `react`/`react-dom` ranges, read from the engine's own `dependencies`. */
   react: string;
   reactDom: string;
+  /** `zod`'s range, read from the engine's own `dependencies`. */
+  zod: string;
 }
 
 /**
@@ -132,6 +134,7 @@ async function readEngineVersions(): Promise<EngineVersions> {
     typesReact: frontend.devDependencies?.["@types/react"] ?? "^18.3.0",
     react: engine.dependencies?.react ?? "^18.3.1",
     reactDom: engine.dependencies?.["react-dom"] ?? "^18.3.1",
+    zod: engine.dependencies?.zod ?? "^4.4.3",
   };
 }
 
@@ -199,6 +202,11 @@ export async function scaffoldPackageRoot(
       "beebox": beeBoxSpec,
       react: versions.react,
       "react-dom": versions.reactDom,
+      // Every box-local card schema imports `zod` — `cardSchema()` takes zod
+      // types for its fields. A box scaffolded without it loaded its schemas
+      // to a bare `Cannot find package 'zod'` warning, and cards of that type
+      // then validated as if the schema had never been written.
+      zod: versions.zod,
     },
     // typescript + the type packages the base tsconfig's `lib` needs
     // (`ES2023, DOM`) to typecheck box code (schemas and views) — pinned to

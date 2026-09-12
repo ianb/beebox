@@ -105,8 +105,8 @@ export function loadManifestEntries(manifestPath: string): ManifestEntry[] {
 }
 
 /** Read, scrub, and link-rewrite every promoted doc; copy any images it references. */
-export function loadPromotedDocs(params: { entries: ManifestEntry[]; repoRoot: string }): PublishedDoc[] {
-  const { entries, repoRoot } = params;
+export function loadPromotedDocs(params: { entries: ManifestEntry[]; repoRoot: string; base: string }): PublishedDoc[] {
+  const { entries, repoRoot, base } = params;
   const byRepoPath = new Map(entries.map((e) => [e.source, e.publish]));
   return entries.map((entry) => {
     const abs = path.join(repoRoot, entry.source);
@@ -123,7 +123,7 @@ export function loadPromotedDocs(params: { entries: ManifestEntry[]; repoRoot: s
       repoRoot,
       repoDocPath: entry.source,
       manifestByRepoPath: byRepoPath,
-      publishPath: entry.publish,
+      base,
     });
     return { publishPath: entry.publish, kind: "promoted", description: entry.description, body, sourceLabel: entry.source };
   });

@@ -1,40 +1,51 @@
 ---
-description: "Dictate to the box by voice and have it speak replies back, with per-message control over the voice used."
+description: "Dictate by voice with spoken start, stop, and send controls, and hear the agent's replies spoken back in a chosen voice and pace."
 ---
 # Voice
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. Voice covers both directions: talking to the
-box and having it talk back.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. Voice is a first-class way in and out of the box, on both desktop and
+phone, not a bolt-on to typing.
 
 **What it does for you**
 
-- Lets you dictate a chat message with spoken controls (start, stop, send)
-  instead of typing.
-- Reads the agent's reply aloud when it is wrapped for speech, in one of
-  several available voices, with per-message tone instructions ("gentle, not
-  urgent").
-- Keeps dictating through a brief network or microphone interruption instead
-  of losing the recording, and lets the microphone yield while the box is
-  talking so the two don't talk over each other.
-- Supports a distinct "narration mode" for long, loose voice dumps: the box
-  stays silent and just captures, rather than replying to every aside.
-- Flags words the speech recognizer was unsure of, so you know what to
-  double check.
+- Dictate a chat message with spoken controls: say "send message," "erase
+  message," or "microphone off" instead of reaching for the screen.
+- Keeps dictating through a brief network drop or the microphone getting
+  grabbed by something else, instead of losing what you said.
+- A narration mode for long, loose voice dumps: the box stays quiet,
+  transcribes, and files what you said rather than chatting back line by
+  line.
+- A voice memo recorded on the phone becomes an audio card with a transcript
+  and a short summary once transcription finishes.
+- A capture session groups a burst of photos and spoken remarks from one
+  sitting into a single readable timeline.
+- The agent's replies can be spoken aloud, and the agent chooses the voice,
+  pacing, and emphasis for each spoken reply, not just one fixed narrator.
+- Short sounds (earcons) mark recording start, stop, failure, and send, so
+  you know the state of the microphone without looking.
+- On the phone, speech recognition runs on the device itself.
+- Your exact spoken words are kept as a quote when the agent turns them into
+  a card or note, not smoothed into the agent's own phrasing. See
+  [provenance.md](provenance.md).
 
 **What it needs**
 
-A microphone (browser or phone) and, for spoken replies, a working
-transcription/TTS setup. See [../install/index.md](../install/index.md).
+A transcription vendor key for accurate, high-quality transcription: OpenAI,
+Mistral, or Deepgram. A microphone, in the browser or on the phone. The
+iPhone app for on-device speech recognition. A text-to-speech provider for
+spoken replies: OpenAI, or Gemini through OpenRouter. See
+[../install/index.md](../install/index.md).
 
 **How it works, briefly**
 
-Speech in either direction is a feature of chat and phone capture, not a
-separate surface. A spoken reply is marked in the agent's response with a
-speech tag that carries the voice and delivery instructions; a dictated
-message arrives as a transcript the agent treats as noisy (punctuation is
-machine-inserted, homophones can be wrong) rather than as exact typed text.
+Recording happens in the browser or the iPhone app. The recording is
+transcribed by the vendor key you've configured, or on-device on the phone,
+and the transcript becomes a chat message or a card. A spoken reply comes
+from a delivery instruction the agent writes into its response, naming the
+voice and how to say it; the box turns that into audio.
 
 **Limits**
 
@@ -44,6 +55,9 @@ support.
 
 **Go deeper**
 
+[chat.md](chat.md), [phone-capture.md](phone-capture.md),
+[provenance.md](provenance.md),
 [../reference/chat-voice.md](../reference/chat-voice.md),
 [../reference/narration-mode.md](../reference/narration-mode.md),
-[chat.md](chat.md), [phone-capture.md](phone-capture.md)
+[../reference/cards/audio.md](../reference/cards/audio.md),
+[../reference/cards/capture-session.md](../reference/cards/capture-session.md)

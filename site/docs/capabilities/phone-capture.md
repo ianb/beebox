@@ -3,10 +3,10 @@ description: "A paired iOS app for capturing photos, voice, and files into your 
 ---
 # Phone and browser capture
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. Capture is how content from your phone or
-browser gets into the box.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. Capture is how content from your phone or browser gets into the box.
 
 **What it does for you**
 

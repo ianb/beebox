@@ -47,3 +47,22 @@ lands there); the public-site home card's sentence about install guides being
 "in the repository for now"; repointing the install prompt once
 container-first (`2026-09-06-container-install-is-the-primary-path.md`) lands.
 Plan stays `status: active`.
+
+Landed absolute URLs, text/plain headers, 404.html, robots.txt, and the
+integrity page; awaiting a ChatGPT retry against beebox.run.
+
+The root README now has an "Ask your agent" section pointing at the learn
+and install prompts and at `CONTRIBUTING.md`/`llms-dev.txt` for
+contributors; the home card's install prompt and install links now point at
+`beebox.run/docs/` and a contributor line points at `CONTRIBUTING.md` and
+`llms-dev.txt`. This also completes the install-prompt repoint assigned to
+`2026-09-06-container-install-is-the-primary-path.md`. Per-doc review and
+deploy verification still pending.
+
+Landed the use-case pages (docs/uses/), the chatbot appraisal, and the jargon pass; spine is now thirteen files.
+
+Landed the web-interface page and the use-to-feature mapping.
+
+Landed shape-it-later, provenance, and the specific voice page.
+
+Landed concepts/enriched-markdown.md (quote, source, todo as the baseline marks).

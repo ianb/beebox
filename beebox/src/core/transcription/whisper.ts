@@ -20,7 +20,7 @@ import type {
   TranscriptionError,
   TranscriptionResult,
 } from "./index.js";
-import { truncateUpstreamBody } from "./index.js";
+import { truncateUpstreamBody } from "./upstream-body.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 

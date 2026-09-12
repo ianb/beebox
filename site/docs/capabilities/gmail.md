@@ -3,11 +3,11 @@ description: "Reads your Gmail into the box as tracked threads, drafts replies f
 ---
 # Gmail
 
-A box is a directory of your data, kept in a git repository; a card is a
-markdown file with structured frontmatter inside it; the agent is the coding
-agent (Claude Code or Codex) that reads and writes the box. The Gmail
-connector brings a deliberately small, tracked slice of your mailbox into the
-box.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header inside it; the agent is the coding agent (Claude Code or Codex) that
+reads and writes the box. The Gmail connector brings a deliberately small,
+tracked slice of your mailbox into the box.
 
 **What it does for you**
 
@@ -23,24 +23,23 @@ box.
 
 **What it needs**
 
-A Google account and its OAuth consent, shared with the Calendar and Drive
-connectors. See the install directory for connector setup:
+A Google account, connected by signing in with your Google account and a
+one-time setup, shared with the Calendar and Drive connectors. See the install directory for connector setup:
 [../install/index.md](../install/index.md).
 
 **How it works, briefly**
 
 Gmail sync produces `email-thread` and `email-message` cards, created and
-refreshed by `bbx wakeup --connector gmail`. Tracking a thread is explicit
-(by thread ID or a matching mail rule); the box does not silently mirror your
-entire inbox. An agent-composed reply becomes an `email-outbound` card that
-is uploaded as a Gmail draft for you to review and send — the agent does not
-send mail.
+refreshed automatically or on demand. Tracking a thread is explicit (by thread ID or a
+matching mail rule); the box does not silently mirror your entire inbox. An
+agent-composed reply becomes an `email-outbound` card that is uploaded as a
+Gmail draft for you to review and send: the agent does not send mail.
 
 **Limits**
 
 Email does not automatically become git content; only tracked threads do.
 The documentation does not say Gmail sync runs on a fixed schedule by
-default beyond `bbx wakeup`.
+default; it runs as part of the box's regular sync pass.
 
 **Go deeper**
 

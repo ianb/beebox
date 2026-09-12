@@ -3,10 +3,11 @@ description: "Builds a structured learning experience on a topic you choose, wit
 ---
 # Courses
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. A course is a set of linked cards the agent
-builds to teach one bounded topic.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. A course is a set of linked cards the agent builds to teach one bounded
+topic.
 
 **What it does for you**
 

@@ -2,7 +2,7 @@ import { createTRPCReact } from "@trpc/react-query";
 import { createTRPCClient, createWSClient, httpBatchStreamLink, retryLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
-import { getApiBase, getWebSocketUrl, withBase } from "../../api.js";
+import { getApiBase, getWebSocketUrl, withBase } from "../../api-core.js";
 import { getMobileAuthToken, isMobileAuthenticated, refreshMobileSession, withMobileAuth } from "../mobile-auth";
 import { toastError } from "../../components/ui/toast-store";
 import { fetchFromBox, retryDelayMs, shouldRetryOperation } from "./transient";

@@ -3,7 +3,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { DocsLinkError, rewritePromotedImages, rewritePromotedLinks, validateAuthoredLinks } from "./docs-links.js";
+import {
+  DocsLinkError,
+  rewriteAuthoredLinks,
+  rewriteGeneratedLinks,
+  rewritePromotedImages,
+  rewritePromotedLinks,
+} from "./docs-links.js";
 
 function tmpRepoRoot(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "docs-links-"));
@@ -11,7 +17,7 @@ function tmpRepoRoot(): string {
 
 // --- promoted docs: the four link cases -------------------------------------
 
-test("rewritePromotedLinks: a link into the published set rewrites to a relative published URL", () => {
+test("rewritePromotedLinks: a link into the published set rewrites to an absolute published URL", () => {
   const repoRoot = tmpRepoRoot();
   const body = rewritePromotedLinks("see [cards](cards-as-markdown.md) for the format", {
     repoRoot,
@@ -20,9 +26,20 @@ test("rewritePromotedLinks: a link into the published set rewrites to a relative
       ["beebox/docs/glossary.md", "concepts/glossary.md"],
       ["beebox/docs/cards-as-markdown.md", "concepts/cards.md"],
     ]),
-    publishPath: "concepts/glossary.md",
+    base: "/main/site/",
   });
-  assert.equal(body, "see [cards](cards.md) for the format");
+  assert.equal(body, "see [cards](http://localhost:3210/main/site/docs/concepts/cards.md) for the format");
+});
+
+test("rewritePromotedLinks: on the canonical base, the origin is beebox.run", () => {
+  const repoRoot = tmpRepoRoot();
+  const body = rewritePromotedLinks("see [glossary](glossary.md)", {
+    repoRoot,
+    repoDocPath: "beebox/docs/README.md",
+    manifestByRepoPath: new Map([["beebox/docs/glossary.md", "concepts/glossary.md"]]),
+    base: "/",
+  });
+  assert.equal(body, "see [glossary](https://beebox.run/docs/concepts/glossary.md)");
 });
 
 test("rewritePromotedLinks: a link under an excluded root flattens to its text", () => {
@@ -31,7 +48,7 @@ test("rewritePromotedLinks: a link under an excluded root flattens to its text",
     repoRoot,
     repoDocPath: "beebox/docs/glossary.md",
     manifestByRepoPath: new Map(),
-    publishPath: "concepts/glossary.md",
+    base: "/main/site/",
   });
   assert.equal(body, "see the decision for background");
 });
@@ -44,7 +61,7 @@ test("rewritePromotedLinks: a tracked repo file rewrites to a GitHub blob URL", 
     repoRoot,
     repoDocPath: "beebox/docs/glossary.md",
     manifestByRepoPath: new Map(),
-    publishPath: "concepts/glossary.md",
+    base: "/main/site/",
   });
   assert.equal(body, "see [held back](https://github.com/ianb/beebox/blob/main/beebox/docs/held-back.md)");
 });
@@ -57,7 +74,7 @@ test("rewritePromotedLinks: a nonexistent target fails the build", () => {
         repoRoot,
         repoDocPath: "beebox/docs/glossary.md",
         manifestByRepoPath: new Map(),
-        publishPath: "concepts/glossary.md",
+        base: "/main/site/",
       }),
     DocsLinkError,
   );
@@ -69,7 +86,7 @@ test("rewritePromotedLinks: external links and images pass through untouched", (
     repoRoot,
     repoDocPath: "beebox/docs/architecture/01.md",
     manifestByRepoPath: new Map(),
-    publishPath: "architecture/01.md",
+    base: "/main/site/",
   });
   assert.equal(body, "[site](https://example.com) and ![pic](images/x.png)");
 });
@@ -96,36 +113,114 @@ test("rewritePromotedImages: a missing image fails the build", () => {
   );
 });
 
-// --- authored docs: links must resolve within the published set ------------
+// --- authored docs: links must resolve within the published set, then absolutize --
 
-test("validateAuthoredLinks: a link within the published set passes", () => {
-  assert.doesNotThrow(() =>
-    validateAuthoredLinks("see [glossary](concepts/glossary.md)", {
-      publishPath: "01-what-bee-box-is.md",
-      sourceLabel: "site/docs/01-what-bee-box-is.md",
-      publishedPaths: new Set(["concepts/glossary.md"]),
-    }),
-  );
+test("rewriteAuthoredLinks: a link within the published set becomes an absolute URL", () => {
+  const out = rewriteAuthoredLinks("see [glossary](concepts/glossary.md)", {
+    publishPath: "01-what-bee-box-is.md",
+    sourceLabel: "site/docs/01-what-bee-box-is.md",
+    publishedPaths: new Set(["concepts/glossary.md"]),
+    base: "/main/site/",
+  });
+  assert.equal(out, "see [glossary](http://localhost:3210/main/site/docs/concepts/glossary.md)");
 });
 
-test("validateAuthoredLinks: a link that leaves the published set fails", () => {
+test("rewriteAuthoredLinks: a link that leaves the published set fails", () => {
   assert.throws(
     () =>
-      validateAuthoredLinks("see [nope](concepts/nope.md)", {
+      rewriteAuthoredLinks("see [nope](concepts/nope.md)", {
         publishPath: "01-what-bee-box-is.md",
         sourceLabel: "site/docs/01-what-bee-box-is.md",
         publishedPaths: new Set(["concepts/glossary.md"]),
+        base: "/main/site/",
       }),
     DocsLinkError,
   );
 });
 
-test("validateAuthoredLinks: a relative link resolves against the doc's own directory", () => {
-  assert.doesNotThrow(() =>
-    validateAuthoredLinks("see [gmail](gmail.md) and [up](../05-how-it-works.md)", {
-      publishPath: "capabilities/chat.md",
-      sourceLabel: "site/docs/capabilities/chat.md",
-      publishedPaths: new Set(["capabilities/gmail.md", "05-how-it-works.md"]),
-    }),
+test("rewriteAuthoredLinks: a relative link resolves against the doc's own directory, and a ../ link resolves up", () => {
+  const out = rewriteAuthoredLinks("see [gmail](gmail.md) and [up](../05-how-it-works.md)", {
+    publishPath: "capabilities/chat.md",
+    sourceLabel: "site/docs/capabilities/chat.md",
+    publishedPaths: new Set(["capabilities/gmail.md", "05-how-it-works.md"]),
+    base: "/main/site/",
+  });
+  assert.equal(
+    out,
+    "see [gmail](http://localhost:3210/main/site/docs/capabilities/gmail.md) and " +
+      "[up](http://localhost:3210/main/site/docs/05-how-it-works.md)",
   );
+});
+
+test("rewriteAuthoredLinks: an anchor is preserved on the absolute URL", () => {
+  const out = rewriteAuthoredLinks("see [terms](concepts/glossary.md#agent)", {
+    publishPath: "01-what-bee-box-is.md",
+    sourceLabel: "site/docs/01-what-bee-box-is.md",
+    publishedPaths: new Set(["concepts/glossary.md"]),
+    base: "/",
+  });
+  assert.equal(out, "see [terms](https://beebox.run/docs/concepts/glossary.md#agent)");
+});
+
+test("rewriteAuthoredLinks: external links and a same-doc anchor pass through untouched", () => {
+  const out = rewriteAuthoredLinks("see [site](https://example.com) and [above](#intro)", {
+    publishPath: "01-what-bee-box-is.md",
+    sourceLabel: "site/docs/01-what-bee-box-is.md",
+    publishedPaths: new Set(),
+    base: "/main/site/",
+  });
+  assert.equal(out, "see [site](https://example.com) and [above](#intro)");
+});
+
+test("rewriteAuthoredLinks: a link inside a fenced code block is left literal", () => {
+  const body = "prose [glossary](concepts/glossary.md)\n\n```\nsee [glossary](concepts/glossary.md)\n```\n";
+  const out = rewriteAuthoredLinks(body, {
+    publishPath: "01-what-bee-box-is.md",
+    sourceLabel: "site/docs/01-what-bee-box-is.md",
+    publishedPaths: new Set(["concepts/glossary.md"]),
+    base: "/main/site/",
+  });
+  assert.equal(
+    out,
+    "prose [glossary](http://localhost:3210/main/site/docs/concepts/glossary.md)\n\n" +
+      "```\nsee [glossary](concepts/glossary.md)\n```\n",
+  );
+});
+
+// --- generated docs: links between engine docs by bare filename -------------
+
+test("rewriteGeneratedLinks: a known filename resolves to its absolute published path", () => {
+  const result = rewriteGeneratedLinks("see [commands](bbx-commands.md)", {
+    publishPathByFilename: new Map([["bbx-commands.md", "reference/bbx-commands.md"]]),
+    base: "/main/site/",
+  });
+  assert.equal(result.body, "see [commands](http://localhost:3210/main/site/docs/reference/bbx-commands.md)");
+  assert.equal(result.unresolvedCount, 0);
+});
+
+test("rewriteGeneratedLinks: a card-<type>.md filename maps under reference/cards/", () => {
+  const result = rewriteGeneratedLinks("see [recipe cards](card-recipe.md)", {
+    publishPathByFilename: new Map([["card-recipe.md", "reference/cards/recipe.md"]]),
+    base: "/",
+  });
+  assert.equal(result.body, "see [recipe cards](https://beebox.run/docs/reference/cards/recipe.md)");
+  assert.equal(result.unresolvedCount, 0);
+});
+
+test("rewriteGeneratedLinks: a filename outside the generated set is left untouched and counted", () => {
+  const result = rewriteGeneratedLinks("see [box path](/_content/notes/meeting.md)", {
+    publishPathByFilename: new Map(),
+    base: "/main/site/",
+  });
+  assert.equal(result.body, "see [box path](/_content/notes/meeting.md)");
+  assert.equal(result.unresolvedCount, 1);
+});
+
+test("rewriteGeneratedLinks: external links pass through untouched and uncounted", () => {
+  const result = rewriteGeneratedLinks("see [site](https://example.com)", {
+    publishPathByFilename: new Map(),
+    base: "/main/site/",
+  });
+  assert.equal(result.body, "see [site](https://example.com)");
+  assert.equal(result.unresolvedCount, 0);
 });

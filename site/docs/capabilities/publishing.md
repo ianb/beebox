@@ -3,10 +3,11 @@ description: "Turns a box document into a shareable external web page, at whatev
 ---
 # Publishing
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. Publishing takes a document out of the box and
-serves it on the open web, under your control.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. Publishing takes a document out of the box and serves it on the open web,
+under your control.
 
 **What it does for you**
 
@@ -15,7 +16,8 @@ serves it on the open web, under your control.
 - Lets you choose who can reach it: fully public, a secret unguessable link,
   or restricted to named accounts you allow.
 - Keeps publishing a two-step, reversible act: draft and review before it
-  goes live, revoke later to take the page and its endpoints down together.
+  goes live, revoke later to take the page and everything backing it down
+  together.
 - Serves every page marked out of search indexes and caches, under a policy
   that blocks it from calling out elsewhere.
 - Records who opened an account-gated page, delivered back as a memo.
@@ -28,10 +30,11 @@ Cloudflare account, set up through a single command). See
 
 **How it works, briefly**
 
-`bbx pub draft` renders a box document into one self-contained page and
-scans it for secrets or box-escaping references before it can be committed.
-Going live and revoking are separate, explicit commands. A page with a reply
-form buffers submissions at the edge; the box pulls them in as ordinary
+Drafting a page renders a box
+document into one self-contained page and scans it for secrets or references
+that would leak outside the box before it can be saved. Going live and
+revoking are separate, explicit steps. A page with a reply form holds
+submissions on the publishing service; the box pulls them in as ordinary
 cards the next time it wakes up, rather than the page writing into the box
 directly.
 
@@ -40,8 +43,8 @@ directly.
 A reply form only works on pages set up with a submit block; a fully public
 page cannot carry one, to prevent it being flooded with unwanted
 submissions. The documentation flags the reply-form authoring path itself
-(the UI to add a submit block when drafting) as not yet built, even though
-the receiving side is complete — check before relying on it.
+(the interface to add a submit block when drafting) as not yet built, even
+though the receiving side is complete. Check before relying on it.
 
 **Go deeper**
 

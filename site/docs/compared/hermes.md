@@ -10,11 +10,12 @@ compared:
 # Bee Box compared with Hermes Agent
 
 Hermes Agent, from Nous Research, is a self-hosted personal assistant built
-around self-improvement: it can rewrite its own instruction files
-mid-conversation, and a background pass reviews each session to save memory
-and patch its skills. Bee Box is built around a **box**: one directory, also
-a git repository, holding **cards** (files with YAML frontmatter and a
-markdown body) that an agent reads and writes as git commits.
+around self-improvement: it can rewrite its own instruction files mid-
+conversation, and a background pass reviews each session to save memory and
+patch its skills. Bee Box is built around a **box**: one directory, kept under
+version control with a full history of changes (using git), holding **cards**
+(files with a structured header and a markdown body) that an agent reads and
+writes as git commits.
 
 **Where they are similar.** Both run for a single operator. Both keep a
 small always-loaded identity file plus detail fetched on demand, and both run
@@ -29,8 +30,9 @@ durable writes through cards and its post-hoc `retro` pass, so a correction
 stated in chat can take a week to land. Hermes's memory writes can be staged
 behind an approval queue; Bee Box's `retro` writes directly, using git
 history as the undo path. Hermes reaches about thirty chat platforms and
-restricts a webhook conversation to four safe tools because its payload is
-untrusted; Bee Box has four connectors, treats only Telegram as a real
+limits what it can do when a message arrives automatically from an outside
+service, allowing only four safe actions in that case, since that message's
+content cannot be trusted; Bee Box has four connectors, treats only Telegram as a real
 conversation, and keeps untrusted email text out of a card's loaded fields
 instead of narrowing the agent's tools. Hermes publishes a written threat
 model ("the only security boundary against an adversarial LLM is the

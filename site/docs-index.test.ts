@@ -9,7 +9,7 @@ function doc(params: { publishPath: string; description: string; body?: string }
   return { publishPath, kind: "authored", description, body, sourceLabel: publishPath };
 }
 
-test("renderDirectoryIndex: H1, purpose line, entries sorted by filename", () => {
+test("renderDirectoryIndex: H1, purpose line, entries sorted by filename, absolute URLs", () => {
   const rendered = renderDirectoryIndex({
     dir: "concepts",
     purpose: "Core vocabulary.",
@@ -17,16 +17,29 @@ test("renderDirectoryIndex: H1, purpose line, entries sorted by filename", () =>
       doc({ publishPath: "concepts/glossary.md", description: "terms" }),
       doc({ publishPath: "concepts/cards.md", description: "the card format" }),
     ],
+    base: "/beebox/",
   });
   assert.equal(
     rendered,
-    "# Concepts\n\nCore vocabulary.\n\n- [cards.md](cards.md): the card format\n- [glossary.md](glossary.md): terms\n",
+    "# Concepts\n\nCore vocabulary.\n\n" +
+      "- [cards.md](http://localhost:3210/beebox/docs/concepts/cards.md): the card format\n" +
+      "- [glossary.md](http://localhost:3210/beebox/docs/concepts/glossary.md): terms\n",
   );
 });
 
 test("renderDirectoryIndex: nested directory humanizes its last segment", () => {
-  const rendered = renderDirectoryIndex({ dir: "reference/cards", purpose: "Every card type.", docs: [] });
+  const rendered = renderDirectoryIndex({ dir: "reference/cards", purpose: "Every card type.", docs: [], base: "/beebox/" });
   assert.match(rendered, /^# Cards\n/);
+});
+
+test("renderDirectoryIndex: the canonical base uses the beebox.run origin", () => {
+  const rendered = renderDirectoryIndex({
+    dir: "concepts",
+    purpose: "Core vocabulary.",
+    docs: [doc({ publishPath: "concepts/glossary.md", description: "terms" })],
+    base: "/",
+  });
+  assert.match(rendered, /\[glossary\.md]\(https:\/\/beebox\.run\/docs\/concepts\/glossary\.md\)/);
 });
 
 test("renderAgentLlmsTxt: shape has the summary, preamble, spine, directories, and site pages", () => {
@@ -42,9 +55,12 @@ test("renderAgentLlmsTxt: shape has the summary, preamble, spine, directories, a
     hasDevEntry: false,
   });
   assert.match(out, /^# Bee Box\n\n> A one-line summary\.\n\nPreamble body\.\n\n## Start here\n/);
-  assert.match(out, /- \[What Bee Box is]\(\/beebox\/docs\/01-what-bee-box-is\.md\): What it is\./);
-  assert.match(out, /## Directories\n\n- \[concepts\/]\(\/beebox\/docs\/concepts\/index\.md\): Core vocabulary\./);
-  assert.match(out, /## Site pages\n\n- \[Home]\(\/beebox\/index\.md\): The home page\./);
+  assert.match(out, /- \[What Bee Box is]\(http:\/\/localhost:3210\/beebox\/docs\/01-what-bee-box-is\.md\): What it is\./);
+  assert.match(
+    out,
+    /## Directories\n\n- \[concepts\/]\(http:\/\/localhost:3210\/beebox\/docs\/concepts\/index\.md\): Core vocabulary\./,
+  );
+  assert.match(out, /## Site pages\n\n- \[Home]\(http:\/\/localhost:3210\/beebox\/index\.md\): The home page\./);
   assert.doesNotMatch(out, /## Contributing/);
 });
 
@@ -59,7 +75,7 @@ test("renderAgentLlmsTxt: hasDevEntry adds a Contributing section before Site pa
   });
   assert.match(
     out,
-    /## Contributing\n\n- \[llms-dev\.txt]\(\/beebox\/llms-dev\.txt\): the contributor entry point[^\n]*\n- \[dev\/]\(\/beebox\/docs\/dev\/index\.md\): development process docs\.\n\n## Site pages/,
+    /## Contributing\n\n- \[llms-dev\.txt]\(http:\/\/localhost:3210\/beebox\/llms-dev\.txt\): the contributor entry point[^\n]*\n- \[dev\/]\(http:\/\/localhost:3210\/beebox\/docs\/dev\/index\.md\): development process docs\.\n\n## Site pages/,
   );
 });
 
@@ -73,6 +89,18 @@ test("renderAgentLlmsTxt: an unlisted site page is excluded", () => {
     hasDevEntry: false,
   });
   assert.doesNotMatch(out, /Prototype/);
+});
+
+test("renderAgentLlmsTxt: the canonical base uses the beebox.run origin", () => {
+  const out = renderAgentLlmsTxt({
+    base: "/",
+    readme: { summary: "s", preamble: "p" },
+    spine: [],
+    directories: [{ dir: "concepts", purpose: "Core vocabulary." }],
+    sitePages: [],
+    hasDevEntry: false,
+  });
+  assert.match(out, /- \[concepts\/]\(https:\/\/beebox\.run\/docs\/concepts\/index\.md\): Core vocabulary\./);
 });
 
 const ALSO = [
@@ -100,12 +128,12 @@ test("renderDevLlmsTxt: no start-here — everything sorted under Files, then Al
   const filesSection = out.split("## Files\n\n")[1]?.split("\n\n## Also")[0];
   assert.equal(
     filesSection,
-    "- [contributing.md](/beebox/docs/dev/contributing.md): How a change lands.\n" +
-      "- [testing.md](/beebox/docs/dev/testing.md): How tests work.",
+    "- [contributing.md](http://localhost:3210/beebox/docs/dev/contributing.md): How a change lands.\n" +
+      "- [testing.md](http://localhost:3210/beebox/docs/dev/testing.md): How tests work.",
   );
-  assert.match(out, /## Also\n\n- \[contracts\/]\(\/beebox\/docs\/contracts\/index\.md\): Wire contracts\./);
-  assert.match(out, /- \[reference\/cards\/]\(\/beebox\/docs\/reference\/cards\/index\.md\): Every card type\./);
-  assert.match(out, /- \[llms\.txt]\(\/beebox\/llms\.txt\): the evaluator-facing index[^\n]*\n?$/);
+  assert.match(out, /## Also\n\n- \[contracts\/]\(http:\/\/localhost:3210\/beebox\/docs\/contracts\/index\.md\): Wire contracts\./);
+  assert.match(out, /- \[reference\/cards\/]\(http:\/\/localhost:3210\/beebox\/docs\/reference\/cards\/index\.md\): Every card type\./);
+  assert.match(out, /- \[llms\.txt]\(http:\/\/localhost:3210\/beebox\/llms\.txt\): the evaluator-facing index[^\n]*\n?$/);
 });
 
 test("renderDevLlmsTxt: start-here orders its files first, the rest fall to Files", () => {
@@ -123,11 +151,11 @@ test("renderDevLlmsTxt: start-here orders its files first, the rest fall to File
   const startHereSection = out.split("## Start here\n\n")[1]?.split("\n\n## Files")[0];
   assert.equal(
     startHereSection,
-    "- [contributing.md](/beebox/docs/dev/contributing.md): How a change lands.\n" +
-      "- [testing.md](/beebox/docs/dev/testing.md): How tests work.",
+    "- [contributing.md](http://localhost:3210/beebox/docs/dev/contributing.md): How a change lands.\n" +
+      "- [testing.md](http://localhost:3210/beebox/docs/dev/testing.md): How tests work.",
   );
   const filesSection = out.split("## Files\n\n")[1]?.split("\n\n## Also")[0];
-  assert.equal(filesSection, "- [architecture.md](/beebox/docs/dev/architecture.md): How it's built.");
+  assert.equal(filesSection, "- [architecture.md](http://localhost:3210/beebox/docs/dev/architecture.md): How it's built.");
 });
 
 test("renderDevLlmsTxt: a start-here filename not published under dev/ fails", () => {

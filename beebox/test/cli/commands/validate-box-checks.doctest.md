@@ -88,8 +88,10 @@ await tmpBox.cleanup();
 
 ## Card-theme presentation configuration
 
-The box-wide validator checks `_config/box.json`, including catalog membership
-and the deliberately small path-pattern language:
+The box-wide validator checks `_config/box.json`'s presentation block against
+the deliberately small path-pattern language. It does NOT check theme names or
+stocks against a catalog — those are an open set, so an unrecognized stock is
+the box's own vocabulary and falls back at the renderer:
 
 ```ts
 const themeBox = await makeTmpBox();
@@ -110,7 +112,6 @@ await themeBox.write("_config/box.json", JSON.stringify({
 clearBoxConfigCache(themeBox.root);
 (await checkPresentationErrors(themeBox.root)).join("\n")
 => Presentation: presentation.rules.0.match: pattern must not contain . or .. path segments
-Presentation: presentation.rules[0].theme names unknown stock "purple" for "post-it"; available stocks: "yellow", "rose", "mint"
 ```
 
 ```ts cleanup

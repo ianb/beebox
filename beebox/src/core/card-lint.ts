@@ -49,7 +49,7 @@ import { symbolIssues } from "./lint-symbol.js";
 import { extractBodyLinks, extractBodyRefs } from "./body-refs.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../shared/display-path.js";
 import { isAttachRef } from "../shared/attach-path.js";
-import { parseRef, formatRefSuffix } from "../shared/ref-path.js";
+import { parseRef, formatRefSuffix, isUrlRef } from "../shared/ref-path.js";
 import { lintBodyMarkdoc } from "./body-markdoc-lint.js";
 import { resolveRefExists } from "./ref-exists.js";
 import {
@@ -221,6 +221,20 @@ async function lintFrontmatterCard(input: {
       });
       continue;
     }
+    // A `ref` names a path inside the box. A URL written there is a vocabulary
+    // mistake, and probing it as a file produced the least useful sentence the
+    // linter can say — "https://… does not exist" sends the reader looking for
+    // a file nobody meant to write. Say what is actually wrong instead. A bare
+    // `#anchor` and an empty value are NOT covered: they are in-box (or
+    // missing) targets that the existence walk already describes correctly.
+    if (isUrlRef(ref)) {
+      warnings.push({
+        type: "reference",
+        severity: "warning",
+        message: `External URL at ${refPath}: ${ref} — a ref names an in-box path; a URL belongs in an \`href\` field`,
+      });
+      continue;
+    }
     try {
       const exists = await resolveRefExists({ ref, fromPath: path, boxRoot: options.boxRoot });
       if (!exists) {
@@ -301,7 +315,7 @@ async function lintFrontmatterCard(input: {
   // a real developer home directory embedded in card content is a leak, not
   // a legitimate ref — error, unlike the ref/canonical checks above, which
   // stay warnings because broken/relative refs are routine data drift.
-  for (const leaked of findAbsoluteMachinePaths(content)) {
+  for (const leaked of findAbsoluteMachinePaths(scannedForLeaks({ content, type, fields: parsed.fields }))) {
     errors.push({
       type: "absolute-path",
       severity: "error",
@@ -309,6 +323,23 @@ async function lintFrontmatterCard(input: {
     });
   }
   return { path, errors, warnings };
+}
+
+/**
+ * The card text the absolute-path guard reads.
+ *
+ * An extfile card's `href` MUST be a `file:` URL (`src/schemas/extfile.tsx`
+ * rejects anything else), so it names a real path on this machine by
+ * construction — that is what an extfile card IS. Scanning it made every
+ * extfile card permanently invalid: the schema demands the value the leak
+ * guard forbids. Only that one value is withheld; the rest of the card —
+ * body, every other field — is scanned as normal.
+ */
+function scannedForLeaks(input: { content: string; type: string; fields: Record<string, unknown> }): string {
+  if (input.type !== "extfile") return input.content;
+  const href = input.fields["href"];
+  if (typeof href !== "string" || href === "") return input.content;
+  return input.content.replaceAll(href, "");
 }
 
 /**

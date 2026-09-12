@@ -10,12 +10,12 @@ compared:
 # Bee Box compared with Agent Zero
 
 Agent Zero describes itself as "a full Linux system for your AI agent": a
-Docker container ships a complete desktop, a browser, and an office suite
-that a general-purpose computer-use agent drives directly, extended by a
-large community plugin hub. Bee Box is a personal assistant built around a
-**box**: one directory, also a git repository, holding **cards** (files
-with YAML frontmatter and a markdown body), where the agent operates on
-records, not a whole desktop.
+Docker container ships a complete desktop, a browser, and an office suite that
+a general-purpose computer-use agent drives directly, extended by a large
+community plugin hub. Bee Box is a personal assistant built around a **box**:
+one directory, kept under version control with a full history of changes (using
+git), holding **cards** (files with a structured header and a markdown body),
+where the agent operates on records, not a whole desktop.
 
 **Where they are similar.** Both treat their instruction files as plain,
 readable, editable text rather than hidden configuration, and both let an

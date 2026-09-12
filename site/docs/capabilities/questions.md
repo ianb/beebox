@@ -3,10 +3,11 @@ description: "Asks you directly when the agent is unsure, and turns your answer 
 ---
 # Questions
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. A question is the agent asking you for
-something it does not have the authority or confidence to decide itself.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. A question is the agent asking you for something it does not have the
+authority or confidence to decide itself.
 
 **What it does for you**
 

@@ -48,8 +48,8 @@ concrete source/caller evidence, not an impression alone:
 
 - `pnpm lint:knip` — unused files, exports, and dependencies. Its reachability
   analysis needs the whole package; do not restrict its graph to a directory.
-- `pnpm lint:circular` — value-import cycles; type-only cycles are fine. Keep
-  cross-directory edges when inspecting a subsystem's cycles.
+- `pnpm lint:circular` — value-import cycles (madge; `.madgerc` skips type
+  imports). Keep cross-directory edges when inspecting a subsystem's cycles.
 - `pnpm lint:oxlint` — structural smells such as useless spreads and identical
   ternary branches.
 - Files near the 300-line cap / functions near 150 — inspect responsibility
@@ -103,8 +103,8 @@ commit; otherwise report the current offending sites.
 - **Dead code — `pnpm lint:knip`.** Healthy is a small handful of genuine
   unused files; a regression is a jump into the dozens (usually a broken entry
   in `knip.json`, not real dead code) or a newly-orphaned file.
-- **Cycles — `pnpm lint:circular`** (madge). Healthy: only `import type` cycles.
-  A regression is any new value-import cycle.
+- **Cycles — `pnpm lint:circular`** (madge, type imports skipped). Healthy is
+  zero reported value cycles; any reported value cycle needs investigation.
 - **Unsafe casts — `rg -n "as unknown as|as never" src`.** Inspect sites in
   scope outside the two blessed helpers (`cardFields`, `parseCommandArgs`).
   `as never` evades the `as unknown as` count and the `.tsx` lint ban. A raw

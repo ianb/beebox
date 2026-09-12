@@ -144,12 +144,17 @@ export function isTestPath(path: string): boolean {
 }
 
 /**
- * The docs-only rule, verbatim from the procedure it replaces: every changed
- * path sits under a `docs/` directory AND none is a `.doctest.md`.
+ * The docs-only rule: every changed path is either a non-doctest `.md`
+ * anywhere (an issue note, README, CONTRIBUTING, a plan) or sits under a
+ * `docs/` directory (which admits images and other doc assets), and none is
+ * a `.doctest.md`. Broadened 2026-09-12 from "under docs/ only": the
+ * checkpoint note finish appends under `issues/` was flipping every
+ * docs-only landing into the full test tier plus the smoke walk. This
+ * matches `hasCodeChange`, which already treats any `.md` as a doc.
  */
 export function isDocsOnly(paths: string[]): boolean {
   if (paths.length === 0) return false;
-  return paths.every((path) => path.split("/").includes("docs") && !isDoctest(path));
+  return paths.every((path) => isDocPath(path) || (path.split("/").includes("docs") && !isDoctest(path)));
 }
 
 /** Any non-test, non-doc source in the diff — what Track O and lint exist for. */

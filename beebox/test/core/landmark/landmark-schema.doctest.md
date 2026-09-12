@@ -90,16 +90,24 @@ withProminence.prominence
 
 Presentation metadata is validated by the presentation reader. A malformed
 system theme must not erase the landmark roles used by navigation, chat startup,
-and root installation.
+and root installation — a theme is decoration, and the roles are how the box is
+navigated.
 
 ```ts
 const badPrimitiveTheme = parseLandmarkFields("---\nnavigation:\n  label: Still here\ndestinations:\n  - for: [triage]\nsystem-theme: bogus\n---\n");
 JSON.stringify([badPrimitiveTheme?.navigation?.label, badPrimitiveTheme?.destinations?.[0]?.for, badPrimitiveTheme?.["system-theme"]])
 => ["Still here",["triage"],null]
+```
 
-const badStockTheme = parseLandmarkFields("---\nnavigation:\n  label: Also here\nsystem-theme:\n  name: paper\n  stock: purple\n---\n");
-JSON.stringify([badStockTheme?.navigation?.label, badStockTheme?.["system-theme"]])
-=> ["Also here",null]
+Malformed means the wrong SHAPE. A name or stock the engine does not recognize
+is not malformed: theme names and stocks are an open set rather than a catalog
+allowlist, so an unknown stock reaches the renderer as authored and falls back
+there.
+
+```ts continue
+const unknownStock = parseLandmarkFields("---\nnavigation:\n  label: Also here\nsystem-theme:\n  name: paper\n  stock: purple\n---\n");
+JSON.stringify([unknownStock?.navigation?.label, unknownStock?.["system-theme"]])
+=> ["Also here",{"name":"paper","stock":"purple"}]
 ```
 
 ## Template

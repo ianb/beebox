@@ -54,6 +54,30 @@ await useTempRegistryStateDir();
 
 // ─── Adversarial review, 2026-08-24 ───────────────────────────────────────
 
+
+/**
+ * How long to wait for a process-group signal to land, and for the pidfile the
+ * fixture writes. A wall-clock deadline rather than an attempt count: 80
+ * attempts at 50ms is 4s only if each iteration costs nothing, and on a loaded
+ * machine both the sleeps and the reads stretch — so the budget shrank exactly
+ * when it needed to be longest.
+ */
+const PID_WAIT_MS = 10_000;
+
+/** Read a file once it exists, or null at the deadline. ENOENT is the wait. */
+async function readWhenPresent(file: string, timeoutMs: number): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try {
+      return await fs.readFile(file, "utf8");
+    } catch (error) {
+      if (errnoCode(error) !== "ENOENT") throw error;
+      if (Date.now() >= deadline) return null;
+      await new Promise<void>((resolve) => { setTimeout(resolve, 50); });
+    }
+  }
+}
+
 test("a first persistent run keeps its lastRunAt when the session id is stored", async () => {
   const rig = await launchRig({
     name: "sdk-update",
@@ -236,7 +260,15 @@ test("a timeout kills the whole process group, not just the run script", async (
   assert.equal(schedule.dir, dir);
   const startedMs = Date.now();
   const report = await runSchedule(fake.deps, {
-    schedule: { ...schedule, config: { ...schedule.config, timeoutMs: 400 } },
+    // Long enough for the fixture to REGISTER its grandchild, short enough that
+    // the `sleep 45` below is still cut off by miles. At 400ms this raced its
+    // own setup: on a loaded machine the run script had not reached the `echo`
+    // that writes the pidfile before the group was killed, so the file never
+    // appeared at all and the test failed waiting for something that was never
+    // going to be written. Four concurrent copies reproduced that every time
+    // on 2026-09-12; raising the wait to 30s did not help, which is what proved
+    // it was not a slow write.
+    schedule: { ...schedule, config: { ...schedule.config, timeoutMs: 5_000 } },
     dryRun: false,
   });
   const elapsedMs = Date.now() - startedMs;
@@ -246,20 +278,20 @@ test("a timeout kills the whole process group, not just the run script", async (
   // late AND overlaps a process still writing the checkout.
   assert.ok(elapsedMs < 15_000, `the runner waited ${String(elapsedMs)}ms on a grandchild it should have killed`);
   const pidFile = path.join(fake.deps.storeRoot, "grandchildjob", "grandchild.pid");
-  let pidText: string | null = null;
-  for (let attempt = 0; attempt < 80 && pidText === null; attempt += 1) {
-    try {
-      pidText = await fs.readFile(pidFile, "utf8");
-    } catch (error) {
-      if (errnoCode(error) !== "ENOENT") throw error;
-      await new Promise<void>((resolve) => { setTimeout(resolve, 50); });
-    }
-  }
-  assert.ok(pidText !== null, `expected ${pidFile} to appear while sealing the process group`);
+  // Poll to a WALL-CLOCK deadline, not a fixed attempt count. 80 attempts at
+  // 50ms is 4s only if each iteration costs nothing; on a loaded machine the
+  // sleeps and the reads both stretch, so the budget shrank exactly when the
+  // grandchild needed longer to get scheduled and write its pidfile. Four
+  // concurrent copies of this file failed here identically on 2026-09-12,
+  // which is the same shape as the original 2026-08-25 report — a fixed delay
+  // became a fixed attempt count, and stayed load-sensitive.
+  const pidText = await readWhenPresent(pidFile, PID_WAIT_MS);
+  assert.ok(pidText !== null, `expected ${pidFile} to appear within ${String(PID_WAIT_MS)}ms while sealing the process group`);
   const pid = Number(pidText.trim());
   assert.ok(Number.isInteger(pid) && pid > 1, "the run script should have recorded a grandchild pid");
   let alive = true;
-  for (let attempt = 0; attempt < 40 && alive; attempt += 1) {
+  const aliveDeadline = Date.now() + PID_WAIT_MS;
+  while (alive && Date.now() < aliveDeadline) {
     await new Promise<void>((resolve) => { setTimeout(resolve, 50); });
     try {
       process.kill(pid, 0);

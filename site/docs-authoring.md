@@ -59,7 +59,12 @@ from a directory page, `gmail.md` between siblings, `01-what-bee-box-is.md`
 from a directory page up to a spine file. The build validates every link
 resolves to a real published file (including a directory's generated
 `index.md`) — a link to something not in the manifest, not yet authored, or
-misspelled fails the build with the exact target that didn't resolve.
+misspelled fails the build with the exact target that didn't resolve. Once
+validated, the build rewrites it to an absolute URL (`docsOrigin(base)` +
+`base` + the resolved path — see `site/CLAUDE.md`'s Agent docs section) so a
+chat agent fetching `llms.txt` can follow it without resolving anything
+itself; you keep writing published-relative links, the absolute form is
+build output.
 
 No links into the repo's `plans/`, `issues/`, `research/`, or similar internal
 material — there is nothing there for this corpus, and an authored link there

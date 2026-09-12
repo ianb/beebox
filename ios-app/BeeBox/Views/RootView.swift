@@ -8,6 +8,7 @@ struct RootView: View {
     @StateObject private var composerDraftStore = ComposerDraftStore()
     @StateObject private var pendingEmissionStore = PendingEmissionStore()
     @State private var showingPairSheet = false
+    @State private var navigationFailure: ChatWebView.NavigationFailure?
     @State private var visibleChatSessionID: String?
     @State private var visibleChatBoxID: PairedBox.ID?
     @State private var locationShareRequest: NativeLocationShareRequest?
@@ -341,8 +342,16 @@ struct RootView: View {
                     return
                 }
                 speechStopRequest = nil
+            },
+            onNavigationFailure: { failure in
+                navigationFailure = failure
             }
         )
+        .overlay {
+            if let failure = navigationFailure {
+                UnreachableBoxView(box: box, failure: failure)
+            }
+        }
         .environment(\.nativeControlRegistry, controlRegistry)
         .id(box.id)
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -629,4 +638,61 @@ private struct EmptyBoxView: View {
     RootView()
         .environmentObject(PairedBoxStore())
         .environmentObject(BoxLockManager())
+}
+
+/// Shown in place of the blank `WKWebView` when a chat navigation fails.
+///
+/// Lives in this file rather than its own: the Xcode project uses explicit
+/// `project.pbxproj` file references, so a new file would need registering in
+/// three places by hand.
+///
+/// Before this, a navigation failure was reported ONLY through `BoxLog.warn`,
+/// which `LogForwarder` sends to the box — the one place that is unreachable in
+/// exactly this failure. So an unreachable box showed an empty white screen and
+/// nothing else, and a transport problem was indistinguishable from a box that
+/// had simply been paired at an address it can never be reached on.
+struct UnreachableBoxView: View {
+    let box: PairedBox
+    let failure: ChatWebView.NavigationFailure
+
+    /// A box paired from a browser sitting on `localhost` stored an address
+    /// that means THE PHONE. No network fix reaches it, so retrying is not the
+    /// advice — re-pairing is.
+    private var pairedToLoopback: Bool {
+        guard let host = box.baseURL.host?.lowercased() else { return false }
+        return host == "localhost" || host == "127.0.0.1" || host == "::1"
+    }
+
+    private var explanation: String {
+        if pairedToLoopback {
+            return "This box was paired from an address only its own computer can reach "
+                + "(\(box.baseURL.host ?? "localhost")), so the phone has nowhere to connect. "
+                + "Pair it again from an address this phone can reach."
+        }
+        return "The phone could not reach \(box.baseURL.host ?? box.baseURL.absoluteString). "
+            + "It may be asleep, off the network, or reachable only over a VPN that is not connected."
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: pairedToLoopback ? "link.badge.plus" : "wifi.exclamationmark")
+                .font(.largeTitle)
+                .foregroundStyle(.secondary)
+            Text(pairedToLoopback ? "Can't reach this box from here" : "Can't reach \(box.label)")
+                .font(.headline)
+            Text(explanation)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            // The underlying error, quietly: it is what distinguishes "offline"
+            // from "host not found" when someone reports this.
+            Text(failure.localizedDescription)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
+    }
 }

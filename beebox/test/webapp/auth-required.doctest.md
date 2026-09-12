@@ -172,7 +172,7 @@ delete process.env.BBX_SECRETS_FILE;
 const optedIn = await makeTestServer({ openAccess: false });
 await optedIn.seed("_config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
 
-const asOwner = await optedIn.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: browseHeaders });
+const asOwner = await optedIn.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
 const atSecrets = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
 
 if (PRIOR_STORE !== undefined) process.env.BBX_SECRETS_FILE = PRIOR_STORE;
@@ -212,7 +212,7 @@ wall and reaches an authenticated procedure, and nothing owner-gated.
 const plain = await makeTestServer({ openAccess: false });
 
 const authedCall = await plain.request({ method: "GET", url: "/api/trpc/inventory.summary", headers: browseHeaders });
-const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/pairing.devices", headers: browseHeaders });
+const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
 
 print(`authedProcedure: ${authedCall.statusCode}`);
 print(`ownerProcedure: ${ownerCall.statusCode} ${ownerCall.body.error.data.code}`);

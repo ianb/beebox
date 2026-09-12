@@ -145,10 +145,10 @@ A second, machine-facing corpus at `/docs/` plus a replaced `llms.txt`, for a
 general chatbot fetching on behalf of someone deciding whether to use Bee Box.
 Full design: `../beebox/docs/plans/agent-docs.md`; content conventions for
 authors: `docs-authoring.md`. Built by `docs.ts` (`buildDocsCorpus`, split
-across `docs-types.ts`, `docs-scrub.ts`, `docs-links.ts`, `docs-manifest.ts`,
-`docs-generated.ts`, `docs-authored.ts`, `docs-compared.ts`, `docs-index.ts`),
-called once from `build.ts` and skipped for box-export dry-runs
-(`buildAgentDocs: false`).
+across `docs-types.ts`, `docs-scrub.ts`, `docs-links.ts`, `docs-origin.ts`,
+`docs-manifest.ts`, `docs-generated.ts`, `docs-authored.ts`, `docs-compared.ts`,
+`docs-index.ts`), called once from `build.ts` and skipped for box-export
+dry-runs (`buildAgentDocs: false`).
 
 **A second entry point, `dist/llms-dev.txt`, for contributors.** Rendered by
 `renderDevLlmsTxt` (`docs-index.ts`, beside `renderAgentLlmsTxt`) from
@@ -194,13 +194,23 @@ paths and names, not tone — so a hit in a generated doc means the
 *generator's* wording needs to lose the literal, not that the gate should be
 loosened. Cloudflare has no blocklist, so that half of the gate is local-only.
 
-**Links** (`docs-links.ts`): a promoted doc's relative link into the published
-set rewrites to a relative published URL; into an excluded root (`plans/`,
-`issues/`, `research/`, …) flattens to its link text; any other tracked repo
-file rewrites to a GitHub blob URL; a nonexistent target fails the build. An
-authored doc's links are already published-relative — the build only
+**Links** (`docs-links.ts`): every link this corpus emits is an absolute URL —
+`docsOrigin(base)` (`docs-origin.ts`) plus `base` plus the published path,
+because a chat agent fetching `llms.txt` does not reliably resolve a
+site-relative or page-relative href. `docsOrigin` returns the canonical
+`https://beebox.run` only when `base === "/"` (the Cloudflare build); any
+other base (the dev router) resolves through `http://localhost:3210`. A
+promoted doc's relative link into the published set rewrites to that absolute
+URL; into an excluded root (`plans/`, `issues/`, `research/`, …) flattens to
+its link text; any other tracked repo file rewrites to a GitHub blob URL; a
+nonexistent target fails the build. An authored doc's links (and a root or
+directory `README.md`'s preamble) are already published-relative — the build
 validates they resolve within the published set (including the generated
-per-directory `index.md` files).
+per-directory `index.md` files) and then rewrites them absolute. A generated
+doc's link to another engine doc by bare filename resolves the same way when
+that filename is in the generated set; a filename outside it (the engine docs
+are not ours to edit here) is left as-is and counted in the build's summary
+line.
 
 **Adding a doc:** authored — add the `.md` under `docs/` mirroring where it
 should publish, with `description:` frontmatter (and `compared:` if it's under
@@ -215,3 +225,12 @@ running the export, so its `reference/` set can lag an engine edit until the
 next explicit `pnpm --dir site build` or a `generateDocs` run refreshes
 `beebox/box-docs/.hash` (which `sources.ts` folds into the manifest, tolerating
 its absence). Accepted as dev-only staleness.
+
+**Static control files** (`docs-static.ts`): the build writes `_headers`
+(every `.md` under `/docs/`, both entry files, and each page twin served as
+`text/plain; charset=utf-8`, because chat-app fetchers reject
+`text/markdown`), a `404.html` (without it Pages answers unknown paths with
+the home page and a 200, which rewards a fetcher's guessed URL), and a
+permissive `robots.txt`. Cloudflare reads them from `dist/`; the router
+ignores them.
+

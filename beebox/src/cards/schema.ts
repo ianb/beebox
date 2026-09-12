@@ -230,6 +230,52 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
    * ships and updates as templates; omit it and any edit parks the update.
    */
   templateMerge?: TemplateMergePolicy;
+  /**
+   * Opt in to receiving submissions — a manifest plus files — into a
+   * subdirectory of the card's attach scope through `POST /api/cards/submit`
+   * and the shared submission form (see {@link CardSubmissions}). Omit for
+   * every card type that does not act as an inbox.
+   */
+  submissions?: CardSubmissions;
+}
+
+/** One problem with a submission, addressed by a path the form can show. */
+export interface SubmissionIssue {
+  path: string;
+  message: string;
+}
+
+export interface CardSubmissionInput {
+  /** The card's parsed frontmatter fields. */
+  fields: Record<string, unknown>;
+  /** The parsed `records` part of the multipart body, whatever shape the schema expects. */
+  manifest: unknown;
+  /** Names of the file parts uploaded beside the manifest. */
+  fileNames: readonly string[];
+  /** Read a file from the card's attach scope by bare name; null when absent. */
+  readAttachment: (name: string) => Promise<string | null>;
+}
+
+export type CardSubmissionResult =
+  /** `manifest`, when present, is the validated shape to persist in place of the raw request body. */
+  | { ok: true; count: number; manifest?: unknown }
+  | { ok: false; issues: SubmissionIssue[] };
+
+/**
+ * A card type's submission contract. The route and the form are generic; the
+ * schema owns what a valid batch is and when the card is accepting.
+ */
+export interface CardSubmissions {
+  /** Subdirectory of the attach scope that receives batches, e.g. `inbox`. */
+  dir: string;
+  /** Null when the card accepts submissions; otherwise the reason it refuses (surfaced as 409). */
+  refusal: (fields: Record<string, unknown>) => string | null;
+  /**
+   * Pure check over the manifest and file names. Runs in the browser before
+   * upload (over `GET /api/files/*`) and on the server at the boundary (over
+   * the filesystem); the `readAttachment` reader is what differs.
+   */
+  validate: (input: CardSubmissionInput) => Promise<CardSubmissionResult>;
 }
 
 /**
@@ -273,6 +319,8 @@ export interface CardSchema<
   readonly ownMarkdocValidation?: boolean;
   /** Template reconciliation policy (see {@link CardSchemaConfig.templateMerge}). */
   readonly templateMerge?: TemplateMergePolicy;
+  /** Submission contract, when this card type acts as an inbox (see {@link CardSubmissions}). */
+  readonly submissions?: CardSubmissions;
 }
 
 /**
@@ -441,6 +489,9 @@ export function cardSchema<
   }
   if (config.templateMerge !== undefined) {
     resolved = { ...resolved, templateMerge: config.templateMerge };
+  }
+  if (config.submissions !== undefined) {
+    resolved = { ...resolved, submissions: config.submissions };
   }
   return resolved;
 }
