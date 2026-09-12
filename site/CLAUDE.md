@@ -181,7 +181,7 @@ exec tsx` on every build — no filesystem side effect, ~1s — producing
 
 **The scrub gate** (`docs-scrub.ts`) runs on every doc kind before it reaches
 `dist/docs/`: a real home path (reusing `bin/path-leak-check.ts`'s `HOME_PATH`
-and `ALLOWED_NAMES`), `private-issues`, or a named box under a boxes directory
+and `ALLOWED_NAMES`), a path or link into `private-issues/` (naming the boundary itself is fine), or a named box under a boxes directory
 (`~/src/boxes/<name>`, `/home/<user>/boxes/<name>`; `test1`, tooling folders,
 the `example-names.md` roster, and placeholders pass) fails the build naming
 file:line. Authored docs are additionally scanned against the developer's

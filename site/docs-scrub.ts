@@ -17,7 +17,12 @@ export class ScrubError extends Error {
   }
 }
 
-const LITERAL_PATTERNS = ["private-issues"] as const;
+// A path or link INTO the private issues repo. Naming the boundary itself
+// (`private-issues/` as a rule in an agent instruction file) is fine and is
+// public in the repo; a path segment after it, or a link target containing
+// it, is a reference into private material.
+const PRIVATE_ISSUES_PATH = /private-issues\/[^\s"')>`]/;
+const PRIVATE_ISSUES_LINK = /]\([^)]*private-issues/;
 
 // A named box under a boxes directory: `~/src/boxes/<name>`, `~/src/box-worktrees/<name>/…`,
 // or the server's `/home/<user>/boxes/<name>`. The directory itself is a public
@@ -108,10 +113,8 @@ export function scrubText(content: string, options: ScrubOptions): void {
         throw new ScrubError(`${sourceLabel}:${lineno} names a box: ${match[0]}`);
       }
     }
-    for (const pattern of LITERAL_PATTERNS) {
-      if (line.includes(pattern)) {
-        throw new ScrubError(`${sourceLabel}:${lineno} disallowed reference: "${pattern}"`);
-      }
+    if (PRIVATE_ISSUES_PATH.test(line) || PRIVATE_ISSUES_LINK.test(line)) {
+      throw new ScrubError(`${sourceLabel}:${lineno} references into private-issues`);
     }
   }
   if (!blocklist) return;
