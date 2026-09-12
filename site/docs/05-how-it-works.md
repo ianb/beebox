@@ -40,6 +40,7 @@ not poll.
 command or a direct file edit. The web interface and chat sit on top of the
 same box.
 
-Why it is built this way: [design/identity.md](design/identity.md) and the
-rest of [design/index.md](design/index.md). Internals:
+Why it is built this way: [design/identity.md](design/identity.md), the rest
+of [design/index.md](design/index.md), and the narrative in
+[architecture/01-what-is-this.md](architecture/01-what-is-this.md). Internals:
 [reference/index.md](reference/index.md).

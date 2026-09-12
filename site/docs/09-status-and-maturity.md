@@ -9,8 +9,7 @@ maintainer's own network, invited to run it rather than to read about it. A
 coding-agent subscription is treated as an audience filter rather than a gap.
 Expect things to change without notice.
 
-**One maintainer.** The project has a single maintainer (named in the
-repository). Bug
+**One maintainer.** The project has a single maintainer, Ian Bicking. Bug
 reports are invited. Pull requests and feature contributions are not
 solicited. Some documentation is agent-written and human-reviewed, and says
 so.

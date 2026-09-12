@@ -38,7 +38,8 @@ frontmatter. Terms are defined in [the glossary](concepts/glossary.md).
 A box can hold several people. The design states that boxes are shared, with
 one granularity: everyone in a box shares everything in it. Different groups
 need different boxes. Per-member identity beyond the login allowlist is not
-designed yet. The project's design narrative describes a household using
-one box through a group chat; that narrative is not part of these pages.
+designed yet. The narrative in
+[architecture/01-what-is-this.md](architecture/01-what-is-this.md) shows a
+household using one box through a group chat.
 
 Details of the requirements are in [what it requires](06-what-it-requires.md).

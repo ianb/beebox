@@ -64,6 +64,14 @@
   description: "Timers the agent sets from chat that fire later."
 
 
+- source: beebox/docs/architecture/01-what-is-this.md
+  publish: architecture/01-what-is-this.md
+  description: "Narrative chapter one: a fictional household's Saturday with a shared box, then the architecture under it."
+
+- source: beebox/docs/architecture/02-cards-and-memory.md
+  publish: architecture/02-cards-and-memory.md
+  description: "Narrative chapter two: how cards become the box's memory."
+
 # --- install ----------------------------------------------------------------
 
 - source: beebox/docs/developer-install.md
