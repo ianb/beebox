@@ -1,5 +1,5 @@
-import type { Dispatch, SetStateAction } from "react";
 import type { RouterOutput } from "../../../lib/trpc";
+import type { InventoryCardState } from "../../../lib/inventory-card-state";
 import { formatBytes } from "../../../lib/format-bytes";
 import { Card } from "../../../components/ui/Card";
 import { Row } from "../../../components/ui/Row";
@@ -10,18 +10,18 @@ import { InventoryTable } from "./InventoryTable";
 import { InventoryTreemap } from "./InventoryTreemap";
 
 type Inventory = RouterOutput["inventory"]["summary"];
-type Projection = "grouped" | "direct";
-type Metric = "count" | "bytes";
-type LinkStatus = "all" | "linked" | "unlinked";
+type Projection = InventoryCardState["projection"];
+type Metric = InventoryCardState["metric"];
+type LinkStatus = InventoryCardState["linkStatus"];
 
 interface InventoryContentProps {
   data: Inventory;
   metric: Metric;
   linkStatus: LinkStatus;
   projection: Projection;
-  setMetric: Dispatch<SetStateAction<Metric>>;
-  setLinkStatus: Dispatch<SetStateAction<LinkStatus>>;
-  setProjection: Dispatch<SetStateAction<Projection>>;
+  setMetric: (value: Metric) => void;
+  setLinkStatus: (value: LinkStatus) => void;
+  setProjection: (value: Projection) => void;
 }
 
 export function InventoryContent({ data, metric, linkStatus, projection, setMetric, setLinkStatus, setProjection }: InventoryContentProps) {
@@ -141,9 +141,9 @@ function InventoryArea({ items, metric, linkStatus, projection, setMetric, setLi
   metric: Metric;
   linkStatus: LinkStatus;
   projection: Projection;
-  setMetric: Dispatch<SetStateAction<Metric>>;
-  setLinkStatus: Dispatch<SetStateAction<LinkStatus>>;
-  setProjection: Dispatch<SetStateAction<Projection>>;
+  setMetric: (value: Metric) => void;
+  setLinkStatus: (value: LinkStatus) => void;
+  setProjection: (value: Projection) => void;
 }) {
   return (
     <Card as="section" aria-label="Storage area view">

@@ -256,7 +256,7 @@ function buildSteps(input: {
       invariant(source.trim().startsWith("card:"), "selected Browse row lacks card provenance");
       const expectedPath = source.trim().slice("card:".length);
       await session.clickRef(ref);
-      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('#bbx-browse-open-card')).some(a => decodeURI(new URL(a.href).pathname).endsWith('/card/' + ${JSON.stringify(expectedPath)}))`]);
+      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('#bbx-browse-open-card')).some(a => decodeURI(new URL(a.href).pathname).endsWith('/views/' + ${JSON.stringify(expectedPath)}))`]);
       await session.waitForReady();
       const snapshot = await session.snapshot();
       const url = await session.getUrl();

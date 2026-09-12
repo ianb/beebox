@@ -65,7 +65,7 @@ export function parseViewUrl(raw: string): ViewTarget {
  * `parseViewUrl` (box-root-normalized) and `resolveContentTarget`
  * (document-relative), which differ only in how they treat the path part.
  */
-export function parseViewQuery(query: string): Pick<ViewTarget, "viewer" | "params" | "viewState"> {
+function parseViewQuery(query: string): Pick<ViewTarget, "viewer" | "params" | "viewState"> {
   const params: Record<string, string> = {};
   let viewer: string | null = null;
   let viewState: ViewState | null = null;

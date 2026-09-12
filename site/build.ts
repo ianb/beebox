@@ -42,6 +42,18 @@ interface CliArgs {
   base: string | undefined;
 }
 
+export interface BuildSiteOptions {
+  cardsDir: string;
+  distDir: string;
+  base: string;
+  writeSourceManifest?: boolean;
+}
+
+export interface BuildSiteResult {
+  pageCount: number;
+  nuggetSummary: string[];
+}
+
 function parseArgs(argv: readonly string[]): CliArgs {
   let base: string | undefined;
   for (let i = 0; i < argv.length; i++) {
@@ -141,15 +153,17 @@ function checkNuggets(nuggets: readonly Nugget[], base: string): string[] {
   return lines;
 }
 
-async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
-  const base = resolveBase(args);
+export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteResult> {
+  const cardsDir = path.resolve(options.cardsDir);
+  const distDir = path.resolve(options.distDir);
+  const base = normalizeBase(options.base);
+  const cardsParent = path.dirname(cardsDir);
+  const cardsPrefix = `${path.basename(cardsDir)}/`;
+  const cards = await listCardFiles({ cardsDir, siteDir: cardsParent });
+  if (cards.pages.length === 0) throw new BuildError(`no *.site-page.card sources found in ${cardsDir}`);
 
-  const cards = await listCardFiles({ cardsDir: CARDS_DIR, siteDir: SITE_DIR });
-  if (cards.pages.length === 0) throw new BuildError(`no *.site-page.card sources found in ${CARDS_DIR}`);
-
-  await fs.rm(DIST_DIR, { recursive: true, force: true });
-  await fs.mkdir(DIST_DIR, { recursive: true });
+  await fs.rm(distDir, { recursive: true, force: true });
+  await fs.mkdir(distDir, { recursive: true });
 
   const emitted = new Set<string>();
   const built: BuiltPage[] = [];
@@ -164,7 +178,7 @@ async function main(): Promise<void> {
   for (const card of cards.pages) {
     const src = await fs.readFile(card.abs, "utf8");
     const { frontmatter, body: authoredBody } = parseSource(src, card.file);
-    const id = card.file.slice("cards/".length);
+    const id = card.file.slice(cardsPrefix.length);
     const body = publishedPageBody({ id, frontmatter, body: authoredBody });
     const route = resolveInternalHref({ href: `/${id}`, pageSitePath: id, base });
     const pageSitePath = route.target;
@@ -174,7 +188,7 @@ async function main(): Promise<void> {
     const html = embedNuggets(withAsides.html, { nuggets, base, pageSitePath: id, linkTargets: nuggetTargets });
     const linkTargets = [...rendered.linkTargets, ...withAsides.linkTargets, ...nuggetTargets];
 
-    const twinOut = path.join(DIST_DIR, `${card.slug}.md`);
+    const twinOut = path.join(distDir, `${card.slug}.md`);
     if (built.some((page) => page.stem === card.slug)) throw new BuildError(`${card.file}: duplicate Markdown twin ${card.slug}.md`);
     await fs.mkdir(path.dirname(twinOut), { recursive: true });
     pages.push({ id, output: route.target, href: route.href, html: headingIds(html), frontmatter });
@@ -190,12 +204,12 @@ async function main(): Promise<void> {
 
   const workspace = prepareWorkspace({ pages, base });
   for (const page of pages) {
-    const output = path.join(DIST_DIR, page.output);
+    const output = path.join(distDir, page.output);
     await fs.mkdir(path.dirname(output), { recursive: true });
     await fs.writeFile(output, workspaceShell(workspace, page), "utf8");
   }
-  await fs.cp(path.join(SITE_DIR, "assets"), path.join(DIST_DIR, "assets"), { recursive: true });
-  await fs.writeFile(path.join(DIST_DIR, "assets/navigation.js"), NAVIGATION_SCRIPT, "utf8");
+  await fs.cp(path.join(SITE_DIR, "assets"), path.join(distDir, "assets"), { recursive: true });
+  await fs.writeFile(path.join(distDir, "assets/navigation.js"), NAVIGATION_SCRIPT, "utf8");
 
   // Link-check: every internal link target must correspond to an emitted page.
   const broken: string[] = [];
@@ -213,7 +227,7 @@ async function main(): Promise<void> {
   const home = built.find((p) => p.stem === "index");
   if (!home) throw new BuildError("no cards/index.site-page.card — the site needs a home page");
   await fs.writeFile(
-    path.join(DIST_DIR, "llms.txt"),
+    path.join(distDir, "llms.txt"),
     renderLlmsTxt({ home: home.frontmatter, pages: built, base }),
     "utf8",
   );
@@ -221,10 +235,18 @@ async function main(): Promise<void> {
   // Input manifest LAST, once all output exists: the dev router compares it
   // against the current sources to decide whether to auto-rebuild. A partial
   // build never leaves a manifest that could mask staleness.
-  await writeManifest(SITE_DIR, DIST_DIR);
+  if (options.writeSourceManifest !== false) await writeManifest(SITE_DIR, distDir);
+
+  return { pageCount: built.length, nuggetSummary };
+}
+
+async function main(): Promise<void> {
+  const args = parseArgs(process.argv.slice(2));
+  const base = resolveBase(args);
+  const result = await buildSite({ cardsDir: CARDS_DIR, distDir: DIST_DIR, base });
 
   process.stdout.write(
-    [`site: built ${built.length} page(s) → dist/ (base ${base})`, ...nuggetSummary].join("\n") + "\n",
+    [`site: built ${result.pageCount} page(s) → dist/ (base ${base})`, ...result.nuggetSummary].join("\n") + "\n",
   );
 }
 

@@ -3,7 +3,7 @@
  * with a New-chat button per landmark, and a trailing "Other chats" card for
  * chats bound to a directory with no landmark. Self-sufficient (fetches its
  * own data). Card-embedded only now — it serves `view: chat-picker` cards
- * (docs/plans/interface-as-cards.md); the /chats page redirects to the
+ * (docs/plans/interface-as-cards.md); the /chats route redirects to the
  * merged Landmarks surface (docs/plans/top-nav-ia.md Track D).
  */
 

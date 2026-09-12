@@ -131,6 +131,45 @@ contribution; marked demonstrations remain marked until they become real copy.
 Pending author-aside suppression, nugget validation, and excerpt provenance
 still run through the existing publishing pipeline.
 
+## Authoring in a box workbench
+
+The repository remains the canonical home of published content. A local Bee
+Box can be a private editorial workbench: drafts, source material, agent chats,
+and abandoned approaches remain in the box, while only selected cards under
+`_publish/public-site/` are eligible for export. Being in that staging
+directory means selected for review; it does not mean published.
+
+Bootstrap a workbench by deliberately copying the current `site/cards/` card
+graph into the box staging directory. In the box, rename public `*.doc.card`
+files to `*.site-doc.card` so they use the strict box-local schema. Keep
+`*.site-page.card` and `*.site-aside.card` suffixes unchanged. Card bodies
+continue to use their public site-root links, including `.doc.card` link
+targets; those are public-site addresses, not box-root addresses.
+
+Preview an export from the repository checkout:
+
+```bash
+pnpm --dir site box-export --box /path/to/workbench
+```
+
+Dry-run is the default. The report names the box, the exact staging and
+destination roots, successful site-build validation, additions, updates,
+unchanged cards, and destination-only cards that will be retained. It reads no
+other box directory and copies no Git history or conversation content.
+
+After reviewing the report, apply additions and updates explicitly:
+
+```bash
+pnpm --dir site box-export --box /path/to/workbench --apply
+```
+
+Apply never deletes repository cards. It maps `*.site-doc.card` back to
+`*.doc.card`, validates the complete selected graph through the real static
+site build in a temporary directory, and writes nothing to `site/cards/` until
+discovery, path safety, and validation all pass. Review and commit the resulting
+repository diff separately; export does not commit, push, deploy, or make the
+box copy canonical.
+
 ## Prompts for an agent
 
 Use a dedicated prompt block for install instructions, learning tasks, or

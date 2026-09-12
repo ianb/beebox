@@ -2,7 +2,7 @@
  * The merged activity surface: every landmark in the box, each with its
  * chats *and* its links, plus a trailing bucket for chats bound to a
  * directory with no landmark. Self-sufficient (fetches its own data), so it
- * serves both the /landmarks page and `view: landmarks` cards
+ * serves both the canonical Landmarks card and authored `view: landmarks` cards
  * (docs/plans/interface-as-cards.md) — a `view: landmarks` card shows the
  * sessions too, which is the point: one full picture of the box's activity
  * (docs/plans/top-nav-ia.md Track D).

@@ -30,11 +30,13 @@ import {
   firstErrorLine,
   firstErrorLines,
   isEnvironmentFailure,
+  isHostQuiet,
   issuePath,
   lastTestedCommit,
   narrowBisect,
   parseLandings,
   renderIssue,
+  tierProducedResults,
   workstreamOf,
   unstageIssueArgs,
 } from "./lib.js";
@@ -253,6 +255,39 @@ test("bisect finds the first failing landing, and asks about log2 of them", asyn
     assert.equal(found, culprit, `culprit ${String(culprit)}`);
     assert.ok(asked.length <= 4, `asked ${String(asked.length)} times for 9 landings`);
   }
+});
+
+// ─── the quiet-host decision ──────────────────────────────────────────────
+
+test("isHostQuiet needs both load under bar and pressure under critical", () => {
+  assert.equal(isHostQuiet({ load1: 4, bar: 8, level: 1 }), true);
+  // 2026-09-11: load1 8 read quiet against a bar of 12 while swap thrashed —
+  // pressure has to gate independently of load, not just raise the bar.
+  assert.equal(isHostQuiet({ load1: 4, bar: 8, level: 4 }), false);
+  assert.equal(isHostQuiet({ load1: 20, bar: 8, level: 1 }), false);
+});
+
+test("isHostQuiet treats a missing pressure signal (non-Darwin) as no objection", () => {
+  assert.equal(isHostQuiet({ load1: 4, bar: 8, level: null }), true);
+});
+
+test("isHostQuiet is not tripped by warn, only critical", () => {
+  assert.equal(isHostQuiet({ load1: 4, bar: 8, level: 2 }), true);
+});
+
+// ─── did a tier actually run ──────────────────────────────────────────────
+
+// 2026-09-11: the load-gate refusal is exit 1 with no `ok`/`not ok` lines, which `failingFiles` would read as green.
+const refusalOutput = "test-ledger: host is under critical memory pressure...\n";
+
+test("tierProducedResults trusts a clean exit even with no parsed files", () => {
+  assert.equal(tierProducedResults({ exitCode: 0, output: "" }), true);
+});
+
+test("tierProducedResults is false only for a non-zero exit with no TAP output", () => {
+  assert.equal(tierProducedResults({ exitCode: 1, output: refusalOutput }), false);
+  const output = "ok 1 - test/a.test.ts # time=10ms\nnot ok 2 - test/b.test.ts # time=20ms\n";
+  assert.equal(tierProducedResults({ exitCode: 1, output }), true);
 });
 
 test("bisect over a single landing asks nothing — it is already the answer", async () => {
