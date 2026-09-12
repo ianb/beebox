@@ -16,14 +16,15 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { readMemoryPressure } from "../../bin/host-pressure.js";
 import { gitCommonDir } from "../../bin/test-git.js";
 import { appendLedgerRecord, readRecords } from "../../bin/test-ledger.js";
 import { hashFileset, ledgerPaths } from "../../bin/test-ledger-lib.js";
 import type { Batch } from "./attribution.js";
-import { TIERS, batchExit, completionMarker, workstreamOf } from "./lib.js";
+import { TIERS, batchExit, completionMarker, isHostQuiet, tierProducedResults, workstreamOf } from "./lib.js";
 import { batchSlowdown, durationHistories, runIsUntrusted } from "./trust.js";
 import { readBatch } from "./batch.js";
-import { report } from "./reporting.js";
+import { alertOnce, report } from "./reporting.js";
 import { createCheckout, failingFiles, removeCheckout, runTier, type Checkout, type SuiteRun } from "./checkout.js";
 import { REPO_ROOT, git, refuse } from "./repo.js";
 import { readPending, writeKnownRed, writeLastAlert, writePending } from "./state.js";
@@ -68,22 +69,29 @@ const QUIET_WAIT_BUDGET_MS = 40 * 60 * 1000;
 /**
  * The tick fires on the hour whatever the host is doing; a run that starts
  * into a thrashed machine wastes the whole batch (its verdicts are withheld
- * anyway). Waiting is cheap and bounded — and if the host never goes quiet,
- * the run proceeds and the slowdown gate protects the verdicts.
+ * anyway) and, under memory pressure specifically, is a predetermined loss —
+ * tap kills files at its 300s budget instead of finishing slow (2026-09-11).
+ * So a host still loaded after the budget is a deferral, not a run: see
+ * `main`'s handling of a `false` return.
  */
-async function waitForQuietHost(): Promise<void> {
+async function waitForQuietHost(): Promise<boolean> {
   const bar = os.availableParallelism() * QUIET_LOAD_PER_CORE;
   for (let waited = 0; ; waited += QUIET_POLL_MS) {
     const load = os.loadavg()[0] ?? 0;
-    if (load <= bar) {
+    const { level, pageouts } = readMemoryPressure();
+    if (isHostQuiet({ load1: load, bar, level })) {
       if (waited > 0) process.stdout.write(`full-suite: host quiet after ${String(Math.round(waited / 60000))}m.\n`);
-      return;
+      return true;
     }
     if (waited >= QUIET_WAIT_BUDGET_MS) {
-      process.stdout.write(`full-suite: still loaded (load1 ${load.toFixed(1)} > ${String(bar)}) after the wait budget; running anyway.\n`);
-      return;
+      process.stdout.write(
+        `full-suite: still loaded (load1 ${load.toFixed(1)} > ${String(bar)}, pressure ${String(level)}, pageouts ${String(pageouts)}) after the wait budget.\n`,
+      );
+      return false;
     }
-    process.stdout.write(`full-suite: load1 ${load.toFixed(1)} > ${String(bar)}; waiting for a quiet host.\n`);
+    process.stdout.write(
+      `full-suite: load1 ${load.toFixed(1)} > ${String(bar)} (pressure ${String(level)}, pageouts ${String(pageouts)}); waiting for a quiet host.\n`,
+    );
     await delay(QUIET_POLL_MS);
   }
 }
@@ -146,14 +154,35 @@ async function main(): Promise<void> {
 
   // Duration history must predate this run's own tier records.
   const histories = durationHistories({ records: readRecords(ledgerPaths(gitCommonDir(REPO_ROOT)).ledger) });
-  await waitForQuietHost();
+  if (!(await waitForQuietHost())) {
+    // Never run into a host that stayed loaded: under memory pressure the
+    // outcome is predetermined (tap kills files at 300s), and the batch/
+    // pending state is left untouched so the next hourly tick retries the
+    // same pinned commit rather than skipping ahead.
+    process.stdout.write("full-suite: host still loaded after 40m; deferred to the next tick.\n");
+    // alertOnce is the run's one report here — it delivers the alert or, when
+    // suppressed as a repeat of the same condition, reports `done` itself
+    // (see deferRed's callers in red.ts for the same pattern). A `report`
+    // call after it would be a second report for one run.
+    await alertOnce({
+      kind: "deferred",
+      files: [],
+      priority: "fyi",
+      title: "full suite: deferred, host still loaded after the wait budget",
+      message: `The full-suite run at \`${batch.pinned.slice(0, 8)}\` skipped: the host was still loaded after ` +
+        "the 40-minute wait budget. Nothing was tested; the same commit will be retried on the next tick.",
+    });
+    return;
+  }
 
   let checkout: Checkout | null = null;
   try {
     checkout = await createCheckout(batch.pinned);
     const base = batch.base ?? batch.pinned;
     const ordinary = await runTier({ checkout, tier: "ordinary", base });
+    if (!tierProducedResults(ordinary)) refuse(`ordinary tier produced no TAP results (exit ${String(ordinary.exitCode)}):\n${ordinary.output}`);
     const careful = await runTier({ checkout, tier: "careful", base });
+    if (!tierProducedResults(careful)) refuse(`careful tier produced no TAP results (exit ${String(careful.exitCode)}):\n${careful.output}`);
     const output = `${ordinary.output}\n${careful.output}`;
     const runs = [ordinary, careful];
     const failures = failingFiles(runs);
