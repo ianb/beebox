@@ -4,9 +4,9 @@ description: "Who Bee Box fits, who it does not, and the requirements that end a
 # Who it is for
 
 Bee Box is a self-hosted personal assistant operated by a coding agent
-(Claude Code or Codex). A **box** is your data: one directory, also a git
-repository, holding **cards**, which are markdown files with validated YAML
-frontmatter. Terms are defined in [the glossary](concepts/glossary.md).
+(Claude Code or Codex). A **box** is your data: one directory, kept under
+version control with git, holding **cards**, files with a structured header
+the system checks. Terms are defined in [the glossary](concepts/glossary.md).
 
 ## It fits you if
 
@@ -24,7 +24,7 @@ frontmatter. Terms are defined in [the glossary](concepts/glossary.md).
 ## It does not fit you if
 
 - You want an app you install and sign into. There is no hosted service and
-  no published container image; you build from the repository.
+  no ready-made package; you build it yourself from the source code.
 - You want to use it from a phone only. There are phone surfaces, including
   capture pages, a web app, Telegram, and an iOS app built locally, but the
   box itself runs on a computer you keep running.
@@ -37,9 +37,9 @@ frontmatter. Terms are defined in [the glossary](concepts/glossary.md).
 
 A box can hold several people. The design states that boxes are shared, with
 one granularity: everyone in a box shares everything in it. Different groups
-need different boxes. Per-member identity beyond the login allowlist is not
-designed yet. The narrative in
+need different boxes. Per-member identity beyond the list of who's allowed
+to log in is not designed yet. The narrative in
 [architecture/01-what-is-this.md](architecture/01-what-is-this.md) shows a
 household using one box through a group chat.
 
-Details of the requirements are in [what it requires](06-what-it-requires.md).
+Details of the requirements are in [what it requires](08-what-it-requires.md).

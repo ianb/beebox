@@ -3,10 +3,10 @@ description: "Keeps recipes as structured cards that scale ingredient amounts to
 ---
 # Recipes
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. A recipe is a card with a structured body the
-recipe view understands.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. A recipe is a card with a structured body the recipe view understands.
 
 **What it does for you**
 
@@ -16,8 +16,8 @@ recipe view understands.
   ingredient or step they apply to, instead of buried in prose.
 - Links to a sub-recipe (a sauce inside a larger dish) so it can be reused
   across recipes instead of copy-pasted.
-- Records where a recipe came from — a cookbook, a person, a URL, or a
-  captured web page — so provenance isn't lost.
+- Records where a recipe came from, whether that's a cookbook, a person, a
+  URL, or a captured web page, so its origin isn't lost.
 
 **What it needs**
 
@@ -28,9 +28,9 @@ something you tell it, paste, or have it capture from a web page or photo.
 
 A recipe card's body uses a small set of markup tags (a serving-size yield,
 per-ingredient amounts, steps, substitutions, sub-recipe links) that the
-recipe view reads to render and scale the recipe. Recipes live under
-`_content/recipes/`; the agent files and organizes them there on request,
-not on a schedule.
+recipe view reads to display and scale the recipe. Recipes are stored in the
+box (under `_content/recipes/`, for the curious); the agent files and
+organizes them there on request, not on a schedule.
 
 **Limits**
 

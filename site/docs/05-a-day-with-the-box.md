@@ -4,7 +4,7 @@ description: "What using Bee Box looks like across one day: the morning pass, tr
 # A day with the box
 
 Bee Box is a personal assistant a coding agent runs over a **box**, one
-directory of markdown **cards** on a machine you control. This page describes
+directory of **cards** on a machine you control. This page describes
 the shape of a day. Terms are in [the glossary](concepts/glossary.md).
 
 **Overnight and morning.** The engine is idle until something happens. A
@@ -34,6 +34,7 @@ answer. Answering creates a follow-up job.
 
 **Chat.** Chat is the central surface, in the web interface or through
 Telegram, and threads resume across processing cycles. You can also ask for a
-page: the agent writes views over your own cards.
+page: a custom screen built to show your own cards the way you want to see
+them (see [views](capabilities/views.md)).
 
-See [what it can do](04-what-it-can-do.md).
+See [what it can do](06-what-it-can-do.md).

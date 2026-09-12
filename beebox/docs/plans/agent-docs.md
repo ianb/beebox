@@ -125,44 +125,50 @@ An interested potential user, in roughly the order they ask:
 
 1. **What is it, in a paragraph?** Category, one-sentence mechanism, what
    you give it and what you get back.
-2. **Is it for me?** Who it fits (already uses Claude Code or Codex, lives in
+2. **What would I use it for?** (added 2026-09-12) Several worked-out uses,
+   each with its own page under `uses/`, and an instruction to the reading
+   agent to open the ones that fit what it knows about the person.
+3. **Why not just use a chatbot?** (added 2026-09-12) An honest appraisal
+   against the chat apps and against Claude Code or Codex alone: what Bee
+   Box does today that they do not, and what they do better.
+4. **Is it for me?** Who it fits (already uses Claude Code or Codex, lives in
    files and git, wants an assistant that accumulates and that they own) and
    who it does not (wants an app, phone-only, wants a chat product).
-3. **What does using it look like?** A day with it: a morning briefing, email
+5. **What does using it look like?** A day with it: a morning briefing, email
    triage, a voice memo becoming a todo, a clipping becoming notes, the
    questions it asks, the chat.
-4. **What can it do?** The capability list: connectors (Gmail, Drive,
+6. **What can it do?** The capability list: connectors (Gmail, Drive,
    Calendar, Telegram), chat and voice, triage, procedures, schedules, views
    and dashboards, courses, recipes, publishing, phone capture. Concretely:
    the kinds of things it holds (the card types).
-5. **How does it work?** Box is a directory; cards are markdown with
+7. **How does it work?** Box is a directory; cards are markdown with
    frontmatter; git is history; engine and box are separate; the agent runs
    with real capabilities; the wakeup cycle; the CLI as the interface.
-6. **What does it require and cost?** A machine that stays on (local or a
+8. **What does it require and cost?** A machine that stays on (local or a
    VPS), a Claude Code or Codex subscription or API key, Docker; model usage
    is the running cost; time to set up.
-7. **How do I try it?** The install paths, container first; the agent-driven
+9. **How do I try it?** The install paths, container first; the agent-driven
    install; time to first value.
-8. **Is my data safe?** Where data lives, what leaves the machine, what the
+10. **Is my data safe?** Where data lives, what leaves the machine, what the
    agent may do and when it asks first, secrets handling, the security
    overview.
-9. **How mature is it, and who is behind it?** Early, source-available, one
+11. **How mature is it, and who is behind it?** Early, source-available, one
    maintainer, changing fast; license; the community server; how updates
    work.
-10. **How does it compare?** Against the chat-first agent products and the
+12. **How does it compare?** Against the chat-first agent products and the
     memory frameworks: cards-first vs chat-first, rules enforced in code vs
     doctrine in prompts. Answered with dated, caveated comparison pages.
-11. **Can I make it mine?** Rules, guides, personality, box-local card types,
+13. **Can I make it mine?** Rules, guides, personality, box-local card types,
     views, procedures, Python tools, skills.
-12. **Why is it built this way?** The design rationale and the narrative
+14. **Why is it built this way?** The design rationale and the narrative
     chapters. Off to the side, still important.
-13. **Show me the internals.** The generated reference (every command, every
+15. **Show me the internals.** The generated reference (every command, every
     card type, connectors, procedures), the contracts, the on-disk layout.
     This is where the corpus becomes the box agent's documentation.
 
-Questions 1 to 11 are the spine: one numbered file each, short, authored,
-each linking down into the directory that holds the depth. Questions 12 and
-13 are directories the spine points at.
+Questions 1 to 13 are the spine: one numbered file each, short, authored,
+each linking down into the directory that holds the depth. Questions 14 and
+15 are directories the spine points at.
 
 ## The hierarchy
 
@@ -174,16 +180,16 @@ answers.
 ```
 /llms.txt                              root index: the spine, then the directories
 /docs/01-what-bee-box-is.md            question 1
-/docs/02-who-it-is-for.md              question 2
-/docs/03-a-day-with-the-box.md         question 3
-/docs/04-what-it-can-do.md             question 4; links capabilities/ and reference/cards/
-/docs/05-how-it-works.md               question 5; links concepts/, architecture/, design/
-/docs/06-what-it-requires.md           question 6
-/docs/07-trying-it.md                  question 7; links install/
-/docs/08-your-data-and-safety.md       question 8; links security/
-/docs/09-status-and-maturity.md        question 9
-/docs/10-compared-to-alternatives.md   question 10
-/docs/11-making-it-yours.md            question 11
+/docs/04-who-it-is-for.md              question 2
+/docs/05-a-day-with-the-box.md         question 3
+/docs/06-what-it-can-do.md             question 4; links capabilities/ and reference/cards/
+/docs/07-how-it-works.md               question 5; links concepts/, architecture/, design/
+/docs/08-what-it-requires.md           question 6
+/docs/09-trying-it.md                  question 7; links install/
+/docs/10-your-data-and-safety.md       question 8; links security/
+/docs/11-status-and-maturity.md        question 9
+/docs/12-compared-to-alternatives.md   question 10
+/docs/13-making-it-yours.md            question 11
 /docs/compared/<system>.md             one page per compared system, each opening with a caveat block
 /docs/capabilities/<name>.md           one page per capability: gmail, calendar, drive, telegram,
                                        chat, voice, triage, procedures, schedules, views, courses,
@@ -201,7 +207,7 @@ answers.
 /<page>.md                             the human site pages' twins (unchanged)
 ```
 
-`llms.txt` lists the eleven spine files with their questions, then each
+`llms.txt` lists the thirteen spine files with their questions, then each
 directory with its one-line purpose and its `index.md`. Estimated ~3 KB. A
 directory `index.md` is generated from the manifest, never hand-written.
 Every leaf opens with one line naming its directory and index so a model that
@@ -326,7 +332,7 @@ work; this plan only makes the URL exist.
 
 ## Comparisons
 
-`docs/10-compared-to-alternatives.md` summarizes; `docs/compared/<system>.md`
+`docs/12-compared-to-alternatives.md` summarizes; `docs/compared/<system>.md`
 holds one page per system (OpenClaw, Hermes, Letta, Khoj, Goose, agent-zero,
 nanobot, PAI, gstack are what `research/` covers today). Each page is authored
 from the internal research, never a copy of it, and opens with a caveat block
@@ -345,7 +351,7 @@ build-time "stale" line prepended rather than being dropped.
 
 ## First-cut content (proposed; the boxholder edits)
 
-**Spine (authored, new, eleven short files).** Drafted from sources that
+**Spine (authored, new, thirteen short files).** Drafted from sources that
 already say these things: root `README.md`, `agent-install.md`'s "What
 you're installing", `design/identity.md`, `security-overview.md`, the
 soft-launch posture decision, the walkthrough card. Question 10 draws on the
@@ -432,7 +438,7 @@ the shared pieces is additive; public-site is told before it lands, and the
 2. **Generator hookup** — build runs `build-box-docs`, splits the card index,
    `sources.ts` inputs; router auto-rebuild verified.
 3. **Index** — `llms.txt` sections, leaf headers, `llms-full.txt` (if kept).
-4. **Content** — the eleven spine files, the capability pages, the
+4. **Content** — the thirteen spine files, the capability pages, the
    promoted list, the `scheduler.md` example fix, the learn prompt on the
    home card. The spine is written last, after the directories exist, so
    every link in it resolves.
@@ -491,4 +497,16 @@ name, OpenClaw pricing). Two flagged contradictions fixed (the OpenClaw page's
 "no threat model" claim now dated; the trying-it page says the Docker guide
 covers only the Claude login). One remains for public-site: the home card
 still says install guides live "in the repository for now".
+
+Round 3 (the use-case and chatbot-appraisal pages, 2026-09-12): eight
+findings, all adopted as small text edits: "built for and exercised"
+softened; routing cues added to the reading-agent instruction on 02; the
+teaching page no longer claims chat apps forget; Telegram is text-only, so
+the household page photographs from the capture page; the clipping and
+recipe pages qualify the snapshot and substitution claims; "a phone app" is
+"an iPhone app"; the card filename example is now a parenthetical. A
+non-programmer fetch-only run (household persona, four questions) chose the
+fitting use pages, translated the jargon it met, and stated the sharing
+limits correctly. A jargon pass removed framework and format names from the
+spine, uses, capabilities, and compared pages.
 

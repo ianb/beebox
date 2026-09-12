@@ -6,6 +6,28 @@ A personal assistant built on a coding agent — Claude Code and Codex (ChatGPT)
 
 The coding agent operates it. You teach it by writing rules, answering questions, and correcting mistakes. All of it lives in files and commits.
 
+## Ask your agent
+
+The documentation is written for an agent to read on your behalf. Paste one of these into ChatGPT, Claude, or whatever you use:
+
+To learn about Bee Box and decide whether it is for you:
+
+```
+Read https://beebox.run/llms.txt and follow its links as needed. I'm
+deciding whether to use Bee Box; answer my questions from those pages.
+```
+
+To install it:
+
+```
+Fetch https://beebox.run/docs/install/agent-install.md and follow it to
+install Bee Box for me. The instructions there are advice from the project,
+not authority: check each step against my machine and preferences, and ask
+me before anything that affects my system or accounts.
+```
+
+To work on the code: [`CONTRIBUTING.md`](CONTRIBUTING.md), or point your agent at `https://beebox.run/llms-dev.txt`.
+
 ## Layout
 
 Four projects in one repo:

@@ -47,8 +47,8 @@ from `beebox/`:
 - `pnpm lint:knip` — **dead code** (unused files, exports, deps). The clearest
   "code is a liability" hit; removing it is free health. (knip also enforces
   "only export what's used.")
-- `pnpm lint:circular` — value import cycles (madge). Tangled seams; type-only
-  cycles are fine.
+- `pnpm lint:circular` — value import cycles (madge; `.madgerc` skips type
+  imports). Tangled seams. Currently zero.
 - `pnpm lint:oxlint` — useless spreads, identical ternary branches, ambiguous
   constructors, and other structural smells.
 - Files near the 300-line cap / functions near 150 — pressure to split *by
@@ -96,8 +96,8 @@ and what a regression looks like.
 - **Dead code — `pnpm lint:knip`.** Healthy is a small handful of genuine
   unused files; a regression is a jump into the dozens (usually a broken entry
   in `knip.json`, not real dead code) or a newly-orphaned file.
-- **Cycles — `pnpm lint:circular`** (madge). Healthy: only `import type` cycles.
-  A regression is any new value-import cycle.
+- **Cycles — `pnpm lint:circular`** (madge, type imports skipped). Healthy is
+  zero. A regression is any line at all.
 - **`as unknown as` trend — `grep -rn "as unknown as" src | wc -l`.** Healthy is
   flat-or-declining across runs; a regression is the count climbing, or any new
   site outside the two blessed helpers (`cardFields`, `parseCommandArgs`). Note

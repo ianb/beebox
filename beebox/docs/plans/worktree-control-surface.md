@@ -593,8 +593,10 @@ shape.
   merged, clean, no live agent — is unchanged.
 - **The `bin/browse` / `pnpm exec` audit** that
   [dev-scripts-into-bin](../../../issues/closed/docs-and-chores/2026-05-26-dev-scripts-into-bin.md)
-  also asks for. This plan applies that issue's principle to worktree tooling
-  only; the broader audit stays open.
+  also asked for. This plan applied that issue's principle to worktree tooling
+  only; the broader audit ran on 2026-09-12 and found the remaining `pnpm exec`
+  calls are runners (tsx/tap/eslint/tsc), not project tools — so that issue is
+  now closed.
 
 ## Open design questions
 
