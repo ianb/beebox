@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execa } from "execa";
+import { newLines, reportLines } from "./lib.ts";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 class MissingScheduleStateError extends Error {
@@ -28,10 +29,7 @@ async function report(command: "lint:oxlint" | "lint:circular"): Promise<string[
   });
   const output = result.all ?? "";
   console.log(output);
-  const lines = output.split("\n")
-    .map((line) => line.trimEnd())
-    .filter((line) => line !== "" && !line.startsWith(">") && !line.includes("ELIFECYCLE"))
-    .filter((line) => !/^Finished in |^Processed \d+ files/u.test(line));
+  const lines = reportLines(output);
   if (result.exitCode !== 0 && lines.length === 0) {
     throw new LintCommandError(command, result.exitCode);
   }
@@ -53,8 +51,7 @@ if (previous === null) {
   process.exit(0);
 }
 
-const known = new Set(previous);
-const added = current.filter((line) => !known.has(line));
+const added = newLines(previous, current);
 if (added.length === 0) process.exit(0);
 const body = [
   `Supplemental lint reports ${String(added.length)} new line${added.length === 1 ? "" : "s"}:`,
