@@ -25,6 +25,12 @@ enum NativeVoiceTurnEvent: Equatable {
     /// The microphone is already down in every one of those, so the turn is
     /// over: it must not sit "active" waiting to reopen on the next silence.
     case dictationFailed
+    /// Dictation went idle without reporting a failure and without a start
+    /// pending. Not every way a recognizer can stop announces itself: an audio
+    /// session that never associates, a route change that ends the recording,
+    /// a start cancelled below the turn. `.dictationFailed` covers the ones
+    /// that say so; this covers the ones that just stop.
+    case dictationWentIdle
 }
 
 struct NativeVoiceTurnState: Equatable {
@@ -65,6 +71,22 @@ struct NativeVoiceTurnState: Equatable {
             waitingForSpeech = false
             // No `.stopDictation`: whatever failed already tore the recognizer
             // down, and re-issuing the command would only re-run that teardown.
+            return .none
+        case .dictationWentIdle:
+            // A turn holding the microphone closed while the box speaks is idle
+            // ON PURPOSE and must survive to reopen — that pause is the whole
+            // point of `waitingForSpeech`. Any other idle means the recognizer
+            // is down and this turn is over.
+            //
+            // Without this the turn sat active indefinitely: the composer
+            // offered to stop a recording that was not happening, over a text
+            // field its own lock had already released, with the screen held
+            // awake for a turn nobody was in. Like `.dictationFailed`, it
+            // issues no `.stopDictation` — the recognizer is already down.
+            guard isActive, waitingForSpeech == false else {
+                return .none
+            }
+            isActive = false
             return .none
         case .speechPlaybackChanged(let playing):
             guard playing != speechPlaybackActive else {

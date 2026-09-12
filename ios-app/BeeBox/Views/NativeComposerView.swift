@@ -112,6 +112,12 @@ struct NativeComposerView: View {
             if case .failed = state {
                 applyVoiceTurn(.dictationFailed)
             }
+            // Idle with nothing coming up means the recognizer is down. The
+            // hands-free reopen after a send does not trip this: it commands the
+            // next start before this fires, so `isStarting` is already true.
+            if state == .idle, dictation.isStarting == false {
+                applyVoiceTurn(.dictationWentIdle)
+            }
         }
         .onChange(of: dictation.interruptionCount) {
             applyEarcon(.recordingInterrupted)

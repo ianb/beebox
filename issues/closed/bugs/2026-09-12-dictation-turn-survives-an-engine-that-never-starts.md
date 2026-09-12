@@ -1,9 +1,10 @@
 ---
 title: "A dictation turn stays open when the engine never starts, leaving a stop control over an editable composer"
-workstream: unattached
+workstream: ios-pairing-papercuts
 area: beebox
 labels: [ios, voice]
 filed-by: agent
+resolution: implemented
 discovered-by: agent
 discovered-in: worktree-ios-pairing-papercuts — verifying the dictation keyboard fix on a simulator
 ---
@@ -27,7 +28,16 @@ The simulator is not the interesting part — it is the demonstration that
 microphone is taken by another app, or whose session is interrupted during
 bring-up, reaches the same shape.
 
-Two candidate fixes, and they are not the same:
+Fixed 2026-09-12 with the first of the two below. `NativeVoiceTurnEvent` gained
+`.dictationWentIdle`, which the composer sends when `dictation.state` reaches
+`.idle` with no start pending; the turn closes unless it is the deliberate pause
+while the box speaks, which `waitingForSpeech` already names. The hands-free
+reopen after a send does not trip it — that path commands the next start before
+the state change is observed, so `isStarting` is already true. Covered by
+`NativeVoiceTurnTests` (the unexpected idle, the speech pause surviving it and
+still resuming, and idle after the turn already closed).
+
+The two candidates were:
 
 - Close the turn when the engine reports it is neither recording nor starting
   after a start was requested — the turn's state machine currently trusts the
