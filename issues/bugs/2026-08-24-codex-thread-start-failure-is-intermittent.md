@@ -6,8 +6,6 @@ labels: [codex, chat]
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-honest-diagnostics — while making codex chat failures report their real phase and stack
-activate-on: 2026-09-12
-category: bugs
 ---
 
 > **Deferred 2026-09-05 → 2026-09-12 (boxholder).** When this activates, check
