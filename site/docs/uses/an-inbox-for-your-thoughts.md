@@ -37,6 +37,12 @@ silently guessed, so some notes need a second look. Per-message voice settings
 apply in chat only. And the box does not anticipate: it will not notice on its
 own that a thought you left needs acting on.
 
+**What makes it possible**
+
+- **Capture sessions** ([phone capture](../capabilities/phone-capture.md)): one recording is kept as a single readable timeline, silences and photos in place.
+- **Triage** ([triage](../capabilities/triage.md)): anything arriving unsorted is classified and filed with a confidence level, so you never have to pick a destination.
+- **The questions loop** ([questions](../capabilities/questions.md)): it asks and waits rather than guessing, and never synthesizes an answer on your behalf.
+
 **Read next.** [Questions](../capabilities/questions.md),
 [memo](../reference/cards/memo.md), [audio](../reference/cards/audio.md),
 [record](../reference/cards/record.md),

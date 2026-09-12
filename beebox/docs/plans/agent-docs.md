@@ -510,3 +510,11 @@ fitting use pages, translated the jargon it met, and stated the sharing
 limits correctly. A jargon pass removed framework and format names from the
 spine, uses, capabilities, and compared pages.
 
+Later the same day: a `capabilities/web-interface.md` page and a "What you
+see" section on the first page and preamble, after a "what is it" answer
+described only files and an agent; each use page gained "What makes it
+possible" (the distinctive features it leans on, with the design rationale
+where a design doc gives one), and the uses overview gained the reverse
+index, feature to uses, so reading backwards shows why each feature exists.
+`bbx` is named only on the how-it-works page, as the agent's own tool.
+

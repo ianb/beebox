@@ -13,6 +13,7 @@ its type; a **box** is the directory of them. One page per capability is in
 - [Calendar](capabilities/calendar.md): two-way Google Calendar sync.
 - [Drive](capabilities/drive.md): mirror Google Docs, Sheets, and folders both ways.
 - [Telegram](capabilities/telegram.md): chat with the box from a messaging app.
+- [The web interface](capabilities/web-interface.md): dashboard, browser, questions, map, history, settings, and a display for each kind of card, on desktop and phone.
 - [Chat](capabilities/chat.md): the central web conversation, with resumable threads.
 - [Voice](capabilities/voice.md): dictation, transcription, and spoken replies.
 - [Phone capture](capabilities/phone-capture.md): record, photograph, and upload from a phone.

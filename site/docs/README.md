@@ -15,7 +15,13 @@ kept as files under version control. A box is the data: one directory on
 disk, kept under version control with git, holding the cards, the
 configuration, and the state. A card is one file: a structured header the
 system checks against the card's type, plus optional text. The files on disk
-are the state and git is the history; the web interface and chat sit on top.
+are the state and git is the history. On top of them is a full web
+application, on desktop and phone: a dashboard, a chat with the agent (typed
+or spoken), a browser over everything in the box, the queue of questions the
+agent is asking, a map of notable places, a history of every change,
+settings; plus a display built for each kind of card (a recipe as a recipe,
+a course, a document, a spreadsheet, a photo), an iPhone app, and a browser
+extension. The files are the substance; the application is how it is used.
 
 It fits someone who already runs a coding agent, has a machine that stays on,
 is comfortable with files and git, and wants an assistant whose memory is

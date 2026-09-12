@@ -36,6 +36,11 @@ match against places you named, not tracking. Person cards are the box's own
 contacts: the documentation describes no sync from a phone's address book or
 Google Contacts.
 
+**What makes it possible**
+
+- **Typed cards with validated fields** ([cards](../concepts/cards.md)): aliases, a role, an address, a coordinate and a radius are checked fields rather than prose, so one person named twenty ways stays one card.
+- **Briefings** ([briefing](../reference/cards/briefing.md)): a directory's standing context names its key people by linking their cards, so who matters here is written down once.
+
 **Read next.** [The glossary](../concepts/glossary.md),
 [person](../reference/cards/person.md), [place](../reference/cards/place.md),
 [briefing](../reference/cards/briefing.md),

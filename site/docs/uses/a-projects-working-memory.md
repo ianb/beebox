@@ -37,6 +37,13 @@ notice on its own that a project has gone quiet: it keeps track, reminds you, an
 runs what you asked for, and it does not anticipate. Open questions and
 outstanding todos are not badged in the navigation, so you find them by looking.
 
+**What makes it possible**
+
+- **Landmarks** ([landmarks](../concepts/landmarks.md)): the editorial layer over a flat tree, saying which few spots are the main pathways; the same card makes the directory a filing destination.
+- **Briefings** ([briefing](../reference/cards/briefing.md)): the primary place for what every agent working here needs to know, so a chat opened there starts informed.
+- **Views** ([views](../capabilities/views.md)): a display built for a kind of card, which is what makes the todo list assembled rather than maintained.
+- **Triage** ([triage](../capabilities/triage.md)): once the directory is a destination, new material files itself there instead of waiting in an inbox.
+
 **Read next.** [Triage](../concepts/triage.md),
 [landmark](../reference/cards/landmark.md),
 [briefing](../reference/cards/briefing.md),

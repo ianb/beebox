@@ -1,5 +1,5 @@
 ---
-description: "What Bee Box is: a self-hosted assistant a coding agent operates over a directory of markdown cards; how things get in (voice, phone, browser, Telegram, email sync), what comes out, and what the agent builds inside it."
+description: "What Bee Box is: a self-hosted assistant with a full web app, a chat, and a phone app, operated by a coding agent over cards you own; what you see, how things get in, what comes out, and what the agent builds inside it."
 ---
 # What Bee Box is
 
@@ -20,6 +20,17 @@ commit you can read. The web interface and chat are built over a box.
 The engine and the box are separate. The engine is the software the project
 publishes; the box is your data. You can update the engine without touching
 the box.
+
+**What you see.** A full web application, on desktop and phone: a dashboard
+of what needs you; a chat with the agent, typed or spoken; a browser over
+everything in the box with tabs for what you have open; the queue of
+questions the agent is asking; a curated map of the box's notable places; a
+history of every change; settings and admin. Each kind of card has its own
+display: a recipe laid out as a recipe, a course with its lessons and your
+progress, a document, a spreadsheet, a PDF, a photo, a folder. There is an
+iPhone app, a browser extension, and a Telegram presence. The files are the
+substance underneath; the application is how you use it. See
+[the web interface](capabilities/web-interface.md).
 
 **How things get in.** More ways than a chat box:
 
