@@ -6,7 +6,7 @@ controls, operated by a coding agent (Claude Code or Codex). The user feeds
 it inputs: voice memos, emails, photographs, web clippings, chat messages.
 The agent turns those into cards, takes the actions it understands, and asks
 a question when it does not. Inputs arrive through web chat (typed or
-spoken), a phone app and capture page (voice memos, photos, scanned paper), a
+spoken), an iPhone app and a capture page for any phone (voice memos, photos, scanned paper), a
 browser extension that clips the page you are reading, Telegram, and
 connectors that sync Gmail, Google Calendar, and Google Drive. The agent has
 real tools and builds inside the box: custom pages for viewing your cards,
