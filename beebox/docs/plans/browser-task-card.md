@@ -1,6 +1,6 @@
 ---
 title: "browser-task card: a prompt card that is its own inbox"
-status: draft
+status: active
 workstream: browser-tasks
 issues:
   - ../../../issues/features/2026-08-13-dead-drop-ingress-for-external-automations.md
