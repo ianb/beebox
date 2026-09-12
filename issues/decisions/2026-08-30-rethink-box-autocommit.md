@@ -62,20 +62,33 @@ boxholder has no intuition on the direction yet and none is assumed here.
 
 ### What the history actually looks like
 
-One box, last 7 days: **469 commits** (~67/day), `.git` at **1.3 GB**.
+Measured across the real boxes, 7 days. (A local dev box was measured first and
+discarded: it is image-generation heavy and 54% of its commits came from one
+trick, which says more about that box than about autocommit. These are the
+boxes in actual use.)
 
-- **252 of them (54%)** are a single trick: `Auto-commit changes from trick:
-  generate-image`.
-- **99 (21%)** touch only `_bookkeeping/` — no content change at all. Most are
-  the procedure triple: `Start procedure:` / `[procedure] <step>:` /
-  `Complete procedure:`, where only the middle one carries content.
+| box | commits/7d | bookkeeping-only | total commits | `.git` |
+|---|---|---|---|---|
+| A (capture-heavy) | 322 | — | 1,132 | 465M |
+| B (household) | 120 | **38 (32%)** | 3,054 | 317M |
+| C (media archive) | 91 | **22 (24%)** | 136,369 | **11G** |
+| D (personal, long-lived) | 62 | **26 (42%)** | 204,537 | 432M |
+| E (course) | 46 | — | 335 | 62M |
+| F (small) | 32 | — | 157 | 8.1M |
 
-So roughly three quarters of commits are bookkeeping or one trick's catch-all,
-and the meaningful units are buried among them. The mid-state problem shows up
-in ordinary traffic too, not just as an edge case: one sampled
-`generate-image` commit swept in an unrelated `ilex-appearance.md` edit and a
-chat card alongside the image it was actually producing, because the trick
-commits with `stageAll`.
+Two distinct problems, and they do not share a box:
+
+- **Volume is trick-driven where it is high.** box A's 322 is mostly one trick (143 page captures, 18 image saves). A trick commits with `stageAll`
+  after it runs, so its commit absorbs whatever else was dirty.
+- **Bookkeeping is a constant tax everywhere.** A quarter to over 40% of
+  commits touch only `_bookkeeping/` — no content change at all. On the quieter
+  boxes the top subjects are almost entirely machinery: `Sync templates from
+  upstream`, `Refresh generated docs`, `Tick: housekeeping`, `GC procedure
+  runs`, and the procedure triple (`Start procedure:` / `[procedure] step` /
+  `Complete procedure:`), where only the middle one carries content.
+- **History weight is not commit count.** box C is 11G of `.git` on 91 commits a week, and box D carries 204,537 commits total. Those are
+  different failure modes — media in objects versus accumulated history — and
+  the cadence decision only touches one of them.
 
 ### Where commits come from
 
