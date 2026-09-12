@@ -42,11 +42,9 @@
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
 import { invariant } from "../beebox/src/lib/invariant.js";
-import { browseDetailMatches } from "./smoke-browse.js";
 import { findCardRow } from "./smoke-card-open.js";
 import {
   BrowseListEmptyError,
-  CardContentMissingError,
   CardRefUnresolvedError,
   CardViewMissingError,
   ChatShellMissingError,
@@ -256,17 +254,13 @@ function buildSteps(input: {
       invariant(source.trim().startsWith("card:"), "selected Browse row lacks card provenance");
       const expectedPath = source.trim().slice("card:".length);
       await session.clickRef(ref);
-      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('#bbx-browse-open-card')).some(a => decodeURI(new URL(a.href).pathname).endsWith('/views/' + ${JSON.stringify(expectedPath)}))`]);
+      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('[data-workspace-card]')).some(node => !node.hidden && node.getAttribute('data-workspace-card') === ${JSON.stringify(expectedPath)})`]);
       await session.waitForReady();
       const snapshot = await session.snapshot();
       const url = await session.getUrl();
-      if (!browseDetailMatches(url, expectedPath) || refFor(snapshot, { role: "link", name: "Open full view →" }) === null) {
-        throw new CardViewMissingError({ name: row.name, url, snapshot });
-      }
-      // Browse itself now has a card title; only the selected detail proves a file loaded.
-      const { stdout: detail } = await session.run(["snapshot", "-s", ".bbx-interface-browse-panel > .bbx-interface-card-desk"]);
+      const { stdout: detail } = await session.run(["snapshot", "-s", `[data-workspace-card=${JSON.stringify(expectedPath)}] [role="tabpanel"]`]);
       if (!cardViewRendered(detail)) {
-        throw new CardContentMissingError({ name: row.name, snapshot });
+        throw new CardViewMissingError({ name: row.name, url, snapshot });
       }
     },
   });

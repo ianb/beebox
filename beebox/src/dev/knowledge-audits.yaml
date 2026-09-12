@@ -32,13 +32,17 @@ tests:
       - '(?:authored|saved)[\s\S]{0,100}(?:history|view)[\s\S]{0,100}(?:plural|multiple|allowed|remain)'
     tags: [interface-cards]
 
+  # Status (2026-09-11, Claude): 1/1 pass against the clean standalone
+  # cards-audit fixture after adding normal-file workspace navigation coverage.
   - id: interface-cards-browse-state
     prompt: >
       I want to browse _content/recipes and then a child directory. Should you
       create a Browse card per directory or save the current directory in its
-      frontmatter? Explain the target, state, and Back behavior. Consult the
-      installed reference if needed; do not edit files.
-    watch_for: "Reads interface-card guidance and explains Browse identity and state without changing files"
+      frontmatter? Explain the target, state, and Back behavior. When I select a
+      normal file, where does it open on desktop and mobile: in Browse's own
+      internal split, or as workspace navigation? Consult the installed reference
+      if needed; do not edit files.
+    watch_for: "Reads interface-card guidance and explains Browse identity, state, and normal-file workspace navigation without changing files"
     expected_level: knows_about
     should_read_any:
       - "node_modules/beebox/box-docs/interface-cards.md"
@@ -47,6 +51,8 @@ tests:
     correct_matches:
       - '(?:not|never|no|without|neither)[\s\S]{0,100}(?:frontmatter|edit|writ)|frontmatter[\s\S]{0,100}(?:not|never)'
       - '(?:same|one|single|canonical)[\s\S]{0,80}(?:card|tab|Browse)'
+      - '(?:right workspace pane|right pane|workspace tab)[\s\S]{0,180}(?:mobile|single-card)|(?:mobile|single-card)[\s\S]{0,180}(?:right workspace pane|right pane|workspace tab)'
+      - '(?:not|no|rather than|instead of|doesn.t)[\s\S]{0,100}(?:internal split|split inside|Browse split)|(?:internal split|split inside|Browse split)[\s\S]{0,100}(?:not|no|rather than|instead)'
     tags: [interface-cards]
 
   - id: interface-cards-history-target

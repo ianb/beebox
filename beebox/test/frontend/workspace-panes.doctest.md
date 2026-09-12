@@ -13,8 +13,8 @@ import {
 } from "../../src/frontend/src/components/chat/workspace/workspace-state.js";
 
 const target = (path, viewer = null) => ({ path, viewer, params: {}, viewState: null });
-const open = (state, path, at, viewport = "desktop", originatingPane) =>
-  reduceWorkspace(state, { type: "openCard", target: target(path), label: path, at, viewport, originatingPane }).state;
+const open = (state, path, at, viewport = "desktop", originatingPane, destinationPane) =>
+  reduceWorkspace(state, { type: "openCard", target: target(path), label: path, at, viewport, originatingPane, destinationPane }).state;
 const panes = (state) => `${state.panes.left.paths.join(",")}|${state.panes.right.paths.join(",")}`;
 ```
 
@@ -86,6 +86,52 @@ state.layout.kind
 state = reduceWorkspace(state, { type: "backToSplit", pane: "right" }).state;
 state.layout.kind
 => split
+```
+
+## An explicit desktop destination can reveal a card beside a focused source
+
+Browse uses this hint for files: files go to the right while the retained
+Browse tab stays on the left. Crossing out of a focused left pane restores the
+split; opening from Browse when it already occupies the right adds another tab
+there instead of duplicating or moving Browse. Mobile keeps its single-card
+placement rules.
+
+```ts
+let state = open(createEmptyWorkspaceState(), "browse", 1);
+state = reduceWorkspace(state, { type: "focusPane", pane: "left" }).state;
+state = open(state, "file-a", 2, "desktop", "left", "right");
+[panes(state), state.layout.kind].join("|")
+=> browse|file-a|split
+
+state = open(state, "browse-right", 3, "desktop", "right");
+state = open(state, "file-b", 4, "desktop", "right", "right");
+panes(state)
+=> browse|file-a,browse-right,file-b
+
+const mobile = open(createEmptyWorkspaceState(), "mobile-file", 1, "mobile", undefined, "right");
+panes(mobile)
+=> mobile-file|
+```
+
+An explicit desktop destination also relocates an existing card. Without that
+hint, opening a card retained in the other pane keeps the pre-existing focus
+behavior and moves focus to its owning pane.
+
+```ts
+let relocation = open(createEmptyWorkspaceState(), "file", 1);
+relocation = open(relocation, "browse", 2, "desktop", "left");
+relocation = open(relocation, "file", 3, "desktop", "left", "right");
+panes(relocation)
+=> browse|file
+
+let focused = open(createEmptyWorkspaceState(), "left", 1);
+focused = reduceWorkspace(focused, { type: "showChat", pane: "left", viewport: "desktop" }).state;
+focused = open(focused, "right", 2);
+focused = reduceWorkspace(focused, { type: "restoreCards", pane: "left", viewport: "desktop" }).state;
+focused = reduceWorkspace(focused, { type: "focusPane", pane: "left" }).state;
+focused = open(focused, "right", 3);
+JSON.stringify({ panes: panes(focused), layout: focused.layout })
+=> {"panes":"left|right","layout":{"kind":"focus","pane":"right"}}
 ```
 
 ## Mobile foreground is independent from desktop layout

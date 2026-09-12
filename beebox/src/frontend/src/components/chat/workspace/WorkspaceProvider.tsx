@@ -1,5 +1,5 @@
 import { workspaceRouteTarget, workspaceProjectionSearch } from "../../../lib/system-card-navigation";
-import { normalizeBrowseTarget } from "../../../lib/browse-card-state";
+import { browseStateToViewState, normalizeBrowseTarget, parseBrowseState, type BrowseState } from "../../../lib/browse-card-state";
 import { decideWorkspaceNavigation, legacyOverlayActions, revealConversationActions, workspaceDisplayReady, workspaceHistoryTarget, workspaceOpenShouldReplace, workspaceRouteBound, shouldRestoreMobileWithBack, type WorkspaceHistoryEntry } from "./workspace-history";
 import { createContext, useContext, useEffect, useRef, useMemo, useCallback, useSyncExternalStore, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams, useRouterState } from "@tanstack/react-router";
@@ -11,10 +11,12 @@ import { projectWorkspace, reduceWorkspace, workspaceTabPaths, type WorkspaceAct
 import { serializeWorkspaceState, conversationStorageScope } from "./workspace-storage";
 import { createWorkspaceBrowserStore } from "./workspace-browser-store";
 import type { ConversationTarget } from "@shared/chat-composer-binding";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 
 declare module "@tanstack/history" { interface HistoryState { bbxWorkspace?: WorkspaceHistoryEntry; bbxWorkspaceRevealConversation?: boolean; bbxConversationOverlay?: boolean } }
 const Workspace = createContext<ReturnType<typeof useWorkspaceController> | null>(null);
 type WorkspaceBrowserStore = ReturnType<typeof createWorkspaceBrowserStore>;
+interface BrowseDetailHandoff { source: BrowseState; detail: ViewTarget }
 
 function revealStoredConversation(input: {
   store: WorkspaceBrowserStore;
@@ -31,6 +33,29 @@ function revealStoredConversation(input: {
   const cardPath = incoming?.path ?? projectWorkspace(store.get(), viewport).foregroundPath;
   if (cardPath === null) return;
   for (const action of revealConversationActions({ state: store.get(), cardPath, viewport })) store.dispatch(action);
+}
+
+function replaceBrowseDetailTarget(input: { store: WorkspaceBrowserStore; source: BrowseState }): boolean {
+  const { store, source } = input;
+  const current = store.get();
+  const path = SYSTEM_CARD_PATHS.browse;
+  const tab = current.tabs[path];
+  const parsed = tab === undefined ? null : parseBrowseState(tab.target);
+  if (tab === undefined || parsed === null || !parsed.ok || JSON.stringify(parsed.state) !== JSON.stringify(source)) return false;
+  store.replace({ ...current, tabs: { ...current.tabs, [path]: { ...tab,
+    target: { ...tab.target, viewState: browseStateToViewState({ directory: source.directory }) } } } });
+  return true;
+}
+
+function performBrowseDetailHandoff(input: BrowseDetailHandoff & {
+  store: WorkspaceBrowserStore;
+  viewport: "mobile" | "desktop";
+  dispatch: (action: WorkspaceAction, replace?: boolean) => void;
+}): boolean {
+  if (!replaceBrowseDetailTarget({ store: input.store, source: input.source })) return false;
+  input.dispatch({ type: "openCard", target: input.detail, label: input.detail.path,
+    at: Date.now(), viewport: input.viewport, destinationPane: "right" }, true);
+  return true;
 }
 
 export function useWorkspace() { return useContext(Workspace); }
@@ -63,7 +88,6 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
   const observed = useRef("");
   const previousMobile = useRef(mobile);
   useEffect(() => { store.select(identity); }, [identity, store]);
-
   // Router writes are imperative; stable callback prevents a restore/write feedback loop.
   const projectHistory = useCallback((replace: boolean, options?: { returnRevision?: number; retainedTarget?: ViewTarget }) => {
     if (!routeReady) return;
@@ -143,10 +167,10 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
       }
     });
   }
-  function open(incoming: ViewTarget, hint?: NavigateHint & { originatingPane?: PaneId }) {
+  function open(incoming: ViewTarget, hint?: NavigateHint & { originatingPane?: PaneId; destinationPane?: PaneId }) {
     const target = normalizeBrowseTarget(incoming);
     const action: WorkspaceAction = { type: "openCard", target, label: hint?.label ?? target.path,
-      at: Date.now(), viewport, originatingPane: hint?.originatingPane };
+      at: Date.now(), viewport, originatingPane: hint?.originatingPane, destinationPane: hint?.destinationPane };
     const before = store.get();
     const after = reduceWorkspace(before, action).state;
     dispatch(action, workspaceOpenShouldReplace({ before, after, viewport }));
@@ -183,7 +207,8 @@ function useWorkspaceController(conversationTarget: ConversationTarget | undefin
     const paths = workspaceTabPaths(state, { viewport, pane });
     return paths.flatMap((path) => state.tabs[path] ? [state.tabs[path]] : []);
   }
-  return { state, store, mobile, projection, transcriptVisible, ready, displayReady, dispatch, open, restoreCards, updateTarget, retargetCard, adopt, activate, tabsForPane,
+  return { state, store, mobile, projection, transcriptVisible, ready, displayReady, dispatch, open,
+    handoffBrowseDetail: (input: BrowseDetailHandoff) => performBrowseDetailHandoff({ ...input, store, viewport, dispatch }), restoreCards, updateTarget, retargetCard, adopt, activate, tabsForPane,
     notice,
     activeView: projection.foregroundPath ? state.tabs[projection.foregroundPath] ?? null : null,
     onZoomView: (view: { target: ViewTarget; label: string }) => open(view.target, { label: view.label }),

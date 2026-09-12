@@ -4,7 +4,7 @@ import { registerFileType, type RendererProps } from "./index";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
 import { BrowseBody } from "../pages/browse/BrowsePage";
 import { BrowseLocationError } from "../pages/browse/components/BrowseLocationError";
-import { browseParent, browseStateToViewState, legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
+import { legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
 import { trpc } from "../lib/trpc";
 import { type ViewState, type ViewTarget } from "../lib/view-url";
 import { BrowseLoading } from "../pages/browse/components/BrowseLoading";
@@ -39,6 +39,7 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
   const focused = workspace?.activeView?.target.path === SYSTEM_CARD_PATHS.browse;
   const utils = trpc.useUtils();
   const navigationVersion = useRef(0);
+  const handedOffDetail = useRef<string | null>(null);
   const stateKey = JSON.stringify(state);
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const directory = trpc.files.kind.useQuery({ path: state.directory });
@@ -53,6 +54,16 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
     setNavigationError(null);
     return () => { navigationVersion.current += 1; };
   }, [stateKey]);
+  useEffect(() => {
+    if (state.detail === undefined) {
+      handedOffDetail.current = null;
+      return;
+    }
+    if (!visible || !valid || workspace === null || !workspace.ready) return;
+    const detailKey = JSON.stringify(state.detail);
+    if (handedOffDetail.current === detailKey) return;
+    if (workspace.handoffBrowseDetail({ source: state, detail: state.detail })) handedOffDetail.current = detailKey;
+  }, [state, state.detail, state.directory, valid, visible, workspace]);
   async function navigate({ target, method, missingKind }: {
     target: ViewTarget;
     method: "push" | "replace";
@@ -66,11 +77,21 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
         missingKind,
       });
       if (version !== navigationVersion.current) return;
-      if (next.viewState) onChange(next.viewState, method);
+      const parsed = parseBrowseState(next);
+      if (!parsed.ok) { setNavigationError(parsed.error); return; }
+      if (parsed.state.detail) workspace?.open(parsed.state.detail, { label: parsed.state.detail.path, destinationPane: "right" });
+      else if (next.viewState) onChange(next.viewState, method);
     } catch (error) {
       if (version !== navigationVersion.current) return;
       setNavigationError(error instanceof Error ? error.message : "Could not open Browse location.");
     }
+  }
+  function openTarget(target: ViewTarget) {
+    navigationVersion.current += 1;
+    setNavigationError(null);
+    workspace?.open(target, target.path === SYSTEM_CARD_PATHS.browse
+      ? { label: target.path }
+      : { label: target.path, destinationPane: "right" });
   }
   const reset = () => { navigationVersion.current += 1; onChange({ directory: "" }, "replace"); };
   if (browseLocationLoading({
@@ -86,10 +107,10 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
       method: options.replace ? "replace" : "push",
       missingKind: options.kind,
     }); }}
-      onDetailNavigate={(target, method) => {
-        if (state.detail?.path === target.path && browseParent(target.path) === state.directory) { navigationVersion.current += 1; onChange(browseStateToViewState({ ...state, detail: target }), method); }
-        else void navigate({ target, method, missingKind: "file" });
-      }} />
+      onFileNavigate={openTarget}
+      onLinkNavigate={(target) => target.path === SYSTEM_CARD_PATHS.browse
+        ? openTarget(target)
+        : void navigate({ target, method: "push", missingKind: "file" })} />
   </>;
 }
 
