@@ -258,3 +258,7 @@ Applied the reviewed root assembly exactly, rebasing its links and promoting sec
 The required resolver prerequisite is in `beebox/src/dev/doc-graph-data.ts`, covered by `beebox/test/dev/doc-graph-data.doctest.md`. The change-selected test run passed all three assertions, and focused lint/doc-check passed. No full suite was run; no runtime application behavior changed.
 
 The second cross-model pass found no material root implementation defects and confirmed the first review's corrections remain intact. Its doc-check caveat was based on an earlier planning snapshot; the applied root now passes doc-check with the resolver fix. Both tracks are locally complete; landing and empirical trigger evaluation remain separate.
+
+## Follow-on assessment
+
+[Skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) applies the same purpose/necessity/compact-form/grouping/hierarchy method to cross-model, launch, bin, issues, and security-report. It incorporates OpenAI skill-creator and prompting advice. Those operating documents remain unchanged while their restructuring is reviewed.
