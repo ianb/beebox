@@ -32,3 +32,18 @@ with the [public site](2026-07-20-public-site.md) workstream and the home
 page with the
 [container-first install](2026-09-06-container-install-is-the-primary-path.md)
 prompt.
+
+## Checkpoint (2026-09-12)
+
+Landed: the corpus under `site/docs/` (authored + promoted + generated,
+`site/docs-manifest.yaml`), `llms.txt` + `llms-dev.txt`, the input manifest
+(`site/sources.ts`), the scrub gate (`site/docs-scrub.ts`), and a root
+`CONTRIBUTING.md` entry point. Reviewed and exercised end-to-end by a
+fetch-only model run against the built corpus.
+
+Remaining: the boxholder's own per-doc review of the promoted set; deploy
+verification once `main` builds on Cloudflare (can't be checked until this
+lands there); the public-site home card's sentence about install guides being
+"in the repository for now"; repointing the install prompt once
+container-first (`2026-09-06-container-install-is-the-primary-path.md`) lands.
+Plan stays `status: active`.
