@@ -6,10 +6,10 @@ import { trpc } from "../trpc.js";
 import { issueRelPathFromRepoPath } from "../../shared/documents.js";
 
 /**
- * Cmd-P over every browsable path — ported from the doc browser's quick-open
- * (`workstreams-app/src/router/router-docs.ts` renderDocQuickOpen), which is one of the affordances
- * the consolidation has to keep. Replacing five reading surfaces with one is
- * only an improvement if finding things gets easier.
+ * Cmd-P over every browsable path — ported from the retired doc browser's
+ * quick-open (formerly `renderDocQuickOpen` in router-docs.ts), which is one
+ * of the affordances the consolidation has to keep. Replacing five reading
+ * surfaces with one is only an improvement if finding things gets easier.
  *
  * The corpus is fetched once per workstream lens and filtered in the browser:
  * a few thousand paths is nothing to filter locally, and a round trip per
