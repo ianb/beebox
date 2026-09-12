@@ -1,12 +1,12 @@
 ---
 title: "Skill bodies and operational guidance: assessment and restructuring proposal"
-status: draft
+status: partial
 workstream: prompt-calibration
 issues: []
 ---
 # Skill bodies and operational guidance
 
-Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. This continues [prompt calibration](prompt-calibration.md) after the description and root changes. It proposes the next edits; the five operating documents are unchanged.
+Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. This continues [prompt calibration](prompt-calibration.md) after the description and root changes. The cross-model restructuring is applied locally; launch, bin, issues, and security-report remain proposals.
 
 **Recommendation:** split only the two alternative runners in `cross-model`; keep launch decisions together with one optional briefing example reference; reorganize the bin manual around distinct operations; retain issues as one contract and security-report as one audit rubric. Smaller entrypoints should expose the right material, not make every task read more files.
 
@@ -215,7 +215,7 @@ For actual skill rewrites, a bounded independent read-only exercise can check no
 4. Reorder/compact issues without changing its field/state/privacy contract.
 5. Trim security-report conservatively, preserving the rubric and correcting only the stale rationale.
 
-Each chunk gets doc-check, whitespace validation, source/links review, and the applicable cross-model review. Test scripts only if scripts change. The current deliverable is this assessment; operating documents remain unchanged until their corresponding editorial chunk is undertaken.
+Each chunk gets doc-check, whitespace validation, source/links review, and the applicable cross-model review. Test scripts only if scripts change. Only the cross-model editorial chunk has been undertaken; the remaining operating documents are unchanged.
 
 ## Assessment review and validation
 
@@ -225,4 +225,12 @@ The independent cross-model review verified the launcher citations, existing anc
 - Preserve the no-editorializing rule and explain the review-bound impact once. Keep the two-round bound even if fresh findings could extend the work; reject an inevitable-never-clean claim as an unsupported universal description of model behavior.
 - Add a conditional read-before-edit pointer for liveness/teardown, matching the existing router-protocol pattern. Its supporting safety facts must not become discoverable only by accident.
 
-Doc-check and whitespace checks pass for this planning artifact. All five operating documents remain at `c8c728285`; no runtime behavior, permissions, or skill bodies changed. This is a reviewed restructuring proposal, not measured skill-activation evidence.
+Doc-check and whitespace checks pass for this planning artifact. At the assessment checkpoint, all five operating documents remained at `c8c728285`. That review covered the proposal, not measured skill activation.
+
+## Cross-model implementation
+
+Applied the shared contract plus conditional [Codex runner](../../../.claude/skills/cross-model/references/codex-runner.md) and [Claude runner](../../../.claude/skills/cross-model/references/claude-runner.md). The [entrypoint](../../../.claude/skills/cross-model/SKILL.md) retains authority, completion, mode selection, delegated prompt scaffolding, bounded review rounds, and material-result handoff. Runner selection follows the driving family for all four intended models; reviewer defaults are preserved. Historical quota observations are labeled as dated, not current guarantees.
+
+The Claude runner now explicitly distinguishes committed branch diffs from working-tree/new-file review targets. Supporting references resolve through the existing Codex skill directory symlink; no mirror generator change is needed. Other four proposed rewrites remain unimplemented.
+
+Validation: doc-check, whitespace, unchanged skill frontmatter, and all source/mirrored reference links pass. An independent Claude review traced plan/diff routing and stalled-run recovery across the four driving models. It prompted explicit moved-template references, restoration of the foreground-run consequence and delegated prompt clause, and removal of a newly added challenge-default sentence. Its proposed target-based model policy was not adopted: the original default and explicit plan-mode override remain. The literal diff-review prompt and authority block remain intact. These are static review traces, not empirical runs of all four models or an activation evaluation.
