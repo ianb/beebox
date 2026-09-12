@@ -939,7 +939,12 @@ struct NativeComposerView: View {
     /// Gates only the TEXT SURFACE. A batch in flight must not lock it — the user
     /// is expected to be writing the caption while it uploads.
     private var isTextEntryLocked: Bool {
-        isPreparingSend || draftStore.isReady == false
+        // Recording locks it: the live transcript is authoritative over the
+        // whole field, so anything typed mid-turn is overwritten by the next
+        // update with no trace. Scoped to the microphone being live (or coming
+        // up), NOT to `voiceTurn.isActive` — a turn stays open across the box's
+        // reply and its speech, and the composer is ordinary text entry there.
+        isPreparingSend || draftStore.isReady == false || isVoiceRecording || isVoiceStarting
     }
 
     /// Records when each lock term engaged and logs the transitions.
@@ -1068,6 +1073,13 @@ struct NativeComposerView: View {
 
     private func requestMicrophone() {
         applyEarcon(.microphoneRequested)
+        // Put the keyboard away, the way opening capture does. The transcript
+        // OWNS the text field for the length of the turn (every update replaces
+        // the whole text and forces the caret to the end — see
+        // `setDictationTranscript`), so a keyboard left standing over a field
+        // nobody can usefully type into is both a confusing state and a way to
+        // lose characters. `isTextEntryLocked` keeps it down for the turn.
+        focused = false
         applyVoiceTurn(.microphoneStarted)
     }
 
