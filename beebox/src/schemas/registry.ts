@@ -75,6 +75,7 @@ import { ExpositionPlanSchema } from "./exposition-plan.js";
 import { LessonPlanSchema } from "./lesson-plan.js";
 import { ProgressSchema } from "./progress.js";
 import { TabArrangementSchema } from "./tab-arrangement.js";
+import { BrowserTaskSchema } from "./browser-task.js";
 import { registerBoxTemplate, unregisterBoxTemplates, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -102,6 +103,7 @@ export const cardSchemas: CardSchema[] = [
   PlaceSchema,
   TodoViewSchema,
   QuestionSchema,
+  BrowserTaskSchema,
   RecipeSchema,
   CommentarySchema,
   BriefingSchema,

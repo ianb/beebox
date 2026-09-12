@@ -23,6 +23,7 @@ import { createBriefingTemplate } from "./briefing.js";
 import { createPersonTemplate } from "./person.js";
 import { createPlaceTemplate } from "./place.js";
 import { createDocTemplate } from "./doc.js";
+import { createBrowserTaskTemplate } from "./browser-task.js";
 import { createFigureTemplate, FigureRuntime } from "./figure.js";
 import { figureStarterSketch } from "./figure-starters.js";
 import { registerTemplate } from "./templates-registry.js";
@@ -232,4 +233,17 @@ registerTemplate({
     return createFigureTemplate(opts);
   },
   attachments: (args) => [{ relPath: "sketch.ts", content: figureStarterSketch(args.runtime) }],
+});
+
+registerTemplate({
+  name: "browser-task",
+  description: "A prompt for someone with a logged-in browser; the card is the inbox for what they find",
+  cardTypes: ["browser-task"],
+  defaultForTypes: ["browser-task"],
+  argsSchema: z.object({
+    title: z.string().describe("Display title"),
+    source: z.string().url().describe("The URL the executor starts at"),
+    prompt: z.string().describe("The prompt body, addressed to the person with the browser"),
+  }),
+  generate: (args) => createBrowserTaskTemplate({ title: args.title, source: args.source, prompt: args.prompt }),
 });

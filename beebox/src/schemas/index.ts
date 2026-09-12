@@ -8,6 +8,7 @@ export { getCardTypes, isKnownCardType } from "./registry.js";
 // Individual schemas, from their own modules
 export { MemoSchema } from "./memo.js";
 export { QuestionSchema } from "./question.js";
+export { BrowserTaskSchema } from "./browser-task.js";
 export { FeedbackSchema } from "./feedback.js";
 export { ImageSchema } from "./image.js";
 export { AudioSchema } from "./audio.js";
@@ -36,6 +37,7 @@ export { AdminSchema } from "./admin.js";
 // Re-export individual schema types
 export type { MemoFields, MemoStatusType } from "./memo.js";
 export type { QuestionFields, QuestionStatusType, QuestionInputTypeValue } from "./question.js";
+export type { BrowserTaskFields, BrowserTaskStatusType } from "./browser-task.js";
 export type { FeedbackFields } from "./feedback.js";
 export type { ImageFields, ImageStatus } from "./image.js";
 export type { AudioFields, AudioStatus } from "./audio.js";
@@ -62,6 +64,7 @@ export type { Landmark } from "./landmark.js";
 
 // Re-export template functions
 export { createMemoTemplate, createVoiceMemoTemplate } from "./memo.js";
+export { createBrowserTaskTemplate } from "./browser-task.js";
 export {
   createSelectQuestionTemplate,
   createTextQuestionTemplate,

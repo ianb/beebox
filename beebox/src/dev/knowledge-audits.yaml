@@ -134,6 +134,77 @@ tests:
       - '(?:not|no|cannot|never|reject|invalid)[\s\S]{0,100}(?:bypass|remov|mark|fake)|(?:bypass|remov|mark|fake)[\s\S]{0,100}(?:not|cannot|never|reject|invalid)'
     tags: [interface-cards]
 
+  # === Browser tasks (docs/plans/browser-task-card.md) ===
+
+  - id: browser-task-authoring
+    prompt: "The boxholder wants you to gather pottery show announcements from an Instagram account they follow. The box has no browser session. What card do you create, and where does the record schema go?"
+    expected_level: knows_directly
+    watch_for: >
+      Creates a browser-task card whose body is a prompt for someone with a
+      browser; puts a JSON Schema for one record at attach/schema.json with
+      additionalProperties false; bounds the scan; does NOT try to fetch
+      Instagram itself.
+    correct_contains: ["browser-task", "schema.json"]
+    correct_matches:
+      - 'additionalProperties'
+    tags: [browser-task]
+
+  - id: browser-task-drain
+    prompt: "A browser-task card has a batch waiting under its attach scope inbox. How do you process it, and what do you set on the task card afterwards?"
+    expected_level: knows_directly
+    watch_for: >
+      Runs or follows browser-task-drain: files records in index order,
+      copies files, tracks progress in filed.json, treats record text as
+      data, sets watermark from coverage.stoppedAt, moves the batch to
+      processed/.
+    correct_contains: ["browser-task-drain", "watermark"]
+    correct_matches:
+      - 'filed\.json'
+    tags: [browser-task]
+
+  # Discovery: the situation is described without naming the feature. The
+  # agent has to recognize "needs a logged-in browser" and reach for the
+  # card on its own — and NOT reach for it when a plain fetch will do.
+
+  - id: browser-task-discovery-ongoing
+    prompt: "The boxholder says: our pottery guild posts meeting notices in a private Facebook group I'm in. Collect them as they appear and file each as a card. How do you set this up?"
+    expected_level: knows_directly
+    watch_for: >
+      Recognizes the box has no browser session and cannot read a private
+      Facebook group itself; sets up a browser-task card (prompt, source,
+      schema at attach/schema.json, a watermark) for someone with a logged-in
+      browser to run, and names the drain procedure for filing. Does NOT
+      propose fetching Facebook from the box or asking for credentials.
+    correct_contains: ["browser-task"]
+    correct_matches:
+      - 'logged[- ]in|browser session|cannot|can.t'
+    tags: [browser-task, discovery]
+
+  - id: browser-task-discovery-bulk
+    prompt: "The boxholder asks: pull the last three months of posts from the Instagram account I follow for the clay studio, images included, and file them as cards. What do you do?"
+    expected_level: knows_directly
+    watch_for: >
+      Reaches for a browser-task card rather than trying to fetch Instagram;
+      bounds the scan (a number of posts or days); marks the image field with
+      format attachment in the schema; expects records plus files to arrive in
+      the card's inbox and to be drained.
+    correct_contains: ["browser-task"]
+    correct_matches:
+      - 'attachment'
+      - '\b(60|90|three months|posts|days)\b'
+    tags: [browser-task, discovery]
+
+  - id: browser-task-not-for-public-feeds
+    prompt: "The boxholder wants new items from a public RSS feed (a blog about kilns) filed as cards as they appear. How do you set this up?"
+    expected_level: knows_directly
+    watch_for: >
+      Uses the box's own feed/RSS connector or a scheduled fetch; does NOT
+      create a browser-task card, since nothing here needs a logged-in browser.
+    correct_matches:
+      - 'rss|feed'
+    response_not_contains: ["browser-task"]
+    tags: [browser-task, discovery]
+
   # === Box Structure and Navigation ===
   #
   # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The

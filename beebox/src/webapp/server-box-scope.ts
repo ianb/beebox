@@ -22,6 +22,7 @@ import { registerBoxIdentityAssetRoutes } from "./routes/box-identity-assets.js"
 import { registerCaptureRoutes } from "./routes/capture.js";
 import { registerSecretsRoutes } from "./routes/secrets.js";
 import { registerBulkUploadRoutes } from "./routes/bulk-upload.js";
+import { registerCardSubmissionRoutes } from "./routes/card-submission.js";
 import { registerScanUploadRoutes } from "./routes/scan-upload.js";
 import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
@@ -312,6 +313,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // bearer), because it is the only one that discloses a stored value.
   registerSecretsRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug });
   await registerBulkUploadRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
+  registerCardSubmissionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
   // The box's own icon and manifest, ahead of the static mount below so the
