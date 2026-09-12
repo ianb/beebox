@@ -162,6 +162,49 @@ tests:
       - 'filed\.json'
     tags: [browser-task]
 
+  # Discovery: the situation is described without naming the feature. The
+  # agent has to recognize "needs a logged-in browser" and reach for the
+  # card on its own — and NOT reach for it when a plain fetch will do.
+
+  - id: browser-task-discovery-ongoing
+    prompt: "The boxholder says: our pottery guild posts meeting notices in a private Facebook group I'm in. Collect them as they appear and file each as a card. How do you set this up?"
+    expected_level: knows_directly
+    watch_for: >
+      Recognizes the box has no browser session and cannot read a private
+      Facebook group itself; sets up a browser-task card (prompt, source,
+      schema at attach/schema.json, a watermark) for someone with a logged-in
+      browser to run, and names the drain procedure for filing. Does NOT
+      propose fetching Facebook from the box or asking for credentials.
+    correct_contains: ["browser-task"]
+    correct_matches:
+      - 'logged[- ]in|browser session|cannot|can.t'
+    tags: [browser-task, discovery]
+
+  - id: browser-task-discovery-bulk
+    prompt: "The boxholder asks: pull the last three months of posts from the Instagram account I follow for the clay studio, images included, and file them as cards. What do you do?"
+    expected_level: knows_directly
+    watch_for: >
+      Reaches for a browser-task card rather than trying to fetch Instagram;
+      bounds the scan (a number of posts or days); marks the image field with
+      format attachment in the schema; expects records plus files to arrive in
+      the card's inbox and to be drained.
+    correct_contains: ["browser-task"]
+    correct_matches:
+      - 'attachment'
+      - '\b(60|90|three months|posts|days)\b'
+    tags: [browser-task, discovery]
+
+  - id: browser-task-not-for-public-feeds
+    prompt: "The boxholder wants new items from a public RSS feed (a blog about kilns) filed as cards as they appear. How do you set this up?"
+    expected_level: knows_directly
+    watch_for: >
+      Uses the box's own feed/RSS connector or a scheduled fetch; does NOT
+      create a browser-task card, since nothing here needs a logged-in browser.
+    correct_matches:
+      - 'rss|feed'
+    response_not_contains: ["browser-task"]
+    tags: [browser-task, discovery]
+
   # === Box Structure and Navigation ===
   #
   # Status (2026-08-14, Codex): 13/13 navigation-tagged audits pass. The

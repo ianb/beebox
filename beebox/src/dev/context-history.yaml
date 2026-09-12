@@ -813,6 +813,13 @@ test1:
       peak: 41216
       added: 0
       turns: 2
+    - date: 2026-09-12T22:27:04.683Z
+      boxCommit: 4ff60f28c9525e463bfcfc20f82f9c6cc643df91
+      repoCommit: 8733c38b5ae8ac0312c211653a9931f9002bc76a
+      initial: 46934
+      peak: 49438
+      added: 2504
+      turns: 5
   schema-instructions-load-when:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -4396,6 +4403,30 @@ test1:
       peak: 50199
       added: 3271
       turns: 4
+  browser-task-discovery-ongoing:
+    - date: 2026-09-12T22:27:04.683Z
+      boxCommit: 4ff60f28c9525e463bfcfc20f82f9c6cc643df91
+      repoCommit: 8733c38b5ae8ac0312c211653a9931f9002bc76a
+      initial: 47005
+      peak: 53984
+      added: 6979
+      turns: 12
+  browser-task-discovery-bulk:
+    - date: 2026-09-12T22:27:04.683Z
+      boxCommit: 4ff60f28c9525e463bfcfc20f82f9c6cc643df91
+      repoCommit: 8733c38b5ae8ac0312c211653a9931f9002bc76a
+      initial: 46954
+      peak: 50059
+      added: 3105
+      turns: 6
+  browser-task-not-for-public-feeds:
+    - date: 2026-09-12T22:27:04.683Z
+      boxCommit: 4ff60f28c9525e463bfcfc20f82f9c6cc643df91
+      repoCommit: 8733c38b5ae8ac0312c211653a9931f9002bc76a
+      initial: 46948
+      peak: 57900
+      added: 10952
+      turns: 19
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
