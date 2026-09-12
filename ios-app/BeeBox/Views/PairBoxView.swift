@@ -90,7 +90,11 @@ struct PairBoxView: View {
             }
             .navigationTitle("Pair Box")
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                // `.confirmationAction`, matching the app's other dismissable
+                // sheets (ComposerActionsView, the composer's selection sheet).
+                // In `.cancellationAction` this sat in the leading cancel slot,
+                // unemphasized — a confirm word in a cancel's place.
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
                         dismiss()
                     }

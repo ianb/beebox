@@ -7,7 +7,7 @@ The scheduler is a background daemon that runs `bbx tick` for multiple boxes on 
 ```bash
 # Add boxes to the scheduler's manifest
 bbx boxes add ~/src/boxes/test1
-bbx boxes add ~/src/boxes/hearthside
+bbx boxes add ~/src/boxes/hearth
 
 # Install launchd plist (auto-starts at login)
 bbx scheduler install

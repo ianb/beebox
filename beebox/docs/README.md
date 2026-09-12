@@ -25,8 +25,8 @@ current truth.
   one in place to reflect later reality; write a new one.
 - **`docs/design/`** — the engineering-rationale reference: why the system is
   shaped this way, one small file per topic (split from the former
-  `design.md`, reconciled to boxholder rulings 2026-07-04). Peer of
-  `stack-decisions.md`; answers *why*, never *how to*.
+  `design.md`, reconciled to boxholder rulings 2026-07-04). Answers *why*, never *how to*. (The old `stack-decisions.md` log is
+  frozen under `reports/`.)
 - **`docs/box/`** — prose docs written for box agents, shipped into every
   installed package's `box-docs/` beside the generated reference docs
   (`src/core/docs-gen/package-docs.ts`). Each has a `read-when:` frontmatter

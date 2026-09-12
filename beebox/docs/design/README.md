@@ -1,7 +1,7 @@
 # docs/design/ — engineering rationale
 
-Why the system is shaped the way it is. Peer of [`../stack-decisions.md`](../stack-decisions.md)
-(the decisions log): these files answer *why*, never *how to*. The onboarding
+Why the system is shaped the way it is. These files answer *why*, never *how to*. (The former peer, the stack
+decisions log, is frozen as a dated report: [`../reports/stack-decisions-2026-09-04.md`](../reports/stack-decisions-2026-09-04.md).) The onboarding
 narrative lives in [`../architecture/`](../architecture/CLAUDE.md); the values
 compass is [`../architecture/spirit.md`](../architecture/spirit.md) — **design
 serves the values written there**; spirit.md's "if the architecture contradicts
