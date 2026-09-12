@@ -287,11 +287,34 @@ struct NativeComposerView: View {
         }
     }
 
+    /// What to say while there is no send binding — one line per state, because
+    /// they are not the same state.
+    ///
+    /// This used to collapse all of them into "Sending requires an updated
+    /// host", written when the web side might not publish a binding at all.
+    /// It does now, and its FIRST publication on every cold load is
+    /// `resolving` (`use-conversation-selection.ts` seeds
+    /// `{kind:"resolving", requestId:"initial"}`), so the common path — a page
+    /// still picking the conversation — accused the host of being out of date.
+    /// Version skew is not what the boxholder is watching for here; say what is
+    /// happening instead of guessing at why.
     private var composerBindingStatusText: String? {
         guard pendingStore.composerBinding?.sendBinding == nil else { return nil }
-        return pendingStore.composerBinding?.selection?.label
-            ?? pendingStore.composerBinding?.selection?.reason
-            ?? "Waiting for conversation. Sending requires an updated host."
+        guard let selection = pendingStore.composerBinding?.selection else {
+            // No publication has arrived. Ordinarily the page is still loading.
+            return "Waiting for the conversation."
+        }
+        switch selection.kind {
+        case .ready:
+            // `sendBinding` is nil despite a ready selection, so the
+            // publication failed validation. The label is still the most
+            // informative thing on hand.
+            return selection.label ?? "Waiting for the conversation."
+        case .resolving:
+            return "Finding the conversation..."
+        case .unavailable:
+            return selection.reason ?? "No conversation to send to."
+        }
     }
 
     private var composerContext: some View {

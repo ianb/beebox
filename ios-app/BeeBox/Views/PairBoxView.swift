@@ -90,13 +90,18 @@ struct PairBoxView: View {
             }
             .navigationTitle("Pair Box")
             .toolbar {
-                // `.confirmationAction`, matching the app's other dismissable
-                // sheets (ComposerActionsView, the composer's selection sheet).
-                // In `.cancellationAction` this sat in the leading cancel slot,
-                // unemphasized — a confirm word in a cancel's place.
+                // A checkmark, not the word "Done", and in `.confirmationAction`
+                // rather than the leading cancel slot it used to occupy. The word
+                // read as a link rather than a confirm — a plain-text bar button
+                // is what Accessibility's Button Shapes underlines, and no
+                // placement change escapes that; a glyph does. The accessibility
+                // label stays "Done" for VoiceOver and the control scan.
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Label("Done", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
                     }
                 }
             }
