@@ -17,10 +17,11 @@ import yaml from "highlight.js/lib/languages/yaml";
 /**
  * Highlighted source for the browser's code, data, and fenced-block views.
  *
- * highlight.js, because `workstreams-app/src/router/router-docs.ts` — the doc reader this browser
- * consolidates — already highlights with it, so the two surfaces agree on what
- * code looks like down to the palette (`styles.css`, the `.hljs-*` rules copied
- * from there). Registered a language at a time off `lib/core` rather than
+ * highlight.js, because `workstreams-app/src/router/router-markdown.ts` — one
+ * of the reading surfaces this browser consolidates — already highlights with
+ * it, so the two surfaces agree on what code looks like down to the palette
+ * (`styles.css`, the `.hljs-*` rules copied from there). Registered a
+ * language at a time off `lib/core` rather than
  * imported whole: the default entry point carries all ~190 grammars, and this
  * is a browser bundle where the corpus is the fourteen below.
  *

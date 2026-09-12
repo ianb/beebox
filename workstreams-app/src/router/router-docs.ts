@@ -7,9 +7,10 @@
 // an already-resolved worktree root; it never touches the live `worktrees`
 // map, spawns a child, or races another request.
 //
-// Markdown→HTML rendering lives in the sibling router-markdown.ts; the retired
-// /dev/docs browser in router-doc-browser.ts (which imports this file, never the
-// other way round).
+// Markdown→HTML rendering lives in the sibling router-markdown.ts. The
+// /<worktree>/dev/docs/ path used to open a standalone doc browser built on
+// top of this module; it now 301s into the general browser instead (see
+// serveDev), and the browser-rendering code has been retired.
 
 import path from "node:path";
 import fs from "node:fs/promises";
