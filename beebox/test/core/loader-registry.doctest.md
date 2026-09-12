@@ -102,14 +102,16 @@ const s = summarize({
 => figure|Rotating Cube Demo|A spinning cube.|🧊|paper|blue
 ```
 
-An authored theme remains present even when its selection is invalid; the plain
-result lets the shared resolver preserve the
-explicit-choice precedence over box and schema defaults.
+An authored theme is carried through as authored. Theme names are an open set,
+so a name the engine ships no palette for is still the card's explicit choice
+and reaches the renderer to fall back there — dropping it here would let a box
+or schema default silently win over something the author wrote. A theme of the
+wrong SHAPE carries nothing, and resolves to plain.
 
 ```ts continue
-const invalidTheme = summarize({ path: "_content/x.doc.card", type: "doc", fields: { theme: { name: "velvet" } } });
-JSON.stringify([invalidTheme.type, invalidTheme.cardTheme])
-=> ["doc",{"name":"plain","stock":"neutral"}]
+const unknownTheme = summarize({ path: "_content/x.doc.card", type: "doc", fields: { theme: { name: "velvet" } } });
+JSON.stringify([unknownTheme.type, unknownTheme.cardTheme])
+=> ["doc",{"name":"velvet","stock":"neutral"}]
 
 const malformedTheme = summarize({ path: "_content/y.doc.card", type: "doc", fields: { theme: "paper" } });
 JSON.stringify(malformedTheme.cardTheme)
