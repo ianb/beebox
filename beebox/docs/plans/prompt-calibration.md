@@ -1,6 +1,6 @@
 ---
 title: "Calibrate skill discovery and the root agent instructions"
-status: draft
+status: active
 workstream: prompt-calibration
 issues:
   - ../../../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md
@@ -9,7 +9,7 @@ issues:
 
 Shorten skill descriptions without losing the connections that make a skill discoverable. Reassemble the root agent instructions around the decisions an agent needs to make, preserving repository facts and constraints while removing persuasion and duplicate explanations.
 
-The skill-description pass is authorized. The root document below is a **proposal**, not active instructions; the existing root `CLAUDE.md` remains unchanged for review.
+The skill descriptions and root assembly have been approved. The descriptions were committed in `6fa206288`; the reviewed assembly is now applied to root `CLAUDE.md` in this worktree. The assembly below records the reviewed design; the root file is the active instruction source.
 
 **Done for this pass:** descriptions retain meaningful triggers and exclusions; every root topic has a purpose, necessity decision, compact form, and destination; a complete proposed root demonstrates the grouping; links and generation paths are checked; an independent cross-model review is adjudicated. This does not claim measured improvement in skill activation.
 
@@ -17,7 +17,7 @@ The skill-description pass is authorized. The root document below is a **proposa
 
 ## Smallest fix and budget
 
-Two tracks: edit the 23 skill descriptions; assess and propose the root rewrite. This pass changes frontmatter and this planning document only. No application source, tests, hooks, generators, or skill bodies change. Budget: 23 description replacements plus the canvas skill's canonical plugin source and roughly 300 lines of planning prose. A later root implementation should replace the current 2,242-word root with roughly 800–1,100 words; clarity and preserved decisions take precedence over that estimate.
+Two tracks: edit the 23 skill descriptions; assess and apply the root rewrite. This pass changes skill frontmatter, root `CLAUDE.md`, and this planning document. No runtime application behavior, hooks, generator source, or skill bodies change. Applying valid root links exposed a doc-check resolver defect: external targets outside its scanned directories were reported missing even when they exist. The implementation therefore also includes a narrow external-link resolution fix and a focused doctest, with no scan expansion or exemptions. Budget: 23 description replacements plus the canvas skill's canonical plugin source and roughly 300 lines of planning prose, the root replacement, and up to 100 lines for the resolver prerequisite and its test. The approved root implementation replaces the original 2,242-word root with roughly 800–1,100 words; clarity and preserved decisions take precedence over that estimate.
 
 ## Stated preferences this plan trades against
 
@@ -30,7 +30,7 @@ Direct human requirements govern this work:
 
 ## What already exists
 
-Source references below are to this checkout before the root rewrite:
+Source references below are to the checkout at `6fa206288`, before the root rewrite:
 
 - `CLAUDE.md:29`: "The router is shared across sessions" — keep this fact and the restart restriction in the root.
 - `CLAUDE.md:35`: "Auto-deploy is `main`-only, and only for deployed paths." — keep the action consequence before an agent commits or merges.
@@ -125,9 +125,9 @@ Concrete link choices for the root implementation:
 - Remove the root's link to the [completed lint-suppression audit](../../../docs/eslint-rule-suppression-audit.md) from always-loaded prose because it is incident history, not a prerequisite for following the rule. The file exists and remains discoverable; the complete active restriction stays in the root.
 - Keep generated preamble ownership in `bin/generate-agents-md.ts`; do not paste its session-specific worktree context into tracked root guidance. Regeneration affects files, not already-loaded session context or other worktrees.
 
-### Proposed root document
+### Reviewed root assembly
 
-The following is the complete proposed assembly. Links below resolve from this plan for review; rebase them to the monorepo root when applying the proposal.
+The following records the approved assembly, applied to root `CLAUDE.md`. Links here resolve from this plan; the root uses the corresponding root-relative links.
 
 #### Where to work
 
@@ -184,6 +184,10 @@ Hooks add `Workstream` and, when exactly one plan matches, `Plan` trailers. An o
 
 When the human asks to finish or land work, use [finish](../../../.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main` commits/merges touching shipped paths: `beebox/`, `agent-doctest/`, `personal-vibe-check/`, `patches/`, or root pnpm files. Worktree commits do not deploy. [Deployment operations](../../../beebox/deploy/README.md).
 
+### Implementation prerequisite: valid external document targets
+
+The root now uses direct Markdown links rather than plain-text mentions. On application, doc-check falsely rejected six existing targets outside its external source inventory: extension, iOS, shared preset, doctest framework, canvas, and exhibits documentation. The inventory identifies documents to scan; it must not limit which existing in-repo files those documents can link to. Fix external reference resolution narrowly, preserve existing precedence and incoming-link accounting, and verify valid, missing, and out-of-repository targets. This does not broaden scanning or relax broken-link checks.
+
 ## Could this be simpler?
 
 Only shortening descriptions would leave the requested root analysis undone. A root containing only links would hide privacy, router, and deployment consequences until after an agent had selected a workflow. Keep short pre-action rules and route the mechanics. No new router document or reference-file split is needed for this pass.
@@ -198,7 +202,7 @@ None. A later bin/CLAUDE.md split needs its own concrete relocation proposal, no
 |---|---|---|---|
 | Short description loses an indirect activation signal | No measured cross-model baseline in this pass | Compare original/body intent, review concrete task signals, independent review | Silent; remaining empirical limitation is explicit |
 | Compact root silently changes an obligation or exception | No semantic automated test | Item-by-item disposition and complete proposed assembly, human review before root edit | Silent without review |
-| A moved fact has no discoverable destination | Doc-check validates paths, not routing judgment | Destination map and direct links at relevant decisions | Broken link can be clear; weak cue is silent |
+| A moved fact has no discoverable destination | Doc-check validates paths, not routing judgment; external-target regression added with root implementation | Destination map and direct links at relevant decisions | Broken link can be clear; weak cue is silent |
 | Codex reads stale copied guidance | Existing generator has safeguards; not changed here | Regenerate after root edits and inspect output; verify skill symlinks | Already-running contexts may remain stale |
 
 ## Agent-flow / user-flow edge cases
@@ -207,7 +211,7 @@ None. A later bin/CLAUDE.md split needs its own concrete relocation proposal, no
 - **ADDRESSED:** shared hazards remain in root even when the code being edited lives elsewhere.
 - **ADDRESSED:** source docs and generated copies have distinct ownership. Do not write AGENTS.md by hand or modify another active worktree.
 - **DEFERRED:** behavior across real sessions and engines needs the existing trigger-eval work; a static review is not evidence of activation rates.
-- **ADDRESSED:** the proposal is visibly labeled; readers cannot mistake the drafted root for current policy.
+- **ADDRESSED:** the assembly is labeled as the reviewed design; root CLAUDE.md is identified as the active source.
 
 ## NOT in scope
 
@@ -216,11 +220,11 @@ None. A later bin/CLAUDE.md split needs its own concrete relocation proposal, no
 - Changing testing, deployment, privacy, lint, or authorization policy.
 - Adding a prompt-evaluation subsystem or running broad application suites for prose edits.
 - Rewriting instructions loaded by box agents.
-- Editing or committing generated mirrors, merging, or deploying this work.
+- Hand-editing or committing generated mirrors, merging, or deploying this work. Regeneration of this checkout's gitignored mirrors is in scope.
 
 ## Open design questions
 
-The root assembly is ready for human review. Its substantive choice is to keep short global restrictions plus a selective map, with detailed mechanics at existing destinations. No unresolved choice blocks the description edits. A numeric compression target is deliberately not an acceptance gate.
+The human approved the root assembly. It keeps short global restrictions plus a selective map, with detailed mechanics at existing destinations. No design questions remain within this pass. A numeric compression target is deliberately not an acceptance gate.
 
 ## Knowledge audits
 
@@ -232,17 +236,25 @@ Validate YAML and description-only changes, inspect source-to-mirror relationshi
 
 ## Implementation order
 
-1. Complete and review description replacements.
-2. Present this purpose/necessity/compact-form assessment, hierarchy, and complete root proposal.
-3. After the human's review, apply the agreed root assembly and regenerate its Codex mirrors; validate links and preserved obligations.
+1. Complete and review description replacements (committed in `6fa206288`).
+2. Present the purpose/necessity/compact-form assessment, hierarchy, and complete root proposal (approved).
+3. Apply the approved root assembly and regenerate its Codex mirrors; validate links and preserved obligations.
 4. Consider skill-body or large-document restructuring separately.
 
 ## Rollout shape
 
-This is a local, incremental documentation change. Existing skill symlinks expose description edits to future readers in this checkout. The root remains unchanged until reviewed. Later generation refreshes this checkout's files; it does not reload active model contexts. Report static validation separately from empirical skill activation, and local edits separately from landing.
+This is a local, incremental documentation change. Existing skill symlinks expose description edits to future readers in this checkout. The approved root is now applied locally. Regeneration refreshes this checkout's files; it does not reload active model contexts. Report static validation separately from empirical skill activation, and local edits separately from landing.
 
 ## Review and validation
 
 The independent cross-model review identified five concrete corrections, applied before handoff: retain bulk-upload and literal issue-tag activation cues; preserve warnings/deprecations in the noise rule; retain the exhibit `--permanent` and Husky ownership details because the proposed destinations do not hold them; and correct the false claim that the historical lint-audit path was missing. Its removal from the proposed root is an editorial choice about history, not a broken-link repair. The delegation paragraph also retains explicit permission to delegate without asking.
 
-The revised descriptions pass YAML and description-only scope checks. All 23 Codex skill links resolve to the canonical repo skills, and the canvas plugin source matches its synchronized copy. Doc-check and whitespace checks pass. The root file is unchanged. No empirical activation result or landing is claimed.
+The revised descriptions pass YAML and description-only scope checks. All 23 Codex skill links resolve to the canonical repo skills, and the canvas plugin source matches its synchronized copy. Doc-check and whitespace checks pass. Those checks validated the description/proposal checkpoint before root implementation. No empirical activation result or landing is claimed.
+
+### Root implementation
+
+Applied the reviewed root assembly exactly, rebasing its links and promoting section headings. The root is 850 words, down from 2,242. Regenerated all 18 gitignored AGENTS.md mirrors and 23 skill links with the worktree name; verified that the root mirror contains the exact source and retains worktree orientation. The link audit found all 29 root targets and anchors valid and no incoming root-heading links to repair.
+
+The required resolver prerequisite is in `beebox/src/dev/doc-graph-data.ts`, covered by `beebox/test/dev/doc-graph-data.doctest.md`. The change-selected test run passed all three assertions, and focused lint/doc-check passed. No full suite was run; no runtime application behavior changed.
+
+The second cross-model pass found no material root implementation defects and confirmed the first review's corrections remain intact. Its doc-check caveat was based on an earlier planning snapshot; the applied root now passes doc-check with the resolver fix. Both tracks are locally complete; landing and empirical trigger evaluation remain separate.
