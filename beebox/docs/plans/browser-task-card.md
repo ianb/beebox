@@ -220,6 +220,27 @@ Not reused, with reason:
   coverage of JSON Schema is not complete; unsupported keywords throw at
   conversion time. The schema author is the box agent, and the view shows a
   conversion error as a card problem, not an upload problem.
+- How people actually use these tools for logged-in feeds (first-person
+  reports, 2025-2026): LinkedIn connection and activity extraction with
+  Claude in Chrome (196 contacts to a Google Sheet; 70 posts to an HTML
+  dashboard, about 30 minutes and "pretty high" token use); an Instagram
+  engagement dashboard from a logged-in account; Facebook feed cleanup and
+  an Instagram caption audit with ChatGPT Atlas. Results go to chat text, a
+  sheet, or a generated HTML page; no one reports a structured JSON plus
+  image download step, and no one mentions Instagram CDN URL expiry.
+  Nobody reports a Meta or LinkedIn account warning from agent-browser use,
+  which is a gap in the evidence rather than reassurance.
+- Two failure reports that change this plan. A Claude Code issue (#64868)
+  claimed the extension could not see logged-in pages; verified false for
+  the boxholder's setup in this session (a signed-in GitHub settings page
+  read correctly). An Atlas user asked for a 1,889-item extraction and the
+  agent silently returned under 80, declaring the rest "impractical". A
+  scan must therefore be bounded up front and must report its own
+  coverage.
+- Packaged "Claude scrapes Instagram" skills call Instagram's internal API
+  with captured cookies instead of driving the page, and stop at image
+  URLs. Not adopted: it is the cookie-copy pattern under another name, and
+  the first thing it breaks is the account.
 - Searched the issue queue for "scrape", "instagram", "drop zone",
   "browser-task": nothing beyond the three related issues named above.
 
@@ -265,6 +286,20 @@ Attach layout:
 (same hazard the rendezvous module names for ids:
 `beebox/src/core/pending-browser-request.ts:56-60`).
 
+The manifest is an object, not a bare array:
+
+```json
+{ "coverage": { "scanned": 84, "stoppedAt": "<permalink or date>", "reason": "reached-watermark" },
+  "records": [ ... ] }
+```
+
+`coverage.reason` is one of `reached-watermark | reached-limit |
+end-of-feed | login-wall | rate-limited | error`. The prompt card always
+states a limit (posts or days), and the executor always reports how far it
+got and why it stopped. This is the answer to the silent-truncation
+failure above: an under-delivered scan is visible in the batch, not
+guessed at from a short record list.
+
 Records reference images by bare filename in any string field the schema
 marks with `"format": "attachment"`. `fromJSONSchema` accepts and ignores an
 unknown format (verified by the reviewer), so the validator has its own
@@ -285,7 +320,8 @@ export type BatchIssue =
   | { kind: "record"; index: number; path: string; message: string }
   | { kind: "missing-file"; index: number; name: string }
   | { kind: "unreferenced-file"; name: string }
-  | { kind: "bad-filename"; name: string };
+  | { kind: "bad-filename"; name: string }
+  | { kind: "coverage"; message: string };            // missing or malformed coverage
 export function validateBatch(
   schemaJson: unknown,
   records: unknown,
@@ -430,7 +466,8 @@ Sections, top to bottom:
   accepted on the same element; nothing depends on it.
 - Inbox status: how many batches wait, the oldest one's age, whether a
   drain is in progress (a batch with a `filed.json` shorter than its
-  records), and the processed list with timestamps. Each batch links to its
+  records), and the processed list with timestamps. Each batch shows its
+  coverage line (scanned, stopped at, reason) and links to its
   `records.json` in the file view.
 
 Progress uses the same `XMLHttpRequest` pattern as `file-upload.ts:83` so
@@ -487,7 +524,10 @@ source in the browser at a human pace, stop at the watermark, write
 `records.json` and fetch each image with local `curl` into the session's
 scratchpad (the only place `file_upload` may read from), naming each per
 the record; take a screenshot of a post only when its image cannot be
-fetched, saved to disk or pushed with `upload_image`; run `validateBatch`
+fetched, saved to disk or pushed with `upload_image`; prefer `get_page_text`
+and `find` over screenshots while scanning, since practitioners report
+screenshot-driven scrolls as the cost driver; stop at the prompt's limit or
+the watermark and fill in `coverage`; run `validateBatch`
 through a one-line script that imports the shared module from the monorepo
 checkout; then open the task card, `find` the file input, `file_upload` in
 chunks under 10 MB, read the issues list, and Submit. Report what was
@@ -548,7 +588,8 @@ none.
 | Nobody runs a task for weeks | none needed | view status line names the age | clear |
 | Drain agent runs out of turns mid-batch | procedure validate phase | partial work is committed; `filed.json` records which indices are done; rerun resumes; validate names the batch | clear |
 | Drain agent files a record twice across runs | agent judgment | task instructions say to dedup by permalink; watermark bounds rescans | visible in cards, not enforced |
-| Executor hits a login wall or rate limit | executor skill | reported in the session, no records uploaded | clear to the person, invisible to the box |
+| Executor hits a login wall or rate limit | executor skill | uploads a batch with zero records and `coverage.reason: login-wall` or `rate-limited`, so the box sees it | clear |
+| Executor under-delivers a large scan | Track 1 doctest (coverage required) | `coverage.reason: reached-limit` with the count; the drain agent sets the watermark to `stoppedAt`, not to "now" | clear |
 | Record text contains instructions aimed at the agent | none | card instructions and procedure prompt say records are data | prompt-level only |
 
 > **Accepted risk:** the last row. A record body that says "ignore the
@@ -638,7 +679,12 @@ Both land RUN against the test box before the plan is called done.
 5. Track 4: procedure template, card instructions, knowledge audits run,
    executor skill. Commit.
 6. One real run against a test box with a throwaway public feed, screenshot
-   exhibit, cross-model review of the branch.
+   exhibit, cross-model review of the branch. The run must confirm two
+   things no published account covers: that Meta CDN image URLs fetch with
+   plain `curl` from the executor's machine during the run, and roughly what
+   a bounded scan of 50 posts costs in time and tokens. If images do not
+   fetch, the fallback is per-post screenshots through `upload_image`, and
+   the skill says so.
 
 ## Rollout shape
 
