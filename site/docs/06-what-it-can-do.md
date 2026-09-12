@@ -3,8 +3,8 @@ description: "Bee Box capability areas, one line each, and the kinds of cards a 
 ---
 # What it can do
 
-A **card** is one markdown file with validated frontmatter; a **box** is the
-directory of them. One page per capability is in
+A **card** is one file with a structured header that gets checked against
+its type; a **box** is the directory of them. One page per capability is in
 [capabilities/index.md](capabilities/index.md).
 
 ## Capability areas
@@ -20,7 +20,7 @@ directory of them. One page per capability is in
 - [Questions](capabilities/questions.md): the agent asks instead of guessing.
 - [Schedules](capabilities/schedules.md): recurring runs and agent-set timers.
 - [Procedures](capabilities/procedures.md): declarative multi-step workflows.
-- [Views](capabilities/views.md): agent-written React interfaces attached to card types.
+- [Views](capabilities/views.md): pages and displays the agent builds for a kind of card, so a collection becomes something to browse.
 - [Courses](capabilities/courses.md): structured teaching material and per-learner progress.
 - [Recipes](capabilities/recipes.md): scaling-aware cooking cards.
 - [Publishing](capabilities/publishing.md): put selected box content on the public web.
@@ -41,4 +41,4 @@ Every card type has a reference page in
 - The interface itself: dashboard, settings, browse, questions, landmarks, history, admin, view, nav.
 
 A box can also define its own card types. See
-[making it yours](11-making-it-yours.md).
+[making it yours](13-making-it-yours.md).

@@ -34,3 +34,7 @@ directory in this corpus has an `index.md` listing its files. When you use
 these pages to answer a question, cite the page the answer came from, and if
 a page does not cover something, say that the documentation does not say
 that, rather than guessing.
+
+For what Bee Box is and whether to use it, the evaluator entry point is
+`llms.txt`, linked below; the spine pages there define the vocabulary these
+pages assume.

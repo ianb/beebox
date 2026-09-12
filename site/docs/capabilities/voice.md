@@ -3,10 +3,10 @@ description: "Dictate to the box by voice and have it speak replies back, with p
 ---
 # Voice
 
-A box is a directory of your data kept in git; a card is a markdown file
-with structured frontmatter; the agent is the coding agent (Claude Code or
-Codex) that operates the box. Voice covers both directions: talking to the
-box and having it talk back.
+A box is a directory of your data, kept under version control with a full
+history of changes (using git); a card is a markdown file with a structured
+header; the agent is the coding agent (Claude Code or Codex) that operates the
+box. Voice covers both directions: talking to the box and having it talk back.
 
 **What it does for you**
 
@@ -25,8 +25,8 @@ box and having it talk back.
 
 **What it needs**
 
-A microphone (browser or phone) and, for spoken replies, a working
-transcription/TTS setup. See [../install/index.md](../install/index.md).
+A microphone (browser or phone) for dictation and, for spoken replies, a
+working setup that turns text into speech. See [../install/index.md](../install/index.md).
 
 **How it works, briefly**
 

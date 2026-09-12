@@ -9,15 +9,17 @@ compared:
 ---
 # Bee Box compared with PAI
 
-PAI (Personal AI Infrastructure), from security researcher Daniel Miessler,
-is a "Life Operating System" built as a replacement for Claude Code's own
-configuration directory: a long system prompt, lifecycle hooks, about
-forty-eight skills, plain markdown state files, and one background daemon
-handling voice, scheduled jobs, and a dashboard. One named assistant knows
-the user's identity, goals, and current work at every session start. Bee Box
-is built around a **box**: one directory, also a git repository, holding
-**cards** (files with YAML frontmatter and a markdown body), that Claude
-Code or Codex operates directly, rather than reconfiguring.
+PAI (Personal AI Infrastructure), from security researcher Daniel Miessler, is
+a "Life Operating System" built as a replacement for Claude Code's own
+configuration directory: a long system prompt, automated triggers at points
+in the agent's lifecycle, about forty-eight skills, plain markdown state
+files, and one background process handling voice, scheduled jobs, and a
+dashboard. One named assistant knows the user's
+identity, goals, and current work at every session start. Bee Box is built
+around a **box**: one directory, kept under version control with a full history
+of changes (using git), holding **cards** (files with a structured header and a
+markdown body), that Claude Code or Codex operates directly, rather than
+reconfiguring.
 
 **Where they are similar.** Both prefer plain files over a database, both
 search the filesystem itself rather than a retrieval index, both give the
@@ -29,7 +31,7 @@ prompt itself that its required output format is a "recurring failure
 pattern"; Bee Box states the equivalent pipeline as ordinary code, calling
 the model only at specific, typed steps. PAI's per-task specification is a
 markdown file the model maintains itself; Bee Box's equivalent, job cards and
-procedures, is checked against a schema. PAI's identity files are written
+procedures, is checked against the rules for that kind of card. PAI's identity files are written
 once and read as fixed; Bee Box's personality is a card that accrues evidence
 and confidence over time. As of this comparison, PAI had a structured
 personal-goals layer (mission, measurable goals, beliefs) with no Bee Box

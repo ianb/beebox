@@ -3,6 +3,10 @@ description: "How Bee Box differs from chat-first assistant frameworks and memor
 ---
 # Compared to alternatives
 
+If you are comparing Bee Box against an ordinary chat assistant rather than
+against another agent system, read
+[03-why-not-just-a-chatbot.md](03-why-not-just-a-chatbot.md) first.
+
 The systems Bee Box is usually weighed against are agent assistant
 frameworks such as OpenClaw, Hermes, Letta, Khoj, Goose, agent-zero,
 nanobot, PAI, and gstack. One dated page per system is in
@@ -12,18 +16,19 @@ nanobot, PAI, and gstack. One dated page per system is in
 external system as another chat channel feeding one uniform turn pipeline.
 Integrations are cheap to add, and thirty of them is normal, but an email is
 a message. Bee Box treats an integration as a data sync that materializes
-durable typed records: a **card**, a markdown file with validated
-frontmatter, per email thread, per calendar event, per document. Chat is one
+durable typed records: a **card**, a file with a structured header that gets checked, per email
+thread, per calendar event, per document. Chat is one
 connector among several. Integrations therefore cost more to build and carry
 more of each source's structure. That is a bet on fidelity over breadth, and
 it would strain if Bee Box needed a second full chat platform quickly.
 
 **Rules enforced in code rather than doctrine in prompts.** Much of what the
 competing systems ask of an agent is written as instructions and hoped for.
-Bee Box moves what it can into mechanism: card schemas validate on load and
-again in a git pre-commit hook, so a malformed record cannot be committed;
-the filename determines the type; every change is a commit; a question card
-carries required fields the agent must fill before the card is valid.
+Bee Box moves what it can into mechanism: each kind of card has fields that
+are checked when it's created and checked again automatically before every
+save, so a malformed record can't slip through; the filename determines the
+type; every change is a commit; a question card carries required fields the
+agent must fill before the card is valid.
 Instructions still matter, and the agent still runs with real capability, so
 this is a difference of degree.
 

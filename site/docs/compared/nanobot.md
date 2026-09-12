@@ -12,11 +12,11 @@ compared:
 nanobot, from the academic group HKUDS (known for retrieval-augmented
 generation research), is a small personal AI agent: a web interface, about
 fifteen chat-platform integrations, memory, and scheduled jobs, built around
-roughly eleven thousand lines of core runtime. Bee Box is a personal
-assistant built around a **box**: one directory, also a git repository,
-holding **cards** (files with YAML frontmatter and a markdown body), a
-larger and more structured system aimed at one boxholder's ongoing life
-rather than at staying minimal.
+roughly eleven thousand lines of core runtime. Bee Box is a personal assistant
+built around a **box**: one directory, kept under version control with a full
+history of changes (using git), holding **cards** (files with a structured
+header and a markdown body), a larger and more structured system aimed at one
+boxholder's ongoing life rather than at staying minimal.
 
 **Where they are similar.** Both keep long-term memory as plain, readable
 files rather than an opaque store, and both run a periodic background pass

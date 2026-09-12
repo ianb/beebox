@@ -55,3 +55,5 @@ contributors; the home card's install prompt and install links now point at
 `llms-dev.txt`. This also completes the install-prompt repoint assigned to
 `2026-09-06-container-install-is-the-primary-path.md`. Per-doc review and
 deploy verification still pending.
+
+Landed the use-case pages (docs/uses/), the chatbot appraisal, and the jargon pass; spine is now thirteen files.
