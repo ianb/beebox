@@ -13,7 +13,10 @@ question when it does not understand.
 A **box** is the data: one directory on disk, kept under version control with
 git. It holds the cards, the configuration, and the state. A **card** is a
 single file: a structured header that the system checks against the card's
-type, plus optional text (the type is part of the filename, for the curious). The files on disk are the
+type, plus optional text (the type is part of the filename, for the curious).
+The text is markdown with a small set of marks any card can use: a quote of
+someone's exact words, the source a passage came from, a todo noted in place
+(see [enriched markdown](concepts/enriched-markdown.md)). The files on disk are the
 state of the system. Git is the history, so every change the agent makes is a
 commit you can read. The web interface and chat are built over a box.
 

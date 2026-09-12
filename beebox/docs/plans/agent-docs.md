@@ -528,3 +528,9 @@ capture sessions mixing photos and speech, agent-chosen delivery, earcons,
 on-device recognition, the named vendors). Wired into the first page, the
 chatbot appraisal, the capability list, the use pages, and the reverse index.
 
+`concepts/enriched-markdown.md` (authored): the boxholder's framing that
+cards are markdown enriched in two specific places, a header each kind of
+card extends and a body with a baseline of cross-cutting marks, quote,
+source, and todo, that the whole system agrees on; linked from the first
+page, how-it-works, provenance, and the reverse index.
+
