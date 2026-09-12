@@ -78,7 +78,7 @@ needs a source-parameterized `durationHistories` and parsed durations plumbed
 out of the wrapper (~50 lines). Build it only if mid-run pressure onset keeps
 showing up after the gates above. Per-test budget scaling was considered and
 rejected as gold-plating. Related per-test items:
-[process-group timeout](../bugs/2026-08-25-schedules-process-group-timeout-test-flaky-under-load.md),
+[process-group timeout](../closed/bugs/2026-08-25-schedules-process-group-timeout-test-flaky-under-load.md),
 [router shutdown](../bugs/2026-08-24-router-core-shutdown-test-flakes-under-load.md),
 [awake timeout](../bugs/2026-08-20-awake-timeout-doctest-flakes-on-a-cold-run.md).
 
