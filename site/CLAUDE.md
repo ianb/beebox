@@ -9,13 +9,13 @@ the static navigation contract are documented in [card-authoring.md](card-author
 That document describes the current implementation; the earlier fisheye
 experiments below remain supported inside card bodies.
 
-**Cards are the native source format.** A page is a callback-box card
+**Cards are the native source format.** A page is a Bee Box card
 (`<slug>.site-page.card` — YAML frontmatter + markdown body, type carried by
-the filename) in exactly the shape a box authors it, so a page moves box → repo
-as a verbatim file copy. There is no importer and no conversion step; the box →
-repo transfer is a plain file copy today, and *where* these cards should live
-long-term (repo, box export, something else) is an open question — see the
-"Direction shift (2026-08-19)" section of the plan.
+the filename). The repository is canonical; a local box may hold private
+editorial work and expose only selected cards under `_publish/public-site/`.
+`box-export.ts` validates that selected graph and copies it into `site/cards/`,
+mapping the box-only `site-doc` suffix to the public `doc` suffix. See the
+workbench workflow in [card-authoring.md](card-authoring.md).
 
 - Principles (settled with the boxholder): `issues/features/2026-07-20-public-site.md`
 - Full plan / tracks: `../beebox/docs/plans/public-site.md`
@@ -48,6 +48,8 @@ and needs no box or application server to serve them.
 ```bash
 pnpm --dir site build                    # base derived from the git branch (router view)
 pnpm --dir site build --base /beebox/   # what the Pages workflow runs
+pnpm --dir site box-export --box <path> # dry-run selected workbench cards
+pnpm --dir site box-export --box <path> --apply
 pnpm --dir site lint                     # eslint (roots: ["."] — sources at package root)
 pnpm --dir site typecheck                # tsc --noEmit
 pnpm --dir site test                     # node --test over *.test.ts
@@ -69,7 +71,12 @@ writes the input manifest last (so a partial build never masks staleness).
 ## Layout
 
 - `build.ts` — CLI entry: reads the page cards, writes HTML + `.md` twins +
-  `llms.txt`, link-checks, resolves the base path.
+  `llms.txt`, link-checks, resolves the base path. Its parameterized
+  `buildSite()` core also validates temporary workbench exports.
+- `box-export.ts` — fail-closed box-workbench export. Reads only
+  `<box>/_publish/public-site/`; dry-runs by default; maps `site-doc` to `doc`;
+  validates with `buildSite()`; `--apply` writes additions and updates but
+  never deletes, commits, pushes, or deploys.
 - `render.ts` — the local Markdoc pipeline + strict (zod) frontmatter parse +
   markdown rendering. `workspace.ts` supplies the card shell and
   `navigation-script.ts` its optional browser navigation. Deliberately does NOT import `workstreams-app/src/router/router-docs.ts`, whose

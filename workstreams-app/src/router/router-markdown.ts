@@ -1,12 +1,11 @@
 // Markdown → HTML for the router's read-only surfaces: HTML escaping, Markdoc
-// rendering with highlight.js code blocks and GFM-style autolinking, and the
-// closed-issue pill decoration. Split out of router-docs.ts so that file can
-// stay about the /<worktree>/dev/ space itself.
+// rendering with highlight.js code blocks and GFM-style autolinking. Split out
+// of router-docs.ts so that file can stay about the /<worktree>/dev/ space
+// itself.
 //
 // Pure string transformation only — nothing here touches the filesystem, the
 // live `worktrees` map, or a response.
 
-import path from "node:path";
 import Markdoc from "@markdoc/markdoc";
 import hljs from "highlight.js";
 
@@ -15,41 +14,6 @@ export function escapeHtml(s: string): string {
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   };
   return String(s).replace(/["&'<>]/g, (c) => replacements[c] ?? c);
-}
-
-export function findClosedIssueLinkHrefs(md: string, docDirRel: string): Set<string> {
-  const closedHrefs = new Set<string>();
-  for (const match of md.matchAll(/]\(([^\s()]+)\)/g)) {
-    const link = match[1];
-    if (
-      !link ||
-      /^([a-z][a-z0-9+.-]*:)?\/\//iu.test(link) ||
-      link.startsWith("/") ||
-      link.startsWith("#")
-    )
-      continue;
-    const [target] = link.split("#");
-    if (!target?.endsWith(".md")) continue;
-    const resolved = path.posix.normalize(path.posix.join(docDirRel, target));
-    if (resolved === "issues/closed" || resolved.startsWith("issues/closed/"))
-      closedHrefs.add(link);
-  }
-  return closedHrefs;
-}
-
-export function appendClosedIssuePills(
-  html: string,
-  closedHrefs: ReadonlySet<string>,
-): string {
-  if (closedHrefs.size === 0) return html;
-  const escaped = new Set([...closedHrefs].map(escapeHtml));
-  return html.replace(
-    /<a\b[^>]*\bhref="([^"]*)"[^>]*>[\s\S]*?<\/a>/gu,
-    (tag: string, href: string) =>
-      escaped.has(href)
-        ? `${tag}<span class="chip chip-closed-link">closed</span>`
-        : tag,
-  );
 }
 
 function unescapeHtml(s: string): string {

@@ -6,13 +6,14 @@
 // different structure from a directory tree — which is why the browser opens on
 // this rather than on a file tree.
 //
-// The computation generalizes working code. `workstreams-app/src/router/router-docs.ts` already
-// derives per-file times from `git log --format=%ct --name-only` and falls back
-// to filesystem mtime for untracked files, with the reasoning recorded in
-// place: untracked files "were created after the worktree clone, not shared at
-// clone time like tracked files — so fall back to it, which floats in-progress
-// docs to the top." That reasoning holds here for the same reason; what changes
-// is that this runs across every checkout and is not scoped to `.md`.
+// The computation generalizes working code from the retired /dev/docs
+// browser, which derived per-file times from `git log --format=%ct
+// --name-only` and fell back to filesystem mtime for untracked files, with the
+// reasoning recorded in place: untracked files "were created after the
+// worktree clone, not shared at clone time like tracked files — so fall back
+// to it, which floats in-progress docs to the top." That reasoning holds here
+// for the same reason; what changes is that this runs across every checkout
+// and is not scoped to `.md`.
 //
 // BOUNDED BY A WINDOW. `git log` over all of history for every file would cost
 // far more than the answer is worth, and a recency feed does not want it: the

@@ -6,8 +6,8 @@
 // EASIER; a browser without quick-open would trade five surfaces for one worse
 // one, which is the opposite of the complaint it answers.
 //
-// The listing rule is ported from the doc browser (`workstreams-app/src/router/router-docs.ts:348-372`)
-// rather than reinvented, including its deliberate exception: `.gitignore`
+// The listing rule is ported from the retired /dev/docs browser rather than
+// reinvented, including its deliberate exception: `.gitignore`
 // keeps node_modules and build output out, and then IGNORED markdown under
 // `scratch/` is re-admitted, because "scratch/ is exactly where agents leave
 // deliverable orientation docs the boxholder wants to browse". What changes is
