@@ -1,6 +1,6 @@
 ---
 name: bbx-guide-testing
-description: Explains beebox's testing system — the test tiers, what each is for, and how to choose. Use when deciding how to test something, writing tests in an unfamiliar tier, or judging what coverage a change needs. Triggers include "how should I test this", "what kind of test", "add tests for X", "is this covered". Instructional (a bbx-guide-* skill) — the debugging discipline is bbx-debug; the full reference is docs/testing.md.
+description: Choose among beebox test tiers and judge appropriate coverage. Use when deciding how to test a change or working in an unfamiliar tier; use bbx-debug for the broader debugging discipline.
 ---
 
 # Testing in beebox: what exists and how to choose

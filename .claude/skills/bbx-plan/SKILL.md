@@ -1,6 +1,6 @@
 ---
 name: bbx-plan
-description: Use when the human wants to write a plan for non-trivial work — a new feature, a refactor, a vocabulary or schema change, a multi-track effort — or to review an existing plan. Triggers include "write a plan", "make a plan for X", "let's plan", "review this plan", "/bbx-plan".
+description: Write or review an implementation plan for non-trivial work such as features, refactors, vocabulary or schema changes, and multi-track efforts.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent, WebFetch, WebSearch
 ---
 

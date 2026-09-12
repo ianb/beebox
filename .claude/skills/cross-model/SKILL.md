@@ -1,6 +1,6 @@
 ---
 name: cross-model
-description: Use when the human wants an independent cross-model review — a review by the OTHER model family from whoever is working. From Claude it runs OpenAI's codex; from Codex it runs `claude -p`. Reviews a plan in docs/plans/, the current branch diff, or runs an adversarial "find how this fails" pass on either. Triggers include "cross-model review", "second opinion", "codex review", "have another model review this", "challenge this plan", "/cross-model".
+description: Get an independent review from the other model family for a plan, branch diff, or adversarial failure analysis. Use when requested and whenever root guidance requires cross-model review for work larger than a small bug fix.
 allowed-tools: Bash, Read, Grep, Glob
 ---
 

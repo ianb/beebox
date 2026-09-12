@@ -1,6 +1,6 @@
 ---
 name: bbx-authoring-schedules
-description: Explains how recurring work is enrolled in this monorepo — the `schedules/<name>/` directory, its `run` script, `prompt.md`, and `bin/schedules`. Use when a task should happen on a cadence rather than when someone remembers it. Triggers include "add a schedule", "run X weekly", "schedule this", "make this a scheduled task", "enroll this task", "migrate this launchd job", "why didn't the schedule run". Design: beebox/docs/plans/scheduled-workstreams.md.
+description: Create, migrate, or troubleshoot recurring monorepo work under `schedules/`. Use when time or cadence should trigger a task, including replacing a launchd job.
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 
